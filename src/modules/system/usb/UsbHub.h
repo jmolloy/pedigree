@@ -38,7 +38,7 @@ class UsbHub : public virtual Device
         virtual void doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0) {}
         virtual void addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0) {}
 
-        void deviceConnected(uint8_t nPort, UsbSpeed speed);
+        bool deviceConnected(uint8_t nPort, UsbSpeed speed);
         void deviceDisconnected(uint8_t nPort);
 
         void getUsedAddresses(ExtensibleBitmap *pBitmap);

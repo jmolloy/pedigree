@@ -26,9 +26,9 @@ namespace RequestType
 {
     enum RequestType
     {
-        Standard = 0x00,
-        Class = 0x20,
-        Vendor = 0x40
+        Standard    = 0x00,
+        Class       = 0x20,
+        Vendor      = 0x40
     };
 };
 
@@ -36,10 +36,37 @@ namespace RequestRecipient
 {
     enum RequestRecipient
     {
-        Device = 0x00,
-        Interface = 0x01,
-        Endpoint = 0x02,
-        Other = 0x03
+        Device      = 0x00,
+        Interface   = 0x01,
+        Endpoint    = 0x02,
+        Other       = 0x03
+    };
+};
+
+namespace RequestDirection
+{
+    enum RequestDirection
+    {
+        Out = 0x00,
+        In  = 0x80
+    };
+};
+
+namespace Request
+{
+    enum Request
+    {
+        GetStatus       = 0,
+        ClearFeature    = 1,
+        SetFeature      = 3,
+        SetAddress      = 5,
+        GetDescriptor   = 6,
+        SetDescriptor   = 7,
+        GetConfiguration= 8,
+        SetConfiguration= 9,
+        GetInterface    = 10,
+        SetInterface    = 11,
+        SynchFrame      = 12,
     };
 };
 
@@ -270,19 +297,31 @@ class UsbDevice : public virtual Device
             return m_pConfiguration;
         }
 
-        /** Transfer methods */
+        // Sync transfer methods
         ssize_t doSync(Endpoint *pEndpoint, UsbPid pid, uintptr_t pBuffer, size_t nBytes);
         ssize_t syncIn(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes);
         ssize_t syncOut(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes);
 
-        ssize_t controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t nValue, uint16_t nIndex, uint16_t nLength=0, uintptr_t pBuffer=0);
-        int16_t status();
+        // Method to perform an USB control request
+        bool controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t nValue, uint16_t nIndex, uint16_t nLength=0, uintptr_t pBuffer=0);
+
+        // Various USB standard control request methods
+        uint16_t getStatus();
+
+        bool clearEndpointHalt(Endpoint *pEndpoint);
+
         bool assignAddress(uint8_t nAddress);
+
         bool useConfiguration(uint8_t nConfig);
+
         bool useInterface(uint8_t nInterface);
+
         void *getDescriptor(uint8_t nDescriptor, uint8_t nSubDescriptor, uint16_t nBytes, uint8_t requestType=0);
+
         uint8_t getDescriptorLength(uint8_t nDescriptor, uint8_t nSubDescriptor, uint8_t requestType=0);
+
         char *getString(uint8_t nString);
+
         void populateDescriptors();
 
     protected:

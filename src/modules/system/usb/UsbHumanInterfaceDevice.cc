@@ -58,7 +58,7 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) :
     //Machine::instance().setKeyboard(this);
 
     HidDescriptor *pHidDescriptor = 0;
-    for(size_t i = 0;i<m_pInterface->pOtherDescriptors.count();i++)
+    for(size_t i = 0;i < m_pInterface->pOtherDescriptors.count();i++)
     {
         UnknownDescriptor *pDescriptor = m_pInterface->pOtherDescriptors[i];
         if(pDescriptor->nType == 0x21)
@@ -73,20 +73,17 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) :
         return;
     }
 
-    //controlRequest(0x21, 0x0b, 1, m_pInterface->pDescriptor->nInterface);
+    //controlRequest(RequestType::Class | RequestRecipient::Interface, Request::SetInterface, 1, m_pInterface->pDescriptor->nInterface);
 
     uint16_t nHidSize = pHidDescriptor->pDescriptor->nDescriptorLength;
     uint8_t *pHidReportDescriptor = static_cast<uint8_t*>(getDescriptor(0x22, 0, nHidSize, RequestRecipient::Interface));
-    int64_t nLogMin = undefined, nLogMax = undefined,
-            nPhysMin = undefined, nPhysMax = undefined,
-            nUsageMin = undefined, nUsageMax = undefined,
-            nReportSize = undefined, nReportCount = undefined,
-            nUsagePage = undefined;
+    int64_t nLogMin = undefined, nLogMax = undefined, nPhysMin = undefined, nPhysMax = undefined, nUsagePage = undefined,
+            nUsageMin = undefined, nUsageMax = undefined, nReportSize = undefined, nReportCount = undefined;
     uint8_t nLogSize = 0;
     uint32_t nBits = 0;
     m_pReport = new HidReport();
     Vector<size_t> *pUsages = new Vector<size_t>();
-    for(size_t i = 0;i<nHidSize;i++)
+    for(size_t i = 0;i < nHidSize;i++)
     {
         union HidItem {
             struct
@@ -94,14 +91,20 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) :
                 uint8_t size : 2;
                 uint8_t type : 2;
                 uint8_t tag : 4;
-            } __attribute__((packed));
+            } PACKED;
             uint8_t raw;
         };
         HidItem item;
         item.raw = pHidReportDescriptor[i];
-        uint8_t size = item.size==3?4:item.size;
-        uint32_t value = size==1?pHidReportDescriptor[i+1]:(size==2?pHidReportDescriptor[i+1]|(pHidReportDescriptor[i+2]<<8):(0));
-        //NOTICE("Item "<<item.tag<<" type "<<Dec<<item.type<<" sz "<<size<<Hex);
+        uint8_t size = item.size == 3 ? 4 : item.size;
+        uint32_t value;
+        if(size == 1)
+            value = pHidReportDescriptor[i + 1];
+        else if(size == 2)
+            value = pHidReportDescriptor[i + 1] | (pHidReportDescriptor[i + 2] << 8);
+        else if(size == 4)
+            value = pHidReportDescriptor[i + 1] | (pHidReportDescriptor[i + 2] << 8) | (pHidReportDescriptor[i + 3] << 16) | (pHidReportDescriptor[i + 4] << 24);
+        NOTICE("Item tag=" << item.tag << " type=" << Dec << item.type << " size=" << size << Hex);
         switch(item.type)
         {
             case 0:
@@ -121,17 +124,13 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) :
                             pBlock->nLogSize = nLogSize;
                             if(value & 2)
                             {
-                                for(size_t j = 0;pUsages->count()<nReportCount;j++)
-                                    pUsages->pushBack(nUsageMin+j);
+                                for(size_t j = 0;pUsages->count() < nReportCount;j++)
+                                    pUsages->pushBack(nUsageMin + j);
                                 pBlock->pUsages = pUsages;
                                 if(value & 4)
-                                {
                                     pBlock->type = HidReportBlock::Relative;
-                                }
                                 else
-                                {
                                     pBlock->type = HidReportBlock::Absolute;
-                                }
                             }
                             else
                             {
@@ -140,7 +139,7 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) :
                             }
                         }
                         m_pReport->pBlockList.pushBack(pBlock);
-                        nBits += nReportSize*nReportCount;
+                        nBits += nReportSize * nReportCount;
                         nUsageMin = undefined;
                         nUsageMax = undefined;
                         pUsages = new Vector<size_t>();

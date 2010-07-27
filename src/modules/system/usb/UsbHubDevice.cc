@@ -17,6 +17,7 @@
 #include <usb/UsbDevice.h>
 #include <usb/UsbHub.h>
 #include <usb/UsbHubDevice.h>
+#include <utilities/PointerGuard.h>
 
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
@@ -61,7 +62,7 @@ UsbHubDevice::UsbHubDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
                 DEBUG_LOG("USB: HUB: Port " << Dec << i << Hex << " couldn't be powered up.");
                 continue;
             }
-            
+
             DEBUG_LOG("USB: HUB: Powered up port " << Dec << i << Hex << " [status = " << portStatus << "]...");
         }
 
@@ -72,9 +73,7 @@ UsbHubDevice::UsbHubDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
         delay(50);
 
         // Wait for completion
-        while(true)
-            if(!(getPortStatus(i) & (1 << 4)))
-                break;
+        while((getPortStatus(i) & (1 << 4)));
 
         // Port has been powered on and now reset, check to see if it's enabled and a device is connected
         portStatus = getPortStatus(i);
@@ -95,15 +94,10 @@ UsbHubDevice::UsbHubDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
             }
             else
             {
-                // Low-speed
+                // Full-speed
                 DEBUG_LOG("USB: HUB: Hub port " << Dec << i << Hex << " has a full-speed device attached to it.");
-                deviceConnected(i, HighSpeed);
+                deviceConnected(i, FullSpeed);
             }
-        }
-        else
-        {
-            // Disable the port's power, no device on it
-            clearPortFeature(i, PortPower);
         }
     }
 }
@@ -114,20 +108,21 @@ UsbHubDevice::~UsbHubDevice()
 
 bool UsbHubDevice::setPortFeature(size_t port, PortFeatureSelectors feature)
 {
-    return !controlRequest(0x23, 3, feature, port + 1, 0, 0);
+    return controlRequest(HubPortRequest, Request::SetFeature, feature, (port + 1) & 0xFF, 0, 0);
 }
 
 bool UsbHubDevice::clearPortFeature(size_t port, PortFeatureSelectors feature)
 {
-    return !controlRequest(0x23, 1, feature, (port + 1) & 0xFF, 0, 0);
+    return controlRequest(HubPortRequest, Request::ClearFeature, feature, (port + 1) & 0xFF, 0, 0);
 }
 
 uint32_t UsbHubDevice::getPortStatus(size_t port)
 {
-    static uint32_t portStatus = 0;
-    controlRequest(0xA3, 0, 0, port + 1, 4, reinterpret_cast<uintptr_t>(&portStatus));
+    uint32_t *portStatus = new uint32_t(0);
+    PointerGuard<uint32_t> guard(portStatus);
+    controlRequest(RequestDirection::In | HubPortRequest, Request::GetStatus, 0, (port + 1) & 0xFF, 4, reinterpret_cast<uintptr_t>(portStatus));
 
-    return portStatus;
+    return *portStatus;
 }
 
 void UsbHubDevice::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid pid, uintptr_t pBuffer, size_t nBytes)

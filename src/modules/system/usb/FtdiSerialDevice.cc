@@ -20,18 +20,19 @@
 
 #define FTDI_BAUD_RATE 9600
 
+static uint8_t nSubdivisors[8] = {0, 3, 2, 4, 1, 5, 6, 7};
+
 FtdiSerialDevice::FtdiSerialDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev), m_pInEndpoint(0), m_pOutEndpoint(0)
 {
     // Reset the device
-    controlRequest(0x40, 0, 0, 0);
+    controlRequest(RequestType::Vendor, 0, 0, 0);
 
     // Calculate the divisor and subdivisor for the baud rate
-    uint16_t nDivisor = (48000000 / 2) / FTDI_BAUD_RATE, nSubdivisor = nDivisor % 8, nSubdivisors[8] = {0, 3, 2, 4, 1, 5, 6, 7};
+    uint16_t nDivisor = (48000000 / 2) / FTDI_BAUD_RATE, nSubdivisor = nSubdivisors[nDivisor % 8];
     nDivisor /= 8;
-    nSubdivisor = nSubdivisors[nSubdivisor];
 
     // Set the divisor and subdivisor (0x4138 / 0x00 for 9600)
-    controlRequest(0x40, 3, (nSubdivisor & 3) << 14 | nDivisor, nSubdivisor >> 2);
+    controlRequest(RequestType::Vendor, 3, (nSubdivisor & 3) << 14 | nDivisor, nSubdivisor >> 2);
 
     // Get the in and out endpoints
     for(size_t i = 0; i < m_pInterface->pEndpoints.count(); i++)

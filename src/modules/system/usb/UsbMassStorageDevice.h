@@ -38,23 +38,35 @@ class UsbMassStorageDevice : public UsbDevice, public ScsiController
 
         bool massStorageReset();
 
-        bool clearEndpointHalt(Endpoint *pEndpoint);
+        enum MassStorageRequests
+        {
+            MassStorageRequest  = RequestType::Class | RequestRecipient::Interface,
+
+            MassStorageReset    = 0xFF,
+            MassStorageGetMaxLUN= 0xFE
+        };
+
+        enum MassStorageSigs
+        {
+            CbwSig = HOST_TO_LITTLE32(0x43425355),  // USBC
+            CswSig = HOST_TO_LITTLE32(0x53425355)   // USBS
+        };
 
         typedef struct Cbw {
-            uint32_t sig;
-            uint32_t tag;
-            uint32_t data_len;
-            uint8_t flags;
-            uint8_t lun;
-            uint8_t cmd_len;
-            uint8_t cmd[16];
+            uint32_t nSig;
+            uint32_t nTag;
+            uint32_t nDataBytes;
+            uint8_t nFlags;
+            uint8_t nLUN;
+            uint8_t nCommandSize;
+            uint8_t pCommand[16];
         } PACKED Cbw;
 
         typedef struct Csw {
-            uint32_t sig;
-            uint32_t tag;
-            uint32_t residue;
-            uint8_t status;
+            uint32_t nSig;
+            uint32_t nTag;
+            uint32_t nResidue;
+            uint8_t nStatus;
         } PACKED Csw;
 
         size_t m_nUnits;

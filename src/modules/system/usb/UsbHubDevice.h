@@ -62,6 +62,11 @@ class UsbHubDevice : public UsbDevice, public UsbHub
             PortIndicator   = 22,
         };
 
+        enum HubRequests
+        {
+            HubPortRequest  = RequestType::Class | RequestRecipient::Other
+        };
+
         bool setPortFeature(size_t port, PortFeatureSelectors feature);
         bool clearPortFeature(size_t port, PortFeatureSelectors feature);
 

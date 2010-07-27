@@ -56,9 +56,9 @@ class Uhci : public UsbHub, public IrqHandler
             uint32_t nMaxLen : 11;
             uint32_t pBuff;
 
-            // Custom qTD fields
+            // Custom TD fields
             uint16_t nBufferSize;
-        } PACKED __attribute__((aligned(32))) TD;
+        } PACKED ALIGN(16) TD;
 
         typedef struct QH
         {
@@ -79,18 +79,16 @@ class Uhci : public UsbHub, public IrqHandler
                 UsbEndpoint &endpointInfo;
 
                 bool bPeriodic;
-                TD *pFirstQTD;
-                TD *pLastQTD;
+                TD *pFirstTD;
+                TD *pLastTD;
                 size_t nTotalBytes;
-
-                size_t qTDCount; /// Number of qTDs related to this queue head, for semaphore wakeup
 
                 QH *pPrev;
                 QH *pNext;
 
-                bool bIgnore; /// Ignore this QH when iterating over the list - don't look at any of its qTDs
+                bool bIgnore; /// Ignore this QH when iterating over the list - don't look at any of its TDs
             } *pMetaData;
-        } PACKED __attribute__((aligned(32))) QH;
+        } PACKED ALIGN(16) QH;
 
         virtual void getName(String &str)
         {
@@ -99,11 +97,9 @@ class Uhci : public UsbHub, public IrqHandler
 
         virtual void addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid pid, uintptr_t pBuffer, size_t nBytes);
         virtual uintptr_t createTransaction(UsbEndpoint endpointInfo);
-        
-        virtual void doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
 
-        //virtual void doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
-        //virtual void addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
+        virtual void doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
+        virtual void addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
 
         // IRQ handler callback.
         virtual bool irq(irq_id_t number, InterruptState &state);
@@ -147,30 +143,26 @@ class Uhci : public UsbHub, public IrqHandler
 
         TD *m_pTDList;
         uintptr_t m_pTDListPhys;
-        ExtensibleBitmap m_qTDBitmap;
+        ExtensibleBitmap m_TDBitmap;
 
         QH *m_pAsyncQH;
         QH *m_pPeriodicQH;
 
         QH *m_pQHList;
         uintptr_t m_pQHListPhys;
-
         ExtensibleBitmap m_QHBitmap;
-
-        uint8_t *m_pTransferPages;
-        uintptr_t m_pTransferPagesPhys;
 
         MemoryRegion m_UhciMR;
 
-        Spinlock m_QueueListChangeLock;
+        Spinlock m_AsyncQueueListChangeLock;
 
         // Pointer to the current queue tail, which allows insertion of new queue
         // heads to the asynchronous schedule.
-        QH *m_pCurrentQueueTail;
+        QH *m_pCurrentAsyncQueueTail;
 
         // Pointer to the current queue head. Used to fill pNext automatically
         // for new queue heads inserted to the asynchronous schedule.
-        QH *m_pCurrentQueueHead;
+        QH *m_pCurrentAsyncQueueHead;
 
         Uhci(const Uhci&);
         void operator =(const Uhci&);

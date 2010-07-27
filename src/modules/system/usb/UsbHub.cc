@@ -27,9 +27,9 @@
 
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
-void UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
+bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
 {
-    //NOTICE("USB: Adding device on port "<<Dec<<nPort<<Hex<<"...");
+    NOTICE("USB: Adding device on port " << Dec << nPort << Hex);
     // Create a bitmap to hold the used addresses
     ExtensibleBitmap *pUsedAddresses = new ExtensibleBitmap();
     pUsedAddresses->set(0);
@@ -44,7 +44,7 @@ void UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
     if(nAddress > 127)
     {
         ERROR("USB: HUB: Out of addresses!");
-        return;
+        return false;
     }
 
     // Create the UsbDevice instance and set us as parent
@@ -58,8 +58,10 @@ void UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
     if(!pDevice->assignAddress(nAddress))
     {
         ERROR("USB: HUB: address assignment failed!");
-        return;
+        return false;
     }
+
+
     // Get all descriptors in place
     pDevice->populateDescriptors();
     UsbDevice::DeviceDescriptor *pDes = pDevice->getDescriptor();
@@ -90,18 +92,22 @@ void UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
         // Set the right interface
         pDevice->useInterface(i);
         NOTICE("USB: Device: " << pDes->sVendor << " " << pDes->sProduct << ", class " << Dec << pInterface->pDescriptor->nClass << ":" << pInterface->pDescriptor->nSubclass << ":" << pInterface->pDescriptor->nProtocol << Hex);
-        /// \todo make this a bit more general. harcoding some numbers and some class names doesn't sound good
+        /// \todo Make this a bit more general. Harcoding some numbers and some class names doesn't sound good
         addChild(pDevice);
         if(pInterface->pDescriptor->nClass == 9)
             replaceChild(pDevice, new UsbHubDevice(pDevice));
         else if(pInterface->pDescriptor->nClass == 3)
+        {
             replaceChild(pDevice, new UsbHumanInterfaceDevice(pDevice));
+            /// \bug HID devices with interface number > 0 can cause problems
+            return true;
+        }
         else if(pInterface->pDescriptor->nClass == 8)
             replaceChild(pDevice, new UsbMassStorageDevice(pDevice));
         else if(pDes->pDescriptor->nVendorId == 0x0403 && pDes->pDescriptor->nProductId == 0x6001)
             replaceChild(pDevice, new FtdiSerialDevice(pDevice));
-        return;
     }
+    return true;
 }
 
 void UsbHub::deviceDisconnected(uint8_t nPort)

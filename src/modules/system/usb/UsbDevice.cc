@@ -20,8 +20,6 @@
 #include <processor/Processor.h>
 #include <utilities/PointerGuard.h>
 
-#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
-
 ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, UsbPid pid, uintptr_t pBuffer, size_t nBytes)
 {
     if(!pEndpoint)
@@ -82,7 +80,7 @@ ssize_t UsbDevice::syncOut(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes
     return doSync(pEndpoint, UsbPidOut, pBuffer, nBytes);
 }
 
-ssize_t UsbDevice::controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t nValue, uint16_t nIndex, uint16_t nLength, uintptr_t pBuffer)
+bool UsbDevice::controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t nValue, uint16_t nIndex, uint16_t nLength, uintptr_t pBuffer)
 {
     // Setup structure - holds request details
     Setup *pSetup = new Setup(nRequestType, nRequest, nValue, nIndex, nLength);
@@ -109,32 +107,33 @@ ssize_t UsbDevice::controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16
 
     // Data Transfer - handles data transfer
     if(nLength)
-        pParentHub->addTransferToTransaction(nTransaction, true, nRequestType & 0x80 ? UsbPidIn : UsbPidOut, pBuffer, nLength);
+        pParentHub->addTransferToTransaction(nTransaction, true, nRequestType & RequestDirection::In ? UsbPidIn : UsbPidOut, pBuffer, nLength);
 
     // Handshake Transfer - IN when we send data to the device, OUT when we receive. Zero-length.
-    pParentHub->addTransferToTransaction(nTransaction, true, nRequestType & 0x80 ? UsbPidOut : UsbPidIn, 0, 0);
+    pParentHub->addTransferToTransaction(nTransaction, true, nRequestType & RequestDirection::In ? UsbPidOut : UsbPidIn, 0, 0);
 
-    // Wait for the transaction to complete, return result
+    // Wait for the transaction to complete
     ssize_t nResult = pParentHub->doSync(nTransaction);
-    if(nResult < 0)
-        return nResult; // Error code
-    else
-        return nResult; // - sizeof(Setup); // Total bytes transferred minus the setup
+    // Return false if we had an error, true otherwise
+    return nResult >= 0; // >= sizeof(Setup) + nLength;
 }
 
-int16_t UsbDevice::status()
+uint16_t UsbDevice::getStatus()
 {
-    uint16_t *nStatus = new uint16_t();
+    uint16_t *nStatus = new uint16_t(0);
     PointerGuard<uint16_t> guard(nStatus);
-    ssize_t nResult = controlRequest(0x80, 0, 0, 0, 2, reinterpret_cast<uintptr_t>(nStatus));
-    if(nResult < 0)
-        return nResult;
+    controlRequest(RequestDirection::In, Request::GetStatus, 0, 0, 2, reinterpret_cast<uintptr_t>(nStatus));
     return *nStatus;
+}
+
+bool UsbDevice::clearEndpointHalt(Endpoint *pEndpoint)
+{
+    return controlRequest(RequestRecipient::Endpoint, Request::ClearFeature, 0, pEndpoint->nEndpoint);
 }
 
 bool UsbDevice::assignAddress(uint8_t nAddress)
 {
-    if(controlRequest(0, 5, nAddress, 0) < 0)
+    if(!controlRequest(0, Request::SetAddress, nAddress, 0))
         return false;
     m_nAddress = nAddress;
     return true;
@@ -143,14 +142,14 @@ bool UsbDevice::assignAddress(uint8_t nAddress)
 bool UsbDevice::useConfiguration(uint8_t nConfig)
 {
     m_pConfiguration = m_pDescriptor->pConfigurations[nConfig];
-    return controlRequest(0, 9, m_pConfiguration->pDescriptor->nConfig, 0) >= 0;
+    return controlRequest(0, Request::SetConfiguration, m_pConfiguration->pDescriptor->nConfig, 0);
 }
 
 bool UsbDevice::useInterface(uint8_t nInterface)
 {
     m_pInterface = m_pConfiguration->pInterfaces[nInterface];
     return true;
-    //return controlRequest(0, 9, m_pInterface->pDescriptor->nAlternateSetting, 0) >= 0;
+    //return controlRequest(0, Request::SetInterface, m_pInterface->pDescriptor->nAlternateSetting, 0);
 }
 
 void *UsbDevice::getDescriptor(uint8_t nDescriptor, uint8_t nSubDescriptor, uint16_t nBytes, uint8_t requestType)
@@ -162,7 +161,7 @@ void *UsbDevice::getDescriptor(uint8_t nDescriptor, uint8_t nSubDescriptor, uint
     if(nDescriptor == 3)
         nIndex = 0x0409; // English (US)
 
-    if(controlRequest(0x80 | requestType, 6, (nDescriptor << 8) | nSubDescriptor, nIndex, nBytes, reinterpret_cast<uintptr_t>(pBuffer)) < 0)
+    if(!controlRequest(RequestDirection::In | requestType, Request::GetDescriptor, (nDescriptor << 8) | nSubDescriptor, nIndex, nBytes, reinterpret_cast<uintptr_t>(pBuffer)))
     {
         delete [] pBuffer;
         return 0;
@@ -179,7 +178,7 @@ uint8_t UsbDevice::getDescriptorLength(uint8_t nDescriptor, uint8_t nSubDescript
     if(nDescriptor == 3)
         nIndex = 0x0409; // English (US)
 
-    if(controlRequest(0x80 | requestType, 6, (nDescriptor << 8) | nSubDescriptor, nIndex, 1, reinterpret_cast<uintptr_t>(&pLength)) < 0)
+    if(!controlRequest(RequestDirection::In | requestType, Request::GetDescriptor, (nDescriptor << 8) | nSubDescriptor, nIndex, 1, reinterpret_cast<uintptr_t>(&pLength)))
         return 0;
     return pLength;
 }
@@ -188,6 +187,7 @@ char *UsbDevice::getString(uint8_t nString)
 {
     if(!nString)
     {
+        ERROR("USB: UsbDevice::getString called with nString=0, will return \"\"");
         char *pString = new char[1];
         pString[0] = '\0';
         return pString;
@@ -195,17 +195,19 @@ char *UsbDevice::getString(uint8_t nString)
 
     uint8_t descriptorLength = getDescriptorLength(3, nString);
     char *pBuffer = static_cast<char*>(getDescriptor(3, nString, descriptorLength));
-    if(pBuffer)
-    {
-        size_t nStrLength = (descriptorLength - 2) / 2;
-        char *pString = new char[nStrLength+1];
-        for(size_t i=0;i<nStrLength;i++)
-            pString[i] = pBuffer[2+i*2];
-        pString[nStrLength] = 0;
-        delete pBuffer;
-        return pString;
-    }
-    return 0;
+    if(!pBuffer)
+        return 0;
+    // Get the number of characters in the string
+    size_t nStrLength = (descriptorLength - 2) / 2;
+    char *pString = new char[nStrLength + 1];
+    // For each character, get the lower part of the UTF-16 value
+    /// \todo UTF-8 support of some kind
+    for(size_t i = 0;i < nStrLength;i++)
+        pString[i] = pBuffer[2 + i*2];
+    // Set the last byte of the string to 0, delete the old buffer and return the string
+    pString[nStrLength] = 0;
+    delete pBuffer;
+    return pString;
 }
 
 void UsbDevice::populateDescriptors()
