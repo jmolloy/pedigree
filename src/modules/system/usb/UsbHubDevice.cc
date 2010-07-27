@@ -22,7 +22,18 @@
 
 UsbHubDevice::UsbHubDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
 {
-    HubDescriptor *pDescriptor = new HubDescriptor(getDescriptor(0, 0, getDescriptorLength(0, 0, RequestType::Class), RequestType::Class));
+    uint8_t len = getDescriptorLength(0, 0, RequestType::Class);
+    void *pDesc = 0;
+    if(len)
+    {
+        pDesc = getDescriptor(0, 0, len, RequestType::Class);
+        if(!pDesc)
+            return;
+    }
+    else
+        return;
+
+    HubDescriptor *pDescriptor = new HubDescriptor(pDesc);
     DEBUG_LOG("USB: HUB: Found a hub with " << Dec << pDescriptor->nPorts << Hex << " ports and hubCharacteristics = " << pDescriptor->hubCharacteristics);
     m_nPorts = pDescriptor->nPorts;
     for(size_t i = 0; i < m_nPorts; i++)
