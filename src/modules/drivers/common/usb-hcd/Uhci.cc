@@ -172,11 +172,6 @@ void Uhci::doDequeue()
             {
                 size_t nOldTDIndex = nTDIndex;
                 nTDIndex = ((pTD->pNext << 4) & 0xFFF) / sizeof(TD);
-                // Periodic TDs are linked in circle, we don't want to get stuck here
-                if(nOldTDIndex == nTDIndex)
-                {
-                    break;
-                }
             }
 
             memset(pTD, 0, sizeof(TD));
@@ -189,8 +184,8 @@ void Uhci::doDequeue()
         memset(pQH, 0, sizeof(QH));
 
 #ifdef USB_VERBOSE_DEBUG
-#endif
         DEBUG_LOG("Dequeue for QH #" << Dec << i << Hex << ".");
+#endif
 
         // This QH is done
         m_QHBitmap.clear(i);
@@ -287,15 +282,28 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                         }
                         else
                         {
+                            pQH->pMetaData->bIgnore = false;
+                            
                             // Invert data toggle
                             pTD->bDataToggle = !pTD->bDataToggle;
+                            
                             // Clear the total bytes field so it won't grow with each completed transfer
                             pQH->pMetaData->nTotalBytes = 0;
                         }
                     }
+                    
                     // Interrupt TDs need to be always active
                     if(bPeriodic)
+                    {
+                        pQH->pMetaData->bIgnore = false;
                         pTD->nStatus = 0x80;
+                        pTD->nActLen = 0;
+
+                        // Modified by the host controller
+                        pQH->pElem = PHYS_TD(nTDIndex) >> 4;
+                        pQH->bElemInvalid = 0;
+                        pQH->bElemQH = 0;
+                    }
                 }
 
                 size_t oldIndex = nTDIndex;
@@ -307,9 +315,7 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
 
                 if(nTDIndex == oldIndex)
                 {
-                    // It's valid for periodic QHs to have one TD with circular reference
-                    //if(!bPeriodic)
-                        ERROR_NOLOCK("UHCI: QH #" << Dec << i << Hex << "'s TD list is invalid - circular reference!");
+                    ERROR_NOLOCK("UHCI: QH #" << Dec << i << Hex << "'s TD list is invalid - circular reference!");
                     break;
                 }
                 else if(pTD->pNext == 0)
@@ -491,20 +497,26 @@ void Uhci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
 {
     // Create a new transaction
     uintptr_t nTransaction = createTransaction(endpointInfo);
+    
     // Get the QH and set the periodic flag
     QH *pQH = &m_pQHList[nTransaction];
     pQH->pMetaData->bPeriodic = true;
+    
     // Add a single transfer to the transaction
     addTransferToTransaction(nTransaction, false, UsbPidIn, pBuffer, nBytes);
+    
     // Get the TD
     TD *pTD = pQH->pMetaData->pLastTD;
-    // Link the TD with itself
+    
+    // Only one TD for this QH
     pTD->pNext = PHYS_TD(INDEX_FROM_TD(pTD)) >> 4;
-    pTD->bNextInvalid = 0;
+    pTD->bNextInvalid = 1;
     pTD->bNextQH = 0;
     pTD->bNextDepth = 1;
+    
     // Unlimited retries
     pTD->nErr = 0;
+    
     // Let doAsync do the rest
     doAsync(nTransaction, pCallback, pParam);
 }

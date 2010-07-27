@@ -97,7 +97,7 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) :
         HidItem item;
         item.raw = pHidReportDescriptor[i];
         uint8_t size = item.size == 3 ? 4 : item.size;
-        uint32_t value;
+        uint32_t value = 0;
         if(size == 1)
             value = pHidReportDescriptor[i + 1];
         else if(size == 2)
@@ -282,6 +282,8 @@ void UsbHumanInterfaceDevice::inputHandler()
                             //if(pBlock->nUsagePage == 7)
                             //    InputManager::instance().keyPressed(scancodeToCharacter(pBlock->nUsageBase+nValue));
                         }
+                    default:
+                        break;
                 }
             }
         }

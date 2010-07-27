@@ -52,6 +52,9 @@ UsbMassStorageDevice::UsbMassStorageDevice(UsbDevice *dev) : Device(dev), UsbDev
     massStorageReset();
 
     // Get the maximum LUN and find out the number of units
+    /// \todo Some mass storage devices don't support this command, fail to
+    ///       return logical information, or just report incorrect data.
+    ///       All that needs to be handled.
     uint8_t *nMaxLUN = new uint8_t(0);
     if(!controlRequest(RequestDirection::In | MassStorageRequest, MassStorageGetMaxLUN, 0, m_pInterface->pDescriptor->nInterface, 1, reinterpret_cast<uintptr_t>(nMaxLUN)))
     {
