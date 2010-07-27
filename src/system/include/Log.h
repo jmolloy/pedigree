@@ -172,6 +172,10 @@ public:
   {
     public:
       virtual void callback(const char *) = 0;
+
+      virtual ~LogCallback() // Virtual destructor for inheritance
+      {
+      }
   };
 
   /** Severity level of the log entry */
