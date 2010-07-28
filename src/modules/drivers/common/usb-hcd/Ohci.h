@@ -52,12 +52,9 @@ class Ohci : public UsbHub,
             uint32_t pNext : 28;
             uint32_t pBufferEnd;
 
-            uint32_t pCallback;
-            uint32_t pParam;
-            uint32_t pBuffer;
+            // Custom qTD fields
             uint16_t nBufferSize;
-            uint16_t nBufferOffset;
-        } PACKED TD;
+        } PACKED __attribute__((aligned(16))) TD;
 
         typedef struct ED
         {
@@ -77,7 +74,25 @@ class Ohci : public UsbHub,
             uint32_t pHeadTD : 28;
             uint32_t res2 : 4;
             uint32_t pNext : 28;
-        } PACKED ED;
+
+            struct MetaData
+            {
+                void (*pCallback)(uintptr_t, ssize_t);
+                uintptr_t pParam;
+
+                UsbEndpoint &endpointInfo;
+
+                bool bPeriodic;
+                TD *pFirstQTD;
+                TD *pLastQTD;
+                size_t nTotalBytes;
+
+                ED *pPrev;
+                ED *pNext;
+
+                bool bIgnore; /// Ignore this QH when iterating over the list - don't look at any of its qTDs
+            } *pMetaData;
+        } PACKED __attribute__((aligned(16))) ED;
 
         typedef struct Hcca
         {
@@ -91,6 +106,11 @@ class Ohci : public UsbHub,
         {
             str = "OHCI";
         }
+
+        virtual void addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid pid, uintptr_t pBuffer, size_t nBytes);
+        virtual uintptr_t createTransaction(UsbEndpoint endpointInfo);
+        virtual void doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
+        virtual void addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
 
         //virtual void doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
         //virtual void addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
@@ -144,6 +164,8 @@ class Ohci : public UsbHub,
 
         Mutex m_Mutex;
 
+        Spinlock m_QueueListChangeLock;
+
         Hcca *m_pHcca;
         uintptr_t m_pHccaPhys;
 
@@ -153,10 +175,17 @@ class Ohci : public UsbHub,
 
         TD *m_pTDList;
         uintptr_t m_pTDListPhys;
+        ExtensibleBitmap m_TDBitmap;
 
-        uint8_t *m_pTransferPages;
-        uintptr_t m_pTransferPagesPhys;
-        MemoryAllocator m_TransferPagesAllocator;
+        // Pointer to the current queue tail, which allows insertion of new queue
+        // heads to the asynchronous schedule.
+        ED *m_pCurrentBulkQueueTail;
+        ED *m_pCurrentControlQueueTail;
+
+        // Pointer to the current queue head. Used to fill pNext automatically
+        // for new queue heads inserted to the asynchronous schedule.
+        ED *m_pCurrentBulkQueueHead;
+        ED *m_pCurrentControlQueueHead;
 
         MemoryRegion m_OhciMR;
 
