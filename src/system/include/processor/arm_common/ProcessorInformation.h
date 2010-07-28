@@ -100,6 +100,8 @@ class ArmCommonProcessorInformation
 //
 uintptr_t ArmCommonProcessorInformation::getKernelStack() const
 {
+    return 0;
+/*
     uintptr_t ret = 0;
 
     // Switch to IRQ mode
@@ -125,9 +127,11 @@ uintptr_t ArmCommonProcessorInformation::getKernelStack() const
     }
 
     return ret;
+*/
 }
 void ArmCommonProcessorInformation::setKernelStack(uintptr_t stack)
 {
+/*
     // Handle IRQ save location
     stack -= 0x10;
 
@@ -151,6 +155,7 @@ void ArmCommonProcessorInformation::setKernelStack(uintptr_t stack)
     cpsr &= ~0x3F;
     cpsr |= oldMode;
     asm volatile("msr cpsr_c, %0" : : "r" (cpsr));
+*/
 }
 
 #endif

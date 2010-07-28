@@ -114,8 +114,8 @@ default_arm_linkflags = ' -T src/system/kernel/link-arm-[mach].ld '
 default_arm_imgdir = '#/images/arm/'
 
 # arm final variables
-arm_cflags = default_arm_cflags + generic_cflags + warning_flags + warning_flags_c + warning_flags_off
-arm_cxxflags = default_arm_cxxflags + generic_cxxflags + warning_flags + warning_flags_cxx + warning_flags_off
+arm_cflags = default_arm_cflags + generic_cflags.replace('-O3', '-O0') + warning_flags + warning_flags_c + warning_flags_off
+arm_cxxflags = default_arm_cxxflags + generic_cxxflags.replace('-O3', '-O0') + warning_flags + warning_flags_cxx + warning_flags_off
 arm_asflags = default_arm_asflags
 arm_linkflags = generic_linkflags + default_arm_linkflags
 arm_defines = filter(lambda x: not x == "SERIAL_IS_FILE", generic_defines) + general_arm_defines
