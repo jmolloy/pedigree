@@ -104,7 +104,9 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) :
             value = pHidReportDescriptor[i + 1] | (pHidReportDescriptor[i + 2] << 8);
         else if(size == 4)
             value = pHidReportDescriptor[i + 1] | (pHidReportDescriptor[i + 2] << 8) | (pHidReportDescriptor[i + 3] << 16) | (pHidReportDescriptor[i + 4] << 24);
-        NOTICE("Item tag=" << item.tag << " type=" << Dec << item.type << " size=" << size << Hex);
+#ifdef USB_VERBOSE_DEBUG
+        DEBUG_LOG("Item tag=" << item.tag << " type=" << Dec << item.type << " size=" << size << Hex);
+#endif
         switch(item.type)
         {
             case 0:
