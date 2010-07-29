@@ -208,7 +208,7 @@ class StateBlock : public TimerHandler
       {
         Segment* seg = new Segment;
 
-        size_t segmentSize = 0;
+        size_t segmentSize = 1024;
         if((offset + 1024) >= nBytes)
           segmentSize = nBytes - offset;
 
@@ -224,8 +224,8 @@ class StateBlock : public TimerHandler
 
         if(nBytes && payload)
         {
-          uint8_t* newPayload = new uint8_t[nBytes];
-          memcpy(newPayload, reinterpret_cast<void*>(payload), nBytes);
+          uint8_t* newPayload = new uint8_t[segmentSize];
+          memcpy(newPayload, reinterpret_cast<void*>(payload + offset), segmentSize);
 
           seg->payload = reinterpret_cast<uintptr_t>(newPayload);
         }
