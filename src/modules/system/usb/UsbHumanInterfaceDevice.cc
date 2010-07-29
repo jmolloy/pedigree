@@ -73,6 +73,12 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) :
         return;
     }
 
+
+    /// \bug WMware's mouse's second interface is known to cause problems
+    //if(m_pDescriptor->pDescriptor->nVendorId == 0x0e0f && m_pInterface->pDescriptor->nInterface)
+    //    return;
+
+    // Disable BIOS stuff
     //controlRequest(RequestType::Class | RequestRecipient::Interface, Request::SetInterface, 1, m_pInterface->pDescriptor->nInterface);
 
     uint16_t nHidSize = pHidDescriptor->pDescriptor->nDescriptorLength;
@@ -105,7 +111,7 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) :
         else if(size == 4)
             value = pHidReportDescriptor[i + 1] | (pHidReportDescriptor[i + 2] << 8) | (pHidReportDescriptor[i + 3] << 16) | (pHidReportDescriptor[i + 4] << 24);
 #ifdef USB_VERBOSE_DEBUG
-        DEBUG_LOG("Item tag=" << item.tag << " type=" << Dec << item.type << " size=" << size << Hex);
+        DEBUG_LOG("USB: HID: Item tag=" << item.tag << " type=" << Dec << item.type << " size=" << size << Hex);
 #endif
         switch(item.type)
         {
@@ -236,8 +242,8 @@ void UsbHumanInterfaceDevice::inputHandler()
     size_t nCurrentBit = 0;
     uint32_t nValue;
     int32_t nSignedValue;
-    NOTICE("USB: HID: Handling input");
-    for(List<HidReportBlock*>::Iterator it = m_pReport->pBlockList.begin();it != m_pReport->pBlockList.end();it++)
+    NOTICE("USB: HID: Handling input on interface " << Dec << m_pInterface->pDescriptor->nInterface << Hex);
+    for(List<HidReportBlock*>::Iterator it = m_pReport->pBlockList.begin(); it != m_pReport->pBlockList.end(); it++)
     {
         HidReportBlock *pBlock = *it;
         if(pBlock->type != HidReportBlock::Ignore)

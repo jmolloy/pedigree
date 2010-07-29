@@ -99,7 +99,7 @@ bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
         else if(pInterface->pDescriptor->nClass == 3)
         {
             replaceChild(pDevice, new UsbHumanInterfaceDevice(pDevice));
-            /// \bug HID devices with interface number > 0 can cause problems
+            /// \bug WMware's mouse's second interface is known to cause problems
             return true;
         }
         else if(pInterface->pDescriptor->nClass == 8)

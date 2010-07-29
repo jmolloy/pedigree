@@ -95,26 +95,34 @@ Uhci::Uhci(Device* pDev) : Device(pDev), m_pBase(0), m_nPorts(0), m_nFrames(0), 
     for(size_t i = 0;i < 7;i++)
     {
         uint16_t nPortStatus = m_pBase->read16(UHCI_PORTSC + i * 2);
-        // Check if we are out of ports
+
+        // Check if this is a valid port
         if(nPortStatus == 0xffff || !(nPortStatus & 0x80))
             break;
-        DEBUG_LOG("USB: UHCI: Port " << Dec << i << Hex << " got " << m_pBase->read16(UHCI_PORTSC + i * 2));
+
+        // Check for a connected device
         if(nPortStatus & UHCI_PORTSC_CONN)
         {
-            // Set the reset bit, wait 50ms then unset it
+            // Perform a reset of the port
             m_pBase->write16(UHCI_PORTSC_PRES | UHCI_PORTSC_CSCH, UHCI_PORTSC + i * 2);
             delay(50);
             m_pBase->write16(0, UHCI_PORTSC + i * 2);
-            DEBUG_LOG("USB: UHCI: Port " << Dec << i << Hex << " got " << m_pBase->read16(UHCI_PORTSC + i * 2));
-            // Wait another 50ms then enable the port
             delay(50);
-            m_pBase->write16(UHCI_PORTSC_ENABLE/* | UHCI_PORTSC_EDCH*/, UHCI_PORTSC + i * 2);
-            DEBUG_LOG("USB: UHCI: Port " << Dec << i << Hex << " got " << m_pBase->read16(UHCI_PORTSC + i * 2));
-            // We got one connected port, check its speed then report the connect
-            bool bLoSpeed = m_pBase->read16(UHCI_PORTSC + i * 2) & UHCI_PORTSC_LOSPEED;
-            DEBUG_LOG("USB: UHCI: Port " << Dec << i << Hex << " is connected at " << (bLoSpeed ? "Low Speed" : "Full Speed"));
-            if(!deviceConnected(i, bLoSpeed ? LowSpeed : FullSpeed))
-                ERROR("USB: UHCI: Device on port " << Dec << i << Hex << " could not be intialized");
+
+            // Enable the port
+            m_pBase->write16(UHCI_PORTSC_ENABLE, UHCI_PORTSC + i * 2);
+
+            // Determine the speed of the attached device
+            if(m_pBase->read16(UHCI_PORTSC + i * 2) & UHCI_PORTSC_LOSPEED)
+            {
+                DEBUG_LOG("USB: UHCI: Port " << Dec << i << Hex << " has a low-speed device connected to it");
+                deviceConnected(i, LowSpeed);
+            }
+            else
+            {
+                DEBUG_LOG("USB: UHCI: Port " << Dec << i << Hex << " has a full-speed device connected to it");
+                deviceConnected(i, FullSpeed);
+            }
         }
         m_nPorts++;
     }
@@ -229,17 +237,17 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                 if(pTD->nStatus != 0x80)
                 {
                     ssize_t nResult;
-                    if((pTD->nStatus & 0x7c) || (nStatus & UHCI_STS_ERR))
+                    if((pTD->nStatus & 0x7e) || (nStatus & UHCI_STS_ERR))
                     {
 #ifdef USB_VERBOSE_DEBUG
                         ERROR_NOLOCK(((nStatus & UHCI_STS_ERR) ? "USB" : "TD") << " ERROR!");
                         ERROR_NOLOCK("TD Status: " << pTD->nStatus);
 #endif
-                        nResult = -(pTD->nStatus & 0x7c);
+                        nResult = -(pTD->nStatus & 0x7e);
                     }
                     else
                     {
-                        nResult = (pTD->nActLen + 1) > pTD->nBufferSize ? pTD->nBufferSize : (pTD->nActLen + 1);
+                        nResult = pTD->nActLen + 1;
                         pQH->pMetaData->nTotalBytes += nResult;
                     }
 #ifdef USB_VERBOSE_DEBUG
@@ -283,15 +291,15 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                         else
                         {
                             pQH->pMetaData->bIgnore = false;
-                            
+
                             // Invert data toggle
                             pTD->bDataToggle = !pTD->bDataToggle;
-                            
+
                             // Clear the total bytes field so it won't grow with each completed transfer
                             pQH->pMetaData->nTotalBytes = 0;
                         }
                     }
-                    
+
                     // Interrupt TDs need to be always active
                     if(bPeriodic)
                     {
@@ -497,26 +505,18 @@ void Uhci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
 {
     // Create a new transaction
     uintptr_t nTransaction = createTransaction(endpointInfo);
-    
+
     // Get the QH and set the periodic flag
     QH *pQH = &m_pQHList[nTransaction];
     pQH->pMetaData->bPeriodic = true;
-    
+
     // Add a single transfer to the transaction
     addTransferToTransaction(nTransaction, false, UsbPidIn, pBuffer, nBytes);
-    
-    // Get the TD
+
+    // Get the TD and set the error counter to "unlimited retries"
     TD *pTD = pQH->pMetaData->pLastTD;
-    
-    // Only one TD for this QH
-    pTD->pNext = PHYS_TD(INDEX_FROM_TD(pTD)) >> 4;
-    pTD->bNextInvalid = 1;
-    pTD->bNextQH = 0;
-    pTD->bNextDepth = 1;
-    
-    // Unlimited retries
     pTD->nErr = 0;
-    
+
     // Let doAsync do the rest
     doAsync(nTransaction, pCallback, pParam);
 }

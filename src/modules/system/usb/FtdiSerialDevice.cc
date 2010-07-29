@@ -15,6 +15,8 @@
  */
 
 #include <usb/UsbDevice.h>
+#include <usb/UsbHub.h>
+#include <usb/Usb.h>
 #include <usb/FtdiSerialDevice.h>
 #include <utilities/PointerGuard.h>
 
@@ -57,6 +59,21 @@ FtdiSerialDevice::FtdiSerialDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
         ERROR("USB: FTDI: No OUT endpoint");
         return;
     }
+
+    // Multiple transfer at the same time test case
+#if 0
+    UsbHub *pParentHub = dynamic_cast<UsbHub*>(m_pParent);
+    UsbEndpoint endpointInfo(m_nAddress, m_nPort, m_pOutEndpoint->nEndpoint, m_Speed, m_pOutEndpoint->nMaxPacketSize);
+    for(char i = 'A'; i <= 'Z'; i++)
+    {
+        char *pChar = new char(i);
+
+        uintptr_t nTransaction = pParentHub->createTransaction(endpointInfo);
+        pParentHub->addTransferToTransaction(nTransaction, m_pOutEndpoint->bDataToggle, UsbPidOut, reinterpret_cast<uintptr_t>(pChar), 1);
+        pParentHub->doAsync(nTransaction);
+        m_pOutEndpoint->bDataToggle = !m_pOutEndpoint->bDataToggle;
+    }
+#endif
 }
 
 FtdiSerialDevice::~FtdiSerialDevice()

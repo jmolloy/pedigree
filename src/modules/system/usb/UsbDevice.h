@@ -251,7 +251,7 @@ class UsbDevice : public virtual Device
         inline UsbDevice() : m_nAddress(0), m_nPort(0) {}
 
         inline UsbDevice(UsbDevice *pDev) : m_nAddress(pDev->m_nAddress), m_nPort(pDev->m_nPort), m_Speed(pDev->m_Speed),
-            m_pInterface(pDev->m_pInterface), m_pDescriptor(pDev->m_pDescriptor), m_pConfiguration(pDev->m_pConfiguration) {}
+            m_pDescriptor(pDev->m_pDescriptor), m_pInterface(pDev->m_pInterface), m_pConfiguration(pDev->m_pConfiguration) {}
 
         virtual inline ~UsbDevice() {};
 
@@ -329,11 +329,12 @@ class UsbDevice : public virtual Device
         uint8_t m_nAddress;
         uint8_t m_nPort;
         UsbSpeed m_Speed;
+
+        DeviceDescriptor *m_pDescriptor;
         Interface *m_pInterface;
 
     private:
 
-        DeviceDescriptor *m_pDescriptor;
         ConfigDescriptor *m_pConfiguration;
 
         UsbDevice(const UsbDevice &d);

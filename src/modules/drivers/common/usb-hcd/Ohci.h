@@ -28,10 +28,11 @@
 /** Device driver for the Ohci class */
 class Ohci : public UsbHub,
 #ifdef X86_COMMON
-    public IrqHandler
+    public IrqHandler,
 #else
-    public InterruptHandler
+    public InterruptHandler,
 #endif
+    public RequestQueue
 {
     public:
         Ohci(Device* pDev);
@@ -52,9 +53,11 @@ class Ohci : public UsbHub,
             uint32_t pNext : 28;
             uint32_t pBufferEnd;
 
-            // Custom qTD fields
+            // Custom TD fields
             uint16_t nBufferSize;
-        } PACKED __attribute__((aligned(16))) TD;
+            uint16_t nNextTDIndex;
+            bool bLast;
+        } PACKED ALIGN(16) TD;
 
         typedef struct ED
         {
@@ -83,16 +86,16 @@ class Ohci : public UsbHub,
                 UsbEndpoint &endpointInfo;
 
                 bool bPeriodic;
-                TD *pFirstQTD;
-                TD *pLastQTD;
+                TD *pFirstTD;
+                TD *pLastTD;
                 size_t nTotalBytes;
 
                 ED *pPrev;
                 ED *pNext;
 
-                bool bIgnore; /// Ignore this QH when iterating over the list - don't look at any of its qTDs
+                bool bLinked;
             } *pMetaData;
-        } PACKED __attribute__((aligned(16))) ED;
+        } PACKED ALIGN(16) ED;
 
         typedef struct Hcca
         {
@@ -109,11 +112,9 @@ class Ohci : public UsbHub,
 
         virtual void addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid pid, uintptr_t pBuffer, size_t nBytes);
         virtual uintptr_t createTransaction(UsbEndpoint endpointInfo);
+
         virtual void doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
         virtual void addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
-
-        //virtual void doAsync(UsbEndpoint endpointInfo, uint8_t nPid, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
-        //virtual void addInterruptInHandler(uint8_t nAddress, uint8_t nEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
 
         // IRQ handler callback.
 #ifdef X86_COMMON
@@ -121,6 +122,13 @@ class Ohci : public UsbHub,
 #else
         virtual void interrupt(size_t number, InterruptState &state);
 #endif
+
+        void doDequeue();
+
+    protected:
+
+        virtual uint64_t executeRequest(uint64_t p1 = 0, uint64_t p2 = 0, uint64_t p3 = 0, uint64_t p4 = 0, uint64_t p5 = 0,
+                                        uint64_t p6 = 0, uint64_t p7 = 0, uint64_t p8 = 0);
 
     private:
 
@@ -132,15 +140,14 @@ class Ohci : public UsbHub,
             OhciInterruptDisable = 0x14,    // HcIntrerruptDisable register
             OhciHcca = 0x18,                // HcHCCA register
             OhciControlHeadED = 0x20,       // HcControlHeadED register
+            OhciControlCurrentED = 0x24,    // HcControlCurrentED register
             OhciBulkHeadED = 0x28,          // HcBulkHeadED register
-            //OHCI_INTR = 0x04,             // Intrerrupt Enable register
-            //OHCI_FRMN = 0x06,             // Frame Number register
-            //OHCI_FRLP = 0x08,             // Frame List Pointer register
+            OhciBulkCurrentED = 0x2c,       // HcBulkCurrentED register
             OhciRhDescriptorA = 0x48,       // HcRhDescriptorA register
             OhciRhPortStatus = 0x54,        // HcRhPortStatus registers
 
             OhciControlStateRunning = 0x80, // HostControllerFunctionalState bits for USBOPERATIONAL
-            OhciControlListsEnable = 0x30,  // ControlListEnable and BulkListEnable bits
+            OhciControlListsEnable = 0x34,  // PeriodicListEnable, ControlListEnable and BulkListEnable bits
 
             OhciCommandBlkListFilled = 0x04,// BulkListFilled bit
             OhciCommandCtlListFilled = 0x02,// ControlListFilled bit
@@ -151,10 +158,11 @@ class Ohci : public UsbHub,
             OhciInterruptWbDoneHead = 0x02, // WritebackDoneHead bit
 
             OhciRhPortStsResCh = 0x100000,  // PortResetStatusChange bit
+            OhciRhPortStsConnStsCh = 0x1000,// ConnectStatusChange bit
+            OhciRhPortStsLoSpeed = 0x200,   // LowSpeedDeviceAttached bit
+            OhciRhPortStsPower = 0x100,     // PortPowerStatus / SetPortPower bit
             OhciRhPortStsReset = 0x10,      // SetPortReset bit
-            //OHCI_PORTSC_EDCH = 0x08,      // Port Enable/Disable Change bit
             OhciRhPortStsEnable = 0x02,     // SetPortEnable bit
-            //OHCI_PORTSC_CSCH = 0x02,      // Port Connect Status Change bit
             OhciRhPortStsConnected = 0x01,  // CurrentConnectStatus bit
         };
 
@@ -177,15 +185,12 @@ class Ohci : public UsbHub,
         uintptr_t m_pTDListPhys;
         ExtensibleBitmap m_TDBitmap;
 
-        // Pointer to the current queue tail, which allows insertion of new queue
-        // heads to the asynchronous schedule.
-        ED *m_pCurrentBulkQueueTail;
-        ED *m_pCurrentControlQueueTail;
-
-        // Pointer to the current queue head. Used to fill pNext automatically
-        // for new queue heads inserted to the asynchronous schedule.
+        // Pointer to the current bulk and control queue heads (can be null)
         ED *m_pCurrentBulkQueueHead;
         ED *m_pCurrentControlQueueHead;
+
+        // Pointer to the current periodic queue tail
+        ED *m_pCurrentPeriodicQueueTail;
 
         MemoryRegion m_OhciMR;
 

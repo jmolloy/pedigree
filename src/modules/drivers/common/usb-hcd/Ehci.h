@@ -110,8 +110,6 @@ class Ehci : public UsbHub,
                 qTD *pLastQTD;
                 size_t nTotalBytes;
 
-                size_t qTDCount; /// Number of qTDs related to this queue head, for semaphore wakeup
-
                 QH *pPrev;
                 QH *pNext;
 
@@ -126,10 +124,11 @@ class Ehci : public UsbHub,
 
         virtual void addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid pid, uintptr_t pBuffer, size_t nBytes);
         virtual uintptr_t createTransaction(UsbEndpoint endpointInfo);
+
         virtual void doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
         virtual void addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
 
-        virtual UsbSpeed getSpeed()
+        virtual UsbSpeed getHubSpeed()
         {
             return HighSpeed;
         }
@@ -144,6 +143,7 @@ class Ehci : public UsbHub,
         void doDequeue();
 
     protected:
+
         virtual uint64_t executeRequest(uint64_t p1 = 0, uint64_t p2 = 0, uint64_t p3 = 0, uint64_t p4 = 0, uint64_t p5 = 0,
                                         uint64_t p6 = 0, uint64_t p7 = 0, uint64_t p8 = 0);
 
@@ -170,10 +170,10 @@ class Ehci : public UsbHub,
             EHCI_CMD_RUN = 0x01,        // Run bit
 
             EHCI_STS_HALTED = 0x1000,   // Host Controller Halted bit
-            EHCI_STS_PORTCH = 0x4,      // Port Change Detect bit
-            EHCI_STS_INT = 0x1,         // On Completition Interrupt bit
-            EHCI_STS_ERR = 0x2,         // Error bit
             EHCI_STS_ASYNCADVANCE = 0x20, // Async Advance
+            EHCI_STS_PORTCH = 0x4,      // Port Change Detect bit
+            EHCI_STS_ERR = 0x2,         // Error bit
+            EHCI_STS_INT = 0x1,         // On Completition Interrupt bit
 
             EHCI_PORTSC_PPOW = 0x1000,  // Port Power bit
             EHCI_PORTSC_PRES = 0x100,   // Port Reset bit
@@ -182,9 +182,6 @@ class Ehci : public UsbHub,
             EHCI_PORTSC_CSCH = 0x2,     // Port Connect Status Change bit
             EHCI_PORTSC_CONN = 0x1,     // Port Connected bit
         };
-
-        void pause();
-        void resume();
 
         IoBase *m_pBase;
 
@@ -201,6 +198,7 @@ class Ehci : public UsbHub,
 
         uint32_t *m_pFrameList;
         uintptr_t m_pFrameListPhys;
+        ExtensibleBitmap m_FrameBitmap;
 
         qTD *m_pqTDList;
         uintptr_t m_pqTDListPhys;

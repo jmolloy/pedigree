@@ -125,7 +125,7 @@ class Uhci : public UsbHub, public IrqHandler
 
             UHCI_PORTSC_PRES = 0x200,   // Port Reset bit
             UHCI_PORTSC_LOSPEED = 0x100,// Port has Low Speed Device attached bit
-            //UHCI_PORTSC_EDCH = 0x8,     // Port Enable/Disable Change bit
+            UHCI_PORTSC_EDCH = 0x8,     // Port Enable/Disable Change bit
             UHCI_PORTSC_ENABLE = 0x4,   // Port Enable bit
             UHCI_PORTSC_CSCH = 0x2,     // Port Connect Status Change bit
             UHCI_PORTSC_CONN = 0x1,     // Port Connected bit
