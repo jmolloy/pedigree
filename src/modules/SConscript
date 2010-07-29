@@ -90,7 +90,8 @@ module_subdirs = [
     'lodisk',
     'usb',
     'splash',
-    'config'
+    'config',
+    'status_server'
 ]
 
 if env['installer']:
