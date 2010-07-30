@@ -65,8 +65,10 @@ int xClose(sqlite3_file *file)
 int xRead(sqlite3_file *file, void *ptr, int iAmt, sqlite3_int64 iOfst)
 {
     int ret = 0;
-    if (iOfst+static_cast<unsigned int>(iAmt) >= g_FileSz)
+    if ((iOfst + static_cast<unsigned int>(iAmt)) >= g_FileSz)
     {
+        if(static_cast<unsigned int>(iAmt) > g_FileSz)
+            iAmt = g_FileSz;
         memset(ptr, 0, iAmt);
         iAmt = g_FileSz - iOfst;
         ret = SQLITE_IOERR_SHORT_READ;
@@ -91,13 +93,13 @@ int xWrite(sqlite3_file *file, const void *ptr, int iAmt, sqlite3_int64 iOfst)
 
         // Allocate it, zero, and copy
         uint8_t *tmp = new uint8_t[nNewSize];
-        memset(tmp, 0, nNewSize);
+        memset(tmp, 0, nNewSize - 1);
         memcpy(tmp, g_pFile, g_FileSz);
         
         delete [] g_pFile;
         
         g_pFile = tmp;
-        g_FileSz = nNewSize;
+        g_FileSz = nNewSize - 1;
     }
 
     memcpy(&g_pFile[iOfst], ptr, iAmt);
