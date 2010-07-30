@@ -27,6 +27,9 @@
 
 #include "Filter.h"
 
+#include "Arp.h"
+#include "IpCommon.h"
+
 Udp Udp::udpInstance;
 
 Udp::Udp()
@@ -68,15 +71,21 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
   // Grab the NIC to send on, if we don't already have one.
   /// \note The NIC is grabbed here *as well as* IP because we need to use the
   ///       NIC IP address for the checksum.
+  IpAddress tmp = dest;
   if(!pCard)
   {
+      if(broadcast)
+      {
+          WARNING("UDP: No NIC given to send(), and attempting to send a broadcast packet!");
+          return false;
+      }
+      
       if(!RoutingTable::instance().hasRoutes())
       {
           WARNING("UDP: No NIC given to send(), and no routes available in the routing table");
           return false;
       }
 
-      IpAddress tmp = dest;
       pCard = RoutingTable::instance().DetermineRoute(&tmp);
       if(!pCard)
       {
@@ -84,39 +93,71 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
           return false;
       }
   }
+  
+  // Grab information about ourselves
+  StationInfo me = pCard->getStationInfo();
+  if(broadcast) /// \note pCard MUST be set for broadcast packets!
+    dest = me.broadcast;
 
-  size_t newSize = nBytes + sizeof(udpHeader);
-  uint8_t* newPacket = new uint8_t[newSize];
-  memset(newPacket, 0, newSize);
+  // Lookup the MAC address of our target
+  MacAddress destMac;
+  bool macValid = true;
+  if(dest == me.broadcast)
+    destMac.setMac(0xff);
+  else
+    macValid = Arp::instance().getFromCache(tmp, true, &destMac, pCard);
 
-  uintptr_t packAddr = reinterpret_cast<uintptr_t>(newPacket);
+  if(!macValid)
+    return false;
+  
+  // Allocate a packet to send
+  uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
 
-  udpHeader* header = reinterpret_cast<udpHeader*>(packAddr);
+  // Grab the ethernet header
+  size_t ethSize = Ethernet::instance().injectHeader(packet, destMac, me.mac, ETH_IPV4);
+  if(!ethSize)
+  {
+    NetworkStack::instance().getMemPool().free(packet);
+    return false;
+  }
+
+  // Grab the IPv4 header
+  size_t ipSize = Ipv4::instance().injectHeader(packet + ethSize, dest, me.ipv4, IP_TCP);
+  if(!ipSize)
+  {
+    NetworkStack::instance().getMemPool().free(packet);
+    return false;
+  }
+
+  // Set up the UDP object
+  udpHeader* header = reinterpret_cast<udpHeader*>(packet + ethSize + ipSize);
+  memset(header, 0, sizeof(udpHeader));
+
+  // Configure ports
   header->src_port = HOST_TO_BIG16(srcPort);
   header->dest_port = HOST_TO_BIG16(destPort);
+
+  // Set the length of this packet
   header->checksum = 0;
   header->len = HOST_TO_BIG16(sizeof(udpHeader) + nBytes);
 
+  // Copy in the payload
   if(nBytes)
-    memcpy(reinterpret_cast<void*>(packAddr + sizeof(udpHeader)), reinterpret_cast<void*>(payload), nBytes);
+    memcpy(reinterpret_cast<void*>(packet + ethSize + ipSize + sizeof(udpHeader)), reinterpret_cast<void*>(payload), nBytes);
 
-  StationInfo me = pCard->getStationInfo();
-
-  IpAddress src = me.ipv4;
-  /// \todo IPv4ism, incorrect for IPv6
-  if(broadcast || !RoutingTable::instance().hasRoutes())
-    dest = me.broadcast;
-
-  header->checksum = 0;
+  // Calculate the checksum
   header->checksum = Udp::instance().udpChecksum(me.ipv4.getIp(), dest.getIp(), header);
 
-  bool success;
-  if(broadcast || !RoutingTable::instance().hasRoutes())
-    success = Ipv4::send(dest, src, IP_UDP, newSize, packAddr, pCard);
-  else
-    success = Ipv4::send(dest, src, IP_UDP, newSize, packAddr);
+  // Perfom an IPv4 checksum over the packet
+  Ipv4::instance().injectChecksumAndDataFields(packet + ethSize, nBytes + sizeof(udpHeader));
 
-  delete [] newPacket;
+  // Transmit
+  bool success = pCard->send(nBytes + sizeof(udpHeader) + ipSize + ethSize, packet);
+
+  // Free the created packet
+  NetworkStack::instance().getMemPool().free(packet);
+
+  // All done.
   return success;
 }
 

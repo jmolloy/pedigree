@@ -28,7 +28,6 @@
 #include "Filter.h"
 
 #include "Arp.h"
-#include "Ethernet.h"
 #include "IpCommon.h"
 
 Tcp Tcp::tcpInstance;
