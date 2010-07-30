@@ -176,9 +176,8 @@ void Process::kill()
       FATAL("Process: should never get here");
   }
 
-  // We have a parent process, so we schedule this process' thread into the
-  // Zombie state and queue the process for removal.
-  ZombieQueue::instance().addObject(new ZombieProcess(this));
+  // We'll get reaped elsewhere
+  NOTICE("Not adding process to zombie queue for cleanup");
   Processor::information().getScheduler().schedule(Thread::Zombie);
 
   FATAL("Should never get here");
