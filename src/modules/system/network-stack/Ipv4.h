@@ -66,14 +66,9 @@ public:
 
   /** Injects an IPv4 header into a given buffer and returns the size
     * of the header. */
-  size_t injectHeader(uintptr_t packet, IpAddress dest, IpAddress from, uint8_t type)
-  {
-    return 0;
-  }
+  size_t injectHeader(uintptr_t packet, IpAddress dest, IpAddress from, uint8_t type);
 
-  void injectChecksumAndDataFields(uintptr_t ipv4HeaderStart, size_t payloadSize)
-  {
-  }
+  void injectChecksumAndDataFields(uintptr_t ipv4HeaderStart, size_t payloadSize);
 
   struct ipHeader
   {

@@ -46,6 +46,53 @@ Ipv4::~Ipv4()
 {
 }
 
+size_t Ipv4::injectHeader(uintptr_t packet, IpAddress dest, IpAddress from, uint8_t type)
+{
+    // Basic validation
+    if(!packet)
+        return 0;
+
+    // Set up the IPv4 header
+    ipHeader *pHeader = reinterpret_cast<ipHeader*>(packet);
+    memset(pHeader, 0, sizeof(ipHeader));
+
+    // Configure destination and source addresses
+    pHeader->ipDest = dest.getIp();
+    pHeader->ipSrc = from.getIp();
+
+    // Configure the IPv4 ID for this packet
+    /// \todo Use a RNG for this
+    pHeader->id = getNextId();
+
+    // Setup the Time To Live, IP version, and IP type fields
+    pHeader->ttl = 128; /// \todo Make configurable
+    pHeader->ipver = 4;
+    pHeader->type = type;
+
+    // We don't use IPv4 options at all yet
+    pHeader->header_len = 5;
+
+    // We've configured what we can for now, return.
+    return pHeader->header_len * 4;
+}
+
+void Ipv4::injectChecksumAndDataFields(uintptr_t ipv4HeaderStart, size_t payloadSize)
+{
+    // Basic validation
+    if(!ipv4HeaderStart || !payloadSize)
+        return;
+
+    // Grab the IPv4 header
+    ipHeader *pHeader = reinterpret_cast<ipHeader*>(ipv4HeaderStart);
+
+    // Set the payload size
+    pHeader->len = HOST_TO_BIG16(payloadSize + (pHeader->header_len * 4));
+
+    // Setup the checksum
+    pHeader->checksum = 0;
+    pHeader->checksum = Network::calculateChecksum(ipv4HeaderStart, pHeader->header_len * 4);
+}
+
 bool Ipv4::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard)
 {
   IpAddress realDest = dest;
