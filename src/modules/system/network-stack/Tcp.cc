@@ -27,6 +27,10 @@
 
 #include "Filter.h"
 
+#include "Arp.h"
+#include "Ethernet.h"
+#include "IpCommon.h"
+
 Tcp Tcp::tcpInstance;
 
 Tcp::Tcp()
@@ -76,13 +80,42 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
       return false;
   }
 
-  size_t newSize = nBytes + sizeof(tcpHeader);
-  uint8_t* newPacket = new uint8_t[newSize];
-  if(!newPacket)
-    return false;
-  uintptr_t packAddr = reinterpret_cast<uintptr_t>(newPacket);
+  // Grab information about ourselves
+  StationInfo me = pCard->getStationInfo();
 
-  tcpHeader* header = reinterpret_cast<tcpHeader*>(packAddr);
+  // Lookup the MAC address of our target
+  MacAddress destMac;
+  bool macValid = true;
+  if(dest == me.broadcast)
+    destMac.setMac(0xff);
+  else
+    macValid = Arp::instance().getFromCache(tmp, true, &destMac, pCard);
+
+  if(!macValid)
+    return false;
+  
+  // Allocate a packet to send
+  uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
+
+  // Grab the ethernet header
+  size_t ethSize = Ethernet::instance().injectHeader(packet, destMac, ETH_IPV4);
+  if(!ethSize)
+  {
+    NetworkStack::instance().getMemPool().free(packet);
+    return false;
+  }
+
+  // Grab the IPv4 header
+  size_t ipSize = Ipv4::instance().injectHeader(packet + ethSize, dest, me.ipv4, IP_TCP);
+  if(!ipSize)
+  {
+    NetworkStack::instance().getMemPool().free(packet);
+    return false;
+  }
+
+  // Got everything we need - create TCP header
+  uintptr_t tcpPacket = packet + ethSize + ipSize;
+  tcpHeader* header = reinterpret_cast<tcpHeader*>(tcpPacket);
   header->src_port = HOST_TO_BIG16(srcPort);
   header->dest_port = HOST_TO_BIG16(destPort);
   header->seqnum = HOST_TO_BIG32(seqNumber);
@@ -95,16 +128,21 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   header->urgptr = 0;
 
   if(payload && nBytes)
-    memcpy(reinterpret_cast<void*>(packAddr + sizeof(tcpHeader)), reinterpret_cast<void*>(payload), nBytes);
-
-  StationInfo me = pCard->getStationInfo();
+    memcpy(reinterpret_cast<void*>(tcpPacket + sizeof(tcpHeader)), reinterpret_cast<void*>(payload), nBytes);
 
   header->checksum = 0;
   header->checksum = Tcp::instance().tcpChecksum(me.ipv4.getIp(), dest.getIp(), header, nBytes + sizeof(tcpHeader));
 
-  bool success = Ipv4::send(dest, Network::convertToIpv4(0, 0, 0, 0), IP_TCP, newSize, packAddr);
+  // Perfom an IPv4 checksum over the packet
+  Ipv4::instance().injectChecksumAndDataFields(packet + ethSize, nBytes + sizeof(tcpHeader));
 
-  delete [] newPacket;
+  // Transmit
+  bool success = pCard->send(nBytes + sizeof(tcpHeader) + ipSize + ethSize, packet);
+
+  // Free the created packet
+  NetworkStack::instance().getMemPool().free(packet);
+
+  // All done.
   return success;
 }
 

@@ -48,6 +48,13 @@ public:
   /** Sends an ethernet packet */
   static void send(size_t nBytes, uintptr_t packet, Network* pCard, MacAddress dest, uint16_t type);
 
+  /** Injects an Ethernet header into a given buffer and returns the size
+    * of the header. */ 
+  size_t injectHeader(uintptr_t packet, MacAddress destMac, uint16_t type)
+  {
+    return 0;
+  }
+
   inline size_t ethHeaderSize()
   {
     return sizeof(ethernetHeader);

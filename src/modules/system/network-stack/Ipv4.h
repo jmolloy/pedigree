@@ -64,6 +64,17 @@ public:
   /** Sends an IP packet */
   static bool send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard = 0);
 
+  /** Injects an IPv4 header into a given buffer and returns the size
+    * of the header. */
+  size_t injectHeader(uintptr_t packet, IpAddress dest, IpAddress from, uint8_t type)
+  {
+    return 0;
+  }
+
+  void injectChecksumAndDataFields(uintptr_t ipv4HeaderStart, size_t payloadSize)
+  {
+  }
+
   struct ipHeader
   {
 #ifdef LITTLE_ENDIAN
