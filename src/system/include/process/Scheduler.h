@@ -53,6 +53,9 @@ public:
     void addThread(Thread *pThread, PerProcessorScheduler &PPSched);
     /** Removes a thread from being load-balanced and accounted. */
     void removeThread(Thread *pThread);
+
+    /** Whether a thread is entered into the scheduler at all. */
+    bool threadInSchedule(Thread *pThread);
   
     /** Adds a process.
      *  \note This is purely for enumeration purposes.

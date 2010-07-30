@@ -62,6 +62,12 @@ void Scheduler::removeThread(Thread *pThread)
     }
 }
 
+bool Scheduler::threadInSchedule(Thread *pThread)
+{
+    PerProcessorScheduler *pPpSched = m_TPMap.lookup(pThread);
+    return pPpSched != 0;
+}
+
 size_t Scheduler::addProcess(Process *pProcess)
 {
   m_Processes.pushBack(pProcess);

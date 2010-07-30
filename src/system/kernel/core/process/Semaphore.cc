@@ -146,8 +146,22 @@ void Semaphore::release(size_t n)
 
   while(m_Queue.count() != 0)
   {
-    // TODO: Check for dead thread.
     Thread *pThread = m_Queue.popFront();
+    if(!pThread)
+    {
+        WARNING("Null thread in a Semaphore thread queue");
+        continue;
+    }
+    else if(!Scheduler::instance().threadInSchedule(pThread))
+    {
+        WARNING("A thread that was to be woken by a Semaphore is no longer in the scheduler");
+        continue;
+    }
+    else if(pThread->getStatus() != Thread::Sleeping)
+    {
+        WARNING("Semaphore has an awake or zombie thread in its thread queue");
+        continue;
+    }
 
     pThread->getLock().acquire();
     pThread->setStatus(Thread::Ready);
