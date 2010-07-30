@@ -24,6 +24,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
     return;
 
   // find the state block if possible, if none exists create one
+  bool bDidAllocateStateBlock = false;
   StateBlockHandle handle;
   handle.localPort = destPort;
   handle.remotePort = sourcePort;
@@ -42,6 +43,8 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
         return;
 
       NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " has no destination.");
+
+      bDidAllocateStateBlock = true;
 
       stateBlock->currentState = Tcp::CLOSED;
     }
@@ -107,7 +110,8 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           WARNING("TCP: Sending RST due to incoming segment while in CLOSED state failed.");
       }
 
-      delete stateBlock;
+      if(bDidAllocateStateBlock)
+          delete stateBlock;
 
       return;
 
