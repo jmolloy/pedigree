@@ -60,10 +60,14 @@ class MemoryPool
         void free(uintptr_t buffer);
 
     private:
+#ifdef THREADS
         /// This Semaphore tracks the number of buffers allocated, and allows
         /// blocking when the buffers run out.
-#ifdef THREADS
         Semaphore m_BlockSemaphore;
+
+        /// This Spinlock turns bitmap operations into an atomic operation to
+        /// avoid race conditions where the same buffer is allocated twice.
+        Spinlock m_BitmapLock;
 #endif
 
         /// Size of each buffer in this pool

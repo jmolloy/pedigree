@@ -16,11 +16,12 @@
 #include <processor/Processor.h>
 #include <utilities/MemoryPool.h>
 #include <processor/VirtualAddressSpace.h>
+#include <LockGuard.h>
 #include <Log.h>
 
 MemoryPool::MemoryPool() :
 #ifdef THREADS
-    m_BlockSemaphore(0),
+    m_BlockSemaphore(0), m_BitmapLock(),
 #endif
     m_BufferSize(1024), m_Pool("memory-pool"), m_bInitialised(false),
     m_AllocBitmap()
@@ -118,17 +119,25 @@ uintptr_t MemoryPool::allocateDoer()
     size_t poolSize = m_Pool.size();
     size_t nBuffers = poolSize / m_BufferSize;
     uintptr_t poolBase = reinterpret_cast<uintptr_t>(m_Pool.virtualAddress());
-    for(size_t n = 0; n < nBuffers; n++)
+
+    bool bInvalid = false;
+    size_t n = 0;
     {
-        if(!m_AllocBitmap.test(n))
-        {
+        LockGuard<Spinlock> guard(m_BitmapLock);
+        n = m_AllocBitmap.getFirstClear();
+        if(n >= nBuffers)
+            bInvalid = true;
+        else
             m_AllocBitmap.set(n);
-            return poolBase + (n * 0x1000);
-        }
     }
 
-    FATAL("allocateDoer failed - known race condition");
-    return 0;
+    if(bInvalid)
+    {
+        FATAL("MemoryPool::allocateDoer - no buffers available, shouldn't have been called.");
+        return 0;
+    }
+    
+    return poolBase + (n * 0x1000);
 }
 
 void MemoryPool::free(uintptr_t buffer)
@@ -136,8 +145,11 @@ void MemoryPool::free(uintptr_t buffer)
     if(!m_bInitialised)
         return;
 
-    size_t n = (buffer - reinterpret_cast<uintptr_t>(m_Pool.virtualAddress())) / m_BufferSize;
-    m_AllocBitmap.clear(n);
+    {
+        LockGuard<Spinlock> guard(m_BitmapLock);
+        size_t n = (buffer - reinterpret_cast<uintptr_t>(m_Pool.virtualAddress())) / m_BufferSize;
+        m_AllocBitmap.clear(n);
+    }
 
 #ifdef THREADS
     m_BlockSemaphore.release();
