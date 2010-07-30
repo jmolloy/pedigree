@@ -112,6 +112,7 @@ int clientThread(void *p)
     // Build the response
     String response;
     response = statusLine;
+    response += "\r\nContent-type: text/html";
     response += "\r\n\r\n";
 
     // Do we need data there?
