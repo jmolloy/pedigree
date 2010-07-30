@@ -98,7 +98,7 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
 
   // Grab the ethernet header
-  size_t ethSize = Ethernet::instance().injectHeader(packet, destMac, ETH_IPV4);
+  size_t ethSize = Ethernet::instance().injectHeader(packet, destMac, me.mac, ETH_IPV4);
   if(!ethSize)
   {
     NetworkStack::instance().getMemPool().free(packet);

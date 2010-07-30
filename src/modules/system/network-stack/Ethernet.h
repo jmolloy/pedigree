@@ -50,10 +50,7 @@ public:
 
   /** Injects an Ethernet header into a given buffer and returns the size
     * of the header. */ 
-  size_t injectHeader(uintptr_t packet, MacAddress destMac, uint16_t type)
-  {
-    return 0;
-  }
+  size_t injectHeader(uintptr_t packet, MacAddress destMac, MacAddress sourceMac, uint16_t type);
 
   inline size_t ethHeaderSize()
   {

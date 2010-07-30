@@ -82,6 +82,26 @@ void Ethernet::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t
   }
 }
 
+size_t Ethernet::injectHeader(uintptr_t packet, MacAddress destMac, MacAddress sourceMac, uint16_t type)
+{
+    // Basic checks for valid input
+    if(!packet || !type)
+        return 0;
+
+    // Set up an Ethernet header
+    ethernetHeader *pHeader = reinterpret_cast<ethernetHeader*>(packet);
+
+    // Copy in the two MAC addresses
+    memcpy(pHeader->destMac, destMac.getMac(), 6);
+    memcpy(pHeader->sourceMac, sourceMac.getMac(), 6);
+
+    // Set the packet type
+    pHeader->type = HOST_TO_BIG16(type);
+
+    // All done.
+    return sizeof(ethernetHeader);
+}
+
 void Ethernet::send(size_t nBytes, uintptr_t packet, Network* pCard, MacAddress dest, uint16_t type)
 {
   if(!pCard || !pCard->isConnected())
