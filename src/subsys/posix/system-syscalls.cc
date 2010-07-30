@@ -520,7 +520,6 @@ int posix_waitpid(int pid, int *status, int options)
 
                 // Delete the process; it's been reaped good and proper.
                 NOTICE("Pid " << pid << " reaped");
-                delete pProcess;
                 return pid;
             }
         }
