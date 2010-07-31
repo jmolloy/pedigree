@@ -23,6 +23,10 @@
 #include <processor/VirtualAddressSpace.h>
 #include <Log.h>
 
+#include <utilities/Tree.h>
+
+Tree<void*, void*> g_FreedPointers;
+
 #include "SlamAllocator.h"
 
 /// If the debug allocator is enabled, this switches it into underflow detection
@@ -275,7 +279,8 @@ void operator delete (void * p)
 
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON)
     if (p == 0) return;
-    SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
+    if(SlamAllocator::instance().isPointerValid(reinterpret_cast<uintptr_t>(p)))
+        SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
 #endif
 }
 void operator delete[] (void * p)
@@ -294,7 +299,8 @@ void operator delete[] (void * p)
 
 #if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON)
     if (p == 0) return;
-    SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
+    if(SlamAllocator::instance().isPointerValid(reinterpret_cast<uintptr_t>(p)))
+        SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
 #endif
 }
 void operator delete (void *p, void *q)

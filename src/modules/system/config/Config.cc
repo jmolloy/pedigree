@@ -143,3 +143,4 @@ Config::Result *Config::query(const char *sql)
     int ret = sqlite3_get_table(g_pSqlite, sql, &result, &rows, &cols, &error);
     return new Result(result, static_cast<size_t>(rows), static_cast<size_t>(cols), error, ret);
 }
+
