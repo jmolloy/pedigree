@@ -46,6 +46,11 @@ class IrqManager
 
     virtual void enable(uint8_t irq, bool enable) = 0;
 
+    /** Called every millisecond, typically handles IRQ mitigation. */
+    virtual void tick()
+    {
+    }
+
   protected:
     /** The default constructor */
     inline IrqManager(){}
