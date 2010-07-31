@@ -145,6 +145,13 @@ class VirtualAddressSpace
         m_HeapEnd = heapEnd;
     }
 
+    /** Determines if a given point is within the virtual address space region dedicated
+     *  to the kernel heap. */
+    virtual bool memIsInHeap(void *pMem) = 0;
+
+    /** Gets a pointer to the byte after the end of the heap. */
+    virtual void *getEndOfHeap() = 0;
+
     /** Pointer to the beginning of the heap */
     void *m_Heap;
     /** Pointer to the current heap end */

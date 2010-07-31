@@ -52,6 +52,9 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
     virtual void *allocateStack(size_t stackSz);
     virtual void freeStack(void *pStack);
 
+    virtual bool memIsInHeap(void *pMem);
+    virtual void *getEndOfHeap();
+
     virtual VirtualAddressSpace *clone();
     virtual void revertToKernelAddressSpace();
 
@@ -218,6 +221,7 @@ class X86KernelVirtualAddressSpace : public X86VirtualAddressSpace
 #define KERNEL_VIRTUAL_TEMP2                reinterpret_cast<void*>(0xFFBFD000)
 #define KERNEL_VIRTUAL_TEMP3                reinterpret_cast<void*>(0xFFBFE000)
 #define KERNEL_VIRTUAL_HEAP                 reinterpret_cast<void*>(0xC0000000)
+#define KERNEL_VIRTUAL_HEAP_SIZE            0x10000000
 #define KERNEL_VIRUTAL_PAGE_DIRECTORY       reinterpret_cast<void*>(0xFF7FF000)
 #define KERNEL_VIRTUAL_ADDRESS              reinterpret_cast<void*>(0xFF400000 - 0x100000)
 #define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS reinterpret_cast<void*>(0xD0000000)

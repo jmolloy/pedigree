@@ -75,6 +75,20 @@ VirtualAddressSpace *VirtualAddressSpace::create()
   return new X86VirtualAddressSpace();
 }
 
+bool X86VirtualAddressSpace::memIsInHeap(void *pMem)
+{
+    if(pMem < KERNEL_VIRTUAL_HEAP)
+        return false;
+    else if(pMem >= getEndOfHeap())
+        return false;
+    else
+        return true;
+}
+void *X86VirtualAddressSpace::getEndOfHeap()
+{
+    return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_HEAP) + KERNEL_VIRTUAL_HEAP_SIZE);
+}
+
 bool X86VirtualAddressSpace::isAddressValid(void *virtualAddress)
 {
   return true;
