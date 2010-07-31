@@ -292,8 +292,8 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
   {
       bool bDispatched = false;
       for (List<Alarm*>::Iterator it = m_Alarms.begin();
-      it != m_Alarms.end();
-      it++)
+           it != m_Alarms.end();
+           it++)
       {
           Alarm *pA = *it;
           if ( pA->m_Time <= getTickCount() )
@@ -307,6 +307,14 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
       if (!bDispatched)
           break;
   }
+  
+  if (UNLIKELY(m_Nanosecond >= 1000000ULL))
+  {
+    // Every millisecond, unblock any interrupts which were halted and halt any
+    // which need to be halted.
+    Machine::instance().getIrqManager()->tick();
+  }
+  
   if (UNLIKELY(m_Nanosecond >= 1000000000ULL))
   {
     ++m_Second;

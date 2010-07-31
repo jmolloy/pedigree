@@ -23,7 +23,47 @@
 
 #define BASE_INTERRUPT_VECTOR 0x20
 
+// Number of IRQs in a single millisecond before an IRQ source is blocked.
+// A value of 10, for example, would mean if an IRQ matches the threshold
+// and sustained its output for a second, 10,000 IRQs would be triggered.
+#define IRQ_MITIGATE_THRESHOLD      10
+
 Pic Pic::m_Instance;
+
+void Pic::tick()
+{
+    Spinlock lock;
+    lock.acquire();
+
+    for(size_t irq = 0; irq < 16; irq++)
+    {
+        // Grab the count and reset it
+        size_t nCount = m_IrqCount[irq];
+        m_IrqCount[irq] = 0;
+
+        // If no IRQs happened over this time period, don't do any processing
+        if(LIKELY(!nCount))
+            continue;
+
+        // If it's above the threshold, maks the IRQ until the next tick
+        if(UNLIKELY(nCount >= IRQ_MITIGATE_THRESHOLD))
+        {
+            WARNING_NOLOCK("Mitigating IRQ" << Dec << irq << Hex << ".");
+            m_MitigatedIrqs[irq] = true;
+            enable(irq, false);
+        }
+        else if(UNLIKELY(m_MitigatedIrqs[irq]))
+        {
+            WARNING_NOLOCK("IRQ" << Dec << irq << Hex << " was mitigated, re-enabling.");
+            
+            // This IRQ has been mitigated, re-enable it
+            m_MitigatedIrqs[irq] = false;
+            enable(irq, true);
+        }
+    }
+
+    lock.release();
+}
 
 irq_id_t Pic::registerIsaIrqHandler(uint8_t irq, IrqHandler *handler, bool bEdge)
 {
@@ -87,6 +127,12 @@ bool Pic::initialise()
     if (IntManager.registerInterruptHandler(i + BASE_INTERRUPT_VECTOR, this) == false)
       return false;
 
+  for(size_t i = 0; i < 16; i++)
+  {
+    m_IrqCount[i] = 0;
+    m_MitigatedIrqs[i] = false;
+  }
+
   // Disable all IRQ's (exept IRQ2)
   enableAll(false);
 
@@ -106,6 +152,7 @@ Pic::Pic()
 void Pic::interrupt(size_t interruptNumber, InterruptState &state)
 {
   size_t irq = (interruptNumber - BASE_INTERRUPT_VECTOR);
+  m_IrqCount[irq]++;
 
   // Is Spurios IRQ7?
 //   if (irq == 7)

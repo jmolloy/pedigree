@@ -46,6 +46,9 @@ class Pic : public IrqManager,
      *\return true, if successfull, false otherwise */
     bool initialise() INITIALISATION_ONLY;
 
+    /** Called every millisecond, typically handles IRQ mitigation. */
+    virtual void tick();
+
   private:
     /** The default constructor */
     Pic() INITIALISATION_ONLY;
@@ -76,6 +79,10 @@ class Pic : public IrqManager,
     IrqHandler *m_Handler[16];
     /** Whether the IRQs are edge or level triggered */
     bool        m_HandlerEdge[16];
+    /** IRQ counts for given handlers */
+    size_t      m_IrqCount[16];
+    /** Mitigated IRQs */
+    bool        m_MitigatedIrqs[16];
 
     /** The Pic instance */
     static Pic m_Instance;
