@@ -75,7 +75,7 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   Network* pCard = RoutingTable::instance().DetermineRoute(&tmp);
   if(!pCard)
   {
-      WARNING("UDP: Couldn't find a route for destination '" << dest.toString() << "'.");
+      WARNING("TCP: Couldn't find a route for destination '" << dest.toString() << "'.");
       return false;
   }
 
@@ -91,7 +91,10 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
     macValid = Arp::instance().getFromCache(tmp, true, &destMac, pCard);
 
   if(!macValid)
+  {
+    WARNING("TCP: Couldn't get a MAC address for the remote host (" << tmp.toString() << ")");
     return false;
+  }
   
   // Allocate a packet to send
   uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
@@ -100,6 +103,7 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   size_t ethSize = Ethernet::instance().injectHeader(packet, destMac, me.mac, ETH_IPV4);
   if(!ethSize)
   {
+    WARNING("TCP: Couldn't inject an ethernet header");
     NetworkStack::instance().getMemPool().free(packet);
     return false;
   }
@@ -108,6 +112,7 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   size_t ipSize = Ipv4::instance().injectHeader(packet + ethSize, dest, me.ipv4, IP_TCP);
   if(!ipSize)
   {
+    WARNING("TCP: Couldn't inject an IPv4 header");
     NetworkStack::instance().getMemPool().free(packet);
     return false;
   }
@@ -137,6 +142,8 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
 
   // Transmit
   bool success = pCard->send(nBytes + sizeof(tcpHeader) + ipSize + ethSize, packet);
+  if(!success)
+    WARNING("TCP: Network card failed to transmit a packet");
 
   // Free the created packet
   NetworkStack::instance().getMemPool().free(packet);

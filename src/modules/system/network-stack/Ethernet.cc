@@ -38,7 +38,7 @@ Ethernet::~Ethernet()
 
 void Ethernet::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
 {
-  if(!packet || !nBytes)
+  if(!packet || !nBytes || !pCard)
       return;
   
   // Check for filtering
