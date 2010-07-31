@@ -542,12 +542,6 @@ bool SlamAllocator::isPointerValid(uintptr_t mem)
     // Grab the header
     AllocHeader *head = reinterpret_cast<AllocHeader *>(mem - sizeof(AllocHeader));
 
-    // If the cache is null, then the pointer is corrupted.
-    if (head->cache == 0)
-    {
-        return false;
-    }
-
 #if OVERRUN_CHECK
     if (head->magic != VIGILANT_MAGIC)
     {
@@ -555,6 +549,29 @@ bool SlamAllocator::isPointerValid(uintptr_t mem)
     }
     // Footer gets checked in SlamCache::free, as we don't know the object size.
 #endif
+
+    // If the cache is null, then the pointer is corrupted.
+    if (head->cache == 0)
+    {
+        return false;
+    }
+
+    // Check for a valid cache
+    bool bValid = false;
+    for (int i = 0; i < 32; i++)
+    {
+        if(head->cache == &m_Caches[i])
+        {
+            bValid = true;
+            break;
+        }
+    }
+    
+    if(!bValid)
+    {
+        WARNING_NOLOCK("SlamAllocator::isPointerValid - cache pointer '" << reinterpret_cast<uintptr_t>(head->cache) << "' is invalid.");
+        return false;
+    }
 
     // Free the memory
     head->cache->isPointerValid(mem - sizeof(AllocHeader));
