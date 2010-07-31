@@ -76,7 +76,7 @@ void Ethernet::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t
       break;
 
     default:
-      NOTICE("Unknown ethernet packet!");
+      NOTICE("Unknown ethernet packet - type is " << BIG_TO_HOST16(ethHeader->type) << "!");
       pCard->badPacket();
       break;
   }

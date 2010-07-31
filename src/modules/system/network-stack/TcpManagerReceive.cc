@@ -384,7 +384,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
             {
               NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is an unacceptable segment ACK.");
               if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->seg_ack, 0, Tcp::RST, 0, 0, 0))
-            WARNING("TCP: Sending ACK due to unacceptable segment ACK while in post-SYN_SENT state failed.");
+                WARNING("TCP: Sending ACK due to unacceptable segment ACK while in post-SYN_SENT state failed.");
               break;
             }
 
@@ -405,11 +405,11 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
               return;
             }
 
-            // Ensure that the parent endpoint handles this properly
-            parent->addIncomingConnection(stateBlock->endpoint);
-
             // Fall through otherwise
             stateBlock->currentState = Tcp::ESTABLISHED;
+
+            // Ensure that the parent endpoint handles this properly
+            parent->addIncomingConnection(stateBlock->endpoint);
           }
 
           case Tcp::ESTABLISHED:
