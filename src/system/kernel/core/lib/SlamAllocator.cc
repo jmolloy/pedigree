@@ -72,28 +72,37 @@ uintptr_t SlamCache::allocate()
 
     if (m_PartialLists[thisCpu] != 0)
     {
-        Atomic<partialListType> atom(m_PartialLists[thisCpu]);
         Node *N =0, *pNext =0;
         do
         {
-            m_PartialLists[thisCpu] = static_cast<partialListType>(atom);
-        
             N = const_cast<Node*>(m_PartialLists[thisCpu]);
-            pNext = N->next;
+            
+            if(N->next == reinterpret_cast<Node*>(VIGILANT_MAGIC))
+            {
+                ERROR_NOLOCK("SlamCache::allocate hit a free block that probably wasn't free");
+                m_PartialLists[thisCpu] = N = 0; // Free list is borked, start over with a new slab
+            }
+#if USING_MAGIC
+            if((N->magic != TEMP_MAGIC) && (N->magic != MAGIC_VALUE))
+            {
+                ERROR_NOLOCK("SlamCache::allocate hit a free block that probably wasn't free");
+                m_PartialLists[thisCpu] = N = 0; // Free list is borked, start over with a new slab
+            }
+#endif
 
             if (N == 0)
             {
-                uintptr_t slab = reinterpret_cast<uintptr_t>(initialiseSlab(getSlab()));
+                Node *pNode = initialiseSlab(getSlab());
+                uintptr_t slab = reinterpret_cast<uintptr_t>(pNode);
 #if CRIPPLINGLY_VIGILANT
                 if (SlamAllocator::instance().getVigilance())
                     trackSlab(slab);
 #endif
                 return slab;
             }
-        } while (!atom.compareAndSwap(N, pNext));
-        // __sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
-        
-        m_PartialLists[thisCpu] = static_cast<partialListType>(atom);
+            
+            pNext = N->next;
+        } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
         
 #if USING_MAGIC
         N->magic = TEMP_MAGIC;
@@ -133,22 +142,18 @@ void SlamCache::free(uintptr_t object)
 
 #if USING_MAGIC
     // Possible double free?
+    assert(N->magic == TEMP_MAGIC);
     assert(N->magic != MAGIC_VALUE);
     N->magic = MAGIC_VALUE;
     N->prev = 0;
 #endif
 
-    Atomic<partialListType> atom(m_PartialLists[thisCpu]);
     Node *pPartialPointer =0;
     do
     {
-        m_PartialLists[thisCpu] = static_cast<partialListType>(atom);
         pPartialPointer = const_cast<Node*>(m_PartialLists[thisCpu]);
         N->next = pPartialPointer;
-    } while (!atom.compareAndSwap(pPartialPointer, N));
-    //__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pPartialPointer, N));
-
-    m_PartialLists[thisCpu] = static_cast<partialListType>(atom);
+    } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pPartialPointer, N));
     
 #if USING_MAGIC
     if (pPartialPointer)
@@ -209,37 +214,34 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
 
     for (size_t i = 1; i < nObjects; i++)
     {
-        Node *pNode = reinterpret_cast<Node*> (slab + i*m_ObjectSize);
-        pNode->next = reinterpret_cast<Node*> (slab + (i+1) * m_ObjectSize);
+        Node *pNode = reinterpret_cast<Node*> (slab + (i * m_ObjectSize));
+        pNode->next = ((i + 1) >= nObjects) ? 0 : reinterpret_cast<Node*> (slab + ((i + 1) * m_ObjectSize));
 #if USING_MAGIC
-        pNode->prev = (i == 1) ? 0 : reinterpret_cast<Node*> (slab + (i-1) * m_ObjectSize);
+        pNode->prev = (i == 1) ? 0 : reinterpret_cast<Node*> (slab + ((i - 1) * m_ObjectSize));
         pNode->magic = MAGIC_VALUE;
 #endif
 
         if (i == 1)
             pFirst = pNode;
-        if (i+1 >= nObjects)
+        if ((i + 1) >= nObjects)
             pLast = pNode;
     }
 
     Node *N = reinterpret_cast<Node*> (slab);
+#if USING_MAGIC
     N->magic = TEMP_MAGIC;
+#endif
 
+    // Link this slab in as the first in the partial list
     if (pFirst)
     {
         // We now need to do two atomic updates.
-        Atomic<partialListType> atom(m_PartialLists[thisCpu]);
         Node *pPartialPointer =0;
         do
         {
-            m_PartialLists[thisCpu] = static_cast<partialListType>(atom);
-            
             pPartialPointer = const_cast<Node*>(m_PartialLists[thisCpu]);
             pLast->next = pPartialPointer;
-        } while(!atom.compareAndSwap(pPartialPointer, pFirst));
-        //__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pPartialPointer, pFirst));
-        
-        m_PartialLists[thisCpu] = static_cast<partialListType>(atom);
+        } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pPartialPointer, pFirst));
 
 #if USING_MAGIC
         if (pPartialPointer)
@@ -382,7 +384,7 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
 #if DEBUGGING_SLAB_ALLOCATOR
     NOTICE_NOLOCK("SlabAllocator::allocate(" << Dec << nBytes << Hex << ")");
 #endif
-
+    
     if (!m_bInitialised)
         initialise();
 
@@ -476,7 +478,7 @@ void SlamAllocator::free(uintptr_t mem)
 #if DEBUGGING_SLAB_ALLOCATOR
     NOTICE_NOLOCK("SlabAllocator::free");
 #endif
-
+    
     // If we're not initialised, fix that
     if(!m_bInitialised)
         initialise();
@@ -486,6 +488,10 @@ void SlamAllocator::free(uintptr_t mem)
         for (int i = 0; i < 32; i++)
             m_Caches[i].check();
 #endif
+
+    // Ensure this pointer is even on the heap...
+    if(!Processor::information().getVirtualAddressSpace().memIsInHeap(reinterpret_cast<void*>(mem)))
+        FATAL_NOLOCK("SlamAllocator::free - given pointer '" << mem << "' was completely invalid.");
 
     // Grab the header
     AllocHeader *head = reinterpret_cast<AllocHeader *>(mem - sizeof(AllocHeader));
@@ -522,6 +528,10 @@ bool SlamAllocator::isPointerValid(uintptr_t mem)
 
     // 0 is fine to free.
     if (!mem) return true;
+
+    // On the heap?
+    if(!Processor::information().getVirtualAddressSpace().memIsInHeap(reinterpret_cast<void*>(mem)))
+        return false;
 
 #if CRIPPLINGLY_VIGILANT
     if (m_bVigilant)
