@@ -105,6 +105,12 @@ opts.AddVariables(
 env = Environment(options=opts, ENV=os.environ, platform='posix')
 Help(opts.GenerateHelpText(env))
 
+# Do timestamp checks first and THEN MD5 files to determine if they've changed.
+env.Decider('MD5-timestamp')
+
+# Cache file checksums after 60 seconds
+SetOption('max_drift', 60)
+
 # Reset the suffixes
 env['OBJSUFFIX'] = '.obj'
 env['PROGSUFFIX'] = ''
@@ -276,10 +282,6 @@ if(env['multiprocessor'] or env['smp']):
 # Set the environment flags
 env['CPPDEFINES'] = defines
 
-# Save the cache, all the options are configured
-if(not env['nocache']):
-    opts.Save('options.cache', env)
-
 ####################################
 # Fluff up our build messages
 ####################################
@@ -312,7 +314,7 @@ if not env['verbose']:
 ## PEDIGREE_USER
 ## PEDIGREE_MACHINE
 ####################################
-if(env['genversion'] and not os.path.exists('src/system/kernel/Version.cc')):
+if env['genversion']:
     # Grab the date (rather than using the `date' program)
     env['PEDIGREE_BUILDTIME'] = datetime.today().isoformat()
 
@@ -343,6 +345,12 @@ if(env['genversion'] and not os.path.exists('src/system/kernel/Version.cc')):
     file = open('src/system/kernel/Version.cc','w')
     file.write(version_out)
     file.close()
+
+    env['genversion'] = 0
+
+# Save the cache, all the options are configured
+if(not env['nocache']):
+    opts.Save('options.cache', env)
 
 ####################################
 # Progress through all our sub-directories
