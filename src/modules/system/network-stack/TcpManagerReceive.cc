@@ -23,7 +23,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
   if(!header)
     return;
 
-  // find the state block if possible, if none exists create one
+  // Find the state block if possible, if none exists create one
   bool bDidAllocateStateBlock = false;
   StateBlockHandle handle;
   handle.localPort = destPort;
@@ -33,11 +33,11 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
   StateBlock* stateBlock;
   if((stateBlock = m_StateBlocks.lookup(handle)) == 0)
   {
-    // check for a listen socket
+    // Check for a listen socket
     handle.listen = true;
     if((stateBlock = m_ListeningStateBlocks.lookup(handle)) == 0)
     {
-      // port doesn't exist, so temporary stateBlock required for proper RST handle
+      // Port doesn't exist, so temporary stateBlock required for proper RST handle
       stateBlock = new StateBlock;
       if(stateBlock == 0)
         return;

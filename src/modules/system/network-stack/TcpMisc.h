@@ -103,17 +103,15 @@ struct StateBlockHandle
 
   bool operator == (StateBlockHandle a)
   {
-    if(a.listen) // require the client to want listen sockets only
+    if(a.listen) // Require the client to want listen sockets only
     {
       if(listen)
         return (localPort == a.localPort);
     }
     else
     {
-      if(listen && a.listen)
-        return false;
-      //NOTICE("Operator == : [" << localPort << ", " << a.localPort << "] [" << remotePort << ", " << a.remotePort << "] [" << remoteHost.ip.getIp() << ", " << a.remoteHost.ip.getIp() << "]?");
-      return ((localPort == a.localPort) && (remoteHost.ip.getIp() == a.remoteHost.ip.getIp()) && (remotePort == a.remotePort));
+      // NOTICE_NOLOCK("Operator == [" << localPort << ", " << a.localPort << "] [" << remotePort << ", " << a.remotePort << "]" << " [" << remoteHost.ip.toString() << ", " << a.remoteHost.ip.toString() << "]");
+      return ((localPort == a.localPort) && (remoteHost.ip == a.remoteHost.ip) && (remotePort == a.remotePort));
     }
     return false;
   }
