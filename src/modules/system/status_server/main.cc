@@ -79,6 +79,9 @@ int clientThread(void *p)
         inputData += buff;
     }
 
+    // No longer want any content from the server
+    pClient->shutdown(Endpoint::ShutReceiving);
+
     bool bHeadRequest = false;
 
     List<String*> firstLine = inputData.tokenise(' ');
@@ -209,9 +212,11 @@ int clientThread(void *p)
     // Send to the client
     pClient->send(response.length(), reinterpret_cast<uintptr_t>(static_cast<const char*>(response)));
 
-    // All done - close the connection
-    pClient->close();
+    // Nothing more to send, bring down our side of the connection
+    pClient->shutdown(Endpoint::ShutSending);
 
+    // Leave the endpoint to be cleaned up when the connection is shut down cleanly
+    /// \todo Does it get cleaned up if we do this?
     return 0;
 }
 
