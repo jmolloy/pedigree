@@ -80,13 +80,21 @@ void List<T>::pushBack(T value)
 template <typename T>
 T List<T>::popBack()
 {
+  // Handle an extremely unusual case
+  if(!m_Last && !m_First)
+    return 0;
+    
   node_t *node = m_Last;
-  m_Last = m_Last->m_Previous;
+  if(m_Last)
+    m_Last = m_Last->m_Previous;
   if (m_Last != 0)
     m_Last->m_Next = 0;
   else
     m_First = 0;
   --m_Count;
+
+  if(!node)
+    return 0;
 
   T value = node->value;
   delete node;
@@ -111,13 +119,21 @@ void List<T>::pushFront(T value)
 template <typename T>
 T List<T>::popFront()
 {
+  // Handle an extremely unusual case
+  if(!m_Last && !m_First)
+    return 0;
+  
   node_t *node = m_First;
-  m_First = m_First->m_Next;
+  if(m_First)
+    m_First = m_First->m_Next;
   if (m_First != 0)
     m_First->m_Previous = 0;
   else
     m_Last = 0;
   --m_Count;
+
+  if(!node)
+    return 0;
 
   T value = node->value;
   delete node;
