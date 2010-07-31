@@ -30,7 +30,13 @@ Endpoint* TcpEndpoint::accept()
 {
     // acquire() will return true when there is at least one connection waiting
     m_IncomingConnectionCount.acquire();
-    Endpoint* e = m_IncomingConnections.popFront();
+
+    Endpoint* e = 0;
+    {
+        LockGuard<Spinlock> guard(m_IncomingConnectionLock);
+        e = m_IncomingConnections.popFront();
+    }
+    
     return e;
 }
 

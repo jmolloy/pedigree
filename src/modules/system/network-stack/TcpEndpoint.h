@@ -45,7 +45,7 @@ class TcpEndpoint : public ConnectionBasedEndpoint
     TcpEndpoint() :
       ConnectionBasedEndpoint(), m_Card(0), m_ConnId(0), m_RemoteHost(),
       nBytesRemoved(0), m_Listening(false), m_IncomingConnections(),
-      m_IncomingConnectionCount(0), m_bConnected(false),
+      m_IncomingConnectionCount(0), m_bConnected(false), m_IncomingConnectionLock(),
       m_DataStream(), m_ShadowDataStream()
     {
       m_bConnection = true;
@@ -53,7 +53,7 @@ class TcpEndpoint : public ConnectionBasedEndpoint
     TcpEndpoint(uint16_t local, uint16_t remote) :
       ConnectionBasedEndpoint(local, remote), m_Card(0), m_ConnId(0),
       m_RemoteHost(), nBytesRemoved(0), m_Listening(false), m_IncomingConnections(),
-      m_IncomingConnectionCount(0), m_bConnected(false),
+      m_IncomingConnectionCount(0), m_bConnected(false), m_IncomingConnectionLock(),
       m_DataStream(), m_ShadowDataStream()
     {
       m_bConnection = true;
@@ -62,7 +62,7 @@ class TcpEndpoint : public ConnectionBasedEndpoint
       ConnectionBasedEndpoint(remoteIp, local, remote), m_Card(0),
       m_ConnId(0), m_RemoteHost(), nBytesRemoved(0), m_Listening(false),
       m_IncomingConnections(), m_IncomingConnectionCount(0), m_bConnected(false),
-      m_DataStream(), m_ShadowDataStream()
+      m_IncomingConnectionLock(), m_DataStream(), m_ShadowDataStream()
     {
       m_bConnection = true;
     };
@@ -70,7 +70,7 @@ class TcpEndpoint : public ConnectionBasedEndpoint
       ConnectionBasedEndpoint(remoteIp, local, remote), m_Card(0),
       m_ConnId(connId), m_RemoteHost(), nBytesRemoved(0), m_Listening(false),
       m_IncomingConnections(), m_IncomingConnectionCount(0), m_bConnected(false),
-      m_DataStream(), m_ShadowDataStream()
+      m_IncomingConnectionLock(), m_DataStream(), m_ShadowDataStream()
     {
       m_bConnection = true;
     };
@@ -111,7 +111,10 @@ class TcpEndpoint : public ConnectionBasedEndpoint
     {
       if(conn)
       {
-        m_IncomingConnections.pushBack(static_cast<Endpoint*>(conn));
+        {
+          LockGuard<Spinlock> guard(m_IncomingConnectionLock);
+          m_IncomingConnections.pushBack(static_cast<Endpoint*>(conn));
+        }
         m_IncomingConnectionCount.release();
       }
     }
@@ -161,6 +164,9 @@ class TcpEndpoint : public ConnectionBasedEndpoint
 
     /** Is there a connection active? */
     bool m_bConnected;
+
+    /** Adding an incoming connection must be an atomic operation. */
+    Spinlock m_IncomingConnectionLock;
 
   protected:
 
