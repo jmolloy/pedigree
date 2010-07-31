@@ -104,7 +104,6 @@ Ne2k::Ne2k(Network* pDev) :
   new Thread(Processor::information().getCurrentThread()->getParent(),
              reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
              reinterpret_cast<void*> (this));
-  initialise();
 #endif
 
   // install the IRQ
@@ -332,57 +331,43 @@ StationInfo Ne2k::getStationInfo()
   return m_StationInfo;
 }
 
-uint64_t Ne2k::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8)
-{
-  // Handle packet received - recv will handle all interim packets as well
-  // as the one which triggered the IRQ
-  if(p1 & 0x05)
-  {
-    recv();
-    m_pBase->write8(0x3D, NE_IMR); // Enable recv interrupts again
-  }
-
-  // Handle packet transmitted
-  if(p1 & 0x0A)
-  {
-    // Failure?
-    if(p1 & 0x8)
-      WARNING("NE2K: Packet transmit failed!");
-  }
-
-  // Overflows
-  /// \todo Handle properly
-  if(p1 & 0x10)
-  {
-    WARNING("NE2K: Receive buffer overflow");
-  }
-  if(p1 & 0x20)
-  {
-    WARNING("NE2K: Counter overflow");
-  }
-
-  // IRQ handled, enable it once again
-  Machine::instance().getIrqManager()->enable(getInterruptNumber(), true);
-
-  return 0;
-}
-
 bool Ne2k::irq(irq_id_t number, InterruptState &state)
 {
   // Grab the interrupt status
   uint8_t irqStatus = m_pBase->read8(NE_ISR);
 
-  // Mask future interrupts of specific ISRs that we're yet to handle
+  // Handle packet received - recv will handle all interim packets as well
+  // as the one which triggered the IRQ
   if(irqStatus & 0x05)
-      m_pBase->write8(0x3D, NE_IMR); // RECV
+  {
+    m_pBase->write8(0x3D, NE_IMR); // RECV
+    recv();
+    m_pBase->write8(0x3D, NE_IMR); // Enable recv interrupts again
+  }
+
+  // Handle packet transmitted
+  if(irqStatus & 0x0A)
+  {
+    // Failure?
+    if(irqStatus & 0x8)
+      WARNING("NE2K: Packet transmit failed!");
+  }
+
+  // Overflows
+  /// \todo Handle properly
+  if(irqStatus & 0x10)
+  {
+    WARNING("NE2K: Receive buffer overflow");
+  }
+  if(irqStatus & 0x20)
+  {
+    WARNING("NE2K: Counter overflow");
+  }
 
   // Ack all status items
   m_pBase->write8(irqStatus, NE_ISR);
 
-  // Add to the queue and allow other threads to run
-  addAsyncRequest(0, irqStatus);
-
-  return false;
+  return true;
 }
 
 bool Ne2k::isConnected()
