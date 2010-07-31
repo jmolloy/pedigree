@@ -224,6 +224,8 @@ int mainThread(void *p)
     while(1)
     {
         ConnectionBasedEndpoint *pClient = static_cast<ConnectionBasedEndpoint*>(pEndpoint->accept());
+        if(!pClient)
+            continue;
         new Thread(Processor::information().getCurrentThread()->getParent(), clientThread, pClient);
     }
 
