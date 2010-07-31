@@ -21,11 +21,13 @@
 #include <network-stack/NetworkStack.h>
 #include <processor/Processor.h>
 #include <machine/IrqManager.h>
+#include <process/Scheduler.h>
 
 // #define NE2K_NO_THREADS
 
 Ne2k::Ne2k(Network* pDev) :
-  Device(pDev), Network(pDev), m_pBase(0), m_NextPacket(0), m_PacketQueueSize(0), m_PacketQueue()
+  Device(pDev), Network(pDev), m_pBase(0), m_NextPacket(0),
+  m_PacketQueueSize(0),m_PacketQueue(), m_PacketQueueLock()
 {
   setSpecificType(String("ne2k-card"));
 
@@ -102,14 +104,16 @@ Ne2k::Ne2k(Network* pDev) :
   new Thread(Processor::information().getCurrentThread()->getParent(),
              reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
              reinterpret_cast<void*> (this));
+  initialise();
 #endif
 
   // install the IRQ
+  NOTICE("NE2K: IRQ is " << getInterruptNumber());
   Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*>(this));
 
-  // clear interrupts and enable them all
+  // clear interrupts and enable the ones we want
   m_pBase->write8(0xff, NE_ISR);
-  m_pBase->write8(0x3f, NE_IMR);
+  m_pBase->write8(0x3D, NE_IMR); // No IRQ for "packet transmitted"
 
   // start the card working properly
   m_pBase->write8(0x22, NE_CMD);
@@ -179,42 +183,32 @@ bool Ne2k::send(size_t nBytes, uintptr_t buffer)
 
 void Ne2k::recv()
 {
-  // check for error
-  uint8_t isr = m_pBase->read8(NE_ISR);
-  if(isr & 0x4)
-  {
-    ERROR("NE2K: Receive failed [status=" << isr << "]!");
-    return;
-  }
-
-  // acknowledge the interrupt, fetch the current counter
-  m_pBase->write8(0x01, NE_ISR);
-
+  // Grab the current buffer in the ring
   m_pBase->write8(0x61, NE_CMD);
   uint8_t current = m_pBase->read8(NE_CURR);
   m_pBase->write8(0x21, NE_CMD);
 
-  // read packets until the current packet
+  // Read packets until the current packet
   while(m_NextPacket != current)
   {
-    // need status and length
+    // Want status and length
     m_pBase->write8(0, NE_RSAR0);
     m_pBase->write8(m_NextPacket, NE_RSAR1);
     m_pBase->write8(4, NE_RBCR0);
     m_pBase->write8(0, NE_RBCR1);
-    m_pBase->write8(0x0a, NE_CMD); // read, start
+    m_pBase->write8(0x0a, NE_CMD); // Read, Start
 
+    // Grab the information we want
     uint16_t status = m_pBase->read16(NE_DATA);
     uint16_t length = m_pBase->read16(NE_DATA);
 
     if(!length)
     {
       ERROR("NE2K: length of packet is invalid!");
-      //break;
-      return;
+      continue;
     }
 
-    // remove the status and length bytes
+    // Remove the status and length bytes
     length -= 3;
 
     // packet buffer
@@ -233,11 +227,14 @@ void Ne2k::recv()
     m_pBase->write8(0x0a, NE_CMD);
 
     // read the packet
-    int i, words = length / 2;
+    int i, words = length / 2, oddbytes = length % 2;
     for(i = 0; i < words; ++i)
       packBuffer[i] = m_pBase->read16(NE_DATA);
-    if(length & 1)
-      tmp[i * 2] = m_pBase->read16(NE_DATA) & 0xFF; // odd packet length handler
+    if(oddbytes)
+    {
+      for(i = 0; i < oddbytes; ++i)
+          tmp[(length - oddbytes) + i] = m_pBase->read16(NE_DATA) & 0xFF; // odd packet length handler
+    }
 
     // check status once again
     while(!(m_pBase->read8(NE_ISR) & 0x40)); // no interrupts at all, this wastes time...
@@ -250,7 +247,7 @@ void Ne2k::recv()
     // push onto the queue
     packet* p = new packet;
     p->ptr = reinterpret_cast<uintptr_t>(packBuffer);
-    p->len = (i * 2) + ((length & 1) ? 1 : 0);
+    p->len = length;
 
 #ifdef NE2K_NO_THREADS
 
@@ -261,14 +258,14 @@ void Ne2k::recv()
 
 #else
 
-    m_PacketQueue.pushBack(p);
-    m_PacketQueueSize.release();
+    {
+        LockGuard<Spinlock> guard(m_PacketQueueLock);
+        m_PacketQueue.pushBack(p);
+        m_PacketQueueSize.release();
+    }
 
 #endif
   }
-
-  // unmask interrupts
-  m_pBase->write8(0x3f, NE_IMR);
 }
 
 int Ne2k::trampoline(void *p)
@@ -286,8 +283,16 @@ void Ne2k::receiveThread()
     m_PacketQueueSize.acquire();
 
     // grab from the front
-    packet* p = m_PacketQueue.popFront();
-    uint8_t* packBuffer = reinterpret_cast<uint8_t*>(p->ptr);
+    packet* p = 0;
+    {
+        LockGuard<Spinlock> guard(m_PacketQueueLock);
+        p = m_PacketQueue.popFront();
+    }
+
+    if(!p)
+        continue;
+    else if(!p->ptr || !p->len)
+        continue;
 
     // pass to the network stack
     NetworkStack::instance().receive(p->len, p->ptr, this, 0);
@@ -327,49 +332,57 @@ StationInfo Ne2k::getStationInfo()
   return m_StationInfo;
 }
 
-bool Ne2k::irq(irq_id_t number, InterruptState &state)
+uint64_t Ne2k::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8)
 {
-  // grab the interrupt status
-  uint8_t irqStatus = m_pBase->read8(NE_ISR);
-
-  // packet received?
-  if(irqStatus & 0x05)
+  // Handle packet received - recv will handle all interim packets as well
+  // as the one which triggered the IRQ
+  if(p1 & 0x05)
   {
-    // unmask all except the receive irq, because we're handling it
-    m_pBase->write8(0x3A, NE_IMR);
-
-    //NOTICE("NE2K: Packet Received");
     recv();
+    m_pBase->write8(0x3D, NE_IMR); // Enable recv interrupts again
   }
 
-  // packet transmitted?
-  if(irqStatus & 0x0A)
+  // Handle packet transmitted
+  if(p1 & 0x0A)
   {
-    // check for failure
-    if(m_pBase->read8(NE_ISR) & 0x8)
+    // Failure?
+    if(p1 & 0x8)
       WARNING("NE2K: Packet transmit failed!");
-    else
-    {
-      // ack
-      m_pBase->write8(0x0A, NE_ISR);
-
-      //NOTICE("NE2K: Packet Transmitted");
-    }
   }
 
-  // overflows
-  if(irqStatus & 0x10)
+  // Overflows
+  /// \todo Handle properly
+  if(p1 & 0x10)
   {
     WARNING("NE2K: Receive buffer overflow");
-    m_pBase->write8(0x10, NE_ISR);
   }
-  if(irqStatus & 0x20)
+  if(p1 & 0x20)
   {
     WARNING("NE2K: Counter overflow");
-    m_pBase->write8(0x20, NE_ISR);
   }
 
-  return true;
+  // IRQ handled, enable it once again
+  Machine::instance().getIrqManager()->enable(getInterruptNumber(), true);
+
+  return 0;
+}
+
+bool Ne2k::irq(irq_id_t number, InterruptState &state)
+{
+  // Grab the interrupt status
+  uint8_t irqStatus = m_pBase->read8(NE_ISR);
+
+  // Mask future interrupts of specific ISRs that we're yet to handle
+  if(irqStatus & 0x05)
+      m_pBase->write8(0x3D, NE_IMR); // RECV
+
+  // Ack all status items
+  m_pBase->write8(irqStatus, NE_ISR);
+
+  // Add to the queue and allow other threads to run
+  addAsyncRequest(0, irqStatus);
+
+  return false;
 }
 
 bool Ne2k::isConnected()

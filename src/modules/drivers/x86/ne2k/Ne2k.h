@@ -25,12 +25,13 @@
 #include <machine/IrqHandler.h>
 #include <process/Thread.h>
 #include <process/Semaphore.h>
+#include <utilities/RequestQueue.h>
 
 #define NE2K_VENDOR_ID 0x10ec
 #define NE2K_DEVICE_ID 0x8029
 
 /** Device driver for the NE2K class of network device */
-class Ne2k : public Network, public IrqHandler
+class Ne2k : public Network, public IrqHandler, public RequestQueue
 {
 public:
   Ne2k(Network* pDev);
@@ -54,6 +55,9 @@ public:
 
   bool isConnected();
 
+  uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
+                          uint64_t p6, uint64_t p7, uint64_t p8);
+
 private:
 
   void recv();
@@ -72,6 +76,8 @@ private:
   Semaphore m_PacketQueueSize;
   List<packet*> m_PacketQueue;
 
+  Spinlock m_PacketQueueLock;
+  
   Ne2k(const Ne2k&);
   void operator =(const Ne2k&);
 };
