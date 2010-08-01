@@ -79,10 +79,22 @@ irq_id_t Pic::registerIsaIrqHandler(uint8_t irq, IrqHandler *handler, bool bEdge
 
   return irq + BASE_INTERRUPT_VECTOR;
 }
-irq_id_t Pic::registerPciIrqHandler(IrqHandler *handler)
+irq_id_t Pic::registerPciIrqHandler(IrqHandler *handler, Device *pDevice)
 {
-  // TODO
-  return 0;
+  if (UNLIKELY(!pDevice))
+    return 0;
+  irq_id_t irq = pDevice->getInterruptNumber();
+  if (UNLIKELY(irq >= 16))
+    return 0;
+
+  // Save the IrqHandler
+  m_Handler[irq] = handler;
+  m_HandlerEdge[irq] = false; // PCI bus uses level triggered IRQs
+
+  // Enable/Unmask the IRQ
+  enable(irq, true);
+
+  return irq + BASE_INTERRUPT_VECTOR;
 }
 void Pic::acknowledgeIrq(irq_id_t Id)
 {

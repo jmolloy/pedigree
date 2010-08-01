@@ -18,6 +18,7 @@
 #define KERNEL_MACHINE_IRQMANAGER_H
 
 #include <machine/types.h>
+#include <machine/Device.h>
 #include <machine/IrqHandler.h>
 
 /** @addtogroup kernelmachine
@@ -33,9 +34,8 @@ class IrqManager
      *\param[in] bEdge whether this IRQ is edge triggered or not
      *\return the irq's identifier */
     virtual irq_id_t registerIsaIrqHandler(uint8_t irq, IrqHandler *handler, bool bEdge = false) = 0;
-    /** Register a PCI irq
-     *\todo what parameters do we need here? Perhaps a PCIDevice class or something? */
-    virtual irq_id_t registerPciIrqHandler(IrqHandler *handler) = 0;
+    /** Register a PCI irq */
+    virtual irq_id_t registerPciIrqHandler(IrqHandler *handler, Device *pDevice) = 0;
     /** Acknoledge the IRQ reception, in case you returned false in the IrqHandler::irq() function. If
      *  this is not called there won't be any following irqs.
      *\param[in] Id the irq's identifier */
