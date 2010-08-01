@@ -241,8 +241,7 @@ class PosixSubsystem : public Subsystem
         void allocateFd(size_t fdNum);
 
         /** Sets the given file descriptor as "available" and deletes the FileDescriptor
-          * linked to it.
-          */
+          * linked to it. */
         void freeFd(size_t fdNum);
 
         /** Frees a range of descriptors (or only those marked FD_CLOEXEC) */

@@ -125,7 +125,6 @@ FileDescriptor::~FileDescriptor()
     }
 }
 
-/// \todo Copy the MemoryMappedFiles tree
 PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
     Subsystem(s), m_SignalHandlers(), m_SignalHandlersLock(), m_FdMap(), m_NextFd(s.m_NextFd),
     m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(s.m_FreeCount),
@@ -147,6 +146,11 @@ PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
         SignalHandler *newSig = new SignalHandler(*reinterpret_cast<SignalHandler *>(value));
         myHandlers.insert(key, newSig);
     }
+
+    // Copy memory mapped files
+    /// \todo Is this enough?
+    for(Tree<void*, MemoryMappedFile*>::Iterator it = s.m_MemoryMappedFiles.begin(); it != s.m_MemoryMappedFiles.end(); it++)
+        m_MemoryMappedFiles.insert(it.key(), it.value());
     
     s.m_SignalHandlersLock.leave();
     m_SignalHandlersLock.release();
@@ -332,11 +336,21 @@ void PosixSubsystem::exit(int code)
                 }
             }
         }
-        else if(pGroup && (p->getGroupMembership() == PosixProcess::Member))
+        else if(pGroup && (p->getGroupMembership() == PosixProcess::Leader))
         {
-            // Group leader not handled yet!
-            /// \todo The group ID must not be allowed to be allocated again until the last group member exits.
-            ERROR("Group leader is exiting, not handled yet!");
+            // Pick a new process to be the leader, remove this one from the list
+            PosixProcess *pNewLeader = 0;
+            for(List<PosixProcess*>::Iterator it = pGroup->Members.begin(); it != pGroup->Members.end(); it++)
+            {
+                if((*it) == p)
+                    it = pGroup->Members.erase(it);
+                else if(!pNewLeader)
+                    pNewLeader = *it;
+            }
+
+            // Set the new leader
+            pNewLeader->setGroupMembership(PosixProcess::Leader);
+            pGroup->Leader = pNewLeader;
         }
     }
 
