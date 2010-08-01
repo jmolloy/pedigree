@@ -558,9 +558,31 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
     int lookup = Dns::instance().hostToIp(String(name), host, pCard);
     if(lookup == -1)
     {
-        /// \todo Try other interfaces!
-        N_NOTICE("gethostbyname: no IPs found for '" << name << "'.");
-        return -1;
+        // None found on this interface, try the rest
+        bool bFound = false;
+        for(size_t i = 0; i < NetworkStack::instance().getNumDevices(); i++)
+        {
+            Network *pTmp = NetworkStack::instance().getDevice(i);
+            if(pTmp != pCard)
+            {
+                if(pTmp->getStationInfo().nDnsServers)
+                {
+                    lookup = Dns::instance().hostToIp(String(name), host, pTmp);
+                    if(lookup != -1)
+                    {
+                        bFound = true;
+                        pCard = pTmp;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if(!bFound)
+        {
+            N_NOTICE("gethostbyname: no IPs found for '" << name << "'.");
+            return -1;
+        }
     }
 
     // Grab the passed hostent
