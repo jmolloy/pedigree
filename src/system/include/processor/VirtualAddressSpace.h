@@ -111,15 +111,15 @@ class VirtualAddressSpace
      *\param[in] virtualAddress the virtual address */
     virtual void unmap(void *virtualAddress) = 0;
 
-    /** \todo documentation */
+    /** Allocates a single stack for a thread. Will use the default kernel thread size. */
     virtual void *allocateStack() = 0;
-    /** \todo documentation */
+    /** Allocates a single stack of the given size for a thread. */
     virtual void *allocateStack(size_t stackSz)
     {
         // Default implementation just ignores the stack size.
         return allocateStack();
     }
-    /** \todo documentation */
+    /** Frees a stack allocated with allocateStack. */
     virtual void freeStack(void *pStack) = 0;
 
     /** Create a new VirtualAddressSpace. Only the kernel is mapped into that virtual address

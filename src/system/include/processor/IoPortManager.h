@@ -60,8 +60,6 @@
        *\param[in] Port pointer to the I/O port range object
        *\param[in] ioPort the I/O port number
        *\param[in] size the number of successive I/O ports - 1 to allocate
-       *\param[in] name user-visible name of the I/O port range
-       *\todo We might want to add a module identifier
        *\return true, if the I/O port has been allocated successfull, false
        *        otherwise */
       bool allocate(IoPort *Port,

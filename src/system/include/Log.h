@@ -222,8 +222,7 @@ public:
   template<class T>
   Log &operator << (T n);
 
-  /** Starts an entry in the log.
-   *\todo This function should gain and release spinlocks, depending on level. */
+  /** Starts an entry in the log. */
   Log &operator<< (SeverityLevel level);
   /** Changes the number type between hex and decimal. */
   Log &operator<< (NumberType type);
