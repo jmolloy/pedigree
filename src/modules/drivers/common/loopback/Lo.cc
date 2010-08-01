@@ -25,6 +25,8 @@
 
 Loopback Loopback::m_Instance;
 
+static uint8_t g_LocalIpv6[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+
 Loopback::Loopback() : Network()
 {
     setSpecificType(String("Loopback-card"));
@@ -33,6 +35,9 @@ Loopback::Loopback() : Network()
 
     m_StationInfo.ipv4.setIp(Network::convertToIpv4(127, 0, 0, 1));
     m_StationInfo.mac.setMac(static_cast<uint8_t>(0));
+
+    m_StationInfo.ipv6 = new IpAddress(g_LocalIpv6);
+    m_StationInfo.nIpv6Addresses = 1;
 }
 
 Loopback::Loopback(Network* pDev) : Network(pDev)
@@ -43,6 +48,9 @@ Loopback::Loopback(Network* pDev) : Network(pDev)
 
     m_StationInfo.ipv4.setIp(Network::convertToIpv4(127, 0, 0, 1));
     m_StationInfo.mac.setMac(static_cast<uint8_t>(0));
+    
+    m_StationInfo.ipv6 = new IpAddress(g_LocalIpv6);
+    m_StationInfo.nIpv6Addresses = 1;
 }
 
 Loopback::~Loopback()

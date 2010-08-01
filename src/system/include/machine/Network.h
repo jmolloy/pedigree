@@ -33,15 +33,12 @@ extern BootIO bootIO;
 /** Station information - basically information about this station, per NIC */
 class StationInfo
 {
-    /// \todo Rework to hold all the information we need for ipv4 and ipv6
-    ///       intelligently.
-    
   public:
     // Broadcast address defaults to 255.255.255.255, as we may need to
     // broadcast without a known IPv4 address (and therefore no known network
     // or broadcast address).
     StationInfo() :
-      ipv4(), ipv6(IpAddress::IPv6), subnetMask(), broadcast(0xFFFFFFFF),
+      ipv4(), ipv6(0), subnetMask(), broadcast(0xFFFFFFFF),
       gateway(), gatewayIpv6(IpAddress::IPv6), dnsServers(0), nDnsServers(0),
       mac(), nPackets(0), nDropped(0), nBad(0)
     {};
@@ -54,7 +51,8 @@ class StationInfo
     virtual ~StationInfo() {};
 
     IpAddress   ipv4;
-    IpAddress   ipv6; // Not compulsory
+    IpAddress   *ipv6; // Not compulsory
+    size_t nIpv6Addresses;
 
     IpAddress   subnetMask;
     IpAddress   broadcast; /// Automatically calculated?
