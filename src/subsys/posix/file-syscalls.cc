@@ -1517,7 +1517,6 @@ int posix_ftruncate(int a, off_t b)
     else if(static_cast<size_t>(b) == pFile->getSize())
         return 0;
     // If we need to reduce the file size, do so
-    /// \todo Filesystems need to handle file resizes properly!
     else if(static_cast<size_t>(b) < pFile->getSize())
     {
         pFile->setSize(b);

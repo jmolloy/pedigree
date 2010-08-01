@@ -31,7 +31,6 @@ extern int login(int uid, char *password);
 
 int main(int argc, char *argv[])
 {
-    /// \todo Support further arguments
     int iRunShell = 0, error = 0, help = 0, nStart = 0, i = 0;
     for(i = 1; i < argc; i++)
     {

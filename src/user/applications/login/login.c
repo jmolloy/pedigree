@@ -45,7 +45,8 @@ void sigint(int sig)
     }
     else
     {
-        // Do not kill us!
+        // Do not kill us! CTRL-C does not do anything while the login prompt
+        // is active
         syslog(LOG_NOTICE, "SIGINT ignored");
     }
 }
@@ -82,8 +83,7 @@ int main(int argc, char **argv)
   }
 #endif
 
-  // New process group for job control. We'll ignore SIGINT for now
-  /// \todo Perhaps restart the process on SIGINT?
+  // New process group for job control. We'll ignore SIGINT for now.
   signal(SIGINT, sigint);
   setsid();
 

@@ -30,9 +30,9 @@ class TimerHandler
   public:
     /** Called when the handler is registered with the Timer/SchedulerTimer class
      * and a timer event occured
-     *\param[in] delta time elapsed since the last event
+     *\param[in] delta time elapsed since the last event, in nanoseconds
      *\param[in,out] state the state of the processor when the event occurred.
-     *\todo which unit for delta? ns? ms? (or us? - JamesM) */
+     */
     virtual void timer(uint64_t delta, InterruptState &state) = 0;
 
   protected:

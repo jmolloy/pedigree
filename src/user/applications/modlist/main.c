@@ -6,7 +6,8 @@
 #include <string.h>
 #include <errno.h>
 
-/// \todo Put the path to the module directory in the configuration database
+// We explicitly define the location of the modules directory to make cross-system
+// work easier - keeps consistency across all Pedigree systems.
 #define MODULE_DIR "root»/system/modules"
 
 extern int pedigree_module_is_loaded(char *name);

@@ -214,13 +214,15 @@ void sigint(int)
  * This is the TUI input handler. It is registered with the kernel at startup
  * and handles every keypress that occurs, via an Event sent from the kernel's
  * InputManager object.
- * \todo Possible race condition with pT, pending requests, and the queue.
  */
 void input_handler(size_t p1, size_t p2, uint8_t* pBuffer, size_t p4)
 {
     uint64_t c = *(reinterpret_cast<uint64_t*>(&pBuffer[1]));
     if(!g_pCurrentTerm || !g_pCurrentTerm->term) // No terminal yet!
-        return;
+    {
+        syscall0(TUI_EVENT_RETURNED);
+       return;
+   }
 
     /** Add the key to the terminal queue */
 

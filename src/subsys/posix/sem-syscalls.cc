@@ -258,8 +258,12 @@ int posix_sem_wait(sem_t *sem)
             return -1;
         }
 
-        /// \todo Interruptible by a signal (EINTR)
         reinterpret_cast<Semaphore*>(p->pObject)->acquire();
+        if(pThread->wasInterrupted())
+        {
+            SYSCALL_ERROR(TimedOut);
+            return -1;
+        }
         return 0;
     }
 

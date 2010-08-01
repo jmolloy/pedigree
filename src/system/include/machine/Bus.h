@@ -21,7 +21,6 @@
 /**
  * A bus is a device which provides a view onto other devices.
  */
-///\todo add property for "is address in IO space? or memory mapped?"
 class Bus : public virtual Device
 {
 public:

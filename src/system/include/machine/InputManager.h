@@ -38,6 +38,8 @@ class InputManager : public TimerHandler
         enum CallbackType
         {
             Key = 0,
+            Mouse = 1,
+            Joystick = 2,
             Unknown = 255
         };
 
@@ -119,7 +121,6 @@ class InputManager : public TimerHandler
         size_t m_nTickCount;
 
         /// Callback list
-        /// \todo When more callback types are created, add handling for them
         List<CallbackItem*> m_KeyCallbacks;
 
 #ifdef THREADS
