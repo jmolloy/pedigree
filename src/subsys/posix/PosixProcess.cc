@@ -15,3 +15,22 @@
  */
 
 #include "PosixProcess.h"
+
+ProcessGroup::~ProcessGroup()
+{
+    // Remove all processes in the list from this group
+    for(List<PosixProcess*>::Iterator it = Members.begin();
+        it != Members.end();
+        ++it)
+    {
+        if(*it)
+        {
+            (*it)->setGroupMembership(PosixProcess::NoGroup);
+            (*it)->setProcessGroup(0);
+        }
+    }
+
+    // All have been removed, update our list accordingly
+    Members.clear();
+}
+

@@ -32,12 +32,7 @@ class ProcessGroup
             Members.clear();
         }
 
-        ~ProcessGroup()
-        {
-            /// \todo If any Processes in this list are still members of
-            ///       this group, they need to be removed.
-            Members.clear();
-        }
+        virtual ~ProcessGroup();
 
         /** The process group ID of this process group. */
         int processGroupId;
