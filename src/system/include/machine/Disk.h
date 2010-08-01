@@ -87,8 +87,12 @@ public:
      * For example, if one has a partition starting on byte 512, one will
      * probably want 4096-byte reads to be aligned with this (so reading 4096
      * bytes from byte 0 on the partition will create one page of cache and not
-     * span two).
-     * \todo Better documentation.
+     * span two). Without an align point a read of the first sector of a partition
+     * starting at byte 512 will have to have a location of 512 rather than 0.
+     *
+     * Use this function to allow reads to fit into the 4096 byte buffers
+     * manipulated in read/write even when location isn't aligned on a 4096
+     * byte boundary.
      */
     virtual void align(uint64_t location)
     {
