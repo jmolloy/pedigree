@@ -74,7 +74,7 @@ class UsbDevice : public virtual Device
 {
     public:
 
-        typedef struct Setup
+        struct Setup
         {
             inline Setup(uint8_t requestType, uint8_t request, uint16_t value, uint16_t index, uint16_t length) :
                 nRequestType(requestType), nRequest(request), nValue(value), nIndex(index), nLength(length) {}
@@ -84,20 +84,20 @@ class UsbDevice : public virtual Device
             uint16_t nValue;
             uint16_t nIndex;
             uint16_t nLength;
-        } PACKED Setup;
+        } PACKED;
 
-        typedef struct UnknownDescriptor
+        struct UnknownDescriptor
         {
             inline UnknownDescriptor(uint8_t *pBuffer, uint8_t type, size_t length) : pDescriptor(pBuffer), nType(type), nLength(length) {}
 
             void *pDescriptor;
             uint8_t nType;
             size_t nLength;
-        } UnknownDescriptor;
+        };
 
-        typedef struct Endpoint
+        struct Endpoint
         {
-            inline Endpoint(void *pBuffer) : pDescriptor(static_cast<struct Descriptor*>(pBuffer)),
+            inline Endpoint(void *pBuffer) : pDescriptor(static_cast<Descriptor*>(pBuffer)),
                 nEndpoint(pDescriptor->nEndpoint), bIn(false), bOut(false),
                 nTransferType(pDescriptor->nTransferType), nMaxPacketSize(pDescriptor->nMaxPacketSize),
                 bDataToggle(false)
@@ -135,11 +135,11 @@ class UsbDevice : public virtual Device
             uint16_t nMaxPacketSize;
 
             bool bDataToggle;
-        } Endpoint;
+        };
 
-        typedef struct Interface
+        struct Interface
         {
-            inline Interface(void *pBuffer) : pDescriptor(static_cast<struct Descriptor*>(pBuffer)) {}
+            inline Interface(void *pBuffer) : pDescriptor(static_cast<Descriptor*>(pBuffer)) {}
 
             struct Descriptor
             {
@@ -157,11 +157,11 @@ class UsbDevice : public virtual Device
             Vector<Endpoint*> pEndpoints;
             Vector<UnknownDescriptor*> pOtherDescriptors;
             String sString;
-        } Interface;
+        };
 
-        typedef struct ConfigDescriptor
+        struct ConfigDescriptor
         {
-            inline ConfigDescriptor(void *pConfigBuffer, size_t length) : pDescriptor(static_cast<struct Descriptor*>(pConfigBuffer))
+            inline ConfigDescriptor(void *pConfigBuffer, size_t length) : pDescriptor(static_cast<Descriptor*>(pConfigBuffer))
             {
                 uint8_t *pBuffer = static_cast<uint8_t*>(pConfigBuffer);
                 size_t nOffset = pBuffer[0];
@@ -173,8 +173,6 @@ class UsbDevice : public virtual Device
                     uint8_t nType = pBuffer[nOffset + 1];
                     if(nType == 4)
                     {
-                        if(pCurrentInterface)
-                            assert(pCurrentInterface->pEndpoints.count() == pCurrentInterface->pDescriptor->nEndpoints);
                         Interface *pNewInterface = new Interface(&pBuffer[nOffset]);
                         if(!pNewInterface->pDescriptor->nAlternateSetting)
                         {
@@ -185,11 +183,8 @@ class UsbDevice : public virtual Device
                     }
                     else if(pCurrentInterface)
                     {
-                        if((nType == 5) && (pCurrentInterface->pDescriptor->nEndpoints))
-                        {
-                            assert(pCurrentInterface->pEndpoints.count() < pCurrentInterface->pDescriptor->nEndpoints);
+                        if(nType == 5)
                             pCurrentInterface->pEndpoints.pushBack(new Endpoint(&pBuffer[nOffset]));
-                        }
                         else
                             pCurrentInterface->pOtherDescriptors.pushBack(new UnknownDescriptor(&pBuffer[nOffset], nType, nLength));
                     }
@@ -197,9 +192,7 @@ class UsbDevice : public virtual Device
                         pOtherDescriptors.pushBack(new UnknownDescriptor(&pBuffer[nOffset], nType, nLength));
                     nOffset += nLength;
                 }
-                if(pCurrentInterface)
-                    assert(pCurrentInterface->pEndpoints.count() == pCurrentInterface->pDescriptor->nEndpoints);
-                assert((pInterfaces.count() == pDescriptor->nInterfaces) && pInterfaces.count());
+                assert(pInterfaces.count());
             }
 
             struct Descriptor
@@ -217,11 +210,11 @@ class UsbDevice : public virtual Device
             Vector<Interface*> pInterfaces;
             Vector<UnknownDescriptor*> pOtherDescriptors;
             String sString;
-        } ConfigDescriptor;
+        };
 
-        typedef struct DeviceDescriptor
+        struct DeviceDescriptor
         {
-            inline DeviceDescriptor(void *pBuffer) : pDescriptor(static_cast<struct Descriptor*>(pBuffer)) {}
+            inline DeviceDescriptor(void *pBuffer) : pDescriptor(static_cast<Descriptor*>(pBuffer)) {}
 
             struct Descriptor
             {
@@ -245,7 +238,7 @@ class UsbDevice : public virtual Device
             String sVendor;
             String sProduct;
             String sSerial;
-        } DeviceDescriptor;
+        };
 
         /** Constructors and destructors */
         inline UsbDevice() : m_nAddress(0), m_nPort(0) {}

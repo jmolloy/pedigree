@@ -38,7 +38,7 @@ class Ehci : public UsbHub,
         Ehci(Device* pDev);
         ~Ehci();
 
-        typedef struct qTD
+        struct qTD
         {
             uint32_t bNextInvalid : 1;
             uint32_t res0 : 4;
@@ -73,9 +73,9 @@ class Ehci : public UsbHub,
 
             // Custom qTD fields
             uint16_t nBufferSize;
-        } PACKED ALIGN(32) qTD;
+        } PACKED ALIGN(32);
 
-        typedef struct QH
+        struct QH
         {
             uint32_t bNextInvalid : 1;
             uint32_t nNextType : 2;
@@ -115,7 +115,7 @@ class Ehci : public UsbHub,
 
                 bool bIgnore; /// Ignore this QH when iterating over the list - don't look at any of its qTDs
             } *pMetaData;
-        } PACKED ALIGN(32) QH;
+        } PACKED ALIGN(32);
 
         virtual void getName(String &str)
         {

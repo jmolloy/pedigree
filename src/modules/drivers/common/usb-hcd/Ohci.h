@@ -38,7 +38,7 @@ class Ohci : public UsbHub,
         Ohci(Device* pDev);
         ~Ohci();
 
-        typedef struct TD
+        struct TD
         {
             uint32_t res0 : 18;
             uint32_t bBuffRounding : 1;
@@ -57,9 +57,9 @@ class Ohci : public UsbHub,
             uint16_t nBufferSize;
             uint16_t nNextTDIndex;
             bool bLast;
-        } PACKED ALIGN(16) TD;
+        } PACKED ALIGN(16);
 
-        typedef struct ED
+        struct ED
         {
             uint32_t nAddress : 7;
             uint32_t nEndpoint : 4;
@@ -95,15 +95,15 @@ class Ohci : public UsbHub,
 
                 bool bLinked;
             } *pMetaData;
-        } PACKED ALIGN(16) ED;
+        } PACKED ALIGN(16);
 
-        typedef struct Hcca
+        struct Hcca
         {
             uint32_t pInterruptEDList[32];
             uint16_t nFrameNumber;
             uint16_t res0;
             uint32_t pDoneHead;
-        } PACKED Hcca;
+        } PACKED;
 
         virtual void getName(String &str)
         {

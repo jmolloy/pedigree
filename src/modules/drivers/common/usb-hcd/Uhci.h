@@ -32,7 +32,7 @@ class Uhci : public UsbHub, public IrqHandler
         Uhci(Device* pDev);
         ~Uhci();
 
-        typedef struct TD
+        struct TD
         {
             uint32_t bNextInvalid : 1;
             uint32_t bNextQH : 1;
@@ -58,9 +58,9 @@ class Uhci : public UsbHub, public IrqHandler
 
             // Custom TD fields
             uint16_t nBufferSize;
-        } PACKED ALIGN(16) TD;
+        } PACKED ALIGN(16);
 
-        typedef struct QH
+        struct QH
         {
             uint32_t bNextInvalid : 1;
             uint32_t bNextQH : 1;
@@ -88,7 +88,7 @@ class Uhci : public UsbHub, public IrqHandler
 
                 bool bIgnore; /// Ignore this QH when iterating over the list - don't look at any of its TDs
             } *pMetaData;
-        } PACKED ALIGN(16) QH;
+        } PACKED ALIGN(16);
 
         virtual void getName(String &str)
         {

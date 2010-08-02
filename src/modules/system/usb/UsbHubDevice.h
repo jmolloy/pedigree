@@ -73,9 +73,9 @@ class UsbHubDevice : public UsbDevice, public UsbHub
         /// Top 32 bits hold change status
         uint32_t getPortStatus(size_t port);
 
-        typedef struct HubDescriptor
+        struct HubDescriptor
         {
-            inline HubDescriptor(void *pBuffer) : pDescriptor(static_cast<struct Descriptor*>(pBuffer)),
+            inline HubDescriptor(void *pBuffer) : pDescriptor(static_cast<Descriptor*>(pBuffer)),
                 nPorts(pDescriptor->nPorts), hubCharacteristics(pDescriptor->hubCharacteristics) {}
 
             struct Descriptor
@@ -88,7 +88,7 @@ class UsbHubDevice : public UsbDevice, public UsbHub
 
             uint8_t nPorts;
             uint16_t hubCharacteristics;
-        } HubDescriptor;
+        };
 
         size_t m_nPorts;
 };

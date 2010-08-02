@@ -66,7 +66,7 @@ enum UsbError
     TransactionError
 };
 
-typedef struct UsbEndpoint
+struct UsbEndpoint
 {
     inline UsbEndpoint(uint8_t address, uint8_t hubPort, uint8_t endpoint, UsbSpeed _speed, size_t maxPacketSize) :
         nAddress(address), nEndpoint(endpoint), speed(_speed), nMaxPacketSize(maxPacketSize), nHubAddress(0), nHubPort(hubPort) {}
@@ -93,6 +93,6 @@ typedef struct UsbEndpoint
     {
         return dumpSpeed(speed);
     }
-} UsbEndpoint;
+};
 
 #endif

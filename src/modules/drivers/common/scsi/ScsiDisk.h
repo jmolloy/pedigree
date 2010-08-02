@@ -42,7 +42,7 @@ class ScsiDisk : public Disk
             uint8_t AscQ;
             uint8_t fieldCode;
             uint8_t senseKeySpecific[3];
-        } __attribute__((packed));
+        } PACKET;
 
         struct Inquiry
         {
@@ -56,13 +56,13 @@ class ScsiDisk : public Disk
             uint8_t VendIdent[8];
             uint8_t ProdIdent[16];
             uint8_t ProdRev[4];
-        } __attribute__((packed));
+        } PACKET;
 
         struct Capacity
         {
             uint32_t LBA;
             uint32_t BlockSize;
-        } __attribute__((packed));
+        } PACKET;
 
     public:
         ScsiDisk();
@@ -103,14 +103,7 @@ class ScsiDisk : public Disk
         /** Default block size for a device */
         inline size_t defaultBlockSize()
         {
-            /*
-            if(m_Type == CdDvd)
-                return 2048;
-            else
-            */
-            {
-                return 512;
-            }
+            return m_BlockSize;
         }
 };
 
