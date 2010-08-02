@@ -22,7 +22,7 @@
 #include <syslog.h>
 
 #ifndef NEW_XTERM
-# include "_Xterm.h"
+# include "Xterm.h"
 #else
 # include "Vt100.h"
 #endif
@@ -39,10 +39,10 @@ public:
 
     /** Kills and recreates the terminal's buffer, with a change in size. */
     void renewBuffer(size_t nWidth, size_t nHeight);
-    
+
     /** Adds a 64-bit keycode from the Keyboard class. */
     void addToQueue(uint64_t key);
-    
+
     /** Grabs 1 byte of the utf-8 encoded queue. */
     char getFromQueue();
 

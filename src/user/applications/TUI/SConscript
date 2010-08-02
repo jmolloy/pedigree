@@ -25,31 +25,24 @@ env.Requires(objname, "libs")
 
 # To include a new subdirectory just add to the list.
 subdirs = [
-    
+
 ]
 
 # To include new files just add to the list, or Glob("*.cpp")
 files = [
-    'main.cc',
-    'Font.cc',
-    'Png.cc',
-    'Header.cc',
-    '_Xterm.cc',
-    'Terminal.cc',
-    'environment.cc',
+    Glob("*.cc")
 ]
 
 # Already-built object files to link
 objects = [
-#    kerneldir + '/crt0.o'
+
 ]
 
 # To include a new directory for includes, just add it to the list
 include = [
     '#/src/subsys/posix/include',
     '#/src/modules/system/TUI',
-    './include',
-    '.'
+    './include'
 ]
 
 # To add a library add to the list below
@@ -67,8 +60,7 @@ libraries = [
 libpaths = [
     env['LIBGCC'],
     builddir,
-    imagesdir + 'libraries',
-    '.'
+    imagesdir + 'libraries'
 ]
 
 ####################################
