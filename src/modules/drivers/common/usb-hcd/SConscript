@@ -41,11 +41,10 @@ include = [
 if 'STATIC_DRIVERS' in env['CPPDEFINES']:
     libraries = []
 else:
-    libraries = ['gcc', 'kernelrtti']
+    libraries = ['gcc']
 
 # To add a library path add to the list below
 libpaths = [
-    imagesdir + 'libraries',
     env['LIBGCC']
 ]
 
