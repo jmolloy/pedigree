@@ -200,7 +200,7 @@ MODULE_EXIT(&exit);
 #ifdef PPC_COMMON
 MODULE_DEPENDS("ata-specific");
 #elif defined(X86_COMMON)
-MODULE_DEPENDS("pci");
+MODULE_DEPENDS("pci", "scsi");
 #else
 MODULE_DEPENDS(0);
 #endif
