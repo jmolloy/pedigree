@@ -35,8 +35,9 @@ void _assert(bool b, const char *file, int line, const char *func)
     if(b)
         return;
 
-    ERROR("Assertion failed in file " << file << " (line " << Dec << line << Hex << ")");
-    ERROR("In function '" << func << "'.");
+    ERROR("Assertion failed in file " << file);
+    ERROR("In function '" << func << "'");
+    ERROR("On line " << Dec << line << Hex << ".");
     Processor::breakpoint();
 
     ERROR("You may not resume after a failed assertion.");
