@@ -142,7 +142,6 @@ void SlamCache::free(uintptr_t object)
 
 #if USING_MAGIC
     // Possible double free?
-    assert(N->magic == TEMP_MAGIC);
     assert(N->magic != MAGIC_VALUE);
     N->magic = MAGIC_VALUE;
     N->prev = 0;
