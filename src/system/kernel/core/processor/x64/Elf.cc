@@ -75,6 +75,8 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
         pStringTable = reinterpret_cast<const char *> (m_pStringTable);
     else
         pStringTable = m_pDynamicStringTable;
+    
+    String symbolName("(unknown)");
 
     // If this is a section header, patch straight to it.
     if (pSymbols && ST_TYPE(pSymbols[R_SYM(rel.info)].info) == 3)
@@ -100,6 +102,8 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
         // This is a weak relocation, but it was undefined.
         else if(S == ~0UL)
             WARNING("Weak relocation == 0 [undefined] for \""<< pStr << "\".");
+        
+        symbolName = pStr;
     }
 
     if (S == 0 && (R_TYPE(rel.info) != R_X86_64_RELATIVE))
@@ -139,7 +143,7 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
             result = (result&0xFFFFFFFF00000000) | ((S + A) & 0xFFFFFFFF);
             break;
         default:
-            ERROR ("Relocation not supported: " << Dec << R_TYPE(rel.info));
+            ERROR ("Relocation not supported for symbol \"" << symbolName << "\": " << Dec << R_TYPE(rel.info));
     }
 
     // Write back the result.
