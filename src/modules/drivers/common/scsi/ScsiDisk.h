@@ -42,7 +42,7 @@ class ScsiDisk : public Disk
             uint8_t AscQ;
             uint8_t fieldCode;
             uint8_t senseKeySpecific[3];
-        } PACKET;
+        } PACKED;
 
         struct Inquiry
         {
@@ -56,13 +56,13 @@ class ScsiDisk : public Disk
             uint8_t VendIdent[8];
             uint8_t ProdIdent[16];
             uint8_t ProdRev[4];
-        } PACKET;
+        } PACKED;
 
         struct Capacity
         {
             uint32_t LBA;
             uint32_t BlockSize;
-        } PACKET;
+        } PACKED;
 
     public:
         ScsiDisk();
