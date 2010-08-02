@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "_Xterm.h"
+#include "Xterm.h"
 #include "Font.h"
 #include "Terminal.h"
 #include <syslog.h>
