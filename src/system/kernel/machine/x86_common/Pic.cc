@@ -18,7 +18,7 @@
 #include <Log.h>
 #include <Debugger.h>
 #include "Pic.h"
-#include <utilities/LockGuard.h>
+#include <LockGuard.h>
 
 // TODO: Needs locking
 
