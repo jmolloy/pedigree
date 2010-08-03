@@ -69,7 +69,13 @@ Cache::Cache() :
 {
     if (!g_AllocatorInited)
     {
+#if defined(X86)
         m_Allocator.free(0xE0000000, 0x10000000);
+#elif defined(X64)
+        m_Allocator.free(0xFFFFFFFFD0000000, 0x10000000);
+#else
+        #error Implement your architecture memory map area for caches into Cache::Cache
+#endif
         g_AllocatorInited = true;
     }
 
