@@ -33,9 +33,7 @@ void Processor::initialisationDone()
     // Unmap the identity mapping of the first MBs
     X64VirtualAddressSpace &KernelAddressSpace = static_cast<X64VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace());
     *reinterpret_cast<uint64_t*>(KernelAddressSpace.m_PhysicalPML4) = 0;
-    *reinterpret_cast<uint64_t*>(KernelAddressSpace.m_PhysicalPML4 + 1) = 0;
     invalidate(0);
-    invalidate(reinterpret_cast<void*>(0x200000));
   #endif
 
   X86CommonPhysicalMemoryManager::instance().initialisationDone();
