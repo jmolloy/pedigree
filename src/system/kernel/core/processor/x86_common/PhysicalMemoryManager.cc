@@ -497,8 +497,8 @@ void X86CommonPhysicalMemoryManager::initialisationDone()
     }
 
     // Free the physical page
-    m_Lock.release();
     m_RangeBelow16MB.free(reinterpret_cast<uintptr_t>(&init) - reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_ADDRESS), count * getPageSize());
+    m_Lock.release();
 }
 
 X86CommonPhysicalMemoryManager::X86CommonPhysicalMemoryManager()
