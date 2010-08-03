@@ -305,13 +305,15 @@ bool AtapiDisk::initialise()
 
 uint64_t AtapiDisk::doRead(uint64_t location)
 {
+    size_t off = location & 0xFFF;
+    location &= ~0xFFF;
     uintptr_t buffer = m_Cache.lookup(location);
     if(!buffer)
     {
         buffer = m_Cache.insert(location);
         doRead2(location, buffer, 4096);
     }
-    return buffer;
+    return buffer + off;
 }
 
 uint64_t AtapiDisk::doRead2(uint64_t location, uintptr_t buffer, size_t buffSize)
@@ -332,6 +334,8 @@ uint64_t AtapiDisk::doRead2(uint64_t location, uintptr_t buffer, size_t buffSize
 
     size_t blockNum = location / m_BlockSize;
     size_t numBlocks = nBytes / m_BlockSize;
+    if(nBytes & m_BlockSize)
+        numBlocks++;
 
     if(m_Type == CdDvd)
     {

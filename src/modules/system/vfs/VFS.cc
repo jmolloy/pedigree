@@ -169,6 +169,7 @@ File *VFS::find(String path, File *pStartNode)
         Filesystem *pFs = lookupFilesystem(path);
         if (!pFs)
             return 0;
+        
         return pFs->find(newPath, 0);
     }
 }

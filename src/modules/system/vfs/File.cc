@@ -46,7 +46,7 @@ uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
         size = m_Size-location;
 
     size_t blockSize = getBlockSize();
-
+    
     size_t n = 0;
     while (size)
     {

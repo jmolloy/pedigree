@@ -228,7 +228,6 @@ File *Filesystem::findNode(File *pNode, String path)
     else
     {
         // Directory contents not cached - cache them now.
-
         pDir->cacheDirectoryContents();
         // Then lookup.
         pFile = pDir->m_Cache.lookup(path);
