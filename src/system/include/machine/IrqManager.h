@@ -28,6 +28,15 @@
 class IrqManager
 {
   public:
+  
+    /** Control codes for the control function */
+    enum ControlCode
+    {
+        MitigationThreshold,    /** Controls the number of IRQs within a 1 ms
+                                 *  period that can occur before the IRQ is
+                                 *  mitigated. */
+    };
+  
     /** Register an ISA irq
      *\param[in] irq the ISA irq number (from 0 to 15)
      *\param[in] handler pointer to the IrqHandler class
@@ -49,6 +58,12 @@ class IrqManager
     /** Called every millisecond, typically handles IRQ mitigation. */
     virtual void tick()
     {
+    }
+    
+    /** Controls specific elements of a given IRQ */
+    virtual bool control(uint8_t irq, ControlCode code, size_t argument)
+    {
+        return true;
     }
 
   protected:

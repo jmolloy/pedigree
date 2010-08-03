@@ -48,6 +48,9 @@ class Pic : public IrqManager,
 
     /** Called every millisecond, typically handles IRQ mitigation. */
     virtual void tick();
+    
+    /** Controls specific elements of a given IRQ */
+    virtual bool control(uint8_t irq, ControlCode code, size_t argument);
 
   private:
     /** The default constructor */
@@ -83,6 +86,8 @@ class Pic : public IrqManager,
     size_t      m_IrqCount[16];
     /** Mitigated IRQs */
     bool        m_MitigatedIrqs[16];
+    /** Mitigation thresholds */
+    size_t      m_MitigationThreshold[16];
 
     /** The Pic instance */
     static Pic m_Instance;

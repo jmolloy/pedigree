@@ -18,6 +18,7 @@
 #include <Log.h>
 #include <Debugger.h>
 #include "Pic.h"
+#include <utilities/LockGuard.h>
 
 // TODO: Needs locking
 
@@ -26,7 +27,7 @@
 // Number of IRQs in a single millisecond before an IRQ source is blocked.
 // A value of 10, for example, would mean if an IRQ matches the threshold
 // and sustained its output for a second, 10,000 IRQs would be triggered.
-#define IRQ_MITIGATE_THRESHOLD      10
+#define DEFAULT_IRQ_MITIGATE_THRESHOLD      10
 
 Pic Pic::m_Instance;
 
@@ -46,7 +47,7 @@ void Pic::tick()
             continue;
 
         // If it's above the threshold, maks the IRQ until the next tick
-        if(UNLIKELY(nCount >= IRQ_MITIGATE_THRESHOLD))
+        if(UNLIKELY(nCount >= m_MitigationThreshold[irq]))
         {
             WARNING_NOLOCK("Mitigating IRQ" << Dec << irq << Hex << ".");
             m_MitigatedIrqs[irq] = true;
@@ -63,6 +64,30 @@ void Pic::tick()
     }
 
     lock.release();
+}
+
+bool Pic::control(uint8_t irq, ControlCode code, size_t argument)
+{
+    if(UNLIKELY(irq > 16))
+        return false;
+
+    Spinlock lock;
+    LockGuard<Spinlock> guard(lock);
+    
+    switch(code)
+    {
+        case MitigationThreshold:
+            if(LIKELY(argument))
+                m_MitigationThreshold[irq] = argument;
+            else
+                m_MitigationThreshold[irq] = DEFAULT_IRQ_MITIGATE_THRESHOLD;
+            return true;
+        
+        default:
+            break;
+    }
+    
+    return false;
 }
 
 irq_id_t Pic::registerIsaIrqHandler(uint8_t irq, IrqHandler *handler, bool bEdge)
@@ -143,6 +168,7 @@ bool Pic::initialise()
   {
     m_IrqCount[i] = 0;
     m_MitigatedIrqs[i] = false;
+    m_MitigationThreshold[i] = DEFAULT_IRQ_MITIGATE_THRESHOLD;
   }
 
   // Disable all IRQ's (exept IRQ2)
