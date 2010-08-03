@@ -111,6 +111,10 @@ static bool findDisks(Device *pDev)
     return false;
 }
 
+/// This ensures that the init module entry function will not exit until the init
+/// program entry point thread is running.
+Mutex g_InitProgramLoaded(true);
+
 static void init()
 {
     static HugeStaticString str;
@@ -249,10 +253,13 @@ static void init()
 
     PosixSubsystem *pSubsystem = new PosixSubsystem;
     pProcess->setSubsystem(pSubsystem);
-
+    
     new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(&init_stage2), 0x0 /* parameter */);
 
     lock.release();
+    
+    // Wait for the program to load
+    g_InitProgramLoaded.acquire();
 #else
     #warning the init module is almost useless without threads.
 #endif
@@ -277,11 +284,12 @@ void init_stage2()
             return;
         }
     }
-    NOTICE("INIT: File found: " << reinterpret_cast<uintptr_t>(initProg));
+    NOTICE("INIT: File found");
     String fname = initProg->getName();
     NOTICE("INIT: name: " << fname);
-    // That will have forked - we don't want to fork, so clear out all the chaff in the new address space that's not
-    // in the kernel address space so we have a clean slate.
+    // That will have forked - we don't want to fork, so clear out all the chaff
+    // in the new address space that's not in the kernel address space so we
+    // have a clean slate.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     pProcess->getAddressSpace()->revertToKernelAddressSpace();
 
@@ -311,6 +319,8 @@ void init_stage2()
 #else
     // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
     new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
+    
+    g_InitProgramLoaded.release();
 #endif
 }
 
