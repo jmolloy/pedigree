@@ -63,6 +63,9 @@ private:
     /** Private operator=
         \note NOT implemented. */
     void operator =(const Semaphore&);
+    
+    /** Removes the given pointer from the thread queue. */
+    void removeThread(class Thread *pThread);
 
     /** Internal event class - just interrupts the calling thread
         (sets wasInterrupted and sets the thread status to Ready). */

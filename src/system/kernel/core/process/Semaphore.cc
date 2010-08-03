@@ -50,6 +50,20 @@ Semaphore::~Semaphore()
     assert(magic == 0xdeadbaba);
 }
 
+void Semaphore::removeThread(Thread *pThread)
+{
+    m_BeingModified.acquire();
+    for(List<Thread*>::Iterator it = m_Queue.begin(); it != m_Queue.end(); ++it)
+    {
+        if((*it) == pThread)
+        {
+            m_Queue.erase(it);
+            break; /// \note Assume no other pointers that match
+        }
+    }
+    m_BeingModified.release();
+}
+
 void Semaphore::acquire(size_t n, size_t timeoutSecs, size_t timeoutUsecs)
 {
     assert(magic == 0xdeadbaba);
@@ -81,6 +95,8 @@ void Semaphore::acquire(size_t n, size_t timeoutSecs, size_t timeoutUsecs)
           Machine::instance().getTimer()->removeAlarm(pEvent);
           delete pEvent;
       }
+      
+      removeThread(pThread);
       return;
     }
 
@@ -97,6 +113,7 @@ void Semaphore::acquire(size_t n, size_t timeoutSecs, size_t timeoutUsecs)
         delete pEvent;
       }
       m_BeingModified.release();
+      removeThread(pThread);
       return;
     }
 
@@ -106,6 +123,9 @@ void Semaphore::acquire(size_t n, size_t timeoutSecs, size_t timeoutUsecs)
     pThread->setDebugState(Thread::SemWait, reinterpret_cast<uintptr_t>(__builtin_return_address(0)));
     Processor::information().getScheduler().sleep(&m_BeingModified);
     pThread->setDebugState(Thread::None, 0);
+    
+    // Either acquired or interrupted, either way, we don't need to be woken again
+    removeThread(pThread);
 
     // Why were we woken?
     if (pThread->wasInterrupted() || pThread->getUnwindState() != Thread::Continue)
@@ -159,7 +179,10 @@ void Semaphore::release(size_t n)
     }
     else if(pThread->getStatus() != Thread::Sleeping)
     {
-        WARNING("Semaphore has an awake or zombie thread in its thread queue");
+        if(pThread->getStatus() == Thread::Zombie)
+            WARNING("Semaphore has a zombie thread in its thread queue");
+        else
+            WARNING("Semaphore has a thread that isn't asleep in its thread queue");
         continue;
     }
 
