@@ -295,7 +295,8 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case PEDIGREE_SIGRET:
             return pedigree_sigret();
         case PEDIGREE_INIT_SIGRET:
-            pedigree_init_sigret();
+            WARNING("POSIX: The 'init sigret' system call is no longer valid.");
+            // pedigree_init_sigret();
             return 0;
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
