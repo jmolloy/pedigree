@@ -13,13 +13,29 @@
 ; ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 ; OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ;
+[bits 64]
 
 [GLOBAL sigret_stub]
 [GLOBAL sigret_stub_end]
 
+; void sigret_stub(size_t p1, size_t p2, size_t p3, size_t p4);
 sigret_stub:
-  mov rax, 0x10066
+
+  ; Grab the handler address
+  mov rax, rdi
+  
+  ; First argument is the buffer
+  mov rdi, rsi
+  
+  ; Call the handler
+  call rax
+  
+  ; Return to the kernel
+  mov rax, 0x10065
   syscall
+  
+  jmp $
+  
 sigret_stub_end:
 
 [GLOBAL pthread_stub]
@@ -28,14 +44,14 @@ sigret_stub_end:
 
 ; void pthread_stub(size_t p1, size_t p2, size_t p3, size_t p4);
 pthread_stub:
-  int3
+  
   ; Call the entry function
   mov rbx, 0
   mov rax, 0x10051
   syscall                       
 
   ; First parameter: entry point.
-  mov rdi, rax
+  mov rax, rdi
 
   ; Second parameter: argument.
   mov rdi, rsi
