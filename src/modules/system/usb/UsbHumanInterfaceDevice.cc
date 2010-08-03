@@ -69,7 +69,9 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) : Device(pDev)
     //    return;
 
     // Disable BIOS stuff
-    //controlRequest(RequestType::Class | RequestRecipient::Interface, Request::SetInterface, 1, m_pInterface->pDescriptor->nInterface);
+    //controlRequest(RequestType::Class | RequestRecipient::Interface, Request::SetInterface, 0, m_pInterface->pDescriptor->nInterface);
+    // Set Idle Rate to 0
+    controlRequest(RequestType::Class | RequestRecipient::Interface, Request::GetInterface, 0, 0);
 
     uint16_t nHidSize = pHidDescriptor->pDescriptor->nDescriptorLength;
     uint8_t *pHidReportDescriptor = static_cast<uint8_t*>(getDescriptor(0x22, 0, nHidSize, RequestRecipient::Interface));
