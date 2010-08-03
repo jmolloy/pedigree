@@ -19,23 +19,14 @@
 
 #define MAX_CMDS 2048
 
-#define NONE_I  0
-#define SHIFT_I 1
-#define CTRL_I  2
-
+#define CTRL_I  1
+#define SHIFT_I 2
 #define ALT_I   4
 #define ALTGR_I 8
-
-// Modifier numbers: for putting in set_modifiers and in the table entry.
-#define ALT_M   1
-#define ALTGR_M 2
-#define SHIFT_M 3
-#define CTRL_M  4
 
 typedef struct cmd
 {
     unsigned int scancode;
-    int escape;
     int modifiers;
     int combinators;
     unsigned int unicode_point;

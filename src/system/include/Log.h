@@ -181,7 +181,7 @@ public:
   /** Severity level of the log entry */
   enum SeverityLevel
   {
-    Debug,
+    Debug = 0,
     Notice,
     Warning,
     Error,

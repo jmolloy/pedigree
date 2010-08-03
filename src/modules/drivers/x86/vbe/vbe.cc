@@ -90,7 +90,6 @@ extern "C" void vbeModeChangedCallback(char *pId, char *pModeId)
 
 void entry()
 {
-  Machine::instance().getKeyboard()->setDebugState(false);
 
   List<Display::ScreenMode*> modeList;
 

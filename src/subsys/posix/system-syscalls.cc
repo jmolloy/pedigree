@@ -50,7 +50,7 @@
 #include <PosixProcess.h>
 
 #include <users/UserManager.h>
-#include <machine/InputManager.h>
+#include <machine/KeymapManager.h>
 //
 // Syscalls pertaining to system operations.
 //
@@ -857,25 +857,18 @@ int pedigree_load_keymap(char *buf, size_t len)
     //               4    Data tree offset
     //               ...  Sparse tree & data tree.
 
-    uint32_t sparseTreeLoc = * reinterpret_cast<uint32_t*> (&buf[0]);
-    uint32_t dataLoc       = * reinterpret_cast<uint32_t*> (&buf[4]);
-    uint32_t sparseTreeSz  = dataLoc - sparseTreeLoc;
-    uint32_t dataSz        = len - dataLoc;
-NOTICE("stl: " << Hex << sparseTreeLoc  <<", dl: " << dataLoc << ", stz: " << sparseTreeSz << ", dz: " << dataSz);
-    uint8_t *sparseTree = new uint8_t[sparseTreeSz];
-    memcpy(sparseTree, &buf[sparseTreeLoc], sparseTreeSz);
+    uint32_t sparseTableOffset  = *reinterpret_cast<uint32_t*>(&buf[0]);
+    uint32_t dataTableOffset    = *reinterpret_cast<uint32_t*>(&buf[4]);
+    uint32_t sparseTableSize    = dataTableOffset - sparseTableOffset;
+    uint32_t dataTableSize      = len - dataTableOffset;
 
-    uint8_t *data = new uint8_t[dataSz];
-    memcpy(data, &buf[dataLoc], dataSz);
+    uint8_t *sparseTable = new uint8_t[sparseTableSize];
+    memcpy(sparseTable, &buf[sparseTableOffset], sparseTableSize);
 
-#ifndef ARM_COMMON /// \todo Implement... even though there IS no keyboard on
-                   ///       most devices...
-    extern uint8_t *g_pSparseTable;
-    extern uint8_t *g_pDataTable;
+    uint8_t *dataTable = new uint8_t[dataTableSize];
+    memcpy(dataTable, &buf[dataTableOffset], dataTableSize);
 
-    g_pSparseTable = sparseTree;
-    g_pDataTable = data;
-#endif
+    KeymapManager::instance().useKeymap(sparseTable, dataTable);
 
     return 0;
 }

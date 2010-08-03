@@ -42,56 +42,54 @@
      NEWLINE = 258,
      QUOTE = 259,
      STRING = 260,
-     E0 = 261,
+     CTRL = 261,
      SHIFT = 262,
-     CTRL = 263,
-     ALT = 264,
-     ALTGR = 265,
-     SHIFT_CTRL = 266,
-     SHIFT_ALT = 267,
-     CTRL_ALT = 268,
-     SHIFT_CTRL_ALT = 269,
-     SHIFT_ALTGR = 270,
-     CTRL_ALTGR = 271,
-     SHIFT_CTRL_ALTGR = 272,
-     SET_COMBINE = 273,
-     COMBINE = 274,
-     OPEN_SQ = 275,
-     CLOSE_SQ = 276,
-     DEFINE = 277,
-     QUOTED_CHAR = 278,
-     CODE_POINT = 279,
-     NUM = 280,
-     ERROR = 281,
-     END = 282
+     ALT = 263,
+     ALTGR = 264,
+     CTRL_SHIFT = 265,
+     SHIFT_ALT = 266,
+     CTRL_ALT = 267,
+     CTRL_SHIFT_ALT = 268,
+     SHIFT_ALTGR = 269,
+     CTRL_ALTGR = 270,
+     CTRL_SHIFT_ALTGR = 271,
+     SET_COMBINE = 272,
+     COMBINE = 273,
+     OPEN_SQ = 274,
+     CLOSE_SQ = 275,
+     DEFINE = 276,
+     QUOTED_CHAR = 277,
+     CODE_POINT = 278,
+     NUM = 279,
+     ERROR = 280,
+     END = 281
    };
 #endif
 /* Tokens.  */
 #define NEWLINE 258
 #define QUOTE 259
 #define STRING 260
-#define E0 261
+#define CTRL 261
 #define SHIFT 262
-#define CTRL 263
-#define ALT 264
-#define ALTGR 265
-#define SHIFT_CTRL 266
-#define SHIFT_ALT 267
-#define CTRL_ALT 268
-#define SHIFT_CTRL_ALT 269
-#define SHIFT_ALTGR 270
-#define CTRL_ALTGR 271
-#define SHIFT_CTRL_ALTGR 272
-#define SET_COMBINE 273
-#define COMBINE 274
-#define OPEN_SQ 275
-#define CLOSE_SQ 276
-#define DEFINE 277
-#define QUOTED_CHAR 278
-#define CODE_POINT 279
-#define NUM 280
-#define ERROR 281
-#define END 282
+#define ALT 263
+#define ALTGR 264
+#define CTRL_SHIFT 265
+#define SHIFT_ALT 266
+#define CTRL_ALT 267
+#define CTRL_SHIFT_ALT 268
+#define SHIFT_ALTGR 269
+#define CTRL_ALTGR 270
+#define CTRL_SHIFT_ALTGR 271
+#define SET_COMBINE 272
+#define COMBINE 273
+#define OPEN_SQ 274
+#define CLOSE_SQ 275
+#define DEFINE 276
+#define QUOTED_CHAR 277
+#define CODE_POINT 278
+#define NUM 279
+#define ERROR 280
+#define END 281
 
 
 
@@ -100,14 +98,14 @@
 typedef union YYSTYPE
 #line 31 "parser.y"
 {
-  int n;
-  char str[256];
-  char c;
-  struct cmd *cmd;
-  struct cmd_list *cmd_list;
+    int n;
+    char str[256];
+    char c;
+    struct cmd *cmd;
+    struct cmd_list *cmd_list;
 }
 /* Line 1489 of yacc.c.  */
-#line 111 "parser.tab.h"
+#line 109 "parser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

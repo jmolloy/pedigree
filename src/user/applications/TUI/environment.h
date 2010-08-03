@@ -30,11 +30,14 @@ struct rgb_t
 
 namespace Keyboard
 {
-    static const uint64_t Special = 1ULL<<63;
-    static const uint64_t Alt     = 1ULL<<62;
-    static const uint64_t AltGr   = 1ULL<<61;
-    static const uint64_t Ctrl    = 1ULL<<60;
-    static const uint64_t Shift   = 1ULL<<59;
+    enum KeyFlags
+    {
+        Special = 1ULL << 63,
+        Ctrl    = 1ULL << 62,
+        Shift   = 1ULL << 61,
+        Alt     = 1ULL << 60,
+        AltGr   = 1ULL << 59
+    };
 }
 
 namespace Display

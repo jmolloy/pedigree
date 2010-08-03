@@ -19,6 +19,7 @@
 
 #include <machine/Keyboard.h>
 #include <machine/IrqManager.h>
+#include <machine/KeymapManager.h>
 #include <processor/types.h>
 #include <processor/IoPort.h>
 #include <process/Semaphore.h>
@@ -26,102 +27,48 @@
 #define BUFLEN 256
 
 /**
- * Keyboard device abstraction.
+ * Keyboard device implementation
  */
-class X86Keyboard : public Keyboard,
-                    private IrqHandler
+class X86Keyboard : public Keyboard, private IrqHandler
 {
-public:
-    X86Keyboard (uint32_t portBase);
-    virtual ~X86Keyboard();
+    public:
+        X86Keyboard (uint32_t portBase);
+        virtual ~X86Keyboard();
 
-    /**
-     * Initialises the device.
-     */
-    virtual void initialise();
+        /// Initialises the device
+        virtual void initialise();
 
-    virtual void setDebugState(bool enableDebugState);
-    virtual bool getDebugState();
+        virtual void setDebugState(bool enableDebugState);
+        virtual bool getDebugState();
 
-    virtual char getChar();
-    virtual char getCharNonBlock();
+        virtual char getChar();
+        virtual char getCharNonBlock();
 
-    virtual uint64_t getCharacter();
-    virtual uint64_t getCharacterNonBlock();
+        /// IrqHandler interface
+        virtual bool irq(irq_id_t number, InterruptState &state);
 
-    virtual void registerCallback(KeyPressedCallback callback)
-    {
-        m_Callback = callback;
-    }
+    private:
+        /// Converts a scancode into an ASCII character (for use in debug state)
+        char scancodeToAscii(uint8_t scancode);
 
-    //
-    // IrqHandler interface
-    //
-    virtual bool irq(irq_id_t number, InterruptState &state);
+        /// True if we're in debug state
+        bool m_bDebugState;
 
-private:
-    /**
-     * Converts a scancode into a "real" character in UTF-32 format, plus
-     * modifier flags in the top 32-bits.
-     */
-    uint64_t scancodeToCharacter(uint8_t scancode);
+        /// The current escape state
+        KeymapManager::EscapeState m_Escape;
 
-    struct table_entry *getTableEntry(uint8_t combinator, bool bAlt, bool bAltGr, bool bCtrl, bool bShift, bool bEscape, uint8_t scancode);
+        /// The IO port through which to access the keyboard
+        IoBase *m_pBase;
 
-    /**
-     * True if we're in debug state.
-     */
-    bool m_bDebugState;
+        /// Circular input buffer
+        uint64_t m_Buffer[BUFLEN];
+        int m_BufStart, m_BufEnd;
 
-    /**
-     * True if shift is held.
-     */
-    bool m_bShift;
+        /// Semaphore for how many items are in the buffer
+        Semaphore m_BufLength;
 
-    /**
-     * True if ctrl is held.
-     */
-    bool m_bCtrl;
-
-    bool m_bAlt;
-    bool m_bAltGr;
-
-    /**
-     * Index of the current active combinator, if any
-     */
-    uint8_t m_Combinator;
-
-    bool m_bEscape;
-
-    /**
-     * True if caps lock is on.
-     */
-    bool m_bCapsLock;
-
-    /**
-     * The IO port through which to access the keyboard.
-     */
-    IoBase *m_pBase;
-    //IoPort m_Port;
-
-    /**
-     * Circular input buffer.
-     */
-    uint64_t m_Buffer[BUFLEN];
-    int m_BufStart, m_BufEnd;
-
-    /**
-     * Semaphore for how many items are in the buffer.
-     */
-    Semaphore m_BufLength;
-
-    /**
-     * IRQ id.
-     */
-    irq_id_t m_IrqId;
-
-    /** Callback. */
-    KeyPressedCallback m_Callback;
+        /// IRQ id
+        irq_id_t m_IrqId;
 };
 
 #endif

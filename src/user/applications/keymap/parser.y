@@ -18,8 +18,8 @@ struct cmd_list
 };
 
 char *quote_char(char c);
-cmd_t *make_cmd(unsigned int scancode, unsigned int upoint, char *val, int escape);
-void set_cmds(int escape, unsigned int scancode, struct cmd_list *cl);
+cmd_t *make_cmd(unsigned int scancode, unsigned int upoint, char *val);
+void set_cmds(unsigned int scancode, struct cmd_list *cl);
 struct cmd_list *add_to_cmd_list(struct cmd_list *cl, cmd_t *c);
 
 void add_define(char *str, int n);
@@ -29,14 +29,14 @@ int lookup_define(char *str);
 
 %union
 {
-  int n;
-  char str[256];
-  char c;
-  struct cmd *cmd;
-  struct cmd_list *cmd_list;
+    int n;
+    char str[256];
+    char c;
+    struct cmd *cmd;
+    struct cmd_list *cmd_list;
 }
 
-%token<str> NEWLINE QUOTE STRING E0 SHIFT CTRL ALT ALTGR SHIFT_CTRL SHIFT_ALT CTRL_ALT SHIFT_CTRL_ALT SHIFT_ALTGR CTRL_ALTGR SHIFT_CTRL_ALTGR SET_COMBINE COMBINE OPEN_SQ CLOSE_SQ DEFINE
+%token<str> NEWLINE QUOTE STRING CTRL SHIFT ALT ALTGR CTRL_SHIFT SHIFT_ALT CTRL_ALT CTRL_SHIFT_ALT SHIFT_ALTGR CTRL_ALTGR CTRL_SHIFT_ALTGR SET_COMBINE COMBINE OPEN_SQ CLOSE_SQ DEFINE
 %token<c>   QUOTED_CHAR
 %token<n>   CODE_POINT NUM
 %token      ERROR END
@@ -55,16 +55,7 @@ command: command_part NEWLINE command
 
 command_part: DEFINE STRING NUM {$$ = 0; add_define($2, $3);}
             | DEFINE STRING CODE_POINT {$$ = 0; add_define($2, $3);}
-            | E0  NUM sections {$$ = $3; set_cmds(1, $2, $$);}
-            | NUM sections     {$$ = $2; set_cmds(0, $1, $$);}
-            | E0 NUM SHIFT     {$$ = 0; cmd_t *c = make_cmd($2, 0, 0, 1); c->set_modifiers = SHIFT_M;}
-            | NUM SHIFT        {$$ = 0; cmd_t *c = make_cmd($1, 0, 0, 0); c->set_modifiers = SHIFT_M;}
-            | E0 NUM CTRL      {$$ = 0; cmd_t *c = make_cmd($2, 0, 0, 1); c->set_modifiers = CTRL_M;}
-            | NUM CTRL         {$$ = 0; cmd_t *c = make_cmd($1, 0, 0, 0); c->set_modifiers = CTRL_M;}
-            | E0 NUM ALT       {$$ = 0; cmd_t *c = make_cmd($2, 0, 0, 1); c->set_modifiers = ALT_M;}
-            | NUM ALT          {$$ = 0; cmd_t *c = make_cmd($1, 0, 0, 0); c->set_modifiers = ALT_M;}
-            | E0 NUM ALTGR     {$$ = 0; cmd_t *c = make_cmd($2, 0, 0, 1); c->set_modifiers = ALTGR_M;}
-            | NUM ALTGR        {$$ = 0; cmd_t *c = make_cmd($1, 0, 0, 0); c->set_modifiers = ALTGR_M;}
+            | NUM sections     {$$ = $2; set_cmds($1, $$);}
             ;
 
 sections: /* Null */           {$$ = 0;}
@@ -72,17 +63,17 @@ sections: /* Null */           {$$ = 0;}
         ;
 
 section: combine                    {$$ = $1;}
-       | SHIFT combine              {$$ = $2; $$->modifiers = SHIFT_I;}
        | CTRL combine               {$$ = $2; $$->modifiers = CTRL_I;}
-       | SHIFT_CTRL combine         {$$ = $2; $$->modifiers = SHIFT_I|CTRL_I;}
+       | SHIFT combine              {$$ = $2; $$->modifiers = SHIFT_I;}
+       | CTRL_SHIFT combine         {$$ = $2; $$->modifiers = CTRL_I|SHIFT_I;}
        | ALT combine                {$$ = $2; $$->modifiers = ALT_I;}
        | ALTGR combine              {$$ = $2; $$->modifiers = ALTGR_I;}
-       | SHIFT_ALT combine          {$$ = $2; $$->modifiers = SHIFT_I|ALT_I;}
        | CTRL_ALT combine           {$$ = $2; $$->modifiers = CTRL_I|ALT_I;}
-       | SHIFT_CTRL_ALT combine     {$$ = $2; $$->modifiers = SHIFT_I|CTRL_I|ALT_I;}
-       | SHIFT_ALTGR combine        {$$ = $2; $$->modifiers = SHIFT_I|ALTGR_I;}
+       | SHIFT_ALT combine          {$$ = $2; $$->modifiers = SHIFT_I|ALT_I;}
+       | CTRL_SHIFT_ALT combine     {$$ = $2; $$->modifiers = CTRL_I|SHIFT_I|ALT_I;}
        | CTRL_ALTGR combine         {$$ = $2; $$->modifiers = CTRL_I|ALTGR_I;}
-       | SHIFT_CTRL_ALTGR combine   {$$ = $2; $$->modifiers = SHIFT_I|CTRL_I|ALTGR_I;}
+       | SHIFT_ALTGR combine        {$$ = $2; $$->modifiers = SHIFT_I|ALTGR_I;}
+       | CTRL_SHIFT_ALTGR combine   {$$ = $2; $$->modifiers = CTRL_I|SHIFT_I|ALTGR_I;}
        ;
 
 combine: point {$$ = $1;}
@@ -91,13 +82,13 @@ combine: point {$$ = $1;}
        | COMBINE OPEN_SQ STRING CLOSE_SQ point {$$ = $5; $$->combinators = lookup_define($3);}
        ;
 
-point: CODE_POINT {$$ = make_cmd(0, $1, (char*)"", 0);}
-     | string     {$$ = make_cmd(0, 0,  $1, 0);}
-     | STRING     {$$ = make_cmd(0, lookup_define($1), (char*)"", 0);}
+point: CODE_POINT {$$ = make_cmd(0, $1, (char*)"");}
+     | string     {$$ = make_cmd(0, 0,  $1);}
+     | STRING     {$$ = make_cmd(0, lookup_define($1), (char*)"");}
      ;
 
-set_combination: SET_COMBINE OPEN_SQ NUM CLOSE_SQ OPEN_SQ CODE_POINT CLOSE_SQ {$$ = make_cmd(0, $6, (char*)"", 0); $$->set_modifiers = $3;}
-               | SET_COMBINE OPEN_SQ STRING CLOSE_SQ OPEN_SQ CODE_POINT CLOSE_SQ {$$ = make_cmd(0, $6, (char*)"", 0); $$->set_modifiers = lookup_define($3);}
+set_combination: SET_COMBINE OPEN_SQ NUM CLOSE_SQ OPEN_SQ CODE_POINT CLOSE_SQ {$$ = make_cmd(0, $6, (char*)""); $$->set_modifiers = $3;}
+               | SET_COMBINE OPEN_SQ STRING CLOSE_SQ OPEN_SQ CODE_POINT CLOSE_SQ {$$ = make_cmd(0, $6, (char*)""); $$->set_modifiers = lookup_define($3);}
                ;
 
 string: QUOTE string_internal QUOTE {strcpy($$, $2);}
@@ -112,10 +103,12 @@ string_internal: /* NULL */                   {strcpy($$, "");}
 
 char *quote_char(char c)
 {
-    switch (c)
+    switch(c)
     {
-      case 'e': return (char*)"\e";
-      default: return (char*)"?";
+        case 'e':
+            return (char*)"\e";
+        default:
+            return (char*)"?";
     }
 }
 
@@ -125,39 +118,37 @@ struct cmd_list *add_to_cmd_list(struct cmd_list *cl, cmd_t *c)
     cl2->cmd = c;
     cl2->next = 0;
 
-    if (cl == 0)
+    if(cl == 0)
         return cl2;
     else
     {
         struct cmd_list *cl3 = cl;
-        while (cl3->next)
+        while(cl3->next)
             cl3 = cl3->next;
         cl3->next = cl2;
         return cl;
     }
 }
 
-cmd_t *make_cmd(unsigned int scancode, unsigned int unicode_point, char *val, int escape)
+cmd_t *make_cmd(unsigned int scancode, unsigned int unicode_point, char *val)
 {
-  cmd_t *c = (cmd_t*)malloc(sizeof(cmd_t));
-  c->scancode = scancode;
-  c->unicode_point = unicode_point;
-  if (val)
-    c->val = strdup(val);
-  else
-    c->val = 0;
-  c->escape = escape;
-  c->modifiers = 0;
+    cmd_t *c = (cmd_t*)malloc(sizeof(cmd_t));
+    c->scancode = scancode;
+    c->unicode_point = unicode_point;
+    if(val)
+        c->val = strdup(val);
+    else
+        c->val = 0;
+    c->modifiers = 0;
 
-  cmds[n_cmds++] = c;
-  return c;
+    cmds[n_cmds++] = c;
+    return c;
 }
 
-void set_cmds(int escape, unsigned int scancode, struct cmd_list *cl)
+void set_cmds(unsigned int scancode, struct cmd_list *cl)
 {
-    while (cl)
+    while(cl)
     {
-        cl->cmd->escape = escape;
         cl->cmd->scancode = scancode;
         cl = cl->next;
     }
@@ -180,7 +171,7 @@ void add_define(char *str, int n)
 int lookup_define(char *str)
 {
     int i;
-    for (i = 0; i < ndefines; i++)
+    for(i = 0; i < ndefines; i++)
     {
         if (!strcmp(defines[i].str, str))
             return defines[i].n;

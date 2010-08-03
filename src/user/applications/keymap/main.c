@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2010 James Molloy, Burtescu Eduard
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -23,7 +23,7 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include "cmd.h"
-#include "parser.tab.h"
+#include "parser.h"
 
 extern int yylex();
 extern int yyparse();
@@ -49,18 +49,16 @@ char *data_buff = 0;
 // Modifiers are CTRL and SHIFT, ALT, ALTGR.
 // Combinators are 256 user-programmable combining flags (used for accents).
 
-#define UNICODE_POINT 0x80000000
-#define SPECIAL       0x40000000
+#define SPECIAL 0x80000000
 
 typedef struct table_entry
 {
-    uint32_t flags; // UNICODE_POINT | SPECIAL | modifiers
-    uint32_t val;   // If flags&UNICODE_POINT, U+val; else number giving special key.
+    uint32_t flags; // SPECIAL | modifiers
+    uint32_t val;   // If flags & SPECIAL, 4 char string for special key, else U+val.
 } table_entry_t;
 
-#define TABLE_IDX(comb, modifiers, escape, scancode) ( ((comb&0xFF)<<12) | ((modifiers&0xF)<<8) | ((escape&1)<<7) | (scancode&0x7F) )
-
-#define TABLE_MAX TABLE_IDX(255,15,1,127)
+#define TABLE_IDX(combinator, modifiers, scancode) (((combinator & 0xFF) << 11) | ((modifiers & 0xF) << 7) | (scancode & 0x7F))
+#define TABLE_MAX TABLE_IDX(0xFF,0xF,0x7F)
 
 table_entry_t table[TABLE_MAX+1];
 
@@ -170,11 +168,10 @@ void parse(char *filename)
         int comb = cmds[i]->combinators & 0xFF;
         int modifiers = cmds[i]->modifiers & 0xF;
 
-        unsigned int idx = TABLE_IDX(comb, modifiers, cmds[i]->escape, cmds[i]->scancode);
+        unsigned int idx = TABLE_IDX(comb, modifiers, cmds[i]->scancode);
         table[idx].flags = cmds[i]->set_modifiers;
         if (cmds[i]->unicode_point != 0)
         {
-            table[idx].flags |= UNICODE_POINT;
             table[idx].val = cmds[i]->unicode_point;
         }
         else if (cmds[i]->val != 0)
@@ -279,14 +276,14 @@ void compile(char *filename)
     int i;
     for (i = 0; i < (int)strlen(fname)+2; i++)
     {
-        if (fname[i] == '.')
+        if (fname[i] == '.' || fname[i] == '/')
             header_guard[i] = '_';
         else
             header_guard[i] = toupper(fname[i]);
     }
 
     fprintf(stream, "/*\n\
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin\n\
+ * Copyright (c) 2010 James Molloy, Burtescu Eduard\n\
  *\n\
  * Permission to use, copy, modify, and distribute this software for any\n\
  * purpose with or without fee is hereby granted, provided that the above\n\
@@ -304,46 +301,14 @@ void compile(char *filename)
 #ifndef %s\n\
 #define %s\n\
 \n\
-#define UNICODE_POINT    0x80000000\n\
-#define SPECIAL          0x40000000\n\
-#define SPARSE_NULL      0x00000000\n\
-#define SPARSE_DATA_FLAG 0x8000\n\
-\n\
-#define NONE_I           0x0\n\
-#define SHIFT_I          0x1\n\
-#define CTRL_I           0x2\n\
-\n\
-#define ALT_I            0x4\n\
-#define ALTGR_I          0x8\n\
-\n\
-#define ALT_M            0x1\n\
-#define ALTGR_M          0x2\n\
-#define SHIFT_M          0x3\n\
-#define CTRL_M           0x4\n\
-\n\
-#define TABLE_IDX(comb, modifiers, escape, scancode) ( ((comb&0xFF)<<12) | ((modifiers&0xF)<<8) | ((escape&1)<<7) | (scancode&0x7F) )\n\
-#define TABLE_MAX TABLE_IDX(255,15,1,127)\n\
-\n\
-typedef struct table_entry\n\
-{\n\
-    uint32_t flags;\n\
-    uint32_t val;\n\
-} table_entry_t;\n\
-\n\
-typedef struct sparse_entry\n\
-{\n\
-    uint16_t left;\n\
-    uint16_t right;\n\
-} sparse_t;\n\
-\n\
-char sparse_buff[%d] =\n\"", header_guard, header_guard, sparse_buffsz+1);
+static char sparseBuff[%d] =\n\"", header_guard, header_guard, sparse_buffsz+1);
 
     for (i = 0; i < sparse_buffsz; i++)
     {
         fprintf(stream, "\\x%02x", (unsigned char)sparse_buff[i]);
         if ((i % 20) == 0 && i != 0) fprintf(stream, "\\\n");
     }
-    fprintf(stream, "\";\n\nchar data_buff[%d] =\n\"", data_buffsz+1);
+    fprintf(stream, "\";\n\nstatic char dataBuff[%d] =\n\"", data_buffsz+1);
     for (i = 0; i < data_buffsz; i++)
     {
         fprintf(stream, "\\x%02x", (unsigned char)data_buff[i]);
@@ -351,9 +316,9 @@ char sparse_buff[%d] =\n\"", header_guard, header_guard, sparse_buffsz+1);
     }
     fprintf(stream, "\";\n\n#endif\n");
 
-    free(header_guard);
-
     fclose(stream);
+
+    //free(header_guard);
 
     printf("Compiled keymap header file written to `%s'.\n", fname);
 }
