@@ -217,5 +217,34 @@ _ZN9Processor8jumpUserEPVmmmmmmm:
     sysret
 
 _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR17X64SchedulerState:
-    ;; TODO
-    int3
+    ; Load the state pointer
+    mov rcx, rsi
+    
+    ; Load the Thread* pointer
+    mov rsi, rdi
+    
+    ; Load new stack and call deleteThread from it - RSI already set from above
+    mov rsp, [rcx + 80]
+    push rcx
+    call _ZN21PerProcessorScheduler12deleteThreadEP6Thread
+    pop rcx
+    
+    ; Restore state
+    mov r8, [rcx+0]
+    mov r9, [rcx+8]
+    mov r10, [rcx+16]
+    mov r11, [rcx+24]
+    mov r12, [rcx+32]
+    mov r13, [rcx+40]
+    mov r14, [rcx+48]
+    mov r15, [rcx+56]
+    mov rbx, [rcx+64]
+    mov rbp, [rcx+72]
+    mov rsp, [rcx+80]
+    mov rdx, [rcx+88]
+    
+    mov rax, 1
+    
+    push rdx
+    ret
+
