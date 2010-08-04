@@ -82,9 +82,11 @@ void *VirtualAddressSpace::expandHeap(ssize_t incr, size_t flags)
               // Free the page
               PMemoryManager.freePage(page);
           }
-
-          // Empty the page.
-          memset(m_HeapEnd, 0, PhysicalMemoryManager::getPageSize());
+          else
+          {
+              // Empty the page.
+              memset(m_HeapEnd, 0, PhysicalMemoryManager::getPageSize());
+          }
 
           // Go to the next address
           m_HeapEnd = adjust_pointer(m_HeapEnd, PhysicalMemoryManager::getPageSize());
