@@ -31,6 +31,9 @@ driver_common_subdirs = [
 
     # CDI framework (NOT the drivers)
     'cdi',
+    
+    # DM9601 driver (USB ethernet)
+    'dm9601'
 ]
 
 # CDI drivers
