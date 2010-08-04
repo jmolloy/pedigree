@@ -248,7 +248,7 @@ class UsbDevice : public virtual Device
 
         virtual inline ~UsbDevice() {};
         
-        virtual bool initialise()
+        virtual bool initialiseDevice()
         {
             return true;
         }

@@ -31,7 +31,7 @@ UsbMassStorageDevice::~UsbMassStorageDevice()
 {
 }
 
-bool UsbMassStorageDevice::initialise()
+bool UsbMassStorageDevice::initialiseDevice()
 {
     for(size_t i = 0; i < m_pInterface->pEndpoints.count(); i++)
     {

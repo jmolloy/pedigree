@@ -20,7 +20,7 @@
 #include <usb/UsbDevice.h>
 #include <usb/UsbHub.h>
 
-class UsbHubDevice : public UsbDevice, public UsbHub
+class UsbHubDevice : public UsbHub
 {
     public:
         UsbHubDevice (UsbDevice *dev);

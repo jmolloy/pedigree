@@ -93,19 +93,19 @@ bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
         pDevice->useInterface(i);
         NOTICE("USB: Device: " << pDes->sVendor << " " << pDes->sProduct << ", class " << Dec << pInterface->pDescriptor->nClass << ":" << pInterface->pDescriptor->nSubclass << ":" << pInterface->pDescriptor->nProtocol << Hex);
         /// \todo Make this a bit more general. Harcoding some numbers and some class names doesn't sound good
-        addChild(pDevice);
+        // addChild(pDevice);
         if(pInterface->pDescriptor->nClass == 9)
         {
             UsbHubDevice *pHub = new UsbHubDevice(pDevice);
-            replaceChild(pDevice, pHub);
-            if(!pHub->initialise())
+            addChild(static_cast<UsbDevice*>(pHub));
+            if(!pHub->initialiseDevice())
                 removeChild(pHub);
         }
         else if(pInterface->pDescriptor->nClass == 3)
         {
             UsbHumanInterfaceDevice *pHid = new UsbHumanInterfaceDevice(pDevice);
-            replaceChild(pDevice, pHid);
-            if(!pHid->initialise())
+            addChild(static_cast<UsbDevice*>(pHid));
+            if(!pHid->initialiseDevice())
                 removeChild(pHid);
             
             /// \bug WMware's mouse's second interface is known to cause problems
@@ -114,15 +114,15 @@ bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
         else if(pInterface->pDescriptor->nClass == 8)
         {
             UsbMassStorageDevice *pMassStorage = new UsbMassStorageDevice(pDevice);
-            replaceChild(pDevice, pMassStorage);
-            if(!pMassStorage->initialise())
+            addChild(static_cast<UsbDevice*>(pMassStorage));
+            if(!pMassStorage->initialiseDevice())
                 removeChild(pMassStorage);
         }
         else if(pDes->pDescriptor->nVendorId == 0x0403 && pDes->pDescriptor->nProductId == 0x6001)
         {
             FtdiSerialDevice *pFtdi = new FtdiSerialDevice(pDevice);
-            replaceChild(pDevice, pFtdi);
-            if(!pFtdi->initialise())
+            addChild(static_cast<UsbDevice*>(pFtdi));
+            if(!pFtdi->initialiseDevice())
                 removeChild(pFtdi);
         }
     }
@@ -159,7 +159,7 @@ void UsbHub::deviceDisconnected(uint8_t nPort)
 
 void UsbHub::getUsedAddresses(ExtensibleBitmap *pBitmap)
 {
-    for (size_t i = 0;i < m_Children.count();i++)
+    for (size_t i = 0; i < m_Children.count(); i++)
     {
         UsbDevice *pDevice = dynamic_cast<UsbDevice*>(m_Children[i]);
         if(pDevice)

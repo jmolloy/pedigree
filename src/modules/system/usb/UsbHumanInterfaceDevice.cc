@@ -49,7 +49,11 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) : Device(pDev)
 {
 }
 
-bool UsbHumanInterfaceDevice::initialise()
+UsbHumanInterfaceDevice::~UsbHumanInterfaceDevice()
+{
+}
+
+bool UsbHumanInterfaceDevice::initialiseDevice()
 {
     HidDescriptor *pHidDescriptor = 0;
     for(size_t i = 0;i < m_pInterface->pOtherDescriptors.count();i++)
@@ -225,10 +229,6 @@ bool UsbHumanInterfaceDevice::initialise()
     dynamic_cast<UsbHub*>(m_pParent)->addInterruptInHandler(endpointInfo, reinterpret_cast<uintptr_t>(m_pReportBuffer), m_pReport->nBytes, callback, reinterpret_cast<uintptr_t>(this));
     
     return true;
-}
-
-UsbHumanInterfaceDevice::~UsbHumanInterfaceDevice()
-{
 }
 
 void UsbHumanInterfaceDevice::callback(uintptr_t pParam, ssize_t ret)

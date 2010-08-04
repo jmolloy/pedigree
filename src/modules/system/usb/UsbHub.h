@@ -22,8 +22,9 @@
 #include <processor/types.h>
 #include <usb/Usb.h>
 #include <utilities/ExtensibleBitmap.h>
+#include <usb/UsbDevice.h>
 
-class UsbHub : public virtual Device
+class UsbHub : public virtual UsbDevice
 {
     public:
 
