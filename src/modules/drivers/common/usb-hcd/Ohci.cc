@@ -93,7 +93,6 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_pCurrentBulkQueueHead(0), m_pCurrentC
 
     // Enable control and bulk lists
     m_pBase->write32(OhciControlListsEnable | OhciControlStateRunning, OhciControl);
-    //m_pBase->write32(OhciCommandCtlListFilled | OhciCommandBlkListFilled, OhciCommandStatus);
 
     // Set up the RequestQueue
     initialise();
@@ -176,9 +175,9 @@ void Ohci::doDequeue()
             m_TDBitmap.clear(nTDIndex);
 
             TD *pTD = &m_pTDList[nTDIndex];
-            bool shouldBreak = !pTD->pNext;
+            bool shouldBreak = pTD->bLast;
             if(!shouldBreak)
-                nTDIndex = ((pTD->pNext << 4) & 0xFFF) / sizeof(TD);
+                nTDIndex = pTD->nNextTDIndex;
 
             memset(pTD, 0, sizeof(TD));
 
@@ -205,10 +204,13 @@ void Ohci::interrupt(size_t number, InterruptState &state)
 #endif
 {
     uint32_t nStatus = m_pBase->read32(OhciInterruptStatus) & m_pBase->read32(OhciInterruptEnable);
+
+    // Check for newly connected / disconnected devices
     if(nStatus & OhciInterruptRhStsChange)
         for(size_t i = 0; i < m_nPorts; i++)
             if(m_pBase->read32(OhciRhPortStatus + (i * 4)) & OhciRhPortStsConnStsCh)
                 addAsyncRequest(0, i);
+
     if(nStatus & OhciInterruptWbDoneHead)
     {
         bool bControlListChanged = false, bBulkListChanged = false;
@@ -347,7 +349,7 @@ void Ohci::interrupt(size_t number, InterruptState &state)
                 {
                     size_t nHeadED = reinterpret_cast<uintptr_t>(m_pCurrentControlQueueHead) & 0xFFF;
                     m_pBase->write32(m_pEDListPhys + nHeadED, OhciControlHeadED);
-                    m_pBase->write32(OhciCommandCtlListFilled, OhciCommandStatus);
+                    m_pBase->write32(OhciCommandControlListFilled, OhciCommandStatus);
                 }
                 else
                     m_pBase->write32(0, OhciControlHeadED);
@@ -358,7 +360,7 @@ void Ohci::interrupt(size_t number, InterruptState &state)
                 {
                     size_t nHeadED = reinterpret_cast<uintptr_t>(m_pCurrentBulkQueueHead) & 0xFFF;
                     m_pBase->write32(m_pEDListPhys + nHeadED, OhciBulkHeadED);
-                    m_pBase->write32(OhciCommandBlkListFilled, OhciCommandStatus);
+                    m_pBase->write32(OhciCommandBulkListFilled, OhciCommandStatus);
                 }
                 else
                     m_pBase->write32(0, OhciBulkHeadED);
@@ -544,13 +546,13 @@ void Ohci::doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)
     {
         m_pCurrentControlQueueHead = pED;
         m_pBase->write32(m_pEDListPhys + pTransaction * sizeof(ED), OhciControlHeadED);
-        m_pBase->write32(OhciCommandCtlListFilled, OhciCommandStatus);
+        m_pBase->write32(OhciCommandControlListFilled, OhciCommandStatus);
     }
     else
     {
         m_pCurrentBulkQueueHead = pED;
         m_pBase->write32(m_pEDListPhys + pTransaction * sizeof(ED), OhciBulkHeadED);
-        m_pBase->write32(OhciCommandBlkListFilled, OhciCommandStatus);
+        m_pBase->write32(OhciCommandBulkListFilled, OhciCommandStatus);
     }
 }
 

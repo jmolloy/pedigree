@@ -133,37 +133,37 @@ class Ohci : public UsbHub,
     private:
 
         enum OhciConstants {
-            OhciControl = 0x04,             // HcControl register
-            OhciCommandStatus = 0x08,       // HcCommandStatus register
+            OhciControl         = 0x04,     // HcControl register
+            OhciCommandStatus   = 0x08,     // HcCommandStatus register
             OhciInterruptStatus = 0x0c,     // HcInterruptStatus register
             OhciInterruptEnable = 0x10,     // HcIntrerruptEnable register
-            OhciInterruptDisable = 0x14,    // HcIntrerruptDisable register
-            OhciHcca = 0x18,                // HcHCCA register
-            OhciControlHeadED = 0x20,       // HcControlHeadED register
-            OhciControlCurrentED = 0x24,    // HcControlCurrentED register
-            OhciBulkHeadED = 0x28,          // HcBulkHeadED register
-            OhciBulkCurrentED = 0x2c,       // HcBulkCurrentED register
-            OhciRhDescriptorA = 0x48,       // HcRhDescriptorA register
-            OhciRhPortStatus = 0x54,        // HcRhPortStatus registers
+            OhciInterruptDisable= 0x14,     // HcIntrerruptDisable register
+            OhciHcca            = 0x18,     // HcHCCA register
+            OhciControlHeadED   = 0x20,     // HcControlHeadED register
+            OhciControlCurrentED= 0x24,     // HcControlCurrentED register
+            OhciBulkHeadED      = 0x28,     // HcBulkHeadED register
+            OhciBulkCurrentED   = 0x2c,     // HcBulkCurrentED register
+            OhciRhDescriptorA   = 0x48,     // HcRhDescriptorA register
+            OhciRhPortStatus    = 0x54,     // HcRhPortStatus registers
 
-            OhciControlStateRunning = 0x80, // HostControllerFunctionalState bits for USBOPERATIONAL
-            OhciControlListsEnable = 0x34,  // PeriodicListEnable, ControlListEnable and BulkListEnable bits
+            OhciControlStateRunning = 0x80,     // HostControllerFunctionalState bits for USBOPERATIONAL
+            OhciControlListsEnable  = 0x34,     // PeriodicListEnable, ControlListEnable and BulkListEnable bits
 
-            OhciCommandBlkListFilled = 0x04,// BulkListFilled bit
-            OhciCommandCtlListFilled = 0x02,// ControlListFilled bit
-            OhciCommandHcReset = 0x01,      // HostControllerReset bit
+            OhciCommandBulkListFilled   = 0x04, // BulkListFilled bit
+            OhciCommandControlListFilled= 0x02, // ControlListFilled bit
+            OhciCommandHcReset          = 0x01, // HostControllerReset bit
 
-            OhciInterruptMIE = 0x80000000,  // MasterInterruptEnable bit
-            OhciInterruptRhStsChange = 0x40,// RootHubStatusChange bit
-            OhciInterruptWbDoneHead = 0x02, // WritebackDoneHead bit
+            OhciInterruptMIE        = 0x80000000,   // MasterInterruptEnable bit
+            OhciInterruptRhStsChange= 0x40,         // RootHubStatusChange bit
+            OhciInterruptWbDoneHead = 0x02,         // WritebackDoneHead bit
 
-            OhciRhPortStsResCh = 0x100000,  // PortResetStatusChange bit
-            OhciRhPortStsConnStsCh = 0x1000,// ConnectStatusChange bit
-            OhciRhPortStsLoSpeed = 0x200,   // LowSpeedDeviceAttached bit
-            OhciRhPortStsPower = 0x100,     // PortPowerStatus / SetPortPower bit
-            OhciRhPortStsReset = 0x10,      // SetPortReset bit
-            OhciRhPortStsEnable = 0x02,     // SetPortEnable bit
-            OhciRhPortStsConnected = 0x01,  // CurrentConnectStatus bit
+            OhciRhPortStsResCh      = 0x100000, // PortResetStatusChange bit
+            OhciRhPortStsConnStsCh  = 0x10000,  // ConnectStatusChange bit
+            OhciRhPortStsLoSpeed    = 0x200,    // LowSpeedDeviceAttached bit
+            OhciRhPortStsPower      = 0x100,    // PortPowerStatus / SetPortPower bit
+            OhciRhPortStsReset      = 0x10,     // SetPortReset bit
+            OhciRhPortStsEnable     = 0x02,     // SetPortEnable bit
+            OhciRhPortStsConnected  = 0x01,     // CurrentConnectStatus bit
         };
 
         IoBase *m_pBase;
