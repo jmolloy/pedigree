@@ -1,0 +1,98 @@
+# Pedigree HID keymap for DeDe - German / Germany
+
+# Definitions for combiners
+DEFINE acute 1
+DEFINE grave 2
+DEFINE circumflex 3
+DEFINE cedilla 4
+DEFINE diaeresis 5
+DEFINE tilde 6
+DEFINE krouzek 7
+
+0x04    U+0061 SHIFT U+0041 ALTGR U+00E6 SHIFT-ALTGR U+00C6 COMBINE[diaeresis] U+00E4 SHIFT COMBINE[diaeresis] U+00C4 COMBINE[acute] U+00E1 SHIFT COMBINE[acute] U+00C1 COMBINE[grave] U+00E0 SHIFT COMBINE[grave] U+00C0  COMBINE[circumflex] U+00E2 SHIFT COMBINE[circumflex] U+00C2 COMBINE[tilde] U+00E3 SHIFT COMBINE[tilde] U+00C3 COMBINE[krouzek] U+00E5 SHIFT COMBINE[krouzek] U+00C5 # a A æ Æ
+0x05    U+0062 SHIFT U+0042     # b B
+0x06    U+0063 SHIFT U+0043 COMBINE[cedilla] U+00E7 SHIFT COMBINE[cedilla] U+00C7   # c C
+0x07    U+0064 SHIFT U+0044 ALTGR U+00F0 SHIFT-ALTGR U+00D0 # d D ð Ð
+0x08    U+0065 SHIFT U+0045 ALTGR U+20AC COMBINE[acute] U+00E9 SHIFT COMBINE[acute] U+00C9 COMBINE[grave] U+00E8 SHIFT COMBINE[grave] U+00C8 COMBINE[circumflex] U+00EA SHIFT COMBINE[circumflex] U+00CA COMBINE[diaeresis] U+00EB SHIFT COMBINE[diaeresis] U+00CB  # e E €
+0x09    U+0066 SHIFT U+0046     # f F
+0x0A    U+0067 SHIFT U+0047     # g G
+0x0B    U+0068 SHIFT U+0048     # h H
+0x0C    U+0069 SHIFT U+0049 COMBINE[diaeresis] U+00EF SHIFT COMBINE[diaeresis] U+00CF COMBINE[acute] U+00ED SHIFT COMBINE[acute] U+00CD COMBINE[grave] U+00EC SHIFT COMBINE[grave] U+00CC COMBINE[circumflex] U+00EE SHIFT COMBINE[circumflex] U+00CE  # i I
+0x0D    U+006A SHIFT U+004A     # j J
+0x0E    U+006B SHIFT U+004B     # k K
+0x0F    U+006C SHIFT U+004C     # l L
+0x10    U+006D SHIFT U+004D ALTGR U+00B5    # m M µ
+0x11    U+006E SHIFT U+004E COMBINE[tilde] U+00F1 SHIFT COMBINE[tilde] U+00D1    # n N
+0x12    U+006F SHIFT U+004F ALTGR U+00F8 SHIFT-ALTGR U+00D8 COMBINE[diaeresis] U+00F6 SHIFT COMBINE[diaeresis] U+00D6 COMBINE[acute] U+00F3 SHIFT COMBINE[acute] U+00D3 COMBINE[grave] U+00F2 SHIFT COMBINE[grave] U+00D2 COMBINE[circumflex] U+00F4 SHIFT COMBINE[circumflex] U+00D4 COMBINE[tilde] U+00F5 SHIFT COMBINE[circumflex] U+00D5  # o O ø Ø
+0x13    U+0070 SHIFT U+0050 ALTGR U+00FE SHIFT-ALTGR U+00DE # p P þ Þ
+0x14    U+0071 SHIFT U+0051 ALTGR U+0040                    # q Q @
+0x15    U+0072 SHIFT U+0052     # r R
+0x16    U+0073 SHIFT U+0053     # s S
+0x17    U+0074 SHIFT U+0054     # t T
+0x18    U+0075 SHIFT U+0055 COMBINE[diaeresis] U+00FC SHIFT COMBINE[diaeresis] U+00DC COMBINE[acute] U+00FA SHIFT COMBINE[acute] U+00DA COMBINE[grave] U+00F9 SHIFT COMBINE[grave] U+00D9 COMBINE[circumflex] U+00FB SHIFT COMBINE[circumflex] U+00DB  # u U
+0x19    U+0076 SHIFT U+0056     # v V
+0x1A    U+0077 SHIFT U+0057     # w W
+0x1B    U+0078 SHIFT U+0058 ALTGR U+00BB    # x X »
+0x1C    U+0079 SHIFT U+0059     # y Y
+0x1D    U+0079 SHIFT U+0059 ALTGR U+00AB COMBINE[diaeresis] U+00FF COMBINE[acute] U+00FD SHIFT COMBINE[acute] U+00DD    # y Y «
+
+0x1E    U+0031 SHIFT U+0021 ALTGR U+00B9 SHIFT-ALTGR U+00A1 # 1 ! ¹ ¡
+0x1F    U+0032 SHIFT U+0022 ALTGR U+00B2                    # 2 " ²
+0x20    U+0033 SHIFT U+0023 ALTGR U+00B3 SHIFT-ALTGR U+00A3 # 3 § ³ £
+0x21    U+0034 SHIFT U+0024     # 4 $
+0x22    U+0035 SHIFT U+0025     # 5 %
+0x23    U+0036 SHIFT U+0026     # 6 &
+0x24    U+0037 SHIFT U+002F ALTGR U+007B    # 7 / {
+0x25    U+0038 SHIFT U+0028 ALTGR U+005B    # 8 ( [
+0x26    U+0039 SHIFT U+0029 ALTGR U+005D    # 9 ) ]
+0x27    U+0030 SHIFT U+003D ALTGR U+007D    # 0 = }
+
+0x28    U+000A                  # Enter
+0x29    U+001B                  # Escape
+0x2A    U+0008                  # Backspace
+0x2B    U+0009                  # Tab
+0x2C    U+0020                  # Space
+
+0x2D    U+00DF SHIFT U+003F ALTGR U+005C SHIFT-ALTGR U+00BF         # ß ? \ ¿
+0x2E    SET-COMBINE[acute][U+00B4] SHIFT SET-COMBINE[grave][U+0060] ALTGR SET-COMBINE[cedilla][U+00B8]      # ´ `
+0x2F    U+00FC SHIFT U+00DC ALTGR SET-COMBINE[diaeresis][U+00A8] SHIFT-ALTGR SET-COMBINE[krouzek][U+00B0]   # ü Ü
+0x30    U+002B SHIFT U+002A ALTGR SET-COMBINE[tilde][U+007E]        # + * ~
+0x31    U+0023 SHIFT U+0027 ALTGR SET-COMBINE[grave][U+0060]        # # '
+0x32    U+0023 SHIFT U+007E     # # ~
+0x33    U+00F6 SHIFT U+00D6     # ö Ö
+0x34    U+00E4 SHIFT U+00C4 ALTGR SET-COMBINE[circumflex][U+005E]   # ä Ä
+0x35    SET-COMBINE[circumflex][U+005E] SHIFT U+00B0                # ^ °
+0x36    U+002C SHIFT U+003B     # , ;
+0x37    U+002E SHIFT U+003A     # . :
+0x38    U+002d SHIFT U+005F     # - _
+
+0x49    "ins "                  # Insert
+0x4A    "home"                  # Home
+0x4B    "pgup"                  # PageUp
+0x4C    "del "                  # Delete
+0x4D    "end "                  # End
+0x4E    "pgdn"                  # PageDown
+0x4F    "righ"                  # RightArrow
+0x50    "left"                  # LeftArrow
+0x51    "down"                  # DownArrow
+0x52    "up  "                  # UpArrow
+
+0x54    U+002F                  # Keypad /
+0x55    U+002A                  # Keypad *
+0x56    U+002D                  # Keypad -
+0x57    U+002B                  # Keypad +
+0x58    U+000A                  # Keypad Enter
+0x59    U+0031 SHIFT "end "     # Keypad 1 End
+0x5A    U+0032 SHIFT "down"     # Keypad 2 DownArrow
+0x5B    U+0033 SHIFT "pgdn"     # Keypad 3 PageDown
+0x5C    U+0034 SHIFT "left"     # Keypad 4 LeftArrow
+0x5D    U+0035                  # Keypad 5
+0x5E    U+0036 SHIFT "righ"     # Keypad 6 RightArrow
+0x5F    U+0037 SHIFT "home"     # Keypad 7 Home
+0x60    U+0038 SHIFT "up  "     # Keypad 8 UpArrow
+0x61    U+0039 SHIFT "pgup"     # Keypad 9 PageUp
+0x62    U+0030 SHIFT "ins "     # Keypad 0 Insert
+0x63    U+002E SHIFT "del "     # Keypad . Delete
+
+0x64    U+003C SHIFT U+003E ALTGR U+007C    # < > |
+

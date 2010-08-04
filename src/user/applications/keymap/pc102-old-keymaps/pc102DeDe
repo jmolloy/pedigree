@@ -9,7 +9,6 @@ DEFINE krouzek 16
 
 0x01    U+001B                  # Escape
 
-0x29    SET-COMBINE[circumflex][U+005E] SHIFT U+00B0 # ^ °
 0x02    U+0031 SHIFT U+0021 ALTGR U+00B9 SHIFT-ALTGR U+00A1    # 1 ! ¹ ¡
 0x03    U+0032 SHIFT U+0022 ALTGR U+00B2    # 2 " ²
 0x04    U+0033 SHIFT U+00A7 ALTGR U+00B3 SHIFT-ALTGR U+00A3   # 3 § ³ £
@@ -53,9 +52,10 @@ ESC 0x1C    U+000A              # Keypad Enter
 0x26    U+006C SHIFT U+004C     # l L
 0x27    U+00F6 SHIFT U+00D6     # ö Ö
 0x28    U+00E4 SHIFT U+00C4 ALTGR SET-COMBINE[circumflex][U+005E] # ä Ä
-0x2B    U+0023 SHIFT U+0027 ALTGR SET-COMBINE[grave][U+0060]      # # '
+0x29    SET-COMBINE[circumflex][U+005E] SHIFT U+00B0 # ^ °
 
 0x2A    SHIFT                   # Shift
+0x2B    U+0023 SHIFT U+0027 ALTGR SET-COMBINE[grave][U+0060]      # # '
 0x56    U+003C SHIFT U+003E ALTGR U+007C     # < > |
 0x2C    U+0079 SHIFT U+0059 ALTGR U+00AB COMBINE[diaeresis] U+00FF COMBINE[acute] U+00FD SHIFT COMBINE[acute] U+00DD   # y Y «
 0x2D    U+0078 SHIFT U+0058 ALTGR U+00BB    # x X »
