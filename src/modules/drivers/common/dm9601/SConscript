@@ -28,6 +28,7 @@ files = [
 include = [
     '#/src/system/include',
     '#/src/modules/system',
+    '#/src/modules/drivers/common',
     '.'
 ]
 
