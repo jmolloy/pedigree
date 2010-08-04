@@ -95,19 +95,56 @@ bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
         /// \todo Make this a bit more general. Harcoding some numbers and some class names doesn't sound good
         addChild(pDevice);
         if(pInterface->pDescriptor->nClass == 9)
-            replaceChild(pDevice, new UsbHubDevice(pDevice));
+        {
+            UsbHubDevice *pHub = new UsbHubDevice(pDevice);
+            replaceChild(pDevice, pHub);
+            if(!pHub->initialise())
+                removeChild(pHub);
+        }
         else if(pInterface->pDescriptor->nClass == 3)
         {
-            replaceChild(pDevice, new UsbHumanInterfaceDevice(pDevice));
+            UsbHumanInterfaceDevice *pHid = new UsbHumanInterfaceDevice(pDevice);
+            replaceChild(pDevice, pHid);
+            if(!pHid->initialise())
+                removeChild(pHid);
+            
             /// \bug WMware's mouse's second interface is known to cause problems
             return true;
         }
         else if(pInterface->pDescriptor->nClass == 8)
-            replaceChild(pDevice, new UsbMassStorageDevice(pDevice));
+        {
+            UsbMassStorageDevice *pMassStorage = new UsbMassStorageDevice(pDevice);
+            replaceChild(pDevice, pMassStorage);
+            if(!pMassStorage->initialise())
+                removeChild(pMassStorage);
+        }
         else if(pDes->pDescriptor->nVendorId == 0x0403 && pDes->pDescriptor->nProductId == 0x6001)
-            replaceChild(pDevice, new FtdiSerialDevice(pDevice));
+        {
+            FtdiSerialDevice *pFtdi = new FtdiSerialDevice(pDevice);
+            replaceChild(pDevice, pFtdi);
+            if(!pFtdi->initialise())
+                removeChild(pFtdi);
+        }
     }
     return true;
+}
+
+void UsbHub::getDeviceByIds(size_t vendor, size_t product, void (*pCallback)(UsbDevice *))
+{
+    for (size_t i = 0;i < m_Children.count();i++)
+    {
+        UsbDevice *pDevice = dynamic_cast<UsbDevice*>(m_Children[i]);
+        if(pDevice)
+        {
+            UsbDevice::DeviceDescriptor *pDes = pDevice->getDescriptor();
+            if(!pDes)
+                continue;
+                
+            if((pDes->pDescriptor->nVendorId == vendor) && (pDes->pDescriptor->nProductId == product) && pCallback)
+                pCallback(pDevice);
+        }
+            
+    }
 }
 
 void UsbHub::deviceDisconnected(uint8_t nPort)

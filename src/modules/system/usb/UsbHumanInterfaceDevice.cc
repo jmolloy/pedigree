@@ -47,6 +47,10 @@ static inline int64_t _uint2int(uint64_t val, uint8_t len)
 
 UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) : Device(pDev), UsbDevice(pDev)
 {
+}
+
+bool UsbHumanInterfaceDevice::initialise()
+{
     HidDescriptor *pHidDescriptor = 0;
     for(size_t i = 0;i < m_pInterface->pOtherDescriptors.count();i++)
     {
@@ -60,7 +64,7 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) : Device(pDev)
     if(!pHidDescriptor)
     {
         ERROR("USB: HID: No HID descriptor");
-        return;
+        return false;
     }
 
 
@@ -214,11 +218,13 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) : Device(pDev)
     if(!pInEndpoint)
     {
         ERROR("USB: HID: No Interrupt IN endpoint");
-        return;
+        return false;
     }
 
     UsbEndpoint endpointInfo(m_nAddress, m_nPort, pInEndpoint->nEndpoint, m_Speed, pInEndpoint->nMaxPacketSize);
     dynamic_cast<UsbHub*>(m_pParent)->addInterruptInHandler(endpointInfo, reinterpret_cast<uintptr_t>(m_pReportBuffer), m_pReport->nBytes, callback, reinterpret_cast<uintptr_t>(this));
+    
+    return true;
 }
 
 UsbHumanInterfaceDevice::~UsbHumanInterfaceDevice()

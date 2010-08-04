@@ -247,6 +247,11 @@ class UsbDevice : public virtual Device
             m_pDescriptor(pDev->m_pDescriptor), m_pInterface(pDev->m_pInterface), m_pConfiguration(pDev->m_pConfiguration) {}
 
         virtual inline ~UsbDevice() {};
+        
+        virtual bool initialise()
+        {
+            return true;
+        }
 
         /** Access to internal information */
         virtual void getName(String &str)

@@ -49,6 +49,9 @@ class UsbHub : public virtual Device
         {
             return LowSpeed;
         }
+        
+        /// Gets a UsbDevice from a given vendor:product pair
+        void getDeviceByIds(size_t vendor, size_t product, void (*pCallback)(class UsbDevice *));
 
     private:
 

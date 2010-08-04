@@ -26,6 +26,14 @@ static uint8_t nSubdivisors[8] = {0, 3, 2, 4, 1, 5, 6, 7};
 
 FtdiSerialDevice::FtdiSerialDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev), m_pInEndpoint(0), m_pOutEndpoint(0)
 {
+}
+
+FtdiSerialDevice::~FtdiSerialDevice()
+{
+}
+
+bool FtdiSerialDevice::initialise()
+{
     // Reset the device
     controlRequest(RequestType::Vendor, 0, 0, 0);
 
@@ -51,13 +59,13 @@ FtdiSerialDevice::FtdiSerialDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
     if(!m_pInEndpoint)
     {
         ERROR("USB: FTDI: No IN endpoint");
-        return;
+        return false;
     }
 
     if(!m_pOutEndpoint)
     {
         ERROR("USB: FTDI: No OUT endpoint");
-        return;
+        return false;
     }
 
     // Multiple transfer at the same time test case
@@ -74,10 +82,8 @@ FtdiSerialDevice::FtdiSerialDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
         m_pOutEndpoint->bDataToggle = !m_pOutEndpoint->bDataToggle;
     }
 #endif
-}
 
-FtdiSerialDevice::~FtdiSerialDevice()
-{
+    return true;
 }
 
 char FtdiSerialDevice::read()

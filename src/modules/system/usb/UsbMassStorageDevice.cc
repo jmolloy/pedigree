@@ -25,6 +25,14 @@
 
 UsbMassStorageDevice::UsbMassStorageDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev), m_nUnits(0), m_pInEndpoint(0), m_pOutEndpoint(0)
 {
+}
+
+UsbMassStorageDevice::~UsbMassStorageDevice()
+{
+}
+
+bool UsbMassStorageDevice::initialise()
+{
     for(size_t i = 0; i < m_pInterface->pEndpoints.count(); i++)
     {
         Endpoint *pEndpoint = m_pInterface->pEndpoints[i];
@@ -39,13 +47,13 @@ UsbMassStorageDevice::UsbMassStorageDevice(UsbDevice *dev) : Device(dev), UsbDev
     if(!m_pInEndpoint)
     {
         ERROR("USB: MSD: No IN endpoint");
-        return;
+        return false;
     }
 
     if(!m_pOutEndpoint)
     {
         ERROR("USB: MSD: No OUT endpoint");
-        return;
+        return false;
     }
 
     // Reset the mass storage device and associated interface
@@ -59,16 +67,14 @@ UsbMassStorageDevice::UsbMassStorageDevice(UsbDevice *dev) : Device(dev), UsbDev
     if(!controlRequest(RequestDirection::In | MassStorageRequest, MassStorageGetMaxLUN, 0, m_pInterface->pDescriptor->nInterface, 1, reinterpret_cast<uintptr_t>(nMaxLUN)))
     {
         ERROR("USB: MSD: Couldn't get maximum LUN");
-        return;
+        return false;
     }
     m_nUnits = *nMaxLUN + 1;
     delete nMaxLUN;
 
     searchDisks();
-}
-
-UsbMassStorageDevice::~UsbMassStorageDevice()
-{
+    
+    return true;
 }
 
 bool UsbMassStorageDevice::massStorageReset()

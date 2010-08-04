@@ -25,6 +25,8 @@ class UsbHumanInterfaceDevice : public UsbDevice
     public:
         UsbHumanInterfaceDevice (UsbDevice *dev);
         virtual ~UsbHumanInterfaceDevice();
+        
+        virtual bool initialise();
 
         virtual void getName(String &str)
         {
