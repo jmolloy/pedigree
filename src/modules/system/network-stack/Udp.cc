@@ -122,7 +122,7 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
   }
 
   // Grab the IPv4 header
-  size_t ipSize = Ipv4::instance().injectHeader(packet + ethSize, dest, me.ipv4, IP_TCP);
+  size_t ipSize = Ipv4::instance().injectHeader(packet + ethSize, dest, me.ipv4, IP_UDP);
   if(!ipSize)
   {
     NetworkStack::instance().getMemPool().free(packet);
