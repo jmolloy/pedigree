@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin, Eduard Burtescu
+ * Copyright (c) 2009 Eduard Burtescu
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
