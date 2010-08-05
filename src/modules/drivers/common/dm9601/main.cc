@@ -19,19 +19,37 @@
 
 #include "Dm9601.h"
 
+#include <usb/UsbDevice.h>
+#include <usb/UsbHub.h>
+
+#include <machine/Device.h>
+
+static struct device
+{
+    uint16_t vendor;
+    uint16_t product;
+} g_Devices[] = {
+    {0x2630, 0x9601}, // Specification defines these for the chip
+    {0x0fe6, 0x8101}, // Kontron product
+};
+
+#define NUM_DEVICES (sizeof(g_Devices) / sizeof(g_Devices[0]))
+
 void dm9601Connected(UsbDevice *pDevice)
 {
     Dm9601 *pDm9601 = new Dm9601(pDevice);
-    pDm9601->getParent()->replaceChild(pDevice, pDm9601);
+    if(pDm9601->initialise())
+        pDm9601->getParent()->replaceChild(pDevice, pDm9601);
 }
 
 static void entry()
 {
-    UsbPnP::instance().registerCallback(0x2603, 0x9601, dm9601Connected);
+    for(size_t i = 0; i < NUM_DEVICES; i++)
+        UsbPnP::instance().registerCallback(g_Devices[i].vendor, g_Devices[i].product, dm9601Connected);
 }
 
-void exit()
+static void exit()
 {
 }
 
-MODULE_INFO("dm9601", &entry, &exit, "usb");
+MODULE_INFO("dm9601", &entry, &exit, "usb", "usb-hcd", "network-stack");
