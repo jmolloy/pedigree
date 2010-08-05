@@ -18,7 +18,6 @@
 #define USB_H
 
 #include <processor/types.h>
-#include <utilities/List.h>
 
 // PID types, ordered as they appear in the EHCI spec
 enum UsbPid {
@@ -77,22 +76,6 @@ struct UsbEndpoint
     size_t nMaxPacketSize;
     uint8_t nHubAddress;
     uint8_t nHubPort;
-
-    static const char *dumpSpeed(UsbSpeed speed)
-    {
-        if(speed == HighSpeed)
-            return "High Speed";
-        if(speed == FullSpeed)
-            return "Full Speed";
-        if(speed == LowSpeed)
-            return "Low Speed";
-        return "";
-    }
-
-    const char *dumpSpeed()
-    {
-        return dumpSpeed(speed);
-    }
 };
 
 #endif

@@ -34,4 +34,4 @@ void exit()
 {
 }
 
-MODULE_INFO("usb-hid", &entry, &exit, "usb");
+MODULE_INFO("usb-hub", &entry, &exit, "usb");

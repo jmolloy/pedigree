@@ -582,7 +582,7 @@ void Ehci::doAsync(uintptr_t nTransaction, void (*pCallback)(uintptr_t, ssize_t)
     pQH->pMetaData->pCallback = pCallback;
     pQH->pMetaData->pParam = pParam;
 #ifdef USB_VERBOSE_DEBUG
-    DEBUG_LOG("START #" << Dec << nTransaction << Hex << " " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << Hex << " " << UsbEndpoint::dumpSpeed((UsbSpeed)pQH->nSpeed));
+    DEBUG_LOG("START #" << Dec << nTransaction << Hex << " " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << Hex);
 #endif
 
     // Link in to the asynchronous schedule

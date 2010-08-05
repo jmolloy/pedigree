@@ -235,7 +235,7 @@ void UsbDevice::populateDescriptors()
     // If the device works at full-speed and it has a device qualifier descriptor,
     // it means that the normal configuration descriptor is for high-speed,
     // and we need to use the other speed configuration descriptor
-    if(m_Speed == FullSpeed && getDescriptor(Descriptor::DeviceQualifier, 0, 1))
+    if(m_Speed == FullSpeed && getDescriptorLength(Descriptor::DeviceQualifier, 0, 1))
         nConfigDescriptor = Descriptor::OtherSpeedConfiguration;
 
     // Get the vendor, product and serial strings
