@@ -14,35 +14,24 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef FTDISERIALDEVICE_H
-#define FTDISERIALDEVICE_H
+#include <Module.h>
+#include <usb/UsbPnP.h>
 
-#include <processor/types.h>
-#include <usb/UsbDevice.h>
-#include <machine/Serial.h>
+#include "UsbHubDevice.h"
 
-class FtdiSerialDevice : public UsbDevice, public Serial
+void hubConnected(UsbDevice *pDevice)
 {
-    public:
-        FtdiSerialDevice (UsbDevice *dev);
-        virtual ~FtdiSerialDevice();
-        
-        virtual bool initialiseDevice();
+    UsbHubDevice *pHub = new UsbHubDevice(pDevice);
+    pHub->getParent()->replaceChild(pDevice, pHub);
+}
 
-        virtual void setBase(uintptr_t nBaseAddr){}
-        virtual char read();
-        virtual char readNonBlock(){return 0;}
-        virtual void write(char c);
+static void entry()
+{
+    UsbPnP::instance().registerCallback(9, SubclassNone, ProtocolNone, hubConnected);
+}
 
-        virtual void getName(String &str)
-        {
-            str = "USB FTDI Serial Device";
-        }
+void exit()
+{
+}
 
-    private:
-
-        Endpoint *m_pInEndpoint;
-        Endpoint *m_pOutEndpoint;
-};
-
-#endif
+MODULE_INFO("usb-hid", &entry, &exit, "usb");

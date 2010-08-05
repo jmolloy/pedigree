@@ -246,7 +246,7 @@ void Ohci::interrupt(size_t number, InterruptState &state)
                         if(!bPeriodic)
                             ERROR_NOLOCK("TD Error " << Dec << pTD->nStatus << Hex);
 #endif
-                        nResult = -pTD->nStatus;
+                        nResult = - pTD->getError();
                     }
                     else
                     {

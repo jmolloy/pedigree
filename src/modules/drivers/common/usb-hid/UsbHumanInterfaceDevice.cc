@@ -17,7 +17,7 @@
 #include <machine/HidInputManager.h>
 #include <usb/UsbHub.h>
 #include <usb/UsbDevice.h>
-#include <usb/UsbHumanInterfaceDevice.h>
+#include "UsbHumanInterfaceDevice.h"
 
 #define undefined -0xffffffff
 
@@ -47,14 +47,6 @@ static inline int64_t _uint2int(uint64_t val, uint8_t len)
 
 UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) : Device(pDev), UsbDevice(pDev)
 {
-}
-
-UsbHumanInterfaceDevice::~UsbHumanInterfaceDevice()
-{
-}
-
-bool UsbHumanInterfaceDevice::initialiseDevice()
-{
     HidDescriptor *pHidDescriptor = 0;
     for(size_t i = 0;i < m_pInterface->pOtherDescriptors.count();i++)
     {
@@ -68,13 +60,13 @@ bool UsbHumanInterfaceDevice::initialiseDevice()
     if(!pHidDescriptor)
     {
         ERROR("USB: HID: No HID descriptor");
-        return false;
+        return;
     }
 
 
     /// \bug WMware's mouse's second interface is known to cause problems
-    //if(m_pDescriptor->pDescriptor->nVendorId == 0x0e0f && m_pInterface->pDescriptor->nInterface)
-    //    return;
+    if(m_pDescriptor->pDescriptor->nVendorId == 0x0e0f && m_pInterface->pDescriptor->nInterface)
+        return;
 
     // Disable BIOS stuff
     //controlRequest(RequestType::Class | RequestRecipient::Interface, Request::SetInterface, 0, m_pInterface->pDescriptor->nInterface);
@@ -222,13 +214,17 @@ bool UsbHumanInterfaceDevice::initialiseDevice()
     if(!pInEndpoint)
     {
         ERROR("USB: HID: No Interrupt IN endpoint");
-        return false;
+        return;
     }
 
     UsbEndpoint endpointInfo(m_nAddress, m_nPort, pInEndpoint->nEndpoint, m_Speed, pInEndpoint->nMaxPacketSize);
     dynamic_cast<UsbHub*>(m_pParent)->addInterruptInHandler(endpointInfo, reinterpret_cast<uintptr_t>(m_pReportBuffer), m_pReport->nBytes, callback, reinterpret_cast<uintptr_t>(this));
-    
-    return true;
+
+    m_bHasDriver = true;
+}
+
+UsbHumanInterfaceDevice::~UsbHumanInterfaceDevice()
+{
 }
 
 void UsbHumanInterfaceDevice::callback(uintptr_t pParam, ssize_t ret)

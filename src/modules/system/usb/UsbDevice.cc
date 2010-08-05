@@ -158,7 +158,7 @@ void *UsbDevice::getDescriptor(uint8_t nDescriptor, uint8_t nSubDescriptor, uint
     uint16_t nIndex = requestType & RequestRecipient::Interface ? m_pInterface->pDescriptor->nInterface : 0;
 
     /// \todo Proper language ID handling!
-    if(nDescriptor == 3)
+    if(nDescriptor == Descriptor::String)
         nIndex = 0x0409; // English (US)
 
     if(!controlRequest(RequestDirection::In | requestType, Request::GetDescriptor, (nDescriptor << 8) | nSubDescriptor, nIndex, nBytes, reinterpret_cast<uintptr_t>(pBuffer)))
@@ -171,48 +171,50 @@ void *UsbDevice::getDescriptor(uint8_t nDescriptor, uint8_t nSubDescriptor, uint
 
 uint8_t UsbDevice::getDescriptorLength(uint8_t nDescriptor, uint8_t nSubDescriptor, uint8_t requestType)
 {
-    static uint8_t pLength = 0;
+    uint8_t *length = new uint8_t(0);
+    PointerGuard<uint8_t> guard(length);
     uint16_t nIndex = requestType & RequestRecipient::Interface ? m_pInterface->pDescriptor->nInterface : 0;
 
     /// \todo Proper language ID handling
-    if(nDescriptor == 3)
+    if(nDescriptor == Descriptor::String)
         nIndex = 0x0409; // English (US)
 
-    if(!controlRequest(RequestDirection::In | requestType, Request::GetDescriptor, (nDescriptor << 8) | nSubDescriptor, nIndex, 1, reinterpret_cast<uintptr_t>(&pLength)))
-        return 0;
-    return pLength;
+    controlRequest(RequestDirection::In | requestType, Request::GetDescriptor, (nDescriptor << 8) | nSubDescriptor, nIndex, 1, reinterpret_cast<uintptr_t>(length));
+    return *length;
 }
 
-char *UsbDevice::getString(uint8_t nString)
+String UsbDevice::getString(uint8_t nString)
 {
+    // A value of zero means there's no string
     if(!nString)
-    {
-        ERROR("USB: UsbDevice::getString called with nString=0, will return \"\"");
-        char *pString = new char[1];
-        pString[0] = '\0';
-        return pString;
-    }
+        return String("");
 
-    uint8_t descriptorLength = getDescriptorLength(3, nString);
-    char *pBuffer = static_cast<char*>(getDescriptor(3, nString, descriptorLength));
+    uint8_t descriptorLength = getDescriptorLength(Descriptor::String, nString);
+    if(!descriptorLength)
+        return String("");
+
+    char *pBuffer = static_cast<char*>(getDescriptor(Descriptor::String, nString, descriptorLength));
     if(!pBuffer)
-        return 0;
-    // Get the number of characters in the string
+        return String("");
+
+    // Get the number of characters in the string and allocate a new buffer for the string
     size_t nStrLength = (descriptorLength - 2) / 2;
     char *pString = new char[nStrLength + 1];
+
     // For each character, get the lower part of the UTF-16 value
     /// \todo UTF-8 support of some kind
     for(size_t i = 0;i < nStrLength;i++)
         pString[i] = pBuffer[2 + i*2];
+
     // Set the last byte of the string to 0, delete the old buffer and return the string
     pString[nStrLength] = 0;
     delete pBuffer;
-    return pString;
+    return String(pString);
 }
 
 void UsbDevice::populateDescriptors()
 {
-    m_pDescriptor = new DeviceDescriptor(getDescriptor(1, 0, getDescriptorLength(1, 0)));
+    m_pDescriptor = new DeviceDescriptor(getDescriptor(Descriptor::Device, 0, getDescriptorLength(Descriptor::Device, 0)));
     if(!m_pDescriptor)
         return; /// \todo Better error handling
 
@@ -226,26 +228,32 @@ void UsbDevice::populateDescriptors()
     DEBUG_LOG("Device has " << Dec << m_pDescriptor->pDescriptor->nConfigurations << Hex << " configurations");
 #endif
 
-    if(m_pDescriptor->pDescriptor->nVendorString)
-        m_pDescriptor->sVendor = getString(m_pDescriptor->pDescriptor->nVendorString);
-    else
-        m_pDescriptor->sVendor = "";
-    if(m_pDescriptor->pDescriptor->nProductString)
-        m_pDescriptor->sProduct = getString(m_pDescriptor->pDescriptor->nProductString);
-    else
-        m_pDescriptor->sProduct = "";
-    if(m_pDescriptor->pDescriptor->nSerialString)
-        m_pDescriptor->sSerial = getString(m_pDescriptor->pDescriptor->nSerialString);
-    else
-        m_pDescriptor->sSerial = "";
-    for(size_t i = 0;i < m_pDescriptor->pDescriptor->nConfigurations;i++)
+    // Descriptor number for the configuration descriptor
+    uint8_t nConfigDescriptor = Descriptor::Configuration;
+
+    // Handle high-speed capable devices running at full-speed:
+    // If the device works at full-speed and it has a device qualifier descriptor,
+    // it means that the normal configuration descriptor is for high-speed,
+    // and we need to use the other speed configuration descriptor
+    if(m_Speed == FullSpeed && getDescriptor(Descriptor::DeviceQualifier, 0, 1))
+        nConfigDescriptor = Descriptor::OtherSpeedConfiguration;
+
+    // Get the vendor, product and serial strings
+    m_pDescriptor->sVendor = getString(m_pDescriptor->pDescriptor->nVendorString);
+    m_pDescriptor->sProduct = getString(m_pDescriptor->pDescriptor->nProductString);
+    m_pDescriptor->sSerial = getString(m_pDescriptor->pDescriptor->nSerialString);
+
+    // Grab each configuration from the device
+    for(size_t i = 0; i < m_pDescriptor->pDescriptor->nConfigurations; i++)
     {
-        uint16_t *pPartialConfig = static_cast<uint16_t*>(getDescriptor(2, i, 4));
+        // Get the total size of this configuration descriptor
+        uint16_t *pPartialConfig = static_cast<uint16_t*>(getDescriptor(nConfigDescriptor, i, 4));
         uint16_t configLength = pPartialConfig[1];
         delete pPartialConfig;
-        ConfigDescriptor *pConfig = new ConfigDescriptor(getDescriptor(2, i, configLength), configLength);
+
+        ConfigDescriptor *pConfig = new ConfigDescriptor(getDescriptor(nConfigDescriptor, i, configLength), configLength);
         pConfig->sString = getString(pConfig->pDescriptor->nString);
-        for(size_t j = 0;j < pConfig->pInterfaces.count();j++)
+        for(size_t j = 0; j < pConfig->pInterfaces.count(); j++)
         {
             Interface *pInterface = pConfig->pInterfaces[j];
             pInterface->sString = getString(pInterface->pDescriptor->nString);

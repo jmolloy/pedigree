@@ -319,11 +319,11 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                         ERROR_NOLOCK("QH NAK counter: " << pqTD->res1 << " [overlay count=" << pQH->overlay.res1 << "]");
                         ERROR_NOLOCK("qTD PID: " << pqTD->nPid << ".");
 #endif
-                        nResult = -(pqTD->nStatus & 0x7c);
+                        nResult = - pqTD->getError();
                     }
                     else
                     {
-                        nResult = pqTD->nBytes > pqTD->nBufferSize ? pqTD->nBufferSize : pqTD->nBytes;
+                        nResult = pqTD->nBufferSize - pqTD->nBytes;
                         pQH->pMetaData->nTotalBytes += nResult;
                     }
 #ifdef USB_VERBOSE_DEBUG

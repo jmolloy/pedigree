@@ -20,10 +20,10 @@
 #include <usb/UsbDevice.h>
 #include <usb/UsbHub.h>
 
-class UsbHubDevice : public UsbHub
+class UsbHubDevice : public UsbDevice, public UsbHub
 {
     public:
-        UsbHubDevice (UsbDevice *dev);
+        UsbHubDevice(UsbDevice *dev);
         virtual ~UsbHubDevice();
 
         virtual void getName(String &str)

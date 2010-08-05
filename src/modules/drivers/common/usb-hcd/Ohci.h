@@ -57,6 +57,27 @@ class Ohci : public UsbHub,
             uint16_t nBufferSize;
             uint16_t nNextTDIndex;
             bool bLast;
+
+            // Possible values for status
+            enum StatusCodes
+            {
+                CrcError = 1,
+                Stall = 4
+            };
+
+            UsbError getError()
+            {
+                switch(nStatus)
+                {
+                    case CrcError:
+                        return ::CrcError;
+                    case Stall:
+                        return ::Stall;
+                    default:
+                        return TransactionError;
+                }
+            }
+
         } PACKED ALIGN(16);
 
         struct ED
@@ -116,7 +137,7 @@ class Ohci : public UsbHub,
         virtual void doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
         virtual void addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
 
-        // IRQ handler callback.
+        /// IRQ handler
 #ifdef X86_COMMON
         virtual bool irq(irq_id_t number, InterruptState &state);
 #else

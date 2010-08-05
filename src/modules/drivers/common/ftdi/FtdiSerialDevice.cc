@@ -14,11 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <utilities/PointerGuard.h>
 #include <usb/UsbDevice.h>
 #include <usb/UsbHub.h>
 #include <usb/Usb.h>
-#include <usb/FtdiSerialDevice.h>
-#include <utilities/PointerGuard.h>
+#include "FtdiSerialDevice.h"
 
 #define FTDI_BAUD_RATE 9600
 
@@ -74,64 +74,12 @@ FtdiSerialDevice::FtdiSerialDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
         m_pOutEndpoint->bDataToggle = !m_pOutEndpoint->bDataToggle;
     }
 #endif
+
+    m_bHasDriver = true;
 }
 
 FtdiSerialDevice::~FtdiSerialDevice()
 {
-}
-
-bool FtdiSerialDevice::initialiseDevice()
-{
-    // Reset the device
-    controlRequest(RequestType::Vendor, 0, 0, 0);
-
-    // Calculate the divisor and subdivisor for the baud rate
-    uint16_t nDivisor = (48000000 / 2) / FTDI_BAUD_RATE, nSubdivisor = nSubdivisors[nDivisor % 8];
-    nDivisor /= 8;
-
-    // Set the divisor and subdivisor (0x4138 / 0x00 for 9600)
-    controlRequest(RequestType::Vendor, 3, (nSubdivisor & 3) << 14 | nDivisor, nSubdivisor >> 2);
-
-    // Get the in and out endpoints
-    for(size_t i = 0; i < m_pInterface->pEndpoints.count(); i++)
-    {
-        Endpoint *pEndpoint = m_pInterface->pEndpoints[i];
-        if(!m_pInEndpoint && (pEndpoint->nTransferType == Endpoint::Bulk) && pEndpoint->bIn)
-            m_pInEndpoint = pEndpoint;
-        if(!m_pOutEndpoint && (pEndpoint->nTransferType == Endpoint::Bulk) && pEndpoint->bOut)
-            m_pOutEndpoint = pEndpoint;
-        if(m_pInEndpoint && m_pOutEndpoint)
-            break;
-    }
-
-    if(!m_pInEndpoint)
-    {
-        ERROR("USB: FTDI: No IN endpoint");
-        return false;
-    }
-
-    if(!m_pOutEndpoint)
-    {
-        ERROR("USB: FTDI: No OUT endpoint");
-        return false;
-    }
-
-    // Multiple transfer at the same time test case
-#if 0
-    UsbHub *pParentHub = dynamic_cast<UsbHub*>(m_pParent);
-    UsbEndpoint endpointInfo(m_nAddress, m_nPort, m_pOutEndpoint->nEndpoint, m_Speed, m_pOutEndpoint->nMaxPacketSize);
-    for(char i = 'A'; i <= 'Z'; i++)
-    {
-        char *pChar = new char(i);
-
-        uintptr_t nTransaction = pParentHub->createTransaction(endpointInfo);
-        pParentHub->addTransferToTransaction(nTransaction, m_pOutEndpoint->bDataToggle, UsbPidOut, reinterpret_cast<uintptr_t>(pChar), 1);
-        pParentHub->doAsync(nTransaction);
-        m_pOutEndpoint->bDataToggle = !m_pOutEndpoint->bDataToggle;
-    }
-#endif
-
-    return true;
 }
 
 char FtdiSerialDevice::read()

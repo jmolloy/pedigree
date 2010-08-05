@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Matthew Iselin
+ * Copyright (c) 2010 Eduard Burtescu
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -17,21 +17,21 @@
 #include <Module.h>
 #include <usb/UsbPnP.h>
 
-#include "Dm9601.h"
+#include "FtdiSerialDevice.h"
 
-void dm9601Connected(UsbDevice *pDevice)
+void ftdiConnected(UsbDevice *pDevice)
 {
-    Dm9601 *pDm9601 = new Dm9601(pDevice);
-    pDm9601->getParent()->replaceChild(pDevice, pDm9601);
+    FtdiSerialDevice *pFtdi = new FtdiSerialDevice(pDevice);
+    pFtdi->getParent()->replaceChild(pDevice, pFtdi);
 }
 
 static void entry()
 {
-    UsbPnP::instance().registerCallback(0x2603, 0x9601, dm9601Connected);
+    UsbPnP::instance().registerCallback(0x0403, 0x6001, ftdiConnected);
 }
 
 void exit()
 {
 }
 
-MODULE_INFO("dm9601", &entry, &exit, "usb");
+MODULE_INFO("ftdi", &entry, &exit, "usb");

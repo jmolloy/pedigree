@@ -73,6 +73,19 @@ class Ehci : public UsbHub,
 
             // Custom qTD fields
             uint16_t nBufferSize;
+
+            // Possible values for status
+            enum StatusCodes
+            {
+                Halted = 0x40,
+            };
+
+            UsbError getError()
+            {
+                if(nStatus & Halted)
+                    return Stall;
+                return TransactionError;
+            }
         } PACKED ALIGN(32);
 
         struct QH
@@ -128,12 +141,7 @@ class Ehci : public UsbHub,
         virtual void doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
         virtual void addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
 
-        virtual UsbSpeed getHubSpeed()
-        {
-            return HighSpeed;
-        }
-
-        // IRQ handler callback.
+        /// IRQ handler
 #ifdef X86_COMMON
         virtual bool irq(irq_id_t number, InterruptState &state);
 #else

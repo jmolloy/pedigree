@@ -58,6 +58,22 @@ class Uhci : public UsbHub, public IrqHandler
 
             // Custom TD fields
             uint16_t nBufferSize;
+
+            // Possible values for status
+            enum StatusCodes
+            {
+                Stall = 0x40,
+                Nak = 0x8,
+            };
+
+            UsbError getError()
+            {
+                if(nStatus & Stall)
+                    return ::Stall;
+                if(nStatus & Nak)
+                    return NakNyet;
+                return TransactionError;
+            }
         } PACKED ALIGN(16);
 
         struct QH
@@ -101,7 +117,7 @@ class Uhci : public UsbHub, public IrqHandler
         virtual void doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
         virtual void addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
 
-        // IRQ handler callback.
+        /// IRQ handler
         virtual bool irq(irq_id_t number, InterruptState &state);
 
         void doDequeue();

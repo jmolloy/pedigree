@@ -24,10 +24,8 @@
 class UsbMassStorageDevice : public UsbDevice, public ScsiController
 {
     public:
-        UsbMassStorageDevice (UsbDevice *dev);
+        UsbMassStorageDevice(UsbDevice *dev);
         virtual ~UsbMassStorageDevice();
-        
-        virtual bool initialiseDevice();
 
         virtual bool sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite);
 
@@ -54,7 +52,7 @@ class UsbMassStorageDevice : public UsbDevice, public ScsiController
             CswSig = HOST_TO_LITTLE32(0x53425355)   // USBS
         };
 
-        typedef struct Cbw {
+        struct Cbw {
             uint32_t nSig;
             uint32_t nTag;
             uint32_t nDataBytes;
@@ -62,14 +60,14 @@ class UsbMassStorageDevice : public UsbDevice, public ScsiController
             uint8_t nLUN;
             uint8_t nCommandSize;
             uint8_t pCommand[16];
-        } PACKED Cbw;
+        } PACKED;
 
-        typedef struct Csw {
+        struct Csw {
             uint32_t nSig;
             uint32_t nTag;
             uint32_t nResidue;
             uint8_t nStatus;
-        } PACKED Csw;
+        } PACKED;
 
         size_t m_nUnits;
         Endpoint *m_pInEndpoint;

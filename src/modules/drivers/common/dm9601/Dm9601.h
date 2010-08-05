@@ -32,10 +32,10 @@
 class Dm9601 : public UsbDevice, public Network
 {
     public:
-    
-        Dm9601(UsbDevice *pDev);
-        
-        virtual ~Dm9601();
+
+        Dm9601(UsbDevice *pDev) {}
+
+        virtual ~Dm9601() {}
 
         virtual void getName(String &str)
         {
@@ -47,9 +47,9 @@ class Dm9601 : public UsbDevice, public Network
         virtual bool setStationInfo(StationInfo info);
 
         virtual StationInfo getStationInfo();
-        
+
     private:
-    
+
         enum VendorRequests
         {
             ReadRegister    = 0,
@@ -59,22 +59,22 @@ class Dm9601 : public UsbDevice, public Network
             WriteMemory     = 5,
             WriteMemory1    = 7,
         };
-    
+
         /// Reads data from a register into a buffer
         ssize_t readRegister(uint8_t reg, uintptr_t buffer, size_t nBytes);
-        
+
         /// Writes data from a buffer to a register
         ssize_t writeRegister(uint8_t reg, uintptr_t buffer, size_t nBytes);
-        
+
         /// Writes a single 8-bit value to a register
         ssize_t writeRegister(uint8_t reg, uint8_t data);
-        
+
         /// Reads data from device memory into a buffer
         ssize_t readMemory(uint16_t offset, uintptr_t buffer, size_t nBytes);
-        
+
         /// Writes data from a buffer into device memory
         ssize_t writeMemory(uint16_t offset, uintptr_t buffer, size_t nBytes);
-        
+
         /// Writes a single 8-bit value into device memory
         ssize_t writeMemory(uint16_t offset, uint8_t data);
 

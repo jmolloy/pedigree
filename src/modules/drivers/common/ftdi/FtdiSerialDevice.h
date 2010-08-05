@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Matthew Iselin
+ * Copyright (c) 2010 Eduard Burtescu
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,24 +14,33 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <Module.h>
-#include <usb/UsbPnP.h>
+#ifndef FTDISERIALDEVICE_H
+#define FTDISERIALDEVICE_H
 
-#include "Dm9601.h"
+#include <processor/types.h>
+#include <usb/UsbDevice.h>
+#include <machine/Serial.h>
 
-void dm9601Connected(UsbDevice *pDevice)
+class FtdiSerialDevice : public UsbDevice, public Serial
 {
-    Dm9601 *pDm9601 = new Dm9601(pDevice);
-    pDm9601->getParent()->replaceChild(pDevice, pDm9601);
-}
+    public:
+        FtdiSerialDevice(UsbDevice *dev);
+        virtual ~FtdiSerialDevice();
 
-static void entry()
-{
-    UsbPnP::instance().registerCallback(0x2603, 0x9601, dm9601Connected);
-}
+        virtual void setBase(uintptr_t nBaseAddr){}
+        virtual char read();
+        virtual char readNonBlock(){return 0;}
+        virtual void write(char c);
 
-void exit()
-{
-}
+        virtual void getName(String &str)
+        {
+            str = "USB FTDI Serial Device";
+        }
 
-MODULE_INFO("dm9601", &entry, &exit, "usb");
+    private:
+
+        Endpoint *m_pInEndpoint;
+        Endpoint *m_pOutEndpoint;
+};
+
+#endif

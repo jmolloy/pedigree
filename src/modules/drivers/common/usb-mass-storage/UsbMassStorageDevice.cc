@@ -15,23 +15,15 @@
  */
 
 #include <machine/Disk.h>
-#include <usb/UsbDevice.h>
-#include <usb/UsbHub.h>
-#include <usb/UsbMassStorageDevice.h>
 #include <utilities/assert.h>
 #include <utilities/Cache.h>
-#include <ServiceManager.h>
 #include <utilities/PointerGuard.h>
+#include <ServiceManager.h>
+#include <usb/UsbDevice.h>
+#include <usb/UsbHub.h>
+#include "UsbMassStorageDevice.h"
 
 UsbMassStorageDevice::UsbMassStorageDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev), m_nUnits(0), m_pInEndpoint(0), m_pOutEndpoint(0)
-{
-}
-
-UsbMassStorageDevice::~UsbMassStorageDevice()
-{
-}
-
-bool UsbMassStorageDevice::initialiseDevice()
 {
     for(size_t i = 0; i < m_pInterface->pEndpoints.count(); i++)
     {
@@ -47,13 +39,13 @@ bool UsbMassStorageDevice::initialiseDevice()
     if(!m_pInEndpoint)
     {
         ERROR("USB: MSD: No IN endpoint");
-        return false;
+        return;
     }
 
     if(!m_pOutEndpoint)
     {
         ERROR("USB: MSD: No OUT endpoint");
-        return false;
+        return;
     }
 
     // Reset the mass storage device and associated interface
@@ -67,14 +59,18 @@ bool UsbMassStorageDevice::initialiseDevice()
     if(!controlRequest(RequestDirection::In | MassStorageRequest, MassStorageGetMaxLUN, 0, m_pInterface->pDescriptor->nInterface, 1, reinterpret_cast<uintptr_t>(nMaxLUN)))
     {
         ERROR("USB: MSD: Couldn't get maximum LUN");
-        return false;
+        return;
     }
     m_nUnits = *nMaxLUN + 1;
     delete nMaxLUN;
 
     searchDisks();
-    
-    return true;
+
+    m_bHasDriver = true;
+}
+
+UsbMassStorageDevice::~UsbMassStorageDevice()
+{
 }
 
 bool UsbMassStorageDevice::massStorageReset()
@@ -99,7 +95,7 @@ bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t
     //DEBUG_LOG("USB: MSD: CBW finished with " << Dec << nResult << Hex);
 
     // Handle stall
-    if(nResult == -0x40)
+    if(nResult == -Stall)
     {
         // Clear out pipe
         if(!clearEndpointHalt(m_pOutEndpoint))
@@ -128,7 +124,7 @@ bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t
 
         DEBUG_LOG("USB: MSD: Result: " << Dec << nResult << Hex << ".");
 
-        if(nResult == -0x40) /// \todo Proper error return values
+        if(nResult == -Stall)
         {
             // STALL, clear the endpoint and attempt CSW read
             bool bClearResult = false;
@@ -154,7 +150,7 @@ bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t
             nResult = syncIn(m_pInEndpoint, reinterpret_cast<uintptr_t>(pCsw), 13);
 
             // Stalled?
-            if(nResult == -0x40)
+            if(nResult == -Stall)
             {
                 // Perform full reset and reset both pipes
                 massStorageReset();

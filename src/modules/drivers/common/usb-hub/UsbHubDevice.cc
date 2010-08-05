@@ -14,10 +14,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <utilities/PointerGuard.h>
 #include <usb/UsbDevice.h>
 #include <usb/UsbHub.h>
-#include <usb/UsbHubDevice.h>
-#include <utilities/PointerGuard.h>
+#include "UsbHubDevice.h"
 
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
@@ -100,6 +100,8 @@ UsbHubDevice::UsbHubDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
             }
         }
     }
+
+    m_bHasDriver = true;
 }
 
 UsbHubDevice::~UsbHubDevice()

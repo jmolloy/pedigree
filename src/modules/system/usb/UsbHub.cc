@@ -15,67 +15,70 @@
  */
 
 #include <processor/Processor.h>
+#include <utilities/ExtensibleBitmap.h>
+#include <LockGuard.h>
 #include <usb/Usb.h>
 #include <usb/UsbDevice.h>
 #include <usb/UsbHub.h>
-#include <usb/UsbHubDevice.h>
-#include <usb/UsbHumanInterfaceDevice.h>
-#include <usb/UsbMassStorageDevice.h>
-#include <usb/FtdiSerialDevice.h>
-#include <utilities/ExtensibleBitmap.h>
-#include <LockGuard.h>
-
-#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
+#include <usb/UsbPnP.h>
 
 bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
 {
     NOTICE("USB: Adding device on port " << Dec << nPort << Hex);
-    // Create a bitmap to hold the used addresses
-    ExtensibleBitmap *pUsedAddresses = new ExtensibleBitmap();
-    pUsedAddresses->set(0);
+
     // Find the root hub
     UsbHub *pRootHub = this;
     while(dynamic_cast<UsbHub*>(pRootHub->getParent()))
         pRootHub = dynamic_cast<UsbHub*>(pRootHub->getParent());
-    // Fill in the used addresses
-    pRootHub->getUsedAddresses(pUsedAddresses);
+
     // Get first unused address and check it
-    uint8_t nAddress = pUsedAddresses->getFirstClear();
+    uint8_t nAddress = pRootHub->m_UsedAddresses.getFirstClear();
     if(nAddress > 127)
     {
         ERROR("USB: HUB: Out of addresses!");
         return false;
     }
 
+    // This address is now used
+    pRootHub->m_UsedAddresses.set(nAddress);
+
     // Create the UsbDevice instance and set us as parent
     UsbDevice *pDevice = new UsbDevice();
     pDevice->setParent(this);
+
     // Set port number
     pDevice->setPort(nPort);
+
     // Set speed
     pDevice->setSpeed(speed);
+
     // Assign the address we've chosen
     if(!pDevice->assignAddress(nAddress))
     {
         ERROR("USB: HUB: address assignment failed!");
+        delete(pDevice);
         return false;
     }
-
 
     // Get all descriptors in place
     pDevice->populateDescriptors();
     UsbDevice::DeviceDescriptor *pDes = pDevice->getDescriptor();
+
     // Currently we only support the default configuration
     if(pDes->pConfigurations.count() > 1)
         DEBUG_LOG("USB: TODO: multiple configuration devices");
     pDevice->useConfiguration(0);
+
+    // Iterate all interfaces
     Vector<UsbDevice::Interface*> pInterfaces = pDevice->getConfiguration()->pInterfaces;
-    for(size_t i = 0;i<pInterfaces.count();i++)
+    for(size_t i = 0; i < pInterfaces.count(); i++)
     {
         UsbDevice::Interface *pInterface = pInterfaces[i];
+
         // Skip alternate settings
         if(pInterface->pDescriptor->nAlternateSetting)
             continue;
+
         // Just in case we have a single-interface device with the class code(s) in the device descriptor
         if(pInterfaces.count() == 1 && pDes->pDescriptor->nClass && !pInterface->pDescriptor->nClass)
         {
@@ -89,86 +92,49 @@ bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
             pDevice = new UsbDevice(pDevice);
             pDevice->setParent(this);
         }
+
         // Set the right interface
         pDevice->useInterface(i);
+
+        // Add the device as a child
+        addChild(pDevice);
+
         NOTICE("USB: Device: " << pDes->sVendor << " " << pDes->sProduct << ", class " << Dec << pInterface->pDescriptor->nClass << ":" << pInterface->pDescriptor->nSubclass << ":" << pInterface->pDescriptor->nProtocol << Hex);
-        /// \todo Make this a bit more general. Harcoding some numbers and some class names doesn't sound good
-        // addChild(pDevice);
-        if(pInterface->pDescriptor->nClass == 9)
-        {
-            UsbHubDevice *pHub = new UsbHubDevice(pDevice);
-            addChild(static_cast<UsbDevice*>(pHub));
-            if(!pHub->initialiseDevice())
-                removeChild(pHub);
-        }
-        else if(pInterface->pDescriptor->nClass == 3)
-        {
-            UsbHumanInterfaceDevice *pHid = new UsbHumanInterfaceDevice(pDevice);
-            addChild(static_cast<UsbDevice*>(pHid));
-            if(!pHid->initialiseDevice())
-                removeChild(pHid);
-            
-            /// \bug WMware's mouse's second interface is known to cause problems
-            return true;
-        }
-        else if(pInterface->pDescriptor->nClass == 8)
-        {
-            UsbMassStorageDevice *pMassStorage = new UsbMassStorageDevice(pDevice);
-            addChild(static_cast<UsbDevice*>(pMassStorage));
-            if(!pMassStorage->initialiseDevice())
-                removeChild(pMassStorage);
-        }
-        else if(pDes->pDescriptor->nVendorId == 0x0403 && pDes->pDescriptor->nProductId == 0x6001)
-        {
-            FtdiSerialDevice *pFtdi = new FtdiSerialDevice(pDevice);
-            addChild(static_cast<UsbDevice*>(pFtdi));
-            if(!pFtdi->initialiseDevice())
-                removeChild(pFtdi);
-        }
+
+        // Send it to the USB PnP manager
+        UsbPnP::instance().probeDevice(pDevice);
     }
     return true;
 }
 
-void UsbHub::getDeviceByIds(size_t vendor, size_t product, void (*pCallback)(UsbDevice *))
-{
-    for (size_t i = 0;i < m_Children.count();i++)
-    {
-        UsbDevice *pDevice = dynamic_cast<UsbDevice*>(m_Children[i]);
-        if(pDevice)
-        {
-            UsbDevice::DeviceDescriptor *pDes = pDevice->getDescriptor();
-            if(!pDes)
-                continue;
-                
-            if((pDes->pDescriptor->nVendorId == vendor) && (pDes->pDescriptor->nProductId == product) && pCallback)
-                pCallback(pDevice);
-        }
-            
-    }
-}
-
 void UsbHub::deviceDisconnected(uint8_t nPort)
 {
-    for (size_t i = 0;i < m_Children.count();i++)
+    uint8_t nAddress = 0;
+    for(size_t i = 0; i < m_Children.count(); i++)
     {
         UsbDevice *pDevice = dynamic_cast<UsbDevice*>(m_Children[i]);
         if(pDevice && pDevice->getPort() == nPort)
+        {
+            if(!nAddress)
+                nAddress = pDevice->getAddress();
+            else if(nAddress != pDevice->getAddress())
+                ERROR("USB: HUB: Found devices on the same port with different addresses");
             delete pDevice;
+        }
     }
+
+    if(!nAddress)
+        return;
+
+    // Find the root hub
+    UsbHub *pRootHub = this;
+    while(dynamic_cast<UsbHub*>(pRootHub->getParent()))
+        pRootHub = dynamic_cast<UsbHub*>(pRootHub->getParent());
+
+    // This address is now free
+    pRootHub->m_UsedAddresses.clear(nAddress);
 }
 
-void UsbHub::getUsedAddresses(ExtensibleBitmap *pBitmap)
-{
-    for (size_t i = 0; i < m_Children.count(); i++)
-    {
-        UsbDevice *pDevice = dynamic_cast<UsbDevice*>(m_Children[i]);
-        if(pDevice)
-            pBitmap->set(pDevice->getAddress());
-        UsbHub *pHub = dynamic_cast<UsbHub*>(m_Children[i]);
-        if(pHub)
-            pHub->getUsedAddresses(pBitmap);
-    }
-}
 
 void UsbHub::syncCallback(uintptr_t pParam, ssize_t nResult)
 {
@@ -178,7 +144,6 @@ void UsbHub::syncCallback(uintptr_t pParam, ssize_t nResult)
     pSyncParam->nResult = nResult;
     pSyncParam->semaphore.release();
 }
-
 
 ssize_t UsbHub::doSync(uintptr_t nTransaction, uint32_t timeout)
 {
@@ -191,7 +156,7 @@ ssize_t UsbHub::doSync(uintptr_t nTransaction, uint32_t timeout)
     // Delete our structure and return the result
     delete pSyncParam;
     if(Processor::information().getCurrentThread()->wasInterrupted())
-        return -0xbeef;
+        return -TransactionError;
     else
         return pSyncParam->nResult;
 }

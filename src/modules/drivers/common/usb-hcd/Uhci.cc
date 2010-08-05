@@ -243,11 +243,11 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                         ERROR_NOLOCK(((nStatus & UHCI_STS_ERR) ? "USB" : "TD") << " ERROR!");
                         ERROR_NOLOCK("TD Status: " << pTD->nStatus);
 #endif
-                        nResult = -(pTD->nStatus & 0x7e);
+                        nResult = - pTD->getError();
                     }
                     else
                     {
-                        nResult = pTD->nActLen + 1;
+                        nResult = (pTD->nActLen + 1) % 0x800;
                         pQH->pMetaData->nTotalBytes += nResult;
                     }
 #ifdef USB_VERBOSE_DEBUG

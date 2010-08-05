@@ -70,6 +70,20 @@ namespace Request
     };
 };
 
+namespace Descriptor
+{
+    enum Descriptor
+    {
+        Device                  = 1,
+        Configuration           = 2,
+        String                  = 3,
+        Interface               = 4,
+        Endpoint                = 5,
+        DeviceQualifier         = 6,
+        OtherSpeedConfiguration = 7,
+    };
+};
+
 class UsbDevice : public virtual Device
 {
     public:
@@ -171,7 +185,7 @@ class UsbDevice : public virtual Device
                 {
                     size_t nLength = pBuffer[nOffset];
                     uint8_t nType = pBuffer[nOffset + 1];
-                    if(nType == 4)
+                    if(nType == ::Descriptor::Interface)
                     {
                         Interface *pNewInterface = new Interface(&pBuffer[nOffset]);
                         if(!pNewInterface->pDescriptor->nAlternateSetting)
@@ -183,7 +197,7 @@ class UsbDevice : public virtual Device
                     }
                     else if(pCurrentInterface)
                     {
-                        if(nType == 5)
+                        if(nType == ::Descriptor::Endpoint)
                             pCurrentInterface->pEndpoints.pushBack(new Endpoint(&pBuffer[nOffset]));
                         else
                             pCurrentInterface->pOtherDescriptors.pushBack(new UnknownDescriptor(&pBuffer[nOffset], nType, nLength));
@@ -240,20 +254,22 @@ class UsbDevice : public virtual Device
             String sSerial;
         };
 
-        /** Constructors and destructors */
-        inline UsbDevice() : m_nAddress(0), m_nPort(0) {}
+        /// Constructors and destructors
+        inline UsbDevice() : m_nAddress(0), m_nPort(0), m_bHasDriver(false) {}
 
-        inline UsbDevice(UsbDevice *pDev) : m_nAddress(pDev->m_nAddress), m_nPort(pDev->m_nPort), m_Speed(pDev->m_Speed),
+        inline UsbDevice(UsbDevice *pDev) : m_nAddress(pDev->m_nAddress), m_nPort(pDev->m_nPort), m_Speed(pDev->m_Speed), m_bHasDriver(false),
             m_pDescriptor(pDev->m_pDescriptor), m_pInterface(pDev->m_pInterface), m_pConfiguration(pDev->m_pConfiguration) {}
 
-        virtual inline ~UsbDevice() {};
-        
-        virtual bool initialiseDevice()
+        virtual inline ~UsbDevice() {}
+
+        /// Returns true if this device is already handled by a driver
+        /// \todo Implement a complete state system instead
+        inline bool hasDriver()
         {
-            return true;
+            return m_bHasDriver;
         }
 
-        /** Access to internal information */
+        /// Access to internal information
         virtual void getName(String &str)
         {
             str = "USB Device";
@@ -294,6 +310,10 @@ class UsbDevice : public virtual Device
         {
             return m_pConfiguration;
         }
+        Interface *getInterface()
+        {
+            return m_pInterface;
+        }
 
         // Sync transfer methods
         ssize_t doSync(Endpoint *pEndpoint, UsbPid pid, uintptr_t pBuffer, size_t nBytes);
@@ -318,7 +338,7 @@ class UsbDevice : public virtual Device
 
         uint8_t getDescriptorLength(uint8_t nDescriptor, uint8_t nSubDescriptor, uint8_t requestType=0);
 
-        char *getString(uint8_t nString);
+        String getString(uint8_t nString);
 
         void populateDescriptors();
 
@@ -327,6 +347,8 @@ class UsbDevice : public virtual Device
         uint8_t m_nAddress;
         uint8_t m_nPort;
         UsbSpeed m_Speed;
+
+        bool m_bHasDriver;
 
         DeviceDescriptor *m_pDescriptor;
         Interface *m_pInterface;
