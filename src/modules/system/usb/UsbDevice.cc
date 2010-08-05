@@ -38,10 +38,10 @@ ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, UsbPid pid, uintptr_t 
     if(!nBytes)
         return 0;
 
-    if(nBytes && (pBuffer & 0xF))
+    if(pBuffer & 0xF)
     {
         ERROR("USB: Input pointer wasn't properly aligned [" << pBuffer << ", " << nBytes << "]");
-        return -1;
+        return -TransactionError;
     }
 
     ssize_t nResult = 0;
@@ -51,7 +51,7 @@ ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, UsbPid pid, uintptr_t 
     if(nTransaction == static_cast<uintptr_t>(-1))
     {
         ERROR("UsbDevice: couldn't get a valid transaction to work with from the parent hub");
-        return -1;
+        return -TransactionError;
     }
 
     size_t byteOffset = 0;
@@ -78,6 +78,34 @@ ssize_t UsbDevice::syncIn(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes)
 ssize_t UsbDevice::syncOut(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes)
 {
     return doSync(pEndpoint, UsbPidOut, pBuffer, nBytes);
+}
+
+void UsbDevice::addInterruptInHandler(Endpoint *pEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
+{
+    if(!pEndpoint)
+    {
+        ERROR("USB: UsbDevice::addInterruptInHandler called with invalid endpoint");
+        return;
+    }
+
+    UsbHub *pParentHub = dynamic_cast<UsbHub*>(m_pParent);
+    if(!pParentHub)
+    {
+        ERROR("USB: Orphaned UsbDevice!");
+        return;
+    }
+
+    if(!nBytes)
+        return;
+
+    if(pBuffer & 0xF)
+    {
+        ERROR("USB: Input pointer wasn't properly aligned [" << pBuffer << ", " << nBytes << "]");
+        return;
+    }
+
+    UsbEndpoint endpointInfo(m_nAddress, m_nPort, pEndpoint->nEndpoint, m_Speed, pEndpoint->nMaxPacketSize);
+    pParentHub->addInterruptInHandler(endpointInfo, pBuffer, nBytes, pCallback, pParam);
 }
 
 bool UsbDevice::controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t nValue, uint16_t nIndex, uint16_t nLength, uintptr_t pBuffer)

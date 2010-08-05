@@ -320,6 +320,8 @@ class UsbDevice : public virtual Device
         ssize_t syncIn(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes);
         ssize_t syncOut(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes);
 
+        void addInterruptInHandler(Endpoint *pEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
+
         // Method to perform an USB control request
         bool controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t nValue, uint16_t nIndex, uint16_t nLength=0, uintptr_t pBuffer=0);
 

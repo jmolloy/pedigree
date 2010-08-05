@@ -217,8 +217,8 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) : Device(pDev)
         return;
     }
 
-    UsbEndpoint endpointInfo(m_nAddress, m_nPort, pInEndpoint->nEndpoint, m_Speed, pInEndpoint->nMaxPacketSize);
-    dynamic_cast<UsbHub*>(m_pParent)->addInterruptInHandler(endpointInfo, reinterpret_cast<uintptr_t>(m_pReportBuffer), m_pReport->nBytes, callback, reinterpret_cast<uintptr_t>(this));
+    // Add the input handler
+    addInterruptInHandler(pInEndpoint, reinterpret_cast<uintptr_t>(m_pReportBuffer), m_pReport->nBytes, callback, reinterpret_cast<uintptr_t>(this));
 
     m_bHasDriver = true;
 }
