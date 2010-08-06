@@ -301,28 +301,25 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                             QH *pNext = pQH->pMetaData->pNext;
 
                             // Main non-hardware linked list update
+                            m_AsyncQueueListChangeLock.acquire(); // Atomic operation
                             pPrev->pMetaData->pNext = pNext;
                             pNext->pMetaData->pPrev = pPrev;
 
-                            // Hardware linked list update
-                            pPrev->pNext = pQH->pNext;
-                            pPrev->bElemQH = 1;
-                            pPrev->bNextInvalid = 0;
-
                             // Update the tail pointer if we need to
                             if(pQH == m_pCurrentAsyncQueueTail)
-                            {
-                                m_AsyncQueueListChangeLock.acquire(); // Atomic operation
                                 m_pCurrentAsyncQueueTail = pPrev;
-                                m_AsyncQueueListChangeLock.release();
-                            }
+
+                            // Hardware linked list update
+                            pPrev->pNext = pQH->pNext;
+                            pPrev->bNextQH = 1;
+                            pPrev->bNextInvalid = 0;
+
+                            m_AsyncQueueListChangeLock.release();
 
                             bDequeue = true;
                         }
                         else
                         {
-                            pQH->pMetaData->bIgnore = false;
-
                             // Invert data toggle
                             pTD->bDataToggle = !pTD->bDataToggle;
 
