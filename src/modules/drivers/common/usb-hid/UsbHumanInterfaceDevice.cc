@@ -19,6 +19,8 @@
 #include <usb/UsbDevice.h>
 #include "UsbHumanInterfaceDevice.h"
 
+#include <utilities/PointerGuard.h>
+
 #define undefined -0xffffffff
 
 #define _sign(x) (x>=0?"+":"- ")<<(x>=0?x:-x)
@@ -63,6 +65,7 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) : Device(pDev)
         return;
     }
 
+    PointerGuard<HidDescriptor> guard(pHidDescriptor);
 
     /// \bug WMware's mouse's second interface is known to cause problems
     if(m_pDescriptor->pDescriptor->nVendorId == 0x0e0f && m_pInterface->pDescriptor->nInterface)
