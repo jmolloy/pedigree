@@ -72,7 +72,7 @@ opts.AddVariables(
     BoolVariable('multiple_consoles', 'If 1, the TUI is built with the ability to create and move between multiple virtual consoles.', 1),
     
     BoolVariable('multiprocessor', 'If 1, multiprocessor support is compiled in to the kernel.', 0),
-    BoolVariable('acpi', 'If 1, ACPI support will be built in (not to be confused with APCI).', 0),
+    BoolVariable('apic', 'If 1, APIC support will be built in (not to be confused with APIC).', 0),
     BoolVariable('smp', 'If 1, SMP support will be built in.', 0),
 
     # ARM options
@@ -270,13 +270,13 @@ if env['verbose_link'] and not '--verbose' in env['LINKFLAGS']:
 else:
     env['LINKFLAGS'] = env['LINKFLAGS'].replace('--verbose', '')
     
-additionalDefines = ['installer', 'debugger', 'cripple_hdd', 'enable_ctrlc', 'multiple_consoles', 'acpi', 'debug_logging', 'usb_verbose_debug']
+additionalDefines = ['installer', 'debugger', 'cripple_hdd', 'enable_ctrlc', 'multiple_consoles', 'apic', 'debug_logging', 'usb_verbose_debug']
 for i in additionalDefines:
     if(env[i] and not i in defines):
         defines += [i.upper()]
 if(env['multiprocessor'] or env['smp']):
     defines = safeAppend(defines, ['MULTIPROCESSOR'])
-    defines = safeAppend(defines, ['ACPI'])
+    defines = safeAppend(defines, ['APIC'])
     defines = safeAppend(defines, ['SMP'])
 
 # Set the environment flags
