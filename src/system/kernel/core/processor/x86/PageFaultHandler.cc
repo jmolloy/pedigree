@@ -20,6 +20,7 @@
 #include <process/Scheduler.h>
 #include <panic.h>
 #include <processor/PhysicalMemoryManager.h>
+#include "VirtualAddressSpace.h"
 
 PageFaultHandler PageFaultHandler::m_Instance;
 
@@ -77,7 +78,7 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
     }
   }
 
-  if (cr2 < 0xc0000000)
+  if (cr2 < reinterpret_cast<uintptr_t>(KERNEL_SPACE_START))
   {
       // Check our handler list.
       for (List<MemoryTrapHandler*>::Iterator it = m_Handlers.begin();
