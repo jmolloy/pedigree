@@ -22,7 +22,7 @@
 
 #include <processor/Processor.h>
 
-#define MAX_OPTIONS_SIZE    (1500 - 28 /* UDP header + IP header */ - 236 /* DhcpPacket size, below */)
+#define MAX_OPTIONS_SIZE    (1400 - 28 /* UDP header + IP header */ - 236 /* DhcpPacket size, below */)
 
 /** Defines a DHCP packet (RFC 2131) */
 struct DhcpPacket
@@ -576,4 +576,4 @@ static void exit()
 {
 }
 
-MODULE_INFO("dhcpclient", &entry, &exit, "network-stack");
+MODULE_INFO("dhcpclient", &entry, &exit, "network-stack", "dm9601");

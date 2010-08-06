@@ -77,8 +77,6 @@ private:
 
   static NetworkStack stack;
   
-  /** Callback - classes are expected to inherit and override this function. It's called when a
-      request needs to be executed (by the worker thread). */
   virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
                                   uint64_t p6, uint64_t p7, uint64_t p8);
 

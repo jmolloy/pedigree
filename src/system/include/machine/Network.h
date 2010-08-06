@@ -81,7 +81,7 @@ class StationInfo
 class Network : public virtual Device
 {
 public:
-  Network()
+  Network() : m_StationInfo()
   {
     m_SpecificType = "Generic Network Device";
   }
