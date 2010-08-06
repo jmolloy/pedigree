@@ -40,9 +40,8 @@ public:
      *  is non-zero.
      * \param n The number of semaphore items required. Must be non-zero.
      * \param timeoutSecs Timeout value in seconds - if zero, no timeout.
-                          If a timeout occurs, \c acquire will return and
-                          Thread::wasInterrupted() will return true. */
-    void acquire(size_t n=1, size_t timeoutSecs=0, size_t timeoutUsecs=0);
+     * \return True if acquire succeeded, false otherwise (timeout). */
+    bool acquire(size_t n=1, size_t timeoutSecs=0, size_t timeoutUsecs=0);
 
     /** Attempts to acquire n items from the semaphore. This will not block.
      * \param n The number of semaphore items required. Must be non-zero.
@@ -63,7 +62,7 @@ private:
     /** Private operator=
         \note NOT implemented. */
     void operator =(const Semaphore&);
-    
+
     /** Removes the given pointer from the thread queue. */
     void removeThread(class Thread *pThread);
 

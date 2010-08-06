@@ -16,6 +16,7 @@
 
 #include <processor/Processor.h>
 #include <utilities/ExtensibleBitmap.h>
+#include <utilities/PointerGuard.h>
 #include <LockGuard.h>
 #include <usb/Usb.h>
 #include <usb/UsbDevice.h>
@@ -149,13 +150,13 @@ ssize_t UsbHub::doSync(uintptr_t nTransaction, uint32_t timeout)
 {
     // Create a structure to hold the semaphore and the result
     SyncParam *pSyncParam = new SyncParam();
+    PointerGuard<SyncParam> guard(pSyncParam);
     // Send the async request
     doAsync(nTransaction, syncCallback, reinterpret_cast<uintptr_t>(pSyncParam));
     // Wait for the semaphore to release
-    pSyncParam->semaphore.acquire(1); // , timeout / 1000);
-    // Delete our structure and return the result
-    delete pSyncParam;
-    if(Processor::information().getCurrentThread()->wasInterrupted())
+    bool bTimeout = !pSyncParam->semaphore.acquire(1, timeout / 1000, (timeout % 1000) * 1000);
+    // Return the result
+    if(bTimeout)
         return -TransactionError;
     else
         return pSyncParam->nResult;

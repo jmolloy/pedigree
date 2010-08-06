@@ -19,7 +19,7 @@
 ///       number of #ifdef's required around the place and also throws an error
 ///       when Semaphores are compiled in a non-threaded environment.
 #ifdef THREADS
- 
+
 #include <Log.h>
 #include <machine/Machine.h>
 #include <machine/Timer.h>
@@ -64,9 +64,13 @@ void Semaphore::removeThread(Thread *pThread)
     m_BeingModified.release();
 }
 
-void Semaphore::acquire(size_t n, size_t timeoutSecs, size_t timeoutUsecs)
+bool Semaphore::acquire(size_t n, size_t timeoutSecs, size_t timeoutUsecs)
 {
-    assert(magic == 0xdeadbaba);
+    if(magic != 0xdeadbaba)
+    {
+        NOTICE(magic);
+        assert(false);
+    }
   // Spin 10 times in the case that the lock is about to be released on
   // multiprocessor systems, and just once for uniprocessor systems, so we don't
   // go through the rigmarole of creating a timeout event if the lock is
@@ -75,7 +79,7 @@ void Semaphore::acquire(size_t n, size_t timeoutSecs, size_t timeoutUsecs)
   for (int i = 0; i < 10; i++)
 #endif
     if (tryAcquire(n))
-      return;
+      return true;
 
   // If we have a timeout, create the event and register it.
   Event *pEvent = 0;
@@ -95,9 +99,9 @@ void Semaphore::acquire(size_t n, size_t timeoutSecs, size_t timeoutUsecs)
           Machine::instance().getTimer()->removeAlarm(pEvent);
           delete pEvent;
       }
-      
+
       removeThread(pThread);
-      return;
+      return true;
     }
 
     m_BeingModified.acquire();
@@ -114,7 +118,7 @@ void Semaphore::acquire(size_t n, size_t timeoutSecs, size_t timeoutUsecs)
       }
       m_BeingModified.release();
       removeThread(pThread);
-      return;
+      return true;
     }
 
     m_Queue.pushBack(pThread);
@@ -123,7 +127,7 @@ void Semaphore::acquire(size_t n, size_t timeoutSecs, size_t timeoutUsecs)
     pThread->setDebugState(Thread::SemWait, reinterpret_cast<uintptr_t>(__builtin_return_address(0)));
     Processor::information().getScheduler().sleep(&m_BeingModified);
     pThread->setDebugState(Thread::None, 0);
-    
+
     // Either acquired or interrupted, either way, we don't need to be woken again
     removeThread(pThread);
 
@@ -136,7 +140,7 @@ void Semaphore::acquire(size_t n, size_t timeoutSecs, size_t timeoutUsecs)
           Machine::instance().getTimer()->removeAlarm(pEvent);
           delete pEvent;
         }
-        return;
+        return false;
     }
   }
 
