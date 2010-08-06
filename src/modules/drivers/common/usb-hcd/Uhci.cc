@@ -234,6 +234,12 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
             {
                 TD *pTD = &m_pTDList[nTDIndex];
 
+                // If we've already detected that this TD was a short transfer,
+                // don't process any more TDs
+                if(pTD->bShortTransferTD)
+                    break;
+
+                bool bEndOfTransfer = false;
                 if(pTD->nStatus != 0x80)
                 {
                     ssize_t nResult;
@@ -254,8 +260,33 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                     DEBUG_LOG_NOLOCK("TD #" << Dec << nTDIndex << Hex << " [from QH #" << Dec << i << Hex << "] DONE: " << Dec << pTD->nAddress << ":" << pTD->nEndpoint << " " << (pTD->nPid==UsbPidOut?"OUT":(pTD->nPid==UsbPidIn?"IN":(pTD->nPid==UsbPidSetup?"SETUP":""))) << " " << nResult << Hex);
 #endif
 
+                    // Handle the "end of transfer" cases
+                    bEndOfTransfer = (!bPeriodic && ((nResult < 0) || (pTD == pQH->pMetaData->pLastTD))) || (bPeriodic && !nResult >= 0);
+
+                    // Some extra cases we need to handle
+                    if((pTD != pQH->pMetaData->pLastTD) && !bEndOfTransfer)
+                    {
+                        // Control endpoints are irrelevant here
+                        if(pTD->nEndpoint)
+                        {
+                            if((nResult >= 0) && (pTD->nPid == UsbPidIn))
+                            {
+                                // Check for a short read. There is no point continuing
+                                // to read from the device if it's sent us less than we
+                                // asked for before the last TD.
+                                // This stops the transfer hanging on IN transactions
+                                // that return less data than expected.
+                                if(nResult < pTD->nBufferSize)
+                                {
+                                    pTD->bShortTransferTD = true;
+                                    bEndOfTransfer = true;
+                                }
+                            }
+                        }
+                    }
+
                     // Last TD or error condition, if async, otherwise only when it gives no error
-                    if((!bPeriodic && ((nResult < 0) || (pTD == pQH->pMetaData->pLastTD))) || (bPeriodic && !nResult >= 0))
+                    if(bEndOfTransfer)
                     {
                         // Valid callback?
                         if(pQH->pMetaData->pCallback)
@@ -316,7 +347,7 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
 
                 size_t oldIndex = nTDIndex;
 
-                if(pTD->bNextInvalid)
+                if(pTD->bNextInvalid || !pTD->pNext || bEndOfTransfer)
                     break;
                 else
                     nTDIndex = ((pTD->pNext << 4) & 0xFFF) / sizeof(TD);
@@ -428,7 +459,7 @@ uintptr_t Uhci::createTransaction(UsbEndpoint endpointInfo)
     {
         LockGuard<Mutex> guard(m_Mutex);
         nIndex = m_QHBitmap.getFirstClear();
-        if(nIndex >= (0x2000 / sizeof(QH)))
+        if(nIndex >= (0x1000 / sizeof(QH)))
         {
             ERROR("USB: UHCI: QH space full");
             return static_cast<uintptr_t>(-1);

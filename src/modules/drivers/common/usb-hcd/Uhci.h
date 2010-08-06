@@ -58,6 +58,7 @@ class Uhci : public UsbHub, public IrqHandler
 
             // Custom TD fields
             uint16_t nBufferSize;
+            bool bShortTransferTD;
 
             // Possible values for status
             enum StatusCodes
