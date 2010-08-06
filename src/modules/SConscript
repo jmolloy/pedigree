@@ -11,9 +11,6 @@ driver_common_subdirs = [
     # DMA
     'dma',
 
-    # CDI framework (NOT the drivers)
-    'cdi',
-
     # Pedigree-specific disk I/O
     'ata',
     'partition',
@@ -39,7 +36,10 @@ driver_common_subdirs = [
     'ftdi',
 
     # DM9601 driver (USB ethernet)
-    'dm9601'
+    'dm9601',
+
+    # CDI framework (NOT the drivers)
+    'cdi',
 ]
 
 # CDI drivers
