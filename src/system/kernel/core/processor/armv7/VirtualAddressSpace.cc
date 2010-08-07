@@ -52,6 +52,20 @@ ArmV7VirtualAddressSpace::~ArmV7VirtualAddressSpace()
 {
 }
 
+bool ArmV7VirtualAddressSpace::memIsInHeap(void *pMem)
+{
+    if(pMem < KERNEL_VIRTUAL_HEAP)
+        return false;
+    else if(pMem >= getEndOfHeap())
+        return false;
+    else
+        return true;
+}
+void *ArmV7VirtualAddressSpace::getEndOfHeap()
+{
+    return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_HEAP) + KERNEL_VIRTUAL_HEAP_SIZE);
+}
+
 uint32_t ArmV7VirtualAddressSpace::toFlags(size_t flags)
 {
     uint32_t ret = 0; // No access.
