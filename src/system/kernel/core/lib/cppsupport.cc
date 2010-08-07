@@ -313,3 +313,36 @@ void operator delete[] (void *p, void *q)
   // TODO
   panic("Operator delete[] -implement");
 }
+
+#ifdef ARMV7
+
+extern "C"
+{
+
+/** Atomic compare and swap operation... or as close as we can get to it. */
+bool __sync_bool_compare_and_swap_4(void *ptr, void *oldval, void *newval)
+{
+    unsigned int notequal = 0, notexclusive = 0;
+    
+    asm volatile("dmb"); // Memory barrier
+    
+    do
+    {
+        asm volatile("ldrex     %0, [%2]\r\n"     // Load current value at &ptr
+                     "subs      %0, %0, %3\r\n"   // Subtract by oldval...
+                     "mov       %1, %0\r\n"       // ... so notequal will be zero if equal
+                     "strexeq   %0, %4, [%2]"     // Write back the result
+                     : "=&r" (notexclusive), "=&r" (notequal)
+                     : "r" (&ptr), "Ir" (oldval), "r" (newval)
+                     : "cc");
+    } while(notexclusive && !notequal);
+    
+    asm volatile("dmb"); // Memory barrier
+    
+    return !notequal;
+}
+
+}
+
+#endif
+
