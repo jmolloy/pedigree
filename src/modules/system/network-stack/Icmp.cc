@@ -35,6 +35,10 @@ Icmp::~Icmp()
 
 void Icmp::send(IpAddress dest, uint8_t type, uint8_t code, uint16_t id, uint16_t seq, size_t nBytes, uintptr_t payload, Network *pCard)
 {
+  StationInfo me = pCard->getStationInfo();
+  if(me.ipv4 == 0)
+    return; // We're not configured yet.
+
   size_t newSize = nBytes + sizeof(icmpHeader);
   uint8_t* newPacket = new uint8_t[newSize];
   uintptr_t packAddr = reinterpret_cast<uintptr_t>(newPacket);
