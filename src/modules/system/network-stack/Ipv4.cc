@@ -195,6 +195,15 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
     IpAddress from(header->ipSrc);
     Endpoint::RemoteEndpoint remoteHost;
     remoteHost.ip = from;
+    
+    // If there's no ARP entry for this host, add one
+    if(!Arp::instance().isInCache(from))
+    {
+        MacAddress e;
+        Ethernet::instance().getMacFromPacket(packet, &e);
+        
+        Arp::instance().insertToCache(from, e);
+    }
 
     uint16_t flags = (BIG_TO_HOST16(header->frag_offset) & 0xF000) >> 12;
     uint16_t frag_offset = (BIG_TO_HOST16(header->frag_offset) & ~0xF000) * 8;

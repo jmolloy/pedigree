@@ -55,6 +55,11 @@ public:
 
   /** Gets an entry from the ARP cache, and optionally resolves it if needed. */
   bool getFromCache(IpAddress ip, bool resolve, MacAddress* ent, Network* pCard);
+  
+  /** Direct cache manipulation */
+  bool isInCache(IpAddress ip);
+  void insertToCache(IpAddress ip, MacAddress mac);
+  void removeFromCache(IpAddress ip);
 
 private:
 

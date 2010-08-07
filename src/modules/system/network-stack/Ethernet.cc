@@ -58,7 +58,7 @@ void Ethernet::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t
   switch(BIG_TO_HOST16(ethHeader->type))
   {
     case ETH_ARP:
-      //NOTICE("ARP packet!");
+      // NOTICE("ARP packet!");
 
       Arp::instance().receive(nBytes, packet, pCard, sizeof(ethernetHeader));
 
@@ -69,7 +69,7 @@ void Ethernet::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t
       break;
 
     case ETH_IPV4:
-      //NOTICE("IP packet!");
+      // NOTICE("IP packet!");
 
       Ipv4::instance().receive(nBytes, packet, pCard, sizeof(ethernetHeader));
 
@@ -100,6 +100,16 @@ size_t Ethernet::injectHeader(uintptr_t packet, MacAddress destMac, MacAddress s
 
     // All done.
     return sizeof(ethernetHeader);
+}
+
+void Ethernet::getMacFromPacket(uintptr_t packet, MacAddress *mac)
+{
+  if(packet && mac)
+  {
+    // grab the header
+    ethernetHeader* ethHeader = reinterpret_cast<ethernetHeader*>(packet);
+    *mac = ethHeader->sourceMac;
+  }
 }
 
 void Ethernet::send(size_t nBytes, uintptr_t packet, Network* pCard, MacAddress dest, uint16_t type)

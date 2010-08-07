@@ -76,6 +76,8 @@ bool Arp::getFromCache(IpAddress ip, bool resolve, MacAddress* ent, Network* pCa
 void Arp::send(IpAddress req, Network* pCard)
 {
   StationInfo cardInfo = pCard->getStationInfo();
+  if(cardInfo.ipv4.getIp() == 0)
+    return; // Give up on trying to send an ARP request with no IP
 
   arpHeader* request = new arpHeader;
 
@@ -120,11 +122,34 @@ uint64_t Arp::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
   return req->success ? 1 : 0;
 }
 
+bool Arp::isInCache(IpAddress ip)
+{
+    return m_ArpCache.lookup(ip.getIp()) != 0;
+}
+
+void Arp::insertToCache(IpAddress ip, MacAddress mac)
+{
+    if(isInCache(ip))
+        return;
+
+    arpEntry* ent = new arpEntry;
+    ent->valid = true;
+    ent->mac = mac;
+    ent->ip = ip;
+    m_ArpCache.insert(ip.getIp(), ent);
+}
+
+void Arp::removeFromCache(IpAddress ip)
+{
+    /// \todo Implement
+    WARNING("ARP: implement removeFromCache");
+}
+
 void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
 {
   if(!packet || !nBytes)
       return;
-
+  
   // Check for filtering
   /// \todo Add statistics to NICs
   if(!NetworkFilter::instance().filter(2, packet + offset, nBytes - offset))
@@ -143,10 +168,8 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
     return;
   }
 
-  // is this for us?
   StationInfo cardInfo = pCard->getStationInfo();
-  if(cardInfo.ipv4 == header->ipDest)
-  {
+  
     // grab the source MAC
     MacAddress sourceMac;
     sourceMac = header->hwSrc;
@@ -165,21 +188,26 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
         ent->ip.setIp(header->ipSrc);
         m_ArpCache.insert(static_cast<uintptr_t>(header->ipSrc), ent);
       }
+      
+      // We can glean information from ARP requests, but unless they're for us
+      // we can't really respond.
+      if((cardInfo.ipv4 == header->ipDest))
+      {
+          // allocate the reply
+          arpHeader* reply = new arpHeader;
+          memcpy(reply, header, sizeof(arpHeader));
+          reply->opcode = HOST_TO_BIG16(ARP_OP_REPLY);
+          reply->ipSrc = cardInfo.ipv4.getIp();
+          reply->ipDest = header->ipSrc;
+          memcpy(reply->hwSrc, cardInfo.mac, 6);
+          memcpy(reply->hwDest, header->hwSrc, 6);
 
-      // allocate the reply
-      arpHeader* reply = new arpHeader;
-      memcpy(reply, header, sizeof(arpHeader));
-      reply->opcode = HOST_TO_BIG16(ARP_OP_REPLY);
-      reply->ipSrc = cardInfo.ipv4.getIp();
-      reply->ipDest = header->ipSrc;
-      memcpy(reply->hwSrc, cardInfo.mac, 6);
-      memcpy(reply->hwDest, header->hwSrc, 6);
+          // send it out
+          Ethernet::send(sizeof(arpHeader), reinterpret_cast<uintptr_t>(reply), pCard, sourceMac, ETH_ARP);
 
-      // send it out
-      Ethernet::send(sizeof(arpHeader), reinterpret_cast<uintptr_t>(reply), pCard, sourceMac, ETH_ARP);
-
-      // and now that it's sent, destroy the reply
-      delete reply;
+          // and now that it's sent, destroy the reply
+          delete reply;
+      }
     }
     // reply
     else if(BIG_TO_HOST16(header->opcode) == ARP_OP_REPLY)
@@ -217,5 +245,4 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
       WARNING("Arp: Unknown ARP opcode: " << BIG_TO_HOST16(header->opcode));
       pCard->badPacket();
     }
-  }
 }
