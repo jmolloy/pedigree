@@ -33,7 +33,7 @@ Icmp::~Icmp()
 {
 }
 
-void Icmp::send(IpAddress dest, uint8_t type, uint8_t code, uint16_t id, uint16_t seq, size_t nBytes, uintptr_t payload)
+void Icmp::send(IpAddress dest, uint8_t type, uint8_t code, uint16_t id, uint16_t seq, size_t nBytes, uintptr_t payload, Network *pCard)
 {
   size_t newSize = nBytes + sizeof(icmpHeader);
   uint8_t* newPacket = new uint8_t[newSize];
@@ -51,7 +51,7 @@ void Icmp::send(IpAddress dest, uint8_t type, uint8_t code, uint16_t id, uint16_
   header->checksum = 0;
   header->checksum = Network::calculateChecksum(packAddr, newSize);
 
-  Ipv4::send(dest, Network::convertToIpv4(0, 0, 0, 0), IP_ICMP, newSize, packAddr);
+  Ipv4::send(dest, Network::convertToIpv4(0, 0, 0, 0), IP_ICMP, newSize, packAddr, pCard);
 
   delete [] newPacket;
 }
@@ -112,7 +112,8 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
           BIG_TO_HOST16(header->id),
           BIG_TO_HOST16(header->seq),
           payloadSize - sizeof(icmpHeader),
-          packet + offset + ipHeaderSize + sizeof(icmpHeader)
+          packet + offset + ipHeaderSize + sizeof(icmpHeader),
+          pCard
         );
 
         }
