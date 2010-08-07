@@ -143,6 +143,11 @@ void Uhci::doDequeue()
 {
     // Absolutely cannot have queue insetions during a dequeue
     LockGuard<Mutex> guard(m_Mutex);
+    
+    // Stop the controller while we dequeue
+    m_pBase->write16(m_pBase->read16(UHCI_CMD) & ~1, UHCI_CMD);
+    while(!(m_pBase->read16(UHCI_STS) & 0x20)) delay(5);
+    
     for(size_t i = 1; i < 128; i++)
     {
         if(!m_QHBitmap.test(i))
@@ -167,6 +172,20 @@ void Uhci::doDequeue()
 #endif
             continue;
         }
+        if(!(pQH->pMetaData->pNext && pQH->pMetaData->pPrev))
+        {
+#ifdef USB_VERBOSE_DEBUG
+            DEBUG_LOG("Not performing dequeue on QH #" << Dec << i << Hex << " as it's not yet linked.");
+#endif
+            continue;
+        }
+        if(!pQH->pMetaData->pFirstTD)
+        {
+#ifdef USB_VERBOSE_DEBUG
+            DEBUG_LOG("Not performing dequeue on QH #" << Dec << i << Hex << " as it has no TDs yet.");
+#endif
+            continue;
+        }
 
         // Remove all TDs
         size_t nTDIndex = INDEX_FROM_TD(pQH->pMetaData->pFirstTD);
@@ -188,16 +207,21 @@ void Uhci::doDequeue()
                 break;
         }
 
+        // This QH is done
+        m_QHBitmap.clear(i);
+
         // Completely invalidate the QH
+        delete pQH->pMetaData;
         memset(pQH, 0, sizeof(QH));
 
 #ifdef USB_VERBOSE_DEBUG
         DEBUG_LOG("Dequeue for QH #" << Dec << i << Hex << ".");
 #endif
-
-        // This QH is done
-        m_QHBitmap.clear(i);
     }
+    
+    // Resume the controller, dequeue done.
+    m_pBase->write16(m_pBase->read16(UHCI_CMD) | 1, UHCI_CMD);
+    while(m_pBase->read16(UHCI_STS) & 0x20) delay(5);
 }
 
 bool Uhci::irq(irq_id_t number, InterruptState &state)
@@ -294,8 +318,6 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
 
                         if(!bPeriodic)
                         {
-                            pQH->pMetaData->bIgnore = true;
-
                             // This queue head is done, dequeue.
                             QH *pPrev = pQH->pMetaData->pPrev;
                             QH *pNext = pQH->pMetaData->pNext;
@@ -317,6 +339,12 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                             m_AsyncQueueListChangeLock.release();
 
                             bDequeue = true;
+                            
+                            // Ignore after the linked list update to avoid a
+                            // case where the dequeue call hits this QH while
+                            // we unlink it. This is a problem as the dequeue
+                            // call zeroes all TDs and the QH itself. Ouch!
+                            pQH->pMetaData->bIgnore = true;
                         }
                         else
                         {
@@ -344,7 +372,7 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
 
                 size_t oldIndex = nTDIndex;
 
-                if(pTD->bNextInvalid || !pTD->pNext || bEndOfTransfer)
+                if(pTD->bNextInvalid || bEndOfTransfer)
                     break;
                 else
                     nTDIndex = ((pTD->pNext << 4) & 0xFFF) / sizeof(TD);
@@ -463,7 +491,7 @@ uintptr_t Uhci::createTransaction(UsbEndpoint endpointInfo)
         }
         m_QHBitmap.set(nIndex);
     }
-
+    
     // Grab the QH
     QH *pQH = &m_pQHList[nIndex];
     memset(pQH, 0, sizeof(QH));
