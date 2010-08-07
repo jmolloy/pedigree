@@ -30,7 +30,7 @@ static void entry()
     UsbPnP::instance().registerCallback(9, SubclassNone, ProtocolNone, hubConnected);
 }
 
-void exit()
+static void exit()
 {
 }
 

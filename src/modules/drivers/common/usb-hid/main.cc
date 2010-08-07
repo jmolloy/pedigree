@@ -30,7 +30,7 @@ static void entry()
     UsbPnP::instance().registerCallback(3, SubclassNone, ProtocolNone, hidConnected);
 }
 
-void exit()
+static void exit()
 {
 }
 

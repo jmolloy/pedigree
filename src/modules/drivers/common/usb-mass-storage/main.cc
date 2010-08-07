@@ -30,7 +30,7 @@ static void entry()
     UsbPnP::instance().registerCallback(8, SubclassNone, ProtocolNone, massStorageConnected);
 }
 
-void exit()
+static void exit()
 {
 }
 
