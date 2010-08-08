@@ -184,7 +184,7 @@ bool Dm9601::send(size_t nBytes, uintptr_t buffer)
 
     // Transmit endpoint
     uint8_t *pBuffer = new uint8_t[txSize];
-    *reinterpret_cast<uint16_t*>(pBuffer) = static_cast<uint16_t>(nBytes);
+    *reinterpret_cast<uint16_t*>(pBuffer) = HOST_TO_LITTLE16(static_cast<uint16_t>(nBytes));
     memcpy(&pBuffer[2], reinterpret_cast<void*>(buffer), nBytes);
     
     ssize_t ret = syncOut(m_pOutEndpoint, reinterpret_cast<uintptr_t>(pBuffer), txSize);
@@ -222,7 +222,7 @@ void Dm9601::doReceive()
     
     uint8_t *pBuffer = reinterpret_cast<uint8_t*>(buff);
     uint8_t rxstatus = pBuffer[0];
-    uint16_t len = *reinterpret_cast<uint16_t*>(&pBuffer[1]);
+    uint16_t len = HOST_TO_LITTLE16(*reinterpret_cast<uint16_t*>(&pBuffer[1])) - 3;
     
     if(rxstatus & 0x3F)
     {
