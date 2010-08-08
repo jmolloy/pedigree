@@ -222,7 +222,7 @@ void Dm9601::doReceive()
     
     uint8_t *pBuffer = reinterpret_cast<uint8_t*>(buff);
     uint8_t rxstatus = pBuffer[0];
-    uint16_t len = HOST_TO_LITTLE16(*reinterpret_cast<uint16_t*>(&pBuffer[1])) - 3;
+    uint16_t len = LITTLE_TO_HOST16(*reinterpret_cast<uint16_t*>(&pBuffer[1])) - 4;
     
     if(rxstatus & 0x3F)
     {
