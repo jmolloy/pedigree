@@ -59,7 +59,7 @@ public:
   size_t Listen(Endpoint* e, uint16_t port, Network* pCard = 0);
 
   /** In TCP terms - sends FIN. */
-  void Shutdown(size_t connectionId);
+  void Shutdown(size_t connectionId, bool bOnlyStopReceive = false);
 
   /** Disconnects from a remote host (blocks until disconnected). Totally tears down the connection, don't
    *  call unless you absolutely must! Use Shutdown to begin a standard disconnect without blocking.

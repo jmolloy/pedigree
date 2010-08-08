@@ -216,8 +216,9 @@ bool TcpEndpoint::shutdown(ShutdownType what)
     }
     else if(what == ShutReceiving)
     {
-        WARNING("TCP: SHUT_RD not yet supported");
-        return true; // Fake it
+        WARNING("No longer able to receive!");
+        TcpManager::instance().Shutdown(m_ConnId, true);
+        return true;
     }
     else if(what == ShutBoth)
     {

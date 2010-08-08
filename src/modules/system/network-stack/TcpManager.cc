@@ -135,7 +135,7 @@ size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPo
     return connId;
 }
 
-void TcpManager::Shutdown(size_t connectionId)
+void TcpManager::Shutdown(size_t connectionId, bool bOnlyStopReceive)
 {
   StateBlockHandle* handle;
   if((handle = m_CurrentConnections.lookup(connectionId)) == 0)
@@ -144,6 +144,11 @@ void TcpManager::Shutdown(size_t connectionId)
   StateBlock* stateBlock;
   if((stateBlock = m_StateBlocks.lookup(*handle)) == 0)
     return;
+    
+  if(bOnlyStopReceive)
+  {
+    return;
+  }
 
   IpAddress dest;
   dest = stateBlock->remoteHost.ip;
