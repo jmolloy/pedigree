@@ -160,7 +160,7 @@ int clientThread(void *p)
 
                 // Interface number
                 response += "<tr><td>";
-                TinyStaticString s;
+                NormalStaticString s;
                 s.append(i);
                 response += s;
                 if(card == RoutingTable::instance().DefaultRoute())
