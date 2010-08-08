@@ -98,6 +98,7 @@ Uhci::Uhci(Device* pDev) : Device(pDev), m_pBase(0), m_nPorts(0), m_nFrames(0), 
 
     // Install the IRQ handler
     Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*>(this));
+    Machine::instance().getIrqManager()->control(getInterruptNumber(), IrqManager::MitigationThreshold, ((12000000 * 8) / 64)); // 12 mbps in bytes, divided by 64 bytes maximum per transfer/IRQ
 
 #ifdef USB_VERBOSE_DEBUG
     DEBUG_LOG("USB: UHCI: Reset complete");
