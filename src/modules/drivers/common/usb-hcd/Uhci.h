@@ -93,7 +93,7 @@ class Uhci : public UsbHub, public IrqHandler
                 void (*pCallback)(uintptr_t, ssize_t);
                 uintptr_t pParam;
 
-                UsbEndpoint &endpointInfo;
+                UsbEndpoint endpointInfo;
 
                 bool bPeriodic;
                 TD *pFirstTD;

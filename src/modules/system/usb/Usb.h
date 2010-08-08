@@ -67,6 +67,8 @@ enum UsbError
 
 struct UsbEndpoint
 {
+    inline UsbEndpoint() :
+        nAddress(0), nEndpoint(0), speed(LowSpeed), nMaxPacketSize(8), nHubAddress(0), nHubPort(0) {}
     inline UsbEndpoint(uint8_t address, uint8_t hubPort, uint8_t endpoint, UsbSpeed _speed, size_t maxPacketSize) :
         nAddress(address), nEndpoint(endpoint), speed(_speed), nMaxPacketSize(maxPacketSize), nHubAddress(0), nHubPort(hubPort) {}
 
@@ -76,6 +78,18 @@ struct UsbEndpoint
     size_t nMaxPacketSize;
     uint8_t nHubAddress;
     uint8_t nHubPort;
+    
+    UsbEndpoint &operator = (UsbEndpoint &e)
+    {
+        nAddress = e.nAddress;
+        nEndpoint = e.nEndpoint;
+        speed = e.speed;
+        nMaxPacketSize = e.nMaxPacketSize;
+        nHubAddress = e.nHubAddress;
+        nHubPort = e.nHubPort;
+        
+        return *const_cast<UsbEndpoint*>(this);
+    }
 };
 
 #endif
