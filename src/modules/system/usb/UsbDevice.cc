@@ -20,7 +20,7 @@
 #include <processor/Processor.h>
 #include <utilities/PointerGuard.h>
 
-ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, UsbPid pid, uintptr_t pBuffer, size_t nBytes)
+ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, UsbPid pid, uintptr_t pBuffer, size_t nBytes, size_t timeout)
 {
     if(!pEndpoint)
     {
@@ -66,18 +66,18 @@ ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, UsbPid pid, uintptr_t 
         pEndpoint->bDataToggle = !pEndpoint->bDataToggle;
     }
 
-    nResult = pParentHub->doSync(nTransaction);
+    nResult = pParentHub->doSync(nTransaction, timeout);
     return nResult;
 }
 
-ssize_t UsbDevice::syncIn(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes)
+ssize_t UsbDevice::syncIn(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes, size_t timeout)
 {
-    return doSync(pEndpoint, UsbPidIn, pBuffer, nBytes);
+    return doSync(pEndpoint, UsbPidIn, pBuffer, nBytes, timeout);
 }
 
-ssize_t UsbDevice::syncOut(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes)
+ssize_t UsbDevice::syncOut(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes, size_t timeout)
 {
-    return doSync(pEndpoint, UsbPidOut, pBuffer, nBytes);
+    return doSync(pEndpoint, UsbPidOut, pBuffer, nBytes, timeout);
 }
 
 void UsbDevice::addInterruptInHandler(Endpoint *pEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)

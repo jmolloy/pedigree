@@ -154,6 +154,8 @@ ssize_t UsbHub::doSync(uintptr_t nTransaction, uint32_t timeout)
     // Send the async request
     doAsync(nTransaction, syncCallback, reinterpret_cast<uintptr_t>(pSyncParam));
     // Wait for the semaphore to release
+    /// \bug Transaction is never deleted here - which makes pParam in the syncCallback above
+    ///      invalid, causing an assertion failure in Semaphore if this times out.
     bool bTimeout = !pSyncParam->semaphore.acquire(1, timeout / 1000, (timeout % 1000) * 1000);
     // Return the result
     if(bTimeout)

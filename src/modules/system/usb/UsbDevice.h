@@ -315,10 +315,10 @@ class UsbDevice : public virtual Device
             return m_pInterface;
         }
 
-        // Sync transfer methods
-        ssize_t doSync(Endpoint *pEndpoint, UsbPid pid, uintptr_t pBuffer, size_t nBytes);
-        ssize_t syncIn(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes);
-        ssize_t syncOut(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes);
+        // Sync transfer methods - if timeout == 0, don't ever time out
+        ssize_t doSync(Endpoint *pEndpoint, UsbPid pid, uintptr_t pBuffer, size_t nBytes, size_t timeout);
+        ssize_t syncIn(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes, size_t timeout = 5000);
+        ssize_t syncOut(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes, size_t timeout = 5000);
 
         void addInterruptInHandler(Endpoint *pEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
 
