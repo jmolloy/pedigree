@@ -161,15 +161,6 @@ void Dm9601::receiveLoop()
     while(1)
     {
         doReceive();
-    
-        // Get state without TX interference
-        {
-            LockGuard<Mutex> guard(m_TxLock);
-            
-            // Grab the network status to clear state
-            // uint8_t *p = new uint8_t;
-            // readRegister(NetworkStatus, reinterpret_cast<uintptr_t>(p), 1);
-        }
     }
 }
 
@@ -214,8 +205,13 @@ bool Dm9601::send(size_t nBytes, uintptr_t buffer)
 
 void Dm9601::doReceive()
 {
+    // Wait for TX to back off before we prepare to send
+    {   
+        LockGuard<Mutex> guard(m_TxLock);
+    }
+    
     uintptr_t buff = NetworkStack::instance().getMemPool().allocate();
-    ssize_t ret = syncIn(m_pInEndpoint, buff, MAX_MTU);
+    ssize_t ret = syncIn(m_pInEndpoint, buff, MAX_MTU, 0); // Never time out.
    
     if(ret < 0)
     {
