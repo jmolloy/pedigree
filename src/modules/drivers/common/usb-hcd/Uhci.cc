@@ -23,8 +23,14 @@
 
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
-#define INDEX_FROM_TD(ptr) (((reinterpret_cast<uintptr_t>((ptr)) & 0xFFF) / sizeof(TD)))
+#define INDEX_FROM_TD_VIRT(ptr) (((reinterpret_cast<uintptr_t>((ptr)) - reinterpret_cast<uintptr_t>(m_pTDList)) / sizeof(TD)))
+#define INDEX_FROM_TD_PHYS(ptr) ((((ptr) - m_pTDListPhys) / sizeof(TD)))
 #define PHYS_TD(idx)        (m_pTDListPhys + ((idx) * sizeof(TD)))
+
+#define QH_REGION_SIZE      0x4000
+#define TD_REGION_SIZE      0x8000
+
+#define TOTAL_MEM_PAGES     ((QH_REGION_SIZE / 0x1000) + (TD_REGION_SIZE / 0x1000) + 1)
 
 Uhci::Uhci(Device* pDev) : Device(pDev), m_pBase(0), m_nPorts(0), m_nFrames(0), m_UhciMR("Uhci-MR"),
                            m_AsyncQueueListChangeLock(), m_pCurrentAsyncQueueTail(0), m_pCurrentAsyncQueueHead(0)
@@ -32,7 +38,7 @@ Uhci::Uhci(Device* pDev) : Device(pDev), m_pBase(0), m_nPorts(0), m_nFrames(0), 
     setSpecificType(String("UHCI"));
 
     // Allocate the memory region
-    if(!PhysicalMemoryManager::instance().allocateRegion(m_UhciMR, 3, PhysicalMemoryManager::continuous, VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode))
+    if(!PhysicalMemoryManager::instance().allocateRegion(m_UhciMR, TOTAL_MEM_PAGES, PhysicalMemoryManager::continuous, VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode))
     {
         ERROR("USB: UHCI: Couldn't allocate memory region!");
         return;
@@ -43,11 +49,11 @@ Uhci::Uhci(Device* pDev) : Device(pDev), m_pBase(0), m_nPorts(0), m_nFrames(0), 
 
     m_pFrameList        = reinterpret_cast<uint32_t*>(pVirtBase);
     m_pQHList           = reinterpret_cast<QH*>(pVirtBase + 0x1000);
-    m_pTDList           = reinterpret_cast<TD*>(pVirtBase + 0x2000);
+    m_pTDList           = reinterpret_cast<TD*>(pVirtBase + 0x1000 + QH_REGION_SIZE);
 
     m_pFrameListPhys    = pPhysBase;
     m_pQHListPhys       = pPhysBase + 0x1000;
-    m_pTDListPhys       = pPhysBase + 0x2000;
+    m_pTDListPhys       = m_pQHListPhys + QH_REGION_SIZE;
 
     // Allocate room for the Dummy QH
     m_QHBitmap.set(0);
@@ -148,7 +154,7 @@ void Uhci::doDequeue()
     m_pBase->write16(m_pBase->read16(UHCI_CMD) & ~1, UHCI_CMD);
     while(!(m_pBase->read16(UHCI_STS) & 0x20)) delay(5);
     
-    for(size_t i = 1; i < 128; i++)
+    for(size_t i = 1; i < (QH_REGION_SIZE / sizeof(QH)); i++)
     {
         if(!m_QHBitmap.test(i))
             continue;
@@ -188,13 +194,13 @@ void Uhci::doDequeue()
         }
 
         // Remove all TDs
-        size_t nTDIndex = INDEX_FROM_TD(pQH->pMetaData->pFirstTD);
+        size_t nTDIndex = INDEX_FROM_TD_VIRT(pQH->pMetaData->pFirstTD);
         while(true)
         {
-            m_TDBitmap.clear(nTDIndex);
+            size_t thisIndex = nTDIndex;
 
             TD *pTD = &m_pTDList[nTDIndex];
-            bool shouldBreak = pTD->bNextInvalid;
+            bool shouldBreak = pTD->bNextInvalid || !pTD->pNext;
             if(!shouldBreak)
             {
                 size_t nOldTDIndex = nTDIndex;
@@ -202,6 +208,8 @@ void Uhci::doDequeue()
             }
 
             memset(pTD, 0, sizeof(TD));
+            
+            m_TDBitmap.clear(thisIndex);
 
             if(shouldBreak)
                 break;
@@ -237,7 +245,7 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
     if(nStatus & UHCI_STS_INT)
     {
         // Check all the queue heads we have in the list
-        for(size_t i = 1; i < (0x1000 / sizeof(QH)); i++)
+        for(size_t i = 1; i < (QH_REGION_SIZE / sizeof(QH)); i++)
         {
             if(!m_QHBitmap.test(i))
                 continue;
@@ -253,7 +261,7 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
             bool bPeriodic = pQH->pMetaData->bPeriodic;
 
             // Iterate the TD list
-            size_t nTDIndex = INDEX_FROM_TD(pQH->pMetaData->pFirstTD);
+            size_t nTDIndex = INDEX_FROM_TD_VIRT(pQH->pMetaData->pFirstTD);
             while(true)
             {
                 TD *pTD = &m_pTDList[nTDIndex];
@@ -375,7 +383,7 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                 if(pTD->bNextInvalid || bEndOfTransfer)
                     break;
                 else
-                    nTDIndex = ((pTD->pNext << 4) & 0xFFF) / sizeof(TD);
+                    nTDIndex = INDEX_FROM_TD_PHYS(pTD->pNext << 4); //((pTD->pNext << 4) & 0xFFF) / sizeof(TD);
 
                 if(nTDIndex == oldIndex)
                 {
@@ -404,7 +412,7 @@ void Uhci::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid
     {
         LockGuard<Mutex> guard(m_Mutex);
         nIndex = m_TDBitmap.getFirstClear();
-        if(nIndex >= (0x1000 / sizeof(TD)))
+        if(nIndex >= (TD_REGION_SIZE / sizeof(TD)))
         {
             ERROR("USB: UHCI: TD space full");
             return;
@@ -484,7 +492,7 @@ uintptr_t Uhci::createTransaction(UsbEndpoint endpointInfo)
     {
         LockGuard<Mutex> guard(m_Mutex);
         nIndex = m_QHBitmap.getFirstClear();
-        if(nIndex >= (0x1000 / sizeof(QH)))
+        if(nIndex >= (QH_REGION_SIZE / sizeof(QH)))
         {
             ERROR("USB: UHCI: QH space full");
             return static_cast<uintptr_t>(-1);
@@ -517,6 +525,8 @@ void Uhci::doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)
     QH *pQH = &m_pQHList[pTransaction];
     pQH->pMetaData->pCallback = pCallback;
     pQH->pMetaData->pParam = pParam;
+    
+    NOTICE_NOLOCK("doAsync");
 
     // Do we need to configure the asynchronous schedule?
     if(m_pCurrentAsyncQueueTail)
@@ -550,6 +560,8 @@ void Uhci::doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)
             pOldTail->pMetaData->pNext = pQH;
             pOldTail->pMetaData->pPrev = pQH;
         }
+    
+        NOTICE_NOLOCK("doAsync done");
     }
     else
     {
