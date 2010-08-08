@@ -67,7 +67,7 @@ void RoutingTable::Add(Type type, IpAddress dest, IpAddress subnet, IpAddress su
     IpAddress bottomOfRange = dest & subnet;
     IpAddress topOfRange = (dest & subnet) + invSubnet;
 
-    NOTICE("RoutingTable: Adding " << (type == DestSubnetComplement ? "complement of " : "") << "subnet match for range " << bottomOfRange.toString() << " [" << bottomOfRange.getIp() << "] -" << topOfRange.toString() << " [" << topOfRange.getIp() << "]");
+    NOTICE("RoutingTable: Adding " << (type == DestSubnetComplement ? "complement of " : "") << "subnet match for range " << bottomOfRange.toString() << " - " << topOfRange.toString());
 
     // Add to the database
     String str;
