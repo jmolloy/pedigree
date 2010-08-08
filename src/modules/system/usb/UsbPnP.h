@@ -31,7 +31,7 @@ class UsbPnP
 {
     private:
         /// Callback function type
-        typedef void (*callback_t)(UsbDevice*);
+        typedef UsbDevice *(*callback_t)(UsbDevice*);
 
     public:
 

@@ -19,10 +19,9 @@
 
 #include "FtdiSerialDevice.h"
 
-void ftdiConnected(UsbDevice *pDevice)
+UsbDevice *ftdiConnected(UsbDevice *pDevice)
 {
-    FtdiSerialDevice *pFtdi = new FtdiSerialDevice(pDevice);
-    pFtdi->getParent()->replaceChild(pDevice, pFtdi);
+    return new FtdiSerialDevice(pDevice);
 }
 
 static void entry()

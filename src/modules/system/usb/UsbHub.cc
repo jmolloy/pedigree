@@ -44,51 +44,39 @@ bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
     pRootHub->m_UsedAddresses.set(nAddress);
 
     // Create the UsbDevice instance and set us as parent
-    UsbDevice *pDevice = new UsbDevice();
+    UsbDevice *pDevice = new UsbDevice(nPort, speed);
     pDevice->setParent(this);
 
-    // Set port number
-    pDevice->setPort(nPort);
+    // Initialise the device - it basically sets the address and gets the descriptors
+    pDevice->initialise(nAddress);
 
-    // Set speed
-    pDevice->setSpeed(speed);
-
-    // Assign the address we've chosen
-    if(!pDevice->assignAddress(nAddress))
+    // Check for initialisation failures
+    if(pDevice->getUsbState() != UsbDevice::Configured)
     {
-        ERROR("USB: HUB: address assignment failed!");
-        delete(pDevice);
+        // Cleanup descriptors
+        if(pDevice->getUsbState() >= UsbDevice::HasDescriptors)
+            delete pDevice->getDescriptor();
+
+        // Delete the device and return false
+        delete pDevice;
         return false;
     }
 
-    // Get all descriptors in place
-    pDevice->populateDescriptors();
-    UsbDevice::DeviceDescriptor *pDes = pDevice->getDescriptor();
-
-    // Currently we only support the default configuration
-    if(pDes->pConfigurations.count() > 1)
-        DEBUG_LOG("USB: TODO: multiple configuration devices");
-    pDevice->useConfiguration(0);
+    // Get the device descriptor
+    UsbDevice::DeviceDescriptor *pDescriptor = pDevice->getDescriptor();
 
     // Iterate all interfaces
-    Vector<UsbDevice::Interface*> pInterfaces = pDevice->getConfiguration()->pInterfaces;
-    for(size_t i = 0; i < pInterfaces.count(); i++)
+    Vector<UsbDevice::Interface*> interfaceList = pDevice->getConfiguration()->interfaceList;
+    for(size_t i = 0; i < interfaceList.count(); i++)
     {
-        UsbDevice::Interface *pInterface = pInterfaces[i];
+        UsbDevice::Interface *pInterface = interfaceList[i];
 
         // Skip alternate settings
-        if(pInterface->pDescriptor->nAlternateSetting)
+        if(pInterface->nAlternateSetting)
             continue;
 
-        // Just in case we have a single-interface device with the class code(s) in the device descriptor
-        if(pInterfaces.count() == 1 && pDes->pDescriptor->nClass && !pInterface->pDescriptor->nClass)
-        {
-            pInterface->pDescriptor->nClass = pDes->pDescriptor->nClass;
-            pInterface->pDescriptor->nSubclass = pDes->pDescriptor->nSubclass;
-            pInterface->pDescriptor->nProtocol = pDes->pDescriptor->nProtocol;
-        }
         // If we're not at the first interface, we have to clone the UsbDevice
-        else if(i)
+        if(i)
         {
             pDevice = new UsbDevice(pDevice);
             pDevice->setParent(this);
@@ -100,7 +88,7 @@ bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
         // Add the device as a child
         addChild(pDevice);
 
-        NOTICE("USB: Device: " << pDes->sVendor << " " << pDes->sProduct << ", class " << Dec << pInterface->pDescriptor->nClass << ":" << pInterface->pDescriptor->nSubclass << ":" << pInterface->pDescriptor->nProtocol << Hex);
+        NOTICE("USB: Device: " << pDescriptor->sVendor << " " << pDescriptor->sProduct << ", class " << Dec << pInterface->nClass << ":" << pInterface->nSubclass << ":" << pInterface->nProtocol << Hex);
 
         // Send it to the USB PnP manager
         UsbPnP::instance().probeDevice(pDevice);
@@ -111,18 +99,36 @@ bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
 void UsbHub::deviceDisconnected(uint8_t nPort)
 {
     uint8_t nAddress = 0;
+    UsbDevice::DeviceDescriptor *pDescriptor = 0;
+
     for(size_t i = 0; i < m_Children.count(); i++)
     {
         UsbDevice *pDevice = dynamic_cast<UsbDevice*>(m_Children[i]);
-        if(pDevice && pDevice->getPort() == nPort)
+
+        if(!pDevice)
+            continue;
+
+        if(pDevice->getPort() != nPort)
+            continue;
+
+        if(!nAddress)
+            nAddress = pDevice->getAddress();
+        else if(nAddress != pDevice->getAddress())
+            ERROR("USB: HUB: Found devices on the same port with different addresses");
+
+        if(pDevice->getUsbState() >= UsbDevice::HasDescriptors)
         {
-            if(!nAddress)
-                nAddress = pDevice->getAddress();
-            else if(nAddress != pDevice->getAddress())
-                ERROR("USB: HUB: Found devices on the same port with different addresses");
-            delete pDevice;
+            if(!pDescriptor)
+                pDescriptor = pDevice->getDescriptor();
+            else if(pDescriptor != pDevice->getDescriptor())
+                ERROR("USB: HUB: Found devices on the same port with different device descriptors");
         }
+
+        delete pDevice;
     }
+
+    if(pDescriptor)
+        delete pDescriptor;
 
     if(!nAddress)
         return;

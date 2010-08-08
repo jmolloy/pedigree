@@ -19,12 +19,15 @@
 
 #include <usb/UsbDevice.h>
 #include <usb/UsbHub.h>
+#include <usb/UsbConstants.h>
 
 class UsbHubDevice : public UsbDevice, public UsbHub
 {
     public:
         UsbHubDevice(UsbDevice *dev);
         virtual ~UsbHubDevice();
+
+        virtual void initialiseDriver();
 
         virtual void getName(String &str)
         {
@@ -64,7 +67,7 @@ class UsbHubDevice : public UsbDevice, public UsbHub
 
         enum HubRequests
         {
-            HubPortRequest  = RequestType::Class | RequestRecipient::Other
+            HubPortRequest  = UsbRequestType::Class | UsbRequestRecipient::Other
         };
 
         bool setPortFeature(size_t port, PortFeatureSelectors feature);

@@ -78,7 +78,7 @@ struct UsbEndpoint
     size_t nMaxPacketSize;
     uint8_t nHubAddress;
     uint8_t nHubPort;
-    
+
     UsbEndpoint &operator = (UsbEndpoint &e)
     {
         nAddress = e.nAddress;
@@ -87,7 +87,7 @@ struct UsbEndpoint
         nMaxPacketSize = e.nMaxPacketSize;
         nHubAddress = e.nHubAddress;
         nHubPort = e.nHubPort;
-        
+
         return *const_cast<UsbEndpoint*>(this);
     }
 };

@@ -27,6 +27,8 @@ class FtdiSerialDevice : public UsbDevice, public Serial
         FtdiSerialDevice(UsbDevice *dev);
         virtual ~FtdiSerialDevice();
 
+        virtual void initialiseDriver();
+
         virtual void setBase(uintptr_t nBaseAddr){}
         virtual char read();
         virtual char readNonBlock(){return 0;}

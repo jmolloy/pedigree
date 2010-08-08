@@ -19,10 +19,9 @@
 
 #include "UsbHumanInterfaceDevice.h"
 
-void hidConnected(UsbDevice *pDevice)
+UsbDevice *hidConnected(UsbDevice *pDevice)
 {
-    UsbHumanInterfaceDevice *pHid = new UsbHumanInterfaceDevice(pDevice);
-    pHid->getParent()->replaceChild(pDevice, pHid);
+    return new UsbHumanInterfaceDevice(pDevice);
 }
 
 static void entry()

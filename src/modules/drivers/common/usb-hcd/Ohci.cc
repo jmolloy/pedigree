@@ -82,7 +82,8 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_pCurrentBulkQueueHead(0), m_pCurrentC
 
     // Install the IRQ handler
 #ifdef X86_COMMON
-    Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*>(this));
+    Machine::instance().getIrqManager()->registerPciIrqHandler(this, this);
+    Machine::instance().getIrqManager()->control(getInterruptNumber(), IrqManager::MitigationThreshold, (12 * 1024 / 8 / 64)); // 12KB/ms (12Mbps) in bytes, divided by 64 bytes maximum per transfer/IRQ
 #else
     InterruptManager::instance().registerInterruptHandler(pDev->getInterruptNumber(), this);
 #endif
@@ -106,7 +107,7 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_pCurrentBulkQueueHead(0), m_pCurrentC
 
     DEBUG_LOG("USB: OHCI: Reset complete, " << Dec << m_nPorts << Hex << " ports available");
 
-    for(size_t i = 0;i < m_nPorts;i++)
+    for(size_t i = 0; i < m_nPorts; i++)
     {
         if(!(m_pBase->read32(OhciRhPortStatus + (i * 4)) & OhciRhPortStsPower))
         {
@@ -186,6 +187,7 @@ void Ohci::doDequeue()
         }
 
         // Completely invalidate the ED
+        delete pED->pMetaData;
         memset(pED, 0, sizeof(ED));
 
 #ifdef USB_VERBOSE_DEBUG

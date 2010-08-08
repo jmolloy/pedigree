@@ -19,6 +19,7 @@
 #include <network-stack/NetworkStack.h>
 #include <processor/Processor.h>
 #include <usb/UsbHub.h>
+#include <usb/UsbConstants.h>
 
 #include <LockGuard.h>
 
@@ -35,12 +36,12 @@ Dm9601::~Dm9601()
 {
 }
 
-bool Dm9601::initialise()
+void Dm9601::initialiseDriver()
 {
     // Grab USB endpoints for the driver to use later
-    for(size_t i = 0; i < m_pInterface->pEndpoints.count(); i++)
+    for(size_t i = 0; i < m_pInterface->endpointList.count(); i++)
     {
-        Endpoint *pEndpoint = m_pInterface->pEndpoints[i];
+        Endpoint *pEndpoint = m_pInterface->endpointList[i];
         if(!m_pInEndpoint && (pEndpoint->nTransferType == Endpoint::Bulk) && pEndpoint->bIn)
             m_pInEndpoint = pEndpoint;
         if(!m_pOutEndpoint && (pEndpoint->nTransferType == Endpoint::Bulk) && pEndpoint->bOut)
@@ -52,60 +53,60 @@ bool Dm9601::initialise()
     if(!m_pInEndpoint)
     {
         ERROR("dm9601: no bulk IN endpoint");
-        return false;
+        return;
     }
 
     if(!m_pOutEndpoint)
     {
-        ERROR("dm9601 no bulk OUT endpoint");
-        return false;
+        ERROR("dm9601: no bulk OUT endpoint");
+        return;
     }
-    
+
     uint8_t *pMac = new uint8_t[6];
     *reinterpret_cast<uint16_t*>(&pMac[0]) = readEeprom(0);
     *reinterpret_cast<uint16_t*>(&pMac[2]) = readEeprom(1);
     *reinterpret_cast<uint16_t*>(&pMac[4]) = readEeprom(2);
     m_StationInfo.mac.setMac(pMac, false);
-    
+
     NOTICE("DM9601: MAC " << pMac[0] << ":" << pMac[1] << ":" << pMac[2] << ":" <<
                              pMac[3] << ":" << pMac[4] << ":" << pMac[5]);
-    
+
     // Reset the chip
     writeRegister(NetworkControl, 1);
     delay(100);
-    
+
     // Select internal MII
     writeRegister(NetworkControl, 0);
-    
+
     // Enable output on GPIO
     writeRegister(GeneralPurposeCtl, 0x1);
-    
+
     // Disable GPIO0 - POWER_DOWN
     writeRegister(GeneralPurpose, 0);
 
     // Enter into the default state - half-duplex, internal PHY
     writeRegister(NetworkControl, 0);
-    
+
     // Jam the RX line when there's less than 3K in the SRAM space
     writeRegister(BackPressThreshold, 0x37);
-    
+
     // Flow control: 3K high water overflow, 8K low water overflow
     writeRegister(FlowControl, 0x38);
-    
+
     // Set up flow control for RX and TX
     writeRegister(RxFlowControl, 1 | (1 << 3) | (1 << 5));
-    
+
     // Enable proper interrupt handling regardless of NAK state
     writeRegister(UsbControl, 0);
-    
+
     // Write the physical address of this station to the card so it can filter
     // incoming packets.
     writeRegister(PhysicalAddress, reinterpret_cast<uintptr_t>(pMac), 6);
-    
+
     // Configure RX control - accept runts, all multicast packets, and turn on
     // the receiver
     writeRegister(RxControl, 5 | (1 << 3));
-    
+
     // Wait for the link to become active
     /// \todo Timeout
     uint8_t *p = new uint8_t;
@@ -115,13 +116,13 @@ bool Dm9601::initialise()
         readRegister(NetworkStatus, reinterpret_cast<uintptr_t>(p), 1);
         delay(100);
     }
-    
+
     new Thread(Processor::information().getCurrentThread()->getParent(), trampoline, this);
     new Thread(Processor::information().getCurrentThread()->getParent(), recvTrampoline, this);
-    
+
     NetworkStack::instance().registerDevice(this);
 
-    return true;
+    m_UsbState = HasDriver;
 }
 
 int Dm9601::recvTrampoline(void *p)
@@ -143,25 +144,23 @@ void Dm9601::receiveThread()
     while(true)
     {
         m_IncomingPackets.acquire();
-        
+
         m_RxPacketQueueLock.acquire();
         Packet *pPacket = m_RxPacketQueue.popFront();
         m_RxPacketQueueLock.release();
-        
+
         NetworkStack::instance().receive(pPacket->len, pPacket->buffer + pPacket->offset, this, 0);
-        
+
         delete pPacket;
-        
+
         NetworkStack::instance().getMemPool().free(pPacket->buffer);
     }
 }
 
 void Dm9601::receiveLoop()
 {
-    while(1)
-    {
+    while(true)
         doReceive();
-    }
 }
 
 bool Dm9601::send(size_t nBytes, uintptr_t buffer)
@@ -176,19 +175,19 @@ bool Dm9601::send(size_t nBytes, uintptr_t buffer)
         delay(100);
         readRegister(NetworkStatus, reinterpret_cast<uintptr_t>(p), 1);
     }
-    
+
     // Avoid runt packets
     size_t padBytes = 0;
     if(nBytes < 64)
     {
         padBytes = nBytes % 64;
         memset(reinterpret_cast<void*>(buffer + nBytes), 0, padBytes);
-        
+
         nBytes = 64;
     }
-    
+
     size_t txSize = nBytes + 2;
-    
+
     if(!(txSize % 64))
         txSize++;
 
@@ -196,18 +195,18 @@ bool Dm9601::send(size_t nBytes, uintptr_t buffer)
     uint8_t *pBuffer = new uint8_t[txSize];
     *reinterpret_cast<uint16_t*>(pBuffer) = HOST_TO_LITTLE16(static_cast<uint16_t>(nBytes));
     memcpy(&pBuffer[2], reinterpret_cast<void*>(buffer), nBytes);
-    
+
     ssize_t ret = syncOut(m_pOutEndpoint, reinterpret_cast<uintptr_t>(pBuffer), txSize);
     delete [] pBuffer;
-    
+
     // Grab the TX status register so we can find errors
     readRegister(TxStatus1 + m_TxPacket, reinterpret_cast<uintptr_t>(p), 1);
-    
+
     m_TxPacket = (m_TxPacket + 1) % 2;
-    
+
     // Read and clear the network status (which will contain the "packet complete" indicator)
     readRegister(NetworkStatus, reinterpret_cast<uintptr_t>(p), 1);
-   
+
     return ret >= 0;
 }
 
@@ -217,18 +216,18 @@ void Dm9601::doReceive()
 {
     uintptr_t buff = NetworkStack::instance().getMemPool().allocate();
     ssize_t ret = syncIn(m_pInEndpoint, buff, MAX_MTU, 0); // Never time out.
-   
+
     if(ret < 0)
     {
         WARNING("dm9601: rx failure due to USB error: " << ret);
         NetworkStack::instance().getMemPool().free(buff);
         return;
     }
-    
+
     uint8_t *pBuffer = reinterpret_cast<uint8_t*>(buff);
     uint8_t rxstatus = pBuffer[0];
     uint16_t len = LITTLE_TO_HOST16(*reinterpret_cast<uint16_t*>(&pBuffer[1])) - 4;
-    
+
     if(rxstatus & 0x3F)
     {
         WARNING("dm9601: rx failure: " << rxstatus << ", length was " << len);
@@ -236,16 +235,16 @@ void Dm9601::doReceive()
         badPacket();
         return;
     }
-    
+
     Packet *pPacket = new Packet;
     pPacket->buffer = buff;
     pPacket->len = len;
     pPacket->offset = 3;
-    
+
     m_RxPacketQueueLock.acquire();
     m_RxPacketQueue.pushBack(pPacket);
     m_RxPacketQueueLock.release();
-  
+
     m_IncomingPackets.release();
 }
 
@@ -282,38 +281,38 @@ ssize_t Dm9601::readRegister(uint8_t reg, uintptr_t buffer, size_t nBytes)
 {
     if(!buffer || (nBytes > 0xFF))
         return -1;
-    return controlRequest(RequestType::Vendor | RequestDirection::In, ReadRegister, 0, reg, nBytes, buffer);
+    return controlRequest(UsbRequestType::Vendor | UsbRequestDirection::In, ReadRegister, 0, reg, nBytes, buffer);
 }
 
 ssize_t Dm9601::writeRegister(uint8_t reg, uintptr_t buffer, size_t nBytes)
 {
     if(!buffer || (nBytes > 0xFF))
         return -1;
-    return controlRequest(RequestType::Vendor | RequestDirection::Out, WriteRegister, 0, reg, nBytes, buffer);
+    return controlRequest(UsbRequestType::Vendor | UsbRequestDirection::Out, WriteRegister, 0, reg, nBytes, buffer);
 }
 
 ssize_t Dm9601::writeRegister(uint8_t reg, uint8_t data)
 {
-    return controlRequest(RequestType::Vendor | RequestDirection::Out, WriteRegister1, data, reg);
+    return controlRequest(UsbRequestType::Vendor | UsbRequestDirection::Out, WriteRegister1, data, reg);
 }
 
 ssize_t Dm9601::readMemory(uint16_t offset, uintptr_t buffer, size_t nBytes)
 {
     if(!buffer || (nBytes > 0xFF))
         return -1;
-    return controlRequest(RequestType::Vendor | RequestDirection::In, ReadMemory, 0, offset, nBytes, buffer);
+    return controlRequest(UsbRequestType::Vendor | UsbRequestDirection::In, ReadMemory, 0, offset, nBytes, buffer);
 }
 
 ssize_t Dm9601::writeMemory(uint16_t offset, uintptr_t buffer, size_t nBytes)
 {
     if(!buffer || (nBytes > 0xFF))
         return -1;
-    return controlRequest(RequestType::Vendor | RequestDirection::Out, WriteMemory, 0, offset, nBytes, buffer);
+    return controlRequest(UsbRequestType::Vendor | UsbRequestDirection::Out, WriteMemory, 0, offset, nBytes, buffer);
 }
 
 ssize_t Dm9601::writeMemory(uint16_t offset, uint8_t data)
 {
-    return controlRequest(RequestType::Vendor | RequestDirection::Out, WriteMemory1, data, offset);
+    return controlRequest(UsbRequestType::Vendor | UsbRequestDirection::Out, WriteMemory1, data, offset);
 }
 
 uint16_t Dm9601::readEeprom(uint8_t offset)
@@ -325,10 +324,10 @@ uint16_t Dm9601::readEeprom(uint8_t offset)
     delay(100);
     writeRegister(PhyControl, 0); // Stop the transfer
     readRegister(PhyLowByte, reinterpret_cast<uintptr_t>(ret), 2);
-    
+
     uint16_t retVal = *ret;
     delete ret;
-    
+
     return retVal;
 }
 
@@ -342,7 +341,7 @@ void Dm9601::writeEeprom(uint8_t offset, uint16_t data)
     writeRegister(PhyControl, 0x12); // Write to EEPROM
     delay(100);
     writeRegister(PhyControl, 0);
- 
+
     delete input;
 }
 
@@ -355,10 +354,10 @@ uint16_t Dm9601::readMii(uint8_t offset)
     delay(100);
     writeRegister(PhyControl, 0); // Stop the transfer
     readRegister(PhyLowByte, reinterpret_cast<uintptr_t>(ret), 2);
-    
+
     uint16_t retVal = *ret;
     delete ret;
-    
+
     return retVal;
 }
 
@@ -372,7 +371,7 @@ void Dm9601::writeMii(uint8_t offset, uint16_t data)
     writeRegister(PhyControl, 0xa); // Transfer to PHY
     delay(100);
     writeRegister(PhyControl, 0);
- 
+
     delete input;
 }
 

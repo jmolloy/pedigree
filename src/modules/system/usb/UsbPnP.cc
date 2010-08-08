@@ -23,7 +23,7 @@ UsbPnP UsbPnP::m_Instance;
 bool UsbPnP::probeDevice(UsbDevice *pDevice)
 {
     // Is this device already handled by a driver?
-    if(pDevice->hasDriver())
+    if(pDevice->getUsbState() == UsbDevice::HasDriver)
         return false;
 
     UsbDevice::DeviceDescriptor *pDes = pDevice->getDescriptor();
@@ -37,19 +37,37 @@ bool UsbPnP::probeDevice(UsbDevice *pDevice)
         if(!item)
             continue;
 
-        if(item->nVendorId != VendorIdNone && item->nVendorId != pDes->pDescriptor->nVendorId)
+        if(item->nVendorId != VendorIdNone && item->nVendorId != pDes->nVendorId)
             continue;
-        if(item->nProductId != ProductIdNone && item->nProductId != pDes->pDescriptor->nProductId)
+        if(item->nProductId != ProductIdNone && item->nProductId != pDes->nProductId)
             continue;
-        if(item->nClass != ClassNone && item->nClass != pIface->pDescriptor->nClass)
+        if(item->nClass != ClassNone && item->nClass != pIface->nClass)
             continue;
-        if(item->nSubclass != SubclassNone && item->nSubclass != pIface->pDescriptor->nSubclass)
+        if(item->nSubclass != SubclassNone && item->nSubclass != pIface->nSubclass)
             continue;
-        if(item->nProtocol != ProtocolNone && item->nProtocol != pIface->pDescriptor->nProtocol)
+        if(item->nProtocol != ProtocolNone && item->nProtocol != pIface->nProtocol)
             continue;
 
-        item->callback(pDevice);
-        return true;
+        // Call the callback, which will give us (hopefully) a copy of pDevice, in the form of a driver class
+        UsbDevice *pNewDevice = item->callback(pDevice);
+
+        // Was this device rejected by the driver?
+        if(!pNewDevice)
+            continue;
+
+        // Initialise the driver
+        pNewDevice->initialiseDriver();
+
+        // Did the device go into the driver state?
+        if(pNewDevice->getUsbState() == UsbDevice::HasDriver)
+        {
+            // Replace the old device with the new one, delete the old one and return true
+            pDevice->getParent()->replaceChild(pDevice, pNewDevice);
+            delete pDevice;
+            return true;
+        }
+        else
+            delete pNewDevice;
     }
     return false;
 }

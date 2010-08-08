@@ -25,9 +25,17 @@
 
 UsbMassStorageDevice::UsbMassStorageDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev), m_nUnits(0), m_pInEndpoint(0), m_pOutEndpoint(0)
 {
-    for(size_t i = 0; i < m_pInterface->pEndpoints.count(); i++)
+}
+
+UsbMassStorageDevice::~UsbMassStorageDevice()
+{
+}
+
+void UsbMassStorageDevice::initialiseDriver()
+{
+    for(size_t i = 0; i < m_pInterface->endpointList.count(); i++)
     {
-        Endpoint *pEndpoint = m_pInterface->pEndpoints[i];
+        Endpoint *pEndpoint = m_pInterface->endpointList[i];
         if(!m_pInEndpoint && (pEndpoint->nTransferType == Endpoint::Bulk) && pEndpoint->bIn)
             m_pInEndpoint = pEndpoint;
         if(!m_pOutEndpoint && (pEndpoint->nTransferType == Endpoint::Bulk) && pEndpoint->bOut)
@@ -56,7 +64,7 @@ UsbMassStorageDevice::UsbMassStorageDevice(UsbDevice *dev) : Device(dev), UsbDev
     ///       return logical information, or just report incorrect data.
     ///       All that needs to be handled.
     uint8_t *nMaxLUN = new uint8_t(0);
-    if(!controlRequest(RequestDirection::In | MassStorageRequest, MassStorageGetMaxLUN, 0, m_pInterface->pDescriptor->nInterface, 1, reinterpret_cast<uintptr_t>(nMaxLUN)))
+    if(!controlRequest(UsbRequestDirection::In | MassStorageRequest, MassStorageGetMaxLUN, 0, m_pInterface->nInterface, 1, reinterpret_cast<uintptr_t>(nMaxLUN)))
     {
         ERROR("USB: MSD: Couldn't get maximum LUN");
         return;
@@ -66,16 +74,12 @@ UsbMassStorageDevice::UsbMassStorageDevice(UsbDevice *dev) : Device(dev), UsbDev
 
     searchDisks();
 
-    m_bHasDriver = true;
-}
-
-UsbMassStorageDevice::~UsbMassStorageDevice()
-{
+    m_UsbState = HasDriver;
 }
 
 bool UsbMassStorageDevice::massStorageReset()
 {
-    return controlRequest(MassStorageRequest, MassStorageReset, 0, m_pInterface->pDescriptor->nInterface);
+    return controlRequest(MassStorageRequest, MassStorageReset, 0, m_pInterface->nInterface);
 }
 
 bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite)

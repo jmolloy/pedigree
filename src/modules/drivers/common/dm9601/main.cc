@@ -19,12 +19,7 @@
 
 #include "Dm9601.h"
 
-#include <usb/UsbDevice.h>
-#include <usb/UsbHub.h>
-
-#include <machine/Device.h>
-
-static struct device
+static struct
 {
     uint16_t vendor;
     uint16_t product;
@@ -35,11 +30,9 @@ static struct device
 
 #define NUM_DEVICES (sizeof(g_Devices) / sizeof(g_Devices[0]))
 
-void dm9601Connected(UsbDevice *pDevice)
+UsbDevice *dm9601Connected(UsbDevice *pDevice)
 {
-    Dm9601 *pDm9601 = new Dm9601(pDevice);
-    if(pDm9601->initialise())
-        pDm9601->getParent()->replaceChild(pDevice, pDm9601);
+    return new Dm9601(pDevice);
 }
 
 static void entry()
@@ -52,4 +45,4 @@ static void exit()
 {
 }
 
-MODULE_INFO("dm9601", &entry, &exit, "usb", "usb-hcd", "network-stack");
+MODULE_INFO("dm9601", &entry, &exit, "usb", "network-stack");

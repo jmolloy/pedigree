@@ -19,10 +19,9 @@
 
 #include "UsbHubDevice.h"
 
-void hubConnected(UsbDevice *pDevice)
+UsbDevice *hubConnected(UsbDevice *pDevice)
 {
-    UsbHubDevice *pHub = new UsbHubDevice(pDevice);
-    pHub->getParent()->replaceChild(pDevice, pHub);
+    return new UsbHubDevice(pDevice);
 }
 
 static void entry()

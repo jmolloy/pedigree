@@ -19,10 +19,9 @@
 
 #include "UsbMassStorageDevice.h"
 
-void massStorageConnected(UsbDevice *pDevice)
+UsbDevice *massStorageConnected(UsbDevice *pDevice)
 {
-    UsbMassStorageDevice *pMassStorage = new UsbMassStorageDevice(pDevice);
-    pMassStorage->getParent()->replaceChild(pDevice, pMassStorage);
+    return new UsbMassStorageDevice(pDevice);
 }
 
 static void entry()

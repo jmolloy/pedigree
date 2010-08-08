@@ -26,6 +26,8 @@ class UsbHumanInterfaceDevice : public UsbDevice
         UsbHumanInterfaceDevice(UsbDevice *dev);
         virtual ~UsbHumanInterfaceDevice();
 
+        virtual void initialiseDriver();
+
         virtual void getName(String &str)
         {
             str = "USB Human Interface Device";
@@ -35,7 +37,12 @@ class UsbHumanInterfaceDevice : public UsbDevice
 
         struct HidDescriptor
         {
-            inline HidDescriptor(UnknownDescriptor *pDes) :  pDescriptor(static_cast<struct Descriptor*>(pDes->pDescriptor)) {}
+            inline HidDescriptor(UnknownDescriptor *pDes)
+            {
+                Descriptor *pDescriptor = static_cast<Descriptor*>(pDes->pDescriptor);
+                nDescriptorLength = pDescriptor->nDescriptorLength;
+                delete pDescriptor;
+            }
 
             struct Descriptor
             {
@@ -46,7 +53,9 @@ class UsbHumanInterfaceDevice : public UsbDevice
                 uint8_t nDescriptors;
                 uint8_t nDescriptorType;
                 uint16_t nDescriptorLength;
-            } PACKED *pDescriptor;
+            } PACKED;
+
+            uint16_t nDescriptorLength;
         };
 
         struct HidReportBlock

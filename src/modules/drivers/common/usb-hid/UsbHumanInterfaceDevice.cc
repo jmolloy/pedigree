@@ -17,6 +17,7 @@
 #include <machine/HidInputManager.h>
 #include <usb/UsbHub.h>
 #include <usb/UsbDevice.h>
+#include <usb/UsbConstants.h>
 #include "UsbHumanInterfaceDevice.h"
 
 #include <utilities/PointerGuard.h>
@@ -49,10 +50,25 @@ static inline int64_t _uint2int(uint64_t val, uint8_t len)
 
 UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) : Device(pDev), UsbDevice(pDev)
 {
-    HidDescriptor *pHidDescriptor = 0;
-    for(size_t i = 0;i < m_pInterface->pOtherDescriptors.count();i++)
+}
+
+UsbHumanInterfaceDevice::~UsbHumanInterfaceDevice()
+{
+}
+
+void UsbHumanInterfaceDevice::initialiseDriver()
+{
+
+    /// \bug WMware's mouse's second interface is known to cause problems
+    if(m_pDescriptor->nVendorId == 0x0e0f && m_pInterface->nInterface)
     {
-        UnknownDescriptor *pDescriptor = m_pInterface->pOtherDescriptors[i];
+        WARNING("USB: HID: Skipping VMWare second mouse interface");
+    }
+
+    HidDescriptor *pHidDescriptor = 0;
+    for(size_t i = 0; i < m_pInterface->otherDescriptorList.count(); i++)
+    {
+        UnknownDescriptor *pDescriptor = m_pInterface->otherDescriptorList[i];
         if(pDescriptor->nType == 0x21)
         {
             pHidDescriptor = new HidDescriptor(pDescriptor);
@@ -65,19 +81,13 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) : Device(pDev)
         return;
     }
 
-    PointerGuard<HidDescriptor> guard(pHidDescriptor);
-
-    /// \bug WMware's mouse's second interface is known to cause problems
-    if(m_pDescriptor->pDescriptor->nVendorId == 0x0e0f && m_pInterface->pDescriptor->nInterface)
-        return;
-
     // Disable BIOS stuff
-    //controlRequest(RequestType::Class | RequestRecipient::Interface, Request::SetInterface, 0, m_pInterface->pDescriptor->nInterface);
+    //controlRequest(UsbRequestType::Class | UsbRequestRecipient::Interface, UsbRequest::SetInterface, 0, m_pInterface->nInterface);
     // Set Idle Rate to 0
-    controlRequest(RequestType::Class | RequestRecipient::Interface, Request::GetInterface, 0, 0);
+    controlRequest(UsbRequestType::Class | UsbRequestRecipient::Interface, UsbRequest::GetInterface, 0, 0);
 
-    uint16_t nHidSize = pHidDescriptor->pDescriptor->nDescriptorLength;
-    uint8_t *pHidReportDescriptor = static_cast<uint8_t*>(getDescriptor(0x22, 0, nHidSize, RequestRecipient::Interface));
+    uint16_t nHidSize = pHidDescriptor->nDescriptorLength;
+    uint8_t *pHidReportDescriptor = static_cast<uint8_t*>(getDescriptor(0x22, 0, nHidSize, UsbRequestRecipient::Interface));
     int64_t nLogMin = undefined, nLogMax = undefined, nPhysMin = undefined, nPhysMax = undefined, nUsagePage = undefined,
             nUsageMin = undefined, nUsageMax = undefined, nReportSize = undefined, nReportCount = undefined;
     uint8_t nLogSize = 0;
@@ -204,9 +214,9 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) : Device(pDev)
 
     Endpoint *pInEndpoint = 0;
 
-    for(size_t i = 0; i < m_pInterface->pEndpoints.count(); i++)
+    for(size_t i = 0; i < m_pInterface->endpointList.count(); i++)
     {
-        Endpoint *pEndpoint = m_pInterface->pEndpoints[i];
+        Endpoint *pEndpoint = m_pInterface->endpointList[i];
         if(pEndpoint->nTransferType == Endpoint::Interrupt && pEndpoint->bIn)
         {
             pInEndpoint = pEndpoint;
@@ -223,11 +233,7 @@ UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) : Device(pDev)
     // Add the input handler
     addInterruptInHandler(pInEndpoint, reinterpret_cast<uintptr_t>(m_pReportBuffer), m_pReport->nBytes, callback, reinterpret_cast<uintptr_t>(this));
 
-    m_bHasDriver = true;
-}
-
-UsbHumanInterfaceDevice::~UsbHumanInterfaceDevice()
-{
+    m_UsbState = HasDriver;
 }
 
 void UsbHumanInterfaceDevice::callback(uintptr_t pParam, ssize_t ret)
@@ -238,7 +244,7 @@ void UsbHumanInterfaceDevice::callback(uintptr_t pParam, ssize_t ret)
 
 void UsbHumanInterfaceDevice::inputHandler()
 {
-    //NOTICE("USB: HID: Handling input on interface " << Dec << m_pInterface->pDescriptor->nInterface << Hex);
+    //NOTICE("USB: HID: Handling input on interface " << Dec << m_pInterface->nInterface << Hex);
 
     size_t nCurrentBit = 0;
     for(List<HidReportBlock*>::Iterator it = m_pReport->pBlockList.begin(); it != m_pReport->pBlockList.end(); it++)

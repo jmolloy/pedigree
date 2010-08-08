@@ -23,11 +23,19 @@
 
 UsbHubDevice::UsbHubDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
 {
-    uint8_t len = getDescriptorLength(0, 0, RequestType::Class);
+}
+
+UsbHubDevice::~UsbHubDevice()
+{
+}
+
+void UsbHubDevice::initialiseDriver()
+{
+    uint8_t len = getDescriptorLength(0, 0, UsbRequestType::Class);
     void *pDesc = 0;
     if(len)
     {
-        pDesc = getDescriptor(0, 0, len, RequestType::Class);
+        pDesc = getDescriptor(0, 0, len, UsbRequestType::Class);
         if(!pDesc)
             return;
     }
@@ -101,28 +109,24 @@ UsbHubDevice::UsbHubDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
         }
     }
 
-    m_bHasDriver = true;
-}
-
-UsbHubDevice::~UsbHubDevice()
-{
+    m_UsbState = HasDriver;
 }
 
 bool UsbHubDevice::setPortFeature(size_t port, PortFeatureSelectors feature)
 {
-    return controlRequest(HubPortRequest, Request::SetFeature, feature, (port + 1) & 0xFF, 0, 0);
+    return controlRequest(HubPortRequest, UsbRequest::SetFeature, feature, (port + 1) & 0xFF, 0, 0);
 }
 
 bool UsbHubDevice::clearPortFeature(size_t port, PortFeatureSelectors feature)
 {
-    return controlRequest(HubPortRequest, Request::ClearFeature, feature, (port + 1) & 0xFF, 0, 0);
+    return controlRequest(HubPortRequest, UsbRequest::ClearFeature, feature, (port + 1) & 0xFF, 0, 0);
 }
 
 uint32_t UsbHubDevice::getPortStatus(size_t port)
 {
     uint32_t *portStatus = new uint32_t(0);
     PointerGuard<uint32_t> guard(portStatus);
-    controlRequest(RequestDirection::In | HubPortRequest, Request::GetStatus, 0, (port + 1) & 0xFF, 4, reinterpret_cast<uintptr_t>(portStatus));
+    controlRequest(UsbRequestDirection::In | HubPortRequest, UsbRequest::GetStatus, 0, (port + 1) & 0xFF, 4, reinterpret_cast<uintptr_t>(portStatus));
 
     return *portStatus;
 }

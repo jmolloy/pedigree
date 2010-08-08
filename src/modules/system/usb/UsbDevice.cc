@@ -14,25 +14,242 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <processor/Processor.h>
+#include <utilities/assert.h>
+#include <utilities/PointerGuard.h>
 #include <usb/Usb.h>
 #include <usb/UsbDevice.h>
 #include <usb/UsbHub.h>
-#include <processor/Processor.h>
-#include <utilities/PointerGuard.h>
+#include <usb/UsbConstants.h>
+#include <usb/UsbDescriptors.h>
+
+UsbDevice::UsbDevice(uint8_t nPort, UsbSpeed speed) :
+    m_nAddress(0), m_nPort(nPort), m_Speed(speed), m_UsbState(Connected)
+{
+}
+
+UsbDevice::UsbDevice(UsbDevice *pDev) :
+    m_nAddress(pDev->m_nAddress), m_nPort(pDev->m_nPort), m_Speed(pDev->m_Speed), m_UsbState(Connected),
+    m_pDescriptor(pDev->m_pDescriptor), m_pConfiguration(pDev->m_pConfiguration), m_pInterface(pDev->m_pInterface)
+{
+}
+
+UsbDevice::~UsbDevice()
+{
+}
+
+UsbDevice::DeviceDescriptor::DeviceDescriptor(UsbDeviceDescriptor *pDescriptor)
+{
+    nBcdUsbRelease = pDescriptor->nBcdUsbRelease;
+    nClass = pDescriptor->nClass;
+    nSubclass = pDescriptor->nSubclass;
+    nProtocol = pDescriptor->nProtocol;
+    nMaxControlPacketSize = pDescriptor->nMaxControlPacketSize;
+    nVendorId = pDescriptor->nVendorId;
+    nProductId = pDescriptor->nProductId;
+    nBcdDeviceRelease = pDescriptor->nBcdDeviceRelease;
+    nVendorString = pDescriptor->nVendorString;
+    nProductString = pDescriptor->nProductString;
+    nSerialString = pDescriptor->nSerialString;
+    nConfigurations = pDescriptor->nConfigurations;
+
+    delete pDescriptor;
+}
+
+UsbDevice::DeviceDescriptor::~DeviceDescriptor()
+{
+    for(size_t i = 0; i < configList.count(); i++)
+        delete configList[i];
+}
+
+UsbDevice::ConfigDescriptor::ConfigDescriptor(void *pConfigBuffer, size_t nConfigLength)
+{
+    UsbConfigurationDescriptor *pDescriptor = static_cast<UsbConfigurationDescriptor*>(pConfigBuffer);
+    nConfig = pDescriptor->nConfig;
+    nString = pDescriptor->nString;
+
+    uint8_t *pBuffer = static_cast<uint8_t*>(pConfigBuffer);
+    size_t nOffset = pBuffer[0];
+    Interface *pCurrentInterface = 0;
+
+    while(nOffset < nConfigLength)
+    {
+        size_t nLength = pBuffer[nOffset];
+        uint8_t nType = pBuffer[nOffset + 1];
+        if(nType == UsbDescriptor::Interface)
+        {
+            Interface *pNewInterface = new Interface(reinterpret_cast<UsbInterfaceDescriptor*>(&pBuffer[nOffset]));
+            if(!pNewInterface->nAlternateSetting)
+            {
+                assert(interfaceList.count() < pDescriptor->nInterfaces);
+                pCurrentInterface = pNewInterface;
+                interfaceList.pushBack(pCurrentInterface);
+            }
+        }
+        else if(pCurrentInterface)
+        {
+            if(nType == UsbDescriptor::Endpoint)
+                pCurrentInterface->endpointList.pushBack(new Endpoint(reinterpret_cast<UsbEndpointDescriptor*>(&pBuffer[nOffset])));
+            else
+                pCurrentInterface->otherDescriptorList.pushBack(new UnknownDescriptor(&pBuffer[nOffset], nType, nLength));
+        }
+        else
+            otherDescriptorList.pushBack(new UnknownDescriptor(&pBuffer[nOffset], nType, nLength));
+        nOffset += nLength;
+    }
+    assert(interfaceList.count());
+
+    delete pDescriptor;
+}
+
+UsbDevice::ConfigDescriptor::~ConfigDescriptor()
+{
+    for(size_t i = 0; i < interfaceList.count(); i++)
+        delete interfaceList[i];
+    for(size_t i = 0; i < otherDescriptorList.count(); i++)
+        delete otherDescriptorList[i];
+}
+
+UsbDevice::Interface::Interface(UsbInterfaceDescriptor *pDescriptor)
+{
+    nInterface = pDescriptor->nInterface;
+    nAlternateSetting = pDescriptor->nAlternateSetting;
+    nClass = pDescriptor->nClass;
+    nSubclass = pDescriptor->nSubclass;
+    nProtocol = pDescriptor->nProtocol;
+    nString = pDescriptor->nString;
+}
+
+UsbDevice::Interface::~Interface()
+{
+    for(size_t i = 0; i < endpointList.count(); i++)
+        delete endpointList[i];
+    for(size_t i = 0; i < otherDescriptorList.count(); i++)
+        delete otherDescriptorList[i];
+}
+
+UsbDevice::Endpoint::Endpoint(UsbEndpointDescriptor *pDescriptor) : bDataToggle(false)
+{
+    nEndpoint = pDescriptor->nEndpoint;
+    bIn = pDescriptor->bDirection;
+    bOut = !bIn;
+    nTransferType = pDescriptor->nTransferType;
+    nMaxPacketSize = pDescriptor->nMaxPacketSize;
+}
+
+void UsbDevice::initialise(uint8_t nAddress)
+{
+    // Check for late calls
+    if(m_UsbState > Connected)
+    {
+        ERROR("USB: UsbDevice::initialise called, but this device is already initialised!");
+        return;
+    }
+
+    // Assign the given address to this device
+    if(!controlRequest(0, UsbRequest::SetAddress, nAddress, 0))
+        return;
+    m_nAddress = nAddress;
+    m_UsbState = Addressed; // We now have an address
+
+    // Get the device descriptor
+    void *pDeviceDescriptor = getDescriptor(UsbDescriptor::Device, 0, getDescriptorLength(UsbDescriptor::Device, 0));
+    if(!pDeviceDescriptor)
+        return;
+    m_pDescriptor = new DeviceDescriptor(static_cast<UsbDeviceDescriptor*>(pDeviceDescriptor));
+    m_UsbState = HasDescriptors; // We now have the device descriptor
+
+    // Debug dump of the device descriptor
+#ifdef USB_VERBOSE_DEBUG
+    DEBUG_LOG("USB version: " << Dec << (m_pDescriptor->nBcdUsbRelease >> 8) << "." << (m_pDescriptor->nBcdUsbRelease & 0xFF) << ".");
+    DEBUG_LOG("Device class/subclass/protocol: " << m_pDescriptor->nClass << "/" << m_pDescriptor->nSubclass << "/" << m_pDescriptor->nProtocol);
+    DEBUG_LOG("Maximum control packet size is " << Dec << m_pDescriptor->nMaxControlPacketSize << Hex << " bytes.");
+    DEBUG_LOG("Vendor and product IDs: " << m_pDescriptor->nVendorId << ":" << m_pDescriptor->nProductId << ".");
+    DEBUG_LOG("Device version: " << Dec << (m_pDescriptor->nBcdDeviceRelease >> 8) << "." << (m_pDescriptor->nBcdDeviceRelease & 0xFF) << ".");
+#endif
+
+    // Descriptor number for the configuration descriptor
+    uint8_t nConfigDescriptor = UsbDescriptor::Configuration;
+
+    // Handle high-speed capable devices running at full-speed:
+    // If the device works at full-speed and it has a device qualifier descriptor,
+    // it means that the normal configuration descriptor is for high-speed,
+    // and we need to use the other speed configuration descriptor
+    if(m_Speed == FullSpeed && m_pDescriptor->nBcdUsbRelease > ((1 << 8) + 19) && getDescriptorLength(UsbDescriptor::DeviceQualifier, 0))
+        nConfigDescriptor = UsbDescriptor::OtherSpeedConfiguration;
+
+    // Get the vendor, product and serial strings
+    m_pDescriptor->sVendor = getString(m_pDescriptor->nVendorString);
+    m_pDescriptor->sProduct = getString(m_pDescriptor->nProductString);
+    m_pDescriptor->sSerial = getString(m_pDescriptor->nSerialString);
+
+    // Grab each configuration from the device
+    for(size_t i = 0; i < m_pDescriptor->nConfigurations; i++)
+    {
+        // Skip extra configurations
+        if(i)
+        {
+            WARNING("USB: Found a device with multiple configurations!");
+            break;
+        }
+
+        // Get the total size of this configuration descriptor
+        uint16_t *pPartialConfig = static_cast<uint16_t*>(getDescriptor(nConfigDescriptor, i, 4));
+        if(!pPartialConfig)
+            return;
+        uint16_t configLength = pPartialConfig[1];
+        delete pPartialConfig;
+
+        // Get our configuration descriptor
+        ConfigDescriptor *pConfig = new ConfigDescriptor(getDescriptor(nConfigDescriptor, i, configLength), configLength);
+
+        // Get the associated string
+        pConfig->sString = getString(pConfig->nString);
+
+        // Go through the interface list
+        for(size_t j = 0; j < pConfig->interfaceList.count(); j++)
+        {
+             // Get this interface, for minor adjustments
+            Interface *pInterface = pConfig->interfaceList[j];
+
+            // Just in case the class numbers are in the device descriptor
+            if(pConfig->interfaceList.count() == 1 && m_pDescriptor->nClass && !pInterface->nClass)
+            {
+                pInterface->nClass = m_pDescriptor->nClass;
+                pInterface->nSubclass = m_pDescriptor->nSubclass;
+                pInterface->nProtocol = m_pDescriptor->nProtocol;
+            }
+
+            // Again, get the associated string
+            pInterface->sString = getString(pInterface->nString);
+        }
+
+        // Make sure it's not empty, then add it to our list of configurations
+        assert(pConfig->interfaceList.count());
+        m_pDescriptor->configList.pushBack(pConfig);
+    }
+
+    // Make sure we ended up with at least a configuration
+    assert(m_pDescriptor->configList.count());
+
+    // Use the first configuration
+    /// \todo support more configurations (how?)
+    useConfiguration(0);
+}
 
 ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, UsbPid pid, uintptr_t pBuffer, size_t nBytes, size_t timeout)
 {
     if(!pEndpoint)
     {
         ERROR("USB: UsbDevice::doSync called with invalid endpoint");
-        return -1;
+        return -TransactionError;
     }
 
     UsbHub *pParentHub = dynamic_cast<UsbHub*>(m_pParent);
     if(!pParentHub)
     {
         ERROR("USB: Orphaned UsbDevice!");
-        return -1;
+        return -TransactionError;
     }
 
     if(!nBytes)
@@ -43,8 +260,6 @@ ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, UsbPid pid, uintptr_t 
         ERROR("USB: Input pointer wasn't properly aligned [" << pBuffer << ", " << nBytes << "]");
         return -TransactionError;
     }
-
-    ssize_t nResult = 0;
 
     UsbEndpoint endpointInfo(m_nAddress, m_nPort, pEndpoint->nEndpoint, m_Speed, pEndpoint->nMaxPacketSize);
     uintptr_t nTransaction = pParentHub->createTransaction(endpointInfo);
@@ -66,8 +281,7 @@ ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, UsbPid pid, uintptr_t 
         pEndpoint->bDataToggle = !pEndpoint->bDataToggle;
     }
 
-    nResult = pParentHub->doSync(nTransaction, timeout);
-    return nResult;
+    return pParentHub->doSync(nTransaction, timeout);
 }
 
 ssize_t UsbDevice::syncIn(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes, size_t timeout)
@@ -135,10 +349,10 @@ bool UsbDevice::controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t 
 
     // Data Transfer - handles data transfer
     if(nLength)
-        pParentHub->addTransferToTransaction(nTransaction, true, nRequestType & RequestDirection::In ? UsbPidIn : UsbPidOut, pBuffer, nLength);
+        pParentHub->addTransferToTransaction(nTransaction, true, nRequestType & UsbRequestDirection::In ? UsbPidIn : UsbPidOut, pBuffer, nLength);
 
     // Handshake Transfer - IN when we send data to the device, OUT when we receive. Zero-length.
-    pParentHub->addTransferToTransaction(nTransaction, true, nRequestType & RequestDirection::In ? UsbPidOut : UsbPidIn, 0, 0);
+    pParentHub->addTransferToTransaction(nTransaction, true, nRequestType & UsbRequestDirection::In ? UsbPidOut : UsbPidIn, 0, 0);
 
     // Wait for the transaction to complete
     ssize_t nResult = pParentHub->doSync(nTransaction);
@@ -150,46 +364,41 @@ uint16_t UsbDevice::getStatus()
 {
     uint16_t *nStatus = new uint16_t(0);
     PointerGuard<uint16_t> guard(nStatus);
-    controlRequest(RequestDirection::In, Request::GetStatus, 0, 0, 2, reinterpret_cast<uintptr_t>(nStatus));
+    controlRequest(UsbRequestDirection::In, UsbRequest::GetStatus, 0, 0, 2, reinterpret_cast<uintptr_t>(nStatus));
     return *nStatus;
 }
 
 bool UsbDevice::clearEndpointHalt(Endpoint *pEndpoint)
 {
-    return controlRequest(RequestRecipient::Endpoint, Request::ClearFeature, 0, pEndpoint->nEndpoint);
+    return controlRequest(UsbRequestRecipient::Endpoint, UsbRequest::ClearFeature, 0, pEndpoint->nEndpoint);
 }
 
-bool UsbDevice::assignAddress(uint8_t nAddress)
+void UsbDevice::useConfiguration(uint8_t nConfig)
 {
-    if(!controlRequest(0, Request::SetAddress, nAddress, 0))
-        return false;
-    m_nAddress = nAddress;
-    return true;
+    m_pConfiguration = m_pDescriptor->configList[nConfig];
+    if(!controlRequest(0, UsbRequest::SetConfiguration, m_pConfiguration->nConfig, 0))
+        return;
+    m_UsbState = Configured; // We now are configured
 }
 
-bool UsbDevice::useConfiguration(uint8_t nConfig)
+void UsbDevice::useInterface(uint8_t nInterface)
 {
-    m_pConfiguration = m_pDescriptor->pConfigurations[nConfig];
-    return controlRequest(0, Request::SetConfiguration, m_pConfiguration->pDescriptor->nConfig, 0);
-}
-
-bool UsbDevice::useInterface(uint8_t nInterface)
-{
-    m_pInterface = m_pConfiguration->pInterfaces[nInterface];
-    return true;
-    //return controlRequest(0, Request::SetInterface, m_pInterface->pDescriptor->nAlternateSetting, 0);
+    m_pInterface = m_pConfiguration->interfaceList[nInterface];
+    if(m_pInterface->nAlternateSetting && !controlRequest(0, UsbRequest::SetInterface, m_pInterface->nAlternateSetting, 0))
+       return;
+    m_UsbState = HasInterface; // We now have an interface
 }
 
 void *UsbDevice::getDescriptor(uint8_t nDescriptor, uint8_t nSubDescriptor, uint16_t nBytes, uint8_t requestType)
 {
     uint8_t *pBuffer = new uint8_t[nBytes];
-    uint16_t nIndex = requestType & RequestRecipient::Interface ? m_pInterface->pDescriptor->nInterface : 0;
+    uint16_t nIndex = requestType & UsbRequestRecipient::Interface ? m_pInterface->nInterface : 0;
 
     /// \todo Proper language ID handling!
-    if(nDescriptor == Descriptor::String)
+    if(nDescriptor == UsbDescriptor::String)
         nIndex = 0x0409; // English (US)
 
-    if(!controlRequest(RequestDirection::In | requestType, Request::GetDescriptor, (nDescriptor << 8) | nSubDescriptor, nIndex, nBytes, reinterpret_cast<uintptr_t>(pBuffer)))
+    if(!controlRequest(UsbRequestDirection::In | requestType, UsbRequest::GetDescriptor, (nDescriptor << 8) | nSubDescriptor, nIndex, nBytes, reinterpret_cast<uintptr_t>(pBuffer)))
     {
         delete [] pBuffer;
         return 0;
@@ -201,13 +410,13 @@ uint8_t UsbDevice::getDescriptorLength(uint8_t nDescriptor, uint8_t nSubDescript
 {
     uint8_t *length = new uint8_t(0);
     PointerGuard<uint8_t> guard(length);
-    uint16_t nIndex = requestType & RequestRecipient::Interface ? m_pInterface->pDescriptor->nInterface : 0;
+    uint16_t nIndex = requestType & UsbRequestRecipient::Interface ? m_pInterface->nInterface : 0;
 
     /// \todo Proper language ID handling
-    if(nDescriptor == Descriptor::String)
+    if(nDescriptor == UsbDescriptor::String)
         nIndex = 0x0409; // English (US)
 
-    controlRequest(RequestDirection::In | requestType, Request::GetDescriptor, (nDescriptor << 8) | nSubDescriptor, nIndex, 1, reinterpret_cast<uintptr_t>(length));
+    controlRequest(UsbRequestDirection::In | requestType, UsbRequest::GetDescriptor, (nDescriptor << 8) | nSubDescriptor, nIndex, 1, reinterpret_cast<uintptr_t>(length));
     return *length;
 }
 
@@ -217,11 +426,11 @@ String UsbDevice::getString(uint8_t nString)
     if(!nString)
         return String("");
 
-    uint8_t descriptorLength = getDescriptorLength(Descriptor::String, nString);
+    uint8_t descriptorLength = getDescriptorLength(UsbDescriptor::String, nString);
     if(!descriptorLength)
         return String("");
 
-    char *pBuffer = static_cast<char*>(getDescriptor(Descriptor::String, nString, descriptorLength));
+    char *pBuffer = static_cast<char*>(getDescriptor(UsbDescriptor::String, nString, descriptorLength));
     if(!pBuffer)
         return String("");
 
@@ -231,61 +440,11 @@ String UsbDevice::getString(uint8_t nString)
 
     // For each character, get the lower part of the UTF-16 value
     /// \todo UTF-8 support of some kind
-    for(size_t i = 0;i < nStrLength;i++)
-        pString[i] = pBuffer[2 + i*2];
+    for(size_t i = 0; i < nStrLength; i++)
+        pString[i] = pBuffer[2 + i * 2];
 
     // Set the last byte of the string to 0, delete the old buffer and return the string
     pString[nStrLength] = 0;
     delete pBuffer;
     return String(pString);
-}
-
-void UsbDevice::populateDescriptors()
-{
-    m_pDescriptor = new DeviceDescriptor(getDescriptor(Descriptor::Device, 0, getDescriptorLength(Descriptor::Device, 0)));
-    if(!m_pDescriptor)
-        return; /// \todo Better error handling
-
-    // Debug dump of the device descriptor
-#ifdef USB_VERBOSE_DEBUG
-    DEBUG_LOG("USB version: " << Dec << (m_pDescriptor->pDescriptor->nBcdUsbRelease >> 8) << "." << (m_pDescriptor->pDescriptor->nBcdUsbRelease & 0xFF) << ".");
-    DEBUG_LOG("Device class/subclass/protocol: " << m_pDescriptor->pDescriptor->nClass << "/" << m_pDescriptor->pDescriptor->nSubclass << "/" << m_pDescriptor->pDescriptor->nProtocol);
-    DEBUG_LOG("Maximum control packet size is " << Dec << m_pDescriptor->pDescriptor->nMaxPacketSize << Hex << " bytes.");
-    DEBUG_LOG("Vendor and product IDs: " << m_pDescriptor->pDescriptor->nVendorId << ":" << m_pDescriptor->pDescriptor->nProductId << ".");
-    DEBUG_LOG("Device version: " << Dec << (m_pDescriptor->pDescriptor->nBcdDeviceRelease >> 8) << "." << (m_pDescriptor->pDescriptor->nBcdDeviceRelease & 0xFF) << ".");
-    DEBUG_LOG("Device has " << Dec << m_pDescriptor->pDescriptor->nConfigurations << Hex << " configurations");
-#endif
-
-    // Descriptor number for the configuration descriptor
-    uint8_t nConfigDescriptor = Descriptor::Configuration;
-
-    // Handle high-speed capable devices running at full-speed:
-    // If the device works at full-speed and it has a device qualifier descriptor,
-    // it means that the normal configuration descriptor is for high-speed,
-    // and we need to use the other speed configuration descriptor
-    if(m_Speed == FullSpeed && getDescriptorLength(Descriptor::DeviceQualifier, 0))
-        nConfigDescriptor = Descriptor::OtherSpeedConfiguration;
-
-    // Get the vendor, product and serial strings
-    m_pDescriptor->sVendor = getString(m_pDescriptor->pDescriptor->nVendorString);
-    m_pDescriptor->sProduct = getString(m_pDescriptor->pDescriptor->nProductString);
-    m_pDescriptor->sSerial = getString(m_pDescriptor->pDescriptor->nSerialString);
-
-    // Grab each configuration from the device
-    for(size_t i = 0; i < m_pDescriptor->pDescriptor->nConfigurations; i++)
-    {
-        // Get the total size of this configuration descriptor
-        uint16_t *pPartialConfig = static_cast<uint16_t*>(getDescriptor(nConfigDescriptor, i, 4));
-        uint16_t configLength = pPartialConfig[1];
-        delete pPartialConfig;
-
-        ConfigDescriptor *pConfig = new ConfigDescriptor(getDescriptor(nConfigDescriptor, i, configLength), configLength);
-        pConfig->sString = getString(pConfig->pDescriptor->nString);
-        for(size_t j = 0; j < pConfig->pInterfaces.count(); j++)
-        {
-            Interface *pInterface = pConfig->pInterfaces[j];
-            pInterface->sString = getString(pInterface->pDescriptor->nString);
-        }
-        m_pDescriptor->pConfigurations.pushBack(pConfig);
-    }
 }

@@ -32,8 +32,9 @@
 
 #define TOTAL_MEM_PAGES     ((QH_REGION_SIZE / 0x1000) + (TD_REGION_SIZE / 0x1000) + 1)
 
-Uhci::Uhci(Device* pDev) : Device(pDev), m_pBase(0), m_nPorts(0), m_nFrames(0), m_UhciMR("Uhci-MR"),
-                           m_AsyncQueueListChangeLock(), m_pCurrentAsyncQueueTail(0), m_pCurrentAsyncQueueHead(0)
+Uhci::Uhci(Device* pDev) :
+    Device(pDev), m_pBase(0), m_nPorts(0), m_AsyncQueueListChangeLock(), m_UhciMR("Uhci-MR"),
+    m_pCurrentAsyncQueueTail(0), m_pCurrentAsyncQueueHead(0), m_nPortCheckTicks(0)
 {
     setSpecificType(String("UHCI"));
 
@@ -67,7 +68,7 @@ Uhci::Uhci(Device* pDev) : Device(pDev), m_pBase(0), m_nPorts(0), m_nFrames(0), 
     pDummyQH->pNext = m_pQHListPhys >> 4;
     pDummyQH->bNextQH = 1;
     pDummyQH->bElemInvalid = 1;
-    
+
     pDummyQH->pMetaData = new QH::MetaData;
     pDummyQH->pMetaData->pPrev = pDummyQH->pMetaData->pNext = pDummyQH;
 
@@ -97,14 +98,17 @@ Uhci::Uhci(Device* pDev) : Device(pDev), m_pBase(0), m_nPorts(0), m_nFrames(0), 
     m_pBase->write16(1, UHCI_CMD);
 
     // Install the IRQ handler
-    Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*>(this));
-    Machine::instance().getIrqManager()->control(getInterruptNumber(), IrqManager::MitigationThreshold, ((12000000 * 8) / 64)); // 12 mbps in bytes, divided by 64 bytes maximum per transfer/IRQ
+    Machine::instance().getIrqManager()->registerPciIrqHandler(this, this);
+    Machine::instance().getIrqManager()->control(getInterruptNumber(), IrqManager::MitigationThreshold, (12 * 1024 / 8 / 64)); // 12KB/ms (12Mbps) in bytes, divided by 64 bytes maximum per transfer/IRQ
+
+    // Set up the RequestQueue
+    initialise();
 
 #ifdef USB_VERBOSE_DEBUG
     DEBUG_LOG("USB: UHCI: Reset complete");
 #endif
 
-    for(size_t i = 0;i < 7;i++)
+    for(size_t i = 0; i < 7; i++)
     {
         uint16_t nPortStatus = m_pBase->read16(UHCI_PORTSC + i * 2);
 
@@ -114,30 +118,13 @@ Uhci::Uhci(Device* pDev) : Device(pDev), m_pBase(0), m_nPorts(0), m_nFrames(0), 
 
         // Check for a connected device
         if(nPortStatus & UHCI_PORTSC_CONN)
-        {
-            // Perform a reset of the port
-            m_pBase->write16(UHCI_PORTSC_PRES | UHCI_PORTSC_CSCH, UHCI_PORTSC + i * 2);
-            delay(50);
-            m_pBase->write16(0, UHCI_PORTSC + i * 2);
-            delay(50);
+            executeRequest(i);
 
-            // Enable the port
-            m_pBase->write16(UHCI_PORTSC_ENABLE, UHCI_PORTSC + i * 2);
-
-            // Determine the speed of the attached device
-            if(m_pBase->read16(UHCI_PORTSC + i * 2) & UHCI_PORTSC_LOSPEED)
-            {
-                DEBUG_LOG("USB: UHCI: Port " << Dec << i << Hex << " has a low-speed device connected to it");
-                deviceConnected(i, LowSpeed);
-            }
-            else
-            {
-                DEBUG_LOG("USB: UHCI: Port " << Dec << i << Hex << " has a full-speed device connected to it");
-                deviceConnected(i, FullSpeed);
-            }
-        }
         m_nPorts++;
     }
+
+    // Install the timer handler for the periodic port checks
+    Machine::instance().getTimer()->registerHandler(this);
 }
 
 Uhci::~Uhci()
@@ -155,11 +142,11 @@ void Uhci::doDequeue()
 {
     // Absolutely cannot have queue insetions during a dequeue
     LockGuard<Mutex> guard(m_Mutex);
-    
+
     // Stop the controller while we dequeue
     m_pBase->write16(m_pBase->read16(UHCI_CMD) & ~1, UHCI_CMD);
     while(!(m_pBase->read16(UHCI_STS) & 0x20)) delay(5);
-    
+
     for(size_t i = 1; i < (QH_REGION_SIZE / sizeof(QH)); i++)
     {
         if(!m_QHBitmap.test(i))
@@ -214,7 +201,7 @@ void Uhci::doDequeue()
             }
 
             memset(pTD, 0, sizeof(TD));
-            
+
             m_TDBitmap.clear(thisIndex);
 
             if(shouldBreak)
@@ -232,7 +219,7 @@ void Uhci::doDequeue()
         DEBUG_LOG("Dequeue for QH #" << Dec << i << Hex << ".");
 #endif
     }
-    
+
     // Resume the controller, dequeue done.
     m_pBase->write16(m_pBase->read16(UHCI_CMD) | 1, UHCI_CMD);
     while(m_pBase->read16(UHCI_STS) & 0x20) delay(5);
@@ -253,7 +240,7 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
         // Check all the queue heads we have in the list
         // QH *pQH = m_pCurrentAsyncQueueHead->pMetaData->pNext;
         // while(
-        
+
         for(size_t i = 1; i < (QH_REGION_SIZE / sizeof(QH)); i++)
         {
             if(!m_QHBitmap.test(i))
@@ -361,7 +348,7 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                             m_AsyncQueueListChangeLock.release();
 
                             bDequeue = true;
-                            
+
                             // Ignore after the linked list update to avoid a
                             // case where the dequeue call hits this QH while
                             // we unlink it. This is a problem as the dequeue
@@ -518,7 +505,7 @@ uintptr_t Uhci::createTransaction(UsbEndpoint endpointInfo)
         }
         m_QHBitmap.set(nIndex);
     }
-        
+
     // Grab the QH
     QH *pQH = &m_pQHList[nIndex];
     memset(pQH, 0, sizeof(QH));
@@ -602,5 +589,64 @@ void Uhci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
 
     // Let doAsync do the rest
     doAsync(nTransaction, pCallback, pParam);
+}
+
+uint64_t Uhci::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
+                              uint64_t p6, uint64_t p7, uint64_t p8)
+{
+    // Check for a connected device
+    if(m_pBase->read16(UHCI_PORTSC + p1 * 2) & UHCI_PORTSC_CONN)
+    {
+        // Perform a reset of the port
+        m_pBase->write16(UHCI_PORTSC_PRES | UHCI_PORTSC_CSCH, UHCI_PORTSC + p1 * 2);
+        delay(50);
+        m_pBase->write16(0, UHCI_PORTSC + p1 * 2);
+        delay(50);
+
+        // Enable the port
+        m_pBase->write16(UHCI_PORTSC_ENABLE, UHCI_PORTSC + p1 * 2);
+        delay(50);
+        m_pBase->write16(UHCI_PORTSC_ENABLE, UHCI_PORTSC + p1 * 2);
+
+        // Determine the speed of the attached device
+        if(m_pBase->read16(UHCI_PORTSC + p1 * 2) & UHCI_PORTSC_LOSPEED)
+        {
+            DEBUG_LOG("USB: UHCI: Port " << Dec << p1 << Hex << " has a low-speed device connected to it");
+            deviceConnected(p1, LowSpeed);
+        }
+        else
+        {
+            DEBUG_LOG("USB: UHCI: Port " << Dec << p1 << Hex << " has a full-speed device connected to it");
+            deviceConnected(p1, FullSpeed);
+        }
+    }
+    else
+        deviceDisconnected(p1);
+    return 0;
+}
+
+void Uhci::timer(uint64_t delta, InterruptState &state)
+{
+    m_nPortCheckTicks += delta;
+
+    // We check the ports once in a millisecond
+    if(m_nPortCheckTicks >= 1000000)
+    {
+        // Reset the counter
+        m_nPortCheckTicks = 0;
+
+        // Check every port for a change
+        for(size_t i = 0; i < m_nPorts; i++)
+        {
+            if(m_pBase->read16(UHCI_PORTSC + i * 2) & UHCI_PORTSC_CSCH)
+            {
+                // Clear the port status change
+                m_pBase->write16(UHCI_PORTSC_CSCH, UHCI_PORTSC + i * 2);
+
+                // Now we can safely add the request
+                addAsyncRequest(0, i);
+            }
+        }
+    }
 }
 

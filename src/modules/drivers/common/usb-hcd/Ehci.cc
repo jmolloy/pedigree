@@ -103,9 +103,9 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
 
     // Install the IRQ
 #ifdef X86_COMMON
-    Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*>(this));
+    Machine::instance().getIrqManager()->registerPciIrqHandler(this, this);
 #else
-    InterruptManager::instance().registerInterruptHandler(pDev->getInterruptNumber(), this);
+    InterruptManager::instance().registerInterruptHandler(getInterruptNumber(), this);
 #endif
 
     // Zero the top 64 bits for addresses of EHCI data structures
@@ -259,6 +259,7 @@ void Ehci::doDequeue()
         }
 
         // Completely invalidate the QH
+        delete pQH->pMetaData;
         memset(pQH, 0, sizeof(QH));
 
 #ifdef USB_VERBOSE_DEBUG

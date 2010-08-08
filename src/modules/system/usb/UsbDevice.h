@@ -19,70 +19,9 @@
 
 #include <machine/Device.h>
 #include <processor/types.h>
-#include <usb/Usb.h>
 #include <utilities/assert.h>
-
-namespace RequestType
-{
-    enum RequestType
-    {
-        Standard    = 0x00,
-        Class       = 0x20,
-        Vendor      = 0x40
-    };
-};
-
-namespace RequestRecipient
-{
-    enum RequestRecipient
-    {
-        Device      = 0x00,
-        Interface   = 0x01,
-        Endpoint    = 0x02,
-        Other       = 0x03
-    };
-};
-
-namespace RequestDirection
-{
-    enum RequestDirection
-    {
-        Out = 0x00,
-        In  = 0x80
-    };
-};
-
-namespace Request
-{
-    enum Request
-    {
-        GetStatus       = 0,
-        ClearFeature    = 1,
-        SetFeature      = 3,
-        SetAddress      = 5,
-        GetDescriptor   = 6,
-        SetDescriptor   = 7,
-        GetConfiguration= 8,
-        SetConfiguration= 9,
-        GetInterface    = 10,
-        SetInterface    = 11,
-        SynchFrame      = 12,
-    };
-};
-
-namespace Descriptor
-{
-    enum Descriptor
-    {
-        Device                  = 1,
-        Configuration           = 2,
-        String                  = 3,
-        Interface               = 4,
-        Endpoint                = 5,
-        DeviceQualifier         = 6,
-        OtherSpeedConfiguration = 7,
-    };
-};
+#include <usb/Usb.h>
+#include <usb/UsbDescriptors.h>
 
 class UsbDevice : public virtual Device
 {
@@ -102,7 +41,8 @@ class UsbDevice : public virtual Device
 
         struct UnknownDescriptor
         {
-            inline UnknownDescriptor(uint8_t *pBuffer, uint8_t type, size_t length) : pDescriptor(pBuffer), nType(type), nLength(length) {}
+            inline UnknownDescriptor(uint8_t *pBuffer, uint8_t type, size_t length) :
+                pDescriptor(pBuffer), nType(type), nLength(length) {}
 
             void *pDescriptor;
             uint8_t nType;
@@ -111,14 +51,7 @@ class UsbDevice : public virtual Device
 
         struct Endpoint
         {
-            inline Endpoint(void *pBuffer) : pDescriptor(static_cast<Descriptor*>(pBuffer)),
-                nEndpoint(pDescriptor->nEndpoint), bIn(false), bOut(false),
-                nTransferType(pDescriptor->nTransferType), nMaxPacketSize(pDescriptor->nMaxPacketSize),
-                bDataToggle(false)
-            {
-                bIn = pDescriptor->bDirection;
-                bOut = !bIn;
-            }
+            Endpoint(UsbEndpointDescriptor *pDescriptor);
 
             enum TransferTypes
             {
@@ -127,20 +60,6 @@ class UsbDevice : public virtual Device
                 Bulk = 2,
                 Interrupt = 3
             };
-
-            struct Descriptor
-            {
-                uint8_t nLength;
-                uint8_t nType;
-                uint8_t nEndpoint : 4;
-                uint8_t res0 : 3;
-                uint8_t bDirection : 1;
-                uint8_t nTransferType : 2;
-                uint8_t res1 : 6;
-                uint16_t nMaxPacketSize : 11;
-                uint8_t res2 : 5;
-                uint8_t nInterval;
-            } PACKED *pDescriptor;
 
             uint8_t nEndpoint;
             bool bIn;
@@ -153,121 +72,83 @@ class UsbDevice : public virtual Device
 
         struct Interface
         {
-            inline Interface(void *pBuffer) : pDescriptor(static_cast<Descriptor*>(pBuffer)) {}
+            Interface(UsbInterfaceDescriptor *pDescriptor);
+            ~Interface();
 
-            struct Descriptor
-            {
-                uint8_t nLength;
-                uint8_t nType;
-                uint8_t nInterface;
-                uint8_t nAlternateSetting;
-                uint8_t nEndpoints;
-                uint8_t nClass;
-                uint8_t nSubclass;
-                uint8_t nProtocol;
-                uint8_t nString;
-            } PACKED *pDescriptor;
+            uint8_t nInterface;
+            uint8_t nAlternateSetting;
+            uint8_t nClass;
+            uint8_t nSubclass;
+            uint8_t nProtocol;
+            uint8_t nString;
 
-            Vector<Endpoint*> pEndpoints;
-            Vector<UnknownDescriptor*> pOtherDescriptors;
+            Vector<Endpoint*> endpointList;
+            Vector<UnknownDescriptor*> otherDescriptorList;
             String sString;
         };
 
         struct ConfigDescriptor
         {
-            inline ConfigDescriptor(void *pConfigBuffer, size_t length) : pDescriptor(static_cast<Descriptor*>(pConfigBuffer))
-            {
-                uint8_t *pBuffer = static_cast<uint8_t*>(pConfigBuffer);
-                size_t nOffset = pBuffer[0];
-                Interface *pCurrentInterface = 0;
+            ConfigDescriptor(void *pConfigBuffer, size_t nConfigLength);
+            ~ConfigDescriptor();
 
-                while(nOffset < length)
-                {
-                    size_t nLength = pBuffer[nOffset];
-                    uint8_t nType = pBuffer[nOffset + 1];
-                    if(nType == ::Descriptor::Interface)
-                    {
-                        Interface *pNewInterface = new Interface(&pBuffer[nOffset]);
-                        if(!pNewInterface->pDescriptor->nAlternateSetting)
-                        {
-                            assert(pInterfaces.count() < pDescriptor->nInterfaces);
-                            pCurrentInterface = pNewInterface;
-                            pInterfaces.pushBack(pCurrentInterface);
-                        }
-                    }
-                    else if(pCurrentInterface)
-                    {
-                        if(nType == ::Descriptor::Endpoint)
-                            pCurrentInterface->pEndpoints.pushBack(new Endpoint(&pBuffer[nOffset]));
-                        else
-                            pCurrentInterface->pOtherDescriptors.pushBack(new UnknownDescriptor(&pBuffer[nOffset], nType, nLength));
-                    }
-                    else
-                        pOtherDescriptors.pushBack(new UnknownDescriptor(&pBuffer[nOffset], nType, nLength));
-                    nOffset += nLength;
-                }
-                assert(pInterfaces.count());
-            }
+            uint8_t nConfig;
+            uint8_t nString;
 
-            struct Descriptor
-            {
-                uint8_t nLength;
-                uint8_t nType;
-                uint16_t nTotalLength;
-                uint8_t nInterfaces;
-                uint8_t nConfig;
-                uint8_t nString;
-                uint8_t nAttributes;
-                uint8_t nMaxPower;
-            } PACKED *pDescriptor;
-
-            Vector<Interface*> pInterfaces;
-            Vector<UnknownDescriptor*> pOtherDescriptors;
+            Vector<Interface*> interfaceList;
+            Vector<UnknownDescriptor*> otherDescriptorList;
             String sString;
         };
 
         struct DeviceDescriptor
         {
-            inline DeviceDescriptor(void *pBuffer) : pDescriptor(static_cast<Descriptor*>(pBuffer)) {}
+            DeviceDescriptor(UsbDeviceDescriptor *pDescriptor);
+            ~DeviceDescriptor();
 
-            struct Descriptor
-            {
-                uint8_t nLength;
-                uint8_t nType;
-                uint16_t nBcdUsbRelease;
-                uint8_t nClass;
-                uint8_t nSubclass;
-                uint8_t nProtocol;
-                uint8_t nMaxPacketSize;
-                uint16_t nVendorId;
-                uint16_t nProductId;
-                uint16_t nBcdDeviceRelease;
-                uint8_t nVendorString;
-                uint8_t nProductString;
-                uint8_t nSerialString;
-                uint8_t nConfigurations;
-            } PACKED *pDescriptor;
+            uint16_t nBcdUsbRelease;
+            uint8_t nClass;
+            uint8_t nSubclass;
+            uint8_t nProtocol;
+            uint8_t nMaxControlPacketSize;
+            uint16_t nVendorId;
+            uint16_t nProductId;
+            uint16_t nBcdDeviceRelease;
+            uint8_t nVendorString;
+            uint8_t nProductString;
+            uint8_t nSerialString;
+            uint8_t nConfigurations;
 
-            Vector<ConfigDescriptor*> pConfigurations;
+            Vector<ConfigDescriptor*> configList;
             String sVendor;
             String sProduct;
             String sSerial;
         };
 
-        /// Constructors and destructors
-        inline UsbDevice() : m_nAddress(0), m_nPort(0), m_bHasDriver(false) {}
-
-        inline UsbDevice(UsbDevice *pDev) : m_nAddress(pDev->m_nAddress), m_nPort(pDev->m_nPort), m_Speed(pDev->m_Speed), m_bHasDriver(false),
-            m_pDescriptor(pDev->m_pDescriptor), m_pInterface(pDev->m_pInterface), m_pConfiguration(pDev->m_pConfiguration) {}
-
-        virtual inline ~UsbDevice() {}
-
-        /// Returns true if this device is already handled by a driver
-        /// \todo Implement a complete state system instead
-        inline bool hasDriver()
+        /// Possible states for an USB device
+        enum UsbState
         {
-            return m_bHasDriver;
-        }
+            Connected = 0,
+            Addressed,
+            HasDescriptors,
+            Configured,
+            HasInterface,
+            HasDriver
+        };
+
+        /// Default constructor
+        UsbDevice(uint8_t nPort, UsbSpeed speed);
+
+        /// Copy constructor
+        UsbDevice(UsbDevice *pDev);
+
+        /// Destructor
+        virtual ~UsbDevice();
+
+        /// Initialises the device at the given address
+        void initialise(uint8_t nAddress);
+
+        /// Implemented by the driver class, initialises driver-specific stuff
+        virtual void initialiseDriver() {}
 
         /// Access to internal information
         virtual void getName(String &str)
@@ -275,89 +156,103 @@ class UsbDevice : public virtual Device
             str = "USB Device";
         }
 
-        uint8_t getAddress()
+        /// Returns the current address of the device
+        inline uint8_t getAddress()
         {
             return m_nAddress;
         }
-        void setAddress(uint8_t nAddress)
-        {
-            m_nAddress = nAddress;
-        }
 
-        uint8_t getPort()
+        /// Returns the number of the port on which the device is connected
+        inline uint8_t getPort()
         {
             return m_nPort;
         }
-        void setPort(uint8_t nPort)
-        {
-            m_nPort = nPort;
-        }
 
-        UsbSpeed getSpeed()
+        /// Returns the speed at which the device operates
+        inline UsbSpeed getSpeed()
         {
             return m_Speed;
         }
-        void setSpeed(UsbSpeed speed)
+
+        /// Returns the current state of the device
+        inline UsbState getUsbState()
         {
-            m_Speed = speed;
+            return m_UsbState;
         }
 
-        DeviceDescriptor *getDescriptor()
+        /// Returns the device descriptor of the device
+        inline DeviceDescriptor *getDescriptor()
         {
             return m_pDescriptor;
         }
-        ConfigDescriptor *getConfiguration()
+
+        /// Returns the configuration in use
+        inline ConfigDescriptor *getConfiguration()
         {
             return m_pConfiguration;
         }
-        Interface *getInterface()
+
+        /// Returns the interface in use
+        inline Interface *getInterface()
         {
             return m_pInterface;
         }
 
-        // Sync transfer methods - if timeout == 0, don't ever time out
+        /// Switches to the given configuration
+        void useConfiguration(uint8_t nConfig);
+
+        /// Switches to the given interface
+        void useInterface(uint8_t nInterface);
+
+    protected:
+
+        // Sync transfer methods
         ssize_t doSync(Endpoint *pEndpoint, UsbPid pid, uintptr_t pBuffer, size_t nBytes, size_t timeout);
         ssize_t syncIn(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes, size_t timeout = 5000);
         ssize_t syncOut(Endpoint *pEndpoint, uintptr_t pBuffer, size_t nBytes, size_t timeout = 5000);
 
         void addInterruptInHandler(Endpoint *pEndpoint, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
 
-        // Method to perform an USB control request
+        /// Performs an USB control request
         bool controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t nValue, uint16_t nIndex, uint16_t nLength=0, uintptr_t pBuffer=0);
 
-        // Various USB standard control request methods
+        /// Gets device's current status
         uint16_t getStatus();
 
+        /// Clears a halt on the given endpoint
         bool clearEndpointHalt(Endpoint *pEndpoint);
 
-        bool assignAddress(uint8_t nAddress);
+        /// Gets a descriptor from the device
+        void *getDescriptor(uint8_t nDescriptorType, uint8_t nDescriptorIndex, uint16_t nBytes, uint8_t requestType=0);
 
-        bool useConfiguration(uint8_t nConfig);
+        /// Gets a descriptor's length from the device
+        uint8_t getDescriptorLength(uint8_t nDescriptorType, uint8_t nDescriptorIndex, uint8_t requestType=0);
 
-        bool useInterface(uint8_t nInterface);
-
-        void *getDescriptor(uint8_t nDescriptor, uint8_t nSubDescriptor, uint16_t nBytes, uint8_t requestType=0);
-
-        uint8_t getDescriptorLength(uint8_t nDescriptor, uint8_t nSubDescriptor, uint8_t requestType=0);
-
+        /// Gets a string
         String getString(uint8_t nString);
 
-        void populateDescriptors();
-
-    protected:
-
+        /// The current address of the device
         uint8_t m_nAddress;
+
+        /// The number of the port on which the device is connected
         uint8_t m_nPort;
+
+        /// The speed at which the device operates
         UsbSpeed m_Speed;
 
-        bool m_bHasDriver;
+        /// The current state of the device
+        UsbState m_UsbState;
 
+        /// Device descriptor for this device
         DeviceDescriptor *m_pDescriptor;
+
+        /// Configuration in use
+        ConfigDescriptor *m_pConfiguration;
+
+        /// Interface in use
         Interface *m_pInterface;
 
     private:
-
-        ConfigDescriptor *m_pConfiguration;
 
         UsbDevice(const UsbDevice &d);
         const UsbDevice& operator = (const UsbDevice& d);

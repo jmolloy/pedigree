@@ -19,6 +19,7 @@
 
 #include <processor/types.h>
 #include <usb/UsbDevice.h>
+#include <usb/UsbConstants.h>
 #include <scsi/ScsiController.h>
 
 class UsbMassStorageDevice : public UsbDevice, public ScsiController
@@ -26,6 +27,8 @@ class UsbMassStorageDevice : public UsbDevice, public ScsiController
     public:
         UsbMassStorageDevice(UsbDevice *dev);
         virtual ~UsbMassStorageDevice();
+
+        virtual void initialiseDriver();
 
         virtual bool sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite);
 
@@ -40,7 +43,7 @@ class UsbMassStorageDevice : public UsbDevice, public ScsiController
 
         enum MassStorageRequests
         {
-            MassStorageRequest  = RequestType::Class | RequestRecipient::Interface,
+            MassStorageRequest  = UsbRequestType::Class | UsbRequestRecipient::Interface,
 
             MassStorageReset    = 0xFF,
             MassStorageGetMaxLUN= 0xFE

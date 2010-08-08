@@ -18,6 +18,7 @@
 
 #include <machine/Device.h>
 #include <machine/IrqHandler.h>
+#include <machine/Timer.h>
 #include <processor/IoBase.h>
 #include <processor/MemoryRegion.h>
 #include <processor/PhysicalMemoryManager.h>
@@ -26,7 +27,7 @@
 #include <usb/UsbHub.h>
 
 /** Device driver for the Uhci class */
-class Uhci : public UsbHub, public IrqHandler
+class Uhci : public UsbHub, public IrqHandler, public RequestQueue, public TimerHandler
 {
     public:
         Uhci(Device* pDev);
@@ -123,6 +124,14 @@ class Uhci : public UsbHub, public IrqHandler
 
         void doDequeue();
 
+        /// Timer callback to handle port status changes
+        void timer(uint64_t delta, InterruptState &state);
+
+    protected:
+
+        virtual uint64_t executeRequest(uint64_t p1 = 0, uint64_t p2 = 0, uint64_t p3 = 0, uint64_t p4 = 0, uint64_t p5 = 0,
+                                        uint64_t p6 = 0, uint64_t p7 = 0, uint64_t p8 = 0);
+
     private:
 
         enum UhciConstants {
@@ -151,9 +160,10 @@ class Uhci : public UsbHub, public IrqHandler
         IoBase *m_pBase;
 
         uint8_t m_nPorts;
-        uint16_t m_nFrames;
 
         Mutex m_Mutex;
+
+        Spinlock m_AsyncQueueListChangeLock;
 
         uint32_t *m_pFrameList;
         uintptr_t m_pFrameListPhys;
@@ -171,15 +181,17 @@ class Uhci : public UsbHub, public IrqHandler
 
         MemoryRegion m_UhciMR;
 
-        Spinlock m_AsyncQueueListChangeLock;
-
-        // Pointer to the current queue tail, which allows insertion of new queue
-        // heads to the asynchronous schedule.
+        /// Pointer to the current queue tail, which allows insertion of new queue
+        /// heads to the asynchronous schedule.
         QH *m_pCurrentAsyncQueueTail;
 
-        // Pointer to the current queue head. Used to fill pNext automatically
-        // for new queue heads inserted to the asynchronous schedule.
+        /// Pointer to the current queue head. Used to fill pNext automatically
+        /// for new queue heads inserted to the asynchronous schedule.
         QH *m_pCurrentAsyncQueueHead;
+
+
+        /// The time passed since last port check
+        uint64_t m_nPortCheckTicks;
 
         Uhci(const Uhci&);
         void operator =(const Uhci&);
