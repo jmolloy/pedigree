@@ -177,6 +177,16 @@ bool Dm9601::send(size_t nBytes, uintptr_t buffer)
         readRegister(NetworkStatus, reinterpret_cast<uintptr_t>(p), 1);
     }
     
+    // Avoid runt packets
+    size_t padBytes = 0;
+    if(nBytes < 64)
+    {
+        padBytes = nBytes % 64;
+        memset(reinterpret_cast<void*>(buffer + nBytes), 0, padBytes);
+        
+        nBytes = 64;
+    }
+    
     size_t txSize = nBytes + 2;
     
     if(!(txSize % 64))
@@ -205,11 +215,6 @@ bool Dm9601::send(size_t nBytes, uintptr_t buffer)
 
 void Dm9601::doReceive()
 {
-    // Wait for TX to back off before we prepare to send
-    {   
-        LockGuard<Mutex> guard(m_TxLock);
-    }
-    
     uintptr_t buff = NetworkStack::instance().getMemPool().allocate();
     ssize_t ret = syncIn(m_pInEndpoint, buff, MAX_MTU, 0); // Never time out.
    
