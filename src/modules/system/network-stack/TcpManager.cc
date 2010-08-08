@@ -247,10 +247,6 @@ int TcpManager::send(size_t connId, uintptr_t payload, bool push, size_t nBytes,
      */
     return -1; // When we SHUT_WR, we send FIN meaning no more data from us.
 
-  // Restrict the buffer size if the receiver's buffer is too small.
-  if(nBytes > stateBlock->rcv_wnd)
-      nBytes = stateBlock->rcv_wnd;
-
   stateBlock->sendSegment(Tcp::ACK | (push ? Tcp::PSH : 0), nBytes, payload, addToRetransmitQueue);
 
   // success!
