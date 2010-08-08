@@ -23,6 +23,8 @@
 
 #include "Filter.h"
 
+// #undef DEBUG_ICMP
+
 Icmp Icmp::icmpInstance;
 
 Icmp::Icmp()
@@ -81,7 +83,7 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
   // grab the header
   icmpHeader* header = reinterpret_cast<icmpHeader*>(packet + offset + ipHeaderSize);
 
-#ifdef DEBUG_ICMP  
+#ifdef DEBUG_ICMP
   NOTICE("ICMP type=" << header->type << ", code=" << header->code << ", checksum=" << header->checksum);
   NOTICE("ICMP id=" << header->id << ", seq=" << header->seq);
 #endif
@@ -105,7 +107,7 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
         {
 
 #ifdef DEBUG_ICMP
-        NOTICE("ICMP: Echo request");
+        NOTICE("ICMP: Echo request from " << IpAddress(ip->ipSrc).toString() << ".");
 #endif
 
         // send the reply
