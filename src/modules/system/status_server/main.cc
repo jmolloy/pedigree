@@ -59,8 +59,6 @@ int clientThread(void *p)
 
     ConnectionBasedEndpoint *pClient = reinterpret_cast<ConnectionBasedEndpoint*>(p);
     
-    NOTICE("Got a client - state is " << pClient->state() << ".");
-
     // Wait for data from the client - block.
     if(!pClient->dataReady(true))
     {
@@ -116,6 +114,7 @@ int clientThread(void *p)
     String response;
     response = statusLine;
     response += "\r\nContent-type: text/html";
+    response += "\r\nConnection: close";
     response += "\r\n\r\n";
 
     // Do we need data there?
@@ -152,7 +151,7 @@ int clientThread(void *p)
             response += "</pre>";
 
             response += "<h3>Network Interfaces</h3>";
-            response += "<table border='1'><tr><th>Interface #</th><th>IP Address</th><th>Subnet Mask</th><th>Gateway</th><th>DNS Servers</th></tr>";
+            response += "<table border='1'><tr><th>Interface #</th><th>IP Address</th><th>Subnet Mask</th><th>Gateway</th><th>DNS Servers</th><th>Driver Name</th><th>MAC address</th><th>Statistics</th></tr>";
             size_t i;
             for (i = 0; i < NetworkStack::instance().getNumDevices(); i++)
             {
@@ -196,7 +195,32 @@ int clientThread(void *p)
                             response += "<br />";
                     }
                 }
-                response += "</td></tr>";
+                response += "</td>";
+                
+                // Driver name
+                response += "<td>";
+                String cardName; card->getName(cardName);
+                response += cardName;
+                response += "</td>";
+                
+                // MAC
+                response += "<td>";
+                response += info.mac.toString();
+                response += "</td>";
+                
+                // Statistics
+                response += "<td>";
+                s.clear();
+                s += "Packets: ";
+                s.append(info.nPackets);
+                s += "<br />Dropped: ";
+                s.append(info.nDropped);
+                s += "<br />RX Errors: ";
+                s.append(info.nBad);
+                response += s;
+                response += "</td>";
+                
+                response += "</tr>";
             }
             response += "</table>";
 
