@@ -29,8 +29,8 @@
 #include "Partition.h"
 #include "PartitionService.h"
 
-Service *pService = 0;
-ServiceFeatures *pFeatures = 0;
+static Service *pService = 0;
+static ServiceFeatures *pFeatures = 0;
 
 bool probeDevice(Disk *pDev)
 {

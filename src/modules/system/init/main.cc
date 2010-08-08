@@ -51,6 +51,8 @@
 
 #include <machine/InputManager.h>
 
+#include <ServiceManager.h>
+
 extern void pedigree_init_sigret();
 extern void pedigree_init_pthreads();
 
@@ -184,6 +186,26 @@ static void init()
     {
         /// \todo Perhaps try and ping a remote host?
         Network* card = NetworkStack::instance().getDevice(i);
+        
+        // Ask for a DHCP lease on this card
+        /// \todo Static configuration
+        ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("dhcp"));
+        Service         *pService  = ServiceManager::instance().getService(String("dhcp"));
+        if(pFeatures->provides(ServiceFeatures::touch))
+        {
+            if(pService)
+            {
+                if(!pService->serve(ServiceFeatures::touch,
+                                   reinterpret_cast<void*>(card),
+                                   sizeof(*card)))
+                    continue;
+            }
+            else
+                continue;
+        }
+        else
+            continue;
+        
         StationInfo info = card->getStationInfo();
 
         // If the device has a gateway, set it as the default and continue
