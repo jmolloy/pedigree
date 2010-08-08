@@ -192,19 +192,8 @@ static void init()
         ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("dhcp"));
         Service         *pService  = ServiceManager::instance().getService(String("dhcp"));
         if(pFeatures->provides(ServiceFeatures::touch))
-        {
             if(pService)
-            {
-                if(!pService->serve(ServiceFeatures::touch,
-                                   reinterpret_cast<void*>(card),
-                                   sizeof(*card)))
-                    continue;
-            }
-            else
-                continue;
-        }
-        else
-            continue;
+                pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(card), sizeof(*card));
         
         StationInfo info = card->getStationInfo();
 
