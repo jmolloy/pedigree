@@ -512,10 +512,13 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
                  j < (m_pSectionHeaders[i].addr+m_pSectionHeaders[i].size)+0x1000; /// \todo This isn't the correct formula - fix.
                  j += 0x1000)
             {
+                bool bCanWrite = m_pSectionHeaders[i].flags & SHF_WRITE;
+                bool bCanExecute = m_pSectionHeaders[i].flags & SHF_EXECINSTR;
+            
                 physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
                 Processor::information().getVirtualAddressSpace().map(phys,
                                                                       reinterpret_cast<void*> (j&~(PhysicalMemoryManager::getPageSize()-1)),
-                                                                      VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode | VirtualAddressSpace::Execute);
+                                                                      (bCanWrite ? VirtualAddressSpace::Write : 0) | VirtualAddressSpace::KernelMode | (bCanExecute ? VirtualAddressSpace::Execute : 0));
             }
 
             if (m_pSectionHeaders[i].type != SHT_NOBITS)
