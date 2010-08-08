@@ -112,7 +112,7 @@ class TcpEndpoint : public ConnectionBasedEndpoint
       if(conn)
       {
         {
-          LockGuard<Spinlock> guard(m_IncomingConnectionLock);
+          LockGuard<Mutex> guard(m_IncomingConnectionLock);
           m_IncomingConnections.pushBack(static_cast<Endpoint*>(conn));
         }
         m_IncomingConnectionCount.release();
@@ -166,7 +166,7 @@ class TcpEndpoint : public ConnectionBasedEndpoint
     bool m_bConnected;
 
     /** Adding an incoming connection must be an atomic operation. */
-    Spinlock m_IncomingConnectionLock;
+    Mutex m_IncomingConnectionLock;
 
   protected:
 

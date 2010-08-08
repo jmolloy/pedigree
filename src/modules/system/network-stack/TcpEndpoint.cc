@@ -33,7 +33,7 @@ Endpoint* TcpEndpoint::accept()
 
     Endpoint* e = 0;
     {
-        LockGuard<Spinlock> guard(m_IncomingConnectionLock);
+        LockGuard<Mutex> guard(m_IncomingConnectionLock);
         e = m_IncomingConnections.popFront();
     }
     
