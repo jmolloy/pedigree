@@ -169,7 +169,7 @@ void progress(const char *text)
     g_Previous = g_BootProgressCurrent;
 }
 
-void init()
+static void init()
 {
     if (!g_pDisplay)
     {
@@ -283,13 +283,9 @@ void init()
     InputManager::instance().installCallback(InputManager::Key, keyCallback);
 }
 
-void destroy()
+static void destroy()
 {
 }
 
-MODULE_NAME("splash");
-MODULE_ENTRY(&init);
-MODULE_EXIT(&destroy);
-#ifdef X86_COMMON
-MODULE_DEPENDS("vbe", "config");
-#endif
+MODULE_INFO("splash", &init, &destroy, "vbe", "config");
+

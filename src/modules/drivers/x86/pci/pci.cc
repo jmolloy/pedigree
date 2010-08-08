@@ -102,7 +102,7 @@ const char *getDevice (uint16_t vendor, uint16_t device)
   return "";
 }
 
-void entry()
+static void entry()
 {
   for (int iBus = 0; iBus < MAX_BUS; iBus++)
   {
@@ -201,12 +201,9 @@ void entry()
   }
 }
 
-void exit()
+static void exit()
 {
 }
 
-MODULE_NAME("pci");
-MODULE_ENTRY(&entry);
-MODULE_EXIT(&exit);
-MODULE_DEPENDS(0);
+MODULE_INFO("pci", &entry, &exit);
 

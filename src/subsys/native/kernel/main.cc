@@ -19,16 +19,14 @@
 
 NativeSyscallManager g_NativeSyscallManager;
 
-void init()
+static void init()
 {
     g_NativeSyscallManager.initialise();
 }
 
-void destroy()
+static void destroy()
 {
 }
 
-MODULE_NAME("native");
-MODULE_ENTRY(&init);
-MODULE_EXIT(&destroy);
-MODULE_DEPENDS(0);
+MODULE_INFO("native", &init, &destroy);
+

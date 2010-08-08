@@ -109,7 +109,7 @@ void removeIsaAta(Device *pDev)
     }
 }
 
-void searchNode(Device *pDev, bool bFallBackISA)
+static void searchNode(Device *pDev, bool bFallBackISA)
 {
     // Try for a PIIX IDE controller first. We prefer the PIIX as it enables us
     // to use DMA (and is a little easier to use for device detection).
@@ -181,7 +181,7 @@ void searchNode(Device *pDev, bool bFallBackISA)
     }
 }
 
-void entry()
+static void entry()
 {
   // Walk the device tree looking for controllers that have 
   // "control" and "command" addresses.
@@ -189,18 +189,18 @@ void entry()
   searchNode(pDev, true);
 }
 
-void exit()
+static void exit()
 {
 
 }
 
-MODULE_NAME("ata");
-MODULE_ENTRY(&entry);
-MODULE_EXIT(&exit);
+MODULE_INFO("ata", &entry, &exit,
 #ifdef PPC_COMMON
-MODULE_DEPENDS("ata-specific");
+    "ata-specific"
 #elif defined(X86_COMMON)
-MODULE_DEPENDS("pci", "scsi");
+    "pci"
 #else
-MODULE_DEPENDS(0);
+    0
 #endif
+    );
+

@@ -54,7 +54,7 @@ static struct nic potential_nics[] = {
 
 #define NUM_POTENTIAL_NICS (sizeof(potential_nics) / sizeof(potential_nics[0]))
 
-void probeDevice(Device *pDev)
+static void probeDevice(Device *pDev)
 {
     NOTICE("3C90x found");
 
@@ -66,18 +66,16 @@ void probeDevice(Device *pDev)
     pDev->getParent()->replaceChild(pDev, pCard);
 }
 
-void entry()
+static void entry()
 {
     for(unsigned int i = 0; i < NUM_POTENTIAL_NICS; i++)
         Device::root().searchByVendorIdAndDeviceId(potential_nics[i].vendor, potential_nics[i].device, probeDevice);
 }
 
-void exit()
+static void exit()
 {
 
 }
 
-MODULE_NAME("3c90x");
-MODULE_ENTRY(&entry);
-MODULE_EXIT(&exit);
-MODULE_DEPENDS("network-stack");
+MODULE_INFO("3c90x", &entry, &exit, "network-stack");
+

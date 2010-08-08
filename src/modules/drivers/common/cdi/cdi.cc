@@ -166,7 +166,5 @@ void cdi_driver_register(struct cdi_driver* driver)
     cdi_list_push(drivers, driver);
 }
 
-MODULE_NAME("cdi");
-MODULE_ENTRY(&cdi_init);
-MODULE_EXIT(&cdi_destroy);
-MODULE_DEPENDS("dma", "network-stack", "vfs");
+MODULE_INFO("cdi", &cdi_init, &cdi_destroy, "dma", "network-stack", "vfs");
+
