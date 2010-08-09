@@ -11,9 +11,9 @@ def win(stdscr):
 
     rows, cols = stdscr.getmaxyx()
     curses.use_default_colors()
-    curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_WHITE)
-    curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_WHITE)
-    curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_WHITE)
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
+    curses.init_pair(3, curses.COLOR_WHITE, curses.COLOR_BLACK)
 
     socket.setdefaulttimeout(120.0)
 
@@ -167,7 +167,8 @@ def win(stdscr):
                 curry = writeline(window, curry, "NOTICE: " + s2[1] + notice)
 
             else:
-                curry = writeline(window, curry, line)
+                # curry = writeline(window, curry, line)
+                pass
 
         return curry
 
