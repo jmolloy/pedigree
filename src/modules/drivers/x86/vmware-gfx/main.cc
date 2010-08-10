@@ -27,6 +27,8 @@
 #include <machine/Display.h>
 #include <config/Config.h>
 
+#define DEBUG_VMWARE_GFX        1
+
 // PCI IDs
 #define PCI_VENDOR_VMWARE       0x15AD
 #define PCI_DEVICE_VMWARE_SVGA1 0x710 // Has ports hardcoded to specific locations
@@ -122,12 +124,13 @@ class VmwareGraphics : public Display
             // Initialise the FIFO
             volatile uint32_t *fifo = reinterpret_cast<volatile uint32_t*>(m_CommandRegion.virtualAddress());
             
-            size_t fifoBase = 0;
-            
             if(caps & SVGA_CAP_EXTENDED_FIFO)
             {
                 size_t numFifoRegs = readRegister(SVGA_REG_MEMREGS);
                 size_t fifoExtendedBase = numFifoRegs * 4;
+
+                if(fifoExtendedBase < 0x1000)
+                    fifoExtendedBase = 0x1000;
             
                 fifo[SVGA_FIFO_MIN] = fifoExtendedBase; // Start right after this information block
                 fifo[SVGA_FIFO_MAX] = cmdSize & ~0x3; // Permit the full FIFO to be used
@@ -135,21 +138,18 @@ class VmwareGraphics : public Display
                 fifo[SVGA_FIFO_STOP] = fifo[SVGA_FIFO_MIN];
                 
                 NOTICE("vmware-gfx using extended fifo, caps=" << fifo[SVGA_FIFO_CAPS] << ", flags=" << fifo[SVGA_FIFO_FLAGS]);
-                NOTICE("vmware-gfx there are " << Dec << numFifoRegs << Hex << " FIFO registers");
-                
-                fifoBase = numFifoRegs;
             }
             else
             {
                 fifo[SVGA_FIFO_MIN] = 16; // Start right after this information block
                 fifo[SVGA_FIFO_MAX] = cmdSize & ~0x3; // Permit the full FIFO to be used
                 fifo[SVGA_FIFO_NEXT_CMD] = fifo[SVGA_FIFO_STOP] = 16; // Empty FIFO
-                
-                fifoBase = 16 / sizeof(uint32_t);
             }
             
             // Enable the FIFO, we're configured now
             writeRegister(SVGA_REG_CFGDONE, 1);
+
+            syncFifo();
             
             // Try some hardware accelerated stuff
             writeRegister(SVGA_REG_CFGDONE, 0);
@@ -172,7 +172,7 @@ class VmwareGraphics : public Display
             {
                 NOTICE("vmware-gfx rect copy supported");
                 
-                writeFifo(1); // RECT COPY
+                writeFifo(3); // RECT COPY
                 writeFifo(8); // Source X
                 writeFifo(8); // Source Y
                 writeFifo(256); // Dest X
@@ -180,6 +180,8 @@ class VmwareGraphics : public Display
                 writeFifo(256); // Width
                 writeFifo(256); // Height
             }
+            else
+                NOTICE("vmware-gfx no rect copy available");
             
             // Start running the FIFO
             writeRegister(SVGA_REG_CFGDONE, 1);
@@ -212,22 +214,26 @@ class VmwareGraphics : public Display
             volatile uint32_t *fifo = reinterpret_cast<volatile uint32_t*>(m_CommandRegion.virtualAddress());
             
             // Check for sync conditions
-            if(((fifo[SVGA_FIFO_STOP] + 4) == fifo[SVGA_FIFO_NEXT_CMD]) ||
-                (fifo[SVGA_FIFO_STOP] == (fifo[SVGA_FIFO_MAX] - 4)))
+            if(((fifo[SVGA_FIFO_NEXT_CMD] + 4) == fifo[SVGA_FIFO_STOP]) ||
+                (fifo[SVGA_FIFO_NEXT_CMD] == (fifo[SVGA_FIFO_MAX] - 4)))
             {
-                NOTICE("vmware-gfx synchronising full fifo");
+#if DEBUG_VMWARE_GFX
+                DEBUG_LOG("vmware-gfx synchronising full fifo");
+#endif
                 syncFifo();
             }
             
-            DEBUG_LOG("vmware-gfx fifo write at " << fifo[SVGA_FIFO_STOP] << " val=" << value);
-            DEBUG_LOG("vmware-gfx min is at " << fifo[SVGA_FIFO_MIN] << " and current position is " << fifo[SVGA_FIFO_NEXT_CMD]);
+#if DEBUG_VMWARE_GFX
+            DEBUG_LOG("vmware-gfx fifo write at " << fifo[SVGA_FIFO_NEXT_CMD] << " val=" << value);
+            DEBUG_LOG("vmware-gfx min is at " << fifo[SVGA_FIFO_MIN] << " and current position is " << fifo[SVGA_FIFO_STOP]);
+#endif
             
             // Load the new item into the FIFO
-            fifo[fifo[SVGA_FIFO_STOP] / 4] = value;
-            if(fifo[SVGA_FIFO_STOP] == (fifo[SVGA_FIFO_MAX] - 4))
-                fifo[SVGA_FIFO_STOP] = fifo[SVGA_FIFO_MIN];
+            fifo[fifo[SVGA_FIFO_NEXT_CMD] / 4] = value;
+            if(fifo[SVGA_FIFO_NEXT_CMD] == (fifo[SVGA_FIFO_MAX] - 4))
+                fifo[SVGA_FIFO_NEXT_CMD] = fifo[SVGA_FIFO_MIN];
             else
-                fifo[SVGA_FIFO_STOP] += 4;
+                fifo[SVGA_FIFO_NEXT_CMD] += 4;
             
             asm volatile("" : : : "memory");
         }
@@ -304,15 +310,11 @@ class VmwareGraphics : public Display
 
 void callback(Device *pDevice)
 {
-    NOTICE("Found a vmware-gfx device");
-    
     VmwareGraphics *pGraphics = new VmwareGraphics(pDevice);
 }
 
 void entry()
 {
-    NOTICE("vmware-gfx");
-    
     // Don't care about non-SVGA2 devices, just use VBE for them.
     Device::root().searchByVendorIdAndDeviceId(PCI_VENDOR_VMWARE, PCI_DEVICE_VMWARE_SVGA2, callback);
     
