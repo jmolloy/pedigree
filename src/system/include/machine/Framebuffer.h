@@ -146,7 +146,7 @@ class Framebuffer
                         if(amtBlue)
                             amtBlue = ((amtBlue / 255) * 0x1F) & 0x1F;
                         
-                        dest = (amtRed << 10) | (amtGreen << 5) | (amtBlue);
+                        dest = (amtRed << 11) | (amtGreen << 5) | (amtBlue);
                     }
                     // About the same for 16-bit ARGB
                     else if(destFormat == Bits16_Argb)
