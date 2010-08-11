@@ -92,7 +92,7 @@ class Framebuffer
         {
             if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
                 return;
-            if(UNLIKELY(!(srcx && srcy && destx && desty && width && height)))
+            if(UNLIKELY(!(width && height)))
                 return;
             
             Display::ScreenMode currMode;
