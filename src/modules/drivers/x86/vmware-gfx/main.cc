@@ -32,7 +32,7 @@
 #include "vm_device_version.h"
 #include "svga_reg.h"
 
-#define DEBUG_VMWARE_GFX        1
+#define DEBUG_VMWARE_GFX        0
 
 class VmwareFramebuffer;
 
@@ -303,12 +303,19 @@ void callback(Device *pDevice)
     
     VmwareFramebuffer *pFramebuffer = new VmwareFramebuffer(reinterpret_cast<uintptr_t>(pGraphics->getFramebuffer()), pGraphics);
     
-    pFramebuffer->rect(64, 64, 256, 256, 0x00ff0000);
+    // Pixel conversion test - RGB565 to 32-bit ARGB, should be green
+    pFramebuffer->rect(64, 64, 256, 256, 0x7E0, Framebuffer::Bits16_Rgb565);
     pFramebuffer->redraw(64, 64, 256, 256);
     
-    // 32x32 blit
-    static uint8_t blitbuffer[4096];
-    dmemset(blitbuffer, 0x00abcdef, 4096 / 4);
+    // 32x32 blit of a variety of colours
+    uint32_t blitbuffer[1024];
+    uint32_t n = 0;
+    for(size_t i = 0; i < 1024; i++)
+    {
+        n = (n + 0x1337) % 0xFFFFFF;
+        n |= 0xFF000000;
+        blitbuffer[i] = n;
+    }
     pFramebuffer->blit(blitbuffer, 0, 0, 384, 384, 32, 32);
     
     pFramebuffer->redraw(384, 384, 32, 32);
@@ -316,6 +323,10 @@ void callback(Device *pDevice)
     // Hardware-accelerated copy test, with a redraw afterwards
     pGraphics->copy(64, 64, 512, 512, 64, 64);
     pFramebuffer->redraw(512, 512, 64, 64);
+    
+    // Software copy test
+    pFramebuffer->copy(64, 64, 512, 256, 64, 64);
+    pFramebuffer->redraw(512, 256, 64, 64);
 }
 
 void entry()
