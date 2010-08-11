@@ -61,7 +61,12 @@ class Framebuffer
         }
         
         /** Blits a given buffer to the screen. Assumes the buffer is in the
-         *  same format as the screen. */
+         *  same format as the screen.
+         *  \todo The buffer should be "created" somehow, external to this blit.
+         *        This works better for hardware accelerated devices which need
+         *        to have pixmaps constructed in video memory for accelerated
+         *        blits.
+         */
         virtual inline void blit(void *pBuffer, size_t srcx, size_t srcy, size_t destx,
                                  size_t desty, size_t width, size_t height)
         {
@@ -77,8 +82,6 @@ class Framebuffer
         }
         
     private:
-    
-    protected:
         
         // Linked Display, used to get mode information for software routines
         Display *m_pDisplay;
@@ -86,6 +89,17 @@ class Framebuffer
         // Base address of this framebuffer, set by whatever code inherits this
         // class, ideally in the constructor.
         uintptr_t m_FramebufferBase;
+    
+    protected:
+        
+        void setFramebuffer(uintptr_t p)
+        {
+            m_FramebufferBase = p;
+        }
+        void setDisplay(Display *p)
+        {
+            m_pDisplay = p;
+        }
         
         inline void swBlit(void *pBuffer, size_t srcx, size_t srcy, size_t destx,
                            size_t desty, size_t width, size_t height)
@@ -99,29 +113,30 @@ class Framebuffer
             if(UNLIKELY(!m_pDisplay->getCurrentScreenMode(currMode)))
                 return;
             
-            size_t bytesPerPixel = currMode.pf.nBpp;
+            size_t bytesPerPixel = currMode.pf.nBpp / 8;
             size_t bytesPerLine = bytesPerPixel * currMode.width; /// \todo Not always the right calculation
+            size_t sourceBytesPerLine = width * bytesPerPixel; /// \todo Pass a struct for the buffer with full buffer width
             
             /// \todo Clipping
             
             // Blit across the width of the screen? How handy!
             if(UNLIKELY((!(srcx && destx)) && (width == currMode.width)))
             {
-                size_t sourceBufferOffset = (srcy * bytesPerLine) + (srcx * bytesPerPixel);
+                size_t sourceBufferOffset = (srcy * sourceBytesPerLine) + (srcx * bytesPerPixel);
                 size_t frameBufferOffset = (desty * bytesPerLine) + (destx * bytesPerPixel);
                 
                 void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
                 void *src = adjust_pointer(pBuffer, sourceBufferOffset);
                 
-                memcpy(dest, src, width * height * bytesPerPixel);
+                memcpy(dest, src, width * bytesPerPixel);
             }
             else
             {
                 // Line-by-line copy
-                for(size_t y = desty; y < (desty + height); y++)
+                for(size_t y1 = desty, y2 = srcy; y1 < (desty + height); y1++, y2++)
                 {
-                    size_t sourceBufferOffset = (y * bytesPerLine) + (srcx * bytesPerPixel);
-                    size_t frameBufferOffset = (y * bytesPerLine) + (destx * bytesPerPixel);
+                    size_t sourceBufferOffset = (y2 * sourceBytesPerLine) + (srcx * bytesPerPixel);
+                    size_t frameBufferOffset = (y1 * bytesPerLine) + (destx * bytesPerPixel);
                 
                     void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
                     void *src = adjust_pointer(pBuffer, sourceBufferOffset);
@@ -135,14 +150,14 @@ class Framebuffer
         {
             if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
                 return;
-            if(UNLIKELY(!(x && y && width && height)))
+            if(UNLIKELY(!(width && height)))
                 return;
             
             Display::ScreenMode currMode;
             if(UNLIKELY(!m_pDisplay->getCurrentScreenMode(currMode)))
                 return;
             
-            size_t bytesPerPixel = currMode.pf.nBpp;
+            size_t bytesPerPixel = currMode.pf.nBpp / 8;
             size_t bytesPerLine = bytesPerPixel * currMode.width; /// \todo Not always the right calculation
             
             /// \todo Clipping
@@ -156,7 +171,7 @@ class Framebuffer
                 
                 /// \todo Colour conversion if the framebuffer isn't in the same
                 ///       pixel format!
-                dmemset(dest, colour, width * bytesPerPixel);
+                dmemset(dest, colour, (width * bytesPerPixel) / 4);
             }
             else
             {
@@ -167,7 +182,7 @@ class Framebuffer
                 
                     void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
                     
-                    dmemset(dest, colour, width * bytesPerPixel);
+                    dmemset(dest, colour, (width * bytesPerPixel) / 4);
                 }
             }
         }

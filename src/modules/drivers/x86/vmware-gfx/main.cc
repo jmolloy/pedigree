@@ -27,16 +27,22 @@
 #include <machine/Display.h>
 #include <config/Config.h>
 
+#include <machine/Framebuffer.h>
+
 #include "vm_device_version.h"
 #include "svga_reg.h"
 
 #define DEBUG_VMWARE_GFX        1
+
+class VmwareFramebuffer;
 
 // Can refer to http://sourceware.org/ml/ecos-devel/2006-10/msg00008/README.xfree86
 // for information about programming this device, as well as the Haiku driver.
 
 class VmwareGraphics : public Display
 {
+    friend class VmwareFramebuffer;
+    
     public:
         VmwareGraphics(Device *pDev) :
             Device(pDev), Display(pDev), m_pIo(0),
@@ -79,8 +85,8 @@ class VmwareGraphics : public Display
             PhysicalMemoryManager::instance().allocateRegion(m_CommandRegion, (cmdSize / 0x1000) + 1, PhysicalMemoryManager::continuous, VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write, cmdBase);
             
             // Set mode
-            writeRegister(SVGA_REG_WIDTH, 1023);
-            writeRegister(SVGA_REG_HEIGHT, 769);
+            writeRegister(SVGA_REG_WIDTH, 1024);
+            writeRegister(SVGA_REG_HEIGHT, 768);
             writeRegister(SVGA_REG_BITS_PER_PIXEL, 32);
             
             size_t fbOffset = readRegister(SVGA_REG_FB_OFFSET);
@@ -121,7 +127,7 @@ class VmwareGraphics : public Display
             {
                 NOTICE("vmware-gfx rect fill supported");
             
-                writeFifo(2); // RECT FILL
+                writeFifo(SVGA_CMD_RECT_FILL); // RECT FILL
                 writeFifo(0xFFFFFFFF); // White
                 writeFifo(64); // X
                 writeFifo(64); // Y
@@ -135,7 +141,7 @@ class VmwareGraphics : public Display
             {
                 NOTICE("vmware-gfx rect copy supported");
                 
-                writeFifo(3); // RECT COPY
+                writeFifo(SVGA_CMD_RECT_COPY); // RECT COPY
                 writeFifo(8); // Source X
                 writeFifo(8); // Source Y
                 writeFifo(256); // Dest X
@@ -152,6 +158,54 @@ class VmwareGraphics : public Display
         
         virtual ~VmwareGraphics()
         {
+        }
+        
+        /** Returns the current screen mode.
+            \return True if operation succeeded, false otherwise. */
+        virtual bool getCurrentScreenMode(ScreenMode &sm)
+        {
+            sm.width = readRegister(SVGA_REG_WIDTH);
+            sm.height = readRegister(SVGA_REG_HEIGHT);
+            sm.pf.nBpp = readRegister(SVGA_REG_BITS_PER_PIXEL);
+            
+            return true;
+        }
+        
+        void redraw(size_t x, size_t y, size_t w, size_t h)
+        {
+            // Disable the command FIFO while we link the command
+            writeRegister(SVGA_REG_CONFIG_DONE, 0);
+            
+            writeFifo(SVGA_CMD_UPDATE);
+            writeFifo(x);
+            writeFifo(y);
+            writeFifo(w);
+            writeFifo(h);
+            
+            // Start running the FIFO
+            writeRegister(SVGA_REG_CONFIG_DONE, 1);
+        }
+        
+        void copy(size_t x1, size_t y1, size_t x2, size_t y2, size_t w, size_t h)
+        {
+            // Disable the command FIFO while we link the command
+            writeRegister(SVGA_REG_CONFIG_DONE, 0);
+        
+            writeFifo(SVGA_CMD_RECT_COPY); // RECT COPY
+            writeFifo(x1); // Source X
+            writeFifo(y1); // Source Y
+            writeFifo(x2); // Dest X
+            writeFifo(y2); // Dest Y
+            writeFifo(w); // Width
+            writeFifo(h); // Height
+            
+            // Start running the FIFO
+            writeRegister(SVGA_REG_CONFIG_DONE, 1);
+        }
+        
+        void *getFramebuffer()
+        {
+            return m_Framebuffer.virtualAddress();
         }
         
     private:
@@ -211,9 +265,57 @@ class VmwareGraphics : public Display
         MemoryRegion m_CommandRegion;
 };
 
+class VmwareFramebuffer : public Framebuffer
+{
+    public:
+        VmwareFramebuffer() : Framebuffer()
+        {
+        }
+        
+        VmwareFramebuffer(uintptr_t fb, Display *pDisplay) :
+            Framebuffer()
+        {
+            setFramebuffer(fb);
+            setDisplay(pDisplay);
+        }
+        
+        virtual ~VmwareFramebuffer()
+        {
+        }
+        
+        /** Performs an update of a region of this framebuffer. This function
+         *  can be used by drivers to request an area of the framebuffer be
+         *  redrawn, but is useless for non-hardware-accelerated devices.
+         *  \param x leftmost x co-ordinate of the redraw area, ~0 for "invalid"
+         *  \param y topmost y co-ordinate of the redraw area, ~0 for "invalid"
+         *  \param w width of the redraw area, ~0 for "invalid"
+         *  \param h height of the redraw area, ~0 for "invalid" */
+        virtual void redraw(size_t x = ~0UL, size_t y = ~0UL,
+                            size_t w = ~0UL, size_t h = ~0UL)
+        {
+            static_cast<VmwareGraphics*>(m_pDisplay)->redraw(x, y, w, h);
+        }
+};
+
 void callback(Device *pDevice)
 {
     VmwareGraphics *pGraphics = new VmwareGraphics(pDevice);
+    
+    VmwareFramebuffer *pFramebuffer = new VmwareFramebuffer(reinterpret_cast<uintptr_t>(pGraphics->getFramebuffer()), pGraphics);
+    
+    pFramebuffer->rect(64, 64, 256, 256, 0x00ff0000);
+    pFramebuffer->redraw(64, 64, 256, 256);
+    
+    // 32x32 blit
+    static uint8_t blitbuffer[4096];
+    dmemset(blitbuffer, 0x00abcdef, 4096 / 4);
+    pFramebuffer->blit(blitbuffer, 0, 0, 384, 384, 32, 32);
+    
+    pFramebuffer->redraw(384, 384, 32, 32);
+    
+    // Hardware-accelerated copy test, with a redraw afterwards
+    pGraphics->copy(64, 64, 512, 512, 64, 64);
+    pFramebuffer->redraw(512, 512, 64, 64);
 }
 
 void entry()
