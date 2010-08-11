@@ -74,107 +74,7 @@ class Framebuffer
         
         /** Converts a given pixel from one pixel format to another. */
         virtual bool convertPixel(uint32_t source, PixelFormat srcFormat,
-                                  uint32_t &dest, PixelFormat destFormat)
-        {
-            if((srcFormat == destFormat) || (!source))
-            {
-                dest = source;
-                return true;
-            }
-            
-            // Amount of red/green/blue
-            size_t amtRed = 0, amtGreen = 0, amtBlue = 0;
-            if((srcFormat == Bits32_Argb) ||
-               (srcFormat == Bits32_Rgb) ||
-               (srcFormat == Bits24_Rgb))
-            {
-                amtRed = (source & 0xff0000) >> 16;
-                amtGreen = (source & 0xff00) >> 8;
-                amtBlue = (source & 0xff);
-            }
-            
-            // Conversion code. Complicated and ugly. :(
-            switch(srcFormat)
-            {
-                case Bits32_Argb:
-                case Bits32_Rgb:
-                case Bits24_Rgb:
-                    // Dead simple conversion from ARGB -> RGB, just lose alpha
-                    if(destFormat == Bits32_Rgb)
-                    {
-                        dest = HOST_TO_LITTLE32(source) & 0xFFFFFF;
-                        return true;
-                    }
-                    // Dead simple conversion from RGB -> ARGB, add 100% alpha
-                    else if(destFormat == Bits32_Argb)
-                    {
-                        dest = HOST_TO_LITTLE32(source) | 0xFF000000;
-                        return true;
-                    }
-                    // Only able to hit this on 24-bit due to initial checks
-                    else if(destFormat == Bits32_Rgb)
-                    {
-                        // Keep alpha out in case dest already has it
-                        dest = source & 0xFFFFFF;
-                        return true;
-                    }
-                    // More involved conversion to 16-bit 555
-                    else if(destFormat == Bits16_Rgb555)
-                    {
-                        size_t amtRed = (source & 0xff0000) >> 16;
-                        size_t amtGreen = (source & 0xff00) >> 8;
-                        size_t amtBlue = (source & 0xff);
-                        if(amtRed)
-                            amtRed = ((amtRed / 255) * 0x1F) & 0x1F;
-                        if(amtGreen)
-                            amtGreen = ((amtGreen / 255) * 0x1F) & 0x1F;
-                        if(amtBlue)
-                            amtBlue = ((amtBlue / 255) * 0x1F) & 0x1F;
-                        
-                        dest = (amtRed << 10) | (amtGreen << 5) | (amtBlue);
-                    }
-                    // About the same for 16-bit 565
-                    else if(destFormat == Bits16_Rgb565)
-                    {
-                        size_t amtRed = (source & 0xff0000) >> 16;
-                        size_t amtGreen = (source & 0xff00) >> 8;
-                        size_t amtBlue = (source & 0xff);
-                        if(amtRed)
-                            amtRed = ((amtRed / 255) * 0x1F) & 0x1F;
-                        if(amtGreen)
-                            amtGreen = ((amtGreen / 255) * 0x3F) & 0x3F;
-                        if(amtBlue)
-                            amtBlue = ((amtBlue / 255) * 0x1F) & 0x1F;
-                        
-                        dest = (amtRed << 11) | (amtGreen << 5) | (amtBlue);
-                    }
-                    // About the same for 16-bit ARGB
-                    else if(destFormat == Bits16_Argb)
-                    {
-                        if(amtRed)
-                            amtRed = ((amtRed / 255) * 0xF) & 0xF;
-                        if(amtGreen)
-                            amtGreen = ((amtGreen / 255) * 0xF) & 0xF;
-                        if(amtBlue)
-                            amtBlue = ((amtBlue / 255) * 0xF) & 0xF;
-                        
-                        dest = (0xF << 12) | (amtRed << 8) | (amtGreen << 4) | (amtBlue);
-                    }
-                    break;
-                case Bits16_Argb:
-                    break;
-                case Bits16_Rgb565:
-                    break;
-                case Bits16_Rgb555:
-                    break;
-                case Bits8_Idx:
-                    break;
-                default:
-                    break;
-            }
-            
-            return false;
-        }
+                                         uint32_t &dest, PixelFormat destFormat);
         
         /** Performs an update of a region of this framebuffer. This function
          *  can be used by drivers to request an area of the framebuffer be
@@ -184,9 +84,7 @@ class Framebuffer
          *  \param w width of the redraw area, ~0 for "invalid"
          *  \param h height of the redraw area, ~0 for "invalid" */
         virtual void redraw(size_t x = ~0UL, size_t y = ~0UL,
-                            size_t w = ~0UL, size_t h = ~0UL)
-        {
-        }
+                            size_t w = ~0UL, size_t h = ~0UL) {}
         
         /** Blits a given buffer to the screen. Assumes the buffer is in the
          *  same format as the screen.
@@ -201,12 +99,19 @@ class Framebuffer
             swBlit(pBuffer, srcx, srcy, destx, desty, width, height);
         }
         
-        /** Draws a single rectangle to the screen with the given 32-bit
-         *  colour in RGBA format (where ALPHA is in the MSB). */
+        /** Draws a single rectangle to the screen with the given colour. */
         virtual inline void rect(size_t x, size_t y, size_t width, size_t height,
-                                 uint32_t colour)
+                                 uint32_t colour, PixelFormat format = Bits32_Argb)
         {
-            swRect(x, y, width, height, colour);
+            swRect(x, y, width, height, colour, format);
+        }
+        
+        /** Copies a rectangle already on the framebuffer to a new location */
+        virtual inline void copy(size_t srcx, size_t srcy,
+                                 size_t destx, size_t desty,
+                                 size_t w, size_t h)
+        {
+            swCopy(srcx, srcy, destx, desty, w, h);
         }
         
     private:
@@ -229,91 +134,12 @@ class Framebuffer
             m_pDisplay = p;
         }
         
-        inline void swBlit(void *pBuffer, size_t srcx, size_t srcy, size_t destx,
-                           size_t desty, size_t width, size_t height)
-        {
-            if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
-                return;
-            if(UNLIKELY(!(width && height)))
-                return;
-            
-            Display::ScreenMode currMode;
-            if(UNLIKELY(!m_pDisplay->getCurrentScreenMode(currMode)))
-                return;
-            
-            size_t bytesPerPixel = currMode.pf.nBpp / 8;
-            size_t bytesPerLine = bytesPerPixel * currMode.width; /// \todo Not always the right calculation
-            size_t sourceBytesPerLine = width * bytesPerPixel; /// \todo Pass a struct for the buffer with full buffer width
-            
-            /// \todo Clipping
-            
-            // Blit across the width of the screen? How handy!
-            if(UNLIKELY((!(srcx && destx)) && (width == currMode.width)))
-            {
-                size_t sourceBufferOffset = (srcy * sourceBytesPerLine) + (srcx * bytesPerPixel);
-                size_t frameBufferOffset = (desty * bytesPerLine) + (destx * bytesPerPixel);
-                
-                void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
-                void *src = adjust_pointer(pBuffer, sourceBufferOffset);
-                
-                memcpy(dest, src, width * bytesPerPixel);
-            }
-            else
-            {
-                // Line-by-line copy
-                for(size_t y1 = desty, y2 = srcy; y1 < (desty + height); y1++, y2++)
-                {
-                    size_t sourceBufferOffset = (y2 * sourceBytesPerLine) + (srcx * bytesPerPixel);
-                    size_t frameBufferOffset = (y1 * bytesPerLine) + (destx * bytesPerPixel);
-                
-                    void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
-                    void *src = adjust_pointer(pBuffer, sourceBufferOffset);
-                    
-                    memcpy(dest, src, width * bytesPerPixel);
-                }
-            }
-        }
+        void swBlit(void *pBuffer, size_t srcx, size_t srcy, size_t destx,
+                    size_t desty, size_t width, size_t height);
         
-        inline void swRect(size_t x, size_t y, size_t width, size_t height, uint32_t colour)
-        {
-            if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
-                return;
-            if(UNLIKELY(!(width && height)))
-                return;
-            
-            Display::ScreenMode currMode;
-            if(UNLIKELY(!m_pDisplay->getCurrentScreenMode(currMode)))
-                return;
-            
-            size_t bytesPerPixel = currMode.pf.nBpp / 8;
-            size_t bytesPerLine = bytesPerPixel * currMode.width; /// \todo Not always the right calculation
-            
-            /// \todo Clipping
-            
-            // Can we just do an easy memset?
-            if(UNLIKELY((!x) && (width == currMode.width)))
-            {
-                size_t frameBufferOffset = (y * bytesPerLine) + (x * bytesPerPixel);
-                
-                void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
-                
-                /// \todo Colour conversion if the framebuffer isn't in the same
-                ///       pixel format!
-                dmemset(dest, colour, (width * bytesPerPixel) / 4);
-            }
-            else
-            {
-                // Line-by-line fill
-                for(size_t desty = y; desty < (y + height); desty++)
-                {
-                    size_t frameBufferOffset = (desty * bytesPerLine) + (x * bytesPerPixel);
-                
-                    void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
-                    
-                    dmemset(dest, colour, (width * bytesPerPixel) / 4);
-                }
-            }
-        }
+        void swRect(size_t x, size_t y, size_t width, size_t height, uint32_t colour, PixelFormat format);
+        
+        void swCopy(size_t srcx, size_t srcy, size_t destx, size_t desty, size_t w, size_t h);
 };
 
 #endif
