@@ -62,10 +62,18 @@ class Framebuffer
         
         /** Blits a given buffer to the screen. Assumes the buffer is in the
          *  same format as the screen. */
-        virtual void blit(void *pBuffer, size_t srcx, size_t srcy, size_t destx,
-                          size_t desty, size_t width, size_t height)
+        virtual inline void blit(void *pBuffer, size_t srcx, size_t srcy, size_t destx,
+                                 size_t desty, size_t width, size_t height)
         {
             swBlit(pBuffer, srcx, srcy, destx, desty, width, height);
+        }
+        
+        /** Draws a single rectangle to the screen with the given 32-bit
+         *  colour in RGBA format (where ALPHA is in the MSB). */
+        virtual inline void rect(size_t x, size_t y, size_t width, size_t height,
+                                 uint32_t colour)
+        {
+            swRect(x, y, width, height, colour);
         }
         
     private:
@@ -79,10 +87,8 @@ class Framebuffer
         // class, ideally in the constructor.
         uintptr_t m_FramebufferBase;
         
-        /** Blits a given buffer to m_FramebufferBase. Semi-optimised software
-         *  blit only, no acceleration. */
-        void swBlit(void *pBuffer, size_t srcx, size_t srcy, size_t destx,
-                    size_t desty, size_t width, size_t height)
+        inline void swBlit(void *pBuffer, size_t srcx, size_t srcy, size_t destx,
+                           size_t desty, size_t width, size_t height)
         {
             if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
                 return;
@@ -95,6 +101,8 @@ class Framebuffer
             
             size_t bytesPerPixel = currMode.pf.nBpp;
             size_t bytesPerLine = bytesPerPixel * currMode.width; /// \todo Not always the right calculation
+            
+            /// \todo Clipping
             
             // Blit across the width of the screen? How handy!
             if(UNLIKELY((!(srcx && destx)) && (width == currMode.width)))
@@ -112,13 +120,54 @@ class Framebuffer
                 // Line-by-line copy
                 for(size_t y = desty; y < (desty + height); y++)
                 {
-                    size_t sourceBufferOffset = ((srcy + y) * bytesPerLine) + (srcx * bytesPerPixel);
-                    size_t frameBufferOffset = ((desty + y) * bytesPerLine) + (destx * bytesPerPixel);
+                    size_t sourceBufferOffset = (y * bytesPerLine) + (srcx * bytesPerPixel);
+                    size_t frameBufferOffset = (y * bytesPerLine) + (destx * bytesPerPixel);
                 
                     void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
                     void *src = adjust_pointer(pBuffer, sourceBufferOffset);
                     
-                    memcpy(dest, src, width * height * bytesPerPixel);
+                    memcpy(dest, src, width * bytesPerPixel);
+                }
+            }
+        }
+        
+        inline void swRect(size_t x, size_t y, size_t width, size_t height, uint32_t colour)
+        {
+            if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
+                return;
+            if(UNLIKELY(!(x && y && width && height)))
+                return;
+            
+            Display::ScreenMode currMode;
+            if(UNLIKELY(!m_pDisplay->getCurrentScreenMode(currMode)))
+                return;
+            
+            size_t bytesPerPixel = currMode.pf.nBpp;
+            size_t bytesPerLine = bytesPerPixel * currMode.width; /// \todo Not always the right calculation
+            
+            /// \todo Clipping
+            
+            // Can we just do an easy memset?
+            if(UNLIKELY((!x) && (width == currMode.width)))
+            {
+                size_t frameBufferOffset = (y * bytesPerLine) + (x * bytesPerPixel);
+                
+                void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
+                
+                /// \todo Colour conversion if the framebuffer isn't in the same
+                ///       pixel format!
+                dmemset(dest, colour, width * bytesPerPixel);
+            }
+            else
+            {
+                // Line-by-line fill
+                for(size_t desty = y; desty < (y + height); desty++)
+                {
+                    size_t frameBufferOffset = (desty * bytesPerLine) + (x * bytesPerPixel);
+                
+                    void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
+                    
+                    dmemset(dest, colour, width * bytesPerPixel);
                 }
             }
         }
