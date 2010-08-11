@@ -32,6 +32,30 @@ class Framebuffer
 {
     public:
     
+        enum PixelFormat
+        {
+            Bits32_Argb,        // Alpha + RGB, with alpha in the highest byte
+            Bits32_Rgb,         // RGB, no alpha, essentially the same as above
+            
+            Bits24_Rgb,         // RGB in a 24-bit pack
+            
+            Bits16_Argb,        // 4:4:4:4 ARGB, alpha most significant nibble
+            Bits16_Rgb565,      // 5:6:5 RGB
+            Bits16_Rgb555,      // 5:5:5 RGB
+            
+            Bits8_Idx           // Index into a palette
+        };
+        
+        struct Buffer
+        {
+            uintptr_t base;
+            size_t width;
+            size_t height;
+            size_t bpp;
+            
+            PixelFormat format;
+        };
+    
         Framebuffer() : m_pDisplay(0), m_FramebufferBase(0)
         {
         }
@@ -46,6 +70,110 @@ class Framebuffer
         virtual void *getRawBuffer()
         {
             return reinterpret_cast<void*>(m_FramebufferBase);
+        }
+        
+        /** Converts a given pixel from one pixel format to another. */
+        virtual bool convertPixel(uint32_t source, PixelFormat srcFormat,
+                                  uint32_t &dest, PixelFormat destFormat)
+        {
+            if((srcFormat == destFormat) || (!source))
+            {
+                dest = source;
+                return true;
+            }
+            
+            // Amount of red/green/blue
+            size_t amtRed = 0, amtGreen = 0, amtBlue = 0;
+            if((srcFormat == Bits32_Argb) ||
+               (srcFormat == Bits32_Rgb) ||
+               (srcFormat == Bits24_Rgb))
+            {
+                amtRed = (source & 0xff0000) >> 16;
+                amtGreen = (source & 0xff00) >> 8;
+                amtBlue = (source & 0xff);
+            }
+            
+            // Conversion code. Complicated and ugly. :(
+            switch(srcFormat)
+            {
+                case Bits32_Argb:
+                case Bits32_Rgb:
+                case Bits24_Rgb:
+                    // Dead simple conversion from ARGB -> RGB, just lose alpha
+                    if(destFormat == Bits32_Rgb)
+                    {
+                        dest = HOST_TO_LITTLE32(source) & 0xFFFFFF;
+                        return true;
+                    }
+                    // Dead simple conversion from RGB -> ARGB, add 100% alpha
+                    else if(destFormat == Bits32_Argb)
+                    {
+                        dest = HOST_TO_LITTLE32(source) | 0xFF000000;
+                        return true;
+                    }
+                    // Only able to hit this on 24-bit due to initial checks
+                    else if(destFormat == Bits32_Rgb)
+                    {
+                        // Keep alpha out in case dest already has it
+                        dest = source & 0xFFFFFF;
+                        return true;
+                    }
+                    // More involved conversion to 16-bit 555
+                    else if(destFormat == Bits16_Rgb555)
+                    {
+                        size_t amtRed = (source & 0xff0000) >> 16;
+                        size_t amtGreen = (source & 0xff00) >> 8;
+                        size_t amtBlue = (source & 0xff);
+                        if(amtRed)
+                            amtRed = ((amtRed / 255) * 0x1F) & 0x1F;
+                        if(amtGreen)
+                            amtGreen = ((amtGreen / 255) * 0x1F) & 0x1F;
+                        if(amtBlue)
+                            amtBlue = ((amtBlue / 255) * 0x1F) & 0x1F;
+                        
+                        dest = (amtRed << 10) | (amtGreen << 5) | (amtBlue);
+                    }
+                    // About the same for 16-bit 565
+                    else if(destFormat == Bits16_Rgb565)
+                    {
+                        size_t amtRed = (source & 0xff0000) >> 16;
+                        size_t amtGreen = (source & 0xff00) >> 8;
+                        size_t amtBlue = (source & 0xff);
+                        if(amtRed)
+                            amtRed = ((amtRed / 255) * 0x1F) & 0x1F;
+                        if(amtGreen)
+                            amtGreen = ((amtGreen / 255) * 0x3F) & 0x3F;
+                        if(amtBlue)
+                            amtBlue = ((amtBlue / 255) * 0x1F) & 0x1F;
+                        
+                        dest = (amtRed << 10) | (amtGreen << 5) | (amtBlue);
+                    }
+                    // About the same for 16-bit ARGB
+                    else if(destFormat == Bits16_Argb)
+                    {
+                        if(amtRed)
+                            amtRed = ((amtRed / 255) * 0xF) & 0xF;
+                        if(amtGreen)
+                            amtGreen = ((amtGreen / 255) * 0xF) & 0xF;
+                        if(amtBlue)
+                            amtBlue = ((amtBlue / 255) * 0xF) & 0xF;
+                        
+                        dest = (0xF << 12) | (amtRed << 8) | (amtGreen << 4) | (amtBlue);
+                    }
+                    break;
+                case Bits16_Argb:
+                    break;
+                case Bits16_Rgb565:
+                    break;
+                case Bits16_Rgb555:
+                    break;
+                case Bits8_Idx:
+                    break;
+                default:
+                    break;
+            }
+            
+            return false;
         }
         
         /** Performs an update of a region of this framebuffer. This function
@@ -82,6 +210,8 @@ class Framebuffer
         }
         
     private:
+    
+    protected:
         
         // Linked Display, used to get mode information for software routines
         Display *m_pDisplay;
@@ -89,8 +219,6 @@ class Framebuffer
         // Base address of this framebuffer, set by whatever code inherits this
         // class, ideally in the constructor.
         uintptr_t m_FramebufferBase;
-    
-    protected:
         
         void setFramebuffer(uintptr_t p)
         {
