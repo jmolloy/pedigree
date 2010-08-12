@@ -327,6 +327,9 @@ void callback(Device *pDevice)
     // Software copy test
     pFramebuffer->copy(64, 64, 512, 256, 64, 64);
     pFramebuffer->redraw(512, 256, 64, 64);
+
+    pFramebuffer->line(64, 512, 128, 512, 0xff0000, Framebuffer::Bits24_Rgb);
+    pFramebuffer->redraw(63, 511, 66, 3);
 }
 
 void entry()

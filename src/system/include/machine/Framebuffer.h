@@ -20,9 +20,6 @@
 #include <utilities/utility.h>
 #include <machine/Display.h>
 
-/// \todo move implementation into Framebuffer.cc
-/// \todo Pixel format conversion
-
 /** This class provides a generic interface for interfacing with a framebuffer.
  *  Each display driver specialises this class to define the "base address" of
  *  the framebuffer in its own way (eg, allocate memory, or use a DMA region).
@@ -113,6 +110,16 @@ class Framebuffer
         {
             swCopy(srcx, srcy, destx, desty, w, h);
         }
+
+        /** Draws a line one pixel wide between two points on the screen */
+        virtual inline void line(size_t x1, size_t y1, size_t x2, size_t y2,
+                                 uint32_t colour, PixelFormat format = Bits32_Argb)
+        {
+            swLine(x1, y1, x2, y2, colour, format);
+        }
+
+        /** Sets an individual pixel on the framebuffer. Not inheritable. */
+        void setPixel(size_t x, size_t y, uint32_t colour, PixelFormat format = Bits32_Argb);
         
     private:
     
@@ -140,6 +147,8 @@ class Framebuffer
         void swRect(size_t x, size_t y, size_t width, size_t height, uint32_t colour, PixelFormat format);
         
         void swCopy(size_t srcx, size_t srcy, size_t destx, size_t desty, size_t w, size_t h);
+
+        void swLine(size_t x1, size_t y1, size_t x2, size_t y2, uint32_t colour, PixelFormat format);
 };
 
 #endif

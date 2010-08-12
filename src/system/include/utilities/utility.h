@@ -135,6 +135,14 @@ inline char toLower(char c)
     return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(pointer) + offset);
   }
 
+  template<typename T>
+  inline void swap(T a, T b)
+  {
+      T t = a;
+      a = b;
+      b = t;
+  }
+
   inline uint8_t checksum(const uint8_t *pMemory, size_t sMemory)
   {
     uint8_t sum = 0;

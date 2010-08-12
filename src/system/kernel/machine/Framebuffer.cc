@@ -373,3 +373,97 @@ void Framebuffer::swCopy(size_t srcx, size_t srcy, size_t destx, size_t desty, s
     }
 }
 
+void Framebuffer::swLine(size_t x1, size_t y1, size_t x2, size_t y2, uint32_t colour, PixelFormat format)
+{
+    if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
+        return;
+    
+    Display::ScreenMode currMode;
+    if(UNLIKELY(!m_pDisplay->getCurrentScreenMode(currMode)))
+        return;
+
+    // Clip co-ordinates where necessary
+    if(x1 > currMode.width)
+        x1 = currMode.width;
+    if(x2 > currMode.width)
+        x2 = currMode.width;
+    if(y1 > currMode.height)
+        y1 = currMode.height;
+    if(y2 > currMode.height)
+        y2 = currMode.height;
+
+    if(UNLIKELY((x1 == x2) && (y1 == y2)))
+        return;
+    
+    size_t bytesPerPixel = currMode.pf.nBpp / 8;
+    size_t bytesPerLine = bytesPerPixel * currMode.width; /// \todo Not always the right calculation
+    
+    uint32_t transformColour = 0;
+    convertPixel(colour, format, transformColour, Bits32_Argb);
+
+    // Bresenham's algorithm, referred to Computer Graphics, C Version (2nd Edition)
+    // from 1997, by D. Hearn and M. Pauline Baker (page 88)
+    // http://www.amazon.com/Computer-Graphics-C-Version-2nd/dp/0135309247
+
+    ssize_t dx = static_cast<ssize_t>(x2 - x1);
+    ssize_t dy = static_cast<ssize_t>(y2 - y1);
+    bool bSteep = dy > dx;
+    if(bSteep)
+    {
+        swap(x1, y1);
+        swap(x2, y2);
+    }
+    if(x1 > x2)
+    {
+        swap(x1, x2);
+        swap(y1, y2);
+    }
+
+    dx = x2 - x1;
+    dy = y2 - y1;
+
+    ssize_t error = dx / 2;
+
+    size_t y = y1;
+
+    for(size_t x = x1; x < x2; x++)
+    {
+        if(bSteep)
+            setPixel(y, x, colour, format);
+        else
+            setPixel(x, y, colour, format);
+
+        error -= dy;
+        if(error < 0)
+        {
+            y++;
+            error += dx;
+        }
+    }
+}
+
+void Framebuffer::setPixel(size_t x, size_t y, uint32_t colour, PixelFormat format)
+{
+    if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
+        return;
+    
+    Display::ScreenMode currMode;
+    if(UNLIKELY(!m_pDisplay->getCurrentScreenMode(currMode)))
+        return;
+
+    if(x > currMode.width)
+        x = currMode.width;
+    if(y > currMode.height)
+        y = currMode.height;
+    
+    size_t bytesPerPixel = currMode.pf.nBpp / 8;
+    size_t bytesPerLine = bytesPerPixel * currMode.width; /// \todo Not always the right calculation
+
+    uint32_t transformColour = 0;
+    convertPixel(colour, format, transformColour, Bits32_Argb);
+
+    size_t frameBufferOffset = (y * bytesPerLine) + (x * bytesPerPixel);
+
+    uint32_t *dest = reinterpret_cast<uint32_t*>(m_FramebufferBase + frameBufferOffset);
+    *dest = transformColour;
+}
