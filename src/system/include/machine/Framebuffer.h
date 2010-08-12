@@ -134,15 +134,15 @@ class Framebuffer
          *  buffer.
          *  The buffer should be padded to finish on a DWORD boundary. This is
          *  not padding per scanline but rather padding per buffer. */
-        Graphics::Buffer *createBuffer(const void *srcData, Graphics::PixelFormat srcFormat,
-                                       size_t width, size_t height)
+        virtual Graphics::Buffer *createBuffer(const void *srcData, Graphics::PixelFormat srcFormat,
+                                               size_t width, size_t height)
         {
             return swCreateBuffer(srcData,srcFormat, width, height);
         }
         
         /** Destroys a created buffer. Frees its memory in both the system RAM
          *  and any references still in VRAM. */
-        void destroyBuffer(Graphics::Buffer *pBuffer)
+        virtual void destroyBuffer(Graphics::Buffer *pBuffer)
         {
             swDestroyBuffer(pBuffer);
         }
