@@ -91,9 +91,11 @@ class VmwareGraphics : public Display
             
             size_t fbOffset = readRegister(SVGA_REG_FB_OFFSET);
             size_t bytesPerLine = readRegister(SVGA_REG_BYTES_PER_LINE);
+            size_t width = readRegister(SVGA_REG_WIDTH);
+            size_t height = readRegister(SVGA_REG_HEIGHT);
             size_t depth = readRegister(SVGA_REG_DEPTH);
             
-            NOTICE("vmware-gfx entered mode 1024x768x16, mode framebuffer is " << (fbBase + fbOffset));
+            NOTICE("vmware-gfx entered mode " << Dec << width << "x" << height << "x" << depth << Hex << ", mode framebuffer is " << (fbBase + fbOffset));
             
             // Disable the command FIFO in case it was already enabled
             writeRegister(SVGA_REG_CONFIG_DONE, 0);
@@ -167,6 +169,10 @@ class VmwareGraphics : public Display
             sm.width = readRegister(SVGA_REG_WIDTH);
             sm.height = readRegister(SVGA_REG_HEIGHT);
             sm.pf.nBpp = readRegister(SVGA_REG_BITS_PER_PIXEL);
+            
+            sm.pf2 = Graphics::Bits24_Rgb;
+            sm.bytesPerPixel = sm.pf.nBpp / 8;
+            sm.bytesPerLine = readRegister(SVGA_REG_BYTES_PER_LINE);
             
             return true;
         }
@@ -297,6 +303,8 @@ class VmwareFramebuffer : public Framebuffer
         }
 };
 
+#include "abc.c"
+
 void callback(Device *pDevice)
 {
     VmwareGraphics *pGraphics = new VmwareGraphics(pDevice);
@@ -304,31 +312,26 @@ void callback(Device *pDevice)
     VmwareFramebuffer *pFramebuffer = new VmwareFramebuffer(reinterpret_cast<uintptr_t>(pGraphics->getFramebuffer()), pGraphics);
     
     // Pixel conversion test - RGB565 to 32-bit ARGB, should be green
-    pFramebuffer->rect(64, 64, 256, 256, 0x7E0, Framebuffer::Bits16_Rgb565);
+    pFramebuffer->rect(64, 64, 256, 256, 0x7E0, Graphics::Bits16_Rgb565);
     pFramebuffer->redraw(64, 64, 256, 256);
-    
-    // 32x32 blit of a variety of colours
-    uint32_t blitbuffer[1024];
-    uint32_t n = 0;
-    for(size_t i = 0; i < 1024; i++)
-    {
-        n = (n + 0x1337) % 0xFFFFFF;
-        n |= 0xFF000000;
-        blitbuffer[i] = n;
-    }
-    pFramebuffer->blit(blitbuffer, 0, 0, 384, 384, 32, 32);
-    
-    pFramebuffer->redraw(384, 384, 32, 32);
-    
-    // Hardware-accelerated copy test, with a redraw afterwards
-    pGraphics->copy(64, 64, 512, 512, 64, 64);
-    pFramebuffer->redraw(512, 512, 64, 64);
     
     // Software copy test
     pFramebuffer->copy(64, 64, 512, 256, 64, 64);
     pFramebuffer->redraw(512, 256, 64, 64);
+    
+    // Big 24-bit to 32-bit blit test
+    Graphics::Buffer *pBuffer = pFramebuffer->createBuffer(gimp_image.pixel_data, Graphics::Bits24_Bgr, gimp_image.width, gimp_image.height);
+    pFramebuffer->blit(pBuffer, 0, 0, 128, 128, gimp_image.width, gimp_image.height);
+    
+    pFramebuffer->redraw(128, 128, gimp_image.width, gimp_image.height);
+    
+    pFramebuffer->destroyBuffer(pBuffer);
+    
+    // Hardware-accelerated copy test, with a redraw afterwards
+    pGraphics->copy(64, 64, 512, 512, 64, 64);
+    pFramebuffer->redraw(512, 512, 64, 64);
 
-    pFramebuffer->line(64, 512, 128, 512, 0xff0000, Framebuffer::Bits24_Rgb);
+    pFramebuffer->line(64, 512, 128, 512, 0xff0000, Graphics::Bits24_Rgb);
     pFramebuffer->redraw(63, 511, 66, 3);
 }
 

@@ -18,7 +18,78 @@
 
 #include <processor/types.h>
 #include <utilities/utility.h>
-#include <machine/Display.h>
+
+class Display;
+
+namespace Graphics
+{
+    
+        enum PixelFormat
+        {
+            Bits32_Argb,        // Alpha + RGB, with alpha in the highest byte
+            Bits32_Rgba,        // RGB + alpha, with alpha in the lowest byte
+            Bits32_Rgb,         // RGB, no alpha, essentially the same as above
+            
+            Bits24_Rgb,         // RGB in a 24-bit pack
+            Bits24_Bgr,         // R and B bytes swapped
+            
+            Bits16_Argb,        // 4:4:4:4 ARGB, alpha most significant nibble
+            Bits16_Rgb565,      // 5:6:5 RGB
+            Bits16_Rgb555,      // 5:5:5 RGB
+            
+            Bits8_Idx           // Index into a palette
+        };
+        
+        inline size_t bitsPerPixel(PixelFormat format)
+        {
+            switch(format)
+            {
+                case Bits32_Argb:
+                case Bits32_Rgba:
+                case Bits32_Rgb:
+                    return 32;
+                case Bits24_Rgb:
+                case Bits24_Bgr:
+                    return 24;
+                case Bits16_Argb:
+                case Bits16_Rgb565:
+                case Bits16_Rgb555:
+                    return 16;
+                case Bits8_Idx:
+                    return 8;
+                default:
+                    return 4;
+            }
+        }
+        
+        inline size_t bytesPerPixel(PixelFormat format)
+        {
+            return bitsPerPixel(format) / 8;
+        }
+        
+        struct Buffer
+        {
+            /// Base of this buffer in memory. For internal use only.
+            uintptr_t base;
+            
+            /// Width of the buffer in pixels
+            size_t width;
+            
+            /// Height of the buffer in pixels
+            size_t height;
+            
+            /// Output format of the buffer. NOT the input format. Used for
+            /// byte-per-pixel calculations.
+            PixelFormat format;
+            
+            /// Buffer ID, for easy identification within drivers
+            size_t bufferId;
+            
+            /// Backing pointer, for drivers. Typically holds a MemoryRegion
+            /// for software-only framebuffers to identify the memory's location.
+            void *pBacking;
+        };
+};
 
 /** This class provides a generic interface for interfacing with a framebuffer.
  *  Each display driver specialises this class to define the "base address" of
@@ -28,30 +99,6 @@
 class Framebuffer
 {
     public:
-    
-        enum PixelFormat
-        {
-            Bits32_Argb,        // Alpha + RGB, with alpha in the highest byte
-            Bits32_Rgb,         // RGB, no alpha, essentially the same as above
-            
-            Bits24_Rgb,         // RGB in a 24-bit pack
-            
-            Bits16_Argb,        // 4:4:4:4 ARGB, alpha most significant nibble
-            Bits16_Rgb565,      // 5:6:5 RGB
-            Bits16_Rgb555,      // 5:5:5 RGB
-            
-            Bits8_Idx           // Index into a palette
-        };
-        
-        struct Buffer
-        {
-            uintptr_t base;
-            size_t width;
-            size_t height;
-            size_t bpp;
-            
-            PixelFormat format;
-        };
     
         Framebuffer() : m_pDisplay(0), m_FramebufferBase(0)
         {
@@ -70,8 +117,35 @@ class Framebuffer
         }
         
         /** Converts a given pixel from one pixel format to another. */
-        virtual bool convertPixel(uint32_t source, PixelFormat srcFormat,
-                                         uint32_t &dest, PixelFormat destFormat);
+        virtual bool convertPixel(uint32_t source, Graphics::PixelFormat srcFormat,
+                                         uint32_t &dest, Graphics::PixelFormat destFormat);
+         
+        /** Creates a new buffer to be used for blits from the given raw pixel
+         *  data. Performs automatic conversion of the pixel format to the
+         *  pixel format of the current display mode.
+         *  Do not modify any of the members of the buffer structure, or attempt
+         *  to inject your own pixels into the buffer.
+         *  Once a buffer is created, it is only used for blitting to the screen
+         *  and cannot be modified.
+         *  It is expected that the buffer has been packed to its bit depth, and
+         *  does not have any padding on each scanline at all.
+         *  Do not delete the returned buffer yourself, pass it to destroyBuffer
+         *  which performs a proper cleanup of all resources related to the
+         *  buffer.
+         *  The buffer should be padded to finish on a DWORD boundary. This is
+         *  not padding per scanline but rather padding per buffer. */
+        Graphics::Buffer *createBuffer(const void *srcData, Graphics::PixelFormat srcFormat,
+                                       size_t width, size_t height)
+        {
+            return swCreateBuffer(srcData,srcFormat, width, height);
+        }
+        
+        /** Destroys a created buffer. Frees its memory in both the system RAM
+         *  and any references still in VRAM. */
+        void destroyBuffer(Graphics::Buffer *pBuffer)
+        {
+            swDestroyBuffer(pBuffer);
+        }
         
         /** Performs an update of a region of this framebuffer. This function
          *  can be used by drivers to request an area of the framebuffer be
@@ -83,22 +157,16 @@ class Framebuffer
         virtual void redraw(size_t x = ~0UL, size_t y = ~0UL,
                             size_t w = ~0UL, size_t h = ~0UL) {}
         
-        /** Blits a given buffer to the screen. Assumes the buffer is in the
-         *  same format as the screen.
-         *  \todo The buffer should be "created" somehow, external to this blit.
-         *        This works better for hardware accelerated devices which need
-         *        to have pixmaps constructed in video memory for accelerated
-         *        blits.
-         */
-        virtual inline void blit(void *pBuffer, size_t srcx, size_t srcy, size_t destx,
-                                 size_t desty, size_t width, size_t height)
+        /** Blits a given buffer to the screen. See createBuffer. */
+        virtual inline void blit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
+                                 size_t destx, size_t desty, size_t width, size_t height)
         {
             swBlit(pBuffer, srcx, srcy, destx, desty, width, height);
         }
         
         /** Draws a single rectangle to the screen with the given colour. */
         virtual inline void rect(size_t x, size_t y, size_t width, size_t height,
-                                 uint32_t colour, PixelFormat format = Bits32_Argb)
+                                 uint32_t colour, Graphics::PixelFormat format = Graphics::Bits32_Argb)
         {
             swRect(x, y, width, height, colour, format);
         }
@@ -113,13 +181,14 @@ class Framebuffer
 
         /** Draws a line one pixel wide between two points on the screen */
         virtual inline void line(size_t x1, size_t y1, size_t x2, size_t y2,
-                                 uint32_t colour, PixelFormat format = Bits32_Argb)
+                                 uint32_t colour, Graphics::PixelFormat format = Graphics::Bits32_Argb)
         {
             swLine(x1, y1, x2, y2, colour, format);
         }
 
         /** Sets an individual pixel on the framebuffer. Not inheritable. */
-        void setPixel(size_t x, size_t y, uint32_t colour, PixelFormat format = Bits32_Argb);
+        void setPixel(size_t x, size_t y, uint32_t colour,
+                      Graphics::PixelFormat format = Graphics::Bits32_Argb);
         
     private:
     
@@ -141,14 +210,22 @@ class Framebuffer
             m_pDisplay = p;
         }
         
-        void swBlit(void *pBuffer, size_t srcx, size_t srcy, size_t destx,
-                    size_t desty, size_t width, size_t height);
+        void swBlit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
+                    size_t destx, size_t desty, size_t width, size_t height);
         
-        void swRect(size_t x, size_t y, size_t width, size_t height, uint32_t colour, PixelFormat format);
+        void swRect(size_t x, size_t y, size_t width, size_t height,
+                    uint32_t colour, Graphics::PixelFormat format);
         
-        void swCopy(size_t srcx, size_t srcy, size_t destx, size_t desty, size_t w, size_t h);
+        void swCopy(size_t srcx, size_t srcy, size_t destx, size_t desty,
+                    size_t w, size_t h);
 
-        void swLine(size_t x1, size_t y1, size_t x2, size_t y2, uint32_t colour, PixelFormat format);
+        void swLine(size_t x1, size_t y1, size_t x2, size_t y2,
+                    uint32_t colour, Graphics::PixelFormat format);
+                    
+        Graphics::Buffer *swCreateBuffer(const void *srcData, Graphics::PixelFormat srcFormat,
+                                         size_t width, size_t height);
+        
+        void swDestroyBuffer(Graphics::Buffer *pBuffer);
 };
 
 #endif

@@ -14,9 +14,13 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <machine/Framebuffer.h>
+#include <processor/MemoryRegion.h>
+#include <processor/PhysicalMemoryManager.h>
+#include <processor/VirtualAddressSpace.h>
+#include <machine/Display.h>
 
-bool Framebuffer::convertPixel(uint32_t source, PixelFormat srcFormat,
-                               uint32_t &dest, PixelFormat destFormat)
+bool Framebuffer::convertPixel(uint32_t source, Graphics::PixelFormat srcFormat,
+                               uint32_t &dest, Graphics::PixelFormat destFormat)
 {
     if((srcFormat == destFormat) || (!source))
     {
@@ -24,203 +28,108 @@ bool Framebuffer::convertPixel(uint32_t source, PixelFormat srcFormat,
         return true;
     }
     
-    // Amount of red/green/blue
-    size_t amtRed = 0, amtGreen = 0, amtBlue = 0, amtAlpha = 0;
-    if((srcFormat == Bits32_Argb) ||
-       (srcFormat == Bits32_Rgb) ||
-       (srcFormat == Bits24_Rgb))
+    // Amount of red/green/blue, in 8-bit intensity values
+    uint8_t amtRed = 0, amtGreen = 0, amtBlue = 0, amtAlpha = 0;
+    
+    // Unpack the pixel as necessary
+    if((srcFormat == Graphics::Bits32_Argb) ||
+       (srcFormat == Graphics::Bits32_Rgb) ||
+       (srcFormat == Graphics::Bits24_Rgb))
     {
-        amtAlpha = (source & 0xff000000) >> 24;
+        if(srcFormat != Graphics::Bits24_Rgb)
+            amtAlpha = (source & 0xff000000) >> 24;
         amtRed = (source & 0xff0000) >> 16;
         amtGreen = (source & 0xff00) >> 8;
         amtBlue = (source & 0xff);
     }
-    else if(srcFormat == Bits16_Argb)
+    else if(srcFormat == Graphics::Bits32_Rgba)
     {
-        amtAlpha = (source & 0xF000) >> 12;
-        amtRed = (source & 0xF00) >> 8;
-        amtGreen = (source & 0xF0) >> 4;
-        amtBlue = (source & 0xF);
+        amtRed = (source & 0xff000000) >> 24;
+        amtGreen = (source & 0xff0000) >> 16;
+        amtBlue = (source & 0xff00) >> 8;
+        amtAlpha = (source & 0xff);
     }
-    else if(srcFormat == Bits16_Rgb565)
+    else if(srcFormat == Graphics::Bits24_Bgr)
     {
-        amtRed = (source & 0xF800) >> 11;
-        amtGreen = (source & 0x7E0) >> 5;
-        amtBlue = (source & 0x1F);
+        amtBlue = (source & 0xff0000) >> 16;
+        amtGreen = (source & 0xff00) >> 8;
+        amtRed = (source & 0xff);
     }
-    else if(srcFormat == Bits16_Rgb555)
+    else if(srcFormat == Graphics::Bits16_Argb)
     {
-        amtRed = (source & 0xF800) >> 10;
-        amtGreen = (source & 0x3E0) >> 5;
-        amtBlue = (source & 0x1F);
+        amtAlpha = (((source & 0xF000) >> 12) / 0xF) * 0xFF;
+        amtRed = (((source & 0xF00) >> 8) / 0xF) * 0xFF;
+        amtGreen = (((source & 0xF0) >> 4) / 0xF) * 0xFF;
+        amtBlue = ((source & 0xF) / 0xF) * 0xFF;
+    }
+    else if(srcFormat == Graphics::Bits16_Rgb565)
+    {
+        amtRed = (((source & 0xF800) >> 11) / 0x1F) * 0xFF;
+        amtGreen = (((source & 0x7E0) >> 5) / 0x3F) * 0xFF;
+        amtBlue = ((source & 0x1F) / 0x1F) * 0xFF;
+    }
+    else if(srcFormat == Graphics::Bits16_Rgb555)
+    {
+        amtRed = (((source & 0xF800) >> 10) / 0x1F) * 0xFF;
+        amtGreen = (((source & 0x3E0) >> 5) / 0x1F) * 0xFF;
+        amtBlue = ((source & 0x1F) / 0x1F) * 0xFF;
     }
     
     // Conversion code. Complicated and ugly. :(
-    switch(srcFormat)
+    switch(destFormat)
     {
-        case Bits32_Argb:
-        case Bits32_Rgb:
-        case Bits24_Rgb:
-            // Dead simple conversion from ARGB -> RGB, just lose alpha
-            if(destFormat == Bits32_Rgb)
-            {
-                dest = HOST_TO_LITTLE32(source) & 0xFFFFFF;
-                return true;
-            }
-            // Dead simple conversion from RGB -> ARGB, add 100% alpha
-            else if(destFormat == Bits32_Argb)
-            {
-                dest = HOST_TO_LITTLE32(source) | 0xFF000000;
-                return true;
-            }
-            // Only able to hit this on 24-bit due to initial checks
-            else if(destFormat == Bits32_Rgb)
-            {
-                // Keep alpha out in case dest already has it
-                dest = source & 0xFFFFFF;
-                return true;
-            }
-            // More involved conversion to 16-bit 555
-            else if(destFormat == Bits16_Rgb555)
-            {
-                size_t amtRed = (source & 0xff0000) >> 16;
-                size_t amtGreen = (source & 0xff00) >> 8;
-                size_t amtBlue = (source & 0xff);
-                if(amtRed)
-                    amtRed = ((amtRed / 255) * 0x1F) & 0x1F;
-                if(amtGreen)
-                    amtGreen = ((amtGreen / 255) * 0x1F) & 0x1F;
-                if(amtBlue)
-                    amtBlue = ((amtBlue / 255) * 0x1F) & 0x1F;
+        case Graphics::Bits32_Argb:
+            dest = (amtAlpha << 24) | (amtRed << 16) | (amtGreen << 8) | amtBlue;
+            return true;
+        case Graphics::Bits32_Rgba:
+            dest = (amtRed << 24) | (amtGreen << 16) | (amtBlue << 8) | amtAlpha;
+            return true;
+        case Graphics::Bits32_Rgb:
+            dest = (amtRed << 16) | (amtGreen << 8) | amtBlue;
+            return true;
+        case Graphics::Bits24_Rgb:
+            dest = (amtRed << 16) | (amtGreen << 8) | amtBlue;
+            return true;
+        case Graphics::Bits24_Bgr:
+            dest = (amtBlue << 16) | (amtGreen << 8) | amtRed;
+            return true;
+        case Graphics::Bits16_Rgb555:
+            // 8-bit to 5-bit scaling. Lossy.
+            if(amtRed)
+                amtRed = ((amtRed / 255) * 0x1F) & 0x1F;
+            if(amtGreen)
+                amtGreen = ((amtGreen / 255) * 0x1F) & 0x1F;
+            if(amtBlue)
+                amtBlue = ((amtBlue / 255) * 0x1F) & 0x1F;
                 
-                dest = (amtRed << 10) | (amtGreen << 5) | (amtBlue);
-                return true;
-            }
-            // About the same for 16-bit 565
-            else if(destFormat == Bits16_Rgb565)
-            {
-                size_t amtRed = (source & 0xff0000) >> 16;
-                size_t amtGreen = (source & 0xff00) >> 8;
-                size_t amtBlue = (source & 0xff);
-                if(amtRed)
-                    amtRed = ((amtRed / 255) * 0x1F) & 0x1F;
-                if(amtGreen)
-                    amtGreen = ((amtGreen / 255) * 0x3F) & 0x3F;
-                if(amtBlue)
-                    amtBlue = ((amtBlue / 255) * 0x1F) & 0x1F;
+            dest = (amtRed << 10) | (amtGreen << 5) | (amtBlue);
+            return true;
+        case Graphics::Bits16_Rgb565:
+            // 8-bit to 5 and 6 -bit scaling. Lossy.
+            if(amtRed)
+                amtRed = ((amtRed / 255) * 0x1F) & 0x1F;
+            if(amtGreen)
+                amtGreen = ((amtGreen / 255) * 0x3F) & 0x3F;
+            if(amtBlue)
+                amtBlue = ((amtBlue / 255) * 0x1F) & 0x1F;
                 
-                dest = (amtRed << 11) | (amtGreen << 5) | (amtBlue);
-                return true;
-            }
-            // About the same for 16-bit ARGB
-            else if(destFormat == Bits16_Argb)
-            {
-                if(amtRed)
-                    amtRed = ((amtRed / 255) * 0xF) & 0xF;
-                if(amtGreen)
-                    amtGreen = ((amtGreen / 255) * 0xF) & 0xF;
-                if(amtBlue)
-                    amtBlue = ((amtBlue / 255) * 0xF) & 0xF;
-                if(amtAlpha)
-                    amtAlpha = ((amtAlpha / 255) * 0xF) & 0xF;
-                
-                dest = (amtAlpha << 12) | (amtRed << 8) | (amtGreen << 4) | (amtBlue);
-                return true;
-            }
-            break;
-        case Bits16_Argb:
-            // 555 -> 32/24 bit RGB
-            if((destFormat == Bits32_Rgb) ||
-               (destFormat == Bits32_Argb) ||
-               (destFormat == Bits32_Rgb) ||
-               (destFormat == Bits24_Rgb))
-            {
-                if(amtRed)
-                    amtRed = ((amtRed / 0x1F) * 0xF) & 0xFF;
-                if(amtGreen)
-                    amtGreen = ((amtGreen / 0x1F) * 0xF) & 0xFF;
-                if(amtBlue)
-                    amtBlue = ((amtBlue / 0x1F) * 0xF) & 0xFF;
-                
-                dest = (amtRed << 16) | (amtGreen << 8) | (amtBlue);
-                
-                if(destFormat == Bits32_Argb)
-                    dest |= 0xFF000000;
-                
-                return true;
-            }
-            break;
-        case Bits16_Rgb565:
-            // 555 -> 32/24 bit RGB
-            if((destFormat == Bits32_Rgb) ||
-               (destFormat == Bits32_Argb) ||
-               (destFormat == Bits32_Rgb) ||
-               (destFormat == Bits24_Rgb))
-            {
-                if(amtRed)
-                    amtRed = ((amtRed / 0x1F) * 0xFF) & 0xFF;
-                if(amtGreen)
-                    amtGreen = ((amtGreen / 0x3F) * 0xFF) & 0xFF;
-                if(amtBlue)
-                    amtBlue = ((amtBlue / 0x1F) * 0xFF) & 0xFF;
-                
-                dest = (amtRed << 16) | (amtGreen << 8) | (amtBlue);
-                
-                if(destFormat == Bits32_Argb)
-                    dest |= 0xFF000000;
-                
-                return true;
-            }
-            break;
-        case Bits16_Rgb555:
-            // 555 -> 32/24 bit RGB
-            if((destFormat == Bits32_Rgb) ||
-               (destFormat == Bits32_Argb) ||
-               (destFormat == Bits32_Rgb) ||
-               (destFormat == Bits24_Rgb))
-            {
-                if(amtRed)
-                    amtRed = ((amtRed / 0x1F) * 0xFF) & 0xFF;
-                if(amtGreen)
-                    amtGreen = ((amtGreen / 0x1F) * 0xFF) & 0xFF;
-                if(amtBlue)
-                    amtBlue = ((amtBlue / 0x1F) * 0xFF) & 0xFF;
-                
-                dest = (amtRed << 16) | (amtGreen << 8) | (amtBlue);
-                
-                if(destFormat == Bits32_Argb)
-                    dest |= 0xFF000000;
-                
-                return true;
-            }
-            else if(destFormat == Bits16_Rgb565)
-            {
-                if(amtRed)
-                    amtRed = ((amtRed / 0x1F) * 0x1F) & 0x1F;
-                if(amtGreen)
-                    amtGreen = ((amtGreen / 0x3F) * 0x3F) & 0x3F;
-                if(amtBlue)
-                    amtBlue = ((amtBlue / 0x1F) * 0x1F) & 0x1F;
-                
-                dest = (amtRed << 11) | (amtGreen << 5) | (amtBlue);
-                
-                return true;
-            }
-            else if(destFormat == Bits16_Argb)
-            {
-                if(amtRed)
-                    amtRed = ((amtRed / 0xF) * 0xF) & 0xF;
-                if(amtGreen)
-                    amtGreen = ((amtGreen / 0xF) * 0xF) & 0xF;
-                if(amtBlue)
-                    amtBlue = ((amtBlue / 0xF) * 0xF) & 0xF;
-                
-                dest = (0xF << 12) | (amtRed << 8) | (amtGreen << 4) | (amtBlue);
-                
-                return true;
-            }
-            break;
-        case Bits8_Idx:
+            dest = (amtRed << 11) | (amtGreen << 5) | (amtBlue);
+            return true;
+        case Graphics::Bits16_Argb:
+            // 8-bit to 4-bit scaling. Lossy.
+            if(amtRed)
+                amtRed = ((amtRed / 255) * 0xF) & 0xF;
+            if(amtGreen)
+                amtGreen = ((amtGreen / 255) * 0xF) & 0xF;
+            if(amtBlue)
+                amtBlue = ((amtBlue / 255) * 0xF) & 0xF;
+            if(amtAlpha)
+                amtAlpha = ((amtAlpha / 255) * 0xF) & 0xF;
+            
+            dest = (amtAlpha << 12) | (amtRed << 8) | (amtGreen << 4) | (amtBlue);
+            return true;
+        case Graphics::Bits8_Idx:
+            /// \todo Palette conversion
             break;
         default:
             break;
@@ -229,8 +138,117 @@ bool Framebuffer::convertPixel(uint32_t source, PixelFormat srcFormat,
     return false;
 }
 
-void Framebuffer::swBlit(void *pBuffer, size_t srcx, size_t srcy, size_t destx,
-                         size_t desty, size_t width, size_t height)
+Graphics::Buffer *Framebuffer::swCreateBuffer(const void *srcData, Graphics::PixelFormat srcFormat, size_t width, size_t height)
+{
+    if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
+        return 0;
+    if(UNLIKELY(!(width && height)))
+        return 0;
+    
+    Display::ScreenMode currMode;
+    if(UNLIKELY(!m_pDisplay->getCurrentScreenMode(currMode)))
+        return 0;
+    
+    Graphics::PixelFormat destFormat = currMode.pf2;
+    
+    size_t sourceBytesPerPixel = bytesPerPixel(srcFormat);
+    size_t sourceBytesPerLine = width * sourceBytesPerPixel;
+    
+    size_t destBytesPerPixel = currMode.bytesPerPixel;
+    size_t destBytesPerLine = width * destBytesPerPixel;
+    
+    size_t fullBufferSize = width * height * destBytesPerPixel;
+    
+    MemoryRegion *pRegion = new MemoryRegion("sw-framebuffer-buffer");
+    bool bSuccess = PhysicalMemoryManager::instance().allocateRegion(
+                     *pRegion,
+                     (fullBufferSize / 0x1000) + 1,
+                     0,
+                     VirtualAddressSpace::Write);
+
+    if(!bSuccess)
+    {
+        delete pRegion;
+        return false;
+    }
+    
+    // Copy the buffer in full
+    void *pAddress = pRegion->virtualAddress();
+    if((sourceBytesPerPixel == destBytesPerPixel) && (srcFormat == destFormat))
+    {
+        // Same pixel format and same pixel size. Safe to do a conventional
+        // memcpy. The pixel size check is to handle cases where a buffer may
+        // be, say, 24-bit RGB, and the display driver also 24-bit RGB, but
+        // the display's framebuffer reserves 32 bits for pixels (even though
+        // the actual depth is 24 bits).
+        memcpy(pAddress, srcData, fullBufferSize);
+    }
+    else
+    {
+        // Have to convert and pack each pixel, much slower than memcpy.
+        size_t x, y;
+        for(y = 0; y < height; y++)
+        {
+            for(x = 0; x < width; x++)
+            {
+                size_t sourceOffset = (y * sourceBytesPerLine) + (x * sourceBytesPerPixel);
+                size_t destOffset = (y * destBytesPerLine) + (x * destBytesPerPixel);
+                
+                // We'll always access the beginning of a pixel, which makes
+                // things here much simpler.
+                const uint32_t *pSource = reinterpret_cast<const uint32_t*>(adjust_pointer(srcData, sourceOffset));
+                
+                uint32_t transform = 0;
+                convertPixel(*pSource, srcFormat, transform, destFormat);
+                
+                if(destBytesPerPixel == 4)
+                {
+                    uint32_t *pDest = reinterpret_cast<uint32_t*>(adjust_pointer(pAddress, destOffset));
+                    *pDest = transform;
+                }
+                else if(destBytesPerPixel == 3)
+                {
+                    // Handle existing data after this byte if it exists
+                    uint32_t *pDest = reinterpret_cast<uint32_t*>(adjust_pointer(pAddress, destOffset));
+                    *pDest = (*pDest & 0xFF000000) | (transform & 0xFFFFFF);
+                }
+                else if(destBytesPerPixel == 2)
+                {
+                    uint16_t *pDest = reinterpret_cast<uint16_t*>(adjust_pointer(pAddress, destOffset));
+                    *pDest = transform & 0xFFFF;
+                }
+                else if(destBytesPerPixel == 1)
+                {
+                    /// \todo 8-bit
+                }
+            }
+        }
+    }
+    
+    Graphics::Buffer *pBuffer = new Graphics::Buffer;
+    pBuffer->base = reinterpret_cast<uintptr_t>(pRegion->virtualAddress());
+    pBuffer->width = width;
+    pBuffer->height = height;
+    pBuffer->format = currMode.pf2;
+    pBuffer->bufferId = 0;
+    pBuffer->pBacking = reinterpret_cast<void*>(pRegion);
+    
+    return pBuffer;
+}
+
+void Framebuffer::swDestroyBuffer(Graphics::Buffer *pBuffer)
+{
+    if(pBuffer && pBuffer->base)
+    {
+        MemoryRegion *pRegion = reinterpret_cast<MemoryRegion*>(pBuffer->pBacking);
+        delete pRegion; // Unmaps the memory as well
+        
+        delete pBuffer;
+    }
+}
+
+void Framebuffer::swBlit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
+                         size_t destx, size_t desty, size_t width, size_t height)
 {
     if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
         return;
@@ -241,47 +259,54 @@ void Framebuffer::swBlit(void *pBuffer, size_t srcx, size_t srcy, size_t destx,
     if(UNLIKELY(!m_pDisplay->getCurrentScreenMode(currMode)))
         return;
     
-    size_t bytesPerPixel = currMode.pf.nBpp / 8;
-    size_t bytesPerLine = bytesPerPixel * currMode.width; /// \todo Not always the right calculation
-    size_t sourceBytesPerLine = width * bytesPerPixel; /// \todo Pass a struct for the buffer with full buffer width
+    size_t bytesPerLine = currMode.bytesPerLine;
+    size_t destBytesPerPixel = currMode.bytesPerPixel;
+    size_t sourceBytesPerLine = pBuffer->width * destBytesPerPixel;
     
     // Sanity check and clip
-    /// \todo Buffer dimension check
+    if((srcx > pBuffer->width) || (srcy > pBuffer->height))
+        return;
     if((destx > currMode.width) || (desty > currMode.height))
         return;
+    if((srcx + width) > pBuffer->width)
+        width = (srcx + width) - pBuffer->width;
+    if((srcy + height) > pBuffer->height)
+        height = (srcy + height) - pBuffer->height;
     if((destx + width) > currMode.width)
         width = (destx + width) - currMode.width;
     if((desty + height) > currMode.height)
         height = (desty + height) - currMode.height;
     
+    void *pSrc = reinterpret_cast<void*>(pBuffer->base);
+    
     // Blit across the width of the screen? How handy!
     if(UNLIKELY((!(srcx && destx)) && (width == currMode.width)))
     {
-        size_t sourceBufferOffset = (srcy * sourceBytesPerLine) + (srcx * bytesPerPixel);
-        size_t frameBufferOffset = (desty * bytesPerLine) + (destx * bytesPerPixel);
+        size_t sourceBufferOffset = (srcy * sourceBytesPerLine) + (srcx * destBytesPerPixel);
+        size_t frameBufferOffset = (desty * bytesPerLine) + (destx * destBytesPerPixel);
         
         void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
-        void *src = adjust_pointer(pBuffer, sourceBufferOffset);
+        void *src = adjust_pointer(pSrc, sourceBufferOffset);
         
-        memmove(dest, src, width * bytesPerPixel);
+        memmove(dest, src, bytesPerLine * height);
     }
     else
     {
         // Line-by-line copy
         for(size_t y1 = desty, y2 = srcy; y1 < (desty + height); y1++, y2++)
         {
-            size_t sourceBufferOffset = (y2 * sourceBytesPerLine) + (srcx * bytesPerPixel);
-            size_t frameBufferOffset = (y1 * bytesPerLine) + (destx * bytesPerPixel);
+            size_t sourceBufferOffset = (y2 * sourceBytesPerLine) + (srcx * destBytesPerPixel);
+            size_t frameBufferOffset = (y1 * bytesPerLine) + (destx * destBytesPerPixel);
         
             void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
-            void *src = adjust_pointer(pBuffer, sourceBufferOffset);
+            void *src = adjust_pointer(pSrc, sourceBufferOffset);
             
-            memmove(dest, src, width * bytesPerPixel);
+            memmove(dest, src, width * destBytesPerPixel);
         }
     }
 }
 
-void Framebuffer::swRect(size_t x, size_t y, size_t width, size_t height, uint32_t colour, PixelFormat format)
+void Framebuffer::swRect(size_t x, size_t y, size_t width, size_t height, uint32_t colour, Graphics::PixelFormat format)
 {
     if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
         return;
@@ -301,10 +326,10 @@ void Framebuffer::swRect(size_t x, size_t y, size_t width, size_t height, uint32
         height = (y + height) - currMode.height;
     
     uint32_t transformColour = 0;
-    convertPixel(colour, format, transformColour, Bits32_Argb);
+    convertPixel(colour, format, transformColour, currMode.pf2);
     
-    size_t bytesPerPixel = currMode.pf.nBpp / 8;
-    size_t bytesPerLine = bytesPerPixel * currMode.width; /// \todo Not always the right calculation
+    size_t bytesPerPixel = currMode.bytesPerPixel;
+    size_t bytesPerLine = currMode.bytesPerLine;
     
     // Can we just do an easy memset?
     if(UNLIKELY((!x) && (width == currMode.width)))
@@ -341,10 +366,29 @@ void Framebuffer::swCopy(size_t srcx, size_t srcy, size_t destx, size_t desty, s
     Display::ScreenMode currMode;
     if(UNLIKELY(!m_pDisplay->getCurrentScreenMode(currMode)))
         return;
+
+    // Sanity check and clip
+    if((srcx > currMode.width) || (srcy > currMode.height))
+        return;
+    if((destx > currMode.width) || (desty > currMode.height))
+        return;
+    if((srcx + w) > currMode.width)
+        w = (srcx + w) - currMode.width;
+    if((srcy + h) > currMode.height)
+        h = (srcy + h) - currMode.height;
+    if((destx + w) > currMode.width)
+        w = (destx + w) - currMode.width;
+    if((desty + h) > currMode.height)
+        h = (desty + h) - currMode.height;
     
-    size_t bytesPerPixel = currMode.pf.nBpp / 8;
-    size_t bytesPerLine = bytesPerPixel * currMode.width; /// \todo Not always the right calculation
-    size_t sourceBytesPerLine = w * bytesPerPixel; /// \todo Pass a struct for the buffer with full buffer width
+    if((srcx == destx) && (srcy == desty))
+        return;
+    if(!(w && h))
+        return;
+    
+    size_t bytesPerLine = currMode.bytesPerLine;
+    size_t bytesPerPixel = currMode.bytesPerPixel;
+    size_t sourceBytesPerLine = w * bytesPerPixel;
     
     // Easy memcpy?
     if(UNLIKELY(((!srcx) && (!destx)) && (w == currMode.width)))
@@ -373,7 +417,7 @@ void Framebuffer::swCopy(size_t srcx, size_t srcy, size_t destx, size_t desty, s
     }
 }
 
-void Framebuffer::swLine(size_t x1, size_t y1, size_t x2, size_t y2, uint32_t colour, PixelFormat format)
+void Framebuffer::swLine(size_t x1, size_t y1, size_t x2, size_t y2, uint32_t colour, Graphics::PixelFormat format)
 {
     if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
         return;
@@ -395,11 +439,11 @@ void Framebuffer::swLine(size_t x1, size_t y1, size_t x2, size_t y2, uint32_t co
     if(UNLIKELY((x1 == x2) && (y1 == y2)))
         return;
     
-    size_t bytesPerPixel = currMode.pf.nBpp / 8;
-    size_t bytesPerLine = bytesPerPixel * currMode.width; /// \todo Not always the right calculation
+    size_t bytesPerPixel = currMode.bytesPerPixel;
+    size_t bytesPerLine = currMode.bytesPerLine;
     
     uint32_t transformColour = 0;
-    convertPixel(colour, format, transformColour, Bits32_Argb);
+    convertPixel(colour, format, transformColour, currMode.pf2);
 
     // Bresenham's algorithm, referred to Computer Graphics, C Version (2nd Edition)
     // from 1997, by D. Hearn and M. Pauline Baker (page 88)
@@ -442,7 +486,7 @@ void Framebuffer::swLine(size_t x1, size_t y1, size_t x2, size_t y2, uint32_t co
     }
 }
 
-void Framebuffer::setPixel(size_t x, size_t y, uint32_t colour, PixelFormat format)
+void Framebuffer::setPixel(size_t x, size_t y, uint32_t colour, Graphics::PixelFormat format)
 {
     if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
         return;
@@ -456,14 +500,15 @@ void Framebuffer::setPixel(size_t x, size_t y, uint32_t colour, PixelFormat form
     if(y > currMode.height)
         y = currMode.height;
     
-    size_t bytesPerPixel = currMode.pf.nBpp / 8;
-    size_t bytesPerLine = bytesPerPixel * currMode.width; /// \todo Not always the right calculation
+    size_t bytesPerPixel = currMode.bytesPerPixel;
+    size_t bytesPerLine = currMode.bytesPerLine;
 
     uint32_t transformColour = 0;
-    convertPixel(colour, format, transformColour, Bits32_Argb);
+    convertPixel(colour, format, transformColour, currMode.pf2);
 
     size_t frameBufferOffset = (y * bytesPerLine) + (x * bytesPerPixel);
 
     uint32_t *dest = reinterpret_cast<uint32_t*>(m_FramebufferBase + frameBufferOffset);
     *dest = transformColour;
 }
+

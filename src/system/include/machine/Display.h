@@ -20,6 +20,8 @@
 #include <machine/Device.h>
 #include <utilities/List.h>
 
+#include <machine/Framebuffer.h>
+
 /**
  * A display is either a dumb framebuffer or something more accelerated.
  *
@@ -66,6 +68,10 @@ public:
         uint32_t refresh;
         uintptr_t framebuffer;
         PixelFormat pf;
+        
+        Graphics::PixelFormat pf2;
+        uint32_t bytesPerLine;
+        uint32_t bytesPerPixel;
     };
 
     Display()
