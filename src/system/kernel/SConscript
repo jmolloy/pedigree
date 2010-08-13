@@ -40,7 +40,8 @@ files = [
     Glob('core/lib/*.cc'),
     Glob('core/lib/*.c'),
     Glob('config/*.cc'),
-    Glob('network/*.cc')
+    Glob('network/*.cc'),
+    Glob('graphics/*.cc'),
 ]
 
 if 'STATIC_DRIVERS' in env['CPPDEFINES']:

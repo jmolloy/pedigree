@@ -18,78 +18,9 @@
 
 #include <processor/types.h>
 #include <utilities/utility.h>
+#include <graphics/Graphics.h>
 
 class Display;
-
-namespace Graphics
-{
-    
-        enum PixelFormat
-        {
-            Bits32_Argb,        // Alpha + RGB, with alpha in the highest byte
-            Bits32_Rgba,        // RGB + alpha, with alpha in the lowest byte
-            Bits32_Rgb,         // RGB, no alpha, essentially the same as above
-            
-            Bits24_Rgb,         // RGB in a 24-bit pack
-            Bits24_Bgr,         // R and B bytes swapped
-            
-            Bits16_Argb,        // 4:4:4:4 ARGB, alpha most significant nibble
-            Bits16_Rgb565,      // 5:6:5 RGB
-            Bits16_Rgb555,      // 5:5:5 RGB
-            
-            Bits8_Idx           // Index into a palette
-        };
-        
-        inline size_t bitsPerPixel(PixelFormat format)
-        {
-            switch(format)
-            {
-                case Bits32_Argb:
-                case Bits32_Rgba:
-                case Bits32_Rgb:
-                    return 32;
-                case Bits24_Rgb:
-                case Bits24_Bgr:
-                    return 24;
-                case Bits16_Argb:
-                case Bits16_Rgb565:
-                case Bits16_Rgb555:
-                    return 16;
-                case Bits8_Idx:
-                    return 8;
-                default:
-                    return 4;
-            }
-        }
-        
-        inline size_t bytesPerPixel(PixelFormat format)
-        {
-            return bitsPerPixel(format) / 8;
-        }
-        
-        struct Buffer
-        {
-            /// Base of this buffer in memory. For internal use only.
-            uintptr_t base;
-            
-            /// Width of the buffer in pixels
-            size_t width;
-            
-            /// Height of the buffer in pixels
-            size_t height;
-            
-            /// Output format of the buffer. NOT the input format. Used for
-            /// byte-per-pixel calculations.
-            PixelFormat format;
-            
-            /// Buffer ID, for easy identification within drivers
-            size_t bufferId;
-            
-            /// Backing pointer, for drivers. Typically holds a MemoryRegion
-            /// for software-only framebuffers to identify the memory's location.
-            void *pBacking;
-        };
-};
 
 /** This class provides a generic interface for interfacing with a framebuffer.
  *  Each display driver specialises this class to define the "base address" of

@@ -28,6 +28,8 @@
 #include <config/Config.h>
 
 #include <machine/Framebuffer.h>
+#include <graphics/Graphics.h>
+#include <graphics/GraphicsService.h>
 
 #include "vm_device_version.h"
 #include "svga_reg.h"
@@ -156,6 +158,22 @@ class VmwareGraphics : public Display
             
             // Start running the FIFO
             writeRegister(SVGA_REG_CONFIG_DONE, 1);
+            
+            m_pFramebuffer = new VmwareFramebuffer(reinterpret_cast<uintptr_t>(m_Framebuffer.virtualAddress()), this);
+            
+            GraphicsService::GraphicsProvider *pProvider = new GraphicsService::GraphicsProvider;
+            pProvider->pDisplay = this;
+            pProvider->pFramebuffer = m_pFramebuffer;
+            pProvider->maxWidth = maxWidth;
+            pProvider->maxHeight = maxHeight;
+            pProvider->maxDepth = 32;
+            
+            // Register with the graphics service
+            ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
+            Service         *pService  = ServiceManager::instance().getService(String("graphics"));
+            if(pFeatures->provides(ServiceFeatures::touch))
+                if(pService)
+                    pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(pProvider), sizeof(*pProvider));
         }
         
         virtual ~VmwareGraphics()
@@ -208,11 +226,38 @@ class VmwareGraphics : public Display
             // Start running the FIFO
             writeRegister(SVGA_REG_CONFIG_DONE, 1);
         }
-        
-        void *getFramebuffer()
+
+        class VmwareFramebuffer : public Framebuffer
         {
-            return m_Framebuffer.virtualAddress();
-        }
+            public:
+                VmwareFramebuffer() : Framebuffer()
+                {
+                }
+                
+                VmwareFramebuffer(uintptr_t fb, Display *pDisplay) :
+                    Framebuffer()
+                {
+                    setFramebuffer(fb);
+                    setDisplay(pDisplay);
+                }
+                
+                virtual ~VmwareFramebuffer()
+                {
+                }
+                
+                /** Performs an update of a region of this framebuffer. This function
+                 *  can be used by drivers to request an area of the framebuffer be
+                 *  redrawn, but is useless for non-hardware-accelerated devices.
+                 *  \param x leftmost x co-ordinate of the redraw area, ~0 for "invalid"
+                 *  \param y topmost y co-ordinate of the redraw area, ~0 for "invalid"
+                 *  \param w width of the redraw area, ~0 for "invalid"
+                 *  \param h height of the redraw area, ~0 for "invalid" */
+                virtual void redraw(size_t x = ~0UL, size_t y = ~0UL,
+                                    size_t w = ~0UL, size_t h = ~0UL)
+                {
+                    static_cast<VmwareGraphics*>(m_pDisplay)->redraw(x, y, w, h);
+                }
+        };
         
     private:
     
@@ -269,38 +314,8 @@ class VmwareGraphics : public Display
         
         MemoryRegion m_Framebuffer;
         MemoryRegion m_CommandRegion;
-};
-
-class VmwareFramebuffer : public Framebuffer
-{
-    public:
-        VmwareFramebuffer() : Framebuffer()
-        {
-        }
         
-        VmwareFramebuffer(uintptr_t fb, Display *pDisplay) :
-            Framebuffer()
-        {
-            setFramebuffer(fb);
-            setDisplay(pDisplay);
-        }
-        
-        virtual ~VmwareFramebuffer()
-        {
-        }
-        
-        /** Performs an update of a region of this framebuffer. This function
-         *  can be used by drivers to request an area of the framebuffer be
-         *  redrawn, but is useless for non-hardware-accelerated devices.
-         *  \param x leftmost x co-ordinate of the redraw area, ~0 for "invalid"
-         *  \param y topmost y co-ordinate of the redraw area, ~0 for "invalid"
-         *  \param w width of the redraw area, ~0 for "invalid"
-         *  \param h height of the redraw area, ~0 for "invalid" */
-        virtual void redraw(size_t x = ~0UL, size_t y = ~0UL,
-                            size_t w = ~0UL, size_t h = ~0UL)
-        {
-            static_cast<VmwareGraphics*>(m_pDisplay)->redraw(x, y, w, h);
-        }
+        VmwareFramebuffer *m_pFramebuffer;
 };
 
 #include "abc.c"
@@ -309,7 +324,16 @@ void callback(Device *pDevice)
 {
     VmwareGraphics *pGraphics = new VmwareGraphics(pDevice);
     
-    VmwareFramebuffer *pFramebuffer = new VmwareFramebuffer(reinterpret_cast<uintptr_t>(pGraphics->getFramebuffer()), pGraphics);
+    GraphicsService::GraphicsProvider pProvider;
+
+    // Testing...
+    ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
+    Service         *pService  = ServiceManager::instance().getService(String("graphics"));
+    if(pFeatures->provides(ServiceFeatures::probe))
+        if(pService)
+            pService->serve(ServiceFeatures::probe, reinterpret_cast<void*>(&pProvider), sizeof(pProvider));
+
+    Framebuffer *pFramebuffer = pProvider.pFramebuffer;
     
     // Pixel conversion test - RGB565 to 32-bit ARGB, should be green
     pFramebuffer->rect(64, 64, 256, 256, 0x7E0, Graphics::Bits16_Rgb565);

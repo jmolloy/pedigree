@@ -62,6 +62,8 @@
 
 #include <Module.h>
 
+#include <graphics/GraphicsService.h>
+
 void apmm()
 {
 }
@@ -271,6 +273,13 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #ifdef TRACK_LOCKS
   g_LocksCommand.setReady();
 #endif
+
+  // Set up the graphics service for drivers to register with
+  GraphicsService *pService = new GraphicsService;
+  ServiceFeatures *pFeatures = new ServiceFeatures;
+  pFeatures->add(ServiceFeatures::touch);
+  pFeatures->add(ServiceFeatures::probe);
+  ServiceManager::instance().addService(String("graphics"), pService, pFeatures);
 
 #if defined(THREADS)
   new Thread(Processor::information().getCurrentThread()->getParent(), &loadModules, static_cast<void*>(&bsInf), 0);
