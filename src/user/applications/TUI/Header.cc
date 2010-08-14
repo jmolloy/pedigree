@@ -17,6 +17,10 @@
 #include "Header.h"
 #include <pedigree_config.h>
 
+#include <graphics/Graphics.h>
+
+extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
+
 rgb_t g_BorderColour                = {150, 80, 0,0};
 rgb_t g_TabBackgroundColour         = {0, 0, 0,0};
 rgb_t g_TabTextColour               = {150, 100, 0,0};
@@ -96,15 +100,21 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
     // Set up the dirty rectangle to cover the entire header area.
     rect.point(0, 0);
     rect.point(m_nWidth, g_FontSize+5);
+    
+    uint32_t borderColourInt = PedigreeGraphics::createRgb(g_BorderColour.r, g_BorderColour.g, g_BorderColour.b);
 
     // Height = font size + 2 px top and bottom + border 1px =
     // font-size + 5px.
+    /*
     for (size_t i = m_nWidth*(g_FontSize+4); i < m_nWidth*(g_FontSize+5); i++)
     {
         pBuffer[i].r = g_BorderColour.r;
         pBuffer[i].g = g_BorderColour.g;
         pBuffer[i].b = g_BorderColour.b;
     }
+    */
+    
+    g_pFramebuffer->line(0, g_FontSize + 4, m_nWidth, 1, borderColourInt, PedigreeGraphics::Bits24_Rgb);
 
     size_t offset = 0;
     if (m_Page != 0)
@@ -132,20 +142,27 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
                 backColour = g_SelectedTabBackgroundColour;
             else if (pTab->flags & TAB_SELECTABLE)
                 backColour = g_TabBackgroundColour;
+            
+            uint32_t backColourInt = PedigreeGraphics::createRgb(backColour.r, backColour.g, backColour.b);
 
             // Fill to background colour.
-            Syscall::fillRect(pBuffer, offset-4, 0, strlen(pTab->text)*charWidth+10, g_FontSize+4, backColour);
+            g_pFramebuffer->rect(offset - 4, 0, strlen(pTab->text) * charWidth + 10, g_FontSize + 4, backColourInt, PedigreeGraphics::Bits24_Rgb);
+            // Syscall::fillRect(pBuffer, offset-4, 0, strlen(pTab->text)*charWidth+10, g_FontSize+4, backColour);
 
             offset = renderString(pBuffer, pTab->text, offset, 2, foreColour, backColour);
 
             offset += 5;
             // Add a seperator.
+            /*
             for (size_t i = offset; i < m_nWidth*(g_FontSize+4)+offset; i += m_nWidth)
             {
                 pBuffer[i].r = g_BorderColour.r;
                 pBuffer[i].g = g_BorderColour.g;
                 pBuffer[i].b = g_BorderColour.b;
             }
+            */
+            
+            g_pFramebuffer->line(offset, 0, 1, g_FontSize + 4, borderColourInt, PedigreeGraphics::Bits24_Rgb);
         }
         pTab = pTab->next;
     }
@@ -156,6 +173,8 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
         // Render a right-double arrow.
         offset = renderString(pBuffer, ">", offset, 2, g_TextColour, g_MainBackgroundColour);
     }
+    
+    g_pFramebuffer->redraw(0, 0, m_nWidth, g_FontSize + 5);
 }
 
 size_t Header::renderString(rgb_t *pBuffer, const char *str, size_t x, size_t y, rgb_t f, rgb_t b)

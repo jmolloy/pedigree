@@ -16,6 +16,10 @@
 
 #include "Font.h"
 
+#include <graphics/Graphics.h>
+
+extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
+
 FT_Library Font::m_Library;
 bool Font::m_bLibraryInitialised = false;
 
@@ -113,6 +117,13 @@ size_t Font::render(rgb_t *pFb, uint32_t c, size_t x, size_t y, rgb_t f, rgb_t b
 
 void Font::drawGlyph(rgb_t *pFb, Glyph *pBitmap, int left, int top)
 {
+    if(!g_pFramebuffer)
+        return;
+    
+    g_pFramebuffer->blit(pBitmap->pBlitBuffer, 0, 0, left, top, m_CellWidth, m_CellHeight);
+    g_pFramebuffer->redraw(left, top, m_CellWidth, m_CellHeight);
+    
+    /*
     for (size_t y = top; y < top+m_CellHeight; y++)
     {
         size_t idx = y*m_nWidth+left;
@@ -121,6 +132,7 @@ void Font::drawGlyph(rgb_t *pFb, Glyph *pBitmap, int left, int top)
                reinterpret_cast<uint8_t*>(&pBitmap->buffer[(y-top)*m_CellWidth]),
                m_CellWidth*sizeof(rgb_t));
     }
+    */
 }
 
 Font::Glyph *Font::generateGlyph(uint32_t c, rgb_t f, rgb_t b)
@@ -154,6 +166,9 @@ Font::Glyph *Font::generateGlyph(uint32_t c, rgb_t f, rgb_t b)
             pGlyph->buffer[idx] = interpolateColour(f, b, m_Face->glyph->bitmap.buffer[gidx]);
         }
     }
+    
+    pGlyph->pBlitBuffer = g_pFramebuffer->createBuffer(pGlyph->buffer, PedigreeGraphics::Bits32_Argb, m_CellWidth, m_CellHeight);
+    
     return pGlyph;
 }
 

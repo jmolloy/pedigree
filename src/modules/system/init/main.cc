@@ -336,10 +336,10 @@ void init_stage2()
 }
 
 #ifdef X86_COMMON
-#define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "TUI", "linker", "network-stack", "vbe", "users", "pedigree-c"
+#define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "TUI", "linker", "network-stack", "vbe", "users", "pedigree-c", "native"
 #elif PPC_COMMON
-#define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "TUI", "linker", "network-stack", "users", "pedigree-c"
+#define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "TUI", "linker", "network-stack", "users", "pedigree-c", "native"
 #elif ARM_COMMON
-#define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "linker", "network-stack", "users", "pedigree-c"
+#define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "linker", "network-stack", "users", "pedigree-c", "native"
 #endif
 MODULE_INFO("init", &init, &destroy, __MOD_DEPS);

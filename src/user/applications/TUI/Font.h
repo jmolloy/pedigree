@@ -21,6 +21,8 @@
 #include <stdint.h>
 #include "environment.h"
 
+#include <graphics/Graphics.h>
+
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
@@ -50,6 +52,8 @@ private:
     struct Glyph
     {
         rgb_t *buffer;
+        
+        PedigreeGraphics::Buffer *pBlitBuffer;
     };
     void drawGlyph(rgb_t *pFb, Glyph *pBitmap, int left, int top);
     Glyph *generateGlyph(uint32_t c, rgb_t f, rgb_t b);

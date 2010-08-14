@@ -42,6 +42,7 @@ objects = [
 include = [
     '#/src/subsys/posix/include',
     '#/src/modules/system/TUI',
+    '#/src/subsys/native/include',
     './include'
 ]
 
@@ -53,7 +54,9 @@ libraries = [
     'freetype',
     'libpng',
     'libz',
-    'kernelrtti'
+    'kernelrtti',
+    'pedigree-c',
+    'pedigree'
 ]
 
 # To add a library path add to the list below

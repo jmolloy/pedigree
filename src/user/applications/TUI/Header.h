@@ -20,6 +20,8 @@
 #include "environment.h"
 #include "Font.h"
 
+#include <graphics/Graphics.h>
+
 #define TAB_SELECTABLE 0x1
 #define TAB_SELECTED   0x2
 

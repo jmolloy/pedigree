@@ -55,6 +55,8 @@ size_t Syscall::nextRequest(size_t responseToLast, char *buffer, size_t *sz, siz
 
 size_t Syscall::getFb(Display::ScreenMode *pMode)
 {
+    return 0;
+    
     return syscall1(TUI_GETFB, reinterpret_cast<size_t>(pMode));
     // Memory barrier, "sz" will have changed. Reload.
     asm volatile ("" : : : "memory");
@@ -87,16 +89,18 @@ void Syscall::setCurrentConsole(size_t tabId)
 
 rgb_t *Syscall::newBuffer()
 {
-    return reinterpret_cast<rgb_t*> (syscall0(TUI_VID_NEW_BUFFER));
+    return 0; // return reinterpret_cast<rgb_t*> (syscall0(TUI_VID_NEW_BUFFER));
 }
 
 void Syscall::setCurrentBuffer(rgb_t *pBuffer)
 {
-    syscall1(TUI_VID_SET_BUFFER, reinterpret_cast<uintptr_t>(pBuffer));
+    return; // syscall1(TUI_VID_SET_BUFFER, reinterpret_cast<uintptr_t>(pBuffer));
 }
 
 void Syscall::updateBuffer(rgb_t *pBuffer, DirtyRectangle &rect)
 {
+    return;
+    
     vid_req_t req;
 
     req.buffer = pBuffer;
@@ -117,12 +121,16 @@ void Syscall::updateBuffer(rgb_t *pBuffer, DirtyRectangle &rect)
 
 void Syscall::killBuffer(rgb_t *pBuffer)
 {
+    return;
+    
     syscall1(TUI_VID_KILL_BUFFER, reinterpret_cast<uintptr_t>(pBuffer));
 }
 
 void Syscall::bitBlit(rgb_t *pBuffer, size_t x, size_t y, size_t x2, size_t y2,
                       size_t w, size_t h)
 {
+    return;
+    
     vid_req_t req;
     req.buffer = pBuffer;
     req.x = x;
@@ -139,6 +147,8 @@ void Syscall::bitBlit(rgb_t *pBuffer, size_t x, size_t y, size_t x2, size_t y2,
 
 void Syscall::fillRect(rgb_t *pBuffer, size_t x, size_t y, size_t w, size_t h, rgb_t c)
 {
+    return;
+    
     vid_req_t req;
     req.buffer = pBuffer;
     req.x = x;

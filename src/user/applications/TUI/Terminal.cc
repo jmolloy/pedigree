@@ -22,6 +22,10 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <graphics/Graphics.h>
+
+extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
+
 extern Header *g_pHeader;
 extern rgb_t g_MainBackgroundColour;
 
@@ -30,10 +34,13 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
     m_PendingRequestSz(0), m_Pid(0), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop), m_Cancel(0), m_WriteInProgress(0)
 {
     // Create a new backbuffer.
-    m_pBuffer = Syscall::newBuffer();
-    if (!m_pBuffer) log("Buffer not created correctly!");
+    // m_pBuffer = Syscall::newBuffer();
+    // if (!m_pBuffer) log("Buffer not created correctly!");
 
-    Syscall::fillRect(m_pBuffer, 0, 0, nWidth+offsetLeft, nHeight+offsetTop, g_MainBackgroundColour);
+    // Syscall::fillRect(m_pBuffer, 0, 0, nWidth+offsetLeft, nHeight+offsetTop, g_MainBackgroundColour);
+    uint32_t backColour = PedigreeGraphics::createRgb(g_MainBackgroundColour.r, g_MainBackgroundColour.g, g_MainBackgroundColour.b);
+    g_pFramebuffer->rect(offsetLeft, offsetTop, nWidth, nHeight, backColour, PedigreeGraphics::Bits24_Rgb);
+    g_pFramebuffer->redraw(offsetLeft, offsetTop, nWidth, nHeight);
 
     size_t tabId = pHeader->addTab(pName, TAB_SELECTABLE);
 
@@ -279,6 +286,6 @@ void Terminal::addToQueue(char c)
 
 void Terminal::setActive(bool b, DirtyRectangle &rect)
 {
-    if (b)
-        Syscall::setCurrentBuffer(m_pBuffer);
+    // if (b)
+    //    Syscall::setCurrentBuffer(m_pBuffer);
 }

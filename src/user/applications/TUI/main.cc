@@ -39,6 +39,8 @@
 #include "Png.h"
 #include "Header.h"
 
+#include <graphics/Graphics.h>
+
 #define CONSOLE_READ    1
 #define CONSOLE_WRITE   2
 #define CONSOLE_GETROWS 3
@@ -75,6 +77,8 @@ Header *g_pHeader = 0;
 size_t g_nWidth, g_nHeight;
 size_t nextConsoleNum = 1;
 size_t g_nLastResponse = 0;
+
+PedigreeGraphics::Framebuffer *g_pFramebuffer = 0;
 
 void modeChanged(size_t width, size_t height)
 {
@@ -118,7 +122,7 @@ void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
     g_pHeader->render(pTL->term->getBuffer(), rect);
 
     //pTL->term->redrawAll(rect);
-    Syscall::updateBuffer(pTL->term->getBuffer(), rect);
+    //Syscall::updateBuffer(pTL->term->getBuffer(), rect);
 }
 
 Terminal *addTerminal(const char *name, DirtyRectangle &rect)
@@ -150,7 +154,7 @@ Terminal *addTerminal(const char *name, DirtyRectangle &rect)
         DirtyRectangle rect2;
         g_pHeader->select(pTL->term->getTabId());
         g_pHeader->render(pTL->term->getBuffer(), rect2);
-        Syscall::updateBuffer(pTL->term->getBuffer(), rect2);
+        // Syscall::updateBuffer(pTL->term->getBuffer(), rect2);
         pTL = pTL->next;
     }
     g_pHeader->select(pTermList->term->getTabId());
@@ -297,12 +301,24 @@ int main (int argc, char **argv)
     syscall1(TUI_INPUT_REGISTER_CALLBACK, reinterpret_cast<uintptr_t>(input_handler));
 
     signal(SIGINT, sigint);
+    
+    // Connect to the graphics service
+    g_pFramebuffer = new PedigreeGraphics::Framebuffer();
+    
+    // Have we got a working mode?
+    if(!g_pFramebuffer->getRawBuffer())
+    {
+        // No!
+        syslog(LOG_EMERG, "TUI Error: No framebuffer available!");
+        return 0;
+    }
 
-    Display::ScreenMode mode;
-    Syscall::getFb(&mode);
-
-    g_nWidth = mode.width;
-    g_nHeight = mode.height;
+    /// \todo System call for this, integrated into Framebuffer or something
+    g_nWidth = 1024;
+    g_nHeight = 768;
+    
+    g_pFramebuffer->rect(0, 0, 1024, 768, 0, PedigreeGraphics::Bits24_Rgb);
+    g_pFramebuffer->redraw(0, 0, 1024, 768);
 
     g_NormalFont = new Font(FONT_SIZE, NORMAL_FONT_PATH,
                             true, g_nWidth);
@@ -318,17 +334,22 @@ int main (int argc, char **argv)
         syslog(LOG_EMERG, "Error: Font '%s' not loaded!", BOLD_FONT_PATH);
         return 0;
     }
+    
+    rgb_t fore = {0xff, 0xff, 0xff, 0xff};
+    rgb_t back = {0, 0, 0, 0};
 
     g_pHeader =  new Header(g_nWidth);
 
     g_pHeader->addTab(const_cast<char*>("The Pedigree Operating System"), 0);
-
+    
     DirtyRectangle rect;
+
+    // DirtyRectangle rect;
     Terminal *pCurrentTerminal = addTerminal("Console0", rect);
     rect.point(0, 0);
     rect.point(g_nWidth, g_nHeight);
 
-    Syscall::updateBuffer(pCurrentTerminal->getBuffer(), rect);
+    // Syscall::updateBuffer(pCurrentTerminal->getBuffer(), rect);
 
     size_t maxBuffSz = (32768 * 2) - 1;
     char *buffer = new char[maxBuffSz + 1];
@@ -387,7 +408,7 @@ int main (int argc, char **argv)
                 buffer[maxBuffSz] = '\0';
                 pT->write(buffer, rect2);
                 g_nLastResponse = sz;
-                Syscall::updateBuffer(g_pCurrentTerm->term->getBuffer(), rect2);
+                // Syscall::updateBuffer(g_pCurrentTerm->term->getBuffer(), rect2);
                 break;
             }
 
