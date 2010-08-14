@@ -16,9 +16,9 @@
 #ifndef _GRAPHICS_H
 #define _GRAPHICS_H
 
-#include <processor/types.h>
+#include <types.h>
  
-namespace Graphics
+namespace PedigreeGraphics
 {
     enum PixelFormat
     {
@@ -71,27 +71,110 @@ namespace Graphics
     
     struct Buffer
     {
-        /// Base of this buffer in memory. For internal use only.
-        uintptr_t base;
-        
-        /// Width of the buffer in pixels
-        size_t width;
-        
-        /// Height of the buffer in pixels
-        size_t height;
-        
-        /// Output format of the buffer. NOT the input format. Used for
-        /// byte-per-pixel calculations.
-        PixelFormat format;
-        
-        /// Buffer ID, for easy identification within drivers
-        size_t bufferId;
-        
-        /// Backing pointer, for drivers. Typically holds a MemoryRegion
-        /// for software-only framebuffers to identify the memory's location.
-        void *pBacking;
+        uint32_t empty;
     };
     
+    class Framebuffer;
+    
+    struct GraphicsProvider
+    {
+        /// \todo Provide the current graphics mode via a watered-down Display
+        ///       class.
+        void *pDisplay;
+        
+        /* Some form of hardware caps here... */
+        bool bHardwareAccel;
+        
+        Framebuffer *pFramebuffer;
+        
+        size_t maxWidth;
+        size_t maxHeight;
+        size_t maxDepth;
+    };
+
+    /** This class provides a generic interface for interfacing with a framebuffer.
+     *  Each display driver specialises this class to define the "base address" of
+     *  the framebuffer in its own way (eg, allocate memory, or use a DMA region).
+     *  There are a variety of default software-only operations, which are used by
+     *  default if the main operational methods are not overridden. */
+    class Framebuffer
+    {
+        public:
+        
+            Framebuffer();
+            
+            virtual ~Framebuffer() {}
+            
+            /** Gets a raw pointer to the framebuffer itself. There is no way to
+             *  know if this pointer points to an MMIO region or real RAM, so it
+             *  cannot be guaranteed to be safe.
+             *  There is no way to determine if an application can safely use
+             *  this buffer without segfaulting. */
+            void *getRawBuffer();
+            
+            /** Converts a given pixel from one pixel format to another. */
+            bool convertPixel(uint32_t source, PedigreeGraphics::PixelFormat srcFormat,
+                              uint32_t &dest, PedigreeGraphics::PixelFormat destFormat);
+             
+            /** Creates a new buffer to be used for blits from the given raw pixel
+             *  data. Performs automatic conversion of the pixel format to the
+             *  pixel format of the current display mode.
+             *  Do not modify any of the members of the buffer structure, or attempt
+             *  to inject your own pixels into the buffer.
+             *  Once a buffer is created, it is only used for blitting to the screen
+             *  and cannot be modified.
+             *  It is expected that the buffer has been packed to its bit depth, and
+             *  does not have any padding on each scanline at all.
+             *  Do not delete the returned buffer yourself, pass it to destroyBuffer
+             *  which performs a proper cleanup of all resources related to the
+             *  buffer.
+             *  The buffer should be padded to finish on a DWORD boundary. This is
+             *  not padding per scanline but rather padding per buffer. */
+            PedigreeGraphics::Buffer *createBuffer(const void *srcData, PedigreeGraphics::PixelFormat srcFormat,
+                                           size_t width, size_t height);
+            
+            /** Destroys a created buffer. Frees its memory in both the system RAM
+             *  and any references still in VRAM. */
+            void destroyBuffer(PedigreeGraphics::Buffer *pBuffer);
+            
+            /** Performs an update of a region of this framebuffer. This function
+             *  can be used by drivers to request an area of the framebuffer be
+             *  redrawn, but is useless for non-hardware-accelerated devices.
+             *  \param x leftmost x co-ordinate of the redraw area, ~0 for "invalid"
+             *  \param y topmost y co-ordinate of the redraw area, ~0 for "invalid"
+             *  \param w width of the redraw area, ~0 for "invalid"
+             *  \param h height of the redraw area, ~0 for "invalid" */
+            void redraw(size_t x = ~0UL, size_t y = ~0UL,
+                        size_t w = ~0UL, size_t h = ~0UL);
+            
+            /** Blits a given buffer to the screen. See createBuffer. */
+            void blit(PedigreeGraphics::Buffer *pBuffer, size_t srcx, size_t srcy,
+                      size_t destx, size_t desty, size_t width, size_t height);
+            
+            /** Draws a single rectangle to the screen with the given colour. */
+            void rect(size_t x, size_t y, size_t width, size_t height,
+                      uint32_t colour, PedigreeGraphics::PixelFormat format = PedigreeGraphics::Bits32_Argb);
+            
+            /** Copies a rectangle already on the framebuffer to a new location */
+            void copy(size_t srcx, size_t srcy,
+                      size_t destx, size_t desty,
+                      size_t w, size_t h);
+
+            /** Draws a line one pixel wide between two points on the screen */
+            void line(size_t x1, size_t y1, size_t x2, size_t y2,
+                      uint32_t colour, PedigreeGraphics::PixelFormat format = PedigreeGraphics::Bits32_Argb);
+
+            /** Sets an individual pixel on the framebuffer. Not inheritable. */
+            void setPixel(size_t x, size_t y, uint32_t colour,
+                          PedigreeGraphics::PixelFormat format = PedigreeGraphics::Bits32_Argb);
+      
+        private:
+            
+            GraphicsProvider m_Provider;
+            
+            bool m_bProviderValid;
+    };
+
     inline bool convertPixel(uint32_t source, PixelFormat srcFormat,
                              uint32_t &dest, PixelFormat destFormat)
     {

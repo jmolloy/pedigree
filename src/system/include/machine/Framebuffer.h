@@ -47,10 +47,6 @@ class Framebuffer
             return reinterpret_cast<void*>(m_FramebufferBase);
         }
         
-        /** Converts a given pixel from one pixel format to another. */
-        virtual bool convertPixel(uint32_t source, Graphics::PixelFormat srcFormat,
-                                         uint32_t &dest, Graphics::PixelFormat destFormat);
-         
         /** Creates a new buffer to be used for blits from the given raw pixel
          *  data. Performs automatic conversion of the pixel format to the
          *  pixel format of the current display mode.

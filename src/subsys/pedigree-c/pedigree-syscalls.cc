@@ -13,7 +13,6 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include "pedigree-syscalls.h"
 #include <config/Config.h>
 #include <linker/KernelElf.h>
 #include <vfs/File.h>
@@ -25,6 +24,25 @@
 
 #include <graphics/Graphics.h>
 #include <graphics/GraphicsService.h>
+
+#define PEDIGREEC_WITHIN_KERNEL
+#include "pedigree-syscalls.h"
+
+struct blitargs
+{
+    Graphics::Buffer *pBuffer;
+    uint32_t srcx, srcy, destx, desty, width, height;
+} PACKED;
+
+struct fourargs
+{
+    uint32_t a, b, c, d;
+} PACKED;
+
+struct sixargs
+{
+    uint32_t a, b, c, d, e, f;
+} PACKED;
 
 #define MAX_RESULTS 32
 static Config::Result *g_Results[MAX_RESULTS];
@@ -264,11 +282,6 @@ uintptr_t pedigree_gfx_get_raw_buffer(void *p)
     return reinterpret_cast<uintptr_t>(pProvider->pFramebuffer->getRawBuffer());
 }
 
-struct fourargs
-{
-    uint32_t a, b, c, d;
-} PACKED;
-
 int pedigree_gfx_create_buffer(void *p, void **b, void *args)
 {
     if(!p)
@@ -297,21 +310,6 @@ int pedigree_gfx_destroy_buffer(void *p, void *b)
     return 0;
 }
 
-int pedigree_gfx_convert_pixel(void *p, uint32_t *in, uint32_t *out, uint32_t infmt, uint32_t outfmt)
-{
-    if(!p)
-        return -1;
-    
-    /// \todo Exploit: could allow userspace code to be run at ring0
-    GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
-    
-    uint32_t outref = 0;
-    bool bSuccess = pProvider->pFramebuffer->convertPixel(*in, static_cast<Graphics::PixelFormat>(infmt), outref, static_cast<Graphics::PixelFormat>(outfmt));
-    *out = outref;
-    
-    return bSuccess ? 0 : -1;
-}
-
 void pedigree_gfx_redraw(void *p, uint32_t x, uint32_t y, uint32_t w, uint32_t h)
 {
     if(!p)
@@ -322,17 +320,6 @@ void pedigree_gfx_redraw(void *p, uint32_t x, uint32_t y, uint32_t w, uint32_t h
     
     pProvider->pFramebuffer->redraw(x, y, w, h);
 }
-
-struct blitargs
-{
-    Graphics::Buffer *pBuffer;
-    uint32_t srcx, srcy, destx, desty, width, height;
-} PACKED;
-
-struct sixargs
-{
-    uint32_t a, b, c, d, e, f;
-} PACKED;
 
 void pedigree_gfx_blit(void *p, void *args)
 {

@@ -185,11 +185,6 @@ int pedigree_gfx_destroy_buffer(void *p, void *b)
     return syscall2(PEDIGREE_GFX_DESTROY_BUFFER, (long) p, (long) b);
 }
 
-int pedigree_gfx_convert_pixel(void *p, uint32_t *in, uint32_t *out, uint32_t infmt, uint32_t outfmt)
-{
-    return syscall5(PEDIGREE_GFX_CONVERT_PIXEL, (long) p, (long) in, (long) out, infmt, outfmt);
-}
-
 void pedigree_gfx_redraw(void *p, uint32_t x, uint32_t y, uint32_t w, uint32_t h)
 {
     syscall5(PEDIGREE_GFX_REDRAW, (long) p, x, y, w, h);

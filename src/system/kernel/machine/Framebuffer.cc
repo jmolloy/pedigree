@@ -19,115 +19,6 @@
 #include <processor/VirtualAddressSpace.h>
 #include <machine/Display.h>
 
-bool Framebuffer::convertPixel(uint32_t source, Graphics::PixelFormat srcFormat,
-                               uint32_t &dest, Graphics::PixelFormat destFormat)
-{
-    if((srcFormat == destFormat) || (!source))
-    {
-        dest = source;
-        return true;
-    }
-    
-    // Amount of red/green/blue, in 8-bit intensity values
-    uint8_t amtRed = 0, amtGreen = 0, amtBlue = 0, amtAlpha = 0;
-    
-    // Unpack the pixel as necessary
-    if((srcFormat == Graphics::Bits32_Argb) ||
-       (srcFormat == Graphics::Bits32_Rgb) ||
-       (srcFormat == Graphics::Bits24_Rgb))
-    {
-        if(srcFormat != Graphics::Bits24_Rgb)
-            amtAlpha = (source & 0xff000000) >> 24;
-        amtRed = (source & 0xff0000) >> 16;
-        amtGreen = (source & 0xff00) >> 8;
-        amtBlue = (source & 0xff);
-    }
-    else if(srcFormat == Graphics::Bits32_Rgba)
-    {
-        amtRed = (source & 0xff000000) >> 24;
-        amtGreen = (source & 0xff0000) >> 16;
-        amtBlue = (source & 0xff00) >> 8;
-        amtAlpha = (source & 0xff);
-    }
-    else if(srcFormat == Graphics::Bits24_Bgr)
-    {
-        amtBlue = (source & 0xff0000) >> 16;
-        amtGreen = (source & 0xff00) >> 8;
-        amtRed = (source & 0xff);
-    }
-    else if(srcFormat == Graphics::Bits16_Argb)
-    {
-        amtAlpha = (((source & 0xF000) >> 12) / 0xF) * 0xFF;
-        amtRed = (((source & 0xF00) >> 8) / 0xF) * 0xFF;
-        amtGreen = (((source & 0xF0) >> 4) / 0xF) * 0xFF;
-        amtBlue = ((source & 0xF) / 0xF) * 0xFF;
-    }
-    else if(srcFormat == Graphics::Bits16_Rgb565)
-    {
-        amtRed = (((source & 0xF800) >> 11) / 0x1F) * 0xFF;
-        amtGreen = (((source & 0x7E0) >> 5) / 0x3F) * 0xFF;
-        amtBlue = ((source & 0x1F) / 0x1F) * 0xFF;
-    }
-    else if(srcFormat == Graphics::Bits16_Rgb555)
-    {
-        amtRed = (((source & 0xF800) >> 10) / 0x1F) * 0xFF;
-        amtGreen = (((source & 0x3E0) >> 5) / 0x1F) * 0xFF;
-        amtBlue = ((source & 0x1F) / 0x1F) * 0xFF;
-    }
-    
-    // Conversion code. Complicated and ugly. :(
-    switch(destFormat)
-    {
-        case Graphics::Bits32_Argb:
-            dest = (amtAlpha << 24) | (amtRed << 16) | (amtGreen << 8) | amtBlue;
-            return true;
-        case Graphics::Bits32_Rgba:
-            dest = (amtRed << 24) | (amtGreen << 16) | (amtBlue << 8) | amtAlpha;
-            return true;
-        case Graphics::Bits32_Rgb:
-            dest = (amtRed << 16) | (amtGreen << 8) | amtBlue;
-            return true;
-        case Graphics::Bits24_Rgb:
-            dest = (amtRed << 16) | (amtGreen << 8) | amtBlue;
-            return true;
-        case Graphics::Bits24_Bgr:
-            dest = (amtBlue << 16) | (amtGreen << 8) | amtRed;
-            return true;
-        case Graphics::Bits16_Rgb555:
-            // 8-bit to 5-bit scaling. Lossy.
-            amtRed >>= 3;
-            amtGreen >>= 3;
-            amtBlue >>= 3;
-                
-            dest = (amtRed << 10) | (amtGreen << 5) | (amtBlue);
-            return true;
-        case Graphics::Bits16_Rgb565:
-            // 8-bit to 5 and 6 -bit scaling. Lossy.
-            amtRed >>= 3;
-            amtGreen >>= 2;
-            amtBlue >>= 3;
-                
-            dest = (amtRed << 11) | (amtGreen << 5) | (amtBlue);
-            return true;
-        case Graphics::Bits16_Argb:
-            // 8-bit to 4-bit scaling. Lossy.
-            amtRed >>= 4;
-            amtGreen >>= 4;
-            amtBlue >>= 4;
-            amtAlpha >>= 4;
-            
-            dest = (amtAlpha << 12) | (amtRed << 8) | (amtGreen << 4) | (amtBlue);
-            return true;
-        case Graphics::Bits8_Idx:
-            /// \todo Palette conversion
-            break;
-        default:
-            break;
-    }
-    
-    return false;
-}
-
 Graphics::Buffer *Framebuffer::swCreateBuffer(const void *srcData, Graphics::PixelFormat srcFormat, size_t width, size_t height)
 {
     if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
@@ -189,7 +80,7 @@ Graphics::Buffer *Framebuffer::swCreateBuffer(const void *srcData, Graphics::Pix
                 const uint32_t *pSource = reinterpret_cast<const uint32_t*>(adjust_pointer(srcData, sourceOffset));
                 
                 uint32_t transform = 0;
-                convertPixel(*pSource, srcFormat, transform, destFormat);
+                Graphics::convertPixel(*pSource, srcFormat, transform, destFormat);
                 
                 if(destBytesPerPixel == 4)
                 {
@@ -316,7 +207,7 @@ void Framebuffer::swRect(size_t x, size_t y, size_t width, size_t height, uint32
         height = (y + height) - currMode.height;
     
     uint32_t transformColour = 0;
-    convertPixel(colour, format, transformColour, currMode.pf2);
+    Graphics::convertPixel(colour, format, transformColour, currMode.pf2);
     
     size_t bytesPerPixel = currMode.bytesPerPixel;
     size_t bytesPerLine = currMode.bytesPerLine;
@@ -487,7 +378,7 @@ void Framebuffer::swLine(size_t x1, size_t y1, size_t x2, size_t y2, uint32_t co
     size_t bytesPerLine = currMode.bytesPerLine;
     
     uint32_t transformColour = 0;
-    convertPixel(colour, format, transformColour, currMode.pf2);
+    Graphics::convertPixel(colour, format, transformColour, currMode.pf2);
 
     // Bresenham's algorithm, referred to Computer Graphics, C Version (2nd Edition)
     // from 1997, by D. Hearn and M. Pauline Baker (page 88)
@@ -548,7 +439,7 @@ void Framebuffer::setPixel(size_t x, size_t y, uint32_t colour, Graphics::PixelF
     size_t bytesPerLine = currMode.bytesPerLine;
 
     uint32_t transformColour = 0;
-    convertPixel(colour, format, transformColour, currMode.pf2);
+    Graphics::convertPixel(colour, format, transformColour, currMode.pf2);
 
     size_t frameBufferOffset = (y * bytesPerLine) + (x * bytesPerPixel);
 

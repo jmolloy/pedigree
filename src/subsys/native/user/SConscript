@@ -28,12 +28,14 @@ subdirs = [
 ]
 
 lib_files = [
-    Glob("*.cc")
+    Glob("*.cc"),
+    Glob("graphics/*.cc")
 ]
 
 # To include a new directory for includes, just add it to the list
 include = [
     '../include',
+    '#/src/subsys',
     '#/src/system/include',
     '#/src/modules/system',
     '.'

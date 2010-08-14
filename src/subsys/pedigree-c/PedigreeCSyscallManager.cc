@@ -21,6 +21,8 @@
 
 #include "PedigreeCSyscallManager.h"
 #include "syscallNumbers.h"
+
+#define PEDIGREEC_WITHIN_KERNEL
 #include "pedigree-syscalls.h"
 
 PedigreeCSyscallManager::PedigreeCSyscallManager()
@@ -123,8 +125,6 @@ uintptr_t PedigreeCSyscallManager::syscall(SyscallState &state)
             return pedigree_gfx_create_buffer(reinterpret_cast<void*>(p1), reinterpret_cast<void**>(p2), reinterpret_cast<void*>(p3));
         case PEDIGREE_GFX_DESTROY_BUFFER:
             return pedigree_gfx_destroy_buffer(reinterpret_cast<void*>(p1), reinterpret_cast<void*>(p2));
-        case PEDIGREE_GFX_CONVERT_PIXEL:
-            return pedigree_gfx_convert_pixel(reinterpret_cast<void*>(p1), reinterpret_cast<uint32_t*>(p2), reinterpret_cast<uint32_t*>(p3), p4, p5);
         case PEDIGREE_GFX_REDRAW:
             pedigree_gfx_redraw(reinterpret_cast<void*>(p1), p2, p3, p4, p5);
             return 0;

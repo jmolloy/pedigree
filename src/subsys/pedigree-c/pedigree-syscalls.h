@@ -19,12 +19,16 @@
 
 #ifndef PEDIGREE_SYSCALLS_LIBC
 
+#ifdef PEDIGREEC_WITHIN_KERNEL
+
 #include <processor/types.h>
 
 #if 1
 #define P_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "]\t" << Hex << x)
 #else
 #define P_NOTICE(x)
+#endif
+
 #endif
 
 #endif
@@ -73,6 +77,12 @@ int pedigree_module_get_depending(char *name, char *buf, size_t bufsz);
 
 int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n);
 
+/** Pedigree graphics framework system calls */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int pedigree_gfx_get_provider(void *p);
 int pedigree_gfx_get_curr_mode(void *p, void *sm);
 uintptr_t pedigree_gfx_get_raw_buffer(void *p);
@@ -85,6 +95,11 @@ void pedigree_gfx_set_pixel(void *p, uint32_t x, uint32_t y, uint32_t colour, ui
 void pedigree_gfx_rect(void *p, void *args);
 void pedigree_gfx_copy(void *p, void *args);
 void pedigree_gfx_line(void *p, void *args);
+
+
+#ifdef __cplusplus
+}; // extern "C"
+#endif
 
 #endif
 
