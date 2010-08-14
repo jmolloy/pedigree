@@ -24,6 +24,8 @@
 #include <config/Config.h>
 #include <utilities/utility.h>
 
+#include <graphics/Graphics.h>
+
 /// \todo Put this in the config manager.
 Display::ScreenMode g_ScreenMode;
 Display *g_pDisplay = 0;
@@ -134,11 +136,27 @@ bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
         m_Mode.pf.mGreen == 6 &&
         m_Mode.pf.pBlue == 0 &&
         m_Mode.pf.mBlue == 5)
+    {
+        m_Mode.pf2 = Graphics::Bits16_Rgb565;
         m_SpecialisedMode = Mode_16bpp_5r6g5b;
+    }
     else if (m_Mode.pf.nBpp == 24)
+    {
+        m_Mode.pf2 = Graphics::Bits24_Rgb;
         m_SpecialisedMode = Mode_24bpp_8r8g8b;
+    }
+    else if (m_Mode.pf.nBpp == 32)
+    {
+        m_Mode.pf2 = Graphics::Bits32_Argb;
+    }
     else
+    {
+        m_Mode.pf2 = Graphics::Bits16_Rgb555;
         m_SpecialisedMode = Mode_Generic;
+    }
+    
+    m_Mode.bytesPerPixel = bytesPerPixel(m_Mode.pf2);
+    m_Mode.bytesPerLine = m_Mode.bytesPerPixel * m_Mode.width;
 
     // Invalidate all current buffers.
     for (Tree<rgb_t*,Buffer*>::Iterator it = m_Buffers.begin();

@@ -24,6 +24,8 @@
 #include <config/Config.h>
 
 #include <LockGuard.h>
+#include <graphics/Graphics.h>
+#include <graphics/GraphicsService.h>
 
 #include "image.h"
 #include "font.h"
@@ -33,12 +35,22 @@ extern Display *g_pDisplay;
 extern Display::ScreenMode g_ScreenMode;
 #endif
 
-static Display::rgb_t *g_pBuffer;
+//static Display::rgb_t *g_pBuffer;
+static uint8_t *g_pBuffer = 0;
+static Graphics::Buffer *g_pFont = 0;
 static size_t g_Width = 0;
 static size_t g_Height = 0;
 
 static Display::rgb_t g_Bg = {0x00,0x00,0x00,0x00};
 static Display::rgb_t g_Fg = {0xFF,0xFF,0xFF,0xFF};
+
+static uint32_t g_BackgroundColour = 0;
+static uint32_t g_ForegroundColour = 0xFFFFFF;
+
+static uint32_t g_ProgressBorderColour = 0x965000;
+static uint32_t g_ProgressColour       = 0x966400;
+
+static Graphics::PixelFormat g_BgFgFormat = Graphics::Bits24_Rgb;
 
 static Display::rgb_t g_ProgressBorderCol = {150,80,0,0x00};
 static Display::rgb_t g_ProgressCol = {150,100,0,0x00};
@@ -48,6 +60,8 @@ static size_t g_ProgressW, g_ProgressH;
 static size_t g_LogBoxX, g_LogBoxY;
 static size_t g_LogX, g_LogY;
 static size_t g_LogW, g_LogH;
+    
+static GraphicsService::GraphicsProvider pProvider;
 
 static size_t g_Previous = 0;
 static bool g_LogMode = false;
@@ -68,22 +82,12 @@ void printChar(char c)
     {
         g_LogX = 0;
         g_LogY++;
+    
+        pProvider.pFramebuffer->redraw(g_LogBoxX, g_LogBoxY, g_LogW, g_LogH);
     }
     else if(c >= ' ')
     {
-        for(size_t i = 0;i<FONT_HEIGHT;i++)
-        {
-            for(size_t j = 0;j<FONT_WIDTH;j++)
-            {
-                if(font_data[(c*FONT_HEIGHT)+i] & (1<<(FONT_WIDTH-j)))
-                {
-                    g_pBuffer[((g_LogBoxY+g_LogY*FONT_HEIGHT + i)*g_Width) + ((g_LogBoxX+g_LogX*FONT_WIDTH) + j)].r = g_Fg.r;
-                    g_pBuffer[((g_LogBoxY+g_LogY*FONT_HEIGHT + i)*g_Width) + ((g_LogBoxX+g_LogX*FONT_WIDTH) + j)].g = g_Fg.g;
-                    g_pBuffer[((g_LogBoxY+g_LogY*FONT_HEIGHT + i)*g_Width) + ((g_LogBoxX+g_LogX*FONT_WIDTH) + j)].b = g_Fg.b;
-                }
-            }
-        }
-        g_pDisplay->updateBuffer(g_pBuffer, g_LogBoxX+g_LogX*FONT_WIDTH, g_LogBoxY+g_LogY*FONT_HEIGHT, g_LogBoxX+g_LogX*FONT_WIDTH+FONT_WIDTH, g_LogBoxY+g_LogY*FONT_HEIGHT+FONT_HEIGHT);
+        pProvider.pFramebuffer->blit(g_pFont, 0, c * FONT_HEIGHT, g_LogBoxX + (g_LogX * FONT_WIDTH), g_LogBoxY + (g_LogY * FONT_HEIGHT), FONT_WIDTH, FONT_HEIGHT);
         g_LogX++;
     }
 
@@ -91,17 +95,23 @@ void printChar(char c)
     {
         g_LogX = 0;
         g_LogY++;
+    
+        pProvider.pFramebuffer->redraw(g_LogBoxX, g_LogBoxY, g_LogW, g_LogH);
     }
 
     // Overflowed the view?
-    if(g_LogY >= (g_LogH/FONT_HEIGHT))
+    if(g_LogY >= (g_LogH / FONT_HEIGHT))
     {
         // By how much?
-        size_t diff = g_LogY - g_LogH/FONT_HEIGHT + 1;
-
-        g_pDisplay->bitBlit(g_pBuffer, g_LogBoxX, g_LogBoxY + (diff*FONT_HEIGHT), g_LogBoxX, g_LogBoxY, g_LogW, ((g_LogH/FONT_HEIGHT)-diff)*FONT_HEIGHT);
-        g_pDisplay->fillRectangle(g_pBuffer, g_LogBoxX, g_LogBoxY + ((g_LogH/FONT_HEIGHT)-diff)*FONT_HEIGHT, g_LogW - g_LogBoxX, diff*FONT_HEIGHT, g_Bg);
-        g_LogY = g_LogH/FONT_HEIGHT-diff;
+        size_t diff = g_LogY - (g_LogH / FONT_HEIGHT) + 1;
+        
+        // Scroll up
+        pProvider.pFramebuffer->copy(g_LogBoxX, g_LogBoxY + (diff * FONT_HEIGHT), g_LogBoxX, g_LogBoxY, g_LogW - g_LogBoxX, ((g_LogH / FONT_HEIGHT) - diff) * FONT_HEIGHT);
+        pProvider.pFramebuffer->rect(g_LogBoxX, g_LogBoxY + ((g_LogH / FONT_HEIGHT) - diff) * FONT_HEIGHT, g_LogW - g_LogBoxX, diff * FONT_HEIGHT, g_BackgroundColour, g_BgFgFormat);
+        
+        g_LogY = (g_LogH / FONT_HEIGHT) - diff;
+    
+        pProvider.pFramebuffer->redraw(g_LogBoxX, g_LogBoxY, g_LogW, g_LogH);
     }
 }
 
@@ -154,33 +164,21 @@ void progress(const char *text)
         InputManager::instance().removeCallback(InputManager::Key, keyCallback);
     }
 
-    // Check if we should refresh screen
-    if(!strcmp(text, "unload"))
-        g_pDisplay->setCurrentBuffer(g_pBuffer);
-
     if(g_LogMode)
         return;
 
     size_t w = (g_ProgressW * g_BootProgressCurrent) / g_BootProgressTotal;
     if(g_Previous <= g_BootProgressCurrent)
-        g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX, g_ProgressY, w, g_ProgressH, g_ProgressCol);
+        pProvider.pFramebuffer->rect(g_ProgressX, g_ProgressY, w, g_ProgressH, g_ProgressColour, g_BgFgFormat);
     else
-        g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX+w, g_ProgressY, g_ProgressW-w, g_ProgressH, g_Bg);
+        pProvider.pFramebuffer->rect(g_ProgressX + w, g_ProgressY, g_ProgressW-w, g_ProgressH, g_BackgroundColour, g_BgFgFormat);
     g_Previous = g_BootProgressCurrent;
+    
+    pProvider.pFramebuffer->redraw(g_ProgressX, g_ProgressY, g_ProgressW, g_ProgressH);
 }
 
 static void init()
 {
-    if (!g_pDisplay)
-    {
-        FATAL("No display");
-    }
-    g_pBuffer = g_pDisplay->newBuffer();
-    assert(g_pBuffer);
-
-    g_Width   = g_ScreenMode.width;
-    g_Height  = g_ScreenMode.height;
-
     Config::Result *pResult = Config::instance().query("select r,g,b from 'colour-scheme' where name='splash-background';");
     if (!pResult)
     {
@@ -191,6 +189,7 @@ static void init()
         g_Bg.r = pResult->getNum(0, static_cast<size_t>(0));
         g_Bg.g = pResult->getNum(0, 1);
         g_Bg.b = pResult->getNum(0, 2);
+        g_BackgroundColour = Graphics::createRgb(g_Bg.r, g_Bg.g, g_Bg.b);
         delete pResult;
     }
 
@@ -204,6 +203,7 @@ static void init()
         g_Fg.r = pResult->getNum(0, static_cast<size_t>(0));
         g_Fg.g = pResult->getNum(0, 1);
         g_Fg.b = pResult->getNum(0, 2);
+        g_ForegroundColour = Graphics::createRgb(g_Fg.r, g_Fg.g, g_Fg.b);
         delete pResult;
     }
 
@@ -217,6 +217,7 @@ static void init()
         g_ProgressBorderCol.r = pResult->getNum(0, static_cast<size_t>(0));
         g_ProgressBorderCol.g = pResult->getNum(0, 1);
         g_ProgressBorderCol.b = pResult->getNum(0, 2);
+        g_ProgressBorderColour = Graphics::createRgb(g_ProgressBorderCol.r, g_ProgressBorderCol.g, g_ProgressBorderCol.b);
         delete pResult;
     }
 
@@ -230,33 +231,80 @@ static void init()
         g_ProgressCol.r = pResult->getNum(0, static_cast<size_t>(0));
         g_ProgressCol.g = pResult->getNum(0, 1);
         g_ProgressCol.b = pResult->getNum(0, 2);
+        g_ProgressColour = Graphics::createRgb(g_ProgressCol.r, g_ProgressCol.g, g_ProgressCol.b);
         delete pResult;
     }
 
-    g_pDisplay->setCurrentBuffer(g_pBuffer);
-    g_pDisplay->fillRectangle(g_pBuffer, 0, 0, g_Width, g_Height, g_Bg);
+    // Grab the current graphics provider for the system, use it to display the
+    // splash screen to the user.
+    /// \todo Check for failure
+    ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
+    Service         *pService  = ServiceManager::instance().getService(String("graphics"));
+    if(pFeatures->provides(ServiceFeatures::probe))
+        if(pService)
+            pService->serve(ServiceFeatures::probe, reinterpret_cast<void*>(&pProvider), sizeof(pProvider));
 
-    size_t x, y;
-    size_t origx = x = (g_Width - width) / 2;
-    size_t origy = y = (g_Height - height) / 3;
-
+    Framebuffer *pFramebuffer = pProvider.pFramebuffer;
+    
+    Display::ScreenMode currMode;
+    pProvider.pDisplay->getCurrentScreenMode(currMode);
+    
+    g_Width   = currMode.width;
+    g_Height  = currMode.height;
+    
+    pFramebuffer->rect(0, 0, g_Width, g_Height, g_BackgroundColour, g_BgFgFormat);
+    
+    // Create the logo buffer
     char *data = header_data;
-    for (size_t i = 0; i < width*height; i++)
+    g_pBuffer = new uint8_t[width * height * 3]; // 24-bit, hardcoded...
+    for (size_t i = 0; i < (width*height); i++)
+        HEADER_PIXEL(data, &g_pBuffer[i * 3]); // 24-bit, hardcoded
+    
+    Graphics::Buffer *pBuffer = pFramebuffer->createBuffer(g_pBuffer, Graphics::Bits24_Bgr, width, height);
+    
+    size_t origx = (g_Width - width) / 2;
+    size_t origy = (g_Height - height) / 3;
+    
+    pFramebuffer->blit(pBuffer, 0, 0, origx, origy, width, height);
+    
+    pFramebuffer->destroyBuffer(pBuffer);
+    
+    delete [] g_pBuffer;
+        
+    // Create the font buffer
+    g_pBuffer = new uint8_t[(FONT_WIDTH * FONT_HEIGHT * 3) * 256]; // 24-bit
+    memset(g_pBuffer, 0, (FONT_WIDTH * FONT_HEIGHT * 3) * 256);
+    size_t offset = 0;
+    
+    // For each character
+    for(size_t character = 0; character < 255; character++)
     {
-        if (i != 0 && (i % width) == 0)
+        // For each character row
+        for(size_t row = 0; row < FONT_HEIGHT; row++)
         {
-            x = origx;
-            y++;
+            // For each character row bit
+            for(size_t col = 0; col <= FONT_WIDTH; col++)
+            {
+                // Is this bit set?
+                size_t fontRow = (character * FONT_HEIGHT) + row;
+                if(font_data[fontRow] & (1 << (FONT_WIDTH - col)))
+                {
+                    // x: col
+                    // y: fontRow
+                    size_t bytesPerPixel = 3;
+                    size_t bytesPerLine = FONT_WIDTH * bytesPerPixel;
+                    size_t pixelOffset = (fontRow * bytesPerLine) + (col * bytesPerPixel);
+                    size_t bufferOffset = pixelOffset;
+                    
+                    uint32_t *p = reinterpret_cast<uint32_t*>(adjust_pointer(g_pBuffer, bufferOffset));
+                    *p = g_ForegroundColour;
+                }
+            }
         }
-        uint8_t pixel[3];
-        HEADER_PIXEL(data, pixel);
-        g_pBuffer[y*g_Width + x].r = pixel[0];
-        g_pBuffer[y*g_Width + x].g = pixel[1];
-        g_pBuffer[y*g_Width + x].b = pixel[2];
-        x++;
     }
-    g_pDisplay->updateBuffer(g_pBuffer, origx, origy, origx+width, origy+height);
 
+    g_pFont = pFramebuffer->createBuffer(g_pBuffer, Graphics::Bits24_Rgb, FONT_WIDTH, FONT_HEIGHT * 256);
+    
     g_ProgressX = (g_Width / 2) - 200;
     g_ProgressW = 400;
     g_ProgressY = (g_Height / 4) * 3;
@@ -268,14 +316,15 @@ static void init()
     g_LogH = g_Height - g_LogBoxY;
     g_LogX = g_LogY = 0;
 
-    // Draw a border around the log area
-    g_pDisplay->fillRectangle(g_pBuffer, g_LogBoxX, g_LogBoxY - 2, g_LogW, g_LogH - 2, g_Fg);
-    g_pDisplay->fillRectangle(g_pBuffer, g_LogBoxX, g_LogBoxY - 1, g_LogW, g_LogH - 1, g_Bg);
+    // Draw a border around the log area    
+    pFramebuffer->rect(g_LogBoxX, g_LogBoxY - 2, g_LogW, g_LogH - 2, g_ForegroundColour, g_BgFgFormat);
+    pFramebuffer->rect(g_LogBoxX, g_LogBoxY - 1, g_LogW, g_LogH - 1, g_BackgroundColour, g_BgFgFormat);
 
-    // Draw empty progress bar. Easiest way to draw a nonfilled rect?
-    // draw two filled rects.
-    g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX-2, g_ProgressY-2, g_ProgressW+4, g_ProgressH+4, g_ProgressBorderCol);
-    g_pDisplay->fillRectangle(g_pBuffer, g_ProgressX-1, g_ProgressY-1, g_ProgressW+2, g_ProgressH+2, g_Bg);
+    // Draw empty progress bar. Easiest way to draw a nonfilled rect? Draw two filled rects.
+    pFramebuffer->rect(g_ProgressX - 2, g_ProgressY - 2, g_ProgressW + 4, g_ProgressH + 4, g_ProgressBorderColour, g_BgFgFormat);
+    pFramebuffer->rect(g_ProgressX - 1, g_ProgressY - 1, g_ProgressW + 2, g_ProgressH + 2, g_BackgroundColour, g_BgFgFormat);
+    
+    pFramebuffer->redraw(0, 0, g_Width, g_Height);
 
     Log::instance().installCallback(&g_StreamLogger, true);
 
@@ -287,5 +336,5 @@ static void destroy()
 {
 }
 
-MODULE_INFO("splash", &init, &destroy, "vbe", "config");
+MODULE_INFO("splash", &init, &destroy, "vmware-gfx", "config");
 

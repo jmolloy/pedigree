@@ -9,6 +9,9 @@
 #include <config/Config.h>
 #include "VbeDisplay.h"
 
+#include <graphics/Graphics.h>
+#include <graphics/GraphicsService.h>
+
 #include <machine/x86_common/Bios.h>
 
 #define REALMODE_PTR(x) ((x[1] << 4) + x[0])
@@ -87,6 +90,26 @@ extern "C" void vbeModeChangedCallback(char *pId, char *pModeId)
         g_pDisplays[id]->setScreenMode(mode_id);
     }
 }
+
+/// \todo Double buffering of some sort to avoid tearing
+class VbeFramebuffer : public Framebuffer
+{
+    public:
+        VbeFramebuffer() : Framebuffer()
+        {
+        }
+        
+        VbeFramebuffer(Display *pDisplay) :
+            Framebuffer()
+        {
+            setFramebuffer(reinterpret_cast<uintptr_t>(pDisplay->getFramebuffer()));
+            setDisplay(pDisplay);
+        }
+        
+        virtual ~VbeFramebuffer()
+        {
+        }
+};
 
 void entry()
 {
@@ -261,6 +284,22 @@ void entry()
           }
       }
   }
+  
+  VbeFramebuffer *pFramebuffer = new VbeFramebuffer(pDisplay);
+
+  GraphicsService::GraphicsProvider *pProvider = new GraphicsService::GraphicsProvider;
+  pProvider->pDisplay = pDisplay;
+  pProvider->pFramebuffer = pFramebuffer;
+  pProvider->maxWidth = 1024;
+  pProvider->maxHeight = 768;
+  pProvider->maxDepth = 24;
+
+  // Register with the graphics service
+  ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
+  Service         *pService  = ServiceManager::instance().getService(String("graphics"));
+  if(pFeatures->provides(ServiceFeatures::touch))
+    if(pService)
+      pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(pProvider), sizeof(*pProvider));
 
   // Insert into the display table if it worked out
   if(switchedSuccessfully && bDelayedInsert)
@@ -282,3 +321,4 @@ void exit()
 }
 
 MODULE_INFO("vbe", &entry, &exit, "pci", "config");
+
