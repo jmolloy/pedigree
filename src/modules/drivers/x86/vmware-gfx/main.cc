@@ -18,6 +18,7 @@
 #include <Module.h>
 #include <processor/types.h>
 #include <processor/Processor.h>
+#include <processor/MemoryMappedIo.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <processor/VirtualAddressSpace.h>
 #include <utilities/StaticString.h>
@@ -48,8 +49,7 @@ class VmwareGraphics : public Display
     public:
         VmwareGraphics(Device *pDev) :
             Device(pDev), Display(pDev), m_pIo(0),
-            m_Framebuffer("vmware-gfx-framebuffer"),
-            m_CommandRegion("vmware-gfx-command")
+            m_Framebuffer(0), m_CommandRegion(0)
         {
             m_pIo = m_Addresses[0]->m_Io;
             
@@ -83,8 +83,16 @@ class VmwareGraphics : public Display
             NOTICE("vmware-gfx found, caps=" << caps << ", maximum resolution is " << Dec << maxWidth << "x" << maxHeight << Hex);
             NOTICE("vmware-gfx        framebuffer at " << fbBase << " - " << (fbBase + fbSize) << ", command FIFO at " << cmdBase);
             
-            PhysicalMemoryManager::instance().allocateRegion(m_Framebuffer, (fbSize / 0x1000) + 1, PhysicalMemoryManager::continuous, VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write, fbBase);
-            PhysicalMemoryManager::instance().allocateRegion(m_CommandRegion, (cmdSize / 0x1000) + 1, PhysicalMemoryManager::continuous, VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write, cmdBase);
+            if(m_Addresses[1]->m_Address == fbBase)
+            {
+                m_Framebuffer = static_cast<MemoryMappedIo*>(m_Addresses[1]->m_Io);
+                m_CommandRegion = static_cast<MemoryMappedIo*>(m_Addresses[2]->m_Io);
+            }
+            else
+            {
+                m_Framebuffer = static_cast<MemoryMappedIo*>(m_Addresses[2]->m_Io);
+                m_CommandRegion = static_cast<MemoryMappedIo*>(m_Addresses[1]->m_Io);
+            }
             
             // Set mode
             writeRegister(SVGA_REG_WIDTH, 1024);
@@ -106,7 +114,7 @@ class VmwareGraphics : public Display
             writeRegister(SVGA_REG_ENABLE, 1);
             
             // Initialise the FIFO
-            volatile uint32_t *fifo = reinterpret_cast<volatile uint32_t*>(m_CommandRegion.virtualAddress());
+            volatile uint32_t *fifo = reinterpret_cast<volatile uint32_t*>(m_CommandRegion->virtualAddress());
             
             if(caps & SVGA_CAP_EXTENDED_FIFO)
             {
@@ -159,7 +167,7 @@ class VmwareGraphics : public Display
             // Start running the FIFO
             writeRegister(SVGA_REG_CONFIG_DONE, 1);
             
-            m_pFramebuffer = new VmwareFramebuffer(reinterpret_cast<uintptr_t>(m_Framebuffer.virtualAddress()), this);
+            m_pFramebuffer = new VmwareFramebuffer(reinterpret_cast<uintptr_t>(m_Framebuffer->virtualAddress()), this);
             
             GraphicsService::GraphicsProvider *pProvider = new GraphicsService::GraphicsProvider;
             pProvider->pDisplay = this;
@@ -279,7 +287,7 @@ class VmwareGraphics : public Display
         
         void writeFifo(uint32_t value)
         {
-            volatile uint32_t *fifo = reinterpret_cast<volatile uint32_t*>(m_CommandRegion.virtualAddress());
+            volatile uint32_t *fifo = reinterpret_cast<volatile uint32_t*>(m_CommandRegion->virtualAddress());
             
             // Check for sync conditions
             if(((fifo[SVGA_FIFO_NEXT_CMD] + 4) == fifo[SVGA_FIFO_STOP]) ||
@@ -312,8 +320,8 @@ class VmwareGraphics : public Display
             while(readRegister(SVGA_REG_BUSY));
         }
         
-        MemoryRegion m_Framebuffer;
-        MemoryRegion m_CommandRegion;
+        MemoryMappedIo *m_Framebuffer;
+        MemoryMappedIo *m_CommandRegion;
         
         VmwareFramebuffer *m_pFramebuffer;
 };
