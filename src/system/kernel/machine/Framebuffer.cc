@@ -95,36 +95,26 @@ bool Framebuffer::convertPixel(uint32_t source, Graphics::PixelFormat srcFormat,
             return true;
         case Graphics::Bits16_Rgb555:
             // 8-bit to 5-bit scaling. Lossy.
-            if(amtRed)
-                amtRed = ((amtRed / 255) * 0x1F) & 0x1F;
-            if(amtGreen)
-                amtGreen = ((amtGreen / 255) * 0x1F) & 0x1F;
-            if(amtBlue)
-                amtBlue = ((amtBlue / 255) * 0x1F) & 0x1F;
+            amtRed >>= 3;
+            amtGreen >>= 3;
+            amtBlue >>= 3;
                 
             dest = (amtRed << 10) | (amtGreen << 5) | (amtBlue);
             return true;
         case Graphics::Bits16_Rgb565:
             // 8-bit to 5 and 6 -bit scaling. Lossy.
-            if(amtRed)
-                amtRed = ((amtRed / 255) * 0x1F) & 0x1F;
-            if(amtGreen)
-                amtGreen = ((amtGreen / 255) * 0x3F) & 0x3F;
-            if(amtBlue)
-                amtBlue = ((amtBlue / 255) * 0x1F) & 0x1F;
+            amtRed >>= 3;
+            amtGreen >>= 2;
+            amtBlue >>= 3;
                 
             dest = (amtRed << 11) | (amtGreen << 5) | (amtBlue);
             return true;
         case Graphics::Bits16_Argb:
             // 8-bit to 4-bit scaling. Lossy.
-            if(amtRed)
-                amtRed = ((amtRed / 255) * 0xF) & 0xF;
-            if(amtGreen)
-                amtGreen = ((amtGreen / 255) * 0xF) & 0xF;
-            if(amtBlue)
-                amtBlue = ((amtBlue / 255) * 0xF) & 0xF;
-            if(amtAlpha)
-                amtAlpha = ((amtAlpha / 255) * 0xF) & 0xF;
+            amtRed >>= 4;
+            amtGreen >>= 4;
+            amtBlue >>= 4;
+            amtAlpha >>= 4;
             
             dest = (amtAlpha << 12) | (amtRed << 8) | (amtGreen << 4) | (amtBlue);
             return true;
