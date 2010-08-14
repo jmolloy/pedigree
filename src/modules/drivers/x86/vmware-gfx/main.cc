@@ -333,7 +333,7 @@ class VmwareGraphics : public Display
 
 void callback(Device *pDevice)
 {
-    VmwareGraphics *pGraphics = new VmwareGraphics(pDevice);
+    // VmwareGraphics *pGraphics = new VmwareGraphics(pDevice);
 
 #if 0
     GraphicsService::GraphicsProvider pProvider;
