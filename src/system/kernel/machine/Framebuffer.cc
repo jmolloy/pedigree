@@ -328,10 +328,32 @@ void Framebuffer::swRect(size_t x, size_t y, size_t width, size_t height, uint32
         
         void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
         
+        size_t copySize = (bytesPerLine * height);
         if((bytesPerPixel == 4) || (bytesPerPixel == 3)) /// \todo Handle 24-bit properly
-            dmemset(dest, transformColour, (bytesPerLine * height) / 4);
+        {
+            if((copySize % 8) == 0) // QWORD boundary
+            {
+                uint64_t val = (static_cast<uint64_t>(transformColour) << 32) | transformColour;
+                qmemset(dest, val, copySize / 8);
+            }
+            else
+                dmemset(dest, transformColour, copySize / 4);
+        }
         else if(bytesPerPixel == 2)
-            wmemset(dest, transformColour, (bytesPerLine * height) / 2);
+        {
+            if((copySize % 8) == 0) // QWORD boundary
+            {
+                uint64_t val = (static_cast<uint64_t>(transformColour) << 48) | (static_cast<uint64_t>(transformColour) << 32) | (transformColour << 16) | transformColour;
+                qmemset(dest, val, copySize / 8);
+            }
+            else if((copySize % 4) == 0) // DWORD boundary
+            {
+                uint32_t val = (transformColour << 16) | transformColour;
+                dmemset(dest, val, copySize / 4);
+            }
+            else
+                wmemset(dest, transformColour, copySize / 2);
+        }
         else
             memset(dest, transformColour, (bytesPerLine * height));
     }
@@ -344,10 +366,32 @@ void Framebuffer::swRect(size_t x, size_t y, size_t width, size_t height, uint32
         
             void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
             
+            size_t copySize = width * bytesPerPixel;
             if((bytesPerPixel == 4) || (bytesPerPixel == 3)) /// \todo Handle 24-bit properly
-                dmemset(dest, transformColour, (width * bytesPerPixel) / 4);
+            {
+                if((copySize % 8) == 0) // QWORD boundary
+                {
+                    uint64_t val = (static_cast<uint64_t>(transformColour) << 32) | transformColour;
+                    qmemset(dest, val, copySize / 8);
+                }
+                else
+                    dmemset(dest, transformColour, copySize / 4);
+            }
             else if(bytesPerPixel == 2)
-                wmemset(dest, transformColour, (width * bytesPerPixel) / 2);
+            {
+                if((copySize % 8) == 0) // QWORD boundary
+                {
+                    uint64_t val = (static_cast<uint64_t>(transformColour) << 48) | (static_cast<uint64_t>(transformColour) << 32) | (transformColour << 16) | transformColour;
+                    qmemset(dest, val, copySize / 8);
+                }
+                else if((copySize % 4) == 0) // DWORD boundary
+                {
+                    uint32_t val = (transformColour << 16) | transformColour;
+                    dmemset(dest, val, copySize / 4);
+                }
+                else
+                    wmemset(dest, transformColour, copySize / 2);
+            }
             else
                 memset(dest, transformColour, (width * bytesPerPixel));
         }

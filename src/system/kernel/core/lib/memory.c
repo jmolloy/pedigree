@@ -90,6 +90,15 @@ void *dmemset(void *buf, unsigned int c, size_t len)
 }
 #endif
 
+void *qmemset(void *buf, unsigned long long c, size_t len)
+{
+  unsigned long long *tmp = (unsigned long long *)buf;
+  while(len--)
+  {
+    *tmp++ = c;
+  }
+  return buf;
+}
 
 #ifdef X86_COMMON
 /** This function courtesy of Josh Cornutt - cheers! */
