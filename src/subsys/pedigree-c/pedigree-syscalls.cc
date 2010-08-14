@@ -23,6 +23,9 @@
 #include <Log.h>
 #include <syscallError.h>
 
+#include <graphics/Graphics.h>
+#include <graphics/GraphicsService.h>
+
 #define MAX_RESULTS 32
 static Config::Result *g_Results[MAX_RESULTS];
 static size_t g_Rows[MAX_RESULTS];
@@ -203,3 +206,194 @@ int pedigree_module_get_depending(char *name, char *buf, size_t bufsz)
         return 0;
     return 1;
 }
+
+int pedigree_gfx_get_provider(void *p)
+{
+    if(!p)
+        return -1;
+    
+    GraphicsService::GraphicsProvider gfxProvider;
+    
+    // Grab the current graphics provider for the system, use it to display the
+    // splash screen to the user.
+    /// \todo Check for failure
+    ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
+    Service         *pService  = ServiceManager::instance().getService(String("graphics"));
+    if(pFeatures->provides(ServiceFeatures::probe))
+    {
+        if(pService)
+        {
+            if(!pService->serve(ServiceFeatures::probe, reinterpret_cast<void*>(&gfxProvider), sizeof(gfxProvider)))
+                return -1;
+        }
+        else
+            return -1;
+    }
+    else
+        return -1;
+    
+    memcpy(p, &gfxProvider, sizeof(gfxProvider));
+    
+    return 0;
+}
+
+int pedigree_gfx_get_curr_mode(void *p, void *sm)
+{
+    if(!p)
+        return -1;
+    
+    /// \todo Exploit: could allow userspace code to be run at ring0
+    GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
+    
+    Display::ScreenMode mode;
+    pProvider->pDisplay->getCurrentScreenMode(mode);
+    
+    memcpy(sm, &mode, sizeof(mode));
+    
+    return 0;
+}
+
+uintptr_t pedigree_gfx_get_raw_buffer(void *p)
+{
+    if(!p)
+        return -1;
+    
+    /// \todo Exploit: could allow userspace code to be run at ring0
+    GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
+    
+    return reinterpret_cast<uintptr_t>(pProvider->pFramebuffer->getRawBuffer());
+}
+
+struct fourargs
+{
+    uint32_t a, b, c, d;
+} PACKED;
+
+int pedigree_gfx_create_buffer(void *p, void **b, void *args)
+{
+    if(!p)
+        return -1;
+        
+    fourargs *pArgs = reinterpret_cast<fourargs*>(args);
+    
+    /// \todo Exploit: could allow userspace code to be run at ring0
+    GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
+    
+    *b = pProvider->pFramebuffer->createBuffer(reinterpret_cast<void*>(pArgs->a), static_cast<Graphics::PixelFormat>(pArgs->b), pArgs->c, pArgs->d);
+    
+    return *b ? 0 : -1;
+}
+
+int pedigree_gfx_destroy_buffer(void *p, void *b)
+{
+    if(!p)
+        return -1;
+    
+    /// \todo Exploit: could allow userspace code to be run at ring0
+    GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
+    
+    pProvider->pFramebuffer->destroyBuffer(reinterpret_cast<Graphics::Buffer*>(b));
+    
+    return 0;
+}
+
+int pedigree_gfx_convert_pixel(void *p, uint32_t *in, uint32_t *out, uint32_t infmt, uint32_t outfmt)
+{
+    if(!p)
+        return -1;
+    
+    /// \todo Exploit: could allow userspace code to be run at ring0
+    GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
+    
+    uint32_t outref = 0;
+    bool bSuccess = pProvider->pFramebuffer->convertPixel(*in, static_cast<Graphics::PixelFormat>(infmt), outref, static_cast<Graphics::PixelFormat>(outfmt));
+    *out = outref;
+    
+    return bSuccess ? 0 : -1;
+}
+
+void pedigree_gfx_redraw(void *p, uint32_t x, uint32_t y, uint32_t w, uint32_t h)
+{
+    if(!p)
+        return;
+    
+    /// \todo Exploit: could allow userspace code to be run at ring0
+    GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
+    
+    pProvider->pFramebuffer->redraw(x, y, w, h);
+}
+
+struct blitargs
+{
+    Graphics::Buffer *pBuffer;
+    uint32_t srcx, srcy, destx, desty, width, height;
+} PACKED;
+
+struct sixargs
+{
+    uint32_t a, b, c, d, e, f;
+} PACKED;
+
+void pedigree_gfx_blit(void *p, void *args)
+{
+    if(!p || !args)
+        return;
+    
+    blitargs *pArgs = reinterpret_cast<blitargs*>(args);
+    
+    /// \todo Exploit: could allow userspace code to be run at ring0
+    GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
+    
+    pProvider->pFramebuffer->blit(pArgs->pBuffer, pArgs->srcx, pArgs->srcy, pArgs->destx, pArgs->desty, pArgs->width, pArgs->height);
+}
+
+void pedigree_gfx_set_pixel(void *p, uint32_t x, uint32_t y, uint32_t colour, uint32_t fmt)
+{
+    if(!p)
+        return;
+    
+    /// \todo Exploit: could allow userspace code to be run at ring0
+    GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
+    
+    pProvider->pFramebuffer->setPixel(x, y, colour, static_cast<Graphics::PixelFormat>(fmt));
+}
+
+void pedigree_gfx_rect(void *p, void *args)
+{
+    if(!p || !args)
+        return;
+    
+    sixargs *pArgs = reinterpret_cast<sixargs*>(args);
+    
+    /// \todo Exploit: could allow userspace code to be run at ring0
+    GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
+    
+    pProvider->pFramebuffer->rect(pArgs->a, pArgs->b, pArgs->c, pArgs->d, pArgs->e, static_cast<Graphics::PixelFormat>(pArgs->f));
+}
+
+void pedigree_gfx_copy(void *p, void *args)
+{
+    if(!p || !args)
+        return;
+    
+    sixargs *pArgs = reinterpret_cast<sixargs*>(args);
+    
+    /// \todo Exploit: could allow userspace code to be run at ring0
+    GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
+    
+    pProvider->pFramebuffer->copy(pArgs->a, pArgs->b, pArgs->c, pArgs->d, pArgs->e, pArgs->f);
+}
+
+void pedigree_gfx_line(void *p, void *args)
+{
+    if(!p || !args)
+        return;
+    
+    sixargs *pArgs = reinterpret_cast<sixargs*>(args);
+    
+    /// \todo Exploit: could allow userspace code to be run at ring0
+    GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
+    
+    pProvider->pFramebuffer->rect(pArgs->a, pArgs->b, pArgs->c, pArgs->d, pArgs->e, static_cast<Graphics::PixelFormat>(pArgs->f));
+}
+

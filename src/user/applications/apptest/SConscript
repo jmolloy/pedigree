@@ -47,7 +47,7 @@ include += ['.']
 
 # To add a library add to the list below
 if env['ARCH_TARGET'] == 'X86':
-    libraries = ['pedigree', 'kernelrtti']
+    libraries = ['c', 'm', 'libstdc++', 'pedigree-c', 'pedigree', 'kernelrtti']
 else:
     libraries = ['c', 'm', 'gcc', 'kernelrtti']
 

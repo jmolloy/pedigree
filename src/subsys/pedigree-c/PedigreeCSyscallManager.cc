@@ -113,6 +113,36 @@ uintptr_t PedigreeCSyscallManager::syscall(SyscallState &state)
             return pedigree_module_is_loaded(reinterpret_cast<char*>(p1));
         case PEDIGREE_MODULE_GET_DEPENDING:
             return pedigree_module_get_depending(reinterpret_cast<char*>(p1), reinterpret_cast<char*>(p2), p3);
+        case PEDIGREE_GFX_GET_PROVIDER:
+            return pedigree_gfx_get_provider(reinterpret_cast<void*>(p1));
+        case PEDIGREE_GFX_GET_CURR_MODE:
+            return pedigree_gfx_get_curr_mode(reinterpret_cast<void*>(p1), reinterpret_cast<void*>(p2));
+        case PEDIGREE_GFX_GET_RAW_BUFFER:
+            return pedigree_gfx_get_raw_buffer(reinterpret_cast<void*>(p1));
+        case PEDIGREE_GFX_CREATE_BUFFER:
+            return pedigree_gfx_create_buffer(reinterpret_cast<void*>(p1), reinterpret_cast<void**>(p2), reinterpret_cast<void*>(p3));
+        case PEDIGREE_GFX_DESTROY_BUFFER:
+            return pedigree_gfx_destroy_buffer(reinterpret_cast<void*>(p1), reinterpret_cast<void*>(p2));
+        case PEDIGREE_GFX_CONVERT_PIXEL:
+            return pedigree_gfx_convert_pixel(reinterpret_cast<void*>(p1), reinterpret_cast<uint32_t*>(p2), reinterpret_cast<uint32_t*>(p3), p4, p5);
+        case PEDIGREE_GFX_REDRAW:
+            pedigree_gfx_redraw(reinterpret_cast<void*>(p1), p2, p3, p4, p5);
+            return 0;
+        case PEDIGREE_GFX_BLIT:
+            pedigree_gfx_blit(reinterpret_cast<void*>(p1), reinterpret_cast<void*>(p2));
+            return 0;
+        case PEDIGREE_GFX_SET_PIXEL:
+            pedigree_gfx_set_pixel(reinterpret_cast<void*>(p1), p2, p3, p4, p5);
+            return 0;
+        case PEDIGREE_GFX_RECT:
+            pedigree_gfx_rect(reinterpret_cast<void*>(p1), reinterpret_cast<void*>(p2));
+            return 0;
+        case PEDIGREE_GFX_COPY:
+            pedigree_gfx_copy(reinterpret_cast<void*>(p1), reinterpret_cast<void*>(p2));
+            return 0;
+        case PEDIGREE_GFX_LINE:
+            pedigree_gfx_line(reinterpret_cast<void*>(p1), reinterpret_cast<void*>(p2));
+            return 0;
         default: ERROR ("PedigreeCSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
 }
