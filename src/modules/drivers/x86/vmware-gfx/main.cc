@@ -253,17 +253,18 @@ class VmwareGraphics : public Display
                 {
                 }
                 
-                /** Performs an update of a region of this framebuffer. This function
-                 *  can be used by drivers to request an area of the framebuffer be
-                 *  redrawn, but is useless for non-hardware-accelerated devices.
-                 *  \param x leftmost x co-ordinate of the redraw area, ~0 for "invalid"
-                 *  \param y topmost y co-ordinate of the redraw area, ~0 for "invalid"
-                 *  \param w width of the redraw area, ~0 for "invalid"
-                 *  \param h height of the redraw area, ~0 for "invalid" */
                 virtual void redraw(size_t x = ~0UL, size_t y = ~0UL,
                                     size_t w = ~0UL, size_t h = ~0UL)
                 {
                     static_cast<VmwareGraphics*>(m_pDisplay)->redraw(x, y, w, h);
+                }
+                
+                virtual inline void copy(size_t srcx, size_t srcy,
+                                         size_t destx, size_t desty,
+                                         size_t w, size_t h)
+                {
+                    /// \todo Caps to determine whether to fall back to software
+                    static_cast<VmwareGraphics*>(m_pDisplay)->copy(srcx, srcy, destx, desty, w, h);
                 }
         };
         
