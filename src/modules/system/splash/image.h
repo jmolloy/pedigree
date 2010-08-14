@@ -6,9 +6,9 @@ static unsigned int height = 246;
 /*  Call this macro repeatedly.  After each use, the pixel data can be extracted  */
 
 #define HEADER_PIXEL(data,pixel) {\
-        pixel[0] = header_data_cmap[static_cast<unsigned char>(data[0])][0]; \
-        pixel[1] = header_data_cmap[static_cast<unsigned char>(data[0])][1]; \
-        pixel[2] = header_data_cmap[static_cast<unsigned char>(data[0])][2]; \
+        (pixel)[0] = header_data_cmap[static_cast<unsigned char>(data[0])][0]; \
+        (pixel)[1] = header_data_cmap[static_cast<unsigned char>(data[0])][1]; \
+        (pixel)[2] = header_data_cmap[static_cast<unsigned char>(data[0])][2]; \
 data ++; }
 
 static char header_data_cmap[256][3] = {

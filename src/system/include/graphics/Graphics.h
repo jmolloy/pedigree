@@ -63,6 +63,12 @@ namespace Graphics
         return bitsPerPixel(format) / 8;
     }
     
+    /// Creates a 24-bit RGB value (Bits24_Rgb)
+    inline uint32_t createRgb(uint32_t r, uint32_t g, uint32_t b)
+    {
+        return (r << 16) | (g << 8) | b;
+    }
+    
     struct Buffer
     {
         /// Base of this buffer in memory. For internal use only.

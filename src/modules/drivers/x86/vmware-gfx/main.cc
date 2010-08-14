@@ -318,12 +318,15 @@ class VmwareGraphics : public Display
         VmwareFramebuffer *m_pFramebuffer;
 };
 
+#if 0
 #include "abc.c"
+#endif
 
 void callback(Device *pDevice)
 {
     VmwareGraphics *pGraphics = new VmwareGraphics(pDevice);
-    
+
+#if 0
     GraphicsService::GraphicsProvider pProvider;
 
     // Testing...
@@ -357,14 +360,13 @@ void callback(Device *pDevice)
 
     pFramebuffer->line(64, 512, 128, 512, 0xff0000, Graphics::Bits24_Rgb);
     pFramebuffer->redraw(63, 511, 66, 3);
+#endif
 }
 
 void entry()
 {
     // Don't care about non-SVGA2 devices, just use VBE for them.
     Device::root().searchByVendorIdAndDeviceId(PCI_VENDOR_ID_VMWARE, PCI_DEVICE_ID_VMWARE_SVGA2, callback);
-    
-    while(1) asm volatile("hlt");
 }
 
 void exit()

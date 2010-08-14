@@ -288,7 +288,7 @@ void Framebuffer::swBlit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
         void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
         void *src = adjust_pointer(pSrc, sourceBufferOffset);
         
-        memmove(dest, src, bytesPerLine * height);
+        memcpy(dest, src, bytesPerLine * height);
     }
     else
     {
@@ -301,7 +301,7 @@ void Framebuffer::swBlit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
             void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
             void *src = adjust_pointer(pSrc, sourceBufferOffset);
             
-            memmove(dest, src, width * destBytesPerPixel);
+            memcpy(dest, src, width * destBytesPerPixel);
         }
     }
 }
@@ -338,7 +338,7 @@ void Framebuffer::swRect(size_t x, size_t y, size_t width, size_t height, uint32
         
         void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
         
-        dmemset(dest, transformColour, (width * bytesPerPixel) / 4);
+        dmemset(dest, transformColour, (bytesPerLine * height) / 4);
     }
     else
     {
@@ -399,7 +399,7 @@ void Framebuffer::swCopy(size_t srcx, size_t srcy, size_t destx, size_t desty, s
         void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffsetDest);
         void *src = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffsetSrc);
         
-        memmove(dest, src, (w * h) * bytesPerPixel);
+        memmove(dest, src, h * bytesPerLine);
     }
     else
     {
