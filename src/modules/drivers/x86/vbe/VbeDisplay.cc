@@ -140,10 +140,25 @@ bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
         m_Mode.pf2 = Graphics::Bits16_Rgb565;
         m_SpecialisedMode = Mode_16bpp_5r6g5b;
     }
-    else if (m_Mode.pf.nBpp == 24)
+    else if (m_Mode.pf.nBpp == 16 &&
+        m_Mode.pf.pRed == 10 &&
+        m_Mode.pf.mRed == 5 &&
+        m_Mode.pf.pGreen == 5 &&
+        m_Mode.pf.mGreen == 5 &&
+        m_Mode.pf.pBlue == 0 &&
+        m_Mode.pf.mBlue == 5)
+    {
+        m_Mode.pf2 = Graphics::Bits16_Rgb555;
+    }
+    else if (m_Mode.pf.nBpp == 24 && m_Mode.pf.pBlue == 0)
     {
         m_Mode.pf2 = Graphics::Bits24_Rgb;
         m_SpecialisedMode = Mode_24bpp_8r8g8b;
+    }
+    else if (m_Mode.pf.nBpp == 24 && m_Mode.pf.pBlue > 0)
+    {
+        /// \todo Assumption may be wrong?
+        m_Mode.pf2 = Graphics::Bits24_Bgr;
     }
     else if (m_Mode.pf.nBpp == 32)
     {
@@ -151,7 +166,7 @@ bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
     }
     else
     {
-        m_Mode.pf2 = Graphics::Bits16_Rgb555;
+        m_Mode.pf2 = Graphics::Bits16_Argb;
         m_SpecialisedMode = Mode_Generic;
     }
     
