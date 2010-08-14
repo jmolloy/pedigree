@@ -30,12 +30,6 @@
 #include "image.h"
 #include "font.h"
 
-#ifdef X86_COMMON
-extern Display *g_pDisplay;
-extern Display::ScreenMode g_ScreenMode;
-#endif
-
-//static Display::rgb_t *g_pBuffer;
 static uint8_t *g_pBuffer = 0;
 static Graphics::Buffer *g_pFont = 0;
 static size_t g_Width = 0;
@@ -243,6 +237,27 @@ static void init()
     if(pFeatures->provides(ServiceFeatures::probe))
         if(pService)
             pService->serve(ServiceFeatures::probe, reinterpret_cast<void*>(&pProvider), sizeof(pProvider));
+    
+    Display *pDisplay = pProvider.pDisplay;
+    
+    // Set up a mode we want
+    if(!pDisplay->setScreenMode(0x117)) // 0x118 for 24-bit
+    {
+        NOTICE("splash: Falling back to 800x600");
+
+        // Attempt to fall back to 800x600
+        if(!pDisplay->setScreenMode(0x114)) // 0x115 for 24-bit
+        {
+            NOTICE("splash: Falling back to 640x480");
+
+            // Finally try and fall back to 640x480
+            if(!pDisplay->setScreenMode(0x111)) // 0x112 for 24-bit
+            {
+                ERROR("splash: Couldn't find a suitable display mode for this system (tried: 1024x768, 800x600, 640x480.");
+                return;
+            }
+        }
+    }
 
     Framebuffer *pFramebuffer = pProvider.pFramebuffer;
     

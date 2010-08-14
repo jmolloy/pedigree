@@ -100,6 +100,7 @@ namespace Graphics
         void *pDisplay;
         
         /* Some form of hardware caps here... */
+        bool bHardwareAccel;
         
         void *pFramebuffer;
         

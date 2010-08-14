@@ -148,6 +148,34 @@ public:
         \return True if operation succeeded, false otherwise. */
     virtual bool setScreenMode(ScreenMode sm)
     {return false;}
+    
+    /** Sets the current screen mode using a set of well-defined VBE IDs.
+     *  Example: 0x117 = 1024x768x16. */
+    virtual bool setScreenMode(size_t modeId)
+    {
+        Display::ScreenMode *pSm = 0;
+
+        List<Display::ScreenMode*> modes;
+        if(!getScreenModes(modes))
+            return false;
+        for(List<Display::ScreenMode*>::Iterator it = modes.begin();
+            it != modes.end();
+            it++)
+        {
+            if ((*it)->id == modeId)
+            {
+                pSm = *it;
+                break;
+            }
+        }
+        if (pSm == 0)
+        {
+            ERROR("Screenmode not found: " << modeId);
+            return false;
+        }
+
+        return setScreenMode(*pSm);
+    }
 };
 
 #endif

@@ -262,11 +262,11 @@ void entry()
 
   g_nDisplays++;
 
-  NOTICE("Switching display mode...");
-
   /// \todo Desired mode should be in the configuration database with a fallback to
   ///       a default if the desired mode cannot be entered.
+  /*
   bool switchedSuccessfully = true;
+  NOTICE("Switching display mode...");
   if(!pDisplay->setScreenMode(mode_id = 0x117)) // 0x118 for 24-bit
   {
       NOTICE("vbe: Falling back to 800x600");
@@ -284,6 +284,7 @@ void entry()
           }
       }
   }
+  */
   
   VbeFramebuffer *pFramebuffer = new VbeFramebuffer(pDisplay);
 
@@ -293,6 +294,7 @@ void entry()
   pProvider->maxWidth = 1024;
   pProvider->maxHeight = 768;
   pProvider->maxDepth = 24;
+  pProvider->bHardwareAccel = false;
 
   // Register with the graphics service
   ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
@@ -302,6 +304,7 @@ void entry()
       pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(pProvider), sizeof(*pProvider));
 
   // Insert into the display table if it worked out
+  /*
   if(switchedSuccessfully && bDelayedInsert)
   {
       str.sprintf("INSERT INTO displays VALUES (%d,%d,%d)", g_nDisplays, reinterpret_cast<uintptr_t>(pDisplay), mode_id);
@@ -310,6 +313,7 @@ void entry()
           FATAL("Display insert failed: " << pResult->errorMessage());
       delete pResult;
   }
+  */
 
   // Replace pDev with pDisplay.
   pDisplay->setParent(pDevice->getParent());

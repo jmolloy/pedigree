@@ -33,6 +33,7 @@ class GraphicsService : public Service
             Display *pDisplay;
             
             /* Some form of hardware caps here... */
+            bool bHardwareAccel;
             
             Framebuffer *pFramebuffer;
             

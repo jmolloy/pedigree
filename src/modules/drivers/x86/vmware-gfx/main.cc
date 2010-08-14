@@ -39,6 +39,18 @@
 
 class VmwareFramebuffer;
 
+static struct mode
+{
+    size_t id;
+    size_t width;
+    size_t height;
+    Graphics::PixelFormat fmt;
+} g_VbeIndexedModes[] = {
+    {0x117, 1024, 768, Graphics::Bits16_Rgb555} // Format is used only for byte count
+};
+
+#define SUPPORTED_MODES_SIZE (sizeof(g_VbeIndexedModes) / sizeof(g_VbeIndexedModes[0]))
+
 // Can refer to http://sourceware.org/ml/ecos-devel/2006-10/msg00008/README.xfree86
 // for information about programming this device, as well as the Haiku driver.
 
@@ -94,6 +106,8 @@ class VmwareGraphics : public Display
                 m_CommandRegion = static_cast<MemoryMappedIo*>(m_Addresses[1]->m_Io);
             }
             
+            #if 0
+            
             // Set mode
             writeRegister(SVGA_REG_WIDTH, 1024);
             writeRegister(SVGA_REG_HEIGHT, 768);
@@ -106,6 +120,8 @@ class VmwareGraphics : public Display
             size_t depth = readRegister(SVGA_REG_DEPTH);
             
             NOTICE("vmware-gfx entered mode " << Dec << width << "x" << height << "x" << depth << Hex << ", mode framebuffer is " << (fbBase + fbOffset));
+            
+            #endif
             
             // Disable the command FIFO in case it was already enabled
             writeRegister(SVGA_REG_CONFIG_DONE, 0);
@@ -175,6 +191,7 @@ class VmwareGraphics : public Display
             pProvider->maxWidth = maxWidth;
             pProvider->maxHeight = maxHeight;
             pProvider->maxDepth = 32;
+            pProvider->bHardwareAccel = true;
             
             // Register with the graphics service
             ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
@@ -188,19 +205,101 @@ class VmwareGraphics : public Display
         {
         }
         
+        virtual void getName(String &str)
+        {
+            str = "vmware-gfx";
+        }
+
+        virtual void dump(String &str)
+        {
+            str = "vmware guest tools, graphics card";
+        }
+        
         /** Returns the current screen mode.
             \return True if operation succeeded, false otherwise. */
-        virtual bool getCurrentScreenMode(ScreenMode &sm)
+        virtual bool getCurrentScreenMode(Display::ScreenMode &sm)
         {
             sm.width = readRegister(SVGA_REG_WIDTH);
             sm.height = readRegister(SVGA_REG_HEIGHT);
             sm.pf.nBpp = readRegister(SVGA_REG_BITS_PER_PIXEL);
             
-            sm.pf2 = Graphics::Bits24_Rgb;
+            size_t redMask = readRegister(SVGA_REG_RED_MASK);
+            size_t greenMask = readRegister(SVGA_REG_GREEN_MASK);
+            size_t blueMask = readRegister(SVGA_REG_BLUE_MASK);
+            
+            /// \todo Not necessarily always correct for boundary cases
+            switch(sm.pf.nBpp)
+            {
+                case 24:
+                    if(redMask > blueMask)
+                        sm.pf2 = Graphics::Bits24_Rgb;
+                    else
+                        sm.pf2 = Graphics::Bits24_Bgr;
+                    break;
+                case 16:
+                    if((redMask == greenMask) && (greenMask == blueMask))
+                    {
+                        if(blueMask == 0xF)
+                            sm.pf2 = Graphics::Bits16_Argb;
+                        else
+                            sm.pf2 = Graphics::Bits16_Rgb555;
+                    }
+                    else
+                        sm.pf2 = Graphics::Bits16_Rgb565;
+                    break;
+                default:
+                    sm.pf2 = Graphics::Bits32_Argb;
+                    break;
+            }
+            
             sm.bytesPerPixel = sm.pf.nBpp / 8;
             sm.bytesPerLine = readRegister(SVGA_REG_BYTES_PER_LINE);
             
             return true;
+        }
+        
+        /** Fills the given List with all of the available screen modes.
+            \return True if operation succeeded, false otherwise. */
+        virtual bool getScreenModes(List<Display::ScreenMode*> &sms)
+        {
+            for(size_t i = 0; i < SUPPORTED_MODES_SIZE; i++)
+            {
+                Display::ScreenMode *pMode = new Display::ScreenMode;
+                pMode->id = g_VbeIndexedModes[i].id;
+                pMode->width = g_VbeIndexedModes[i].width;
+                pMode->height = g_VbeIndexedModes[i].height;
+                pMode->pf2 = g_VbeIndexedModes[i].fmt;
+                
+                sms.pushBack(pMode);
+            }
+            
+            return true;
+        }
+
+        /** Sets the current screen mode.
+            \return True if operation succeeded, false otherwise. */
+        virtual bool setScreenMode(Display::ScreenMode sm)
+        {
+            setMode(sm.width, sm.height, Graphics::bitsPerPixel(sm.pf2));
+            return true;
+        }
+        
+        void setMode(size_t w, size_t h, size_t bpp)
+        {
+            // Set mode
+            writeRegister(SVGA_REG_WIDTH, w);
+            writeRegister(SVGA_REG_HEIGHT, h);
+            writeRegister(SVGA_REG_BITS_PER_PIXEL, bpp);
+            
+            size_t fbOffset = readRegister(SVGA_REG_FB_OFFSET);
+            size_t bytesPerLine = readRegister(SVGA_REG_BYTES_PER_LINE);
+            size_t width = readRegister(SVGA_REG_WIDTH);
+            size_t height = readRegister(SVGA_REG_HEIGHT);
+            size_t depth = readRegister(SVGA_REG_DEPTH);
+            uintptr_t fbBase = readRegister(SVGA_REG_FB_START);
+            size_t fbSize = readRegister(SVGA_REG_VRAM_SIZE);
+            
+            NOTICE("vmware-gfx entered mode " << Dec << width << "x" << height << "x" << depth << Hex << ", mode framebuffer is " << (fbBase + fbOffset));
         }
         
         void redraw(size_t x, size_t y, size_t w, size_t h)
@@ -327,49 +426,9 @@ class VmwareGraphics : public Display
         VmwareFramebuffer *m_pFramebuffer;
 };
 
-#if 0
-#include "abc.c"
-#endif
-
 void callback(Device *pDevice)
 {
-    // VmwareGraphics *pGraphics = new VmwareGraphics(pDevice);
-
-#if 0
-    GraphicsService::GraphicsProvider pProvider;
-
-    // Testing...
-    ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
-    Service         *pService  = ServiceManager::instance().getService(String("graphics"));
-    if(pFeatures->provides(ServiceFeatures::probe))
-        if(pService)
-            pService->serve(ServiceFeatures::probe, reinterpret_cast<void*>(&pProvider), sizeof(pProvider));
-
-    Framebuffer *pFramebuffer = pProvider.pFramebuffer;
-    
-    // Pixel conversion test - RGB565 to 32-bit ARGB, should be green
-    pFramebuffer->rect(64, 64, 256, 256, 0x7E0, Graphics::Bits16_Rgb565);
-    pFramebuffer->redraw(64, 64, 256, 256);
-    
-    // Software copy test
-    pFramebuffer->copy(64, 64, 512, 256, 64, 64);
-    pFramebuffer->redraw(512, 256, 64, 64);
-    
-    // Big 24-bit to 32-bit blit test
-    Graphics::Buffer *pBuffer = pFramebuffer->createBuffer(gimp_image.pixel_data, Graphics::Bits24_Bgr, gimp_image.width, gimp_image.height);
-    pFramebuffer->blit(pBuffer, 0, 0, 128, 128, gimp_image.width, gimp_image.height);
-    
-    pFramebuffer->redraw(128, 128, gimp_image.width, gimp_image.height);
-    
-    pFramebuffer->destroyBuffer(pBuffer);
-    
-    // Hardware-accelerated copy test, with a redraw afterwards
-    pGraphics->copy(64, 64, 512, 512, 64, 64);
-    pFramebuffer->redraw(512, 512, 64, 64);
-
-    pFramebuffer->line(64, 512, 128, 512, 0xff0000, Graphics::Bits24_Rgb);
-    pFramebuffer->redraw(63, 511, 66, 3);
-#endif
+    VmwareGraphics *pGraphics = new VmwareGraphics(pDevice);
 }
 
 void entry()

@@ -56,6 +56,8 @@ VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*>
     }
     delete pR;
 
+  uintptr_t fbAddr = 0;
+
   for (List<Display::ScreenMode*>::Iterator it = m_ModeList.begin();
        it != m_ModeList.end();
        it++)
@@ -68,11 +70,32 @@ VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*>
           FATAL("VbeDisplay: Sql error: " << pR->errorMessage());
           return;
       }
+      
+      fbAddr = (*it)->framebuffer;
 
       delete pR;
   }
 
   m_Allocator.free(0, vidMemSz);
+
+    // Assumes the same framebuffer for all modes
+    bool bFramebufferFound = false;
+    for (Vector<Device::Address*>::Iterator it = m_Addresses.begin();
+        it != m_Addresses.end();
+        it++)
+    {
+        uintptr_t address = (*it)->m_Address;
+        size_t size = (*it)->m_Size;
+        if (address <= fbAddr && (address+size) > fbAddr)
+        {
+            m_pFramebuffer = static_cast<MemoryMappedIo*> ((*it)->m_Io);
+            bFramebufferFound = true;
+            break;
+        }
+    }
+    
+    if(!bFramebufferFound)
+        ERROR("No PCI MMIO region found for the desired video mode.");
 }
 
 VbeDisplay::~VbeDisplay()
@@ -180,27 +203,6 @@ bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
     {
         Buffer *pBuf = it.value();
         pBuf->valid = false;
-    }
-
-    bool bFramebufferFound = false;
-    for (Vector<Device::Address*>::Iterator it = m_Addresses.begin();
-        it != m_Addresses.end();
-        it++)
-    {
-        uintptr_t address = (*it)->m_Address;
-        size_t size = (*it)->m_Size;
-        if (address <= m_Mode.framebuffer && (address+size) > m_Mode.framebuffer)
-        {
-            m_pFramebuffer = static_cast<MemoryMappedIo*> ((*it)->m_Io);
-            bFramebufferFound = true;
-            break;
-        }
-    }
-    
-    if(!bFramebufferFound)
-    {
-        ERROR("No PCI MMIO region found for the desired video mode.");
-        return false;
     }
 
     // SET SuperVGA VIDEO MODE - AX=4F02h, BX=new mode
