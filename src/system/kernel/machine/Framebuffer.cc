@@ -328,7 +328,12 @@ void Framebuffer::swRect(size_t x, size_t y, size_t width, size_t height, uint32
         
         void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
         
-        dmemset(dest, transformColour, (bytesPerLine * height) / 4);
+        if((bytesPerPixel == 4) || (bytesPerPixel == 3)) /// \todo Handle 24-bit properly
+            dmemset(dest, transformColour, (bytesPerLine * height) / 4);
+        else if(bytesPerPixel == 2)
+            wmemset(dest, transformColour, (bytesPerLine * height) / 2);
+        else
+            memset(dest, transformColour, (bytesPerLine * height));
     }
     else
     {
@@ -339,7 +344,12 @@ void Framebuffer::swRect(size_t x, size_t y, size_t width, size_t height, uint32
         
             void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
             
-            dmemset(dest, transformColour, (width * bytesPerPixel) / 4);
+            if((bytesPerPixel == 4) || (bytesPerPixel == 3)) /// \todo Handle 24-bit properly
+                dmemset(dest, transformColour, (width * bytesPerPixel) / 4);
+            else if(bytesPerPixel == 2)
+                wmemset(dest, transformColour, (width * bytesPerPixel) / 2);
+            else
+                memset(dest, transformColour, (width * bytesPerPixel));
         }
     }
 }
@@ -498,7 +508,25 @@ void Framebuffer::setPixel(size_t x, size_t y, uint32_t colour, Graphics::PixelF
 
     size_t frameBufferOffset = (y * bytesPerLine) + (x * bytesPerPixel);
 
-    uint32_t *dest = reinterpret_cast<uint32_t*>(m_FramebufferBase + frameBufferOffset);
-    *dest = transformColour;
+    if(bytesPerPixel == 4)
+    {
+        uint32_t *pDest = reinterpret_cast<uint32_t*>(m_FramebufferBase + frameBufferOffset);
+        *pDest = transformColour;
+    }
+    else if(bytesPerPixel == 3)
+    {
+        // Handle existing data after this byte if it exists
+        uint32_t *pDest = reinterpret_cast<uint32_t*>(m_FramebufferBase + frameBufferOffset);
+        *pDest = (*pDest & 0xFF000000) | (transformColour & 0xFFFFFF);
+    }
+    else if(bytesPerPixel == 2)
+    {
+        uint16_t *pDest = reinterpret_cast<uint16_t*>(m_FramebufferBase + frameBufferOffset);
+        *pDest = transformColour & 0xFFFF;
+    }
+    else if(bytesPerPixel == 1)
+    {
+        /// \todo 8-bit
+    }
 }
 
