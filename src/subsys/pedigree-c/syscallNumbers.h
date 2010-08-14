@@ -44,4 +44,31 @@
 #define PEDIGREE_MODULE_UNLOAD              23
 #define PEDIGREE_MODULE_IS_LOADED           24
 #define PEDIGREE_MODULE_GET_DEPENDING       25
+
+/* int pedigree_gfx_get_provider(void *p) */
+#define PEDIGREE_GFX_GET_PROVIDER           64
+/* int pedigree_gfx_get_curr_mode(void *p) */
+#define PEDIGREE_GFX_GET_CURR_MODE          65
+/* uintptr_t pedigree_gfx_get_raw_buffer() */
+#define PEDIGREE_GFX_GET_RAW_BUFFER         66
+/* int pedigree_gfx_create_buffer(void *p) */
+#define PEDIGREE_GFX_CREATE_BUFFER          67
+/* void pedigree_gfx_destroy_buffer(void *p) */
+#define PEDIGREE_GFX_DESTROY_BUFFER         68
+/* bool pedigree_gfx_convert_pixel(uint32_t*, uint32_t*, uint32_t, uint32_t) */
+#define PEDIGREE_GFX_CONVERT_PIXEL          69
+/* void pedigree_gfx_redraw() */
+#define PEDIGREE_GFX_REDRAW                 70
+/* void pedigree_gfx_blit(void*, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t) */
+#define PEDIGREE_GFX_BLIT                   71
+/* void pedigree_gfx_rect(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t) */
+#define PEDIGREE_GFX_RECT                   72
+/* void pedigree_gfx_copy(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t) */
+#define PEDIGREE_GFX_COPY                   73
+/* void pedigree_gfx_line(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t) */
+#define PEDIGREE_GFX_LINE                   74
+/* void pedigree_gfx_set_pixel(uint32_t, uint32_t, uint32_t, uint32_t) */
+#define PEDIGREE_GFX_SET_PIXEL              75
+
 #endif
+
