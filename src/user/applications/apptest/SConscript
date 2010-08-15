@@ -39,11 +39,11 @@ objects = [
 ]
 
 # To include a new directory for includes, just add it to the list
-if env['ARCH_TARGET'] == 'X86':
-    include = ['#/src/subsys/native/include']
-else:
-    include = ['#/src/subsys/posix/include']
-include += ['.']
+include = [
+    '#/src/subsys/native/include',
+    '#/src/subsys/posix/include',
+    '.'
+]
 
 # To add a library add to the list below
 if env['ARCH_TARGET'] == 'X86':
