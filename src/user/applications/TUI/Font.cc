@@ -121,7 +121,6 @@ void Font::drawGlyph(rgb_t *pFb, Glyph *pBitmap, int left, int top)
         return;
     
     g_pFramebuffer->blit(pBitmap->pBlitBuffer, 0, 0, left, top, m_CellWidth, m_CellHeight);
-    g_pFramebuffer->redraw(left, top, m_CellWidth, m_CellHeight);
     
     /*
     for (size_t y = top; y < top+m_CellHeight; y++)

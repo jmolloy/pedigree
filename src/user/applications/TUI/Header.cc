@@ -105,15 +105,6 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
 
     // Height = font size + 2 px top and bottom + border 1px =
     // font-size + 5px.
-    /*
-    for (size_t i = m_nWidth*(g_FontSize+4); i < m_nWidth*(g_FontSize+5); i++)
-    {
-        pBuffer[i].r = g_BorderColour.r;
-        pBuffer[i].g = g_BorderColour.g;
-        pBuffer[i].b = g_BorderColour.b;
-    }
-    */
-    
     g_pFramebuffer->line(0, g_FontSize + 4, m_nWidth, 1, borderColourInt, PedigreeGraphics::Bits24_Rgb);
 
     size_t offset = 0;
@@ -147,21 +138,11 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
 
             // Fill to background colour.
             g_pFramebuffer->rect(offset - 4, 0, strlen(pTab->text) * charWidth + 10, g_FontSize + 4, backColourInt, PedigreeGraphics::Bits24_Rgb);
-            // Syscall::fillRect(pBuffer, offset-4, 0, strlen(pTab->text)*charWidth+10, g_FontSize+4, backColour);
 
             offset = renderString(pBuffer, pTab->text, offset, 2, foreColour, backColour);
 
             offset += 5;
-            // Add a seperator.
-            /*
-            for (size_t i = offset; i < m_nWidth*(g_FontSize+4)+offset; i += m_nWidth)
-            {
-                pBuffer[i].r = g_BorderColour.r;
-                pBuffer[i].g = g_BorderColour.g;
-                pBuffer[i].b = g_BorderColour.b;
-            }
-            */
-            
+            // Add a seperator
             g_pFramebuffer->line(offset, 0, 1, g_FontSize + 4, borderColourInt, PedigreeGraphics::Bits24_Rgb);
         }
         pTab = pTab->next;
@@ -173,8 +154,6 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
         // Render a right-double arrow.
         offset = renderString(pBuffer, ">", offset, 2, g_TextColour, g_MainBackgroundColour);
     }
-    
-    g_pFramebuffer->redraw(0, 0, m_nWidth, g_FontSize + 5);
 }
 
 size_t Header::renderString(rgb_t *pBuffer, const char *str, size_t x, size_t y, rgb_t f, rgb_t b)

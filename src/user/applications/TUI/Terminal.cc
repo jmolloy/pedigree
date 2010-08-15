@@ -40,7 +40,6 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
     // Syscall::fillRect(m_pBuffer, 0, 0, nWidth+offsetLeft, nHeight+offsetTop, g_MainBackgroundColour);
     uint32_t backColour = PedigreeGraphics::createRgb(g_MainBackgroundColour.r, g_MainBackgroundColour.g, g_MainBackgroundColour.b);
     g_pFramebuffer->rect(offsetLeft, offsetTop, nWidth, nHeight, backColour, PedigreeGraphics::Bits24_Rgb);
-    g_pFramebuffer->redraw(offsetLeft, offsetTop, nWidth, nHeight);
 
     size_t tabId = pHeader->addTab(pName, TAB_SELECTABLE);
 

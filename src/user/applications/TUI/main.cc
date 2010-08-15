@@ -102,7 +102,7 @@ void modeChanged(size_t width, size_t height)
 
         g_pHeader->render(pTerm->getBuffer(), rect);
 
-        Syscall::updateBuffer(pTerm->getBuffer(), rect);
+        doRedraw(rect);
 
         pTL = pTL->next;
     }
@@ -121,8 +121,9 @@ void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
     g_pHeader->select(pTL->term->getTabId());
     g_pHeader->render(pTL->term->getBuffer(), rect);
 
-    //pTL->term->redrawAll(rect);
-    //Syscall::updateBuffer(pTL->term->getBuffer(), rect);
+    pTL->term->redrawAll(rect);
+    
+    doRedraw(rect);
 }
 
 Terminal *addTerminal(const char *name, DirtyRectangle &rect)
@@ -154,7 +155,7 @@ Terminal *addTerminal(const char *name, DirtyRectangle &rect)
         DirtyRectangle rect2;
         g_pHeader->select(pTL->term->getTabId());
         g_pHeader->render(pTL->term->getBuffer(), rect2);
-        // Syscall::updateBuffer(pTL->term->getBuffer(), rect2);
+        doRedraw(rect2);
         pTL = pTL->next;
     }
     g_pHeader->select(pTermList->term->getTabId());
@@ -255,7 +256,7 @@ void input_handler(size_t p1, size_t p2, uint8_t* pBuffer, size_t p4)
 
     if(checkCommand(c, rect2))
     {
-        Syscall::updateBuffer(g_pCurrentTerm->term->getBuffer(), rect2);
+        doRedraw(rect2);
         syscall0(TUI_EVENT_RETURNED);
     }
     else
@@ -349,7 +350,7 @@ int main (int argc, char **argv)
     rect.point(0, 0);
     rect.point(g_nWidth, g_nHeight);
 
-    // Syscall::updateBuffer(pCurrentTerminal->getBuffer(), rect);
+    doRedraw(rect);
 
     size_t maxBuffSz = (32768 * 2) - 1;
     char *buffer = new char[maxBuffSz + 1];
@@ -408,7 +409,7 @@ int main (int argc, char **argv)
                 buffer[maxBuffSz] = '\0';
                 pT->write(buffer, rect2);
                 g_nLastResponse = sz;
-                // Syscall::updateBuffer(g_pCurrentTerm->term->getBuffer(), rect2);
+                doRedraw(rect2);
                 break;
             }
 

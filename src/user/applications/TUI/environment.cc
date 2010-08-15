@@ -17,6 +17,10 @@
 #include "environment.h"
 #include <syscall.h>
 
+#include <graphics/Graphics.h>
+
+extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
+
 #include <stdio.h>
 extern void log();
 void *operator new (size_t size) throw()
@@ -97,26 +101,13 @@ void Syscall::setCurrentBuffer(rgb_t *pBuffer)
     return; // syscall1(TUI_VID_SET_BUFFER, reinterpret_cast<uintptr_t>(pBuffer));
 }
 
-void Syscall::updateBuffer(rgb_t *pBuffer, DirtyRectangle &rect)
+void doRedraw(DirtyRectangle &rect)
 {
-    return;
-    
-    vid_req_t req;
-
-    req.buffer = pBuffer;
-    req.x = rect.getX();
-    req.y = rect.getY();
-    req.x2 = rect.getX2()-1;
-    req.y2 = rect.getY2()-1;
-
-    // Sanity check - this happens if no points were given!
-    if (req.x  == ~0UL && req.y  == ~0UL &&
-        req.x2 == ~0UL && req.y2 == ~0UL)
+    if(rect.getX() == ~0UL && rect.getY() == ~0UL &&
+       rect.getX2() == ~0UL && rect.getY2() == ~0UL)
         return;
-
-    asm volatile("" ::: "memory");
-
-    syscall1(TUI_VID_UPDATE_BUFFER, reinterpret_cast<uintptr_t>(&req));
+    
+    g_pFramebuffer->redraw(rect.getX(), rect.getY(), rect.getWidth(), rect.getHeight());
 }
 
 void Syscall::killBuffer(rgb_t *pBuffer)

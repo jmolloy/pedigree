@@ -107,12 +107,13 @@ namespace Syscall
     void setCurrentConsole(size_t tabId);
     rgb_t *newBuffer();
     void setCurrentBuffer(rgb_t *pBuffer);
-    void updateBuffer(rgb_t *pBuffer, DirtyRectangle &rect);
     void killBuffer(rgb_t *pBuffer);
     void bitBlit(rgb_t *pBuffer, size_t x, size_t y, size_t x2, size_t y2,
                  size_t w, size_t h);
     void fillRect(rgb_t *pBuffer, size_t x, size_t y, size_t w, size_t h, rgb_t c);
 }
+
+void doRedraw(DirtyRectangle &rect);
 
 rgb_t interpolateColour(rgb_t col1, rgb_t col2, uint16_t a);
 
