@@ -87,6 +87,13 @@ Terminal::~Terminal()
 
 void Terminal::renewBuffer(size_t nWidth, size_t nHeight)
 {
+    uint32_t backColourInt = PedigreeGraphics::createRgb(g_MainBackgroundColour.r, g_MainBackgroundColour.g, g_MainBackgroundColour.b);
+    g_pFramebuffer->rect(0, 0, nWidth + m_OffsetLeft, nHeight + m_OffsetTop, backColourInt, PedigreeGraphics::Bits24_Rgb);
+
+    m_pXterm->resize(nWidth, nHeight, m_pBuffer);
+    
+    /*
+
     Syscall::killBuffer(m_pBuffer);
 
     m_pBuffer = Syscall::newBuffer();
@@ -97,6 +104,8 @@ void Terminal::renewBuffer(size_t nWidth, size_t nHeight)
     log("here1");
     m_pXterm->resize(nWidth, nHeight, m_pBuffer);
     log("here2");
+    
+    */
 }
 
 void Terminal::addToQueue(uint64_t key)

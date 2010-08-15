@@ -35,28 +35,30 @@
 #include <graphics/Graphics.h>
 
 extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
+    
+ // RGBA -> BGRA
 
 rgb_t g_Colours[] = { {0x00,0x00,0x00,0},
-                      {0xB0,0x22,0x22,0},
-                      {0x22,0xB0,0x22,0},
-                      {0xB0,0xB0,0x22,0},
                       {0x22,0x22,0xB0,0},
-                      {0xB0,0x22,0xB0,0},
+                      {0x22,0xB0,0x22,0},
                       {0x22,0xB0,0xB0,0},
+                      {0xB0,0x22,0x22,0},
+                      {0xB0,0x22,0xB0,0},
+                      {0xB0,0xB0,0x22,0},
                       {0xF0,0xF0,0xF0,0},
                       {0xFF,0xFF,0xFF,0} };
 
 rgb_t g_BrightColours[] = { {0x33,0x33,0x33,0},
-                            {0xFF,0x33,0x33,0},
-                            {0x33,0xFF,0x33,0},
-                            {0xFF,0xFF,0x33,0},
                             {0x33,0x33,0xFF,0},
-                            {0xFF,0x33,0xFF,0},
+                            {0x33,0xFF,0x33,0},
                             {0x33,0xFF,0xFF,0},
+                            {0xFF,0x33,0x33,0},
+                            {0xFF,0x33,0xFF,0},
+                            {0xFF,0xFF,0x33,0},
                             {0xFF,0xFF,0xFF,0} };
 
-size_t g_DefaultFg = 0;
-size_t g_DefaultBg = 7;
+size_t g_DefaultFg = 7;
+size_t g_DefaultBg = 0;
 
 extern Font *g_NormalFont, *g_BoldFont;
 
@@ -447,6 +449,13 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 // Line drawing
                 if(m_pWindows[m_ActiveBuffer]->getLineRenderMode())
                 {
+                    m_pWindows[m_ActiveBuffer]->lineRender(utf32, rect);
+                }
+                else if (utf32 >= 32)
+                    m_pWindows[m_ActiveBuffer]->addChar(utf32, rect);
+                
+                /*
+                    
                     switch (utf32)
                     {
                         case 'j': utf32 = 0x2518; break; // Lower right corner
@@ -466,6 +475,8 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 }
                 if (utf32 >= 32)
                     m_pWindows[m_ActiveBuffer]->addChar(utf32, rect);
+                    
+                */
         }
     }
 }
@@ -1119,6 +1130,96 @@ void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
     for(col = (m_Width - n); col < m_Width; col++)
     {
         setChar(' ', col, row);
+    }
+}
+
+void Xterm::Window::lineRender(uint32_t utf32, DirtyRectangle &rect)
+{
+    syslog(LOG_NOTICE, "line render: %c", utf32);
+    
+    size_t left = m_OffsetLeft + (m_CursorX * g_NormalFont->getWidth());
+    size_t top = m_OffsetTop + (m_CursorY * g_NormalFont->getHeight());
+    
+    size_t halfWidth = (g_NormalFont->getWidth() / 2) + 1;
+    size_t halfHeight = (g_NormalFont->getHeight() / 2) + 1;
+    
+    size_t fullWidth = g_NormalFont->getWidth();
+    size_t fullHeight = g_NormalFont->getHeight();
+    
+    uint32_t bgColourInt = PedigreeGraphics::createRgb(g_Colours[m_Bg].r, g_Colours[m_Bg].g, g_Colours[m_Bg].b);
+    uint32_t fgColourInt = PedigreeGraphics::createRgb(g_Colours[m_Fg].r, g_Colours[m_Fg].g, g_Colours[m_Fg].b);
+
+    // g_pFramebuffer->rect(left, top, fullWidth, fullHeight, bgColourInt, PedigreeGraphics::Bits24_Rgb);
+    
+    // line(size_t x1, size_t y1, size_t x2, size_t y2, uint32_t colour, PedigreeGraphics::PixelFormat format = PedigreeGraphics::Bits32_Argb);
+    
+    rect.point(left, top);
+    rect.point(left + fullWidth, top + fullHeight);
+    
+    switch(utf32)
+    {
+        case 'j':
+            // Bottom right corner
+            g_pFramebuffer->line(left, top + halfHeight, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            g_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            break;
+        case 'k':
+            // Upper right corner
+            g_pFramebuffer->line(left, top + halfHeight, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            g_pFramebuffer->line(left + halfWidth, top + halfHeight, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            break;
+        case 'l':
+            // Upper left corner
+            g_pFramebuffer->line(left + halfWidth, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            g_pFramebuffer->line(left + halfWidth, top + halfHeight, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            break;
+        case 'm':
+            // Lower left corner
+            g_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            g_pFramebuffer->line(left + halfWidth, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            break;
+        case 'n':
+            // Crossing lines
+            g_pFramebuffer->line(left, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            g_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            break;
+        case 'q':
+            // Horizontal line
+            g_pFramebuffer->line(left, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            break;
+        case 't':
+            // Left 'T'
+            g_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            g_pFramebuffer->line(left + halfWidth, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            break;
+        case 'u':
+            // Right 'T'
+            g_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            g_pFramebuffer->line(left, top + halfHeight, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            break;
+        case 'v':
+            // Bottom 'T'
+            g_pFramebuffer->line(left, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            g_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            break;
+        case 'w':
+            // Top 'T'
+            g_pFramebuffer->line(left, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            g_pFramebuffer->line(left + halfWidth, top + halfHeight, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            break;
+        case 'x':
+            // Vertical line
+            g_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            break;
+        default:
+            break;
+    }
+
+    m_CursorX++;
+    if ((m_CursorX % m_Width) == 0)
+    {
+        m_CursorX = 0;
+        cursorDown(1, rect);
     }
 }
 

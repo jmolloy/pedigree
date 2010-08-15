@@ -160,6 +160,8 @@ private:
             {
                 return m_bLineRender;
             }
+            
+            void lineRender(uint32_t utf32, DirtyRectangle &rect);
 
         private:
             Window(const Window &);
