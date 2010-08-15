@@ -736,8 +736,11 @@ void Xterm::Window::scrollRegionUp(size_t n, DirtyRectangle &rect)
     // If we're bitblitting, we need to commit all changes before now.
     doRedraw(rect);
     rect.reset();
-    g_pFramebuffer->copy(0, top1_y, 0, top2_y, m_FbWidth, bottom2_y - top2_y);
-    g_pFramebuffer->rect(0, bottom2_y, m_FbWidth, bottom1_y - bottom2_y, bgColourInt, PedigreeGraphics::Bits24_Rgb);
+    g_pFramebuffer->copy(m_OffsetLeft, top1_y, m_OffsetLeft, top2_y, m_FbWidth, bottom2_y - top2_y);
+    g_pFramebuffer->rect(m_OffsetLeft, bottom2_y, m_FbWidth, bottom1_y - bottom2_y, bgColourInt, PedigreeGraphics::Bits24_Rgb);
+    
+    rect.point(m_OffsetLeft, top2_y);
+    rect.point(m_OffsetLeft + m_FbWidth, bottom1_y);
 
     memmove(&m_pBuffer[m_ScrollStart*m_Width], &m_pBuffer[(m_ScrollStart+n)*m_Width], (m_ScrollEnd+1-n-m_ScrollStart)*m_Width*sizeof(TermChar));
 
@@ -781,8 +784,11 @@ void Xterm::Window::scrollRegionDown(size_t n, DirtyRectangle &rect)
     // If we're bitblitting, we need to commit all changes before now.
     doRedraw(rect);
     rect.reset();
-    g_pFramebuffer->copy(0, top1_y, 0, top2_y, m_FbWidth, bottom2_y - top2_y);
-    g_pFramebuffer->rect(0, top1_y, m_FbWidth, top2_y - top1_y, bgColourInt, PedigreeGraphics::Bits24_Rgb);
+    g_pFramebuffer->copy(m_OffsetLeft, top1_y, m_OffsetLeft, top2_y, m_FbWidth, bottom2_y - top2_y);
+    g_pFramebuffer->rect(m_OffsetLeft, top1_y, m_FbWidth, top2_y - top1_y, bgColourInt, PedigreeGraphics::Bits24_Rgb);
+    
+    rect.point(m_OffsetLeft, top1_y);
+    rect.point(m_OffsetLeft + m_FbWidth, bottom2_y);
 
     memmove(&m_pBuffer[(m_ScrollStart+n)*m_Width], &m_pBuffer[((m_ScrollStart))*m_Width], ((m_ScrollEnd+1)-n-m_ScrollStart)*m_Width*sizeof(TermChar));
 
@@ -807,8 +813,11 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
     // If we're bitblitting, we need to commit all changes before now.
     doRedraw(rect);
     rect.reset();
-    g_pFramebuffer->copy(0, top2_px, 0, top_px, m_FbWidth, (m_Height - n) * g_NormalFont->getHeight());
-    g_pFramebuffer->rect(0, bottom2_px, m_FbWidth, n * g_NormalFont->getHeight(), bgColourInt, PedigreeGraphics::Bits24_Rgb);
+    g_pFramebuffer->copy(m_OffsetLeft, top2_px, m_OffsetLeft, top_px, m_FbWidth, (m_Height - n) * g_NormalFont->getHeight());
+    g_pFramebuffer->rect(m_OffsetLeft, bottom2_px, m_FbWidth, n * g_NormalFont->getHeight(), bgColourInt, PedigreeGraphics::Bits24_Rgb);
+    
+    rect.point(m_OffsetLeft, top_px);
+    rect.point(m_OffsetLeft + m_FbWidth, bottom2_px + (n * g_NormalFont->getHeight()));
 
     bool bViewEqual = (m_pView == m_pInsert);
     memmove(m_pInsert, &m_pInsert[n*m_Width], ((m_Width * m_Height) - (n * m_Width)) * sizeof(TermChar));
@@ -959,7 +968,9 @@ void Xterm::Window::eraseScreen(DirtyRectangle &rect)
     // One good fillRect should do the job nicely.
     uint32_t bgColourInt = PedigreeGraphics::createRgb(g_Colours[m_Bg].r, g_Colours[m_Bg].g, g_Colours[m_Bg].b);
     g_pFramebuffer->rect(m_OffsetLeft, m_OffsetTop, m_FbWidth - m_OffsetLeft, m_Height * g_NormalFont->getHeight(), bgColourInt, PedigreeGraphics::Bits24_Rgb);
-    // Syscall::fillRect(m_pFramebuffer, m_OffsetLeft, m_OffsetTop, m_FbWidth-m_OffsetLeft, m_Height*g_NormalFont->getHeight(), g_Colours[m_Bg]);
+    
+    rect.point(m_OffsetLeft, m_OffsetTop);
+    rect.point(m_OffsetLeft + m_FbWidth, m_OffsetTop + (m_Height * g_NormalFont->getHeight()));
 
     for(size_t row = 0; row < m_Height; row++)
     {
@@ -977,7 +988,9 @@ void Xterm::Window::eraseEOL(DirtyRectangle &rect)
     // Again, one fillRect should do it.
     uint32_t bgColourInt = PedigreeGraphics::createRgb(g_Colours[m_Bg].r, g_Colours[m_Bg].g, g_Colours[m_Bg].b);
     g_pFramebuffer->rect(l, m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()), m_FbWidth - l, g_NormalFont->getHeight(), bgColourInt, PedigreeGraphics::Bits24_Rgb);
-    // Syscall::fillRect(m_pFramebuffer, l, m_OffsetTop+ (m_CursorY * g_NormalFont->getHeight()), m_FbWidth-l, g_NormalFont->getHeight(), g_Colours[m_Bg]);
+    
+    rect.point(l, m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()));
+    rect.point(m_OffsetLeft + m_FbWidth, m_OffsetTop + ((m_CursorY + 1) * g_NormalFont->getHeight()));
 
     size_t row = m_CursorY;
     for(size_t col = m_CursorX; col < m_Width; col++)
@@ -992,14 +1005,8 @@ void Xterm::Window::eraseSOL(DirtyRectangle &rect)
     uint32_t bgColourInt = PedigreeGraphics::createRgb(g_Colours[m_Bg].r, g_Colours[m_Bg].g, g_Colours[m_Bg].b);
     g_pFramebuffer->rect(m_OffsetLeft, m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()), m_CursorX * g_NormalFont->getWidth(), g_NormalFont->getHeight(), bgColourInt, PedigreeGraphics::Bits24_Rgb);
     
-    /*
-    Syscall::fillRect(m_pFramebuffer,
-                      m_OffsetLeft,
-                      m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()),
-                      m_CursorX * g_NormalFont->getWidth(),
-                      g_NormalFont->getHeight(),
-                      g_Colours[m_Bg]);
-    */
+    rect.point(m_OffsetLeft, m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()));
+    rect.point(m_OffsetLeft + (m_CursorX * g_NormalFont->getWidth()), m_OffsetTop + ((m_CursorY + 1) * g_NormalFont->getHeight()));
 
     size_t row = m_CursorY;
     for(size_t col = 0; col < m_CursorX; col++)
@@ -1014,14 +1021,8 @@ void Xterm::Window::eraseLine(DirtyRectangle &rect)
     uint32_t bgColourInt = PedigreeGraphics::createRgb(g_Colours[m_Bg].r, g_Colours[m_Bg].g, g_Colours[m_Bg].b);
     g_pFramebuffer->rect(m_OffsetLeft, m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()), m_FbWidth - m_OffsetLeft, g_NormalFont->getHeight(), bgColourInt, PedigreeGraphics::Bits24_Rgb);
     
-    /*
-    Syscall::fillRect(m_pFramebuffer,
-                      m_OffsetLeft,
-                      m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()),
-                      m_FbWidth - m_OffsetLeft,
-                      g_NormalFont->getHeight(),
-                      g_Colours[m_Bg]);
-    */
+    rect.point(m_OffsetLeft, m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()));
+    rect.point(m_OffsetLeft + m_FbWidth, m_OffsetTop + ((m_CursorY + 1) * g_NormalFont->getHeight()));
 
     size_t row = m_CursorY;
     for(size_t col = 0; col < m_Width; col++)
@@ -1041,14 +1042,8 @@ void Xterm::Window::eraseChars(size_t n, DirtyRectangle &rect)
     uint32_t bgColourInt = PedigreeGraphics::createRgb(g_Colours[m_Bg].r, g_Colours[m_Bg].g, g_Colours[m_Bg].b);
     g_pFramebuffer->rect(left, m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()), width, g_NormalFont->getHeight(), bgColourInt, PedigreeGraphics::Bits24_Rgb);
     
-    /*
-    Syscall::fillRect(m_pFramebuffer,
-                      left,
-                      m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()),
-                      width,
-                      g_NormalFont->getHeight(),
-                      g_Colours[m_Bg]);
-    */
+    rect.point(left, m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()));
+    rect.point(left + width, m_OffsetTop + ((m_CursorY + 1) * g_NormalFont->getHeight()));
 
     size_t row = m_CursorY;
     for(size_t col = m_CursorX; col < (m_CursorX + n); col++)
@@ -1062,7 +1057,8 @@ void Xterm::Window::eraseUp(DirtyRectangle &rect)
     uint32_t bgColourInt = PedigreeGraphics::createRgb(g_Colours[m_Bg].r, g_Colours[m_Bg].g, g_Colours[m_Bg].b);
     g_pFramebuffer->rect(m_OffsetLeft, m_OffsetTop, m_FbWidth - m_OffsetLeft, g_NormalFont->getHeight() * m_CursorY, bgColourInt, PedigreeGraphics::Bits24_Rgb);
     
-    // Syscall::fillRect(m_pFramebuffer, m_OffsetLeft, m_OffsetTop, m_FbWidth - m_OffsetLeft, g_NormalFont->getHeight() * m_CursorY, g_Colours[m_Bg]);
+    rect.point(m_OffsetLeft, m_OffsetTop);
+    rect.point(m_OffsetLeft + m_FbWidth, m_OffsetTop + ((m_CursorY + 1) * g_NormalFont->getHeight()));
 
     for(size_t row = 0; row < m_CursorY; row++)
     {
@@ -1079,7 +1075,8 @@ void Xterm::Window::eraseDown(DirtyRectangle &rect)
     uint32_t bgColourInt = PedigreeGraphics::createRgb(g_Colours[m_Bg].r, g_Colours[m_Bg].g, g_Colours[m_Bg].b);
     g_pFramebuffer->rect(m_OffsetLeft, top, m_FbWidth - m_OffsetLeft, g_NormalFont->getHeight() * (m_Height - m_CursorY), bgColourInt, PedigreeGraphics::Bits24_Rgb);
     
-    // Syscall::fillRect(m_pFramebuffer, m_OffsetLeft, top, m_FbWidth - m_OffsetLeft, g_NormalFont->getHeight() * (m_Height - m_CursorY), g_Colours[m_Bg]);
+    rect.point(m_OffsetLeft, top);
+    rect.point(m_OffsetLeft + m_FbWidth, top + ((m_Height - m_CursorY) * g_NormalFont->getHeight()));
 
     for(size_t row = m_CursorY; row < m_Height; row++)
     {
@@ -1110,8 +1107,6 @@ void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
     
     uint32_t bgColourInt = PedigreeGraphics::createRgb(g_Colours[m_Bg].r, g_Colours[m_Bg].g, g_Colours[m_Bg].b);
     g_pFramebuffer->rect(left, top, n * g_NormalFont->getWidth(), g_NormalFont->getHeight(), bgColourInt, PedigreeGraphics::Bits24_Rgb);
-    
-    // Syscall::fillRect(m_pFramebuffer, left, top, n * g_NormalFont->getWidth(), g_NormalFont->getHeight(), g_Colours[m_Bg]);
 
     // Update the moved section
     size_t row = m_CursorY, col = 0;
