@@ -24,7 +24,8 @@ subdirs = [
     'applications/sudo',
     'applications/modload',
     'applications/modunload',
-    'applications/modlist'
+    'applications/modlist',
+    'applications/fire'
 ]
 
 # Cleans a set of flags
@@ -41,6 +42,7 @@ def fixFlags(flags):
 # Fix the CFLAGS and CXXFLAGS for applications
 env['CFLAGS'] = fixFlags(env['CFLAGS'])
 env['CXXFLAGS'] = fixFlags(env['CXXFLAGS'])
+env['CPPDEFINES'] += ['PEDIGREE', '__PEDIGREE__']
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
 

@@ -465,3 +465,9 @@ void Framebuffer::setPixel(size_t x, size_t y, uint32_t colour, Graphics::PixelF
     }
 }
 
+void Framebuffer::swDraw(void *pBuffer, size_t srcx, size_t srcy,
+                         size_t destx, size_t desty, size_t width, size_t height,
+                         Graphics::PixelFormat format)
+{
+    /// \todo Write
+}

@@ -32,11 +32,11 @@ files = [
     Glob('src/thread/*.c'),
     Glob('src/timer/*.c'),
     Glob('src/video/*.c'),
-    Glob('src/audio/disk/*.c'),
+    Glob('src/audio/dummy/*.c'),
     Glob('src/video/dummy/*.c'),
     Glob('src/joystick/dummy/*.c'),
     Glob('src/cdrom/dummy/*.c'),
-    Glob('src/thread/dummy/*.c'),
+    Glob('src/thread/generic/*.c'),
     Glob('src/timer/dummy/*.c'),
     Glob('src/loadso/dummy/*.c'),
 ]
@@ -54,7 +54,8 @@ libraries = [
     'c',
     'm',
     'pedigree-c',
-    'pedigree'
+    'pedigree',
+    'pthread'
 ]
 
 if env['ARCH_TARGET'] in ['X86', 'X64', 'ARM']:

@@ -90,6 +90,16 @@ class Framebuffer
         {
             swBlit(pBuffer, srcx, srcy, destx, desty, width, height);
         }
+
+        /** Draws given raw pixel data to the screen. Used for framebuffer
+         *  chains and applications which need to render constantly changing
+         *  pixel buffers. */
+        virtual inline void draw(void *pBuffer, size_t srcx, size_t srcy,
+                                 size_t destx, size_t desty, size_t width, size_t height,
+                                 Graphics::PixelFormat format = Graphics::Bits32_Argb)
+        {
+            swDraw(pBuffer, srcx, srcy, destx, desty, width, height, format);
+        }
         
         /** Draws a single rectangle to the screen with the given colour. */
         virtual inline void rect(size_t x, size_t y, size_t width, size_t height,
@@ -148,6 +158,10 @@ class Framebuffer
 
         void swLine(size_t x1, size_t y1, size_t x2, size_t y2,
                     uint32_t colour, Graphics::PixelFormat format);
+
+        void swDraw(void *pBuffer, size_t srcx, size_t srcy,
+                    size_t destx, size_t desty, size_t width, size_t height,
+                    Graphics::PixelFormat format = Graphics::Bits32_Argb);
                     
         Graphics::Buffer *swCreateBuffer(const void *srcData, Graphics::PixelFormat srcFormat,
                                          size_t width, size_t height);
