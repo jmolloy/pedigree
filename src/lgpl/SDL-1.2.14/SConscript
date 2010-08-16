@@ -1,0 +1,77 @@
+####################################
+# SCons build system for Pedigree
+## Tyler Kennedy (AKA Linuxhq AKA TkTech)
+####################################
+
+import os.path
+Import(['env'])
+
+# Temporary copy of the global environment so we can fiddle with flags
+tmpEnvironment = env.Clone()
+
+# Change to then name of this module
+builddir = "#" + env["PEDIGREE_BUILD_BASE"]
+imagesdir = env["PEDIGREE_IMAGES_DIR"]
+objname = builddir + '/libSDL.a'
+
+# To include a new subdirectory just add to the list.
+subdirs = [
+    
+]
+
+# To include new files just add to the list, or Glob("*.cpp")
+files = [
+    Glob('src/*.c'),
+    Glob('src/audio/*.c'),
+    Glob('src/cdrom/*.c'),
+    Glob('src/cpuinfo/*.c'),
+    Glob('src/events/*.c'),
+    Glob('src/file/*.c'),
+    Glob('src/joystick/*.c'),
+    Glob('src/stdlib/*.c'),
+    Glob('src/thread/*.c'),
+    Glob('src/timer/*.c'),
+    Glob('src/video/*.c'),
+    Glob('src/audio/disk/*.c'),
+    Glob('src/video/dummy/*.c'),
+    Glob('src/joystick/dummy/*.c'),
+    Glob('src/cdrom/dummy/*.c'),
+    Glob('src/thread/dummy/*.c'),
+    Glob('src/timer/dummy/*.c'),
+    Glob('src/loadso/dummy/*.c'),
+]
+
+# To include a new directory for includes, just add it to the list
+include = [
+    './include',
+    '#/src/subsys/posix/include',
+    '#/src/subsys/native/include',
+]
+
+# To add a library add to the list below
+libraries = [
+    'gcc',
+    'c',
+    'm',
+    'pedigree-c',
+    'pedigree'
+]
+
+if env['ARCH_TARGET'] in ['X86', 'X64', 'ARM']:
+    libraries += ['kernelrtti']
+
+# To add a library path add to the list below
+libpaths = [
+    '#',
+    imagesdir + 'libraries',
+    builddir
+]
+
+tmpEnvironment['CPPPATH'] = include
+tmpEnvironment['LIBS'] = libraries
+tmpEnvironment['LIBPATH'] = libpaths
+tmpEnvironment['CPPDEFINES'] += ['PEDIGREE']
+
+SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
+
+tmpEnvironment.Library(objname, files)

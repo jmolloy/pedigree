@@ -11,7 +11,7 @@ Import(['env'])
 subdirs = ['subsys', 'modules', 'system']
 
 if env['ARCH_TARGET'] in ['X86', 'X64', 'PPC']:
-    subdirs += ['user']
+    subdirs += ['user', 'lgpl']
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
 
