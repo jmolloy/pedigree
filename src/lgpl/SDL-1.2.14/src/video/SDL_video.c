@@ -129,6 +129,9 @@ static VideoBootStrap *bootstrap[] = {
 #if SDL_VIDEO_DRIVER_DUMMY
 	&DUMMY_bootstrap,
 #endif
+#if SDL_VIDEO_DRIVER_PEDIGREE
+	&PEDIGREE_bootstrap,
+#endif
 	NULL
 };
 
@@ -143,7 +146,6 @@ static SDL_GrabMode SDL_WM_GrabInputOff(void);
 #if SDL_VIDEO_OPENGL
 static int lock_count = 0;
 #endif
-
 
 /*
  * Initialize the video and event subsystems -- determine native pixel format
@@ -198,6 +200,7 @@ int SDL_VideoInit (const char *driver_name, Uint32 flags)
 			}
 		}
 	}
+
 	if ( video == NULL ) {
 		SDL_SetError("No available video device");
 		return(-1);
@@ -240,7 +243,7 @@ int SDL_VideoInit (const char *driver_name, Uint32 flags)
 	video->gl_config.multisamplesamples = 0;
 	video->gl_config.accelerated = -1; /* not known, don't set */
 	video->gl_config.swap_control = -1; /* not known, don't set */
-	
+
 	/* Initialize the video subsystem */
 	SDL_memset(&vformat, 0, sizeof(vformat));
 	if ( video->VideoInit(video, &vformat) < 0 ) {
@@ -278,6 +281,7 @@ int SDL_VideoInit (const char *driver_name, Uint32 flags)
 		SDL_VideoQuit();
 		return(-1);
 	}
+
 	SDL_CursorInit(flags & SDL_INIT_EVENTTHREAD);
 
 	/* We're ready to go! */

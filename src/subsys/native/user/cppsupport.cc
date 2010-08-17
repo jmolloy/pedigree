@@ -15,28 +15,3 @@
  */
 
 #include <types.h>
-
-/// \todo Write
-
-void *operator new (size_t size) throw()
-{
-  return 0;
-}
-void *operator new[] (size_t size) throw()
-{
-  return 0;
-}
-void *operator new (size_t size, void* memory) throw()
-{
-  return 0;
-}
-void *operator new[] (size_t size, void* memory) throw()
-{
-  return 0;
-}
-void operator delete (void * p)
-{
-}
-void operator delete[] (void * p)
-{
-}

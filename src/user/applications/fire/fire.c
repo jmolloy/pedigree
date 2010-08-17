@@ -401,7 +401,6 @@ int buttonstate;
 	normal(remap);
 	bright(remap2);
 
-
 	flash=0;
 	whichmap=0;
 	loadcolors(whichmap);

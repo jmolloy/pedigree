@@ -25,6 +25,10 @@
 
 #include "SDL_blit.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Pixel format functions */
 extern SDL_PixelFormat *SDL_AllocFormat(int bpp,
 		Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask);
@@ -44,3 +48,7 @@ extern Uint16 SDL_CalculatePitch(SDL_Surface *surface);
 extern void SDL_DitherColors(SDL_Color *colors, int bpp);
 extern Uint8 SDL_FindColor(SDL_Palette *pal, Uint8 r, Uint8 g, Uint8 b);
 extern void SDL_ApplyGamma(Uint16 *gamma, SDL_Color *colors, SDL_Color *output, int ncolors);
+
+#ifdef __cplusplus
+}
+#endif

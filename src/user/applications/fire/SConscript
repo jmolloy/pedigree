@@ -11,6 +11,7 @@ tmp = env.Clone()
 appdir = "#" + env["PEDIGREE_BUILD_APPS"]
 builddir = "#" + env["PEDIGREE_BUILD_BASE"]
 kerneldir = "#" + env["PEDIGREE_BUILD_KERNEL"]
+imagesdir = env["PEDIGREE_IMAGES_DIR"]
 objname = appdir + '/fire'
 
 env.Alias("apps", objname)
@@ -48,12 +49,15 @@ libraries = [
     'gcc',
     'c',
     'm',
-    'SDL'
+    'SDL',
+    'pedigree',
+    'stdc++'
 ]
 
 # To add a library path add to the list below
 libpaths = [
-    env['LIBGCC'],
+    '#',
+    imagesdir + 'libraries',
     builddir
 ]
 

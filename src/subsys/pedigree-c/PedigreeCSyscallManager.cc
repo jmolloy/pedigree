@@ -60,6 +60,8 @@ uintptr_t PedigreeCSyscallManager::syscall(SyscallState &state)
     // We're interruptible.
     Processor::setInterrupts(true);
 
+    NOTICE("pedigree-c syscall #" << Dec << state.getSyscallNumber() << Hex);
+
     switch (state.getSyscallNumber())
     {
         // Pedigree system calls, called from POSIX applications
@@ -142,6 +144,9 @@ uintptr_t PedigreeCSyscallManager::syscall(SyscallState &state)
             return 0;
         case PEDIGREE_GFX_LINE:
             pedigree_gfx_line(reinterpret_cast<void*>(p1), reinterpret_cast<void*>(p2));
+            return 0;
+        case PEDIGREE_GFX_DRAW:
+            pedigree_gfx_draw(reinterpret_cast<void*>(p1), reinterpret_cast<void*>(p2));
             return 0;
         default: ERROR ("PedigreeCSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
