@@ -262,9 +262,15 @@ static void init()
     /// \todo Check for failure
     ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
     Service         *pService  = ServiceManager::instance().getService(String("graphics"));
+    bool bSuccess = false;
     if(pFeatures->provides(ServiceFeatures::probe))
         if(pService)
-            pService->serve(ServiceFeatures::probe, reinterpret_cast<void*>(&pProvider), sizeof(pProvider));
+            bSuccess = pService->serve(ServiceFeatures::probe, reinterpret_cast<void*>(&pProvider), sizeof(pProvider));
+    
+    if(!bSuccess)
+    {
+        FATAL("splash: couldn't find any graphics providers - at least one is required to run Pedigree!");
+    }
     
     Display *pDisplay = pProvider.pDisplay;
     
@@ -289,11 +295,8 @@ static void init()
 
     Framebuffer *pFramebuffer = pProvider.pFramebuffer;
     
-    Display::ScreenMode currMode;
-    pProvider.pDisplay->getCurrentScreenMode(currMode);
-    
-    g_Width   = currMode.width;
-    g_Height  = currMode.height;
+    g_Width   = pFramebuffer->getWidth();
+    g_Height  = pFramebuffer->getHeight();
     
     pFramebuffer->rect(0, 0, g_Width, g_Height, g_BackgroundColour, g_BgFgFormat);
     
@@ -378,5 +381,5 @@ static void destroy()
 {
 }
 
-MODULE_INFO("splash", &init, &destroy, "vmware-gfx", "config");
+MODULE_INFO("splash", &init, &destroy, "gfx-deps", "config");
 
