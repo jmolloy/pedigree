@@ -33,7 +33,8 @@ namespace PedigreeGraphics
         Bits16_Rgb565,      // 5:6:5 RGB
         Bits16_Rgb555,      // 5:5:5 RGB
         
-        Bits8_Idx           // Index into a palette
+        Bits8_Idx,          // Index into a palette
+        Bits8_Rgb332,
     };
         
     inline size_t bitsPerPixel(PixelFormat format)
@@ -237,6 +238,12 @@ namespace PedigreeGraphics
             amtGreen = (((source & 0x3E0) >> 5) / 0x1F) * 0xFF;
             amtBlue = ((source & 0x1F) / 0x1F) * 0xFF;
         }
+        else if(srcFormat == Bits8_Rgb332)
+        {
+            amtRed = (((source & 0xE0) >> 5) / 0x7) * 0xFF;
+            amtGreen = (((source & 0x1C) >> 2) / 0x7) * 0xFF;
+            amtBlue = ((source & 0x3) / 0x3) * 0xFF;
+        }
         
         // Conversion code. Complicated and ugly. :(
         switch(destFormat)
@@ -284,6 +291,13 @@ namespace PedigreeGraphics
             case Bits8_Idx:
                 /// \todo Palette conversion
                 break;
+            case Bits8_Rgb332:
+                amtRed >>= 5;
+                amtGreen >>= 5;
+                amtBlue >>= 6;
+                
+                dest = (amtRed << 5) | (amtGreen << 2) | amtBlue;
+                return true;
             default:
                 break;
         }
