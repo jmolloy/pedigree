@@ -62,6 +62,11 @@ static bool g_LogMode = false;
 
 Mutex g_PrintLock(false);
 
+void printChar(char c, size_t x, size_t y)
+{
+    pProvider.pFramebuffer->blit(g_pFont, 0, c * FONT_HEIGHT, x, y, FONT_WIDTH, FONT_HEIGHT);
+}
+
 void printChar(char c)
 {
     LockGuard<Mutex> guard(g_PrintLock);
@@ -113,6 +118,29 @@ void printString(const char *str)
 {
     for(size_t i = 0;i<strlen(str);i++)
         printChar(str[i]);
+}
+
+void printStringAt(const char *str, size_t x, size_t y)
+{
+    /// \todo Handle overflows
+    for(size_t i = 0; i < strlen(str); i++)
+    {
+        printChar(str[i], x, y);
+        x += FONT_WIDTH;
+    }
+}
+
+void centerStringAt(const char *str, size_t x, size_t y)
+{
+    /// \todo Handle overflows
+    size_t pxWidth = strlen(str) * FONT_WIDTH;
+    
+    size_t startX = x - (pxWidth / 2);
+    for(size_t i = 0; i < strlen(str); i++)
+    {
+        printChar(str[i], startX, y);
+        startX += FONT_WIDTH;
+    }
 }
 
 class StreamingScreenLogger : public Log::LogCallback
@@ -318,14 +346,17 @@ static void init()
     
     g_ProgressX = (g_Width / 2) - 200;
     g_ProgressW = 400;
-    g_ProgressY = (g_Height / 4) * 3;
+    g_ProgressY = (g_Height / 3) * 2;
     g_ProgressH = 15;
 
     g_LogBoxX = 0;
-    g_LogBoxY = g_ProgressY + (g_ProgressH * 2);
+    g_LogBoxY = (g_Height / 4) * 3;
     g_LogW = g_Width;
     g_LogH = g_Height - g_LogBoxY;
     g_LogX = g_LogY = 0;
+
+    // Yay text!
+    centerStringAt("Please wait, Pedigree is loading...", g_Width / 2, g_ProgressY - (FONT_HEIGHT * 3));
 
     // Draw a border around the log area    
     pFramebuffer->rect(g_LogBoxX, g_LogBoxY - 2, g_LogW, g_LogH - 2, g_ForegroundColour, g_BgFgFormat);
