@@ -31,7 +31,7 @@ class Framebuffer
 {
     public:
     
-        Framebuffer() : m_pDisplay(0), m_FramebufferBase(0)
+        Framebuffer() : m_pDisplay(0), m_FramebufferBase(0), m_pParent(0)
         {
         }
         
@@ -44,6 +44,8 @@ class Framebuffer
          *  cannot be guaranteed to be safe. */
         virtual void *getRawBuffer()
         {
+            if(m_pParent)
+                return m_pParent->getRawBuffer();
             return reinterpret_cast<void*>(m_FramebufferBase);
         }
         
@@ -64,6 +66,8 @@ class Framebuffer
         virtual Graphics::Buffer *createBuffer(const void *srcData, Graphics::PixelFormat srcFormat,
                                                size_t width, size_t height)
         {
+            if(m_pParent)
+                return m_pParent->createBuffer(srcData, srcFormat, width, height);
             return swCreateBuffer(srcData,srcFormat, width, height);
         }
         
@@ -71,7 +75,10 @@ class Framebuffer
          *  and any references still in VRAM. */
         virtual void destroyBuffer(Graphics::Buffer *pBuffer)
         {
-            swDestroyBuffer(pBuffer);
+            if(m_pParent)
+                m_pParent->destroyBuffer(pBuffer);
+            else
+                swDestroyBuffer(pBuffer);
         }
         
         /** Performs an update of a region of this framebuffer. This function
@@ -81,14 +88,40 @@ class Framebuffer
          *  \param y topmost y co-ordinate of the redraw area, ~0 for "invalid"
          *  \param w width of the redraw area, ~0 for "invalid"
          *  \param h height of the redraw area, ~0 for "invalid" */
-        virtual void redraw(size_t x = ~0UL, size_t y = ~0UL,
-                            size_t w = ~0UL, size_t h = ~0UL) {}
+        void redraw(size_t x = ~0UL, size_t y = ~0UL,
+                    size_t w = ~0UL, size_t h = ~0UL)
+        {
+            if(m_pParent)
+            {
+                // Redraw with parent:
+                // 1. Draw our framebuffer. This will go to the top without
+                //    changing intermediate framebuffers.
+                // 2. Pass a redraw up the chain. This will reach the top level
+                //    (probably with modified x/y) and cause our screen region
+                //    to be redrawn.
+                /// \todo How do parents know what children have modified, and
+                ///       whether the redraw has been caused by a child? If the
+                ///       redraw is caused by a child the "precedence" algorithm
+                ///       shouldn't be used, but it it's been called direcetly,
+                ///       precedence should take place.
+                /// \note If none of the above makes sense, you need to read the
+                ///       Pedigree graphics design doc:
+                ///       http://pedigree-project.org/issues/114
+                m_pParent->draw(reinterpret_cast<void*>(m_FramebufferBase), x, y, x, y, w, h, m_PixelFormat);
+                m_pParent->redraw(x, y, w, h);
+            }
+            else
+                hwRedraw(x, y, w, h);
+        }
         
         /** Blits a given buffer to the screen. See createBuffer. */
         virtual inline void blit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
                                  size_t destx, size_t desty, size_t width, size_t height)
         {
-            swBlit(pBuffer, srcx, srcy, destx, desty, width, height);
+            if(m_pParent)
+                m_pParent->blit(pBuffer, srcx, srcy, destx, desty, width, height);
+            else
+                swBlit(pBuffer, srcx, srcy, destx, desty, width, height);
         }
 
         /** Draws given raw pixel data to the screen. Used for framebuffer
@@ -98,14 +131,20 @@ class Framebuffer
                                  size_t destx, size_t desty, size_t width, size_t height,
                                  Graphics::PixelFormat format = Graphics::Bits32_Argb)
         {
-            swDraw(pBuffer, srcx, srcy, destx, desty, width, height, format);
+            if(m_pParent)
+                m_pParent->draw(pBuffer, srcx, srcy, destx, desty, width, height, format);
+            else
+                swDraw(pBuffer, srcx, srcy, destx, desty, width, height, format);
         }
         
         /** Draws a single rectangle to the screen with the given colour. */
         virtual inline void rect(size_t x, size_t y, size_t width, size_t height,
                                  uint32_t colour, Graphics::PixelFormat format = Graphics::Bits32_Argb)
         {
-            swRect(x, y, width, height, colour, format);
+            if(m_pParent)
+                m_pParent->rect(x, y, width, height, colour, format);
+            else
+                swRect(x, y, width, height, colour, format);
         }
         
         /** Copies a rectangle already on the framebuffer to a new location */
@@ -113,14 +152,20 @@ class Framebuffer
                                  size_t destx, size_t desty,
                                  size_t w, size_t h)
         {
-            swCopy(srcx, srcy, destx, desty, w, h);
+            if(m_pParent)
+                m_pParent->copy(srcx, srcy, destx, desty, w, h);
+            else
+                swCopy(srcx, srcy, destx, desty, w, h);
         }
 
         /** Draws a line one pixel wide between two points on the screen */
         virtual inline void line(size_t x1, size_t y1, size_t x2, size_t y2,
                                  uint32_t colour, Graphics::PixelFormat format = Graphics::Bits32_Argb)
         {
-            swLine(x1, y1, x2, y2, colour, format);
+            if(m_pParent)
+                m_pParent->line(x1, y1, x2, y2, colour, format);
+            else
+                swLine(x1, y1, x2, y2, colour, format);
         }
 
         /** Sets an individual pixel on the framebuffer. Not inheritable. */
@@ -137,6 +182,24 @@ class Framebuffer
         // Base address of this framebuffer, set by whatever code inherits this
         // class, ideally in the constructor.
         uintptr_t m_FramebufferBase;
+        
+        /// Width of the framebuffer in pixels
+        size_t m_nWidth;
+        
+        /// Height of the framebuffer in pixels
+        size_t m_nHeight;
+        
+        /// Framebuffer pixel format
+        Graphics::PixelFormat m_PixelFormat;
+        
+        /// Bytes per pixel in this framebuffer
+        size_t m_BytesPerPixel;
+        
+        /// Bytes per line in this framebuffer
+        size_t m_nBytesPerLine;
+        
+        /// Parent of this framebuffer
+        Framebuffer *m_pParent;
         
         void setFramebuffer(uintptr_t p)
         {
@@ -167,6 +230,10 @@ class Framebuffer
                                          size_t width, size_t height);
         
         void swDestroyBuffer(Graphics::Buffer *pBuffer);
+        
+        /// Inherited by drivers that provide a hardware redraw function
+        virtual inline void hwRedraw(size_t x = ~0UL, size_t y = ~0UL,
+                                     size_t w = ~0UL, size_t h = ~0UL) {}
 };
 
 #endif

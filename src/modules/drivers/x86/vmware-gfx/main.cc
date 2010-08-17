@@ -352,8 +352,8 @@ class VmwareGraphics : public Display
                 {
                 }
                 
-                virtual void redraw(size_t x = ~0UL, size_t y = ~0UL,
-                                    size_t w = ~0UL, size_t h = ~0UL)
+                virtual void hwRedraw(size_t x = ~0UL, size_t y = ~0UL,
+                                      size_t w = ~0UL, size_t h = ~0UL)
                 {
                     static_cast<VmwareGraphics*>(m_pDisplay)->redraw(x, y, w, h);
                 }
