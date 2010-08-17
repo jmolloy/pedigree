@@ -60,8 +60,6 @@ uintptr_t PedigreeCSyscallManager::syscall(SyscallState &state)
     // We're interruptible.
     Processor::setInterrupts(true);
 
-    NOTICE("pedigree-c syscall #" << Dec << state.getSyscallNumber() << Hex);
-
     switch (state.getSyscallNumber())
     {
         // Pedigree system calls, called from POSIX applications
