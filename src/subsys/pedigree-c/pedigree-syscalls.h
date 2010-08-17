@@ -95,7 +95,7 @@ void pedigree_gfx_set_pixel(void *p, uint32_t x, uint32_t y, uint32_t colour, ui
 void pedigree_gfx_rect(void *p, void *args);
 void pedigree_gfx_copy(void *p, void *args);
 void pedigree_gfx_line(void *p, void *args);
-
+void pedigree_gfx_draw(void *p, void *args);
 
 #ifdef __cplusplus
 }; // extern "C"

@@ -28,6 +28,12 @@ struct blitargs
     uint32_t srcx, srcy, destx, desty, width, height;
 } PACKED;
 
+struct drawargs
+{
+    void *a;
+    uint32_t b, c, d, e, f, g, h;
+} PACKED;
+
 struct fourargs
 {
     uint32_t a, b, c, d;
@@ -106,6 +112,26 @@ void Framebuffer::blit(Buffer *pBuffer, size_t srcx, size_t srcy,
     args.height = height;
     
     pedigree_gfx_blit(&m_Provider, &args);
+}
+
+void Framebuffer::draw(void *pBuffer, size_t srcx, size_t srcy,
+                       size_t destx, size_t desty, size_t width, size_t height,
+                       PixelFormat format)
+{
+    if(!m_bProviderValid)
+        return;
+    
+    drawargs args;
+    args.a = pBuffer;
+    args.b = srcx;
+    args.c = srcy;
+    args.d = destx;
+    args.e = desty;
+    args.f = width;
+    args.g = height;
+    args.h = static_cast<uint32_t>(format);
+    
+    pedigree_gfx_draw(&m_Provider, &args);
 }
 
 void Framebuffer::rect(size_t x, size_t y, size_t width, size_t height,

@@ -150,6 +150,13 @@ namespace PedigreeGraphics
             /** Blits a given buffer to the screen. See createBuffer. */
             void blit(PedigreeGraphics::Buffer *pBuffer, size_t srcx, size_t srcy,
                       size_t destx, size_t desty, size_t width, size_t height);
+
+            /** Draws given raw pixel data to the screen. Used for framebuffer
+             *  chains and applications which need to render constantly changing
+             *  pixel buffers. */
+            void draw(void *pBuffer, size_t srcx, size_t srcy,
+                      size_t destx, size_t desty, size_t width, size_t height,
+                      PedigreeGraphics::PixelFormat format = PedigreeGraphics::Bits32_Argb);
             
             /** Draws a single rectangle to the screen with the given colour. */
             void rect(size_t x, size_t y, size_t width, size_t height,

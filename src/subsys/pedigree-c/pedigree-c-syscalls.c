@@ -215,4 +215,7 @@ void pedigree_gfx_line(void *p, void *args)
     syscall2(PEDIGREE_GFX_LINE, (long) p, (long) args);
 }
 
-
+void pedigree_gfx_draw(void *p, void *args)
+{
+    syscall2(PEDIGREE_GFX_DRAW, (long) p, (long) args);
+}

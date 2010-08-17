@@ -275,14 +275,10 @@ static void init()
     for (size_t i = 0; i < (width*height); i++)
         HEADER_PIXEL(data, &g_pBuffer[i * 3]); // 24-bit, hardcoded
     
-    Graphics::Buffer *pBuffer = pFramebuffer->createBuffer(g_pBuffer, Graphics::Bits24_Bgr, width, height);
-    
     size_t origx = (g_Width - width) / 2;
     size_t origy = (g_Height - height) / 3;
-    
-    pFramebuffer->blit(pBuffer, 0, 0, origx, origy, width, height);
-    
-    pFramebuffer->destroyBuffer(pBuffer);
+
+    pFramebuffer->draw(g_pBuffer, 0, 0, origx, origy, width, height, Graphics::Bits24_Bgr);
     
     delete [] g_pBuffer;
         

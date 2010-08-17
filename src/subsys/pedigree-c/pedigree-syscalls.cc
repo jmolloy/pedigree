@@ -34,6 +34,12 @@ struct blitargs
     uint32_t srcx, srcy, destx, desty, width, height;
 } PACKED;
 
+struct drawargs
+{
+    void *a;
+    uint32_t b, c, d, e, f, g, h;
+} PACKED;
+
 struct fourargs
 {
     uint32_t a, b, c, d;
@@ -384,3 +390,15 @@ void pedigree_gfx_line(void *p, void *args)
     pProvider->pFramebuffer->rect(pArgs->a, pArgs->b, pArgs->c, pArgs->d, pArgs->e, static_cast<Graphics::PixelFormat>(pArgs->f));
 }
 
+void pedigree_gfx_draw(void *p, void *args)
+{
+    if(!p || !args)
+        return;
+
+    drawargs *pArgs = reinterpret_cast<drawargs*>(args);
+    
+    /// \todo Exploit: could allow userspace code to be run at ring0
+    GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
+    
+    pProvider->pFramebuffer->draw(pArgs->a, pArgs->b, pArgs->c, pArgs->d, pArgs->e, pArgs->f, pArgs->g, static_cast<Graphics::PixelFormat>(pArgs->h));
+}

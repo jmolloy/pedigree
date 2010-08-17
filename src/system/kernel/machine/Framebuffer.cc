@@ -469,5 +469,11 @@ void Framebuffer::swDraw(void *pBuffer, size_t srcx, size_t srcy,
                          size_t destx, size_t desty, size_t width, size_t height,
                          Graphics::PixelFormat format)
 {
-    /// \todo Write
+    // Potentially inefficient use of RAM and VRAM, but best way to avoid
+    // redundant copies of code lying around.
+    Graphics::Buffer *p = createBuffer(pBuffer, format, srcx + width, srcy + height);
+    if(!p)
+        return;
+    blit(p, srcx, srcy, destx, desty, width, height);
+    destroyBuffer(p);
 }

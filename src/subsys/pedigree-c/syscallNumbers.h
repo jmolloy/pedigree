@@ -56,6 +56,7 @@
 #define PEDIGREE_GFX_COPY                   72
 #define PEDIGREE_GFX_LINE                   73
 #define PEDIGREE_GFX_SET_PIXEL              74
+#define PEDIGREE_GFX_DRAW                   75
 
 #endif
 
