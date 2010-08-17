@@ -227,6 +227,14 @@ bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
     g_ScreenMode = m_Mode;
     g_Framebuffer = reinterpret_cast<uintptr_t>(m_pFramebuffer->virtualAddress());
     g_FbSize = m_pFramebuffer->size();
+    
+    m_pLogicalFramebuffer->setWidth(m_Mode.width);
+    m_pLogicalFramebuffer->setHeight(m_Mode.height);
+    m_pLogicalFramebuffer->setBytesPerPixel(m_Mode.bytesPerPixel);
+    m_pLogicalFramebuffer->setBytesPerLine(m_Mode.bytesPerLine);
+    m_pLogicalFramebuffer->setFormat(m_Mode.pf2);
+    m_pLogicalFramebuffer->setXPos(0); m_pLogicalFramebuffer->setYPos(0);
+    m_pLogicalFramebuffer->setParent(0);
 
     return true;
 }

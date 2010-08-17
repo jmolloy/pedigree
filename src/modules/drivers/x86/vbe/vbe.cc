@@ -103,7 +103,6 @@ class VbeFramebuffer : public Framebuffer
             Framebuffer()
         {
             setFramebuffer(reinterpret_cast<uintptr_t>(pDisplay->getFramebuffer()));
-            setDisplay(pDisplay);
         }
         
         virtual ~VbeFramebuffer()
@@ -287,6 +286,7 @@ void entry()
   */
   
   VbeFramebuffer *pFramebuffer = new VbeFramebuffer(pDisplay);
+  pDisplay->setLogicalFramebuffer(pFramebuffer);
 
   GraphicsService::GraphicsProvider *pProvider = new GraphicsService::GraphicsProvider;
   pProvider->pDisplay = pDisplay;

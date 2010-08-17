@@ -106,23 +106,6 @@ class VmwareGraphics : public Display
                 m_CommandRegion = static_cast<MemoryMappedIo*>(m_Addresses[1]->m_Io);
             }
             
-            #if 0
-            
-            // Set mode
-            writeRegister(SVGA_REG_WIDTH, 1024);
-            writeRegister(SVGA_REG_HEIGHT, 768);
-            writeRegister(SVGA_REG_BITS_PER_PIXEL, 32);
-            
-            size_t fbOffset = readRegister(SVGA_REG_FB_OFFSET);
-            size_t bytesPerLine = readRegister(SVGA_REG_BYTES_PER_LINE);
-            size_t width = readRegister(SVGA_REG_WIDTH);
-            size_t height = readRegister(SVGA_REG_HEIGHT);
-            size_t depth = readRegister(SVGA_REG_DEPTH);
-            
-            NOTICE("vmware-gfx entered mode " << Dec << width << "x" << height << "x" << depth << Hex << ", mode framebuffer is " << (fbBase + fbOffset));
-            
-            #endif
-            
             // Disable the command FIFO in case it was already enabled
             writeRegister(SVGA_REG_CONFIG_DONE, 0);
             
@@ -149,36 +132,6 @@ class VmwareGraphics : public Display
                 fifo[SVGA_FIFO_MAX] = cmdSize & ~0x3; // Permit the full FIFO to be used
                 fifo[SVGA_FIFO_NEXT_CMD] = fifo[SVGA_FIFO_STOP] = 16; // Empty FIFO
             }
-            
-            // Try some hardware accelerated stuff
-            if(caps & SVGA_CAP_RECT_FILL)
-            {
-                NOTICE("vmware-gfx rect fill supported");
-            
-                writeFifo(SVGA_CMD_RECT_FILL); // RECT FILL
-                writeFifo(0xFFFFFFFF); // White
-                writeFifo(64); // X
-                writeFifo(64); // Y
-                writeFifo(256); // Width
-                writeFifo(256); // Height
-            }
-            else
-                NOTICE("vmware-gfx no rect fill available");
-            
-            if(caps & SVGA_CAP_RECT_COPY)
-            {
-                NOTICE("vmware-gfx rect copy supported");
-                
-                writeFifo(SVGA_CMD_RECT_COPY); // RECT COPY
-                writeFifo(8); // Source X
-                writeFifo(8); // Source Y
-                writeFifo(256); // Dest X
-                writeFifo(256); // Dest Y
-                writeFifo(256); // Width
-                writeFifo(256); // Height
-            }
-            else
-                NOTICE("vmware-gfx no rect copy available");
             
             // Start running the FIFO
             writeRegister(SVGA_REG_CONFIG_DONE, 1);
@@ -292,12 +245,51 @@ class VmwareGraphics : public Display
             writeRegister(SVGA_REG_BITS_PER_PIXEL, bpp);
             
             size_t fbOffset = readRegister(SVGA_REG_FB_OFFSET);
-            size_t bytesPerLine = readRegister(SVGA_REG_BYTES_PER_LINE);
             size_t width = readRegister(SVGA_REG_WIDTH);
             size_t height = readRegister(SVGA_REG_HEIGHT);
             size_t depth = readRegister(SVGA_REG_DEPTH);
             uintptr_t fbBase = readRegister(SVGA_REG_FB_START);
             size_t fbSize = readRegister(SVGA_REG_VRAM_SIZE);
+            
+            size_t redMask = readRegister(SVGA_REG_RED_MASK);
+            size_t greenMask = readRegister(SVGA_REG_GREEN_MASK);
+            size_t blueMask = readRegister(SVGA_REG_BLUE_MASK);
+            
+            size_t bytesPerLine = readRegister(SVGA_REG_BYTES_PER_LINE);
+            size_t bytesPerPixel = bpp / 8;
+            
+            m_pFramebuffer->setWidth(w);
+            m_pFramebuffer->setHeight(h);
+            m_pFramebuffer->setBytesPerPixel(bytesPerPixel);
+            m_pFramebuffer->setBytesPerLine(bytesPerLine);
+
+            Graphics::PixelFormat pf;
+            switch(bpp)
+            {
+                case 24:
+                    if(redMask > blueMask)
+                        pf = Graphics::Bits24_Rgb;
+                    else
+                        pf = Graphics::Bits24_Bgr;
+                    break;
+                case 16:
+                    if((redMask == greenMask) && (greenMask == blueMask))
+                    {
+                        if(blueMask == 0xF)
+                            pf = Graphics::Bits16_Argb;
+                        else
+                            pf = Graphics::Bits16_Rgb555;
+                    }
+                    else
+                        pf = Graphics::Bits16_Rgb565;
+                    break;
+                default:
+                    pf = Graphics::Bits32_Argb;
+                    break;
+            }
+            m_pFramebuffer->setFormat(pf);
+            m_pFramebuffer->setXPos(0); m_pFramebuffer->setYPos(0);
+            m_pFramebuffer->setParent(0);
             
             NOTICE("vmware-gfx entered mode " << Dec << width << "x" << height << "x" << depth << Hex << ", mode framebuffer is " << (fbBase + fbOffset));
         }
@@ -341,11 +333,10 @@ class VmwareGraphics : public Display
                 {
                 }
                 
-                VmwareFramebuffer(uintptr_t fb, Display *pDisplay) :
-                    Framebuffer()
+                VmwareFramebuffer(uintptr_t fb, VmwareGraphics *pDisplay) :
+                    Framebuffer(), m_pDisplay(pDisplay)
                 {
                     setFramebuffer(fb);
-                    setDisplay(pDisplay);
                 }
                 
                 virtual ~VmwareFramebuffer()
@@ -355,7 +346,7 @@ class VmwareGraphics : public Display
                 virtual void hwRedraw(size_t x = ~0UL, size_t y = ~0UL,
                                       size_t w = ~0UL, size_t h = ~0UL)
                 {
-                    static_cast<VmwareGraphics*>(m_pDisplay)->redraw(x, y, w, h);
+                    m_pDisplay->redraw(x, y, w, h);
                 }
                 
                 virtual inline void copy(size_t srcx, size_t srcy,
@@ -363,8 +354,15 @@ class VmwareGraphics : public Display
                                          size_t w, size_t h)
                 {
                     /// \todo Caps to determine whether to fall back to software
-                    static_cast<VmwareGraphics*>(m_pDisplay)->copy(srcx, srcy, destx, desty, w, h);
+                    if(1)
+                        m_pDisplay->copy(srcx, srcy, destx, desty, w, h);
+                    else
+                        swCopy(srcx, srcy, destx, desty, w, h);
                 }
+            
+            private:
+            
+                VmwareGraphics *m_pDisplay;
         };
         
     private:

@@ -154,7 +154,7 @@ public:
     virtual bool setScreenMode(size_t modeId)
     {
         Display::ScreenMode *pSm = 0;
-
+        
         List<Display::ScreenMode*> modes;
         if(!getScreenModes(modes))
             return false;

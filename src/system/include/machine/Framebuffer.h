@@ -31,12 +31,34 @@ class Framebuffer
 {
     public:
     
-        Framebuffer() : m_pDisplay(0), m_FramebufferBase(0), m_pParent(0)
+        Framebuffer() : m_pParent(0), m_FramebufferBase(0)
         {
         }
         
         virtual ~Framebuffer()
         {
+        }
+        
+        inline size_t getWidth()
+        {
+            return m_nWidth;
+        }
+        
+        inline size_t getHeight()
+        {
+            return m_nHeight;
+        }
+        
+        inline size_t getFormat()
+        {
+            return m_PixelFormat;
+        }
+        
+        /// Sets the palette used for palette-based colour formats. Takes an
+        /// array of pixels in Bits32_Argb format.
+        inline void setPalette(uint32_t *palette, size_t nEntries)
+        {
+            /// \todo Write
         }
         
         /** Gets a raw pointer to the framebuffer itself. There is no way to
@@ -107,8 +129,8 @@ class Framebuffer
                 /// \note If none of the above makes sense, you need to read the
                 ///       Pedigree graphics design doc:
                 ///       http://pedigree-project.org/issues/114
-                m_pParent->draw(reinterpret_cast<void*>(m_FramebufferBase), x, y, x, y, w, h, m_PixelFormat);
-                m_pParent->redraw(x, y, w, h);
+                m_pParent->draw(reinterpret_cast<void*>(m_FramebufferBase), x, y, m_XPos + x, m_YPos + y, w, h, m_PixelFormat);
+                m_pParent->redraw(m_XPos + x, m_YPos + y, w, h);
             }
             else
                 hwRedraw(x, y, w, h);
@@ -119,9 +141,8 @@ class Framebuffer
                                  size_t destx, size_t desty, size_t width, size_t height)
         {
             if(m_pParent)
-                m_pParent->blit(pBuffer, srcx, srcy, destx, desty, width, height);
-            else
-                swBlit(pBuffer, srcx, srcy, destx, desty, width, height);
+                m_pParent->blit(pBuffer, srcx, srcy, m_XPos + destx, m_YPos + desty, width, height);
+            swBlit(pBuffer, srcx, srcy, destx, desty, width, height);
         }
 
         /** Draws given raw pixel data to the screen. Used for framebuffer
@@ -132,9 +153,8 @@ class Framebuffer
                                  Graphics::PixelFormat format = Graphics::Bits32_Argb)
         {
             if(m_pParent)
-                m_pParent->draw(pBuffer, srcx, srcy, destx, desty, width, height, format);
-            else
-                swDraw(pBuffer, srcx, srcy, destx, desty, width, height, format);
+                m_pParent->draw(pBuffer, srcx, srcy, m_XPos + destx, m_YPos + desty, width, height, format);
+            swDraw(pBuffer, srcx, srcy, destx, desty, width, height, format);
         }
         
         /** Draws a single rectangle to the screen with the given colour. */
@@ -142,9 +162,8 @@ class Framebuffer
                                  uint32_t colour, Graphics::PixelFormat format = Graphics::Bits32_Argb)
         {
             if(m_pParent)
-                m_pParent->rect(x, y, width, height, colour, format);
-            else
-                swRect(x, y, width, height, colour, format);
+                m_pParent->rect(m_XPos + x, m_YPos + y, width, height, colour, format);
+            swRect(x, y, width, height, colour, format);
         }
         
         /** Copies a rectangle already on the framebuffer to a new location */
@@ -153,9 +172,8 @@ class Framebuffer
                                  size_t w, size_t h)
         {
             if(m_pParent)
-                m_pParent->copy(srcx, srcy, destx, desty, w, h);
-            else
-                swCopy(srcx, srcy, destx, desty, w, h);
+                m_pParent->copy(srcx, srcy, m_XPos + destx, m_YPos + desty, w, h);
+            swCopy(srcx, srcy, destx, desty, w, h);
         }
 
         /** Draws a line one pixel wide between two points on the screen */
@@ -163,51 +181,85 @@ class Framebuffer
                                  uint32_t colour, Graphics::PixelFormat format = Graphics::Bits32_Argb)
         {
             if(m_pParent)
-                m_pParent->line(x1, y1, x2, y2, colour, format);
-            else
-                swLine(x1, y1, x2, y2, colour, format);
+                m_pParent->line(m_XPos + x1, m_YPos + y1, m_YPos + x2, y2, colour, format);
+            swLine(x1, y1, x2, y2, colour, format);
         }
 
         /** Sets an individual pixel on the framebuffer. Not inheritable. */
         void setPixel(size_t x, size_t y, uint32_t colour,
                       Graphics::PixelFormat format = Graphics::Bits32_Argb);
         
+        /** Class friendship isn't inheritable, so these have to be public for
+         *  graphics drivers to use. They shouldn't be touched by anything that
+         *  isn't a graphics driver. */
+        
+        /// X position on our parent's framebuffer
+        size_t m_XPos;
+        inline void setXPos(size_t x)
+        {
+            m_XPos = x;
+        }
+        
+        /// Y position on our parent's framebuffer
+        size_t m_YPos;
+        inline void setYPos(size_t y)
+        {
+            m_YPos = y;
+        }
+        
+        /// Width of the framebuffer in pixels
+        size_t m_nWidth;
+        inline void setWidth(size_t w)
+        {
+            m_nWidth = w;
+        }
+        
+        /// Height of the framebuffer in pixels
+        size_t m_nHeight;
+        inline void setHeight(size_t h)
+        {
+            m_nHeight = h;
+        }
+        
+        /// Framebuffer pixel format
+        Graphics::PixelFormat m_PixelFormat;
+        inline void setFormat(Graphics::PixelFormat pf)
+        {
+            m_PixelFormat = pf;
+        }
+        
+        /// Bytes per pixel in this framebuffer
+        size_t m_nBytesPerPixel;
+        inline void setBytesPerPixel(size_t b)
+        {
+            m_nBytesPerPixel = b;
+        }
+        
+        /// Bytes per line in this framebuffer
+        size_t m_nBytesPerLine;
+        inline void setBytesPerLine(size_t b)
+        {
+            m_nBytesPerLine = b;
+        }
+        
+        /// Parent of this framebuffer
+        Framebuffer *m_pParent;
+        inline void setParent(Framebuffer *p)
+        {
+            m_pParent = p;
+        }
+        
     private:
     
     protected:
-        
-        // Linked Display, used to get mode information for software routines
-        Display *m_pDisplay;
     
         // Base address of this framebuffer, set by whatever code inherits this
         // class, ideally in the constructor.
         uintptr_t m_FramebufferBase;
         
-        /// Width of the framebuffer in pixels
-        size_t m_nWidth;
-        
-        /// Height of the framebuffer in pixels
-        size_t m_nHeight;
-        
-        /// Framebuffer pixel format
-        Graphics::PixelFormat m_PixelFormat;
-        
-        /// Bytes per pixel in this framebuffer
-        size_t m_BytesPerPixel;
-        
-        /// Bytes per line in this framebuffer
-        size_t m_nBytesPerLine;
-        
-        /// Parent of this framebuffer
-        Framebuffer *m_pParent;
-        
         void setFramebuffer(uintptr_t p)
         {
             m_FramebufferBase = p;
-        }
-        void setDisplay(Display *p)
-        {
-            m_pDisplay = p;
         }
         
         void swBlit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,

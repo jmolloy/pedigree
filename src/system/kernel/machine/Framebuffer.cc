@@ -21,21 +21,17 @@
 
 Graphics::Buffer *Framebuffer::swCreateBuffer(const void *srcData, Graphics::PixelFormat srcFormat, size_t width, size_t height)
 {
-    if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
+    if(UNLIKELY(!m_FramebufferBase))
         return 0;
     if(UNLIKELY(!(width && height)))
         return 0;
     
-    Display::ScreenMode currMode;
-    if(UNLIKELY(!m_pDisplay->getCurrentScreenMode(currMode)))
-        return 0;
-    
-    Graphics::PixelFormat destFormat = currMode.pf2;
+    Graphics::PixelFormat destFormat = m_PixelFormat;
     
     size_t sourceBytesPerPixel = bytesPerPixel(srcFormat);
     size_t sourceBytesPerLine = width * sourceBytesPerPixel;
     
-    size_t destBytesPerPixel = currMode.bytesPerPixel;
+    size_t destBytesPerPixel = m_nBytesPerPixel;
     size_t destBytesPerLine = width * destBytesPerPixel;
     
     size_t fullBufferSize = width * height * destBytesPerPixel;
@@ -110,7 +106,7 @@ Graphics::Buffer *Framebuffer::swCreateBuffer(const void *srcData, Graphics::Pix
     pBuffer->base = reinterpret_cast<uintptr_t>(pRegion->virtualAddress());
     pBuffer->width = width;
     pBuffer->height = height;
-    pBuffer->format = currMode.pf2;
+    pBuffer->format = m_PixelFormat;
     pBuffer->bufferId = 0;
     pBuffer->pBacking = reinterpret_cast<void*>(pRegion);
     
@@ -131,37 +127,33 @@ void Framebuffer::swDestroyBuffer(Graphics::Buffer *pBuffer)
 void Framebuffer::swBlit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
                          size_t destx, size_t desty, size_t width, size_t height)
 {
-    if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
+    if(UNLIKELY(!m_FramebufferBase))
         return;
     if(UNLIKELY(!(width && height)))
         return;
     
-    Display::ScreenMode currMode;
-    if(UNLIKELY(!m_pDisplay->getCurrentScreenMode(currMode)))
-        return;
-    
-    size_t bytesPerLine = currMode.bytesPerLine;
-    size_t destBytesPerPixel = currMode.bytesPerPixel;
+    size_t bytesPerLine = m_nBytesPerLine;
+    size_t destBytesPerPixel = m_nBytesPerPixel;
     size_t sourceBytesPerLine = pBuffer->width * destBytesPerPixel;
     
     // Sanity check and clip
     if((srcx > pBuffer->width) || (srcy > pBuffer->height))
         return;
-    if((destx > currMode.width) || (desty > currMode.height))
+    if((destx > m_nWidth) || (desty > m_nHeight))
         return;
     if((srcx + width) > pBuffer->width)
         width = (srcx + width) - pBuffer->width;
     if((srcy + height) > pBuffer->height)
         height = (srcy + height) - pBuffer->height;
-    if((destx + width) > currMode.width)
-        width = (destx + width) - currMode.width;
-    if((desty + height) > currMode.height)
-        height = (desty + height) - currMode.height;
+    if((destx + width) > m_nWidth)
+        width = (destx + width) - m_nWidth;
+    if((desty + height) > m_nHeight)
+        height = (desty + height) - m_nHeight;
     
     void *pSrc = reinterpret_cast<void*>(pBuffer->base);
     
     // Blit across the width of the screen? How handy!
-    if(UNLIKELY((!(srcx && destx)) && (width == currMode.width)))
+    if(UNLIKELY((!(srcx && destx)) && (width == m_nWidth)))
     {
         size_t sourceBufferOffset = (srcy * sourceBytesPerLine) + (srcx * destBytesPerPixel);
         size_t frameBufferOffset = (desty * bytesPerLine) + (destx * destBytesPerPixel);
@@ -189,31 +181,27 @@ void Framebuffer::swBlit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
 
 void Framebuffer::swRect(size_t x, size_t y, size_t width, size_t height, uint32_t colour, Graphics::PixelFormat format)
 {
-    if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
+    if(UNLIKELY(!m_FramebufferBase))
         return;
     if(UNLIKELY(!(width && height)))
         return;
-    
-    Display::ScreenMode currMode;
-    if(UNLIKELY(!m_pDisplay->getCurrentScreenMode(currMode)))
-        return;
 
     // Sanity check and clip
-    if((x > currMode.width) || (y > currMode.height))
+    if((x > m_nWidth) || (y > m_nHeight))
         return;
-    if((x + width) > currMode.width)
-        width = (x + width) - currMode.width;
-    if((y + height) > currMode.height)
-        height = (y + height) - currMode.height;
+    if((x + width) > m_nWidth)
+        width = (x + width) - m_nWidth;
+    if((y + height) > m_nHeight)
+        height = (y + height) - m_nHeight;
     
     uint32_t transformColour = 0;
-    Graphics::convertPixel(colour, format, transformColour, currMode.pf2);
+    Graphics::convertPixel(colour, format, transformColour, m_PixelFormat);
     
-    size_t bytesPerPixel = currMode.bytesPerPixel;
-    size_t bytesPerLine = currMode.bytesPerLine;
+    size_t bytesPerPixel = m_nBytesPerPixel;
+    size_t bytesPerLine = m_nBytesPerLine;
     
     // Can we just do an easy memset?
-    if(UNLIKELY((!x) && (width == currMode.width)))
+    if(UNLIKELY((!x) && (width == m_nWidth)))
     {
         size_t frameBufferOffset = (y * bytesPerLine) + (x * bytesPerPixel);
         
@@ -291,42 +279,38 @@ void Framebuffer::swRect(size_t x, size_t y, size_t width, size_t height, uint32
 
 void Framebuffer::swCopy(size_t srcx, size_t srcy, size_t destx, size_t desty, size_t w, size_t h)
 {
-    if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
+    if(UNLIKELY(!m_FramebufferBase))
         return;
     if(UNLIKELY(!(w && h)))
         return;
     if(UNLIKELY((srcx == destx) && (srcy == desty)))
         return;
-    
-    Display::ScreenMode currMode;
-    if(UNLIKELY(!m_pDisplay->getCurrentScreenMode(currMode)))
-        return;
 
     // Sanity check and clip
-    if((srcx > currMode.width) || (srcy > currMode.height))
+    if((srcx > m_nWidth) || (srcy > m_nHeight))
         return;
-    if((destx > currMode.width) || (desty > currMode.height))
+    if((destx > m_nWidth) || (desty > m_nHeight))
         return;
-    if((srcx + w) > currMode.width)
-        w = (srcx + w) - currMode.width;
-    if((srcy + h) > currMode.height)
-        h = (srcy + h) - currMode.height;
-    if((destx + w) > currMode.width)
-        w = (destx + w) - currMode.width;
-    if((desty + h) > currMode.height)
-        h = (desty + h) - currMode.height;
+    if((srcx + w) > m_nWidth)
+        w = (srcx + w) - m_nWidth;
+    if((srcy + h) > m_nHeight)
+        h = (srcy + h) - m_nHeight;
+    if((destx + w) > m_nWidth)
+        w = (destx + w) - m_nWidth;
+    if((desty + h) > m_nHeight)
+        h = (desty + h) - m_nHeight;
     
     if((srcx == destx) && (srcy == desty))
         return;
     if(!(w && h))
         return;
     
-    size_t bytesPerLine = currMode.bytesPerLine;
-    size_t bytesPerPixel = currMode.bytesPerPixel;
+    size_t bytesPerLine = m_nBytesPerLine;
+    size_t bytesPerPixel = m_nBytesPerPixel;
     size_t sourceBytesPerLine = w * bytesPerPixel;
     
     // Easy memcpy?
-    if(UNLIKELY(((!srcx) && (!destx)) && (w == currMode.width)))
+    if(UNLIKELY(((!srcx) && (!destx)) && (w == m_nWidth)))
     {
         size_t frameBufferOffsetSrc = (srcy * bytesPerLine) + (srcx * bytesPerPixel);
         size_t frameBufferOffsetDest = (desty * bytesPerLine) + (destx * bytesPerPixel);
@@ -354,31 +338,27 @@ void Framebuffer::swCopy(size_t srcx, size_t srcy, size_t destx, size_t desty, s
 
 void Framebuffer::swLine(size_t x1, size_t y1, size_t x2, size_t y2, uint32_t colour, Graphics::PixelFormat format)
 {
-    if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
-        return;
-    
-    Display::ScreenMode currMode;
-    if(UNLIKELY(!m_pDisplay->getCurrentScreenMode(currMode)))
+    if(UNLIKELY(!m_FramebufferBase))
         return;
 
     // Clip co-ordinates where necessary
-    if(x1 > currMode.width)
-        x1 = currMode.width;
-    if(x2 > currMode.width)
-        x2 = currMode.width;
-    if(y1 > currMode.height)
-        y1 = currMode.height;
-    if(y2 > currMode.height)
-        y2 = currMode.height;
+    if(x1 > m_nWidth)
+        x1 = m_nWidth;
+    if(x2 > m_nWidth)
+        x2 = m_nWidth;
+    if(y1 > m_nHeight)
+        y1 = m_nHeight;
+    if(y2 > m_nHeight)
+        y2 = m_nHeight;
 
     if(UNLIKELY((x1 == x2) && (y1 == y2)))
         return;
     
-    size_t bytesPerPixel = currMode.bytesPerPixel;
-    size_t bytesPerLine = currMode.bytesPerLine;
+    size_t bytesPerPixel = m_nBytesPerPixel;
+    size_t bytesPerLine = m_nBytesPerLine;
     
     uint32_t transformColour = 0;
-    Graphics::convertPixel(colour, format, transformColour, currMode.pf2);
+    Graphics::convertPixel(colour, format, transformColour, m_PixelFormat);
 
     // Bresenham's algorithm, referred to Computer Graphics, C Version (2nd Edition)
     // from 1997, by D. Hearn and M. Pauline Baker (page 88)
@@ -423,23 +403,19 @@ void Framebuffer::swLine(size_t x1, size_t y1, size_t x2, size_t y2, uint32_t co
 
 void Framebuffer::setPixel(size_t x, size_t y, uint32_t colour, Graphics::PixelFormat format)
 {
-    if(UNLIKELY((!m_pDisplay) || (!m_FramebufferBase)))
-        return;
-    
-    Display::ScreenMode currMode;
-    if(UNLIKELY(!m_pDisplay->getCurrentScreenMode(currMode)))
+    if(UNLIKELY(!m_FramebufferBase))
         return;
 
-    if(x > currMode.width)
-        x = currMode.width;
-    if(y > currMode.height)
-        y = currMode.height;
+    if(x > m_nWidth)
+        x = m_nWidth;
+    if(y > m_nHeight)
+        y = m_nHeight;
     
-    size_t bytesPerPixel = currMode.bytesPerPixel;
-    size_t bytesPerLine = currMode.bytesPerLine;
+    size_t bytesPerPixel = m_nBytesPerPixel;
+    size_t bytesPerLine = m_nBytesPerLine;
 
     uint32_t transformColour = 0;
-    Graphics::convertPixel(colour, format, transformColour, currMode.pf2);
+    Graphics::convertPixel(colour, format, transformColour, m_PixelFormat);
 
     size_t frameBufferOffset = (y * bytesPerLine) + (x * bytesPerPixel);
 
@@ -477,3 +453,4 @@ void Framebuffer::swDraw(void *pBuffer, size_t srcx, size_t srcy,
     blit(p, srcx, srcy, destx, desty, width, height);
     destroyBuffer(p);
 }
+

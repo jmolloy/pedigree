@@ -23,6 +23,8 @@
 #include <processor/MemoryMappedIo.h>
 #include <processor/PhysicalMemoryManager.h>
 
+#include <machine/Framebuffer.h>
+
 class VbeDisplay : public Display
 {
 public:
@@ -58,6 +60,11 @@ public:
     {
         return m_Mode.id;
     }
+    
+    virtual void setLogicalFramebuffer(Framebuffer *p)
+    {
+        m_pLogicalFramebuffer = p;
+    }
 
 private:
     /** Copy constructor is private. */
@@ -76,6 +83,7 @@ private:
     Display::ScreenMode m_Mode;
 
     MemoryMappedIo *m_pFramebuffer;
+    Framebuffer *m_pLogicalFramebuffer;
 
     /** Possible display modes that we have specialised code for. */
     enum ModeType
