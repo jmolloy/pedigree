@@ -172,7 +172,8 @@ SDL_Surface *PEDIGREE_SetVideoMode(_THIS, SDL_Surface *current,
 		SDL_free( _this->hidden->buffer );
 	}
 
-    PedigreeGraphics::Framebuffer *pFramebuffer = new PedigreeGraphics::Framebuffer();
+    PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
+    PedigreeGraphics::Framebuffer *pFramebuffer = pRootFramebuffer->createChild(0, 0, width, height, PedigreeGraphics::Bits24_Rgb);
     if(!pFramebuffer->getRawBuffer())
     {
 		_this->hidden->buffer = NULL;
@@ -251,7 +252,7 @@ static void PEDIGREE_UpdateRects(_THIS, int numrects, SDL_Rect *rects)
 
     for(int i = 0; i < numrects; i++)
     {
-        pFramebuffer->redraw(rects[i].x, rects[i].y, rects[i].w, rects[i].h);
+        pFramebuffer->redraw(rects[i].x, rects[i].y, rects[i].w, rects[i].h, true);
     }
 }
 

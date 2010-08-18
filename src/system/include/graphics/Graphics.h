@@ -219,10 +219,13 @@ namespace Graphics
     }
 
     /// Creates a new framebuffer as a child of the current framebuffer
+    /// \param pFbOverride If non-null, this specifies the memory region to use
+    ///                    as the framebuffer for the new object
     Framebuffer *createFramebuffer(Framebuffer *pParent,
                                    size_t x, size_t y,
                                    size_t w, size_t h,
-                                   Graphics::PixelFormat format);
+                                   Graphics::PixelFormat format,
+                                   void *pFbOverride = 0);
 
     /// Destroys a given framebuffer.
     void destroyFramebuffer(Framebuffer *pFramebuffer);

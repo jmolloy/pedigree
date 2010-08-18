@@ -126,7 +126,7 @@ uintptr_t PedigreeCSyscallManager::syscall(SyscallState &state)
         case PEDIGREE_GFX_DESTROY_BUFFER:
             return pedigree_gfx_destroy_buffer(reinterpret_cast<void*>(p1), reinterpret_cast<void*>(p2));
         case PEDIGREE_GFX_REDRAW:
-            pedigree_gfx_redraw(reinterpret_cast<void*>(p1), p2, p3, p4, p5);
+            pedigree_gfx_redraw(reinterpret_cast<void*>(p1), reinterpret_cast<void*>(p2));
             return 0;
         case PEDIGREE_GFX_BLIT:
             pedigree_gfx_blit(reinterpret_cast<void*>(p1), reinterpret_cast<void*>(p2));
@@ -145,6 +145,11 @@ uintptr_t PedigreeCSyscallManager::syscall(SyscallState &state)
             return 0;
         case PEDIGREE_GFX_DRAW:
             pedigree_gfx_draw(reinterpret_cast<void*>(p1), reinterpret_cast<void*>(p2));
+            return 0;
+        case PEDIGREE_GFX_CREATE_FBUFFER:
+            return pedigree_gfx_create_fbuffer(reinterpret_cast<void*>(p1), reinterpret_cast<void*>(p2));
+        case PEDIGREE_GFX_DELETE_FBUFFER:
+            pedigree_gfx_delete_fbuffer(reinterpret_cast<void*>(p1));
             return 0;
         default: ERROR ("PedigreeCSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }

@@ -89,13 +89,16 @@ uintptr_t pedigree_gfx_get_raw_buffer(void *p);
 int pedigree_gfx_create_buffer(void *p, void **b, void *args);
 int pedigree_gfx_destroy_buffer(void *p, void *b);
 int pedigree_gfx_convert_pixel(void *p, uint32_t *in, uint32_t *out, uint32_t infmt, uint32_t outfmt);
-void pedigree_gfx_redraw(void *p, uint32_t x, uint32_t y, uint32_t w, uint32_t h);
+void pedigree_gfx_redraw(void *p, void *args);
 void pedigree_gfx_blit(void *p, void *args);
 void pedigree_gfx_set_pixel(void *p, uint32_t x, uint32_t y, uint32_t colour, uint32_t fmt);
 void pedigree_gfx_rect(void *p, void *args);
 void pedigree_gfx_copy(void *p, void *args);
 void pedigree_gfx_line(void *p, void *args);
 void pedigree_gfx_draw(void *p, void *args);
+
+int pedigree_gfx_create_fbuffer(void *p, void *args);
+void pedigree_gfx_delete_fbuffer(void *p);
 
 #ifdef __cplusplus
 }; // extern "C"

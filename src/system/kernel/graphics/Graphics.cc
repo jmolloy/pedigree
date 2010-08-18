@@ -19,7 +19,8 @@
 Framebuffer *Graphics::createFramebuffer(Framebuffer *pParent,
                                          size_t x, size_t y,
                                          size_t w, size_t h,
-                                         Graphics::PixelFormat format)
+                                         Graphics::PixelFormat format,
+                                         void *pFbOverride)
 {
     if(!(w && h))
         return 0;
@@ -34,7 +35,11 @@ Framebuffer *Graphics::createFramebuffer(Framebuffer *pParent,
     size_t bytesPerLine = bytesPerPixel * w;
 
     // Allocate space for the buffer
-    uint8_t *pMem = new uint8_t[bytesPerLine * h];
+    uint8_t *pMem = 0;
+    if(!pFbOverride)
+        pMem = new uint8_t[bytesPerLine * h];
+    else
+        pMem = reinterpret_cast<uint8_t*>(pFbOverride);
 
     // Create the framebuffer
     Framebuffer *pRet = new Framebuffer();
@@ -60,7 +65,8 @@ void Graphics::destroyFramebuffer(Framebuffer *pFramebuffer)
         pFramebuffer->redraw(0, 0, pFramebuffer->getWidth(), pFramebuffer->getHeight(), false);
 
     // Delete our framebuffer memory
-    delete [] reinterpret_cast<uint8_t*>(pFramebuffer->getRawBuffer());
+    /// \todo Need a flag to know that this address isn't on the heap!
+    // delete [] reinterpret_cast<uint8_t*>(pFramebuffer->getRawBuffer());
 
     // Finally delete the framebuffer object
     delete pFramebuffer;

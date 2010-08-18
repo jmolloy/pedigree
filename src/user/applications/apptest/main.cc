@@ -7,6 +7,7 @@
 
 #include <graphics/Graphics.h>
 
+PedigreeGraphics::Framebuffer *pRootFramebuffer = 0;
 PedigreeGraphics::Framebuffer *pFramebuffer = 0;
 
 int main(int argc, char **argv)
@@ -14,7 +15,8 @@ int main(int argc, char **argv)
     printf("Userspace graphics framework test!\n");
     
     // Connects to the display automatically
-    pFramebuffer = new PedigreeGraphics::Framebuffer();
+    pRootFramebuffer = new PedigreeGraphics::Framebuffer();
+    pFramebuffer = pRootFramebuffer->createChild(64, 64, 128, 128, PedigreeGraphics::Bits24_Rgb);
     
     // Check for a valid framebuffer (will return null on error)
     if(!pFramebuffer->getRawBuffer())
@@ -24,8 +26,8 @@ int main(int argc, char **argv)
     }
     
     // Draw a red rectangle
-    pFramebuffer->rect(64, 64, 128, 128, 0xff0000, PedigreeGraphics::Bits24_Rgb);
-    pFramebuffer->redraw(64, 64, 128, 128);
+    pFramebuffer->rect(0, 0, 128, 128, 0xff0000, PedigreeGraphics::Bits24_Rgb);
+    pFramebuffer->redraw(0, 0, 128, 128, true);
     
     printf("Should now be a red square on the screen.");
     

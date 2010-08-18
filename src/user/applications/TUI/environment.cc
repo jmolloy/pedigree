@@ -107,7 +107,7 @@ void doRedraw(DirtyRectangle &rect)
        rect.getX2() == ~0UL && rect.getY2() == ~0UL)
         return;
     
-    g_pFramebuffer->redraw(rect.getX(), rect.getY(), rect.getWidth(), rect.getHeight());
+    g_pFramebuffer->redraw(rect.getX(), rect.getY(), rect.getWidth(), rect.getHeight(), true);
 }
 
 void Syscall::killBuffer(rgb_t *pBuffer)

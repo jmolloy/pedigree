@@ -185,9 +185,9 @@ int pedigree_gfx_destroy_buffer(void *p, void *b)
     return syscall2(PEDIGREE_GFX_DESTROY_BUFFER, (long) p, (long) b);
 }
 
-void pedigree_gfx_redraw(void *p, uint32_t x, uint32_t y, uint32_t w, uint32_t h)
+void pedigree_gfx_redraw(void *p, void *args)
 {
-    syscall5(PEDIGREE_GFX_REDRAW, (long) p, x, y, w, h);
+    syscall2(PEDIGREE_GFX_REDRAW, (long) p, (long) args);
 }
 
 void pedigree_gfx_blit(void *p, void *args)
@@ -218,4 +218,14 @@ void pedigree_gfx_line(void *p, void *args)
 void pedigree_gfx_draw(void *p, void *args)
 {
     syscall2(PEDIGREE_GFX_DRAW, (long) p, (long) args);
+}
+
+int pedigree_gfx_create_fbuffer(void *p, void *args)
+{
+    return syscall2(PEDIGREE_GFX_CREATE_FBUFFER, (long) p, (long) args);
+}
+
+void pedigree_gfx_delete_fbuffer(void *p)
+{
+    syscall1(PEDIGREE_GFX_DELETE_FBUFFER, (long) p);
 }

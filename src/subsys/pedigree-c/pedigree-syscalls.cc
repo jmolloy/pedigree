@@ -40,6 +40,14 @@ struct drawargs
     uint32_t b, c, d, e, f, g, h;
 } PACKED;
 
+struct createargs
+{
+    void *pFramebuffer;
+    void *pReturnProvider;
+    size_t x, y, w, h;
+    Graphics::PixelFormat format;
+} PACKED;
+
 struct fourargs
 {
     uint32_t a, b, c, d;
@@ -316,15 +324,17 @@ int pedigree_gfx_destroy_buffer(void *p, void *b)
     return 0;
 }
 
-void pedigree_gfx_redraw(void *p, uint32_t x, uint32_t y, uint32_t w, uint32_t h)
+void pedigree_gfx_redraw(void *p, void *args)
 {
     if(!p)
         return;
+
+    sixargs *pArgs = reinterpret_cast<sixargs*>(args);
     
     /// \todo Exploit: could allow userspace code to be run at ring0
     GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
     
-    pProvider->pFramebuffer->redraw(x, y, w, h);
+    pProvider->pFramebuffer->redraw(pArgs->a, pArgs->b, pArgs->c, pArgs->d, pArgs->e);
 }
 
 void pedigree_gfx_blit(void *p, void *args)
@@ -401,4 +411,31 @@ void pedigree_gfx_draw(void *p, void *args)
     GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
     
     pProvider->pFramebuffer->draw(pArgs->a, pArgs->b, pArgs->c, pArgs->d, pArgs->e, pArgs->f, pArgs->g, static_cast<Graphics::PixelFormat>(pArgs->h));
+}
+
+int pedigree_gfx_create_fbuffer(void *p, void *args)
+{
+    if(!p || !args)
+        return - 1;
+
+    createargs *pArgs = reinterpret_cast<createargs*>(args);
+    
+    GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
+    GraphicsService::GraphicsProvider *pReturnProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(pArgs->pReturnProvider);
+    
+    pReturnProvider->pFramebuffer = Graphics::createFramebuffer(pProvider->pFramebuffer, pArgs->x, pArgs->y, pArgs->w, pArgs->h, pArgs->format, pArgs->pFramebuffer);
+    if(!pReturnProvider->pFramebuffer)
+        return -1;
+
+    return 0;
+}
+
+void pedigree_gfx_delete_fbuffer(void *p)
+{
+    if(!p)
+        return;
+
+    GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
+
+    Graphics::destroyFramebuffer(pProvider->pFramebuffer);
 }

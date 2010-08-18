@@ -77,7 +77,6 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
     }
 
     m_Pid = pid;
-
 }
 
 Terminal::~Terminal()

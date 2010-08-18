@@ -103,8 +103,7 @@ namespace PedigreeGraphics
         public:
         
             Framebuffer();
-            
-            virtual ~Framebuffer() {}
+            virtual ~Framebuffer();
             
             /** Gets a raw pointer to the framebuffer itself. There is no way to
              *  know if this pointer points to an MMIO region or real RAM, so it
@@ -112,6 +111,10 @@ namespace PedigreeGraphics
              *  There is no way to determine if an application can safely use
              *  this buffer without segfaulting. */
             void *getRawBuffer();
+
+            /** Creates a new child of this framebuffer with the given semantics.
+             *  Do a normal "delete" to destroy memory consumed by this new buffer. */
+            Framebuffer *createChild(size_t x, size_t y, size_t w, size_t h, PixelFormat format);
             
             /** Converts a given pixel from one pixel format to another. */
             bool convertPixel(uint32_t source, PedigreeGraphics::PixelFormat srcFormat,
@@ -144,9 +147,11 @@ namespace PedigreeGraphics
              *  \param x leftmost x co-ordinate of the redraw area, ~0 for "invalid"
              *  \param y topmost y co-ordinate of the redraw area, ~0 for "invalid"
              *  \param w width of the redraw area, ~0 for "invalid"
-             *  \param h height of the redraw area, ~0 for "invalid" */
+             *  \param h height of the redraw area, ~0 for "invalid"
+             *  \param bChild non-zero if a child began the redraw, zero otherwise */
             void redraw(size_t x = ~0UL, size_t y = ~0UL,
-                        size_t w = ~0UL, size_t h = ~0UL);
+                        size_t w = ~0UL, size_t h = ~0UL,
+                        bool bChild = false);
             
             /** Blits a given buffer to the screen. See createBuffer. */
             void blit(PedigreeGraphics::Buffer *pBuffer, size_t srcx, size_t srcy,
@@ -177,10 +182,14 @@ namespace PedigreeGraphics
                           PedigreeGraphics::PixelFormat format = PedigreeGraphics::Bits32_Argb);
       
         private:
+
+            Framebuffer(GraphicsProvider &gfx);
             
             GraphicsProvider m_Provider;
             
             bool m_bProviderValid;
+
+            bool m_bIsChild;
     };
 
     inline bool convertPixel(uint32_t source, PixelFormat srcFormat,

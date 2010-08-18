@@ -34,6 +34,14 @@ struct drawargs
     uint32_t b, c, d, e, f, g, h;
 } PACKED;
 
+struct createargs
+{
+    void *pFramebuffer;
+    void *pReturnProvider;
+    size_t x, y, w, h;
+    PixelFormat format;
+} PACKED;
+
 struct fourargs
 {
     uint32_t a, b, c, d;
@@ -44,11 +52,23 @@ struct sixargs
     uint32_t a, b, c, d, e, f;
 } PACKED;
 
-Framebuffer::Framebuffer() : m_Provider(), m_bProviderValid(false)
+Framebuffer::Framebuffer() : m_Provider(), m_bProviderValid(false), m_bIsChild(false)
 {
     int ret = pedigree_gfx_get_provider(&m_Provider);
     if(ret >= 0)
         m_bProviderValid = true;
+}
+
+Framebuffer::Framebuffer(GraphicsProvider &gfx)
+{
+    m_Provider = gfx;
+    m_bProviderValid = true;
+}
+
+Framebuffer::~Framebuffer()
+{
+    if(m_bIsChild)
+        pedigree_gfx_delete_fbuffer(&m_Provider);
 }
 
 void *Framebuffer::getRawBuffer()
@@ -57,6 +77,37 @@ void *Framebuffer::getRawBuffer()
         return 0;
     
     return reinterpret_cast<void*>(pedigree_gfx_get_raw_buffer(&m_Provider));
+}
+
+Framebuffer *Framebuffer::createChild(size_t x, size_t y, size_t w, size_t h, PixelFormat format)
+{
+    if(!m_bProviderValid)
+        return 0;
+    if(!(w && h))
+        return 0;
+
+    size_t nBytes = (w * h * bytesPerPixel(format));
+    uint8_t *pBuffer = new uint8_t[nBytes];
+
+    GraphicsProvider ret = m_Provider;
+    createargs args;
+    args.pReturnProvider = &ret;
+    args.pFramebuffer = reinterpret_cast<void*>(pBuffer);
+    args.x = x;
+    args.y = y;
+    args.w = w;
+    args.h = h;
+    args.format = format;
+    int ok = pedigree_gfx_create_fbuffer(&m_Provider, &args);
+
+    if(ok < 0)
+    {
+        delete [] pBuffer;
+        return 0;
+    }
+
+    Framebuffer *pNewFB = new Framebuffer(ret);
+    return pNewFB;
 }
 
 Buffer *Framebuffer::createBuffer(const void *srcData, PixelFormat srcFormat,
@@ -91,12 +142,20 @@ void Framebuffer::destroyBuffer(Buffer *pBuffer)
 }
 
 void Framebuffer::redraw(size_t x, size_t y,
-                         size_t w, size_t h)
+                         size_t w, size_t h,
+                         bool bChild)
 {
     if(!m_bProviderValid)
         return;
+
+    sixargs args;
+    args.a = x;
+    args.b = y;
+    args.c = w;
+    args.d = h;
+    args.e = bChild;
     
-    pedigree_gfx_redraw(&m_Provider, x, y, w, h);
+    pedigree_gfx_redraw(&m_Provider, &args);
 }
 
 void Framebuffer::blit(Buffer *pBuffer, size_t srcx, size_t srcy,
