@@ -30,16 +30,19 @@ extern Header *g_pHeader;
 extern rgb_t g_MainBackgroundColour;
 
 Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground) :
-    m_pBuffer(0), m_pXterm(0), m_Len(0), m_WriteBufferLen(0), m_TabId(0), m_bHasPendingRequest(false),
+    m_pBuffer(0), m_pFramebuffer(0), m_pXterm(0), m_Len(0), m_WriteBufferLen(0), m_TabId(0), m_bHasPendingRequest(false),
     m_PendingRequestSz(0), m_Pid(0), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop), m_Cancel(0), m_WriteInProgress(0)
 {
     // Create a new backbuffer.
     // m_pBuffer = Syscall::newBuffer();
     // if (!m_pBuffer) log("Buffer not created correctly!");
+    
+    m_pFramebuffer = g_pFramebuffer->createChild(m_OffsetLeft, m_OffsetTop, nWidth, nHeight);
+    if((!m_pFramebuffer) || (!m_pFramebuffer->getRawBuffer()))
+        return;
 
-    // Syscall::fillRect(m_pBuffer, 0, 0, nWidth+offsetLeft, nHeight+offsetTop, g_MainBackgroundColour);
     uint32_t backColour = PedigreeGraphics::createRgb(g_MainBackgroundColour.r, g_MainBackgroundColour.g, g_MainBackgroundColour.b);
-    g_pFramebuffer->rect(offsetLeft, offsetTop, nWidth, nHeight, backColour, PedigreeGraphics::Bits24_Rgb);
+    m_pFramebuffer->rect(0, 0, nWidth, nHeight, backColour, PedigreeGraphics::Bits24_Rgb);
 
     size_t tabId = pHeader->addTab(pName, TAB_SELECTABLE);
 
@@ -48,7 +51,7 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
     Syscall::createConsole(tabId, pName);
 
 #ifndef NEW_XTERM
-    m_pXterm = new Xterm(m_pBuffer, nWidth, nHeight, offsetLeft, offsetTop, this);
+    m_pXterm = new Xterm(m_pFramebuffer, nWidth, nHeight, m_OffsetLeft, m_OffsetTop, this);
 #else
     Display::ScreenMode mode;
     mode.width = nWidth;
@@ -86,25 +89,19 @@ Terminal::~Terminal()
 
 void Terminal::renewBuffer(size_t nWidth, size_t nHeight)
 {
+    if(!m_pFramebuffer)
+        return;
+    
+    delete m_pFramebuffer;
+    
+    m_pFramebuffer = g_pFramebuffer->createChild(m_OffsetLeft, m_OffsetTop, nWidth, nHeight);
+    if((!m_pFramebuffer) || (!m_pFramebuffer->getRawBuffer()))
+        return;
+    
     uint32_t backColourInt = PedigreeGraphics::createRgb(g_MainBackgroundColour.r, g_MainBackgroundColour.g, g_MainBackgroundColour.b);
-    g_pFramebuffer->rect(0, 0, nWidth + m_OffsetLeft, nHeight + m_OffsetTop, backColourInt, PedigreeGraphics::Bits24_Rgb);
+    m_pFramebuffer->rect(0, 0, nWidth, nHeight, backColourInt, PedigreeGraphics::Bits24_Rgb);
 
-    m_pXterm->resize(nWidth, nHeight, m_pBuffer);
-    
-    /*
-
-    Syscall::killBuffer(m_pBuffer);
-
-    m_pBuffer = Syscall::newBuffer();
-    if (!m_pBuffer) log("Buffer not created correctly!");
-    log("here0");
-
-    Syscall::fillRect(m_pBuffer, 0, 0, nWidth+m_OffsetLeft, nHeight+m_OffsetTop, g_MainBackgroundColour);
-    log("here1");
-    m_pXterm->resize(nWidth, nHeight, m_pBuffer);
-    log("here2");
-    
-    */
+    m_pXterm->resize(nWidth, nHeight, m_pFramebuffer);
 }
 
 void Terminal::addToQueue(uint64_t key)
@@ -293,6 +290,9 @@ void Terminal::addToQueue(char c)
 
 void Terminal::setActive(bool b, DirtyRectangle &rect)
 {
+    // Force complete redraw
+    m_pFramebuffer->redraw(0, 0, m_pFramebuffer->getWidth(), m_pFramebuffer->getHeight(), false);
+    
     // if (b)
     //    Syscall::setCurrentBuffer(m_pBuffer);
 }

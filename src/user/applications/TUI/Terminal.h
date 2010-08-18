@@ -119,6 +119,8 @@ private:
 
 
     rgb_t *m_pBuffer;
+    
+    PedigreeGraphics::Framebuffer *m_pFramebuffer;
 #ifndef NEW_XTERM
     Xterm *m_pXterm;
 #else

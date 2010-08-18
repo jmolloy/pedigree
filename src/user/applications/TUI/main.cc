@@ -315,7 +315,6 @@ int main (int argc, char **argv)
         return 0;
     }
 
-    /// \todo System call for this, integrated into Framebuffer or something
     g_nWidth = g_pFramebuffer->getWidth();
     g_nHeight = g_pFramebuffer->getHeight();
     

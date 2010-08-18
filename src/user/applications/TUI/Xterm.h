@@ -18,6 +18,8 @@
 
 #include "environment.h"
 
+#include <graphics/Graphics.h>
+
 #define XTERM_BOLD      0x1
 #define XTERM_UNDERLINE 0x2
 #define XTERM_INVERSE   0x4
@@ -27,7 +29,7 @@
 class Xterm
 {
 public:
-    Xterm(rgb_t *pFramebuffer, size_t nWidth, size_t nHeight, size_t offsetLeft, size_t offsetTop, class Terminal *pT);
+    Xterm(PedigreeGraphics::Framebuffer *pFramebuffer, size_t nWidth, size_t nHeight, size_t offsetLeft, size_t offsetTop, class Terminal *pT);
     ~Xterm();
 
     /** Writes the given UTF-32 character to the Xterm. */
@@ -54,10 +56,10 @@ public:
         m_pWindows[m_ActiveBuffer]->hideCursor(rect);
     }
 
-    void resize(size_t w, size_t h, rgb_t *b)
+    void resize(size_t w, size_t h, PedigreeGraphics::Framebuffer *pFb)
     {
-        m_pWindows[0]->resize(w, h, b);
-        m_pWindows[1]->resize(w, h, b);
+        m_pWindows[0]->resize(w, h, pFb);
+        m_pWindows[1]->resize(w, h, pFb);
     }
 
 private:
@@ -88,13 +90,13 @@ private:
             };
 
         public:
-            Window(size_t nRows, size_t nCols, rgb_t *pFb, size_t nMaxScrollback, size_t offsetLeft, size_t offsetTop, size_t fbWidth);
+            Window(size_t nRows, size_t nCols, PedigreeGraphics::Framebuffer *pFb, size_t nMaxScrollback, size_t offsetLeft, size_t offsetTop, size_t fbWidth);
             ~Window();
 
             void showCursor(DirtyRectangle &rect);
             void hideCursor(DirtyRectangle &rect);
 
-            void resize(size_t nRows, size_t nCols, rgb_t *pBuffer);
+            void resize(size_t nRows, size_t nCols, PedigreeGraphics::Framebuffer *pBuffer);
 
             void setScrollRegion(int start, int end);
             void setForeColour(uint8_t fgColour);
@@ -170,7 +172,7 @@ private:
             TermChar *m_pBuffer;
             size_t m_BufferLength;
 
-            rgb_t *m_pFramebuffer;
+            PedigreeGraphics::Framebuffer *m_pFramebuffer;
 
             size_t m_FbWidth;
             size_t m_Width, m_Height;
