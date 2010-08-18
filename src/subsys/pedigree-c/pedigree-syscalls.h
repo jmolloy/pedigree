@@ -100,6 +100,8 @@ void pedigree_gfx_draw(void *p, void *args);
 int pedigree_gfx_create_fbuffer(void *p, void *args);
 void pedigree_gfx_delete_fbuffer(void *p);
 
+void pedigree_gfx_fbinfo(void *p, size_t *w, size_t *h, uint32_t *fmt);
+
 #ifdef __cplusplus
 }; // extern "C"
 #endif

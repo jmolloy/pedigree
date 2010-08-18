@@ -45,7 +45,6 @@ struct createargs
     void *pFramebuffer;
     void *pReturnProvider;
     size_t x, y, w, h;
-    Graphics::PixelFormat format;
 } PACKED;
 
 struct fourargs
@@ -423,7 +422,7 @@ int pedigree_gfx_create_fbuffer(void *p, void *args)
     GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
     GraphicsService::GraphicsProvider *pReturnProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(pArgs->pReturnProvider);
     
-    pReturnProvider->pFramebuffer = Graphics::createFramebuffer(pProvider->pFramebuffer, pArgs->x, pArgs->y, pArgs->w, pArgs->h, pArgs->format, pArgs->pFramebuffer);
+    pReturnProvider->pFramebuffer = Graphics::createFramebuffer(pProvider->pFramebuffer, pArgs->x, pArgs->y, pArgs->w, pArgs->h, pArgs->pFramebuffer);
     if(!pReturnProvider->pFramebuffer)
         return -1;
 
@@ -439,3 +438,19 @@ void pedigree_gfx_delete_fbuffer(void *p)
 
     Graphics::destroyFramebuffer(pProvider->pFramebuffer);
 }
+
+void pedigree_gfx_fbinfo(void *p, size_t *w, size_t *h, uint32_t *fmt)
+{
+    if(!p)
+        return;
+
+    GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
+    
+    if(w)
+        *w = pProvider->pFramebuffer->getWidth();
+    if(h)
+        *h = pProvider->pFramebuffer->getHeight();
+    if(fmt)
+        *fmt = static_cast<uint32_t>(pProvider->pFramebuffer->getFormat());
+}
+

@@ -305,7 +305,7 @@ int main (int argc, char **argv)
     
     // Connect to the graphics service
     PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
-    g_pFramebuffer = pRootFramebuffer->createChild(0, 0, 1024, 768, PedigreeGraphics::Bits24_Rgb);
+    g_pFramebuffer = pRootFramebuffer->createChild(0, 0, pRootFramebuffer->getWidth(), pRootFramebuffer->getHeight());
     
     // Have we got a working mode?
     if(!g_pFramebuffer->getRawBuffer())
@@ -316,11 +316,11 @@ int main (int argc, char **argv)
     }
 
     /// \todo System call for this, integrated into Framebuffer or something
-    g_nWidth = 1024;
-    g_nHeight = 768;
+    g_nWidth = g_pFramebuffer->getWidth();
+    g_nHeight = g_pFramebuffer->getHeight();
     
-    g_pFramebuffer->rect(0, 0, 1024, 768, 0, PedigreeGraphics::Bits24_Rgb);
-    g_pFramebuffer->redraw(0, 0, 1024, 768, true);
+    g_pFramebuffer->rect(0, 0, g_nWidth, g_nHeight, 0, PedigreeGraphics::Bits24_Rgb);
+    g_pFramebuffer->redraw(0, 0, g_nWidth, g_nHeight, true);
 
     g_NormalFont = new Font(FONT_SIZE, NORMAL_FONT_PATH,
                             true, g_nWidth);

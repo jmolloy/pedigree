@@ -19,7 +19,6 @@
 Framebuffer *Graphics::createFramebuffer(Framebuffer *pParent,
                                          size_t x, size_t y,
                                          size_t w, size_t h,
-                                         Graphics::PixelFormat format,
                                          void *pFbOverride)
 {
     if(!(w && h))
@@ -30,6 +29,10 @@ Framebuffer *Graphics::createFramebuffer(Framebuffer *pParent,
     // buffers.
     if((x > pParent->getWidth()) || (y > pParent->getHeight()))
         return 0;
+    
+    // Every framebuffer in the system uses the same framebuffer format - that
+    // of the graphics card itself.
+    Graphics::PixelFormat format = pParent->getFormat();
 
     size_t bytesPerPixel = Graphics::bytesPerPixel(format);
     size_t bytesPerLine = bytesPerPixel * w;
@@ -71,3 +74,4 @@ void Graphics::destroyFramebuffer(Framebuffer *pFramebuffer)
     // Finally delete the framebuffer object
     delete pFramebuffer;
 }
+

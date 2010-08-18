@@ -173,7 +173,7 @@ SDL_Surface *PEDIGREE_SetVideoMode(_THIS, SDL_Surface *current,
 	}
 
     PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
-    PedigreeGraphics::Framebuffer *pFramebuffer = pRootFramebuffer->createChild(0, 0, width, height, PedigreeGraphics::Bits24_Rgb);
+    PedigreeGraphics::Framebuffer *pFramebuffer = pRootFramebuffer->createChild(0, 0, width, height);
     if(!pFramebuffer->getRawBuffer())
     {
 		_this->hidden->buffer = NULL;

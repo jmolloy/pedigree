@@ -105,6 +105,15 @@ namespace PedigreeGraphics
             Framebuffer();
             virtual ~Framebuffer();
             
+            /** Gets the framebuffer width */
+            size_t getWidth();
+            
+            /** Gets the framebuffer height */
+            size_t getHeight();
+            
+            /** Gets the framebuffer's native format */
+            PedigreeGraphics::PixelFormat getFormat();
+            
             /** Gets a raw pointer to the framebuffer itself. There is no way to
              *  know if this pointer points to an MMIO region or real RAM, so it
              *  cannot be guaranteed to be safe.
@@ -114,7 +123,7 @@ namespace PedigreeGraphics
 
             /** Creates a new child of this framebuffer with the given semantics.
              *  Do a normal "delete" to destroy memory consumed by this new buffer. */
-            Framebuffer *createChild(size_t x, size_t y, size_t w, size_t h, PixelFormat format);
+            Framebuffer *createChild(size_t x, size_t y, size_t w, size_t h);
             
             /** Converts a given pixel from one pixel format to another. */
             bool convertPixel(uint32_t source, PedigreeGraphics::PixelFormat srcFormat,

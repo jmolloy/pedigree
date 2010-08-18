@@ -16,7 +16,7 @@ int main(int argc, char **argv)
     
     // Connects to the display automatically
     pRootFramebuffer = new PedigreeGraphics::Framebuffer();
-    pFramebuffer = pRootFramebuffer->createChild(64, 64, 128, 128, PedigreeGraphics::Bits24_Rgb);
+    pFramebuffer = pRootFramebuffer->createChild(64, 64, 128, 128);
     
     // Check for a valid framebuffer (will return null on error)
     if(!pFramebuffer->getRawBuffer())

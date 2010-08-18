@@ -229,3 +229,9 @@ void pedigree_gfx_delete_fbuffer(void *p)
 {
     syscall1(PEDIGREE_GFX_DELETE_FBUFFER, (long) p);
 }
+
+void pedigree_gfx_fbinfo(void *p, size_t *w, size_t *h, uint32_t *fmt)
+{
+    syscall4(PEDIGREE_GFX_FBINFO, (long) p, (long) w, (long) h, (long) fmt);
+}
+

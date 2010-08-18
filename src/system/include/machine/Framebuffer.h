@@ -159,8 +159,9 @@ class Framebuffer
                                  size_t destx, size_t desty, size_t width, size_t height,
                                  Graphics::PixelFormat format = Graphics::Bits32_Argb)
         {
-            if(m_pParent)
-                m_pParent->draw(pBuffer, srcx, srcy, m_XPos + destx, m_YPos + desty, width, height, format);
+            // Draw is implemented as a "create buffer and blit"... so we can
+            // avoid checking for parent here as we don't want to poison the
+            // parent's buffer.
             swDraw(pBuffer, srcx, srcy, destx, desty, width, height, format);
         }
         

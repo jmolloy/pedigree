@@ -39,7 +39,6 @@ struct createargs
     void *pFramebuffer;
     void *pReturnProvider;
     size_t x, y, w, h;
-    PixelFormat format;
 } PACKED;
 
 struct fourargs
@@ -71,6 +70,39 @@ Framebuffer::~Framebuffer()
         pedigree_gfx_delete_fbuffer(&m_Provider);
 }
 
+size_t Framebuffer::getWidth()
+{
+    if(!m_bProviderValid)
+        return 0;
+    
+    size_t ret = 0;
+    pedigree_gfx_fbinfo(&m_Provider, &ret, 0, 0);
+    
+    return ret;
+}
+
+size_t Framebuffer::getHeight()
+{
+    if(!m_bProviderValid)
+        return 0;
+    
+    size_t ret = 0;
+    pedigree_gfx_fbinfo(&m_Provider, 0, &ret, 0);
+    
+    return ret;
+}
+
+PixelFormat Framebuffer::getFormat()
+{
+    if(!m_bProviderValid)
+        return Bits32_Argb;
+    
+    uint32_t ret = 0;
+    pedigree_gfx_fbinfo(&m_Provider, 0, 0, &ret);
+    
+    return static_cast<PixelFormat>(ret);
+}
+
 void *Framebuffer::getRawBuffer()
 {
     if(!m_bProviderValid)
@@ -79,14 +111,14 @@ void *Framebuffer::getRawBuffer()
     return reinterpret_cast<void*>(pedigree_gfx_get_raw_buffer(&m_Provider));
 }
 
-Framebuffer *Framebuffer::createChild(size_t x, size_t y, size_t w, size_t h, PixelFormat format)
+Framebuffer *Framebuffer::createChild(size_t x, size_t y, size_t w, size_t h)
 {
     if(!m_bProviderValid)
         return 0;
     if(!(w && h))
         return 0;
 
-    size_t nBytes = (w * h * bytesPerPixel(format));
+    size_t nBytes = (w * h * bytesPerPixel(getFormat()));
     uint8_t *pBuffer = new uint8_t[nBytes];
 
     GraphicsProvider ret = m_Provider;
@@ -97,7 +129,6 @@ Framebuffer *Framebuffer::createChild(size_t x, size_t y, size_t w, size_t h, Pi
     args.y = y;
     args.w = w;
     args.h = h;
-    args.format = format;
     int ok = pedigree_gfx_create_fbuffer(&m_Provider, &args);
 
     if(ok < 0)

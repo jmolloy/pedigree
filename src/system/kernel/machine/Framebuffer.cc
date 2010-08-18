@@ -19,6 +19,8 @@
 #include <processor/VirtualAddressSpace.h>
 #include <machine/Display.h>
 
+#include <Log.h>
+
 Graphics::Buffer *Framebuffer::swCreateBuffer(const void *srcData, Graphics::PixelFormat srcFormat, size_t width, size_t height)
 {
     if(UNLIKELY(!m_FramebufferBase))
@@ -131,9 +133,13 @@ void Framebuffer::swBlit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
         return;
     if(UNLIKELY(!(width && height)))
         return;
+    if(UNLIKELY(!pBuffer))
+        return;
     
     size_t bytesPerLine = m_nBytesPerLine;
     size_t destBytesPerPixel = m_nBytesPerPixel;
+    
+    size_t sourceBytesPerPixel = Graphics::bytesPerPixel(pBuffer->format);
     size_t sourceBytesPerLine = pBuffer->width * destBytesPerPixel;
     
     // Sanity check and clip

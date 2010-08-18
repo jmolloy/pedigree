@@ -224,7 +224,6 @@ namespace Graphics
     Framebuffer *createFramebuffer(Framebuffer *pParent,
                                    size_t x, size_t y,
                                    size_t w, size_t h,
-                                   Graphics::PixelFormat format,
                                    void *pFbOverride = 0);
 
     /// Destroys a given framebuffer.
