@@ -53,7 +53,7 @@ private:
     Header &operator = (const Header&);
     
     void update();
-    size_t renderString(const char *str, size_t x, size_t y, rgb_t f, rgb_t b);
+    size_t renderString(const char *str, size_t x, size_t y, uint32_t f, uint32_t b);
 
     size_t m_nWidth;
     size_t m_Page;

@@ -84,7 +84,7 @@ Font::~Font()
 {
 }
 
-size_t Font::render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, size_t y, rgb_t f, rgb_t b)
+size_t Font::render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, size_t y, uint32_t f, uint32_t b)
 {
     Glyph *pGlyph = 0;
     bool bKillGlyph = true;
@@ -134,14 +134,23 @@ void Font::drawGlyph(PedigreeGraphics::Framebuffer *pFb, Glyph *pBitmap, int lef
     */
 }
 
-Font::Glyph *Font::generateGlyph(uint32_t c, rgb_t f, rgb_t b)
+Font::Glyph *Font::generateGlyph(uint32_t c, uint32_t f, uint32_t b)
 {
     Glyph *pGlyph = new Glyph;
     pGlyph->buffer = new rgb_t[m_CellWidth*m_CellHeight];
+    
+    rgb_t back, front;
+    back.r = (b & 0xFF0000) >> 16;
+    back.g = (b & 0xFF00) >> 8;
+    back.b = (b & 0xFF);
+    front.r = (f & 0xFF0000) >> 16;
+    front.g = (f & 0xFF00) >> 8;
+    front.b = (f & 0xFF);
+    front.a = back.a = 0;
 
     // Erase to background colour.
     for (size_t i = 0; i < m_CellWidth*m_CellHeight; i++)
-        pGlyph->buffer[i] = b;
+        pGlyph->buffer[i] = back;
 
     int error = FT_Load_Char(m_Face, c, FT_LOAD_RENDER);
     if (error)
@@ -162,27 +171,21 @@ Font::Glyph *Font::generateGlyph(uint32_t c, rgb_t f, rgb_t b)
             if ((static_cast<int32_t>(idx) < 0) || idx >= m_CellWidth*m_CellHeight)
                 continue;
             size_t gidx = (r*m_Face->glyph->bitmap.pitch)+c;
-            pGlyph->buffer[idx] = interpolateColour(f, b, m_Face->glyph->bitmap.buffer[gidx]);
+            pGlyph->buffer[idx] = interpolateColour(front, back, m_Face->glyph->bitmap.buffer[gidx]);
         }
     }
     
-    pGlyph->pBlitBuffer = g_pFramebuffer->createBuffer(pGlyph->buffer, PedigreeGraphics::Bits32_Argb, m_CellWidth, m_CellHeight);
+    pGlyph->pBlitBuffer = g_pFramebuffer->createBuffer(pGlyph->buffer, PedigreeGraphics::Bits32_Rgb, m_CellWidth, m_CellHeight);
     
     return pGlyph;
 }
 
-Font::Glyph *Font::cacheLookup(uint32_t c, rgb_t f, rgb_t b)
+Font::Glyph *Font::cacheLookup(uint32_t c, uint32_t f, uint32_t b)
 {
     if (m_pCache == 0) return 0;
 
     // Hash key is made up of the foreground, background and lower 16-bits of the character.
-    uint64_t key = static_cast<uint64_t> (c&0xFFFF) |
-        (static_cast<uint64_t>(f.r)<<16ULL) |
-        (static_cast<uint64_t>(f.g)<<24ULL) |
-        (static_cast<uint64_t>(f.b)<<32ULL) |
-        (static_cast<uint64_t>(b.r)<<40ULL) |
-        (static_cast<uint64_t>(b.g)<<48ULL) |
-        (static_cast<uint64_t>(b.b)<<56ULL);
+    uint64_t key = (static_cast<uint64_t>(f) << 40ULL) | (static_cast<uint64_t>(b) << 16ULL) | (c & 0xFFFF);
 
     key %= m_CacheSize;
 
@@ -193,12 +196,8 @@ Font::Glyph *Font::cacheLookup(uint32_t c, rgb_t f, rgb_t b)
     while (pBucket)
     {
         if (pBucket->c == c &&
-            pBucket->f.r == f.r &&
-            pBucket->f.g == f.g &&
-            pBucket->f.b == f.b &&
-            pBucket->b.r == b.r &&
-            pBucket->b.g == b.g &&
-            pBucket->b.b == b.b)
+            pBucket->f == f &&
+            pBucket->b == b)
         {
             return pBucket->value;
         }
@@ -210,18 +209,12 @@ Font::Glyph *Font::cacheLookup(uint32_t c, rgb_t f, rgb_t b)
     return 0;
 }
 
-void Font::cacheInsert(Glyph *pGlyph, uint32_t c, rgb_t f, rgb_t b)
+void Font::cacheInsert(Glyph *pGlyph, uint32_t c, uint32_t f, uint32_t b)
 {
     if (m_pCache == 0) return;
 
     // Hash key is made up of the foreground, background and lower 16-bits of the character.
-    uint64_t key = static_cast<uint64_t> (c&0xFFFF) |
-        (static_cast<uint64_t>(f.r)<<16ULL) |
-        (static_cast<uint64_t>(f.g)<<24ULL) |
-        (static_cast<uint64_t>(f.b)<<32ULL) |
-        (static_cast<uint64_t>(b.r)<<40ULL) |
-        (static_cast<uint64_t>(b.g)<<48ULL) |
-        (static_cast<uint64_t>(b.b)<<56ULL);
+    uint64_t key = (static_cast<uint64_t>(f) << 40ULL) | (static_cast<uint64_t>(b) << 16ULL) | (c & 0xFFFF);
 
     key %= m_CacheSize;
 

@@ -21,13 +21,13 @@
 
 extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
 
-rgb_t g_BorderColour                = {150, 80, 0,0};
-rgb_t g_TabBackgroundColour         = {0, 0, 0,0};
-rgb_t g_TabTextColour               = {150, 100, 0,0};
-rgb_t g_SelectedTabBackgroundColour = {150, 100, 0,0};
-rgb_t g_SelectedTabTextColour       = {255, 255, 255,0};
-rgb_t g_TextColour                  = {255, 255, 255,0};
-rgb_t g_MainBackgroundColour        = {0, 0, 0,0};
+uint32_t g_BorderColour                    = 0x5096; // {150, 80, 0,0};
+uint32_t g_TabBackgroundColour             = 0; // {0, 0, 0,0};
+uint32_t g_TabTextColour                   = 0x6496; // {150, 100, 0,0};
+uint32_t g_SelectedTabBackgroundColour     = 0x6496; // {150, 100, 0,0};
+uint32_t g_SelectedTabTextColour           = 0xFFFFFF; // {255, 255, 255,0};
+uint32_t g_TextColour                      = 0xFFFFFF; // {255, 255, 255,0};
+uint32_t g_MainBackgroundColour            = 0; // {0, 0, 0,0};
 size_t g_FontSize = 16;
 
 Header::Header(size_t nWidth) :
@@ -64,20 +64,20 @@ Header::Header(size_t nWidth) :
 
         if (!strcmp(buf, "border"))
         {
-            g_BorderColour = rgb;
-            g_TabBackgroundColour = rgb;
+            g_BorderColour = PedigreeGraphics::createRgb(rgb.r, rgb.g, rgb.b);
+            g_TabBackgroundColour = PedigreeGraphics::createRgb(rgb.r, rgb.g, rgb.b);
         }
         else if (!strcmp(buf, "fill"))
-            g_SelectedTabBackgroundColour = rgb;
+            g_SelectedTabBackgroundColour = PedigreeGraphics::createRgb(rgb.r, rgb.g, rgb.b);
         else if (!strcmp(buf, "selected-text"))
-            g_SelectedTabTextColour = rgb;
+            g_SelectedTabTextColour = PedigreeGraphics::createRgb(rgb.r, rgb.g, rgb.b);
         else if (!strcmp(buf, "text"))
         {
-            g_TextColour = rgb;
-            g_TabTextColour = rgb;
+            g_TextColour = PedigreeGraphics::createRgb(rgb.r, rgb.g, rgb.b);
+            g_TabTextColour = PedigreeGraphics::createRgb(rgb.r, rgb.g, rgb.b);
         }
         else if (!strcmp(buf, "tui-background"))
-            g_MainBackgroundColour = rgb;
+            g_MainBackgroundColour = PedigreeGraphics::createRgb(rgb.r, rgb.g, rgb.b);
     }
     pedigree_config_freeresult(result);
 
@@ -110,11 +110,9 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
     rect.point(0, 0);
     rect.point(m_nWidth, g_FontSize+5);
     
-    uint32_t borderColourInt = PedigreeGraphics::createRgb(g_BorderColour.r, g_BorderColour.g, g_BorderColour.b);
-
     // Height = font size + 2 px top and bottom + border 1px =
     // font-size + 5px.
-    m_pFramebuffer->line(0, g_FontSize + 4, m_nWidth, 1, borderColourInt, PedigreeGraphics::Bits24_Rgb);
+    m_pFramebuffer->line(0, g_FontSize + 4, m_nWidth, 1, g_BorderColour, PedigreeGraphics::Bits24_Rgb);
 
     size_t offset = 0;
     if (m_Page != 0)
@@ -131,28 +129,26 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
             // Add 5 pixels.
             offset += 5;
 
-            rgb_t foreColour = g_TextColour;
+            uint32_t foreColour = g_TextColour;
             if (pTab->flags & TAB_SELECTED)
                 foreColour = g_SelectedTabTextColour;
             else if (pTab->flags & TAB_SELECTABLE)
                 foreColour = g_TabTextColour;
 
-            rgb_t backColour = g_MainBackgroundColour;
+            uint32_t backColour = g_MainBackgroundColour;
             if (pTab->flags & TAB_SELECTED)
                 backColour = g_SelectedTabBackgroundColour;
             else if (pTab->flags & TAB_SELECTABLE)
                 backColour = g_TabBackgroundColour;
-            
-            uint32_t backColourInt = PedigreeGraphics::createRgb(backColour.r, backColour.g, backColour.b);
 
             // Fill to background colour.
-            m_pFramebuffer->rect(offset - 4, 0, strlen(pTab->text) * charWidth + 10, g_FontSize + 4, backColourInt, PedigreeGraphics::Bits24_Rgb);
+            m_pFramebuffer->rect(offset - 4, 0, strlen(pTab->text) * charWidth + 10, g_FontSize + 4, backColour, PedigreeGraphics::Bits24_Rgb);
 
             offset = renderString(pTab->text, offset, 2, foreColour, backColour);
 
             offset += 5;
             // Add a seperator
-            m_pFramebuffer->line(offset, 0, 1, g_FontSize + 4, borderColourInt, PedigreeGraphics::Bits24_Rgb);
+            m_pFramebuffer->line(offset, 0, 1, g_FontSize + 4, g_BorderColour, PedigreeGraphics::Bits24_Rgb);
         }
         pTab = pTab->next;
     }
@@ -165,7 +161,7 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
     }
 }
 
-size_t Header::renderString(const char *str, size_t x, size_t y, rgb_t f, rgb_t b)
+size_t Header::renderString(const char *str, size_t x, size_t y, uint32_t f, uint32_t b)
 {
     while (*str)
         x += m_pFont->render(m_pFramebuffer, *str++, x, y, f, b);
