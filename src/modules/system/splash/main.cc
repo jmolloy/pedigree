@@ -318,7 +318,7 @@ static void init()
     g_Width   = pParentFramebuffer->getWidth();
     g_Height  = pParentFramebuffer->getHeight();
 
-    g_pFramebuffer = Graphics::createFramebuffer(pParentFramebuffer, 64, 64, g_Width, g_Height, pParentFramebuffer->getFormat());
+    g_pFramebuffer = Graphics::createFramebuffer(pParentFramebuffer, 0, 0, g_Width, g_Height, pParentFramebuffer->getFormat());
     
     g_pFramebuffer->rect(0, 0, g_Width, g_Height, g_BackgroundColour, g_BgFgFormat);
     
