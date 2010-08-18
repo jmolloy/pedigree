@@ -112,6 +112,11 @@ class Framebuffer
          *  \param w width of the redraw area, ~0 for "invalid"
          *  \param h height of the redraw area, ~0 for "invalid"
          *  \param bChild non-zero if a child began the redraw, zero otherwise
+         *  \note Because every redraw ends up redrawing a large region of the
+         *        "root" framebuffer, it's not necessary to do framebuffer
+         *        copies at any point. The only reason a framebuffer copy is
+         *        done in this function is in the one case where a parent needs
+         *        to override a child's framebuffer.
          */
         void redraw(size_t x = ~0UL, size_t y = ~0UL,
                     size_t w = ~0UL, size_t h = ~0UL,
