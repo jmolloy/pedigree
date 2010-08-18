@@ -143,13 +143,19 @@ class Framebuffer
                 hwRedraw(x, y, w, h);
         }
         
-        /** Blits a given buffer to the screen. See createBuffer. */
+        /** Blits a given buffer to the screen. See createBuffer.
+         *  \param bLowestCall whether this is the lowest level call for the
+         *                     chain or a call being passed up from a child
+         *                     somewhere in the chain.
+         */
         virtual inline void blit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
-                                 size_t destx, size_t desty, size_t width, size_t height)
+                                 size_t destx, size_t desty, size_t width, size_t height,
+                                 bool bLowestCall = true)
         {
             if(m_pParent)
-                m_pParent->blit(pBuffer, srcx, srcy, m_XPos + destx, m_YPos + desty, width, height);
-            swBlit(pBuffer, srcx, srcy, destx, desty, width, height);
+                m_pParent->blit(pBuffer, srcx, srcy, m_XPos + destx, m_YPos + desty, width, height, false);
+            if(bLowestCall || !m_pParent)
+                swBlit(pBuffer, srcx, srcy, destx, desty, width, height);
         }
 
         /** Draws given raw pixel data to the screen. Used for framebuffer
@@ -167,39 +173,47 @@ class Framebuffer
         
         /** Draws a single rectangle to the screen with the given colour. */
         virtual inline void rect(size_t x, size_t y, size_t width, size_t height,
-                                 uint32_t colour, Graphics::PixelFormat format = Graphics::Bits32_Argb)
+                                 uint32_t colour, Graphics::PixelFormat format = Graphics::Bits32_Argb,
+                                 bool bLowestCall = true)
         {
             if(m_pParent)
-                m_pParent->rect(m_XPos + x, m_YPos + y, width, height, colour, format);
-            swRect(x, y, width, height, colour, format);
+                m_pParent->rect(m_XPos + x, m_YPos + y, width, height, colour, format, false);
+            if(bLowestCall || !m_pParent)
+                swRect(x, y, width, height, colour, format);
         }
         
         /** Copies a rectangle already on the framebuffer to a new location */
         virtual inline void copy(size_t srcx, size_t srcy,
                                  size_t destx, size_t desty,
-                                 size_t w, size_t h)
+                                 size_t w, size_t h,
+                                 bool bLowestCall = true)
         {
             if(m_pParent)
-                m_pParent->copy(m_XPos + srcx, m_YPos + srcy, m_XPos + destx, m_YPos + desty, w, h);
-            swCopy(srcx, srcy, destx, desty, w, h);
+                m_pParent->copy(m_XPos + srcx, m_YPos + srcy, m_XPos + destx, m_YPos + desty, w, h, false);
+            if(bLowestCall || !m_pParent)
+                swCopy(srcx, srcy, destx, desty, w, h);
         }
 
         /** Draws a line one pixel wide between two points on the screen */
         virtual inline void line(size_t x1, size_t y1, size_t x2, size_t y2,
-                                 uint32_t colour, Graphics::PixelFormat format = Graphics::Bits32_Argb)
+                                 uint32_t colour, Graphics::PixelFormat format = Graphics::Bits32_Argb,
+                                 bool bLowestCall = true)
         {
             if(m_pParent)
-                m_pParent->line(m_XPos + x1, m_YPos + y1, m_YPos + x2, y2, colour, format);
-            swLine(x1, y1, x2, y2, colour, format);
+                m_pParent->line(m_XPos + x1, m_YPos + y1, m_YPos + x2, y2, colour, format, false);
+            if(bLowestCall || !m_pParent)
+                swLine(x1, y1, x2, y2, colour, format);
         }
 
         /** Sets an individual pixel on the framebuffer. Not inheritable. */
         void setPixel(size_t x, size_t y, uint32_t colour,
-                      Graphics::PixelFormat format = Graphics::Bits32_Argb)
+                      Graphics::PixelFormat format = Graphics::Bits32_Argb,
+                      bool bLowestCall = true)
         {
             if(m_pParent)
-                m_pParent->setPixel(m_XPos + x, m_YPos + y, colour, format);
-            swSetPixel(x, y, colour, format);
+                m_pParent->setPixel(m_XPos + x, m_YPos + y, colour, format, false);
+            if(bLowestCall || !m_pParent)
+                swSetPixel(x, y, colour, format);
         }
         
         /** Class friendship isn't inheritable, so these have to be public for
