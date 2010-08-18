@@ -396,7 +396,7 @@ void pedigree_gfx_line(void *p, void *args)
     /// \todo Exploit: could allow userspace code to be run at ring0
     GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
     
-    pProvider->pFramebuffer->rect(pArgs->a, pArgs->b, pArgs->c, pArgs->d, pArgs->e, static_cast<Graphics::PixelFormat>(pArgs->f));
+    pProvider->pFramebuffer->line(pArgs->a, pArgs->b, pArgs->c, pArgs->d, pArgs->e, static_cast<Graphics::PixelFormat>(pArgs->f));
 }
 
 void pedigree_gfx_draw(void *p, void *args)
