@@ -360,50 +360,63 @@ void Framebuffer::swLine(size_t x1, size_t y1, size_t x2, size_t y2, uint32_t co
     if(UNLIKELY((x1 == x2) && (y1 == y2)))
         return;
     
-    size_t bytesPerPixel = m_nBytesPerPixel;
-    size_t bytesPerLine = m_nBytesPerLine;
-    
     uint32_t transformColour = 0;
     Graphics::convertPixel(colour, format, transformColour, m_PixelFormat);
+    
+    // Special cases
+    if(x1 == x2) // Vertical line
+    {
+        if(y1 > y2)
+            swap(y1, y2);
+        for(size_t y = y1; y < y2; y++)
+            setPixel(x1, y, transformColour, m_PixelFormat);
+        return;
+    }
+    else if(y1 == y2)
+    {
+        if(x1 > x2)
+            swap(x1, x2);
+        for(size_t x = x1; x < x2; x++)
+            setPixel(x, y1, transformColour, m_PixelFormat);
+        return;
+    }
 
     // Bresenham's algorithm, referred to Computer Graphics, C Version (2nd Edition)
     // from 1997, by D. Hearn and M. Pauline Baker (page 88)
     // http://www.amazon.com/Computer-Graphics-C-Version-2nd/dp/0135309247
-
-    ssize_t dx = static_cast<ssize_t>(x2 - x1);
-    ssize_t dy = static_cast<ssize_t>(y2 - y1);
-    bool bSteep = dy > dx;
-    if(bSteep)
-    {
-        swap(x1, y1);
-        swap(x2, y2);
-    }
+    
+    ssize_t dx = static_cast<ssize_t>(x2) - static_cast<ssize_t>(x1);
+    ssize_t dy = static_cast<ssize_t>(y2) - static_cast<ssize_t>(y1);
+    ssize_t p = 2 * (dy - dx);
+    ssize_t x, y, xEnd;
+    
     if(x1 > x2)
     {
-        swap(x1, x2);
-        swap(y1, y2);
+        x = x2;
+        y = y2;
+        xEnd = x1;
     }
-
-    dx = x2 - x1;
-    dy = y2 - y1;
-
-    ssize_t error = dx / 2;
-
-    size_t y = y1;
-
-    for(size_t x = x1; x < x2; x++)
+    else
     {
-        if(bSteep)
-            setPixel(y, x, colour, format);
+        x = x1;
+        y = y1;
+        xEnd = x2;
+    }
+    
+    setPixel(x, y, transformColour, m_PixelFormat);
+    
+    while(x < xEnd)
+    {
+        x++;
+        if(p < 0)
+            p += (dy * 2);
         else
-            setPixel(x, y, colour, format);
-
-        error -= dy;
-        if(error < 0)
         {
             y++;
-            error += dx;
+            p += 2 * (dy - dx);
         }
+        
+        setPixel(x, y, transformColour, m_PixelFormat);
     }
 }
 

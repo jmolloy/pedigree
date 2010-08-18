@@ -205,7 +205,7 @@ class Framebuffer
                                  bool bLowestCall = true)
         {
             if(m_pParent)
-                m_pParent->line(m_XPos + x1, m_YPos + y1, m_YPos + x2, y2, colour, format, false);
+                m_pParent->line(m_XPos + x1, m_YPos + y1, m_XPos + x2, m_YPos + y2, colour, format, false);
             if(bLowestCall || !m_pParent)
                 swLine(x1, y1, x2, y2, colour, format);
         }
