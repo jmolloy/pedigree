@@ -112,7 +112,7 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
     
     // Height = font size + 2 px top and bottom + border 1px =
     // font-size + 5px.
-    m_pFramebuffer->line(0, g_FontSize + 4, m_nWidth, 1, g_BorderColour, PedigreeGraphics::Bits24_Rgb);
+    m_pFramebuffer->line(0, g_FontSize + 4, m_nWidth, g_FontSize + 4, g_BorderColour, PedigreeGraphics::Bits24_Rgb);
 
     size_t offset = 0;
     if (m_Page != 0)
@@ -148,7 +148,7 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
 
             offset += 5;
             // Add a seperator
-            m_pFramebuffer->line(offset, 0, 1, g_FontSize + 4, g_BorderColour, PedigreeGraphics::Bits24_Rgb);
+            m_pFramebuffer->line(offset, 0, offset, g_FontSize + 4, g_BorderColour, PedigreeGraphics::Bits24_Rgb);
         }
         pTab = pTab->next;
     }
