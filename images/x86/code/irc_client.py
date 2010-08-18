@@ -14,6 +14,10 @@ def win(stdscr):
     curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
     curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
     curses.init_pair(3, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    
+    serv = sys.argv[1]
+    mynick = sys.argv[2]
+    chan = sys.argv[3]
 
     socket.setdefaulttimeout(120.0)
 
@@ -21,13 +25,9 @@ def win(stdscr):
 
     server.setblocking(1)
 
-    serv = sys.argv[1]
     server.connect((serv, 6667))
 
     server.setblocking(0)
-
-    mynick = sys.argv[2]
-    chan = sys.argv[3]
 
     server.send("NICK " + mynick + "\r\nUSER " + mynick + " none none : 0 : 0\r\nJOIN " + chan + "\r\n")
 
@@ -47,7 +47,7 @@ def win(stdscr):
 
     recv_win.standout()
     # TODO: It's possible to join multiple channels. Reflect this in the header.
-    recv_win.addstr(0, 1, "  " + mynick + " on " + serv + ", in " + chan + ".  ", curses.color_pair(2))
+    recv_win.addstr(0, 1, "  " + mynick + " on " + serv + ", in " + chan + ". ", curses.color_pair(2))
     recv_win.standend()
     send_win.addstr(0, 0, "> ")
 
