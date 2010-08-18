@@ -74,6 +74,6 @@ tmpEnvironment['LIBS'] = libraries
 tmpEnvironment['LIBPATH'] = libpaths
 tmpEnvironment['CPPDEFINES'] += ['PEDIGREE']
 
-SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
-
 tmpEnvironment.Library(objname, files)
+
+SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])

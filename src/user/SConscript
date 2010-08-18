@@ -8,6 +8,91 @@ Import(['env'])
 
 tmp = env.Clone()
 
+####### APPLICATION BUILDS #######
+
+# Cleans a set of flags so we can build proper applications rather than
+# freestanding binaries.
+def fixFlags(flags):
+    flags = flags.replace('-nostdinc', '')
+    flags = flags.replace('-ffreestanding', '')
+    flags = flags.replace('-nostdlib', '')
+    if env['ARCH_TARGET']  in ['X86', 'X64']:
+        flags += ' -msse2'
+    if env['ARCH_TARGET'] == 'PPC':
+        flags += ' -U__svr4__ '
+    return flags
+
+appsbase = 'applications/'
+appoutputdir    = "#" + env["PEDIGREE_BUILD_APPS"]
+imagesdir       = env["PEDIGREE_IMAGES_DIR"]
+builddir        = "#" + env["PEDIGREE_BUILD_BASE"]
+
+# Applications which just use POSIX libc/libm
+posixc_apps = [
+    'syscall-test',
+    'net-test',
+    'login',
+    'keymap',
+    'mount',
+    'config',
+    'display-mode',
+    'reboot',
+    'sudo',
+    'modload',
+    'modunload',
+    'modlist'
+]
+
+# Applications which use libSDL
+sdl_apps = [
+    'fire'
+]
+
+# Applications which use libpedigree and/or libstdc++
+cpp_apps = [
+    'TUI',
+    'apptest'
+]
+
+default_libs = ['gcc', 'c', 'm', 'pedigree-c']
+
+# Search path for libraries
+libpath = [
+    builddir
+]
+
+# Default include path
+incpath = [
+    '#/src/subsys/posix/include'
+]
+
+all_apps = posixc_apps + sdl_apps + cpp_apps
+
+tmp['CFLAGS'] = fixFlags(env['CFLAGS'])
+tmp['CXXFLAGS'] = fixFlags(env['CXXFLAGS'])
+tmp['CPPDEFINES'] += ['PEDIGREE', '__PEDIGREE__']
+tmp['LIBS'] = default_libs
+tmp['LIBPATH'] = libpath
+tmp['CPPPATH'] = incpath
+
+for i in all_apps:
+    e = tmp.Clone()
+    
+    if i in sdl_apps:
+        e['LIBS'] += ['SDL']
+        e['CPPPATH'] += ['#/src/lgpl/SDL-1.14.1/include']
+    elif i in cpp_apps:
+        e['LIBS'] += ['pedigree', 'stdc++']
+        e['LIBPATH'] += [imagesdir + 'libraries']
+        e['CPPPATH'] += ['#/src/subsys/native/include',
+                         '#/src/subsys/posix/include/c++/4.3.2']
+
+    base = appsbase + i
+    files = [Glob(base + '/*.c'), Glob(base + '/*.cc')]
+    e.Program(appoutputdir + '/' + i, files, LINKFLAGS='')
+
+'''
+    
 # To include a new subdirectory just add to the list.
 subdirs = [
     'applications/apptest',
@@ -28,16 +113,7 @@ subdirs = [
     'applications/fire'
 ]
 
-# Cleans a set of flags
-def fixFlags(flags):
-    flags = flags.replace('-nostdinc', '')
-    flags = flags.replace('-ffreestanding', '')
-    flags = flags.replace('-nostdlib', '')
-    if env['ARCH_TARGET']  in ['X86', 'X64']:
-        flags += ' -msse2'
-    if env['ARCH_TARGET'] == 'PPC':
-        flags += ' -U__svr4__ '
-    return flags
+# Special handling 
 
 # Fix the CFLAGS and CXXFLAGS for applications
 env['CFLAGS'] = fixFlags(env['CFLAGS'])
@@ -48,3 +124,5 @@ SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
 
 # Reset the old environment
 env = tmp
+
+'''

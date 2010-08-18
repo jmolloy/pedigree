@@ -61,7 +61,7 @@ Framebuffer::Framebuffer() : m_Provider(), m_bProviderValid(false), m_bIsChild(f
 Framebuffer::Framebuffer(GraphicsProvider &gfx)
 {
     m_Provider = gfx;
-    m_bProviderValid = true;
+    m_bProviderValid = m_bIsChild = true;
 }
 
 Framebuffer::~Framebuffer()
