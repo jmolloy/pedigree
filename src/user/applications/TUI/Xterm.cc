@@ -30,6 +30,10 @@
 
 #define C_BRIGHT  8
 
+// Set to 1 to use Framebuffer::line instead of Unicode lines.
+// Fairly buggy unfortunately.
+#define USE_FRAMEBUFFER_LINES       1
+
 #include <pedigree_config.h>
 
 #include <graphics/Graphics.h>
@@ -449,15 +453,16 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 
             default:
                 // Line drawing
+#if USE_FRAMEBUFFER_LINES
                 if(m_pWindows[m_ActiveBuffer]->getLineRenderMode())
                 {
                     m_pWindows[m_ActiveBuffer]->lineRender(utf32, rect);
                 }
                 else if (utf32 >= 32)
                     m_pWindows[m_ActiveBuffer]->addChar(utf32, rect);
-                
-                /*
-                    
+#else
+                if(m_pWindows[m_ActiveBuffer]->getLineRenderMode())
+                {
                     switch (utf32)
                     {
                         case 'j': utf32 = 0x2518; break; // Lower right corner
@@ -477,8 +482,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 }
                 if (utf32 >= 32)
                     m_pWindows[m_ActiveBuffer]->addChar(utf32, rect);
-                    
-                */
+#endif
         }
     }
 }
@@ -630,6 +634,11 @@ void Xterm::Window::renderAll(DirtyRectangle &rect, Xterm::Window *pPrevious)
 
 void Xterm::Window::setChar(uint32_t utf32, size_t x, size_t y)
 {
+    if(x > m_Width)
+        return;
+    if(y > m_Height)
+        return;
+    
     TermChar *c = &m_pInsert[y*m_Width+x];
 
     c->fore = m_Fg;
@@ -1118,54 +1127,88 @@ void Xterm::Window::lineRender(uint32_t utf32, DirtyRectangle &rect)
 {
     syslog(LOG_NOTICE, "line render: %c", utf32);
     
+    /*
+    if(m_CursorX > m_Width)
+        return;
+    if(m_CursorY > m_Height)
+        return;
+    */
+    
     size_t left = (m_CursorX * g_NormalFont->getWidth());
     size_t top = (m_CursorY * g_NormalFont->getHeight());
     
-    size_t halfWidth = (g_NormalFont->getWidth() / 2) + 1;
-    size_t halfHeight = (g_NormalFont->getHeight() / 2) + 1;
+    m_CursorX++;
+    if(m_CursorX > m_Width)
+    {
+        m_CursorX = 0;
+        cursorDown(1, rect);
+    }
     
     size_t fullWidth = g_NormalFont->getWidth();
     size_t fullHeight = g_NormalFont->getHeight();
     
+    size_t halfWidth = (fullWidth / 2) + 1;
+    size_t halfHeight = (fullHeight / 2) + 1;
+    
     uint32_t bgColourInt = g_Colours[m_Bg];
     uint32_t fgColourInt = g_Colours[m_Fg];
 
-    // m_pFramebuffer->rect(left, top, fullWidth, fullHeight, bgColourInt, PedigreeGraphics::Bits24_Rgb);
-    
-    // line(size_t x1, size_t y1, size_t x2, size_t y2, uint32_t colour, PedigreeGraphics::PixelFormat format = PedigreeGraphics::Bits32_Argb);
+    m_pFramebuffer->rect(left, top, fullWidth, fullHeight, bgColourInt, PedigreeGraphics::Bits24_Rgb);
     
     rect.point(m_OffsetLeft + left, m_OffsetTop + top);
     rect.point(m_OffsetLeft + left + fullWidth, m_OffsetTop + top + fullHeight);
     
-    switch(utf32)
+    switch(utf32 & 0xFF)
     {
         case 'j':
             // Bottom right corner
+            
+            // Middle left to Center
             m_pFramebuffer->line(left, top + halfHeight, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            
+            // Center to Middle top
             m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         case 'k':
             // Upper right corner
+            
+            // Middle left to Center
             m_pFramebuffer->line(left, top + halfHeight, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            
+            // Center to Middle bottom
             m_pFramebuffer->line(left + halfWidth, top + halfHeight, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         case 'l':
             // Upper left corner
+            
+            // Center to Middle right
             m_pFramebuffer->line(left + halfWidth, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            
+            // Center to Middle bottom
             m_pFramebuffer->line(left + halfWidth, top + halfHeight, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         case 'm':
             // Lower left corner
+            
+            // Center to Middle top
             m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            
+            // Center to Middle right
             m_pFramebuffer->line(left + halfWidth, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         case 'n':
             // Crossing lines
+            
+            // Middle left to Middle right
             m_pFramebuffer->line(left, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            
+            // Middle top to Middle bottom
             m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         case 'q':
             // Horizontal line
+            
+            // Middle left to Middle right
             m_pFramebuffer->line(left, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         case 't':
@@ -1175,32 +1218,39 @@ void Xterm::Window::lineRender(uint32_t utf32, DirtyRectangle &rect)
             break;
         case 'u':
             // Right 'T'
+            
+            // Middle top to Middle bottom
             m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            
+            // Middle left to Center
             m_pFramebuffer->line(left, top + halfHeight, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         case 'v':
             // Bottom 'T'
+            
+            // Middle left to Middle right
             m_pFramebuffer->line(left, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            
+            // Middle top to Center
             m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         case 'w':
             // Top 'T'
+            
+            // Middle left to Middle right
             m_pFramebuffer->line(left, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            
+            // Middle bottom to Center
             m_pFramebuffer->line(left + halfWidth, top + halfHeight, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         case 'x':
             // Vertical line
+            
+            // Middle top to Middle bottom
             m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         default:
             break;
-    }
-
-    m_CursorX++;
-    if ((m_CursorX % m_Width) == 0)
-    {
-        m_CursorX = 0;
-        cursorDown(1, rect);
     }
 }
 
