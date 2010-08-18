@@ -84,7 +84,7 @@ Font::~Font()
 {
 }
 
-size_t Font::render(rgb_t *pFb, uint32_t c, size_t x, size_t y, rgb_t f, rgb_t b)
+size_t Font::render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, size_t y, rgb_t f, rgb_t b)
 {
     Glyph *pGlyph = 0;
     bool bKillGlyph = true;
@@ -115,12 +115,12 @@ size_t Font::render(rgb_t *pFb, uint32_t c, size_t x, size_t y, rgb_t f, rgb_t b
     return m_CellWidth;
 }
 
-void Font::drawGlyph(rgb_t *pFb, Glyph *pBitmap, int left, int top)
+void Font::drawGlyph(PedigreeGraphics::Framebuffer *pFb, Glyph *pBitmap, int left, int top)
 {
     if(!g_pFramebuffer)
         return;
     
-    g_pFramebuffer->blit(pBitmap->pBlitBuffer, 0, 0, left, top, m_CellWidth, m_CellHeight);
+    pFb->blit(pBitmap->pBlitBuffer, 0, 0, left, top, m_CellWidth, m_CellHeight);
     
     /*
     for (size_t y = top; y < top+m_CellHeight; y++)

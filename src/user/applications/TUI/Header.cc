@@ -32,7 +32,7 @@ size_t g_FontSize = 16;
 
 Header::Header(size_t nWidth) :
     m_nWidth(nWidth), m_Page(0), m_LastPage(0), m_pFont(0),
-    m_pTabs(0), m_NextTabId(0)
+    m_pTabs(0), m_NextTabId(0), m_pFramebuffer(0)
 {
     m_pFont = new Font(g_FontSize, "/system/fonts/DejaVuSansMono-BoldOblique.ttf", false, nWidth);
     g_FontSize = m_pFont->getHeight();
@@ -96,6 +96,15 @@ size_t Header::getHeight()
 void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
 {
     size_t charWidth = m_pFont->getWidth();
+    
+    if(!m_pFramebuffer)
+    {
+        m_pFramebuffer = g_pFramebuffer->createChild(0, 0, m_nWidth, g_FontSize + 5);
+        if(!m_pFramebuffer)
+            return;
+        else if(!m_pFramebuffer->getRawBuffer())
+            return;
+    }
 
     // Set up the dirty rectangle to cover the entire header area.
     rect.point(0, 0);
@@ -105,13 +114,13 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
 
     // Height = font size + 2 px top and bottom + border 1px =
     // font-size + 5px.
-    g_pFramebuffer->line(0, g_FontSize + 4, m_nWidth, 1, borderColourInt, PedigreeGraphics::Bits24_Rgb);
+    m_pFramebuffer->line(0, g_FontSize + 4, m_nWidth, 1, borderColourInt, PedigreeGraphics::Bits24_Rgb);
 
     size_t offset = 0;
     if (m_Page != 0)
     {
         // Render a left-double arrow.
-        offset = renderString(pBuffer, "<", offset, 2, g_TextColour, g_MainBackgroundColour);
+        offset = renderString("<", offset, 2, g_TextColour, g_MainBackgroundColour);
     }
 
     Tab *pTab = m_pTabs;
@@ -137,13 +146,13 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
             uint32_t backColourInt = PedigreeGraphics::createRgb(backColour.r, backColour.g, backColour.b);
 
             // Fill to background colour.
-            g_pFramebuffer->rect(offset - 4, 0, strlen(pTab->text) * charWidth + 10, g_FontSize + 4, backColourInt, PedigreeGraphics::Bits24_Rgb);
+            m_pFramebuffer->rect(offset - 4, 0, strlen(pTab->text) * charWidth + 10, g_FontSize + 4, backColourInt, PedigreeGraphics::Bits24_Rgb);
 
-            offset = renderString(pBuffer, pTab->text, offset, 2, foreColour, backColour);
+            offset = renderString(pTab->text, offset, 2, foreColour, backColour);
 
             offset += 5;
             // Add a seperator
-            g_pFramebuffer->line(offset, 0, 1, g_FontSize + 4, borderColourInt, PedigreeGraphics::Bits24_Rgb);
+            m_pFramebuffer->line(offset, 0, 1, g_FontSize + 4, borderColourInt, PedigreeGraphics::Bits24_Rgb);
         }
         pTab = pTab->next;
     }
@@ -152,14 +161,14 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
     {
         offset += 5;
         // Render a right-double arrow.
-        offset = renderString(pBuffer, ">", offset, 2, g_TextColour, g_MainBackgroundColour);
+        offset = renderString(">", offset, 2, g_TextColour, g_MainBackgroundColour);
     }
 }
 
-size_t Header::renderString(rgb_t *pBuffer, const char *str, size_t x, size_t y, rgb_t f, rgb_t b)
+size_t Header::renderString(const char *str, size_t x, size_t y, rgb_t f, rgb_t b)
 {
     while (*str)
-        x += m_pFont->render(pBuffer, *str++, x, y, f, b);
+        x += m_pFont->render(m_pFramebuffer, *str++, x, y, f, b);
     return x;
 }
 
@@ -242,3 +251,4 @@ size_t Header::addTab(char *string, size_t flags)
 
     return pTab->id;
 }
+

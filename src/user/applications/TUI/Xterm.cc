@@ -709,10 +709,10 @@ void Xterm::Window::render(DirtyRectangle &rect, size_t flags, size_t x, size_t 
     rect.point((x+1)*g_NormalFont->getWidth()+m_OffsetLeft+1, (y+1)*g_NormalFont->getHeight()+m_OffsetTop);
 
     if (flags & XTERM_BOLD)
-        g_BoldFont->render(m_pFramebuffer, utf32, x*g_BoldFont->getWidth()+m_OffsetLeft,
+        g_BoldFont->render(g_pFramebuffer, utf32, x*g_BoldFont->getWidth()+m_OffsetLeft,
                            y*g_BoldFont->getHeight()+m_OffsetTop, fg, bg);
     else
-        g_NormalFont->render(m_pFramebuffer, utf32, x*g_NormalFont->getWidth()+m_OffsetLeft,
+        g_NormalFont->render(g_pFramebuffer, utf32, x*g_NormalFont->getWidth()+m_OffsetLeft,
                              y*g_NormalFont->getHeight()+m_OffsetTop, fg, bg);
 }
 

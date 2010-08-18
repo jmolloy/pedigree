@@ -32,7 +32,7 @@ public:
     Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWidth);
     virtual ~Font();
 
-    virtual size_t render(rgb_t *pFb, uint32_t c, size_t x, size_t y, rgb_t f, rgb_t b);
+    virtual size_t render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, size_t y, rgb_t f, rgb_t b);
 
     size_t getWidth()
     {return m_CellWidth;}
@@ -55,7 +55,7 @@ private:
         
         PedigreeGraphics::Buffer *pBlitBuffer;
     };
-    void drawGlyph(rgb_t *pFb, Glyph *pBitmap, int left, int top);
+    void drawGlyph(PedigreeGraphics::Framebuffer *pFb, Glyph *pBitmap, int left, int top);
     Glyph *generateGlyph(uint32_t c, rgb_t f, rgb_t b);
     void cacheInsert(Glyph *pGlyph, uint32_t c, rgb_t f, rgb_t b);
     Glyph *cacheLookup(uint32_t c, rgb_t f, rgb_t b);
