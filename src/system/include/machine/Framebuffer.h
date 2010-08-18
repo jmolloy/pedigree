@@ -19,6 +19,7 @@
 #include <processor/types.h>
 #include <utilities/utility.h>
 #include <graphics/Graphics.h>
+#include <Log.h>
 
 class Display;
 
@@ -49,7 +50,7 @@ class Framebuffer
             return m_nHeight;
         }
         
-        inline size_t getFormat()
+        inline Graphics::PixelFormat getFormat()
         {
             return m_PixelFormat;
         }
@@ -90,7 +91,7 @@ class Framebuffer
         {
             if(m_pParent)
                 return m_pParent->createBuffer(srcData, srcFormat, width, height);
-            return swCreateBuffer(srcData,srcFormat, width, height);
+            return swCreateBuffer(srcData, srcFormat, width, height);
         }
         
         /** Destroys a created buffer. Frees its memory in both the system RAM
@@ -109,9 +110,12 @@ class Framebuffer
          *  \param x leftmost x co-ordinate of the redraw area, ~0 for "invalid"
          *  \param y topmost y co-ordinate of the redraw area, ~0 for "invalid"
          *  \param w width of the redraw area, ~0 for "invalid"
-         *  \param h height of the redraw area, ~0 for "invalid" */
+         *  \param h height of the redraw area, ~0 for "invalid"
+         *  \param bChild non-zero if a child began the redraw, zero otherwise
+         */
         void redraw(size_t x = ~0UL, size_t y = ~0UL,
-                    size_t w = ~0UL, size_t h = ~0UL)
+                    size_t w = ~0UL, size_t h = ~0UL,
+                    bool bChild = false)
         {
             if(m_pParent)
             {
@@ -119,18 +123,21 @@ class Framebuffer
                 // 1. Draw our framebuffer. This will go to the top without
                 //    changing intermediate framebuffers.
                 // 2. Pass a redraw up the chain. This will reach the top level
-                //    (probably with modified x/y) and cause our screen region
-                //    to be redrawn.
-                /// \todo How do parents know what children have modified, and
-                ///       whether the redraw has been caused by a child? If the
-                ///       redraw is caused by a child the "precedence" algorithm
-                ///       shouldn't be used, but it it's been called direcetly,
-                ///       precedence should take place.
+                //    (with modified x/y) and cause our screen region to be redrawn.
+
                 /// \note If none of the above makes sense, you need to read the
                 ///       Pedigree graphics design doc:
                 ///       http://pedigree-project.org/issues/114
-                m_pParent->draw(reinterpret_cast<void*>(m_FramebufferBase), x, y, m_XPos + x, m_YPos + y, w, h, m_PixelFormat);
-                m_pParent->redraw(m_XPos + x, m_YPos + y, w, h);
+
+                // If the redraw was not caused by a child, make sure our
+                // framebuffer has precedence over any children.
+                /// \todo nChildren parameter - this is not necessary if no children!
+                if(!bChild)
+                    m_pParent->draw(reinterpret_cast<void*>(m_FramebufferBase), x, y, m_XPos + x, m_YPos + y, w, h, m_PixelFormat);
+
+                // Now we are a child requesting a redraw, so the parent will not
+                // have precedence over us.
+                m_pParent->redraw(m_XPos + x, m_YPos + y, w, h, true);
             }
             else
                 hwRedraw(x, y, w, h);
@@ -172,7 +179,7 @@ class Framebuffer
                                  size_t w, size_t h)
         {
             if(m_pParent)
-                m_pParent->copy(srcx, srcy, m_XPos + destx, m_YPos + desty, w, h);
+                m_pParent->copy(m_XPos + srcx, m_YPos + srcy, m_XPos + destx, m_YPos + desty, w, h);
             swCopy(srcx, srcy, destx, desty, w, h);
         }
 
@@ -187,7 +194,12 @@ class Framebuffer
 
         /** Sets an individual pixel on the framebuffer. Not inheritable. */
         void setPixel(size_t x, size_t y, uint32_t colour,
-                      Graphics::PixelFormat format = Graphics::Bits32_Argb);
+                      Graphics::PixelFormat format = Graphics::Bits32_Argb)
+        {
+            if(m_pParent)
+                m_pParent->setPixel(m_XPos + x, m_YPos + y, colour, format);
+            swSetPixel(x, y, colour, format);
+        }
         
         /** Class friendship isn't inheritable, so these have to be public for
          *  graphics drivers to use. They shouldn't be touched by anything that
@@ -248,19 +260,27 @@ class Framebuffer
         {
             m_pParent = p;
         }
+        inline Framebuffer *getParent()
+        {
+            return m_pParent;
+        }
+        
+        void setFramebuffer(uintptr_t p)
+        {
+            m_FramebufferBase = p;
+        }
         
     private:
+
+        /** Sets an individual pixel on the framebuffer. Not inheritable. */
+        void swSetPixel(size_t x, size_t y, uint32_t colour,
+                        Graphics::PixelFormat format = Graphics::Bits32_Argb);
     
     protected:
     
         // Base address of this framebuffer, set by whatever code inherits this
         // class, ideally in the constructor.
         uintptr_t m_FramebufferBase;
-        
-        void setFramebuffer(uintptr_t p)
-        {
-            m_FramebufferBase = p;
-        }
         
         void swBlit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
                     size_t destx, size_t desty, size_t width, size_t height);
@@ -284,8 +304,8 @@ class Framebuffer
         void swDestroyBuffer(Graphics::Buffer *pBuffer);
         
         /// Inherited by drivers that provide a hardware redraw function
-        virtual inline void hwRedraw(size_t x = ~0UL, size_t y = ~0UL,
-                                     size_t w = ~0UL, size_t h = ~0UL) {}
+        virtual void hwRedraw(size_t x = ~0UL, size_t y = ~0UL,
+                              size_t w = ~0UL, size_t h = ~0UL) {}
 };
 
 #endif

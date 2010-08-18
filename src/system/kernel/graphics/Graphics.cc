@@ -14,4 +14,54 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <graphics/Graphics.h>
+#include <machine/Framebuffer.h>
 
+Framebuffer *Graphics::createFramebuffer(Framebuffer *pParent,
+                                         size_t x, size_t y,
+                                         size_t w, size_t h,
+                                         Graphics::PixelFormat format)
+{
+    if(!(w && h))
+        return 0;
+
+    // Don't allow insane placement, but do allow "offscreen" buffers.
+    // They may be moved later, at which point they will be "onscreen"
+    // buffers.
+    if((x > pParent->getWidth()) || (y > pParent->getHeight()))
+        return 0;
+
+    size_t bytesPerPixel = Graphics::bytesPerPixel(format);
+    size_t bytesPerLine = bytesPerPixel * w;
+
+    // Allocate space for the buffer
+    uint8_t *pMem = new uint8_t[bytesPerLine * h];
+
+    // Create the framebuffer
+    Framebuffer *pRet = new Framebuffer();
+    pRet->setFramebuffer(reinterpret_cast<uintptr_t>(pMem));
+    pRet->setWidth(w);
+    pRet->setHeight(h);
+    pRet->setFormat(format);
+    pRet->setBytesPerPixel(bytesPerPixel);
+    pRet->setBytesPerLine(bytesPerLine);
+    pRet->setXPos(x);
+    pRet->setYPos(y);
+    pRet->m_pParent = pParent;
+    return pRet;
+}
+
+void Graphics::destroyFramebuffer(Framebuffer *pFramebuffer)
+{
+    if((!pFramebuffer) || (!pFramebuffer->getRawBuffer()))
+        return;
+
+    // Let the parent redraw itself onto this region
+    if(pFramebuffer->getParent())
+        pFramebuffer->redraw(0, 0, pFramebuffer->getWidth(), pFramebuffer->getHeight(), false);
+
+    // Delete our framebuffer memory
+    delete [] reinterpret_cast<uint8_t*>(pFramebuffer->getRawBuffer());
+
+    // Finally delete the framebuffer object
+    delete pFramebuffer;
+}

@@ -401,7 +401,7 @@ void Framebuffer::swLine(size_t x1, size_t y1, size_t x2, size_t y2, uint32_t co
     }
 }
 
-void Framebuffer::setPixel(size_t x, size_t y, uint32_t colour, Graphics::PixelFormat format)
+void Framebuffer::swSetPixel(size_t x, size_t y, uint32_t colour, Graphics::PixelFormat format)
 {
     if(UNLIKELY(!m_FramebufferBase))
         return;

@@ -17,6 +17,8 @@
 #define _GRAPHICS_H
 
 #include <processor/types.h>
+
+class Framebuffer;
  
 namespace Graphics
 {
@@ -215,6 +217,15 @@ namespace Graphics
         
         return false;
     }
+
+    /// Creates a new framebuffer as a child of the current framebuffer
+    Framebuffer *createFramebuffer(Framebuffer *pParent,
+                                   size_t x, size_t y,
+                                   size_t w, size_t h,
+                                   Graphics::PixelFormat format);
+
+    /// Destroys a given framebuffer.
+    void destroyFramebuffer(Framebuffer *pFramebuffer);
 };
 
 #endif

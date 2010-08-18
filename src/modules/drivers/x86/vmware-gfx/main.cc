@@ -290,6 +290,9 @@ class VmwareGraphics : public Display
             m_pFramebuffer->setFormat(pf);
             m_pFramebuffer->setXPos(0); m_pFramebuffer->setYPos(0);
             m_pFramebuffer->setParent(0);
+
+            // Blank the framebuffer, new mode
+            m_pFramebuffer->rect(0, 0, w, h, 0);
             
             NOTICE("vmware-gfx entered mode " << Dec << width << "x" << height << "x" << depth << Hex << ", mode framebuffer is " << (fbBase + fbOffset));
         }

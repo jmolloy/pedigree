@@ -30,6 +30,8 @@
 #include "image.h"
 #include "font.h"
 
+Framebuffer *g_pFramebuffer = 0;
+
 static uint8_t *g_pBuffer = 0;
 static Graphics::Buffer *g_pFont = 0;
 static size_t g_Width = 0;
@@ -64,11 +66,17 @@ Mutex g_PrintLock(false);
 
 void printChar(char c, size_t x, size_t y)
 {
-    pProvider.pFramebuffer->blit(g_pFont, 0, c * FONT_HEIGHT, x, y, FONT_WIDTH, FONT_HEIGHT);
+    if(!g_pFramebuffer)
+        return;
+
+    g_pFramebuffer->blit(g_pFont, 0, c * FONT_HEIGHT, x, y, FONT_WIDTH, FONT_HEIGHT);
 }
 
 void printChar(char c)
 {
+    if(!g_pFramebuffer)
+        return;
+
     LockGuard<Mutex> guard(g_PrintLock);
 
     if(!c)
@@ -82,11 +90,11 @@ void printChar(char c)
         g_LogX = 0;
         g_LogY++;
     
-        pProvider.pFramebuffer->redraw(g_LogBoxX, g_LogBoxY, g_LogW, g_LogH);
+        g_pFramebuffer->redraw(g_LogBoxX, g_LogBoxY, g_LogW, g_LogH, true);
     }
     else if(c >= ' ')
     {
-        pProvider.pFramebuffer->blit(g_pFont, 0, c * FONT_HEIGHT, g_LogBoxX + (g_LogX * FONT_WIDTH), g_LogBoxY + (g_LogY * FONT_HEIGHT), FONT_WIDTH, FONT_HEIGHT);
+        g_pFramebuffer->blit(g_pFont, 0, c * FONT_HEIGHT, g_LogBoxX + (g_LogX * FONT_WIDTH), g_LogBoxY + (g_LogY * FONT_HEIGHT), FONT_WIDTH, FONT_HEIGHT);
         g_LogX++;
     }
 
@@ -95,7 +103,7 @@ void printChar(char c)
         g_LogX = 0;
         g_LogY++;
     
-        pProvider.pFramebuffer->redraw(g_LogBoxX, g_LogBoxY, g_LogW, g_LogH);
+        g_pFramebuffer->redraw(g_LogBoxX, g_LogBoxY, g_LogW, g_LogH, true);
     }
 
     // Overflowed the view?
@@ -105,12 +113,12 @@ void printChar(char c)
         size_t diff = g_LogY - (g_LogH / FONT_HEIGHT) + 1;
         
         // Scroll up
-        pProvider.pFramebuffer->copy(g_LogBoxX, g_LogBoxY + (diff * FONT_HEIGHT), g_LogBoxX, g_LogBoxY, g_LogW - g_LogBoxX, ((g_LogH / FONT_HEIGHT) - diff) * FONT_HEIGHT);
-        pProvider.pFramebuffer->rect(g_LogBoxX, g_LogBoxY + ((g_LogH / FONT_HEIGHT) - diff) * FONT_HEIGHT, g_LogW - g_LogBoxX, diff * FONT_HEIGHT, g_BackgroundColour, g_BgFgFormat);
+        g_pFramebuffer->copy(g_LogBoxX, g_LogBoxY + (diff * FONT_HEIGHT), g_LogBoxX, g_LogBoxY, g_LogW - g_LogBoxX, ((g_LogH / FONT_HEIGHT) - diff) * FONT_HEIGHT);
+        g_pFramebuffer->rect(g_LogBoxX, g_LogBoxY + ((g_LogH / FONT_HEIGHT) - diff) * FONT_HEIGHT, g_LogW - g_LogBoxX, diff * FONT_HEIGHT, g_BackgroundColour, g_BgFgFormat);
         
         g_LogY = (g_LogH / FONT_HEIGHT) - diff;
     
-        pProvider.pFramebuffer->redraw(g_LogBoxX, g_LogBoxY, g_LogW, g_LogH);
+        g_pFramebuffer->redraw(g_LogBoxX, g_LogBoxY, g_LogW, g_LogH, true);
     }
 }
 
@@ -179,11 +187,16 @@ void progress(const char *text)
     // Calculate percentage.
     if(g_BootProgressTotal == 0)
         return;
+    if(!g_pFramebuffer)
+        return;
 
+    bool bFinished = false;
     if((g_BootProgressCurrent + 1) >= g_BootProgressTotal)
     {
         Log::instance().removeCallback(&g_StreamLogger);
         InputManager::instance().removeCallback(InputManager::Key, keyCallback);
+
+        bFinished = true;
     }
 
     if(g_LogMode)
@@ -191,12 +204,19 @@ void progress(const char *text)
 
     size_t w = (g_ProgressW * g_BootProgressCurrent) / g_BootProgressTotal;
     if(g_Previous <= g_BootProgressCurrent)
-        pProvider.pFramebuffer->rect(g_ProgressX, g_ProgressY, w, g_ProgressH, g_ProgressColour, g_BgFgFormat);
+        g_pFramebuffer->rect(g_ProgressX, g_ProgressY, w, g_ProgressH, g_ProgressColour, g_BgFgFormat);
     else
-        pProvider.pFramebuffer->rect(g_ProgressX + w, g_ProgressY, g_ProgressW-w, g_ProgressH, g_BackgroundColour, g_BgFgFormat);
+        g_pFramebuffer->rect(g_ProgressX + w, g_ProgressY, g_ProgressW-w, g_ProgressH, g_BackgroundColour, g_BgFgFormat);
     g_Previous = g_BootProgressCurrent;
     
-    pProvider.pFramebuffer->redraw(g_ProgressX, g_ProgressY, g_ProgressW, g_ProgressH);
+    g_pFramebuffer->redraw(g_ProgressX, g_ProgressY, g_ProgressW, g_ProgressH, true);
+
+    if(bFinished)
+    {
+        // Destroy the framebuffer now that we're done
+        Graphics::destroyFramebuffer(g_pFramebuffer);
+        g_pFramebuffer = 0;
+    }
 }
 
 static void init()
@@ -293,12 +313,14 @@ static void init()
         }
     }
 
-    Framebuffer *pFramebuffer = pProvider.pFramebuffer;
+    Framebuffer *pParentFramebuffer = pProvider.pFramebuffer;
     
-    g_Width   = pFramebuffer->getWidth();
-    g_Height  = pFramebuffer->getHeight();
+    g_Width   = pParentFramebuffer->getWidth();
+    g_Height  = pParentFramebuffer->getHeight();
+
+    g_pFramebuffer = Graphics::createFramebuffer(pParentFramebuffer, 64, 64, g_Width, g_Height, pParentFramebuffer->getFormat());
     
-    pFramebuffer->rect(0, 0, g_Width, g_Height, g_BackgroundColour, g_BgFgFormat);
+    g_pFramebuffer->rect(0, 0, g_Width, g_Height, g_BackgroundColour, g_BgFgFormat);
     
     // Create the logo buffer
     char *data = header_data;
@@ -309,7 +331,7 @@ static void init()
     size_t origx = (g_Width - width) / 2;
     size_t origy = (g_Height - height) / 3;
 
-    pFramebuffer->draw(g_pBuffer, 0, 0, origx, origy, width, height, Graphics::Bits24_Bgr);
+    g_pFramebuffer->draw(g_pBuffer, 0, 0, origx, origy, width, height, Graphics::Bits24_Bgr);
     
     delete [] g_pBuffer;
         
@@ -345,7 +367,7 @@ static void init()
         }
     }
 
-    g_pFont = pFramebuffer->createBuffer(g_pBuffer, Graphics::Bits24_Rgb, FONT_WIDTH, FONT_HEIGHT * 256);
+    g_pFont = g_pFramebuffer->createBuffer(g_pBuffer, Graphics::Bits24_Rgb, FONT_WIDTH, FONT_HEIGHT * 256);
     
     g_ProgressX = (g_Width / 2) - 200;
     g_ProgressW = 400;
@@ -361,15 +383,15 @@ static void init()
     // Yay text!
     centerStringAt("Please wait, Pedigree is loading...", g_Width / 2, g_ProgressY - (FONT_HEIGHT * 3));
 
-    // Draw a border around the log area    
-    pFramebuffer->rect(g_LogBoxX, g_LogBoxY - 2, g_LogW, g_LogH - 2, g_ForegroundColour, g_BgFgFormat);
-    pFramebuffer->rect(g_LogBoxX, g_LogBoxY - 1, g_LogW, g_LogH - 1, g_BackgroundColour, g_BgFgFormat);
+    // Draw a border around the log area
+    g_pFramebuffer->rect(g_LogBoxX, g_LogBoxY - 2, g_LogW, g_LogH - 2, g_ForegroundColour, g_BgFgFormat);
+    g_pFramebuffer->rect(g_LogBoxX, g_LogBoxY - 1, g_LogW, g_LogH - 1, g_BackgroundColour, g_BgFgFormat);
 
     // Draw empty progress bar. Easiest way to draw a nonfilled rect? Draw two filled rects.
-    pFramebuffer->rect(g_ProgressX - 2, g_ProgressY - 2, g_ProgressW + 4, g_ProgressH + 4, g_ProgressBorderColour, g_BgFgFormat);
-    pFramebuffer->rect(g_ProgressX - 1, g_ProgressY - 1, g_ProgressW + 2, g_ProgressH + 2, g_BackgroundColour, g_BgFgFormat);
+    g_pFramebuffer->rect(g_ProgressX - 2, g_ProgressY - 2, g_ProgressW + 4, g_ProgressH + 4, g_ProgressBorderColour, g_BgFgFormat);
+    g_pFramebuffer->rect(g_ProgressX - 1, g_ProgressY - 1, g_ProgressW + 2, g_ProgressH + 2, g_BackgroundColour, g_BgFgFormat);
     
-    pFramebuffer->redraw(0, 0, g_Width, g_Height);
+    g_pFramebuffer->redraw(0, 0, g_Width, g_Height, true);
 
     Log::instance().installCallback(&g_StreamLogger, true);
 
