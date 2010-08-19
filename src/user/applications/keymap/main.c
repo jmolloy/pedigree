@@ -355,6 +355,7 @@ void install(char *filename)
     if (!stream)
     {
         fprintf(stderr, "Error opening file `%s'.\n", filename);
+        return;
     }
     fseek(stream, 0, SEEK_END);
     len = ftell(stream);
@@ -368,6 +369,7 @@ void install(char *filename)
         fprintf(stderr, "Error loading keymap.\n");
     else
         printf("Keymap loaded.\n");
+    fclose(stream);
     exit (0);
 #endif
 }
