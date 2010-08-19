@@ -55,6 +55,44 @@
 
 #define FONT_SIZE           12
 
+/** From InputManager */
+
+/// The type for a given callback. In the future callbacks may have
+/// other types such as "Mouse" which need to be handled.
+enum CallbackType
+{
+    Key = 0,
+    Mouse = 1,
+    Joystick = 2,
+    Unknown = 255
+};
+
+/// Structure containing notification to the remote application
+/// of input. Used to generalise input handling across the system
+/// for all types of devices.
+struct InputNotification
+{
+    CallbackType type;
+
+    union
+    {
+        struct
+        {
+            uint64_t key;
+        } key;
+        struct
+        {
+            ssize_t relx;
+            ssize_t rely;
+            ssize_t relz;
+
+            bool buttons[64];
+        } pointy;
+    } data;
+};
+
+/** End code from InputManager */
+
 void log(char *c)
 {
     syscall1(TUI_LOG, reinterpret_cast<size_t>(c));
@@ -175,6 +213,7 @@ void doRefresh(Terminal *pT)
             pT->refresh(); // Handle any region not redrawn by above
 
     // Redraw the header
+    DirtyRectangle rect;
     g_pHeader->render(0, rect);
     doRedraw(rect);
 }
@@ -236,14 +275,19 @@ void sigint(int)
  * and handles every keypress that occurs, via an Event sent from the kernel's
  * InputManager object.
  */
-void input_handler(size_t p1, size_t p2, uint8_t* pBuffer, size_t p4)
+void input_handler(size_t p1, size_t p2, size_t* pBuffer, size_t p4)
 {
-    uint64_t c = *(reinterpret_cast<uint64_t*>(&pBuffer[1]));
     if(!g_pCurrentTerm || !g_pCurrentTerm->term) // No terminal yet!
     {
         syscall0(TUI_EVENT_RETURNED);
-       return;
-   }
+        return;
+    }
+
+    InputNotification *pNote = reinterpret_cast<InputNotification*>(&pBuffer[1]);
+    if(pNote->type != Key)
+        return;
+
+    uint64_t c = pNote->data.key.key;
 
     /** Add the key to the terminal queue */
 

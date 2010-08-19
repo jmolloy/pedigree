@@ -43,8 +43,11 @@ extern Display::ScreenMode g_ScreenMode;
 ///       screen. At the moment things like CTRL-C are not handled until after
 ///       a write is complete, which is usually alright, but can cause CTRL-C
 ///       to appear to simply not work at all.
-void callback(uint64_t key)
+void callback(InputManager::InputNotification &note)
 {
+    if(note.type != InputManager::Key)
+        return; // Ignore any non-keyboard input
+
     if (!g_UserConsole)
     {
         WARNING("Key called with no console");
@@ -52,7 +55,7 @@ void callback(uint64_t key)
     }
 
     // Ensure this is sent with highest priority (0).
-    g_UserConsole->addAsyncRequest(0, TUI_CHAR_RECV, g_UserConsoleId, key);
+    g_UserConsole->addAsyncRequest(0, TUI_CHAR_RECV, g_UserConsoleId, note.data.key.key);
     ConsoleManager::instance().getConsoleFile(g_UserConsole)->dataIsReady();
 }
 
@@ -67,7 +70,7 @@ void pedigree_event_return()
 void pedigree_input_register_callback(uintptr_t func)
 {
     InputManager::instance().installCallback(InputManager::Key,
-                                             reinterpret_cast<void (*)(uint64_t)>(func),
+                                             reinterpret_cast<void (*)(InputManager::InputNotification&)>(func),
                                              Processor::information().getCurrentThread());
 }
 

@@ -164,8 +164,12 @@ class StreamingScreenLogger : public Log::LogCallback
 
 static StreamingScreenLogger g_StreamLogger;
 
-void keyCallback(uint64_t key)
+void keyCallback(InputManager::InputNotification &note)
 {
+    if(note.type != InputManager::Key)
+        return;
+
+    uint64_t key = note.data.key.key;
     if(key == '\e' && !g_LogMode)
     {
         // Because we edit the dimensions of the screen, we can't let a print

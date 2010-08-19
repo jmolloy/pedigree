@@ -27,11 +27,8 @@
  */
 class InputManager
 {
-    private:
-        /// Callback function type
-        typedef void (*callback_t)(uint64_t);
-
     public:
+
         /// The type for a given callback. In the future callbacks may have
         /// other types such as "Mouse" which need to be handled.
         enum CallbackType
@@ -41,6 +38,33 @@ class InputManager
             Joystick = 2,
             Unknown = 255
         };
+
+        /// Structure containing notification to the remote application
+        /// of input. Used to generalise input handling across the system
+        /// for all types of devices.
+        struct InputNotification
+        {
+            CallbackType type;
+
+            union
+            {
+                struct
+                {
+                    uint64_t key;
+                } key;
+                struct
+                {
+                    ssize_t relx;
+                    ssize_t rely;
+                    ssize_t relz;
+
+                    bool buttons[64];
+                } pointy;
+            } data;
+        };
+
+        /// Callback function type
+        typedef void (*callback_t)(InputNotification &);
 
         /// Default constructor
         InputManager();
@@ -60,6 +84,12 @@ class InputManager
         /// Called whenever a key is pressed and needs to be added to the queue
         void keyPressed(uint64_t key);
 
+        /// Called whenever mouse input comes in.
+        void mouseUpdate(ssize_t relX, ssize_t relY, ssize_t relZ, uint32_t buttonBitmap);
+
+        /// Called whenever joystick input comes in
+        void joystickUpdate(ssize_t relX, ssize_t relY, ssize_t relZ, uint32_t buttonBitmap);
+
         /// Installs a callback for a specific item
         void installCallback(CallbackType type, callback_t callback, Thread *pThread = 0);
 
@@ -76,6 +106,10 @@ class InputManager
         /// Static instance
         static InputManager m_Instance;
 
+        /// Puts a notification into the queue (doer for all main functions)
+        /// \note Deletes \p note if THREADS is not defined
+        void putNotification(InputNotification *note);
+
         /// Item in the callback list. This stores information that may be needed
         /// to create and send an Event for a userspace callback.
         struct CallbackItem
@@ -91,8 +125,8 @@ class InputManager
 #endif
         };
 
-        /// Key press queue (for distribution to applications)
-        List<uint64_t> m_KeyQueue;
+        /// Input queue (for distribution to applications)
+        List<InputNotification*> m_InputQueue;
 
         /// Spinlock for work on queues.
         /// \note Using a Spinlock here because a lot of our work will happen
@@ -101,11 +135,11 @@ class InputManager
         Spinlock m_QueueLock;
 
         /// Callback list
-        List<CallbackItem*> m_KeyCallbacks;
+        List<CallbackItem*> m_Callbacks;
 
 #ifdef THREADS
         /// Key press queue Semaphore
-        Semaphore m_KeyQueueSize;
+        Semaphore m_InputQueueSize;
 
         /// Thread object for our worker thread
         Thread *m_pThread;

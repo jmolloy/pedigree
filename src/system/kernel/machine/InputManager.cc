@@ -23,29 +23,29 @@
 class InputEvent : public Event
 {
     public:
-        InputEvent(InputManager::CallbackType type, uint64_t key, uintptr_t handlerAddress) :
-                    Event(handlerAddress, true, 0),
-                    m_Type(type),
-                    m_Key(key)
-        {};
+        InputEvent(InputManager::InputNotification *pNote, uintptr_t handlerAddress) :
+                    Event(handlerAddress, true, 0), m_Notification()
+        {
+            m_Notification = *pNote;
+        };
         virtual ~InputEvent()
         {};
 
         virtual size_t serialize(uint8_t *pBuffer)
         {
-            pBuffer[0] = static_cast<uint8_t>(m_Type);
-            *(reinterpret_cast<uint64_t*>(&pBuffer[1])) = m_Key;
-            return sizeof(uint8_t) + sizeof(uint64_t);
+            size_t *buf = reinterpret_cast<size_t*>(pBuffer);
+            *buf = EventNumbers::InputEvent;
+            memcpy(&buf[1], &m_Notification, sizeof(InputManager::InputNotification));
+            return sizeof(InputManager::InputNotification) + sizeof(size_t);
         }
 
-        static bool unserialize(uint8_t *pBuffer, Event &event)
+        static bool unserialize(uint8_t *pBuffer, InputEvent &event)
         {
-            /// \todo How to do this?
-            /*
-            InputEvent *ev = static_cast<InputEvent*>(&event);
-            ev->m_Type = static_cast<InputManager::CallbackType>(pBuffer[0]);
-            ev->m_Key = *(reinterpret_cast<uint64_t*>(&pBuffer[1]));
-            */
+            size_t *buf = reinterpret_cast<size_t*>(pBuffer);
+            if(*buf != EventNumbers::InputEvent)
+                return false;
+
+            memcpy(&event.m_Notification, &buf[1], sizeof(InputManager::InputNotification));
             return true;
         }
 
@@ -56,24 +56,45 @@ class InputEvent : public Event
 
         inline InputManager::CallbackType getType()
         {
-            return m_Type;
+            return m_Notification.type;
         }
 
         inline uint64_t getKey()
         {
-            return m_Key;
+            return m_Notification.data.key.key;
+        }
+
+        inline ssize_t getRelX()
+        {
+            return m_Notification.data.pointy.relx;
+        }
+
+        inline ssize_t getRelY()
+        {
+            return m_Notification.data.pointy.rely;
+        }
+
+        inline ssize_t getRelZ()
+        {
+            return m_Notification.data.pointy.relz;
+        }
+
+        inline void getButtonStates(bool states[64], size_t maxDesired = 64)
+        {
+            for(size_t i = 0; i < maxDesired; i++)
+                states[i] = m_Notification.data.pointy.buttons[i];
         }
     private:
-        InputManager::CallbackType m_Type;
-        uint64_t m_Key;
+
+        InputManager::InputNotification m_Notification;
 };
 
 InputManager InputManager::m_Instance;
 
 InputManager::InputManager() :
-    m_KeyQueue(), m_QueueLock(), m_KeyCallbacks()
+    m_InputQueue(), m_QueueLock(), m_Callbacks()
 #ifdef THREADS
-    , m_KeyQueueSize(0), m_pThread(0)
+    , m_InputQueueSize(0), m_pThread(0)
 #endif
 {
 }
@@ -96,22 +117,59 @@ void InputManager::initialise()
 
 void InputManager::keyPressed(uint64_t key)
 {
+    InputNotification *note = new InputNotification;
+    note->type = Key;
+    note->data.key.key = key;
+
+    putNotification(note);
+}
+
+void InputManager::mouseUpdate(ssize_t relX, ssize_t relY, ssize_t relZ, uint32_t buttonBitmap)
+{
+    InputNotification *note = new InputNotification;
+    note->type = Mouse;
+    note->data.pointy.relx = relX;
+    note->data.pointy.rely = relY;
+    note->data.pointy.relz = relZ;
+    for(size_t i = 0; i < 64; i++)
+        note->data.pointy.buttons[i] = buttonBitmap & (1 << i);
+
+    putNotification(note);
+}
+
+void InputManager::joystickUpdate(ssize_t relX, ssize_t relY, ssize_t relZ, uint32_t buttonBitmap)
+{
+    InputNotification *note = new InputNotification;
+    note->type = Joystick;
+    note->data.pointy.relx = relX;
+    note->data.pointy.rely = relY;
+    note->data.pointy.relz = relZ;
+    for(size_t i = 0; i < 64; i++)
+        note->data.pointy.buttons[i] = buttonBitmap & (1 << i);
+
+    putNotification(note);
+}
+
+void InputManager::putNotification(InputNotification *note)
+{
 #ifdef THREADS
     LockGuard<Spinlock> guard(m_QueueLock);
-    m_KeyQueue.pushBack(key);
-    m_KeyQueueSize.release();
+    m_InputQueue.pushBack(note);
+    m_InputQueueSize.release();
 #else
     // No need for locking, as no threads exist
-    for(List<CallbackItem*>::Iterator it = m_KeyCallbacks.begin();
-        it != m_KeyCallbacks.end();
+    for(List<CallbackItem*>::Iterator it = m_Callbacks.begin();
+        it != m_Callbacks.end();
         it++)
     {
         if(*it)
         {
             callback_t func = (*it)->func;
-            func(key);
+            func(*note);
         }
     }
+
+    delete note;
 #endif
 }
 
@@ -125,7 +183,7 @@ void InputManager::installCallback(CallbackType type, callback_t callback, Threa
 #ifdef THREADS
         item->pThread = pThread;
 #endif
-        m_KeyCallbacks.pushBack(item);
+        m_Callbacks.pushBack(item);
     }
 }
 
@@ -134,8 +192,8 @@ void InputManager::removeCallback(CallbackType type, callback_t callback, Thread
     LockGuard<Spinlock> guard(m_QueueLock);
     if(type == Key)
     {
-        for(List<CallbackItem*>::Iterator it = m_KeyCallbacks.begin();
-            it != m_KeyCallbacks.end();
+        for(List<CallbackItem*>::Iterator it = m_Callbacks.begin();
+            it != m_Callbacks.end();
             it++)
         {
             if(*it)
@@ -146,7 +204,7 @@ void InputManager::removeCallback(CallbackType type, callback_t callback, Thread
 #endif
                     (callback == (*it)->func))
                 {
-                    m_KeyCallbacks.erase(it);
+                    m_Callbacks.erase(it);
                     return;
                 }
             }
@@ -166,20 +224,20 @@ void InputManager::mainThread()
 #ifdef THREADS
     while(true)
     {
-        m_KeyQueueSize.acquire();
-        if(!m_KeyQueue.count())
+        m_InputQueueSize.acquire();
+        if(!m_InputQueue.count())
             continue; /// \todo Handle exit condition
 
         m_QueueLock.acquire();
-        uint64_t key = m_KeyQueue.popFront();
+        InputNotification *pNote = m_InputQueue.popFront();
         m_QueueLock.release();
 
         // Don't send the key to applications if it was zero
-        if(!key)
+        if(!pNote)
             continue;
 
-        for(List<CallbackItem*>::Iterator it = m_KeyCallbacks.begin();
-            it != m_KeyCallbacks.end();
+        for(List<CallbackItem*>::Iterator it = m_Callbacks.begin();
+            it != m_Callbacks.end();
             it++)
         {
             if(*it)
@@ -189,12 +247,14 @@ void InputManager::mainThread()
                 if(!pThread)
                 {
                     /// \todo Verify that the callback is in fact in the kernel
-                    func(key);
+                    func(*pNote);
+                    delete pNote;
                     continue;
                 }
 
-                InputEvent *pEvent = new InputEvent(Key, key, reinterpret_cast<uintptr_t>(func));
+                InputEvent *pEvent = new InputEvent(pNote, reinterpret_cast<uintptr_t>(func));
                 pThread->sendEvent(pEvent);
+                delete pNote;
             }
         }
     }
