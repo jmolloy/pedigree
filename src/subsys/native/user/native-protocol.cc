@@ -15,8 +15,8 @@
  */
 
 #include <native-protocol.h>
-#include <syscallNumbers.h>
-#include <syscall.h>
+#include <nativeSyscallNumbers.h>
+#include <native-syscall.h>
 
 int _syscall(Object *pObject, size_t nOp)
 {

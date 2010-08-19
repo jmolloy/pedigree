@@ -19,7 +19,7 @@
 #include "pipe-syscalls.h"
 #include "signal-syscalls.h"
 #include "pthread-syscalls.h"
-#include "syscallNumbers.h"
+#include "posixSyscallNumbers.h"
 #include <syscallError.h>
 #include <processor/types.h>
 #include <processor/Processor.h>

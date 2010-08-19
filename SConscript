@@ -27,11 +27,13 @@ if env['ARCH_TARGET'] == 'X86':
     subdirs += ['src/subsys/native']
 
 # Then modules and the system proper get built
-subdirs += ['src/modules', 'src/system']
+subdirs += ['src/modules', 'src/system/kernel']
 
 # On X86, X64 and PPC we build applications and LGPL libraries
 if env['ARCH_TARGET'] in ['X86', 'X64', 'PPC']:
     subdirs += ['src/user', 'src/lgpl']
+if not env['ARCH_TARGET'] in ['X86', 'X64']:
+    subdirs += ['src/system/boot']
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
 

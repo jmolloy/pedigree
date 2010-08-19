@@ -355,5 +355,4 @@ if(not env['nocache']):
 ####################################
 # Progress through all our sub-directories
 ####################################
-VariantDir(env['BUILDDIR'], 'src', duplicate = 0)
-SConscript('SConscript', exports = ['env'])
+SConscript('SConscript', variant_dir = env['BUILDDIR'], exports = ['env'], duplicate = 0)

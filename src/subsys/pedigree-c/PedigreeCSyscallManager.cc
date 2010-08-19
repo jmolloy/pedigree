@@ -20,7 +20,7 @@
 #include <Log.h>
 
 #include "PedigreeCSyscallManager.h"
-#include "syscallNumbers.h"
+#include "pedigreecSyscallNumbers.h"
 
 #define PEDIGREEC_WITHIN_KERNEL
 #include "pedigree-syscalls.h"

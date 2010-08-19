@@ -18,7 +18,7 @@
 #define TERMINAL_H
 
 #include "environment.h"
-#include <syscall.h>
+#include <tui-syscall.h>
 #include <syslog.h>
 
 #ifndef NEW_XTERM

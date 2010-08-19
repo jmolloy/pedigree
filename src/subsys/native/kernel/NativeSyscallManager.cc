@@ -20,7 +20,7 @@
 #include <Log.h>
 
 #include "NativeSyscallManager.h"
-#include <syscallNumbers.h>
+#include <nativeSyscallNumbers.h>
 
 NativeSyscallManager::NativeSyscallManager()
 {

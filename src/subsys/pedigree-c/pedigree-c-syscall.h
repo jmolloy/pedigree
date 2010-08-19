@@ -18,20 +18,25 @@
 #define _PEDIGREE_SYSCALL_H
 
 // If you change this, ensure you change src/system/include/processor/Syscalls.h !
-#define NATIVE_SYSCALL_SERVICE 3
+#define PEDIGREE_C_SYSCALL_SERVICE 4
 
 #ifdef X86
-#include "syscall-i686.h"
+#include "pedigree-c-syscall-i686.h"
 #define SYSCALL_TARGET_FOUND
 #endif
 
 #ifdef X64
-#include "syscall-amd64.h"
+#include "pedigree-c-syscall-amd64.h"
 #define SYSCALL_TARGET_FOUND
 #endif
 
 #ifdef PPC_COMMON
-#include "syscall-ppc.h"
+#include "pedigree-c-syscall-ppc.h"
+#define SYSCALL_TARGET_FOUND
+#endif
+
+#ifdef ARM_COMMON
+#include "pedigree-c-syscall-arm.h"
 #define SYSCALL_TARGET_FOUND
 #endif
 

@@ -1,4 +1,4 @@
-#/*
+/*
  * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -26,7 +26,7 @@
 #include <errno.h>
 
 #include "environment.h"
-#include <syscall.h>
+#include <tui-syscall.h>
 #include <syslog.h>
 
 #include <pthread.h>

@@ -20,7 +20,7 @@
 #include <Log.h>
 
 #include "PosixSyscallManager.h"
-#include "syscallNumbers.h"
+#include "posixSyscallNumbers.h"
 #include "file-syscalls.h"
 #include "system-syscalls.h"
 #include "console-syscalls.h"

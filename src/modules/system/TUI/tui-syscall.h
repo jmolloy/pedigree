@@ -21,22 +21,22 @@
 #define TUI_SYSCALL_SERVICE 2
 
 #ifdef X86
-#include "syscall-i686.h"
+#include "tui-syscall-i686.h"
 #define SYSCALL_TARGET_FOUND
 #endif
 
 #ifdef X64
-#include "syscall-amd64.h"
+#include "tui-syscall-amd64.h"
 #define SYSCALL_TARGET_FOUND
 #endif
 
 #ifdef PPC_COMMON
-#include "syscall-ppc.h"
+#include "tui-syscall-ppc.h"
 #define SYSCALL_TARGET_FOUND
 #endif
 
 #ifdef ARM_COMMON
-#include "syscall-arm.h"
+#include "tui-syscall-arm.h"
 #define SYSCALL_TARGET_FOUND
 #endif
 
@@ -44,6 +44,6 @@
 #error Syscall target not found!
 #endif
 
-#include "syscallNumbers.h"
+#include "tuiSyscallNumbers.h"
 
 #endif

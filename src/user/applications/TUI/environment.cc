@@ -15,7 +15,7 @@
  */
 
 #include "environment.h"
-#include <syscall.h>
+#include <tui-syscall.h>
 
 #include <graphics/Graphics.h>
 

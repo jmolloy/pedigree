@@ -28,7 +28,7 @@
 
 #include "TuiSyscallManager.h"
 #include "Console.h"
-#include "syscallNumbers.h"
+#include "tuiSyscallNumbers.h"
 
 UserConsole *g_Consoles[256];
 UserConsole *g_UserConsole = 0;

@@ -14,9 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "syscallNumbers.h"
+#include "pedigreecSyscallNumbers.h"
 
-#include "syscall.h"
+#include "pedigree-c-syscall.h"
 
 #include <processor/types.h>
 #include <pedigree_config.h>

@@ -21,22 +21,22 @@
 #define POSIX_SYSCALL_SERVICE 1
 
 #ifdef X86
-#include "syscall-i686.h"
+#include "posix-syscall-i686.h"
 #define SYSCALL_TARGET_FOUND
 #endif
 
 #ifdef X64
-#include "syscall-amd64.h"
+#include "posix-syscall-amd64.h"
 #define SYSCALL_TARGET_FOUND
 #endif
 
 #ifdef PPC_COMMON
-#include "syscall-ppc.h"
+#include "posix-syscall-ppc.h"
 #define SYSCALL_TARGET_FOUND
 #endif
 
 #ifdef ARM_COMMON
-#include "syscall-arm.h"
+#include "posix-syscall-arm.h"
 #define SYSCALL_TARGET_FOUND
 #endif
 

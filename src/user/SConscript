@@ -54,14 +54,25 @@ cpp_apps = [
     'apptest'
 ]
 
+# Custom include paths for specific applications
+custom_incpath = {
+    'TUI' : ['#/src/modules/system/TUI']
+}
+
+# Custom libraries for specific applications
+custom_libs = {
+    'TUI' : ['png', 'freetype', 'z']
+}
+
+# Default libraries for all applications
 default_libs = ['gcc', 'c', 'm', 'pedigree-c']
 
-# Search path for libraries
+# Search paths for libraries
 libpath = [
     builddir
 ]
 
-# Default include path
+# Default include paths
 incpath = [
     '#/src/subsys/posix/include'
 ]
@@ -80,17 +91,34 @@ for i in all_apps:
     
     if i in sdl_apps:
         e['LIBS'] += ['SDL']
-        e['CPPPATH'] += ['#/src/lgpl/SDL-1.14.1/include']
-    elif i in cpp_apps:
+        e['CPPPATH'] += ['#/src/lgpl/SDL-1.2.14/include']
+    
+    # SDL apps require libpedigree (C++)
+    if i in cpp_apps or i in sdl_apps:
         e['LIBS'] += ['pedigree', 'stdc++']
         e['LIBPATH'] += [imagesdir + 'libraries']
         e['CPPPATH'] += ['#/src/subsys/native/include',
                          '#/src/subsys/posix/include/c++/4.3.2']
 
     base = appsbase + i
+    
+    # Handle extra include directories
+    if(os.path.exists(base + '/include')):
+        e['CPPPATH'] += [base + '/include']
+    if(custom_incpath.has_key(i)):
+        e['CPPPATH'] += custom_incpath[i]
+    if(custom_libs.has_key(i)):
+        e['LIBS'] += custom_libs[i]
+    
+    output = builddir + '/apps/' + i
     files = [Glob(base + '/*.c'), Glob(base + '/*.cc')]
-    e.Program(appoutputdir + '/' + i, files, LINKFLAGS='')
-
+    e.Program(output, files, LINKFLAGS='')
+    
+    env.Alias("apps", output)
+    
+    env.Depends(output, "crt0")
+    env.Depends(output, "libs")
+    
 '''
     
 # To include a new subdirectory just add to the list.

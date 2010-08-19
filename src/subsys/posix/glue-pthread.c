@@ -14,15 +14,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "syscallNumbers.h"
+#include "posixSyscallNumbers.h"
 
+// Define errno before including syscall.h.
 #include "errno.h"
 #define errno (*__errno())
 extern int *__errno (void);
 int h_errno; // required by networking code
 
-// Define errno before including syscall.h.
-#include "syscall.h"
+#include "posix-syscall.h"
 
 #include "newlib.h"
 
