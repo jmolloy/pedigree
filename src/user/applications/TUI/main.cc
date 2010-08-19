@@ -46,6 +46,7 @@
 #define CONSOLE_GETROWS 3
 #define CONSOLE_GETCOLS 4
 #define CONSOLE_DATA_AVAILABLE 5
+#define CONSOLE_REFRESH 10
 #define TUI_MODE_CHANGED 98
 #define TUI_CHAR_RECV   99
 
@@ -161,6 +162,21 @@ Terminal *addTerminal(const char *name, DirtyRectangle &rect)
     g_pHeader->select(pTermList->term->getTabId());
 
     return pTerm;
+}
+
+// Restores the full contents of the active terminal
+void doRefresh(Terminal *pT)
+{
+    // Refresh the given terminal
+    /// \todo Massive caveat with more than one graphics app running
+    ///       at a time - they'll get covered up by this!
+    if(g_pCurrentTerm)
+        if(g_pCurrentTerm->term == pT)
+            pT->refresh(); // Handle any region not redrawn by above
+
+    // Redraw the header
+    g_pHeader->render(0, rect);
+    doRedraw(rect);
 }
 
 bool checkCommand(uint64_t key, DirtyRectangle &rect)
@@ -446,6 +462,10 @@ int main (int argc, char **argv)
 
             case CONSOLE_GETCOLS:
                 g_nLastResponse = pT->getCols();
+                break;
+
+            case CONSOLE_REFRESH:
+                doRefresh(pT);
                 break;
 
             default:

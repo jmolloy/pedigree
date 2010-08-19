@@ -138,7 +138,7 @@ class Framebuffer
                 // framebuffer has precedence over any children.
                 /// \todo nChildren parameter - this is not necessary if no children!
                 if(!bChild)
-                    m_pParent->draw(reinterpret_cast<void*>(m_FramebufferBase), x, y, m_XPos + x, m_YPos + y, w, h, m_PixelFormat);
+                    m_pParent->draw(reinterpret_cast<void*>(m_FramebufferBase), x, y, m_XPos + x, m_YPos + y, w, h, m_PixelFormat, false);
 
                 // Now we are a child requesting a redraw, so the parent will not
                 // have precedence over us.
@@ -168,12 +168,13 @@ class Framebuffer
          *  pixel buffers. */
         virtual inline void draw(void *pBuffer, size_t srcx, size_t srcy,
                                  size_t destx, size_t desty, size_t width, size_t height,
-                                 Graphics::PixelFormat format = Graphics::Bits32_Argb)
+                                 Graphics::PixelFormat format = Graphics::Bits32_Argb,
+                                 bool bLowestCall = true)
         {
             // Draw is implemented as a "create buffer and blit"... so we can
             // avoid checking for parent here as we don't want to poison the
             // parent's buffer.
-            swDraw(pBuffer, srcx, srcy, destx, desty, width, height, format);
+            swDraw(pBuffer, srcx, srcy, destx, desty, width, height, format, bLowestCall);
         }
         
         /** Draws a single rectangle to the screen with the given colour. */
@@ -316,7 +317,8 @@ class Framebuffer
 
         void swDraw(void *pBuffer, size_t srcx, size_t srcy,
                     size_t destx, size_t desty, size_t width, size_t height,
-                    Graphics::PixelFormat format = Graphics::Bits32_Argb);
+                    Graphics::PixelFormat format = Graphics::Bits32_Argb,
+                    bool bLowestCall = true);
                     
         Graphics::Buffer *swCreateBuffer(const void *srcData, Graphics::PixelFormat srcFormat,
                                          size_t width, size_t height);

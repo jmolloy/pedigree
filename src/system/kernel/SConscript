@@ -67,6 +67,7 @@ libudis86_files = [
 include = [
     '#/src/system/include',
     '#/src/modules/system',
+    '#/src/modules',
     'debugger/',
     'debugger/commands/',
     'debugger/libudis86/',

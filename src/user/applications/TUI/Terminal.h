@@ -92,6 +92,13 @@ public:
         m_pXterm->renderAll(rect);
     }
 
+    void refresh()
+    {
+        // Force our buffer to the screen
+        if(m_pFramebuffer)
+            m_pFramebuffer->redraw(0, 0, m_pFramebuffer->getWidth(), m_pFramebuffer->getHeight(), false);
+    }
+
     rgb_t *getBuffer()
     {
         return m_pBuffer;

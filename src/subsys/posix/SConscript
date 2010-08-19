@@ -74,6 +74,7 @@ crtn_files = ["crtn" + suffix + ".s"]
 # To include a new directory for includes, just add it to the list
 include = [
     './include',
+    '#/src/modules',
     '#/src/system/include',
     '#/src/modules/system',
     '#/src/subsys/pedigree-c',

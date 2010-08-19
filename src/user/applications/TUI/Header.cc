@@ -110,6 +110,9 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
     rect.point(0, 0);
     rect.point(m_nWidth, g_FontSize+5);
     
+    // Wipe the area
+    m_pFramebuffer->rect(0, 0, m_nWidth, g_FontSize + 4, g_MainBackgroundColour, PedigreeGraphics::Bits24_Rgb);
+    
     // Height = font size + 2 px top and bottom + border 1px =
     // font-size + 5px.
     m_pFramebuffer->line(0, g_FontSize + 4, m_nWidth, g_FontSize + 4, g_BorderColour, PedigreeGraphics::Bits24_Rgb);

@@ -28,6 +28,7 @@
 #define CONSOLE_GETROWS 3
 #define CONSOLE_GETCOLS 4
 #define CONSOLE_DATA_AVAILABLE 5
+#define CONSOLE_REFRESH 10
 
 #define LINEBUFFER_MAXIMUM 2048
 
@@ -54,6 +55,9 @@ private:
 
     virtual uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
     virtual uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+
+    /// Small hack: call truncate to redraw the console
+    virtual void truncate();
 
 
 public:

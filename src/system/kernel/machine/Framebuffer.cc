@@ -357,6 +357,8 @@ void Framebuffer::swLine(size_t x1, size_t y1, size_t x2, size_t y2, uint32_t co
     if(y2 > m_nHeight)
         y2 = m_nHeight;
 
+    NOTICE("swLine(" << Dec << x1 << ", " << y1 << " -> " << x2 << ", " << y2 << Hex << ")");
+
     if(UNLIKELY((x1 == x2) && (y1 == y2)))
         return;
     
@@ -462,14 +464,15 @@ void Framebuffer::swSetPixel(size_t x, size_t y, uint32_t colour, Graphics::Pixe
 
 void Framebuffer::swDraw(void *pBuffer, size_t srcx, size_t srcy,
                          size_t destx, size_t desty, size_t width, size_t height,
-                         Graphics::PixelFormat format)
+                         Graphics::PixelFormat format,
+                         bool bLowestCall)
 {
     // Potentially inefficient use of RAM and VRAM, but best way to avoid
     // redundant copies of code lying around.
     Graphics::Buffer *p = createBuffer(pBuffer, format, srcx + width, srcy + height);
     if(!p)
         return;
-    blit(p, srcx, srcy, destx, desty, width, height);
+    blit(p, srcx, srcy, destx, desty, width, height, bLowestCall);
     destroyBuffer(p);
 }
 

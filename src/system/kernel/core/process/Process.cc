@@ -29,6 +29,8 @@
 
 #include <Subsystem.h>
 
+#include <vfs/File.h>
+
 Process::Process() :
   m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(0), m_pAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()),
   m_ExitStatus(0), m_Cwd(0), m_Ctty(0), m_SpaceAllocator(), m_pUser(0), m_pGroup(0), m_pDynamicLinker(0),
@@ -131,6 +133,11 @@ void Process::kill()
 	NOTICE("Kill: " << m_Id << " (parent: " << m_pParent->getId() << ")");
   else
 	NOTICE("Kill: " << m_Id << " (parent: <orphan>)");
+
+  // Redraw on kill.
+  /// \todo Caveat with redirection, maybe? Hmm...
+  if(m_Ctty)
+      m_Ctty->truncate();
 
   // Bye bye process - have we got any zombie children?
   for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
