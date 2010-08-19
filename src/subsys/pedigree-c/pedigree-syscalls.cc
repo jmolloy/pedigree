@@ -22,6 +22,8 @@
 #include <Log.h>
 #include <syscallError.h>
 
+#include <machine/InputManager.h>
+
 #include <graphics/Graphics.h>
 #include <graphics/GraphicsService.h>
 
@@ -236,6 +238,24 @@ int pedigree_module_get_depending(char *name, char *buf, size_t bufsz)
     else
         return 0;
     return 1;
+}
+
+void pedigree_input_install_callback(void *p)
+{
+    // First parameter is now obsolete, gotta remove it some time...
+    InputManager::instance().installCallback(
+        InputManager::Key,
+        reinterpret_cast<InputManager::callback_t>(p),
+        Processor::information().getCurrentThread());
+}
+
+void pedigree_input_remove_callback(void *p)
+{
+    // First parameter is now obsolete, gotta remove it some time...
+    InputManager::instance().removeCallback(
+        InputManager::Key,
+        reinterpret_cast<InputManager::callback_t>(p),
+        Processor::information().getCurrentThread());
 }
 
 int pedigree_gfx_get_provider(void *p)

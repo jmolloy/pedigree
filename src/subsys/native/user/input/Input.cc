@@ -14,17 +14,21 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <input/Input.h>
+#include <pedigree-c/pedigree-syscalls.h>
 
 using namespace Input;
 
 void Input::installCallback(callback_t cb)
 {
+    pedigree_input_install_callback(reinterpret_cast<void*>(cb));
 }
 
 void Input::removeCallback(callback_t cb)
 {
+    pedigree_input_remove_callback(reinterpret_cast<void*>(cb));
 }
 
 void Input::loadKeymapFromFile(const char *path)
 {
+    /// \todo Implement
 }

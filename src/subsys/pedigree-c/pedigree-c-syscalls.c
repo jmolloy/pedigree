@@ -42,6 +42,16 @@ int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
     return syscall3(PEDIGREE_GET_MOUNT, (long) mount_buf, (long) info_buf, n);
 }
 
+void pedigree_input_install_callback(void *p)
+{
+    return syscall1(PEDIGREE_INPUT_INSTALL_CALLBACK, (long) p);
+}
+
+void pedigree_input_remove_callback(void *p)
+{
+    return syscall1(PEDIGREE_INPUT_REMOVE_CALLBACK, (long) p);
+}
+
 void pedigree_module_load(char *file)
 {
     syscall1(PEDIGREE_MODULE_LOAD, (long)file);

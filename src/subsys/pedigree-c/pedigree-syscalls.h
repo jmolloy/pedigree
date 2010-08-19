@@ -77,6 +77,9 @@ int pedigree_module_get_depending(char *name, char *buf, size_t bufsz);
 
 int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n);
 
+void pedigree_input_install_callback(void *p);
+void pedigree_input_remove_callback(void *p);
+
 /** Pedigree graphics framework system calls */
 
 #ifdef __cplusplus
