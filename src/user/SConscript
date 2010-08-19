@@ -56,7 +56,8 @@ cpp_apps = [
 
 # Custom include paths for specific applications
 custom_incpath = {
-    'TUI' : ['#/src/modules/system/TUI']
+    'TUI' : ['#/src/modules/system/TUI',
+             '#/src/user/applications/TUI/include']
 }
 
 # Custom libraries for specific applications
@@ -118,39 +119,3 @@ for i in all_apps:
     
     env.Depends(output, "crt0")
     env.Depends(output, "libs")
-    
-'''
-    
-# To include a new subdirectory just add to the list.
-subdirs = [
-    'applications/apptest',
-    'applications/syscall-test',
-    'applications/net-test',
-#   'applications/netconfig',
-    'applications/login',
-    'applications/keymap',
-    'applications/mount',
-    'applications/TUI',
-    'applications/config',
-    'applications/display-mode',
-    'applications/reboot',
-    'applications/sudo',
-    'applications/modload',
-    'applications/modunload',
-    'applications/modlist',
-    'applications/fire'
-]
-
-# Special handling 
-
-# Fix the CFLAGS and CXXFLAGS for applications
-env['CFLAGS'] = fixFlags(env['CFLAGS'])
-env['CXXFLAGS'] = fixFlags(env['CXXFLAGS'])
-env['CPPDEFINES'] += ['PEDIGREE', '__PEDIGREE__']
-
-SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
-
-# Reset the old environment
-env = tmp
-
-'''
