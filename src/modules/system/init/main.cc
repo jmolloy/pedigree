@@ -17,7 +17,7 @@
 #include <Log.h>
 #include <vfs/VFS.h>
 #include <vfs/Directory.h>
-#include "../../subsys/posix/PosixSubsystem.h"
+#include <subsys/posix/PosixSubsystem.h> // In src
 #include <machine/Device.h>
 #include <machine/Disk.h>
 #include <Module.h>
@@ -33,7 +33,7 @@
 #include <panic.h>
 #include <utilities/assert.h>
 
-#include <kernel/core/BootIO.h>
+#include <core/BootIO.h> // In src/system/kernel
 
 #include <network-stack/NetworkStack.h>
 #include <network-stack/RoutingTable.h>

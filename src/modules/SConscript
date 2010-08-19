@@ -6,6 +6,11 @@
 import os.path
 Import(['env'])
 
+driverdir = "#" + env["PEDIGREE_BUILD_DRIVERS"]
+moduledir = "#" + env["PEDIGREE_BUILD_MODULES"]
+imagesdir = env["PEDIGREE_IMAGES_DIR"]
+objname = driverdir + '/vmware-gfx.o'
+
 # Common drivers - order is important
 driver_common_subdirs = [
     # DMA
@@ -62,7 +67,7 @@ if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
         'ne2k',
         # 'ps2mouse',
         'vbe',
-        'vmware-gfx'
+        # 'vmware-gfx'
     ]
 elif env['ARCH_TARGET'] == 'PPC':
     driver_arch = 'ppc'
@@ -120,9 +125,155 @@ drivers = ['drivers/' + driver_arch + '/' + i for i in driver_arch_subdirs]
 drivers += ['drivers/common/' + i for i in driver_common_subdirs]
 modules = ['system/' + i for i in module_subdirs]
 
-SConscript([os.path.join(i, 'SConscript') for i in drivers],exports = ['env'])
-SConscript(['drivers/SConscript-cdi'],exports = ['env'])
-SConscript([os.path.join(i, 'SConscript') for i in modules],exports = ['env'])
+all_modules = drivers + modules
+
+# Custom CFLAGS for specific modules
+custom_cflags = {
+    'config' : ['-DSQLITE_OS_OTHER=1',
+                '-DSQLITE_THREADSAFE=0',
+                '-DSQLITE_TEMP_STORE=3',
+                '-DSQLITE_DISABLE_LFS=1',
+                '-DSQLITE_OMIT_LOCALTIME=1',
+                '-DSQLITE_OMIT_FLOATING_POINT=1']
+}
+
+# Custom CXXFLAGS for specific modules
+custom_cxxflags = {
+}
+
+# Flags from CXXFLAGS and CFLAGS to *remove* for a module
+remove_flags = {
+    'config' : ['-ffreestanding', '-fno-builtin']
+}
+
+# Try and follow this subdirectory scheme for platform code in modules to
+# simplify the custom_subdirs dictionary
+arch_subdir = ''
+if env['ARCH_TARGET'] == 'X86':
+    arch_subdir = 'i686'
+elif env['ARCH_TARGET'] == 'X64':
+    arch_subdir = 'amd64'
+elif env['ARCH_TARGET'] == 'ARM':
+    arc_subdir = 'arm'
+elif env['ARCH_TARGET'] == 'PPC':
+    arch_subdir = 'ppc'
+else:
+    arch_subdir = 'unknown'
+
+# Custom subdirectories for specific modules
+custom_subdirs = {
+    'dma'           : [env['ARCH_TARGET'].lower()],
+    'linker'        : [arch_subdir]
+}
+
+# Custom files to add to the file list
+custom_files = {
+    'linker'        : [arch_subdir + '/asm-' + arch_subdir + '.s']
+}
+
+# Custom include paths for specific modules
+custom_incpath = {
+    'cdi'           : ['#/src/modules/drivers/common/cdi/include',
+                       '#/src/modules/drivers/cdi/include'],
+    'status_server' : ['#/src/system/kernel'],
+    'TUI'           : ['#/src/system/kernel'],
+    'init'          : ['#/src/system/kernel', '#/src'],
+    'linker'        : ['#/src/modules/system/linker']
+}
+
+# Custom library paths for specific modules
+custom_libs = {
+}
+
+# Default libraries for module builds
+if 'STATIC_DRIVERS' in env['CPPDEFINES']:
+    default_libs = []
+else:
+    default_libs = ['gcc', 'kernelrtti']
+
+# Default library paths
+default_libpath = [
+    imagesdir + '/libraries',
+    env['LIBGCC']
+]
+
+# Default include paths
+default_incpath = [
+    '#/src/modules',
+    '#/src/modules/system',
+    '#/src/modules/drivers/common',
+    '#/src/system/include'
+]
+
+tmp = env.Clone()
+tmp['LIBS'] = default_libs
+tmp['LIBPATH'] = default_libpath
+tmp['CPPPATH'] = default_incpath
+
+def buildModule(env, path, outputBase, targetAlias):
+    e = env.Clone()
+
+    # Handle extra include directories
+    base = path
+    i = os.path.basename(path)
+    if(os.path.exists(base + '/include')):
+        e['CPPPATH'] += [base + '/include']
+    if(custom_incpath.has_key(i)):
+        e['CPPPATH'] += custom_incpath[i]
+    if(custom_libs.has_key(i)):
+        e['LIBS'] += custom_libs[i]
+    if(custom_cflags.has_key(i)):
+        e['CFLAGS'] += ' ' + ' '.join(custom_cflags[i])
+    if(custom_cxxflags.has_key(i)):
+        e['CXXFLAGS'] += ' ' + ' '.join(custom_cxxflags[i])
+    if(remove_flags.has_key(i)):
+        for flag in remove_flags[i]:
+            e['CFLAGS'] = e['CFLAGS'].replace(flag, ' ')
+            e['CXXFLAGS'] = e['CXXFLAGS'].replace(flag, ' ')
+    
+    output = outputBase + '/' + i + '.o'
+    files = [Glob(base + '/*.c'), Glob(base + '/*.cc')]
+    if custom_subdirs.has_key(i):
+        for d in custom_subdirs[i]:
+            files = [Glob(base + '/' + d + '/*.c'), Glob(base + '/' + d + '/*.cc')]
+    if custom_files.has_key(i):
+        for f in custom_files[i]:
+            files += [base + '/' + f]
+            
+    
+    # Static drivers don't need special yes they do
+    if "STATIC_DRIVERS" in env['CPPDEFINES']:
+        e.Program(output, files, LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT', LSCRIPT = File("#src/modules/link_static.ld"))
+    else:
+        e.Program(output, files, LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT', LSCRIPT = File("#src/modules/link.ld"))
+    
+    env.Alias(targetAlias, output)
+
+for i in modules:
+    buildModule(tmp, i, moduledir, 'modules')
+
+for i in drivers:
+    buildModule(tmp, i, driverdir, 'drivers')
+
+# Special handling for CDI drivers
+tmp['CPPPATH'] += ['#/src/modules/drivers/common/cdi/include',
+                   '#/src/modules/drivers/cdi/include']
+
+for i in cdi_drivers:
+    oldpath = tmp['CPPPATH']
+    
+    # Patch up the path and add any include directory to the path
+    i = 'drivers/cdi/' + i
+    incdir = env.Dir('#/src/modules/' + i + '/include')
+    if(os.path.exists(incdir.abspath)):
+        tmp['CPPPATH'] += [incdir]
+    buildModule(tmp, i, driverdir, 'drivers')
+    
+    tmp['CPPPATH'] = oldpath
+
+# SConscript([os.path.join(i, 'SConscript') for i in drivers],exports = ['env'])
+# SConscript(['drivers/SConscript-cdi'],exports = ['env'])
+# SConscript([os.path.join(i, 'SConscript') for i in modules],exports = ['env'])
 
 # Ready to generate the initrd...
 builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"])

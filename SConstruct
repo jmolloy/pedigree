@@ -261,13 +261,13 @@ else:
 if not env['warnings'] and not '-Werror' in env['CXXFLAGS']:
     env['CXXFLAGS'] = safeAppend(env['CXXFLAGS'], ' -Werror')
     env['CFLAGS'] = safeAppend(env['CFLAGS'], ' -Werror')
-else:
+elif '-Werror' in env['CXXFLAGS']:
     env['CXXFLAGS'] = env['CXXFLAGS'].replace('-Werror', '')
     env['CFLAGS'] = env['CFLAGS'].replace('-Werror', '')
 
 if env['verbose_link'] and not '--verbose' in env['LINKFLAGS']:
     env['LINKFLAGS'] = safeAppend(env['LINKFLAGS'], ' --verbose')
-else:
+elif '--verbose' in env['LINKFLAGS']:
     env['LINKFLAGS'] = env['LINKFLAGS'].replace('--verbose', '')
     
 additionalDefines = ['installer', 'debugger', 'cripple_hdd', 'enable_ctrlc', 'multiple_consoles', 'apic', 'debug_logging', 'usb_verbose_debug']

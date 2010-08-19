@@ -32,15 +32,12 @@ IsaDma &IsaDma::instance()
 }
 #endif
 
-void pedigree_init()
+static void pedigree_init()
 {
 }
 
-void pedigree_destroy()
+static void pedigree_destroy()
 {
 }
 
-MODULE_NAME("dma");
-MODULE_ENTRY(&pedigree_init);
-MODULE_EXIT(&pedigree_destroy);
-MODULE_DEPENDS(0);
+MODULE_INFO("dma", &pedigree_init, &pedigree_destroy);

@@ -35,12 +35,9 @@ struct cdi_driver;
  * \endenglish
  */
 #define CDI_DRIVER(name, drvobj, deps...) \
-    void mod_entry() {(drvobj).drv.init(); cdi_pedigree_walk_dev_list_init((struct cdi_driver*)&(drvobj));} \
-    void mod_exit() {cdi_pedigree_walk_dev_list_destroy((struct cdi_driver*)&(drvobj)); (drvobj).drv.destroy();} \
-    MODULE_NAME(name); \
-    MODULE_ENTRY(mod_entry); \
-    MODULE_EXIT(mod_exit); \
-    MODULE_DEPENDS("cdi" deps);
+    static void mod_entry() {(drvobj).drv.init(); cdi_pedigree_walk_dev_list_init((struct cdi_driver*)&(drvobj));} \
+    static void mod_exit() {cdi_pedigree_walk_dev_list_destroy((struct cdi_driver*)&(drvobj)); (drvobj).drv.destroy();} \
+    MODULE_INFO(name, &mod_entry, &mod_exit, "cdi" deps)
 
 #ifdef __cplusplus
 extern "C" {
