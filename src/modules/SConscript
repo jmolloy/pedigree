@@ -200,9 +200,9 @@ default_libpath = [
 # Default include paths
 default_incpath = [
     '#/src/modules',
+    '#/src/system/include',
     '#/src/modules/system',
     '#/src/modules/drivers/common',
-    '#/src/system/include'
 ]
 
 tmp = env.Clone()
@@ -235,7 +235,7 @@ def buildModule(env, path, outputBase, targetAlias):
     files = [Glob(base + '/*.c'), Glob(base + '/*.cc')]
     if custom_subdirs.has_key(i):
         for d in custom_subdirs[i]:
-            files = [Glob(base + '/' + d + '/*.c'), Glob(base + '/' + d + '/*.cc')]
+            files += [Glob(base + '/' + d + '/*.c'), Glob(base + '/' + d + '/*.cc')]
     if custom_files.has_key(i):
         for f in custom_files[i]:
             files += [base + '/' + f]
