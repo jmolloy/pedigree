@@ -67,7 +67,7 @@ if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
         'ne2k',
         # 'ps2mouse',
         'vbe',
-        # 'vmware-gfx'
+        'vmware-gfx'
     ]
 elif env['ARCH_TARGET'] == 'PPC':
     driver_arch = 'ppc'

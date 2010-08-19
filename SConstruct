@@ -105,8 +105,11 @@ opts.AddVariables(
 env = Environment(options=opts, ENV=os.environ, platform='posix')
 Help(opts.GenerateHelpText(env))
 
-# Do timestamp checks first and THEN MD5 files to determine if they've changed.
-env.Decider('MD5-timestamp')
+# Don't use MD5s to determine if files have changed, just check the timestamp
+env.Decider('timestamp-newer')
+
+# Avoid any form of RCS scan (git etc)
+env.SourceCode(".", None)
 
 # Cache file checksums after 60 seconds
 SetOption('max_drift', 60)
@@ -355,4 +358,5 @@ if(not env['nocache']):
 ####################################
 # Progress through all our sub-directories
 ####################################
+env.CacheDir('./build_cache')
 SConscript('SConscript', variant_dir = env['BUILDDIR'], exports = ['env'], duplicate = 0)
