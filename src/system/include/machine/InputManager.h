@@ -29,8 +29,7 @@ class InputManager
 {
     public:
 
-        /// The type for a given callback. In the future callbacks may have
-        /// other types such as "Mouse" which need to be handled.
+        /// The type for a given callback.
         enum CallbackType
         {
             Key = 0,
