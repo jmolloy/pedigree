@@ -227,7 +227,13 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
     }
 
     // Look up the module's name and entry/exit functions, and dependency list.
-    module->name = *reinterpret_cast<const char**> (module->elf.lookupSymbol("g_pModuleName"));
+    const char **pName = reinterpret_cast<const char**> (module->elf.lookupSymbol("g_pModuleName"));
+    if(!pName)
+    {
+        ERROR("KERNELELF: Hit an invalid module, ignoring");
+        return 0;
+    }
+    module->name = *pName;
     module->entry = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleEntry"));
     module->exit = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleExit"));
     module->depends = reinterpret_cast<const char **> (module->elf.lookupSymbol("g_pDepends"));
