@@ -37,8 +37,6 @@
 
 void input_handler(Input::InputNotification &note)
 {
-    syslog(LOG_NOTICE, "got input!");
-
     if(note.type == Input::Key)
     {
         SDL_keysym sym;
