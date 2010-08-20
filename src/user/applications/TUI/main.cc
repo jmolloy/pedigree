@@ -40,6 +40,7 @@
 #include "Header.h"
 
 #include <graphics/Graphics.h>
+#include <input/Input.h>
 
 #define CONSOLE_READ    1
 #define CONSOLE_WRITE   2
@@ -54,42 +55,6 @@
 #define BOLD_FONT_PATH      "/system/fonts/DejaVuSansMono-Bold.ttf"
 
 #define FONT_SIZE           12
-
-/** From InputManager */
-
-/// The type for a given callback. In the future callbacks may have
-/// other types such as "Mouse" which need to be handled.
-enum CallbackType
-{
-    Key = 0,
-    Mouse = 1,
-    Joystick = 2,
-    Unknown = 255
-};
-
-/// Structure containing notification to the remote application
-/// of input. Used to generalise input handling across the system
-/// for all types of devices.
-struct InputNotification
-{
-    CallbackType type;
-
-    union
-    {
-        struct
-        {
-            uint64_t key;
-        } key;
-        struct
-        {
-            ssize_t relx;
-            ssize_t rely;
-            ssize_t relz;
-
-            bool buttons[64];
-        } pointy;
-    } data;
-};
 
 /** End code from InputManager */
 
@@ -283,8 +248,8 @@ void input_handler(size_t p1, size_t p2, size_t* pBuffer, size_t p4)
         return;
     }
 
-    InputNotification *pNote = reinterpret_cast<InputNotification*>(&pBuffer[1]);
-    if(pNote->type != Key)
+    Input::InputNotification *pNote = reinterpret_cast<Input::InputNotification*>(&pBuffer[1]);
+    if(pNote->type != Input::Key)
         return;
 
     uint64_t c = pNote->data.key.key;
@@ -358,6 +323,9 @@ int main (int argc, char **argv)
         printf("TUI is already running\n");
         return 1;
     }
+
+    /// \todo Needs userspace event handling!
+    // Input::installCallback(input_handler);
 
     syscall1(TUI_INPUT_REGISTER_CALLBACK, reinterpret_cast<uintptr_t>(input_handler));
 
