@@ -24,6 +24,10 @@
 /* Useful functions and variables from SDL_events.c */
 #include "SDL_events.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Start and stop the event processing loop */
 extern int SDL_StartEventLoop(Uint32 flags);
 extern void SDL_StopEventLoop(void);
@@ -75,6 +79,10 @@ extern void SDL_ResetKeyboard(void);
 
 /* Used by the event loop to queue pending keyboard repeat events */
 extern void SDL_CheckKeyRepeat(void);
+
+#ifdef __cplusplus
+};
+#endif
 
 /* Used by the OS keyboard code to detect whether or not to do UNICODE */
 #ifndef DEFAULT_UNICODE_TRANSLATION

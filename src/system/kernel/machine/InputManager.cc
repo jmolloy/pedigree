@@ -20,6 +20,9 @@
 
 #include <process/Event.h>
 
+// Incoming relative mouse movements are divided by this
+#define MOUSE_REDUCE_FACTOR     4
+
 class InputEvent : public Event
 {
     public:
@@ -129,6 +132,11 @@ void InputManager::keyPressed(uint64_t key)
 
 void InputManager::mouseUpdate(ssize_t relX, ssize_t relY, ssize_t relZ, uint32_t buttonBitmap)
 {
+    // Smooth input out
+    relX /= MOUSE_REDUCE_FACTOR;
+    relY /= MOUSE_REDUCE_FACTOR;
+    relZ /= MOUSE_REDUCE_FACTOR;
+
     InputNotification *note = new InputNotification;
     note->type = Mouse;
     note->data.pointy.relx = relX;

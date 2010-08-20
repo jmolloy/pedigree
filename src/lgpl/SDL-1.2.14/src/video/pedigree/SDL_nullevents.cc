@@ -31,6 +31,45 @@
 #include "SDL_nullvideo.h"
 #include "SDL_nullevents_c.h"
 
+#include <syslog.h>
+
+#include <input/Input.h>
+
+void input_handler(Input::InputNotification &note)
+{
+    syslog(LOG_NOTICE, "got input!");
+
+    if(note.type == Input::Key)
+    {
+        SDL_keysym sym;
+        sym.scancode = 0;
+        sym.sym = static_cast<SDLKey>(note.data.key.key);
+        sym.mod = KMOD_NONE;
+        sym.unicode = 0;
+        SDL_PrivateKeyboard(SDL_PRESSED, &sym);
+        SDL_PrivateKeyboard(SDL_RELEASED, &sym);
+    }
+    else if(note.type == Input::Mouse)
+    {
+        Uint8 state = 0;
+        for(int i = 0; i < 8; i++)
+            if(note.data.pointy.buttons[i])
+                state |= (1 << i);
+
+        SDL_PrivateMouseMotion(state, 1, (Sint16) note.data.pointy.relx, (Sint16) note.data.pointy.rely);
+    }
+}
+
+void PEDIGREE_InitInput()
+{
+    Input::installCallback(input_handler);
+}
+
+void PEDIGREE_DestroyInput()
+{
+    Input::removeCallback(input_handler);
+}
+
 void PEDIGREE_PumpEvents(_THIS)
 {
 	/* do nothing. */

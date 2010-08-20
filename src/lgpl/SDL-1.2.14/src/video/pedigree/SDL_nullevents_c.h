@@ -30,6 +30,9 @@
 extern "C" {
 #endif
 
+extern void PEDIGREE_InitInput();
+extern void PEDIGREE_DestroyInput();
+
 extern void PEDIGREE_InitOSKeymap(_THIS);
 extern void PEDIGREE_PumpEvents(_THIS);
 

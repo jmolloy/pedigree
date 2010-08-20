@@ -15,6 +15,7 @@
  */
 
 #include <machine/HidInputManager.h>
+#include <machine/InputManager.h>
 #include <usb/UsbHub.h>
 #include <usb/UsbDevice.h>
 #include <usb/UsbConstants.h>
@@ -277,6 +278,11 @@ void UsbHumanInterfaceDevice::inputHandler()
                         }
                         else
                             NOTICE("    Absolute input, usage " << Dec << pBlock->nUsagePage << ":" << ((*pBlock->pUsages)[i]) << ", value " << _sign(nSignedValue) << " " << pBlock->nSize << Hex);
+
+                        if((pBlock->nUsagePage == 1) && (((*pBlock->pUsages)[i]) == 48))
+                            InputManager::instance().mouseUpdate(nSignedValue, 0, 0, 0);
+                        else if((pBlock->nUsagePage == 1) && (((*pBlock->pUsages)[i]) == 49))
+                            InputManager::instance().mouseUpdate(0, nSignedValue, 0, 0);
                     }
                     break;
                 case HidReportBlock::Relative:

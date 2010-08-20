@@ -87,6 +87,7 @@ static int PEDIGREE_Available(void)
 
 static void PEDIGREE_DeleteDevice(SDL_VideoDevice *device)
 {
+    PEDIGREE_DestroyInput();
 	SDL_free(device->hidden);
 	SDL_free(device);
 }
@@ -155,6 +156,8 @@ int PEDIGREE_VideoInit(_THIS, SDL_PixelFormat *vformat)
 	/* we change this during the SDL_SetVideoMode implementation... */
 	vformat->BitsPerPixel = 24;
 	vformat->BytesPerPixel = 3;
+
+    PEDIGREE_InitInput();
 
 	/* We're done! */
 	return(0);
