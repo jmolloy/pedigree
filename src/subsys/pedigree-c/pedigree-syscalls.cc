@@ -240,20 +240,19 @@ int pedigree_module_get_depending(char *name, char *buf, size_t bufsz)
     return 1;
 }
 
-void pedigree_input_install_callback(void *p)
+void pedigree_input_install_callback(void *p, uintptr_t param)
 {
     // First parameter is now obsolete, gotta remove it some time...
     InputManager::instance().installCallback(
-        InputManager::Key,
         reinterpret_cast<InputManager::callback_t>(p),
-        Processor::information().getCurrentThread());
+        Processor::information().getCurrentThread(),
+        param);
 }
 
 void pedigree_input_remove_callback(void *p)
 {
     // First parameter is now obsolete, gotta remove it some time...
     InputManager::instance().removeCallback(
-        InputManager::Key,
         reinterpret_cast<InputManager::callback_t>(p),
         Processor::information().getCurrentThread());
 }
@@ -474,3 +473,10 @@ void pedigree_gfx_fbinfo(void *p, size_t *w, size_t *h, uint32_t *fmt)
         *fmt = static_cast<uint32_t>(pProvider->pFramebuffer->getFormat());
 }
 
+void pedigree_event_return()
+{
+    // Return to the old code
+    Processor::information().getScheduler().eventHandlerReturned();
+
+    FATAL("event_return: should never get here");
+}

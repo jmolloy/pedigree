@@ -240,19 +240,15 @@ void sigint(int)
  * and handles every keypress that occurs, via an Event sent from the kernel's
  * InputManager object.
  */
-void input_handler(size_t p1, size_t p2, size_t* pBuffer, size_t p4)
+void input_handler(Input::InputNotification &note)
 {
-    if(!g_pCurrentTerm || !g_pCurrentTerm->term) // No terminal yet!
-    {
-        syscall0(TUI_EVENT_RETURNED);
-        return;
-    }
-
-    Input::InputNotification *pNote = reinterpret_cast<Input::InputNotification*>(&pBuffer[1]);
-    if(pNote->type != Input::Key)
+    if(!g_pCurrentTerm || !g_pCurrentTerm->term) // No terminal yet!;
         return;
 
-    uint64_t c = pNote->data.key.key;
+    if(note.type != Input::Key)
+        return;
+
+    uint64_t c = note.data.key.key;
 
     /** Add the key to the terminal queue */
 
@@ -282,7 +278,7 @@ void input_handler(size_t p1, size_t p2, size_t* pBuffer, size_t p4)
     if(checkCommand(c, rect2))
     {
         doRedraw(rect2);
-        syscall0(TUI_EVENT_RETURNED);
+        return;
     }
     else
         pT->addToQueue(c);
@@ -312,8 +308,6 @@ void input_handler(size_t p1, size_t p2, size_t* pBuffer, size_t p4)
         pT->setHasPendingRequest(false, 0);
     }
     delete [] buffer;
-
-    syscall0(TUI_EVENT_RETURNED);
 }
 
 int main (int argc, char **argv)
@@ -324,10 +318,7 @@ int main (int argc, char **argv)
         return 1;
     }
 
-    /// \todo Needs userspace event handling!
-    // Input::installCallback(input_handler);
-
-    syscall1(TUI_INPUT_REGISTER_CALLBACK, reinterpret_cast<uintptr_t>(input_handler));
+    Input::installCallback(input_handler);
 
     signal(SIGINT, sigint);
     

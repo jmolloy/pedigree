@@ -23,8 +23,8 @@
 class InputEvent : public Event
 {
     public:
-        InputEvent(InputManager::InputNotification *pNote, uintptr_t handlerAddress) :
-                    Event(handlerAddress, true, 0), m_Notification()
+        InputEvent(InputManager::InputNotification *pNote, uintptr_t param, uintptr_t handlerAddress) :
+                    Event(handlerAddress, true, 0), m_Notification(), m_nParam(param)
         {
             m_Notification = *pNote;
         };
@@ -33,19 +33,20 @@ class InputEvent : public Event
 
         virtual size_t serialize(uint8_t *pBuffer)
         {
-            size_t *buf = reinterpret_cast<size_t*>(pBuffer);
-            *buf = EventNumbers::InputEvent;
-            memcpy(&buf[1], &m_Notification, sizeof(InputManager::InputNotification));
-            return sizeof(InputManager::InputNotification) + sizeof(size_t);
+            uintptr_t *buf = reinterpret_cast<uintptr_t*>(pBuffer);
+            buf[0] = EventNumbers::InputEvent;
+            buf[1] = m_nParam;
+            memcpy(&buf[2], &m_Notification, sizeof(InputManager::InputNotification));
+            return sizeof(InputManager::InputNotification) + (sizeof(uintptr_t) * 2);
         }
 
         static bool unserialize(uint8_t *pBuffer, InputEvent &event)
         {
-            size_t *buf = reinterpret_cast<size_t*>(pBuffer);
+            uintptr_t *buf = reinterpret_cast<uintptr_t*>(pBuffer);
             if(*buf != EventNumbers::InputEvent)
                 return false;
 
-            memcpy(&event.m_Notification, &buf[1], sizeof(InputManager::InputNotification));
+            memcpy(&event.m_Notification, &buf[2], sizeof(InputManager::InputNotification));
             return true;
         }
 
@@ -87,6 +88,8 @@ class InputEvent : public Event
     private:
 
         InputManager::InputNotification m_Notification;
+
+        uintptr_t m_nParam;
 };
 
 InputManager InputManager::m_Instance;
@@ -173,40 +176,35 @@ void InputManager::putNotification(InputNotification *note)
 #endif
 }
 
-void InputManager::installCallback(CallbackType type, callback_t callback, Thread *pThread)
+void InputManager::installCallback(callback_t callback, Thread *pThread, uintptr_t param)
 {
     LockGuard<Spinlock> guard(m_QueueLock);
-    if(type == Key)
-    {
-        CallbackItem *item = new CallbackItem;
-        item->func = callback;
+    CallbackItem *item = new CallbackItem;
+    item->func = callback;
 #ifdef THREADS
-        item->pThread = pThread;
+    item->pThread = pThread;
 #endif
-        m_Callbacks.pushBack(item);
-    }
+    item->nParam = param;
+    m_Callbacks.pushBack(item);
 }
 
-void InputManager::removeCallback(CallbackType type, callback_t callback, Thread *pThread)
+void InputManager::removeCallback(callback_t callback, Thread *pThread)
 {
     LockGuard<Spinlock> guard(m_QueueLock);
-    if(type == Key)
+    for(List<CallbackItem*>::Iterator it = m_Callbacks.begin();
+        it != m_Callbacks.end();
+        it++)
     {
-        for(List<CallbackItem*>::Iterator it = m_Callbacks.begin();
-            it != m_Callbacks.end();
-            it++)
+        if(*it)
         {
-            if(*it)
-            {
-                if(
+            if(
 #ifdef THREADS
-                    (pThread == (*it)->pThread) &&
+                (pThread == (*it)->pThread) &&
 #endif
-                    (callback == (*it)->func))
-                {
-                    m_Callbacks.erase(it);
-                    return;
-                }
+                (callback == (*it)->func))
+            {
+                m_Callbacks.erase(it);
+                return;
             }
         }
     }
@@ -252,7 +250,7 @@ void InputManager::mainThread()
                     continue;
                 }
 
-                InputEvent *pEvent = new InputEvent(pNote, reinterpret_cast<uintptr_t>(func));
+                InputEvent *pEvent = new InputEvent(pNote, (*it)->nParam, reinterpret_cast<uintptr_t>(func));
                 pThread->sendEvent(pEvent);
                 delete pNote;
             }

@@ -89,11 +89,11 @@ class InputManager
         /// Called whenever joystick input comes in
         void joystickUpdate(ssize_t relX, ssize_t relY, ssize_t relZ, uint32_t buttonBitmap);
 
-        /// Installs a callback for a specific item
-        void installCallback(CallbackType type, callback_t callback, Thread *pThread = 0);
+        /// Installs a callback
+        void installCallback(callback_t callback, Thread *pThread = 0, uintptr_t param = 0);
 
-        /// Removes a callback for a specific item
-        void removeCallback(CallbackType type, callback_t callback, Thread *pThread = 0);
+        /// Removes a callback
+        void removeCallback(callback_t callback, Thread *pThread = 0);
 
         /// Thread trampoline
         static int trampoline(void *ptr);
@@ -122,6 +122,10 @@ class InputManager
             /// will be no address space switch for a call to a kernel function).
             Thread *pThread;
 #endif
+
+            /// Parameter to put into the serialised buffer sent to userspace.
+            /// Typically holds the address of a userspace callback.
+            uintptr_t nParam;
         };
 
         /// Input queue (for distribution to applications)

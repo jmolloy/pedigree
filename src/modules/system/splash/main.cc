@@ -198,7 +198,7 @@ void progress(const char *text)
     if((g_BootProgressCurrent + 1) >= g_BootProgressTotal)
     {
         Log::instance().removeCallback(&g_StreamLogger);
-        InputManager::instance().removeCallback(InputManager::Key, keyCallback);
+        InputManager::instance().removeCallback(keyCallback);
 
         bFinished = true;
     }
@@ -400,7 +400,7 @@ static void init()
     Log::instance().installCallback(&g_StreamLogger, true);
 
     g_BootProgressUpdate = &progress;
-    InputManager::instance().installCallback(InputManager::Key, keyCallback);
+    InputManager::instance().installCallback(keyCallback);
 }
 
 static void destroy()
