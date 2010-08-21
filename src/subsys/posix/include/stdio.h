@@ -487,8 +487,8 @@ int	_EXFUN(fpurge, (FILE *));
 ssize_t _EXFUN(__getdelim, (char **, size_t *, int, FILE *));
 ssize_t _EXFUN(__getline, (char **, size_t *, FILE *));
 
-#define getdelim __getdelim
-#define getline __getline
+ssize_t _EXFUN(getdelim, (char **, size_t *, int, FILE *));
+ssize_t _EXFUN(getline, (char **, size_t *, FILE *));
 
 #ifdef __LARGE64_FILES
 #if !defined(__CYGWIN__) || defined(_COMPILING_NEWLIB)

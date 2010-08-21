@@ -2064,3 +2064,13 @@ int setgroups(int ngroups, const gid_t *gidset)
     STUBBED("setgroups");
     return 0;
 }
+
+ssize_t getdelim(char **a, size_t *b, int c, FILE *d)
+{
+    return __getdelim(a, b, c, d);
+}
+ssize_t getline(char **a, size_t *b, FILE *c)
+{
+    return __getline(a, b, c);
+}
+
