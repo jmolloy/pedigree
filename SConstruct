@@ -358,5 +358,4 @@ if(not env['nocache']):
 ####################################
 # Progress through all our sub-directories
 ####################################
-env.CacheDir('./build_cache')
 SConscript('SConscript', variant_dir = env['BUILDDIR'], exports = ['env'], duplicate = 0)
