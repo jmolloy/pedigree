@@ -194,6 +194,8 @@ _VOID	_EXFUN(_mstats_r,(struct _reent *, char *));
 #endif
 int	_EXFUN(_system_r,(struct _reent *, const char *));
 
+char *_EXFUN(mkdtemp, (char *));
+
 _VOID	_EXFUN(__eprintf,(const char *, const char *, unsigned int, const char *));
 
 _END_STD_C
