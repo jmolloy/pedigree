@@ -33,17 +33,15 @@ diff -rupN binutils-2.19-orig/config.sub binutils-2.19/config.sub
 diff -rupN binutils-2.19-orig/gas/configure.tgt binutils-2.19/gas/configure.tgt
 --- binutils-2.19-orig/gas/configure.tgt	2008-10-02 18:07:18.000000000 +1000
 +++ binutils-2.19/gas/configure.tgt	2009-03-12 14:39:16.000278700 +1000
-@@ -235,6 +235,10 @@ case ${generic_target} in
+@@ -230,4 +230,8 @@ case ${generic_target} in
    i386-*-chaos)				fmt=elf ;;
    i386-*-rdos*)				fmt=elf ;;
-   i386-*-darwin*)			fmt=macho ;;
 +  
 +  i386-*-pedigree*)   fmt=elf ;;
 +  amd64-*-pedigree*)  fmt=elf ;;
 +  x86_64-*-pedigree*) fmt=elf ;;
  
    i860-*-*)				fmt=elf endian=little ;;
- 
 diff -rupN binutils-2.19-orig/ld/Makefile.in binutils-2.19/ld/Makefile.in
 --- binutils-2.19-orig/ld/Makefile.in	2008-09-09 18:02:20.000000000 +1000
 +++ binutils-2.19/ld/Makefile.in	2009-03-12 15:44:34.152278700 +1000
