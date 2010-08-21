@@ -16,13 +16,13 @@ typedef unsigned int rlim_t;
 #define RLIM_SAVED_MAX      ((rlim_t) 0)
 #define RLIM_SAVED_CUR      ((rlim_t) 1)
 
-#define RLIMIT_CORE         16384
-#define RLIMIT_CPU          RLIM_INFINITY
-#define RLIMIT_DATA         RLIM_INFINITY
-#define RLIMIT_FSIZE        RLIM_INFINITY
-#define RLIMIT_NOFILE       RLIM_INFINITY
-#define RLIMIT_STACK        RLIM_INFINITY
-#define RLIMIT_AS           RLIM_INFINITY
+#define RLIMIT_CORE         0
+#define RLIMIT_CPU          1
+#define RLIMIT_DATA         2
+#define RLIMIT_FSIZE        3
+#define RLIMIT_NOFILE       4
+#define RLIMIT_STACK        5
+#define RLIMIT_AS           6
 
 struct rusage {
   	struct timeval ru_utime;	/* user time used */
