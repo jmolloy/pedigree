@@ -9,10 +9,6 @@
 #ifndef _STDINT_H
 #define _STDINT_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #if defined(__GNUC__) && \
   ( (__GNUC__ >= 4) || \
     ( (__GNUC__ >= 3) && defined(__GNUC_MINOR__) && (__GNUC_MINOR__ > 2) ) )
@@ -21,6 +17,10 @@ extern "C" {
 #else
 #define __STDINT_EXP(x) x
 #include <limits.h>
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 /* Check if "long long" is 64bit wide */
