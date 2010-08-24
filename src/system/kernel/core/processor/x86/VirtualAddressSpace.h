@@ -213,8 +213,9 @@ class X86KernelVirtualAddressSpace : public X86VirtualAddressSpace
 #define KERNEL_SPACE_START                  reinterpret_cast<void*>(0xC0000000)
 
 #define USERSPACE_VIRTUAL_HEAP              reinterpret_cast<void*> (0x50000000)
-#define USERSPACE_VIRTUAL_STACK             reinterpret_cast<void*>(0xC0000000)
-#define USERSPACE_VIRTUAL_STACK_SIZE        0x100000
+#define USERSPACE_VIRTUAL_STACK             reinterpret_cast<void*>(0xB0000000)
+#define USERSPACE_VIRTUAL_MAX_STACK_SIZE    0x10000000
+#define USERSPACE_VIRTUAL_LOWEST_STACK      reinterpret_cast<void*>(0x70000000)
 #define VIRTUAL_PAGE_DIRECTORY              reinterpret_cast<void*>(0xFFBFF000)
 #define VIRTUAL_PAGE_TABLES                 reinterpret_cast<void*>(0xFFC00000)
 #define KERNEL_VIRTUAL_TEMP1                reinterpret_cast<void*>(0xFFBFC000)

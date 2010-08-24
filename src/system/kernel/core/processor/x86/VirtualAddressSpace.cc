@@ -144,14 +144,14 @@ void X86VirtualAddressSpace::unmap(void *virtualAddress)
 }
 void *X86VirtualAddressSpace::allocateStack()
 {
-    void *st  = doAllocateStack(USERSPACE_VIRTUAL_STACK_SIZE);
+    void *st  = doAllocateStack(USERSPACE_VIRTUAL_MAX_STACK_SIZE);
 
     return st;
 }
 void *X86VirtualAddressSpace::allocateStack(size_t stackSz)
 {
     if(stackSz == 0)
-        stackSz = USERSPACE_VIRTUAL_STACK_SIZE;
+        stackSz = USERSPACE_VIRTUAL_MAX_STACK_SIZE;
     void *st  = doAllocateStack(stackSz);
 
     return st;
@@ -474,18 +474,17 @@ void *X86VirtualAddressSpace::doAllocateStack(size_t sSize)
     m_pStackTop = adjust_pointer(m_pStackTop, -sSize);
 
     m_Lock.release();
+    
+    NOTICE("doAllocateStack(" << sSize << ")");
 
-    // Map it in
-    uintptr_t stackBottom = reinterpret_cast<uintptr_t>(pStack) - sSize;
-    for (size_t j = 0; j < sSize; j += PhysicalMemoryManager::getPageSize())
-    {
-        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-        bool b = map(phys,
-                 reinterpret_cast<void*> (j + stackBottom),
-                 VirtualAddressSpace::Write);
-        if (!b)
-            WARNING("map() failed in doAllocateStack");
-    }
+    // Map in the top page, then everything else will be demand paged
+    uintptr_t stackTop = reinterpret_cast<uintptr_t>(pStack) - 0x1000;
+    physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+    bool b = map(phys,
+             reinterpret_cast<void*>(stackTop),
+             VirtualAddressSpace::Write);
+    if (!b)
+        WARNING("map() failed in doAllocateStack");
   }
   return pStack;
 }

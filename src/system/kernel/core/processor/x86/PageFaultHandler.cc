@@ -80,6 +80,22 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
 
   if (cr2 < reinterpret_cast<uintptr_t>(KERNEL_SPACE_START))
   {
+      // Within stack?
+      /// \todo Implement this better
+      if((cr2 >= reinterpret_cast<uintptr_t>(USERSPACE_VIRTUAL_LOWEST_STACK)) &&
+         (cr2 <= reinterpret_cast<uintptr_t>(USERSPACE_VIRTUAL_STACK)))
+      {
+          // Map it in
+          physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+          if(Processor::information().getVirtualAddressSpace().map(phys, reinterpret_cast<void*>(cr2 & ~0xFFF), VirtualAddressSpace::Write))
+          {
+              NOTICE_NOLOCK("#PF: stack expansion at " << cr2 << " successful [EIP=" << state.getInstructionPointer() << "]");
+              return;
+          }
+          else
+              WARNING_NOLOCK("#PF: Demand mapping for userspace stack failed");
+      }
+
       // Check our handler list.
       for (List<MemoryTrapHandler*>::Iterator it = m_Handlers.begin();
            it != m_Handlers.end();
