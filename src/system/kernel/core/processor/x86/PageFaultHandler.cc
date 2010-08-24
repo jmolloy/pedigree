@@ -82,6 +82,7 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
   {
       // Within stack?
       /// \todo Implement this better
+#if 0
       if((cr2 >= reinterpret_cast<uintptr_t>(USERSPACE_VIRTUAL_LOWEST_STACK)) &&
          (cr2 <= reinterpret_cast<uintptr_t>(USERSPACE_VIRTUAL_STACK)))
       {
@@ -95,6 +96,7 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
           else
               WARNING_NOLOCK("#PF: Demand mapping for userspace stack failed");
       }
+#endif
 
       // Check our handler list.
       for (List<MemoryTrapHandler*>::Iterator it = m_Handlers.begin();

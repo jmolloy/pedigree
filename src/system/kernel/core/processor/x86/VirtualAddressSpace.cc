@@ -478,13 +478,16 @@ void *X86VirtualAddressSpace::doAllocateStack(size_t sSize)
     NOTICE("doAllocateStack(" << sSize << ")");
 
     // Map in the top page, then everything else will be demand paged
-    uintptr_t stackTop = reinterpret_cast<uintptr_t>(pStack) - 0x1000;
-    physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-    bool b = map(phys,
-             reinterpret_cast<void*>(stackTop),
-             VirtualAddressSpace::Write);
-    if (!b)
-        WARNING("map() failed in doAllocateStack");
+    uintptr_t stackBottom = reinterpret_cast<uintptr_t>(pStack) - sSize;
+    for(size_t j = 0; j < sSize; j += 0x1000)
+    {
+        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+        bool b = map(phys,
+                 reinterpret_cast<void*>(stackBottom + j),
+                 VirtualAddressSpace::Write);
+        if (!b)
+            WARNING("map() failed in doAllocateStack");
+    }
   }
   return pStack;
 }
