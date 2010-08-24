@@ -78,7 +78,7 @@ bool NMFaultHandler::initialise()
         asm volatile ("finit");
         
         // set the FPU Control Word
-        _SetFPUControlWord(0x330);
+        _SetFPUControlWord(0x33F);
  
         asm volatile ("mov %0, %%cr0" :: "r" (cr0));
     }
