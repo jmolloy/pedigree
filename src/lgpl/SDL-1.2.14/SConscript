@@ -37,9 +37,10 @@ files = [
     Glob('src/video/pedigree/*.cc'),
     Glob('src/joystick/dummy/*.c'),
     Glob('src/cdrom/dummy/*.c'),
-    Glob('src/thread/generic/*.c'),
+#     Glob('src/thread/generic/*.c'),
+    Glob('src/thread/pthread/*.c'),
     Glob('src/timer/dummy/*.c'),
-    Glob('src/loadso/dummy/*.c'),
+    Glob('src/loadso/dlopen/*.c'),
 ]
 
 # To include a new directory for includes, just add it to the list

@@ -16,9 +16,9 @@
 // Marks code as not implemented for those reading header files
 #define NOTIMPL
 
-#define PTHREAD_CANCEL_ASYNCHRONOUS
+// #define PTHREAD_CANCEL_ASYNCHRONOUS
 #define PTHREAD_CANCEL_ENABLE
-#define PTHREAD_CANCEL_DEFERRED
+// #define PTHREAD_CANCEL_DEFERRED
 #define PTHREAD_CANCEL_DISABLE
 #define PTHREAD_CANCELED
 #define PTHREAD_COND_INITIALIZER
