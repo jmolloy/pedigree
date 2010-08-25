@@ -1,11 +1,13 @@
 #ifndef _SCHED_H_
 #define _SCHED_H_
 
+#include <sys/sched.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <sys/sched.h>
+int sched_yield();
 
 #ifdef __cplusplus
 }

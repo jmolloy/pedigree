@@ -147,4 +147,6 @@
 #define PEDIGREE_SIGRET         101
 #define PEDIGREE_INIT_SIGRET    102
 
+#define POSIX_SCHED_YIELD       103
+
 #endif

@@ -278,8 +278,8 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_SYSLOG:
             return posix_syslog(reinterpret_cast<const char*>(p1), static_cast<int>(p2));
 
-		case POSIX_FTRUNCATE:
-			return posix_ftruncate(static_cast<int>(p1), static_cast<off_t>(p2));
+        case POSIX_FTRUNCATE:
+            return posix_ftruncate(static_cast<int>(p1), static_cast<off_t>(p2));
 
         // Stub warning
         case POSIX_STUBBED:
@@ -297,6 +297,9 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case PEDIGREE_INIT_SIGRET:
             WARNING("POSIX: The 'init sigret' system call is no longer valid.");
             // pedigree_init_sigret();
+            return 0;
+        case POSIX_SCHED_YIELD:
+            Scheduler::instance().yield();
             return 0;
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }

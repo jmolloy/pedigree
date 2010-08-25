@@ -2074,3 +2074,7 @@ ssize_t getline(char **a, size_t *b, FILE *c)
     return __getline(a, b, c);
 }
 
+int sched_yield()
+{
+    return syscall0(POSIX_SCHED_YIELD);
+}
