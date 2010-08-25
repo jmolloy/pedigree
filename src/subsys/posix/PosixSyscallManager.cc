@@ -301,6 +301,8 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_SCHED_YIELD:
             Scheduler::instance().yield();
             return 0;
+        case POSIX_PEDIGREE_THRWAKEUP:
+            return posix_pedigree_thrwakeup(static_cast<pthread_t>(p1));
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
 }

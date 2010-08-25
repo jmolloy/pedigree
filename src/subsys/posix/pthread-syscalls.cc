@@ -497,3 +497,30 @@ int posix_pthread_key_delete(pthread_key_t key)
 
     return 0;
 }
+
+int posix_pedigree_thrwakeup(pthread_t thr)
+{
+    // Grab the subsystem
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return -1;
+    }
+
+    // Grab the thread
+    PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(thr);
+    if(!pThread)
+    {
+        ERROR("Not a valid POSIX thread?");
+        return -1;
+    }
+    
+    // Wake it up
+    pThread->pThread->getLock().acquire();
+    pThread->pThread->setStatus(Thread::Ready);
+    pThread->pThread->getLock().release();
+    
+    return 0;
+}

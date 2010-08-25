@@ -61,4 +61,6 @@ key_destructor posix_pthread_key_destructor(pthread_key_t key);
 
 void pedigree_init_pthreads();
 
+int posix_pedigree_thrwakeup(pthread_t thr);
+
 #endif

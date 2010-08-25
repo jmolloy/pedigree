@@ -149,4 +149,6 @@
 
 #define POSIX_SCHED_YIELD       103
 
+#define POSIX_PEDIGREE_THRWAKEUP  104
+
 #endif

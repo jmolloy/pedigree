@@ -31,6 +31,11 @@ int h_errno; // required by networking code
 typedef void (*pthread_once_func_t)(void);
 int onceFunctions[32] = {0};
 
+static int pedigree_thrwakeup(pthread_t t)
+{
+    return syscall1(POSIX_PEDIGREE_THRWAKEUP, (long) t);
+}
+
 int pthread_once(pthread_once_t *once_control, pthread_once_func_t init_routine)
 {
     if(!once_control || (*once_control > 32))
@@ -348,7 +353,7 @@ int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
         return -1;
     }
     
-    lock->atom = 0;
+    lock->atom = 1;
     lock->owner = pthread_self();
     lock->locker = -1;
     return 0;
@@ -433,6 +438,10 @@ int pthread_spin_unlock(pthread_spinlock_t *lock)
     
     lock->locker = -1;
     __sync_bool_compare_and_swap(&lock->atom, 0, 1);
+    
+    // Avoids a case where, in a loop constantly performing an acquire, no other
+    // thread can access the spinlock.
+    sched_yield();
     
     return 0;
 }
