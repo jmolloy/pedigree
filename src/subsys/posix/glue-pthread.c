@@ -24,6 +24,7 @@ int h_errno; // required by networking code
 
 #include "posix-syscall.h"
 
+#define _WANT_STRING_H
 #include "newlib.h"
 
 #define _PTHREAD_ATTR_MAGIC 0xdeadbeef

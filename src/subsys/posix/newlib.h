@@ -31,7 +31,6 @@
 #include <sys/timeb.h>
 
 #include <stdlib.h>
-#include <string.h>
 #include <stdarg.h>
 #include <utime.h>
 
@@ -48,5 +47,9 @@
 #include <poll.h>
 
 #include <syslog.h>
+
+#ifdef _WANT_STRING_H
+#include <string.h>
+#endif
 
 #endif
