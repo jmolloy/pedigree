@@ -384,18 +384,16 @@ typedef int pthread_t;
 typedef int pthread_cond_t;
 typedef int pthread_condattr_t;
 typedef int pthread_key_t;
-typedef int pthread_mutex_t;
 typedef int pthread_mutexattr_t;
 typedef int pthread_once_t;
 typedef int pthread_rwlock_t;
 typedef int pthread_rwlockattr_t;
 
-typedef struct _pthread_attr_t
+typedef struct _mutex_q_item
 {
-    size_t stackSize;
-    int detachState;
-    __uint32_t magic; // == _PTHREAD_ATTR_MAGIC when initialised
-} pthread_attr_t;
+    pthread_t thr;
+    struct _mutex_q_item *next;
+} mutex_q_item;
 
 typedef struct _pthread_spinlock_t
 {
@@ -403,6 +401,21 @@ typedef struct _pthread_spinlock_t
     pthread_t owner;
     pthread_t locker;
 } pthread_spinlock_t;
+
+typedef struct _pthread_mutex_t
+{
+    int value;
+    mutex_q_item *q, *back, *front;
+    
+    pthread_spinlock_t lock;
+} pthread_mutex_t;
+
+typedef struct _pthread_attr_t
+{
+    size_t stackSize;
+    int detachState;
+    __uint32_t magic; // == _PTHREAD_ATTR_MAGIC when initialised
+} pthread_attr_t;
 #endif
 
 #endif  /* !__need_inttypes */

@@ -31,6 +31,8 @@ int posix_sem_close(sem_t *sem)
 
 int posix_sem_destroy(sem_t *sem)
 {
+    return 0;
+#if 0
     if(!sem)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -48,10 +50,13 @@ int posix_sem_destroy(sem_t *sem)
     pSubsystem->removeSyncObject(*sem);
 
     return 0;
+#endif
 }
 
 int posix_sem_getvalue(sem_t *sem, int *val)
 {
+    return 0;
+#if 0
     if(!sem)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -75,10 +80,13 @@ int posix_sem_getvalue(sem_t *sem, int *val)
 
     SYSCALL_ERROR(InvalidArgument);
     return -1;
+#endif
 }
 
 int posix_sem_init(sem_t *sem, int pshared, unsigned value)
 {
+    return 0;
+#if 0
     if(!sem)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -121,10 +129,13 @@ int posix_sem_init(sem_t *sem, int pshared, unsigned value)
 
     SYSCALL_ERROR(NoSpaceLeftOnDevice);
     return -1;
+#endif
 }
 
 int posix_sem_post(sem_t *sem)
 {
+    return 0;
+#if 0
     if(!sem)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -154,10 +165,13 @@ int posix_sem_post(sem_t *sem)
 
     SYSCALL_ERROR(InvalidArgument);
     return -1;
+#endif
 }
 
 int posix_sem_timedwait(sem_t *sem, const struct timespec *tm)
 {
+    return 0;
+#if 0
     if(!sem)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -193,10 +207,13 @@ int posix_sem_timedwait(sem_t *sem, const struct timespec *tm)
 
     SYSCALL_ERROR(InvalidArgument);
     return -1;
+#endif
 }
 
 int posix_sem_trywait(sem_t *sem)
 {
+    return 0;
+#if 0
     if(!sem)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -230,10 +247,13 @@ int posix_sem_trywait(sem_t *sem)
 
     SYSCALL_ERROR(InvalidArgument);
     return -1;
+#endif
 }
 
 int posix_sem_wait(sem_t *sem)
 {
+    return 0;
+#if 0
     if(!sem)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -269,10 +289,13 @@ int posix_sem_wait(sem_t *sem)
 
     SYSCALL_ERROR(InvalidArgument);
     return -1;
+#endif
 }
 
 int posix_pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
 {
+    return 0;
+#if 0
     if(!mutex)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -315,10 +338,13 @@ int posix_pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *
 
     SYSCALL_ERROR(NoSpaceLeftOnDevice);
     return -1;
+#endif
 }
 
 int posix_pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
+    return 0;
+#if 0
     if(!mutex || (!mutex == PTHREAD_MUTEX_INITIALIZER))
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -336,10 +362,13 @@ int posix_pthread_mutex_destroy(pthread_mutex_t *mutex)
     pSubsystem->removeSyncObject(*mutex);
 
     return 0;
+#endif
 }
 
 int posix_pthread_mutex_lock(pthread_mutex_t *mutex)
 {
+    return 0;
+#if 0
     if(!mutex)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -375,10 +404,13 @@ int posix_pthread_mutex_lock(pthread_mutex_t *mutex)
 
     SYSCALL_ERROR(InvalidArgument);
     return -1;
+#endif
 }
 
 int posix_pthread_mutex_trylock(pthread_mutex_t *mutex)
 {
+    return 0;
+#if 0
     if(!mutex)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -412,10 +444,13 @@ int posix_pthread_mutex_trylock(pthread_mutex_t *mutex)
 
     SYSCALL_ERROR(InvalidArgument);
     return -1;
+#endif
 }
 
 int posix_pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
+    return 0;
+#if 0
     if(!mutex)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -445,4 +480,5 @@ int posix_pthread_mutex_unlock(pthread_mutex_t *mutex)
 
     SYSCALL_ERROR(InvalidArgument);
     return -1;
+#endif
 }

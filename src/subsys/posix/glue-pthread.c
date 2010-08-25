@@ -36,6 +36,11 @@ static int pedigree_thrwakeup(pthread_t t)
     return syscall1(POSIX_PEDIGREE_THRWAKEUP, (long) t);
 }
 
+static int pedigree_thrsleep(pthread_t t)
+{
+    return syscall1(POSIX_PEDIGREE_THRSLEEP, (long) t);
+}
+
 int pthread_once(pthread_once_t *once_control, pthread_once_func_t init_routine)
 {
     if(!once_control || (*once_control > 32))
@@ -196,51 +201,138 @@ int pthread_attr_setschedparam(pthread_attr_t *attr, const struct sched_param *p
 
 int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
 {
-    return syscall2(POSIX_PTHREAD_MUTEX_INIT, (int) mutex, (int) attr);
+    syslog(LOG_NOTICE, "pthread_mutex_init(%x)", mutex);
+    
+    if(!mutex)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    
+    if(pthread_spin_init(&mutex->lock, 0) < 0)
+        return -1; // errno from the function
+
+    mutex->value = 1;
+    mutex->q = mutex->back = mutex->front = 0;
+    
+    return 0;
 }
 
 int pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
-    return syscall1(POSIX_PTHREAD_MUTEX_DESTROY, (int) mutex);
+    syslog(LOG_NOTICE, "pthread_mutex_destroy(%x)", mutex);
+    
+    if(!mutex)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    mutex->value = 0;
+    mutex->q = mutex->back = mutex->front = 0;
+    
+    pthread_spin_destroy(&mutex->lock);
+    
+    return 0;
 }
 
 int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
+    syslog(LOG_NOTICE, "pthread_mutex_lock(%x)", mutex);
+    
     if(!mutex)
     {
         errno = EINVAL;
         return -1;
     }
-
-    if(*mutex == PTHREAD_MUTEX_INITIALIZER)
+    
+    int32_t val = __sync_sub_and_fetch(&mutex->value, 1);
+    if(val >= 0)
+        return 0; // Got the lock
+    
+    // Not locked, block
+    mutex_q_item *i = (mutex_q_item*) malloc(sizeof(mutex_q_item));
+    i->thr = pthread_self();
+    i->next = 0;
+    
+    // This is a bit racy
+    if(!mutex->q)
     {
-        if(pthread_mutex_init(mutex, 0) == -1)
-            return -1;
+        syslog(LOG_NOTICE, "linking, queue is invalid");
+        
+        mutex->back = mutex->front = i;
+        mutex->q = mutex->front;
     }
-
-    return syscall1(POSIX_PTHREAD_MUTEX_LOCK, (int) mutex);
+    else
+    {
+        syslog(LOG_NOTICE, "linking, queue is active and valid");
+        
+        mutex->back->next = i;
+        mutex->back = i;
+    }
+    
+    syslog(LOG_NOTICE, "about to put to sleep (p=%x, thr=%d)", i, i->thr);
+    
+    // Wait until the mutex is unlocked now
+    pedigree_thrsleep(i->thr);
+    
+    syslog(LOG_NOTICE, "no longer asleep");
+    
+    free(i);
+    
+    // Locked
+    return 0;
 }
 
 int pthread_mutex_trylock(pthread_mutex_t *mutex)
 {
+    syslog(LOG_NOTICE, "pthread_mutex_trylock(%x)", mutex);
+    
     if(!mutex)
     {
         errno = EINVAL;
         return -1;
     }
-
-    if(*mutex == PTHREAD_MUTEX_INITIALIZER)
+    
+    // Is it probably safe to lock?
+    if((mutex->value - 1) < 0)
     {
-        if(pthread_mutex_init(mutex, 0) == -1)
-            return -1;
+        errno = EBUSY;
+        return -1;
     }
-
-    return syscall1(POSIX_PTHREAD_MUTEX_TRYLOCK, (int) mutex);
+    
+    return pthread_mutex_lock(mutex);
 }
 
 int pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
-    return syscall1(POSIX_PTHREAD_MUTEX_UNLOCK, (int) mutex);
+    syslog(LOG_NOTICE, "pthread_mutex_unlock(%x)", mutex);
+    
+    if(!mutex)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    
+    int32_t val = __sync_add_and_fetch(&mutex->value, 1);
+    
+    /// \todo Atomicity
+    if((!mutex->q) || (!mutex->front))
+    {
+        return 0;
+    }
+    mutex_q_item *front = mutex->front;
+    mutex->front = front->next;
+    mutex->q = mutex->front;
+    
+    syslog(LOG_NOTICE, "about to wake up (front=%x, thr=%d)", front, front->thr);
+    
+    pthread_t thr = front->thr;
+    pedigree_thrwakeup(thr);
+    
+    syslog(LOG_NOTICE, "wakeup complete");
+    
+    return 0;
 }
 
 int pthread_mutexattr_init(pthread_mutexattr_t *attr)

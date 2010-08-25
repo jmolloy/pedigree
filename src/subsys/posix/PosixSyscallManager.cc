@@ -303,6 +303,8 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             return 0;
         case POSIX_PEDIGREE_THRWAKEUP:
             return posix_pedigree_thrwakeup(static_cast<pthread_t>(p1));
+        case POSIX_PEDIGREE_THRSLEEP:
+            return posix_pedigree_thrsleep(static_cast<pthread_t>(p1));
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
 }

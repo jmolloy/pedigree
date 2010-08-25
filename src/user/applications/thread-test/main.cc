@@ -15,7 +15,7 @@ using namespace std;
 
 list<int> the_list;
 
-#define USE_SPINLOCK
+// #define USE_SPINLOCK
 
 #ifdef USE_SPINLOCK
 pthread_spinlock_t spinlock;

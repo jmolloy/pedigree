@@ -244,7 +244,9 @@ int posix_pthread_detach(pthread_t thread)
  */
 pthread_t posix_pthread_self()
 {
+    PT_NOTICE("pthread_self");
     Thread *pThread = Processor::information().getCurrentThread();
+    PT_NOTICE("    -> " << Dec << pThread->getId() << Hex);
     return pThread->getId();
 }
 
@@ -521,6 +523,33 @@ int posix_pedigree_thrwakeup(pthread_t thr)
     pThread->pThread->getLock().acquire();
     pThread->pThread->setStatus(Thread::Ready);
     pThread->pThread->getLock().release();
+    
+    Scheduler::instance().yield();
+    
+    return 0;
+}
+
+int posix_pedigree_thrsleep(pthread_t thr)
+{
+    // Grab the subsystem
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return -1;
+    }
+
+    // Grab the thread
+    PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(thr);
+    if(!pThread)
+    {
+        ERROR("Not a valid POSIX thread?");
+        return -1;
+    }
+    
+    // Put it to sleep
+    Processor::information().getScheduler().sleep();
     
     return 0;
 }
