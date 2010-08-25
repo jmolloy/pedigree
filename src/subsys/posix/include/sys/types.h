@@ -396,6 +396,13 @@ typedef struct _pthread_attr_t
     int detachState;
     __uint32_t magic; // == _PTHREAD_ATTR_MAGIC when initialised
 } pthread_attr_t;
+
+typedef struct _pthread_spinlock_t
+{
+    char atom;
+    pthread_t owner;
+    pthread_t locker;
+} pthread_spinlock_t;
 #endif
 
 #endif  /* !__need_inttypes */

@@ -337,3 +337,102 @@ int pthread_key_delete(pthread_key_t key)
         a(buff);
     return syscall1(POSIX_PTHREAD_KEY_DELETE, key);
 }
+
+
+
+int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
+{
+    if(!lock)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    
+    lock->atom = 0;
+    lock->owner = pthread_self();
+    lock->locker = -1;
+    return 0;
+}
+
+int pthread_spin_destroy(pthread_spinlock_t *lock)
+{
+    if(!lock)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    
+    if(lock->locker >= 0)
+    {
+        errno = EBUSY;
+        return -1;
+    }
+    
+    lock->owner = lock->locker = -1;
+    return 0;
+}
+
+int pthread_spin_lock(pthread_spinlock_t *lock)
+{
+    if(!lock)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    
+    while(!__sync_bool_compare_and_swap(&lock->atom, 1, 0))
+    {
+        if(lock->locker == pthread_self())
+        {
+            // Attempt to lock the lock... but we've already acquired it!
+            errno = EDEADLK;
+            return -1;
+        }
+        
+        /// \todo If there are no other threads running, this should throw EDEADLK
+        sched_yield();
+    }
+    
+    lock->locker = pthread_self();
+    
+    return 0;
+}
+
+int pthread_spin_trylock(pthread_spinlock_t *lock)
+{
+    if(!lock)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    
+    if(!__sync_bool_compare_and_swap(&lock->atom, 1, 0))
+    {
+        errno = EBUSY;
+        return -1;
+    }
+    
+    lock->locker = pthread_self();
+    
+    return 0;
+}
+
+int pthread_spin_unlock(pthread_spinlock_t *lock)
+{
+    if(!lock)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    
+    if(lock->locker < 0)
+    {
+        errno = EPERM;
+        return -1;
+    }
+    
+    lock->locker = -1;
+    __sync_bool_compare_and_swap(&lock->atom, 0, 1);
+    
+    return 0;
+}

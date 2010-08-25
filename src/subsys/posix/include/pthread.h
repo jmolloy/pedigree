@@ -117,6 +117,12 @@ int         _EXFUN(pthread_rwlock_wrlock, (pthread_rwlock_t *));
 int         _EXFUN(pthread_rwlockattr_destroy, (pthread_rwlockattr_t *));
 */
 
+int         _EXFUN(pthread_spin_destroy, (pthread_spinlock_t*));
+int         _EXFUN(pthread_spin_init, (pthread_spinlock_t*, int));
+int         _EXFUN(pthread_spin_lock, (pthread_spinlock_t*));
+int         _EXFUN(pthread_spin_trylock, (pthread_spinlock_t*));
+int         _EXFUN(pthread_spin_unlock, (pthread_spinlock_t*));
+
 #ifdef __cplusplus
 }
 #endif
