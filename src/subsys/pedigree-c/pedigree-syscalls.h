@@ -106,6 +106,7 @@ int pedigree_gfx_create_fbuffer(void *p, void *args);
 void pedigree_gfx_delete_fbuffer(void *p);
 
 void pedigree_gfx_fbinfo(void *p, size_t *w, size_t *h, uint32_t *fmt);
+void pedigree_gfx_setpalette(void* p, uint32_t *data, size_t entries);
 
 #ifdef __cplusplus
 }; // extern "C"

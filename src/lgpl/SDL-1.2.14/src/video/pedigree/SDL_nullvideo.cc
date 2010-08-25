@@ -48,6 +48,8 @@
 
 #include <graphics/Graphics.h>
 
+#include <syslog.h>
+
 #define PEDIGREEVID_DRIVER_NAME "pedigree"
 
 extern "C"
@@ -247,7 +249,7 @@ static void PEDIGREE_UpdateRects(_THIS, int numrects, SDL_Rect *rects)
     if(_this->screen->format->BitsPerPixel == 16)
         format = PedigreeGraphics::Bits16_Rgb555;
     else if(_this->screen->format->BitsPerPixel == 8)
-        format = PedigreeGraphics::Bits8_Rgb332;
+        format = PedigreeGraphics::Bits8_Idx;
     else
         format = PedigreeGraphics::Bits24_Rgb;
 
@@ -261,6 +263,24 @@ static void PEDIGREE_UpdateRects(_THIS, int numrects, SDL_Rect *rects)
 
 int PEDIGREE_SetColors(_THIS, int firstcolor, int ncolors, SDL_Color *colors)
 {
+    if(!_this->hidden->provider)
+        return 1;
+
+    PedigreeGraphics::Framebuffer *pFramebuffer = reinterpret_cast<PedigreeGraphics::Framebuffer*>(_this->hidden->provider);
+
+    uint32_t *palette = new uint32_t[256];
+    
+    size_t n = 0;
+    for(size_t i = firstcolor; i < (firstcolor + ncolors); i++)
+    {
+        palette[i] = PedigreeGraphics::createRgb(colors[n].r, colors[n].g, colors[n].b);
+        n++;
+    }
+    
+    pFramebuffer->setPalette(palette, 256);
+    
+    syslog(LOG_NOTICE, "SDL: SetColors called, %d changed colour entries in the palette", ncolors);
+
 	/* do nothing of note. */
 	return(1);
 }

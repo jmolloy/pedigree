@@ -22,6 +22,12 @@ class Framebuffer;
  
 namespace Graphics
 {
+    /// Creates a 24-bit RGB value (Bits24_Rgb)
+    inline uint32_t createRgb(uint32_t r, uint32_t g, uint32_t b)
+    {
+        return (r << 16) | (g << 8) | b;
+    }
+
     enum PixelFormat
     {
         Bits32_Argb,        // Alpha + RGB, with alpha in the highest byte
@@ -65,12 +71,6 @@ namespace Graphics
     inline size_t bytesPerPixel(PixelFormat format)
     {
         return bitsPerPixel(format) / 8;
-    }
-    
-    /// Creates a 24-bit RGB value (Bits24_Rgb)
-    inline uint32_t createRgb(uint32_t r, uint32_t g, uint32_t b)
-    {
-        return (r << 16) | (g << 8) | b;
     }
     
     struct Buffer

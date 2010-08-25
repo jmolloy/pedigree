@@ -114,6 +114,11 @@ namespace PedigreeGraphics
             /** Gets the framebuffer's native format */
             PedigreeGraphics::PixelFormat getFormat();
             
+            /** Sets a new palette for use with indexed colour formats. The
+             *  palette should be an array of uint32_t's, all of which will be
+             *  interpreted as 24-bit RGB. */
+            void setPalette(uint32_t *palette, size_t entries);
+            
             /** Gets a raw pointer to the framebuffer itself. There is no way to
              *  know if this pointer points to an MMIO region or real RAM, so it
              *  cannot be guaranteed to be safe.

@@ -65,5 +65,6 @@
 #define PEDIGREE_GFX_CREATE_FBUFFER         76
 #define PEDIGREE_GFX_DELETE_FBUFFER         77
 #define PEDIGREE_GFX_FBINFO                 78
+#define PEDIGREE_GFX_SETPALETTE             79
 
 #endif

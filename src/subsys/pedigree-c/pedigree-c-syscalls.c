@@ -250,3 +250,8 @@ void pedigree_gfx_fbinfo(void *p, size_t *w, size_t *h, uint32_t *fmt)
     syscall4(PEDIGREE_GFX_FBINFO, (long) p, (long) w, (long) h, (long) fmt);
 }
 
+void pedigree_gfx_setpalette(void* p, uint32_t *data, size_t entries)
+{
+    syscall3(PEDIGREE_GFX_SETPALETTE, (long) p, (long) data, (long) entries);
+}
+

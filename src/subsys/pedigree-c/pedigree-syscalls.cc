@@ -473,6 +473,16 @@ void pedigree_gfx_fbinfo(void *p, size_t *w, size_t *h, uint32_t *fmt)
         *fmt = static_cast<uint32_t>(pProvider->pFramebuffer->getFormat());
 }
 
+void pedigree_gfx_setpalette(void* p, uint32_t *data, size_t entries)
+{
+    if(!p)
+        return;
+
+    GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
+    
+    pProvider->pFramebuffer->setPalette(data, entries);
+}
+
 void pedigree_event_return()
 {
     // Return to the old code

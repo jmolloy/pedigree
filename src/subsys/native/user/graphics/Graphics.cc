@@ -70,6 +70,14 @@ Framebuffer::~Framebuffer()
         pedigree_gfx_delete_fbuffer(&m_Provider);
 }
 
+void Framebuffer::setPalette(uint32_t *palette, size_t entries)
+{
+    if(!m_bProviderValid)
+        return;
+    
+    pedigree_gfx_setpalette(&m_Provider, palette, entries);
+}
+
 size_t Framebuffer::getWidth()
 {
     if(!m_bProviderValid)

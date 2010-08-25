@@ -34,6 +34,15 @@ class Framebuffer
     
         Framebuffer() : m_pParent(0), m_FramebufferBase(0)
         {
+            m_Palette = new uint32_t[256];
+            
+            size_t i = 0;
+            for(size_t r = 0; r <= 255; r += 0x33)
+                for(size_t g = 0; g <= 255; g += 0x33)
+                    for(size_t b = 0; b <= 255; b += 0x33)
+                        m_Palette[i++] = Graphics::createRgb(r, g, b);
+            
+            NOTICE("Framebuffer: created " << Dec << i << Hex << " entries in the default palette");
         }
         
         virtual ~Framebuffer()
@@ -59,7 +68,16 @@ class Framebuffer
         /// array of pixels in Bits32_Argb format.
         inline void setPalette(uint32_t *palette, size_t nEntries)
         {
-            /// \todo Write
+            delete [] m_Palette;
+            m_Palette = new uint32_t[nEntries];
+            memcpy(m_Palette, palette, nEntries * sizeof(uint32_t));
+            
+            NOTICE("Framebuffer: new palette set with " << Dec << nEntries << Hex << " entries");
+        }
+        
+        uint32_t *getPalette()
+        {
+            return m_Palette;
         }
         
         /** Gets a raw pointer to the framebuffer itself. There is no way to
@@ -302,6 +320,9 @@ class Framebuffer
         // Base address of this framebuffer, set by whatever code inherits this
         // class, ideally in the constructor.
         uintptr_t m_FramebufferBase;
+      
+        /// Current graphics palette - an array of 256 32-bit RGBA entries
+        uint32_t *m_Palette;
         
         void swBlit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
                     size_t destx, size_t desty, size_t width, size_t height);

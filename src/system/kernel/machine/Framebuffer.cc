@@ -78,7 +78,14 @@ Graphics::Buffer *Framebuffer::swCreateBuffer(const void *srcData, Graphics::Pix
                 const uint32_t *pSource = reinterpret_cast<const uint32_t*>(adjust_pointer(srcData, sourceOffset));
                 
                 uint32_t transform = 0;
-                Graphics::convertPixel(*pSource, srcFormat, transform, destFormat);
+                if(srcFormat == Graphics::Bits8_Idx)
+                {
+                    const uint8_t *tmp = reinterpret_cast<const uint8_t*>(adjust_pointer(srcData, sourceOffset));
+                    uint32_t source = m_Palette[*tmp];
+                    Graphics::convertPixel(source, Graphics::Bits24_Bgr, transform, destFormat);
+                }
+                else
+                    Graphics::convertPixel(*pSource, srcFormat, transform, destFormat);
                 
                 if(destBytesPerPixel == 4)
                 {
@@ -201,7 +208,13 @@ void Framebuffer::swRect(size_t x, size_t y, size_t width, size_t height, uint32
         height = (y + height) - m_nHeight;
     
     uint32_t transformColour = 0;
-    Graphics::convertPixel(colour, format, transformColour, m_PixelFormat);
+    if(format == Graphics::Bits8_Idx)
+    {
+        uint32_t source = m_Palette[colour & 0xFF];
+        Graphics::convertPixel(source, Graphics::Bits24_Bgr, transformColour, m_PixelFormat);
+    }
+    else
+        Graphics::convertPixel(colour, format, transformColour, m_PixelFormat);
     
     size_t bytesPerPixel = m_nBytesPerPixel;
     size_t bytesPerLine = m_nBytesPerLine;
@@ -363,7 +376,13 @@ void Framebuffer::swLine(size_t x1, size_t y1, size_t x2, size_t y2, uint32_t co
         return;
     
     uint32_t transformColour = 0;
-    Graphics::convertPixel(colour, format, transformColour, m_PixelFormat);
+    if(format == Graphics::Bits8_Idx)
+    {
+        uint32_t source = m_Palette[colour & 0xFF];
+        Graphics::convertPixel(source, Graphics::Bits24_Bgr, transformColour, m_PixelFormat);
+    }
+    else
+        Graphics::convertPixel(colour, format, transformColour, m_PixelFormat);
     
     // Special cases
     if(x1 == x2) // Vertical line
@@ -434,9 +453,15 @@ void Framebuffer::swSetPixel(size_t x, size_t y, uint32_t colour, Graphics::Pixe
     
     size_t bytesPerPixel = m_nBytesPerPixel;
     size_t bytesPerLine = m_nBytesPerLine;
-
+    
     uint32_t transformColour = 0;
-    Graphics::convertPixel(colour, format, transformColour, m_PixelFormat);
+    if(format == Graphics::Bits8_Idx)
+    {
+        uint32_t source = m_Palette[colour & 0xFF];
+        Graphics::convertPixel(source, Graphics::Bits24_Bgr, transformColour, m_PixelFormat);
+    }
+    else
+        Graphics::convertPixel(colour, format, transformColour, m_PixelFormat);
 
     size_t frameBufferOffset = (y * bytesPerLine) + (x * bytesPerPixel);
 

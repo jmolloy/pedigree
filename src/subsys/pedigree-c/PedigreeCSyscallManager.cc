@@ -154,6 +154,9 @@ uintptr_t PedigreeCSyscallManager::syscall(SyscallState &state)
         case PEDIGREE_GFX_FBINFO:
             pedigree_gfx_fbinfo(reinterpret_cast<void*>(p1), reinterpret_cast<size_t*>(p2), reinterpret_cast<size_t*>(p3), reinterpret_cast<uint32_t*>(p4));
             return 0;
+        case PEDIGREE_GFX_SETPALETTE:
+            pedigree_gfx_setpalette(reinterpret_cast<void*>(p1), reinterpret_cast<uint32_t*>(p2), static_cast<size_t>(p3));
+            return 0;
         case PEDIGREE_INPUT_INSTALL_CALLBACK:
             pedigree_input_install_callback(reinterpret_cast<void*>(p1), static_cast<uintptr_t>(p2));
             return 0;
