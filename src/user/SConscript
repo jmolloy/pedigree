@@ -93,12 +93,12 @@ for i in all_apps:
     e = tmp.Clone()
     
     if i in sdl_apps:
-        e['LIBS'] += ['SDL']
+        e['LIBS'] += ['SDL', 'pthread']
         e['CPPPATH'] += ['#/src/lgpl/SDL-1.2.14/include']
     
     # SDL apps require libpedigree (C++)
     if i in cpp_apps or i in sdl_apps:
-        e['LIBS'] += ['pedigree', 'stdc++', 'pthread']
+        e['LIBS'] += ['pedigree', 'stdc++']
         e['LIBPATH'] += [imagesdir + 'libraries']
         e['CPPPATH'] += ['#/src/subsys/native/include',
                          '#/src/subsys/posix/include/c++/4.3.2',
