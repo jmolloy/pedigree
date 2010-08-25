@@ -31,8 +31,8 @@ int posix_sem_close(sem_t *sem)
 
 int posix_sem_destroy(sem_t *sem)
 {
-    return 0;
-#if 0
+    PT_NOTICE("sem_destroy");
+
     if(!sem)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -50,13 +50,12 @@ int posix_sem_destroy(sem_t *sem)
     pSubsystem->removeSyncObject(*sem);
 
     return 0;
-#endif
 }
 
 int posix_sem_getvalue(sem_t *sem, int *val)
 {
-    return 0;
-#if 0
+    PT_NOTICE("sem_getvalue");
+
     if(!sem)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -80,13 +79,12 @@ int posix_sem_getvalue(sem_t *sem, int *val)
 
     SYSCALL_ERROR(InvalidArgument);
     return -1;
-#endif
 }
 
 int posix_sem_init(sem_t *sem, int pshared, unsigned value)
 {
-    return 0;
-#if 0
+    PT_NOTICE("sem_init");
+
     if(!sem)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -129,13 +127,12 @@ int posix_sem_init(sem_t *sem, int pshared, unsigned value)
 
     SYSCALL_ERROR(NoSpaceLeftOnDevice);
     return -1;
-#endif
 }
 
 int posix_sem_post(sem_t *sem)
 {
-    return 0;
-#if 0
+    PT_NOTICE("sem_post");
+
     if(!sem)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -165,13 +162,12 @@ int posix_sem_post(sem_t *sem)
 
     SYSCALL_ERROR(InvalidArgument);
     return -1;
-#endif
 }
 
 int posix_sem_timedwait(sem_t *sem, const struct timespec *tm)
 {
-    return 0;
-#if 0
+    PT_NOTICE("sem_timedwait");
+
     if(!sem)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -207,13 +203,12 @@ int posix_sem_timedwait(sem_t *sem, const struct timespec *tm)
 
     SYSCALL_ERROR(InvalidArgument);
     return -1;
-#endif
 }
 
 int posix_sem_trywait(sem_t *sem)
 {
-    return 0;
-#if 0
+    PT_NOTICE("sem_trywait");
+
     if(!sem)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -247,13 +242,12 @@ int posix_sem_trywait(sem_t *sem)
 
     SYSCALL_ERROR(InvalidArgument);
     return -1;
-#endif
 }
 
 int posix_sem_wait(sem_t *sem)
 {
-    return 0;
-#if 0
+    PT_NOTICE("sem_wait");
+
     if(!sem)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -289,7 +283,6 @@ int posix_sem_wait(sem_t *sem)
 
     SYSCALL_ERROR(InvalidArgument);
     return -1;
-#endif
 }
 
 int posix_pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
