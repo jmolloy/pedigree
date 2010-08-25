@@ -156,8 +156,8 @@ int PEDIGREE_VideoInit(_THIS, SDL_PixelFormat *vformat)
 
 	/* Determine the screen depth (use default 8-bit depth) */
 	/* we change this during the SDL_SetVideoMode implementation... */
-	vformat->BitsPerPixel = 24;
-	vformat->BytesPerPixel = 3;
+	vformat->BitsPerPixel = 16;
+	vformat->BytesPerPixel = 2;
 
     PEDIGREE_InitInput();
 
@@ -247,7 +247,7 @@ static void PEDIGREE_UpdateRects(_THIS, int numrects, SDL_Rect *rects)
     
     PedigreeGraphics::PixelFormat format;
     if(_this->screen->format->BitsPerPixel == 16)
-        format = PedigreeGraphics::Bits16_Rgb555;
+        format = PedigreeGraphics::Bits16_Rgb565;
     else if(_this->screen->format->BitsPerPixel == 8)
         format = PedigreeGraphics::Bits8_Idx;
     else
@@ -274,12 +274,13 @@ int PEDIGREE_SetColors(_THIS, int firstcolor, int ncolors, SDL_Color *colors)
     for(size_t i = firstcolor; i < (firstcolor + ncolors); i++)
     {
         palette[i] = PedigreeGraphics::createRgb(colors[n].r, colors[n].g, colors[n].b);
+        syslog(LOG_NOTICE, "SDL: SetColor[%d]: %x", i, palette[i]);
         n++;
     }
     
     pFramebuffer->setPalette(palette, 256);
     
-    syslog(LOG_NOTICE, "SDL: SetColors called, %d changed colour entries in the palette", ncolors);
+    syslog(LOG_NOTICE, "SDL: SetColors called, %d->%d changed colour entries in the palette", firstcolor, ncolors);
 
 	/* do nothing of note. */
 	return(1);

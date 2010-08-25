@@ -21,7 +21,7 @@
 
 #include <Log.h>
 
-Graphics::Buffer *Framebuffer::swCreateBuffer(const void *srcData, Graphics::PixelFormat srcFormat, size_t width, size_t height)
+Graphics::Buffer *Framebuffer::swCreateBuffer(const void *srcData, Graphics::PixelFormat srcFormat, size_t width, size_t height, uint32_t *pPalette)
 {
     if(UNLIKELY(!m_FramebufferBase))
         return 0;
@@ -80,9 +80,8 @@ Graphics::Buffer *Framebuffer::swCreateBuffer(const void *srcData, Graphics::Pix
                 uint32_t transform = 0;
                 if(srcFormat == Graphics::Bits8_Idx)
                 {
-                    const uint8_t *tmp = reinterpret_cast<const uint8_t*>(adjust_pointer(srcData, sourceOffset));
-                    uint32_t source = m_Palette[*tmp];
-                    Graphics::convertPixel(source, Graphics::Bits24_Bgr, transform, destFormat);
+                    uint32_t source = pPalette[(*pSource) & 0xFF];
+                    Graphics::convertPixel(source, Graphics::Bits24_Rgb, transform, destFormat);
                 }
                 else
                     Graphics::convertPixel(*pSource, srcFormat, transform, destFormat);
@@ -494,7 +493,7 @@ void Framebuffer::swDraw(void *pBuffer, size_t srcx, size_t srcy,
 {
     // Potentially inefficient use of RAM and VRAM, but best way to avoid
     // redundant copies of code lying around.
-    Graphics::Buffer *p = createBuffer(pBuffer, format, srcx + width, srcy + height);
+    Graphics::Buffer *p = createBuffer(pBuffer, format, srcx + width, srcy + height, m_Palette);
     if(!p)
         return;
     blit(p, srcx, srcy, destx, desty, width, height, bLowestCall);

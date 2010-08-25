@@ -37,9 +37,9 @@ class Framebuffer
             m_Palette = new uint32_t[256];
             
             size_t i = 0;
-            for(size_t r = 0; r <= 255; r += 0x33)
-                for(size_t g = 0; g <= 255; g += 0x33)
-                    for(size_t b = 0; b <= 255; b += 0x33)
+            for(size_t g = 0; g <= 255; g += 0x33)
+                for(size_t b = 0; b <= 255; b += 0x33)
+                    for(size_t r = 0; r <= 255; r += 0x33)
                         m_Palette[i++] = Graphics::createRgb(r, g, b);
             
             NOTICE("Framebuffer: created " << Dec << i << Hex << " entries in the default palette");
@@ -105,20 +105,20 @@ class Framebuffer
          *  The buffer should be padded to finish on a DWORD boundary. This is
          *  not padding per scanline but rather padding per buffer. */
         virtual Graphics::Buffer *createBuffer(const void *srcData, Graphics::PixelFormat srcFormat,
-                                               size_t width, size_t height)
+                                               size_t width, size_t height, uint32_t *pPalette = 0)
         {
             if(m_pParent)
-                return m_pParent->createBuffer(srcData, srcFormat, width, height);
-            return swCreateBuffer(srcData, srcFormat, width, height);
+                 return m_pParent->createBuffer(srcData, srcFormat, width, height, pPalette);
+            return swCreateBuffer(srcData, srcFormat, width, height, pPalette);
         }
         
         /** Destroys a created buffer. Frees its memory in both the system RAM
          *  and any references still in VRAM. */
         virtual void destroyBuffer(Graphics::Buffer *pBuffer)
         {
-            if(m_pParent)
-                m_pParent->destroyBuffer(pBuffer);
-            else
+            // if(m_pParent)
+            //     m_pParent->destroyBuffer(pBuffer);
+            // else
                 swDestroyBuffer(pBuffer);
         }
         
@@ -342,7 +342,7 @@ class Framebuffer
                     bool bLowestCall = true);
                     
         Graphics::Buffer *swCreateBuffer(const void *srcData, Graphics::PixelFormat srcFormat,
-                                         size_t width, size_t height);
+                                         size_t width, size_t height, uint32_t *pPalette);
         
         void swDestroyBuffer(Graphics::Buffer *pBuffer);
         
