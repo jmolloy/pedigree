@@ -41,9 +41,9 @@ void probeXhci(Device *pDev)
     // Create a new Xhci node
     Xhci *pXhci = new Xhci(pDev);
 
-    // Replace pDev with pXhci.
-    pXhci->setParent(pDev->getParent());
+    // Replace pDev with pXhci, then delete pDev
     pDev->getParent()->replaceChild(pDev, pXhci);
+    delete pDev;
     */
 }
 
@@ -54,9 +54,9 @@ void probeEhci(Device *pDev)
     // Create a new Ehci node
     Ehci *pEhci = new Ehci(pDev);
 
-    // Replace pDev with pEhci.
-    pEhci->setParent(pDev->getParent());
+    // Replace pDev with pEhci, then delete pDev
     pDev->getParent()->replaceChild(pDev, pEhci);
+    delete pDev;
 }
 
 void probeOhci(Device *pDev)
@@ -66,9 +66,9 @@ void probeOhci(Device *pDev)
     // Create a new Ohci node
     Ohci *pOhci = new Ohci(pDev);
 
-    // Replace pDev with pOhci.
-    pOhci->setParent(pDev->getParent());
+    // Replace pDev with pOhci, then delete pDev
     pDev->getParent()->replaceChild(pDev, pOhci);
+    delete pDev;
 }
 
 #ifdef X86_COMMON
@@ -79,9 +79,9 @@ void probeUhci(Device *pDev)
     // Create a new Uhci node
     Uhci *pUhci = new Uhci(pDev);
 
-    // Replace pDev with pUhci.
-    pUhci->setParent(pDev->getParent());
+    // Replace pDev with pUhci, then delete pDev
     pDev->getParent()->replaceChild(pDev, pUhci);
+    delete pDev;
 }
 #endif
 
