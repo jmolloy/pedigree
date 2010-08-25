@@ -524,8 +524,6 @@ int posix_pedigree_thrwakeup(pthread_t thr)
     pThread->pThread->setStatus(Thread::Ready);
     pThread->pThread->getLock().release();
     
-    Scheduler::instance().yield();
-    
     return 0;
 }
 

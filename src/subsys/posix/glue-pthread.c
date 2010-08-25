@@ -28,6 +28,9 @@ int h_errno; // required by networking code
 
 #define _PTHREAD_ATTR_MAGIC 0xdeadbeef
 
+// Define to 1 to get verbose debugging (hinders performance) in some functions
+#define PTHREAD_DEBUG       0
+
 typedef void (*pthread_once_func_t)(void);
 int onceFunctions[32] = {0};
 
@@ -201,13 +204,17 @@ int pthread_attr_setschedparam(pthread_attr_t *attr, const struct sched_param *p
 
 int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
 {
+#if PTHREAD_DEBUG
     syslog(LOG_NOTICE, "pthread_mutex_init(%x)", mutex);
+#endif
     
     if(!mutex)
     {
         errno = EINVAL;
         return -1;
     }
+    
+    memset(mutex, 0, sizeof(pthread_mutex_t));
     
     if(pthread_spin_init(&mutex->lock, 0) < 0)
         return -1; // errno from the function
@@ -220,7 +227,9 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
 
 int pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
+#if PTHREAD_DEBUG
     syslog(LOG_NOTICE, "pthread_mutex_destroy(%x)", mutex);
+#endif
     
     if(!mutex)
     {
@@ -233,12 +242,16 @@ int pthread_mutex_destroy(pthread_mutex_t *mutex)
     
     pthread_spin_destroy(&mutex->lock);
     
+    memset(mutex, 0, sizeof(pthread_mutex_t));
+    
     return 0;
 }
 
 int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
+#if PTHREAD_DEBUG
     syslog(LOG_NOTICE, "pthread_mutex_lock(%x)", mutex);
+#endif
     
     if(!mutex)
     {
@@ -246,16 +259,25 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
         return -1;
     }
     
-    int32_t val = __sync_sub_and_fetch(&mutex->value, 1);
-    if(val >= 0)
-        return 0; // Got the lock
+    // Attempt a direct acquire
+    int32_t val = mutex->value;
+    if((val - 1) >= 0)
+    {
+        if(__sync_bool_compare_and_swap(&mutex->value, val, val - 1))
+            return 0;
+    }
     
-    // Not locked, block
+    // Couldn't acquire, lock
     mutex_q_item *i = (mutex_q_item*) malloc(sizeof(mutex_q_item));
     i->thr = pthread_self();
     i->next = 0;
     
+    mutex_q_item *old_front = mutex->front;
+    mutex_q_item *old_back = mutex->back;
+    mutex_q_item *old_q = mutex->q;
+    
     // This is a bit racy
+    pthread_spin_lock(&mutex->lock);
     if(!mutex->q)
     {
         syslog(LOG_NOTICE, "linking, queue is invalid");
@@ -273,7 +295,22 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     
     syslog(LOG_NOTICE, "about to put to sleep (p=%x, thr=%d)", i, i->thr);
     
-    // Wait until the mutex is unlocked now
+    pthread_spin_unlock(&mutex->lock);
+    
+    // Check for mutex unlock while we've been manipulating the queue!
+    if(val == (mutex->value - 1))
+    {
+        syslog(LOG_NOTICE, "mutex unlocked just before we went to sleep");
+        
+        pthread_spin_lock(&mutex->lock);
+        mutex->back = old_back;
+        mutex->front = old_front;
+        mutex->q = old_q;
+        free(i);
+        pthread_spin_unlock(&mutex->lock);
+        
+        return 0;
+    }
     pedigree_thrsleep(i->thr);
     
     syslog(LOG_NOTICE, "no longer asleep");
@@ -286,7 +323,9 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
 
 int pthread_mutex_trylock(pthread_mutex_t *mutex)
 {
+#if PTHREAD_DEBUG
     syslog(LOG_NOTICE, "pthread_mutex_trylock(%x)", mutex);
+#endif
     
     if(!mutex)
     {
@@ -294,19 +333,22 @@ int pthread_mutex_trylock(pthread_mutex_t *mutex)
         return -1;
     }
     
-    // Is it probably safe to lock?
-    if((mutex->value - 1) < 0)
+    int32_t val = mutex->value;
+    if((val - 1) >= 0)
     {
-        errno = EBUSY;
-        return -1;
+        if(__sync_bool_compare_and_swap(&mutex->value, val, val - 1))
+            return 0;
     }
     
-    return pthread_mutex_lock(mutex);
+    errno = EBUSY;
+    return -1;
 }
 
 int pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
+#if PTHREAD_DEBUG
     syslog(LOG_NOTICE, "pthread_mutex_unlock(%x)", mutex);
+#endif
     
     if(!mutex)
     {
@@ -316,21 +358,20 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
     
     int32_t val = __sync_add_and_fetch(&mutex->value, 1);
     
-    /// \todo Atomicity
+    pthread_spin_lock(&mutex->lock);
     if((!mutex->q) || (!mutex->front))
     {
+        pthread_spin_unlock(&mutex->lock);
         return 0;
     }
     mutex_q_item *front = mutex->front;
     mutex->front = front->next;
     mutex->q = mutex->front;
     
-    syslog(LOG_NOTICE, "about to wake up (front=%x, thr=%d)", front, front->thr);
-    
     pthread_t thr = front->thr;
     pedigree_thrwakeup(thr);
     
-    syslog(LOG_NOTICE, "wakeup complete");
+    pthread_spin_unlock(&mutex->lock);
     
     return 0;
 }
@@ -355,24 +396,28 @@ int pthread_mutexattr_destroy(pthread_mutexattr_t *attr)
 
 int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr)
 {
-    return pthread_mutex_init(cond, 0);
+    errno = ENOSYS;
+    return -1;
 }
 
 int pthread_cond_destroy(pthread_cond_t *cond)
 {
-    return pthread_mutex_destroy(cond);
+    errno = ENOSYS;
+    return -1;
 }
 
 int pthread_cond_broadcast(pthread_cond_t *cond)
 {
-    return pthread_mutex_unlock(cond);
+    errno = ENOSYS;
+    return -1;
 }
 
 /// \note pthread_cond_signal will unblock *at least one* thread... In this
 ///       implementation, it really is just like broadcast.
 int pthread_cond_signal(pthread_cond_t *cond)
 {
-    return pthread_mutex_unlock(cond);
+    errno = ENOSYS;
+    return -1;
 }
 
 int pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *tm)
@@ -383,11 +428,8 @@ int pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, const s
 
 int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 {
-    if(pthread_mutex_unlock(mutex) == -1)
-        return -1;
-    pthread_mutex_lock(cond);
-    pthread_mutex_lock(mutex);
-    return 0;
+    errno = ENOSYS;
+    return -1;
 }
 
 int pthread_condattr_destroy(pthread_condattr_t *attr)
