@@ -116,7 +116,7 @@
 #undef HAVE_ICONV
 #define HAVE_SIGACTION 1
 #undef HAVE_SETJMP
-#define HAVE_NANOSLEEP 1
+#undef HAVE_NANOSLEEP
 #undef HAVE_CLOCK_GETTIME
 #define HAVE_GETPAGESIZE 1
 #undef HAVE_MPROTECT
@@ -225,12 +225,12 @@
 /* Enable various timer systems */
 #undef SDL_TIMER_BEOS
 #undef SDL_TIMER_DC
-#define SDL_TIMER_DUMMY 1
+#undef SDL_TIMER_DUMMY
 #undef SDL_TIMER_MACOS
 #undef SDL_TIMER_MINT
 #undef SDL_TIMER_OS2
 #undef SDL_TIMER_RISCOS
-#undef SDL_TIMER_UNIX
+#define SDL_TIMER_UNIX 1
 #undef SDL_TIMER_WIN32
 #undef SDL_TIMER_WINCE
 

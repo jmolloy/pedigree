@@ -39,7 +39,7 @@ files = [
     Glob('src/cdrom/dummy/*.c'),
 #     Glob('src/thread/generic/*.c'),
     Glob('src/thread/pthread/*.c'),
-    Glob('src/timer/dummy/*.c'),
+    Glob('src/timer/unix/*.c'),
     Glob('src/loadso/dlopen/*.c'),
 ]
 
