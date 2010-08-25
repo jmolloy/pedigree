@@ -51,7 +51,8 @@ sdl_apps = [
 # Applications which use libpedigree and/or libstdc++
 cpp_apps = [
     'TUI',
-    'apptest'
+    'apptest',
+    'thread-test'
 ]
 
 # Custom include paths for specific applications
@@ -62,7 +63,8 @@ custom_incpath = {
 
 # Custom libraries for specific applications
 custom_libs = {
-    'TUI' : ['png', 'freetype', 'z']
+    'TUI' : ['png', 'freetype', 'z'],
+    'thread-test' : ['pthread']
 }
 
 # Default libraries for all applications
@@ -99,7 +101,8 @@ for i in all_apps:
         e['LIBS'] += ['pedigree', 'stdc++', 'pthread']
         e['LIBPATH'] += [imagesdir + 'libraries']
         e['CPPPATH'] += ['#/src/subsys/native/include',
-                         '#/src/subsys/posix/include/c++/4.3.2']
+                         '#/src/subsys/posix/include/c++/4.3.2',
+                         '#/src/subsys/posix/include/c++/4.3.2/i686-pedigree']
 
     base = appsbase + i
     
