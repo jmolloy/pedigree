@@ -49,7 +49,6 @@ void *consumer(void *ptr)
 
         i = the_list.front();
         the_list.pop_front();
-        printf("popping off front [%d]\n", pthread_self());
 
 #ifdef USE_SPINLOCK
         pthread_spin_unlock(&spinlock);
@@ -57,8 +56,6 @@ void *consumer(void *ptr)
         pthread_mutex_unlock(&mutex);
 #endif
     }
-    
-    printf("Thread done!\n");
 
     return NULL;
 }
