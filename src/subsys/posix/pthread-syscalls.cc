@@ -199,7 +199,7 @@ int posix_pthread_join(pthread_t thread, void **value_ptr)
  */
 int posix_pthread_detach(pthread_t thread)
 {
-    PT_NOTICE("pthread_join");
+    PT_NOTICE("pthread_detach");
 
     // Grab the subsystem
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -259,6 +259,7 @@ pthread_t posix_pthread_self()
  */
 int posix_pthread_enter(uintptr_t arg)
 {
+    PT_NOTICE("pthread_enter");
     return 0;
 }
 
@@ -315,6 +316,8 @@ void pedigree_init_pthreads()
 
 void* posix_pthread_getspecific(pthread_key_t key)
 {
+    PT_NOTICE("pthread_getspecific");
+    
     // Grab the subsystem
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
@@ -347,6 +350,8 @@ void* posix_pthread_getspecific(pthread_key_t key)
 
 int posix_pthread_setspecific(pthread_key_t key, const void *buff)
 {
+    PT_NOTICE("pthread_setspecific");
+    
     // Grab the subsystem
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
@@ -381,6 +386,8 @@ int posix_pthread_setspecific(pthread_key_t key, const void *buff)
 
 int posix_pthread_key_create(pthread_key_t *okey, key_destructor destructor)
 {
+    PT_NOTICE("pthread_key_create");
+    
     // Grab the subsystem
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
@@ -430,6 +437,8 @@ int posix_pthread_key_create(pthread_key_t *okey, key_destructor destructor)
 
 key_destructor posix_pthread_key_destructor(pthread_key_t key)
 {
+    PT_NOTICE("pthread_key_destructor");
+    
     // Grab the subsystem
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
@@ -461,6 +470,8 @@ key_destructor posix_pthread_key_destructor(pthread_key_t key)
 
 int posix_pthread_key_delete(pthread_key_t key)
 {
+    PT_NOTICE("pthread_key_delete");
+    
     // Grab the subsystem
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
