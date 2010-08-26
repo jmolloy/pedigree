@@ -219,6 +219,28 @@ void InputManager::removeCallback(callback_t callback, Thread *pThread)
     }
 }
 
+bool InputManager::removeCallbackByThread(Thread *pThread)
+{
+#ifdef THREADS
+    LockGuard<Spinlock> guard(m_QueueLock);
+    for(List<CallbackItem*>::Iterator it = m_Callbacks.begin();
+        it != m_Callbacks.end();
+        it++)
+    {
+        if(*it)
+        {
+            if(pThread == (*it)->pThread)
+            {
+                m_Callbacks.erase(it);
+                return true;
+            }
+        }
+    }
+    
+    return false;
+#endif
+}
+
 int InputManager::trampoline(void *ptr)
 {
     InputManager *p = reinterpret_cast<InputManager *>(ptr);

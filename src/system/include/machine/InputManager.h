@@ -94,6 +94,11 @@ class InputManager
 
         /// Removes a callback
         void removeCallback(callback_t callback, Thread *pThread = 0);
+        
+        /// Removes a callback by searching for a Thread pointer. This can be
+        /// used to avoid useless and broken links to a Thread in the callback
+        /// list if the Thread doesn't clean up properly.
+        bool removeCallbackByThread(Thread *pThread);
 
         /// Thread trampoline
         static int trampoline(void *ptr);

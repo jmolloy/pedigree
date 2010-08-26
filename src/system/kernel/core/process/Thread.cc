@@ -24,6 +24,8 @@
 #include <machine/Machine.h>
 #include <Log.h>
 
+#include <machine/InputManager.h>
+
 Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
                void *pStack, bool semiUser) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
@@ -117,6 +119,12 @@ Thread::Thread(Process *pParent, SyscallState &state) :
 
 Thread::~Thread()
 {
+  if(InputManager::instance().removeCallbackByThread(this))
+  {
+    WARNING("A thread is being removed, but it never removed itself from InputManager.");
+    WARNING("This warning indicates an application or kernel module is buggy!");
+  }
+
   // Remove us from the scheduler.
   Scheduler::instance().removeThread(this);
 
