@@ -277,32 +277,23 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     mutex_q_item *old_back = mutex->back;
     mutex_q_item *old_q = mutex->q;
     
-    // This is a bit racy
     pthread_spin_lock(&mutex->lock);
     if(!mutex->q)
     {
-        syslog(LOG_NOTICE, "linking, queue is invalid");
-        
         mutex->back = mutex->front = i;
         mutex->q = mutex->front;
     }
     else
     {
-        syslog(LOG_NOTICE, "linking, queue is active and valid");
-        
         mutex->back->next = i;
         mutex->back = i;
     }
-    
-    syslog(LOG_NOTICE, "about to put to sleep (p=%x, thr=%d)", i, i->thr);
     
     pthread_spin_unlock(&mutex->lock);
     
     // Check for mutex unlock while we've been manipulating the queue!
     if(val == (mutex->value - 1))
     {
-        syslog(LOG_NOTICE, "mutex unlocked just before we went to sleep");
-        
         pthread_spin_lock(&mutex->lock);
         mutex->back = old_back;
         mutex->front = old_front;
@@ -313,8 +304,6 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
         return 0;
     }
     pedigree_thrsleep(i->thr);
-    
-    syslog(LOG_NOTICE, "no longer asleep");
     
     free(i);
     
