@@ -295,6 +295,7 @@ void entry()
   pProvider->maxHeight = 768;
   pProvider->maxDepth = 24;
   pProvider->bHardwareAccel = false;
+  pProvider->bTextModes = true;
 
   // Register with the graphics service
   ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));

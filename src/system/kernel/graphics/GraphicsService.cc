@@ -22,10 +22,11 @@ bool GraphicsService::serve(ServiceFeatures::Type type, void *pData, size_t data
         return false;
 
     // Touch = provide a new display device
+    GraphicsProvider *pProvider = reinterpret_cast<GraphicsProvider *>(pData);
     if(type & ServiceFeatures::touch)
     {
         /// \todo Sanity check
-        m_Providers.pushBack(reinterpret_cast<GraphicsProvider*>(pData));
+        m_Providers.pushBack(pProvider);
         
         m_pCurrentProvider = determineBestProvider();
         

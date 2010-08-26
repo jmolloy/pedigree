@@ -91,6 +91,8 @@ namespace PedigreeGraphics
         size_t maxWidth;
         size_t maxHeight;
         size_t maxDepth;
+        
+        bool bReserved1;
     };
 
     /** This class provides a generic interface for interfacing with a framebuffer.

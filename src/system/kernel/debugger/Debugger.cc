@@ -46,6 +46,7 @@
 #include <process/initialiseMultitasking.h>
 #include <machine/Machine.h>
 #include <process/Scheduler.h>
+#include <graphics/GraphicsService.h>
 
 Debugger Debugger::m_Instance;
 
@@ -101,6 +102,21 @@ void Debugger::initialise()
 void Debugger::start(InterruptState &state, LargeStaticString &description)
 {
   Log::instance() << " << Flushing log content >>" << Flush;
+  
+  // Drop out of whatever graphics mode we were in
+  GraphicsService::GraphicsProvider provider;
+  memset(&provider, 0, sizeof(provider));
+  provider.bTextModes = true;
+  
+  ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
+  Service         *pService  = ServiceManager::instance().getService(String("graphics"));
+  bool bSuccess = false;
+  if(pFeatures->provides(ServiceFeatures::probe))
+    if(pService)
+      bSuccess = pService->serve(ServiceFeatures::probe, reinterpret_cast<void*>(&provider), sizeof(provider));
+  
+  if(bSuccess && !provider.bTextModes)
+    provider.pDisplay->setScreenMode(0);
 
   // We take a copy of the interrupt state here so that we can replace it with another thread's interrupt state should we
   // decide to switch threads.

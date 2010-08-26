@@ -46,7 +46,8 @@ static struct mode
     size_t height;
     Graphics::PixelFormat fmt;
 } g_VbeIndexedModes[] = {
-    {0x117, 1024, 768, Graphics::Bits16_Rgb555} // Format is used only for byte count
+    {0x117, 1024, 768, Graphics::Bits16_Rgb555}, // Format is used only for byte count
+    {0, 80, 25, Graphics::Bits8_Idx} /// Mode zero = "disable"
 };
 
 #define SUPPORTED_MODES_SIZE (sizeof(g_VbeIndexedModes) / sizeof(g_VbeIndexedModes[0]))
@@ -145,6 +146,7 @@ class VmwareGraphics : public Display
             pProvider->maxHeight = maxHeight;
             pProvider->maxDepth = 32;
             pProvider->bHardwareAccel = true;
+            pProvider->bTextModes = false;
             
             // Register with the graphics service
             ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
@@ -233,7 +235,16 @@ class VmwareGraphics : public Display
             \return True if operation succeeded, false otherwise. */
         virtual bool setScreenMode(Display::ScreenMode sm)
         {
-            setMode(sm.width, sm.height, Graphics::bitsPerPixel(sm.pf2));
+            if(sm.id == 0)
+            {
+                // Disable SVGA instead of setting a mode
+                writeRegister(SVGA_REG_ENABLE, 0);
+            }
+            else
+            {
+                setMode(sm.width, sm.height, Graphics::bitsPerPixel(sm.pf2));
+                Machine::instance().getVga(0)->setMode(sm.id); // Remember this new mode
+            }
             return true;
         }
         

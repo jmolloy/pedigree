@@ -40,6 +40,11 @@ class GraphicsService : public Service
             size_t maxWidth;
             size_t maxHeight;
             size_t maxDepth;
+            
+            /// Set to true if this display can drop back to a text-based mode
+            /// with x86's int 10h thing. If this is false, the driver should
+            /// handle "mode zero" as a "disable the video device" mode.
+            bool bTextModes;
         };
 
         /** serve: Interface through which clients interact with the Service */
