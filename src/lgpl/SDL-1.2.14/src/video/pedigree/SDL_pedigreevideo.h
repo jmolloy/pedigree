@@ -21,6 +21,22 @@
 */
 #include "SDL_config.h"
 
-#include "SDL_nullvideo.h"
+#ifndef _SDL_pedigreevideo_h
+#define _SDL_pedigreevideo_h
 
-/* Functions to be exported */
+#include "../SDL_sysvideo.h"
+
+/* Hidden "this" pointer for the video functions */
+#define _THIS	SDL_VideoDevice *_this
+
+
+/* Private display data */
+
+struct SDL_PrivateVideoData {
+    int w, h;
+    void *buffer;
+    void *provider;
+};
+
+#endif /* _SDL_nullvideo_h */
+

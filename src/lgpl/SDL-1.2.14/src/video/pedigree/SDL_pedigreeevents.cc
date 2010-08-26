@@ -21,20 +21,18 @@
 */
 #include "SDL_config.h"
 
-/* Being a null driver, there's no event stream. We just define stubs for
-   most of the API. */
-
 #include "SDL.h"
 #include "../../events/SDL_sysevents.h"
 #include "../../events/SDL_events_c.h"
 
-#include "SDL_nullvideo.h"
-#include "SDL_nullevents_c.h"
+#include "SDL_pedigreevideo.h"
+#include "SDL_pedigreeevents_c.h"
 
 #include <syslog.h>
 
 #include <input/Input.h>
 
+// Input handler: receives input notifications and sends them to SDL
 void input_handler(Input::InputNotification &note)
 {
     if(note.type == Input::Key)
@@ -70,13 +68,11 @@ void PEDIGREE_DestroyInput()
 
 void PEDIGREE_PumpEvents(_THIS)
 {
-	/* do nothing. */
+	// Nothing that has to be done here - everything comes in as events
 }
 
 void PEDIGREE_InitOSKeymap(_THIS)
 {
-	/* do nothing. */
+	/// \todo Need to setup the keymap for stuff like the enter key!
 }
-
-/* end of SDL_nullevents.c ... */
 

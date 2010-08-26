@@ -21,11 +21,8 @@
 */
 #include "SDL_config.h"
 
-#include "SDL_nullvideo.h"
+#include "SDL_pedigreevideo.h"
 
-/* Variables and functions exported by SDL_sysevents.c to other parts 
-   of the native video subsystem (SDL_sysvideo.c)
-*/
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -39,6 +36,4 @@ extern void PEDIGREE_PumpEvents(_THIS);
 #ifdef __cplusplus
 };
 #endif
-
-/* end of SDL_nullevents_c.h ... */
 

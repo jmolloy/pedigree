@@ -21,30 +21,15 @@
 */
 #include "SDL_config.h"
 
-/* Dummy SDL video driver implementation; this is just enough to make an
- *  SDL-based application THINK it's got a working video driver, for
- *  applications that call SDL_Init(SDL_INIT_VIDEO) when they don't need it,
- *  and also for use as a collection of stubs when porting SDL to a new
- *  platform for which you haven't yet written a valid video driver.
- *
- * This is also a great way to determine bottlenecks: if you think that SDL
- *  is a performance problem for a given platform, enable this driver, and
- *  then see if your application runs faster without video overhead.
- *
- * Initial work by Ryan C. Gordon (icculus@icculus.org). A good portion
- *  of this was cut-and-pasted from Stephane Peter's work in the AAlib
- *  SDL video driver.  Renamed to "PEDIGREE" by Sam Lantinga.
- */
-
 #include "SDL_video.h"
 #include "SDL_mouse.h"
 #include "../SDL_sysvideo.h"
 #include "../SDL_pixels_c.h"
 #include "../../events/SDL_events_c.h"
 
-#include "SDL_nullvideo.h"
-#include "SDL_nullevents_c.h"
-#include "SDL_nullmouse_c.h"
+#include "SDL_pedigreevideo.h"
+#include "SDL_pedigreeevents_c.h"
+#include "SDL_pedigreemouse_c.h"
 
 #include <graphics/Graphics.h>
 
@@ -78,18 +63,12 @@ static void PEDIGREE_UpdateRects(_THIS, int numrects, SDL_Rect *rects);
 static int PEDIGREE_Available(void)
 {
     return 1;
-
-	const char *envr = SDL_getenv("SDL_VIDEODRIVER");
-	if ((envr) && (SDL_strcmp(envr, PEDIGREEVID_DRIVER_NAME) == 0)) {
-		return(1);
-	}
-
-	return(0);
 }
 
 static void PEDIGREE_DeleteDevice(SDL_VideoDevice *device)
 {
     PEDIGREE_DestroyInput();
+    
 	SDL_free(device->hidden);
 	SDL_free(device);
 }
@@ -152,13 +131,11 @@ VideoBootStrap PEDIGREE_bootstrap = {
 
 int PEDIGREE_VideoInit(_THIS, SDL_PixelFormat *vformat)
 {
-	/* fprintf(stderr, "WARNING: You are using the SDL pedigree video driver!\n"); */
-
-	/* Determine the screen depth (use default 8-bit depth) */
-	/* we change this during the SDL_SetVideoMode implementation... */
+	// Default to 16 bpp
 	vformat->BitsPerPixel = 16;
 	vformat->BytesPerPixel = 2;
 
+    // Bring up the input callbacks
     PEDIGREE_InitInput();
 
 	/* We're done! */
@@ -167,7 +144,8 @@ int PEDIGREE_VideoInit(_THIS, SDL_PixelFormat *vformat)
 
 SDL_Rect **PEDIGREE_ListModes(_THIS, SDL_PixelFormat *format, Uint32 flags)
 {
-   	 return (SDL_Rect **) -1;
+    /// \todo Write?
+   	return (SDL_Rect **) -1;
 }
 
 SDL_Surface *PEDIGREE_SetVideoMode(_THIS, SDL_Surface *current,
@@ -193,8 +171,6 @@ SDL_Surface *PEDIGREE_SetVideoMode(_THIS, SDL_Surface *current,
 		SDL_SetError("Couldn't allocate buffer for requested mode");
 		return(NULL);
 	}
-
- 	/* printf("Setting mode %dx%d\n", width, height); */
 
 	SDL_memset(_this->hidden->buffer, 0, width * height * (bpp / 8));
 
@@ -293,3 +269,4 @@ void PEDIGREE_VideoQuit(_THIS)
 		_this->screen->pixels = NULL;
 	}
 }
+
