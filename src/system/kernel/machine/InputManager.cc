@@ -184,7 +184,7 @@ void InputManager::putNotification(InputNotification *note)
 #endif
 }
 
-void InputManager::installCallback(callback_t callback, Thread *pThread, uintptr_t param)
+void InputManager::installCallback(CallbackType filter, callback_t callback, Thread *pThread, uintptr_t param)
 {
     LockGuard<Spinlock> guard(m_QueueLock);
     CallbackItem *item = new CallbackItem;
@@ -193,6 +193,7 @@ void InputManager::installCallback(callback_t callback, Thread *pThread, uintptr
     item->pThread = pThread;
 #endif
     item->nParam = param;
+    item->filter = filter;
     m_Callbacks.pushBack(item);
 }
 
@@ -248,19 +249,22 @@ void InputManager::mainThread()
         {
             if(*it)
             {
-                Thread *pThread = (*it)->pThread;
-                callback_t func = (*it)->func;
-                if(!pThread)
+                if((*it)->filter & pNote->type)
                 {
-                    /// \todo Verify that the callback is in fact in the kernel
-                    func(*pNote);
-                    delete pNote;
-                    continue;
-                }
+                    Thread *pThread = (*it)->pThread;
+                    callback_t func = (*it)->func;
+                    if(!pThread)
+                    {
+                        /// \todo Verify that the callback is in fact in the kernel
+                        func(*pNote);
+                        delete pNote;
+                        continue;
+                    }
 
-                InputEvent *pEvent = new InputEvent(pNote, (*it)->nParam, reinterpret_cast<uintptr_t>(func));
-                pThread->sendEvent(pEvent);
-                delete pNote;
+                    InputEvent *pEvent = new InputEvent(pNote, (*it)->nParam, reinterpret_cast<uintptr_t>(func));
+                    pThread->sendEvent(pEvent);
+                    delete pNote;
+                }
             }
         }
     }

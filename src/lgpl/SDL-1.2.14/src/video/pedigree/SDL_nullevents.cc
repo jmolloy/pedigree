@@ -60,7 +60,7 @@ void input_handler(Input::InputNotification &note)
 
 void PEDIGREE_InitInput()
 {
-    Input::installCallback(input_handler);
+    Input::installCallback(Input::Key | Input::Mouse, input_handler);
 }
 
 void PEDIGREE_DestroyInput()

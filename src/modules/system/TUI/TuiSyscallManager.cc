@@ -69,7 +69,8 @@ void pedigree_event_return()
 
 void pedigree_input_register_callback(uintptr_t func)
 {
-    InputManager::instance().installCallback(reinterpret_cast<void (*)(InputManager::InputNotification&)>(func),
+    InputManager::instance().installCallback(InputManager::Key,
+                                             reinterpret_cast<void (*)(InputManager::InputNotification&)>(func),
                                              Processor::information().getCurrentThread());
 }
 

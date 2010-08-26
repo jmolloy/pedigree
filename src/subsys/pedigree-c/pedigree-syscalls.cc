@@ -240,10 +240,11 @@ int pedigree_module_get_depending(char *name, char *buf, size_t bufsz)
     return 1;
 }
 
-void pedigree_input_install_callback(void *p, uintptr_t param)
+void pedigree_input_install_callback(void *p, uint32_t type, uintptr_t param)
 {
     // First parameter is now obsolete, gotta remove it some time...
     InputManager::instance().installCallback(
+        static_cast<InputManager::CallbackType>(type),
         reinterpret_cast<InputManager::callback_t>(p),
         Processor::information().getCurrentThread(),
         param);

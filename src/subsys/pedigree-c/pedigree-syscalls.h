@@ -83,7 +83,7 @@ int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n);
 extern "C" {
 #endif
 
-void pedigree_input_install_callback(void *p, uintptr_t param);
+void pedigree_input_install_callback(void *p, uint32_t type, uintptr_t param);
 void pedigree_input_remove_callback(void *p);
 
 void pedigree_event_return();

@@ -242,7 +242,7 @@ void sigint(int)
  */
 void input_handler(Input::InputNotification &note)
 {
-    if(!g_pCurrentTerm || !g_pCurrentTerm->term) // No terminal yet!;
+    if(!g_pCurrentTerm || !g_pCurrentTerm->term) // No terminal yet!
         return;
 
     if(note.type != Input::Key)
@@ -318,7 +318,7 @@ int main (int argc, char **argv)
         return 1;
     }
 
-    Input::installCallback(input_handler);
+    Input::installCallback(Input::Key, input_handler);
 
     signal(SIGINT, sigint);
     

@@ -30,9 +30,9 @@ static void event_callback(size_t p1, size_t p2, uintptr_t* pBuffer, size_t p4)
     pedigree_event_return();
 }
 
-void Input::installCallback(callback_t cb)
+void Input::installCallback(CallbackType type, callback_t cb)
 {
-    pedigree_input_install_callback(reinterpret_cast<void*>(event_callback), reinterpret_cast<uintptr_t>(cb));
+    pedigree_input_install_callback(reinterpret_cast<void*>(event_callback), static_cast<uint32_t>(type), reinterpret_cast<uintptr_t>(cb));
 }
 
 void Input::removeCallback(callback_t cb)

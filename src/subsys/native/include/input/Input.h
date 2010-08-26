@@ -21,13 +21,12 @@
 namespace Input
 {
     /// The type for a given callback.
-    enum CallbackType
-    {
-        Key = 0,
-        Mouse = 1,
-        Joystick = 2,
-        Unknown = 255
-    };
+    const int Key = 1;
+    const int Mouse = 2;
+    const int Joystick = 4;
+    const int Unknown = 255;
+        
+    typedef int CallbackType;
 
     /// Structure containing notification to the remote application
     /// of input. Used to generalise input handling across the system
@@ -58,7 +57,7 @@ namespace Input
 
     /// Installs an input callback, to allow a program to be notified of
     /// input from any of the possible input devices.
-    void installCallback(callback_t cb);
+    void installCallback(CallbackType type, callback_t cb);
 
     /// Removes a given callback
     void removeCallback(callback_t cb);

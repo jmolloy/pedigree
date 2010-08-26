@@ -29,14 +29,14 @@ class InputManager
 {
     public:
 
-        /// The type for a given callback.
-        enum CallbackType
-        {
-            Key = 0,
-            Mouse = 1,
-            Joystick = 2,
-            Unknown = 255
-        };
+        /// The type for a given callback (enum values can't be used for bitwise
+        /// operations, so we define these as constants).
+        const static int Key = 1;
+        const static int Mouse = 2;
+        const static int Joystick = 4;
+        const static int Unknown = 255;
+        
+        typedef int CallbackType;
 
         /// Structure containing notification to the remote application
         /// of input. Used to generalise input handling across the system
@@ -90,7 +90,7 @@ class InputManager
         void joystickUpdate(ssize_t relX, ssize_t relY, ssize_t relZ, uint32_t buttonBitmap);
 
         /// Installs a callback
-        void installCallback(callback_t callback, Thread *pThread = 0, uintptr_t param = 0);
+        void installCallback(CallbackType filter, callback_t callback, Thread *pThread = 0, uintptr_t param = 0);
 
         /// Removes a callback
         void removeCallback(callback_t callback, Thread *pThread = 0);
@@ -126,6 +126,9 @@ class InputManager
             /// Parameter to put into the serialised buffer sent to userspace.
             /// Typically holds the address of a userspace callback.
             uintptr_t nParam;
+            
+            /// Filter for this callback
+            CallbackType filter;
         };
 
         /// Input queue (for distribution to applications)

@@ -400,7 +400,7 @@ static void init()
     Log::instance().installCallback(&g_StreamLogger, true);
 
     g_BootProgressUpdate = &progress;
-    InputManager::instance().installCallback(keyCallback);
+    InputManager::instance().installCallback(InputManager::Key, keyCallback);
 }
 
 static void destroy()
