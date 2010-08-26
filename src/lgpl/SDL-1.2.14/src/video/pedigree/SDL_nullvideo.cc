@@ -207,7 +207,7 @@ SDL_Surface *PEDIGREE_SetVideoMode(_THIS, SDL_Surface *current,
 	}
 
 	/* Set up the new mode framebuffer */
-	current->flags = flags & SDL_FULLSCREEN;
+	current->flags = (flags & SDL_FULLSCREEN) | SDL_HWPALETTE;
 	_this->hidden->w = current->w = width;
 	_this->hidden->h = current->h = height;
 	current->pitch = current->w * (bpp / 8);
@@ -252,7 +252,7 @@ static void PEDIGREE_UpdateRects(_THIS, int numrects, SDL_Rect *rects)
         format = PedigreeGraphics::Bits8_Idx;
     else
         format = PedigreeGraphics::Bits24_Rgb;
-
+    
     pFramebuffer->draw(_this->hidden->buffer, 0, 0, 0, 0, _this->hidden->w, _this->hidden->h, format);
 
     for(int i = 0; i < numrects; i++)
@@ -264,7 +264,7 @@ static void PEDIGREE_UpdateRects(_THIS, int numrects, SDL_Rect *rects)
 int PEDIGREE_SetColors(_THIS, int firstcolor, int ncolors, SDL_Color *colors)
 {
     if(!_this->hidden->provider)
-        return 1;
+        return 0;
 
     PedigreeGraphics::Framebuffer *pFramebuffer = reinterpret_cast<PedigreeGraphics::Framebuffer*>(_this->hidden->provider);
 
@@ -274,16 +274,12 @@ int PEDIGREE_SetColors(_THIS, int firstcolor, int ncolors, SDL_Color *colors)
     for(size_t i = firstcolor; i < (firstcolor + ncolors); i++)
     {
         palette[i] = PedigreeGraphics::createRgb(colors[n].r, colors[n].g, colors[n].b);
-        syslog(LOG_NOTICE, "SDL: SetColor[%d]: %x", i, palette[i]);
         n++;
     }
     
     pFramebuffer->setPalette(palette, 256);
-    
-    syslog(LOG_NOTICE, "SDL: SetColors called, %d->%d changed colour entries in the palette", firstcolor, ncolors);
 
-	/* do nothing of note. */
-	return(1);
+    return 1;
 }
 
 /* Note:  If we are terminated, this could be called in the middle of
