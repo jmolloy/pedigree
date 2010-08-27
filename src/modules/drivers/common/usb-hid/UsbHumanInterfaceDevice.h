@@ -20,6 +20,8 @@
 #include <processor/types.h>
 #include <usb/UsbDevice.h>
 
+#include "HidReport.h"
+
 class UsbHumanInterfaceDevice : public UsbDevice
 {
     public:
@@ -58,35 +60,19 @@ class UsbHumanInterfaceDevice : public UsbDevice
             uint16_t nDescriptorLength;
         };
 
-        struct HidReportBlock
-        {
-            enum
-            {
-                Ignore,
-                Absolute,
-                Relative,
-                Array
-            } type;
-            size_t nCount;
-            size_t nSize;
-            uint32_t nUsagePage;
-            uint32_t nUsageBase;
-            uint8_t nLogSize;
-            Vector<size_t> *pUsages;
-        };
-
-         struct HidReport
-        {
-            size_t nBytes;
-            List<HidReportBlock *> pBlockList;
-        };
-
         static void callback(uintptr_t pParam, ssize_t ret);
         void inputHandler();
 
+        /// The endpoint used to receive input reports from the device
+        Endpoint *m_pInEndpoint;
+
+        /// The report instance used for input parsing
         HidReport *m_pReport;
-        uint8_t *m_pReportBuffer;
-        uint8_t *m_pOldReportBuffer;
+
+        /// Input report buffer
+        uint8_t *m_pInReportBuffer;
+        /// Old input report buffer
+        uint8_t *m_pOldInReportBuffer;
 };
 
 #endif

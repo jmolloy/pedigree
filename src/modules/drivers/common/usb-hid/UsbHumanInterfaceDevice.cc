@@ -16,40 +16,16 @@
 
 #include <machine/HidInputManager.h>
 #include <machine/InputManager.h>
+#include <utilities/PointerGuard.h>
 #include <usb/UsbHub.h>
 #include <usb/UsbDevice.h>
 #include <usb/UsbConstants.h>
+
+#include "HidReport.h"
 #include "UsbHumanInterfaceDevice.h"
 
-#include <utilities/PointerGuard.h>
-
-#define undefined -0xffffffff
-
-#define _sign(x) (x>=0?"+":"- ")<<(x>=0?x:-x)
-
-static inline uint64_t _getField(uint8_t *pBuffer, size_t nStart, size_t nLength)
-{
-    uint64_t nValue = 0;
-    size_t i = 0;
-    while(i < nLength)
-    {
-        uint8_t nBits = ((nStart % 8) + nLength - i) < 8 ? nLength % 8 : 8 - (nStart % 8);
-        nValue |= ((pBuffer[nStart / 8] >> (nStart % 8)) & ((1 << nBits) - 1)) << i;
-        i += nBits;
-        nStart += nBits;
-    }
-    return nValue;
-}
-
-static inline int64_t _uint2int(uint64_t val, uint8_t len)
-{
-    // Check for the most significant bit, it shows the sign
-    if(val & (1 << (len - 1)))
-        return -((1 << len) - val); // Negative value
-    return val; // Positive value
-}
-
-UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) : Device(pDev), UsbDevice(pDev)
+UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) :
+    Device(pDev), UsbDevice(pDev), m_pInEndpoint(0)
 {
 }
 
@@ -59,11 +35,11 @@ UsbHumanInterfaceDevice::~UsbHumanInterfaceDevice()
 
 void UsbHumanInterfaceDevice::initialiseDriver()
 {
-
     /// \bug WMware's mouse's second interface is known to cause problems
     if(m_pDescriptor->nVendorId == 0x0e0f && m_pInterface->nInterface)
     {
         WARNING("USB: HID: Skipping VMWare second mouse interface");
+        return;
     }
 
     HidDescriptor *pHidDescriptor = 0;
@@ -81,158 +57,47 @@ void UsbHumanInterfaceDevice::initialiseDriver()
         ERROR("USB: HID: No HID descriptor");
         return;
     }
+    PointerGuard<HidDescriptor> guard(pHidDescriptor);
 
-    // Disable BIOS stuff
-    //controlRequest(UsbRequestType::Class | UsbRequestRecipient::Interface, UsbRequest::SetInterface, 0, m_pInterface->nInterface);
     // Set Idle Rate to 0
     controlRequest(UsbRequestType::Class | UsbRequestRecipient::Interface, UsbRequest::GetInterface, 0, 0);
 
-    uint16_t nHidSize = pHidDescriptor->nDescriptorLength;
-    uint8_t *pHidReportDescriptor = static_cast<uint8_t*>(getDescriptor(0x22, 0, nHidSize, UsbRequestRecipient::Interface));
-    int64_t nLogMin = undefined, nLogMax = undefined, nPhysMin = undefined, nPhysMax = undefined, nUsagePage = undefined,
-            nUsageMin = undefined, nUsageMax = undefined, nReportSize = undefined, nReportCount = undefined;
-    uint8_t nLogSize = 0;
-    uint32_t nBits = 0;
+    // Get the report descriptor
+    uint16_t nReportDescriptorSize = pHidDescriptor->nDescriptorLength;
+    uint8_t *pReportDescriptor = static_cast<uint8_t*>(getDescriptor(0x22, 0, nReportDescriptorSize, UsbRequestRecipient::Interface));
+    PointerGuard<uint8_t> guard2(pReportDescriptor);
+
+    // Create a new report instance and use it to parse the report descriptor
     m_pReport = new HidReport();
-    Vector<size_t> *pUsages = new Vector<size_t>();
-    for(size_t i = 0; i < nHidSize; i++)
-    {
-        union
-        {
-            struct
-            {
-                uint8_t size : 2;
-                uint8_t type : 2;
-                uint8_t tag : 4;
-            } PACKED;
-            uint8_t raw;
-        } item;
-        item.raw = pHidReportDescriptor[i];
-        uint8_t size = item.size == 3 ? 4 : item.size;
-        uint32_t value = 0;
-        if(size == 1)
-            value = pHidReportDescriptor[i + 1];
-        else if(size == 2)
-            value = pHidReportDescriptor[i + 1] | (pHidReportDescriptor[i + 2] << 8);
-        else if(size == 4)
-            value = pHidReportDescriptor[i + 1] | (pHidReportDescriptor[i + 2] << 8) | (pHidReportDescriptor[i + 3] << 16) | (pHidReportDescriptor[i + 4] << 24);
-#ifdef USB_VERBOSE_DEBUG
-        DEBUG_LOG("USB: HID: Item tag=" << item.tag << " type=" << Dec << item.type << " size=" << size << Hex);
-#endif
-        switch(item.type)
-        {
-            case 0:
-                switch(item.tag)
-                {
-                    case 0x8:
-                        HidReportBlock *pBlock = new HidReportBlock();
-                        pBlock->nCount = nReportCount;
-                        pBlock->nSize = nReportSize;
-                        if(value & 1)
-                        {
-                            pBlock->type = HidReportBlock::Ignore;
-                        }
-                        else
-                        {
-                            pBlock->nUsagePage = nUsagePage;
-                            pBlock->nLogSize = nLogSize;
-                            if(value & 2)
-                            {
-                                for(size_t j = 0; pUsages->count() < nReportCount; j++)
-                                    pUsages->pushBack(nUsageMin + j);
-                                pBlock->pUsages = pUsages;
-                                if(value & 4)
-                                    pBlock->type = HidReportBlock::Relative;
-                                else
-                                    pBlock->type = HidReportBlock::Absolute;
-                            }
-                            else
-                            {
-                                pBlock->type = HidReportBlock::Array;
-                                pBlock->nUsageBase = nUsageMin;
-                            }
-                        }
-                        m_pReport->pBlockList.pushBack(pBlock);
-                        nBits += nReportSize * nReportCount;
-                        nUsageMin = undefined;
-                        nUsageMax = undefined;
-                        pUsages = new Vector<size_t>();
-                        break;
-                }
-                break;
-            case 1:
-                switch(item.tag)
-                {
-                    case 0x0:
-                        nUsagePage = value;
-                        pUsages->clear();
-                        break;
-                    case 0x1:
-                        nLogMin = value;
-                        break;
-                    case 0x2:
-                        nLogMax = value;
-                        nLogSize = size;
-                        break;
-                    case 0x3:
-                        nPhysMin = value;
-                        break;
-                    case 0x4:
-                        nPhysMax = value;
-                        break;
-                    case 0x7:
-                        nReportSize = value;
-                        break;
-                    case 0x9:
-                        nReportCount = value;
-                        break;
-                }
-                break;
-            case 2:
-                switch(item.tag)
-                {
-                    case 0x0:
-                        pUsages->pushBack(value);
-                        break;
-                    case 0x1:
-                        nUsageMin = value;
-                        break;
-                    case 0x2:
-                        nUsageMax = value;
-                        break;
-                }
-                break;
-        }
-        i += size;
-    }
-    delete pUsages;
-    m_pReport->nBytes = nBits / 8;
+    m_pReport->parseDescriptor(pReportDescriptor, nReportDescriptorSize);
 
-    // Allocate the report buffers
-    m_pReportBuffer = new uint8_t[m_pReport->nBytes];
-    m_pOldReportBuffer = new uint8_t[m_pReport->nBytes];
-    memset(m_pOldReportBuffer, 0, m_pReport->nBytes);
-
-    Endpoint *pInEndpoint = 0;
-
+    // Search for an interrupt IN endpoint
     for(size_t i = 0; i < m_pInterface->endpointList.count(); i++)
     {
         Endpoint *pEndpoint = m_pInterface->endpointList[i];
         if(pEndpoint->nTransferType == Endpoint::Interrupt && pEndpoint->bIn)
         {
-            pInEndpoint = pEndpoint;
+            m_pInEndpoint = pEndpoint;
             break;
         }
     }
 
-    if(!pInEndpoint)
+    // Did we end up with no interrupt IN endpoint?
+    if(!m_pInEndpoint)
     {
         ERROR("USB: HID: No Interrupt IN endpoint");
+        delete m_pReport;
         return;
     }
 
+    // Allocate the input report buffers and zero them
+    m_pInReportBuffer = new uint8_t[m_pInEndpoint->nMaxPacketSize];
+    m_pOldInReportBuffer = new uint8_t[m_pInEndpoint->nMaxPacketSize];
+    memset(m_pInReportBuffer, 0, m_pInEndpoint->nMaxPacketSize);
+    memset(m_pOldInReportBuffer, 0, m_pInEndpoint->nMaxPacketSize);
+
     // Add the input handler
-    addInterruptInHandler(pInEndpoint, reinterpret_cast<uintptr_t>(m_pReportBuffer), m_pReport->nBytes, callback, reinterpret_cast<uintptr_t>(this));
+    addInterruptInHandler(m_pInEndpoint, reinterpret_cast<uintptr_t>(m_pInReportBuffer), m_pInEndpoint->nMaxPacketSize, callback, reinterpret_cast<uintptr_t>(this));
 
     m_UsbState = HasDriver;
 }
@@ -245,104 +110,10 @@ void UsbHumanInterfaceDevice::callback(uintptr_t pParam, ssize_t ret)
 
 void UsbHumanInterfaceDevice::inputHandler()
 {
-    //NOTICE("USB: HID: Handling input on interface " << Dec << m_pInterface->nInterface << Hex);
+    // Do we have a report instance?
+    if(!m_pReport)
+        return;
 
-    size_t nCurrentBit = 0;
-    for(List<HidReportBlock*>::Iterator it = m_pReport->pBlockList.begin(); it != m_pReport->pBlockList.end(); it++)
-    {
-        HidReportBlock *pBlock = *it;
-        for(size_t i = 0; pBlock->type != HidReportBlock::Ignore && i < pBlock->nCount; i++)
-        {
-            uint64_t nValue = _getField(m_pReportBuffer, nCurrentBit + i * pBlock->nSize, pBlock->nSize);
-            int64_t nSignedValue;
-            switch(pBlock->type)
-            {
-                case HidReportBlock::Absolute:
-                    nSignedValue = nValue - _getField(m_pOldReportBuffer, nCurrentBit + i * pBlock->nSize, pBlock->nSize);
-
-                    if(nSignedValue)
-                    {
-                        if(pBlock->nUsagePage == 7)
-                        {
-                            if(nSignedValue > 0)
-                                HidInputManager::instance().keyDown((*pBlock->pUsages)[i]);
-                            else
-                                HidInputManager::instance().keyUp((*pBlock->pUsages)[i]);
-                        }
-                        else if(pBlock->nUsagePage == 9)
-                        {
-                            if(nSignedValue > 0)
-                                NOTICE("    Button " << Dec << ((*pBlock->pUsages)[i]) << Hex << " down");
-                            else
-                                NOTICE("    Button " << Dec << ((*pBlock->pUsages)[i]) << Hex << " up");
-                        }
-                        else
-                            NOTICE("    Absolute input, usage " << Dec << pBlock->nUsagePage << ":" << ((*pBlock->pUsages)[i]) << ", value " << _sign(nSignedValue) << " " << pBlock->nSize << Hex);
-
-                        if((pBlock->nUsagePage == 1) && (((*pBlock->pUsages)[i]) == 48))
-                            InputManager::instance().mouseUpdate(nSignedValue, 0, 0, 0);
-                        else if((pBlock->nUsagePage == 1) && (((*pBlock->pUsages)[i]) == 49))
-                            InputManager::instance().mouseUpdate(0, nSignedValue, 0, 0);
-                    }
-                    break;
-                case HidReportBlock::Relative:
-                    nSignedValue = _uint2int(nValue, pBlock->nLogSize * 8);
-
-                    if(nSignedValue)
-                        NOTICE("    Relative input, usage " << Dec << pBlock->nUsagePage << ":" << ((*pBlock->pUsages)[i]) << ", value " << _sign(nSignedValue) << Hex);
-                    break;
-                case HidReportBlock::Array:
-
-                    if(nValue)
-                    {
-                        NOTICE("    Array input, usage entry " << Dec << pBlock->nUsagePage << ":" << (pBlock->nUsageBase + nValue) << Hex);
-
-                        // Check if this array entry is new
-                        bool bNew = true;
-                        for(size_t j = 0; j < pBlock->nCount; j++)
-                        {
-                            if(_getField(m_pOldReportBuffer, nCurrentBit + j * pBlock->nSize, pBlock->nSize) == nValue)
-                            {
-                                bNew = false;
-                                break;
-                            }
-                        }
-                        if(bNew)
-                            if(pBlock->nUsagePage == 7)
-                                HidInputManager::instance().keyDown(pBlock->nUsageBase + nValue);
-                    }
-                case HidReportBlock::Ignore:
-                default:
-                    break;
-            }
-        }
-
-        // Special case here: check for array entries that disapeared
-        if(pBlock->type == HidReportBlock::Array)
-        {
-            for(size_t i = 0; i < pBlock->nCount; i++)
-            {
-                uint64_t nOldValue = _getField(m_pOldReportBuffer, nCurrentBit + i * pBlock->nSize, pBlock->nSize);
-                if(nOldValue)
-                {
-                    // Check if this array entry disapeared
-                    bool bDisapeared = true;
-                    for(size_t j = 0; j < pBlock->nCount; j++)
-                    {
-                        if(_getField(m_pReportBuffer, nCurrentBit + j * pBlock->nSize, pBlock->nSize) == nOldValue)
-                        {
-                            bDisapeared = false;
-                            break;
-                        }
-                    }
-                    if(bDisapeared)
-                        if(pBlock->nUsagePage == 7)
-                            HidInputManager::instance().keyUp(pBlock->nUsageBase + nOldValue);
-                }
-            }
-        }
-
-        nCurrentBit += pBlock->nCount * pBlock->nSize;
-    }
-    memcpy(m_pOldReportBuffer, m_pReportBuffer, m_pReport->nBytes);
+    // Feed the report instance with the input we just got
+    m_pReport->feedInput(m_pInReportBuffer, m_pOldInReportBuffer, m_pInEndpoint->nMaxPacketSize);
 }
