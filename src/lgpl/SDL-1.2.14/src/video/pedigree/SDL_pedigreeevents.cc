@@ -93,7 +93,8 @@ void input_handler(Input::InputNotification &note)
             else if(!strcmp(buf, "pgdn"))
                 keySym = SDLK_PAGEDOWN;
         }
-        else
+        
+        if(keySym == SDLK_UNKNOWN)
             keySym = static_cast<SDLKey>(key);
         
         sym.sym = keySym;
