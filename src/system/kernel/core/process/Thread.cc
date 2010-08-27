@@ -26,12 +26,15 @@
 
 #include <machine/InputManager.h>
 
+#include <processor/MemoryRegion.h>
+#include <processor/PhysicalMemoryManager.h>
+
 Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
                void *pStack, bool semiUser) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
     m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler()), m_Priority(DEFAULT_PRIORITY),
-    m_PendingRequests()
+    m_PendingRequests(), m_pTlsBase(0)
 {
   if (pParent == 0)
   {
@@ -79,7 +82,7 @@ Thread::Thread(Process *pParent) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Running), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
     m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler()), m_Priority(DEFAULT_PRIORITY),
-    m_PendingRequests()
+    m_PendingRequests(), m_pTlsBase(0)
 {
   if (pParent == 0)
   {
@@ -96,7 +99,7 @@ Thread::Thread(Process *pParent, SyscallState &state) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
     m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler()), m_Priority(DEFAULT_PRIORITY),
-    m_PendingRequests()
+    m_PendingRequests(), m_pTlsBase(0)
 {
   if (pParent == 0)
   {
@@ -147,6 +150,9 @@ Thread::~Thread()
         // we may have switched address spaces to allow the thread to die.
         m_pParent->getAddressSpace()->freeStack(m_StateLevels[i].m_pUserStack);
   }
+  
+  if(m_pTlsBase)
+    delete m_pTlsBase;
 }
 
 void Thread::setStatus(Thread::Status s)
@@ -266,6 +272,37 @@ Event *Thread::getNextEvent()
     }
 
     return 0;
+}
+
+uintptr_t Thread::getTlsBase()
+{
+    // Solves a problem where threads are created pointing to different address
+    // spaces than the process that creates them (for whatever reason). Because
+    // this is usually only called right after the address space switch in
+    // PerProcessorScheduler, the address space is set properly.
+    if(!m_pTlsBase)
+    {
+        // Allocate space for this thread's TLS region
+        m_pTlsBase = new MemoryRegion("thread-local-storage");
+        if(!PhysicalMemoryManager::instance().allocateRegion(
+                                        *m_pTlsBase,
+                                        THREAD_TLS_SIZE / 0x1000,
+                                        0,
+                                        VirtualAddressSpace::Write))
+        {
+          delete m_pTlsBase;
+          m_pTlsBase = 0;
+        }
+        else
+        {
+          NOTICE("Thread [" << Dec << m_Id << Hex << "]: allocated TLS area at " << reinterpret_cast<uintptr_t>(m_pTlsBase->virtualAddress()) << ".");
+          
+          uint32_t *tlsBase = reinterpret_cast<uint32_t*>(m_pTlsBase->virtualAddress());
+          *tlsBase = static_cast<uint32_t>(m_Id);
+        }
+    }
+    else
+        return reinterpret_cast<uintptr_t>(m_pTlsBase->virtualAddress());
 }
 
 #endif

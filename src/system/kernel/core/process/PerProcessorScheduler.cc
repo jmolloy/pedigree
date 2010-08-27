@@ -59,6 +59,7 @@ void PerProcessorScheduler::initialise(Thread *pThread)
 
     m_pSchedulingAlgorithm->addThread(pThread);
     Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
+    Processor::setTlsBase(pThread->getTlsBase());
 
     Machine::instance().getSchedulerTimer()->registerHandler(this);
 }
@@ -107,9 +108,10 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThre
     if(pLock && (pNextThread->getStateLevel() == reinterpret_cast<uintptr_t>(pLock)))
         FATAL("STATE LEVEL = LOCK PASSED TO SCHEDULER: " << pNextThread->getStateLevel() << "/" << reinterpret_cast<uintptr_t>(pLock) << "!");
 
-    // Load the new kernel stack into the TSS and switch address spaces
+    // Load the new kernel stack into the TSS, and the new TLS base and switch address spaces
     Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pNextThread->getKernelStack()) );
     Processor::switchAddressSpace( *pNextThread->getParent()->getAddressSpace() );
+    Processor::setTlsBase(pNextThread->getTlsBase());
 
     if (pLock)
     {

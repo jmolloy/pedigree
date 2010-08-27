@@ -40,6 +40,9 @@ class X86GdtManager
      *\note This should only be called from initialiseProcessor2()
      *\todo and some smp/acpi function */
     static void initialiseProcessor() INITIALISATION_ONLY;
+    
+    /** Sets up the TLS base for the current CPU to point to the given base. */
+    void setTlsBase(uintptr_t base);
 
   private:
     /** The constructor */

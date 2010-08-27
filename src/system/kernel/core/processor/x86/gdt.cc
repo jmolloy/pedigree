@@ -38,6 +38,9 @@ void X86GdtManager::initialise(size_t processorCount)
   setSegmentDescriptor(2, 0, 0xFFFFF, 0x92, 0xC); // Kernel data - 0x10
   setSegmentDescriptor(3, 0, 0xFFFFF, 0xF8, 0xC); // User code - 0x18
   setSegmentDescriptor(4, 0, 0xFFFFF, 0xF2, 0xC); // User data - 0x20
+  
+  /// \todo This won't work on SMP systems at all.
+  setSegmentDescriptor(6, 0, 0xFFFFF, 0xF2, 0xC); // User TLS data - 0x30
 
 #ifdef MULTIPROCESSOR
   size_t i = 0;
@@ -98,6 +101,12 @@ X86GdtManager::X86GdtManager()
 }
 X86GdtManager::~X86GdtManager()
 {
+}
+
+void X86GdtManager::setTlsBase(uintptr_t base)
+{
+  /// \todo This won't work on SMP systems at all.
+  setSegmentDescriptor(6, base, 0xFFFFF, 0xF2, 0xC); // User TLS data - 0x28
 }
 
 void X86GdtManager::setSegmentDescriptor(size_t index, uint32_t base, uint32_t limit, uint8_t flags, uint8_t flags2)

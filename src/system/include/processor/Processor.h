@@ -268,6 +268,9 @@ class Processor
       inline static void setSegmentRegisters(uint32_t segmentBase, bool supervisorKey, bool
  userKey);
     #endif
+    
+    /** Set a new TLS area base address. */
+    static void setTlsBase(uintptr_t newBase);
 
     /** How far has the processor-specific interface been initialised */
     static size_t m_Initialised;

@@ -222,6 +222,9 @@ _ZN9Processor8jumpUserEPVmmmmmmm:
     mov    bx, 0x23
     mov    ds, bx
     mov    es, bx
+    
+    ; Load FS/GS with the TLS selector
+    mov    bx, 0x33
     mov    fs, bx
     mov    gs, bx
 

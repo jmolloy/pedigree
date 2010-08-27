@@ -29,8 +29,13 @@
 #include <utilities/RequestQueue.h>
 #include <utilities/ExtensibleBitmap.h>
 
+#include <processor/MemoryRegion.h>
+
 class Processor;
 class Process;
+
+/** Thread TLS area size */
+#define THREAD_TLS_SIZE     0x100000
 
 /**
  * An abstraction of a thread of execution.
@@ -334,6 +339,9 @@ public:
             (*it)->mutex.release();
         }
     }
+    
+    /** Gets the TLS base address for this thread. */
+    uintptr_t getTlsBase();
 
     /**
      * Sets the exit code of the Thread and sets the state to Zombie, if it is being waited on;
@@ -440,6 +448,9 @@ private:
 
     /** List of requests pending on this Thread */
     List<RequestQueue::Request*> m_PendingRequests;
+    
+    /** Memory region for the TLS base of this thread (userspace-only) */
+    MemoryRegion *m_pTlsBase;
 };
 
 #endif

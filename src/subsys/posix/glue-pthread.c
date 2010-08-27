@@ -84,7 +84,9 @@ int pthread_detach(pthread_t thread)
 
 pthread_t pthread_self()
 {
-    return syscall0(POSIX_PTHREAD_SELF);
+    pthread_t ret = 0;
+    asm volatile("mov %%fs:0, %0" : "=r" (ret));
+    return ret;
 }
 
 int pthread_equal(pthread_t t1, pthread_t t2)

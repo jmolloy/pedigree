@@ -107,3 +107,13 @@ void Processor::identify(HugeStaticString &str)
   ident[12] = 0;
   str = ident;
 }
+
+void Processor::setTlsBase(uintptr_t newBase)
+{
+    X86GdtManager::instance().setTlsBase(newBase);
+    
+    // Reload FS/GS
+    uint16_t newseg = newBase ? 0x33 : 0x23;
+    asm volatile("mov %0, %%bx; mov %%bx, %%fs; mov %%bx, %%gs" :: "r" (newseg) : "ebx");
+}
+
