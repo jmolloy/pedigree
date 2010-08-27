@@ -607,7 +607,7 @@ int posix_gettimeofday(timeval *tv, struct timezone *tz)
     Timer *pTimer = Machine::instance().getTimer();
 
     tv->tv_sec = pTimer->getUnixTimestamp();
-    tv->tv_usec = 0;
+    tv->tv_usec = pTimer->getTickCount();
 
     return 0;
 }
