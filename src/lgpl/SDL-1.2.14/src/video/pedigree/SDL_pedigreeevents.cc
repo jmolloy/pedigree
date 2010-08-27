@@ -53,7 +53,6 @@ void input_handler(Input::InputNotification &note)
         
         SDL_keysym sym;
         sym.scancode = 0;
-        //sym.mod = KMOD_NONE;
         sym.unicode = 0;
         
         sym.mod = KMOD_NONE;
@@ -67,7 +66,9 @@ void input_handler(Input::InputNotification &note)
             sym.mod = static_cast<SDLMod>(sym.mod | KMOD_META);
         
         SDLKey keySym = SDLK_UNKNOWN;
-        if(key & Keyboard::Special)
+        if(((key & 0xFF) == 0xA) || ((key & 0xFF) == 0xD))
+            keySym = SDLK_RETURN;
+        else if(key & Keyboard::Special)
         {
             char buf[5];
             memcpy(buf, static_cast<void*>(&key), 4);
