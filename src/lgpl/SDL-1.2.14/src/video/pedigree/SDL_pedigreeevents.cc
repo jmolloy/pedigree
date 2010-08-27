@@ -32,16 +32,71 @@
 
 #include <input/Input.h>
 
+namespace Keyboard
+{
+    enum KeyFlags
+    {
+        Special = 1ULL << 63,
+        Ctrl    = 1ULL << 62,
+        Shift   = 1ULL << 61,
+        Alt     = 1ULL << 60,
+        AltGr   = 1ULL << 59
+    };
+}
+
 // Input handler: receives input notifications and sends them to SDL
 void input_handler(Input::InputNotification &note)
 {
     if(note.type == Input::Key)
     {
+        uint64_t key = note.data.key.key;
+        
         SDL_keysym sym;
         sym.scancode = 0;
-        sym.sym = static_cast<SDLKey>(note.data.key.key);
-        sym.mod = KMOD_NONE;
+        //sym.mod = KMOD_NONE;
         sym.unicode = 0;
+        
+        sym.mod = KMOD_NONE;
+        if(key & Keyboard::Ctrl)
+            sym.mod = static_cast<SDLMod>(sym.mod | KMOD_CTRL);
+        if(key & Keyboard::Shift)
+            sym.mod = static_cast<SDLMod>(sym.mod | KMOD_SHIFT);
+        if(key & Keyboard::Alt)
+            sym.mod = static_cast<SDLMod>(sym.mod | KMOD_ALT);
+        if(key & Keyboard::AltGr)
+            sym.mod = static_cast<SDLMod>(sym.mod | KMOD_META);
+        
+        SDLKey keySym = SDLK_UNKNOWN;
+        if(key & Keyboard::Special)
+        {
+            char buf[5];
+            memcpy(buf, static_cast<void*>(&key), 4);
+            buf[4] = 0;
+            
+            if(!strcmp(buf, "left"))
+                keySym = SDLK_LEFT;
+            else if(!strcmp(buf, "righ"))
+                keySym = SDLK_RIGHT;
+            else if(!strcmp(buf, "up"))
+                keySym = SDLK_UP;
+            else if(!strcmp(buf, "down"))
+                keySym = SDLK_DOWN;
+            else if(!strcmp(buf, "ins"))
+                keySym = SDLK_INSERT;
+            else if(!strcmp(buf, "home"))
+                keySym = SDLK_HOME;
+            else if(!strcmp(buf, "end"))
+                keySym = SDLK_END;
+            else if(!strcmp(buf, "pgup"))
+                keySym = SDLK_PAGEUP;
+            else if(!strcmp(buf, "pgdn"))
+                keySym = SDLK_PAGEDOWN;
+        }
+        else
+            keySym = static_cast<SDLKey>(key);
+        
+        sym.sym = keySym;
+        
         SDL_PrivateKeyboard(SDL_PRESSED, &sym);
         SDL_PrivateKeyboard(SDL_RELEASED, &sym);
     }
