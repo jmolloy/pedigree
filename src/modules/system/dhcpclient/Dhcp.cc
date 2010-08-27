@@ -210,7 +210,7 @@ static ServiceFeatures *pFeatures = 0;
 bool dhcpClient(Network *pCard)
 {
     StationInfo info = pCard->getStationInfo();
-    
+
     /// \todo Find a better way to check for the loopback address
     if(info.ipv4 == Network::convertToIpv4(127, 0, 0, 1))
         return false;
@@ -220,7 +220,7 @@ bool dhcpClient(Network *pCard)
 
     #define BUFFSZ 2048
     uint8_t* buff = new uint8_t[BUFFSZ];
-        
+
     bool bSuccess = true;
 
     // Can be used for anything
@@ -265,16 +265,16 @@ bool dhcpClient(Network *pCard)
         size_t byteOffset = 0;
         byteOffset = addOption(&cookie, sizeof(cookie), byteOffset, dhcp.options);
         byteOffset = addOption(&msgTypeOpt, sizeof(msgTypeOpt), byteOffset, dhcp.options);
-      
+
         // Want a subnet mask, router, and DNS server(s)
         const uint8_t paramsWanted[] = {1, 3, 6};
-      
+
         paramRequest.len = sizeof paramsWanted;
-      
+
         byteOffset = addOption(&paramRequest, sizeof(paramRequest), byteOffset, dhcp.options);
         memcpy(dhcp.options + byteOffset, &paramsWanted, sizeof paramsWanted);
         byteOffset += sizeof paramsWanted;
-      
+
         byteOffset = addOption(&endOpt, sizeof(endOpt), byteOffset, dhcp.options);
 
         // Throw into the send buffer and send it out
@@ -294,7 +294,7 @@ bool dhcpClient(Network *pCard)
         DhcpOptionServerIdent dhcpServer;
 
         int n = 0;
-        if(e->dataReady(true) == false)
+        if(e->dataReady(true, 5) == false)
         {
             WARNING("DHCP: Did not receive a reply to DHCP DISCOVER (timed out)!");
             UdpManager::instance().returnEndpoint(e);
@@ -371,7 +371,7 @@ bool dhcpClient(Network *pCard)
         currentState = REQUEST_SENT;
 
         DhcpOptionAddrReq addrReq;
-      
+
         paramRequest.len = sizeof paramsWanted;
 
         addrReq.a4 = (myIpWillBe & 0xFF000000) >> 24;
@@ -386,11 +386,11 @@ bool dhcpClient(Network *pCard)
         byteOffset = addOption(&msgTypeOpt, sizeof(msgTypeOpt), byteOffset, dhcp.options);
         byteOffset = addOption(&addrReq, sizeof(addrReq), byteOffset, dhcp.options);
         byteOffset = addOption(&dhcpServer, sizeof(dhcpServer), byteOffset, dhcp.options);
-      
+
         byteOffset = addOption(&paramRequest, sizeof(paramRequest), byteOffset, dhcp.options);
         memcpy(dhcp.options + byteOffset, &paramsWanted, sizeof paramsWanted);
         byteOffset += sizeof paramsWanted;
-      
+
         byteOffset = addOption(&endOpt, sizeof(endOpt), byteOffset, dhcp.options);
 
         // Throw into the send buffer and send it out
@@ -455,7 +455,7 @@ bool dhcpClient(Network *pCard)
             {
                 opt = reinterpret_cast<DhcpOption*>(incoming->options + byteOffset + sizeof(cookie));
                 DEBUG_LOG("DHCP ACK opt=" << Dec << opt->code << Hex << "/" << opt->code << ".");
-                
+
                 if(opt->code == DHCP_MSGEND)
                     break;
                 else if(opt->code == DHCP_MSGTYPE)
@@ -511,10 +511,10 @@ bool dhcpClient(Network *pCard)
 
         // Set it up
         StationInfo host;
-      
+
         uint32_t ipv4 = Network::convertToIpv4(addrReq.a1, addrReq.a2, addrReq.a3, addrReq.a4);
         uint32_t subnet = Network::convertToIpv4(subnetMask.a1, subnetMask.a2, subnetMask.a3, subnetMask.a4);
-      
+
         host.ipv4.setIp(ipv4);
 
         if(subnetMaskSet)
@@ -525,7 +525,7 @@ bool dhcpClient(Network *pCard)
             host.gateway.setIp(Network::convertToIpv4(defGateway.a1, defGateway.a2, defGateway.a3, defGateway.a4));
         else
             host.gateway.setIp(Network::convertToIpv4(192, 168, 0, 1)); /// \todo Autoconfiguration IPv4 address
-        
+
         if(dnsServers)
         {
             host.dnsServers = dnsServers;
@@ -536,23 +536,23 @@ bool dhcpClient(Network *pCard)
             host.dnsServers = 0;
             host.nDnsServers = 0;
         }
-      
+
         // The number of hosts we can get on this network is found by swapping
         // bits in the subnet mask (ie, 255.255.255.0 becomes 0.0.0.255).
         uint32_t numHosts = subnet ^ 0xFFFFFFFF;
-      
+
         // Then we take the IP we've been given, AND against the subnet to get the
         // bottom of the IP range, and then add the number of hosts to find the
         // broadcast address.
         uint32_t broadcast = (ipv4 & subnet) + numHosts;
         host.broadcast.setIp(broadcast);
-        
+
         UdpManager::instance().returnEndpoint(e);
         delete [] buff;
-      
+
         return pCard->setStationInfo(host);
     }
-    
+
     return false;
 }
 
@@ -560,7 +560,7 @@ bool DhcpService::serve(ServiceFeatures::Type type, void *pData, size_t dataLen)
 {
     if(!pData)
         return false;
-    
+
     // Correct type?
     if(pFeatures->provides(type))
     {
