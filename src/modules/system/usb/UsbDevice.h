@@ -41,8 +41,11 @@ class UsbDevice : public virtual Device
 
         struct UnknownDescriptor
         {
-            inline UnknownDescriptor(uint8_t *pBuffer, uint8_t type, size_t length) :
-                pDescriptor(pBuffer), nType(type), nLength(length) {}
+            inline UnknownDescriptor(uint8_t *pBuffer, uint8_t type, size_t length) : nType(type), nLength(length)
+            {
+                pDescriptor = new uint8_t[nLength];
+                memcpy(pDescriptor, pBuffer, nLength);
+            }
 
             void *pDescriptor;
             uint8_t nType;
