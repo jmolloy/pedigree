@@ -299,6 +299,7 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
     Processor::information().setCurrentThread(pThread);
     Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
     Processor::switchAddressSpace( *pThread->getParent()->getAddressSpace() );
+    Processor::setTlsBase(pThread->getTlsBase());
 
     // This thread is safe from being moved as its status is now "running".
     if (pThread->getLock().m_bInterrupts) bWasInterrupts = true;
@@ -349,6 +350,7 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
     Processor::information().setCurrentThread(pThread);
     Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
     Processor::switchAddressSpace( *pThread->getParent()->getAddressSpace() );
+    Processor::setTlsBase(pThread->getTlsBase());
 
     // This thread is safe from being moved as its status is now "running".
     pThread->getLock().m_Atom.m_Atom = 1;
