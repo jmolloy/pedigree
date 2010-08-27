@@ -46,6 +46,7 @@
   while (0)
 #else
 #define DEBUG_LOG(text)
+#define DEBUG_LOG_NOLOCK(text)
 #endif
 
 /** Add a notice to the log */
