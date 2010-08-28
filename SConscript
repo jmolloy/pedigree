@@ -165,9 +165,7 @@ def buildImageMtools(target, source, env):
     # Copy the base image to the destination, overwriting any image that
     # may already exist there.
     if('gz' in imageBase):
-        shutil.copy(imageBase, "./tmp.tar.gz")
-        os.system("tar -xzf tmp.tar.gz")
-        os.system("rm -f tmp.tar.gz")
+        os.system("tar -xzf " + imageBase + " -C .")
         shutil.move(os.path.basename(imageBase).replace('tar.gz', 'img'), outFile)
     else:
         shutil.copy(imageBase, outFile)
