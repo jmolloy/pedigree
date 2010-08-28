@@ -467,6 +467,7 @@ int	sethostname(char *name, size_t len)
     return 0;
 }
 
+/// \todo ioctl is actually supposed to take varargs, not a single buffer
 int ioctl(int fd, int command, void *buf)
 {
     return (long)syscall3(POSIX_IOCTL, fd, command, (long)buf);

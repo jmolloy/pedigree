@@ -53,7 +53,7 @@ _BEGIN_STD_C
 
 #define __IOCTL_LAST  0x401C
 
-int _EXFUN(ioctl, (int fildes, int request, ...));
+int _EXFUN(ioctl, (int fildes, int request, void *args));
 
 _END_STD_C
 

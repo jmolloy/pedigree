@@ -36,8 +36,6 @@
 #define __need___va_list
 #include <stdarg.h>
 
-#include <limits.h>
-
 /*
  * <sys/reent.h> defines __FILE, _fpos_t.
  * They must be defined there because struct _reent needs them (and we don't

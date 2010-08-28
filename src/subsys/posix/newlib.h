@@ -5,6 +5,10 @@
 #define _COMPILING_SUBSYS
 #endif
 
+#ifndef _PEDIGREE_COMPILING_SUBSYS
+#define _PEDIGREE_COMPILING_SUBSYS
+#endif
+
 #ifdef _EXFUN
 #undef _EXFUN
 #define _EXFUN(x, y)

@@ -129,6 +129,11 @@
 #  endif /* _LIMITS_H  */
 # endif	 /* GCC 2.  */
 
+#if defined __GNUC__ && !defined _GCC_LIMITS_H_ && !defined _PEDIGREE_COMPILING_SUBSYS
+/* `_GCC_LIMITS_H_' is what GCC's file defines.  */
+# include_next <limits.h>
+#endif /* __GNUC__ && !_GCC_LIMITS_H_ */
+
 #endif	 /* !_LIBC_LIMITS_H_ */
 
 #ifndef _POSIX2_RE_DUP_MAX
@@ -148,8 +153,3 @@
 #ifndef IOV_MAX
 #define IOV_MAX		512
 #endif
-
-#if defined __GNUC__ && !defined _GCC_LIMITS_H_ && !defined _PEDIGREE_COMPILING_SUBSYS
-/* `_GCC_LIMITS_H_' is what GCC's file defines.  */
-# include_next <limits.h>
-#endif /* __GNUC__ && !_GCC_LIMITS_H_ */
