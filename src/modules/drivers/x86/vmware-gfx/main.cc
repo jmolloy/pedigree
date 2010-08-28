@@ -248,6 +248,25 @@ class VmwareGraphics : public Display
             return true;
         }
         
+        virtual bool setScreenMode(size_t nWidth, size_t nHeight, size_t nBpp)
+        {
+            // Read maximum resolution
+            size_t maxWidth = readRegister(SVGA_REG_MAX_WIDTH);
+            size_t maxHeight = readRegister(SVGA_REG_MAX_HEIGHT);
+            
+            // Check the passed resolution is within these boundaries: if not,
+            // modify it. Applications that use framebuffers from us should use
+            // their width/height methods in order to handle any potential
+            // screen resolution.
+            if(nWidth > maxWidth)
+                nWidth = maxWidth;
+            if(nHeight > maxHeight)
+                nHeight = maxHeight;
+            
+            setMode(nWidth, nHeight, nBpp);
+            return true;
+        }
+        
         void setMode(size_t w, size_t h, size_t bpp)
         {
             // Set mode

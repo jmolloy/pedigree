@@ -176,6 +176,41 @@ public:
 
         return setScreenMode(*pSm);
     }
+    
+    /** Sets the current screen mode using a width, height, and pixel depth */
+    virtual bool setScreenMode(size_t nWidth, size_t nHeight, size_t nBpp)
+    {
+        // This default implementation is enough for VBE
+        /// \todo "Closest match": allow a threshold for a match in case the
+        ///       specific mode specified cannot be set.
+        
+        Display::ScreenMode *pSm = 0;
+        
+        List<Display::ScreenMode*> modes;
+        if(!getScreenModes(modes))
+            return false;
+        for(List<Display::ScreenMode*>::Iterator it = modes.begin();
+            it != modes.end();
+            it++)
+        {
+            if (((*it)->width == nWidth) &&
+                ((*it)->height == nHeight))
+            {
+                if((Graphics::bitsPerPixel((*it)->pf2) == nBpp) || (((*it)->pf.nBpp) == nBpp))
+                {
+                    pSm = *it;
+                    break;
+                }
+            }
+        }
+        if (pSm == 0)
+        {
+            ERROR("Screenmode not found: " << Dec << nWidth << "x" << nHeight << "x" << nBpp << Hex);
+            return false;
+        }
+
+        return setScreenMode(*pSm);
+    }
 };
 
 #endif

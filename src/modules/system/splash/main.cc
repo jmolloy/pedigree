@@ -299,19 +299,19 @@ static void init()
     Display *pDisplay = pProvider.pDisplay;
     
     // Set up a mode we want
-    if(!pDisplay->setScreenMode(0x117)) // 0x118 for 24-bit
+    if(!pDisplay->setScreenMode(1024, 768, 16))
     {
         NOTICE("splash: Falling back to 800x600");
 
         // Attempt to fall back to 800x600
-        if(!pDisplay->setScreenMode(0x114)) // 0x115 for 24-bit
+        if(!pDisplay->setScreenMode(800, 600, 16))
         {
             NOTICE("splash: Falling back to 640x480");
 
             // Finally try and fall back to 640x480
-            if(!pDisplay->setScreenMode(0x111)) // 0x112 for 24-bit
+            if(!pDisplay->setScreenMode(640, 480, 16))
             {
-                ERROR("splash: Couldn't find a suitable display mode for this system (tried: 1024x768, 800x600, 640x480.");
+                ERROR("splash: Couldn't find a suitable display mode for this system (tried: 1024x768, 800x600, 640x480).");
                 return;
             }
         }
