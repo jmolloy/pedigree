@@ -239,9 +239,7 @@ def buildModule(env, path, outputBase, targetAlias):
     if custom_files.has_key(i):
         for f in custom_files[i]:
             files += [base + '/' + f]
-            
     
-    # Static drivers don't need special yes they do
     if "STATIC_DRIVERS" in env['CPPDEFINES']:
         e.Program(output, files, LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT', LSCRIPT = File("#src/modules/link_static.ld"))
     else:
@@ -318,8 +316,6 @@ initrdList += [builddir.abspath + '/subsystems/pedigree-c.o']
 if env['ARCH_TARGET'] == 'X86':
     initrdList += [builddir.abspath + '/subsystems/native.o']
 
-initrd = ' '.join(initrdList)
-
 env.Depends(initrdFile, "drivers")
 env.Depends(initrdFile, "modules")
 env.Depends(initrdFile, "subsys")
@@ -329,4 +325,5 @@ if('STATIC_DRIVERS' in env['CPPDEFINES']):
     env.Depends("kernel", initrdList) # Kernel depends on all drivers/modules
     env['INITRD_LIST'] = initrdList
 else:
-    env.Command(initrdFile, None, '@echo Building initrd... && tar --absolute-names --transform="s,/.*/,," -czf $TARGET ' + initrd)
+    env.Tar(initrdFile, initrdList)
+

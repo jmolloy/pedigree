@@ -102,7 +102,8 @@ opts.AddVariables(
 # or env['ENV']['PATH'] won't be the user's $PATH from the shell environment.
 # That specifically breaks the build on OS X when using tar from macports (which
 # is needed at least on OS X 10.5 as the OS X tar does not have --transform).
-env = Environment(options=opts, ENV=os.environ, platform='posix')
+env = Environment(options=opts, ENV=os.environ, platform='posix',
+                  tools = ['default', 'textfile'], TARFLAGS='--transform="s,.*/,," -cz')
 Help(opts.GenerateHelpText(env))
 
 # Don't use MD5s to determine if files have changed, just check the timestamp
@@ -335,20 +336,24 @@ if env['genversion']:
     # Set the flags
     env['PEDIGREE_FLAGS'] = ' '.join(env['CPPDEFINES'])
 
-    # Build the string of data to write
-    version_out = ''
-    version_out += 'const char *g_pBuildTime = "'     + env['PEDIGREE_BUILDTIME'] + '";\n'
-    version_out += 'const char *g_pBuildRevision = "' + env['PEDIGREE_REVISION']  + '";\n'
-    version_out += 'const char *g_pBuildFlags = "'    + env['PEDIGREE_FLAGS']     + '";\n'
-    version_out += 'const char *g_pBuildUser = "'     + env['PEDIGREE_USER']      + '";\n'
-    version_out += 'const char *g_pBuildMachine = "'  + env['PEDIGREE_MACHINE']   + '";\n'
-    version_out += 'const char *g_pBuildTarget = "'   + env['ARCH_TARGET']        + '";\n'
+    version_out = ['const char *g_pBuildTime = "$buildtime";',
+                   'const char *g_pBuildRevision = "$rev";',
+                   'const char *g_pBuildFlags = "$flags";',
+                   'const char *g_pBuildUser = "$user";',
+                   'const char *g_pBuildMachine = "$machine";',
+                   'const char *g_pBuildTarget = "$target";']
+    
+    sub_dict = {"$buildtime"    : env['PEDIGREE_BUILDTIME'],
+                "$rev"          : env['PEDIGREE_REVISION'],
+                "$flags"        : env['PEDIGREE_FLAGS'],
+                "$user"         : env['PEDIGREE_USER'],
+                "$machine"      : env['PEDIGREE_MACHINE'],
+                "$target"       : env['ARCH_TARGET']
+               }
 
     # Write the file to disk (We *assume* src/system/kernel/)
-    file = open('src/system/kernel/Version.cc','w')
-    file.write(version_out)
-    file.close()
-
+    env.Textfile('#src/system/kernel/Version.cc', version_out, SUBST_DICT=sub_dict)
+    
     env['genversion'] = 0
 
 # Save the cache, all the options are configured

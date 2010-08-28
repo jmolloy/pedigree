@@ -290,10 +290,3 @@ else:
     # Build the live CD ISO
     env.Command(cdimg, [configdb, builddir + '/initrd.tar', builddir + '/kernel/kernel', hddimg], Action(buildCdImage, None))
 
-
-# To include a new subdirectory just add to the list.
-# subdirs = [
-    # 'src/system'
-# ]
-
-# SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
