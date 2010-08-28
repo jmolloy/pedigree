@@ -1,6 +1,8 @@
 #ifndef SYS_TERMIOS_H
 #define SYS_TERMIOS_H
 
+#include <unistd.h>
+
 #ifdef __cplusplus
 extern "C"
 {

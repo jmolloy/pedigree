@@ -123,7 +123,7 @@ int	_EXFUN(nice, (int __nice_value ));
 #if !defined(__INSIDE_CYGWIN__)
 off_t   _EXFUN(lseek, (int __fildes, off_t __offset, int __whence ));
 #endif
-#if defined(__SPU__) || defined(__CYGWIN__)
+#if defined(__SPU__) || defined(__CYGWIN__) || defined(__PEDIGREE__)
 #define F_ULOCK	0
 #define F_LOCK	1
 #define F_TLOCK	2

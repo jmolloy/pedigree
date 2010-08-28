@@ -2,6 +2,7 @@
 #define _SYS_UIO_H
 
 #include <sys/types.h>
+#include <limits.h>
 
 struct iovec
 {
