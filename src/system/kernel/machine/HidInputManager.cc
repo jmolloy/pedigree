@@ -35,6 +35,8 @@ HidInputManager::~HidInputManager()
 void HidInputManager::keyDown(uint8_t keyCode)
 {
     KeymapManager &keymapManager = KeymapManager::instance();
+    
+    InputManager::instance().rawKeyUpdate(keyCode, false);
 
     // Check for modifiers
     if(keymapManager.handleHidModifier(keyCode, true))
@@ -73,6 +75,8 @@ void HidInputManager::keyDown(uint8_t keyCode)
 void HidInputManager::keyUp(uint8_t keyCode)
 {
     KeymapManager &keymapManager = KeymapManager::instance();
+    
+    InputManager::instance().rawKeyUpdate(keyCode, true);
 
     // Check for modifiers
     if(keymapManager.handleHidModifier(keyCode, false))

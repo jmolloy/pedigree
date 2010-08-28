@@ -130,6 +130,16 @@ void InputManager::keyPressed(uint64_t key)
     putNotification(note);
 }
 
+void InputManager::rawKeyUpdate(uint8_t scancode, bool bKeyUp)
+{
+    InputNotification *note = new InputNotification;
+    note->type = RawKey;
+    note->data.rawkey.scancode = scancode;
+    note->data.rawkey.keyUp = bKeyUp;
+
+    putNotification(note);
+}
+
 void InputManager::mouseUpdate(ssize_t relX, ssize_t relY, ssize_t relZ, uint32_t buttonBitmap)
 {
     // Smooth input out

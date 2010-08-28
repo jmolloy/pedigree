@@ -32,6 +32,9 @@
 
 #include <input/Input.h>
 
+static SDLKey keymap[256];
+static SDLMod modstate = KMOD_NONE;
+
 namespace Keyboard
 {
     enum KeyFlags
@@ -47,60 +50,58 @@ namespace Keyboard
 // Input handler: receives input notifications and sends them to SDL
 void input_handler(Input::InputNotification &note)
 {
-    if(note.type == Input::Key)
+    if(note.type == Input::RawKey)
     {
-        uint64_t key = note.data.key.key;
+        SDLKey trans = keymap[note.data.rawkey.scancode];
         
         SDL_keysym sym;
-        sym.scancode = 0;
+        sym.scancode = note.data.rawkey.scancode;
         sym.unicode = 0;
-        
         sym.mod = KMOD_NONE;
-        if(key & Keyboard::Ctrl)
-            sym.mod = static_cast<SDLMod>(sym.mod | KMOD_CTRL);
-        if(key & Keyboard::Shift)
-            sym.mod = static_cast<SDLMod>(sym.mod | KMOD_SHIFT);
-        if(key & Keyboard::Alt)
-            sym.mod = static_cast<SDLMod>(sym.mod | KMOD_ALT);
-        if(key & Keyboard::AltGr)
-            sym.mod = static_cast<SDLMod>(sym.mod | KMOD_META);
+        sym.sym = trans;
         
-        SDLKey keySym = SDLK_UNKNOWN;
-        if(((key & 0xFF) == 0xA) || ((key & 0xFF) == 0xD))
-            keySym = SDLK_RETURN;
-        else if(key & Keyboard::Special)
+        int mods = static_cast<int>(modstate);
+        
+        if(note.data.rawkey.keyUp)
         {
-            char buf[5];
-            memcpy(buf, static_cast<void*>(&key), 4);
-            buf[4] = 0;
+            if(trans == SDLK_LALT)
+                mods &= ~KMOD_LALT;
+            if(trans == SDLK_RALT)
+                mods &= ~KMOD_RALT;
+            if(trans == SDLK_LSHIFT)
+                mods &= ~KMOD_LSHIFT;
+            if(trans == SDLK_RSHIFT)
+                mods &= ~KMOD_RSHIFT;
+            if(trans == SDLK_LCTRL)
+                mods &= ~KMOD_LCTRL;
+            if(trans == SDLK_RCTRL)
+                mods &= ~KMOD_RCTRL;
             
-            if(!strcmp(buf, "left"))
-                keySym = SDLK_LEFT;
-            else if(!strcmp(buf, "righ"))
-                keySym = SDLK_RIGHT;
-            else if(!strcmp(buf, "up"))
-                keySym = SDLK_UP;
-            else if(!strcmp(buf, "down"))
-                keySym = SDLK_DOWN;
-            else if(!strcmp(buf, "ins"))
-                keySym = SDLK_INSERT;
-            else if(!strcmp(buf, "home"))
-                keySym = SDLK_HOME;
-            else if(!strcmp(buf, "end"))
-                keySym = SDLK_END;
-            else if(!strcmp(buf, "pgup"))
-                keySym = SDLK_PAGEUP;
-            else if(!strcmp(buf, "pgdn"))
-                keySym = SDLK_PAGEDOWN;
+            sym.mod = static_cast<SDLMod>(mods);
+            
+            SDL_PrivateKeyboard(SDL_RELEASED, &sym);
+        }
+        else
+        {
+            if(trans == SDLK_LALT)
+                mods |= KMOD_LALT;
+            if(trans == SDLK_RALT)
+                mods |= KMOD_RALT;
+            if(trans == SDLK_LSHIFT)
+                mods |= KMOD_LSHIFT;
+            if(trans == SDLK_RSHIFT)
+                mods |= KMOD_RSHIFT;
+            if(trans == SDLK_LCTRL)
+                mods |= KMOD_LCTRL;
+            if(trans == SDLK_RCTRL)
+                mods |= KMOD_RCTRL;
+            
+            sym.mod = static_cast<SDLMod>(mods);
+            
+            SDL_PrivateKeyboard(SDL_PRESSED, &sym);
         }
         
-        if(keySym == SDLK_UNKNOWN)
-            keySym = static_cast<SDLKey>(key);
-        
-        sym.sym = keySym;
-        
-        SDL_PrivateKeyboard(SDL_PRESSED, &sym);
-        SDL_PrivateKeyboard(SDL_RELEASED, &sym);
+        modstate = static_cast<SDLMod>(mods);
     }
     else if(note.type == Input::Mouse)
     {
@@ -115,7 +116,7 @@ void input_handler(Input::InputNotification &note)
 
 void PEDIGREE_InitInput()
 {
-    Input::installCallback(Input::Key | Input::Mouse, input_handler);
+    Input::installCallback(Input::RawKey | Input::Mouse, input_handler);
 }
 
 void PEDIGREE_DestroyInput()
@@ -125,11 +126,92 @@ void PEDIGREE_DestroyInput()
 
 void PEDIGREE_PumpEvents(_THIS)
 {
-	// Nothing that has to be done here - everything comes in as events
+	// Nothing that has to be done here - everything comes in as async events
 }
 
 void PEDIGREE_InitOSKeymap(_THIS)
 {
-	/// \todo Need to setup the keymap for stuff like the enter key!
+    size_t i;
+	
+    /* Initialize the DirectFB key translation table */
+    for(i = 0; i < SDL_arraysize(keymap); ++i)
+        keymap[i] = SDLK_UNKNOWN;
+    
+    for(i = 0; i <= (SDLK_z - SDLK_a); i++)
+        keymap[0x04 + i]    = static_cast<SDLKey>(SDLK_a + i);
+    
+    for(i = 0; i <= (SDLK_9 - SDLK_1); i++)
+        keymap[0x1E + i]    = static_cast<SDLKey>(SDLK_1 + i);
+    keymap[0x27] = SDLK_0;
+    
+    keymap[0x28]            = SDLK_RETURN;
+    keymap[0x29]            = SDLK_ESCAPE;
+    keymap[0x2A]            = SDLK_BACKSPACE;
+    keymap[0x2B]            = SDLK_TAB;
+    keymap[0x2C]            = SDLK_SPACE;
+    keymap[0x2D]            = SDLK_MINUS;
+    keymap[0x2E]            = SDLK_PLUS;
+    keymap[0x2F]            = SDLK_LEFTBRACKET;
+    keymap[0x30]            = SDLK_RIGHTBRACKET;
+    keymap[0x31]            = SDLK_BACKSLASH;
+    keymap[0x32]            = SDLK_UNKNOWN; // INT 2?
+    keymap[0x33]            = SDLK_SEMICOLON;
+    keymap[0x34]            = SDLK_ASTERISK;
+    keymap[0x35]            = SDLK_BACKQUOTE;
+    keymap[0x36]            = SDLK_COMMA;
+    keymap[0x37]            = SDLK_PERIOD;
+    keymap[0x38]            = SDLK_SLASH;
+    keymap[0x39]            = SDLK_UNKNOWN; // Caps Lock
+    
+    for(i = 0; i <= (SDLK_F12 - SDLK_F1); i++)
+        keymap[0x3A + i]    = static_cast<SDLKey>(SDLK_F1 + i);
+    
+    keymap[0x46]            = SDLK_UNKNOWN; // Print screen
+    keymap[0x47]            = SDLK_UNKNOWN; // Scroll lock
+    keymap[0x48]            = SDLK_UNKNOWN; // Pause/Break
+    keymap[0x49]            = SDLK_INSERT;
+    keymap[0x4A]            = SDLK_HOME;
+    keymap[0x4B]            = SDLK_PAGEUP;
+    keymap[0x4C]            = SDLK_DELETE;
+    keymap[0x4D]            = SDLK_END;
+    keymap[0x4E]            = SDLK_PAGEDOWN;
+    keymap[0x4F]            = SDLK_RIGHT;
+    keymap[0x50]            = SDLK_LEFT;
+    keymap[0x51]            = SDLK_DOWN;
+    keymap[0x52]            = SDLK_UP;
+    keymap[0x53]            = SDLK_UNKNOWN; // Numlock
+    keymap[0x54]            = SDLK_KP_DIVIDE;
+    keymap[0x55]            = SDLK_KP_MULTIPLY;
+    keymap[0x56]            = SDLK_KP_MINUS;
+    keymap[0x57]            = SDLK_KP_PLUS;
+    keymap[0x58]            = SDLK_KP_ENTER;
+    
+    keymap[0x59]            = SDLK_KP1;
+    keymap[0x5A]            = SDLK_KP2;
+    keymap[0x5B]            = SDLK_KP3;
+    keymap[0x5C]            = SDLK_KP4;
+    keymap[0x5E]            = SDLK_KP6;
+    keymap[0x5F]            = SDLK_KP7;
+    keymap[0x60]            = SDLK_KP8;
+    keymap[0x61]            = SDLK_KP9;
+    keymap[0x62]            = SDLK_KP0;
+    
+    keymap[0x63]            = SDLK_KP_PERIOD;
+    keymap[0x64]            = SDLK_UNKNOWN; // INT 1?
+    keymap[0x65]            = SDLK_LSUPER; // WinMenu, turn into super
+    // 0x68 -> 0x73 = F13 to F24
+    keymap[0x75]            = SDLK_HELP;
+    keymap[0x7A]            = SDLK_UNDO;
+    
+    keymap[0x97]            = SDLK_KP5;
+    
+    keymap[0xE0]            = SDLK_LCTRL;
+    keymap[0xE1]            = SDLK_LSHIFT;
+    keymap[0xE2]            = SDLK_LALT;
+    keymap[0xE3]            = SDLK_LSUPER;
+    keymap[0xE4]            = SDLK_RCTRL;
+    keymap[0xE5]            = SDLK_RSHIFT;
+    keymap[0xE6]            = SDLK_RALT;
+    keymap[0xE7]            = SDLK_RSUPER;
 }
 

@@ -34,6 +34,7 @@ class InputManager
         const static int Key = 1;
         const static int Mouse = 2;
         const static int Joystick = 4;
+        const static int RawKey = 8;
         const static int Unknown = 255;
         
         typedef int CallbackType;
@@ -59,6 +60,15 @@ class InputManager
 
                     bool buttons[64];
                 } pointy;
+                struct
+                {
+                    /// HID scancode for the key (most generic type of scancode,
+                    /// and easy to build translation tables for)
+                    uint8_t scancode;
+                    
+                    /// Whether this is a keyUp event or not.
+                    bool keyUp;
+                } rawkey;
             } data;
         };
 
@@ -82,6 +92,10 @@ class InputManager
 
         /// Called whenever a key is pressed and needs to be added to the queue
         void keyPressed(uint64_t key);
+        
+        /// Called whenever a raw key signal comes in
+        /// \param scancode a HID scancode
+        void rawKeyUpdate(uint8_t scancode, bool bKeyUp);
 
         /// Called whenever mouse input comes in.
         void mouseUpdate(ssize_t relX, ssize_t relY, ssize_t relZ, uint32_t buttonBitmap);

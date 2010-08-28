@@ -24,6 +24,7 @@ namespace Input
     const int Key = 1;
     const int Mouse = 2;
     const int Joystick = 4;
+    const int RawKey = 8;
     const int Unknown = 255;
         
     typedef int CallbackType;
@@ -49,6 +50,15 @@ namespace Input
 
                 bool buttons[64];
             } pointy;
+            struct
+            {
+                /// HID scancode for the key (most generic type of scancode,
+                /// and easy to build translation tables for)
+                uint8_t scancode;
+                
+                /// Whether this is a keyUp event or not.
+                bool keyUp;
+            } rawkey;
         } data;
     };
 
