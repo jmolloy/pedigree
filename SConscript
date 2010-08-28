@@ -282,7 +282,10 @@ else:
     fileList += [[i[0] + '/' + j for j in i[2]] for i in os.walk(builddir + '/drivers')]
 
     # Add libraries
-    fileList += [builddir + '/libc.so', builddir + '/libm.so']
+    fileList += [builddir + '/libc.so',
+                 builddir + '/libm.so',
+                 builddir + '/libpthread.so',
+                 builddir + '/libSDL.so']
 
     # Build the hard disk image
     env.Command(hddimg, fileList, Action(buildImage, None))

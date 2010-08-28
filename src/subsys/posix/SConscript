@@ -20,7 +20,7 @@ subsysdir = "#" + env["PEDIGREE_BUILD_SUBSYS"]
 posix_objname = subsysdir + '/posix.o'
 glue_objname = builddir + '/libpedigree-glue.a'
 crt0_objname = kerneldir + '/crt0.o'
-libpthread_objname = builddir + '/libpthread.a'
+libpthread_objname = builddir + '/libpthread.so'
 crti_objname = kerneldir + '/crti.o'
 crtn_objname = kerneldir + '/crtn.o'
 libpedigree_c_objname = builddir + '/libpedigree-c.a'
@@ -136,7 +136,7 @@ tmp_crtn.Program(crtn_objname, crtn_files, LINKFLAGS='-nostdlib -r')
 
 # libpthread
 tmp_pthread = tmp.Clone()
-tmp_pthread.Library(libpthread_objname, pthread_files)
+tmp_pthread.Program(libpthread_objname, pthread_files, LINKFLAGS="-Wl,-shared -Wl,-soname,libpthread.so")
 
 # Build libc/libm
 

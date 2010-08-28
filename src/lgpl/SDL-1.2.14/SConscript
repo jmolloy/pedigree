@@ -12,7 +12,7 @@ tmpEnvironment = env.Clone()
 # Change to then name of this module
 builddir = "#" + env["PEDIGREE_BUILD_BASE"]
 imagesdir = env["PEDIGREE_IMAGES_DIR"]
-objname = builddir + '/libSDL.a'
+objname = builddir + '/libSDL.so'
 
 # To include a new subdirectory just add to the list.
 subdirs = [
@@ -37,7 +37,6 @@ files = [
     Glob('src/video/pedigree/*.cc'),
     Glob('src/joystick/dummy/*.c'),
     Glob('src/cdrom/dummy/*.c'),
-#     Glob('src/thread/generic/*.c'),
     Glob('src/thread/pthread/*.c'),
     Glob('src/timer/unix/*.c'),
     Glob('src/loadso/dlopen/*.c'),
@@ -58,6 +57,7 @@ libraries = [
     'pedigree',
     'pedigree-c',
     'pthread',
+    'stdc++'
 ]
 
 if env['ARCH_TARGET'] in ['X86', 'X64', 'ARM']:
@@ -75,6 +75,6 @@ tmpEnvironment['LIBS'] = libraries
 tmpEnvironment['LIBPATH'] = libpaths
 tmpEnvironment['CPPDEFINES'] += ['PEDIGREE']
 
-tmpEnvironment.Library(objname, files)
+tmpEnvironment.Program(objname, files, LINKFLAGS="-Wl,-shared -Wl,-soname,libSDL.so")
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
