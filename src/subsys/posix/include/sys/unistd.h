@@ -229,8 +229,8 @@ int     _EXFUN(_execve, (const char *__path, char * const __argv[], char * const
 int     _EXFUN(ftruncate, (int __fd, off_t __length));
 int     _EXFUN(truncate, (const char *, off_t __length));
 
-#if defined(__CYGWIN__) || defined(__rtems__)
 int	_EXFUN(getdtablesize, (void));
+#if defined(__CYGWIN__) || defined(__rtems__)
 int	_EXFUN(setdtablesize, (int));
 useconds_t _EXFUN(ualarm, (useconds_t __useconds, useconds_t __interval));
 #if !(defined  (_WINSOCK_H) || defined (__USE_W32_SOCKETS))
@@ -253,6 +253,9 @@ ssize_t _EXFUN(readlink, (const char *__path, char *__buf, size_t __buflen));
 ssize_t	_EXFUN(readlinkat, (int __dirfd1, const char *__path, char *__buf, size_t __buflen));
 #endif
 int     _EXFUN(symlink, (const char *__name1, const char *__name2));
+
+int _EXFUN(setresuid, (uid_t ruid, uid_t euid, uid_t suid));
+int _EXFUN(setresgid, (gid_t rgid, gid_t egid, gid_t sgid));
 
 #define	F_OK	0
 #define	R_OK	4

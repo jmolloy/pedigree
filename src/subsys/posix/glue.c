@@ -2079,3 +2079,25 @@ int sched_yield()
 {
     return syscall0(POSIX_SCHED_YIELD);
 }
+
+int getdtablesize()
+{
+    STUBBED("getdtablesize");
+    
+    struct rlimit tmp;
+    getrlimit(RLIMIT_NOFILE, &tmp);
+    return tmp.rlim_cur;
+}
+
+int setresuid(uid_t ruid, uid_t euid, uid_t suid)
+{
+    STUBBED("setresuid");
+    return -1;
+}
+
+int setresgid(gid_t rgid, gid_t egid, gid_t sgid)
+{
+    STUBBED("setresgid");
+    return -1;
+}
+
