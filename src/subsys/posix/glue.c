@@ -1997,12 +1997,6 @@ void if_freenameindex(struct if_nameindex *nameindex)
     STUBBED("if_freenameindex");
 }
 
-int mprotect(void *addr, size_t len, int prot)
-{
-    STUBBED("mprotect");
-    return -1;
-}
-
 int tcsendbreak(int fildes, int duration)
 {
     STUBBED("tcsendbreak");
@@ -2099,5 +2093,33 @@ int setresgid(gid_t rgid, gid_t egid, gid_t sgid)
 {
     STUBBED("setresgid");
     return -1;
+}
+
+int mprotect(void *addr, size_t len, int prot)
+{
+    STUBBED("mprotect");
+    return 0;
+}
+
+int nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
+{
+    if(!rqtp)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    
+    return syscall2(POSIX_NANOSLEEP, (long) rqtp, (long) rmtp);
+}
+
+int clock_gettime(clockid_t clock_id, struct timespec *tp)
+{
+    if(!tp)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    
+    return syscall2(POSIX_CLOCK_GETTIME, clock_id, (long) tp);
 }
 

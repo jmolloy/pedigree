@@ -23,7 +23,7 @@
 
 #include "newlib.h"
 
-#if 1
+#if 0
 #define SC_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "]\t" << Hex << x)
 #else
 #define SC_NOTICE(x)
@@ -50,6 +50,8 @@ int posix_getgid();
 
 size_t posix_alarm(uint32_t seconds);
 int posix_sleep(uint32_t seconds);
+int posix_nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
+int posix_clock_gettime(clockid_t clock_id, struct timespec *tp);
 
 int pedigree_sigret();
 

@@ -19,6 +19,7 @@ _BEGIN_STD_C
 
 void  *mmap(void *, size_t, int, int, int, off_t);
 int    munmap(void *, size_t);
+int    mprotect(void *addr, size_t len, int prot);
 
 _END_STD_C
 

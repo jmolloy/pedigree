@@ -185,8 +185,6 @@ void Semaphore::release(size_t n)
     {
         if(pThread->getStatus() == Thread::Zombie)
             WARNING("Semaphore has a zombie thread in its thread queue");
-        else
-            WARNING("Semaphore has a thread that isn't asleep in its thread queue");
         continue;
     }
 

@@ -305,6 +305,12 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             return posix_pedigree_thrwakeup(static_cast<pthread_t>(p1));
         case POSIX_PEDIGREE_THRSLEEP:
             return posix_pedigree_thrsleep(static_cast<pthread_t>(p1));
+        
+        case POSIX_NANOSLEEP:
+            return posix_nanosleep(reinterpret_cast<struct timespec*>(p1), reinterpret_cast<struct timespec*>(p2));
+        case POSIX_CLOCK_GETTIME:
+            return posix_clock_gettime(static_cast<clockid_t>(p1), reinterpret_cast<struct timespec*>(p2));
+        
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
 }

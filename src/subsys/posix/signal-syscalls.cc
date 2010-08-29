@@ -514,6 +514,53 @@ int posix_sleep(uint32_t seconds)
     return 0;
 }
 
+int posix_nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
+{
+    SG_NOTICE("nanosleep");
+
+    Semaphore sem(0);
+
+    uint64_t startTick = Machine::instance().getTimer()->getTickCount();
+    sem.acquire(1, rqtp->tv_sec, rqtp->tv_nsec);
+    if (Processor::information().getCurrentThread()->wasInterrupted())
+    {
+        uint64_t endTick = Machine::instance().getTimer()->getTickCount();
+        uint64_t elapsed = endTick - startTick;
+        if(rmtp)
+        {
+            rmtp->tv_nsec = elapsed;
+            rmtp->tv_sec = (elapsed / 1000) + 1;
+        }
+        
+        /// \todo Handle "interrupted before end of timeout"
+        Processor::information().getCurrentThread()->setInterrupted(false);
+        return 0;
+    }
+    else
+    {
+        ERROR("sleep: acquire was not interrupted?");
+    }
+
+    return 0;
+}
+
+int posix_clock_gettime(clockid_t clock_id, struct timespec *tp)
+{
+    SG_NOTICE("clock_gettime");
+    
+    // All clocks are equal, but some are more equal than others.
+    // Seriously though, we don't currently care about the id value.
+    
+    // Tick count is in nanoseconds. The calculation for tv_sec will mean it will
+    // be the UNIX timestamp for the current time *MINUS* the boot tick count.
+    // Because the boot tick count is in fact zero at startup, we need to keep
+    // tv_sec valid.
+    tp->tv_nsec = Machine::instance().getTimer()->getTickCount();
+    tp->tv_sec = Machine::instance().getTimer()->getUnixTimestamp() - (tp->tv_nsec / 1000000000);
+    
+    return 0;
+}
+
 int posix_sigaltstack(const struct stack_t *stack, struct stack_t *oldstack)
 {
     // Verify arguments

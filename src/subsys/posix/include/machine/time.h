@@ -9,6 +9,8 @@
 #endif
 #endif /* !__rtems__ */
 
+#define _POSIX_MONOTONIC_CLOCK      1
+
 #endif	/* _MACHTIME_H_ */
 
 
