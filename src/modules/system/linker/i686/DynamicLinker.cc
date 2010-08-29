@@ -34,7 +34,7 @@ void DynamicLinker::initPlt(Elf *pElf, uintptr_t value)
   uint32_t *got = reinterpret_cast<uint32_t*> (pElf->getGlobalOffsetTable()+value);
   if (reinterpret_cast<uintptr_t>(got) == value)
   {
-    WARNING("DynamicLinker: Global offset table not found!");
+    WARNING("DynamicLinker: Global offset table not found [" << pElf->getGlobalOffsetTable() << "]!");
     return;
   }
 

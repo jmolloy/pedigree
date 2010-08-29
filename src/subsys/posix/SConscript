@@ -136,7 +136,9 @@ tmp_crtn.Program(crtn_objname, crtn_files, LINKFLAGS='-nostdlib -r')
 
 # libpthread
 tmp_pthread = tmp.Clone()
-tmp_pthread.Program(libpthread_objname, pthread_files, LINKFLAGS="-Wl,-shared -Wl,-soname,libpthread.so")
+# tmp_pthread['CFLAGS'] += ' -fPIC '
+# tmp_pthread['CXXFLAGS'] += ' -fPIC '
+tmp_pthread.Program(libpthread_objname, pthread_files, LINKFLAGS="-shared -Wl,-shared -Wl,-soname,libpthread.so")
 
 # Build libc/libm
 

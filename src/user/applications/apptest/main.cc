@@ -7,6 +7,10 @@
 #include <string.h>
 #include <alloca.h>
 
+#include <iostream>
+
+using namespace std;
+
 #include <graphics/Graphics.h>
 
 PedigreeGraphics::Framebuffer *pRootFramebuffer = 0;
@@ -32,6 +36,8 @@ int main(int argc, char **argv)
     pFramebuffer->redraw(0, 0, 128, 128, true);
     
     printf("Should now be a red square on the screen.\n");
+    
+    cout << "C++ output for the win!" << endl;
     
     return 0;
 }

@@ -75,6 +75,6 @@ tmpEnvironment['LIBS'] = libraries
 tmpEnvironment['LIBPATH'] = libpaths
 tmpEnvironment['CPPDEFINES'] += ['PEDIGREE']
 
-tmpEnvironment.Program(objname, files, LINKFLAGS="-Wl,-shared -Wl,-soname,libSDL.so")
+tmpEnvironment.Program(objname, files, LINKFLAGS="-shared -Wl,-shared -Wl,-soname,libSDL.so")
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
