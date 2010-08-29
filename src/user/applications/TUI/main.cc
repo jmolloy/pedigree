@@ -318,8 +318,6 @@ int main (int argc, char **argv)
         return 1;
     }
 
-    Input::installCallback(Input::Key, input_handler);
-
     signal(SIGINT, sigint);
     
     // Connect to the graphics service
@@ -370,6 +368,8 @@ int main (int argc, char **argv)
     rect.point(g_nWidth, g_nHeight);
 
     doRedraw(rect);
+
+    Input::installCallback(Input::Key, input_handler);
 
     size_t maxBuffSz = (32768 * 2) - 1;
     char *buffer = new char[maxBuffSz + 1];
