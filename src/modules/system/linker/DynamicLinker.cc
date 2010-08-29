@@ -88,6 +88,7 @@ bool DynamicLinker::loadProgram(File *pFile, bool bDryRun)
 
     String fileName;
     pFile->getName(fileName);
+    NOTICE("DynamicLinker::loadProgram(" << fileName << ")");
 
     Elf *programElf = new Elf();
 
@@ -205,6 +206,10 @@ bool DynamicLinker::loadObject(File *pFile, bool bDryRun)
 
     Elf *pElf = new Elf();
     SharedObject *pSo = 0;
+    
+    String fileName;
+    pFile->getName(fileName);
+    NOTICE("DynamicLinker::loadObject(" << fileName << ")");
 
     if(!bDryRun)
     {

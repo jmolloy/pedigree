@@ -37,6 +37,6 @@ void RawFsDir::addEntry(File *pEntry)
 void RawFsDir::removeRecursive()
 {
     /// \todo Leaky.
-    NOTICE("raws: removing '" << getName() << "'");
+    NOTICE("rawfs: removing '" << getName() << "'");
     m_Cache.clear();
 }
