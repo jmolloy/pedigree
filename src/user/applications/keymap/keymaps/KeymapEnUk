@@ -22,7 +22,7 @@ DEFINE diaeresis 5
 0x10    U+006D SHIFT U+004D     # m M
 0x11    U+006E SHIFT U+004E     # n N
 0x12    U+006F SHIFT U+004F COMBINE[acute] U+00F3 SHIFT COMBINE[acute] U+00D3 COMBINE[grave] U+00F2 SHIFT COMBINE[grave] U+00D2 COMBINE[circumflex] U+00F4 SHIFT COMBINE[circumflex] U+00D4 COMBINE[diaeresis] U+00F6 SHIFT COMBINE[diaeresis] U+00D6   # o O
-0x13    U+0070 SHIFT U+0041     # p P
+0x13    U+0070 SHIFT U+0050     # p P
 0x14    U+0071 SHIFT U+0051     # q Q
 0x15    U+0072 SHIFT U+0052     # r R
 0x16    U+0073 SHIFT U+0053     # s S
