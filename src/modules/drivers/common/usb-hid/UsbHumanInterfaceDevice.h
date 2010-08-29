@@ -17,10 +17,9 @@
 #ifndef USBHUMANINTERFACEDEVICE_H
 #define USBHUMANINTERFACEDEVICE_H
 
+#include <hid/HidReport.h>
 #include <processor/types.h>
 #include <usb/UsbDevice.h>
-
-#include "HidReport.h"
 
 class UsbHumanInterfaceDevice : public UsbDevice
 {

@@ -31,6 +31,9 @@ driver_common_subdirs = [
     # Pedigree-specific SCSI layer
     'scsi',
 
+    # Pedigree-specific HID layer
+    'hid',
+
     # Pedigree-specific USB drivers
     'usb-hcd',
     'usb-hub',

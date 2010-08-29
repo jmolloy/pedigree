@@ -15,22 +15,13 @@
  */
 
 #include <Module.h>
-#include <usb/UsbPnP.h>
-
-#include "UsbHumanInterfaceDevice.h"
-
-UsbDevice *hidConnected(UsbDevice *pDevice)
-{
-    return new UsbHumanInterfaceDevice(pDevice);
-}
 
 static void entry()
 {
-    UsbPnP::instance().registerCallback(3, SubclassNone, ProtocolNone, hidConnected);
 }
 
 static void exit()
 {
 }
 
-MODULE_INFO("usb-hid", &entry, &exit, "hid", "usb");
+MODULE_INFO("hid", &entry, &exit);

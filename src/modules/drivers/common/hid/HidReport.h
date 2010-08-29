@@ -17,10 +17,9 @@
 #ifndef HIDREPORT_H
 #define HIDREPORT_H
 
+#include <hid/HidUtils.h>
 #include <processor/types.h>
 #include <utilities/Vector.h>
-
-#include "HidUtils.h"
 
 class HidReport
 {

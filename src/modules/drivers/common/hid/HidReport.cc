@@ -14,20 +14,29 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <hid/HidReport.h>
+#include <hid/HidUsages.h>
+#include <hid/HidUtils.h>
 #include <utilities/PointerGuard.h>
 #include <Log.h>
-
-#include "HidReport.h"
-#include "HidUsages.h"
-#include "HidUtils.h"
 
 // Handy macro for mixing tag and type in a single value
 #define MIX_TYPE_N_TAG(type, tag) (type | (tag << 2))
 
-#define getTabs(tabs) "";for(size_t t = 0; t < tabs; t++)Log::instance() << "    ";Log::instance()
+// Log macro that also outputs a number of tabs before the text
+#define TABBED_LOG(tabs, text) \
+    do \
+    { \
+        char *sTabs = new char[(tabs * 4) + 1]; \
+        memset(sTabs, ' ', tabs * 4); \
+        sTabs[tabs * 4] = '\0'; \
+        DEBUG_LOG(sTabs << text); \
+        delete [] sTabs; \
+    } \
+    while (0)
 
-#define ITEM_LOG(tabs, type, value) DEBUG_LOG(getTabs(tabs) << type << " (" << value << ")" << Hex)
-#define ITEM_LOG_DEC(tabs, type, value) DEBUG_LOG(getTabs(tabs) << Dec << type << " (" << value << ")" << Hex)
+#define ITEM_LOG(tabs, type, value) TABBED_LOG(tabs, type << " (" << value << ")" << Hex)
+#define ITEM_LOG_DEC(tabs, type, value) TABBED_LOG(tabs, Dec << type << " (" << value << ")" << Hex)
 
 HidReport::HidReport()
 {
@@ -155,7 +164,7 @@ void HidReport::parseDescriptor(uint8_t *pDescriptor, size_t nDescriptorLength)
                 }
 
                 nDepth--;
-                DEBUG_LOG(getTabs(nDepth) << "End Collection");
+                TABBED_LOG(nDepth, "End Collection");
                 break;
 
             // Global items (set various global variables)
@@ -341,14 +350,15 @@ void HidReport::InputBlock::feedInput(uint8_t *pBuffer, uint8_t *pOldBuffer, siz
         switch(type)
         {
             case Absolute:
-
+                // Here we have to take the current absolute value and
+                // subtract it by the old value to get a relative value
                 nRelativeValue = nValue - HidUtils::getBufferField(pOldBuffer, nBitOffset + i * state.nReportSize, state.nReportSize);
 
                 if(nRelativeValue)
                     HidUtils::sendInputToManager(deviceType, state.nUsagePage, state.getUsageByIndex(i), nRelativeValue);
                 break;
             case Relative:
-
+                // The actual value is relative
                 nRelativeValue = nValue;
                 HidUtils::fixNegativeValue(state.nLogMin, state.nLogMax, nRelativeValue);
 
@@ -356,7 +366,7 @@ void HidReport::InputBlock::feedInput(uint8_t *pBuffer, uint8_t *pOldBuffer, siz
                     HidUtils::sendInputToManager(deviceType, state.nUsagePage, state.getUsageByIndex(i), nRelativeValue);
                 break;
             case Array:
-
+                // A non-zero value in an array means a holded key/button
                 if(nValue)
                 {
                     // Check if this array entry is new
@@ -369,13 +379,20 @@ void HidReport::InputBlock::feedInput(uint8_t *pBuffer, uint8_t *pOldBuffer, siz
                             break;
                         }
                     }
+
+                    // If it's new, we have a keyDown/buttonDown
                     if(bNew)
                         HidUtils::sendInputToManager(deviceType, state.nUsagePage, nValue, 1);
                 }
+                break;
+            // This is to please GCC
+            case Constant:
+                break;
         }
     }
 
     // Special case here: check for array entries that disapeared
+    // (keys/buttons that were released since last time)
     if(type == Array)
     {
         for(size_t i = 0; i < state.nReportCount; i++)
@@ -393,6 +410,8 @@ void HidReport::InputBlock::feedInput(uint8_t *pBuffer, uint8_t *pOldBuffer, siz
                         break;
                     }
                 }
+
+                // If it disapeared, we have a keyUp/buttonUp
                 if(bDisapeared)
                     HidUtils::sendInputToManager(deviceType, state.nUsagePage, nOldValue, -1);
             }

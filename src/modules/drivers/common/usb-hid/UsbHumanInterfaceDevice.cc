@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <hid/HidReport.h>
 #include <machine/HidInputManager.h>
 #include <machine/InputManager.h>
 #include <utilities/PointerGuard.h>
@@ -21,7 +22,6 @@
 #include <usb/UsbDevice.h>
 #include <usb/UsbConstants.h>
 
-#include "HidReport.h"
 #include "UsbHumanInterfaceDevice.h"
 
 UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) :
