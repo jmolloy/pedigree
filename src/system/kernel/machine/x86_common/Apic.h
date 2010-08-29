@@ -37,8 +37,8 @@ class Apic : public IrqManager
     //
     // IrqManager interface
     //
-    virtual irq_id_t registerIsaIrqHandler(uint8_t, IrqHandler *handler);
-    virtual irq_id_t registerPciIrqHandler(IrqHandler *handler);
+    virtual irq_id_t registerIsaIrqHandler(uint8_t, IrqHandler *handler, bool bEdge = false);
+    virtual irq_id_t registerPciIrqHandler(IrqHandler *handler, Device *pDevice);
     virtual void acknowledgeIrq(irq_id_t Id);
     virtual void unregisterHandler(irq_id_t Id, IrqHandler *handler);
     virtual void enable(irq_id_t Id, bool bEnable);

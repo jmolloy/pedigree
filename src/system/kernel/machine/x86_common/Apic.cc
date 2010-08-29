@@ -19,12 +19,12 @@
 #include <Log.h>
 #include "Apic.h"
 
-irq_id_t Apic::registerIsaIrqHandler(uint8_t, IrqHandler *handler)
+irq_id_t Apic::registerIsaIrqHandler(uint8_t, IrqHandler *handler, bool bEdge)
 {
   // TODO
   return 0;
 }
-irq_id_t Apic::registerPciIrqHandler(IrqHandler *handler)
+irq_id_t Apic::registerPciIrqHandler(IrqHandler *handler, Device *pDevice)
 {
   // TODO
   return 0;

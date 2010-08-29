@@ -65,7 +65,7 @@ void SlamCache::initialise(size_t objectSize)
 uintptr_t SlamCache::allocate()
 {
 #ifdef MULTIPROCESSOR
-    size_t thisCpu = Processor::information().id();
+    size_t thisCpu = Processor::id();
 #else
     size_t thisCpu = 0;
 #endif
@@ -124,7 +124,7 @@ uintptr_t SlamCache::allocate()
 void SlamCache::free(uintptr_t object)
 {
 #ifdef MULTIPROCESSOR
-    size_t thisCpu = Processor::information().id();
+    size_t thisCpu = Processor::id();
 #else
     size_t thisCpu = 0;
 #endif
@@ -200,7 +200,7 @@ void SlamCache::freeSlab(uintptr_t slab)
 SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
 {
 #ifdef MULTIPROCESSOR
-    size_t thisCpu = Processor::information().id();
+    size_t thisCpu = Processor::id();
 #else
     size_t thisCpu = 0;
 #endif
