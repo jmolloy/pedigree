@@ -127,10 +127,10 @@ static void init()
 //     FATAL("No disks found!");
     }
 
-//    if (VFS::instance().find(String("raw»/")) == 0)
-//    {
-//        FATAL("No raw partition!");
-//    }
+    if (VFS::instance().find(String("raw»/")) == 0)
+    {
+        FATAL("No raw partition!");
+    }
 
     // Are we running a live CD?
     /// \todo Use the configuration manager to determine if we're running a live CD or

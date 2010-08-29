@@ -66,7 +66,7 @@ void searchNode(Device *pDev, RawFsDir *pDir)
             pChild->getName(str);
             if (hasDiskChildren(pChild))
             {
-                NOTICE("Add dir `" << str << "'");
+                NOTICE("rawfs: adding dir '" << str << "'");
                 RawFsDir *pDir2 = new RawFsDir(str,
                                                g_pRawFs,
                                                static_cast<File*>(pDir));
@@ -79,7 +79,7 @@ void searchNode(Device *pDev, RawFsDir *pDir)
             }
             else
             {
-                NOTICE("Add file `" << str << "'");
+                NOTICE("rawfs: adding file '" << str << "'");
                 pDir->addEntry(new RawFsFile(str,
                                              g_pRawFs,
                                              static_cast<File*>(pDir),

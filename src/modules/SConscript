@@ -101,7 +101,7 @@ module_subdirs = [
     'linker',
     'users',
     #'ramfs',
-    #'rawfs',
+    'rawfs',
     'lodisk',
     'usb',
     'splash',

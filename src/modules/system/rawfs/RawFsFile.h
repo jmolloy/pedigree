@@ -30,9 +30,8 @@ public:
     /** Constructor, should only be called by RawFs. */
     RawFsFile(String name, class RawFs *pFs, File *pParent, Disk *pDisk);
     ~RawFsFile() {}
-
-    uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer);
-    uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer);
+    
+    virtual uintptr_t readBlock(uint64_t location);
 
     virtual void fileAttributeChanged() {}
 private:

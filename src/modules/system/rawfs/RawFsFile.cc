@@ -29,13 +29,9 @@ RawFsFile::RawFsFile(String name, RawFs *pFs, File *pParent, Disk *pDisk) :
     m_pDisk(pDisk)
 {
 }
-
-uint64_t RawFsFile::read(uint64_t location, uint64_t size, uintptr_t buffer)
+    
+uintptr_t RawFsFile::readBlock(uint64_t location)
 {
-    return m_pDisk->read(location, size, buffer);
+    return m_pDisk->read(location);
 }
 
-uint64_t RawFsFile::write(uint64_t location, uint64_t size, uintptr_t buffer)
-{
-    return m_pDisk->write(location, size, buffer);
-}

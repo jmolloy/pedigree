@@ -36,22 +36,7 @@ void RawFsDir::addEntry(File *pEntry)
 
 void RawFsDir::removeRecursive()
 {
-    NOTICE("Remove `" << getName() << "'");
-/*    for (RadixTree<File*>::Iterator it = m_Cache.begin();
-         it != m_Cache.end();
-         it++)
-    {
-        NOTICE("Here");
-        if ( (*it)->isDirectory())
-        {
-            NOTICE("HEre2");
-            RawFsDir *pDir = reinterpret_cast<RawFsDir*>(*it);
-            pDir->removeRecursive();
-        }
-        delete *it;
-//        m_Cache.erase(it);
-//        it = m_Cache.begin();
-}*/
-    NOTICE("HEre3");
+    /// \todo Leaky.
+    NOTICE("raws: removing '" << getName() << "'");
     m_Cache.clear();
 }
