@@ -53,15 +53,15 @@ void input_handler(Input::InputNotification &note)
     if(note.type == Input::RawKey)
     {
         SDLKey trans = keymap[note.data.rawkey.scancode];
-        
+
         SDL_keysym sym;
         sym.scancode = note.data.rawkey.scancode;
         sym.unicode = 0;
         sym.mod = KMOD_NONE;
         sym.sym = trans;
-        
+
         int mods = static_cast<int>(modstate);
-        
+
         if(note.data.rawkey.keyUp)
         {
             if(trans == SDLK_LALT)
@@ -76,9 +76,9 @@ void input_handler(Input::InputNotification &note)
                 mods &= ~KMOD_LCTRL;
             if(trans == SDLK_RCTRL)
                 mods &= ~KMOD_RCTRL;
-            
+
             sym.mod = static_cast<SDLMod>(mods);
-            
+
             SDL_PrivateKeyboard(SDL_RELEASED, &sym);
         }
         else
@@ -95,22 +95,25 @@ void input_handler(Input::InputNotification &note)
                 mods |= KMOD_LCTRL;
             if(trans == SDLK_RCTRL)
                 mods |= KMOD_RCTRL;
-            
+
             sym.mod = static_cast<SDLMod>(mods);
-            
+
             SDL_PrivateKeyboard(SDL_PRESSED, &sym);
         }
-        
+
         modstate = static_cast<SDLMod>(mods);
     }
     else if(note.type == Input::Mouse)
     {
-        Uint8 state = 0;
         for(int i = 0; i < 8; i++)
-            if(note.data.pointy.buttons[i])
-                state |= (1 << i);
+        {
+            if(note.data.pointy.buttons[i] && !(SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(i + 1)))
+                SDL_PrivateMouseButton(SDL_PRESSED, i + 1, 0, 0);
+            if(!note.data.pointy.buttons[i] && (SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(i + 1)))
+                SDL_PrivateMouseButton(SDL_RELEASED, i + 1, 0, 0);
+        }
 
-        SDL_PrivateMouseMotion(state, 1, (Sint16) note.data.pointy.relx, (Sint16) note.data.pointy.rely);
+        SDL_PrivateMouseMotion(0, 1, (Sint16) note.data.pointy.relx, (Sint16) note.data.pointy.rely);
     }
 }
 
@@ -132,18 +135,18 @@ void PEDIGREE_PumpEvents(_THIS)
 void PEDIGREE_InitOSKeymap(_THIS)
 {
     size_t i;
-	
+
     /* Initialize the DirectFB key translation table */
     for(i = 0; i < SDL_arraysize(keymap); ++i)
         keymap[i] = SDLK_UNKNOWN;
-    
+
     for(i = 0; i <= (SDLK_z - SDLK_a); i++)
         keymap[0x04 + i]    = static_cast<SDLKey>(SDLK_a + i);
-    
+
     for(i = 0; i <= (SDLK_9 - SDLK_1); i++)
         keymap[0x1E + i]    = static_cast<SDLKey>(SDLK_1 + i);
     keymap[0x27] = SDLK_0;
-    
+
     keymap[0x28]            = SDLK_RETURN;
     keymap[0x29]            = SDLK_ESCAPE;
     keymap[0x2A]            = SDLK_BACKSPACE;
@@ -162,10 +165,10 @@ void PEDIGREE_InitOSKeymap(_THIS)
     keymap[0x37]            = SDLK_PERIOD;
     keymap[0x38]            = SDLK_SLASH;
     keymap[0x39]            = SDLK_UNKNOWN; // Caps Lock
-    
+
     for(i = 0; i <= (SDLK_F12 - SDLK_F1); i++)
         keymap[0x3A + i]    = static_cast<SDLKey>(SDLK_F1 + i);
-    
+
     keymap[0x46]            = SDLK_UNKNOWN; // Print screen
     keymap[0x47]            = SDLK_UNKNOWN; // Scroll lock
     keymap[0x48]            = SDLK_UNKNOWN; // Pause/Break
@@ -185,7 +188,7 @@ void PEDIGREE_InitOSKeymap(_THIS)
     keymap[0x56]            = SDLK_KP_MINUS;
     keymap[0x57]            = SDLK_KP_PLUS;
     keymap[0x58]            = SDLK_KP_ENTER;
-    
+
     keymap[0x59]            = SDLK_KP1;
     keymap[0x5A]            = SDLK_KP2;
     keymap[0x5B]            = SDLK_KP3;
@@ -195,16 +198,16 @@ void PEDIGREE_InitOSKeymap(_THIS)
     keymap[0x60]            = SDLK_KP8;
     keymap[0x61]            = SDLK_KP9;
     keymap[0x62]            = SDLK_KP0;
-    
+
     keymap[0x63]            = SDLK_KP_PERIOD;
     keymap[0x64]            = SDLK_UNKNOWN; // INT 1?
     keymap[0x65]            = SDLK_LSUPER; // WinMenu, turn into super
     // 0x68 -> 0x73 = F13 to F24
     keymap[0x75]            = SDLK_HELP;
     keymap[0x7A]            = SDLK_UNDO;
-    
+
     keymap[0x97]            = SDLK_KP5;
-    
+
     keymap[0xE0]            = SDLK_LCTRL;
     keymap[0xE1]            = SDLK_LSHIFT;
     keymap[0xE2]            = SDLK_LALT;

@@ -111,9 +111,9 @@ void HidUtils::sendInputToManager(HidDeviceType deviceType, uint16_t nUsagePage,
     {
         // Set/unset the bit in the bitmap
         if(nRelativeValue > 0)
-            mouseButtons |= 1 << nUsage;
+            mouseButtons |= 1 << (nUsage - 1);
         else
-            mouseButtons &= ~(1 << nUsage);
+            mouseButtons &= ~(1 << (nUsage - 1));
 
         // Send the new bitmap to the input manager
         InputManager::instance().mouseUpdate(0, 0, 0, mouseButtons);
@@ -124,9 +124,9 @@ void HidUtils::sendInputToManager(HidDeviceType deviceType, uint16_t nUsagePage,
     {
         // Set/unset the bit in the bitmap
         if(nRelativeValue > 0)
-            joystickButtons |= 1 << nUsage;
+            joystickButtons |= 1 << (nUsage - 1);
         else
-            joystickButtons &= ~(1 << nUsage);
+            joystickButtons &= ~(1 << (nUsage - 1));
 
         // Send the new bitmap to the input manager
         InputManager::instance().joystickUpdate(0, 0, 0, joystickButtons);

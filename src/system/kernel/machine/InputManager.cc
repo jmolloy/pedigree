@@ -21,7 +21,7 @@
 #include <process/Event.h>
 
 // Incoming relative mouse movements are divided by this
-#define MOUSE_REDUCE_FACTOR     8
+#define MOUSE_REDUCE_FACTOR     1
 
 class InputEvent : public Event
 {
@@ -174,7 +174,7 @@ void InputManager::joystickUpdate(ssize_t relX, ssize_t relY, ssize_t relZ, uint
 void InputManager::putNotification(InputNotification *note)
 {
     LockGuard<Spinlock> guard(m_QueueLock);
-    
+
     // Can we mitigate this notification?
     if(note->type == Mouse)
     {
@@ -187,20 +187,20 @@ void InputManager::putNotification(InputNotification *note)
                 (*it)->data.pointy.relx += note->data.pointy.relx;
                 (*it)->data.pointy.rely += note->data.pointy.rely;
                 (*it)->data.pointy.relz += note->data.pointy.relz;
-                
+
                 for(int i = 0; i < 64; i++)
                 {
                     if(note->data.pointy.buttons[i])
                         (*it)->data.pointy.buttons[i] = true;
                 }
-                
+
                 // Merged, this precise logic means only one mouse event is ever
                 // in the queue, so it's safe to just return here.
                 return;
             }
         }
     }
-    
+
 #ifdef THREADS
     m_InputQueue.pushBack(note);
     m_InputQueueSize.release();
@@ -273,7 +273,7 @@ bool InputManager::removeCallbackByThread(Thread *pThread)
             }
         }
     }
-    
+
     return false;
 #endif
 }

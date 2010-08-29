@@ -21,6 +21,10 @@
 
 UsbDevice *hidConnected(UsbDevice *pDevice)
 {
+    // We have to use VMware's second mouse interface, the first one is tablet-like
+    if(pDevice->getDescriptor()->nVendorId == 0x0e0f && !pDevice->getInterface()->nInterface)
+        return 0;
+
     return new UsbHumanInterfaceDevice(pDevice);
 }
 

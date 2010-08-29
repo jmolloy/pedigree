@@ -35,13 +35,7 @@ UsbHumanInterfaceDevice::~UsbHumanInterfaceDevice()
 
 void UsbHumanInterfaceDevice::initialiseDriver()
 {
-    /// \bug WMware's mouse's second interface is known to cause problems
-    if(m_pDescriptor->nVendorId == 0x0e0f && m_pInterface->nInterface)
-    {
-        WARNING("USB: HID: Skipping VMWare second mouse interface");
-        return;
-    }
-
+    // Get the HID descriptor
     HidDescriptor *pHidDescriptor = 0;
     for(size_t i = 0; i < m_pInterface->otherDescriptorList.count(); i++)
     {
