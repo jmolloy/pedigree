@@ -14,7 +14,7 @@ diff -rupN gcc-4.3.2-orig/config.sub gcc-4.3.2/config.sub
 diff -rupN gcc-4.3.2-orig/gcc/config/pedigree.h gcc-4.3.2/gcc/config/pedigree.h
 --- gcc-4.3.2-orig/gcc/config/pedigree.h	1970-01-01 10:00:00.000000000 +1000
 +++ gcc-4.3.2/gcc/config/pedigree.h	2009-03-12 15:20:51.000000000 +1000
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,22 @@
 +#undef TARGET_OS_CPP_BUILTINS
 +#define TARGET_OS_CPP_BUILTINS()      \
 +  do {                                \
@@ -35,6 +35,8 @@ diff -rupN gcc-4.3.2-orig/gcc/config/pedigree.h gcc-4.3.2/gcc/config/pedigree.h
 +
 +#undef ENDFILE_SPEC
 +#define ENDFILE_SPEC "crtend.o%s crtn.o%s"
++
++#define NO_IMPLICIT_EXTERN_C
 diff -rupN gcc-4.3.2-orig/gcc/config.gcc gcc-4.3.2/gcc/config.gcc
 --- gcc-4.3.2-orig/gcc/config.gcc	2008-06-10 02:32:15.000000000 +1000
 +++ gcc-4.3.2/gcc/config.gcc	2009-03-12 16:51:59.000000000 +1000
