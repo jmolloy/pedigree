@@ -19,4 +19,5 @@
 ;##############################################################################
 [bits 32]
 [section .trampoline.text]
-  incbin "CMakeFiles/kernel.dir/core/processor/x86/asm/trampoline.bin"
+  incbin "build/kernel/trampoline.bin"
+

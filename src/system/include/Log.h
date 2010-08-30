@@ -199,7 +199,10 @@ public:
     {return m_Instance;}
 
    /** Initialises the Log */
-  void initialise();
+  void initialise1();
+  
+   /** Initialises the default Log callback (to a serial port) */
+  void initialise2();
 
   /** Installs an output callback */
   void installCallback(LogCallback *pCallback, bool bSkipBacklog=false);

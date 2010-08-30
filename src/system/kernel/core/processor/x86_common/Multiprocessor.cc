@@ -13,8 +13,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
- 
-#ifdef SMP
+
+#ifdef MULTIPROCESSOR
 
 #include <Log.h>
 #include <utilities/Vector.h>
@@ -68,9 +68,12 @@ size_t Multiprocessor::initialise1()
 
   // No processor list found
   if (bMPInfoFound == false)
+  {
+    NOTICE("Multiprocessor: couldn't find any information about multiple processors");
     return 1;
+  }
 
-  NOTICE("Multiprocessor: Found " << Dec << Processors->count() << " processors");
+  NOTICE("Multiprocessor: Found " << Dec << Processors->count() << Hex << " processors");
 
   // Copy the trampoline code to 0x7000
   extern void *trampoline;
@@ -78,6 +81,8 @@ size_t Multiprocessor::initialise1()
   memcpy(reinterpret_cast<void*>(0x7000),
          &trampoline,
          reinterpret_cast<uintptr_t>(&trampoline_end) - reinterpret_cast<uintptr_t>(&trampoline));
+  
+  NOTICE("Multiprocessor: copied " << (reinterpret_cast<uintptr_t>(&trampoline_end) - reinterpret_cast<uintptr_t>(&trampoline)) << " bytes of AP startup code");
 
   // Parameters for the trampoline code
   #if defined(X86)
@@ -102,12 +107,6 @@ size_t Multiprocessor::initialise1()
   // Startup the application processors through startup interprocessor interrupt
   for (size_t i = 0; i < Processors->count(); i++)
   {
-    // Allocate kernel stack
-    void *pStack = kernelSpace.allocateStack();
-
-    // Set trampoline stack
-    *trampolineStack = reinterpret_cast<uintptr_t>(pStack);
-
     // Add a ProcessorInformation object
     ::ProcessorInformation *pProcessorInfo = new ::ProcessorInformation((*Processors)[i]->processorId,
                                                                         (*Processors)[i]->apicId);
@@ -116,10 +115,28 @@ size_t Multiprocessor::initialise1()
     // Startup the processor
     if (localApic.getId() != (*Processors)[i]->apicId)
     {
+      // Allocate kernel stack
+      void *pStack = kernelSpace.allocateStack();
+
+      // Set trampoline stack
+      *trampolineStack = reinterpret_cast<uintptr_t>(pStack);
+        
       NOTICE(" Booting processor #" << Dec << (*Processors)[i]->processorId << ", stack at 0x" << Hex << reinterpret_cast<uintptr_t>(pStack));
 
       // TODO: We need a timer and send Init IPIs (assert and deassert)
 
+      // Acquire the lock
+      m_ProcessorLock1.acquire();
+      
+      localApic.interProcessorInterrupt((*Processors)[i]->apicId,
+                                        0x07,
+                                        LocalApic::deliveryModeInit,
+                                        true,
+                                        true);
+      for(int z = 0; z < 0x10000; z++);
+      
+      NOTICE("Startup IPI");
+      
       // Send the Startup IPI to the processor
       localApic.interProcessorInterrupt((*Processors)[i]->apicId,
                                         0x07,
@@ -127,13 +144,14 @@ size_t Multiprocessor::initialise1()
                                         true,
                                         false);
 
-      // Acquire the lock
-      m_ProcessorLock1.acquire();
-
       // Wait until the processor is started and has unlocked the lock
       m_ProcessorLock1.acquire();
       m_ProcessorLock1.release();
+      
+      NOTICE("CPU startup complete");
     }
+    else
+        NOTICE("Currently running on CPU #" << Dec << localApic.getId() << Hex << " so not booting this AP");
   }
 
   return Processors->count();

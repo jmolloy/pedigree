@@ -21,4 +21,8 @@ size_t Processor::m_Initialised = 0;
   ProcessorInformation Processor::m_ProcessorInformation(0);
 #else
   Vector<ProcessorInformation*> Processor::m_ProcessorInformation;
+  ProcessorInformation Processor::m_SafeBspProcessorInformation(0);
 #endif
+
+size_t Processor::m_nProcessors = 1;
+

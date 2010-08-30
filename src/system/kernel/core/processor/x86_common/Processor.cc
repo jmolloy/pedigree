@@ -209,6 +209,9 @@ void Processor::cpuid(uint32_t inEax,
   #include "../../../machine/x86_common/Pc.h"
   ProcessorId Processor::id()
   {
+    if(m_Initialised < 2)
+        return 0;
+  
     Pc &pc = Pc::instance();
     uint8_t apicId = pc.getLocalApic().getId();
 
@@ -220,6 +223,9 @@ void Processor::cpuid(uint32_t inEax,
   }
   ProcessorInformation &Processor::information()
   {
+    if(m_Initialised < 2)
+        return m_SafeBspProcessorInformation;
+    
     Pc &pc = Pc::instance();
     uint8_t apicId = pc.getLocalApic().getId();
 

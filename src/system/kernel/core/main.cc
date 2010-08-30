@@ -178,6 +178,9 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // Initialise the processor-specific interface
   Processor::initialise1(bsInf);
 
+  // Initialise the kernel log
+  Log::instance().initialise1();
+
   // Initialise the machine-specific interface
   Machine &machine = Machine::instance();
 
@@ -193,6 +196,13 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   machine.initialise2();
 
+  // Initialise the kernel log's callbacks
+  Log::instance().initialise2();
+
+  // Initialise the processor-specific interface
+  // Bootup of the other Application Processors and related tasks
+  Processor::initialise2(bsInf);
+
   // Initialise the Kernel Elf class
   if (KernelElf::instance().initialise(bsInf) == false)
     panic("KernelElf::initialise() failed");
@@ -205,10 +215,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #ifndef ARM_COMMON
   KernelCoreSyscallManager::instance().initialise();
 #endif
-
-  // Initialise the processor-specific interface
-  // Bootup of the other Application Processors and related tasks
-  Processor::initialise2(bsInf);
 
   Processor::setInterrupts(true);
 
@@ -266,9 +272,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   str += "\n";
 #endif
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
-
-  // Initialise the kernel log.
-  Log::instance().initialise();
 
 #ifdef TRACK_LOCKS
   g_LocksCommand.setReady();

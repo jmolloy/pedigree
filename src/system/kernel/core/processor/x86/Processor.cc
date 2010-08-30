@@ -55,7 +55,6 @@ physical_uintptr_t Processor::readCr3()
 
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
-
   // Initialise this processor's interrupt handling
   X86InterruptManager::initialiseProcessor();
 
@@ -69,27 +68,26 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
   IoPortManager &ioPortManager = IoPortManager::instance();
   ioPortManager.initialise(0, 0x10000);
 
-    NMFaultHandler::instance().initialise();
+  NMFaultHandler::instance().initialise();
 
   m_Initialised = 1;
 }
 
 void Processor::initialise2(const BootstrapStruct_t &Info)
 {
-  size_t nProcessors = 1;
-
+  m_nProcessors = 1;
   #if defined(MULTIPROCESSOR)
-    nProcessors = Multiprocessor::initialise1();
+    m_nProcessors = Multiprocessor::initialise1();
   #endif
 
   // Initialise the GDT
-  X86GdtManager::instance().initialise(nProcessors);
+  X86GdtManager::instance().initialise(m_nProcessors);
   X86GdtManager::initialiseProcessor();
 
   initialiseMultitasking();
 
   #if defined(MULTIPROCESSOR)
-    if (nProcessors != 1)
+    if (m_nProcessors != 1)
       Multiprocessor::initialise2();
   #endif
 

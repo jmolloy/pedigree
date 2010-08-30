@@ -281,7 +281,13 @@ class Processor
       static ProcessorInformation m_ProcessorInformation;
     #else
       static Vector<ProcessorInformation*> m_ProcessorInformation;
+      
+      /// Used before multiprocessor stuff is turned on as a "safe" info structure.
+      /// For stuff like early heap setup and all that.
+      static ProcessorInformation m_SafeBspProcessorInformation;
     #endif
+    
+    static size_t m_nProcessors;
 };
 
 /** @} */

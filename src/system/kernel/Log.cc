@@ -70,7 +70,7 @@ Log::~Log ()
 {
 }
 
-void Log::initialise ()
+void Log::initialise1()
 {
 #ifndef ARM_COMMON
     char *cmdline = g_pBootstrapInfo->getCommandLine();
@@ -95,7 +95,10 @@ void Log::initialise ()
         }
     }
 #endif
+}
 
+void Log::initialise2()
+{
     if(m_EchoToSerial)
         installCallback(&g_SerialCallback, false);
 }

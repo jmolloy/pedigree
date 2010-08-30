@@ -19,6 +19,16 @@
 ;##############################################################################
 [bits 16]
 [org 0x7000]
+
+  cli
+
+  mov bx, 0xb800
+  mov ds, bx
+  mov word [ds:2], 0x787c
+  
+  mov bx, 0
+  mov ds, bx
+
   ; Load the new GDT
   lgdt [GDTR]
 
@@ -32,6 +42,7 @@
 
 [bits 32]
 pmode:
+
   mov ax, 0x10
   mov ds, ax
   mov es, ax
@@ -79,9 +90,10 @@ GDT:
   db 0x92
   db 0xCF
   db 0x00
+GDT_END:
 ;##########################################################################
 ;##### Global descriptor table register ###################################
 ;##########################################################################
 GDTR:
-  dw 0x18
+  dw (GDT_END - GDT) - 1
   dd GDT
