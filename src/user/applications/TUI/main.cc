@@ -312,11 +312,21 @@ void input_handler(Input::InputNotification &note)
 
 int main (int argc, char **argv)
 {
-    if(getpid()>2)
+    FILE *fp = fopen("/config/TUI/.tui.lck", "r");
+    if(fp)
     {
-        printf("TUI is already running\n");
+        fclose(fp);
+        syslog(LOG_EMERG, "TUI is already running\n");
         return 1;
     }
+    
+    fp = fopen("/config/TUI/.tui.lck", "w");
+    if(!fp)
+    {
+        syslog(LOG_EMERG, "TUI: couldn't create lock file: %s\n", strerror(errno));
+        return 1;
+    }
+    fclose(fp);
 
     signal(SIGINT, sigint);
     
