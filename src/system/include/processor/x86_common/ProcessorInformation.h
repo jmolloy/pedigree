@@ -72,6 +72,12 @@ class X86CommonProcessorInformation
      *\return the Tss of the processor */
     inline void *getTss() const
       {return reinterpret_cast<void*>(m_Tss);}
+    /** Gets the processor's TLS base segment */
+    inline uint16_t getTlsSelector()
+      {return m_TlsSelector;}
+    /** Sets the processor's TLS base segment */
+    inline void setTlsSelector(uint16_t tls)
+      {m_TlsSelector = tls;}
 
     inline uintptr_t getKernelStack() const;
     inline void setKernelStack(uintptr_t stack);
@@ -89,9 +95,15 @@ class X86CommonProcessorInformation
     inline X86CommonProcessorInformation(ProcessorId processorId, uint8_t apicId = 0)
       : m_ProcessorId(processorId), m_TssSelector(0), m_Tss(0),
         m_VirtualAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()), m_LocalApicId(apicId),
-        m_pCurrentThread(0), m_Scheduler() {}
+        m_pCurrentThread(0), m_Scheduler(), m_TlsSelector(0) {}
     /** The destructor does nothing */
     inline virtual ~X86CommonProcessorInformation(){}
+
+    inline void setIds(ProcessorId processorId, uint8_t apicId = 0)
+    {
+        m_ProcessorId = processorId;
+        m_LocalApicId = apicId;
+    }
 
   private:
     /** Default constructor
@@ -118,6 +130,8 @@ class X86CommonProcessorInformation
     Thread *m_pCurrentThread;
     /** The processor's scheduler. */
     PerProcessorScheduler m_Scheduler;
+    /** The processor's TLS segment */
+    uint16_t m_TlsSelector;
 };
 
 /** @} */

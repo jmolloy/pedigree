@@ -233,7 +233,7 @@ void Processor::cpuid(uint32_t inEax,
       if (m_ProcessorInformation[i]->m_LocalApicId == apicId)
         return *m_ProcessorInformation[i];
 
-    return *reinterpret_cast<ProcessorInformation*>(0);
+    return m_SafeBspProcessorInformation;
   }
 
 #endif

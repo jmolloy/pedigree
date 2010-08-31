@@ -27,7 +27,7 @@ static char g_SafeStack[8192] = {0};
 void X86GdtManager::initialise(size_t processorCount)
 {
   // Calculate the number of entries
-  m_DescriptorCount = 6 + processorCount;
+  m_DescriptorCount = 6 + (processorCount * 2);
 
   // Allocate the GDT
   m_Gdt = new segment_descriptor[m_DescriptorCount];
@@ -38,16 +38,18 @@ void X86GdtManager::initialise(size_t processorCount)
   setSegmentDescriptor(2, 0, 0xFFFFF, 0x92, 0xC); // Kernel data - 0x10
   setSegmentDescriptor(3, 0, 0xFFFFF, 0xF8, 0xC); // User code - 0x18
   setSegmentDescriptor(4, 0, 0xFFFFF, 0xF2, 0xC); // User data - 0x20
-  
-  /// \todo This won't work on SMP systems at all.
-  setSegmentDescriptor(6, 0, 0xFFFFF, 0xF2, 0xC); // User TLS data - 0x30
 
 #ifdef MULTIPROCESSOR
+
+    /// \todo Multiprocessor #DF handler
+
   size_t i = 0;
   for (Vector<ProcessorInformation*>::Iterator it = Processor::m_ProcessorInformation.begin();
        it != Processor::m_ProcessorInformation.end();
-       it++, i++)
+       it++, i += 2)
   {
+    NOTICE("Setting up TSS segment for CPU #" << Dec << i << Hex << ".");
+  
     X86TaskStateSegment *Tss = new X86TaskStateSegment;
     initialiseTss(Tss);
     setTssDescriptor(i + 5, reinterpret_cast<uint32_t>(Tss));
@@ -55,8 +57,14 @@ void X86GdtManager::initialise(size_t processorCount)
     ProcessorInformation *processorInfo = *it;
     processorInfo->setTss(Tss);
     processorInfo->setTssSelector((i + 5) << 3);
+    
+    // TLS segment
+    setSegmentDescriptor(i + 6, 0, 0xFFFFF, 0xF2, 0xC);
+    processorInfo->setTlsSelector((i + 6) << 3);
   }
 #else
+  setSegmentDescriptor(6, 0, 0xFFFFF, 0xF2, 0xC); // User TLS data - 0x30
+  
   X86TaskStateSegment *Tss = new X86TaskStateSegment;
   initialiseTss(Tss);
   setTssDescriptor(5, reinterpret_cast<uint32_t>(Tss)); // 0x28
@@ -64,11 +72,12 @@ void X86GdtManager::initialise(size_t processorCount)
   ProcessorInformation &processorInfo = Processor::information();
   processorInfo.setTss(Tss);
   processorInfo.setTssSelector(5 << 3);
+  processorInfo.setTlsSelector(6 << 3);
 
   // Create the double-fault handler TSS
   static X86TaskStateSegment DFTss;
   initialiseDoubleFaultTss(&DFTss);
-  setTssDescriptor(6, reinterpret_cast<uint32_t>(&DFTss)); // 0x30
+  setTssDescriptor(7, reinterpret_cast<uint32_t>(&DFTss)); // 0x38
 #endif
 
 }
@@ -105,8 +114,12 @@ X86GdtManager::~X86GdtManager()
 
 void X86GdtManager::setTlsBase(uintptr_t base)
 {
-  /// \todo This won't work on SMP systems at all.
+#ifdef MULTIPROCESSOR
+  /// \todo One TLS base per CPU
+  setSegmentDescriptor(Processor::information().getTlsSelector() >> 3, base, 0xFFFFF, 0xF2, 0xC);
+#else
   setSegmentDescriptor(6, base, 0xFFFFF, 0xF2, 0xC); // User TLS data - 0x28
+#endif
 }
 
 void X86GdtManager::setSegmentDescriptor(size_t index, uint32_t base, uint32_t limit, uint8_t flags, uint8_t flags2)

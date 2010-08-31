@@ -82,7 +82,7 @@ size_t Multiprocessor::initialise1()
          &trampoline,
          reinterpret_cast<uintptr_t>(&trampoline_end) - reinterpret_cast<uintptr_t>(&trampoline));
   
-  NOTICE("Multiprocessor: copied " << (reinterpret_cast<uintptr_t>(&trampoline_end) - reinterpret_cast<uintptr_t>(&trampoline)) << " bytes of AP startup code");
+  DEBUG_LOG("Multiprocessor: copied " << (reinterpret_cast<uintptr_t>(&trampoline_end) - reinterpret_cast<uintptr_t>(&trampoline)) << " bytes of AP startup code");
 
   // Parameters for the trampoline code
   #if defined(X86)
@@ -108,13 +108,16 @@ size_t Multiprocessor::initialise1()
   for (size_t i = 0; i < Processors->count(); i++)
   {
     // Add a ProcessorInformation object
-    ::ProcessorInformation *pProcessorInfo = new ::ProcessorInformation((*Processors)[i]->processorId,
-                                                                        (*Processors)[i]->apicId);
-    Processor::m_ProcessorInformation.pushBack(pProcessorInfo);
+    ::ProcessorInformation *pProcessorInfo = 0;
 
     // Startup the processor
     if (localApic.getId() != (*Processors)[i]->apicId)
     {
+      // AP: set up a proper information structure
+      pProcessorInfo = new ::ProcessorInformation((*Processors)[i]->processorId,
+                                                  (*Processors)[i]->apicId);
+      Processor::m_ProcessorInformation.pushBack(pProcessorInfo);
+    
       // Allocate kernel stack
       void *pStack = kernelSpace.allocateStack();
 
@@ -123,7 +126,8 @@ size_t Multiprocessor::initialise1()
         
       NOTICE(" Booting processor #" << Dec << (*Processors)[i]->processorId << ", stack at 0x" << Hex << reinterpret_cast<uintptr_t>(pStack));
 
-      // TODO: We need a timer and send Init IPIs (assert and deassert)
+      /// \todo 10 ms delay between INIT IPI and Startup IPI, and we may need to
+      ///       send the Startup IPI twice on some hardware.
 
       // Acquire the lock
       m_ProcessorLock1.acquire();
@@ -135,8 +139,6 @@ size_t Multiprocessor::initialise1()
                                         true);
       for(int z = 0; z < 0x10000; z++);
       
-      NOTICE("Startup IPI");
-      
       // Send the Startup IPI to the processor
       localApic.interProcessorInterrupt((*Processors)[i]->apicId,
                                         0x07,
@@ -147,11 +149,15 @@ size_t Multiprocessor::initialise1()
       // Wait until the processor is started and has unlocked the lock
       m_ProcessorLock1.acquire();
       m_ProcessorLock1.release();
-      
-      NOTICE("CPU startup complete");
     }
     else
-        NOTICE("Currently running on CPU #" << Dec << localApic.getId() << Hex << " so not booting this AP");
+    {
+      NOTICE("Currently running on CPU #" << Dec << localApic.getId() << Hex << ", skipping boot (not necessary)");
+      
+      Processor::m_ProcessorInformation.pushBack(&Processor::m_SafeBspProcessorInformation);
+      Processor::m_SafeBspProcessorInformation.setIds((*Processors)[i]->processorId,
+                                                      (*Processors)[i]->apicId);
+    }
   }
 
   return Processors->count();

@@ -85,13 +85,19 @@ void Processor::initialise2(const BootstrapStruct_t &Info)
   X86GdtManager::initialiseProcessor();
 
   initialiseMultitasking();
-
+  
+  Processor::setInterrupts(false);
+  
+  m_Initialised = 2;
+  
   #if defined(MULTIPROCESSOR)
     if (m_nProcessors != 1)
       Multiprocessor::initialise2();
-  #endif
 
-  m_Initialised = 2;
+    NOTICE("All APs now booted.");
+  
+    while(1);
+  #endif
 }
 
 void Processor::identify(HugeStaticString &str)
@@ -111,7 +117,7 @@ void Processor::setTlsBase(uintptr_t newBase)
     X86GdtManager::instance().setTlsBase(newBase);
     
     // Reload FS/GS
-    uint16_t newseg = newBase ? 0x33 : 0x23;
+    uint16_t newseg = newBase ? Processor::information().getTlsSelector() | 3 : 0x23;
     asm volatile("mov %0, %%bx; mov %%bx, %%fs; mov %%bx, %%gs" :: "r" (newseg) : "ebx");
 }
 

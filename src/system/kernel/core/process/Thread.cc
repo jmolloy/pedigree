@@ -292,6 +292,8 @@ uintptr_t Thread::getTlsBase()
         {
           delete m_pTlsBase;
           m_pTlsBase = 0;
+          
+          return 0;
         }
         else
         {
@@ -301,8 +303,7 @@ uintptr_t Thread::getTlsBase()
           *tlsBase = static_cast<uint32_t>(m_Id);
         }
     }
-    else
-        return reinterpret_cast<uintptr_t>(m_pTlsBase->virtualAddress());
+    return reinterpret_cast<uintptr_t>(m_pTlsBase->virtualAddress());
 }
 
 #endif
