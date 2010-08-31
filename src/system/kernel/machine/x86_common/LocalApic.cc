@@ -178,7 +178,7 @@ void LocalApic::interrupt(size_t nInterruptNumber, InterruptState &state)
     // TODO: Delta is wrong.
     if (LIKELY(m_Handler != 0))
     {
-      NOTICE("Timer " << Processor::id());
+      // NOTICE("Timer " << Processor::id());
       m_Handler->timer (0, state);
     }
     ack();

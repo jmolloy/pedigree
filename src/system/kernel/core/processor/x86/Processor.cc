@@ -93,10 +93,6 @@ void Processor::initialise2(const BootstrapStruct_t &Info)
   #if defined(MULTIPROCESSOR)
     if (m_nProcessors != 1)
       Multiprocessor::initialise2();
-
-    NOTICE("All APs now booted.");
-  
-    while(1);
   #endif
 }
 
