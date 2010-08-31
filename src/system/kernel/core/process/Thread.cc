@@ -276,6 +276,9 @@ Event *Thread::getNextEvent()
 
 uintptr_t Thread::getTlsBase()
 {
+    if(!m_StateLevels[0].m_pKernelStack)
+        return 0;
+
     // Solves a problem where threads are created pointing to different address
     // spaces than the process that creates them (for whatever reason). Because
     // this is usually only called right after the address space switch in
