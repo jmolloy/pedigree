@@ -16,3 +16,4 @@ docs/doxygen/*
 *.vcproj*
 *.ncb
 images/x86/games/dos
+tmp

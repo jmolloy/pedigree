@@ -56,6 +56,33 @@ SECTIONS
     *(.bss*)
     . = ALIGN(4096);
   }
+  
+  .mptrampoline : AT(ADDR(.mptrampoline) - 0xFF300000)
+  {
+    . = ALIGN(4);
+    
+    trampoline16 = .;
+    *(.trampoline.text16)
+    trampoline16_end = .;
+    
+    . = ALIGN(4);
+    
+    trampoline32 = .;
+    *(.trampoline.text32)
+    trampoline32_end = .;
+    
+    . = ALIGN(4);
+    
+    trampolinegdtr = .;
+    *(.trampoline.data.gdtr)
+    trampolinegdtr_end = .;
+    
+    . = ALIGN(4);
+    
+    trampolinegdt = .;
+    *(.trampoline.data.gdt)
+    trampolinegdt_end = .;
+}
 
   /DISCARD/ : { *(.comment) *(.eh_frame) *(.debug_abbrev) *(.debug_info) *(.debug_line) *(.debug_loc) *(.debug_pubnames) *(.debug_aranges) *(.debug_str) *(.debug_macinfo) *(.debug_ranges) *(.stab) *(.stabstr) }
 

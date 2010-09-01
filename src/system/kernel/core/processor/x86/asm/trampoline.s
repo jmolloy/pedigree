@@ -18,19 +18,16 @@
 ;### Trampoline code ##########################################################
 ;##############################################################################
 [bits 16]
-[org 0x7000]
+[section .trampoline.text16]
 
   cli
-
-  mov bx, 0xb800
-  mov ds, bx
-  mov word [ds:2], 0x787c
   
-  mov bx, 0
-  mov ds, bx
+  xor ax, ax
+  mov ds, ax
 
   ; Load the new GDT
-  lgdt [GDTR]
+  mov si, 0x7200
+  lgdt [ds:si]
 
   ; Set Cr0.PE
   mov eax, cr0
@@ -38,9 +35,10 @@
   mov cr0, eax
 
   ; Jump into protected-mode
-  jmp 0x08:pmode
+  jmp 0x08:0x7100
 
 [bits 32]
+[section .trampoline.text32]
 pmode:
 
   mov ax, 0x10
@@ -73,6 +71,7 @@ pmode:
 ;##########################################################################
 ;##### Global descriptor table ############################################
 ;##########################################################################
+[section .trampoline.data.gdt]
 GDT:
   dd 0x00000000
   dd 0x00000000
@@ -94,6 +93,7 @@ GDT_END:
 ;##########################################################################
 ;##### Global descriptor table register ###################################
 ;##########################################################################
+[section .trampoline.data.gdtr]
 GDTR:
-  dw (GDT_END - GDT) - 1
-  dd GDT
+  dw 0x18 - 1
+  dd 0x7210

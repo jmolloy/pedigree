@@ -76,13 +76,23 @@ size_t Multiprocessor::initialise1()
   NOTICE("Multiprocessor: Found " << Dec << Processors->count() << Hex << " processors");
 
   // Copy the trampoline code to 0x7000
-  extern void *trampoline;
-  extern void *trampoline_end;
+  /// \note This is a slightly hacky way to have the code linked directly to the
+  ///       kernel - we hard-code specific offsets. Avoids the "relocation
+  ///       truncated to fit" error from ld.
+  extern void *trampoline16, *trampoline32, *trampolinegdt, *trampolinegdtr;
+  extern void *trampoline16_end, *trampoline32_end, *trampolinegdt_end, *trampolinegdtr_end;
   memcpy(reinterpret_cast<void*>(0x7000),
-         &trampoline,
-         reinterpret_cast<uintptr_t>(&trampoline_end) - reinterpret_cast<uintptr_t>(&trampoline));
-  
-  DEBUG_LOG("Multiprocessor: copied " << (reinterpret_cast<uintptr_t>(&trampoline_end) - reinterpret_cast<uintptr_t>(&trampoline)) << " bytes of AP startup code");
+         &trampoline16,
+         reinterpret_cast<uintptr_t>(&trampoline16_end) - reinterpret_cast<uintptr_t>(&trampoline16));
+  memcpy(reinterpret_cast<void*>(0x7100),
+         &trampoline32,
+         reinterpret_cast<uintptr_t>(&trampoline32_end) - reinterpret_cast<uintptr_t>(&trampoline32));
+  memcpy(reinterpret_cast<void*>(0x7200),
+         &trampolinegdtr,
+         reinterpret_cast<uintptr_t>(&trampolinegdtr_end) - reinterpret_cast<uintptr_t>(&trampolinegdtr));
+  memcpy(reinterpret_cast<void*>(0x7210),
+         &trampolinegdt,
+         reinterpret_cast<uintptr_t>(&trampolinegdt_end) - reinterpret_cast<uintptr_t>(&trampolinegdt));
 
   // Parameters for the trampoline code
   #if defined(X86)
