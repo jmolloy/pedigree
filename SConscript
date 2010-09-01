@@ -74,7 +74,10 @@ if('STATIC_DRIVERS' in env['CPPDEFINES']):
 # TODO: If any of these commands fail, they WILL NOT STOP the build!
 
 def buildImageLosetup(target, source, env):
-    print "Building " + os.path.basename(target[0].path) + "..."
+    if env['verbose']:
+        print '      Creating ' + os.path.basename(target[0].path)
+    else:
+        print '      Creating \033[32m' + os.path.basename(target[0].path) + '\033[0m'
 
     builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"]).abspath
     imagedir = env.Dir(env['PEDIGREE_IMAGES_DIR']).abspath
@@ -150,7 +153,10 @@ def buildImageLosetup(target, source, env):
     os.rmdir("tmp")
 
 def buildImageMtools(target, source, env):
-    print "Building " + os.path.basename(target[0].path) + "..."
+    if env['verbose']:
+        print '      Creating ' + os.path.basename(target[0].path)
+    else:
+        print '      Creating \033[32m' + os.path.basename(target[0].path) + '\033[0m'
 
     builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"]).abspath
     imagedir = env.Dir(env['PEDIGREE_IMAGES_DIR']).abspath
@@ -211,14 +217,16 @@ def buildImageMtools(target, source, env):
         os.system("mcopy -bms -Do " + i.path + destDrive + otherPath + " > /dev/null 2>&1")
 
 def buildCdImage(target, source, env):
-    print "Building " + os.path.basename(target[0].path) + "..."
+    if env['verbose']:
+        print '      Creating ' + os.path.basename(target[0].path)
+    else:
+        print '      Creating \033[32m' + os.path.basename(target[0].path) + '\033[0m'
 
     builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"]).abspath
     pathToGrub = env.Dir("#images/grub").abspath
     configDb = source[0].abspath
     stage2_eltorito = "stage2_eltorito-" + env['ARCH_TARGET'].lower()
     shutil.copy(pathToGrub + "/" + stage2_eltorito, "./stage2_eltorito")
-    print stage2_eltorito
 
     cmd = "mkisofs -D -joliet -graft-points -quiet -input-charset ascii -R \
                  -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 \
@@ -229,7 +237,6 @@ def buildCdImage(target, source, env):
                  boot/initrd.tar=" + source[1].abspath + " \
                 /livedisk.img=" + source[3].abspath + "\
                 .pedigree-root=" + configDb
-    print cmd
     os.system(cmd)
 
     os.remove("./stage2_eltorito")

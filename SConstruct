@@ -302,6 +302,7 @@ if not env['verbose']:
         env['RANLIBCOMSTR'] =  '      Indexing $TARGET'
         env['NMCOMSTR']   =    '  Creating map $TARGET'
         env['DOCCOMSTR']  =    '   Documenting $TARGET'
+        env['TARCOMSTR']  =    '      Creating $TARGET'
     else:
         env['CCCOMSTR']   =    '     Compiling \033[32m$TARGET\033[0m'
         env['CXXCOMSTR']  =    '     Compiling \033[32m$TARGET\033[0m'
@@ -311,6 +312,7 @@ if not env['verbose']:
         env['RANLIBCOMSTR'] =  '      Indexing \033[32m$TARGET\033[0m'
         env['NMCOMSTR']   =    '  Creating map \033[32m$TARGET\033[0m'
         env['DOCCOMSTR']  =    '   Documenting \033[32m$TARGET\033[0m'
+        env['TARCOMSTR']  =    '      Creating \033[32m$TARGET\033[0m'
 
 ####################################
 # Generate Version.cc
