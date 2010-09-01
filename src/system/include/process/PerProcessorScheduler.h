@@ -114,6 +114,13 @@ private:
 
     /** The current SchedulingAlgorithm */
     SchedulingAlgorithm *m_pSchedulingAlgorithm;
+    
+    Mutex m_NewThreadDataLock;
+    Semaphore m_NewThreadDataCount;
+    
+    List<void*> m_NewThreadData;
+    
+    static int processorAddThread(void *instance);
 
 #ifdef ARM_BEAGLE
     size_t m_TickCount;

@@ -56,6 +56,9 @@ class Processor
 {
   friend class Multiprocessor;
   friend class X86GdtManager;
+#ifdef THREADS
+  friend class Scheduler;
+#endif
   public:
     /** Initialises the processor specific interface. After this function call the whole
      *  processor-specific interface is initialised. Note though, that only the

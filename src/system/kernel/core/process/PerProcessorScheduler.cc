@@ -39,7 +39,8 @@
 #endif
 
 PerProcessorScheduler::PerProcessorScheduler() :
-    m_pSchedulingAlgorithm(0)
+    m_pSchedulingAlgorithm(0), m_NewThreadDataLock(false), m_NewThreadDataCount(0),
+    m_NewThreadData()
 #ifdef ARM_BEAGLE
     , m_TickCount(0)
 #endif
@@ -50,11 +51,42 @@ PerProcessorScheduler::~PerProcessorScheduler()
 {
 }
 
+struct newThreadData
+{
+    Thread *pThread;
+    Thread::ThreadStartFunc pStartFunction;
+    void *pParam;
+    bool bUsermode;
+    void *pStack;
+};
+
+int PerProcessorScheduler::processorAddThread(void *instance)
+{
+    PerProcessorScheduler *pInstance = reinterpret_cast<PerProcessorScheduler*>(instance);
+    while(true)
+    {
+        pInstance->m_NewThreadDataCount.acquire();
+        
+        pInstance->m_NewThreadDataLock.acquire();
+        void *p = pInstance->m_NewThreadData.popFront();
+        pInstance->m_NewThreadDataLock.release();
+        
+        newThreadData *pData = reinterpret_cast<newThreadData*>(p);
+        
+        pData->pThread->setCpuId(Processor::id());
+        pInstance->addThread(pData->pThread, pData->pStartFunction, pData->pParam, pData->bUsermode, pData->pStack);
+        
+        delete pData;
+    }
+    return 0;
+}
+
 void PerProcessorScheduler::initialise(Thread *pThread)
 {
     m_pSchedulingAlgorithm = new RoundRobin();
 
     pThread->setStatus(Thread::Running);
+    pThread->setCpuId(Processor::id());
     Processor::information().setCurrentThread(pThread);
 
     m_pSchedulingAlgorithm->addThread(pThread);
@@ -62,6 +94,8 @@ void PerProcessorScheduler::initialise(Thread *pThread)
     Processor::setTlsBase(pThread->getTlsBase());
 
     Machine::instance().getSchedulerTimer()->registerHandler(this);
+    
+    new Thread(pThread->getParent(), processorAddThread, reinterpret_cast<void*>(this), 0, false, true);
 }
 
 void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThread, Spinlock *pLock)
@@ -281,6 +315,26 @@ void PerProcessorScheduler::eventHandlerReturned()
 
 void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc pStartFunction, void *pParam, bool bUsermode, void *pStack)
 {
+    if(this != &Processor::information().getScheduler())
+    {
+        newThreadData *pData = new newThreadData;
+        pData->pThread = pThread;
+        pData->pStartFunction = pStartFunction;
+        pData->pParam = pParam;
+        pData->bUsermode = bUsermode;
+        pData->pStack = pStack;
+        
+        m_NewThreadDataLock.acquire();
+        m_NewThreadData.pushBack(pData);
+        m_NewThreadDataLock.release();
+    
+        m_NewThreadDataCount.release();
+        
+        return;
+    }
+    
+    pThread->setCpuId(Processor::id());
+
     bool bWasInterrupts = Processor::getInterrupts();
     Processor::setInterrupts(false);
 
@@ -331,6 +385,8 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
 
 void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
 {
+    pThread->setCpuId(Processor::id());
+    
     bool bWasInterrupts = Processor::getInterrupts();
     Processor::setInterrupts(false);
 

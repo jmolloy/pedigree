@@ -30,6 +30,9 @@
 #include <Log.h>
 #include <machine/x86_common/LocalApic.h>
 #include <utilities/assert.h>
+#include <process/PerProcessorScheduler.h>
+#include <process/RoundRobinCoreAllocator.h>
+#include <process/ProcessorThreadAllocator.h>
 
 Scheduler Scheduler::m_Instance;
 
@@ -44,6 +47,21 @@ Scheduler::~Scheduler()
 
 bool Scheduler::initialise()
 {
+  RoundRobinCoreAllocator *pRoundRobin = new RoundRobinCoreAllocator();
+  ProcessorThreadAllocator::instance().setAlgorithm(pRoundRobin);
+  
+  List<PerProcessorScheduler*> procList;
+  
+  size_t i = 0;
+  for (Vector<ProcessorInformation*>::Iterator it = Processor::m_ProcessorInformation.begin();
+       it != Processor::m_ProcessorInformation.end();
+       it++, i += 2)
+  {
+    procList.pushBack(&((*it)->getScheduler()));
+  }
+  
+  pRoundRobin->initialise(procList);
+
   return true;
 }
 

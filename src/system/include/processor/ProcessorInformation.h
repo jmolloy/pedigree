@@ -25,6 +25,8 @@ typedef size_t ProcessorId;
 
 /** @} */
 
+#ifndef _PROCESSOR_INFORMATION_ONLY_WANT_PROCESSORID
+
 #if defined(X86_COMMON)
   #include <processor/x86_common/ProcessorInformation.h>
   #define PROCESSOR_SPECIFIC_NAME(x) X86Common##x
@@ -57,5 +59,9 @@ typedef PROCESSOR_SPECIFIC_NAME(ProcessorInformation) ProcessorInformation;
 /** @} */
 
 #undef PROCESSOR_SPECIFIC_NAME
+
+#else
+#undef KERNEL_PROCESSOR_PROCESSORINFORMATION_H
+#endif
 
 #endif

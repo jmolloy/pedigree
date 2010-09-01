@@ -22,6 +22,9 @@
 #include <process/Scheduler.h>
 #include <process/Process.h>
 #include <processor/Processor.h>
+#include <process/PerProcessorScheduler.h>
+#include <process/RoundRobinCoreAllocator.h>
+#include <process/ProcessorThreadAllocator.h>
 
 void initialiseMultitasking()
 {
@@ -55,7 +58,7 @@ void initialiseMultitasking()
     pProcess->description() += Processor::id();
 
     // Create the kernel idle thread.
-    Thread *pThread = new Thread(pProcess);  
+    Thread *pThread = new Thread(pProcess);
     Processor::information().getScheduler().initialise(pThread);
   }
 #endif

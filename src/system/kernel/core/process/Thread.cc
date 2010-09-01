@@ -19,6 +19,7 @@
 #include <process/Thread.h>
 #include <process/Scheduler.h>
 #include <process/SchedulingAlgorithm.h>
+#include <process/ProcessorThreadAllocator.h>
 #include <processor/Processor.h>
 #include <processor/StackFrame.h>
 #include <machine/Machine.h>
@@ -29,8 +30,10 @@
 #include <processor/MemoryRegion.h>
 #include <processor/PhysicalMemoryManager.h>
 
+#include <processor/ProcessorInformation.h>
+
 Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
-               void *pStack, bool semiUser) :
+               void *pStack, bool semiUser, bool bDontPickCore) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
     m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler()), m_Priority(DEFAULT_PRIORITY),
@@ -69,13 +72,15 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
   // us while we're starting.
   m_Lock.acquire();
 
-  // Add us to the general scheduler.
-  Scheduler::instance().addThread(this, Processor::information().getScheduler());
-
-  // Add us to the per-processor scheduler.
-  Processor::information().getScheduler().addThread(this, pStartFunction, pParam,
-                                                    bUserMode, pStack);
-
+  // Add to the scheduler
+  if(!bDontPickCore)
+      ProcessorThreadAllocator::instance().addThread(this, pStartFunction, pParam, bUserMode, pStack);
+  else
+  {
+      Scheduler::instance().addThread(this, Processor::information().getScheduler());
+      Processor::information().getScheduler().addThread(this, pStartFunction, pParam,
+                                                        bUserMode, pStack);
+  }
 }
 
 Thread::Thread(Process *pParent) :

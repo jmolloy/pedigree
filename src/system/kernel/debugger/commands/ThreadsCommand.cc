@@ -252,6 +252,9 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
     }
 
     Line += "[";
+    Line += "CPU";
+    Line += tehThread->getCpuId();
+    Line += ":";
     Line += tehThread->getId();
     Line += "] ";
 

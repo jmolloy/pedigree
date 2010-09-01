@@ -31,6 +31,11 @@
 
 #include <processor/MemoryRegion.h>
 
+// Hacky but I'd rather not c&p the typedef
+#define _PROCESSOR_INFORMATION_ONLY_WANT_PROCESSORID
+#include <processor/ProcessorInformation.h>
+#undef _PROCESSOR_INFORMATION_ONLY_WANT_PROCESSORID
+
 class Processor;
 class Process;
 
@@ -86,7 +91,7 @@ public:
      * \param semiUser (Optional) Whether to start the thread as if it was a user mode thread, but begin
                      in kernel mode (to do setup and jump to usermode manually). */
     Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
-           void *pStack=0, bool semiUser = false);
+           void *pStack=0, bool semiUser = false, bool bDontPickCore = false);
 
     /** Alternative constructor - this should be used only by initialiseMultitasking() to
      * define the first kernel thread. */
@@ -342,6 +347,30 @@ public:
     
     /** Gets the TLS base address for this thread. */
     uintptr_t getTlsBase();
+    
+    /** Gets this thread's CPU ID */
+    inline
+#ifdef MULTIPROCESSOR
+    ProcessorId
+#else
+    size_t
+#endif
+    getCpuId()
+    {
+        return m_ProcId;
+    }
+    
+    /** Sets this thread's CPU ID */
+    inline void setCpuId(
+#ifdef MULTIPROCESSOR
+    ProcessorId
+#else
+    size_t
+#endif
+    id)
+    {
+        m_ProcId = id;
+    }
 
     /**
      * Sets the exit code of the Thread and sets the state to Zombie, if it is being waited on;
@@ -451,6 +480,13 @@ private:
     
     /** Memory region for the TLS base of this thread (userspace-only) */
     MemoryRegion *m_pTlsBase;
+    
+#ifdef MULTIPROCESSOR
+    ProcessorId
+#else
+    size_t
+#endif
+    m_ProcId;
 };
 
 #endif

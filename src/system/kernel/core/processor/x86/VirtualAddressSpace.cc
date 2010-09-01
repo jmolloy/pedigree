@@ -474,8 +474,6 @@ void *X86VirtualAddressSpace::doAllocateStack(size_t sSize)
     m_pStackTop = adjust_pointer(m_pStackTop, -sSize);
 
     m_Lock.release();
-    
-    NOTICE("doAllocateStack(" << sSize << ")");
 
     // Map in the top page, then everything else will be demand paged
     uintptr_t stackBottom = reinterpret_cast<uintptr_t>(pStack) - sSize;
