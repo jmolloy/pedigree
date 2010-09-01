@@ -52,6 +52,7 @@ bool Scheduler::initialise()
   
   List<PerProcessorScheduler*> procList;
   
+#ifdef MULTIPROCESSOR
   size_t i = 0;
   for (Vector<ProcessorInformation*>::Iterator it = Processor::m_ProcessorInformation.begin();
        it != Processor::m_ProcessorInformation.end();
@@ -59,6 +60,9 @@ bool Scheduler::initialise()
   {
     procList.pushBack(&((*it)->getScheduler()));
   }
+#else
+  procList.pushBack(&Processor::information().getScheduler());
+#endif
   
   pRoundRobin->initialise(procList);
 
