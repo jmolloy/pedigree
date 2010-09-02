@@ -222,7 +222,9 @@ bool Rtc::initialise()
   // Activate the IRQ
   uint8_t statusb = read(0x0B);
   write(0x0B, statusb | 0x40);
-
+  read(0x0C); // Some RTC chips need the interrupt status to be cleared after
+              // changing the control register.
+  
   return true;
 }
 void Rtc::synchronise()
