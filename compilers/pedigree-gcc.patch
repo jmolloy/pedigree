@@ -1,13 +1,13 @@
 diff -rupN gcc-4.3.2-orig/config.sub gcc-4.3.2/config.sub
 --- gcc-4.3.2-orig/config.sub	2008-01-23 12:37:40.000000000 +1000
 +++ gcc-4.3.2/config.sub	2009-03-12 15:16:17.000000000 +1000
-@@ -1409,6 +1409,9 @@ case $os in
- 	-dicos*)
- 		os=-dicos
+@@ -1450,6 +1450,9 @@ case $os in
  		;;
-+  -pedigree*)
-+    os=-pedigree
-+    ;;
+         -nacl*)
+ 	        ;;
++	-pedigree*)
++		os=-pedigree
++		;;
  	-none)
  		;;
  	*)
@@ -85,6 +85,20 @@ diff -rupN gcc-4.3.2-orig/libstdc++-v3/crossconfig.m4 gcc-4.3.2/libstdc++-v3/cro
    *-mingw32*)
      GLIBCXX_CHECK_LINKER_FEATURES
      GLIBCXX_CHECK_MATH_SUPPORT
+diff -rupN gcc-4.5.1-orig/libtool.m4 gcc-4.5.1/libtool.m4
+--- gcc-4.5.1-orig/libtool.m4  2009-04-17 21:58:42.000000000 +1000
++++ gcc-4.5.1/libtool.m4  2009-08-17 16:51:35.312742600 +1000
+@@ -5117,7 +5117,9 @@
+   _LT_LINKER_SHLIBS($1)
+   _LT_SYS_DYNAMIC_LINKER($1)
+   _LT_LINKER_HARDCODE_LIBPATH($1)
+-  LT_SYS_DLOPEN_SELF
++  if test "$cross_compiling" = no; then
++    LT_SYS_DLOPEN_SELF
++  fi
+   _LT_CMD_STRIPLIB
+
+   # Report which library types will actually be built
 diff -rupN gcc-4.4.1-orig/libgcc/config.host gcc-4.4.1/libgcc/config.host
 --- gcc-4.4.1-orig/libgcc/config.host	2009-04-17 21:58:42.000000000 +1000
 +++ gcc-4.4.1/libgcc/config.host	2009-08-17 16:51:35.312742600 +1000

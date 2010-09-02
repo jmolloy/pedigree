@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-my $gcc_version = "4.4.1";
+my $gcc_version = "4.5.1";
 my $binutils_version = "2.20.1";
 my $nasm_version = "2.07";
 
