@@ -84,6 +84,8 @@ private:
 
     MemoryMappedIo *m_pFramebuffer;
     Framebuffer *m_pLogicalFramebuffer;
+    
+    Device::Address *m_pFramebufferRawAddress;
 
     /** Possible display modes that we have specialised code for. */
     enum ModeType

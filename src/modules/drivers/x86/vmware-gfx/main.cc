@@ -62,7 +62,8 @@ class VmwareGraphics : public Display
     public:
         VmwareGraphics(Device *pDev) :
             Device(pDev), Display(pDev), m_pIo(0),
-            m_Framebuffer(0), m_CommandRegion(0)
+            m_Framebuffer(0), m_CommandRegion(0),
+            m_pFramebufferRawAddress(0)
         {
             m_pIo = m_Addresses[0]->m_Io;
             
@@ -100,11 +101,17 @@ class VmwareGraphics : public Display
             {
                 m_Framebuffer = static_cast<MemoryMappedIo*>(m_Addresses[1]->m_Io);
                 m_CommandRegion = static_cast<MemoryMappedIo*>(m_Addresses[2]->m_Io);
+                m_Addresses[2]->map();
+                
+                m_pFramebufferRawAddress = m_Addresses[1];
             }
             else
             {
                 m_Framebuffer = static_cast<MemoryMappedIo*>(m_Addresses[2]->m_Io);
                 m_CommandRegion = static_cast<MemoryMappedIo*>(m_Addresses[1]->m_Io);
+                m_Addresses[1]->map();
+                
+                m_pFramebufferRawAddress = m_Addresses[2];
             }
             
             // Disable the command FIFO in case it was already enabled
@@ -320,6 +327,10 @@ class VmwareGraphics : public Display
             m_pFramebuffer->setFormat(pf);
             m_pFramebuffer->setXPos(0); m_pFramebuffer->setYPos(0);
             m_pFramebuffer->setParent(0);
+            
+            /// \todo If we switch to any mode after the first one has been set,
+            ///       the old region needs to be deallocated.
+            m_pFramebufferRawAddress->map((height * bytesPerLine) * height);
 
             // Blank the framebuffer, new mode
             m_pFramebuffer->rect(0, 0, w, h, 0);
@@ -455,6 +466,8 @@ class VmwareGraphics : public Display
         MemoryMappedIo *m_CommandRegion;
         
         VmwareFramebuffer *m_pFramebuffer;
+        
+        Device::Address *m_pFramebufferRawAddress;
 };
 
 void callback(Device *pDevice)

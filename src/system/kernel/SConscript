@@ -15,8 +15,6 @@ imagesdir = env["PEDIGREE_IMAGES_DIR"]
 builddir = env["PEDIGREE_BUILD_BASE"]
 objname = kerneldir + '/kernel'
 
-x86_ap_trampoline = kerneldir + '/trampoline.bin'
-
 env.Alias("kernel", objname)
 
 # To include a new subdirectory just add to the list.
@@ -147,10 +145,11 @@ if env['ARCH_TARGET'] == 'X86':
         'core/processor/x86/asm/InterruptManager.s',
         'core/processor/x86/asm/Processor.s',
         'core/processor/x86/asm/Scheduler.s',
-        'core/processor/x86/asm/multiprocessor.s'
+        # 'core/processor/x86/asm/multiprocessor.s'
     ]
     
-    mp_trampoline = ['core/processor/x86/asm/trampoline.s']
+    if 'MULTIPROCESSOR' in env['CPPDEFINES']:    
+        files += ['core/processor/x86/asm/trampoline.s']
 
 if env['ARCH_TARGET'] == 'X64':
     files += [
@@ -172,10 +171,4 @@ SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
 if env['ARCH_TARGET'] == 'X64':
     tmpEnvironment['LINKFLAGS'] += ' -m64 -mcmodel=kernel'
 tmpEnvironment.Program(objname, files)
-
-if env['ARCH_TARGET'] == 'X86' and len(mp_trampoline):
-    tmpEnvironment.Object(x86_ap_trampoline, mp_trampoline, ASFLAGS=tmpEnvironment['ASFLAGS'].replace("-f elf32", "-f bin"))
-
-    env.Depends(builddir + "/src/system/kernel/core/processor/x86/asm/multiprocessor.obj", x86_ap_trampoline)
-    env.Depends(objname, x86_ap_trampoline)
 

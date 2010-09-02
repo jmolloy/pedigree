@@ -203,7 +203,8 @@ void Device::searchByClassSubclassAndProgInterface(uint16_t classCode, uint16_t 
 }
 
 Device::Address::Address(String n, uintptr_t a, size_t s, bool io, size_t pad) :
-  m_Name(n), m_Address(a), m_Size(s), m_IsIoSpace(io), m_Io(0), m_Padding(pad)
+  m_Name(n), m_Address(a), m_Size(s), m_IsIoSpace(io), m_Io(0), m_Padding(pad),
+  m_bMapped(false)
 {
 #ifndef KERNEL_PROCESSOR_NO_PORT_IO
     if (m_IsIoSpace)
@@ -221,21 +222,37 @@ Device::Address::Address(String n, uintptr_t a, size_t s, bool io, size_t pad) :
         if (s%pageSize) numPages++;
 
         MemoryMappedIo *pIo = new MemoryMappedIo(m_Name, a%pageSize, pad);
-        PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
-        if (!physicalMemoryManager.allocateRegion(*pIo,
-                                                    numPages,
-                                                    PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory |
-                                                    PhysicalMemoryManager::force,
-                                                    VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write |
-                                                    VirtualAddressSpace::WriteThrough | VirtualAddressSpace::CacheDisable,
-                                                    a))
-        {
-            ERROR("Device::Address - allocateRegion for " << a << " failed!");
-        }
         m_Io = pIo;
 #ifndef KERNEL_PROCESSOR_NO_PORT_IO
     }
 #endif
+}
+
+void Device::Address::map(size_t forcedSize)
+{
+    if(!m_Io)
+        return;
+#ifndef KERNEL_PROCESSOR_NO_PORT_IO
+    if(m_IsIoSpace)
+        return;
+#endif
+    
+    size_t pageSize = PhysicalMemoryManager::getPageSize();
+    size_t s = forcedSize ? forcedSize : m_Size;
+    uint32_t numPages = s / pageSize;
+    if (s%pageSize) numPages++;
+    
+    PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
+    if (!physicalMemoryManager.allocateRegion(*static_cast<MemoryMappedIo*>(m_Io),
+                                               numPages,
+                                               PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory |
+                                               PhysicalMemoryManager::force,
+                                               VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write |
+                                               VirtualAddressSpace::WriteThrough | VirtualAddressSpace::CacheDisable,
+                                               m_Address))
+    {
+        ERROR("Device::Address - map for " << m_Address << " failed!");
+    }
 }
 
 Device::Address::~Address()

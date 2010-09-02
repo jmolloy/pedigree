@@ -89,6 +89,7 @@ VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*>
         if (address <= fbAddr && (address+size) > fbAddr)
         {
             m_pFramebuffer = static_cast<MemoryMappedIo*> ((*it)->m_Io);
+            m_pFramebufferRawAddress = (*it);
             bFramebufferFound = true;
             break;
         }
@@ -222,11 +223,6 @@ bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
 
     // Tell the Machine instance what VBE mode we're in, so it can set it again if we enter the debugger and return.
     Machine::instance().getVga(0)->setMode(m_Mode.id);
-
-    g_pDisplay = this;
-    g_ScreenMode = m_Mode;
-    g_Framebuffer = reinterpret_cast<uintptr_t>(m_pFramebuffer->virtualAddress());
-    g_FbSize = m_pFramebuffer->size();
     
     m_pLogicalFramebuffer->setWidth(m_Mode.width);
     m_pLogicalFramebuffer->setHeight(m_Mode.height);
@@ -235,6 +231,14 @@ bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
     m_pLogicalFramebuffer->setFormat(m_Mode.pf2);
     m_pLogicalFramebuffer->setXPos(0); m_pLogicalFramebuffer->setYPos(0);
     m_pLogicalFramebuffer->setParent(0);
+    
+    m_pFramebufferRawAddress->map((m_Mode.height * m_Mode.bytesPerLine) + m_Mode.width);
+    m_pLogicalFramebuffer->setFramebuffer(reinterpret_cast<uintptr_t>(m_pFramebuffer->virtualAddress()));
+
+    g_pDisplay = this;
+    g_ScreenMode = m_Mode;
+    g_Framebuffer = reinterpret_cast<uintptr_t>(m_pFramebuffer->virtualAddress());
+    g_FbSize = m_pFramebuffer->size();
 
     return true;
 }
