@@ -71,6 +71,7 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_pCurrentBulkQueueHead(0), m_pCurrentC
 
     // Grab the ports
     m_pBase = m_Addresses[0]->m_Io;
+    m_Addresses[0]->map();
 
     // Set reset bit
     m_pBase->write32(OhciCommandHcReset, OhciCommandStatus);

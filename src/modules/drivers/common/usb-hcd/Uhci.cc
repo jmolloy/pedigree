@@ -82,6 +82,7 @@ Uhci::Uhci(Device* pDev) :
 
     // Grab the ports
     m_pBase = m_Addresses[0]->m_Io;
+    m_Addresses[0]->map();
 
     // Set reset bit
     m_pBase->write16(UHCI_CMD_GRES, UHCI_CMD);

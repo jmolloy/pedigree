@@ -82,11 +82,15 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
 
     // Grab the ports
     m_pBase = m_Addresses[0]->m_Io;
+    m_Addresses[0]->map();
     m_nOpRegsOffset = m_pBase->read8(EHCI_CAPLENGTH);
 
     // Get structural capabilities to determine the number of physical ports
     // we have available to us.
     m_nPorts = m_pBase->read8(EHCI_HCSPARAMS) & 0xF;
+#ifdef USB_VERBOSE_DEBUG
+    NOTICE("EHCI controller has #" << Dec << m_nPorts << Hex << " physical ports.");
+#endif
 
     // Don't reset a running controller, make sure it's paused
     m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) & ~EHCI_CMD_RUN, m_nOpRegsOffset + EHCI_CMD);
