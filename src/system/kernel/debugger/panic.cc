@@ -30,6 +30,8 @@
 #include <Log.h>
 #include <utilities/utility.h>
 
+#include <graphics/GraphicsService.h>
+
 static size_t newlineCount(const char *pString)
 {
   size_t nNewlines = 0;
@@ -111,6 +113,25 @@ void _panic( const char* msg, DebuggerIO* pScreen )
 
 void panic( const char* msg )
 {
+  // Drop out of whatever graphics mode we were in
+  GraphicsService::GraphicsProvider provider;
+  memset(&provider, 0, sizeof(provider));
+  provider.bTextModes = true;
+  
+  ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
+  Service         *pService  = ServiceManager::instance().getService(String("graphics"));
+  bool bSuccess = false;
+  if(pFeatures->provides(ServiceFeatures::probe))
+    if(pService)
+      bSuccess = pService->serve(ServiceFeatures::probe, reinterpret_cast<void*>(&provider), sizeof(provider));
+  
+  if(bSuccess && !provider.bTextModes)
+    provider.pDisplay->setScreenMode(0);
+
+#ifdef MULTIPROCESSOR
+  Machine::instance().stopAllOtherProcessors();
+#endif
+
   /*
    * I/O implementations.
    */
