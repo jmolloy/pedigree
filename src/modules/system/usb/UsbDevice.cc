@@ -384,7 +384,7 @@ void UsbDevice::useConfiguration(uint8_t nConfig)
 void UsbDevice::useInterface(uint8_t nInterface)
 {
     m_pInterface = m_pConfiguration->interfaceList[nInterface];
-    if(m_pInterface->nAlternateSetting && !controlRequest(0, UsbRequest::SetInterface, m_pInterface->nAlternateSetting, 0))
+    if(m_pInterface->nAlternateSetting && !controlRequest(UsbRequestRecipient::Interface, UsbRequest::SetInterface, m_pInterface->nAlternateSetting, 0))
        return;
     m_UsbState = HasInterface; // We now have an interface
 }
