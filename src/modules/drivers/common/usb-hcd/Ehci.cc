@@ -337,6 +337,7 @@ bool Ehci::irq(irq_id_t number, InterruptState &state)
 void Ehci::interrupt(size_t number, InterruptState &state)
 #endif
 {
+    /*
     uint32_t pciStatus = PciBus::instance().readConfigSpace(this, 1) >> 16;
     if(!(pciStatus & 8))
     {
@@ -347,6 +348,7 @@ void Ehci::interrupt(size_t number, InterruptState &state)
 #endif
         ;
     }
+    */
 
     uint32_t nStatus = m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & m_pBase->read32(m_nOpRegsOffset + EHCI_INTR);
 #ifdef USB_VERBOSE_DEBUG
