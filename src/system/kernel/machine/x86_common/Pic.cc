@@ -111,6 +111,12 @@ irq_id_t Pic::registerPciIrqHandler(IrqHandler *handler, Device *pDevice)
   irq_id_t irq = pDevice->getInterruptNumber();
   if (UNLIKELY(irq >= 16))
     return 0;
+  
+  if(m_Handler[irq])
+  {
+    ERROR_NOLOCK("IRQ sharing is not yet supported (wanted IRQ=#" << Dec << irq << Hex << "]");
+    return 0;
+  }
 
   // Save the IrqHandler
   m_Handler[irq] = handler;
