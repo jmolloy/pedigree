@@ -37,15 +37,15 @@ bool UsbPnP::probeDevice(UsbDevice *pDevice)
         if(!item)
             continue;
 
-        if(item->nVendorId != VendorIdNone && item->nVendorId != pDes->nVendorId)
+        if((item->nVendorId != VendorIdNone) && (item->nVendorId != pDes->nVendorId))
             continue;
-        if(item->nProductId != ProductIdNone && item->nProductId != pDes->nProductId)
+        if((item->nProductId != ProductIdNone) && (item->nProductId != pDes->nProductId))
             continue;
-        if(item->nClass != ClassNone && item->nClass != pIface->nClass)
+        if((item->nClass != ClassNone) && (item->nClass != pIface->nClass))
             continue;
-        if(item->nSubclass != SubclassNone && item->nSubclass != pIface->nSubclass)
+        if((item->nSubclass != SubclassNone) && (item->nSubclass != pIface->nSubclass))
             continue;
-        if(item->nProtocol != ProtocolNone && item->nProtocol != pIface->nProtocol)
+        if((item->nProtocol != ProtocolNone) && (item->nProtocol != pIface->nProtocol))
             continue;
 
         // Call the callback, which will give us (hopefully) a copy of pDevice, in the form of a driver class
