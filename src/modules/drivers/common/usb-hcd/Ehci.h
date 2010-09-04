@@ -161,6 +161,7 @@ class Ehci : public UsbHub,
             EHCI_CAPLENGTH = 0x00,      // Capability Registers Length
             EHCI_HCIVERSION = 0x02,     // Host Controller Interface Version
             EHCI_HCSPARAMS = 0x04,      // Host Controller Structural Parameters
+            EHCI_HCCPARAMS = 0x08,      // Host Controller Structural Parameters
 
             EHCI_CMD = 0x00,            // Command register
             EHCI_STS = 0x04,            // Status register
