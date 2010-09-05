@@ -247,12 +247,8 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
             DEBUG_LOG("USB: EHCI: Port " << Dec << i << Hex << " - status after power-up: " << m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + i * 4));
 #endif
         }
-
-        // If connected, send it to the RequestQueue
-        if(m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4) & EHCI_PORTSC_CONN)
-            executeRequest(i);
-        else
-            m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + i * 4), m_nOpRegsOffset + EHCI_PORTSC + i * 4);
+        
+        executeRequest(i);
     }
 
     // Enable port status change interrupt and clear it from status
@@ -757,7 +753,7 @@ uint64_t Ehci::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4
 #ifdef USB_VERBOSE_DEBUG
             DEBUG_LOG("USB: EHCI: Port " << Dec << p1 << Hex << " - status after reset: " << m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + p1 * 4));
 #endif
-            if(m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + p1 * 4) & EHCI_PORTSC_EN)
+            if((m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + p1 * 4) & EHCI_PORTSC_EN) && (m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC + p1 * 4) & EHCI_PORTSC_CONN))
             {
                 DEBUG_LOG("USB: EHCI: Port " << Dec << p1 << Hex << " is now connected");
 
@@ -780,10 +776,10 @@ uint64_t Ehci::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4
     }
     else
     {
-#ifdef USB_VERBOSE_DEBUG
         DEBUG_LOG("USB: EHCI: Port " << Dec << p1 << Hex << " is now disconnected");
-#endif
+        
         deviceDisconnected(p1);
+        
         // Clean any bits that would remain
         m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + p1 * 4), m_nOpRegsOffset + EHCI_PORTSC + p1 * 4);
     }
