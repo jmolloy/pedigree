@@ -76,19 +76,19 @@ uintptr_t PedigreeCSyscallManager::syscall(SyscallState &state)
             pedigree_config_getcolname(p1, p2, reinterpret_cast<char*>(p3), p4);
             return 0;
         case PEDIGREE_CONFIG_GETSTR_N:
-            pedigree_config_getstr(p1, p2, p3, reinterpret_cast<char*>(p4), p5);
+            pedigree_config_getstr(p1, p2, reinterpret_cast<char*>(p3), p4);
             return 0;
         case PEDIGREE_CONFIG_GETSTR_S:
-            pedigree_config_getstr(p1, p2, reinterpret_cast<const char*>(p3), reinterpret_cast<char*>(p4), p5);
+            pedigree_config_getstr(p1, reinterpret_cast<const char*>(p2), reinterpret_cast<char*>(p3), p4);
             return 0;
         case PEDIGREE_CONFIG_GETNUM_N:
-            return pedigree_config_getnum(p1, p2, p3);
+            return pedigree_config_getnum(p1, p2);
         case PEDIGREE_CONFIG_GETNUM_S:
-            return pedigree_config_getnum(p1, p2, reinterpret_cast<const char*>(p3));
+            return pedigree_config_getnum(p1, reinterpret_cast<const char*>(p2));
         case PEDIGREE_CONFIG_GETBOOL_N:
-            return pedigree_config_getbool(p1, p2, p3);
+            return pedigree_config_getbool(p1, p2);
         case PEDIGREE_CONFIG_GETBOOL_S:
-            return pedigree_config_getbool(p1, p2, reinterpret_cast<const char*>(p3));
+            return pedigree_config_getbool(p1, reinterpret_cast<const char*>(p2));
         case PEDIGREE_CONFIG_QUERY:
             return pedigree_config_query(reinterpret_cast<const char*>(p1));
         case PEDIGREE_CONFIG_FREERESULT:
@@ -98,6 +98,8 @@ uintptr_t PedigreeCSyscallManager::syscall(SyscallState &state)
             return pedigree_config_numcols(p1);
         case PEDIGREE_CONFIG_NUMROWS:
             return pedigree_config_numrows(p1);
+        case PEDIGREE_CONFIG_NEXTROW:
+            return pedigree_config_nextrow(p1);
         case PEDIGREE_CONFIG_WAS_SUCCESSFUL:
             return pedigree_config_was_successful(p1);
         case PEDIGREE_CONFIG_GET_ERROR_MESSAGE:

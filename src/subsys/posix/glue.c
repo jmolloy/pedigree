@@ -427,17 +427,19 @@ int gethostname(char *name, size_t len)
     if(!name || !len)
         return -1;
 
-    result = pedigree_config_query("select * from 'network-generic' WHERE `key` = 'hostname';");
-    if((result == -1) || (pedigree_config_was_successful(result) == -1) || (pedigree_config_numrows(result) == 0))
-    {
-        if(result != -1)
-            pedigree_config_freeresult(result);
-        strncpy(name, "pedigree", len);
+    result = pedigree_config_query("select * from 'network-generic' WHERE `key` = 'hostname'");
+    if(result == -1 || pedigree_config_numrows(result) == 0){
+        strncpy(name,"pedigree",len);
         return 0;
     }
 
-    pedigree_config_getstr_s(result, 0, "value", name, len);
-    pedigree_config_freeresult(result);
+    if(pedigree_config_nextrow(result) == 0){
+        pedigree_config_getstr_s(result,"value",name,len);
+        return 0;
+    }
+
+    strncpy(name,"pedigree",len);
+
     return 0;
 }
 
@@ -451,16 +453,13 @@ int	sethostname(char *name, size_t len)
 
     // Need to add permission and name checking
 
-    const char *query = "update 'network-generic' set `value`= '%s' WHERE `key` = 'hostname'";
+    const char *query = "UPDATE 'network-generic' SET `value`= '%s' WHERE `key` = 'hostname'";
     char *tmp    = pedigree_config_escape_string(name);
-    char *buffer = (char*)malloc(strlen(query) + strlen(tmp) - 2 + 1);
+    char *buffer = (char*)malloc(strlen(query) + strlen(tmp) + 1);
 
     sprintf(buffer,query,tmp);
 
-    int result = pedigree_config_query(buffer);
-
-    if(result != -1)
-        pedigree_config_freeresult(result);
+    pedigree_config_query(buffer);
 
     free(tmp);
     free(buffer);
@@ -1101,13 +1100,8 @@ struct servent* getservbyname(const char *name, const char *proto)
     free(escName);
 
     int result = pedigree_config_query(buf);
-    if (result == -1 || pedigree_config_was_successful(result) || !pedigree_config_numrows(result))
-    {
-
-        if(result != -1)
-            pedigree_config_freeresult(result);
+    if (result == -1 || pedigree_config_was_successful(result) || !pedigree_config_numrows(result) || pedigree_config_nextrow(result))
         return 0;
-    }
 
     if(se.s_name)
         free(se.s_name);
@@ -1119,9 +1113,9 @@ struct servent* getservbyname(const char *name, const char *proto)
     if(proto)
         strncpy(newProto, proto, 64);
     else
-        pedigree_config_getstr_s(result, 0, "proto", newProto, 64);
+        pedigree_config_getstr_s(result, "proto", newProto, 64);
 
-    se.s_port = pedigree_config_getnum_s(result, 0, "port");
+    se.s_port = pedigree_config_getnum_s(result, "port");
     strncpy(se.s_name, name, 64);
     se.s_proto = newProto;
 
@@ -1154,21 +1148,17 @@ struct servent* getservbyport(int port, const char *proto)
         sprintf(buf, "select * from 'network-services' where port = %d", port);
 
     int result = pedigree_config_query(buf);
-    if (result == -1 || pedigree_config_was_successful(result) || !pedigree_config_numrows(result))
-    {
-        if(result != -1)
-            pedigree_config_freeresult(result);
+    if (result == -1 || pedigree_config_was_successful(result) || !pedigree_config_numrows(result) || pedigree_config_nextrow(result))
         return 0;
-    }
 
     se.s_name = (char*) malloc(64);
     char *newProto = (char*) malloc(64);
     if(proto)
         strncpy(newProto, proto, 64);
     else
-        pedigree_config_getstr_s(result, 0, "proto", newProto, 64);
+        pedigree_config_getstr_s(result, "proto", newProto, 64);
 
-    pedigree_config_getstr_s(result, 0, "name", se.s_name, 64);
+    pedigree_config_getstr_s(result, "name", se.s_name, 64);
     se.s_port = port;
     se.s_proto = newProto;
 
@@ -1240,22 +1230,22 @@ void setprotoent(int stayopen)
 struct group *getgrnam(const char *name)
 {
     STUBBED("getgrnam");
-
+    
     /// \todo HACK HACK HACKITY HACK SO VERY HACKY. Yeah, this is for Apache.
     /// Also it's going to leak memory everywhere, and use it really badly.
-
+    
     static struct group ret;
-
+    
     ret.gr_name = (char*) malloc(128);
     strcpy(ret.gr_name, name);
-
+    
     ret.gr_gid = 3; // httpd
-
+    
     ret.gr_mem = (char**) malloc(8);
     ret.gr_mem[0] = (char*) malloc(128);
     strcpy(ret.gr_mem[0], "httpd");
     ret.gr_mem[1] = 0;
-
+    
     return &ret;
 }
 
@@ -2087,7 +2077,7 @@ int sched_yield()
 int getdtablesize()
 {
     STUBBED("getdtablesize");
-
+    
     struct rlimit tmp;
     getrlimit(RLIMIT_NOFILE, &tmp);
     return tmp.rlim_cur;
@@ -2118,7 +2108,7 @@ int nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
         errno = EINVAL;
         return -1;
     }
-
+    
     return syscall2(POSIX_NANOSLEEP, (long) rqtp, (long) rmtp);
 }
 
@@ -2129,7 +2119,7 @@ int clock_gettime(clockid_t clock_id, struct timespec *tp)
         errno = EINVAL;
         return -1;
     }
-
+    
     return syscall2(POSIX_CLOCK_GETTIME, clock_id, (long) tp);
 }
 

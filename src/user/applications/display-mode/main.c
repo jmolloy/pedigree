@@ -17,7 +17,7 @@ int main(int argc, char **argv)
         usage();
         exit(1);
     }
-/*
+
     char buf[256];
     int result;
     unsigned int width, height, depth;
@@ -98,5 +98,5 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    exit(0);*/
+    exit(0);
 }

@@ -15,55 +15,20 @@
  */
 
 #include "Header.h"
+#include <pedigree_config.h>
 
-#include <syslog.h>
-
-#include <config/Config.h>
 #include <graphics/Graphics.h>
 
 extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
 
-uint32_t g_BorderColour                    = 0x965000; // {150, 80, 0,0};
-uint32_t g_TabBackgroundColour             = 0x000000; // {0, 0, 0,0};
-uint32_t g_TabTextColour                   = 0x966400; // {150, 100, 0,0};
-uint32_t g_SelectedTabBackgroundColour     = 0x966400; // {150, 100, 0,0};
+uint32_t g_BorderColour                    = 0x5096; // {150, 80, 0,0};
+uint32_t g_TabBackgroundColour             = 0; // {0, 0, 0,0};
+uint32_t g_TabTextColour                   = 0x6496; // {150, 100, 0,0};
+uint32_t g_SelectedTabBackgroundColour     = 0x6496; // {150, 100, 0,0};
 uint32_t g_SelectedTabTextColour           = 0xFFFFFF; // {255, 255, 255,0};
 uint32_t g_TextColour                      = 0xFFFFFF; // {255, 255, 255,0};
-uint32_t g_MainBackgroundColour            = 0x000000; // {0, 0, 0,0};
+uint32_t g_MainBackgroundColour            = 0; // {0, 0, 0,0};
 size_t g_FontSize = 16;
-
-static void getRgbColorFromDb(const char *colorName, uint32_t &color)
-{
-    // The query string
-    string sQuery;
-
-    // Create the query string
-    sQuery += "select r,g,b from 'colour-scheme' where name='";
-    sQuery += colorName;
-    sQuery += "';";
-
-    // Query the database
-    Config::Result *pResult = Config::query(sQuery.c_str());
-
-    // Did the query fail?
-    if(!pResult)
-    {
-        syslog(LOG_ALERT, "TUI: Error looking up '%s' colour.", colorName);
-        return;
-    }
-    if(!pResult->succeeded())
-    {
-        syslog(LOG_ALERT, "TUI: Error looking up '%s' colour: %s\n", colorName, pResult->errorMessage().c_str());
-        delete pResult;
-        return;
-    }
-
-    // Get the color from the query result
-    color = PedigreeGraphics::createRgb(pResult->getNum(0, "r"), pResult->getNum(0, "g"), pResult->getNum(0, "b"));
-
-    // Dispose of the query result
-    delete pResult;
-}
 
 Header::Header(size_t nWidth) :
     m_nWidth(nWidth), m_Page(0), m_LastPage(0), m_pFont(0),
@@ -72,12 +37,50 @@ Header::Header(size_t nWidth) :
     m_pFont = new Font(g_FontSize, "/system/fonts/DejaVuSansMono-BoldOblique.ttf", false, nWidth);
     g_FontSize = m_pFont->getHeight();
 
-    getRgbColorFromDb("border", g_BorderColour);
-    g_TabBackgroundColour = g_BorderColour;
-    getRgbColorFromDb("fill", g_SelectedTabBackgroundColour);
-    getRgbColorFromDb("selected-text", g_TextColour);
-    g_TabTextColour = g_TextColour;
-    getRgbColorFromDb("tui-background", g_MainBackgroundColour);
+    int result = pedigree_config_query("select * from 'colour-scheme';");
+    if (result == -1)
+    {
+        log("Unable to query config!");
+        return;
+    }
+
+    char buf[256];
+    if (pedigree_config_was_successful(result) != 0)
+    {
+        pedigree_config_get_error_message(result, buf, 256);
+        log(buf);
+        return;
+    }
+
+    while (pedigree_config_nextrow(result) == 0)
+    {
+        memset (buf, 0, 256);
+        pedigree_config_getstr_n (result, 0, buf, 256);
+        rgb_t rgb;
+        rgb.r = pedigree_config_getnum_n (result, 1);
+        rgb.g = pedigree_config_getnum_n (result, 2);
+        rgb.b = pedigree_config_getnum_n (result, 3);
+        rgb.a = 0;
+
+        if (!strcmp(buf, "border"))
+        {
+            g_BorderColour = PedigreeGraphics::createRgb(rgb.r, rgb.g, rgb.b);
+            g_TabBackgroundColour = PedigreeGraphics::createRgb(rgb.r, rgb.g, rgb.b);
+        }
+        else if (!strcmp(buf, "fill"))
+            g_SelectedTabBackgroundColour = PedigreeGraphics::createRgb(rgb.r, rgb.g, rgb.b);
+        else if (!strcmp(buf, "selected-text"))
+            g_SelectedTabTextColour = PedigreeGraphics::createRgb(rgb.r, rgb.g, rgb.b);
+        else if (!strcmp(buf, "text"))
+        {
+            g_TextColour = PedigreeGraphics::createRgb(rgb.r, rgb.g, rgb.b);
+            g_TabTextColour = PedigreeGraphics::createRgb(rgb.r, rgb.g, rgb.b);
+        }
+        else if (!strcmp(buf, "tui-background"))
+            g_MainBackgroundColour = PedigreeGraphics::createRgb(rgb.r, rgb.g, rgb.b);
+    }
+    pedigree_config_freeresult(result);
+
 }
 
 Header::~Header()
@@ -93,7 +96,7 @@ size_t Header::getHeight()
 void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
 {
     size_t charWidth = m_pFont->getWidth();
-
+    
     if(!m_pFramebuffer)
     {
         m_pFramebuffer = g_pFramebuffer->createChild(0, 0, m_nWidth, g_FontSize + 5);
@@ -106,10 +109,10 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
     // Set up the dirty rectangle to cover the entire header area.
     rect.point(0, 0);
     rect.point(m_nWidth, g_FontSize+5);
-
+    
     // Wipe the area
     m_pFramebuffer->rect(0, 0, m_nWidth, g_FontSize + 4, g_MainBackgroundColour, PedigreeGraphics::Bits24_Rgb);
-
+    
     // Height = font size + 2 px top and bottom + border 1px =
     // font-size + 5px.
     m_pFramebuffer->line(0, g_FontSize + 4, m_nWidth, g_FontSize + 4, g_BorderColour, PedigreeGraphics::Bits24_Rgb);

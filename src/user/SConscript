@@ -34,6 +34,7 @@ posixc_apps = [
     'login',
     'keymap',
     'mount',
+    'config',
     'display-mode',
     'reboot',
     'sudo',
@@ -51,8 +52,7 @@ sdl_apps = [
 cpp_apps = [
     'TUI',
     'apptest',
-    'config',
-    'thread-test',
+    'thread-test'
 ]
 
 # Custom include paths for specific applications
