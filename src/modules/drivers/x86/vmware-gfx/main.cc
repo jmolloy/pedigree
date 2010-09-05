@@ -330,7 +330,8 @@ class VmwareGraphics : public Display
             
             /// \todo If we switch to any mode after the first one has been set,
             ///       the old region needs to be deallocated.
-            m_pFramebufferRawAddress->map((height * bytesPerLine) * height);
+            m_pFramebufferRawAddress->map(height * bytesPerLine);
+            m_pFramebuffer->setFramebuffer(reinterpret_cast<uintptr_t>(m_Framebuffer->virtualAddress()));
 
             // Blank the framebuffer, new mode
             m_pFramebuffer->rect(0, 0, w, h, 0);
