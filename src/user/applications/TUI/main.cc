@@ -320,10 +320,41 @@ int main (int argc, char **argv)
         return 1;
     }
     
-    fp = fopen("/config/TUI/.tui.lck", "w");
+    struct stat info;
+    int err = stat("/config", &info);
+    if((err < 0) && (errno == ENOENT))
+    {
+        if(mkdir("/config", 0777) < 0)
+        {
+            syslog(LOG_EMERG, "TUI: couldn't create /config: %s!", strerror(errno));
+            return 1;
+        }
+    }
+    else if(err < 0)
+    {
+        syslog(LOG_EMERG, "TUI: couldn't stat /config for some reason: %s!", strerror(errno));
+        return 1;
+    }
+    
+    err = stat("/config/TUI", &info);
+    if((err < 0) && (errno == ENOENT))
+    {
+        if(mkdir("/config/TUI", 0777) < 0)
+        {
+            syslog(LOG_EMERG, "TUI: couldn't create /config/TUI: %s!", strerror(errno));
+            return 1;
+        }
+    }
+    else if(err < 0)
+    {
+        syslog(LOG_EMERG, "TUI: couldn't stat /config/TUI for some reason: %s!", strerror(errno));
+        return 1;
+    }
+    
+    fp = fopen("/config/TUI/.tui.lck", "w+");
     if(!fp)
     {
-        syslog(LOG_EMERG, "TUI: couldn't create lock file: %s\n", strerror(errno));
+        syslog(LOG_EMERG, "TUI: couldn't create lock file: %s", strerror(errno));
         return 1;
     }
     fclose(fp);
