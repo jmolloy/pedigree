@@ -90,7 +90,7 @@ static void getXtermColorFromDb(const char *colorName, uint8_t &color)
     }
     if(!pResult->succeeded())
     {
-        syslog(LOG_ALERT, "TUI: Error looking up '%s' colour: %s\n", colorName, pResult->errorMessage());
+        syslog(LOG_ALERT, "TUI: Error looking up '%s' colour: %s\n", colorName, pResult->errorMessage().c_str());
         delete pResult;
         return;
     }

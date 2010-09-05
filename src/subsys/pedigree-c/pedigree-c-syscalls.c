@@ -21,6 +21,7 @@
 #include <processor/types.h>
 #include <pedigree_config.h>
 
+#include <stdlib.h>
 #include <unistd.h>
 
 // These are provided by libc
