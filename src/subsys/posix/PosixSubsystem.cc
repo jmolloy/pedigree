@@ -418,18 +418,18 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType, Inter
         case DivideByZero:
             NOTICE_NOLOCK("    (Division by zero)");
             // Send SIGFPE
-            sig = getSignalHandler(11);
+            sig = getSignalHandler(8);
             break;
             break;
         case FpuError:
             NOTICE_NOLOCK("    (FPU error)");
             // Send SIGFPE
-            sig = getSignalHandler(11);
+            sig = getSignalHandler(8);
             break;
         case SpecialFpuError:
             NOTICE_NOLOCK("    (FPU error - special)");
             // Send SIGFPE
-            sig = getSignalHandler(11);
+            sig = getSignalHandler(8);
             break;
         default:
             NOTICE_NOLOCK("    (Unknown)");
