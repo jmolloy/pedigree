@@ -288,9 +288,9 @@ else:
 
     # Add libraries
     fileList += [builddir + '/libc.so',
-                 builddir + '/libm.so',
-                 builddir + '/libpthread.so',
-                 builddir + '/libSDL.so']
+                 builddir + '/libm.so',]
+#                 builddir + '/libpthread.so',
+#                 builddir + '/libSDL.so']
 
     # Build the hard disk image
     env.Command(hddimg, fileList, Action(buildImage, None))

@@ -12,7 +12,7 @@ tmpEnvironment = env.Clone()
 # Change to then name of this module
 builddir = "#" + env["PEDIGREE_BUILD_BASE"]
 imagesdir = env["PEDIGREE_IMAGES_DIR"]
-objname = builddir + '/libSDL.so'
+objname = builddir + '/libSDL.a'
 
 # To include a new subdirectory just add to the list.
 subdirs = [
@@ -75,6 +75,6 @@ tmpEnvironment['LIBS'] = libraries
 tmpEnvironment['LIBPATH'] = libpaths
 tmpEnvironment['CPPDEFINES'] += ['PEDIGREE']
 
-tmpEnvironment.Program(objname, files, LINKFLAGS="-shared -Wl,-shared -Wl,-soname,libSDL.so")
+tmpEnvironment.Library(objname, files) #, LINKFLAGS="-shared -Wl,-shared -Wl,-soname,libSDL.so")
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
