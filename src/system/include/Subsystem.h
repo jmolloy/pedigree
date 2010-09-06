@@ -59,6 +59,10 @@ class Subsystem
         {
             InvalidOpcode = 0,
             PageFault = 1,
+            GeneralProtectionFault = 2,
+            DivideByZero = 3,
+            FpuError = 4,
+            SpecialFpuError = 5,
             Other = 255
         };
 

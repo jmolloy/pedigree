@@ -286,7 +286,7 @@ void PosixSubsystem::exit(int code)
         pProcess->setExitStatus( (code&0xFF) << 8 );
     if(code)
     {
-        NOTICE("Sending unexpected exit event to thread");
+        WARNING("Sending unexpected exit event (" << code << ") to thread");
         pThread->unexpectedExit();
     }
 
@@ -409,6 +409,27 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType, Inter
             NOTICE_NOLOCK("    (Invalid opcode)");
             // Send SIGILL
             sig = getSignalHandler(4);
+            break;
+        case GeneralProtectionFault:
+            NOTICE_NOLOCK("    (General Fault)");
+            // Send SIGSEGV
+            sig = getSignalHandler(11);
+            break;
+        case DivideByZero:
+            NOTICE_NOLOCK("    (Division by zero)");
+            // Send SIGFPE
+            sig = getSignalHandler(11);
+            break;
+            break;
+        case FpuError:
+            NOTICE_NOLOCK("    (FPU error)");
+            // Send SIGFPE
+            sig = getSignalHandler(11);
+            break;
+        case SpecialFpuError:
+            NOTICE_NOLOCK("    (FPU error - special)");
+            // Send SIGFPE
+            sig = getSignalHandler(11);
             break;
         default:
             NOTICE_NOLOCK("    (Unknown)");
