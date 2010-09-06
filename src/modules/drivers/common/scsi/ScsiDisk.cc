@@ -230,7 +230,14 @@ uintptr_t ScsiDisk::read(uint64_t location)
         return buffer + pageOffset;
 
 	// Wait for the unit to be ready before reading
-    if(!unitReady())
+	bool bReady = false;
+	for(int i = 0; i < 3; i++)
+	{
+        if((bReady = unitReady()))
+            break;
+    }
+    
+    if(!bReady)
     {
         ERROR("ScsiDisk::read - unit not ready");
         return 0;
@@ -240,30 +247,37 @@ uintptr_t ScsiDisk::read(uint64_t location)
 
     bool bOk;
     ScsiCommand *pCommand;
-
-    DEBUG_LOG("SCSI: trying read(10)");
-    pCommand = new ScsiCommands::Read10((pageNumber / m_BlockSize), 4096 / m_BlockSize);
-    bOk = sendCommand(pCommand, buffer, 4096);
-    delete pCommand;
-    if(bOk)
-        return buffer + pageOffset;
-    DEBUG_LOG("SCSI: trying read(12)");
-    pCommand = new ScsiCommands::Read12((pageNumber / m_BlockSize), 4096 / m_BlockSize);
-    bOk = sendCommand(pCommand, buffer, 4096);
-    delete pCommand;
-    if(bOk)
-        return buffer + pageOffset;
-    DEBUG_LOG("SCSI: trying read(16)");
-    pCommand = new ScsiCommands::Read16((pageNumber / m_BlockSize), 4096 / m_BlockSize);
-    bOk = sendCommand(pCommand, buffer, 4096);
-    delete pCommand;
-    if(!bOk)
+    
+    for(int i = 0; i < 3; i++)
     {
-        ERROR("SCSI: no read function worked");
-        return 0;
+        DEBUG_LOG("SCSI: trying read(10)");
+        pCommand = new ScsiCommands::Read10((pageNumber / m_BlockSize), 4096 / m_BlockSize);
+        bOk = sendCommand(pCommand, buffer, 4096);
+        delete pCommand;
+        if(bOk)
+            return buffer + pageOffset;
     }
-
-    return buffer + pageOffset;
+    for(int i = 0; i < 3; i++)
+    {
+        DEBUG_LOG("SCSI: trying read(12)");
+        pCommand = new ScsiCommands::Read12((pageNumber / m_BlockSize), 4096 / m_BlockSize);
+        bOk = sendCommand(pCommand, buffer, 4096);
+        delete pCommand;
+        if(bOk)
+            return buffer + pageOffset;
+    }
+    for(int i = 0; i < 3; i++)
+    {
+        DEBUG_LOG("SCSI: trying read(16)");
+        pCommand = new ScsiCommands::Read16((pageNumber / m_BlockSize), 4096 / m_BlockSize);
+        bOk = sendCommand(pCommand, buffer, 4096);
+        delete pCommand;
+        if(bOk)
+            return buffer + pageOffset;
+    }
+    
+    ERROR("SCSI: no read function worked");
+    return 0;
 }
 
 void ScsiDisk::write(uint64_t location)
