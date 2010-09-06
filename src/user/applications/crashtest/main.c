@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <string.h>
+#include <stdlib.h>
 
 // Don't give a warning for division by zero
 #pragma GCC diagnostic ignored "-Wdiv-by-zero"
@@ -16,15 +17,8 @@ int main(int argc, char *argv[])
 {
     printf("crashtest: a return value of zero means success\n");
     
-    signal(SIGSEGV, sighandler);
     signal(SIGFPE, sighandler);
     signal(SIGILL, sighandler);
-    
-    // SIGSEGV
-    printf("Testing SIGSEGV...\n");
-    char *p = (char*) 0;
-    strcpy(p, "Hello");
-    printf("Works.\n");
     
     // SIGFPE
     printf("Testing SIGFPE...\n");
