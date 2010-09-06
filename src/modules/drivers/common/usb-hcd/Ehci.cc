@@ -369,6 +369,8 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                 continue;
             if(pQH->pMetaData->bIgnore)
                 continue;
+            if(!(pQH->pMetaData->pFirstQTD && pQH->pMetaData->pLastQTD))
+                continue;
 
             bool bPeriodic = pQH->pMetaData->bPeriodic;
 
@@ -409,8 +411,9 @@ void Ehci::interrupt(size_t number, InterruptState &state)
 
                         if(!bPeriodic)
                         {
-                            pQH->pMetaData->bIgnore = true;
-
+                            // Ensure the list doesn't change as we modify it
+                            m_QueueListChangeLock.acquire(); // Atomic operation
+                            
                             // Was the reclaim head bit set?
                             if(pQH->hrcl)
                                 pQH->pMetaData->pNext->hrcl = 1; // Make sure there's always a reclaim head
@@ -429,14 +432,17 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                             // Update the tail pointer if we need to
                             if(pQH == m_pCurrentQueueTail)
                             {
-                                m_QueueListChangeLock.acquire(); // Atomic operation
                                 m_pCurrentQueueTail = pPrev;
-                                m_QueueListChangeLock.release();
                             }
 
                             // Interrupt on Async Advance Doorbell - will run the dequeue thread to
                             // clear bits in the QH and qTD bitmaps
                             m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) | (1 << 6), m_nOpRegsOffset + EHCI_CMD);
+                            
+                            // Now ready for dequeue.
+                            pQH->pMetaData->bIgnore = true;
+                            
+                            m_QueueListChangeLock.release();
                         }
                     }
                     // Interrupt qTDs need constant refresh
@@ -632,6 +638,7 @@ uintptr_t Ehci::createTransaction(UsbEndpoint endpointInfo)
     pMetaData->pNext = 0;
     pMetaData->pPrev = 0;
     pMetaData->bIgnore = false;
+    pMetaData->nTotalBytes = 0;
 
     pQH->pMetaData = pMetaData;
 
