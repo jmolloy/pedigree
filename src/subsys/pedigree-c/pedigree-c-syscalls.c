@@ -83,31 +83,31 @@ void pedigree_config_getcolname(size_t resultIdx, size_t n, char *buf, size_t bu
     syscall4(PEDIGREE_CONFIG_GETCOLNAME, resultIdx, n, (long)buf, bufsz);
 }
 
-void pedigree_config_getstr_n(size_t resultIdx, size_t n, char *buf, size_t bufsz)
+void pedigree_config_getstr_n(size_t resultIdx, size_t row, size_t n, char *buf, size_t bufsz)
 {
-    syscall4(PEDIGREE_CONFIG_GETSTR_N, resultIdx, n, (long)buf, bufsz);
+    syscall5(PEDIGREE_CONFIG_GETSTR_N, resultIdx, row, n, (long)buf, bufsz);
 }
-void pedigree_config_getstr_s(size_t resultIdx, const char *col, char *buf, size_t bufsz)
+void pedigree_config_getstr_s(size_t resultIdx, size_t row, const char *col, char *buf, size_t bufsz)
 {
-    syscall4(PEDIGREE_CONFIG_GETSTR_S, resultIdx, (long)col, (long)buf, bufsz);
-}
-
-int pedigree_config_getnum_n(size_t resultIdx, size_t n)
-{
-    return syscall2(PEDIGREE_CONFIG_GETNUM_N, resultIdx, n);
-}
-int pedigree_config_getnum_s(size_t resultIdx, const char *col)
-{
-    return syscall2(PEDIGREE_CONFIG_GETNUM_S, resultIdx, (long)col);
+    syscall5(PEDIGREE_CONFIG_GETSTR_S, resultIdx, row, (long)col, (long)buf, bufsz);
 }
 
-int pedigree_config_getbool_n(size_t resultIdx, size_t n)
+int pedigree_config_getnum_n(size_t resultIdx, size_t row, size_t n)
 {
-    return syscall2(PEDIGREE_CONFIG_GETBOOL_N, resultIdx, n);
+    return syscall3(PEDIGREE_CONFIG_GETNUM_N, row, resultIdx, n);
 }
-int pedigree_config_getbool_s(size_t resultIdx, const char *col)
+int pedigree_config_getnum_s(size_t resultIdx, size_t row, const char *col)
 {
-    return syscall2(PEDIGREE_CONFIG_GETBOOL_S, resultIdx, (long)col);
+    return syscall3(PEDIGREE_CONFIG_GETNUM_S, row, resultIdx, (long)col);
+}
+
+int pedigree_config_getbool_n(size_t resultIdx, size_t row, size_t n)
+{
+    return syscall3(PEDIGREE_CONFIG_GETBOOL_N, resultIdx, row, n);
+}
+int pedigree_config_getbool_s(size_t resultIdx, size_t row, const char *col)
+{
+    return syscall3(PEDIGREE_CONFIG_GETBOOL_S, resultIdx, row, (long)col);
 }
 
 int pedigree_config_query(const char *query)
@@ -130,11 +130,6 @@ int pedigree_config_numrows(size_t resultIdx)
     return syscall1(PEDIGREE_CONFIG_NUMROWS, resultIdx);
 }
 
-int pedigree_config_nextrow(size_t resultIdx)
-{
-    return syscall1(PEDIGREE_CONFIG_NEXTROW, resultIdx);
-}
-
 int pedigree_config_was_successful(size_t resultIdx)
 {
     return syscall1(PEDIGREE_CONFIG_WAS_SUCCESSFUL, resultIdx);
@@ -147,27 +142,27 @@ void pedigree_config_get_error_message(size_t resultIdx, char *buf, int bufsz)
 
 char *pedigree_config_escape_string(const char *str)
 {
-    char *buf = (char*)malloc(strlen(str)*2+1);
-    const char *it = str;
-    int i = 0;
-    while(*it)
+    // Expect the worst: every char needs to be escaped
+    char *bufferStart = (char*)malloc(strlen(str) * 2 + 1);
+    char *buffer = bufferStart;
+    while(*str)
     {
-        if(*it == '\'')
+        if(*str == '\'')
         {
-            buf[i] = '\'';
-            buf[i+1] = '\'';
-            i+=2;
+            *buffer++ = '\'';
+            *buffer++ = '\'';
         }
         else
-        {
-            buf[i] = *it;
-            i++;
-        }
-        it++;
-    }
-    buf[i] = '\0';
+            *buffer++ = *str;
 
-    return buf;
+        str++;
+    }
+    *buffer = '\0';
+
+    // Reallocate so we won't use more space than we need
+    bufferStart = realloc(bufferStart, strlen(bufferStart) + 1);
+
+    return bufferStart;
 }
 
 // Pedigree-specific function: login with given uid and password.

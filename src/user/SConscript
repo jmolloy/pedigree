@@ -34,7 +34,6 @@ posixc_apps = [
     'login',
     'keymap',
     'mount',
-    'config',
     'display-mode',
     'reboot',
     'sudo',
@@ -52,6 +51,7 @@ sdl_apps = [
 cpp_apps = [
     'TUI',
     'apptest',
+    'config',
     'thread-test'
 ]
 
@@ -91,11 +91,11 @@ tmp['CPPPATH'] = incpath
 
 for i in all_apps:
     e = tmp.Clone()
-    
+
     if i in sdl_apps:
         e['LIBS'] += ['SDL', 'pthread']
         e['CPPPATH'] += ['#/src/lgpl/SDL-1.2.14/include']
-    
+
     # SDL apps require libpedigree (C++)
     if i in cpp_apps or i in sdl_apps:
         e['LIBS'] += ['pedigree', 'stdc++']
@@ -105,7 +105,7 @@ for i in all_apps:
                          '#/src/subsys/posix/include/c++/4.3.2/i686-pedigree']
 
     base = appsbase + i
-    
+
     # Handle extra include directories
     if(os.path.exists(base + '/include')):
         e['CPPPATH'] += [base + '/include']
@@ -113,12 +113,12 @@ for i in all_apps:
         e['CPPPATH'] += custom_incpath[i]
     if(custom_libs.has_key(i)):
         e['LIBS'] += custom_libs[i]
-    
+
     output = builddir + '/apps/' + i
     files = [Glob(base + '/*.c'), Glob(base + '/*.cc')]
     e.Program(output, files, LINKFLAGS='')
-    
+
     env.Alias("apps", output)
-    
+
     env.Depends(output, "crt0")
     env.Depends(output, "libs")
