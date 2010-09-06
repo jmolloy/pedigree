@@ -116,10 +116,10 @@
 #undef HAVE_ICONV
 #define HAVE_SIGACTION 1
 #undef HAVE_SETJMP
-#define HAVE_NANOSLEEP 1
-#define HAVE_CLOCK_GETTIME 1
+#undef HAVE_NANOSLEEP
+#undef HAVE_CLOCK_GETTIME
 #define HAVE_GETPAGESIZE 1
-#undef HAVE_MPROTECT
+#define HAVE_MPROTECT 1
 
 #else
 /* We may need some replacement for stdarg.h here */
