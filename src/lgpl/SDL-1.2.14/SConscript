@@ -22,6 +22,7 @@ subdirs = [
 # To include new files just add to the list, or Glob("*.cpp")
 files = [
     Glob('src/*.c'),
+    Glob('src/hermes/*.asm'),
     Glob('src/audio/*.c'),
     Glob('src/cdrom/*.c'),
     Glob('src/cpuinfo/*.c'),
@@ -74,6 +75,7 @@ tmpEnvironment['CPPPATH'] = include
 tmpEnvironment['LIBS'] = libraries
 tmpEnvironment['LIBPATH'] = libpaths
 tmpEnvironment['CPPDEFINES'] += ['PEDIGREE']
+tmpEnvironment['ASFLAGS'] += ' -I' + env.Dir('#src/lgpl/SDL-1.2.14/src/hermes').path + '/ '
 
 tmpEnvironment.Library(objname, files) #, LINKFLAGS="-shared -Wl,-shared -Wl,-soname,libSDL.so")
 
