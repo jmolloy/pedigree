@@ -159,16 +159,16 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
         {
             if (!g_UserConsole)
                 WARNING("Request pending with no console");
-
-            g_UserConsole->requestPending();
+            else
+                g_UserConsole->requestPending();
             return 0;
         }
         case TUI_RESPOND_TO_PENDING:
         {
             if (!g_UserConsole)
                 WARNING("Respond to pending with no console");
-
-            g_UserConsole->respondToPending(static_cast<size_t>(p1), reinterpret_cast<char*>(p2), static_cast<size_t>(p3));
+            else
+                g_UserConsole->respondToPending(static_cast<size_t>(p1), reinterpret_cast<char*>(p2), static_cast<size_t>(p3));
             return 0;
         }
         case TUI_CREATE_CONSOLE:
@@ -272,7 +272,10 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
             pedigree_input_register_callback(static_cast<uintptr_t>(p1));
             break;
         case TUI_STOP_REQUEST_QUEUE:
-            g_UserConsole->stopCurrentBlock();
+            if (!g_UserConsole)
+                WARNING("Request queue tried to stop without a console");
+            else
+                g_UserConsole->stopCurrentBlock();
             break;
         default: ERROR ("TuiSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
