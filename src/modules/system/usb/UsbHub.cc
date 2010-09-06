@@ -156,7 +156,6 @@ ssize_t UsbHub::doSync(uintptr_t nTransaction, uint32_t timeout)
 {
     // Create a structure to hold the semaphore and the result
     SyncParam *pSyncParam = new SyncParam();
-    PointerGuard<SyncParam> guard(pSyncParam);
     // Send the async request
     doAsync(nTransaction, syncCallback, reinterpret_cast<uintptr_t>(pSyncParam));
     // Wait for the semaphore to release
@@ -167,5 +166,9 @@ ssize_t UsbHub::doSync(uintptr_t nTransaction, uint32_t timeout)
     if(bTimeout)
         return -TransactionError;
     else
-        return pSyncParam->nResult;
+    {
+        ssize_t ret = pSyncParam->nResult;
+        delete pSyncParam;
+        return ret;
+    }
 }
