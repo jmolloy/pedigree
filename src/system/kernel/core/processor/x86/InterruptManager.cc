@@ -23,6 +23,11 @@
   #include <Debugger.h>
 #endif
 
+#ifdef THREADS
+#include <process/Process.h>
+#include <Subsystem.h>
+#endif
+
 #define SYSCALL_INTERRUPT_NUMBER 255
 
 const char* g_ExceptionNames[] =
@@ -197,6 +202,41 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
     pHandler->interrupt(nIntNumber, interruptState);
     return;
   }
+  
+  // Check for exceptions we can kill threads with
+#ifdef THREADS
+  Thread *pThread = Processor::information().getCurrentThread();
+  Process *pProcess = pThread->getParent();
+  Subsystem *pSubsystem = pProcess->getSubsystem();
+  if(pSubsystem)
+  {
+      if(UNLIKELY(nIntNumber == 0))
+      {
+          pSubsystem->threadException(pThread, Subsystem::DivideByZero, interruptState);
+          return;
+      }
+      else if(UNLIKELY(nIntNumber == 6))
+      {
+          pSubsystem->threadException(pThread, Subsystem::InvalidOpcode, interruptState);
+          return;
+      }
+      else if(UNLIKELY(nIntNumber == 13))
+      {
+          pSubsystem->threadException(pThread, Subsystem::GeneralProtectionFault, interruptState);
+          return;
+      }
+      else if(UNLIKELY(nIntNumber == 16))
+      {
+          pSubsystem->threadException(pThread, Subsystem::FpuError, interruptState);
+          return;
+      }
+      else if(UNLIKELY(nIntNumber == 19))
+      {
+          pSubsystem->threadException(pThread, Subsystem::SpecialFpuError, interruptState);
+          return;
+      }
+  }
+#endif
 
   // unhandled interrupt, check for an exception (interrupts 0-31 inclusive are
   // reserved, not for use by system programmers)
