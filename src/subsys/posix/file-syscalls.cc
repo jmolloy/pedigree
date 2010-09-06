@@ -1331,6 +1331,7 @@ void *posix_mmap(void *p)
                 // Now, allocate the memory
                 if(!pProcess->getSpaceAllocator().allocateSpecific(mapAddress, len))
                 {
+                    F_NOTICE("mmap: out of memory");
                     SYSCALL_ERROR(OutOfMemory);
                     return 0;
                 }
@@ -1340,6 +1341,7 @@ void *posix_mmap(void *p)
                 // Anonymous mapping - get an address from the space allocator
                 if(!pProcess->getSpaceAllocator().allocate(len, mapAddress))
                 {
+                    F_NOTICE("mmap: out of memory");
                     SYSCALL_ERROR(OutOfMemory);
                     return 0;
                 }
@@ -1347,6 +1349,7 @@ void *posix_mmap(void *p)
             else
             {
                 // Flags not supported
+                F_NOTICE("mmap: flags not supported");
                 SYSCALL_ERROR(NotSupported);
                 return 0;
             }
@@ -1361,6 +1364,7 @@ void *posix_mmap(void *p)
                     if(!va.map(phys, reinterpret_cast<void*>(virt), VirtualAddressSpace::Write))
                     {
                         /// \todo Need to unmap and free all the mappings so far, then return to the space allocator.
+                        F_NOTICE("mmap: out of memory");
                         SYSCALL_ERROR(OutOfMemory);
                         return 0;
                     }
@@ -1384,6 +1388,7 @@ void *posix_mmap(void *p)
         else
         {
             // No valid file given, return error
+            F_NOTICE("mmap: invalid file descriptor");
             SYSCALL_ERROR(BadFileDescriptor);
             return 0;
         }
