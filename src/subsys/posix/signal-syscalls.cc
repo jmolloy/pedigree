@@ -521,15 +521,15 @@ int posix_nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
     Semaphore sem(0);
 
     uint64_t startTick = Machine::instance().getTimer()->getTickCount();
-    sem.acquire(1, rqtp->tv_sec, rqtp->tv_nsec);
+    sem.acquire(1, rqtp->tv_sec, rqtp->tv_nsec / 1000);
     if (Processor::information().getCurrentThread()->wasInterrupted())
     {
         uint64_t endTick = Machine::instance().getTimer()->getTickCount();
         uint64_t elapsed = endTick - startTick;
         if(rmtp)
         {
-            rmtp->tv_nsec = elapsed;
-            rmtp->tv_sec = (elapsed / 1000) + 1;
+            rmtp->tv_nsec = static_cast<time_t>(static_cast<uint64_t>(elapsed * 1000) % 1000000000ULL);
+            rmtp->tv_sec = static_cast<time_t>(elapsed / 1000);
         }
         
         /// \todo Handle "interrupted before end of timeout"
@@ -551,12 +551,10 @@ int posix_clock_gettime(clockid_t clock_id, struct timespec *tp)
     // All clocks are equal, but some are more equal than others.
     // Seriously though, we don't currently care about the id value.
     
-    // Tick count is in nanoseconds. The calculation for tv_sec will mean it will
-    // be the UNIX timestamp for the current time *MINUS* the boot tick count.
-    // Because the boot tick count is in fact zero at startup, we need to keep
-    // tv_sec valid.
-    tp->tv_nsec = Machine::instance().getTimer()->getTickCount();
-    tp->tv_sec = static_cast<time_t>(static_cast<uint64_t>(Machine::instance().getTimer()->getUnixTimestamp()) - (tp->tv_nsec / 1000000000ULL));
+    // We only care about the nanoseconds that may have passed in the past
+    // second - everything else is handled by the UNIX timestamp.
+    tp->tv_nsec = static_cast<time_t>(static_cast<uint64_t>((Machine::instance().getTimer()->getTickCount() * 1000)) % 1000000000ULL);
+    tp->tv_sec = static_cast<time_t>(Machine::instance().getTimer()->getUnixTimestamp());
     
     return 0;
 }
