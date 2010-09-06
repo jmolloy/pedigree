@@ -146,14 +146,16 @@ int loadModules(void *inf)
     /// \note We have to do this before we call Processor::initialisationDone() otherwise the
     ///       BootstrapStruct_t might already be unmapped
     Archive initrd(bsInf.getInitrdAddress(), bsInf.getInitrdSize());
-
+    
     size_t nFiles = initrd.getNumFiles();
     g_BootProgressTotal = nFiles*2; // Each file has to be preloaded and executed.
     for (size_t i = 0; i < nFiles; i++)
     {
-        // Load file.
+        Processor::setInterrupts(true);
         KernelElf::instance().loadModule(reinterpret_cast<uint8_t*> (initrd.getFile(i)),
                                          initrd.getFileSize(i));
+        if(!Processor::getInterrupts())
+            WARNING("A loaded module disabled interrupts.");
     }
 
     // The initialisation is done here, unmap/free the .init section and on x86/64 the identity
