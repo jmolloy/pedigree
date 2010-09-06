@@ -39,7 +39,8 @@ posixc_apps = [
     'sudo',
     'modload',
     'modunload',
-    'modlist'
+    'modlist',
+    'crashtest'
 ]
 
 # Applications which use libSDL
