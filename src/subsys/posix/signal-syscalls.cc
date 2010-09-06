@@ -516,7 +516,7 @@ int posix_sleep(uint32_t seconds)
 
 int posix_nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
 {
-    SG_NOTICE("nanosleep");
+    SG_NOTICE("nanosleep(" << Dec << rqtp->tv_sec << ":" << rqtp->tv_nsec << Hex << ") - " << Machine::instance().getTimer()->getTickCount() << ".");
 
     Semaphore sem(0);
 
@@ -556,7 +556,7 @@ int posix_clock_gettime(clockid_t clock_id, struct timespec *tp)
     // Because the boot tick count is in fact zero at startup, we need to keep
     // tv_sec valid.
     tp->tv_nsec = Machine::instance().getTimer()->getTickCount();
-    tp->tv_sec = Machine::instance().getTimer()->getUnixTimestamp() - (tp->tv_nsec / 1000000000);
+    tp->tv_sec = static_cast<time_t>(static_cast<uint64_t>(Machine::instance().getTimer()->getUnixTimestamp()) - (tp->tv_nsec / 1000000000ULL));
     
     return 0;
 }
