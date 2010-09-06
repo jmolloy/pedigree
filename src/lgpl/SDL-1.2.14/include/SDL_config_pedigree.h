@@ -126,6 +126,8 @@
 #include <stdarg.h>
 #endif /* HAVE_LIBC */
 
+#define USE_ITIMER 1
+
 /* Allow disabling of core subsystems */
 #define SDL_AUDIO_DISABLED 0
 #define SDL_CDROM_DISABLED 0
