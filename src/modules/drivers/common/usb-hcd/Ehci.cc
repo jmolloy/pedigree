@@ -166,6 +166,7 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
 #else
     InterruptManager::instance().registerInterruptHandler(getInterruptNumber(), this);
 #endif
+    Machine::instance().getIrqManager()->control(getInterruptNumber(), IrqManager::MitigationThreshold, 7500000 / 64); // 58 MB/s (480Mbps) in bytes/s, divided by 64 bytes maximum per control transfer/IRQ
 
     // Zero the top 64 bits for addresses of EHCI data structures
     m_pBase->write32(0, m_nOpRegsOffset + EHCI_CTRLDSEG);
@@ -347,6 +348,10 @@ void Ehci::interrupt(size_t number, InterruptState &state)
     */
 
     uint32_t nStatus = m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & m_pBase->read32(m_nOpRegsOffset + EHCI_INTR);
+    
+    if(!nStatus)
+        return false; // Shared IRQ: this IRQ is for another device
+    
 #ifdef USB_VERBOSE_DEBUG
     DEBUG_LOG_NOLOCK("EHCI IRQ " << nStatus);
 #endif

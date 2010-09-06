@@ -100,7 +100,7 @@ Uhci::Uhci(Device* pDev) :
 
     // Install the IRQ handler
     Machine::instance().getIrqManager()->registerPciIrqHandler(this, this);
-    Machine::instance().getIrqManager()->control(getInterruptNumber(), IrqManager::MitigationThreshold, (12 * 1024 / 8 / 64)); // 12KB/ms (12Mbps) in bytes, divided by 64 bytes maximum per transfer/IRQ
+    Machine::instance().getIrqManager()->control(getInterruptNumber(), IrqManager::MitigationThreshold, (1500000 / 64)); // 12KB/ms (12Mbps) in bytes, divided by 64 bytes maximum per transfer/IRQ
 
     // Set up the RequestQueue
     initialise();
@@ -229,6 +229,10 @@ void Uhci::doDequeue()
 bool Uhci::irq(irq_id_t number, InterruptState &state)
 {
     uint16_t nStatus = m_pBase->read16(UHCI_STS);
+    
+    if(!nStatus)
+        return false; // Shared IRQ: this IRQ is for another device
+    
     m_pBase->write16(nStatus, UHCI_STS);
 
 #ifdef USB_VERBOSE_DEBUG

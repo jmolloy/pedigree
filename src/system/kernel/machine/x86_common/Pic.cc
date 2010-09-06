@@ -49,7 +49,7 @@ void Pic::tick()
         // If it's above the threshold, maks the IRQ until the next tick
         if(UNLIKELY(nCount >= m_MitigationThreshold[irq]))
         {
-            WARNING_NOLOCK("Mitigating IRQ" << Dec << irq << Hex << ".");
+            WARNING_NOLOCK("Mitigating IRQ" << Dec << irq << Hex << " [" << nCount << " IRQs in the last second].");
             m_MitigatedIrqs[irq] = true;
             enable(irq, false);
         }
@@ -78,7 +78,12 @@ bool Pic::control(uint8_t irq, ControlCode code, size_t argument)
     {
         case MitigationThreshold:
             if(LIKELY(argument))
-                m_MitigationThreshold[irq] = argument;
+            {
+                if(UNLIKELY(m_Handler[irq].count() > 1))
+                    m_MitigationThreshold[irq] += argument;
+                else
+                    m_MitigationThreshold[irq] = argument;
+            }
             else
                 m_MitigationThreshold[irq] = DEFAULT_IRQ_MITIGATE_THRESHOLD;
             return true;
@@ -96,7 +101,7 @@ irq_id_t Pic::registerIsaIrqHandler(uint8_t irq, IrqHandler *handler, bool bEdge
     return 0;
 
   // Save the IrqHandler
-  m_Handler[irq] = handler;
+  m_Handler[irq].pushBack(handler);
   m_HandlerEdge[irq] = bEdge;
 
   // Enable/Unmask the IRQ
@@ -111,15 +116,9 @@ irq_id_t Pic::registerPciIrqHandler(IrqHandler *handler, Device *pDevice)
   irq_id_t irq = pDevice->getInterruptNumber();
   if (UNLIKELY(irq >= 16))
     return 0;
-  
-  if(m_Handler[irq])
-  {
-    ERROR_NOLOCK("IRQ sharing is not yet supported (wanted IRQ=#" << Dec << irq << Hex << "]");
-    return 0;
-  }
 
   // Save the IrqHandler
-  m_Handler[irq] = handler;
+  m_Handler[irq].pushBack(handler);
   m_HandlerEdge[irq] = false; // PCI bus uses level triggered IRQs
 
   // Enable/Unmask the IRQ
@@ -140,10 +139,20 @@ void Pic::unregisterHandler(irq_id_t Id, IrqHandler *handler)
   uint8_t irq = Id - BASE_INTERRUPT_VECTOR;
 
   // Disable the IRQ
-  enable(irq, false);
+  if(!m_Handler[irq].count())
+      enable(irq, false);
 
   // Remove the handler
-  m_Handler[irq] = 0;
+  for(List<IrqHandler*>::Iterator it = m_Handler[irq].begin();
+      it != m_Handler[irq].end();
+      it++)
+  {
+    if(*it == handler)
+    {
+        m_Handler[irq].erase(it);
+        return;
+    }
+  }
 }
 
 bool Pic::initialise()
@@ -184,11 +193,11 @@ bool Pic::initialise()
 }
 
 Pic::Pic()
-  : m_SlavePort("PIC #2"), m_MasterPort("PIC #1")
+  : m_SlavePort("PIC #2"), m_MasterPort("PIC #1"), m_Lock(false)
 {
   for (size_t i = 0;i < 16;i++)
   {
-    m_Handler[i] = 0;
+    m_Handler[i].clear();
     m_HandlerEdge[i] = false;
   }
 }
@@ -223,12 +232,22 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
 //   }
 
   // Call the irq handler, if any
-  if (LIKELY(m_Handler[irq] != 0))
+  if (LIKELY(m_Handler[irq].count() != 0))
   {
     if(m_HandlerEdge[irq])
         eoi(irq);
 
-    if (m_Handler[irq]->irq(irq, state) == false)
+    bool bHandled = false;
+    for(List<IrqHandler*>::Iterator it = m_Handler[irq].begin();
+        it != m_Handler[irq].end();
+        it++)
+    {
+        bool tmp = (*it)->irq(irq, state);
+        if(!bHandled && tmp)
+            bHandled = true;
+    }
+    
+    if(!bHandled)
     {
       // Disable/Mask the IRQ line (the handler did not remove
       // the interrupt reason, yet)

@@ -20,6 +20,7 @@
 #include <processor/IoPort.h>
 #include <processor/InterruptManager.h>
 #include <machine/IrqManager.h>
+#include <utilities/List.h>
 
 /** @addtogroup kernelmachinex86common
  * @{ */
@@ -79,7 +80,7 @@ class Pic : public IrqManager,
     IoPort m_MasterPort;
 
     /** The IRQ handler */
-    IrqHandler *m_Handler[16];
+    List<IrqHandler*> m_Handler[16];
     /** Whether the IRQs are edge or level triggered */
     bool        m_HandlerEdge[16];
     /** IRQ counts for given handlers */
@@ -88,6 +89,9 @@ class Pic : public IrqManager,
     bool        m_MitigatedIrqs[16];
     /** Mitigation thresholds */
     size_t      m_MitigationThreshold[16];
+    
+    /** Main lock for all modifications */
+    Spinlock    m_Lock;
 
     /** The Pic instance */
     static Pic m_Instance;
