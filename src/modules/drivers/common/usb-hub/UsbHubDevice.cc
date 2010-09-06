@@ -162,7 +162,7 @@ void UsbHubDevice::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBu
     UsbHub *pParent = dynamic_cast<UsbHub*>(m_pParent);
     if(!pParent)
         return;
-    if(m_Speed == HighSpeed && endpointInfo.speed != HighSpeed && !endpointInfo.nHubAddress)
+    if((m_Speed == HighSpeed) && (endpointInfo.speed != HighSpeed) && (!endpointInfo.nHubAddress))
         endpointInfo.nHubAddress = m_nAddress;
     pParent->addInterruptInHandler(endpointInfo, pBuffer, nBytes, pCallback, pParam);
 }

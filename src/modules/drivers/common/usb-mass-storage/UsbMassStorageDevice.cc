@@ -128,7 +128,8 @@ bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t
 
         DEBUG_LOG("USB: MSD: Result: " << Dec << nResult << Hex << ".");
 
-        if(nResult == -Stall)
+        /// \todo Should probably just be transaction errors and stalls
+        if(nResult < 0) // == -Stall)
         {
             // STALL, clear the endpoint and attempt CSW read
             bool bClearResult = false;
@@ -195,11 +196,28 @@ bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t
     PointerGuard<Csw> guard2(pCsw);
     nResult = syncIn(m_pInEndpoint, reinterpret_cast<uintptr_t>(pCsw), 13);
 
-    /// \todo Handle stall here
+    /// \todo Should probably just be transaction errors and stalls
     if(nResult < 0)
     {
-        DEBUG_LOG("USB: MSD: Reading CSW ended up failing with status " << nResult);
-        return false;
+        if(!clearEndpointHalt(m_pInEndpoint))
+        {
+            massStorageReset();
+            if(!clearEndpointHalt(m_pInEndpoint))
+            {
+                DEBUG_LOG("USB: MSD: Reading CSW ended up failing after endpoint halt cleared, and a mass storage reset, with status " << nResult);
+                return false;
+            }
+        }
+        else
+        {
+            nResult = syncIn(m_pInEndpoint, reinterpret_cast<uintptr_t>(pCsw), 13);
+            if(nResult < 0)
+            {
+                DEBUG_LOG("USB: MSD: Reading CSW ended up failing after endpoint halt cleared, with status " << nResult);
+                massStorageReset();
+                return false;
+            }
+        }
     }
 
     DEBUG_LOG("USB: MSD: Command finished STS = " << pCsw->nStatus << " SIG=" << pCsw->nSig);
