@@ -62,10 +62,12 @@ class UsbHub : public virtual Device
         /// Structure used synchronous transactions
         struct SyncParam
         {
-            inline SyncParam() : semaphore(0), nResult(-1) {}
+            inline SyncParam() : semaphore(0), nResult(-1), timedOut(false) {}
 
             Semaphore semaphore;
             ssize_t nResult;
+            
+            bool timedOut;
         };
 
         /// Callback used by synchronous transactions

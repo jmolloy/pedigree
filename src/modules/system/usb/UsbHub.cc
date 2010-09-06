@@ -150,6 +150,9 @@ void UsbHub::syncCallback(uintptr_t pParam, ssize_t nResult)
     SyncParam *pSyncParam = reinterpret_cast<SyncParam*>(pParam);
     pSyncParam->nResult = nResult;
     pSyncParam->semaphore.release();
+    
+    if(pSyncParam->timedOut)
+        delete pSyncParam;
 }
 
 ssize_t UsbHub::doSync(uintptr_t nTransaction, uint32_t timeout)
@@ -164,7 +167,10 @@ ssize_t UsbHub::doSync(uintptr_t nTransaction, uint32_t timeout)
     bool bTimeout = !pSyncParam->semaphore.acquire(1, timeout / 1000, (timeout % 1000) * 1000);
     // Return the result
     if(bTimeout)
+    {
+        pSyncParam->timedOut = true;
         return -TransactionError;
+    }
     else
     {
         ssize_t ret = pSyncParam->nResult;
