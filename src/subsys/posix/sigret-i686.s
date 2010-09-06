@@ -37,12 +37,19 @@ sigret_stub:
   mov edi, [esp]
   
   ; Push the serialized buffer
+  xor eax, eax
+  
   mov esi, [esp + 4]
-  push esi
+  cmp esi, 0
+  jz .justRun
+  mov eax, [esi]
+  and eax, 0xff
   
   ; TODO: Push the handler address too and call a common stub of some sort...
 
 .justRun:
+  push eax
+  
   ; Run the handler
   call edi
 
