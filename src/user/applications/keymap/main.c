@@ -369,7 +369,6 @@ void install(char *filename)
         fprintf(stderr, "Error loading keymap.\n");
     else
         printf("Keymap loaded.\n");
-    fclose(stream);
     exit (0);
 #endif
 }
