@@ -333,11 +333,11 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                         if(!bPeriodic)
                         {
                             // This queue head is done, dequeue.
+                            m_AsyncQueueListChangeLock.acquire(); // Atomic operation
                             QH *pPrev = pQH->pMetaData->pPrev;
                             QH *pNext = pQH->pMetaData->pNext;
 
                             // Main non-hardware linked list update
-                            m_AsyncQueueListChangeLock.acquire(); // Atomic operation
                             pPrev->pMetaData->pNext = pNext;
                             pNext->pMetaData->pPrev = pPrev;
 
