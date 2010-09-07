@@ -53,7 +53,7 @@ Graphics::Buffer *Framebuffer::swCreateBuffer(const void *srcData, Graphics::Pix
     
     // Copy the buffer in full
     void *pAddress = pRegion->virtualAddress();
-    if((sourceBytesPerPixel == destBytesPerPixel) && (srcFormat == destFormat))
+    if(((sourceBytesPerPixel == destBytesPerPixel) && (sourceBytesPerLine == destBytesPerLine)) && (srcFormat == destFormat))
     {
         // Same pixel format and same pixel size. Safe to do a conventional
         // memcpy. The pixel size check is to handle cases where a buffer may

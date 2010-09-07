@@ -293,7 +293,7 @@ class VmwareGraphics : public Display
             size_t blueMask = readRegister(SVGA_REG_BLUE_MASK);
             
             size_t bytesPerLine = readRegister(SVGA_REG_BYTES_PER_LINE);
-            size_t bytesPerPixel = bpp / 8;
+            size_t bytesPerPixel = bytesPerLine / w;
             
             m_pFramebuffer->setWidth(w);
             m_pFramebuffer->setHeight(h);
