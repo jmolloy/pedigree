@@ -77,10 +77,7 @@ bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
 
         // If we're not at the first interface, we have to clone the UsbDevice
         if(i)
-        {
             pDevice = new UsbDevice(pDevice);
-            pDevice->setParent(this);
-        }
 
         // Set the right interface
         pDevice->useInterface(i);

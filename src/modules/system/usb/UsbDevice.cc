@@ -32,6 +32,8 @@ UsbDevice::UsbDevice(UsbDevice *pDev) :
     m_nAddress(pDev->m_nAddress), m_nPort(pDev->m_nPort), m_Speed(pDev->m_Speed), m_UsbState(Connected),
     m_pDescriptor(pDev->m_pDescriptor), m_pConfiguration(pDev->m_pConfiguration), m_pInterface(pDev->m_pInterface)
 {
+    // We have the same parent as pDev
+    m_pParent = pDev->m_pParent;
 }
 
 UsbDevice::~UsbDevice()
@@ -78,13 +80,8 @@ UsbDevice::ConfigDescriptor::ConfigDescriptor(void *pConfigBuffer, size_t nConfi
         uint8_t nType = pBuffer[nOffset + 1];
         if(nType == UsbDescriptor::Interface)
         {
-            Interface *pNewInterface = new Interface(reinterpret_cast<UsbInterfaceDescriptor*>(&pBuffer[nOffset]));
-            if(!pNewInterface->nAlternateSetting)
-            {
-                assert(interfaceList.count() < pDescriptor->nInterfaces);
-                pCurrentInterface = pNewInterface;
-                interfaceList.pushBack(pCurrentInterface);
-            }
+            pCurrentInterface = new Interface(reinterpret_cast<UsbInterfaceDescriptor*>(&pBuffer[nOffset]));
+            interfaceList.pushBack(pCurrentInterface);
         }
         else if(pCurrentInterface)
         {
@@ -383,10 +380,20 @@ void UsbDevice::useConfiguration(uint8_t nConfig)
 
 void UsbDevice::useInterface(uint8_t nInterface)
 {
+    // First check if the previous interface was an alternate setting
+    bool bWasAlternateSetting = m_pInterface && m_pInterface->nAlternateSetting;
+
+    // Set our interface to the new one
     m_pInterface = m_pConfiguration->interfaceList[nInterface];
-    if(m_pInterface->nAlternateSetting && !controlRequest(UsbRequestRecipient::Interface, UsbRequest::SetInterface, m_pInterface->nAlternateSetting, 0))
+
+    // If needed, change the alternate setting
+    if(bWasAlternateSetting || m_pInterface->nAlternateSetting)
+        if(!controlRequest(UsbRequestRecipient::Interface, UsbRequest::SetInterface, m_pInterface->nAlternateSetting, 0))
        return;
-    m_UsbState = HasInterface; // We now have an interface
+
+    // Set our state to HasInterface, if it's not higher
+    if(m_UsbState < HasInterface)
+        m_UsbState = HasInterface;
 }
 
 void *UsbDevice::getDescriptor(uint8_t nDescriptor, uint8_t nSubDescriptor, uint16_t nBytes, uint8_t requestType)
