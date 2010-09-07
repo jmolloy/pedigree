@@ -37,26 +37,19 @@ static Graphics::Buffer *g_pFont = 0;
 static size_t g_Width = 0;
 static size_t g_Height = 0;
 
-static Display::rgb_t g_Bg = {0x00,0x00,0x00,0x00};
-static Display::rgb_t g_Fg = {0xFF,0xFF,0xFF,0xFF};
+static uint32_t g_BackgroundColour      = 0x000000;
+static uint32_t g_ForegroundColour      = 0xFFFFFF;
+static uint32_t g_ProgressBorderColour  = 0x965000;
+static uint32_t g_ProgressColour        = 0x966400;
 
-static uint32_t g_BackgroundColour = 0;
-static uint32_t g_ForegroundColour = 0xFFFFFF;
-
-static uint32_t g_ProgressBorderColour = 0x965000;
-static uint32_t g_ProgressColour       = 0x966400;
-
-static Graphics::PixelFormat g_BgFgFormat = Graphics::Bits24_Rgb;
-
-static Display::rgb_t g_ProgressBorderCol = {150,80,0,0x00};
-static Display::rgb_t g_ProgressCol = {150,100,0,0x00};
+static Graphics::PixelFormat g_ColorFormat = Graphics::Bits24_Rgb;
 
 static size_t g_ProgressX, g_ProgressY;
 static size_t g_ProgressW, g_ProgressH;
 static size_t g_LogBoxX, g_LogBoxY;
 static size_t g_LogX, g_LogY;
 static size_t g_LogW, g_LogH;
-    
+
 static GraphicsService::GraphicsProvider pProvider;
 
 static size_t g_Previous = 0;
@@ -81,7 +74,8 @@ void printChar(char c)
 
     if(!c)
         return;
-    else if(c == '\t')
+
+    if(c == '\t')
         g_LogX = (g_LogX + 8) & ~7;
     else if(c == '\r')
         g_LogX = 0;
@@ -89,7 +83,7 @@ void printChar(char c)
     {
         g_LogX = 0;
         g_LogY++;
-    
+
         g_pFramebuffer->redraw(g_LogBoxX, g_LogBoxY, g_LogW, g_LogH, true);
     }
     else if(c >= ' ')
@@ -102,7 +96,7 @@ void printChar(char c)
     {
         g_LogX = 0;
         g_LogY++;
-    
+
         g_pFramebuffer->redraw(g_LogBoxX, g_LogBoxY, g_LogW, g_LogH, true);
     }
 
@@ -111,20 +105,20 @@ void printChar(char c)
     {
         // By how much?
         size_t diff = g_LogY - (g_LogH / FONT_HEIGHT) + 1;
-        
+
         // Scroll up
         g_pFramebuffer->copy(g_LogBoxX, g_LogBoxY + (diff * FONT_HEIGHT), g_LogBoxX, g_LogBoxY, g_LogW - g_LogBoxX, ((g_LogH / FONT_HEIGHT) - diff) * FONT_HEIGHT);
-        g_pFramebuffer->rect(g_LogBoxX, g_LogBoxY + ((g_LogH / FONT_HEIGHT) - diff) * FONT_HEIGHT, g_LogW - g_LogBoxX, diff * FONT_HEIGHT, g_BackgroundColour, g_BgFgFormat);
-        
+        g_pFramebuffer->rect(g_LogBoxX, g_LogBoxY + ((g_LogH / FONT_HEIGHT) - diff) * FONT_HEIGHT, g_LogW - g_LogBoxX, diff * FONT_HEIGHT, g_BackgroundColour, g_ColorFormat);
+
         g_LogY = (g_LogH / FONT_HEIGHT) - diff;
-    
+
         g_pFramebuffer->redraw(g_LogBoxX, g_LogBoxY, g_LogW, g_LogH, true);
     }
 }
 
 void printString(const char *str)
 {
-    for(size_t i = 0;i<strlen(str);i++)
+    for(size_t i = 0; i < strlen(str); i++)
         printChar(str[i]);
 }
 
@@ -138,17 +132,15 @@ void printStringAt(const char *str, size_t x, size_t y)
     }
 }
 
-void centerStringAt(const char *str, size_t x, size_t y)
+void centerStringAt(const char *str, size_t midX, size_t midY)
 {
     /// \todo Handle overflows
-    size_t pxWidth = strlen(str) * FONT_WIDTH;
-    
-    size_t startX = x - (pxWidth / 2);
-    for(size_t i = 0; i < strlen(str); i++)
-    {
-        printChar(str[i], startX, y);
-        startX += FONT_WIDTH;
-    }
+    size_t width = strlen(str) * FONT_WIDTH;
+    size_t height = FONT_HEIGHT;
+
+    size_t x = midX - (width / 2);
+    size_t y = midY - (height / 2);
+    printStringAt(str, x, y);
 }
 
 class StreamingScreenLogger : public Log::LogCallback
@@ -212,7 +204,7 @@ void progress(const char *text)
     else
         g_pFramebuffer->rect(g_ProgressX + w, g_ProgressY, g_ProgressW-w, g_ProgressH, g_BackgroundColour, g_BgFgFormat);
     g_Previous = g_BootProgressCurrent;
-    
+
     g_pFramebuffer->redraw(g_ProgressX, g_ProgressY, g_ProgressW, g_ProgressH, true);
 
     if(bFinished)
@@ -223,63 +215,39 @@ void progress(const char *text)
     }
 }
 
+static void getColor(const char *colorName, uint32_t &color)
+{
+    // The query string
+    String sQuery;
+
+    // Create the query string
+    sQuery += "select r,g,b from 'colour-scheme' where name='";
+    sQuery += colorName;
+    sQuery += "';";
+
+    // Query the database
+    Config::Result *pResult = Config::instance().query(sQuery);
+
+    // Did the query fail?
+    if(!pResult)
+    {
+        ERROR("Splash: Error looking up '" << colorName << "' colour.");
+        return;
+    }
+
+    // Get the color from the query result
+    color = Graphics::createRgb(pResult->getNum(0, "r"), pResult->getNum(0, "g"), pResult->getNum(0, "b"));
+
+    // Dispose of the query result
+    delete pResult;
+}
+
 static void init()
 {
-    Config::Result *pResult = Config::instance().query("select r,g,b from 'colour-scheme' where name='splash-background';");
-    if (!pResult)
-    {
-        ERROR("Error looking up background colour.");
-    }
-    else
-    {
-        g_Bg.r = pResult->getNum(0, static_cast<size_t>(0));
-        g_Bg.g = pResult->getNum(0, 1);
-        g_Bg.b = pResult->getNum(0, 2);
-        g_BackgroundColour = Graphics::createRgb(g_Bg.r, g_Bg.g, g_Bg.b);
-        delete pResult;
-    }
-
-    pResult = Config::instance().query("select r,g,b from 'colour-scheme' where name='splash-foreground';");
-    if (!pResult)
-    {
-        ERROR("Error looking up foreground colour.");
-    }
-    else
-    {
-        g_Fg.r = pResult->getNum(0, static_cast<size_t>(0));
-        g_Fg.g = pResult->getNum(0, 1);
-        g_Fg.b = pResult->getNum(0, 2);
-        g_ForegroundColour = Graphics::createRgb(g_Fg.r, g_Fg.g, g_Fg.b);
-        delete pResult;
-    }
-
-    pResult = Config::instance().query("select r,g,b from 'colour-scheme' where name='border';");
-    if (!pResult)
-    {
-        ERROR("Error looking up border colour.");
-    }
-    else
-    {
-        g_ProgressBorderCol.r = pResult->getNum(0, static_cast<size_t>(0));
-        g_ProgressBorderCol.g = pResult->getNum(0, 1);
-        g_ProgressBorderCol.b = pResult->getNum(0, 2);
-        g_ProgressBorderColour = Graphics::createRgb(g_ProgressBorderCol.r, g_ProgressBorderCol.g, g_ProgressBorderCol.b);
-        delete pResult;
-    }
-
-    pResult = Config::instance().query("select r,g,b from 'colour-scheme' where name='fill';");
-    if (!pResult)
-    {
-        ERROR("Error looking up border colour.");
-    }
-    else
-    {
-        g_ProgressCol.r = pResult->getNum(0, static_cast<size_t>(0));
-        g_ProgressCol.g = pResult->getNum(0, 1);
-        g_ProgressCol.b = pResult->getNum(0, 2);
-        g_ProgressColour = Graphics::createRgb(g_ProgressCol.r, g_ProgressCol.g, g_ProgressCol.b);
-        delete pResult;
-    }
+    getColor("splash-background", g_BackgroundColour);
+    getColor("splash-foreground", g_ForegroundColour);
+    getColor("border", g_ProgressBorderColour);
+    getColor("fill", g_ProgressColour);
 
     // Grab the current graphics provider for the system, use it to display the
     // splash screen to the user.
@@ -290,14 +258,14 @@ static void init()
     if(pFeatures->provides(ServiceFeatures::probe))
         if(pService)
             bSuccess = pService->serve(ServiceFeatures::probe, reinterpret_cast<void*>(&pProvider), sizeof(pProvider));
-    
+
     if(!bSuccess)
     {
         FATAL("splash: couldn't find any graphics providers - at least one is required to run Pedigree!");
     }
-    
+
     Display *pDisplay = pProvider.pDisplay;
-    
+
     // Set up a mode we want
     if(!pDisplay->setScreenMode(1024, 768, 16))
     {
@@ -318,32 +286,32 @@ static void init()
     }
 
     Framebuffer *pParentFramebuffer = pProvider.pFramebuffer;
-    
+
     g_Width   = pParentFramebuffer->getWidth();
     g_Height  = pParentFramebuffer->getHeight();
 
     g_pFramebuffer = Graphics::createFramebuffer(pParentFramebuffer, 0, 0, g_Width, g_Height);
-    
-    g_pFramebuffer->rect(0, 0, g_Width, g_Height, g_BackgroundColour, g_BgFgFormat);
-    
+
+    g_pFramebuffer->rect(0, 0, g_Width, g_Height, g_BackgroundColour, g_ColorFormat);
+
     // Create the logo buffer
     char *data = header_data;
     g_pBuffer = new uint8_t[width * height * 3]; // 24-bit, hardcoded...
     for (size_t i = 0; i < (width*height); i++)
         HEADER_PIXEL(data, &g_pBuffer[i * 3]); // 24-bit, hardcoded
-    
+
     size_t origx = (g_Width - width) / 2;
     size_t origy = (g_Height - height) / 3;
 
     g_pFramebuffer->draw(g_pBuffer, 0, 0, origx, origy, width, height, Graphics::Bits24_Bgr);
-    
+
     delete [] g_pBuffer;
-        
+
     // Create the font buffer
     g_pBuffer = new uint8_t[(FONT_WIDTH * FONT_HEIGHT * 3) * 256]; // 24-bit
     memset(g_pBuffer, 0, (FONT_WIDTH * FONT_HEIGHT * 3) * 256);
     size_t offset = 0;
-    
+
     // For each character
     for(size_t character = 0; character < 255; character++)
     {
@@ -388,13 +356,13 @@ static void init()
     centerStringAt("Please wait, Pedigree is loading...", g_Width / 2, g_ProgressY - (FONT_HEIGHT * 3));
 
     // Draw a border around the log area
-    g_pFramebuffer->rect(g_LogBoxX, g_LogBoxY - 2, g_LogW, g_LogH - 2, g_ForegroundColour, g_BgFgFormat);
-    g_pFramebuffer->rect(g_LogBoxX, g_LogBoxY - 1, g_LogW, g_LogH - 1, g_BackgroundColour, g_BgFgFormat);
+    g_pFramebuffer->rect(g_LogBoxX, g_LogBoxY - 2, g_LogW, g_LogH - 2, g_ForegroundColour, g_ColorFormat);
+    g_pFramebuffer->rect(g_LogBoxX, g_LogBoxY - 1, g_LogW, g_LogH - 1, g_BackgroundColour, g_ColorFormat);
 
     // Draw empty progress bar. Easiest way to draw a nonfilled rect? Draw two filled rects.
-    g_pFramebuffer->rect(g_ProgressX - 2, g_ProgressY - 2, g_ProgressW + 4, g_ProgressH + 4, g_ProgressBorderColour, g_BgFgFormat);
-    g_pFramebuffer->rect(g_ProgressX - 1, g_ProgressY - 1, g_ProgressW + 2, g_ProgressH + 2, g_BackgroundColour, g_BgFgFormat);
-    
+    g_pFramebuffer->rect(g_ProgressX - 2, g_ProgressY - 2, g_ProgressW + 4, g_ProgressH + 4, g_ProgressBorderColour, g_ColorFormat);
+    g_pFramebuffer->rect(g_ProgressX - 1, g_ProgressY - 1, g_ProgressW + 2, g_ProgressH + 2, g_BackgroundColour, g_ColorFormat);
+
     g_pFramebuffer->redraw(0, 0, g_Width, g_Height, true);
 
     Log::instance().installCallback(&g_StreamLogger, true);
