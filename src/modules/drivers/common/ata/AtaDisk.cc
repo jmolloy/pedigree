@@ -101,7 +101,11 @@ bool AtaDisk::initialise()
         m_pIdent[i] = commandRegs->read16(0);
     }
 
-    commandRegs->read8(7);
+    if(commandRegs->read8(7) & 1)
+    {
+        WARNING("ATA drive now has an error status after reading IDENTIFY data.");
+        return false;
+    }
 
     // Interpret the data.
 
