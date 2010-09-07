@@ -54,7 +54,7 @@ class UsbDevice : public virtual Device
 
         struct Endpoint
         {
-            Endpoint(UsbEndpointDescriptor *pDescriptor);
+            Endpoint(UsbEndpointDescriptor *pDescriptor, UsbSpeed speed);
 
             enum TransferTypes
             {
@@ -92,7 +92,7 @@ class UsbDevice : public virtual Device
 
         struct ConfigDescriptor
         {
-            ConfigDescriptor(void *pConfigBuffer, size_t nConfigLength);
+            ConfigDescriptor(void *pConfigBuffer, size_t nConfigLength, UsbSpeed speed);
             ~ConfigDescriptor();
 
             uint8_t nConfig;

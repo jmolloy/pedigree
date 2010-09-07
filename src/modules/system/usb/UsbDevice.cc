@@ -64,7 +64,7 @@ UsbDevice::DeviceDescriptor::~DeviceDescriptor()
         delete configList[i];
 }
 
-UsbDevice::ConfigDescriptor::ConfigDescriptor(void *pConfigBuffer, size_t nConfigLength)
+UsbDevice::ConfigDescriptor::ConfigDescriptor(void *pConfigBuffer, size_t nConfigLength, UsbSpeed speed)
 {
     UsbConfigurationDescriptor *pDescriptor = static_cast<UsbConfigurationDescriptor*>(pConfigBuffer);
     nConfig = pDescriptor->nConfig;
@@ -86,7 +86,7 @@ UsbDevice::ConfigDescriptor::ConfigDescriptor(void *pConfigBuffer, size_t nConfi
         else if(pCurrentInterface)
         {
             if(nType == UsbDescriptor::Endpoint)
-                pCurrentInterface->endpointList.pushBack(new Endpoint(reinterpret_cast<UsbEndpointDescriptor*>(&pBuffer[nOffset])));
+                pCurrentInterface->endpointList.pushBack(new Endpoint(reinterpret_cast<UsbEndpointDescriptor*>(&pBuffer[nOffset]), speed));
             else
                 pCurrentInterface->otherDescriptorList.pushBack(new UnknownDescriptor(&pBuffer[nOffset], nType, nLength));
         }
@@ -125,13 +125,20 @@ UsbDevice::Interface::~Interface()
         delete otherDescriptorList[i];
 }
 
-UsbDevice::Endpoint::Endpoint(UsbEndpointDescriptor *pDescriptor) : bDataToggle(false)
+UsbDevice::Endpoint::Endpoint(UsbEndpointDescriptor *pDescriptor, UsbSpeed speed) : bDataToggle(false)
 {
     nEndpoint = pDescriptor->nEndpoint;
     bIn = pDescriptor->bDirection;
     bOut = !bIn;
     nTransferType = pDescriptor->nTransferType;
     nMaxPacketSize = pDescriptor->nMaxPacketSize;
+        
+    // Some high speed devices, when put onto a FS/LS-only port, still keep
+    // their HS endpoint information structures and confuse drivers as to
+    // what the device is actually doing. Fix that.
+    if((speed == LowSpeed) || (speed == FullSpeed))
+        if(nMaxPacketSize > 64)
+            nMaxPacketSize = 64;
 }
 
 void UsbDevice::initialise(uint8_t nAddress)
@@ -172,7 +179,7 @@ void UsbDevice::initialise(uint8_t nAddress)
     // If the device works at full-speed and it has a device qualifier descriptor,
     // it means that the normal configuration descriptor is for high-speed,
     // and we need to use the other speed configuration descriptor
-    if(m_Speed == FullSpeed && m_pDescriptor->nBcdUsbRelease > ((1 << 8) + 19) && getDescriptorLength(UsbDescriptor::DeviceQualifier, 0))
+    if((m_Speed == FullSpeed) && (m_pDescriptor->nBcdUsbRelease > ((1 << 8) + 19)) && getDescriptorLength(UsbDescriptor::DeviceQualifier, 0))
         nConfigDescriptor = UsbDescriptor::OtherSpeedConfiguration;
 
     // Get the vendor, product and serial strings
@@ -198,7 +205,7 @@ void UsbDevice::initialise(uint8_t nAddress)
         delete pPartialConfig;
 
         // Get our configuration descriptor
-        ConfigDescriptor *pConfig = new ConfigDescriptor(getDescriptor(nConfigDescriptor, i, configLength), configLength);
+        ConfigDescriptor *pConfig = new ConfigDescriptor(getDescriptor(nConfigDescriptor, i, configLength), configLength, m_Speed);
 
         // Get the associated string
         pConfig->sString = getString(pConfig->nString);
