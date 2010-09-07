@@ -63,7 +63,13 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
     switch (state.getSyscallNumber())
     {
         case TUI_NEXT_REQUEST:
-            return g_UserConsole->nextRequest(p1, reinterpret_cast<char*>(p2), reinterpret_cast<size_t*>(p3), p4, reinterpret_cast<size_t*>(p5));
+            if (!g_UserConsole)
+            {
+                WARNING("Next request with no console");
+                return 0;
+            }
+            else
+                return g_UserConsole->nextRequest(p1, reinterpret_cast<char*>(p2), reinterpret_cast<size_t*>(p3), p4, reinterpret_cast<size_t*>(p5));
         case TUI_REQUEST_PENDING:
         {
             if (!g_UserConsole)
@@ -104,7 +110,9 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
         }
         case TUI_SET_CURRENT_CONSOLE:
         {
-            g_UserConsole->stopCurrentBlock();
+            if (g_UserConsole)
+                g_UserConsole->stopCurrentBlock();
+            
             g_UserConsoleId = p1;
             g_UserConsole = g_Consoles[p1];
             break;
