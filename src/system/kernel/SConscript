@@ -19,7 +19,7 @@ env.Alias("kernel", objname)
 
 # To include a new subdirectory just add to the list.
 subdirs = [
-    
+
 ]
 
 # To include new files just add to the list, or Glob("*.cpp")
@@ -33,6 +33,7 @@ files = [
     'Service.cc',
     Glob('utilities/*.cc'),
     Glob('utilities/sha1/*.cc'),
+    Glob('utilities/md5/*.cc'),
     Glob('machine/*.cc'),
     Glob('linker/*.cc'),
     Glob('core/*.cc'),
@@ -107,9 +108,9 @@ if 'X86_COMMON' in env['CPPDEFINES']:
         'machine/x86_common/x86emu/prim_ops.c',
         'machine/x86_common/x86emu/sys.c',
     ]
-    
+
     commonFiles = Glob('core/processor/x86_common/*.cc')
-    
+
     if 'DEBUGGER' in env['CPPDEFINES']:
         files += [Glob('debugger/libudis86/*.c')]
         files += commonFiles
@@ -147,8 +148,8 @@ if env['ARCH_TARGET'] == 'X86':
         'core/processor/x86/asm/Scheduler.s',
         # 'core/processor/x86/asm/multiprocessor.s'
     ]
-    
-    if 'MULTIPROCESSOR' in env['CPPDEFINES']:    
+
+    if 'MULTIPROCESSOR' in env['CPPDEFINES']:
         files += ['core/processor/x86/asm/trampoline.s']
 
 if env['ARCH_TARGET'] == 'X64':
