@@ -23,6 +23,7 @@
 #include <syscallError.h>
 
 #include <machine/InputManager.h>
+#include <machine/KeymapManager.h>
 
 #include <graphics/Graphics.h>
 #include <graphics/GraphicsService.h>
@@ -209,7 +210,7 @@ void pedigree_module_load(char *_file)
     // Map the module in the memory
     uintptr_t buffer;
     MemoryMappedFile *pMmFile = MemoryMappedFileManager::instance().map(file, buffer);
-    KernelElf::instance().loadModule(reinterpret_cast<uint8_t *>(buffer), file->getSize(), true);
+    KernelElf::instance().loadModule(reinterpret_cast<uint8_t*>(buffer), file->getSize(), true);
     MemoryMappedFileManager::instance().unmap(pMmFile);
 }
 
@@ -252,6 +253,28 @@ void pedigree_input_remove_callback(void *p)
     InputManager::instance().removeCallback(
         reinterpret_cast<InputManager::callback_t>(p),
         Processor::information().getCurrentThread());
+}
+
+int pedigree_load_keymap(char *buf, size_t len)
+{
+    // File format:  0    Sparse tree offset
+    //               4    Data tree offset
+    //               ...  Sparse tree & data tree.
+
+    uint32_t sparseTableOffset  = *reinterpret_cast<uint32_t*>(&buf[0]);
+    uint32_t dataTableOffset    = *reinterpret_cast<uint32_t*>(&buf[4]);
+    uint32_t sparseTableSize    = dataTableOffset - sparseTableOffset;
+    uint32_t dataTableSize      = len - dataTableOffset;
+
+    uint8_t *sparseTable = new uint8_t[sparseTableSize];
+    memcpy(sparseTable, &buf[sparseTableOffset], sparseTableSize);
+
+    uint8_t *dataTable = new uint8_t[dataTableSize];
+    memcpy(dataTable, &buf[dataTableOffset], dataTableSize);
+
+    KeymapManager::instance().useKeymap(sparseTable, dataTable);
+
+    return 0;
 }
 
 int pedigree_gfx_get_provider(void *p)

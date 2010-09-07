@@ -84,7 +84,7 @@ size_t SelectEvent::serialize(uint8_t *pBuffer)
     pBuf[2] = reinterpret_cast<size_t>(m_pFdSet);
     pBuf[3] = m_FdIdx;
     pBuf[4] = reinterpret_cast<size_t>(m_pFile);
-    
+
     return 5 * sizeof(size_t);
 }
 
@@ -143,7 +143,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
     }
 
     List<SelectEvent*> events;
-    
+
     bool bError = false;
     bool bWillReturnImmediately = (timeoutType == ReturnImmediately);
     size_t nRet = 0;
@@ -192,7 +192,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
                 // Quickly check again now we've added the monitoring event,
                 // to avoid a race condition where we could miss the event.
                 //
-                /// \note This is safe because the event above can only be 
+                /// \note This is safe because the event above can only be
                 ///       dispatched to this thread, and while we hold the
                 ///       reentrancy spinlock that cannot happen!
                 if (pFd->file->select(false, 0))
@@ -227,7 +227,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
                 // Quickly check again now we've added the monitoring event,
                 // to avoid a race condition where we could miss the event.
                 //
-                /// \note This is safe because the event above can only be 
+                /// \note This is safe because the event above can only be
                 ///       dispatched to this thread, and while we hold the
                 ///       reentrancy spinlock that cannot happen!
                 if (pFd->file->select(true, 0))
@@ -262,7 +262,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
                 // Quickly check again now we've added the monitoring event,
                 // to avoid a race condition where we could miss the event.
                 //
-                /// \note This is safe because the event above can only be 
+                /// \note This is safe because the event above can only be
                 ///       dispatched to this thread, and while we hold the
                 ///       reentrancy spinlock that cannot happen!
                 if (pFd->file->select(false, 0))
@@ -286,7 +286,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         // the events and will be raised whenever an FD has action.
         assert(nRet == 0);
         sem.acquire(1, timeoutSecs, timeoutUSecs);
-        
+
         // Did we actually get the semaphore or did we timeout?
         if (!Processor::information().getCurrentThread()->wasInterrupted())
         {

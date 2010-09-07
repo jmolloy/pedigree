@@ -50,7 +50,6 @@
 #include <PosixProcess.h>
 
 #include <users/UserManager.h>
-#include <machine/KeymapManager.h>
 //
 // Syscalls pertaining to system operations.
 //
@@ -101,7 +100,7 @@ static char **load_string_array(Vector<String*> &rArray, uintptr_t arrayLoc, uin
 long posix_sbrk(int delta)
 {
     SC_NOTICE("sbrk(" << delta << ")");
-    
+
     long ret = reinterpret_cast<long>(
                    Processor::information().getVirtualAddressSpace().expandHeap (delta, VirtualAddressSpace::Write));
     SC_NOTICE("    -> " << ret);
@@ -850,28 +849,6 @@ int posix_getpgrp()
         return pProcess->getProcessGroup()->processGroupId;
     else
         return pProcess->getId(); // Fallback if no ProcessGroup pointer yet
-}
-
-int pedigree_load_keymap(char *buf, size_t len)
-{
-    // File format:  0    Sparse tree offset
-    //               4    Data tree offset
-    //               ...  Sparse tree & data tree.
-
-    uint32_t sparseTableOffset  = *reinterpret_cast<uint32_t*>(&buf[0]);
-    uint32_t dataTableOffset    = *reinterpret_cast<uint32_t*>(&buf[4]);
-    uint32_t sparseTableSize    = dataTableOffset - sparseTableOffset;
-    uint32_t dataTableSize      = len - dataTableOffset;
-
-    uint8_t *sparseTable = new uint8_t[sparseTableSize];
-    memcpy(sparseTable, &buf[sparseTableOffset], sparseTableSize);
-
-    uint8_t *dataTable = new uint8_t[dataTableSize];
-    memcpy(dataTable, &buf[dataTableOffset], dataTableSize);
-
-    KeymapManager::instance().useKeymap(sparseTable, dataTable);
-
-    return 0;
 }
 
 int posix_syslog(const char *msg, int prio)

@@ -13,8 +13,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef _INPUT_MANAGER_H
-#define _INPUT_MANAGER_H
+#ifndef _INPUT_H
+#define _INPUT_H
 
 #include <types.h>
 
@@ -26,7 +26,7 @@ namespace Input
     const int Joystick = 4;
     const int RawKey = 8;
     const int Unknown = 255;
-        
+
     typedef int CallbackType;
 
     /// Structure containing notification to the remote application
@@ -55,7 +55,7 @@ namespace Input
                 /// HID scancode for the key (most generic type of scancode,
                 /// and easy to build translation tables for)
                 uint8_t scancode;
-                
+
                 /// Whether this is a keyUp event or not.
                 bool keyUp;
             } rawkey;

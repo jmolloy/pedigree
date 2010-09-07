@@ -15,6 +15,7 @@
  */
 #include <input/Input.h>
 #include <pedigree-c/pedigree-syscalls.h>
+#include <stdio.h>
 
 using namespace Input;
 
@@ -42,5 +43,24 @@ void Input::removeCallback(callback_t cb)
 
 void Input::loadKeymapFromFile(const char *path)
 {
-    /// \todo Implement
+    // Load the file in to a buffer.
+    FILE *pFile = fopen(path, "r");
+    if (!pFile)
+    {
+        fprintf(stderr, "Input::loadKeymapFromFile: Error opening file `%s'.\n", path);
+        return;
+    }
+
+    // Get the length of the file
+    fseek(pFile, 0, SEEK_END);
+    size_t nLength = ftell(pFile);
+    fseek(pFile, 0, SEEK_SET);
+
+    // Read the file
+    uint8_t *pBuffer = new uint8_t [nLength];
+    fread(pBuffer, 1, nLength, pFile);
+    fclose(pFile);
+
+    if(pedigree_load_keymap((char*)pBuffer, nLength))
+        fprintf(stderr, "Input::loadKeymapFromFile: Error loading keymap\n");
 }

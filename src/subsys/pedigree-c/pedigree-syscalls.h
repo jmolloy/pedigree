@@ -66,7 +66,6 @@ void pedigree_config_get_error_message(size_t resultIdx, char *buf, int buflen);
 
 int pedigree_login(int uid, const char *password);
 
-int pedigree_load_keymap(char *buffer, size_t len);
 int pedigree_reboot();
 
 void pedigree_module_load(char *file);
@@ -84,6 +83,7 @@ extern "C" {
 
 void pedigree_input_install_callback(void *p, uint32_t type, uintptr_t param);
 void pedigree_input_remove_callback(void *p);
+int pedigree_load_keymap(char *buffer, size_t len);
 
 void pedigree_event_return();
 
