@@ -129,7 +129,7 @@ bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t
         DEBUG_LOG("USB: MSD: Result: " << Dec << nResult << Hex << ".");
 
         /// \todo Should probably just be transaction errors and stalls
-        if(nResult < 0) // == -Stall)
+        if((nResult < 0) || ((nResult < nRespBytes) && (!bWrite))) // == -Stall)
         {
             // STALL, clear the endpoint and attempt CSW read
             bool bClearResult = false;
