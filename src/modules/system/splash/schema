@@ -14,6 +14,20 @@
 -- OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 --
 
+--
+-- Mode to set at bootup
+--
+create table 'desired-display-mode' (
+       'width' integer,
+       'height' integer,
+       'bpp' integer);
+
+-- Feel free to change
+insert into 'desired-display-mode' values (1024, 768, 16);
+
+--
+-- Colour scheme for splash and TUI
+--
 create table 'colour-scheme' (
        'name' varchar(255) primary key,
        'r' integer,

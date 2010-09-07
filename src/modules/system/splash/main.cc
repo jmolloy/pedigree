@@ -235,8 +235,39 @@ static void getColor(const char *colorName, uint32_t &color)
         return;
     }
 
+    if(!pResult->succeeded())
+    {
+        ERROR("Splash: Error looking up '" << colorName << "' colour: " << pResult->errorMessage());
+        delete pResult;
+        return;
+    }
+
     // Get the color from the query result
     color = Graphics::createRgb(pResult->getNum(0, "r"), pResult->getNum(0, "g"), pResult->getNum(0, "b"));
+
+    // Dispose of the query result
+    delete pResult;
+}
+
+static void getDesiredMode(uint32_t &width, uint32_t &height, uint32_t &bpp)
+{
+    // Query the database
+    Config::Result *pResult = Config::instance().query("select width,height,bpp from 'desired-display-mode';");
+
+    // Did the query fail?
+    if(!pResult)
+        return;
+
+    if(!pResult->succeeded())
+    {
+        delete pResult;
+        return;
+    }
+
+    // Get the mode details from the query result
+    width = pResult->getNum(0, "width");
+    height = pResult->getNum(0, "height");
+    bpp = pResult->getNum(0, "bpp");
 
     // Dispose of the query result
     delete pResult;
@@ -266,21 +297,31 @@ static void init()
 
     Display *pDisplay = pProvider.pDisplay;
 
-    // Set up a mode we want
-    if(!pDisplay->setScreenMode(1024, 768, 16))
+    // Get the desired mode from the database
+    size_t nDesiredWidth = 0, nDesiredHeight = 0, nDesiredBpp = 0;
+    getDesiredMode(nDesiredWidth, nDesiredHeight, nDesiredBpp);
+
+    // Set up the mode we want
+    if(!(nDesiredWidth && nDesiredHeight && nDesiredBpp) || !pDisplay->setScreenMode(nDesiredWidth, nDesiredHeight, nDesiredBpp))
     {
-        NOTICE("splash: Falling back to 800x600");
+        NOTICE("splash: Falling back to 1024x768");
 
-        // Attempt to fall back to 800x600
-        if(!pDisplay->setScreenMode(800, 600, 16))
+        // Attempt to fall back to 1024x768
+        if(!pDisplay->setScreenMode(1024, 768, 16))
         {
-            NOTICE("splash: Falling back to 640x480");
+            NOTICE("splash: Falling back to 800x600");
 
-            // Finally try and fall back to 640x480
-            if(!pDisplay->setScreenMode(640, 480, 16))
+            // Attempt to fall back to 800x600
+            if(!pDisplay->setScreenMode(800, 600, 16))
             {
-                ERROR("splash: Couldn't find a suitable display mode for this system (tried: 1024x768, 800x600, 640x480).");
-                return;
+                NOTICE("splash: Falling back to 640x480");
+
+                // Finally try and fall back to 640x480
+                if(!pDisplay->setScreenMode(640, 480, 16))
+                {
+                    ERROR("splash: Couldn't find a suitable display mode for this system (tried: 1024x768, 800x600, 640x480).");
+                    return;
+                }
             }
         }
     }
@@ -331,7 +372,7 @@ static void init()
                     size_t bytesPerLine = FONT_WIDTH * bytesPerPixel;
                     size_t pixelOffset = (fontRow * bytesPerLine) + (col * bytesPerPixel);
                     size_t bufferOffset = pixelOffset;
-                    
+
                     uint32_t *p = reinterpret_cast<uint32_t*>(adjust_pointer(g_pBuffer, bufferOffset));
                     *p = g_ForegroundColour;
                 }
