@@ -200,9 +200,9 @@ void progress(const char *text)
 
     size_t w = (g_ProgressW * g_BootProgressCurrent) / g_BootProgressTotal;
     if(g_Previous <= g_BootProgressCurrent)
-        g_pFramebuffer->rect(g_ProgressX, g_ProgressY, w, g_ProgressH, g_ProgressColour, g_BgFgFormat);
+        g_pFramebuffer->rect(g_ProgressX, g_ProgressY, w, g_ProgressH, g_ProgressColour, g_ColorFormat);
     else
-        g_pFramebuffer->rect(g_ProgressX + w, g_ProgressY, g_ProgressW-w, g_ProgressH, g_BackgroundColour, g_BgFgFormat);
+        g_pFramebuffer->rect(g_ProgressX + w, g_ProgressY, g_ProgressW-w, g_ProgressH, g_BackgroundColour, g_ColorFormat);
     g_Previous = g_BootProgressCurrent;
 
     g_pFramebuffer->redraw(g_ProgressX, g_ProgressY, g_ProgressW, g_ProgressH, true);
