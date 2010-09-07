@@ -36,7 +36,7 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
     // Create a new backbuffer.
     // m_pBuffer = Syscall::newBuffer();
     // if (!m_pBuffer) log("Buffer not created correctly!");
-    
+
     m_pFramebuffer = g_pFramebuffer->createChild(m_OffsetLeft, m_OffsetTop, nWidth, nHeight);
     if((!m_pFramebuffer) || (!m_pFramebuffer->getRawBuffer()))
         return;
@@ -76,7 +76,7 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
         close(2);
         Syscall::setCtty(pName);
         execl("/applications/login", "/applications/login", 0);
-        log("Launching login failed!");
+        syslog(LOG_ALERT, "Launching login failed!");
     }
 
     m_Pid = pid;
@@ -91,13 +91,13 @@ void Terminal::renewBuffer(size_t nWidth, size_t nHeight)
 {
     if(!m_pFramebuffer)
         return;
-    
+
     delete m_pFramebuffer;
-    
+
     m_pFramebuffer = g_pFramebuffer->createChild(m_OffsetLeft, m_OffsetTop, nWidth, nHeight);
     if((!m_pFramebuffer) || (!m_pFramebuffer->getRawBuffer()))
         return;
-    
+
     uint32_t backColourInt = PedigreeGraphics::createRgb(g_MainBackgroundColour.r, g_MainBackgroundColour.g, g_MainBackgroundColour.b);
     m_pFramebuffer->rect(0, 0, nWidth, nHeight, backColourInt, PedigreeGraphics::Bits24_Rgb);
 
@@ -146,7 +146,7 @@ void Terminal::addToQueue(uint64_t key)
     else
     {
         uint32_t utf32 = key&0xFFFFFFFF;
-        
+
         // Begin Utf-32 -> Utf-8 conversion.
         char buf[4];
         size_t nbuf = 0;
@@ -292,7 +292,7 @@ void Terminal::setActive(bool b, DirtyRectangle &rect)
 {
     // Force complete redraw
     m_pFramebuffer->redraw(0, 0, m_pFramebuffer->getWidth(), m_pFramebuffer->getHeight(), false);
-    
+
     // if (b)
     //    Syscall::setCurrentBuffer(m_pBuffer);
 }

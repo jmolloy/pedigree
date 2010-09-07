@@ -21,49 +21,12 @@
 
 extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
 
-#include <stdio.h>
-extern void log();
-void *operator new (size_t size) throw()
-{
-  void *ret = malloc(size);
-  return ret;
-}
-void *operator new[] (size_t size) throw()
-{
-  return malloc(size);
-}
-void *operator new (size_t size, void* memory) throw()
-{
-  return memory;
-}
-void *operator new[] (size_t size, void* memory) throw()
-{
-  return memory;
-}
-void operator delete (void * p)
-{
-  free(p);
-}
-void operator delete[] (void * p)
-{
-  free(p);
-}
-
 size_t Syscall::nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t buffersz, size_t *terminalId)
 {
     size_t ret = syscall5(TUI_NEXT_REQUEST, responseToLast, reinterpret_cast<size_t>(buffer), reinterpret_cast<size_t>(sz), buffersz, reinterpret_cast<size_t>(terminalId));
     // Memory barrier, "sz" will have changed. Reload.
     asm volatile ("" : : : "memory");
     return ret;
-}
-
-size_t Syscall::getFb(Display::ScreenMode *pMode)
-{
-    return 0;
-    
-    return syscall1(TUI_GETFB, reinterpret_cast<size_t>(pMode));
-    // Memory barrier, "sz" will have changed. Reload.
-    asm volatile ("" : : : "memory");
 }
 
 void Syscall::requestPending()
@@ -91,66 +54,13 @@ void Syscall::setCurrentConsole(size_t tabId)
     syscall1(TUI_SET_CURRENT_CONSOLE, tabId);
 }
 
-rgb_t *Syscall::newBuffer()
-{
-    return 0; // return reinterpret_cast<rgb_t*> (syscall0(TUI_VID_NEW_BUFFER));
-}
-
-void Syscall::setCurrentBuffer(rgb_t *pBuffer)
-{
-    return; // syscall1(TUI_VID_SET_BUFFER, reinterpret_cast<uintptr_t>(pBuffer));
-}
-
 void doRedraw(DirtyRectangle &rect)
 {
     if(rect.getX() == ~0UL && rect.getY() == ~0UL &&
        rect.getX2() == ~0UL && rect.getY2() == ~0UL)
         return;
-    
+
     g_pFramebuffer->redraw(rect.getX(), rect.getY(), rect.getWidth(), rect.getHeight(), true);
-}
-
-void Syscall::killBuffer(rgb_t *pBuffer)
-{
-    return;
-    
-    syscall1(TUI_VID_KILL_BUFFER, reinterpret_cast<uintptr_t>(pBuffer));
-}
-
-void Syscall::bitBlit(rgb_t *pBuffer, size_t x, size_t y, size_t x2, size_t y2,
-                      size_t w, size_t h)
-{
-    return;
-    
-    vid_req_t req;
-    req.buffer = pBuffer;
-    req.x = x;
-    req.y = y;
-    req.x2 = x2;
-    req.y2 = y2;
-    req.w = w;
-    req.h = h;
-
-    asm volatile("" ::: "memory");
-
-    syscall1(TUI_VID_BIT_BLIT, reinterpret_cast<uintptr_t>(&req));
-}
-
-void Syscall::fillRect(rgb_t *pBuffer, size_t x, size_t y, size_t w, size_t h, rgb_t c)
-{
-    return;
-    
-    vid_req_t req;
-    req.buffer = pBuffer;
-    req.x = x;
-    req.y = y;
-    req.w = w;
-    req.h = h;
-    req.c = &c;
-
-    asm volatile("" ::: "memory");
-
-    syscall1(TUI_VID_FILL_RECT, reinterpret_cast<uintptr_t>(&req));
 }
 
 DirtyRectangle::DirtyRectangle() :

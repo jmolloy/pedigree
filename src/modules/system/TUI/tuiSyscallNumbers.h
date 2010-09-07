@@ -17,31 +17,13 @@
 #ifndef SYSCALL_NUMBERS_H
 #define SYSCALL_NUMBERS_H
 
-struct vid_req_t
-{
-    struct rgb_t *buffer;
-    size_t x, y, x2, y2, w, h;
-    struct rgb_t *c;
-};
+#define TUI_NEXT_REQUEST            1
+#define TUI_REQUEST_PENDING         2
+#define TUI_RESPOND_TO_PENDING      3
+#define TUI_STOP_REQUEST_QUEUE      4
 
-#define TUI_NEXT_REQUEST       1
-#define TUI_LOG                2
-#define TUI_GETFB              3
-#define TUI_REQUEST_PENDING    4
-#define TUI_RESPOND_TO_PENDING 5
-#define TUI_CREATE_CONSOLE     6
-#define TUI_SET_CTTY           7
-#define TUI_SET_CURRENT_CONSOLE 8
-
-#define TUI_VID_NEW_BUFFER     9
-#define TUI_VID_SET_BUFFER     10
-#define TUI_VID_UPDATE_BUFFER  11
-#define TUI_VID_KILL_BUFFER    12
-#define TUI_VID_BIT_BLIT       13
-#define TUI_VID_FILL_RECT      14
-
-#define TUI_EVENT_RETURNED             15
-#define TUI_INPUT_REGISTER_CALLBACK    16
-#define TUI_STOP_REQUEST_QUEUE 17
+#define TUI_CREATE_CONSOLE          5
+#define TUI_SET_CTTY                6
+#define TUI_SET_CURRENT_CONSOLE     7
 
 #endif

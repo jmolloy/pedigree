@@ -16,6 +16,8 @@
 
 #include "Font.h"
 
+#include <syslog.h>
+
 #include <graphics/Graphics.h>
 
 extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
@@ -34,8 +36,7 @@ Font::Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWid
         error = FT_Init_FreeType(&m_Library);
         if (error)
         {
-            sprintf(str, "Freetype init error: %d\n", error);
-            log(str);
+            syslog(LOG_ALERT, "Freetype init error: %d", error);
             return;
         }
         m_bLibraryInitialised = true;
@@ -45,22 +46,19 @@ Font::Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWid
                         &m_Face);
     if (error == FT_Err_Unknown_File_Format)
     {
-        sprintf(str, "Freetype font format error.\n");
-        log(str);
+        syslog(LOG_ALERT, "Freetype font format error");
         return;
     }
     else if (error)
     {
-        sprintf(str, "Freetype font load error: %d\n", error);
-        log(str);
+        syslog(LOG_ALERT, "Freetype font load error: %d", error);
         return;
     }
 
-    error = FT_Set_Pixel_Sizes(m_Face, 0, requestedSize); 
+    error = FT_Set_Pixel_Sizes(m_Face, 0, requestedSize);
     if (error)
     {
-        sprintf(str, "Freetype set pixel size error: %d\n", error);
-        log(str);
+        syslog(LOG_ALERT, "Freetype set pixel size error: %d", error);
         return;
     }
 
@@ -119,9 +117,9 @@ void Font::drawGlyph(PedigreeGraphics::Framebuffer *pFb, Glyph *pBitmap, int lef
 {
     if(!g_pFramebuffer)
         return;
-    
+
     pFb->blit(pBitmap->pBlitBuffer, 0, 0, left, top, m_CellWidth, m_CellHeight);
-    
+
     /*
     for (size_t y = top; y < top+m_CellHeight; y++)
     {
@@ -138,7 +136,7 @@ Font::Glyph *Font::generateGlyph(uint32_t c, uint32_t f, uint32_t b)
 {
     Glyph *pGlyph = new Glyph;
     pGlyph->buffer = new rgb_t[m_CellWidth*m_CellHeight];
-    
+
     rgb_t back, front;
     back.r = (b & 0xFF0000) >> 16;
     back.g = (b & 0xFF00) >> 8;
@@ -155,12 +153,10 @@ Font::Glyph *Font::generateGlyph(uint32_t c, uint32_t f, uint32_t b)
     int error = FT_Load_Char(m_Face, c, FT_LOAD_RENDER);
     if (error)
     {
-        char str[64];
-        sprintf(str, "Freetype load char error: %d\n", error);
-        log(str);
+        syslog(LOG_ALERT, "Freetype load char error: %d", error);
         return 0;
     }
-    
+
     for (ssize_t r = 0; r < m_Face->glyph->bitmap.rows; r++)
     {
         if (r >= static_cast<ssize_t>(m_CellHeight)) break;
@@ -174,9 +170,9 @@ Font::Glyph *Font::generateGlyph(uint32_t c, uint32_t f, uint32_t b)
             pGlyph->buffer[idx] = interpolateColour(front, back, m_Face->glyph->bitmap.buffer[gidx]);
         }
     }
-    
+
     pGlyph->pBlitBuffer = g_pFramebuffer->createBuffer(pGlyph->buffer, PedigreeGraphics::Bits32_Rgb, m_CellWidth, m_CellHeight);
-    
+
     return pGlyph;
 }
 

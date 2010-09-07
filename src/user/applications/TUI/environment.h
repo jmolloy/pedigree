@@ -96,21 +96,12 @@ private:
 
 namespace Syscall
 {
-//    void log(char *c);    void log(const char *c);
-
     size_t nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t buffersz, size_t *terminalId);
-    size_t getFb(Display::ScreenMode *pMode);
     void requestPending();
     void respondToPending(size_t response, char *buffer, size_t sz);
     void createConsole(size_t tabId, char *pName);
     void setCtty(char *pName);
     void setCurrentConsole(size_t tabId);
-    rgb_t *newBuffer();
-    void setCurrentBuffer(rgb_t *pBuffer);
-    void killBuffer(rgb_t *pBuffer);
-    void bitBlit(rgb_t *pBuffer, size_t x, size_t y, size_t x2, size_t y2,
-                 size_t w, size_t h);
-    void fillRect(rgb_t *pBuffer, size_t x, size_t y, size_t w, size_t h, rgb_t c);
 }
 
 void doRedraw(DirtyRectangle &rect);

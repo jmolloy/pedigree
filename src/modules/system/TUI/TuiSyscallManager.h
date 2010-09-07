@@ -18,38 +18,23 @@
 
 #include <processor/types.h>
 #include <processor/SyscallHandler.h>
-#include <processor/PhysicalMemoryManager.h>
-#include <processor/MemoryRegion.h>
-#include <machine/Display.h>
 
 class TuiSyscallManager : public SyscallHandler
 {
-public:
-    void initialise();
+    public:
+        /// The constructor
+        TuiSyscallManager() {}
+        /// The destructor
+        virtual ~TuiSyscallManager() {}
 
-    /** Calls a syscall. */
-    uintptr_t call(uintptr_t function, uintptr_t p1=0, uintptr_t p2=0, uintptr_t p3=0, uintptr_t p4=0, uintptr_t p5=0);
+        /// Initialise the TUI syscall manager
+        void initialise();
 
-    /** Called when a syscall arrives. */
-    virtual uintptr_t syscall(SyscallState &state);
+        /// Calls a syscall
+        uintptr_t call(uintptr_t function, uintptr_t p1=0, uintptr_t p2=0, uintptr_t p3=0, uintptr_t p4=0, uintptr_t p5=0);
 
-    /** The constructor */
-    TuiSyscallManager();
-    /** The destructor */
-    virtual ~TuiSyscallManager();
-
-    // Called by video drivers to inform us that a mode change has taken place.
-    void modeChanged(Display *pDisplay, Display::ScreenMode mode, uintptr_t pFramebuffer, size_t pFbSize);
-
-private:
-    /** The copy-constructor
-     *\note Not implemented (singleton) */
-    TuiSyscallManager(const TuiSyscallManager &);
-    /** The copy-constructor
-     *\note Not implemented (singleton) */
-    TuiSyscallManager &operator = (const TuiSyscallManager &);
-
-    Display *m_pDisplay;
+        /// Called when a syscall arrives
+        virtual uintptr_t syscall(SyscallState &state);
 };
 
 #endif

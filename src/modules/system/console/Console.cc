@@ -465,7 +465,7 @@ uint64_t ConsoleFile::write(uint64_t location, uint64_t size, uintptr_t buffer, 
 
 void ConsoleFile::truncate()
 {
-    m_pBackEnd->addAsyncRequest(1, CONSOLE_REFRESH, m_Param);
+    m_pBackEnd->addRequest(1, CONSOLE_REFRESH, m_Param);
 }
 
 int ConsoleManager::getCols(File* file)

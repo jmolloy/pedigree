@@ -15,18 +15,18 @@
  */
 
 #include "Png.h"
+
+#include <syslog.h>
 #include <unistd.h>
 
 Png::Png(const char *filename) :
     m_PngPtr(0), m_InfoPtr(0), m_nWidth(0), m_nHeight(0), m_pRowPointers(0)
 {
-    char str[64];
-
     // Open the file.
     FILE *stream = fopen(filename, "rb");
     if (!stream)
     {
-        log("PNG file failed to open.");
+        syslog(LOG_ALERT, "PNG file failed to open");
         return;
     }
 
@@ -34,12 +34,12 @@ Png::Png(const char *filename) :
     char buf[4];
     if (fread(buf, 1, 4, stream) != 4)
     {
-        log("PNG file failed to read ident.");
+        syslog(LOG_ALERT, "PNG file failed to read ident");
         return;
     }
     if (png_sig_cmp(reinterpret_cast<png_byte*>(buf), 0, 4) != 0)
     {
-        log("PNG file failed IDENT check.");
+        syslog(LOG_ALERT, "PNG file failed IDENT check");
         return;
     }
 
@@ -48,14 +48,14 @@ Png::Png(const char *filename) :
 
     if (m_PngPtr == 0)
     {
-        log("PNG file failed to initialise");
+        syslog(LOG_ALERT, "PNG file failed to initialise");
         return;
     }
 
     m_InfoPtr = png_create_info_struct(m_PngPtr);
     if (m_InfoPtr == 0)
     {
-        log("PNG info failed to initialise");
+        syslog(LOG_ALERT, "PNG info failed to initialise");
         return;
     }
 
@@ -65,11 +65,11 @@ Png::Png(const char *filename) :
 
     png_set_palette_to_rgb(m_PngPtr);
 
-    png_read_png(m_PngPtr, m_InfoPtr, 
+    png_read_png(m_PngPtr, m_InfoPtr,
                  PNG_TRANSFORM_STRIP_16 | // 16-bit-per-channel down to 8.
                  PNG_TRANSFORM_STRIP_ALPHA | // No alpha
                  PNG_TRANSFORM_PACKING , // Unpack 2 and 4 bit samples.
-                 
+
                  reinterpret_cast<void*>(0));
 
     m_pRowPointers = reinterpret_cast<uint8_t**>(png_get_rows(m_PngPtr, m_InfoPtr));
@@ -80,18 +80,16 @@ Png::Png(const char *filename) :
 
     if (bit_depth != 8)
     {
-        log("PNG - invalid bit depth");
+        syslog(LOG_ALERT, "PNG - invalid bit depth");
         return;
     }
     if (color_type != PNG_COLOR_TYPE_RGB)
     {
-        sprintf(str, "PNG - invalid colour type: %d", color_type);
-        log(str);
+        syslog(LOG_ALERT, "PNG - invalid colour type: %d", color_type);
         return;
     }
 
-    sprintf(str, "PNG loaded %ul %ul\n", m_nWidth, m_nHeight);
-    log(str);
+    syslog(LOG_ALERT, "PNG loaded %ul %ul", m_nWidth, m_nHeight);
 }
 
 Png::~Png()
@@ -113,7 +111,7 @@ void Png::render(rgb_t *pFb, size_t x, size_t y, size_t width, size_t height)
             rgb.g = m_pRowPointers[r][c*3+1];
             rgb.b = m_pRowPointers[r][c*3+2];
             rgb.a = 255;
-            
+
             pFb[(r+y)*width + (c+x)] = rgb;
         }
     }

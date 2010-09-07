@@ -48,8 +48,6 @@
 #define CONSOLE_GETCOLS 4
 #define CONSOLE_DATA_AVAILABLE 5
 #define CONSOLE_REFRESH 10
-#define TUI_MODE_CHANGED 98
-#define TUI_CHAR_RECV   99
 
 #define NORMAL_FONT_PATH    "/system/fonts/DejaVuSansMono.ttf"
 #define BOLD_FONT_PATH      "/system/fonts/DejaVuSansMono-Bold.ttf"
@@ -57,16 +55,6 @@
 #define FONT_SIZE           12
 
 /** End code from InputManager */
-
-void log(char *c)
-{
-    syscall1(TUI_LOG, reinterpret_cast<size_t>(c));
-}
-
-void log(const char *c)
-{
-    syscall1(TUI_LOG, reinterpret_cast<size_t>(c));
-}
 
 struct TerminalList
 {
@@ -84,6 +72,7 @@ size_t g_nLastResponse = 0;
 
 PedigreeGraphics::Framebuffer *g_pFramebuffer = 0;
 
+/*
 void modeChanged(size_t width, size_t height)
 {
     syslog(LOG_ALERT, "w: %d, h: %d\n", width, height);
@@ -110,7 +99,7 @@ void modeChanged(size_t width, size_t height)
 
         pTL = pTL->next;
     }
-}
+}*/
 
 void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
 {
@@ -126,7 +115,7 @@ void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
     g_pHeader->render(pTL->term->getBuffer(), rect);
 
     pTL->term->redrawAll(rect);
-    
+
     doRedraw(rect);
 }
 
@@ -319,7 +308,7 @@ int main (int argc, char **argv)
         syslog(LOG_EMERG, "TUI is already running\n");
         return 1;
     }
-    
+
     struct stat info;
     int err = stat("/config", &info);
     if((err < 0) && (errno == ENOENT))
@@ -335,7 +324,7 @@ int main (int argc, char **argv)
         syslog(LOG_EMERG, "TUI: couldn't stat /config for some reason: %s!", strerror(errno));
         return 1;
     }
-    
+
     err = stat("/config/TUI", &info);
     if((err < 0) && (errno == ENOENT))
     {
@@ -350,7 +339,7 @@ int main (int argc, char **argv)
         syslog(LOG_EMERG, "TUI: couldn't stat /config/TUI for some reason: %s!", strerror(errno));
         return 1;
     }
-    
+
     fp = fopen("/config/TUI/.tui.lck", "w+");
     if(!fp)
     {
@@ -360,11 +349,11 @@ int main (int argc, char **argv)
     fclose(fp);
 
     signal(SIGINT, sigint);
-    
+
     // Connect to the graphics service
     PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
     g_pFramebuffer = pRootFramebuffer->createChild(0, 0, pRootFramebuffer->getWidth(), pRootFramebuffer->getHeight());
-    
+
     // Have we got a working mode?
     if(!g_pFramebuffer->getRawBuffer())
     {
@@ -375,7 +364,7 @@ int main (int argc, char **argv)
 
     g_nWidth = g_pFramebuffer->getWidth();
     g_nHeight = g_pFramebuffer->getHeight();
-    
+
     g_pFramebuffer->rect(0, 0, g_nWidth, g_nHeight, 0, PedigreeGraphics::Bits24_Rgb);
     g_pFramebuffer->redraw(0, 0, g_nWidth, g_nHeight, true);
 
@@ -393,14 +382,14 @@ int main (int argc, char **argv)
         syslog(LOG_EMERG, "Error: Font '%s' not loaded!", BOLD_FONT_PATH);
         return 0;
     }
-    
+
     rgb_t fore = {0xff, 0xff, 0xff, 0xff};
     rgb_t back = {0, 0, 0, 0};
 
     g_pHeader =  new Header(g_nWidth);
 
     g_pHeader->addTab(const_cast<char*>("The Pedigree Operating System"), 0);
-    
+
     DirtyRectangle rect;
 
     // DirtyRectangle rect;
@@ -414,7 +403,6 @@ int main (int argc, char **argv)
 
     size_t maxBuffSz = (32768 * 2) - 1;
     char *buffer = new char[maxBuffSz + 1];
-    char str[64];
     size_t tabId;
     while (true)
     {
@@ -424,14 +412,14 @@ int main (int argc, char **argv)
         if(cmd == 0)
             continue;
 
-        if (cmd == TUI_MODE_CHANGED)
+        /*if (cmd == TUI_MODE_CHANGED)
         {
             uint64_t u = * reinterpret_cast<uint64_t*>(buffer);
             syslog(LOG_ALERT, "u: %llx", u);
             modeChanged(u&0xFFFFFFFFULL, (u>>32)&0xFFFFFFFFULL);
 
             continue;
-        }
+        }*/
 
         Terminal *pT = 0;
         TerminalList *pTL = g_pTermList;
@@ -446,8 +434,7 @@ int main (int argc, char **argv)
         }
         if (pT == 0)
         {
-            sprintf(str, "Completely unrecognised terminal ID %ld, aborting.", tabId);
-            log (str);
+            syslog(LOG_ALERT, "Completely unrecognised terminal ID %ld, aborting.", tabId);
             continue;
         }
 
@@ -475,7 +462,6 @@ int main (int argc, char **argv)
 
             case CONSOLE_READ:
             {
-                char str[64];
                 size_t i = 0;
                 while (i < sz)
                 {
@@ -513,11 +499,7 @@ int main (int argc, char **argv)
                 break;
 
             default:
-            {
-                char str[64];
-                sprintf(str, "Unknown command: %x", cmd);
-                log(str);
-            }
+                syslog(LOG_ALERT, "Unknown command: %x", cmd);
         }
 
     }

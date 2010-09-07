@@ -78,9 +78,7 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
         m_pReq->ret = responseToLast;
 
         if (m_pReq->p1 == CONSOLE_READ)
-        {
             memcpy(reinterpret_cast<uint8_t*>(m_pReq->p4), buffer, responseToLast);
-        }
 
         bool bAsync = m_pReq->isAsync;
 
@@ -89,6 +87,7 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
 
         if (bAsync)
         {
+            WARNING("TUI: Async request in the console request list, bad things can happen");
             assert_heap_ptr_valid(m_pReq);
             if(m_pReq->pThread)
                 m_pReq->pThread->removeRequest(m_pReq);
@@ -100,7 +99,6 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
         // and it was just freed by us if it was async).
         m_pReq = 0;
     }
-
     m_RequestQueueMutex.release();
 
     // Sleep on the queue length semaphore - wake when there's something to do.
@@ -170,11 +168,6 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
             assert_heap_ptr_valid(reinterpret_cast<uint8_t*>(m_pReq->p4));
             delete [] reinterpret_cast<uint8_t*>(m_pReq->p4);
         }
-    }
-    else if (command == TUI_CHAR_RECV || command == TUI_MODE_CHANGED)
-    {
-        memcpy(buffer, reinterpret_cast<uint8_t*>(&m_pReq->p3), 8);
-        *sz = 8;
     }
 
     return command;
