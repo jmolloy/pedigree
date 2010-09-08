@@ -132,13 +132,6 @@ UsbDevice::Endpoint::Endpoint(UsbEndpointDescriptor *pDescriptor, UsbSpeed speed
     bOut = !bIn;
     nTransferType = pDescriptor->nTransferType;
     nMaxPacketSize = pDescriptor->nMaxPacketSize;
-        
-    // Some high speed devices, when put onto a FS/LS-only port, still keep
-    // their HS endpoint information structures and confuse drivers as to
-    // what the device is actually doing. Fix that.
-    if((speed == LowSpeed) || (speed == FullSpeed))
-        if(nMaxPacketSize > 64)
-            nMaxPacketSize = 64;
 }
 
 void UsbDevice::initialise(uint8_t nAddress)
@@ -169,7 +162,7 @@ void UsbDevice::initialise(uint8_t nAddress)
     DEBUG_LOG("Device class/subclass/protocol: " << m_pDescriptor->nClass << "/" << m_pDescriptor->nSubclass << "/" << m_pDescriptor->nProtocol);
     DEBUG_LOG("Maximum control packet size is " << Dec << m_pDescriptor->nMaxControlPacketSize << Hex << " bytes.");
     DEBUG_LOG("Vendor and product IDs: " << m_pDescriptor->nVendorId << ":" << m_pDescriptor->nProductId << ".");
-    DEBUG_LOG("Device version: " << Dec << (m_pDescriptor->nBcdDeviceRelease >> 8) << "." << (m_pDescriptor->nBcdDeviceRelease & 0xFF) << ".");
+    DEBUG_LOG("Device version: " << Dec << (m_pDescriptor->nBcdDeviceRelease >> 8) << "." << (m_pDescriptor->nBcdDeviceRelease & 0xFF) << Hex << ".");
 #endif
 
     // Descriptor number for the configuration descriptor
@@ -179,9 +172,23 @@ void UsbDevice::initialise(uint8_t nAddress)
     // If the device works at full-speed and it has a device qualifier descriptor,
     // it means that the normal configuration descriptor is for high-speed,
     // and we need to use the other speed configuration descriptor
-    if((m_Speed == FullSpeed) && (m_pDescriptor->nBcdUsbRelease > ((1 << 8) + 19)) && getDescriptorLength(UsbDescriptor::DeviceQualifier, 0))
-        nConfigDescriptor = UsbDescriptor::OtherSpeedConfiguration;
-
+    /// \todo This doesn't work - HS devices at FS stall all over the place. Find out why.
+#if 0
+    if(m_pDescriptor->nBcdUsbRelease >= 0x200)
+    {
+        DeviceQualifier *pQualifier = reinterpret_cast<DeviceQualifier*>(getDescriptor(UsbDescriptor::DeviceQualifier, 0, sizeof(DeviceQualifier)));
+        if(pQualifier && ((m_Speed == LowSpeed) || (m_Speed == FullSpeed)))
+        {
+            if(pQualifier->nVersion >= 0x200)
+            {
+                nConfigDescriptor = UsbDescriptor::OtherSpeedConfiguration;
+            }
+            
+            delete pQualifier;
+        }
+    }
+#endif
+    
     // Get the vendor, product and serial strings
     m_pDescriptor->sVendor = getString(m_pDescriptor->nVendorString);
     m_pDescriptor->sProduct = getString(m_pDescriptor->nProductString);

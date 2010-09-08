@@ -126,6 +126,17 @@ class UsbDevice : public virtual Device
             String sProduct;
             String sSerial;
         };
+        
+        struct DeviceQualifier
+        {
+            uint16_t nVersion;
+            uint8_t nClass;
+            uint8_t nSubclass;
+            uint8_t nProtocol;
+            uint8_t nMaxControlPacketSize;
+            uint8_t nConfigurations;
+            uint8_t nRsvd;
+        } PACKED;
 
         /// Possible states for an USB device
         enum UsbState

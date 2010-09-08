@@ -32,9 +32,17 @@
 
 #define TOTAL_MEM_PAGES     ((QH_REGION_SIZE / 0x1000) + (TD_REGION_SIZE / 0x1000) + 1)
 
+static int threadStub(void *p)
+{
+    Uhci *pUhci = reinterpret_cast<Uhci*>(p);
+    pUhci->doDequeue();
+    return 0;
+}
+
 Uhci::Uhci(Device* pDev) :
     Device(pDev), m_pBase(0), m_nPorts(0), m_AsyncQueueListChangeLock(), m_UhciMR("Uhci-MR"),
-    m_pCurrentAsyncQueueTail(0), m_pCurrentAsyncQueueHead(0), m_nPortCheckTicks(0)
+    m_pCurrentAsyncQueueTail(0), m_pCurrentAsyncQueueHead(0),
+    m_AsyncSchedule(), m_DequeueList(), m_DequeueCount(0), m_nPortCheckTicks(0)
 {
     setSpecificType(String("UHCI"));
 
@@ -98,6 +106,9 @@ Uhci::Uhci(Device* pDev) :
     // Start the controller
     m_pBase->write16(1, UHCI_CMD);
 
+    // Dequeue main thread
+    new Thread(Processor::information().getCurrentThread()->getParent(), threadStub, reinterpret_cast<void*>(this));
+
     // Install the IRQ handler
     Machine::instance().getIrqManager()->registerPciIrqHandler(this, this);
     Machine::instance().getIrqManager()->control(getInterruptNumber(), IrqManager::MitigationThreshold, (1500000 / 64)); // 12KB/ms (12Mbps) in bytes, divided by 64 bytes maximum per transfer/IRQ
@@ -132,98 +143,69 @@ Uhci::~Uhci()
 {
 }
 
-static int threadStub(void *p)
-{
-    Uhci *pUhci = reinterpret_cast<Uhci*>(p);
-    pUhci->doDequeue();
-    return 0;
-}
-
 void Uhci::doDequeue()
 {
-    // Absolutely cannot have queue insetions during a dequeue
-    LockGuard<Mutex> guard(m_Mutex);
-
-    // Stop the controller while we dequeue
-    m_pBase->write16(m_pBase->read16(UHCI_CMD) & ~1, UHCI_CMD);
-    while(!(m_pBase->read16(UHCI_STS) & 0x20)) delay(5);
-
-    for(size_t i = 1; i < (QH_REGION_SIZE / sizeof(QH)); i++)
+    while(1)
     {
-        if(!m_QHBitmap.test(i))
+        m_DequeueCount.acquire();
+        
+        QH *pQH = 0;
+        {
+            LockGuard<Spinlock> guard(m_AsyncQueueListChangeLock);
+            pQH = m_DequeueList.popFront();
+        }
+        
+        if(!pQH)
             continue;
 
-        QH *pQH = &m_pQHList[i];
-
-        // Is this QH valid?
-        if(!pQH->pMetaData)
-        {
-#ifdef USB_VERBOSE_DEBUG
-            DEBUG_LOG("Not performing dequeue on QH #" << Dec << i << Hex << " as it's not even initialised.");
-#endif
-            continue;
-        }
-
-        // Is this QH even linked!?
-        if(!pQH->pMetaData->bIgnore)
-        {
-#ifdef USB_VERBOSE_DEBUG
-            DEBUG_LOG("Not performing dequeue on QH #" << Dec << i << Hex << " as it's still active.");
-#endif
-            continue;
-        }
-        if(!(pQH->pMetaData->pNext && pQH->pMetaData->pPrev))
-        {
-#ifdef USB_VERBOSE_DEBUG
-            DEBUG_LOG("Not performing dequeue on QH #" << Dec << i << Hex << " as it's not yet linked.");
-#endif
-            continue;
-        }
-        if(!pQH->pMetaData->pFirstTD)
-        {
-#ifdef USB_VERBOSE_DEBUG
-            DEBUG_LOG("Not performing dequeue on QH #" << Dec << i << Hex << " as it has no TDs yet.");
-#endif
-            continue;
-        }
+        // Stop the controller while we dequeue
+        m_pBase->write16(m_pBase->read16(UHCI_CMD) & ~1, UHCI_CMD);
+        while(!(m_pBase->read16(UHCI_STS) & 0x20)) delay(5);
 
         // Remove all TDs
-        size_t nTDIndex = INDEX_FROM_TD_VIRT(pQH->pMetaData->pFirstTD);
-        while(true)
+        if(pQH->pMetaData->completedTdList.count())
         {
-            size_t thisIndex = nTDIndex;
-
-            TD *pTD = &m_pTDList[nTDIndex];
-            bool shouldBreak = pTD->bNextInvalid || !pTD->pNext;
-            if(!shouldBreak)
+            for(List<TD*>::Iterator it = pQH->pMetaData->completedTdList.begin();
+                it != pQH->pMetaData->completedTdList.end();
+                it++)
             {
-                size_t nOldTDIndex = nTDIndex;
-                nTDIndex = INDEX_FROM_TD_PHYS(pTD->pNext << 4);
+                size_t idx = (*it)->id;
+                memset(*it, 0, sizeof(TD));
+                
+                m_TDBitmap.clear(idx);
             }
-
-            memset(pTD, 0, sizeof(TD));
-
-            m_TDBitmap.clear(thisIndex);
-
-            if(shouldBreak)
-                break;
+        }
+        
+        // Will only be valid if we hit an error - some TDs may not have been
+        // run, so they'll not be in the completed list.
+        if(pQH->pMetaData->tdList.count())
+        {
+            for(List<TD*>::Iterator it = pQH->pMetaData->tdList.begin();
+                it != pQH->pMetaData->tdList.end();
+                it++)
+            {
+                size_t idx = (*it)->id;
+                memset(*it, 0, sizeof(TD));
+                
+                m_TDBitmap.clear(idx);
+            }
         }
 
         // This QH is done
-        m_QHBitmap.clear(i);
+        m_QHBitmap.clear(pQH->pMetaData->id);
 
         // Completely invalidate the QH
         delete pQH->pMetaData;
         memset(pQH, 0, sizeof(QH));
 
 #ifdef USB_VERBOSE_DEBUG
-        DEBUG_LOG("Dequeue for QH #" << Dec << i << Hex << ".");
+        DEBUG_LOG("Dequeue complete.");
 #endif
-    }
 
-    // Resume the controller, dequeue done.
-    m_pBase->write16(m_pBase->read16(UHCI_CMD) | 1, UHCI_CMD);
-    while(m_pBase->read16(UHCI_STS) & 0x20) delay(5);
+        // Resume the controller, dequeue done.
+        m_pBase->write16(m_pBase->read16(UHCI_CMD) | 1, UHCI_CMD);
+        while(m_pBase->read16(UHCI_STS) & 0x20) delay(5);
+    }
 }
 
 bool Uhci::irq(irq_id_t number, InterruptState &state)
@@ -239,47 +221,45 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
     DEBUG_LOG("UHCI IRQ " << nStatus);
 #endif
 
-    bool bDequeue = false;
+    List<QH*> persistList;
+
     if(nStatus & UHCI_STS_INT)
     {
         // Check all the queue heads we have in the list
         // QH *pQH = m_pCurrentAsyncQueueHead->pMetaData->pNext;
-        // while(
-
-        for(size_t i = 1; i < (QH_REGION_SIZE / sizeof(QH)); i++)
+        
+        QH *pQH = 0;
+        do
         {
-            if(!m_QHBitmap.test(i))
-                continue;
-
-            QH *pQH = &m_pQHList[i];
-            if(!pQH->pMetaData) // This QH isn't actually ready to be handled yet.
-                continue;
-            if(!(pQH->pMetaData->pPrev && pQH->pMetaData->pNext)) // This QH isn't actually linked yet
-                continue;
-            if(pQH->pMetaData->bIgnore)
-                continue;
-            if(!pQH->pMetaData->pFirstTD)
             {
-                WARNING_NOLOCK("UHCI: QH #" << Dec << i << Hex << " hasn't had any transactions added to it yet.");
-                continue;
+                LockGuard<Spinlock> guard(m_AsyncQueueListChangeLock);
+                if(m_AsyncSchedule.count())
+                    pQH = m_AsyncSchedule.popFront();
+                else
+                    break;
             }
 
-            bool bPeriodic = pQH->pMetaData->bPeriodic;
-
-            // Iterate the TD list
-            size_t nTDIndex = INDEX_FROM_TD_VIRT(pQH->pMetaData->pFirstTD);
-            while(true)
             {
-                TD *pTD = &m_pTDList[nTDIndex];
+                bool bPeriodic = pQH->pMetaData->bPeriodic;
 
-                // If we've already detected that this TD was a short transfer,
-                // don't process any more TDs
-                if(pTD->bShortTransferTD)
-                    break;
-
-                bool bEndOfTransfer = false;
-                if(pTD->nStatus != 0x80)
+                // Iterate the TD list
+                TD *pTD = 0;
+                while(pQH->pMetaData->tdList.count())
                 {
+                    pTD = pQH->pMetaData->tdList.popFront();
+                    
+                    // If we've already detected that this TD was a short transfer,
+                    // don't process any more TDs
+                    if(pTD->bShortTransferTD)
+                        break;
+
+                    bool bEndOfTransfer = false;
+                    if(pTD->nStatus == 0x80)
+                    {
+                        pQH->pMetaData->tdList.pushFront(pTD);
+                        break;
+                    }
+                    
                     ssize_t nResult;
                     if((pTD->nStatus & 0x7e) || (nStatus & UHCI_STS_ERR))
                     {
@@ -295,11 +275,11 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                         pQH->pMetaData->nTotalBytes += nResult;
                     }
 #ifdef USB_VERBOSE_DEBUG
-                    DEBUG_LOG_NOLOCK("TD #" << Dec << nTDIndex << Hex << " [from QH #" << Dec << i << Hex << "] DONE: " << Dec << pTD->nAddress << ":" << pTD->nEndpoint << " " << (pTD->nPid==UsbPidOut?"OUT":(pTD->nPid==UsbPidIn?"IN":(pTD->nPid==UsbPidSetup?"SETUP":""))) << " " << nResult << Hex);
+                    DEBUG_LOG_NOLOCK("TD #" << Dec << pTD->id << " [QH #" << pQH->pMetaData->id << Hex << "] DONE: " << Dec << pTD->nAddress << ":" << pTD->nEndpoint << " " << (pTD->nPid==UsbPidOut?"OUT":(pTD->nPid==UsbPidIn?"IN":(pTD->nPid==UsbPidSetup?"SETUP":""))) << " " << nResult << Hex);
 #endif
 
                     // Handle the "end of transfer" cases
-                    bEndOfTransfer = (!bPeriodic && ((nResult < 0) || (pTD == pQH->pMetaData->pLastTD))) || (bPeriodic && !nResult >= 0);
+                    bEndOfTransfer = (!bPeriodic && ((nResult < 0) || (pTD == pQH->pMetaData->pLastTD))) || (bPeriodic && (nResult >= 0));
 
                     // Some extra cases we need to handle
                     if((pTD != pQH->pMetaData->pLastTD) && !bEndOfTransfer)
@@ -316,12 +296,16 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                                 // that return less data than expected.
                                 if(nResult < pTD->nBufferSize)
                                 {
+                                    DEBUG_LOG_NOLOCK("UHCI: Short read - got " << nResult << " bytes, wanted " << pTD->nBufferSize << " bytes");
                                     pTD->bShortTransferTD = true;
                                     bEndOfTransfer = true;
                                 }
                             }
                         }
                     }
+                    
+                    if(!bPeriodic)
+                        pQH->pMetaData->completedTdList.pushBack(pTD);
 
                     // Last TD or error condition, if async, otherwise only when it gives no error
                     if(bEndOfTransfer)
@@ -334,25 +318,30 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                         {
                             // This queue head is done, dequeue.
                             m_AsyncQueueListChangeLock.acquire(); // Atomic operation
-                            QH *pPrev = pQH->pMetaData->pPrev;
-                            QH *pNext = pQH->pMetaData->pNext;
+                            
+                            // Update the hardware and software linked lists
+                            {
+                                QH *pPrev = pQH->pMetaData->pPrev;
+                                QH *pNext = pQH->pMetaData->pNext;
 
-                            // Main non-hardware linked list update
-                            pPrev->pMetaData->pNext = pNext;
-                            pNext->pMetaData->pPrev = pPrev;
+                                // Main non-hardware linked list update
+                                pPrev->pMetaData->pNext = pNext;
+                                pNext->pMetaData->pPrev = pPrev;
 
-                            // Hardware linked list update
-                            pPrev->pNext = pQH->pNext;
-                            pPrev->bNextQH = 1;
-                            pPrev->bNextInvalid = 0;
+                                // Hardware linked list update
+                                pPrev->pNext = pQH->pNext;
+                                pPrev->bNextQH = 1;
+                                pPrev->bNextInvalid = 0;
 
-                            // Update the tail pointer if we need to
-                            if(pQH == m_pCurrentAsyncQueueTail)
-                                m_pCurrentAsyncQueueTail = pPrev;
+                                // Update the tail pointer if we need to
+                                if(pQH == m_pCurrentAsyncQueueTail)
+                                    m_pCurrentAsyncQueueTail = pPrev;
+                            }
+
+                            m_DequeueList.pushBack(pQH);
+                            m_DequeueCount.release();
 
                             m_AsyncQueueListChangeLock.release();
-
-                            bDequeue = true;
 
                             // Ignore after the linked list update to avoid a
                             // case where the dequeue call hits this QH while
@@ -378,40 +367,34 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                         pTD->nActLen = 0;
 
                         // Modified by the host controller
-                        pQH->pElem = PHYS_TD(nTDIndex) >> 4;
+                        pQH->pElem = PHYS_TD(pTD->id) >> 4;
                         pQH->bElemInvalid = 0;
                         pQH->bElemQH = 0;
+                        
+                        pQH->pMetaData->tdList.pushBack(pTD);
+                        break; // Periodic QHs should only have one TD
                     }
                 }
-
-                size_t oldIndex = nTDIndex;
-
-                if(pTD->bNextInvalid || bEndOfTransfer)
-                    break;
-                else
-                    nTDIndex = INDEX_FROM_TD_PHYS(pTD->pNext << 4);
-
-                if(nTDIndex == oldIndex)
-                {
-                    ERROR_NOLOCK("UHCI: QH #" << Dec << i << Hex << "'s TD list is invalid - circular reference!");
-                    break;
-                }
-                else if(pTD->pNext == 0)
-                {
-                    ERROR_NOLOCK("UHCI: QH #" << Dec << i << Hex << "'s TD list is invalid - null pNext pointer (and T bit not set)!");
-                    break;
-                }
-                else if(nTDIndex > (TD_REGION_SIZE / sizeof(TD)))
-                {
-                    ERROR_NOLOCK("UHCI: QH #" << Dec << i << Hex << " has a TD pointing to a TD that is outside the TD region.");
-                    break;
-                }
             }
+            
+            if(!pQH->pMetaData->bIgnore)
+                persistList.pushBack(pQH);
+        
+        } while(pQH);
+    }
+    
+    if(persistList.count())
+    {
+        for(List<QH*>::Iterator it = persistList.begin();
+            it != persistList.end();
+            it++)
+        {
+            LockGuard<Spinlock> guard(m_AsyncQueueListChangeLock);
+            m_AsyncSchedule.pushBack(*it);
+            
+            it = persistList.erase(it);
         }
     }
-
-    if(bDequeue)
-        new Thread(Processor::information().getCurrentThread()->getParent(), threadStub, reinterpret_cast<void*>(this));
 
     return true;
 }
@@ -435,6 +418,7 @@ void Uhci::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid
     TD *pTD = &m_pTDList[nIndex];
     memset(pTD, 0, sizeof(TD));
     pTD->bNextInvalid = 1; // Assume next is invalid, will be zeroed if another TD is linked
+    pTD->id = nIndex;
 
     // Grab the QH
     QH *pQH = &m_pQHList[pTransaction];
@@ -494,6 +478,8 @@ void Uhci::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid
         pQH->bElemQH = 0;
     }
     pQH->pMetaData->pLastTD = pTD;
+    
+    pQH->pMetaData->tdList.pushBack(pTD);
 }
 
 uintptr_t Uhci::createTransaction(UsbEndpoint endpointInfo)
@@ -517,8 +503,13 @@ uintptr_t Uhci::createTransaction(UsbEndpoint endpointInfo)
 
     // Only need to configure metadata, everything else is set during linkage and TD creation
     pQH->pMetaData = new QH::MetaData;
-    memset(pQH->pMetaData, 0, sizeof(QH::MetaData));
     pQH->pMetaData->endpointInfo = endpointInfo;
+    pQH->pMetaData->bPeriodic = false;
+    pQH->pMetaData->pFirstTD = pQH->pMetaData->pLastTD = 0;
+    pQH->pMetaData->nTotalBytes = 0;
+    pQH->pMetaData->pPrev = pQH->pMetaData->pNext = 0;
+    pQH->pMetaData->bIgnore = false;
+    pQH->pMetaData->id = nIndex;
 
     return nIndex;
 }
@@ -550,6 +541,9 @@ void Uhci::doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)
             // Atomic operation - modifying both the housekeeping and the
             // hardware linked lists
             LockGuard<Spinlock> guard(m_AsyncQueueListChangeLock);
+            
+            pQH->pMetaData->bIgnore = true;
+            m_AsyncSchedule.pushBack(pQH);
 
             QH *pOldTail = m_pCurrentAsyncQueueTail;
 
@@ -568,6 +562,9 @@ void Uhci::doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)
             pQH->pMetaData->pNext = m_pCurrentAsyncQueueHead;
             pQH->pMetaData->pPrev = pOldTail;
             m_pCurrentAsyncQueueHead->pMetaData->pPrev = pQH;
+            
+            // Ready for IRQs
+            pQH->pMetaData->bIgnore = false;
         }
     }
     else

@@ -60,6 +60,8 @@ class Uhci : public UsbHub, public IrqHandler, public RequestQueue, public Timer
             // Custom TD fields
             uint16_t nBufferSize;
             bool bShortTransferTD;
+                
+            size_t id;
 
             // Possible values for status
             enum StatusCodes
@@ -103,8 +105,13 @@ class Uhci : public UsbHub, public IrqHandler, public RequestQueue, public Timer
 
                 QH *pPrev;
                 QH *pNext;
+                
+                List<TD*> tdList;
+                List<TD*> completedTdList;
 
                 bool bIgnore; /// Ignore this QH when iterating over the list - don't look at any of its TDs
+                
+                size_t id;
             } *pMetaData;
         } PACKED ALIGN(16);
 
@@ -188,6 +195,15 @@ class Uhci : public UsbHub, public IrqHandler, public RequestQueue, public Timer
         /// Pointer to the current queue head. Used to fill pNext automatically
         /// for new queue heads inserted to the asynchronous schedule.
         QH *m_pCurrentAsyncQueueHead;
+        
+        /// List of QHs in the active asynchronous schedule
+        List<QH*> m_AsyncSchedule;
+        
+        /// List of QHs ready for dequeue
+        List<QH*> m_DequeueList;
+        
+        /// Semaphore for the dequeue list
+        Semaphore m_DequeueCount;
 
 
         /// The time passed since last port check
