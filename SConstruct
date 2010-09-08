@@ -59,6 +59,7 @@ opts.AddVariables(
     BoolVariable('installer', 'Build the installer', 0),
     BoolVariable('genflags', 'Whether or not to generate flags and things dynamically.', 1),
     BoolVariable('ccache', 'Prepend ccache to cross-compiler paths (for use with CROSS)', 0),
+    BoolVariable('distcc', 'Prepend distcc to cross-compiler paths (for use with CROSS)', 0),
     
     BoolVariable('nocache', 'Do not create an options.cache file (NOT recommended).', 0),
     BoolVariable('genversion', 'Whether or not to regenerate Version.cc if it already exists.', 1),
@@ -147,6 +148,8 @@ if env['CROSS'] != '':
     prefix = ''
     if env['ccache']:
         prefix = 'ccache '
+    if env['distcc']:
+        prefix = 'distcc ' + prefix
     env['CC'] = prefix + crossBase + 'gcc'
     env['CC_NOCACHE'] = crossBase + 'gcc'
     env['CXX'] = prefix + crossBase + 'g++'
