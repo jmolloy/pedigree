@@ -39,7 +39,7 @@ List<T>::~List()
 {
     if (m_Magic != 0x1BADB002)
     {
-        FATAL("List: bad magic.");
+        FATAL("List: bad magic [" << m_Magic << "].");
     }
     clear();
 }
@@ -153,7 +153,10 @@ typename List<T>::Iterator List<T>::erase(Iterator &Iter)
     Node->m_Next->m_Previous = Node->m_Previous;
   --m_Count;
 
-  Iterator tmp(Node->m_Next);
+  node_t *pNext = Node->m_Next;
+  if(!pNext)
+    pNext = Node;
+  Iterator tmp(pNext);
   delete Node;
   return tmp;
 }
@@ -201,7 +204,7 @@ List<void*>::~List()
 {
     if (m_Magic != 0x1BADB002)
     {
-        FATAL("List: bad magic.");
+        FATAL("List: bad magic [" << m_Magic << "].");
     }
     clear();
 }
@@ -291,7 +294,10 @@ List<void*>::Iterator List<void*>::erase(Iterator &Iter)
     Node->m_Next->m_Previous = Node->m_Previous;
   --m_Count;
 
-  Iterator tmp(Node->m_Next);
+  node_t *pNext = Node->m_Next;
+  if(!pNext)
+    pNext = Node;
+  Iterator tmp(pNext);
   delete Node;
   return tmp;
 }
