@@ -1,6 +1,8 @@
 #ifndef _SYS_UTIME_H
 #define _SYS_UTIME_H
 
+#include <time.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

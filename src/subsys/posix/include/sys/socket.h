@@ -33,7 +33,12 @@ struct msghdr
   int32_t       msg_flags;
 };
 
-/*** \todo cmsghdr ***/
+struct cmsghdr
+{
+  socklen_t     cmsg_len;
+  int           cmsg_level;
+  int           cmsg_type;
+};
 
 struct linger
 {
@@ -96,6 +101,8 @@ enum SocketOptions
 #define  SHUT_RD 0 /** Disables receiving */
 #define  SHUT_WR 1 /** Disables sending */
 #define  SHUT_RDWR 2 /** Disables recv/send */
+
+#define SCM_RIGHTS    1
 
 #ifdef __cplusplus
 extern "C" {

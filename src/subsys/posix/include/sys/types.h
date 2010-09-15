@@ -418,6 +418,9 @@ typedef struct _pthread_attr_t
 } pthread_attr_t;
 #endif
 
+typedef unsigned long fsblkcnt_t;
+typedef unsigned long fsfilcnt_t;
+
 #endif  /* !__need_inttypes */
 
 #undef __need_inttypes

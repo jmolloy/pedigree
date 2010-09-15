@@ -8,7 +8,8 @@
 struct dirent
 {
   char d_name[MAXNAMLEN];
-  short d_ino;
+  ino_t d_ino;
+  int d_type;
 };
 
 typedef struct ___DIR
