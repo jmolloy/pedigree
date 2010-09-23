@@ -360,7 +360,7 @@ if env['genversion']:
                }
 
     # Write the file to disk (We *assume* src/system/kernel/)
-    env.Textfile('#src/system/kernel/Version.cc', version_out, SUBST_DICT=sub_dict)
+    env.Textfile('#' + env['BUILDDIR'] + '/Version.cc', version_out, SUBST_DICT=sub_dict)
     
     env['genversion'] = 0
 

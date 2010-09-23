@@ -25,7 +25,7 @@ subdirs = [
 # To include new files just add to the list, or Glob("*.cpp")
 files = [
     'Log.cc',
-    'Version.cc',
+    '#' + builddir + '/Version.cc',
     'Archive.cc',
     'Spinlock.cc',
     'Subsystem.cc',
