@@ -18,6 +18,7 @@ import commands
 import re
 import string
 import getpass
+import SCons
 from socket import gethostname
 from datetime import *
     
@@ -104,8 +105,12 @@ opts.AddVariables(
 # or env['ENV']['PATH'] won't be the user's $PATH from the shell environment.
 # That specifically breaks the build on OS X when using tar from macports (which
 # is needed at least on OS X 10.5 as the OS X tar does not have --transform).
-env = Environment(options=opts, ENV=os.environ, platform='posix',
-                  tools = ['default', 'textfile'], TARFLAGS='--transform="s,.*/,," -cz')
+try:
+    env = Environment(options=opts, ENV=os.environ, platform='posix',
+                      tools = ['default', 'textfile'], TARFLAGS='--transform="s,.*/,," -cz')
+except SCons.Errors.EnvironmentError:
+    env = Environment(options=opts, ENV=os.environ, platform='posix',
+                      tools = ['default'], TARFLAGS='--transform="s,.*/,," -cz')
 Help(opts.GenerateHelpText(env))
 
 # Don't use MD5s to determine if files have changed, just check the timestamp
@@ -360,7 +365,19 @@ if env['genversion']:
                }
 
     # Write the file to disk (We *assume* src/system/kernel/)
-    env.Textfile('#' + env['BUILDDIR'] + '/Version.cc', version_out, SUBST_DICT=sub_dict)
+    if hasattr(env, 'Textfile'):
+        env.Textfile('#' + env['BUILDDIR'] + '/Version.cc', version_out, SUBST_DICT=sub_dict)
+    else:
+        def replacer(s):
+            for keyname, value in sub_dict.iteritems():
+                s = s.replace(keyname, value)
+            return s
+        
+        version_out = map(replacer, version_out)
+        
+        f = open(env.File('#' + env['BUILDDIR'] + '/Version.cc').path, 'w')
+        f.write('\n'.join(version_out))
+        f.close()
     
     env['genversion'] = 0
 
