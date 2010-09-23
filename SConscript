@@ -42,6 +42,10 @@ floppyimg = env.File(builddir + '/floppy.img')
 hddimg = env.File(builddir + '/hdd.img')
 cdimg = env.File(builddir + '/pedigree.iso')
 
+additional_images = {}
+if env['haveqemuimg'] and (env['createvdi'] or env['createvmdk']):
+    additional_images = {'vdi': env.File(builddir + '/hdd.vdi'), 'vmdk' : env.File(builddir + '/hdd.vmdk')}
+
 configSchemas = []
 for i in os.walk(env.Dir("#src").abspath):
     configSchemas += map(lambda x: i[0] + '/' + x, filter(lambda y: y == 'schema', i[2]))
@@ -64,6 +68,13 @@ if('STATIC_DRIVERS' in env['CPPDEFINES']):
     env.Command(config_file, configdb, makeHeader)
 
 # TODO: If any of these commands fail, they WILL NOT STOP the build!
+
+def postImageBuild(img, env):
+    if env['haveqemuimg']:
+        if env['createvdi'] and (additional_images.get('vdi') <> None):
+            os.system("echo Creating hdd.vdi... && qemu-img convert -O vpc %s %s" % (img, additional_images.get('vdi').path))
+        if env['createvmdk'] and (additional_images.get('vmdk') <> None):
+            os.system("echo Creating hdd.vmdk... && qemu-img convert -f raw -O vmdk %s %s" % (img, additional_images.get('vmdk').path))
 
 def buildImageLosetup(target, source, env):
     if env['verbose']:
@@ -141,6 +152,8 @@ def buildImageLosetup(target, source, env):
     for i in os.listdir("tmp"):
         os.remove(i)
     os.rmdir("tmp")
+    
+    postImageBuild(outFile, env)
 
 def buildImageMtools(target, source, env):
     if env['verbose']:
@@ -205,6 +218,8 @@ def buildImageMtools(target, source, env):
 
         otherPath = prefix + i.abspath.replace(search, '')
         os.system("mcopy -bms -Do " + i.path + destDrive + otherPath + " > /dev/null 2>&1")
+    
+    postImageBuild(outFile, env)
 
 def buildCdImage(target, source, env):
     if env['verbose']:
@@ -225,10 +240,10 @@ def buildCdImage(target, source, env):
                  boot/grub/menu.lst=" + pathToGrub + "/menu.lst \
                  boot/kernel=" + source[2].abspath + " \
                  boot/initrd.tar=" + source[1].abspath + " \
+                 /livedisk.img=" + source[3].abspath + " \
                 .pedigree-root=" + configDb
     os.system(cmd)
 
-    #            /livedisk.img=" + source[3].abspath + "\
 
     os.remove("./stage2_eltorito")
 

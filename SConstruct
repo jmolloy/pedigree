@@ -67,6 +67,9 @@ opts.AddVariables(
     
     BoolVariable('havelosetup', 'Whether or not `losetup` is available.', 0),
     BoolVariable('forcemtools', 'Force use of mtools (and the FAT filesystem) even if losetup is available.', 0),
+    BoolVariable('haveqemuimg', 'Whether or not `qemu-img` is available (for VDI/VMDK creation).', 0),
+    BoolVariable('createvdi', 'Convert the created hard disk image to a VDI file for VirtualBox after it is created.', 0),
+    BoolVariable('createvmdk', 'Convert the created hard disk image to a VMDK file for VMware after it is created.', 0),
     
     BoolVariable('pacman', 'If 1, you are managing your images/local directory with pacman and want that instead of the images/<arch> directory.', 0),
     
@@ -173,6 +176,11 @@ if(len(env['CC']) > 0 and env['LIBGCC'] == ''):
     a = os.popen(env['CC'] + ' --print-libgcc-file-name')
     env['LIBGCC'] = os.path.dirname(a.read())
     a.close()
+
+if env['haveqemuimg']:
+    p = commands.getoutput("which qemu-img")
+    if not os.path.exists(p):
+        env['haveqemuimg'] = False
 
 tmp = re.match('(.*?)\-.*', os.path.basename(env['CROSS']), re.S)
 if(tmp != None):
