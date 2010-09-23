@@ -3,14 +3,6 @@
 ## Tyler Kennedy (AKA Linuxhq AKA TkTech)
 ####################################
 
-import os.path
-Import(['env'])
-
-####################################
-# SCons build system for Pedigree
-## Tyler Kennedy (AKA Linuxhq AKA TkTech)
-####################################
-
 import os
 import shutil
 Import(['env'])
@@ -233,9 +225,10 @@ def buildCdImage(target, source, env):
                  boot/grub/menu.lst=" + pathToGrub + "/menu.lst \
                  boot/kernel=" + source[2].abspath + " \
                  boot/initrd.tar=" + source[1].abspath + " \
-                /livedisk.img=" + source[3].abspath + "\
                 .pedigree-root=" + configDb
     os.system(cmd)
+
+    #            /livedisk.img=" + source[3].abspath + "\
 
     os.remove("./stage2_eltorito")
 
