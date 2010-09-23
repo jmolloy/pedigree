@@ -331,55 +331,64 @@ if not env['verbose']:
 ## PEDIGREE_USER
 ## PEDIGREE_MACHINE
 ####################################
-if env['genversion']:
-    # Grab the date (rather than using the `date' program)
-    env['PEDIGREE_BUILDTIME'] = datetime.today().isoformat()
 
-    # Use the OS to find out information about the user and computer name
-    env['PEDIGREE_USER'] = getpass.getuser()
-    env['PEDIGREE_MACHINE'] = gethostname() # The name of the computer (not the type or OS)
+# Grab the date (rather than using the `date' program)
+env['PEDIGREE_BUILDTIME'] = datetime.today().isoformat()
 
-    # Grab the git revision of the repo
-    gitpath = commands.getoutput("which git")
-    if os.path.exists(gitpath):
-        env['PEDIGREE_REVISION'] = commands.getoutput(gitpath + ' rev-parse --verify HEAD --short')
-    else:
-        env['PEDIGREE_REVISION'] = "(unknown, git not found)"
+# Use the OS to find out information about the user and computer name
+env['PEDIGREE_USER'] = getpass.getuser()
+env['PEDIGREE_MACHINE'] = gethostname() # The name of the computer (not the type or OS)
 
-    # Set the flags
-    env['PEDIGREE_FLAGS'] = ' '.join(env['CPPDEFINES'])
+# Grab the git revision of the repo
+gitpath = commands.getoutput("which git")
+if os.path.exists(gitpath):
+    env['PEDIGREE_REVISION'] = commands.getoutput(gitpath + ' rev-parse --verify HEAD --short')
+else:
+    env['PEDIGREE_REVISION'] = "(unknown, git not found)"
 
-    version_out = ['const char *g_pBuildTime = "$buildtime";',
-                   'const char *g_pBuildRevision = "$rev";',
-                   'const char *g_pBuildFlags = "$flags";',
-                   'const char *g_pBuildUser = "$user";',
-                   'const char *g_pBuildMachine = "$machine";',
-                   'const char *g_pBuildTarget = "$target";']
-    
-    sub_dict = {"$buildtime"    : env['PEDIGREE_BUILDTIME'],
-                "$rev"          : env['PEDIGREE_REVISION'],
-                "$flags"        : env['PEDIGREE_FLAGS'],
-                "$user"         : env['PEDIGREE_USER'],
-                "$machine"      : env['PEDIGREE_MACHINE'],
-                "$target"       : env['ARCH_TARGET']
-               }
+# Set the flags
+env['PEDIGREE_FLAGS'] = ' '.join(env['CPPDEFINES'])
 
-    # Write the file to disk (We *assume* src/system/kernel/)
-    if hasattr(env, 'Textfile'):
-        env.Textfile('#' + env['BUILDDIR'] + '/Version.cc', version_out, SUBST_DICT=sub_dict)
-    else:
+version_out = ['const char *g_pBuildTime = "$buildtime";',
+               'const char *g_pBuildRevision = "$rev";',
+               'const char *g_pBuildFlags = "$flags";',
+               'const char *g_pBuildUser = "$user";',
+               'const char *g_pBuildMachine = "$machine";',
+               'const char *g_pBuildTarget = "$target";']
+
+sub_dict = {"$buildtime"    : env['PEDIGREE_BUILDTIME'],
+            "$rev"          : env['PEDIGREE_REVISION'],
+            "$flags"        : env['PEDIGREE_FLAGS'],
+            "$user"         : env['PEDIGREE_USER'],
+            "$machine"      : env['PEDIGREE_MACHINE'],
+            "$target"       : env['ARCH_TARGET']
+           }
+
+# Write the file to disk (We *assume* src/system/kernel/)
+if hasattr(env, 'Textfile'):
+    env.Textfile('#' + env['BUILDDIR'] + '/Version.cc', [version_out, env.Value(env, 'genversion')], SUBST_DICT=sub_dict)
+else:
+    def create_version_cc(target, source, env):
+        global version_out
+        
+        # Make the non-SCons target a bit special.
+        # People using Cygwin have enough to deal with without boring
+        # status messages from build systems that don't support fancy
+        # builders to do stuff quickly and easily.
+        print "Creating Version.cc [rev: %s, with: %s@%s]" % (env['PEDIGREE_REVISION'], env['PEDIGREE_USER'], env['PEDIGREE_MACHINE'])
+        
         def replacer(s):
             for keyname, value in sub_dict.iteritems():
                 s = s.replace(keyname, value)
             return s
-        
+    
         version_out = map(replacer, version_out)
-        
-        f = open(env.File('#' + env['BUILDDIR'] + '/Version.cc').path, 'w')
+    
+        f = open(target[0].path, 'w')
         f.write('\n'.join(version_out))
         f.close()
     
-    env['genversion'] = 0
+    env.Command('#' + env['BUILDDIR'] + '/Version.cc', env.Value(env, 'genversion'), Action(create_version_cc, None))
 
 # Save the cache, all the options are configured
 if(not env['nocache']):
@@ -389,3 +398,7 @@ if(not env['nocache']):
 # Progress through all our sub-directories
 ####################################
 SConscript('SConscript', variant_dir = env['BUILDDIR'], exports = ['env'], duplicate = 0)
+
+print
+print "**** This build of Pedigree (at rev %s, for %s, by %s) started at %s ****" % (env['PEDIGREE_REVISION'], env['ARCH_TARGET'], env['PEDIGREE_USER'], datetime.today())
+print
