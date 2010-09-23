@@ -18,6 +18,7 @@
 #include "Font.h"
 #include "Terminal.h"
 #include <syslog.h>
+#include <time.h>
 
 #define C_BLACK   0
 #define C_RED     1
@@ -67,6 +68,8 @@ uint32_t g_BrightColours[] =
 uint8_t g_DefaultFg = 7;
 uint8_t g_DefaultBg = 0;
 
+bool g_FontsPrecached = false;
+
 extern Font *g_NormalFont, *g_BoldFont;
 
 static void getXtermColorFromDb(const char *colorName, uint8_t &color)
@@ -114,6 +117,31 @@ Xterm::Xterm(PedigreeGraphics::Framebuffer *pFramebuffer, size_t nWidth, size_t 
 
     getXtermColorFromDb("xterm-bg", g_DefaultBg);
     getXtermColorFromDb("xterm-fg", g_DefaultFg);
+
+    // Precache glyphs for all colour combinations
+    if(!g_FontsPrecached)
+    {
+        g_FontsPrecached = true;
+        size_t nGlyphs = 0;
+
+        struct timeval tv_start, tv_end;
+        gettimeofday(&tv_start, 0);
+
+        for(uint32_t c = 32; c < 127; c++)
+        {
+            g_NormalFont->precacheGlyph(c, g_DefaultFg, g_DefaultBg);
+            g_BoldFont->precacheGlyph(c, g_DefaultFg, g_DefaultBg);
+
+            nGlyphs += 2;
+        }
+
+        gettimeofday(&tv_end, 0);
+
+        time_t startUsec = (tv_start.tv_sec * 1000000) + tv_start.tv_usec;
+        time_t endUsec = (tv_end.tv_sec * 1000000) + tv_end.tv_usec;
+
+        syslog(LOG_NOTICE, "TUI xterm: precached %d glyphs in %d seconds and %d milliseconds", nGlyphs, (endUsec - startUsec) / 1000000, ((endUsec - startUsec) % 1000000) / 1000);
+    }
 }
 
 Xterm::~Xterm()
