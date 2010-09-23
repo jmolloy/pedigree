@@ -383,6 +383,15 @@ int main (int argc, char **argv)
         return 0;
     }
 
+    // Precache the entire base ASCII range (not extended characters)
+    // for rendering as white on black.
+    /// \todo Grab the colours from the database instead, in case black/white aren't used.
+    for(uint32_t c = 0; c < 128; c++)
+    {
+        g_NormalFont->precacheGlyph(c, PedigreeGraphics::createRgb(255, 255, 255), PedigreeGraphics::createRgb(0, 0, 0));
+        g_BoldFont->precacheGlyph(c, PedigreeGraphics::createRgb(255, 255, 255), PedigreeGraphics::createRgb(0, 0, 0));
+    }
+
     rgb_t fore = {0xff, 0xff, 0xff, 0xff};
     rgb_t back = {0, 0, 0, 0};
 

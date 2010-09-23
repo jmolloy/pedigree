@@ -132,9 +132,18 @@ void Font::drawGlyph(PedigreeGraphics::Framebuffer *pFb, Glyph *pBitmap, int lef
     */
 }
 
+void Font::precacheGlyph(uint32_t c, uint32_t f, uint32_t b)
+{
+    generateGlyph(c, f, b);
+}
+
 Font::Glyph *Font::generateGlyph(uint32_t c, uint32_t f, uint32_t b)
 {
-    Glyph *pGlyph = new Glyph;
+    Glyph *pGlyph = 0;
+    if((pGlyph = cacheLookup(c, f, b)))
+        return pGlyph;
+
+    pGlyph = new Glyph;
     pGlyph->buffer = new rgb_t[m_CellWidth*m_CellHeight];
 
     rgb_t back, front;
