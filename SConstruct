@@ -372,9 +372,9 @@ sub_dict = {"$buildtime"    : env['PEDIGREE_BUILDTIME'],
             "$target"       : env['ARCH_TARGET']
            }
 
-# Write the file to disk (We *assume* src/system/kernel/)
+# Create the file
 if hasattr(env, 'Textfile'):
-    env.Textfile('#' + env['BUILDDIR'] + '/Version.cc', [version_out, env.Value(env, 'genversion')], SUBST_DICT=sub_dict)
+    env.Textfile('#' + env['BUILDDIR'] + '/Version.cc', [version_out], SUBST_DICT=sub_dict)
 else:
     def create_version_cc(target, source, env):
         global version_out
