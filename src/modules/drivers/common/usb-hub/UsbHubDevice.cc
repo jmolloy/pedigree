@@ -74,20 +74,10 @@ void UsbHubDevice::initialiseDriver()
             DEBUG_LOG("USB: HUB: Powered up port " << Dec << i << Hex << " [status = " << portStatus << "]...");
         }
 
-        // Reset the port
-        setPortFeature(i, PortReset);
-
-        // Delay while the reset completes
-        delay(50);
-
-        // Wait for completion
-        while((getPortStatus(i) & (1 << 4)));
-
-        // Port has been powered on and now reset, check to see if it's enabled and a device is connected
-        portStatus = getPortStatus(i);
-        if((portStatus & 0x3) == 0x3)
+        if(portReset(i))
         {
             // Got a device - what type?
+            portStatus = getPortStatus(i);
             if(portStatus & (1 << 10))
             {
                 // High-speed
@@ -110,6 +100,22 @@ void UsbHubDevice::initialiseDriver()
     }
 
     m_UsbState = HasDriver;
+}
+
+bool UsbHubDevice::portReset(uint8_t nPort)
+{
+    // Reset the port
+    setPortFeature(nPort, PortReset);
+
+    // Delay while the reset completes
+    delay(50);
+
+    // Wait for completion
+    while((getPortStatus(nPort) & (1 << 4)));
+
+    // Port has been powered on and now reset, check to see if it's enabled and a device is connected
+    uint32_t portStatus = getPortStatus(nPort);
+    return ((portStatus & 0x3) == 0x3);
 }
 
 bool UsbHubDevice::setPortFeature(size_t port, PortFeatureSelectors feature)

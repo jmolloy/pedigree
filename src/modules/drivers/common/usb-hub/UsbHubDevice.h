@@ -39,6 +39,8 @@ class UsbHubDevice : public UsbDevice, public UsbHub
         virtual void doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)=0, uintptr_t pParam=0);
         virtual void addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam=0);
 
+        virtual bool portReset(uint8_t nPort);
+
     private:
 
         enum HubFeatureSelectors
