@@ -585,21 +585,31 @@ void Ohci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
     m_pCurrentPeriodicQueueTail = pED;
 }
 
+bool Ohci::portReset(uint8_t nPort)
+{
+    /// \todo Error handling? Device fails to reset? Not present after reset?
+
+    // Perform a reset of the port
+    m_pBase->write32(OhciRhPortStsReset | OhciRhPortStsConnStsCh, OhciRhPortStatus + (nPort * 4));
+    while(!(m_pBase->read32(OhciRhPortStatus + (nPort * 4)) & OhciRhPortStsResCh))
+        delay(5);
+    m_pBase->write32(OhciRhPortStsResCh, OhciRhPortStatus + (nPort * 4));
+
+    // Enable the port if not already enabled
+    if(!(m_pBase->read32(OhciRhPortStatus + (nPort * 4)) & OhciRhPortStsEnable))
+        m_pBase->write32(OhciRhPortStsEnable, OhciRhPortStatus + (nPort * 4));
+
+    return true;
+}
+
 uint64_t Ohci::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
                               uint64_t p6, uint64_t p7, uint64_t p8)
 {
     // Check for a connected device
     if(m_pBase->read32(OhciRhPortStatus + (p1 * 4)) & OhciRhPortStsConnected)
     {
-        // Perform a reset of the port
-        m_pBase->write32(OhciRhPortStsReset | OhciRhPortStsConnStsCh, OhciRhPortStatus + (p1 * 4));
-        while(!(m_pBase->read32(OhciRhPortStatus + (p1 * 4)) & OhciRhPortStsResCh))
-            delay(5);
-        m_pBase->write32(OhciRhPortStsResCh, OhciRhPortStatus + (p1 * 4));
-
-        // Enable the port if not already enabled
-        if(!(m_pBase->read32(OhciRhPortStatus + (p1 * 4)) & OhciRhPortStsEnable))
-            m_pBase->write32(OhciRhPortStsEnable, OhciRhPortStatus + (p1 * 4));
+        if(!portReset(p1))
+            return 0;
 
         // Determine the speed of the attached device
         if(m_pBase->read32(OhciRhPortStatus + (p1 * 4)) & OhciRhPortStsLoSpeed)

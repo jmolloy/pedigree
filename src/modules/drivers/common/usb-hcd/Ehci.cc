@@ -742,53 +742,62 @@ void Ehci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
     m_pFrameList[nFrameIndex] = (m_pQHListPhys + nTransaction * sizeof(QH)) | 2;
 }
 
+bool Ehci::portReset(uint8_t nPort)
+{
+    int retry;
+    for(retry = 0; retry < 3; retry++)
+    {
+#ifdef USB_VERBOSE_DEBUG
+        DEBUG_LOG("USB: EHCI: Port " << Dec << nPort << Hex << " - status before reset: " << m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + (nPort * 4)));
+#endif
+
+        // Set the reset bit
+        m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + (nPort * 4)) | EHCI_PORTSC_PRES, m_nOpRegsOffset + EHCI_PORTSC + (nPort * 4));
+
+        delay(50);
+
+        // Unset the reset bit
+        m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + (nPort * 4)) & ~EHCI_PORTSC_PRES, m_nOpRegsOffset + EHCI_PORTSC + (nPort * 4));
+
+        // Wait for the reset to complete
+        while(m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + (nPort * 4)) & EHCI_PORTSC_PRES)
+            delay(5);
+
+#ifdef USB_VERBOSE_DEBUG
+        DEBUG_LOG("USB: EHCI: Port " << Dec << nPort << Hex << " - status after reset: " << m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + (nPort * 4)));
+#endif
+
+        if((m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + (nPort * 4)) & EHCI_PORTSC_EN) && (m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC + (nPort * 4)) & EHCI_PORTSC_CONN))
+        {
+            DEBUG_LOG("USB: EHCI: Port " << Dec << nPort << Hex << " is connected");
+            return true;
+        }
+        else
+        {
+            DEBUG_LOG("USB: EHCI: Port " << Dec << nPort << Hex << " seems to be not HighSpeed. Oh, well, let's send it to companions");
+            m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + (nPort * 4)) | 0x2000, m_nOpRegsOffset + EHCI_PORTSC + (nPort * 4));
+            break;
+        }
+    }
+
+    WARNING("EHCI: Port " << Dec << nPort << Hex << " could not be connected");
+
+    return false;
+}
+
 uint64_t Ehci::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
                               uint64_t p6, uint64_t p7, uint64_t p8)
 {
     // See if there's any device attached on the port
     if(m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + p1 * 4) & EHCI_PORTSC_CONN)
     {
-        int retry;
-        for(retry = 0; retry < 3; retry++)
-        {
-            // Set the reset bit
-#ifdef USB_VERBOSE_DEBUG
-            DEBUG_LOG("USB: EHCI: Port "<<Dec<<p1<<Hex<<" - status before reset: "<<m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+p1*4));
-#endif
-            m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + p1 * 4) | EHCI_PORTSC_PRES, m_nOpRegsOffset + EHCI_PORTSC + p1 * 4);
-            delay(50);
-            // Unset the reset bit
-            m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + p1 * 4) & ~EHCI_PORTSC_PRES, m_nOpRegsOffset + EHCI_PORTSC + p1 * 4);
-            // Wait for the reset to complete
-            while(m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + p1 * 4) & EHCI_PORTSC_PRES)
-                delay(5);
-#ifdef USB_VERBOSE_DEBUG
-            DEBUG_LOG("USB: EHCI: Port " << Dec << p1 << Hex << " - status after reset: " << m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + p1 * 4));
-#endif
-            if((m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + p1 * 4) & EHCI_PORTSC_EN) && (m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC + p1 * 4) & EHCI_PORTSC_CONN))
-            {
-                DEBUG_LOG("USB: EHCI: Port " << Dec << p1 << Hex << " is now connected");
-
-                if(deviceConnected(p1, HighSpeed))
-                    break;
-
-                // We have to try again
-                delay(500);
-            }
-            else
-            {
-                DEBUG_LOG("USB: EHCI: Port " << Dec << p1 << Hex << " seems to be not HighSpeed. Oh, well, let's send it to companions");
-                m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + p1 * 4) | 0x2000, m_nOpRegsOffset + EHCI_PORTSC + p1 * 4);
-                break;
-            }
-        }
-
-        if(retry == 3)
-            WARNING("EHCI: Port " << Dec << p1 << Hex << " could not be connected");
+        if(portReset(p1))
+            if(!deviceConnected(p1, HighSpeed))
+                WARNING("EHCI: Port " << Dec << p1 << Hex << " appeared to be connected but could not be set up");
     }
     else
     {
-        DEBUG_LOG("USB: EHCI: Port " << Dec << p1 << Hex << " is now disconnected");
+        DEBUG_LOG("USB: EHCI: Port " << Dec << p1 << Hex << " is disconnected");
         
         deviceDisconnected(p1);
         

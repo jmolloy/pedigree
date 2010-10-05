@@ -58,6 +58,12 @@ class UsbHub : public virtual Device
         /// Gets a UsbDevice from a given vendor:product pair
         //void getDeviceByIds(size_t vendor, size_t product, void (*pCallback)(class UsbDevice *));
 
+        /// Performs a port reset for the given port. Should only be used in
+        /// situations where a device cannot recover from an error without a
+        /// complete reset.
+        /// \note Assumes the port is at CONNECTED with a VALID DEVICE attached.
+        virtual bool portReset(uint8_t nPort) = 0;
+
     private:
         /// Structure used synchronous transactions
         struct SyncParam

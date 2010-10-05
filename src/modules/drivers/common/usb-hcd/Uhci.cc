@@ -593,25 +593,35 @@ void Uhci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
     doAsync(nTransaction, pCallback, pParam);
 }
 
+bool Uhci::portReset(uint8_t nPort)
+{
+    /// \todo Error handling? Will resets always result in a usable device?
+
+    // Perform a reset of the port
+    m_pBase->write16(UHCI_PORTSC_PRES | UHCI_PORTSC_CSCH, UHCI_PORTSC + (nPort * 2));
+    delay(50);
+    m_pBase->write16(0, UHCI_PORTSC + (nPort * 2));
+    delay(50);
+
+    // Enable the port
+    m_pBase->write16(UHCI_PORTSC_ENABLE, UHCI_PORTSC + (nPort * 2));
+    delay(50);
+    m_pBase->write16(UHCI_PORTSC_ENABLE, UHCI_PORTSC + (nPort * 2));
+
+    return true;
+}
+
 uint64_t Uhci::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
                               uint64_t p6, uint64_t p7, uint64_t p8)
 {
     // Check for a connected device
-    if(m_pBase->read16(UHCI_PORTSC + p1 * 2) & UHCI_PORTSC_CONN)
+    if(m_pBase->read16(UHCI_PORTSC + (p1 * 2)) & UHCI_PORTSC_CONN)
     {
-        // Perform a reset of the port
-        m_pBase->write16(UHCI_PORTSC_PRES | UHCI_PORTSC_CSCH, UHCI_PORTSC + p1 * 2);
-        delay(50);
-        m_pBase->write16(0, UHCI_PORTSC + p1 * 2);
-        delay(50);
-
-        // Enable the port
-        m_pBase->write16(UHCI_PORTSC_ENABLE, UHCI_PORTSC + p1 * 2);
-        delay(50);
-        m_pBase->write16(UHCI_PORTSC_ENABLE, UHCI_PORTSC + p1 * 2);
+        if(!portReset(p1))
+            return 0;
 
         // Determine the speed of the attached device
-        if(m_pBase->read16(UHCI_PORTSC + p1 * 2) & UHCI_PORTSC_LOSPEED)
+        if(m_pBase->read16(UHCI_PORTSC + (p1 * 2)) & UHCI_PORTSC_LOSPEED)
         {
             DEBUG_LOG("USB: UHCI: Port " << Dec << p1 << Hex << " has a low-speed device connected to it");
             deviceConnected(p1, LowSpeed);
