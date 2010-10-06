@@ -88,6 +88,9 @@ Uhci::Uhci(Device* pDev) :
 #endif
     PciBus::instance().writeConfigSpace(this, 1, nCommand | 0x4);
 
+    // Tell the BIOS to gtfo, and tell IRQs to come instead
+    PciBus::instance().writeConfigSpace(this, 0xC0 / 4, 0x2000);
+
     // Grab the ports
     m_pBase = m_Addresses[0]->m_Io;
     m_Addresses[0]->map();
@@ -120,17 +123,24 @@ Uhci::Uhci(Device* pDev) :
     DEBUG_LOG("USB: UHCI: Reset complete");
 #endif
 
-    for(size_t i = 0; i < 7; i++)
+    for(size_t i = 0; i < 8; i++)
     {
-        uint16_t nPortStatus = m_pBase->read16(UHCI_PORTSC + i * 2);
+        uint16_t nPortStatus = m_pBase->read16(UHCI_PORTSC + (i * 2));
+        if((!(nPortStatus & 0x80)) && (m_nPorts >= 2))
+        {
+            break; // Controllers must have 2 ports, but can have up to 7 by the spec.
+        }
 
-        // Check if this is a valid port
-        if(nPortStatus == 0xffff || !(nPortStatus & 0x80))
-            break;
-
-        // Check for a connected device
-        if(nPortStatus & UHCI_PORTSC_CONN)
+        // Reset the port and check for connectivity
+        if(portReset(i))
+        {
+            NOTICE("USB: UHCI INIT [" << reinterpret_cast<uintptr_t>(this) << "]: It seems the device is connected, trying to use it");
             executeRequest(i);
+        }
+        else
+        {
+            DEBUG_LOG("USB: UHCI INIT [" << reinterpret_cast<uintptr_t>(this) << "]: Port " << Dec << i << Hex << " is in fact disconnected.");
+        }
 
         m_nPorts++;
     }
@@ -213,7 +223,9 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
     uint16_t nStatus = m_pBase->read16(UHCI_STS);
     
     if(!nStatus)
+    {
         return false; // Shared IRQ: this IRQ is for another device
+    }
     
     m_pBase->write16(nStatus, UHCI_STS);
 
@@ -339,9 +351,10 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                             }
 
                             m_DequeueList.pushBack(pQH);
-                            m_DequeueCount.release();
 
                             m_AsyncQueueListChangeLock.release();
+                            
+                            m_DequeueCount.release();
 
                             // Ignore after the linked list update to avoid a
                             // case where the dequeue call hits this QH while
@@ -385,13 +398,12 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
     
     if(persistList.count())
     {
+        LockGuard<Spinlock> guard(m_AsyncQueueListChangeLock);
         for(List<QH*>::Iterator it = persistList.begin();
             it != persistList.end();
             it++)
         {
-            LockGuard<Spinlock> guard(m_AsyncQueueListChangeLock);
             m_AsyncSchedule.pushBack(*it);
-            
             it = persistList.erase(it);
         }
     }
@@ -516,11 +528,13 @@ uintptr_t Uhci::createTransaction(UsbEndpoint endpointInfo)
 
 void Uhci::doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
-    LockGuard<Mutex> guard(m_Mutex);
-    if((pTransaction == static_cast<uintptr_t>(-1)) || !m_QHBitmap.test(pTransaction))
     {
-        ERROR("UHCI: doAsync: didn't get a valid transaction id [" << pTransaction << "].");
-        return;
+        LockGuard<Mutex> guard(m_Mutex);
+        if((pTransaction == static_cast<uintptr_t>(-1)) || !m_QHBitmap.test(pTransaction))
+        {
+            ERROR("UHCI: doAsync: didn't get a valid transaction id [" << pTransaction << "].");
+            return;
+        }
     }
 
     // Configure remaining metadata
@@ -537,35 +551,35 @@ void Uhci::doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)
         pQH->bNextInvalid = 0;
         pQH->bNextQH = 1;
 
-        {
-            // Atomic operation - modifying both the housekeeping and the
-            // hardware linked lists
-            LockGuard<Spinlock> guard(m_AsyncQueueListChangeLock);
-            
-            pQH->pMetaData->bIgnore = true;
-            m_AsyncSchedule.pushBack(pQH);
+        // Atomic operation - modifying both the housekeeping and the
+        // hardware linked lists
+        m_AsyncQueueListChangeLock.acquire();
 
-            QH *pOldTail = m_pCurrentAsyncQueueTail;
+        pQH->pMetaData->bIgnore = true;
+        m_AsyncSchedule.pushBack(pQH);
 
-            // Update the tail pointer
-            m_pCurrentAsyncQueueTail = pQH;
+        QH *pOldTail = m_pCurrentAsyncQueueTail;
 
-            // The current tail needs to point to this QH
-            pOldTail->pNext = (m_pQHListPhys + (pTransaction * sizeof(QH))) >> 4;
-            pOldTail->bNextInvalid = 0;
-            pOldTail->bNextQH = 1;
+        // Update the tail pointer
+        m_pCurrentAsyncQueueTail = pQH;
 
-            // Finally, fix the linked list
-            pOldTail->pMetaData->pNext = pQH;
+        // The current tail needs to point to this QH
+        pOldTail->pNext = (m_pQHListPhys + (pTransaction * sizeof(QH))) >> 4;
+        pOldTail->bNextInvalid = 0;
+        pOldTail->bNextQH = 1;
 
-            // Enter the information for correct dequeue
-            pQH->pMetaData->pNext = m_pCurrentAsyncQueueHead;
-            pQH->pMetaData->pPrev = pOldTail;
-            m_pCurrentAsyncQueueHead->pMetaData->pPrev = pQH;
-            
-            // Ready for IRQs
-            pQH->pMetaData->bIgnore = false;
-        }
+        // Finally, fix the linked list
+        pOldTail->pMetaData->pNext = pQH;
+
+        // Enter the information for correct dequeue
+        pQH->pMetaData->pNext = m_pCurrentAsyncQueueHead;
+        pQH->pMetaData->pPrev = pOldTail;
+        m_pCurrentAsyncQueueHead->pMetaData->pPrev = pQH;
+        
+        // Ready for IRQs
+        pQH->pMetaData->bIgnore = false;
+
+        m_AsyncQueueListChangeLock.release();
     }
     else
     {
@@ -595,18 +609,38 @@ void Uhci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
 
 bool Uhci::portReset(uint8_t nPort)
 {
-    /// \todo Error handling? Will resets always result in a usable device?
-
+    // Clear the "enable/disable change status" register
+    m_pBase->write16(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) | UHCI_PORTSC_EDCH, UHCI_PORTSC + (nPort * 2));
+    
     // Perform a reset of the port
     m_pBase->write16(UHCI_PORTSC_PRES | UHCI_PORTSC_CSCH, UHCI_PORTSC + (nPort * 2));
     delay(50);
     m_pBase->write16(0, UHCI_PORTSC + (nPort * 2));
-    delay(50);
+    delay(100);
+    
+    // Verify that we have a device connected here
+    if(!(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) & UHCI_PORTSC_CONN))
+        return false;
 
     // Enable the port
     m_pBase->write16(UHCI_PORTSC_ENABLE, UHCI_PORTSC + (nPort * 2));
-    delay(50);
-    m_pBase->write16(UHCI_PORTSC_ENABLE, UHCI_PORTSC + (nPort * 2));
+    delay(100);
+    
+    // Verify that it's enabled
+    // "For the root hub, this bit gets set only when a port is disabled due to
+    // disconnect on the that port or due to the appropriate conditions existing
+    // at the EOF2 point" - UHCI spec
+    // So, it's fairly safe to assume the device, if any, isn't worth considering
+    // if the port enabled change status isn't set.
+    if(!(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) & UHCI_PORTSC_EDCH))
+        return false;
+    
+    // Check that the device is completely enabled
+    if(!(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) & UHCI_PORTSC_ENABLE))
+        return false;
+    
+    // Clear the "enable/disable change status" register
+    m_pBase->write16(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) | UHCI_PORTSC_EDCH, UHCI_PORTSC + (nPort * 2));
 
     return true;
 }
@@ -617,23 +651,25 @@ uint64_t Uhci::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4
     // Check for a connected device
     if(m_pBase->read16(UHCI_PORTSC + (p1 * 2)) & UHCI_PORTSC_CONN)
     {
-        if(!portReset(p1))
-            return 0;
-
         // Determine the speed of the attached device
         if(m_pBase->read16(UHCI_PORTSC + (p1 * 2)) & UHCI_PORTSC_LOSPEED)
         {
-            DEBUG_LOG("USB: UHCI: Port " << Dec << p1 << Hex << " has a low-speed device connected to it");
-            deviceConnected(p1, LowSpeed);
+            DEBUG_LOG("USB: UHCI [" << reinterpret_cast<uintptr_t>(this) << "]: Port " << Dec << p1 << Hex << " has a low-speed device connected to it");
+            if(deviceConnected(p1, LowSpeed))
+                WARNING("USB: UHCI [" << reinterpret_cast<uintptr_t>(this) << "]: Port " << Dec << p1 << Hex << " appeared to be connected but could not be set up");
         }
         else
         {
-            DEBUG_LOG("USB: UHCI: Port " << Dec << p1 << Hex << " has a full-speed device connected to it");
-            deviceConnected(p1, FullSpeed);
+            DEBUG_LOG("USB: UHCI [" << reinterpret_cast<uintptr_t>(this) << "]: Port " << Dec << p1 << Hex << " has a full-speed device connected to it");
+            if(deviceConnected(p1, FullSpeed))
+                WARNING("USB UHCI [" << reinterpret_cast<uintptr_t>(this) << "]: Port " << Dec << p1 << Hex << " appeared to be connected but could not be set up");
         }
     }
     else
+    {
+        DEBUG_LOG("USB: UHCI [" << reinterpret_cast<uintptr_t>(this) << "]: Device on port " << Dec << p1 << Hex << " disconnected.");
         deviceDisconnected(p1);
+    }
     return 0;
 }
 
@@ -650,10 +686,10 @@ void Uhci::timer(uint64_t delta, InterruptState &state)
         // Check every port for a change
         for(size_t i = 0; i < m_nPorts; i++)
         {
-            if(m_pBase->read16(UHCI_PORTSC + i * 2) & UHCI_PORTSC_CSCH)
+            if(m_pBase->read16(UHCI_PORTSC + (i * 2)) & UHCI_PORTSC_CSCH)
             {
                 // Clear the port status change
-                m_pBase->write16(UHCI_PORTSC_CSCH, UHCI_PORTSC + i * 2);
+                m_pBase->write16(m_pBase->read16(UHCI_PORTSC + (i * 2)) | UHCI_PORTSC_CSCH, UHCI_PORTSC + (i * 2));
 
                 // Now we can safely add the request
                 addAsyncRequest(0, i);

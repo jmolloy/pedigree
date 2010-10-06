@@ -43,7 +43,7 @@ void Spinlock::acquire()
 
   if (m_Magic != 0xdeadbaba)
   {
-      FATAL("Wrong magic in acquire.");
+      FATAL_NOLOCK("Wrong magic in acquire.");
   }
 
   while (m_Atom.compareAndSwap(true, false) == false)
@@ -76,13 +76,13 @@ void Spinlock::release()
   bool bWasInterrupts = Processor::getInterrupts();
   if (bWasInterrupts == true)
   {
-      FATAL("Spinlock: release() called with interrupts enabled.");
+      FATAL_NOLOCK("Spinlock: release() called with interrupts enabled.");
   }
   bool bInterrupts = m_bInterrupts;
 
   if (m_Magic != 0xdeadbaba)
   {
-      FATAL("Wrong magic in release.");
+      FATAL_NOLOCK("Wrong magic in release.");
   }
 
   if (m_Atom.compareAndSwap(false, true) == false)

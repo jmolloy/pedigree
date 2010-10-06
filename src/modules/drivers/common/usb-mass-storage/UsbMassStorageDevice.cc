@@ -96,7 +96,7 @@ bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t
 
     ssize_t nResult = syncOut(m_pOutEndpoint, reinterpret_cast<uintptr_t>(pCbw), 31);
 
-    //DEBUG_LOG("USB: MSD: CBW finished with " << Dec << nResult << Hex);
+    DEBUG_LOG("USB: MSD: CBW finished with " << Dec << nResult << Hex);
 
     // Handle stall
     if(nResult == -Stall)

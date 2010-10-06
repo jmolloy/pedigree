@@ -150,7 +150,8 @@ void UsbDevice::initialise(uint8_t nAddress)
     m_UsbState = Addressed; // We now have an address
 
     // Get the device descriptor
-    void *pDeviceDescriptor = getDescriptor(UsbDescriptor::Device, 0, getDescriptorLength(UsbDescriptor::Device, 0));
+    size_t nDescriptorLength = getDescriptorLength(UsbDescriptor::Device, 0);
+    void *pDeviceDescriptor = getDescriptor(UsbDescriptor::Device, 0, nDescriptorLength);
     if(!pDeviceDescriptor)
         return;
     m_pDescriptor = new DeviceDescriptor(static_cast<UsbDeviceDescriptor*>(pDeviceDescriptor));
@@ -163,6 +164,8 @@ void UsbDevice::initialise(uint8_t nAddress)
     DEBUG_LOG("Maximum control packet size is " << Dec << m_pDescriptor->nMaxControlPacketSize << Hex << " bytes.");
     DEBUG_LOG("Vendor and product IDs: " << m_pDescriptor->nVendorId << ":" << m_pDescriptor->nProductId << ".");
     DEBUG_LOG("Device version: " << Dec << (m_pDescriptor->nBcdDeviceRelease >> 8) << "." << (m_pDescriptor->nBcdDeviceRelease & 0xFF) << Hex << ".");
+    DEBUG_LOG("Number of configurations: " << m_pDescriptor->nConfigurations << ".");
+    DEBUG_LOG("String indices: " << m_pDescriptor->nVendorString << ", " << m_pDescriptor->nProductString << ", " << m_pDescriptor->nSerialString);
 #endif
 
     // Descriptor number for the configuration descriptor
@@ -357,16 +360,31 @@ bool UsbDevice::controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t 
 
     // Setup Transfer - handles the SETUP phase of the transfer
     pParentHub->addTransferToTransaction(nTransaction, false, UsbPidSetup, reinterpret_cast<uintptr_t>(pSetup), sizeof(Setup));
+    
+    // Handle the maximum size of control packets to this device. Needed for the
+    // cases where a read may breach this boundary.
+    size_t nMaxSize = m_Speed == HighSpeed ? 64 : 8;
+    if(m_pDescriptor)
+        if(m_pDescriptor->nMaxControlPacketSize)
+            nMaxSize = m_pDescriptor->nMaxControlPacketSize;
 
     // Data Transfer - handles data transfer
     if(nLength)
-        pParentHub->addTransferToTransaction(nTransaction, true, nRequestType & UsbRequestDirection::In ? UsbPidIn : UsbPidOut, pBuffer, nLength);
+    {
+        bool bToggle = true;
+        for(size_t i = 0; i < nLength; i+= nMaxSize)
+        {
+            pParentHub->addTransferToTransaction(nTransaction, bToggle, nRequestType & UsbRequestDirection::In ? UsbPidIn : UsbPidOut, pBuffer + i, nLength > nMaxSize ? nMaxSize : nLength);
+            bToggle = !bToggle;
+        }
+    }
 
     // Handshake Transfer - IN when we send data to the device, OUT when we receive. Zero-length.
     pParentHub->addTransferToTransaction(nTransaction, true, nRequestType & UsbRequestDirection::In ? UsbPidOut : UsbPidIn, 0, 0);
-
+    
     // Wait for the transaction to complete
     ssize_t nResult = pParentHub->doSync(nTransaction);
+    
     // Return false if we had an error, true otherwise
     return nResult >= 0; // >= sizeof(Setup) + nLength;
 }

@@ -42,6 +42,7 @@ bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
 
     // This address is now used
     pRootHub->m_UsedAddresses.set(nAddress);
+    NOTICE("USB: Assigned device on port " << Dec << nPort << Hex << " address " << nAddress);
 
     // Create the UsbDevice instance and set us as parent
     UsbDevice *pDevice = new UsbDevice(nPort, speed);
@@ -85,7 +86,7 @@ bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
         // Add the device as a child
         addChild(pDevice);
 
-        NOTICE("USB: Device: " << pDescriptor->sVendor << " " << pDescriptor->sProduct << ", class " << Dec << pInterface->nClass << ":" << pInterface->nSubclass << ":" << pInterface->nProtocol << Hex);
+        NOTICE("USB: Device (address " << nAddress << "): " << pDescriptor->sVendor << " " << pDescriptor->sProduct << ", class " << Dec << pInterface->nClass << ":" << pInterface->nSubclass << ":" << pInterface->nProtocol << Hex);
 
         // Send it to the USB PnP manager
         UsbPnP::instance().probeDevice(pDevice);
@@ -156,6 +157,7 @@ ssize_t UsbHub::doSync(uintptr_t nTransaction, uint32_t timeout)
 {
     // Create a structure to hold the semaphore and the result
     SyncParam *pSyncParam = new SyncParam();
+    
     // Send the async request
     doAsync(nTransaction, syncCallback, reinterpret_cast<uintptr_t>(pSyncParam));
     // Wait for the semaphore to release

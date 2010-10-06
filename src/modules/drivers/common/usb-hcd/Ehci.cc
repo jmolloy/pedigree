@@ -350,7 +350,14 @@ void Ehci::interrupt(size_t number, InterruptState &state)
     uint32_t nStatus = m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & m_pBase->read32(m_nOpRegsOffset + EHCI_INTR);
     
     if(!nStatus)
+    {
         return false; // Shared IRQ: this IRQ is for another device
+    }
+    
+    if(nStatus & 0x16)
+    {
+        NOTICE_NOLOCK("EHCI: Unusual IRQ, status is " << nStatus);
+    }
     
 #ifdef USB_VERBOSE_DEBUG
     DEBUG_LOG_NOLOCK("EHCI IRQ " << nStatus);
@@ -774,7 +781,7 @@ bool Ehci::portReset(uint8_t nPort)
         }
         else
         {
-            DEBUG_LOG("USB: EHCI: Port " << Dec << nPort << Hex << " seems to be not HighSpeed. Oh, well, let's send it to companions");
+            DEBUG_LOG("USB: EHCI: Port " << Dec << nPort << Hex << " seems to be not HighSpeed. Returning to companion controllers.");
             m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + (nPort * 4)) | 0x2000, m_nOpRegsOffset + EHCI_PORTSC + (nPort * 4));
             break;
         }

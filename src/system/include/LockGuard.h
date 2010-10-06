@@ -29,7 +29,7 @@ class LockGuard
     {
       m_Lock.acquire();
     }
-    inline ~LockGuard()
+    inline virtual ~LockGuard()
     {
       m_Lock.release();
     }

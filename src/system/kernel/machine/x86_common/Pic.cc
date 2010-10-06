@@ -243,7 +243,7 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
         it++)
     {
         bool tmp = (*it)->irq(irq, state);
-        if(!bHandled && tmp)
+        if((!bHandled) && tmp)
             bHandled = true;
     }
     
