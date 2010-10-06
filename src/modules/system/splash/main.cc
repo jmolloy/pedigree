@@ -304,23 +304,42 @@ static void init()
     // Set up the mode we want
     if(!(nDesiredWidth && nDesiredHeight && nDesiredBpp) || !pDisplay->setScreenMode(nDesiredWidth, nDesiredHeight, nDesiredBpp))
     {
-        NOTICE("splash: Falling back to 1024x768");
+        bool bModeFound = true;
 
-        // Attempt to fall back to 1024x768
-        if(!pDisplay->setScreenMode(1024, 768, 16))
+        // 24-bit mode fallbacks
+        NOTICE("splash: Falling back to 1024x768x24");
+        if(!pDisplay->setScreenMode(1024, 768, 24))
         {
-            NOTICE("splash: Falling back to 800x600");
-
             // Attempt to fall back to 800x600
-            if(!pDisplay->setScreenMode(800, 600, 16))
+            NOTICE("splash: Falling back to 800x600x24");
+            if(!pDisplay->setScreenMode(800, 600, 24))
             {
-                NOTICE("splash: Falling back to 640x480");
-
                 // Finally try and fall back to 640x480
-                if(!pDisplay->setScreenMode(640, 480, 16))
+                NOTICE("splash: Falling back to 640x480x24");
+                if(!pDisplay->setScreenMode(640, 480, 24))
                 {
-                    ERROR("splash: Couldn't find a suitable display mode for this system (tried: 1024x768, 800x600, 640x480).");
-                    return;
+                    bModeFound = false;
+                }
+            }
+        }
+
+        if(!bModeFound)
+        {
+            // 16-bit mode fallbacks
+            NOTICE("splash: Falling back to 1024x768x16");
+            if(!pDisplay->setScreenMode(1024, 768, 16))
+            {
+                // Attempt to fall back to 800x600
+                NOTICE("splash: Falling back to 800x600x16");
+                if(!pDisplay->setScreenMode(800, 600, 16))
+                {
+                    // Finally try and fall back to 640x480
+                    NOTICE("splash: Falling back to 640x480x16");
+                    if(!pDisplay->setScreenMode(640, 480, 16))
+                    {
+                        ERROR("splash: Couldn't find a suitable display mode for this system (tried: 1024x768, 800x600, 640x480).");
+                        return;
+                    }
                 }
             }
         }
