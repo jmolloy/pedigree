@@ -15,7 +15,7 @@ echo
 if [ ! -e $script_dir/.easy_os ]; then
 
     echo "Checking for dependencies... Which operating system are you running on?"
-    echo "Cygwin, Debian/Ubuntu, or some other system?"
+    echo "Cygwin, Debian/Ubuntu, OpenSuSE, or some other system?"
 
     read os
 
@@ -24,14 +24,18 @@ if [ ! -e $script_dir/.easy_os ]; then
     real_os=$os
 
     case $real_os in
-         debian)
+        debian)
             # TODO: Not sure if the package list is any different for debian vs ubuntu?
             echo "Installing packages with apt-get, please wait..."
             sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage
             ;;
-         ubuntu)
+        ubuntu)
             echo "Installing packages with apt-get, please wait..."
             sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage
+            ;;
+        opensuse)
+            echo "Installing packages with zypper, please wait..."
+            sudo zypper install mpfr-devel mpc-devel gmp3-devel sqlite3 texinfo scons genisoimage
             ;;
         cygwin)
             echo "Please ensure you use Cygwin's 'setup.exe' to install the following:"
