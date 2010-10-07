@@ -614,33 +614,23 @@ bool Uhci::portReset(uint8_t nPort)
     
     // Perform a reset of the port
     m_pBase->write16(UHCI_PORTSC_PRES | UHCI_PORTSC_CSCH, UHCI_PORTSC + (nPort * 2));
-    delay(50);
+    delay(10);
     m_pBase->write16(0, UHCI_PORTSC + (nPort * 2));
-    delay(100);
-    
-    // Verify that we have a device connected here
-    if(!(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) & UHCI_PORTSC_CONN))
-        return false;
 
     // Enable the port
     m_pBase->write16(UHCI_PORTSC_ENABLE, UHCI_PORTSC + (nPort * 2));
     delay(100);
-    
-    // Verify that it's enabled
-    // "For the root hub, this bit gets set only when a port is disabled due to
-    // disconnect on the that port or due to the appropriate conditions existing
-    // at the EOF2 point" - UHCI spec
-    // So, it's fairly safe to assume the device, if any, isn't worth considering
-    // if the port enabled change status isn't set.
-    if(!(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) & UHCI_PORTSC_EDCH))
-        return false;
     
     // Check that the device is completely enabled
     if(!(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) & UHCI_PORTSC_ENABLE))
         return false;
     
     // Clear the "enable/disable change status" register
-    m_pBase->write16(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) | UHCI_PORTSC_EDCH, UHCI_PORTSC + (nPort * 2));
+    m_pBase->write16(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) | (UHCI_PORTSC_EDCH | UHCI_PORTSC_CSCH), UHCI_PORTSC + (nPort * 2));
+    
+    // Verify that we have a device connected here
+    if(!(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) & UHCI_PORTSC_CONN))
+        return false;
 
     return true;
 }
