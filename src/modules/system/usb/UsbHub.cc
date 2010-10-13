@@ -192,6 +192,7 @@ ssize_t UsbHub::doSync(uintptr_t nTransaction, uint32_t timeout)
     // Return the result
     if(bTimeout)
     {
+        WARNING("USB: a transaction timed out.");
         pSyncParam->timedOut = true;
         return -TransactionError;
     }

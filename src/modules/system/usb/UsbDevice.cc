@@ -144,7 +144,7 @@ void UsbDevice::initialise(uint8_t nAddress)
         ERROR("USB: UsbDevice::initialise called, but this device is already initialised!");
         return;
     }
-
+    
     // Assign the given address to this device
     if(!controlRequest(0, UsbRequest::SetAddress, nAddress, 0))
     {
@@ -157,10 +157,19 @@ void UsbDevice::initialise(uint8_t nAddress)
     // Get the device descriptor
     size_t nDescriptorLength = getDescriptorLength(UsbDescriptor::Device, 0);
     if(!nDescriptorLength)
+    {
+        m_UsbState = Connected;
+        WARNING("Device (" << nAddress << "): address assignment worked, but couldn't get the device descriptor length.");
         return;
+    }
+    
     void *pDeviceDescriptor = getDescriptor(UsbDescriptor::Device, 0, nDescriptorLength);
     if(!pDeviceDescriptor)
+    {
+        m_UsbState = Connected;
+        WARNING("Device (" << nAddress << "): address assignment worked, but couldn't get a device descriptor.");
         return;
+    }
     m_pDescriptor = new DeviceDescriptor(static_cast<UsbDeviceDescriptor*>(pDeviceDescriptor));
     m_UsbState = HasDescriptors; // We now have the device descriptor
 
