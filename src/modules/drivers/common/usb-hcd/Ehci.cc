@@ -546,7 +546,7 @@ void Ehci::addTransferToTransaction(uintptr_t nTransaction, bool bToggle, UsbPid
 
     // Active, we want an interrupt on completion, and reset the error counter
     pqTD->nStatus = 0x80;
-    pqTD->bIoc = 1;
+    pqTD->bIoc = 0; // Interrupt only on last TD
     pqTD->nErr = 3; // Up to 3 retries of this transaction
 
     // Set up the transfer
@@ -670,6 +670,7 @@ void Ehci::doAsync(uintptr_t nTransaction, void (*pCallback)(uintptr_t, ssize_t)
     QH *pQH = &m_pQHList[nTransaction];
     pQH->pMetaData->pCallback = pCallback;
     pQH->pMetaData->pParam = pParam;
+    pQH->pMetaData->pLastQTD->bIoc = 1;
 #ifdef USB_VERBOSE_DEBUG
     DEBUG_LOG("START #" << Dec << nTransaction << Hex << " " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << Hex);
 #endif

@@ -149,6 +149,12 @@ class Uhci : public UsbHub, public IrqHandler, public RequestQueue, public Timer
                                         uint64_t p6 = 0, uint64_t p7 = 0, uint64_t p8 = 0);
 
     private:
+    
+        /// Stops the UHCI controller
+        void stop();
+        
+        /// Starts the UHCI controller
+        void start();
 
         enum UhciConstants {
             UHCI_CMD = 0x00,            // Command register

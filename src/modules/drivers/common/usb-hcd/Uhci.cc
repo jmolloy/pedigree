@@ -104,7 +104,7 @@ Uhci::Uhci(Device* pDev) :
 #ifdef USB_VERBOSE_DEBUG
     DEBUG_LOG("USB: UHCI: Pci command+status: " << nCommand);
 #endif
-    PciBus::instance().writeConfigSpace(this, 1, nCommand | 0x4);
+    PciBus::instance().writeConfigSpace(this, 1, nCommand | 0x6);
     
     // Stop a running controller (BIOS may have started it up)
     m_pBase->write16(m_pBase->read16(UHCI_CMD) & ~1, UHCI_CMD);
@@ -181,10 +181,6 @@ void Uhci::doDequeue()
         if(!pQH)
             continue;
 
-        // Stop the controller while we dequeue
-        m_pBase->write16(m_pBase->read16(UHCI_CMD) & ~1, UHCI_CMD);
-        while(!(m_pBase->read16(UHCI_STS) & 0x20)) delay(5);
-
         // Remove all TDs
         if(pQH->pMetaData->completedTdList.count())
         {
@@ -224,10 +220,6 @@ void Uhci::doDequeue()
 #ifdef USB_VERBOSE_DEBUG
         DEBUG_LOG("Dequeue complete.");
 #endif
-
-        // Resume the controller, dequeue done.
-        m_pBase->write16(m_pBase->read16(UHCI_CMD) | 1, UHCI_CMD);
-        while(m_pBase->read16(UHCI_STS) & 0x20) delay(5);
     }
 }
 
@@ -337,12 +329,17 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                     {
                         // Valid callback?
                         if(pQH->pMetaData->pCallback)
+                        {
                             pQH->pMetaData->pCallback(pQH->pMetaData->pParam, nResult < 0 ? nResult : pQH->pMetaData->nTotalBytes);
+                        }
 
                         if(!bPeriodic)
                         {
                             // This queue head is done, dequeue.
                             m_AsyncQueueListChangeLock.acquire(); // Atomic operation
+
+                            // Stop the controller while we dequeue
+                            stop();
                             
                             // Update the hardware and software linked lists
                             {
@@ -364,6 +361,9 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                             }
 
                             m_DequeueList.pushBack(pQH);
+
+                            // Resume the controller, dequeue done.
+                            start();
 
                             m_AsyncQueueListChangeLock.release();
                             
@@ -448,9 +448,10 @@ void Uhci::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid
     // Grab the QH
     QH *pQH = &m_pQHList[pTransaction];
 
-    // Active, interrupt on completion, and only allow one retry
+    // Active, and only allow one retry
     pTD->nStatus = 0x80;
-    pTD->bIoc = 1;
+    pTD->bIoc = 0; // Don't issue an interrupt on completion until the very last
+                   // TD in the transaction.
     pTD->nErr = 3;
 
     // PID for this transfer
@@ -553,13 +554,13 @@ void Uhci::doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)
     // Stop a running controller. We're modifying the hardware list and we don't
     // want it to be touched while we're changing it. Hardware doesn't care about
     // our "change spinlock".
-    m_pBase->write16(m_pBase->read16(UHCI_CMD) & ~1, UHCI_CMD);
-    while(!(m_pBase->read16(UHCI_STS) & UHCI_STS_HALT)) delay(10);
+    stop();
 
     // Configure remaining metadata
     QH *pQH = &m_pQHList[pTransaction];
     pQH->pMetaData->pCallback = pCallback;
     pQH->pMetaData->pParam = pParam;
+    pQH->pMetaData->pLastTD->bIoc = 1;
 
     // Do we need to configure the asynchronous schedule?
     if(m_pCurrentAsyncQueueTail)
@@ -605,9 +606,7 @@ void Uhci::doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)
         ERROR("UHCI: Queue tail is null!");
     }
     
-    // Restart the controller
-    m_pBase->write16(m_pBase->read16(UHCI_CMD) | 1, UHCI_CMD);
-    while(m_pBase->read16(UHCI_STS) & UHCI_STS_HALT) delay(10);
+    start();
 }
 
 void Uhci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
@@ -708,5 +707,17 @@ void Uhci::timer(uint64_t delta, InterruptState &state)
             }
         }
     }
+}
+
+void Uhci::stop()
+{
+    m_pBase->write16(m_pBase->read16(UHCI_CMD) & ~1, UHCI_CMD);
+    while(!(m_pBase->read16(UHCI_STS) & UHCI_STS_HALT)) delay(10);
+}
+
+void Uhci::start()
+{
+    m_pBase->write16(m_pBase->read16(UHCI_CMD) | 1, UHCI_CMD);
+    while(m_pBase->read16(UHCI_STS) & UHCI_STS_HALT) delay(10);
 }
 
