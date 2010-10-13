@@ -31,35 +31,59 @@ bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
     UsbHub *pRootHub = this;
     while(dynamic_cast<UsbHub*>(pRootHub->getParent()))
         pRootHub = dynamic_cast<UsbHub*>(pRootHub->getParent());
-
-    // Get first unused address and check it
-    uint8_t nAddress = pRootHub->m_UsedAddresses.getFirstClear();
-    if(nAddress > 127)
+    
+    size_t nRetry = 0;
+    uint8_t lastAddress = 0, nAddress = 0;
+    
+    // Try twice with two different addresses
+    UsbDevice *pDevice = 0;
+    while(nRetry < 2)
     {
-        ERROR("USB: HUB: Out of addresses!");
-        return false;
+        // Get first unused address and check it
+        nAddress = pRootHub->m_UsedAddresses.getFirstClear();
+        if(nAddress > 127)
+        {
+            ERROR("USB: HUB: Out of addresses!");
+            return false;
+        }
+
+        // This address is now used
+        pRootHub->m_UsedAddresses.set(nAddress);
+        if(lastAddress)
+            pRootHub->m_UsedAddresses.clear(lastAddress);
+        NOTICE("USB: Allocated device on port " << Dec << nPort << Hex << " address " << nAddress);
+
+        // Create the UsbDevice instance and set us as parent
+        pDevice = new UsbDevice(nPort, speed);
+        pDevice->setParent(this);
+
+        // Initialise the device - it basically sets the address and gets the descriptors
+        pDevice->initialise(nAddress);
+
+        // Check for initialisation failures
+        if(pDevice->getUsbState() != UsbDevice::Configured)
+        {
+            NOTICE("Device initialisation ended up not giving a configured device [retry " << nRetry << " of 2].");
+            
+            // Cleanup descriptors
+            if(pDevice->getUsbState() >= UsbDevice::HasDescriptors)
+                delete pDevice->getDescriptor();
+
+            delete pDevice;
+        }
+        else
+        {
+            NOTICE("USB: Device on port " << Dec << nPort << Hex << " accepted address " << nAddress);
+            break;
+        }
+        
+        lastAddress = nAddress;
+        nRetry++;
     }
-
-    // This address is now used
-    pRootHub->m_UsedAddresses.set(nAddress);
-    NOTICE("USB: Assigned device on port " << Dec << nPort << Hex << " address " << nAddress);
-
-    // Create the UsbDevice instance and set us as parent
-    UsbDevice *pDevice = new UsbDevice(nPort, speed);
-    pDevice->setParent(this);
-
-    // Initialise the device - it basically sets the address and gets the descriptors
-    pDevice->initialise(nAddress);
-
-    // Check for initialisation failures
-    if(pDevice->getUsbState() != UsbDevice::Configured)
+    
+    if(nRetry == 2)
     {
-        // Cleanup descriptors
-        if(pDevice->getUsbState() >= UsbDevice::HasDescriptors)
-            delete pDevice->getDescriptor();
-
-        // Delete the device and return false
-        delete pDevice;
+        NOTICE("Device initialisation couldn't configure the device.");
         return false;
     }
 
@@ -89,7 +113,8 @@ bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
         NOTICE("USB: Device (address " << nAddress << "): " << pDescriptor->sVendor << " " << pDescriptor->sProduct << ", class " << Dec << pInterface->nClass << ":" << pInterface->nSubclass << ":" << pInterface->nProtocol << Hex);
 
         // Send it to the USB PnP manager
-        UsbPnP::instance().probeDevice(pDevice);
+        NOTICE("pnp instance is: " << reinterpret_cast<uintptr_t>(&UsbPnP::instance()) << ".");
+        // UsbPnP::instance().probeDevice(pDevice);
     }
     return true;
 }

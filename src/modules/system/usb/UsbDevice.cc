@@ -23,6 +23,8 @@
 #include <usb/UsbConstants.h>
 #include <usb/UsbDescriptors.h>
 
+#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
+
 UsbDevice::UsbDevice(uint8_t nPort, UsbSpeed speed) :
     m_nAddress(0), m_nPort(nPort), m_Speed(speed), m_UsbState(Connected)
 {
@@ -145,12 +147,17 @@ void UsbDevice::initialise(uint8_t nAddress)
 
     // Assign the given address to this device
     if(!controlRequest(0, UsbRequest::SetAddress, nAddress, 0))
+    {
+        WARNING("Device (" << nAddress << "): couldn't assign an address to the device.");
         return;
+    }
     m_nAddress = nAddress;
     m_UsbState = Addressed; // We now have an address
 
     // Get the device descriptor
     size_t nDescriptorLength = getDescriptorLength(UsbDescriptor::Device, 0);
+    if(!nDescriptorLength)
+        return;
     void *pDeviceDescriptor = getDescriptor(UsbDescriptor::Device, 0, nDescriptorLength);
     if(!pDeviceDescriptor)
         return;
@@ -363,20 +370,38 @@ bool UsbDevice::controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t 
     
     // Handle the maximum size of control packets to this device. Needed for the
     // cases where a read may breach this boundary.
-    size_t nMaxSize = m_Speed == HighSpeed ? 64 : 8;
+    size_t nMaxSize = 0;
     if(m_pDescriptor)
         if(m_pDescriptor->nMaxControlPacketSize)
             nMaxSize = m_pDescriptor->nMaxControlPacketSize;
+    if(!nMaxSize)
+    {
+        if((m_Speed == LowSpeed) || (m_Speed == FullSpeed))
+            nMaxSize = 8;
+        else
+            nMaxSize = 64;
+    }
 
     // Data Transfer - handles data transfer
     if(nLength)
     {
         bool bToggle = true;
-        for(size_t i = 0; i < nLength; i+= nMaxSize)
+#if 0
+        pParentHub->addTransferToTransaction(nTransaction, bToggle, nRequestType & UsbRequestDirection::In ? UsbPidIn : UsbPidOut, pBuffer, nLength);
+#else
+        size_t nTransferLength = nLength;
+        size_t nOffset = 0;
+        while(nTransferLength)
         {
-            pParentHub->addTransferToTransaction(nTransaction, bToggle, nRequestType & UsbRequestDirection::In ? UsbPidIn : UsbPidOut, pBuffer + i, nLength > nMaxSize ? nMaxSize : nLength);
+            size_t sz = nTransferLength > nMaxSize ? nMaxSize : nTransferLength;
+            
+            pParentHub->addTransferToTransaction(nTransaction, bToggle, nRequestType & UsbRequestDirection::In ? UsbPidIn : UsbPidOut, pBuffer + nOffset, sz);
             bToggle = !bToggle;
+            
+            nTransferLength -= sz;
+            nOffset += sz;
         }
+#endif
     }
 
     // Handshake Transfer - IN when we send data to the device, OUT when we receive. Zero-length.
@@ -386,6 +411,8 @@ bool UsbDevice::controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t 
     ssize_t nResult = pParentHub->doSync(nTransaction);
     
     // Return false if we had an error, true otherwise
+    if(nResult < 0)
+        DEBUG_LOG("USB: Control request failure - status is " << nResult);
     return nResult >= 0; // >= sizeof(Setup) + nLength;
 }
 

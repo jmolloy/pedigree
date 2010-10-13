@@ -35,7 +35,7 @@ class UsbPnP
 
     public:
 
-        inline UsbPnP() {}
+        UsbPnP() : m_Callbacks() {}
         inline virtual ~UsbPnP() {}
 
         /// Singleton design

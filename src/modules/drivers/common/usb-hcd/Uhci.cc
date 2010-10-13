@@ -45,6 +45,14 @@ Uhci::Uhci(Device* pDev) :
     m_AsyncSchedule(), m_DequeueList(), m_DequeueCount(0), m_nPortCheckTicks(0)
 {
     setSpecificType(String("UHCI"));
+    
+    // Verify that IRQs are enabled - we need them!
+    if(!Processor::getInterrupts())
+        Processor::setInterrupts(true);
+
+    // Grab the ports
+    m_pBase = m_Addresses[0]->m_Io;
+    m_Addresses[0]->map();
 
     // Allocate the memory region
     if(!PhysicalMemoryManager::instance().allocateRegion(m_UhciMR, TOTAL_MEM_PAGES, PhysicalMemoryManager::continuous, VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode))
@@ -81,34 +89,7 @@ Uhci::Uhci(Device* pDev) :
     pDummyQH->pMetaData->pPrev = pDummyQH->pMetaData->pNext = pDummyQH;
 
     m_pCurrentAsyncQueueTail = m_pCurrentAsyncQueueHead = pDummyQH;
-
-    uint32_t nCommand = PciBus::instance().readConfigSpace(this, 1);
-#ifdef USB_VERBOSE_DEBUG
-    DEBUG_LOG("USB: UHCI: Pci command+status: " << nCommand);
-#endif
-    PciBus::instance().writeConfigSpace(this, 1, nCommand | 0x4);
-
-    // Tell the BIOS to gtfo, and tell IRQs to come instead
-    PciBus::instance().writeConfigSpace(this, 0xC0 / 4, 0x2000);
-
-    // Grab the ports
-    m_pBase = m_Addresses[0]->m_Io;
-    m_Addresses[0]->map();
-
-    // Set reset bit
-    m_pBase->write16(UHCI_CMD_GRES, UHCI_CMD);
-    delay(50);
-    m_pBase->write16(0, UHCI_CMD);
-
-    // Write frame list pointer
-    m_pBase->write32(m_pFrameListPhys, UHCI_FRLP);
-
-    // Enable wanted interrupts
-    m_pBase->write16(0xf, UHCI_INTR);
-
-    // Start the controller
-    m_pBase->write16(1, UHCI_CMD);
-
+    
     // Dequeue main thread
     new Thread(Processor::information().getCurrentThread()->getParent(), threadStub, reinterpret_cast<void*>(this));
 
@@ -119,6 +100,37 @@ Uhci::Uhci(Device* pDev) :
     // Set up the RequestQueue
     initialise();
 
+    uint32_t nCommand = PciBus::instance().readConfigSpace(this, 1);
+#ifdef USB_VERBOSE_DEBUG
+    DEBUG_LOG("USB: UHCI: Pci command+status: " << nCommand);
+#endif
+    PciBus::instance().writeConfigSpace(this, 1, nCommand | 0x4);
+    
+    // Stop a running controller (BIOS may have started it up)
+    m_pBase->write16(m_pBase->read16(UHCI_CMD) & ~1, UHCI_CMD);
+    while(!(m_pBase->read16(UHCI_STS) & UHCI_STS_HALT)) delay(10);
+
+    // Tell the BIOS to gtfo, and tell IRQs to come instead.
+    // Clear all "write to clear" bits too.
+    PciBus::instance().writeConfigSpace(this, 0xC0 / 4, 0x8F00 | 0x2000);
+
+    // Reset the host controller
+    m_pBase->write16(m_pBase->read16(UHCI_CMD) | UHCI_CMD_GRES, UHCI_CMD);
+    delay(50);
+    m_pBase->write16(m_pBase->read16(UHCI_CMD) & ~UHCI_CMD_GRES, UHCI_CMD);
+
+    // Write frame list pointer
+    m_pBase->write32(m_pFrameListPhys, UHCI_FRLP);
+
+    // Enable wanted interrupts
+    m_pBase->write16(0xf, UHCI_INTR);
+
+    // Start the controller: 64-byte reclamation and CF set, as well as run bit.
+    // Also, force a global resume of all ports out of any form of suspend state
+    m_pBase->write16(0xC1 | 0x10, UHCI_CMD);
+    delay(20);
+    m_pBase->write16(0xC1, UHCI_CMD);
+
 #ifdef USB_VERBOSE_DEBUG
     DEBUG_LOG("USB: UHCI: Reset complete");
 #endif
@@ -126,6 +138,7 @@ Uhci::Uhci(Device* pDev) :
     for(size_t i = 0; i < 8; i++)
     {
         uint16_t nPortStatus = m_pBase->read16(UHCI_PORTSC + (i * 2));
+        NOTICE("Port status is " << nPortStatus);
         if((!(nPortStatus & 0x80)) && (m_nPorts >= 2))
         {
             break; // Controllers must have 2 ports, but can have up to 7 by the spec.
@@ -273,12 +286,12 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                     }
                     
                     ssize_t nResult;
-                    if((pTD->nStatus & 0x7e) || (nStatus & UHCI_STS_ERR))
+                    if(((pTD->nErr == 0) && (pTD->nStatus & 0x7e)) || (nStatus & UHCI_STS_ERR))
                     {
-#ifdef USB_VERBOSE_DEBUG
+// #ifdef USB_VERBOSE_DEBUG
                         ERROR_NOLOCK(((nStatus & UHCI_STS_ERR) ? "USB" : "TD") << " ERROR!");
-                        ERROR_NOLOCK("TD Status: " << pTD->nStatus);
-#endif
+                        ERROR_NOLOCK("TD Status: " << pTD->nStatus << " [" << pTD->nErr << "], USB status: " << nStatus);
+// #endif
                         nResult = - pTD->getError();
                     }
                     else
@@ -438,7 +451,7 @@ void Uhci::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid
     // Active, interrupt on completion, and only allow one retry
     pTD->nStatus = 0x80;
     pTD->bIoc = 1;
-    pTD->nErr = 1;
+    pTD->nErr = 3;
 
     // PID for this transfer
     pTD->nPid = pid;
@@ -536,6 +549,12 @@ void Uhci::doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)
             return;
         }
     }
+    
+    // Stop a running controller. We're modifying the hardware list and we don't
+    // want it to be touched while we're changing it. Hardware doesn't care about
+    // our "change spinlock".
+    m_pBase->write16(m_pBase->read16(UHCI_CMD) & ~1, UHCI_CMD);
+    while(!(m_pBase->read16(UHCI_STS) & UHCI_STS_HALT)) delay(10);
 
     // Configure remaining metadata
     QH *pQH = &m_pQHList[pTransaction];
@@ -585,6 +604,10 @@ void Uhci::doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t)
     {
         ERROR("UHCI: Queue tail is null!");
     }
+    
+    // Restart the controller
+    m_pBase->write16(m_pBase->read16(UHCI_CMD) | 1, UHCI_CMD);
+    while(m_pBase->read16(UHCI_STS) & UHCI_STS_HALT) delay(10);
 }
 
 void Uhci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
@@ -609,16 +632,15 @@ void Uhci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
 
 bool Uhci::portReset(uint8_t nPort)
 {
-    // Clear the "enable/disable change status" register
-    m_pBase->write16(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) | UHCI_PORTSC_EDCH, UHCI_PORTSC + (nPort * 2));
+    /// \todo Clean this up a bit.
     
     // Perform a reset of the port
-    m_pBase->write16(UHCI_PORTSC_PRES | UHCI_PORTSC_CSCH, UHCI_PORTSC + (nPort * 2));
-    delay(10);
-    m_pBase->write16(0, UHCI_PORTSC + (nPort * 2));
+    m_pBase->write16(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) | UHCI_PORTSC_PRES, UHCI_PORTSC + (nPort * 2));
+    delay(50);
+    m_pBase->write16(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) & ~UHCI_PORTSC_PRES, UHCI_PORTSC + (nPort * 2));
 
     // Enable the port
-    m_pBase->write16(UHCI_PORTSC_ENABLE, UHCI_PORTSC + (nPort * 2));
+    m_pBase->write16(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) | UHCI_PORTSC_ENABLE, UHCI_PORTSC + (nPort * 2));
     delay(100);
     
     // Check that the device is completely enabled

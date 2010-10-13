@@ -66,17 +66,24 @@ class Uhci : public UsbHub, public IrqHandler, public RequestQueue, public Timer
             // Possible values for status
             enum StatusCodes
             {
-                Stall = 0x40,
+                Timeout = 0x4,
                 Nak = 0x8,
+                Babble = 0x10,
+                Stall = 0x40,
             };
 
-            UsbError getError()
+            inline UsbError getError()
             {
                 if(nStatus & Stall)
                     return ::Stall;
-                if(nStatus & Nak)
+                else if(nStatus & Nak)
                     return NakNyet;
-                return TransactionError;
+                else if(nStatus & Babble)
+                    return ::Babble;
+                else if(nStatus & Timeout)
+                    return ::Timeout;
+                else
+                    return TransactionError;
             }
         } PACKED ALIGN(16);
 
@@ -155,6 +162,7 @@ class Uhci : public UsbHub, public IrqHandler, public RequestQueue, public Timer
             UHCI_CMD_HCRES = 0x02,      // Host Controller Reset bit
             UHCI_CMD_RUN = 0x01,        // Run bit
 
+            UHCI_STS_HALT = 0x20,       // Controller is halted
             UHCI_STS_ERR = 0x02,        // UHCI Error
             UHCI_STS_INT = 0x01,        // On Completition Interrupt bit
 
