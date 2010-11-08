@@ -10,6 +10,12 @@ echo "This script will ask a couple questions and then automatically fill"
 echo "dependencies and compile Pedigree for you."
 echo
 
+rl=`which greadlink`
+if [ -z "${rl}" ]; then
+    rl=`which readlink`
+fi
+script_dir=`$rl -f $(dirname $0)`
+
 if [ ! -e $script_dir/.easy_os ]; then
 
     echo "Checking for dependencies... Which operating system are you running on?"
@@ -20,7 +26,6 @@ if [ ! -e $script_dir/.easy_os ]; then
     shopt -s nocasematch
 
     real_os=$os
-    rl=readlink
 
     case $real_os in
         debian)
@@ -38,8 +43,7 @@ if [ ! -e $script_dir/.easy_os ]; then
             ;;
         osx)
             echo "Installing packages with macports, please wait..."
-            sudo port install coreutils mpfr mpc gmp sqlite3 texinfo scons cdrtools wget
-            rl=greadlink
+            sudo port install coreutils mpfr libmpc gmp sqlite3 texinfo scons cdrtools wget
             ;;
         cygwin)
             echo "Please ensure you use Cygwin's 'setup.exe' to install the following:"
@@ -68,12 +72,12 @@ if [ ! -e $script_dir/.easy_os ]; then
     esac
 
     shopt -u nocasematch
-
-    script_dir=`$rl -f $(dirname $0)`
     
     echo $real_os > $script_dir/.easy_os
 
     echo
+
+    exit 0
 
 fi
 
