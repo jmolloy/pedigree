@@ -107,9 +107,33 @@ $script_dir/scripts/checkBuildSystemNoInteractive.pl i686-pedigree $script_dir/p
 old=$(pwd)
 cd $script_dir
 
+set +e
+
+# Update the local working copy, only if the working copy is not dirty and we
+# are not a developer.
+git remote -v | grep ssh > /dev/null 2>&1
+if [ $? != 0 ]; then
+    # Not a developer - check for clean working copy
+    if [[ $(git diff --shortstat 2> /dev/null | tail -n1) == "" ]]; then
+        echo
+        echo "Please wait, checking for a newer revision of the Pedigree source code."
+        echo "If one is found, it will be downloaded and your local copy will be automatically updated."
+        git fetch && git rebase origin/master > /dev/null 2>&1
+    fi
+fi
+
+echo
+echo "Ensuring CDI is up-to-date."
+
 # Setup all submodules, make sure they are up-to-date
-git submodule init
-git submodule update
+git submodule init > /dev/null 2>&1
+git submodule update > /dev/null 2>&1
+
+set -e
+
+echo
+echo "Beginning the Pedigree build."
+echo
 
 # Build Pedigree.
 scons CROSS=$script_dir/compilers/dir/bin/i686-pedigree-
