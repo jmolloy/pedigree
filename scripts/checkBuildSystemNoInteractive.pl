@@ -16,7 +16,7 @@ for(my $i = 2; $i < @ARGV; $i++)
 {
     if($ARGV[$i] eq "osx-compat")
     {
-        $gcc_configure_special .= " --disable-werror --with-gmp=/opt/local ";
+        $gcc_configure_special .= " --disable-werror --with-gmp=/opt/local --with-libiconv-prefix=/opt/local ";
         $binutils_configure_special .= " --disable-werror ";
     }
 }
