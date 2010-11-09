@@ -1,6 +1,10 @@
 #ifndef _SYS_MOUNT_H
 #define _SYS_MOUNT_H
 
+#include <unistd.h>
+
+struct statvfs;
+
 #define MNT_NOWAIT      1
 #define MNT_RDONLY      2
 
@@ -23,7 +27,7 @@
 extern "C" {
 #endif
 
-int getmntinfo(struct statfs **mntbufp, int flags);
+int _EXFUN(getmntinfo, (struct statvfs **mntbufp, int flags));
 
 #ifdef __cplusplus
 }; // extern "C"

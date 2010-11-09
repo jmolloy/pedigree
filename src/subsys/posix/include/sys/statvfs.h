@@ -2,7 +2,11 @@
 #define _SYS_STATVFS_H
 
 #include <sys/types.h>
+#include <sys/mount.h>
 #include <unistd.h>
+
+#define VFS_NAMELEN  32
+#define VFS_MNAMELEN 1024
 
 struct statvfs
 {
@@ -17,6 +21,10 @@ struct statvfs
     unsigned long f_fsid;
     unsigned long f_flag;
     unsigned long f_namemax;
+
+    char f_fstypename[VFS_NAMELEN];
+    char f_mntonname[VFS_MNAMELEN];
+    char f_mntfromname[VFS_MNAMELEN];
 };
 
 #define ST_RDONLY    1

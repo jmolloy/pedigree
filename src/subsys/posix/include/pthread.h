@@ -33,8 +33,8 @@
 
 #define PTHREAD_ONCE_INIT               0
 
-#define PTHREAD_PROCESS_SHARED
-#define PTHREAD_PROCESS_PRIVATE
+#define PTHREAD_PROCESS_SHARED          1
+#define PTHREAD_PROCESS_PRIVATE         2
 
 #define PTHREAD_MUTEX_NORMAL            0
 #define PTHREAD_MUTEX_ERRORCHECK        1

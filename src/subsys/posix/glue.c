@@ -1807,7 +1807,7 @@ int setrlimit(int resource, const struct rlimit *rlp)
 }
 
 /// \todo Write - should just be a simple ls-style read of the raw drive
-int getmntinfo(struct statfs **mntbufp, int flags)
+int getmntinfo(struct statvfs **mntbufp, int flags)
 {
     STUBBED("getmntinfo");
     return -1;
