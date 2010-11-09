@@ -5,6 +5,15 @@
 
 #define MAXNAMLEN 255
 
+#define DT_UNKNOWN      0
+#define DT_REG          1
+#define DT_DIR          2
+#define DT_FIFI         3
+#define DT_SOCK         4
+#define DT_CHR          5
+#define DT_BLK          6
+#define DT_LNK          7
+
 struct dirent
 {
   char d_name[MAXNAMLEN];

@@ -786,6 +786,10 @@ int posix_readdir(int fd, dirent *ent)
     String tmp = file->getName();
     strcpy(ent->d_name, static_cast<const char*>(tmp));
     ent->d_name[strlen(static_cast<const char*>(tmp))] = '\0';
+    if(file->isSymlink())
+        ent->d_type = DT_LNK;
+    else
+        ent->d_type = file->isDirectory() ? DT_DIR : DT_REG;
     pFd->offset ++;
 
     return 0;
