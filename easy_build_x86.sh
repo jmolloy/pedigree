@@ -48,7 +48,7 @@ if [ ! -e $script_dir/.easy_os ]; then
             ;;
         osx|mac)
             echo "Installing packages with macports, please wait..."
-            sudo port install mpfr libmpc gmp libiconv sqlite3 texinfo scons cdrtools wget gnutar mtools
+            sudo port install mpfr libmpc gmp libiconv sqlite3 texinfo scons cdrtools wget mtools
 
             real_os="osx"
             ;;

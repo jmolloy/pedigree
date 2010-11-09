@@ -110,14 +110,11 @@ opts.AddVariables(
 # is needed at least on OS X 10.5 as the OS X tar does not have --transform).
 try:
     env = Environment(options=opts, ENV=os.environ, platform='posix',
-                      tools = ['default', 'textfile'], TARFLAGS='--transform="s,.*/,," -cz')
+                      tools = ['default', 'textfile'], TARFLAGS='-cz')
 except SCons.Errors.EnvironmentError:
     env = Environment(options=opts, ENV=os.environ, platform='posix',
-                      tools = ['default'], TARFLAGS='--transform="s,.*/,," -cz')
+                      tools = ['default'], TARFLAGS='-cz')
 Help(opts.GenerateHelpText(env))
-
-if os.uname()[0] == 'Darwin':
-    env['TAR'] = 'gnutar'
 
 # Don't use MD5s to determine if files have changed, just check the timestamp
 env.Decider('timestamp-newer')
