@@ -10,11 +10,9 @@ echo "This script will ask a couple questions and then automatically fill"
 echo "dependencies and compile Pedigree for you."
 echo
 
-rl=`which greadlink`
-if [ -z "${rl}" ]; then
-    rl=`which readlink`
-fi
-script_dir=`$rl -f $(dirname $0)`
+old=$(pwd)
+script_dir=$(cd -P -- "$(dirname -- "$0")" && pwd -P) && script_dir=$script_dir
+cd $old
 
 compiler_build_options=""
 
@@ -50,7 +48,7 @@ if [ ! -e $script_dir/.easy_os ]; then
             ;;
         osx|mac)
             echo "Installing packages with macports, please wait..."
-            sudo port install coreutils mpfr libmpc gmp libiconv sqlite3 texinfo scons cdrtools wget gnutar
+            sudo port install mpfr libmpc gmp libiconv sqlite3 texinfo scons cdrtools wget gnutar
 
             real_os="osx"
             ;;
@@ -106,7 +104,7 @@ esac
 # Install cross-compilers
 $script_dir/scripts/checkBuildSystemNoInteractive.pl i686-pedigree $script_dir/pedigree-compiler $compiler_build_options
 
-old=$PWD
+old=$(pwd)
 cd $script_dir
 
 # Setup all submodules, make sure they are up-to-date
@@ -116,7 +114,7 @@ git submodule update
 # Build Pedigree.
 scons CROSS=$script_dir/compilers/dir/bin/i686-pedigree-
 
-cd $old
+cd "$old"
 
 echo
 echo
