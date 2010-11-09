@@ -141,7 +141,7 @@ class Uhci : public UsbHub, public IrqHandler, public RequestQueue, public Timer
         /// Timer callback to handle port status changes
         void timer(uint64_t delta, InterruptState &state);
 
-        virtual bool portReset(uint8_t nPort);
+        virtual bool portReset(uint8_t nPort, bool bErrorResponse = false);
 
     protected:
 

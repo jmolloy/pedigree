@@ -150,7 +150,7 @@ class Ehci : public UsbHub,
 
         void doDequeue();
 
-        virtual bool portReset(uint8_t nPort);
+        virtual bool portReset(uint8_t nPort, bool bErrorResponse = false);
 
     protected:
 

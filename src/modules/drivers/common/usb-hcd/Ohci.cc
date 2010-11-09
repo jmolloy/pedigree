@@ -585,7 +585,7 @@ void Ohci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
     m_pCurrentPeriodicQueueTail = pED;
 }
 
-bool Ohci::portReset(uint8_t nPort)
+bool Ohci::portReset(uint8_t nPort, bool bErrorResponse)
 {
     /// \todo Error handling? Device fails to reset? Not present after reset?
 

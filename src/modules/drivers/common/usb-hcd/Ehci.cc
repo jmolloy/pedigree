@@ -363,11 +363,22 @@ void Ehci::interrupt(size_t number, InterruptState &state)
     DEBUG_LOG_NOLOCK("EHCI IRQ " << nStatus);
 #endif
     if(nStatus & EHCI_STS_PORTCH)
+    {
         for(size_t i = 0; i < m_nPorts; i++)
+        {
             if(m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + i * 4) & EHCI_PORTSC_CSCH)
-                addAsyncRequest(0, i);
+            {
+                m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + i * 4), m_nOpRegsOffset + EHCI_PORTSC + i * 4);
+                
+                if(!m_IgnoredPorts.test(i))
+                    addAsyncRequest(0, i);
+            }
+        }
+    }
 
-    if(nStatus & EHCI_STS_INT)
+    // Because there's no IOC for *every* transfer, we need to handle errors
+    // that occur before the last transfer. These will create an error status only.
+    if(nStatus & (EHCI_STS_INT | EHCI_STS_ERR))
     {
         for(size_t i = 1; i < 128; i++)
         {
@@ -750,7 +761,7 @@ void Ehci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
     m_pFrameList[nFrameIndex] = (m_pQHListPhys + nTransaction * sizeof(QH)) | 2;
 }
 
-bool Ehci::portReset(uint8_t nPort)
+bool Ehci::portReset(uint8_t nPort, bool bErrorResponse)
 {
     int retry;
     for(retry = 0; retry < 3; retry++)

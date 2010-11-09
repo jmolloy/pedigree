@@ -25,6 +25,8 @@ bool UsbPnP::probeDevice(UsbDevice *pDevice)
     // Is this device already handled by a driver?
     if(pDevice->getUsbState() == UsbDevice::HasDriver)
         return false;
+    else if(!m_Callbacks.count())
+        return false;
 
     UsbDevice::DeviceDescriptor *pDes = pDevice->getDescriptor();
     UsbDevice::Interface *pIface = pDevice->getInterface();

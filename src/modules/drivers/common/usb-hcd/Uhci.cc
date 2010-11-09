@@ -105,35 +105,42 @@ Uhci::Uhci(Device* pDev) :
     DEBUG_LOG("USB: UHCI: Pci command+status: " << nCommand);
 #endif
     PciBus::instance().writeConfigSpace(this, 1, nCommand | 0x6);
-    
-    // Stop a running controller (BIOS may have started it up)
-    m_pBase->write16(m_pBase->read16(UHCI_CMD) & ~1, UHCI_CMD);
-    while(!(m_pBase->read16(UHCI_STS) & UHCI_STS_HALT)) delay(10);
 
-    // Tell the BIOS to gtfo, and tell IRQs to come instead.
-    // Clear all "write to clear" bits too.
-    PciBus::instance().writeConfigSpace(this, 0xC0 / 4, 0x8F00 | 0x2000);
+    // Disable legacy emulation and SMI generation
+    PciBus::instance().writeConfigSpace(this, 0xC0 / 4, 0x8F00); // Clear bits
+    
+    // Stop a running controller (BIOS may have started it up). Unset the configured
+    // flag, as we are no longer configured properly.
+    m_pBase->write16(m_pBase->read16(UHCI_CMD) & ~0x41, UHCI_CMD);
+    while(!(m_pBase->read16(UHCI_STS) & UHCI_STS_HALT)) delay(10);
+    m_pBase->write16(m_pBase->read16(UHCI_STS), UHCI_STS);
 
     // Reset the host controller
-    m_pBase->write16(m_pBase->read16(UHCI_CMD) | UHCI_CMD_GRES, UHCI_CMD);
-    delay(50);
-    m_pBase->write16(m_pBase->read16(UHCI_CMD) & ~UHCI_CMD_GRES, UHCI_CMD);
+    m_pBase->write16(m_pBase->read16(UHCI_CMD) | UHCI_CMD_HCRES, UHCI_CMD);
+    while(m_pBase->read16(UHCI_CMD) & UHCI_CMD_HCRES) delay(5);
 
     // Write frame list pointer
     m_pBase->write32(m_pFrameListPhys, UHCI_FRLP);
 
     // Enable wanted interrupts
     m_pBase->write16(0xf, UHCI_INTR);
+    
+    // Enable USB controller interrupts
+    PciBus::instance().writeConfigSpace(this, 0xC0 / 4, 0x2000); // PIRQ enble
 
     // Start the controller: 64-byte reclamation and CF set, as well as run bit.
     // Also, force a global resume of all ports out of any form of suspend state
     m_pBase->write16(0xC1 | 0x10, UHCI_CMD);
-    delay(20);
+    delay(10);
     m_pBase->write16(0xC1, UHCI_CMD);
+    while(m_pBase->read16(UHCI_STS) & UHCI_STS_HALT) delay(10);
 
 #ifdef USB_VERBOSE_DEBUG
     DEBUG_LOG("USB: UHCI: Reset complete");
 #endif
+
+    // Give time for ports to resume and stabilise.
+    delay(100);
 
     for(size_t i = 0; i < 8; i++)
     {
@@ -144,16 +151,8 @@ Uhci::Uhci(Device* pDev) :
             break; // Controllers must have 2 ports, but can have up to 7 by the spec.
         }
 
-        // Reset the port and check for connectivity
-        if(portReset(i))
-        {
-            NOTICE("USB: UHCI INIT [" << reinterpret_cast<uintptr_t>(this) << "]: It seems the device is connected, trying to use it");
-            executeRequest(i);
-        }
-        else
-        {
-            DEBUG_LOG("USB: UHCI INIT [" << reinterpret_cast<uintptr_t>(this) << "]: Port " << Dec << i << Hex << " is in fact disconnected.");
-        }
+        // Reset the port (the timer will receive the connection status changes)
+        portReset(i);
 
         m_nPorts++;
     }
@@ -240,11 +239,10 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
 
     List<QH*> persistList;
 
-    if(nStatus & UHCI_STS_INT)
+    // Because there's no IOC for *every* transfer, we need to handle errors
+    // that occur before the last transfer. These will create an error status only.
+    if(nStatus & (UHCI_STS_INT | UHCI_STS_ERR))
     {
-        // Check all the queue heads we have in the list
-        // QH *pQH = m_pCurrentAsyncQueueHead->pMetaData->pNext;
-        
         QH *pQH = 0;
         do
         {
@@ -494,7 +492,7 @@ void Uhci::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid
         pQH->pMetaData->pLastTD->pNext = PHYS_TD(nIndex) >> 4;
         pQH->pMetaData->pLastTD->bNextInvalid = 0;
         pQH->pMetaData->pLastTD->bNextQH = 0;
-        pQH->pMetaData->pLastTD->bNextDepth = 1;
+        // pQH->pMetaData->pLastTD->bNextDepth = 1;
     }
     else
     {
@@ -629,10 +627,19 @@ void Uhci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
     doAsync(nTransaction, pCallback, pParam);
 }
 
-bool Uhci::portReset(uint8_t nPort)
+bool Uhci::portReset(uint8_t nPort, bool bErrorResponse)
 {
-    /// \todo Clean this up a bit.
-    
+#ifdef USB_VERBOSE_DEBUG
+    DEBUG_LOG("USB: UHCI: Reset on port " << nPort);
+#endif
+
+    if(bErrorResponse)
+    {
+        // Before port reset, disable the port
+        m_pBase->write16(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) & ~UHCI_PORTSC_ENABLE, UHCI_PORTSC + (nPort * 2));
+        while(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) & UHCI_PORTSC_ENABLE) delay(10);
+    }
+
     // Perform a reset of the port
     m_pBase->write16(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) | UHCI_PORTSC_PRES, UHCI_PORTSC + (nPort * 2));
     delay(50);
@@ -640,18 +647,32 @@ bool Uhci::portReset(uint8_t nPort)
 
     // Enable the port
     m_pBase->write16(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) | UHCI_PORTSC_ENABLE, UHCI_PORTSC + (nPort * 2));
-    delay(100);
+    delay(bErrorResponse ? 500 : 100);
     
     // Check that the device is completely enabled
     if(!(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) & UHCI_PORTSC_ENABLE))
+    {
+//#ifdef USB_VERBOSE_DEBUG
+        DEBUG_LOG("USB: UHCI: During reset, port " << nPort << " could not be enabled. It may become enabled soon.");
+//#endif
         return false;
+    }
     
     // Clear the "enable/disable change status" register
     m_pBase->write16(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) | (UHCI_PORTSC_EDCH | UHCI_PORTSC_CSCH), UHCI_PORTSC + (nPort * 2));
     
     // Verify that we have a device connected here
     if(!(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) & UHCI_PORTSC_CONN))
+    {
+//#ifdef USB_VERBOSE_DEBUG
+        DEBUG_LOG("USB: UHCI: During reset, port " << nPort << " was enabled but had no device on it. A device may be detected shortly.");
+//#endif
         return false;
+    }
+    
+#ifdef USB_VERBOSE_DEBUG
+    DEBUG_LOG("USB: Post-reset status is " << m_pBase->read16(UHCI_PORTSC + (nPort * 2)));
+#endif
 
     return true;
 }
@@ -666,13 +687,13 @@ uint64_t Uhci::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4
         if(m_pBase->read16(UHCI_PORTSC + (p1 * 2)) & UHCI_PORTSC_LOSPEED)
         {
             DEBUG_LOG("USB: UHCI [" << reinterpret_cast<uintptr_t>(this) << "]: Port " << Dec << p1 << Hex << " has a low-speed device connected to it");
-            if(deviceConnected(p1, LowSpeed))
+            if(!deviceConnected(p1, LowSpeed))
                 WARNING("USB: UHCI [" << reinterpret_cast<uintptr_t>(this) << "]: Port " << Dec << p1 << Hex << " appeared to be connected but could not be set up");
         }
         else
         {
             DEBUG_LOG("USB: UHCI [" << reinterpret_cast<uintptr_t>(this) << "]: Port " << Dec << p1 << Hex << " has a full-speed device connected to it");
-            if(deviceConnected(p1, FullSpeed))
+            if(!deviceConnected(p1, FullSpeed))
                 WARNING("USB UHCI [" << reinterpret_cast<uintptr_t>(this) << "]: Port " << Dec << p1 << Hex << " appeared to be connected but could not be set up");
         }
     }
@@ -703,7 +724,8 @@ void Uhci::timer(uint64_t delta, InterruptState &state)
                 m_pBase->write16(m_pBase->read16(UHCI_PORTSC + (i * 2)) | UHCI_PORTSC_CSCH, UHCI_PORTSC + (i * 2));
 
                 // Now we can safely add the request
-                addAsyncRequest(0, i);
+                if(!m_IgnoredPorts.test(i))
+                    addAsyncRequest(0, i);
             }
         }
     }

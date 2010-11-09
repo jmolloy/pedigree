@@ -62,7 +62,21 @@ class UsbHub : public virtual Device
         /// situations where a device cannot recover from an error without a
         /// complete reset.
         /// \note Assumes the port is at CONNECTED with a VALID DEVICE attached.
-        virtual bool portReset(uint8_t nPort) = 0;
+        /// \param bErrorResponse true if this is a reset as a response to an error.
+        ///                       Error responses are allowed to use significantly
+        ///                       longer delays in their reset logic.
+        virtual bool portReset(uint8_t nPort, bool bErrorResponse = false) = 0;
+        
+        /// Tells the hub to IGNORE a specific port's connect state changes for
+        /// a short while.
+        /// \param bIgnore pass true to stop ignoring a port.
+        void ignoreConnectionChanges(uint8_t nPort, bool bIgnore = true)
+        {
+            if(bIgnore)
+                m_IgnoredPorts.set(nPort);
+            else
+                m_IgnoredPorts.clear(nPort);
+        }
 
     private:
         /// Structure used synchronous transactions
@@ -82,6 +96,11 @@ class UsbHub : public virtual Device
         /// Bitmap of used addresses under this hub
         /// \note valid only for root hubs
         ExtensibleBitmap m_UsedAddresses;
+        
+    protected:
+        
+        /// Bitmap of ports to ignore connection changes on
+        ExtensibleBitmap m_IgnoredPorts;
 };
 
 #endif

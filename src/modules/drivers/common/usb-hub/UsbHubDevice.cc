@@ -102,13 +102,16 @@ void UsbHubDevice::initialiseDriver()
     m_UsbState = HasDriver;
 }
 
-bool UsbHubDevice::portReset(uint8_t nPort)
+bool UsbHubDevice::portReset(uint8_t nPort, bool bErrorResponse)
 {
     // Reset the port
     setPortFeature(nPort, PortReset);
 
     // Delay while the reset completes
     delay(50);
+    
+    // Done with reset
+    clearPortFeature(nPort, PortReset);
 
     // Wait for completion
     while((getPortStatus(nPort) & (1 << 4)));

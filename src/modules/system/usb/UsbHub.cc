@@ -35,6 +35,8 @@ bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
     size_t nRetry = 0;
     uint8_t lastAddress = 0, nAddress = 0;
     
+    pRootHub->ignoreConnectionChanges(nPort);
+    
     // Try twice with two different addresses
     UsbDevice *pDevice = 0;
     while(nRetry < 2)
@@ -63,13 +65,24 @@ bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
         // Check for initialisation failures
         if(pDevice->getUsbState() != UsbDevice::Configured)
         {
-            NOTICE("Device initialisation ended up not giving a configured device [retry " << nRetry << " of 2].");
+            NOTICE("USB: Device initialisation ended up not giving a configured device [retry " << nRetry << " of 2].");
             
             // Cleanup descriptors
             if(pDevice->getUsbState() >= UsbDevice::HasDescriptors)
                 delete pDevice->getDescriptor();
 
             delete pDevice;
+            
+            // Reset the port that this device is attached to.
+            NOTICE("USB: Performing a port reset on port " << nPort);
+            if((!pRootHub->portReset(nPort, true)) && (nRetry < 1))
+            {
+                // Give up completely
+                NOTICE("USB: Port reset failed (port " << nPort << ")");
+                pRootHub->ignoreConnectionChanges(nPort, false);
+                pRootHub->m_UsedAddresses.clear(nAddress);
+                return false;
+            }
         }
         else
         {
@@ -80,6 +93,8 @@ bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
         lastAddress = nAddress;
         nRetry++;
     }
+    
+    pRootHub->ignoreConnectionChanges(nPort, false);
     
     if(nRetry == 2)
     {
