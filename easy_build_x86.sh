@@ -50,7 +50,7 @@ if [ ! -e $script_dir/.easy_os ]; then
             ;;
         osx|mac)
             echo "Installing packages with macports, please wait..."
-            sudo port install coreutils mpfr libmpc gmp libiconv sqlite3 texinfo scons cdrtools wget
+            sudo port install coreutils mpfr libmpc gmp libiconv sqlite3 texinfo scons cdrtools wget gnutar
 
             real_os="osx"
             ;;
@@ -106,12 +106,17 @@ esac
 # Install cross-compilers
 $script_dir/scripts/checkBuildSystemNoInteractive.pl i686-pedigree $script_dir/pedigree-compiler $compiler_build_options
 
+old=$PWD
+cd $script_dir
+
 # Setup all submodules, make sure they are up-to-date
 git submodule init
 git submodule update
 
 # Build Pedigree.
 scons CROSS=$script_dir/compilers/dir/bin/i686-pedigree-
+
+cd $old
 
 echo
 echo

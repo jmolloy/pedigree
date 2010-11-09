@@ -116,6 +116,9 @@ except SCons.Errors.EnvironmentError:
                       tools = ['default'], TARFLAGS='--transform="s,.*/,," -cz')
 Help(opts.GenerateHelpText(env))
 
+if os.uname()[0] == 'Darwin':
+    env['TAR'] = 'gnutar'
+
 # Don't use MD5s to determine if files have changed, just check the timestamp
 env.Decider('timestamp-newer')
 
