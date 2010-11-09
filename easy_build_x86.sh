@@ -106,6 +106,11 @@ esac
 # Install cross-compilers
 $script_dir/scripts/checkBuildSystemNoInteractive.pl i686-pedigree $script_dir/pedigree-compiler $compiler_build_options
 
+# Setup all submodules, make sure they are up-to-date
+git submodule init
+git submodule update
+
+# Build Pedigree.
 scons CROSS=$script_dir/compilers/dir/bin/i686-pedigree-
 
 echo
