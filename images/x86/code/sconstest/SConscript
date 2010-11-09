@@ -1,0 +1,4 @@
+env = Environment()
+
+env.Program('scons_test', source = ['src/test.c'])
+

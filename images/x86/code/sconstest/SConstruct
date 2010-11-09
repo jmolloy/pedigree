@@ -1,0 +1,1 @@
+SConscript('SConscript', build_dir='builds', duplicate=0)
