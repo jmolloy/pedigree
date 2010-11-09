@@ -7,6 +7,19 @@ my $gcc_version = "4.5.1";
 my $binutils_version = "2.20.1";
 my $nasm_version = "2.07";
 
+my $gcc_configure_special = "";
+my $binutils_configure_special = "";
+
+# Handle special arguments. These are given to change the behaviour of the script, or to
+# work around issues with specific operating systems.
+for(my $i = 2; $i < @ARGV; $i++)
+{
+    if($ARGV[$i] eq "osx-compat")
+    {
+        $gcc_configure_special .= " --disable-werror --with-gmp=/opt/local ";
+        $binutils_configure_special .= " --disable-werror ";
+    }
+}
 
 my @download = ( {'url' => "ftp://ftp.gnu.org/gnu/gcc/gcc-$gcc_version/gcc-core-$gcc_version.tar.bz2",
                   'name' => 'Gcc core files',
@@ -50,21 +63,21 @@ my @compile = ( {'dir' => "nasm-$nasm_version",
                  'test' => './bin/nasm' },
                 {'dir' => "binutils-$binutils_version",
                  'name' => "Binutils",
-                 'configure' => "--target=\$TARGET --disable-werror --prefix=\$PREFIX --disable-nls",
+                 'configure' => "--target=\$TARGET $binutils_configure_special --prefix=\$PREFIX --disable-nls",
                  'make' => "all",
                  'install' => "install",
                  'arch' => 'all',
                  'test' => './bin/!TARGET-objdump'},
                 {'dir' => "gcc-$gcc_version",
                  'name' => "Gcc",
-                 'configure' => "--target=\$TARGET --disable-werror --prefix=\$PREFIX --disable-nls --enable-languages=c,c++ --without-headers --without-newlib",
+                 'configure' => "--target=\$TARGET $gcc_configure_special --prefix=\$PREFIX --disable-nls --enable-languages=c,c++ --without-headers --without-newlib",
                  'make' => "all-gcc all-target-libgcc",
                  'install' => "install-gcc install-target-libgcc",
                  'arch' => 'i686-pedigree amd64-pedigree x86_64-pedigree i686-elf amd64-elf arm-elf ppc-elf powerpc-elf',
                  'test' => './bin/!TARGET-gcc'},
                 {'dir' => "gcc-$gcc_version",
                  'name' => "Gcc (mips)",
-                 'configure' => "--target=\$TARGET --prefix=\$PREFIX --disable-nls --enable-languages=c,c++ --without-headers --without-newlib --with-llsc=yes",
+                 'configure' => "--target=\$TARGET $gcc_configure_special --prefix=\$PREFIX --disable-nls --enable-languages=c,c++ --without-headers --without-newlib --with-llsc=yes",
                  'make' => "all-gcc all-target-libgcc",
                  'install' => "install-gcc install-target-libgcc",
                  'arch' => 'mips64el-elf',

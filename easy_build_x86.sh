@@ -16,12 +16,19 @@ if [ -z "${rl}" ]; then
 fi
 script_dir=`$rl -f $(dirname $0)`
 
+compiler_build_options=""
+
+real_os=""
 if [ ! -e $script_dir/.easy_os ]; then
 
     echo "Checking for dependencies... Which operating system are you running on?"
     echo "Cygwin, Debian/Ubuntu, OpenSuSE, OSX, or some other system?"
 
-    read os
+    if [ $# == 0 ]; then
+        read os
+    else
+        os=$1
+    fi
 
     shopt -s nocasematch
 
@@ -41,12 +48,14 @@ if [ ! -e $script_dir/.easy_os ]; then
             echo "Installing packages with zypper, please wait..."
             sudo zypper install mpfr-devel mpc-devel gmp3-devel sqlite3 texinfo scons genisoimage
             ;;
-        osx)
+        osx|mac)
             echo "Installing packages with macports, please wait..."
             sudo port install coreutils mpfr libmpc gmp sqlite3 texinfo scons cdrtools wget
+
+            real_os="osx"
             ;;
-        cygwin)
-            echo "Please ensure you use Cygwin's 'setup.exe' to install the following:"
+        cygwin|windows|mingw)
+            echo "Please ensure you use Cygwin's 'setup.exe', or some other method, to install the following:"
             echo " - Python"
             echo " - GCC & binutils"
             echo " - libgmp, libmpc, libmpfr"
@@ -55,6 +64,8 @@ if [ ! -e $script_dir/.easy_os ]; then
             echo "You will need to find alternative sources for the following:"
             echo " - mtools"
             echo " - scons"
+
+            real_os="cygwin"
             ;;
         *)
             echo "Operating system '$os' is not supported yet."
@@ -77,16 +88,23 @@ if [ ! -e $script_dir/.easy_os ]; then
 
     echo
 
-    exit 0
-
+else
+    real_os=`cat $script_dir/.easy_os`
 fi
 
 echo "Please wait, checking for a working cross-compiler."
 echo "If none is found, the source code for one will be downloaded, and it will be"
 echo "compiled for you."
 
+# Special parameters for some operating systems when building cross-compilers
+case $real_os in
+    osx)
+        compiler_build_options="$compiler_build_options osx-compat"
+        ;;
+esac
+
 # Install cross-compilers
-$script_dir/scripts/checkBuildSystemNoInteractive.pl i686-pedigree $script_dir/pedigree-compiler
+$script_dir/scripts/checkBuildSystemNoInteractive.pl i686-pedigree $script_dir/pedigree-compiler $compiler_build_options
 
 scons CROSS=$script_dir/compilers/dir/bin/i686-pedigree-
 
