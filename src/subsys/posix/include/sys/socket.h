@@ -8,7 +8,11 @@
 #define _SS_MAXSIZE	128
 
 typedef size_t socklen_t;
+
+#ifndef _SA_FAMILY_T
+#define _SA_FAMILY_T
 typedef uint32_t sa_family_t;
+#endif
 
 struct sockaddr
 {

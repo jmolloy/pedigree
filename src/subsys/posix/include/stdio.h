@@ -321,9 +321,11 @@ void    _EXFUN(setbuffer, (FILE *, char *, int));
 int	_EXFUN(setlinebuf, (FILE *));
 int	_EXFUN(getc_unlocked, (FILE *));
 int	_EXFUN(getchar_unlocked, (void));
+#ifndef __PEDIGREE__
 void	_EXFUN(flockfile, (FILE *));
 int	_EXFUN(ftrylockfile, (FILE *));
 void	_EXFUN(funlockfile, (FILE *));
+#endif
 int	_EXFUN(putc_unlocked, (int, FILE *));
 int	_EXFUN(putchar_unlocked, (int));
 #endif /* ! __STRICT_ANSI__ */
