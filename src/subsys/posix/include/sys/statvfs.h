@@ -27,6 +27,11 @@ struct statvfs
     char f_mntfromname[VFS_MNAMELEN];
 };
 
+#ifndef _STATFS_T
+#define _STATFS_T
+typedef struct statvfs struct statfs;
+#endif
+
 #define ST_RDONLY    1
 #define ST_NOSUID    2
 

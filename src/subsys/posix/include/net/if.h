@@ -18,6 +18,24 @@ struct ifreq {
     char ifr_name[IFNAMSIZ];
 };
 
+struct ifconf
+{
+    int ifc_len;
+    union
+    {
+        caddr_t ifcu_buf;
+        struct ifreq *ifcu_req;
+    } ifc_ifcu;
+};
+
+#define ifc_buf ifc_ifcu.ifcu_buf
+#define ifc_req ifc_ifcu.ifcu_req
+
+#define SIOCGSIZIFCONF      1
+#define SIOCFGIADDR         2
+#define SIOCSIFADDR         3
+#define SIOCGIFCONF         4
+
 _BEGIN_STD_C
 
 unsigned                _EXFUN(if_nametoindex, (const char*));

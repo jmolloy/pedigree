@@ -4,7 +4,10 @@
 #include <sys/statvfs.h>
 
 // Same structure, different name, so much for standards.
-#define statfs statvfs
+#ifndef _STATFS_T
+#define _STATFS_T
+typedef struct statvfs struct statfs;
+#endif
 
 #include <sys/mount.h>
 
