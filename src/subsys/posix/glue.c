@@ -102,6 +102,9 @@ int h_errno; // required by networking code
 
 #define NUM_ATFORK_HANDLERS 32 // (* 3)
 
+// For getopt(3).
+int optreset = 0;
+
 // Defines an fork handler
 struct forkHandler
 {
@@ -1807,7 +1810,7 @@ int setrlimit(int resource, const struct rlimit *rlp)
 }
 
 /// \todo Write - should just be a simple ls-style read of the raw drive
-int getmntinfo(struct statvfs **mntbufp, int flags)
+int getmntinfo(struct statfs **mntbufp, int flags)
 {
     STUBBED("getmntinfo");
     return -1;
@@ -2131,5 +2134,11 @@ int clock_gettime(clockid_t clock_id, struct timespec *tp)
     }
 
     return syscall2(POSIX_CLOCK_GETTIME, clock_id, (long) tp);
+}
+
+int setreuid(uid_t ruid, uid_t euid)
+{
+    STUBBED("setreuid");
+    return 0;
 }
 

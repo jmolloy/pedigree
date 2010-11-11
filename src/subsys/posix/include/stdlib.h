@@ -176,6 +176,9 @@ long long _EXFUN(_strtoll_r,(struct _reent *, const char *__n, char **__end_PTR,
 unsigned long long _EXFUN(strtoull,(const char *__n, char **__end_PTR, int __base));
 unsigned long long _EXFUN(_strtoull_r,(struct _reent *, const char *__n, char **__end_PTR, int __base));
 
+#define random() rand()
+#define srandom(seed) srand(seed)
+
 #ifndef __CYGWIN__
 _VOID	_EXFUN(cfree,(_PTR));
 int	_EXFUN(unsetenv,(const char *__string));
