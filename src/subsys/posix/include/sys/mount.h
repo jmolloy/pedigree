@@ -3,7 +3,8 @@
 
 #include <unistd.h>
 
-struct statvfs;
+#include <sys/statvfs.h>
+#include <sys/statfs.h>
 
 #define MNT_NOWAIT      1
 #define MNT_RDONLY      2
