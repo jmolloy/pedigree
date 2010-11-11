@@ -1705,6 +1705,12 @@ const char *gai_strerror(int ecode)
     return gai_strings[ecode];
 }
 
+int getitimer(int which, struct itimerval *value)
+{
+    STUBBED("getitimer");
+    return -1;
+}
+
 int setitimer(int which, const struct itimerval *value, struct itimerval *ovalue)
 {
     STUBBED("setitimer");
@@ -2142,3 +2148,21 @@ int setreuid(uid_t ruid, uid_t euid)
     return 0;
 }
 
+int grantpt(int fildes)
+{
+    STUBBED("grantpt");
+    return 0;
+}
+
+int unlockpt(int fildes)
+{
+    STUBBED("unlockpt");
+    return 0;
+}
+
+char *ptsname(int fildes)
+{
+    STUBBED("ptsname");
+    static char *ret = "[fake]";
+    return ret;
+}
