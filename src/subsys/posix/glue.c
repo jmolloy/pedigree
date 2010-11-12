@@ -1001,10 +1001,9 @@ int inet_addr(const char *cp)
         {
             case 4:
                 // Standard case
-                for(i = 0; i < numComponents; ++i)
-                    ret += (atoi(ipComponents[i]) & 0xFF) << (i * 8);
+                for(i = 0; i < 4; i++)
+                    ret += (atoi(ipComponents[i]) & 0xFF) << ((3 - i) * 8);
                 break;
-
             case 3:
                 {
                     // Last quantity is a 16-bit value
@@ -1030,16 +1029,16 @@ int inet_addr(const char *cp)
                 ret = INET_ADDR_INVALID;
         }
 
-        // All done
+        // All done - return in network byte order
         free(tmp_ptr);
-        return ret;
+        return htonl(ret);
     }
     else
     {
-        // Convert to an integer and return
+        // Convert to an integer and return in network byte order
         int ret = atoi(tmp);
         free(tmp_ptr);
-        return ret;
+        return htonl(ret);
     }
 }
 
