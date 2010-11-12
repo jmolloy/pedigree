@@ -161,6 +161,17 @@ public:
     {
         m_pUser = pUser;
     }
+    
+    /** Gets the effective user. */
+    User *getEffectiveUser()
+    {
+        return m_pEffectiveUser;
+    }
+    /** Sets the effective user. */
+    void setEffectiveUser(User *pUser)
+    {
+        m_pEffectiveUser = pUser;
+    }
 
     /** Gets the current group. */
     Group *getGroup()
@@ -171,6 +182,16 @@ public:
     void setGroup(Group *pGroup)
     {
         m_pGroup = pGroup;
+    }
+    
+    /** Gets the current effective group. */
+    Group *getEffectiveGroup()
+    {
+        return m_pEffectiveGroup;
+    }
+    void setEffectiveGroup(Group *pGroup)
+    {
+        m_pEffectiveGroup = pGroup;
     }
 
     void setLinker(DynamicLinker *pDl)
@@ -245,6 +266,10 @@ private:
     User *m_pUser;
     /** Current group. */
     Group *m_pGroup;
+    /** Effective user. */
+    User *m_pEffectiveUser;
+    /** Effective group. */
+    Group *m_pEffectiveGroup;
 
     /** The Process' dynamic linker. */
     DynamicLinker *m_pDynamicLinker;

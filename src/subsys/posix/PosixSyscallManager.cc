@@ -311,6 +311,19 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_CLOCK_GETTIME:
             return posix_clock_gettime(static_cast<clockid_t>(p1), reinterpret_cast<struct timespec*>(p2));
         
+        case POSIX_GETEUID:
+            return posix_geteuid();
+        case POSIX_GETEGID:
+            return posix_getegid();
+        case POSIX_SETEUID:
+            return posix_seteuid(static_cast<uid_t>(p1));
+        case POSIX_SETEGID:
+            return posix_setegid(static_cast<gid_t>(p1));
+        case POSIX_SETUID:
+            return posix_setuid(static_cast<uid_t>(p1));
+        case POSIX_SETGID:
+            return posix_setgid(static_cast<gid_t>(p1));
+        
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
 }

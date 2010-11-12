@@ -502,28 +502,6 @@ int gettimeofday(struct timeval *tv, void *tz)
     return 0;
 }
 
-uid_t getuid(void)
-{
-    return (long)syscall0(POSIX_GETUID);
-}
-
-gid_t getgid(void)
-{
-    return (long)syscall0(POSIX_GETGID);
-}
-
-uid_t geteuid(void)
-{
-    STUBBED("geteuid");
-    return getuid();
-}
-
-gid_t getegid(void)
-{
-    STUBBED("getegid");
-    return getgid();
-}
-
 const char * const sys_siglist[] =
 {
     0,
@@ -553,17 +531,55 @@ char *strsignal(int sig)
         return (char*)"Unknown";
 }
 
+uid_t getuid(void)
+{
+    return (long)syscall0(POSIX_GETUID);
+}
+
+gid_t getgid(void)
+{
+    return (long)syscall0(POSIX_GETGID);
+}
+
+uid_t geteuid(void)
+{
+    return (uid_t) syscall0(POSIX_GETEUID);
+}
+
+gid_t getegid(void)
+{
+    return (gid_t) syscall0(POSIX_GETEGID);
+}
+
 int setuid(uid_t uid)
 {
-    STUBBED("setuid");
-    errno = EINVAL;
-    return -1;
+    return syscall1(POSIX_SETUID, uid);
 }
 
 int setgid(gid_t gid)
 {
-    STUBBED("setgid");
-    errno = EINVAL;
+    return syscall1(POSIX_SETGID, gid);
+}
+
+int seteuid(uid_t uid)
+{
+    return syscall1(POSIX_SETEUID, uid);
+}
+
+int setegid(gid_t gid)
+{
+    return syscall1(POSIX_SETEGID, gid);
+}
+
+int setresuid(uid_t ruid, uid_t euid, uid_t suid)
+{
+    STUBBED("setresuid");
+    return -1;
+}
+
+int setresgid(gid_t rgid, gid_t egid, gid_t sgid)
+{
+    STUBBED("setresgid");
     return -1;
 }
 
@@ -2100,18 +2116,6 @@ int getdtablesize()
     struct rlimit tmp;
     getrlimit(RLIMIT_NOFILE, &tmp);
     return tmp.rlim_cur;
-}
-
-int setresuid(uid_t ruid, uid_t euid, uid_t suid)
-{
-    STUBBED("setresuid");
-    return -1;
-}
-
-int setresgid(gid_t rgid, gid_t egid, gid_t sgid)
-{
-    STUBBED("setresgid");
-    return -1;
 }
 
 int mprotect(void *addr, size_t len, int prot)

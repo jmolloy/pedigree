@@ -45,8 +45,14 @@ int posix_gettimeofday(timeval *tv, struct timezone *tz);
 
 int posix_getpwent(passwd *pw, int n, char *str);
 int posix_getpwnam(passwd *pw, const char *name, char *str);
-int posix_getuid();
-int posix_getgid();
+uid_t posix_getuid();
+gid_t posix_getgid();
+uid_t posix_geteuid();
+gid_t posix_getegid();
+int posix_setuid(uid_t uid);
+int posix_setgid(gid_t gid);
+int posix_seteuid(uid_t euid);
+int posix_setegid(gid_t egid);
 
 size_t posix_alarm(uint32_t seconds);
 int posix_sleep(uint32_t seconds);

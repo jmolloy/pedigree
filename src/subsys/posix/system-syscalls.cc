@@ -684,16 +684,90 @@ int posix_getpwnam(passwd *pw, const char *name, char *str)
     return 0;
 }
 
-int posix_getuid()
+uid_t posix_getuid()
 {
     SC_NOTICE("getuid() -> " << Dec << Processor::information().getCurrentThread()->getParent()->getUser()->getId());
     return Processor::information().getCurrentThread()->getParent()->getUser()->getId();
 }
 
-int posix_getgid()
+gid_t posix_getgid()
 {
     SC_NOTICE("getgid() -> " << Dec << Processor::information().getCurrentThread()->getParent()->getGroup()->getId());
     return Processor::information().getCurrentThread()->getParent()->getGroup()->getId();
+}
+
+uid_t posix_geteuid()
+{
+    SC_NOTICE("geteuid() -> " << Dec << Processor::information().getCurrentThread()->getParent()->getEffectiveUser()->getId());
+    return Processor::information().getCurrentThread()->getParent()->getEffectiveUser()->getId();
+}
+
+gid_t posix_getegid()
+{
+    SC_NOTICE("getegid() -> " << Dec << Processor::information().getCurrentThread()->getParent()->getEffectiveGroup()->getId());
+    return Processor::information().getCurrentThread()->getParent()->getEffectiveGroup()->getId();
+}
+
+int posix_setuid(uid_t uid)
+{
+    /// \todo Missing "set user"
+    User *user = UserManager::instance().getUser(uid);
+    if(!user)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+    
+    Processor::information().getCurrentThread()->getParent()->setUser(user);
+    Processor::information().getCurrentThread()->getParent()->setEffectiveUser(user);
+    
+    return 0;
+}
+
+int posix_setgid(gid_t gid)
+{
+    /// \todo Missing "set user"
+    Group *group= UserManager::instance().getGroup(gid);
+    if(!group)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+    
+    Processor::information().getCurrentThread()->getParent()->setGroup(group);
+    Processor::information().getCurrentThread()->getParent()->setEffectiveGroup(group);
+    
+    return 0;
+}
+
+int posix_seteuid(uid_t euid)
+{
+    /// \todo Missing "set user"
+    User *user = UserManager::instance().getUser(euid);
+    if(!user)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+    
+    Processor::information().getCurrentThread()->getParent()->setEffectiveUser(user);
+    
+    return 0;
+}
+
+int posix_setegid(gid_t egid)
+{
+    /// \todo Missing "set user"
+    Group *group= UserManager::instance().getGroup(egid);
+    if(!group)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+    
+    Processor::information().getCurrentThread()->getParent()->setEffectiveGroup(group);
+    
+    return 0;
 }
 
 

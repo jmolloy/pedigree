@@ -155,4 +155,12 @@
 #define POSIX_NANOSLEEP         106
 #define POSIX_CLOCK_GETTIME     107
 
+#define POSIX_GETEUID           108
+#define POSIX_GETEGID           109
+#define POSIX_SETEUID           110
+#define POSIX_SETEGID           111
+
+#define POSIX_SETUID            112
+#define POSIX_SETGID            113
+
 #endif
