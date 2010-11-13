@@ -51,6 +51,11 @@ bool VFS::mount(Disk *pDisk, String &alias)
             }
             alias = getUniqueAlias(alias);
             addAlias(pFs, alias);
+            
+            if(m_Mounts.lookup(pFs) == 0)
+                m_Mounts.insert(pFs, new List<String*>);
+            
+            m_Mounts.lookup(pFs)->pushBack(new String(alias));
 
             for (List<MountCallback*>::Iterator it = m_MountCallbacks.begin();
                  it != m_MountCallbacks.end();
@@ -73,13 +78,25 @@ void VFS::addAlias(Filesystem *pFs, String alias)
 
     pFs->m_nAliases++;
     m_Aliases.insert(alias, pFs);
+    
+    if(m_Mounts.lookup(pFs) == 0)
+        m_Mounts.insert(pFs, new List<String*>);
+    
+    m_Mounts.lookup(pFs)->pushBack(new String(alias));
 }
 
 void VFS::addAlias(String oldAlias, String newAlias)
 {
     Filesystem *pFs = m_Aliases.lookup(oldAlias);
     if(pFs)
+    {
         m_Aliases.insert(newAlias, pFs);
+        
+        if(m_Mounts.lookup(pFs) == 0)
+            m_Mounts.insert(pFs, new List<String*>);
+        
+        m_Mounts.lookup(pFs)->pushBack(new String(newAlias));
+    }
 }
 
 String VFS::getUniqueAlias(String alias)
@@ -113,6 +130,7 @@ bool VFS::aliasExists(String alias)
 
 void VFS::removeAlias(String alias)
 {
+    /// \todo Remove from m_Mounts
     m_Aliases.remove(alias);
 }
 
@@ -130,6 +148,23 @@ void VFS::removeAllAliases(Filesystem *pFs)
             it = m_Aliases.erase(it);
         }
     }
+    
+    /// \todo Locking.
+    if(m_Mounts.lookup(pFs) != 0)
+    {
+        List<String*>* pList = m_Mounts.lookup(pFs);
+        for(List<String*>::Iterator it = pList->begin();
+            it != pList->end();
+            it++)
+        {
+            delete *it;
+        }
+        
+        delete pList;
+        
+        m_Mounts.remove(pFs);
+    }
+    
     delete pFs;
 }
 

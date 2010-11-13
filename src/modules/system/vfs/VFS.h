@@ -71,6 +71,12 @@ public:
     {
         return m_Aliases;
     }
+    
+    /** Obtains a list of all mounted filesystems */
+    inline Tree<Filesystem *, List<String*>* > &getMounts()
+    {
+        return m_Mounts;
+    }
 
     /** Removes an alias from a filesystem. If no aliases remain for that filesystem,
      *  the filesystem is destroyed.
@@ -117,7 +123,7 @@ private:
 
 private:
     RadixTree<Filesystem*> m_Aliases;
-    // List<Alias*> m_Aliases;
+    Tree<Filesystem*, List<String*>* > m_Mounts;
 
     List<Filesystem::ProbeCallback*> m_ProbeCallbacks;
     List<MountCallback*> m_MountCallbacks;
