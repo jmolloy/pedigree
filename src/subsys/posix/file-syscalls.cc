@@ -1587,6 +1587,8 @@ int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
 
 int posix_chmod(const char *path, mode_t mode)
 {
+    F_NOTICE("chmod(" << String(path) << ", " << Oct << mode << Hex << ")");
+    
     /// \todo EACCESS, EPERM
     
     if(mode == static_cast<mode_t>(-1))
@@ -1615,13 +1617,25 @@ int posix_chmod(const char *path, mode_t mode)
         file = Symlink::fromFile(file)->followLink();
     
     /// \todo Might want to change permissions on open file descriptors?
-    file->setPermissions(mode);
+    uint32_t permissions = 0;
+    if (mode & S_IRUSR) permissions |= FILE_UR;
+    if (mode & S_IWUSR) permissions |= FILE_UW;
+    if (mode & S_IXUSR) permissions |= FILE_UX;
+    if (mode & S_IRGRP) permissions |= FILE_GR;
+    if (mode & S_IWGRP) permissions |= FILE_GW;
+    if (mode & S_IXGRP) permissions |= FILE_GX;
+    if (mode & S_IROTH) permissions |= FILE_OR;
+    if (mode & S_IWOTH) permissions |= FILE_OW;
+    if (mode & S_IXOTH) permissions |= FILE_OX;
+    file->setPermissions(permissions);
     
     return 0;
 }
 
 int posix_chown(const char *path, uid_t owner, gid_t group)
 {
+    F_NOTICE("chown(" << String(path) << ", " << owner << ", " << group << ")");
+    
     /// \todo EACCESS, EPERM
     
     // Is there any need to change?
