@@ -204,6 +204,11 @@ Log &Log::operator << (T n)
         radix = 16;
         m_Buffer.str.append("0x");
     }
+    else if (m_NumberType == Oct)
+    {
+        radix = 8;
+        m_Buffer.str.append("0");
+    }
     m_Buffer.str.append(n, radix);
     return *this;
 }

@@ -141,7 +141,9 @@ enum NumberType
   /** Hexadecimal */
   Hex,
   /** Decimal */
-  Dec
+  Dec,
+  /** Octal */
+  Oct
 };
 
 /** Modifiers for Log */
