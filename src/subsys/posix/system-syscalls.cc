@@ -466,6 +466,8 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
 int posix_waitpid(int pid, int *status, int options)
 {
+    SC_NOTICE("waitpid(" << pid << ", " << options << ")");
+    
     if (options & 1)
     {
 //        SC_NOTICE("waitpid(pid=" << Dec << pid << Hex << ", WNOHANG)");
@@ -597,12 +599,16 @@ int posix_exit(int code)
 
 int posix_getpid()
 {
+    SC_NOTICE("getpid");
+    
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     return pProcess->getId();
 }
 
 int posix_gettimeofday(timeval *tv, struct timezone *tz)
 {
+    SC_NOTICE("gettimeofday");
+    
     Timer *pTimer = Machine::instance().getTimer();
 
     tv->tv_sec = pTimer->getUnixTimestamp();
@@ -655,6 +661,8 @@ int posix_getpwent(passwd *pw, int n, char *str)
 
 int posix_getpwnam(passwd *pw, const char *name, char *str)
 {
+    SC_NOTICE("getpwname(" << name << ")");
+    
     // Grab the given user.
     User *pUser = UserManager::instance().getUser(String(name));
     if (!pUser) return -1;
@@ -710,6 +718,8 @@ gid_t posix_getegid()
 
 int posix_setuid(uid_t uid)
 {
+    SC_NOTICE("setuid(" << uid << ")");
+    
     /// \todo Missing "set user"
     User *user = UserManager::instance().getUser(uid);
     if(!user)
@@ -726,6 +736,8 @@ int posix_setuid(uid_t uid)
 
 int posix_setgid(gid_t gid)
 {
+    SC_NOTICE("setgid(" << gid << ")");
+    
     /// \todo Missing "set user"
     Group *group= UserManager::instance().getGroup(gid);
     if(!group)
@@ -742,6 +754,8 @@ int posix_setgid(gid_t gid)
 
 int posix_seteuid(uid_t euid)
 {
+    SC_NOTICE("seteuid(" << euid << ")");
+    
     /// \todo Missing "set user"
     User *user = UserManager::instance().getUser(euid);
     if(!user)
@@ -757,6 +771,8 @@ int posix_seteuid(uid_t euid)
 
 int posix_setegid(gid_t egid)
 {
+    SC_NOTICE("setegid(" << egid << ")");
+    
     /// \todo Missing "set user"
     Group *group= UserManager::instance().getGroup(egid);
     if(!group)
