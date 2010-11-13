@@ -744,6 +744,11 @@ int chdir(const char *path)
     return (long)syscall1(POSIX_CHDIR, (long)path);
 }
 
+int fchdir(int fildes)
+{
+    return syscall1(POSIX_FCHDIR, fildes);
+}
+
 int dup(int fileno)
 {
     return (long)syscall1(POSIX_DUP, fileno);
@@ -1508,13 +1513,6 @@ int uname(struct utsname *n)
 int mknod(const char *path, mode_t mode, dev_t dev)
 {
     STUBBED("mknod");
-    return -1;
-}
-
-/// \todo open needs to work on directories, then implement this
-int fchdir(int fildes)
-{
-    STUBBED("fchdir");
     return -1;
 }
 

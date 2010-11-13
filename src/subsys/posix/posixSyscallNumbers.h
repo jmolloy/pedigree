@@ -167,5 +167,6 @@
 #define POSIX_CHMOD             115
 #define POSIX_FCHOWN            116
 #define POSIX_FCHMOD            117
+#define POSIX_FCHDIR            118
 
 #endif

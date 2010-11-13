@@ -75,11 +75,23 @@ int posix_open(const char *name, int flags, int mode)
       return -1;
     }
 
-    F_NOTICE("open(" << name << ", " << ((mode&O_RDWR)?"O_RDWR":"") << ((mode&O_RDONLY)?"O_RDONLY":"") << ((mode&O_WRONLY)?"O_WRONLY":"") << ")");
+    F_NOTICE("open(" << name << ", " << ((mode & O_RDWR) ? "O_RDWR" : "") << ((mode & O_RDONLY) ? "O_RDONLY" : "") << ((mode & O_WRONLY) ? "O_WRONLY" : "") << ")");
+    
+    // One of these three must be specified
+    /// \bug Breaks /dev/tty open in crt0
+#if 0
+    if(!(flags & (O_RDONLY | O_WRONLY | O_RDWR)))
+    {
+        F_NOTICE("One of O_RDONLY, O_WRONLY, or O_RDWR must be passed.");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+#endif
 
     // verify the filename - don't try to open a dud file
     if (name[0] == 0)
     {
+        F_NOTICE("File does not exist (null path).");
         SYSCALL_ERROR(DoesNotExist);
         return -1;
     }
@@ -122,6 +134,7 @@ int posix_open(const char *name, int flags, int mode)
             bool worked = VFS::instance().createFile(String(name), 0777, GET_CWD());
             if (!worked)
             {
+                F_NOTICE("File does not exist (createFile failed)");
                 SYSCALL_ERROR(DoesNotExist);
                 pSubsystem->freeFd(fd);
                 return -1;
@@ -130,6 +143,7 @@ int posix_open(const char *name, int flags, int mode)
             file = VFS::instance().find(String(name), GET_CWD());
             if (!file)
             {
+                F_NOTICE("File does not exist (O_CREAT failed)");
                 SYSCALL_ERROR(DoesNotExist);
                 pSubsystem->freeFd(fd);
                 return -1;
@@ -146,20 +160,30 @@ int posix_open(const char *name, int flags, int mode)
             return -1;
         }
     }
+    else if(flags & O_CREAT)
+    {
+        if(flags & O_EXCL)
+        {
+            F_NOTICE("File exists, exclusive mode is on, and O_CREAT was set.");
+            SYSCALL_ERROR(FileExists);
+            return -1;
+        }
+    }
 
     while(file && file->isSymlink())
         file = Symlink::fromFile(file)->followLink();
     if(!file)
     {
+      F_NOTICE("File does not exist.");
       SYSCALL_ERROR(DoesNotExist);
       pSubsystem->freeFd(fd);
       return -1;
     }
 
-    if (file->isDirectory())
+    if (file->isDirectory() && (flags & (O_WRONLY | O_RDWR)))
     {
         // Error - is directory.
-        F_NOTICE("Is a directory.");
+        F_NOTICE("Is a directory, and O_WRONLY or O_RDWR was specified.");
         SYSCALL_ERROR(IsADirectory);
         pSubsystem->freeFd(fd);
         return -1;
@@ -189,6 +213,7 @@ int posix_open(const char *name, int flags, int mode)
     }
     else
     {
+      F_NOTICE("File does not exist.");
       SYSCALL_ERROR(DoesNotExist);
       pSubsystem->freeFd(fd);
       return -1;
@@ -217,6 +242,12 @@ int posix_read(int fd, char *ptr, int len)
     {
         // Error - no such file descriptor.
         SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
+    
+    if(pFd->file->isDirectory())
+    {
+        SYSCALL_ERROR(IsADirectory);
         return -1;
     }
 
@@ -1766,6 +1797,38 @@ int posix_fchown(int fd, uid_t owner, gid_t group)
     if(group != static_cast<gid_t>(-1))
         file->setGid(group);
     
+    return 0;
+}
+
+int posix_fchdir(int fd)
+{
+    F_NOTICE("fchdir(" << fd << ")");
+    
+    // Lookup this process.
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if (!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return -1;
+    }
+
+    FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
+    if (!pFd)
+    {
+        // Error - no such file descriptor.
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
+    
+    File *file = pFd->file;
+    if(!file->isDirectory())
+    {
+        SYSCALL_ERROR(NotADirectory);
+        return -1;
+    }
+    
+    Processor::information().getCurrentThread()->getParent()->setCwd(file);
     return 0;
 }
 

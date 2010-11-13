@@ -25,7 +25,7 @@
 
 #include "newlib.h"
 
-#if 0
+#if 1
 #define F_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "]\t" << Hex << x)
 #else
 #define F_NOTICE(x)
@@ -59,7 +59,10 @@ int posix_ioctl(int fd, int operation, void *buf);
 
 int posix_chmod(const char *path, mode_t mode);
 int posix_chown(const char *path, uid_t owner, gid_t group);
+int posix_fchmod(int fd, mode_t mode);
+int posix_fchown(int fd, uid_t owner, gid_t group);
 int posix_chdir(const char *path);
+int posix_fchdir(int fd)
 
 int posix_dup(int fd);
 int posix_dup2(int fd1, int fd2);

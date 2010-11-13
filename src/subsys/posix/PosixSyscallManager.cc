@@ -332,6 +332,8 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             return posix_fchown(static_cast<int>(p1), static_cast<uid_t>(p2), static_cast<gid_t>(p3));
         case POSIX_FCHMOD:
             return posix_fchmod(static_cast<int>(p1), static_cast<mode_t>(p2));
+        case POSIX_FCHDIR:
+            return posix_fchdir(static_cast<int>(p1));
         
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
