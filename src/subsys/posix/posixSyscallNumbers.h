@@ -165,5 +165,7 @@
 
 #define POSIX_CHOWN             114
 #define POSIX_CHMOD             115
+#define POSIX_FCHOWN            116
+#define POSIX_FCHMOD            117
 
 #endif

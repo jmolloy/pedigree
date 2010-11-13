@@ -610,9 +610,19 @@ int chmod(const char *path, mode_t mode)
     return syscall2(POSIX_CHMOD, (long) path, mode);
 }
 
+int fchmod(int fildes, mode_t mode)
+{
+    return syscall2(POSIX_FCHMOD, fildes, mode);
+}
+
 int chown(const char *path, uid_t owner, gid_t group)
 {
     return syscall3(POSIX_CHOWN, (long) path, owner, group);
+}
+
+int fchown(int fildes, uid_t owner, uid_t group)
+{
+    return syscall3(POSIX_FCHOWN, fildes, owner, group);
 }
 
 int utime(const char *path,const struct utimbuf *times)
@@ -786,14 +796,6 @@ int fcntl(int fildes, int cmd, ...)
 int sigprocmask(int how, const sigset_t* set, sigset_t* oset)
 {
     return (long)syscall3(POSIX_SIGPROCMASK, how, (long) set, (long) oset);
-}
-
-int fchown(int fildes, uid_t owner, uid_t group)
-{
-    STUBBED("fchown");
-    return 0;
-
-    return -1;
 }
 
 int rmdir(const char *path)
@@ -1482,12 +1484,6 @@ unsigned short htons(unsigned short n)
 unsigned short ntohs(unsigned short n)
 {
     return BIG_TO_HOST16(n);
-}
-
-int fchmod(int fildes, mode_t mode)
-{
-    STUBBED("fchmod");
-    return -1;
 }
 
 void sync(void)

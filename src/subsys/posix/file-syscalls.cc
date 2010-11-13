@@ -1591,7 +1591,7 @@ int posix_chmod(const char *path, mode_t mode)
     
     /// \todo EACCESS, EPERM
     
-    if(mode == static_cast<mode_t>(-1))
+    if((mode == static_cast<mode_t>(-1)) || (mode > 0777))
     {
         SYSCALL_ERROR(InvalidArgument);
         return -1;
@@ -1660,6 +1660,105 @@ int posix_chown(const char *path, uid_t owner, gid_t group)
     // Symlink traversal
     while (file->isSymlink())
         file = Symlink::fromFile(file)->followLink();
+    
+    // Set the UID and GID
+    if(owner != static_cast<uid_t>(-1))
+        file->setUid(owner);
+    if(group != static_cast<gid_t>(-1))
+        file->setGid(group);
+    
+    return 0;
+}
+
+int posix_fchmod(int fd, mode_t mode)
+{
+    F_NOTICE("fchmod(" << fd << ", " << Oct << mode << Hex << ")");
+    
+    /// \todo EACCESS, EPERM
+    
+    if((mode == static_cast<mode_t>(-1)) || (mode > 0777))
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+    
+    // Lookup this process.
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if (!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return -1;
+    }
+
+    FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
+    if (!pFd)
+    {
+        // Error - no such file descriptor.
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
+    
+    File *file = pFd->file;
+    
+    // Read-only filesystem?
+    if(file->getFilesystem()->isReadOnly())
+    {
+        SYSCALL_ERROR(ReadOnlyFilesystem);
+        return -1;
+    }
+    
+    /// \todo Might want to change permissions on open file descriptors?
+    uint32_t permissions = 0;
+    if (mode & S_IRUSR) permissions |= FILE_UR;
+    if (mode & S_IWUSR) permissions |= FILE_UW;
+    if (mode & S_IXUSR) permissions |= FILE_UX;
+    if (mode & S_IRGRP) permissions |= FILE_GR;
+    if (mode & S_IWGRP) permissions |= FILE_GW;
+    if (mode & S_IXGRP) permissions |= FILE_GX;
+    if (mode & S_IROTH) permissions |= FILE_OR;
+    if (mode & S_IWOTH) permissions |= FILE_OW;
+    if (mode & S_IXOTH) permissions |= FILE_OX;
+    file->setPermissions(permissions);
+    
+    return 0;
+}
+
+int posix_fchown(int fd, uid_t owner, gid_t group)
+{
+    F_NOTICE("fchown(" << fd << ", " << owner << ", " << group << ")");
+    
+    /// \todo EACCESS, EPERM
+    
+    // Is there any need to change?
+    if((owner == group) && (owner == static_cast<uid_t>(-1)))
+        return 0;
+    
+    // Lookup this process.
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if (!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return -1;
+    }
+
+    FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
+    if (!pFd)
+    {
+        // Error - no such file descriptor.
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
+    
+    File *file = pFd->file;
+    
+    // Read-only filesystem?
+    if(file->getFilesystem()->isReadOnly())
+    {
+        SYSCALL_ERROR(ReadOnlyFilesystem);
+        return -1;
+    }
     
     // Set the UID and GID
     if(owner != static_cast<uid_t>(-1))
