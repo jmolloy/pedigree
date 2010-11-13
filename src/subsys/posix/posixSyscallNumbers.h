@@ -163,4 +163,7 @@
 #define POSIX_SETUID            112
 #define POSIX_SETGID            113
 
+#define POSIX_CHOWN             114
+#define POSIX_CHMOD             115
+
 #endif

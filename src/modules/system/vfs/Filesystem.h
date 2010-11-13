@@ -84,6 +84,12 @@ public:
     {
         return m_pDisk;
     }
+    
+    /** Is the filesystem readonly? */
+    bool isReadOnly()
+    {
+        return m_bReadOnly;
+    }
 
 protected:
     /** createFile calls this after it has parsed the string path. */

@@ -607,20 +607,12 @@ mode_t umask(mode_t mask)
 
 int chmod(const char *path, mode_t mode)
 {
-    STUBBED("chmod");
-    return 0;
-
-    errno = ENOENT;
-    return -1;
+    return syscall2(POSIX_CHMOD, (long) path, mode);
 }
 
 int chown(const char *path, uid_t owner, gid_t group)
 {
-    STUBBED("chown");
-    return 0;
-
-    errno = ENOENT;
-    return -1;
+    return syscall3(POSIX_CHOWN, (long) path, owner, group);
 }
 
 int utime(const char *path,const struct utimbuf *times)

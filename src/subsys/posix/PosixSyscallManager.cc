@@ -324,6 +324,11 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_SETGID:
             return posix_setgid(static_cast<gid_t>(p1));
         
+        case POSIX_CHOWN:
+            return posix_chown(reinterpret_cast<const char *>(p1), static_cast<uid_t>(p2), static_cast<gid_t>(p3));
+        case POSIX_CHMOD:
+            return posix_chmod(reinterpret_cast<const char *>(p1), static_cast<mode_t>(p2));
+        
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
 }

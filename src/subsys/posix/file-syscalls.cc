@@ -1584,3 +1584,75 @@ int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
     */
     return -1;
 }
+
+int posix_chmod(const char *path, mode_t mode)
+{
+    /// \todo EACCESS, EPERM
+    
+    if(mode == static_cast<mode_t>(-1))
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    File* file = VFS::instance().find(String(path), GET_CWD());
+    if (!file)
+    {
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+    }
+    
+    // Read-only filesystem?
+    if(file->getFilesystem()->isReadOnly())
+    {
+        SYSCALL_ERROR(ReadOnlyFilesystem);
+        return -1;
+    }
+
+    /// \todo ELOOP (Issue #127)
+    // Symlink traversal
+    while (file->isSymlink())
+        file = Symlink::fromFile(file)->followLink();
+    
+    /// \todo Might want to change permissions on open file descriptors?
+    file->setPermissions(mode);
+    
+    return 0;
+}
+
+int posix_chown(const char *path, uid_t owner, gid_t group)
+{
+    /// \todo EACCESS, EPERM
+    
+    // Is there any need to change?
+    if((owner == group) && (owner == static_cast<uid_t>(-1)))
+        return 0;
+
+    File* file = VFS::instance().find(String(path), GET_CWD());
+    if (!file)
+    {
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+    }
+    
+    // Read-only filesystem?
+    if(file->getFilesystem()->isReadOnly())
+    {
+        SYSCALL_ERROR(ReadOnlyFilesystem);
+        return -1;
+    }
+
+    /// \todo ELOOP (Issue #127)
+    // Symlink traversal
+    while (file->isSymlink())
+        file = Symlink::fromFile(file)->followLink();
+    
+    // Set the UID and GID
+    if(owner != static_cast<uid_t>(-1))
+        file->setUid(owner);
+    if(group != static_cast<gid_t>(-1))
+        file->setGid(group);
+    
+    return 0;
+}
+
