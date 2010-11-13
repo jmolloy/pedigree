@@ -255,6 +255,8 @@ static void init()
     Process *pProcess = new Process(Processor::information().getCurrentThread()->getParent());
     pProcess->setUser(UserManager::instance().getUser(0));
     pProcess->setGroup(UserManager::instance().getUser(0)->getDefaultGroup());
+    pProcess->setEffectiveUser(pProcess->getUser());
+    pProcess->setEffectiveGroup(pProcess->getGroup());
 
     pProcess->description().clear();
     pProcess->description().append("init");

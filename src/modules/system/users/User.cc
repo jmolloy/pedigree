@@ -69,6 +69,9 @@ bool User::login(String password)
   {
     pProcess->setUser(this);
     pProcess->setGroup(m_pDefaultGroup);
+    
+    pProcess->setEffectiveUser(this);
+    pProcess->setEffectiveGroup(m_pDefaultGroup);
     return true;
   }
   else return false;
