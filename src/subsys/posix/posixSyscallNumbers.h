@@ -169,4 +169,7 @@
 #define POSIX_FCHMOD            117
 #define POSIX_FCHDIR            118
 
+#define POSIX_STATVFS           119
+#define POSIX_FSTATVFS          120
+
 #endif

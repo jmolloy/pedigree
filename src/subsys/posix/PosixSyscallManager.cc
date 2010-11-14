@@ -335,6 +335,11 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_FCHDIR:
             return posix_fchdir(static_cast<int>(p1));
         
+        case POSIX_STATVFS:
+            return posix_statvfs(reinterpret_cast<const char *>(p1), reinterpret_cast<struct statvfs *>(p2));
+        case POSIX_FSTATVFS:
+            return posix_fstatvfs(static_cast<int>(p1), reinterpret_cast<struct statvfs *>(p2));
+        
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
 }

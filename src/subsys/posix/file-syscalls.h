@@ -62,7 +62,7 @@ int posix_chown(const char *path, uid_t owner, gid_t group);
 int posix_fchmod(int fd, mode_t mode);
 int posix_fchown(int fd, uid_t owner, gid_t group);
 int posix_chdir(const char *path);
-int posix_fchdir(int fd)
+int posix_fchdir(int fd);
 
 int posix_dup(int fd);
 int posix_dup2(int fd1, int fd2);
@@ -81,5 +81,8 @@ int posix_munmap(void *addr, size_t len);
 int posix_access(const char *name, int amode);
 
 int posix_ftruncate(int a, off_t b);
+
+int posix_fstatvfs(int fd, struct statvfs *buf);
+int posix_statvfs(const char *path, struct statvfs *buf);
 
 #endif

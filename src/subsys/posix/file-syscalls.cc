@@ -1846,3 +1846,83 @@ int posix_fchdir(int fd)
     return 0;
 }
 
+int statvfs_doer(Filesystem *pFs, struct statvfs *buf)
+{
+    if(!pFs)
+    {
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+    }
+    
+    /// \todo Get all this data from the Filesystem object
+    buf->f_bsize = 4096;
+    buf->f_frsize = 512;
+    buf->f_blocks = static_cast<fsblkcnt_t>(-1);
+    buf->f_bfree = static_cast<fsblkcnt_t>(-1);
+    buf->f_bavail = static_cast<fsblkcnt_t>(-1);
+    buf->f_files = 0;
+    buf->f_ffree = static_cast<fsfilcnt_t>(-1);
+    buf->f_favail = static_cast<fsfilcnt_t>(-1);
+    buf->f_fsid = 0;
+    buf->f_flag = (pFs->isReadOnly() ? ST_RDONLY : 0) | ST_NOSUID; // No suid in pedigree yet.
+    buf->f_namemax = VFS_MNAMELEN;
+    
+    // FS type
+    strcpy(buf->f_fstypename, "ext2");
+    
+    // "From" point
+    /// \todo Disk device hash + path (on raw filesystem maybe?)
+    strcpy(buf->f_mntfromname, "from");
+    
+    // "To" point
+    /// \todo What to put here?
+    strcpy(buf->f_mntfromname, "to");
+    
+    return 0;
+}
+
+int posix_fstatvfs(int fd, struct statvfs *buf)
+{
+    F_NOTICE("fstatvfs(" << fd << ")");
+    
+    // Lookup this process.
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if (!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return -1;
+    }
+
+    FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
+    if (!pFd)
+    {
+        // Error - no such file descriptor.
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
+    
+    File *file = pFd->file;
+
+    return statvfs_doer(file->getFilesystem(), buf);
+}
+
+int posix_statvfs(const char *path, struct statvfs *buf)
+{
+    F_NOTICE("statvfs(" << path << ")");
+
+    File* file = VFS::instance().find(String(path), GET_CWD());
+    if (!file)
+    {
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+    }
+
+    /// \todo ELOOP (Issue #127)
+    // Symlink traversal
+    while (file->isSymlink())
+        file = Symlink::fromFile(file)->followLink();
+    
+    return statvfs_doer(file->getFilesystem(), buf);
+}
+
