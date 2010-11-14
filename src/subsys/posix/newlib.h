@@ -56,7 +56,6 @@
 #include <string.h>
 #endif
 
-#include <sys/statvfs.h>
-#include <sys/statfs.h>
+#include <sys/mount.h>
 
 #endif

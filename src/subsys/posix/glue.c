@@ -35,7 +35,7 @@ int h_errno; // required by networking code
 #include <semaphore.h>
 
 #include <sys/resource.h>
-#include <sys/statfs.h>
+#include <sys/mount.h>
 
 #include <setjmp.h>
 
@@ -1817,21 +1817,9 @@ int setrlimit(int resource, const struct rlimit *rlp)
 }
 
 /// \todo Write - should just be a simple ls-style read of the raw drive
-int getmntinfo(struct statfs **mntbufp, int flags)
+int getmntinfo(struct statvfs **mntbufp, int flags)
 {
     STUBBED("getmntinfo");
-    return -1;
-}
-
-int statfs(const char *path, struct statfs *buf)
-{
-    STUBBED("statfs");
-    return -1;
-}
-
-int fstatfs(int fd, struct statfs *buf)
-{
-    STUBBED("fstatfs");
     return -1;
 }
 
