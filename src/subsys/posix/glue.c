@@ -1835,6 +1835,16 @@ int fstatfs(int fd, struct statfs *buf)
     return -1;
 }
 
+int statvfs(const char *path, struct statvfs *buf)
+{
+    return syscall2(POSIX_STATVFS, (long) path, (long) buf);
+}
+
+int fstatvfs(int fd, struct statvfs *buf)
+{
+    return syscall2(POSIX_FSTATVFS, fd, (long) buf);
+}
+
 struct fstab *getfsent(void)
 {
     STUBBED("getfsent");
