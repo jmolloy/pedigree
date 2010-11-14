@@ -1586,33 +1586,47 @@ int posix_ftruncate(int a, off_t b)
 int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
 {
     NOTICE("pedigree_get_mount(" << Dec << n << Hex << ")");
-
-    /// \todo Get the list of Alias strings from the RadixTree somehow.
-
-    /*
-    List<VFS::Alias*> myAliases = VFS::instance().getAliases();
+    
+    typedef List<String*> StringList;
+    typedef Tree<Filesystem *, List<String*>* > VFSMountTree;
+    VFSMountTree &mounts = VFS::instance().getMounts();
+    
     size_t i = 0;
-    for(List<VFS::Alias*>::Iterator it = myAliases.begin(); it != myAliases.end() && i <= n; it++, i++)
+    for(VFSMountTree::Iterator it = mounts.begin();
+        it != mounts.end();
+        it++)
     {
-        if(i == n)
+        Filesystem *pFs = it.key();
+        StringList *pList = it.value();
+        Disk *pDisk = pFs->getDisk();
+        
+        for(StringList::Iterator it2 = pList->begin();
+            it2 != pList->end();
+            it2++, i++)
         {
-            String info, str;
-            Disk *disk = (*it)->fs->getDisk();
-            if(disk)
+            String mount = **it2;
+            
+            if(i == n)
             {
-                disk->getName(str);
-                disk->getParent()->getName(info);
-                info += " // ";
-                info += str;
+                String info, s;
+                if(pDisk)
+                {
+                    pDisk->getName(s);
+                    pDisk->getParent()->getName(info);
+                    info += " // ";
+                    info += s;
+                }
+                else
+                    info = "no disk";
+                
+                strcpy(mount_buf, static_cast<const char *>(mount));
+                strcpy(info_buf, static_cast<const char *>(info));
+                
+                return 0;
             }
-            else
-                info = "no disk";
-            strcpy(mount_buf, static_cast<const char*>((*it)->alias));
-            strcpy(info_buf, static_cast<const char*>(info));
-            return 0;
         }
     }
-    */
+    
     return -1;
 }
 
