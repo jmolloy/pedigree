@@ -1289,7 +1289,7 @@ void *posix_mmap(void *p)
 
     // Get real variables from the parameters
     void *addr = map_info->addr;
-    size_t len = map_info->len;
+    size_t len = map_info->len + 1;
     int prot = map_info->prot;
     int flags = map_info->flags;
     int fd = map_info->fildes;
@@ -1432,6 +1432,8 @@ void *posix_mmap(void *p)
     {
         // Grab the file to map in
         File *fileToMap = f->file;
+        
+        F_NOTICE("mmap: file name is " << fileToMap->getFullPath());
 
         // Grab the MemoryMappedFile for it. This will automagically handle
         // MAP_FIXED mappings too
