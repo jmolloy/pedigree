@@ -78,6 +78,8 @@ void X86Keyboard::initialise()
     {
         ERROR("X86Keyboard: failed to register IRQ handler!");
     }
+    
+    irqManager.control(1, IrqManager::MitigationThreshold, 100);
 }
 
 
