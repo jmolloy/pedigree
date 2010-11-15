@@ -2153,3 +2153,9 @@ char *ptsname(int fildes)
     static char *ret = "[fake]";
     return ret;
 }
+
+char *crypt(const char *key, const char *salt)
+{
+    STUBBED("crypt");
+    return 0;
+}
