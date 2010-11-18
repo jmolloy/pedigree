@@ -159,6 +159,6 @@ int	_EXFUN(_fstat64,( int __fd, struct stat64 *__sbuf ));
 
 #endif /* !_STAT_H_ */
 #ifdef __cplusplus
-}
+};
 #endif
 #endif /* _SYS_STAT_H */

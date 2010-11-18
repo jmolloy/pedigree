@@ -29,10 +29,10 @@ struct rusage {
 	struct timeval ru_stime;	/* system time used */
 };
 
-struct rlimit {
+typedef struct rlimit {
     rlim_t rlim_curr;
     rlim_t rlim_max;
-};
+} rlimit_t;
 #define rlim_cur rlim_curr
 
 int _EXFUN(getrlimit, (int resource, struct rlimit *rlp));

@@ -813,6 +813,6 @@ void _reclaim_reent _PARAMS ((struct _reent *));
 #define _GLOBAL_REENT _global_impure_ptr
 
 #ifdef __cplusplus
-}
+};
 #endif
 #endif /* _SYS_REENT_H_ */
