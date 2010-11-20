@@ -30,7 +30,7 @@ int h_errno; // required by networking code
 #define _PTHREAD_ATTR_MAGIC 0xdeadbeef
 
 // Define to 1 to get verbose debugging (hinders performance) in some functions
-#define PTHREAD_DEBUG       0
+#define PTHREAD_DEBUG       1
 
 typedef void (*pthread_once_func_t)(void);
 int onceFunctions[32] = {0};
@@ -393,30 +393,64 @@ int pthread_mutexattr_destroy(pthread_mutexattr_t *attr)
  * as mutexes, which will (hopefully!) work just as well.
  */
 
+/// \todo Eventually implement condvars properly rather than as a thin wrapper
+///       arround a pair of mutexes.
+
 int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr)
 {
-    errno = ENOSYS;
-    return -1;
+#if PTHREAD_DEBUG
+    syslog(LOG_NOTICE, "pthread_cond_init(%x)", cond);
+#endif
+    
+    if(!cond)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    
+    int ret = pthread_mutex_init(cond, 0);
+#if PTHREAD_DEBUG
+    syslog(LOG_NOTICE, "pthread_cond_init: returning %d from mutex init [%s]\n", ret, strerror(errno));
+#endif
+
+    return ret;
 }
 
 int pthread_cond_destroy(pthread_cond_t *cond)
 {
-    errno = ENOSYS;
-    return -1;
+    if(!cond)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    
+    return pthread_mutex_destroy(cond);
 }
 
 int pthread_cond_broadcast(pthread_cond_t *cond)
 {
-    errno = ENOSYS;
-    return -1;
+    if(!cond)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    
+    pthread_spin_lock(&cond->lock);
+    while(cond->front)
+    {
+        __sync_fetch_and_sub(&cond->value, 1);
+    
+        pedigree_thrwakeup(cond->front->thr);
+        cond->front = cond->front->next;
+    }
+    pthread_spin_unlock(&cond->lock);
+    
+    return 0;
 }
 
-/// \note pthread_cond_signal will unblock *at least one* thread... In this
-///       implementation, it really is just like broadcast.
 int pthread_cond_signal(pthread_cond_t *cond)
 {
-    errno = ENOSYS;
-    return -1;
+    return pthread_mutex_unlock(cond);
 }
 
 int pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *tm)
@@ -427,8 +461,20 @@ int pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, const s
 
 int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 {
-    errno = ENOSYS;
-    return -1;
+    if((!cond) || (!mutex))
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    
+    int e = 0;
+    e = pthread_mutex_unlock(mutex);
+    if(e)
+        return e;
+    e = pthread_mutex_lock(cond);
+    pthread_mutex_lock(mutex);
+    
+    return e;
 }
 
 int pthread_condattr_destroy(pthread_condattr_t *attr)
