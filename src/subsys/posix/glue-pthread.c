@@ -205,6 +205,12 @@ int pthread_attr_setschedparam(pthread_attr_t *attr, const struct sched_param *p
     return 0;
 }
 
+/// Uses a pthread_mutex_t but really works for both semaphores and mutexes
+void __pedigree_init_lock(pthread_mutex_t *mutex, int startValue)
+{
+    mutex->value = startValue;
+}
+
 int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
 {
 #if PTHREAD_DEBUG
@@ -222,7 +228,7 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
     if(pthread_spin_init(&mutex->lock, 0) < 0)
         return -1; // errno from the function
 
-    mutex->value = 1;
+    __pedigree_init_lock(mutex, 1);
     mutex->q = mutex->back = mutex->front = 0;
     
     return 0;
@@ -348,7 +354,8 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
         return -1;
     }
     
-    int32_t val = __sync_add_and_fetch(&mutex->value, 1);
+    // Mutexes are binary semaphores.
+    __sync_val_compare_and_swap(&mutex->value, 0, 1);
     
     pthread_spin_lock(&mutex->lock);
     if((!mutex->q) || (!mutex->front))
