@@ -8,14 +8,14 @@ set -e
 script_dir=`readlink -f $(dirname $0)`
 
 echo "Pedigree Easy Build script"
-echo "This script will ask a couple questions and then automatically fill"
+echo "This script will ask a couple questions and then automatically install"
 echo "dependencies and compile Pedigree for you."
 echo
 
 if [ ! -e $script_dir/.easy_os ]; then
 
     echo "Checking for dependencies... Which operating system are you running on?"
-    echo "Cygwin, Debian/Ubuntu, OpenSuSE, or some other system?"
+    echo "Cygwin, Debian/Ubuntu, OpenSuSE, Fedora or some other system?"
 
     read os
 
@@ -36,6 +36,10 @@ if [ ! -e $script_dir/.easy_os ]; then
         opensuse)
             echo "Installing packages with zypper, please wait..."
             sudo zypper install mpfr-devel mpc-devel gmp3-devel sqlite3 texinfo scons genisoimage
+            ;;
+        fedora|redhat|centos|rhel)
+            echo "Installing packages with YUM, please wait..."
+            sudo yum install mpfr-devel gmp-devel libmpc-devel sqlite texinfo scons genisoimage
             ;;
         cygwin)
             echo "Please ensure you use Cygwin's 'setup.exe' to install the following:"
