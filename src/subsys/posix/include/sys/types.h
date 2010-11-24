@@ -381,7 +381,6 @@ typedef struct {
 #define _POSIX_THREAD_TYPES_DEFINED
 // Pedigree pthread types
 typedef int pthread_t;
-typedef int pthread_cond_t;
 typedef int pthread_condattr_t;
 typedef int pthread_key_t;
 typedef int pthread_mutexattr_t;
@@ -409,6 +408,8 @@ typedef struct _pthread_mutex_t
     
     pthread_spinlock_t lock;
 } pthread_mutex_t;
+
+#define pthread_cond_t pthread_mutex_t
 
 typedef struct _pthread_attr_t
 {
