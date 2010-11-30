@@ -34,6 +34,26 @@ class Keyboard
             Alt     = 1ULL << 60,
             AltGr   = 1ULL << 59
         };
+    
+        /// Bit numbers follow the same format as the PS/2 keyboard LED byte
+        enum KeyboardLeds
+        {
+            /// Scroll Lock LED
+            ScrollLock  = 1 << 1,
+        
+            /// Number Lock LED
+            NumLock     = 1 << 2,
+            
+            /// Caps Lock LED
+            CapsLock    = 1 << 3,
+            
+            /// LEDs 1-4 cover non-standard LEDs that might be present on some
+            /// keyboards - very vendor-specific.
+            Led1        = 1 << 4,
+            Led2        = 1 << 5,
+            Led3        = 1 << 6,
+            Led4        = 1 << 7
+        };
 
         virtual ~Keyboard() {}
 
@@ -73,6 +93,24 @@ class Keyboard
          * the character is non-ASCII.
          */
         virtual char getCharNonBlock() =0;
+    
+        /**
+         * Gets the current state of the LEDs on the keyboard.
+         * A single byte bitmap is returned with flags from KeyboardLeds
+         * identifying which LEDs are on or off.
+         */
+        virtual char getLedState()
+        {
+            return 0;
+        }
+    
+        /**
+         * Sets the current state of LEDs on the keyboard.
+         * If a keyboard does not have any LEDs this is essentially a no-op.
+         */
+        virtual void setLedState(char state)
+        {
+        }
 };
 
 #endif

@@ -32,7 +32,7 @@
 
 X86Keyboard::X86Keyboard(uint32_t portBase) :
     m_bDebugState(false), m_Escape(KeymapManager::EscapeNone), m_pBase(0),
-    m_BufStart(0), m_BufEnd(0), m_BufLength(0), m_IrqId(0)
+    m_BufStart(0), m_BufEnd(0), m_BufLength(0), m_IrqId(0), m_LedState(0)
 {
 }
 
@@ -119,6 +119,30 @@ bool X86Keyboard::irq(irq_id_t number, InterruptState &state)
         Debugger::instance().start(state, sError);
     }
 #endif
+    
+    // Check for LED manipulation
+    if(scancode & 0x80)
+    {
+        uint8_t code = scancode & ~0x80;
+        if(m_Escape && (code == 0x3A))
+        {
+            DEBUG_LOG("X86Keyboard: Caps Lock toggled");
+            m_LedState ^= Keyboard::CapsLock;
+            setLedState(m_LedState);
+        }
+        else if(code == 0x45)
+        {
+            DEBUG_LOG("X86Keyboard: Num Lock toggled");
+            m_LedState ^= Keyboard::NumLock;
+            setLedState(m_LedState);
+        }
+        else if(code == 0x46)
+        {
+            DEBUG_LOG("X86Keyboard: Scroll Lock toggled");
+            m_LedState ^= Keyboard::ScrollLock;
+            setLedState(m_LedState);
+        }
+    }
 
     // Get the HID keycode corresponding to the scancode
     uint8_t keyCode = KeymapManager::instance().convertPc102ScancodeToHidKeycode(scancode, m_Escape);
@@ -246,4 +270,17 @@ char X86Keyboard::scancodeToAscii(uint8_t scancode)
     if((key & Keyboard::Special) || ((key & 0xFFFFFFFF) > 0x7f))
         return 0;
     return static_cast<char>(key & 0x7f);
+}
+
+char X86Keyboard::getLedState()
+{
+    return m_LedState;
+}
+
+void X86Keyboard::setLedState(char state)
+{
+    m_LedState = state;
+    
+    m_pBase->write8(0xED, 4);
+    m_pBase->write8(state, 0);
 }

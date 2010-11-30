@@ -43,6 +43,9 @@ class X86Keyboard : public Keyboard, private IrqHandler
 
         virtual char getChar();
         virtual char getCharNonBlock();
+    
+        virtual char getLedState();
+        virtual void setLedState(char state);
 
         /// IrqHandler interface
         virtual bool irq(irq_id_t number, InterruptState &state);
@@ -69,6 +72,9 @@ class X86Keyboard : public Keyboard, private IrqHandler
 
         /// IRQ id
         irq_id_t m_IrqId;
+    
+        /// Current LED state
+        char m_LedState;
 };
 
 #endif
