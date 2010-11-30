@@ -14,29 +14,40 @@ diff -rupN gcc-4.3.2-orig/config.sub gcc-4.3.2/config.sub
 diff -rupN gcc-4.3.2-orig/gcc/config/pedigree.h gcc-4.3.2/gcc/config/pedigree.h
 --- gcc-4.3.2-orig/gcc/config/pedigree.h	1970-01-01 10:00:00.000000000 +1000
 +++ gcc-4.3.2/gcc/config/pedigree.h	2009-03-12 15:20:51.000000000 +1000
-@@ -0,0 +1,22 @@
+@@ -0,0 +1,33 @@
++#define NO_IMPLICIT_EXTERN_C
++
++#define STARTFILE_SPEC \
++    "%{!shared: %{!pg:crt0.o%s}} \
++    crti.o%s crtbegin.o%s"
++
++#define ENDFILE_SPEC \
++    "crtend.o%s crtn.o%s"
++
++#undef CPLUSPLUS_CPP_SPEC
++#define CPLUSPLUS_CPP_SPEC "-D_GNU_SOURCE %(cpp)"
++
++#undef LIB_SPEC
++#define LIB_SPEC \
++    "%{pthread:-lpthread} \
++     -lc"
++
 +#undef TARGET_OS_CPP_BUILTINS
-+#define TARGET_OS_CPP_BUILTINS()      \
-+  do {                                \
-+    builtin_define_std ("pedigree");      \
-+    builtin_define_std ("unix");      \
-+    builtin_assert ("system=pedigree");   \
-+    builtin_assert ("system=unix");   \
-+  } while(0);
++#define TARGET_OS_CPP_BUILTINS()                \
++    do {                                        \
++        builtin_define_std ("__pedigree__");    \
++        builtin_define_std ("pedigree");        \
++        builtin_define_std ("unix");            \
++        builtin_assert ("system=pedigree");     \
++        builtin_assert ("system=unix");         \
++    } while(0);
++
++#if defined(HAVE_LD_EH_FRAME_HDR)
++#define LINK_EH_SPEC "%{!static:--eh-frame-hdr} "
++#endif
 +
 +#undef TARGET_VERSION
 +#define TARGET_VERSION fprintf(stderr, " (i386/x86_64 pedigree)")
-+#undef STARTFILE_SPEC
-+#define STARTFILE_SPEC "%{!shared: \
-+                        %{!symbolic: \
-+                        %{pg:gcrt0.o%s}%{!pg:%{p:mcrt0.o%s}%{!p:crt0.o%s}}}}\
-+                       crti.o%s \
-+                       crtbegin.o%s"
-+
-+#undef ENDFILE_SPEC
-+#define ENDFILE_SPEC "crtend.o%s crtn.o%s"
-+
-+#define NO_IMPLICIT_EXTERN_C
 diff -rupN gcc-4.3.2-orig/gcc/config.gcc gcc-4.3.2/gcc/config.gcc
 --- gcc-4.3.2-orig/gcc/config.gcc	2008-06-10 02:32:15.000000000 +1000
 +++ gcc-4.3.2/gcc/config.gcc	2009-03-12 16:51:59.000000000 +1000
