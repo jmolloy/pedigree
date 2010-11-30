@@ -281,6 +281,8 @@ void X86Keyboard::setLedState(char state)
 {
     m_LedState = state;
     
-    m_pBase->write8(0xED, 4);
+    while(m_pBase->read8(4) & 2);
+    m_pBase->write8(0xED, 0);
+    while(m_pBase->read8(4) & 2);
     m_pBase->write8(state, 0);
 }
