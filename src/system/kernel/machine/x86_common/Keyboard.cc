@@ -124,7 +124,7 @@ bool X86Keyboard::irq(irq_id_t number, InterruptState &state)
     if(scancode & 0x80)
     {
         uint8_t code = scancode & ~0x80;
-        if(m_Escape && (code == 0x3A))
+        if(code == 0x3A)
         {
             DEBUG_LOG("X86Keyboard: Caps Lock toggled");
             m_LedState ^= Keyboard::CapsLock;
