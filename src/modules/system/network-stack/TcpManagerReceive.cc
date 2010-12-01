@@ -280,7 +280,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
     case Tcp::LAST_ACK:
     case Tcp::TIME_WAIT:
 
-      if(stateBlock->seg_len == 0 && stateBlock->rcv_wnd == 0)
+      if((stateBlock->seg_len == 0) && (stateBlock->rcv_wnd == 0))
       {
         // Unacceptable
         if(!(stateBlock->seg_seq == stateBlock->rcv_nxt))
@@ -292,12 +292,15 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
         }
       }
 
-      if(stateBlock->seg_len == 0 && stateBlock->rcv_wnd > 0)
+      if((stateBlock->seg_len == 0) && (stateBlock->rcv_wnd > 0))
       {
         // Unacceptable
-        if(!(stateBlock->rcv_nxt <= stateBlock->seg_seq && stateBlock->seg_seq < (stateBlock->rcv_nxt + stateBlock->rcv_wnd)))
+        if(!((stateBlock->rcv_nxt <= stateBlock->seg_seq) && (stateBlock->seg_seq < (stateBlock->rcv_nxt + stateBlock->rcv_wnd))))
         {
           NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is unacceptable 2.");
+          NOTICE("    >> RCV_NXT = " << stateBlock->rcv_nxt);
+          NOTICE("    >> SEG_SEQ = " << stateBlock->seg_seq);
+          NOTICE("    >> RCV_NXT + RCV_WND = " << (stateBlock->rcv_nxt + stateBlock->rcv_wnd));
           if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0))
             WARNING("TCP: Sending ACK due to unacceptable ACK (2) while in post-SYN_SENT state failed.");
           break;
@@ -305,7 +308,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
       }
 
       // Unacceptable
-      if(stateBlock->seg_len > 0 && stateBlock->rcv_wnd == 0)
+      if((stateBlock->seg_len > 0) && (stateBlock->rcv_wnd == 0))
       {
         NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is unacceptable 3.");
         if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0))
@@ -313,12 +316,12 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
         break;
       }
 
-      if(stateBlock->seg_len > 0 && stateBlock->rcv_wnd > 0)
+      if((stateBlock->seg_len > 0) && (stateBlock->rcv_wnd > 0))
       {
         if(!(
-          (stateBlock->rcv_nxt <= stateBlock->seg_seq && stateBlock->seg_seq < (stateBlock->rcv_nxt + stateBlock->rcv_wnd))
+          ((stateBlock->rcv_nxt <= stateBlock->seg_seq) && (stateBlock->seg_seq < (stateBlock->rcv_nxt + stateBlock->rcv_wnd)))
           ||
-          (stateBlock->rcv_nxt <= (stateBlock->seg_seq + stateBlock->seg_len - 1) && (stateBlock->seg_seq + stateBlock->seg_len - 1) < (stateBlock->rcv_nxt + stateBlock->rcv_wnd))))
+          ((stateBlock->rcv_nxt <= (stateBlock->seg_seq + stateBlock->seg_len - 1)) && ((stateBlock->seg_seq + stateBlock->seg_len - 1) < (stateBlock->rcv_nxt + stateBlock->rcv_wnd)))))
         {
           NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " during " << Tcp::stateString(stateBlock->currentState) << " is unacceptable 4.");
           if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0))
