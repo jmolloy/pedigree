@@ -64,8 +64,17 @@ inline AtaStatus ataWait(IoBase *pBase)
     // will come out in the return value even if DRQ is set.
     if(!(status & 0x8))
     {
-        while(!(status & 0x40) && !(status & 0x1))
+        while(!(status & 0x41))
+        {
             status = pBase->read8(7);
+            
+            // If for some reason the original check for zero gave back something
+            // set, we check again here so we don't infinitely loop waiting for
+            // the bits that'll never be set. Essentially an escape for devices
+            // that aren't present.
+            if(!status)
+                break;
+        }
     }
 
     // Okay, BSY is unset now. The drive is no longer busy, it is up to the

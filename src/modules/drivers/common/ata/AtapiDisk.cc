@@ -55,10 +55,20 @@ bool AtapiDisk::initialise()
   IoBase *controlRegs = m_ControlRegs;
 
   // Drive spin-up
-  // commandRegs->write8(0x00, 6);
+  commandRegs->write8(0x00, 6);
+    
+  // Check for device presence
+  uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
+  commandRegs->write8(devSelect, 6);
+  commandRegs->write8(0xA1, 7);
+  if(commandRegs->read8(7) == 0)
+  {
+    NOTICE("ATAPI: No device present here");
+    return false;
+  }
 
   // Select the device to transmit to
-  uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
+  devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
   commandRegs->write8(devSelect, 6);
 
   // Wait for it to be selected

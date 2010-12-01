@@ -43,20 +43,29 @@ AtaDisk::~AtaDisk()
 
 bool AtaDisk::initialise()
 {
-
     // Grab our parent.
     AtaController *pParent = dynamic_cast<AtaController*> (m_pParent);
 
     // Grab our parent's IoPorts for command and control accesses.
     IoBase *commandRegs = m_CommandRegs;
     // Commented out - unused variable.
-    //IoBase *controlRegs = m_ControlRegs;
+    // IoBase *controlRegs = m_ControlRegs;
 
     // Drive spin-up
-    //commandRegs->write8(0x00, 6);
+    commandRegs->write8(0x00, 6);
+    
+    // Check for device presence
+    uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
+    commandRegs->write8(devSelect, 6);
+    commandRegs->write8(0xEC, 7);
+    if(commandRegs->read8(7) == 0)
+    {
+        NOTICE("ATA: No device present here");
+        return false;
+    }
 
     // Select the device to transmit to
-    uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
+    devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
     commandRegs->write8(devSelect, 6);
 
     // Wait for it to be selected
@@ -75,7 +84,7 @@ bool AtaDisk::initialise()
     AtaStatus status;
 
     // Disable IRQs, for the moment.
-    //controlRegs->write8(0x01, 6);
+    // controlRegs->write8(0x01, 6);
 
     // Send IDENTIFY.
     commandRegs->read8(7);
