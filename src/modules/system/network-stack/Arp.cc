@@ -177,17 +177,9 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
     // request?
     if(BIG_TO_HOST16(header->opcode) == ARP_OP_REQUEST)
     {
+      // Add to local cache even if the request isn't for us
       MacAddress myMac = cardInfo.mac;
-
-      // add to our local cache, if needed
-      if(m_ArpCache.lookup(static_cast<uintptr_t>(header->ipSrc)) == 0)
-      {
-        arpEntry* ent = new arpEntry;
-        ent->valid = true;
-        ent->mac = sourceMac;
-        ent->ip.setIp(header->ipSrc);
-        m_ArpCache.insert(static_cast<uintptr_t>(header->ipSrc), ent);
-      }
+      insertToCache(IpAddress(header->ipSrc), sourceMac);
       
       // We can glean information from ARP requests, but unless they're for us
       // we can't really respond.
@@ -215,14 +207,7 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
       NOTICE("arp " << IpAddress(header->ipSrc).toString() << " is at " << sourceMac.toString());
 
       // add to our local cache, if needed
-      if(m_ArpCache.lookup(header->ipSrc) == 0)
-      {
-        arpEntry* ent = new arpEntry;
-        ent->valid = true;
-        ent->mac = sourceMac;
-        ent->ip.setIp(header->ipSrc);
-        m_ArpCache.insert(header->ipSrc, ent);
-      }
+      insertToCache(IpAddress(header->ipSrc), sourceMac);
 
       // search all the requests we've made, trigger the first we find
       for(Vector<ArpRequest*>::Iterator it = m_ArpRequests.begin();
