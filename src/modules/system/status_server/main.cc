@@ -23,6 +23,8 @@
 #include <network-stack/RoutingTable.h>
 #include <network-stack/NetworkStack.h>
 #include <network-stack/ConnectionBasedEndpoint.h>
+#include <vfs/Vfs.h>
+#include <vfs/Filesystem.h>
 
 class StringCallback : public Log::LogCallback
 {
@@ -223,6 +225,50 @@ int clientThread(void *p)
                 response += "</tr>";
             }
             response += "</table>";
+            
+            response += "<h3>VFS</h3>";
+            response += "<table border='1'><tr><th>VFS Alias</th><th>Disk</th></tr>";
+            
+            typedef List<String*> StringList;
+            typedef Tree<Filesystem*, List<String*>*> VFSMountTree;
+            
+            VFSMountTree &mounts = VFS::instance().getMounts();
+            
+            for(VFSMountTree::Iterator i = mounts.begin();
+                i != mounts.end();
+                i++)
+            {
+                Filesystem *pFs = i.key();
+                StringList *pList = i.value();
+                Disk *pDisk = pFs->getDisk();
+                
+                for(StringList::Iterator j = pList->begin();
+                    j != pList->end();
+                    j++)
+                {
+                    String mount = **j;
+                    String diskInfo, temp;
+                    
+                    if(pDisk)
+                    {
+                        pDisk->getName(temp);
+                        pDisk->getParent()->getName(diskInfo);
+                        
+                        diskInfo += " -- ";
+                        diskInfo += temp;
+                    }
+                    else
+                        diskInfo = "(no disk)";
+                    
+                    response += "<tr><td>";
+                    response += mount;
+                    response += "</td><td>";
+                    response += diskInfo;
+                    response += "</td></tr>";
+                }
+            }
+            
+            response += "</table>";
 
             response += "<h3>Kernel Log</h3>";
             response += "<pre>";
@@ -238,6 +284,8 @@ int clientThread(void *p)
 
     // Nothing more to send, bring down our side of the connection
     pClient->shutdown(Endpoint::ShutSending);
+    
+    pClient->shutdown(Endpoint::ShutBoth);
 
     // Leave the endpoint to be cleaned up when the connection is shut down cleanly
     /// \todo Does it get cleaned up if we do this?
@@ -273,4 +321,4 @@ static void destroy()
 {
 }
 
-MODULE_INFO("Status Server", &init, &destroy, "network-stack", "init");
+MODULE_INFO("Status Server", &init, &destroy, "network-stack", "init", "vfs");
