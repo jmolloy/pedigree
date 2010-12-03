@@ -23,7 +23,7 @@
 #include <network-stack/RoutingTable.h>
 #include <network-stack/NetworkStack.h>
 #include <network-stack/ConnectionBasedEndpoint.h>
-#include <vfs/Vfs.h>
+#include <vfs/VFS.h>
 #include <vfs/Filesystem.h>
 
 class StringCallback : public Log::LogCallback
