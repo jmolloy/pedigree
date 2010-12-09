@@ -39,6 +39,7 @@ opts.AddVariables(
     ('AS','Sets the assembler to use.'),
     ('AR','Sets the archiver to use.'),
     ('LINK','Sets the linker to use.'),
+    ('OBJCOPY','Path to `objcopy\' executable.'),
     ('CFLAGS','Sets the C compiler flags.',''),
     ('CXXFLAGS','Sets the C++ compiler flags.',''),
     ('ASFLAGS','Sets the assembler flags.',''),
@@ -169,6 +170,7 @@ if env['CROSS'] != '':
     env['AR'] = crossBase + 'ar'
     env['RANLIB'] = crossBase + 'ranlib'
     env['LD'] = crossBase + 'gcc'
+    env['OBJCOPY'] = crossBase + 'objcopy'
     env['LINK'] = env['LD']
 env['LD'] = env['LINK']
 
