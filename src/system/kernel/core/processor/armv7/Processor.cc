@@ -253,3 +253,10 @@ void Processor::writeTTBCR(uint32_t value)
 {
     asm volatile("MCR p15,0,%0,c2,c0,2" : : "r" (value));
 }
+
+void Processor::setTlsBase(uintptr_t newBase)
+{
+    // Using the user read-only thread and process ID register to store the TLS base
+    asm volatile("MCR p15,0,%0,c13,c0,3" : : "r" (newBase));
+}
+

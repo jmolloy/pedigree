@@ -85,7 +85,14 @@ int pthread_detach(pthread_t thread)
 pthread_t pthread_self()
 {
     pthread_t ret = 0;
+#ifdef X86_COMMON
     asm volatile("mov %%fs:0, %0" : "=r" (ret));
+#endif
+
+#ifdef ARMV7
+    asm volatile("mrc p15,0,%0,c13,c0,3" : "=r" (ret));
+#endif
+
     return ret;
 }
 
