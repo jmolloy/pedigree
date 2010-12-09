@@ -157,7 +157,7 @@ if env['ARCH_TARGET'] == 'X86':
 elif env['ARCH_TARGET'] == 'X64':
     arch_subdir = 'amd64'
 elif env['ARCH_TARGET'] == 'ARM':
-    arc_subdir = 'arm'
+    arch_subdir = 'arm'
 elif env['ARCH_TARGET'] == 'PPC':
     arch_subdir = 'ppc'
 else:
@@ -181,7 +181,8 @@ custom_incpath = {
     'status_server' : ['#/src/system/kernel'],
     'TUI'           : ['#/src/system/kernel'],
     'init'          : ['#/src/system/kernel', '#/src'],
-    'linker'        : ['#/src/modules/system/linker']
+    'linker'        : ['#/src/modules/system/linker'],
+    'usb-glue'      : ['#/src/system/kernel/machine/arm_beagle'] # TODO: handle other machine types
 }
 
 # Custom library paths for specific modules

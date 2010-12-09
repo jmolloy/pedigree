@@ -113,7 +113,4 @@ void destroy()
 {
 }
 
-MODULE_NAME("rawfs");
-MODULE_ENTRY(&init);
-MODULE_EXIT(&destroy);
-MODULE_DEPENDS("vfs");
+MODULE_INFO("rawfs", &init, &destroy, "vfs");

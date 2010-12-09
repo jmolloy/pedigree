@@ -108,6 +108,7 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
     DEBUG_LOG("      Host controller " << (hccparams & 2 ? "does" : "does not") << " allow us to use frame lists with more than 1024 items in them.");
 #endif
 
+#ifdef X86_COMMON
     // Pre-OS to OS handoff
     while(eecp)
     {
@@ -141,6 +142,7 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
         else
             eecp = (legsup >> 8) & 0xFF; // Zero = "end of list"
     }
+#endif
     
     // Disable any running schedules gracefully before halting the controller
     m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) & ~(EHCI_CMD_ASYNCLE | EHCI_CMD_PERIODICLE), m_nOpRegsOffset + EHCI_CMD);
@@ -351,7 +353,11 @@ void Ehci::interrupt(size_t number, InterruptState &state)
     
     if(!nStatus)
     {
-        return false; // Shared IRQ: this IRQ is for another device
+        return
+#ifdef X86_COMMON
+        false // Shared IRQ: this IRQ is for another device
+#endif
+        ;
     }
     
     if(nStatus & 0x16)
