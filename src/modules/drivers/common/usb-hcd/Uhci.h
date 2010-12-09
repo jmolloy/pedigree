@@ -13,6 +13,9 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
+#ifdef X86_COMMON
+
 #ifndef UHCI_H
 #define UHCI_H
 
@@ -228,5 +231,7 @@ class Uhci : public UsbHub, public IrqHandler, public RequestQueue, public Timer
         Uhci(const Uhci&);
         void operator =(const Uhci&);
 };
+
+#endif
 
 #endif

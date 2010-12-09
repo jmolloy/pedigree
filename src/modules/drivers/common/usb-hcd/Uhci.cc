@@ -14,6 +14,8 @@
  * OR IN CONRTLCTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#ifdef X86_COMMON
+
 #include <machine/Machine.h>
 #include <machine/Pci.h>
 #include <processor/Processor.h>
@@ -743,3 +745,4 @@ void Uhci::start()
     while(m_pBase->read16(UHCI_STS) & UHCI_STS_HALT) delay(10);
 }
 
+#endif
