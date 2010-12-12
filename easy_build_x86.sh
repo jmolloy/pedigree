@@ -44,7 +44,9 @@ if [ ! -e $script_dir/.easy_os ]; then
             ;;
         opensuse)
             echo "Installing packages with zypper, please wait..."
+            set +e
             sudo zypper install mpfr-devel mpc-devel gmp3-devel sqlite3 texinfo scons genisoimage
+            set -e
             ;;
         fedora|redhat|centos|rhel)
             echo "Installing packages with YUM, please wait..."
