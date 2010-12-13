@@ -181,7 +181,7 @@ static void init()
     // Build routing tables - try to find a default configuration that can
     // connect to the outside world
     IpAddress empty;
-    bool bRouteFound = false;
+    Network *pDefaultCard = 0;
     for (size_t i = 0; i < NetworkStack::instance().getNumDevices(); i++)
     {
         /// \todo Perhaps try and ping a remote host?
@@ -200,11 +200,8 @@ static void init()
         // If the device has a gateway, set it as the default and continue
         if (info.gateway != empty)
         {
-            if(!bRouteFound)
-            {
-                RoutingTable::instance().Add(RoutingTable::Named, empty, empty, String("default"), card);
-                bRouteFound = true;
-            }
+            if(!pDefaultCard)
+                pDefaultCard = card;
 
             // Additionally route the complement of its subnet to the gateway
             RoutingTable::instance().Add(RoutingTable::DestSubnetComplement,
@@ -231,8 +228,10 @@ static void init()
     }
 
     // Otherwise, just assume the default is interface zero
-    if (!bRouteFound)
+    if (!pDefaultCard)
         RoutingTable::instance().Add(RoutingTable::Named, empty, empty, String("default"), NetworkStack::instance().getDevice(0));
+    else
+        RoutingTable::instance().Add(RoutingTable::Named, empty, empty, String("default"), pDefaultCard);
 
 #if 0
     // Routes installed, start the UDP logger
