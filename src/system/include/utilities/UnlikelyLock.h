@@ -73,7 +73,9 @@ public:
         the critical region. */
     inline bool acquire()
     {
-        Processor::setInterrupts(false);
+        bool bOldInterrupts = Processor::getInterrupts();
+        if(bOldInterrupts)
+            Processor::setInterrupts(false);
 
         m_Atomic += 100000;
 
@@ -81,12 +83,14 @@ public:
         {
             // Someone already acquire()d... :(
             m_Atomic -= 100000;
-            Processor::setInterrupts(true);
+            Processor::setInterrupts(bOldInterrupts);
             return false;
         }
 
         while (m_Atomic > 100000)
             ;
+        
+        m_bInterrupts = bOldInterrupts;
 
         return true;
     }
@@ -95,11 +99,13 @@ public:
     {
         // Reset counter to one.
         m_Atomic -= 100000;
-        Processor::setInterrupts(true);
+        Processor::setInterrupts(m_bInterrupts);
     }
 
 private:
     Atomic<size_t> m_Atomic;
+    
+    bool m_bInterrupts;
 };
 
 #endif
