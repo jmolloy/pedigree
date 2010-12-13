@@ -340,6 +340,10 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_FSTATVFS:
             return posix_fstatvfs(static_cast<int>(p1), reinterpret_cast<struct statvfs *>(p2));
         
+        case PEDIGREE_UNWIND_SIGNAL:
+            pedigree_unwind_signal();
+            return 0;
+        
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
 }

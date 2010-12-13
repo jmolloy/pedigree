@@ -44,6 +44,7 @@ uintptr_t posix_signal(int sig, void* func);
 int posix_raise(int sig, SyscallState &State);
 int posix_kill(int pid, int sig);
 int posix_sigprocmask(int how, const uint32_t *set, uint32_t *oset);
+void pedigree_unwind_signal();
 
 int posix_sigaltstack(const stack_t *stack, struct stack_t *oldstack);
 

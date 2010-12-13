@@ -65,6 +65,7 @@ elif env['ARCH_TARGET'] == 'ARM':
     suffix = '-arm'
 
 posix_files += ["sigret" + suffix + ".s"]
+glue_files += ["setjmp" + suffix + ".s"]
 
 pthread_files = ['glue-pthread.c']
 
