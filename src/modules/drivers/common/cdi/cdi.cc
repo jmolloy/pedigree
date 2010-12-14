@@ -166,4 +166,50 @@ void cdi_driver_register(struct cdi_driver* driver)
     cdi_list_push(drivers, driver);
 }
 
+int cdi_provide_device(struct cdi_bus_data *device)
+{
+    // What type is the device?
+    switch(device->bus_type)
+    {
+        case CDI_PCI:
+            {
+                // Grab the cdi_pci_device for this device
+                struct cdi_pci_device *pci = reinterpret_cast<struct cdi_pci_device *>(device);
+                
+                // Create a new device object to add to the tree
+                Device *pDevice = new Device();
+                
+                // PCI data
+                pDevice->setPciPosition(pci->bus, pci->dev, pci->function);
+                pDevice->setPciIdentifiers(pci->class_id, pci->subclass_id, pci->vendor_id, pci->device_id, pci->interface_id);
+                pDevice->setInterruptNumber(pci->irq);
+                
+                // PCI BARs
+                struct cdi_pci_resource *pResource = 0;
+                for(int i = 0; (pResource = reinterpret_cast<struct cdi_pci_resource *>(cdi_list_get(pci->resources, i))); i++)
+                {
+                    TinyStaticString barName("BAR");
+                    barName.append(i, 10);
+                    
+                    Device::Address *pAddress = new Device::Address(String(barName), pResource->start, pResource->length, pResource->type == CDI_PCI_IOPORTS);
+                    
+                    pDevice->addresses().pushBack(pAddress);
+                }
+                
+                // Link into the tree
+                pDevice->setParent(&Device::root());
+                Device::root().addChild(pDevice);
+                
+                return 0;
+            }
+            break;
+        
+        default:
+            WARNING("CDI: Unimplemented device type for cdi_provide_device(): " << device->bus_type);
+            break;
+    };
+    
+    return -1;
+}
+
 MODULE_INFO("cdi", &cdi_init, &cdi_destroy, "dma", "network-stack", "vfs");
