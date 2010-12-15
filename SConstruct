@@ -375,30 +375,27 @@ sub_dict = {"$buildtime"    : env['PEDIGREE_BUILDTIME'],
            }
 
 # Create the file
-if hasattr(env, 'Textfile'):
-    env.Textfile('#' + env['BUILDDIR'] + '/Version.cc', [version_out], SUBST_DICT=sub_dict)
-else:
-    def create_version_cc(target, source, env):
-        global version_out
-        
-        # Make the non-SCons target a bit special.
-        # People using Cygwin have enough to deal with without boring
-        # status messages from build systems that don't support fancy
-        # builders to do stuff quickly and easily.
-        print "Creating Version.cc [rev: %s, with: %s@%s]" % (env['PEDIGREE_REVISION'], env['PEDIGREE_USER'], env['PEDIGREE_MACHINE'])
-        
-        def replacer(s):
-            for keyname, value in sub_dict.iteritems():
-                s = s.replace(keyname, value)
-            return s
+def create_version_cc(target, source, env):
+    global version_out
+
+    # Make the non-SCons target a bit special.
+    # People using Cygwin have enough to deal with without boring
+    # status messages from build systems that don't support fancy
+    # builders to do stuff quickly and easily.
+    print "Creating Version.cc [rev: %s, with: %s@%s]" % (env['PEDIGREE_REVISION'], env['PEDIGREE_USER'], env['PEDIGREE_MACHINE'])
+
+    def replacer(s):
+        for keyname, value in sub_dict.iteritems():
+            s = s.replace(keyname, value)
+        return s
     
-        version_out = map(replacer, version_out)
+    version_out = map(replacer, version_out)
     
-        f = open(target[0].path, 'w')
-        f.write('\n'.join(version_out))
-        f.close()
+    f = open(target[0].path, 'w')
+    f.write('\n'.join(version_out))
+    f.close()
     
-    env.Command('#' + env['BUILDDIR'] + '/Version.cc', env.Value(env, 'genversion'), Action(create_version_cc, None))
+env.Command('#' + env['BUILDDIR'] + '/Version.cc', env.Value(env, 'genversion'), Action(create_version_cc, None))
 
 # Save the cache, all the options are configured
 if(not env['nocache']):
