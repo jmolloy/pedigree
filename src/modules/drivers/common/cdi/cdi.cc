@@ -176,6 +176,10 @@ int cdi_provide_device(struct cdi_bus_data *device)
                 // Grab the cdi_pci_device for this device
                 struct cdi_pci_device *pci = reinterpret_cast<struct cdi_pci_device *>(device);
                 
+                // Don't re-create existing devices
+                if(pci->meta.backdev)
+                    return -1;
+                
                 // Create a new device object to add to the tree
                 Device *pDevice = new Device();
                 
@@ -205,7 +209,7 @@ int cdi_provide_device(struct cdi_bus_data *device)
             break;
         
         default:
-            WARNING("CDI: Unimplemented device type for cdi_provide_device(): " << device->bus_type);
+            WARNING("CDI: Unimplemented device type for cdi_provide_device(): " << static_cast<int>(device->bus_type));
             break;
     };
     
