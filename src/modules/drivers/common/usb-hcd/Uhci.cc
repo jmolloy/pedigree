@@ -154,7 +154,8 @@ Uhci::Uhci(Device* pDev) :
         }
 
         // Reset the port (the timer will receive the connection status changes)
-        portReset(i);
+        if(portReset(i))
+            executeRequest(i);
 
         m_nPorts++;
     }
