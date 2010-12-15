@@ -82,6 +82,7 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
 
     // Grab the ports
     m_pBase = m_Addresses[0]->m_Io;
+    NOTICE("EHCI: Working off: " << (m_Addresses[0]->m_IsIoSpace ? "P" : "MM") << "IO");
     m_Addresses[0]->map();
     m_nOpRegsOffset = m_pBase->read8(EHCI_CAPLENGTH);
 #ifdef USB_VERBOSE_DEBUG
@@ -366,7 +367,6 @@ void Ehci::interrupt(size_t number, InterruptState &state)
     */
 
     uint32_t nStatus = m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & m_pBase->read32(m_nOpRegsOffset + EHCI_INTR);
-    NOTICE_NOLOCK("status register: " << m_pBase->read32(m_nOpRegsOffset + EHCI_STS));
     
     if(!nStatus)
     {
