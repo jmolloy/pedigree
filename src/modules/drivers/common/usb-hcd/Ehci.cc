@@ -75,7 +75,8 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
 #ifdef X86_COMMON
     uint32_t nPciCmdSts = PciBus::instance().readConfigSpace(this, 1);
 #ifdef USB_VERBOSE_DEBUG
-    DEBUG_LOG("USB: EHCI: Pci command: " << (nPciCmdSts & 0xffff));
+    DEBUG_LOG("USB: EHCI: PCI command register: " << (nPciCmdSts & 0xffff));
+    DEBUG_LOG("USB: EHCI: PCI status register: " << ((nPciCmdSts & 0xffff0000) >> 16));
 #endif
     PciBus::instance().writeConfigSpace(this, 1, nPciCmdSts | 0x4);
 #endif
@@ -228,19 +229,26 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
     // Write the async list head pointer
     m_pBase->write32(m_pQHListPhys, m_nOpRegsOffset + EHCI_ASYNCLP);
 
+    // Set the desired interrupt threshold (frame list size = 4096 bytes)
+    m_pBase->write32((m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) & ~0xFF0000) | 0x80000, m_nOpRegsOffset + EHCI_CMD);
+
     // Turn on the controller
     m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) | EHCI_CMD_RUN, m_nOpRegsOffset + EHCI_CMD);
     while(m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & EHCI_STS_HALTED)
         delay(5);
-
-    // Set the desired interrupt threshold (frame list size = 4096 bytes)
-    m_pBase->write32((m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) & ~0xFF0000) | 0x80000, m_nOpRegsOffset + EHCI_CMD);
 
     // Set up the RequestQueue
     initialise();
 
     // Take over the ports
     m_pBase->write32(1, m_nOpRegsOffset + EHCI_CFGFLAG);
+    
+    // If it's supported, enable the asynchronous park mode with only one transaction
+    // before advancing through the queue.
+    if(hccparams & 4)
+    {
+        m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) | 0x900, m_nOpRegsOffset + EHCI_CMD);
+    }
 
     // Enable the asynchronous schedule, and wait for it to become enabled
     m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) | EHCI_CMD_ASYNCLE, m_nOpRegsOffset + EHCI_CMD);
@@ -370,6 +378,7 @@ void Ehci::interrupt(size_t number, InterruptState &state)
     
     if(!nStatus)
     {
+        WARNING_NOLOCK("EHCI: unwanted IRQ?");
         return
 #ifdef X86_COMMON
         false // Shared IRQ: this IRQ is for another device
@@ -580,7 +589,7 @@ void Ehci::addTransferToTransaction(uintptr_t nTransaction, bool bToggle, UsbPid
 
     // Active, we want an interrupt on completion, and reset the error counter
     pqTD->nStatus = 0x80;
-    pqTD->bIoc = 1; // Interrupt only on last TD
+    pqTD->bIoc = 0; // Interrupt only on last TD
     pqTD->nErr = 3; // Up to 3 retries of this transaction
 
     // Set up the transfer
