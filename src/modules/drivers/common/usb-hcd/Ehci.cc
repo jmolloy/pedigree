@@ -107,7 +107,7 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
     
 #ifdef USB_VERBOSE_DEBUG
     DEBUG_LOG("EHCI: Host controller " << (hccparams & 1 ? "does" : "does not") << " require 64-bit data structures.");
-    DEBUG_LOG("      Host controller " << (hccparams & 2 ? "does" : "does not") << " allow us to use frame lists with more than 1024 items in them.");
+    DEBUG_LOG("      Host controller " << (hccparams & 2 ? "does" : "does not") << " allow us to use frame lists with anything other than 1024 items in them.");
     DEBUG_LOG("      Host controller " << (hccparams & 4 ? "does" : "does not") << " support the asynchronous schedule park capability.");
     DEBUG_LOG("      CAPLENGTH is " << m_pBase->read8(EHCI_CAPLENGTH));
     DEBUG_LOG("      HCCPARAMS is " << hccparams);
