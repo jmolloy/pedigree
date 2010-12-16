@@ -40,7 +40,7 @@ void RoutingTable::Add(Type type, IpAddress dest, IpAddress subIp, String meta, 
     // Add the route to the database directly
     String str;
     size_t hash = DeviceHashTree::instance().getHash(card);
-    str.sprintf("INSERT INTO routes (ipaddr, subip, name, type, iface) VALUES (%u, %u, '%s', %d, %u)", dest.getIp(), subIp.getIp(), static_cast<const char*>(meta), static_cast<int>(type), hash);
+    str.sprintf("INSERT INTO routes (ipaddr, subip, name, type, iface) VALUES (%u, %u, '%s', %u, %u)", dest.getIp(), subIp.getIp(), static_cast<const char*>(meta), static_cast<int>(type), hash);
     Config::Result *pResult = Config::instance().query(str);
     if(!pResult->succeeded())
     {
@@ -72,7 +72,7 @@ void RoutingTable::Add(Type type, IpAddress dest, IpAddress subnet, IpAddress su
     // Add to the database
     String str;
     size_t hash = DeviceHashTree::instance().getHash(card);
-    str.sprintf("INSERT INTO routes (ipstart, ipend, subip, name, type, iface) VALUES (%u, %u, %u, '%s', %d, %u)",
+    str.sprintf("INSERT INTO routes (ipstart, ipend, subip, name, type, iface) VALUES (%u, %u, %u, '%s', %u, %u)",
                 bottomOfRange.getIp(),
                 topOfRange.getIp(),
                 subIp.getIp(),
@@ -122,7 +122,7 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
     delete pResult;
 
     // No rows! Try a subnet lookup first, without a complement.
-    str.sprintf("SELECT * FROM routes WHERE ((ipstart <= %u) AND (ipend >= %u) AND (type == %u))", ip->getIp(), ip->getIp(), static_cast<int>(DestSubnet));
+    str.sprintf("SELECT * FROM routes WHERE ((ipstart >= %u) AND (ipend <= %u)) AND (type == %u)", ip->getIp(), ip->getIp(), static_cast<int>(DestSubnet));
     pResult = Config::instance().query(str);
     if(!pResult->succeeded())
         ERROR("Routing table query failed: " << pResult->errorMessage());
@@ -133,7 +133,7 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
     delete pResult;
 
     // Still nothing, try a complement subnet search
-    str.sprintf("SELECT * FROM routes WHERE (NOT ((ipstart <= %u) AND (ipend >= %u))) AND (type == %u)", ip->getIp(), ip->getIp(), static_cast<int>(DestSubnetComplement));
+    str.sprintf("SELECT * FROM routes WHERE (NOT ((ipstart >= %u) AND (ipend <= %u))) AND (type == %u)", ip->getIp(), ip->getIp(), static_cast<int>(DestSubnetComplement));
     pResult = Config::instance().query(str);
     if(!pResult->succeeded())
         ERROR("Routing table query failed: " << pResult->errorMessage());

@@ -43,31 +43,36 @@ PhysicalMemoryManager &PhysicalMemoryManager::instance()
 
 physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
 {
-    LockGuard<Spinlock> guard(m_Lock);
+    m_Lock.acquire();
 
     physical_uintptr_t ptr;
 
     ptr = m_PageStack.allocate(0);
     if(!ptr)
     {
+    /// \bug If caches are compacted, we end up with a massive deadlock somewhere
+#if 0
         CacheManager::instance().compactAll();
 
         ptr = m_PageStack.allocate(0);
         if(!ptr)
         {
+#endif
             m_Lock.release();
             FATAL_NOLOCK("Out of physical memory!");
+#if 0
         }
+#endif
     }
+    
+    m_Lock.release();
 
 #if defined(TRACK_PAGE_ALLOCATIONS)             
     if (Processor::m_Initialised == 2)
     {
         if (!g_AllocationCommand.isMallocing())
         {
-            m_Lock.release();
             g_AllocationCommand.allocatePage(ptr);
-            m_Lock.acquire();
         }
     }
 #endif

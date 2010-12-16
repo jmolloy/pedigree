@@ -17,7 +17,7 @@
 #include <utilities/UnlikelyLock.h>
 
 UnlikelyLock::UnlikelyLock() :
-    m_Atomic(0)
+    m_Atomic(0), m_bInterrupts(false)
 {
 }
 

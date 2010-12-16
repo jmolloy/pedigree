@@ -261,6 +261,15 @@ int pedigree_sigret()
     return 0;
 }
 
+void pedigree_unwind_signal()
+{
+    SG_NOTICE("pedigree_unwind_signal");
+    
+    // Pop a state from the thread, but don't jump to it.
+    Thread *pThread = Processor::information().getCurrentThread();
+    pThread->popState();
+}
+
 int doThreadKill(Thread *p, int sig)
 {
     // Build the pending signal and pass it in

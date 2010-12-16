@@ -35,3 +35,6 @@ the project.
    + Provided optimised mem* routines
  - Rich Edelman
    + Provides the pedigree-project.org server
+ - Alex Smith
+   + Various bug fixes in the form of patches and commits to the tree
+   + Alex developing Kiwi provides us with motivation to work on Pedigree.

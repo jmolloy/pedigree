@@ -172,4 +172,6 @@
 #define POSIX_STATVFS           119
 #define POSIX_FSTATVFS          120
 
+#define PEDIGREE_UNWIND_SIGNAL  121
+
 #endif

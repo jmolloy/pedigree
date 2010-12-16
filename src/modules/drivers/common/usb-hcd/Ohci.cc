@@ -84,7 +84,7 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_pCurrentBulkQueueHead(0), m_pCurrentC
     // Install the IRQ handler
 #ifdef X86_COMMON
     Machine::instance().getIrqManager()->registerPciIrqHandler(this, this);
-    Machine::instance().getIrqManager()->control(getInterruptNumber(), IrqManager::MitigationThreshold, (12 * 1024 / 8 / 64)); // 12KB/ms (12Mbps) in bytes, divided by 64 bytes maximum per transfer/IRQ
+    Machine::instance().getIrqManager()->control(getInterruptNumber(), IrqManager::MitigationThreshold, (1500000 / 64)); // 12KB/ms (12Mbps) in bytes, divided by 64 bytes maximum per transfer/IRQ
 #else
     InterruptManager::instance().registerInterruptHandler(pDev->getInterruptNumber(), this);
 #endif

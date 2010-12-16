@@ -69,7 +69,7 @@ extern "C" void __cxa_atexit(void (*f)(void *), void *p, void *d)
 /// Called by G++ if a pure virtual function is called. Bad Thing, should never happen!
 extern "C" void __cxa_pure_virtual()
 {
-    panic("Pure virtual function call made");
+    FATAL_NOLOCK("Pure virtual function call made");
 }
 
 /// Called by G++ if function local statics are initialised for the first time

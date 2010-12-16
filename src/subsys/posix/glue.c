@@ -2160,3 +2160,8 @@ char *crypt(const char *key, const char *salt)
     return 0;
 }
 
+void __pedigree_revoke_signal_context()
+{
+    // Call into the kernel.
+    syscall0(PEDIGREE_UNWIND_SIGNAL);
+}

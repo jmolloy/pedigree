@@ -141,7 +141,8 @@ public:
     {
         if (m_nStateLevel == 0)
         {
-            ERROR("Thread: popStack() called with state level 0!");
+            ERROR("Thread: Potential error: popStack() called with state level 0!");
+            ERROR("Thread: (ignore this if longjmp has been called)");
             return;
         }
         m_nStateLevel --;

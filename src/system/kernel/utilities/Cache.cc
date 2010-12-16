@@ -313,6 +313,6 @@ void Cache::compact()
 
         m_Allocator.free(reinterpret_cast<uintptr_t>(page), 4096);
     }
-
+    
     m_Lock.release();
 }

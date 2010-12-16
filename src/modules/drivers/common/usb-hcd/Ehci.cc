@@ -75,13 +75,15 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
 #ifdef X86_COMMON
     uint32_t nPciCmdSts = PciBus::instance().readConfigSpace(this, 1);
 #ifdef USB_VERBOSE_DEBUG
-    DEBUG_LOG("USB: EHCI: Pci command: " << (nPciCmdSts & 0xffff));
+    DEBUG_LOG("USB: EHCI: PCI command register: " << (nPciCmdSts & 0xffff));
+    DEBUG_LOG("USB: EHCI: PCI status register: " << ((nPciCmdSts & 0xffff0000) >> 16));
 #endif
     PciBus::instance().writeConfigSpace(this, 1, nPciCmdSts | 0x4);
 #endif
 
     // Grab the ports
     m_pBase = m_Addresses[0]->m_Io;
+    NOTICE("EHCI: Working off: " << (m_Addresses[0]->m_IsIoSpace ? "P" : "MM") << "IO");
     m_Addresses[0]->map();
     m_nOpRegsOffset = m_pBase->read8(EHCI_CAPLENGTH);
 #ifdef USB_VERBOSE_DEBUG
@@ -90,12 +92,12 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
 
     // Get structural capabilities to determine the number of physical ports
     // we have available to us.
-    m_nPorts = m_pBase->read8(EHCI_HCSPARAMS) & 0xF;
+    m_nPorts = m_pBase->read32(EHCI_HCSPARAMS) & 0xF;
 #ifdef USB_VERBOSE_DEBUG
     NOTICE("EHCI controller has " << Dec << m_nPorts << Hex << " physical ports.");
 #endif
     
-    uint16_t hccparams = m_pBase->read16(EHCI_HCCPARAMS);
+    uint32_t hccparams = m_pBase->read32(EHCI_HCCPARAMS);
     uint8_t eecp = (hccparams >> 8) & 0xFF;
     if(eecp && (eecp < 0x40))
     {
@@ -105,15 +107,26 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
     
 #ifdef USB_VERBOSE_DEBUG
     DEBUG_LOG("EHCI: Host controller " << (hccparams & 1 ? "does" : "does not") << " require 64-bit data structures.");
-    DEBUG_LOG("      Host controller " << (hccparams & 2 ? "does" : "does not") << " allow us to use frame lists with more than 1024 items in them.");
+    DEBUG_LOG("      Host controller " << (hccparams & 2 ? "does" : "does not") << " allow us to use frame lists with anything other than 1024 items in them.");
+    DEBUG_LOG("      Host controller " << (hccparams & 4 ? "does" : "does not") << " support the asynchronous schedule park capability.");
+    DEBUG_LOG("      CAPLENGTH is " << m_pBase->read8(EHCI_CAPLENGTH));
+    DEBUG_LOG("      HCCPARAMS is " << hccparams);
+    DEBUG_LOG("      HCSPARAMS is " << m_pBase->read32(EHCI_HCSPARAMS));
+    DEBUG_LOG("      EECP is " << eecp);
 #endif
 
 #ifdef X86_COMMON
     // Pre-OS to OS handoff
     while(eecp)
     {
-        /// \todo Handle non-32-bit aligned values
-        uint32_t legsup = PciBus::instance().readConfigSpace(this, eecp / sizeof(uint32_t));
+#ifdef USB_VERBOSE_DEBUG
+        DEBUG_LOG("EHCI: Reading LEGSUP register and checking for BIOS ownership.");
+#endif
+        /// \todo Handle non-32-bit aligned values for the EECP
+        uint32_t legsup = 0;
+        uint32_t dwordOffset = eecp / sizeof(uint32_t);
+        legsup = PciBus::instance().readConfigSpace(this, dwordOffset);
+        
         if(legsup & 1)
         {
             // Perform handoff if necessary
@@ -126,21 +139,20 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
 
                 // Take ownership of the controller
                 legsup |= (1 << 24);
-                PciBus::instance().writeConfigSpace(this, eecp / sizeof(uint32_t), legsup);
+                PciBus::instance().writeConfigSpace(this, dwordOffset, legsup);
                 
                 // Wait for the BIOS to relinquish control
                 while(legsup & (1 << 16))
                 {
-                    legsup = PciBus::instance().readConfigSpace(this, eecp / sizeof(uint32_t));
+                    legsup = PciBus::instance().readConfigSpace(this, dwordOffset);
                     delay(5);
                 }
             }
             
-            // Found the legacy support capability
-            eecp = 0;
+            eecp = (legsup >> 8) & 0xFF; // Zero = "end of list"
         }
         else
-            eecp = (legsup >> 8) & 0xFF; // Zero = "end of list"
+            eecp = 0;
     }
 #endif
     
@@ -154,7 +166,7 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
     while(!(m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & EHCI_STS_HALTED))
         delay(5);
 
-    // Write reset command and wait for it to complete
+    // Write host controller reset command and wait for it to complete
     m_pBase->write32(EHCI_CMD_HCRES, m_nOpRegsOffset + EHCI_CMD);
     while(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) & EHCI_CMD_HCRES)
         delay(5);
@@ -217,19 +229,26 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
     // Write the async list head pointer
     m_pBase->write32(m_pQHListPhys, m_nOpRegsOffset + EHCI_ASYNCLP);
 
+    // Set the desired interrupt threshold (frame list size = 4096 bytes)
+    m_pBase->write32((m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) & ~0xFF0000) | 0x80000, m_nOpRegsOffset + EHCI_CMD);
+
     // Turn on the controller
     m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) | EHCI_CMD_RUN, m_nOpRegsOffset + EHCI_CMD);
     while(m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & EHCI_STS_HALTED)
         delay(5);
-
-    // Set the desired interrupt threshold (frame list size = 4096 bytes)
-    m_pBase->write32((m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) & ~0xFF0000) | 0x80000, m_nOpRegsOffset + EHCI_CMD);
 
     // Set up the RequestQueue
     initialise();
 
     // Take over the ports
     m_pBase->write32(1, m_nOpRegsOffset + EHCI_CFGFLAG);
+    
+    // If it's supported, enable the asynchronous park mode with only one transaction
+    // before advancing through the queue.
+    if(hccparams & 4)
+    {
+        m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) | 0x900, m_nOpRegsOffset + EHCI_CMD);
+    }
 
     // Enable the asynchronous schedule, and wait for it to become enabled
     m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) | EHCI_CMD_ASYNCLE, m_nOpRegsOffset + EHCI_CMD);
@@ -242,6 +261,7 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
 #ifdef USB_VERBOSE_DEBUG
         DEBUG_LOG("USB: EHCI: Port " << Dec << i << Hex << " - status initially: " << m_pBase->read32(m_nOpRegsOffset+EHCI_PORTSC+i*4));
 #endif
+        // Check for port power
         if(!(m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + i * 4) & EHCI_PORTSC_PPOW))
         {
             m_pBase->write32(EHCI_PORTSC_PPOW, m_nOpRegsOffset + EHCI_PORTSC + i * 4);
@@ -250,6 +270,11 @@ Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
             DEBUG_LOG("USB: EHCI: Port " << Dec << i << Hex << " - status after power-up: " << m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + i * 4));
 #endif
         }
+        
+        // Check for an existing reset on the port and request termination
+        m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + (i * 4)) & ~EHCI_PORTSC_PRES, m_nOpRegsOffset + EHCI_PORTSC + (i * 4));
+        while(m_pBase->read32(m_nOpRegsOffset + EHCI_PORTSC + (i * 4)) & EHCI_PORTSC_PRES)
+            delay(5);
         
         executeRequest(i);
     }
@@ -353,6 +378,7 @@ void Ehci::interrupt(size_t number, InterruptState &state)
     
     if(!nStatus)
     {
+        WARNING_NOLOCK("EHCI: unwanted IRQ?");
         return
 #ifdef X86_COMMON
         false // Shared IRQ: this IRQ is for another device
