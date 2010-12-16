@@ -1,10 +1,12 @@
 Welcome to Pedigree.
-This is Pedigree Foster -- 0.1
+This is Pedigree Foster (Milestone #1) -- 0.1.1
 
 -------------------------------------------------------------------------------
-NOTE: This is a *pre-release* build of Pedigree. There may still be significant
+NOTE: This is a *testing* build of Pedigree. There may still be significant
 bugs which are being worked on, and the quality of this build may not directly
-reflect the quality of the final release. 
+reflect the quality of a non-testing release.
+
+Again, _expect bugs_.
 -------------------------------------------------------------------------------
 
 Please report any issues on http://www.pedigree-project.org. We prefer getting
