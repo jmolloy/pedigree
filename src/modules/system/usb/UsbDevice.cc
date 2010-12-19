@@ -26,7 +26,8 @@
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
 UsbDevice::UsbDevice(uint8_t nPort, UsbSpeed speed) :
-    m_nAddress(0), m_nPort(nPort), m_Speed(speed), m_UsbState(Connected)
+    m_nAddress(0), m_nPort(nPort), m_Speed(speed), m_UsbState(Connected),
+    m_pDescriptor(0), m_pConfiguration(0), m_pInterface(0)
 {
 }
 
@@ -381,8 +382,12 @@ bool UsbDevice::controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t 
     // cases where a read may breach this boundary.
     size_t nMaxSize = 0;
     if(m_pDescriptor)
+    {
         if(m_pDescriptor->nMaxControlPacketSize)
+        {
             nMaxSize = m_pDescriptor->nMaxControlPacketSize;
+        }
+    }
     if(!nMaxSize)
     {
         if((m_Speed == LowSpeed) || (m_Speed == FullSpeed))
