@@ -31,7 +31,7 @@ struct blitargs
 struct drawargs
 {
     void *a;
-    uint32_t b, c, d, e, f, g, h;
+    uintptr_t b, c, d, e, f, g, h;
 } PACKED;
 
 struct createargs
@@ -43,12 +43,12 @@ struct createargs
 
 struct fourargs
 {
-    uint32_t a, b, c, d;
+    uintptr_t a, b, c, d;
 } PACKED;
 
 struct sixargs
 {
-    uint32_t a, b, c, d, e, f;
+    uintptr_t a, b, c, d, e, f;
 } PACKED;
 
 Framebuffer::Framebuffer() : m_Provider(), m_bProviderValid(false), m_bIsChild(false)
@@ -157,8 +157,8 @@ Buffer *Framebuffer::createBuffer(const void *srcData, PixelFormat srcFormat,
     
     Buffer *ret = 0;
     fourargs args;
-    args.a = reinterpret_cast<uint32_t>(srcData); /// \todo 64-bit caveat
-    args.b = static_cast<uint32_t>(srcFormat);
+    args.a = reinterpret_cast<uintptr_t>(srcData);
+    args.b = static_cast<uintptr_t>(srcFormat);
     args.c = width;
     args.d = height;
     int ok = pedigree_gfx_create_buffer(&m_Provider, reinterpret_cast<void**>(&ret), &args);

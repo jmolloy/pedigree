@@ -42,7 +42,7 @@ struct blitargs
 struct drawargs
 {
     void *a;
-    uint32_t b, c, d, e, f, g, h;
+    uintptr_t b, c, d, e, f, g, h;
 } PACKED;
 
 struct createargs
@@ -54,12 +54,12 @@ struct createargs
 
 struct fourargs
 {
-    uint32_t a, b, c, d;
+    uintptr_t a, b, c, d;
 } PACKED;
 
 struct sixargs
 {
-    uint32_t a, b, c, d, e, f;
+    uintptr_t a, b, c, d, e, f;
 } PACKED;
 
 #define MAX_RESULTS 32

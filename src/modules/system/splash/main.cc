@@ -249,7 +249,7 @@ static void getColor(const char *colorName, uint32_t &color)
     delete pResult;
 }
 
-static void getDesiredMode(uint32_t &width, uint32_t &height, uint32_t &bpp)
+static void getDesiredMode(size_t &width, size_t &height, size_t &bpp)
 {
     // Query the database
     Config::Result *pResult = Config::instance().query("select width,height,bpp from 'desired-display-mode';");

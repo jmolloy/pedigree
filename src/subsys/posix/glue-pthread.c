@@ -64,17 +64,17 @@ int pthread_once(pthread_once_t *once_control, pthread_once_func_t init_routine)
 
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void*), void *arg)
 {
-    return syscall4(POSIX_PTHREAD_CREATE, (int) thread, (int) attr, (int) start_routine, (int) arg);
+    return syscall4(POSIX_PTHREAD_CREATE, (long) thread, (long) attr, (long) start_routine, (long) arg);
 }
 
 int pthread_join(pthread_t thread, void **value_ptr)
 {
-    return syscall2(POSIX_PTHREAD_JOIN, (int) thread, (int) value_ptr);
+    return syscall2(POSIX_PTHREAD_JOIN, (long) thread, (long) value_ptr);
 }
 
 void pthread_exit(void *ret)
 {
-    syscall1(POSIX_PTHREAD_RETURN, (int) ret);
+    syscall1(POSIX_PTHREAD_RETURN, (long) ret);
 }
 
 int pthread_detach(pthread_t thread)
@@ -103,12 +103,12 @@ int pthread_equal(pthread_t t1, pthread_t t2)
 
 int pthread_kill(pthread_t thread, int sig)
 {
-    return syscall2(POSIX_PTHREAD_KILL, (int) thread, sig);
+    return syscall2(POSIX_PTHREAD_KILL, (long) thread, sig);
 }
 
 int pthread_sigmask(int how, const sigset_t *set, sigset_t *oset)
 {
-    return syscall3(POSIX_PTHREAD_SIGMASK, how, (int) set, (int) oset);
+    return syscall3(POSIX_PTHREAD_SIGMASK, how, (long) set, (long) oset);
 }
 
 int pthread_attr_init(pthread_attr_t *attr)
@@ -501,12 +501,12 @@ void* pthread_getspecific(pthread_key_t key)
 
 int pthread_setspecific(pthread_key_t key, const void *data)
 {
-    return syscall2(POSIX_PTHREAD_SETSPECIFIC, key, (int) data);
+    return syscall2(POSIX_PTHREAD_SETSPECIFIC, key, (long) data);
 }
 
 int pthread_key_create(pthread_key_t *key, void (*destructor)(void *))
 {
-    return syscall2(POSIX_PTHREAD_KEY_CREATE, (int) key, (int) destructor);
+    return syscall2(POSIX_PTHREAD_KEY_CREATE, (long) key, (long) destructor);
 }
 
 typedef void (*key_destructor)(void*);
