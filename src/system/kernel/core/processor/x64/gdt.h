@@ -40,6 +40,9 @@ class X64GdtManager
      *\note This should only be called from initialiseProcessor2()
      *\todo and some smp/acpi function */
     static void initialiseProcessor() INITIALISATION_ONLY;
+    
+    /** Sets up the TLS base for the current CPU to point to the given base. */
+    void setTlsBase(uintptr_t base);
 
   private:
     /** The constructor */
@@ -72,6 +75,7 @@ class X64GdtManager
     /** Readies a TSS for use.
      *\param[in] pTss the TSS to ready. */
     void initialiseTss(struct X64TaskStateSegment *pTss) INITIALISATION_ONLY;
+    void initialiseDoubleFaultTss(X64TaskStateSegment *pTss) INITIALISATION_ONLY;
     
     /** Load the new segment registers
      *\note This function is implemented in asm/gdt.s */

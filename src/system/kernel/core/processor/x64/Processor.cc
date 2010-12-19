@@ -98,5 +98,22 @@ void Processor::initialise2(const BootstrapStruct_t &Info)
 
 void Processor::identify(HugeStaticString &str)
 {
-  str = "Rarcaken!!";
+  uint32_t eax, ebx, ecx, edx;
+  char ident[13];
+  cpuid(0, 0, eax, ebx, ecx, edx);
+  memcpy(ident, &ebx, 4);
+  memcpy(&ident[4], &edx, 4);
+  memcpy(&ident[8], &ecx, 4);
+  ident[12] = 0;
+  str = ident;
 }
+
+void Processor::setTlsBase(uintptr_t newBase)
+{
+    X64GdtManager::instance().setTlsBase(newBase);
+    
+    // Reload FS/GS
+    uint16_t newseg = newBase ? Processor::information().getTlsSelector() | 3 : 0x23;
+    asm volatile("mov %0, %%bx; mov %%bx, %%fs; mov %%bx, %%gs" :: "r" (newseg) : "ebx");
+}
+
