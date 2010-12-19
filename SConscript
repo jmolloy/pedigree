@@ -13,16 +13,15 @@ subdirs = [
     'src/subsys/pedigree-c'
 ]
 
-# Currently the native API is only supported on x86 (not x86-64 or other
-# architectures).
-if env['ARCH_TARGET'] == 'X86':
+# Currently the native API is only supported on x86 architectures
+if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
     subdirs += ['src/subsys/native']
 
 # Then modules and the system proper get built
 subdirs += ['src/modules', 'src/system/kernel']
 
 # On X86, X64 and PPC we build applications and LGPL libraries
-if env['ARCH_TARGET'] in ['X86', 'X64', 'PPC']:
+if env['ARCH_TARGET'] in ['X86', 'PPC']: # 'X64'
     subdirs += ['src/user', 'src/lgpl']
 if not env['ARCH_TARGET'] in ['X86', 'X64']:
     subdirs += ['src/system/boot']
