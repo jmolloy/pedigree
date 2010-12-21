@@ -163,9 +163,15 @@ elif env['ARCH_TARGET'] == 'PPC':
 else:
     arch_subdir = 'unknown'
 
+def dma_fix(s):
+    if s == 'X86' or s == 'X64':
+        return 'X86'
+    else:
+        return s
+
 # Custom subdirectories for specific modules
 custom_subdirs = {
-    'dma'           : [env['ARCH_TARGET'].lower()],
+    'dma'           : [dma_fix(env['ARCH_TARGET']).lower()],
     'linker'        : [arch_subdir]
 }
 
