@@ -323,7 +323,7 @@ initrdList += [builddir.abspath + '/modules/' + i + '.o' for i in initrd_modules
 # Subsystems
 initrdList += [builddir.abspath + '/subsystems/posix.o']
 initrdList += [builddir.abspath + '/subsystems/pedigree-c.o']
-if env['ARCH_TARGET'] == 'X86':
+if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
     initrdList += [builddir.abspath + '/subsystems/native.o']
 
 env.Depends(initrdFile, "drivers")
