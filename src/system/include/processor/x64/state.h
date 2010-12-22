@@ -345,6 +345,12 @@ public:
     uint64_t rbp;
     uint64_t rsp;
     uint64_t rip;
+    
+    // bit 0: Has FPU
+    // bit 1: Used SSE
+    uint32_t flags;
+    
+    uint8_t x87FPU_MMX_XMM_MXCSR_State[512+16] __attribute__((aligned(16)));
 };
 
 /** @} */
