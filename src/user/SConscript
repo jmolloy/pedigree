@@ -16,8 +16,10 @@ def fixFlags(flags):
     flags = flags.replace('-nostdinc', '')
     flags = flags.replace('-ffreestanding', '')
     flags = flags.replace('-nostdlib', '')
-    if env['ARCH_TARGET']  in ['X86', 'X64']:
+    if env['ARCH_TARGET'] in ['X86', 'X64']:
         flags += ' -msse2'
+    if env['ARCH_TARGET'] == 'X64':
+        flags = flags.replace('-mcmodel=kernel', '-mcmodel=small')
     if env['ARCH_TARGET'] == 'PPC':
         flags += ' -U__svr4__ '
     return flags
