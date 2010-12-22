@@ -92,12 +92,18 @@ void *dmemset(void *buf, unsigned int c, size_t len)
 
 void *qmemset(void *buf, unsigned long long c, size_t len)
 {
-  unsigned long long *tmp = (unsigned long long *)buf;
-  while(len--)
-  {
-    *tmp++ = c;
-  }
+  /// \todo Could be made faster with SSE, but some work needs to be done on
+  ///       alignment first.
+  
+#ifdef X64
+  asm volatile("rep stosq" :: "a" (c), "c" (len), "D" (buf));
   return buf;
+#else
+  unsigned long long *p = (unsigned long long*) buf;
+  while(len--)
+    *p++ = c;
+  return buf;
+#endif
 }
 
 #ifdef X86_COMMON
