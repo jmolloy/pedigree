@@ -37,8 +37,8 @@ Tree<void*, void*> g_FreedPointers;
 void *__dso_handle;
 
 // Defined in the linker.
-uintptr_t start_ctors;
-uintptr_t end_ctors;
+extern uintptr_t start_ctors;
+extern uintptr_t end_ctors;
 
 #ifdef USE_DEBUG_ALLOCATOR
 Spinlock allocLock;
