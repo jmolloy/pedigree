@@ -114,6 +114,6 @@ void Processor::setTlsBase(uintptr_t newBase)
     
     // Reload FS/GS
     uint16_t newseg = newBase ? Processor::information().getTlsSelector() | 3 : 0x23;
-    asm volatile("mov %0, %%bx; mov %%bx, %%fs; mov %%bx, %%gs" :: "r" (newseg) : "ebx");
+    // asm volatile("mov %0, %%bx; mov %%bx, %%fs; mov %%bx, %%gs" :: "r" (newseg) : "ebx");
 }
 
