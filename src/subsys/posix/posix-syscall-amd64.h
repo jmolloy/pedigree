@@ -63,6 +63,6 @@ static long syscall5(long function, long p1, long p2, long p3, long p4, long p5)
   long eax = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
   long ret;
   asm volatile("mov %7, %%r8; \
-                syscall" : "=a" (ret), "=b" (errno) : "0" (eax), "1" (p1), "d" (p2), "S" (p3), "D" (p4), "m" (p5): "rcx");
+                syscall" : "=a" (ret), "=b" (errno) : "0" (eax), "1" (p1), "d" (p2), "S" (p3), "D" (p4), "m" (p5): "rcx", "r8");
   return ret;
 }
