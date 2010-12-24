@@ -61,8 +61,6 @@ static inline void _SetFPUControlWord(uint16_t cw)
 
 bool NMFaultHandler::initialise()
 {
-    NOTICE("Initialising NM Fault Handler");
-
     // Check for FPU and XSAVE
     uint32_t eax, ebx, ecx, edx, mxcsr = 0;
     uint64_t cr0, cr4;

@@ -33,12 +33,12 @@ void X64GdtManager::initialise(size_t processorCount)
 
   // Fill the GDT
   setSegmentDescriptor(0, 0, 0, 0, 0);
-  setSegmentDescriptor(1, 0, 0, 0x98, 0x2); // Kernel code
-  setSegmentDescriptor(2, 0, 0, 0x92, 0x2); // Kernel data
-  setSegmentDescriptor(3, 0, 0, 0xF8, 0x2); // User code32
-  setSegmentDescriptor(4, 0, 0, 0xF2, 0x2); // User data32
-  setSegmentDescriptor(5, 0, 0, 0xF8, 0x22); // User code64
-  setSegmentDescriptor(6, 0, 0, 0xF2, 0x22); // User data64
+  setSegmentDescriptor(1, 0, 0, 0x98, 0x2); // Kernel code - 0x08
+  setSegmentDescriptor(2, 0, 0, 0x92, 0x2); // Kernel data - 0x10
+  setSegmentDescriptor(3, 0, 0, 0xF8, 0x2); // User code32 - 0x18
+  setSegmentDescriptor(4, 0, 0, 0xF2, 0x2); // User data32 - 0x20
+  setSegmentDescriptor(5, 0, 0, 0xF8, 0x22); // User code64 - 0x28
+  setSegmentDescriptor(6, 0, 0, 0xF2, 0x22); // User data64 - 0x30
 
 #ifdef MULTIPROCESSOR
 
