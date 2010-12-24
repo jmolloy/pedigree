@@ -20,6 +20,7 @@ def fixFlags(flags):
         flags += ' -msse2'
     if env['ARCH_TARGET'] == 'X64':
         flags = flags.replace('-mcmodel=kernel', '-mcmodel=small')
+        flags = flags.replace('-mno-red-zone', '')
     if env['ARCH_TARGET'] == 'PPC':
         flags += ' -U__svr4__ '
     return flags
