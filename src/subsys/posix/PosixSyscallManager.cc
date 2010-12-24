@@ -61,7 +61,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
     uintptr_t p3 = state.getSyscallParameter(2);
     uintptr_t p4 = state.getSyscallParameter(3);
     uintptr_t p5 = state.getSyscallParameter(4);
-
+    
     // NOTICE("[" << Processor::information().getCurrentThread()->getParent()->getId() << "] : " << Dec << state.getSyscallNumber() << Hex);
 
     // We're interruptible.
@@ -344,6 +344,6 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             pedigree_unwind_signal();
             return 0;
         
-        default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
+        default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber() << Hex); return 0;
     }
 }

@@ -57,7 +57,7 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
     uintptr_t p3 = state.getSyscallParameter(2);
     uintptr_t p4 = state.getSyscallParameter(3);
     uintptr_t p5 = state.getSyscallParameter(4);
-
+    
     static uintptr_t currBuff = 0;
 
     switch (state.getSyscallNumber())
@@ -123,7 +123,7 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
             else
                 g_UserConsole->stopCurrentBlock();
             break;
-        default: ERROR ("TuiSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
+        default: ERROR ("TuiSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber() << Hex); return 0;
     }
     return 0;
 }
