@@ -30,7 +30,7 @@
 #define SSE_ALIGN_MASK      0xF
 
 // Set to 1 to allow SSE to be used.
-#define USE_SSE             1
+#define USE_SSE             0
 
 #ifdef X86_COMMON
 inline void *memset_nonzero(void *buf, int c, size_t n)
@@ -196,20 +196,162 @@ void *qmemset(void *buf, unsigned long long c, size_t len)
 }
 
 #ifdef X86_COMMON
+
+#ifdef USE_SSE
+inline void *sse2_aligned_memcpy(void *restrict s1, const void *restrict s2, const size_t n)
+{
+    uintptr_t p1 = (uintptr_t) s1;
+    uintptr_t p2 = (uintptr_t) s2;
+    
+    if(!n) return s1;
+    
+    // Count of 128 byte blocks
+    for(size_t i = 0; i < n; i++)
+    {
+        asm volatile("prefetchnta 128(%0); \
+                      prefetchnta 160(%0); \
+                      prefetchnta 192(%0); \
+                      prefetchnta 224(%0);" : : "r" (p2));
+    
+        // Read a full 128 bytes.
+        asm volatile("movdqa 0(%0), %%xmm0" : : "r" (p2));
+        asm volatile("movdqa 16(%0), %%xmm1" : : "r" (p2));
+        asm volatile("movdqa 32(%0), %%xmm2" : : "r" (p2));
+        asm volatile("movdqa 48(%0), %%xmm3" : : "r" (p2));
+        asm volatile("movdqa 64(%0), %%xmm4" : : "r" (p2));
+        asm volatile("movdqa 80(%0), %%xmm5" : : "r" (p2));
+        asm volatile("movdqa 96(%0), %%xmm6" : : "r" (p2));
+        asm volatile("movdqa 112(%0), %%xmm7" : : "r" (p2));
+        
+        // Write back to the destination now.
+        asm volatile("movntdq %%xmm0, 0(%0)" : : "r" (p1));
+        asm volatile("movntdq %%xmm1, 16(%0)" : : "r" (p1));
+        asm volatile("movntdq %%xmm2, 32(%0)" : : "r" (p1));
+        asm volatile("movntdq %%xmm3, 48(%0)" : : "r" (p1));
+        asm volatile("movntdq %%xmm4, 64(%0)" : : "r" (p1));
+        asm volatile("movntdq %%xmm5, 80(%0)" : : "r" (p1));
+        asm volatile("movntdq %%xmm6, 96(%0)" : : "r" (p1));
+        asm volatile("movntdq %%xmm7, 112(%0)" : : "r" (p1));
+        
+        // Increment counters.
+        p1 += 128;
+        p2 += 128;
+    }
+
+    return s1;
+}
+#endif
+
 /** This function courtesy of Josh Cornutt - cheers! */
 void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
 {
+    // Check for bad usage of memcpy
+    if(!n) return s1;
+    
+#if USE_SSE
+
+    uintptr_t unused = 0;
+
+    uintptr_t p1 = (uintptr_t) s1;
+    uintptr_t p2 = (uintptr_t) s2;
+    size_t off1 = 0, off2 = 0, i = 0;
+    
+    asm volatile("prefetchnta 0(%0); \
+                  prefetchnta 16(%0); \
+                  prefetchnta 32(%0); \
+                  prefetchnta 64(%0);" : : "r" (p2));
+    
+    while(((p1 + off1) & SSE_ALIGN_MASK) || ((p2 + off2) & SSE_ALIGN_MASK))
+    {
+        asm volatile("movsb" : : "D" (p1 + off1), "S" (p2 + off2));
+        
+        off1++; off2++;
+        if(off1 >= n)
+            return s1;
+    }
+
+    // Are we copying big blocks with nice power-of-2 sizes?
+    // The SSE2 aligned memcpy will copy 128 bytes at a time. We can use that to
+    // seriously dent the number of bytes we need to transfer.
+    size_t nBigBlocks = (n - off1) >> 7;
+    if(nBigBlocks)
+    {
+        sse2_aligned_memcpy((void*) (p1 + off1), (void*) (p2 + off2), nBigBlocks);
+        off1 += nBigBlocks << 7;
+        off2 += nBigBlocks << 7;
+    }
+    
+    p1 += off1;
+    p2 += off2;
+    
+    size_t nRemaining = n - off1;
+    
+    // Attempt to use SSE transfers for the rest of this data
+    switch(nRemaining >> 4)
+    {
+        case 7:
+            asm volatile("movdqa 96(%0), %%xmm6" : : "r" (p2));
+        case 6:
+            asm volatile("movdqa 80(%0), %%xmm5" : : "r" (p2));
+        case 5:
+            asm volatile("movdqa 64(%0), %%xmm4" : : "r" (p2));
+        case 4:
+            asm volatile("movdqa 48(%0), %%xmm3" : : "r" (p2));
+        case 3:
+            asm volatile("movdqa 32(%0), %%xmm2" : : "r" (p2));
+        case 2:
+            asm volatile("movdqa 16(%0), %%xmm1" : : "r" (p2));
+        case 1:
+            asm volatile("movdqa 0(%0), %%xmm0" : : "r" (p2));
+    };
+    
+    switch(nRemaining >> 4)
+    {
+        case 7:
+            asm volatile("movntdq %%xmm6, 96(%0)" : : "r" (p1));
+        case 6:
+            asm volatile("movntdq %%xmm5, 80(%0)" : : "r" (p1));
+        case 5:
+            asm volatile("movntdq %%xmm4, 64(%0)" : : "r" (p1));
+        case 4:
+            asm volatile("movntdq %%xmm3, 48(%0)" : : "r" (p1));
+        case 3:
+            asm volatile("movntdq %%xmm2, 32(%0)" : : "r" (p1));
+        case 2:
+            asm volatile("movntdq %%xmm1, 16(%0)" : : "r" (p1));
+        case 1:
+            asm volatile("movntdq %%xmm0, 0(%0)" : : "r" (p1));
+        case 0:
+            // No 16-byte blocks left. Transfer using native word sizes.
+#ifdef X64
+            asm volatile("rep movsq" : "=c" (unused) : "D" (p1), "S" (p2), "c" (nRemaining >> 3));
+            p1 += (nRemaining >> 3);
+            p2 += (nRemaining >> 3);
+            nRemaining -= (nRemaining >> 3);
+#endif
+
+            asm volatile("rep movsd" : "=c" (unused) : "D" (p1), "S" (p2), "c" (nRemaining >> 2));
+            p1 += (nRemaining >> 2);
+            p2 += (nRemaining >> 2);
+            nRemaining -= (nRemaining >> 2);
+            
+            asm volatile("rep movsw" : "=c" (unused) : "D" (p1), "S" (p2), "c" (nRemaining >> 1));
+            p1 += (nRemaining >> 1);
+            p2 += (nRemaining >> 1);
+            nRemaining -= (nRemaining >> 1);
+            
+            asm volatile("rep movsb" : "=c" (unused) : "D" (p1), "S" (p2), "c" (nRemaining));
+            p1 += (nRemaining);
+            p2 += (nRemaining);
+            nRemaining -= nRemaining;
+    };
+
+    return s1;
+
+#else
+
     char *p1 = (char *)s1;
     const char *p2 = (const char *)s2;
-
-    // Don't use SSE for now.
-#if 0
-    asm volatile("  prefetchnta 0(%0);  \
-                    prefetchnta 32(%0); "
-                 ::"r"(s1));
-#endif
-    // check for bad usage of memcpy
-    if(!n) return s1;
 
     // calculate the distance to the nearest natural boundary
     size_t offset = (sizeof(size_t) - ((size_t)p1 % sizeof(size_t))) % sizeof(size_t);
@@ -236,6 +378,8 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
 
     // clean up the remaining bytes
     asm volatile("rep movsb;":"=c"(unused):"D"(p1), "S"(p2), "c"(n % sizeof(size_t)));
+
+#endif
 
     return s1;
 }

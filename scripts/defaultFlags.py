@@ -46,8 +46,8 @@ general_x86_defines = ['X86_COMMON', 'LITTLE_ENDIAN', '__UD_STANDALONE__', 'THRE
 x86_32_defines = ['X86', 'BITS_32', 'KERNEL_NEEDS_ADDRESS_SPACE_SWITCH']
 
 # 32-bit CFLAGS and CXXFLAGS
-default_x86_cflags = ' -march=pentium4 '
-default_x86_cxxflags = ' -march=pentium4 '
+default_x86_cflags = ' -march=pentium4 -mtune=k8 '
+default_x86_cxxflags = ' -march=pentium4 -mtune=k8 '
 
 # 32-bit assembler flags
 default_x86_asflags = '32'
