@@ -50,7 +50,7 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
     os.system(ar + " x " + os.path.basename(glue_name))
 
     os.system(cc + " -nostdlib -shared -Wl,-shared -Wl,-soname,libc.so -o " + buildOut + ".so *.obj *.o -L. -lpedigree-c -lgcc")
-    os.system(ar + " cru " + buildOut + ".a *.o")
+    os.system(ar + " cru " + buildOut + ".a *.o *.obj")
 
     for i in os.listdir("."):
         os.remove(i)
