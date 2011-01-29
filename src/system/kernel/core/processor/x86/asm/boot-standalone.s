@@ -14,6 +14,8 @@ MBOOT_CHECKSUM     equ -(MBOOT_HEADER_MAGIC + MBOOT_HEADER_FLAGS)
 [EXTERN init]
 [EXTERN end]
 
+[EXTERN g_TscStart]
+
 ; The Multiboot Header
 [SECTION .init.multiboot]
 align 4
@@ -104,8 +106,86 @@ start:
   jmp eax
 
 callmain:
+  
+  ; Get the FPU and SSE going
+  call ___startup_init_fpu_sse
+  
   call _main
   jmp $
+
+; Enables the FPU and SSE (used very early by GCC's codegen due to -march=core2)
+___startup_init_fpu_sse:
+  push ebp
+  mov ebp, esp
+  
+  ; One scratch variable
+  sub esp, 4
+  
+  ; Grab CPUID
+  mov eax, 1
+  xor ecx, ecx
+  cpuid
+  
+  test edx, 1
+  jz .nofpu
+  
+  ; FPU is available, start it up
+  mov ebx, cr0
+  or ebx, 0x22 ; NE | MP
+  and ebx, 0xFFFFFFF3 ; Remove EM and TS
+  
+  mov cr0, ebx
+  
+  finit
+  
+  mov dword [esp], 0x33F
+  fldcw [esp]
+  
+  mov cr0, ebx
+  
+  .nofpu:
+  
+  ; We support FXSAVE/FXRSTOR, sort of. Needed for SSE - NMFaultHandler will do
+  ; this properly later.
+  test edx, (1 << 24)
+  jz .nofxsr
+  
+  ; Enable it
+  mov ebx, cr4
+  or ebx, (1 << 9)
+  mov cr4, ebx
+  
+  .nofxsr:
+  
+  ; SSE?
+  test edx, (1 << 25) ; SSE feature
+  jz .nosse
+  
+  ; SSE is available, start it up
+  mov ebx, cr4
+  or ebx, (1 << 10) ; SIMD floating-point exception handling bit
+  mov cr4, ebx
+  
+  stmxcsr [esp]
+  mov ebx, [esp]
+  
+  ; Mask all exceptions
+  or ebx, (1 << 12) | (1 << 11) | (1 << 10) | (1 << 9) | (1 << 8) | (1 << 7)
+  and ebx, 0xFFFFFFFFFFFFFFC0 ; Clear any pending exceptions
+  
+  ; Set rounding method
+  or ebx, (3 << 13)
+  
+  mov [esp], ebx
+  
+  ; Write the control word
+  ldmxcsr [esp]
+  
+  .nosse:
+  
+  mov esp, ebp
+  pop ebp
+  ret
 
 [SECTION .asm.bss nobits]
 global pagedirectory
