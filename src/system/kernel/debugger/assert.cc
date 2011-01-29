@@ -30,17 +30,22 @@
 
 #include <panic.h>
 
+#include <utilities/assert.h>
+
 void _assert(bool b, const char *file, int line, const char *func)
 {
     if(b)
         return;
 
-    ERROR("Assertion failed in file " << file);
-    ERROR("In function '" << func << "'");
-    ERROR("On line " << Dec << line << Hex << ".");
-    Processor::breakpoint();
+    if(Processor::m_Initialised)
+    {
+        ERROR("Assertion failed in file " << file);
+        ERROR("In function '" << func << "'");
+        ERROR("On line " << Dec << line << Hex << ".");
+        Processor::breakpoint();
 
-    ERROR("You may not resume after a failed assertion.");
+        ERROR("You may not resume after a failed assertion.");
+    }
 
     // Best reason for a return is that the debugger isn't active. Either way, it's an error condition, panic.
     panic("assertion failed");
