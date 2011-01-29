@@ -14,9 +14,26 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <utilities/utility.h>
+#include <utilities/assert.h>
+
+#include <panic.h>
+
+/**
+    x86 note:
+    Pedigree requires at least an SSE2-capable CPU in order to run. This allows
+    us to make assumptions here about CPU support of certain features.
+    
+    Eventually we will have copies of each function for SSE2,3,4,x.
+**/
+
+#define SSE_ALIGN_SIZE      0x10
+#define SSE_ALIGN_MASK      0xF
+
+// Set to 1 to allow SSE to be used.
+#define USE_SSE             1
 
 #ifdef X86_COMMON
-void *memset(void *buf, int c, size_t n)
+inline void *memset_nonzero(void *buf, int c, size_t n)
 {
     char *p = (char *)buf;
 
@@ -28,6 +45,59 @@ void *memset(void *buf, int c, size_t n)
     asm volatile("rep stosb;":"=c"(unused):"D"(p), "c"(n), "a"(c));
     return buf;
 }
+
+void *memset(void *buf, int c, size_t n)
+{
+#if USE_SSE
+    if(c)
+        return memset_nonzero(buf, c, n);
+    else
+    {
+        uintptr_t p = (uintptr_t) buf;
+        size_t off = 0;
+        
+        if(!n)
+            return buf;
+        
+        // Align to the SSE block size
+        if(p & SSE_ALIGN_MASK)
+        {
+            // If p == 0x01, nForAlignment will be 0x0F (0x10 - 0x01).
+            // p + off = 0x01 + 0x0F = 0x10
+            size_t nForAlignment = (SSE_ALIGN_SIZE - (p & SSE_ALIGN_MASK));
+            if(nForAlignment > n)
+                nForAlignment = n;
+            
+            uint32_t unused = 0; // Used to tell GCC ECX gets smashed.
+            off = nForAlignment;
+            asm volatile("rep stosb" : "=c" (unused) : "D" (buf), "c" (nForAlignment), "a" (0));
+            
+            if(off >= n)
+                return buf;
+        }
+        
+        // Clearing memory to zero, and at least one SSE-size block!
+        // Massive optimisation possible!
+        
+        // Now aligned, clear 16 bytes at a time
+        asm volatile("pxor %xmm0, %xmm0");
+        for(; (off + SSE_ALIGN_SIZE) <= n; off += SSE_ALIGN_SIZE)
+        {
+            // assert(((p + off) & SSE_ALIGN_MASK) == 0);
+            asm volatile("movdqa %%xmm0, (%0)" : : "r" (p + off));
+        }
+        
+        // Any remaining bytes can now be cleared.
+        if(off < n)
+            asm volatile("rep stosb" : : "D" (p + off), "c" (n - off), "a" (0));
+        
+        return buf;
+    }
+#else
+    return memset_nonzero(buf, c, n);
+#endif
+}
+
 #else
 void *memset(void *buf, int c, size_t len)
 {
@@ -43,6 +113,12 @@ void *memset(void *buf, int c, size_t len)
 #ifdef X86_COMMON
 void *wmemset(void *buf, int c, size_t n)
 {
+#if USE_SSE
+    // Use SSE if it would give us an advantage here.
+    if((!c) && ((n << 1) >= SSE_ALIGN_SIZE))
+      return memset(buf, (char) c, n << 1);
+#endif
+    
     char *p = (char *)buf;
 
     // check for bad usage of memcpy
@@ -68,6 +144,12 @@ void *wmemset(void *buf, int c, size_t len)
 #ifdef X86_COMMON
 void *dmemset(void *buf, unsigned int c, size_t n)
 {
+#if USE_SSE
+    // Use SSE if it would give us an advantage here.
+    if((!c) && ((n << 2) >= SSE_ALIGN_SIZE))
+      return memset(buf, (char) c, n << 2);
+#endif
+  
     char *p = (char *)buf;
 
     // check for bad usage of memcpy
@@ -92,8 +174,15 @@ void *dmemset(void *buf, unsigned int c, size_t len)
 
 void *qmemset(void *buf, unsigned long long c, size_t len)
 {
-  /// \todo Could be made faster with SSE, but some work needs to be done on
-  ///       alignment first.
+#ifdef X86_COMMON
+
+#if USE_SSE
+  // Use SSE if it would give us an advantage here.
+  if((!c) && ((len << 3) >= SSE_ALIGN_SIZE))
+    return memset(buf, (char) c, len << 3);
+#endif
+
+#endif
   
 #ifdef X64
   asm volatile("rep stosq" :: "a" (c), "c" (len), "D" (buf));
@@ -150,6 +239,16 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
 
     return s1;
 }
+
+void *memcpy_gcc(void *restrict s1, const void *restrict s2, size_t n)
+{
+    char *restrict p1 = s1;
+    const char *restrict p2 = s2;
+    while(n)
+        *p1++ = *p2++;
+    return s1;
+}
+
 #else
 void *memcpy(void *dest, const void *src, size_t len)
 {
