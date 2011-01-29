@@ -22,6 +22,10 @@
 /** @addtogroup kernel
  * @{ */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** Prints out a message to the screen and the most recent log entries and halts the
  *  processor. This function should only be called in unrecoverable emergency cases,
  *  e.g. when the kernel is unable to successfully complete its initialisation.
@@ -31,6 +35,10 @@
  *\param[in] msg the message to print to the screen */
 void panic( const char* msg );
 
+
+#ifdef __cplusplus
+};
+#endif
 /** @} */
 
 #endif
