@@ -311,7 +311,7 @@ env['CPPDEFINES'] = defines
 # Fluff up our build messages
 ####################################
 if not env['verbose']:
-    if env['nocolour'] or os.environ['TERM'] == 'dumb' :
+    if env['nocolour'] or os.environ.get('TERM') == 'dumb' or os.environ.get('TERM') is None:
         env['CCCOMSTR']   =    '     Compiling $TARGET'
         env['CXXCOMSTR']  =    '     Compiling $TARGET'
         env['ASCOMSTR']   =    '    Assembling $TARGET'
