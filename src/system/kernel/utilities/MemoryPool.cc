@@ -51,7 +51,7 @@ bool MemoryPool::initialise(size_t poolSize, size_t bufferSize)
     if(m_bInitialised)
         return true;
 
-    if(!poolSize || !bufferSize || (bufferSize > poolSize))
+    if(!poolSize || !bufferSize || (bufferSize > (poolSize * PhysicalMemoryManager::getPageSize())))
         return false;
 
     // Find the next power of two for bufferSize, if it isn't already one
