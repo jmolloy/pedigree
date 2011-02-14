@@ -73,7 +73,7 @@ bool MemoryPool::initialise(size_t poolSize, size_t bufferSize)
         m_Pool,
         poolSize,
         0,
-        VirtualAddressSpace::Write
+        VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode
     );
     if(!m_bInitialised)
         return false;
