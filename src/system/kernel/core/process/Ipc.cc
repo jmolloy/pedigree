@@ -113,13 +113,66 @@ Ipc::IpcMessage::IpcMessage(size_t nBytes, uintptr_t regionHandle) : nPages(0), 
     /// \todo regionHandle == 0 means "create a new one".
 
     nPages = (nBytes / 4096) + 1;
-    m_pMemRegion = reinterpret_cast<MemoryRegion*>(regionHandle);
-
-    if(nPages == 1)
+    
+    if(nPages == 1) // Don't be silly with memory regions and such when the pool
+                    // is adequate.
         IpcMessage();
-
-    if(!m_pMemRegion)
-        ERROR("IpcMessage: regionHandle misused.");
+    else
+    {
+        MemoryRegion *pRegion = reinterpret_cast<MemoryRegion*>(regionHandle);
+        if(!pRegion)
+        {
+            // Need to allocate RAM for this space.
+            m_pMemRegion = new MemoryRegion("IPC Message");
+            if(!PhysicalMemoryManager::instance().allocateRegion(
+                                        *m_pMemRegion,
+                                        nPages,
+                                        PhysicalMemoryManager::continuous,
+                                        VirtualAddressSpace::Write))
+            {
+                delete m_pMemRegion;
+                m_pMemRegion = 0;
+                
+                ERROR("IpcMessage: region allocation failed.");
+            }
+        }
+        else
+        {
+            // Need to remap the given region into this address space, if it isn't
+            // mapped in already.
+            void *pAddress = pRegion->virtualAddress();
+            physical_uintptr_t phys = pRegion->physicalAddress();
+            
+            VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+            if(va.isMapped(pAddress))
+            {
+                size_t ignore = 0;
+                physical_uintptr_t map_phys = 0;
+                va.getMapping(pAddress, map_phys, ignore);
+                
+                // This works because we ask for continuous physical memory.
+                // Even if we didn't, it would still be a valid check. We would just
+                // have to verify a few more physical pages to be 100% certain.
+                if(phys == map_phys)
+                    return;
+            }
+            
+            // Create the region.
+            m_pMemRegion = new MemoryRegion("IPC Message");
+            if(!PhysicalMemoryManager::instance().allocateRegion(
+                                        *m_pMemRegion,
+                                        nPages,
+                                        PhysicalMemoryManager::continuous,
+                                        VirtualAddressSpace::Write,
+                                        phys))
+            {
+                delete m_pMemRegion;
+                m_pMemRegion = 0;
+                
+                ERROR("IpcMessage: region allocation failed.");
+            }
+        }
+    }
 }
 
 Ipc::IpcMessage::~IpcMessage()
