@@ -31,7 +31,8 @@ lib_files = [
     Glob("*.cc"),
     Glob("config/*.cc"),
     Glob("graphics/*.cc"),
-    Glob("input/*.cc")
+    Glob("input/*.cc"),
+    Glob("ipc/*.cc")
 ]
 
 # To include a new directory for includes, just add it to the list

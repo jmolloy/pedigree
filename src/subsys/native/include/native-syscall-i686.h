@@ -21,47 +21,47 @@
 static int syscall0(int function)
 {
   int eax = ((NATIVE_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
-  int ret;
-  asm volatile("int $255" : "=a" (ret) : "0" (eax));
+  int ret, ign;
+  asm volatile("int $255" : "=a" (ret), "=b" (ign) : "0" (eax));
   return ret;
 }
 
 static int syscall1(int function, int p1)
 {
   int eax = ((NATIVE_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
-  int ret;
-  asm volatile("int $255" : "=a" (ret) : "0" (eax), "b" (p1));
+  int ret, ign;
+  asm volatile("int $255" : "=a" (ret), "=b" (ign) : "0" (eax), "b" (p1));
   return ret;
 }
 
 static int syscall2(int function, int p1, int p2)
 {
   int eax = ((NATIVE_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
-  int ret;
-  asm volatile("int $255" : "=a" (ret) : "0" (eax), "b" (p1), "c" (p2));
+  int ret, ign;
+  asm volatile("int $255" : "=a" (ret), "=b" (ign) : "0" (eax), "b" (p1), "c" (p2));
   return ret;
 }
 
 static int syscall3(int function, int p1, int p2, int p3)
 {
   int eax = ((NATIVE_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
-  int ret;
-  asm volatile("int $255" : "=a" (ret) : "0" (eax), "b" (p1), "c" (p2), "d" (p3));
+  int ret, ign;
+  asm volatile("int $255" : "=a" (ret), "=b" (ign) : "0" (eax), "b" (p1), "c" (p2), "d" (p3));
   return ret;
 }
 
 static int syscall4(int function, int p1, int p2, int p3, int p4)
 {
   int eax = ((NATIVE_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
-  int ret;
-  asm volatile("int $255" : "=a" (ret) : "0" (eax), "b" (p1), "c" (p2), "d" (p3), "S" (p4));
+  int ret, ign;
+  asm volatile("int $255" : "=a" (ret), "=b" (ign) : "0" (eax), "b" (p1), "c" (p2), "d" (p3), "S" (p4));
   return ret;
 }
 
 static int syscall5(int function, int p1, int p2, int p3, int p4, int p5)
 {
   int eax = ((NATIVE_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
-  int ret;
-  asm volatile("int $255" : "=a" (ret) : "0" (eax), "b" (p1), "c" (p2), "d" (p3), "S" (p4), "D" (p5));
+  int ret, ign;
+  asm volatile("int $255" : "=a" (ret), "=b" (ign) : "0" (eax), "b" (p1), "c" (p2), "d" (p3), "S" (p4), "D" (p5));
   return ret;
 }
