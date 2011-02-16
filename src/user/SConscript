@@ -56,7 +56,9 @@ cpp_apps = [
     'TUI',
     'apptest',
     'config',
-    'thread-test'
+    'thread-test',
+    'ipc-test-server',
+    'ipc-test-client'
 ]
 
 # Custom include paths for specific applications
