@@ -199,7 +199,10 @@ custom_libs = {
 if 'STATIC_DRIVERS' in env['CPPDEFINES']:
     default_libs = []
 else:
-    default_libs = ['gcc', 'kernelrtti-nopic']
+    if env['ARCH_TARGET'] == 'X64':
+        default_libs = ['gcc', 'kernelrtti-nopic']
+    else:
+        default_libs = ['gcc', 'kernelrtti']
 
 # Default library paths
 default_libpath = [
