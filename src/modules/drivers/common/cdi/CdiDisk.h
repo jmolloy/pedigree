@@ -56,6 +56,19 @@ class CdiDisk : public Disk
         virtual uintptr_t read(uint64_t location);
         virtual void write(uint64_t location);
 
+        /// Assume CDI-provided disks are never read-only.
+        virtual bool cacheIsCritical()
+        {
+            return false;
+        }
+
+        /// CDI disks do not yet do any form of caching.
+        /// \todo Fix that.
+        virtual void flush(uint64_t location)
+        {
+            return;
+        }
+
     private:
         CdiDisk(const CdiDisk&);
         const CdiDisk & operator = (const CdiDisk&);

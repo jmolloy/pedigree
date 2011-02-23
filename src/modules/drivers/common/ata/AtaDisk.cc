@@ -53,7 +53,7 @@ bool AtaDisk::initialise()
 
     // Drive spin-up
     commandRegs->write8(0x00, 6);
-    
+
     // Check for device presence
     uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
     commandRegs->write8(devSelect, 6);
@@ -92,7 +92,7 @@ bool AtaDisk::initialise()
 
     // Read status register.
     status = ataWait(commandRegs);
-    
+
     // Check that the device actually exists
     if (status.__reg_contents == 0)
         return false;
@@ -276,6 +276,18 @@ void AtaDisk::align(uint64_t location)
 {
     assert (m_nAlignPoints < 8);
     m_AlignPoints[m_nAlignPoints++] = location;
+}
+
+void AtaDisk::flush(uint64_t location)
+{
+    if(location & 0xFFF)
+        location &= ~0xFFF;
+
+    uintptr_t buff = m_Cache.lookup(location);
+    if(!buff)
+        return;
+
+    doWrite(location);
 }
 
 uint64_t AtaDisk::doRead(uint64_t location)

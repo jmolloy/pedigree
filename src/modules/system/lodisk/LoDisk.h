@@ -76,6 +76,14 @@ class FileDisk : public Disk
         virtual void write(uint64_t location);
         virtual void align(uint64_t location);
 
+        /// None of our writes ever end up back on the loaded file.
+        /// \todo Could it be possible to allow writes to go through to the file we've mounted?
+        ///       Then this could return true if the backing device is read-only, false otherwise.
+        virtual bool cacheIsCritical()
+        {
+            return true;
+        }
+
     private:
 
         FileDisk(const FileDisk&);
