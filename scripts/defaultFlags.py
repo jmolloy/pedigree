@@ -45,9 +45,10 @@ general_x86_defines = ['X86_COMMON', 'LITTLE_ENDIAN', '__UD_STANDALONE__', 'THRE
 # 32-bit defines
 x86_32_defines = ['X86', 'BITS_32', 'KERNEL_NEEDS_ADDRESS_SPACE_SWITCH']
 
-# 32-bit CFLAGS and CXXFLAGS
-default_x86_cflags = ' -march=pentium4 -mtune=k8 '
-default_x86_cxxflags = ' -march=pentium4 -mtune=k8 '
+# 32-bit CFLAGS and CXXFLAGS - disable SSE and MMX generation, we only use it
+# in very specific implementations (eg SSE-powered memset/memcpy).
+default_x86_cflags = ' -march=pentium4 -mtune=k8 -mno-sse -mno-mmx '
+default_x86_cxxflags = ' -march=pentium4 -mtune=k8 -mno-sse -mno-mmx '
 
 # 32-bit assembler flags
 default_x86_asflags = '32'

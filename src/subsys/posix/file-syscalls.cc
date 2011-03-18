@@ -50,6 +50,36 @@ extern int posix_getpid();
 
 #define GET_CWD() (Processor::information().getCurrentThread()->getParent()->getCwd())
 
+inline File *traverseSymlink(File *file)
+{
+    if(!file)
+    {
+        SYSCALL_ERROR(DoesNotExist);
+        return 0;
+    }
+
+    Tree<File*, File*> loopDetect;
+    while(file->isSymlink())
+    {
+        file = Symlink::fromFile(file)->followLink();
+        if(!file)
+        {
+            SYSCALL_ERROR(DoesNotExist);
+            return 0;
+        }
+
+        if(loopDetect.lookup(file))
+        {
+            SYSCALL_ERROR(LoopExists);
+            return 0;
+        }
+        else
+            loopDetect.insert(file, file);
+    }
+
+    return file;
+}
+
 int posix_close(int fd)
 {
     F_NOTICE("close(" << fd << ")");
@@ -170,8 +200,6 @@ int posix_open(const char *name, int flags, int mode)
         }
     }
 
-    while(file && file->isSymlink())
-        file = Symlink::fromFile(file)->followLink();
     if(!file)
     {
       F_NOTICE("File does not exist.");
@@ -179,6 +207,11 @@ int posix_open(const char *name, int flags, int mode)
       pSubsystem->freeFd(fd);
       return -1;
     }
+
+    file = traverseSymlink(file);
+
+    if(!file)
+        return -1;
 
     if (file->isDirectory() && (flags & (O_WRONLY | O_RDWR)))
     {
@@ -424,14 +457,16 @@ int posix_rename(const char* source, const char* dst)
     }
 
     // traverse symlink
-    while (src->isSymlink())
-        src = Symlink::fromFile(src)->followLink();
+    src = traverseSymlink(src);
+    if(!src)
+        return -1;
 
     if (dest)
     {
         // traverse symlink
-        while (dest->isSymlink())
-            dest = Symlink::fromFile(dest)->followLink();
+        dest = traverseSymlink(dest);
+        if(!dest)
+            return -1;
 
         if (dest->isDirectory() && !src->isDirectory())
         {
@@ -511,15 +546,12 @@ int posix_stat(const char *name, struct stat *st)
         SYSCALL_ERROR(DoesNotExist);
         return -1;
     }
+    
+    file = traverseSymlink(file);
 
-    while (file->isSymlink())
-        file = Symlink::fromFile(file)->followLink();
-
-    if (!file)
+    if(!file)
     {
-        // Error - not found.
         F_NOTICE("    -> Symlink traversal failed");
-        SYSCALL_ERROR(DoesNotExist);
         return -1;
     }
 
@@ -736,9 +768,11 @@ int posix_opendir(const char *dir, dirent *ent)
         SYSCALL_ERROR(DoesNotExist);
         return -1;
     }
+    
+    file = traverseSymlink(file);
 
-    while (file->isSymlink())
-        file = Symlink::fromFile(file)->followLink();
+    if(!file)
+        return -1;
 
     if (!file->isDirectory())
     {
@@ -1658,10 +1692,10 @@ int posix_chmod(const char *path, mode_t mode)
         return -1;
     }
 
-    /// \todo ELOOP (Issue #127)
     // Symlink traversal
-    while (file->isSymlink())
-        file = Symlink::fromFile(file)->followLink();
+    file = traverseSymlink(file);
+    if(!file)
+        return -1;
     
     /// \todo Might want to change permissions on open file descriptors?
     uint32_t permissions = 0;
@@ -1703,10 +1737,10 @@ int posix_chown(const char *path, uid_t owner, gid_t group)
         return -1;
     }
 
-    /// \todo ELOOP (Issue #127)
     // Symlink traversal
-    while (file->isSymlink())
-        file = Symlink::fromFile(file)->followLink();
+    file = traverseSymlink(file);
+    if(!file)
+        return -1;
     
     // Set the UID and GID
     if(owner != static_cast<uid_t>(-1))
@@ -1920,10 +1954,10 @@ int posix_statvfs(const char *path, struct statvfs *buf)
         return -1;
     }
 
-    /// \todo ELOOP (Issue #127)
     // Symlink traversal
-    while (file->isSymlink())
-        file = Symlink::fromFile(file)->followLink();
+    file = traverseSymlink(file);
+    if(!file)
+        return -1;
     
     return statvfs_doer(file->getFilesystem(), buf);
 }
