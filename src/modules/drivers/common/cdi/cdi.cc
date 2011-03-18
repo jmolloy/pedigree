@@ -18,6 +18,10 @@
 #include <cdi/lists.h>
 #include <cdi/pci.h>
 
+#ifdef X86_COMMON
+#include <machine/Pci.h>
+#endif
+
 static cdi_list_t drivers = NULL;
 static cdi_list_t devices = NULL;
 
@@ -31,6 +35,12 @@ void iterateDeviceTree(Device *root)
 
         struct cdi_pci_device *dev = new struct cdi_pci_device;
         dev->bus_data.bus_type = CDI_PCI;
+
+        // Enable bus mastering and standard I/O as needed.
+#ifdef X86_COMMON
+    uint32_t nPciCmdSts = PciBus::instance().readConfigSpace(p, 1);
+    PciBus::instance().writeConfigSpace(p, 1, nPciCmdSts | 0x7);
+#endif
 
         dev->bus = p->getPciBusPosition();
         dev->dev = p->getPciDevicePosition();
