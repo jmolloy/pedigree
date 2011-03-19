@@ -122,7 +122,7 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
     delete pResult;
 
     // No rows! Try a subnet lookup first, without a complement.
-    str.sprintf("SELECT * FROM routes WHERE ((ipstart >= %u) AND (ipend <= %u)) AND (type == %u)", ip->getIp(), ip->getIp(), static_cast<int>(DestSubnet));
+    str.sprintf("SELECT * FROM routes WHERE ((ipstart <= %u) AND (ipend >= %u)) AND (type == %u)", ip->getIp(), ip->getIp(), static_cast<int>(DestSubnet));
     pResult = Config::instance().query(str);
     if(!pResult->succeeded())
         ERROR("Routing table query failed: " << pResult->errorMessage());
@@ -133,7 +133,7 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
     delete pResult;
 
     // Still nothing, try a complement subnet search
-    str.sprintf("SELECT * FROM routes WHERE (NOT ((ipstart >= %u) AND (ipend <= %u))) AND (type == %u)", ip->getIp(), ip->getIp(), static_cast<int>(DestSubnetComplement));
+    str.sprintf("SELECT * FROM routes WHERE (NOT ((ipstart <= %u) AND (ipend >= %u))) AND (type == %u)", ip->getIp(), ip->getIp(), static_cast<int>(DestSubnetComplement));
     pResult = Config::instance().query(str);
     if(!pResult->succeeded())
         ERROR("Routing table query failed: " << pResult->errorMessage());
@@ -145,7 +145,9 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
 
     // Nothing even still, try the default route if we're allowed
     if(bGiveDefault)
+    {
         return DefaultRoute();
+    }
 
     // Not even the default route worked!
     return 0;
