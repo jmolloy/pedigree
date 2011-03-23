@@ -95,9 +95,18 @@ Ne2k::Ne2k(Network* pDev) :
   m_pBase->write8(PAGE_RX, NE_BNDRY);
   m_pBase->write8(PAGE_STOP, NE_PSTOP);
 
-  // accept broadcast and runt packets (<64 bytes)
-  m_pBase->write8(0x06, NE_RCR);
+  // accept multicast, broadcast, and runt packets (<64 bytes)
+  /// \todo Proper multicast subscription via the Network card abstraction
+  m_pBase->write8(0x14, NE_RCR);
   m_pBase->write8(0x00, NE_TCR);
+
+  // Accept all multicast packets. Once we have an API for multicast subscription this will be
+  // different, as we may not want to receive every single multicast packet that arrives.
+  uint8_t tmp = m_pBase->read8(NE_CMD);
+  m_pBase->write8(tmp | 0x40, NE_CMD);
+  for(i = 0; i < MAR_SIZE; i++)
+    m_pBase->write8(0xFF, NE_MAR + i);
+  m_pBase->write8(tmp, NE_CMD);
 
   // register the packet queue handler before we install the IRQ
 #ifdef THREADS

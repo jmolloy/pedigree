@@ -45,6 +45,8 @@ enum Ne2kConstants {
     NE_MAR    = 0x8, // page 1, really 0x8 - 0xf
 };
 
+#define MAR_SIZE          8
+
 #define PAGE_TX           0x40
 #define PAGE_RX           0x50
 #define PAGE_STOP         0x80
