@@ -20,7 +20,7 @@
 
 // Protocols we use in IPv6
 #include "Ethernet.h"
-#include "Arp.h" /// \todo ARP6
+#include "Arp.h" /// \todo NDP
 
 // Child protocols of IPv6
 #include "Icmp.h"
@@ -63,8 +63,17 @@ void Ipv6::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
     /// \todo Add statistics to NICs
     if(!NetworkFilter::instance().filter(2, packet + offset, nBytes - offset))
         return;
-    
+
     NOTICE("IPv6: received a packet!");
+
+    // Grab the header
+    ip6Header* header = reinterpret_cast<ip6Header*>(packet + offset);
+
+    // Get the destination and source addresses
+    IpAddress src(header->sourceAddress);
+    IpAddress dest(header->destAddress);
+
+    NOTICE("IPv6: packet from " << src.toString() << " to " << dest.toString());
 
     /// \todo Implement
 }
