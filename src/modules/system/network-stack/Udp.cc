@@ -20,6 +20,7 @@
 
 #include "Ethernet.h"
 #include "Ipv4.h"
+#include "Ipv6.h"
 
 #include "UdpManager.h"
 
@@ -40,24 +41,43 @@ Udp::~Udp()
 {
 }
 
-uint16_t Udp::udpChecksum(uint32_t srcip, uint32_t destip, udpHeader* data)
+uint16_t Udp::udpChecksum(IpAddress srcip, IpAddress destip, udpHeader* data)
 {
+  bool isIpv6 = srcip.getType() == IpAddress::IPv6;
+
   // psuedo-header on the front as well, build the packet, and checksum it
-  size_t tmpSize = BIG_TO_HOST16(data->len) + sizeof(udpPsuedoHeaderIpv4);
+  size_t tmpSize = BIG_TO_HOST16(data->len) + (isIpv6 ? sizeof(udpPsuedoHeaderIpv6) : sizeof(udpPsuedoHeaderIpv4));
   uint8_t* tmpPack = new uint8_t[tmpSize];
   uintptr_t tmpPackAddr = reinterpret_cast<uintptr_t>(tmpPack);
 
-  udpPsuedoHeaderIpv4* psuedo = reinterpret_cast<udpPsuedoHeaderIpv4*>(tmpPackAddr);
-  memcpy(reinterpret_cast<void*>(tmpPackAddr + sizeof(udpPsuedoHeaderIpv4)), data, BIG_TO_HOST16(data->len));
+  if(isIpv6)
+  {
+    udpPsuedoHeaderIpv6* psuedo = reinterpret_cast<udpPsuedoHeaderIpv6*>(tmpPackAddr);
+    memcpy(reinterpret_cast<void*>(tmpPackAddr + sizeof(udpPsuedoHeaderIpv6)), data, BIG_TO_HOST16(data->len));
 
-  psuedo->src_addr = srcip;
-  psuedo->dest_addr = destip;
-  psuedo->zero = 0;
-  psuedo->proto = IP_UDP;
-  psuedo->udplen = data->len;
+    srcip.getIp(psuedo->src_addr);
+    destip.getIp(psuedo->dest_addr);
+    psuedo->zero1 = psuedo->zero2 = 0;
+    psuedo->nextHeader = IP_UDP;
+    psuedo->length = data->len;
 
-  udpHeader* tmp = reinterpret_cast<udpHeader*>(tmpPackAddr + sizeof(udpPsuedoHeaderIpv4));
-  tmp->checksum = 0;
+    udpHeader* tmp = reinterpret_cast<udpHeader*>(tmpPackAddr + sizeof(udpPsuedoHeaderIpv6));
+    tmp->checksum = 0;
+  }
+  else
+  {
+    udpPsuedoHeaderIpv4* psuedo = reinterpret_cast<udpPsuedoHeaderIpv4*>(tmpPackAddr);
+    memcpy(reinterpret_cast<void*>(tmpPackAddr + sizeof(udpPsuedoHeaderIpv4)), data, BIG_TO_HOST16(data->len));
+
+    psuedo->src_addr = srcip.getIp();
+    psuedo->dest_addr = destip.getIp();
+    psuedo->zero = 0;
+    psuedo->proto = IP_UDP;
+    psuedo->udplen = data->len;
+
+    udpHeader* tmp = reinterpret_cast<udpHeader*>(tmpPackAddr + sizeof(udpPsuedoHeaderIpv4));
+    tmp->checksum = 0;
+  }
 
   uint16_t checksum = Network::calculateChecksum(tmpPackAddr, tmpSize);
 
@@ -79,7 +99,7 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
           WARNING("UDP: No NIC given to send(), and attempting to send a broadcast packet!");
           return false;
       }
-      
+
       if(!RoutingTable::instance().hasRoutes())
       {
           WARNING("UDP: No NIC given to send(), and no routes available in the routing table");
@@ -93,7 +113,7 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
           return false;
       }
   }
-  
+
   // Grab information about ourselves
   StationInfo me = pCard->getStationInfo();
   if(broadcast) /// \note pCard MUST be set for broadcast packets!
@@ -109,7 +129,7 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
 
   if(!macValid)
     return false;
-  
+
   // Allocate a packet to send
   uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
 
@@ -146,7 +166,7 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
     memcpy(reinterpret_cast<void*>(packet + ethSize + ipSize + sizeof(udpHeader)), reinterpret_cast<void*>(payload), nBytes);
 
   // Calculate the checksum
-  header->checksum = Udp::instance().udpChecksum(me.ipv4.getIp(), dest.getIp(), header);
+  header->checksum = Udp::instance().udpChecksum(me.ipv4, dest, header);
 
   // Perfom an IPv4 checksum over the packet
   Ipv4::instance().injectChecksumAndDataFields(packet + ethSize, nBytes + sizeof(udpHeader));
@@ -166,13 +186,25 @@ void Udp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   if(!packet || !nBytes)
       return;
 
-  // grab the IP header to find the size, so we can skip options and get to the UDP header
-  Ipv4::ipHeader* ip = reinterpret_cast<Ipv4::ipHeader*>(packet + offset);
-  size_t ipHeaderSize = (ip->header_len) * 4; // len is the number of DWORDs
+  size_t udpHeaderOffset = 0;
+  IpAddress to;
+  if(from.getType() == IpAddress::IPv6)
+  {
+    // Yay assumptions.
+    /// \todo Fix this to not explode when extension headers are present
+    udpHeaderOffset = sizeof(Ipv6::ip6Header);
+    to.setIp(reinterpret_cast<Ipv6::ip6Header*>(packet + offset)->destAddress);
+  }
+  else
+  {
+    // grab the IP header to find the size, so we can skip options and get to the UDP header
+    Ipv4::ipHeader* ip = reinterpret_cast<Ipv4::ipHeader*>(packet + offset);
+    udpHeaderOffset = (ip->header_len) * 4; // len is the number of DWORDs
+    to.setIp(ip->ipDest);
+  }
 
   // Check for filtering
-  /// \todo Add statistics to NICs
-  if(!NetworkFilter::instance().filter(3, packet + offset + ipHeaderSize, nBytes - offset - ipHeaderSize))
+  if(!NetworkFilter::instance().filter(3, packet + offset + udpHeaderOffset, nBytes - offset - udpHeaderOffset))
   {
     pCard->droppedPacket();
     return;
@@ -180,7 +212,6 @@ void Udp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
 
   // check if this packet is for us, or if it's a broadcast
   StationInfo cardInfo = pCard->getStationInfo();
-  IpAddress to(ip->ipDest);
   /*if(cardInfo.ipv4.getIp() != ip->ipDest && ip->ipDest != 0xffffffff)
   {
     // not for us, TODO: check a flag to see if we'll accept these sorts of packets
@@ -189,7 +220,7 @@ void Udp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   }*/
 
   // grab the header now
-  udpHeader* header = reinterpret_cast<udpHeader*>(packet + offset + ipHeaderSize);
+  udpHeader* header = reinterpret_cast<udpHeader*>(packet + offset + udpHeaderOffset);
 
   // find the payload and its size - udpHeader::len is the size of the header + data
   // we use it rather than calculating the size from offsets in order to be able to handle
@@ -202,12 +233,13 @@ void Udp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   {
     uint16_t checksum = header->checksum;
     header->checksum = 0;
-    uint16_t calcChecksum = udpChecksum(ip->ipSrc, ip->ipDest, header);
+    uint16_t calcChecksum = udpChecksum(from, to, header);
     header->checksum = checksum;
 
     if(header->checksum != calcChecksum)
     {
-      WARNING("UDP Checksum failed on incoming packet!");
+      WARNING("UDP Checksum failed on incoming packet [" << header->checksum << " != " << calcChecksum << "]!");
+      WARNING("flipped: " << BIG_TO_HOST16(header->checksum) << ", " << BIG_TO_HOST16(calcChecksum));
       pCard->badPacket();
       return;
     }

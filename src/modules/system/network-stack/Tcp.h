@@ -30,13 +30,13 @@ class Tcp
 private:
 
   static Tcp tcpInstance;
-  
+
 	struct tcpOption
 	{
 		uint8_t optkind;
 		uint8_t optlen;
 	} __attribute__((packed));
-  
+
   // psuedo-header that's added to the packet during checksum
   struct tcpPsuedoHeaderIpv4
   {
@@ -46,11 +46,22 @@ private:
     uint8_t   proto;
     uint16_t  tcplen;
   } __attribute__ ((packed));
-  
+
+  // Psuedo-header for checksum when being sent over IPv6
+  struct tcpPsuedoHeaderIpv6
+  {
+    uint8_t  src_addr[16];
+    uint8_t  dest_addr[16];
+    uint32_t length;
+    uint8_t  nextHeader;
+    uint16_t zero1;
+    uint8_t  zero2;
+  } __attribute__ ((packed));
+
 public:
   Tcp();
   virtual ~Tcp();
-  
+
   /** For access to the stack without declaring an instance of it */
   static Tcp& instance()
   {
@@ -70,10 +81,10 @@ public:
     uint16_t  checksum;
     uint16_t  urgptr;
   } __attribute__ ((packed));
-  
+
   /** Packet arrival callback */
   void receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
-  
+
   /** Sends a TCP packet */
   static bool send(IpAddress dest,
                    uint16_t srcPort,
@@ -84,10 +95,10 @@ public:
                    uint16_t window,
                    size_t nBytes,
                    uintptr_t payload);
-  
+
   /** Calculates a TCP checksum */
-  uint16_t tcpChecksum(uint32_t srcip, uint32_t destip, tcpHeader* data, uint16_t len);
-  
+  uint16_t tcpChecksum(IpAddress srcip, IpAddress destip, tcpHeader* data, uint16_t len);
+
   /// \todo Work on my hex to be able to do this in my head rather than use decimal numbers
   enum TcpFlag
   {
@@ -100,7 +111,7 @@ public:
     ECE = 64,
     CWR = 128
   };
-  
+
   enum TcpOption
   {
     OPT_END = 0,
@@ -126,7 +137,7 @@ public:
     CLOSED          = 10,
     UNKNOWN         = 11
   };
-  
+
   // provides a string representation of a given state
   static const char* stateString(TcpState state)
   {

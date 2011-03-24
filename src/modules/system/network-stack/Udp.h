@@ -38,7 +38,7 @@ private:
     uint16_t  len;
     uint16_t  checksum;
   } __attribute__ ((packed));
-  
+
   // psuedo-header that's added to the packet during checksum
   struct udpPsuedoHeaderIpv4
   {
@@ -48,25 +48,36 @@ private:
     uint8_t   proto;
     uint16_t  udplen;
   } __attribute__ ((packed));
-  
+
+  // Psuedo-header for checksum when being sent over IPv6
+  struct udpPsuedoHeaderIpv6
+  {
+    uint8_t  src_addr[16];
+    uint8_t  dest_addr[16];
+    uint32_t length;
+    uint16_t zero1;
+    uint8_t  zero2;
+    uint8_t  nextHeader;
+  } __attribute__ ((packed));
+
 public:
   Udp();
   virtual ~Udp();
-  
+
   /** For access to the stack without declaring an instance of it */
   static Udp& instance()
   {
     return udpInstance;
   }
-  
+
   /** Packet arrival callback */
   void receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
-  
+
   /** Sends a UDP packet */
   static bool send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nBytes, uintptr_t payload, bool broadcast = false, Network *pCard = 0);
-  
+
   /** Calculates a UDP checksum */
-  uint16_t udpChecksum(uint32_t srcip, uint32_t destip, udpHeader* data);
+  uint16_t udpChecksum(IpAddress srcip, IpAddress destip, udpHeader* data);
 };
 
 #endif

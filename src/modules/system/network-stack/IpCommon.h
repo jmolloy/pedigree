@@ -19,13 +19,16 @@
 // This file contains definitions common to IPv4 and IPv6
 
 /// IP ICMP protocol type
-#define IP_ICMP  0x01
+#define IP_ICMP     0x01
 
 /// IP UDP protocol type
-#define IP_UDP   0x11
+#define IP_UDP      0x11
 
 /// IP TCP protocol type
-#define IP_TCP   0x06
+#define IP_TCP      0x06
+
+// IP ICMPv6 protocol type
+#define IP_ICMPV6   0x3A
 
 #endif
 

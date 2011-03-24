@@ -20,6 +20,7 @@
 
 #include "Ethernet.h"
 #include "Ipv4.h"
+#include "Ipv6.h"
 
 #include "TcpManager.h"
 
@@ -40,24 +41,43 @@ Tcp::~Tcp()
 {
 }
 
-uint16_t Tcp::tcpChecksum(uint32_t srcip, uint32_t destip, tcpHeader* data, uint16_t len)
+uint16_t Tcp::tcpChecksum(IpAddress srcip, IpAddress destip, tcpHeader* data, uint16_t len)
 {
+  bool isIpv6 = srcip.getType() == IpAddress::IPv6;
+
   // psuedo-header on the front as well, build the packet, and checksum it
-  size_t tmpSize = len + sizeof(tcpPsuedoHeaderIpv4);
+  size_t tmpSize = len + (isIpv6 ? sizeof(tcpPsuedoHeaderIpv6) : sizeof(tcpPsuedoHeaderIpv4));
   uint8_t* tmpPack = new uint8_t[tmpSize];
   uintptr_t tmpPackAddr = reinterpret_cast<uintptr_t>(tmpPack);
 
-  tcpPsuedoHeaderIpv4* psuedo = reinterpret_cast<tcpPsuedoHeaderIpv4*>(tmpPackAddr);
-  memcpy(reinterpret_cast<void*>(tmpPackAddr + sizeof(tcpPsuedoHeaderIpv4)), data, len);
+  if(isIpv6)
+  {
+    tcpPsuedoHeaderIpv6* psuedo = reinterpret_cast<tcpPsuedoHeaderIpv6*>(tmpPackAddr);
+    memcpy(reinterpret_cast<void*>(tmpPackAddr + sizeof(tcpPsuedoHeaderIpv6)), data, len);
 
-  psuedo->src_addr = srcip;
-  psuedo->dest_addr = destip;
-  psuedo->zero = 0;
-  psuedo->proto = IP_TCP;
-  psuedo->tcplen = HOST_TO_BIG16(len);
+    srcip.getIp(psuedo->src_addr);
+    destip.getIp(psuedo->dest_addr);
+    psuedo->zero1 = psuedo->zero2 = 0;
+    psuedo->nextHeader = IP_TCP;
+    psuedo->length = HOST_TO_BIG16(len);
 
-  tcpHeader* tmp = reinterpret_cast<tcpHeader*>(tmpPackAddr + sizeof(tcpPsuedoHeaderIpv4));
-  tmp->checksum = 0;
+    tcpHeader* tmp = reinterpret_cast<tcpHeader*>(tmpPackAddr + sizeof(tcpPsuedoHeaderIpv6));
+    tmp->checksum = 0;
+  }
+  else
+  {
+    tcpPsuedoHeaderIpv4* psuedo = reinterpret_cast<tcpPsuedoHeaderIpv4*>(tmpPackAddr);
+    memcpy(reinterpret_cast<void*>(tmpPackAddr + sizeof(tcpPsuedoHeaderIpv4)), data, len);
+
+    psuedo->src_addr = srcip.getIp();
+    psuedo->dest_addr = destip.getIp();
+    psuedo->zero = 0;
+    psuedo->proto = IP_TCP;
+    psuedo->tcplen = HOST_TO_BIG16(len);
+
+    tcpHeader* tmp = reinterpret_cast<tcpHeader*>(tmpPackAddr + sizeof(tcpPsuedoHeaderIpv4));
+    tmp->checksum = 0;
+  }
 
   uint16_t checksum = Network::calculateChecksum(tmpPackAddr, tmpSize);
 
@@ -95,7 +115,7 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
     WARNING("TCP: Couldn't get a MAC address for the remote host (" << tmp.toString() << ")");
     return false;
   }
-  
+
   // Allocate a packet to send
   uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
 
@@ -135,7 +155,7 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
     memcpy(reinterpret_cast<void*>(tcpPacket + sizeof(tcpHeader)), reinterpret_cast<void*>(payload), nBytes);
 
   header->checksum = 0;
-  header->checksum = Tcp::instance().tcpChecksum(me.ipv4.getIp(), dest.getIp(), header, nBytes + sizeof(tcpHeader));
+  header->checksum = Tcp::instance().tcpChecksum(me.ipv4, dest, header, nBytes + sizeof(tcpHeader));
 
   // Perfom an IPv4 checksum over the packet
   Ipv4::instance().injectChecksumAndDataFields(packet + ethSize, nBytes + sizeof(tcpHeader));
@@ -157,35 +177,51 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   if(!packet || !nBytes)
       return;
 
-  // grab the IP header to find the size, so we can skip options and get to the TCP header
-  /// \todo Argh, IPv4-specific!
-  Ipv4::ipHeader* ip = reinterpret_cast<Ipv4::ipHeader*>(packet + offset);
-  size_t ipHeaderSize = (ip->header_len) * 4; // len is the number of DWORDs
+  size_t tcpHeaderOffset = 0;
+  size_t tcpPayloadSize = 0;
+  IpAddress to;
+  if(from.getType() == IpAddress::IPv6)
+  {
+    // Yay assumptions.
+    /// \todo Fix this to not explode when extension headers are present
+    tcpHeaderOffset = sizeof(Ipv6::ip6Header);
+    to.setIp(reinterpret_cast<Ipv6::ip6Header*>(packet + offset)->destAddress);
+
+    tcpPayloadSize = BIG_TO_HOST16(reinterpret_cast<Ipv6::ip6Header*>(packet + offset)->payloadLength) - tcpHeaderOffset;
+  }
+  else
+  {
+    // grab the IP header to find the size, so we can skip options and get to the UDP header
+    Ipv4::ipHeader* ip = reinterpret_cast<Ipv4::ipHeader*>(packet + offset);
+    tcpHeaderOffset = (ip->header_len) * 4; // len is the number of DWORDs
+    to.setIp(ip->ipDest);
+
+    tcpPayloadSize = BIG_TO_HOST16(ip->len) - tcpHeaderOffset;
+  }
 
   // Check for filtering
   /// \todo Add statistics to NICs
-  if(!NetworkFilter::instance().filter(3, packet + offset + ipHeaderSize, nBytes - offset - ipHeaderSize))
+  if(!NetworkFilter::instance().filter(3, packet + offset + tcpHeaderOffset, nBytes - offset - tcpHeaderOffset))
   {
     pCard->droppedPacket();
     return;
   }
 
   // check if this packet is for us, or if it's a broadcast
+  /// \todo IPv6
   StationInfo cardInfo = pCard->getStationInfo();
-  if(cardInfo.ipv4.getIp() != ip->ipDest &&
-     ip->ipDest != 0xffffffff &&
-     cardInfo.broadcast.getIp() != ip->ipDest)
+  if(from.getType() == IpAddress::IPv4 &&
+     cardInfo.ipv4 != to &&
+     to.getIp() != 0xffffffff &&
+     cardInfo.broadcast != to)
   {
     // not for us (depending on future requirements, we may need to implement a "catch-all"
     // flag in the same way as UDP)
     return;
   }
 
-  // find the size of the TCP header + data
-  size_t tcpPayloadSize = BIG_TO_HOST16(ip->len) - ipHeaderSize;
-
   // grab the header now
-  tcpHeader* header = reinterpret_cast<tcpHeader*>(packet + offset + ipHeaderSize);
+  tcpHeader* header = reinterpret_cast<tcpHeader*>(packet + offset + tcpHeaderOffset);
 
   // the size of the header (+ options)
   size_t headerSize = header->offset * 4;
@@ -201,7 +237,7 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   {
     uint16_t checksum = header->checksum;
     header->checksum = 0;
-    uint16_t calcChecksum = tcpChecksum(ip->ipSrc, ip->ipDest, header, tcpPayloadSize);
+    uint16_t calcChecksum = tcpChecksum(from, to, header, tcpPayloadSize);
     header->checksum = checksum;
 
     if(header->checksum != calcChecksum)

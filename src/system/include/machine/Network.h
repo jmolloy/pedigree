@@ -38,12 +38,12 @@ class StationInfo
     // broadcast without a known IPv4 address (and therefore no known network
     // or broadcast address).
     StationInfo() :
-      ipv4(), ipv6(0), subnetMask(), broadcast(0xFFFFFFFF),
+      ipv4(), ipv6(0), nIpv6Addresses(0), subnetMask(), broadcast(0xFFFFFFFF),
       gateway(), gatewayIpv6(IpAddress::IPv6), dnsServers(0), nDnsServers(0),
       mac(), nPackets(0), nDropped(0), nBad(0)
     {};
     StationInfo(const StationInfo& info) :
-      ipv4(info.ipv4), ipv6(info.ipv6), subnetMask(info.subnetMask),
+      ipv4(info.ipv4), ipv6(info.ipv6), nIpv6Addresses(info.nIpv6Addresses), subnetMask(info.subnetMask),
       broadcast(info.broadcast), gateway(info.gateway), gatewayIpv6(info.gatewayIpv6),
       dnsServers(info.dnsServers), nDnsServers(info.nDnsServers), mac(info.mac),
       nPackets(info.nPackets), nDropped(info.nDropped), nBad(info.nBad)
@@ -63,7 +63,7 @@ class StationInfo
     size_t      nDnsServers;
 
     MacAddress  mac; // MAC address
-    
+
     size_t nPackets;    /// Number of packets passed through the interface
     size_t nDropped;    /// Number of packets dropped by the filter
     size_t nBad;        /// Number of packets dropped because they were invalid
@@ -135,7 +135,7 @@ public:
 
   /** Converts an IPv4 address into an integer */
   static uint32_t convertToIpv4(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
-  
+
   /** Converts an IPv6 address into an IpAddress object */
   static IpAddress convertToIpv4(
                                     uint8_t a, uint8_t b,
@@ -150,22 +150,22 @@ public:
 
   /** Calculates a checksum */
   static uint16_t calculateChecksum(uintptr_t buffer, size_t nBytes);
-  
+
   /** Packet statistics */
-  
+
   /// Called when a packet is picked up by the system, regardless of if it's
   /// eventually bad or dropped
   virtual void gotPacket()
   {
     m_StationInfo.nPackets++;
   }
-  
+
   /// Called when a packet is dropped by the system
   virtual void droppedPacket()
   {
     m_StationInfo.nDropped++;
   }
-  
+
   /// Called when a packet is determined to be "bad" by the system (ie, invalid
   /// checksum).
   virtual void badPacket()
