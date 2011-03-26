@@ -16,6 +16,10 @@
 #ifndef IP_COMMON_H
 #define IP_COMMON_H
 
+#include <processor/types.h>
+
+class IpAddress;
+
 // This file contains definitions common to IPv4 and IPv6
 
 /// IP ICMP protocol type
@@ -29,6 +33,21 @@
 
 /// IP ICMPv6 protocol type
 #define IP_ICMPV6   0x3A
+
+/// Base class for IPv4/IPv6, for generic checksums
+class IpBase
+{
+    public:
+        IpBase() {}
+        virtual ~IpBase() {}
+
+        /// Injects an IPv4 header into a given buffer and returns the size of the header.
+        virtual size_t injectHeader(uintptr_t packet, IpAddress dest, IpAddress from, uint8_t type) = 0;
+
+        virtual void injectChecksumAndDataFields(uintptr_t ipv4HeaderStart, size_t payloadSize) = 0;
+
+        virtual uint16_t ipChecksum(IpAddress &from, IpAddress &to, uint8_t proto, uintptr_t data, uint16_t length) = 0;
+};
 
 #endif
 

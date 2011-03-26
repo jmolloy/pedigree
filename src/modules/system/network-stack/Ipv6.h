@@ -35,7 +35,7 @@
 /**
  * The Pedigree network stack - IPv4 layer
  */
-class Ipv6
+class Ipv6 : public IpBase
 {
 public:
     Ipv6();
@@ -52,6 +52,12 @@ public:
 
     /** Sends an IP packet */
     static bool send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard = 0);
+
+    virtual uint16_t ipChecksum(IpAddress &from, IpAddress &to, uint8_t proto, uintptr_t data, uint16_t length);
+
+    virtual size_t injectHeader(uintptr_t packet, IpAddress dest, IpAddress from, uint8_t type);
+
+    virtual void injectChecksumAndDataFields(uintptr_t ipv4HeaderStart, size_t payloadSize);
 
     struct ip6Header
     {
@@ -71,7 +77,7 @@ public:
         LockGuard<Spinlock> guard(m_NextIdLock);
         return m_IpId++;
     }
-  
+
 private:
 
     static Ipv6 ipInstance;

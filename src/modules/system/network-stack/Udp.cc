@@ -43,6 +43,11 @@ Udp::~Udp()
 
 bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nBytes, uintptr_t payload, bool broadcast, Network *pCard)
 {
+  // IP base for all operations here.
+  IpBase *pIp = &Ipv4::instance();
+  if(dest.getType() == IpAddress::IPv6)
+    pIp = &Ipv6::instance();
+
   // Grab the NIC to send on, if we don't already have one.
   /// \note The NIC is grabbed here *as well as* IP because we need to use the
   ///       NIC IP address for the checksum.
@@ -89,7 +94,7 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
   uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
 
   // Grab the ethernet header
-  size_t ethSize = Ethernet::instance().injectHeader(packet, destMac, me.mac, ETH_IPV4);
+  size_t ethSize = Ethernet::instance().injectHeader(packet, destMac, me.mac, dest.getType());
   if(!ethSize)
   {
     NetworkStack::instance().getMemPool().free(packet);
@@ -97,7 +102,7 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
   }
 
   // Grab the IPv4 header
-  size_t ipSize = Ipv4::instance().injectHeader(packet + ethSize, dest, me.ipv4, IP_UDP);
+  size_t ipSize = pIp->injectHeader(packet + ethSize, dest, me.ipv4, IP_UDP);
   if(!ipSize)
   {
     NetworkStack::instance().getMemPool().free(packet);
@@ -121,10 +126,10 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
     memcpy(reinterpret_cast<void*>(packet + ethSize + ipSize + sizeof(udpHeader)), reinterpret_cast<void*>(payload), nBytes);
 
   // Calculate the checksum
-  header->checksum = Ipv4::ipChecksum(me.ipv4, dest, IP_UDP, reinterpret_cast<uintptr_t>(header), sizeof(udpHeader) + nBytes);
+  header->checksum = pIp->ipChecksum(me.ipv4, dest, IP_UDP, reinterpret_cast<uintptr_t>(header), sizeof(udpHeader) + nBytes);
 
-  // Perfom an IPv4 checksum over the packet
-  Ipv4::instance().injectChecksumAndDataFields(packet + ethSize, nBytes + sizeof(udpHeader));
+  // Perfom a checksum over the packet
+  pIp->injectChecksumAndDataFields(packet + ethSize, nBytes + sizeof(udpHeader));
 
   // Transmit
   bool success = pCard->send(nBytes + sizeof(udpHeader) + ipSize + ethSize, packet);
@@ -141,6 +146,10 @@ void Udp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   if(!packet || !nBytes)
       return;
 
+  /// \todo Change receive() to give us more information!!!
+
+  IpBase *pIp = 0;
+
   size_t udpHeaderOffset = 0;
   IpAddress to;
   if(from.getType() == IpAddress::IPv6)
@@ -149,6 +158,8 @@ void Udp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
     /// \todo Fix this to not explode when extension headers are present
     udpHeaderOffset = sizeof(Ipv6::ip6Header);
     to.setIp(reinterpret_cast<Ipv6::ip6Header*>(packet + offset)->destAddress);
+
+    pIp = &Ipv6::instance();
   }
   else
   {
@@ -156,6 +167,8 @@ void Udp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
     Ipv4::ipHeader* ip = reinterpret_cast<Ipv4::ipHeader*>(packet + offset);
     udpHeaderOffset = (ip->header_len) * 4; // len is the number of DWORDs
     to.setIp(ip->ipDest);
+
+    pIp = &Ipv4::instance();
   }
 
   // Check for filtering
@@ -186,7 +199,7 @@ void Udp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   // check the checksum, if it's not zero
   if(header->checksum != 0)
   {
-    uint16_t checksum = Ipv4::ipChecksum(from, to, IP_UDP, reinterpret_cast<uintptr_t>(header), BIG_TO_HOST16(header->len));
+    uint16_t checksum = pIp->ipChecksum(from, to, IP_UDP, reinterpret_cast<uintptr_t>(header), BIG_TO_HOST16(header->len));
     if(checksum)
     {
       WARNING("UDP Checksum failed on incoming packet [" << header->checksum << ", and " << checksum << " should be zero]!");

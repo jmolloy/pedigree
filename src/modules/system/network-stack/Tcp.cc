@@ -43,6 +43,11 @@ Tcp::~Tcp()
 
 bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seqNumber, uint32_t ackNumber, uint8_t flags, uint16_t window, size_t nBytes, uintptr_t payload)
 {
+  // IP base for all operations here.
+  IpBase *pIp = &Ipv4::instance();
+  if(dest.getType() == IpAddress::IPv6)
+    pIp = &Ipv6::instance();
+
   // Grab the NIC to send on.
   /// \note The NIC is grabbed here *as well as* IP because we need to use the
   ///       NIC IP address for the checksum.
@@ -75,7 +80,7 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
 
   // Grab the ethernet header
-  size_t ethSize = Ethernet::instance().injectHeader(packet, destMac, me.mac, ETH_IPV4);
+  size_t ethSize = Ethernet::instance().injectHeader(packet, destMac, me.mac, dest.getType());
   if(!ethSize)
   {
     WARNING("TCP: Couldn't inject an ethernet header");
@@ -84,7 +89,7 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   }
 
   // Grab the IPv4 header
-  size_t ipSize = Ipv4::instance().injectHeader(packet + ethSize, dest, me.ipv4, IP_TCP);
+  size_t ipSize = pIp->injectHeader(packet + ethSize, dest, me.ipv4, IP_TCP);
   if(!ipSize)
   {
     WARNING("TCP: Couldn't inject an IPv4 header");
@@ -110,10 +115,10 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
     memcpy(reinterpret_cast<void*>(tcpPacket + sizeof(tcpHeader)), reinterpret_cast<void*>(payload), nBytes);
 
   header->checksum = 0;
-  header->checksum = Ipv4::ipChecksum(me.ipv4, dest, IP_TCP, tcpPacket, nBytes + sizeof(tcpHeader));
+  header->checksum = pIp->ipChecksum(me.ipv4, dest, IP_TCP, tcpPacket, nBytes + sizeof(tcpHeader));
 
   // Perfom an IPv4 checksum over the packet
-  Ipv4::instance().injectChecksumAndDataFields(packet + ethSize, nBytes + sizeof(tcpHeader));
+  pIp->injectChecksumAndDataFields(packet + ethSize, nBytes + sizeof(tcpHeader));
 
   // Transmit
   bool success = pCard->send(nBytes + sizeof(tcpHeader) + ipSize + ethSize, packet);
@@ -132,6 +137,10 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   if(!packet || !nBytes)
       return;
 
+  /// \todo Lower layer should give us more information!
+
+  IpBase *pIp = 0;
+
   size_t tcpHeaderOffset = 0;
   size_t tcpPayloadSize = 0;
   IpAddress to;
@@ -143,6 +152,8 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
     to.setIp(reinterpret_cast<Ipv6::ip6Header*>(packet + offset)->destAddress);
 
     tcpPayloadSize = BIG_TO_HOST16(reinterpret_cast<Ipv6::ip6Header*>(packet + offset)->payloadLength) - tcpHeaderOffset;
+
+    pIp = &Ipv4::instance();
   }
   else
   {
@@ -152,6 +163,8 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
     to.setIp(ip->ipDest);
 
     tcpPayloadSize = BIG_TO_HOST16(ip->len) - tcpHeaderOffset;
+
+    pIp = &Ipv6::instance();
   }
 
   // Check for filtering
@@ -190,7 +203,7 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   // check the checksum, if it's not zero
   if(header->checksum != 0)
   {
-    uint16_t checksum = Ipv4::ipChecksum(from, to, IP_TCP, reinterpret_cast<uintptr_t>(header), tcpPayloadSize);
+    uint16_t checksum = pIp->ipChecksum(from, to, IP_TCP, reinterpret_cast<uintptr_t>(header), tcpPayloadSize);
     if(checksum)
     {
       WARNING("TCP Checksum failed on incoming packet [dp=" << Dec << BIG_TO_HOST16(header->dest_port) << Hex << "]. Header checksum is " << header->checksum << ", calculated should be zero but is " << checksum << "!");

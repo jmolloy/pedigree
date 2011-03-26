@@ -30,8 +30,8 @@ class IpAddress
     /** The type of an IP address */
     enum IpType
     {
-        IPv4 = 0,
-        IPv6
+        IPv4 = 0x0800,
+        IPv6 = 0x86DD
     };
 
     /** Constructors */
@@ -161,7 +161,7 @@ class IpAddress
         else
             return false;
     }
-    
+
     String toString();
 
     private:

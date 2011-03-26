@@ -46,7 +46,7 @@
 /**
  * The Pedigree network stack - IPv4 layer
  */
-class Ipv4
+class Ipv4 : public IpBase
 {
 public:
   Ipv4();
@@ -66,9 +66,9 @@ public:
 
   /** Injects an IPv4 header into a given buffer and returns the size
     * of the header. */
-  size_t injectHeader(uintptr_t packet, IpAddress dest, IpAddress from, uint8_t type);
+  virtual size_t injectHeader(uintptr_t packet, IpAddress dest, IpAddress from, uint8_t type);
 
-  void injectChecksumAndDataFields(uintptr_t ipv4HeaderStart, size_t payloadSize);
+  virtual void injectChecksumAndDataFields(uintptr_t ipv4HeaderStart, size_t payloadSize);
 
   /**
    * Calculates a checksum for an upper-layer protocol.
@@ -76,7 +76,7 @@ public:
    * calculated checksum matches.
    * @param length Length of data to checksum, in HOST byte order.
    */
-  static uint16_t ipChecksum(IpAddress &from, IpAddress &to, uint8_t proto, uintptr_t data, uint16_t length);
+  virtual uint16_t ipChecksum(IpAddress &from, IpAddress &to, uint8_t proto, uintptr_t data, uint16_t length);
 
   struct ipHeader
   {
