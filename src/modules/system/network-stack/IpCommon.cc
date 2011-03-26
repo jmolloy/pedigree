@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Matthew Iselin
+ * Copyright (c) 2011 Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,22 +13,4 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef IP_COMMON_H
-#define IP_COMMON_H
-
-// This file contains definitions common to IPv4 and IPv6
-
-/// IP ICMP protocol type
-#define IP_ICMP     0x01
-
-/// IP UDP protocol type
-#define IP_UDP      0x11
-
-/// IP TCP protocol type
-#define IP_TCP      0x06
-
-/// IP ICMPv6 protocol type
-#define IP_ICMPV6   0x3A
-
-#endif
-
+#include "IpCommon.h"

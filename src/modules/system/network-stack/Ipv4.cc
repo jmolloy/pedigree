@@ -93,6 +93,34 @@ void Ipv4::injectChecksumAndDataFields(uintptr_t ipv4HeaderStart, size_t payload
     pHeader->checksum = Network::calculateChecksum(ipv4HeaderStart, pHeader->header_len * 4);
 }
 
+uint16_t Ipv4::ipChecksum(IpAddress &from, IpAddress &to, uint8_t proto, uintptr_t data, uint16_t length)
+{
+  // Allocate space for the psuedo-header + packet data
+  size_t tmpSize = length + sizeof(PsuedoHeader);
+  uint8_t* tmpPack = new uint8_t[tmpSize];
+  uintptr_t tmpPackAddr = reinterpret_cast<uintptr_t>(tmpPack);
+
+  // Set up the psuedo-header
+  PsuedoHeader *pHeader = reinterpret_cast<PsuedoHeader*>(tmpPackAddr);
+  pHeader->src_addr = from.getIp();
+  pHeader->dest_addr = to.getIp();
+  pHeader->proto = proto;
+  pHeader->datalen = HOST_TO_BIG16(length);
+  pHeader->zero = 0;
+
+  // Throw in the packet data
+  memcpy(reinterpret_cast<void*>(tmpPackAddr + sizeof(PsuedoHeader)),
+         reinterpret_cast<void*>(data),
+         length);
+
+  // Perform the checksum
+  uint16_t checksum = Network::calculateChecksum(tmpPackAddr, tmpSize);
+
+  // Done.
+  delete [] tmpPack;
+  return checksum;
+}
+
 bool Ipv4::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard)
 {
   IpAddress realDest = dest;
@@ -195,13 +223,13 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
     IpAddress from(header->ipSrc);
     Endpoint::RemoteEndpoint remoteHost;
     remoteHost.ip = from;
-    
+
     // If there's no ARP entry for this host, add one
     if(!Arp::instance().isInCache(from))
     {
         MacAddress e;
         Ethernet::instance().getMacFromPacket(packet, &e);
-        
+
         Arp::instance().insertToCache(from, e);
     }
 
@@ -227,7 +255,7 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         // Find the offset of the data section of this packet
         size_t dataOffset = offset;
         dataOffset += header->header_len * 4;
-        
+
         // Grab the fragment block for this combination of IP and ID
         Ipv4Identifier id(BIG_TO_HOST16(header->id), from);
         fragmentWrapper *p = m_Fragments.lookup(id);
@@ -347,7 +375,7 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         pCard->badPacket();
         break;
     }
-    
+
 
     if(wasFragment)
     {

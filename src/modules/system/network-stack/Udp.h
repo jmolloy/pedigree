@@ -39,16 +39,6 @@ private:
     uint16_t  checksum;
   } __attribute__ ((packed));
 
-  // psuedo-header that's added to the packet during checksum
-  struct udpPsuedoHeaderIpv4
-  {
-    uint32_t  src_addr;
-    uint32_t  dest_addr;
-    uint8_t   zero;
-    uint8_t   proto;
-    uint16_t  udplen;
-  } __attribute__ ((packed));
-
   // Psuedo-header for checksum when being sent over IPv6
   struct udpPsuedoHeaderIpv6
   {
@@ -75,9 +65,6 @@ public:
 
   /** Sends a UDP packet */
   static bool send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nBytes, uintptr_t payload, bool broadcast = false, Network *pCard = 0);
-
-  /** Calculates a UDP checksum */
-  uint16_t udpChecksum(IpAddress srcip, IpAddress destip, udpHeader* data);
 };
 
 #endif

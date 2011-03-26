@@ -37,16 +37,6 @@ private:
 		uint8_t optlen;
 	} __attribute__((packed));
 
-  // psuedo-header that's added to the packet during checksum
-  struct tcpPsuedoHeaderIpv4
-  {
-    uint32_t  src_addr;
-    uint32_t  dest_addr;
-    uint8_t   zero;
-    uint8_t   proto;
-    uint16_t  tcplen;
-  } __attribute__ ((packed));
-
   // Psuedo-header for checksum when being sent over IPv6
   struct tcpPsuedoHeaderIpv6
   {

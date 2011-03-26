@@ -41,51 +41,6 @@ Tcp::~Tcp()
 {
 }
 
-uint16_t Tcp::tcpChecksum(IpAddress srcip, IpAddress destip, tcpHeader* data, uint16_t len)
-{
-  bool isIpv6 = srcip.getType() == IpAddress::IPv6;
-
-  // psuedo-header on the front as well, build the packet, and checksum it
-  size_t tmpSize = len + (isIpv6 ? sizeof(tcpPsuedoHeaderIpv6) : sizeof(tcpPsuedoHeaderIpv4));
-  uint8_t* tmpPack = new uint8_t[tmpSize];
-  uintptr_t tmpPackAddr = reinterpret_cast<uintptr_t>(tmpPack);
-
-  if(isIpv6)
-  {
-    tcpPsuedoHeaderIpv6* psuedo = reinterpret_cast<tcpPsuedoHeaderIpv6*>(tmpPackAddr);
-    memcpy(reinterpret_cast<void*>(tmpPackAddr + sizeof(tcpPsuedoHeaderIpv6)), data, len);
-
-    srcip.getIp(psuedo->src_addr);
-    destip.getIp(psuedo->dest_addr);
-    psuedo->zero1 = psuedo->zero2 = 0;
-    psuedo->nextHeader = IP_TCP;
-    psuedo->length = HOST_TO_BIG16(len);
-
-    tcpHeader* tmp = reinterpret_cast<tcpHeader*>(tmpPackAddr + sizeof(tcpPsuedoHeaderIpv6));
-    tmp->checksum = 0;
-  }
-  else
-  {
-    tcpPsuedoHeaderIpv4* psuedo = reinterpret_cast<tcpPsuedoHeaderIpv4*>(tmpPackAddr);
-    memcpy(reinterpret_cast<void*>(tmpPackAddr + sizeof(tcpPsuedoHeaderIpv4)), data, len);
-
-    psuedo->src_addr = srcip.getIp();
-    psuedo->dest_addr = destip.getIp();
-    psuedo->zero = 0;
-    psuedo->proto = IP_TCP;
-    psuedo->tcplen = HOST_TO_BIG16(len);
-
-    tcpHeader* tmp = reinterpret_cast<tcpHeader*>(tmpPackAddr + sizeof(tcpPsuedoHeaderIpv4));
-    tmp->checksum = 0;
-  }
-
-  uint16_t checksum = Network::calculateChecksum(tmpPackAddr, tmpSize);
-
-  delete [] tmpPack;
-
-  return checksum;
-}
-
 bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seqNumber, uint32_t ackNumber, uint8_t flags, uint16_t window, size_t nBytes, uintptr_t payload)
 {
   // Grab the NIC to send on.
@@ -155,7 +110,7 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
     memcpy(reinterpret_cast<void*>(tcpPacket + sizeof(tcpHeader)), reinterpret_cast<void*>(payload), nBytes);
 
   header->checksum = 0;
-  header->checksum = Tcp::instance().tcpChecksum(me.ipv4, dest, header, nBytes + sizeof(tcpHeader));
+  header->checksum = Ipv4::ipChecksum(me.ipv4, dest, IP_TCP, tcpPacket, nBytes + sizeof(tcpHeader));
 
   // Perfom an IPv4 checksum over the packet
   Ipv4::instance().injectChecksumAndDataFields(packet + ethSize, nBytes + sizeof(tcpHeader));
@@ -235,14 +190,10 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   // check the checksum, if it's not zero
   if(header->checksum != 0)
   {
-    uint16_t checksum = header->checksum;
-    header->checksum = 0;
-    uint16_t calcChecksum = tcpChecksum(from, to, header, tcpPayloadSize);
-    header->checksum = checksum;
-
-    if(header->checksum != calcChecksum)
+    uint16_t checksum = Ipv4::ipChecksum(from, to, IP_TCP, reinterpret_cast<uintptr_t>(header), tcpPayloadSize);
+    if(checksum)
     {
-      WARNING("TCP Checksum failed on incoming packet [dp=" << Dec << BIG_TO_HOST16(header->dest_port) << Hex << "]. Header checksum is " << header->checksum << " and calculated is " << calcChecksum << "!");
+      WARNING("TCP Checksum failed on incoming packet [dp=" << Dec << BIG_TO_HOST16(header->dest_port) << Hex << "]. Header checksum is " << header->checksum << ", calculated should be zero but is " << checksum << "!");
       pCard->badPacket();
       return;
     }
