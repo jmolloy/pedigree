@@ -41,10 +41,7 @@ class IpBase
         IpBase() {}
         virtual ~IpBase() {}
 
-        /// Injects an IPv4 header into a given buffer and returns the size of the header.
-        virtual size_t injectHeader(uintptr_t packet, IpAddress dest, IpAddress from, uint8_t type) = 0;
-
-        virtual void injectChecksumAndDataFields(uintptr_t ipv4HeaderStart, size_t payloadSize) = 0;
+        virtual bool send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard = 0) = 0;
 
         virtual uint16_t ipChecksum(IpAddress &from, IpAddress &to, uint8_t proto, uintptr_t data, uint16_t length) = 0;
 };

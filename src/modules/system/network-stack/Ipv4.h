@@ -62,7 +62,7 @@ public:
   void receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
 
   /** Sends an IP packet */
-  static bool send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard = 0);
+  virtual bool send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard = 0);
 
   /** Injects an IPv4 header into a given buffer and returns the size
     * of the header. */

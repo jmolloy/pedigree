@@ -44,6 +44,7 @@ Udp::~Udp()
 bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nBytes, uintptr_t payload, bool broadcast, Network *pCard)
 {
   // IP base for all operations here.
+  /// \todo Abstract this out so that we don't have to have this specific code in the protocol.
   IpBase *pIp = &Ipv4::instance();
   if(dest.getType() == IpAddress::IPv6)
     pIp = &Ipv6::instance();
@@ -93,46 +94,24 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
   // Allocate a packet to send
   uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
 
-  // Grab the ethernet header
-  size_t ethSize = Ethernet::instance().injectHeader(packet, destMac, me.mac, dest.getType());
-  if(!ethSize)
-  {
-    NetworkStack::instance().getMemPool().free(packet);
-    return false;
-  }
-
-  // Grab the IPv4 header
-  size_t ipSize = pIp->injectHeader(packet + ethSize, dest, me.ipv4, IP_UDP);
-  if(!ipSize)
-  {
-    NetworkStack::instance().getMemPool().free(packet);
-    return false;
-  }
-
-  // Set up the UDP object
-  udpHeader* header = reinterpret_cast<udpHeader*>(packet + ethSize + ipSize);
+  // Add the UDP header to the packet.
+  udpHeader* header = reinterpret_cast<udpHeader*>(packet);
   memset(header, 0, sizeof(udpHeader));
-
-  // Configure ports
   header->src_port = HOST_TO_BIG16(srcPort);
   header->dest_port = HOST_TO_BIG16(destPort);
-
-  // Set the length of this packet
-  header->checksum = 0;
   header->len = HOST_TO_BIG16(sizeof(udpHeader) + nBytes);
+  header->checksum = 0;
 
   // Copy in the payload
   if(nBytes)
-    memcpy(reinterpret_cast<void*>(packet + ethSize + ipSize + sizeof(udpHeader)), reinterpret_cast<void*>(payload), nBytes);
+    memcpy(reinterpret_cast<void*>(packet + sizeof(udpHeader)), reinterpret_cast<void*>(payload), nBytes);
 
   // Calculate the checksum
+  /// \todo me.ipv4 is IPv4-specific
   header->checksum = pIp->ipChecksum(me.ipv4, dest, IP_UDP, reinterpret_cast<uintptr_t>(header), sizeof(udpHeader) + nBytes);
 
-  // Perfom a checksum over the packet
-  pIp->injectChecksumAndDataFields(packet + ethSize, nBytes + sizeof(udpHeader));
-
   // Transmit
-  bool success = pCard->send(nBytes + sizeof(udpHeader) + ipSize + ethSize, packet);
+  bool success = pIp->send(me.ipv4, dest, IP_UDP, nBytes + sizeof(udpHeader), packet, pCard);
 
   // Free the created packet
   NetworkStack::instance().getMemPool().free(packet);

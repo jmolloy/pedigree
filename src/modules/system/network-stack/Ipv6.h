@@ -51,13 +51,9 @@ public:
     void receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
 
     /** Sends an IP packet */
-    static bool send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard = 0);
+    virtual bool send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard = 0);
 
     virtual uint16_t ipChecksum(IpAddress &from, IpAddress &to, uint8_t proto, uintptr_t data, uint16_t length);
-
-    virtual size_t injectHeader(uintptr_t packet, IpAddress dest, IpAddress from, uint8_t type);
-
-    virtual void injectChecksumAndDataFields(uintptr_t ipv4HeaderStart, size_t payloadSize);
 
     struct ip6Header
     {
@@ -81,6 +77,17 @@ public:
 private:
 
     static Ipv6 ipInstance;
+
+    // Psuedo-header for checksum when being sent over IPv6
+    struct PsuedoHeader
+    {
+        uint8_t  src_addr[16];
+        uint8_t  dest_addr[16];
+        uint32_t length;
+        uint16_t zero1;
+        uint8_t  zero2;
+        uint8_t  nextHeader;
+    } __attribute__ ((packed));
 
     /// Lock for the "Next ID" variable
     Spinlock m_NextIdLock;

@@ -39,17 +39,6 @@ private:
     uint16_t  checksum;
   } __attribute__ ((packed));
 
-  // Psuedo-header for checksum when being sent over IPv6
-  struct udpPsuedoHeaderIpv6
-  {
-    uint8_t  src_addr[16];
-    uint8_t  dest_addr[16];
-    uint32_t length;
-    uint16_t zero1;
-    uint8_t  zero2;
-    uint8_t  nextHeader;
-  } __attribute__ ((packed));
-
 public:
   Udp();
   virtual ~Udp();

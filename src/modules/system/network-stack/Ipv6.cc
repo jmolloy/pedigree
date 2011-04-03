@@ -46,6 +46,34 @@ Ipv6::~Ipv6()
 {
 }
 
+uint16_t Ipv6::ipChecksum(IpAddress &from, IpAddress &to, uint8_t proto, uintptr_t data, uint16_t length)
+{
+  // Allocate space for the psuedo-header + packet data
+  size_t tmpSize = length + sizeof(PsuedoHeader);
+  uint8_t* tmpPack = new uint8_t[tmpSize];
+  uintptr_t tmpPackAddr = reinterpret_cast<uintptr_t>(tmpPack);
+
+  // Set up the psuedo-header
+  PsuedoHeader *pHeader = reinterpret_cast<PsuedoHeader*>(tmpPackAddr);
+  from.getIp(pHeader->src_addr);
+  to.getIp(pHeader->dest_addr);
+  pHeader->nextHeader = proto;
+  pHeader->length = HOST_TO_BIG16(length);
+  pHeader->zero1 = pHeader->zero2 = 0;
+
+  // Throw in the packet data
+  memcpy(reinterpret_cast<void*>(tmpPackAddr + sizeof(PsuedoHeader)),
+         reinterpret_cast<void*>(data),
+         length);
+
+  // Perform the checksum
+  uint16_t checksum = Network::calculateChecksum(tmpPackAddr, tmpSize);
+
+  // Done.
+  delete [] tmpPack;
+  return checksum;
+}
+
 bool Ipv6::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard)
 {
     /// \todo Implement
