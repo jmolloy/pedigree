@@ -78,27 +78,9 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
 
   // Allocate a packet to send
   uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
-
-  // Grab the ethernet header
-  size_t ethSize = Ethernet::instance().injectHeader(packet, destMac, me.mac, dest.getType());
-  if(!ethSize)
-  {
-    WARNING("TCP: Couldn't inject an ethernet header");
-    NetworkStack::instance().getMemPool().free(packet);
-    return false;
-  }
-
-  // Grab the IPv4 header
-  size_t ipSize = pIp->injectHeader(packet + ethSize, dest, me.ipv4, IP_TCP);
-  if(!ipSize)
-  {
-    WARNING("TCP: Couldn't inject an IPv4 header");
-    NetworkStack::instance().getMemPool().free(packet);
-    return false;
-  }
-
-  // Got everything we need - create TCP header
-  uintptr_t tcpPacket = packet + ethSize + ipSize;
+  
+  // Create TCP header
+  uintptr_t tcpPacket = packet;
   tcpHeader* header = reinterpret_cast<tcpHeader*>(tcpPacket);
   header->src_port = HOST_TO_BIG16(srcPort);
   header->dest_port = HOST_TO_BIG16(destPort);
@@ -111,19 +93,17 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   header->winsize = HOST_TO_BIG16(window);
   header->urgptr = 0;
 
+  // Inject the payload
   if(payload && nBytes)
     memcpy(reinterpret_cast<void*>(tcpPacket + sizeof(tcpHeader)), reinterpret_cast<void*>(payload), nBytes);
 
   header->checksum = 0;
+
+  /// \todo IPv4-specific
   header->checksum = pIp->ipChecksum(me.ipv4, dest, IP_TCP, tcpPacket, nBytes + sizeof(tcpHeader));
-
-  // Perfom an IPv4 checksum over the packet
-  pIp->injectChecksumAndDataFields(packet + ethSize, nBytes + sizeof(tcpHeader));
-
+  
   // Transmit
-  bool success = pCard->send(nBytes + sizeof(tcpHeader) + ipSize + ethSize, packet);
-  if(!success)
-    WARNING("TCP: Network card failed to transmit a packet");
+  bool success = pIp->send(me.ipv4, dest, IP_TCP, nBytes + sizeof(tcpHeader), packet, pCard);
 
   // Free the created packet
   NetworkStack::instance().getMemPool().free(packet);
