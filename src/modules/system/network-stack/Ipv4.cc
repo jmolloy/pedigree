@@ -125,6 +125,8 @@ bool Ipv4::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uin
 {
   IpAddress realDest = dest;
 
+  NOTICE_NOLOCK("outgoing ipv4 packet to " << dest.toString());
+
   // Grab the address to send to (as well as the NIC to send with)
   if(!pCard)
   {
@@ -184,7 +186,7 @@ bool Ipv4::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uin
   else
     macValid = Arp::instance().getFromCache(realDest, true, &destMac, pCard);
   if(macValid)
-    Ethernet::send(newSize, packAddr, pCard, destMac, ETH_IPV4);
+    Ethernet::send(newSize, packAddr, pCard, destMac, dest.getType());
 
   delete [] newPacket;
   return macValid;

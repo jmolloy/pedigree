@@ -19,6 +19,7 @@
 #include <processor/types.h>
 
 class IpAddress;
+class Network;
 
 // This file contains definitions common to IPv4 and IPv6
 
