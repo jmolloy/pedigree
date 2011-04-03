@@ -133,7 +133,7 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
 
     tcpPayloadSize = BIG_TO_HOST16(reinterpret_cast<Ipv6::ip6Header*>(packet + offset)->payloadLength) - tcpHeaderOffset;
 
-    pIp = &Ipv4::instance();
+    pIp = &Ipv6::instance();
   }
   else
   {
@@ -144,7 +144,7 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
 
     tcpPayloadSize = BIG_TO_HOST16(ip->len) - tcpHeaderOffset;
 
-    pIp = &Ipv6::instance();
+    pIp = &Ipv4::instance();
   }
 
   // Check for filtering
