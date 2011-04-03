@@ -111,7 +111,7 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
   header->checksum = pIp->ipChecksum(me.ipv4, dest, IP_UDP, reinterpret_cast<uintptr_t>(header), sizeof(udpHeader) + nBytes);
 
   // Transmit
-  bool success = pIp->send(me.ipv4, dest, IP_UDP, nBytes + sizeof(udpHeader), packet, pCard);
+  bool success = pIp->send(dest, me.ipv4, IP_UDP, nBytes + sizeof(udpHeader), packet, pCard);
 
   // Free the created packet
   NetworkStack::instance().getMemPool().free(packet);

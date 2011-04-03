@@ -103,7 +103,7 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   header->checksum = pIp->ipChecksum(me.ipv4, dest, IP_TCP, tcpPacket, nBytes + sizeof(tcpHeader));
   
   // Transmit
-  bool success = pIp->send(me.ipv4, dest, IP_TCP, nBytes + sizeof(tcpHeader), packet, pCard);
+  bool success = pIp->send(dest, me.ipv4, IP_TCP, nBytes + sizeof(tcpHeader), packet, pCard);
 
   // Free the created packet
   NetworkStack::instance().getMemPool().free(packet);
@@ -177,7 +177,7 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   // find the payload and its size - tcpHeader::len is the size of the header + data
   // we use it rather than calculating the size from offsets in order to be able to handle
   // packets that may have been padded (for whatever reason)
-  uintptr_t payload = reinterpret_cast<uintptr_t>(header) + (header->offset * 4); // offset is in DWORDs
+  uintptr_t payload = reinterpret_cast<uintptr_t>(header) + headerSize; // offset is in DWORDs
   size_t payloadSize = tcpPayloadSize - headerSize; //  (packet + nBytes) - payload;
 
   // check the checksum, if it's not zero
