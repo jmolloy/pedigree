@@ -95,7 +95,10 @@ int NetworkStack::packetThread(void *p)
     uint32_t offset = pack->offset;
 
     if(!packet || !packetSize)
+    {
+        delete pack;
         return 0;
+    }
 
     // Pass onto the ethernet layer
     /// \todo We should accept a parameter here that specifies the type of packet
@@ -104,7 +107,8 @@ int NetworkStack::packetThread(void *p)
     Ethernet::instance().receive(packetSize, packet, pCard, offset);
 
     NetworkStack::instance().getMemPool().free(packet);
-
+    
+    delete pack;
     return 0;
 }
 
