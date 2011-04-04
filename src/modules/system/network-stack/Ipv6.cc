@@ -105,7 +105,7 @@ void Ipv6::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
 
     size_t payloadSize = BIG_TO_HOST16(header->payloadLength);
 
-    NOTICE("IPv6: packet from " << src.toString() << " to " << dest.toString());
+    NOTICE("IPv6: packet from " << src.toString() << " to " << dest.toString() << " [" << (dest.isMulticast() ? "multicast" : "unicast") << "]");
 
     // Networking endpoint for the return path to the host sending this packet.
     Endpoint::RemoteEndpoint remoteHost;

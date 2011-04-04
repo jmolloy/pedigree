@@ -13,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
- 
+
 #include <network/IpAddress.h>
 
 String IpAddress::toString()
@@ -45,10 +45,10 @@ String IpAddress::toString()
             {
                 if(!bZeroComp)
                     str += ":";
-                
+
                 if(alreadyZeroComp)
                     continue;
-                
+
                 // Zero-compression
                 if(!m_Ipv6[i] && !m_Ipv6[i+1])
                 {
@@ -68,4 +68,22 @@ String IpAddress::toString()
         return String(static_cast<const char*>(str));
     }
     return String("");
+}
+
+bool IpAddress::isMulticast()
+{
+    if(m_Type == IPv4)
+    {
+        // Leading bits of the IP address = 1110? The old class D is all multicast now.
+        if(((m_Ipv4 & 0xFF) & 0xE0) == 0xE0)
+            return true;
+    }
+    else if(m_Type == IPv6)
+    {
+        // FF00::/8 is the multicast range for IPv6.
+        if(m_Ipv6[0] == 0xFF)
+            return true;
+    }
+
+    return false;
 }

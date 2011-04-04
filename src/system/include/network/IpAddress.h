@@ -164,6 +164,12 @@ class IpAddress
 
     String toString();
 
+    /// Whether the IP address is a valid multicast address.
+    bool isMulticast();
+
+    /// Whether the IP address is a valid unicast address.
+    inline bool isUnicast() { return !isMulticast(); }
+
     private:
 
         IpType      m_Type;
