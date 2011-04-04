@@ -22,6 +22,8 @@
 #include <process/Semaphore.h>
 #include <machine/Network.h>
 
+#include "IpCommon.h"
+
 /**
  * The Pedigree network stack - TCP layer
  */
@@ -73,7 +75,7 @@ public:
   } __attribute__ ((packed));
 
   /** Packet arrival callback */
-  void receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
+  void receive(IpAddress from, IpAddress to, uintptr_t packet, size_t nBytes, IpBase *pIp, Network* pCard);
 
   /** Sends a TCP packet */
   static bool send(IpAddress dest,

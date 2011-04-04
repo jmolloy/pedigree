@@ -78,7 +78,7 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
 
   // Allocate a packet to send
   uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
-  
+
   // Create TCP header
   uintptr_t tcpPacket = packet;
   tcpHeader* header = reinterpret_cast<tcpHeader*>(tcpPacket);
@@ -101,7 +101,7 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
 
   /// \todo IPv4-specific
   header->checksum = pIp->ipChecksum(me.ipv4, dest, IP_TCP, tcpPacket, nBytes + sizeof(tcpHeader));
-  
+
   // Transmit
   bool success = pIp->send(dest, me.ipv4, IP_TCP, nBytes + sizeof(tcpHeader), packet, pCard);
 
@@ -112,44 +112,14 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   return success;
 }
 
-void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
+void Tcp::receive(IpAddress from, IpAddress to, uintptr_t packet, size_t nBytes, IpBase *pIp, Network* pCard)
 {
   if(!packet || !nBytes)
       return;
 
-  /// \todo Lower layer should give us more information!
-
-  IpBase *pIp = 0;
-
-  size_t tcpHeaderOffset = 0;
-  size_t tcpPayloadSize = 0;
-  IpAddress to;
-  if(from.getType() == IpAddress::IPv6)
-  {
-    // Yay assumptions.
-    /// \todo Fix this to not explode when extension headers are present
-    tcpHeaderOffset = sizeof(Ipv6::ip6Header);
-    to.setIp(reinterpret_cast<Ipv6::ip6Header*>(packet + offset)->destAddress);
-
-    tcpPayloadSize = BIG_TO_HOST16(reinterpret_cast<Ipv6::ip6Header*>(packet + offset)->payloadLength) - tcpHeaderOffset;
-
-    pIp = &Ipv6::instance();
-  }
-  else
-  {
-    // grab the IP header to find the size, so we can skip options and get to the UDP header
-    Ipv4::ipHeader* ip = reinterpret_cast<Ipv4::ipHeader*>(packet + offset);
-    tcpHeaderOffset = (ip->header_len) * 4; // len is the number of DWORDs
-    to.setIp(ip->ipDest);
-
-    tcpPayloadSize = BIG_TO_HOST16(ip->len) - tcpHeaderOffset;
-
-    pIp = &Ipv4::instance();
-  }
-
   // Check for filtering
   /// \todo Add statistics to NICs
-  if(!NetworkFilter::instance().filter(3, packet + offset + tcpHeaderOffset, nBytes - offset - tcpHeaderOffset))
+  if(!NetworkFilter::instance().filter(3, packet, nBytes))
   {
     pCard->droppedPacket();
     return;
@@ -169,7 +139,7 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   }
 
   // grab the header now
-  tcpHeader* header = reinterpret_cast<tcpHeader*>(packet + offset + tcpHeaderOffset);
+  tcpHeader* header = reinterpret_cast<tcpHeader*>(packet);
 
   // the size of the header (+ options)
   size_t headerSize = header->offset * 4;
@@ -178,12 +148,14 @@ void Tcp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCar
   // we use it rather than calculating the size from offsets in order to be able to handle
   // packets that may have been padded (for whatever reason)
   uintptr_t payload = reinterpret_cast<uintptr_t>(header) + headerSize; // offset is in DWORDs
-  size_t payloadSize = tcpPayloadSize - headerSize; //  (packet + nBytes) - payload;
+  size_t payloadSize = nBytes - headerSize;
+
+  NOTICE("TCP packet size: " << nBytes << " (" << payloadSize << " bytes of payload lol)");
 
   // check the checksum, if it's not zero
   if(header->checksum != 0)
   {
-    uint16_t checksum = pIp->ipChecksum(from, to, IP_TCP, reinterpret_cast<uintptr_t>(header), tcpPayloadSize);
+    uint16_t checksum = pIp->ipChecksum(from, to, IP_TCP, reinterpret_cast<uintptr_t>(header), nBytes);
     if(checksum)
     {
       WARNING("TCP Checksum failed on incoming packet [dp=" << Dec << BIG_TO_HOST16(header->dest_port) << Hex << "]. Header checksum is " << header->checksum << ", calculated should be zero but is " << checksum << "!");

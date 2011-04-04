@@ -120,74 +120,49 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
   return success;
 }
 
-void Udp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
+void Udp::receive(IpAddress from, IpAddress to, uintptr_t packet, size_t nBytes, IpBase *pIp, Network* pCard)
 {
-  if(!packet || !nBytes)
-      return;
+    if(!packet || !nBytes)
+        return;
 
-  /// \todo Change receive() to give us more information!!!
-
-  IpBase *pIp = 0;
-
-  size_t udpHeaderOffset = 0;
-  IpAddress to;
-  if(from.getType() == IpAddress::IPv6)
-  {
-    // Yay assumptions.
-    /// \todo Fix this to not explode when extension headers are present
-    udpHeaderOffset = sizeof(Ipv6::ip6Header);
-    to.setIp(reinterpret_cast<Ipv6::ip6Header*>(packet + offset)->destAddress);
-
-    pIp = &Ipv6::instance();
-  }
-  else
-  {
-    // grab the IP header to find the size, so we can skip options and get to the UDP header
-    Ipv4::ipHeader* ip = reinterpret_cast<Ipv4::ipHeader*>(packet + offset);
-    udpHeaderOffset = (ip->header_len) * 4; // len is the number of DWORDs
-    to.setIp(ip->ipDest);
-
-    pIp = &Ipv4::instance();
-  }
-
-  // Check for filtering
-  if(!NetworkFilter::instance().filter(3, packet + offset + udpHeaderOffset, nBytes - offset - udpHeaderOffset))
-  {
-    pCard->droppedPacket();
-    return;
-  }
-
-  // check if this packet is for us, or if it's a broadcast
-  StationInfo cardInfo = pCard->getStationInfo();
-  /*if(cardInfo.ipv4.getIp() != ip->ipDest && ip->ipDest != 0xffffffff)
-  {
-    // not for us, TODO: check a flag to see if we'll accept these sorts of packets
-    // as an example, DHCP will need this
-    return;
-  }*/
-
-  // grab the header now
-  udpHeader* header = reinterpret_cast<udpHeader*>(packet + offset + udpHeaderOffset);
-
-  // find the payload and its size - udpHeader::len is the size of the header + data
-  // we use it rather than calculating the size from offsets in order to be able to handle
-  // packets that may have been padded (for whatever reason)
-  uintptr_t payload = reinterpret_cast<uintptr_t>(header) + sizeof(udpHeader);
-  size_t payloadSize = BIG_TO_HOST16(header->len) - sizeof(udpHeader);
-
-  // check the checksum, if it's not zero
-  if(header->checksum != 0)
-  {
-    uint16_t checksum = pIp->ipChecksum(from, to, IP_UDP, reinterpret_cast<uintptr_t>(header), BIG_TO_HOST16(header->len));
-    if(checksum)
+    // Check for filtering
+    if(!NetworkFilter::instance().filter(3, packet, nBytes))
     {
-      WARNING("UDP Checksum failed on incoming packet [" << header->checksum << ", and " << checksum << " should be zero]!");
-      pCard->badPacket();
-      return;
+        pCard->droppedPacket();
+        return;
     }
-  }
 
-  // either no checksum, or calculation was successful, either way go on to handle it
-  UdpManager::instance().receive(from, to, BIG_TO_HOST16(header->src_port), BIG_TO_HOST16(header->dest_port), payload, payloadSize, pCard);
+    // check if this packet is for us, or if it's a broadcast
+    StationInfo cardInfo = pCard->getStationInfo();
+    /*if(cardInfo.ipv4.getIp() != ip->ipDest && ip->ipDest != 0xffffffff)
+    {
+        // not for us, TODO: check a flag to see if we'll accept these sorts of packets
+        // as an example, DHCP will need this
+        return;
+    }*/
+
+    // Grab the header now
+    udpHeader* header = reinterpret_cast<udpHeader*>(packet);
+
+    // Find the payload and its size - udpHeader::len is the size of the header + data
+    // we use it rather than calculating the size from offsets in order to be able to handle
+    // packets that may have been padded (for whatever reason)
+    uintptr_t payload = reinterpret_cast<uintptr_t>(header) + sizeof(udpHeader);
+    size_t payloadSize = BIG_TO_HOST16(header->len) - sizeof(udpHeader);
+
+    // Check the checksum, if it's not zero
+    if(header->checksum != 0)
+    {
+        uint16_t checksum = pIp->ipChecksum(from, to, IP_UDP, reinterpret_cast<uintptr_t>(header), BIG_TO_HOST16(header->len));
+        if(checksum)
+        {
+            WARNING("UDP Checksum failed on incoming packet [" << header->checksum << ", and " << checksum << " should be zero]!");
+            pCard->badPacket();
+            return;
+        }
+    }
+
+    // Either no checksum, or calculation was successful, either way go on to handle it
+    UdpManager::instance().receive(from, to, BIG_TO_HOST16(header->src_port), BIG_TO_HOST16(header->dest_port), payload, payloadSize, pCard);
 }
 

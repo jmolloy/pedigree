@@ -103,6 +103,8 @@ void Ipv6::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
     IpAddress src(header->sourceAddress);
     IpAddress dest(header->destAddress);
 
+    size_t payloadSize = BIG_TO_HOST16(header->payloadLength);
+
     NOTICE("IPv6: packet from " << src.toString() << " to " << dest.toString());
 
     // Networking endpoint for the return path to the host sending this packet.
@@ -117,11 +119,12 @@ void Ipv6::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         {
             case IP_TCP:
                 NOTICE("TCP over IPv6");
-                Tcp::instance().receive(src, nBytes, packetAddress, pCard, 0);
+                Tcp::instance().receive(src, dest, packetAddress + sizeof(ip6Header), payloadSize, this, pCard);
                 break;
             case IP_UDP:
                 NOTICE("UDP over IPv6");
-                Udp::instance().receive(src, nBytes, packetAddress, pCard, 0);
+                /// \todo Assumes no extension headers.
+                Udp::instance().receive(src, dest, packetAddress + sizeof(ip6Header), payloadSize, this, pCard);
                 break;
             case IP_ICMPV6:
                 NOTICE("ICMPv6 over IPv6");

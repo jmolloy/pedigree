@@ -22,6 +22,8 @@
 #include <process/Semaphore.h>
 #include <machine/Network.h>
 
+#include "IpCommon.h"
+
 /**
  * The Pedigree network stack - UDP layer
  */
@@ -50,7 +52,7 @@ public:
   }
 
   /** Packet arrival callback */
-  void receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
+  void receive(IpAddress from, IpAddress to, uintptr_t packet, size_t nBytes, IpBase *pIp, Network* pCard);
 
   /** Sends a UDP packet */
   static bool send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nBytes, uintptr_t payload, bool broadcast = false, Network *pCard = 0);

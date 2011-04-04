@@ -223,6 +223,7 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
   if(checksum == calcChecksum)
   {
     IpAddress from(header->ipSrc);
+    IpAddress to(header->ipDest);
     Endpoint::RemoteEndpoint remoteHost;
     remoteHost.ip = from;
 
@@ -343,6 +344,10 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         wasFragment = false;
     }
 
+    size_t headerLen = (header->header_len * 4);
+    size_t payloadSize = BIG_TO_HOST16(header->len) - headerLen;
+    uintptr_t dataAddress = packetAddress + headerLen;
+
     switch(header->type)
     {
       case IP_ICMP:
@@ -360,7 +365,7 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         RawManager::instance().receive(packetAddress, nBytes - offset, &remoteHost, IPPROTO_UDP, pCard);
 
         // udp needs the ip header as well
-        Udp::instance().receive(from, nBytes, packetAddress, pCard, 0);
+        Udp::instance().receive(from, to, dataAddress, payloadSize, this, pCard);
         break;
 
       case IP_TCP:
@@ -369,7 +374,7 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         RawManager::instance().receive(packetAddress, nBytes - offset, &remoteHost, IPPROTO_TCP, pCard);
 
         // tcp needs the ip header as well
-        Tcp::instance().receive(from, nBytes, packetAddress, pCard, 0);
+        Tcp::instance().receive(from, to, dataAddress, payloadSize, this, pCard);
         break;
 
       default:
