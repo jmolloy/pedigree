@@ -22,6 +22,8 @@
 #include <process/Semaphore.h>
 #include <machine/Network.h>
 
+class IpBase;
+
 /// \todo Implement more!
 #define ICMP_ECHO_REPLY   0x00
 #define ICMP_ECHO_REQUEST 0x08
@@ -42,7 +44,7 @@ public:
   }
   
   /** Packet arrival callback */
-  void receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
+  void receive(IpAddress from, IpAddress to, uintptr_t packet, size_t nBytes, IpBase *pIp, Network* pCard);
   
   /** Sends an ICMP packet */
   static void send(IpAddress dest, uint8_t type, uint8_t code, uint16_t id, uint16_t seq, size_t nBytes, uintptr_t payload, Network *pCard = 0);

@@ -349,7 +349,7 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         RawManager::instance().receive(packetAddress, nBytes - offset, &remoteHost, IPPROTO_ICMP, pCard);
 
         // icmp needs the ip header as well
-        Icmp::instance().receive(from, nBytes, packetAddress, pCard, 0);
+        Icmp::instance().receive(from, to, dataAddress, payloadSize, this, pCard);
         break;
 
       case IP_UDP:

@@ -40,48 +40,41 @@ void Icmp::send(IpAddress dest, uint8_t type, uint8_t code, uint16_t id, uint16_
   StationInfo me = pCard->getStationInfo();
   if(me.ipv4 == 0)
     return; // We're not configured yet.
+  
+  uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
 
-  size_t newSize = nBytes + sizeof(icmpHeader);
-  uint8_t* newPacket = new uint8_t[newSize];
-  uintptr_t packAddr = reinterpret_cast<uintptr_t>(newPacket);
-
-  icmpHeader* header = reinterpret_cast<icmpHeader*>(packAddr);
+  icmpHeader* header = reinterpret_cast<icmpHeader*>(packet);
   header->type = type;
   header->code = code;
   header->id = HOST_TO_BIG16(id);
   header->seq = HOST_TO_BIG16(seq);
 
   if(nBytes)
-    memcpy(reinterpret_cast<void*>(packAddr + sizeof(icmpHeader)), reinterpret_cast<void*>(payload), nBytes);
+    memcpy(reinterpret_cast<void*>(packet + sizeof(icmpHeader)), reinterpret_cast<void*>(payload), nBytes);
 
   header->checksum = 0;
-  header->checksum = Network::calculateChecksum(packAddr, newSize);
+  header->checksum = Network::calculateChecksum(packet, nBytes + sizeof(icmpHeader));
 
-  Ipv4::instance().send(dest, Network::convertToIpv4(0, 0, 0, 0), IP_ICMP, newSize, packAddr, pCard);
-
-  delete [] newPacket;
+  /// \note Assume IPv4, as ICMPv6 exists for IPv6.
+  Ipv4::instance().send(dest, Network::convertToIpv4(0, 0, 0, 0), IP_ICMP, nBytes + sizeof(icmpHeader), packet, pCard);
+  
+  NetworkStack::instance().getMemPool().free(packet);
 }
 
-void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
+void Icmp::receive(IpAddress from, IpAddress to, uintptr_t packet, size_t nBytes, IpBase *pIp, Network* pCard)
 {
   if(!packet || !nBytes)
       return;
 
-  // grab the IP header to find the size, so we can skip options and get to the TCP header
-  Ipv4::ipHeader* ip = reinterpret_cast<Ipv4::ipHeader*>(packet + offset);
-  size_t ipHeaderSize = (ip->header_len) * 4; // len is the number of DWORDs
-  size_t payloadSize = BIG_TO_HOST16(ip->len) - ipHeaderSize;
-
   // Check for filtering
-  /// \todo Add statistics to NICs
-  if(!NetworkFilter::instance().filter(3, packet + offset + ipHeaderSize, nBytes - offset - ipHeaderSize))
+  if(!NetworkFilter::instance().filter(3, packet, nBytes))
   {
     pCard->droppedPacket();
     return;
   }
   
-  // grab the header
-  icmpHeader* header = reinterpret_cast<icmpHeader*>(packet + offset + ipHeaderSize);
+  // Grab the header
+  icmpHeader* header = reinterpret_cast<icmpHeader*>(packet);
 
 #ifdef DEBUG_ICMP
   NOTICE("ICMP type=" << header->type << ", code=" << header->code << ", checksum=" << header->checksum);
@@ -91,7 +84,7 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
   // check the checksum
   uint16_t checksum = header->checksum;
   header->checksum = 0;
-  uint16_t calcChecksum = Network::calculateChecksum(reinterpret_cast<uintptr_t>(header), payloadSize); //nBytes - offset - sizeof(Ipv4::ipHeader));
+  uint16_t calcChecksum = Network::calculateChecksum(packet, nBytes);
   header->checksum = checksum;
 
 #ifdef DEBUG_ICMP
@@ -107,7 +100,7 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
         {
 
 #ifdef DEBUG_ICMP
-        NOTICE("ICMP: Echo request from " << IpAddress(ip->ipSrc).toString() << ".");
+        NOTICE("ICMP: Echo request from " << from.toString() << ".");
 #endif
 
         // send the reply
@@ -117,8 +110,8 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
           header->code,
           BIG_TO_HOST16(header->id),
           BIG_TO_HOST16(header->seq),
-          payloadSize - sizeof(icmpHeader),
-          packet + offset + ipHeaderSize + sizeof(icmpHeader),
+          nBytes - sizeof(icmpHeader),
+          packet + sizeof(icmpHeader),
           pCard
         );
 
@@ -135,5 +128,8 @@ void Icmp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCa
     }
   }
   else
+  {
+    WARNING("ICMP: invalid checksum on incoming packet.");
     pCard->badPacket();
+  }
 }
