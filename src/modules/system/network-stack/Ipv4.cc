@@ -144,13 +144,11 @@ bool Ipv4::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uin
   if(from == Network::convertToIpv4(0, 0, 0, 0))
     from = me.ipv4;
 
-  // Allocate space for the new packet with an IP header
-  size_t newSize = nBytes + sizeof(ipHeader);
-  uint8_t* newPacket = new uint8_t[newSize];
-  uintptr_t packAddr = reinterpret_cast<uintptr_t>(newPacket);
+  // Move the payload past the IP header we will now inject
+  memmove(reinterpret_cast<void*>(packet + sizeof(ipHeader)), reinterpret_cast<void*>(packet), nBytes);
 
   // Grab a pointer for the ip header
-  ipHeader* header = reinterpret_cast<ipHeader*>(newPacket);
+  ipHeader* header = reinterpret_cast<ipHeader*>(packet);
   memset(header, 0, sizeof(ipHeader));
 
   // Compose the IPv4 packet header
@@ -169,10 +167,7 @@ bool Ipv4::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uin
   header->header_len = 5;
 
   header->checksum = 0;
-  header->checksum = Network::calculateChecksum(packAddr, sizeof(ipHeader));
-
-  // copy the payload into the packet
-  memcpy(reinterpret_cast<void*>(packAddr + sizeof(ipHeader)), reinterpret_cast<void*>(packet), nBytes);
+  header->checksum = Network::calculateChecksum(packet, sizeof(ipHeader));
 
   // Get the address to send to
   /// \todo Perhaps flag this so if we don't want to automatically resolve the MAC
@@ -183,10 +178,10 @@ bool Ipv4::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uin
     destMac.setMac(0xff);
   else
     macValid = Arp::instance().getFromCache(realDest, true, &destMac, pCard);
-  if(macValid)
-    Ethernet::send(newSize, packAddr, pCard, destMac, dest.getType());
 
-  delete [] newPacket;
+  if(macValid)
+    Ethernet::send(nBytes + sizeof(ipHeader), packet, pCard, destMac, dest.getType());
+
   return macValid;
 }
 
@@ -358,8 +353,8 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         break;
 
       case IP_UDP:
-        // NOTICE("IP: UDP packet");
-
+        // NOTICE("IPv4: UDP packet");
+        
         RawManager::instance().receive(packetAddress, nBytes - offset, &remoteHost, IPPROTO_UDP, pCard);
 
         // udp needs the ip header as well
@@ -367,7 +362,7 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         break;
 
       case IP_TCP:
-        // NOTICE("IP: TCP packet");
+        // NOTICE("IPv4: TCP packet");
 
         RawManager::instance().receive(packetAddress, nBytes - offset, &remoteHost, IPPROTO_TCP, pCard);
 

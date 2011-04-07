@@ -79,7 +79,10 @@ void Arp::send(IpAddress req, Network* pCard)
   if(cardInfo.ipv4.getIp() == 0)
     return; // Give up on trying to send an ARP request with no IP
 
-  arpHeader* request = new arpHeader;
+  // Allocate a packet to send
+  uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
+
+  arpHeader* request = reinterpret_cast<arpHeader*>(packet);
 
   request->hwType = HOST_TO_BIG16(0x0001); // ethernet
   request->hwSize = 6;
@@ -102,9 +105,9 @@ void Arp::send(IpAddress req, Network* pCard)
 
   memset(request->hwDest, 0, 6);
 
-  Ethernet::send(sizeof(arpHeader), reinterpret_cast<uintptr_t>(request), pCard, destMac, ETH_ARP);
+  Ethernet::send(sizeof(arpHeader), packet, pCard, destMac, ETH_ARP);
 
-  delete request;
+  NetworkStack::instance().getMemPool().free(packet);
 }
 
 uint64_t Arp::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
@@ -186,7 +189,8 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
       if((cardInfo.ipv4 == header->ipDest))
       {
           // allocate the reply
-          arpHeader* reply = new arpHeader;
+          uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
+          arpHeader* reply = reinterpret_cast<arpHeader*>(packet);
           memcpy(reply, header, sizeof(arpHeader));
           reply->opcode = HOST_TO_BIG16(ARP_OP_REPLY);
           reply->ipSrc = cardInfo.ipv4.getIp();
@@ -195,10 +199,10 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
           memcpy(reply->hwDest, header->hwSrc, 6);
 
           // send it out
-          Ethernet::send(sizeof(arpHeader), reinterpret_cast<uintptr_t>(reply), pCard, sourceMac, ETH_ARP);
+          Ethernet::send(sizeof(arpHeader), packet, pCard, sourceMac, ETH_ARP);
 
           // and now that it's sent, destroy the reply
-          delete reply;
+          NetworkStack::instance().getMemPool().free(packet);
       }
     }
     // reply

@@ -80,17 +80,6 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
   if(broadcast) /// \note pCard MUST be set for broadcast packets!
     dest = me.broadcast;
 
-  // Lookup the MAC address of our target
-  MacAddress destMac;
-  bool macValid = true;
-  if(dest == me.broadcast)
-    destMac.setMac(0xff);
-  else
-    macValid = Arp::instance().getFromCache(tmp, true, &destMac, pCard);
-
-  if(!macValid)
-    return false;
-
   // Allocate a packet to send
   uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
 
