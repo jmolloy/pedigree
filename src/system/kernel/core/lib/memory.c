@@ -403,7 +403,8 @@ void *memcpy(void *dest, const void *src, size_t len)
 }
 #endif
 
-#ifdef X86_COMMON
+// #ifdef X86_COMMON
+#if 0
 void *memmove(void *s1, const void *s2, size_t n)
 {
     char *p1 = (char *)s1;
@@ -497,13 +498,14 @@ void *memmove(void *s1, const void *s2, size_t n)
   }
   return s1;
 }
+#endif
 
 int memcmp(const void *p1, const void *p2, size_t len)
 {
-    size_t i = len - 1;
     const char* a = (const char*) p1;
     const char* b = (const char*) p2;
-    for(; i >= 0; i--)
+    size_t i = 0;
+    for(; i < len; i++)
     {
         if(a[i] < b[i])
             return -1;
@@ -512,4 +514,3 @@ int memcmp(const void *p1, const void *p2, size_t len)
     }
     return 0;
 }
-#endif
