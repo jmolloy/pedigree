@@ -107,6 +107,7 @@ void Ndp::receive(IpAddress from, IpAddress to, uint8_t icmpType, uint8_t icmpCo
                                 if(!me.nIpv6Addresses)
                                 {
                                     me.ipv6 = new IpAddress(newIpv6);
+                                    me.ipv6->setIpv6Prefix(pPrefix->prefixLength);
                                     me.nIpv6Addresses = 1;
                                 }
                                 else
@@ -118,6 +119,7 @@ void Ndp::receive(IpAddress from, IpAddress to, uint8_t icmpType, uint8_t icmpCo
                                         pNew[i] = me.ipv6[i];
 
                                     pNew[currAddresses] = IpAddress(newIpv6);
+                                    pNew[currAddresses].setIpv6Prefix(pPrefix->prefixLength);
 
                                     delete [] me.ipv6;
                                     me.ipv6 = pNew;

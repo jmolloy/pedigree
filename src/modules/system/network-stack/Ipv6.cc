@@ -80,6 +80,7 @@ bool Ipv6Service::serve(ServiceFeatures::Type type, void *pData, size_t dataLen)
             if(!info.nIpv6Addresses)
             {
                 info.ipv6 = new IpAddress(ipv6);
+                info.ipv6->setIpv6Prefix(64);
                 info.nIpv6Addresses = 1;
             }
             else
@@ -90,7 +91,8 @@ bool Ipv6Service::serve(ServiceFeatures::Type type, void *pData, size_t dataLen)
                 for(size_t i = 0; i < currAddresses; i++)
                     pNew[i] = info.ipv6[i];
 
-                pNew[currAddresses] = IpAddress(ipv6);
+                pNew[currAddresses].setIp(ipv6);
+                pNew[currAddresses].setIpv6Prefix(64);
 
                 delete [] info.ipv6;
                 info.ipv6 = pNew;
