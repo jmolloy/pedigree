@@ -23,7 +23,7 @@
 #include "Arp.h" /// \todo NDP
 
 // Child protocols of IPv6
-#include "Icmp.h"
+#include "Icmpv6.h"
 #include "Udp.h"
 #include "Tcp.h"
 
@@ -128,6 +128,7 @@ void Ipv6::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
                 break;
             case IP_ICMPV6:
                 NOTICE("ICMPv6 over IPv6");
+                Icmpv6::instance().receive(src, dest, packetAddress + sizeof(ip6Header), payloadSize, this, pCard);
                 break;
         }
     }
