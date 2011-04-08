@@ -320,8 +320,10 @@ bool Ne2k::setStationInfo(StationInfo info)
   // MAC isn't changeable, so set it all manually
   m_StationInfo.ipv4 = info.ipv4;
   NOTICE("NE2K: Setting ipv4, " << info.ipv4.toString() << ", " << m_StationInfo.ipv4.toString() << "...");
+
   m_StationInfo.ipv6 = info.ipv6;
   m_StationInfo.nIpv6Addresses = info.nIpv6Addresses;
+  NOTICE("NE2K: Copied " << info.nIpv6Addresses << " IPv6 addresses.");
 
   m_StationInfo.subnetMask = info.subnetMask;
   NOTICE("NE2K: Setting subnet mask, " << info.subnetMask.toString() << ", " << m_StationInfo.subnetMask.toString() << "...");

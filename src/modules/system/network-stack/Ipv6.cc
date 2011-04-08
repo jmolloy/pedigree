@@ -37,8 +37,80 @@
 
 Ipv6 Ipv6::ipInstance;
 
-Ipv6::Ipv6() :
-  m_NextIdLock(), m_IpId(0)
+Ipv6Service *g_pIpv6Service = 0;
+ServiceFeatures *g_pIpv6Features = 0;
+
+void getIpv6Eui64(MacAddress mac, uint8_t *eui)
+{
+    memcpy(eui, mac.getMac(), 3);
+    memcpy(eui + 5, mac.getMac() + 3, 3);
+    eui[3] = 0xFF; // Middle two bytes are 'FFFE'
+    eui[4] = 0xFE;
+
+    // Add the Modified EUI-64 identifier
+    eui[0] |= 0x2;
+}
+
+bool Ipv6Service::serve(ServiceFeatures::Type type, void *pData, size_t dataLen)
+{
+    if(!pData)
+        return false;
+
+    // Correct type?
+    if(g_pIpv6Features->provides(type))
+    {
+        // We only provide Touch services
+        if(type & ServiceFeatures::touch)
+        {
+            Network *pCard = static_cast<Network*>(pData);
+
+            StationInfo info = pCard->getStationInfo();
+
+            // Create an IPv6-modified EUI-64 out of the MAC address
+            uint8_t eui[8];
+            getIpv6Eui64(info.mac, eui);
+
+            // Fill in the prefix (link-local)
+            uint8_t ipv6[16] = {0};
+            ipv6[0] = 0xFE;
+            ipv6[1] = 0x80;
+            memcpy(ipv6 + 8, eui, 8);
+
+            // Set the card's IPv6 address
+            if(!info.nIpv6Addresses)
+            {
+                info.ipv6 = new IpAddress(ipv6);
+                info.nIpv6Addresses = 1;
+
+                NOTICE("Stateless autoconfiguration gives " << info.ipv6->toString());
+            }
+            else
+            {
+                // Need to add a new address.
+                size_t currAddresses = info.nIpv6Addresses;
+                IpAddress *pNew = new IpAddress[currAddresses + 1];
+                for(size_t i = 0; i < currAddresses; i++)
+                    pNew[i] = info.ipv6[i];
+
+                pNew[currAddresses] = IpAddress(ipv6);
+
+                delete [] info.ipv6;
+                info.ipv6 = pNew;
+
+                info.nIpv6Addresses++;
+
+                NOTICE("Stateless autoconfiguration gives (extra - " << info.nIpv6Addresses << ") " << pNew[currAddresses].toString());
+            }
+
+            pCard->setStationInfo(info);
+        }
+    }
+
+    // Not provided by us, fail!
+    return false;
+}
+
+Ipv6::Ipv6()
 {
 }
 
@@ -182,8 +254,6 @@ void Ipv6::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
     {
         MacAddress e;
         Ethernet::instance().getMacFromPacket(packet, &e);
-
-        NOTICE("IPv6: poisoning cache for " << src.toString() << ": " << e.toString());
 
         Ndp::instance().addEntry(src, e);
     }

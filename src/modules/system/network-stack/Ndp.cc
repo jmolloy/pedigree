@@ -74,7 +74,6 @@ void Ndp::receive(IpAddress from, IpAddress to, uint8_t icmpType, uint8_t icmpCo
                 }
 
                 // Grab the link-layer address of the sender, if any, and add it to our cache.
-                /// \todo Implement a cache.
                 Option *pOption = reinterpret_cast<Option*>(payload + sizeof(NeighbourSolicitation));
                 if(nBytes > sizeof(NeighbourSolicitation))
                 {

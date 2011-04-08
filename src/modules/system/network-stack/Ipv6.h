@@ -24,13 +24,27 @@
 #include <LockGuard.h>
 #include <Spinlock.h>
 
+#include <ServiceManager.h>
+
 #include "NetworkStack.h"
 #include "Ethernet.h"
 
-/// \todo Move to a proper utilities header, called RingBuffer or something
-#include "TcpMisc.h"
-
 #include "IpCommon.h"
+
+/** Ipv6Service: provides an interface to IPv6 throughout the system. */
+class Ipv6Service : public Service
+{
+    public:
+        Ipv6Service() {};
+        virtual ~Ipv6Service() {};
+
+        /**
+         * serve: Interface through which clients interact with the Service
+         * 'touch' will perform address autoconfiguration on the given Network object,
+         *      which will provide a link-local IPv6 address.
+         */
+        bool serve(ServiceFeatures::Type type, void *pData, size_t dataLen);
+};
 
 /**
  * The Pedigree network stack - IPv4 layer
@@ -65,13 +79,6 @@ public:
         uint8_t destAddress[16];
     } __attribute__((packed));
 
-    /** Gets the next IP Packet ID */
-    uint16_t getNextId()
-    {
-        LockGuard<Spinlock> guard(m_NextIdLock);
-        return m_IpId++;
-    }
-
 private:
 
     static Ipv6 ipInstance;
@@ -86,12 +93,6 @@ private:
         uint8_t  zero2;
         uint8_t  nextHeader;
     } __attribute__ ((packed));
-
-    /// Lock for the "Next ID" variable
-    Spinlock m_NextIdLock;
-
-    /// Next ID to use for an IPv4 packet
-    uint16_t m_IpId;
 
 };
 

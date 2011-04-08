@@ -186,16 +186,30 @@ static void init()
     {
         /// \todo Perhaps try and ping a remote host?
         Network* card = NetworkStack::instance().getDevice(i);
-        
-        // Ask for a DHCP lease on this card
-        /// \todo Static configuration
-        ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("dhcp"));
-        Service         *pService  = ServiceManager::instance().getService(String("dhcp"));
-        if(pFeatures->provides(ServiceFeatures::touch))
-            if(pService)
-                pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(card), sizeof(*card));
-        
+
         StationInfo info = card->getStationInfo();
+
+        // IPv6 stateless autoconfiguration and DHCP/DHCPv6 must not happen on
+        // the loopback device, which has a fixed address.
+        if(info.ipv4.getIp() != Network::convertToIpv4(127, 0, 0, 1))
+        {
+            // Auto-configure IPv6 on this card.
+            ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("ipv6"));
+            Service         *pService  = ServiceManager::instance().getService(String("ipv6"));
+            if(pFeatures->provides(ServiceFeatures::touch))
+                if(pService)
+                    pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(card), sizeof(*card));
+
+            // Ask for a DHCP lease on this card
+            /// \todo Static configuration
+            pFeatures = ServiceManager::instance().enumerateOperations(String("dhcp"));
+            pService  = ServiceManager::instance().getService(String("dhcp"));
+            if(pFeatures->provides(ServiceFeatures::touch))
+                if(pService)
+                    pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(card), sizeof(*card));
+        }
+
+        info = card->getStationInfo();
 
         // If the device has a gateway, set it as the default and continue
         if (info.gateway != empty)
