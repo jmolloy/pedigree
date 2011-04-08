@@ -62,18 +62,20 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   // Grab information about ourselves
   StationInfo me = pCard->getStationInfo();
 
-  // Lookup the MAC address of our target
-  MacAddress destMac;
-  bool macValid = true;
-  if(dest == me.broadcast)
-    destMac.setMac(0xff);
-  else
-    macValid = Arp::instance().getFromCache(tmp, true, &destMac, pCard);
-
-  if(!macValid)
+  // Source address determination.
+  IpAddress src = me.ipv4;
+  if(dest.getType() == IpAddress::IPv6)
   {
-    WARNING("TCP: Couldn't get a MAC address for the remote host (" << tmp.toString() << ")");
-    return false;
+    // Handle IPv6 source address determination.
+    if(!me.nIpv6Addresses)
+    {
+      WARNING("TCP: can't send to an IPv6 host without an IPv6 address.");
+      return false;
+    }
+
+    /// \todo Distinguish IPv6 addresses, and prefixes, and provide a way of
+    ///       choosing the right one.
+    src = me.ipv6[0];
   }
 
   // Allocate a packet to send
@@ -98,12 +100,10 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
     memcpy(reinterpret_cast<void*>(tcpPacket + sizeof(tcpHeader)), reinterpret_cast<void*>(payload), nBytes);
 
   header->checksum = 0;
-
-  /// \todo IPv4-specific
-  header->checksum = pIp->ipChecksum(me.ipv4, dest, IP_TCP, tcpPacket, nBytes + sizeof(tcpHeader));
+  header->checksum = pIp->ipChecksum(src, dest, IP_TCP, tcpPacket, nBytes + sizeof(tcpHeader));
 
   // Transmit
-  bool success = pIp->send(dest, me.ipv4, IP_TCP, nBytes + sizeof(tcpHeader), packet, pCard);
+  bool success = pIp->send(dest, src, IP_TCP, nBytes + sizeof(tcpHeader), packet, pCard);
 
   // Free the created packet
   NetworkStack::instance().getMemPool().free(packet);
@@ -118,7 +118,6 @@ void Tcp::receive(IpAddress from, IpAddress to, uintptr_t packet, size_t nBytes,
       return;
 
   // Check for filtering
-  /// \todo Add statistics to NICs
   if(!NetworkFilter::instance().filter(3, packet, nBytes))
   {
     pCard->droppedPacket();
@@ -149,8 +148,6 @@ void Tcp::receive(IpAddress from, IpAddress to, uintptr_t packet, size_t nBytes,
   // packets that may have been padded (for whatever reason)
   uintptr_t payload = reinterpret_cast<uintptr_t>(header) + headerSize; // offset is in DWORDs
   size_t payloadSize = nBytes - headerSize;
-
-  NOTICE("TCP packet size: " << nBytes << " (" << payloadSize << " bytes of payload lol)");
 
   // check the checksum, if it's not zero
   if(header->checksum != 0)

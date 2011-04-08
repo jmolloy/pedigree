@@ -80,6 +80,22 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
   if(broadcast) /// \note pCard MUST be set for broadcast packets!
     dest = me.broadcast;
 
+  // Source address determination.
+  IpAddress src = me.ipv4;
+  if(dest.getType() == IpAddress::IPv6)
+  {
+    // Handle IPv6 source address determination.
+    if(!me.nIpv6Addresses)
+    {
+      WARNING("TCP: can't send to an IPv6 host without an IPv6 address.");
+      return false;
+    }
+
+    /// \todo Distinguish IPv6 addresses, and prefixes, and provide a way of
+    ///       choosing the right one.
+    src = me.ipv6[0];
+  }
+
   // Allocate a packet to send
   uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
 
@@ -96,11 +112,10 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
     memcpy(reinterpret_cast<void*>(packet + sizeof(udpHeader)), reinterpret_cast<void*>(payload), nBytes);
 
   // Calculate the checksum
-  /// \todo me.ipv4 is IPv4-specific
-  header->checksum = pIp->ipChecksum(me.ipv4, dest, IP_UDP, reinterpret_cast<uintptr_t>(header), sizeof(udpHeader) + nBytes);
+  header->checksum = pIp->ipChecksum(src, dest, IP_UDP, reinterpret_cast<uintptr_t>(header), sizeof(udpHeader) + nBytes);
 
   // Transmit
-  bool success = pIp->send(dest, me.ipv4, IP_UDP, nBytes + sizeof(udpHeader), packet, pCard);
+  bool success = pIp->send(dest, src, IP_UDP, nBytes + sizeof(udpHeader), packet, pCard);
 
   // Free the created packet
   NetworkStack::instance().getMemPool().free(packet);
