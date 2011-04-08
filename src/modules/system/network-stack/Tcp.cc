@@ -51,13 +51,19 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   // Grab the NIC to send on.
   /// \note The NIC is grabbed here *as well as* IP because we need to use the
   ///       NIC IP address for the checksum.
-  IpAddress tmp = dest;
-  Network* pCard = RoutingTable::instance().DetermineRoute(&tmp);
-  if(!pCard)
+  Network *pCard = 0;
+  if(dest.getType() == IpAddress::IPv4)
   {
+    IpAddress tmp = dest;
+    pCard = RoutingTable::instance().DetermineRoute(&tmp);
+    if(!pCard)
+    {
       WARNING("TCP: Couldn't find a route for destination '" << dest.toString() << "'.");
       return false;
+    }
   }
+  else
+    pCard = RoutingTable::instance().DefaultRoute(); // Guesswork!
 
   // Grab information about ourselves
   StationInfo me = pCard->getStationInfo();
@@ -75,7 +81,21 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
 
     /// \todo Distinguish IPv6 addresses, and prefixes, and provide a way of
     ///       choosing the right one.
-    src = me.ipv6[0];
+    /// \bug Assumes any non-link-local address is fair game.
+    size_t i;
+    for(i = 0; i < me.nIpv6Addresses; i++)
+    {
+        if(!me.ipv6[i].isLinkLocal())
+        {
+            src = me.ipv6[i];
+            break;
+        }
+    }
+    if(i == me.nIpv6Addresses)
+    {
+        WARNING("No IPv6 address available for TCP");
+        return false;
+    }
   }
 
   // Allocate a packet to send
