@@ -47,7 +47,11 @@ String IpAddress::toString()
                     str += ":";
 
                 if(alreadyZeroComp)
+                {
+                    if(m_Ipv6[i])
+                        str.append(m_Ipv6[i], 16);
                     continue;
+                }
 
                 // Zero-compression
                 if(!m_Ipv6[i] && !m_Ipv6[i+1])
@@ -63,7 +67,9 @@ String IpAddress::toString()
                     alreadyZeroComp = true;
                 }
             }
-            str.append(m_Ipv6[i], 16, 2);
+
+            if(m_Ipv6[i])
+                str.append(m_Ipv6[i], 16);
         }
         return String(static_cast<const char*>(str));
     }
