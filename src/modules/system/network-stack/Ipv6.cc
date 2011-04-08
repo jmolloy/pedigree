@@ -77,6 +77,7 @@ uint16_t Ipv6::ipChecksum(IpAddress &from, IpAddress &to, uint8_t proto, uintptr
 bool Ipv6::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard)
 {
     /// \todo Implement
+    WARNING("IPv6: couldn't send to " << dest.toString() << " as Ipv6::send is stubbed.");
     return false;
 }
 

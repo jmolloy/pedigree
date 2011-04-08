@@ -16,8 +16,11 @@
 #include "Icmpv6.h"
 #include "IpCommon.h"
 #include "Ipv6.h"
+#include "Ndp.h"
 
 #include <network/IpAddress.h>
+
+#define ICMPV6_NSOLICIT     135
 
 Icmpv6 Icmpv6::icmpInstance;
 
@@ -36,6 +39,21 @@ void Icmpv6::receive(IpAddress from, IpAddress to, uintptr_t packet, size_t nByt
     icmpv6Header *pHeader = reinterpret_cast<icmpv6Header*>(packet);
 
     NOTICE("Type: " << pHeader->type << ", Code: " << pHeader->code);
+
+    uint16_t checksum = Ipv6::instance().ipChecksum(from, to, IP_ICMPV6, packet, nBytes);
+    if(checksum)
+    {
+        WARNING("ICMPv6: checksum incorrect on incoming packet from " << from.toString());
+        pCard->badPacket();
+        return;
+    }
+
+    switch(pHeader->type)
+    {
+        case ICMPV6_NSOLICIT:
+            Ndp::instance().receive(from, to, pHeader->code, packet + sizeof(icmpv6Header), nBytes - sizeof(icmpv6Header), pCard);
+            break;
+    }
 }
 
 void Icmpv6::send(IpAddress dest, uint8_t type, uint8_t code, uintptr_t payload, size_t nBytes, Network *pCard)
