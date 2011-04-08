@@ -36,16 +36,16 @@ class IpAddress
 
     /** Constructors */
     IpAddress() :
-        m_Type(IPv4), m_Ipv4(0), m_Ipv6(), m_bSet(false)
+        m_Type(IPv4), m_Ipv4(0), m_Ipv6(), m_bSet(false), m_Ipv6Prefix(0)
     {};
     IpAddress(IpType type) :
-        m_Type(type), m_Ipv4(0), m_Ipv6(), m_bSet(false)
+        m_Type(type), m_Ipv4(0), m_Ipv6(), m_bSet(false), m_Ipv6Prefix(0)
     {};
     IpAddress(uint32_t ipv4) :
-        m_Type(IPv4), m_Ipv4(ipv4), m_Ipv6(), m_bSet(true)
+        m_Type(IPv4), m_Ipv4(ipv4), m_Ipv6(), m_bSet(true), m_Ipv6Prefix(0)
     {};
     IpAddress(uint8_t *ipv6) :
-        m_Type(IPv6), m_Ipv4(0), m_Ipv6(), m_bSet(true)
+        m_Type(IPv6), m_Ipv4(0), m_Ipv6(), m_bSet(true), m_Ipv6Prefix(0)
     {
         memcpy(m_Ipv6, ipv6, 16);
     };
@@ -119,6 +119,7 @@ class IpAddress
             a.getIp(m_Ipv6);
             m_Ipv4 = 0;
             m_Type = IPv6;
+            m_Ipv6Prefix = a.getIpv6Prefix();
             m_bSet = true;
         }
         else
@@ -173,6 +174,18 @@ class IpAddress
     /// Whether the IP address is a valid unicast address.
     inline bool isUnicast() { return !isMulticast(); }
 
+    /// Obtains the IPv6 prefix for this address.
+    inline size_t getIpv6Prefix()
+    {
+        return m_Ipv6Prefix;
+    }
+
+    /// Sets the IPv6 prefix for this address.
+    inline void setIpv6Prefix(size_t prefix)
+    {
+        m_Ipv6Prefix = prefix;
+    }
+
     private:
 
         IpType      m_Type;
@@ -181,6 +194,8 @@ class IpAddress
         uint8_t     m_Ipv6[16]; // the IPv6 address
 
         bool        m_bSet; // has the IP been set yet?
+
+        size_t      m_Ipv6Prefix; // IPv6 prefix for this IP.
 };
 
 #endif

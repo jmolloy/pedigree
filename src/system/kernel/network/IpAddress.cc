@@ -83,6 +83,11 @@ String IpAddress::toString()
                 str.append(m_Ipv6[i], 16, pad);
             }
         }
+
+        // Append the prefix for this address.
+        str.append("/");
+        str.append(m_Ipv6Prefix, 10);
+
         return String(static_cast<const char*>(str));
     }
     return String("");
