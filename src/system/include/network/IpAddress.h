@@ -164,6 +164,9 @@ class IpAddress
 
     String toString();
 
+    /// Whether the IP address is considered "link-local" or not.
+    bool isLinkLocal();
+
     /// Whether the IP address is a valid multicast address.
     bool isMulticast();
 

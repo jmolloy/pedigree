@@ -60,7 +60,7 @@ bool Arp::getFromCache(IpAddress ip, bool resolve, MacAddress* ent, Network* pCa
 
   // push this onto the list
   m_ArpRequests.pushBack(req);
-  
+
   bool success = addRequest(0, reinterpret_cast<uint64_t>(req), reinterpret_cast<uint64_t>(pCard));
 
   // if sucessful, load into the passed MacAddress
@@ -115,7 +115,7 @@ uint64_t Arp::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
 {
   ArpRequest* req = reinterpret_cast<ArpRequest*>(p1);
   Network *pCard = reinterpret_cast<Network*>(p2);
-  
+
   // Send the request
   req->success = false;
   send(req->destIp, pCard);
@@ -152,9 +152,8 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
 {
   if(!packet || !nBytes)
       return;
-  
+
   // Check for filtering
-  /// \todo Add statistics to NICs
   if(!NetworkFilter::instance().filter(2, packet + offset, nBytes - offset))
   {
     pCard->droppedPacket();
@@ -172,7 +171,7 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
   }
 
   StationInfo cardInfo = pCard->getStationInfo();
-  
+
     // grab the source MAC
     MacAddress sourceMac;
     sourceMac = header->hwSrc;
@@ -183,7 +182,7 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
       // Add to local cache even if the request isn't for us
       MacAddress myMac = cardInfo.mac;
       insertToCache(IpAddress(header->ipSrc), sourceMac);
-      
+
       // We can glean information from ARP requests, but unless they're for us
       // we can't really respond.
       if((cardInfo.ipv4 == header->ipDest))

@@ -22,6 +22,9 @@
 
 #define ICMPV6_ECHOREQ      128
 #define ICMPV6_ECHORESP     129
+
+#define ICMPV6_RSOLICIT     133
+#define ICMPV6_RADVERT      134
 #define ICMPV6_NSOLICIT     135
 #define ICMPV6_NADVERT      136
 
@@ -59,7 +62,10 @@ void Icmpv6::receive(IpAddress from, IpAddress to, uintptr_t packet, size_t nByt
             send(from, to, ICMPV6_ECHORESP, pHeader->code, packet + sizeof(icmpv6Header), nBytes - sizeof(icmpv6Header), pCard);
             break;
 
+        case ICMPV6_RSOLICIT:
+        case ICMPV6_RADVERT:
         case ICMPV6_NSOLICIT:
+        case ICMPV6_NADVERT:
             Ndp::instance().receive(from, to, pHeader->type, pHeader->code, packet + sizeof(icmpv6Header), nBytes - sizeof(icmpv6Header), pCard);
             break;
     }
@@ -82,7 +88,7 @@ void Icmpv6::send(IpAddress dest, IpAddress from, uint8_t type, uint8_t code, ui
 
     /// \todo Assumption for which IPv6 address to use.
     header->checksum = 0;
-    header->checksum = Ipv6::instance().ipChecksum(me.ipv6[0], dest, IP_ICMPV6, packet, sizeof(icmpv6Header) + nBytes);
+    header->checksum = Ipv6::instance().ipChecksum(from, dest, IP_ICMPV6, packet, sizeof(icmpv6Header) + nBytes);
 
     Ipv6::instance().send(dest, from, IP_ICMPV6, nBytes + sizeof(icmpv6Header), packet, pCard);
 

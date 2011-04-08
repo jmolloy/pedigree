@@ -40,7 +40,7 @@ Ipv6 Ipv6::ipInstance;
 Ipv6Service *g_pIpv6Service = 0;
 ServiceFeatures *g_pIpv6Features = 0;
 
-void getIpv6Eui64(MacAddress mac, uint8_t *eui)
+void Ipv6::getIpv6Eui64(MacAddress mac, uint8_t *eui)
 {
     memcpy(eui, mac.getMac(), 3);
     memcpy(eui + 5, mac.getMac() + 3, 3);
@@ -68,7 +68,7 @@ bool Ipv6Service::serve(ServiceFeatures::Type type, void *pData, size_t dataLen)
 
             // Create an IPv6-modified EUI-64 out of the MAC address
             uint8_t eui[8];
-            getIpv6Eui64(info.mac, eui);
+            Ipv6::getIpv6Eui64(info.mac, eui);
 
             // Fill in the prefix (link-local)
             uint8_t ipv6[16] = {0};
@@ -103,6 +103,10 @@ bool Ipv6Service::serve(ServiceFeatures::Type type, void *pData, size_t dataLen)
             }
 
             pCard->setStationInfo(info);
+
+            // Additionally, attempt to find any routers on the local network
+            // in order to get a routable IPv6 address.
+            Ndp::instance().routerSolicit(pCard);
         }
     }
 
@@ -194,7 +198,16 @@ bool Ipv6::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uin
     bool macValid = true;
     if(dest.isMulticast())
     {
-        /// \todo Multicast.
+        // Need individual octets of the IPv6 address.
+        uint8_t ipv6[16];
+        dest.getIp(ipv6);
+
+        // Put together a link layer address for the address.
+        /// \todo Ethernet-specific
+        uint8_t tmp[6] = {0x33, 0x33, ipv6[12], ipv6[13], ipv6[14], ipv6[15]};
+        destMac.setMac(tmp);
+
+        macValid = true;
     }
     else
         macValid = Ndp::instance().neighbourSolicit(realDest, &destMac, pCard);

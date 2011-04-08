@@ -69,6 +69,9 @@ public:
 
     virtual uint16_t ipChecksum(IpAddress &from, IpAddress &to, uint8_t proto, uintptr_t data, uint16_t length);
 
+    /// Calculates an IPv6-modified EUI-64 for the given MAC address.
+    static void getIpv6Eui64(MacAddress mac, uint8_t *eui);
+
     struct ip6Header
     {
         uint32_t verClassFlow;

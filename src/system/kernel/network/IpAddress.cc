@@ -16,6 +16,14 @@
 
 #include <network/IpAddress.h>
 
+bool IpAddress::isLinkLocal()
+{
+    if(m_Type == IPv4)
+        return (m_Ipv4 & 0xFFFF) == 0xA9FE; // 169.254/16
+    else
+        return (m_Ipv6[0] == 0xFE) && (m_Ipv6[1] == 0x80);
+}
+
 String IpAddress::toString()
 {
     if(m_Type == IPv4)
@@ -68,8 +76,12 @@ String IpAddress::toString()
                 }
             }
 
-            if(m_Ipv6[i])
-                str.append(m_Ipv6[i], 16);
+            if(m_Ipv6[i] || m_Ipv6[i - 1])
+            {
+                size_t pad = 1;
+                if(m_Ipv6[i - 1]) pad = 2; // Keep internal zeroes (eg f0f).
+                str.append(m_Ipv6[i], 16, pad);
+            }
         }
         return String(static_cast<const char*>(str));
     }
