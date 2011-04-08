@@ -164,6 +164,8 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
         newStateBlock->rcv_wnd = stateBlock->seg_wnd;
         newStateBlock->rcv_up = 0;
 
+        newStateBlock->seg_seq = newStateBlock->rcv_nxt;
+
         newStateBlock->currentState = Tcp::SYN_RECEIVED;
 
         newStateBlock->endpoint = stateBlock->endpoint;
@@ -280,6 +282,16 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
     case Tcp::LAST_ACK:
     case Tcp::TIME_WAIT:
 
+      // Is SYN set on the incoming packet?
+      if(header->flags & Tcp::SYN)
+      {
+        /// \todo RST needs to be sent
+        NOTICE("TCP: unexpected SYN!");
+        if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK | Tcp::RST, stateBlock->snd_wnd, 0, 0))
+          WARNING("TCP: Sending RST due to SYN during non-SYN phase failed.");
+        break;
+      }
+
       if((stateBlock->seg_len == 0) && (stateBlock->rcv_wnd == 0))
       {
         // Unacceptable
@@ -366,13 +378,6 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
       }
 
       /// \todo Check security and precedence (IP header)...
-
-      if(header->flags & Tcp::SYN)
-      {
-        /// \todo RST needs to be sent
-        NOTICE("TCP: unexpected SYN!");
-        break;
-      }
 
       if(header->flags & Tcp::ACK)
       {
