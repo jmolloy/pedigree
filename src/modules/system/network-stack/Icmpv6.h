@@ -43,7 +43,7 @@ class Icmpv6
         void receive(IpAddress from, IpAddress to, uintptr_t packet, size_t nBytes, IpBase *pIp, Network* pCard);
 
         /** Sends an ICMP packet */
-        static void send(IpAddress dest, uint8_t type, uint8_t code, uintptr_t payload, size_t nBytes, Network *pCard = 0);
+        static void send(IpAddress dest, IpAddress from, uint8_t type, uint8_t code, uintptr_t payload, size_t nBytes, Network *pCard = 0);
 
     private:
 

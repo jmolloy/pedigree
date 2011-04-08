@@ -57,15 +57,13 @@ public:
 
     struct ip6Header
     {
-        uint32_t version : 4;
-        uint32_t trafficClass : 8;
-        uint32_t flowLabel : 20;
+        uint32_t verClassFlow;
         uint16_t payloadLength;
         uint8_t nextHeader;
         uint8_t hopLimit;
         uint8_t sourceAddress[16];
         uint8_t destAddress[16];
-    };
+    } __attribute__((packed));
 
     /** Gets the next IP Packet ID */
     uint16_t getNextId()

@@ -19,7 +19,13 @@
 #include <processor/types.h>
 #include <machine/Network.h>
 
+#include <utilities/RadixTree.h>
+
 #include "IpCommon.h"
+
+#define NADVERT_FLAGS_ROUTER        1
+#define NADVERT_FLAGS_SOLICIT       2
+#define NADVERT_FLAGS_OVERRIDE      4
 
 class Ndp
 {
@@ -34,13 +40,43 @@ class Ndp
 
         /// \todo Implement a cache of some sort.
 
-        void receive(IpAddress from, IpAddress to, uint8_t icmpCode, uintptr_t payload, size_t nBytes, Network *pCard);
+        void receive(IpAddress from, IpAddress to, uint8_t icmpType, uint8_t icmpCode, uintptr_t payload, size_t nBytes, Network *pCard);
 
-        /// Solicit a neighbour for an address.
-        bool neighbourSolicit(IpAddress addr, MacAddress *pMac);
+        /// Solicit a neighbour for an address. Uses cache where possible.
+        bool neighbourSolicit(IpAddress addr, MacAddress *pMac, Network *pCard);
+
+        /// Adds a given IP->LinkLayer association to the cache.
+        void addEntry(IpAddress addr, MacAddress mac);
 
     private:
         static Ndp ndpInstance;
+
+        RadixTree<MacAddress*> m_LookupCache;
+
+        struct NeighbourSolicitation
+        {
+            uint32_t reserved;
+            uint8_t  target[16];
+        } __attribute__((packed));
+
+        struct NeighbourAdvertisement
+        {
+            uint32_t flags;
+            uint8_t  target[16];
+        } __attribute__((packed));
+
+        struct Option
+        {
+            uint8_t type;
+            uint8_t length;
+        } __attribute__((packed));
+
+        struct LinkLayerAddressOption
+        {
+            uint8_t type;
+            uint8_t length;
+            uint8_t address[6];
+        } __attribute__((packed));
 };
 
 #endif

@@ -20,7 +20,10 @@
 
 #include <network/IpAddress.h>
 
+#define ICMPV6_ECHOREQ      128
+#define ICMPV6_ECHORESP     129
 #define ICMPV6_NSOLICIT     135
+#define ICMPV6_NADVERT      136
 
 Icmpv6 Icmpv6::icmpInstance;
 
@@ -50,13 +53,19 @@ void Icmpv6::receive(IpAddress from, IpAddress to, uintptr_t packet, size_t nByt
 
     switch(pHeader->type)
     {
+        case ICMPV6_ECHOREQ:
+            // Echo request. Turn it around and send it right back!
+            /// \todo Verify 'to' is unicast.
+            send(from, to, ICMPV6_ECHORESP, pHeader->code, packet + sizeof(icmpv6Header), nBytes - sizeof(icmpv6Header), pCard);
+            break;
+
         case ICMPV6_NSOLICIT:
-            Ndp::instance().receive(from, to, pHeader->code, packet + sizeof(icmpv6Header), nBytes - sizeof(icmpv6Header), pCard);
+            Ndp::instance().receive(from, to, pHeader->type, pHeader->code, packet + sizeof(icmpv6Header), nBytes - sizeof(icmpv6Header), pCard);
             break;
     }
 }
 
-void Icmpv6::send(IpAddress dest, uint8_t type, uint8_t code, uintptr_t payload, size_t nBytes, Network *pCard)
+void Icmpv6::send(IpAddress dest, IpAddress from, uint8_t type, uint8_t code, uintptr_t payload, size_t nBytes, Network *pCard)
 {
     StationInfo me = pCard->getStationInfo();
     if(!me.nIpv6Addresses)
@@ -75,7 +84,7 @@ void Icmpv6::send(IpAddress dest, uint8_t type, uint8_t code, uintptr_t payload,
     header->checksum = 0;
     header->checksum = Ipv6::instance().ipChecksum(me.ipv6[0], dest, IP_ICMPV6, packet, sizeof(icmpv6Header) + nBytes);
 
-    Ipv6::instance().send(dest, Network::convertToIpv6(0), IP_ICMPV6, nBytes + sizeof(icmpv6Header), packet, pCard);
+    Ipv6::instance().send(dest, from, IP_ICMPV6, nBytes + sizeof(icmpv6Header), packet, pCard);
 
     NetworkStack::instance().getMemPool().free(packet);
 }
