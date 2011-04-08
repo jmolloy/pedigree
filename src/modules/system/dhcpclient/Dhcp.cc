@@ -510,7 +510,7 @@ bool dhcpClient(Network *pCard)
         }
 
         // Set it up
-        StationInfo host;
+        StationInfo host = pCard->getStationInfo();
 
         uint32_t ipv4 = Network::convertToIpv4(addrReq.a1, addrReq.a2, addrReq.a3, addrReq.a4);
         uint32_t subnet = Network::convertToIpv4(subnetMask.a1, subnetMask.a2, subnetMask.a3, subnetMask.a4);
