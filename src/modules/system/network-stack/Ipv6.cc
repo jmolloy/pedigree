@@ -81,8 +81,6 @@ bool Ipv6Service::serve(ServiceFeatures::Type type, void *pData, size_t dataLen)
             {
                 info.ipv6 = new IpAddress(ipv6);
                 info.nIpv6Addresses = 1;
-
-                NOTICE("Stateless autoconfiguration gives " << info.ipv6->toString());
             }
             else
             {
@@ -98,8 +96,6 @@ bool Ipv6Service::serve(ServiceFeatures::Type type, void *pData, size_t dataLen)
                 info.ipv6 = pNew;
 
                 info.nIpv6Addresses++;
-
-                NOTICE("Stateless autoconfiguration gives (extra - " << info.nIpv6Addresses << ") " << pNew[currAddresses].toString());
             }
 
             pCard->setStationInfo(info);
@@ -107,6 +103,8 @@ bool Ipv6Service::serve(ServiceFeatures::Type type, void *pData, size_t dataLen)
             // Additionally, attempt to find any routers on the local network
             // in order to get a routable IPv6 address.
             Ndp::instance().routerSolicit(pCard);
+
+            return true;
         }
     }
 
@@ -284,13 +282,16 @@ void Ipv6::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         switch(nextHeader)
         {
             case IP_TCP:
+                // NOTICE("IPv6: TCP");
                 Tcp::instance().receive(src, dest, packetAddress + sizeof(ip6Header), payloadSize, this, pCard);
                 break;
             case IP_UDP:
+                // NOTICE("IPv6: UDP");
                 /// \todo Assumes no extension headers.
                 Udp::instance().receive(src, dest, packetAddress + sizeof(ip6Header), payloadSize, this, pCard);
                 break;
             case IP_ICMPV6:
+                // NOTICE("IPv6: ICMPv6");
                 Icmpv6::instance().receive(src, dest, packetAddress + sizeof(ip6Header), payloadSize, this, pCard);
                 break;
         }

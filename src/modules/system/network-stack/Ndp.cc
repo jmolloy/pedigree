@@ -59,8 +59,6 @@ void Ndp::receive(IpAddress from, IpAddress to, uint8_t icmpType, uint8_t icmpCo
                 ///       hop limit.
 
                 // Parse options to get prefix and MTU information.
-                /// \todo Test on my main network with proper routable IPv6. -Matt
-
                 Option *pOption = reinterpret_cast<Option*>(payload + sizeof(RouterAdvertisement));
                 if(nBytes > sizeof(RouterAdvertisement))
                 {
@@ -73,7 +71,7 @@ void Ndp::receive(IpAddress from, IpAddress to, uint8_t icmpType, uint8_t icmpCo
 
                             IpAddress prefix(pPrefix->prefix);
 
-                            NOTICE("Assigned prefix " << prefix.toString() << "/" << Dec << pPrefix->prefixLength << Hex << ".");
+                            /// \todo Store the router address somewhere. We need it to route packets!
 
                             // Have we already associated with this router?
                             /// \todo Cache this rather than recalculate on each advertisement.
@@ -90,9 +88,6 @@ void Ndp::receive(IpAddress from, IpAddress to, uint8_t icmpType, uint8_t icmpCo
                                     break;
                                 }
                             }
-
-                            if(bAlreadyAssociated)
-                                NOTICE("Already know this router (" << from.toString());
 
                             // If we are allowed to allocate autoconfiguration addresses from this prefix, do so.
                             if((!bAlreadyAssociated) && (pPrefix->rsvdFlags & 0x40))
@@ -113,8 +108,6 @@ void Ndp::receive(IpAddress from, IpAddress to, uint8_t icmpType, uint8_t icmpCo
                                 {
                                     me.ipv6 = new IpAddress(newIpv6);
                                     me.nIpv6Addresses = 1;
-
-                                    NOTICE("Adding IPv6 address '" << me.ipv6->toString() << "'");
                                 }
                                 else
                                 {
@@ -130,8 +123,6 @@ void Ndp::receive(IpAddress from, IpAddress to, uint8_t icmpType, uint8_t icmpCo
                                     me.ipv6 = pNew;
 
                                     me.nIpv6Addresses++;
-
-                                    NOTICE("Adding IPv6 address '" << pNew[currAddresses].toString() << "'");
                                 }
 
                                 // Update the NIC's information for the rest of the stack to use.
@@ -151,7 +142,6 @@ void Ndp::receive(IpAddress from, IpAddress to, uint8_t icmpType, uint8_t icmpCo
 
                 // Is this a solicitation for us?
                 IpAddress packetTarget = pMessage->target;
-                NOTICE("NDP: Neighbour solicitation for " << packetTarget.toString());
 
                 bool bMatch = false;
                 IpAddress *pMatch = 0;
@@ -240,17 +230,9 @@ bool Ndp::routerSolicit(Network *pCard)
     if(i == me.nIpv6Addresses)
         return false;
 
-    NOTICE("Requesting router solicit from " << from.toString());
-
     uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
     RouterSolicitation *solicit = reinterpret_cast<RouterSolicitation*>(packet);
     memset(solicit, 0, sizeof(RouterSolicitation));
-
-    // Add an option with our MAC address.
-    LinkLayerAddressOption *pAddrOption = reinterpret_cast<LinkLayerAddressOption*>(packet + sizeof(RouterSolicitation));
-    pAddrOption->type = 1;
-    pAddrOption->length = sizeof(LinkLayerAddressOption) / 8;
-    memcpy(pAddrOption->address, me.mac.getMac(), 6);
 
     // Broadcast to all routers.
     /// \todo Implement some way of creating "special" IPv6 addresses... neatly.
@@ -259,7 +241,7 @@ bool Ndp::routerSolicit(Network *pCard)
     IpAddress to(dest);
 
     // Send the solicit packet.
-    Icmpv6::instance().send(to, from, NDP_RSOLICIT, 0, packet, sizeof(RouterSolicitation) + sizeof(LinkLayerAddressOption), pCard);
+    Icmpv6::instance().send(to, from, NDP_RSOLICIT, 0, packet, sizeof(RouterSolicitation), pCard);
     NetworkStack::instance().getMemPool().free(packet);
 
     // No need to wait: the advertisement will come in shortly (if any) and the
@@ -276,8 +258,6 @@ bool Ndp::neighbourSolicit(IpAddress addr, MacAddress *pMac, Network *pCard)
         *pMac = *p;
         return true;
     }
-
-    NOTICE("Solicit for " << addr.toString());
 
     StationInfo me = pCard->getStationInfo();
 

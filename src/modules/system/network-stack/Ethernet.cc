@@ -70,7 +70,7 @@ void Ethernet::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t
       break;
 
     case ETH_IPV4:
-      // NOTICE("IP packet!");
+      // NOTICE("IPv4 packet!");
 
       Ipv4::instance().receive(nBytes, packet, pCard, sizeof(ethernetHeader));
 

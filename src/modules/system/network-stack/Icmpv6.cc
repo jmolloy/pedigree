@@ -40,11 +40,7 @@ Icmpv6::~Icmpv6()
 
 void Icmpv6::receive(IpAddress from, IpAddress to, uintptr_t packet, size_t nBytes, IpBase *pIp, Network* pCard)
 {
-    NOTICE("Incoming ICMPv6 from " << from.toString() << " to " << to.toString());
-
     icmpv6Header *pHeader = reinterpret_cast<icmpv6Header*>(packet);
-
-    NOTICE("Type: " << pHeader->type << ", Code: " << pHeader->code);
 
     uint16_t checksum = Ipv6::instance().ipChecksum(from, to, IP_ICMPV6, packet, nBytes);
     if(checksum)
@@ -86,7 +82,6 @@ void Icmpv6::send(IpAddress dest, IpAddress from, uint8_t type, uint8_t code, ui
     if(nBytes)
         memcpy(reinterpret_cast<void*>(packet + sizeof(icmpv6Header)), reinterpret_cast<void*>(payload), nBytes);
 
-    /// \todo Assumption for which IPv6 address to use.
     header->checksum = 0;
     header->checksum = Ipv6::instance().ipChecksum(from, dest, IP_ICMPV6, packet, sizeof(icmpv6Header) + nBytes);
 
