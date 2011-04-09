@@ -100,8 +100,12 @@ int clientThread(void *p)
 
     bool bNotFound = false;
 
+    bool bNoLog = false;
+
     String path = *firstLine.popFront();
-    if(!(path == String("/")))
+    if(path == String("/nolog"))
+        bNoLog = true;
+    else if(!(path == String("/")))
         bNotFound = true;
 
     // Got a heap of information now - prepare to return
@@ -278,10 +282,13 @@ int clientThread(void *p)
 
             response += "</table>";
 
-            response += "<h3>Kernel Log</h3>";
-            response += "<pre>";
-            response += pCallback->getStr();
-            response += "</pre>";
+            if(!bNoLog)
+            {
+                response += "<h3>Kernel Log</h3>";
+                response += "<pre>";
+                response += pCallback->getStr();
+                response += "</pre>";
+            }
 
             response += "</body></html>";
         }
