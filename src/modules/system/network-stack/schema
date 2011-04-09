@@ -35,6 +35,7 @@ create table 'routesv6' (
 
         -- Prefix match
         'prefix' string,
+        'prefixNum' integer,
 
         -- Replacement IP address
         'subip1' integer,
