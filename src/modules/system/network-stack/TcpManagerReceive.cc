@@ -17,11 +17,20 @@
 #include "TcpManager.h"
 #include <Log.h>
 
+#include <process/Mutex.h>
+#include <LockGuard.h>
+
+#define TCP_DEBUG 1
+
+static Mutex g_TcpMutex(false);
+
 void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort, Tcp::tcpHeader* header, uintptr_t payload, size_t payloadSize, Network* pCard)
 {
   // sanity checks
   if(!header)
     return;
+
+  LockGuard<Mutex> guard(g_TcpMutex);
 
   // Find the state block if possible, if none exists create one
   bool bDidAllocateStateBlock = false;
@@ -42,7 +51,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
       if(stateBlock == 0)
         return;
 
-      NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " has no destination.");
+      WARNING("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " has no destination.");
 
       bDidAllocateStateBlock = true;
 
@@ -67,6 +76,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
   // what state are we in?
   // RFC793, page 65 onwards
   Tcp::TcpState oldState = stateBlock->currentState;
+#if TCP_DEBUG
   NOTICE("TCP Packet arrived while stateBlock in " << Tcp::stateString(stateBlock->currentState) << " [remote port = " << Dec << stateBlock->remoteHost.remotePort << Hex << "] [connId = " << stateBlock->connId << "].");
 
   // dump some pretty information
@@ -81,6 +91,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
                 (header->flags & Tcp::ECE ? "ECE " : "") <<
                 (header->flags & Tcp::CWR ? "CWR " : "")
   );
+#endif
 
   switch(stateBlock->currentState)
   {
@@ -285,7 +296,6 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
       // Is SYN set on the incoming packet?
       if(header->flags & Tcp::SYN)
       {
-        /// \todo RST needs to be sent
         NOTICE("TCP: unexpected SYN!");
         if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK | Tcp::RST, stateBlock->snd_wnd, 0, 0))
           WARNING("TCP: Sending RST due to SYN during non-SYN phase failed.");
@@ -303,6 +313,13 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           break;
         }
       }
+
+      /*
+        (NN) TCP Packet arriving on port 1234 during SYN-RECEIVED is unacceptable 2.
+        (NN)     >> RCV_NXT = 0xd3c9b468
+        (NN)     >> SEG_SEQ = 0xd3c9b467
+        (NN)     >> RCV_NXT + RCV_WND = 0xd3c9cae8
+        */
 
       if((stateBlock->seg_len == 0) && (stateBlock->rcv_wnd > 0))
       {
@@ -636,14 +653,18 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
 
   if(oldState != stateBlock->currentState)
   {
+#if TCP_DEBUG
     NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " caused state change from " << Tcp::stateString(oldState) << " to " << Tcp::stateString(stateBlock->currentState) << ".");
+#endif
     stateBlock->endpoint->stateChanged(stateBlock->currentState);
     stateBlock->waitState.release();
   }
 
   if(stateBlock->currentState == Tcp::CLOSED)
   {
+#if TCP_DEBUG
     NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " caused connection to close.");
+#endif
 
     // If we are in a state that's not created by user intervention, we can safely remove and close the connection
     // both of these require the user to go through a close() operation, which inherently calls disconnect.
