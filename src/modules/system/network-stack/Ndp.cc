@@ -19,6 +19,8 @@
 
 #include "NetworkStack.h"
 
+#include "RoutingTable.h"
+
 Ndp Ndp::ndpInstance;
 
 #define NDP_RSOLICIT    133
@@ -103,12 +105,16 @@ void Ndp::receive(IpAddress from, IpAddress to, uint8_t icmpType, uint8_t icmpCo
                                 // Add the prefix now.
                                 memcpy(newIpv6, pPrefix->prefix, pPrefix->prefixLength / 8);
 
+                                IpAddress *pNewAddress = 0;
+
                                 // Add it to the IPv6 list.
                                 if(!me.nIpv6Addresses)
                                 {
                                     me.ipv6 = new IpAddress(newIpv6);
                                     me.ipv6->setIpv6Prefix(pPrefix->prefixLength);
                                     me.nIpv6Addresses = 1;
+
+                                    pNewAddress = me.ipv6;
                                 }
                                 else
                                 {
@@ -125,10 +131,22 @@ void Ndp::receive(IpAddress from, IpAddress to, uint8_t icmpType, uint8_t icmpCo
                                     me.ipv6 = pNew;
 
                                     me.nIpv6Addresses++;
+
+                                    pNewAddress = &pNew[currAddresses];
                                 }
 
                                 // Update the NIC's information for the rest of the stack to use.
                                 pCard->setStationInfo(me);
+
+                                // Add routes for this prefix.
+                                uint8_t localhost[16] = {0}; localhost[15] = 1;
+                                RoutingTable::instance().Add(RoutingTable::DestIpv6Sub, *pNewAddress, IpAddress(localhost), String(""), pCard);
+                                RoutingTable::instance().Add(RoutingTable::DestPrefix, *pNewAddress, IpAddress(), IpAddress(), String(""), pCard);
+                                RoutingTable::instance().Add(RoutingTable::DestPrefixComplement, *pNewAddress, IpAddress(), from, String(""), pCard);
+
+                                // Add as a default route if none exists
+                                if(!RoutingTable::instance().DefaultRouteV6())
+                                    RoutingTable::instance().Add(RoutingTable::NamedV6, IpAddress(), IpAddress(), String("default"), pCard);
                             }
                         }
 

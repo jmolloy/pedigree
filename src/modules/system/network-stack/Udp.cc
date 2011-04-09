@@ -93,7 +93,21 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
 
     /// \todo Distinguish IPv6 addresses, and prefixes, and provide a way of
     ///       choosing the right one.
-    src = me.ipv6[0];
+    /// \bug Assumes any non-link-local address is fair game.
+    size_t i;
+    for(i = 0; i < me.nIpv6Addresses; i++)
+    {
+        if(!me.ipv6[i].isLinkLocal())
+        {
+            src = me.ipv6[i];
+            break;
+        }
+    }
+    if(i == me.nIpv6Addresses)
+    {
+        WARNING("No IPv6 address available for TCP");
+        return false;
+    }
   }
 
   // Allocate a packet to send

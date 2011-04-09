@@ -27,6 +27,29 @@ create table 'routes' (
         'type' integer,
         'iface' integer);
 
+create table 'routesv6' (
+        'id' integer primary key autoincrement,
+
+        -- Conventional IP match
+        'ipaddr' string,
+
+        -- Prefix match
+        'prefix' string,
+
+        -- Replacement IP address
+        'subip1' integer,
+        'subip2' integer,
+        'subip3' integer,
+        'subip4' integer,
+        
+        -- Metadata
+        'name' varchar(64),
+        'type' integer,
+        'iface' integer,
+        
+        -- Route metric. Helps with similar prefix matching.
+        'metric' integer);
+
 create table 'network-services' (
         -- Service name
         'name' varchar(64) unique,

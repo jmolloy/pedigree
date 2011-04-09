@@ -24,6 +24,32 @@ bool IpAddress::isLinkLocal()
         return (m_Ipv6[0] == 0xFE) && (m_Ipv6[1] == 0x80);
 }
 
+String IpAddress::prefixString(size_t override)
+{
+    if(m_Type == IPv4)
+    {
+        return String("");
+    }
+    else
+    {
+        NormalStaticString str;
+        str.clear();
+        size_t prefix = override <= 128 ? override : m_Ipv6Prefix;
+
+        for(size_t i = 0; i < prefix / 8; i++)
+        {
+            if(i && ((i % 2) == 0))
+                str += ":";
+
+            size_t pad = 1;
+            if(i && m_Ipv6[i - 1]) pad = 2; // Keep internal zeroes (eg f0f).
+            str.append(m_Ipv6[i], 16, pad);
+        }
+
+        return String(static_cast<const char*>(str));
+    }
+}
+
 String IpAddress::toString()
 {
     if(m_Type == IPv4)

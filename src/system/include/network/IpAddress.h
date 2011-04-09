@@ -36,16 +36,16 @@ class IpAddress
 
     /** Constructors */
     IpAddress() :
-        m_Type(IPv4), m_Ipv4(0), m_Ipv6(), m_bSet(false), m_Ipv6Prefix(0)
+        m_Type(IPv4), m_Ipv4(0), m_Ipv6(), m_bSet(false), m_Ipv6Prefix(128)
     {};
     IpAddress(IpType type) :
-        m_Type(type), m_Ipv4(0), m_Ipv6(), m_bSet(false), m_Ipv6Prefix(0)
+        m_Type(type), m_Ipv4(0), m_Ipv6(), m_bSet(false), m_Ipv6Prefix(128)
     {};
     IpAddress(uint32_t ipv4) :
-        m_Type(IPv4), m_Ipv4(ipv4), m_Ipv6(), m_bSet(true), m_Ipv6Prefix(0)
+        m_Type(IPv4), m_Ipv4(ipv4), m_Ipv6(), m_bSet(true), m_Ipv6Prefix(128)
     {};
     IpAddress(uint8_t *ipv6) :
-        m_Type(IPv6), m_Ipv4(0), m_Ipv6(), m_bSet(true), m_Ipv6Prefix(0)
+        m_Type(IPv6), m_Ipv4(0), m_Ipv6(), m_bSet(true), m_Ipv6Prefix(128)
     {
         memcpy(m_Ipv6, ipv6, 16);
     };
@@ -164,6 +164,9 @@ class IpAddress
     }
 
     String toString();
+
+    /// Prefix string. Not zero-compressed. For routing.
+    String prefixString(size_t override = 256);
 
     /// Whether the IP address is considered "link-local" or not.
     bool isLinkLocal();

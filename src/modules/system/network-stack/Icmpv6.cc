@@ -18,6 +18,8 @@
 #include "Ipv6.h"
 #include "Ndp.h"
 
+#include "RoutingTable.h"
+
 #include <network/IpAddress.h>
 
 #define ICMPV6_ECHOREQ      128
@@ -69,6 +71,29 @@ void Icmpv6::receive(IpAddress from, IpAddress to, uintptr_t packet, size_t nByt
 
 void Icmpv6::send(IpAddress dest, IpAddress from, uint8_t type, uint8_t code, uintptr_t payload, size_t nBytes, Network *pCard)
 {
+    if(dest.isMulticast() && !pCard)
+    {
+        WARNING("ICMPv6: Packet had a multicast destination, but no given network interface. Can't figure out where to send this!");
+        return;
+    }
+
+    // This use of the routing table is merely to determine which NIC to send
+    // on, so we can change the from address if needed. IPv6::send does the
+    // actual routing of packets for external access.
+    if(dest.isUnicast() && !dest.isLinkLocal())
+    {
+      IpAddress tmp = dest;
+      pCard = RoutingTable::instance().DetermineRoute(&tmp);
+      if(!pCard)
+      {
+        WARNING("ICMPv6: Couldn't find a route for destination '" << dest.toString() << "'.");
+        return;
+      }
+    }
+
+    if(dest.isLinkLocal())
+      pCard = RoutingTable::instance().DefaultRouteV6();
+
     StationInfo me = pCard->getStationInfo();
     if(!me.nIpv6Addresses)
         return; // We're not configured yet.

@@ -76,12 +76,16 @@ bool Ipv6Service::serve(ServiceFeatures::Type type, void *pData, size_t dataLen)
             ipv6[1] = 0x80;
             memcpy(ipv6 + 8, eui, 8);
 
+            IpAddress *pNewAddress = 0;
+
             // Set the card's IPv6 address
             if(!info.nIpv6Addresses)
             {
                 info.ipv6 = new IpAddress(ipv6);
                 info.ipv6->setIpv6Prefix(64);
                 info.nIpv6Addresses = 1;
+
+                pNewAddress = info.ipv6;
             }
             else
             {
@@ -98,9 +102,15 @@ bool Ipv6Service::serve(ServiceFeatures::Type type, void *pData, size_t dataLen)
                 info.ipv6 = pNew;
 
                 info.nIpv6Addresses++;
+
+                pNewAddress = &pNew[currAddresses];
             }
 
             pCard->setStationInfo(info);
+
+            // Set up a route for this address.
+            uint8_t localhost[16] = {0}; localhost[15] = 1;
+            RoutingTable::instance().Add(RoutingTable::DestIpv6Sub, *pNewAddress, IpAddress(localhost), String(""), pCard);
 
             // Additionally, attempt to find any routers on the local network
             // in order to get a routable IPv6 address.
@@ -161,19 +171,20 @@ bool Ipv6::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uin
     }
 
     // Grab the address to send to (as well as the NIC to send with)
-#if 0
-    if(!pCard)
+    // OVERRIDE any given pCard value!
+    if(dest.isUnicast() && !dest.isLinkLocal())
     {
-        pCard = RoutingTable::instance().DetermineRoute(&realDest);
-        if(!pCard)
-        {
-            WARNING("IPv4: Couldn't find a route for destination '" << dest.toString() << "'.");
-            return false;
-        }
+      pCard = RoutingTable::instance().DetermineRoute(&realDest);
+      if(!pCard)
+      {
+        WARNING("IPv6: Couldn't find a route for destination '" << dest.toString() << "'.");
+        return false;
+      }
     }
-#else
-#warning IPv6 routing is not yet supported.
-#endif
+
+    if(dest.isLinkLocal())
+      pCard = RoutingTable::instance().DefaultRouteV6();
+
     if(!pCard->isConnected())
         return false; // NIC isn't active
 
@@ -191,7 +202,7 @@ bool Ipv6::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uin
     pHeader->nextHeader = type;
     pHeader->hopLimit = 255; /// \todo Configurable hop limit.
     from.getIp(pHeader->sourceAddress);
-    realDest.getIp(pHeader->destAddress);
+    dest.getIp(pHeader->destAddress);
 
     // Get the address to send this packet to.
     MacAddress destMac;
@@ -260,15 +271,6 @@ void Ipv6::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         {
             return;
         }
-    }
-
-    // Cheat a bit with NDP - glean information from the packet.
-    if(src.isUnicast())
-    {
-        MacAddress e;
-        Ethernet::instance().getMacFromPacket(packet, &e);
-
-        Ndp::instance().addEntry(src, e);
     }
 
     size_t payloadSize = BIG_TO_HOST16(header->payloadLength);

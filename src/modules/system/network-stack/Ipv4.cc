@@ -220,12 +220,13 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
     Endpoint::RemoteEndpoint remoteHost;
     remoteHost.ip = from;
 
-    // If there's no ARP entry for this host, add one
-    if(!Arp::instance().isInCache(from))
+    StationInfo me = pCard->getStationInfo();
+    if((!me.ipv4.getIp()) && (!Arp::instance().isInCache(from))) // Not configured yet?
     {
+        // Poison the ARP cache with this packet, as we won't be able to do
+        // ARP for link-layer address determination yet.
         MacAddress e;
         Ethernet::instance().getMacFromPacket(packet, &e);
-
         Arp::instance().insertToCache(from, e);
     }
 
@@ -354,7 +355,7 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
 
       case IP_UDP:
         // NOTICE("IPv4: UDP packet");
-        
+
         RawManager::instance().receive(packetAddress, nBytes - offset, &remoteHost, IPPROTO_UDP, pCard);
 
         // udp needs the ip header as well

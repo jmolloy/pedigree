@@ -51,19 +51,13 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   // Grab the NIC to send on.
   /// \note The NIC is grabbed here *as well as* IP because we need to use the
   ///       NIC IP address for the checksum.
-  Network *pCard = 0;
-  if(dest.getType() == IpAddress::IPv4)
+  IpAddress tmp = dest;
+  Network *pCard = RoutingTable::instance().DetermineRoute(&tmp);
+  if(!pCard)
   {
-    IpAddress tmp = dest;
-    pCard = RoutingTable::instance().DetermineRoute(&tmp);
-    if(!pCard)
-    {
-      WARNING("TCP: Couldn't find a route for destination '" << dest.toString() << "'.");
-      return false;
-    }
+    WARNING("TCP: Couldn't find a route for destination '" << dest.toString() << "'.");
+    return false;
   }
-  else
-    pCard = RoutingTable::instance().DefaultRoute(); // Guesswork!
 
   // Grab information about ourselves
   StationInfo me = pCard->getStationInfo();
