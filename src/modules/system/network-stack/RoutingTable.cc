@@ -137,12 +137,13 @@ void RoutingTable::Add(Type type, IpAddress dest, IpAddress subnet, IpAddress su
         // Add to the database
         String str;
         size_t hash = DeviceHashTree::instance().getHash(card);
-        str.sprintf("INSERT INTO routesv6 (prefix, subip1, subip2, subip3, subip4, name, type, iface, metric) VALUES ('%s', %u, %u, %u, %u, '%s', %u, %u, %u)",
+        str.sprintf("INSERT INTO routesv6 (prefix, subip1, subip2, subip3, subip4, prefixNum, name, type, iface, metric) VALUES ('%s', %u, %u, %u, %u, %u, '%s', %u, %u, %u)",
                     static_cast<const char*>(dest.prefixString()),
                     subipTemp[0],
                     subipTemp[1],
                     subipTemp[2],
                     subipTemp[3],
+                    dest.getIpv6Prefix(),
                     static_cast<const char*>(meta),
                     static_cast<int>(type),
                     hash,
@@ -203,15 +204,32 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
         }
         delete pResult;
 
-        // Try a prefix lookup.
-        str.sprintf("SELECT * FROM routesv6 WHERE prefix='%s' AND type=%u ORDER BY metric ASC", static_cast<const char *>(ip->prefixString()), static_cast<int>(DestPrefix));
+        // Try a prefix lookup. This involves finding all the potential prefix numbers and then
+        // using those to find a usable prefix.
+        str.sprintf("SELECT id, prefixNum FROM routesv6 WHERE type = %u ORDER BY metric ASC", static_cast<int>(DestPrefix));
         pResult = Config::instance().query(str);
         if(!pResult->succeeded())
             ERROR("Routing table query failed: " << pResult->errorMessage());
         else if(pResult->rows())
         {
-            return route(ip, pResult);
+            // Got a bunch of prefixes!
+            for(size_t i = 0; i < pResult->rows(); i++)
+            {
+                // Check this prefix.
+                size_t prefixNum = pResult->getNum(i, "prefixNum");
+                str.sprintf("SELECT * FROM routesv6 WHERE prefix = '%s' AND type = %u ORDER BY metric ASC", static_cast<const char *>(ip->prefixString(prefixNum)), static_cast<int>(DestPrefix));
+                Config::Result *pTempResult = Config::instance().query(str);
+                if(!pTempResult->succeeded())
+                    continue;
+                else if(pTempResult->rows())
+                {
+                    delete pResult;
+                    return route(ip, pTempResult);
+                }
+            }
         }
+        else
+            NOTICE("No prefixes");
         delete pResult;
 
         // Still nothing, try a complement prefix search
