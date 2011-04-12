@@ -37,6 +37,11 @@ class SerialLogger : public Log::LogCallback
         {
             for(size_t n = 0; n < Machine::instance().getNumSerial(); n++)
             {
+#if defined(MEMORY_LOGGING_ENABLED) && !defined(MEMORY_LOG_INLINE)
+                if(n == 1) // Don't override memory log.
+                    continue;
+#endif
+
                 Machine::instance().getSerial(n)->write(str);
 #ifndef SERIAL_IS_FILE
                 // Handle carriage return if we're writing to a real terminal

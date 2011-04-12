@@ -76,6 +76,8 @@ opts.AddVariables(
     
     BoolVariable('enable_ctrlc', 'If 1, the ability to use CTRL-C to kill running tasks is enabled.', 1),
     BoolVariable('multiple_consoles', 'If 1, the TUI is built with the ability to create and move between multiple virtual consoles.', 1),
+    BoolVariable('memory_log', 'If 1, memory logging on the second serial line is enabled.', 1),
+    BoolVariable('memory_log_inline', 'If 1, memory logging will be output alongside conventional serial output.', 0),
     
     BoolVariable('multiprocessor', 'If 1, multiprocessor support is compiled in to the kernel.', 0),
     BoolVariable('apic', 'If 1, APIC support will be built in (not to be confused with ACPI).', 0),
@@ -292,6 +294,11 @@ if env['verbose_link'] and not '--verbose' in env['LINKFLAGS']:
     env['LINKFLAGS'] = safeAppend(env['LINKFLAGS'], ' --verbose')
 elif '--verbose' in env['LINKFLAGS']:
     env['LINKFLAGS'] = env['LINKFLAGS'].replace('--verbose', '')
+    
+if env['memory_log']:
+    defines += ['MEMORY_LOGGING_ENABLED']
+if env['memory_log_inline']:
+    defines += ['MEMORY_LOG_INLINE']
     
 additionalDefines = ['installer', 'debugger', 'cripple_hdd', 'enable_ctrlc', 'multiple_consoles', 'multiprocessor', 'smp', 'apic', 'acpi', 'debug_logging', 'usb_verbose_debug']
 for i in additionalDefines:
