@@ -1,0 +1,79 @@
+####################################
+# SCons build system for Pedigree
+## Tyler Kennedy (AKA Linuxhq AKA TkTech)
+####################################
+
+import os.path
+Import(['env'])
+
+tmp = env.Clone()
+
+####### END-USER LIBRARY BUILDS #######
+
+# Cleans a set of flags so we can build proper libraries rather than
+# freestanding stuff.
+def fixFlags(flags):
+    flags = flags.replace('-nostdinc', '')
+    flags = flags.replace('-ffreestanding', '')
+    flags = flags.replace('-nostdlib', '')
+    if env['ARCH_TARGET'] in ['X86', 'X64']:
+        flags += ' -msse2'
+    if env['ARCH_TARGET'] == 'X64':
+        flags = flags.replace('-mcmodel=kernel', '-mcmodel=small')
+        flags = flags.replace('-mno-red-zone', '')
+    if env['ARCH_TARGET'] == 'PPC':
+        flags += ' -U__svr4__ '
+    return flags
+
+libsbase        = 'libraries/'
+appoutputdir    = "#" + env["PEDIGREE_BUILD_APPS"]
+imagesdir       = env["PEDIGREE_IMAGES_DIR"]
+builddir        = "#" + env["PEDIGREE_BUILD_BASE"]
+
+# Libraries to compile
+libs = [
+    'libui'
+]
+
+# Subsystem for each set of libraries
+subsys = {
+    'libui' : 'native'
+}
+
+tmp['CFLAGS'] = fixFlags(env['CFLAGS'])
+tmp['CXXFLAGS'] = fixFlags(env['CXXFLAGS'])
+tmp['CPPDEFINES'] += ['PEDIGREE', '__PEDIGREE__']
+tmp['LIBS'] = []
+tmp['LIBPATH'] = []
+tmp['CPPPATH'] = []
+
+for i in libs:
+    e = tmp.Clone()
+    
+    # Determine the subsystem and include directories for this library
+    incpath = []
+    s = subsys[i]
+    if s == 'native':
+        incpath += ['#/src/subsys/native/include',
+                    '#/src/subsys/posix/include/c++/4.3.2',
+                    '#/src/subsys/posix/include/c++/4.3.2/i686-pedigree']
+    else:
+        print "** Library with subsys '%s' is not buildable - fix src/user/libraries/SConscript!" % (s)
+    
+    base = "#/src/user/libraries/%s" % (i)
+
+    # Handle extra include directories within the library
+    if(os.path.exists(Dir(base).abspath + '/include')):
+        incpath += [base + '/include']
+    
+    print base
+    print incpath
+        
+    e['CPPPATH'] = incpath
+    
+    output = builddir + '/libs/' + i + '.a'
+    files = [Glob(base + '/src/*.c'), Glob(base + '/src/*.cc')]
+    e.Library(output, files)
+
+    env.Alias("libs", output)
+

@@ -6,6 +6,10 @@
 import os.path
 Import(['env'])
 
+# Build libraries & other support directories before applications.
+subdirs = ['libraries']
+SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
+
 tmp = env.Clone()
 
 ####### APPLICATION BUILDS #######
@@ -58,19 +62,23 @@ cpp_apps = [
     'config',
     'thread-test',
     'ipc-test-server',
-    'ipc-test-client'
+    'ipc-test-client',
+    'winman',
+    'uitest'
 ]
 
 # Custom include paths for specific applications
 custom_incpath = {
     'TUI' : ['#/src/modules/system/TUI',
-             '#/src/user/applications/TUI/include']
+             '#/src/user/applications/TUI/include'],
+    'uitest' : ['#/src/user/libraries/libui/include']
 }
 
 # Custom libraries for specific applications
 custom_libs = {
     'TUI' : ['png', 'freetype', 'z'],
-    'thread-test' : ['pthread']
+    'thread-test' : ['pthread'],
+    'uitest' : ['ui']
 }
 
 # Default libraries for all applications
@@ -78,7 +86,8 @@ default_libs = ['gcc', 'c', 'm', 'pedigree-c']
 
 # Search paths for libraries
 libpath = [
-    builddir
+    builddir,
+    builddir + '/libs'
 ]
 
 # Default include paths
@@ -128,3 +137,4 @@ for i in all_apps:
 
     env.Depends(output, "crt0")
     env.Depends(output, "libs")
+

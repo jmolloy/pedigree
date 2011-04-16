@@ -17,26 +17,69 @@
 #define _GRAPHICS_H
 
 #include <types.h>
- 
+
 namespace PedigreeGraphics
 {
+    class Rect
+    {
+        public:
+
+            Rect() : x(0), y(0), w(0), h(0) {};
+            Rect(size_t x, size_t y, size_t width, size_t height) :
+                x(x), y(y), w(width), h(height)
+            {};
+
+            virtual ~Rect() {};
+
+            void update(size_t x, size_t y, size_t w, size_t h)
+            {
+                x = x; y = y;
+                w = w; h = h;
+            }
+
+            inline size_t getX()
+            {
+                return x;
+            }
+
+            inline size_t getY()
+            {
+                return y;
+            }
+
+            inline size_t getW()
+            {
+                return w;
+            }
+
+            inline size_t getH()
+            {
+                return h;
+            }
+
+        private:
+
+            size_t x, y;
+            size_t w, h;
+    };
+
     enum PixelFormat
     {
         Bits32_Argb,        // Alpha + RGB, with alpha in the highest byte
         Bits32_Rgba,        // RGB + alpha, with alpha in the lowest byte
         Bits32_Rgb,         // RGB, no alpha, essentially the same as above
-        
+
         Bits24_Rgb,         // RGB in a 24-bit pack
         Bits24_Bgr,         // R and B bytes swapped
-        
+
         Bits16_Argb,        // 4:4:4:4 ARGB, alpha most significant nibble
         Bits16_Rgb565,      // 5:6:5 RGB
         Bits16_Rgb555,      // 5:5:5 RGB
-        
+
         Bits8_Idx,          // Index into a palette
         Bits8_Rgb332,
     };
-        
+
     inline size_t bitsPerPixel(PixelFormat format)
     {
         switch(format)
@@ -58,40 +101,40 @@ namespace PedigreeGraphics
                 return 4;
         }
     }
-    
+
     inline size_t bytesPerPixel(PixelFormat format)
     {
         return bitsPerPixel(format) / 8;
     }
-    
+
     /// Creates a 24-bit RGB value (Bits24_Rgb)
     inline uint32_t createRgb(uint32_t r, uint32_t g, uint32_t b)
     {
         return (r << 16) | (g << 8) | b;
     }
-    
+
     struct Buffer
     {
         uint32_t empty;
     };
-    
+
     class Framebuffer;
-    
+
     struct GraphicsProvider
     {
         /// \todo Provide the current graphics mode via a watered-down Display
         ///       class.
         void *pDisplay;
-        
+
         /* Some form of hardware caps here... */
         bool bHardwareAccel;
-        
+
         Framebuffer *pFramebuffer;
-        
+
         size_t maxWidth;
         size_t maxHeight;
         size_t maxDepth;
-        
+
         bool bReserved1;
     };
 
@@ -103,24 +146,24 @@ namespace PedigreeGraphics
     class Framebuffer
     {
         public:
-        
+
             Framebuffer();
             virtual ~Framebuffer();
-            
+
             /** Gets the framebuffer width */
             size_t getWidth();
-            
+
             /** Gets the framebuffer height */
             size_t getHeight();
-            
+
             /** Gets the framebuffer's native format */
             PedigreeGraphics::PixelFormat getFormat();
-            
+
             /** Sets a new palette for use with indexed colour formats. The
              *  palette should be an array of uint32_t's, all of which will be
              *  interpreted as 24-bit RGB. */
             void setPalette(uint32_t *palette, size_t entries);
-            
+
             /** Gets a raw pointer to the framebuffer itself. There is no way to
              *  know if this pointer points to an MMIO region or real RAM, so it
              *  cannot be guaranteed to be safe.
@@ -131,11 +174,11 @@ namespace PedigreeGraphics
             /** Creates a new child of this framebuffer with the given semantics.
              *  Do a normal "delete" to destroy memory consumed by this new buffer. */
             Framebuffer *createChild(size_t x, size_t y, size_t w, size_t h);
-            
+
             /** Converts a given pixel from one pixel format to another. */
             bool convertPixel(uint32_t source, PedigreeGraphics::PixelFormat srcFormat,
                               uint32_t &dest, PedigreeGraphics::PixelFormat destFormat);
-             
+
             /** Creates a new buffer to be used for blits from the given raw pixel
              *  data. Performs automatic conversion of the pixel format to the
              *  pixel format of the current display mode.
@@ -152,11 +195,11 @@ namespace PedigreeGraphics
              *  not padding per scanline but rather padding per buffer. */
             PedigreeGraphics::Buffer *createBuffer(const void *srcData, PedigreeGraphics::PixelFormat srcFormat,
                                            size_t width, size_t height);
-            
+
             /** Destroys a created buffer. Frees its memory in both the system RAM
              *  and any references still in VRAM. */
             void destroyBuffer(PedigreeGraphics::Buffer *pBuffer);
-            
+
             /** Performs an update of a region of this framebuffer. This function
              *  can be used by drivers to request an area of the framebuffer be
              *  redrawn, but is useless for non-hardware-accelerated devices.
@@ -168,7 +211,7 @@ namespace PedigreeGraphics
             void redraw(size_t x = ~0UL, size_t y = ~0UL,
                         size_t w = ~0UL, size_t h = ~0UL,
                         bool bChild = false);
-            
+
             /** Blits a given buffer to the screen. See createBuffer. */
             void blit(PedigreeGraphics::Buffer *pBuffer, size_t srcx, size_t srcy,
                       size_t destx, size_t desty, size_t width, size_t height);
@@ -179,11 +222,11 @@ namespace PedigreeGraphics
             void draw(void *pBuffer, size_t srcx, size_t srcy,
                       size_t destx, size_t desty, size_t width, size_t height,
                       PedigreeGraphics::PixelFormat format = PedigreeGraphics::Bits32_Argb);
-            
+
             /** Draws a single rectangle to the screen with the given colour. */
             void rect(size_t x, size_t y, size_t width, size_t height,
                       uint32_t colour, PedigreeGraphics::PixelFormat format = PedigreeGraphics::Bits32_Argb);
-            
+
             /** Copies a rectangle already on the framebuffer to a new location */
             void copy(size_t srcx, size_t srcy,
                       size_t destx, size_t desty,
@@ -196,13 +239,13 @@ namespace PedigreeGraphics
             /** Sets an individual pixel on the framebuffer. Not inheritable. */
             void setPixel(size_t x, size_t y, uint32_t colour,
                           PedigreeGraphics::PixelFormat format = PedigreeGraphics::Bits32_Argb);
-      
+
         private:
 
             Framebuffer(GraphicsProvider &gfx);
-            
+
             GraphicsProvider m_Provider;
-            
+
             bool m_bProviderValid;
 
             bool m_bIsChild;
@@ -216,10 +259,10 @@ namespace PedigreeGraphics
             dest = source;
             return true;
         }
-        
+
         // Amount of red/green/blue, in 8-bit intensity values
         uint8_t amtRed = 0, amtGreen = 0, amtBlue = 0, amtAlpha = 0;
-        
+
         // Unpack the pixel as necessary
         if((srcFormat == Bits32_Argb) ||
            (srcFormat == Bits32_Rgb) ||
@@ -269,7 +312,7 @@ namespace PedigreeGraphics
             amtGreen = (((source & 0x1C) >> 2) / 0x7) * 0xFF;
             amtBlue = ((source & 0x3) / 0x3) * 0xFF;
         }
-        
+
         // Conversion code. Complicated and ugly. :(
         switch(destFormat)
         {
@@ -293,7 +336,7 @@ namespace PedigreeGraphics
                 amtRed >>= 3;
                 amtGreen >>= 3;
                 amtBlue >>= 3;
-                    
+
                 dest = (amtRed << 10) | (amtGreen << 5) | (amtBlue);
                 return true;
             case Bits16_Rgb565:
@@ -301,7 +344,7 @@ namespace PedigreeGraphics
                 amtRed >>= 3;
                 amtGreen >>= 2;
                 amtBlue >>= 3;
-                    
+
                 dest = (amtRed << 11) | (amtGreen << 5) | (amtBlue);
                 return true;
             case Bits16_Argb:
@@ -310,7 +353,7 @@ namespace PedigreeGraphics
                 amtGreen >>= 4;
                 amtBlue >>= 4;
                 amtAlpha >>= 4;
-                
+
                 dest = (amtAlpha << 12) | (amtRed << 8) | (amtGreen << 4) | (amtBlue);
                 return true;
             case Bits8_Idx:
@@ -320,13 +363,13 @@ namespace PedigreeGraphics
                 amtRed >>= 5;
                 amtGreen >>= 5;
                 amtBlue >>= 6;
-                
+
                 dest = (amtRed << 5) | (amtGreen << 2) | amtBlue;
                 return true;
             default:
                 break;
         }
-        
+
         return false;
     }
 };
