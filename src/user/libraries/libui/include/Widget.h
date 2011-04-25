@@ -28,6 +28,7 @@
 enum WidgetMessages
 {
     RepaintNeeded,
+    MouseMove,
     MouseDown,
     MouseUp,
     KeyDown,
@@ -44,6 +45,22 @@ class Widget
 
         Widget();
         virtual ~Widget();
+
+        /**
+         * Obtains a handle for this widget. The handle is only usable by the
+         * window manager, and is determined by the following formula during
+         * widget construction in construct():
+         * (PID << 32) | ((WidgetPointer >> 32) | (WidgetPointer & 0xFFFFFFFF))
+         * If the system is not capable of 64-bit addressing, the 32-bit right
+         * shift is not necessary.
+         * The PID is assumed to never exceed the limits of a 32-bit unsigned
+         * integer. Should this happen, the PID should be folded in the same way
+         * as the widget pointer.
+         */
+        inline uint64_t getHandle()
+        {
+            return m_Handle;
+        }
 
         /**
          * Constructs the internal state of the widget. This involves talking to
@@ -145,6 +162,12 @@ class Widget
 
         /** Framebuffer for all rendering. */
         PedigreeGraphics::Framebuffer *m_pFramebuffer;
+
+        /** Widget handle. */
+        uint64_t m_Handle;
+
+        /** Widget event handler. */
+        widgetCallback_t m_EventCallback;
 };
 
 /** @} */

@@ -65,9 +65,6 @@ for i in libs:
     # Handle extra include directories within the library
     if(os.path.exists(Dir(base).abspath + '/include')):
         incpath += [base + '/include']
-    
-    print base
-    print incpath
         
     e['CPPPATH'] = incpath
     

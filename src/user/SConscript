@@ -107,27 +107,28 @@ tmp['CPPPATH'] = incpath
 for i in all_apps:
     e = tmp.Clone()
 
-    if i in sdl_apps:
-        e['LIBS'] += ['SDL', 'pthread']
-        e['CPPPATH'] += ['#/src/lgpl/SDL-1.2.14/include']
-
-    # SDL apps require libpedigree (C++)
-    if i in cpp_apps or i in sdl_apps:
-        e['LIBS'] += ['pedigree', 'stdc++']
-        e['LIBPATH'] += [imagesdir + 'libraries']
-        e['CPPPATH'] += ['#/src/subsys/native/include',
-                         '#/src/subsys/posix/include/c++/4.3.2',
-                         '#/src/subsys/posix/include/c++/4.3.2/i686-pedigree']
-
     base = appsbase + i
 
-    # Handle extra include directories
+    # Handle custom paths and libraries.
     if(os.path.exists(base + '/include')):
         e['CPPPATH'] += [base + '/include']
     if(custom_incpath.has_key(i)):
         e['CPPPATH'] += custom_incpath[i]
     if(custom_libs.has_key(i)):
         e['LIBS'] += custom_libs[i]
+
+    # Handle SDL dependencies.
+    if i in sdl_apps:
+        e['LIBS'] += ['SDL', 'pthread']
+        e['CPPPATH'] += ['#/src/lgpl/SDL-1.2.14/include']
+
+    # Handle C++-related dependencies.
+    if i in cpp_apps or i in sdl_apps:
+        e['LIBS'] += ['pedigree', 'stdc++']
+        e['LIBPATH'] += [imagesdir + 'libraries']
+        e['CPPPATH'] += ['#/src/subsys/native/include',
+                         '#/src/subsys/posix/include/c++/4.3.2',
+                         '#/src/subsys/posix/include/c++/4.3.2/i686-pedigree']
 
     output = builddir + '/apps/' + i
     files = [Glob(base + '/*.c'), Glob(base + '/*.cc')]

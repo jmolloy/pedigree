@@ -146,7 +146,7 @@ namespace PedigreeGraphics
     class Framebuffer
     {
         public:
-
+        
             Framebuffer();
             virtual ~Framebuffer();
 
@@ -240,9 +240,12 @@ namespace PedigreeGraphics
             void setPixel(size_t x, size_t y, uint32_t colour,
                           PedigreeGraphics::PixelFormat format = PedigreeGraphics::Bits32_Argb);
 
-        private:
-
+            /** Creates a framebuffer given a GraphicsProvider. Sanity checked
+             *  and should barely be used (as the information itself only ever
+             *  comes from the kernel; it cannot be fabricated). */
             Framebuffer(GraphicsProvider &gfx);
+
+        private:
 
             GraphicsProvider m_Provider;
 
