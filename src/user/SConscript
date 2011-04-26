@@ -71,7 +71,9 @@ cpp_apps = [
 custom_incpath = {
     'TUI' : ['#/src/modules/system/TUI',
              '#/src/user/applications/TUI/include'],
-    'uitest' : ['#/src/user/libraries/libui/include']
+    'uitest' : ['#/src/user/libraries/libui/include'],
+    'winman' : ['#/src/user/libraries/libui/include',
+                '#/src/user/libraries/libui/src']
 }
 
 # Custom libraries for specific applications

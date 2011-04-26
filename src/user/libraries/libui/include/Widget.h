@@ -20,6 +20,7 @@
 #include <graphics/Graphics.h>
 
 #include <string>
+#include <map>
 
 /** \addtogroup PedigreeGUI
  *  @{
@@ -50,7 +51,7 @@ class Widget
          * Obtains a handle for this widget. The handle is only usable by the
          * window manager, and is determined by the following formula during
          * widget construction in construct():
-         * (PID << 32) | ((WidgetPointer >> 32) | (WidgetPointer & 0xFFFFFFFF))
+         * \note (PID << 32) | ((WidgetPointer >> 32) | (WidgetPointer & 0xFFFFFFFF))
          * If the system is not capable of 64-bit addressing, the 32-bit right
          * shift is not necessary.
          * The PID is assumed to never exceed the limits of a 32-bit unsigned
@@ -168,6 +169,9 @@ class Widget
 
         /** Widget event handler. */
         widgetCallback_t m_EventCallback;
+
+        /** Handle -> Callback mapping. For event handler. */
+        static std::map<uint64_t, widgetCallback_t> m_CallbackMap;
 };
 
 /** @} */

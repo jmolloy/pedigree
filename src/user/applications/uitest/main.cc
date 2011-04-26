@@ -65,9 +65,11 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    cout << "uitest: widget created (handle is " << pWidget->getHandle() << ")." << endl;
+
     pWidget->visibility(true);
 
-    cout << "uitest: widget created" << endl;
+    cout << "Widget visible!" << endl;
 
     Rect dirty;
     pWidget->render(rt, dirty);

@@ -125,6 +125,9 @@ namespace LibUiProtocol
 
         /// Size of the data in the message (after this header).
         size_t messageSize;
+        
+        /// Whether this message is a response from the window manager or not.
+        bool isResponse;
     };
 
     /** Large buffer preparation message data. */

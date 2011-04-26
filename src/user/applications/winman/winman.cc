@@ -14,18 +14,68 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <stdio.h>
+#include <unistd.h>
 
 #include <graphics/Graphics.h>
 #include <input/Input.h>
+#include <ipc/Ipc.h>
+
+#include <protocol.h>
+
+using namespace LibUiProtocol;
+using namespace PedigreeIpc;
 
 PedigreeGraphics::Framebuffer *g_pTopLevelFramebuffer = 0;
+
+void handleMessage(char *messageData)
+{
+    WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
+
+    printf("Incoming message at %x\n", messageData);
+
+    if(pWinMan->messageCode == Create)
+        printf("Create message!\n");
+
+    printf("Incoming message with code %d\n", pWinMan->messageCode);
+}
+
+void checkForMessages(IpcEndpoint *pEndpoint)
+{
+    if(!pEndpoint)
+        return;
+
+    IpcMessage *pRecv = 0;
+    if(recv(pEndpoint, &pRecv, false))
+    {
+        handleMessage(static_cast<char *>(pRecv->getBuffer()));
+
+        delete pRecv;
+    }
+}
 
 int main(int argc, char *argv[])
 {
     printf("Starting up the window manager...\n");
 
+    // Daemonize!
+    if(fork() != 0)
+    {
+        printf("Success.\n");
+        return 0;
+    }
+
+    // Create the window manager IPC endpoint for libui.
+    createEndpoint("pedigree-winman");
+    IpcEndpoint *pEndpoint = getEndpoint("pedigree-winman");
+
+    if(!pEndpoint)
+    {
+        printf("error: couldn't create the pedigree-winman IPC endpoint!\n");
+        return 0;
+    }
+
     PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
-    g_pTopLevelFramebuffer = pRootFramebuffer->createChild(0, 0, pRootFramebuffer->getWidth(), pRootFramebuffer->getHeight());
+    g_pTopLevelFramebuffer = pRootFramebuffer->createChild(512, 32, pRootFramebuffer->getWidth() - 512, pRootFramebuffer->getHeight());
 
     if(!g_pTopLevelFramebuffer->getRawBuffer())
     {
@@ -38,9 +88,12 @@ int main(int argc, char *argv[])
 
     g_pTopLevelFramebuffer->rect(0, 0, g_nWidth, g_nHeight, PedigreeGraphics::createRgb(0, 0, 255), PedigreeGraphics::Bits32_Rgb);
 
+    printf("Entering main loop (%d,%d).\n", g_nWidth, g_nHeight);
+
     // Main loop: logic & message handling goes here!
     while(true)
     {
+        checkForMessages(pEndpoint);
         g_pTopLevelFramebuffer->redraw();
     }
 

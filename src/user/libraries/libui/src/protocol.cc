@@ -37,10 +37,13 @@ bool LibUiProtocol::sendMessage(void *pMessage, size_t messageLength)
     if(messageLength > 0x1000)
     {
         /// \todo Implement buffer-negotiate handshake.
-        delete pEndpoint;
         return false;
     }
     IpcMessage *pIpcMessage = new IpcMessage();
+    if(!pIpcMessage->initialise())
+    {
+        return false;
+    }
 
     // Fill the message with the data to transmit. Callers should have the proper
     // window manager message structures in the buffer already.
@@ -48,17 +51,15 @@ bool LibUiProtocol::sendMessage(void *pMessage, size_t messageLength)
     if(!pDest)
     {
         delete pIpcMessage;
-        delete pEndpoint;
         return false;
     }
-    memcpy(pDest, pIpcMessage, messageLength);
+    memcpy(pDest, pMessage, messageLength);
 
     // Transmit the message.
     send(pEndpoint, pIpcMessage, false);
 
     // Clean up.
     delete pIpcMessage;
-    delete pEndpoint;
 
     return true;
 }
@@ -87,7 +88,6 @@ bool LibUiProtocol::recvMessage(void *pBuffer, size_t maxSize)
     // Verify.
     if((!pRecv) || (!pRecv->getBuffer()))
     {
-        delete pEndpoint;
         return false;
     }
 
@@ -97,7 +97,6 @@ bool LibUiProtocol::recvMessage(void *pBuffer, size_t maxSize)
 
     // Clean up.
     delete pRecv;
-    delete pEndpoint;
 
     return true;
 }
