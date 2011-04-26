@@ -21,6 +21,7 @@
 #include <processor/MemoryRegion.h>
 
 #include <process/Semaphore.h>
+#include <process/Mutex.h>
 
 #include <utilities/String.h>
 #include <utilities/List.h>
@@ -75,7 +76,7 @@ namespace Ipc
 
         private:
             size_t nPages;
-            
+
             /// Virtual address of a message when m_pMemRegion is invalid.
             uintptr_t m_vAddr;
 
@@ -95,10 +96,16 @@ namespace Ipc
             {
             }
 
-            inline void pushMessage(IpcMessage* pMessage)
+            inline Mutex *pushMessage(IpcMessage* pMessage)
             {
-                m_Queue.pushBack(pMessage);
+                QueuedMessage *p = new QueuedMessage;
+                p->pMessage = pMessage;
+                p->pMutex = new Mutex(true);
+
+                m_Queue.pushBack(p);
                 m_QueueSize.release();
+
+                return p->pMutex;
             }
 
             inline IpcMessage *getMessage(bool bBlock = false)
@@ -107,7 +114,15 @@ namespace Ipc
                     return 0;
                 else
                     m_QueueSize.acquire();
-                return m_Queue.popFront();
+                QueuedMessage *p = m_Queue.popFront();
+
+                IpcMessage *pReturn = p->pMessage;
+
+                p->pMutex->release();
+                delete p->pMutex;
+                delete p;
+
+                return pReturn;
             }
 
             inline String &getName()
@@ -116,9 +131,17 @@ namespace Ipc
             }
 
         private:
+
+            /// A queued message ready for retrieval.
+            struct QueuedMessage
+            {
+                Mutex *pMutex;
+                IpcMessage *pMessage;
+            };
+
             String m_Name;
 
-            List<IpcMessage*> m_Queue;
+            List<QueuedMessage*> m_Queue;
             Semaphore m_QueueSize;
     };
 

@@ -55,7 +55,13 @@ bool Ipc::send(IpcEndpoint *pEndpoint, IpcMessage *pMessage, bool bAsync)
     if(!(pEndpoint && pMessage))
         return false;
 
-    pEndpoint->pushMessage(pMessage);
+    Mutex *pMutex = pEndpoint->pushMessage(pMessage);
+    if(!pMutex)
+        return false;
+
+    // Block if we're allowed to.
+    if(!bAsync)
+        pMutex->acquire();
 
     return true;
 }
