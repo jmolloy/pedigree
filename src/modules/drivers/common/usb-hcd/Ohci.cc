@@ -368,11 +368,10 @@ void Ohci::interrupt(size_t number, InterruptState &state)
                 else
                     m_pBase->write32(0, OhciBulkHeadED);
             }
-            new Thread(Processor::information().getCurrentThread()->getParent(), threadStub, reinterpret_cast<void*>(this));
         }
     }
-    else
 #ifdef USB_VERBOSE_DEBUG
+    else
         DEBUG_LOG("IRQ " << nStatus);
 #endif
 
