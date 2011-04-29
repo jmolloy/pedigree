@@ -57,6 +57,8 @@ class Ohci : public UsbHub,
             uint16_t nBufferSize;
             uint16_t nNextTDIndex;
             bool bLast;
+            
+            size_t id;
 
             // Possible values for status
             enum StatusCodes
@@ -104,7 +106,7 @@ class Ohci : public UsbHub,
                 void (*pCallback)(uintptr_t, ssize_t);
                 uintptr_t pParam;
 
-                UsbEndpoint &endpointInfo;
+                UsbEndpoint endpointInfo;
 
                 bool bPeriodic;
                 TD *pFirstTD;
@@ -113,8 +115,15 @@ class Ohci : public UsbHub,
 
                 ED *pPrev;
                 ED *pNext;
+                
+                List<TD*> tdList;
+                List<TD*> completedTdList;
+                
+                bool bIgnore;
 
                 bool bLinked;
+                
+                size_t id;
             } *pMetaData;
         } PACKED ALIGN(16);
 
@@ -156,6 +165,7 @@ class Ohci : public UsbHub,
     private:
 
         enum OhciConstants {
+            OhciVersion         = 0x00,
             OhciControl         = 0x04,     // HcControl register
             OhciCommandStatus   = 0x08,     // HcCommandStatus register
             OhciInterruptStatus = 0x0c,     // HcInterruptStatus register
@@ -166,12 +176,18 @@ class Ohci : public UsbHub,
             OhciControlCurrentED= 0x24,     // HcControlCurrentED register
             OhciBulkHeadED      = 0x28,     // HcBulkHeadED register
             OhciBulkCurrentED   = 0x2c,     // HcBulkCurrentED register
+            OhciFmInterval      = 0x34,
             OhciRhDescriptorA   = 0x48,     // HcRhDescriptorA register
+            OhciRhStatus        = 0x50,
             OhciRhPortStatus    = 0x54,     // HcRhPortStatus registers
 
+            OhciControlStateFunctionalMask = 0xC0,
+            
+            OhciControlInterruptRoute = 0x100,
             OhciControlStateRunning = 0x80,     // HostControllerFunctionalState bits for USBOPERATIONAL
             OhciControlListsEnable  = 0x34,     // PeriodicListEnable, ControlListEnable and BulkListEnable bits
 
+            OhciCommandRequestOwnership = 0x08, // Requests ownership change
             OhciCommandBulkListFilled   = 0x04, // BulkListFilled bit
             OhciCommandControlListFilled= 0x02, // ControlListFilled bit
             OhciCommandHcReset          = 0x01, // HostControllerReset bit
@@ -214,6 +230,15 @@ class Ohci : public UsbHub,
 
         // Pointer to the current periodic queue tail
         ED *m_pCurrentPeriodicQueueTail;
+        
+        /// Dequeue list lock.
+        Spinlock m_DequeueListLock;
+        
+        /// List of EDs ready for dequeue
+        List<ED*> m_DequeueList;
+        
+        /// Semaphore for the dequeue list
+        Semaphore m_DequeueCount;
 
         MemoryRegion m_OhciMR;
 

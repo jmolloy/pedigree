@@ -28,9 +28,18 @@
 #define INDEX_FROM_TD(ptr) (((reinterpret_cast<uintptr_t>((ptr)) & 0xFFF) / sizeof(TD)))
 #define PHYS_TD(idx)        (m_pTDListPhys + ((idx) * sizeof(TD)))
 
-Ohci::Ohci(Device* pDev) : Device(pDev), m_pCurrentBulkQueueHead(0), m_pCurrentControlQueueHead(0), m_OhciMR("Ohci-MR")
+static int threadStub(void *p)
+{
+    Ohci *pOhci = reinterpret_cast<Ohci*>(p);
+    pOhci->doDequeue();
+    return 0;
+}
+
+Ohci::Ohci(Device* pDev) : Device(pDev), m_pCurrentBulkQueueHead(0), m_pCurrentControlQueueHead(0),
+                           m_DequeueListLock(), m_DequeueList(), m_DequeueCount(0), m_OhciMR("Ohci-MR")
 {
     setSpecificType(String("OHCI"));
+    
     // Allocate the memory region
     if(!PhysicalMemoryManager::instance().allocateRegion(m_OhciMR, 3, PhysicalMemoryManager::continuous, 0))
     {
@@ -65,46 +74,94 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_pCurrentBulkQueueHead(0), m_pCurrentC
 
 #ifdef X86_COMMON
     uint32_t nPciCmdSts = PciBus::instance().readConfigSpace(this, 1);
-    DEBUG_LOG("USB: OHCI: Pci command: " << (nPciCmdSts & 0xffff));
-    PciBus::instance().writeConfigSpace(this, 1, nPciCmdSts | 0x4);
+    PciBus::instance().writeConfigSpace(this, 1, nPciCmdSts | 0x6);
 #endif
 
     // Grab the ports
     m_pBase = m_Addresses[0]->m_Io;
     m_Addresses[0]->map();
+    
+    uint8_t version = m_pBase->read32(OhciVersion) & 0xFF;
+    DEBUG_LOG("USB: OHCI: starting up - controller is version " << Dec << ((version & 0xF0) >> 8) << "." << (version & 0xF) << Hex << ".");
+    
+    // Determine first of all if the HC is controlled by the BIOS.
+    uint32_t control = m_pBase->read32(OhciControl);
+    if(control & OhciControlInterruptRoute)
+    {
+        // SMM.
+        DEBUG_LOG("USB: OHCI: currently in SMM!");
+        uint32_t status = m_pBase->read32(OhciCommandStatus);
+        m_pBase->write32(status | OhciCommandRequestOwnership, OhciCommandStatus);
+        while((control = m_pBase->read32(OhciControl)) & OhciControlInterruptRoute)
+            delay(1);
+    }
+    else if(control & OhciControlStateFunctionalMask)
+    {
+        // Chances are good that the BIOS has the thing running.
+        DEBUG_LOG("USB: OHCI: BIOS is currently in charge.");
+        
+        // Throw the controller into operational mode if it isn't.
+        if(!(control & OhciControlStateRunning))
+            m_pBase->write32(OhciControlStateRunning, OhciControl);
+    }
+    
+    // Perform a reset via the UHCI Control register.
+    m_pBase->write32(control & ~OhciControlStateFunctionalMask, OhciControl);
+    delay(200);
+    
+    // Grab the FM Interval register (5.1.1.4, OHCI spec).
+    uint32_t interval = m_pBase->read32(OhciFmInterval);
 
-    // Set reset bit
+    // Perform a full hardware reset.
     m_pBase->write32(OhciCommandHcReset, OhciCommandStatus);
     while(m_pBase->read32(OhciCommandStatus) & OhciCommandHcReset)
         delay(5);
+    
+    // We now have 2 ms to complete all operations before we start the controller. 5.1.1.4, OHCI spec.
 
-    // Set Hcca pointer
+    // Set up the HCCA block.
     m_pBase->write32(m_pHccaPhys, OhciHcca);
+    
+    /// \todo Two ED queues, for control and bulk EDs.
+    
+    // Set up the operational registers.
+    m_pBase->write32(m_pEDListPhys, OhciControlHeadED);
+    m_pBase->write32(m_pEDListPhys, OhciBulkHeadED);
+    
+    // Disable and then enable the interrupts we want.
+    m_pBase->write32(0x4000007F, OhciInterruptDisable);
+    m_pBase->write32(OhciInterruptMIE | OhciInterruptWbDoneHead | 0x1 | 0x10 | 0x20, OhciInterruptEnable);
+    
+    // Prepare the control register
+    control = m_pBase->read32(OhciControl);
+    control &= ~(0x3 | 0x3C | OhciControlStateFunctionalMask | OhciControlInterruptRoute); // Control bulk service, List enable, etc
+    control |= OhciControlListsEnable | OhciControlStateRunning | 0x3; // 4:1 control/bulk ED ratio
+    m_pBase->write32(control, OhciControl);
+    
+    // Controller is now running. Yay!
+    
+    // Restore the Frame Interval register (reset by a HC reset)
+    m_pBase->write32(interval | (1 << 31), OhciFmInterval);
+    
+    DEBUG_LOG("USB: OHCI: maximum packet size is " << ((interval >> 16) & 0xEFFF));
+    
+    // Turn on all ports on the root hub.
+    m_pBase->write32(0x10000, OhciRhStatus);
+    
+    // Dequeue main thread
+    new Thread(Processor::information().getCurrentThread()->getParent(), threadStub, reinterpret_cast<void*>(this));
 
     // Install the IRQ handler
-#ifdef X86_COMMON
     Machine::instance().getIrqManager()->registerPciIrqHandler(this, this);
     Machine::instance().getIrqManager()->control(getInterruptNumber(), IrqManager::MitigationThreshold, (1500000 / 64)); // 12KB/ms (12Mbps) in bytes, divided by 64 bytes maximum per transfer/IRQ
-#else
-    InterruptManager::instance().registerInterruptHandler(pDev->getInterruptNumber(), this);
-#endif
-
-    // Enable wanted interrupts and clean the interrupt status
-    m_pBase->write32(0x4000007f, OhciInterruptStatus);
-    m_pBase->write32(OhciInterruptMIE | OhciInterruptWbDoneHead, OhciInterruptEnable);
-
-    // Enable control and bulk lists
-    m_pBase->write32(OhciControlListsEnable | OhciControlStateRunning, OhciControl);
 
     // Set up the RequestQueue
     initialise();
 
-    // Read the first root hub descriptor
+    // Get the number of ports and delay for power-up for this root hub. 
     uint32_t rhDescA = m_pBase->read32(OhciRhDescriptorA);
-    // Get the number of ports
-    m_nPorts = rhDescA & 0xFF;
-    // Get the amount of time we need to wait for the power to come on
     uint8_t powerWait = ((rhDescA >> 24) & 0xFF) * 2;
+    m_nPorts = rhDescA & 0xFF;
 
     DEBUG_LOG("USB: OHCI: Reset complete, " << Dec << m_nPorts << Hex << " ports available");
 
@@ -112,12 +169,16 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_pCurrentBulkQueueHead(0), m_pCurrentC
     {
         if(!(m_pBase->read32(OhciRhPortStatus + (i * 4)) & OhciRhPortStsPower))
         {
+            DEBUG_LOG("USB: OHCI: applying power to port " << i);
+            
             // Needs port power, do so
             m_pBase->write32(OhciRhPortStsPower, OhciRhPortStatus + (i * 4));
 
             // Wait as long as it needs
             delay(powerWait);
         }
+        
+        DEBUG_LOG("OHCI: Determining if there's a device on this port");
 
         // Check for a connected device
         if(m_pBase->read32(OhciRhPortStatus + (i * 4)) & OhciRhPortStsConnected)
@@ -133,70 +194,59 @@ Ohci::~Ohci()
 {
 }
 
-static int threadStub(void *p)
-{
-    Ohci *pOhci = reinterpret_cast<Ohci*>(p);
-    pOhci->doDequeue();
-    return 0;
-}
-
 void Ohci::doDequeue()
 {
-    // Absolutely cannot have queue insetions during a dequeue
-    LockGuard<Mutex> guard(m_Mutex);
-
-    for(size_t i = 1; i < 0x1000 / sizeof(ED); i++)
+    while(1)
     {
-        if(!m_EDBitmap.test(i))
-            continue;
-
-        ED *pED = &m_pEDList[i];
-
-        // Is this ED valid or even linked?
-        if(!pED->pMetaData || !pED->pMetaData->bLinked)
+        m_DequeueCount.acquire();
+        
+        ED *pED = 0;
         {
-#ifdef USB_VERBOSE_DEBUG
-            DEBUG_LOG("Not performing dequeue on ED #" << Dec << i << Hex << " as it's not even initialised.");
-#endif
+            LockGuard<Spinlock> guard(m_DequeueListLock);
+            pED = m_DequeueList.popFront();
+        }
+        
+        if(!pED)
             continue;
-        }
-
-        // Is this ED still active?
-        if(!pED->bSkip)
+        
+        if(pED->pMetaData->completedTdList.count())
         {
-#ifdef USB_VERBOSE_DEBUG
-            DEBUG_LOG("Not performing dequeue on ED #" << Dec << i << Hex << " as it's still active.");
-#endif
-            continue;
+            for(List<TD*>::Iterator it = pED->pMetaData->completedTdList.begin();
+                it != pED->pMetaData->completedTdList.end();
+                it++)
+            {
+                size_t idx = (*it)->id;
+                memset(*it, 0, sizeof(TD));
+                
+                m_TDBitmap.clear(idx);
+            }
         }
-
-        // Remove all TDs
-        size_t nTDIndex = INDEX_FROM_TD(pED->pMetaData->pFirstTD);
-        while(true)
+        
+        // We might still have TDs that haven't been completed, if an earlier
+        // transaction fails somewhere.
+        if(pED->pMetaData->tdList.count())
         {
-            m_TDBitmap.clear(nTDIndex);
-
-            TD *pTD = &m_pTDList[nTDIndex];
-            bool shouldBreak = pTD->bLast;
-            if(!shouldBreak)
-                nTDIndex = pTD->nNextTDIndex;
-
-            memset(pTD, 0, sizeof(TD));
-
-            if(shouldBreak)
-                break;
+            for(List<TD*>::Iterator it = pED->pMetaData->completedTdList.begin();
+                it != pED->pMetaData->completedTdList.end();
+                it++)
+            {
+                size_t idx = (*it)->id;
+                memset(*it, 0, sizeof(TD));
+                
+                m_TDBitmap.clear(idx);
+            }
         }
-
-        // Completely invalidate the ED
+        
+        size_t edId = pED->pMetaData->id;
+        
         delete pED->pMetaData;
         memset(pED, 0, sizeof(ED));
-
+        
+        m_EDBitmap.clear(edId);
+        
 #ifdef USB_VERBOSE_DEBUG
-        DEBUG_LOG("Dequeue for ED #" << Dec << i << Hex << ".");
+        DEBUG_LOG("Dequeue for ED #" << Dec << edId << Hex << " complete.");
 #endif
-
-        // This ED is done
-        m_EDBitmap.clear(i);
     }
 }
 
@@ -206,7 +256,53 @@ bool Ohci::irq(irq_id_t number, InterruptState &state)
 void Ohci::interrupt(size_t number, InterruptState &state)
 #endif
 {
-    uint32_t nStatus = m_pBase->read32(OhciInterruptStatus) & m_pBase->read32(OhciInterruptEnable);
+    if(!m_pHcca)
+    {
+        return
+#ifdef X86_COMMON
+        true
+#endif
+        ;
+    }
+
+    uint32_t nStatus = 0;
+    
+    // Have a look at the HCCA status.
+    uint32_t done = m_pHcca->pDoneHead;
+    if(done)
+    {
+        m_pHcca->pDoneHead = 0;
+        if(done & ~0x1)
+        {
+            // Override other interrupt causes.
+            nStatus = OhciInterruptWbDoneHead;
+        }
+        
+        if(done & 0x1)
+        {
+            nStatus = m_pBase->read32(OhciInterruptStatus);
+            done &= ~0x1;
+        }
+    }
+    else
+        nStatus = m_pBase->read32(OhciInterruptStatus);
+    
+    // Not for us?
+    if(!nStatus)
+    {
+        return
+#ifdef X86_COMMON
+        true
+#endif
+        ;
+    }
+    
+    // Clear the MIE bit from the interrupt status. We don't care for it.
+    nStatus &= ~0x40000000;
+    
+#ifdef USB_VERBOSE_DEBUGGING
+    DEBUG_LOG("OHCI: IRQ " << nStatus);
+#endif
 
     // Check for newly connected / disconnected devices
     if(nStatus & OhciInterruptRhStsChange)
@@ -219,130 +315,142 @@ void Ohci::interrupt(size_t number, InterruptState &state)
         bool bControlListChanged = false, bBulkListChanged = false;
 
         // Check all the EDs we have in the list
+        /// \todo Move to the same style as UHCI, with lists of EDs to check.
         for(size_t i = 1; i < (0x1000 / sizeof(ED)); i++)
         {
             if(!m_EDBitmap.test(i))
                 continue;
 
             ED *pED = &m_pEDList[i];
-            if(!pED->pMetaData) // This ED isn't actually ready to be handled yet.
+            
+            // Verification.
+            if(!pED->pMetaData)
                 continue;
-            if(pED->bSkip)
+            if(pED->bSkip || pED->pMetaData->bIgnore)
                 continue;
-            if(!pED->pMetaData->bLinked) // This ED isn't linked yet.
+            if(!pED->pMetaData->bLinked)
                 continue;
 
             bool bPeriodic = pED->pMetaData->bPeriodic;
 
             // Iterate the TD list
-            size_t nTDIndex = INDEX_FROM_TD(pED->pMetaData->pFirstTD);
-            while(true)
+            TD *pTD = 0;
+            while(pED->pMetaData->tdList.count())
             {
-                TD *pTD = &m_pTDList[nTDIndex];
-
-                if(pTD->nStatus != 0xf)
+                pTD = pED->pMetaData->tdList.popFront();
+                
+                // TD not yet handled - return to the list and go to the next ED.
+                if(pTD->nStatus == 0xF)
                 {
-                    ssize_t nResult;
-                    if(pTD->nStatus)
-                    {
+                    pED->pMetaData->tdList.pushFront(pTD);
+                    break;
+                }
+            
+                ssize_t nResult;
+                if(pTD->nStatus)
+                {
 #ifdef USB_VERBOSE_DEBUG
-                        if(!bPeriodic)
-                            ERROR_NOLOCK("TD Error " << Dec << pTD->nStatus << Hex);
+                    if(!bPeriodic)
+                        ERROR_NOLOCK("TD Error " << Dec << pTD->nStatus << Hex);
 #endif
-                        nResult = - pTD->getError();
+                    nResult = - pTD->getError();
+                }
+                else
+                {
+                    if(pTD->pBufferStart)
+                    {
+                        // Only a part of the buffer has been transfered
+                        size_t nBytesLeft = pTD->pBufferEnd - pTD->pBufferStart + 1;
+                        nResult = pTD->nBufferSize - nBytesLeft;
+                    }
+                    else
+                        nResult = pTD->nBufferSize;
+                    pED->pMetaData->nTotalBytes += nResult;
+                }
+#ifdef USB_VERBOSE_DEBUG
+                DEBUG_LOG_NOLOCK("TD #" << Dec << pTD->id << Hex << " [from ED #" << Dec << pED->pMetaData->id << Hex << "] DONE: " << Dec << pED->nAddress << ":" << pED->nEndpoint << " " << (pTD->nPid==1?"OUT":(pTD->nPid==2?"IN":(pTD->nPid==0?"SETUP":""))) << " " << nResult << Hex);
+#endif
+
+                /// \note It might be nice to document this.
+                bool bEndOfTransfer = (!bPeriodic && ((nResult < 0) || (pTD == pED->pMetaData->pLastTD))) || (bPeriodic && (nResult >= 0));
+                
+                if(!bPeriodic)
+                    pED->pMetaData->completedTdList.pushBack(pTD);
+
+                // Last TD or error condition, if async, otherwise only when it gives no error
+                if(bEndOfTransfer)
+                {
+                    // Valid callback?
+                    if(pED->pMetaData->pCallback)
+                    {
+                        pED->pMetaData->pCallback(pED->pMetaData->pParam, nResult < 0 ? nResult : pED->pMetaData->nTotalBytes);
+                    }
+
+                    if(!bPeriodic)
+                    {
+                        // HC will skip with ED next time
+                        pED->bSkip = pED->pMetaData->bIgnore = true;
+
+                        // This ED is done, dequeue.
+                        ED *pPrev = pED->pMetaData->pPrev;
+                        ED *pNext = pED->pMetaData->pNext;
+                        if(pNext)
+                            pNext->pMetaData->pPrev = pPrev;
+                        if(pPrev)
+                        {
+                            // Main non-hardware linked list update
+                            pPrev->pMetaData->pNext = pNext;
+
+                            // Hardware linked list update
+                            pPrev->pNext = pED->pNext;
+                        }
+
+                        // Update the head pointers if we need to
+                        m_QueueListChangeLock.acquire(); // Atomic operation
+                        if(pED == m_pCurrentControlQueueHead)
+                            m_pCurrentControlQueueHead = pNext;
+                        if(pED == m_pCurrentBulkQueueHead)
+                            m_pCurrentBulkQueueHead = pNext;
+                        m_QueueListChangeLock.release();
+
+                        // We changed one of the lists
+                        if(!pED->pMetaData->endpointInfo.nEndpoint)
+                            bControlListChanged = true;
+                        else
+                            bBulkListChanged = true;
+                    
+                        {
+                            m_DequeueListLock.acquire();
+                            m_DequeueList.pushBack(pED);
+                            m_DequeueListLock.release();
+                        }
+
+                        break;
                     }
                     else
                     {
-                        if(pTD->pBufferStart)
-                        {
-                            // Only a part of the buffer has been transfered
-                            size_t nBytesLeft = pTD->pBufferEnd - pTD->pBufferStart + 1;
-                            nResult = pTD->nBufferSize - nBytesLeft;
-                        }
-                        else
-                            nResult = pTD->nBufferSize;
-                        pED->pMetaData->nTotalBytes += nResult;
-                    }
-#ifdef USB_VERBOSE_DEBUG
-                    DEBUG_LOG_NOLOCK("TD #" << Dec << nTDIndex << Hex << " [from ED #" << Dec << i << Hex << "] DONE: " << Dec << pED->nAddress << ":" << pED->nEndpoint << " " << (pTD->nPid==1?"OUT":(pTD->nPid==2?"IN":(pTD->nPid==0?"SETUP":""))) << " " << nResult << Hex);
-#endif
+                        // Invert data toggle
+                        pTD->bDataToggle = !pTD->bDataToggle;
 
-                    // Last TD or error condition, if async, otherwise only when it gives no error
-                    if((!bPeriodic && ((nResult < 0) || (pTD == pED->pMetaData->pLastTD))) || (bPeriodic && !nResult >= 0))
-                    {
-                        // Valid callback?
-                        if(pED->pMetaData->pCallback)
-                            pED->pMetaData->pCallback(pED->pMetaData->pParam, nResult < 0 ? nResult : pED->pMetaData->nTotalBytes);
-
-                        if(!bPeriodic)
-                        {
-                            // HC will skip with ED next time
-                            pED->bSkip = true;
-
-                            // This ED is done, dequeue.
-                            ED *pPrev = pED->pMetaData->pPrev;
-                            ED *pNext = pED->pMetaData->pNext;
-                            if(pNext)
-                                pNext->pMetaData->pPrev = pPrev;
-                            if(pPrev)
-                            {
-                                // Main non-hardware linked list update
-                                pPrev->pMetaData->pNext = pNext;
-
-                                // Hardware linked list update
-                                pPrev->pNext = pED->pNext;
-                            }
-
-                            // Update the head pointers if we need to
-                            m_QueueListChangeLock.acquire(); // Atomic operation
-                            if(pED == m_pCurrentControlQueueHead)
-                                m_pCurrentControlQueueHead = pNext;
-                            if(pED == m_pCurrentBulkQueueHead)
-                                m_pCurrentBulkQueueHead = pNext;
-                            m_QueueListChangeLock.release();
-
-                            // We changed one of the lists
-                            if(!pED->pMetaData->endpointInfo.nEndpoint)
-                                bControlListChanged = true;
-                            else
-                                bBulkListChanged = true;
-
-                            break;
-                        }
-                        else
-                        {
-                            // Invert data toggle
-                            pTD->bDataToggle = !pTD->bDataToggle;
-
-                            // Clear the total bytes field so it won't grow with each completed transfer
-                            pED->pMetaData->nTotalBytes = 0;
-                        }
-                    }
-
-                    // Interrupt TDs need to be always active
-                    if(bPeriodic)
-                    {
-                        pTD->nStatus = 0xf;
-                        pTD->pBufferStart = pTD->pBufferEnd - pTD->nBufferSize + 1;
-                        pED->pHeadTD = PHYS_TD(nTDIndex) >> 4;
+                        // Clear the total bytes field so it won't grow with each completed transfer
+                        pED->pMetaData->nTotalBytes = 0;
                     }
                 }
 
-                size_t oldIndex = nTDIndex;
-
-                if(pTD->bLast)
-                    break;
-                else
-                    nTDIndex = pTD->nNextTDIndex;
-
-                if(nTDIndex == oldIndex)
+                // Interrupt TDs need to be always active
+                if(bPeriodic)
                 {
-                    ERROR_NOLOCK("OHCI: ED #" << Dec << i << Hex << "'s TD list is invalid - circular reference!");
-                    break;
+                    pTD->nStatus = 0xf;
+                    pTD->pBufferStart = pTD->pBufferEnd - pTD->nBufferSize + 1;
+                    pED->pHeadTD = PHYS_TD(pTD->id) >> 4;
+                    
+                    pED->pMetaData->tdList.pushBack(pTD);
+                    break; // Only one TD in a periodic transfer.
                 }
             }
         }
 
+        /// \todo Update to look more like UHCI and EHCI.
         if(bControlListChanged || bBulkListChanged)
         {
             // We changed one or both lists, fix the hardware list state
@@ -370,11 +478,8 @@ void Ohci::interrupt(size_t number, InterruptState &state)
             }
         }
     }
-#ifdef USB_VERBOSE_DEBUG
-    else
-        DEBUG_LOG("IRQ " << nStatus);
-#endif
 
+    // Clear the interrupt status now that we are done processing it.
     m_pBase->write32(nStatus, OhciInterruptStatus);
 
 #ifdef X86_COMMON
@@ -400,6 +505,7 @@ void Ohci::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid
     // Grab the TD pointer we're going to set up now
     TD *pTD = &m_pTDList[nIndex];
     memset(pTD, 0, sizeof(TD));
+    pTD->id = nIndex;
 
     // Buffer rounding - allow packets smaller than the buffer we specify
     pTD->bBuffRounding = 1;
@@ -461,6 +567,8 @@ void Ohci::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid
         pED->pHeadTD = PHYS_TD(nIndex) >> 4;
     }
     pED->pMetaData->pLastTD = pTD;
+    
+    pED->pMetaData->tdList.pushBack(pTD);
 }
 
 uintptr_t Ohci::createTransaction(UsbEndpoint endpointInfo)
@@ -496,6 +604,8 @@ uintptr_t Ohci::createTransaction(UsbEndpoint endpointInfo)
     pED->pMetaData = new ED::MetaData;
     memset(pED->pMetaData, 0, sizeof(ED::MetaData));
     pED->pMetaData->endpointInfo = endpointInfo;
+    pED->pMetaData->id = nIndex;
+    pED->pMetaData->bIgnore = false;
 
     // Complete
     return nIndex;
@@ -503,12 +613,16 @@ uintptr_t Ohci::createTransaction(UsbEndpoint endpointInfo)
 
 void Ohci::doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
-    LockGuard<Mutex> guard(m_Mutex);
-    if((pTransaction == static_cast<uintptr_t>(-1)) || !m_EDBitmap.test(pTransaction))
     {
-        ERROR("OHCI: doAsync: didn't get a valid transaction id [" << pTransaction << "].");
-        return;
+        LockGuard<Mutex> guard(m_Mutex);
+        if((pTransaction == static_cast<uintptr_t>(-1)) || !m_EDBitmap.test(pTransaction))
+        {
+            ERROR("OHCI: doAsync: didn't get a valid transaction id [" << pTransaction << "].");
+            return;
+        }
     }
+    
+    /// \todo Stop the controller as we are modifying the queue.
 
     // Atomic operation - modifying both the housekeeping and the
     // hardware linked lists
