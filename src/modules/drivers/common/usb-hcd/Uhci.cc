@@ -213,11 +213,13 @@ void Uhci::doDequeue()
         }
 
         // This QH is done
-        m_QHBitmap.clear(pQH->pMetaData->id);
+        size_t id = pQH->pMetaData->id;
 
         // Completely invalidate the QH
         delete pQH->pMetaData;
         memset(pQH, 0, sizeof(QH));
+        
+        m_QHBitmap.clear(id);
 
 #ifdef USB_VERBOSE_DEBUG
         DEBUG_LOG("Dequeue complete.");
@@ -337,6 +339,10 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
                         if(!bPeriodic)
                         {
                             // This queue head is done, dequeue.
+                            /// \note The reason LockGuard isn't used here is  because C++ is free to decide when to
+                            /// \note destruct an object whenever it wants. This is a really easy way to create a
+                            /// \note case where it is possible for a deadlock to occur simply by trusting the
+                            /// \note language to do the "right" thing ("Do what I mean", not "Do what I say").
                             m_AsyncQueueListChangeLock.acquire(); // Atomic operation
 
                             // Stop the controller while we dequeue
