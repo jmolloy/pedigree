@@ -32,6 +32,9 @@
 // Set to 1 to allow SSE to be used.
 #define USE_SSE             0
 
+#define USE_SSE_MEMCPY      1
+#define USE_SSE_MEMSET      1
+
 #ifdef X86_COMMON
 inline void *memset_nonzero(void *buf, int c, size_t n)
 {
@@ -48,7 +51,7 @@ inline void *memset_nonzero(void *buf, int c, size_t n)
 
 void *memset(void *buf, int c, size_t n)
 {
-#if USE_SSE
+#if USE_SSE && USE_SSE_MEMSET
     if(c)
         return memset_nonzero(buf, c, n);
     else
@@ -113,7 +116,7 @@ void *memset(void *buf, int c, size_t len)
 #ifdef X86_COMMON
 void *wmemset(void *buf, int c, size_t n)
 {
-#if USE_SSE
+#if USE_SSE && USE_SSE_MEMSET
     // Use SSE if it would give us an advantage here.
     if((!c) && ((n << 1) >= SSE_ALIGN_SIZE))
       return memset(buf, (char) c, n << 1);
@@ -144,7 +147,7 @@ void *wmemset(void *buf, int c, size_t len)
 #ifdef X86_COMMON
 void *dmemset(void *buf, unsigned int c, size_t n)
 {
-#if USE_SSE
+#if USE_SSE && USE_SSE_MEMSET
     // Use SSE if it would give us an advantage here.
     if((!c) && ((n << 2) >= SSE_ALIGN_SIZE))
       return memset(buf, (char) c, n << 2);
@@ -176,7 +179,7 @@ void *qmemset(void *buf, unsigned long long c, size_t len)
 {
 #ifdef X86_COMMON
 
-#if USE_SSE
+#if USE_SSE && USE_SSE_MEMSET
   // Use SSE if it would give us an advantage here.
   if((!c) && ((len << 3) >= SSE_ALIGN_SIZE))
     return memset(buf, (char) c, len << 3);
@@ -197,7 +200,7 @@ void *qmemset(void *buf, unsigned long long c, size_t len)
 
 #ifdef X86_COMMON
 
-#ifdef USE_SSE
+#if USE_SSE && USE_SSE_MEMCPY
 inline void *sse2_aligned_memcpy(void *restrict s1, const void *restrict s2, const size_t n)
 {
     uintptr_t p1 = (uintptr_t) s1;
@@ -248,7 +251,7 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
     // Check for bad usage of memcpy
     if(!n) return s1;
     
-#if USE_SSE
+#if USE_SSE && USE_SSE_MEMCPY
 
     uintptr_t unused = 0;
 
