@@ -35,13 +35,16 @@ static int threadStub(void *p)
     return 0;
 }
 
-Ohci::Ohci(Device* pDev) : Device(pDev), m_pCurrentBulkQueueHead(0), m_pCurrentControlQueueHead(0),
+Ohci::Ohci(Device* pDev) : Device(pDev), m_Mutex(false), m_ScheduleChangeLock(),
+                           m_PeriodicListChangeLock(), m_ControlListChangeLock(), m_BulkListChangeLock(),
+                           m_pBulkQueueHead(0), m_pControlQueueHead(0),
+                           m_pBulkQueueTail(0), m_pControlQueueTail(0), m_pPeriodicQueueTail(0),
                            m_DequeueListLock(), m_DequeueList(), m_DequeueCount(0), m_OhciMR("Ohci-MR")
 {
     setSpecificType(String("OHCI"));
     
     // Allocate the memory region
-    if(!PhysicalMemoryManager::instance().allocateRegion(m_OhciMR, 3, PhysicalMemoryManager::continuous, 0))
+    if(!PhysicalMemoryManager::instance().allocateRegion(m_OhciMR, 5, PhysicalMemoryManager::continuous, VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode))
     {
         ERROR("USB: OHCI: Couldn't allocate memory region!");
         return;
@@ -49,30 +52,42 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_pCurrentBulkQueueHead(0), m_pCurrentC
 
     uintptr_t virtualBase   = reinterpret_cast<uintptr_t>(m_OhciMR.virtualAddress());
     uintptr_t physicalBase  = m_OhciMR.physicalAddress();
+    
     m_pHcca                 = reinterpret_cast<Hcca*>(virtualBase);
-    m_pEDList               = reinterpret_cast<ED*>(virtualBase + 0x1000);
-    m_pTDList               = reinterpret_cast<TD*>(virtualBase + 0x2000);
+    m_pBulkEDList           = reinterpret_cast<ED*>(virtualBase + 0x1000);
+    m_pControlEDList        = reinterpret_cast<ED*>(virtualBase + 0x2000);
+    m_pPeriodicEDList       = reinterpret_cast<ED*>(virtualBase + 0x3000);
+    m_pTDList               = reinterpret_cast<TD*>(virtualBase + 0x4000);
 
     m_pHccaPhys             = physicalBase;
-    m_pEDListPhys           = physicalBase + 0x1000;
-    m_pTDListPhys           = physicalBase + 0x2000;
+    m_pBulkEDListPhys       = physicalBase + 0x1000;
+    m_pControlEDListPhys    = physicalBase + 0x2000;
+    m_pPeriodicEDListPhys   = physicalBase + 0x3000;
+    m_pTDListPhys           = physicalBase + 0x4000;
 
+    // Clear out the HCCA block.
     memset(m_pHcca, 0, 0x800);
 
     // Get an ED for the periodic list
-    m_EDBitmap.set(0);
-    ED *pPeriodicED = &m_pEDList[0];
+    m_PeriodicEDBitmap.set(0);
+    ED *pPeriodicED = m_pPeriodicEDList;
     memset(pPeriodicED, 0, sizeof(ED));
-    // HC will skip this ED
     pPeriodicED->bSkip = true;
+    pPeriodicED->pMetaData = new ED::MetaData;
+    pPeriodicED->pMetaData->id = 0x2000;
+    pPeriodicED->pMetaData->pPrev = pPeriodicED->pMetaData->pNext = pPeriodicED;
 
     // Set all HCCA interrupt ED entries to our periodic ED
-    dmemset(m_pHcca->pInterruptEDList, m_pEDListPhys, 3);
+    dmemset(m_pHcca->pInterruptEDList, m_pPeriodicEDListPhys, 3);
 
     // Every periodic ED will be added after this one
-    m_pCurrentPeriodicQueueTail = pPeriodicED;
+    m_pPeriodicQueueTail = pPeriodicED;
+    
+    m_pBulkQueueTail = m_pBulkQueueHead = 0;
+    m_pControlQueueTail = m_pControlQueueHead = 0;
 
 #ifdef X86_COMMON
+    // Make sure bus mastering and MMIO are enabled.
     uint32_t nPciCmdSts = PciBus::instance().readConfigSpace(this, 1);
     PciBus::instance().writeConfigSpace(this, 1, nPciCmdSts | 0x6);
 #endif
@@ -81,8 +96,9 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_pCurrentBulkQueueHead(0), m_pCurrentC
     m_pBase = m_Addresses[0]->m_Io;
     m_Addresses[0]->map();
     
+    // Dump the version of the controller and a nice little banner.
     uint8_t version = m_pBase->read32(OhciVersion) & 0xFF;
-    DEBUG_LOG("USB: OHCI: starting up - controller is version " << Dec << ((version & 0xF0) >> 8) << "." << (version & 0xF) << Hex << ".");
+    DEBUG_LOG("USB: OHCI: starting up - controller is version " << Dec << ((version & 0xF0) >> 4) << "." << (version & 0xF) << Hex << ".");
     
     // Determine first of all if the HC is controlled by the BIOS.
     uint32_t control = m_pBase->read32(OhciControl);
@@ -95,10 +111,13 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_pCurrentBulkQueueHead(0), m_pCurrentC
         while((control = m_pBase->read32(OhciControl)) & OhciControlInterruptRoute)
             delay(1);
     }
-    else if(control & OhciControlStateFunctionalMask)
+    else
     {
         // Chances are good that the BIOS has the thing running.
-        DEBUG_LOG("USB: OHCI: BIOS is currently in charge.");
+        if(control & OhciControlStateFunctionalMask)
+            DEBUG_LOG("USB: OHCI: BIOS is currently in charge.");
+        else
+            DEBUG_LOG("USB: OHCI: not yet operational.");
         
         // Throw the controller into operational mode if it isn't.
         if(!(control & OhciControlStateRunning))
@@ -122,11 +141,9 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_pCurrentBulkQueueHead(0), m_pCurrentC
     // Set up the HCCA block.
     m_pBase->write32(m_pHccaPhys, OhciHcca);
     
-    /// \todo Two ED queues, for control and bulk EDs.
-    
     // Set up the operational registers.
-    m_pBase->write32(m_pEDListPhys, OhciControlHeadED);
-    m_pBase->write32(m_pEDListPhys, OhciBulkHeadED);
+    m_pBase->write32(m_pControlEDListPhys, OhciControlHeadED);
+    m_pBase->write32(m_pBulkEDListPhys, OhciBulkHeadED);
     
     // Disable and then enable the interrupts we want.
     m_pBase->write32(0x4000007F, OhciInterruptDisable);
@@ -147,6 +164,9 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_pCurrentBulkQueueHead(0), m_pCurrentC
     
     // Turn on all ports on the root hub.
     m_pBase->write32(0x10000, OhciRhStatus);
+
+    // Set up the RequestQueue
+    initialise();
     
     // Dequeue main thread
     new Thread(Processor::information().getCurrentThread()->getParent(), threadStub, reinterpret_cast<void*>(this));
@@ -154,9 +174,6 @@ Ohci::Ohci(Device* pDev) : Device(pDev), m_pCurrentBulkQueueHead(0), m_pCurrentC
     // Install the IRQ handler
     Machine::instance().getIrqManager()->registerPciIrqHandler(this, this);
     Machine::instance().getIrqManager()->control(getInterruptNumber(), IrqManager::MitigationThreshold, (1500000 / 64)); // 12KB/ms (12Mbps) in bytes, divided by 64 bytes maximum per transfer/IRQ
-
-    // Set up the RequestQueue
-    initialise();
 
     // Get the number of ports and delay for power-up for this root hub. 
     uint32_t rhDescA = m_pBase->read32(OhciRhDescriptorA);
@@ -209,6 +226,8 @@ void Ohci::doDequeue()
         if(!pED)
             continue;
         
+#if 1
+        
         if(pED->pMetaData->completedTdList.count())
         {
             for(List<TD*>::Iterator it = pED->pMetaData->completedTdList.begin();
@@ -216,8 +235,6 @@ void Ohci::doDequeue()
                 it++)
             {
                 size_t idx = (*it)->id;
-                memset(*it, 0, sizeof(TD));
-                
                 m_TDBitmap.clear(idx);
             }
         }
@@ -231,22 +248,38 @@ void Ohci::doDequeue()
                 it++)
             {
                 size_t idx = (*it)->id;
-                memset(*it, 0, sizeof(TD));
-                
                 m_TDBitmap.clear(idx);
             }
         }
         
-        size_t edId = pED->pMetaData->id;
+        size_t edId = pED->pMetaData->id & 0xFFF;
+        Lists type = pED->pMetaData->edType;
         
         delete pED->pMetaData;
         memset(pED, 0, sizeof(ED));
         
-        m_EDBitmap.clear(edId);
+        switch(type)
+        {
+            case ControlList:
+                m_ControlEDBitmap.clear(edId);
+                break;
+            case BulkList:
+                m_BulkEDBitmap.clear(edId);
+                break;
+            case PeriodicList:
+                m_PeriodicEDBitmap.clear(edId);
+                break;
+            case IsochronousList:
+                DEBUG_LOG("USB: OHCI: dequeue on an isochronous ED, but we don't support them yet.");
+                break;
+        }
         
 #ifdef USB_VERBOSE_DEBUG
         DEBUG_LOG("Dequeue for ED #" << Dec << edId << Hex << " complete.");
 #endif
+
+#endif
+
     }
 }
 
@@ -290,6 +323,7 @@ void Ohci::interrupt(size_t number, InterruptState &state)
     // Not for us?
     if(!nStatus)
     {
+        DEBUG_LOG("USB: OHCI: irq is not for us");
         return
 #ifdef X86_COMMON
         true
@@ -300,37 +334,36 @@ void Ohci::interrupt(size_t number, InterruptState &state)
     // Clear the MIE bit from the interrupt status. We don't care for it.
     nStatus &= ~0x40000000;
     
-#ifdef USB_VERBOSE_DEBUGGING
+#ifdef USB_VERBOSE_DEBUG
     DEBUG_LOG("OHCI: IRQ " << nStatus);
 #endif
+
+    // Clear the interrupt status early. This IRQ handler is quite capable of
+    // catering to several concurrent instances of itself running.
+    m_pBase->write32(nStatus, OhciInterruptStatus);
 
     // Check for newly connected / disconnected devices
     if(nStatus & OhciInterruptRhStsChange)
         for(size_t i = 0; i < m_nPorts; i++)
             if(m_pBase->read32(OhciRhPortStatus + (i * 4)) & OhciRhPortStsConnStsCh)
                 addAsyncRequest(0, i);
+    
+    // A list of EDs that persist in the schedule. Used to repopulate the schedule list.
+    List<ED*> persistList;
 
     if(nStatus & OhciInterruptWbDoneHead)
     {
-        bool bControlListChanged = false, bBulkListChanged = false;
-
-        // Check all the EDs we have in the list
-        /// \todo Move to the same style as UHCI, with lists of EDs to check.
-        for(size_t i = 1; i < (0x1000 / sizeof(ED)); i++)
+        ED *pED = 0;
+        do
         {
-            if(!m_EDBitmap.test(i))
-                continue;
-
-            ED *pED = &m_pEDList[i];
+            {
+                LockGuard<Spinlock> guard(m_ScheduleChangeLock);
+                if(m_FullSchedule.count())
+                    pED = m_FullSchedule.popFront();
+                else
+                    break;
+            }
             
-            // Verification.
-            if(!pED->pMetaData)
-                continue;
-            if(pED->bSkip || pED->pMetaData->bIgnore)
-                continue;
-            if(!pED->pMetaData->bLinked)
-                continue;
-
             bool bPeriodic = pED->pMetaData->bPeriodic;
 
             // Iterate the TD list
@@ -388,44 +421,71 @@ void Ohci::interrupt(size_t number, InterruptState &state)
 
                     if(!bPeriodic)
                     {
-                        // HC will skip with ED next time
-                        pED->bSkip = pED->pMetaData->bIgnore = true;
-
-                        // This ED is done, dequeue.
-                        ED *pPrev = pED->pMetaData->pPrev;
-                        ED *pNext = pED->pMetaData->pNext;
-                        if(pNext)
-                            pNext->pMetaData->pPrev = pPrev;
-                        if(pPrev)
-                        {
-                            // Main non-hardware linked list update
-                            pPrev->pMetaData->pNext = pNext;
-
-                            // Hardware linked list update
-                            pPrev->pNext = pED->pNext;
-                        }
-
-                        // Update the head pointers if we need to
-                        m_QueueListChangeLock.acquire(); // Atomic operation
-                        if(pED == m_pCurrentControlQueueHead)
-                            m_pCurrentControlQueueHead = pNext;
-                        if(pED == m_pCurrentBulkQueueHead)
-                            m_pCurrentBulkQueueHead = pNext;
-                        m_QueueListChangeLock.release();
-
-                        // We changed one of the lists
-                        if(!pED->pMetaData->endpointInfo.nEndpoint)
-                            bControlListChanged = true;
+                        // Stop the controller for the list we need to change.
+                        // Hardware does not care for our spinlocks!
+                        stop(pED->pMetaData->edType);
+                        
+                        Spinlock *lock = 0;
+                        
+                        // Lock in preparation for the dequeue.
+                        if(pED->pMetaData->edType == ControlList)
+                            lock = &m_ControlListChangeLock;
+                        else if(pED->pMetaData->edType == BulkList)
+                            lock = &m_BulkListChangeLock;
                         else
-                            bBulkListChanged = true;
+                        {
+                            DEBUG_LOG("USB: OHCI: an ED was about to be dequeued without a lock");
+                            break;
+                        }
+                        
+                        lock->acquire();
+                        
+                        // Tell the host controller to ignore this ED from now on.
+                        pED->bSkip = true;
+                        
+                        // Perform the software & hardware dequeue.
+                        {
+                            ED *pPrev = pED->pMetaData->pPrev;
+                            ED *pNext = pED->pMetaData->pNext;
+                            
+                            // Software linked list update.
+                            pPrev->pMetaData->pNext = pNext;
+                            pNext->pMetaData->pPrev = pPrev;
+                            
+                            // Hardware linked list update.
+                            pPrev->pNext = pED->pNext;
+                            
+                            // Update the tail pointer if needed.
+                            /// \note Don't need to check edType here :)
+                            if(pED == m_pControlQueueTail)
+                                m_pControlQueueTail = pPrev;
+                            else if(pED == m_pBulkQueueTail)
+                                m_pBulkQueueTail = pPrev;
+                            
+                            // Update the head pointer if needed.
+                            if(pED == m_pControlQueueHead)
+                                m_pControlQueueHead = pNext;
+                            else if(pED == m_pBulkQueueHead)
+                                m_pBulkQueueHead = pNext;
+                        }
+                        
+                        lock->release();
+                        
+                        // Resume the controller, we are done here.
+                        start(pED->pMetaData->edType);
                     
+                        // Add to the dequeue list, ready for dequeue.
                         {
                             m_DequeueListLock.acquire();
                             m_DequeueList.pushBack(pED);
                             m_DequeueListLock.release();
                         }
-
-                        break;
+                        
+                        // Fire off a dequeue: all is well, and we are unlocked.
+                        m_DequeueCount.release();
+                        
+                        // Make sure we ignore the ED from now on.
+                        pED->pMetaData->bIgnore = true;
                     }
                     else
                     {
@@ -448,39 +508,26 @@ void Ohci::interrupt(size_t number, InterruptState &state)
                     break; // Only one TD in a periodic transfer.
                 }
             }
-        }
-
-        /// \todo Update to look more like UHCI and EHCI.
-        if(bControlListChanged || bBulkListChanged)
+            
+            // If this ED is not queued for deletion, make sure we can use it
+            // in the next IRQ.
+            if(!pED->pMetaData->bIgnore)
+                persistList.pushBack(pED);
+        } while(pED);
+    }
+    
+    // Restore EDs into the schedule if they were removed and need to persist.
+    if(persistList.count())
+    {
+        LockGuard<Spinlock> guard(m_ScheduleChangeLock);
+        for(List<ED*>::Iterator it = persistList.begin();
+            it != persistList.end();
+            it++)
         {
-            // We changed one or both lists, fix the hardware list state
-            if(bControlListChanged)
-            {
-                if(m_pCurrentControlQueueHead)
-                {
-                    size_t nHeadED = reinterpret_cast<uintptr_t>(m_pCurrentControlQueueHead) & 0xFFF;
-                    m_pBase->write32(m_pEDListPhys + nHeadED, OhciControlHeadED);
-                    m_pBase->write32(OhciCommandControlListFilled, OhciCommandStatus);
-                }
-                else
-                    m_pBase->write32(0, OhciControlHeadED);
-            }
-            if(bBulkListChanged)
-            {
-                if(m_pCurrentBulkQueueHead)
-                {
-                    size_t nHeadED = reinterpret_cast<uintptr_t>(m_pCurrentBulkQueueHead) & 0xFFF;
-                    m_pBase->write32(m_pEDListPhys + nHeadED, OhciBulkHeadED);
-                    m_pBase->write32(OhciCommandBulkListFilled, OhciCommandStatus);
-                }
-                else
-                    m_pBase->write32(0, OhciBulkHeadED);
-            }
+            m_FullSchedule.pushBack(*it);
+            it = persistList.erase(it);
         }
     }
-
-    // Clear the interrupt status now that we are done processing it.
-    m_pBase->write32(nStatus, OhciInterruptStatus);
 
 #ifdef X86_COMMON
     return true;
@@ -552,9 +599,35 @@ void Ohci::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid
 
     // This is the last TD so far
     pTD->bLast = true;
+    
+    // pTransaction will be 0x0xxx for CONTROL, 0x1xxx for BULK, 0x2xxx for PERIODIC.
+    size_t transactionType = (pTransaction & 0x3000) >> 12;
+    uintptr_t edOffset = pTransaction & 0xFFF;
+    
+    ED *pED = 0;
+    switch(transactionType)
+    {
+        case 0:
+            pED = &m_pControlEDList[edOffset];
+            break;
+        case 1:
+            pED = &m_pBulkEDList[edOffset];
+            break;
+        case 2:
+            pED = &m_pPeriodicEDList[edOffset];
+            break;
+        default:
+            break;
+    }
+    
+    if(!pED)
+    {
+        /// \todo Clean up!
+        ERROR("USB: OHCI: transaction " << pTransaction << " is invalid.");
+        return;
+    }
 
-    // Grab the transaction's ED and add our TD to it
-    ED *pED = &m_pEDList[pTransaction];
+    // Add our TD to the ED's queue.
     if(pED->pMetaData->pLastTD)
     {
         pED->pMetaData->pLastTD->pNext = PHYS_TD(nIndex) >> 4;
@@ -573,20 +646,39 @@ void Ohci::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid
 
 uintptr_t Ohci::createTransaction(UsbEndpoint endpointInfo)
 {
+    // Determine what kind of transaction this is.
+    bool bIsBulk = endpointInfo.nEndpoint > 0;
+
     // Atomic operation: find clear bit, set it
+    ED *pED = 0;
     size_t nIndex = 0;
     {
         LockGuard<Mutex> guard(m_Mutex);
-        nIndex = m_EDBitmap.getFirstClear();
+        
+        if(bIsBulk)
+            nIndex = m_BulkEDBitmap.getFirstClear();
+        else
+            nIndex = m_ControlEDBitmap.getFirstClear();
+        
         if(nIndex >= (0x1000 / sizeof(ED)))
         {
             ERROR("USB: OHCI: ED space full");
             return static_cast<uintptr_t>(-1);
         }
-        m_EDBitmap.set(nIndex);
+        
+        if(bIsBulk)
+        {
+            m_BulkEDBitmap.set(nIndex);
+            pED = &m_pBulkEDList[nIndex];
+            nIndex += 0x1000;
+        }
+        else
+        {
+            m_ControlEDBitmap.set(nIndex);
+            pED = &m_pControlEDList[nIndex];
+        }
     }
 
-    ED *pED = &m_pEDList[nIndex];
     memset(pED, 0, sizeof(ED));
 
     // Device address, endpoint and speed
@@ -597,15 +689,20 @@ uintptr_t Ohci::createTransaction(UsbEndpoint endpointInfo)
     // Maximum packet size
     pED->nMaxPacketSize = endpointInfo.nMaxPacketSize;
 
-    // Set sKip, will be unset when the ED gets inserted into the list
+    // Make sure this ED is ignored until it's properly queued.
     pED->bSkip = true;
 
     // Setup the metadata
     pED->pMetaData = new ED::MetaData;
-    memset(pED->pMetaData, 0, sizeof(ED::MetaData));
     pED->pMetaData->endpointInfo = endpointInfo;
     pED->pMetaData->id = nIndex;
-    pED->pMetaData->bIgnore = false;
+    pED->pMetaData->bIgnore = true; // Don't handle this ED until we're ready.
+    pED->pMetaData->edType = bIsBulk ? BulkList : ControlList;
+    pED->pMetaData->bPeriodic = false;
+    pED->pMetaData->pFirstTD = pED->pMetaData->pLastTD = 0;
+    pED->pMetaData->nTotalBytes = 0;
+    pED->pMetaData->pPrev = pED->pMetaData->pNext = 0;
+    pED->pMetaData->bLinked = false;
 
     // Complete
     return nIndex;
@@ -613,67 +710,147 @@ uintptr_t Ohci::createTransaction(UsbEndpoint endpointInfo)
 
 void Ohci::doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
+    // pTransaction will be 0x0xxx for CONTROL, 0x1xxx for BULK, 0x2xxx for PERIODIC.
+    size_t transactionType = (pTransaction & 0x3000) >> 12;
+    uintptr_t edOffset = pTransaction & 0xFFF;
+    
+    DEBUG_LOG("transaction: " << pTransaction << ", type is " << transactionType << " and offset is " << edOffset);
+    
+    Spinlock *pLock = 0;
+    
+    ED *pED = 0;
     {
         LockGuard<Mutex> guard(m_Mutex);
-        if((pTransaction == static_cast<uintptr_t>(-1)) || !m_EDBitmap.test(pTransaction))
+        
+        bool bValid = false;
+        if(transactionType == 0)
+            bValid = m_ControlEDBitmap.test(edOffset);
+        else if(transactionType == 1)
+            bValid = m_BulkEDBitmap.test(edOffset);
+        
+        if((pTransaction == static_cast<uintptr_t>(-1)) || !bValid)
         {
-            ERROR("OHCI: doAsync: didn't get a valid transaction id [" << pTransaction << "].");
+            ERROR("OHCI: doAsync: didn't get a valid transaction id [" << pTransaction << ", " << edOffset << "].");
+            return;
+        }
+        
+        if(transactionType == 0)
+        {
+            pED = &m_pControlEDList[edOffset];
+            pLock = &m_ControlListChangeLock;
+        }
+        else if(transactionType == 1)
+        {
+            pED = &m_pBulkEDList[edOffset];
+            pLock = &m_BulkListChangeLock;
+        }
+        else
+        {
+            ERROR("OHCI: doAsync: only control and bulk transactions supported");
             return;
         }
     }
     
-    /// \todo Stop the controller as we are modifying the queue.
+    // Stop the controller as we are modifying the queue.
+    stop(pED->pMetaData->edType);
 
-    // Atomic operation - modifying both the housekeeping and the
-    // hardware linked lists
-    LockGuard<Spinlock> guard2(m_QueueListChangeLock);
-
-    ED *pED = &m_pEDList[pTransaction];
+    // Set up all the metadata we can at the moment.
     pED->pMetaData->pCallback = pCallback;
     pED->pMetaData->pParam = pParam;
 
     bool bControl = !pED->pMetaData->endpointInfo.nEndpoint;
-
-    ED *pOldQueueHead = 0;
+    
+    // Add to the housekeeping schedule before we link in proper.
+    m_ScheduleChangeLock.acquire();
+    m_FullSchedule.pushBack(pED);
+    m_ScheduleChangeLock.release();
+    
+    // Lock while we modify the linked lists.
+    pLock->acquire();
+    
+    // Handle the case where there is not yet a queue head.
     if(bControl)
-        pOldQueueHead = m_pCurrentControlQueueHead;
-    else
-        pOldQueueHead = m_pCurrentBulkQueueHead;
-
-    // Link in to the asynchronous schedule
-    if(pOldQueueHead)
     {
-        // Current ED needs to point to the schedule's head
-        size_t nHeadED = reinterpret_cast<uintptr_t>(pOldQueueHead) & 0xFFF;
-        pED->pNext = (m_pEDListPhys + nHeadED) >> 5;
-
-        // Enter the information for correct dequeue
-        pED->pMetaData->pNext = pOldQueueHead;
-        pOldQueueHead->pMetaData->pPrev = pED;
+        if(!m_pControlQueueHead)
+            m_pControlQueueHead = pED;
     }
-
-    // Enable the ED by unsetting sKip
-    pED->bSkip = false;
-    // We are now linked
+    else
+    {
+        if(!m_pBulkQueueHead)
+            m_pBulkQueueHead = pED;
+    }
+    
+    // Grab the queue head.
+    ED *pQueueHead = 0;
+    physical_uintptr_t queueHeadPhys = 0;
+    if(bControl)
+    {
+        pQueueHead = m_pControlQueueHead;
+        queueHeadPhys = m_pControlEDListPhys;
+    }
+    else
+    {
+        pQueueHead = m_pBulkQueueHead;
+        queueHeadPhys = m_pBulkEDListPhys;
+    }
+    
+    // Always at the end of the ED queue. Zero means "no next ED" to OHCI.
+    pED->pNext = 0;
+    
+    // Grab the current tail of the list and update it to point to us.
+    ED *pTail = 0;
+    if(bControl)
+    {
+        pTail = m_pControlQueueTail;
+        m_pControlQueueTail = pED;
+    }
+    else
+    {
+        pTail = m_pBulkQueueTail;
+        m_pBulkQueueTail = pED;
+    }
+    
+    // Point the old tail to this ED.
+    if(pTail)
+    {
+        pTail->pNext = (queueHeadPhys + (edOffset * sizeof(ED))) >> 4;
+        pTail->pMetaData->pNext = pED;
+    }
+    
+    // Fix up the software linked list.
+    pED->pMetaData->pNext = pQueueHead;
+    pED->pMetaData->pPrev = pTail;
+    pQueueHead->pMetaData->pPrev = pED;
+    
+    // Enable handling of this ED now.
+    pED->bSkip = pED->pMetaData->bIgnore = false;
     pED->pMetaData->bLinked = true;
-
-    // Update the head pointer and the one in the HC
+    
+    // Can now unlock.
+    pLock->release();
+    
+    // Update the head of the relevant list.
     if(bControl)
-    {
-        m_pCurrentControlQueueHead = pED;
-        m_pBase->write32(m_pEDListPhys + pTransaction * sizeof(ED), OhciControlHeadED);
-        m_pBase->write32(OhciCommandControlListFilled, OhciCommandStatus);
-    }
+        m_pBase->write32(queueHeadPhys, OhciControlHeadED);
     else
-    {
-        m_pCurrentBulkQueueHead = pED;
-        m_pBase->write32(m_pEDListPhys + pTransaction * sizeof(ED), OhciBulkHeadED);
-        m_pBase->write32(OhciCommandBulkListFilled, OhciCommandStatus);
-    }
+        m_pBase->write32(queueHeadPhys, OhciBulkHeadED);
+    
+    // Tell the controller that the list has valid TD in it now.
+    // The OHCI will automatically stop processing the ED list if it determines
+    // no more transfers are pending.
+    uint32_t status = m_pBase->read32(OhciCommandStatus);
+    status |= bControl ? OhciCommandControlListFilled : OhciCommandBulkListFilled;
+    m_pBase->write32(status, OhciCommandStatus);
+    
+    // Restart the controller.
+    start(pED->pMetaData->edType);
 }
 
 void Ohci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
+    /// \todo write.
+    
+/*
     // Create a new transaction
     uintptr_t nTransaction = createTransaction(endpointInfo);
 
@@ -694,8 +871,9 @@ void Ohci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
     // Add the ED to the periodic queue
     LockGuard<Mutex> guard(m_Mutex);
     LockGuard<Spinlock> guard2(m_QueueListChangeLock); // Atomic operation
-    m_pCurrentPeriodicQueueTail->pNext = (m_pEDListPhys + nTransaction * sizeof(ED)) >> 4;
-    m_pCurrentPeriodicQueueTail = pED;
+    m_pPeriodicQueueTail->pNext = (m_pEDListPhys + nTransaction * sizeof(ED)) >> 4;
+    m_pPeriodicQueueTail = pED;
+*/
 }
 
 bool Ohci::portReset(uint8_t nPort, bool bErrorResponse)
@@ -740,3 +918,24 @@ uint64_t Ohci::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4
         deviceDisconnected(p1);
     return 0;
 }
+
+void Ohci::stop(Lists list)
+{
+    if(!m_pHcca)
+        return;
+
+    uint32_t control = m_pBase->read32(OhciControl);
+    control &= ~static_cast<int>(list);
+    m_pBase->write32(control, OhciControl);
+}
+
+void Ohci::start(Lists list)
+{
+    if(!m_pHcca)
+        return;
+
+    uint32_t control = m_pBase->read32(OhciControl);
+    control |= static_cast<int>(list);
+    m_pBase->write32(control, OhciControl);
+}
+

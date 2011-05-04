@@ -34,6 +34,17 @@ class Ohci : public UsbHub,
 #endif
     public RequestQueue
 {
+    private:
+    
+        /// Enumeration of lists that can be stopped or started.
+        enum Lists
+        {
+            PeriodicList    = 0x4,
+            IsochronousList = 0x8,
+            ControlList     = 0x10,
+            BulkList        = 0x20
+        };
+    
     public:
         Ohci(Device* pDev);
         ~Ohci();
@@ -123,6 +134,8 @@ class Ohci : public UsbHub,
 
                 bool bLinked;
                 
+                Lists edType;
+                
                 size_t id;
             } *pMetaData;
         } PACKED ALIGN(16);
@@ -163,6 +176,11 @@ class Ohci : public UsbHub,
                                         uint64_t p6 = 0, uint64_t p7 = 0, uint64_t p8 = 0);
 
     private:
+        /// Stops the controller from processing the given list.
+        void stop(Lists list);
+        
+        /// Starts processing of the given list.
+        void start(Lists list);
 
         enum OhciConstants {
             OhciVersion         = 0x00,
@@ -185,7 +203,7 @@ class Ohci : public UsbHub,
             
             OhciControlInterruptRoute = 0x100,
             OhciControlStateRunning = 0x80,     // HostControllerFunctionalState bits for USBOPERATIONAL
-            OhciControlListsEnable  = 0x34,     // PeriodicListEnable, ControlListEnable and BulkListEnable bits
+            OhciControlListsEnable  = 0x30, // 0x34     // PeriodicListEnable, ControlListEnable and BulkListEnable bits
 
             OhciCommandRequestOwnership = 0x08, // Requests ownership change
             OhciCommandBulkListFilled   = 0x04, // BulkListFilled bit
@@ -209,30 +227,57 @@ class Ohci : public UsbHub,
 
         uint8_t m_nPorts;
 
+        /// Global lock.
         Mutex m_Mutex;
-
-        Spinlock m_QueueListChangeLock;
 
         Hcca *m_pHcca;
         uintptr_t m_pHccaPhys;
+        
+        /// Lock for modifying the schedule list itself (m_FullSchedule)
+        Spinlock m_ScheduleChangeLock;
 
-        ED *m_pEDList;
-        uintptr_t m_pEDListPhys;
-        ExtensibleBitmap m_EDBitmap;
+        ED *m_pPeriodicEDList;
+        uintptr_t m_pPeriodicEDListPhys;
+        ExtensibleBitmap m_PeriodicEDBitmap;
+        
+        /// Lock for changing the periodic list.
+        Spinlock m_PeriodicListChangeLock;
+
+        ED *m_pControlEDList;
+        uintptr_t m_pControlEDListPhys;
+        ExtensibleBitmap m_ControlEDBitmap;
+        
+        /// Lock for changing the control list.
+        Spinlock m_ControlListChangeLock;
+        
+        ED *m_pBulkEDList;
+        uintptr_t m_pBulkEDListPhys;
+        ExtensibleBitmap m_BulkEDBitmap;
+        
+        /// Lock for changing the bulk list.
+        Spinlock m_BulkListChangeLock;
 
         TD *m_pTDList;
         uintptr_t m_pTDListPhys;
         ExtensibleBitmap m_TDBitmap;
 
-        // Pointer to the current bulk and control queue heads (can be null)
-        ED *m_pCurrentBulkQueueHead;
-        ED *m_pCurrentControlQueueHead;
+        // Pointers to the current bulk and control queue heads (can be null)
+        ED *m_pBulkQueueHead;
+        ED *m_pControlQueueHead;
+        
+        // Pointers to the current bulk and control queue tails
+        ED *m_pBulkQueueTail;
+        ED *m_pControlQueueTail;
 
         // Pointer to the current periodic queue tail
-        ED *m_pCurrentPeriodicQueueTail;
+        ED *m_pPeriodicQueueTail;
         
         /// Dequeue list lock.
         Spinlock m_DequeueListLock;
+        
+        /// List of ED pointers in both the control and bulk queues. Used for
+        /// IRQ handling.
+        List<ED*> m_FullSchedule;
         
         /// List of EDs ready for dequeue
         List<ED*> m_DequeueList;
