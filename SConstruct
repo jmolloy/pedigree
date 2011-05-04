@@ -83,6 +83,8 @@ opts.AddVariables(
     BoolVariable('apic', 'If 1, APIC support will be built in (not to be confused with ACPI).', 0),
     BoolVariable('acpi', 'If 1, ACPI support will be built in (not to be confused with APIC).', 0),
     BoolVariable('smp', 'If 1, SMP support will be built in.', 0),
+    
+    BoolVariable('nogfx', 'If 1, the standard 80x25 text mode will be used. Will not load userspace if set to 1.', 0),
 
     # ARM options
     BoolVariable('arm_integrator', 'Target the Integrator/CP development board', 0),
@@ -300,7 +302,7 @@ if env['memory_log']:
 if env['memory_log_inline']:
     defines += ['MEMORY_LOG_INLINE']
     
-additionalDefines = ['installer', 'debugger', 'cripple_hdd', 'enable_ctrlc', 'multiple_consoles', 'multiprocessor', 'smp', 'apic', 'acpi', 'debug_logging', 'usb_verbose_debug']
+additionalDefines = ['installer', 'debugger', 'cripple_hdd', 'enable_ctrlc', 'multiple_consoles', 'multiprocessor', 'smp', 'apic', 'acpi', 'debug_logging', 'usb_verbose_debug', 'nogfx']
 for i in additionalDefines:
     if(env[i] and not i in defines):
         defines += [i.upper()]
