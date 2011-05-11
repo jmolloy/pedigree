@@ -26,7 +26,7 @@ generic_linkflags = '-nostdlib -nostdinc -nostartfiles'
 generic_defines = [
     'DEBUGGER_QWERTY',          # Enable the QWERTY keymap
     #'SMBIOS',                  # Enable SMBIOS
-    'SERIAL_IS_FILE',           # Don't treat the serial port like a VT100 terminal
+    #'SERIAL_IS_FILE',           # Don't treat the serial port like a VT100 terminal
     #'DONT_LOG_TO_SERIAL',      # Do not put the kernel's log over the serial port, (qemu -serial file:serial.txt or /dev/pts/0 or stdio on linux)
                                 # TODO: Should be a proper option... I'll do that soon. -Matt
     'ADDITIONAL_CHECKS',
