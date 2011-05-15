@@ -43,9 +43,62 @@ inline void *memset_nonzero(void *buf, int c, size_t n)
     // check for bad usage of memcpy
     if(!n) return buf;
 
+    c &= 0xFF;
+
     size_t unused;
-    // see if it's even worth aligning
-    asm volatile("rep stosb;":"=c"(unused):"D"(p), "c"(n), "a"(c));
+    if(n == 1)
+    {
+        *p = c;
+        return buf;
+    }
+
+    while(n)
+    {
+#ifdef BITS_64
+        if((n % 8) == 0)
+        {
+            uint64_t word = (c << 56) | (c << 48) | (c << 40) | (c << 32) | (c << 24) | (c << 16) | (c << 8) | c;
+            asm volatile("rep stosq" : "=c" (unused) : "D" (p), "c" (n / 8), "D" (word));
+            n = 0;
+        }
+        else
+#endif
+        if((n % 4) == 0)
+        {
+            uint32_t word = (c << 24) | (c << 16) | (c << 8) | c;
+            asm volatile("rep stosl" : "=c" (unused) : "D" (p), "c" (n / 4), "a" (word));
+            n = 0;
+        }
+        else if((n % 2) == 0)
+        {
+            uint16_t word = (c << 8) | c;
+            asm volatile("rep stosw" : "=c" (unused) : "D" (p), "c" (n / 2), "a" (word));
+            n = 0;
+        }
+        else
+        {
+            // Set until n is aligned in a friendly way.
+            size_t nBytes = n;
+            size_t q = n % 8, d = n % 4, w = n % 2;
+            if(n > 8)
+            {
+#ifdef BITS_64
+                if((q < d) && (q < w))
+                    nBytes = q;
+                else
+#endif
+                if(d < w)
+                    nBytes = d;
+                else if(w < d)
+                    nBytes = w;
+            }
+
+            asm volatile("rep stosb;":"=c"(unused):"D"(p), "c"(nBytes), "a"(c));
+            n -= nBytes;
+            p += nBytes;
+        }
+    }
+
     return buf;
 }
 
