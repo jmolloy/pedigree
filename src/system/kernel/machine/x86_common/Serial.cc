@@ -32,7 +32,7 @@ void X86Serial::setBase(uintptr_t nBaseAddr)
 
   m_Port.write8(0x00, serial::inten); // Disable all interrupts
   m_Port.write8(0x80, serial::lctrl); // Enable DLAB (set baud rate divisor)
-  m_Port.write8(0x13, serial::rxtx);  // Set divisor to 3 (lo byte) 115200 baud
+  m_Port.write8(0x01, serial::rxtx);  // Set divisor to 3 (lo byte) 115200 baud
   m_Port.write8(0x00, serial::inten); //                  (hi byte)
   m_Port.write8(0x03, serial::lctrl); // 8 bits, no parity, one stop bit
   m_Port.write8(0xC7, serial::iififo);// Enable FIFO, clear them, with 14-byte threshold
