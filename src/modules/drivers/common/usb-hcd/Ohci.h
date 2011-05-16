@@ -166,8 +166,6 @@ class Ohci : public UsbHub,
         virtual void interrupt(size_t number, InterruptState &state);
 #endif
 
-        void doDequeue();
-
         virtual bool portReset(uint8_t nPort, bool bErrorResponse = false);
 
     protected:
@@ -181,6 +179,48 @@ class Ohci : public UsbHub,
         
         /// Starts processing of the given list.
         void start(Lists list);
+        
+        /// Prepares an ED to be reclaimed.
+        void removeED(ED *pED);
+        
+        /// Converts a software ED pointer to a physical address.
+        inline physical_uintptr_t vtp_ed(ED *pED)
+        {
+            if(!pED || !pED->pMetaData)
+                return 0;
+            
+            size_t id = pED->pMetaData->id & 0xFFF;
+            Lists type = pED->pMetaData->edType;
+            switch(type)
+            {
+                case ControlList:
+                    return m_pControlEDListPhys + (id * sizeof(ED));
+                case BulkList:
+                    return m_pBulkEDListPhys + (id * sizeof(ED));
+                default:
+                    return 0;
+            }
+        }
+        
+        /// Converts a physical address to an ED pointer. Maybe.
+        inline ED *ptv_ed(physical_uintptr_t phys)
+        {
+            if(!phys)
+                return 0;
+            
+            // Figure out which list the ED was in.
+            /// \todo defines for the list sizes so changing one doesn't involve rewriting heaps of code
+            if((m_pControlEDListPhys <= phys) && (phys < (m_pControlEDListPhys + 0x1000)))
+            {
+                return &m_pControlEDList[phys & 0xFFF];
+            }
+            else if((m_pBulkEDListPhys <= phys) && (phys < (m_pBulkEDListPhys + 0x1000)))
+            {
+                return &m_pBulkEDList[phys & 0xFFF];
+            }
+            else
+                return 0;
+        }
 
         enum OhciConstants {
             OhciVersion         = 0x00,
@@ -212,7 +252,9 @@ class Ohci : public UsbHub,
 
             OhciInterruptMIE        = 0x80000000,   // MasterInterruptEnable bit
             OhciInterruptRhStsChange= 0x40,         // RootHubStatusChange bit
+            OhciInterruptUnrecoverableError = 0x10,
             OhciInterruptWbDoneHead = 0x02,         // WritebackDoneHead bit
+            OhciInterruptStartOfFrame = 0x04,         // StartOfFrame interrupt
 
             OhciRhPortStsResCh      = 0x100000, // PortResetStatusChange bit
             OhciRhPortStsConnStsCh  = 0x10000,  // ConnectStatusChange bit
@@ -279,7 +321,7 @@ class Ohci : public UsbHub,
         /// IRQ handling.
         List<ED*> m_FullSchedule;
         
-        /// List of EDs ready for dequeue
+        /// List of EDs ready for dequeue (reclaiming)
         List<ED*> m_DequeueList;
         
         /// Semaphore for the dequeue list
