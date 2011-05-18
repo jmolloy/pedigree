@@ -75,6 +75,7 @@ opts.AddVariables(
     BoolVariable('pacman', 'If 1, you are managing your images/local directory with pacman and want that instead of the images/<arch> directory.', 0),
     
     BoolVariable('serial_is_file', 'If 1, the serial port is connected to a file (ie, an emulated serial port). If zero, the serial port is connected to a VT100-compatible terminal.', 1),
+    BoolVariable('ipv4_forwarding', 'If 1, enable IPv4 forwarding.', '0'),
     
     BoolVariable('enable_ctrlc', 'If 1, the ability to use CTRL-C to kill running tasks is enabled.', 1),
     BoolVariable('multiple_consoles', 'If 1, the TUI is built with the ability to create and move between multiple virtual consoles.', 1),
@@ -304,7 +305,9 @@ if env['memory_log']:
 if env['memory_log_inline']:
     defines += ['MEMORY_LOG_INLINE']
     
-additionalDefines = ['serial_is_file', 'installer', 'debugger', 'cripple_hdd', 'enable_ctrlc', 'multiple_consoles', 'multiprocessor', 'smp', 'apic', 'acpi', 'debug_logging', 'usb_verbose_debug', 'nogfx']
+additionalDefines = ['ipv4_forwarding', 'serial_is_file', 'installer', 'debugger', 'cripple_hdd', 'enable_ctrlc',
+                     'multiple_consoles', 'multiprocessor', 'smp', 'apic', 'acpi', 'debug_logging', 'usb_verbose_debug',
+                     'nogfx']
 for i in additionalDefines:
     if(env[i] and not i in defines):
         defines += [i.upper()]

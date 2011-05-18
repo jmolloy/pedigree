@@ -23,7 +23,7 @@
 
 #include "Filter.h"
 
-// #undef DEBUG_ICMP
+// #define DEBUG_ICMP
 
 Icmp Icmp::icmpInstance;
 
