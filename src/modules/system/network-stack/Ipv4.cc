@@ -229,7 +229,7 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         Ethernet::instance().getMacFromPacket(packet, &e);
         Arp::instance().insertToCache(from, e);
     }
-    
+
 #ifdef IPV4_FORWARDING
     // Is the incoming IP address unicast, and not ours?
     if(to.isUnicast() && (to != me.ipv4) && (me.ipv4.getIp() != 0) && (to != me.broadcast))
@@ -237,7 +237,17 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         // Not for us!
         MacAddress e;
         DEBUG_LOG("IPv4: forwarding packet from " << from.toString() << " to " << to.toString());
-        bool macValid = Arp::instance().getFromCache(to, true, &e, pCard);
+
+        IpAddress realDest;
+        pCard = RoutingTable::instance().DetermineRoute(&realDest);
+        if(!pCard)
+        {
+            DEBUG_LOG("IPv4: no route to forwarding destination " << to.toString());
+            pCard->droppedPacket();
+            return;
+        }
+
+        bool macValid = Arp::instance().getFromCache(realDest, true, &e, pCard);
         if(macValid)
             Ethernet::send(nBytes - Ethernet::instance().ethHeaderSize(), packet + Ethernet::instance().ethHeaderSize(), pCard, e, to.getType());
         else
