@@ -355,7 +355,7 @@ static void init()
     g_pFramebuffer->rect(0, 0, g_Width, g_Height, g_BackgroundColour, g_ColorFormat);
 
     // Create the logo buffer
-    char *data = header_data;
+    uint8_t *data = header_data;
     g_pBuffer = new uint8_t[width * height * 3]; // 24-bit, hardcoded...
     for (size_t i = 0; i < (width*height); i++)
         HEADER_PIXEL(data, &g_pBuffer[i * 3]); // 24-bit, hardcoded
