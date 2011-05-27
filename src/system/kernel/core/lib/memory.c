@@ -32,6 +32,9 @@
 // Set to 1 to allow SSE to be used.
 #define USE_SSE             0
 
+#define USE_SSE_MEMCPY      1
+#define USE_SSE_MEMSET      1
+
 #ifdef X86_COMMON
 inline void *memset_nonzero(void *buf, int c, size_t n)
 {
@@ -40,15 +43,68 @@ inline void *memset_nonzero(void *buf, int c, size_t n)
     // check for bad usage of memcpy
     if(!n) return buf;
 
+    c &= 0xFF;
+
     size_t unused;
-    // see if it's even worth aligning
-    asm volatile("rep stosb;":"=c"(unused):"D"(p), "c"(n), "a"(c));
+    if(n == 1)
+    {
+        *p = c;
+        return buf;
+    }
+
+    while(n)
+    {
+#ifdef BITS_64
+        if((n % 8) == 0)
+        {
+            uint64_t word = (c << 56) | (c << 48) | (c << 40) | (c << 32) | (c << 24) | (c << 16) | (c << 8) | c;
+            asm volatile("rep stosq" : "=c" (unused) : "D" (p), "c" (n / 8), "D" (word));
+            n = 0;
+        }
+        else
+#endif
+        if((n % 4) == 0)
+        {
+            uint32_t word = (c << 24) | (c << 16) | (c << 8) | c;
+            asm volatile("rep stosl" : "=c" (unused) : "D" (p), "c" (n / 4), "a" (word));
+            n = 0;
+        }
+        else if((n % 2) == 0)
+        {
+            uint16_t word = (c << 8) | c;
+            asm volatile("rep stosw" : "=c" (unused) : "D" (p), "c" (n / 2), "a" (word));
+            n = 0;
+        }
+        else
+        {
+            // Set until n is aligned in a friendly way.
+            size_t nBytes = n;
+            size_t q = n % 8, d = n % 4, w = n % 2;
+            if(n > 8)
+            {
+#ifdef BITS_64
+                if((q < d) && (q < w))
+                    nBytes = q;
+                else
+#endif
+                if(d < w)
+                    nBytes = d;
+                else if(w < d)
+                    nBytes = w;
+            }
+
+            asm volatile("rep stosb;":"=c"(unused):"D"(p), "c"(nBytes), "a"(c));
+            n -= nBytes;
+            p += nBytes;
+        }
+    }
+
     return buf;
 }
 
 void *memset(void *buf, int c, size_t n)
 {
-#if USE_SSE
+#if USE_SSE && USE_SSE_MEMSET
     if(c)
         return memset_nonzero(buf, c, n);
     else
@@ -113,7 +169,7 @@ void *memset(void *buf, int c, size_t len)
 #ifdef X86_COMMON
 void *wmemset(void *buf, int c, size_t n)
 {
-#if USE_SSE
+#if USE_SSE && USE_SSE_MEMSET
     // Use SSE if it would give us an advantage here.
     if((!c) && ((n << 1) >= SSE_ALIGN_SIZE))
       return memset(buf, (char) c, n << 1);
@@ -144,7 +200,7 @@ void *wmemset(void *buf, int c, size_t len)
 #ifdef X86_COMMON
 void *dmemset(void *buf, unsigned int c, size_t n)
 {
-#if USE_SSE
+#if USE_SSE && USE_SSE_MEMSET
     // Use SSE if it would give us an advantage here.
     if((!c) && ((n << 2) >= SSE_ALIGN_SIZE))
       return memset(buf, (char) c, n << 2);
@@ -176,7 +232,7 @@ void *qmemset(void *buf, unsigned long long c, size_t len)
 {
 #ifdef X86_COMMON
 
-#if USE_SSE
+#if USE_SSE && USE_SSE_MEMSET
   // Use SSE if it would give us an advantage here.
   if((!c) && ((len << 3) >= SSE_ALIGN_SIZE))
     return memset(buf, (char) c, len << 3);
@@ -197,7 +253,7 @@ void *qmemset(void *buf, unsigned long long c, size_t len)
 
 #ifdef X86_COMMON
 
-#ifdef USE_SSE
+#if USE_SSE && USE_SSE_MEMCPY
 inline void *sse2_aligned_memcpy(void *restrict s1, const void *restrict s2, const size_t n)
 {
     uintptr_t p1 = (uintptr_t) s1;
@@ -248,7 +304,7 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
     // Check for bad usage of memcpy
     if(!n) return s1;
     
-#if USE_SSE
+#if USE_SSE && USE_SSE_MEMCPY
 
     uintptr_t unused = 0;
 

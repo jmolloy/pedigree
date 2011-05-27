@@ -155,7 +155,11 @@ static void init()
     // Is there a root disk mounted?
     if(VFS::instance().find(String("root»/.pedigree-root")) == 0)
     {
+#ifndef NOGFX
         FATAL("No root disk (missing .pedigree-root?)");
+#else
+        WARNING("No root disk, but nogfx builds don't need one.");
+#endif
     }
 
     // Fill out the device hash table
@@ -255,6 +259,9 @@ static void init()
     Log::instance().installCallback(logger);
 #endif
 
+#ifdef NOGFX
+    WARNING("-- System booted - no userspace supported in nogfx builds yet. --");
+#else
     str += "Loading init program (root»/applications/TUI)\n";
     bootIO.write(str, BootIO::White, BootIO::Black);
     str.clear();
@@ -279,15 +286,16 @@ static void init()
 
     PosixSubsystem *pSubsystem = new PosixSubsystem;
     pProcess->setSubsystem(pSubsystem);
-    
+
     new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(&init_stage2), 0x0 /* parameter */);
 
     lock.release();
-    
+
     // Wait for the program to load
     g_InitProgramLoaded.acquire();
 #else
     #warning the init module is almost useless without threads.
+#endif
 #endif
 }
 static void destroy()
@@ -343,9 +351,10 @@ void init_stage2()
 #if 0
     system_reset();
 #else
+
     // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
-    new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
-    
+    new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-16) /* Stack */);
+
     g_InitProgramLoaded.release();
 #endif
 }

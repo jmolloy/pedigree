@@ -20,6 +20,8 @@
 #include <network-stack/UdpManager.h>
 #include <network-stack/ConnectionlessEndpoint.h>
 
+#include <network-stack/Ndp.h>
+
 #include <processor/Processor.h>
 #include <ServiceManager.h>
 
@@ -454,7 +456,6 @@ bool dhcpClient(Network *pCard)
             while((byteOffset + sizeof(cookie) + (sizeof(DhcpPacket) - MAX_OPTIONS_SIZE)) < sizeof(DhcpPacket))
             {
                 opt = reinterpret_cast<DhcpOption*>(incoming->options + byteOffset + sizeof(cookie));
-                DEBUG_LOG("DHCP ACK opt=" << Dec << opt->code << Hex << "/" << opt->code << ".");
 
                 if(opt->code == DHCP_MSGEND)
                     break;

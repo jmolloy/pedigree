@@ -74,6 +74,9 @@ opts.AddVariables(
     
     BoolVariable('pacman', 'If 1, you are managing your images/local directory with pacman and want that instead of the images/<arch> directory.', 0),
     
+    BoolVariable('serial_is_file', 'If 1, the serial port is connected to a file (ie, an emulated serial port). If zero, the serial port is connected to a VT100-compatible terminal.', 1),
+    BoolVariable('ipv4_forwarding', 'If 1, enable IPv4 forwarding.', '0'),
+    
     BoolVariable('enable_ctrlc', 'If 1, the ability to use CTRL-C to kill running tasks is enabled.', 1),
     BoolVariable('multiple_consoles', 'If 1, the TUI is built with the ability to create and move between multiple virtual consoles.', 1),
     BoolVariable('memory_log', 'If 1, memory logging on the second serial line is enabled.', 1),
@@ -83,6 +86,8 @@ opts.AddVariables(
     BoolVariable('apic', 'If 1, APIC support will be built in (not to be confused with ACPI).', 0),
     BoolVariable('acpi', 'If 1, ACPI support will be built in (not to be confused with APIC).', 0),
     BoolVariable('smp', 'If 1, SMP support will be built in.', 0),
+    
+    BoolVariable('nogfx', 'If 1, the standard 80x25 text mode will be used. Will not load userspace if set to 1.', 0),
 
     # ARM options
     BoolVariable('arm_integrator', 'Target the Integrator/CP development board', 0),
@@ -300,7 +305,9 @@ if env['memory_log']:
 if env['memory_log_inline']:
     defines += ['MEMORY_LOG_INLINE']
     
-additionalDefines = ['installer', 'debugger', 'cripple_hdd', 'enable_ctrlc', 'multiple_consoles', 'multiprocessor', 'smp', 'apic', 'acpi', 'debug_logging', 'usb_verbose_debug']
+additionalDefines = ['ipv4_forwarding', 'serial_is_file', 'installer', 'debugger', 'cripple_hdd', 'enable_ctrlc',
+                     'multiple_consoles', 'multiprocessor', 'smp', 'apic', 'acpi', 'debug_logging', 'usb_verbose_debug',
+                     'nogfx']
 for i in additionalDefines:
     if(env[i] and not i in defines):
         defines += [i.upper()]

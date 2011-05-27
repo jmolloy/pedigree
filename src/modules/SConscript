@@ -187,6 +187,7 @@ custom_incpath = {
     'status_server' : ['#/src/system/kernel'],
     'TUI'           : ['#/src/system/kernel'],
     'init'          : ['#/src/system/kernel', '#/src'],
+    'splash'        : ['#/src/system/kernel'], # For nogfx
     'linker'        : ['#/src/modules/system/linker'],
     'usb-glue'      : ['#/src/system/kernel/machine/arm_beagle'] # TODO: handle other machine types
 }

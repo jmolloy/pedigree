@@ -27,10 +27,16 @@
 #include <graphics/Graphics.h>
 #include <graphics/GraphicsService.h>
 
+#include <core/BootIO.h> // In src/system/kernel
+
 #include "image.h"
 #include "font.h"
 
 Framebuffer *g_pFramebuffer = 0;
+
+#ifdef NOGFX
+extern BootIO bootIO;
+#endif
 
 static uint8_t *g_pBuffer = 0;
 static Graphics::Buffer *g_pFont = 0;
@@ -118,8 +124,24 @@ void printChar(char c)
 
 void printString(const char *str)
 {
+#ifndef NOGFX
     for(size_t i = 0; i < strlen(str); i++)
         printChar(str[i]);
+#else
+    static HugeStaticString s;
+    s += str;
+    
+    BootIO::Colour c = BootIO::LightGrey;
+    if(str[1] == 'W')
+        c = BootIO::Orange;
+    else if(str[1] == 'E' || str[1] == 'F')
+        c = BootIO::Red;
+    else if(str[1] == 'D')
+        c = BootIO::DarkGrey;
+        
+    bootIO.write(s, c, BootIO::Black);
+    s.clear();
+#endif
 }
 
 void printStringAt(const char *str, size_t x, size_t y)
@@ -156,6 +178,7 @@ class StreamingScreenLogger : public Log::LogCallback
 
 static StreamingScreenLogger g_StreamLogger;
 
+#ifndef NOGFX
 void keyCallback(InputManager::InputNotification &note)
 {
     if(note.type != InputManager::Key)
@@ -177,6 +200,7 @@ void keyCallback(InputManager::InputNotification &note)
         g_LogH = g_Height;
     }
 }
+#endif
 
 void progress(const char *text)
 {
@@ -190,13 +214,18 @@ void progress(const char *text)
     if((g_BootProgressCurrent + 1) >= g_BootProgressTotal)
     {
         Log::instance().removeCallback(&g_StreamLogger);
+        
+#ifndef NOGFX
         InputManager::instance().removeCallback(keyCallback);
+#endif
 
         bFinished = true;
     }
 
     if(g_LogMode)
         return;
+        
+#ifndef NOGFX
 
     size_t w = (g_ProgressW * g_BootProgressCurrent) / g_BootProgressTotal;
     if(g_Previous <= g_BootProgressCurrent)
@@ -213,6 +242,8 @@ void progress(const char *text)
         Graphics::destroyFramebuffer(g_pFramebuffer);
         g_pFramebuffer = 0;
     }
+
+#endif
 }
 
 static void getColor(const char *colorName, uint32_t &color)
@@ -275,6 +306,13 @@ static void getDesiredMode(size_t &width, size_t &height, size_t &bpp)
 
 static void init()
 {
+#ifdef NOGFX
+
+    Log::instance().installCallback(&g_StreamLogger, true);
+
+    g_BootProgressUpdate = &progress;
+
+#else
     getColor("splash-background", g_BackgroundColour);
     getColor("splash-foreground", g_ForegroundColour);
     getColor("border", g_ProgressBorderColour);
@@ -429,6 +467,7 @@ static void init()
 
     g_BootProgressUpdate = &progress;
     InputManager::instance().installCallback(InputManager::Key, keyCallback);
+#endif    
 }
 
 static void destroy()
