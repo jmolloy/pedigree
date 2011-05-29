@@ -213,36 +213,40 @@ static void init()
                     pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(card), sizeof(*card));
         }
 
-        info = card->getStationInfo();
+        StationInfo newInfo = card->getStationInfo();
+
+        // List IPv6 addresses
+        for(size_t i = 0; i < info.nIpv6Addresses; i++)
+            NOTICE("Interface " << i << " has IPv6 address " << info.ipv6[i].toString() << " (" << Dec << i << Hex << " out of " << info.nIpv6Addresses << ")");
 
         // If the device has a gateway, set it as the default and continue
-        if (info.gateway != empty)
+        if (newInfo.gateway != empty)
         {
             if(!pDefaultCard)
                 pDefaultCard = card;
 
             // Additionally route the complement of its subnet to the gateway
             RoutingTable::instance().Add(RoutingTable::DestSubnetComplement,
-                                         info.ipv4,
-                                         info.subnetMask,
-                                         info.gateway,
+                                         newInfo.ipv4,
+                                         newInfo.subnetMask,
+                                         newInfo.gateway,
                                          String(""),
                                          card);
 
             // And the actual subnet that the card is on needs to route to... the card.
             RoutingTable::instance().Add(RoutingTable::DestSubnet,
-                                         info.ipv4,
-                                         info.subnetMask,
+                                         newInfo.ipv4,
+                                         newInfo.subnetMask,
                                          empty,
                                          String(""),
                                          card);
         }
 
         // If this isn't already the loopback device, redirect our own IP to 127.0.0.1
-        if(info.ipv4.getIp() != Network::convertToIpv4(127, 0, 0, 1))
-            RoutingTable::instance().Add(RoutingTable::DestIpSub, info.ipv4, Network::convertToIpv4(127, 0, 0, 1), String(""), NetworkStack::instance().getLoopback());
+        if(newInfo.ipv4.getIp() != Network::convertToIpv4(127, 0, 0, 1))
+            RoutingTable::instance().Add(RoutingTable::DestIpSub, newInfo.ipv4, Network::convertToIpv4(127, 0, 0, 1), String(""), NetworkStack::instance().getLoopback());
         else
-            RoutingTable::instance().Add(RoutingTable::DestIp, info.ipv4, empty, String(""), card);
+            RoutingTable::instance().Add(RoutingTable::DestIp, newInfo.ipv4, empty, String(""), card);
     }
 
     // Otherwise, just assume the default is interface zero
