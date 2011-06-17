@@ -160,24 +160,29 @@ if env['CC_NOCACHE'] == '':
 
 # Set the compilers if CROSS is not an empty string
 if env['CROSS'] != '':
-    crossBase = env['CROSS']
+    cross = os.path.split(env['CROSS'])
+    crossPath = cross[0]
+    crossTuple = cross[1]
+
+    env['ENV']['PATH'] += ':' + crossPath
+
     prefix = ''
     if env['ccache']:
         prefix = 'ccache '
     if env['distcc']:
         prefix = 'distcc ' + prefix
-    env['CC'] = prefix + crossBase + 'gcc'
-    env['CC_NOCACHE'] = crossBase + 'gcc'
-    env['CXX'] = prefix + crossBase + 'g++'
+    env['CC'] = prefix + crossTuple + 'gcc'
+    env['CC_NOCACHE'] = crossTuple + 'gcc'
+    env['CXX'] = prefix + crossTuple + 'g++'
     
     # AS will be setup soon
     env['AS'] = ''
 
     # AR and LD never have the prefix added. They must run on the host.
-    env['AR'] = crossBase + 'ar'
-    env['RANLIB'] = crossBase + 'ranlib'
-    env['LD'] = crossBase + 'gcc'
-    env['OBJCOPY'] = crossBase + 'objcopy'
+    env['AR'] = crossTuple + 'ar'
+    env['RANLIB'] = crossTuple + 'ranlib'
+    env['LD'] = crossTuple + 'gcc'
+    env['OBJCOPY'] = crossTuple + 'objcopy'
     env['LINK'] = env['LD']
 env['LD'] = env['LINK']
 
@@ -269,7 +274,7 @@ if(env['pacman']):
 if(env['AS'] == ''):
     # NASM is used for X86 and X64 builds
     if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
-        crossPath = os.path.dirname(env['CC'])
+        crossPath = os.path.dirname(env['CROSS'])
         env['AS'] = crossPath + "/nasm"
     else:
         if(env['CROSS'] == ''):
