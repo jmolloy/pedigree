@@ -4,7 +4,7 @@
 
 # Generic entry-level flags (that everyone should have)
 generic_cflags = '-std=gnu99 -fno-builtin -nostdinc -nostdlib -ffreestanding -g0 -O3 '
-generic_cxxflags = generic_cflags.replace('-std=gnu99', '-std=c++0x') + ' -fno-exceptions '
+generic_cxxflags = generic_cflags.replace('-std=gnu99', '-std=c++98') + ' -fno-exceptions ' # c++0x
 
 # Warning flags (that force us to write betterish code)
 warning_flags = ' -Wfatal-errors -Wall -Wextra -Wpointer-arith -Wcast-align -Wwrite-strings -Wno-long-long -Wno-variadic-macros '
