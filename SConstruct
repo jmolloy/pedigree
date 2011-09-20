@@ -71,6 +71,7 @@ opts.AddVariables(
     BoolVariable('haveqemuimg', 'Whether or not `qemu-img` is available (for VDI/VMDK creation).', 0),
     BoolVariable('createvdi', 'Convert the created hard disk image to a VDI file for VirtualBox after it is created.', 0),
     BoolVariable('createvmdk', 'Convert the created hard disk image to a VMDK file for VMware after it is created.', 0),
+    ('isoprog', 'Program to use to generate ISO images. The default of `mkisofs\' should be fine for most.', 'mkisofs'),
     
     BoolVariable('pacman', 'If 1, you are managing your images/local directory with pacman and want that instead of the images/<arch> directory.', 0),
     
@@ -195,6 +196,15 @@ if env['haveqemuimg']:
     p = commands.getoutput("which qemu-img")
     if not os.path.exists(p):
         env['haveqemuimg'] = False
+
+# Verify the ISO program
+p = commands.getoutput("which " + env['isoprog'])
+if not os.path.exists(p):
+    print "ISO generation program does not exist - is mkisofs installed? Perhaps you need to add isoprog=genisoimage to the build command line."
+
+    # I'd prefer that this wasn't fatal, but it's REALLY important to get the attention
+    # of the person building Pedigree - it's easiest to test using an ISO after all.
+    exit(1)
 
 tmp = re.match('(.*?)\-.*', os.path.basename(env['CROSS']), re.S)
 if(tmp != None):
