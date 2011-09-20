@@ -21,7 +21,7 @@ import getpass
 import SCons
 from socket import gethostname
 from datetime import *
-    
+
 # Grab all the default flags for each architecture
 sys.path += ['./scripts']
 from defaultFlags import *
@@ -73,7 +73,7 @@ opts.AddVariables(
     BoolVariable('createvmdk', 'Convert the created hard disk image to a VMDK file for VMware after it is created.', 0),
     ('isoprog', 'Program to use to generate ISO images. The default of `mkisofs\' should be fine for most.', 'mkisofs'),
     
-    BoolVariable('pacman', 'If 1, you are managing your images/local directory with pacman and want that instead of the images/<arch> directory.', 0),
+    BoolVariable('pup', 'If 1, you are managing your images/local directory with the Pedigree UPdater (pup) and want that instead of the images/<arch> directory.', 1),
     
     BoolVariable('serial_is_file', 'If 1, the serial port is connected to a file (ie, an emulated serial port). If zero, the serial port is connected to a VT100-compatible terminal.', 1),
     BoolVariable('ipv4_forwarding', 'If 1, enable IPv4 forwarding.', '0'),
@@ -277,7 +277,7 @@ if(tmp == None or env['ARCH_TARGET'] == ''):
     print "Unsupported target - have you used scripts/checkBuildSystem.pl to build a cross-compiler?"
     Exit(1)
 
-if(env['pacman']):
+if(env['pup']):
     env['PEDIGREE_IMAGES_DIR'] = '#images/local/'
     
 # Configure the assembler
