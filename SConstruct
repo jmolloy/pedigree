@@ -167,10 +167,10 @@ if env['CROSS'] != '':
     env['ENV']['PATH'] += ':' + crossPath
 
     prefix = ''
-    if env['ccache']:
-        prefix = 'ccache '
     if env['distcc']:
-        prefix = 'distcc ' + prefix
+        prefix = 'distcc '
+    if env['ccache']:
+        prefix = 'ccache ' + prefix
     env['CC'] = prefix + crossTuple + 'gcc'
     env['CC_NOCACHE'] = crossTuple + 'gcc'
     env['CXX'] = prefix + crossTuple + 'g++'
