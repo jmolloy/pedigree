@@ -165,7 +165,7 @@ if env['CROSS'] != '':
     crossPath = cross[0]
     crossTuple = cross[1]
 
-    env['ENV']['PATH'] += ':' + crossPath
+    env['ENV']['PATH'] =  crossPath + ':' + env['ENV']['PATH']
 
     prefix = ''
     if env['distcc']:
