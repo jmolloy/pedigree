@@ -6,7 +6,6 @@ extern int sprintf(char*, const char*, ...);
 extern void setenv(char*,char*,int);
 
 extern char **environ;
-void *__gxx_personality_v0;
 
 extern void _init_signals(void);
 
