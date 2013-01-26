@@ -7,8 +7,8 @@ my $gcc_version = "4.5.1";
 my $binutils_version = "2.20.1";
 my $nasm_version = "2.07";
 
-my $gcc_configure_special = "";
-my $binutils_configure_special = "";
+my $gcc_configure_special = " --disable-werror ";
+my $binutils_configure_special = " --disable-werror ";
 
 # Handle special arguments. These are given to change the behaviour of the script, or to
 # work around issues with specific operating systems.
@@ -16,8 +16,7 @@ for(my $i = 2; $i < @ARGV; $i++)
 {
     if($ARGV[$i] eq "osx-compat")
     {
-        $gcc_configure_special .= " --disable-werror --with-gmp=/opt/local --with-libiconv-prefix=/opt/local ";
-        $binutils_configure_special .= " --disable-werror ";
+        $gcc_configure_special .= " --with-gmp=/opt/local --with-libiconv-prefix=/opt/local ";
     }
 }
 
