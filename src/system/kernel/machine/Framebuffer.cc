@@ -17,6 +17,7 @@
 #include <processor/MemoryRegion.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <processor/VirtualAddressSpace.h>
+#include <processor/Processor.h>
 #include <machine/Display.h>
 
 #include <Log.h>
@@ -36,7 +37,7 @@ Graphics::Buffer *Framebuffer::swCreateBuffer(const void *srcData, Graphics::Pix
     size_t destBytesPerPixel = m_nBytesPerPixel;
     size_t destBytesPerLine = width * destBytesPerPixel;
 
-    size_t fullBufferSize = width * height * destBytesPerPixel;
+    size_t fullBufferSize = height * destBytesPerLine;
 
     MemoryRegion *pRegion = new MemoryRegion("sw-framebuffer-buffer");
     bool bSuccess = PhysicalMemoryManager::instance().allocateRegion(
@@ -83,12 +84,19 @@ Graphics::Buffer *Framebuffer::swCreateBuffer(const void *srcData, Graphics::Pix
                     uint32_t source = pPalette[(*pSource) & 0xFF];
                     Graphics::convertPixel(source, Graphics::Bits24_Rgb, transform, destFormat);
                 }
-                else
+                else {
                     Graphics::convertPixel(*pSource, srcFormat, transform, destFormat);
+                }
 
                 if(destBytesPerPixel == 4)
                 {
                     uint32_t *pDest = reinterpret_cast<uint32_t*>(adjust_pointer(pAddress, destOffset));
+
+                    if(sourceBytesPerPixel == 3)
+                        transform &= 0xFFFFFF;
+                    else if(sourceBytesPerPixel == 2)
+                        transform &= 0xFFFF;
+
                     *pDest = transform;
                 }
                 else if(destBytesPerPixel == 3)
@@ -115,6 +123,7 @@ Graphics::Buffer *Framebuffer::swCreateBuffer(const void *srcData, Graphics::Pix
     pBuffer->width = width;
     pBuffer->height = height;
     pBuffer->format = m_PixelFormat;
+    pBuffer->bytesPerPixel = destBytesPerPixel;
     pBuffer->bufferId = 0;
     pBuffer->pBacking = reinterpret_cast<void*>(pRegion);
 
@@ -145,7 +154,7 @@ void Framebuffer::swBlit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
     size_t bytesPerLine = m_nBytesPerLine;
     size_t destBytesPerPixel = m_nBytesPerPixel;
 
-    size_t sourceBytesPerPixel = Graphics::bytesPerPixel(pBuffer->format);
+    size_t sourceBytesPerPixel = pBuffer->bytesPerPixel;
     size_t sourceBytesPerLine = pBuffer->width * destBytesPerPixel;
 
     // Sanity check and clip
@@ -165,10 +174,10 @@ void Framebuffer::swBlit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
     void *pSrc = reinterpret_cast<void*>(pBuffer->base);
 
     // Blit across the width of the screen? How handy!
-    if(UNLIKELY((!(srcx && destx)) && (width == m_nWidth)))
+    if(UNLIKELY((srcx == destx) && (srcx == 0) && (width == m_nWidth)))
     {
-        size_t sourceBufferOffset = (srcy * sourceBytesPerLine) + (srcx * destBytesPerPixel);
-        size_t frameBufferOffset = (desty * bytesPerLine) + (destx * destBytesPerPixel);
+        size_t sourceBufferOffset = (srcy * sourceBytesPerLine);
+        size_t frameBufferOffset = (desty * bytesPerLine);
 
         void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
         void *src = adjust_pointer(pSrc, sourceBufferOffset);
@@ -180,7 +189,7 @@ void Framebuffer::swBlit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
         // Line-by-line copy
         for(size_t y1 = desty, y2 = srcy; y1 < (desty + height); y1++, y2++)
         {
-            size_t sourceBufferOffset = (y2 * sourceBytesPerLine) + (srcx * destBytesPerPixel);
+            size_t sourceBufferOffset = (y2 * sourceBytesPerLine) + (srcx * sourceBytesPerPixel);
             size_t frameBufferOffset = (y1 * bytesPerLine) + (destx * destBytesPerPixel);
 
             void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
@@ -201,6 +210,10 @@ void Framebuffer::swRect(size_t x, size_t y, size_t width, size_t height, uint32
     // Sanity check and clip
     if((x > m_nWidth) || (y > m_nHeight))
         return;
+    if(width > m_nWidth)
+        width = m_nWidth;
+    if(height > m_nHeight)
+        height = m_nHeight;
     if((x + width) > m_nWidth)
         width = (x + width) - m_nWidth;
     if((y + height) > m_nHeight)
@@ -513,10 +526,16 @@ void Framebuffer::swDraw(void *pBuffer, size_t srcx, size_t srcy,
 {
     // Potentially inefficient use of RAM and VRAM, but best way to avoid
     // redundant copies of code lying around.
-    Graphics::Buffer *p = createBuffer(pBuffer, format, srcx + width, srcy + height, m_Palette);
+    Graphics::Buffer *p = createBuffer(pBuffer, format, width, height, m_Palette);
     if(!p)
         return;
     blit(p, srcx, srcy, destx, desty, width, height, bLowestCall);
     destroyBuffer(p);
 }
 
+void Framebuffer::swDraw(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
+                         size_t destx, size_t desty, size_t width, size_t height,
+                         bool bLowestCall)
+{
+    blit(pBuffer, srcx, srcy, destx, desty, width, height, bLowestCall);
+}

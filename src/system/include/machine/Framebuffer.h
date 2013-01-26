@@ -49,22 +49,22 @@ class Framebuffer
         {
         }
 
-        inline size_t getWidth()
+        inline size_t getWidth() const
         {
             return m_nWidth;
         }
 
-        inline size_t getHeight()
+        inline size_t getHeight() const
         {
             return m_nHeight;
         }
 
-        inline Graphics::PixelFormat getFormat()
+        inline Graphics::PixelFormat getFormat() const
         {
             return m_PixelFormat;
         }
 
-        inline bool getActive()
+        inline bool getActive() const
         {
             return m_bActive;
         }
@@ -85,7 +85,7 @@ class Framebuffer
             NOTICE("Framebuffer: new palette set with " << Dec << nEntries << Hex << " entries");
         }
 
-        uint32_t *getPalette()
+        uint32_t *getPalette() const
         {
             return m_Palette;
         }
@@ -93,7 +93,7 @@ class Framebuffer
         /** Gets a raw pointer to the framebuffer itself. There is no way to
          *  know if this pointer points to an MMIO region or real RAM, so it
          *  cannot be guaranteed to be safe. */
-        virtual void *getRawBuffer()
+        virtual void *getRawBuffer() const
         {
             if(m_pParent)
                 return m_pParent->getRawBuffer();
@@ -165,8 +165,15 @@ class Framebuffer
                 // If the redraw was not caused by a child, make sure our
                 // framebuffer has precedence over any children.
                 /// \todo nChildren parameter - this is not necessary if no children!
-                if(!bChild)
-                    m_pParent->draw(reinterpret_cast<void*>(m_FramebufferBase), x, y, m_XPos + x, m_YPos + y, w, h, m_PixelFormat, false);
+                if(!bChild) {
+                    if(m_pParent->getFormat() == m_PixelFormat) {
+                        Graphics::Buffer buf = bufferFromSelf();
+                        m_pParent->draw(&buf, x, y, m_XPos + x, m_YPos + y, w, h, false);
+                        //m_pParent->draw(reinterpret_cast<void*>(m_FramebufferBase), x, y, m_XPos + x, m_YPos + y, w, h, m_PixelFormat, false);
+                    } else {
+                        ERROR("Child framebuffer has different pixel format to parent!");
+                    }
+                }
 
                 // Now we are a child requesting a redraw, so the parent will not
                 // have precedence over us.
@@ -345,6 +352,27 @@ class Framebuffer
         /// Whether this framebuffer is active or not.
         bool m_bActive;
 
+        Graphics::Buffer bufferFromSelf() {
+            Graphics::Buffer ret;
+            ret.base = m_FramebufferBase;
+            ret.width = m_nWidth;
+            ret.height = m_nHeight;
+            ret.format = m_PixelFormat;
+            ret.bytesPerPixel = m_nBytesPerPixel;
+            ret.bufferId = 0;
+            ret.pBacking = 0;
+            return ret;
+        }
+
+        /// Special implementation of draw() where a Graphics::Buffer is already available.
+        /// For use in redraw, and similar.
+        virtual void draw(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
+                                 size_t destx, size_t desty, size_t width, size_t height,
+                                 bool bLowestCall = true)
+        {
+            swDraw(pBuffer, srcx, srcy, destx, desty, width, height, bLowestCall);
+        }
+
         void swBlit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
                     size_t destx, size_t desty, size_t width, size_t height);
 
@@ -360,6 +388,10 @@ class Framebuffer
         void swDraw(void *pBuffer, size_t srcx, size_t srcy,
                     size_t destx, size_t desty, size_t width, size_t height,
                     Graphics::PixelFormat format = Graphics::Bits32_Argb,
+                    bool bLowestCall = true);
+
+        void swDraw(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
+                    size_t destx, size_t desty, size_t width, size_t height,
                     bool bLowestCall = true);
 
         Graphics::Buffer *swCreateBuffer(const void *srcData, Graphics::PixelFormat srcFormat,
