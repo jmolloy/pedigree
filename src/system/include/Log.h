@@ -33,7 +33,7 @@
   do \
   { \
     Log::instance().m_Lock.acquire(); \
-    Log::instance() << Log::Debug << text << Flush; \
+    Log::instance() << Log::Debug << __FILE__ << ":" << Dec << __LINE__ << Hex << " " << __FUNCTION__ << " -- " << text << Flush; \
     Log::instance().m_Lock.release(); \
   } \
   while (0)
@@ -41,7 +41,7 @@
 #define DEBUG_LOG_NOLOCK(text) \
   do \
   { \
-    Log::instance() << Log::Debug << text << Flush; \
+    Log::instance() << Log::Debug <<  __FILE__ << ":" << Dec << __LINE__ << Hex << " " << __FUNCTION__ << " -- " << text << Flush; \
   } \
   while (0)
 #else
@@ -54,7 +54,7 @@
   do \
   { \
     Log::instance().m_Lock.acquire(); \
-    Log::instance() << Log::Notice << text << Flush; \
+    Log::instance() << Log::Notice <<  __FILE__ << ":" << Dec << __LINE__ << Hex << " " << __FUNCTION__ << " -- " << text << Flush; \
     Log::instance().m_Lock.release(); \
   } \
   while (0)
@@ -63,7 +63,7 @@
 #define NOTICE_NOLOCK(text) \
   do \
   { \
-    Log::instance() << Log::Notice << text << Flush; \
+    Log::instance() << Log::Notice <<  __FILE__ << ":" << Dec << __LINE__ << Hex << " " << __FUNCTION__ << " -- " << text << Flush; \
   } \
   while (0)
 
@@ -72,7 +72,7 @@
   do \
   { \
     Log::instance().m_Lock.acquire(); \
-    Log::instance() << Log::Warning << text << Flush; \
+    Log::instance() << Log::Warning <<  __FILE__ << ":" << Dec << __LINE__ << Hex << " " << __FUNCTION__ << " -- " << text << Flush; \
     Log::instance().m_Lock.release(); \
   } \
   while (0)
@@ -81,7 +81,7 @@
 #define WARNING_NOLOCK(text) \
   do \
   { \
-    Log::instance() << Log::Warning << text << Flush; \
+    Log::instance() << Log::Warning <<  __FILE__ << ":" << Dec << __LINE__ << Hex << " " << __FUNCTION__ << " -- " << text << Flush; \
   } \
   while (0)
 
@@ -90,7 +90,7 @@
   do \
   { \
     Log::instance().m_Lock.acquire(); \
-    Log::instance() << Log::Error << text << Flush; \
+    Log::instance() << Log::Error <<  __FILE__ << ":" << Dec << __LINE__ << Hex << " " << __FUNCTION__ << " -- " << text << Flush; \
     Log::instance().m_Lock.release(); \
   } \
   while (0)
@@ -99,7 +99,7 @@
 #define ERROR_NOLOCK(text) \
   do \
   { \
-    Log::instance() << Log::Error << text << Flush; \
+    Log::instance() << Log::Error <<  __FILE__ << ":" << Dec << __LINE__ << Hex << " " << __FUNCTION__ << " -- " << text << Flush; \
   } \
   while (0)
 
@@ -112,7 +112,7 @@
   do \
   { \
     Log::instance().m_Lock.acquire(); \
-    Log::instance() << Log::Fatal << text << Flush; \
+    Log::instance() << Log::Fatal <<  __FILE__ << ":" << Dec << __LINE__ << Hex << " " << __FUNCTION__ << " -- " << text << Flush; \
     const char *panicstr = static_cast<const char*>(Log::instance().getLatestEntry().str); \
     Log::instance().m_Lock.release(); \
     Processor::breakpoint(); \
@@ -124,7 +124,7 @@
 #define FATAL_NOLOCK(text) \
   do \
   { \
-    Log::instance() << Log::Fatal << text << Flush; \
+    Log::instance() << Log::Fatal <<  __FILE__ << ":" << Dec << __LINE__ << Hex << " " << __FUNCTION__ << " -- " << text << Flush; \
     Processor::breakpoint(); \
     panic(static_cast<const char*>(Log::instance().getLatestEntry().str)); \
   } \
