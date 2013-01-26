@@ -47,10 +47,20 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
         except:
             continue
     
-    os.system(ar + " x " + os.path.basename(glue_name))
+    res = os.system(ar + " x " + os.path.basename(glue_name))
+    if res != 0:
+        print "  (failed)"
+        exit(res)
 
-    os.system(cc + " -nostdlib -shared -Wl,-shared -Wl,-soname,libc.so -o " + buildOut + ".so *.obj *.o -L. -lpedigree-c -lgcc")
-    os.system(ar + " cru " + buildOut + ".a *.o *.obj")
+    res = os.system(cc + " -nostdlib -shared -Wl,-shared -Wl,-soname,libc.so -o " + buildOut + ".so *.obj *.o -L. -lpedigree-c -lgcc")
+    if res != 0:
+        print "  (failed)"
+        exit(res)
+    res = os.system(ar + " cru " + buildOut + ".a *.o *.obj")
+    if res != 0:
+        print "  (failed)"
+        os.unlink("%s.so" % (buildOut,))
+        exit(res)
 
     for i in os.listdir("."):
         os.remove(i)
