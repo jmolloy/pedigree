@@ -87,6 +87,9 @@ namespace Graphics
         /// Output format of the buffer. NOT the input format. Used for
         /// byte-per-pixel calculations.
         PixelFormat format;
+
+        /// Number of bytes per pixel (as it may be different to the format).
+        size_t bytesPerPixel;
         
         /// Buffer ID, for easy identification within drivers
         size_t bufferId;
