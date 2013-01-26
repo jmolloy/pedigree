@@ -159,6 +159,9 @@ namespace PedigreeGraphics
             /** Gets the framebuffer's native format */
             PedigreeGraphics::PixelFormat getFormat();
 
+            /** Gets the number of bytes per pixel for the framebuffer */
+            size_t getBytesPerPixel();
+
             /** Sets a new palette for use with indexed colour formats. The
              *  palette should be an array of uint32_t's, all of which will be
              *  interpreted as 24-bit RGB. */

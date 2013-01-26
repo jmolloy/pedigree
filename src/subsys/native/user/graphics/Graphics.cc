@@ -84,7 +84,7 @@ size_t Framebuffer::getWidth()
         return 0;
     
     size_t ret = 0;
-    pedigree_gfx_fbinfo(&m_Provider, &ret, 0, 0);
+    pedigree_gfx_fbinfo(&m_Provider, &ret, 0, 0, 0);
     
     return ret;
 }
@@ -95,7 +95,7 @@ size_t Framebuffer::getHeight()
         return 0;
     
     size_t ret = 0;
-    pedigree_gfx_fbinfo(&m_Provider, 0, &ret, 0);
+    pedigree_gfx_fbinfo(&m_Provider, 0, &ret, 0, 0);
     
     return ret;
 }
@@ -106,9 +106,20 @@ PixelFormat Framebuffer::getFormat()
         return Bits32_Argb;
     
     uint32_t ret = 0;
-    pedigree_gfx_fbinfo(&m_Provider, 0, 0, &ret);
+    pedigree_gfx_fbinfo(&m_Provider, 0, 0, &ret, 0);
     
     return static_cast<PixelFormat>(ret);
+}
+
+size_t Framebuffer::getBytesPerPixel()
+{
+    if(!m_bProviderValid)
+        return 4;
+    
+    size_t ret = 0;
+    pedigree_gfx_fbinfo(&m_Provider, 0, 0, 0, &ret);
+    
+    return ret;
 }
 
 void *Framebuffer::getRawBuffer()
@@ -126,7 +137,7 @@ Framebuffer *Framebuffer::createChild(size_t x, size_t y, size_t w, size_t h)
     if(!(w && h))
         return 0;
 
-    size_t nBytes = (w * h * bytesPerPixel(getFormat()));
+    size_t nBytes = (w * h * getBytesPerPixel());
     uint8_t *pBuffer = new uint8_t[nBytes];
 
     GraphicsProvider ret = m_Provider;

@@ -241,9 +241,9 @@ void pedigree_gfx_delete_fbuffer(void *p)
     syscall1(PEDIGREE_GFX_DELETE_FBUFFER, (long) p);
 }
 
-void pedigree_gfx_fbinfo(void *p, size_t *w, size_t *h, uint32_t *fmt)
+void pedigree_gfx_fbinfo(void *p, size_t *w, size_t *h, uint32_t *fmt, size_t *bypp)
 {
-    syscall4(PEDIGREE_GFX_FBINFO, (long) p, (long) w, (long) h, (long) fmt);
+    syscall5(PEDIGREE_GFX_FBINFO, (long) p, (long) w, (long) h, (long) fmt, (long) bypp);
 }
 
 void pedigree_gfx_setpalette(void* p, uint32_t *data, size_t entries)

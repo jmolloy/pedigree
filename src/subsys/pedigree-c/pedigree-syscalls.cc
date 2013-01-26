@@ -478,7 +478,7 @@ void pedigree_gfx_delete_fbuffer(void *p)
     Graphics::destroyFramebuffer(pProvider->pFramebuffer);
 }
 
-void pedigree_gfx_fbinfo(void *p, size_t *w, size_t *h, uint32_t *fmt)
+void pedigree_gfx_fbinfo(void *p, size_t *w, size_t *h, uint32_t *fmt, size_t *bypp)
 {
     if(!p)
         return;
@@ -491,6 +491,8 @@ void pedigree_gfx_fbinfo(void *p, size_t *w, size_t *h, uint32_t *fmt)
         *h = pProvider->pFramebuffer->getHeight();
     if(fmt)
         *fmt = static_cast<uint32_t>(pProvider->pFramebuffer->getFormat());
+    if(bypp)
+        *bypp = pProvider->pFramebuffer->getBytesPerPixel();
 }
 
 void pedigree_gfx_setpalette(void* p, uint32_t *data, size_t entries)

@@ -295,12 +295,20 @@ class Framebuffer
         {
             m_nBytesPerPixel = b;
         }
+        inline uint32_t getBytesPerPixel() const
+        {
+            return m_nBytesPerPixel;
+        }
 
         /// Bytes per line in this framebuffer
         size_t m_nBytesPerLine;
         inline void setBytesPerLine(size_t b)
         {
             m_nBytesPerLine = b;
+        }
+        inline uint32_t getBytesPerLine() const
+        {
+            return m_nBytesPerLine;
         }
 
         /// Parent of this framebuffer
@@ -309,7 +317,7 @@ class Framebuffer
         {
             m_pParent = p;
         }
-        inline Framebuffer *getParent()
+        inline Framebuffer *getParent() const
         {
             return m_pParent;
         }
