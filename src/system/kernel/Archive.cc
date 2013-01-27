@@ -41,7 +41,7 @@ Archive::Archive(uint8_t *pPhys, size_t sSize) :
 
 Archive::~Archive()
 {
-  // TODO destroy all pages.
+  m_Region.free();
 }
 
 size_t Archive::getNumFiles()
