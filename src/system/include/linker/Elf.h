@@ -17,10 +17,12 @@
 #ifndef KERNEL_LINKER_ELF_H
 #define KERNEL_LINKER_ELF_H
 
+#ifndef __PEDIGREE__
 #include <compiler.h>
 #include <processor/types.h>
 #include <utilities/List.h>
 #include <linker/SymbolTable.h>
+#endif
 
 /** @addtogroup kernellinker
  * @{ */
@@ -140,6 +142,8 @@ typedef uint64_t Elf_Xword;
 typedef  int64_t Elf_Sxword;
 
 #endif
+
+#ifndef _NO_ELF_CLASS
 
 /**
  * Provides an implementation of a 32-bit Executable and Linker format file parser.
@@ -399,6 +403,8 @@ class Elf
         *\note currently not implemented */
         Elf &operator = (const Elf &);
 };
+
+#endif
 
 /** @} */
 
