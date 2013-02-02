@@ -108,7 +108,7 @@ case $real_os in
 esac
 
 # Install cross-compilers
-$script_dir/scripts/checkBuildSystemNoInteractive.pl i686-pedigree $script_dir/pedigree-compiler $compiler_build_options
+$script_dir/scripts/checkBuildSystemNoInteractive.pl amd64-pedigree $script_dir/pedigree-compiler $compiler_build_options
 
 old=$(pwd)
 cd $script_dir
@@ -159,7 +159,7 @@ echo "Beginning the Pedigree build."
 echo
 
 # Build Pedigree.
-scons CROSS=$script_dir/compilers/dir/bin/i686-pedigree-
+scons CROSS=$script_dir/compilers/dir/bin/amd64-pedigree-
 
 cd "$old"
 
