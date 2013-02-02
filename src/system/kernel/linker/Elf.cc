@@ -249,6 +249,13 @@ bool Elf::createNeededOnly(uint8_t *pBuffer, size_t length)
                     pDyn++;
                 }
             }
+            else if(m_pProgramHeaders[i].type == PT_INTERP)
+            {
+                ElfProgramHeader_t *pInterp = &m_pProgramHeaders[i];
+                m_sInterpreter = String(reinterpret_cast<char*> (&pBuffer[pInterp->offset]));
+
+                NOTICE("ELF::createNeededOnly interpreter is " << m_sInterpreter);
+            }
         }
 
         if (m_pDynamicStringTable)
@@ -424,6 +431,13 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
 
                     pDyn++;
                 }
+            }
+            else if(m_pProgramHeaders[i].type == PT_INTERP)
+            {
+                ElfProgramHeader_t *pInterp = &m_pProgramHeaders[i];
+                m_sInterpreter = String(reinterpret_cast<char*> (&pBuffer[pInterp->offset]));
+
+                NOTICE("ELF::create interpreter is " << m_sInterpreter);
             }
         }
 
@@ -1120,6 +1134,10 @@ uintptr_t Elf::debugFrameTableLength()
 List<char*> &Elf::neededLibraries()
 {
     return m_NeededLibraries;
+}
+
+String &Elf::getInterpreter() {
+    return m_sInterpreter;
 }
 
 size_t Elf::getPltSize ()

@@ -78,7 +78,7 @@ DynamicLinker::~DynamicLinker()
     delete m_pProgramElf;
 }
 
-bool DynamicLinker::loadProgram(File *pFile, bool bDryRun)
+bool DynamicLinker::loadProgram(File *pFile, bool bDryRun, bool bInterpreter, String *sInterpreter)
 {
     if(!pFile)
         return false;
@@ -134,6 +134,16 @@ bool DynamicLinker::loadProgram(File *pFile, bool bDryRun)
                 delete programElf;
             return false;
         }
+    }
+
+    if(bInterpreter)
+    {
+        if(!sInterpreter)
+            return false;
+        *sInterpreter = programElf->getInterpreter();
+        if(bDryRun)
+            delete programElf;
+        return *sInterpreter != "";
     }
 
     List<char*> &dependencies = programElf->neededLibraries();

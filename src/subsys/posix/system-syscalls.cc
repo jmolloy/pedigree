@@ -330,6 +330,21 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     DynamicLinker *pOldLinker = pProcess->getLinker();
     DynamicLinker *pLinker = new DynamicLinker();
 
+    // Should we actually load this file, or request another program load the file?
+    String interpreter("");
+    if(pLinker->checkInterpreter(file, interpreter))
+    {
+        // Switch to the interpreter.
+        // argv can stay the same, as the interpreter will pass it on directly.
+        file = VFS::instance().find(interpreter, Processor::information().getCurrentThread()->getParent()->getCwd());
+        if(!file)
+        {
+            SYSCALL_ERROR(DoesNotExist);
+            delete pLinker;
+            return -1;
+        }
+    }
+
     // Can we load the new image? Check before we clean out the last ELF image...
     if(!pLinker->checkDependencies(file))
     {
@@ -417,9 +432,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     // JAMESM: I don't think the sigret code actually needs to be called from userspace. Here should do just fine, no?
 
     pedigree_init_sigret();
-    NOTICE("a");
     pedigree_init_pthreads();
-    NOTICE("b");
 
     class RunInitEvent : public Event
     {
@@ -443,11 +456,9 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         volatile uintptr_t tmp = * vInitLoc;
         *vInitLoc = tmp; // GCC can't ignore a write.
         asm volatile("" :::"memory"); // Memory barrier.
-        NOTICE("Calling it");
         Processor::information().getCurrentThread()->sendEvent(ev);
         // Yield, so the code gets run before we return.
         Scheduler::instance().yield();
-        NOTICE("Here");
     }
 
     /// \todo Genericize this somehow - "pState.setScratchRegisters(state)"?

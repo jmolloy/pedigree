@@ -193,6 +193,9 @@ class Elf
         /** Returns a list of required libraries before this object will load. */
         List<char*> &neededLibraries();
 
+        /** Returns the name of the interpreter set aside for this program, or an empty string. */
+        String &getInterpreter();
+
         /** Returns the virtual address of the last byte to be written. Used to calculate the
         * sbrk memory breakpoint. */
         uintptr_t getLastAddress();
@@ -389,6 +392,7 @@ class Elf
         SymbolTable           m_SymbolTable;
         uintptr_t             m_InitFunc;
         uintptr_t             m_FiniFunc;
+        String                m_sInterpreter;
 
     private:
         /** The assignment operator
