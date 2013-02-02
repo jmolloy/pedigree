@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <graphics/Graphics.h>
 
@@ -76,7 +77,14 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
         close(2);
         Syscall::setCtty(pName);
         execl("/applications/login", "/applications/login", 0);
-        syslog(LOG_ALERT, "Launching login failed!");
+        syslog(LOG_ALERT, "Launching login failed (next line is the error in errno...)");
+        syslog(LOG_ALERT, strerror(errno));
+
+        DirtyRectangle rect;
+        write("Couldn't load 'login' for this terminal... ", rect);
+        write(strerror(errno), rect);
+        write("\r\n\r\nYour installation of Pedigree may not be complete, or you may have hit a bug.", rect);
+        redrawAll(rect);
     }
 
     m_Pid = pid;
