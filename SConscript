@@ -293,7 +293,8 @@ else:
 
     # Add libraries
     fileList += [builddir + '/libc.so',
-                 builddir + '/libm.so',]
+                 builddir + '/libm.so',
+                 builddir + '/libload.so',]
 #                 builddir + '/libpthread.so',
 #                 builddir + '/libSDL.so']
 
