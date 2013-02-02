@@ -741,6 +741,8 @@ bool FatFilesystem::readSectorBlock(uint32_t sec, size_t size, uintptr_t buffer)
     {
         size_t sz = (size > 512) ? 512 : size;
         uintptr_t buff = m_pDisk->read(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(sec)+off);
+        if(!buff)
+            return false;
         memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(buff),
                sz);
         buffer += sz;
