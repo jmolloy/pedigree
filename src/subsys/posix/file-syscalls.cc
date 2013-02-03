@@ -1337,7 +1337,7 @@ void *posix_mmap(void *p)
     if (!pSubsystem)
     {
         ERROR("No subsystem for this process!");
-        return 0;
+        return MAP_FAILED;
     }
 
     // The return address
@@ -1360,7 +1360,7 @@ void *posix_mmap(void *p)
             if(!len || (mapAddress & (pageSz-1)))
             {
                 SYSCALL_ERROR(InvalidArgument);
-                return 0;
+                return MAP_FAILED;
             }
 
             // Does the application want a fixed mapping?
@@ -1372,7 +1372,7 @@ void *posix_mmap(void *p)
                 if(!mapAddress)
                 {
                     SYSCALL_ERROR(InvalidArgument);
-                    return 0;
+                    return MAP_FAILED;
                 }
 
                 // Unmap existing allocations (before releasing the space to the process'
@@ -1402,7 +1402,7 @@ void *posix_mmap(void *p)
                 {
                     F_NOTICE("mmap: out of memory");
                     SYSCALL_ERROR(OutOfMemory);
-                    return 0;
+                    return MAP_FAILED;
                 }
             }
             else if(flags & (MAP_ANON | MAP_SHARED))
@@ -1412,7 +1412,7 @@ void *posix_mmap(void *p)
                 {
                     F_NOTICE("mmap: out of memory");
                     SYSCALL_ERROR(OutOfMemory);
-                    return 0;
+                    return MAP_FAILED;
                 }
             }
             else
@@ -1420,7 +1420,7 @@ void *posix_mmap(void *p)
                 // Flags not supported
                 F_NOTICE("mmap: flags not supported");
                 SYSCALL_ERROR(NotSupported);
-                return 0;
+                return MAP_FAILED;
             }
 
             // Got an address and a length, map it in now
@@ -1435,7 +1435,7 @@ void *posix_mmap(void *p)
                         /// \todo Need to unmap and free all the mappings so far, then return to the space allocator.
                         F_NOTICE("mmap: out of memory");
                         SYSCALL_ERROR(OutOfMemory);
-                        return 0;
+                        return MAP_FAILED;
                     }
                 }
                 else
@@ -1459,7 +1459,7 @@ void *posix_mmap(void *p)
             // No valid file given, return error
             F_NOTICE("mmap: invalid file descriptor");
             SYSCALL_ERROR(BadFileDescriptor);
-            return 0;
+            return MAP_FAILED;
         }
     }
     else
