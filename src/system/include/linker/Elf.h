@@ -55,6 +55,11 @@
 #define SHF_EXECINSTR     0x4
 #define SHF_MASKPROC      0xf0000000
 
+// Program header flags - common to Elf32 and Elf64.
+#define PF_X              0x1
+#define PF_W              0x2
+#define PF_R              0x4
+
 // Process header flags - common to Elf32 and Elf64.
 #define	PT_NULL    0 /* Program header table entry unused */
 #define PT_LOAD    1 /* Loadable program segment */
@@ -249,6 +254,7 @@ class Elf
 
     protected:
 
+#endif
         struct ElfHeader_t
         {
             uint8_t  ident[16];
@@ -315,6 +321,14 @@ class Elf
             #endif
         } PACKED;
 
+        struct ElfHash_t
+        {
+            Elf_Word nbucket;
+            Elf_Word nchain;
+            // buckets follow
+            // chains follow
+        };
+
         struct ElfDyn_t
         {
             Elf_Sxword tag;
@@ -338,6 +352,7 @@ class Elf
             Elf_Sxword addend;
         } PACKED;
 
+#ifndef _NO_ELF_CLASS
     private:
 
         bool relocate(uint8_t *pBuffer, uintptr_t length);

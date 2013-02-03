@@ -36,7 +36,8 @@ builddir        = "#" + env["PEDIGREE_BUILD_BASE"]
 
 # libloader (userspace dynamic linker)
 libload_sources = [
-    'loader.cc'
+    'loader.cc',
+    'stubs.s'
 ]
 
 # Applications which just use POSIX libc/libm
