@@ -95,6 +95,9 @@ class List
     /** Erase an element
      *\param[in] iterator the iterator that points to the element */
     Iterator erase(Iterator &Iter);
+    /** Erase an element with a reverse iterator
+     *\param[in] reverse iterator the iterator that points to the element */
+    ReverseIterator erase(ReverseIterator &Iter);
 
     /** Get an iterator pointing to the beginning of the List
      *\return iterator pointing to the beginning of the List */
@@ -211,6 +214,9 @@ class List<void*>
     /** Erase an element
      *\param[in] iterator the iterator that points to the element */
     Iterator erase(Iterator &Iter);
+    /** Erase an element with a reverse iterator
+     *\param[in] reverse iterator the iterator that points to the element */
+    ReverseIterator erase(ReverseIterator &Iter);
 
     /** Get an iterator pointing to the beginning of the List
      *\return iterator pointing to the beginning of the List */
@@ -353,6 +359,12 @@ class List<T*>
     inline Iterator erase(Iterator &Iter)
     {
       return Iterator(m_VoidList.erase(Iter.__getIterator()));
+    }
+    /** Erase an element with a reverse iterator
+     *\param[in] reverse iterator the iterator that points to the element */
+    inline ReverseIterator erase(ReverseIterator &Iter)
+    {
+      return ReverseIterator(m_VoidList.erase(Iter.__getIterator()));
     }
 
     /** Get an iterator pointing to the beginning of the List

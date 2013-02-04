@@ -32,12 +32,15 @@ class RangeList
   public:
     /** Default constructor does nothing */
     inline RangeList()
-      : m_List(){}
+      : m_List(), m_bReverse(false) {}
+    /** Construct with reverse order, without an initial allocation. */
+    inline RangeList(bool reverse)
+      : m_List(), m_bReverse(reverse) {}
     /** Construct with a preexisting range
      *\param[in] Address beginning of the range
      *\param[in] Length length of the range */
-    RangeList(T Address, T Length)
-      : m_List()
+    RangeList(T Address, T Length, bool bReverse = false)
+      : m_List(), m_bReverse(bReverse)
     {
       Range *range = new Range(Address, Length);
       m_List.pushBack(range);
@@ -88,10 +91,15 @@ class RangeList
     /** List of ranges */
     List<Range*> m_List;
 
+    /** Should we allocate in reverse order? */
+    bool m_bReverse;
+
     RangeList &operator = (const RangeList & l);
 
     typedef typename List<Range*>::Iterator Iterator;
     typedef typename List<Range*>::ConstIterator ConstIterator;
+    typedef typename List<Range*>::ReverseIterator ReverseIterator;
+    typedef typename List<Range*>::ConstReverseIterator ConstReverseIterator;
 };
 
 /** @} */
@@ -147,21 +155,41 @@ void RangeList<T>::free(T address, T length)
 template<typename T>
 bool RangeList<T>::allocate(T length, T &address)
 {
-  Iterator cur(m_List.begin());
-  ConstIterator end(m_List.end());
-  for (;cur != end;++cur)
-    if ((*cur)->length >= length)
-    {
-      address = (*cur)->address;
-      (*cur)->address += length;
-      (*cur)->length -= length;
-      if ((*cur)->length == 0)
+  if(m_bReverse) {
+    ReverseIterator cur(m_List.rbegin());
+    ConstReverseIterator end(m_List.rend());
+    for (;cur != end;++cur)
+      if ((*cur)->length >= length)
       {
-        delete *cur;
-        m_List.erase(cur);
+        T offset = (*cur)->length - length;
+        address = (*cur)->address + offset;
+        (*cur)->length -= length;
+        if ((*cur)->length == 0)
+        {
+          delete *cur;
+          m_List.erase(cur);
+        }
+        return true;
       }
-      return true;
-    }
+  }
+  else
+  {
+    Iterator cur(m_List.begin());
+    ConstIterator end(m_List.end());
+    for (;cur != end;++cur)
+      if ((*cur)->length >= length)
+      {
+        address = (*cur)->address;
+        (*cur)->address += length;
+        (*cur)->length -= length;
+        if ((*cur)->length == 0)
+        {
+          delete *cur;
+          m_List.erase(cur);
+        }
+        return true;
+      }
+  }
   return false;
 }
 template<typename T>
