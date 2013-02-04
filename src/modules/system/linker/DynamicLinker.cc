@@ -83,7 +83,7 @@ bool DynamicLinker::loadProgram(File *pFile, bool bDryRun, bool bInterpreter, St
     if(!pFile)
         return false;
 
-    uintptr_t buffer;
+    uintptr_t buffer = 0;
     MemoryMappedFile *pMmFile = MemoryMappedFileManager::instance().map(pFile, buffer);
 
     String fileName;
@@ -209,7 +209,7 @@ bool DynamicLinker::loadProgram(File *pFile, bool bDryRun, bool bInterpreter, St
 
 bool DynamicLinker::loadObject(File *pFile, bool bDryRun)
 {
-    uintptr_t buffer;
+    uintptr_t buffer = 0;
     size_t size;
     uintptr_t loadBase;
     MemoryMappedFile *pMmFile = MemoryMappedFileManager::instance().map(pFile, buffer);

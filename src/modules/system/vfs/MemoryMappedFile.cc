@@ -229,7 +229,6 @@ MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address, 
     m_CacheLock.release();
 
     // Now we know that pMmFile is valid, load it into our address space.
-    address = 0;
     if (!pMmFile->load(address))
     {
         ERROR_NOLOCK("MemoryMappedFile: load failed in map()");
