@@ -220,33 +220,41 @@ MemoryMappedFileManager::~MemoryMappedFileManager()
 {
 }
 
-MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address, size_t sizeOverride, size_t offset)
+MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address, size_t sizeOverride, size_t offset, bool shared)
 {
-    m_CacheLock.acquire();
-
-    // Attempt to find an existing MemoryMappedFile* in the cache.
-    MemoryMappedFile *pMmFile = m_Cache.lookup(pFile);
-    if (pMmFile)
+    MemoryMappedFile *pMmFile = 0;
+    if(shared)
     {
-        // File existed in cache - check if the file has been changed
-        // since it was put in the cache.
-        if (false /*pFile->hasBeenTouched()*/)
-        {
-            pMmFile->markForDeletion();
-            m_Cache.remove(pFile);
-            pMmFile = 0;
-        }
-    }
+        m_CacheLock.acquire();
 
-    // At this point we could have a null file because (a) the initial cache lookup failed
-    // or (b) the file was out of date.
-    if (!pMmFile)
+        // Attempt to find an existing MemoryMappedFile* in the cache.
+        pMmFile = m_Cache.lookup(pFile);
+        if (pMmFile)
+        {
+            // File existed in cache - check if the file has been changed
+            // since it was put in the cache.
+            if (false /*pFile->hasBeenTouched()*/)
+            {
+                pMmFile->markForDeletion();
+                m_Cache.remove(pFile);
+                pMmFile = 0;
+            }
+        }
+
+        // At this point we could have a null file because (a) the initial cache lookup failed
+        // or (b) the file was out of date.
+        if (!pMmFile)
+        {
+            pMmFile = new MemoryMappedFile(pFile);
+            m_Cache.insert(pFile, pMmFile);
+        }
+
+        m_CacheLock.release();
+    }
+    else
     {
         pMmFile = new MemoryMappedFile(pFile);
-        m_Cache.insert(pFile, pMmFile);
     }
-
-    m_CacheLock.release();
 
     if(sizeOverride == 0)
         sizeOverride = pMmFile->getExtent();
@@ -355,6 +363,7 @@ void MemoryMappedFileManager::unmapAll()
          it != pMmFileList->end();
          it = pMmFileList->begin())
     {
+        NOTICE("Unmapping...");
         (*it)->file->unload( (*it)->offset );
         if ((*it)->file->decreaseRefCount())
         {

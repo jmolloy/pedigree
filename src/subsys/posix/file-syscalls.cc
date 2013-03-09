@@ -1485,7 +1485,8 @@ void *posix_mmap(void *p)
         // MAP_FIXED mappings too
         /// \todo There *should* be proper flag checks here!
         uintptr_t address = reinterpret_cast<uintptr_t>(addr);
-        MemoryMappedFile *pFile = MemoryMappedFileManager::instance().map(fileToMap, address, len, off);
+        bool bShared = (flags & MAP_SHARED);
+        MemoryMappedFile *pFile = MemoryMappedFileManager::instance().map(fileToMap, address, len, off, bShared);
 
         // Add the offset...
         // address += off;
