@@ -4,4 +4,5 @@
 
 _libload_resolve_symbol:
     call _libload_dofixup
-    ret
+    add esp, 8
+    jmp eax

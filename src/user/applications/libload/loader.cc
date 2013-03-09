@@ -24,7 +24,7 @@
 #define STB_LOPROC     13
 #define STB_HIPROC     15
 
-typedef void (*entry_point_t)(int, char*[]);
+typedef void (*entry_point_t)(char*[], char **);
 
 typedef struct _object_meta {
     std::string path;
@@ -33,8 +33,10 @@ typedef struct _object_meta {
     void *mapped_file;
     size_t mapped_file_sz;
 
-    uintptr_t loadBase;
     bool relocated;
+    uintptr_t load_base;
+
+    bool running;
 
     std::list<std::pair<void*, size_t> > memory_regions;
 
@@ -85,6 +87,8 @@ typedef struct _object_meta {
 
 #define IS_NOT_PAGE_ALIGNED(x) (((x) & (getpagesize() - 1)) != 0)
 
+extern "C" void *pedigree_sys_request_mem(size_t len);
+
 bool loadObject(const char *filename, object_meta_t *meta);
 
 bool findSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym);
@@ -93,14 +97,14 @@ bool lookupSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, boo
 
 void doRelocation(object_meta_t *meta);
 
-void doThisRelocation(ElfRel_t rel, object_meta_t *meta);
-void doThisRelocation(ElfRela_t rel, object_meta_t *meta);
+uintptr_t doThisRelocation(ElfRel_t rel, object_meta_t *meta);
+uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta);
 
 std::string symbolName(const ElfSymbol_t &sym, object_meta_t *meta);
 
 std::string findObject(std::string name);
 
-extern "C" void _libload_resolve_symbol();
+extern "C" uintptr_t _libload_resolve_symbol();
 
 std::list<std::string> g_lSearchPaths;
 
@@ -116,6 +120,8 @@ size_t elfhash(const char *name) {
     return h;
 }
 
+extern char **environ;
+
 extern "C" int main(int argc, char *argv[])
 {
     // Sanity check: do we actually have a program to load?
@@ -125,6 +131,7 @@ extern "C" int main(int argc, char *argv[])
 
     char *ld_libpath = getenv("LD_LIBRARY_PATH");
     char *ld_preload = getenv("LD_PRELOAD");
+    char *ld_debug = getenv("LD_DEBUG");
 
     g_lSearchPaths.push_back(std::string("/libraries"));
     g_lSearchPaths.push_back(std::string("."));
@@ -137,17 +144,20 @@ extern "C" int main(int argc, char *argv[])
         }
     }
 
-    printf("Search path:\n");
-    for(std::list<std::string>::iterator it = g_lSearchPaths.begin();
-        it != g_lSearchPaths.end();
-        ++it) {
-        printf(" -> %s\n", it->c_str());
+    if(ld_debug) {
+        fprintf(stderr, "libload.so: search path is\n");
+        for(std::list<std::string>::iterator it = g_lSearchPaths.begin();
+            it != g_lSearchPaths.end();
+            ++it) {
+            printf(" -> %s\n", it->c_str());
+        }
     }
 
     /// \todo Implement dlopen etc in here.
 
     // Load the main object passed on the command line.
     object_meta_t *meta = new object_meta_t;
+    meta->running = false;
     if(!loadObject(argv[0], meta)) {
         delete meta;
         return ENOEXEC;
@@ -159,6 +169,7 @@ extern "C" int main(int argc, char *argv[])
         if(!loadObject(ld_preload, preload)) {
             printf("Loading preload '%s' failed.\n", ld_preload);
         } else {
+            doRelocation(preload);
             meta->preloads.push_back(preload);
         }
     }
@@ -172,14 +183,18 @@ extern "C" int main(int argc, char *argv[])
             if(!loadObject(it->c_str(), object)) {
                 printf("Loading '%s' failed.\n", it->c_str());
             } else {
+                doRelocation(object);
                 meta->objects.push_back(object);
             }
         }
     }
 
+    // Do initial relocation of the binary (non-GOT entries)
+    doRelocation(meta);
+
     // All done - run the program!
-    printf("Calling entry point %p!\n", meta->entry);
-    meta->entry(argc, argv);
+    meta->running = true;
+    meta->entry(argv, environ);
 
     return 0;
 }
@@ -202,8 +217,8 @@ std::string findObject(std::string name) {
     return std::string("<not found>");
 }
 
+#include <syslog.h>
 bool loadObject(const char *filename, object_meta_t *meta) {
-    printf("filename: %p\n", filename);
     meta->path = findObject(std::string(filename));
 
     // Okay, let's open up the file for reading...
@@ -211,17 +226,6 @@ bool loadObject(const char *filename, object_meta_t *meta) {
     if(fd < 0) {
         fprintf(stderr, "libload.so: couldn't load object '%s' (%s) (%s)\n", filename, meta->path.c_str(), strerror(errno));
         return false;
-    }
-
-    // Open /dev/zero for BSS.
-    int zerofd = open("/dev/zero", O_RDONLY);
-    if(zerofd < 0) {
-        zerofd = open("/dev/null", O_RDONLY);
-        if(zerofd < 0) {
-            printf("couldn't open /dev/zero or /dev/null\n");
-            errno = ENOEXEC;
-            return false;
-        }
     }
 
     // Check header.
@@ -260,7 +264,7 @@ bool loadObject(const char *filename, object_meta_t *meta) {
 
     meta->mapped_file_sz = st.st_size;
 
-    const char *pBuffer = (const char *) mmap(0, meta->mapped_file_sz, PROT_READ, MAP_PRIVATE, fd, 0);
+    const char *pBuffer = (const char *) mmap(0, meta->mapped_file_sz, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
     if(pBuffer == MAP_FAILED) {
         close(fd);
         errno = ENOEXEC;
@@ -268,7 +272,17 @@ bool loadObject(const char *filename, object_meta_t *meta) {
     }
     meta->mapped_file = (void *) pBuffer;
 
+    meta->phdrs = (ElfProgramHeader_t *) &pBuffer[header.phoff];
     meta->shdrs = (ElfSectionHeader_t *) &pBuffer[header.shoff];
+
+    if(header.type == ET_REL) {
+        meta->relocated = true;
+    } else if(header.type == ET_EXEC || header.type == ET_DYN) {
+        // First program header zero?
+        if(header.phnum) {
+            meta->relocated = (meta->phdrs[0].vaddr & ~(getpagesize() - 1)) == 0;
+        }
+    }
 
     meta->sh_shstrtab = &meta->shdrs[header.shstrndx];
     meta->shstrtab = (const char *) &pBuffer[meta->sh_shstrtab->offset];
@@ -297,15 +311,49 @@ bool loadObject(const char *filename, object_meta_t *meta) {
     }
 
     // Load program headers.
-    meta->loadBase = 0;
+    meta->load_base = 0;
     if(header.phnum) {
-        meta->phdrs = (ElfProgramHeader_t *) &pBuffer[header.phoff];
+        if(meta->relocated) {
+            // Reserve space for the full loaded virtual address space of the process.
+            meta->load_base = meta->phdrs[0].vaddr & ~(getpagesize() - 1);
+            uintptr_t finalAddress = 0;
+            for(size_t i = 0; i < header.phnum; ++i) {
+                uintptr_t endAddr = meta->phdrs[i].vaddr + meta->phdrs[i].memsz;
+                finalAddress = std::max(finalAddress, endAddr);
+            }
+            size_t mapSize = finalAddress - meta->load_base;
+            if(mapSize & (getpagesize() - 1)) {
+                mapSize = (mapSize + getpagesize()) & ~(getpagesize() - 1);
+            }
+
+            void *p = pedigree_sys_request_mem(mapSize);
+            if(!p) {
+                munmap((void *) pBuffer, meta->mapped_file_sz);
+                errno = ENOEXEC;
+                return false;
+            }
+
+            meta->load_base = (uintptr_t) p;
+            if(meta->load_base & (getpagesize() - 1)) {
+                meta->load_base = (meta->load_base + getpagesize()) & ~(getpagesize() - 1);
+            }
+
+            // Patch up section headers, quickly.
+            for(size_t shdx = 0; shdx < header.shnum; ++shdx) {
+                meta->shdrs[shdx].addr += meta->load_base;
+            }
+        }
 
         // NEEDED libraries are stored as offsets into the dynamic string table.
         std::list<uintptr_t> tmp_needed;
 
         for(size_t i = 0; i < header.phnum; i++) {
             if(meta->phdrs[i].type == PT_DYNAMIC) {
+                meta->ph_dynamic = &meta->phdrs[i];
+                if(meta->relocated) {
+                    meta->ph_dynamic->vaddr += meta->load_base;
+                }
+
                 ElfDyn_t *dyn = (ElfDyn_t *) &pBuffer[meta->phdrs[i].offset];
 
                 while(dyn->tag != DT_NULL) {
@@ -366,76 +414,73 @@ bool loadObject(const char *filename, object_meta_t *meta) {
                     flags |= PROT_EXEC;
                 if(meta->phdrs[i].flags & PF_W)
                     flags |= PROT_WRITE;
+                if((meta->phdrs[i].flags & PF_R) == 0)
+                    flags &= ~PROT_READ;
 
-                size_t mapSize = meta->phdrs[i].memsz;
-                if(IS_NOT_PAGE_ALIGNED(mapSize)) {
-                    mapSize = (mapSize & ~(getpagesize() - 1)) + getpagesize();
+                if(meta->relocated) {
+                    meta->phdrs[i].vaddr += meta->load_base;
                 }
 
-                size_t offset = meta->phdrs[i].offset;
-                if(IS_NOT_PAGE_ALIGNED(offset)) {
-                    offset &= ~(getpagesize() - 1);
-                }
+                uintptr_t phdr_base = meta->phdrs[i].vaddr;
 
-                uintptr_t realAddr = meta->phdrs[i].vaddr & ~(getpagesize() - 1);
-                if(meta->loadBase == 0 && realAddr == 0) {
-                    meta->relocated = true;
-                } else if(meta->relocated && meta->loadBase) {
-                    realAddr += meta->loadBase;
-                }
+                size_t pagesz = getpagesize();
 
-                // Anonymous maps are used for the case where .bss exists, as some binaries
-                // have .bss and .data in the same page. Which makes mmap hard.
-                int type = 0;
-                if(meta->phdrs[i].memsz != meta->phdrs[i].filesz) {
-                    type = MAP_ANON;
-                    offset = 0;
-                } else if(!meta->relocated) {
-                    type = MAP_FIXED;
-                }
+                size_t base_addend = phdr_base & (pagesz - 1);
+                phdr_base &= ~(pagesz - 1);
 
-                void *loaded = mmap((void *) realAddr, mapSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | type, fd, offset);
-                if(loaded == MAP_FAILED) {
-                    // Unmap all previous mappings.
-                    for(std::list<std::pair<void*, size_t> >::iterator it = meta->memory_regions.begin();
-                        it != meta->memory_regions.end();
-                        ++it) {
-                        munmap(it->first, it->second);
-                        it = meta->memory_regions.erase(it);
+                size_t offset = meta->phdrs[i].offset & ~(pagesz - 1);
+                size_t offset_addend = meta->phdrs[i].offset & (pagesz - 1);
+
+                size_t mapsz = offset_addend + meta->phdrs[i].memsz;
+
+                // Already mapped?
+                if((msync((void *) phdr_base, mapsz, MS_SYNC) != 0) && (errno == ENOMEM)) {
+                    int mapflags = MAP_ANON | MAP_FIXED;
+                    if(meta->relocated) {
+                        mapflags |= MAP_USERSVD;
+                    }
+                    void *p = mmap((void *) phdr_base, mapsz, PROT_READ | PROT_WRITE, mapflags, 0, 0);
+                    if(p == MAP_FAILED) {
+                        /// \todo cleanup.
+                        errno = ENOEXEC;
+                        return false;
                     }
 
-                    munmap(meta->mapped_file, meta->mapped_file_sz);
-                    close(fd);
-
-                    errno = ENOEXEC;
-                    return false;
+                    // It'd be nice to fully mmap the file, but Pedigree's mmap is not very good.
+                    memcpy((void *) meta->phdrs[i].vaddr, &pBuffer[meta->phdrs[i].offset], meta->phdrs[i].filesz);
+                    meta->memory_regions.push_back(std::pair<void *, size_t>(p, mapsz));
                 }
 
                 if(meta->phdrs[i].memsz > meta->phdrs[i].filesz) {
-                    uintptr_t vaddr = meta->phdrs[i].vaddr;
-                    if(meta->relocated) {
-                        vaddr += meta->loadBase;
-                    }
-
-                    memcpy((void *) vaddr, &pBuffer[meta->phdrs[i].offset], meta->phdrs[i].filesz);
+                    uintptr_t vaddr = meta->phdrs[i].vaddr + meta->phdrs[i].filesz;
+                    memset((void *) vaddr, 0, meta->phdrs[i].memsz - meta->phdrs[i].filesz);
                 }
 
-                if((meta->phdrs[i].flags & PF_R) == 0) {
-                    flags &= ~PROT_READ;
-                }
-
-                mprotect(loaded, mapSize, flags);
-
-                meta->memory_regions.push_back(std::pair<void*, size_t>(loaded, mapSize));
-
-                if(!meta->loadBase) {
-                    if(meta->relocated) {
-                        meta->loadBase = (uintptr_t) loaded;
-                    } else {
-                        meta->loadBase = meta->phdrs[i].vaddr;
-                    }
-                }
+                // mprotect accordingly.
+                size_t alignExtra = meta->phdrs[i].vaddr & (getpagesize() - 1);
+                uintptr_t protectaddr = meta->phdrs[i].vaddr & ~(getpagesize() - 1);
+                mprotect((void *) protectaddr, meta->phdrs[i].memsz + alignExtra, flags);
             }
+        }
+
+        if(meta->relocated) {
+            uintptr_t base_vaddr = meta->load_base;
+
+            // Patch up references.
+            if(meta->dyn_strtab)
+                meta->dyn_strtab += base_vaddr;
+            if(meta->dyn_symtab)
+                meta->dyn_symtab = (ElfSymbol_t *) (((uintptr_t) meta->dyn_symtab) + base_vaddr);
+            if(meta->got)
+                meta->got = (uintptr_t *) (((uintptr_t) meta->got) + base_vaddr);
+            if(meta->rela)
+                meta->rela = (ElfRela_t *) (((uintptr_t) meta->rela) + base_vaddr);
+            if(meta->rel)
+                meta->rel = (ElfRel_t *) (((uintptr_t) meta->rel) + base_vaddr);
+            if(meta->plt_rela)
+                meta->plt_rela = (ElfRela_t *) (((uintptr_t) meta->plt_rela) + base_vaddr);
+            if(meta->plt_rel)
+                meta->plt_rel = (ElfRel_t *) (((uintptr_t) meta->plt_rel) + base_vaddr);
         }
 
         if(meta->dyn_strtab) {
@@ -452,9 +497,12 @@ bool loadObject(const char *filename, object_meta_t *meta) {
     }
 
     // Do another pass over section headers to try and get the hash table.
+    meta->hash = 0;
+    meta->hash_buckets = 0;
+    meta->hash_chains = 0;
     for(size_t i = 0; i < header.shnum; i++) {
         if(meta->shdrs[i].type == SHT_HASH) {
-            uintptr_t vaddr = meta->shdrs[meta->shdrs[i].link].offset + meta->loadBase;
+            uintptr_t vaddr = meta->shdrs[meta->shdrs[i].link].addr;
             if(((uintptr_t) meta->dyn_symtab) == vaddr) {
                 meta->hash = (ElfHash_t *) &pBuffer[meta->shdrs[i].offset];
                 meta->hash_buckets = (Elf_Word *) &pBuffer[meta->shdrs[i].offset + sizeof(ElfHash_t)];
@@ -469,11 +517,7 @@ bool loadObject(const char *filename, object_meta_t *meta) {
         meta->got[2] = (uintptr_t) _libload_resolve_symbol;
     }
 
-    // Do initial relocation of the binary.
-    doRelocation(meta);
-
     // mmap complete - don't need the file descriptors open any longer.
-    close(zerofd);
     close(fd);
 
     return true;
@@ -503,12 +547,16 @@ bool lookupSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, boo
     do {
         sym = meta->dyn_symtab[y];
         if(symbolName(sym, meta) == sname) {
-            if(bWeak) {
-                if(ST_BIND(sym.info) == STB_WEAK) {
+            if(ST_BIND(sym.info) == STB_GLOBAL || ST_BIND(sym.info) == STB_LOCAL) {
+                if(sym.shndx) {
+                    break;
+                } else if(ST_TYPE(sym.info) == 2 && sym.value != 0) {
                     break;
                 }
-            } else if(ST_BIND(sym.info) == STB_GLOBAL || ST_BIND(sym.info) == STB_LOCAL) {
-                if(sym.shndx) {
+            }
+            if(bWeak) {
+                if(ST_BIND(sym.info) == STB_WEAK) {
+                    sym.value = (uintptr_t) ~0UL;
                     break;
                 }
             }
@@ -518,12 +566,10 @@ bool lookupSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, boo
 
     if(y != 0) {
         // Patch up the value.
-        if(ST_TYPE(sym.info) < 3) {
-            ElfSectionHeader_t *sh = &meta->shdrs[sym.shndx];
-            sym.value += sh->addr;
-
-            if(meta->relocated) {
-                sym.value += meta->loadBase;
+        if(ST_TYPE(sym.info) < 3 && ST_BIND(sym.info) != STB_WEAK) {
+            if(sym.shndx && meta->relocated) {
+                ElfSectionHeader_t *sh = &meta->shdrs[sym.shndx];
+                sym.value += meta->load_base;
             }
         }
     }
@@ -561,7 +607,7 @@ std::string symbolName(const ElfSymbol_t &sym, object_meta_t *meta) {
     if(!meta) {
         return std::string("");
     } else if(sym.name == 0) {
-        return std::string("<no name>");
+        return std::string("");
     }
 
     ElfSymbol_t *symtab = meta->symtab;
@@ -593,20 +639,22 @@ void doRelocation(object_meta_t *meta) {
         }
     }
 
-    if(meta->plt_rel) {
-        for(size_t i = 0; i < (meta->plt_sz / sizeof(ElfRel_t)); i++) {
-            if(meta->relocated) {
-                uintptr_t *entry = (uintptr_t *) (meta->loadBase + meta->plt_rel[i].offset);
-                *entry += meta->loadBase;
+    // Relocated binaries need to have the GOTPLT fixed up, as each entry points to
+    // a non-relocated address (that is also not relative).
+    if(meta->relocated) {
+        uintptr_t base = meta->load_base;
+
+        if(meta->plt_rel) {
+            for(size_t i = 0; i < (meta->plt_sz / sizeof(ElfRel_t)); i++) {
+                uintptr_t *addr = (uintptr_t *) (base + meta->plt_rel[i].offset);
+                *addr += base;
             }
         }
-    }
 
-    if(meta->plt_rela) {
-        for(size_t i = 0; i < (meta->plt_sz / sizeof(ElfRela_t)); i++) {
-            if(meta->relocated) {
-                uintptr_t *entry = (uintptr_t *) (meta->loadBase + meta->plt_rela[i].offset);
-                *entry += meta->loadBase;
+        if(meta->plt_rela) {
+            for(size_t i = 0; i < (meta->plt_sz / sizeof(ElfRela_t)); i++) {
+                uintptr_t *addr = (uintptr_t *) (base + meta->plt_rel[i].offset);
+                *addr += base;
             }
         }
     }
@@ -645,14 +693,10 @@ void doRelocation(object_meta_t *meta) {
 #define R_386_GOTOFF   9
 #define R_386_GOTPC    10
 
-void doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
+uintptr_t doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
     ElfSymbol_t *symtab = meta->symtab;
-    const char *strtab = meta->strtab;
     if(meta->dyn_symtab) {
         symtab = meta->dyn_symtab;
-    }
-    if(meta->dyn_strtab) {
-        strtab = meta->dyn_strtab;
     }
 
     ElfSymbol_t *sym = &symtab[R_SYM(rel.info)];
@@ -661,20 +705,16 @@ void doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
         sh = &meta->shdrs[sym->shndx];
     }
 
-    uintptr_t B = 0;
-    if(meta->relocated) {
-        B = meta->loadBase;
-    }
+    uintptr_t B = meta->load_base;
     uintptr_t P = rel.offset;
     if(meta->relocated) {
-        P += (sh ? sh->addr : B);
+        P += B;
     }
 
     uintptr_t A = *((uintptr_t*) P);
     uintptr_t S = 0;
 
     std::string symbolname = symbolName(*sym, meta);
-    printf("fixup for '%s'\n", symbolname.c_str());
 
     // Patch in section header?
     if(symtab && ST_TYPE(sym->info) == 3) {
@@ -688,16 +728,15 @@ void doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
                 // Search anything except the current object.
                 if(!findSymbol(symbolname.c_str(), meta, lookupsym)) {
                     printf("symbol lookup for '%s' failed.\n", symbolname.c_str());
-                    return;
+                    lookupsym.value = (uintptr_t) ~0UL;
                 }
             } else {
                 // Attempt a local lookup first.
                 if(!lookupSymbol(symbolname.c_str(), meta, lookupsym, false)) {
-                    printf("Couldn't look up in main object, trying others\n");
                     // No local symbol of that name - search other objects.
                     if(!findSymbol(symbolname.c_str(), meta, lookupsym)) {
                         printf("symbol lookup for '%s' failed.\n", symbolname.c_str());
-                        return;
+                        lookupsym.value = (uintptr_t) ~0UL;
                     }
                 }
             }
@@ -705,6 +744,9 @@ void doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
             S = lookupsym.value;
         }
     }
+
+    if(S == (uintptr_t) ~0UL)
+        S = 0;
 
     uint32_t result = A;
     switch(R_TYPE(rel.info)) {
@@ -719,6 +761,7 @@ void doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
         case R_386_JMP_SLOT:
         case R_386_GLOB_DAT:
             result = S;
+            break;
         case R_386_COPY:
             result = *((uint32_t *) S);
             break;
@@ -728,9 +771,10 @@ void doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
     }
 
     *((uint32_t *) P) = result;
+    return result;
 }
 
-void doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
+uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
     ElfSymbol_t *symtab = meta->symtab;
     const char *strtab = meta->strtab;
     if(meta->dyn_symtab) {
@@ -749,16 +793,12 @@ void doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
     uintptr_t A = rel.addend;
     uintptr_t S = 0;
     uintptr_t B = 0;
-    if(meta->relocated) {
-        B = meta->loadBase;
-    }
     uintptr_t P = rel.offset;
     if(meta->relocated) {
         P += (sh ? sh->addr : B);
     }
 
     std::string symbolname = symbolName(*sym, meta);
-    printf("fixup for '%s'\n", symbolname.c_str());
 
     // Patch in section header?
     if(symtab && ST_TYPE(sym->info) == 3) {
@@ -768,20 +808,20 @@ void doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
             S = sym->value;
         } else {
             ElfSymbol_t lookupsym;
+            lookupsym.value = 0;
             if(R_TYPE(rel.info) == R_X86_64_COPY) {
                 // Search anything except the current object.
                 if(!findSymbol(symbolname.c_str(), meta, lookupsym)) {
                     printf("symbol lookup for '%s' failed.\n", symbolname.c_str());
-                    return;
+                    lookupsym.value = (uintptr_t) ~0UL;
                 }
             } else {
                 // Attempt a local lookup first.
                 if(!lookupSymbol(symbolname.c_str(), meta, lookupsym, false)) {
-                    printf("Couldn't look up in main object, trying others\n");
                     // No local symbol of that name - search other objects.
                     if(!findSymbol(symbolname.c_str(), meta, lookupsym)) {
                         printf("symbol lookup for '%s' failed.\n", symbolname.c_str());
-                        return;
+                        lookupsym.value = (uintptr_t) ~0UL;
                     }
                 }
             }
@@ -792,7 +832,12 @@ void doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
 
     // Valid S?
     if((S == 0) && (R_TYPE(rel.info) != R_X86_64_RELATIVE)) {
-        return;
+        return (uintptr_t) ~0UL;
+    }
+
+    // Weak symbol.
+    if(S == (uintptr_t) ~0UL) {
+        S = 0;
     }
 
     uintptr_t result = *((uintptr_t *) P);
@@ -821,21 +866,32 @@ void doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
             break;
     }
     *((uintptr_t *) P) = result;
+    return result;
 }
 
-extern "C" void _libload_dofixup(uintptr_t id, uintptr_t symbol) {
+extern "C" uintptr_t _libload_dofixup(uintptr_t id, uintptr_t symbol) {
     object_meta_t *meta = (object_meta_t *) id;
-    printf("fixup for id=%p, symbol=%p\n", id, symbol);
-
-    if(!symbol)
-        return;
+    uintptr_t returnaddr = 0;
 
 #ifdef BITS_32
-    ElfRel_t rel = meta->rel[symbol];
+    ElfRel_t rel = meta->plt_rel[symbol / sizeof(ElfRel_t)];
 #else
-    ElfRela_t rel = meta->rela[symbol];
+    ElfRela_t rel = meta->plt_rela[symbol / sizeof(ElfRela_t)];
 #endif
-    doThisRelocation(rel, meta);
+    // Verify the symbol is sane.
+    if(meta->hash && (R_SYM(rel.info) > meta->hash->nchain)) {
+        fprintf(stderr, "symbol lookup failed (symbol not in hash table)\n");
+        abort();
+    }
 
-    printf("fixup done\n");
+    ElfSymbol_t *sym = &meta->dyn_symtab[R_SYM(rel.info)];
+    std::string symbolname = symbolName(*sym, meta);
+
+    uintptr_t result = doThisRelocation(rel, meta);
+    if(result == (uintptr_t) ~0UL) {
+        fprintf(stderr, "symbol lookup failed (couldn't relocate)\n");
+        abort();
+    }
+
+    return result;
 }
