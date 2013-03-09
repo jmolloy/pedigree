@@ -155,7 +155,8 @@ void RangeList<T>::free(T address, T length)
 template<typename T>
 bool RangeList<T>::allocate(T length, T &address)
 {
-  if(m_bReverse) {
+  if(m_bReverse)
+  {
     ReverseIterator cur(m_List.rbegin());
     ConstReverseIterator end(m_List.rend());
     for (;cur != end;++cur)
