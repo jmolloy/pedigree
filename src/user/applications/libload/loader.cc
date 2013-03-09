@@ -122,12 +122,16 @@ size_t elfhash(const char *name) {
 
 extern char **environ;
 
+#include <syslog.h>
+
 extern "C" int main(int argc, char *argv[])
 {
     // Sanity check: do we actually have a program to load?
     if(argc == 0) {
         return 0;
     }
+
+    syslog(LOG_INFO, "libload.so starting...");
 
     char *ld_libpath = getenv("LD_LIBRARY_PATH");
     char *ld_preload = getenv("LD_PRELOAD");
@@ -155,6 +159,8 @@ extern "C" int main(int argc, char *argv[])
 
     /// \todo Implement dlopen etc in here.
 
+    syslog(LOG_INFO, "libload.so loading main object");
+
     // Load the main object passed on the command line.
     object_meta_t *meta = new object_meta_t;
     meta->running = false;
@@ -163,16 +169,19 @@ extern "C" int main(int argc, char *argv[])
         return ENOEXEC;
     }
 
+    syslog(LOG_INFO, "libload.so loading preload, if one exists");
+
     // Preload?
     if(ld_preload) {
         object_meta_t *preload = new object_meta_t;
         if(!loadObject(ld_preload, preload)) {
             printf("Loading preload '%s' failed.\n", ld_preload);
         } else {
-            doRelocation(preload);
             meta->preloads.push_back(preload);
         }
     }
+
+    syslog(LOG_INFO, "libload.so loading dependencies");
 
     // Any libraries to load?
     if(meta->needed.size()) {
@@ -183,14 +192,33 @@ extern "C" int main(int argc, char *argv[])
             if(!loadObject(it->c_str(), object)) {
                 printf("Loading '%s' failed.\n", it->c_str());
             } else {
-                doRelocation(object);
                 meta->objects.push_back(object);
             }
         }
     }
 
+    syslog(LOG_INFO, "libload.so relocating dependencies");
+
+    // Relocate preloads.
+    for(std::list<struct _object_meta *>::iterator it = meta->preloads.begin();
+        it != meta->preloads.end();
+        ++it) {
+        doRelocation(*it);
+    }
+
+    // Relocate all other loaded objects.
+    for(std::list<struct _object_meta *>::iterator it = meta->objects.begin();
+        it != meta->objects.end();
+        ++it) {
+        doRelocation(*it);
+    }
+
+    syslog(LOG_INFO, "libload.so relocating main object");
+
     // Do initial relocation of the binary (non-GOT entries)
     doRelocation(meta);
+
+    syslog(LOG_INFO, "libload.so running entry point");
 
     // All done - run the program!
     meta->running = true;
