@@ -174,4 +174,6 @@
 
 #define PEDIGREE_UNWIND_SIGNAL  121
 
+#define POSIX_MSYNC             122
+
 #endif

@@ -1741,6 +1741,11 @@ void *mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off)
     return (void*) syscall1(POSIX_MMAP, (long) &t);
 }
 
+int msync(void *addr, size_t len, int flags)
+{
+    return (int) syscall3(POSIX_MSYNC, (long) addr, (long) len, flags);
+}
+
 int munmap(void *addr, size_t len)
 {
     return (long) syscall2(POSIX_MUNMAP, (long) addr, (long) len);

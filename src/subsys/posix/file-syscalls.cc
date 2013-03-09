@@ -1323,7 +1323,7 @@ void *posix_mmap(void *p)
 
     // Get real variables from the parameters
     void *addr = map_info->addr;
-    size_t len = map_info->len + 1;
+    size_t len = map_info->len;
     int prot = map_info->prot;
     int flags = map_info->flags;
     int fd = map_info->fildes;
@@ -1345,7 +1345,7 @@ void *posix_mmap(void *p)
 
     // Valid file passed?
     FileDescriptor* f = pSubsystem->getFileDescriptor(fd);
-    if(!f)
+    if(flags & MAP_ANON)
     {
         // Anonymous mmap instead?
         if(flags & (MAP_ANON | MAP_SHARED))
@@ -1394,25 +1394,31 @@ void *posix_mmap(void *p)
                     }
                 }
 
-                // Allow the pages to be used the the process now
-                pProcess->getSpaceAllocator().free(mapAddress, len);
-
                 // Now, allocate the memory
-                if(!pProcess->getSpaceAllocator().allocateSpecific(mapAddress, len))
+                if(!pProcess->getSpaceAllocator().allocateSpecific(mapAddress, numPages * pageSz))
                 {
-                    F_NOTICE("mmap: out of memory");
-                    SYSCALL_ERROR(OutOfMemory);
-                    return MAP_FAILED;
+                    if(!(flags & MAP_USERSVD))
+                    {
+                        F_NOTICE("mmap: out of memory");
+                        SYSCALL_ERROR(OutOfMemory);
+                        return MAP_FAILED;
+                    }
                 }
             }
             else if(flags & (MAP_ANON | MAP_SHARED))
             {
                 // Anonymous mapping - get an address from the space allocator
-                if(!pProcess->getSpaceAllocator().allocate(len, mapAddress))
+                /// \todo NEED AN ALIGNED ADDRESS. COME ON.
+                if(!pProcess->getSpaceAllocator().allocate(numPages * pageSz, mapAddress))
                 {
                     F_NOTICE("mmap: out of memory");
                     SYSCALL_ERROR(OutOfMemory);
                     return MAP_FAILED;
+                }
+
+                if (mapAddress & (pageSz-1))
+                {
+                    mapAddress = (mapAddress + pageSz) & ~(pageSz - 1);
                 }
             }
             else
@@ -1453,6 +1459,12 @@ void *posix_mmap(void *p)
             ///       we should store an object of some description. Then it'll
             ///       be something like pSubsystem->addMemoryMap()
             pSubsystem->memoryMapFile(finalAddress, 0);
+
+            // Clear the allocated region if needed
+            if(flags & MAP_ANON)
+            {
+                memset(finalAddress, 0xAB, numPages * PhysicalMemoryManager::getPageSize());
+            }
         }
         else
         {
@@ -1473,10 +1485,10 @@ void *posix_mmap(void *p)
         // MAP_FIXED mappings too
         /// \todo There *should* be proper flag checks here!
         uintptr_t address = reinterpret_cast<uintptr_t>(addr);
-        MemoryMappedFile *pFile = MemoryMappedFileManager::instance().map(fileToMap, address, len);
+        MemoryMappedFile *pFile = MemoryMappedFileManager::instance().map(fileToMap, address, len, off);
 
         // Add the offset...
-        address += off;
+        // address += off;
         finalAddress = reinterpret_cast<void*>(address);
 
         // Another memory mapped file to keep track of
@@ -1485,6 +1497,19 @@ void *posix_mmap(void *p)
 
     // Complete
     return finalAddress;
+}
+
+int posix_msync(void *p, size_t len, int flags) {
+    F_NOTICE("msync");
+
+    // Hacky, more or less just for the dynamic linker to figure out if a page is already mapped.
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    if(!va.isMapped(p)) {
+        SYSCALL_ERROR(OutOfMemory);
+        return -1;
+    }
+
+    return 0;
 }
 
 int posix_munmap(void *addr, size_t len)

@@ -343,6 +343,9 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case PEDIGREE_UNWIND_SIGNAL:
             pedigree_unwind_signal();
             return 0;
+
+        case POSIX_MSYNC:
+            return posix_msync(reinterpret_cast<void *>(p1), static_cast<size_t>(p2), static_cast<int>(p3));
         
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber() << Hex); return 0;
     }
