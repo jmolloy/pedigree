@@ -45,13 +45,17 @@ MemoryMappedFile::~MemoryMappedFile()
     m_Mappings.clear();
 }
 
-bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess)
+bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess, size_t extentOverride)
 {
     LockGuard<Mutex> guard(m_Lock);
 
+    size_t extent = m_Extent;
+    if(extentOverride)
+        extent = extentOverride;
+
     // Verify that we're not trying to memory map an empty file
     /// \todo It's ok to do so if write is enabled!
-    if(m_Extent <= 1)
+    if(extent <= 1)
         return false;
 
     if (!pProcess)
@@ -59,9 +63,9 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess)
 
     if (address == 0)
     {
-        if (!pProcess->getSpaceAllocator().allocate(m_Extent+PhysicalMemoryManager::getPageSize(), address))
+        if (!pProcess->getSpaceAllocator().allocate(extent+PhysicalMemoryManager::getPageSize(), address))
             return false;
-        if (address & ~(PhysicalMemoryManager::getPageSize()-1))
+        if (address & (PhysicalMemoryManager::getPageSize()-1))
         {
             address = (address + PhysicalMemoryManager::getPageSize()) &
                 ~(PhysicalMemoryManager::getPageSize()-1);
@@ -69,11 +73,11 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess)
     }
     else
     {
-        if (!pProcess->getSpaceAllocator().allocateSpecific(address, m_Extent))
+        if (!pProcess->getSpaceAllocator().allocateSpecific(address, extent))
             return false;
     }
 
-    NOTICE("MemoryMappedFile: " << Hex << address << " -> " << (address+m_Extent) << " (pid " << pProcess->getId() << ")");
+    NOTICE("MemoryMappedFile: " << Hex << address << " -> " << (address+extent) << " (pid " << pProcess->getId() << ")");
 
     // Create a spinlock as an easy way of disabling interrupts.
     Spinlock spinlock;
@@ -93,6 +97,11 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess)
     {
         uintptr_t v = it.key() + address;
         uintptr_t p = it.value();
+
+        // Extent overridden means don't map the entire file in...
+        if(it.key() >= extent) {
+            break;
+        }
 
         if (!va->map(p, reinterpret_cast<void*>(v), VirtualAddressSpace::Execute | VirtualAddressSpace::Write))
         {
@@ -139,9 +148,11 @@ void MemoryMappedFile::unload(uintptr_t address)
     }
 }
 
-void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset)
+void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileoffset)
 {
     LockGuard<Mutex> guard(m_Lock);
+
+    //NOTICE_NOLOCK("trap at " << address << "[" << offset << ", " << fileoffset << "]");
 
     // Quick sanity check...
     if (address-offset > m_Extent)
@@ -154,6 +165,13 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset)
 
     uintptr_t v = address & ~(PhysicalMemoryManager::getPageSize()-1);
 
+    // Mapped?
+    if(va.isMapped(reinterpret_cast<void *>(v)))
+    {
+        FATAL_NOLOCK("MemoryMappedFile: trap() on an already-mapped address");
+        return;
+    }
+
     // Allocate a physical page to store the result.
     physical_uintptr_t p = PhysicalMemoryManager::instance().allocatePage();
 
@@ -165,7 +183,9 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset)
     }
 
     // Add the mapping to our list.
-    m_Mappings.insert(v-offset, p);
+    uintptr_t readloc = (v - offset) + fileoffset;
+    //NOTICE("readloc: " << readloc);
+    m_Mappings.insert(readloc, p);
 
     // We can't just read directly into the new page, as the ATA driver
     // among others use thread-based IPC, which means they run in the
@@ -173,11 +193,11 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset)
     // memcpy.
     uint8_t *buffer = new uint8_t[PhysicalMemoryManager::getPageSize()];
 
-    if (m_pFile->read(v-offset, PhysicalMemoryManager::getPageSize(),
+    if (m_pFile->read(readloc, PhysicalMemoryManager::getPageSize(),
                       reinterpret_cast<uintptr_t>(buffer)) == 0)
     {
         WARNING_NOLOCK("MemoryMappedFile: read() failed in trap()");
-        WARNING_NOLOCK("File is " << m_pFile->getName() << ", offset was " << (v - offset) << ", reading a page.");
+        WARNING_NOLOCK("File is " << m_pFile->getName() << ", offset was " << readloc << ", reading a page.");
         // Non-fatal, continue.
     }
 
@@ -187,7 +207,7 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset)
 
     // Now that the file is read and memory written, change the mapping
     // to read only.
-    va.setFlags(reinterpret_cast<void*>(v), 0);
+    // va.setFlags(reinterpret_cast<void*>(v), 0);
 }
 
 MemoryMappedFileManager::MemoryMappedFileManager() :
@@ -200,7 +220,7 @@ MemoryMappedFileManager::~MemoryMappedFileManager()
 {
 }
 
-MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address, size_t sizeOverride)
+MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address, size_t sizeOverride, size_t offset)
 {
     m_CacheLock.acquire();
 
@@ -222,14 +242,17 @@ MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address, 
     // or (b) the file was out of date.
     if (!pMmFile)
     {
-        pMmFile = new MemoryMappedFile(pFile, sizeOverride);
+        pMmFile = new MemoryMappedFile(pFile);
         m_Cache.insert(pFile, pMmFile);
     }
 
     m_CacheLock.release();
 
+    if(sizeOverride == 0)
+        sizeOverride = pMmFile->getExtent();
+
     // Now we know that pMmFile is valid, load it into our address space.
-    if (!pMmFile->load(address))
+    if (!pMmFile->load(address, 0, sizeOverride))
     {
         ERROR_NOLOCK("MemoryMappedFile: load failed in map()");
         return 0;
@@ -249,7 +272,7 @@ MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address, 
         m_MmFileLists.insert(&va, pMmFileList);
     }
 
-    MmFile *_pMmFile = new MmFile(address, pMmFile->getExtent(), pMmFile);
+    MmFile *_pMmFile = new MmFile(address, sizeOverride, offset, pMmFile);
     pMmFileList->pushBack(_pMmFile);
 
     // Success.
@@ -312,7 +335,7 @@ void MemoryMappedFileManager::clone(Process *pProcess)
          it != pMmFileList->end();
          it++)
     {
-        MmFile *pMmFile = new MmFile( (*it)->offset, (*it)->size, (*it)->file );
+        MmFile *pMmFile = new MmFile( (*it)->offset, (*it)->size, (*it)->fileoffset, (*it)->file );
         pMmFileList2->pushBack(pMmFile);
 
         (*it)->file->increaseRefCount();
@@ -352,7 +375,7 @@ bool MemoryMappedFileManager::trap(uintptr_t address, bool bIsWrite)
     /// \todo Handle read-write maps.
     if (bIsWrite)
     {
-        return false;
+        // return false;
     }
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
@@ -375,7 +398,7 @@ bool MemoryMappedFileManager::trap(uintptr_t address, bool bIsWrite)
         if ( (address >= pMmFile->offset) && (address < pMmFile->offset+pMmFile->size) )
         {
             m_CacheLock.release();
-            pMmFile->file->trap(address, pMmFile->offset);
+            pMmFile->file->trap(address, pMmFile->offset, pMmFile->fileoffset);
 
 //            NOTICE_NOLOCK("Trap end: " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
             return true;
