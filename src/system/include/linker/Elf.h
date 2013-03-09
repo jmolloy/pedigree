@@ -33,6 +33,12 @@
 #define DEBUG(...)
 #endif
 
+// Object file types
+#define ET_NONE           0x0
+#define ET_REL            0x1
+#define ET_EXEC           0x2
+#define ET_DYN            0x3
+#define ET_CORE           0x4
 
 // Section header types - common to Elf32 and Elf64.
 #define SHT_PROGBITS      0x1     // The data is contained in the program file.
