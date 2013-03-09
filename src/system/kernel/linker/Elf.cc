@@ -713,6 +713,8 @@ bool Elf::finaliseModule(uint8_t *pBuffer, size_t length)
 bool Elf::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolTable *pSymtab, bool bAllocate, size_t *pSize)
 {
 #ifdef THREADS
+    NOTICE("Elf::allocate: buffer at " << Hex << reinterpret_cast<uintptr_t>(pBuffer) << ", len " << length);
+
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
 
     // Scan the segments to find the size.

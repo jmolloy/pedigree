@@ -363,7 +363,6 @@ void MemoryMappedFileManager::unmapAll()
          it != pMmFileList->end();
          it = pMmFileList->begin())
     {
-        NOTICE("Unmapping...");
         (*it)->file->unload( (*it)->offset );
         if ((*it)->file->decreaseRefCount())
         {
