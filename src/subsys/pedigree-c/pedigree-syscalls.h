@@ -75,6 +75,8 @@ int pedigree_module_get_depending(char *name, char *buf, size_t bufsz);
 
 int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n);
 
+void *pedigree_sys_request_mem(size_t len);
+
 /** Pedigree graphics framework system calls */
 
 #ifdef __cplusplus

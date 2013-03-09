@@ -164,6 +164,8 @@ uintptr_t PedigreeCSyscallManager::syscall(SyscallState &state)
         case PEDIGREE_EVENT_RETURN:
             pedigree_event_return();
             return 0;
+        case PEDIGREE_SYS_REQUEST_MEM:
+            return reinterpret_cast<uintptr_t>(pedigree_sys_request_mem(static_cast<size_t>(p1)));
         default: ERROR ("PedigreeCSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
 }
