@@ -1772,7 +1772,11 @@ int getgroups(int gidsetsize, gid_t grouplist[])
 
 size_t getpagesize(void)
 {
-    return sysconf(_SC_PAGESIZE);
+    // Avoid masses of system calls by assuming the page size doesn't actually ever change.
+    static size_t sz = (size_t) ~0;
+    if(sz == (size_t) ~0)
+        sz = sysconf(_SC_PAGESIZE);
+    return sz;
 }
 
 char *realpath(const char *file_name, char *resolved_name)
