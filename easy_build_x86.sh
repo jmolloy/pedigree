@@ -147,6 +147,7 @@ echo "Installing a base set of packages..."
 $script_dir/run_pup.py install pedigree-base
 $script_dir/run_pup.py install libpng
 $script_dir/run_pup.py install libfreetype
+$script_dir/run_pup.py install libiconv
 $script_dir/run_pup.py install zlib
 
 $script_dir/run_pup.py install bash
