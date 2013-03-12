@@ -239,19 +239,23 @@ PosixSubsystem::~PosixSubsystem()
     {
         //uintptr_t addr = reinterpret_cast<uintptr_t>(it.key());
         MemoryMappedFile *pFile = unmapFile(it.key());
-        if(pFile)
+        if(pFile->getFile())
         {
             // It better handle files that've already been unmapped...
             MemoryMappedFileManager::instance().unmap(pFile);
         }
         else
         {
-            WARNING("PosixSubsystem::~PosixSubsystem - unfreed anonymous memory maps still exist");
-            // Anonymous mmap, manually free the space
-            /*size_t pageSz = PhysicalMemoryManager::getPageSize();
-            size_t numPages = (len / pageSz) + (len % pageSz ? 1 : 0);
+            NOTICE("File to destroy is " << (uintptr_t) pFile << ".");
+            size_t extent = pFile->getExtent();
 
-            uintptr_t address = reinterpret_cast<uintptr_t>(addr);
+            // Anonymous mmap, manually free the space
+            size_t pageSz = PhysicalMemoryManager::getPageSize();
+            size_t numPages = (extent / pageSz) + (extent % pageSz ? 1 : 0);
+
+            uintptr_t address = reinterpret_cast<uintptr_t>(it.key());
+
+            NOTICE("PosixSubsystem - cleaning up anonymous memory map from " << address << " -> " << address + extent);
 
             // Unmap!
             VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
@@ -272,7 +276,8 @@ PosixSubsystem::~PosixSubsystem()
             }
 
             // Free from the space allocator as well
-            m_pProcess->getSpaceAllocator().free(address, len);*/
+            m_pProcess->getSpaceAllocator().free(address, extent);
+            delete pFile;
         }
     }
 }

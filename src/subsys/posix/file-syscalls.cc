@@ -1458,12 +1458,13 @@ void *posix_mmap(void *p)
             /// \todo This is not really ideal - rather than storing a MMFile
             ///       we should store an object of some description. Then it'll
             ///       be something like pSubsystem->addMemoryMap()
+            MemoryMappedFile *pFile = new MemoryMappedFile(len);
             pSubsystem->memoryMapFile(finalAddress, 0);
 
             // Clear the allocated region if needed
             if(flags & MAP_ANON)
             {
-                memset(finalAddress, 0xAB, numPages * PhysicalMemoryManager::getPageSize());
+                memset(finalAddress, 0, numPages * PhysicalMemoryManager::getPageSize());
             }
         }
         else

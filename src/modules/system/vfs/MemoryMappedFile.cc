@@ -32,6 +32,12 @@ MemoryMappedFile::MemoryMappedFile(File *pFile, size_t extentOverride) :
     }
 }
 
+MemoryMappedFile::MemoryMappedFile(size_t anonMapSize) :
+    m_pFile(0), m_Mappings(), m_bMarkedForDeletion(false), m_Extent(anonMapSize),
+    m_RefCount(1), m_Lock()
+{
+}
+
 MemoryMappedFile::~MemoryMappedFile()
 {
     // Free all physical pages.

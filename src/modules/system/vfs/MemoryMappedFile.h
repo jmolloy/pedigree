@@ -49,6 +49,9 @@ public:
     /** Constructor - to be called from MemoryMappedFileManager only! */
     MemoryMappedFile(File *pFile, size_t extentOverride = 0);
 
+    /** Secondary constructor for anonymous memory mapped "file". */
+    MemoryMappedFile(size_t anonMapSize);
+
     /** Destructor */
     virtual ~MemoryMappedFile();
 
