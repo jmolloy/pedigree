@@ -1459,7 +1459,7 @@ void *posix_mmap(void *p)
             ///       we should store an object of some description. Then it'll
             ///       be something like pSubsystem->addMemoryMap()
             MemoryMappedFile *pFile = new MemoryMappedFile(len);
-            pSubsystem->memoryMapFile(finalAddress, 0);
+            pSubsystem->memoryMapFile(finalAddress, pFile);
 
             // Clear the allocated region if needed
             if(flags & MAP_ANON)
