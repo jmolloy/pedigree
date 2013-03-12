@@ -83,6 +83,8 @@ typedef struct _object_meta {
 
     std::list<struct _object_meta*> preloads;
     std::list<struct _object_meta*> objects;
+
+    struct _object_meta *parent;
 } object_meta_t;
 
 #define IS_NOT_PAGE_ALIGNED(x) (((x) & (getpagesize() - 1)) != 0)
@@ -177,6 +179,7 @@ extern "C" int main(int argc, char *argv[])
         if(!loadObject(ld_preload, preload)) {
             printf("Loading preload '%s' failed.\n", ld_preload);
         } else {
+            preload->parent = meta;
             meta->preloads.push_back(preload);
         }
     }
@@ -192,6 +195,7 @@ extern "C" int main(int argc, char *argv[])
             if(!loadObject(it->c_str(), object)) {
                 printf("Loading '%s' failed.\n", it->c_str());
             } else {
+                object->parent = meta;
                 meta->objects.push_back(object);
             }
         }
@@ -617,8 +621,13 @@ bool findSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym) {
             return true;
     }
 
-    for(std::list<object_meta_t*>::iterator it = meta->objects.begin();
-        it != meta->objects.end();
+    object_meta_t *ext_meta = meta;
+    while(ext_meta->parent) {
+        ext_meta = ext_meta->parent;
+    }
+
+    for(std::list<object_meta_t*>::iterator it = ext_meta->objects.begin();
+        it != ext_meta->objects.end();
         ++it) {
         if(lookupSymbol(symbol, *it, sym, false))
             return true;
@@ -763,7 +772,7 @@ uintptr_t doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
                 if(!lookupSymbol(symbolname.c_str(), meta, lookupsym, false)) {
                     // No local symbol of that name - search other objects.
                     if(!findSymbol(symbolname.c_str(), meta, lookupsym)) {
-                        printf("symbol lookup for '%s' failed.\n", symbolname.c_str());
+                        printf("symbol lookup for '%s' (needed in '%s') failed.\n", symbolname.c_str(), meta->path.c_str());
                         lookupsym.value = (uintptr_t) ~0UL;
                     }
                 }
@@ -848,7 +857,7 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
                 if(!lookupSymbol(symbolname.c_str(), meta, lookupsym, false)) {
                     // No local symbol of that name - search other objects.
                     if(!findSymbol(symbolname.c_str(), meta, lookupsym)) {
-                        printf("symbol lookup for '%s' failed.\n", symbolname.c_str());
+                        printf("symbol lookup for '%s' (needed in '%s') failed.\n", symbolname.c_str(), meta->path.c_str());
                         lookupsym.value = (uintptr_t) ~0UL;
                     }
                 }
