@@ -609,8 +609,6 @@ bool lookupSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, boo
             if(ST_BIND(sym.info) == STB_GLOBAL || ST_BIND(sym.info) == STB_LOCAL) {
                 if(sym.shndx) {
                     break;
-                } else if(ST_TYPE(sym.info) == 2 && sym.value != 0) {
-                    break;
                 }
             }
             if(bWeak) {
