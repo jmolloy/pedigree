@@ -92,7 +92,7 @@ typedef struct _object_meta {
 
 extern "C" void *pedigree_sys_request_mem(size_t len);
 
-bool loadObject(const char *filename, object_meta_t *meta);
+bool loadObject(const char *filename, object_meta_t *meta, bool envpath = false);
 
 bool loadSharedObjectHelper(const char *filename, object_meta_t *parent);
 
@@ -107,7 +107,7 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta);
 
 std::string symbolName(const ElfSymbol_t &sym, object_meta_t *meta);
 
-std::string findObject(std::string name);
+std::string findObject(std::string name, bool envpath);
 
 extern "C" uintptr_t _libload_resolve_symbol();
 
@@ -171,7 +171,7 @@ extern "C" int main(int argc, char *argv[])
     // Load the main object passed on the command line.
     object_meta_t *meta = new object_meta_t;
     meta->running = false;
-    if(!loadObject(argv[0], meta)) {
+    if(!loadObject(argv[0], meta, true)) {
         delete meta;
         return ENOEXEC;
     }
@@ -235,7 +235,7 @@ extern "C" int main(int argc, char *argv[])
     return 0;
 }
 
-std::string findObject(std::string name) {
+std::string findObject(std::string name, bool envpath) {
     std::string fixed_path = name;
     std::list<std::string>::iterator it = g_lSearchPaths.begin();
     do {
@@ -249,6 +249,32 @@ std::string findObject(std::string name) {
         fixed_path += "/";
         fixed_path += name;
     } while(++it != g_lSearchPaths.end());
+
+    if(envpath) {
+        // Check $PATH for the file.
+        char *path = getenv("PATH");
+
+        if(path) {
+            // Parse, write.
+            const char *entry;
+            while((entry = strtok(path, ":"))) {
+                g_lSearchPaths.push_back(std::string(entry));
+
+                /// \todo Handle environment variables in entry if needed.
+                fixed_path = entry;
+                fixed_path += "/";
+                fixed_path += name;
+
+                std::string result = findObject(fixed_path, false);
+
+                if(result != "<not found>")
+                    return result;
+
+                // Remove from the search paths - wasn't found.
+                g_lSearchPaths.pop_back();
+            }
+        }
+    }
 
     return std::string("<not found>");
 }
@@ -276,9 +302,9 @@ bool loadSharedObjectHelper(const char *filename, object_meta_t *parent) {
 }
 
 #include <syslog.h>
-bool loadObject(const char *filename, object_meta_t *meta) {
+bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
     meta->filename = filename;
-    meta->path = findObject(meta->filename);
+    meta->path = findObject(meta->filename, envpath);
 
     // Okay, let's open up the file for reading...
     int fd = open(meta->path.c_str(), O_RDONLY);
