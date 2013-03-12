@@ -8,10 +8,10 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <iostream>
 #include <string>
 #include <list>
 #include <map>
+#include <set>
 
 #define PACKED __attribute__((packed))
 
@@ -27,6 +27,7 @@
 typedef void (*entry_point_t)(char*[], char **);
 
 typedef struct _object_meta {
+    std::string filename;
     std::string path;
     entry_point_t entry;
 
@@ -93,6 +94,8 @@ extern "C" void *pedigree_sys_request_mem(size_t len);
 
 bool loadObject(const char *filename, object_meta_t *meta);
 
+bool loadSharedObjectHelper(const char *filename, object_meta_t *parent);
+
 bool findSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym);
 
 bool lookupSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, bool bWeak);
@@ -109,6 +112,8 @@ std::string findObject(std::string name);
 extern "C" uintptr_t _libload_resolve_symbol();
 
 std::list<std::string> g_lSearchPaths;
+
+std::set<std::string> g_LoadedObjects;
 
 size_t elfhash(const char *name) {
     size_t h = 0, g = 0;
@@ -171,6 +176,8 @@ extern "C" int main(int argc, char *argv[])
         return ENOEXEC;
     }
 
+    g_LoadedObjects.insert(meta->filename);
+
     syslog(LOG_INFO, "libload.so loading preload, if one exists");
 
     // Preload?
@@ -181,6 +188,8 @@ extern "C" int main(int argc, char *argv[])
         } else {
             preload->parent = meta;
             meta->preloads.push_back(preload);
+
+            g_LoadedObjects.insert(preload->filename);
         }
     }
 
@@ -191,13 +200,8 @@ extern "C" int main(int argc, char *argv[])
         for(std::list<std::string>::iterator it = meta->needed.begin();
             it != meta->needed.end();
             ++it) {
-            object_meta_t *object = new object_meta_t;
-            if(!loadObject(it->c_str(), object)) {
-                printf("Loading '%s' failed.\n", it->c_str());
-            } else {
-                object->parent = meta;
-                meta->objects.push_back(object);
-            }
+            if(g_LoadedObjects.find(*it) == g_LoadedObjects.end())
+                loadSharedObjectHelper(it->c_str(), meta);
         }
     }
 
@@ -249,9 +253,32 @@ std::string findObject(std::string name) {
     return std::string("<not found>");
 }
 
+bool loadSharedObjectHelper(const char *filename, object_meta_t *parent) {
+    object_meta_t *object = new object_meta_t;
+    if(!loadObject(filename, object)) {
+        printf("Loading '%s' failed.\n", filename);
+    } else {
+        object->parent = parent;
+        parent->objects.push_back(object);
+        g_LoadedObjects.insert(object->filename);
+
+        if(object->needed.size()) {
+            for(std::list<std::string>::iterator it = object->needed.begin();
+                it != object->needed.end();
+                ++it) {
+                if(g_LoadedObjects.find(*it) == g_LoadedObjects.end())
+                    return loadSharedObjectHelper(it->c_str(), parent);
+            }
+        }
+    }
+
+    return true;
+}
+
 #include <syslog.h>
 bool loadObject(const char *filename, object_meta_t *meta) {
-    meta->path = findObject(std::string(filename));
+    meta->filename = filename;
+    meta->path = findObject(meta->filename);
 
     // Okay, let's open up the file for reading...
     int fd = open(meta->path.c_str(), O_RDONLY);
