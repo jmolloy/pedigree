@@ -532,7 +532,7 @@ int posix_waitpid(int pid, int *status, int options)
                     *status = pProcess->getExitStatus();
 
                 // Delete the process; it's been reaped good and proper.
-                SC_NOTICE("Pid " << pid << " reaped");
+                SC_NOTICE("(abs) Pid " << pid << " reaped");
                 delete pProcess;
                 return pid;
             }
@@ -555,7 +555,7 @@ int posix_waitpid(int pid, int *status, int options)
                         if (status)
                             *status = pProcess->getExitStatus();
                         pid = pProcess->getId();
-                        SC_NOTICE("Pid " << pid << " reaped");
+                        SC_NOTICE("(any) Pid " << pid << " reaped");
                         delete pProcess;
                         return pid;
                     }
