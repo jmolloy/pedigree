@@ -25,6 +25,7 @@
 #define STB_HIPROC     15
 
 typedef void (*entry_point_t)(char*[], char **);
+typedef void (*init_fini_func_t)();
 
 typedef struct _object_meta {
     std::string filename;
@@ -230,6 +231,23 @@ extern "C" int main(int argc, char *argv[])
 
     // All done - run the program!
     meta->running = true;
+
+    // Run init functions in loaded objects.
+    for(std::list<struct _object_meta *>::iterator it = meta->objects.begin();
+        it != meta->objects.end();
+        ++it) {
+        if((*it)->init_func) {
+            init_fini_func_t init = (init_fini_func_t) (*it)->init_func;
+            init();
+        }
+    }
+
+    // Run init function, if one exists.
+    if(meta->init_func) {
+        init_fini_func_t init = (init_fini_func_t) meta->init_func;
+        init();
+    }
+
     meta->entry(argv, environ);
 
     return 0;
@@ -566,6 +584,10 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                 meta->plt_rela = (ElfRela_t *) (((uintptr_t) meta->plt_rela) + base_vaddr);
             if(meta->plt_rel)
                 meta->plt_rel = (ElfRel_t *) (((uintptr_t) meta->plt_rel) + base_vaddr);
+            if(meta->init_func)
+                meta->init_func += base_vaddr;
+            if(meta->fini_func)
+                meta->fini_func += base_vaddr;
         }
 
         if(meta->dyn_strtab) {
