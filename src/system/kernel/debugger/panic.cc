@@ -113,6 +113,8 @@ void _panic( const char* msg, DebuggerIO* pScreen )
 
 void panic( const char* msg )
 {
+  Processor::setInterrupts(false);
+
   // Drop out of whatever graphics mode we were in
   GraphicsService::GraphicsProvider provider;
   memset(&provider, 0, sizeof(provider));
@@ -164,5 +166,6 @@ void panic( const char* msg )
     _panic( msg, pInterfaces[nIFace] );
 
   // Halt the processor
-  Processor::halt();
+  while(1)
+    Processor::halt();
 }
