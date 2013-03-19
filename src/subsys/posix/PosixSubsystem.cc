@@ -149,8 +149,9 @@ PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
 
     // Copy memory mapped files
     /// \todo Is this enough?
-    for(Tree<void*, MemoryMappedFile*>::Iterator it = s.m_MemoryMappedFiles.begin(); it != s.m_MemoryMappedFiles.end(); it++)
+    for(Tree<void*, MemoryMappedFile*>::Iterator it = s.m_MemoryMappedFiles.begin(); it != s.m_MemoryMappedFiles.end(); it++) {
         m_MemoryMappedFiles.insert(it.key(), it.value());
+    }
     
     s.m_SignalHandlersLock.leave();
     m_SignalHandlersLock.release();
@@ -234,6 +235,16 @@ PosixSubsystem::~PosixSubsystem()
 
     m_SyncObjects.clear();
 
+    // Switch to the address space of the process we're destroying.
+    // We need to unmap memory maps, and we can't do that in our address space.
+    VirtualAddressSpace &curr = Processor::information().getVirtualAddressSpace();
+    VirtualAddressSpace *va = m_pProcess->getAddressSpace();
+
+    if(va != &curr) {
+        // Switch into the address space we want to unmap inside.
+        Processor::switchAddressSpace(*va);
+    }
+
     // Clean up memory mapped files (that haven't been unmapped...)
     for(Tree<void*, MemoryMappedFile*>::Iterator it = m_MemoryMappedFiles.begin(); it != m_MemoryMappedFiles.end(); it++)
     {
@@ -246,7 +257,6 @@ PosixSubsystem::~PosixSubsystem()
         }
         else
         {
-            NOTICE("File to destroy is " << (uintptr_t) pFile << ".");
             size_t extent = pFile->getExtent();
 
             // Anonymous mmap, manually free the space
@@ -255,20 +265,17 @@ PosixSubsystem::~PosixSubsystem()
 
             uintptr_t address = reinterpret_cast<uintptr_t>(it.key());
 
-            NOTICE("PosixSubsystem - cleaning up anonymous memory map from " << address << " -> " << address + extent);
-
             // Unmap!
-            VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
             for (size_t i = 0; i < numPages; i++)
             {
                 void *unmapAddr = reinterpret_cast<void*>(address + (i * pageSz));
-                if(va.isMapped(unmapAddr))
+                if(va->isMapped(unmapAddr))
                 {
                     // Unmap the virtual address
                     physical_uintptr_t phys = 0;
                     size_t flags = 0;
-                    va.getMapping(unmapAddr, phys, flags);
-                    va.unmap(reinterpret_cast<void*>(unmapAddr));
+                    va->getMapping(unmapAddr, phys, flags);
+                    va->unmap(reinterpret_cast<void*>(unmapAddr));
 
                     // Free the physical page
                     PhysicalMemoryManager::instance().freePage(phys);
@@ -279,6 +286,10 @@ PosixSubsystem::~PosixSubsystem()
             m_pProcess->getSpaceAllocator().free(address, extent);
             delete pFile;
         }
+    }
+
+    if(va != &curr) {
+        Processor::switchAddressSpace(curr);
     }
 }
 
