@@ -150,7 +150,9 @@ PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
     // Copy memory mapped files
     /// \todo Is this enough?
     for(Tree<void*, MemoryMappedFile*>::Iterator it = s.m_MemoryMappedFiles.begin(); it != s.m_MemoryMappedFiles.end(); it++) {
-        m_MemoryMappedFiles.insert(it.key(), it.value());
+        if(it.value()->getFile()) {
+            m_MemoryMappedFiles.insert(it.key(), it.value());
+        }
     }
     
     s.m_SignalHandlersLock.leave();
@@ -287,6 +289,7 @@ PosixSubsystem::~PosixSubsystem()
             delete pFile;
         }
     }
+    m_MemoryMappedFiles.clear();
 
     if(va != &curr) {
         Processor::switchAddressSpace(curr);
