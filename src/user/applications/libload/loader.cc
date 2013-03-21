@@ -27,6 +27,11 @@
 typedef void (*entry_point_t)(char*[], char **);
 typedef void (*init_fini_func_t)();
 
+enum LookupPolicy {
+    LocalFirst,
+    NotThisObject,
+};
+
 typedef struct _object_meta {
     std::string filename;
     std::string path;
@@ -97,9 +102,9 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath = false)
 
 bool loadSharedObjectHelper(const char *filename, object_meta_t *parent);
 
-bool findSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym);
+bool findSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, LookupPolicy policy = LocalFirst);
 
-bool lookupSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, bool bWeak);
+bool lookupSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, bool bWeak, bool bGlobal = true);
 
 void doRelocation(object_meta_t *meta);
 
@@ -630,7 +635,7 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
     return true;
 }
 
-bool lookupSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, bool bWeak) {
+bool lookupSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, bool bWeak, bool bGlobal) {
     if(!meta) {
         return false;
     }
@@ -651,10 +656,11 @@ bool lookupSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, boo
         return false;
     }
 
+    // Try a local lookup first.
     do {
         sym = meta->dyn_symtab[y];
         if(symbolName(sym, meta) == sname) {
-            if(ST_BIND(sym.info) == STB_GLOBAL || ST_BIND(sym.info) == STB_LOCAL) {
+            if(ST_BIND(sym.info) == STB_LOCAL) {
                 if(sym.shndx) {
                     break;
                 }
@@ -669,6 +675,22 @@ bool lookupSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, boo
         y = meta->hash_chains[y];
     } while(y != 0);
 
+    // No local symbols found - try a global lookup.
+    if((bGlobal) && (y == 0)) {
+        y = meta->hash_buckets[hash % meta->hash->nbucket];
+        do {
+            sym = meta->dyn_symtab[y];
+            if(symbolName(sym, meta) == sname) {
+                if(ST_BIND(sym.info) == STB_GLOBAL) {
+                    if(sym.shndx) {
+                        break;
+                    }
+                }
+            }
+            y = meta->hash_chains[y];
+        } while(y != 0);
+    }
+
     if(y != 0) {
         // Patch up the value.
         if(ST_TYPE(sym.info) < 3 && ST_BIND(sym.info) != STB_WEAK) {
@@ -682,16 +704,9 @@ bool lookupSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, boo
     return y != 0;
 }
 
-bool findSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym) {
+bool findSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, LookupPolicy policy) {
     if(!meta) {
         return false;
-    }
-
-    for(std::list<object_meta_t*>::iterator it = meta->preloads.begin();
-        it != meta->preloads.end();
-        ++it) {
-        if(lookupSymbol(symbol, *it, sym, false))
-            return true;
     }
 
     object_meta_t *ext_meta = meta;
@@ -699,11 +714,31 @@ bool findSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym) {
         ext_meta = ext_meta->parent;
     }
 
-    for(std::list<object_meta_t*>::iterator it = ext_meta->objects.begin();
-        it != ext_meta->objects.end();
+    // Try preloads.
+    for(std::list<object_meta_t*>::iterator it = ext_meta->preloads.begin();
+        it != ext_meta->preloads.end();
         ++it) {
         if(lookupSymbol(symbol, *it, sym, false))
             return true;
+    }
+
+    // If we are going to attempt a local lookup first, check for non-weak values locally.
+    if(policy == LocalFirst) {
+        if(lookupSymbol(symbol, meta, sym, false, false))
+            return true;
+    }
+
+    // Try the parent object.
+    if((meta != ext_meta) && lookupSymbol(symbol, ext_meta, sym, false))
+        return true;
+
+    // Now, try any loaded objects we might have.
+    for(std::list<object_meta_t*>::iterator it = ext_meta->objects.begin();
+        it != ext_meta->objects.end();
+        ++it) {
+        if(lookupSymbol(symbol, *it, sym, false)) {
+            return true;
+        }
     }
 
     // No luck? Try weak symbols in the main object.
@@ -834,29 +869,24 @@ uintptr_t doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
             S = sym->value;
         } else {
             ElfSymbol_t lookupsym;
+            LookupPolicy policy = LocalFirst;
             if(R_TYPE(rel.info) == R_386_COPY) {
-                // Search anything except the current object.
-                if(!findSymbol(symbolname.c_str(), meta, lookupsym)) {
-                    printf("symbol lookup for '%s' failed.\n", symbolname.c_str());
-                    lookupsym.value = (uintptr_t) ~0UL;
-                }
-            } else {
-                // Attempt a local lookup first.
-                if(!lookupSymbol(symbolname.c_str(), meta, lookupsym, false)) {
-                    // No local symbol of that name - search other objects.
-                    if(!findSymbol(symbolname.c_str(), meta, lookupsym)) {
-                        printf("symbol lookup for '%s' (needed in '%s') failed.\n", symbolname.c_str(), meta->path.c_str());
-                        lookupsym.value = (uintptr_t) ~0UL;
-                    }
-                }
+                policy = NotThisObject;
+            }
+
+            // Attempt to find the symbol.
+            if(!findSymbol(symbolname.c_str(), meta, lookupsym, policy)) {
+                printf("symbol lookup for '%s' (needed in '%s') failed.\n", symbolname.c_str(), meta->path.c_str());
+                lookupsym.value = (uintptr_t) ~0UL;
             }
 
             S = lookupsym.value;
         }
     }
 
-    if(S == (uintptr_t) ~0UL)
+    if(S == (uintptr_t) ~0UL) {
         S = 0;
+    }
 
     uint32_t result = A;
     switch(R_TYPE(rel.info)) {
