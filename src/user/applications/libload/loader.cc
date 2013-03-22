@@ -15,6 +15,8 @@
 
 #define PACKED __attribute__((packed))
 
+#define DEBUG_LIBLOAD
+
 #define _NO_ELF_CLASS
 #include <Elf.h>
 
@@ -340,9 +342,15 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
     ElfHeader_t header;
     int n = read(fd, &header, sizeof(header));
     if(n < 0) {
+#ifdef DEBUG_LIBLOAD
+        fprintf(stderr, "libload.so: couldn't read file header (%s)\n", strerror(errno));
+#endif
         close(fd);
         return false;
     } else if(n != sizeof(header)) {
+#ifdef DEBUG_LIBLOAD
+        fprintf(stderr, "libload.so: read was not the correct size\n");
+#endif
         close(fd);
         errno = ENOEXEC;
         return false;
@@ -352,6 +360,9 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
        header.ident[2] != 'L' ||
        header.ident[3] != 'F' ||
        header.ident[0] != 127) {
+#ifdef DEBUG_LIBLOAD
+        fprintf(stderr, "libload.so: bad ELF magic\n");
+#endif
         close(fd);
         errno = ENOEXEC;
         return false;
@@ -359,6 +370,9 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
 
     // Fairly confident we have an ELF binary now. Valid class?
     if(!(header.ident[4] == 1 || header.ident[4] == 2)) {
+#ifdef DEBUG_LIBLOAD
+        fprintf(stderr, "libload.so: not a valid ELF class\n");
+#endif
         close(fd);
         errno = ENOEXEC;
         return false;
@@ -374,6 +388,9 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
 
     const char *pBuffer = (const char *) mmap(0, meta->mapped_file_sz, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
     if(pBuffer == MAP_FAILED) {
+#ifdef DEBUG_LIBLOAD
+        fprintf(stderr, "libload.so: could not mmap binary\n");
+#endif
         close(fd);
         errno = ENOEXEC;
         return false;
