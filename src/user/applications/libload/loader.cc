@@ -601,7 +601,6 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                 ++it) {
                 std::string s(meta->dyn_strtab + *it);
                 meta->needed.push_back(s);
-                it = tmp_needed.erase(it);
             }
         }
     } else {
