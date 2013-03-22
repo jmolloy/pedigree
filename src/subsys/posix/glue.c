@@ -1404,29 +1404,23 @@ struct dlHandle
     int mode;
 };
 
+extern void *_libload_dlopen(const char *, int) __attribute__ ((weak));
+extern void *_libload_dlsym(void *, const char *) __attribute__ ((weak));
+extern int _libload_dlclose(void *) __attribute__ ((weak));
+
 void *dlopen(const char *file, int mode)
 {
-    void* p = (void*) malloc(sizeof(struct dlHandle));
-    if (!p)
-        return 0;
-    void* ret = (void*) syscall3(POSIX_DLOPEN, (long) file, mode, (long) p);
-    if (ret)
-        return ret;
-    free(p);
-    return 0;
+    return _libload_dlopen(file, mode);
 }
 
 void *dlsym(void* handle, const char* name)
 {
-    return (void*) syscall2(POSIX_DLSYM, (long) handle, (long) name);
+    return _libload_dlsym(handle, name);
 }
 
 int dlclose(void *handle)
 {
-    STUBBED("dlclose");
-    if (handle)
-        free(handle);
-    return 0;
+    return _libload_dlclose(handle);
 }
 
 char *dlerror(void)

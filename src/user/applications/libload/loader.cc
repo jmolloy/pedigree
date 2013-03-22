@@ -102,7 +102,7 @@ extern "C" void *pedigree_sys_request_mem(size_t len);
 
 bool loadObject(const char *filename, object_meta_t *meta, bool envpath = false);
 
-bool loadSharedObjectHelper(const char *filename, object_meta_t *parent);
+bool loadSharedObjectHelper(const char *filename, object_meta_t *parent, object_meta_t **out = NULL);
 
 bool findSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, LookupPolicy policy = LocalFirst);
 
@@ -113,15 +113,23 @@ void doRelocation(object_meta_t *meta);
 uintptr_t doThisRelocation(ElfRel_t rel, object_meta_t *meta);
 uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta);
 
-std::string symbolName(const ElfSymbol_t &sym, object_meta_t *meta);
+std::string symbolName(const ElfSymbol_t &sym, object_meta_t *meta, bool bNoDynamic = false);
 
 std::string findObject(std::string name, bool envpath);
 
+extern "C" void *_libload_dlopen(const char *file, int mode);
+extern "C" void *_libload_dlsym(void *handle, const char *name);
+extern "C" int _libload_dlclose(void *handle);
+
 extern "C" uintptr_t _libload_resolve_symbol();
+
+object_meta_t *g_MainObject = 0;
 
 std::list<std::string> g_lSearchPaths;
 
 std::set<std::string> g_LoadedObjects;
+
+std::map<std::string, uintptr_t> g_LibLoadSymbols;
 
 size_t elfhash(const char *name) {
     size_t h = 0, g = 0;
@@ -155,6 +163,11 @@ extern "C" int main(int argc, char *argv[])
     g_lSearchPaths.push_back(std::string("/libraries"));
     g_lSearchPaths.push_back(std::string("."));
 
+    // Prepare for libload hooks.
+    g_LibLoadSymbols.insert(std::pair<std::string, uintptr_t>("_libload_dlopen", (uintptr_t) _libload_dlopen));
+    g_LibLoadSymbols.insert(std::pair<std::string, uintptr_t>("_libload_dlsym", (uintptr_t) _libload_dlsym));
+    g_LibLoadSymbols.insert(std::pair<std::string, uintptr_t>("_libload_dlopen", (uintptr_t) _libload_dlclose));
+
     if(ld_libpath) {
         // Parse, write.
         const char *entry;
@@ -177,7 +190,7 @@ extern "C" int main(int argc, char *argv[])
     syslog(LOG_INFO, "libload.so loading main object");
 
     // Load the main object passed on the command line.
-    object_meta_t *meta = new object_meta_t;
+    object_meta_t *meta = g_MainObject = new object_meta_t;
     meta->running = false;
     if(!loadObject(argv[0], meta, true)) {
         delete meta;
@@ -304,7 +317,7 @@ std::string findObject(std::string name, bool envpath) {
     return std::string("<not found>");
 }
 
-bool loadSharedObjectHelper(const char *filename, object_meta_t *parent) {
+bool loadSharedObjectHelper(const char *filename, object_meta_t *parent, object_meta_t **out) {
     object_meta_t *object = new object_meta_t;
     if(!loadObject(filename, object)) {
         printf("Loading '%s' failed.\n", filename);
@@ -321,6 +334,10 @@ bool loadSharedObjectHelper(const char *filename, object_meta_t *parent) {
                     return loadSharedObjectHelper(it->c_str(), parent);
             }
         }
+    }
+
+    if(out) {
+        *out = object;
     }
 
     return true;
@@ -711,7 +728,6 @@ bool lookupSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, boo
         // Patch up the value.
         if(ST_TYPE(sym.info) < 3 && ST_BIND(sym.info) != STB_WEAK) {
             if(sym.shndx && meta->relocated) {
-                ElfSectionHeader_t *sh = &meta->shdrs[sym.shndx];
                 sym.value += meta->load_base;
             }
         }
@@ -723,6 +739,15 @@ bool lookupSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, boo
 bool findSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, LookupPolicy policy) {
     if(!meta) {
         return false;
+    }
+
+    // Do we override or not?
+    std::map<std::string, uintptr_t>::iterator it = g_LibLoadSymbols.find(std::string(symbol));
+    if(it != g_LibLoadSymbols.end()) {
+        if(it->first == symbol) {
+            sym.value = it->second;
+            return true;
+        }
     }
 
     object_meta_t *ext_meta = meta;
@@ -764,7 +789,7 @@ bool findSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, Looku
     return false;
 }
 
-std::string symbolName(const ElfSymbol_t &sym, object_meta_t *meta) {
+std::string symbolName(const ElfSymbol_t &sym, object_meta_t *meta, bool bNoDynamic) {
     if(!meta) {
         return std::string("");
     } else if(sym.name == 0) {
@@ -773,13 +798,14 @@ std::string symbolName(const ElfSymbol_t &sym, object_meta_t *meta) {
 
     ElfSymbol_t *symtab = meta->symtab;
     const char *strtab = meta->strtab;
-    if(meta->dyn_symtab) {
+
+    if((!bNoDynamic) && meta->dyn_symtab) {
         symtab = meta->dyn_symtab;
     }
 
     if(ST_TYPE(sym.info) == 3) {
         strtab = meta->shstrtab;
-    } else if(meta->dyn_strtab) {
+    } else if((!bNoDynamic) && meta->dyn_strtab) {
         strtab = meta->dyn_strtab;
     }
 
@@ -1050,4 +1076,50 @@ extern "C" uintptr_t _libload_dofixup(uintptr_t id, uintptr_t symbol) {
     }
 
     return result;
+}
+
+#include <dlfcn.h>
+
+void *_libload_dlopen(const char *file, int mode) {
+    object_meta_t *result = 0;
+
+    std::set<std::string>::iterator it = g_LoadedObjects.find(std::string(file));
+    if(it != g_LoadedObjects.end()) {
+        /// \todo implement me :(
+        fprintf(stderr, "Not yet able to dlopen already-opened objects.\n");
+        return 0;
+    }
+
+    bool bLoad = loadSharedObjectHelper(file, g_MainObject, &result);
+    if(!bLoad) {
+        return 0;
+    }
+
+    doRelocation(result);
+
+    if(result->init_func) {
+        init_fini_func_t init = (init_fini_func_t) result->init_func;
+        init();
+    }
+
+    return (void *) result;
+}
+
+void *_libload_dlsym(void *handle, const char *name) {
+    if(!handle)
+        return 0;
+
+    object_meta_t *obj = (object_meta_t *) handle;
+
+    ElfSymbol_t sym;
+    bool bFound = findSymbol(name, obj, sym);
+    if(!bFound) {
+        return 0;
+    }
+
+    return (void *) sym.value;
+}
+
+int _libload_dlclose(void *handle) {
+    return 0;
 }
