@@ -35,6 +35,17 @@ enum LookupPolicy {
 };
 
 typedef struct _object_meta {
+    _object_meta() :
+        filename(), path(), entry(0), mapped_file(0), mapped_file_sz(0),
+        relocated(false), load_base(0), running(false), debug(false),
+        memory_regions(), phdrs(0), shdrs(0), sh_symtab(0), sh_strtab(0),
+        symtab(0), strtab(0), sh_shstrtab(0), shstrtab(0), ph_dynamic(0),
+        needed(0), dyn_symtab(0), dyn_strtab(0), dyn_strtab_sz(0), rela(0),
+        rel(0), rela_sz(0), rel_sz(0), uses_rela(false), got(0), plt_rela(0),
+        plt_rel(0), init_func(0), fini_func(0), plt_sz(0), hash(0), hash_buckets(0),
+        hash_chains(0), preloads(), objects(), parent(0)
+    {}
+
     std::string filename;
     std::string path;
     entry_point_t entry;
@@ -46,6 +57,8 @@ typedef struct _object_meta {
     uintptr_t load_base;
 
     bool running;
+
+    bool debug;
 
     std::list<std::pair<void*, size_t> > memory_regions;
 
@@ -191,6 +204,7 @@ extern "C" int main(int argc, char *argv[])
 
     // Load the main object passed on the command line.
     object_meta_t *meta = g_MainObject = new object_meta_t;
+    meta->debug = false;
     meta->running = false;
     if(!loadObject(argv[0], meta, true)) {
         delete meta;
@@ -319,8 +333,10 @@ std::string findObject(std::string name, bool envpath) {
 
 bool loadSharedObjectHelper(const char *filename, object_meta_t *parent, object_meta_t **out) {
     object_meta_t *object = new object_meta_t;
+    bool bSuccess = true;
     if(!loadObject(filename, object)) {
         printf("Loading '%s' failed.\n", filename);
+        bSuccess = false;
     } else {
         object->parent = parent;
         parent->objects.push_back(object);
@@ -331,7 +347,7 @@ bool loadSharedObjectHelper(const char *filename, object_meta_t *parent, object_
                 it != object->needed.end();
                 ++it) {
                 if(g_LoadedObjects.find(*it) == g_LoadedObjects.end())
-                    return loadSharedObjectHelper(it->c_str(), parent);
+                    bSuccess = loadSharedObjectHelper(it->c_str(), parent);
             }
         }
     }
@@ -340,7 +356,7 @@ bool loadSharedObjectHelper(const char *filename, object_meta_t *parent, object_
         *out = object;
     }
 
-    return true;
+    return bSuccess;
 }
 
 #include <syslog.h>
@@ -581,6 +597,7 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                     if(meta->relocated) {
                         mapflags |= MAP_USERSVD;
                     }
+
                     void *p = mmap((void *) phdr_base, mapsz, PROT_READ | PROT_WRITE, mapflags, 0, 0);
                     if(p == MAP_FAILED) {
                         /// \todo cleanup.
