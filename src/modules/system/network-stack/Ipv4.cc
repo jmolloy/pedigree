@@ -126,10 +126,11 @@ bool Ipv4::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uin
   IpAddress realDest = dest;
 
   // Grab the address to send to (as well as the NIC to send with)
+  Network *pSubCard = RoutingTable::instance().DetermineRoute(&realDest);
   if(!pCard)
   {
-    pCard = RoutingTable::instance().DetermineRoute(&realDest);
-    if(!pCard)
+    pCard = pSubCard;
+    if(!pSubCard)
     {
       WARNING("IPv4: Couldn't find a route for destination '" << dest.toString() << "'.");
       return false;
