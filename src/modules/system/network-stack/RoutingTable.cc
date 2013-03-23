@@ -111,9 +111,9 @@ void RoutingTable::Add(Type type, IpAddress dest, IpAddress subnet, IpAddress su
         String str;
         size_t hash = DeviceHashTree::instance().getHash(card);
         str.sprintf("INSERT INTO routes (ipstart, ipend, subip, name, type, iface) VALUES (%u, %u, %u, '%s', %u, %u)",
-                    bottomOfRange.getIp(),
-                    topOfRange.getIp(),
-                    subIp.getIp(),
+                    BIG_TO_HOST32(bottomOfRange.getIp()),
+                    BIG_TO_HOST32(topOfRange.getIp()),
+                    BIG_TO_HOST32(subIp.getIp()),
                     static_cast<const char*>(meta),
                     static_cast<int>(type),
                     hash);
@@ -168,7 +168,7 @@ Network *RoutingTable::route(IpAddress *ip, Config::Result *pResult)
     // If we are to perform substitution, do so
     Type t = static_cast<Type>(pResult->getNum(0, "type"));
     if(t == DestIpSub || t == DestSubnetComplement)
-        ip->setIp(pResult->getNum(0, "subip"));
+        ip->setIp(HOST_TO_BIG32(pResult->getNum(0, "subip")));
     else if(t == DestIpv6Sub || t == DestPrefixComplement)
     {
         uint32_t subIp[4];
@@ -253,7 +253,7 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
     {
         // Build a query to search for a direct match
         String str;
-        str.sprintf("SELECT * FROM routes WHERE ipaddr=%u", ip->getIp());
+        str.sprintf("SELECT * FROM routes WHERE ipaddr=%u", BIG_TO_HOST32(ip->getIp()));
         Config::Result *pResult = Config::instance().query(str);
         if(!pResult->succeeded())
             ERROR("Routing table query failed: " << pResult->errorMessage());
@@ -264,7 +264,7 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
         delete pResult;
 
         // No rows! Try a subnet lookup first, without a complement.
-        str.sprintf("SELECT * FROM routes WHERE ((ipstart <= %u) AND (ipend >= %u)) AND (type == %u)", ip->getIp(), ip->getIp(), static_cast<int>(DestSubnet));
+        str.sprintf("SELECT * FROM routes WHERE ((ipstart <= %u) AND (ipend >= %u)) AND (type == %u)", BIG_TO_HOST32(ip->getIp()), BIG_TO_HOST32(ip->getIp()), static_cast<int>(DestSubnet));
         pResult = Config::instance().query(str);
         if(!pResult->succeeded())
             ERROR("Routing table query failed: " << pResult->errorMessage());
@@ -275,7 +275,7 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
         delete pResult;
 
         // Still nothing, try a complement subnet search
-        str.sprintf("SELECT * FROM routes WHERE (NOT ((ipstart <= %u) AND (ipend >= %u))) AND (type == %u)", ip->getIp(), ip->getIp(), static_cast<int>(DestSubnetComplement));
+        str.sprintf("SELECT * FROM routes WHERE (NOT ((ipstart <= %u) AND (ipend >= %u))) AND (type == %u)", BIG_TO_HOST32(ip->getIp()), BIG_TO_HOST32(ip->getIp()), static_cast<int>(DestSubnetComplement));
         pResult = Config::instance().query(str);
         if(!pResult->succeeded())
             ERROR("Routing table query failed: " << pResult->errorMessage());
