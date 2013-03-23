@@ -100,7 +100,8 @@ libpath = [
 
 # Default include paths
 incpath = [
-    '#/src/subsys/posix/include'
+    '#/src/subsys/posix/include',
+    '#/src/subsys/posix/syscalls',
 ]
 
 all_apps = posixc_apps + sdl_apps + cpp_apps
@@ -114,7 +115,8 @@ tmp['CPPPATH'] = incpath
 
 # -static stops GCC placing the path to the dynamic linker into the binary, and creates a non-relocateable executable.
 libload_env = tmp.Clone()
-libload_env['CFLAGS'] += ' -static'
+libload_env['CFLAGS'] += ' -static '
+libload_env['CXXFLAGS'] += ' -static '
 libload_env['CPPPATH'] += ['#/src/system/include/linker',
                            '#/src/subsys/posix/include/c++/4.3.2',
                            '#/src/subsys/posix/include/c++/4.3.2/i686-pedigree']
