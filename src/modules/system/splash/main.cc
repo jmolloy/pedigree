@@ -172,7 +172,9 @@ class StreamingScreenLogger : public Log::LogCallback
         /// therefore we simply redirect to it.
         void callback(const char *str)
         {
+#ifdef DEBUGGER
             printString(str);
+#endif
         }
 };
 
@@ -216,7 +218,9 @@ void progress(const char *text)
         Log::instance().removeCallback(&g_StreamLogger);
         
 #ifndef NOGFX
+#ifdef DEBUGGER
         InputManager::instance().removeCallback(keyCallback);
+#endif
 #endif
 
         bFinished = true;
@@ -233,6 +237,10 @@ void progress(const char *text)
     else
         g_pFramebuffer->rect(g_ProgressX + w, g_ProgressY, g_ProgressW-w, g_ProgressH, g_BackgroundColour, g_ColorFormat);
     g_Previous = g_BootProgressCurrent;
+
+    char buf[80];
+    sprintf(buf, "%d%%", ((g_BootProgressCurrent * 100) / g_BootProgressTotal));
+    centerStringAt(buf, g_ProgressX + (g_ProgressW / 2), g_ProgressY - FONT_HEIGHT);
 
     g_pFramebuffer->redraw(g_ProgressX, g_ProgressY, g_ProgressW, g_ProgressH, true);
 
@@ -452,10 +460,16 @@ static void init()
 
     // Yay text!
     centerStringAt("Please wait, Pedigree is loading...", g_Width / 2, g_ProgressY - (FONT_HEIGHT * 3));
+#ifdef DEBUGGER
+#endif
 
+#ifdef DEBUGGER
     // Draw a border around the log area
+    centerStringAt("< Kernel Log >", g_LogW / 2, g_LogBoxY - 2 - (FONT_HEIGHT / 2) - FONT_HEIGHT);
+    centerStringAt("(you can push ESCAPE to make the log fill the screen)", g_LogW / 2, g_LogBoxY - 2 - (FONT_HEIGHT / 2));
     g_pFramebuffer->rect(g_LogBoxX, g_LogBoxY - 2, g_LogW, g_LogH - 2, g_ForegroundColour, g_ColorFormat);
     g_pFramebuffer->rect(g_LogBoxX, g_LogBoxY - 1, g_LogW, g_LogH - 1, g_BackgroundColour, g_ColorFormat);
+#endif
 
     // Draw empty progress bar. Easiest way to draw a nonfilled rect? Draw two filled rects.
     g_pFramebuffer->rect(g_ProgressX - 2, g_ProgressY - 2, g_ProgressW + 4, g_ProgressH + 4, g_ProgressBorderColour, g_ColorFormat);
@@ -466,7 +480,11 @@ static void init()
     Log::instance().installCallback(&g_StreamLogger, true);
 
     g_BootProgressUpdate = &progress;
+
+#ifdef DEBUGGER
     InputManager::instance().installCallback(InputManager::Key, keyCallback);
+#endif
+
 #endif    
 }
 
