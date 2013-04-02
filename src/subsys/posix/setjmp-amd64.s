@@ -38,6 +38,9 @@
 global setjmp:function
 global longjmp:function
 
+global _setjmp:function
+global _longjmp:function
+
 ; C function that runs a system call to check to see if we are in a signal
 ; context, and unwind that context. Allows longjmp from signal handlers.
 extern __pedigree_revoke_signal_context
@@ -73,4 +76,12 @@ longjmp:
   mov r15, [rdi + 40]
   
   ret
+
+_setjmp:
+    call [rel setjmp wrt ..got]
+    ret
+
+_longjmp:
+    call [rel longjmp wrt ..got]
+    ret
 
