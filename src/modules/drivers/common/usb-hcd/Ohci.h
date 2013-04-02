@@ -47,7 +47,7 @@ class Ohci : public UsbHub,
     
     public:
         Ohci(Device* pDev);
-        ~Ohci();
+        virtual ~Ohci();
 
         struct TD
         {
@@ -277,27 +277,27 @@ class Ohci : public UsbHub,
         
         /// Lock for modifying the schedule list itself (m_FullSchedule)
         Spinlock m_ScheduleChangeLock;
+        
+        /// Lock for changing the periodic list.
+        Spinlock m_PeriodicListChangeLock;
+        
+        /// Lock for changing the control list.
+        Spinlock m_ControlListChangeLock;
+        
+        /// Lock for changing the bulk list.
+        Spinlock m_BulkListChangeLock;
 
         ED *m_pPeriodicEDList;
         uintptr_t m_pPeriodicEDListPhys;
         ExtensibleBitmap m_PeriodicEDBitmap;
-        
-        /// Lock for changing the periodic list.
-        Spinlock m_PeriodicListChangeLock;
 
         ED *m_pControlEDList;
         uintptr_t m_pControlEDListPhys;
         ExtensibleBitmap m_ControlEDBitmap;
         
-        /// Lock for changing the control list.
-        Spinlock m_ControlListChangeLock;
-        
         ED *m_pBulkEDList;
         uintptr_t m_pBulkEDListPhys;
         ExtensibleBitmap m_BulkEDBitmap;
-        
-        /// Lock for changing the bulk list.
-        Spinlock m_BulkListChangeLock;
 
         TD *m_pTDList;
         uintptr_t m_pTDListPhys;

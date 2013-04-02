@@ -23,7 +23,7 @@
 #include <usb/Usb.h>
 #include <usb/UsbDescriptors.h>
 
-class UsbDevice : public virtual Device
+class UsbDevice : public Device
 {
     public:
 
@@ -168,6 +168,11 @@ class UsbDevice : public virtual Device
         virtual void getName(String &str)
         {
             str = "USB Device";
+        }
+
+        virtual Type getType()
+        {
+            return UsbGeneric;
         }
 
         /// Returns the current address of the device

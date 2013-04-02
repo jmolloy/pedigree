@@ -26,7 +26,7 @@
 // #define NE2K_NO_THREADS
 
 Ne2k::Ne2k(Network* pDev) :
-  Device(pDev), Network(pDev), m_pBase(0), m_NextPacket(0),
+  Network(pDev), m_pBase(0), m_NextPacket(0),
   m_PacketQueueSize(0),m_PacketQueue(), m_PacketQueueLock()
 {
   setSpecificType(String("ne2k-card"));

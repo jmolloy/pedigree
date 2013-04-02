@@ -102,7 +102,7 @@ static bool findDisks(Device *pDev)
         if (pChild->getNumChildren() == 0 && /* Only check leaf nodes. */
                 pChild->getType() == Device::Disk)
         {
-            if ( probeDisk(dynamic_cast<Disk*> (pChild)) ) return true;
+            if ( probeDisk(static_cast<Disk*> (pChild)) ) return true;
         }
         else
         {

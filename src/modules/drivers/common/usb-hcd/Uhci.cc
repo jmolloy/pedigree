@@ -42,7 +42,7 @@ static int threadStub(void *p)
 }
 
 Uhci::Uhci(Device* pDev) :
-    Device(pDev), m_pBase(0), m_nPorts(0), m_AsyncQueueListChangeLock(), m_UhciMR("Uhci-MR"),
+    UsbHub(pDev), m_pBase(0), m_nPorts(0), m_AsyncQueueListChangeLock(), m_UhciMR("Uhci-MR"),
     m_pCurrentAsyncQueueTail(0), m_pCurrentAsyncQueueHead(0),
     m_AsyncSchedule(), m_DequeueList(), m_DequeueCount(0), m_nPortCheckTicks(0)
 {

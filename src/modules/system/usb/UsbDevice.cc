@@ -276,7 +276,7 @@ ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, UsbPid pid, uintptr_t 
         return -TransactionError;
     }
 
-    UsbHub *pParentHub = dynamic_cast<UsbHub*>(m_pParent);
+    UsbHub *pParentHub = static_cast<UsbHub*>(m_pParent);
     if(!pParentHub)
     {
         ERROR("USB: Orphaned UsbDevice!");
@@ -333,7 +333,7 @@ void UsbDevice::addInterruptInHandler(Endpoint *pEndpoint, uintptr_t pBuffer, ui
         return;
     }
 
-    UsbHub *pParentHub = dynamic_cast<UsbHub*>(m_pParent);
+    UsbHub *pParentHub = static_cast<UsbHub*>(m_pParent);
     if(!pParentHub)
     {
         ERROR("USB: Orphaned UsbDevice!");
@@ -359,7 +359,7 @@ bool UsbDevice::controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t 
     Setup *pSetup = new Setup(nRequestType, nRequest, nValue, nIndex, nLength);
     PointerGuard<Setup> guard(pSetup);
 
-    UsbHub *pParentHub = dynamic_cast<UsbHub*>(m_pParent);
+    UsbHub *pParentHub = static_cast<UsbHub*>(m_pParent);
     if(!pParentHub)
     {
         ERROR("USB: Orphaned UsbDevice!");

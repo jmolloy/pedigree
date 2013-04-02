@@ -35,7 +35,7 @@ class CdiDisk : public Disk
 {
     public:
         CdiDisk(Disk* pDev, struct cdi_storage_device* device);
-        ~CdiDisk();
+        virtual ~CdiDisk();
 
         virtual void getName(String &str)
         {

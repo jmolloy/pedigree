@@ -47,7 +47,7 @@ AtapiDisk::~AtapiDisk()
 bool AtapiDisk::initialise()
 {
   // Grab our parent.
-  AtaController *pParent = dynamic_cast<AtaController*> (m_pParent);
+  AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
   // Grab our parent's IoPorts for command and control accesses.
   IoBase *commandRegs = m_CommandRegs;
@@ -450,7 +450,7 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   AtaStatus status;
 
   // Grab our parent.
-  AtaController *pParent = dynamic_cast<AtaController*> (m_pParent);
+  AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
   // Grab our parent's IoPorts for command and control accesses.
   IoBase *commandRegs = m_CommandRegs;

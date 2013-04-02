@@ -34,7 +34,7 @@ class Uhci : public UsbHub, public IrqHandler, public RequestQueue, public Timer
 {
     public:
         Uhci(Device* pDev);
-        ~Uhci();
+        virtual ~Uhci();
 
         struct TD
         {

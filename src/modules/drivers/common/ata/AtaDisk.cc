@@ -44,7 +44,7 @@ AtaDisk::~AtaDisk()
 bool AtaDisk::initialise()
 {
     // Grab our parent.
-    AtaController *pParent = dynamic_cast<AtaController*> (m_pParent);
+    AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Grab our parent's IoPorts for command and control accesses.
     IoBase *commandRegs = m_CommandRegs;
@@ -211,7 +211,7 @@ uintptr_t AtaDisk::read(uint64_t location)
         FATAL("AtaDisk: write request not on a sector boundary!");
 
     // Grab our parent.
-    AtaController *pParent = dynamic_cast<AtaController*> (m_pParent);
+    AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Look through the align points.
     uint64_t alignPoint = 0;
@@ -253,7 +253,7 @@ void AtaDisk::write(uint64_t location)
         FATAL("AtaDisk: write request not on a sector boundary!");
 
     // Grab our parent.
-    AtaController *pParent = dynamic_cast<AtaController*> (m_pParent);
+    AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Look through the align points.
     uint64_t alignPoint = 0;
@@ -301,7 +301,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
     }
 
     // Grab our parent.
-    AtaController *pParent = dynamic_cast<AtaController*> (m_pParent);
+    AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Grab our parent's IoPorts for command and control accesses.
     IoBase *commandRegs = m_CommandRegs;
@@ -477,7 +477,7 @@ uint64_t AtaDisk::doWrite(uint64_t location)
 
     /// \todo DMA?
     // Grab our parent.
-    AtaController *pParent = dynamic_cast<AtaController*> (m_pParent);
+    AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Grab our parent's IoPorts for command and control accesses.
     IoBase *commandRegs = m_CommandRegs;
@@ -648,7 +648,7 @@ void AtaDisk::irqReceived()
 void AtaDisk::setupLBA28(uint64_t n, uint32_t nSectors)
 {
     // Grab our parent.
-    AtaController *pParent = dynamic_cast<AtaController*> (m_pParent);
+    AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Grab our parent's IoPorts for command and control accesses.
     IoBase *commandRegs = m_CommandRegs;
@@ -676,7 +676,7 @@ void AtaDisk::setupLBA28(uint64_t n, uint32_t nSectors)
 void AtaDisk::setupLBA48(uint64_t n, uint32_t nSectors)
 {
     // Grab our parent.
-    AtaController *pParent = dynamic_cast<AtaController*> (m_pParent);
+    AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Grab our parent's IoPorts for command and control accesses.
     IoBase *commandRegs = m_CommandRegs;

@@ -163,7 +163,7 @@ void RoutingTable::Add(Type type, IpAddress dest, IpAddress subnet, IpAddress su
 Network *RoutingTable::route(IpAddress *ip, Config::Result *pResult)
 {
     // Grab the interface
-    Network *pCard = dynamic_cast<Network*>(DeviceHashTree::instance().getDevice(pResult->getNum(0, "iface")));
+    Network *pCard = static_cast<Network*>(DeviceHashTree::instance().getDevice(pResult->getNum(0, "iface")));
 
     // If we are to perform substitution, do so
     Type t = static_cast<Type>(pResult->getNum(0, "type"));

@@ -70,7 +70,7 @@ void searchNode(Device *pDev)
         }
       }
       if (!hasPartitions)
-        hasPartitions = probeDevice(dynamic_cast<Disk*> (pChild));
+        hasPartitions = probeDevice(static_cast<Disk*> (pChild));
     }
     // Recurse, if we didn't find any partitions.
     if (!hasPartitions)

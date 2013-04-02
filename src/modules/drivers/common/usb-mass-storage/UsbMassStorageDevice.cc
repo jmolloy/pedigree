@@ -23,7 +23,8 @@
 #include <usb/UsbHub.h>
 #include "UsbMassStorageDevice.h"
 
-UsbMassStorageDevice::UsbMassStorageDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev), m_nUnits(0), m_pInEndpoint(0), m_pOutEndpoint(0)
+UsbMassStorageDevice::UsbMassStorageDevice(UsbDevice *dev) :
+    UsbDevice(dev), ScsiController(), m_nUnits(0), m_pInEndpoint(0), m_pOutEndpoint(0)
 {
 }
 

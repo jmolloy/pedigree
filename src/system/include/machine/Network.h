@@ -78,7 +78,7 @@ class StationInfo
 /**
  * A network device (sends/receives packets on a network)
  */
-class Network : public virtual Device
+class Network : public Device
 {
 public:
   Network() : m_StationInfo()

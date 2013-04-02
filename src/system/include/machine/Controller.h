@@ -21,7 +21,7 @@
 /**
  * A controller is a hub that controls multiple devices.
  */
-class Controller : public virtual Device
+class Controller : public Device
 {
 public:
   Controller()

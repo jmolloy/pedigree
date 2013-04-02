@@ -36,7 +36,7 @@ class Ehci : public UsbHub,
 {
     public:
         Ehci(Device* pDev);
-        ~Ehci();
+        virtual ~Ehci();
 
         struct qTD
         {
