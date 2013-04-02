@@ -816,7 +816,7 @@ int posix_opendir(const char *dir, dirent *ent)
 
 int posix_readdir(int fd, dirent *ent)
 {
-    // F_NOTICE("readdir(" << fd << ")");
+    F_NOTICE("readdir(" << fd << ")");
 
     if (fd == -1)
         return -1;
@@ -865,6 +865,8 @@ void posix_rewinddir(int fd, dirent *ent)
     if (fd == -1)
         return;
 
+    F_NOTICE("rewinddir(" << fd << ")");
+
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
     if (!pSubsystem)
@@ -881,6 +883,8 @@ int posix_closedir(int fd)
 {
     if (fd == -1)
         return -1;
+
+    F_NOTICE("closedir(" << fd << ")");
 
     /// \todo Race here - fix.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
