@@ -83,10 +83,10 @@ opts.AddVariables(
     BoolVariable('memory_log', 'If 1, memory logging on the second serial line is enabled.', 1),
     BoolVariable('memory_log_inline', 'If 1, memory logging will be output alongside conventional serial output.', 0),
     
-    BoolVariable('multiprocessor', 'If 1, multiprocessor support is compiled in to the kernel.', 0),
-    BoolVariable('apic', 'If 1, APIC support will be built in (not to be confused with ACPI).', 0),
-    BoolVariable('acpi', 'If 1, ACPI support will be built in (not to be confused with APIC).', 0),
-    BoolVariable('smp', 'If 1, SMP support will be built in.', 0),
+    BoolVariable('multiprocessor', 'If 1, multiprocessor support is compiled in to the kernel.', 1),
+    BoolVariable('apic', 'If 1, APIC support will be built in (not to be confused with ACPI).', 1),
+    BoolVariable('acpi', 'If 1, ACPI support will be built in (not to be confused with APIC).', 1),
+    BoolVariable('smp', 'If 1, SMP support will be built in.', 1),
     
     BoolVariable('nogfx', 'If 1, the standard 80x25 text mode will be used. Will not load userspace if set to 1.', 0),
 
