@@ -198,8 +198,6 @@ extern "C" int main(int argc, char *argv[])
         }
     }
 
-    /// \todo Implement dlopen etc in here.
-
     syslog(LOG_INFO, "libload.so loading main object");
 
     // Load the main object passed on the command line.
@@ -991,10 +989,10 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
 
     uintptr_t A = rel.addend;
     uintptr_t S = 0;
-    uintptr_t B = 0;
+    uintptr_t B = meta->load_base;
     uintptr_t P = rel.offset;
     if(meta->relocated) {
-        P += (sh ? sh->addr : B);
+        P += B;
     }
 
     std::string symbolname = symbolName(*sym, meta);
@@ -1007,22 +1005,15 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
             S = sym->value;
         } else {
             ElfSymbol_t lookupsym;
-            lookupsym.value = 0;
+            LookupPolicy policy = LocalFirst;
             if(R_TYPE(rel.info) == R_X86_64_COPY) {
-                // Search anything except the current object.
-                if(!findSymbol(symbolname.c_str(), meta, lookupsym)) {
-                    printf("symbol lookup for '%s' failed.\n", symbolname.c_str());
-                    lookupsym.value = (uintptr_t) ~0UL;
-                }
-            } else {
-                // Attempt a local lookup first.
-                if(!lookupSymbol(symbolname.c_str(), meta, lookupsym, false)) {
-                    // No local symbol of that name - search other objects.
-                    if(!findSymbol(symbolname.c_str(), meta, lookupsym)) {
-                        printf("symbol lookup for '%s' (needed in '%s') failed.\n", symbolname.c_str(), meta->path.c_str());
-                        lookupsym.value = (uintptr_t) ~0UL;
-                    }
-                }
+                policy = NotThisObject;
+            }
+
+            // Attempt to find the symbol.
+            if(!findSymbol(symbolname.c_str(), meta, lookupsym, policy)) {
+                printf("symbol lookup for '%s' (needed in '%s') failed.\n", symbolname.c_str(), meta->path.c_str());
+                lookupsym.value = (uintptr_t) ~0UL;
             }
 
             S = lookupsym.value;
