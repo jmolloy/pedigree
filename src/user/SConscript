@@ -34,10 +34,20 @@ appoutputdir    = "#" + env["PEDIGREE_BUILD_APPS"]
 imagesdir       = env["PEDIGREE_IMAGES_DIR"]
 builddir        = "#" + env["PEDIGREE_BUILD_BASE"]
 
+suffix = '-noarch'
+if env['ARCH_TARGET'] == 'X86':
+    suffix = '-i686'
+elif env['ARCH_TARGET'] == 'X64':
+    suffix = '-amd64'
+elif env['ARCH_TARGET'] == 'PPC':
+    suffix = '-ppc'
+elif env['ARCH_TARGET'] == 'ARM':
+    suffix = '-arm'
+
 # libloader (userspace dynamic linker)
 libload_sources = [
     'loader.cc',
-    'stubs.s'
+    'stubs%s.s' % (suffix,)
 ]
 
 # Applications which just use POSIX libc/libm
