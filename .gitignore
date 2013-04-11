@@ -23,3 +23,4 @@ pedigree-compiler
 *.pyc
 scripts/pup/pup.conf
 *.obj
+*.swp
