@@ -288,7 +288,7 @@ int main (int argc, char ** argv) {
         memset(fb, 0, width * height * (32 / 8));
 
 	// uint8_t * fb = (uint8_t *) pFramebuffer->getRawBuffer(); //ctx->backbuffer;
-	OSMesaContext gl_ctx = OSMesaCreateContext(OSMESA_RGBA, NULL);
+	OSMesaContext gl_ctx = OSMesaCreateContext(OSMESA_RGB, NULL);
 	if ( !OSMesaMakeCurrent(gl_ctx, fb, GL_UNSIGNED_BYTE, width, height) ) {
 		fprintf(stderr, "OSMesaMakeCurrent failed.\n");
                 return 1;
@@ -303,7 +303,7 @@ int main (int argc, char ** argv) {
 	while (1) {
 		angle += 0.2;
 		draw();
-                pFramebuffer->draw(fb, 0, 0, 0, 0, width, height, PedigreeGraphics::Bits32_Rgba);
+                pFramebuffer->draw(fb, 0, 0, 0, 0, width, height, PedigreeGraphics::Bits24_Rgb);
                 pFramebuffer->redraw(0, 0, width, height, true);
 
                 /*
