@@ -63,7 +63,13 @@ posixc_apps = [
     'modload',
     'modunload',
     'modlist',
-    'crashtest'
+    'crashtest',
+    'gears'
+]
+
+# Applications which use Mesa
+mesa_apps = [
+    'gears',
 ]
 
 # Applications which use libSDL
@@ -155,9 +161,13 @@ for i in all_apps:
     if i in sdl_apps:
         e['LIBS'] += ['SDL', 'pthread']
         e['CPPPATH'] += ['#/src/lgpl/SDL-1.2.14/include']
+    if i in mesa_apps:
+        e['LIBS'] += ['OSMesa']
+        e['LIBPATH'] += ['%s/libraries' % (imagesdir,)]
+        e['CPPPATH'] += ['%s/include' % (imagesdir,)]
 
     # Handle C++-related dependencies.
-    if i in cpp_apps or i in sdl_apps:
+    if i in cpp_apps or i in sdl_apps or i in mesa_apps:
         e['LIBS'] += ['pedigree', 'stdc++']
         e['LIBPATH'] += [imagesdir + 'libraries']
         e['CPPPATH'] += ['#/src/subsys/native/include',
