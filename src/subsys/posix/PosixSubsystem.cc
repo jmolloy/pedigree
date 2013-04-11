@@ -450,6 +450,26 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType, Inter
             // Send SIGFPE
             sig = getSignalHandler(8);
             break;
+        case TerminalInput:
+            NOTICE_NOLOCK("    (Attempt to read from terminal by non-foreground process)");
+            // Send SIGTTIN
+            sig = getSignalHandler(21);
+            break;
+        case TerminalOutput:
+            NOTICE_NOLOCK("    (Output to terminal by non-foreground process)");
+            // Send SIGTTOU
+            sig = getSignalHandler(22);
+            break;
+        case Continue:
+            NOTICE_NOLOCK("    (Continuing a stopped process)");
+            // Send SIGCONT
+            sig = getSignalHandler(19);
+            break;
+        case Stop:
+            NOTICE_NOLOCK("    (Stopping a process)");
+            // Send SIGTSTP
+            sig = getSignalHandler(18);
+            break;
         default:
             NOTICE_NOLOCK("    (Unknown)");
             // Unknown exception

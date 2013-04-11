@@ -63,6 +63,10 @@ class Subsystem
             DivideByZero = 3,
             FpuError = 4,
             SpecialFpuError = 5,
+            TerminalInput = 6, // Read from terminal, but not foreground.
+            TerminalOutput = 7, // Output to terminal, but not foreground.
+            Continue = 8,
+            Stop = 9,
             Other = 255
         };
 
