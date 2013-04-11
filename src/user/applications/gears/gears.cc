@@ -31,12 +31,18 @@
 
 // Simplified, courtesy of Kevin Lange.
 
+#define _USE_MATH_DEFINES
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <sched.h>
+#include <string.h>
+#include <unistd.h>
 
 #include <GL/gl.h>
 #include <GL/osmesa.h>
+
+#include <graphics/Graphics.h>
 
 static GLfloat view_rotx = 20.0, view_roty = 30.0, view_rotz = 0.0;
 static GLint gear1, gear2, gear3;
@@ -266,16 +272,30 @@ int main (int argc, char ** argv) {
 	int width  = 500;
 	int height = 500;
 
+        PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
+        PedigreeGraphics::Framebuffer *pFramebuffer = pRootFramebuffer->createChild(0, 0, width, height);
+        if(!pFramebuffer->getRawBuffer()) {
+            fprintf(stderr, "Couldn't get a framebuffer to use.\n");
+            return 1;
+        }
+
 	/* Do something with a window */
 	//window_t * wina = window_create(left, top, width, height);
 	//ctx = init_graphics_window_double_buffer(wina);
 	//draw_fill(ctx, rgb(0,0,0));
 
-	uint8_t * fb = 0; //ctx->backbuffer;
-	OSMesaContext gl_ctx = OSMesaCreateContext(OSMESA_BGRA, NULL);
+        uint8_t *fb = (uint8_t *) malloc(width * height * (32 / 8)); // 32 bits per pixel
+        memset(fb, 0, width * height * (32 / 8));
+
+	// uint8_t * fb = (uint8_t *) pFramebuffer->getRawBuffer(); //ctx->backbuffer;
+	OSMesaContext gl_ctx = OSMesaCreateContext(OSMESA_RGBA, NULL);
 	if ( !OSMesaMakeCurrent(gl_ctx, fb, GL_UNSIGNED_BYTE, width, height) ) {
-		fprintf(stderr, "oh no\n");
+		fprintf(stderr, "OSMesaMakeCurrent failed.\n");
+                return 1;
 	}
+
+	/* OSMesa renders upside down by default, this will fix it. */
+	OSMesaPixelStore(OSMESA_Y_UP, 0);
 
 	reshape(500,500);
 	init();
@@ -283,8 +303,8 @@ int main (int argc, char ** argv) {
 	while (1) {
 		angle += 0.2;
 		draw();
-                // redraw
-		// flip(ctx);
+                pFramebuffer->draw(fb, 0, 0, 0, 0, width, height, PedigreeGraphics::Bits32_Rgba);
+                pFramebuffer->redraw(0, 0, width, height, true);
 
                 /*
 		w_keyboard_t * kbd = poll_keyboard_async();
