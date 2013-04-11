@@ -2163,6 +2163,18 @@ char *crypt(const char *key, const char *salt)
     return 0;
 }
 
+int ffsl(long int i)
+{
+    STUBBED("ffsl");
+    return 0;
+}
+
+int ffsll(long long int i)
+{
+    STUBBED("ffsll");
+    return 0;
+}
+
 void __pedigree_revoke_signal_context()
 {
     // Call into the kernel.
