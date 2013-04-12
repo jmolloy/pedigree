@@ -43,7 +43,7 @@ void Spinlock::acquire()
 
   if (m_Magic != 0xdeadbaba)
   {
-      FATAL_NOLOCK("Wrong magic in acquire.");
+      FATAL_NOLOCK("Wrong magic in acquire [" << m_Magic << "].");
   }
 
   while (m_Atom.compareAndSwap(true, false) == false)
