@@ -32,7 +32,7 @@ namespace PedigreeIpc
             /// Internal use only.
             StandardIpcMessage(void *);
 
-            virtual inline void *getBuffer()
+            virtual void *getBuffer() const
             {
                 return static_cast<void*>(m_vAddr);
             }
@@ -51,12 +51,12 @@ namespace PedigreeIpc
 
             virtual bool initialise();
 
-            inline void *getHandle()
+            void *getHandle() const
             {
                 return m_pHandle;
             }
 
-            inline size_t getSize()
+            size_t getSize() const
             {
                 return m_nBytes;
             }

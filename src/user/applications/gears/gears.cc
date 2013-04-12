@@ -38,11 +38,17 @@
 #include <sched.h>
 #include <string.h>
 #include <unistd.h>
+#include <syslog.h>
 
 #include <GL/gl.h>
 #include <GL/osmesa.h>
 
 #include <graphics/Graphics.h>
+#include <Widget.h>
+
+class Gears;
+
+Gears *g_pGears = NULL;
 
 static GLfloat view_rotx = 20.0, view_roty = 30.0, view_rotz = 0.0;
 static GLint gear1, gear2, gear3;
@@ -263,80 +269,117 @@ init(void)
 }
 
 
+class Gears : public Widget
+{
+    public:
+        Gears() : Widget(), fb(NULL)
+        {};
+        virtual ~Gears()
+        {}
 
+        bool initOpenGL()
+        {
+            PedigreeGraphics::Framebuffer *pFramebuffer = getFramebuffer();
+            size_t width = pFramebuffer->getWidth();
+            size_t height = pFramebuffer->getHeight();
+
+            fb = (uint8_t *) malloc(width * height * pFramebuffer->getBytesPerPixel());
+
+            gl_ctx = OSMesaCreateContext(OSMESA_RGB, NULL);
+            if(!OSMesaMakeCurrent(gl_ctx, fb, GL_UNSIGNED_BYTE, width, height))
+            {
+                fprintf(stderr, "OSMesaMakeCurrent failed.\n");
+                return false;
+            }
+
+            // Don't render upside down.
+            OSMesaPixelStore(OSMESA_Y_UP, 0);
+
+            return true;
+        }
+
+        void deinitOpenGL()
+        {
+            OSMesaDestroyContext(gl_ctx);
+        }
+
+        virtual bool render(PedigreeGraphics::Rect &rt, PedigreeGraphics::Rect &dirty)
+        {
+            PedigreeGraphics::Framebuffer *pFramebuffer = getFramebuffer();
+            size_t width = pFramebuffer->getWidth();
+            size_t height = pFramebuffer->getHeight();
+
+            // Render frame.
+            angle += 0.2;
+            draw();
+
+            // Draw to framebuffer.
+            pFramebuffer->draw(fb, 0, 0, 0, 0, width, height, PedigreeGraphics::Bits24_Rgb);
+            dirty.update(0, 0, width, height);
+
+            return true;
+        }
+
+    private:
+        uint8_t *fb;
+
+        OSMesaContext gl_ctx;
+};
+
+bool callback(WidgetMessages message, size_t msgSize, void *msgData)
+{
+    syslog(LOG_INFO, "gears: callback");
+    switch(message)
+    {
+        case RepaintNeeded:
+            {
+                syslog(LOG_INFO, "need to redraw");
+
+                PedigreeGraphics::Rect rt, dirty;
+                g_pGears->render(rt, dirty);
+
+                g_pGears->redraw(dirty);
+            }
+            break;
+        default:
+            syslog(LOG_INFO, "gears: unhandled callback");
+    }
+    return true;
+}
 
 int main (int argc, char ** argv) {
-    int left = 30;
-    int top  = 30;
+    PedigreeGraphics::Rect rt(0, 0, 500, 500);
 
-    int width  = 500;
-    int height = 500;
+    char endpoint[256];
+    sprintf(endpoint, "gears.%d", getpid());
 
-    PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
-    PedigreeGraphics::Framebuffer *pFramebuffer = pRootFramebuffer->createChild(0, 0, width, height);
-    if(!pFramebuffer->getRawBuffer()) {
-        fprintf(stderr, "Couldn't get a framebuffer to use.\n");
+    g_pGears = new Gears();
+    if(!g_pGears->construct(endpoint, callback, rt)) {
+        syslog(LOG_ERR, "gears: not able to construct widget");
+        delete g_pGears;
         return 1;
     }
 
-    /* Do something with a window */
-    //window_t * wina = window_create(left, top, width, height);
-    //ctx = init_graphics_window_double_buffer(wina);
-    //draw_fill(ctx, rgb(0,0,0));
+    g_pGears->initOpenGL();
 
-    uint8_t *fb = (uint8_t *) malloc(width * height * (32 / 8)); // 32 bits per pixel
-    memset(fb, 0, width * height * (32 / 8));
-
-    // uint8_t * fb = (uint8_t *) pFramebuffer->getRawBuffer(); //ctx->backbuffer;
-    OSMesaContext gl_ctx = OSMesaCreateContext(OSMESA_RGB, NULL);
-    if ( !OSMesaMakeCurrent(gl_ctx, fb, GL_UNSIGNED_BYTE, width, height) ) {
-        fprintf(stderr, "OSMesaMakeCurrent failed.\n");
-        return 1;
-    }
-
-    /* OSMesa renders upside down by default, this will fix it. */
-    OSMesaPixelStore(OSMESA_Y_UP, 0);
-
-    reshape(500,500);
+    reshape(rt.getW(), rt.getH());
     init();
 
+    syslog(LOG_INFO, "gears: entering main loop");
+
     while (1) {
-        angle += 0.2;
-        draw();
-        pFramebuffer->draw(fb, 0, 0, 0, 0, width, height, PedigreeGraphics::Bits24_Rgb);
-        pFramebuffer->redraw(0, 0, width, height, true);
+        Widget::checkForEvents();
 
-        /*
-        w_keyboard_t * kbd = poll_keyboard_async();
-        if (kbd != NULL) {
-        if (kbd->key == 'q') {
-        break;
-        }
-        switch (kbd->event.keycode) {
-        case KEY_ARROW_LEFT:
-        view_roty += 5.0;
-        break;
-        case KEY_ARROW_RIGHT:
-        view_roty -= 5.0;
-        break;
-        case KEY_ARROW_UP:
-        view_rotx += 5.0;
-        break;
-        case KEY_ARROW_DOWN:
-        view_rotx -= 5.0;
-        break;
-        }
-        free(kbd);
-        }
-        syscall_yield();
-        */
+        // Cheat a bit, render every frame.
+        callback(RepaintNeeded, 0, 0);
 
+        // Let other processes run, don't slam the CPU...
         sched_yield();
     }
 
-    OSMesaDestroyContext(gl_ctx);
+    g_pGears->deinitOpenGL();
 
-    free(fb);
+    delete g_pGears;
 
     return 0;
 }

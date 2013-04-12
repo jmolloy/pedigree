@@ -31,7 +31,7 @@ namespace LibUiProtocol
     bool sendMessage(void *pMessage, size_t messageLength);
 
     /** Receives a message from the window manager. Blocks. */
-    bool recvMessage(void *pBuffer, size_t maxSize);
+    bool recvMessage(const char *endpoint, void *pBuffer, size_t maxSize);
 
     /** Widget handle type. */
     typedef uint64_t handle_t;
@@ -146,10 +146,15 @@ namespace LibUiProtocol
     /** Create message data. */
     struct CreateMessage
     {
-        size_t x;
-        size_t y;
-        size_t width;
-        size_t height;
+        /// IPC endpoint for this widget.
+        char endpoint[256];
+
+        /// Minimum width and height for the window.
+        size_t minWidth;
+        size_t minHeight;
+
+        /// A 'rigid' window cannot be resized by the window manager.
+        bool rigid;
     };
 
     /** Create message response data. */

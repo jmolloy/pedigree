@@ -94,6 +94,7 @@ custom_incpath = {
     'TUI' : ['#/src/modules/system/TUI',
              '#/src/user/applications/TUI/include'],
     'uitest' : ['#/src/user/libraries/libui/include'],
+    'gears' : ['#/src/user/libraries/libui/include'],
     'winman' : ['#/src/user/libraries/libui/include',
                 '#/src/user/libraries/libui/src']
 }
@@ -102,7 +103,8 @@ custom_incpath = {
 custom_libs = {
     'TUI' : ['png', 'freetype', 'z'],
     'thread-test' : ['pthread'],
-    'uitest' : ['ui']
+    'uitest' : ['ui'],
+    'gears' : ['ui'],
 }
 
 # Default libraries for all applications

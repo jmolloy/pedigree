@@ -248,6 +248,12 @@ namespace PedigreeGraphics
              *  comes from the kernel; it cannot be fabricated). */
             Framebuffer(GraphicsProvider &gfx);
 
+            /** Gets the internal GraphicsProvider for the framebuffer. */
+            inline GraphicsProvider getProvider() const
+            {
+                return m_Provider;
+            }
+
         private:
 
             GraphicsProvider m_Provider;

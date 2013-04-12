@@ -64,14 +64,14 @@ bool LibUiProtocol::sendMessage(void *pMessage, size_t messageLength)
     return true;
 }
 
-bool LibUiProtocol::recvMessage(void *pBuffer, size_t maxSize)
+bool LibUiProtocol::recvMessage(const char *endpoint, void *pBuffer, size_t maxSize)
 {
     /// \todo Handle messages > 4 KB in size!
     if(maxSize > 0x1000)
         return false;
 
     // Grab the endpoint for the window manager.
-    IpcEndpoint *pEndpoint = getEndpoint("pedigree-winman");
+    IpcEndpoint *pEndpoint = getEndpoint(endpoint);
     if(!pEndpoint)
     {
         /// \todo Log the error somewhere.

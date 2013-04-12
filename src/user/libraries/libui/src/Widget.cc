@@ -15,11 +15,14 @@
  */
 #include <Widget.h>
 
+#include <ipc/Ipc.h>
+
 /// \todo GTFO libc!
 #include <unistd.h>
 
 /// \todo GTFO libc!
 #include <string.h>
+#include <stdlib.h>
 
 #include "protocol.h"
 
@@ -33,15 +36,18 @@ static bool defaultEventHandler(WidgetMessages message, size_t dataSize, void *d
 
 std::map<uint64_t, widgetCallback_t> Widget::m_CallbackMap;
 
-Widget::Widget() : m_bConstructed(false), m_pFramebuffer(0), m_Handle(0), m_EventCallback(defaultEventHandler)
+Widget::Widget() : m_bConstructed(false), m_pFramebuffer(0), m_Handle(0), m_EventCallback(defaultEventHandler), m_Endpoint("")
 {
 }
 
 Widget::~Widget()
 {
+    if(m_Endpoint) {
+        free((void *) m_Endpoint);
+    }
 }
 
-bool Widget::construct(widgetCallback_t cb, PedigreeGraphics::Rect &dimensions)
+bool Widget::construct(const char *endpoint, widgetCallback_t cb, PedigreeGraphics::Rect &dimensions)
 {
     if(m_Handle)
     {
@@ -52,6 +58,14 @@ bool Widget::construct(widgetCallback_t cb, PedigreeGraphics::Rect &dimensions)
     /// \todo Maybe we can get a decent way of having a default handler?
     if(!cb)
         return false;
+
+    // Create endpoint, if not already created.
+    /// \todo fail if endpoint already exists.
+    PedigreeIpc::createEndpoint(endpoint);
+    size_t len = strlen(endpoint);
+    m_Endpoint = (const char *) malloc(256);
+    memset((void *) m_Endpoint, 0, 256);
+    memcpy((void *) m_Endpoint, endpoint, len > 256 ? 255 : len);
 
     // Construct the handle first.
     uint64_t pid = getpid();
@@ -73,10 +87,10 @@ bool Widget::construct(widgetCallback_t cb, PedigreeGraphics::Rect &dimensions)
     pWinMan->messageSize = sizeof(CreateMessage);
     pWinMan->widgetHandle = m_Handle;
     pWinMan->isResponse = false;
-    pCreate->x = dimensions.getX();
-    pCreate->y = dimensions.getY();
-    pCreate->width = dimensions.getW();
-    pCreate->height = dimensions.getH();
+    strlcpy(pCreate->endpoint, m_Endpoint, 256);
+    pCreate->minWidth = dimensions.getW();
+    pCreate->minHeight = dimensions.getH();
+    pCreate->rigid = true;
 
     // Send the message off to the window manager and wait for a response. The
     // response will contain a GraphicsProvider that we can use to create our
@@ -93,7 +107,7 @@ bool Widget::construct(widgetCallback_t cb, PedigreeGraphics::Rect &dimensions)
     totalSize = sizeof(WindowManagerMessage) + sizeof(CreateMessageResponse);
     messageData = new char[totalSize];
 
-    if(!recvMessage(messageData, totalSize))
+    if(!recvMessage(m_Endpoint, messageData, totalSize))
     {
         m_Handle = 0;
         delete [] messageData;

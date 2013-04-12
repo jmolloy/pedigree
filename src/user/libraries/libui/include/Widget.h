@@ -68,11 +68,12 @@ class Widget
          * the window manager via IPC to obtain a framebuffer for rendering, as
          * well as notifying the window manager that this widget now exists.
          * No other calls are valid until this call has returned successfully.
+         * \param endpoint Unique IPC endpoint name to listen on for this widget
          * \param cb Event handler callback.
          * \param dimensions Dimensions of the widget to be created.
          * \return True if the widget was successfully constructed, False otherwise.
          */
-        bool construct(widgetCallback_t cb, PedigreeGraphics::Rect &dimensions);
+        bool construct(const char *endpoint, widgetCallback_t cb, PedigreeGraphics::Rect &dimensions);
 
         /**
          * Sets an internal property of the widget. Properties can be read by
@@ -169,6 +170,9 @@ class Widget
 
         /** Widget event handler. */
         widgetCallback_t m_EventCallback;
+
+        /** IPC endpoint name for window manager communication. */
+        const char *m_Endpoint;
 
         /** Handle -> Callback mapping. For event handler. */
         static std::map<uint64_t, widgetCallback_t> m_CallbackMap;

@@ -96,7 +96,7 @@ namespace Ipc
             {
             }
 
-            inline Mutex *pushMessage(IpcMessage* pMessage)
+            Mutex *pushMessage(IpcMessage* pMessage)
             {
                 QueuedMessage *p = new QueuedMessage;
                 p->pMessage = pMessage;
@@ -108,7 +108,7 @@ namespace Ipc
                 return p->pMutex;
             }
 
-            inline IpcMessage *getMessage(bool bBlock = false)
+            IpcMessage *getMessage(bool bBlock = false)
             {
                 if((!bBlock) && (!m_QueueSize.tryAcquire()))
                     return 0;
@@ -125,7 +125,7 @@ namespace Ipc
                 return pReturn;
             }
 
-            inline String &getName()
+            String &getName()
             {
                 return m_Name;
             }

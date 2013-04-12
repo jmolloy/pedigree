@@ -15,6 +15,10 @@
  */
 #include <stdio.h>
 #include <unistd.h>
+#include <syslog.h>
+#include <string.h>
+
+#include <map>
 
 #include <graphics/Graphics.h>
 #include <input/Input.h>
@@ -22,30 +26,84 @@
 
 #include <protocol.h>
 
-using namespace LibUiProtocol;
-using namespace PedigreeIpc;
-
 PedigreeGraphics::Framebuffer *g_pTopLevelFramebuffer = 0;
+
+class WindowMetadata {
+    public:
+        PedigreeGraphics::Framebuffer *pFramebuffer;
+        char endpoint[256];
+};
+
+std::map<uint64_t, WindowMetadata*> *g_Windows;
 
 void handleMessage(char *messageData)
 {
-    WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
+    LibUiProtocol::WindowManagerMessage *pWinMan =
+        reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(messageData);
 
-    printf("Incoming message at %x\n", messageData);
+    syslog(LOG_INFO, "winman: incoming message at %x", messageData);
+    syslog(LOG_INFO, "winman: incoming message with code %d", pWinMan->messageCode);
 
-    if(pWinMan->messageCode == Create)
-        printf("Create message!\n");
+    size_t totalSize = sizeof(LibUiProtocol::WindowManagerMessage);
 
-    printf("Incoming message with code %d\n", pWinMan->messageCode);
+    PedigreeIpc::IpcMessage *pIpcResponse = new PedigreeIpc::IpcMessage();
+    bool bSuccess = pIpcResponse->initialise();
+    syslog(LOG_INFO, "winman: creating response: %s", bSuccess ? "good" : "bad");
+
+    if(pWinMan->messageCode == LibUiProtocol::Create)
+    {
+        LibUiProtocol::CreateMessage *pCreate =
+        reinterpret_cast<LibUiProtocol::CreateMessage*>(messageData + sizeof(LibUiProtocol::WindowManagerMessage));
+        totalSize += sizeof(LibUiProtocol::CreateMessageResponse);
+        char *responseData = (char *) pIpcResponse->getBuffer();
+
+        WindowMetadata *pMetadata = new WindowMetadata;
+        strcpy(pMetadata->endpoint, pCreate->endpoint);
+
+        /// \todo Create a new window PROPERLY.
+        syslog(LOG_INFO, "winman: create %dx%d", pCreate->minWidth, pCreate->minHeight);
+        PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
+        pMetadata->pFramebuffer = pRootFramebuffer; // g_pTopLevelFramebuffer->createChild(0, 0, pCreate->minWidth, pCreate->minHeight);
+
+        LibUiProtocol::WindowManagerMessage *pHeader =
+            reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(responseData);
+        pHeader->messageCode = LibUiProtocol::Create;
+        pHeader->widgetHandle = pWinMan->widgetHandle;
+        pHeader->messageSize = sizeof(LibUiProtocol::CreateMessageResponse);
+        pHeader->isResponse = true;
+
+        LibUiProtocol::CreateMessageResponse *pCreateResp =
+            reinterpret_cast<LibUiProtocol::CreateMessageResponse*>(responseData + sizeof(LibUiProtocol::WindowManagerMessage));
+        pCreateResp->provider = pMetadata->pFramebuffer->getProvider();
+
+        syslog(LOG_INFO, "winman: create message!");
+        g_Windows->insert(std::make_pair(pWinMan->widgetHandle, pMetadata));
+        syslog(LOG_INFO, "winman: metadata entered");
+
+        syslog(LOG_INFO, "winman: getting endpoint for IPC");
+        PedigreeIpc::IpcEndpoint *pEndpoint = PedigreeIpc::getEndpoint(pMetadata->endpoint);
+        syslog(LOG_INFO, "winman: endpoint retrieved [%s] %p", pMetadata->endpoint, pEndpoint);
+
+        syslog(LOG_INFO, "winman: transmitting response");
+        PedigreeIpc::send(pEndpoint, pIpcResponse, true);
+
+        syslog(LOG_INFO, "winman: create message response transmitted");
+    }
+    else
+    {
+        syslog(LOG_INFO, "winman: unhandled message type");
+    }
+
+    delete pIpcResponse;
 }
 
-void checkForMessages(IpcEndpoint *pEndpoint)
+void checkForMessages(PedigreeIpc::IpcEndpoint *pEndpoint)
 {
     if(!pEndpoint)
         return;
 
-    IpcMessage *pRecv = 0;
-    if(recv(pEndpoint, &pRecv, false))
+    PedigreeIpc::IpcMessage *pRecv = 0;
+    if(PedigreeIpc::recv(pEndpoint, &pRecv, false))
     {
         handleMessage(static_cast<char *>(pRecv->getBuffer()));
 
@@ -55,31 +113,31 @@ void checkForMessages(IpcEndpoint *pEndpoint)
 
 int main(int argc, char *argv[])
 {
-    printf("Starting up the window manager...\n");
-
-    // Daemonize!
-    if(fork() != 0)
-    {
-        printf("Success.\n");
-        return 0;
-    }
-
     // Create the window manager IPC endpoint for libui.
-    createEndpoint("pedigree-winman");
-    IpcEndpoint *pEndpoint = getEndpoint("pedigree-winman");
+    PedigreeIpc::createEndpoint("pedigree-winman");
+    PedigreeIpc::IpcEndpoint *pEndpoint = PedigreeIpc::getEndpoint("pedigree-winman");
 
     if(!pEndpoint)
     {
-        printf("error: couldn't create the pedigree-winman IPC endpoint!\n");
+        syslog(LOG_CRIT, "error: couldn't create the pedigree-winman IPC endpoint!");
+        return 0;
+    }
+
+    // Make a program to test window creation etc...
+    if(fork() == 0)
+    {
+        syslog(LOG_INFO, "winman: child alive %d", getpid());
+        char *const new_argv[] = {"/applications/gears"};
+        execv(new_argv[0], new_argv);
         return 0;
     }
 
     PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
-    g_pTopLevelFramebuffer = pRootFramebuffer->createChild(512, 32, pRootFramebuffer->getWidth() - 512, pRootFramebuffer->getHeight());
+    g_pTopLevelFramebuffer = pRootFramebuffer->createChild(0, 0, pRootFramebuffer->getWidth(), pRootFramebuffer->getHeight());
 
     if(!g_pTopLevelFramebuffer->getRawBuffer())
     {
-        printf("error: no top-level framebuffer could be created.\n");
+        syslog(LOG_CRIT, "error: no top-level framebuffer could be created.");
         return -1;
     }
 
@@ -87,8 +145,11 @@ int main(int argc, char *argv[])
     size_t g_nHeight = g_pTopLevelFramebuffer->getHeight();
 
     g_pTopLevelFramebuffer->rect(0, 0, g_nWidth, g_nHeight, PedigreeGraphics::createRgb(0, 0, 255), PedigreeGraphics::Bits32_Rgb);
+    g_pTopLevelFramebuffer->redraw(0, 0, g_nWidth, g_nHeight, true);
 
-    printf("Entering main loop (%d,%d).\n", g_nWidth, g_nHeight);
+    syslog(LOG_INFO, "winman: entering main loop %d", getpid());
+
+    g_Windows = new std::map<uint64_t, WindowMetadata*>();
 
     // Main loop: logic & message handling goes here!
     while(true)
