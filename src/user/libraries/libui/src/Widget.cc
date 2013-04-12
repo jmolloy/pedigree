@@ -114,9 +114,6 @@ bool Widget::construct(const char *endpoint, widgetCallback_t cb, PedigreeGraphi
         return false;
     }
 
-    /// \todo Verify this message is actually for us!
-    /// \todo Process-targeted messages in an endpoint.
-
     pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
     if(!pWinMan->isResponse)
     {

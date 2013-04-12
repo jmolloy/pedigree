@@ -62,8 +62,7 @@ void handleMessage(char *messageData)
 
         /// \todo Create a new window PROPERLY.
         syslog(LOG_INFO, "winman: create %dx%d", pCreate->minWidth, pCreate->minHeight);
-        PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
-        pMetadata->pFramebuffer = pRootFramebuffer; // g_pTopLevelFramebuffer->createChild(0, 0, pCreate->minWidth, pCreate->minHeight);
+        pMetadata->pFramebuffer = g_pTopLevelFramebuffer->createChild(0, 0, pCreate->minWidth, pCreate->minHeight);
 
         LibUiProtocol::WindowManagerMessage *pHeader =
             reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(responseData);
@@ -94,7 +93,7 @@ void handleMessage(char *messageData)
         syslog(LOG_INFO, "winman: unhandled message type");
     }
 
-    delete pIpcResponse;
+    // delete pIpcResponse;
 }
 
 void checkForMessages(PedigreeIpc::IpcEndpoint *pEndpoint)
@@ -132,8 +131,8 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
-    g_pTopLevelFramebuffer = pRootFramebuffer->createChild(0, 0, pRootFramebuffer->getWidth(), pRootFramebuffer->getHeight());
+    // Use the root framebuffer.
+    g_pTopLevelFramebuffer = new PedigreeGraphics::Framebuffer();
 
     if(!g_pTopLevelFramebuffer->getRawBuffer())
     {

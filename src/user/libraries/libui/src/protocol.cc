@@ -59,7 +59,7 @@ bool LibUiProtocol::sendMessage(void *pMessage, size_t messageLength)
     send(pEndpoint, pIpcMessage, false);
 
     // Clean up.
-    delete pIpcMessage;
+    // delete pIpcMessage;
 
     return true;
 }
@@ -96,7 +96,7 @@ bool LibUiProtocol::recvMessage(const char *endpoint, void *pBuffer, size_t maxS
     memcpy(pBuffer, pRecv->getBuffer(), maxSize);
 
     // Clean up.
-    delete pRecv;
+    // delete pRecv;
 
     return true;
 }

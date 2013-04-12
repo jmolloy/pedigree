@@ -333,11 +333,11 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
     {
         case RepaintNeeded:
             {
-                syslog(LOG_INFO, "need to redraw");
-
                 PedigreeGraphics::Rect rt, dirty;
+                syslog(LOG_INFO, "gears: rendering...");
                 g_pGears->render(rt, dirty);
 
+                syslog(LOG_INFO, "gears: asking winman for redraw...");
                 g_pGears->redraw(dirty);
             }
             break;
