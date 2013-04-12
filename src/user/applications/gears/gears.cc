@@ -359,6 +359,7 @@ int main (int argc, char ** argv) {
         delete g_pGears;
         return 1;
     }
+    syslog(LOG_INFO, "gears: widget constructed");
 
     g_pGears->initOpenGL();
 
