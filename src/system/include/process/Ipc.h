@@ -92,40 +92,18 @@ namespace Ipc
     class IpcEndpoint
     {
         public:
-            IpcEndpoint(String name) : m_Name(name), m_Queue(), m_QueueSize(0)
+            IpcEndpoint(String name) :
+                m_Name(name), m_Queue(), m_QueueSize(0), m_QueueLock(false)
             {
+                NOTICE("Creating endpoint with name " << name);
+                NOTICE("Endpoint is at " << ((uintptr_t) this));
             }
 
-            Mutex *pushMessage(IpcMessage* pMessage)
-            {
-                QueuedMessage *p = new QueuedMessage;
-                p->pMessage = pMessage;
-                p->pMutex = new Mutex(true);
+            Mutex *pushMessage(IpcMessage* pMessage);
 
-                m_Queue.pushBack(p);
-                m_QueueSize.release();
+            IpcMessage *getMessage(bool bBlock = false);
 
-                return p->pMutex;
-            }
-
-            IpcMessage *getMessage(bool bBlock = false)
-            {
-                if((!bBlock) && (!m_QueueSize.tryAcquire()))
-                    return 0;
-                else
-                    m_QueueSize.acquire();
-                QueuedMessage *p = m_Queue.popFront();
-
-                IpcMessage *pReturn = p->pMessage;
-
-                p->pMutex->release();
-                delete p->pMutex;
-                delete p;
-
-                return pReturn;
-            }
-
-            String &getName()
+            const String &getName() const
             {
                 return m_Name;
             }
@@ -143,6 +121,8 @@ namespace Ipc
 
             List<QueuedMessage*> m_Queue;
             Semaphore m_QueueSize;
+
+            Mutex m_QueueLock;
     };
 
     bool send(IpcEndpoint *pEndpoint, IpcMessage *pMessage, bool bAsync = false);

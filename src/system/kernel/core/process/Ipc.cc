@@ -17,6 +17,8 @@
 
 #include <utilities/RadixTree.h>
 
+#include <process/Scheduler.h>
+
 #include <processor/PhysicalMemoryManager.h>
 #include <processor/VirtualAddressSpace.h>
 
@@ -61,7 +63,9 @@ bool Ipc::send(IpcEndpoint *pEndpoint, IpcMessage *pMessage, bool bAsync)
 
     // Block if we're allowed to.
     if(!bAsync)
+    {
         pMutex->acquire();
+    }
 
     return true;
 }
@@ -83,6 +87,49 @@ bool Ipc::recv(IpcEndpoint *pEndpoint, IpcMessage **pMessage, bool bAsync)
     }
 
     return false;
+}
+
+Mutex *IpcEndpoint::pushMessage(IpcMessage* pMessage)
+{
+    LockGuard<Mutex> guard(m_QueueLock);
+
+    QueuedMessage *p = new QueuedMessage;
+    p->pMessage = pMessage;
+    p->pMutex = new Mutex(true);
+
+    m_Queue.pushBack(p);
+    m_QueueSize.release();
+
+    return p->pMutex;
+}
+
+IpcMessage *IpcEndpoint::getMessage(bool bBlock)
+{
+    // Handle the case where m_QueueSize acquire() returns but the queue is
+    // already emptied by the time we acquire the Mutex.
+    QueuedMessage *p = 0;
+    while(p == 0) {
+        bool b = m_QueueSize.tryAcquire();
+        if(!b)
+        {
+            if((!bBlock) && (!m_QueueSize.tryAcquire()))
+                return 0;
+            else
+                m_QueueSize.acquire();
+        }
+
+        LockGuard<Mutex> guard(m_QueueLock);
+        p = m_Queue.popFront();
+    }
+
+    IpcMessage *pReturn = p->pMessage;
+
+    p->pMutex->release();
+    Scheduler::instance().yield();
+    delete p->pMutex;
+    delete p;
+
+    return pReturn;
 }
 
 Ipc::IpcMessage::IpcMessage() : nPages(1), m_vAddr(0), m_pMemRegion(0)
