@@ -391,6 +391,14 @@ class VmwareGraphics : public Display
                 virtual void hwRedraw(size_t x = ~0UL, size_t y = ~0UL,
                                       size_t w = ~0UL, size_t h = ~0UL)
                 {
+                    if(x == ~0UL)
+                        x = 0;
+                    if(y == ~0UL)
+                        y = 0;
+                    if(w == ~0UL)
+                        w = getWidth();
+                    if(h == ~0UL)
+                        h = getHeight();
                     m_pDisplay->redraw(x, y, w, h);
                 }
                 
