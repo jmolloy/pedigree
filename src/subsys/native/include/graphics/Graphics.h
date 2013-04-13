@@ -33,26 +33,26 @@ namespace PedigreeGraphics
 
             void update(size_t x, size_t y, size_t w, size_t h)
             {
-                x = x; y = y;
-                w = w; h = h;
+                this->x = x; this->y = y;
+                this->w = w; this->h = h;
             }
 
-            inline size_t getX()
+            inline size_t getX() const
             {
                 return x;
             }
 
-            inline size_t getY()
+            inline size_t getY() const
             {
                 return y;
             }
 
-            inline size_t getW()
+            inline size_t getW() const
             {
                 return w;
             }
 
-            inline size_t getH()
+            inline size_t getH() const
             {
                 return h;
             }
