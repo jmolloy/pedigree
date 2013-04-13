@@ -134,6 +134,8 @@ private:
     Vt100 *m_pXterm;
 #endif
 
+    char m_pName[256];
+
     char m_pQueue[256];
     size_t m_Len;
 

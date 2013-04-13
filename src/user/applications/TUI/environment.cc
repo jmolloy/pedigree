@@ -54,6 +54,11 @@ void Syscall::setCurrentConsole(size_t tabId)
     syscall1(TUI_SET_CURRENT_CONSOLE, tabId);
 }
 
+void Syscall::dataAvailable()
+{
+    syscall0(TUI_DATA_CHANGED);
+}
+
 void doRedraw(DirtyRectangle &rect)
 {
     if(rect.getX() == ~0UL && rect.getY() == ~0UL &&

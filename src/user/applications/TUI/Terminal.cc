@@ -49,6 +49,8 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
 
     setTabId(tabId);
 
+    strcpy(m_pName, pName);
+
     Syscall::createConsole(tabId, pName);
 
 #ifndef NEW_XTERM
@@ -294,6 +296,9 @@ void Terminal::addToQueue(char c)
     if(m_Len >= 256)
         return;
     m_pQueue[m_Len++] = c;
+
+    // Key available in queue, we should notify the upper layers.
+    Syscall::dataAvailable();
 }
 
 void Terminal::setActive(bool b, DirtyRectangle &rect)

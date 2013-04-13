@@ -123,6 +123,14 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
             else
                 g_UserConsole->stopCurrentBlock();
             break;
+
+        case TUI_DATA_CHANGED:
+        {
+            char *name = reinterpret_cast<char*>(p1);
+            ConsoleFile *pConsole = ConsoleManager::instance().getConsoleFile(g_UserConsole);
+            pConsole->dataIsReady();
+            break;
+        }
         default: ERROR ("TuiSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber() << Hex); return 0;
     }
     return 0;

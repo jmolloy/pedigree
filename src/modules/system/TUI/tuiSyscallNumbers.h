@@ -26,4 +26,6 @@
 #define TUI_SET_CTTY                6
 #define TUI_SET_CURRENT_CONSOLE     7
 
+#define TUI_DATA_CHANGED            8
+
 #endif

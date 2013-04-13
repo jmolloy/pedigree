@@ -32,10 +32,18 @@ ConsoleFile::ConsoleFile(String consoleName, Filesystem *pFs) :
 int ConsoleFile::select(bool bWriting, int timeout)
 {
     bool ret = false;
+
+    // Console is always writeable
+    /// \todo is it?
+    if(bWriting)
+        return true;
+
+    // Check for data.
     if(timeout == 0)
         ret = ConsoleManager::instance().hasDataAvailable(this);
     else
         while(!(ret = ConsoleManager::instance().hasDataAvailable(this))) Scheduler::instance().yield();
+
     return (ret ? 1 : 0);
 }
 

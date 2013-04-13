@@ -102,6 +102,7 @@ namespace Syscall
     void createConsole(size_t tabId, char *pName);
     void setCtty(char *pName);
     void setCurrentConsole(size_t tabId);
+    void dataAvailable();
 }
 
 void doRedraw(DirtyRectangle &rect);
