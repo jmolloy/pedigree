@@ -402,7 +402,7 @@ void Framebuffer::swLine(size_t x1, size_t y1, size_t x2, size_t y2, uint32_t co
     if(y2 > m_nHeight)
         y2 = m_nHeight;
 
-    NOTICE("swLine(" << Dec << x1 << ", " << y1 << " -> " << x2 << ", " << y2 << Hex << ")");
+    // NOTICE("swLine(" << Dec << x1 << ", " << y1 << " -> " << x2 << ", " << y2 << Hex << ")");
 
     if(UNLIKELY((x1 == x2) && (y1 == y2)))
         return;
