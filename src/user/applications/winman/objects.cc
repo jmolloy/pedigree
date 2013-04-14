@@ -47,6 +47,12 @@ void WObject::bump(ssize_t bumpX, ssize_t bumpY)
     m_Dimensions.update(x, y, w, h);
 }
 
+Window::Window(::Container *pParent, PedigreeGraphics::Framebuffer *pBaseFramebuffer) :
+    m_pParent(pParent), m_pBaseFramebuffer(pBaseFramebuffer), m_bFocus(false)
+{
+    m_pParent->addChild(this);
+}
+
 void Window::render()
 {
     PedigreeGraphics::Rect &me = getDimensions();
@@ -58,7 +64,22 @@ void Window::render()
     size_t r = 0;
     if(m_bFocus)
         r = 255;
-    m_pBaseFramebuffer->rect(x - 1, y - 1, w + 2, h + 2, PedigreeGraphics::createRgb(255, 255, 255), PedigreeGraphics::Bits32_Rgb);
+
+    // Window border.
+
+    // Top
+    m_pBaseFramebuffer->line(x - 1, y - 1, x + w + 1, y - 1, PedigreeGraphics::createRgb(255, 255, 255), PedigreeGraphics::Bits32_Rgb);
+
+    // Left
+    m_pBaseFramebuffer->line(x - 1, y - 1, x - 1, y + h + 1, PedigreeGraphics::createRgb(255, 255, 255), PedigreeGraphics::Bits32_Rgb);
+
+    // Right
+    m_pBaseFramebuffer->line(x + w + 1, y - 1, x + w + 1, y + h + 1, PedigreeGraphics::createRgb(255, 255, 255), PedigreeGraphics::Bits32_Rgb);
+
+    // Bottom
+    m_pBaseFramebuffer->line(x - 1, y + h + 1, x + w + 1, y + h + 1, PedigreeGraphics::createRgb(255, 255, 255), PedigreeGraphics::Bits32_Rgb);
+
+    // Window.
     m_pBaseFramebuffer->rect(x, y, w, h, PedigreeGraphics::createRgb(r, 0, 0), PedigreeGraphics::Bits32_Rgb);
     // m_pBaseFramebuffer->redraw(x, y, w, h, true);
 }

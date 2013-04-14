@@ -88,10 +88,7 @@ class Window : public WObject
 {
     public:
         /// \todo move this constructor to objects.cc, and call addChild
-        Window(::Container *pParent, PedigreeGraphics::Framebuffer *pBaseFramebuffer) :
-            m_pParent(pParent), m_pBaseFramebuffer(pBaseFramebuffer), m_bFocus(false)
-        {
-        }
+        Window(::Container *pParent, PedigreeGraphics::Framebuffer *pBaseFramebuffer);
         Window();
 
         virtual ~Window()

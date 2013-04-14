@@ -159,42 +159,20 @@ int main(int argc, char *argv[])
 
     RootContainer *pRootContainer = new RootContainer(g_nWidth, g_nHeight);
 
-    Window *pLeft = new Window(pRootContainer, g_pTopLevelFramebuffer);
-    Window *pRight = new Window(pRootContainer, g_pTopLevelFramebuffer);
-
     Container *pMiddle = new Container(pRootContainer);
     pMiddle->setLayout(Container::Stacked);
 
-    Container *pMiddleAgain = new Container(pMiddle);
+    Window *pLeft = new Window(pRootContainer, g_pTopLevelFramebuffer);
+    Window *pRight = new Window(pRootContainer, g_pTopLevelFramebuffer);
+    pRootContainer->addChild(pMiddle);
 
+    // Should be evenly split down the screen after retile()
     Window *pTop = new Window(pMiddle, g_pTopLevelFramebuffer);
     Window *pMiddleWindow = new Window(pMiddle, g_pTopLevelFramebuffer);
     Window *pBottom = new Window(pMiddle, g_pTopLevelFramebuffer);
 
-    Window *pTopAgain = new Window(pMiddleAgain, g_pTopLevelFramebuffer);
-    Window *pMiddleWindowAgain = new Window(pMiddleAgain, g_pTopLevelFramebuffer);
-    Window *pBottomAgain = new Window(pMiddleAgain, g_pTopLevelFramebuffer);
-
-    // Should be evenly split down the screen after retile()
-    pRootContainer->addChild(pLeft);
-    pRootContainer->addChild(pMiddle);
-    pRootContainer->addChild(pRight);
-
-    // Should be evenly split in the middle tile after retile()
-    pMiddle->addChild(pTop);
-    pMiddle->addChild(pMiddleWindow);
-    pMiddle->addChild(pBottom);
-    pMiddle->addChild(pMiddleAgain);
-
-    pMiddleAgain->addChild(pTopAgain);
-    pMiddleAgain->addChild(pMiddleWindowAgain);
-    pMiddleAgain->addChild(pBottomAgain);
-
     g_pFocusWindow = pLeft;
     pLeft->focus();
-
-    syslog(LOG_INFO, "winman: pushing middle %p out 128 pixels", static_cast<WObject*>(pMiddle));
-    pMiddleAgain->resize(128, 0);
 
     syslog(LOG_INFO, "winman: entering main loop %d", getpid());
 
