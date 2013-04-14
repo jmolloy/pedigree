@@ -19,7 +19,7 @@
 #include <stdint.h>
 #include <syslog.h>
 
-#include <list>
+#include <vector>
 
 #include <graphics/Graphics.h>
 #include <input/Input.h>
@@ -88,7 +88,7 @@ class Window : public WObject
 {
     public:
         /// \todo move this constructor to objects.cc, and call addChild
-        Window(::Container *pParent, PedigreeGraphics::Framebuffer *pBaseFramebuffer);
+        Window(uint64_t handle, PedigreeIpc::IpcEndpoint *endpoint, ::Container *pParent, PedigreeGraphics::Framebuffer *pBaseFramebuffer);
         Window();
 
         virtual ~Window()
@@ -107,7 +107,26 @@ class Window : public WObject
         virtual void focus();
         virtual void nofocus();
 
+        PedigreeIpc::IpcEndpoint *getEndpoint() const
+        {
+            return m_Endpoint;
+        }
+
+        uint64_t getHandle() const
+        {
+            return m_Handle;
+        }
+
+        ::Container *getParent() const
+        {
+            return m_pParent;
+        }
+
     private:
+        uint64_t m_Handle;
+
+        PedigreeIpc::IpcEndpoint *m_Endpoint;
+
         ::Container *m_pParent;
 
         PedigreeGraphics::Framebuffer *m_pBaseFramebuffer;
@@ -121,6 +140,9 @@ class Window : public WObject
  */
 class Container : public WObject
 {
+    protected:
+        typedef std::vector<WObject*> WObjectList_t;
+
     public:
         enum Layout
         {
@@ -163,6 +185,92 @@ class Container : public WObject
         }
 
         /**
+         * Removes the given child.
+         */
+        void removeChild(WObject *pChild)
+        {
+            WObjectList_t::iterator it = m_Children.begin();
+            for(; it != m_Children.end(); ++it)
+            {
+                if((*it) == pChild)
+                {
+                    m_Children.erase(it);
+                    break;
+                }
+            }
+
+            // Did we actually erase something?
+            if(it != m_Children.end())
+            {
+                retile();
+            }
+        }
+
+        /**
+         * Gets the nth child in the container.
+         */
+        WObject *getChild(size_t n) const
+        {
+            if(n > m_Children.size())
+            {
+                return 0;
+            }
+
+            return m_Children[n];
+        }
+
+        /**
+         * Finds the left sibling of the given child.
+         * Note that in the 'Stacked' layout, this is the container above the
+         * child, not the container to its left.
+         */
+        WObject *getLeftSibling(WObject *pChild) const
+        {
+            WObjectList_t::const_iterator it = m_Children.begin();
+            for(; it != m_Children.end(); ++it)
+            {
+                if((*it) == pChild)
+                {
+                    if(it == m_Children.begin())
+                    {
+                        break;
+                    }
+
+                    --it;
+                    return (*it);
+                }
+            }
+
+            return 0;
+        }
+
+        /**
+         * Finds the right sibling of the given child.
+         * Note that in the 'Stacked' layout, this is the container below the
+         * child, not the container to its right.
+         */
+        WObject *getRightSibling(WObject *pChild) const
+        {
+            WObjectList_t::const_iterator it = m_Children.begin();
+            for(; it != m_Children.end(); ++it)
+            {
+                if((*it) == pChild)
+                {
+                    ++it;
+
+                    if(it == m_Children.end())
+                    {
+                        break;
+                    }
+
+                    return (*it);
+                }
+            }
+
+            return 0;
+        }
+
+        /**
          * Taking our dimensions and layout into account, retile our children.
          * This will resize and reposition children, which may cause them to
          * retile also.
@@ -182,8 +290,7 @@ class Container : public WObject
         void render();
 
     protected:
-        typedef std::list<WObject*> WObjectList_t;
-        std::list<WObject*> m_Children;
+        std::vector<WObject*> m_Children;
 
         Container()
         {

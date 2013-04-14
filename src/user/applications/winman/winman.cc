@@ -32,15 +32,11 @@
 
 PedigreeGraphics::Framebuffer *g_pTopLevelFramebuffer = 0;
 
+RootContainer *g_pRootContainer = 0;
+
 Window *g_pFocusWindow = 0;
 
-class WindowMetadata {
-    public:
-        PedigreeGraphics::Framebuffer *pFramebuffer;
-        char endpoint[256];
-};
-
-std::map<uint64_t, WindowMetadata*> *g_Windows;
+std::map<uint64_t, Window*> *g_Windows;
 
 void handleMessage(char *messageData)
 {
@@ -63,12 +59,13 @@ void handleMessage(char *messageData)
         totalSize += sizeof(LibUiProtocol::CreateMessageResponse);
         char *responseData = (char *) pIpcResponse->getBuffer();
 
-        WindowMetadata *pMetadata = new WindowMetadata;
-        strcpy(pMetadata->endpoint, pCreate->endpoint);
+        PedigreeIpc::IpcEndpoint *pEndpoint = PedigreeIpc::getEndpoint(pCreate->endpoint);
 
-        /// \todo Create a new window PROPERLY.
-        syslog(LOG_INFO, "winman: create %dx%d", pCreate->minWidth, pCreate->minHeight);
-        pMetadata->pFramebuffer = g_pTopLevelFramebuffer->createChild(0, 0, pCreate->minWidth, pCreate->minHeight);
+        /// \todo Stop giving windows the top-level framebuffer.
+        Container *pParent = g_pRootContainer;
+        if(g_pFocusWindow)
+            pParent = g_pFocusWindow->getParent();
+        Window *pWindow = new Window(pWinMan->widgetHandle, pEndpoint, pParent, g_pTopLevelFramebuffer);
 
         LibUiProtocol::WindowManagerMessage *pHeader =
             reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(responseData);
@@ -79,15 +76,11 @@ void handleMessage(char *messageData)
 
         LibUiProtocol::CreateMessageResponse *pCreateResp =
             reinterpret_cast<LibUiProtocol::CreateMessageResponse*>(responseData + sizeof(LibUiProtocol::WindowManagerMessage));
-        pCreateResp->provider = pMetadata->pFramebuffer->getProvider();
+        pCreateResp->provider = g_pTopLevelFramebuffer->getProvider(); // bad
 
         syslog(LOG_INFO, "winman: create message!");
-        g_Windows->insert(std::make_pair(pWinMan->widgetHandle, pMetadata));
+        g_Windows->insert(std::make_pair(pWinMan->widgetHandle, pWindow));
         syslog(LOG_INFO, "winman: metadata entered");
-
-        syslog(LOG_INFO, "winman: getting endpoint for IPC");
-        PedigreeIpc::IpcEndpoint *pEndpoint = PedigreeIpc::getEndpoint(pMetadata->endpoint);
-        syslog(LOG_INFO, "winman: endpoint retrieved [%s] %p", pMetadata->endpoint, pEndpoint);
 
         syslog(LOG_INFO, "winman: transmitting response");
         PedigreeIpc::send(pEndpoint, pIpcResponse, true);
@@ -116,10 +109,96 @@ void checkForMessages(PedigreeIpc::IpcEndpoint *pEndpoint)
     }
 }
 
+#define ALT_KEY (1ULL << 60)
+#define SHIFT_KEY (1ULL << 61)
+
+// I am almost completely convinced this is not right.
+// Will keymaps change these values???
+#define KEY_LEFT    108
+#define KEY_UP      117
+#define KEY_DOWN    100
+#define KEY_RIGHT   114
+
 /// System input callback.
 void systemInputCallback(Input::InputNotification &note)
 {
     syslog(LOG_INFO, "winman: system input (type=%d)", note.type);
+    if(note.type & Input::Key)
+    {
+        uint64_t c = note.data.key.key;
+
+        /// \todo make configurable
+        if((c & ALT_KEY) && (g_pFocusWindow != 0))
+        {
+            bool bShift = (c & SHIFT_KEY);
+
+            c &= 0xFF;
+            syslog(LOG_INFO, "ALT-%d %c", c, c);
+
+            Container *focusParent = g_pFocusWindow->getParent();
+            Window *newFocus = 0;
+            WObject *sibling = 0;
+            if(bShift)
+            {
+                if(c == 'r')
+                {
+                    g_pRootContainer->retile();
+                }
+            }
+            else if(c == '\n')
+            {
+                // Window *pWindow = new Window(focusParent, g_pTopLevelFramebuffer);
+            }
+            else if((c == KEY_LEFT) || (c == KEY_RIGHT) || (c == KEY_UP) || (c == KEY_DOWN))
+            {
+                if((c == KEY_LEFT) && (focusParent->getLayout() == Container::SideBySide))
+                {
+                    sibling = focusParent->getLeftSibling(g_pFocusWindow);
+                }
+                else if((c == KEY_UP) && (focusParent->getLayout() == Container::Stacked))
+                {
+                    sibling = focusParent->getLeftSibling(g_pFocusWindow);
+                }
+                else if((c == KEY_DOWN) && (focusParent->getLayout() == Container::Stacked))
+                {
+                    sibling = focusParent->getRightSibling(g_pFocusWindow);
+                }
+                else if((c == KEY_RIGHT) && (focusParent->getLayout() == Container::SideBySide))
+                {
+                    sibling = focusParent->getRightSibling(g_pFocusWindow);
+                }
+
+                if(sibling)
+                {
+                    while(sibling->getType() == WObject::Container)
+                    {
+                        // Need to make the focus the first non-Container child of the container.
+                        Container *pContainer = static_cast<Container*>(sibling);
+                        sibling = pContainer->getChild(0);
+                    }
+
+                    if(sibling->getType() == WObject::Window)
+                    {
+                        newFocus = static_cast<Window*>(sibling);
+                    }
+                }
+                else
+                {
+                    // We need to find a left sibling, and give up if none exists.
+                    // That is, perhaps this is the leftmost window inside a container
+                    // that has containers to its left. We need to handle that.
+                    syslog(LOG_INFO, "need to traverse further to find sibling");
+                }
+            }
+
+            if(newFocus)
+            {
+                g_pFocusWindow->nofocus();
+                g_pFocusWindow = newFocus;
+                g_pFocusWindow->focus();
+            }
+        }
+    }
 }
 
 int main(int argc, char *argv[])
@@ -134,7 +213,6 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    /*
     // Make a program to test window creation etc...
     if(fork() == 0)
     {
@@ -143,7 +221,6 @@ int main(int argc, char *argv[])
         execv(new_argv[0], new_argv);
         return 0;
     }
-    */
 
     // Use the root framebuffer.
     PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
@@ -163,14 +240,15 @@ int main(int argc, char *argv[])
 
     syslog(LOG_INFO, "winman: creating tile root");
 
-    RootContainer *pRootContainer = new RootContainer(g_nWidth, g_nHeight);
+    g_pRootContainer = new RootContainer(g_nWidth, g_nHeight);
 
-    Container *pMiddle = new Container(pRootContainer);
+    /*
+    Container *pMiddle = new Container(g_pRootContainer);
     pMiddle->setLayout(Container::Stacked);
 
-    Window *pLeft = new Window(pRootContainer, g_pTopLevelFramebuffer);
-    Window *pRight = new Window(pRootContainer, g_pTopLevelFramebuffer);
-    pRootContainer->addChild(pMiddle);
+    Window *pLeft = new Window(g_pRootContainer, g_pTopLevelFramebuffer);
+    Window *pRight = new Window(g_pRootContainer, g_pTopLevelFramebuffer);
+    g_pRootContainer->addChild(pMiddle);
 
     // Should be evenly split down the screen after retile()
     Window *pTop = new Window(pMiddle, g_pTopLevelFramebuffer);
@@ -180,17 +258,35 @@ int main(int argc, char *argv[])
     g_pFocusWindow = pLeft;
     pLeft->focus();
 
+    if(pMiddle->getLeftSibling(pMiddleWindow) != pTop)
+    {
+        syslog(LOG_INFO, "winman: left sibling check is incorrect");
+    }
+    if(pMiddle->getRightSibling(pMiddleWindow) != pBottom)
+    {
+        syslog(LOG_INFO, "winman: right sibling check is incorrect");
+    }
+    if(pMiddle->getLeftSibling(pTop) != 0)
+    {
+        syslog(LOG_INFO, "winman: left sibling check with no left sibling is incorrect");
+    }
+    if(pMiddle->getRightSibling(pBottom) != 0)
+    {
+        syslog(LOG_INFO, "winman: right sibling check with no right sibling is incorrect");
+    }
+    */
+
     syslog(LOG_INFO, "winman: entering main loop %d", getpid());
 
-    g_Windows = new std::map<uint64_t, WindowMetadata*>();
+    g_Windows = new std::map<uint64_t, Window*>();
 
     Input::installCallback(Input::Key | Input::Mouse, systemInputCallback);
 
     // Main loop: logic & message handling goes here!
     while(true)
     {
-        //checkForMessages(pEndpoint);
-        pRootContainer->render();
+        checkForMessages(pEndpoint);
+        g_pRootContainer->render();
         g_pTopLevelFramebuffer->redraw();
 
         sched_yield();

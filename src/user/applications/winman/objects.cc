@@ -47,14 +47,16 @@ void WObject::bump(ssize_t bumpX, ssize_t bumpY)
     m_Dimensions.update(x, y, w, h);
 }
 
-Window::Window(::Container *pParent, PedigreeGraphics::Framebuffer *pBaseFramebuffer) :
-    m_pParent(pParent), m_pBaseFramebuffer(pBaseFramebuffer), m_bFocus(false)
+Window::Window(uint64_t handle, PedigreeIpc::IpcEndpoint *endpoint, ::Container *pParent, PedigreeGraphics::Framebuffer *pBaseFramebuffer) :
+    m_Handle(handle), m_Endpoint(endpoint), m_pParent(pParent), m_pBaseFramebuffer(pBaseFramebuffer), m_bFocus(false)
 {
     m_pParent->addChild(this);
 }
 
 void Window::render()
 {
+    return;
+
     PedigreeGraphics::Rect &me = getDimensions();
     size_t x = me.getX() + 5;
     size_t y = me.getY() + 5;
