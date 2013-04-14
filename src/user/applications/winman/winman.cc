@@ -116,6 +116,12 @@ void checkForMessages(PedigreeIpc::IpcEndpoint *pEndpoint)
     }
 }
 
+/// System input callback.
+void systemInputCallback(Input::InputNotification &note)
+{
+    syslog(LOG_INFO, "winman: system input (type=%d)", note.type);
+}
+
 int main(int argc, char *argv[])
 {
     // Create the window manager IPC endpoint for libui.
@@ -177,6 +183,8 @@ int main(int argc, char *argv[])
     syslog(LOG_INFO, "winman: entering main loop %d", getpid());
 
     g_Windows = new std::map<uint64_t, WindowMetadata*>();
+
+    Input::installCallback(Input::Key | Input::Mouse, systemInputCallback);
 
     // Main loop: logic & message handling goes here!
     while(true)
