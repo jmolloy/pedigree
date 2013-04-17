@@ -151,43 +151,42 @@ void systemInputCallback(Input::InputNotification &note)
             }
             else if((c == KEY_LEFT) || (c == KEY_RIGHT) || (c == KEY_UP) || (c == KEY_DOWN))
             {
-                if((c == KEY_LEFT) && (focusParent->getLayout() == Container::SideBySide))
+                syslog(LOG_INFO, "parent: %p focus: %p", focusParent, g_pFocusWindow);
+                if(c == KEY_LEFT)
                 {
-                    sibling = focusParent->getLeftSibling(g_pFocusWindow);
+                    sibling = focusParent->getLeft(g_pFocusWindow);
                 }
-                else if((c == KEY_UP) && (focusParent->getLayout() == Container::Stacked))
+                else if(c == KEY_UP)
                 {
-                    sibling = focusParent->getLeftSibling(g_pFocusWindow);
+                    sibling = focusParent->getUp(g_pFocusWindow);
                 }
-                else if((c == KEY_DOWN) && (focusParent->getLayout() == Container::Stacked))
+                else if(c == KEY_DOWN)
                 {
-                    sibling = focusParent->getRightSibling(g_pFocusWindow);
+                    sibling = focusParent->getDown(g_pFocusWindow);
                 }
-                else if((c == KEY_RIGHT) && (focusParent->getLayout() == Container::SideBySide))
+                else if(c == KEY_RIGHT)
                 {
-                    sibling = focusParent->getRightSibling(g_pFocusWindow);
+                    sibling = focusParent->getRight(g_pFocusWindow);
                 }
 
+                // Not edge of screen?
                 if(sibling)
                 {
+                    syslog(LOG_INFO, "found sibling %p", sibling);
                     while(sibling->getType() == WObject::Container)
                     {
                         // Need to make the focus the first non-Container child of the container.
+                        /// \todo Need to have containers remember the last window that was focussed
+                        ///       inside it, so we can a) render it differently, and b) not assume
+                        ///       getChild(0) is the right thing to do.
                         Container *pContainer = static_cast<Container*>(sibling);
-                        sibling = pContainer->getChild(0);
+                        sibling = pContainer->getFocusWindow();
                     }
 
                     if(sibling->getType() == WObject::Window)
                     {
                         newFocus = static_cast<Window*>(sibling);
                     }
-                }
-                else
-                {
-                    // We need to find a left sibling, and give up if none exists.
-                    // That is, perhaps this is the leftmost window inside a container
-                    // that has containers to its left. We need to handle that.
-                    syslog(LOG_INFO, "need to traverse further to find sibling");
                 }
             }
 
@@ -213,6 +212,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+    /*
     // Make a program to test window creation etc...
     if(fork() == 0)
     {
@@ -221,6 +221,7 @@ int main(int argc, char *argv[])
         execv(new_argv[0], new_argv);
         return 0;
     }
+    */
 
     // Use the root framebuffer.
     PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
@@ -242,39 +243,28 @@ int main(int argc, char *argv[])
 
     g_pRootContainer = new RootContainer(g_nWidth, g_nHeight);
 
-    /*
     Container *pMiddle = new Container(g_pRootContainer);
     pMiddle->setLayout(Container::Stacked);
 
-    Window *pLeft = new Window(g_pRootContainer, g_pTopLevelFramebuffer);
-    Window *pRight = new Window(g_pRootContainer, g_pTopLevelFramebuffer);
+    Container *another = new Container(pMiddle);
+    another->setLayout(Container::SideBySide);
+
+    Window *pLeft = new Window(0, 0, g_pRootContainer, g_pTopLevelFramebuffer);
     g_pRootContainer->addChild(pMiddle);
+    Window *pRight = new Window(0, 0, g_pRootContainer, g_pTopLevelFramebuffer);
 
     // Should be evenly split down the screen after retile()
-    Window *pTop = new Window(pMiddle, g_pTopLevelFramebuffer);
-    Window *pMiddleWindow = new Window(pMiddle, g_pTopLevelFramebuffer);
-    Window *pBottom = new Window(pMiddle, g_pTopLevelFramebuffer);
+    Window *pTop = new Window(0, 0, pMiddle, g_pTopLevelFramebuffer);
+    Window *pMiddleWindow = new Window(0, 0, pMiddle, g_pTopLevelFramebuffer);
+    Window *pBottom = new Window(0, 0, pMiddle, g_pTopLevelFramebuffer);
+
+    pMiddle->addChild(another);
+
+    Window *more = new Window(0, 0, another, g_pTopLevelFramebuffer);
+    Window *evenmore = new Window(0, 0, another, g_pTopLevelFramebuffer);
 
     g_pFocusWindow = pLeft;
     pLeft->focus();
-
-    if(pMiddle->getLeftSibling(pMiddleWindow) != pTop)
-    {
-        syslog(LOG_INFO, "winman: left sibling check is incorrect");
-    }
-    if(pMiddle->getRightSibling(pMiddleWindow) != pBottom)
-    {
-        syslog(LOG_INFO, "winman: right sibling check is incorrect");
-    }
-    if(pMiddle->getLeftSibling(pTop) != 0)
-    {
-        syslog(LOG_INFO, "winman: left sibling check with no left sibling is incorrect");
-    }
-    if(pMiddle->getRightSibling(pBottom) != 0)
-    {
-        syslog(LOG_INFO, "winman: right sibling check with no right sibling is incorrect");
-    }
-    */
 
     syslog(LOG_INFO, "winman: entering main loop %d", getpid());
 
@@ -285,7 +275,7 @@ int main(int argc, char *argv[])
     // Main loop: logic & message handling goes here!
     while(true)
     {
-        checkForMessages(pEndpoint);
+        //checkForMessages(pEndpoint);
         g_pRootContainer->render();
         g_pTopLevelFramebuffer->redraw();
 

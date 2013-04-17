@@ -55,8 +55,6 @@ Window::Window(uint64_t handle, PedigreeIpc::IpcEndpoint *endpoint, ::Container 
 
 void Window::render()
 {
-    return;
-
     PedigreeGraphics::Rect &me = getDimensions();
     size_t x = me.getX() + 5;
     size_t y = me.getY() + 5;
@@ -66,6 +64,8 @@ void Window::render()
     size_t r = 0;
     if(m_bFocus)
         r = 255;
+    else if(m_pParent->getFocusWindow() == this)
+        r = 255 / 2;
 
     // Window border.
 
@@ -89,6 +89,7 @@ void Window::render()
 void Window::focus()
 {
     m_bFocus = true;
+    m_pParent->setFocusWindow(this);
 }
 
 void Window::nofocus()
@@ -236,7 +237,8 @@ void Container::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pCh
     }
 
     // Resize siblings.
-    if(m_pParent->getType() == WObject::Container)
+    if(m_pParent->getType() == WObject::Container ||
+        m_pParent->getType() == WObject::Root)
     {
         syslog(LOG_INFO, "passing resize up to parent");
         Container *pContainer = static_cast<Container*>(m_pParent);
@@ -261,6 +263,209 @@ void Container::render()
             pWindow->render();
         }
     }
+}
+
+WObject *Container::getLeftSibling(const WObject *pChild) const
+{
+    WObjectList_t::const_iterator it = m_Children.begin();
+    for(; it != m_Children.end(); ++it)
+    {
+        if((*it) == pChild)
+        {
+            if(it == m_Children.begin())
+            {
+                break;
+            }
+
+            --it;
+            return (*it);
+        }
+    }
+
+    return 0;
+}
+
+WObject *Container::getRightSibling(const WObject *pChild) const
+{
+    WObjectList_t::const_iterator it = m_Children.begin();
+    for(; it != m_Children.end(); ++it)
+    {
+        if((*it) == pChild)
+        {
+            ++it;
+
+            if(it == m_Children.end())
+            {
+                break;
+            }
+
+            return (*it);
+        }
+    }
+
+    return 0;
+}
+
+WObject *Container::getLeftObject() const
+{
+    return getLeftSibling(this);
+}
+
+WObject *Container::getRightObject() const
+{
+    return getRightSibling(this);
+}
+
+WObject *Container::getLeft(const WObject *obj) const
+{
+    WObject *sibling = 0;
+    if(m_Layout == SideBySide)
+    {
+        WObject *sibling = getLeftSibling(obj);
+        if(sibling)
+        {
+            return sibling;
+        }
+    }
+
+    // No sibling to the child. If we are inside a side-by-side layout,
+    // this could be trivial.
+    if(m_pParent && (m_pParent->getType() == WObject::Container))
+    {
+        const Container *pContainer = static_cast<const Container*>(m_pParent);
+        if(pContainer->getLayout() == SideBySide)
+        {
+            sibling = getLeftObject();
+            if(sibling)
+            {
+                return sibling;
+            }
+        }
+    }
+
+    // Root has no parent.
+    if(getType() != WObject::Root)
+    {
+        const Container *pContainer = static_cast<const Container*>(m_pParent);
+        return pContainer->getLeft(this);
+    }
+
+    return 0;
+}
+
+WObject *Container::getRight(const WObject *obj) const
+{
+    WObject *sibling = 0;
+    if(m_Layout == SideBySide)
+    {
+        WObject *sibling = getRightSibling(obj);
+        if(sibling)
+        {
+            return sibling;
+        }
+    }
+
+    // No sibling to the child. If we are inside a side-by-side layout,
+    // this could be trivial.
+    if(m_pParent && (m_pParent->getType() == WObject::Container))
+    {
+        const Container *pContainer = static_cast<const Container*>(m_pParent);
+        if(pContainer->getLayout() == SideBySide)
+        {
+            sibling = getRightObject();
+            if(sibling)
+            {
+                return sibling;
+            }
+        }
+    }
+
+    // Root has no parent.
+    if(getType() != WObject::Root)
+    {
+        const Container *pContainer = static_cast<const Container*>(m_pParent);
+        return pContainer->getRight(this);
+    }
+
+    return 0;
+}
+
+WObject *Container::getUp(const WObject *obj) const
+{
+    WObject *sibling = 0;
+    if(m_Layout == Stacked)
+    {
+        syslog(LOG_INFO, "finding left sibling of object");
+        WObject *sibling = getLeftSibling(obj);
+        if(sibling)
+        {
+            return sibling;
+        }
+    }
+
+    // No sibling to the child. If we are inside a stacked layout,
+    // this could be trivial.
+    syslog(LOG_INFO, "parent: %p", m_pParent);
+    if(m_pParent && (m_pParent->getType() == WObject::Container))
+    {
+        syslog(LOG_INFO, "winman: A trying parent %p", m_pParent);
+        const Container *pContainer = static_cast<const Container*>(m_pParent);
+        if(pContainer->getLayout() == Stacked)
+        {
+            sibling = getLeftObject();
+            if(sibling)
+            {
+                return sibling;
+            }
+        }
+    }
+
+    // Root has no parent.
+    if(getType() != WObject::Root)
+    {
+        syslog(LOG_INFO, "winman: B trying parent %p", m_pParent);
+        const Container *pContainer = static_cast<const Container*>(m_pParent);
+        return pContainer->getUp(this);
+    }
+
+    return 0;
+}
+
+WObject *Container::getDown(const WObject *obj) const
+{
+    WObject *sibling = 0;
+    if(m_Layout == Stacked)
+    {
+        WObject *sibling = getRightSibling(obj);
+        if(sibling)
+        {
+            return sibling;
+        }
+    }
+
+    // No sibling to the child. If we are inside a stacked layout,
+    // this could be trivial.
+    if(m_pParent && (m_pParent->getType() == WObject::Container))
+    {
+        const Container *pContainer = static_cast<const Container*>(m_pParent);
+        if(pContainer->getLayout() == Stacked)
+        {
+            sibling = getRightObject();
+            if(sibling)
+            {
+                return sibling;
+            }
+        }
+    }
+
+    // Root has no parent.
+    if(getType() != WObject::Root)
+    {
+        const Container *pContainer = static_cast<const Container*>(m_pParent);
+        return pContainer->getDown(this);
+    }
+
+    return 0;
 }
 
 void RootContainer::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pChild)

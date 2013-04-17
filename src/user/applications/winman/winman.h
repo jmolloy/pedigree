@@ -31,6 +31,7 @@
 
 class WObject;
 class Container;
+class RootContainer;
 class Window;
 
 /**
@@ -43,6 +44,7 @@ class WObject
         {
             Container,
             Window,
+            Root,
         };
 
         WObject() : m_Dimensions(0, 0, 0, 0)
@@ -151,7 +153,7 @@ class Container : public WObject
         };
 
         Container(WObject *pParent) :
-            m_Children(), m_pParent(pParent), m_Layout(SideBySide)
+            m_Children(), m_pParent(pParent), m_Layout(SideBySide), m_pFocusWindow(0)
         {
         }
 
@@ -175,12 +177,26 @@ class Container : public WObject
             retile();
         }
 
+        ::Window *getFocusWindow() const
+        {
+            return m_pFocusWindow;
+        }
+
+        void setFocusWindow(::Window *w)
+        {
+            m_pFocusWindow = w;
+        }
+
         /**
          * Add a new child.
          */
         void addChild(WObject *pChild)
         {
             m_Children.push_back(pChild);
+            if((pChild->getType() == WObject::Window) && (m_pFocusWindow == 0))
+            {
+                m_pFocusWindow = static_cast< ::Window*>(pChild);
+            }
             retile();
         }
 
@@ -224,51 +240,54 @@ class Container : public WObject
          * Note that in the 'Stacked' layout, this is the container above the
          * child, not the container to its left.
          */
-        WObject *getLeftSibling(WObject *pChild) const
-        {
-            WObjectList_t::const_iterator it = m_Children.begin();
-            for(; it != m_Children.end(); ++it)
-            {
-                if((*it) == pChild)
-                {
-                    if(it == m_Children.begin())
-                    {
-                        break;
-                    }
-
-                    --it;
-                    return (*it);
-                }
-            }
-
-            return 0;
-        }
+        WObject *getLeftSibling(const WObject *pChild) const;
 
         /**
          * Finds the right sibling of the given child.
          * Note that in the 'Stacked' layout, this is the container below the
          * child, not the container to its right.
          */
-        WObject *getRightSibling(WObject *pChild) const
-        {
-            WObjectList_t::const_iterator it = m_Children.begin();
-            for(; it != m_Children.end(); ++it)
-            {
-                if((*it) == pChild)
-                {
-                    ++it;
+        WObject *getRightSibling(const WObject *pChild) const;
 
-                    if(it == m_Children.end())
-                    {
-                        break;
-                    }
+        /**
+         * Finds any object to our left, other than the root container.
+         * This is the left of the container itself.
+         */
+        WObject *getLeftObject() const;
 
-                    return (*it);
-                }
-            }
+        /**
+         * Finds any object to our right, other than the root container.
+         * This is the right of the container itself.
+         */
+        WObject *getRightObject() const;
 
-            return 0;
-        }
+        /**
+         * Gets the object to the left of the given child, or 0 if no
+         * object is to the left of the given child.
+         * This is a VISUAL left.
+         */
+        WObject *getLeft(const WObject *obj) const;
+
+        /**
+         * Gets the object to the right of the given child, or 0 if no
+         * object is to the right of the given child.
+         * This is a VISUAL right.
+         */
+        WObject *getRight(const WObject *obj) const;
+
+        /**
+         * Gets the object above the given child, or 0 if no object is
+         * above the given child.
+         * This is a VISUAL above.
+         */
+        WObject *getUp(const WObject *obj) const;
+
+        /**
+         * Gets the object below the given child, or 0 if no object is
+         * below the given child.
+         * This is a VISUAL below.
+         */
+        WObject *getDown(const WObject *obj) const;
 
         /**
          * Taking our dimensions and layout into account, retile our children.
@@ -301,6 +320,8 @@ class Container : public WObject
         WObject *m_pParent;
 
         Layout m_Layout;
+
+        ::Window *m_pFocusWindow;
 };
 
 /**
@@ -313,6 +334,11 @@ class RootContainer : public Container
             Container()
         {
             reposition(0, 0, w, h);
+        }
+
+        virtual Type getType() const
+        {
+            return WObject::Root;
         }
 
         virtual void resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pChild = 0);
