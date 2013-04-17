@@ -76,7 +76,7 @@ void handleMessage(char *messageData)
 
         LibUiProtocol::CreateMessageResponse *pCreateResp =
             reinterpret_cast<LibUiProtocol::CreateMessageResponse*>(responseData + sizeof(LibUiProtocol::WindowManagerMessage));
-        pCreateResp->provider = g_pTopLevelFramebuffer->getProvider(); // bad
+        pCreateResp->provider = pWindow->getContext()->getProvider();
 
         syslog(LOG_INFO, "winman: create message!");
         g_Windows->insert(std::make_pair(pWinMan->widgetHandle, pWindow));
@@ -133,7 +133,7 @@ void systemInputCallback(Input::InputNotification &note)
             bool bShift = (c & SHIFT_KEY);
 
             c &= 0xFF;
-            syslog(LOG_INFO, "ALT-%d %c", c, c);
+            syslog(LOG_INFO, "ALT-%d %c", (uint32_t) c, (char) c);
 
             Container *focusParent = g_pFocusWindow->getParent();
             Window *newFocus = 0;
@@ -144,11 +144,58 @@ void systemInputCallback(Input::InputNotification &note)
                 {
                     g_pRootContainer->retile();
                 }
+                else if(c == 'q')
+                {
+                    if(focusParent->getChildCount() > 1)
+                    {
+                        newFocus = static_cast<Window*>(focusParent->getLeftSibling(g_pFocusWindow));
+                        if(!newFocus)
+                        {
+                            newFocus = static_cast<Window*>(focusParent->getRightSibling(g_pFocusWindow));
+                        }
+                    }
+
+                    focusParent->removeChild(g_pFocusWindow);
+
+                    if(focusParent->getChildCount() == 0)
+                    {
+                        // No more children - remove container.
+                        /// \todo write me.
+                    }
+
+                    g_pFocusWindow = newFocus;
+                }
             }
             else if(c == '\n')
             {
-                // Window *pWindow = new Window(focusParent, g_pTopLevelFramebuffer);
+                // Add window to active container.
+                /// \todo How do we make this work? We need to run a command,
+                ///       and wait for it to send a Create request and shove
+                ///       it in here??? Hmm.
+                // Perhaps create a process, map its PID, use PID to create
+                // window in the correct container when it first sends a
+                // Create.
+                Window *pWindow = new Window(0, 0, focusParent, g_pTopLevelFramebuffer);
             }
+            /*
+            else if(c == 'v')
+            {
+                // Replace focus window with container (Container::replace) in
+                // Stacked layout mode.
+                // Add the focus window as a child.
+            }
+            else if(c == 'h')
+            {
+                // Replace focus window with container (Container::replace) in
+                // SideBySide layout mode.
+                // Add the focus window as a child.
+            }
+            else if(c == 'r')
+            {
+                // State machine: enter 'resize mode', which allows us to resize
+                // the container in which the window with focus is in.
+            }
+            */
             else if((c == KEY_LEFT) || (c == KEY_RIGHT) || (c == KEY_UP) || (c == KEY_DOWN))
             {
                 syslog(LOG_INFO, "parent: %p focus: %p", focusParent, g_pFocusWindow);
@@ -225,7 +272,7 @@ int main(int argc, char *argv[])
 
     // Use the root framebuffer.
     PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
-    g_pTopLevelFramebuffer = pRootFramebuffer->createChild(0, 0, pRootFramebuffer->getWidth(), pRootFramebuffer->getHeight());
+    g_pTopLevelFramebuffer = pRootFramebuffer; //->createChild(0, 0, pRootFramebuffer->getWidth(), pRootFramebuffer->getHeight());
 
     if(!g_pTopLevelFramebuffer->getRawBuffer())
     {
@@ -275,6 +322,7 @@ int main(int argc, char *argv[])
     // Main loop: logic & message handling goes here!
     while(true)
     {
+        // g_pTopLevelFramebuffer->rect(0, 0, g_nWidth, g_nHeight, PedigreeGraphics::createRgb(0, 0, 255), PedigreeGraphics::Bits32_Rgb);
         //checkForMessages(pEndpoint);
         g_pRootContainer->render();
         g_pTopLevelFramebuffer->redraw();

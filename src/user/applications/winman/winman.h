@@ -78,6 +78,11 @@ class WObject
             return m_Dimensions;
         }
 
+        /// Refresh our graphical context, called after reposition.
+        virtual void refreshContext()
+        {
+        }
+
     private:
         PedigreeGraphics::Rect m_Dimensions;
 };
@@ -89,7 +94,6 @@ class WObject
 class Window : public WObject
 {
     public:
-        /// \todo move this constructor to objects.cc, and call addChild
         Window(uint64_t handle, PedigreeIpc::IpcEndpoint *endpoint, ::Container *pParent, PedigreeGraphics::Framebuffer *pBaseFramebuffer);
         Window();
 
@@ -108,6 +112,13 @@ class Window : public WObject
 
         virtual void focus();
         virtual void nofocus();
+
+        virtual void refreshContext();
+
+        PedigreeGraphics::Framebuffer *getContext() const
+        {
+            return m_pRealFramebuffer;
+        }
 
         PedigreeIpc::IpcEndpoint *getEndpoint() const
         {
@@ -132,6 +143,7 @@ class Window : public WObject
         ::Container *m_pParent;
 
         PedigreeGraphics::Framebuffer *m_pBaseFramebuffer;
+        PedigreeGraphics::Framebuffer *m_pRealFramebuffer;
 
         bool m_bFocus;
 };
@@ -192,11 +204,55 @@ class Container : public WObject
          */
         void addChild(WObject *pChild)
         {
+            // insertion breaks retile() somehow.
+            //insertChild(m_pFocusWindow, pChild);
             m_Children.push_back(pChild);
             if((pChild->getType() == WObject::Window) && (m_pFocusWindow == 0))
             {
                 m_pFocusWindow = static_cast< ::Window*>(pChild);
             }
+            retile();
+        }
+
+        /**
+         * Replaces a child.
+         */
+        void replaceChild(WObject *pChild, WObject *pNewChild)
+        {
+            WObjectList_t::iterator it = m_Children.begin();
+            for(; it != m_Children.end(); ++it)
+            {
+                if((*it) == pChild)
+                {
+                    it = m_Children.erase(it);
+                    m_Children.insert(it, pNewChild);
+                    break;
+                }
+            }
+        }
+
+        /**
+         * Inserts a child after the given child, or at the end if
+         * pCurrent is null.
+         */
+        void insertChild(WObject *pCurrent, WObject *pNewChild)
+        {
+            WObjectList_t::iterator it = m_Children.begin();
+            for(; it != m_Children.end(); ++it)
+            {
+                if((*it) == pCurrent)
+                {
+                    ++it;
+                    it = m_Children.insert(it, pNewChild);
+                    break;
+                }
+            }
+
+            if(it == m_Children.end())
+            {
+                m_Children.push_back(pNewChild);
+            }
+
             retile();
         }
 
@@ -220,6 +276,14 @@ class Container : public WObject
             {
                 retile();
             }
+        }
+
+        /**
+         * Gets the number of children in the container.
+         */
+        size_t getChildCount() const
+        {
+            return m_Children.size();
         }
 
         /**

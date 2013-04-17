@@ -35,7 +35,9 @@ void WObject::reposition(size_t x, size_t y, size_t w, size_t h)
 
     ssize_t horizDistance = w - static_cast<ssize_t>(m_Dimensions.getW());
     ssize_t vertDistance = h - static_cast<ssize_t>(m_Dimensions.getH());
-    //resize(horizDistance, vertDistance, this);
+    // resize(horizDistance, vertDistance, this);
+
+    refreshContext();
 }
 
 void WObject::bump(ssize_t bumpX, ssize_t bumpY)
@@ -48,16 +50,25 @@ void WObject::bump(ssize_t bumpX, ssize_t bumpY)
 }
 
 Window::Window(uint64_t handle, PedigreeIpc::IpcEndpoint *endpoint, ::Container *pParent, PedigreeGraphics::Framebuffer *pBaseFramebuffer) :
-    m_Handle(handle), m_Endpoint(endpoint), m_pParent(pParent), m_pBaseFramebuffer(pBaseFramebuffer), m_bFocus(false)
+    m_Handle(handle), m_Endpoint(endpoint), m_pParent(pParent), m_pBaseFramebuffer(pBaseFramebuffer), m_pRealFramebuffer(0), m_bFocus(false)
 {
+    refreshContext();
     m_pParent->addChild(this);
+}
+
+void Window::refreshContext()
+{
+    delete m_pRealFramebuffer;
+
+    PedigreeGraphics::Rect &me = getDimensions();
+    m_pRealFramebuffer = m_pBaseFramebuffer->createChild(me.getX(), me.getY(), me.getW(), me.getH());
 }
 
 void Window::render()
 {
     PedigreeGraphics::Rect &me = getDimensions();
-    size_t x = me.getX() + 5;
-    size_t y = me.getY() + 5;
+    size_t x = 5; //me.getX() + 5;
+    size_t y = 5; //me.getY() + 5;
     size_t w = me.getW() - 10;
     size_t h = me.getH() - 10;
     //syslog(LOG_INFO, "winman: Window::render(%d, %d, %d, %d)", x, y, w, h);
@@ -70,19 +81,19 @@ void Window::render()
     // Window border.
 
     // Top
-    m_pBaseFramebuffer->line(x - 1, y - 1, x + w + 1, y - 1, PedigreeGraphics::createRgb(255, 255, 255), PedigreeGraphics::Bits32_Rgb);
+    m_pRealFramebuffer->line(x - 1, y - 1, x + w + 1, y - 1, PedigreeGraphics::createRgb(255, 255, 255), PedigreeGraphics::Bits32_Rgb);
 
     // Left
-    m_pBaseFramebuffer->line(x - 1, y - 1, x - 1, y + h + 1, PedigreeGraphics::createRgb(255, 255, 255), PedigreeGraphics::Bits32_Rgb);
+    m_pRealFramebuffer->line(x - 1, y - 1, x - 1, y + h + 1, PedigreeGraphics::createRgb(255, 255, 255), PedigreeGraphics::Bits32_Rgb);
 
     // Right
-    m_pBaseFramebuffer->line(x + w + 1, y - 1, x + w + 1, y + h + 1, PedigreeGraphics::createRgb(255, 255, 255), PedigreeGraphics::Bits32_Rgb);
+    m_pRealFramebuffer->line(x + w + 1, y - 1, x + w + 1, y + h + 1, PedigreeGraphics::createRgb(255, 255, 255), PedigreeGraphics::Bits32_Rgb);
 
     // Bottom
-    m_pBaseFramebuffer->line(x - 1, y + h + 1, x + w + 1, y + h + 1, PedigreeGraphics::createRgb(255, 255, 255), PedigreeGraphics::Bits32_Rgb);
+    m_pRealFramebuffer->line(x - 1, y + h + 1, x + w + 1, y + h + 1, PedigreeGraphics::createRgb(255, 255, 255), PedigreeGraphics::Bits32_Rgb);
 
     // Window.
-    m_pBaseFramebuffer->rect(x, y, w, h, PedigreeGraphics::createRgb(r, 0, 0), PedigreeGraphics::Bits32_Rgb);
+    m_pRealFramebuffer->rect(x, y, w, h, PedigreeGraphics::createRgb(r, 0, 0), PedigreeGraphics::Bits32_Rgb);
     // m_pBaseFramebuffer->redraw(x, y, w, h, true);
 }
 
@@ -153,8 +164,18 @@ void Container::retile()
         }
     }
 
-    // Fun logic to tile children goes here.
-    // May need to call resized() on child windows.
+    // Retile child containers (reposition does not do that)
+    WObjectList_t::iterator it = m_Children.begin();
+    for(; it != m_Children.end(); ++it)
+    {
+        if((*it)->getType() == WObject::Container ||
+            (*it)->getType() == WObject::Root)
+        {
+            syslog(LOG_INFO, "container child");
+            Container *pContainer = static_cast<Container*>(*it);
+            pContainer->retile();
+        }
+    }
 }
 
 void Container::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pChild)
@@ -237,8 +258,8 @@ void Container::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pCh
     }
 
     // Resize siblings.
-    if(m_pParent->getType() == WObject::Container ||
-        m_pParent->getType() == WObject::Root)
+    if(m_pParent && ((m_pParent->getType() == WObject::Container) ||
+        m_pParent->getType() == WObject::Root))
     {
         syslog(LOG_INFO, "passing resize up to parent");
         Container *pContainer = static_cast<Container*>(m_pParent);
