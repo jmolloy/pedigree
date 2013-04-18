@@ -283,17 +283,11 @@ class Gears : public Widget
             size_t width = pFramebuffer->getWidth();
             size_t height = pFramebuffer->getHeight();
 
-            fb = (uint8_t *) malloc(width * height * pFramebuffer->getBytesPerPixel());
-
             gl_ctx = OSMesaCreateContext(OSMESA_RGB, NULL);
-            if(!OSMesaMakeCurrent(gl_ctx, fb, GL_UNSIGNED_BYTE, width, height))
+            if(!glResize(width, height))
             {
-                fprintf(stderr, "OSMesaMakeCurrent failed.\n");
                 return false;
             }
-
-            // Don't render upside down.
-            OSMesaPixelStore(OSMESA_Y_UP, 0);
 
             return true;
         }
@@ -303,9 +297,15 @@ class Gears : public Widget
             OSMesaDestroyContext(gl_ctx);
         }
 
+        void reposition(PedigreeGraphics::Rect newrt)
+        {
+            glResize(newrt.getW(), newrt.getH());
+        }
+
         virtual bool render(PedigreeGraphics::Rect &rt, PedigreeGraphics::Rect &dirty)
         {
             PedigreeGraphics::Framebuffer *pFramebuffer = getFramebuffer();
+            syslog(LOG_INFO, "render: rendering to %p", pFramebuffer);
             size_t width = pFramebuffer->getWidth();
             size_t height = pFramebuffer->getHeight();
 
@@ -321,6 +321,31 @@ class Gears : public Widget
         }
 
     private:
+
+        bool glResize(size_t w, size_t h)
+        {
+            PedigreeGraphics::Framebuffer *pFramebuffer = getFramebuffer();
+
+            if(fb)
+            {
+                free(fb);
+            }
+            fb = (uint8_t *) malloc(w * h * pFramebuffer->getBytesPerPixel());
+
+            if(!OSMesaMakeCurrent(gl_ctx, fb, GL_UNSIGNED_BYTE, w, h))
+            {
+                fprintf(stderr, "OSMesaMakeCurrent failed.\n");
+                return false;
+            }
+
+            // Don't render upside down.
+            OSMesaPixelStore(OSMESA_Y_UP, 0);
+
+            reshape(w, h);
+
+            return true;
+        }
+
         uint8_t *fb;
 
         OSMesaContext gl_ctx;
@@ -341,6 +366,16 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
                 g_pGears->redraw(dirty);
             }
             break;
+        case Reposition:
+            {
+                PedigreeGraphics::Rect dirty;
+                PedigreeGraphics::Rect *rt = reinterpret_cast<PedigreeGraphics::Rect*>(msgData);
+                syslog(LOG_INFO, "gears: reposition event");
+                g_pGears->reposition(*rt);
+                syslog(LOG_INFO, "gears: reposition complete");
+                g_pGears->render(*rt, dirty);
+                syslog(LOG_INFO, "gears: rendering complete");
+            }
         default:
             syslog(LOG_INFO, "gears: unhandled callback");
     }
@@ -348,7 +383,7 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
 }
 
 int main (int argc, char ** argv) {
-    PedigreeGraphics::Rect rt(0, 0, 500, 500);
+    PedigreeGraphics::Rect rt(30, 30, 500, 500);
 
     char endpoint[256];
     sprintf(endpoint, "gears.%d", getpid());
@@ -369,7 +404,7 @@ int main (int argc, char ** argv) {
     syslog(LOG_INFO, "gears: entering main loop");
 
     while (1) {
-        Widget::checkForEvents();
+        Widget::checkForEvents(true);
 
         // Cheat a bit, render every frame.
         callback(RepaintNeeded, 0, 0);

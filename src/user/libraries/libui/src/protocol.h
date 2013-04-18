@@ -33,6 +33,9 @@ namespace LibUiProtocol
     /** Receives a message from the window manager. Blocks. */
     bool recvMessage(const char *endpoint, void *pBuffer, size_t maxSize);
 
+    /** Receives a message from the window manager. Blocks. */
+    bool recvMessageAsync(const char *endpoint, void *pBuffer, size_t maxSize);
+
     /** Widget handle type. */
     typedef uint64_t handle_t;
 
@@ -57,6 +60,12 @@ namespace LibUiProtocol
          * framebuffer.
          */
         Create,
+
+        /**
+         * Reposition: window manager -> widget. Causes both a reposition and
+         * render event to be created by the widget layer.
+         */
+        Reposition,
 
         /**
          * SetProperty: widget -> window manager. Requests modification of a window
@@ -160,6 +169,16 @@ namespace LibUiProtocol
     /** Create message response data. */
     struct CreateMessageResponse
     {
+        PedigreeGraphics::GraphicsProvider provider;
+    };
+
+    /** Reposition message data. */
+    struct RepositionMessage
+    {
+        /// New rect.
+        PedigreeGraphics::Rect rt;
+
+        /// New graphics provider. The old one is no longer valid here.
         PedigreeGraphics::GraphicsProvider provider;
     };
 

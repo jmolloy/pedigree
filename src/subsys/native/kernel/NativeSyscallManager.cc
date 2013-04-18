@@ -59,7 +59,7 @@ uintptr_t NativeSyscallManager::syscall(SyscallState &state)
     // We're interruptible.
     Processor::setInterrupts(true);
 
-    NOTICE("Native syscall " << state.getSyscallNumber() << " (" << p1 << ", " << p2 << ", " << p3 << ", " << p4 << ", " << p5);
+    // NOTICE("Native syscall " << state.getSyscallNumber() << " (" << p1 << ", " << p2 << ", " << p3 << ", " << p4 << ", " << p5);
 
     switch (state.getSyscallNumber())
     {

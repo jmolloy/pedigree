@@ -59,7 +59,7 @@ bool LibUiProtocol::sendMessage(void *pMessage, size_t messageLength)
     send(pEndpoint, pIpcMessage, false);
 
     // Clean up.
-    // delete pIpcMessage;
+    delete pIpcMessage;
 
     return true;
 }
@@ -79,9 +79,6 @@ bool LibUiProtocol::recvMessage(const char *endpoint, void *pBuffer, size_t maxS
     }
 
     // Block and wait for a message to appear on the endpoint.
-    /// \todo We need to take a widget handle here so we can resend messages
-    ///       that we don't actually want (eg, those for another process'
-    ///       widgets!)
     IpcMessage *pRecv = 0;
     recv(pEndpoint, &pRecv, false);
 
@@ -96,7 +93,41 @@ bool LibUiProtocol::recvMessage(const char *endpoint, void *pBuffer, size_t maxS
     memcpy(pBuffer, pRecv->getBuffer(), maxSize);
 
     // Clean up.
-    // delete pRecv;
+    delete pRecv;
+
+    return true;
+}
+
+bool LibUiProtocol::recvMessageAsync(const char *endpoint, void *pBuffer, size_t maxSize)
+{
+    /// \todo Handle messages > 4 KB in size!
+    if(maxSize > 0x1000)
+        return false;
+
+    // Grab the endpoint for the window manager.
+    IpcEndpoint *pEndpoint = getEndpoint(endpoint);
+    if(!pEndpoint)
+    {
+        /// \todo Log the error somewhere.
+        return false;
+    }
+
+    // Check for a message on the endpoint.
+    IpcMessage *pRecv = 0;
+    recv(pEndpoint, &pRecv, true);
+
+    // Verify.
+    if((!pRecv) || (!pRecv->getBuffer()))
+    {
+        return false;
+    }
+
+    // Copy the message across.
+    /// \todo When messages > 4 KB are made possible, sanitise maxSize here!
+    memcpy(pBuffer, pRecv->getBuffer(), maxSize);
+
+    // Clean up.
+    delete pRecv;
 
     return true;
 }

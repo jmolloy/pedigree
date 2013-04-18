@@ -135,6 +135,11 @@ class Window : public WObject
             return m_pParent;
         }
 
+        void setParent(::Container *p)
+        {
+            m_pParent = p;
+        }
+
     private:
         uint64_t m_Handle;
 
@@ -202,7 +207,7 @@ class Container : public WObject
         /**
          * Add a new child.
          */
-        void addChild(WObject *pChild)
+        void addChild(WObject *pChild, bool bNoRetile = false)
         {
             // insertion breaks retile() somehow.
             //insertChild(m_pFocusWindow, pChild);
@@ -211,7 +216,11 @@ class Container : public WObject
             {
                 m_pFocusWindow = static_cast< ::Window*>(pChild);
             }
-            retile();
+
+            if(!bNoRetile)
+            {
+                retile();
+            }
         }
 
         /**

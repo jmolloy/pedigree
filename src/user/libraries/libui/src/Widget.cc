@@ -23,6 +23,10 @@
 /// \todo GTFO libc!
 #include <string.h>
 #include <stdlib.h>
+#include <syslog.h>
+
+#include <map>
+#include <queue>
 
 #include "protocol.h"
 
@@ -34,7 +38,10 @@ static bool defaultEventHandler(WidgetMessages message, size_t dataSize, void *d
     return false;
 }
 
+static Widget *g_pWidget = 0;
+
 std::map<uint64_t, widgetCallback_t> Widget::m_CallbackMap;
+std::queue<char *> g_PendingMessages;
 
 Widget::Widget() : m_bConstructed(false), m_pFramebuffer(0), m_Handle(0), m_EventCallback(defaultEventHandler), m_Endpoint("")
 {
@@ -104,30 +111,39 @@ bool Widget::construct(const char *endpoint, widgetCallback_t cb, PedigreeGraphi
 
     delete [] messageData;
 
-    totalSize = sizeof(WindowManagerMessage) + sizeof(CreateMessageResponse);
+    totalSize = 1024;
     messageData = new char[totalSize];
 
-    if(!recvMessage(m_Endpoint, messageData, totalSize))
+    while(1)
     {
-        m_Handle = 0;
-        delete [] messageData;
-        return false;
-    }
+        if(!recvMessage(m_Endpoint, messageData, totalSize))
+        {
+            m_Handle = 0;
+            delete [] messageData;
+            return false;
+        }
 
-    pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
-    if(!pWinMan->isResponse)
-    {
-        /// \todo Add back to the message queue?
-        delete [] messageData;
-        return false;
+        pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
+        if(!(pWinMan->isResponse && (pWinMan->messageCode == Create)))
+        {
+            g_PendingMessages.push(messageData);
+            messageData = new char[totalSize];
+        }
+        else
+        {
+            break;
+        }
     }
 
     // Grab the results and use them.
     CreateMessageResponse *pCreateResp = reinterpret_cast<CreateMessageResponse*>(messageData + sizeof(WindowManagerMessage));
     m_pFramebuffer = new PedigreeGraphics::Framebuffer(pCreateResp->provider);
     m_EventCallback = cb;
+    m_CallbackMap[m_Handle] = cb;
 
     delete [] messageData;
+
+    g_pWidget = this;
 
     return true;
 }
@@ -275,7 +291,60 @@ void Widget::destroy()
     m_Handle = 0;
 }
 
-void Widget::checkForEvents()
+void Widget::checkForEvents(bool bAsync)
 {
-    /// \todo Read messages and distribute to callbacks.
+    /// \todo ALL created widgets, not just one.
+    if(g_pWidget)
+    {
+        char *buffer = 0;
+        bool bMessage = false;
+        if(g_PendingMessages.empty())
+        {
+            buffer = new char[1024];
+            bMessage = recvMessageAsync(g_pWidget->m_Endpoint, buffer, 1024);
+        }
+        else
+        {
+            bMessage = true;
+            buffer = g_PendingMessages.front();
+            g_PendingMessages.pop();
+        }
+
+        if(bMessage)
+        {
+            syslog(LOG_INFO, "** checkForEvents: message received!");
+
+            LibUiProtocol::WindowManagerMessage *pHeader =
+                reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
+
+            widgetCallback_t cb = m_CallbackMap[pHeader->widgetHandle];
+
+            switch(pHeader->messageCode)
+            {
+                case LibUiProtocol::Reposition:
+                {
+                    LibUiProtocol::RepositionMessage *pReposition =
+                        reinterpret_cast<LibUiProtocol::RepositionMessage*>(buffer + sizeof(LibUiProtocol::WindowManagerMessage));
+
+                    // Destroy old framebuffer and re-create, if needed.
+                    if(g_pWidget->m_pFramebuffer->getProvider().pFramebuffer !=
+                        pReposition->provider.pFramebuffer)
+                    {
+                        delete g_pWidget->m_pFramebuffer;
+                        syslog(LOG_INFO, "** old framebuffer was %p", g_pWidget->m_pFramebuffer);
+                        g_pWidget->m_pFramebuffer = new PedigreeGraphics::Framebuffer(pReposition->provider);
+                        syslog(LOG_INFO, "** new framebuffer is %p", g_pWidget->m_pFramebuffer);
+                        syslog(LOG_INFO, "** d=%p f=%p", pReposition->provider.pDisplay, pReposition->provider.pFramebuffer);
+                    }
+
+                    // Run the callback now that the framebuffer is re-created.
+                    cb(::Reposition, sizeof(pReposition->rt), &pReposition->rt);
+                }
+                default:
+                    syslog(LOG_INFO, "** unknown event");
+            }
+        }
+
+        delete [] buffer;
+    }
 }

@@ -29,6 +29,7 @@
 enum WidgetMessages
 {
     RepaintNeeded,
+    Reposition,
     MouseMove,
     MouseDown,
     MouseUp,
@@ -58,7 +59,7 @@ class Widget
          * integer. Should this happen, the PID should be folded in the same way
          * as the widget pointer.
          */
-        inline uint64_t getHandle()
+        inline uint64_t getHandle() const
         {
             return m_Handle;
         }
@@ -148,11 +149,11 @@ class Widget
          * Handles emptying the pending event queue and dispatch to callbacks
          * for an application automatically.
          */
-        static void checkForEvents();
+        static void checkForEvents(bool bAsync = false);
 
     protected:
 
-        inline PedigreeGraphics::Framebuffer *getFramebuffer()
+        inline PedigreeGraphics::Framebuffer *getFramebuffer() const
         {
             return m_pFramebuffer;
         }

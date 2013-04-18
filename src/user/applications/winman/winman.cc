@@ -61,11 +61,16 @@ void handleMessage(char *messageData)
 
         PedigreeIpc::IpcEndpoint *pEndpoint = PedigreeIpc::getEndpoint(pCreate->endpoint);
 
-        /// \todo Stop giving windows the top-level framebuffer.
         Container *pParent = g_pRootContainer;
         if(g_pFocusWindow)
+        {
             pParent = g_pFocusWindow->getParent();
+        }
         Window *pWindow = new Window(pWinMan->widgetHandle, pEndpoint, pParent, g_pTopLevelFramebuffer);
+        if(!g_pFocusWindow)
+        {
+            g_pFocusWindow = pWindow;
+        }
 
         LibUiProtocol::WindowManagerMessage *pHeader =
             reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(responseData);
@@ -92,7 +97,7 @@ void handleMessage(char *messageData)
         syslog(LOG_INFO, "winman: unhandled message type");
     }
 
-    // delete pIpcResponse;
+    delete pIpcResponse;
 }
 
 void checkForMessages(PedigreeIpc::IpcEndpoint *pEndpoint)
@@ -101,7 +106,7 @@ void checkForMessages(PedigreeIpc::IpcEndpoint *pEndpoint)
         return;
 
     PedigreeIpc::IpcMessage *pRecv = 0;
-    if(PedigreeIpc::recv(pEndpoint, &pRecv, false))
+    if(PedigreeIpc::recv(pEndpoint, &pRecv, true))
     {
         handleMessage(static_cast<char *>(pRecv->getBuffer()));
 
@@ -146,6 +151,8 @@ void systemInputCallback(Input::InputNotification &note)
                 }
                 else if(c == 'q')
                 {
+                    /// \todo this code is completely broken.
+
                     if(focusParent->getChildCount() > 1)
                     {
                         newFocus = static_cast<Window*>(focusParent->getLeftSibling(g_pFocusWindow));
@@ -177,19 +184,40 @@ void systemInputCallback(Input::InputNotification &note)
                 // Create.
                 Window *pWindow = new Window(0, 0, focusParent, g_pTopLevelFramebuffer);
             }
+            else if((c == 'v') || (c == 'h'))
+            {
+                ::Container::Layout layout;
+                if(c == 'v')
+                {
+                    layout = Container::Stacked;
+                }
+                else if(c == 'h')
+                {
+                    layout = Container::SideBySide;
+                }
+                else
+                {
+                    layout = Container::SideBySide;
+                }
+
+                // Replace focus window with container (Container::replace) in
+                // the relevant layout mode.
+                if(focusParent->getChildCount() == 1)
+                {
+                    focusParent->setLayout(layout);
+                }
+                else if(focusParent->getLayout() != layout)
+                {
+                    Container *pNewContainer = new Container(focusParent);
+                    pNewContainer->addChild(g_pFocusWindow, true);
+                    g_pFocusWindow->setParent(pNewContainer);
+
+                    focusParent->replaceChild(g_pFocusWindow, pNewContainer);
+                    focusParent->retile();
+                    pNewContainer->setLayout(layout);
+                }
+            }
             /*
-            else if(c == 'v')
-            {
-                // Replace focus window with container (Container::replace) in
-                // Stacked layout mode.
-                // Add the focus window as a child.
-            }
-            else if(c == 'h')
-            {
-                // Replace focus window with container (Container::replace) in
-                // SideBySide layout mode.
-                // Add the focus window as a child.
-            }
             else if(c == 'r')
             {
                 // State machine: enter 'resize mode', which allows us to resize
@@ -259,7 +287,6 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    /*
     // Make a program to test window creation etc...
     if(fork() == 0)
     {
@@ -268,11 +295,10 @@ int main(int argc, char *argv[])
         execv(new_argv[0], new_argv);
         return 0;
     }
-    */
 
     // Use the root framebuffer.
     PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
-    g_pTopLevelFramebuffer = pRootFramebuffer; //->createChild(0, 0, pRootFramebuffer->getWidth(), pRootFramebuffer->getHeight());
+    g_pTopLevelFramebuffer = pRootFramebuffer->createChild(0, 0, pRootFramebuffer->getWidth(), pRootFramebuffer->getHeight());
 
     if(!g_pTopLevelFramebuffer->getRawBuffer())
     {
@@ -290,6 +316,7 @@ int main(int argc, char *argv[])
 
     g_pRootContainer = new RootContainer(g_nWidth, g_nHeight);
 
+    /*
     Container *pMiddle = new Container(g_pRootContainer);
     pMiddle->setLayout(Container::Stacked);
 
@@ -312,6 +339,7 @@ int main(int argc, char *argv[])
 
     g_pFocusWindow = pLeft;
     pLeft->focus();
+    */
 
     syslog(LOG_INFO, "winman: entering main loop %d", getpid());
 
@@ -323,7 +351,7 @@ int main(int argc, char *argv[])
     while(true)
     {
         // g_pTopLevelFramebuffer->rect(0, 0, g_nWidth, g_nHeight, PedigreeGraphics::createRgb(0, 0, 255), PedigreeGraphics::Bits32_Rgb);
-        //checkForMessages(pEndpoint);
+        checkForMessages(pEndpoint);
         g_pRootContainer->render();
         g_pTopLevelFramebuffer->redraw();
 

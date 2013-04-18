@@ -16,6 +16,8 @@
 
 #include "winman.h"
 
+#include <protocol.h>
+
 void WObject::reposition(size_t x, size_t y, size_t w, size_t h)
 {
     if(x == ~0UL)
@@ -62,10 +64,49 @@ void Window::refreshContext()
 
     PedigreeGraphics::Rect &me = getDimensions();
     m_pRealFramebuffer = m_pBaseFramebuffer->createChild(me.getX(), me.getY(), me.getW(), me.getH());
+
+    if(m_Endpoint && m_pRealFramebuffer)
+    {
+        syslog(LOG_INFO, "transmitting reposition message");
+        size_t totalSize = sizeof(LibUiProtocol::WindowManagerMessage) + sizeof(LibUiProtocol::RepositionMessage);
+
+        PedigreeIpc::IpcMessage *pMessage = new PedigreeIpc::IpcMessage();
+        bool bSuccess = pMessage->initialise();
+        syslog(LOG_INFO, "winman: [repos] creating msg: %s", bSuccess ? "good" : "bad");
+        char *buffer = (char *) pMessage->getBuffer();
+        syslog(LOG_INFO, "winman: [repos] buffer at %p", buffer);
+
+        LibUiProtocol::WindowManagerMessage *pHeader =
+            reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
+        pHeader->messageCode = LibUiProtocol::Reposition;
+        pHeader->widgetHandle = m_Handle;
+        pHeader->messageSize = sizeof(LibUiProtocol::RepositionMessage);
+        pHeader->isResponse = false;
+
+        syslog(LOG_INFO, "winman: [repos] created header");
+
+        LibUiProtocol::RepositionMessage *pReposition =
+            reinterpret_cast<LibUiProtocol::RepositionMessage*>(buffer + sizeof(LibUiProtocol::WindowManagerMessage));
+        pReposition->rt = me;
+        syslog(LOG_INFO, "winman: [repos] framebuffer is %p", m_pRealFramebuffer);
+        pReposition->provider = m_pRealFramebuffer->getProvider();
+        syslog(LOG_INFO, "winman: d=%p f=%p", m_pRealFramebuffer->getProvider().pDisplay, m_pRealFramebuffer->getProvider().pFramebuffer);
+        syslog(LOG_INFO, "winman: d=%p f=%p", m_pRealFramebuffer->getProvider().pDisplay, m_pRealFramebuffer->getProvider().pFramebuffer);
+
+        syslog(LOG_INFO, "winman: [repos] created message");
+
+        syslog(LOG_INFO, "sending...");
+        PedigreeIpc::send(m_Endpoint, pMessage, true);
+        syslog(LOG_INFO, "sent!");
+
+        delete pMessage;
+    }
 }
 
 void Window::render()
 {
+    /// \todo Window frames and decorations eg title
+    /*
     PedigreeGraphics::Rect &me = getDimensions();
     size_t x = 5; //me.getX() + 5;
     size_t y = 5; //me.getY() + 5;
@@ -95,6 +136,7 @@ void Window::render()
     // Window.
     m_pRealFramebuffer->rect(x, y, w, h, PedigreeGraphics::createRgb(r, 0, 0), PedigreeGraphics::Bits32_Rgb);
     // m_pBaseFramebuffer->redraw(x, y, w, h, true);
+    */
 }
 
 void Window::focus()
