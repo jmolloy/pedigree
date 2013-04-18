@@ -100,14 +100,39 @@ class VbeFramebuffer : public Framebuffer
         }
         
         VbeFramebuffer(Display *pDisplay) :
-            Framebuffer()
+            Framebuffer(), m_pDisplay(pDisplay), m_pBackbuffer(0), m_nBackbufferBytes(0)
         {
-            setFramebuffer(reinterpret_cast<uintptr_t>(pDisplay->getFramebuffer()));
+            Display::ScreenMode sm;
+            pDisplay->getCurrentScreenMode(sm); /// \todo handle error
+            m_nBackbufferBytes = sm.bytesPerLine * sm.height;
+            m_pBackbuffer = new char[m_nBackbufferBytes];
+            setFramebuffer(reinterpret_cast<uintptr_t>(m_pBackbuffer));
+        }
+
+        virtual void hwRedraw(size_t x = ~0UL, size_t y = ~0UL,
+                              size_t w = ~0UL, size_t h = ~0UL)
+        {
+            if(x == ~0UL)
+                x = 0;
+            if(y == ~0UL)
+                y = 0;
+            if(w == ~0UL)
+                w = getWidth();
+            if(h == ~0UL)
+                h = getHeight();
+
+            /// \todo Subregions
+            memcpy(m_pDisplay->getFramebuffer(), m_pBackbuffer, m_nBackbufferBytes);
         }
         
         virtual ~VbeFramebuffer()
         {
         }
+
+    private:
+        Display *m_pDisplay;
+        char *m_pBackbuffer;
+        size_t m_nBackbufferBytes;
 };
 
 void entry()
