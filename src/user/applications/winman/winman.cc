@@ -96,8 +96,6 @@ void handleMessage(char *messageData)
     {
         syslog(LOG_INFO, "winman: unhandled message type");
     }
-
-    delete pIpcResponse;
 }
 
 void checkForMessages(PedigreeIpc::IpcEndpoint *pEndpoint)

@@ -98,8 +98,6 @@ void Window::refreshContext()
         syslog(LOG_INFO, "sending...");
         PedigreeIpc::send(m_Endpoint, pMessage, true);
         syslog(LOG_INFO, "sent!");
-
-        delete pMessage;
     }
 }
 

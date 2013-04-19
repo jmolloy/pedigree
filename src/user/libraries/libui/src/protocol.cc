@@ -58,9 +58,6 @@ bool LibUiProtocol::sendMessage(void *pMessage, size_t messageLength)
     // Transmit the message.
     send(pEndpoint, pIpcMessage, false);
 
-    // Clean up.
-    delete pIpcMessage;
-
     return true;
 }
 
