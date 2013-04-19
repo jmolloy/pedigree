@@ -18,6 +18,15 @@
 
 #include <protocol.h>
 
+#define WINDOW_BORDER_X 2
+#define WINDOW_BORDER_Y 2
+#define WINDOW_TITLE_H 20
+
+#define WINDOW_CLIENT_START_X (WINDOW_BORDER_X + 1)
+#define WINDOW_CLIENT_START_Y (WINDOW_BORDER_Y + 1 + WINDOW_TITLE_H)
+#define WINDOW_CLIENT_ADDEND_W (WINDOW_CLIENT_START_X * 2)
+#define WINDOW_CLIENT_ADDEND_H (WINDOW_CLIENT_START_Y + WINDOW_BORDER_Y + 1)
+
 void WObject::reposition(size_t x, size_t y, size_t w, size_t h)
 {
     if(x == ~0UL)
@@ -28,16 +37,8 @@ void WObject::reposition(size_t x, size_t y, size_t w, size_t h)
         w = m_Dimensions.getW();
     if(h == ~0UL)
         h = m_Dimensions.getH();
-    //m_Dimensions.update(x, y, m_Dimensions.getW(), m_Dimensions.getH());
 
-    syslog(LOG_INFO, "before reposition: %d, %d %dx%d", m_Dimensions.getX(), m_Dimensions.getY(), m_Dimensions.getW(), m_Dimensions.getH());
-    syslog(LOG_INFO, "reposition: %d, %d %dx%d", x, y, w, h);
     m_Dimensions.update(x, y, w, h);
-    syslog(LOG_INFO, "actual reposition: %d, %d %dx%d", m_Dimensions.getX(), m_Dimensions.getY(), m_Dimensions.getW(), m_Dimensions.getH());
-
-    ssize_t horizDistance = w - static_cast<ssize_t>(m_Dimensions.getW());
-    ssize_t vertDistance = h - static_cast<ssize_t>(m_Dimensions.getH());
-    // resize(horizDistance, vertDistance, this);
 
     refreshContext();
 }
@@ -63,18 +64,24 @@ void Window::refreshContext()
     delete m_pRealFramebuffer;
 
     PedigreeGraphics::Rect &me = getDimensions();
-    m_pRealFramebuffer = m_pBaseFramebuffer->createChild(me.getX(), me.getY(), me.getW(), me.getH());
+    if((me.getW() < WINDOW_CLIENT_ADDEND_W) || (me.getH() < WINDOW_CLIENT_ADDEND_H))
+    {
+        // We have some basic requirements for window sizes.
+        return;
+    }
+    m_pRealFramebuffer = m_pBaseFramebuffer->createChild(
+            me.getX() + WINDOW_CLIENT_START_X,
+            me.getY() + WINDOW_CLIENT_START_Y,
+            me.getW() - WINDOW_CLIENT_ADDEND_W,
+            me.getH() - WINDOW_CLIENT_ADDEND_H);
 
     if(m_Endpoint && m_pRealFramebuffer)
     {
-        syslog(LOG_INFO, "transmitting reposition message");
         size_t totalSize = sizeof(LibUiProtocol::WindowManagerMessage) + sizeof(LibUiProtocol::RepositionMessage);
 
         PedigreeIpc::IpcMessage *pMessage = new PedigreeIpc::IpcMessage();
         bool bSuccess = pMessage->initialise();
-        syslog(LOG_INFO, "winman: [repos] creating msg: %s", bSuccess ? "good" : "bad");
         char *buffer = (char *) pMessage->getBuffer();
-        syslog(LOG_INFO, "winman: [repos] buffer at %p", buffer);
 
         LibUiProtocol::WindowManagerMessage *pHeader =
             reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
@@ -83,58 +90,48 @@ void Window::refreshContext()
         pHeader->messageSize = sizeof(LibUiProtocol::RepositionMessage);
         pHeader->isResponse = false;
 
-        syslog(LOG_INFO, "winman: [repos] created header");
 
         LibUiProtocol::RepositionMessage *pReposition =
             reinterpret_cast<LibUiProtocol::RepositionMessage*>(buffer + sizeof(LibUiProtocol::WindowManagerMessage));
-        pReposition->rt = me;
-        syslog(LOG_INFO, "winman: [repos] framebuffer is %p", m_pRealFramebuffer);
+        pReposition->rt.update(0, 0, m_pRealFramebuffer->getWidth(), m_pRealFramebuffer->getHeight());
         pReposition->provider = m_pRealFramebuffer->getProvider();
-        syslog(LOG_INFO, "winman: d=%p f=%p", m_pRealFramebuffer->getProvider().pDisplay, m_pRealFramebuffer->getProvider().pFramebuffer);
-        syslog(LOG_INFO, "winman: d=%p f=%p", m_pRealFramebuffer->getProvider().pDisplay, m_pRealFramebuffer->getProvider().pFramebuffer);
 
-        syslog(LOG_INFO, "winman: [repos] created message");
-
-        syslog(LOG_INFO, "sending...");
         PedigreeIpc::send(m_Endpoint, pMessage, true);
-        syslog(LOG_INFO, "sent!");
     }
 }
 
 void Window::render()
 {
-    /// \todo Window frames and decorations eg title
-    /*
+    // Render pretty window frames.
     PedigreeGraphics::Rect &me = getDimensions();
-    size_t x = 5; //me.getX() + 5;
-    size_t y = 5; //me.getY() + 5;
-    size_t w = me.getW() - 10;
-    size_t h = me.getH() - 10;
-    //syslog(LOG_INFO, "winman: Window::render(%d, %d, %d, %d)", x, y, w, h);
+    size_t x = WINDOW_BORDER_X;
+    size_t y = WINDOW_BORDER_Y;
+    size_t w = me.getW() - (WINDOW_BORDER_X * 2);
+    size_t h = me.getH() - (WINDOW_BORDER_Y * 2);
+
     size_t r = 0;
     if(m_bFocus)
         r = 255;
     else if(m_pParent->getFocusWindow() == this)
         r = 255 / 2;
+    uint32_t borderColour = PedigreeGraphics::createRgb(r, 0, 0);
 
     // Window border.
 
     // Top
-    m_pRealFramebuffer->line(x - 1, y - 1, x + w + 1, y - 1, PedigreeGraphics::createRgb(255, 255, 255), PedigreeGraphics::Bits32_Rgb);
+    m_pBaseFramebuffer->line(x, y, x + w, y, borderColour, PedigreeGraphics::Bits24_Rgb);
 
     // Left
-    m_pRealFramebuffer->line(x - 1, y - 1, x - 1, y + h + 1, PedigreeGraphics::createRgb(255, 255, 255), PedigreeGraphics::Bits32_Rgb);
+    m_pBaseFramebuffer->line(x, y, x, y + h, borderColour, PedigreeGraphics::Bits24_Rgb);
 
     // Right
-    m_pRealFramebuffer->line(x + w + 1, y - 1, x + w + 1, y + h + 1, PedigreeGraphics::createRgb(255, 255, 255), PedigreeGraphics::Bits32_Rgb);
+    m_pBaseFramebuffer->line(x + w, y, x + w, y + h, borderColour, PedigreeGraphics::Bits24_Rgb);
 
     // Bottom
-    m_pRealFramebuffer->line(x - 1, y + h + 1, x + w + 1, y + h + 1, PedigreeGraphics::createRgb(255, 255, 255), PedigreeGraphics::Bits32_Rgb);
+    m_pBaseFramebuffer->line(x, y + h, x + w, y + h, borderColour, PedigreeGraphics::Bits24_Rgb);
 
-    // Window.
-    m_pRealFramebuffer->rect(x, y, w, h, PedigreeGraphics::createRgb(r, 0, 0), PedigreeGraphics::Bits32_Rgb);
-    // m_pBaseFramebuffer->redraw(x, y, w, h, true);
-    */
+    // Title bar.
+    m_pBaseFramebuffer->rect(x + 1, y + 1, w - 1, WINDOW_TITLE_H, PedigreeGraphics::createRgb(49, 79, 79), PedigreeGraphics::Bits24_Rgb);
 }
 
 void Window::focus()
