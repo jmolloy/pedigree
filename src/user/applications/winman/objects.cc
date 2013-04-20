@@ -22,10 +22,18 @@
 #define WINDOW_BORDER_Y 2
 #define WINDOW_TITLE_H 20
 
+// Start location of the client rendering area.
 #define WINDOW_CLIENT_START_X (WINDOW_BORDER_X + 1)
 #define WINDOW_CLIENT_START_Y (WINDOW_BORDER_Y + 1 + WINDOW_TITLE_H)
-#define WINDOW_CLIENT_ADDEND_W (WINDOW_CLIENT_START_X * 2)
-#define WINDOW_CLIENT_ADDEND_H (WINDOW_CLIENT_START_Y + WINDOW_BORDER_Y + 1)
+
+// Insets from the end of the client area.
+#define WINDOW_CLIENT_END_X   (WINDOW_BORDER_X + 1)
+#define WINDOW_CLIENT_END_Y   (WINDOW_BORDER_Y + 1)
+
+// Total space from the W/H that the window manager has used and taken from the
+// client area for rendering decorations etc...
+#define WINDOW_CLIENT_LOST_W (WINDOW_CLIENT_START_X * 2)
+#define WINDOW_CLIENT_LOST_H (WINDOW_CLIENT_START_Y + WINDOW_CLIENT_END_Y)
 
 void WObject::reposition(size_t x, size_t y, size_t w, size_t h)
 {
@@ -64,7 +72,7 @@ void Window::refreshContext()
     delete m_pRealFramebuffer;
 
     PedigreeGraphics::Rect &me = getDimensions();
-    if((me.getW() < WINDOW_CLIENT_ADDEND_W) || (me.getH() < WINDOW_CLIENT_ADDEND_H))
+    if((me.getW() < WINDOW_CLIENT_LOST_W) || (me.getH() < WINDOW_CLIENT_LOST_H))
     {
         // We have some basic requirements for window sizes.
         return;
@@ -72,8 +80,8 @@ void Window::refreshContext()
     m_pRealFramebuffer = m_pBaseFramebuffer->createChild(
             me.getX() + WINDOW_CLIENT_START_X,
             me.getY() + WINDOW_CLIENT_START_Y,
-            me.getW() - WINDOW_CLIENT_ADDEND_W,
-            me.getH() - WINDOW_CLIENT_ADDEND_H);
+            me.getW() - WINDOW_CLIENT_LOST_W,
+            me.getH() - WINDOW_CLIENT_LOST_H);
 
     if(m_Endpoint && m_pRealFramebuffer)
     {
@@ -103,8 +111,8 @@ void Window::render()
 {
     // Render pretty window frames.
     PedigreeGraphics::Rect &me = getDimensions();
-    size_t x = WINDOW_BORDER_X;
-    size_t y = WINDOW_BORDER_Y;
+    size_t x = me.getX() + WINDOW_BORDER_X;
+    size_t y = me.getY() + WINDOW_BORDER_Y;
     size_t w = me.getW() - (WINDOW_BORDER_X * 2);
     size_t h = me.getH() - (WINDOW_BORDER_Y * 2);
 
@@ -130,7 +138,7 @@ void Window::render()
     m_pBaseFramebuffer->line(x, y + h, x + w, y + h, borderColour, PedigreeGraphics::Bits24_Rgb);
 
     // Title bar.
-    m_pBaseFramebuffer->rect(x + 1, y + 1, w - 1, WINDOW_TITLE_H, PedigreeGraphics::createRgb(49, 79, 79), PedigreeGraphics::Bits24_Rgb);
+    m_pBaseFramebuffer->rect(x + 1, y + 1, w - 2, WINDOW_TITLE_H, PedigreeGraphics::createRgb(49, 79, 79), PedigreeGraphics::Bits24_Rgb);
 }
 
 void Window::focus()
