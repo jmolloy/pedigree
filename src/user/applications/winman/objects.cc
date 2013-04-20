@@ -46,9 +46,10 @@ void WObject::reposition(size_t x, size_t y, size_t w, size_t h)
     if(h == ~0UL)
         h = m_Dimensions.getH();
 
+    PedigreeGraphics::Rect old = m_Dimensions;
     m_Dimensions.update(x, y, w, h);
 
-    refreshContext();
+    refreshContext(old);
 }
 
 void WObject::bump(ssize_t bumpX, ssize_t bumpY)
@@ -63,12 +64,25 @@ void WObject::bump(ssize_t bumpX, ssize_t bumpY)
 Window::Window(uint64_t handle, PedigreeIpc::IpcEndpoint *endpoint, ::Container *pParent, PedigreeGraphics::Framebuffer *pBaseFramebuffer) :
     m_Handle(handle), m_Endpoint(endpoint), m_pParent(pParent), m_pBaseFramebuffer(pBaseFramebuffer), m_pRealFramebuffer(0), m_bFocus(false)
 {
-    refreshContext();
+    PedigreeGraphics::Rect none;
+    refreshContext(none);
     m_pParent->addChild(this);
 }
 
-void Window::refreshContext()
+void Window::refreshContext(PedigreeGraphics::Rect oldDimensions)
 {
+    if(m_pRealFramebuffer && (oldDimensions.getW() && oldDimensions.getH()))
+    {
+        // We are refreshing our context, so wipe out the old framebuffer.
+        // This helps avoid having bits and pieces of the old window left
+        // over after we're resized to be smaller.
+        m_pBaseFramebuffer->rect(oldDimensions.getX(),
+                                 oldDimensions.getY(),
+                                 oldDimensions.getW(),
+                                 oldDimensions.getH(),
+                                 PedigreeGraphics::createRgb(0, 0, 255),
+                                 PedigreeGraphics::Bits24_Rgb);
+    }
     delete m_pRealFramebuffer;
 
     PedigreeGraphics::Rect &me = getDimensions();

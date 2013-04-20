@@ -79,7 +79,7 @@ class WObject
         }
 
         /// Refresh our graphical context, called after reposition.
-        virtual void refreshContext()
+        virtual void refreshContext(PedigreeGraphics::Rect oldDimensions)
         {
         }
 
@@ -113,7 +113,7 @@ class Window : public WObject
         virtual void focus();
         virtual void nofocus();
 
-        virtual void refreshContext();
+        virtual void refreshContext(PedigreeGraphics::Rect oldDimensions);
 
         PedigreeGraphics::Framebuffer *getContext() const
         {

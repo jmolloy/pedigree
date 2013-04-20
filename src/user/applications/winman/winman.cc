@@ -375,17 +375,27 @@ int main(int argc, char *argv[])
 
     Input::installCallback(Input::Key | Input::Mouse, systemInputCallback);
 
+    // Clear out the base of the screen.
+    g_pTopLevelFramebuffer->rect(0, 0, g_nWidth, g_nHeight, PedigreeGraphics::createRgb(0, 0, 255), PedigreeGraphics::Bits24_Rgb);
+
     // Main loop: logic & message handling goes here!
     while(true)
     {
-        // g_pTopLevelFramebuffer->rect(0, 0, g_nWidth, g_nHeight, PedigreeGraphics::createRgb(0, 0, 255), PedigreeGraphics::Bits32_Rgb);
-
+        // Check for any messages coming in from windows, asynchronously.
         checkForMessages(pEndpoint);
 
+        // Render all window decorations and non-client display elements.
+        /// \todo Doing this every frame is silly. It should only be done on window reposition,
+        ///       or if/when a window updates properties such as its title.
         g_pRootContainer->render();
 
+        // Submit a full redraw to the graphics card.
+        /// \todo We need to stop doing this - we should figue out how much we changed.
         g_pTopLevelFramebuffer->redraw();
 
+        // Yield control to the rest of the system. As we do everything we
+        // possibly can asynchronously, if we don't yield we'll pound the
+        // system and not let any other processes work.
         sched_yield();
     }
 
