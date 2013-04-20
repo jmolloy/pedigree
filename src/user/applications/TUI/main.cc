@@ -73,11 +73,19 @@ size_t g_nWidth, g_nHeight;
 size_t nextConsoleNum = 1;
 size_t g_nLastResponse = 0;
 
+class PedigreeTerminalEmulator;
+static PedigreeTerminalEmulator *g_pEmu = 0;
+
 PedigreeGraphics::Framebuffer *g_pFramebuffer = 0;
 
-/*
 void modeChanged(size_t width, size_t height)
 {
+    if(!g_pTermList)
+    {
+        // Spurious/early modeChanged.
+        return;
+    }
+
     syslog(LOG_ALERT, "w: %d, h: %d\n", width, height);
 
     g_pHeader->setWidth(width);
@@ -102,7 +110,7 @@ void modeChanged(size_t width, size_t height)
 
         pTL = pTL->next;
     }
-}*/
+}
 
 void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
 {
@@ -554,6 +562,9 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
             {
                 /// \todo reposition/re-render/resize
                 syslog(LOG_INFO, "TUI: reposition event");
+                PedigreeGraphics::Rect *rt = reinterpret_cast<PedigreeGraphics::Rect*>(msgData);
+                g_pFramebuffer = g_pEmu->getInternalFramebuffer();
+                modeChanged(rt->getW(), rt->getH());
             }
             break;
         case KeyUp:
@@ -574,11 +585,11 @@ int main(int argc, char *argv[])
 
     PedigreeGraphics::Rect rt;
 
-    PedigreeTerminalEmulator *pEmu = new PedigreeTerminalEmulator();
-    if(!pEmu->construct(endpoint, callback, rt))
+    g_pEmu = new PedigreeTerminalEmulator();
+    if(!g_pEmu->construct(endpoint, callback, rt))
     {
         syslog(LOG_ERR, "tui: couldn't construct widget");
-        delete pEmu;
+        delete g_pEmu;
         return 1;
     }
 
@@ -587,7 +598,7 @@ int main(int argc, char *argv[])
     // Handle initial reposition event.
     Widget::checkForEvents(true);
 
-    tui_do(pEmu->getInternalFramebuffer());
+    tui_do(g_pEmu->getInternalFramebuffer());
 
     return 0;
 }
