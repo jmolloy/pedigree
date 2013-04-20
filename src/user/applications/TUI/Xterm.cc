@@ -527,8 +527,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 
 void Xterm::renderAll(DirtyRectangle &rect)
 {
-    rect.point(0, 0);
-    rect.point(getCols() * g_NormalFont->getWidth(), getRows() * g_NormalFont->getHeight());
+    m_pWindows[m_ActiveBuffer]->renderAll(rect, 0);
 }
 
 Xterm::Window::Window(size_t nRows, size_t nCols, PedigreeGraphics::Framebuffer *pFb, size_t nMaxScrollback, size_t offsetLeft, size_t offsetTop, size_t fbWidth) :

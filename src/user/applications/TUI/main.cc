@@ -106,6 +106,7 @@ void modeChanged(size_t width, size_t height)
 
         g_pHeader->render(pTerm->getBuffer(), rect);
 
+        pTerm->redrawAll(rect);
         doRedraw(rect);
 
         pTL = pTL->next;
