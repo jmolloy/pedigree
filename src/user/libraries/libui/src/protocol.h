@@ -248,7 +248,7 @@ namespace LibUiProtocol
     struct KeyEventMessage
     {
         ButtonState state;
-        char key;
+        uint64_t key;
     };
 };
 

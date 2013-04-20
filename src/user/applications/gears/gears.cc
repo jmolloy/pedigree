@@ -305,7 +305,6 @@ class Gears : public Widget
         virtual bool render(PedigreeGraphics::Rect &rt, PedigreeGraphics::Rect &dirty)
         {
             PedigreeGraphics::Framebuffer *pFramebuffer = getFramebuffer();
-            syslog(LOG_INFO, "render: rendering to %p", pFramebuffer);
             size_t width = pFramebuffer->getWidth();
             size_t height = pFramebuffer->getHeight();
 
@@ -353,29 +352,50 @@ class Gears : public Widget
 
 bool callback(WidgetMessages message, size_t msgSize, void *msgData)
 {
-    syslog(LOG_INFO, "gears: callback");
     switch(message)
     {
         case RepaintNeeded:
             {
                 PedigreeGraphics::Rect rt, dirty;
-                syslog(LOG_INFO, "gears: rendering...");
                 g_pGears->render(rt, dirty);
 
-                syslog(LOG_INFO, "gears: asking winman for redraw...");
-                g_pGears->redraw(dirty);
+                // g_pGears->redraw(dirty);
             }
             break;
         case Reposition:
             {
                 PedigreeGraphics::Rect dirty;
                 PedigreeGraphics::Rect *rt = reinterpret_cast<PedigreeGraphics::Rect*>(msgData);
-                syslog(LOG_INFO, "gears: reposition event");
                 g_pGears->reposition(*rt);
-                syslog(LOG_INFO, "gears: reposition complete");
                 g_pGears->render(*rt, dirty);
-                syslog(LOG_INFO, "gears: rendering complete");
             }
+            break;
+        case KeyUp:
+            {
+                uint64_t *key = reinterpret_cast<uint64_t*>(msgData);
+                syslog(LOG_INFO, "gears: keypress %d '%c'", (uint32_t) *key, (char) (*key & 0xFF));
+
+                // What do we have?
+                /// \todo don't do this this is silly.
+                *key &= 0xFF;
+                if(*key == 'a')
+                {
+                    view_roty += 5.0;
+                }
+                else if(*key == 'd')
+                {
+                    view_roty -= 5.0;
+                }
+                else if(*key == 'w')
+                {
+                    view_rotx += 5.0;
+                }
+                else if(*key == 's')
+                {
+                    view_rotx -= 5.0;
+                }
+            }
+            break;
         default:
             syslog(LOG_INFO, "gears: unhandled callback");
     }
@@ -403,6 +423,8 @@ int main (int argc, char ** argv) {
 
     syslog(LOG_INFO, "gears: entering main loop");
 
+    time_t t1, t2;
+
     while (1) {
         Widget::checkForEvents(true);
 
@@ -410,7 +432,7 @@ int main (int argc, char ** argv) {
         callback(RepaintNeeded, 0, 0);
 
         // Let other processes run, don't slam the CPU...
-        sched_yield();
+        // sched_yield();
     }
 
     g_pGears->deinitOpenGL();

@@ -312,8 +312,6 @@ void Widget::checkForEvents(bool bAsync)
 
         if(bMessage)
         {
-            syslog(LOG_INFO, "** checkForEvents: message received!");
-
             LibUiProtocol::WindowManagerMessage *pHeader =
                 reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
 
@@ -331,14 +329,20 @@ void Widget::checkForEvents(bool bAsync)
                         pReposition->provider.pFramebuffer)
                     {
                         delete g_pWidget->m_pFramebuffer;
-                        syslog(LOG_INFO, "** old framebuffer was %p", g_pWidget->m_pFramebuffer);
                         g_pWidget->m_pFramebuffer = new PedigreeGraphics::Framebuffer(pReposition->provider);
-                        syslog(LOG_INFO, "** new framebuffer is %p", g_pWidget->m_pFramebuffer);
-                        syslog(LOG_INFO, "** d=%p f=%p", pReposition->provider.pDisplay, pReposition->provider.pFramebuffer);
                     }
 
                     // Run the callback now that the framebuffer is re-created.
                     cb(::Reposition, sizeof(pReposition->rt), &pReposition->rt);
+                    break;
+                }
+                case LibUiProtocol::KeyEvent:
+                {
+                    LibUiProtocol::KeyEventMessage *pKeyEvent =
+                        reinterpret_cast<LibUiProtocol::KeyEventMessage*>(buffer + sizeof(LibUiProtocol::WindowManagerMessage));
+
+                    cb(::KeyUp, sizeof(pKeyEvent->key), &pKeyEvent->key);
+                    break;
                 }
                 default:
                     syslog(LOG_INFO, "** unknown event");

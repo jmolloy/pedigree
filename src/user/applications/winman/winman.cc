@@ -43,14 +43,10 @@ void handleMessage(char *messageData)
     LibUiProtocol::WindowManagerMessage *pWinMan =
         reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(messageData);
 
-    syslog(LOG_INFO, "winman: incoming message at %x", messageData);
-    syslog(LOG_INFO, "winman: incoming message with code %d", pWinMan->messageCode);
-
     size_t totalSize = sizeof(LibUiProtocol::WindowManagerMessage);
 
     PedigreeIpc::IpcMessage *pIpcResponse = new PedigreeIpc::IpcMessage();
     bool bSuccess = pIpcResponse->initialise();
-    syslog(LOG_INFO, "winman: creating response: %s", bSuccess ? "good" : "bad");
 
     if(pWinMan->messageCode == LibUiProtocol::Create)
     {
@@ -83,14 +79,9 @@ void handleMessage(char *messageData)
             reinterpret_cast<LibUiProtocol::CreateMessageResponse*>(responseData + sizeof(LibUiProtocol::WindowManagerMessage));
         pCreateResp->provider = pWindow->getContext()->getProvider();
 
-        syslog(LOG_INFO, "winman: create message!");
         g_Windows->insert(std::make_pair(pWinMan->widgetHandle, pWindow));
-        syslog(LOG_INFO, "winman: metadata entered");
 
-        syslog(LOG_INFO, "winman: transmitting response");
         PedigreeIpc::send(pEndpoint, pIpcResponse, true);
-
-        syslog(LOG_INFO, "winman: create message response transmitted");
     }
     else
     {
@@ -126,6 +117,7 @@ void checkForMessages(PedigreeIpc::IpcEndpoint *pEndpoint)
 void systemInputCallback(Input::InputNotification &note)
 {
     syslog(LOG_INFO, "winman: system input (type=%d)", note.type);
+    bool bHandled = false;
     if(note.type & Input::Key)
     {
         uint64_t c = note.data.key.key;
@@ -146,6 +138,7 @@ void systemInputCallback(Input::InputNotification &note)
                 if(c == 'r')
                 {
                     g_pRootContainer->retile();
+                    bHandled = true;
                 }
                 else if(c == 'q')
                 {
@@ -169,6 +162,8 @@ void systemInputCallback(Input::InputNotification &note)
                     }
 
                     g_pFocusWindow = newFocus;
+
+                    bHandled = true;
                 }
             }
             else if(c == '\n')
@@ -181,6 +176,7 @@ void systemInputCallback(Input::InputNotification &note)
                 // window in the correct container when it first sends a
                 // Create.
                 Window *pWindow = new Window(0, 0, focusParent, g_pTopLevelFramebuffer);
+                bHandled = true;
             }
             else if((c == 'v') || (c == 'h'))
             {
@@ -214,6 +210,8 @@ void systemInputCallback(Input::InputNotification &note)
                     focusParent->retile();
                     pNewContainer->setLayout(layout);
                 }
+
+                bHandled = true;
             }
             /*
             else if(c == 'r')
@@ -224,7 +222,6 @@ void systemInputCallback(Input::InputNotification &note)
             */
             else if((c == KEY_LEFT) || (c == KEY_RIGHT) || (c == KEY_UP) || (c == KEY_DOWN))
             {
-                syslog(LOG_INFO, "parent: %p focus: %p", focusParent, g_pFocusWindow);
                 if(c == KEY_LEFT)
                 {
                     sibling = focusParent->getLeft(g_pFocusWindow);
@@ -245,7 +242,6 @@ void systemInputCallback(Input::InputNotification &note)
                 // Not edge of screen?
                 if(sibling)
                 {
-                    syslog(LOG_INFO, "found sibling %p", sibling);
                     while(sibling->getType() == WObject::Container)
                     {
                         // Need to make the focus the first non-Container child of the container.
@@ -269,6 +265,37 @@ void systemInputCallback(Input::InputNotification &note)
                 g_pFocusWindow = newFocus;
                 g_pFocusWindow->focus();
             }
+
+            bHandled = true;
+        }
+    }
+
+    if(!bHandled)
+    {
+        // Forward event to focus window.
+        size_t totalSize = sizeof(LibUiProtocol::WindowManagerMessage);
+        if(note.type & Input::Key)
+            totalSize += sizeof(LibUiProtocol::KeyEventMessage);
+
+        PedigreeIpc::IpcMessage *pMessage = new PedigreeIpc::IpcMessage();
+        pMessage->initialise();
+        char *buffer = (char *) pMessage->getBuffer();
+
+        LibUiProtocol::WindowManagerMessage *pHeader =
+            reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
+        pHeader->messageCode = LibUiProtocol::KeyEvent;
+        pHeader->widgetHandle = g_pFocusWindow->getHandle();
+        pHeader->messageSize = totalSize - sizeof(*pHeader);
+        pHeader->isResponse = false;
+
+        if(note.type & Input::Key)
+        {
+            LibUiProtocol::KeyEventMessage *pKeyEvent =
+                reinterpret_cast<LibUiProtocol::KeyEventMessage*>(buffer + sizeof(LibUiProtocol::WindowManagerMessage));
+            pKeyEvent->state = LibUiProtocol::Up; /// \todo 'keydown' messages.
+            pKeyEvent->key = note.data.key.key;
+
+            PedigreeIpc::send(g_pFocusWindow->getEndpoint(), pMessage, true);
         }
     }
 }
@@ -349,8 +376,11 @@ int main(int argc, char *argv[])
     while(true)
     {
         // g_pTopLevelFramebuffer->rect(0, 0, g_nWidth, g_nHeight, PedigreeGraphics::createRgb(0, 0, 255), PedigreeGraphics::Bits32_Rgb);
+
         checkForMessages(pEndpoint);
+
         g_pRootContainer->render();
+
         g_pTopLevelFramebuffer->redraw();
 
         sched_yield();

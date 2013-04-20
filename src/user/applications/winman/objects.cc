@@ -90,7 +90,6 @@ void Window::refreshContext()
         pHeader->messageSize = sizeof(LibUiProtocol::RepositionMessage);
         pHeader->isResponse = false;
 
-
         LibUiProtocol::RepositionMessage *pReposition =
             reinterpret_cast<LibUiProtocol::RepositionMessage*>(buffer + sizeof(LibUiProtocol::WindowManagerMessage));
         pReposition->rt.update(0, 0, m_pRealFramebuffer->getWidth(), m_pRealFramebuffer->getHeight());
@@ -147,8 +146,6 @@ void Window::nofocus()
 
 void Window::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pChild)
 {
-    syslog(LOG_INFO, "winman: window::resize w=%ld h=%ld", horizDistance, vertDistance);
-
     PedigreeGraphics::Rect &me = getDimensions();
     size_t currentWidth = me.getW();
     size_t currentHeight = me.getH();
@@ -160,8 +157,6 @@ void Window::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pChild
 
 void Container::retile()
 {
-    syslog(LOG_INFO, "winman: retile");
-
     if(m_Children.size() == 0)
     {
         syslog(LOG_INFO, "winman: no children in container, no retile");
@@ -181,7 +176,6 @@ void Container::retile()
         WObjectList_t::iterator it = m_Children.begin();
         for(; it != m_Children.end(); ++it)
         {
-            syslog(LOG_INFO, "tile now at x=%d, w=%d", newX, dividedW);
             (*it)->reposition(newX, newY, dividedW, currentHeight);
             newX += dividedW;
         }
@@ -195,7 +189,6 @@ void Container::retile()
         WObjectList_t::iterator it = m_Children.begin();
         for(; it != m_Children.end(); ++it)
         {
-            syslog(LOG_INFO, "tile now at y=%d, h=%d", newY, dividedH);
             (*it)->reposition(newX, newY, currentWidth, dividedH);
             newY += dividedH;
         }
@@ -208,7 +201,6 @@ void Container::retile()
         if((*it)->getType() == WObject::Container ||
             (*it)->getType() == WObject::Root)
         {
-            syslog(LOG_INFO, "container child");
             Container *pContainer = static_cast<Container*>(*it);
             pContainer->retile();
         }
@@ -221,12 +213,8 @@ void Container::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pCh
     size_t currentWidth = me.getW();
     size_t currentHeight = me.getH();
 
-    syslog(LOG_INFO, "winman: resize w=%d h=%d", horizDistance, vertDistance);
-
     if(pChild)
     {
-        syslog(LOG_INFO, "winman: container resize with child");
-
         ssize_t bumpX = horizDistance;
         ssize_t bumpY = vertDistance;
 
@@ -239,16 +227,13 @@ void Container::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pCh
         {
             if(bResize)
             {
-                syslog(LOG_INFO, "resizing a client");
                 (*it)->bump(bumpX, bumpY); // Bump X/Y co-ords.
                 (*it)->resize(horizDistance, vertDistance);
                 return; // Resize will cascade.
             }
 
-            syslog(LOG_INFO, "%p vs %p", (*it), pChild);
             if((*it) == pChild)
             {
-                syslog(LOG_INFO, "found child");
                 bResize = true;
             }
         }
@@ -271,8 +256,6 @@ void Container::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pCh
             // Is this right?
             ssize_t extendW = horizDistance / static_cast<ssize_t>(m_Children.size());
             ssize_t extendH = vertDistance / static_cast<ssize_t>(m_Children.size());
-
-            syslog(LOG_INFO, "winman: extendW=%d extendH=%d", extendW, extendH);
 
             // Resize children in the relevant direction for them.
             WObjectList_t::iterator it = m_Children.begin();
@@ -298,7 +281,6 @@ void Container::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pCh
     if(m_pParent && ((m_pParent->getType() == WObject::Container) ||
         m_pParent->getType() == WObject::Root))
     {
-        syslog(LOG_INFO, "passing resize up to parent");
         Container *pContainer = static_cast<Container*>(m_pParent);
 
         pContainer->resize(horizDistance, vertDistance, static_cast<WObject*>(this));
@@ -453,7 +435,6 @@ WObject *Container::getUp(const WObject *obj) const
     WObject *sibling = 0;
     if(m_Layout == Stacked)
     {
-        syslog(LOG_INFO, "finding left sibling of object");
         WObject *sibling = getLeftSibling(obj);
         if(sibling)
         {
@@ -463,10 +444,8 @@ WObject *Container::getUp(const WObject *obj) const
 
     // No sibling to the child. If we are inside a stacked layout,
     // this could be trivial.
-    syslog(LOG_INFO, "parent: %p", m_pParent);
     if(m_pParent && (m_pParent->getType() == WObject::Container))
     {
-        syslog(LOG_INFO, "winman: A trying parent %p", m_pParent);
         const Container *pContainer = static_cast<const Container*>(m_pParent);
         if(pContainer->getLayout() == Stacked)
         {
@@ -481,7 +460,6 @@ WObject *Container::getUp(const WObject *obj) const
     // Root has no parent.
     if(getType() != WObject::Root)
     {
-        syslog(LOG_INFO, "winman: B trying parent %p", m_pParent);
         const Container *pContainer = static_cast<const Container*>(m_pParent);
         return pContainer->getUp(this);
     }
@@ -528,7 +506,6 @@ WObject *Container::getDown(const WObject *obj) const
 
 void RootContainer::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pChild)
 {
-    syslog(LOG_INFO, "RootContainer resize");
     if(pChild)
     {
         // Use the Container implementation to resize siblings of the
