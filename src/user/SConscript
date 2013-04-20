@@ -20,7 +20,10 @@ def fixFlags(flags):
     flags = flags.replace('-nostdinc', '')
     flags = flags.replace('-ffreestanding', '')
     flags = flags.replace('-nostdlib', '')
+    flags = flags.replace('-fno-builtin', '')
     if env['ARCH_TARGET'] in ['X86', 'X64']:
+        flags = flags.replace('-mno-mmx', '')
+        flags = flags.replace('-mno-sse', '')
         flags += ' -msse2'
     if env['ARCH_TARGET'] == 'X64':
         flags = flags.replace('-mcmodel=kernel', '-mcmodel=small')
@@ -91,7 +94,8 @@ cpp_apps = [
 
 # Custom include paths for specific applications
 custom_incpath = {
-    'TUI' : ['#/src/modules/system/TUI',
+    'TUI' : ['#/src/user/libraries/libui/include',
+             '#/src/modules/system/TUI',
              '#/src/user/applications/TUI/include'],
     'uitest' : ['#/src/user/libraries/libui/include'],
     'gears' : ['#/src/user/libraries/libui/include'],
@@ -101,7 +105,7 @@ custom_incpath = {
 
 # Custom libraries for specific applications
 custom_libs = {
-    'TUI' : ['png', 'freetype', 'z'],
+    'TUI' : ['png', 'freetype', 'z', 'ui'],
     'thread-test' : ['pthread'],
     'uitest' : ['ui'],
     'gears' : ['ui'],

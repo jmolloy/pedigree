@@ -24,6 +24,7 @@
 #include <sys/stat.h>
 #include <signal.h>
 #include <errno.h>
+#include <sched.h>
 
 #include "environment.h"
 #include <tui-syscall.h>
@@ -41,6 +42,8 @@
 
 #include <graphics/Graphics.h>
 #include <input/Input.h>
+
+#include <Widget.h>
 
 #define CONSOLE_READ    1
 #define CONSOLE_WRITE   2
@@ -224,21 +227,8 @@ void sigint(int)
     syslog(LOG_NOTICE, "TUI sent SIGINT, oops!");
 }
 
-/**
- * This is the TUI input handler. It is registered with the kernel at startup
- * and handles every keypress that occurs, via an Event sent from the kernel's
- * InputManager object.
- */
-void input_handler(Input::InputNotification &note)
+void key_input_handler(uint64_t c)
 {
-    if(!g_pCurrentTerm || !g_pCurrentTerm->term) // No terminal yet!
-        return;
-
-    if(note.type != Input::Key)
-        return;
-
-    uint64_t c = note.data.key.key;
-
     /** Add the key to the terminal queue */
 
     Terminal *pT = g_pCurrentTerm->term;
@@ -299,7 +289,24 @@ void input_handler(Input::InputNotification &note)
     delete [] buffer;
 }
 
-int main (int argc, char **argv)
+/**
+ * This is the TUI input handler. It is registered with the kernel at startup
+ * and handles every keypress that occurs, via an Event sent from the kernel's
+ * InputManager object.
+ */
+void input_handler(Input::InputNotification &note)
+{
+    if(!g_pCurrentTerm || !g_pCurrentTerm->term) // No terminal yet!
+        return;
+
+    if(note.type != Input::Key)
+        return;
+
+    uint64_t c = note.data.key.key;
+    key_input_handler(c);
+}
+
+int TUImain (int argc, char **argv)
 {
     FILE *fp = fopen("/config/TUI/.tui.lck", "r");
     if(fp)
@@ -352,10 +359,16 @@ int main (int argc, char **argv)
 
     // Connect to the graphics service
     PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
-    g_pFramebuffer = pRootFramebuffer->createChild(0, 0, pRootFramebuffer->getWidth(), pRootFramebuffer->getHeight());
+//    g_pFramebuffer = pRootFramebuffer->createChild(0, 0, pRootFramebuffer->getWidth(), pRootFramebuffer->getHeight());
+    return 0;
+}
+
+int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
+{
+    g_pFramebuffer = pFramebuffer;
 
     // Have we got a working mode?
-    if(!g_pFramebuffer->getRawBuffer())
+    if(!pFramebuffer->getRawBuffer())
     {
         // No!
         syslog(LOG_EMERG, "TUI Error: No framebuffer available!");
@@ -399,14 +412,21 @@ int main (int argc, char **argv)
 
     doRedraw(rect);
 
-    Input::installCallback(Input::Key, input_handler);
+    // Input::installCallback(Input::Key, input_handler);
 
     size_t maxBuffSz = (32768 * 2) - 1;
     char *buffer = new char[maxBuffSz + 1];
     size_t tabId;
     while (true)
     {
-        size_t cmd = Syscall::nextRequest(g_nLastResponse, buffer, &sz, maxBuffSz, &tabId);
+        // Don't spin forever (as there may not be events waiting).
+        sched_yield();
+
+        // Check for any events and dispatch callbacks.
+        Widget::checkForEvents(true);
+
+        // Check for pending requests in the RequestQueue.
+        size_t cmd = Syscall::nextRequestAsync(g_nLastResponse, buffer, &sz, maxBuffSz, &tabId);
         // syslog(LOG_NOTICE, "Command %d received. (term %d, sz %d)", cmd, tabId, sz);
 
         if(cmd == 0)
@@ -501,8 +521,73 @@ int main (int argc, char **argv)
             default:
                 syslog(LOG_ALERT, "Unknown command: %x", cmd);
         }
-
     }
+
+    return 0;
+}
+
+class PedigreeTerminalEmulator : public Widget
+{
+    public:
+        PedigreeTerminalEmulator() : Widget()
+        {};
+
+        virtual ~PedigreeTerminalEmulator()
+        {};
+
+        PedigreeGraphics::Framebuffer *getInternalFramebuffer() const
+        {
+            return getFramebuffer();
+        }
+
+        virtual bool render(PedigreeGraphics::Rect &rt, PedigreeGraphics::Rect &dirty)
+        {
+            return true;
+        }
+};
+
+bool callback(WidgetMessages message, size_t msgSize, void *msgData)
+{
+    switch(message)
+    {
+        case Reposition:
+            {
+                /// \todo reposition/re-render/resize
+                syslog(LOG_INFO, "TUI: reposition event");
+            }
+            break;
+        case KeyUp:
+            {
+                key_input_handler(*reinterpret_cast<uint64_t*>(msgData));
+            }
+            break;
+        default:
+            syslog(LOG_INFO, "TUI: unhandled callback");
+    }
+    return true;
+}
+
+int main(int argc, char *argv[])
+{
+    char endpoint[256];
+    sprintf(endpoint, "tui.%d", getpid());
+
+    PedigreeGraphics::Rect rt;
+
+    PedigreeTerminalEmulator *pEmu = new PedigreeTerminalEmulator();
+    if(!pEmu->construct(endpoint, callback, rt))
+    {
+        syslog(LOG_ERR, "tui: couldn't construct widget");
+        delete pEmu;
+        return 1;
+    }
+
+    signal(SIGINT, sigint);
+
+    // Handle initial reposition event.
+    Widget::checkForEvents(true);
+
+    tui_do(pEmu->getInternalFramebuffer());
 
     return 0;
 }
