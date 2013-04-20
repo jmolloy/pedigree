@@ -54,6 +54,29 @@ static GLfloat view_rotx = 20.0, view_roty = 30.0, view_rotz = 0.0;
 static GLint gear1, gear2, gear3;
 static GLfloat angle = 0.0;
 
+static unsigned int frames = 0;
+static unsigned int start_time = 0;
+
+void fps()
+{
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    frames++;
+    if (!start_time)
+    {
+        start_time = now.tv_sec;
+    }
+    else if (now.tv_sec - start_time >= 5)
+    {
+        gettimeofday(&now, NULL);
+        GLfloat seconds = now.tv_sec - start_time;
+        GLfloat fps = frames / seconds;
+        printf("%d frames in %3.1f seconds = %6.3f FPS\n", frames, seconds, fps);
+        start_time = now.tv_sec;
+        frames = 0;
+    }
+}
+
 static void
 gear(GLfloat inner_radius, GLfloat outer_radius, GLfloat width,
      GLint teeth, GLfloat tooth_depth)
@@ -431,6 +454,9 @@ int main (int argc, char ** argv) {
         // Cheat a bit, render every frame.
         callback(RepaintNeeded, 0, 0);
 
+        // Display our FPS - nice way to see how vbe performs...
+        fps();
+
         // Let other processes run, don't slam the CPU...
         sched_yield();
     }
@@ -441,3 +467,4 @@ int main (int argc, char ** argv) {
 
     return 0;
 }
+
