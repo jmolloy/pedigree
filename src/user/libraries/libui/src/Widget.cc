@@ -43,7 +43,7 @@ static Widget *g_pWidget = 0;
 std::map<uint64_t, widgetCallback_t> Widget::m_CallbackMap;
 std::queue<char *> g_PendingMessages;
 
-Widget::Widget() : m_bConstructed(false), m_pFramebuffer(0), m_Handle(0), m_EventCallback(defaultEventHandler), m_Endpoint("")
+Widget::Widget() : m_bConstructed(false), m_pFramebuffer(0), m_Handle(0), m_EventCallback(defaultEventHandler), m_Endpoint(0)
 {
 }
 
@@ -69,10 +69,7 @@ bool Widget::construct(const char *endpoint, widgetCallback_t cb, PedigreeGraphi
     // Create endpoint, if not already created.
     /// \todo fail if endpoint already exists.
     PedigreeIpc::createEndpoint(endpoint);
-    size_t len = strlen(endpoint);
-    m_Endpoint = (const char *) malloc(256);
-    memset((void *) m_Endpoint, 0, 256);
-    memcpy((void *) m_Endpoint, endpoint, len > 256 ? 255 : len);
+    m_Endpoint = PedigreeIpc::getEndpoint(endpoint);
 
     // Construct the handle first.
     uint64_t pid = getpid();
@@ -94,7 +91,7 @@ bool Widget::construct(const char *endpoint, widgetCallback_t cb, PedigreeGraphi
     pWinMan->messageSize = sizeof(CreateMessage);
     pWinMan->widgetHandle = m_Handle;
     pWinMan->isResponse = false;
-    strlcpy(pCreate->endpoint, m_Endpoint, 256);
+    strlcpy(pCreate->endpoint, endpoint, 256);
     pCreate->minWidth = dimensions.getW();
     pCreate->minHeight = dimensions.getH();
     pCreate->rigid = true;

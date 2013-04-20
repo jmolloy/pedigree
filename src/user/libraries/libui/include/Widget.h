@@ -18,6 +18,7 @@
 
 #include <types.h>
 #include <graphics/Graphics.h>
+#include <ipc/Ipc.h>
 
 #include <string>
 #include <map>
@@ -173,7 +174,7 @@ class Widget
         widgetCallback_t m_EventCallback;
 
         /** IPC endpoint name for window manager communication. */
-        const char *m_Endpoint;
+        PedigreeIpc::IpcEndpoint *m_Endpoint;
 
         /** Handle -> Callback mapping. For event handler. */
         static std::map<uint64_t, widgetCallback_t> m_CallbackMap;

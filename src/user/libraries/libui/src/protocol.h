@@ -20,6 +20,7 @@
 
 #include <Widget.h>
 #include <graphics/Graphics.h>
+#include <ipc/Ipc.h>
 
 /** \addtogroup PedigreeGUI
  *  @{
@@ -31,10 +32,10 @@ namespace LibUiProtocol
     bool sendMessage(void *pMessage, size_t messageLength);
 
     /** Receives a message from the window manager. Blocks. */
-    bool recvMessage(const char *endpoint, void *pBuffer, size_t maxSize);
+    bool recvMessage(PedigreeIpc::IpcEndpoint *endpoint, void *pBuffer, size_t maxSize);
 
     /** Receives a message from the window manager. Blocks. */
-    bool recvMessageAsync(const char *endpoint, void *pBuffer, size_t maxSize);
+    bool recvMessageAsync(PedigreeIpc::IpcEndpoint *endpoint, void *pBuffer, size_t maxSize);
 
     /** Widget handle type. */
     typedef uint64_t handle_t;

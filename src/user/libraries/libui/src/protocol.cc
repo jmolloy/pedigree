@@ -61,14 +61,13 @@ bool LibUiProtocol::sendMessage(void *pMessage, size_t messageLength)
     return true;
 }
 
-bool LibUiProtocol::recvMessage(const char *endpoint, void *pBuffer, size_t maxSize)
+bool LibUiProtocol::recvMessage(IpcEndpoint *pEndpoint, void *pBuffer, size_t maxSize)
 {
     /// \todo Handle messages > 4 KB in size!
     if(maxSize > 0x1000)
         return false;
 
     // Grab the endpoint for the window manager.
-    IpcEndpoint *pEndpoint = getEndpoint(endpoint);
     if(!pEndpoint)
     {
         /// \todo Log the error somewhere.
@@ -95,14 +94,13 @@ bool LibUiProtocol::recvMessage(const char *endpoint, void *pBuffer, size_t maxS
     return true;
 }
 
-bool LibUiProtocol::recvMessageAsync(const char *endpoint, void *pBuffer, size_t maxSize)
+bool LibUiProtocol::recvMessageAsync(IpcEndpoint *pEndpoint, void *pBuffer, size_t maxSize)
 {
     /// \todo Handle messages > 4 KB in size!
     if(maxSize > 0x1000)
         return false;
 
     // Grab the endpoint for the window manager.
-    IpcEndpoint *pEndpoint = getEndpoint(endpoint);
     if(!pEndpoint)
     {
         /// \todo Log the error somewhere.
