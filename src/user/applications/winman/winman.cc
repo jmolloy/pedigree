@@ -66,6 +66,7 @@ void handleMessage(char *messageData)
         if(!g_pFocusWindow)
         {
             g_pFocusWindow = pWindow;
+            pWindow->focus();
         }
 
         LibUiProtocol::WindowManagerMessage *pHeader =
