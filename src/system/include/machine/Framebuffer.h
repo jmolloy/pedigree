@@ -329,7 +329,7 @@ class Framebuffer
             return m_pParent;
         }
 
-        void setFramebuffer(uintptr_t p)
+        virtual void setFramebuffer(uintptr_t p)
         {
             m_FramebufferBase = p;
         }
