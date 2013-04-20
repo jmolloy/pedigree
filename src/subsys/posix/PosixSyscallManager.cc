@@ -17,6 +17,11 @@
 #include <processor/SyscallManager.h>
 #include <processor/Processor.h>
 #include <process/Scheduler.h>
+
+#define MACHINE_FORWARD_DECL_ONLY
+#include <machine/Machine.h>
+#include <machine/Timer.h>
+
 #include <Log.h>
 
 #include "PosixSyscallManager.h"
@@ -51,7 +56,16 @@ uintptr_t PosixSyscallManager::call(uintptr_t function, uintptr_t p1, uintptr_t 
         ERROR("PosixSyscallManager: invalid function called: " << Dec << static_cast<int>(function));
         return 0;
     }
-    return SyscallManager::instance().syscall(posix, function, p1, p2, p3, p4, p5);
+    Timer *pTimer = Machine::instance().getTimer();
+
+    uint64_t start = pTimer->getUnixTimestamp();
+    uintptr_t ret = SyscallManager::instance().syscall(posix, function, p1, p2, p3, p4, p5);
+    uint64_t end = pTimer->getUnixTimestamp();
+    if(end > start)
+    {
+        NOTICE("POSIX: syscall #" << function << " took over a second!");
+    }
+    return ret;
 }
 
 uintptr_t PosixSyscallManager::syscall(SyscallState &state)
