@@ -97,6 +97,7 @@ private:
 namespace Syscall
 {
     size_t nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t buffersz, size_t *terminalId);
+    size_t nextRequestAsync(size_t responseToLast, char *buffer, size_t *sz, size_t buffersz, size_t *terminalId);
     void requestPending();
     void respondToPending(size_t response, char *buffer, size_t sz);
     void createConsole(size_t tabId, char *pName);

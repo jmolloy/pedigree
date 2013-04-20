@@ -28,4 +28,6 @@
 
 #define TUI_DATA_CHANGED            8
 
+#define TUI_NEXT_REQUEST_ASYNC      9
+
 #endif

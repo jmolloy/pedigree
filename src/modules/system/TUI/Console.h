@@ -25,7 +25,7 @@ public:
     ~UserConsole();
 
     /** Block and wait for a request. */
-    size_t nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t buffsz, size_t *tabId);
+    size_t nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t buffsz, size_t *tabId, bool bAsyncOnly = false);
 
     /** Set the currently executing request as "pending" - its value will be
         set later. */

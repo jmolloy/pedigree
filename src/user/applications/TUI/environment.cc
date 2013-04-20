@@ -29,6 +29,14 @@ size_t Syscall::nextRequest(size_t responseToLast, char *buffer, size_t *sz, siz
     return ret;
 }
 
+size_t Syscall::nextRequestAsync(size_t responseToLast, char *buffer, size_t *sz, size_t buffersz, size_t *terminalId)
+{
+    size_t ret = syscall5(TUI_NEXT_REQUEST_ASYNC, responseToLast, reinterpret_cast<size_t>(buffer), reinterpret_cast<size_t>(sz), buffersz, reinterpret_cast<size_t>(terminalId));
+    // Memory barrier, "sz" will have changed. Reload.
+    asm volatile ("" : : : "memory");
+    return ret;
+}
+
 void Syscall::requestPending()
 {
     syscall0(TUI_REQUEST_PENDING);

@@ -68,7 +68,7 @@ void UserConsole::stopCurrentBlock()
     }
 }
 
-size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t maxBuffSz, size_t *terminalId)
+size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t maxBuffSz, size_t *terminalId, bool bAsyncOnly)
 {
     // Lock m_pReq. Any use of the RequestQueue will *probably* end up with a
     // change of m_pReq, so stop anyone from accessing the queue.
@@ -102,7 +102,17 @@ size_t UserConsole::nextRequest(size_t responseToLast, char *buffer, size_t *sz,
     m_RequestQueueMutex.release();
 
     // Sleep on the queue length semaphore - wake when there's something to do.
-    m_RequestQueueSize.acquire();
+    if(bAsyncOnly)
+    {
+        if(!m_RequestQueueSize.tryAcquire())
+        {
+            return 0;
+        }
+    }
+    else
+    {
+        m_RequestQueueSize.acquire();
+    }
 
     // Check why we were woken - is m_Stop set? If so, quit.
     if (m_Stop)

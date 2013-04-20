@@ -63,13 +63,14 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
     switch (state.getSyscallNumber())
     {
         case TUI_NEXT_REQUEST:
+        case TUI_NEXT_REQUEST_ASYNC:
             if (!g_UserConsole)
             {
                 WARNING("Next request with no console");
                 return 0;
             }
             else
-                return g_UserConsole->nextRequest(p1, reinterpret_cast<char*>(p2), reinterpret_cast<size_t*>(p3), p4, reinterpret_cast<size_t*>(p5));
+                return g_UserConsole->nextRequest(p1, reinterpret_cast<char*>(p2), reinterpret_cast<size_t*>(p3), p4, reinterpret_cast<size_t*>(p5), state.getSyscallNumber() == TUI_NEXT_REQUEST_ASYNC);
         case TUI_REQUEST_PENDING:
         {
             if (!g_UserConsole)
