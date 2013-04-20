@@ -62,6 +62,30 @@ Framebuffer::Framebuffer(GraphicsProvider &gfx)
 {
     m_Provider = gfx;
     m_bProviderValid = m_bIsChild = true;
+
+    // Because a GraphicsProvider is a generic structure, we could have been
+    // created in another address space. We need to 'transfer' the provider
+    // into our own address space.
+    // Fortunately, the provider is still valid, so we can call getters here.
+    // We just can't do anything that involves the actual framebuffer.
+    size_t nBytes = (getWidth() * getHeight() * getBytesPerPixel());
+    uint8_t *pBuffer = new uint8_t[nBytes];
+
+    GraphicsProvider ret = m_Provider;
+    createargs args;
+    args.pReturnProvider = &m_Provider;
+    args.pFramebuffer = reinterpret_cast<void*>(pBuffer);
+    args.x = 0;
+    args.y = 0;
+    args.w = getWidth();
+    args.h = getHeight();
+    int ok = pedigree_gfx_create_fbuffer(&gfx, &args);
+
+    if(ok < 0)
+    {
+        delete [] pBuffer;
+        m_bProviderValid = false;
+    }
 }
 
 Framebuffer::~Framebuffer()
