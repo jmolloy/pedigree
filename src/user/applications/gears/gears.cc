@@ -432,7 +432,7 @@ int main (int argc, char ** argv) {
         callback(RepaintNeeded, 0, 0);
 
         // Let other processes run, don't slam the CPU...
-        // sched_yield();
+        sched_yield();
     }
 
     g_pGears->deinitOpenGL();
