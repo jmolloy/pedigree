@@ -311,7 +311,8 @@ extern void system_reset();
 void init_stage2()
 {
     // Load initial program.
-    File* initProg = VFS::instance().find(String("root»/applications/TUI"));
+    //File* initProg = VFS::instance().find(String("root»/applications/TUI"));
+    File* initProg = VFS::instance().find(String("root»/applications/winman"));
     if (!initProg)
     {
         NOTICE("INIT: FileNotFound!!");

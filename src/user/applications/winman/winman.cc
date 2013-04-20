@@ -312,11 +312,13 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    // Make a program to test window creation etc...
+    // Start up the TUI.
+    /// \todo also do this when creating a new window with the keyboard.
     if(fork() == 0)
     {
         syslog(LOG_INFO, "winman: child alive %d", getpid());
-        char *const new_argv[] = {"/applications/gears"};
+        char *const new_argv[] = {"/applications/tui"};
+        //char *const new_argv[] = {"/applications/gears"};
         execv(new_argv[0], new_argv);
         return 0;
     }
