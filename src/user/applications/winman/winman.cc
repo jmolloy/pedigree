@@ -15,6 +15,7 @@
  */
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <syslog.h>
 #include <string.h>
 #include <sched.h>
@@ -37,6 +38,19 @@ RootContainer *g_pRootContainer = 0;
 Window *g_pFocusWindow = 0;
 
 std::map<uint64_t, Window*> *g_Windows;
+
+/// \todo Make configurable.
+#define CLIENT_DEFAULT "/applications/tui"
+
+void startClient()
+{
+    if(fork() == 0)
+    {
+        char *const new_argv[] = {CLIENT_DEFAULT};
+        execv(new_argv[0], new_argv);
+        exit(1);
+    }
+}
 
 void handleMessage(char *messageData)
 {
@@ -62,7 +76,9 @@ void handleMessage(char *messageData)
         {
             pParent = g_pFocusWindow->getParent();
         }
+
         Window *pWindow = new Window(pWinMan->widgetHandle, pEndpoint, pParent, g_pTopLevelFramebuffer);
+
         if(!g_pFocusWindow)
         {
             g_pFocusWindow = pWindow;
@@ -170,13 +186,7 @@ void systemInputCallback(Input::InputNotification &note)
             else if(c == '\n')
             {
                 // Add window to active container.
-                /// \todo How do we make this work? We need to run a command,
-                ///       and wait for it to send a Create request and shove
-                ///       it in here??? Hmm.
-                // Perhaps create a process, map its PID, use PID to create
-                // window in the correct container when it first sends a
-                // Create.
-                Window *pWindow = new Window(0, 0, focusParent, g_pTopLevelFramebuffer);
+                startClient();
                 bHandled = true;
             }
             else if((c == 'v') || (c == 'h'))
@@ -313,16 +323,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    // Start up the TUI.
-    /// \todo also do this when creating a new window with the keyboard.
-    if(fork() == 0)
-    {
-        syslog(LOG_INFO, "winman: child alive %d", getpid());
-        char *const new_argv[] = {"/applications/tui"};
-        //char *const new_argv[] = {"/applications/gears"};
-        execv(new_argv[0], new_argv);
-        return 0;
-    }
+    startClient();
 
     // Use the root framebuffer.
     PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
