@@ -78,7 +78,7 @@ static void getXtermColorFromDb(const char *colorName, uint8_t &color)
     string sQuery;
 
     // Create the query string
-    sQuery += "select r from 'colour-scheme' where name='";
+    sQuery += "select r from 'colour_scheme' where name='";
     sQuery += colorName;
     sQuery += "';";
 

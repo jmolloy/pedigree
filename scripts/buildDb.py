@@ -20,6 +20,7 @@
 import os
 import re
 import tempfile
+import subprocess
 
 print "Building configuration database..."
 
@@ -44,4 +45,7 @@ for match in m:
 sql = re.sub('create table (.|\n)*?;', '', sql)
 sql = re.sub('CREATE TABLE (.|\n)*?;', '', sql)
 
-os.popen('sqlite3 ./build/config.db', 'w').write('begin;'+tables+sql+'commit;')
+p = subprocess.Popen(['sqlite3', './build/config.db'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+stdoutdata, stderrdata = p.communicate('begin;'+tables+sql+'commit;')
+if stdoutdata:
+    print stdoutdata

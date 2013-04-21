@@ -430,7 +430,7 @@ int gethostname(char *name, size_t len)
     if(!name || !len)
         return -1;
 
-    result = pedigree_config_query("select * from 'network-generic' WHERE `key` = 'hostname';");
+    result = pedigree_config_query("select * from 'network_generic' WHERE `key` = 'hostname';");
     if((result == -1) || (pedigree_config_was_successful(result) == -1) || (pedigree_config_numrows(result) == 0))
     {
         if(result != -1)
@@ -454,7 +454,7 @@ int	sethostname(char *name, size_t len)
 
     // Need to add permission and name checking
 
-    const char *query = "update 'network-generic' set `value`= '%s' WHERE `key` = 'hostname'";
+    const char *query = "update 'network_generic' set `value`= '%s' WHERE `key` = 'hostname'";
     char *tmp    = pedigree_config_escape_string(name);
     char *buffer = (char*)malloc(strlen(query) + strlen(tmp) - 2 + 1);
 
@@ -1109,11 +1109,11 @@ struct servent* getservbyname(const char *name, const char *proto)
     if(proto)
     {
         escProto = pedigree_config_escape_string(proto);
-        sprintf(buf, "select * from 'network-services' where name = '%s' and proto = '%s'", escName, escProto);
+        sprintf(buf, "select * from 'network_services' where name = '%s' and proto = '%s'", escName, escProto);
         free(escProto);
     }
     else
-        sprintf(buf, "select * from 'network-services' where name = '%s'", escName);
+        sprintf(buf, "select * from 'network_services' where name = '%s'", escName);
 
     free(escName);
 
@@ -1166,9 +1166,9 @@ struct servent* getservbyport(int port, const char *proto)
     char buf[256];
 
     if(proto)
-        sprintf(buf, "select * from 'network-services' where port = %d and proto = '%s'", port, pedigree_config_escape_string(proto));
+        sprintf(buf, "select * from 'network_services' where port = %d and proto = '%s'", port, pedigree_config_escape_string(proto));
     else
-        sprintf(buf, "select * from 'network-services' where port = %d", port);
+        sprintf(buf, "select * from 'network_services' where port = %d", port);
 
     int result = pedigree_config_query(buf);
     if (result == -1 || pedigree_config_was_successful(result) || !pedigree_config_numrows(result))

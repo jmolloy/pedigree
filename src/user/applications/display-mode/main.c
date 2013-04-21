@@ -24,7 +24,7 @@ int main(int argc, char **argv)
 
     if(argc == 2 && !strcmp(argv[1], "list"))
     {
-        result = pedigree_config_query("select * from 'display-modes'");
+        result = pedigree_config_query("select * from 'display_modes'");
         if (result == -1)
             fprintf(stderr, "Unable to get the modes.\n");
 
@@ -48,7 +48,7 @@ int main(int argc, char **argv)
     {
         if(sscanf(argv[2], "%dx%dx%d", &width, &height, &depth) == 3)
         {
-            sprintf(buf, "select * from 'display-modes' where width = %d and height = %d and depth = %d and display_id = 0", width, height, depth);
+            sprintf(buf, "select * from 'display_modes' where width = %d and height = %d and depth = %d and display_id = 0", width, height, depth);
             result = pedigree_config_query(buf);
             memset(buf, 0, 256);
             if (result == -1)

@@ -38,7 +38,7 @@ static void getRgbColorFromDb(const char *colorName, uint32_t &color)
     string sQuery;
 
     // Create the query string
-    sQuery += "select r,g,b from 'colour-scheme' where name='";
+    sQuery += "select r,g,b from 'colour_scheme' where name='";
     sQuery += colorName;
     sQuery += "';";
 
