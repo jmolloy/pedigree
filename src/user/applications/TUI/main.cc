@@ -415,7 +415,9 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
     DirtyRectangle rect;
 
     // DirtyRectangle rect;
-    Terminal *pCurrentTerminal = addTerminal("Console0", rect);
+    char newTermName[256];
+    sprintf(newTermName, "Console%d", getpid());
+    Terminal *pCurrentTerminal = addTerminal(newTermName, rect);
     rect.point(0, 0);
     rect.point(g_nWidth, g_nHeight);
 

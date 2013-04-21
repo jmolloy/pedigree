@@ -30,10 +30,16 @@
 #include "Console.h"
 #include "tuiSyscallNumbers.h"
 
-UserConsole *g_Consoles[256];
-UserConsole *g_UserConsole = 0;
-size_t g_UserConsoleId = 0;
+// UserConsole *g_Consoles[256];
+// UserConsole *g_UserConsole = 0;
+//size_t g_UserConsoleId = 0;
 TuiSyscallManager g_TuiSyscallManager;
+
+/// Current console, by PID.
+Tree<uint64_t, UserConsole *> g_UserConsoleMap;
+
+// All consoles within a process, by PID.
+Tree<uint64_t, Tree<uintptr_t, UserConsole *>* > g_ConsolesMap;
 
 void TuiSyscallManager::initialise()
 {
@@ -59,6 +65,17 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
     uintptr_t p5 = state.getSyscallParameter(4);
     
     static uintptr_t currBuff = 0;
+
+    // Set locals, if any.
+    uint64_t pid = Processor::information().getCurrentThread()->getParent()->getId();
+    UserConsole *g_UserConsole = g_UserConsoleMap.lookup(pid);
+    Tree<uintptr_t, UserConsole *> *g_Consoles = g_ConsolesMap.lookup(pid);
+
+    if(!g_Consoles)
+    {
+        g_Consoles = new Tree<uintptr_t, UserConsole *>;
+        g_ConsolesMap.insert(pid, g_Consoles);
+    }
 
     switch (state.getSyscallNumber())
     {
@@ -94,11 +111,11 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
 
             UserConsole *pC = new UserConsole();
             ConsoleManager::instance().registerConsole(String(name), pC, id);
-            g_Consoles[id] = pC;
+            g_Consoles->insert(id, pC);
             if (!g_UserConsole)
             {
-                g_UserConsole = pC;
-                g_UserConsoleId = id;
+                g_UserConsoleMap.insert(pid, pC);
+                // g_UserConsoleId = id;
             }
             return 0;
         }
@@ -112,10 +129,14 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
         case TUI_SET_CURRENT_CONSOLE:
         {
             if (g_UserConsole)
+            {
                 g_UserConsole->stopCurrentBlock();
+                g_UserConsoleMap.remove(pid);
+            }
             
-            g_UserConsoleId = p1;
-            g_UserConsole = g_Consoles[p1];
+            //g_UserConsoleId = p1;
+            g_UserConsole = g_Consoles->lookup(p1);
+            g_UserConsoleMap.insert(pid, g_UserConsole);
             break;
         }
         case TUI_STOP_REQUEST_QUEUE:
