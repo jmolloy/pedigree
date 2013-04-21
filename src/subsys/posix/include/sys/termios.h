@@ -89,7 +89,6 @@ typedef unsigned int tcflag_t;
 #define TCIFLUSH  0
 #define TCOFLUSH  1
 #define TCIOFLUSH 2
-#define TIOCFLUSH TCIOFLUSH
 
 #define TIOCPKT_FLUSHWRITE      1
 #define TIOCPKT_NOSTOP          2
