@@ -29,6 +29,35 @@
 typedef void (*entry_point_t)(char*[], char **);
 typedef void (*init_fini_func_t)();
 
+/** GCC optimises these quite well indeed (SSE etc), and the libc memcpy/memset is AWFUL. */
+
+void *memcpy(void * __restrict dst, const void * __restrict src, size_t len)
+{
+    char *dst_c = (char *) dst;
+    const char *src_c = (const char *) src;
+
+    for(; len; --len)
+    {
+        *dst_c = *src_c;
+        dst_c++;
+        src_c++;
+    }
+
+    return dst;
+}
+
+void *memset(void *dst, int val, size_t len)
+{
+    char *dst_c = (char *) dst;
+    for(; len; --len)
+    {
+        *dst_c = val;
+        dst_c++;
+    }
+
+    return dst;
+}
+
 enum LookupPolicy {
     LocalFirst,
     NotThisObject,
