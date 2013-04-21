@@ -260,7 +260,7 @@ static void getColor(const char *colorName, uint32_t &color)
     String sQuery;
 
     // Create the query string
-    sQuery += "select r,g,b from 'colour-scheme' where name='";
+    sQuery += "select r,g,b from 'colour_scheme' where name='";
     sQuery += colorName;
     sQuery += "';";
 
@@ -291,7 +291,7 @@ static void getColor(const char *colorName, uint32_t &color)
 static void getDesiredMode(size_t &width, size_t &height, size_t &bpp)
 {
     // Query the database
-    Config::Result *pResult = Config::instance().query("select width,height,bpp from 'desired-display-mode';");
+    Config::Result *pResult = Config::instance().query("select width,height,bpp from 'desired_display_mode';");
 
     // Did the query fail?
     if(!pResult)

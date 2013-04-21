@@ -51,7 +51,8 @@ create table 'routesv6' (
         -- Route metric. Helps with similar prefix matching.
         'metric' integer);
 
-create table 'network-services' (
+create table 'network_services' (
+        id integer primary key autoincrement,
         -- Service name
         'name' varchar(64) unique,
         -- Service port
@@ -59,14 +60,16 @@ create table 'network-services' (
         -- Service protocol
         'proto' varchar(64));
 
-create table 'network-generic' (
+create table 'network_generic' (
+        id integer primary key autoincrement,
 	-- Key/Value pairs
 	'key' varchar(255) unique,
 	'value' varchar(255));
 
 -- Some default services
-insert into 'network-services' values ('tftp', 69, 'udp');
-insert into 'network-services' values ('ftp', 21, 'tcp');
-insert into 'network-services' values ('http', 80, 'tcp');
+insert into 'network_services' values (NULL, 'tftp', 69, 'udp');
+insert into 'network_services' values (NULL, 'ftp', 21, 'tcp');
+insert into 'network_services' values (NULL, 'http', 80, 'tcp');
+insert into 'network_services' values (NULL, 'telnet', 23, 'tcp');
 
-insert into 'network-generic' values ('hostname', 'pedigree-foster');
+insert into 'network_generic' values (NULL, 'hostname', 'pedigree-foster');
