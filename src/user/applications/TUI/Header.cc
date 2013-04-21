@@ -69,7 +69,7 @@ Header::Header(size_t nWidth) :
     m_nWidth(nWidth), m_Page(0), m_LastPage(0), m_pFont(0),
     m_pTabs(0), m_NextTabId(0), m_pFramebuffer(0)
 {
-    m_pFont = new Font(g_FontSize, "/system/fonts/DejaVuSansMono-BoldOblique.ttf", false, nWidth);
+    m_pFont = new Font(g_FontSize, "/system/fonts/DejaVuSansMono-Bold.ttf", false, nWidth);
     g_FontSize = m_pFont->getHeight();
 
     getRgbColorFromDb("border", g_BorderColour);
