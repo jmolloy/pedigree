@@ -380,10 +380,10 @@ env['PEDIGREE_MACHINE'] = gethostname() # The name of the computer (not the type
 
 # Grab the git revision of the repo
 gitpath = commands.getoutput("which git")
-if os.path.exists(gitpath):
+if os.path.exists(gitpath) and env['genversion'] == '1':
     env['PEDIGREE_REVISION'] = commands.getoutput(gitpath + ' rev-parse --verify HEAD --short')
 else:
-    env['PEDIGREE_REVISION'] = "(unknown, git not found)"
+    env['PEDIGREE_REVISION'] = "(unknown)"
 
 # Set the flags
 env['PEDIGREE_FLAGS'] = ' '.join(env['CPPDEFINES'])
@@ -407,11 +407,20 @@ sub_dict = {"$buildtime"    : env['PEDIGREE_BUILDTIME'],
 def create_version_cc(target, source, env):
     global version_out
 
+    # We need to have a Version.cc, but we can disable the (costly) rebuild of
+    # it every single time a compile is done - handy for developers.
+    if env['genversion'] == '0' and os.path.exists(target[0].abspath):
+        return
+
     # Make the non-SCons target a bit special.
     # People using Cygwin have enough to deal with without boring
     # status messages from build systems that don't support fancy
     # builders to do stuff quickly and easily.
-    print "Creating Version.cc [rev: %s, with: %s@%s]" % (env['PEDIGREE_REVISION'], env['PEDIGREE_USER'], env['PEDIGREE_MACHINE'])
+    info = "Version.cc [rev: %s, with: %s@%s]" % (env['PEDIGREE_REVISION'], env['PEDIGREE_USER'], env['PEDIGREE_MACHINE'])
+    if env['verbose']:
+        print "      Creating %s" % (info,)
+    else:
+        print '      Creating \033[32m%s\033[0m' % (info,)
 
     def replacer(s):
         for keyname, value in sub_dict.iteritems():
@@ -424,7 +433,7 @@ def create_version_cc(target, source, env):
     f.write('\n'.join(version_out))
     f.close()
     
-env.Command('#' + env['BUILDDIR'] + '/Version.cc', env.Value(env, 'genversion'), Action(create_version_cc, None))
+env.Command('#' + env['BUILDDIR'] + '/Version.cc', None, Action(create_version_cc, None))
 
 # Save the cache, all the options are configured
 if(not env['nocache']):
