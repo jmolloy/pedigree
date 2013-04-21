@@ -925,6 +925,12 @@ int posix_ioctl(int fd, int command, void *buf)
         {
             return console_getwinsize(f->file, reinterpret_cast<winsize_t*>(buf));
         }
+
+        case TIOCFLUSH:
+        {
+            return console_flush(f->file, buf);
+        }
+
         case FIONBIO:
         {
             // set/unset non-blocking

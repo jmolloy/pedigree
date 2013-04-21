@@ -51,6 +51,7 @@
 #define CONSOLE_GETCOLS 4
 #define CONSOLE_DATA_AVAILABLE 5
 #define CONSOLE_REFRESH 10
+#define CONSOLE_FLUSH   11
 
 #define NORMAL_FONT_PATH    "/system/fonts/DejaVuSansMono.ttf"
 #define BOLD_FONT_PATH      "/system/fonts/DejaVuSansMono-Bold.ttf"
@@ -527,6 +528,18 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
 
             case CONSOLE_REFRESH:
                 doRefresh(pT);
+                break;
+
+            case CONSOLE_FLUSH:
+                syslog(LOG_INFO, "TUI: console flush on %p [existing buffer=%s]", pT, buffer);
+                g_nLastResponse = 0;
+                if(pT->hasPendingRequest())
+                {
+                    Syscall::respondToPending(g_nLastResponse, buffer, 0);
+                    pT->setHasPendingRequest(false, 0);
+                }
+
+                pT->clearQueue();
                 break;
 
             default:

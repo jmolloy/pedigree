@@ -206,6 +206,12 @@ char Terminal::getFromQueue()
         return 0;
 }
 
+
+void Terminal::clearQueue()
+{
+    m_Len = 0;
+}
+
 #include <syslog.h>
 void Terminal::write(char *pStr, DirtyRectangle &rect)
 {

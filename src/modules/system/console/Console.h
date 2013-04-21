@@ -29,6 +29,7 @@
 #define CONSOLE_GETCOLS 4
 #define CONSOLE_DATA_AVAILABLE 5
 #define CONSOLE_REFRESH 10
+#define CONSOLE_FLUSH   11
 
 #define LINEBUFFER_MAXIMUM 2048
 
@@ -145,6 +146,7 @@ public:
     int  getCols(File* file);
     int  getRows(File* file);
     bool hasDataAvailable(File* file);
+    void flush(File *file);
 
     //
     // Filesystem interface.

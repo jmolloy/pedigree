@@ -507,6 +507,15 @@ bool ConsoleManager::hasDataAvailable(File* file)
     return static_cast<bool>(pFile->m_pBackEnd->addRequest(1,CONSOLE_DATA_AVAILABLE, pFile->m_Param));
 }
 
+void ConsoleManager::flush(File *file)
+{
+    if(!file)
+        return;
+
+    ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
+    static_cast<bool>(pFile->m_pBackEnd->addRequest(1, CONSOLE_FLUSH, pFile->m_Param));
+}
+
 static void initConsole()
 {
 }

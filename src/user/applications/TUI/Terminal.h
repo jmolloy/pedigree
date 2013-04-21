@@ -45,6 +45,9 @@ public:
     /** Adds a 64-bit keycode from the Keyboard class. */
     void addToQueue(uint64_t key);
 
+    /** Wipes out the queue for this terminal. */
+    void clearQueue();
+
     /** Grabs 1 byte of the utf-8 encoded queue. */
     char getFromQueue();
 
