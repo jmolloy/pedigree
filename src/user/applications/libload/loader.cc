@@ -291,7 +291,7 @@ std::string findObject(std::string name, bool envpath) {
     do {
         struct stat st;
         int l = stat(fixed_path.c_str(), &st);
-        if(l == 0) {
+        if((l == 0) && S_ISREG(st.st_mode)) {
             return fixed_path;
         }
 
