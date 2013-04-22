@@ -27,13 +27,15 @@
 #define WINDOW_CLIENT_START_Y (WINDOW_BORDER_Y + 1 + WINDOW_TITLE_H)
 
 // Insets from the end of the client area.
-#define WINDOW_CLIENT_END_X   (WINDOW_BORDER_X + 1)
-#define WINDOW_CLIENT_END_Y   (WINDOW_BORDER_Y + 1)
+#define WINDOW_CLIENT_END_X   (WINDOW_BORDER_X)
+#define WINDOW_CLIENT_END_Y   (WINDOW_BORDER_Y)
 
 // Total space from the W/H that the window manager has used and taken from the
 // client area for rendering decorations etc...
-#define WINDOW_CLIENT_LOST_W (WINDOW_CLIENT_START_X * 2)
+#define WINDOW_CLIENT_LOST_W (WINDOW_CLIENT_START_X + WINDOW_CLIENT_END_X)
 #define WINDOW_CLIENT_LOST_H (WINDOW_CLIENT_START_Y + WINDOW_CLIENT_END_Y)
+
+static size_t g_nextContextId = 1;
 
 void WObject::reposition(size_t x, size_t y, size_t w, size_t h)
 {
@@ -71,18 +73,6 @@ Window::Window(uint64_t handle, PedigreeIpc::IpcEndpoint *endpoint, ::Container 
 
 void Window::refreshContext(PedigreeGraphics::Rect oldDimensions)
 {
-    if(m_pRealFramebuffer && (oldDimensions.getW() && oldDimensions.getH()))
-    {
-        // We are refreshing our context, so wipe out the old framebuffer.
-        // This helps avoid having bits and pieces of the old window left
-        // over after we're resized to be smaller.
-        m_pBaseFramebuffer->rect(oldDimensions.getX(),
-                                 oldDimensions.getY(),
-                                 oldDimensions.getW(),
-                                 oldDimensions.getH(),
-                                 PedigreeGraphics::createRgb(0, 0, 255),
-                                 PedigreeGraphics::Bits24_Rgb);
-    }
     delete m_pRealFramebuffer;
 
     PedigreeGraphics::Rect &me = getDimensions();
@@ -96,6 +86,22 @@ void Window::refreshContext(PedigreeGraphics::Rect oldDimensions)
             me.getY() + WINDOW_CLIENT_START_Y,
             me.getW() - WINDOW_CLIENT_LOST_W,
             me.getH() - WINDOW_CLIENT_LOST_H);
+    m_pRealFramebuffer->getProvider().contextId = g_nextContextId++;
+
+    //if(m_pRealFramebuffer && (oldDimensions.getW() && oldDimensions.getH()))
+    {
+        // We are refreshing our context, so wipe out the old framebuffer.
+        // This helps avoid having bits and pieces of the old window left
+        // over after we're resized to be smaller.
+        syslog(LOG_INFO, "wiping out old region %dx%x w=%d h=%d", oldDimensions.getX(), oldDimensions.getY(), oldDimensions.getW(), oldDimensions.getH());
+        m_pBaseFramebuffer->rect(oldDimensions.getX(),
+                                 oldDimensions.getY(),
+                                 oldDimensions.getW(),
+                                 oldDimensions.getH(),
+                                 PedigreeGraphics::createRgb(0, 0, 255),
+                                 PedigreeGraphics::Bits24_Rgb);
+        syslog(LOG_INFO, "wiping out old region done");
+    }
 
     if(m_Endpoint && m_pRealFramebuffer)
     {
@@ -130,12 +136,14 @@ void Window::render()
     size_t w = me.getW() - (WINDOW_BORDER_X * 2);
     size_t h = me.getH() - (WINDOW_BORDER_Y * 2);
 
-    size_t r = 0;
+    size_t r = 0, g = 0, b = 0;
     if(m_bFocus)
         r = 255;
     else if(m_pParent->getFocusWindow() == this)
         r = 255 / 2;
-    uint32_t borderColour = PedigreeGraphics::createRgb(r, 0, 0);
+    else
+        r = g = b = 255;
+    uint32_t borderColour = PedigreeGraphics::createRgb(r, g, b);
 
     // Window border.
 
@@ -152,7 +160,7 @@ void Window::render()
     m_pBaseFramebuffer->line(x, y + h, x + w, y + h, borderColour, PedigreeGraphics::Bits24_Rgb);
 
     // Title bar.
-    m_pBaseFramebuffer->rect(x + 1, y + 1, w - 2, WINDOW_TITLE_H, PedigreeGraphics::createRgb(49, 79, 79), PedigreeGraphics::Bits24_Rgb);
+    m_pBaseFramebuffer->rect(x + 1, y + 1, w - 1, WINDOW_TITLE_H, PedigreeGraphics::createRgb(49, 79, 79), PedigreeGraphics::Bits24_Rgb);
 }
 
 void Window::focus()
