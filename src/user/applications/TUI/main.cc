@@ -74,25 +74,57 @@ size_t g_nWidth, g_nHeight;
 size_t nextConsoleNum = 1;
 size_t g_nLastResponse = 0;
 
-class PedigreeTerminalEmulator;
+
+class PedigreeTerminalEmulator : public Widget
+{
+    public:
+        PedigreeTerminalEmulator() : Widget()
+        {};
+
+        virtual ~PedigreeTerminalEmulator()
+        {};
+
+        PedigreeGraphics::Framebuffer *getInternalFramebuffer()
+        {
+            return getFramebuffer();
+        }
+
+        virtual bool render(PedigreeGraphics::Rect &rt, PedigreeGraphics::Rect &dirty)
+        {
+            return true;
+        }
+};
+
 static PedigreeTerminalEmulator *g_pEmu = 0;
 
 PedigreeGraphics::Framebuffer *g_pFramebuffer = 0;
 
+void checkFramebuffer()
+{
+    if(g_pEmu)
+    {
+        g_pFramebuffer = g_pEmu->getInternalFramebuffer();
+    }
+}
+
 void modeChanged(size_t width, size_t height)
 {
-    if(!g_pTermList)
+    if(!(g_pTermList && g_pFramebuffer))
     {
         // Spurious/early modeChanged.
         return;
     }
 
-    syslog(LOG_ALERT, "w: %d, h: %d\n", width, height);
-
-    g_pHeader->setWidth(width);
+    syslog(LOG_ALERT, "w: %d, h: %d", width, height);
 
     g_nWidth = width;
     g_nHeight = height;
+
+    // Wipe out the framebuffer, start over.
+
+    g_pFramebuffer->rect(0, 0, g_nWidth, g_nHeight, 0, PedigreeGraphics::Bits24_Rgb);
+
+    g_pHeader->setWidth(width);
 
     TerminalList *pTL = g_pTermList;
     while (pTL)
@@ -100,11 +132,10 @@ void modeChanged(size_t width, size_t height)
         Terminal *pTerm = pTL->term;
 
         // Kill and renew the buffers.
-        pTerm->renewBuffer(width, height-(g_pHeader->getHeight()+1));
+        pTerm->renewBuffer(width, height-(g_pHeader->getHeight()));
 
         DirtyRectangle rect;
         g_pHeader->select(pTerm->getTabId());
-
         g_pHeader->render(pTerm->getBuffer(), rect);
 
         pTerm->redrawAll(rect);
@@ -112,6 +143,8 @@ void modeChanged(size_t width, size_t height)
 
         pTL = pTL->next;
     }
+
+    g_pFramebuffer->redraw(0, 0, g_nWidth, g_nHeight, true);
 }
 
 void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
@@ -136,7 +169,7 @@ Terminal *addTerminal(const char *name, DirtyRectangle &rect)
 {
     size_t h = g_pHeader->getHeight()+1;
 
-    Terminal *pTerm = new Terminal(const_cast<char*>(name), g_nWidth, g_nHeight-h, g_pHeader, 0, h, 0);
+    Terminal *pTerm = new Terminal(const_cast<char*>(name), g_nWidth - 3, g_nHeight-h, g_pHeader, 3, h, 0);
 
     TerminalList *pTermList = new TerminalList;
     pTermList->term = pTerm;
@@ -550,26 +583,6 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
     return 0;
 }
 
-class PedigreeTerminalEmulator : public Widget
-{
-    public:
-        PedigreeTerminalEmulator() : Widget()
-        {};
-
-        virtual ~PedigreeTerminalEmulator()
-        {};
-
-        PedigreeGraphics::Framebuffer *getInternalFramebuffer() const
-        {
-            return getFramebuffer();
-        }
-
-        virtual bool render(PedigreeGraphics::Rect &rt, PedigreeGraphics::Rect &dirty)
-        {
-            return true;
-        }
-};
-
 bool callback(WidgetMessages message, size_t msgSize, void *msgData)
 {
     switch(message)
@@ -579,7 +592,7 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
                 /// \todo reposition/re-render/resize
                 syslog(LOG_INFO, "TUI: reposition event");
                 PedigreeGraphics::Rect *rt = reinterpret_cast<PedigreeGraphics::Rect*>(msgData);
-                g_pFramebuffer = g_pEmu->getInternalFramebuffer();
+                checkFramebuffer();
                 modeChanged(rt->getW(), rt->getH());
             }
             break;

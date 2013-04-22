@@ -57,8 +57,8 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
     m_pXterm = new Xterm(m_pFramebuffer, nWidth, nHeight, m_OffsetLeft, m_OffsetTop, this);
 #else
     Display::ScreenMode mode;
-    mode.width = nWidth;
-    mode.height = nHeight-offsetTop;
+    mode.width = nWidth - 1;
+    mode.height = nHeight-offsetTop - 1;
     mode.pf.mRed = 0xFF;
     mode.pf.mGreen = 0xFF;
     mode.pf.mBlue = 0xFF;
