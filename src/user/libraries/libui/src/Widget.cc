@@ -288,6 +288,69 @@ void Widget::destroy()
     m_Handle = 0;
 }
 
+PedigreeGraphics::Framebuffer *Widget::getFramebuffer()
+{
+    // Constructed yet?
+    if(!m_Handle)
+        return 0;
+
+    // No framebuffer yet?
+    if(!m_pFramebuffer)
+        return 0;
+
+    // Allocate the message.
+    size_t totalSize = sizeof(WindowManagerMessage) + sizeof(SyncMessage);
+    char *messageData = new char[totalSize];
+    WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
+    SyncMessage *pMessage = reinterpret_cast<SyncMessage*>(messageData + sizeof(WindowManagerMessage));
+
+    // Fill the message.
+    pWinMan->messageCode = Sync;
+    pWinMan->messageSize = sizeof(SyncMessage);
+    pWinMan->widgetHandle = m_Handle;
+    pWinMan->isResponse = false;
+
+    // Transmit, synchronously.
+    sendMessage(messageData, totalSize);
+
+    delete [] messageData;
+
+    // Get the response.
+    totalSize = 1024;
+    messageData = new char[totalSize];
+
+    while(1)
+    {
+        if(!recvMessage(m_Endpoint, messageData, totalSize))
+        {
+            m_Handle = 0;
+            delete [] messageData;
+            return 0;
+        }
+
+        pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
+        if(!(pWinMan->isResponse && (pWinMan->messageCode == Sync)))
+        {
+            g_PendingMessages.push(messageData);
+            messageData = new char[totalSize];
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    SyncMessageResponse *pSyncResp = reinterpret_cast<SyncMessageResponse*>(messageData + sizeof(WindowManagerMessage));
+    if(m_pFramebuffer->getProvider().contextId !=
+        pSyncResp->provider.contextId)
+    {
+        delete m_pFramebuffer;
+        m_pFramebuffer = new PedigreeGraphics::Framebuffer(pSyncResp->provider);
+    }
+
+    return m_pFramebuffer;
+}
+
 void Widget::checkForEvents(bool bAsync)
 {
     /// \todo ALL created widgets, not just one.
@@ -322,8 +385,8 @@ void Widget::checkForEvents(bool bAsync)
                         reinterpret_cast<LibUiProtocol::RepositionMessage*>(buffer + sizeof(LibUiProtocol::WindowManagerMessage));
 
                     // Destroy old framebuffer and re-create, if needed.
-                    if(g_pWidget->m_pFramebuffer->getProvider().pFramebuffer !=
-                        pReposition->provider.pFramebuffer)
+                    if(g_pWidget->m_pFramebuffer->getProvider().contextId !=
+                        pReposition->provider.contextId)
                     {
                         delete g_pWidget->m_pFramebuffer;
                         g_pWidget->m_pFramebuffer = new PedigreeGraphics::Framebuffer(pReposition->provider);

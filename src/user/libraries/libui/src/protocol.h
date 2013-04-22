@@ -69,6 +69,13 @@ namespace LibUiProtocol
         Reposition,
 
         /**
+         * Sync: widget -> window manager. To be used synchronously from a
+         * client to synchronise with the window manager to ensure that it is
+         * not halfway through a reposition when a frame is rendered.
+         */
+        Sync,
+
+        /**
          * SetProperty: widget -> window manager. Requests modification of a window
          * manager property for the widget.
          */
@@ -180,6 +187,20 @@ namespace LibUiProtocol
         PedigreeGraphics::Rect rt;
 
         /// New graphics provider. The old one is no longer valid here.
+        PedigreeGraphics::GraphicsProvider provider;
+    };
+
+    /** Sync message data. */
+    struct SyncMessage
+    {
+    };
+
+    /** Sync message response data. */
+    struct SyncMessageResponse
+    {
+        /// The window manager will return the provider for the calling widget,
+        /// which can be used to refresh the local framebuffer if it changes
+        /// during a sync.
         PedigreeGraphics::GraphicsProvider provider;
     };
 

@@ -46,8 +46,7 @@ void startClient()
 {
     if(fork() == 0)
     {
-        char *const new_argv[] = {CLIENT_DEFAULT};
-        execv(new_argv[0], new_argv);
+        execl(CLIENT_DEFAULT, CLIENT_DEFAULT, 0);
         exit(1);
     }
 }
@@ -99,6 +98,28 @@ void handleMessage(char *messageData)
         g_Windows->insert(std::make_pair(pWinMan->widgetHandle, pWindow));
 
         PedigreeIpc::send(pEndpoint, pIpcResponse, true);
+    }
+    else if(pWinMan->messageCode == LibUiProtocol::Sync)
+    {
+        std::map<uint64_t, Window*>::iterator it = g_Windows->find(pWinMan->widgetHandle);
+        if(it != g_Windows->end())
+        {
+            Window *pWindow = it->second;
+            char *responseData = (char *) pIpcResponse->getBuffer();
+
+            LibUiProtocol::WindowManagerMessage *pHeader =
+                reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(responseData);
+            pHeader->messageCode = LibUiProtocol::Sync;
+            pHeader->widgetHandle = pWinMan->widgetHandle;
+            pHeader->messageSize = sizeof(LibUiProtocol::SyncMessageResponse);
+            pHeader->isResponse = true;
+
+            LibUiProtocol::SyncMessageResponse *pSyncResp =
+                reinterpret_cast<LibUiProtocol::SyncMessageResponse*>(responseData + sizeof(LibUiProtocol::WindowManagerMessage));
+            pSyncResp->provider = pWindow->getContext()->getProvider();
+
+            PedigreeIpc::send(pWindow->getEndpoint(), pIpcResponse, true);
+        }
     }
     else
     {

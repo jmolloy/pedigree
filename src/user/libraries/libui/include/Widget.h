@@ -154,10 +154,7 @@ class Widget
 
     protected:
 
-        inline PedigreeGraphics::Framebuffer *getFramebuffer() const
-        {
-            return m_pFramebuffer;
-        }
+        PedigreeGraphics::Framebuffer *getFramebuffer();
 
     private:
 
