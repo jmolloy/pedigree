@@ -346,13 +346,13 @@ class Gears : public Widget
 
         bool glResize(size_t w, size_t h)
         {
-            PedigreeGraphics::Framebuffer *pFramebuffer = getFramebuffer();
-
             if(fb)
             {
                 free(fb);
             }
-            fb = (uint8_t *) malloc(w * h * pFramebuffer->getBytesPerPixel());
+
+            // OSMESA_RGB = 24-bit.
+            fb = (uint8_t *) malloc(w * h * 3);
 
             if(!OSMesaMakeCurrent(gl_ctx, fb, GL_UNSIGNED_BYTE, w, h))
             {
