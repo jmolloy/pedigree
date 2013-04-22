@@ -24,3 +24,4 @@ pedigree-compiler
 scripts/pup/pup.conf
 *.obj
 *.swp
+.tags
