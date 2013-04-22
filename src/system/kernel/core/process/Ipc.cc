@@ -57,7 +57,7 @@ bool Ipc::send(IpcEndpoint *pEndpoint, IpcMessage *pMessage, bool bAsync)
     if(!(pEndpoint && pMessage))
         return false;
 
-    Mutex *pMutex = pEndpoint->pushMessage(pMessage);
+    Mutex *pMutex = pEndpoint->pushMessage(pMessage, bAsync);
     if(!pMutex)
         return false;
 
@@ -65,6 +65,7 @@ bool Ipc::send(IpcEndpoint *pEndpoint, IpcMessage *pMessage, bool bAsync)
     if(!bAsync)
     {
         pMutex->acquire();
+        delete pMutex;
     }
 
     return true;
@@ -89,13 +90,14 @@ bool Ipc::recv(IpcEndpoint *pEndpoint, IpcMessage **pMessage, bool bAsync)
     return false;
 }
 
-Mutex *IpcEndpoint::pushMessage(IpcMessage* pMessage)
+Mutex *IpcEndpoint::pushMessage(IpcMessage* pMessage, bool bAsync)
 {
     LockGuard<Mutex> guard(m_QueueLock);
 
     QueuedMessage *p = new QueuedMessage;
     p->pMessage = pMessage;
     p->pMutex = new Mutex(true);
+    p->bAsync = bAsync;
 
     m_Queue.pushBack(p);
     m_QueueSize.release();
@@ -112,23 +114,27 @@ IpcMessage *IpcEndpoint::getMessage(bool bBlock)
         bool b = m_QueueSize.tryAcquire();
         if(!b)
         {
-            if((!bBlock) && (!m_QueueSize.tryAcquire()))
+            if(!bBlock)
                 return 0;
             else
                 m_QueueSize.acquire();
         }
 
-        LockGuard<Mutex> guard(m_QueueLock);
+        m_QueueLock.acquire();
         p = m_Queue.popFront();
+        m_QueueLock.release();
     }
 
     IpcMessage *pReturn = p->pMessage;
 
     p->pMutex->release();
-    delete p->pMutex;
-    delete p;
-
     Scheduler::instance().yield();
+
+    if(p->bAsync)
+    {
+        delete p->pMutex;
+    }
+    delete p;
 
     return pReturn;
 }

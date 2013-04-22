@@ -99,7 +99,12 @@ namespace Ipc
                 NOTICE("Endpoint is at " << ((uintptr_t) this));
             }
 
-            Mutex *pushMessage(IpcMessage* pMessage);
+            ~IpcEndpoint()
+            {
+                FATAL("IpcEndpoint " << m_Name << " is being destroyed.");
+            }
+
+            Mutex *pushMessage(IpcMessage* pMessage, bool bAsync);
 
             IpcMessage *getMessage(bool bBlock = false);
 
@@ -115,6 +120,7 @@ namespace Ipc
             {
                 Mutex *pMutex;
                 IpcMessage *pMessage;
+                bool bAsync;
             };
 
             String m_Name;
