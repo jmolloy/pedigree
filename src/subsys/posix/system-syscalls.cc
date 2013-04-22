@@ -954,21 +954,22 @@ int posix_getpgrp()
 
 int posix_syslog(const char *msg, int prio)
 {
-    if(Processor::information().getCurrentThread()->getParent()->getId() <= 1)
+    uint64_t id = Processor::information().getCurrentThread()->getParent()->getId();
+    if(id <= 1)
     {
         if(prio <= LOG_CRIT)
-            FATAL(msg);
+            FATAL("[" << id << "] " << msg);
     }
 
     if(prio <= LOG_ERR)
-        ERROR(msg);
+        ERROR("[" << id << "] " << msg);
     else if(prio == LOG_WARNING)
-        WARNING(msg);
+        WARNING("[" << id << "] " << msg);
     else if(prio == LOG_NOTICE || prio == LOG_INFO)
-        NOTICE(msg);
+        NOTICE("[" << id << "] " << msg);
 #if DEBUGGER
     else
-        NOTICE(msg);
+        NOTICE("[" << id << "] " << msg);
 #endif
     return 0;
 }
