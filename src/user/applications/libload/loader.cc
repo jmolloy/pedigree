@@ -390,6 +390,7 @@ bool loadSharedObjectHelper(const char *filename, object_meta_t *parent, object_
 bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
     meta->filename = filename;
     meta->path = findObject(meta->filename, envpath);
+    syslog(LOG_INFO, "libload.so loading %s", filename);
 
     // Okay, let's open up the file for reading...
     int fd = open(meta->path.c_str(), O_RDONLY);
@@ -613,33 +614,69 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                 size_t base_addend = phdr_base & (pagesz - 1);
                 phdr_base &= ~(pagesz - 1);
 
+#if 0
                 size_t offset = meta->phdrs[i].offset & ~(pagesz - 1);
                 size_t offset_addend = meta->phdrs[i].offset & (pagesz - 1);
+                size_t mapsz = offset_addend + meta->phdrs[i].filesz;
+#else
+                size_t offset = 0;
+                if(meta->phdrs[i].offset)
+                {
+                    offset = meta->phdrs[i].offset - base_addend;
+                }
 
-                size_t mapsz = offset_addend + meta->phdrs[i].memsz;
+                size_t mapsz = base_addend + meta->phdrs[i].filesz;
+#endif
 
                 // Already mapped?
                 if((msync((void *) phdr_base, mapsz, MS_SYNC) != 0) && (errno == ENOMEM)) {
-                    int mapflags = MAP_ANON | MAP_FIXED;
+                    int mapflags = MAP_FIXED | MAP_PRIVATE;
                     if(meta->relocated) {
                         mapflags |= MAP_USERSVD;
                     }
 
-                    void *p = mmap((void *) phdr_base, mapsz, PROT_READ | PROT_WRITE, mapflags, 0, 0);
+                    int map_fd = fd;
+                    if((flags & PROT_WRITE) == 0)
+                    {
+                        // If the program header is read-only, we can quite
+                        // happily share the mapping and reduce memory
+                        // usage across the system.
+                        mapflags &= ~(MAP_PRIVATE);
+                    }
+
+                    // Zero out additional space.
+                    if(meta->phdrs[i].memsz > meta->phdrs[i].filesz)
+                    {
+                        uintptr_t vaddr_start = meta->phdrs[i].vaddr + meta->phdrs[i].filesz;
+                        uintptr_t vaddr_end = meta->phdrs[i].vaddr + meta->phdrs[i].memsz;
+                        if((vaddr_start & ~(getpagesize() - 1)) !=
+                            (vaddr_end & ~(getpagesize() - 1)))
+                        {
+                            // Not the same page, won't be mapped in with the
+                            // rest of the program header. Map the rest as an
+                            // anonymous mapping.
+                            vaddr_start += getpagesize();
+                            vaddr_start &= ~(getpagesize() - 1);
+                            size_t totalLength = vaddr_end - vaddr_start;
+                            void *p = mmap((void *) vaddr_start, totalLength, PROT_READ | PROT_WRITE, mapflags | MAP_ANON, 0, 0);
+                            if(p == MAP_FAILED)
+                            {
+                                /// \todo cleanup.
+                                errno = ENOEXEC;
+                                return false;
+                            }
+                            meta->memory_regions.push_back(std::pair<void *, size_t>(p, totalLength));
+                        }
+                    }
+
+                    void *p = mmap((void *) phdr_base, mapsz, PROT_READ | PROT_WRITE, mapflags, map_fd, map_fd ? offset : 0);
                     if(p == MAP_FAILED) {
                         /// \todo cleanup.
                         errno = ENOEXEC;
                         return false;
                     }
 
-                    // It'd be nice to fully mmap the file, but Pedigree's mmap is not very good.
-                    memcpy((void *) meta->phdrs[i].vaddr, &pBuffer[meta->phdrs[i].offset], meta->phdrs[i].filesz);
                     meta->memory_regions.push_back(std::pair<void *, size_t>(p, mapsz));
-                }
-
-                if(meta->phdrs[i].memsz > meta->phdrs[i].filesz) {
-                    uintptr_t vaddr = meta->phdrs[i].vaddr + meta->phdrs[i].filesz;
-                    memset((void *) vaddr, 0, meta->phdrs[i].memsz - meta->phdrs[i].filesz);
                 }
 
                 // mprotect accordingly.

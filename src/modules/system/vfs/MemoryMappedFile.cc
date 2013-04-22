@@ -57,7 +57,7 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess, size_t extent
 
     size_t extent = m_Extent;
     if(extentOverride)
-        extent = extentOverride;
+        m_Extent = extent = extentOverride;
 
     // Verify that we're not trying to memory map an empty file
     /// \todo It's ok to do so if write is enabled!
@@ -79,8 +79,12 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess, size_t extent
     }
     else
     {
-        if (!pProcess->getSpaceAllocator().allocateSpecific(address, extent))
-            return false;
+        //if (!pProcess->getSpaceAllocator().allocateSpecific(address, extent))
+        //    return false;
+
+        // If this fails, we generally assume a reservation has been made.
+        /// \todo rework APIs a lot.
+        pProcess->getSpaceAllocator().allocateSpecific(address, extent);
     }
 
     NOTICE("MemoryMappedFile: " << Hex << address << " -> " << (address+extent) << " (pid " << pProcess->getId() << ")");
@@ -161,11 +165,13 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileo
     //NOTICE_NOLOCK("trap at " << address << "[" << offset << ", " << fileoffset << "]");
 
     // Quick sanity check...
+    /*
     if (address-offset > m_Extent)
     {
         FATAL_NOLOCK("MemoryMappedFile: trap called with invalid address: " << Hex << address);
         return;
     }
+    */
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
@@ -188,9 +194,12 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileo
         return;
     }
 
+    uintptr_t offsetIntoMap = (v - offset);
+    uintptr_t alignedOffsetIntoMap = offsetIntoMap & ~(PhysicalMemoryManager::getPageSize() - 1);
+
     // Add the mapping to our list.
-    uintptr_t readloc = (v - offset) + fileoffset;
-    //NOTICE("readloc: " << readloc);
+    uintptr_t readloc = offsetIntoMap + fileoffset;
+    //NOTICE("readloc: " << readloc << " [v=" << v << ", offset=" << offset << ", extent=" << m_Extent << "]");
     m_Mappings.insert(readloc, p);
 
     // We can't just read directly into the new page, as the ATA driver
@@ -199,8 +208,9 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileo
     // memcpy.
     uint8_t *buffer = new uint8_t[PhysicalMemoryManager::getPageSize()];
 
-    if (m_pFile->read(readloc, PhysicalMemoryManager::getPageSize(),
-                      reinterpret_cast<uintptr_t>(buffer)) == 0)
+    uint64_t bytesRead = 0;
+    if ((bytesRead = m_pFile->read(readloc, PhysicalMemoryManager::getPageSize(),
+                      reinterpret_cast<uintptr_t>(buffer))) == 0)
     {
         WARNING_NOLOCK("MemoryMappedFile: read() failed in trap()");
         WARNING_NOLOCK("File is " << m_pFile->getName() << ", offset was " << readloc << ", reading a page.");
@@ -208,6 +218,18 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileo
     }
 
     memcpy(reinterpret_cast<uint8_t*>(v), buffer, PhysicalMemoryManager::getPageSize());
+
+    // Zero out the rest of the page if we hit EOF halfway through.
+    // This is great for things like ELF which can have .bss shoved on the end
+    // of .data, where mmap can't quite fix up the last bytes. When the early
+    // bytes of .bss are accessed, we get paged in, and the beginning of .bss
+    // gets zeroed nicely.
+    // The rest of .bss can obviously be mapped to /dev/null or similar.
+    if((alignedOffsetIntoMap + bytesRead) >= m_Extent)
+    {
+        uintptr_t bufferOffset = m_Extent - alignedOffsetIntoMap;
+        memset(reinterpret_cast<uint8_t*>(v + bufferOffset), 0, PhysicalMemoryManager::getPageSize() - bufferOffset);
+    }
 
     delete [] buffer;
 
@@ -275,6 +297,14 @@ MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address, 
     pMmFile->increaseRefCount();
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+
+    // Make sure the size is page aligned. (we'll fill any space that is past
+    // the end of the extent with zeroes).
+    if(sizeOverride & (PhysicalMemoryManager::instance().getPageSize() - 1))
+    {
+        sizeOverride += 0x1000;
+        sizeOverride &= ~(PhysicalMemoryManager::instance().getPageSize() - 1);
+    }
 
     /// \todo This operation should be atomic with respect to threads.
 
