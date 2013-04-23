@@ -136,6 +136,9 @@ namespace PedigreeGraphics
         size_t maxDepth;
 
         bool bReserved1;
+
+        /// For sharing framebuffers across process boundaries.
+        size_t contextId;
     };
 
     /** This class provides a generic interface for interfacing with a framebuffer.
@@ -249,7 +252,7 @@ namespace PedigreeGraphics
             Framebuffer(GraphicsProvider &gfx);
 
             /** Gets the internal GraphicsProvider for the framebuffer. */
-            inline GraphicsProvider getProvider() const
+            inline GraphicsProvider getProvider()
             {
                 return m_Provider;
             }
