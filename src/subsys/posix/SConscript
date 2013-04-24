@@ -49,7 +49,8 @@ glue_files = [
     'glue.c',
     'glue-sysconf.c',
     'glue-fseek.c',
-    'glue-fpurge.c'
+    'glue-fpurge.c',
+    'glue-scandir.c',
 ]
 
 crt0_files = ['crt0.c']
