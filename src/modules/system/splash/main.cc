@@ -242,7 +242,7 @@ void progress(const char *text)
     sprintf(buf, "%d%%", ((g_BootProgressCurrent * 100) / g_BootProgressTotal));
     centerStringAt(buf, g_ProgressX + (g_ProgressW / 2), g_ProgressY - FONT_HEIGHT);
 
-    g_pFramebuffer->redraw(g_ProgressX, g_ProgressY, g_ProgressW, g_ProgressH, true);
+    g_pFramebuffer->redraw(g_ProgressX, g_ProgressY - (FONT_HEIGHT * 2), g_ProgressW, g_ProgressH + (FONT_HEIGHT * 2), true);
 
     if(bFinished)
     {
