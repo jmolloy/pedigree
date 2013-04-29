@@ -26,6 +26,11 @@ Tree<PedigreeIpc::IpcMessage *, Ipc::IpcMessage *> __msg_lookup;
 uintptr_t createStandardMessage(PedigreeIpc::IpcMessage *pMessage)
 {
     Ipc::IpcMessage *pKernelMessage = new Ipc::IpcMessage();
+    Ipc::IpcMessage *pCheck = __msg_lookup.lookup(pMessage);
+    if(pCheck)
+    {
+        FATAL("Inserting an already allocated IPC message [createStandardMessage].");
+    }
     __msg_lookup.insert(pMessage, pKernelMessage);
 
     return reinterpret_cast<uintptr_t>(pKernelMessage->getBuffer());
@@ -43,7 +48,7 @@ void *getIpcSharedRegion(PedigreeIpc::IpcMessage *pMessage)
 {
     Ipc::IpcMessage *pKernelMessage = __msg_lookup.lookup(pMessage);
     if(pKernelMessage)
-        return pKernelMessage->getBuffer();
+        return pKernelMessage->getHandle();
 
     return 0;
 }
@@ -82,6 +87,11 @@ void *recvIpcPhase1(PedigreeIpc::IpcEndpoint *pEndpoint, bool bAsync)
 uintptr_t recvIpcPhase2(PedigreeIpc::IpcMessage *pUserMessage, void *pMessage)
 {
     Ipc::IpcMessage *pKernelMessage = reinterpret_cast<Ipc::IpcMessage*>(pMessage);
+    Ipc::IpcMessage *pCheck = __msg_lookup.lookup(pUserMessage);
+    if(pCheck)
+    {
+        FATAL("Inserting an already allocated IPC message [recvIpcPhase2].");
+    }
     __msg_lookup.insert(pUserMessage, pKernelMessage);
 
     return reinterpret_cast<uintptr_t>(pKernelMessage->getBuffer());

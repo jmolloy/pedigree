@@ -210,7 +210,10 @@ Ipc::IpcMessage::IpcMessage(size_t nBytes, uintptr_t regionHandle) : nPages(0), 
                 // Even if we didn't, it would still be a valid check. We would just
                 // have to verify a few more physical pages to be 100% certain.
                 if(phys == map_phys)
+                {
+                    m_pMemRegion = pRegion;
                     return;
+                }
             }
 
             // Create the region.
@@ -225,7 +228,7 @@ Ipc::IpcMessage::IpcMessage(size_t nBytes, uintptr_t regionHandle) : nPages(0), 
                 delete m_pMemRegion;
                 m_pMemRegion = 0;
 
-                ERROR("IpcMessage: region allocation failed.");
+                ERROR("IpcMessage: region allocation (via handle) failed.");
             }
         }
     }

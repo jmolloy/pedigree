@@ -27,7 +27,7 @@ PedigreeIpc::StandardIpcMessage::~StandardIpcMessage()
     syscall1(IPC_DESTROY_MESSAGE, reinterpret_cast<uintptr_t>(this));
 }
 
-PedigreeIpc::SharedIpcMessage::SharedIpcMessage(size_t nBytes, void *handle) : m_vAddr(0), m_nBytes(nBytes), m_pHandle(0) {}
+PedigreeIpc::SharedIpcMessage::SharedIpcMessage(size_t nBytes, void *handle) : StandardIpcMessage(), m_nBytes(nBytes), m_pHandle(handle) {}
 
 PedigreeIpc::SharedIpcMessage::~SharedIpcMessage()
 {

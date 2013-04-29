@@ -62,7 +62,6 @@ namespace PedigreeIpc
             }
 
         private:
-            void *m_vAddr;
             size_t m_nBytes;
             void *m_pHandle;
     };
