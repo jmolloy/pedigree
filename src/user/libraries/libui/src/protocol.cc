@@ -22,10 +22,17 @@
 using namespace PedigreeIpc;
 using namespace LibUiProtocol;
 
+static IpcEndpoint *g_pWinmanEndpoint = 0;
+
 bool LibUiProtocol::sendMessage(void *pMessage, size_t messageLength)
 {
     // Grab the endpoint for the window manager.
-    IpcEndpoint *pEndpoint = getEndpoint("pedigree-winman");
+    if(!g_pWinmanEndpoint)
+    {
+        g_pWinmanEndpoint = getEndpoint("pedigree-winman");
+    }
+
+    IpcEndpoint *pEndpoint = g_pWinmanEndpoint;
     if(!pEndpoint)
     {
         /// \todo Log the error somewhere.

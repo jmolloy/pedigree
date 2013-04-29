@@ -13,12 +13,15 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#define _USE_MATH_DEFINES
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <syslog.h>
 #include <string.h>
 #include <sched.h>
+#include <math.h>
+#include <errno.h>
 
 #include <map>
 #include <list>
@@ -26,6 +29,11 @@
 #include <graphics/Graphics.h>
 #include <input/Input.h>
 #include <ipc/Ipc.h>
+
+#include <cairo/cairo.h>
+#include <cairo/cairo-ft.h>
+
+#include <iostream>
 
 #include <protocol.h>
 
@@ -37,10 +45,13 @@ RootContainer *g_pRootContainer = 0;
 
 Window *g_pFocusWindow = 0;
 
+uint8_t *g_pBackbuffer = 0;
+
 std::map<uint64_t, Window*> *g_Windows;
 
 /// \todo Make configurable.
-#define CLIENT_DEFAULT "/applications/tui"
+//#define CLIENT_DEFAULT "/applications/tui"
+#define CLIENT_DEFAULT "/applications/gears"
 
 void startClient()
 {
@@ -51,7 +62,7 @@ void startClient()
     }
 }
 
-void handleMessage(char *messageData)
+void handleMessage(char *messageData, cairo_t *cr)
 {
     LibUiProtocol::WindowManagerMessage *pWinMan =
         reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(messageData);
@@ -63,6 +74,7 @@ void handleMessage(char *messageData)
 
     if(pWinMan->messageCode == LibUiProtocol::Create)
     {
+        syslog(LOG_INFO, "\n**** CREATE ****\n");
         LibUiProtocol::CreateMessage *pCreate =
         reinterpret_cast<LibUiProtocol::CreateMessage*>(messageData + sizeof(LibUiProtocol::WindowManagerMessage));
         totalSize += sizeof(LibUiProtocol::CreateMessageResponse);
@@ -76,7 +88,10 @@ void handleMessage(char *messageData)
             pParent = g_pFocusWindow->getParent();
         }
 
-        Window *pWindow = new Window(pWinMan->widgetHandle, pEndpoint, pParent, g_pTopLevelFramebuffer);
+        Window *pWindow = new Window(pWinMan->widgetHandle, pEndpoint, pParent);
+        std::string newTitle(pCreate->title);
+        pWindow->setTitle(newTitle);
+        pWindow->render(cr);
 
         if(!g_pFocusWindow)
         {
@@ -93,7 +108,7 @@ void handleMessage(char *messageData)
 
         LibUiProtocol::CreateMessageResponse *pCreateResp =
             reinterpret_cast<LibUiProtocol::CreateMessageResponse*>(responseData + sizeof(LibUiProtocol::WindowManagerMessage));
-        pCreateResp->provider = pWindow->getContext()->getProvider();
+        // pCreateResp->provider = pWindow->getContext()->getProvider();
 
         g_Windows->insert(std::make_pair(pWinMan->widgetHandle, pWindow));
 
@@ -116,9 +131,19 @@ void handleMessage(char *messageData)
 
             LibUiProtocol::SyncMessageResponse *pSyncResp =
                 reinterpret_cast<LibUiProtocol::SyncMessageResponse*>(responseData + sizeof(LibUiProtocol::WindowManagerMessage));
-            pSyncResp->provider = pWindow->getContext()->getProvider();
+            // pSyncResp->provider = pWindow->getContext()->getProvider();
 
             PedigreeIpc::send(pWindow->getEndpoint(), pIpcResponse, true);
+        }
+    }
+    else if(pWinMan->messageCode == LibUiProtocol::RequestRedraw)
+    {
+        /// \todo don't redraw entire window - we get provided a region!
+        std::map<uint64_t, Window*>::iterator it = g_Windows->find(pWinMan->widgetHandle);
+        if(it != g_Windows->end())
+        {
+            Window *pWindow = it->second;
+            pWindow->render(cr);
         }
     }
     else
@@ -127,7 +152,7 @@ void handleMessage(char *messageData)
     }
 }
 
-void checkForMessages(PedigreeIpc::IpcEndpoint *pEndpoint)
+void checkForMessages(PedigreeIpc::IpcEndpoint *pEndpoint, cairo_t *cr)
 {
     if(!pEndpoint)
         return;
@@ -135,7 +160,7 @@ void checkForMessages(PedigreeIpc::IpcEndpoint *pEndpoint)
     PedigreeIpc::IpcMessage *pRecv = 0;
     if(PedigreeIpc::recv(pEndpoint, &pRecv, true))
     {
-        handleMessage(static_cast<char *>(pRecv->getBuffer()));
+        handleMessage(static_cast<char *>(pRecv->getBuffer()), cr);
 
         delete pRecv;
     }
@@ -302,7 +327,7 @@ void systemInputCallback(Input::InputNotification &note)
         }
     }
 
-    if(!bHandled)
+    if((!bHandled) && (g_pFocusWindow))
     {
         // Forward event to focus window.
         size_t totalSize = sizeof(LibUiProtocol::WindowManagerMessage);
@@ -334,6 +359,10 @@ void systemInputCallback(Input::InputNotification &note)
 
 int main(int argc, char *argv[])
 {
+    syslog(LOG_INFO, "winman: starting up...");
+    std::cout << "hello c++" << std::endl;
+    syslog(LOG_INFO, "winman: i/o works");
+
     // Create the window manager IPC endpoint for libui.
     PedigreeIpc::createEndpoint("pedigree-winman");
     PedigreeIpc::IpcEndpoint *pEndpoint = PedigreeIpc::getEndpoint("pedigree-winman");
@@ -344,11 +373,20 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    startClient();
+    FT_Library font_library;
+    FT_Face ft_face;
+    int e = FT_Init_FreeType(&font_library);
+    if(e)
+    {
+        syslog(LOG_CRIT, "error: couldn't initialise Freetype");
+        return 0;
+    }
+
+    e = FT_New_Face(font_library, "/system/fonts/DejaVuSansMono.ttf", 0, &ft_face);
 
     // Use the root framebuffer.
     PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
-    g_pTopLevelFramebuffer = pRootFramebuffer->createChild(0, 0, pRootFramebuffer->getWidth(), pRootFramebuffer->getHeight());
+    g_pTopLevelFramebuffer = pRootFramebuffer; // new PedigreeGraphics::Framebuffer(prov); // pRootFramebuffer->createChild(0, 0, pRootFramebuffer->getWidth(), pRootFramebuffer->getHeight());
 
     if(!g_pTopLevelFramebuffer->getRawBuffer())
     {
@@ -359,37 +397,75 @@ int main(int argc, char *argv[])
     size_t g_nWidth = g_pTopLevelFramebuffer->getWidth();
     size_t g_nHeight = g_pTopLevelFramebuffer->getHeight();
 
-    g_pTopLevelFramebuffer->rect(0, 0, g_nWidth, g_nHeight, PedigreeGraphics::createRgb(0, 0, 255), PedigreeGraphics::Bits32_Rgb);
-    g_pTopLevelFramebuffer->redraw(0, 0, g_nWidth, g_nHeight, true);
+    cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, g_nWidth, g_nHeight);
+    cairo_t *cr = cairo_create(surface);
+
+    g_pBackbuffer = cairo_image_surface_get_data(surface);
+
+    /// \todo Check for cairo error here...
+
+    cairo_user_data_key_t key;
+    cairo_font_face_t *font_face;
+
+    font_face = cairo_ft_font_face_create_for_ft_face(ft_face, 0);
+    cairo_font_face_set_user_data(font_face, &key,
+                                  ft_face, (cairo_destroy_func_t) FT_Done_Face);
+    cairo_set_font_face(cr, font_face);
+
+#if 0
+    cairo_surface_t *wallpaper = cairo_image_surface_create_from_png("/system/wallpaper/fields.png");
+    syslog(LOG_INFO, "status: %s / %s", cairo_status_to_string(cairo_status(cr)), cairo_status_to_string(cairo_surface_status(wallpaper)));
+
+    int wallpaperWidth = cairo_image_surface_get_width(wallpaper);
+    int wallpaperHeight = cairo_image_surface_get_height(wallpaper);
+
+    syslog(LOG_INFO, "w: %d, h: %d", wallpaperWidth, wallpaperHeight);
+
+    cairo_scale(cr, g_nWidth / (double) wallpaperWidth, g_nHeight / (double) wallpaperHeight);
+
+    cairo_set_source_surface(cr, wallpaper, 0, 0);
+    cairo_paint(cr);
+    cairo_surface_destroy(wallpaper);
+    while(1);
+#else
+    cairo_set_source_rgba(cr, 0, 0, 1.0, 1.0);
+    cairo_rectangle(cr, 0, 0, g_nWidth, g_nHeight);
+    cairo_stroke_preserve(cr);
+    cairo_fill(cr);
+#endif
+
+    // g_pTopLevelFramebuffer->rect(0, 0, g_nWidth, g_nHeight, PedigreeGraphics::createRgb(0, 0, 255), PedigreeGraphics::Bits32_Rgb);
+
+    syslog(LOG_INFO, "winman: framebuffer is at %p", g_pTopLevelFramebuffer->getRawBuffer());
 
     syslog(LOG_INFO, "winman: creating tile root");
 
     g_pRootContainer = new RootContainer(g_nWidth, g_nHeight);
 
-    /*
+#if 0
     Container *pMiddle = new Container(g_pRootContainer);
     pMiddle->setLayout(Container::Stacked);
 
     Container *another = new Container(pMiddle);
     another->setLayout(Container::SideBySide);
 
-    Window *pLeft = new Window(0, 0, g_pRootContainer, g_pTopLevelFramebuffer);
+    Window *pLeft = new Window(0, 0, g_pRootContainer);
     g_pRootContainer->addChild(pMiddle);
-    Window *pRight = new Window(0, 0, g_pRootContainer, g_pTopLevelFramebuffer);
+    Window *pRight = new Window(0, 0, g_pRootContainer);
 
     // Should be evenly split down the screen after retile()
-    Window *pTop = new Window(0, 0, pMiddle, g_pTopLevelFramebuffer);
-    Window *pMiddleWindow = new Window(0, 0, pMiddle, g_pTopLevelFramebuffer);
-    Window *pBottom = new Window(0, 0, pMiddle, g_pTopLevelFramebuffer);
+    Window *pTop = new Window(0, 0, pMiddle);
+    Window *pMiddleWindow = new Window(0, 0, pMiddle);
+    Window *pBottom = new Window(0, 0, pMiddle);
 
     pMiddle->addChild(another);
 
-    Window *more = new Window(0, 0, another, g_pTopLevelFramebuffer);
-    Window *evenmore = new Window(0, 0, another, g_pTopLevelFramebuffer);
+    Window *more = new Window(0, 0, another);
+    Window *evenmore = new Window(0, 0, another);
 
     g_pFocusWindow = pLeft;
     pLeft->focus();
-    */
+#endif
 
     syslog(LOG_INFO, "winman: entering main loop %d", getpid());
 
@@ -397,19 +473,31 @@ int main(int argc, char *argv[])
 
     Input::installCallback(Input::Key | Input::Mouse, systemInputCallback);
 
-    // Clear out the base of the screen.
-    g_pTopLevelFramebuffer->rect(0, 0, g_nWidth, g_nHeight, PedigreeGraphics::createRgb(0, 0, 255), PedigreeGraphics::Bits24_Rgb);
+    // Render all window decorations and non-client display elements first up.
+    g_pRootContainer->render(cr);
+
+    // Load first tile.
+    startClient();
 
     // Main loop: logic & message handling goes here!
     while(true)
     {
         // Check for any messages coming in from windows, asynchronously.
-        checkForMessages(pEndpoint);
+        checkForMessages(pEndpoint, cr);
 
-        // Render all window decorations and non-client display elements.
-        /// \todo Doing this every frame is silly. It should only be done on window reposition,
-        ///       or if/when a window updates properties such as its title.
-        g_pRootContainer->render();
+        // Flush the cairo surface, which will ensure the most recent data is
+        // in the framebuffer ready to send to the device.
+        cairo_surface_flush(surface);
+
+        // Draw the updated backbuffer.
+        g_pTopLevelFramebuffer->draw(g_pBackbuffer,
+                                     0,
+                                     0,
+                                     0,
+                                     0,
+                                     g_nWidth,
+                                     g_nHeight,
+                                     PedigreeGraphics::Bits32_Rgb);
 
         // Submit a full redraw to the graphics card.
         /// \todo We need to stop doing this - we should figue out how much we changed.

@@ -20,10 +20,13 @@
 #include <syslog.h>
 
 #include <vector>
+#include <string>
 
 #include <graphics/Graphics.h>
 #include <input/Input.h>
 #include <ipc/Ipc.h>
+
+#include <cairo/cairo.h>
 
 /** \addtogroup PedigreeGUI
  *  @{
@@ -94,7 +97,7 @@ class WObject
 class Window : public WObject
 {
     public:
-        Window(uint64_t handle, PedigreeIpc::IpcEndpoint *endpoint, ::Container *pParent, PedigreeGraphics::Framebuffer *pBaseFramebuffer);
+        Window(uint64_t handle, PedigreeIpc::IpcEndpoint *endpoint, ::Container *pParent);
         Window();
 
         virtual ~Window()
@@ -106,7 +109,12 @@ class Window : public WObject
             return WObject::Window;
         }
 
-        virtual void render();
+        virtual void setTitle(const std::string &s)
+        {
+            m_sWindowTitle = s;
+        }
+
+        virtual void render(cairo_t *cr);
 
         virtual void resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pChild = 0);
 
@@ -115,9 +123,9 @@ class Window : public WObject
 
         virtual void refreshContext(PedigreeGraphics::Rect oldDimensions);
 
-        PedigreeGraphics::Framebuffer *getContext() const
+        void *getFramebuffer() const
         {
-            return m_pRealFramebuffer;
+            return m_Framebuffer ? m_Framebuffer->getBuffer() : 0;
         }
 
         PedigreeIpc::IpcEndpoint *getEndpoint() const
@@ -147,8 +155,9 @@ class Window : public WObject
 
         ::Container *m_pParent;
 
-        PedigreeGraphics::Framebuffer *m_pBaseFramebuffer;
-        PedigreeGraphics::Framebuffer *m_pRealFramebuffer;
+        PedigreeIpc::SharedIpcMessage *m_Framebuffer;
+
+        std::string m_sWindowTitle;
 
         bool m_bFocus;
 };
@@ -379,7 +388,7 @@ class Container : public WObject
         /**
          * Render children
          */
-        void render();
+        void render(cairo_t *cr);
 
     protected:
         std::vector<WObject*> m_Children;

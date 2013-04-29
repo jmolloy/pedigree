@@ -615,7 +615,7 @@ int main(int argc, char *argv[])
     PedigreeGraphics::Rect rt;
 
     g_pEmu = new PedigreeTerminalEmulator();
-    if(!g_pEmu->construct(endpoint, callback, rt))
+    if(!g_pEmu->construct(endpoint, "Pedigree xterm Emulator", callback, rt))
     {
         syslog(LOG_ERR, "tui: couldn't construct widget");
         delete g_pEmu;

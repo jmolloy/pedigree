@@ -75,7 +75,7 @@ class Widget
          * \param dimensions Dimensions of the widget to be created.
          * \return True if the widget was successfully constructed, False otherwise.
          */
-        bool construct(const char *endpoint, widgetCallback_t cb, PedigreeGraphics::Rect &dimensions);
+        bool construct(const char *endpoint, const char *title, widgetCallback_t cb, PedigreeGraphics::Rect &dimensions);
 
         /**
          * Sets an internal property of the widget. Properties can be read by
@@ -147,6 +147,15 @@ class Widget
         void destroy();
 
         /**
+         * Gets the raw framebuffer for the window.
+         * This will be in ARGB32 format.
+         */
+        void *getRawFramebuffer()
+        {
+            return m_SharedFramebuffer ? m_SharedFramebuffer->getBuffer() : 0;
+        }
+
+        /**
          * Handles emptying the pending event queue and dispatch to callbacks
          * for an application automatically.
          */
@@ -172,6 +181,9 @@ class Widget
 
         /** IPC endpoint name for window manager communication. */
         PedigreeIpc::IpcEndpoint *m_Endpoint;
+
+        /** IPC shared message that handles our framebuffer. */
+        PedigreeIpc::SharedIpcMessage *m_SharedFramebuffer;
 
         /** Handle -> Callback mapping. For event handler. */
         static std::map<uint64_t, widgetCallback_t> m_CallbackMap;

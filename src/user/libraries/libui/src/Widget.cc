@@ -32,6 +32,8 @@
 
 using namespace LibUiProtocol;
 
+#define PEDIGREE_WINMAN_ENDPOINT "pedigree-winman"
+
 /// Default event handler for new widgets.
 static bool defaultEventHandler(WidgetMessages message, size_t dataSize, void *dataBuffer)
 {
@@ -41,9 +43,12 @@ static bool defaultEventHandler(WidgetMessages message, size_t dataSize, void *d
 static Widget *g_pWidget = 0;
 
 std::map<uint64_t, widgetCallback_t> Widget::m_CallbackMap;
-std::queue<char *> g_PendingMessages;
+std::queue<PedigreeIpc::IpcMessage *> g_PendingMessages;
 
-Widget::Widget() : m_bConstructed(false), m_pFramebuffer(0), m_Handle(0), m_EventCallback(defaultEventHandler), m_Endpoint(0)
+Widget::Widget() :
+    m_bConstructed(false), m_pFramebuffer(0), m_Handle(0),
+    m_EventCallback(defaultEventHandler), m_Endpoint(0),
+    m_SharedFramebuffer(0)
 {
 }
 
@@ -54,7 +59,7 @@ Widget::~Widget()
     }
 }
 
-bool Widget::construct(const char *endpoint, widgetCallback_t cb, PedigreeGraphics::Rect &dimensions)
+bool Widget::construct(const char *endpoint, const char *title, widgetCallback_t cb, PedigreeGraphics::Rect &dimensions)
 {
     if(m_Handle)
     {
@@ -70,6 +75,7 @@ bool Widget::construct(const char *endpoint, widgetCallback_t cb, PedigreeGraphi
     /// \todo fail if endpoint already exists.
     PedigreeIpc::createEndpoint(endpoint);
     m_Endpoint = PedigreeIpc::getEndpoint(endpoint);
+    PedigreeIpc::IpcEndpoint *winman = PedigreeIpc::getEndpoint(PEDIGREE_WINMAN_ENDPOINT);
 
     // Construct the handle first.
     uint64_t pid = getpid();
@@ -80,9 +86,16 @@ bool Widget::construct(const char *endpoint, widgetCallback_t cb, PedigreeGraphi
     m_Handle = (pid << 32) | (widgetPointer);
 #endif
 
+    PedigreeIpc::IpcMessage *pCreateMessage = new PedigreeIpc::IpcMessage();
+    if(!pCreateMessage->initialise())
+    {
+        m_Handle = 0;
+        return false;
+    }
+
     // Prepare a message to send.
     size_t totalSize = sizeof(WindowManagerMessage) + sizeof(CreateMessage);
-    char *messageData = new char[totalSize];
+    char *messageData = static_cast<char *>(pCreateMessage->getBuffer());
     WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
     CreateMessage *pCreate = reinterpret_cast<CreateMessage*>(messageData + sizeof(WindowManagerMessage));
 
@@ -92,6 +105,7 @@ bool Widget::construct(const char *endpoint, widgetCallback_t cb, PedigreeGraphi
     pWinMan->widgetHandle = m_Handle;
     pWinMan->isResponse = false;
     strlcpy(pCreate->endpoint, endpoint, 256);
+    strlcpy(pCreate->title, title, 256);
     pCreate->minWidth = dimensions.getW();
     pCreate->minHeight = dimensions.getH();
     pCreate->rigid = true;
@@ -99,48 +113,53 @@ bool Widget::construct(const char *endpoint, widgetCallback_t cb, PedigreeGraphi
     // Send the message off to the window manager and wait for a response. The
     // response will contain a GraphicsProvider that we can use to create our
     // Framebuffer for drawing on.
-    if(!sendMessage(messageData, totalSize))
+    if(!PedigreeIpc::send(winman, pCreateMessage, false))
     {
         m_Handle = 0;
-        delete [] messageData;
+        delete pCreateMessage;
         return false;
     }
 
-    delete [] messageData;
-
-    totalSize = 1024;
-    messageData = new char[totalSize];
+    PedigreeIpc::IpcMessage *pResponse = 0;
 
     while(1)
     {
-        if(!recvMessage(m_Endpoint, messageData, totalSize))
+        if(!PedigreeIpc::recv(m_Endpoint, &pResponse, false))
         {
             m_Handle = 0;
-            delete [] messageData;
             return false;
         }
 
-        pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
+        if(!(pResponse && pResponse->getBuffer()))
+        {
+            continue;
+        }
+
+        pWinMan = reinterpret_cast<WindowManagerMessage*>(pResponse->getBuffer());
         if(!(pWinMan->isResponse && (pWinMan->messageCode == Create)))
         {
-            g_PendingMessages.push(messageData);
-            messageData = new char[totalSize];
+            g_PendingMessages.push(pResponse);
         }
         else
         {
+            messageData = static_cast<char *>(pResponse->getBuffer());
             break;
         }
     }
 
     // Grab the results and use them.
     CreateMessageResponse *pCreateResp = reinterpret_cast<CreateMessageResponse*>(messageData + sizeof(WindowManagerMessage));
-    m_pFramebuffer = new PedigreeGraphics::Framebuffer(pCreateResp->provider);
     m_EventCallback = cb;
     m_CallbackMap[m_Handle] = cb;
 
-    delete [] messageData;
+    delete pResponse;
 
     g_pWidget = this;
+
+    // Asynchronously check for any events in the pipeline. This should be an
+    // initial reposition event that we really need to get out to the client
+    // ASAP.
+    checkForEvents(true);
 
     return true;
 }
@@ -290,6 +309,9 @@ void Widget::destroy()
 
 PedigreeGraphics::Framebuffer *Widget::getFramebuffer()
 {
+    return 0;
+
+    /*
     // Constructed yet?
     if(!m_Handle)
         return 0;
@@ -311,7 +333,9 @@ PedigreeGraphics::Framebuffer *Widget::getFramebuffer()
     pWinMan->isResponse = false;
 
     // Transmit, synchronously.
+    syslog(LOG_INFO, "TX Sync [%d]", getpid());
     sendMessage(messageData, totalSize);
+    syslog(LOG_INFO, "TX complete");
 
     delete [] messageData;
 
@@ -349,6 +373,7 @@ PedigreeGraphics::Framebuffer *Widget::getFramebuffer()
     }
 
     return m_pFramebuffer;
+    */
 }
 
 void Widget::checkForEvents(bool bAsync)
@@ -357,21 +382,21 @@ void Widget::checkForEvents(bool bAsync)
     if(g_pWidget)
     {
         char *buffer = 0;
-        bool bMessage = false;
+        PedigreeIpc::IpcMessage *pMessage = 0;
         if(g_PendingMessages.empty())
         {
-            buffer = new char[1024];
-            bMessage = recvMessageAsync(g_pWidget->m_Endpoint, buffer, 1024);
+            PedigreeIpc::recv(g_pWidget->m_Endpoint, &pMessage, true);
         }
         else
         {
-            bMessage = true;
-            buffer = g_PendingMessages.front();
+            pMessage = g_PendingMessages.front();
             g_PendingMessages.pop();
         }
 
-        if(bMessage)
+        if(pMessage)
         {
+            buffer = static_cast<char *>(pMessage->getBuffer());
+
             LibUiProtocol::WindowManagerMessage *pHeader =
                 reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
 
@@ -383,14 +408,10 @@ void Widget::checkForEvents(bool bAsync)
                 {
                     LibUiProtocol::RepositionMessage *pReposition =
                         reinterpret_cast<LibUiProtocol::RepositionMessage*>(buffer + sizeof(LibUiProtocol::WindowManagerMessage));
-
-                    // Destroy old framebuffer and re-create, if needed.
-                    if(g_pWidget->m_pFramebuffer->getProvider().contextId !=
-                        pReposition->provider.contextId)
-                    {
-                        delete g_pWidget->m_pFramebuffer;
-                        g_pWidget->m_pFramebuffer = new PedigreeGraphics::Framebuffer(pReposition->provider);
-                    }
+                    delete g_pWidget->m_SharedFramebuffer;
+                    g_pWidget->m_SharedFramebuffer =
+                            new PedigreeIpc::SharedIpcMessage(pReposition->shmem_size, pReposition->shmem_handle);
+                    g_pWidget->m_SharedFramebuffer->initialise();
 
                     // Run the callback now that the framebuffer is re-created.
                     cb(::Reposition, sizeof(pReposition->rt), &pReposition->rt);
@@ -409,6 +430,9 @@ void Widget::checkForEvents(bool bAsync)
             }
         }
 
-        delete [] buffer;
+        if(pMessage)
+        {
+            delete pMessage;
+        }
     }
 }

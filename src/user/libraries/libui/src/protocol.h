@@ -166,6 +166,9 @@ namespace LibUiProtocol
         /// IPC endpoint for this widget.
         char endpoint[256];
 
+        /// Initial title for this widget.
+        char title[256];
+
         /// Minimum width and height for the window.
         size_t minWidth;
         size_t minHeight;
@@ -177,7 +180,6 @@ namespace LibUiProtocol
     /** Create message response data. */
     struct CreateMessageResponse
     {
-        PedigreeGraphics::GraphicsProvider provider;
     };
 
     /** Reposition message data. */
@@ -186,8 +188,11 @@ namespace LibUiProtocol
         /// New rect.
         PedigreeGraphics::Rect rt;
 
-        /// New graphics provider. The old one is no longer valid here.
-        PedigreeGraphics::GraphicsProvider provider;
+        /// New handle for the shared memory space.
+        void *shmem_handle;
+
+        /// Size of the framebuffer.
+        size_t shmem_size;
     };
 
     /** Sync message data. */

@@ -96,11 +96,16 @@ cpp_apps = [
 custom_incpath = {
     'TUI' : ['#/src/user/libraries/libui/include',
              '#/src/modules/system/TUI',
-             '#/src/user/applications/TUI/include'],
+             '#/images/local/include',
+             '#/images/local/include/freetype2'],
+             #'#/src/user/applications/TUI/include'],
     'uitest' : ['#/src/user/libraries/libui/include'],
     'gears' : ['#/src/user/libraries/libui/include'],
     'winman' : ['#/src/user/libraries/libui/include',
-                '#/src/user/libraries/libui/src']
+                '#/src/user/libraries/libui/src',
+                '#/images/local/include',
+                '#/images/local/include/pixman-1',
+                '#/images/local/include/freetype2']
 }
 
 # Custom libraries for specific applications
@@ -109,6 +114,7 @@ custom_libs = {
     'thread-test' : ['pthread'],
     'uitest' : ['ui'],
     'gears' : ['ui'],
+    'winman': ['cairo', 'pixman-1', 'fontconfig', 'expat', 'freetype', 'png', 'z'],
 }
 
 # Default libraries for all applications
@@ -117,7 +123,7 @@ default_libs = ['gcc', 'c', 'm', 'pedigree-c']
 # Search paths for libraries
 libpath = [
     builddir,
-    builddir + '/libs'
+    builddir + '/libs',
 ]
 
 # Default include paths

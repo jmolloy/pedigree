@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
     Rect rt(20, 20, 100, 100);
 
     Widget *pWidget = new TestWidget();
-    if(!pWidget->construct("uitest", callback, rt))
+    if(!pWidget->construct("uitest", "UI Test", callback, rt))
     {
         cerr << "uitest: widget construction failed" << endl;
         delete pWidget;

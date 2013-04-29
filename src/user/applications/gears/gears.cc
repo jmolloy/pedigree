@@ -71,7 +71,8 @@ void fps()
         gettimeofday(&now, NULL);
         GLfloat seconds = now.tv_sec - start_time;
         GLfloat fps = frames / seconds;
-        printf("%d frames in %3.1f seconds = %6.3f FPS\n", frames, seconds, fps);
+        //printf("%d frames in %3.1f seconds = %6.3f FPS\n", frames, seconds, fps);
+        syslog(LOG_INFO, "%d frames in %3.1f seconds = %6.3f FPS", frames, seconds, fps);
         start_time = now.tv_sec;
         frames = 0;
     }
@@ -295,21 +296,20 @@ init(void)
 class Gears : public Widget
 {
     public:
-        Gears() : Widget(), fb(NULL)
+        Gears() : Widget(), fb(NULL), m_bGlInit(false), m_nWidth(0), m_nHeight(0)
         {};
         virtual ~Gears()
         {}
 
         bool initOpenGL()
         {
-            PedigreeGraphics::Framebuffer *pFramebuffer = getFramebuffer();
-            size_t width = pFramebuffer->getWidth();
-            size_t height = pFramebuffer->getHeight();
+            gl_ctx = OSMesaCreateContext(OSMESA_BGRA, NULL);
 
-            gl_ctx = OSMesaCreateContext(OSMESA_RGB, NULL);
-            if(!glResize(width, height))
+            m_bGlInit = true;
+
+            if(m_nWidth)
             {
-                return false;
+                glResize(m_nWidth, m_nHeight);
             }
 
             return true;
@@ -322,22 +322,21 @@ class Gears : public Widget
 
         void reposition(PedigreeGraphics::Rect newrt)
         {
+            m_nWidth = newrt.getW();
+            m_nHeight = newrt.getH();
             glResize(newrt.getW(), newrt.getH());
         }
 
         virtual bool render(PedigreeGraphics::Rect &rt, PedigreeGraphics::Rect &dirty)
         {
-            PedigreeGraphics::Framebuffer *pFramebuffer = getFramebuffer();
-            size_t width = pFramebuffer->getWidth();
-            size_t height = pFramebuffer->getHeight();
+            if(!m_bGlInit)
+            {
+                return false;
+            }
 
             // Render frame.
             angle += 0.2;
             draw();
-
-            // Draw to framebuffer.
-            pFramebuffer->draw(fb, 0, 0, 0, 0, width, height, PedigreeGraphics::Bits24_Rgb);
-            dirty.update(0, 0, width, height);
 
             return true;
         }
@@ -346,14 +345,12 @@ class Gears : public Widget
 
         bool glResize(size_t w, size_t h)
         {
-            if(fb)
+            if(!m_bGlInit)
             {
-                free(fb);
+                return false;
             }
 
-            // OSMESA_RGB = 24-bit.
-            fb = (uint8_t *) malloc(w * h * 3);
-
+            fb = (uint8_t*) getRawFramebuffer();
             if(!OSMesaMakeCurrent(gl_ctx, fb, GL_UNSIGNED_BYTE, w, h))
             {
                 fprintf(stderr, "OSMesaMakeCurrent failed.\n");
@@ -370,7 +367,11 @@ class Gears : public Widget
 
         uint8_t *fb;
 
+        bool m_bGlInit;
+
         OSMesaContext gl_ctx;
+
+        size_t m_nWidth, m_nHeight;
 };
 
 bool callback(WidgetMessages message, size_t msgSize, void *msgData)
@@ -382,7 +383,7 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
                 PedigreeGraphics::Rect rt, dirty;
                 g_pGears->render(rt, dirty);
 
-                // g_pGears->redraw(dirty);
+                g_pGears->redraw(dirty);
             }
             break;
         case Reposition:
@@ -390,7 +391,6 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
                 PedigreeGraphics::Rect dirty;
                 PedigreeGraphics::Rect *rt = reinterpret_cast<PedigreeGraphics::Rect*>(msgData);
                 g_pGears->reposition(*rt);
-                g_pGears->render(*rt, dirty);
             }
             break;
         case KeyUp:
@@ -432,7 +432,7 @@ int main (int argc, char ** argv) {
     sprintf(endpoint, "gears.%d", getpid());
 
     g_pGears = new Gears();
-    if(!g_pGears->construct(endpoint, callback, rt)) {
+    if(!g_pGears->construct(endpoint, "OSMesa 3D Gears", callback, rt)) {
         syslog(LOG_ERR, "gears: not able to construct widget");
         delete g_pGears;
         return 1;
@@ -441,7 +441,8 @@ int main (int argc, char ** argv) {
 
     g_pGears->initOpenGL();
 
-    reshape(rt.getW(), rt.getH());
+    syslog(LOG_INFO, "gears: reshaping");
+
     init();
 
     syslog(LOG_INFO, "gears: entering main loop");
@@ -458,7 +459,7 @@ int main (int argc, char ** argv) {
         fps();
 
         // Let other processes run, don't slam the CPU...
-        sched_yield();
+        // sched_yield();
     }
 
     g_pGears->deinitOpenGL();

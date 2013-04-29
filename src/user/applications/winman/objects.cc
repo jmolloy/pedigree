@@ -15,6 +15,7 @@
  */
 
 #include "winman.h"
+#include <string.h>
 
 #include <protocol.h>
 
@@ -23,8 +24,8 @@
 #define WINDOW_TITLE_H 20
 
 // Start location of the client rendering area.
-#define WINDOW_CLIENT_START_X (WINDOW_BORDER_X + 1)
-#define WINDOW_CLIENT_START_Y (WINDOW_BORDER_Y + 1 + WINDOW_TITLE_H)
+#define WINDOW_CLIENT_START_X (WINDOW_BORDER_X)
+#define WINDOW_CLIENT_START_Y (WINDOW_BORDER_Y + WINDOW_TITLE_H)
 
 // Insets from the end of the client area.
 #define WINDOW_CLIENT_END_X   (WINDOW_BORDER_X)
@@ -32,8 +33,8 @@
 
 // Total space from the W/H that the window manager has used and taken from the
 // client area for rendering decorations etc...
-#define WINDOW_CLIENT_LOST_W (WINDOW_CLIENT_START_X + WINDOW_CLIENT_END_X)
-#define WINDOW_CLIENT_LOST_H (WINDOW_CLIENT_START_Y + WINDOW_CLIENT_END_Y)
+#define WINDOW_CLIENT_LOST_W (WINDOW_CLIENT_START_X + WINDOW_CLIENT_END_X + 1)
+#define WINDOW_CLIENT_LOST_H (WINDOW_CLIENT_START_Y + WINDOW_CLIENT_END_Y + 1)
 
 static size_t g_nextContextId = 1;
 
@@ -63,8 +64,8 @@ void WObject::bump(ssize_t bumpX, ssize_t bumpY)
     m_Dimensions.update(x, y, w, h);
 }
 
-Window::Window(uint64_t handle, PedigreeIpc::IpcEndpoint *endpoint, ::Container *pParent, PedigreeGraphics::Framebuffer *pBaseFramebuffer) :
-    m_Handle(handle), m_Endpoint(endpoint), m_pParent(pParent), m_pBaseFramebuffer(pBaseFramebuffer), m_pRealFramebuffer(0), m_bFocus(false)
+Window::Window(uint64_t handle, PedigreeIpc::IpcEndpoint *endpoint, ::Container *pParent) :
+    m_Handle(handle), m_Endpoint(endpoint), m_pParent(pParent), m_Framebuffer(0), m_bFocus(false)
 {
     PedigreeGraphics::Rect none;
     refreshContext(none);
@@ -73,7 +74,7 @@ Window::Window(uint64_t handle, PedigreeIpc::IpcEndpoint *endpoint, ::Container 
 
 void Window::refreshContext(PedigreeGraphics::Rect oldDimensions)
 {
-    delete m_pRealFramebuffer;
+    delete m_Framebuffer;
 
     PedigreeGraphics::Rect &me = getDimensions();
     if((me.getW() < WINDOW_CLIENT_LOST_W) || (me.getH() < WINDOW_CLIENT_LOST_H))
@@ -81,34 +82,27 @@ void Window::refreshContext(PedigreeGraphics::Rect oldDimensions)
         // We have some basic requirements for window sizes.
         return;
     }
-    m_pRealFramebuffer = m_pBaseFramebuffer->createChild(
-            me.getX() + WINDOW_CLIENT_START_X,
-            me.getY() + WINDOW_CLIENT_START_Y,
-            me.getW() - WINDOW_CLIENT_LOST_W,
-            me.getH() - WINDOW_CLIENT_LOST_H);
-    m_pRealFramebuffer->getProvider().contextId = g_nextContextId++;
 
-    //if(m_pRealFramebuffer && (oldDimensions.getW() && oldDimensions.getH()))
-    {
-        // We are refreshing our context, so wipe out the old framebuffer.
-        // This helps avoid having bits and pieces of the old window left
-        // over after we're resized to be smaller.
-        syslog(LOG_INFO, "wiping out old region %dx%x w=%d h=%d", oldDimensions.getX(), oldDimensions.getY(), oldDimensions.getW(), oldDimensions.getH());
-        m_pBaseFramebuffer->rect(oldDimensions.getX(),
-                                 oldDimensions.getY(),
-                                 oldDimensions.getW(),
-                                 oldDimensions.getH(),
-                                 PedigreeGraphics::createRgb(0, 0, 255),
-                                 PedigreeGraphics::Bits24_Rgb);
-        syslog(LOG_INFO, "wiping out old region done");
-    }
+    /// \todo get a cairo context from somewhere, wipe out the old dimensions...
 
-    if(m_Endpoint && m_pRealFramebuffer)
+    // Size of the IPC region we need to allocate.
+    size_t regionWidth = me.getW() - WINDOW_CLIENT_LOST_W;
+    size_t regionHeight = me.getH() - WINDOW_CLIENT_LOST_H;
+    int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, regionWidth);
+    size_t regionSize = regionHeight * stride;
+    m_Framebuffer = new PedigreeIpc::SharedIpcMessage(regionSize, 0);
+    m_Framebuffer->initialise();
+    memset(m_Framebuffer->getBuffer(), 0, regionSize);
+
+    if(m_Endpoint && m_Framebuffer)
     {
-        size_t totalSize = sizeof(LibUiProtocol::WindowManagerMessage) + sizeof(LibUiProtocol::RepositionMessage);
+        size_t totalSize =
+                sizeof(LibUiProtocol::WindowManagerMessage) +
+                sizeof(LibUiProtocol::RepositionMessage);
 
         PedigreeIpc::IpcMessage *pMessage = new PedigreeIpc::IpcMessage();
-        bool bSuccess = pMessage->initialise();
+        pMessage->initialise();
+
         char *buffer = (char *) pMessage->getBuffer();
 
         LibUiProtocol::WindowManagerMessage *pHeader =
@@ -120,14 +114,15 @@ void Window::refreshContext(PedigreeGraphics::Rect oldDimensions)
 
         LibUiProtocol::RepositionMessage *pReposition =
             reinterpret_cast<LibUiProtocol::RepositionMessage*>(buffer + sizeof(LibUiProtocol::WindowManagerMessage));
-        pReposition->rt.update(0, 0, m_pRealFramebuffer->getWidth(), m_pRealFramebuffer->getHeight());
-        pReposition->provider = m_pRealFramebuffer->getProvider();
+        pReposition->rt.update(0, 0, regionWidth, regionHeight);
+        pReposition->shmem_handle = m_Framebuffer->getHandle();
+        pReposition->shmem_size = regionSize;
 
         PedigreeIpc::send(m_Endpoint, pMessage, true);
     }
 }
 
-void Window::render()
+void Window::render(cairo_t *cr)
 {
     // Render pretty window frames.
     PedigreeGraphics::Rect &me = getDimensions();
@@ -136,31 +131,77 @@ void Window::render()
     size_t w = me.getW() - (WINDOW_BORDER_X * 2);
     size_t h = me.getH() - (WINDOW_BORDER_Y * 2);
 
-    size_t r = 0, g = 0, b = 0;
+    double r = 0.0, g = 0.0, b = 0.0;
     if(m_bFocus)
-        r = 255;
+        r = 1.0;
     else if(m_pParent->getFocusWindow() == this)
-        r = 255 / 2;
+        r = 0.5;
     else
-        r = g = b = 255;
-    uint32_t borderColour = PedigreeGraphics::createRgb(r, g, b);
+        r = g = b = 1.0;
+
+    cairo_save(cr);
+
+    // Blank out the window in full.
+    cairo_set_line_width(cr, 0);
+    cairo_set_source_rgba(cr, 0.0, 0.0, 0.0, 0.8);
+    cairo_rectangle(cr, x, y, w, h);
+    cairo_fill(cr);
+
+    // Draw the child framebuffer before window decorations.
+    void *pBuffer = getFramebuffer();
+    if(pBuffer)
+    {
+        size_t regionWidth = me.getW() - WINDOW_CLIENT_LOST_W;
+        size_t regionHeight = me.getH() - WINDOW_CLIENT_LOST_H;
+        int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, regionWidth);
+
+        cairo_surface_t *surface = cairo_image_surface_create_for_data(
+                (uint8_t *) pBuffer,
+                CAIRO_FORMAT_ARGB32,
+                regionWidth,
+                regionHeight,
+                stride);
+
+        cairo_translate(
+                cr,
+                me.getX() + WINDOW_CLIENT_START_X,
+                me.getY() + WINDOW_CLIENT_START_Y);
+
+        cairo_set_source_surface(cr, surface, 0, 0);
+
+        cairo_paint(cr);
+
+        cairo_surface_destroy(surface);
+
+        cairo_identity_matrix(cr);
+    }
+
+    cairo_set_line_cap(cr, CAIRO_LINE_CAP_SQUARE);
+    cairo_set_line_join(cr, CAIRO_LINE_JOIN_MITER);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+
+    // Window title bar.
+    cairo_set_line_width(cr, 0);
+    cairo_set_source_rgba(cr, 0.2, 0.3, 0.3, 1.0);
+    cairo_rectangle(cr, x, y, w, WINDOW_TITLE_H);
+    cairo_fill(cr);
+
+    // Window title.
+    cairo_text_extents_t extents;
+    cairo_set_font_size(cr, 13);
+    cairo_text_extents(cr, m_sWindowTitle.c_str(), &extents);
+    cairo_move_to(cr, me.getX() + ((w / 2) - (extents.width / 2)), me.getY() + WINDOW_CLIENT_START_Y - (extents.height / 2));
+    cairo_set_source_rgba(cr, 0.7, 0.7, 0.7, 1.0);
+    cairo_show_text(cr, m_sWindowTitle.c_str());
 
     // Window border.
+    cairo_set_source_rgba(cr, r, g, b, 1.0);
+    cairo_set_line_width(cr, 1.0);
 
-    // Top
-    m_pBaseFramebuffer->line(x, y, x + w, y, borderColour, PedigreeGraphics::Bits24_Rgb);
+    cairo_rectangle(cr, x, y, w, h);
+    cairo_stroke(cr);
 
-    // Left
-    m_pBaseFramebuffer->line(x, y, x, y + h, borderColour, PedigreeGraphics::Bits24_Rgb);
-
-    // Right
-    m_pBaseFramebuffer->line(x + w, y, x + w, y + h, borderColour, PedigreeGraphics::Bits24_Rgb);
-
-    // Bottom
-    m_pBaseFramebuffer->line(x, y + h, x + w, y + h, borderColour, PedigreeGraphics::Bits24_Rgb);
-
-    // Title bar.
-    m_pBaseFramebuffer->rect(x + 1, y + 1, w - 1, WINDOW_TITLE_H, PedigreeGraphics::createRgb(49, 79, 79), PedigreeGraphics::Bits24_Rgb);
+    cairo_restore(cr);
 }
 
 void Window::focus()
@@ -317,7 +358,7 @@ void Container::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pCh
     }
 }
 
-void Container::render()
+void Container::render(cairo_t *cr)
 {
     WObjectList_t::iterator it = m_Children.begin();
     for(; it != m_Children.end(); ++it)
@@ -325,12 +366,12 @@ void Container::render()
         if((*it)->getType() == WObject::Container)
         {
             Container *pContainer = static_cast<Container*>(*it);
-            pContainer->render();
+            pContainer->render(cr);
         }
         else if((*it)->getType() == WObject::Window)
         {
             ::Window *pWindow = static_cast< ::Window*>(*it);
-            pWindow->render();
+            pWindow->render(cr);
         }
     }
 }
