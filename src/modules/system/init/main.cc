@@ -324,7 +324,7 @@ void init_stage2()
         }
     }
     NOTICE("INIT: File found");
-    String fname = initProg->getName();
+    String fname = String("root»/applications/winman");
     NOTICE("INIT: name: " << fname);
     // That will have forked - we don't want to fork, so clear out all the chaff
     // in the new address space that's not in the kernel address space so we
@@ -335,12 +335,27 @@ void init_stage2()
     DynamicLinker *pLinker = new DynamicLinker();
     pProcess->setLinker(pLinker);
 
+    // Should we actually load this file, or request another program load the file?
+    String interpreter("");
+    if(pLinker->checkInterpreter(initProg, interpreter))
+    {
+        // Switch to the interpreter.
+        String realInterpreter("root»");
+        realInterpreter += interpreter;
+        initProg = VFS::instance().find(realInterpreter);
+        if(!initProg)
+        {
+            FATAL("Unable to load init program interpreter " << realInterpreter << "!");
+            return;
+        }
+    }
+
     if (!pLinker->loadProgram(initProg))
     {
         FATAL("Init program failed to load!");
     }
 
-    for (int j = 0; j < 0x20000; j += 0x1000)
+    for (int j = 0; j < 0x21000; j += 0x1000)
     {
         physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
         bool b = Processor::information().getVirtualAddressSpace().map(phys, reinterpret_cast<void*> (j+0x20000000), VirtualAddressSpace::Write);
@@ -350,15 +365,50 @@ void init_stage2()
 
     // Initialise the sigret and pthreads shizzle.
     pedigree_init_sigret();
-
     pedigree_init_pthreads();
+
+    class RunInitEvent : public Event
+    {
+    public:
+        RunInitEvent(uintptr_t addr) : Event(addr, true)
+        {}
+        size_t serialize(uint8_t *pBuffer)
+        {return 0;}
+        size_t getNumber() {return ~0UL;}
+    };
+
+    // Find the init function location, if it exists.
+    uintptr_t initLoc = pLinker->getProgramElf()->getInitFunc();
+    if (initLoc)
+    {
+        NOTICE("initLoc active: " << initLoc);
+
+        RunInitEvent *ev = new RunInitEvent(initLoc);
+        // Poke the initLoc so we know it's mapped in!
+        volatile uintptr_t *vInitLoc = reinterpret_cast<volatile uintptr_t*> (initLoc);
+        volatile uintptr_t tmp = * vInitLoc;
+        *vInitLoc = tmp; // GCC can't ignore a write.
+        asm volatile("" :::"memory"); // Memory barrier.
+        Processor::information().getCurrentThread()->sendEvent(ev);
+        // Yield, so the code gets run before we return.
+        Scheduler::instance().yield();
+    }
+
+    uintptr_t *argv_loc = reinterpret_cast<uintptr_t *>(0x20020000);
+    memset(argv_loc, 0, PhysicalMemoryManager::instance().getPageSize());
+    argv_loc[0] = reinterpret_cast<uintptr_t>(&argv_loc[2]);
+    memcpy(&argv_loc[2], static_cast<const char *>(fname), fname.length());
+
+    uintptr_t *env_loc = reinterpret_cast<uintptr_t *>(0x20020400);
+
+    uintptr_t *stack = reinterpret_cast<uintptr_t*>(0x20020000 - 24);
 
 #if 0
     system_reset();
 #else
 
     // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
-    new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-16) /* Stack */);
+    new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), argv_loc /* parameter */,  reinterpret_cast<void*>(stack) /* Stack */);
 
     g_InitProgramLoaded.release();
 #endif
