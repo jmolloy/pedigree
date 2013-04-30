@@ -141,12 +141,6 @@ void Window::render(cairo_t *cr)
 
     cairo_save(cr);
 
-    // Blank out the window in full.
-    cairo_set_line_width(cr, 0);
-    cairo_set_source_rgba(cr, 0.0, 0.0, 0.0, 0.8);
-    cairo_rectangle(cr, x, y, w, h);
-    cairo_fill(cr);
-
     // Draw the child framebuffer before window decorations.
     void *pBuffer = getFramebuffer();
     if(pBuffer)

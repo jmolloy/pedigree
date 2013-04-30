@@ -130,3 +130,32 @@ void Png::render(cairo_t *cr, size_t x, size_t y, size_t width, size_t height)
 
   cairo_surface_destroy(surface);
 }
+
+void Png::renderPartial(
+            cairo_t *cr,
+            size_t atX, size_t atY,
+            size_t innerX, size_t innerY,
+            size_t partialWidth, size_t partialHeight,
+            size_t scaleWidth, size_t scaleHeight)
+{
+  cairo_surface_t *surface = cairo_image_surface_create_for_data(
+                                  (uint8_t*) m_pBitmap,
+                                  CAIRO_FORMAT_RGB24,
+                                  m_nWidth,
+                                  m_nHeight,
+                                  m_nWidth * 4);
+
+  cairo_save(cr);
+
+  cairo_rectangle(cr, atX, atY, partialWidth, partialHeight);
+  cairo_clip(cr);
+  cairo_new_path(cr);
+
+  cairo_identity_matrix(cr);
+  cairo_scale(cr, scaleWidth / (double) m_nWidth, scaleHeight / (double) m_nHeight);
+  cairo_set_source_surface(cr, surface, innerX, innerY);
+  cairo_paint(cr);
+  cairo_restore(cr);
+
+  cairo_surface_destroy(surface);
+}

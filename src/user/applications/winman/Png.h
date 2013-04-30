@@ -31,6 +31,12 @@ public:
     ~Png();
     
     void render(cairo_t *cr, size_t x, size_t y, size_t width, size_t height);
+    void renderPartial(
+            cairo_t *cr,
+            size_t atX, size_t atY,
+            size_t innerX, size_t innerY,
+            size_t partialWidth, size_t partialHeight,
+            size_t scaleWidth, size_t scaleHeight);
 
     size_t getWidth()
     {return m_nWidth;}
