@@ -128,8 +128,6 @@ IpcMessage *IpcEndpoint::getMessage(bool bBlock)
     IpcMessage *pReturn = p->pMessage;
 
     p->pMutex->release();
-    Scheduler::instance().yield();
-
     if(p->bAsync)
     {
         delete p->pMutex;
