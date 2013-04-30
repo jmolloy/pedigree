@@ -42,6 +42,8 @@ static bool defaultEventHandler(WidgetMessages message, size_t dataSize, void *d
 
 static Widget *g_pWidget = 0;
 
+static PedigreeIpc::IpcEndpoint *g_pWinmanEndpoint = 0;
+
 std::map<uint64_t, widgetCallback_t> Widget::m_CallbackMap;
 std::queue<PedigreeIpc::IpcMessage *> g_PendingMessages;
 
@@ -75,7 +77,10 @@ bool Widget::construct(const char *endpoint, const char *title, widgetCallback_t
     /// \todo fail if endpoint already exists.
     PedigreeIpc::createEndpoint(endpoint);
     m_Endpoint = PedigreeIpc::getEndpoint(endpoint);
-    PedigreeIpc::IpcEndpoint *winman = PedigreeIpc::getEndpoint(PEDIGREE_WINMAN_ENDPOINT);
+    if(!g_pWinmanEndpoint)
+    {
+        g_pWinmanEndpoint = PedigreeIpc::getEndpoint(PEDIGREE_WINMAN_ENDPOINT);
+    }
 
     // Construct the handle first.
     uint64_t pid = getpid();
@@ -113,7 +118,7 @@ bool Widget::construct(const char *endpoint, const char *title, widgetCallback_t
     // Send the message off to the window manager and wait for a response. The
     // response will contain a GraphicsProvider that we can use to create our
     // Framebuffer for drawing on.
-    if(!PedigreeIpc::send(winman, pCreateMessage, false))
+    if(!PedigreeIpc::send(g_pWinmanEndpoint, pCreateMessage, false))
     {
         m_Handle = 0;
         delete pCreateMessage;
@@ -226,8 +231,15 @@ bool Widget::redraw(PedigreeGraphics::Rect &rt)
         return false;
 
     // Allocate the message.
+    PedigreeIpc::IpcMessage *pRedrawMessage = new PedigreeIpc::IpcMessage();
+    if(!pRedrawMessage->initialise())
+    {
+        m_Handle = 0;
+        return false;
+    }
+
     size_t totalSize = sizeof(WindowManagerMessage) + sizeof(RequestRedrawMessage);
-    char *messageData = new char[totalSize];
+    char *messageData = static_cast<char *>(pRedrawMessage->getBuffer());
     WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
     RequestRedrawMessage *pMessage = reinterpret_cast<RequestRedrawMessage*>(messageData + sizeof(WindowManagerMessage));
 
@@ -242,12 +254,14 @@ bool Widget::redraw(PedigreeGraphics::Rect &rt)
     pMessage->height = rt.getH();
 
     // Transmit.
-    bool result = sendMessage(messageData, totalSize);
+    if(!PedigreeIpc::send(g_pWinmanEndpoint, pRedrawMessage, false))
+    {
+        m_Handle = 0;
+        delete pRedrawMessage;
+        return false;
+    }
 
-    // Clean up.
-    delete [] messageData;
-
-    return result;
+    return true;
 }
 
 bool Widget::visibility(bool vis)
@@ -385,7 +399,7 @@ void Widget::checkForEvents(bool bAsync)
         PedigreeIpc::IpcMessage *pMessage = 0;
         if(g_PendingMessages.empty())
         {
-            PedigreeIpc::recv(g_pWidget->m_Endpoint, &pMessage, true);
+            PedigreeIpc::recv(g_pWidget->m_Endpoint, &pMessage, bAsync);
         }
         else
         {
