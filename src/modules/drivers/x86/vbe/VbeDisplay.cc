@@ -232,7 +232,7 @@ bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
     m_pLogicalFramebuffer->setXPos(0); m_pLogicalFramebuffer->setYPos(0);
     m_pLogicalFramebuffer->setParent(0);
     
-    m_pFramebufferRawAddress->map((m_Mode.height * m_Mode.bytesPerLine) + m_Mode.width);
+    m_pFramebufferRawAddress->map((m_Mode.height * m_Mode.bytesPerLine) + m_Mode.width, true);
     m_pLogicalFramebuffer->setFramebuffer(reinterpret_cast<uintptr_t>(m_pFramebuffer->virtualAddress()));
 
     g_pDisplay = this;
