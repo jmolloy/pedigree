@@ -50,6 +50,8 @@ uint8_t *g_pBackbuffer = 0;
 
 std::map<uint64_t, Window*> *g_Windows;
 
+std::vector<Window*> g_PendingWindows;
+
 /// \todo Make configurable.
 //#define CLIENT_DEFAULT "/applications/tui"
 #define CLIENT_DEFAULT "/applications/gears"
@@ -63,7 +65,7 @@ void startClient()
     }
 }
 
-bool handleMessage(char *messageData, cairo_t *cr)
+void handleMessage(char *messageData)
 {
     bool bResult = false;
     LibUiProtocol::WindowManagerMessage *pWinMan =
@@ -93,8 +95,7 @@ bool handleMessage(char *messageData, cairo_t *cr)
         Window *pWindow = new Window(pWinMan->widgetHandle, pEndpoint, pParent);
         std::string newTitle(pCreate->title);
         pWindow->setTitle(newTitle);
-        pWindow->render(cr);
-        bResult = true;
+        g_PendingWindows.push_back(pWindow);
 
         if(!g_pFocusWindow)
         {
@@ -146,33 +147,28 @@ bool handleMessage(char *messageData, cairo_t *cr)
         if(it != g_Windows->end())
         {
             Window *pWindow = it->second;
-            pWindow->render(cr);
-            bResult = true;
+            g_PendingWindows.push_back(pWindow);
         }
     }
     else
     {
         syslog(LOG_INFO, "winman: unhandled message type");
     }
-
-    return bResult;
 }
 
-bool checkForMessages(PedigreeIpc::IpcEndpoint *pEndpoint, cairo_t *cr)
+void checkForMessages(PedigreeIpc::IpcEndpoint *pEndpoint)
 {
-    bool bResult = false;
     if(!pEndpoint)
-        return bResult;
+        return;
 
+    /// \todo should keep looping while we have messages to handle.
     PedigreeIpc::IpcMessage *pRecv = 0;
     if(PedigreeIpc::recv(pEndpoint, &pRecv, true))
     {
-        bResult = handleMessage(static_cast<char *>(pRecv->getBuffer()), cr);
+        handleMessage(static_cast<char *>(pRecv->getBuffer()));
 
         delete pRecv;
     }
-
-    return bResult;
 }
 
 #define ALT_KEY (1ULL << 60)
@@ -395,7 +391,7 @@ int main(int argc, char *argv[])
 
     // Use the root framebuffer.
     PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
-    g_pTopLevelFramebuffer = pRootFramebuffer; // new PedigreeGraphics::Framebuffer(prov); // pRootFramebuffer->createChild(0, 0, pRootFramebuffer->getWidth(), pRootFramebuffer->getHeight());
+    g_pTopLevelFramebuffer = pRootFramebuffer;
 
     if(!g_pTopLevelFramebuffer->getRawBuffer())
     {
@@ -406,7 +402,34 @@ int main(int argc, char *argv[])
     size_t g_nWidth = g_pTopLevelFramebuffer->getWidth();
     size_t g_nHeight = g_pTopLevelFramebuffer->getHeight();
 
-    cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, g_nWidth, g_nHeight);
+    cairo_format_t format = CAIRO_FORMAT_ARGB32;
+    if(g_pTopLevelFramebuffer->getFormat() == PedigreeGraphics::Bits24_Rgb)
+    {
+        if(g_pTopLevelFramebuffer->getBytesPerPixel() != 4)
+        {
+            syslog(LOG_CRIT, "winman: error: incompatible framebuffer format (bytes per pixel)");
+            return -1;
+        }
+    }
+    else if(g_pTopLevelFramebuffer->getFormat() == PedigreeGraphics::Bits16_Rgb565)
+    {
+        format = CAIRO_FORMAT_RGB16_565;
+    }
+    else if(g_pTopLevelFramebuffer->getFormat() > PedigreeGraphics::Bits32_Rgb)
+    {
+        syslog(LOG_CRIT, "winman: error: incompatible framebuffer format (possibly BGR or similar)");
+        return -1;
+    }
+
+    int stride = cairo_format_stride_for_width(format, g_nWidth);
+    cairo_surface_t *surface = cairo_image_surface_create_for_data(
+            (uint8_t *) g_pTopLevelFramebuffer->getRawBuffer(),
+            format,
+            g_nWidth,
+            g_nHeight,
+            stride);
+
+    //cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, g_nWidth, g_nHeight);
     cairo_t *cr = cairo_create(surface);
 
     g_pBackbuffer = cairo_image_surface_get_data(surface);
@@ -421,35 +444,24 @@ int main(int argc, char *argv[])
                                   ft_face, (cairo_destroy_func_t) FT_Done_Face);
     cairo_set_font_face(cr, font_face);
 
-#if 1
-    /*
-    cairo_surface_t *wallpaper = cairo_image_surface_create_from_png("/system/wallpaper/fields.png");
-    syslog(LOG_INFO, "status: %s / %s", cairo_status_to_string(cairo_status(cr)), cairo_status_to_string(cairo_surface_status(wallpaper)));
+    Png *wallpaper = 0;
+    FILE *fp = fopen("/system/wallpaper/fields.png", "rb");
+    if(fp)
+    {
+        fclose(fp);
 
-    int wallpaperWidth = cairo_image_surface_get_width(wallpaper);
-    int wallpaperHeight = cairo_image_surface_get_height(wallpaper);
-
-    syslog(LOG_INFO, "w: %d, h: %d", wallpaperWidth, wallpaperHeight);
-
-    cairo_scale(cr, g_nWidth / (double) wallpaperWidth, g_nHeight / (double) wallpaperHeight);
-
-    cairo_set_source_surface(cr, wallpaper, 0, 0);
-    cairo_paint(cr);
-    cairo_surface_destroy(wallpaper);
-    */
-
-    Png *png = new Png("/system/wallpaper/fields.png");
-    png->render(cr, 0, 0, g_nWidth, g_nHeight);
-#else
-    cairo_set_source_rgba(cr, 0, 0, 1.0, 1.0);
-    cairo_rectangle(cr, 0, 0, g_nWidth, g_nHeight);
-    cairo_stroke_preserve(cr);
-    cairo_fill(cr);
-#endif
-
-    // g_pTopLevelFramebuffer->rect(0, 0, g_nWidth, g_nHeight, PedigreeGraphics::createRgb(0, 0, 255), PedigreeGraphics::Bits32_Rgb);
-
-    syslog(LOG_INFO, "winman: framebuffer is at %p", g_pTopLevelFramebuffer->getRawBuffer());
+        // A nice wallpaper.
+        wallpaper = new Png("/system/wallpaper/fields.png");
+        wallpaper->render(cr, 0, 0, g_nWidth, g_nHeight);
+    }
+    else
+    {
+        // No PNG found, fall back to a blue background.
+        cairo_set_source_rgba(cr, 0, 0, 1.0, 1.0);
+        cairo_rectangle(cr, 0, 0, g_nWidth, g_nHeight);
+        cairo_stroke_preserve(cr);
+        cairo_fill(cr);
+    }
 
     syslog(LOG_INFO, "winman: creating tile root");
 
@@ -480,42 +492,79 @@ int main(int argc, char *argv[])
     pLeft->focus();
 #endif
 
-    syslog(LOG_INFO, "winman: entering main loop %d", getpid());
+    syslog(LOG_INFO, "winman: entering main loop pid=%d", getpid());
 
     g_Windows = new std::map<uint64_t, Window*>();
 
+    // Install our global input callback before we kick off our client.
     Input::installCallback(Input::Key | Input::Mouse, systemInputCallback);
 
     // Render all window decorations and non-client display elements first up.
     g_pRootContainer->render(cr);
 
+    // Kick off the first render before any windows are open.
+    cairo_surface_flush(surface);
+    g_pTopLevelFramebuffer->redraw();
+
     // Load first tile.
     startClient();
 
     // Main loop: logic & message handling goes here!
+    DirtyRectangle dirty;
     while(true)
     {
         // Check for any messages coming in from windows, asynchronously.
-        // checkForMessages returns true if a handled message requires a redraw.
-        if(checkForMessages(pEndpoint, cr))
+        checkForMessages(pEndpoint);
+
+        // Check for any windows that may need rendering.
+        if(!g_PendingWindows.empty())
         {
+            // Render each window, also ensuring the wallpaper is rendered again
+            // so that windows with alpha look correct.
+            std::vector<Window*>::iterator it = g_PendingWindows.begin();
+            for(; it != g_PendingWindows.end(); ++it)
+            {
+                PedigreeGraphics::Rect rt = (*it)->getCopyDimensions();
+
+                // Render wallpaper.
+                if(wallpaper)
+                {
+                    wallpaper->renderPartial(
+                            cr,
+                            rt.getX(), rt.getY(),
+                            0, 0,
+                            rt.getW(), rt.getH(),
+                            g_nWidth, g_nHeight);
+                }
+                else
+                {
+                    // Boring background.
+                    cairo_set_source_rgba(cr, 0, 0, 1.0, 1.0);
+                    cairo_rectangle(cr, rt.getX(), rt.getY(), rt.getW(), rt.getH());
+                    cairo_stroke_preserve(cr);
+                    cairo_fill(cr);
+                }
+
+                // Render window.
+                (*it)->render(cr);
+
+                // Update the dirty rectangle.
+                dirty.point(rt.getX(), rt.getY());
+                dirty.point(rt.getX() + rt.getW(), rt.getY() + rt.getH());
+            }
+
+            // Empty out the list in full.
+            g_PendingWindows.clear();
+
             // Flush the cairo surface, which will ensure the most recent data is
             // in the framebuffer ready to send to the device.
             cairo_surface_flush(surface);
 
-            // Draw the updated backbuffer.
-            g_pTopLevelFramebuffer->draw(g_pBackbuffer,
-                                         0,
-                                         0,
-                                         0,
-                                         0,
-                                         g_nWidth,
-                                         g_nHeight,
-                                         PedigreeGraphics::Bits32_Rgb);
+            // Submit a redraw to the graphics card.
+            g_pTopLevelFramebuffer->redraw(dirty.getX(), dirty.getY(), dirty.getWidth(), dirty.getHeight());
 
-            // Submit a full redraw to the graphics card.
-            /// \todo We need to stop doing this - we should figue out how much we changed.
-            g_pTopLevelFramebuffer->redraw();
+            // Wipe out the dirty rectangle - we're all done.
+            dirty.reset();
         }
         else
         {

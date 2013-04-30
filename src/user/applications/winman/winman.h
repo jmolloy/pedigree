@@ -32,6 +32,36 @@
  *  @{
  */
 
+
+/**
+ * DirtyRectangle: receives a number of points, uses these to determine the full
+ * extent that has been modified in the lifetime of the object. This can be used
+ * to calculate the full amount of screen space that needs to be redrawn.
+ */
+class DirtyRectangle
+{
+public:
+    DirtyRectangle();
+    ~DirtyRectangle();
+
+    void point(size_t x, size_t y);
+
+    size_t getX() const {return m_X;}
+    size_t getY() const {return m_Y;}
+    size_t getX2() const {return m_X2;}
+    size_t getY2() const {return m_Y2;}
+    size_t getWidth() const {return m_X2-m_X+1;}
+    size_t getHeight() const {return m_Y2-m_Y+1;}
+
+    void reset()
+    {
+        m_X = 0; m_Y = 0; m_X2 = 0; m_X2 = 0;
+    }
+
+private:
+    size_t m_X, m_Y, m_X2, m_Y2;
+};
+
 class WObject;
 class Container;
 class RootContainer;
@@ -68,6 +98,11 @@ class WObject
 
         virtual void resized()
         {
+        }
+
+        PedigreeGraphics::Rect getCopyDimensions() const
+        {
+            return m_Dimensions;
         }
 
     protected:
