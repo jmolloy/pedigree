@@ -23,7 +23,7 @@ create table 'desired_display_mode' (
        'bpp' integer);
 
 -- Feel free to change
-insert into 'desired_display_mode' values (1024, 768, 24);
+insert into 'desired_display_mode' values (1024, 768, 32);
 
 --
 -- Colour scheme for splash and TUI
