@@ -196,7 +196,7 @@ public:
             if (((*it)->width == nWidth) &&
                 ((*it)->height == nHeight))
             {
-                if((Graphics::bitsPerPixel((*it)->pf2) == nBpp) || (((*it)->pf.nBpp) == nBpp))
+                if(/*(Graphics::bitsPerPixel((*it)->pf2) == nBpp) ||*/ (((*it)->pf.nBpp) == nBpp))
                 {
                     pSm = *it;
                     break;
