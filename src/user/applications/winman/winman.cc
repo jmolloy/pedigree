@@ -38,6 +38,7 @@
 #include <protocol.h>
 
 #include "winman.h"
+#include "Png.h"
 
 PedigreeGraphics::Framebuffer *g_pTopLevelFramebuffer = 0;
 
@@ -62,8 +63,9 @@ void startClient()
     }
 }
 
-void handleMessage(char *messageData, cairo_t *cr)
+bool handleMessage(char *messageData, cairo_t *cr)
 {
+    bool bResult = false;
     LibUiProtocol::WindowManagerMessage *pWinMan =
         reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(messageData);
 
@@ -92,6 +94,7 @@ void handleMessage(char *messageData, cairo_t *cr)
         std::string newTitle(pCreate->title);
         pWindow->setTitle(newTitle);
         pWindow->render(cr);
+        bResult = true;
 
         if(!g_pFocusWindow)
         {
@@ -144,26 +147,32 @@ void handleMessage(char *messageData, cairo_t *cr)
         {
             Window *pWindow = it->second;
             pWindow->render(cr);
+            bResult = true;
         }
     }
     else
     {
         syslog(LOG_INFO, "winman: unhandled message type");
     }
+
+    return bResult;
 }
 
-void checkForMessages(PedigreeIpc::IpcEndpoint *pEndpoint, cairo_t *cr)
+bool checkForMessages(PedigreeIpc::IpcEndpoint *pEndpoint, cairo_t *cr)
 {
+    bool bResult = false;
     if(!pEndpoint)
-        return;
+        return bResult;
 
     PedigreeIpc::IpcMessage *pRecv = 0;
     if(PedigreeIpc::recv(pEndpoint, &pRecv, true))
     {
-        handleMessage(static_cast<char *>(pRecv->getBuffer()), cr);
+        bResult = handleMessage(static_cast<char *>(pRecv->getBuffer()), cr);
 
         delete pRecv;
     }
+
+    return bResult;
 }
 
 #define ALT_KEY (1ULL << 60)
@@ -412,7 +421,8 @@ int main(int argc, char *argv[])
                                   ft_face, (cairo_destroy_func_t) FT_Done_Face);
     cairo_set_font_face(cr, font_face);
 
-#if 0
+#if 1
+    /*
     cairo_surface_t *wallpaper = cairo_image_surface_create_from_png("/system/wallpaper/fields.png");
     syslog(LOG_INFO, "status: %s / %s", cairo_status_to_string(cairo_status(cr)), cairo_status_to_string(cairo_surface_status(wallpaper)));
 
@@ -426,7 +436,10 @@ int main(int argc, char *argv[])
     cairo_set_source_surface(cr, wallpaper, 0, 0);
     cairo_paint(cr);
     cairo_surface_destroy(wallpaper);
-    while(1);
+    */
+
+    Png *png = new Png("/system/wallpaper/fields.png");
+    png->render(cr, 0, 0, g_nWidth, g_nHeight);
 #else
     cairo_set_source_rgba(cr, 0, 0, 1.0, 1.0);
     cairo_rectangle(cr, 0, 0, g_nWidth, g_nHeight);
@@ -483,30 +496,34 @@ int main(int argc, char *argv[])
     while(true)
     {
         // Check for any messages coming in from windows, asynchronously.
-        checkForMessages(pEndpoint, cr);
+        // checkForMessages returns true if a handled message requires a redraw.
+        if(checkForMessages(pEndpoint, cr))
+        {
+            // Flush the cairo surface, which will ensure the most recent data is
+            // in the framebuffer ready to send to the device.
+            cairo_surface_flush(surface);
 
-        // Flush the cairo surface, which will ensure the most recent data is
-        // in the framebuffer ready to send to the device.
-        cairo_surface_flush(surface);
+            // Draw the updated backbuffer.
+            g_pTopLevelFramebuffer->draw(g_pBackbuffer,
+                                         0,
+                                         0,
+                                         0,
+                                         0,
+                                         g_nWidth,
+                                         g_nHeight,
+                                         PedigreeGraphics::Bits32_Rgb);
 
-        // Draw the updated backbuffer.
-        g_pTopLevelFramebuffer->draw(g_pBackbuffer,
-                                     0,
-                                     0,
-                                     0,
-                                     0,
-                                     g_nWidth,
-                                     g_nHeight,
-                                     PedigreeGraphics::Bits32_Rgb);
-
-        // Submit a full redraw to the graphics card.
-        /// \todo We need to stop doing this - we should figue out how much we changed.
-        g_pTopLevelFramebuffer->redraw();
-
-        // Yield control to the rest of the system. As we do everything we
-        // possibly can asynchronously, if we don't yield we'll pound the
-        // system and not let any other processes work.
-        sched_yield();
+            // Submit a full redraw to the graphics card.
+            /// \todo We need to stop doing this - we should figue out how much we changed.
+            g_pTopLevelFramebuffer->redraw();
+        }
+        else
+        {
+            // Yield control to the rest of the system. As we do everything we
+            // possibly can asynchronously, if we don't yield we'll pound the
+            // system and not let any other processes work.
+            sched_yield();
+        }
     }
 
     return 0;
