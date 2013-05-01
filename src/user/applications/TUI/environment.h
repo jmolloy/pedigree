@@ -20,6 +20,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <Widget.h>
+
 struct rgb_t
 {
     uint8_t b;
@@ -39,6 +41,43 @@ namespace Keyboard
         AltGr   = 1ULL << 59
     };
 }
+
+class PedigreeTerminalEmulator : public Widget
+{
+    public:
+        PedigreeTerminalEmulator() : Widget(), m_nWidth(0), m_nHeight(0)
+        {};
+
+        virtual ~PedigreeTerminalEmulator()
+        {};
+
+        virtual bool render(PedigreeGraphics::Rect &rt, PedigreeGraphics::Rect &dirty)
+        {
+            return true;
+        }
+
+        void handleReposition(PedigreeGraphics::Rect &rt)
+        {
+            m_nWidth = rt.getW();
+            m_nHeight = rt.getH();
+        }
+
+        size_t getWidth() const
+        {
+            return m_nWidth;
+        }
+
+        size_t getHeight() const
+        {
+            return m_nHeight;
+        }
+
+    private:
+        size_t m_nWidth;
+        size_t m_nHeight;
+};
+
+extern PedigreeTerminalEmulator *g_pEmu;
 
 namespace Display
 {

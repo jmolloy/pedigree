@@ -25,9 +25,11 @@ extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
 FT_Library Font::m_Library;
 bool Font::m_bLibraryInitialised = false;
 
+extern cairo_t *g_Cairo;
+
 Font::Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWidth) :
     m_Face(), m_CellWidth(0), m_CellHeight(0), m_nWidth(nWidth), m_Baseline(requestedSize), m_bCache(bCache),
-    m_pCache(0), m_CacheSize(0)
+    m_pCache(0), m_CacheSize(0), key(), m_FontSize(requestedSize)
 {
     char str[64];
     int error;
@@ -54,6 +56,24 @@ Font::Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWid
         syslog(LOG_ALERT, "Freetype font load error: %d", error);
         return;
     }
+
+    font_face = cairo_ft_font_face_create_for_ft_face(m_Face, 0);
+    cairo_font_face_set_user_data(font_face, &key,
+                                  m_Face, (cairo_destroy_func_t) FT_Done_Face);
+
+    cairo_save(g_Cairo);
+    cairo_set_font_face(g_Cairo, font_face);
+    cairo_set_font_size(g_Cairo, m_FontSize);
+
+    cairo_font_extents_t extents;
+    cairo_font_extents(g_Cairo, &extents);
+    cairo_restore(g_Cairo);
+
+    m_CellHeight = m_Baseline = extents.height;
+    m_CellHeight += extents.descent;
+    m_CellWidth = extents.max_x_advance;
+
+    return;
 
     error = FT_Set_Pixel_Sizes(m_Face, 0, requestedSize);
     if (error)
@@ -111,6 +131,25 @@ size_t Font::render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, si
     }
 
     return m_CellWidth;
+}
+
+size_t Font::render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b)
+{
+    cairo_save(g_Cairo);
+    cairo_set_font_face(g_Cairo, font_face);
+    cairo_set_font_size(g_Cairo, m_FontSize);
+    cairo_set_source_rgba(
+            g_Cairo,
+            ((f >> 16) & 0xFF) / 256.0,
+            ((f >> 8) & 0xFF) / 256.0,
+            ((f) & 0xFF) / 256.0,
+            1.0);
+
+    cairo_move_to(g_Cairo, x, y + m_Baseline);
+    cairo_show_text(g_Cairo, s);
+    cairo_restore(g_Cairo);
+
+    return m_CellWidth * strlen(s);
 }
 
 void Font::drawGlyph(PedigreeGraphics::Framebuffer *pFb, Glyph *pBitmap, int left, int top)

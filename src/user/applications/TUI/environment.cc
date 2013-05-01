@@ -73,7 +73,11 @@ void doRedraw(DirtyRectangle &rect)
        rect.getX2() == ~0UL && rect.getY2() == ~0UL)
         return;
 
-    g_pFramebuffer->redraw(rect.getX(), rect.getY(), rect.getWidth(), rect.getHeight(), true);
+    if(g_pEmu)
+    {
+        PedigreeGraphics::Rect rt(rect.getX(), rect.getY(), rect.getWidth(), rect.getHeight());
+        g_pEmu->redraw(rt);
+    }
 }
 
 DirtyRectangle::DirtyRectangle() :

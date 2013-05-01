@@ -45,6 +45,8 @@
 
 #include <Widget.h>
 
+#include <cairo/cairo.h>
+
 #define CONSOLE_READ    1
 #define CONSOLE_WRITE   2
 #define CONSOLE_GETROWS 3
@@ -56,7 +58,7 @@
 #define NORMAL_FONT_PATH    "/system/fonts/DejaVuSansMono.ttf"
 #define BOLD_FONT_PATH      "/system/fonts/DejaVuSansMono-Bold.ttf"
 
-#define FONT_SIZE           12
+#define FONT_SIZE           15
 
 /** End code from InputManager */
 
@@ -74,28 +76,10 @@ size_t g_nWidth, g_nHeight;
 size_t nextConsoleNum = 1;
 size_t g_nLastResponse = 0;
 
+cairo_t *g_Cairo = 0;
+cairo_surface_t *g_Surface = 0;
 
-class PedigreeTerminalEmulator : public Widget
-{
-    public:
-        PedigreeTerminalEmulator() : Widget()
-        {};
-
-        virtual ~PedigreeTerminalEmulator()
-        {};
-
-        PedigreeGraphics::Framebuffer *getInternalFramebuffer()
-        {
-            return getFramebuffer();
-        }
-
-        virtual bool render(PedigreeGraphics::Rect &rt, PedigreeGraphics::Rect &dirty)
-        {
-            return true;
-        }
-};
-
-static PedigreeTerminalEmulator *g_pEmu = 0;
+PedigreeTerminalEmulator *g_pEmu = 0;
 
 PedigreeGraphics::Framebuffer *g_pFramebuffer = 0;
 
@@ -103,13 +87,29 @@ void checkFramebuffer()
 {
     if(g_pEmu)
     {
-        g_pFramebuffer = g_pEmu->getInternalFramebuffer();
+        /// \todo load new cr & surface
+        if(g_Surface)
+        {
+            cairo_surface_destroy(g_Surface);
+            cairo_destroy(g_Cairo);
+        }
+
+        int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, g_nWidth);
+        g_Surface = cairo_image_surface_create_for_data(
+                (uint8_t*) g_pEmu->getRawFramebuffer(),
+                CAIRO_FORMAT_ARGB32,
+                g_nWidth,
+                g_nHeight,
+                stride);
+        g_Cairo = cairo_create(g_Surface);
+
+        syslog(LOG_INFO, "created cairo %p %p %dx%d", g_Surface, g_Cairo, g_nWidth, g_nHeight);
     }
 }
 
 void modeChanged(size_t width, size_t height)
 {
-    if(!(g_pTermList && g_pFramebuffer))
+    if(!(g_pTermList && g_Cairo))
     {
         // Spurious/early modeChanged.
         return;
@@ -121,8 +121,10 @@ void modeChanged(size_t width, size_t height)
     g_nHeight = height;
 
     // Wipe out the framebuffer, start over.
-
-    g_pFramebuffer->rect(0, 0, g_nWidth, g_nHeight, 0, PedigreeGraphics::Bits24_Rgb);
+    cairo_set_source_rgba(g_Cairo, 0, 0, 0.0, 0.8);
+    cairo_rectangle(g_Cairo, 0, 0, g_nWidth, g_nHeight);
+    cairo_stroke_preserve(g_Cairo);
+    cairo_fill(g_Cairo);
 
     g_pHeader->setWidth(width);
 
@@ -139,12 +141,12 @@ void modeChanged(size_t width, size_t height)
         g_pHeader->render(pTerm->getBuffer(), rect);
 
         pTerm->redrawAll(rect);
-        doRedraw(rect);
 
         pTL = pTL->next;
     }
 
-    g_pFramebuffer->redraw(0, 0, g_nWidth, g_nHeight, true);
+    PedigreeGraphics::Rect rt(0, 0, g_nWidth, g_nHeight);
+    g_pEmu->redraw(rt);
 }
 
 void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
@@ -410,19 +412,17 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
 {
     g_pFramebuffer = pFramebuffer;
 
-    // Have we got a working mode?
-    if(!pFramebuffer->getRawBuffer())
-    {
-        // No!
-        syslog(LOG_EMERG, "TUI Error: No framebuffer available!");
-        return 0;
-    }
+    g_nWidth = g_pEmu->getWidth();
+    g_nHeight = g_pEmu->getHeight();
 
-    g_nWidth = g_pFramebuffer->getWidth();
-    g_nHeight = g_pFramebuffer->getHeight();
+    cairo_set_line_cap(g_Cairo, CAIRO_LINE_CAP_SQUARE);
+    cairo_set_line_join(g_Cairo, CAIRO_LINE_JOIN_MITER);
+    cairo_set_antialias(g_Cairo, CAIRO_ANTIALIAS_NONE);
+    cairo_set_line_width(g_Cairo, 1.0);
 
-    g_pFramebuffer->rect(0, 0, g_nWidth, g_nHeight, 0, PedigreeGraphics::Bits24_Rgb);
-    g_pFramebuffer->redraw(0, 0, g_nWidth, g_nHeight, true);
+    cairo_set_source_rgba(g_Cairo, 0, 0, 0.0, 0.8);
+    cairo_rectangle(g_Cairo, 0, 0, g_nWidth, g_nHeight);
+    cairo_fill(g_Cairo);
 
     g_NormalFont = new Font(FONT_SIZE, NORMAL_FONT_PATH,
                             true, g_nWidth);
@@ -439,14 +439,31 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
         return 0;
     }
 
+    g_NormalFont->render("Hello world from the TUI!", 200, 200, 0xFF0000, 0);
+
     rgb_t fore = {0xff, 0xff, 0xff, 0xff};
     rgb_t back = {0, 0, 0, 0};
 
     g_pHeader =  new Header(g_nWidth);
 
     g_pHeader->addTab(const_cast<char*>("The Pedigree Operating System"), 0);
+    g_pHeader->addTab(const_cast<char*>("tab1"), 0);
+    g_pHeader->addTab(const_cast<char*>("tab2"), 0);
+    g_pHeader->addTab(const_cast<char*>("tab3"), 0);
+    g_pHeader->addTab(const_cast<char*>("tab4"), 0);
+    g_pHeader->addTab(const_cast<char*>("look i'm long!"), 0);
+    g_pHeader->select(2);
+
 
     DirtyRectangle rect;
+    g_pHeader->render(0, rect);
+
+    while(1)
+    {
+    PedigreeGraphics::Rect rt(0, 0, g_nWidth, g_nHeight);
+    g_pEmu->redraw(rt);
+        Widget::checkForEvents(true);
+    }
 
     // DirtyRectangle rect;
     char newTermName[256];
@@ -592,7 +609,13 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
                 /// \todo reposition/re-render/resize
                 syslog(LOG_INFO, "TUI: reposition event");
                 PedigreeGraphics::Rect *rt = reinterpret_cast<PedigreeGraphics::Rect*>(msgData);
+                syslog(LOG_INFO, "** checking framebuffer");
+                g_pEmu->handleReposition(*rt);
+                g_nWidth = g_pEmu->getWidth();
+                g_nHeight = g_pEmu->getHeight();
                 checkFramebuffer();
+                syslog(LOG_INFO, "** checking framebuffer done");
+                syslog(LOG_INFO, "** modeChanged");
                 modeChanged(rt->getW(), rt->getH());
             }
             break;
@@ -612,6 +635,8 @@ int main(int argc, char *argv[])
     char endpoint[256];
     sprintf(endpoint, "tui.%d", getpid());
 
+    syslog(LOG_INFO, "bss variable: %p [@%p]", g_pHeader, &g_pHeader);
+
     PedigreeGraphics::Rect rt;
 
     g_pEmu = new PedigreeTerminalEmulator();
@@ -625,9 +650,11 @@ int main(int argc, char *argv[])
     signal(SIGINT, sigint);
 
     // Handle initial reposition event.
+    syslog(LOG_INFO, "handling initial reposition");
     Widget::checkForEvents(true);
 
-    tui_do(g_pEmu->getInternalFramebuffer());
+    syslog(LOG_INFO, "going live");
+    tui_do(0);
 
     return 0;
 }
