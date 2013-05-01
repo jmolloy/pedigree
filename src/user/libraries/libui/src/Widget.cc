@@ -254,9 +254,8 @@ bool Widget::redraw(PedigreeGraphics::Rect &rt)
     pMessage->height = rt.getH();
 
     // Transmit.
-    if(!PedigreeIpc::send(g_pWinmanEndpoint, pRedrawMessage, false))
+    if(!PedigreeIpc::send(g_pWinmanEndpoint, pRedrawMessage))
     {
-        m_Handle = 0;
         delete pRedrawMessage;
         return false;
     }
