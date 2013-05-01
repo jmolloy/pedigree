@@ -53,8 +53,8 @@ std::map<uint64_t, Window*> *g_Windows;
 std::vector<Window*> g_PendingWindows;
 
 /// \todo Make configurable.
-//#define CLIENT_DEFAULT "/applications/tui"
-#define CLIENT_DEFAULT "/applications/gears"
+#define CLIENT_DEFAULT "/applications/tui"
+//#define CLIENT_DEFAULT "/applications/gears"
 
 void startClient()
 {
@@ -62,6 +62,28 @@ void startClient()
     {
         execl(CLIENT_DEFAULT, CLIENT_DEFAULT, 0);
         exit(1);
+    }
+}
+
+void fps()
+{
+    static unsigned int frames = 0;
+    static unsigned int start_time = 0;
+
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    frames++;
+    if (!start_time)
+    {
+        start_time = now.tv_sec;
+    }
+    else if (now.tv_sec - start_time >= 5)
+    {
+        float seconds = now.tv_sec - start_time;
+        float fps = frames / seconds;
+        syslog(LOG_INFO, "%d frames in %3.1f seconds = %6.3f FPS", frames, seconds, fps);
+        start_time = now.tv_sec;
+        frames = 0;
     }
 }
 
@@ -73,12 +95,11 @@ void handleMessage(char *messageData)
 
     size_t totalSize = sizeof(LibUiProtocol::WindowManagerMessage);
 
-    PedigreeIpc::IpcMessage *pIpcResponse = new PedigreeIpc::IpcMessage();
-    bool bSuccess = pIpcResponse->initialise();
-
     if(pWinMan->messageCode == LibUiProtocol::Create)
     {
-        syslog(LOG_INFO, "\n**** CREATE ****\n");
+        PedigreeIpc::IpcMessage *pIpcResponse = new PedigreeIpc::IpcMessage();
+        bool bSuccess = pIpcResponse->initialise();
+
         LibUiProtocol::CreateMessage *pCreate =
         reinterpret_cast<LibUiProtocol::CreateMessage*>(messageData + sizeof(LibUiProtocol::WindowManagerMessage));
         totalSize += sizeof(LibUiProtocol::CreateMessageResponse);
@@ -123,6 +144,9 @@ void handleMessage(char *messageData)
         std::map<uint64_t, Window*>::iterator it = g_Windows->find(pWinMan->widgetHandle);
         if(it != g_Windows->end())
         {
+            PedigreeIpc::IpcMessage *pIpcResponse = new PedigreeIpc::IpcMessage();
+            bool bSuccess = pIpcResponse->initialise();
+
             Window *pWindow = it->second;
             char *responseData = (char *) pIpcResponse->getBuffer();
 
@@ -163,7 +187,7 @@ void checkForMessages(PedigreeIpc::IpcEndpoint *pEndpoint)
 
     /// \todo should keep looping while we have messages to handle.
     PedigreeIpc::IpcMessage *pRecv = 0;
-    if(PedigreeIpc::recv(pEndpoint, &pRecv, true))
+    if(PedigreeIpc::recv(pEndpoint, &pRecv, false))
     {
         handleMessage(static_cast<char *>(pRecv->getBuffer()));
 
@@ -319,6 +343,8 @@ void systemInputCallback(Input::InputNotification &note)
                         newFocus = static_cast<Window*>(sibling);
                     }
                 }
+
+                bHandled = true;
             }
 
             if(newFocus)
@@ -327,8 +353,6 @@ void systemInputCallback(Input::InputNotification &note)
                 g_pFocusWindow = newFocus;
                 g_pFocusWindow->focus();
             }
-
-            bHandled = true;
         }
     }
 
@@ -358,6 +382,10 @@ void systemInputCallback(Input::InputNotification &note)
             pKeyEvent->key = note.data.key.key;
 
             PedigreeIpc::send(g_pFocusWindow->getEndpoint(), pMessage, true);
+        }
+        else
+        {
+            delete pMessage;
         }
     }
 }
@@ -571,7 +599,7 @@ int main(int argc, char *argv[])
             // Yield control to the rest of the system. As we do everything we
             // possibly can asynchronously, if we don't yield we'll pound the
             // system and not let any other processes work.
-            sched_yield();
+            // sched_yield();
         }
     }
 
