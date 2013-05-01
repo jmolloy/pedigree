@@ -95,9 +95,8 @@ void fps()
     {
         start_time = now.tv_sec;
     }
-    else if (now.tv_sec - start_time >= 5)
+    else if ((now.tv_sec - start_time) >= 5)
     {
-        gettimeofday(&now, NULL);
         GLfloat seconds = now.tv_sec - start_time;
         GLfloat fps = frames / seconds;
         //printf("%d frames in %3.1f seconds = %6.3f FPS\n", frames, seconds, fps);
