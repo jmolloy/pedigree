@@ -110,7 +110,7 @@ custom_incpath = {
 
 # Custom libraries for specific applications
 custom_libs = {
-    'TUI' : ['png', 'freetype', 'z', 'ui'],
+    'TUI' : ['cairo', 'pixman-1', 'fontconfig', 'expat', 'freetype', 'png', 'z', 'ui'],
     'thread-test' : ['pthread'],
     'uitest' : ['ui'],
     'gears' : ['ui'],
