@@ -72,6 +72,9 @@ bool g_FontsPrecached = false;
 
 extern Font *g_NormalFont, *g_BoldFont;
 
+extern cairo_t *g_Cairo;
+extern cairo_surface_t *g_Surface;
+
 static void getXtermColorFromDb(const char *colorName, uint8_t &color)
 {
     // The query string
@@ -117,6 +120,9 @@ Xterm::Xterm(PedigreeGraphics::Framebuffer *pFramebuffer, size_t nWidth, size_t 
 
     getXtermColorFromDb("xterm-bg", g_DefaultBg);
     getXtermColorFromDb("xterm-fg", g_DefaultFg);
+
+    return;
+
 
     // Precache glyphs for all colour combinations
     if(!g_FontsPrecached)
@@ -545,8 +551,23 @@ Xterm::Window::Window(size_t nRows, size_t nCols, PedigreeGraphics::Framebuffer 
     for (size_t i = 0; i < m_Width*m_Height; i++)
         m_pBuffer[i] = blank;
 
-    if(m_Bg)
-        m_pFramebuffer->rect(m_OffsetLeft, m_OffsetTop, nCols * g_NormalFont->getWidth(), nRows * g_NormalFont->getHeight(), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
+    if(m_Bg && g_Cairo)
+    {
+        cairo_save(g_Cairo);
+        cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+
+        cairo_set_source_rgba(
+                g_Cairo,
+                ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
+                ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
+                ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+                0.8);
+
+        cairo_rectangle(g_Cairo, m_OffsetLeft, m_OffsetTop, nCols * g_NormalFont->getWidth(), nRows * g_NormalFont->getHeight());
+        cairo_fill(g_Cairo);
+
+        cairo_restore(g_Cairo);
+    }
 
     m_pInsert = m_pView = m_pBuffer;
 }
@@ -586,8 +607,21 @@ void Xterm::Window::resize(size_t nWidth, size_t nHeight, PedigreeGraphics::Fram
     for (size_t i = 0; i < cols*rows; i++)
         newBuf[i] = blank;
 
-    if(m_Bg)
-        m_pFramebuffer->rect(m_OffsetLeft, m_OffsetTop, nWidth, nHeight, g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
+    if(m_Bg && g_Cairo)
+    {
+        cairo_save(g_Cairo);
+        cairo_set_source_rgba(
+                g_Cairo,
+                ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
+                ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
+                ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+                1.0);
+
+        cairo_rectangle(g_Cairo, m_OffsetLeft, m_OffsetTop, nWidth, nHeight);
+        cairo_fill(g_Cairo);
+
+        cairo_restore(g_Cairo);
+    }
 
     for (size_t r = 0; r < m_Height; r++)
     {
@@ -750,11 +784,15 @@ void Xterm::Window::render(DirtyRectangle &rect, size_t flags, size_t x, size_t 
     rect.point((x+1)*g_NormalFont->getWidth()+m_OffsetLeft+1, (y+1)*g_NormalFont->getHeight()+m_OffsetTop);
 
     if (flags & XTERM_BOLD)
-        g_BoldFont->render(m_pFramebuffer, utf32, x*g_BoldFont->getWidth(),
-                           y*g_BoldFont->getHeight(), fg, bg);
+        g_BoldFont->render(m_pFramebuffer, utf32,
+                           x*g_BoldFont->getWidth()+m_OffsetLeft,
+                           y*g_BoldFont->getHeight()+m_OffsetTop,
+                           fg, bg);
     else
-        g_NormalFont->render(m_pFramebuffer, utf32, x*g_NormalFont->getWidth(),
-                             y*g_NormalFont->getHeight(), fg, bg);
+        g_NormalFont->render(m_pFramebuffer, utf32,
+                             x*g_NormalFont->getWidth()+m_OffsetLeft,
+                             y*g_NormalFont->getHeight()+m_OffsetTop,
+                             fg, bg);
 }
 
 void Xterm::Window::scrollRegionUp(size_t n, DirtyRectangle &rect)
@@ -786,8 +824,28 @@ void Xterm::Window::scrollRegionUp(size_t n, DirtyRectangle &rect)
     // If we're bitblitting, we need to commit all changes before now.
     doRedraw(rect);
     rect.reset();
-    m_pFramebuffer->copy(0, top1_y, m_OffsetLeft, top2_y, m_FbWidth, bottom2_y - top2_y);
-    m_pFramebuffer->rect(0, bottom2_y, m_FbWidth, bottom1_y - bottom2_y, g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
+
+    cairo_save(g_Cairo);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+    cairo_set_source_surface(g_Cairo, g_Surface, 0, top1_y);
+
+    cairo_rectangle(g_Cairo, m_OffsetLeft, top2_y, m_FbWidth, bottom2_y - top2_y);
+    cairo_fill(g_Cairo);
+
+    cairo_set_source_rgba(
+            g_Cairo,
+            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            0.8);
+
+    cairo_rectangle(g_Cairo, m_OffsetLeft, bottom2_y, m_FbWidth, bottom1_y - bottom2_y);
+    cairo_fill(g_Cairo);
+
+    cairo_restore(g_Cairo);
+
+    // m_pFramebuffer->copy(0, top1_y, m_OffsetLeft, top2_y, m_FbWidth, bottom2_y - top2_y);
+    // m_pFramebuffer->rect(0, bottom2_y, m_FbWidth, bottom1_y - bottom2_y, g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
 
     rect.point(m_OffsetLeft, top2_y + m_OffsetTop);
     rect.point(m_OffsetLeft + m_FbWidth, bottom1_y + m_OffsetTop);
@@ -805,6 +863,7 @@ void Xterm::Window::scrollRegionUp(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::scrollRegionDown(size_t n, DirtyRectangle &rect)
 {
+    return;
 
     /*
     +----------+
@@ -832,8 +891,28 @@ void Xterm::Window::scrollRegionDown(size_t n, DirtyRectangle &rect)
     // If we're bitblitting, we need to commit all changes before now.
     doRedraw(rect);
     rect.reset();
-    m_pFramebuffer->copy(0, top1_y, 0, top2_y, m_FbWidth, bottom2_y - top2_y);
-    m_pFramebuffer->rect(0, top1_y, m_FbWidth, top2_y - top1_y, g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
+
+    cairo_save(g_Cairo);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+    cairo_set_source_surface(g_Cairo, g_Surface, 0, top1_y);
+
+    cairo_rectangle(g_Cairo, m_OffsetLeft, top2_y, m_FbWidth, bottom2_y - top2_y);
+    cairo_fill(g_Cairo);
+
+    cairo_set_source_rgba(
+            g_Cairo,
+            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            0.8);
+
+    cairo_rectangle(g_Cairo, m_OffsetLeft, top1_y, m_FbWidth, top2_y - top1_y);
+    cairo_fill(g_Cairo);
+
+    cairo_restore(g_Cairo);
+
+    // m_pFramebuffer->copy(0, top1_y, 0, top2_y, m_FbWidth, bottom2_y - top2_y);
+    // m_pFramebuffer->rect(0, top1_y, m_FbWidth, top2_y - top1_y, g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
 
     rect.point(m_OffsetLeft, top1_y);
     rect.point(m_OffsetLeft + m_FbWidth, bottom2_y);
@@ -859,8 +938,28 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
     // If we're bitblitting, we need to commit all changes before now.
     doRedraw(rect);
     rect.reset();
-    m_pFramebuffer->copy(0, top2_px, 0, top_px, m_FbWidth, (m_Height - n) * g_NormalFont->getHeight());
-    m_pFramebuffer->rect(0, bottom2_px, m_FbWidth, n * g_NormalFont->getHeight(), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
+
+    cairo_save(g_Cairo);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+    cairo_set_source_surface(g_Cairo, g_Surface, 0, top2_px);
+
+    cairo_rectangle(g_Cairo, 0, top_px, m_FbWidth, (m_Height - n) * g_NormalFont->getHeight());
+    cairo_fill(g_Cairo);
+
+    cairo_set_source_rgba(
+            g_Cairo,
+            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            0.8);
+
+    cairo_rectangle(g_Cairo, 0, bottom2_px, m_FbWidth, n * g_NormalFont->getHeight());
+    cairo_fill(g_Cairo);
+
+    cairo_restore(g_Cairo);
+
+    // m_pFramebuffer->copy(0, top2_px, 0, top_px, m_FbWidth, (m_Height - n) * g_NormalFont->getHeight());
+    // m_pFramebuffer->rect(0, bottom2_px, m_FbWidth, n * g_NormalFont->getHeight(), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
 
     rect.point(m_OffsetLeft, top_px + m_OffsetTop);
     rect.point(m_OffsetLeft + m_FbWidth, bottom2_px + (n * g_NormalFont->getHeight()) + m_OffsetTop);
@@ -1011,8 +1110,23 @@ void Xterm::Window::scrollDown(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::eraseScreen(DirtyRectangle &rect)
 {
+    cairo_save(g_Cairo);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+
+    cairo_set_source_rgba(
+            g_Cairo,
+            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            0.8);
+
+    cairo_rectangle(g_Cairo, 0, 0, m_FbWidth, m_Height * g_NormalFont->getHeight());
+    cairo_fill(g_Cairo);
+
+    cairo_restore(g_Cairo);
+
     // One good fillRect should do the job nicely.
-    m_pFramebuffer->rect(0, 0, m_FbWidth, m_Height * g_NormalFont->getHeight(), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
+    // m_pFramebuffer->rect(0, 0, m_FbWidth, m_Height * g_NormalFont->getHeight(), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
 
     rect.point(m_OffsetLeft, m_OffsetTop);
     rect.point(m_OffsetLeft + m_FbWidth, m_OffsetTop + (m_Height * g_NormalFont->getHeight()));
@@ -1030,8 +1144,23 @@ void Xterm::Window::eraseEOL(DirtyRectangle &rect)
 {
     size_t l = (m_CursorX * g_NormalFont->getWidth());
 
+    cairo_save(g_Cairo);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+
+    cairo_set_source_rgba(
+            g_Cairo,
+            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            0.8);
+
+    cairo_rectangle(g_Cairo, l, m_CursorY * g_NormalFont->getHeight(), m_FbWidth - l, g_NormalFont->getHeight());
+    cairo_fill(g_Cairo);
+
+    cairo_restore(g_Cairo);
+
     // Again, one fillRect should do it.
-    m_pFramebuffer->rect(l, m_CursorY * g_NormalFont->getHeight(), m_FbWidth - l, g_NormalFont->getHeight(), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
+    //m_pFramebuffer->rect(l, m_CursorY * g_NormalFont->getHeight(), m_FbWidth - l, g_NormalFont->getHeight(), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
 
     rect.point(m_OffsetLeft, m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()));
     rect.point(m_OffsetLeft + m_FbWidth, m_OffsetTop + ((m_CursorY + 1) * g_NormalFont->getHeight()));
@@ -1045,8 +1174,23 @@ void Xterm::Window::eraseEOL(DirtyRectangle &rect)
 
 void Xterm::Window::eraseSOL(DirtyRectangle &rect)
 {
+    cairo_save(g_Cairo);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+
+    cairo_set_source_rgba(
+            g_Cairo,
+            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            0.8);
+
+    cairo_rectangle(g_Cairo, 0, m_CursorY * g_NormalFont->getHeight(), m_CursorY * g_NormalFont->getWidth(), g_NormalFont->getHeight());
+    cairo_fill(g_Cairo);
+
+    cairo_restore(g_Cairo);
+
     // Again, one fillRect should do it.
-    m_pFramebuffer->rect(0, m_CursorY * g_NormalFont->getHeight(), m_CursorX * g_NormalFont->getWidth(), g_NormalFont->getHeight(), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
+    // m_pFramebuffer->rect(0, m_CursorY * g_NormalFont->getHeight(), m_CursorX * g_NormalFont->getWidth(), g_NormalFont->getHeight(), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
 
     rect.point(m_OffsetLeft, m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()));
     rect.point(m_OffsetLeft + (m_CursorX * g_NormalFont->getWidth()), m_OffsetTop + ((m_CursorY + 1) * g_NormalFont->getHeight()));
@@ -1060,8 +1204,23 @@ void Xterm::Window::eraseSOL(DirtyRectangle &rect)
 
 void Xterm::Window::eraseLine(DirtyRectangle &rect)
 {
+    cairo_save(g_Cairo);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+
+    cairo_set_source_rgba(
+            g_Cairo,
+            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            0.8);
+
+    cairo_rectangle(g_Cairo, 0, m_CursorY * g_NormalFont->getHeight(), m_FbWidth - m_OffsetLeft, g_NormalFont->getHeight());
+    cairo_fill(g_Cairo);
+
+    cairo_restore(g_Cairo);
+
     // Again, one fillRect should do it.
-    m_pFramebuffer->rect(0, m_CursorY * g_NormalFont->getHeight(), m_FbWidth - m_OffsetLeft, g_NormalFont->getHeight(), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
+    //m_pFramebuffer->rect(0, m_CursorY * g_NormalFont->getHeight(), m_FbWidth - m_OffsetLeft, g_NormalFont->getHeight(), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
 
     rect.point(m_OffsetLeft, m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()));
     rect.point(m_OffsetLeft + m_FbWidth, m_OffsetTop + ((m_CursorY + 1) * g_NormalFont->getHeight()));
@@ -1081,7 +1240,22 @@ void Xterm::Window::eraseChars(size_t n, DirtyRectangle &rect)
         n = m_Width - m_CursorX;
     size_t width = n * g_NormalFont->getWidth();
 
-    m_pFramebuffer->rect(left, m_CursorY * g_NormalFont->getHeight(), width, g_NormalFont->getHeight(), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
+    cairo_save(g_Cairo);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+
+    cairo_set_source_rgba(
+            g_Cairo,
+            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            0.8);
+
+    cairo_rectangle(g_Cairo, left, m_CursorY * g_NormalFont->getHeight(), width, g_NormalFont->getHeight());
+    cairo_fill(g_Cairo);
+
+    cairo_restore(g_Cairo);
+
+    // m_pFramebuffer->rect(left, m_CursorY * g_NormalFont->getHeight(), width, g_NormalFont->getHeight(), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
 
     rect.point(m_OffsetLeft, m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()));
     rect.point(m_OffsetLeft + width, m_OffsetTop + ((m_CursorY + 1) * g_NormalFont->getHeight()));
@@ -1095,7 +1269,22 @@ void Xterm::Window::eraseChars(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::eraseUp(DirtyRectangle &rect)
 {
-    m_pFramebuffer->rect(0, 0, m_FbWidth, g_NormalFont->getHeight() * m_CursorY, g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
+    cairo_save(g_Cairo);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+
+    cairo_set_source_rgba(
+            g_Cairo,
+            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            0.8);
+
+    cairo_rectangle(g_Cairo, 0, 0, m_FbWidth, g_NormalFont->getHeight() * m_CursorY);
+    cairo_fill(g_Cairo);
+
+    cairo_restore(g_Cairo);
+
+    // m_pFramebuffer->rect(0, 0, m_FbWidth, g_NormalFont->getHeight() * m_CursorY, g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
 
     rect.point(m_OffsetLeft, m_OffsetTop);
     rect.point(m_OffsetLeft + m_FbWidth, m_OffsetTop + ((m_CursorY + 1) * g_NormalFont->getHeight()));
@@ -1112,7 +1301,23 @@ void Xterm::Window::eraseUp(DirtyRectangle &rect)
 void Xterm::Window::eraseDown(DirtyRectangle &rect)
 {
     size_t top = m_CursorY * g_NormalFont->getHeight();
-    m_pFramebuffer->rect(0, top, m_FbWidth, g_NormalFont->getHeight() * (m_Height - m_CursorY), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
+
+    cairo_save(g_Cairo);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+
+    cairo_set_source_rgba(
+            g_Cairo,
+            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            0.8);
+
+    cairo_rectangle(g_Cairo, 0, top, m_FbWidth, g_NormalFont->getHeight() * (m_Height - m_CursorY));
+    cairo_fill(g_Cairo);
+
+    cairo_restore(g_Cairo);
+
+    // m_pFramebuffer->rect(0, top, m_FbWidth, g_NormalFont->getHeight() * (m_Height - m_CursorY), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
 
     rect.point(m_OffsetLeft, top + m_OffsetTop);
     rect.point(m_OffsetLeft + m_FbWidth, top + m_OffsetTop + ((m_Height - m_CursorY) * g_NormalFont->getHeight()));
@@ -1141,10 +1346,26 @@ void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
     memmove(&m_pBuffer[(m_CursorY * m_Width) + deleteStart], &m_pBuffer[(m_CursorY * m_Width) + deleteEnd], numChars * sizeof(TermChar));
 
     // Now that the characters have been shifted, clear the space after the region we copied
+    syslog(LOG_INFO, "w=%d h=%d", m_Width, m_Height);
     size_t left = (m_Width - n) * g_NormalFont->getWidth();
     size_t top = m_CursorY * g_NormalFont->getHeight();
 
-    m_pFramebuffer->rect(left, top, n * g_NormalFont->getWidth(), g_NormalFont->getHeight(), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
+    cairo_save(g_Cairo);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+
+    cairo_set_source_rgba(
+            g_Cairo,
+            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            0.8);
+
+    cairo_rectangle(g_Cairo, left, top, n * g_NormalFont->getWidth(), g_NormalFont->getHeight());
+    cairo_fill(g_Cairo);
+
+    cairo_restore(g_Cairo);
+
+    // m_pFramebuffer->rect(left, top, n * g_NormalFont->getWidth(), g_NormalFont->getHeight(), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
 
     // Update the moved section
     size_t row = m_CursorY, col = 0;
@@ -1171,8 +1392,8 @@ void Xterm::Window::lineRender(uint32_t utf32, DirtyRectangle &rect)
         return;
     */
 
-    size_t left = (m_CursorX * g_NormalFont->getWidth());
-    size_t top = (m_CursorY * g_NormalFont->getHeight());
+    size_t left = m_OffsetLeft + (m_CursorX * g_NormalFont->getWidth());
+    size_t top = m_OffsetTop + (m_CursorY * g_NormalFont->getHeight());
 
     m_CursorX++;
     if(m_CursorX > m_Width)
@@ -1190,7 +1411,28 @@ void Xterm::Window::lineRender(uint32_t utf32, DirtyRectangle &rect)
     uint32_t bgColourInt = g_Colours[m_Bg];
     uint32_t fgColourInt = g_Colours[m_Fg];
 
-    m_pFramebuffer->rect(left, top, fullWidth, fullHeight, bgColourInt, PedigreeGraphics::Bits24_Rgb);
+
+    cairo_save(g_Cairo);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+
+    cairo_set_source_rgba(
+            g_Cairo,
+            ((bgColourInt >> 16) & 0xFF) / 256.0,
+            ((bgColourInt >> 8) & 0xFF) / 256.0,
+            (bgColourInt & 0xFF) / 256.0,
+            0.8);
+
+    cairo_rectangle(g_Cairo, left, top, fullWidth, fullHeight);
+    cairo_fill(g_Cairo);
+
+    cairo_set_source_rgba(
+            g_Cairo,
+            ((fgColourInt >> 16) & 0xFF) / 256.0,
+            ((fgColourInt >> 8) & 0xFF) / 256.0,
+            (fgColourInt & 0xFF) / 256.0,
+            1.0);
+
+    // m_pFramebuffer->rect(left, top, fullWidth, fullHeight, bgColourInt, PedigreeGraphics::Bits24_Rgb);
 
     rect.point(m_OffsetLeft + left, m_OffsetTop + top);
     rect.point(m_OffsetLeft + left + fullWidth, m_OffsetTop + top + fullHeight);
@@ -1201,93 +1443,175 @@ void Xterm::Window::lineRender(uint32_t utf32, DirtyRectangle &rect)
             // Bottom right corner
 
             // Middle left to Center
-            m_pFramebuffer->line(left, top + halfHeight, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left, top + halfHeight);
+            cairo_line_to(g_Cairo, left + halfWidth, top + halfHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left, top + halfHeight, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
 
             // Center to Middle top
-            m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left + halfWidth, top);
+            cairo_line_to(g_Cairo, left + halfWidth, top + halfHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         case 'k':
             // Upper right corner
 
             // Middle left to Center
-            m_pFramebuffer->line(left, top + halfHeight, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left, top + halfHeight);
+            cairo_line_to(g_Cairo, left + halfWidth, top + halfHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left, top + halfHeight, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
 
             // Center to Middle bottom
-            m_pFramebuffer->line(left + halfWidth, top + halfHeight, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left + halfWidth, top + halfHeight);
+            cairo_line_to(g_Cairo, left + halfWidth, top + fullHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left + halfWidth, top + halfHeight, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         case 'l':
             // Upper left corner
 
             // Center to Middle right
-            m_pFramebuffer->line(left + halfWidth, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left + halfWidth, top + halfHeight);
+            cairo_line_to(g_Cairo, left + fullWidth, top + halfHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left + halfWidth, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
 
             // Center to Middle bottom
-            m_pFramebuffer->line(left + halfWidth, top + halfHeight, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left + halfWidth, top + halfHeight);
+            cairo_line_to(g_Cairo, left + halfWidth, top + fullHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left + halfWidth, top + halfHeight, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         case 'm':
             // Lower left corner
 
             // Center to Middle top
-            m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left + halfWidth, top);
+            cairo_line_to(g_Cairo, left + halfWidth, top + halfHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
 
             // Center to Middle right
-            m_pFramebuffer->line(left + halfWidth, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left + halfWidth, top + halfHeight);
+            cairo_line_to(g_Cairo, left + fullWidth, top + halfHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left + halfWidth, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         case 'n':
             // Crossing lines
 
             // Middle left to Middle right
-            m_pFramebuffer->line(left, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left, top + halfHeight);
+            cairo_line_to(g_Cairo, left + fullWidth, top + halfHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
 
             // Middle top to Middle bottom
-            m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left + halfWidth, top);
+            cairo_line_to(g_Cairo, left + halfWidth, top + fullHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         case 'q':
             // Horizontal line
 
             // Middle left to Middle right
-            m_pFramebuffer->line(left, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left, top + halfHeight);
+            cairo_line_to(g_Cairo, left + fullWidth, top + halfHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         case 't':
             // Left 'T'
-            m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
-            m_pFramebuffer->line(left + halfWidth, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left + halfWidth, top);
+            cairo_line_to(g_Cairo, left + halfWidth, top + fullHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left + halfWidth, top + halfHeight);
+            cairo_line_to(g_Cairo, left + fullWidth, top + halfHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left + halfWidth, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         case 'u':
             // Right 'T'
 
             // Middle top to Middle bottom
-            m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left + halfWidth, top);
+            cairo_line_to(g_Cairo, left + halfWidth, top + fullHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
 
             // Middle left to Center
-            m_pFramebuffer->line(left, top + halfHeight, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left, top + halfHeight);
+            cairo_line_to(g_Cairo, left + halfWidth, top + halfHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left, top + halfHeight, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         case 'v':
             // Bottom 'T'
 
             // Middle left to Middle right
-            m_pFramebuffer->line(left, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left, top + halfHeight);
+            cairo_line_to(g_Cairo, left + fullWidth, top + halfHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
 
             // Middle top to Center
-            m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left + halfWidth, top);
+            cairo_line_to(g_Cairo, left + halfWidth, top + halfHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         case 'w':
             // Top 'T'
 
             // Middle left to Middle right
-            m_pFramebuffer->line(left, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left, top + halfHeight);
+            cairo_line_to(g_Cairo, left + fullWidth, top + halfHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left, top + halfHeight, left + fullWidth, top + halfHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
 
             // Middle bottom to Center
-            m_pFramebuffer->line(left + halfWidth, top + halfHeight, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left + halfWidth, top + halfHeight);
+            cairo_line_to(g_Cairo, left + halfWidth, top + fullHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left + halfWidth, top + halfHeight, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         case 'x':
             // Vertical line
 
             // Middle top to Middle bottom
-            m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
+            cairo_move_to(g_Cairo, left + halfWidth, top);
+            cairo_line_to(g_Cairo, left + halfWidth, top + fullHeight);
+            cairo_stroke(g_Cairo);
+
+            //m_pFramebuffer->line(left + halfWidth, top, left + halfWidth, top + fullHeight, fgColourInt, PedigreeGraphics::Bits24_Rgb);
             break;
         default:
             break;
     }
+
+    cairo_restore(g_Cairo);
 }
 

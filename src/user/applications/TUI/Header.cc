@@ -98,21 +98,17 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
 {
     size_t charWidth = m_pFont->getWidth();
 
-    /*
-    if(!m_pFramebuffer)
+    if(!g_Cairo)
     {
-        m_pFramebuffer = g_pFramebuffer->createChild(0, 0, m_nWidth, g_FontSize + 5);
-        if(!m_pFramebuffer)
-            return;
-        else if(!m_pFramebuffer->getRawBuffer())
-            return;
-    }*/
+        return;
+    }
 
     // Set up the dirty rectangle to cover the entire header area.
     rect.point(0, 0);
     rect.point(m_nWidth, g_FontSize+5);
 
     cairo_save(g_Cairo);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
 
     // Wipe the background.
     cairo_set_source_rgba(
@@ -120,7 +116,7 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
             ((g_MainBackgroundColour >> 16) & 0xFF) / 256.0,
             ((g_MainBackgroundColour >> 8) & 0xFF) / 256.0,
             ((g_MainBackgroundColour) & 0xFF) / 256.0,
-            1.0);
+            0.8);
 
     cairo_rectangle(g_Cairo, 0, 0, m_nWidth, g_FontSize + 4);
     cairo_fill(g_Cairo);
@@ -137,6 +133,8 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
     {
         if (pTab->page == m_Page)
         {
+            offset += 5;
+
             uint32_t foreColour = g_TextColour;
             if (pTab->flags & TAB_SELECTED)
                 foreColour = g_SelectedTabTextColour;
@@ -157,7 +155,7 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
                     ((backColour) & 0xFF) / 256.0,
                     1.0);
 
-            cairo_rectangle(g_Cairo, offset, 0, strlen(pTab->text) * charWidth + 10, g_FontSize + 4);
+            cairo_rectangle(g_Cairo, offset - 5, 0, strlen(pTab->text) * charWidth + 10, g_FontSize + 4);
             cairo_fill(g_Cairo);
 
             offset = renderString(pTab->text, offset, 2, foreColour, backColour);

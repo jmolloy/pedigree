@@ -19,7 +19,11 @@
 
 #include <graphics/Graphics.h>
 
+#include <cairo/cairo.h>
+
 extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
+
+extern cairo_surface_t *g_Surface;
 
 size_t Syscall::nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t buffersz, size_t *terminalId)
 {
@@ -73,9 +77,10 @@ void doRedraw(DirtyRectangle &rect)
        rect.getX2() == ~0UL && rect.getY2() == ~0UL)
         return;
 
-    if(g_pEmu)
+    if(g_pEmu && g_Surface)
     {
         PedigreeGraphics::Rect rt(rect.getX(), rect.getY(), rect.getWidth(), rect.getHeight());
+        cairo_surface_flush(g_Surface);
         g_pEmu->redraw(rt);
     }
 }

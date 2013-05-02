@@ -30,6 +30,8 @@ extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
 extern Header *g_pHeader;
 extern rgb_t g_MainBackgroundColour;
 
+extern cairo_t *g_Cairo;
+
 Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground) :
     m_pBuffer(0), m_pFramebuffer(0), m_pXterm(0), m_Len(0), m_WriteBufferLen(0), m_TabId(0), m_bHasPendingRequest(false),
     m_PendingRequestSz(0), m_Pid(0), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop), m_Cancel(0), m_WriteInProgress(0)
@@ -38,12 +40,27 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
     // m_pBuffer = Syscall::newBuffer();
     // if (!m_pBuffer) log("Buffer not created correctly!");
 
-    m_pFramebuffer = g_pFramebuffer->createChild(m_OffsetLeft, m_OffsetTop, nWidth, nHeight);
-    if((!m_pFramebuffer) || (!m_pFramebuffer->getRawBuffer()))
-        return;
+    //m_pFramebuffer = g_pFramebuffer->createChild(m_OffsetLeft, m_OffsetTop, nWidth, nHeight);
+    //if((!m_pFramebuffer) || (!m_pFramebuffer->getRawBuffer()))
+    //    return;
 
-    uint32_t backColour = PedigreeGraphics::createRgb(g_MainBackgroundColour.r, g_MainBackgroundColour.g, g_MainBackgroundColour.b);
-    m_pFramebuffer->rect(0, 0, nWidth, nHeight, backColour, PedigreeGraphics::Bits24_Rgb);
+    //uint32_t backColour = PedigreeGraphics::createRgb(g_MainBackgroundColour.r, g_MainBackgroundColour.g, g_MainBackgroundColour.b);
+    //m_pFramebuffer->rect(0, 0, nWidth, nHeight, backColour, PedigreeGraphics::Bits24_Rgb);
+
+    cairo_save(g_Cairo);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+
+    cairo_set_source_rgba(
+            g_Cairo,
+            g_MainBackgroundColour.r / 256.0,
+            g_MainBackgroundColour.g / 256.0,
+            g_MainBackgroundColour.b / 256.0,
+            0.8);
+
+    cairo_rectangle(g_Cairo, m_OffsetLeft, m_OffsetTop, nWidth, nHeight);
+    cairo_fill(g_Cairo);
+
+    cairo_restore(g_Cairo);
 
     size_t tabId = pHeader->addTab(pName, TAB_SELECTABLE);
 
@@ -54,7 +71,7 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
     Syscall::createConsole(tabId, pName);
 
 #ifndef NEW_XTERM
-    m_pXterm = new Xterm(m_pFramebuffer, nWidth, nHeight, m_OffsetLeft, m_OffsetTop, this);
+    m_pXterm = new Xterm(0, nWidth, nHeight, m_OffsetLeft, m_OffsetTop, this);
 #else
     Display::ScreenMode mode;
     mode.width = nWidth - 1;
@@ -99,6 +116,22 @@ Terminal::~Terminal()
 
 void Terminal::renewBuffer(size_t nWidth, size_t nHeight)
 {
+    cairo_save(g_Cairo);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+
+    cairo_set_source_rgba(
+            g_Cairo,
+            g_MainBackgroundColour.r / 256.0,
+            g_MainBackgroundColour.g / 256.0,
+            g_MainBackgroundColour.b / 256.0,
+            0.8);
+
+    cairo_rectangle(g_Cairo, m_OffsetLeft, m_OffsetTop, nWidth, nHeight);
+    cairo_fill(g_Cairo);
+
+    m_pXterm->resize(nWidth, nHeight, 0);
+    return;
+
     if(!m_pFramebuffer)
         return;
 
@@ -310,7 +343,7 @@ void Terminal::addToQueue(char c)
 void Terminal::setActive(bool b, DirtyRectangle &rect)
 {
     // Force complete redraw
-    m_pFramebuffer->redraw(0, 0, m_pFramebuffer->getWidth(), m_pFramebuffer->getHeight(), false);
+    // m_pFramebuffer->redraw(0, 0, m_pFramebuffer->getWidth(), m_pFramebuffer->getHeight(), false);
 
     // if (b)
     //    Syscall::setCurrentBuffer(m_pBuffer);

@@ -58,7 +58,7 @@
 #define NORMAL_FONT_PATH    "/system/fonts/DejaVuSansMono.ttf"
 #define BOLD_FONT_PATH      "/system/fonts/DejaVuSansMono-Bold.ttf"
 
-#define FONT_SIZE           15
+#define FONT_SIZE           12
 
 /** End code from InputManager */
 
@@ -447,23 +447,8 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
     g_pHeader =  new Header(g_nWidth);
 
     g_pHeader->addTab(const_cast<char*>("The Pedigree Operating System"), 0);
-    g_pHeader->addTab(const_cast<char*>("tab1"), 0);
-    g_pHeader->addTab(const_cast<char*>("tab2"), 0);
-    g_pHeader->addTab(const_cast<char*>("tab3"), 0);
-    g_pHeader->addTab(const_cast<char*>("tab4"), 0);
-    g_pHeader->addTab(const_cast<char*>("look i'm long!"), 0);
-    g_pHeader->select(2);
-
 
     DirtyRectangle rect;
-    g_pHeader->render(0, rect);
-
-    while(1)
-    {
-    PedigreeGraphics::Rect rt(0, 0, g_nWidth, g_nHeight);
-    g_pEmu->redraw(rt);
-        Widget::checkForEvents(true);
-    }
 
     // DirtyRectangle rect;
     char newTermName[256];
