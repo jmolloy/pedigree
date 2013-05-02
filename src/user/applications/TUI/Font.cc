@@ -137,7 +137,7 @@ size_t Font::render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, si
     return m_CellWidth;
 }
 
-size_t Font::render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b)
+size_t Font::render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b, bool bBack)
 {
     cairo_save(g_Cairo);
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
@@ -146,15 +146,18 @@ size_t Font::render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b)
     cairo_set_font_face(g_Cairo, font_face);
     cairo_set_font_size(g_Cairo, m_FontSize);
 
-    cairo_set_source_rgba(
-            g_Cairo,
-            ((b >> 16) & 0xFF) / 256.0,
-            ((b >> 8) & 0xFF) / 256.0,
-            ((b) & 0xFF) / 256.0,
-            0.8);
+    if(bBack)
+    {
+        cairo_set_source_rgba(
+                g_Cairo,
+                ((b >> 16) & 0xFF) / 256.0,
+                ((b >> 8) & 0xFF) / 256.0,
+                ((b) & 0xFF) / 256.0,
+                0.8);
 
-    cairo_rectangle(g_Cairo, x, y, m_CellWidth * len, m_CellHeight);
-    cairo_fill(g_Cairo);
+        cairo_rectangle(g_Cairo, x, y, m_CellWidth * len, m_CellHeight);
+        cairo_fill(g_Cairo);
+    }
 
     cairo_set_source_rgba(
             g_Cairo,

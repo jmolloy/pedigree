@@ -37,7 +37,7 @@ public:
 
     virtual size_t render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, size_t y, uint32_t f, uint32_t b);
 
-    virtual size_t render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b);
+    virtual size_t render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b, bool bBack = true);
 
     size_t getWidth()
     {return m_CellWidth;}

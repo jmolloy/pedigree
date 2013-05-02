@@ -103,7 +103,7 @@ void checkFramebuffer()
                 stride);
         g_Cairo = cairo_create(g_Surface);
 
-        syslog(LOG_INFO, "created cairo %p %p %dx%d", g_Surface, g_Cairo, g_nWidth, g_nHeight);
+        syslog(LOG_INFO, "created cairo %p %p %p %dx%d", g_pEmu->getRawFramebuffer(), g_Surface, g_Cairo, g_nWidth, g_nHeight);
     }
 }
 
@@ -134,11 +134,14 @@ void modeChanged(size_t width, size_t height)
         Terminal *pTerm = pTL->term;
 
         // Kill and renew the buffers.
-        pTerm->renewBuffer(width, height-(g_pHeader->getHeight()));
+        pTerm->renewBuffer(width, height);
 
         DirtyRectangle rect;
+
+        /*
         g_pHeader->select(pTerm->getTabId());
         g_pHeader->render(pTerm->getBuffer(), rect);
+        */
 
         pTerm->redrawAll(rect);
 
@@ -159,8 +162,10 @@ void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
 
     g_pCurrentTerm->term->setActive(true, rect);
 
+    /*
     g_pHeader->select(pTL->term->getTabId());
     g_pHeader->render(pTL->term->getBuffer(), rect);
+    */
 
     pTL->term->redrawAll(rect);
 
@@ -169,7 +174,7 @@ void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
 
 Terminal *addTerminal(const char *name, DirtyRectangle &rect)
 {
-    size_t h = g_pHeader->getHeight()+1;
+    size_t h = 0; // g_pHeader->getHeight()+1;
 
     Terminal *pTerm = new Terminal(const_cast<char*>(name), g_nWidth - 3, g_nHeight-h, g_pHeader, 3, h, 0);
 
@@ -190,6 +195,7 @@ Terminal *addTerminal(const char *name, DirtyRectangle &rect)
 
     selectTerminal(pTermList, rect);
 
+    /*
     TerminalList *pTL = g_pTermList;
     while (pTL)
     {
@@ -200,6 +206,7 @@ Terminal *addTerminal(const char *name, DirtyRectangle &rect)
         pTL = pTL->next;
     }
     g_pHeader->select(pTermList->term->getTabId());
+    */
 
     return pTerm;
 }
@@ -215,9 +222,11 @@ void doRefresh(Terminal *pT)
             pT->refresh(); // Handle any region not redrawn by above
 
     // Redraw the header
+    /*
     DirtyRectangle rect;
     g_pHeader->render(0, rect);
     doRedraw(rect);
+    */
 }
 
 bool checkCommand(uint64_t key, DirtyRectangle &rect)
@@ -619,8 +628,6 @@ int main(int argc, char *argv[])
 {
     char endpoint[256];
     sprintf(endpoint, "tui.%d", getpid());
-
-    syslog(LOG_INFO, "bss variable: %p [@%p]", g_pHeader, &g_pHeader);
 
     PedigreeGraphics::Rect rt;
 

@@ -199,7 +199,7 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
 
 size_t Header::renderString(const char *str, size_t x, size_t y, uint32_t f, uint32_t b)
 {
-    x += m_pFont->render(str, x, y, f, b);
+    x += m_pFont->render(str, x, y, f, b, false);
     return x;
 }
 
