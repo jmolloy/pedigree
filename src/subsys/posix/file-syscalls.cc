@@ -845,7 +845,11 @@ int posix_readdir(int fd, dirent *ent)
     }
     File* file = Directory::fromFile(pFd->file)->getChild(pFd->offset);
     if (!file)
+    {
+        // Normal EOF condition.
+        SYSCALL_ERROR(NoError);
         return -1;
+    }
 
     ent->d_ino = static_cast<short>(file->getInode());
     String tmp = file->getName();
