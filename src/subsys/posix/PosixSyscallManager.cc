@@ -301,6 +301,9 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             // pedigree_init_sigret();
             return 0;
         case POSIX_SCHED_YIELD:
+            // Fix for the case where we slam the system with yields and in
+            // doing so, spend so much time doing syscalls that IRQs get lost.
+            Processor::haltUntilInterrupt();
             Scheduler::instance().yield();
             return 0;
         case POSIX_PEDIGREE_THRWAKEUP:
