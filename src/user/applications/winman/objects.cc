@@ -206,7 +206,7 @@ void Window::render(cairo_t *cr)
     cairo_text_extents_t extents;
     cairo_set_font_size(cr, 13);
     cairo_text_extents(cr, m_sWindowTitle.c_str(), &extents);
-    cairo_move_to(cr, me.getX() + ((w / 2) - (extents.width / 2)), me.getY() + WINDOW_CLIENT_START_Y - (extents.height / 2));
+    cairo_move_to(cr, me.getX() + ((w / 2) - (extents.width / 2)), me.getY() + WINDOW_CLIENT_START_Y - 3);
     cairo_set_source_rgba(cr, 0.7, 0.7, 0.7, 1.0);
     cairo_show_text(cr, m_sWindowTitle.c_str());
 
