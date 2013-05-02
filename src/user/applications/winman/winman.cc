@@ -25,6 +25,7 @@
 
 #include <map>
 #include <list>
+#include <set>
 
 #include <graphics/Graphics.h>
 #include <input/Input.h>
@@ -32,8 +33,6 @@
 
 #include <cairo/cairo.h>
 #include <cairo/cairo-ft.h>
-
-#include <iostream>
 
 #include <protocol.h>
 
@@ -50,7 +49,7 @@ uint8_t *g_pBackbuffer = 0;
 
 std::map<uint64_t, Window*> *g_Windows;
 
-std::vector<Window*> g_PendingWindows;
+std::set<Window*> g_PendingWindows;
 
 /// \todo Make configurable.
 #define CLIENT_DEFAULT "/applications/tui"
@@ -116,7 +115,7 @@ void handleMessage(char *messageData)
         Window *pWindow = new Window(pWinMan->widgetHandle, pEndpoint, pParent);
         std::string newTitle(pCreate->title);
         pWindow->setTitle(newTitle);
-        g_PendingWindows.push_back(pWindow);
+        g_PendingWindows.insert(pWindow);
 
         if(!g_pFocusWindow)
         {
@@ -171,7 +170,7 @@ void handleMessage(char *messageData)
         if(it != g_Windows->end())
         {
             Window *pWindow = it->second;
-            g_PendingWindows.push_back(pWindow);
+            g_PendingWindows.insert(pWindow);
         }
     }
     else
@@ -352,6 +351,7 @@ void systemInputCallback(Input::InputNotification &note)
                 g_pFocusWindow->nofocus();
                 g_pFocusWindow = newFocus;
                 g_pFocusWindow->focus();
+                g_PendingWindows.insert(g_pFocusWindow);
             }
         }
     }
@@ -393,8 +393,6 @@ void systemInputCallback(Input::InputNotification &note)
 int main(int argc, char *argv[])
 {
     syslog(LOG_INFO, "winman: starting up...");
-    std::cout << "hello c++" << std::endl;
-    syslog(LOG_INFO, "winman: i/o works");
 
     // Create the window manager IPC endpoint for libui.
     PedigreeIpc::createEndpoint("pedigree-winman");
@@ -493,7 +491,23 @@ int main(int argc, char *argv[])
 
     syslog(LOG_INFO, "winman: creating tile root");
 
-    g_pRootContainer = new RootContainer(g_nWidth, g_nHeight);
+    g_pRootContainer = new RootContainer(g_nWidth, g_nHeight - 24);
+
+    // Create a nice little bar at the bottom of the screen.
+    cairo_save(cr);
+    cairo_set_source_rgba(cr, 0.2, 0.2, 0.2, 0.8);
+    cairo_rectangle(cr, 0, g_nHeight - 24, g_nWidth, 24);
+    cairo_fill(cr);
+
+    cairo_set_font_size(cr, 13);
+    cairo_font_extents_t extents;
+    cairo_font_extents(cr, &extents);
+
+    cairo_move_to(cr, 3, (g_nHeight - 24) + 3 + extents.height);
+    cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
+    cairo_show_text(cr, "The Pedigree Operating System");
+    cairo_restore(cr);
+
 
 #if 0
     Container *pMiddle = new Container(g_pRootContainer);
@@ -549,7 +563,7 @@ int main(int argc, char *argv[])
         {
             // Render each window, also ensuring the wallpaper is rendered again
             // so that windows with alpha look correct.
-            std::vector<Window*>::iterator it = g_PendingWindows.begin();
+            std::set<Window*>::iterator it = g_PendingWindows.begin();
             for(; it != g_PendingWindows.end(); ++it)
             {
                 PedigreeGraphics::Rect rt = (*it)->getCopyDimensions();
