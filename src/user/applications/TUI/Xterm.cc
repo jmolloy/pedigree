@@ -827,7 +827,7 @@ void Xterm::Window::scrollRegionUp(size_t n, DirtyRectangle &rect)
 
     cairo_save(g_Cairo);
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
-    cairo_set_source_surface(g_Cairo, g_Surface, 0, top1_y);
+    cairo_set_source_surface(g_Cairo, g_Surface, 0, -((double) top1_y));
 
     cairo_rectangle(g_Cairo, m_OffsetLeft, top2_y, m_FbWidth, bottom2_y - top2_y);
     cairo_fill(g_Cairo);
@@ -863,8 +863,6 @@ void Xterm::Window::scrollRegionUp(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::scrollRegionDown(size_t n, DirtyRectangle &rect)
 {
-    return;
-
     /*
     +----------+
     |          |
@@ -894,9 +892,14 @@ void Xterm::Window::scrollRegionDown(size_t n, DirtyRectangle &rect)
 
     cairo_save(g_Cairo);
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
-    cairo_set_source_surface(g_Cairo, g_Surface, 0, top1_y);
 
     cairo_rectangle(g_Cairo, m_OffsetLeft, top2_y, m_FbWidth, bottom2_y - top2_y);
+
+    cairo_push_group(g_Cairo);
+    cairo_set_source_surface(g_Cairo, g_Surface, 0, top2_y);
+    cairo_fill_preserve(g_Cairo);
+    cairo_pop_group_to_source(g_Cairo);
+
     cairo_fill(g_Cairo);
 
     cairo_set_source_rgba(
@@ -941,7 +944,7 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
 
     cairo_save(g_Cairo);
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
-    cairo_set_source_surface(g_Cairo, g_Surface, 0, top2_px);
+    cairo_set_source_surface(g_Cairo, g_Surface, 0, -((double) top2_px));
 
     cairo_rectangle(g_Cairo, 0, top_px, m_FbWidth, (m_Height - n) * g_NormalFont->getHeight());
     cairo_fill(g_Cairo);
