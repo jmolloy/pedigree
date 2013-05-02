@@ -21,6 +21,7 @@ namespace Error
 {
   enum PosixError
   {
+    NoError              =0,
     NotEnoughPermissions =1,
     DoesNotExist         =2,
     NoSuchProcess        =3,
