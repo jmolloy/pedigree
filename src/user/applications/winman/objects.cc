@@ -142,24 +142,19 @@ void Window::setDirty(PedigreeGraphics::Rect &dirty)
     size_t clientW = me.getW() - WINDOW_CLIENT_LOST_W;
     size_t clientH = me.getH() - WINDOW_CLIENT_LOST_H;
 
-    if(realX > clientW)
+    if(realX > clientW || realY > clientH)
     {
-        realX = clientW;
+        return;
     }
 
-    if(realY > clientH)
+    if((realX + clientW) > clientW)
     {
-        realY = clientH;
+        realW = clientW - realX;
     }
 
-    if((realX + realW) > clientW)
+    if((realY + clientH) > clientH)
     {
-        realW = realX - clientW;
-    }
-
-    if((realY + realH) > clientH)
-    {
-        realH = realY - clientH;
+        realH = clientH - realY;
     }
 
     m_Dirty.update(realX + WINDOW_CLIENT_START_X, realY + WINDOW_CLIENT_START_Y, realW, realH);
@@ -184,7 +179,7 @@ void Window::render(cairo_t *cr)
 
     // Draw the child framebuffer before window decorations.
     void *pBuffer = getFramebuffer();
-    if(pBuffer && 1) // isDirty())
+    if(pBuffer && isDirty())
     {
         cairo_save(cr);
         size_t regionWidth = me.getW() - WINDOW_CLIENT_LOST_W;
@@ -200,17 +195,14 @@ void Window::render(cairo_t *cr)
 
         cairo_set_source_surface(cr, surface, me.getX() + WINDOW_CLIENT_START_X, me.getY() + WINDOW_CLIENT_START_Y);
 
-        /*
         cairo_rectangle(
                 cr,
                 me.getX() + m_Dirty.getX(),
                 me.getY() + m_Dirty.getY(),
                 m_Dirty.getW(),
                 m_Dirty.getH());
-        cairo_clip(cr);
-        */
 
-        cairo_paint(cr);
+        cairo_fill(cr);
 
         cairo_surface_destroy(surface);
         cairo_restore(cr);

@@ -184,6 +184,10 @@ void handleMessage(char *messageData)
             g_PendingWindows.insert(pWindow);
         }
     }
+    else if(pWinMan->messageCode == LibUiProtocol::RequestRedraw)
+    {
+        // We inject this to wake up checkForMessages and move on to rendering.
+    }
     else
     {
         syslog(LOG_INFO, "winman: unhandled message type");
@@ -195,7 +199,6 @@ void checkForMessages(PedigreeIpc::IpcEndpoint *pEndpoint)
     if(!pEndpoint)
         return;
 
-    /// \todo should keep looping while we have messages to handle.
     PedigreeIpc::IpcMessage *pRecv = 0;
     if(PedigreeIpc::recv(pEndpoint, &pRecv, false))
     {
@@ -678,7 +681,7 @@ int main(int argc, char *argv[])
             size_t nDirty = g_StatusField.length() ? 1 : 0;
             for(; it != g_PendingWindows.end(); ++it)
             {
-                if(0) // !(*it)->isDirty())
+                if(!(*it)->isDirty())
                 {
                     continue;
                 }
@@ -695,11 +698,10 @@ int main(int argc, char *argv[])
                 {
                     wallpaper->renderPartial(
                             cr,
-                            rt.getX(), rt.getY(), //rt.getX() + dirty.getX(),
-                            // rt.getY() + dirty.getY(),
+                            rt.getX() + dirty.getX(),
+                            rt.getY() + dirty.getY(),
                             0, 0,
-                            rt.getW(), rt.getH(),
-                            //dirty.getW(), dirty.getH(),
+                            dirty.getW(), dirty.getH(),
                             g_nWidth, g_nHeight);
                 }
                 else
@@ -715,17 +717,12 @@ int main(int argc, char *argv[])
                 (*it)->render(cr);
 
                 // Update the dirty rectangle.
-                /*
                 renderDirty.point(
                         rt.getX() + dirty.getX(),
                         rt.getX() + dirty.getY());
                 renderDirty.point(
                         rt.getX() + dirty.getX() + dirty.getW(),
                         rt.getX() + dirty.getY() + dirty.getH());
-                */
-
-                renderDirty.point(rt.getX(), rt.getY());
-                renderDirty.point(rt.getX() + rt.getW(), rt.getY() + rt.getH());
             }
 
             // Empty out the list in full.
