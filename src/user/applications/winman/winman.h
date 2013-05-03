@@ -32,6 +32,22 @@
  *  @{
  */
 
+#define WINDOW_BORDER_X 2
+#define WINDOW_BORDER_Y 2
+#define WINDOW_TITLE_H 20
+
+// Start location of the client rendering area.
+#define WINDOW_CLIENT_START_X (WINDOW_BORDER_X)
+#define WINDOW_CLIENT_START_Y (WINDOW_BORDER_Y + WINDOW_TITLE_H)
+
+// Insets from the end of the client area.
+#define WINDOW_CLIENT_END_X   (WINDOW_BORDER_X)
+#define WINDOW_CLIENT_END_Y   (WINDOW_BORDER_Y)
+
+// Total space from the W/H that the window manager has used and taken from the
+// client area for rendering decorations etc...
+#define WINDOW_CLIENT_LOST_W (WINDOW_CLIENT_START_X + WINDOW_CLIENT_END_X + 1)
+#define WINDOW_CLIENT_LOST_H (WINDOW_CLIENT_START_Y + WINDOW_CLIENT_END_Y + 1)
 
 /**
  * DirtyRectangle: receives a number of points, uses these to determine the full
@@ -183,6 +199,22 @@ class Window : public WObject
             m_pParent = p;
         }
 
+        void setDirty(PedigreeGraphics::Rect &dirty);
+
+        PedigreeGraphics::Rect getDirty() const
+        {
+            return m_Dirty;
+        }
+
+        bool isDirty() const
+        {
+            return !(
+                m_Dirty.getX() == 0 &&
+                m_Dirty.getY() == 0 &&
+                m_Dirty.getW() == 0 &&
+                m_Dirty.getH() == 0);
+        }
+
     private:
         uint64_t m_Handle;
 
@@ -193,6 +225,10 @@ class Window : public WObject
         PedigreeIpc::SharedIpcMessage *m_Framebuffer;
 
         std::string m_sWindowTitle;
+
+        PedigreeGraphics::Rect m_Dirty;
+
+        bool m_bPendingDecoration;
 
         bool m_bFocus;
 };

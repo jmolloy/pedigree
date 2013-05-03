@@ -19,23 +19,6 @@
 
 #include <protocol.h>
 
-#define WINDOW_BORDER_X 2
-#define WINDOW_BORDER_Y 2
-#define WINDOW_TITLE_H 20
-
-// Start location of the client rendering area.
-#define WINDOW_CLIENT_START_X (WINDOW_BORDER_X)
-#define WINDOW_CLIENT_START_Y (WINDOW_BORDER_Y + WINDOW_TITLE_H)
-
-// Insets from the end of the client area.
-#define WINDOW_CLIENT_END_X   (WINDOW_BORDER_X)
-#define WINDOW_CLIENT_END_Y   (WINDOW_BORDER_Y)
-
-// Total space from the W/H that the window manager has used and taken from the
-// client area for rendering decorations etc...
-#define WINDOW_CLIENT_LOST_W (WINDOW_CLIENT_START_X + WINDOW_CLIENT_END_X + 1)
-#define WINDOW_CLIENT_LOST_H (WINDOW_CLIENT_START_Y + WINDOW_CLIENT_END_Y + 1)
-
 static size_t g_nextContextId = 1;
 
 DirtyRectangle::DirtyRectangle() :
@@ -87,7 +70,8 @@ void WObject::bump(ssize_t bumpX, ssize_t bumpY)
 }
 
 Window::Window(uint64_t handle, PedigreeIpc::IpcEndpoint *endpoint, ::Container *pParent) :
-    m_Handle(handle), m_Endpoint(endpoint), m_pParent(pParent), m_Framebuffer(0), m_bFocus(false)
+    m_Handle(handle), m_Endpoint(endpoint), m_pParent(pParent),
+    m_Framebuffer(0), m_Dirty(), m_bPendingDecoration(false), m_bFocus(false)
 {
     PedigreeGraphics::Rect none;
     refreshContext(none);
@@ -142,6 +126,40 @@ void Window::refreshContext(PedigreeGraphics::Rect oldDimensions)
 
         PedigreeIpc::send(m_Endpoint, pMessage, true);
     }
+
+    m_bPendingDecoration = true;
+}
+
+void Window::setDirty(PedigreeGraphics::Rect &dirty)
+{
+    PedigreeGraphics::Rect &me = getDimensions();
+
+    size_t realX = dirty.getX();
+    size_t realY = dirty.getY();
+    size_t realW = dirty.getW();
+    size_t realH = dirty.getH();
+
+    if(realX > me.getW())
+    {
+        realX = me.getW();
+    }
+
+    if(realY > me.getH())
+    {
+        realY = me.getH();
+    }
+
+    if((realX + realW) > me.getW())
+    {
+        realW = realX - me.getW();
+    }
+
+    if((realY + realH) > me.getH())
+    {
+        realH = realY - me.getH();
+    }
+
+    m_Dirty.update(realX, realY, realW, realH);
 }
 
 void Window::render(cairo_t *cr)
@@ -165,7 +183,7 @@ void Window::render(cairo_t *cr)
 
     // Draw the child framebuffer before window decorations.
     void *pBuffer = getFramebuffer();
-    if(pBuffer)
+    if(pBuffer && isDirty())
     {
         size_t regionWidth = me.getW() - WINDOW_CLIENT_LOST_W;
         size_t regionHeight = me.getH() - WINDOW_CLIENT_LOST_H;
@@ -178,52 +196,61 @@ void Window::render(cairo_t *cr)
                 regionHeight,
                 stride);
 
-        cairo_translate(
+        cairo_set_source_surface(cr, surface, WINDOW_CLIENT_START_X, WINDOW_CLIENT_START_Y);
+
+        cairo_rectangle(
                 cr,
-                me.getX() + WINDOW_CLIENT_START_X,
-                me.getY() + WINDOW_CLIENT_START_Y);
+                me.getX() + WINDOW_CLIENT_START_X + m_Dirty.getX(),
+                me.getY() + WINDOW_CLIENT_START_Y + m_Dirty.getY(),
+                m_Dirty.getW(),
+                m_Dirty.getH());
 
-        cairo_set_source_surface(cr, surface, 0, 0);
-
-        cairo_paint(cr);
+        cairo_fill(cr);
 
         cairo_surface_destroy(surface);
 
-        cairo_identity_matrix(cr);
+        // No longer dirty - rendered.
+        m_Dirty.update(0, 0, 0, 0);
     }
 
-    cairo_set_line_cap(cr, CAIRO_LINE_CAP_SQUARE);
-    cairo_set_line_join(cr, CAIRO_LINE_JOIN_MITER);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    if(m_bPendingDecoration)
+    {
+        cairo_set_line_cap(cr, CAIRO_LINE_CAP_SQUARE);
+        cairo_set_line_join(cr, CAIRO_LINE_JOIN_MITER);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
 
-    // Window title bar.
-    cairo_set_line_width(cr, 0);
-    cairo_set_source_rgba(cr, 0.2, 0.3, 0.3, 1.0);
-    cairo_rectangle(cr, x, y, w, WINDOW_TITLE_H);
-    cairo_fill(cr);
+        // Window title bar.
+        cairo_set_line_width(cr, 0);
+        cairo_set_source_rgba(cr, 0.2, 0.3, 0.3, 1.0);
+        cairo_rectangle(cr, x, y, w, WINDOW_TITLE_H);
+        cairo_fill(cr);
 
-    // Window title.
-    cairo_text_extents_t extents;
-    cairo_set_font_size(cr, 13);
-    cairo_text_extents(cr, m_sWindowTitle.c_str(), &extents);
-    cairo_move_to(cr, me.getX() + ((w / 2) - (extents.width / 2)), me.getY() + WINDOW_CLIENT_START_Y - 3);
-    cairo_set_source_rgba(cr, 0.7, 0.7, 0.7, 1.0);
-    cairo_show_text(cr, m_sWindowTitle.c_str());
+        // Window title.
+        cairo_text_extents_t extents;
+        cairo_set_font_size(cr, 13);
+        cairo_text_extents(cr, m_sWindowTitle.c_str(), &extents);
+        cairo_move_to(cr, me.getX() + ((w / 2) - (extents.width / 2)), me.getY() + WINDOW_CLIENT_START_Y - 3);
+        cairo_set_source_rgba(cr, 0.7, 0.7, 0.7, 1.0);
+        cairo_show_text(cr, m_sWindowTitle.c_str());
 
-    // Window border.
-    cairo_set_source_rgba(cr, r, g, b, 1.0);
-    cairo_set_line_width(cr, 1.0);
+        // Window border.
+        cairo_set_source_rgba(cr, r, g, b, 1.0);
+        cairo_set_line_width(cr, 1.0);
 
-    cairo_rectangle(cr, x, y, w, h);
-    cairo_stroke(cr);
+        cairo_rectangle(cr, x, y, w, h);
+        cairo_stroke(cr);
+    }
 
     cairo_restore(cr);
+
+    m_bPendingDecoration = false;
 }
 
 void Window::focus()
 {
     m_bFocus = true;
     m_pParent->setFocusWindow(this);
+    m_bPendingDecoration = true;
 }
 
 void Window::nofocus()
@@ -240,6 +267,8 @@ void Window::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pChild
     reposition(
         me.getX(), me.getY(),
         currentWidth + horizDistance, currentHeight + vertDistance);
+
+    m_bPendingDecoration = true;
 }
 
 void Container::retile()

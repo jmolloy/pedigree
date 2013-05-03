@@ -153,7 +153,8 @@ void Png::renderPartial(
 
   cairo_identity_matrix(cr);
   cairo_scale(cr, scaleWidth / (double) m_nWidth, scaleHeight / (double) m_nHeight);
-  cairo_set_source_surface(cr, surface, innerX, innerY);
+  cairo_translate(cr, innerX, innerY);
+  cairo_set_source_surface(cr, surface, 0, 0);
   cairo_paint(cr);
   cairo_restore(cr);
 

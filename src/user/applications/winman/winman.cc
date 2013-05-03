@@ -53,7 +53,7 @@ std::set<Window*> g_PendingWindows;
 
 /// \todo Make configurable.
 #define CLIENT_DEFAULT "/applications/tui"
-//#define CLIENT_DEFAULT "/applications/gears"
+// #define CLIENT_DEFAULT "/applications/gears"
 
 void startClient()
 {
@@ -165,11 +165,15 @@ void handleMessage(char *messageData)
     }
     else if(pWinMan->messageCode == LibUiProtocol::RequestRedraw)
     {
-        /// \todo don't redraw entire window - we get provided a region!
+        LibUiProtocol::RequestRedrawMessage *pRedrawMsg =
+            reinterpret_cast<LibUiProtocol::RequestRedrawMessage*>(messageData + sizeof(LibUiProtocol::WindowManagerMessage));
+        PedigreeGraphics::Rect dirty(pRedrawMsg->x, pRedrawMsg->y, pRedrawMsg->width, pRedrawMsg->height);
+
         std::map<uint64_t, Window*>::iterator it = g_Windows->find(pWinMan->widgetHandle);
         if(it != g_Windows->end())
         {
             Window *pWindow = it->second;
+            pWindow->setDirty(dirty);
             g_PendingWindows.insert(pWindow);
         }
     }
@@ -552,7 +556,7 @@ int main(int argc, char *argv[])
     startClient();
 
     // Main loop: logic & message handling goes here!
-    DirtyRectangle dirty;
+    DirtyRectangle renderDirty;
     while(true)
     {
         // Check for any messages coming in from windows, asynchronously.
@@ -564,8 +568,19 @@ int main(int argc, char *argv[])
             // Render each window, also ensuring the wallpaper is rendered again
             // so that windows with alpha look correct.
             std::set<Window*>::iterator it = g_PendingWindows.begin();
+            size_t nDirty = 0;
             for(; it != g_PendingWindows.end(); ++it)
             {
+                if(!(*it)->isDirty())
+                {
+                    continue;
+                }
+                else
+                {
+                    ++nDirty;
+                }
+
+                PedigreeGraphics::Rect dirty = (*it)->getDirty();
                 PedigreeGraphics::Rect rt = (*it)->getCopyDimensions();
 
                 // Render wallpaper.
@@ -573,16 +588,17 @@ int main(int argc, char *argv[])
                 {
                     wallpaper->renderPartial(
                             cr,
-                            rt.getX(), rt.getY(),
+                            rt.getX() + WINDOW_CLIENT_START_X + dirty.getX(),
+                            rt.getY() + WINDOW_CLIENT_START_Y + dirty.getY(),
                             0, 0,
-                            rt.getW(), rt.getH(),
+                            dirty.getW(), dirty.getH(),
                             g_nWidth, g_nHeight);
                 }
                 else
                 {
                     // Boring background.
                     cairo_set_source_rgba(cr, 0, 0, 1.0, 1.0);
-                    cairo_rectangle(cr, rt.getX(), rt.getY(), rt.getW(), rt.getH());
+                    cairo_rectangle(cr, dirty.getX(), dirty.getY(), dirty.getW(), dirty.getH());
                     cairo_stroke_preserve(cr);
                     cairo_fill(cr);
                 }
@@ -591,22 +607,29 @@ int main(int argc, char *argv[])
                 (*it)->render(cr);
 
                 // Update the dirty rectangle.
-                dirty.point(rt.getX(), rt.getY());
-                dirty.point(rt.getX() + rt.getW(), rt.getY() + rt.getH());
+                renderDirty.point(dirty.getX(), dirty.getY());
+                renderDirty.point(dirty.getX() + dirty.getW(), dirty.getY() + dirty.getH());
             }
 
             // Empty out the list in full.
             g_PendingWindows.clear();
+
+            // Only do rendering if we actually did some rendering!
+            if(!nDirty)
+            {
+                renderDirty.reset();
+                continue;
+            }
 
             // Flush the cairo surface, which will ensure the most recent data is
             // in the framebuffer ready to send to the device.
             cairo_surface_flush(surface);
 
             // Submit a redraw to the graphics card.
-            g_pTopLevelFramebuffer->redraw(dirty.getX(), dirty.getY(), dirty.getWidth(), dirty.getHeight());
+            g_pTopLevelFramebuffer->redraw(renderDirty.getX(), renderDirty.getY(), renderDirty.getWidth(), renderDirty.getHeight());
 
             // Wipe out the dirty rectangle - we're all done.
-            dirty.reset();
+            renderDirty.reset();
         }
         else
         {
