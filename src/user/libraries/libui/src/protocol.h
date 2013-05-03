@@ -128,7 +128,12 @@ namespace LibUiProtocol
          * KeyboardEvent: window manager -> widget. Notifies a widget of a keyboard
          * event.
          */
-        KeyEvent
+        KeyEvent,
+
+        /**
+         * Nothing: nothing at all.
+         */
+        Nothing
     };
 
     /** Applied as the header on a request or notification sent via IPC. */

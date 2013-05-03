@@ -208,7 +208,7 @@ class Window : public WObject
 
         bool isDirty() const
         {
-            return !(
+            return m_bPendingDecoration || !(
                 m_Dirty.getX() == 0 &&
                 m_Dirty.getY() == 0 &&
                 m_Dirty.getW() == 0 &&

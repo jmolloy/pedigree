@@ -139,27 +139,30 @@ void Window::setDirty(PedigreeGraphics::Rect &dirty)
     size_t realW = dirty.getW();
     size_t realH = dirty.getH();
 
-    if(realX > me.getW())
+    size_t clientW = me.getW() - WINDOW_CLIENT_LOST_W;
+    size_t clientH = me.getH() - WINDOW_CLIENT_LOST_H;
+
+    if(realX > clientW)
     {
-        realX = me.getW();
+        realX = clientW;
     }
 
-    if(realY > me.getH())
+    if(realY > clientH)
     {
-        realY = me.getH();
+        realY = clientH;
     }
 
-    if((realX + realW) > me.getW())
+    if((realX + realW) > clientW)
     {
-        realW = realX - me.getW();
+        realW = realX - clientW;
     }
 
-    if((realY + realH) > me.getH())
+    if((realY + realH) > clientH)
     {
-        realH = realY - me.getH();
+        realH = realY - clientH;
     }
 
-    m_Dirty.update(realX, realY, realW, realH);
+    m_Dirty.update(realX + WINDOW_CLIENT_START_X, realY + WINDOW_CLIENT_START_Y, realW, realH);
 }
 
 void Window::render(cairo_t *cr)
@@ -179,12 +182,11 @@ void Window::render(cairo_t *cr)
     else
         r = g = b = 1.0;
 
-    cairo_save(cr);
-
     // Draw the child framebuffer before window decorations.
     void *pBuffer = getFramebuffer();
-    if(pBuffer && isDirty())
+    if(pBuffer && 1) // isDirty())
     {
+        cairo_save(cr);
         size_t regionWidth = me.getW() - WINDOW_CLIENT_LOST_W;
         size_t regionHeight = me.getH() - WINDOW_CLIENT_LOST_H;
         int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, regionWidth);
@@ -196,25 +198,30 @@ void Window::render(cairo_t *cr)
                 regionHeight,
                 stride);
 
-        cairo_set_source_surface(cr, surface, WINDOW_CLIENT_START_X, WINDOW_CLIENT_START_Y);
+        cairo_set_source_surface(cr, surface, me.getX() + WINDOW_CLIENT_START_X, me.getY() + WINDOW_CLIENT_START_Y);
 
+        /*
         cairo_rectangle(
                 cr,
-                me.getX() + WINDOW_CLIENT_START_X + m_Dirty.getX(),
-                me.getY() + WINDOW_CLIENT_START_Y + m_Dirty.getY(),
+                me.getX() + m_Dirty.getX(),
+                me.getY() + m_Dirty.getY(),
                 m_Dirty.getW(),
                 m_Dirty.getH());
+        cairo_clip(cr);
+        */
 
-        cairo_fill(cr);
+        cairo_paint(cr);
 
         cairo_surface_destroy(surface);
+        cairo_restore(cr);
 
         // No longer dirty - rendered.
         m_Dirty.update(0, 0, 0, 0);
     }
 
-    if(m_bPendingDecoration)
+    if(1 || m_bPendingDecoration)
     {
+        cairo_save(cr);
         cairo_set_line_cap(cr, CAIRO_LINE_CAP_SQUARE);
         cairo_set_line_join(cr, CAIRO_LINE_JOIN_MITER);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -239,9 +246,8 @@ void Window::render(cairo_t *cr)
 
         cairo_rectangle(cr, x, y, w, h);
         cairo_stroke(cr);
+        cairo_restore(cr);
     }
-
-    cairo_restore(cr);
 
     m_bPendingDecoration = false;
 }
@@ -256,6 +262,7 @@ void Window::focus()
 void Window::nofocus()
 {
     m_bFocus = false;
+    m_bPendingDecoration = true;
 }
 
 void Window::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pChild)
@@ -264,9 +271,14 @@ void Window::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pChild
     size_t currentWidth = me.getW();
     size_t currentHeight = me.getH();
 
+    syslog(LOG_INFO, "w: resize %d %d", horizDistance, vertDistance);
     reposition(
         me.getX(), me.getY(),
         currentWidth + horizDistance, currentHeight + vertDistance);
+
+    // Pass resize up to parent to arrange other tiles to resize around this
+    // one, as necessary.
+    m_pParent->resize(horizDistance, vertDistance, this);
 
     m_bPendingDecoration = true;
 }

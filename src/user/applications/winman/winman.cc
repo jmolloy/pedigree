@@ -51,6 +51,13 @@ std::map<uint64_t, Window*> *g_Windows;
 
 std::set<Window*> g_PendingWindows;
 
+PedigreeIpc::IpcEndpoint *g_pEndpoint = 0;
+
+std::string g_StatusField = "";
+
+size_t g_nWidth = 0;
+size_t g_nHeight = 0;
+
 /// \todo Make configurable.
 #define CLIENT_DEFAULT "/applications/tui"
 // #define CLIENT_DEFAULT "/applications/gears"
@@ -200,31 +207,64 @@ void checkForMessages(PedigreeIpc::IpcEndpoint *pEndpoint)
 
 #define ALT_KEY (1ULL << 60)
 #define SHIFT_KEY (1ULL << 61)
+#define SPECIAL_KEY (1ULL << 63)
 
-// I am almost completely convinced this is not right.
-// Will keymaps change these values???
-#define KEY_LEFT    108
-#define KEY_UP      117
-#define KEY_DOWN    100
-#define KEY_RIGHT   114
+enum ActualKey
+{
+    None,
+    Left,
+    Right,
+    Up,
+    Down,
+};
 
 /// System input callback.
 void systemInputCallback(Input::InputNotification &note)
 {
     syslog(LOG_INFO, "winman: system input (type=%d)", note.type);
+    static bool bResize = false;
+
     bool bHandled = false;
+    bool bWakeup = false;
     if(note.type & Input::Key)
     {
         uint64_t c = note.data.key.key;
+
+        ActualKey realKey = None;
+
+        if(c & SPECIAL_KEY)
+        {
+            uint32_t k = c & 0xFFFFFFFFULL;
+            char str[5];
+            memcpy(str, reinterpret_cast<char*>(&k), 4);
+            str[4] = 0;
+
+            if(!strcmp(str, "left"))
+            {
+                realKey = Left;
+            }
+            else if(!strcmp(str, "righ"))
+            {
+                realKey = Right;
+            }
+            else if(!strcmp(str, "up"))
+            {
+                realKey = Up;
+            }
+            else if(!strcmp(str, "down"))
+            {
+                realKey = Down;
+            }
+        }
 
         /// \todo make configurable
         if((c & ALT_KEY) && (g_pFocusWindow != 0))
         {
             bool bShift = (c & SHIFT_KEY);
 
-            c &= 0xFF;
-            syslog(LOG_INFO, "ALT-%d %c", (uint32_t) c, (char) c);
+            syslog(LOG_INFO, "ALT-%d [%x%x] %c", (uint32_t) c, (uint32_t) (c >> 32ULL), (uint32_t) c, (char) c);
 
+            c &= 0xFFFFFFFFULL;
             Container *focusParent = g_pFocusWindow->getParent();
             Window *newFocus = 0;
             WObject *sibling = 0;
@@ -302,28 +342,30 @@ void systemInputCallback(Input::InputNotification &note)
 
                 bHandled = true;
             }
-            /*
             else if(c == 'r')
             {
                 // State machine: enter 'resize mode', which allows us to resize
                 // the container in which the window with focus is in.
+                bResize = true;
+                bHandled = true;
+                bWakeup = true;
+                g_StatusField = "<resize mode>";
             }
-            */
-            else if((c == KEY_LEFT) || (c == KEY_RIGHT) || (c == KEY_UP) || (c == KEY_DOWN))
+            else if(realKey != None)
             {
-                if(c == KEY_LEFT)
+                if(realKey == Left)
                 {
                     sibling = focusParent->getLeft(g_pFocusWindow);
                 }
-                else if(c == KEY_UP)
+                else if(realKey == Up)
                 {
                     sibling = focusParent->getUp(g_pFocusWindow);
                 }
-                else if(c == KEY_DOWN)
+                else if(realKey == Down)
                 {
                     sibling = focusParent->getDown(g_pFocusWindow);
                 }
-                else if(c == KEY_RIGHT)
+                else if(realKey == Right)
                 {
                     sibling = focusParent->getRight(g_pFocusWindow);
                 }
@@ -352,11 +394,42 @@ void systemInputCallback(Input::InputNotification &note)
 
             if(newFocus)
             {
+                g_PendingWindows.insert(g_pFocusWindow);
+                g_PendingWindows.insert(newFocus);
+
                 g_pFocusWindow->nofocus();
                 g_pFocusWindow = newFocus;
                 g_pFocusWindow->focus();
-                g_PendingWindows.insert(g_pFocusWindow);
+                bWakeup = true;
             }
+        }
+
+        if(bResize && (g_pFocusWindow))
+        {
+            if(c == '\e')
+            {
+                g_StatusField = " ";
+                bResize = false;
+                bWakeup = true;
+            }
+            else if(realKey == Left)
+            {
+                g_pFocusWindow->resize(-10, 0);
+            }
+            else if(realKey == Right)
+            {
+                g_pFocusWindow->resize(10, 0);
+            }
+            else if(realKey == Up)
+            {
+                g_pFocusWindow->resize(0, -10);
+            }
+            else if(realKey == Down)
+            {
+                g_pFocusWindow->resize(0, 10);
+            }
+
+            bHandled = true;
         }
     }
 
@@ -392,6 +465,54 @@ void systemInputCallback(Input::InputNotification &note)
             delete pMessage;
         }
     }
+
+    // If we need to wake up the main IPC thread, inject a nothing message.
+    if(bWakeup)
+    {
+        PedigreeIpc::IpcMessage *pMessage = new PedigreeIpc::IpcMessage();
+        pMessage->initialise();
+        char *buffer = (char *) pMessage->getBuffer();
+
+        LibUiProtocol::WindowManagerMessage *pHeader =
+            reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
+        pHeader->messageCode = LibUiProtocol::Nothing;
+
+        PedigreeIpc::send(g_pEndpoint, pMessage, true);
+    }
+}
+
+void infoPanel(cairo_t *cr)
+{
+    // Create a nice little bar at the bottom of the screen.
+    cairo_save(cr);
+    cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
+
+    cairo_set_source_rgba(cr, 0.2, 0.2, 0.2, 0.8);
+    cairo_rectangle(cr, 0, g_nHeight - 24, g_nWidth, 24);
+    cairo_fill(cr);
+
+    cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
+
+    cairo_set_font_size(cr, 13);
+    cairo_font_extents_t extents;
+    cairo_font_extents(cr, &extents);
+
+    cairo_move_to(cr, 3, (g_nHeight - 24) + 3 + extents.height);
+    cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
+    cairo_show_text(cr, "The Pedigree Operating System");
+
+    if(g_StatusField.length())
+    {
+        cairo_move_to(
+                cr,
+                g_nWidth - 3 - (extents.max_x_advance * g_StatusField.length()),
+                (g_nHeight - 24) + 3 + extents.height);
+        cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
+        cairo_show_text(cr, g_StatusField.c_str());
+        g_StatusField.clear();
+    }
+
+    cairo_restore(cr);
 }
 
 int main(int argc, char *argv[])
@@ -400,9 +521,9 @@ int main(int argc, char *argv[])
 
     // Create the window manager IPC endpoint for libui.
     PedigreeIpc::createEndpoint("pedigree-winman");
-    PedigreeIpc::IpcEndpoint *pEndpoint = PedigreeIpc::getEndpoint("pedigree-winman");
+    g_pEndpoint = PedigreeIpc::getEndpoint("pedigree-winman");
 
-    if(!pEndpoint)
+    if(!g_pEndpoint)
     {
         syslog(LOG_CRIT, "error: couldn't create the pedigree-winman IPC endpoint!");
         return 0;
@@ -429,8 +550,8 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    size_t g_nWidth = g_pTopLevelFramebuffer->getWidth();
-    size_t g_nHeight = g_pTopLevelFramebuffer->getHeight();
+    g_nWidth = g_pTopLevelFramebuffer->getWidth();
+    g_nHeight = g_pTopLevelFramebuffer->getHeight();
 
     cairo_format_t format = CAIRO_FORMAT_ARGB32;
     if(g_pTopLevelFramebuffer->getFormat() == PedigreeGraphics::Bits24_Rgb)
@@ -497,21 +618,7 @@ int main(int argc, char *argv[])
 
     g_pRootContainer = new RootContainer(g_nWidth, g_nHeight - 24);
 
-    // Create a nice little bar at the bottom of the screen.
-    cairo_save(cr);
-    cairo_set_source_rgba(cr, 0.2, 0.2, 0.2, 0.8);
-    cairo_rectangle(cr, 0, g_nHeight - 24, g_nWidth, 24);
-    cairo_fill(cr);
-
-    cairo_set_font_size(cr, 13);
-    cairo_font_extents_t extents;
-    cairo_font_extents(cr, &extents);
-
-    cairo_move_to(cr, 3, (g_nHeight - 24) + 3 + extents.height);
-    cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
-    cairo_show_text(cr, "The Pedigree Operating System");
-    cairo_restore(cr);
-
+    infoPanel(cr);
 
 #if 0
     Container *pMiddle = new Container(g_pRootContainer);
@@ -560,18 +667,18 @@ int main(int argc, char *argv[])
     while(true)
     {
         // Check for any messages coming in from windows, asynchronously.
-        checkForMessages(pEndpoint);
+        checkForMessages(g_pEndpoint);
 
         // Check for any windows that may need rendering.
-        if(!g_PendingWindows.empty())
+        if((!g_PendingWindows.empty()) || g_StatusField.length())
         {
             // Render each window, also ensuring the wallpaper is rendered again
             // so that windows with alpha look correct.
             std::set<Window*>::iterator it = g_PendingWindows.begin();
-            size_t nDirty = 0;
+            size_t nDirty = g_StatusField.length() ? 1 : 0;
             for(; it != g_PendingWindows.end(); ++it)
             {
-                if(!(*it)->isDirty())
+                if(0) // !(*it)->isDirty())
                 {
                     continue;
                 }
@@ -588,10 +695,11 @@ int main(int argc, char *argv[])
                 {
                     wallpaper->renderPartial(
                             cr,
-                            rt.getX() + WINDOW_CLIENT_START_X + dirty.getX(),
-                            rt.getY() + WINDOW_CLIENT_START_Y + dirty.getY(),
+                            rt.getX(), rt.getY(), //rt.getX() + dirty.getX(),
+                            // rt.getY() + dirty.getY(),
                             0, 0,
-                            dirty.getW(), dirty.getH(),
+                            rt.getW(), rt.getH(),
+                            //dirty.getW(), dirty.getH(),
                             g_nWidth, g_nHeight);
                 }
                 else
@@ -607,8 +715,17 @@ int main(int argc, char *argv[])
                 (*it)->render(cr);
 
                 // Update the dirty rectangle.
-                renderDirty.point(dirty.getX(), dirty.getY());
-                renderDirty.point(dirty.getX() + dirty.getW(), dirty.getY() + dirty.getH());
+                /*
+                renderDirty.point(
+                        rt.getX() + dirty.getX(),
+                        rt.getX() + dirty.getY());
+                renderDirty.point(
+                        rt.getX() + dirty.getX() + dirty.getW(),
+                        rt.getX() + dirty.getY() + dirty.getH());
+                */
+
+                renderDirty.point(rt.getX(), rt.getY());
+                renderDirty.point(rt.getX() + rt.getW(), rt.getY() + rt.getH());
             }
 
             // Empty out the list in full.
@@ -619,6 +736,11 @@ int main(int argc, char *argv[])
             {
                 renderDirty.reset();
                 continue;
+            }
+
+            if(g_StatusField.length())
+            {
+                infoPanel(cr);
             }
 
             // Flush the cairo surface, which will ensure the most recent data is
