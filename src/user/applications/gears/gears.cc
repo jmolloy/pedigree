@@ -366,6 +366,8 @@ class Gears : public Widget
             angle += 0.2;
             draw();
 
+            dirty.update(0, 0, m_nWidth, m_nHeight);
+
             return true;
         }
 
