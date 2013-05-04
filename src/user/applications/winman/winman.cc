@@ -803,7 +803,12 @@ int main(int argc, char *argv[])
                 {
                     // Boring background.
                     cairo_set_source_rgba(cr, 0, 0, 1.0, 1.0);
-                    cairo_rectangle(cr, dirty.getX(), dirty.getY(), dirty.getW(), dirty.getH());
+                    cairo_rectangle(
+                            cr,
+                            rt.getX() + dirty.getX(),
+                            rt.getY() + dirty.getY(),
+                            dirty.getW(),
+                            dirty.getH());
                     cairo_stroke_preserve(cr);
                     cairo_fill(cr);
                 }
