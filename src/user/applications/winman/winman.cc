@@ -414,21 +414,13 @@ void systemInputCallback(Input::InputNotification &note)
                 sibling = focusParent->getLeft(g_pFocusWindow);
                 if(sibling)
                 {
-                    sibling->resize(10, 0);
-                }
-                else
-                {
-                    g_pFocusWindow->resize(-10, 0);
+                    sibling->resize(-10, 0);
                 }
             }
             else if(realKey == Right)
             {
                 sibling = focusParent->getRight(g_pFocusWindow);
                 if(sibling)
-                {
-                    sibling->resize(-10, 0);
-                }
-                else
                 {
                     g_pFocusWindow->resize(10, 0);
                 }
@@ -438,21 +430,13 @@ void systemInputCallback(Input::InputNotification &note)
                 sibling = focusParent->getUp(g_pFocusWindow);
                 if(sibling)
                 {
-                    sibling->resize(0, 10);
-                }
-                else
-                {
-                    g_pFocusWindow->resize(0, -10);
+                    sibling->resize(0, -10);
                 }
             }
             else if(realKey == Down)
             {
                 sibling = focusParent->getDown(g_pFocusWindow);
                 if(sibling)
-                {
-                    sibling->resize(0, -10);
-                }
-                else
                 {
                     g_pFocusWindow->resize(0, 10);
                 }
@@ -464,6 +448,10 @@ void systemInputCallback(Input::InputNotification &note)
 
             if(bWakeup)
             {
+                if(sibling && (sibling->getType() == WObject::Window))
+                {
+                    g_PendingWindows.insert(static_cast<Window*>(sibling));
+                }
                 g_PendingWindows.insert(g_pFocusWindow);
             }
         }

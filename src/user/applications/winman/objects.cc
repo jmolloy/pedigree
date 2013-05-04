@@ -229,12 +229,22 @@ void Window::render(cairo_t *cr)
 
         cairo_set_source_surface(cr, surface, me.getX() + WINDOW_CLIENT_START_X, me.getY() + WINDOW_CLIENT_START_Y);
 
+        // Clip to the dirty rectangle (don't update anything more)
         cairo_rectangle(
                 cr,
                 me.getX() + realDirty.getX(),
                 me.getY() + realDirty.getY(),
                 realDirty.getW(),
                 realDirty.getH());
+        cairo_clip(cr);
+
+        // Clip to the window only (fixes rendering glitches during resize)
+        cairo_rectangle(
+                cr,
+                me.getX() + WINDOW_CLIENT_START_X,
+                me.getY() + WINDOW_CLIENT_START_Y,
+                me.getW() - WINDOW_CLIENT_LOST_W,
+                me.getH() - WINDOW_CLIENT_LOST_H);
         cairo_clip(cr);
 
         cairo_paint(cr);
