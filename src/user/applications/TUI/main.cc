@@ -123,7 +123,6 @@ void modeChanged(size_t width, size_t height)
     // Wipe out the framebuffer, start over.
     cairo_set_source_rgba(g_Cairo, 0, 0, 0.0, 0.8);
     cairo_rectangle(g_Cairo, 0, 0, g_nWidth, g_nHeight);
-    cairo_stroke_preserve(g_Cairo);
     cairo_fill(g_Cairo);
 
     g_pHeader->setWidth(width);
@@ -137,13 +136,16 @@ void modeChanged(size_t width, size_t height)
         pTerm->renewBuffer(width, height);
 
         DirtyRectangle rect;
+        pTerm->redrawAll(rect);
+        pTerm->showCursor(rect);
+
+        // Resize any clients.
+        kill(pTerm->getPid(), SIGWINCH);
 
         /*
         g_pHeader->select(pTerm->getTabId());
         g_pHeader->render(pTerm->getBuffer(), rect);
         */
-
-        pTerm->redrawAll(rect);
 
         pTL = pTL->next;
     }
@@ -596,6 +598,7 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
 
 bool callback(WidgetMessages message, size_t msgSize, void *msgData)
 {
+    DirtyRectangle dirty;
     switch(message)
     {
         case Reposition:
@@ -618,9 +621,29 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
                 key_input_handler(*reinterpret_cast<uint64_t*>(msgData));
             }
             break;
+        case Focus:
+            {
+                if(g_pCurrentTerm)
+                {
+                    g_pCurrentTerm->term->setCursorStyle(true);
+                    g_pCurrentTerm->term->showCursor(dirty);
+                }
+            }
+            break;
+        case NoFocus:
+            {
+                if(g_pCurrentTerm)
+                {
+                    g_pCurrentTerm->term->setCursorStyle(false);
+                    g_pCurrentTerm->term->showCursor(dirty);
+                }
+            }
+            break;
         default:
             syslog(LOG_INFO, "TUI: unhandled callback");
     }
+
+    doRedraw(dirty);
     return true;
 }
 

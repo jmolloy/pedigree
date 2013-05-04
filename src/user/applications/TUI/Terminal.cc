@@ -116,35 +116,7 @@ Terminal::~Terminal()
 
 void Terminal::renewBuffer(size_t nWidth, size_t nHeight)
 {
-    cairo_save(g_Cairo);
-    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
-
-    cairo_set_source_rgba(
-            g_Cairo,
-            g_MainBackgroundColour.r / 256.0,
-            g_MainBackgroundColour.g / 256.0,
-            g_MainBackgroundColour.b / 256.0,
-            0.8);
-
-    cairo_rectangle(g_Cairo, m_OffsetLeft, m_OffsetTop, nWidth, nHeight);
-    cairo_fill(g_Cairo);
-
     m_pXterm->resize(nWidth, nHeight, 0);
-    return;
-
-    if(!m_pFramebuffer)
-        return;
-
-    delete m_pFramebuffer;
-
-    m_pFramebuffer = g_pFramebuffer->createChild(m_OffsetLeft, m_OffsetTop, nWidth, nHeight);
-    if((!m_pFramebuffer) || (!m_pFramebuffer->getRawBuffer()))
-        return;
-
-    uint32_t backColourInt = PedigreeGraphics::createRgb(g_MainBackgroundColour.r, g_MainBackgroundColour.g, g_MainBackgroundColour.b);
-    m_pFramebuffer->rect(0, 0, nWidth, nHeight, backColourInt, PedigreeGraphics::Bits24_Rgb);
-
-    m_pXterm->resize(nWidth, nHeight, m_pFramebuffer);
 }
 
 void Terminal::addToQueue(uint64_t key)

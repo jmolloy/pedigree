@@ -538,7 +538,7 @@ void Xterm::renderAll(DirtyRectangle &rect)
 
 Xterm::Window::Window(size_t nRows, size_t nCols, PedigreeGraphics::Framebuffer *pFb, size_t nMaxScrollback, size_t offsetLeft, size_t offsetTop, size_t fbWidth) :
     m_pBuffer(0), m_BufferLength(nRows*nCols), m_pFramebuffer(pFb), m_FbWidth(fbWidth), m_Width(nCols), m_Height(nRows), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop), m_nMaxScrollback(nMaxScrollback), m_CursorX(0), m_CursorY(0), m_ScrollStart(0), m_ScrollEnd(nRows-1),
-    m_pInsert(0), m_pView(0), m_Fg(g_DefaultFg), m_Bg(g_DefaultBg), m_Flags(0), m_bLineRender(false)
+    m_pInsert(0), m_pView(0), m_Fg(g_DefaultFg), m_Bg(g_DefaultBg), m_Flags(0), m_bCursorFilled(true), m_bLineRender(false)
 {
     // Using malloc() instead of new[] so we can use realloc()
     m_pBuffer = reinterpret_cast<TermChar*>(malloc(m_Width*m_Height*sizeof(TermChar)));
@@ -579,7 +579,7 @@ Xterm::Window::~Window()
 
 void Xterm::Window::showCursor(DirtyRectangle &rect)
 {
-    render(rect, XTERM_INVERSE);
+    render(rect, m_bCursorFilled ? XTERM_INVERSE : XTERM_BORDER);
 }
 
 void Xterm::Window::hideCursor(DirtyRectangle &rect)
@@ -587,9 +587,9 @@ void Xterm::Window::hideCursor(DirtyRectangle &rect)
     render(rect);
 }
 
-void Xterm::Window::resize(size_t nWidth, size_t nHeight, PedigreeGraphics::Framebuffer *pBuffer)
+void Xterm::Window::resize(size_t nWidth, size_t nHeight, bool bActive)
 {
-    m_pFramebuffer = pBuffer;
+    m_pFramebuffer = 0;
 
     size_t cols = nWidth / g_NormalFont->getWidth();
     size_t rows = nHeight / g_NormalFont->getHeight();
@@ -597,17 +597,7 @@ void Xterm::Window::resize(size_t nWidth, size_t nHeight, PedigreeGraphics::Fram
     g_NormalFont->setWidth(nWidth);
     g_BoldFont->setWidth(nWidth);
 
-    TermChar *newBuf = reinterpret_cast<TermChar*>(malloc(cols*rows*sizeof(TermChar)));
-
-    TermChar blank;
-    blank.fore = m_Fg;
-    blank.back = m_Bg;
-    blank.utf32 = ' ';
-    blank.flags = 0;
-    for (size_t i = 0; i < cols*rows; i++)
-        newBuf[i] = blank;
-
-    if(m_Bg && g_Cairo)
+    if(bActive && m_Bg && g_Cairo)
     {
         cairo_save(g_Cairo);
         cairo_set_source_rgba(
@@ -622,6 +612,16 @@ void Xterm::Window::resize(size_t nWidth, size_t nHeight, PedigreeGraphics::Fram
 
         cairo_restore(g_Cairo);
     }
+
+    TermChar *newBuf = reinterpret_cast<TermChar*>(malloc(cols*rows*sizeof(TermChar)));
+
+    TermChar blank;
+    blank.fore = m_Fg;
+    blank.back = m_Bg;
+    blank.utf32 = ' ';
+    blank.flags = 0;
+    for (size_t i = 0; i < cols*rows; i++)
+        newBuf[i] = blank;
 
     for (size_t r = 0; r < m_Height; r++)
     {
@@ -639,7 +639,6 @@ void Xterm::Window::resize(size_t nWidth, size_t nHeight, PedigreeGraphics::Fram
     m_pInsert = m_pView = m_pBuffer = newBuf;
     m_BufferLength = rows*cols;
 
-    m_pFramebuffer = pBuffer;
     m_FbWidth = nWidth;
     m_Width = cols;
     m_Height = rows;
@@ -649,11 +648,6 @@ void Xterm::Window::resize(size_t nWidth, size_t nHeight, PedigreeGraphics::Fram
         m_CursorX = 0;
     if (m_CursorY >= m_Height)
         m_CursorY = 0;
-
-    DirtyRectangle rect;
-    renderAll(rect, 0);
-
-    doRedraw(rect);
 }
 
 void Xterm::Window::setScrollRegion(int start, int end)
@@ -783,16 +777,44 @@ void Xterm::Window::render(DirtyRectangle &rect, size_t flags, size_t x, size_t 
     rect.point(x*g_NormalFont->getWidth()+m_OffsetLeft, y*g_NormalFont->getHeight()+m_OffsetTop);
     rect.point((x+1)*g_NormalFont->getWidth()+m_OffsetLeft+1, (y+1)*g_NormalFont->getHeight()+m_OffsetTop);
 
-    if (flags & XTERM_BOLD)
-        g_BoldFont->render(m_pFramebuffer, utf32,
-                           x*g_BoldFont->getWidth()+m_OffsetLeft,
-                           y*g_BoldFont->getHeight()+m_OffsetTop,
-                           fg, bg);
-    else
-        g_NormalFont->render(m_pFramebuffer, utf32,
-                             x*g_NormalFont->getWidth()+m_OffsetLeft,
-                             y*g_NormalFont->getHeight()+m_OffsetTop,
-                             fg, bg);
+    Font *pFont = g_NormalFont;
+    if(flags & XTERM_BOLD)
+    {
+        pFont = g_BoldFont;
+    }
+
+    pFont->render(m_pFramebuffer, utf32,
+                  x * pFont->getWidth() + m_OffsetLeft,
+                  y * pFont->getHeight() + m_OffsetTop,
+                  fg, bg);
+
+    if(flags & XTERM_BORDER)
+    {
+        // Border around the cell.
+        cairo_save(g_Cairo);
+        cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+
+        cairo_set_line_width(g_Cairo, 1.0);
+        cairo_set_line_join(g_Cairo, CAIRO_LINE_JOIN_MITER);
+        cairo_set_antialias(g_Cairo, CAIRO_ANTIALIAS_NONE);
+
+        cairo_set_source_rgba(
+                g_Cairo,
+                ((fg >> 16) & 0xFF) / 256.0,
+                ((fg >> 8) & 0xFF) / 256.0,
+                (fg & 0xFF) / 256.0,
+                0.8);
+
+        cairo_rectangle(
+                g_Cairo,
+                (x * pFont->getWidth()) + m_OffsetLeft + 1,
+                (y * pFont->getHeight()) + m_OffsetTop + 1,
+                pFont->getWidth() - 2,
+                pFont->getHeight() - 2);
+        cairo_stroke(g_Cairo);
+
+        cairo_restore(g_Cairo);
+    }
 }
 
 void Xterm::Window::scrollRegionUp(size_t n, DirtyRectangle &rect)
