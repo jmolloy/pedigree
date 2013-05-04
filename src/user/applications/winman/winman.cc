@@ -124,11 +124,12 @@ void handleMessage(char *messageData)
         pWindow->setTitle(newTitle);
         g_PendingWindows.insert(pWindow);
 
-        if(!g_pFocusWindow)
+        if(g_pFocusWindow)
         {
-            g_pFocusWindow = pWindow;
-            pWindow->focus();
+            g_pFocusWindow->nofocus();
         }
+        g_pFocusWindow = pWindow;
+        pWindow->focus();
 
         LibUiProtocol::WindowManagerMessage *pHeader =
             reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(responseData);

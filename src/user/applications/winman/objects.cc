@@ -190,7 +190,7 @@ void Window::render(cairo_t *cr)
 
     // Draw the child framebuffer before window decorations.
     void *pBuffer = getFramebuffer();
-    if(pBuffer && isClientDirty())
+    if(pBuffer && (isDirty() && m_bRefresh))
     {
         cairo_save(cr);
         size_t regionWidth = m_nRegionWidth;
@@ -294,12 +294,38 @@ void Window::focus()
     m_bFocus = true;
     m_pParent->setFocusWindow(this);
     m_bPendingDecoration = true;
+
+    PedigreeIpc::IpcMessage *pMessage = new PedigreeIpc::IpcMessage();
+    pMessage->initialise();
+    char *buffer = (char *) pMessage->getBuffer();
+
+    LibUiProtocol::WindowManagerMessage *pHeader =
+        reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
+    pHeader->messageCode = LibUiProtocol::Focus;
+    pHeader->widgetHandle = m_Handle;
+    pHeader->messageSize = 0;
+    pHeader->isResponse = false;
+
+    PedigreeIpc::send(m_Endpoint, pMessage, true);
 }
 
 void Window::nofocus()
 {
     m_bFocus = false;
     m_bPendingDecoration = true;
+
+    PedigreeIpc::IpcMessage *pMessage = new PedigreeIpc::IpcMessage();
+    pMessage->initialise();
+    char *buffer = (char *) pMessage->getBuffer();
+
+    LibUiProtocol::WindowManagerMessage *pHeader =
+        reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
+    pHeader->messageCode = LibUiProtocol::NoFocus;
+    pHeader->widgetHandle = m_Handle;
+    pHeader->messageSize = 0;
+    pHeader->isResponse = false;
+
+    PedigreeIpc::send(m_Endpoint, pMessage, true);
 }
 
 void Window::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pChild)
