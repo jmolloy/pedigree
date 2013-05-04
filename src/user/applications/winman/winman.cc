@@ -184,7 +184,7 @@ void handleMessage(char *messageData)
             g_PendingWindows.insert(pWindow);
         }
     }
-    else if(pWinMan->messageCode == LibUiProtocol::RequestRedraw)
+    else if(pWinMan->messageCode == LibUiProtocol::Nothing)
     {
         // We inject this to wake up checkForMessages and move on to rendering.
     }
