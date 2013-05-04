@@ -131,6 +131,11 @@ class WObject
         {
         }
 
+        //// Render.
+        virtual void render(cairo_t *cr)
+        {
+        }
+
     protected:
         void setDimensions(PedigreeGraphics::Rect &rt)
         {
@@ -489,6 +494,14 @@ class Container : public WObject
          * retile also.
          */
         void retile();
+
+        /**
+         * Parent of this container.
+         */
+        WObject *getParent() const
+        {
+            return m_pParent;
+        }
 
         /**
          * Resize the entire container.

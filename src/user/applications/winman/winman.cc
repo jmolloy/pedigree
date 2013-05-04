@@ -49,7 +49,7 @@ uint8_t *g_pBackbuffer = 0;
 
 std::map<uint64_t, Window*> *g_Windows;
 
-std::set<Window*> g_PendingWindows;
+std::set<WObject*> g_PendingWindows;
 
 PedigreeIpc::IpcEndpoint *g_pEndpoint = 0;
 
@@ -286,6 +286,72 @@ void systemInputCallback(Input::InputNotification &note)
                     pid_t pid = (pid_t) ((handle >> 32) & 0xFFFFFFFF);
                     kill(pid, SIGTERM);
 
+                    // Find any siblings if we can.
+                    WObject *siblingObject = focusParent->getLeftSibling(g_pFocusWindow);
+                    if(!siblingObject)
+                    {
+                        siblingObject = focusParent->getRightSibling(g_pFocusWindow);
+                    }
+
+                    // Will there be any children left?
+                    if(focusParent->getChildCount() > 1)
+                    {
+                        // Yes. Focus adjustment is mostly trivial.
+                    }
+                    else
+                    {
+                        // No. Focus adjustment is less trivial.
+                        siblingObject = focusParent->getLeft(g_pFocusWindow);
+                        if(!siblingObject)
+                        {
+                            siblingObject = focusParent->getRight(g_pFocusWindow);
+                        }
+                        if(!siblingObject)
+                        {
+                            siblingObject = focusParent->getUp(g_pFocusWindow);
+                        }
+                        if(!siblingObject)
+                        {
+                            siblingObject = focusParent->getDown(g_pFocusWindow);
+                        }
+                    }
+
+                    // Remove from the parent container.
+                    focusParent->removeChild(g_pFocusWindow);
+                    if(focusParent->getChildCount() > 0)
+                    {
+                        focusParent->retile();
+                    }
+                    else if(focusParent->getParent())
+                    {
+                        Container *pContainer = static_cast<Container*>(focusParent->getParent());
+                        pContainer->removeChild(focusParent);
+                        pContainer->retile();
+                        focusParent = pContainer;
+                    }
+
+                    // Assign new focus.
+                    if(siblingObject)
+                    {
+                        while(siblingObject->getType() == WObject::Container)
+                        {
+                            Container *pContainer = static_cast<Container*>(siblingObject);
+                            siblingObject = pContainer->getFocusWindow();
+                        }
+
+                        if(siblingObject->getType() == WObject::Window)
+                        {
+                            newFocus = static_cast<Window*>(siblingObject);
+                        }
+                    }
+
+                    // All children are now pending a redraw.
+                    g_PendingWindows.insert(focusParent);
+
+                    // Clean up.
+                    // delete g_pFocusWindow;
+                    g_pFocusWindow = 0;
+
                     bHandled = true;
                 }
             }
@@ -366,10 +432,6 @@ void systemInputCallback(Input::InputNotification &note)
                 {
                     while(sibling->getType() == WObject::Container)
                     {
-                        // Need to make the focus the first non-Container child of the container.
-                        /// \todo Need to have containers remember the last window that was focussed
-                        ///       inside it, so we can a) render it differently, and b) not assume
-                        ///       getChild(0) is the right thing to do.
                         Container *pContainer = static_cast<Container*>(sibling);
                         sibling = pContainer->getFocusWindow();
                     }
@@ -385,10 +447,14 @@ void systemInputCallback(Input::InputNotification &note)
 
             if(newFocus)
             {
-                g_PendingWindows.insert(g_pFocusWindow);
+                if(g_pFocusWindow)
+                {
+                    g_PendingWindows.insert(g_pFocusWindow);
+                    g_pFocusWindow->nofocus();
+                }
+
                 g_PendingWindows.insert(newFocus);
 
-                g_pFocusWindow->nofocus();
                 g_pFocusWindow = newFocus;
                 g_pFocusWindow->focus();
                 bWakeup = true;
@@ -449,10 +515,7 @@ void systemInputCallback(Input::InputNotification &note)
 
             if(bWakeup)
             {
-                if(sibling && (sibling->getType() == WObject::Window))
-                {
-                    g_PendingWindows.insert(static_cast<Window*>(sibling));
-                }
+                g_PendingWindows.insert(sibling);
                 g_PendingWindows.insert(g_pFocusWindow);
             }
         }
@@ -699,11 +762,17 @@ int main(int argc, char *argv[])
         {
             // Render each window, also ensuring the wallpaper is rendered again
             // so that windows with alpha look correct.
-            std::set<Window*>::iterator it = g_PendingWindows.begin();
+            std::set<WObject*>::iterator it = g_PendingWindows.begin();
             size_t nDirty = g_StatusField.length() ? 1 : 0;
             for(; it != g_PendingWindows.end(); ++it)
             {
-                if(!(*it)->isDirty())
+                Window *pWindow = 0;
+                if((*it)->getType() == WObject::Window)
+                {
+                    pWindow = static_cast<Window*>(*it);
+                }
+
+                if(pWindow && !pWindow->isDirty())
                 {
                     continue;
                 }
@@ -712,8 +781,12 @@ int main(int argc, char *argv[])
                     ++nDirty;
                 }
 
-                PedigreeGraphics::Rect dirty = (*it)->getDirty();
                 PedigreeGraphics::Rect rt = (*it)->getCopyDimensions();
+                PedigreeGraphics::Rect dirty = rt;
+                if(pWindow)
+                {
+                    dirty = pWindow->getDirty();
+                }
 
                 // Render wallpaper.
                 if(wallpaper)
