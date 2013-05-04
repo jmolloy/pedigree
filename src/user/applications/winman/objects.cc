@@ -80,9 +80,12 @@ Window::Window(uint64_t handle, PedigreeIpc::IpcEndpoint *endpoint, ::Container 
 
 void Window::refreshContext(PedigreeGraphics::Rect oldDimensions)
 {
-    delete m_Framebuffer;
-
     PedigreeGraphics::Rect &me = getDimensions();
+
+    /// \todo Need a way to destroy the old framebuffer without freeing the
+    ///       shared region. Refcount on the region perhaps?
+    // delete m_Framebuffer;
+
     if((me.getW() < WINDOW_CLIENT_LOST_W) || (me.getH() < WINDOW_CLIENT_LOST_H))
     {
         // We have some basic requirements for window sizes.

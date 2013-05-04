@@ -421,10 +421,7 @@ void Widget::checkForEvents(bool bAsync)
                 {
                     LibUiProtocol::RepositionMessage *pReposition =
                         reinterpret_cast<LibUiProtocol::RepositionMessage*>(buffer + sizeof(LibUiProtocol::WindowManagerMessage));
-                    /// \todo If we delete this pointer, we free an extra memory region
-                    ///       that we REALLY didn't mean to free. Fix that on the kernel
-                    ///       side...
-                    //delete g_pWidget->m_SharedFramebuffer;
+                    delete g_pWidget->m_SharedFramebuffer;
                     g_pWidget->m_SharedFramebuffer =
                             new PedigreeIpc::SharedIpcMessage(pReposition->shmem_size, pReposition->shmem_handle);
                     g_pWidget->m_SharedFramebuffer->initialise();
