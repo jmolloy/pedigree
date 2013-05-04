@@ -438,6 +438,12 @@ void Widget::checkForEvents(bool bAsync)
                     cb(::KeyUp, sizeof(pKeyEvent->key), &pKeyEvent->key);
                     break;
                 }
+                case LibUiProtocol::Focus:
+                    cb(::Focus, 0, 0);
+                    break;
+                case LibUiProtocol::NoFocus:
+                    cb(::NoFocus, 0, 0);
+                    break;
                 default:
                     syslog(LOG_INFO, "** unknown event");
             }

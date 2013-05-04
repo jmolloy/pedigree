@@ -35,7 +35,9 @@ enum WidgetMessages
     MouseDown,
     MouseUp,
     KeyDown,
-    KeyUp
+    KeyUp,
+    Focus,
+    NoFocus,
 };
 
 typedef bool (*widgetCallback_t)(WidgetMessages, size_t, void *);

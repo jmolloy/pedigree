@@ -131,6 +131,18 @@ namespace LibUiProtocol
         KeyEvent,
 
         /**
+         * Focus: window manager -> widget. A notification to state that the
+         * window has now received focus.
+         */
+        Focus,
+
+        /**
+         * NoFocus: window manager -> widget. A notification to state that the
+         * window has just lost focus.
+         */
+        NoFocus,
+
+        /**
          * Nothing: nothing at all.
          */
         Nothing
