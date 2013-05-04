@@ -273,33 +273,17 @@ void systemInputCallback(Input::InputNotification &note)
             WObject *sibling = 0;
             if(bShift)
             {
-                if(c == 'r')
+                if(c == 'R')
                 {
                     g_pRootContainer->retile();
                     bHandled = true;
                 }
-                else if(c == 'q')
+                else if(c == 'Q')
                 {
-                    /// \todo this code is completely broken.
-
-                    if(focusParent->getChildCount() > 1)
-                    {
-                        newFocus = static_cast<Window*>(focusParent->getLeftSibling(g_pFocusWindow));
-                        if(!newFocus)
-                        {
-                            newFocus = static_cast<Window*>(focusParent->getRightSibling(g_pFocusWindow));
-                        }
-                    }
-
-                    focusParent->removeChild(g_pFocusWindow);
-
-                    if(focusParent->getChildCount() == 0)
-                    {
-                        // No more children - remove container.
-                        /// \todo write me.
-                    }
-
-                    g_pFocusWindow = newFocus;
+                    // Kill the client.
+                    uint64_t handle = g_pFocusWindow->getHandle();
+                    pid_t pid = (pid_t) ((handle >> 32) & 0xFFFFFFFF);
+                    kill(pid, SIGTERM);
 
                     bHandled = true;
                 }
@@ -353,6 +337,9 @@ void systemInputCallback(Input::InputNotification &note)
                 bHandled = true;
                 bWakeup = true;
                 g_StatusField = "<resize mode>";
+
+                // Don't transmit resizes to the client(s) yet.
+                g_pRootContainer->norefresh();
             }
             else if(realKey != None)
             {
@@ -407,32 +394,78 @@ void systemInputCallback(Input::InputNotification &note)
             }
         }
 
-        if(bResize && (g_pFocusWindow))
+        if((!bHandled) && bResize && (g_pFocusWindow))
         {
+            bWakeup = true;
+            bHandled = true;
+
+            Container *focusParent = g_pFocusWindow->getParent();
+            WObject *sibling = 0;
             if(c == '\e')
             {
                 g_StatusField = " ";
                 bResize = false;
-                bWakeup = true;
+
+                // Okay, now the client(s) can get a refreshed context.
+                g_pRootContainer->yesrefresh();
             }
             else if(realKey == Left)
             {
-                g_pFocusWindow->resize(-10, 0);
+                sibling = focusParent->getLeft(g_pFocusWindow);
+                if(sibling)
+                {
+                    sibling->resize(10, 0);
+                }
+                else
+                {
+                    g_pFocusWindow->resize(-10, 0);
+                }
             }
             else if(realKey == Right)
             {
-                g_pFocusWindow->resize(10, 0);
+                sibling = focusParent->getRight(g_pFocusWindow);
+                if(sibling)
+                {
+                    sibling->resize(-10, 0);
+                }
+                else
+                {
+                    g_pFocusWindow->resize(10, 0);
+                }
             }
             else if(realKey == Up)
             {
-                g_pFocusWindow->resize(0, -10);
+                sibling = focusParent->getUp(g_pFocusWindow);
+                if(sibling)
+                {
+                    sibling->resize(0, 10);
+                }
+                else
+                {
+                    g_pFocusWindow->resize(0, -10);
+                }
             }
             else if(realKey == Down)
             {
-                g_pFocusWindow->resize(0, 10);
+                sibling = focusParent->getDown(g_pFocusWindow);
+                if(sibling)
+                {
+                    sibling->resize(0, -10);
+                }
+                else
+                {
+                    g_pFocusWindow->resize(0, 10);
+                }
+            }
+            else
+            {
+                bWakeup = false;
             }
 
-            bHandled = true;
+            if(bWakeup)
+            {
+                g_PendingWindows.insert(g_pFocusWindow);
+            }
         }
     }
 

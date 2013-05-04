@@ -121,6 +121,16 @@ class WObject
             return m_Dimensions;
         }
 
+        /// Don't refresh the context on every reposition.
+        virtual void norefresh()
+        {
+        }
+
+        /// Refresh context on every reposition.
+        virtual void yesrefresh()
+        {
+        }
+
     protected:
         void setDimensions(PedigreeGraphics::Rect &rt)
         {
@@ -133,7 +143,7 @@ class WObject
         }
 
         /// Refresh our graphical context, called after reposition.
-        virtual void refreshContext(PedigreeGraphics::Rect oldDimensions)
+        virtual void refreshContext()
         {
         }
 
@@ -172,7 +182,20 @@ class Window : public WObject
         virtual void focus();
         virtual void nofocus();
 
-        virtual void refreshContext(PedigreeGraphics::Rect oldDimensions);
+        /// Don't refresh the context on every reposition.
+        virtual void norefresh()
+        {
+            m_bRefresh = false;
+        }
+
+        /// Refresh context on every reposition.
+        virtual void yesrefresh()
+        {
+            m_bRefresh = true;
+            refreshContext();
+        }
+
+        virtual void refreshContext();
 
         void *getFramebuffer() const
         {
@@ -203,19 +226,32 @@ class Window : public WObject
 
         PedigreeGraphics::Rect getDirty() const
         {
+            // Different behaviour if we are waiting on a window redecoration
+            if(m_bPendingDecoration)
+            {
+                // Redraw ALL the things.
+                PedigreeGraphics::Rect rt = getCopyDimensions();
+                rt.update(0, 0, rt.getW(), rt.getH());
+                return rt;
+            }
             return m_Dirty;
         }
 
         bool isDirty() const
         {
-            return m_bPendingDecoration || !(
+            return m_bPendingDecoration || isClientDirty();
+        }
+
+    private:
+        bool isClientDirty() const
+        {
+            return !(
                 m_Dirty.getX() == 0 &&
                 m_Dirty.getY() == 0 &&
                 m_Dirty.getW() == 0 &&
                 m_Dirty.getH() == 0);
         }
 
-    private:
         uint64_t m_Handle;
 
         PedigreeIpc::IpcEndpoint *m_Endpoint;
@@ -231,6 +267,11 @@ class Window : public WObject
         bool m_bPendingDecoration;
 
         bool m_bFocus;
+
+        bool m_bRefresh;
+
+        size_t m_nRegionWidth;
+        size_t m_nRegionHeight;
 };
 
 /**
@@ -460,6 +501,12 @@ class Container : public WObject
          * Render children
          */
         void render(cairo_t *cr);
+
+        /// Don't refresh the context on every reposition.
+        virtual void norefresh();
+
+        /// Refresh context on every reposition.
+        virtual void yesrefresh();
 
     protected:
         std::vector<WObject*> m_Children;

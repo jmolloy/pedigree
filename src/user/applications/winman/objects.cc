@@ -54,10 +54,9 @@ void WObject::reposition(size_t x, size_t y, size_t w, size_t h)
     if(h == ~0UL)
         h = m_Dimensions.getH();
 
-    PedigreeGraphics::Rect old = m_Dimensions;
     m_Dimensions.update(x, y, w, h);
 
-    refreshContext(old);
+    refreshContext();
 }
 
 void WObject::bump(ssize_t bumpX, ssize_t bumpY)
@@ -71,16 +70,22 @@ void WObject::bump(ssize_t bumpX, ssize_t bumpY)
 
 Window::Window(uint64_t handle, PedigreeIpc::IpcEndpoint *endpoint, ::Container *pParent) :
     m_Handle(handle), m_Endpoint(endpoint), m_pParent(pParent),
-    m_Framebuffer(0), m_Dirty(), m_bPendingDecoration(false), m_bFocus(false)
+    m_Framebuffer(0), m_Dirty(), m_bPendingDecoration(false), m_bFocus(false),
+    m_bRefresh(true), m_nRegionWidth(0), m_nRegionHeight(0)
 {
-    PedigreeGraphics::Rect none;
-    refreshContext(none);
+    refreshContext();
     m_pParent->addChild(this);
 }
 
-void Window::refreshContext(PedigreeGraphics::Rect oldDimensions)
+void Window::refreshContext()
 {
     PedigreeGraphics::Rect &me = getDimensions();
+    if(!m_bRefresh)
+    {
+        // Not refreshing context currently.
+        m_bPendingDecoration = true;
+        return;
+    }
 
     /// \todo Need a way to destroy the old framebuffer without freeing the
     ///       shared region. Refcount on the region perhaps?
@@ -102,6 +107,9 @@ void Window::refreshContext(PedigreeGraphics::Rect oldDimensions)
     m_Framebuffer = new PedigreeIpc::SharedIpcMessage(regionSize, 0);
     m_Framebuffer->initialise();
     memset(m_Framebuffer->getBuffer(), 0, regionSize);
+
+    m_nRegionWidth = regionWidth;
+    m_nRegionHeight = regionHeight;
 
     if(m_Endpoint && m_Framebuffer)
     {
@@ -150,12 +158,12 @@ void Window::setDirty(PedigreeGraphics::Rect &dirty)
         return;
     }
 
-    if((realX + clientW) > clientW)
+    if((realX + realW) > clientW)
     {
         realW = clientW - realX;
     }
 
-    if((realY + clientH) > clientH)
+    if((realY + realH) > clientH)
     {
         realH = clientH - realY;
     }
@@ -182,11 +190,11 @@ void Window::render(cairo_t *cr)
 
     // Draw the child framebuffer before window decorations.
     void *pBuffer = getFramebuffer();
-    if(pBuffer && isDirty())
+    if(pBuffer && isClientDirty())
     {
         cairo_save(cr);
-        size_t regionWidth = me.getW() - WINDOW_CLIENT_LOST_W;
-        size_t regionHeight = me.getH() - WINDOW_CLIENT_LOST_H;
+        size_t regionWidth = m_nRegionWidth;
+        size_t regionHeight = m_nRegionHeight;
         int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, regionWidth);
 
         cairo_surface_t *surface = cairo_image_surface_create_for_data(
@@ -196,16 +204,40 @@ void Window::render(cairo_t *cr)
                 regionHeight,
                 stride);
 
+        PedigreeGraphics::Rect realDirty = getDirty();
+        size_t dirtyX = realDirty.getX();
+        size_t dirtyY = realDirty.getY();
+        size_t dirtyWidth = realDirty.getW();
+        size_t dirtyHeight = realDirty.getH();
+
+        if(dirtyX < WINDOW_CLIENT_START_X)
+        {
+            dirtyX = WINDOW_CLIENT_START_X;
+        }
+        if(dirtyY < WINDOW_CLIENT_START_Y)
+        {
+            dirtyY = WINDOW_CLIENT_START_Y;
+        }
+        if((dirtyX + dirtyWidth) > regionWidth)
+        {
+            dirtyWidth = regionWidth;
+        }
+        if((dirtyY + dirtyHeight) > regionHeight)
+        {
+            dirtyHeight = regionHeight;
+        }
+
         cairo_set_source_surface(cr, surface, me.getX() + WINDOW_CLIENT_START_X, me.getY() + WINDOW_CLIENT_START_Y);
 
         cairo_rectangle(
                 cr,
-                me.getX() + m_Dirty.getX(),
-                me.getY() + m_Dirty.getY(),
-                m_Dirty.getW(),
-                m_Dirty.getH());
+                me.getX() + realDirty.getX(),
+                me.getY() + realDirty.getY(),
+                realDirty.getW(),
+                realDirty.getH());
+        cairo_clip(cr);
 
-        cairo_fill(cr);
+        cairo_paint(cr);
 
         cairo_surface_destroy(surface);
         cairo_restore(cr);
@@ -214,7 +246,7 @@ void Window::render(cairo_t *cr)
         m_Dirty.update(0, 0, 0, 0);
     }
 
-    if(1 || m_bPendingDecoration)
+    if(m_bPendingDecoration)
     {
         cairo_save(cr);
         cairo_set_line_cap(cr, CAIRO_LINE_CAP_SQUARE);
@@ -634,5 +666,25 @@ void RootContainer::resize(ssize_t horizDistance, ssize_t vertDistance, WObject 
         // Use the Container implementation to resize siblings of the
         // child that we've been passed.
         Container::resize(horizDistance, vertDistance, pChild);
+    }
+}
+
+/// Don't refresh the context on every reposition.
+void Container::norefresh()
+{
+    WObjectList_t::const_iterator it = m_Children.begin();
+    for(; it != m_Children.end(); ++it)
+    {
+        (*it)->norefresh();
+    }
+}
+
+/// Refresh context on every reposition.
+void Container::yesrefresh()
+{
+    WObjectList_t::const_iterator it = m_Children.begin();
+    for(; it != m_Children.end(); ++it)
+    {
+        (*it)->yesrefresh();
     }
 }
