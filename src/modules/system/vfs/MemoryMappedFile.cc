@@ -40,13 +40,29 @@ MemoryMappedFile::MemoryMappedFile(size_t anonMapSize) :
 
 MemoryMappedFile::~MemoryMappedFile()
 {
-    // Free all physical pages.
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+
+    // Free all physical pages, "sensibly".
     for (Tree<uintptr_t,uintptr_t>::Iterator it = m_Mappings.begin();
          it != m_Mappings.end();
          it++)
     {
+        uintptr_t v = it.key();
         uintptr_t p = it.value();
-        PhysicalMemoryManager::instance().freePage(p);
+
+        if (va.isMapped(reinterpret_cast<void*>(v)))
+        {
+            uintptr_t p;
+            size_t flags;
+            va.getMapping(reinterpret_cast<void*>(v), p, flags);
+
+            // Unmap virtual.
+            va.unmap(reinterpret_cast<void*>(v));
+
+            // Original copy? Unmap original.
+            if (p == it.value())
+                PhysicalMemoryManager::instance().freePage(p);
+        }
     }
     m_Mappings.clear();
 }
@@ -132,7 +148,6 @@ void MemoryMappedFile::unload(uintptr_t address)
 {
     LockGuard<Mutex> guard(m_Lock);
 
-    // Create a spinlock as an easy way of disabling interrupts.
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
     // Remove all the V->P mappings we currently posess.
@@ -306,18 +321,21 @@ MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address, 
         sizeOverride &= ~(PhysicalMemoryManager::instance().getPageSize() - 1);
     }
 
-    /// \todo This operation should be atomic with respect to threads.
-
-    // Add to the MmFileList for this VA space (if it exists).
-    MmFileList *pMmFileList = m_MmFileLists.lookup(&va);
-    if (!pMmFileList)
     {
-        pMmFileList = new MmFileList();
-        m_MmFileLists.insert(&va, pMmFileList);
-    }
+        // This operation must appear atomic.
+        LockGuard<Mutex> guard(m_CacheLock);
 
-    MmFile *_pMmFile = new MmFile(address, sizeOverride, offset, pMmFile);
-    pMmFileList->pushBack(_pMmFile);
+        // Add to the MmFileList for this VA space (if it exists).
+        MmFileList *pMmFileList = m_MmFileLists.lookup(&va);
+        if (!pMmFileList)
+        {
+            pMmFileList = new MmFileList();
+            m_MmFileLists.insert(&va, pMmFileList);
+        }
+
+        MmFile *_pMmFile = new MmFile(address, sizeOverride, offset, pMmFile);
+        pMmFileList->pushBack(_pMmFile);
+    }
 
     // Success.
     return pMmFile;
@@ -413,9 +431,14 @@ void MemoryMappedFileManager::unmapAll()
     m_MmFileLists.remove(&va);
 }
 
+// #define MMFILE_DEBUG
+
 bool MemoryMappedFileManager::trap(uintptr_t address, bool bIsWrite)
 {
-    //NOTICE_NOLOCK("Trap start: " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
+#ifdef MMFILE_DEBUG
+    NOTICE_NOLOCK("Trap start: " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
+#endif
+
     /// \todo Handle read-write maps.
     if (bIsWrite)
     {
@@ -425,6 +448,9 @@ bool MemoryMappedFileManager::trap(uintptr_t address, bool bIsWrite)
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
     m_CacheLock.acquire();
+#ifdef MMFILE_DEBUG
+    NOTICE_NOLOCK("trap: got lock");
+#endif
 
     MmFileList *pMmFileList = m_MmFileLists.lookup(&va);
     if (!pMmFileList)
@@ -433,21 +459,43 @@ bool MemoryMappedFileManager::trap(uintptr_t address, bool bIsWrite)
         return false;
     }
 
+#ifdef MMFILE_DEBUG
+    NOTICE_NOLOCK("trap: lookup complete " << reinterpret_cast<uintptr_t>(pMmFileList));
+#endif
 
     for (List<MmFile*>::Iterator it = pMmFileList->begin();
          it != pMmFileList->end();
          it++)
     {
         MmFile *pMmFile = *it;
+#ifdef MMFILE_DEBUG
+        NOTICE_NOLOCK("mmfile=" << reinterpret_cast<uintptr_t>(pMmFile));
+        if(!pMmFile)
+        {
+            NOTICE_NOLOCK("bad mmfile, should create a real #PF and backtrace");
+            break;
+        }
+#endif
+
         if ( (address >= pMmFile->offset) && (address < pMmFile->offset+pMmFile->size) )
         {
+#ifdef MMFILE_DEBUG
+            NOTICE_NOLOCK("trap: release lock B");
+#endif
             m_CacheLock.release();
             pMmFile->file->trap(address, pMmFile->offset, pMmFile->fileoffset);
 
+#ifdef MMFILE_DEBUG
+            NOTICE_NOLOCK("trap: completed for " << address);
+#endif
 //            NOTICE_NOLOCK("Trap end: " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
             return true;
         }
     }
+
+#ifdef MMFILE_DEBUG
+    NOTICE_NOLOCK("trap: fell off end");
+#endif
     m_CacheLock.release();
 
 //    NOTICE_NOLOCK("Trap end (false): " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
