@@ -343,6 +343,11 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
             delete pLinker;
             return -1;
         }
+
+        // Welp, wipe out the old linker, don't leave crufty mmaps lying around.
+        // We are changing which file to load - get a new linker for that.
+        delete pLinker;
+        pLinker = new DynamicLinker();
     }
 
     // Can we load the new image? Check before we clean out the last ELF image...
