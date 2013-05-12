@@ -526,7 +526,7 @@ void Framebuffer::swDraw(void *pBuffer, size_t srcx, size_t srcy,
 {
     // Potentially inefficient use of RAM and VRAM, but best way to avoid
     // redundant copies of code lying around.
-    Graphics::Buffer *p = createBuffer(pBuffer, format, width, height, m_Palette);
+    Graphics::Buffer *p = createBuffer(pBuffer, format, srcx + width, srcy + height, m_Palette);
     if(!p)
         return;
     blit(p, srcx, srcy, destx, desty, width, height, bLowestCall);
