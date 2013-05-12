@@ -71,8 +71,6 @@ int posix_fcntl(int fd, int cmd, int num, int* args);
 
 int posix_mkdir(const char* name, int mode);
 
-int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout);
-
 int posix_isatty(int fd);
 
 void *posix_mmap(void *p);
