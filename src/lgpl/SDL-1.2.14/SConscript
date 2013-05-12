@@ -81,4 +81,7 @@ tmpEnvironment['ASFLAGS'] += ' -I' + env.Dir('#src/lgpl/SDL-1.2.14/src/hermes').
 tmpEnvironment.SharedLibrary(sobjname, files, LINKFLAGS="")
 tmpEnvironment.Library(objname, files, LINKFLAGS="")
 
+env.Alias(sobjname, 'libs')
+env.Alias(objname, 'libs')
+
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
