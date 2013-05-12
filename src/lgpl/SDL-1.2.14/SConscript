@@ -13,6 +13,7 @@ tmpEnvironment = env.Clone()
 builddir = "#" + env["PEDIGREE_BUILD_BASE"]
 imagesdir = env["PEDIGREE_IMAGES_DIR"]
 objname = builddir + '/libSDL.a'
+sobjname = builddir + '/libSDL.so'
 
 # To include a new subdirectory just add to the list.
 subdirs = [
@@ -77,6 +78,7 @@ tmpEnvironment['LIBPATH'] = libpaths
 tmpEnvironment['CPPDEFINES'] += ['PEDIGREE']
 tmpEnvironment['ASFLAGS'] += ' -I' + env.Dir('#src/lgpl/SDL-1.2.14/src/hermes').path + '/ '
 
-tmpEnvironment.Library(objname, files) #, LINKFLAGS="-shared -Wl,-shared -Wl,-soname,libSDL.so")
+tmpEnvironment.SharedLibrary(sobjname, files, LINKFLAGS="")
+tmpEnvironment.Library(objname, files, LINKFLAGS="")
 
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
