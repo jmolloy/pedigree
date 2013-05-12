@@ -225,7 +225,7 @@ static void PEDIGREE_UpdateRects(_THIS, int numrects, SDL_Rect *rects)
     
     PedigreeGraphics::PixelFormat format;
     if(_this->screen->format->BitsPerPixel == 32)
-        format = PedigreeGraphics::Bits32_Rgba;
+        format = PedigreeGraphics::Bits32_Rgb;
     else if(_this->screen->format->BitsPerPixel == 16)
         format = PedigreeGraphics::Bits16_Rgb565;
     else if(_this->screen->format->BitsPerPixel == 8)
