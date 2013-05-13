@@ -64,11 +64,14 @@ uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
             m_DataCache.insert(block*blockSize, buff);
         }
 
-        memcpy(reinterpret_cast<void*>(buffer),
-               reinterpret_cast<void*>(buff+offs),
-               sz);
+        if(buffer)
+        {
+            memcpy(reinterpret_cast<void*>(buffer),
+                   reinterpret_cast<void*>(buff+offs),
+                   sz);
+            buffer += sz;
+        }
         location += sz;
-        buffer += sz;
         size -= sz;
         n += sz;
     }
@@ -107,6 +110,39 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
         fileAttributeChanged();
     }
     return n;
+}
+
+physical_uintptr_t File::getPhysicalPage(size_t offset) const
+{
+    // Sanitise input.
+    size_t blockSize = getBlockSize();
+    offset &= ~(blockSize - 1);
+
+    // Quick and easy exit.
+    if(offset > m_Size)
+    {
+        return static_cast<physical_uintptr_t>(~0UL);
+    }
+
+    // Check if we have this page in the cache.
+    uintptr_t vaddr = m_DataCache.lookup(offset);
+    if (!vaddr)
+    {
+        return static_cast<physical_uintptr_t>(~0UL);
+    }
+
+    // Look up the page now that we've confirmed it is in the cache.
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    if(va.isMapped(reinterpret_cast<void *>(vaddr)))
+    {
+        physical_uintptr_t phys = 0;
+        size_t flags = 0;
+        va.getMapping(reinterpret_cast<void *>(vaddr), phys, flags);
+
+        return phys;
+    }
+
+    return static_cast<physical_uintptr_t>(~0UL);
 }
 
 Time File::getCreationTime()

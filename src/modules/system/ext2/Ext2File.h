@@ -44,7 +44,7 @@ public:
 protected:
     /** Performs a read-to-cache. */
     uintptr_t readBlock(uint64_t location);
-    size_t getBlockSize()
+    size_t getBlockSize() const
     {
         return reinterpret_cast<Ext2Filesystem*>(m_pFilesystem)->m_BlockSize;
     }

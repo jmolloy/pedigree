@@ -21,9 +21,13 @@
 
 MemoryMappedFileManager MemoryMappedFileManager::m_Instance;
 
-MemoryMappedFile::MemoryMappedFile(File *pFile, size_t extentOverride) :
+/// \todo number of CPUs
+static char g_TrapPage[256][4096] __attribute__((aligned(4096))) = {0};
+
+MemoryMappedFile::MemoryMappedFile(File *pFile, size_t extentOverride, bool bShared) :
     m_pFile(pFile), m_Mappings(), m_bMarkedForDeletion(false),
-    m_Extent(extentOverride ? extentOverride : pFile->getSize() + 1), m_RefCount(0), m_Lock()
+    m_Extent(extentOverride ? extentOverride : pFile->getSize() + 1), m_RefCount(0), m_Lock(),
+    m_bShared(bShared)
 {
     if (m_Extent & ~(PhysicalMemoryManager::getPageSize()-1))
     {
@@ -199,54 +203,89 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileo
         return;
     }
 
-    // Allocate a physical page to store the result.
-    physical_uintptr_t p = PhysicalMemoryManager::instance().allocatePage();
-
-    // Map it into the address space.
-    if (!va.map(p, reinterpret_cast<void *>(v), VirtualAddressSpace::Write | VirtualAddressSpace::Execute))
-    {
-        FATAL_NOLOCK("MemoryMappedFile: map() failed in trap()");
-        return;
-    }
-
     uintptr_t offsetIntoMap = (v - offset);
     uintptr_t alignedOffsetIntoMap = offsetIntoMap & ~(PhysicalMemoryManager::getPageSize() - 1);
 
     // Add the mapping to our list.
     uintptr_t readloc = offsetIntoMap + fileoffset;
     //NOTICE("readloc: " << readloc << " [v=" << v << ", offset=" << offset << ", extent=" << m_Extent << "]");
-    m_Mappings.insert(readloc, p);
 
-    // We can't just read directly into the new page, as the ATA driver
-    // among others use thread-based IPC, which means they run in the
-    // kernel address space, not ours. So we must create a buffer and
-    // memcpy.
-    uint8_t *buffer = new uint8_t[PhysicalMemoryManager::getPageSize()];
-
-    uint64_t bytesRead = 0;
-    if ((bytesRead = m_pFile->read(readloc, PhysicalMemoryManager::getPageSize(),
-                      reinterpret_cast<uintptr_t>(buffer))) == 0)
+    // Grab an existing, or allocate a new, physical page to store the result.
+    bool bDoRead = false;
+    physical_uintptr_t p = m_pFile->getPhysicalPage(readloc);
+    if(p == static_cast<physical_uintptr_t>(~0UL))
     {
-        WARNING_NOLOCK("MemoryMappedFile: read() failed in trap()");
-        WARNING_NOLOCK("File is " << m_pFile->getName() << ", offset was " << readloc << ", reading a page.");
-        // Non-fatal, continue.
+        // No page found. Read and try again.
+        // NOTICE_NOLOCK("<trap falling back to a no-buffer read for " << m_pFile->getName() << ">");
+        m_pFile->read(readloc, PhysicalMemoryManager::getPageSize(), 0);
+        p = m_pFile->getPhysicalPage(readloc);
+        if(p == static_cast<physical_uintptr_t>(~0UL))
+        {
+            WARNING_NOLOCK("MemoryMappedFile: read() didn't give us a physical address");
+            return;
+        }
     }
 
-    memcpy(reinterpret_cast<uint8_t*>(v), buffer, PhysicalMemoryManager::getPageSize());
-
-    // Zero out the rest of the page if we hit EOF halfway through.
-    // This is great for things like ELF which can have .bss shoved on the end
-    // of .data, where mmap can't quite fix up the last bytes. When the early
-    // bytes of .bss are accessed, we get paged in, and the beginning of .bss
-    // gets zeroed nicely.
-    // The rest of .bss can obviously be mapped to /dev/null or similar.
-    if((alignedOffsetIntoMap + bytesRead) >= m_Extent)
+    physical_uintptr_t mapPhys = p;
+    if(!m_bShared)
     {
-        uintptr_t bufferOffset = m_Extent - alignedOffsetIntoMap;
-        memset(reinterpret_cast<uint8_t*>(v + bufferOffset), 0, PhysicalMemoryManager::getPageSize() - bufferOffset);
+        mapPhys = PhysicalMemoryManager::instance().allocatePage();
     }
 
-    delete [] buffer;
+    // Map the page into the address space.
+    if (!va.map(mapPhys, reinterpret_cast<void *>(v), VirtualAddressSpace::Write | VirtualAddressSpace::Execute))
+    {
+        FATAL_NOLOCK("MemoryMappedFile: map() failed in trap()");
+        return;
+    }
+    m_Mappings.insert(readloc, mapPhys);
+
+    // Do we need to do a data copy (for non-shared)?
+    if(!m_bShared)
+    {
+        // Grab the current process.
+        Process *pProcess = Processor::information().getCurrentThread()->getParent();
+        size_t pageSz = PhysicalMemoryManager::getPageSize();
+
+        // Get some space in the virtual address space to prepare this copy.
+        /// \todo CPU number here.
+        uintptr_t allocAddress = reinterpret_cast<uintptr_t>(g_TrapPage[0]);
+
+        uintptr_t address = allocAddress;
+        // NOTICE_NOLOCK("** trap: pid=" << pProcess->getId() << ", v=" << v << ", allocAddress=" << allocAddress << ", address=" << address);
+        if(va.isMapped(reinterpret_cast<void*>(address)))
+        {
+            // Early startup, most likely.
+            // Rip out the old mapping so we can override it.
+            va.unmap(reinterpret_cast<void *>(address));
+        }
+        va.map(p, reinterpret_cast<void *>(address), VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
+
+        // Perform the copy.
+        memcpy(reinterpret_cast<uint8_t*>(v), reinterpret_cast<void *>(address), pageSz);
+
+        va.unmap(reinterpret_cast<void *>(address));
+        pProcess->getSpaceAllocator().free(allocAddress, pageSz * 2);
+
+        // Fudge bytesRead to be logical.
+        size_t bytesRead = pageSz;
+
+        // Zero out the rest of the page if we hit EOF halfway through.
+        // This is great for things like ELF which can have .bss shoved on the end
+        // of .data, where mmap can't quite fix up the last bytes. When the early
+        // bytes of .bss are accessed, we get paged in, and the beginning of .bss
+        // gets zeroed nicely.
+        // The rest of .bss can obviously be mapped to /dev/null or similar.
+        if((alignedOffsetIntoMap + bytesRead) >= m_Extent)
+        {
+            uintptr_t bufferOffset = m_Extent - alignedOffsetIntoMap;
+            memset(reinterpret_cast<uint8_t*>(v + bufferOffset), 0, pageSz - bufferOffset);
+        }
+    }
+    else
+    {
+        // NOTICE_NOLOCK("<trap only needed to map a physical page " << p << " for " << m_pFile->getName() << ">");
+    }
 
     // Now that the file is read and memory written, change the mapping
     // to read only.
@@ -288,7 +327,7 @@ MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address, 
         // or (b) the file was out of date.
         if (!pMmFile)
         {
-            pMmFile = new MemoryMappedFile(pFile);
+            pMmFile = new MemoryMappedFile(pFile, 0, shared);
             m_Cache.insert(pFile, pMmFile);
         }
 
@@ -296,7 +335,7 @@ MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address, 
     }
     else
     {
-        pMmFile = new MemoryMappedFile(pFile);
+        pMmFile = new MemoryMappedFile(pFile, 0, shared);
     }
 
     if(sizeOverride == 0)

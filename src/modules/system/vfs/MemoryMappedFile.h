@@ -47,7 +47,7 @@ class MemoryMappedFile
 {
 public:
     /** Constructor - to be called from MemoryMappedFileManager only! */
-    MemoryMappedFile(File *pFile, size_t extentOverride = 0);
+    MemoryMappedFile(File *pFile, size_t extentOverride = 0, bool bShared = false);
 
     /** Secondary constructor for anonymous memory mapped "file". */
     MemoryMappedFile(size_t anonMapSize);
@@ -114,6 +114,11 @@ private:
     size_t m_RefCount;
 
     Mutex m_Lock;
+
+    /** Whether or not this mmap is shared (ie, data written is available to
+     * other processes in the system).
+     */
+    bool m_bShared;
 };
 
 /** This class is a multiplexing trap handler, to take traps pertaining to
