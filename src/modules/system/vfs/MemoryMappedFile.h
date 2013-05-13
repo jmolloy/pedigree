@@ -66,7 +66,7 @@ public:
     /** Trap occurred. Should be called only from MemoryMappedFileManager!
         \param address The address of the fault.
         \param offset The starting offset of this mmappedfile in memory. */
-    void trap(uintptr_t address, uintptr_t offset, uintptr_t fileoffset);
+    void trap(uintptr_t address, uintptr_t offset, uintptr_t fileoffset, bool bIsWrite);
 
     /** Mark this map for deletion when its reference count drops to zero - i.e. the underlying File has changed. */
     void markForDeletion()

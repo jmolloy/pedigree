@@ -177,9 +177,10 @@ void MemoryMappedFile::unload(uintptr_t address)
     }
 }
 
-void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileoffset)
+void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileoffset, bool bIsWrite)
 {
     LockGuard<Mutex> guard(m_Lock);
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
 
     //NOTICE_NOLOCK("trap at " << address << "[" << offset << ", " << fileoffset << "]");
 
@@ -194,14 +195,7 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileo
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
-    uintptr_t v = address & ~(PhysicalMemoryManager::getPageSize()-1);
-
-    // Mapped?
-    if(va.isMapped(reinterpret_cast<void *>(v)))
-    {
-        FATAL_NOLOCK("MemoryMappedFile: trap() on an already-mapped address");
-        return;
-    }
+    uintptr_t v = address & ~(pageSz - 1);
 
     uintptr_t offsetIntoMap = (v - offset);
     uintptr_t alignedOffsetIntoMap = offsetIntoMap & ~(PhysicalMemoryManager::getPageSize() - 1);
@@ -209,6 +203,33 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileo
     // Add the mapping to our list.
     uintptr_t readloc = offsetIntoMap + fileoffset;
     //NOTICE("readloc: " << readloc << " [v=" << v << ", offset=" << offset << ", extent=" << m_Extent << "]");
+
+    bool bShouldCopy = (!m_bShared) && bIsWrite;
+    if(!m_bShared)
+    {
+        // Will we need to memset?
+        if((alignedOffsetIntoMap + pageSz) >= m_Extent)
+        {
+            // Yes. Always force a copy - even if just reading.
+            bShouldCopy = true;
+        }
+    }
+
+    // Mapped?
+    if(va.isMapped(reinterpret_cast<void *>(v)))
+    {
+        if(bShouldCopy)
+        {
+            // Sane state to be in - just unmap the virtual (CoW)
+            m_Mappings.remove(readloc);
+            va.unmap(reinterpret_cast<void *>(v));
+        }
+        else
+        {
+            FATAL_NOLOCK("MemoryMappedFile: trap() on an already-mapped address");
+            return;
+        }
+    }
 
     // Grab an existing, or allocate a new, physical page to store the result.
     bool bDoRead = false;
@@ -227,13 +248,13 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileo
     }
 
     physical_uintptr_t mapPhys = p;
-    if(!m_bShared)
+    if(bShouldCopy)
     {
         mapPhys = PhysicalMemoryManager::instance().allocatePage();
     }
 
     // Map the page into the address space.
-    if (!va.map(mapPhys, reinterpret_cast<void *>(v), VirtualAddressSpace::Write | VirtualAddressSpace::Execute))
+    if (!va.map(mapPhys, reinterpret_cast<void *>(v), ((bIsWrite || m_bShared) ? VirtualAddressSpace::Write : 0) | VirtualAddressSpace::Execute))
     {
         FATAL_NOLOCK("MemoryMappedFile: map() failed in trap()");
         return;
@@ -241,11 +262,10 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileo
     m_Mappings.insert(readloc, mapPhys);
 
     // Do we need to do a data copy (for non-shared)?
-    if(!m_bShared)
+    if(bShouldCopy)
     {
         // Grab the current process.
         Process *pProcess = Processor::information().getCurrentThread()->getParent();
-        size_t pageSz = PhysicalMemoryManager::getPageSize();
 
         // Get some space in the virtual address space to prepare this copy.
         /// \todo CPU number here.
@@ -521,7 +541,7 @@ bool MemoryMappedFileManager::trap(uintptr_t address, bool bIsWrite)
             NOTICE_NOLOCK("trap: release lock B");
 #endif
             m_CacheLock.release();
-            pMmFile->file->trap(address, pMmFile->offset, pMmFile->fileoffset);
+            pMmFile->file->trap(address, pMmFile->offset, pMmFile->fileoffset, bIsWrite);
 
 #ifdef MMFILE_DEBUG
             NOTICE_NOLOCK("trap: completed for " << address);
