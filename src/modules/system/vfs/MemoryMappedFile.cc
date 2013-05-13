@@ -265,7 +265,6 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileo
         memcpy(reinterpret_cast<uint8_t*>(v), reinterpret_cast<void *>(address), pageSz);
 
         va.unmap(reinterpret_cast<void *>(address));
-        pProcess->getSpaceAllocator().free(allocAddress, pageSz * 2);
 
         // Fudge bytesRead to be logical.
         size_t bytesRead = pageSz;
