@@ -52,7 +52,7 @@ class MemoryPool
         uintptr_t allocate();
 
         /// Allocates a buffer from the pool. If no buffers are available, this
-        /// function will return strawight away.
+        /// function will return straight away.
         /// @return Zero if a buffer couldn't be allocated.
         uintptr_t allocateNow();
 
