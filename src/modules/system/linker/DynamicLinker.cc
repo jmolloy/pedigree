@@ -141,9 +141,17 @@ bool DynamicLinker::loadProgram(File *pFile, bool bDryRun, bool bInterpreter, St
         if(!sInterpreter)
             return false;
         *sInterpreter = programElf->getInterpreter();
+        bool hasInterpreter = (*sInterpreter != "");
         if(bDryRun)
+        {
+            // Clean up the ELF
             delete programElf;
-        return *sInterpreter != "";
+            m_pProgramElf = 0;
+
+            // Unmap this file - any future loadProgram will map it again.
+            MemoryMappedFileManager::instance().unmap(pMmFile);
+        }
+        return hasInterpreter;
     }
 
     List<char*> &dependencies = programElf->neededLibraries();
