@@ -266,7 +266,8 @@ else:
         fileList += ["#/images/hdd_ext2.tar.gz"]
         buildImage = buildImageLosetup
     else:
-        fileList += ["#/images/hdd_fat16.tar.gz"]
+        # fileList += ["#/images/hdd_fat16.tar.gz"]
+        fileList += ["#/images/hdd_fat32.tar.gz"]
         buildImage = buildImageMtools
 
     # /boot directory
