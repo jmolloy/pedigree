@@ -180,14 +180,15 @@ def buildImageMtools(target, source, env):
 
     # Open for use in mtools
     mtsetup = env.File("#/scripts/mtsetup.sh").abspath
-    os.system("sh " + mtsetup + " " + outFile + " > /dev/null 2>&1")
+    os.system("sh " + mtsetup + " -h " + outFile + " > /dev/null 2>&1")
 
     destDrive = " C:"
-    os.system("mcopy -Do " + builddir + "/config.db C:/.pedigree-root > /dev/null 2>&1; rm -f .pedigree-root")
+    os.system("MTOOLS_SKIP_CHECK=1 mcopy -Do " + builddir + "/config.db C:/.pedigree-root > /dev/null 2>&1; rm -f .pedigree-root")
+    os.system("MTOOLS_SKIP_CHECK=1 mcopy -Do " + imagedir + "/../grub/menu-hdd.lst C:/boot/grub/menu.lst > /dev/null 2>&1")
 
     # Copy the kernel, initrd, and configuration database
     for i in source[0:3]:
-        os.system("mcopy -Do " + i.abspath + " C:/boot > /dev/null 2>&1")
+        os.system("MTOOLS_SKIP_CHECK=1 mcopy -Do " + i.abspath + " C:/boot > /dev/null 2>&1")
     source = source[3:]
 
     # Copy each input file across
@@ -216,7 +217,7 @@ def buildImageMtools(target, source, env):
             prefix = '/libraries'
 
         otherPath = prefix + i.abspath.replace(search, '')
-        os.system("mcopy -bms -Do " + i.path + destDrive + otherPath + " > /dev/null 2>&1")
+        os.system("MTOOLS_SKIP_CHECK=1 mcopy -bms -Do " + i.path + destDrive + otherPath + " > /dev/null 2>&1")
     
     postImageBuild(outFile, env)
 
