@@ -18,6 +18,7 @@
 #define UNLIKELY_LOCK_H
 
 #include <processor/Processor.h>
+#include <process/Scheduler.h>
 #include <Atomic.h>
 
 /** \file UnlikelyLock.h
@@ -88,7 +89,9 @@ public:
         }
 
         while (m_Atomic > 100000)
-            ;
+        {
+            Scheduler::instance().yield();
+        }
         
         m_bInterrupts = bOldInterrupts;
 
