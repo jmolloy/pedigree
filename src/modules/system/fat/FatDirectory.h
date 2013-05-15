@@ -85,6 +85,9 @@ private:
   uintptr_t m_BlockSize;
   bool m_bRootDir;
 
+  /** Lock for add/remove/cache operations, so we don't break horribly. */
+  Mutex m_Lock;
+
   /** Number of bytes to iterate over for this directory */
   uint32_t m_DirBlockSize;
 };

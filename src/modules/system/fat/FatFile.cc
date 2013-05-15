@@ -21,21 +21,11 @@
 #include <utilities/MemoryPool.h>
 #include <LockGuard.h>
 
-#define FAT_BLOCK_POOL_BLKSIZE  (PhysicalMemoryManager::getPageSize())
-#define FAT_BLOCK_POOL_SIZE     ((FAT_BLOCK_POOL_BLKSIZE) * 16384)
-
-MemoryPool g_FatBlockRegion("FatFileBlockCache");
-Mutex g_FatCacheLock(false);
-
 FatFile::FatFile(String name, Time accessedTime, Time modifiedTime, Time creationTime,
        uintptr_t inode, class Filesystem *pFs, size_t size, uint32_t dirClus, uint32_t dirOffset, File *pParent) :
   File(name,accessedTime,modifiedTime,creationTime,inode,pFs,size,pParent),
-  m_DirClus(dirClus), m_DirOffset(dirOffset)
+  m_DirClus(dirClus), m_DirOffset(dirOffset), m_FileBlockCache()
 {
-    if(!g_FatBlockRegion.initialised())
-    {
-        g_FatBlockRegion.initialise(FAT_BLOCK_POOL_SIZE / PhysicalMemoryManager::getPageSize(), FAT_BLOCK_POOL_BLKSIZE);
-    }
 }
 
 FatFile::~FatFile()
@@ -55,14 +45,10 @@ uintptr_t FatFile::readBlock(uint64_t location)
     FatFilesystem *pFs = reinterpret_cast<FatFilesystem*>(m_pFilesystem);
 
     /// \note Not freed. Watch out.
-    /// \todo THIS IS TERRIBLE ARE YOU SERIOUS. NOT FREED!?
-    /// \todo THIS IS ALSO TERRIBLE BECAUSE 4K * 16K IS THE ENTIRE POOL SIZE
-    ///       THAT IS ONLY 64 MB IT SHOULD GROW DYNAMICALLY OR SOMETHING.
-    /// \todo PUT THAT Cache THING IN HERE BECAUSE IT MAKES FAR MORE SENSE
-    /// \note LOUD NOISES
-    g_FatCacheLock.acquire();
-    uintptr_t buffer = g_FatBlockRegion.allocate();
-    g_FatCacheLock.release();
+    /// \todo THIS COULD HAVE AWESOME BEHAVIOUR IF THE CACHE GETS COMPACTED
+    ///       BECAUSE THE LAYER CALLING readBlock WON'T KNOW THE PAGES JUST
+    ///       GOT OBLITERATED. FIX THAT.
+    uintptr_t buffer = m_FileBlockCache.insert(location);
     pFs->read(this, location, getBlockSize(), buffer);
 
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH

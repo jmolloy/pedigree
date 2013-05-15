@@ -21,6 +21,7 @@
 #include <processor/types.h>
 #include <utilities/String.h>
 #include <utilities/RadixTree.h>
+#include <utilities/Cache.h>
 
 /** A File is a file, a directory or a symlink. */
 class FatFile : public File
@@ -58,6 +59,8 @@ public:
 private:
   uint32_t m_DirClus;
   uint32_t m_DirOffset;
+
+  Cache m_FileBlockCache;
 };
 
 #endif
