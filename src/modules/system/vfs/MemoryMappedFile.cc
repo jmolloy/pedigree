@@ -128,12 +128,20 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess, size_t extent
         uintptr_t v = it.key() + address;
         uintptr_t p = it.value();
 
+        // Check for shared page.
+        bool bMapWrite = m_bShared;
+        if(p == static_cast<physical_uintptr_t>(~0))
+        {
+            p = m_pFile->getPhysicalPage(it.key());
+            bMapWrite = true;
+        }
+
         // Extent overridden means don't map the entire file in...
         if(it.key() >= extent) {
             break;
         }
 
-        if (!va->map(p, reinterpret_cast<void*>(v), VirtualAddressSpace::Execute | VirtualAddressSpace::Write))
+        if (!va->map(p, reinterpret_cast<void*>(v), VirtualAddressSpace::Execute | (bMapWrite ? VirtualAddressSpace::Write : 0)))
         {
             WARNING("MemoryMappedFile: map() failed at " << v);
             return false;
@@ -171,7 +179,7 @@ void MemoryMappedFile::unload(uintptr_t address)
 
             // If we forked and copied this page, we want to delete the second copy.
             // So, if the physical mapping is not what we have on record, free it.
-            if (p != it.value())
+            if ((p != static_cast<physical_uintptr_t>(~0)) && (p != it.value()))
                 PhysicalMemoryManager::instance().freePage(p);
         }
     }
@@ -259,7 +267,10 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileo
         FATAL_NOLOCK("MemoryMappedFile: map() failed in trap()");
         return;
     }
-    m_Mappings.insert(readloc, mapPhys);
+
+    // We shouldn't ever free physical pages tied to real file data, but we
+    // can happily free physical pages related to copied data.
+    m_Mappings.insert(readloc, bShouldCopy ? mapPhys : ~0);
 
     // Do we need to do a data copy (for non-shared)?
     if(bShouldCopy)
