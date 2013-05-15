@@ -57,12 +57,14 @@ uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
         uintptr_t offs  = location % blockSize;
         uintptr_t sz    = (size+offs > blockSize) ? blockSize-offs : size;
 
+        m_Lock.acquire();
         uintptr_t buff = m_DataCache.lookup(block*blockSize);
         if (!buff)
         {
             buff = readBlock(block*blockSize);
             m_DataCache.insert(block*blockSize, buff);
         }
+        m_Lock.release();
 
         if(buffer)
         {
@@ -89,12 +91,14 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
         uintptr_t offs  = location % blockSize;
         uintptr_t sz    = (size+offs > blockSize) ? blockSize-offs : size;
 
+        m_Lock.acquire();
         uintptr_t buff = m_DataCache.lookup(block*blockSize);
         if (!buff)
         {
             buff = readBlock(block*blockSize);
             m_DataCache.insert(block*blockSize, buff);
         }
+        m_Lock.release();
 
         memcpy(reinterpret_cast<void*>(buff+offs),
                reinterpret_cast<void*>(buffer),
@@ -112,7 +116,7 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
     return n;
 }
 
-physical_uintptr_t File::getPhysicalPage(size_t offset) const
+physical_uintptr_t File::getPhysicalPage(size_t offset)
 {
     // Sanitise input.
     size_t blockSize = getBlockSize();
@@ -125,7 +129,9 @@ physical_uintptr_t File::getPhysicalPage(size_t offset) const
     }
 
     // Check if we have this page in the cache.
+    m_Lock.acquire();
     uintptr_t vaddr = m_DataCache.lookup(offset);
+    m_Lock.release();
     if (!vaddr)
     {
         return static_cast<physical_uintptr_t>(~0UL);

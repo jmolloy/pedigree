@@ -71,7 +71,7 @@ public:
     /** Get the physical address for the given offset into the file.
      * Returns (physical_uintptr_t) ~0 if the offset isn't in the cache.
      */
-    physical_uintptr_t getPhysicalPage(size_t offset) const;
+    physical_uintptr_t getPhysicalPage(size_t offset);
 
     /** Returns the time the file was created. */
     Time getCreationTime();
