@@ -35,6 +35,11 @@ class Spinlock
         return !m_Atom;
     }
 
+    bool interrupts() const
+    {
+        return m_bInterrupts;
+    }
+
   private:
     volatile bool m_bInterrupts;
     Atomic<bool> m_Atom;
