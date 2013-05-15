@@ -128,17 +128,20 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess, size_t extent
         uintptr_t v = it.key() + address;
         uintptr_t p = it.value();
 
-        // Check for shared page.
-        bool bMapWrite = m_bShared;
-        if(p == static_cast<physical_uintptr_t>(~0))
-        {
-            p = m_pFile->getPhysicalPage(it.key());
-            bMapWrite = true;
-        }
-
         // Extent overridden means don't map the entire file in...
         if(it.key() >= extent) {
             break;
+        }
+
+        // Check for shared page.
+        bool bMapWrite = m_bShared;
+        if(p == static_cast<physical_uintptr_t>(~0UL))
+        {
+            p = m_pFile->getPhysicalPage(it.key());
+        }
+        else
+        {
+            bMapWrite = true;
         }
 
         if (!va->map(p, reinterpret_cast<void*>(v), VirtualAddressSpace::Execute | (bMapWrite ? VirtualAddressSpace::Write : 0)))
