@@ -182,7 +182,7 @@ void MemoryMappedFile::unload(uintptr_t address)
 
             // If we forked and copied this page, we want to delete the second copy.
             // So, if the physical mapping is not what we have on record, free it.
-            if ((p != static_cast<physical_uintptr_t>(~0)) && (p != it.value()))
+            if ((p != static_cast<physical_uintptr_t>(~0UL)) && (p != it.value()))
                 PhysicalMemoryManager::instance().freePage(p);
         }
     }
@@ -273,7 +273,7 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileo
 
     // We shouldn't ever free physical pages tied to real file data, but we
     // can happily free physical pages related to copied data.
-    m_Mappings.insert(readloc, bShouldCopy ? mapPhys : ~0);
+    m_Mappings.insert(readloc, bShouldCopy ? mapPhys : static_cast<physical_uintptr_t>(~0UL));
 
     // Do we need to do a data copy (for non-shared)?
     if(bShouldCopy)
