@@ -105,6 +105,7 @@ bool Semaphore::acquire(size_t n, size_t timeoutSecs, size_t timeoutUsecs)
     }
 
     m_BeingModified.acquire();
+    bool bWasInterrupts = m_BeingModified.interrupts();
 
     // To avoid a race condition, check again here after we've disabled interrupts.
     // This stops the condition where the lock is released after tryAcquire returns false,
@@ -140,6 +141,12 @@ bool Semaphore::acquire(size_t n, size_t timeoutSecs, size_t timeoutUsecs)
           Machine::instance().getTimer()->removeAlarm(pEvent);
           delete pEvent;
         }
+
+        // Restore interrupt state. It turns out that we can sometimes come
+        // back without interrupts enabled in some circumstances when they were
+        // enabled previously, which is a terrible side-effect for a timed-out
+        // Semaphore acquire to have.
+        Processor::setInterrupts(bWasInterrupts);
         return false;
     }
   }
