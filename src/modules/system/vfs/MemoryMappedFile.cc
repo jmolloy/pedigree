@@ -44,6 +44,8 @@ MemoryMappedFile::MemoryMappedFile(size_t anonMapSize) :
 
 MemoryMappedFile::~MemoryMappedFile()
 {
+    LockGuard<Mutex> guard(m_Lock);
+
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
     // Free all physical pages, "sensibly".
