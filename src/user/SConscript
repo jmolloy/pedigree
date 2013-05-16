@@ -67,7 +67,9 @@ posixc_apps = [
     'modunload',
     'modlist',
     'crashtest',
-    'gears'
+    'gears',
+    'init',
+    'preloadd'
 ]
 
 # Applications which use Mesa
