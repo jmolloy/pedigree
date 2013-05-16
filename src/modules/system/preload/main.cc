@@ -49,9 +49,22 @@ int preloadThread(void *p)
     File* pFile = VFS::instance().find(String(s));
     if(pFile)
     {
+        uintptr_t buffer = 0;
+        MemoryMappedFile *pMmFile = MemoryMappedFileManager::instance().map(pFile, buffer);
+
         NOTICE("PRELOAD: preloading " << s << "...");
-        Scheduler::instance().yield();
-        pFile->read(0, pFile->getSize(), 0);
+        size_t sz = 0;
+        while(sz < pFile->getSize())
+        {
+            char buf[4096];
+            char test = *reinterpret_cast<char*>(buffer + sz);
+            sz += 0x1000;
+
+            Scheduler::instance().yield();
+
+        }
+
+        MemoryMappedFileManager::instance().unmap(pMmFile);
     }
 
     NOTICE("PRELOAD: preload " << s << " has completed.");
