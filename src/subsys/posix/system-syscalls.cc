@@ -374,7 +374,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
     // 1 MB -> 1.2 GB (ish) is free for mmaps etc.
     // Anything ABOVE 1.2 GB (ish) is stack and heap!
-    pProcess->getSpaceAllocator().free(0x00100000, 0x50000000);
+    pProcess->getSpaceAllocator().free(0x00400000, 0x50000000);
 
     // Get rid of all the crap from the last elf image.
     /// \todo Preserve anonymous mmaps etc.

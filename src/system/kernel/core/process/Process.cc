@@ -37,7 +37,7 @@ Process::Process() :
   m_pDynamicLinker(0), m_pSubsystem(0), m_DeadThreads(0)
 {
   m_Id = Scheduler::instance().addProcess(this);
-  m_SpaceAllocator.free(0x00100000, 0x80000000); // Start off at 1MB so we never allocate 0x00000000 -
+  m_SpaceAllocator.free(0x00400000, 0x80000000); // Start off at 1MB so we never allocate 0x00000000 -
                                                  // This is treated as a "fail number" by the dynamic linker.
 }
 

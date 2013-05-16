@@ -326,7 +326,7 @@ void init_stage2()
     // have a clean slate.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     pProcess->getSpaceAllocator().clear();
-    pProcess->getSpaceAllocator().free(0x00100000, 0x50000000);
+    pProcess->getSpaceAllocator().free(0x00400000, 0x50000000);
     pProcess->getAddressSpace()->revertToKernelAddressSpace();
 
     DynamicLinker *pLinker = new DynamicLinker();
