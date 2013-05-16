@@ -1288,6 +1288,28 @@ void *posix_mmap(void *p)
     // The return address
     void *finalAddress = 0;
 
+    // Sanitise input.
+    uintptr_t sanityAddress = reinterpret_cast<uintptr_t>(addr);
+    if(sanityAddress)
+    {
+        /// \todo Magic numbers... (VirtualAddressSpace.h)
+        if((sanityAddress < 0x400000) || (sanityAddress >= 0xC0000000))
+        {
+            if(flags & MAP_FIXED)
+            {
+                // Invalid input and MAP_FIXED, this is an error.
+                SYSCALL_ERROR(InvalidArgument);
+                return MAP_FAILED;
+            }
+            else
+            {
+                // Invalid input - but not MAP_FIXED, so we can ignore addr.
+                sanityAddress = 0;
+            }
+        }
+    }
+    addr = reinterpret_cast<void *>(sanityAddress);
+
     // Valid file passed?
     FileDescriptor* f = pSubsystem->getFileDescriptor(fd);
     if(flags & MAP_ANON)
