@@ -110,7 +110,8 @@ module_subdirs = [
     'splash',
     'config',
     'status_server',
-    'gfx-deps'
+    'gfx-deps',
+    'preload'
 ]
 
 if env['installer']:
