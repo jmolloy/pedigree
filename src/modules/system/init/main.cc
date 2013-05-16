@@ -266,7 +266,7 @@ static void init()
 #ifdef NOGFX
     WARNING("-- System booted - no userspace supported in nogfx builds yet. --");
 #else
-    str += "Loading init program (root»/applications/TUI)\n";
+    str += "Loading init program (root»/applications/init)\n";
     bootIO.write(str, BootIO::White, BootIO::Black);
     str.clear();
 
@@ -312,19 +312,14 @@ void init_stage2()
 {
     // Load initial program.
     //File* initProg = VFS::instance().find(String("root»/applications/TUI"));
-    File* initProg = VFS::instance().find(String("root»/applications/winman"));
+    String fname = String("root»/applications/init");
+    File* initProg = VFS::instance().find(fname);
     if (!initProg)
     {
-        NOTICE("INIT: FileNotFound!!");
-        initProg = VFS::instance().find(String("root»/applications/tui"));
-        if (!initProg)
-        {
-            FATAL("Unable to load init program!");
-            return;
-        }
+        FATAL("INIT: FileNotFound!!");
+        return;
     }
     NOTICE("INIT: File found");
-    String fname = String("root»/applications/winman");
     NOTICE("INIT: name: " << fname);
     // That will have forked - we don't want to fork, so clear out all the chaff
     // in the new address space that's not in the kernel address space so we
