@@ -799,16 +799,11 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster, bool bLock)
             break;
     }
 
-
     //uint8_t *fatBlocks = new uint8_t[m_Superblock.BPB_BytsPerSec * 2];
 
     // Reading from the FAT - critical section
-    while(!m_FatLock.enter())
-    {
-        Scheduler::instance().yield();
-    }
+    m_FatLock.acquire();
     uint8_t *fatBlocks = reinterpret_cast<uint8_t*>(m_FatCache.lookup(fatOffset / m_Superblock.BPB_BytsPerSec));
-    m_FatLock.leave();
 
     if(fatBlocks && (m_Type == FAT12))
     {
@@ -817,7 +812,6 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster, bool bLock)
     }
     if(!fatBlocks)
     {
-        m_FatLock.acquire();
         fatBlocks = new uint8_t[m_Superblock.BPB_BytsPerSec * 2];
         if(!readSectorBlock(m_FatSector + (fatOffset / m_Superblock.BPB_BytsPerSec), m_Superblock.BPB_BytsPerSec * 2, reinterpret_cast<uintptr_t>(fatBlocks)))
         {
@@ -829,9 +823,9 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster, bool bLock)
 
         m_FatCache.insert(fatOffset / m_Superblock.BPB_BytsPerSec, reinterpret_cast<uintptr_t>(fatBlocks));
         m_FatCache.insert((fatOffset / m_Superblock.BPB_BytsPerSec) + 1, reinterpret_cast<uintptr_t>(fatBlocks + m_Superblock.BPB_BytsPerSec));
-
-        m_FatLock.release();
     }
+
+    m_FatLock.release();
 
     // read from cache
     fatOffset %= m_Superblock.BPB_BytsPerSec;

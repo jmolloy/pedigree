@@ -220,8 +220,8 @@ protected:
   uint8_t *m_pFatCache;
 
   /** FAT lock */
-  //Mutex m_FatLock;
-  UnlikelyLock m_FatLock;
+  Mutex m_FatLock;
+  //UnlikelyLock m_FatLock;
 
   /** Root filesystem node. */
   File *m_pRoot;
