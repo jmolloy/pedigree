@@ -172,6 +172,9 @@ void MemoryMappedFile::unload(uintptr_t address)
     {
         uintptr_t v = it.key() + address;
 
+        // Check for shared page.
+        bool bFreePages = (it.value() != static_cast<physical_uintptr_t>(~0UL));
+
         if (va.isMapped(reinterpret_cast<void*>(v)))
         {
             uintptr_t p;
@@ -182,7 +185,7 @@ void MemoryMappedFile::unload(uintptr_t address)
 
             // If we forked and copied this page, we want to delete the second copy.
             // So, if the physical mapping is not what we have on record, free it.
-            if ((p != static_cast<physical_uintptr_t>(~0UL)) && (p != it.value()))
+            if (bFreePages && (p != static_cast<physical_uintptr_t>(~0UL)) && (p != it.value()))
                 PhysicalMemoryManager::instance().freePage(p);
         }
     }
