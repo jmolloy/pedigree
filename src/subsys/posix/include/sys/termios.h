@@ -130,6 +130,8 @@ typedef struct winsize
 {
   unsigned short ws_row;
   unsigned short ws_col;
+  unsigned short ws_xpixel;
+  unsigned short ws_ypixel;
 } winsize_t;
 
 int _EXFUN(tcgetattr, (int, termios_t *));
