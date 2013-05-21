@@ -311,7 +311,6 @@ extern void system_reset();
 void init_stage2()
 {
     // Load initial program.
-    //File* initProg = VFS::instance().find(String("root»/applications/TUI"));
     String fname = String("root»/applications/init");
     File* initProg = VFS::instance().find(fname);
     if (!initProg)
@@ -326,7 +325,9 @@ void init_stage2()
     // have a clean slate.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     pProcess->getSpaceAllocator().clear();
-    pProcess->getSpaceAllocator().free(0x00400000, 0x50000000);
+    pProcess->getSpaceAllocator().free(
+            pProcess->getAddressSpace()->getUserStart(),
+            pProcess->getAddressSpace()->getUserReservedStart());
     pProcess->getAddressSpace()->revertToKernelAddressSpace();
 
     DynamicLinker *pLinker = new DynamicLinker();
@@ -337,17 +338,20 @@ void init_stage2()
     if(pLinker->checkInterpreter(initProg, interpreter))
     {
         // Switch to the interpreter.
-        String realInterpreter("root»");
-        realInterpreter += interpreter;
-        initProg = VFS::instance().find(realInterpreter);
+        initProg = VFS::instance().find(interpreter, pProcess->getCwd());
         if(!initProg)
         {
-            FATAL("Unable to load init program interpreter " << realInterpreter << "!");
+            FATAL("Unable to find init program interpreter '" << interpreter << "'!");
             return;
         }
+
+        // Using the interpreter - don't worry about dynamic linking.
+        delete pLinker;
+        pLinker = 0;
+        pProcess->setLinker(pLinker);
     }
 
-    if (!pLinker->loadProgram(initProg))
+    if (pLinker && !pLinker->loadProgram(initProg))
     {
         FATAL("Init program failed to load!");
     }
@@ -374,21 +378,44 @@ void init_stage2()
         size_t getNumber() {return ~0UL;}
     };
 
-    // Find the init function location, if it exists.
-    uintptr_t initLoc = pLinker->getProgramElf()->getInitFunc();
-    if (initLoc)
+    Elf *elf = 0;
+    if(pLinker)
     {
-        NOTICE("initLoc active: " << initLoc);
+        elf = pLinker->getProgramElf();
+    }
+    else
+    {
+        uintptr_t loadAddr = pProcess->getAddressSpace()->getDynamicLinkerAddress();
+        MemoryMappedFile *pMmFile = MemoryMappedFileManager::instance().map(initProg, loadAddr, 0, 0, false);
+        if(!pMmFile)
+        {
+            FATAL("Couldn't memory map dynamic linker for init program");
+        }
 
-        RunInitEvent *ev = new RunInitEvent(initLoc);
-        // Poke the initLoc so we know it's mapped in!
-        volatile uintptr_t *vInitLoc = reinterpret_cast<volatile uintptr_t*> (initLoc);
-        volatile uintptr_t tmp = * vInitLoc;
-        *vInitLoc = tmp; // GCC can't ignore a write.
-        asm volatile("" :::"memory"); // Memory barrier.
-        Processor::information().getCurrentThread()->sendEvent(ev);
-        // Yield, so the code gets run before we return.
-        Scheduler::instance().yield();
+        // Create the ELF.
+        /// \todo It'd be awesome if we could just pull out the entry address.
+        elf = new Elf();
+        elf->create(reinterpret_cast<uint8_t*>(loadAddr), initProg->getSize());
+    }
+
+    if(pLinker)
+    {
+        // Find the init function location, if it exists.
+        uintptr_t initLoc = elf->getInitFunc();
+        if (initLoc)
+        {
+            NOTICE("initLoc active: " << initLoc);
+
+            RunInitEvent *ev = new RunInitEvent(initLoc);
+            // Poke the initLoc so we know it's mapped in!
+            volatile uintptr_t *vInitLoc = reinterpret_cast<volatile uintptr_t*> (initLoc);
+            volatile uintptr_t tmp = * vInitLoc;
+            *vInitLoc = tmp; // GCC can't ignore a write.
+            asm volatile("" :::"memory"); // Memory barrier.
+            Processor::information().getCurrentThread()->sendEvent(ev);
+            // Yield, so the code gets run before we return.
+            Scheduler::instance().yield();
+        }
     }
 
     uintptr_t *argv_loc = reinterpret_cast<uintptr_t *>(0x20020000);
@@ -404,8 +431,20 @@ void init_stage2()
     system_reset();
 #else
 
-    // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
-    new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), argv_loc /* parameter */,  reinterpret_cast<void*>(stack) /* Stack */);
+    uintptr_t entryPoint = elf->getEntryPoint();
+    if(!pLinker)
+    {
+        // Free up resources used in the metadata-only ELF object.
+        delete elf;
+    }
+
+    // Alrighty - lets create a new thread for this program - -8 as PPC assumes
+    // the previous stack frame is available...
+    new Thread(
+            pProcess,
+            reinterpret_cast<Thread::ThreadStartFunc>(entryPoint),
+            argv_loc /* parameter */,
+            reinterpret_cast<void*>(stack) /* Stack */);
 
     g_InitProgramLoaded.release();
 #endif
