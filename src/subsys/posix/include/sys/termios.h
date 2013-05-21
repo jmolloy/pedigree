@@ -25,6 +25,9 @@ typedef unsigned int tcflag_t;
 #define VTIME  5       /* also VEOL */
 #define VSTART 11
 #define VSTOP  12
+#define VWERASE 14
+#define VLNEXT 15
+#define VEOL2  16
 
 # define TCSAFLUSH	0
 # define TCSANOW	1
