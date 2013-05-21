@@ -146,6 +146,10 @@ int posix_open(const char *name, int flags, int mode)
         if (!file)
             file = NullFs::instance().getFile();
     }
+    else if (!strcmp(name, "/dev/urandom"))
+    {
+        file = RandomFs::instance().getFile();
+    }
     else if (!strcmp(name, "/dev/null"))
     {
         file = NullFs::instance().getFile();
