@@ -292,12 +292,19 @@ void AtaDisk::flush(uint64_t location)
 
 uint64_t AtaDisk::doRead(uint64_t location)
 {
-    uint64_t nBytes = 4096;
-    uintptr_t buffer = m_Cache.insert(location, nBytes);
+    // Handle the case where a read took place while we were waiting in the
+    // RequestQueue - don't double up the cache.
+    size_t nBytes = 4096;
+    uintptr_t buffer = m_Cache.lookup(location);
+    if(buffer)
+    {
+        WARNING("AtaDisk::doRead(" << location << ") - buffer was already in cache");
+        return 0;
+    }
+    buffer = m_Cache.insert(location);
     if(!buffer)
     {
-        nBytes = 4096;
-        m_Cache.insert(location);
+        FATAL("AtaDisk::doRead - no buffer");
     }
 
     // Grab our parent.
