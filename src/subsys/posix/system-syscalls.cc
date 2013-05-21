@@ -175,8 +175,11 @@ int posix_fork(SyscallState &state)
 
     // Register with the dynamic linker.
     DynamicLinker *oldLinker = pProcess->getLinker();
-    DynamicLinker *newLinker = new DynamicLinker(*oldLinker);
-    pProcess->setLinker(newLinker);
+    if(oldLinker)
+    {
+        DynamicLinker *newLinker = new DynamicLinker(*oldLinker);
+        pProcess->setLinker(newLinker);
+    }
 
     MemoryMappedFileManager::instance().clone(pProcess);
 
