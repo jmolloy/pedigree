@@ -238,7 +238,8 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     }
 
     // Attempt to find the file, first!
-    File* file = VFS::instance().find(String(name), Processor::information().getCurrentThread()->getParent()->getCwd());
+    File *pActualFile = 0;
+    File* file = pActualFile = VFS::instance().find(String(name), Processor::information().getCurrentThread()->getParent()->getCwd());
     if (!file)
     {
         // Error - not found.
@@ -350,11 +351,12 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         // Welp, wipe out the old linker, don't leave crufty mmaps lying around.
         // We are changing which file to load - get a new linker for that.
         delete pLinker;
-        pLinker = new DynamicLinker();
+        pLinker = 0;
+        pProcess->setLinker(pLinker);
     }
 
     // Can we load the new image? Check before we clean out the last ELF image...
-    if(!pLinker->checkDependencies(file))
+    if(pLinker && !pLinker->checkDependencies(file))
     {
         delete pLinker;
         SYSCALL_ERROR(ExecFormatError);
@@ -365,6 +367,8 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     // actually load, we can set up the Process object
     pProcess->description() = String(name);
 
+    /// \todo Write pActualFile->getFullPath() into argv[0]
+
     // Save the argv and env lists so they aren't destroyed when we overwrite the address space.
     save_string_array(argv, savedArgv);
     save_string_array(env, savedEnv);
@@ -374,10 +378,9 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         Processor::information().getCurrentThread()->inhibitEvent(sig, true);
 
     pProcess->getSpaceAllocator().clear();
-
-    // 1 MB -> 1.2 GB (ish) is free for mmaps etc.
-    // Anything ABOVE 1.2 GB (ish) is stack and heap!
-    pProcess->getSpaceAllocator().free(0x00400000, 0x50000000);
+    pProcess->getSpaceAllocator().free(
+            pProcess->getAddressSpace()->getUserStart(),
+            pProcess->getAddressSpace()->getUserReservedStart());
 
     // Get rid of all the crap from the last elf image.
     /// \todo Preserve anonymous mmaps etc.
@@ -385,22 +388,25 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
     pProcess->getAddressSpace()->revertToKernelAddressSpace();
 
-    // Set the new linker now before we loadProgram, else we could trap and
-    // have a linker mismatch.
-    pProcess->setLinker(pLinker);
-
-    if (!pLinker->loadProgram(file))
+    if(pLinker)
     {
-        pProcess->setLinker(pOldLinker);
-        delete pLinker;
-        SYSCALL_ERROR(ExecFormatError);
+        // Set the new linker now before we loadProgram, else we could trap and
+        // have a linker mismatch.
+        pProcess->setLinker(pLinker);
 
-        // Allow signals again, even though the address space is in a completely undefined state now
-        for(int sig = 0; sig < 32; sig++)
-            pProcess->getThread(0)->inhibitEvent(sig, false);
-        return -1;
+        if (!pLinker->loadProgram(file))
+        {
+            pProcess->setLinker(pOldLinker);
+            delete pLinker;
+            SYSCALL_ERROR(ExecFormatError);
+
+            // Allow signals again, even though the address space is in a completely undefined state now
+            for(int sig = 0; sig < 32; sig++)
+                pProcess->getThread(0)->inhibitEvent(sig, false);
+            return -1;
+        }
+        delete pOldLinker;
     }
-    delete pOldLinker;
 
     // Close all FD_CLOEXEC descriptors.
     pSubsystem->freeMultipleFds(true);
@@ -428,7 +434,31 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     argv = const_cast<const char**> (load_string_array(savedArgv, location, location));
     env  = const_cast<const char**> (load_string_array(savedEnv , location, location));
 
-    Elf *elf = pProcess->getLinker()->getProgramElf();
+    Elf *elf = 0;
+    if(pLinker)
+    {
+        elf = pProcess->getLinker()->getProgramElf();
+    }
+    else
+    {
+        // Memory map the interpreter and create an Elf object for it.
+        // The memory map is defined as unshared, but because we map files
+        // with CoW, most of this mapping ends up shared across all address
+        // spaces. This means we don't have to be smart about loading the ELF.
+        uintptr_t loadAddr = pProcess->getAddressSpace()->getDynamicLinkerAddress();
+        MemoryMappedFile *pMmFile = MemoryMappedFileManager::instance().map(file, loadAddr, 0, 0, false);
+        if(!pMmFile)
+        {
+            ERROR("execve: couldn't memory map dynamic linker");
+            SYSCALL_ERROR(ExecFormatError);
+            return -1;
+        }
+
+        // Create the ELF.
+        /// \todo It'd be awesome if we could just pull out the entry address.
+        elf = new Elf();
+        elf->create(reinterpret_cast<uint8_t*>(loadAddr), file->getSize());
+    }
 
     ProcessorState pState = state;
     //pState.setStackPointer(STACK_START-8);
@@ -455,21 +485,25 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         size_t getNumber() {return ~0UL;}
     };
 
-    // Find the init function location, if it exists.
-    uintptr_t initLoc = elf->getInitFunc();
-    if (initLoc)
+    // Don't run init if we don't have a linker (loaded image needs to relocate itself and call init)
+    if(pLinker)
     {
-        NOTICE("initLoc active: " << initLoc);
+        // Find the init function location, if it exists.
+        uintptr_t initLoc = elf->getInitFunc();
+        if (initLoc)
+        {
+            NOTICE("initLoc active: " << initLoc);
 
-        RunInitEvent *ev = new RunInitEvent(initLoc);
-        // Poke the initLoc so we know it's mapped in!
-        volatile uintptr_t *vInitLoc = reinterpret_cast<volatile uintptr_t*> (initLoc);
-        volatile uintptr_t tmp = * vInitLoc;
-        *vInitLoc = tmp; // GCC can't ignore a write.
-        asm volatile("" :::"memory"); // Memory barrier.
-        Processor::information().getCurrentThread()->sendEvent(ev);
-        // Yield, so the code gets run before we return.
-        Scheduler::instance().yield();
+            RunInitEvent *ev = new RunInitEvent(initLoc);
+            // Poke the initLoc so we know it's mapped in!
+            volatile uintptr_t *vInitLoc = reinterpret_cast<volatile uintptr_t*> (initLoc);
+            volatile uintptr_t tmp = * vInitLoc;
+            *vInitLoc = tmp; // GCC can't ignore a write.
+            asm volatile("" :::"memory"); // Memory barrier.
+            Processor::information().getCurrentThread()->sendEvent(ev);
+            // Yield, so the code gets run before we return.
+            Scheduler::instance().yield();
+        }
     }
 
     /// \todo Genericize this somehow - "pState.setScratchRegisters(state)"?
@@ -478,6 +512,12 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     state.m_R7 = pState.m_R7;
     state.m_R8 = pState.m_R8;
 #endif
+
+    // If no linker, destroy the ELF we created just to get the entry location.
+    if(!pLinker)
+    {
+        delete elf;
+    }
 
     // Allow signals again now that everything's loaded
     for(int sig = 0; sig < 32; sig++)
