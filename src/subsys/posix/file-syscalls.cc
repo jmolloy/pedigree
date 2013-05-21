@@ -1288,12 +1288,14 @@ void *posix_mmap(void *p)
     // The return address
     void *finalAddress = 0;
 
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+
     // Sanitise input.
     uintptr_t sanityAddress = reinterpret_cast<uintptr_t>(addr);
     if(sanityAddress)
     {
-        /// \todo Magic numbers... (VirtualAddressSpace.h)
-        if((sanityAddress < 0x400000) || (sanityAddress >= 0xC0000000))
+        if((sanityAddress < va.getUserStart()) ||
+            (sanityAddress >= va.getKernelStart()))
         {
             if(flags & MAP_FIXED)
             {
@@ -1318,7 +1320,6 @@ void *posix_mmap(void *p)
         if(flags & (MAP_ANON | MAP_SHARED))
         {
             // Allocation information
-            VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
             uintptr_t mapAddress = reinterpret_cast<uintptr_t>(addr);
             size_t pageSz = PhysicalMemoryManager::getPageSize();
             size_t numPages = (len / pageSz) + (len % pageSz ? 1 : 0);
