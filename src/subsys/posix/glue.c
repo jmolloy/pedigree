@@ -1589,7 +1589,7 @@ int getaddrinfo(const char *nodename, const char *servname, const struct addrinf
     static struct sockaddr_in addr;
     addr.sin_family = AF_INET;
     if(servname)
-        addr.sin_port = atoi(servname);
+        addr.sin_port = htons(atoi(servname));
 
     // Fill the basics of the return pointer
     if(hints)
