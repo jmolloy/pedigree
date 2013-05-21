@@ -16,6 +16,7 @@
 
 #if defined(THREADS)
 
+#include <processor/types.h>
 #include <process/Process.h>
 #include <processor/Processor.h>
 #include <process/Scheduler.h>
@@ -37,8 +38,7 @@ Process::Process() :
   m_pDynamicLinker(0), m_pSubsystem(0), m_DeadThreads(0)
 {
   m_Id = Scheduler::instance().addProcess(this);
-  m_SpaceAllocator.free(0x00400000, 0x80000000); // Start off at 1MB so we never allocate 0x00000000 -
-                                                 // This is treated as a "fail number" by the dynamic linker.
+  m_SpaceAllocator.free(m_pAddressSpace->getUserStart(), m_pAddressSpace->getUserReservedStart());
 }
 
 Process::Process(Process *pParent) :
@@ -50,7 +50,7 @@ Process::Process(Process *pParent) :
    m_pAddressSpace = pParent->m_pAddressSpace->clone();
    // Copy the heap, but only if it's not the kernel heap (which is static)
   uintptr_t parentHeap = reinterpret_cast<uintptr_t>(pParent->m_pAddressSpace->m_Heap); // 0xc0000000
-  if(parentHeap < 0xc0000000) /// \todo A better way would be nice.
+  if(parentHeap < m_pAddressSpace->getKernelStart()) /// \todo A better way would be nice.
     m_pAddressSpace->setHeap(pParent->m_pAddressSpace->m_Heap, pParent->m_pAddressSpace->m_HeapEnd);
 
   m_Id = Scheduler::instance().addProcess(this);
