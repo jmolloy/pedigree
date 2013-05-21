@@ -304,15 +304,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   for (;;)
   {
     // Kernel idle thread.
-    Processor::setInterrupts(true);
-
-#if defined(X86_COMMON)
-    asm volatile ("hlt");
-#elif defined(ARM_COMMON)
-    asm volatile ("wfi");
-#else
-    // No instruction to halt the processor until a given event.
-#endif
+    Processor::haltUntilInterrupt();
 
 #ifdef THREADS
     Scheduler::instance().yield();
