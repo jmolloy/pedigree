@@ -237,7 +237,7 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
     module->entry = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleEntry"));
     module->exit = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleExit"));
     module->depends = reinterpret_cast<const char **> (module->elf.lookupSymbol("g_pDepends"));
-    DEBUG("KERNELELF: Preloaded module " << module->name);
+    DEBUG("KERNELELF: Preloaded module " << module->name << " at " << module->loadBase);
 
     g_BootProgressCurrent ++;
     if (g_BootProgressUpdate && !silent)
