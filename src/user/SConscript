@@ -151,10 +151,16 @@ libload_env['CPPPATH'] += ['#/src/system/include/linker',
                            '#/src/subsys/posix/include/c++/4.3.2',
                            '#/src/subsys/posix/include/c++/4.3.2/i686-pedigree']
 libload_env['LIBPATH'] += [builddir, imagesdir + 'libraries']
-libload_env['LIBS'] += ['stdc++']
+libload_env['LIBS'] = ['-lgcc']
 libload = os.path.join(builddir, 'libload.so')
 libload_linkscript = libload_env.File(os.path.join(appsbase, 'libload', 'libload.ld'))
-libload_env.Program(libload, [os.path.join(appsbase, 'libload', x) for x in libload_sources], LINKFLAGS="-T%s " % (libload_linkscript,))
+in_files = [os.path.join(appsbase, 'libload', x) for x in libload_sources]
+in_files += [os.path.join(imagesdir, 'libraries', 'libstdc++.a'),
+             os.path.join(builddir, 'libc.a'),
+             os.path.join(builddir, 'libm.a'),
+             os.path.join(builddir, 'libpedigree.a'),
+             os.path.join(builddir, 'libpedigree-c.a')]
+libload_env.Program(libload, in_files, LINKFLAGS="-static --no-whole-archive -nodefaultlibs -T%s " % (libload_linkscript,))
 libload_env.Depends(libload, "crt0")
 
 env.Alias('libs', libload)

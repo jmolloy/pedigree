@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <syslog.h>
 
 #include <string>
 #include <list>
@@ -173,6 +174,14 @@ std::set<std::string> g_LoadedObjects;
 
 std::map<std::string, uintptr_t> g_LibLoadSymbols;
 
+extern char __elf_start;
+extern char __start_bss;
+extern char __end_bss;
+
+extern "C" void _init();
+extern "C" void _fini();
+extern "C" int _start(int argc, char *argv[]);
+
 size_t elfhash(const char *name) {
     size_t h = 0, g = 0;
     while(*name) {
@@ -187,7 +196,38 @@ size_t elfhash(const char *name) {
 
 extern char **environ;
 
-#include <syslog.h>
+/**
+ * Entry point for the dynamic linker. Maps in .bss (as libload.so is loaded
+ * as a simple mmap + jump to entry - no proper section loading) and calls
+ * the init and fini functions around the call to crt0's _start, which is
+ * the normal entry point for an application.
+ */
+extern "C" int _libload_main(int argc, char *argv[])
+{
+    /// \note THIS IS CALLED BEFORE CRT0. Do not use argc/argv/environ,
+    ///       and keep everything as minimal as possible.
+
+    // Get .bss loaded and ready early.
+    uintptr_t bssStart = reinterpret_cast<uintptr_t>(&__start_bss);
+    uintptr_t bssEnd = reinterpret_cast<uintptr_t>(&__end_bss);
+    mmap(
+        &__start_bss,
+        bssEnd - bssStart,
+        PROT_READ | PROT_WRITE,
+        MAP_PRIVATE | MAP_ANON | MAP_FIXED | MAP_USERSVD,
+        -1,
+        0);
+
+    // Run .init stuff.
+    _init();
+
+    int ret = _start(argc, argv);
+
+    // Run .fini stuff.
+    _fini();
+
+    return ret;
+}
 
 extern "C" int main(int argc, char *argv[])
 {
