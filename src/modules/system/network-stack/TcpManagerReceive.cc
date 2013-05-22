@@ -545,7 +545,23 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
       /* Finally, process the actual segment payload */
       if(stateBlock->currentState == Tcp::ESTABLISHED || stateBlock->currentState == Tcp::FIN_WAIT_1 || stateBlock->currentState == Tcp::FIN_WAIT_2)
       {
-        if(stateBlock->seg_len)
+        // Is this a valid data segment?
+        if(stateBlock->seg_seq < stateBlock->rcv_nxt)
+        {
+          // Transmission of already-acked data. Resend an ACK.
+          WARNING(" + (sequence is already partially acked)");
+          if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0))
+            WARNING("TCP: Sending ACK for incoming data failed!");
+          else
+            alreadyAck = true;
+        }
+        else if(stateBlock->seg_seq > stateBlock->rcv_nxt)
+        {
+          // Packet has come in out-of-order - drop on the floor.
+          WARNING(" + (sequence out of order)");
+          alreadyAck = true;
+        }
+        else if(stateBlock->seg_len)
         {
           NOTICE(" + Payload: " << String(reinterpret_cast<const char*>(payload)));
           if(stateBlock->endpoint)
