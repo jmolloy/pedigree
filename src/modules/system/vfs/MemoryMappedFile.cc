@@ -317,7 +317,15 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileo
         if((alignedOffsetIntoMap + bytesRead) >= m_Extent)
         {
             uintptr_t bufferOffset = m_Extent - alignedOffsetIntoMap;
-            memset(reinterpret_cast<uint8_t*>(v + bufferOffset), 0, pageSz - bufferOffset);
+            if(UNLIKELY(bufferOffset >= pageSz))
+            {
+                WARNING_NOLOCK("MemoryMappedFile::trap - buffer offset larger than a page, not zeroing anything.");
+            }
+            else
+            {
+                NOTICE_NOLOCK("  -> zeroing " << (pageSz - bufferOffset) << " bytes (from " << bufferOffset << " onwards) @" << v << ".");
+                memset(reinterpret_cast<uint8_t*>(v + bufferOffset), 0, pageSz - 1 - bufferOffset);
+            }
         }
     }
     else
