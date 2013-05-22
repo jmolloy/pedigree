@@ -22,15 +22,13 @@
 
 #define TCP_DEBUG 1
 
-static Mutex g_TcpMutex(false);
-
 void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort, Tcp::tcpHeader* header, uintptr_t payload, size_t payloadSize, Network* pCard)
 {
   // sanity checks
   if(!header)
     return;
 
-  LockGuard<Mutex> guard(g_TcpMutex);
+  LockGuard<Mutex> guard(m_TcpMutex);
 
   // Find the state block if possible, if none exists create one
   bool bDidAllocateStateBlock = false;

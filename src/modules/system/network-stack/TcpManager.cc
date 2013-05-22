@@ -38,10 +38,13 @@ size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
   handle->remoteHost.ip.setIp(static_cast<uint32_t>(0));
   handle->listen = true;
   StateBlock* stateBlock;
-  if((stateBlock = m_StateBlocks.lookup(*handle)) != 0)
   {
-    delete handle;
-    return 0;
+    LockGuard<Mutex> guard(m_TcpMutex);
+    if((stateBlock = m_StateBlocks.lookup(*handle)) != 0)
+    {
+      delete handle;
+      return 0;
+    }
   }
 
   // build a state block for it
@@ -62,8 +65,11 @@ size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
 
   stateBlock->numEndpointPackets = 0;
 
-  m_ListeningStateBlocks.insert(*handle, stateBlock);
-  m_CurrentConnections.insert(connId, handle);
+  {
+    LockGuard<Mutex> guard(m_TcpMutex);
+    m_ListeningStateBlocks.insert(*handle, stateBlock);
+    m_CurrentConnections.insert(connId, handle);
+  }
 
   return connId;
 }
@@ -82,10 +88,13 @@ size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPo
   handle->remoteHost = remoteHost;
   handle->listen = false;
   StateBlock* stateBlock;
-  if((stateBlock = m_StateBlocks.lookup(*handle)) != 0)
   {
-    delete handle;
-    return 0;
+    LockGuard<Mutex> guard(m_TcpMutex);
+    if((stateBlock = m_StateBlocks.lookup(*handle)) != 0)
+    {
+      delete handle;
+      return 0;
+    }
   }
 
   // build a state block for it
@@ -116,8 +125,11 @@ size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPo
 
   stateBlock->numEndpointPackets = 0;
 
-  m_StateBlocks.insert(*handle, stateBlock);
-  m_CurrentConnections.insert(connId, handle);
+  {
+    LockGuard<Mutex> guard(m_TcpMutex);
+    m_StateBlocks.insert(*handle, stateBlock);
+    m_CurrentConnections.insert(connId, handle);
+  }
 
   Tcp::send(stateBlock->remoteHost.ip, stateBlock->localPort, stateBlock->remoteHost.remotePort, stateBlock->iss, 0, Tcp::SYN, stateBlock->snd_wnd, 0, 0);
 
@@ -137,6 +149,8 @@ size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPo
 
 void TcpManager::Shutdown(size_t connectionId, bool bOnlyStopReceive)
 {
+  LockGuard<Mutex> guard(m_TcpMutex);
+
   StateBlockHandle* handle;
   if((handle = m_CurrentConnections.lookup(connectionId)) == 0)
     return;
@@ -179,6 +193,8 @@ void TcpManager::Shutdown(size_t connectionId, bool bOnlyStopReceive)
 
 void TcpManager::Disconnect(size_t connectionId)
 {
+  LockGuard<Mutex> guard(m_TcpMutex);
+
   StateBlockHandle* handle;
   if((handle = m_CurrentConnections.lookup(connectionId)) == 0)
     return;
@@ -227,6 +243,8 @@ void TcpManager::Disconnect(size_t connectionId)
 
 int TcpManager::send(size_t connId, uintptr_t payload, bool push, size_t nBytes, bool addToRetransmitQueue)
 {
+  LockGuard<Mutex> guard(m_TcpMutex);
+
   if(!payload || !nBytes)
     return -1;
 
@@ -255,6 +273,8 @@ int TcpManager::send(size_t connId, uintptr_t payload, bool push, size_t nBytes,
 
 void TcpManager::removeConn(size_t connId)
 {
+  LockGuard<Mutex> guard(m_TcpMutex);
+
   //return;
   StateBlockHandle* handle;
   if((handle = m_CurrentConnections.lookup(connId)) == 0)
