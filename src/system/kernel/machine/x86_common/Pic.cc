@@ -49,7 +49,7 @@ void Pic::tick()
         // If it's above the threshold, maks the IRQ until the next tick
         if(UNLIKELY(nCount >= m_MitigationThreshold[irq]))
         {
-            WARNING_NOLOCK("Mitigating IRQ" << Dec << irq << Hex << " [" << nCount << " IRQs in the last second].");
+            WARNING_NOLOCK("Mitigating IRQ" << Dec << irq << Hex << " [" << nCount << " IRQs in the last millisecond].");
             m_MitigatedIrqs[irq] = true;
             enable(irq, false);
         }
