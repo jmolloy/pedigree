@@ -352,6 +352,8 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
 
         case POSIX_MSYNC:
             return posix_msync(reinterpret_cast<void *>(p1), static_cast<size_t>(p2), static_cast<int>(p3));
+        case POSIX_GETPEERNAME:
+            return posix_getpeername(static_cast<int>(p1), reinterpret_cast<struct sockaddr*>(p2), reinterpret_cast<socklen_t*>(p3));
         
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber() << Hex); return 0;
     }

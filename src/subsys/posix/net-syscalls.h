@@ -42,4 +42,6 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset);
 
 int posix_shutdown(int socket, int how);
 
+int posix_getpeername(int socket, struct sockaddr *address, socklen_t *address_len);
+
 #endif

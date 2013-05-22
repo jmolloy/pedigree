@@ -841,8 +841,7 @@ int bind(int sock, const struct sockaddr* local_addr, size_t addrlen)
 
 int getpeername(int sock, struct sockaddr* addr, size_t *addrlen)
 {
-    STUBBED("getpeername");
-    return -1;
+    return syscall3(POSIX_GETPEERNAME, sock, (long) addr, (long) addrlen);
 }
 
 int getsockname(int sock, struct sockaddr* addr, size_t *addrlen)
@@ -1301,8 +1300,22 @@ int inet_pton(void)
 
 const char* inet_ntop(int af, const void* src, char* dst, unsigned long size)
 {
-    STUBBED("inet_ntop");
-    return 0;
+    if(af != AF_INET)
+    {
+        errno = EAFNOSUPPORT;
+        return 0;
+    }
+
+    /// \todo endianness is terrible here.
+    uint32_t addr = *((uint32_t *) src);
+    int n = snprintf(dst, size, "%u.%u.%u.%u", addr & 0xff, (addr & 0xff00) >> 8, (addr & 0xff0000) >> 16, (addr & 0xff000000) >> 24);
+    if(n > size)
+    {
+        errno = ENOSPC;
+        return 0;
+    }
+
+    return dst;
 }
 
 ssize_t readlink(const char* path, char* buf, size_t bufsize)

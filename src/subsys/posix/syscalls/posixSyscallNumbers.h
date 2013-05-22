@@ -176,4 +176,6 @@
 
 #define POSIX_MSYNC             122
 
+#define POSIX_GETPEERNAME       123
+
 #endif

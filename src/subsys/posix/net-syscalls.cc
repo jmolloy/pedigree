@@ -711,3 +711,44 @@ int posix_shutdown(int socket, int how)
     else
         return -1;
 }
+
+int posix_getpeername(int socket, struct sockaddr *address, socklen_t *address_len)
+{
+    N_NOTICE("posix_getpeername");
+
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if (!pSubsystem)
+    {
+        ERROR("No subsystem for one or both of the processes!");
+        return -1;
+    }
+
+    FileDescriptor *f = pSubsystem->getFileDescriptor(socket);
+    if (!f || !f->file)
+    {
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
+    Socket *s = static_cast<Socket *>(f->file);
+
+    Endpoint* p = s->getEndpoint();
+    if (s->getProtocol() == NETMAN_TYPE_TCP)
+    {
+        ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(p);
+
+        /// todo this may not be accurate.
+        struct sockaddr_in* sin = reinterpret_cast<struct sockaddr_in*>(address);
+        sin->sin_port = HOST_TO_BIG16(p->getRemotePort());
+        sin->sin_addr.s_addr = p->getRemoteIp().getIp();
+        *address_len = sizeof(struct sockaddr_in);
+    }
+    else
+    {
+        /// \todo NotConnected more correct?
+        SYSCALL_ERROR(NotSupported);
+        return -1;
+    }
+
+    return 0;
+}
