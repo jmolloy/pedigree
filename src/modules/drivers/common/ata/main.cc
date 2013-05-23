@@ -48,7 +48,8 @@ void probePiixController(Device *pDev)
 
   // Create a new AtaController device node.
   Controller *pDevController = new Controller(pDev);
-  if(pDevController->getInterruptNumber() == 0xFF)
+  uintptr_t intnum = pDevController->getInterruptNumber();
+  if(intnum == 0)
   {
       // No valid interrupt, handle
       pDevController->setInterruptNumber(interrupt);
