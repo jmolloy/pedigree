@@ -185,7 +185,18 @@ bool BusMasterIde::hasError()
 
     // Easy check here
     uint8_t statusReg = m_pBase->read8(Status);
-    return (statusReg & 0x1);
+    return (statusReg & 0x2);
+}
+
+bool BusMasterIde::hasCompleted()
+{
+    // Sanity check
+    if(!m_pBase)
+        return false;
+
+    // Easy check here
+    uint8_t statusReg = m_pBase->read8(Status);
+    return (statusReg & 0x1) == 0;
 }
 
 void BusMasterIde::commandComplete()

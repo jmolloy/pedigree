@@ -210,6 +210,8 @@ uintptr_t AtaDisk::read(uint64_t location)
     if (location % 512)
         FATAL("AtaDisk: write request not on a sector boundary!");
 
+    /// \todo Bounds checking.
+
     // Grab our parent.
     AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
@@ -370,7 +372,9 @@ uint64_t AtaDisk::doRead(uint64_t location)
         /// \bug Hello! I am a race condition! You find me in poorly written code, like the two lines below. Enjoy!
 
         // Enable IRQs.
-        Machine::instance().getIrqManager()->enable(getParent()->getInterruptNumber(), true);
+        uintptr_t intNumber = pParent->getInterruptNumber();
+        if(intNumber != 0xFF)
+            Machine::instance().getIrqManager()->enable(intNumber, true);
 
         bool bDmaSetup = false;
         if(m_bDma)
@@ -403,10 +407,29 @@ uint64_t AtaDisk::doRead(uint64_t location)
             }
         }
 
-        // Acquire the 'outstanding IRQ' mutex.
+        // Acquire the 'outstanding IRQ' mutex, or use other means if no IRQ.
         while(true)
         {
-            m_IrqReceived.acquire(1, 10);
+            if(intNumber != 0xFF)
+            {
+                m_IrqReceived.acquire(1, 10);
+            }
+            else
+            {
+                // No IRQ line.
+                if(m_bDma && bDmaSetup)
+                {
+                    while(!(m_BusMaster->hasCompleted() || m_BusMaster->hasInterrupt()))
+                    {
+                        Processor::haltUntilInterrupt();
+                    }
+                }
+                else
+                {
+                    /// \todo Write non-DMA case (if needed?)
+                }
+            }
+
             if(Processor::information().getCurrentThread()->wasInterrupted())
             {
                 // Interrupted! Fail! Assume nothing read so far.
@@ -415,7 +438,12 @@ uint64_t AtaDisk::doRead(uint64_t location)
             }
             else if(m_bDma && bDmaSetup)
             {
-                if(m_BusMaster->hasInterrupt())
+                while(!(m_BusMaster->hasInterrupt() || m_BusMaster->hasCompleted()))
+                {
+                    Processor::haltUntilInterrupt();
+                }
+
+                if(m_BusMaster->hasInterrupt() || m_BusMaster->hasCompleted())
                 {
                     // commandComplete effectively resets the device state, so we need
                     // to get the error register first.
@@ -445,10 +473,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
                     return 0;
                 }
 
-                // Mark the start of the sector.
-                uint8_t *pSector = reinterpret_cast<uint8_t*> (pTarget);
-
-                // We got the mutex, so an IRQ must have arrived.
+                // Read the sector.
                 for (int j = 0; j < 256; j++)
                     *pTarget++ = commandRegs->read16(0);
             }

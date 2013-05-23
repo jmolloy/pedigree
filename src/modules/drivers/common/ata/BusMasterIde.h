@@ -143,6 +143,15 @@ class BusMasterIde
          */
         bool hasError();
 
+        /** \brief Determines if the CURRENT TRANSFER has completed.
+         *  \return True if the transfer has completed, false otherwise.
+         *
+         *  Some bus mastering controllers don't provide an IRQ line and others
+         *  may need this particular function to be waited upon to be sure that
+         *  the transfer has completed even if an IRQ is fired.
+         */
+        bool hasCompleted();
+
         /** \brief Called by drivers when a command completes
          *
          *  The interface requires that we reset the command register's start
