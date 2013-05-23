@@ -370,12 +370,17 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
         pthread_spin_unlock(&mutex->lock);
         return 0;
     }
-    mutex_q_item *front = mutex->front;
-    mutex->front = front->next;
-    mutex->q = mutex->front;
 
-    pthread_t thr = front->thr;
-    pedigree_thrwakeup(thr);
+    // Wake up the next waiting thread.
+    mutex_q_item *front = mutex->front;
+    if(front)
+    {
+        mutex->front = front->next;
+        mutex->q = mutex->front;
+
+        pthread_t thr = front->thr;
+        pedigree_thrwakeup(thr);
+    }
 
     pthread_spin_unlock(&mutex->lock);
 
