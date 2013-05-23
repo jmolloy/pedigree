@@ -46,31 +46,8 @@ MemoryMappedFile::~MemoryMappedFile()
 {
     LockGuard<Mutex> guard(m_Lock);
 
-    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-
-    // Free all physical pages, "sensibly".
-    for (Tree<uintptr_t,uintptr_t>::Iterator it = m_Mappings.begin();
-         it != m_Mappings.end();
-         it++)
-    {
-        uintptr_t v = it.key();
-        uintptr_t p = it.value();
-
-        if (va.isMapped(reinterpret_cast<void*>(v)))
-        {
-            uintptr_t p;
-            size_t flags;
-            va.getMapping(reinterpret_cast<void*>(v), p, flags);
-
-            // Unmap virtual.
-            va.unmap(reinterpret_cast<void*>(v));
-
-            // Original copy? Unmap original.
-            if (p == it.value())
-                PhysicalMemoryManager::instance().freePage(p);
-        }
-    }
-    m_Mappings.clear();
+    /// \note You should call unload() before destroying a MemoryMappedFile.
+    ///       as unload() can offset the keys of m_Mappings correctly.
 }
 
 bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess, size_t extentOverride)
@@ -209,6 +186,7 @@ void MemoryMappedFile::unload(uintptr_t address)
                 PhysicalMemoryManager::instance().freePage(p);
         }
     }
+    m_Mappings.clear();
 }
 
 void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileoffset, bool bIsWrite)
