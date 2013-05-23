@@ -34,14 +34,6 @@ FatFile::~FatFile()
 
 uintptr_t FatFile::readBlock(uint64_t location)
 {
-#ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
-    // Switch to the kernel address space because of reasons.
-    // It seems like things like ATA operate in the kernel address space and
-    // do not see our MemoryPool(s) or anything like that. Ouch.
-    VirtualAddressSpace &VAddressSpace = Processor::information().getVirtualAddressSpace();
-    Processor::switchAddressSpace(VirtualAddressSpace::getKernelAddressSpace());
-#endif
-
     FatFilesystem *pFs = reinterpret_cast<FatFilesystem*>(m_pFilesystem);
 
     /// \note Not freed. Watch out.
@@ -50,10 +42,6 @@ uintptr_t FatFile::readBlock(uint64_t location)
     ///       GOT OBLITERATED. FIX THAT.
     uintptr_t buffer = m_FileBlockCache.insert(location);
     pFs->read(this, location, getBlockSize(), buffer);
-
-#ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
-    Processor::switchAddressSpace(VAddressSpace);
-#endif
 
     return buffer;
 }
