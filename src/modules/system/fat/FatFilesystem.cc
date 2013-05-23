@@ -356,19 +356,23 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
         // read in the entire cluster
         readCluster(clus, reinterpret_cast<uintptr_t> (tmpBuffer));
 
-        // read...
-        while (currOffset < m_BlockSize)
+        // How many bytes should we copy?
+        size_t bytesToCopy = finalSize - bytesRead;
+        if(bytesToCopy > m_BlockSize)
         {
-            destBuffer[bytesRead] = tmpBuffer[currOffset];
-            currOffset++;
-            bytesRead++;
+            bytesToCopy = m_BlockSize;
+        }
 
-            // if at any time we're done, end reading
-            if (bytesRead == finalSize)
-            {
-                delete [] tmpBuffer;
-                return bytesRead;
-            }
+        // Perform the copy.
+        memcpy(&destBuffer[bytesRead], &tmpBuffer[currOffset], bytesToCopy);
+        currOffset += bytesToCopy;
+        bytesRead += bytesToCopy;
+
+        // Done?
+        if(bytesRead == finalSize)
+        {
+            delete [] tmpBuffer;
+            return bytesRead;
         }
 
         // end of cluster, set the offset back to zero
