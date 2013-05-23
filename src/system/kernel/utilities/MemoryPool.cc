@@ -93,7 +93,11 @@ uintptr_t MemoryPool::allocate()
 
     /// \bug Race if another allocate() call occurs between the acquire and the doer
 #ifdef THREADS
-    m_BlockSemaphore.acquire();
+    if(!m_BlockSemaphore.tryAcquire())
+    {
+        ERROR("MemoryPool: COMPLETELY out of buffers!");
+        m_BlockSemaphore.acquire();
+    }
 #endif
     return allocateDoer();
 }
