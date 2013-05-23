@@ -16,6 +16,8 @@
 
 #include "Font.h"
 
+#include <iconv.h>
+
 #include <syslog.h>
 
 #include <graphics/Graphics.h>
@@ -104,37 +106,37 @@ Font::~Font()
 
 size_t Font::render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, size_t y, uint32_t f, uint32_t b)
 {
-    /// \todo convert to utf-8...
-    const char s[] = {c & 0xFF, 0};
-    return render(s, x, y, f, b);
+    uint32_t utf32[] = {c, 0};
+    char *utf32_c = (char *) utf32;
 
-    Glyph *pGlyph = 0;
-    bool bKillGlyph = true;
-    // We can't cache characters over 0xFFFF anyway.
-    if (m_bCache && c < 0xFFFF)
+    /// \todo UTF-32 endianness
+    /// \todo Global iconv_t object - we use it a lot... (but that would mean resetting state)
+    iconv_t ic = iconv_open("UTF-8", "UTF-32LE");
+    if(ic == (iconv_t) -1)
     {
-        pGlyph = cacheLookup(c, f, b);
-        if (!pGlyph)
-        {
-            pGlyph = generateGlyph(c, f, b);
-            cacheInsert(pGlyph, c, f, b);
-        }
-        bKillGlyph = false;
+        syslog(LOG_WARNING, "TUI: Font::render couldn't open iconv (%s)", strerror(errno));
+        return 0;
+    }
+
+    char out[100] = {0};
+    char *out_c = (char *) out;
+    size_t utf32_len = 8;
+    size_t out_len = 100;
+    size_t res = iconv(ic, &utf32_c, &utf32_len, &out_c, &out_len);
+
+    iconv_close(ic);
+
+    size_t ret = 0;
+    if(res == ((size_t) -1))
+    {
+        syslog(LOG_WARNING, "TUI: Font::render couldn't convert input UTF-32 %x", c);
     }
     else
-        pGlyph = generateGlyph(c, f, b);
-
-    if (!pGlyph) return 0;
-
-    drawGlyph(pFb, pGlyph, x, y);
-
-    if (bKillGlyph)
     {
-        delete [] pGlyph->buffer;
-        delete pGlyph;
+        ret = render(out, x, y, f, b);
     }
 
-    return m_CellWidth;
+    return ret;
 }
 
 size_t Font::render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b, bool bBack)
