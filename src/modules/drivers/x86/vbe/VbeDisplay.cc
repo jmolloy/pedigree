@@ -38,7 +38,7 @@ VbeDisplay::VbeDisplay() : m_VbeVersion(), m_ModeList(), m_Mode(), m_pFramebuffe
 }
 
 VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*> &sms, size_t vidMemSz, size_t displayNum) :
-    Device(p), Display(p), m_VbeVersion(version), m_ModeList(sms), m_Mode(), m_pFramebuffer(0),
+    Display(p), m_VbeVersion(version), m_ModeList(sms), m_Mode(), m_pFramebuffer(0),
     m_Buffers(), m_SpecialisedMode(Mode_Generic), m_Allocator()
 {
     String str;

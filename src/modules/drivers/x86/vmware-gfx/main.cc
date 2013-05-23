@@ -61,7 +61,7 @@ class VmwareGraphics : public Display
     
     public:
         VmwareGraphics(Device *pDev) :
-            Device(pDev), Display(pDev), m_pIo(0),
+            Display(pDev), m_pIo(0),
             m_Framebuffer(0), m_CommandRegion(0),
             m_pFramebufferRawAddress(0)
         {

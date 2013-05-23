@@ -34,7 +34,7 @@
  *     Note that these functions may not actually be accelerated on-chip, this is up to the driver;
  *     however they are likely to be much faster than updating the buffer manually and calling updateBuffer().
  */
-class Display : public virtual Device
+class Display : public Device
 {
 public:
 
