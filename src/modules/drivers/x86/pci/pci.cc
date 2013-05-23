@@ -182,6 +182,7 @@ static void entry()
           pDevice->addresses().pushBack(pAddress);
         }
 
+        NOTICE("PCI:     IRQ: L" << cs.interrupt_line << " P" << cs.interrupt_pin);
         pDevice->setInterruptNumber(cs.interrupt_line);
         pBus->addChild(pDevice);
         pDevice->setParent(pBus);
