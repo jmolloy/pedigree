@@ -532,7 +532,9 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   bool bDmaSetup = false;
   if(m_bDma && nRespBytes)
   {
-      bDmaSetup = m_BusMaster->begin(respBuff, nRespBytes, bWrite);
+      bDmaSetup = m_BusMaster->add(respBuff, nRespBytes);
+      if(bDmaSetup)
+        bDmaSetup = m_BusMaster->begin(bWrite);
   }
 
   // Ensure interrupts are actually enabled now.

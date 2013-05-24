@@ -70,8 +70,7 @@ bool BusMasterIde::initialise(IoBase *pBase)
     m_pBase = pBase;
     return true;
 }
-
-bool BusMasterIde::begin(uintptr_t buffer, size_t nBytes, bool bWrite)
+bool BusMasterIde::add(uintptr_t buffer, size_t nBytes)
 {
     // Sanity check
     if(!buffer || !nBytes || !m_pBase)
@@ -111,14 +110,14 @@ bool BusMasterIde::begin(uintptr_t buffer, size_t nBytes, bool bWrite)
                     pageOffset = (buffer & 0xFFF);
 
                 // Install into the PRD table now
-                // NOTICE("PRD[" << Dec << i << Hex << "].addr=" << (physPage + pageOffset) << ".");
+                // NOTICE("PRD[" << Dec << m_LastPrdTableOffset + i << Hex << "].addr=" << (physPage + pageOffset) << ".");
                 m_PrdTable[m_LastPrdTableOffset + i].physAddr = physPage + pageOffset;
 
                 // Determine the transfer size we should use
                 size_t transferSize = nRemainingBytes;
                 if(transferSize > 4096)
                     transferSize = 4096 - pageOffset;
-                // NOTICE("PRD[" << Dec << i << Hex << "].size=" << transferSize << ".");
+                // NOTICE("PRD[" << Dec << m_LastPrdTableOffset + i << Hex << "].size=" << transferSize << ".");
                 m_PrdTable[m_LastPrdTableOffset + i].byteCount = transferSize & 0xFFFF;
 
                 // Complete the PRD entry after determining the next offset
@@ -144,26 +143,36 @@ bool BusMasterIde::begin(uintptr_t buffer, size_t nBytes, bool bWrite)
         else if(!i)
             return false;
 
-        // If no other command is running, set the PRD physical address and
-        // begin the command.
-        statusReg = m_pBase->read8(Status);
-        if(!(statusReg & 0x1))
-        {
-            // Write the physical address to the table address register
-            m_pBase->write32(m_PrdTablePhys, PrdTableAddr);
-
-            // Begin the command
-            uint8_t cmdReg = m_pBase->read8(Command);
-            if(cmdReg & 0x1)
-                FATAL("BusMaster IDE status and command registers don't make sense");
-            cmdReg = (cmdReg & 0xF6) | 0x1 | (!bWrite ? 8 : 0);
-            m_pBase->write8(cmdReg, BusMasterIde::Command);
-        }
-
+        m_LastPrdTableOffset += i;
         return true;
     }
     else
         return false; // Buffer not mapped - nothing we can do!
+}
+
+bool BusMasterIde::begin(bool bWrite)
+{
+    // If no other command is running, set the PRD physical address and
+    // begin the command.
+    uint8_t statusReg = m_pBase->read8(Status);
+    if(!(statusReg & 0x1))
+    {
+        // Write the physical address to the table address register
+        m_pBase->write32(m_PrdTablePhys, PrdTableAddr);
+
+        // Begin the command
+        uint8_t cmdReg = m_pBase->read8(Command);
+        if(cmdReg & 0x1)
+            FATAL("BusMaster IDE status and command registers don't make sense");
+        cmdReg = (cmdReg & 0xF6) | 0x1 | (!bWrite ? 8 : 0);
+        m_pBase->write8(cmdReg, BusMasterIde::Command);
+    }
+    else
+    {
+        return false;
+    }
+
+    return true;
 }
 
 bool BusMasterIde::hasInterrupt()

@@ -183,6 +183,10 @@ bool AtaDisk::initialise()
     }
     m_pFirmwareRevision[8] = '\0';
 
+    NOTICE("can transfer " << Dec << (LITTLE_TO_HOST16(m_pIdent[47]) & 0xFF) << Hex << " blocks per transfer");
+    NOTICE("word 63: " << m_pIdent[63]);
+    NOTICE("word 88: " << m_pIdent[88]);
+
     uint16_t word83 = LITTLE_TO_HOST16(m_pIdent[83]);
     if (word83 & (1<<10))
     {
@@ -297,14 +301,16 @@ uint64_t AtaDisk::doRead(uint64_t location)
 {
     // Handle the case where a read took place while we were waiting in the
     // RequestQueue - don't double up the cache.
-    size_t nBytes = 4096;
+    size_t nBytes = 65536;
+    uint64_t oldLocation = location;
+    location &= ~(nBytes - 1);
     uintptr_t buffer = m_Cache.lookup(location);
     if(buffer)
     {
-        WARNING("AtaDisk::doRead(" << location << ") - buffer was already in cache");
+        WARNING("AtaDisk::doRead(" << oldLocation << ") - buffer was already in cache");
         return 0;
     }
-    buffer = m_Cache.insert(location);
+    buffer = m_Cache.insert(location, nBytes);
     if(!buffer)
     {
         FATAL("AtaDisk::doRead - no buffer");
@@ -350,6 +356,12 @@ uint64_t AtaDisk::doRead(uint64_t location)
         uint8_t nSectorsToRead = (nSectors>255) ? 255 : nSectors;
         nSectors -= nSectorsToRead;
 
+        bool bDmaSetup = false;
+        if(m_bDma)
+        {
+            bDmaSetup = m_BusMaster->add(buffer, nSectorsToRead * 512);
+        }
+
         /// \todo CHS
         if (m_SupportsLBA48)
             setupLBA48(location, nSectorsToRead);
@@ -377,8 +389,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
         if(intNumber != 0xFF)
             Machine::instance().getIrqManager()->enable(intNumber, true);
 
-        bool bDmaSetup = false;
-        if(m_bDma)
+        if(m_bDma && bDmaSetup)
         {
             if (!m_SupportsLBA48)
             {
@@ -392,7 +403,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
             }
 
             // Start the DMA command
-            bDmaSetup = m_BusMaster->begin(buffer, nSectorsToRead * 512, false);
+            bDmaSetup = m_BusMaster->begin(false);
         }
         else
         {
@@ -439,9 +450,14 @@ uint64_t AtaDisk::doRead(uint64_t location)
             }
             else if(m_bDma && bDmaSetup)
             {
-                while(!(m_BusMaster->hasInterrupt() || m_BusMaster->hasCompleted()))
+                // Ensure we are not busy before continuing handling.
+                status = ataWait(commandRegs);
+                if(status.reg.err)
                 {
-                    Processor::haltUntilInterrupt();
+                    /// \todo What's the best way to handle this?
+                    m_BusMaster->commandComplete();
+                    WARNING("ATA: read failed during DMA data transfer");
+                    return 0;
                 }
 
                 if(m_BusMaster->hasInterrupt() || m_BusMaster->hasCompleted())
@@ -477,17 +493,6 @@ uint64_t AtaDisk::doRead(uint64_t location)
                 // Read the sector.
                 for (int j = 0; j < 256; j++)
                     *pTarget++ = commandRegs->read16(0);
-            }
-        }
-        else
-        {
-            // Check for an error during the DMA command
-            status = ataWait(commandRegs);
-            if(status.reg.err)
-            {
-                /// \todo What's the best way to handle this?
-                WARNING("ATA: read failed during DMA data transfer");
-                return 0;
             }
         }
     }
@@ -588,7 +593,8 @@ uint64_t AtaDisk::doWrite(uint64_t location)
             }
 
             // Start the DMA command
-            bDmaSetup = m_BusMaster->begin(buffer, nSectorsToWrite * 512, true);
+            bDmaSetup = m_BusMaster->add(buffer, nSectorsToWrite * 512);
+            bDmaSetup = m_BusMaster->begin(true);
         }
         else
         {
