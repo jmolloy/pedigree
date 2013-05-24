@@ -82,7 +82,7 @@ Graphics::Buffer *Framebuffer::swCreateBuffer(const void *srcData, Graphics::Pix
                 if(srcFormat == Graphics::Bits8_Idx)
                 {
                     uint32_t source = pPalette[(*pSource) & 0xFF];
-                    Graphics::convertPixel(source, Graphics::Bits24_Rgb, transform, destFormat);
+                    Graphics::convertPixel(source, Graphics::Bits24_Bgr, transform, destFormat);
                 }
                 else {
                     Graphics::convertPixel(*pSource, srcFormat, transform, destFormat);
@@ -167,9 +167,11 @@ void Framebuffer::swBlit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
     if((srcy + height) > pBuffer->height)
         height = (srcy + height) - pBuffer->height;
     if((destx + width) > m_nWidth)
-        width = (destx + width) - m_nWidth;
+        width = m_nWidth - destx; // (destx + width) - m_nWidth;
     if((desty + height) > m_nHeight)
-        height = (desty + height) - m_nHeight;
+        height = m_nHeight - desty; // (desty + height) - m_nHeight;
+
+    /// \todo This code is broken for the case where srcx/srcy are not zero. :(
 
     void *pSrc = reinterpret_cast<void*>(pBuffer->base);
 

@@ -33,6 +33,7 @@ namespace Graphics
         Bits32_Argb,        // Alpha + RGB, with alpha in the highest byte
         Bits32_Rgba,        // RGB + alpha, with alpha in the lowest byte
         Bits32_Rgb,         // RGB, no alpha, essentially the same as above
+        Bits32_Bgr,         // BGR, no alpha
         
         Bits24_Rgb,         // RGB in a 24-bit pack
         Bits24_Bgr,         // R and B bytes swapped
@@ -52,6 +53,7 @@ namespace Graphics
             case Bits32_Argb:
             case Bits32_Rgba:
             case Bits32_Rgb:
+            case Bits32_Bgr:
                 return 32;
             case Bits24_Rgb:
             case Bits24_Bgr:
@@ -129,7 +131,7 @@ namespace Graphics
             amtBlue = (source & 0xff00) >> 8;
             amtAlpha = (source & 0xff);
         }
-        else if(srcFormat == Bits24_Bgr)
+        else if((srcFormat == Bits32_Bgr) || (srcFormat == Bits24_Bgr))
         {
             amtBlue = (source & 0xff0000) >> 16;
             amtGreen = (source & 0xff00) >> 8;

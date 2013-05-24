@@ -53,10 +53,11 @@ insert into 'colour_scheme' values ('tui-background',    0,0,0);
 --
 -- insert into 'colour_scheme' values ('splash-background', 0,    0,  0);
 -- insert into 'colour_scheme' values ('splash-foreground', 255,255,255);
+-- insert into 'colour_scheme' values ('selected-text',     255,255,255);
+-- insert into 'colour_scheme' values ('background', 0,  0,  0  );
 -- insert into 'colour_scheme' values ('border',            60,  60,150);
 -- insert into 'colour_scheme' values ('fill',              20,  20,100);
--- insert into 'colour_scheme' values ('selected-text',     255,255,255);
--- insert into 'colour_scheme' values ('text',                0,  0,  0);
+-- insert into 'colour_scheme' values ('text',              255,255,255);
 -- insert into 'colour_scheme' values ('tui-background',    255,255,255);
 -- insert into 'colour_scheme' values ('xterm-bg',          8,    0,  0);
 -- insert into 'colour_scheme' values ('xterm-fg',          0,    0,  0);

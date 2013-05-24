@@ -117,7 +117,9 @@ IpcMessage *IpcEndpoint::getMessage(bool bBlock)
             if(!bBlock)
                 return 0;
             else
+            {
                 m_QueueSize.acquire();
+            }
         }
 
         m_QueueLock.acquire();
@@ -241,7 +243,9 @@ Ipc::IpcMessage::~IpcMessage()
         delete m_pMemRegion;
     }
     else if(m_vAddr)
+    {
         __ipc_mempool.free(m_vAddr);
+    }
 }
 
 void *Ipc::IpcMessage::getBuffer()

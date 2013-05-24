@@ -1484,7 +1484,10 @@ int posix_msync(void *p, size_t len, int flags) {
 
 int posix_munmap(void *addr, size_t len)
 {
-    F_NOTICE("munmap");
+    F_NOTICE("munmap(" << reinterpret_cast<uintptr_t>(addr) << ", " << Dec << len << Hex << ")");
+
+    /// \todo Debug me, fix me! munmap seems to kill stuff somewhere.
+    return 0;
 
     // Grab the Process subsystem
     Process *pProcess = Processor::information().getCurrentThread()->getParent();

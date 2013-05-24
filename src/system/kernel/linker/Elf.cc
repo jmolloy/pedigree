@@ -198,7 +198,7 @@ bool Elf::createNeededOnly(uint8_t *pBuffer, size_t length)
          (pHeader->ident[3] != 'F') ||
          (pHeader->ident[0] != 127) )
     {
-        ERROR("ELF file: ident check failed!");
+        ERROR("ELF file: ident check failed [" << String(reinterpret_cast<const char *>(pHeader->ident)) << "]!");
         return false;
     }
 
@@ -288,7 +288,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
          (pHeader->ident[3] != 'F') ||
          (pHeader->ident[0] != 127) )
     {
-        ERROR("ELF file: ident check failed!");
+        ERROR("ELF file: ident check failed [" << String(reinterpret_cast<const char *>(pHeader->ident)) << "]!");
         return false;
     }
 
