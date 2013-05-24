@@ -196,6 +196,9 @@ int posix_fork(SyscallState &state)
     // Create a new thread for the new process.
     new Thread(pProcess, state);
 
+    // Kick off the new thread immediately.
+    Scheduler::instance().yield();
+
     // Parent returns child ID.
     return pProcess->getId();
 }
