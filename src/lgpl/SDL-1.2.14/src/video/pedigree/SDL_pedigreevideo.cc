@@ -233,6 +233,10 @@ static void PEDIGREE_UpdateRects(_THIS, int numrects, SDL_Rect *rects)
     else
         format = PedigreeGraphics::Bits24_Rgb;
 
+    pFramebuffer->draw(_this->hidden->buffer, 0, 0, 0, 0, 800, 600, format);
+    pFramebuffer->redraw(0, 0, 800, 600, true);
+    return;
+
     for(int i = 0; i < numrects; i++)
     {
         syslog(LOG_INFO, "UpdateRects: redraw %dx%d [%dx%d]\n", rects[i].x, rects[i].y, rects[i].w, rects[i].h);
