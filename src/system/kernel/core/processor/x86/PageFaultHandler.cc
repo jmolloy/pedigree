@@ -50,14 +50,13 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
   VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
   if (va.isMapped(reinterpret_cast<void*>(page)))
   {
-    physical_uintptr_t phys = 0;
-    size_t flags = 0;
+    physical_uintptr_t phys;
+    size_t flags;
     va.getMapping(reinterpret_cast<void*>(page), phys, flags);
     if (flags & VirtualAddressSpace::CopyOnWrite)
     {
-      flags &= ~VirtualAddressSpace::CopyOnWrite;
-
-      uint8_t *buffer = new uint8_t[PhysicalMemoryManager::instance().getPageSize()];
+#if 0
+      static uint8_t buffer[PhysicalMemoryManager::instance().getPageSize()];
       memcpy(buffer, reinterpret_cast<uint8_t*>(page), PhysicalMemoryManager::instance().getPageSize());
 
       // Now that we've saved the page content, we can make a new physical page and map it.
@@ -67,17 +66,15 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
         FATAL("PageFaultHandler: Out of memory!");
         return;
       }
-
       va.unmap(reinterpret_cast<void*>(page));
-      if (!va.map(p, reinterpret_cast<void*>(page), flags | VirtualAddressSpace::Write))
+      if (!va.map(p, reinterpret_cast<void*>(page), VirtualAddressSpace::Write))
       {
         FATAL("PageFaultHandler: map() failed.");
         return;
       }
-
       memcpy(reinterpret_cast<uint8_t*>(page), buffer, PhysicalMemoryManager::instance().getPageSize());
-      delete [] buffer;
       return;
+#endif
     }
   }
 
