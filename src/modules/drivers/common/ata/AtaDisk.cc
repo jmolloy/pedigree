@@ -52,7 +52,8 @@ bool AtaDisk::initialise()
     // IoBase *controlRegs = m_ControlRegs;
 
     // Drive spin-up
-    commandRegs->write8(0x00, 6);
+    /// \note Shouldn't be writing all zeroes to this register!
+    // commandRegs->write8(0xA0, 6);
 
     // Check for device presence
     uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
@@ -331,7 +332,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
     // Select the device to transmit to
     uint8_t devSelect;
     if (m_SupportsLBA48)
-        devSelect = (m_IsMaster) ? 0x40 : 0x50;
+        devSelect = (m_IsMaster) ? 0xE0 : 0xF0;
     else
         devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
     commandRegs->write8(devSelect, 6);
@@ -528,7 +529,7 @@ uint64_t AtaDisk::doWrite(uint64_t location)
     // Select the device to transmit to
     uint8_t devSelect;
     if (m_SupportsLBA48)
-        devSelect = (m_IsMaster) ? 0x40 : 0x50;
+        devSelect = (m_IsMaster) ? 0xE0 : 0xF0;
     else
         devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
     commandRegs->write8(devSelect, 6);
