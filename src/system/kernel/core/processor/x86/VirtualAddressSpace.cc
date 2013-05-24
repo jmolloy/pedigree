@@ -590,29 +590,17 @@ VirtualAddressSpace *X86VirtualAddressSpace::clone()
             if ((*pageTableEntry & PAGE_PRESENT) != PAGE_PRESENT)
                 continue;
 
-            uint32_t flags = PAGE_GET_FLAGS(pageTableEntry);
+            uint32_t flags = fromFlags(PAGE_GET_FLAGS(pageTableEntry));
+            physical_uintptr_t phys = PAGE_GET_PHYSICAL_ADDRESS(pageTableEntry);
 
             void *virtualAddress = reinterpret_cast<void*> ( ((i*1024)+j)*4096 );
             if (getKernelAddressSpace().isMapped(virtualAddress))
                 continue;
 
-            // Page mapped in source address space, but not in kernel.
-            /// \todo Copy on write.
-            physical_uintptr_t newFrame = PhysicalMemoryManager::instance().allocatePage();
-
-            // Temporarily map in.
-            map(newFrame,
-                KERNEL_VIRTUAL_TEMP1,
-                VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
-
-            // Copy across.
-            memcpy(KERNEL_VIRTUAL_TEMP1, virtualAddress, 0x1000);
-
-            // Unmap.
-            unmap(KERNEL_VIRTUAL_TEMP1);
-
             // Map in.
-            mapCrossSpace(v, newFrame, virtualAddress, fromFlags(flags));
+            flags &= ~Write;
+            flags |= CopyOnWrite;
+            mapCrossSpace(v, phys, virtualAddress, flags);
         }
     }
 
@@ -653,14 +641,17 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
             }
 
             // Grab the physical address for it.
+            uint32_t flags = fromFlags(PAGE_GET_FLAGS(pageTableEntry));
             physical_uintptr_t physicalAddress = PAGE_GET_PHYSICAL_ADDRESS(pageTableEntry);
 
             // Page mapped in this address space but not in kernel. Unmap it.
             unmap(virtualAddress);
 
-            // And release the physical memory.
-            /// \todo There's going to be a caveat with CoW here...
-            PhysicalMemoryManager::instance().freePage(physicalAddress);
+            // And release the physical memory, if not CoW.
+            if(!(flags & CopyOnWrite))
+            {
+              PhysicalMemoryManager::instance().freePage(physicalAddress);
+            }
 
             // This PTE is no longer valid
             *pageTableEntry = 0;
