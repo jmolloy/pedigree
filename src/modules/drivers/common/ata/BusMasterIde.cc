@@ -156,7 +156,7 @@ bool BusMasterIde::begin(uintptr_t buffer, size_t nBytes, bool bWrite)
             uint8_t cmdReg = m_pBase->read8(Command);
             if(cmdReg & 0x1)
                 FATAL("BusMaster IDE status and command registers don't make sense");
-            cmdReg = (cmdReg & 0xF6) | 0x1 | (bWrite ? 8 : 0);
+            cmdReg = (cmdReg & 0xF6) | 0x1 | (!bWrite ? 8 : 0);
             m_pBase->write8(cmdReg, BusMasterIde::Command);
         }
 
