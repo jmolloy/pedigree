@@ -155,7 +155,7 @@ SDL_Surface *PEDIGREE_SetVideoMode(_THIS, SDL_Surface *current,
 		SDL_free( _this->hidden->buffer );
 	}
 
-    syslog(LOG_INFO, "SetVideoMode(%d, %d, %d)\n", width, height, bpp);
+    syslog(LOG_INFO, "SetVideoMode(%d, %d, %d)", width, height, bpp);
 
     PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
     PedigreeGraphics::Framebuffer *pFramebuffer = pRootFramebuffer->createChild(0, 0, width, height);
