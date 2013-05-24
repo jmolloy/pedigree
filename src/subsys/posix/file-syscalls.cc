@@ -294,10 +294,8 @@ int posix_read(int fd, char *ptr, int len)
     uint64_t nRead = 0;
     if (ptr && len)
     {
-        char *kernelBuf = new char[len];
-        nRead = pFd->file->read(pFd->offset, len, reinterpret_cast<uintptr_t>(kernelBuf), canBlock);
-        memcpy(reinterpret_cast<void*>(ptr), reinterpret_cast<void*>(kernelBuf), len);
-        delete [] kernelBuf;
+        /// \todo Sanitise input and check it's mapped etc so we don't segfault the kernel
+        nRead = pFd->file->read(pFd->offset, len, len > 0x500000 ? 0 : reinterpret_cast<uintptr_t>(ptr), canBlock);
 
         pFd->offset += nRead;
     }
@@ -340,10 +338,8 @@ int posix_write(int fd, char *ptr, int len)
     uint64_t nWritten = 0;
     if (ptr && len)
     {
-        char *kernelBuf = new char[len];
-        memcpy(reinterpret_cast<void*>(kernelBuf), reinterpret_cast<void*>(ptr), len);
-        nWritten = pFd->file->write(pFd->offset, len, reinterpret_cast<uintptr_t>(kernelBuf));
-        delete [] kernelBuf;
+        /// \todo Sanitise input and check it's mapped etc so we don't segfault the kernel
+        nWritten = pFd->file->write(pFd->offset, len, reinterpret_cast<uintptr_t>(ptr));
         pFd->offset += nWritten;
     }
 
