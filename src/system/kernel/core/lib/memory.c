@@ -58,7 +58,7 @@ inline void *memset_nonzero(void *buf, int c, size_t n)
         if((n % 8) == 0)
         {
             uint64_t word = (c << 56) | (c << 48) | (c << 40) | (c << 32) | (c << 24) | (c << 16) | (c << 8) | c;
-            asm volatile("rep stosq" : "=c" (unused) : "D" (p), "c" (n / 8), "D" (word));
+            asm volatile("rep stosq" : "=c" (unused) : "D" (p), "c" (n / 8), "a" (word));
             n = 0;
         }
         else
