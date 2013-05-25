@@ -51,9 +51,8 @@ bool AtaDisk::initialise()
     // Commented out - unused variable.
     // IoBase *controlRegs = m_ControlRegs;
 
-    // Drive spin-up
-    /// \note Shouldn't be writing all zeroes to this register!
-    // commandRegs->write8(0xA0, 6);
+    // Drive spin-up (go from standby to active, if necessary)
+    setFeatures(0x07, 0, 0, 0, 0);
 
     // Check for device presence
     uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
@@ -741,3 +740,20 @@ void AtaDisk::setupLBA48(uint64_t n, uint32_t nSectors)
     commandRegs->write8(lba2, 4);
     commandRegs->write8(lba3, 5);
 }
+
+bool AtaDisk::setFeatures(uint8_t command, uint8_t countreg, uint8_t lowreg, uint8_t midreg, uint8_t hireg)
+{
+    // Grab our parent's IoPorts for command and control accesses.
+    IoBase *commandRegs = m_CommandRegs;
+
+    uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
+    commandRegs->write8(devSelect, 6);
+
+    commandRegs->write8(command, 1);
+    commandRegs->write8(countreg, 2);
+    commandRegs->write8(lowreg, 3);
+    commandRegs->write8(midreg, 4);
+    commandRegs->write8(hireg, 5);
+    commandRegs->write8(0xEF, 7);
+}
+
