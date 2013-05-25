@@ -105,6 +105,7 @@ def buildImageLosetup(target, source, env):
 
     # Perhaps the menu.lst should refer to .pedigree-root :)
     os.system("sudo cp " + builddir + "/config.db ./tmp/.pedigree-root")
+    os.system("sudo cp " + imagedir + "/../grub/menu-hdd.lst ./tmp/boot/grub/menu.lst")
 
     # Copy the kernel, initrd, and configuration database
     for i in source[0:3]:
@@ -146,6 +147,10 @@ def buildImageLosetup(target, source, env):
 
         os.system("sudo cp -R " + i.path + " ./tmp" + otherPath)
 
+    os.system("sudo mkdir -p ./tmp/tmp")
+    os.system("sudo mkdir -p ./tmp/config")
+    os.system("sudo cp " + imagedir + "/../base/config/greeting ./tmp/config/greeting")
+    os.system("sudo cp " + imagedir + "/../base/.bashrc ./tmp/.bashrc")
     os.system("sudo umount ./tmp")
 
     for i in os.listdir("tmp"):
@@ -218,7 +223,11 @@ def buildImageMtools(target, source, env):
 
         otherPath = prefix + i.abspath.replace(search, '')
         os.system("MTOOLS_SKIP_CHECK=1 mcopy -bms -Do " + i.path + destDrive + otherPath + " > /dev/null 2>&1")
-    
+
+    os.system("MTOOLS_SKIP_CHECK=1 mmd -Ds C:/tmp C:/config > /dev/null 2>&1")
+    os.system("MTOOLS_SKIP_CHECK=1 mcopy -Do " + imagedir + "/../base/config/greeting C:/config/greeting > /dev/null 2>&1")
+    os.system("MTOOLS_SKIP_CHECK=1 mcopy -Do " + imagedir + "/../base/.bashrc C:/.bashrc > /dev/null 2>&1")
+
     postImageBuild(outFile, env)
 
 def buildCdImage(target, source, env):
