@@ -22,6 +22,31 @@
 #include <processor/VirtualAddressSpace.h>
 #include <Spinlock.h>
 
+//
+// Virtual address space layout
+//
+#define KERNEL_SPACE_START                      reinterpret_cast<void*>(0xFFFFFFF000000000)
+
+#define USERSPACE_DYNAMIC_LINKER_LOCATION       reinterpret_cast<void*>(0x4FA00000)
+
+#define USERSPACE_VIRTUAL_START                 reinterpret_cast<void*>(0x400000)
+#define USERSPACE_VIRTUAL_HEAP                  reinterpret_cast<void*>(0x50000000)
+#define USERSPACE_VIRTUAL_STACK                 reinterpret_cast<void*>(0xC0000000)
+#define USERSPACE_RESERVED_START                USERSPACE_VIRTUAL_HEAP
+#define USERSPACE_VIRTUAL_STACK_SIZE            0x100000
+#define USERSPACE_VIRTUAL_MAX_STACK_SIZE        0x100000
+#define USERSPACE_VIRTUAL_LOWEST_STACK          reinterpret_cast<void*>(0x70000000)
+#define KERNEL_VIRTUAL_HEAP                     reinterpret_cast<void*>(0xFFFFFFFF00000000)
+#define KERNEL_VIRTUAL_HEAP_SIZE                0x7FC00000
+#define KERNEL_VIRTUAL_ADDRESS                  reinterpret_cast<void*>(0xFFFFFFFF7FF00000)
+#define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS     reinterpret_cast<void*>(0xFFFFFFFF90000000)
+#define KERNEL_VIRTUAL_PAGESTACK_4GB            reinterpret_cast<void*>(0xFFFFFFFF7FC00000)
+#define KERNEL_VIRTUAL_PAGESTACK_ABV4GB1        reinterpret_cast<void*>(0xFFFFFFFE00000000) // First page stack above 4 GB holds 0x200000000 8-byte addresses
+#define KERNEL_VIRTUAL_PAGESTACK_ABV4GB2        reinterpret_cast<void*>(0xFFFFFFF000000000) // Second page stack holds all addresses above the end of the first page stack (massive number)
+#define KERNEL_VIRTUAL_STACK                    reinterpret_cast<void*>(-0x9000)
+#define KERNEL_VIRTUAL_MEMORYREGION_SIZE        0x40000000
+#define KERNEL_STACK_SIZE                       0x8000
+
 /** @addtogroup kernelprocessorx64
  * @{ */
 
@@ -85,6 +110,30 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
 
     /** The destructor cleans up the address space */
     virtual ~X64VirtualAddressSpace();
+
+    /** Gets start address of the kernel in the address space. */
+    virtual uintptr_t getKernelStart() const
+    {
+        return reinterpret_cast<uintptr_t>(KERNEL_SPACE_START);
+    }
+
+    /** Gets start address of the region usable and cloneable for userspace. */
+    virtual uintptr_t getUserStart() const
+    {
+        return reinterpret_cast<uintptr_t>(USERSPACE_VIRTUAL_START);
+    }
+
+    /** Gets start address of reserved areas of the userpace address space. */
+    virtual uintptr_t getUserReservedStart() const
+    {
+        return reinterpret_cast<uintptr_t>(USERSPACE_RESERVED_START);
+    }
+
+    /** Gets address of the dynamic linker in the address space. */
+    virtual uintptr_t getDynamicLinkerAddress() const
+    {
+        return reinterpret_cast<uintptr_t>(USERSPACE_DYNAMIC_LINKER_LOCATION);
+    }
 
   private:
     /** The default constructor */
@@ -155,25 +204,5 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
 };
 
 /** @} */
-
-//
-// Virtual address space layout
-//
-#define USERSPACE_VIRTUAL_HEAP                  reinterpret_cast<void*>(0x50000000)
-#define USERSPACE_VIRTUAL_STACK                 reinterpret_cast<void*>(0xC0000000)
-#define USERSPACE_VIRTUAL_STACK_SIZE            0x100000
-#define USERSPACE_VIRTUAL_MAX_STACK_SIZE        0x100000
-#define USERSPACE_VIRTUAL_LOWEST_STACK          reinterpret_cast<void*>(0x70000000)
-#define KERNEL_SPACE_START                      reinterpret_cast<void*>(0xFFFFFFF000000000)
-#define KERNEL_VIRTUAL_HEAP                     reinterpret_cast<void*>(0xFFFFFFFF00000000)
-#define KERNEL_VIRTUAL_HEAP_SIZE                0x7FC00000
-#define KERNEL_VIRTUAL_ADDRESS                  reinterpret_cast<void*>(0xFFFFFFFF7FF00000)
-#define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS     reinterpret_cast<void*>(0xFFFFFFFF90000000)
-#define KERNEL_VIRTUAL_PAGESTACK_4GB            reinterpret_cast<void*>(0xFFFFFFFF7FC00000)
-#define KERNEL_VIRTUAL_PAGESTACK_ABV4GB1        reinterpret_cast<void*>(0xFFFFFFFE00000000) // First page stack above 4 GB holds 0x200000000 8-byte addresses
-#define KERNEL_VIRTUAL_PAGESTACK_ABV4GB2        reinterpret_cast<void*>(0xFFFFFFF000000000) // Second page stack holds all addresses above the end of the first page stack (massive number)
-#define KERNEL_VIRTUAL_STACK                    reinterpret_cast<void*>(-0x9000)
-#define KERNEL_VIRTUAL_MEMORYREGION_SIZE        0x40000000
-#define KERNEL_STACK_SIZE                       0x8000
 
 #endif
