@@ -95,7 +95,7 @@ private:
 
 protected:
     /** Performs the SET FEATURES command. */
-    bool setFeatures(uint8_t command, uint8_t countreg, uint8_t lowreg, uint8_t midreg, uint8_t hireg);
+    void setFeatures(uint8_t command, uint8_t countreg, uint8_t lowreg, uint8_t midreg, uint8_t hireg);
 
     /** Sector cache. */
     Cache m_Cache;
