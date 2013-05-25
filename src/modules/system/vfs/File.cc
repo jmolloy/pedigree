@@ -42,8 +42,18 @@ File::~File()
 
 uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
-    if (location+size >= m_Size)
+    if ((location+size) >= m_Size)
+    {
+        size_t oldSize = size;
         size = m_Size-location;
+        if((location + size) > m_Size)
+        {
+            // Completely broken read parameters.
+            ERROR("VFS: even after fixup, read at location " << location << " is larger than file size (" << m_Size << ")");
+            ERROR("VFS:    fixup size: " << size << ", original size: " << oldSize);
+            return 0;
+        }
+    }
 
     size_t blockSize = getBlockSize();
     
@@ -83,6 +93,9 @@ uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
 uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
     size_t blockSize = getBlockSize();
+
+    // Extend the file before writing it if needed.
+    extend(location + size);
 
     size_t n = 0;
     while (size)

@@ -229,6 +229,13 @@ protected:
     virtual size_t getBlockSize() const
     {return PhysicalMemoryManager::getPageSize();}
 
+    /** Internal function to extend a file to be at least the given size. */
+    virtual void extend(size_t newSize)
+    {
+        if(m_Size < newSize)
+            m_Size = newSize;
+    }
+
     /** Internal function to notify all registered MonitorTargets. */
     void dataChanged();
 
