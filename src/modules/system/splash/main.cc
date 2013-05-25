@@ -27,10 +27,16 @@
 #include <graphics/Graphics.h>
 #include <graphics/GraphicsService.h>
 
+#include <core/BootIO.h> // In src/system/kernel
+
 #include "image.h"
 #include "font.h"
 
 Framebuffer *g_pFramebuffer = 0;
+
+#ifdef NOGFX
+extern BootIO bootIO;
+#endif
 
 static uint8_t *g_pBuffer = 0;
 static Graphics::Buffer *g_pFont = 0;
@@ -118,8 +124,24 @@ void printChar(char c)
 
 void printString(const char *str)
 {
+#ifndef NOGFX
     for(size_t i = 0; i < strlen(str); i++)
         printChar(str[i]);
+#else
+    static HugeStaticString s;
+    s += str;
+    
+    BootIO::Colour c = BootIO::LightGrey;
+    if(str[1] == 'W')
+        c = BootIO::Orange;
+    else if(str[1] == 'E' || str[1] == 'F')
+        c = BootIO::Red;
+    else if(str[1] == 'D')
+        c = BootIO::DarkGrey;
+        
+    bootIO.write(s, c, BootIO::Black);
+    s.clear();
+#endif
 }
 
 void printStringAt(const char *str, size_t x, size_t y)
@@ -150,12 +172,15 @@ class StreamingScreenLogger : public Log::LogCallback
         /// therefore we simply redirect to it.
         void callback(const char *str)
         {
+#ifdef DEBUGGER
             printString(str);
+#endif
         }
 };
 
 static StreamingScreenLogger g_StreamLogger;
 
+#ifndef NOGFX
 void keyCallback(InputManager::InputNotification &note)
 {
     if(note.type != InputManager::Key)
@@ -177,6 +202,7 @@ void keyCallback(InputManager::InputNotification &note)
         g_LogH = g_Height;
     }
 }
+#endif
 
 void progress(const char *text)
 {
@@ -190,13 +216,20 @@ void progress(const char *text)
     if((g_BootProgressCurrent + 1) >= g_BootProgressTotal)
     {
         Log::instance().removeCallback(&g_StreamLogger);
+        
+#ifndef NOGFX
+#ifdef DEBUGGER
         InputManager::instance().removeCallback(keyCallback);
+#endif
+#endif
 
         bFinished = true;
     }
 
     if(g_LogMode)
         return;
+        
+#ifndef NOGFX
 
     size_t w = (g_ProgressW * g_BootProgressCurrent) / g_BootProgressTotal;
     if(g_Previous <= g_BootProgressCurrent)
@@ -205,7 +238,11 @@ void progress(const char *text)
         g_pFramebuffer->rect(g_ProgressX + w, g_ProgressY, g_ProgressW-w, g_ProgressH, g_BackgroundColour, g_ColorFormat);
     g_Previous = g_BootProgressCurrent;
 
-    g_pFramebuffer->redraw(g_ProgressX, g_ProgressY, g_ProgressW, g_ProgressH, true);
+    char buf[80];
+    sprintf(buf, "%d%%", ((g_BootProgressCurrent * 100) / g_BootProgressTotal));
+    centerStringAt(buf, g_ProgressX + (g_ProgressW / 2), g_ProgressY - FONT_HEIGHT);
+
+    g_pFramebuffer->redraw(g_ProgressX, g_ProgressY - (FONT_HEIGHT * 2), g_ProgressW, g_ProgressH + (FONT_HEIGHT * 2), true);
 
     if(bFinished)
     {
@@ -213,6 +250,8 @@ void progress(const char *text)
         Graphics::destroyFramebuffer(g_pFramebuffer);
         g_pFramebuffer = 0;
     }
+
+#endif
 }
 
 static void getColor(const char *colorName, uint32_t &color)
@@ -221,7 +260,7 @@ static void getColor(const char *colorName, uint32_t &color)
     String sQuery;
 
     // Create the query string
-    sQuery += "select r,g,b from 'colour-scheme' where name='";
+    sQuery += "select r,g,b from 'colour_scheme' where name='";
     sQuery += colorName;
     sQuery += "';";
 
@@ -249,10 +288,10 @@ static void getColor(const char *colorName, uint32_t &color)
     delete pResult;
 }
 
-static void getDesiredMode(uint32_t &width, uint32_t &height, uint32_t &bpp)
+static void getDesiredMode(size_t &width, size_t &height, size_t &bpp)
 {
     // Query the database
-    Config::Result *pResult = Config::instance().query("select width,height,bpp from 'desired-display-mode';");
+    Config::Result *pResult = Config::instance().query("select width,height,bpp from 'desired_display_mode';");
 
     // Did the query fail?
     if(!pResult)
@@ -275,6 +314,13 @@ static void getDesiredMode(uint32_t &width, uint32_t &height, uint32_t &bpp)
 
 static void init()
 {
+#ifdef NOGFX
+
+    Log::instance().installCallback(&g_StreamLogger, true);
+
+    g_BootProgressUpdate = &progress;
+
+#else
     getColor("splash-background", g_BackgroundColour);
     getColor("splash-foreground", g_ForegroundColour);
     getColor("border", g_ProgressBorderColour);
@@ -351,11 +397,12 @@ static void init()
     g_Height  = pParentFramebuffer->getHeight();
 
     g_pFramebuffer = Graphics::createFramebuffer(pParentFramebuffer, 0, 0, g_Width, g_Height);
+    g_ColorFormat = g_pFramebuffer->getFormat();
 
     g_pFramebuffer->rect(0, 0, g_Width, g_Height, g_BackgroundColour, g_ColorFormat);
 
     // Create the logo buffer
-    char *data = header_data;
+    uint8_t *data = header_data;
     g_pBuffer = new uint8_t[width * height * 3]; // 24-bit, hardcoded...
     for (size_t i = 0; i < (width*height); i++)
         HEADER_PIXEL(data, &g_pBuffer[i * 3]); // 24-bit, hardcoded
@@ -414,10 +461,16 @@ static void init()
 
     // Yay text!
     centerStringAt("Please wait, Pedigree is loading...", g_Width / 2, g_ProgressY - (FONT_HEIGHT * 3));
+#ifdef DEBUGGER
+#endif
 
+#ifdef DEBUGGER
     // Draw a border around the log area
+    centerStringAt("< Kernel Log >", g_LogW / 2, g_LogBoxY - 2 - (FONT_HEIGHT / 2) - FONT_HEIGHT);
+    centerStringAt("(you can push ESCAPE to make the log fill the screen)", g_LogW / 2, g_LogBoxY - 2 - (FONT_HEIGHT / 2));
     g_pFramebuffer->rect(g_LogBoxX, g_LogBoxY - 2, g_LogW, g_LogH - 2, g_ForegroundColour, g_ColorFormat);
     g_pFramebuffer->rect(g_LogBoxX, g_LogBoxY - 1, g_LogW, g_LogH - 1, g_BackgroundColour, g_ColorFormat);
+#endif
 
     // Draw empty progress bar. Easiest way to draw a nonfilled rect? Draw two filled rects.
     g_pFramebuffer->rect(g_ProgressX - 2, g_ProgressY - 2, g_ProgressW + 4, g_ProgressH + 4, g_ProgressBorderColour, g_ColorFormat);
@@ -428,7 +481,12 @@ static void init()
     Log::instance().installCallback(&g_StreamLogger, true);
 
     g_BootProgressUpdate = &progress;
+
+#ifdef DEBUGGER
     InputManager::instance().installCallback(InputManager::Key, keyCallback);
+#endif
+
+#endif    
 }
 
 static void destroy()

@@ -23,6 +23,8 @@
 #include <process/Thread.h>
 #include <process/Event.h>
 
+#include <processor/PhysicalMemoryManager.h>
+
 #define FILE_UR 0001
 #define FILE_UW 0002
 #define FILE_UX 0004
@@ -56,6 +58,8 @@ public:
     virtual ~File();
 
     /** Reads from the file.
+     *  \param[in] buffer Buffer to write the read data into. Can be null, in
+     *      which case the data can be found by calling getPhysicalPage.
 	 *  \param[in] bCanBlock Whether or not the File can block when reading
 	 */
     virtual uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
@@ -63,6 +67,11 @@ public:
 	 *  \param[in] bCanBlock Whether or not the File can block when reading
 	 */
     virtual uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+
+    /** Get the physical address for the given offset into the file.
+     * Returns (physical_uintptr_t) ~0 if the offset isn't in the cache.
+     */
+    physical_uintptr_t getPhysicalPage(size_t offset);
 
     /** Returns the time the file was created. */
     Time getCreationTime();
@@ -217,8 +226,15 @@ protected:
     }
     /** Internal function to retrieve the block size returned by readBlock.
         \note This must be constant throughout the life of the file. */
-    virtual size_t getBlockSize()
-    {return 1024;}
+    virtual size_t getBlockSize() const
+    {return PhysicalMemoryManager::getPageSize();}
+
+    /** Internal function to extend a file to be at least the given size. */
+    virtual void extend(size_t newSize)
+    {
+        if(m_Size < newSize)
+            m_Size = newSize;
+    }
 
     /** Internal function to notify all registered MonitorTargets. */
     void dataChanged();

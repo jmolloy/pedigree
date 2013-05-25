@@ -47,16 +47,16 @@ AtapiDisk::~AtapiDisk()
 bool AtapiDisk::initialise()
 {
   // Grab our parent.
-  AtaController *pParent = dynamic_cast<AtaController*> (m_pParent);
+  AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
   // Grab our parent's IoPorts for command and control accesses.
   IoBase *commandRegs = m_CommandRegs;
   // Commented out - unused variable.
   IoBase *controlRegs = m_ControlRegs;
 
-  // Drive spin-up
-  commandRegs->write8(0x00, 6);
-    
+  // Drive spin-up (go from standby to active, if necessary)
+  setFeatures(0x07, 0, 0, 0, 0);
+
   // Check for device presence
   uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
   commandRegs->write8(devSelect, 6);
@@ -251,13 +251,13 @@ bool AtapiDisk::initialise()
       // We have information in the error register
       uint8_t err = commandRegs->read8(1);
 
-      // Error?
-      /*if(err & 0x4)
+      // ABORT?
+      if(err & 0x4)
       {
-          WARNING("ATAPI: GET MEDIA STATUS command failed!");
+          WARNING("ATAPI: GET MEDIA STATUS command aborted by device");
           return false;
       }
-      else */if(err & 2)
+      else if(err & 2)
       {
           WARNING("ATAPI: No media present in the drive - aborting.");
           WARNING("       TODO: handle media changes/insertions/removal properly");
@@ -450,7 +450,7 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   AtaStatus status;
 
   // Grab our parent.
-  AtaController *pParent = dynamic_cast<AtaController*> (m_pParent);
+  AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
   // Grab our parent's IoPorts for command and control accesses.
   IoBase *commandRegs = m_CommandRegs;
@@ -532,7 +532,9 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   bool bDmaSetup = false;
   if(m_bDma && nRespBytes)
   {
-      bDmaSetup = m_BusMaster->begin(respBuff, nRespBytes, bWrite);
+      bDmaSetup = m_BusMaster->add(respBuff, nRespBytes);
+      if(bDmaSetup)
+        bDmaSetup = m_BusMaster->begin(bWrite);
   }
 
   // Ensure interrupts are actually enabled now.

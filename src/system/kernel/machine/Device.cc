@@ -228,7 +228,7 @@ Device::Address::Address(String n, uintptr_t a, size_t s, bool io, size_t pad) :
 #endif
 }
 
-void Device::Address::map(size_t forcedSize)
+void Device::Address::map(size_t forcedSize, bool bUser)
 {
     if(!m_Io)
         return;
@@ -247,7 +247,8 @@ void Device::Address::map(size_t forcedSize)
                                                numPages,
                                                PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory |
                                                PhysicalMemoryManager::force,
-                                               VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write |
+                                               (bUser ? 0 : VirtualAddressSpace::KernelMode) |
+                                               VirtualAddressSpace::Write |
                                                VirtualAddressSpace::WriteThrough | VirtualAddressSpace::CacheDisable,
                                                m_Address))
     {

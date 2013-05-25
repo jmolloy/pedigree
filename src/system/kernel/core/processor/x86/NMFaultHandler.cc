@@ -105,7 +105,7 @@ bool NMFaultHandler::initialise()
         mxcsr |= (MXCSR_RC_TRUNCATE << MXCSR_RC);
             
         // write the control word
-        asm volatile("stmxcsr %0;"::"m"(mxcsr));
+        asm volatile("ldmxcsr %0;"::"m"(mxcsr));
     }
     else
         asm volatile("mov %0, %%cr4;"::"r"(cr4));

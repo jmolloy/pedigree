@@ -21,7 +21,7 @@
 
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
-UsbHubDevice::UsbHubDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev)
+UsbHubDevice::UsbHubDevice(UsbDevice *dev) : UsbDevice(dev), UsbHub()
 {
 }
 
@@ -142,17 +142,13 @@ uint32_t UsbHubDevice::getPortStatus(size_t port)
 
 void UsbHubDevice::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid pid, uintptr_t pBuffer, size_t nBytes)
 {
-    UsbHub *pParent = dynamic_cast<UsbHub*>(m_pParent);
-    if(!pParent)
-        return;
+    UsbHub *pParent = static_cast<UsbHub*>(UsbDevice::m_pParent);
     pParent->addTransferToTransaction(pTransaction, bToggle, pid, pBuffer, nBytes);
 }
 
 uintptr_t UsbHubDevice::createTransaction(UsbEndpoint endpointInfo)
 {
-    UsbHub *pParent = dynamic_cast<UsbHub*>(m_pParent);
-    if(!pParent)
-        return static_cast<uintptr_t>(-1);
+    UsbHub *pParent = static_cast<UsbHub*>(UsbDevice::m_pParent);
     if((m_Speed == HighSpeed) && (endpointInfo.speed != HighSpeed) && !endpointInfo.nHubAddress)
         endpointInfo.nHubAddress = m_nAddress;
     return pParent->createTransaction(endpointInfo);
@@ -160,17 +156,13 @@ uintptr_t UsbHubDevice::createTransaction(UsbEndpoint endpointInfo)
 
 void UsbHubDevice::doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
-    UsbHub *pParent = dynamic_cast<UsbHub*>(m_pParent);
-    if(!pParent)
-        return;
+    UsbHub *pParent = static_cast<UsbHub*>(UsbDevice::m_pParent);
     pParent->doAsync(pTransaction, pCallback, pParam);
 }
 
 void UsbHubDevice::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
-    UsbHub *pParent = dynamic_cast<UsbHub*>(m_pParent);
-    if(!pParent)
-        return;
+    UsbHub *pParent = static_cast<UsbHub*>(UsbDevice::m_pParent);
     if((m_Speed == HighSpeed) && (endpointInfo.speed != HighSpeed) && (!endpointInfo.nHubAddress))
         endpointInfo.nHubAddress = m_nAddress;
     pParent->addInterruptInHandler(endpointInfo, pBuffer, nBytes, pCallback, pParam);

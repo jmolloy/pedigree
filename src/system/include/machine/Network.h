@@ -38,12 +38,12 @@ class StationInfo
     // broadcast without a known IPv4 address (and therefore no known network
     // or broadcast address).
     StationInfo() :
-      ipv4(), ipv6(0), subnetMask(), broadcast(0xFFFFFFFF),
+      ipv4(), ipv6(0), nIpv6Addresses(0), subnetMask(), broadcast(0xFFFFFFFF),
       gateway(), gatewayIpv6(IpAddress::IPv6), dnsServers(0), nDnsServers(0),
       mac(), nPackets(0), nDropped(0), nBad(0)
     {};
     StationInfo(const StationInfo& info) :
-      ipv4(info.ipv4), ipv6(info.ipv6), subnetMask(info.subnetMask),
+      ipv4(info.ipv4), ipv6(info.ipv6), nIpv6Addresses(info.nIpv6Addresses), subnetMask(info.subnetMask),
       broadcast(info.broadcast), gateway(info.gateway), gatewayIpv6(info.gatewayIpv6),
       dnsServers(info.dnsServers), nDnsServers(info.nDnsServers), mac(info.mac),
       nPackets(info.nPackets), nDropped(info.nDropped), nBad(info.nBad)
@@ -63,7 +63,7 @@ class StationInfo
     size_t      nDnsServers;
 
     MacAddress  mac; // MAC address
-    
+
     size_t nPackets;    /// Number of packets passed through the interface
     size_t nDropped;    /// Number of packets dropped by the filter
     size_t nBad;        /// Number of packets dropped because they were invalid
@@ -78,7 +78,7 @@ class StationInfo
 /**
  * A network device (sends/receives packets on a network)
  */
-class Network : public virtual Device
+class Network : public Device
 {
 public:
   Network() : m_StationInfo()
@@ -135,37 +135,37 @@ public:
 
   /** Converts an IPv4 address into an integer */
   static uint32_t convertToIpv4(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
-  
+
   /** Converts an IPv6 address into an IpAddress object */
-  static IpAddress convertToIpv4(
-                                    uint8_t a, uint8_t b,
-                                    uint8_t c, uint8_t d,
-                                    uint8_t e, uint8_t f,
-                                    uint8_t g, uint8_t h,
-                                    uint8_t i, uint8_t j,
-                                    uint8_t k, uint8_t l,
-                                    uint8_t m, uint8_t n,
-                                    uint8_t o, uint8_t p
+  static IpAddress convertToIpv6(
+                                    uint8_t a, uint8_t b = 0,
+                                    uint8_t c = 0, uint8_t d = 0,
+                                    uint8_t e = 0, uint8_t f = 0,
+                                    uint8_t g = 0, uint8_t h = 0,
+                                    uint8_t i = 0, uint8_t j = 0,
+                                    uint8_t k = 0, uint8_t l = 0,
+                                    uint8_t m = 0, uint8_t n = 0,
+                                    uint8_t o = 0, uint8_t p = 0
   );
 
   /** Calculates a checksum */
   static uint16_t calculateChecksum(uintptr_t buffer, size_t nBytes);
-  
+
   /** Packet statistics */
-  
+
   /// Called when a packet is picked up by the system, regardless of if it's
   /// eventually bad or dropped
   virtual void gotPacket()
   {
     m_StationInfo.nPackets++;
   }
-  
+
   /// Called when a packet is dropped by the system
   virtual void droppedPacket()
   {
     m_StationInfo.nDropped++;
   }
-  
+
   /// Called when a packet is determined to be "bad" by the system (ie, invalid
   /// checksum).
   virtual void badPacket()

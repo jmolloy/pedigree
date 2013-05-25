@@ -19,11 +19,23 @@
 
 #include <graphics/Graphics.h>
 
+#include <cairo/cairo.h>
+
 extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
+
+extern cairo_surface_t *g_Surface;
 
 size_t Syscall::nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t buffersz, size_t *terminalId)
 {
     size_t ret = syscall5(TUI_NEXT_REQUEST, responseToLast, reinterpret_cast<size_t>(buffer), reinterpret_cast<size_t>(sz), buffersz, reinterpret_cast<size_t>(terminalId));
+    // Memory barrier, "sz" will have changed. Reload.
+    asm volatile ("" : : : "memory");
+    return ret;
+}
+
+size_t Syscall::nextRequestAsync(size_t responseToLast, char *buffer, size_t *sz, size_t buffersz, size_t *terminalId)
+{
+    size_t ret = syscall5(TUI_NEXT_REQUEST_ASYNC, responseToLast, reinterpret_cast<size_t>(buffer), reinterpret_cast<size_t>(sz), buffersz, reinterpret_cast<size_t>(terminalId));
     // Memory barrier, "sz" will have changed. Reload.
     asm volatile ("" : : : "memory");
     return ret;
@@ -54,13 +66,23 @@ void Syscall::setCurrentConsole(size_t tabId)
     syscall1(TUI_SET_CURRENT_CONSOLE, tabId);
 }
 
+void Syscall::dataAvailable()
+{
+    syscall0(TUI_DATA_CHANGED);
+}
+
 void doRedraw(DirtyRectangle &rect)
 {
     if(rect.getX() == ~0UL && rect.getY() == ~0UL &&
        rect.getX2() == ~0UL && rect.getY2() == ~0UL)
         return;
 
-    g_pFramebuffer->redraw(rect.getX(), rect.getY(), rect.getWidth(), rect.getHeight(), true);
+    if(g_pEmu && g_Surface)
+    {
+        PedigreeGraphics::Rect rt(rect.getX(), rect.getY(), rect.getWidth(), rect.getHeight());
+        cairo_surface_flush(g_Surface);
+        g_pEmu->redraw(rt);
+    }
 }
 
 DirtyRectangle::DirtyRectangle() :

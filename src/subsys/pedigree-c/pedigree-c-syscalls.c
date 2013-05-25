@@ -43,6 +43,10 @@ int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
     return syscall3(PEDIGREE_GET_MOUNT, (long) mount_buf, (long) info_buf, n);
 }
 
+void *pedigree_sys_request_mem(size_t len) {
+    return (void *) syscall1(PEDIGREE_SYS_REQUEST_MEM, (long) len);
+}
+
 void pedigree_input_install_callback(void *p, uint32_t type, uintptr_t param)
 {
     syscall3(PEDIGREE_INPUT_INSTALL_CALLBACK, (long) p, type, param);
@@ -241,9 +245,9 @@ void pedigree_gfx_delete_fbuffer(void *p)
     syscall1(PEDIGREE_GFX_DELETE_FBUFFER, (long) p);
 }
 
-void pedigree_gfx_fbinfo(void *p, size_t *w, size_t *h, uint32_t *fmt)
+void pedigree_gfx_fbinfo(void *p, size_t *w, size_t *h, uint32_t *fmt, size_t *bypp)
 {
-    syscall4(PEDIGREE_GFX_FBINFO, (long) p, (long) w, (long) h, (long) fmt);
+    syscall5(PEDIGREE_GFX_FBINFO, (long) p, (long) w, (long) h, (long) fmt, (long) bypp);
 }
 
 void pedigree_gfx_setpalette(void* p, uint32_t *data, size_t entries)

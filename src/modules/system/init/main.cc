@@ -102,7 +102,7 @@ static bool findDisks(Device *pDev)
         if (pChild->getNumChildren() == 0 && /* Only check leaf nodes. */
                 pChild->getType() == Device::Disk)
         {
-            if ( probeDisk(dynamic_cast<Disk*> (pChild)) ) return true;
+            if ( probeDisk(static_cast<Disk*> (pChild)) ) return true;
         }
         else
         {
@@ -155,7 +155,11 @@ static void init()
     // Is there a root disk mounted?
     if(VFS::instance().find(String("root»/.pedigree-root")) == 0)
     {
+#ifndef NOGFX
         FATAL("No root disk (missing .pedigree-root?)");
+#else
+        WARNING("No root disk, but nogfx builds don't need one.");
+#endif
     }
 
     // Fill out the device hash table
@@ -186,45 +190,63 @@ static void init()
     {
         /// \todo Perhaps try and ping a remote host?
         Network* card = NetworkStack::instance().getDevice(i);
-        
-        // Ask for a DHCP lease on this card
-        /// \todo Static configuration
-        ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("dhcp"));
-        Service         *pService  = ServiceManager::instance().getService(String("dhcp"));
-        if(pFeatures->provides(ServiceFeatures::touch))
-            if(pService)
-                pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(card), sizeof(*card));
-        
+
         StationInfo info = card->getStationInfo();
 
+        // IPv6 stateless autoconfiguration and DHCP/DHCPv6 must not happen on
+        // the loopback device, which has a fixed address.
+        if(info.ipv4.getIp() != Network::convertToIpv4(127, 0, 0, 1))
+        {
+            // Auto-configure IPv6 on this card.
+            ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("ipv6"));
+            Service         *pService  = ServiceManager::instance().getService(String("ipv6"));
+            if(pFeatures->provides(ServiceFeatures::touch))
+                if(pService)
+                    pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(card), sizeof(*card));
+
+            // Ask for a DHCP lease on this card
+            /// \todo Static configuration
+            pFeatures = ServiceManager::instance().enumerateOperations(String("dhcp"));
+            pService  = ServiceManager::instance().getService(String("dhcp"));
+            if(pFeatures->provides(ServiceFeatures::touch))
+                if(pService)
+                    pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(card), sizeof(*card));
+        }
+
+        StationInfo newInfo = card->getStationInfo();
+
+        // List IPv6 addresses
+        for(size_t i = 0; i < info.nIpv6Addresses; i++)
+            NOTICE("Interface " << i << " has IPv6 address " << info.ipv6[i].toString() << " (" << Dec << i << Hex << " out of " << info.nIpv6Addresses << ")");
+
         // If the device has a gateway, set it as the default and continue
-        if (info.gateway != empty)
+        if (newInfo.gateway != empty)
         {
             if(!pDefaultCard)
                 pDefaultCard = card;
 
             // Additionally route the complement of its subnet to the gateway
             RoutingTable::instance().Add(RoutingTable::DestSubnetComplement,
-                                         info.ipv4,
-                                         info.subnetMask,
-                                         info.gateway,
+                                         newInfo.ipv4,
+                                         newInfo.subnetMask,
+                                         newInfo.gateway,
                                          String(""),
                                          card);
 
             // And the actual subnet that the card is on needs to route to... the card.
             RoutingTable::instance().Add(RoutingTable::DestSubnet,
-                                         info.ipv4,
-                                         info.subnetMask,
+                                         newInfo.ipv4,
+                                         newInfo.subnetMask,
                                          empty,
                                          String(""),
                                          card);
         }
 
         // If this isn't already the loopback device, redirect our own IP to 127.0.0.1
-        if(info.ipv4.getIp() != Network::convertToIpv4(127, 0, 0, 1))
-            RoutingTable::instance().Add(RoutingTable::DestIpSub, info.ipv4, Network::convertToIpv4(127, 0, 0, 1), String(""), NetworkStack::instance().getLoopback());
+        if(newInfo.ipv4.getIp() != Network::convertToIpv4(127, 0, 0, 1))
+            RoutingTable::instance().Add(RoutingTable::DestIpSub, newInfo.ipv4, Network::convertToIpv4(127, 0, 0, 1), String(""), NetworkStack::instance().getLoopback());
         else
-            RoutingTable::instance().Add(RoutingTable::DestIp, info.ipv4, empty, String(""), card);
+            RoutingTable::instance().Add(RoutingTable::DestIp, newInfo.ipv4, empty, String(""), card);
     }
 
     // Otherwise, just assume the default is interface zero
@@ -241,7 +263,10 @@ static void init()
     Log::instance().installCallback(logger);
 #endif
 
-    str += "Loading init program (root»/applications/TUI)\n";
+#ifdef NOGFX
+    WARNING("-- System booted - no userspace supported in nogfx builds yet. --");
+#else
+    str += "Loading init program (root»/applications/init)\n";
     bootIO.write(str, BootIO::White, BootIO::Black);
     str.clear();
 
@@ -265,15 +290,16 @@ static void init()
 
     PosixSubsystem *pSubsystem = new PosixSubsystem;
     pProcess->setSubsystem(pSubsystem);
-    
+
     new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(&init_stage2), 0x0 /* parameter */);
 
     lock.release();
-    
+
     // Wait for the program to load
     g_InitProgramLoaded.acquire();
 #else
     #warning the init module is almost useless without threads.
+#endif
 #endif
 }
 static void destroy()
@@ -285,35 +311,52 @@ extern void system_reset();
 void init_stage2()
 {
     // Load initial program.
-    File* initProg = VFS::instance().find(String("root»/applications/TUI"));
+    String fname = String("root»/applications/init");
+    File* initProg = VFS::instance().find(fname);
     if (!initProg)
     {
-        NOTICE("INIT: FileNotFound!!");
-        initProg = VFS::instance().find(String("root»/applications/tui"));
-        if (!initProg)
-        {
-            FATAL("Unable to load init program!");
-            return;
-        }
+        FATAL("INIT: FileNotFound!!");
+        return;
     }
     NOTICE("INIT: File found");
-    String fname = initProg->getName();
     NOTICE("INIT: name: " << fname);
     // That will have forked - we don't want to fork, so clear out all the chaff
     // in the new address space that's not in the kernel address space so we
     // have a clean slate.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    pProcess->getSpaceAllocator().clear();
+    pProcess->getSpaceAllocator().free(
+            pProcess->getAddressSpace()->getUserStart(),
+            pProcess->getAddressSpace()->getUserReservedStart());
     pProcess->getAddressSpace()->revertToKernelAddressSpace();
 
     DynamicLinker *pLinker = new DynamicLinker();
     pProcess->setLinker(pLinker);
 
-    if (!pLinker->loadProgram(initProg))
+    // Should we actually load this file, or request another program load the file?
+    String interpreter("");
+    if(pLinker->checkInterpreter(initProg, interpreter))
+    {
+        // Switch to the interpreter.
+        initProg = VFS::instance().find(interpreter, pProcess->getCwd());
+        if(!initProg)
+        {
+            FATAL("Unable to find init program interpreter '" << interpreter << "'!");
+            return;
+        }
+
+        // Using the interpreter - don't worry about dynamic linking.
+        delete pLinker;
+        pLinker = 0;
+        pProcess->setLinker(pLinker);
+    }
+
+    if (pLinker && !pLinker->loadProgram(initProg))
     {
         FATAL("Init program failed to load!");
     }
 
-    for (int j = 0; j < 0x20000; j += 0x1000)
+    for (int j = 0; j < 0x21000; j += 0x1000)
     {
         physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
         bool b = Processor::information().getVirtualAddressSpace().map(phys, reinterpret_cast<void*> (j+0x20000000), VirtualAddressSpace::Write);
@@ -323,15 +366,86 @@ void init_stage2()
 
     // Initialise the sigret and pthreads shizzle.
     pedigree_init_sigret();
-
     pedigree_init_pthreads();
+
+    class RunInitEvent : public Event
+    {
+    public:
+        RunInitEvent(uintptr_t addr) : Event(addr, true)
+        {}
+        size_t serialize(uint8_t *pBuffer)
+        {return 0;}
+        size_t getNumber() {return ~0UL;}
+    };
+
+    Elf *elf = 0;
+    if(pLinker)
+    {
+        elf = pLinker->getProgramElf();
+    }
+    else
+    {
+        uintptr_t loadAddr = pProcess->getAddressSpace()->getDynamicLinkerAddress();
+        MemoryMappedFile *pMmFile = MemoryMappedFileManager::instance().map(initProg, loadAddr, 0, 0, false);
+        if(!pMmFile)
+        {
+            FATAL("Couldn't memory map dynamic linker for init program");
+        }
+
+        // Create the ELF.
+        /// \todo It'd be awesome if we could just pull out the entry address.
+        elf = new Elf();
+        elf->create(reinterpret_cast<uint8_t*>(loadAddr), initProg->getSize());
+    }
+
+    if(pLinker)
+    {
+        // Find the init function location, if it exists.
+        uintptr_t initLoc = elf->getInitFunc();
+        if (initLoc)
+        {
+            NOTICE("initLoc active: " << initLoc);
+
+            RunInitEvent *ev = new RunInitEvent(initLoc);
+            // Poke the initLoc so we know it's mapped in!
+            volatile uintptr_t *vInitLoc = reinterpret_cast<volatile uintptr_t*> (initLoc);
+            volatile uintptr_t tmp = * vInitLoc;
+            *vInitLoc = tmp; // GCC can't ignore a write.
+            asm volatile("" :::"memory"); // Memory barrier.
+            Processor::information().getCurrentThread()->sendEvent(ev);
+            // Yield, so the code gets run before we return.
+            Scheduler::instance().yield();
+        }
+    }
+
+    uintptr_t *argv_loc = reinterpret_cast<uintptr_t *>(0x20020000);
+    memset(argv_loc, 0, PhysicalMemoryManager::instance().getPageSize());
+    argv_loc[0] = reinterpret_cast<uintptr_t>(&argv_loc[2]);
+    memcpy(&argv_loc[2], static_cast<const char *>(fname), fname.length());
+
+    uintptr_t *env_loc = reinterpret_cast<uintptr_t *>(0x20020400);
+
+    uintptr_t *stack = reinterpret_cast<uintptr_t*>(0x20020000 - 24);
 
 #if 0
     system_reset();
 #else
-    // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
-    new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(pLinker->getProgramElf()->getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x20020000-8) /* Stack */);
-    
+
+    uintptr_t entryPoint = elf->getEntryPoint();
+    if(!pLinker)
+    {
+        // Free up resources used in the metadata-only ELF object.
+        delete elf;
+    }
+
+    // Alrighty - lets create a new thread for this program - -8 as PPC assumes
+    // the previous stack frame is available...
+    new Thread(
+            pProcess,
+            reinterpret_cast<Thread::ThreadStartFunc>(entryPoint),
+            argv_loc /* parameter */,
+            reinterpret_cast<void*>(stack) /* Stack */);
+
     g_InitProgramLoaded.release();
 #endif
 }

@@ -61,7 +61,7 @@ class VmwareGraphics : public Display
     
     public:
         VmwareGraphics(Device *pDev) :
-            Device(pDev), Display(pDev), m_pIo(0),
+            Display(pDev), m_pIo(0),
             m_Framebuffer(0), m_CommandRegion(0),
             m_pFramebufferRawAddress(0)
         {
@@ -330,7 +330,7 @@ class VmwareGraphics : public Display
             
             /// \todo If we switch to any mode after the first one has been set,
             ///       the old region needs to be deallocated.
-            m_pFramebufferRawAddress->map(height * bytesPerLine);
+            m_pFramebufferRawAddress->map(height * bytesPerLine, true);
             m_pFramebuffer->setFramebuffer(reinterpret_cast<uintptr_t>(m_Framebuffer->virtualAddress()));
 
             // Blank the framebuffer, new mode
@@ -391,6 +391,14 @@ class VmwareGraphics : public Display
                 virtual void hwRedraw(size_t x = ~0UL, size_t y = ~0UL,
                                       size_t w = ~0UL, size_t h = ~0UL)
                 {
+                    if(x == ~0UL)
+                        x = 0;
+                    if(y == ~0UL)
+                        y = 0;
+                    if(w == ~0UL)
+                        w = getWidth();
+                    if(h == ~0UL)
+                        h = getHeight();
                     m_pDisplay->redraw(x, y, w, h);
                 }
                 

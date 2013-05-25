@@ -36,7 +36,10 @@ void Processor::reset()
 
 void Processor::haltUntilInterrupt()
 {
-    asm volatile("sti; hlt; cli;");
+    bool bWasInterrupts = getInterrupts();
+    __asm__ __volatile__("sti; hlt");
+    if(!bWasInterrupts)
+        setInterrupts(false);
 }
 
 #endif

@@ -430,7 +430,7 @@ int gethostname(char *name, size_t len)
     if(!name || !len)
         return -1;
 
-    result = pedigree_config_query("select * from 'network-generic' WHERE `key` = 'hostname';");
+    result = pedigree_config_query("select * from 'network_generic' WHERE `key` = 'hostname';");
     if((result == -1) || (pedigree_config_was_successful(result) == -1) || (pedigree_config_numrows(result) == 0))
     {
         if(result != -1)
@@ -454,7 +454,7 @@ int	sethostname(char *name, size_t len)
 
     // Need to add permission and name checking
 
-    const char *query = "update 'network-generic' set `value`= '%s' WHERE `key` = 'hostname'";
+    const char *query = "update 'network_generic' set `value`= '%s' WHERE `key` = 'hostname'";
     char *tmp    = pedigree_config_escape_string(name);
     char *buffer = (char*)malloc(strlen(query) + strlen(tmp) - 2 + 1);
 
@@ -841,8 +841,7 @@ int bind(int sock, const struct sockaddr* local_addr, size_t addrlen)
 
 int getpeername(int sock, struct sockaddr* addr, size_t *addrlen)
 {
-    STUBBED("getpeername");
-    return -1;
+    return syscall3(POSIX_GETPEERNAME, sock, (long) addr, (long) addrlen);
 }
 
 int getsockname(int sock, struct sockaddr* addr, size_t *addrlen)
@@ -1109,11 +1108,11 @@ struct servent* getservbyname(const char *name, const char *proto)
     if(proto)
     {
         escProto = pedigree_config_escape_string(proto);
-        sprintf(buf, "select * from 'network-services' where name = '%s' and proto = '%s'", escName, escProto);
+        sprintf(buf, "select * from 'network_services' where name = '%s' and proto = '%s'", escName, escProto);
         free(escProto);
     }
     else
-        sprintf(buf, "select * from 'network-services' where name = '%s'", escName);
+        sprintf(buf, "select * from 'network_services' where name = '%s'", escName);
 
     free(escName);
 
@@ -1166,9 +1165,9 @@ struct servent* getservbyport(int port, const char *proto)
     char buf[256];
 
     if(proto)
-        sprintf(buf, "select * from 'network-services' where port = %d and proto = '%s'", port, pedigree_config_escape_string(proto));
+        sprintf(buf, "select * from 'network_services' where port = %d and proto = '%s'", port, pedigree_config_escape_string(proto));
     else
-        sprintf(buf, "select * from 'network-services' where port = %d", port);
+        sprintf(buf, "select * from 'network_services' where port = %d", port);
 
     int result = pedigree_config_query(buf);
     if (result == -1 || pedigree_config_was_successful(result) || !pedigree_config_numrows(result))
@@ -1301,8 +1300,22 @@ int inet_pton(void)
 
 const char* inet_ntop(int af, const void* src, char* dst, unsigned long size)
 {
-    STUBBED("inet_ntop");
-    return 0;
+    if(af != AF_INET)
+    {
+        errno = EAFNOSUPPORT;
+        return 0;
+    }
+
+    /// \todo endianness is terrible here.
+    uint32_t addr = *((uint32_t *) src);
+    int n = snprintf(dst, size, "%u.%u.%u.%u", addr & 0xff, (addr & 0xff00) >> 8, (addr & 0xff0000) >> 16, (addr & 0xff000000) >> 24);
+    if(n > size)
+    {
+        errno = ENOSPC;
+        return 0;
+    }
+
+    return dst;
 }
 
 ssize_t readlink(const char* path, char* buf, size_t bufsize)
@@ -1404,29 +1417,23 @@ struct dlHandle
     int mode;
 };
 
+extern void *_libload_dlopen(const char *, int) __attribute__ ((weak));
+extern void *_libload_dlsym(void *, const char *) __attribute__ ((weak));
+extern int _libload_dlclose(void *) __attribute__ ((weak));
+
 void *dlopen(const char *file, int mode)
 {
-    void* p = (void*) malloc(sizeof(struct dlHandle));
-    if (!p)
-        return 0;
-    void* ret = (void*) syscall3(POSIX_DLOPEN, (long) file, mode, (long) p);
-    if (ret)
-        return ret;
-    free(p);
-    return 0;
+    return _libload_dlopen(file, mode);
 }
 
 void *dlsym(void* handle, const char* name)
 {
-    return (void*) syscall2(POSIX_DLSYM, (long) handle, (long) name);
+    return _libload_dlsym(handle, name);
 }
 
 int dlclose(void *handle)
 {
-    STUBBED("dlclose");
-    if (handle)
-        free(handle);
-    return 0;
+    return _libload_dlclose(handle);
 }
 
 char *dlerror(void)
@@ -1595,7 +1602,7 @@ int getaddrinfo(const char *nodename, const char *servname, const struct addrinf
     static struct sockaddr_in addr;
     addr.sin_family = AF_INET;
     if(servname)
-        addr.sin_port = atoi(servname);
+        addr.sin_port = htons(atoi(servname));
 
     // Fill the basics of the return pointer
     if(hints)
@@ -1741,6 +1748,11 @@ void *mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off)
     return (void*) syscall1(POSIX_MMAP, (long) &t);
 }
 
+int msync(void *addr, size_t len, int flags)
+{
+    return (int) syscall3(POSIX_MSYNC, (long) addr, (long) len, flags);
+}
+
 int munmap(void *addr, size_t len)
 {
     return (long) syscall2(POSIX_MUNMAP, (long) addr, (long) len);
@@ -1767,7 +1779,11 @@ int getgroups(int gidsetsize, gid_t grouplist[])
 
 size_t getpagesize(void)
 {
-    return sysconf(_SC_PAGESIZE);
+    // Avoid masses of system calls by assuming the page size doesn't actually ever change.
+    static size_t sz = (size_t) ~0;
+    if(sz == (size_t) ~0)
+        sz = sysconf(_SC_PAGESIZE);
+    return sz;
 }
 
 char *realpath(const char *file_name, char *resolved_name)
@@ -2157,6 +2173,18 @@ char *ptsname(int fildes)
 char *crypt(const char *key, const char *salt)
 {
     STUBBED("crypt");
+    return 0;
+}
+
+int ffsl(long int i)
+{
+    STUBBED("ffsl");
+    return 0;
+}
+
+int ffsll(long long int i)
+{
+    STUBBED("ffsll");
     return 0;
 }
 

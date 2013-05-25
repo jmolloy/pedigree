@@ -40,6 +40,13 @@ public:
     /** Creates a new DynamicLinker from another. Copies all mappings. */
     DynamicLinker(DynamicLinker &other);
 
+    /** Checks the given program for a requested interpreter, that we should
+        run instead of loading the binary ourselves. */
+    bool checkInterpreter(File *pFile, String &actualFilename)
+    {
+        return loadProgram(pFile, true, true, &actualFilename);
+    }
+
     /** Checks dependencies for a given program. Returns true if
         all dependencies are available and loadable, false if not. */
     bool checkDependencies(File *pFile)
@@ -51,7 +58,7 @@ public:
         linker will also load all library dependencies. If any of
         these loads fails, false is returned.
         \param pFile The ELF file. */
-    bool loadProgram(File *pFile, bool bDryRun = false);
+    bool loadProgram(File *pFile, bool bDryRun = false, bool bInterpreter = false, String *sInterpreter = 0);
 
     /** Loads a shared object into this address space (along with
         any dependencies.

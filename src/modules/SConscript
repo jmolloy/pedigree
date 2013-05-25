@@ -110,7 +110,8 @@ module_subdirs = [
     'splash',
     'config',
     'status_server',
-    'gfx-deps'
+    'gfx-deps',
+    'preload'
 ]
 
 if env['installer']:
@@ -163,9 +164,15 @@ elif env['ARCH_TARGET'] == 'PPC':
 else:
     arch_subdir = 'unknown'
 
+def dma_fix(s):
+    if s == 'X86' or s == 'X64':
+        return 'X86'
+    else:
+        return s
+
 # Custom subdirectories for specific modules
 custom_subdirs = {
-    'dma'           : [env['ARCH_TARGET'].lower()],
+    'dma'           : [dma_fix(env['ARCH_TARGET']).lower()],
     'linker'        : [arch_subdir]
 }
 
@@ -181,6 +188,7 @@ custom_incpath = {
     'status_server' : ['#/src/system/kernel'],
     'TUI'           : ['#/src/system/kernel'],
     'init'          : ['#/src/system/kernel', '#/src'],
+    'splash'        : ['#/src/system/kernel'], # For nogfx
     'linker'        : ['#/src/modules/system/linker'],
     'usb-glue'      : ['#/src/system/kernel/machine/arm_beagle'] # TODO: handle other machine types
 }
@@ -193,7 +201,10 @@ custom_libs = {
 if 'STATIC_DRIVERS' in env['CPPDEFINES']:
     default_libs = []
 else:
-    default_libs = ['gcc', 'kernelrtti']
+    if env['ARCH_TARGET'] == 'X64':
+        default_libs = ['gcc', 'kernelrtti-nopic']
+    else:
+        default_libs = ['gcc', 'kernelrtti']
 
 # Default library paths
 default_libpath = [
@@ -317,7 +328,7 @@ initrdList += [builddir.abspath + '/modules/' + i + '.o' for i in initrd_modules
 # Subsystems
 initrdList += [builddir.abspath + '/subsystems/posix.o']
 initrdList += [builddir.abspath + '/subsystems/pedigree-c.o']
-if env['ARCH_TARGET'] == 'X86':
+if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
     initrdList += [builddir.abspath + '/subsystems/native.o']
 
 env.Depends(initrdFile, "drivers")

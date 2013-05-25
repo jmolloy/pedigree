@@ -60,7 +60,12 @@ class RoutingTable
             DestIpSub,
             DestSubnet,
             DestSubnetComplement,
-            Named
+            DestIpv6,
+            DestIpv6Sub,
+            DestPrefix,
+            DestPrefixComplement,
+            Named,
+            NamedV6
         };
 
         RoutingTable();
@@ -100,12 +105,15 @@ class RoutingTable
         /** Grabs the default route */
         Network *DefaultRoute();
 
+        /** Grabs the default route for IPv6 */
+        Network *DefaultRouteV6();
+
     private:
 
         static RoutingTable m_Instance;
 
         bool m_bHasRoutes;
-        
+
         Mutex m_TableLock;
 
         /** Used to finalise the determined route */

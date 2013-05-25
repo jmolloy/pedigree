@@ -17,10 +17,12 @@
 #ifndef KERNEL_LINKER_ELF_H
 #define KERNEL_LINKER_ELF_H
 
+#ifndef __PEDIGREE__
 #include <compiler.h>
 #include <processor/types.h>
 #include <utilities/List.h>
 #include <linker/SymbolTable.h>
+#endif
 
 /** @addtogroup kernellinker
  * @{ */
@@ -31,6 +33,12 @@
 #define DEBUG(...)
 #endif
 
+// Object file types
+#define ET_NONE           0x0
+#define ET_REL            0x1
+#define ET_EXEC           0x2
+#define ET_DYN            0x3
+#define ET_CORE           0x4
 
 // Section header types - common to Elf32 and Elf64.
 #define SHT_PROGBITS      0x1     // The data is contained in the program file.
@@ -52,6 +60,11 @@
 #define SHF_ALLOC         0x2
 #define SHF_EXECINSTR     0x4
 #define SHF_MASKPROC      0xf0000000
+
+// Program header flags - common to Elf32 and Elf64.
+#define PF_X              0x1
+#define PF_W              0x2
+#define PF_R              0x4
 
 // Process header flags - common to Elf32 and Elf64.
 #define	PT_NULL    0 /* Program header table entry unused */
@@ -141,6 +154,8 @@ typedef  int64_t Elf_Sxword;
 
 #endif
 
+#ifndef _NO_ELF_CLASS
+
 /**
  * Provides an implementation of a 32-bit Executable and Linker format file parser.
  * The ELF data can be loaded either by supplying an entire ELF file in a buffer, or
@@ -193,6 +208,9 @@ class Elf
         /** Returns a list of required libraries before this object will load. */
         List<char*> &neededLibraries();
 
+        /** Returns the name of the interpreter set aside for this program, or an empty string. */
+        String &getInterpreter();
+
         /** Returns the virtual address of the last byte to be written. Used to calculate the
         * sbrk memory breakpoint. */
         uintptr_t getLastAddress();
@@ -242,6 +260,7 @@ class Elf
 
     protected:
 
+#endif
         struct ElfHeader_t
         {
             uint8_t  ident[16];
@@ -308,6 +327,14 @@ class Elf
             #endif
         } PACKED;
 
+        struct ElfHash_t
+        {
+            Elf_Word nbucket;
+            Elf_Word nchain;
+            // buckets follow
+            // chains follow
+        };
+
         struct ElfDyn_t
         {
             Elf_Sxword tag;
@@ -331,6 +358,7 @@ class Elf
             Elf_Sxword addend;
         } PACKED;
 
+#ifndef _NO_ELF_CLASS
     private:
 
         bool relocate(uint8_t *pBuffer, uintptr_t length);
@@ -389,12 +417,15 @@ class Elf
         SymbolTable           m_SymbolTable;
         uintptr_t             m_InitFunc;
         uintptr_t             m_FiniFunc;
+        String                m_sInterpreter;
 
     private:
         /** The assignment operator
         *\note currently not implemented */
         Elf &operator = (const Elf &);
 };
+
+#endif
 
 /** @} */
 

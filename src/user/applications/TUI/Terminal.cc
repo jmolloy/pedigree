@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <graphics/Graphics.h>
 
@@ -28,6 +29,8 @@ extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
 
 extern Header *g_pHeader;
 extern rgb_t g_MainBackgroundColour;
+
+extern cairo_t *g_Cairo;
 
 Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground) :
     m_pBuffer(0), m_pFramebuffer(0), m_pXterm(0), m_Len(0), m_WriteBufferLen(0), m_TabId(0), m_bHasPendingRequest(false),
@@ -37,25 +40,42 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
     // m_pBuffer = Syscall::newBuffer();
     // if (!m_pBuffer) log("Buffer not created correctly!");
 
-    m_pFramebuffer = g_pFramebuffer->createChild(m_OffsetLeft, m_OffsetTop, nWidth, nHeight);
-    if((!m_pFramebuffer) || (!m_pFramebuffer->getRawBuffer()))
-        return;
+    //m_pFramebuffer = g_pFramebuffer->createChild(m_OffsetLeft, m_OffsetTop, nWidth, nHeight);
+    //if((!m_pFramebuffer) || (!m_pFramebuffer->getRawBuffer()))
+    //    return;
 
-    uint32_t backColour = PedigreeGraphics::createRgb(g_MainBackgroundColour.r, g_MainBackgroundColour.g, g_MainBackgroundColour.b);
-    m_pFramebuffer->rect(0, 0, nWidth, nHeight, backColour, PedigreeGraphics::Bits24_Rgb);
+    //uint32_t backColour = PedigreeGraphics::createRgb(g_MainBackgroundColour.r, g_MainBackgroundColour.g, g_MainBackgroundColour.b);
+    //m_pFramebuffer->rect(0, 0, nWidth, nHeight, backColour, PedigreeGraphics::Bits24_Rgb);
+
+    cairo_save(g_Cairo);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+
+    cairo_set_source_rgba(
+            g_Cairo,
+            g_MainBackgroundColour.r / 256.0,
+            g_MainBackgroundColour.g / 256.0,
+            g_MainBackgroundColour.b / 256.0,
+            0.8);
+
+    cairo_rectangle(g_Cairo, m_OffsetLeft, m_OffsetTop, nWidth, nHeight);
+    cairo_fill(g_Cairo);
+
+    cairo_restore(g_Cairo);
 
     size_t tabId = pHeader->addTab(pName, TAB_SELECTABLE);
 
     setTabId(tabId);
 
+    strcpy(m_pName, pName);
+
     Syscall::createConsole(tabId, pName);
 
 #ifndef NEW_XTERM
-    m_pXterm = new Xterm(m_pFramebuffer, nWidth, nHeight, m_OffsetLeft, m_OffsetTop, this);
+    m_pXterm = new Xterm(0, nWidth, nHeight, m_OffsetLeft, m_OffsetTop, this);
 #else
     Display::ScreenMode mode;
-    mode.width = nWidth;
-    mode.height = nHeight-offsetTop;
+    mode.width = nWidth - 1;
+    mode.height = nHeight-offsetTop - 1;
     mode.pf.mRed = 0xFF;
     mode.pf.mGreen = 0xFF;
     mode.pf.mBlue = 0xFF;
@@ -76,7 +96,14 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
         close(2);
         Syscall::setCtty(pName);
         execl("/applications/login", "/applications/login", 0);
-        syslog(LOG_ALERT, "Launching login failed!");
+        syslog(LOG_ALERT, "Launching login failed (next line is the error in errno...)");
+        syslog(LOG_ALERT, strerror(errno));
+
+        DirtyRectangle rect;
+        write("Couldn't load 'login' for this terminal... ", rect);
+        write(strerror(errno), rect);
+        write("\r\n\r\nYour installation of Pedigree may not be complete, or you may have hit a bug.", rect);
+        redrawAll(rect);
     }
 
     m_Pid = pid;
@@ -89,19 +116,7 @@ Terminal::~Terminal()
 
 void Terminal::renewBuffer(size_t nWidth, size_t nHeight)
 {
-    if(!m_pFramebuffer)
-        return;
-
-    delete m_pFramebuffer;
-
-    m_pFramebuffer = g_pFramebuffer->createChild(m_OffsetLeft, m_OffsetTop, nWidth, nHeight);
-    if((!m_pFramebuffer) || (!m_pFramebuffer->getRawBuffer()))
-        return;
-
-    uint32_t backColourInt = PedigreeGraphics::createRgb(g_MainBackgroundColour.r, g_MainBackgroundColour.g, g_MainBackgroundColour.b);
-    m_pFramebuffer->rect(0, 0, nWidth, nHeight, backColourInt, PedigreeGraphics::Bits24_Rgb);
-
-    m_pXterm->resize(nWidth, nHeight, m_pFramebuffer);
+    m_pXterm->resize(nWidth, nHeight, 0);
 }
 
 void Terminal::addToQueue(uint64_t key)
@@ -196,6 +211,12 @@ char Terminal::getFromQueue()
         return 0;
 }
 
+
+void Terminal::clearQueue()
+{
+    m_Len = 0;
+}
+
 #include <syslog.h>
 void Terminal::write(char *pStr, DirtyRectangle &rect)
 {
@@ -286,12 +307,15 @@ void Terminal::addToQueue(char c)
     if(m_Len >= 256)
         return;
     m_pQueue[m_Len++] = c;
+
+    // Key available in queue, we should notify the upper layers.
+    Syscall::dataAvailable();
 }
 
 void Terminal::setActive(bool b, DirtyRectangle &rect)
 {
     // Force complete redraw
-    m_pFramebuffer->redraw(0, 0, m_pFramebuffer->getWidth(), m_pFramebuffer->getHeight(), false);
+    // m_pFramebuffer->redraw(0, 0, m_pFramebuffer->getWidth(), m_pFramebuffer->getHeight(), false);
 
     // if (b)
     //    Syscall::setCurrentBuffer(m_pBuffer);

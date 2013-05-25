@@ -6,6 +6,10 @@
 import os.path
 Import(['env'])
 
+# Build libraries & other support directories before applications.
+subdirs = ['libraries']
+SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
+
 tmp = env.Clone()
 
 ####### APPLICATION BUILDS #######
@@ -16,8 +20,14 @@ def fixFlags(flags):
     flags = flags.replace('-nostdinc', '')
     flags = flags.replace('-ffreestanding', '')
     flags = flags.replace('-nostdlib', '')
-    if env['ARCH_TARGET']  in ['X86', 'X64']:
+    flags = flags.replace('-fno-builtin', '')
+    if env['ARCH_TARGET'] in ['X86', 'X64']:
+        flags = flags.replace('-mno-mmx', '')
+        flags = flags.replace('-mno-sse', '')
         flags += ' -msse2'
+    if env['ARCH_TARGET'] == 'X64':
+        flags = flags.replace('-mcmodel=kernel', '-mcmodel=small')
+        flags = flags.replace('-mno-red-zone', '')
     if env['ARCH_TARGET'] == 'PPC':
         flags += ' -U__svr4__ '
     return flags
@@ -26,6 +36,22 @@ appsbase = 'applications/'
 appoutputdir    = "#" + env["PEDIGREE_BUILD_APPS"]
 imagesdir       = env["PEDIGREE_IMAGES_DIR"]
 builddir        = "#" + env["PEDIGREE_BUILD_BASE"]
+
+suffix = '-noarch'
+if env['ARCH_TARGET'] == 'X86':
+    suffix = '-i686'
+elif env['ARCH_TARGET'] == 'X64':
+    suffix = '-amd64'
+elif env['ARCH_TARGET'] == 'PPC':
+    suffix = '-ppc'
+elif env['ARCH_TARGET'] == 'ARM':
+    suffix = '-arm'
+
+# libloader (userspace dynamic linker)
+libload_sources = [
+    'loader.cc',
+    'stubs%s.s' % (suffix,)
+]
 
 # Applications which just use POSIX libc/libm
 posixc_apps = [
@@ -40,7 +66,15 @@ posixc_apps = [
     'modload',
     'modunload',
     'modlist',
-    'crashtest'
+    'crashtest',
+    'gears',
+    'init',
+    'preloadd'
+]
+
+# Applications which use Mesa
+mesa_apps = [
+    'gears',
 ]
 
 # Applications which use libSDL
@@ -53,19 +87,36 @@ cpp_apps = [
     'TUI',
     'apptest',
     'config',
-    'thread-test'
+    'thread-test',
+    'ipc-test-server',
+    'ipc-test-client',
+    'winman',
+    'uitest'
 ]
 
 # Custom include paths for specific applications
 custom_incpath = {
-    'TUI' : ['#/src/modules/system/TUI',
-             '#/src/user/applications/TUI/include']
+    'TUI' : ['#/src/user/libraries/libui/include',
+             '#/src/modules/system/TUI',
+             '#/images/local/include',
+             '#/images/local/include/freetype2'],
+             #'#/src/user/applications/TUI/include'],
+    'uitest' : ['#/src/user/libraries/libui/include'],
+    'gears' : ['#/src/user/libraries/libui/include'],
+    'winman' : ['#/src/user/libraries/libui/include',
+                '#/src/user/libraries/libui/src',
+                '#/images/local/include',
+                '#/images/local/include/pixman-1',
+                '#/images/local/include/freetype2']
 }
 
 # Custom libraries for specific applications
 custom_libs = {
-    'TUI' : ['png', 'freetype', 'z'],
-    'thread-test' : ['pthread']
+    'TUI' : ['cairo', 'pixman-1', 'fontconfig', 'expat', 'freetype', 'png', 'z', 'ui', 'iconv'],
+    'thread-test' : ['pthread'],
+    'uitest' : ['ui'],
+    'gears' : ['ui'],
+    'winman': ['cairo', 'pixman-1', 'fontconfig', 'expat', 'freetype', 'png', 'z'],
 }
 
 # Default libraries for all applications
@@ -73,12 +124,14 @@ default_libs = ['gcc', 'c', 'm', 'pedigree-c']
 
 # Search paths for libraries
 libpath = [
-    builddir
+    builddir,
+    builddir + '/libs',
 ]
 
 # Default include paths
 incpath = [
-    '#/src/subsys/posix/include'
+    '#/src/subsys/posix/include',
+    '#/src/subsys/posix/syscalls',
 ]
 
 all_apps = posixc_apps + sdl_apps + cpp_apps
@@ -90,30 +143,57 @@ tmp['LIBS'] = default_libs
 tmp['LIBPATH'] = libpath
 tmp['CPPPATH'] = incpath
 
+# -static stops GCC placing the path to the dynamic linker into the binary, and creates a non-relocateable executable.
+libload_env = tmp.Clone()
+libload_env['CFLAGS'] += ' -static '
+libload_env['CXXFLAGS'] += ' -static '
+libload_env['CPPPATH'] += ['#/src/system/include/linker',
+                           '#/src/subsys/posix/include/c++/4.3.2',
+                           '#/src/subsys/posix/include/c++/4.3.2/i686-pedigree']
+libload_env['LIBPATH'] += [builddir, imagesdir + 'libraries']
+libload_env['LIBS'] = ['-lgcc']
+libload = os.path.join(builddir, 'libload.so')
+libload_linkscript = libload_env.File(os.path.join(appsbase, 'libload', 'libload.ld'))
+in_files = [os.path.join(appsbase, 'libload', x) for x in libload_sources]
+in_files += [os.path.join(imagesdir, 'libraries', 'libstdc++.a'),
+             os.path.join(builddir, 'libc.a'),
+             os.path.join(builddir, 'libm.a'),
+             os.path.join(builddir, 'libpedigree.a'),
+             os.path.join(builddir, 'libpedigree-c.a')]
+libload_env.Program(libload, in_files, LINKFLAGS="-static --no-whole-archive -nodefaultlibs -T%s " % (libload_linkscript,))
+libload_env.Depends(libload, "crt0")
+
+env.Alias('libs', libload)
+
 for i in all_apps:
     e = tmp.Clone()
 
-    if i in sdl_apps:
-        e['LIBS'] += ['SDL', 'pthread']
-        e['CPPPATH'] += ['#/src/lgpl/SDL-1.2.14/include']
-
-    # SDL apps require libpedigree (C++)
-    if i in cpp_apps or i in sdl_apps:
-        e['LIBS'] += ['pedigree', 'stdc++']
-        e['LIBPATH'] += [imagesdir + 'libraries']
-        e['CPPPATH'] += ['#/src/subsys/native/include',
-                         '#/src/subsys/posix/include/c++/4.3.2',
-                         '#/src/subsys/posix/include/c++/4.3.2/i686-pedigree']
-
     base = appsbase + i
 
-    # Handle extra include directories
+    # Handle custom paths and libraries.
     if(os.path.exists(base + '/include')):
         e['CPPPATH'] += [base + '/include']
     if(custom_incpath.has_key(i)):
         e['CPPPATH'] += custom_incpath[i]
     if(custom_libs.has_key(i)):
         e['LIBS'] += custom_libs[i]
+
+    # Handle SDL dependencies.
+    if i in sdl_apps:
+        e['LIBS'] += ['SDL', 'pthread']
+        e['CPPPATH'] += ['#/src/lgpl/SDL-1.2.14/include']
+    if i in mesa_apps:
+        e['LIBS'] += ['OSMesa']
+        e['LIBPATH'] += ['%s/libraries' % (imagesdir,)]
+        e['CPPPATH'] += ['%s/include' % (imagesdir,)]
+
+    # Handle C++-related dependencies.
+    if i in cpp_apps or i in sdl_apps or i in mesa_apps:
+        e['LIBS'] += ['pedigree', 'stdc++']
+        e['LIBPATH'] += [imagesdir + 'libraries']
+        e['CPPPATH'] += ['#/src/subsys/native/include',
+                         '#/src/subsys/posix/include/c++/4.3.2',
+                         '#/src/subsys/posix/include/c++/4.3.2/i686-pedigree']
 
     output = builddir + '/apps/' + i
     files = [Glob(base + '/*.c'), Glob(base + '/*.cc')]
@@ -123,3 +203,4 @@ for i in all_apps:
 
     env.Depends(output, "crt0")
     env.Depends(output, "libs")
+

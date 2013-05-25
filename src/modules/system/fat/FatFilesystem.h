@@ -54,6 +54,7 @@ public:
   virtual void truncate(File *pFile);
   virtual void fileAttributeChanged(File *pFile);
   virtual void cacheDirectoryContents(File *pFile);
+  virtual void extend(File *pFile, size_t size);
 
 protected:
 

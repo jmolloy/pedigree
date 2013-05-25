@@ -76,7 +76,10 @@ Png::Png(const char *filename) :
 
     // Grab the info header information.
     int bit_depth, color_type, interlace_type, compression_type, filter_method;
-    png_get_IHDR(m_PngPtr, m_InfoPtr, &m_nWidth, &m_nHeight, &bit_depth, &color_type, &interlace_type, &compression_type, &filter_method);
+    png_uint_32 w, h;
+    png_get_IHDR(m_PngPtr, m_InfoPtr, &w, &h, &bit_depth, &color_type, &interlace_type, &compression_type, &filter_method);
+    m_nWidth = w;
+    m_nHeight = h;
 
     if (bit_depth != 8)
     {

@@ -17,6 +17,7 @@
 #include "Ethernet.h"
 #include "Arp.h"
 #include "Ipv4.h"
+#include "Ipv6.h"
 #include "RawManager.h"
 #include <Module.h>
 #include <Log.h>
@@ -40,7 +41,7 @@ void Ethernet::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t
 {
   if(!packet || !nBytes || !pCard)
       return;
-  
+
   // Check for filtering
   if(!NetworkFilter::instance().filter(1, packet, nBytes))
   {
@@ -69,9 +70,16 @@ void Ethernet::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t
       break;
 
     case ETH_IPV4:
-      // NOTICE("IP packet!");
+      // NOTICE("IPv4 packet!");
 
       Ipv4::instance().receive(nBytes, packet, pCard, sizeof(ethernetHeader));
+
+      break;
+
+    case ETH_IPV6:
+      // NOTICE("IPv6 packet!");
+
+      Ipv6::instance().receive(nBytes, packet, pCard, sizeof(ethernetHeader));
 
       break;
 
@@ -117,13 +125,11 @@ void Ethernet::send(size_t nBytes, uintptr_t packet, Network* pCard, MacAddress 
   if(!pCard || !pCard->isConnected())
     return; // NIC isn't active
 
-  // allocate space for the new packet with an ethernet header
-  size_t newSize = nBytes + sizeof(ethernetHeader);
-  uint8_t* newPacket = new uint8_t[newSize];
-  uintptr_t packAddr = reinterpret_cast<uintptr_t>(newPacket);
+  // Move the payload for the ethernet header to go in
+  memmove(reinterpret_cast<void*>(packet + sizeof(ethernetHeader)), reinterpret_cast<void*>(packet), nBytes);
 
   // get the ethernet header pointer
-  ethernetHeader* ethHeader = reinterpret_cast<ethernetHeader*>(newPacket);
+  ethernetHeader* ethHeader = reinterpret_cast<ethernetHeader*>(packet);
 
   // copy in the data
   StationInfo me = pCard->getStationInfo();
@@ -131,14 +137,9 @@ void Ethernet::send(size_t nBytes, uintptr_t packet, Network* pCard, MacAddress 
   memcpy(ethHeader->sourceMac, me.mac, 6);
   ethHeader->type = HOST_TO_BIG16(type);
 
-  // and then throw in the payload
-  memcpy(reinterpret_cast<void*>(packAddr + sizeof(ethernetHeader)), reinterpret_cast<void*>(packet), nBytes);
-
   // send it over the network
-  pCard->send(newSize, packAddr);
+  pCard->send(nBytes + sizeof(ethernetHeader), packet);
 
   // and dump it into any raw sockets (note the -1 for protocol - this means WIRE level endpoints)
   // RawManager::instance().receive(packAddr, newSize, 0, -1, pCard);
-
-  delete [] newPacket;
 }

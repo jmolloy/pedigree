@@ -36,7 +36,7 @@ Endpoint* TcpEndpoint::accept()
         LockGuard<Mutex> guard(m_IncomingConnectionLock);
         e = m_IncomingConnections.popFront();
     }
-    
+
     return e;
 }
 
@@ -150,12 +150,15 @@ size_t TcpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, uint32_t se
         size_t sz = m_ShadowDataStream.getDataSize();
         if(sz > m_ShadowDataStream.getSize())
         {
-            ERROR("Shadow data stream has potentially been corrupted: " << sz << ", " << m_ShadowDataStream.getSize() << "!");
+            ERROR("TCP: Shadow data stream has potentially been corrupted: " << sz << ", " << m_ShadowDataStream.getSize() << "!");
             return 0;
         }
         uint8_t *buff = new uint8_t[sz];
         sz = m_ShadowDataStream.read(reinterpret_cast<uintptr_t>(buff), sz);
-        m_DataStream.write(reinterpret_cast<uintptr_t>(buff), sz);
+        size_t o = m_DataStream.write(reinterpret_cast<uintptr_t>(buff), sz);
+
+        if(!o)
+            DEBUG_LOG("TCP: wrote zero bytes to a data stream!");
 
         // Data has arrived!
         for(List<Socket*>::Iterator it = m_Sockets.begin(); it != m_Sockets.end(); ++it)
@@ -210,13 +213,13 @@ bool TcpEndpoint::shutdown(ShutdownType what)
     if(what == ShutSending)
     {
         // No longer able to write!
-        NOTICE("No longer able to send!");
+        NOTICE("TCP: Endpoint " << reinterpret_cast<uintptr_t>(this) << ": no longer able to send!");
         TcpManager::instance().Shutdown(m_ConnId);
         return true;
     }
     else if(what == ShutReceiving)
     {
-        WARNING("No longer able to receive!");
+        NOTICE("TCP: Endpoint " << reinterpret_cast<uintptr_t>(this) << ": no longer able to receive!");
         TcpManager::instance().Shutdown(m_ConnId, true);
         return true;
     }

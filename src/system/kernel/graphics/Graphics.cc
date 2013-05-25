@@ -34,7 +34,7 @@ Framebuffer *Graphics::createFramebuffer(Framebuffer *pParent,
     // of the graphics card itself.
     Graphics::PixelFormat format = pParent->getFormat();
 
-    size_t bytesPerPixel = Graphics::bytesPerPixel(format);
+    size_t bytesPerPixel = pParent->getBytesPerPixel();
     size_t bytesPerLine = bytesPerPixel * w;
 
     // Allocate space for the buffer
@@ -43,6 +43,7 @@ Framebuffer *Graphics::createFramebuffer(Framebuffer *pParent,
         pMem = new uint8_t[bytesPerLine * h];
     else
         pMem = reinterpret_cast<uint8_t*>(pFbOverride);
+    NOTICE("pMem: " << ((uintptr_t) pMem) << " ov=" << (pFbOverride ? "yes" : "no"));
 
     // Create the framebuffer
     Framebuffer *pRet = new Framebuffer();

@@ -46,29 +46,37 @@
 /**
  * The Pedigree network stack - IPv4 layer
  */
-class Ipv4
+class Ipv4 : public IpBase
 {
 public:
   Ipv4();
   virtual ~Ipv4();
-  
+
   /** For access to the stack without declaring an instance of it */
   static Ipv4& instance()
   {
     return ipInstance;
   }
-  
+
   /** Packet arrival callback */
   void receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset);
-  
+
   /** Sends an IP packet */
-  static bool send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard = 0);
+  virtual bool send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard = 0);
 
   /** Injects an IPv4 header into a given buffer and returns the size
     * of the header. */
-  size_t injectHeader(uintptr_t packet, IpAddress dest, IpAddress from, uint8_t type);
+  virtual size_t injectHeader(uintptr_t packet, IpAddress dest, IpAddress from, uint8_t type);
 
-  void injectChecksumAndDataFields(uintptr_t ipv4HeaderStart, size_t payloadSize);
+  virtual void injectChecksumAndDataFields(uintptr_t ipv4HeaderStart, size_t payloadSize);
+
+  /**
+   * Calculates a checksum for an upper-layer protocol.
+   * Will return zero on an incoming packet with a non-zero checksum if the
+   * calculated checksum matches.
+   * @param length Length of data to checksum, in HOST byte order.
+   */
+  virtual uint16_t ipChecksum(IpAddress &from, IpAddress &to, uint8_t proto, uintptr_t data, uint16_t length);
 
   struct ipHeader
   {
@@ -96,10 +104,20 @@ public:
     LockGuard<Spinlock> guard(m_NextIdLock);
     return m_IpId++;
   }
-  
+
 private:
 
   static Ipv4 ipInstance;
+
+  /// IPv4 psuedo-header for upper-layer checksums.
+  struct PsuedoHeader
+  {
+    uint32_t  src_addr;
+    uint32_t  dest_addr;
+    uint8_t   zero;
+    uint8_t   proto;
+    uint16_t  datalen;
+  } __attribute__ ((packed));
 
   /// An actual fragment
   struct fragment
@@ -169,7 +187,7 @@ private:
 
   /// Lock for the "Next ID" variable
   Spinlock m_NextIdLock;
-  
+
   /// Next ID to use for an IPv4 packet
   uint16_t m_IpId;
 

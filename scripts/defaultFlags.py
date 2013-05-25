@@ -4,7 +4,7 @@
 
 # Generic entry-level flags (that everyone should have)
 generic_cflags = '-std=gnu99 -fno-builtin -nostdinc -nostdlib -ffreestanding -g0 -O3 '
-generic_cxxflags = generic_cflags.replace('-std=gnu99', '-std=gnu++98') + ' -fno-exceptions '
+generic_cxxflags = generic_cflags.replace('-std=gnu99', '-std=gnu++98') + ' -fno-exceptions -fno-rtti ' # c++0x
 
 # Warning flags (that force us to write betterish code)
 warning_flags = ' -Wfatal-errors -Wall -Wextra -Wpointer-arith -Wcast-align -Wwrite-strings -Wno-long-long -Wno-variadic-macros '
@@ -26,7 +26,7 @@ generic_linkflags = '-nostdlib -nostdinc -nostartfiles'
 generic_defines = [
     'DEBUGGER_QWERTY',          # Enable the QWERTY keymap
     #'SMBIOS',                  # Enable SMBIOS
-    'SERIAL_IS_FILE',           # Don't treat the serial port like a VT100 terminal
+    #'SERIAL_IS_FILE',           # Don't treat the serial port like a VT100 terminal
     #'DONT_LOG_TO_SERIAL',      # Do not put the kernel's log over the serial port, (qemu -serial file:serial.txt or /dev/pts/0 or stdio on linux)
                                 # TODO: Should be a proper option... I'll do that soon. -Matt
     'ADDITIONAL_CHECKS',
@@ -45,9 +45,10 @@ general_x86_defines = ['X86_COMMON', 'LITTLE_ENDIAN', '__UD_STANDALONE__', 'THRE
 # 32-bit defines
 x86_32_defines = ['X86', 'BITS_32', 'KERNEL_NEEDS_ADDRESS_SPACE_SWITCH']
 
-# 32-bit CFLAGS and CXXFLAGS
-default_x86_cflags = ' -march=i486 '
-default_x86_cxxflags = ' -march=i486 '
+# 32-bit CFLAGS and CXXFLAGS - disable SSE and MMX generation, we only use it
+# in very specific implementations (eg SSE-powered memset/memcpy).
+default_x86_cflags = ' -march=pentium4 -mtune=k8 -mno-sse -mno-mmx '
+default_x86_cxxflags = ' -march=pentium4 -mtune=k8 -mno-sse -mno-mmx '
 
 # 32-bit assembler flags
 default_x86_asflags = '32'
@@ -71,8 +72,8 @@ x86_defines = generic_defines + general_x86_defines + x86_32_defines
 x64_defines = ['X64', 'BITS_64']
 
 # x64 CFLAGS and CXXFLAGS
-default_x64_cflags = ' -m64 -mno-red-zone -mcmodel=kernel '
-default_x64_cxxflags = ' -m64 -mno-red-zone -mcmodel=kernel '
+default_x64_cflags = ' -m64 -mno-red-zone -mcmodel=kernel -march=core2 '
+default_x64_cxxflags = ' -m64 -mno-red-zone -mcmodel=kernel -march=core2 '
 
 # x64 assembler flags
 default_x64_asflags = '64'
@@ -84,8 +85,8 @@ default_x64_linkflags = ' -T src/system/kernel/core/processor/x64/kernel.ld '
 default_x64_imgdir = '#/images/x64/'
 
 # x64 final variables
-x64_cflags = default_x64_cflags + generic_cflags.replace('-O3', '-O2') + warning_flags + warning_flags_c + warning_flags_off
-x64_cxxflags = default_x64_cxxflags + generic_cxxflags.replace('-O3', '-O2') + warning_flags + warning_flags_cxx + warning_flags_off
+x64_cflags = default_x64_cflags + generic_cflags + warning_flags + warning_flags_c + warning_flags_off
+x64_cxxflags = default_x64_cxxflags + generic_cxxflags + warning_flags + warning_flags_cxx + warning_flags_off
 x64_asflags = generic_asflags + default_x64_asflags
 x64_linkflags = generic_linkflags + default_x64_linkflags
 x64_defines = generic_defines + general_x86_defines + x64_defines

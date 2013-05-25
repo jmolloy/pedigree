@@ -239,7 +239,7 @@ class Tree
 
     /** Attempts to find an element with the given key.
      *\return the element found, or NULL if not found. */
-    E lookup(K key)
+    E lookup(K key) const
     {
         Node *n = root;
         while (n != 0)

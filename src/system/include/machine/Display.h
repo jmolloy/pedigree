@@ -34,7 +34,7 @@
  *     Note that these functions may not actually be accelerated on-chip, this is up to the driver;
  *     however they are likely to be much faster than updating the buffer manually and calling updateBuffer().
  */
-class Display : public virtual Device
+class Display : public Device
 {
 public:
 
@@ -196,7 +196,7 @@ public:
             if (((*it)->width == nWidth) &&
                 ((*it)->height == nHeight))
             {
-                if((Graphics::bitsPerPixel((*it)->pf2) == nBpp) || (((*it)->pf.nBpp) == nBpp))
+                if(/*(Graphics::bitsPerPixel((*it)->pf2) == nBpp) ||*/ (((*it)->pf.nBpp) == nBpp))
                 {
                     pSm = *it;
                     break;

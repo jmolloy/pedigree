@@ -134,7 +134,8 @@ start:
   mov cr3, rax
 
   pop rdi
-  mov rsp, 0
+  mov rsp, stack
+  add rsp, 0x10000
 
   ; clear the stackframe
   xor rbp, rbp
@@ -159,9 +160,91 @@ callmain:
   mov es, ax
   mov fs, ax
   mov gs, ax
+  
+  ; Get the FPU and SSE going
+  call ___startup_init_fpu_sse
 
   call _main
   jmp $
+
+; Enables the FPU and SSE (used very early by GCC's codegen)
+___startup_init_fpu_sse:
+  push rbp
+  mov rbp, rsp
+  
+  ; One scratch variable
+  sub rsp, 8
+  
+  ; Grab CPUID
+  mov rax, 1
+  xor rcx, rcx
+  cpuid
+  
+  test rdx, 1
+  jz .nofpu
+  
+  ; FPU is available, start it up
+  mov rbx, cr0
+  or rbx, 0x22 ; NE | MP
+  and rbx, 0xFFFFFFFFFFFFFFF3 ; Remove EM and TS
+  
+  mov cr0, rbx
+  
+  finit
+  
+  mov qword [rsp], 0x33F
+  fldcw [rsp]
+  
+  mov cr0, rbx
+  
+  .nofpu:
+  
+  ; We support FXSAVE/FXRSTOR, sort of. Needed for SSE - NMFaultHandler will do
+  ; this properly later.
+  test rdx, (1 << 24)
+  jz .nofxsr
+  
+  ; Enable it
+  mov rbx, cr4
+  or rbx, (1 << 9)
+  mov cr4, rbx
+  
+  .nofxsr:
+  
+  ; SSE?
+  test rdx, (1 << 25) ; SSE feature
+  jz .nosse
+  
+  ; SSE is available, start it up
+  mov rbx, cr4
+  or rbx, (1 << 10) ; SIMD floating-point exception handling bit
+  mov cr4, rbx
+  
+  stmxcsr [rsp]
+  mov rbx, [rsp]
+  
+  ; Mask all exceptions
+  or rbx, (1 << 12) | (1 << 11) | (1 << 10) | (1 << 9) | (1 << 8) | (1 << 7)
+  and rbx, 0xFFFFFFFFFFFFFFC0 ; Clear any pending exceptions
+  
+  ; Set rounding method
+  or rbx, (3 << 13)
+  
+  mov [rsp], rbx
+  
+  ; Write the control word
+  ldmxcsr [rsp]
+  
+  .nosse:
+  
+  ; TS bit
+  ; mov rax, cr0
+  ; or rax, (1 << 3)
+  ; mov cr0, rax
+  
+  mov rsp, rbp
+  pop rbp
+  ret
 
 [SECTION .data]
   GDTR:
@@ -228,4 +311,4 @@ pagetable2:
         
 ; The kernel stack
 stack:
-  resb 32768
+  resb 0x10000

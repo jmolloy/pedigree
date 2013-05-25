@@ -1,11 +1,27 @@
 BUILD README
 =======================
 
+We highly recommend you first try one of our Easy Build scripts before you try
+and run SCons manually. There's a little bit of work involved in setting up a
+build of Pedigree for the first time - after that it's as easy as just running
+"scons" at the command line.
+
+Just run ./easy_build_x86.sh, ./easy_build_x64.sh, or ./easy_build_arm.sh to
+build Pedigree for the relevant architecture. Dependencies and a cross-compiler
+will be installed/created, allowing you to jump straight into testing Pedigree.
+
+To build Pedigree at any point after this, just run "scons".
+
+To switch between architectures, just remove "options.cache" before you re-run
+an easy build script.
+
+Alternatively, you can build manually if you already have a cross-compiler:
+
 Required: SCons 1.2.0
 
 Simply run:
 
-scons CROSS=/path/to/compilers/bin/i686-elf-
+scons CROSS=/path/to/compilers/bin/i686-pedigree-
 
 You should give SCons the path to gcc in CROSS, ending in '-' so it can add
 'gcc', 'g++' or 'as' to the end of the stub and get a valid compiler. It'll
@@ -20,6 +36,8 @@ environment variables or '~'.
 
 IMAGES DIRECTORY
 =======================
+
+Note: this information is out of date.
 
 The images/local directory allows you to use Pacman, Pedigree's package manager,
 to manage your hard disk image file set. To do so you will need a version of

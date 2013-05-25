@@ -18,6 +18,9 @@
 #include <utilities/utility.h>
 #include <processor/Processor.h>
 
+// These will all be safe for use when entering a double fault handler
+static char g_SafeStack[8192] = {0};
+
 X64GdtManager X64GdtManager::m_Instance;
 
 void X64GdtManager::initialise(size_t processorCount)
@@ -30,23 +33,65 @@ void X64GdtManager::initialise(size_t processorCount)
 
   // Fill the GDT
   setSegmentDescriptor(0, 0, 0, 0, 0);
-  setSegmentDescriptor(1, 0, 0, 0x98, 0x2); // Kernel code
-  setSegmentDescriptor(2, 0, 0, 0x92, 0x2); // Kernel data
-  setSegmentDescriptor(3, 0, 0, 0xF8, 0x2); // User code32
-  setSegmentDescriptor(4, 0, 0, 0xF2, 0x2); // User data32
-  setSegmentDescriptor(5, 0, 0, 0xF8, 0x22); // User code64
-  setSegmentDescriptor(6, 0, 0, 0xF2, 0x22); // User data64
-  for (size_t i = 0;i < processorCount;i++)
+  setSegmentDescriptor(1, 0, 0, 0x98, 0x2); // Kernel code - 0x08
+  setSegmentDescriptor(2, 0, 0, 0x92, 0x2); // Kernel data - 0x10
+  setSegmentDescriptor(3, 0, 0, 0xF8, 0x2); // User code32 - 0x18
+  setSegmentDescriptor(4, 0, 0, 0xF2, 0x2); // User data32 - 0x20
+  setSegmentDescriptor(5, 0, 0, 0xF8, 0x22); // User code64 - 0x28
+  setSegmentDescriptor(6, 0, 0, 0xF2, 0x22); // User data64 - 0x30
+
+#ifdef MULTIPROCESSOR
+
+    /// \todo Multiprocessor #DF handler
+
+  size_t i = 0;
+  for (Vector<ProcessorInformation*>::Iterator it = Processor::m_ProcessorInformation.begin();
+       it != Processor::m_ProcessorInformation.end();
+       it++, i += 2)
   {
+    NOTICE("Setting up TSS segment for CPU #" << Dec << i << Hex << ".");
+  
     X64TaskStateSegment *Tss = new X64TaskStateSegment;
     initialiseTss(Tss);
-    setTssDescriptor(2 * i + 7, reinterpret_cast<uint64_t>(Tss));
+    setTssDescriptor(i + 7, reinterpret_cast<uint64_t>(Tss));
 
-    ProcessorInformation &processorInfo = Processor::information();
-    processorInfo.setTss(Tss);
-    processorInfo.setTssSelector((2 * i + 7) << 3);
+    ProcessorInformation *processorInfo = *it;
+    processorInfo->setTss(Tss);
+    processorInfo->setTssSelector((i + 7) << 3);
+    
+    // TLS segment
+    setSegmentDescriptor(i + 8, 0, 0xFFFFF, 0xF2, 0xC);
+    processorInfo->setTlsSelector((i + 8) << 3);
   }
+#else
+  setSegmentDescriptor(8, 0, 0xFFFFF, 0xF2, 0xC); // User TLS data
+  
+  X64TaskStateSegment *Tss = new X64TaskStateSegment;
+  initialiseTss(Tss);
+  setTssDescriptor(7, reinterpret_cast<uint64_t>(Tss));
+
+  ProcessorInformation &processorInfo = Processor::information();
+  processorInfo.setTss(Tss);
+  processorInfo.setTssSelector(7 << 3);
+  processorInfo.setTlsSelector(8 << 3);
+
+  // Create the double-fault handler TSS
+  static X64TaskStateSegment DFTss;
+  initialiseDoubleFaultTss(&DFTss);
+  setTssDescriptor(9, reinterpret_cast<uint64_t>(&DFTss));
+#endif
 }
+
+void X64GdtManager::setTlsBase(uintptr_t base)
+{
+#ifdef MULTIPROCESSOR
+  /// \todo One TLS base per CPU
+  setSegmentDescriptor(Processor::information().getTlsSelector() >> 3, base, 0xFFFFF, 0xF2, 0xC);
+#else
+  setSegmentDescriptor(8, base, 0xFFFFF, 0xF2, 0xC); // User TLS data
+#endif
+}
+
 void X64GdtManager::initialiseProcessor()
 {
   struct
@@ -89,3 +134,11 @@ void X64GdtManager::initialiseTss(X64TaskStateSegment *pTss)
 {
   memset( reinterpret_cast<void*> (pTss), 0, sizeof(X64TaskStateSegment) );
 }
+
+void X64GdtManager::initialiseDoubleFaultTss(X64TaskStateSegment *pTss)
+{
+    /// \todo Write.
+    
+    return;
+}
+

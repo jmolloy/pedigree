@@ -107,20 +107,31 @@ class BusMasterIde
          */
         bool initialise(IoBase *pBase);
 
-        /** \brief Initialises/begins a DMA transaction.
+        /** \brief Adds a buffer to a DMA transaction.
          *  \param buffer Address of the buffer to be used for the transaction
          *  \param nBytes Size of the buffer
          *  \param bWrite Whether or not this is a write operation
          *  \return True if setting up the transaction is successful, false
          *          otherwise.
          *
-         *  Driver code calls this to begin an operation on a given buffer.
+         * This will add a buffer to an existing transaction, or begin a new
+         * one if no transaction already exists. Calling @commandComplete
+         * will remove all pending buffer (as they are complete).
+         */
+        bool add(uintptr_t buffer, size_t nBytes);
+
+        /** \brief Begin a DMA operation.
+         *  \param bWrite Whether or not this is a write operation.
+         *  \return True if beginning the transaction is successful, false
+         *          otherwise.
+         *
+         *  Driver code calls this to begin an operation.
          *  This call will store the buffer, and will begin the Bus Master
          *  operation if it is not already in progress. For every buffer,
          *  device driver software should send a command to the respective
          *  device.
          */
-        bool begin(uintptr_t buffer, size_t nBytes, bool bWrite);
+        bool begin(bool bWrite);
 
         /** \brief Determines if an INTERRUPT has occurred on this channel.
          *  \return True if an interrupt has occurred, false otherwise.
@@ -142,6 +153,15 @@ class BusMasterIde
          *  method; this merely provides notification that the transfer failed
          */
         bool hasError();
+
+        /** \brief Determines if the CURRENT TRANSFER has completed.
+         *  \return True if the transfer has completed, false otherwise.
+         *
+         *  Some bus mastering controllers don't provide an IRQ line and others
+         *  may need this particular function to be waited upon to be sure that
+         *  the transfer has completed even if an IRQ is fired.
+         */
+        bool hasCompleted();
 
         /** \brief Called by drivers when a command completes
          *

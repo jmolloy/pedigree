@@ -26,7 +26,8 @@
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
 UsbDevice::UsbDevice(uint8_t nPort, UsbSpeed speed) :
-    m_nAddress(0), m_nPort(nPort), m_Speed(speed), m_UsbState(Connected)
+    m_nAddress(0), m_nPort(nPort), m_Speed(speed), m_UsbState(Connected),
+    m_pDescriptor(0), m_pConfiguration(0), m_pInterface(0)
 {
 }
 
@@ -275,7 +276,7 @@ ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, UsbPid pid, uintptr_t 
         return -TransactionError;
     }
 
-    UsbHub *pParentHub = dynamic_cast<UsbHub*>(m_pParent);
+    UsbHub *pParentHub = static_cast<UsbHub*>(m_pParent);
     if(!pParentHub)
     {
         ERROR("USB: Orphaned UsbDevice!");
@@ -332,7 +333,7 @@ void UsbDevice::addInterruptInHandler(Endpoint *pEndpoint, uintptr_t pBuffer, ui
         return;
     }
 
-    UsbHub *pParentHub = dynamic_cast<UsbHub*>(m_pParent);
+    UsbHub *pParentHub = static_cast<UsbHub*>(m_pParent);
     if(!pParentHub)
     {
         ERROR("USB: Orphaned UsbDevice!");
@@ -358,7 +359,7 @@ bool UsbDevice::controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t 
     Setup *pSetup = new Setup(nRequestType, nRequest, nValue, nIndex, nLength);
     PointerGuard<Setup> guard(pSetup);
 
-    UsbHub *pParentHub = dynamic_cast<UsbHub*>(m_pParent);
+    UsbHub *pParentHub = static_cast<UsbHub*>(m_pParent);
     if(!pParentHub)
     {
         ERROR("USB: Orphaned UsbDevice!");
@@ -381,8 +382,12 @@ bool UsbDevice::controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t 
     // cases where a read may breach this boundary.
     size_t nMaxSize = 0;
     if(m_pDescriptor)
+    {
         if(m_pDescriptor->nMaxControlPacketSize)
+        {
             nMaxSize = m_pDescriptor->nMaxControlPacketSize;
+        }
+    }
     if(!nMaxSize)
     {
         if((m_Speed == LowSpeed) || (m_Speed == FullSpeed))

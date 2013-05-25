@@ -26,6 +26,9 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
+#include <cairo/cairo.h>
+#include <cairo/cairo-ft.h>
+
 class Font
 {
 public:
@@ -33,6 +36,8 @@ public:
     virtual ~Font();
 
     virtual size_t render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, size_t y, uint32_t f, uint32_t b);
+
+    virtual size_t render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b, bool bBack = true);
 
     size_t getWidth()
     {return m_CellWidth;}
@@ -81,6 +86,11 @@ private:
     };
     CacheEntry **m_pCache;
     size_t m_CacheSize;
+
+    cairo_user_data_key_t key;
+    cairo_font_face_t *font_face;
+
+    size_t m_FontSize;
 };
 
 #endif

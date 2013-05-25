@@ -34,9 +34,20 @@ class Ohci : public UsbHub,
 #endif
     public RequestQueue
 {
+    private:
+    
+        /// Enumeration of lists that can be stopped or started.
+        enum Lists
+        {
+            PeriodicList    = 0x4,
+            IsochronousList = 0x8,
+            ControlList     = 0x10,
+            BulkList        = 0x20
+        };
+    
     public:
         Ohci(Device* pDev);
-        ~Ohci();
+        virtual ~Ohci();
 
         struct TD
         {
@@ -57,6 +68,8 @@ class Ohci : public UsbHub,
             uint16_t nBufferSize;
             uint16_t nNextTDIndex;
             bool bLast;
+            
+            size_t id;
 
             // Possible values for status
             enum StatusCodes
@@ -104,7 +117,7 @@ class Ohci : public UsbHub,
                 void (*pCallback)(uintptr_t, ssize_t);
                 uintptr_t pParam;
 
-                UsbEndpoint &endpointInfo;
+                UsbEndpoint endpointInfo;
 
                 bool bPeriodic;
                 TD *pFirstTD;
@@ -113,8 +126,17 @@ class Ohci : public UsbHub,
 
                 ED *pPrev;
                 ED *pNext;
+                
+                List<TD*> tdList;
+                List<TD*> completedTdList;
+                
+                bool bIgnore;
 
                 bool bLinked;
+                
+                Lists edType;
+                
+                size_t id;
             } *pMetaData;
         } PACKED ALIGN(16);
 
@@ -144,8 +166,6 @@ class Ohci : public UsbHub,
         virtual void interrupt(size_t number, InterruptState &state);
 #endif
 
-        void doDequeue();
-
         virtual bool portReset(uint8_t nPort, bool bErrorResponse = false);
 
     protected:
@@ -154,8 +174,56 @@ class Ohci : public UsbHub,
                                         uint64_t p6 = 0, uint64_t p7 = 0, uint64_t p8 = 0);
 
     private:
+        /// Stops the controller from processing the given list.
+        void stop(Lists list);
+        
+        /// Starts processing of the given list.
+        void start(Lists list);
+        
+        /// Prepares an ED to be reclaimed.
+        void removeED(ED *pED);
+        
+        /// Converts a software ED pointer to a physical address.
+        inline physical_uintptr_t vtp_ed(ED *pED)
+        {
+            if(!pED || !pED->pMetaData)
+                return 0;
+            
+            size_t id = pED->pMetaData->id & 0xFFF;
+            Lists type = pED->pMetaData->edType;
+            switch(type)
+            {
+                case ControlList:
+                    return m_pControlEDListPhys + (id * sizeof(ED));
+                case BulkList:
+                    return m_pBulkEDListPhys + (id * sizeof(ED));
+                default:
+                    return 0;
+            }
+        }
+        
+        /// Converts a physical address to an ED pointer. Maybe.
+        inline ED *ptv_ed(physical_uintptr_t phys)
+        {
+            if(!phys)
+                return 0;
+            
+            // Figure out which list the ED was in.
+            /// \todo defines for the list sizes so changing one doesn't involve rewriting heaps of code
+            if((m_pControlEDListPhys <= phys) && (phys < (m_pControlEDListPhys + 0x1000)))
+            {
+                return &m_pControlEDList[phys & 0xFFF];
+            }
+            else if((m_pBulkEDListPhys <= phys) && (phys < (m_pBulkEDListPhys + 0x1000)))
+            {
+                return &m_pBulkEDList[phys & 0xFFF];
+            }
+            else
+                return 0;
+        }
 
         enum OhciConstants {
+            OhciVersion         = 0x00,
             OhciControl         = 0x04,     // HcControl register
             OhciCommandStatus   = 0x08,     // HcCommandStatus register
             OhciInterruptStatus = 0x0c,     // HcInterruptStatus register
@@ -166,19 +234,27 @@ class Ohci : public UsbHub,
             OhciControlCurrentED= 0x24,     // HcControlCurrentED register
             OhciBulkHeadED      = 0x28,     // HcBulkHeadED register
             OhciBulkCurrentED   = 0x2c,     // HcBulkCurrentED register
+            OhciFmInterval      = 0x34,
             OhciRhDescriptorA   = 0x48,     // HcRhDescriptorA register
+            OhciRhStatus        = 0x50,
             OhciRhPortStatus    = 0x54,     // HcRhPortStatus registers
 
+            OhciControlStateFunctionalMask = 0xC0,
+            
+            OhciControlInterruptRoute = 0x100,
             OhciControlStateRunning = 0x80,     // HostControllerFunctionalState bits for USBOPERATIONAL
-            OhciControlListsEnable  = 0x34,     // PeriodicListEnable, ControlListEnable and BulkListEnable bits
+            OhciControlListsEnable  = 0x30, // 0x34     // PeriodicListEnable, ControlListEnable and BulkListEnable bits
 
+            OhciCommandRequestOwnership = 0x08, // Requests ownership change
             OhciCommandBulkListFilled   = 0x04, // BulkListFilled bit
             OhciCommandControlListFilled= 0x02, // ControlListFilled bit
             OhciCommandHcReset          = 0x01, // HostControllerReset bit
 
             OhciInterruptMIE        = 0x80000000,   // MasterInterruptEnable bit
             OhciInterruptRhStsChange= 0x40,         // RootHubStatusChange bit
+            OhciInterruptUnrecoverableError = 0x10,
             OhciInterruptWbDoneHead = 0x02,         // WritebackDoneHead bit
+            OhciInterruptStartOfFrame = 0x04,         // StartOfFrame interrupt
 
             OhciRhPortStsResCh      = 0x100000, // PortResetStatusChange bit
             OhciRhPortStsConnStsCh  = 0x10000,  // ConnectStatusChange bit
@@ -193,27 +269,63 @@ class Ohci : public UsbHub,
 
         uint8_t m_nPorts;
 
+        /// Global lock.
         Mutex m_Mutex;
-
-        Spinlock m_QueueListChangeLock;
 
         Hcca *m_pHcca;
         uintptr_t m_pHccaPhys;
+        
+        /// Lock for modifying the schedule list itself (m_FullSchedule)
+        Spinlock m_ScheduleChangeLock;
+        
+        /// Lock for changing the periodic list.
+        Spinlock m_PeriodicListChangeLock;
+        
+        /// Lock for changing the control list.
+        Spinlock m_ControlListChangeLock;
+        
+        /// Lock for changing the bulk list.
+        Spinlock m_BulkListChangeLock;
 
-        ED *m_pEDList;
-        uintptr_t m_pEDListPhys;
-        ExtensibleBitmap m_EDBitmap;
+        ED *m_pPeriodicEDList;
+        uintptr_t m_pPeriodicEDListPhys;
+        ExtensibleBitmap m_PeriodicEDBitmap;
+
+        ED *m_pControlEDList;
+        uintptr_t m_pControlEDListPhys;
+        ExtensibleBitmap m_ControlEDBitmap;
+        
+        ED *m_pBulkEDList;
+        uintptr_t m_pBulkEDListPhys;
+        ExtensibleBitmap m_BulkEDBitmap;
 
         TD *m_pTDList;
         uintptr_t m_pTDListPhys;
         ExtensibleBitmap m_TDBitmap;
 
-        // Pointer to the current bulk and control queue heads (can be null)
-        ED *m_pCurrentBulkQueueHead;
-        ED *m_pCurrentControlQueueHead;
+        // Pointers to the current bulk and control queue heads (can be null)
+        ED *m_pBulkQueueHead;
+        ED *m_pControlQueueHead;
+        
+        // Pointers to the current bulk and control queue tails
+        ED *m_pBulkQueueTail;
+        ED *m_pControlQueueTail;
 
         // Pointer to the current periodic queue tail
-        ED *m_pCurrentPeriodicQueueTail;
+        ED *m_pPeriodicQueueTail;
+        
+        /// Dequeue list lock.
+        Spinlock m_DequeueListLock;
+        
+        /// List of ED pointers in both the control and bulk queues. Used for
+        /// IRQ handling.
+        List<ED*> m_FullSchedule;
+        
+        /// List of EDs ready for dequeue (reclaiming)
+        List<ED*> m_DequeueList;
+        
+        /// Semaphore for the dequeue list
+        Semaphore m_DequeueCount;
 
         MemoryRegion m_OhciMR;
 

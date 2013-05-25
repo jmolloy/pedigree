@@ -25,7 +25,7 @@
 Dns Dns::dnsInstance;
 uint16_t Dns::m_NextId = 0;
 
-String qnameLabelHelper(char *buff, size_t &len, uintptr_t buffLoc)
+String qnameLabelHelper(char *buff, size_t *len, uintptr_t buffLoc)
 {
     String ret;
     size_t retLen = 0;
@@ -36,6 +36,13 @@ String qnameLabelHelper(char *buff, size_t &len, uintptr_t buffLoc)
 
     // Current size of this section
     size_t sectionSize = *locbuff++;
+    if(!sectionSize)
+    {
+      // Empty name.
+      *len = 1;
+      ret = ".";
+      return ret;
+    }
 
     // Keep reading until we hit a zero-sized section
     while(true)
@@ -81,7 +88,7 @@ String qnameLabelHelper(char *buff, size_t &len, uintptr_t buffLoc)
       retLen++;
 
       // All done!
-      len = retLen;
+      *len = retLen;
       return ret;
 }
 
@@ -181,7 +188,7 @@ void Dns::mainThread()
           // that the NAME field for a QUESTION section will never be a pointer,
           // unlike the ANSWER section below.
           size_t nameLength = 0;
-          String tmp = qnameLabelHelper(reinterpret_cast<char*>(buffLoc + ansOffset), nameLength, buffLoc);
+          String tmp = qnameLabelHelper(reinterpret_cast<char*>(buffLoc + ansOffset), &nameLength, buffLoc);
 
           // Add to the offset. We don't really care about the suffix at the
           // moment as we're mainly doing this to get to the answer section.
@@ -201,14 +208,15 @@ void Dns::mainThread()
           // This is an offset within the DNS packet to the string
           size_t len = 0;
           size_t offset = BIG_TO_HOST16(ans->name) - 0xC000;
-          *qname = qnameLabelHelper(reinterpret_cast<char*>(buffLoc + offset), len, buffLoc);
+          *qname = qnameLabelHelper(reinterpret_cast<char*>(buffLoc + offset), &len, buffLoc);
           NOTICE("Got: " << *qname << ", len " << len << ".");
         }
         else
         {
           // This is a name component within the answer section
+          /// \todo this code is pretty broken - needs to be rewritten.
           size_t len = 0;
-          *qname = qnameLabelHelper(reinterpret_cast<char*>(buffLoc + ansStart), len, buffLoc);
+          *qname = qnameLabelHelper(reinterpret_cast<char*>(ansStart), &len, buffLoc);
           NOTICE("Got: " << *qname << ", len " << len << ".");
 
           // Update the answer pointer so the rest of the structure comes across properly
@@ -288,7 +296,7 @@ void Dns::mainThread()
             break;
             default:
             {
-                WARNING("Unknown record type returned from DNS server");
+                WARNING("Unknown record type '" << (BIG_TO_HOST16(ans->type)) << "' returned from DNS server");
             }
             break;
         }

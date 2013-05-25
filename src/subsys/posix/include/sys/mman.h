@@ -13,13 +13,20 @@ _BEGIN_STD_C
 #define MAP_FIXED 4
 #define MAP_ANON 8
 
+#define MAP_USERSVD 0x10000
+
 #define MAP_FAILED ((void*) 0)
+
+#define MS_ASYNC        0x1
+#define MS_SYNC         0x2
+#define MS_INVALIDATE   0x4
 
 #include <sys/types.h>
 
 void  *mmap(void *, size_t, int, int, int, off_t);
 int    munmap(void *, size_t);
 int    mprotect(void *addr, size_t len, int prot);
+int    msync(void *addr, size_t len, int flags);
 
 _END_STD_C
 

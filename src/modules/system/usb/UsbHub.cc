@@ -29,8 +29,8 @@ bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
 
     // Find the root hub
     UsbHub *pRootHub = this;
-    while(dynamic_cast<UsbHub*>(pRootHub->getParent()))
-        pRootHub = dynamic_cast<UsbHub*>(pRootHub->getParent());
+    while(pRootHub->getParent()->getType() == Device::UsbController)
+        pRootHub = static_cast<UsbHub*>(pRootHub->getParent());
     
     size_t nRetry = 0;
     uint8_t lastAddress = 0, nAddress = 0;
@@ -141,7 +141,7 @@ void UsbHub::deviceDisconnected(uint8_t nPort)
 
     for(size_t i = 0; i < m_Children.count(); i++)
     {
-        UsbDevice *pDevice = dynamic_cast<UsbDevice*>(m_Children[i]);
+        UsbDevice *pDevice = static_cast<UsbDevice*>(m_Children[i]);
 
         if(!pDevice)
             continue;
@@ -173,8 +173,8 @@ void UsbHub::deviceDisconnected(uint8_t nPort)
 
     // Find the root hub
     UsbHub *pRootHub = this;
-    while(dynamic_cast<UsbHub*>(pRootHub->getParent()))
-        pRootHub = dynamic_cast<UsbHub*>(pRootHub->getParent());
+    while(pRootHub->getParent()->getType() == Device::UsbController)
+        pRootHub = static_cast<UsbHub*>(pRootHub->getParent());
 
     // This address is now free
     pRootHub->m_UsedAddresses.clear(nAddress);

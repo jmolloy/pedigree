@@ -66,7 +66,7 @@ class X86GdtManager
                               uint32_t base,
                               uint32_t limit,
                               uint8_t flags,
-                              uint8_t flags2) INITIALISATION_ONLY;
+                              uint8_t flags2);
     /** Set up a task-state-segment descriptor
      *\param[in] index the descriptor index
      *\param[in] base the base address */

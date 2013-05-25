@@ -39,6 +39,11 @@ void RequestQueue::initialise()
 {
   // Start the worker thread.
 #ifdef THREADS
+  if(m_pThread)
+  {
+    WARNING("RequestQueue initialised multiple times - don't do this.");
+    return;
+  }
   m_pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
                        reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
                        reinterpret_cast<void*> (this));

@@ -159,9 +159,11 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
 //
 // Virtual address space layout
 //
-#define USERSPACE_VIRTUAL_HEAP                  reinterpret_cast<void*>(0x10000000)
+#define USERSPACE_VIRTUAL_HEAP                  reinterpret_cast<void*>(0x50000000)
 #define USERSPACE_VIRTUAL_STACK                 reinterpret_cast<void*>(0xC0000000)
 #define USERSPACE_VIRTUAL_STACK_SIZE            0x100000
+#define USERSPACE_VIRTUAL_MAX_STACK_SIZE        0x100000
+#define USERSPACE_VIRTUAL_LOWEST_STACK          reinterpret_cast<void*>(0x70000000)
 #define KERNEL_SPACE_START                      reinterpret_cast<void*>(0xFFFFFFF000000000)
 #define KERNEL_VIRTUAL_HEAP                     reinterpret_cast<void*>(0xFFFFFFFF00000000)
 #define KERNEL_VIRTUAL_HEAP_SIZE                0x7FC00000

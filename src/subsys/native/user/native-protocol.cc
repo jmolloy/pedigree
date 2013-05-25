@@ -26,6 +26,6 @@ int _syscall(Object *pObject, size_t nOp)
     pObject->serialise(&buff, buffLength);
     if(!buff)
         return -1;
-    syscall3(NATIVE_USERSPACE_TO_KERNEL, (int) pObject, buffLength, nOp);
+    syscall3(NATIVE_USERSPACE_TO_KERNEL, (uintptr_t) pObject, buffLength, nOp);
     return 0;
 }

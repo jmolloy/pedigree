@@ -37,9 +37,21 @@
 #define assert_heap_ptr_valid
 #endif
 
+#ifndef __cplusplus
+#define bool char
+#endif
+
 /// Internal use only, the assert() macro passes the additional arguments automatically
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void _assert(bool b, const char *file, int line, const char *func);
 bool _assert_ptr_valid(uintptr_t x);
+
+#ifdef __cplusplus
+};
+#endif
 
 /** @} */
 

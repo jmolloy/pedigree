@@ -21,7 +21,7 @@ import getpass
 import SCons
 from socket import gethostname
 from datetime import *
-    
+
 # Grab all the default flags for each architecture
 sys.path += ['./scripts']
 from defaultFlags import *
@@ -67,20 +67,28 @@ opts.AddVariables(
     BoolVariable('genversion', 'Whether or not to regenerate Version.cc if it already exists.', 1),
     
     BoolVariable('havelosetup', 'Whether or not `losetup` is available.', 0),
-    BoolVariable('forcemtools', 'Force use of mtools (and the FAT filesystem) even if losetup is available.', 0),
+    BoolVariable('forcemtools', 'Force use of mtools (and the FAT filesystem) even if losetup is available.', 1),
     BoolVariable('haveqemuimg', 'Whether or not `qemu-img` is available (for VDI/VMDK creation).', 0),
     BoolVariable('createvdi', 'Convert the created hard disk image to a VDI file for VirtualBox after it is created.', 0),
     BoolVariable('createvmdk', 'Convert the created hard disk image to a VMDK file for VMware after it is created.', 0),
+    ('isoprog', 'Program to use to generate ISO images. The default of `mkisofs\' should be fine for most.', 'mkisofs'),
     
-    BoolVariable('pacman', 'If 1, you are managing your images/local directory with pacman and want that instead of the images/<arch> directory.', 0),
+    BoolVariable('pup', 'If 1, you are managing your images/local directory with the Pedigree UPdater (pup) and want that instead of the images/<arch> directory.', 1),
+    
+    BoolVariable('serial_is_file', 'If 1, the serial port is connected to a file (ie, an emulated serial port). If zero, the serial port is connected to a VT100-compatible terminal.', 1),
+    BoolVariable('ipv4_forwarding', 'If 1, enable IPv4 forwarding.', '0'),
     
     BoolVariable('enable_ctrlc', 'If 1, the ability to use CTRL-C to kill running tasks is enabled.', 1),
     BoolVariable('multiple_consoles', 'If 1, the TUI is built with the ability to create and move between multiple virtual consoles.', 1),
+    BoolVariable('memory_log', 'If 1, memory logging on the second serial line is enabled.', 1),
+    BoolVariable('memory_log_inline', 'If 1, memory logging will be output alongside conventional serial output.', 0),
     
     BoolVariable('multiprocessor', 'If 1, multiprocessor support is compiled in to the kernel.', 0),
     BoolVariable('apic', 'If 1, APIC support will be built in (not to be confused with ACPI).', 0),
     BoolVariable('acpi', 'If 1, ACPI support will be built in (not to be confused with APIC).', 0),
     BoolVariable('smp', 'If 1, SMP support will be built in.', 0),
+    
+    BoolVariable('nogfx', 'If 1, the standard 80x25 text mode will be used. Will not load userspace if set to 1.', 0),
 
     # ARM options
     BoolVariable('arm_integrator', 'Target the Integrator/CP development board', 0),
@@ -153,24 +161,29 @@ if env['CC_NOCACHE'] == '':
 
 # Set the compilers if CROSS is not an empty string
 if env['CROSS'] != '':
-    crossBase = env['CROSS']
+    cross = os.path.split(env['CROSS'])
+    crossPath = cross[0]
+    crossTuple = cross[1]
+
+    env['ENV']['PATH'] =  os.path.abspath(crossPath) + ':' + env['ENV']['PATH']
+
     prefix = ''
-    if env['ccache']:
-        prefix = 'ccache '
     if env['distcc']:
-        prefix = 'distcc ' + prefix
-    env['CC'] = prefix + crossBase + 'gcc'
-    env['CC_NOCACHE'] = crossBase + 'gcc'
-    env['CXX'] = prefix + crossBase + 'g++'
+        prefix = 'distcc '
+    if env['ccache']:
+        prefix = 'ccache ' + prefix
+    env['CC'] = prefix + crossTuple + 'gcc'
+    env['CC_NOCACHE'] = crossTuple + 'gcc'
+    env['CXX'] = prefix + crossTuple + 'g++'
     
     # AS will be setup soon
     env['AS'] = ''
 
     # AR and LD never have the prefix added. They must run on the host.
-    env['AR'] = crossBase + 'ar'
-    env['RANLIB'] = crossBase + 'ranlib'
-    env['LD'] = crossBase + 'gcc'
-    env['OBJCOPY'] = crossBase + 'objcopy'
+    env['AR'] = crossTuple + 'ar'
+    env['RANLIB'] = crossTuple + 'ranlib'
+    env['LD'] = crossTuple + 'gcc'
+    env['OBJCOPY'] = crossTuple + 'objcopy'
     env['LINK'] = env['LD']
 env['LD'] = env['LINK']
 
@@ -183,6 +196,15 @@ if env['haveqemuimg']:
     p = commands.getoutput("which qemu-img")
     if not os.path.exists(p):
         env['haveqemuimg'] = False
+
+# Verify the ISO program
+p = commands.getoutput("which " + env['isoprog'])
+if not os.path.exists(p):
+    print "ISO generation program does not exist - is mkisofs installed? Perhaps you need to add isoprog=genisoimage to the build command line."
+
+    # I'd prefer that this wasn't fatal, but it's REALLY important to get the attention
+    # of the person building Pedigree - it's easiest to test using an ISO after all.
+    exit(1)
 
 tmp = re.match('(.*?)\-.*', os.path.basename(env['CROSS']), re.S)
 if(tmp != None):
@@ -255,14 +277,14 @@ if(tmp == None or env['ARCH_TARGET'] == ''):
     print "Unsupported target - have you used scripts/checkBuildSystem.pl to build a cross-compiler?"
     Exit(1)
 
-if(env['pacman']):
+if(env['pup']):
     env['PEDIGREE_IMAGES_DIR'] = '#images/local/'
     
 # Configure the assembler
 if(env['AS'] == ''):
     # NASM is used for X86 and X64 builds
     if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
-        crossPath = os.path.dirname(env['CC'])
+        crossPath = os.path.dirname(env['CROSS'])
         env['AS'] = crossPath + "/nasm"
     else:
         if(env['CROSS'] == ''):
@@ -293,7 +315,14 @@ if env['verbose_link'] and not '--verbose' in env['LINKFLAGS']:
 elif '--verbose' in env['LINKFLAGS']:
     env['LINKFLAGS'] = env['LINKFLAGS'].replace('--verbose', '')
     
-additionalDefines = ['installer', 'debugger', 'cripple_hdd', 'enable_ctrlc', 'multiple_consoles', 'multiprocessor', 'smp', 'apic', 'acpi', 'debug_logging', 'usb_verbose_debug']
+if env['memory_log']:
+    defines += ['MEMORY_LOGGING_ENABLED']
+if env['memory_log_inline']:
+    defines += ['MEMORY_LOG_INLINE']
+    
+additionalDefines = ['ipv4_forwarding', 'serial_is_file', 'installer', 'debugger', 'cripple_hdd', 'enable_ctrlc',
+                     'multiple_consoles', 'multiprocessor', 'smp', 'apic', 'acpi', 'debug_logging', 'usb_verbose_debug',
+                     'nogfx']
 for i in additionalDefines:
     if(env[i] and not i in defines):
         defines += [i.upper()]
@@ -311,7 +340,7 @@ env['CPPDEFINES'] = defines
 # Fluff up our build messages
 ####################################
 if not env['verbose']:
-    if env['nocolour'] or os.environ['TERM'] == 'dumb' :
+    if env['nocolour'] or os.environ.get('TERM') == 'dumb' or os.environ.get('TERM') is None:
         env['CCCOMSTR']   =    '     Compiling $TARGET'
         env['CXXCOMSTR']  =    '     Compiling $TARGET'
         env['ASCOMSTR']   =    '    Assembling $TARGET'
@@ -351,10 +380,10 @@ env['PEDIGREE_MACHINE'] = gethostname() # The name of the computer (not the type
 
 # Grab the git revision of the repo
 gitpath = commands.getoutput("which git")
-if os.path.exists(gitpath):
+if os.path.exists(gitpath) and env['genversion'] == '1':
     env['PEDIGREE_REVISION'] = commands.getoutput(gitpath + ' rev-parse --verify HEAD --short')
 else:
-    env['PEDIGREE_REVISION'] = "(unknown, git not found)"
+    env['PEDIGREE_REVISION'] = "(unknown)"
 
 # Set the flags
 env['PEDIGREE_FLAGS'] = ' '.join(env['CPPDEFINES'])
@@ -378,11 +407,20 @@ sub_dict = {"$buildtime"    : env['PEDIGREE_BUILDTIME'],
 def create_version_cc(target, source, env):
     global version_out
 
+    # We need to have a Version.cc, but we can disable the (costly) rebuild of
+    # it every single time a compile is done - handy for developers.
+    if env['genversion'] == '0' and os.path.exists(target[0].abspath):
+        return
+
     # Make the non-SCons target a bit special.
     # People using Cygwin have enough to deal with without boring
     # status messages from build systems that don't support fancy
     # builders to do stuff quickly and easily.
-    print "Creating Version.cc [rev: %s, with: %s@%s]" % (env['PEDIGREE_REVISION'], env['PEDIGREE_USER'], env['PEDIGREE_MACHINE'])
+    info = "Version.cc [rev: %s, with: %s@%s]" % (env['PEDIGREE_REVISION'], env['PEDIGREE_USER'], env['PEDIGREE_MACHINE'])
+    if env['verbose']:
+        print "      Creating %s" % (info,)
+    else:
+        print '      Creating \033[32m%s\033[0m' % (info,)
 
     def replacer(s):
         for keyname, value in sub_dict.iteritems():
@@ -395,7 +433,7 @@ def create_version_cc(target, source, env):
     f.write('\n'.join(version_out))
     f.close()
     
-env.Command('#' + env['BUILDDIR'] + '/Version.cc', env.Value(env, 'genversion'), Action(create_version_cc, None))
+env.Command('#' + env['BUILDDIR'] + '/Version.cc', None, Action(create_version_cc, None))
 
 # Save the cache, all the options are configured
 if(not env['nocache']):

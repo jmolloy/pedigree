@@ -16,6 +16,8 @@
 
 #include "Font.h"
 
+#include <iconv.h>
+
 #include <syslog.h>
 
 #include <graphics/Graphics.h>
@@ -25,9 +27,11 @@ extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
 FT_Library Font::m_Library;
 bool Font::m_bLibraryInitialised = false;
 
+extern cairo_t *g_Cairo;
+
 Font::Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWidth) :
     m_Face(), m_CellWidth(0), m_CellHeight(0), m_nWidth(nWidth), m_Baseline(requestedSize), m_bCache(bCache),
-    m_pCache(0), m_CacheSize(0)
+    m_pCache(0), m_CacheSize(0), key(), m_FontSize(requestedSize)
 {
     char str[64];
     int error;
@@ -54,6 +58,24 @@ Font::Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWid
         syslog(LOG_ALERT, "Freetype font load error: %d", error);
         return;
     }
+
+    font_face = cairo_ft_font_face_create_for_ft_face(m_Face, 0);
+    cairo_font_face_set_user_data(font_face, &key,
+                                  m_Face, (cairo_destroy_func_t) FT_Done_Face);
+
+    cairo_save(g_Cairo);
+    cairo_set_font_face(g_Cairo, font_face);
+    cairo_set_font_size(g_Cairo, m_FontSize);
+
+    cairo_font_extents_t extents;
+    cairo_font_extents(g_Cairo, &extents);
+    cairo_restore(g_Cairo);
+
+    m_CellHeight = m_Baseline = extents.height;
+    m_CellHeight += extents.descent;
+    m_CellWidth = extents.max_x_advance;
+
+    return;
 
     error = FT_Set_Pixel_Sizes(m_Face, 0, requestedSize);
     if (error)
@@ -84,33 +106,73 @@ Font::~Font()
 
 size_t Font::render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, size_t y, uint32_t f, uint32_t b)
 {
-    Glyph *pGlyph = 0;
-    bool bKillGlyph = true;
-    // We can't cache characters over 0xFFFF anyway.
-    if (m_bCache && c < 0xFFFF)
+    uint32_t utf32[] = {c, 0};
+    char *utf32_c = (char *) utf32;
+
+    /// \todo UTF-32 endianness
+    /// \todo Global iconv_t object - we use it a lot... (but that would mean resetting state)
+    iconv_t ic = iconv_open("UTF-8", "UTF-32LE");
+    if(ic == (iconv_t) -1)
     {
-        pGlyph = cacheLookup(c, f, b);
-        if (!pGlyph)
-        {
-            pGlyph = generateGlyph(c, f, b);
-            cacheInsert(pGlyph, c, f, b);
-        }
-        bKillGlyph = false;
+        syslog(LOG_WARNING, "TUI: Font::render couldn't open iconv (%s)", strerror(errno));
+        return 0;
+    }
+
+    char out[100] = {0};
+    char *out_c = (char *) out;
+    size_t utf32_len = 8;
+    size_t out_len = 100;
+    size_t res = iconv(ic, &utf32_c, &utf32_len, &out_c, &out_len);
+
+    iconv_close(ic);
+
+    size_t ret = 0;
+    if(res == ((size_t) -1))
+    {
+        syslog(LOG_WARNING, "TUI: Font::render couldn't convert input UTF-32 %x", c);
     }
     else
-        pGlyph = generateGlyph(c, f, b);
-
-    if (!pGlyph) return 0;
-
-    drawGlyph(pFb, pGlyph, x, y);
-
-    if (bKillGlyph)
     {
-        delete [] pGlyph->buffer;
-        delete pGlyph;
+        ret = render(out, x, y, f, b);
     }
 
-    return m_CellWidth;
+    return ret;
+}
+
+size_t Font::render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b, bool bBack)
+{
+    cairo_save(g_Cairo);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+    size_t len = strlen(s);
+
+    cairo_set_font_face(g_Cairo, font_face);
+    cairo_set_font_size(g_Cairo, m_FontSize);
+
+    if(bBack)
+    {
+        cairo_set_source_rgba(
+                g_Cairo,
+                ((b >> 16) & 0xFF) / 256.0,
+                ((b >> 8) & 0xFF) / 256.0,
+                ((b) & 0xFF) / 256.0,
+                0.8);
+
+        cairo_rectangle(g_Cairo, x, y, m_CellWidth * len, m_CellHeight);
+        cairo_fill(g_Cairo);
+    }
+
+    cairo_set_source_rgba(
+            g_Cairo,
+            ((f >> 16) & 0xFF) / 256.0,
+            ((f >> 8) & 0xFF) / 256.0,
+            ((f) & 0xFF) / 256.0,
+            1.0);
+
+    cairo_move_to(g_Cairo, x, y + m_Baseline);
+    cairo_show_text(g_Cairo, s);
+    cairo_restore(g_Cairo);
+
+    return m_CellWidth * len;
 }
 
 void Font::drawGlyph(PedigreeGraphics::Framebuffer *pFb, Glyph *pBitmap, int left, int top)

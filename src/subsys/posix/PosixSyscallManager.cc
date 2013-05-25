@@ -30,6 +30,7 @@
 #include "sem-syscalls.h"
 #include "pthread-syscalls.h"
 #include "select-syscalls.h"
+#include "poll-syscalls.h"
 
 PosixSyscallManager::PosixSyscallManager()
 {
@@ -51,7 +52,9 @@ uintptr_t PosixSyscallManager::call(uintptr_t function, uintptr_t p1, uintptr_t 
         ERROR("PosixSyscallManager: invalid function called: " << Dec << static_cast<int>(function));
         return 0;
     }
-    return SyscallManager::instance().syscall(posix, function, p1, p2, p3, p4, p5);
+
+    uintptr_t ret = SyscallManager::instance().syscall(posix, function, p1, p2, p3, p4, p5);
+    return ret;
 }
 
 uintptr_t PosixSyscallManager::syscall(SyscallState &state)
@@ -61,7 +64,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
     uintptr_t p3 = state.getSyscallParameter(2);
     uintptr_t p4 = state.getSyscallParameter(3);
     uintptr_t p5 = state.getSyscallParameter(4);
-
+    
     // NOTICE("[" << Processor::information().getCurrentThread()->getParent()->getId() << "] : " << Dec << state.getSyscallNumber() << Hex);
 
     // We're interruptible.
@@ -299,6 +302,9 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             // pedigree_init_sigret();
             return 0;
         case POSIX_SCHED_YIELD:
+            // Fix for the case where we slam the system with yields and in
+            // doing so, spend so much time doing syscalls that IRQs get lost.
+            Processor::haltUntilInterrupt();
             Scheduler::instance().yield();
             return 0;
         case POSIX_PEDIGREE_THRWAKEUP:
@@ -343,7 +349,12 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case PEDIGREE_UNWIND_SIGNAL:
             pedigree_unwind_signal();
             return 0;
+
+        case POSIX_MSYNC:
+            return posix_msync(reinterpret_cast<void *>(p1), static_cast<size_t>(p2), static_cast<int>(p3));
+        case POSIX_GETPEERNAME:
+            return posix_getpeername(static_cast<int>(p1), reinterpret_cast<struct sockaddr*>(p2), reinterpret_cast<socklen_t*>(p3));
         
-        default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
+        default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber() << Hex); return 0;
     }
 }

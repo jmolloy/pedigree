@@ -25,7 +25,7 @@
 
 #include "newlib.h"
 
-#if 1
+#if 0
 #define F_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "]\t" << Hex << x)
 #else
 #define F_NOTICE(x)
@@ -71,11 +71,10 @@ int posix_fcntl(int fd, int cmd, int num, int* args);
 
 int posix_mkdir(const char* name, int mode);
 
-int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout);
-
 int posix_isatty(int fd);
 
 void *posix_mmap(void *p);
+int posix_msync(void *p, size_t len, int flags);
 int posix_munmap(void *addr, size_t len);
 
 int posix_access(const char *name, int amode);

@@ -25,7 +25,7 @@
 #include "UsbHumanInterfaceDevice.h"
 
 UsbHumanInterfaceDevice::UsbHumanInterfaceDevice(UsbDevice *pDev) :
-    Device(pDev), UsbDevice(pDev), m_pInEndpoint(0)
+    UsbDevice(pDev), m_pInEndpoint(0)
 {
 }
 

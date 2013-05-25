@@ -24,6 +24,7 @@
 #include <sys/stat.h>
 #include <signal.h>
 #include <errno.h>
+#include <sched.h>
 
 #include "environment.h"
 #include <tui-syscall.h>
@@ -42,12 +43,17 @@
 #include <graphics/Graphics.h>
 #include <input/Input.h>
 
+#include <Widget.h>
+
+#include <cairo/cairo.h>
+
 #define CONSOLE_READ    1
 #define CONSOLE_WRITE   2
 #define CONSOLE_GETROWS 3
 #define CONSOLE_GETCOLS 4
 #define CONSOLE_DATA_AVAILABLE 5
 #define CONSOLE_REFRESH 10
+#define CONSOLE_FLUSH   11
 
 #define NORMAL_FONT_PATH    "/system/fonts/DejaVuSansMono.ttf"
 #define BOLD_FONT_PATH      "/system/fonts/DejaVuSansMono-Bold.ttf"
@@ -70,17 +76,56 @@ size_t g_nWidth, g_nHeight;
 size_t nextConsoleNum = 1;
 size_t g_nLastResponse = 0;
 
+cairo_t *g_Cairo = 0;
+cairo_surface_t *g_Surface = 0;
+
+PedigreeTerminalEmulator *g_pEmu = 0;
+
 PedigreeGraphics::Framebuffer *g_pFramebuffer = 0;
 
-/*
+void checkFramebuffer()
+{
+    if(g_pEmu)
+    {
+        /// \todo load new cr & surface
+        if(g_Surface)
+        {
+            cairo_surface_destroy(g_Surface);
+            cairo_destroy(g_Cairo);
+        }
+
+        int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, g_nWidth);
+        g_Surface = cairo_image_surface_create_for_data(
+                (uint8_t*) g_pEmu->getRawFramebuffer(),
+                CAIRO_FORMAT_ARGB32,
+                g_nWidth,
+                g_nHeight,
+                stride);
+        g_Cairo = cairo_create(g_Surface);
+
+        syslog(LOG_INFO, "created cairo %p %p %p %dx%d", g_pEmu->getRawFramebuffer(), g_Surface, g_Cairo, g_nWidth, g_nHeight);
+    }
+}
+
 void modeChanged(size_t width, size_t height)
 {
-    syslog(LOG_ALERT, "w: %d, h: %d\n", width, height);
+    if(!(g_pTermList && g_Cairo))
+    {
+        // Spurious/early modeChanged.
+        return;
+    }
 
-    g_pHeader->setWidth(width);
+    syslog(LOG_ALERT, "w: %d, h: %d", width, height);
 
     g_nWidth = width;
     g_nHeight = height;
+
+    // Wipe out the framebuffer, start over.
+    cairo_set_source_rgba(g_Cairo, 0, 0, 0.0, 0.8);
+    cairo_rectangle(g_Cairo, 0, 0, g_nWidth, g_nHeight);
+    cairo_fill(g_Cairo);
+
+    g_pHeader->setWidth(width);
 
     TerminalList *pTL = g_pTermList;
     while (pTL)
@@ -88,18 +133,26 @@ void modeChanged(size_t width, size_t height)
         Terminal *pTerm = pTL->term;
 
         // Kill and renew the buffers.
-        pTerm->renewBuffer(width, height-(g_pHeader->getHeight()+1));
+        pTerm->renewBuffer(width, height);
 
         DirtyRectangle rect;
+        pTerm->redrawAll(rect);
+        pTerm->showCursor(rect);
+
+        // Resize any clients.
+        kill(pTerm->getPid(), SIGWINCH);
+
+        /*
         g_pHeader->select(pTerm->getTabId());
-
         g_pHeader->render(pTerm->getBuffer(), rect);
-
-        doRedraw(rect);
+        */
 
         pTL = pTL->next;
     }
-}*/
+
+    PedigreeGraphics::Rect rt(0, 0, g_nWidth, g_nHeight);
+    g_pEmu->redraw(rt);
+}
 
 void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
 {
@@ -111,8 +164,10 @@ void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
 
     g_pCurrentTerm->term->setActive(true, rect);
 
+    /*
     g_pHeader->select(pTL->term->getTabId());
     g_pHeader->render(pTL->term->getBuffer(), rect);
+    */
 
     pTL->term->redrawAll(rect);
 
@@ -121,9 +176,9 @@ void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
 
 Terminal *addTerminal(const char *name, DirtyRectangle &rect)
 {
-    size_t h = g_pHeader->getHeight()+1;
+    size_t h = 0; // g_pHeader->getHeight()+1;
 
-    Terminal *pTerm = new Terminal(const_cast<char*>(name), g_nWidth, g_nHeight-h, g_pHeader, 0, h, 0);
+    Terminal *pTerm = new Terminal(const_cast<char*>(name), g_nWidth - 3, g_nHeight-h, g_pHeader, 3, h, 0);
 
     TerminalList *pTermList = new TerminalList;
     pTermList->term = pTerm;
@@ -142,6 +197,7 @@ Terminal *addTerminal(const char *name, DirtyRectangle &rect)
 
     selectTerminal(pTermList, rect);
 
+    /*
     TerminalList *pTL = g_pTermList;
     while (pTL)
     {
@@ -152,6 +208,7 @@ Terminal *addTerminal(const char *name, DirtyRectangle &rect)
         pTL = pTL->next;
     }
     g_pHeader->select(pTermList->term->getTabId());
+    */
 
     return pTerm;
 }
@@ -167,9 +224,11 @@ void doRefresh(Terminal *pT)
             pT->refresh(); // Handle any region not redrawn by above
 
     // Redraw the header
+    /*
     DirtyRectangle rect;
     g_pHeader->render(0, rect);
     doRedraw(rect);
+    */
 }
 
 bool checkCommand(uint64_t key, DirtyRectangle &rect)
@@ -224,21 +283,8 @@ void sigint(int)
     syslog(LOG_NOTICE, "TUI sent SIGINT, oops!");
 }
 
-/**
- * This is the TUI input handler. It is registered with the kernel at startup
- * and handles every keypress that occurs, via an Event sent from the kernel's
- * InputManager object.
- */
-void input_handler(Input::InputNotification &note)
+void key_input_handler(uint64_t c)
 {
-    if(!g_pCurrentTerm || !g_pCurrentTerm->term) // No terminal yet!
-        return;
-
-    if(note.type != Input::Key)
-        return;
-
-    uint64_t c = note.data.key.key;
-
     /** Add the key to the terminal queue */
 
     Terminal *pT = g_pCurrentTerm->term;
@@ -299,7 +345,24 @@ void input_handler(Input::InputNotification &note)
     delete [] buffer;
 }
 
-int main (int argc, char **argv)
+/**
+ * This is the TUI input handler. It is registered with the kernel at startup
+ * and handles every keypress that occurs, via an Event sent from the kernel's
+ * InputManager object.
+ */
+void input_handler(Input::InputNotification &note)
+{
+    if(!g_pCurrentTerm || !g_pCurrentTerm->term) // No terminal yet!
+        return;
+
+    if(note.type != Input::Key)
+        return;
+
+    uint64_t c = note.data.key.key;
+    key_input_handler(c);
+}
+
+int TUImain (int argc, char **argv)
 {
     FILE *fp = fopen("/config/TUI/.tui.lck", "r");
     if(fp)
@@ -352,21 +415,25 @@ int main (int argc, char **argv)
 
     // Connect to the graphics service
     PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
-    g_pFramebuffer = pRootFramebuffer->createChild(0, 0, pRootFramebuffer->getWidth(), pRootFramebuffer->getHeight());
+//    g_pFramebuffer = pRootFramebuffer->createChild(0, 0, pRootFramebuffer->getWidth(), pRootFramebuffer->getHeight());
+    return 0;
+}
 
-    // Have we got a working mode?
-    if(!g_pFramebuffer->getRawBuffer())
-    {
-        // No!
-        syslog(LOG_EMERG, "TUI Error: No framebuffer available!");
-        return 0;
-    }
+int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
+{
+    g_pFramebuffer = pFramebuffer;
 
-    g_nWidth = g_pFramebuffer->getWidth();
-    g_nHeight = g_pFramebuffer->getHeight();
+    g_nWidth = g_pEmu->getWidth();
+    g_nHeight = g_pEmu->getHeight();
 
-    g_pFramebuffer->rect(0, 0, g_nWidth, g_nHeight, 0, PedigreeGraphics::Bits24_Rgb);
-    g_pFramebuffer->redraw(0, 0, g_nWidth, g_nHeight, true);
+    cairo_set_line_cap(g_Cairo, CAIRO_LINE_CAP_SQUARE);
+    cairo_set_line_join(g_Cairo, CAIRO_LINE_JOIN_MITER);
+    cairo_set_antialias(g_Cairo, CAIRO_ANTIALIAS_NONE);
+    cairo_set_line_width(g_Cairo, 1.0);
+
+    cairo_set_source_rgba(g_Cairo, 0, 0, 0.0, 0.8);
+    cairo_rectangle(g_Cairo, 0, 0, g_nWidth, g_nHeight);
+    cairo_fill(g_Cairo);
 
     g_NormalFont = new Font(FONT_SIZE, NORMAL_FONT_PATH,
                             true, g_nWidth);
@@ -383,6 +450,8 @@ int main (int argc, char **argv)
         return 0;
     }
 
+    g_NormalFont->render("Hello world from the TUI!", 200, 200, 0xFF0000, 0);
+
     rgb_t fore = {0xff, 0xff, 0xff, 0xff};
     rgb_t back = {0, 0, 0, 0};
 
@@ -393,20 +462,29 @@ int main (int argc, char **argv)
     DirtyRectangle rect;
 
     // DirtyRectangle rect;
-    Terminal *pCurrentTerminal = addTerminal("Console0", rect);
+    char newTermName[256];
+    sprintf(newTermName, "Console%d", getpid());
+    Terminal *pCurrentTerminal = addTerminal(newTermName, rect);
     rect.point(0, 0);
     rect.point(g_nWidth, g_nHeight);
 
     doRedraw(rect);
 
-    Input::installCallback(Input::Key, input_handler);
+    // Input::installCallback(Input::Key, input_handler);
 
     size_t maxBuffSz = (32768 * 2) - 1;
     char *buffer = new char[maxBuffSz + 1];
     size_t tabId;
     while (true)
     {
-        size_t cmd = Syscall::nextRequest(g_nLastResponse, buffer, &sz, maxBuffSz, &tabId);
+        // Don't spin forever (as there may not be events waiting).
+        sched_yield();
+
+        // Check for any events and dispatch callbacks.
+        Widget::checkForEvents(true);
+
+        // Check for pending requests in the RequestQueue.
+        size_t cmd = Syscall::nextRequestAsync(g_nLastResponse, buffer, &sz, maxBuffSz, &tabId);
         // syslog(LOG_NOTICE, "Command %d received. (term %d, sz %d)", cmd, tabId, sz);
 
         if(cmd == 0)
@@ -498,11 +576,100 @@ int main (int argc, char **argv)
                 doRefresh(pT);
                 break;
 
+            case CONSOLE_FLUSH:
+                syslog(LOG_INFO, "TUI: console flush on %p [existing buffer=%s]", pT, buffer);
+                g_nLastResponse = 0;
+                if(pT->hasPendingRequest())
+                {
+                    Syscall::respondToPending(g_nLastResponse, buffer, 0);
+                    pT->setHasPendingRequest(false, 0);
+                }
+
+                pT->clearQueue();
+                break;
+
             default:
                 syslog(LOG_ALERT, "Unknown command: %x", cmd);
         }
-
     }
+
+    return 0;
+}
+
+bool callback(WidgetMessages message, size_t msgSize, void *msgData)
+{
+    DirtyRectangle dirty;
+    switch(message)
+    {
+        case Reposition:
+            {
+                /// \todo reposition/re-render/resize
+                syslog(LOG_INFO, "TUI: reposition event");
+                PedigreeGraphics::Rect *rt = reinterpret_cast<PedigreeGraphics::Rect*>(msgData);
+                syslog(LOG_INFO, "** checking framebuffer");
+                g_pEmu->handleReposition(*rt);
+                g_nWidth = g_pEmu->getWidth();
+                g_nHeight = g_pEmu->getHeight();
+                checkFramebuffer();
+                syslog(LOG_INFO, "** checking framebuffer done");
+                syslog(LOG_INFO, "** modeChanged");
+                modeChanged(rt->getW(), rt->getH());
+            }
+            break;
+        case KeyUp:
+            {
+                key_input_handler(*reinterpret_cast<uint64_t*>(msgData));
+            }
+            break;
+        case Focus:
+            {
+                if(g_pCurrentTerm)
+                {
+                    g_pCurrentTerm->term->setCursorStyle(true);
+                    g_pCurrentTerm->term->showCursor(dirty);
+                }
+            }
+            break;
+        case NoFocus:
+            {
+                if(g_pCurrentTerm)
+                {
+                    g_pCurrentTerm->term->setCursorStyle(false);
+                    g_pCurrentTerm->term->showCursor(dirty);
+                }
+            }
+            break;
+        default:
+            syslog(LOG_INFO, "TUI: unhandled callback");
+    }
+
+    doRedraw(dirty);
+    return true;
+}
+
+int main(int argc, char *argv[])
+{
+    char endpoint[256];
+    sprintf(endpoint, "tui.%d", getpid());
+
+    PedigreeGraphics::Rect rt;
+
+    g_pEmu = new PedigreeTerminalEmulator();
+    if(!g_pEmu->construct(endpoint, "Pedigree xterm Emulator", callback, rt))
+    {
+        syslog(LOG_ERR, "tui: couldn't construct widget");
+        delete g_pEmu;
+        return 1;
+    }
+
+    signal(SIGINT, sigint);
+
+    // Handle initial reposition event.
+    syslog(LOG_INFO, "handling initial reposition");
+    Widget::checkForEvents(true);
+
+    syslog(LOG_INFO, "going live");
+    tui_do(0);
 
     return 0;
 }

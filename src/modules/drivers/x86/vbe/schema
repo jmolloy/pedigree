@@ -17,7 +17,7 @@ create table 'displays' (
        'pointer' integer,
        'mode_id' integer);
 
-create table 'display-modes' (
+create table 'display_modes' (
        'id' integer primary key,
        'mode_id' integer,
        'display_id' integer,

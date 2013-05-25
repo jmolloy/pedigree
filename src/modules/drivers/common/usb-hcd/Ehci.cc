@@ -50,7 +50,7 @@ do \
     } \
 } while(0)
 
-Ehci::Ehci(Device* pDev) : Device(pDev), m_pCurrentQueueTail(0), m_pCurrentQueueHead(0), m_EhciMR("Ehci-MR")
+Ehci::Ehci(Device* pDev) : UsbHub(pDev), m_pCurrentQueueTail(0), m_pCurrentQueueHead(0), m_EhciMR("Ehci-MR")
 {
     setSpecificType(String("EHCI"));
 

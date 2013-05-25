@@ -19,7 +19,7 @@
 #include <processor/Processor.h>
 
 IsaAtaController::IsaAtaController(Controller *pDev, int nController) :
-  Device(pDev), AtaController(pDev, nController)
+  AtaController(pDev, nController)
 {
   setSpecificType(String("ata-controller"));
 
@@ -144,10 +144,10 @@ bool IsaAtaController::irq(irq_id_t number, InterruptState &state)
 {
   for (unsigned int i = 0; i < getNumChildren(); i++)
   {
-    AtaDisk *pDisk = dynamic_cast<AtaDisk*> (getChild(i));
+    AtaDisk *pDisk = static_cast<AtaDisk*> (getChild(i));
     if(pDisk->isAtapi())
     {
-        AtapiDisk *pAtapiDisk = dynamic_cast<AtapiDisk*>(pDisk);
+        AtapiDisk *pAtapiDisk = static_cast<AtapiDisk*>(pDisk);
         pAtapiDisk->irqReceived();
     }
     else

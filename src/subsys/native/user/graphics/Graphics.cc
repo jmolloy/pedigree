@@ -31,7 +31,7 @@ struct blitargs
 struct drawargs
 {
     void *a;
-    uint32_t b, c, d, e, f, g, h;
+    uintptr_t b, c, d, e, f, g, h;
 } PACKED;
 
 struct createargs
@@ -43,12 +43,12 @@ struct createargs
 
 struct fourargs
 {
-    uint32_t a, b, c, d;
+    uintptr_t a, b, c, d;
 } PACKED;
 
 struct sixargs
 {
-    uint32_t a, b, c, d, e, f;
+    uintptr_t a, b, c, d, e, f;
 } PACKED;
 
 Framebuffer::Framebuffer() : m_Provider(), m_bProviderValid(false), m_bIsChild(false)
@@ -62,6 +62,30 @@ Framebuffer::Framebuffer(GraphicsProvider &gfx)
 {
     m_Provider = gfx;
     m_bProviderValid = m_bIsChild = true;
+
+    // Because a GraphicsProvider is a generic structure, we could have been
+    // created in another address space. We need to 'transfer' the provider
+    // into our own address space.
+    // Fortunately, the provider is still valid, so we can call getters here.
+    // We just can't do anything that involves the actual framebuffer.
+    size_t nBytes = (getWidth() * getHeight() * getBytesPerPixel());
+    uint8_t *pBuffer = new uint8_t[nBytes];
+
+    GraphicsProvider ret = m_Provider;
+    createargs args;
+    args.pReturnProvider = &m_Provider;
+    args.pFramebuffer = reinterpret_cast<void*>(pBuffer);
+    args.x = 0;
+    args.y = 0;
+    args.w = getWidth();
+    args.h = getHeight();
+    int ok = pedigree_gfx_create_fbuffer(&gfx, &args);
+
+    if(ok < 0)
+    {
+        delete [] pBuffer;
+        m_bProviderValid = false;
+    }
 }
 
 Framebuffer::~Framebuffer()
@@ -84,7 +108,7 @@ size_t Framebuffer::getWidth()
         return 0;
     
     size_t ret = 0;
-    pedigree_gfx_fbinfo(&m_Provider, &ret, 0, 0);
+    pedigree_gfx_fbinfo(&m_Provider, &ret, 0, 0, 0);
     
     return ret;
 }
@@ -95,7 +119,7 @@ size_t Framebuffer::getHeight()
         return 0;
     
     size_t ret = 0;
-    pedigree_gfx_fbinfo(&m_Provider, 0, &ret, 0);
+    pedigree_gfx_fbinfo(&m_Provider, 0, &ret, 0, 0);
     
     return ret;
 }
@@ -106,9 +130,20 @@ PixelFormat Framebuffer::getFormat()
         return Bits32_Argb;
     
     uint32_t ret = 0;
-    pedigree_gfx_fbinfo(&m_Provider, 0, 0, &ret);
+    pedigree_gfx_fbinfo(&m_Provider, 0, 0, &ret, 0);
     
     return static_cast<PixelFormat>(ret);
+}
+
+size_t Framebuffer::getBytesPerPixel()
+{
+    if(!m_bProviderValid)
+        return 4;
+    
+    size_t ret = 0;
+    pedigree_gfx_fbinfo(&m_Provider, 0, 0, 0, &ret);
+    
+    return ret;
 }
 
 void *Framebuffer::getRawBuffer()
@@ -126,7 +161,7 @@ Framebuffer *Framebuffer::createChild(size_t x, size_t y, size_t w, size_t h)
     if(!(w && h))
         return 0;
 
-    size_t nBytes = (w * h * bytesPerPixel(getFormat()));
+    size_t nBytes = (w * h * getBytesPerPixel());
     uint8_t *pBuffer = new uint8_t[nBytes];
 
     GraphicsProvider ret = m_Provider;
@@ -157,8 +192,8 @@ Buffer *Framebuffer::createBuffer(const void *srcData, PixelFormat srcFormat,
     
     Buffer *ret = 0;
     fourargs args;
-    args.a = reinterpret_cast<uint32_t>(srcData); /// \todo 64-bit caveat
-    args.b = static_cast<uint32_t>(srcFormat);
+    args.a = reinterpret_cast<uintptr_t>(srcData);
+    args.b = static_cast<uintptr_t>(srcFormat);
     args.c = width;
     args.d = height;
     int ok = pedigree_gfx_create_buffer(&m_Provider, reinterpret_cast<void**>(&ret), &args);

@@ -85,6 +85,11 @@ extern int h_errno;
 #define EAI_SYSTEM      8
 #define EAI_OVERFLOW    9
 
+#if defined(_BSD_SOURCE) || defined(_SVID_SOURCE) || defined(_GNU_SOURCE)
+#define NI_MAXHOST      1025
+#define NI_MAXSERV      32
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

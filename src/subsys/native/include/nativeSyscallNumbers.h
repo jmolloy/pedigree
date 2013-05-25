@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2011 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -18,5 +18,16 @@
 #define SYSCALL_NUMBERS_H
 
 #define NATIVE_USERSPACE_TO_KERNEL      1
+
+#define IPC_CREATE_STANDARD_MESSAGE             2
+#define IPC_CREATE_SHARED_MESSAGE               3
+#define IPC_GET_SHARED_REGION                   4
+#define IPC_DESTROY_MESSAGE                     5
+#define IPC_SEND_IPC                            6
+#define IPC_RECV_PHASE1                         7
+#define IPC_RECV_PHASE2                         8
+#define IPC_CREATE_ENDPOINT                     9
+#define IPC_REMOVE_ENDPOINT                     10
+#define IPC_GET_ENDPOINT                        11
 
 #endif

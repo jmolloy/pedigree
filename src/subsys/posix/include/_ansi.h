@@ -33,11 +33,15 @@
 #define	_DOTS		, ...
 #define _VOID void
 #ifdef __CYGWIN__
+#define	_EXFUN_NOTHROW(name, proto)	__cdecl name proto _NOTHROW
 #define	_EXFUN(name, proto)		__cdecl name proto
 #define	_EXPARM(name, proto)		(* __cdecl name) proto
+#define	_EXFNPTR(name, proto)		(__cdecl * name) proto
 #else
+#define	_EXFUN_NOTHROW(name, proto)	name proto _NOTHROW
 #define	_EXFUN(name, proto)		name proto
 #define _EXPARM(name, proto)		(* name) proto
+#define _EXFNPTR(name, proto)		(* name) proto
 #endif
 #define	_DEFUN(name, arglist, args)	name(args)
 #define	_DEFUN_VOID(name)		name(_NOARGS)

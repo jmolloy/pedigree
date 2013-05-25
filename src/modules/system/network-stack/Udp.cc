@@ -20,6 +20,7 @@
 
 #include "Ethernet.h"
 #include "Ipv4.h"
+#include "Ipv6.h"
 
 #include "UdpManager.h"
 
@@ -40,34 +41,14 @@ Udp::~Udp()
 {
 }
 
-uint16_t Udp::udpChecksum(uint32_t srcip, uint32_t destip, udpHeader* data)
-{
-  // psuedo-header on the front as well, build the packet, and checksum it
-  size_t tmpSize = BIG_TO_HOST16(data->len) + sizeof(udpPsuedoHeaderIpv4);
-  uint8_t* tmpPack = new uint8_t[tmpSize];
-  uintptr_t tmpPackAddr = reinterpret_cast<uintptr_t>(tmpPack);
-
-  udpPsuedoHeaderIpv4* psuedo = reinterpret_cast<udpPsuedoHeaderIpv4*>(tmpPackAddr);
-  memcpy(reinterpret_cast<void*>(tmpPackAddr + sizeof(udpPsuedoHeaderIpv4)), data, BIG_TO_HOST16(data->len));
-
-  psuedo->src_addr = srcip;
-  psuedo->dest_addr = destip;
-  psuedo->zero = 0;
-  psuedo->proto = IP_UDP;
-  psuedo->udplen = data->len;
-
-  udpHeader* tmp = reinterpret_cast<udpHeader*>(tmpPackAddr + sizeof(udpPsuedoHeaderIpv4));
-  tmp->checksum = 0;
-
-  uint16_t checksum = Network::calculateChecksum(tmpPackAddr, tmpSize);
-
-  delete [] tmpPack;
-
-  return checksum;
-}
-
 bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nBytes, uintptr_t payload, bool broadcast, Network *pCard)
 {
+  // IP base for all operations here.
+  /// \todo Abstract this out so that we don't have to have this specific code in the protocol.
+  IpBase *pIp = &Ipv4::instance();
+  if(dest.getType() == IpAddress::IPv6)
+    pIp = &Ipv6::instance();
+
   // Grab the NIC to send on, if we don't already have one.
   /// \note The NIC is grabbed here *as well as* IP because we need to use the
   ///       NIC IP address for the checksum.
@@ -79,7 +60,7 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
           WARNING("UDP: No NIC given to send(), and attempting to send a broadcast packet!");
           return false;
       }
-      
+
       if(!RoutingTable::instance().hasRoutes())
       {
           WARNING("UDP: No NIC given to send(), and no routes available in the routing table");
@@ -93,66 +74,62 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
           return false;
       }
   }
-  
+
   // Grab information about ourselves
   StationInfo me = pCard->getStationInfo();
   if(broadcast) /// \note pCard MUST be set for broadcast packets!
     dest = me.broadcast;
 
-  // Lookup the MAC address of our target
-  MacAddress destMac;
-  bool macValid = true;
-  if(dest == me.broadcast)
-    destMac.setMac(0xff);
-  else
-    macValid = Arp::instance().getFromCache(tmp, true, &destMac, pCard);
+  // Source address determination.
+  IpAddress src = me.ipv4;
+  if(dest.getType() == IpAddress::IPv6)
+  {
+    // Handle IPv6 source address determination.
+    if(!me.nIpv6Addresses)
+    {
+      WARNING("TCP: can't send to an IPv6 host without an IPv6 address.");
+      return false;
+    }
 
-  if(!macValid)
-    return false;
-  
+    /// \todo Distinguish IPv6 addresses, and prefixes, and provide a way of
+    ///       choosing the right one.
+    /// \bug Assumes any non-link-local address is fair game.
+    size_t i;
+    for(i = 0; i < me.nIpv6Addresses; i++)
+    {
+        if(!me.ipv6[i].isLinkLocal())
+        {
+            src = me.ipv6[i];
+            break;
+        }
+    }
+    if(i == me.nIpv6Addresses)
+    {
+        WARNING("No IPv6 address available for TCP");
+        return false;
+    }
+  }
+
   // Allocate a packet to send
   uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
 
-  // Grab the ethernet header
-  size_t ethSize = Ethernet::instance().injectHeader(packet, destMac, me.mac, ETH_IPV4);
-  if(!ethSize)
-  {
-    NetworkStack::instance().getMemPool().free(packet);
-    return false;
-  }
-
-  // Grab the IPv4 header
-  size_t ipSize = Ipv4::instance().injectHeader(packet + ethSize, dest, me.ipv4, IP_UDP);
-  if(!ipSize)
-  {
-    NetworkStack::instance().getMemPool().free(packet);
-    return false;
-  }
-
-  // Set up the UDP object
-  udpHeader* header = reinterpret_cast<udpHeader*>(packet + ethSize + ipSize);
+  // Add the UDP header to the packet.
+  udpHeader* header = reinterpret_cast<udpHeader*>(packet);
   memset(header, 0, sizeof(udpHeader));
-
-  // Configure ports
   header->src_port = HOST_TO_BIG16(srcPort);
   header->dest_port = HOST_TO_BIG16(destPort);
-
-  // Set the length of this packet
-  header->checksum = 0;
   header->len = HOST_TO_BIG16(sizeof(udpHeader) + nBytes);
+  header->checksum = 0;
 
   // Copy in the payload
   if(nBytes)
-    memcpy(reinterpret_cast<void*>(packet + ethSize + ipSize + sizeof(udpHeader)), reinterpret_cast<void*>(payload), nBytes);
+    memcpy(reinterpret_cast<void*>(packet + sizeof(udpHeader)), reinterpret_cast<void*>(payload), nBytes);
 
   // Calculate the checksum
-  header->checksum = Udp::instance().udpChecksum(me.ipv4.getIp(), dest.getIp(), header);
-
-  // Perfom an IPv4 checksum over the packet
-  Ipv4::instance().injectChecksumAndDataFields(packet + ethSize, nBytes + sizeof(udpHeader));
+  header->checksum = pIp->ipChecksum(src, dest, IP_UDP, reinterpret_cast<uintptr_t>(header), sizeof(udpHeader) + nBytes);
 
   // Transmit
-  bool success = pCard->send(nBytes + sizeof(udpHeader) + ipSize + ethSize, packet);
+  bool success = pIp->send(dest, src, IP_UDP, nBytes + sizeof(udpHeader), packet, pCard);
 
   // Free the created packet
   NetworkStack::instance().getMemPool().free(packet);
@@ -161,59 +138,49 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
   return success;
 }
 
-void Udp::receive(IpAddress from, size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offset)
+void Udp::receive(IpAddress from, IpAddress to, uintptr_t packet, size_t nBytes, IpBase *pIp, Network* pCard)
 {
-  if(!packet || !nBytes)
-      return;
+    if(!packet || !nBytes)
+        return;
 
-  // grab the IP header to find the size, so we can skip options and get to the UDP header
-  Ipv4::ipHeader* ip = reinterpret_cast<Ipv4::ipHeader*>(packet + offset);
-  size_t ipHeaderSize = (ip->header_len) * 4; // len is the number of DWORDs
-
-  // Check for filtering
-  /// \todo Add statistics to NICs
-  if(!NetworkFilter::instance().filter(3, packet + offset + ipHeaderSize, nBytes - offset - ipHeaderSize))
-  {
-    pCard->droppedPacket();
-    return;
-  }
-
-  // check if this packet is for us, or if it's a broadcast
-  StationInfo cardInfo = pCard->getStationInfo();
-  IpAddress to(ip->ipDest);
-  /*if(cardInfo.ipv4.getIp() != ip->ipDest && ip->ipDest != 0xffffffff)
-  {
-    // not for us, TODO: check a flag to see if we'll accept these sorts of packets
-    // as an example, DHCP will need this
-    return;
-  }*/
-
-  // grab the header now
-  udpHeader* header = reinterpret_cast<udpHeader*>(packet + offset + ipHeaderSize);
-
-  // find the payload and its size - udpHeader::len is the size of the header + data
-  // we use it rather than calculating the size from offsets in order to be able to handle
-  // packets that may have been padded (for whatever reason)
-  uintptr_t payload = reinterpret_cast<uintptr_t>(header) + sizeof(udpHeader);
-  size_t payloadSize = BIG_TO_HOST16(header->len) - sizeof(udpHeader);
-
-  // check the checksum, if it's not zero
-  if(header->checksum != 0)
-  {
-    uint16_t checksum = header->checksum;
-    header->checksum = 0;
-    uint16_t calcChecksum = udpChecksum(ip->ipSrc, ip->ipDest, header);
-    header->checksum = checksum;
-
-    if(header->checksum != calcChecksum)
+    // Check for filtering
+    if(!NetworkFilter::instance().filter(3, packet, nBytes))
     {
-      WARNING("UDP Checksum failed on incoming packet!");
-      pCard->badPacket();
-      return;
+        pCard->droppedPacket();
+        return;
     }
-  }
 
-  // either no checksum, or calculation was successful, either way go on to handle it
-  UdpManager::instance().receive(from, to, BIG_TO_HOST16(header->src_port), BIG_TO_HOST16(header->dest_port), payload, payloadSize, pCard);
+    // check if this packet is for us, or if it's a broadcast
+    StationInfo cardInfo = pCard->getStationInfo();
+    /*if(cardInfo.ipv4.getIp() != ip->ipDest && ip->ipDest != 0xffffffff)
+    {
+        // not for us, TODO: check a flag to see if we'll accept these sorts of packets
+        // as an example, DHCP will need this
+        return;
+    }*/
+
+    // Grab the header now
+    udpHeader* header = reinterpret_cast<udpHeader*>(packet);
+
+    // Find the payload and its size - udpHeader::len is the size of the header + data
+    // we use it rather than calculating the size from offsets in order to be able to handle
+    // packets that may have been padded (for whatever reason)
+    uintptr_t payload = reinterpret_cast<uintptr_t>(header) + sizeof(udpHeader);
+    size_t payloadSize = BIG_TO_HOST16(header->len) - sizeof(udpHeader);
+
+    // Check the checksum, if it's not zero
+    if(header->checksum != 0)
+    {
+        uint16_t checksum = pIp->ipChecksum(from, to, IP_UDP, reinterpret_cast<uintptr_t>(header), BIG_TO_HOST16(header->len));
+        if(checksum)
+        {
+            WARNING("UDP Checksum failed on incoming packet [" << header->checksum << ", and " << checksum << " should be zero]!");
+            pCard->badPacket();
+            return;
+        }
+    }
+
+    // Either no checksum, or calculation was successful, either way go on to handle it
+    UdpManager::instance().receive(from, to, BIG_TO_HOST16(header->src_port), BIG_TO_HOST16(header->dest_port), payload, payloadSize, pCard);
 }
 

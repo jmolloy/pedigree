@@ -224,7 +224,7 @@ bool Rtc::initialise()
   write(0x0B, statusb | 0x40);
   read(0x0C); // Some RTC chips need the interrupt status to be cleared after
               // changing the control register.
-  
+
   return true;
 }
 void Rtc::synchronise()
@@ -309,20 +309,20 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
       if (!bDispatched)
           break;
   }
-  
+
   if (UNLIKELY(m_Nanosecond >= 1000000ULL))
   {
     // Every millisecond, unblock any interrupts which were halted and halt any
     // which need to be halted.
     Machine::instance().getIrqManager()->tick();
   }
-  
+
   if (UNLIKELY(m_Nanosecond >= 1000000000ULL))
   {
     ++m_Second;
     m_Nanosecond -= 1000000000ULL;
 
-#if 1
+#ifdef MEMORY_LOGGING_ENABLED
     Serial *pSerial = Machine::instance().getSerial(1);
     NormalStaticString str;
     str += "Heap: ";
@@ -334,7 +334,6 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
     str += "K\n";
 
     pSerial->write(str);
-
 #endif
 
 

@@ -135,6 +135,29 @@ echo "Ensuring CDI is up-to-date."
 git submodule init > /dev/null 2>&1
 git submodule update > /dev/null 2>&1
 
+echo
+echo "Configuring the Pedigree UPdater..."
+
+$script_dir/setup_pup.py
+$script_dir/run_pup.py sync
+
+echo
+echo "Installing a base set of packages..."
+
+$script_dir/run_pup.py install pedigree-base
+$script_dir/run_pup.py install libpng
+$script_dir/run_pup.py install libfreetype
+$script_dir/run_pup.py install libiconv
+$script_dir/run_pup.py install zlib
+
+$script_dir/run_pup.py install bash
+$script_dir/run_pup.py install coreutils
+$script_dir/run_pup.py install fontconfig
+$script_dir/run_pup.py install pixman
+$script_dir/run_pup.py install cairo
+$script_dir/run_pup.py install expat
+$script_dir/run_pup.py install mesa
+
 set -e
 
 echo

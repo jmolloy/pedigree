@@ -13,9 +13,8 @@ subdirs = [
     'src/subsys/pedigree-c'
 ]
 
-# Currently the native API is only supported on x86 (not x86-64 or other
-# architectures).
-if env['ARCH_TARGET'] == 'X86':
+# Currently the native API is only supported on x86 architectures
+if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
     subdirs += ['src/subsys/native']
 
 # Then modules and the system proper get built
@@ -106,6 +105,7 @@ def buildImageLosetup(target, source, env):
 
     # Perhaps the menu.lst should refer to .pedigree-root :)
     os.system("sudo cp " + builddir + "/config.db ./tmp/.pedigree-root")
+    os.system("sudo cp " + imagedir + "/../grub/menu-hdd.lst ./tmp/boot/grub/menu.lst")
 
     # Copy the kernel, initrd, and configuration database
     for i in source[0:3]:
@@ -147,6 +147,10 @@ def buildImageLosetup(target, source, env):
 
         os.system("sudo cp -R " + i.path + " ./tmp" + otherPath)
 
+    os.system("sudo mkdir -p ./tmp/tmp")
+    os.system("sudo mkdir -p ./tmp/config")
+    os.system("sudo cp " + imagedir + "/../base/config/greeting ./tmp/config/greeting")
+    os.system("sudo cp " + imagedir + "/../base/.bashrc ./tmp/.bashrc")
     os.system("sudo umount ./tmp")
 
     for i in os.listdir("tmp"):
@@ -181,14 +185,15 @@ def buildImageMtools(target, source, env):
 
     # Open for use in mtools
     mtsetup = env.File("#/scripts/mtsetup.sh").abspath
-    os.system("sh " + mtsetup + " " + outFile + " > /dev/null 2>&1")
+    os.system("sh " + mtsetup + " -h " + outFile + " > /dev/null 2>&1")
 
     destDrive = " C:"
-    os.system("mcopy -Do " + builddir + "/config.db C:/.pedigree-root > /dev/null 2>&1; rm -f .pedigree-root")
+    os.system("MTOOLS_SKIP_CHECK=1 mcopy -Do " + builddir + "/config.db C:/.pedigree-root > /dev/null 2>&1; rm -f .pedigree-root")
+    os.system("MTOOLS_SKIP_CHECK=1 mcopy -Do " + imagedir + "/../grub/menu-hdd.lst C:/boot/grub/menu.lst > /dev/null 2>&1")
 
     # Copy the kernel, initrd, and configuration database
     for i in source[0:3]:
-        os.system("mcopy -Do " + i.abspath + " C:/boot > /dev/null 2>&1")
+        os.system("MTOOLS_SKIP_CHECK=1 mcopy -Do " + i.abspath + " C:/boot > /dev/null 2>&1")
     source = source[3:]
 
     # Copy each input file across
@@ -217,8 +222,12 @@ def buildImageMtools(target, source, env):
             prefix = '/libraries'
 
         otherPath = prefix + i.abspath.replace(search, '')
-        os.system("mcopy -bms -Do " + i.path + destDrive + otherPath + " > /dev/null 2>&1")
-    
+        os.system("MTOOLS_SKIP_CHECK=1 mcopy -bms -Do " + i.path + destDrive + otherPath + " > /dev/null 2>&1")
+
+    os.system("MTOOLS_SKIP_CHECK=1 mmd -Ds C:/tmp C:/config > /dev/null 2>&1")
+    os.system("MTOOLS_SKIP_CHECK=1 mcopy -Do " + imagedir + "/../base/config/greeting C:/config/greeting > /dev/null 2>&1")
+    os.system("MTOOLS_SKIP_CHECK=1 mcopy -Do " + imagedir + "/../base/.bashrc C:/.bashrc > /dev/null 2>&1")
+
     postImageBuild(outFile, env)
 
 def buildCdImage(target, source, env):
@@ -233,7 +242,8 @@ def buildCdImage(target, source, env):
     stage2_eltorito = "stage2_eltorito-" + env['ARCH_TARGET'].lower()
     shutil.copy(pathToGrub + "/" + stage2_eltorito, "./stage2_eltorito")
 
-    cmd = "mkisofs -D -joliet -graft-points -quiet -input-charset ascii -R \
+    cmd = env['isoprog']
+    cmd += " -D -joliet -graft-points -quiet -input-charset ascii -R \
                  -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 \
                  -boot-info-table -o " + target[0].path + " -V 'PEDIGREE' \
                  boot/grub/stage2_eltorito=./stage2_eltorito \
@@ -243,7 +253,6 @@ def buildCdImage(target, source, env):
                  /livedisk.img=" + source[3].abspath + " \
                 .pedigree-root=" + configDb
     os.system(cmd)
-
 
     os.remove("./stage2_eltorito")
 
@@ -267,7 +276,8 @@ else:
         fileList += ["#/images/hdd_ext2.tar.gz"]
         buildImage = buildImageLosetup
     else:
-        fileList += ["#/images/hdd_fat16.tar.gz"]
+        # fileList += ["#/images/hdd_fat16.tar.gz"]
+        fileList += ["#/images/hdd_fat32.tar.gz"]
         buildImage = buildImageMtools
 
     # /boot directory
@@ -294,9 +304,11 @@ else:
 
     # Add libraries
     fileList += [builddir + '/libc.so',
-                 builddir + '/libm.so',]
+                 builddir + '/libm.so',
+                 builddir + '/libload.so',
 #                 builddir + '/libpthread.so',
-#                 builddir + '/libSDL.so']
+                 builddir + '/libSDL.so',
+                 ]
 
     # Build the hard disk image
     env.Command(hddimg, fileList, Action(buildImage, None))

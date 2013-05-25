@@ -1,0 +1,32 @@
+{
+	"folders":
+	[
+		{
+			"path": "../"
+		}
+	],
+    "settings":
+    {
+        "sublimeclang_options":
+        [
+            "-DDEBUGGER_QWERTY -DADDITIONAL_CHECKS -DVERBOSE_LINKER",
+            "-DX86_COMMON -DLITTLE_ENDIAN -D__UD_STANDALONE__ -DTHREADS",
+            "-DKERNEL_STANDALONE",
+            "-DX86 -DBITS_32 -DKERNEL_NEEDS_ADDRESS_SPACE_SWITCH",
+            "-I${folder:${project_path:SConstruct}}/src/lgpl/SDL-1.2.14/include",
+            "-I${folder:${project_path:SConstruct}}/src/system/include/linker",
+            "-I${folder:${project_path:SConstruct}}/src/subsys/posix/include/c++/4.3.2",
+            "-I${folder:${project_path:SConstruct}}/src/subsys/posix/include/c++/4.3.2/i686-pedigree",
+            "-I${folder:${project_path:SConstruct}}/src/subsys/native/include",
+            "-I${folder:${project_path:SConstruct}}/src/system/include",
+            "-I${folder:${project_path:SConstruct}}/src/subsys/pedigree-c/include",
+            "-I${folder:${project_path:SConstruct}}/src/subsys/posix/include",
+            "-I${folder:${project_path:SConstruct}}/src/subsys/posix/syscalls",
+            "-I${folder:${project_path:SConstruct}}/src/modules/system/TUI",
+            "-I${folder:${project_path:SConstruct}}/images/local/include",
+            "-I${folder:${project_path:SConstruct}}/src/user/libraries/libui/include",
+            "-I${folder:${project_path:SConstruct}}/src/user/libraries/libui/src",
+            "-I${folder:${project_path:SConstruct}}/src/user/applications/TUI/include"
+        ]
+    }
+}

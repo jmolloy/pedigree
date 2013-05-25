@@ -93,15 +93,44 @@ void Ipv4::injectChecksumAndDataFields(uintptr_t ipv4HeaderStart, size_t payload
     pHeader->checksum = Network::calculateChecksum(ipv4HeaderStart, pHeader->header_len * 4);
 }
 
+uint16_t Ipv4::ipChecksum(IpAddress &from, IpAddress &to, uint8_t proto, uintptr_t data, uint16_t length)
+{
+  // Allocate space for the psuedo-header + packet data
+  size_t tmpSize = length + sizeof(PsuedoHeader);
+  uint8_t* tmpPack = new uint8_t[tmpSize];
+  uintptr_t tmpPackAddr = reinterpret_cast<uintptr_t>(tmpPack);
+
+  // Set up the psuedo-header
+  PsuedoHeader *pHeader = reinterpret_cast<PsuedoHeader*>(tmpPackAddr);
+  pHeader->src_addr = from.getIp();
+  pHeader->dest_addr = to.getIp();
+  pHeader->proto = proto;
+  pHeader->datalen = HOST_TO_BIG16(length);
+  pHeader->zero = 0;
+
+  // Throw in the packet data
+  memcpy(reinterpret_cast<void*>(tmpPackAddr + sizeof(PsuedoHeader)),
+         reinterpret_cast<void*>(data),
+         length);
+
+  // Perform the checksum
+  uint16_t checksum = Network::calculateChecksum(tmpPackAddr, tmpSize);
+
+  // Done.
+  delete [] tmpPack;
+  return checksum;
+}
+
 bool Ipv4::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uintptr_t packet, Network *pCard)
 {
   IpAddress realDest = dest;
 
   // Grab the address to send to (as well as the NIC to send with)
+  Network *pSubCard = RoutingTable::instance().DetermineRoute(&realDest);
   if(!pCard)
   {
-    pCard = RoutingTable::instance().DetermineRoute(&realDest);
-    if(!pCard)
+    pCard = pSubCard;
+    if(!pSubCard)
     {
       WARNING("IPv4: Couldn't find a route for destination '" << dest.toString() << "'.");
       return false;
@@ -116,13 +145,11 @@ bool Ipv4::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uin
   if(from == Network::convertToIpv4(0, 0, 0, 0))
     from = me.ipv4;
 
-  // Allocate space for the new packet with an IP header
-  size_t newSize = nBytes + sizeof(ipHeader);
-  uint8_t* newPacket = new uint8_t[newSize];
-  uintptr_t packAddr = reinterpret_cast<uintptr_t>(newPacket);
+  // Move the payload past the IP header we will now inject
+  memmove(reinterpret_cast<void*>(packet + sizeof(ipHeader)), reinterpret_cast<void*>(packet), nBytes);
 
   // Grab a pointer for the ip header
-  ipHeader* header = reinterpret_cast<ipHeader*>(newPacket);
+  ipHeader* header = reinterpret_cast<ipHeader*>(packet);
   memset(header, 0, sizeof(ipHeader));
 
   // Compose the IPv4 packet header
@@ -141,10 +168,7 @@ bool Ipv4::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uin
   header->header_len = 5;
 
   header->checksum = 0;
-  header->checksum = Network::calculateChecksum(packAddr, sizeof(ipHeader));
-
-  // copy the payload into the packet
-  memcpy(reinterpret_cast<void*>(packAddr + sizeof(ipHeader)), reinterpret_cast<void*>(packet), nBytes);
+  header->checksum = Network::calculateChecksum(packet, sizeof(ipHeader));
 
   // Get the address to send to
   /// \todo Perhaps flag this so if we don't want to automatically resolve the MAC
@@ -155,10 +179,10 @@ bool Ipv4::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uin
     destMac.setMac(0xff);
   else
     macValid = Arp::instance().getFromCache(realDest, true, &destMac, pCard);
-  if(macValid)
-    Ethernet::send(newSize, packAddr, pCard, destMac, ETH_IPV4);
 
-  delete [] newPacket;
+  if(macValid)
+    Ethernet::send(nBytes + sizeof(ipHeader), packet, pCard, destMac, dest.getType());
+
   return macValid;
 }
 
@@ -193,17 +217,45 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
   if(checksum == calcChecksum)
   {
     IpAddress from(header->ipSrc);
+    IpAddress to(header->ipDest);
     Endpoint::RemoteEndpoint remoteHost;
     remoteHost.ip = from;
-    
-    // If there's no ARP entry for this host, add one
-    if(!Arp::instance().isInCache(from))
+
+    StationInfo me = pCard->getStationInfo();
+    if((!me.ipv4.getIp()) && (!Arp::instance().isInCache(from))) // Not configured yet?
     {
+        // Poison the ARP cache with this packet, as we won't be able to do
+        // ARP for link-layer address determination yet.
         MacAddress e;
         Ethernet::instance().getMacFromPacket(packet, &e);
-        
         Arp::instance().insertToCache(from, e);
     }
+
+#ifdef IPV4_FORWARDING
+    // Is the incoming IP address unicast, and not ours?
+    if(to.isUnicast() && (to != me.ipv4) && (me.ipv4.getIp() != 0) && (to != me.broadcast))
+    {
+        // Not for us!
+        MacAddress e;
+        DEBUG_LOG("IPv4: forwarding packet from " << from.toString() << " to " << to.toString());
+
+        IpAddress realDest;
+        pCard = RoutingTable::instance().DetermineRoute(&realDest);
+        if(!pCard)
+        {
+            DEBUG_LOG("IPv4: no route to forwarding destination " << to.toString());
+            pCard->droppedPacket();
+            return;
+        }
+
+        bool macValid = Arp::instance().getFromCache(realDest, true, &e, pCard);
+        if(macValid)
+            Ethernet::send(nBytes - Ethernet::instance().ethHeaderSize(), packet + Ethernet::instance().ethHeaderSize(), pCard, e, to.getType());
+        else
+            pCard->droppedPacket();
+        return;
+    }
+#endif
 
     uint16_t flags = (BIG_TO_HOST16(header->frag_offset) & 0xF000) >> 12;
     uint16_t frag_offset = (BIG_TO_HOST16(header->frag_offset) & ~0xF000) * 8;
@@ -227,7 +279,7 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         // Find the offset of the data section of this packet
         size_t dataOffset = offset;
         dataOffset += header->header_len * 4;
-        
+
         // Grab the fragment block for this combination of IP and ID
         Ipv4Identifier id(BIG_TO_HOST16(header->id), from);
         fragmentWrapper *p = m_Fragments.lookup(id);
@@ -313,6 +365,10 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         wasFragment = false;
     }
 
+    size_t headerLen = (header->header_len * 4);
+    size_t payloadSize = BIG_TO_HOST16(header->len) - headerLen;
+    uintptr_t dataAddress = packetAddress + headerLen;
+
     switch(header->type)
     {
       case IP_ICMP:
@@ -321,25 +377,25 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         RawManager::instance().receive(packetAddress, nBytes - offset, &remoteHost, IPPROTO_ICMP, pCard);
 
         // icmp needs the ip header as well
-        Icmp::instance().receive(from, nBytes, packetAddress, pCard, 0);
+        Icmp::instance().receive(from, to, dataAddress, payloadSize, this, pCard);
         break;
 
       case IP_UDP:
-        // NOTICE("IP: UDP packet");
+        // NOTICE("IPv4: UDP packet");
 
         RawManager::instance().receive(packetAddress, nBytes - offset, &remoteHost, IPPROTO_UDP, pCard);
 
         // udp needs the ip header as well
-        Udp::instance().receive(from, nBytes, packetAddress, pCard, 0);
+        Udp::instance().receive(from, to, dataAddress, payloadSize, this, pCard);
         break;
 
       case IP_TCP:
-        // NOTICE("IP: TCP packet");
+        // NOTICE("IPv4: TCP packet");
 
         RawManager::instance().receive(packetAddress, nBytes - offset, &remoteHost, IPPROTO_TCP, pCard);
 
         // tcp needs the ip header as well
-        Tcp::instance().receive(from, nBytes, packetAddress, pCard, 0);
+        Tcp::instance().receive(from, to, dataAddress, payloadSize, this, pCard);
         break;
 
       default:
@@ -347,7 +403,7 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         pCard->badPacket();
         break;
     }
-    
+
 
     if(wasFragment)
     {

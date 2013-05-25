@@ -78,8 +78,10 @@ void UsbPnP::reprobeDevices(Device *pParent)
 {
     for(size_t i = 0; i < pParent->getNumChildren(); i++)
     {
-        UsbDevice *pDevice = dynamic_cast<UsbDevice*>(pParent->getChild(i));
-        if(pDevice)
+        UsbDevice *pDevice = static_cast<UsbDevice*>(pParent->getChild(i));
+        if(pDevice &&
+            ((pDevice->getType() == Device::UsbGeneric) ||
+            (pDevice->getType() == Device::UsbController)))
             probeDevice(pDevice);
 
         reprobeDevices(pParent->getChild(i));

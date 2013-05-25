@@ -17,6 +17,7 @@
 #include "FatDirectory.h"
 #include "FatFilesystem.h"
 #include <syscallError.h>
+#include <LockGuard.h>
 #include "FatFile.h"
 
 #include "fat.h"
@@ -33,7 +34,7 @@ FatDirectory::FatDirectory(String name, uintptr_t inode_num,
             LITTLE_TO_HOST32(0),
             pParent),
   m_DirClus(dirClus), m_DirOffset(dirOffset), m_Type(FAT16), m_BlockSize(0),
-  m_bRootDir(false), m_DirBlockSize(0)
+  m_bRootDir(false), m_Lock(false), m_DirBlockSize(0)
 {
   /*uint32_t mode = LITTLE_TO_HOST32(inode.i_mode);
   uint32_t permissions;
@@ -88,6 +89,7 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
   FatFilesystem *pFs = reinterpret_cast<FatFilesystem *>(m_pFilesystem);
 
   NOTICE("addEntry(" << filename << ")");
+  LockGuard<Mutex> guard(m_Lock);
 
   // grab the first cluster of the parent directory
   uint32_t clus = m_Inode;
@@ -288,6 +290,8 @@ bool FatDirectory::removeEntry(File *pFile)
     dirOffset = fatFile->getDirOffset();
   }
 
+  LockGuard<Mutex> guard(m_Lock);
+
   // First byte = 0xE5 means the file's been deleted.
   Dir *dir = reinterpret_cast<Dir *>(pFs->getDirectoryEntry(dirClus, dirOffset));
   PointerGuard<Dir> dirGuard(dir);
@@ -345,6 +349,8 @@ bool FatDirectory::removeEntry(File *pFile)
 void FatDirectory::cacheDirectoryContents()
 {
   FatFilesystem *pFs = reinterpret_cast<FatFilesystem *>(m_pFilesystem);
+
+  LockGuard<Mutex> guard(m_Lock);
 
   // first check that we're not working in the root directory - if so, handle . and .. for it
   uint32_t clus = m_Inode;

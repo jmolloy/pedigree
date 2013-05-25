@@ -38,11 +38,11 @@ VbeDisplay::VbeDisplay() : m_VbeVersion(), m_ModeList(), m_Mode(), m_pFramebuffe
 }
 
 VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*> &sms, size_t vidMemSz, size_t displayNum) :
-    Device(p), Display(p), m_VbeVersion(version), m_ModeList(sms), m_Mode(), m_pFramebuffer(0),
+    Display(p), m_VbeVersion(version), m_ModeList(sms), m_Mode(), m_pFramebuffer(0),
     m_Buffers(), m_SpecialisedMode(Mode_Generic), m_Allocator()
 {
     String str;
-    str.sprintf("DELETE FROM 'display-modes' where display_id = %d", displayNum);
+    str.sprintf("DELETE FROM 'display_modes' where display_id = %d", displayNum);
     Config::Result *pR = Config::instance().query(str);
     if(!pR)
     {
@@ -62,7 +62,7 @@ VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*>
        it != m_ModeList.end();
        it++)
   {
-      str.sprintf("INSERT INTO 'display-modes' VALUES (NULL, %d,%d,%d,%d,%d,%d)", (*it)->id, displayNum, (*it)->width, (*it)->height, (*it)->pf.nBpp, (*it)->refresh);
+      str.sprintf("INSERT INTO 'display_modes' VALUES (NULL, %d,%d,%d,%d,%d,%d)", (*it)->id, displayNum, (*it)->width, (*it)->height, (*it)->pf.nBpp, (*it)->refresh);
       pR = Config::instance().query(str);
 
       if (!pR->succeeded())
@@ -232,7 +232,7 @@ bool VbeDisplay::setScreenMode(Display::ScreenMode sm)
     m_pLogicalFramebuffer->setXPos(0); m_pLogicalFramebuffer->setYPos(0);
     m_pLogicalFramebuffer->setParent(0);
     
-    m_pFramebufferRawAddress->map((m_Mode.height * m_Mode.bytesPerLine) + m_Mode.width);
+    m_pFramebufferRawAddress->map((m_Mode.height * m_Mode.bytesPerLine) + m_Mode.width, true);
     m_pLogicalFramebuffer->setFramebuffer(reinterpret_cast<uintptr_t>(m_pFramebuffer->virtualAddress()));
 
     g_pDisplay = this;

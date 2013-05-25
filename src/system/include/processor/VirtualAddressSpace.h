@@ -152,6 +152,18 @@ class VirtualAddressSpace
     /** Gets a pointer to the byte after the end of the heap. */
     virtual void *getEndOfHeap() = 0;
 
+    /** Gets start address of the kernel in the address space. */
+    virtual uintptr_t getKernelStart() const = 0;
+
+    /** Gets start address of the region usable and cloneable for userspace. */
+    virtual uintptr_t getUserStart() const = 0;
+
+    /** Gets start address of reserved areas of the userpace address space. */
+    virtual uintptr_t getUserReservedStart() const = 0;
+
+    /** Gets address of the dynamic linker in the address space. */
+    virtual uintptr_t getDynamicLinkerAddress() const = 0;
+
     /** Pointer to the beginning of the heap */
     void *m_Heap;
     /** Pointer to the current heap end */

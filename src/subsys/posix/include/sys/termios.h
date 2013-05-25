@@ -25,6 +25,9 @@ typedef unsigned int tcflag_t;
 #define VTIME  5       /* also VEOL */
 #define VSTART 11
 #define VSTOP  12
+#define VWERASE 14
+#define VLNEXT 15
+#define VEOL2  16
 
 # define TCSAFLUSH	0
 # define TCSANOW	1
@@ -127,6 +130,8 @@ typedef struct winsize
 {
   unsigned short ws_row;
   unsigned short ws_col;
+  unsigned short ws_xpixel;
+  unsigned short ws_ypixel;
 } winsize_t;
 
 int _EXFUN(tcgetattr, (int, termios_t *));

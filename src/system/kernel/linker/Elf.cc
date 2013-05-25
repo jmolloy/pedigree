@@ -198,7 +198,7 @@ bool Elf::createNeededOnly(uint8_t *pBuffer, size_t length)
          (pHeader->ident[3] != 'F') ||
          (pHeader->ident[0] != 127) )
     {
-        ERROR("ELF file: ident check failed!");
+        ERROR("ELF file: ident check failed [" << String(reinterpret_cast<const char *>(pHeader->ident)) << "]!");
         return false;
     }
 
@@ -249,6 +249,13 @@ bool Elf::createNeededOnly(uint8_t *pBuffer, size_t length)
                     pDyn++;
                 }
             }
+            else if(m_pProgramHeaders[i].type == PT_INTERP)
+            {
+                ElfProgramHeader_t *pInterp = &m_pProgramHeaders[i];
+                m_sInterpreter = String(reinterpret_cast<char*> (&pBuffer[pInterp->offset]));
+
+                NOTICE("ELF::createNeededOnly interpreter is " << m_sInterpreter);
+            }
         }
 
         if (m_pDynamicStringTable)
@@ -281,7 +288,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
          (pHeader->ident[3] != 'F') ||
          (pHeader->ident[0] != 127) )
     {
-        ERROR("ELF file: ident check failed!");
+        ERROR("ELF file: ident check failed [" << String(reinterpret_cast<const char *>(pHeader->ident)) << "]!");
         return false;
     }
 
@@ -425,6 +432,13 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
                     pDyn++;
                 }
             }
+            else if(m_pProgramHeaders[i].type == PT_INTERP)
+            {
+                ElfProgramHeader_t *pInterp = &m_pProgramHeaders[i];
+                m_sInterpreter = String(reinterpret_cast<char*> (&pBuffer[pInterp->offset]));
+
+                NOTICE("ELF::create interpreter is " << m_sInterpreter);
+            }
         }
 
         m_nDynamicSymbolTableSize = reinterpret_cast<uintptr_t>(m_pDynamicStringTable) -
@@ -476,6 +490,8 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
             loadSize += m_pSectionHeaders[i].size;
         }
     }
+    if(loadSize & 0xFFF)    // Make sure two modules don't accidentally end up in the same page.
+        loadSize += 0x1000; // ie, end page == start page of another module.
     loadSize = (loadSize+0x1000)&0xFFFFF000;
     if (!KernelElf::instance().getModuleAllocator().allocate(loadSize, loadBase))
     {
@@ -509,16 +525,43 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
 
             // We now know where to place this section, so map some memory for it.
             for (uintptr_t j = m_pSectionHeaders[i].addr;
-                 j < (m_pSectionHeaders[i].addr+m_pSectionHeaders[i].size)+0x1000; /// \todo This isn't the correct formula - fix.
+                 j < (m_pSectionHeaders[i].addr + m_pSectionHeaders[i].size) + 0x1000; /// \todo This isn't the correct formula - fix.
                  j += 0x1000)
             {
                 bool bCanWrite = m_pSectionHeaders[i].flags & SHF_WRITE;
                 bool bCanExecute = m_pSectionHeaders[i].flags & SHF_EXECINSTR;
-            
-                physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-                Processor::information().getVirtualAddressSpace().map(phys,
-                                                                      reinterpret_cast<void*> (j&~(PhysicalMemoryManager::getPageSize()-1)),
-                                                                      (bCanWrite ? VirtualAddressSpace::Write : 0) | VirtualAddressSpace::KernelMode | (bCanExecute ? VirtualAddressSpace::Execute : 0));
+                
+                void *virt = reinterpret_cast<void*> (j&~(PhysicalMemoryManager::getPageSize()-1));
+                if(!Processor::information().getVirtualAddressSpace().isMapped(virt))
+                {
+                    physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+                    Processor::information().getVirtualAddressSpace().map(phys,
+                                                                          virt,
+                                                                          (bCanWrite ? VirtualAddressSpace::Write : 0) | VirtualAddressSpace::KernelMode | (bCanExecute ? VirtualAddressSpace::Execute : 0));
+                }
+                else
+                {
+                    // Already mapped: check to see if we need to make the area writable/executable now
+                    size_t flags = 0; physical_uintptr_t phys = 0;
+                    Processor::information().getVirtualAddressSpace().getMapping(virt, phys, flags);
+                    if((flags & VirtualAddressSpace::Write) == 0)
+                    {
+                        if(bCanWrite)
+                        {
+                            flags |= VirtualAddressSpace::Write;
+                        }
+                    }
+                    
+                    if((flags & VirtualAddressSpace::Execute) == 0)
+                    {
+                        if(bCanExecute)
+                        {
+                            flags |= VirtualAddressSpace::Execute;
+                        }
+                    }
+                    
+                    Processor::information().getVirtualAddressSpace().setFlags(virt, flags);
+                }
             }
 
             if (m_pSectionHeaders[i].type != SHT_NOBITS)
@@ -670,6 +713,8 @@ bool Elf::finaliseModule(uint8_t *pBuffer, size_t length)
 bool Elf::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolTable *pSymtab, bool bAllocate, size_t *pSize)
 {
 #ifdef THREADS
+    NOTICE("Elf::allocate: buffer at " << Hex << reinterpret_cast<uintptr_t>(pBuffer) << ", len " << length);
+
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
 
     // Scan the segments to find the size.
@@ -1091,6 +1136,10 @@ uintptr_t Elf::debugFrameTableLength()
 List<char*> &Elf::neededLibraries()
 {
     return m_NeededLibraries;
+}
+
+String &Elf::getInterpreter() {
+    return m_sInterpreter;
 }
 
 size_t Elf::getPltSize ()

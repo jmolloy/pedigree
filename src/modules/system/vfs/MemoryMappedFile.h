@@ -47,14 +47,17 @@ class MemoryMappedFile
 {
 public:
     /** Constructor - to be called from MemoryMappedFileManager only! */
-    MemoryMappedFile(File *pFile, size_t extentOverride = 0);
+    MemoryMappedFile(File *pFile, size_t extentOverride = 0, bool bShared = false);
+
+    /** Secondary constructor for anonymous memory mapped "file". */
+    MemoryMappedFile(size_t anonMapSize);
 
     /** Destructor */
     virtual ~MemoryMappedFile();
 
     /** Loads this file.
         \param address Load at the given address, or if address is 0, finds some free space and returns the start address in address. */
-    bool load(uintptr_t &address, Process *pProcess=0);
+    bool load(uintptr_t &address, Process *pProcess=0, size_t extentOverride = 0);
 
     /** Unloads this file.
         \note Should ONLY be called from MemoryMappedFileManager! */
@@ -63,7 +66,7 @@ public:
     /** Trap occurred. Should be called only from MemoryMappedFileManager!
         \param address The address of the fault.
         \param offset The starting offset of this mmappedfile in memory. */
-    void trap(uintptr_t address, uintptr_t offset);
+    void trap(uintptr_t address, uintptr_t offset, uintptr_t fileoffset, bool bIsWrite);
 
     /** Mark this map for deletion when its reference count drops to zero - i.e. the underlying File has changed. */
     void markForDeletion()
@@ -111,6 +114,11 @@ private:
     size_t m_RefCount;
 
     Mutex m_Lock;
+
+    /** Whether or not this mmap is shared (ie, data written is available to
+     * other processes in the system).
+     */
+    bool m_bShared;
 };
 
 /** This class is a multiplexing trap handler, to take traps pertaining to
@@ -126,7 +134,7 @@ public:
         \param pFile The VFS file to map.
         \param [out] address The address the file gets mapped to. 
         \return A pointer to a MemoryMappedFile object representing the mapped file. */
-    MemoryMappedFile *map(File *pFile, uintptr_t &address, size_t sizeOverride = 0);
+    MemoryMappedFile *map(File *pFile, uintptr_t &address, size_t sizeOverride = 0, size_t offset = 0, bool shared = true);
 
     /** Remove a specific mapping from this address space.
         \param pFile The MemoryMappedFile to remove the mapping for. */
@@ -158,11 +166,12 @@ private:
         This is the type of a particular instantiation of a mmfile. */
     struct MmFile
     {
-        MmFile(uintptr_t o, uintptr_t s, MemoryMappedFile *f) :
-            offset(o), size(s), file(f)
+        MmFile(uintptr_t o, uintptr_t s, uintptr_t fo, MemoryMappedFile *f) :
+            offset(o), size(s), fileoffset(fo), file(f)
         {}
         uintptr_t offset;
         uintptr_t size;
+        uintptr_t fileoffset;
         MemoryMappedFile *file;
     };
     typedef List<MmFile*> MmFileList;

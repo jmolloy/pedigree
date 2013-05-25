@@ -42,8 +42,18 @@ File::~File()
 
 uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
-    if (location+size >= m_Size)
+    if ((location+size) >= m_Size)
+    {
+        size_t oldSize = size;
         size = m_Size-location;
+        if((location + size) > m_Size)
+        {
+            // Completely broken read parameters.
+            ERROR("VFS: even after fixup, read at location " << location << " is larger than file size (" << m_Size << ")");
+            ERROR("VFS:    fixup size: " << size << ", original size: " << oldSize);
+            return 0;
+        }
+    }
 
     size_t blockSize = getBlockSize();
     
@@ -57,18 +67,23 @@ uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
         uintptr_t offs  = location % blockSize;
         uintptr_t sz    = (size+offs > blockSize) ? blockSize-offs : size;
 
+        m_Lock.acquire();
         uintptr_t buff = m_DataCache.lookup(block*blockSize);
         if (!buff)
         {
             buff = readBlock(block*blockSize);
             m_DataCache.insert(block*blockSize, buff);
         }
+        m_Lock.release();
 
-        memcpy(reinterpret_cast<void*>(buffer),
-               reinterpret_cast<void*>(buff+offs),
-               sz);
+        if(buffer)
+        {
+            memcpy(reinterpret_cast<void*>(buffer),
+                   reinterpret_cast<void*>(buff+offs),
+                   sz);
+            buffer += sz;
+        }
         location += sz;
-        buffer += sz;
         size -= sz;
         n += sz;
     }
@@ -79,6 +94,9 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
 {
     size_t blockSize = getBlockSize();
 
+    // Extend the file before writing it if needed.
+    extend(location + size);
+
     size_t n = 0;
     while (size)
     {
@@ -86,12 +104,14 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
         uintptr_t offs  = location % blockSize;
         uintptr_t sz    = (size+offs > blockSize) ? blockSize-offs : size;
 
+        m_Lock.acquire();
         uintptr_t buff = m_DataCache.lookup(block*blockSize);
         if (!buff)
         {
             buff = readBlock(block*blockSize);
             m_DataCache.insert(block*blockSize, buff);
         }
+        m_Lock.release();
 
         memcpy(reinterpret_cast<void*>(buff+offs),
                reinterpret_cast<void*>(buffer),
@@ -107,6 +127,41 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
         fileAttributeChanged();
     }
     return n;
+}
+
+physical_uintptr_t File::getPhysicalPage(size_t offset)
+{
+    // Sanitise input.
+    size_t blockSize = getBlockSize();
+    offset &= ~(blockSize - 1);
+
+    // Quick and easy exit.
+    if(offset > m_Size)
+    {
+        return static_cast<physical_uintptr_t>(~0UL);
+    }
+
+    // Check if we have this page in the cache.
+    m_Lock.acquire();
+    uintptr_t vaddr = m_DataCache.lookup(offset);
+    m_Lock.release();
+    if (!vaddr)
+    {
+        return static_cast<physical_uintptr_t>(~0UL);
+    }
+
+    // Look up the page now that we've confirmed it is in the cache.
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    if(va.isMapped(reinterpret_cast<void *>(vaddr)))
+    {
+        physical_uintptr_t phys = 0;
+        size_t flags = 0;
+        va.getMapping(reinterpret_cast<void *>(vaddr), phys, flags);
+
+        return phys;
+    }
+
+    return static_cast<physical_uintptr_t>(~0UL);
 }
 
 Time File::getCreationTime()

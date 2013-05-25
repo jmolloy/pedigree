@@ -408,8 +408,8 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
         lg2 ++;
     }
 
-    // Allocate 4GB and I'll kick your teeth in.
-    assert(lg2 < 24);
+    // Allocate >2GB and I'll kick your teeth in.
+    assert(lg2 < 31);
 
     nBytes = powerOf2;
     assert(nBytes >= OBJECT_MINIMUM_SIZE);

@@ -25,7 +25,8 @@
 
 static uint8_t nSubdivisors[8] = {0, 3, 2, 4, 1, 5, 6, 7};
 
-FtdiSerialDevice::FtdiSerialDevice(UsbDevice *dev) : Device(dev), UsbDevice(dev), m_pInEndpoint(0), m_pOutEndpoint(0)
+FtdiSerialDevice::FtdiSerialDevice(UsbDevice *dev) :
+    UsbDevice(dev), Serial(), m_pInEndpoint(0), m_pOutEndpoint(0)
 {
 }
 

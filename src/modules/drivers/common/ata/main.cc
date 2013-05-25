@@ -48,7 +48,8 @@ void probePiixController(Device *pDev)
 
   // Create a new AtaController device node.
   Controller *pDevController = new Controller(pDev);
-  if(pDevController->getInterruptNumber() == 0xFF)
+  uintptr_t intnum = pDevController->getInterruptNumber();
+  if(intnum == 0)
   {
       // No valid interrupt, handle
       pDevController->setInterruptNumber(interrupt);
@@ -114,7 +115,7 @@ static void searchNode(Device *pDev, bool bFallBackISA)
     // Try for a PIIX IDE controller first. We prefer the PIIX as it enables us
     // to use DMA (and is a little easier to use for device detection).
     static bool bPiixControllerFound = false;
-#if 0
+#if 1
     for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
     {
         Device *pChild = pDev->getChild(i);
@@ -172,7 +173,7 @@ static void searchNode(Device *pDev, bool bFallBackISA)
                         foundControl = true;
                 }
                 if (foundCommand && foundControl)
-                    probeIsaDevice(dynamic_cast<Controller*> (pChild));
+                    probeIsaDevice(static_cast<Controller*> (pChild));
             }
 
             // Recurse.

@@ -20,6 +20,7 @@
 #include <machine/Machine.h>
 #include <processor/Processor.h>
 #include <machine/IrqManager.h>
+#include <machine/InputManager.h>
 #include <LockGuard.h>
 #include <Log.h>
 
@@ -75,7 +76,7 @@ bool Ps2Mouse::irq(irq_id_t number, InterruptState &state)
             m_Buffer[m_BufferIndex++] = b;
             if(m_BufferIndex == 3)
             {
-                /// \todo Send the buffer to InputManager
+                InputManager::instance().mouseUpdate(m_Buffer[1], m_Buffer[2], m_Buffer[0] & 0x3);
                 m_BufferIndex = 0;
             }
         }

@@ -34,7 +34,7 @@ class Uhci : public UsbHub, public IrqHandler, public RequestQueue, public Timer
 {
     public:
         Uhci(Device* pDev);
-        ~Uhci();
+        virtual ~Uhci();
 
         struct TD
         {
@@ -223,7 +223,6 @@ class Uhci : public UsbHub, public IrqHandler, public RequestQueue, public Timer
         
         /// Semaphore for the dequeue list
         Semaphore m_DequeueCount;
-
 
         /// The time passed since last port check
         uint64_t m_nPortCheckTicks;

@@ -21,6 +21,7 @@ namespace Error
 {
   enum PosixError
   {
+    NoError              =0,
     NotEnoughPermissions =1,
     DoesNotExist         =2,
     NoSuchProcess        =3,
@@ -48,6 +49,7 @@ namespace Error
     IllegalSeek          =29,
     ReadOnlyFilesystem   =30,
     BrokenPipe           =32,
+    LoopExists           =92,
     OperationNotSupported=95,
     TimedOut             =116,
     InProgress           =119,

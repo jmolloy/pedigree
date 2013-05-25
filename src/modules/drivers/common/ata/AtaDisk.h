@@ -48,6 +48,8 @@ public:
     virtual void write(uint64_t location);
     virtual void align(uint64_t location);
 
+    virtual void flush(uint64_t location);
+
     // These are the internal functions that the controller calls when it is ready to process our request.
     virtual uint64_t doRead(uint64_t location);
     virtual uint64_t doWrite(uint64_t location);
@@ -92,6 +94,9 @@ private:
     Mutex m_IrqReceived;
 
 protected:
+    /** Performs the SET FEATURES command. */
+    bool setFeatures(uint8_t command, uint8_t countreg, uint8_t lowreg, uint8_t midreg, uint8_t hireg);
+
     /** Sector cache. */
     Cache m_Cache;
 

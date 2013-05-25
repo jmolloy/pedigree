@@ -22,7 +22,7 @@ static long syscall0(long function)
 {
   long eax = ((NATIVE_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
   long ret;
-  asm volatile("syscall" : "=a" (ret), "=b" (errno) : "0" (eax) : "rcx");
+  asm volatile("syscall" : "=a" (ret) : "0" (eax) : "rcx");
   return ret;
 }
 
@@ -30,7 +30,7 @@ static long syscall1(long function, long p1)
 {
   long eax = ((NATIVE_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
   long ret;
-  asm volatile("syscall" : "=a" (ret), "=b" (errno) : "0" (eax), "1" (p1): "rcx");
+  asm volatile("syscall" : "=a" (ret) : "0" (eax), "b" (p1): "rcx");
   return ret;
 }
 
@@ -38,7 +38,7 @@ static long syscall2(long function, long p1, long p2)
 {
   long eax = ((NATIVE_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
   long ret;
-  asm volatile("syscall" : "=a" (ret), "=b" (errno) : "0" (eax), "1" (p1), "d" (p2): "rcx");
+  asm volatile("syscall" : "=a" (ret) : "0" (eax), "b" (p1), "d" (p2): "rcx");
   return ret;
 }
 
@@ -46,7 +46,7 @@ static long syscall3(long function, long p1, long p2, long p3)
 {
   long eax = ((NATIVE_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
   long ret;
-  asm volatile("syscall" : "=a" (ret), "=b" (errno) : "0" (eax), "1" (p1), "d" (p2), "S" (p3): "rcx");
+  asm volatile("syscall" : "=a" (ret) : "0" (eax), "b" (p1), "d" (p2), "S" (p3): "rcx");
   return ret;
 }
 
@@ -54,7 +54,7 @@ static long syscall4(long function, long p1, long p2, long p3, long p4)
 {
   long eax = ((NATIVE_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
   long ret;
-  asm volatile("syscall" : "=a" (ret), "=b" (errno) : "0" (eax), "1" (p1), "d" (p2), "S" (p3), "D" (p4): "rcx");
+  asm volatile("syscall" : "=a" (ret) : "0" (eax), "b" (p1), "d" (p2), "S" (p3), "D" (p4): "rcx");
   return ret;
 }
 
@@ -62,7 +62,7 @@ static long syscall5(long function, long p1, long p2, long p3, long p4, long p5)
 {
   long eax = ((NATIVE_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
   long ret;
-  asm volatile("mov %7, %%r8; \
-                syscall" : "=a" (ret), "=b" (errno) : "0" (eax), "1" (p1), "d" (p2), "S" (p3), "D" (p4), "m" (p5): "rcx");
+  asm volatile("mov %6, %%r8; \
+                syscall" : "=a" (ret) : "0" (eax), "b" (p1), "d" (p2), "S" (p3), "D" (p4), "m" (p5): "rcx");
   return ret;
 }

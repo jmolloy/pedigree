@@ -27,12 +27,25 @@
 /** @addtogroup kernel
  * @{ */
 
+#define SHOW_FILE_IN_LOGS 0
+
+#if SHOW_FILE_IN_LOGS
+#define FILE_LOG(level) \
+  do \
+  { \
+    Log::instance() << level << __FILE__ << ":" << Dec << __LINE__ << Hex << " " << __FUNCTION__ << " -- "; \
+  } while(0)
+#else
+#define FILE_LOG(level)
+#endif
+
 /** Add a debug item to the log */
 #ifdef DEBUG_LOGGING
 #define DEBUG_LOG(text) \
   do \
   { \
     Log::instance().m_Lock.acquire(); \
+    FILE_LOG(Log::Debug); \
     Log::instance() << Log::Debug << text << Flush; \
     Log::instance().m_Lock.release(); \
   } \
@@ -41,6 +54,7 @@
 #define DEBUG_LOG_NOLOCK(text) \
   do \
   { \
+    FILE_LOG(Log::Debug); \
     Log::instance() << Log::Debug << text << Flush; \
   } \
   while (0)
@@ -54,6 +68,7 @@
   do \
   { \
     Log::instance().m_Lock.acquire(); \
+    FILE_LOG(Log::Notice); \
     Log::instance() << Log::Notice << text << Flush; \
     Log::instance().m_Lock.release(); \
   } \
@@ -63,6 +78,7 @@
 #define NOTICE_NOLOCK(text) \
   do \
   { \
+    FILE_LOG(Log::Notice); \
     Log::instance() << Log::Notice << text << Flush; \
   } \
   while (0)
@@ -72,6 +88,7 @@
   do \
   { \
     Log::instance().m_Lock.acquire(); \
+    FILE_LOG(Log::Warning); \
     Log::instance() << Log::Warning << text << Flush; \
     Log::instance().m_Lock.release(); \
   } \
@@ -81,6 +98,7 @@
 #define WARNING_NOLOCK(text) \
   do \
   { \
+    FILE_LOG(Log::Warning); \
     Log::instance() << Log::Warning << text << Flush; \
   } \
   while (0)
@@ -90,6 +108,7 @@
   do \
   { \
     Log::instance().m_Lock.acquire(); \
+    FILE_LOG(Log::Error); \
     Log::instance() << Log::Error << text << Flush; \
     Log::instance().m_Lock.release(); \
   } \
@@ -99,6 +118,7 @@
 #define ERROR_NOLOCK(text) \
   do \
   { \
+    FILE_LOG(Log::Error); \
     Log::instance() << Log::Error << text << Flush; \
   } \
   while (0)
@@ -112,6 +132,7 @@
   do \
   { \
     Log::instance().m_Lock.acquire(); \
+    FILE_LOG(Log::Fatal); \
     Log::instance() << Log::Fatal << text << Flush; \
     const char *panicstr = static_cast<const char*>(Log::instance().getLatestEntry().str); \
     Log::instance().m_Lock.release(); \
@@ -124,6 +145,7 @@
 #define FATAL_NOLOCK(text) \
   do \
   { \
+    FILE_LOG(Log::Fatal); \
     Log::instance() << Log::Fatal << text << Flush; \
     Processor::breakpoint(); \
     panic(static_cast<const char*>(Log::instance().getLatestEntry().str)); \

@@ -21,7 +21,7 @@
 /**
  * A bus is a device which provides a view onto other devices.
  */
-class Bus : public virtual Device
+class Bus : public Device
 {
 public:
   Bus(const char *pName) :

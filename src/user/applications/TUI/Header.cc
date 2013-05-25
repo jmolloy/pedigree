@@ -21,7 +21,11 @@
 #include <config/Config.h>
 #include <graphics/Graphics.h>
 
+#include <cairo/cairo.h>
+
 extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
+
+extern cairo_t *g_Cairo;
 
 uint32_t g_BorderColour                    = 0x965000; // {150, 80, 0,0};
 uint32_t g_TabBackgroundColour             = 0x000000; // {0, 0, 0,0};
@@ -38,7 +42,7 @@ static void getRgbColorFromDb(const char *colorName, uint32_t &color)
     string sQuery;
 
     // Create the query string
-    sQuery += "select r,g,b from 'colour-scheme' where name='";
+    sQuery += "select r,g,b from 'colour_scheme' where name='";
     sQuery += colorName;
     sQuery += "';";
 
@@ -69,7 +73,7 @@ Header::Header(size_t nWidth) :
     m_nWidth(nWidth), m_Page(0), m_LastPage(0), m_pFont(0),
     m_pTabs(0), m_NextTabId(0), m_pFramebuffer(0)
 {
-    m_pFont = new Font(g_FontSize, "/system/fonts/DejaVuSansMono-BoldOblique.ttf", false, nWidth);
+    m_pFont = new Font(g_FontSize, "/system/fonts/DejaVuSansMono-Bold.ttf", false, nWidth);
     g_FontSize = m_pFont->getHeight();
 
     getRgbColorFromDb("border", g_BorderColour);
@@ -94,25 +98,28 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
 {
     size_t charWidth = m_pFont->getWidth();
 
-    if(!m_pFramebuffer)
+    if(!g_Cairo)
     {
-        m_pFramebuffer = g_pFramebuffer->createChild(0, 0, m_nWidth, g_FontSize + 5);
-        if(!m_pFramebuffer)
-            return;
-        else if(!m_pFramebuffer->getRawBuffer())
-            return;
+        return;
     }
 
     // Set up the dirty rectangle to cover the entire header area.
     rect.point(0, 0);
     rect.point(m_nWidth, g_FontSize+5);
 
-    // Wipe the area
-    m_pFramebuffer->rect(0, 0, m_nWidth, g_FontSize + 4, g_MainBackgroundColour, PedigreeGraphics::Bits24_Rgb);
+    cairo_save(g_Cairo);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
 
-    // Height = font size + 2 px top and bottom + border 1px =
-    // font-size + 5px.
-    m_pFramebuffer->line(0, g_FontSize + 4, m_nWidth, g_FontSize + 4, g_BorderColour, PedigreeGraphics::Bits24_Rgb);
+    // Wipe the background.
+    cairo_set_source_rgba(
+            g_Cairo,
+            ((g_MainBackgroundColour >> 16) & 0xFF) / 256.0,
+            ((g_MainBackgroundColour >> 8) & 0xFF) / 256.0,
+            ((g_MainBackgroundColour) & 0xFF) / 256.0,
+            0.8);
+
+    cairo_rectangle(g_Cairo, 0, 0, m_nWidth, g_FontSize + 4);
+    cairo_fill(g_Cairo);
 
     size_t offset = 0;
     if (m_Page != 0)
@@ -126,7 +133,6 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
     {
         if (pTab->page == m_Page)
         {
-            // Add 5 pixels.
             offset += 5;
 
             uint32_t foreColour = g_TextColour;
@@ -142,13 +148,29 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
                 backColour = g_TabBackgroundColour;
 
             // Fill to background colour.
-            m_pFramebuffer->rect(offset - 4, 0, strlen(pTab->text) * charWidth + 10, g_FontSize + 4, backColour, PedigreeGraphics::Bits24_Rgb);
+            cairo_set_source_rgba(
+                    g_Cairo,
+                    ((backColour >> 16) & 0xFF) / 256.0,
+                    ((backColour >> 8) & 0xFF) / 256.0,
+                    ((backColour) & 0xFF) / 256.0,
+                    1.0);
+
+            cairo_rectangle(g_Cairo, offset - 5, 0, strlen(pTab->text) * charWidth + 10, g_FontSize + 4);
+            cairo_fill(g_Cairo);
 
             offset = renderString(pTab->text, offset, 2, foreColour, backColour);
 
             offset += 5;
             // Add a seperator
-            m_pFramebuffer->line(offset, 0, offset, g_FontSize + 4, g_BorderColour, PedigreeGraphics::Bits24_Rgb);
+            cairo_set_source_rgba(
+                    g_Cairo,
+                    ((g_BorderColour >> 16) & 0xFF) / 256.0,
+                    ((g_BorderColour >> 8) & 0xFF) / 256.0,
+                    ((g_BorderColour) & 0xFF) / 256.0,
+                    1.0);
+            cairo_move_to(g_Cairo, offset, 0);
+            cairo_line_to(g_Cairo, offset, g_FontSize + 4);
+            cairo_stroke(g_Cairo);
         }
         pTab = pTab->next;
     }
@@ -159,12 +181,25 @@ void Header::render(rgb_t *pBuffer, DirtyRectangle &rect)
         // Render a right-double arrow.
         offset = renderString(">", offset, 2, g_TextColour, g_MainBackgroundColour);
     }
+
+    // Height = font size + 2 px top and bottom + border 1px =
+    // font-size + 5px.
+    cairo_set_source_rgba(
+            g_Cairo,
+            ((g_BorderColour >> 16) & 0xFF) / 256.0,
+            ((g_BorderColour >> 8) & 0xFF) / 256.0,
+            ((g_BorderColour) & 0xFF) / 256.0,
+            1.0);
+    cairo_move_to(g_Cairo, 0, g_FontSize + 4);
+    cairo_line_to(g_Cairo, m_nWidth, g_FontSize + 4);
+    cairo_stroke(g_Cairo);
+
+    cairo_restore(g_Cairo);
 }
 
 size_t Header::renderString(const char *str, size_t x, size_t y, uint32_t f, uint32_t b)
 {
-    while (*str)
-        x += m_pFont->render(m_pFramebuffer, *str++, x, y, f, b);
+    x += m_pFont->render(str, x, y, f, b, false);
     return x;
 }
 

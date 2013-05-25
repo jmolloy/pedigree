@@ -55,7 +55,7 @@ public:
     else if((location + 0x1000) > m_Length)
         return 0;
 
-    Disk *pParent = dynamic_cast<Disk*> (getParent());
+    Disk *pParent = static_cast<Disk*> (getParent());
 
     if (!m_bAligned)
     {
@@ -76,7 +76,7 @@ public:
     else if((location + 0x1000) > m_Length)
         return;
 
-    Disk *pParent = dynamic_cast<Disk*> (getParent());
+    Disk *pParent = static_cast<Disk*> (getParent());
 
     if (!m_bAligned)
     {

@@ -16,6 +16,7 @@
 
 #include "NetworkStack.h"
 #include "Ethernet.h"
+#include "Ipv6.h"
 #include <Module.h>
 #include <Log.h>
 #include <processor/Processor.h>
@@ -56,9 +57,9 @@ uint64_t NetworkStack::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uin
                                 uint64_t p6, uint64_t p7, uint64_t p8)
 {
     ERROR("Old style network stack request, ignoring");
-    
+
     /*
-    
+
     // Make sure we have interrupts enabled, so we're interruptible.
     Processor::setInterrupts(true);
 
@@ -77,7 +78,7 @@ uint64_t NetworkStack::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uin
     Ethernet::instance().receive(packetSize, packet, pCard, offset);
 
     m_MemPool.free(packet);
-    
+
     */
 
     return 0;
@@ -95,7 +96,10 @@ int NetworkStack::packetThread(void *p)
     uint32_t offset = pack->offset;
 
     if(!packet || !packetSize)
+    {
+        delete pack;
         return 0;
+    }
 
     // Pass onto the ethernet layer
     /// \todo We should accept a parameter here that specifies the type of packet
@@ -105,6 +109,7 @@ int NetworkStack::packetThread(void *p)
 
     NetworkStack::instance().getMemPool().free(packet);
 
+    delete pack;
     return 0;
 }
 
@@ -130,9 +135,9 @@ void NetworkStack::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint
   p->packetLength = nBytes;
   p->pCard = pCard;
   p->offset = offset;
-  
+
   new Thread(Processor::information().getCurrentThread()->getParent(), packetThread, p);
-  
+
   /*
   addAsyncRequest(0, reinterpret_cast<uint64_t>(safePacket),
                      static_cast<uint64_t>(nBytes),
@@ -169,10 +174,19 @@ void NetworkStack::deRegisterDevice(Network *pDevice)
   }
 }
 
+extern Ipv6Service *g_pIpv6Service;
+extern ServiceFeatures *g_pIpv6Features;
+
 static void entry()
 {
     // Initialise the DNS implementation
     Dns::instance().initialise();
+
+    // Install the IPv6 Service
+    g_pIpv6Service = new Ipv6Service;
+    g_pIpv6Features = new ServiceFeatures;
+    g_pIpv6Features->add(ServiceFeatures::touch);
+    ServiceManager::instance().addService(String("ipv6"), g_pIpv6Service, g_pIpv6Features);
 }
 
 static void exit()

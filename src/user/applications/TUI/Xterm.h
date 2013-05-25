@@ -25,6 +25,7 @@
 #define XTERM_INVERSE   0x4
 #define XTERM_BRIGHTFG  0x8
 #define XTERM_BRIGHTBG  0x10
+#define XTERM_BORDER    0x20
 
 class Xterm
 {
@@ -58,8 +59,13 @@ public:
 
     void resize(size_t w, size_t h, PedigreeGraphics::Framebuffer *pFb)
     {
-        m_pWindows[0]->resize(w, h, pFb);
-        m_pWindows[1]->resize(w, h, pFb);
+        m_pWindows[(m_ActiveBuffer + 1) % 2]->resize(w, h, false);
+        m_pWindows[m_ActiveBuffer]->resize(w, h, true);
+    }
+
+    void setCursorStyle(bool bFilled)
+    {
+        m_pWindows[m_ActiveBuffer]->setCursorStyle(bFilled);
     }
 
 private:
@@ -96,7 +102,7 @@ private:
             void showCursor(DirtyRectangle &rect);
             void hideCursor(DirtyRectangle &rect);
 
-            void resize(size_t nRows, size_t nCols, PedigreeGraphics::Framebuffer *pBuffer);
+            void resize(size_t nRows, size_t nCols, bool bActive);
 
             void setScrollRegion(int start, int end);
             void setForeColour(uint8_t fgColour);
@@ -115,6 +121,10 @@ private:
             void setCursorY(size_t y, DirtyRectangle &rect);
             size_t getCursorX();
             size_t getCursorY();
+            void setCursorStyle(bool bFilled)
+            {
+                m_bCursorFilled = bFilled;
+            }
 
             void cursorLeft(DirtyRectangle &rect);
             void cursorLeftNum(size_t n, DirtyRectangle &rect);
@@ -189,6 +199,8 @@ private:
 
             uint8_t m_Fg, m_Bg;
             uint8_t m_Flags;
+
+            bool m_bCursorFilled;
 
             bool m_bLineRender;
     };

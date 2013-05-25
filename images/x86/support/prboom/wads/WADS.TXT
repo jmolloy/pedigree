@@ -1,4 +1,0 @@
-Note - the DOOM1.WAD file is from the SHAREWARE VERSION of DOOM.
-
-We can't put the full version's WADs into the repository - if you have them,
-you can only use them in your *local working copy*.

@@ -23,10 +23,12 @@
 
 #include <LockGuard.h>
 
+#include <machine/Network.h>
+
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
 Dm9601::Dm9601(UsbDevice *pDev) :
-            Device(pDev), UsbDevice(pDev), m_pInEndpoint(0), m_pOutEndpoint(0),
+            UsbDevice(pDev), ::Network(), m_pInEndpoint(0), m_pOutEndpoint(0),
             m_TxLock(false), m_IncomingPackets(false), m_RxPacketQueue(),
             m_RxPacketQueueLock(), m_TxPacket(0)
 {

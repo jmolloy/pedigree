@@ -241,6 +241,11 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         }
         if (errorfds && FD_ISSET(i, errorfds))
         {
+            FD_CLR(i, errorfds);
+        }
+        /*
+        if (errorfds && FD_ISSET(i, errorfds))
+        {
             // Has the file already got data in it?
             /// \todo Specify read/write/error to select and monitor.
             if (pFd->file->select(false, 0))
@@ -274,6 +279,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
                 reentrancyLock.release();
             }
         }
+        */
     }
 
     // Grunt work is done, now time to cleanup.

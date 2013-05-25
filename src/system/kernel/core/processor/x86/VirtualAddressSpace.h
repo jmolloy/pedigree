@@ -21,6 +21,34 @@
 #include <Spinlock.h>
 #include <processor/VirtualAddressSpace.h>
 
+//
+// Virtual address space layout
+//
+#define KERNEL_SPACE_START                  reinterpret_cast<void*>(0xC0000000)
+
+#define USERSPACE_DYNAMIC_LINKER_LOCATION   reinterpret_cast<void*>(0x4FA00000)
+
+#define USERSPACE_VIRTUAL_START             reinterpret_cast<void*>(0x400000)
+#define USERSPACE_VIRTUAL_HEAP              reinterpret_cast<void*>(0x50000000)
+#define USERSPACE_VIRTUAL_STACK             reinterpret_cast<void*>(0xB0000000)
+#define USERSPACE_RESERVED_START            USERSPACE_VIRTUAL_HEAP
+#define USERSPACE_VIRTUAL_MAX_STACK_SIZE    0x100000
+#define USERSPACE_VIRTUAL_LOWEST_STACK      reinterpret_cast<void*>(0x70000000)
+#define VIRTUAL_PAGE_DIRECTORY              reinterpret_cast<void*>(0xFFBFF000)
+#define VIRTUAL_PAGE_TABLES                 reinterpret_cast<void*>(0xFFC00000)
+#define KERNEL_VIRTUAL_TEMP1                reinterpret_cast<void*>(0xFFBFC000)
+#define KERNEL_VIRTUAL_TEMP2                reinterpret_cast<void*>(0xFFBFD000)
+#define KERNEL_VIRTUAL_TEMP3                reinterpret_cast<void*>(0xFFBFE000)
+#define KERNEL_VIRTUAL_HEAP                 reinterpret_cast<void*>(0xC0000000)
+#define KERNEL_VIRTUAL_HEAP_SIZE            0x10000000
+#define KERNEL_VIRUTAL_PAGE_DIRECTORY       reinterpret_cast<void*>(0xFF7FF000)
+#define KERNEL_VIRTUAL_ADDRESS              reinterpret_cast<void*>(0xFF400000 - 0x100000)
+#define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS reinterpret_cast<void*>(0xD0000000)
+#define KERNEL_VIRTUAL_PAGESTACK_4GB        reinterpret_cast<void*>(0xF0000000)
+#define KERNEL_VIRTUAL_STACK                reinterpret_cast<void*>(0xFF3F6000)
+#define KERNEL_VIRTUAL_MEMORYREGION_SIZE    0x10000000
+#define KERNEL_STACK_SIZE                   0x8000
+
 /** @addtogroup kernelprocessorx86
  * @{ */
 
@@ -79,6 +107,30 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
     static void initialise() INITIALISATION_ONLY;
     /** The destructor cleans up the address space */
     virtual ~X86VirtualAddressSpace();
+
+    /** Gets start address of the kernel in the address space. */
+    virtual uintptr_t getKernelStart() const
+    {
+        return reinterpret_cast<uintptr_t>(KERNEL_SPACE_START);
+    }
+
+    /** Gets start address of the region usable and cloneable for userspace. */
+    virtual uintptr_t getUserStart() const
+    {
+        return reinterpret_cast<uintptr_t>(USERSPACE_VIRTUAL_START);
+    }
+
+    /** Gets start address of reserved areas of the userpace address space. */
+    virtual uintptr_t getUserReservedStart() const
+    {
+        return reinterpret_cast<uintptr_t>(USERSPACE_RESERVED_START);
+    }
+
+    /** Gets address of the dynamic linker in the address space. */
+    virtual uintptr_t getDynamicLinkerAddress() const
+    {
+        return reinterpret_cast<uintptr_t>(USERSPACE_DYNAMIC_LINKER_LOCATION);
+    }
 
   protected:
     /** The constructor for already present paging structures
@@ -206,29 +258,5 @@ class X86KernelVirtualAddressSpace : public X86VirtualAddressSpace
 };
 
 /** @} */
-
-//
-// Virtual address space layout
-//
-#define KERNEL_SPACE_START                  reinterpret_cast<void*>(0xC0000000)
-
-#define USERSPACE_VIRTUAL_HEAP              reinterpret_cast<void*> (0x50000000)
-#define USERSPACE_VIRTUAL_STACK             reinterpret_cast<void*>(0xB0000000)
-#define USERSPACE_VIRTUAL_MAX_STACK_SIZE    0x100000
-#define USERSPACE_VIRTUAL_LOWEST_STACK      reinterpret_cast<void*>(0x70000000)
-#define VIRTUAL_PAGE_DIRECTORY              reinterpret_cast<void*>(0xFFBFF000)
-#define VIRTUAL_PAGE_TABLES                 reinterpret_cast<void*>(0xFFC00000)
-#define KERNEL_VIRTUAL_TEMP1                reinterpret_cast<void*>(0xFFBFC000)
-#define KERNEL_VIRTUAL_TEMP2                reinterpret_cast<void*>(0xFFBFD000)
-#define KERNEL_VIRTUAL_TEMP3                reinterpret_cast<void*>(0xFFBFE000)
-#define KERNEL_VIRTUAL_HEAP                 reinterpret_cast<void*>(0xC0000000)
-#define KERNEL_VIRTUAL_HEAP_SIZE            0x10000000
-#define KERNEL_VIRUTAL_PAGE_DIRECTORY       reinterpret_cast<void*>(0xFF7FF000)
-#define KERNEL_VIRTUAL_ADDRESS              reinterpret_cast<void*>(0xFF400000 - 0x100000)
-#define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS reinterpret_cast<void*>(0xD0000000)
-#define KERNEL_VIRTUAL_PAGESTACK_4GB        reinterpret_cast<void*>(0xF0000000)
-#define KERNEL_VIRTUAL_STACK                reinterpret_cast<void*>(0xFF3F6000)
-#define KERNEL_VIRTUAL_MEMORYREGION_SIZE    0x10000000
-#define KERNEL_STACK_SIZE                   0x8000
 
 #endif

@@ -137,3 +137,17 @@ int console_getwinsize(File* file, winsize_t *buf)
   buf->ws_col = ConsoleManager::instance().getCols(file);
   return 0;
 }
+
+int console_flush(File *file, void *what)
+{
+  if (!ConsoleManager::instance().isConsole(file))
+  {
+    // Error - not a TTY.
+    return -1;
+  }
+
+  /// \todo handle 'what' parameter
+  ConsoleManager::instance().flush(file);
+  return 0;
+}
+

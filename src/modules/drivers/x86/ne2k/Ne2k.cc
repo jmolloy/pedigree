@@ -26,7 +26,7 @@
 // #define NE2K_NO_THREADS
 
 Ne2k::Ne2k(Network* pDev) :
-  Device(pDev), Network(pDev), m_pBase(0), m_NextPacket(0),
+  Network(pDev), m_pBase(0), m_NextPacket(0),
   m_PacketQueueSize(0),m_PacketQueue(), m_PacketQueueLock()
 {
   setSpecificType(String("ne2k-card"));
@@ -95,9 +95,18 @@ Ne2k::Ne2k(Network* pDev) :
   m_pBase->write8(PAGE_RX, NE_BNDRY);
   m_pBase->write8(PAGE_STOP, NE_PSTOP);
 
-  // accept broadcast and runt packets (<64 bytes)
-  m_pBase->write8(0x06, NE_RCR);
+  // accept multicast, broadcast, and runt packets (<64 bytes)
+  /// \todo Proper multicast subscription via the Network card abstraction
+  m_pBase->write8(0x14, NE_RCR);
   m_pBase->write8(0x00, NE_TCR);
+
+  // Accept all multicast packets. Once we have an API for multicast subscription this will be
+  // different, as we may not want to receive every single multicast packet that arrives.
+  uint8_t tmp = m_pBase->read8(NE_CMD);
+  m_pBase->write8(tmp | 0x40, NE_CMD);
+  for(i = 0; i < MAR_SIZE; i++)
+    m_pBase->write8(0xFF, NE_MAR + i);
+  m_pBase->write8(tmp, NE_CMD);
 
   // register the packet queue handler before we install the IRQ
 #ifdef THREADS
@@ -311,7 +320,10 @@ bool Ne2k::setStationInfo(StationInfo info)
   // MAC isn't changeable, so set it all manually
   m_StationInfo.ipv4 = info.ipv4;
   NOTICE("NE2K: Setting ipv4, " << info.ipv4.toString() << ", " << m_StationInfo.ipv4.toString() << "...");
+
   m_StationInfo.ipv6 = info.ipv6;
+  m_StationInfo.nIpv6Addresses = info.nIpv6Addresses;
+  NOTICE("NE2K: Copied " << info.nIpv6Addresses << " IPv6 addresses.");
 
   m_StationInfo.subnetMask = info.subnetMask;
   NOTICE("NE2K: Setting subnet mask, " << info.subnetMask.toString() << ", " << m_StationInfo.subnetMask.toString() << "...");

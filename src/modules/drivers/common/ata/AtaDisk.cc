@@ -44,16 +44,16 @@ AtaDisk::~AtaDisk()
 bool AtaDisk::initialise()
 {
     // Grab our parent.
-    AtaController *pParent = dynamic_cast<AtaController*> (m_pParent);
+    AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Grab our parent's IoPorts for command and control accesses.
     IoBase *commandRegs = m_CommandRegs;
     // Commented out - unused variable.
     // IoBase *controlRegs = m_ControlRegs;
 
-    // Drive spin-up
-    commandRegs->write8(0x00, 6);
-    
+    // Drive spin-up (go from standby to active, if necessary)
+    setFeatures(0x07, 0, 0, 0, 0);
+
     // Check for device presence
     uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
     commandRegs->write8(devSelect, 6);
@@ -92,7 +92,7 @@ bool AtaDisk::initialise()
 
     // Read status register.
     status = ataWait(commandRegs);
-    
+
     // Check that the device actually exists
     if (status.__reg_contents == 0)
         return false;
@@ -182,6 +182,10 @@ bool AtaDisk::initialise()
     }
     m_pFirmwareRevision[8] = '\0';
 
+    NOTICE("can transfer " << Dec << (LITTLE_TO_HOST16(m_pIdent[47]) & 0xFF) << Hex << " blocks per transfer");
+    NOTICE("word 63: " << m_pIdent[63]);
+    NOTICE("word 88: " << m_pIdent[88]);
+
     uint16_t word83 = LITTLE_TO_HOST16(m_pIdent[83]);
     if (word83 & (1<<10))
     {
@@ -210,8 +214,10 @@ uintptr_t AtaDisk::read(uint64_t location)
     if (location % 512)
         FATAL("AtaDisk: write request not on a sector boundary!");
 
+    /// \todo Bounds checking.
+
     // Grab our parent.
-    AtaController *pParent = dynamic_cast<AtaController*> (m_pParent);
+    AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Look through the align points.
     uint64_t alignPoint = 0;
@@ -253,7 +259,7 @@ void AtaDisk::write(uint64_t location)
         FATAL("AtaDisk: write request not on a sector boundary!");
 
     // Grab our parent.
-    AtaController *pParent = dynamic_cast<AtaController*> (m_pParent);
+    AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Look through the align points.
     uint64_t alignPoint = 0;
@@ -278,18 +284,39 @@ void AtaDisk::align(uint64_t location)
     m_AlignPoints[m_nAlignPoints++] = location;
 }
 
+void AtaDisk::flush(uint64_t location)
+{
+    if(location & 0xFFF)
+        location &= ~0xFFF;
+
+    uintptr_t buff = m_Cache.lookup(location);
+    if(!buff)
+        return;
+
+    doWrite(location);
+}
+
 uint64_t AtaDisk::doRead(uint64_t location)
 {
-    uint64_t nBytes = 4096;
-    uintptr_t buffer = m_Cache.insert(location, nBytes);
+    // Handle the case where a read took place while we were waiting in the
+    // RequestQueue - don't double up the cache.
+    size_t nBytes = 65536;
+    uint64_t oldLocation = location;
+    location &= ~(nBytes - 1);
+    uintptr_t buffer = m_Cache.lookup(location);
+    if(buffer)
+    {
+        WARNING("AtaDisk::doRead(" << oldLocation << ") - buffer was already in cache");
+        return 0;
+    }
+    buffer = m_Cache.insert(location, nBytes);
     if(!buffer)
     {
-        nBytes = 4096;
-        m_Cache.insert(location);
+        FATAL("AtaDisk::doRead - no buffer");
     }
 
     // Grab our parent.
-    AtaController *pParent = dynamic_cast<AtaController*> (m_pParent);
+    AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Grab our parent's IoPorts for command and control accesses.
     IoBase *commandRegs = m_CommandRegs;
@@ -310,7 +337,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
     // Select the device to transmit to
     uint8_t devSelect;
     if (m_SupportsLBA48)
-        devSelect = (m_IsMaster) ? 0x40 : 0x50;
+        devSelect = (m_IsMaster) ? 0xE0 : 0xF0;
     else
         devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
     commandRegs->write8(devSelect, 6);
@@ -327,6 +354,12 @@ uint64_t AtaDisk::doRead(uint64_t location)
         // Send out sector count.
         uint8_t nSectorsToRead = (nSectors>255) ? 255 : nSectors;
         nSectors -= nSectorsToRead;
+
+        bool bDmaSetup = false;
+        if(m_bDma)
+        {
+            bDmaSetup = m_BusMaster->add(buffer, nSectorsToRead * 512);
+        }
 
         /// \todo CHS
         if (m_SupportsLBA48)
@@ -351,10 +384,11 @@ uint64_t AtaDisk::doRead(uint64_t location)
         /// \bug Hello! I am a race condition! You find me in poorly written code, like the two lines below. Enjoy!
 
         // Enable IRQs.
-        Machine::instance().getIrqManager()->enable(getParent()->getInterruptNumber(), true);
+        uintptr_t intNumber = pParent->getInterruptNumber();
+        if(intNumber != 0xFF)
+            Machine::instance().getIrqManager()->enable(intNumber, true);
 
-        bool bDmaSetup = false;
-        if(m_bDma)
+        if(m_bDma && bDmaSetup)
         {
             if (!m_SupportsLBA48)
             {
@@ -368,7 +402,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
             }
 
             // Start the DMA command
-            bDmaSetup = m_BusMaster->begin(buffer, nSectorsToRead * 512, false);
+            bDmaSetup = m_BusMaster->begin(false);
         }
         else
         {
@@ -384,10 +418,29 @@ uint64_t AtaDisk::doRead(uint64_t location)
             }
         }
 
-        // Acquire the 'outstanding IRQ' mutex.
+        // Acquire the 'outstanding IRQ' mutex, or use other means if no IRQ.
         while(true)
         {
-            m_IrqReceived.acquire(1, 10);
+            if(intNumber != 0xFF)
+            {
+                m_IrqReceived.acquire(1, 10);
+            }
+            else
+            {
+                // No IRQ line.
+                if(m_bDma && bDmaSetup)
+                {
+                    while(!(m_BusMaster->hasCompleted() || m_BusMaster->hasInterrupt()))
+                    {
+                        Processor::haltUntilInterrupt();
+                    }
+                }
+                else
+                {
+                    /// \todo Write non-DMA case (if needed?)
+                }
+            }
+
             if(Processor::information().getCurrentThread()->wasInterrupted())
             {
                 // Interrupted! Fail! Assume nothing read so far.
@@ -396,7 +449,17 @@ uint64_t AtaDisk::doRead(uint64_t location)
             }
             else if(m_bDma && bDmaSetup)
             {
-                if(m_BusMaster->hasInterrupt())
+                // Ensure we are not busy before continuing handling.
+                status = ataWait(commandRegs);
+                if(status.reg.err)
+                {
+                    /// \todo What's the best way to handle this?
+                    m_BusMaster->commandComplete();
+                    WARNING("ATA: read failed during DMA data transfer");
+                    return 0;
+                }
+
+                if(m_BusMaster->hasInterrupt() || m_BusMaster->hasCompleted())
                 {
                     // commandComplete effectively resets the device state, so we need
                     // to get the error register first.
@@ -426,23 +489,9 @@ uint64_t AtaDisk::doRead(uint64_t location)
                     return 0;
                 }
 
-                // Mark the start of the sector.
-                uint8_t *pSector = reinterpret_cast<uint8_t*> (pTarget);
-
-                // We got the mutex, so an IRQ must have arrived.
+                // Read the sector.
                 for (int j = 0; j < 256; j++)
                     *pTarget++ = commandRegs->read16(0);
-            }
-        }
-        else
-        {
-            // Check for an error during the DMA command
-            status = ataWait(commandRegs);
-            if(status.reg.err)
-            {
-                /// \todo What's the best way to handle this?
-                WARNING("ATA: read failed during DMA data transfer");
-                return 0;
             }
         }
     }
@@ -465,7 +514,7 @@ uint64_t AtaDisk::doWrite(uint64_t location)
 
     /// \todo DMA?
     // Grab our parent.
-    AtaController *pParent = dynamic_cast<AtaController*> (m_pParent);
+    AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Grab our parent's IoPorts for command and control accesses.
     IoBase *commandRegs = m_CommandRegs;
@@ -484,7 +533,7 @@ uint64_t AtaDisk::doWrite(uint64_t location)
     // Select the device to transmit to
     uint8_t devSelect;
     if (m_SupportsLBA48)
-        devSelect = (m_IsMaster) ? 0x40 : 0x50;
+        devSelect = (m_IsMaster) ? 0xE0 : 0xF0;
     else
         devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
     commandRegs->write8(devSelect, 6);
@@ -543,7 +592,8 @@ uint64_t AtaDisk::doWrite(uint64_t location)
             }
 
             // Start the DMA command
-            bDmaSetup = m_BusMaster->begin(buffer, nSectorsToWrite * 512, true);
+            bDmaSetup = m_BusMaster->add(buffer, nSectorsToWrite * 512);
+            bDmaSetup = m_BusMaster->begin(true);
         }
         else
         {
@@ -636,7 +686,7 @@ void AtaDisk::irqReceived()
 void AtaDisk::setupLBA28(uint64_t n, uint32_t nSectors)
 {
     // Grab our parent.
-    AtaController *pParent = dynamic_cast<AtaController*> (m_pParent);
+    AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Grab our parent's IoPorts for command and control accesses.
     IoBase *commandRegs = m_CommandRegs;
@@ -664,7 +714,7 @@ void AtaDisk::setupLBA28(uint64_t n, uint32_t nSectors)
 void AtaDisk::setupLBA48(uint64_t n, uint32_t nSectors)
 {
     // Grab our parent.
-    AtaController *pParent = dynamic_cast<AtaController*> (m_pParent);
+    AtaController *pParent = static_cast<AtaController*> (m_pParent);
 
     // Grab our parent's IoPorts for command and control accesses.
     IoBase *commandRegs = m_CommandRegs;
@@ -690,3 +740,20 @@ void AtaDisk::setupLBA48(uint64_t n, uint32_t nSectors)
     commandRegs->write8(lba2, 4);
     commandRegs->write8(lba3, 5);
 }
+
+bool AtaDisk::setFeatures(uint8_t command, uint8_t countreg, uint8_t lowreg, uint8_t midreg, uint8_t hireg)
+{
+    // Grab our parent's IoPorts for command and control accesses.
+    IoBase *commandRegs = m_CommandRegs;
+
+    uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
+    commandRegs->write8(devSelect, 6);
+
+    commandRegs->write8(command, 1);
+    commandRegs->write8(countreg, 2);
+    commandRegs->write8(lowreg, 3);
+    commandRegs->write8(midreg, 4);
+    commandRegs->write8(hireg, 5);
+    commandRegs->write8(0xEF, 7);
+}
+

@@ -23,7 +23,7 @@
 #include <utilities/ExtensibleBitmap.h>
 #include <usb/Usb.h>
 
-class UsbHub : public virtual Device
+class UsbHub : public Device
 {
     public:
 
@@ -32,7 +32,16 @@ class UsbHub : public virtual Device
             m_UsedAddresses.set(0);
         }
 
+        UsbHub(Device *p) : Device(p)
+        {
+        }
+
         inline virtual ~UsbHub() {}
+
+        virtual Type getType()
+        {
+            return UsbController;
+        }
 
         /// Adds a new transfer to an existent transaction
         virtual void addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid pid, uintptr_t pBuffer, size_t nBytes) =0;

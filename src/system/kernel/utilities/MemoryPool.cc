@@ -51,7 +51,7 @@ bool MemoryPool::initialise(size_t poolSize, size_t bufferSize)
     if(m_bInitialised)
         return true;
 
-    if(!poolSize || !bufferSize || (bufferSize > poolSize))
+    if(!poolSize || !bufferSize || (bufferSize > (poolSize * PhysicalMemoryManager::getPageSize())))
         return false;
 
     // Find the next power of two for bufferSize, if it isn't already one
@@ -73,7 +73,7 @@ bool MemoryPool::initialise(size_t poolSize, size_t bufferSize)
         m_Pool,
         poolSize,
         0,
-        VirtualAddressSpace::Write
+        VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode
     );
     if(!m_bInitialised)
         return false;
@@ -93,7 +93,11 @@ uintptr_t MemoryPool::allocate()
 
     /// \bug Race if another allocate() call occurs between the acquire and the doer
 #ifdef THREADS
-    m_BlockSemaphore.acquire();
+    if(!m_BlockSemaphore.tryAcquire())
+    {
+        ERROR("MemoryPool: COMPLETELY out of buffers!");
+        m_BlockSemaphore.acquire();
+    }
 #endif
     return allocateDoer();
 }

@@ -65,6 +65,7 @@
 //----------------------------------------------------------------------
 //Pedigree includes
 #include <utilities/md5/md5.h>
+#include <utilities/utility.h>
 
 //----------------------------------------------------------------------
 // defines
@@ -275,13 +276,7 @@ void MD5::Decode (unsigned long int *output, unsigned char *input, unsigned int 
  */  
 void MD5::MD5_memcpy (POINTER output, POINTER input, unsigned int len)
 {
-	/*
-	 * TODO-Note: Replace "for loop" with standard memcpy if possible.
-	 */
-	unsigned int i;
-
-	for (i = 0; i < len; i++)
-		output[i] = input[i];
+	memcpy(output, input, len);
 }
 
 /**
@@ -294,12 +289,7 @@ void MD5::MD5_memcpy (POINTER output, POINTER input, unsigned int len)
  */  
 void MD5::MD5_memset (POINTER output,int value,unsigned int len)
 {
-	/*
-	 * TODO-Note: Replace "for loop" with standard memset if possible.
-	 */
-	unsigned int i;
-	for (i = 0; i < len; i++)
-		((char *)output)[i] = (char)value;
+	memset(output, value, len);
 }
 
 //----------------------------------------------------------------------	

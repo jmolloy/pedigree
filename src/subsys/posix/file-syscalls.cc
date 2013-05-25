@@ -50,6 +50,36 @@ extern int posix_getpid();
 
 #define GET_CWD() (Processor::information().getCurrentThread()->getParent()->getCwd())
 
+inline File *traverseSymlink(File *file)
+{
+    if(!file)
+    {
+        SYSCALL_ERROR(DoesNotExist);
+        return 0;
+    }
+
+    Tree<File*, File*> loopDetect;
+    while(file->isSymlink())
+    {
+        file = Symlink::fromFile(file)->followLink();
+        if(!file)
+        {
+            SYSCALL_ERROR(DoesNotExist);
+            return 0;
+        }
+
+        if(loopDetect.lookup(file))
+        {
+            SYSCALL_ERROR(LoopExists);
+            return 0;
+        }
+        else
+            loopDetect.insert(file, file);
+    }
+
+    return file;
+}
+
 int posix_close(int fd)
 {
     F_NOTICE("close(" << fd << ")");
@@ -116,6 +146,10 @@ int posix_open(const char *name, int flags, int mode)
         if (!file)
             file = NullFs::instance().getFile();
     }
+    else if (!strcmp(name, "/dev/urandom"))
+    {
+        file = RandomFs::instance().getFile();
+    }
     else if (!strcmp(name, "/dev/null"))
     {
         file = NullFs::instance().getFile();
@@ -170,8 +204,6 @@ int posix_open(const char *name, int flags, int mode)
         }
     }
 
-    while(file && file->isSymlink())
-        file = Symlink::fromFile(file)->followLink();
     if(!file)
     {
       F_NOTICE("File does not exist.");
@@ -179,6 +211,11 @@ int posix_open(const char *name, int flags, int mode)
       pSubsystem->freeFd(fd);
       return -1;
     }
+
+    file = traverseSymlink(file);
+
+    if(!file)
+        return -1;
 
     if (file->isDirectory() && (flags & (O_WRONLY | O_RDWR)))
     {
@@ -257,10 +294,8 @@ int posix_read(int fd, char *ptr, int len)
     uint64_t nRead = 0;
     if (ptr && len)
     {
-        char *kernelBuf = new char[len];
-        nRead = pFd->file->read(pFd->offset, len, reinterpret_cast<uintptr_t>(kernelBuf), canBlock);
-        memcpy(reinterpret_cast<void*>(ptr), reinterpret_cast<void*>(kernelBuf), len);
-        delete [] kernelBuf;
+        /// \todo Sanitise input and check it's mapped etc so we don't segfault the kernel
+        nRead = pFd->file->read(pFd->offset, len, len > 0x500000 ? 0 : reinterpret_cast<uintptr_t>(ptr), canBlock);
 
         pFd->offset += nRead;
     }
@@ -303,10 +338,8 @@ int posix_write(int fd, char *ptr, int len)
     uint64_t nWritten = 0;
     if (ptr && len)
     {
-        char *kernelBuf = new char[len];
-        memcpy(reinterpret_cast<void*>(kernelBuf), reinterpret_cast<void*>(ptr), len);
-        nWritten = pFd->file->write(pFd->offset, len, reinterpret_cast<uintptr_t>(kernelBuf));
-        delete [] kernelBuf;
+        /// \todo Sanitise input and check it's mapped etc so we don't segfault the kernel
+        nWritten = pFd->file->write(pFd->offset, len, reinterpret_cast<uintptr_t>(ptr));
         pFd->offset += nWritten;
     }
 
@@ -424,14 +457,16 @@ int posix_rename(const char* source, const char* dst)
     }
 
     // traverse symlink
-    while (src->isSymlink())
-        src = Symlink::fromFile(src)->followLink();
+    src = traverseSymlink(src);
+    if(!src)
+        return -1;
 
     if (dest)
     {
         // traverse symlink
-        while (dest->isSymlink())
-            dest = Symlink::fromFile(dest)->followLink();
+        dest = traverseSymlink(dest);
+        if(!dest)
+            return -1;
 
         if (dest->isDirectory() && !src->isDirectory())
         {
@@ -511,15 +546,12 @@ int posix_stat(const char *name, struct stat *st)
         SYSCALL_ERROR(DoesNotExist);
         return -1;
     }
+    
+    file = traverseSymlink(file);
 
-    while (file->isSymlink())
-        file = Symlink::fromFile(file)->followLink();
-
-    if (!file)
+    if(!file)
     {
-        // Error - not found.
         F_NOTICE("    -> Symlink traversal failed");
-        SYSCALL_ERROR(DoesNotExist);
         return -1;
     }
 
@@ -736,9 +768,11 @@ int posix_opendir(const char *dir, dirent *ent)
         SYSCALL_ERROR(DoesNotExist);
         return -1;
     }
+    
+    file = traverseSymlink(file);
 
-    while (file->isSymlink())
-        file = Symlink::fromFile(file)->followLink();
+    if(!file)
+        return -1;
 
     if (!file->isDirectory())
     {
@@ -782,7 +816,7 @@ int posix_opendir(const char *dir, dirent *ent)
 
 int posix_readdir(int fd, dirent *ent)
 {
-    // F_NOTICE("readdir(" << fd << ")");
+    F_NOTICE("readdir(" << fd << ")");
 
     if (fd == -1)
         return -1;
@@ -811,7 +845,11 @@ int posix_readdir(int fd, dirent *ent)
     }
     File* file = Directory::fromFile(pFd->file)->getChild(pFd->offset);
     if (!file)
+    {
+        // Normal EOF condition.
+        SYSCALL_ERROR(NoError);
         return -1;
+    }
 
     ent->d_ino = static_cast<short>(file->getInode());
     String tmp = file->getName();
@@ -831,6 +869,8 @@ void posix_rewinddir(int fd, dirent *ent)
     if (fd == -1)
         return;
 
+    F_NOTICE("rewinddir(" << fd << ")");
+
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
     if (!pSubsystem)
@@ -847,6 +887,8 @@ int posix_closedir(int fd)
 {
     if (fd == -1)
         return -1;
+
+    F_NOTICE("closedir(" << fd << ")");
 
     /// \todo Race here - fix.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -887,6 +929,12 @@ int posix_ioctl(int fd, int command, void *buf)
         {
             return console_getwinsize(f->file, reinterpret_cast<winsize_t*>(buf));
         }
+
+        case TIOCFLUSH:
+        {
+            return console_flush(f->file, buf);
+        }
+
         case FIONBIO:
         {
             // set/unset non-blocking
@@ -1038,75 +1086,6 @@ int posix_isatty(int fd)
 
     NOTICE("isatty(" << fd << ") -> " << ((ConsoleManager::instance().isConsole(pFd->file)) ? 1 : 0));
     return (ConsoleManager::instance().isConsole(pFd->file)) ? 1 : 0;
-}
-
-/** poll: determine if a set of file descriptors are writable/readable.
- *
- *  Permits any number of descriptors, unlike select().
- *  \todo Timeout
- */
-int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout)
-{
-    F_NOTICE("poll(" << Dec << nfds << ", " << timeout << Hex << ")");
-
-    // Grab the subsystem for this process
-    Process *pProcess = Processor::information().getCurrentThread()->getParent();
-    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
-    if (!pSubsystem)
-    {
-        ERROR("No subsystem for this process!");
-        return -1;
-    }
-
-    // Number of descriptors ready
-    int numReady = 0;
-
-    // Build the list
-    for(unsigned int i = 0; i < nfds; i++)
-    {
-        struct pollfd *me = &fds[i];
-        me->revents = 0;
-
-        if(me->fd < 0)
-            continue;
-
-        FileDescriptor *pFd = pSubsystem->getFileDescriptor(me->fd);
-        if(!pFd)
-        {
-            me->revents |= POLLNVAL;
-            numReady++;
-        }
-        else
-        {
-            int n = 0;
-            if(me->events & POLLIN)
-            {
-                if(pFd->file->select(false, 0))
-                {
-                    me->revents |= POLLIN;
-                    n++;
-                }
-            }
-
-            if(me->events & POLLOUT)
-            {
-                if(pFd->file->select(true, 0))
-                {
-                    me->revents |= POLLOUT;
-                    n++;
-                }
-            }
-
-            if(n)
-            {
-                me->revents |= POLLHUP | POLLERR | POLLNVAL;
-                numReady++;
-            }
-        }
-    }
-
-    // Return the number ready to go
-    return numReady;
 }
 
 int posix_fcntl(int fd, int cmd, int num, int* args)
@@ -1289,7 +1268,7 @@ void *posix_mmap(void *p)
 
     // Get real variables from the parameters
     void *addr = map_info->addr;
-    size_t len = map_info->len + 1;
+    size_t len = map_info->len;
     int prot = map_info->prot;
     int flags = map_info->flags;
     int fd = map_info->fildes;
@@ -1303,21 +1282,44 @@ void *posix_mmap(void *p)
     if (!pSubsystem)
     {
         ERROR("No subsystem for this process!");
-        return 0;
+        return MAP_FAILED;
     }
 
     // The return address
     void *finalAddress = 0;
 
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+
+    // Sanitise input.
+    uintptr_t sanityAddress = reinterpret_cast<uintptr_t>(addr);
+    if(sanityAddress)
+    {
+        if((sanityAddress < va.getUserStart()) ||
+            (sanityAddress >= va.getKernelStart()))
+        {
+            if(flags & MAP_FIXED)
+            {
+                // Invalid input and MAP_FIXED, this is an error.
+                SYSCALL_ERROR(InvalidArgument);
+                return MAP_FAILED;
+            }
+            else
+            {
+                // Invalid input - but not MAP_FIXED, so we can ignore addr.
+                sanityAddress = 0;
+            }
+        }
+    }
+    addr = reinterpret_cast<void *>(sanityAddress);
+
     // Valid file passed?
     FileDescriptor* f = pSubsystem->getFileDescriptor(fd);
-    if(!f)
+    if(flags & MAP_ANON)
     {
         // Anonymous mmap instead?
         if(flags & (MAP_ANON | MAP_SHARED))
         {
             // Allocation information
-            VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
             uintptr_t mapAddress = reinterpret_cast<uintptr_t>(addr);
             size_t pageSz = PhysicalMemoryManager::getPageSize();
             size_t numPages = (len / pageSz) + (len % pageSz ? 1 : 0);
@@ -1326,7 +1328,7 @@ void *posix_mmap(void *p)
             if(!len || (mapAddress & (pageSz-1)))
             {
                 SYSCALL_ERROR(InvalidArgument);
-                return 0;
+                return MAP_FAILED;
             }
 
             // Does the application want a fixed mapping?
@@ -1338,7 +1340,7 @@ void *posix_mmap(void *p)
                 if(!mapAddress)
                 {
                     SYSCALL_ERROR(InvalidArgument);
-                    return 0;
+                    return MAP_FAILED;
                 }
 
                 // Unmap existing allocations (before releasing the space to the process'
@@ -1360,25 +1362,31 @@ void *posix_mmap(void *p)
                     }
                 }
 
-                // Allow the pages to be used the the process now
-                pProcess->getSpaceAllocator().free(mapAddress, len);
-
                 // Now, allocate the memory
-                if(!pProcess->getSpaceAllocator().allocateSpecific(mapAddress, len))
+                if(!pProcess->getSpaceAllocator().allocateSpecific(mapAddress, numPages * pageSz))
                 {
-                    F_NOTICE("mmap: out of memory");
-                    SYSCALL_ERROR(OutOfMemory);
-                    return 0;
+                    if(!(flags & MAP_USERSVD))
+                    {
+                        F_NOTICE("mmap: out of memory");
+                        SYSCALL_ERROR(OutOfMemory);
+                        return MAP_FAILED;
+                    }
                 }
             }
             else if(flags & (MAP_ANON | MAP_SHARED))
             {
                 // Anonymous mapping - get an address from the space allocator
-                if(!pProcess->getSpaceAllocator().allocate(len, mapAddress))
+                /// \todo NEED AN ALIGNED ADDRESS. COME ON.
+                if(!pProcess->getSpaceAllocator().allocate(numPages * pageSz, mapAddress))
                 {
                     F_NOTICE("mmap: out of memory");
                     SYSCALL_ERROR(OutOfMemory);
-                    return 0;
+                    return MAP_FAILED;
+                }
+
+                if (mapAddress & (pageSz-1))
+                {
+                    mapAddress = (mapAddress + pageSz) & ~(pageSz - 1);
                 }
             }
             else
@@ -1386,7 +1394,7 @@ void *posix_mmap(void *p)
                 // Flags not supported
                 F_NOTICE("mmap: flags not supported");
                 SYSCALL_ERROR(NotSupported);
-                return 0;
+                return MAP_FAILED;
             }
 
             // Got an address and a length, map it in now
@@ -1401,7 +1409,7 @@ void *posix_mmap(void *p)
                         /// \todo Need to unmap and free all the mappings so far, then return to the space allocator.
                         F_NOTICE("mmap: out of memory");
                         SYSCALL_ERROR(OutOfMemory);
-                        return 0;
+                        return MAP_FAILED;
                     }
                 }
                 else
@@ -1418,14 +1426,21 @@ void *posix_mmap(void *p)
             /// \todo This is not really ideal - rather than storing a MMFile
             ///       we should store an object of some description. Then it'll
             ///       be something like pSubsystem->addMemoryMap()
-            pSubsystem->memoryMapFile(finalAddress, 0);
+            MemoryMappedFile *pFile = new MemoryMappedFile(len);
+            pSubsystem->memoryMapFile(finalAddress, pFile);
+
+            // Clear the allocated region if needed
+            if(flags & MAP_ANON)
+            {
+                memset(finalAddress, 0, numPages * PhysicalMemoryManager::getPageSize());
+            }
         }
         else
         {
             // No valid file given, return error
             F_NOTICE("mmap: invalid file descriptor");
             SYSCALL_ERROR(BadFileDescriptor);
-            return 0;
+            return MAP_FAILED;
         }
     }
     else
@@ -1439,10 +1454,11 @@ void *posix_mmap(void *p)
         // MAP_FIXED mappings too
         /// \todo There *should* be proper flag checks here!
         uintptr_t address = reinterpret_cast<uintptr_t>(addr);
-        MemoryMappedFile *pFile = MemoryMappedFileManager::instance().map(fileToMap, address, len);
+        bool bShared = (flags & MAP_SHARED);
+        MemoryMappedFile *pFile = MemoryMappedFileManager::instance().map(fileToMap, address, len, off, bShared);
 
         // Add the offset...
-        address += off;
+        // address += off;
         finalAddress = reinterpret_cast<void*>(address);
 
         // Another memory mapped file to keep track of
@@ -1453,9 +1469,25 @@ void *posix_mmap(void *p)
     return finalAddress;
 }
 
+int posix_msync(void *p, size_t len, int flags) {
+    F_NOTICE("msync");
+
+    // Hacky, more or less just for the dynamic linker to figure out if a page is already mapped.
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    if(!va.isMapped(p)) {
+        SYSCALL_ERROR(OutOfMemory);
+        return -1;
+    }
+
+    return 0;
+}
+
 int posix_munmap(void *addr, size_t len)
 {
-    F_NOTICE("munmap");
+    F_NOTICE("munmap(" << reinterpret_cast<uintptr_t>(addr) << ", " << Dec << len << Hex << ")");
+
+    /// \todo Debug me, fix me! munmap seems to kill stuff somewhere.
+    return 0;
 
     // Grab the Process subsystem
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -1658,10 +1690,10 @@ int posix_chmod(const char *path, mode_t mode)
         return -1;
     }
 
-    /// \todo ELOOP (Issue #127)
     // Symlink traversal
-    while (file->isSymlink())
-        file = Symlink::fromFile(file)->followLink();
+    file = traverseSymlink(file);
+    if(!file)
+        return -1;
     
     /// \todo Might want to change permissions on open file descriptors?
     uint32_t permissions = 0;
@@ -1703,10 +1735,10 @@ int posix_chown(const char *path, uid_t owner, gid_t group)
         return -1;
     }
 
-    /// \todo ELOOP (Issue #127)
     // Symlink traversal
-    while (file->isSymlink())
-        file = Symlink::fromFile(file)->followLink();
+    file = traverseSymlink(file);
+    if(!file)
+        return -1;
     
     // Set the UID and GID
     if(owner != static_cast<uid_t>(-1))
@@ -1920,10 +1952,10 @@ int posix_statvfs(const char *path, struct statvfs *buf)
         return -1;
     }
 
-    /// \todo ELOOP (Issue #127)
     // Symlink traversal
-    while (file->isSymlink())
-        file = Symlink::fromFile(file)->followLink();
+    file = traverseSymlink(file);
+    if(!file)
+        return -1;
     
     return statvfs_doer(file->getFilesystem(), buf);
 }

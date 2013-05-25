@@ -6,7 +6,6 @@ extern int sprintf(char*, const char*, ...);
 extern void setenv(char*,char*,int);
 
 extern char **environ;
-void *__gxx_personality_v0;
 
 extern void _init_signals(void);
 
@@ -36,8 +35,10 @@ void _start(char **argv, char **env)
     argc = 0;
     while (*i++)
       argc++;
+    if(!env)
+      env = environ;
     i  = env;
-    while (*i)
+    while (env && (*i))
     {
       // Save the key.
       char *key = *i;

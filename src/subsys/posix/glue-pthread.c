@@ -30,7 +30,7 @@ int h_errno; // required by networking code
 #define _PTHREAD_ATTR_MAGIC 0xdeadbeef
 
 // Define to 1 to get verbose debugging (hinders performance) in some functions
-#define PTHREAD_DEBUG       1
+#define PTHREAD_DEBUG       0
 
 typedef void (*pthread_once_func_t)(void);
 int onceFunctions[32] = {0};
@@ -64,17 +64,17 @@ int pthread_once(pthread_once_t *once_control, pthread_once_func_t init_routine)
 
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void*), void *arg)
 {
-    return syscall4(POSIX_PTHREAD_CREATE, (int) thread, (int) attr, (int) start_routine, (int) arg);
+    return syscall4(POSIX_PTHREAD_CREATE, (long) thread, (long) attr, (long) start_routine, (long) arg);
 }
 
 int pthread_join(pthread_t thread, void **value_ptr)
 {
-    return syscall2(POSIX_PTHREAD_JOIN, (int) thread, (int) value_ptr);
+    return syscall2(POSIX_PTHREAD_JOIN, (long) thread, (long) value_ptr);
 }
 
 void pthread_exit(void *ret)
 {
-    syscall1(POSIX_PTHREAD_RETURN, (int) ret);
+    syscall1(POSIX_PTHREAD_RETURN, (long) ret);
 }
 
 int pthread_detach(pthread_t thread)
@@ -103,12 +103,12 @@ int pthread_equal(pthread_t t1, pthread_t t2)
 
 int pthread_kill(pthread_t thread, int sig)
 {
-    return syscall2(POSIX_PTHREAD_KILL, (int) thread, sig);
+    return syscall2(POSIX_PTHREAD_KILL, (long) thread, sig);
 }
 
 int pthread_sigmask(int how, const sigset_t *set, sigset_t *oset)
 {
-    return syscall3(POSIX_PTHREAD_SIGMASK, how, (int) set, (int) oset);
+    return syscall3(POSIX_PTHREAD_SIGMASK, how, (long) set, (long) oset);
 }
 
 int pthread_attr_init(pthread_attr_t *attr)
@@ -223,21 +223,21 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
 #if PTHREAD_DEBUG
     syslog(LOG_NOTICE, "pthread_mutex_init(%x)", mutex);
 #endif
-    
+
     if(!mutex)
     {
         errno = EINVAL;
         return -1;
     }
-    
+
     memset(mutex, 0, sizeof(pthread_mutex_t));
-    
+
     if(pthread_spin_init(&mutex->lock, 0) < 0)
         return -1; // errno from the function
 
     __pedigree_init_lock(mutex, 1);
     mutex->q = mutex->back = mutex->front = 0;
-    
+
     return 0;
 }
 
@@ -246,7 +246,7 @@ int pthread_mutex_destroy(pthread_mutex_t *mutex)
 #if PTHREAD_DEBUG
     syslog(LOG_NOTICE, "pthread_mutex_destroy(%x)", mutex);
 #endif
-    
+
     if(!mutex)
     {
         errno = EINVAL;
@@ -255,11 +255,11 @@ int pthread_mutex_destroy(pthread_mutex_t *mutex)
 
     mutex->value = 0;
     mutex->q = mutex->back = mutex->front = 0;
-    
+
     pthread_spin_destroy(&mutex->lock);
-    
+
     memset(mutex, 0, sizeof(pthread_mutex_t));
-    
+
     return 0;
 }
 
@@ -268,13 +268,13 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
 #if PTHREAD_DEBUG
     syslog(LOG_NOTICE, "pthread_mutex_lock(%x)", mutex);
 #endif
-    
+
     if(!mutex)
     {
         errno = EINVAL;
         return -1;
     }
-    
+
     // Attempt a direct acquire
     int32_t val = mutex->value;
     if((val - 1) >= 0)
@@ -282,16 +282,16 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
         if(__sync_bool_compare_and_swap(&mutex->value, val, val - 1))
             return 0;
     }
-    
+
     // Couldn't acquire, lock
     mutex_q_item *i = (mutex_q_item*) malloc(sizeof(mutex_q_item));
     i->thr = pthread_self();
     i->next = 0;
-    
+
     mutex_q_item *old_front = mutex->front;
     mutex_q_item *old_back = mutex->back;
     mutex_q_item *old_q = mutex->q;
-    
+
     pthread_spin_lock(&mutex->lock);
     if(!mutex->q)
     {
@@ -303,9 +303,9 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
         mutex->back->next = i;
         mutex->back = i;
     }
-    
+
     pthread_spin_unlock(&mutex->lock);
-    
+
     // Check for mutex unlock while we've been manipulating the queue!
     if(val == (mutex->value - 1))
     {
@@ -315,13 +315,13 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
         mutex->q = old_q;
         free(i);
         pthread_spin_unlock(&mutex->lock);
-        
+
         return 0;
     }
     pedigree_thrsleep(i->thr);
-    
+
     free(i);
-    
+
     // Locked
     return 0;
 }
@@ -331,20 +331,20 @@ int pthread_mutex_trylock(pthread_mutex_t *mutex)
 #if PTHREAD_DEBUG
     syslog(LOG_NOTICE, "pthread_mutex_trylock(%x)", mutex);
 #endif
-    
+
     if(!mutex)
     {
         errno = EINVAL;
         return -1;
     }
-    
+
     int32_t val = mutex->value;
     if((val - 1) >= 0)
     {
         if(__sync_bool_compare_and_swap(&mutex->value, val, val - 1))
             return 0;
     }
-    
+
     errno = EBUSY;
     return -1;
 }
@@ -354,31 +354,36 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
 #if PTHREAD_DEBUG
     syslog(LOG_NOTICE, "pthread_mutex_unlock(%x)", mutex);
 #endif
-    
+
     if(!mutex)
     {
         errno = EINVAL;
         return -1;
     }
-    
+
     // Mutexes are binary semaphores.
     __sync_val_compare_and_swap(&mutex->value, 0, 1);
-    
+
     pthread_spin_lock(&mutex->lock);
     if((!mutex->q) || (!mutex->front))
     {
         pthread_spin_unlock(&mutex->lock);
         return 0;
     }
+
+    // Wake up the next waiting thread.
     mutex_q_item *front = mutex->front;
-    mutex->front = front->next;
-    mutex->q = mutex->front;
-    
-    pthread_t thr = front->thr;
-    pedigree_thrwakeup(thr);
-    
+    if(front)
+    {
+        mutex->front = front->next;
+        mutex->q = mutex->front;
+
+        pthread_t thr = front->thr;
+        pedigree_thrwakeup(thr);
+    }
+
     pthread_spin_unlock(&mutex->lock);
-    
+
     return 0;
 }
 
@@ -408,13 +413,13 @@ int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr)
 #if PTHREAD_DEBUG
     syslog(LOG_NOTICE, "pthread_cond_init(%x)", cond);
 #endif
-    
+
     if(!cond)
     {
         errno = EINVAL;
         return -1;
     }
-    
+
     int ret = pthread_mutex_init(cond, 0);
 #if PTHREAD_DEBUG
     syslog(LOG_NOTICE, "pthread_cond_init: returning %d from mutex init [%s]\n", ret, strerror(errno));
@@ -430,7 +435,7 @@ int pthread_cond_destroy(pthread_cond_t *cond)
         errno = EINVAL;
         return -1;
     }
-    
+
     return pthread_mutex_destroy(cond);
 }
 
@@ -441,17 +446,17 @@ int pthread_cond_broadcast(pthread_cond_t *cond)
         errno = EINVAL;
         return -1;
     }
-    
+
     pthread_spin_lock(&cond->lock);
     while(cond->front)
     {
         __sync_fetch_and_sub(&cond->value, 1);
-    
+
         pedigree_thrwakeup(cond->front->thr);
         cond->front = cond->front->next;
     }
     pthread_spin_unlock(&cond->lock);
-    
+
     return 0;
 }
 
@@ -473,14 +478,14 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
         errno = EINVAL;
         return -1;
     }
-    
+
     int e = 0;
     e = pthread_mutex_unlock(mutex);
     if(e)
         return e;
     e = pthread_mutex_lock(cond);
     pthread_mutex_lock(mutex);
-    
+
     return e;
 }
 
@@ -501,12 +506,12 @@ void* pthread_getspecific(pthread_key_t key)
 
 int pthread_setspecific(pthread_key_t key, const void *data)
 {
-    return syscall2(POSIX_PTHREAD_SETSPECIFIC, key, (int) data);
+    return syscall2(POSIX_PTHREAD_SETSPECIFIC, key, (long) data);
 }
 
 int pthread_key_create(pthread_key_t *key, void (*destructor)(void *))
 {
-    return syscall2(POSIX_PTHREAD_KEY_CREATE, (int) key, (int) destructor);
+    return syscall2(POSIX_PTHREAD_KEY_CREATE, (long) key, (long) destructor);
 }
 
 typedef void (*key_destructor)(void*);
@@ -538,7 +543,7 @@ int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
         errno = EINVAL;
         return -1;
     }
-    
+
     lock->atom = 1;
     lock->owner = pthread_self();
     lock->locker = -1;
@@ -552,13 +557,13 @@ int pthread_spin_destroy(pthread_spinlock_t *lock)
         errno = EINVAL;
         return -1;
     }
-    
+
     if(lock->locker >= 0)
     {
         errno = EBUSY;
         return -1;
     }
-    
+
     lock->owner = lock->locker = -1;
     return 0;
 }
@@ -570,7 +575,7 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
         errno = EINVAL;
         return -1;
     }
-    
+
     while(!__sync_bool_compare_and_swap(&lock->atom, 1, 0))
     {
         if(lock->locker == pthread_self())
@@ -579,13 +584,13 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
             errno = EDEADLK;
             return -1;
         }
-        
+
         /// \todo If there are no other threads running, this should throw EDEADLK
         sched_yield();
     }
-    
+
     lock->locker = pthread_self();
-    
+
     return 0;
 }
 
@@ -596,15 +601,15 @@ int pthread_spin_trylock(pthread_spinlock_t *lock)
         errno = EINVAL;
         return -1;
     }
-    
+
     if(!__sync_bool_compare_and_swap(&lock->atom, 1, 0))
     {
         errno = EBUSY;
         return -1;
     }
-    
+
     lock->locker = pthread_self();
-    
+
     return 0;
 }
 
@@ -615,19 +620,19 @@ int pthread_spin_unlock(pthread_spinlock_t *lock)
         errno = EINVAL;
         return -1;
     }
-    
+
     if(lock->locker < 0)
     {
         errno = EPERM;
         return -1;
     }
-    
+
     lock->locker = -1;
     __sync_bool_compare_and_swap(&lock->atom, 0, 1);
-    
+
     // Avoids a case where, in a loop constantly performing an acquire, no other
     // thread can access the spinlock.
     sched_yield();
-    
+
     return 0;
 }

@@ -35,7 +35,7 @@ class CdiDisk : public Disk
 {
     public:
         CdiDisk(Disk* pDev, struct cdi_storage_device* device);
-        ~CdiDisk();
+        virtual ~CdiDisk();
 
         virtual void getName(String &str)
         {
@@ -55,6 +55,19 @@ class CdiDisk : public Disk
         // These are the functions that others call - they add a request to the parent controller's queue.
         virtual uintptr_t read(uint64_t location);
         virtual void write(uint64_t location);
+
+        /// Assume CDI-provided disks are never read-only.
+        virtual bool cacheIsCritical()
+        {
+            return false;
+        }
+
+        /// CDI disks do not yet do any form of caching.
+        /// \todo Fix that.
+        virtual void flush(uint64_t location)
+        {
+            return;
+        }
 
     private:
         CdiDisk(const CdiDisk&);

@@ -1,20 +1,23 @@
 megs: 1024
-romimage: file="/usr/share/bochs/BIOS-bochs-latest"
-# vgaromimage: file="/usr/share/bochs/VGABIOS-lgpl-latest"
+romimage: file="$BXSHARE/BIOS-bochs-latest"
+vgaromimage: file="$BXSHARE/VGABIOS-lgpl-latest-cirrus"
 boot: disk
 log: bochsout.txt
 mouse: enabled=0
-# vga: extension=vbe
+vga: extension=cirrus
 
-cpu: count=4
+cpu: count=1
 
 #clock: sync=both, time0=local
 
 #magic_break: enabled=1
 
-com1: enabled=1, mode=file, dev=serial.txt
+com1: enabled=1, mode=file, dev=build/serial.txt
 
-ata0-master:  type=disk, path=build/hdd.img, mode=flat, translation=auto
+ata0-master:  type=disk, path=build/hdd.img, mode=flat, translation=lba
 
-i440fxsupport: enabled=1, slot2=pcivga
+pci: enabled=1, chipset=i440fx, slot1=cirrus
 
+port_e9_hack: enabled=1
+
+debug: action=ignore, harddrv=ignore, pci_ide=report

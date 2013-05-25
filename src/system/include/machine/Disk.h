@@ -21,7 +21,7 @@
 /**
  * A disk is a random access fixed size block device.
  */
-class Disk : public virtual Device
+class Disk : public Device
 {
 public:
 
@@ -95,6 +95,41 @@ public:
      * byte boundary.
      */
     virtual void align(uint64_t location)
+    {
+        return;
+    }
+
+    /**
+     * \brief Whether or not the cache is critical and cannot be flushed or deleted.
+     *
+     * Some implementations of this class may provide a Disk that does not actually back onto a
+     * writeable media, or perhaps sit only in RAM and have no correlation to physical hardware.
+     * If cache pages are deleted for these implementations, data may be lost.
+     *
+     * Note that cache should only be marked "critical" if it is possible to write via an
+     * implementation. There is no need to worry about cache pages being deleted on a read-only
+     * disk as they will be re-created on the next read (and no written data is lost).
+     *
+     * This function allows callers that want to delete cache pages to verify that the cache is not
+     * critical to the performance of the implementation.
+     *
+     * \return True if the cache is critical and must not be removed or flushed. False otherwise.
+     */
+    virtual bool cacheIsCritical()
+    {
+        return false;
+    }
+
+    /**
+     * \brief Flush a cached page to disk.
+     *
+     * Essentially a no-op if the given location is not actually in
+     * cache. Called either by filesystem drivers (on removable disks) or from a central cache
+     * manager which handles flushing caches back to the disk on a regular basis.
+     *
+     * Will not remove the page from cache, that must be done by the caller.
+     */
+    virtual void flush(uint64_t location)
     {
         return;
     }

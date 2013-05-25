@@ -45,6 +45,9 @@ public:
     /** Adds a 64-bit keycode from the Keyboard class. */
     void addToQueue(uint64_t key);
 
+    /** Wipes out the queue for this terminal. */
+    void clearQueue();
+
     /** Grabs 1 byte of the utf-8 encoded queue. */
     char getFromQueue();
 
@@ -109,6 +112,21 @@ public:
         return m_Pid;
     }
 
+    void showCursor(DirtyRectangle &rect)
+    {
+        m_pXterm->showCursor(rect);
+    }
+
+    void hideCursor(DirtyRectangle &rect)
+    {
+        m_pXterm->hideCursor(rect);
+    }
+
+    void setCursorStyle(bool bFilled = true)
+    {
+        m_pXterm->setCursorStyle(bFilled);
+    }
+
     /** Cancels the current write operation (used by SIGINT handling) */
     void cancel()
     {
@@ -133,6 +151,8 @@ private:
 #else
     Vt100 *m_pXterm;
 #endif
+
+    char m_pName[256];
 
     char m_pQueue[256];
     size_t m_Len;

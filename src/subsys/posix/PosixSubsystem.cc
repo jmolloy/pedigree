@@ -149,8 +149,11 @@ PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
 
     // Copy memory mapped files
     /// \todo Is this enough?
-    for(Tree<void*, MemoryMappedFile*>::Iterator it = s.m_MemoryMappedFiles.begin(); it != s.m_MemoryMappedFiles.end(); it++)
-        m_MemoryMappedFiles.insert(it.key(), it.value());
+    for(Tree<void*, MemoryMappedFile*>::Iterator it = s.m_MemoryMappedFiles.begin(); it != s.m_MemoryMappedFiles.end(); it++) {
+        if(it.value()->getFile()) {
+            m_MemoryMappedFiles.insert(it.key(), it.value());
+        }
+    }
     
     s.m_SignalHandlersLock.leave();
     m_SignalHandlersLock.release();
@@ -234,37 +237,47 @@ PosixSubsystem::~PosixSubsystem()
 
     m_SyncObjects.clear();
 
+    // Switch to the address space of the process we're destroying.
+    // We need to unmap memory maps, and we can't do that in our address space.
+    VirtualAddressSpace &curr = Processor::information().getVirtualAddressSpace();
+    VirtualAddressSpace *va = m_pProcess->getAddressSpace();
+
+    if(va != &curr) {
+        // Switch into the address space we want to unmap inside.
+        Processor::switchAddressSpace(*va);
+    }
+
     // Clean up memory mapped files (that haven't been unmapped...)
     for(Tree<void*, MemoryMappedFile*>::Iterator it = m_MemoryMappedFiles.begin(); it != m_MemoryMappedFiles.end(); it++)
     {
         //uintptr_t addr = reinterpret_cast<uintptr_t>(it.key());
         MemoryMappedFile *pFile = unmapFile(it.key());
-        if(pFile)
+        if(pFile->getFile())
         {
             // It better handle files that've already been unmapped...
             MemoryMappedFileManager::instance().unmap(pFile);
         }
         else
         {
-            WARNING("PosixSubsystem::~PosixSubsystem - unfreed anonymous memory maps still exist");
-            // Anonymous mmap, manually free the space
-            /*size_t pageSz = PhysicalMemoryManager::getPageSize();
-            size_t numPages = (len / pageSz) + (len % pageSz ? 1 : 0);
+            size_t extent = pFile->getExtent();
 
-            uintptr_t address = reinterpret_cast<uintptr_t>(addr);
+            // Anonymous mmap, manually free the space
+            size_t pageSz = PhysicalMemoryManager::getPageSize();
+            size_t numPages = (extent / pageSz) + (extent % pageSz ? 1 : 0);
+
+            uintptr_t address = reinterpret_cast<uintptr_t>(it.key());
 
             // Unmap!
-            VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
             for (size_t i = 0; i < numPages; i++)
             {
                 void *unmapAddr = reinterpret_cast<void*>(address + (i * pageSz));
-                if(va.isMapped(unmapAddr))
+                if(va->isMapped(unmapAddr))
                 {
                     // Unmap the virtual address
                     physical_uintptr_t phys = 0;
                     size_t flags = 0;
-                    va.getMapping(unmapAddr, phys, flags);
-                    va.unmap(reinterpret_cast<void*>(unmapAddr));
+                    va->getMapping(unmapAddr, phys, flags);
+                    va->unmap(reinterpret_cast<void*>(unmapAddr));
 
                     // Free the physical page
                     PhysicalMemoryManager::instance().freePage(phys);
@@ -272,8 +285,14 @@ PosixSubsystem::~PosixSubsystem()
             }
 
             // Free from the space allocator as well
-            m_pProcess->getSpaceAllocator().free(address, len);*/
+            m_pProcess->getSpaceAllocator().free(address, extent);
+            delete pFile;
         }
+    }
+    m_MemoryMappedFiles.clear();
+
+    if(va != &curr) {
+        Processor::switchAddressSpace(curr);
     }
 }
 
@@ -430,6 +449,26 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType, Inter
             NOTICE_NOLOCK("    (FPU error - special)");
             // Send SIGFPE
             sig = getSignalHandler(8);
+            break;
+        case TerminalInput:
+            NOTICE_NOLOCK("    (Attempt to read from terminal by non-foreground process)");
+            // Send SIGTTIN
+            sig = getSignalHandler(21);
+            break;
+        case TerminalOutput:
+            NOTICE_NOLOCK("    (Output to terminal by non-foreground process)");
+            // Send SIGTTOU
+            sig = getSignalHandler(22);
+            break;
+        case Continue:
+            NOTICE_NOLOCK("    (Continuing a stopped process)");
+            // Send SIGCONT
+            sig = getSignalHandler(19);
+            break;
+        case Stop:
+            NOTICE_NOLOCK("    (Stopping a process)");
+            // Send SIGTSTP
+            sig = getSignalHandler(18);
             break;
         default:
             NOTICE_NOLOCK("    (Unknown)");

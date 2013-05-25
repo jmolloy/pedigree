@@ -155,6 +155,8 @@ SDL_Surface *PEDIGREE_SetVideoMode(_THIS, SDL_Surface *current,
 		SDL_free( _this->hidden->buffer );
 	}
 
+    syslog(LOG_INFO, "SetVideoMode(%d, %d, %d)", width, height, bpp);
+
     PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
     PedigreeGraphics::Framebuffer *pFramebuffer = pRootFramebuffer->createChild(0, 0, width, height);
     if(!pFramebuffer->getRawBuffer())
@@ -222,15 +224,22 @@ static void PEDIGREE_UpdateRects(_THIS, int numrects, SDL_Rect *rects)
     PedigreeGraphics::Framebuffer *pFramebuffer = reinterpret_cast<PedigreeGraphics::Framebuffer*>(_this->hidden->provider);
     
     PedigreeGraphics::PixelFormat format;
-    if(_this->screen->format->BitsPerPixel == 16)
+    if(_this->screen->format->BitsPerPixel == 32)
+        format = PedigreeGraphics::Bits32_Rgb;
+    else if(_this->screen->format->BitsPerPixel == 16)
         format = PedigreeGraphics::Bits16_Rgb565;
     else if(_this->screen->format->BitsPerPixel == 8)
         format = PedigreeGraphics::Bits8_Idx;
     else
         format = PedigreeGraphics::Bits24_Rgb;
 
+    pFramebuffer->draw(_this->hidden->buffer, 0, 0, 0, 0, 800, 600, format);
+    pFramebuffer->redraw(0, 0, 800, 600, true);
+    return;
+
     for(int i = 0; i < numrects; i++)
     {
+        syslog(LOG_INFO, "UpdateRects: redraw %dx%d [%dx%d]\n", rects[i].x, rects[i].y, rects[i].w, rects[i].h);
         pFramebuffer->draw(_this->hidden->buffer, rects[i].x, rects[i].y, rects[i].x, rects[i].y, rects[i].w, rects[i].h, format);
         pFramebuffer->redraw(rects[i].x, rects[i].y, rects[i].w, rects[i].h, true);
     }

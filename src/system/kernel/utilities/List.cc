@@ -162,6 +162,28 @@ typename List<T>::Iterator List<T>::erase(Iterator &Iter)
 }
 
 template <typename T>
+typename List<T>::ReverseIterator List<T>::erase(ReverseIterator &Iter)
+{
+  node_t *Node = Iter.__getNode();
+  if (Node->m_Next == 0)
+    m_First = Node->m_Previous;
+  else
+    Node->m_Next->m_Previous = Node->m_Previous;
+  if (Node->m_Previous == 0)
+    m_Last = Node->m_Next;
+  else
+    Node->m_Previous->m_Next = Node->m_Next;
+  --m_Count;
+
+  node_t *pNext = Node->m_Previous;
+  if(!pNext)
+    pNext = Node;
+  ReverseIterator tmp(pNext);
+  delete Node;
+  return tmp;
+}
+
+template <typename T>
 void List<T>::clear()
 {
   node_t *cur = m_First;
@@ -298,6 +320,26 @@ List<void*>::Iterator List<void*>::erase(Iterator &Iter)
   if(!pNext)
     pNext = Node;
   Iterator tmp(pNext);
+  delete Node;
+  return tmp;
+}
+List<void*>::ReverseIterator List<void*>::erase(ReverseIterator &Iter)
+{
+  node_t *Node = Iter.__getNode();
+  if (Node->m_Next == 0)
+    m_First = Node->m_Previous;
+  else
+    Node->m_Next->m_Previous = Node->m_Previous;
+  if (Node->m_Previous == 0)
+    m_Last = Node->m_Next;
+  else
+    Node->m_Previous->m_Next = Node->m_Next;
+  --m_Count;
+
+  node_t *pNext = Node->m_Previous;
+  if(!pNext)
+    pNext = Node;
+  ReverseIterator tmp(pNext);
   delete Node;
   return tmp;
 }

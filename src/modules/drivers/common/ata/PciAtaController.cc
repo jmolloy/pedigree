@@ -21,8 +21,10 @@
 #include <Log.h>
 
 PciAtaController::PciAtaController(Controller *pDev, int nController) :
-    Device(pDev), AtaController(pDev, nController), m_PciControllerType(UnknownController)
+    AtaController(pDev, nController), m_PciControllerType(UnknownController)
 {
+    setSpecificType(String("ata-controller"));
+
     // Determine controller type
     NormalStaticString str;
     switch(getPciDeviceId())
@@ -85,6 +87,11 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
             bar4 = addresses()[i];
     }
 
+    m_Children.clear();
+
+    // Set up the RequestQueue
+    initialise();
+
     // Read the BusMaster interface base address register and tell it where we
     // would like to talk to it (BAR4).
     uint32_t busMasterIfaceAddr = PciBus::instance().readConfigSpace(pDev, 8);
@@ -105,6 +112,19 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
     ideTiming = 0xCCE0 | (3 << 4) | 4;
     ideTiming |= (ideTiming << 16);
     PciBus::instance().writeConfigSpace(pDev, 0x10, ideTiming);
+
+    // Write the interrupt line into the PCI space if needed.
+    uint32_t miscFields = PciBus::instance().readConfigSpace(pDev, 0xF);
+    if((miscFields & 0xF) != getInterruptNumber())
+    {
+        if(getInterruptNumber())
+        {
+            NOTICE("    - Configured PCI space for interrupt line " << getInterruptNumber());
+            miscFields &= ~0xF;
+            miscFields |= getInterruptNumber() & 0xF;
+        }
+    }
+    PciBus::instance().writeConfigSpace(pDev, 0xF, miscFields);
 
     // The controller must be able to perform BusMaster IDE DMA transfers, or
     // else we have to fall back to PIO transfers.
@@ -189,7 +209,8 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
         ERROR("Couldn't allocate slave control ports");
 
     // Install our IRQ handler
-    Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*> (this));
+    if(getInterruptNumber() != 0xFF)
+        Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*> (this));
 
     // And finally, create disks
     diskHelper(true, masterCommand, masterControl, primaryBusMaster);
@@ -238,7 +259,7 @@ bool PciAtaController::irq(irq_id_t number, InterruptState &state)
 {
   for (unsigned int i = 0; i < getNumChildren(); i++)
   {
-    AtaDisk *pDisk = dynamic_cast<AtaDisk*> (getChild(i));
+    AtaDisk *pDisk = static_cast<AtaDisk*> (getChild(i));
     if(pDisk->isAtapi())
     {
         AtapiDisk *pAtapiDisk = static_cast<AtapiDisk*>(pDisk);

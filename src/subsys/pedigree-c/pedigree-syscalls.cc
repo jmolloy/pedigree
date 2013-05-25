@@ -42,7 +42,7 @@ struct blitargs
 struct drawargs
 {
     void *a;
-    uint32_t b, c, d, e, f, g, h;
+    uintptr_t b, c, d, e, f, g, h;
 } PACKED;
 
 struct createargs
@@ -54,12 +54,12 @@ struct createargs
 
 struct fourargs
 {
-    uint32_t a, b, c, d;
+    uintptr_t a, b, c, d;
 } PACKED;
 
 struct sixargs
 {
-    uint32_t a, b, c, d, e, f;
+    uintptr_t a, b, c, d, e, f;
 } PACKED;
 
 #define MAX_RESULTS 32
@@ -208,7 +208,7 @@ void pedigree_module_load(char *_file)
     }
 
     // Map the module in the memory
-    uintptr_t buffer;
+    uintptr_t buffer = 0;
     MemoryMappedFile *pMmFile = MemoryMappedFileManager::instance().map(file, buffer);
     KernelElf::instance().loadModule(reinterpret_cast<uint8_t*>(buffer), file->getSize(), true);
     MemoryMappedFileManager::instance().unmap(pMmFile);
@@ -478,7 +478,7 @@ void pedigree_gfx_delete_fbuffer(void *p)
     Graphics::destroyFramebuffer(pProvider->pFramebuffer);
 }
 
-void pedigree_gfx_fbinfo(void *p, size_t *w, size_t *h, uint32_t *fmt)
+void pedigree_gfx_fbinfo(void *p, size_t *w, size_t *h, uint32_t *fmt, size_t *bypp)
 {
     if(!p)
         return;
@@ -491,6 +491,8 @@ void pedigree_gfx_fbinfo(void *p, size_t *w, size_t *h, uint32_t *fmt)
         *h = pProvider->pFramebuffer->getHeight();
     if(fmt)
         *fmt = static_cast<uint32_t>(pProvider->pFramebuffer->getFormat());
+    if(bypp)
+        *bypp = pProvider->pFramebuffer->getBytesPerPixel();
 }
 
 void pedigree_gfx_setpalette(void* p, uint32_t *data, size_t entries)
@@ -509,4 +511,14 @@ void pedigree_event_return()
     Processor::information().getScheduler().eventHandlerReturned();
 
     FATAL("event_return: should never get here");
+}
+
+void *pedigree_sys_request_mem(size_t len) {
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    uintptr_t mapAddress = 0;
+    if(!pProcess->getSpaceAllocator().allocate(len, mapAddress)) {
+        return 0;
+    }
+
+    return reinterpret_cast<void *>(mapAddress);
 }

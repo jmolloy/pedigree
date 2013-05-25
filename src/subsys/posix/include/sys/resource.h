@@ -24,6 +24,8 @@ typedef unsigned int rlim_t;
 #define RLIMIT_STACK        5
 #define RLIMIT_AS           6
 
+#define RLIM_NLIMITS        (RLIMIT_AS + 1)
+
 struct rusage {
   	struct timeval ru_utime;	/* user time used */
 	struct timeval ru_stime;	/* system time used */

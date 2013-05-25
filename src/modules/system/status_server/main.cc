@@ -60,7 +60,7 @@ int clientThread(void *p)
         return 0;
 
     ConnectionBasedEndpoint *pClient = reinterpret_cast<ConnectionBasedEndpoint*>(p);
-    
+
     // Wait for data from the client - block.
     if(!pClient->dataReady(true))
     {
@@ -100,8 +100,12 @@ int clientThread(void *p)
 
     bool bNotFound = false;
 
+    bool bNoLog = false;
+
     String path = *firstLine.popFront();
-    if(!(path == String("/")))
+    if(path == String("/nolog"))
+        bNoLog = true;
+    else if(!(path == String("/")))
         bNotFound = true;
 
     // Got a heap of information now - prepare to return
@@ -172,6 +176,14 @@ int clientThread(void *p)
                 // IP address
                 response += "<td>";
                 response += info.ipv4.toString();
+                if(info.nIpv6Addresses)
+                {
+                    for(size_t nAddress = 0; nAddress < info.nIpv6Addresses; nAddress++)
+                    {
+                        response += "<br />";
+                        response += info.ipv6[nAddress].toString();
+                    }
+                }
                 response += "</td>";
 
                 // Subnet mask
@@ -198,18 +210,18 @@ int clientThread(void *p)
                     }
                 }
                 response += "</td>";
-                
+
                 // Driver name
                 response += "<td>";
                 String cardName; card->getName(cardName);
                 response += cardName;
                 response += "</td>";
-                
+
                 // MAC
                 response += "<td>";
                 response += info.mac.toString();
                 response += "</td>";
-                
+
                 // Statistics
                 response += "<td>";
                 s.clear();
@@ -221,19 +233,19 @@ int clientThread(void *p)
                 s.append(info.nBad);
                 response += s;
                 response += "</td>";
-                
+
                 response += "</tr>";
             }
             response += "</table>";
-            
+
             response += "<h3>VFS</h3>";
             response += "<table border='1'><tr><th>VFS Alias</th><th>Disk</th></tr>";
-            
+
             typedef List<String*> StringList;
             typedef Tree<Filesystem*, List<String*>*> VFSMountTree;
-            
+
             VFSMountTree &mounts = VFS::instance().getMounts();
-            
+
             for(VFSMountTree::Iterator i = mounts.begin();
                 i != mounts.end();
                 i++)
@@ -241,25 +253,25 @@ int clientThread(void *p)
                 Filesystem *pFs = i.key();
                 StringList *pList = i.value();
                 Disk *pDisk = pFs->getDisk();
-                
+
                 for(StringList::Iterator j = pList->begin();
                     j != pList->end();
                     j++)
                 {
                     String mount = **j;
                     String diskInfo, temp;
-                    
+
                     if(pDisk)
                     {
                         pDisk->getName(temp);
                         pDisk->getParent()->getName(diskInfo);
-                        
+
                         diskInfo += " -- ";
                         diskInfo += temp;
                     }
                     else
                         diskInfo = "(no disk)";
-                    
+
                     response += "<tr><td>";
                     response += mount;
                     response += "</td><td>";
@@ -267,14 +279,17 @@ int clientThread(void *p)
                     response += "</td></tr>";
                 }
             }
-            
+
             response += "</table>";
 
-            response += "<h3>Kernel Log</h3>";
-            response += "<pre>";
-            response += pCallback->getStr();
-            response += "</pre>";
-            
+            if(!bNoLog)
+            {
+                response += "<h3>Kernel Log</h3>";
+                response += "<pre>";
+                response += pCallback->getStr();
+                response += "</pre>";
+            }
+
             response += "</body></html>";
         }
     }
@@ -284,7 +299,7 @@ int clientThread(void *p)
 
     // Nothing more to send, bring down our side of the connection
     pClient->shutdown(Endpoint::ShutSending);
-    
+
     pClient->shutdown(Endpoint::ShutBoth);
 
     // Leave the endpoint to be cleaned up when the connection is shut down cleanly

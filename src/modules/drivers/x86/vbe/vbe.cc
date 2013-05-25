@@ -91,7 +91,6 @@ extern "C" void vbeModeChangedCallback(char *pId, char *pModeId)
     }
 }
 
-/// \todo Double buffering of some sort to avoid tearing
 class VbeFramebuffer : public Framebuffer
 {
     public:
@@ -100,14 +99,72 @@ class VbeFramebuffer : public Framebuffer
         }
         
         VbeFramebuffer(Display *pDisplay) :
-            Framebuffer()
+            Framebuffer(), m_pDisplay(pDisplay), m_pBackbuffer(0), m_nBackbufferBytes(0)
         {
-            setFramebuffer(reinterpret_cast<uintptr_t>(pDisplay->getFramebuffer()));
+        }
+
+        virtual void hwRedraw(size_t x = ~0UL, size_t y = ~0UL,
+                              size_t w = ~0UL, size_t h = ~0UL)
+        {
+            if(x == ~0UL)
+                x = 0;
+            if(y == ~0UL)
+                y = 0;
+            if(w == ~0UL)
+                w = getWidth();
+            if(h == ~0UL)
+                h = getHeight();
+
+            /// \todo Subregions
+            memcpy(m_pDisplay->getFramebuffer(), m_pBackbuffer, m_nBackbufferBytes);
         }
         
         virtual ~VbeFramebuffer()
         {
         }
+
+        virtual void setFramebuffer(uintptr_t p)
+        {
+            Display::ScreenMode sm;
+            m_pDisplay->getCurrentScreenMode(sm); /// \todo handle error
+            m_nBackbufferBytes = sm.bytesPerLine * sm.height;
+            if(m_nBackbufferBytes)
+            {
+                m_pBackbuffer = 0;
+
+                if(m_pFramebufferRegion)
+                {
+                    delete m_pFramebufferRegion;
+                }
+
+                size_t nPages = (m_nBackbufferBytes + PhysicalMemoryManager::instance().getPageSize()) / PhysicalMemoryManager::instance().getPageSize();
+
+                m_pFramebufferRegion = new MemoryRegion("VBE Backbuffer");
+                if(!PhysicalMemoryManager::instance().allocateRegion(
+                                            *m_pFramebufferRegion,
+                                            nPages,
+                                            0,
+                                            VirtualAddressSpace::Write))
+                {
+                    delete m_pFramebufferRegion;
+                    m_pFramebufferRegion = 0;
+                }
+                else
+                {
+                    NOTICE("VBE backbuffer is at " << reinterpret_cast<uintptr_t>(m_pFramebufferRegion->virtualAddress()));
+                    m_pBackbuffer = reinterpret_cast<char*>(m_pFramebufferRegion->virtualAddress());
+                }
+
+                Framebuffer::setFramebuffer(reinterpret_cast<uintptr_t>(m_pBackbuffer));
+            }
+        }
+
+    private:
+        Display *m_pDisplay;
+        char *m_pBackbuffer;
+        size_t m_nBackbufferBytes;
+
+        MemoryRegion *m_pFramebufferRegion;
 };
 
 void entry()
@@ -153,6 +210,10 @@ void entry()
       return;
   }
 
+  size_t maxWidth = 0;
+  size_t maxHeight = 0;
+  size_t maxBpp = 0;
+
   uintptr_t fbAddr = 0;
   uint16_t *modes = reinterpret_cast<uint16_t*> (REALMODE_PTR(info->videomodes));
   for (int i = 0; modes[i] != 0xFFFF; i++)
@@ -189,6 +250,13 @@ void entry()
     pSm->pf.nBpp = mode->bpp;
     pSm->pf.nPitch = mode->pitch;
     modeList.pushBack(pSm);
+
+    if(mode->Xres > maxWidth)
+      maxWidth = mode->Xres;
+    if(mode->Yres > maxHeight)
+      maxHeight = mode->Yres;
+    if(mode->bpp > maxBpp)
+      maxBpp = mode->bpp;
   }
 
   // Total video memory, in bytes.
@@ -291,9 +359,9 @@ void entry()
   GraphicsService::GraphicsProvider *pProvider = new GraphicsService::GraphicsProvider;
   pProvider->pDisplay = pDisplay;
   pProvider->pFramebuffer = pFramebuffer;
-  pProvider->maxWidth = 1024;
-  pProvider->maxHeight = 768;
-  pProvider->maxDepth = 24;
+  pProvider->maxWidth = maxWidth;
+  pProvider->maxHeight = maxHeight;
+  pProvider->maxDepth = maxBpp;
   pProvider->bHardwareAccel = false;
   pProvider->bTextModes = true;
 

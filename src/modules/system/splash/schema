@@ -17,18 +17,18 @@
 --
 -- Mode to set at bootup
 --
-create table 'desired-display-mode' (
+create table 'desired_display_mode' (
        'width' integer,
        'height' integer,
        'bpp' integer);
 
 -- Feel free to change
-insert into 'desired-display-mode' values (1024, 768, 24);
+insert into 'desired_display_mode' values (1024, 768, 32);
 
 --
 -- Colour scheme for splash and TUI
 --
-create table 'colour-scheme' (
+create table 'colour_scheme' (
        'name' varchar(255) primary key,
        'r' integer,
        'g' integer,
@@ -37,26 +37,27 @@ create table 'colour-scheme' (
 --
 -- Standard (orange-on-black) theme.
 --
-insert into 'colour-scheme' values ('splash-background', 0,    0,  0);
-insert into 'colour-scheme' values ('splash-foreground', 255,255,255);
-insert into 'colour-scheme' values ('selected-text',     255,255,255);
-insert into 'colour-scheme' values ('background', 0,  0,  0  );
-insert into 'colour-scheme' values ('border',     150,80, 0  );
-insert into 'colour-scheme' values ('fill',       150,100,0  );
-insert into 'colour-scheme' values ('text',       255,255,255);
-insert into 'colour-scheme' values ('xterm-bg',   0,  0,  0  );
-insert into 'colour-scheme' values ('xterm-fg',   7,  0,  0  );
-insert into 'colour-scheme' values ('tui-background',    0,0,0);
+insert into 'colour_scheme' values ('splash-background', 0,    0,  0);
+insert into 'colour_scheme' values ('splash-foreground', 255,255,255);
+insert into 'colour_scheme' values ('selected-text',     255,255,255);
+insert into 'colour_scheme' values ('background', 0,  0,  0  );
+insert into 'colour_scheme' values ('border',     150,80, 0  );
+insert into 'colour_scheme' values ('fill',       150,100,0  );
+insert into 'colour_scheme' values ('text',       255,255,255);
+insert into 'colour_scheme' values ('xterm-bg',   0,  0,  0  );
+insert into 'colour_scheme' values ('xterm-fg',   7,  0,  0  );
+insert into 'colour_scheme' values ('tui-background',    0,0,0);
 
 --
 -- Blue on black.
 --
--- insert into 'colour-scheme' values ('splash-background', 0,    0,  0);
--- insert into 'colour-scheme' values ('splash-foreground', 255,255,255);
--- insert into 'colour-scheme' values ('border',            60,  60,150);
--- insert into 'colour-scheme' values ('fill',              20,  20,100);
--- insert into 'colour-scheme' values ('selected-text',     255,255,255);
--- insert into 'colour-scheme' values ('text',                0,  0,  0);
--- insert into 'colour-scheme' values ('tui-background',    255,255,255);
--- insert into 'colour-scheme' values ('xterm-bg',          8,    0,  0);
--- insert into 'colour-scheme' values ('xterm-fg',          0,    0,  0);
+-- insert into 'colour_scheme' values ('splash-background', 0,    0,  0);
+-- insert into 'colour_scheme' values ('splash-foreground', 255,255,255);
+-- insert into 'colour_scheme' values ('selected-text',     255,255,255);
+-- insert into 'colour_scheme' values ('background', 0,  0,  0  );
+-- insert into 'colour_scheme' values ('border',            60,  60,150);
+-- insert into 'colour_scheme' values ('fill',              20,  20,100);
+-- insert into 'colour_scheme' values ('text',              255,255,255);
+-- insert into 'colour_scheme' values ('tui-background',    255,255,255);
+-- insert into 'colour_scheme' values ('xterm-bg',          8,    0,  0);
+-- insert into 'colour_scheme' values ('xterm-fg',          0,    0,  0);

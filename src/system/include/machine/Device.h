@@ -45,7 +45,9 @@ public:
     Sound,      ///< A device that can play sounds.
     Console,    ///< A keyboard-like human interface device.
     Mouse,      ///< A mouse-like human interface device (includes trackpads and styluses)
-    Controller  ///< A device which exposes other devices but requires a driver, and does no address space translation.
+    Controller, ///< A device which exposes other devices but requires a driver, and does no address space translation.
+    UsbController, ///< Same as Controller, but exposes USB devices.
+    UsbGeneric, ///< Same as Generic, but for USB devices.
   };
   /** Each device may have one or more disjoint regions of address space. This can be in I/O space
       or memory space. */
@@ -57,7 +59,7 @@ public:
     Address(String n, uintptr_t a, size_t s, bool io, size_t pad=1);
     ~Address();
     /** Actually maps this address into memory if not already done. */
-    void map(size_t forcedSize = 0);
+    void map(size_t forcedSize = 0, bool bUser = false);
     /** A textual identifier for this address range. */
     String m_Name;
     /** The base of the address range, as the processor sees it (all parental

@@ -20,3 +20,8 @@ tmp
 .easy_os
 pedigree-compiler
 .DS_Store
+*.pyc
+scripts/pup/pup.conf
+*.obj
+*.swp
+.tags

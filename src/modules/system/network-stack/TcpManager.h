@@ -22,6 +22,8 @@
 #include <processor/types.h>
 #include <process/Semaphore.h>
 #include <machine/Network.h>
+#include <process/Mutex.h>
+#include <LockGuard.h>
 
 #include <Log.h>
 
@@ -41,7 +43,8 @@ class TcpManager : public ProtocolManager
 {
 public:
   TcpManager() :
-    m_NextTcpSequence(0), m_NextConnId(1), m_StateBlocks(), m_ListeningStateBlocks(), m_CurrentConnections(), m_Endpoints(), m_PortsAvailable()
+    m_NextTcpSequence(0), m_NextConnId(1), m_StateBlocks(), m_ListeningStateBlocks(),
+    m_CurrentConnections(), m_Endpoints(), m_PortsAvailable(), m_TcpMutex(false)
   {};
   virtual ~TcpManager()
   {};
@@ -84,6 +87,8 @@ public:
   /** Grabs the current state of a given connection */
   Tcp::TcpState getState(size_t connId)
   {
+    LockGuard<Mutex> guard(m_TcpMutex);
+
     StateBlockHandle* handle;
     if((handle = m_CurrentConnections.lookup(connId)) == 0)
       return Tcp::UNKNOWN;
@@ -98,6 +103,8 @@ public:
   /** Gets the next sequence number to use */
   uint32_t getNextSequenceNumber()
   {
+    /// \todo Need recursive mutexes!
+
     /// \todo These need to be randomised to avoid sequence attacks
     m_NextTcpSequence += 0xffff;
     return m_NextTcpSequence;
@@ -106,6 +113,8 @@ public:
   /** Gets a unique connection ID */
   size_t getConnId()
   {
+    /// \todo Need recursive mutexes!
+
     size_t ret = m_NextConnId;
     while(m_CurrentConnections.lookup(ret) != 0) // ensure it's unique
       ret++;
@@ -116,6 +125,8 @@ public:
   /** Grabs the number of packets that have been queued for a given connection */
   uint32_t getNumQueuedPackets(size_t connId)
   {
+    LockGuard<Mutex> guard(m_TcpMutex);
+
     StateBlockHandle* handle;
     if((handle = m_CurrentConnections.lookup(connId)) == 0)
       return 0;
@@ -130,6 +141,8 @@ public:
   /** Reduces the number of queued packets by the specified amount */
   void removeQueuedPackets(size_t connId, uint32_t n = 1)
   {
+    LockGuard<Mutex> guard(m_TcpMutex);
+
     StateBlockHandle* handle;
     if((handle = m_CurrentConnections.lookup(connId)) == 0)
       return;
@@ -144,6 +157,8 @@ public:
   /** Allocates a unique local port for a connection with a server */
   uint16_t allocatePort()
   {
+    LockGuard<Mutex> guard(m_TcpMutex);
+
     static uint16_t lastPort = 32768;
     return lastPort++;
 
@@ -201,6 +216,9 @@ private:
 
   /** Port availability */
   Tree<size_t, bool*> m_PortsAvailable;
+
+  /** Lock to control access to state blocks. */
+  Mutex m_TcpMutex;
 };
 
 #endif

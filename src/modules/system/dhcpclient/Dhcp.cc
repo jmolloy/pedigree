@@ -20,6 +20,8 @@
 #include <network-stack/UdpManager.h>
 #include <network-stack/ConnectionlessEndpoint.h>
 
+#include <network-stack/Ndp.h>
+
 #include <processor/Processor.h>
 #include <ServiceManager.h>
 
@@ -454,7 +456,6 @@ bool dhcpClient(Network *pCard)
             while((byteOffset + sizeof(cookie) + (sizeof(DhcpPacket) - MAX_OPTIONS_SIZE)) < sizeof(DhcpPacket))
             {
                 opt = reinterpret_cast<DhcpOption*>(incoming->options + byteOffset + sizeof(cookie));
-                DEBUG_LOG("DHCP ACK opt=" << Dec << opt->code << Hex << "/" << opt->code << ".");
 
                 if(opt->code == DHCP_MSGEND)
                     break;
@@ -510,7 +511,7 @@ bool dhcpClient(Network *pCard)
         }
 
         // Set it up
-        StationInfo host;
+        StationInfo host = pCard->getStationInfo();
 
         uint32_t ipv4 = Network::convertToIpv4(addrReq.a1, addrReq.a2, addrReq.a3, addrReq.a4);
         uint32_t subnet = Network::convertToIpv4(subnetMask.a1, subnetMask.a2, subnetMask.a3, subnetMask.a4);

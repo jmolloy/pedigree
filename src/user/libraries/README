@@ -1,0 +1,17 @@
+This subdirectory contains directories for libraries designed to be used by
+user applications that don't fall under the "subsystem" banner.
+
+The folder structure is as so:
+
+- libraries
+  + name_of_lib (with lib prefix - "libui")
+    + include
+    + src
+
+The include directory within a library directory contains PUBLIC include files
+that will be exposed to applications linking against the library.
+
+The src directory contains the actual source code for the library, as well as
+PRIVATE include files that should not be exposed to applications, but are
+required within the source code.
+
