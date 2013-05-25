@@ -19,10 +19,6 @@
 #include <process/Scheduler.h>
 #include <Log.h>
 
-#define MACHINE_FORWARD_DECL_ONLY
-#include <machine/Machine.h>
-#include <machine/Timer.h>
-
 #include <ipc/Ipc.h>
 #include <native-ipc.h>
 
@@ -54,36 +50,6 @@ uintptr_t NativeSyscallManager::call(uintptr_t function, uintptr_t p1, uintptr_t
     return ret;
 }
 
-class SyscallTimer
-{
-    public:
-        SyscallTimer(uintptr_t func) : function(func), t1(0), t2(0), p1(0), p2(0)
-        {
-            Timer *pTimer = Machine::instance().getTimer();
-            t1 = pTimer->getUnixTimestamp();
-            p1 = pTimer->getTickCount();
-        }
-
-        ~SyscallTimer()
-        {
-            Timer *pTimer = Machine::instance().getTimer();
-            t2 = pTimer->getUnixTimestamp();
-            p2 = pTimer->getTickCount();
-
-            if(t2 - t1)
-            {
-                NOTICE("native: syscall " << function);
-                NOTICE(" -> start=" << t1 << " (" << p1 << ")");
-                NOTICE(" -> end=" << t2 << " (" << p2 << ")");
-            }
-        }
-
-    private:
-        uintptr_t function;
-        uint64_t t1, t2;
-        uint64_t p1, p2;
-};
-
 uintptr_t NativeSyscallManager::syscall(SyscallState &state)
 {
     uintptr_t p1 = state.getSyscallParameter(0);
@@ -96,8 +62,6 @@ uintptr_t NativeSyscallManager::syscall(SyscallState &state)
     Processor::setInterrupts(true);
 
     // NOTICE("Native syscall " << state.getSyscallNumber() << " (" << p1 << ", " << p2 << ", " << p3 << ", " << p4 << ", " << p5);
-    
-    SyscallTimer timeme(state.getSyscallNumber());
 
     switch (state.getSyscallNumber())
     {
