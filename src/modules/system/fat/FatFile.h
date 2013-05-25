@@ -56,6 +56,8 @@ public:
 
   uintptr_t readBlock(uint64_t location);
 
+  void extend(size_t newSize);
+
 private:
   uint32_t m_DirClus;
   uint32_t m_DirOffset;
