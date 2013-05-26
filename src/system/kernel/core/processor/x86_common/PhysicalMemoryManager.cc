@@ -30,6 +30,10 @@
 #include "../x64/utils.h"
 #endif
 
+#if defined(X86) && defined(DEBUGGER)
+uint32_t g_PageBitmap[32768] = {0};
+#endif
+
 #if defined(TRACK_PAGE_ALLOCATIONS)
 #include <commands/AllocationCommand.h>
 #endif
@@ -64,6 +68,13 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
         }
 #endif
     }
+
+#if defined(X86) && defined(DEBUGGER)
+    physical_uintptr_t ptr_bitmap = ptr / 0x1000;
+    size_t idx = ptr_bitmap / 32;
+    size_t bit = ptr_bitmap % 32;
+    g_PageBitmap[idx] |= (1 << bit);
+#endif
     
     m_Lock.release();
 
@@ -83,6 +94,19 @@ void X86CommonPhysicalMemoryManager::freePage(physical_uintptr_t page)
 {
     LockGuard<Spinlock> guard(m_Lock);
 
+#if defined(X86) && defined(DEBUGGER)
+    physical_uintptr_t ptr_bitmap = page / 0x1000;
+    size_t idx = ptr_bitmap / 32;
+    size_t bit = ptr_bitmap % 32;
+    if(!(g_PageBitmap[idx] & (1 << bit)))
+    {
+        m_Lock.release();
+        FATAL_NOLOCK("PhysicalMemoryManager DOUBLE FREE");
+    }
+
+    g_PageBitmap[idx] &= ~(1 << bit);
+#endif
+
     m_PageStack.free(page);
 
 #if defined(TRACK_PAGE_ALLOCATIONS)             
@@ -101,6 +125,19 @@ void X86CommonPhysicalMemoryManager::freePageUnlocked(physical_uintptr_t page)
 {
     if(!m_Lock.acquired())
         FATAL("X86CommonPhysicalMemoryManager::freePageUnlocked called without an acquired lock");
+
+#if defined(X86) && defined(DEBUGGER)
+    physical_uintptr_t ptr_bitmap = page / 0x1000;
+    size_t idx = ptr_bitmap / 32;
+    size_t bit = ptr_bitmap % 32;
+    if(!(g_PageBitmap[idx] & (1 << bit)))
+    {
+        m_Lock.release();
+        FATAL_NOLOCK("PhysicalMemoryManager DOUBLE FREE");
+    }
+
+    g_PageBitmap[idx] &= ~(1 << bit);
+#endif
 
     m_PageStack.free(page);
 
