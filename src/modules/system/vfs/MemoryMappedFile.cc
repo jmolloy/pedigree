@@ -127,6 +127,8 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess, size_t extent
         // Need to remove the cloned page and replace it with the real mapping.
         if(va->isMapped(reinterpret_cast<void*>(v)))
         {
+            FATAL("???");
+
             size_t flags = 0;
             physical_uintptr_t phys = 0;
             va->getMapping(reinterpret_cast<void*>(v), phys, flags);
@@ -141,7 +143,7 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess, size_t extent
             PhysicalMemoryManager::instance().freePage(phys);
         }
 
-        if (!va->map(p, reinterpret_cast<void*>(v), VirtualAddressSpace::Execute | (bMapWrite ? VirtualAddressSpace::Write : 0)))
+        if (!va->map(p, reinterpret_cast<void*>(v), VirtualAddressSpace::Execute | (bMapWrite ? VirtualAddressSpace::Write : VirtualAddressSpace::Shared)))
         {
             WARNING("MemoryMappedFile: map() failed at " << v);
             return false;
@@ -272,7 +274,10 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileo
 
     // Map the page into the address space.
     // NOTICE_NOLOCK("trap: " << v << " -> " << mapPhys << " for " << m_pFile->getName());
-    if (!va.map(mapPhys, reinterpret_cast<void *>(v), ((bIsWrite || m_bShared) ? VirtualAddressSpace::Write : 0) | VirtualAddressSpace::Execute))
+    if (!va.map(mapPhys,
+                reinterpret_cast<void *>(v),
+                ((bIsWrite || m_bShared) ? VirtualAddressSpace::Write : VirtualAddressSpace::Shared) |
+                    VirtualAddressSpace::Execute))
     {
         FATAL_NOLOCK("MemoryMappedFile: map() failed in trap()");
         return;
