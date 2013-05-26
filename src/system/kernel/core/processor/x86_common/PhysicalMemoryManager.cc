@@ -31,7 +31,7 @@
 #endif
 
 #if defined(X86) && defined(DEBUGGER)
-uint32_t g_PageBitmap[32768] = {0};
+uint32_t g_PageBitmap[16384] = {0};
 #endif
 
 #if defined(TRACK_PAGE_ALLOCATIONS)
