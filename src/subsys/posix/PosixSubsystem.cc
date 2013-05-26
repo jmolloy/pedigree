@@ -237,6 +237,10 @@ PosixSubsystem::~PosixSubsystem()
 
     m_SyncObjects.clear();
 
+    // Spinlock as a quick way of disabling interrupts.
+    Spinlock spinlock;
+    spinlock.acquire();
+
     // Switch to the address space of the process we're destroying.
     // We need to unmap memory maps, and we can't do that in our address space.
     VirtualAddressSpace &curr = Processor::information().getVirtualAddressSpace();
@@ -294,6 +298,8 @@ PosixSubsystem::~PosixSubsystem()
     if(va != &curr) {
         Processor::switchAddressSpace(curr);
     }
+
+    spinlock.release();
 }
 
 void PosixSubsystem::exit(int code)
