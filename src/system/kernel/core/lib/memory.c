@@ -79,7 +79,7 @@ inline void *memset_nonzero(void *buf, int c, size_t n)
         {
             // Set until n is aligned in a friendly way.
             size_t nBytes = n;
-            size_t q = n % 8, d = n % 4, w = n % 2;
+            size_t q = 8 - (n % 8), d = 4 - (n % 4), w = 2 - (n % 2);
             if(n > 8)
             {
 #ifdef BITS_64
