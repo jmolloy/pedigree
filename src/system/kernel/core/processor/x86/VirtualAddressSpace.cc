@@ -37,6 +37,7 @@
 #define PAGE_GLOBAL                 0x100
 #define PAGE_SWAPPED                0x200
 #define PAGE_COPY_ON_WRITE          0x400
+#define PAGE_SHARED                 0x800
 
 //
 // Macros
@@ -534,6 +535,8 @@ uint32_t X86VirtualAddressSpace::toFlags(size_t flags)
     Flags |= PAGE_PRESENT;
   if ((flags & CopyOnWrite) == CopyOnWrite)
     Flags |= PAGE_COPY_ON_WRITE;
+  if ((flags & Shared) == Shared)
+    Flags |= PAGE_SHARED;
   return Flags;
 }
 size_t X86VirtualAddressSpace::fromFlags(uint32_t Flags)
@@ -551,6 +554,8 @@ size_t X86VirtualAddressSpace::fromFlags(uint32_t Flags)
     flags |= Swapped;
   if ((Flags & PAGE_COPY_ON_WRITE) == PAGE_COPY_ON_WRITE)
     flags |= CopyOnWrite;
+  if ((Flags & PAGE_SHARED) == PAGE_SHARED)
+    flags |= Shared;
   return flags;
 }
 
@@ -652,6 +657,8 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
                 continue;
             }
 
+            size_t flags = PAGE_GET_FLAGS(pageTableEntry);
+
             // Grab the physical address for it.
             physical_uintptr_t physicalAddress = PAGE_GET_PHYSICAL_ADDRESS(pageTableEntry);
 
@@ -660,7 +667,10 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
 
             // And release the physical memory.
             /// \todo There's going to be a caveat with CoW here...
-            PhysicalMemoryManager::instance().freePage(physicalAddress);
+            if((flags & (PAGE_SHARED | PAGE_COPY_ON_WRITE)) == 0)
+            {
+                PhysicalMemoryManager::instance().freePage(physicalAddress);
+            }
 
             // This PTE is no longer valid
             *pageTableEntry = 0;
