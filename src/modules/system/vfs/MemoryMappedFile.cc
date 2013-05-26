@@ -330,7 +330,8 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileo
             }
             else
             {
-                NOTICE_NOLOCK("  -> zeroing " << (pageSz - bufferOffset) << " bytes (from " << bufferOffset << " onwards) @" << v << ".");
+                // NOTICE_NOLOCK("  -> zeroing " << (pageSz - 1 - bufferOffset) << " bytes (from " << bufferOffset << " onwards) @" << v << ".");
+                // NOTICE_NOLOCK("  -> zeroing @" << (v + bufferOffset) << " -> " << ((v + bufferOffset) + (pageSz - 1 - bufferOffset)) << ".");
                 memset(reinterpret_cast<uint8_t*>(v + bufferOffset), 0, pageSz - 1 - bufferOffset);
             }
         }
