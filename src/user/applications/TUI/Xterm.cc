@@ -40,8 +40,8 @@
 
  // RGBA -> BGRA
 
-extern uint32_t *g_Colours;
-extern uint32_t *g_BrightColours;
+extern uint32_t g_Colours[];
+extern uint32_t g_BrightColours[];
 
 uint8_t g_DefaultFg = 7;
 uint8_t g_DefaultBg = 0;
