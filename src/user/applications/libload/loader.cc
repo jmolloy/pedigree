@@ -269,6 +269,21 @@ extern "C" int main(int argc, char *argv[])
 
     syslog(LOG_INFO, "libload.so loading main object");
 
+    // Ungodly hack.
+    if(!strcmp(argv[0], "sh") || !strcmp(argv[0], "/bin/sh"))
+    {
+        // Get user's shell.
+        argv[0] = getenv("SHELL");
+        if(!argv[0])
+        {
+            // Assume bash.
+            syslog(LOG_WARNING, "libload: $SHELL is undefined and /bin/sh was requested");
+            argv[0] = "bash";
+        }
+    }
+
+    syslog(LOG_INFO, "libload.so main object is %s", argv[0]);
+
     // Load the main object passed on the command line.
     object_meta_t *meta = g_MainObject = new object_meta_t;
     meta->debug = false;

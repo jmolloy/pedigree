@@ -240,9 +240,16 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         return -1;
     }
 
+    String toLoad(name);
+    if(!strcmp(name, "sh") || !strcmp(name, "/bin/sh"))
+    {
+        /// \todo read $SHELL from environment.
+        toLoad = "/applications/bash";
+    }
+
     // Attempt to find the file, first!
     File *pActualFile = 0;
-    File* file = pActualFile = VFS::instance().find(String(name), Processor::information().getCurrentThread()->getParent()->getCwd());
+    File* file = pActualFile = VFS::instance().find(toLoad, Processor::information().getCurrentThread()->getParent()->getCwd());
     if (!file)
     {
         // Error - not found.
