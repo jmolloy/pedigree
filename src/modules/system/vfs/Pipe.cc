@@ -65,6 +65,13 @@ uint64_t Pipe::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
                 // No data left and/or EOF given - END.
                 return n;
             }
+
+            // Perhaps EOF was hit - don't return one null byte!
+            if (m_Front == m_Back)
+            {
+                return n;
+            }
+
             pBuf[n++] = m_Buffer[m_Front];
             m_Front = (m_Front+1) % PIPE_BUF_MAX;
             m_BufAvailable.release();
