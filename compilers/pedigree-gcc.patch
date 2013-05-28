@@ -138,8 +138,8 @@ diff -rupN gcc-4.4.1-orig/libgcc/config.host gcc-4.4.1/libgcc/config.host
  	;;
  i[34567]86-*-openbsd*)
 diff -rup gcc/configure{.old,}
---- gcc/configure.old	2013-05-28 22:06:14.604629002 +1000
-+++ gcc/configure	2013-05-28 22:06:37.668072645 +1000
+--- a/gcc/configure.old	2013-05-28 22:06:14.604629002 +1000
++++ b/gcc/configure	2013-05-28 22:06:37.668072645 +1000
 @@ -7434,7 +7434,7 @@ $as_echo "$as_me: WARNING:
  *** Info documentation will not be built." >&2;}
    BUILD_INFO=
