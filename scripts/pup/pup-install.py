@@ -33,7 +33,7 @@ def main(arglist):
         os.makedirs(installRoot)
     
     s = sqlite3.connect(localPath + "/packages.pupdb")
-    e = s.execute("select * from packages where name=? and arch=? order by ver desc limit 1", ([arglist[0]]))
+    e = s.execute("select * from packages where name=? and arch=? order by ver desc limit 1", (arglist[0], desiredArch))
     data = e.fetchone()
     if data is None:
         s.close()
