@@ -33,7 +33,7 @@ my @download = ( {'url' => "ftp://ftp.gnu.org/gnu/gcc/gcc-$gcc_version/gcc-core-
                  {'url' => "ftp://ftp.gnu.org/gnu/binutils/binutils-$binutils_version.tar.bz2",
                   'name' => 'Binutils',
                   'filename' => "binutils-$binutils_version.tar.bz2",
-                  'extract' => "tar -xjf binutils-$binutils_version.tar.bz2",
+                  'extract' => "tar -xjf binutils-$binutils_version.tar.bz2 && sed -i.bak -e 's/\@colophon/\@\@colophon/' -e 's/doc\@cygnus.com/doc\@\@cygnus.com/' binutils-$binutils_version/bfd/doc/bfd.texinfo",
                   'arch' => 'all'},
                  {'url' => "http://www.nasm.us/pub/nasm/releasebuilds/$nasm_version/nasm-$nasm_version.tar.bz2",
                   'name' => 'Nasm',
