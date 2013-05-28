@@ -152,6 +152,11 @@ $script_dir/run_pup.py install zlib
 
 $script_dir/run_pup.py install bash
 $script_dir/run_pup.py install coreutils
+$script_dir/run_pup.py install fontconfig
+$script_dir/run_pup.py install pixman
+$script_dir/run_pup.py install cairo
+$script_dir/run_pup.py install expat
+$script_dir/run_pup.py install mesa
 
 set -e
 
