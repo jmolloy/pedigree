@@ -138,7 +138,7 @@ git submodule update > /dev/null 2>&1
 echo
 echo "Configuring the Pedigree UPdater..."
 
-$script_dir/setup_pup.py
+$script_dir/setup_pup.py amd64
 $script_dir/run_pup.py sync
 
 echo

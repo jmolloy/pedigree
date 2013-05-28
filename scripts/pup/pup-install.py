@@ -25,7 +25,7 @@ import pup_common
 
 def main(arglist):
 
-    remotePath, localPath, installRoot = pup_common.getConfig(arglist[1:])
+    remotePath, localPath, installRoot, desiredArch = pup_common.getConfig(arglist[1:])
 
     if not os.path.exists(localPath):
         os.makedirs(localPath)
@@ -33,17 +33,17 @@ def main(arglist):
         os.makedirs(installRoot)
     
     s = sqlite3.connect(localPath + "/packages.pupdb")
-    e = s.execute("select * from packages where name=? order by ver desc limit 1", ([arglist[0]]))
+    e = s.execute("select * from packages where name=? and arch=? order by ver desc limit 1", ([arglist[0]]))
     data = e.fetchone()
     if data is None:
         s.close()
         
-        print "The package '%s' is not available. You may need to run `pup sync' to update the list of available packages." % (arglist[0])
+        print "The package '%s' [%s] is not available. You may need to run `pup sync' to update the list of available packages." % (arglist[0], desiredArch)
         exit(1)
     s.close()
     
     # Package name
-    packageName = "%s-%s" % (data[1], data[2])
+    packageName = "%s-%s-%s" % (data[1], data[2], desiredArch)
     localFile = "%s/%s.pup" % (localPath, packageName)
     
     print "Preparing to install %s" % (packageName)
@@ -76,7 +76,7 @@ def main(arglist):
     t = tarfile.open(localFile)
     t.extractall(installRoot)
     
-    print "Package %s is now installed." % (packageName)
+    print "Package %s [%s] is now installed." % (packageName, desiredArch)
 
 if __name__ == '__main__':
     main(sys.argv[1:])

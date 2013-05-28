@@ -25,7 +25,7 @@ import pup_common
 
 def main(arglist):
 
-    remotePath, localPath, ignore = pup_common.getConfig(arglist)
+    remotePath, localPath, ignore, ignore = pup_common.getConfig(arglist)
     
     if localPath[-1] == "/":
         localPath = localPath[0:-1]

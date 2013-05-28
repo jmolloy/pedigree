@@ -37,6 +37,7 @@ def getConfig(args):
 
         localPath = cp.get("paths", "localdb")
         installRoot = cp.get("paths", "installroot")
+        desiredArch = cp.get("settings", "arch")
 
         remotePath = []
         for server in cp.items("remotes"):
@@ -54,5 +55,5 @@ def getConfig(args):
     if remotePath[-1] == "/":
         remotePath = remotePath[0:-1]
     
-    return (remotePath, localPath, installRoot)
+    return (remotePath, localPath, installRoot, desiredArch)
 
