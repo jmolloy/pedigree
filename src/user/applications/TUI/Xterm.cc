@@ -353,6 +353,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                         case 0:
                         {
                             // Reset all attributes.
+                            syslog(LOG_INFO, "reset all");
                             m_pWindows[m_ActiveBuffer]->setFlags(0);
                             m_pWindows[m_ActiveBuffer]->setForeColour(g_DefaultFg);
                             m_pWindows[m_ActiveBuffer]->setBackColour(g_DefaultBg);
@@ -393,10 +394,8 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                             break;
                         case 38:
                             // xterm-256 foreground
-                            syslog(LOG_INFO, "xterm-256 fg");
                             if(m_Cmd.params[i+1] == 5)
                             {
-                                syslog(LOG_INFO, "xterm-256 good: %d [%x]", m_Cmd.params[i+2], g_Colours[m_Cmd.params[i+2]]);
                                 m_pWindows[m_ActiveBuffer]->setForeColour(m_Cmd.params[i+2]);
                                 i += 3;
                             }
