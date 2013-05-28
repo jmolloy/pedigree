@@ -12,7 +12,7 @@ pupConfigDefault = "%s/scripts/pup/pup.conf.default" % (scriptdir,)
 pupConfig = "%s/scripts/pup/pup.conf" % (scriptdir,)
 
 target_arch = 'i686'
-if sys.argc > 1:
+if len(sys.argv) > 1:
     target_arch = sys.argv[1]
 
 # Open the original file
