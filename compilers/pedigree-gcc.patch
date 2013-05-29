@@ -20,11 +20,11 @@ diff -rupN gcc-4.3.2-orig/gcc/config/pedigree.h gcc-4.3.2/gcc/config/pedigree.h
 +#undef STARTFILE_SPEC
 +#define STARTFILE_SPEC \
 +    "%{!shared: %{!pg:crt0.o%s}} \
-+    crti.o%s crtbegin.o%s"
++    crti.o%s %{!shared:crtbegin.o%s} %{shared:crtbeginS.o%s}"
 +
 +#undef ENDFILE_SPEC
 +#define ENDFILE_SPEC \
-+    "crtend.o%s crtn.o%s"
++    "%{!shared:crtend.o%s} %{shared:crtendS.o%s} crtn.o%s"
 +
 +#undef CPLUSPLUS_CPP_SPEC
 +#define CPLUSPLUS_CPP_SPEC "-D_GNU_SOURCE %(cpp)"
@@ -67,7 +67,7 @@ diff -rupN gcc-4.3.2-orig/gcc/config.gcc gcc-4.3.2/gcc/config.gcc
    esac
    ;;
 +*-*-pedigree*)
-+  extra_parts="crtbegin.o crtend.o"
++  extra_parts="crtbegin.o crtend.o crtbeginS.o crtendS.o"
 +  gas=yes
 +  gnu_ld=yes
 +  default_use_cxa_atexit=yes
@@ -129,10 +129,10 @@ diff -rupN gcc-4.4.1-orig/libgcc/config.host gcc-4.4.1/libgcc/config.host
  x86_64-*-netbsd*)
  	;;
 +i[34567]86-*-pedigree*)
-+	extra_parts="crtbegin.o crtend.o"
++	extra_parts="crtbegin.o crtend.o crtbeginS.o crtendS.o"
 +	;;
 +x86_64-*-pedigree*)
-+	extra_parts="crtbegin.o crtend.o"
++	extra_parts="crtbegin.o crtend.o crtbeginS.o crtendS.o"
 +	;;
  i[34567]86-*-openbsd2.*|i[34567]86-*openbsd3.[0123])
  	;;
