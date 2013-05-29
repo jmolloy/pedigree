@@ -108,7 +108,7 @@ case $real_os in
 esac
 
 # Install cross-compilers
-$script_dir/scripts/checkBuildSystemNoInteractive.pl amd64-pedigree $script_dir/pedigree-compiler $compiler_build_options
+$script_dir/scripts/checkBuildSystemNoInteractive.pl x86_64-pedigree $script_dir/pedigree-compiler $compiler_build_options
 
 old=$(pwd)
 cd $script_dir
