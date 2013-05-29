@@ -81,12 +81,12 @@ diff -rupN gcc-4.3.2-orig/gcc/config.gcc gcc-4.3.2/gcc/config.gcc
  	;;
 +i[3-7]86-*-pedigree*)
 +  tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h i386/i386elf.h pedigree.h"
-+  tmake_file="i386/t-i386elf t-svr4"
++  tmake_file="i386/t-i386elf i386/t-crtstuff t-pedigree"
 +  use_fixproto=yes
 +  ;;
 +x86_64-*-pedigree* | amd64-*-pedigree*)
 +  tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h i386/i386elf.h i386/x86-64.h pedigree.h"
-+  tmake_file="i386/t-i386elf t-svr4"
++  tmake_file="i386/t-i386elf i386/t-crtstuff t-pedigree"
 +  use_fixproto=yes
 +  ;;
  i[34567]86-*-darwin*)
@@ -149,3 +149,12 @@ diff -rup gcc/configure{.old,}
  fi
  
  
+--- /dev/null	2013-05-15 13:32:17.906234052 +1000
++++ b/gcc/config/t-pedigree	2013-05-29 16:40:50.359743858 +1000
+@@ -0,0 +1,6 @@
++EXTRA_MULTILIB_PARTS= crtbegin.o crtend.o crtbeginS.o crtendS.o
++
++# Always build crtstuff with PIC.
++CRTSTUFF_T_CFLAGS_S = $(CRTSTUFF_T_CFLAGS) -fPIC
++
++TARGET_LIBGCC2_CFLAGS = -fPIC
