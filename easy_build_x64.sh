@@ -165,7 +165,7 @@ echo "Beginning the Pedigree build."
 echo
 
 # Build Pedigree.
-scons CROSS=$script_dir/compilers/dir/bin/amd64-pedigree-
+scons CROSS=$script_dir/compilers/dir/bin/x86_64-pedigree-
 
 cd "$old"
 
@@ -173,7 +173,7 @@ echo
 echo
 echo "Pedigree is now ready to be built without running this script."
 echo "To build in future, run the following command in the '$script_dir' directory:"
-echo "scons CROSS=$script_dir/pedigree-compiler/bin/amd64-pedigree-"
+echo "scons CROSS=$script_dir/pedigree-compiler/bin/x86_64-pedigree-"
 echo
 echo "If you wish, you can continue to run this script. It won't ask questions"
 echo "anymore, unless you remove the '.easy_os' file in '$script_dir'."
