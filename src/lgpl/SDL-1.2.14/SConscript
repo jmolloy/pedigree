@@ -84,7 +84,8 @@ tmpEnvironment['LIBPATH'] = libpaths
 tmpEnvironment['CPPDEFINES'] += ['PEDIGREE']
 tmpEnvironment['ASFLAGS'] += ' -I' + env.Dir('#src/lgpl/SDL-1.2.14/src/hermes').path + '/ '
 
-tmpEnvironment.SharedLibrary(sobjname, files, LINKFLAGS="")
+if env['ARCH_TARGET'] in ['X86']:
+    tmpEnvironment.SharedLibrary(sobjname, files, LINKFLAGS="")
 tmpEnvironment.Library(objname, files, LINKFLAGS="")
 
 env.Alias(sobjname, 'libs')

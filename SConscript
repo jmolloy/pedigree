@@ -307,8 +307,10 @@ else:
                  builddir + '/libm.so',
                  builddir + '/libload.so',
 #                 builddir + '/libpthread.so',
-                 builddir + '/libSDL.so',
                  ]
+
+    if env['ARCH_TARGET'] in ['X86']:
+        fileList += [builddir + '/libSDL.so']
 
     # Build the hard disk image
     env.Command(hddimg, fileList, Action(buildImage, None))
