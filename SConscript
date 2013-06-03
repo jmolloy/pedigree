@@ -21,10 +21,8 @@ if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
 subdirs += ['src/modules', 'src/system/kernel']
 
 # On X86, X64 and PPC we build applications and LGPL libraries
-if env['ARCH_TARGET'] in ['X86']:
-    subdirs += ['src/lgpl']
-if env['ARCH_TARGET'] in ['X86', 'PPC']:
-    subdirs += ['src/user']
+if env['ARCH_TARGET'] in ['X86', 'X64', 'PPC']:
+    subdirs += ['src/user', 'src/lgpl']
 if not env['ARCH_TARGET'] in ['X86', 'X64']:
     subdirs += ['src/system/boot']
 

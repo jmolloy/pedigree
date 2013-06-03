@@ -139,6 +139,10 @@ tmp_crtn.Program(crtn_objname, crtn_files, LINKFLAGS='-nostdlib -r')
 
 # libpthread
 tmp_pthread = tmp.Clone()
+tmp_pthread['CFLAGS'] = tmp_pthread['CFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
+tmp_pthread['CXXFLAGS'] = tmp_pthread['CXXFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
+tmp_pthread['CFLAGS'] += glueFlags
+tmp_pthread['CXXFLAGS'] += glueFlags
 tmp_pthread.Library(libpthread_objname, pthread_files)
 
 # Build libc/libm

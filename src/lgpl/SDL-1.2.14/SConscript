@@ -62,9 +62,6 @@ libraries = [
     'stdc++'
 ]
 
-if env['ARCH_TARGET'] in ['X86', 'X64', 'ARM']:
-    libraries += ['kernelrtti']
-
 # To add a library path add to the list below
 libpaths = [
     '#',
@@ -72,6 +69,15 @@ libpaths = [
     builddir
 ]
 
+def fixFlags(f):
+    f = f.replace('-mcmodel=kernel', '-mcmodel=small')
+    f = f.replace('-mno-sse', '')
+    f = f.replace('-mno-mmx', '')
+    f = f.replace('-mno-red-zone', '')
+    return f
+
+tmpEnvironment['CFLAGS'] = fixFlags(tmpEnvironment['CFLAGS'])
+tmpEnvironment['CXXFLAGS'] = fixFlags(tmpEnvironment['CXXFLAGS'])
 tmpEnvironment['CPPPATH'] = include
 tmpEnvironment['LIBS'] = libraries
 tmpEnvironment['LIBPATH'] = libpaths
