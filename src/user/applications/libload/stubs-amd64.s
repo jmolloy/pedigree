@@ -3,6 +3,9 @@
 [extern _libload_dofixup]
 
 _libload_resolve_symbol:
+    pop r15
+    pop r14
+
     push rdi
     push rsi
 
@@ -13,5 +16,4 @@ _libload_resolve_symbol:
     pop rsi
     pop rdi
 
-    add rsp, 8
     jmp rax
