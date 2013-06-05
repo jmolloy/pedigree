@@ -976,7 +976,7 @@ void doRelocation(object_meta_t *meta) {
 
         if(meta->plt_rela) {
             for(size_t i = 0; i < (meta->plt_sz / sizeof(ElfRela_t)); i++) {
-                uintptr_t *addr = (uintptr_t *) (base + meta->plt_rel[i].offset);
+                uintptr_t *addr = (uintptr_t *) (base + meta->plt_rela[i].offset);
                 *addr += base;
             }
         }
@@ -1094,12 +1094,8 @@ uintptr_t doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
 
 uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
     ElfSymbol_t *symtab = meta->symtab;
-    const char *strtab = meta->strtab;
     if(meta->dyn_symtab) {
         symtab = meta->dyn_symtab;
-    }
-    if(meta->dyn_strtab) {
-        strtab = meta->dyn_strtab;
     }
 
     ElfSymbol_t *sym = &symtab[R_SYM(rel.info)];
@@ -1108,13 +1104,14 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
         sh = &meta->shdrs[sym->shndx];
     }
 
-    uintptr_t A = rel.addend;
-    uintptr_t S = 0;
     uintptr_t B = meta->load_base;
     uintptr_t P = rel.offset;
     if(meta->relocated) {
         P += B;
     }
+
+    uintptr_t A = *((uintptr_t*) P);
+    uintptr_t S = 0;
 
     std::string symbolname = symbolName(*sym, meta);
 
