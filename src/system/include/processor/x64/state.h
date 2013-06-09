@@ -232,10 +232,12 @@ class X64SyscallState
     uint64_t m_R8;
     /** The base-pointer */
     uint64_t m_Rbp;
+  public:
     /** The RSI general purpose register */
     uint64_t m_Rsi;
     /** The RDI general purpose register */
     uint64_t m_Rdi;
+  private:
     /** The RDX general purpose register */
     uint64_t m_Rdx;
     /** The RBX general purpose register */

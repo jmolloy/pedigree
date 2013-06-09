@@ -480,6 +480,15 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     state.setStackPointer(pState.getStackPointer());
     state.setInstructionPointer(elf->getEntryPoint());
 
+    /// \todo The below is abysmal and needs to be generic because
+    ///       it will need to be done for every architecture that
+    ///       takes function parameters in registers!
+#ifdef X64
+    // x86_64 passes parameters in registers.
+    state.m_Rdi = pState.rdi;
+    state.m_Rsi = pState.rsi;
+#endif
+
     // JAMESM: I don't think the sigret code actually needs to be called from userspace. Here should do just fine, no?
 
     pedigree_init_sigret();
