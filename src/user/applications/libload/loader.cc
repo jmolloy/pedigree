@@ -62,6 +62,7 @@ void *memset(void *dst, int val, size_t len)
 enum LookupPolicy {
     LocalFirst,
     NotThisObject,
+    LocalLast
 };
 
 typedef struct _object_meta {
@@ -836,7 +837,7 @@ bool lookupSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, boo
             }
             if(bWeak) {
                 if(ST_BIND(sym.info) == STB_WEAK) {
-                    sym.value = (uintptr_t) ~0UL;
+                    // sym.value = (uintptr_t) ~0UL;
                     break;
                 }
             }
@@ -862,7 +863,7 @@ bool lookupSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, boo
 
     if(y != 0) {
         // Patch up the value.
-        if(ST_TYPE(sym.info) < 3 && ST_BIND(sym.info) != STB_WEAK) {
+        if(ST_TYPE(sym.info) < 3) { // && ST_BIND(sym.info) != STB_WEAK) {
             if(sym.shndx && meta->relocated) {
                 sym.value += meta->load_base;
             }
@@ -918,9 +919,27 @@ bool findSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, Looku
         }
     }
 
+    // Try again but accept weak symbols.
+    for(std::list<object_meta_t*>::iterator it = ext_meta->objects.begin();
+        it != ext_meta->objects.end();
+        ++it) {
+        if(lookupSymbol(symbol, *it, sym, true)) {
+            return true;
+        }
+    }
+
+    // Try a local lookup if not found.
+    if(policy == LocalLast) {
+        if(lookupSymbol(symbol, meta, sym, false, false))
+            return true;
+    }
+
     // No luck? Try weak symbols in the main object.
-    if(lookupSymbol(symbol, meta, sym, true))
-        return true;
+    if(policy != NotThisObject)
+    {
+        if(lookupSymbol(symbol, meta, sym, true))
+            return true;
+    }
 
     return false;
 }
@@ -1114,6 +1133,7 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
     uintptr_t S = 0;
 
     std::string symbolname = symbolName(*sym, meta);
+    size_t symbolSize = sizeof(uintptr_t);
 
     // Patch in section header?
     if(symtab && ST_TYPE(sym->info) == 3) {
@@ -1135,6 +1155,7 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
             }
 
             S = lookupsym.value;
+            symbolSize = lookupsym.size;
         }
     }
 
@@ -1159,7 +1180,18 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
             result = (result & 0xFFFFFFFF00000000) | ((S + A - P) & 0xFFFFFFFF);
             break;
         case R_X86_64_COPY:
-            result = *((uintptr_t *) S);
+            // Only copy if not null.
+            if(S)
+            {
+                if(symbolSize > sizeof(uintptr_t))
+                {
+                    memcpy(
+                        (void *) (P + sizeof(uintptr_t)),
+                        (void *) (S + sizeof(uintptr_t)),
+                        symbolSize - sizeof(uintptr_t));
+                }
+                result = *((uintptr_t *) S);
+            }
             break;
         case R_X86_64_JUMP_SLOT:
         case R_X86_64_GLOB_DAT:
@@ -1184,8 +1216,9 @@ extern "C" uintptr_t _libload_dofixup(uintptr_t id, uintptr_t symbol) {
 #ifdef BITS_32
     ElfRel_t rel = meta->plt_rel[symbol / sizeof(ElfRel_t)];
 #else
-    ElfRela_t rel = meta->plt_rela[symbol / sizeof(ElfRela_t)];
+    ElfRela_t rel = meta->plt_rela[symbol]; // / sizeof(ElfRela_t)];
 #endif
+
     // Verify the symbol is sane.
     if(meta->hash && (R_SYM(rel.info) > meta->hash->nchain)) {
         fprintf(stderr, "symbol lookup failed (symbol not in hash table)\n");
