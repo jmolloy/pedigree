@@ -16,6 +16,7 @@
 
 #include <Log.h>
 #include <panic.h>
+#include <utilities/assert.h>
 #include <utilities/utility.h>
 #include <processor/MemoryRegion.h>
 #include <processor/Processor.h>
@@ -106,6 +107,9 @@ void X86CommonPhysicalMemoryManager::freePage(physical_uintptr_t page)
 
     g_PageBitmap[idx] &= ~(1 << bit);
 #endif
+
+    assert(page != 0);
+    assert((page & 0xFFF) == 0);
 
     m_PageStack.free(page);
 
