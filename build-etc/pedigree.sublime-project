@@ -23,6 +23,7 @@
             "-I${folder:${project_path:SConstruct}}/src/subsys/posix/include",
             "-I${folder:${project_path:SConstruct}}/src/subsys/posix/syscalls",
             "-I${folder:${project_path:SConstruct}}/src/modules/system/TUI",
+            "-I${folder:${project_path:SConstruct}}/src/modules/system",
             "-I${folder:${project_path:SConstruct}}/images/local/include",
             "-I${folder:${project_path:SConstruct}}/src/user/libraries/libui/include",
             "-I${folder:${project_path:SConstruct}}/src/user/libraries/libui/src",
