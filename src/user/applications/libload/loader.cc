@@ -180,7 +180,7 @@ extern char __end_bss;
 
 extern "C" void _init();
 extern "C" void _fini();
-extern "C" int _start(int argc, char *argv[]);
+extern "C" int _start(char *argv[], char *env[]);
 
 size_t elfhash(const char *name) {
     size_t h = 0, g = 0;
@@ -202,7 +202,7 @@ extern char **environ;
  * the init and fini functions around the call to crt0's _start, which is
  * the normal entry point for an application.
  */
-extern "C" int _libload_main(int argc, char *argv[])
+extern "C" int _libload_main(char *argv[], char *env[])
 {
     /// \note THIS IS CALLED BEFORE CRT0. Do not use argc/argv/environ,
     ///       and keep everything as minimal as possible.
@@ -221,7 +221,7 @@ extern "C" int _libload_main(int argc, char *argv[])
     // Run .init stuff.
     _init();
 
-    int ret = _start(argc, argv);
+    int ret = _start(argv, env);
 
     // Run .fini stuff.
     _fini();
