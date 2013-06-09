@@ -36,6 +36,7 @@
 #define PAGE_GLOBAL                 0x100
 #define PAGE_SWAPPED                0x200
 #define PAGE_COPY_ON_WRITE          0x400
+#define PAGE_SHARED                 0x800
 #define PAGE_NX                     0x8000000000000000
 
 //
@@ -345,6 +346,15 @@ void X64VirtualAddressSpace::revertToKernelAddressSpace()
                 if ((*pdEntry & PAGE_PRESENT) != PAGE_PRESENT)
                     continue;
 
+                // Address this region begins at.
+                void *regionVirtualAddress = reinterpret_cast<void*> ( ((i & 0x100)?(~0ULL << 48):0ULL) | /* Sign-extension. */
+                                                                 (i << 39) |
+                                                                 (j << 30) |
+                                                                 (k << 21) );
+
+                if(regionVirtualAddress > KERNEL_SPACE_START)
+                    break;
+
                 /// \todo Deal with 2MB pages here.
 
                 bool bDidSkipPD = false;
@@ -354,42 +364,40 @@ void X64VirtualAddressSpace::revertToKernelAddressSpace()
                     if ((*ptEntry & PAGE_PRESENT) != PAGE_PRESENT)
                         continue;
 
-                    void *virtualAddress = reinterpret_cast<void*> ( ((i & 0x100)?(~0ULL << 48):0ULL) | /* Sign-extension. */
-                                                                     (i << 39) |
-                                                                     (j << 30) |
-                                                                     (k << 21) |
-                                                                     (l << 12) );
+                    void *virtualAddress = reinterpret_cast<void *>(
+                        reinterpret_cast<uintptr_t>(regionVirtualAddress) | (l << 12));
 
                     // A little inefficient?
-                    if((virtualAddress >= KERNEL_SPACE_START) || (getKernelAddressSpace().isMapped(virtualAddress)))
+                    if(getKernelAddressSpace().isMapped(virtualAddress))
                     {
                         bDidSkipPD = true;
                         continue;
                     }
-                    
-                    NOTICE_NOLOCK("Blowing away " << reinterpret_cast<uintptr_t>(virtualAddress));
+
+                    size_t flags = PAGE_GET_FLAGS(ptEntry);
+                    physical_uintptr_t physicalAddress = PAGE_GET_PHYSICAL_ADDRESS(ptEntry);
 
                     // Free the page.
-                    /// \todo There's going to be a caveat with CoW here...
                     unmap(virtualAddress);
-                    PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(ptEntry));
+
+                    // And release the physical memory.
+                    /// \todo There's going to be a caveat with CoW here...
+                    if((flags & (PAGE_SHARED | PAGE_COPY_ON_WRITE)) == 0)
+                    {
+                        PhysicalMemoryManager::instance().freePage(physicalAddress);
+                    }
 
                     *ptEntry = 0;
                 }
 
                 // If we skipped at least one page in the table, don't free
-/*
-                if(!bDidSkipPD)
-                {
-                    NOTICE_NOLOCK("freeing table");
-                    
-                    // We didn't skip any, so free the table
-                    physical_uintptr_t phys = PAGE_GET_PHYSICAL_ADDRESS(pdEntry);
-                    *pdEntry = 0;
-                    PhysicalMemoryManager::instance().freePage(phys);
-                    Processor::invalidate(pdEntry);
-                }
-*/
+                if(bDidSkipPD)
+                    continue;
+
+                // Remove the table.
+                PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pdEntry));
+                *pdEntry = 0;
+                Processor::invalidate(pdEntry);
             }
         }
     }
@@ -622,6 +630,8 @@ uint64_t X64VirtualAddressSpace::toFlags(size_t flags)
     Flags |= PAGE_PRESENT;
   if ((flags & CopyOnWrite) == CopyOnWrite)
     Flags |= PAGE_COPY_ON_WRITE;
+  if ((flags & Shared) == Shared)
+    Flags |= PAGE_SHARED;
   return Flags;
 }
 size_t X64VirtualAddressSpace::fromFlags(uint64_t Flags)
@@ -641,6 +651,8 @@ size_t X64VirtualAddressSpace::fromFlags(uint64_t Flags)
     flags |= Swapped;
   if ((Flags & PAGE_COPY_ON_WRITE) == PAGE_COPY_ON_WRITE)
     flags |= CopyOnWrite;
+  if ((Flags & PAGE_SHARED) == PAGE_SHARED)
+    flags |= Shared;
   return flags;
 }
 
