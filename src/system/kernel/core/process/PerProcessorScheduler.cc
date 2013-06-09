@@ -423,7 +423,7 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
         return;
     }
 
-    Processor::restoreState(reinterpret_cast<SyscallState&>(kStack), &pCurrentThread->getLock().m_Atom.m_Atom);
+    Processor::restoreState(*reinterpret_cast<SyscallState*>(kStack), &pCurrentThread->getLock().m_Atom.m_Atom);
 }
 
 
