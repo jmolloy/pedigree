@@ -20,6 +20,7 @@
 #include <process/Scheduler.h>
 #include <panic.h>
 #include <processor/PhysicalMemoryManager.h>
+#include "VirtualAddressSpace.h"
 
 PageFaultHandler PageFaultHandler::m_Instance;
 
@@ -78,15 +79,36 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
     }
   }
 
-  // Check our handler list.
-  for (List<MemoryTrapHandler*>::Iterator it = m_Handlers.begin();
-       it != m_Handlers.end();
-       it++)
+  if (cr2 < reinterpret_cast<uintptr_t>(KERNEL_SPACE_START))
   {
-    if ((*it)->trap(cr2, code & PFE_ATTEMPTED_WRITE))
-    {
-      return;
-    }
+      // Within stack?
+      /// \todo Implement this better
+#if 0
+      if((cr2 >= reinterpret_cast<uintptr_t>(USERSPACE_VIRTUAL_LOWEST_STACK)) &&
+         (cr2 <= reinterpret_cast<uintptr_t>(USERSPACE_VIRTUAL_STACK)))
+      {
+          // Map it in
+          physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+          if(Processor::information().getVirtualAddressSpace().map(phys, reinterpret_cast<void*>(cr2 & ~0xFFF), VirtualAddressSpace::Write))
+          {
+              NOTICE_NOLOCK("#PF: stack expansion at " << cr2 << " successful [EIP=" << state.getInstructionPointer() << "]");
+              return;
+          }
+          else
+              WARNING_NOLOCK("#PF: Demand mapping for userspace stack failed");
+      }
+#endif
+
+      // Check our handler list.
+      for (List<MemoryTrapHandler*>::Iterator it = m_Handlers.begin();
+           it != m_Handlers.end();
+           it++)
+      {
+          if ((*it)->trap(cr2, code & PFE_ATTEMPTED_WRITE))
+          {
+              return;
+          }
+      }
   }
 
   //  Get PFE location and error code
@@ -96,11 +118,15 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
   sError.append(cr2, 16, 8, '0');
   sError.append(", error code 0x");
   sError.append(code, 16, 8, '0');
+  sError.append(", EIP 0x");
+  sError.append(state.getInstructionPointer(), 16, 8, '0');
 
   //  Extract error code information
   static LargeStaticString sCode;
   sCode.clear();
-  sCode.append("Details: ");
+  sCode.append("Details: PID=");
+  sCode.append(Processor::information().getCurrentThread()->getParent()->getId());
+  sCode.append(" ");
 
   if(!(code & PFE_PAGE_PRESENT)) sCode.append("NOT ");
   sCode.append("PRESENT | ");
@@ -124,7 +150,9 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
 
   //static LargeStaticString eCode;
   #ifdef DEBUGGER
-    Debugger::instance().start(state, sError);
+    // Page faults in usermode are usually useless to debug in the debugger (some exceptions exist)
+    if(!(code & PFE_USER_MODE))
+        Debugger::instance().start(state, sError);
   #endif
 
   Scheduler &scheduler = Scheduler::instance();
@@ -136,7 +164,14 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
   else
   {
     //  Unrecoverable PFE in a process - Kill the process and yield
-    Processor::information().getCurrentThread()->getParent()->kill();
+    //Processor::information().getCurrentThread()->getParent()->kill();
+    Thread *pThread = Processor::information().getCurrentThread();
+    Process *pProcess = pThread->getParent();
+    Subsystem *pSubsystem = pProcess->getSubsystem();
+    if(pSubsystem)
+        pSubsystem->threadException(pThread, Subsystem::PageFault, state);
+    else
+        pProcess->kill();
 
     //  kill member function also calls yield(), so shouldn't get here.
     for(;;) ;
