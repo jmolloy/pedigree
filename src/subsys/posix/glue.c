@@ -37,6 +37,8 @@ int h_errno; // required by networking code
 #include <sys/resource.h>
 #include <sys/mount.h>
 
+#include <sys/reent.h>
+
 #include <setjmp.h>
 
 #include <pedigree_config.h>
@@ -2192,4 +2194,34 @@ void __pedigree_revoke_signal_context()
 {
     // Call into the kernel.
     syscall0(PEDIGREE_UNWIND_SIGNAL);
+}
+
+/**
+ * glue for newlib <-> dlmalloc
+ * dlmalloc has locks if we compile it to have them.
+ */
+
+void *_malloc_r(struct _reent *ptr, size_t sz)
+{
+    return malloc(sz);
+}
+
+void *_calloc_r(struct _reent *ptr, size_t a, size_t b)
+{
+    return calloc(a, b);
+}
+
+void *_realloc_r(struct _reent *ptr, void *p, size_t sz)
+{
+    return realloc(p, sz);
+}
+
+void *_memalign_r(struct _reent *ptr, size_t align, size_t nbytes)
+{
+    return memalign(align, nbytes);
+}
+
+void _free_r(struct _reent *ptr, void *p)
+{
+    free(p);
 }

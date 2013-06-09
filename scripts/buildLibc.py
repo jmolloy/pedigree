@@ -20,6 +20,7 @@
 import tempfile
 import shutil
 import os
+import sys
 
 def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
     
@@ -39,7 +40,39 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
     shutil.copy(glue, tmpdir + "/" + os.path.basename(glue_name))
     shutil.copy(pedigree_c_name, tmpdir + "/" + os.path.basename(pedigree_c_name))
 
-    objs_to_remove = ["init", "getpwent", "signal", "fseek", "getcwd", "rename", "rewinddir", "opendir", "readdir", "closedir", "_isatty", "basename", "setjmp"]
+    objs_to_remove = [
+        "init",
+        "getpwent",
+        "signal",
+        "fseek",
+        "getcwd",
+        "rename",
+        "rewinddir",
+        "opendir",
+        "readdir",
+        "closedir",
+        "_isatty",
+        "basename",
+        "setjmp",
+        "malloc",
+        "mallocr",
+        "calloc",
+        "callocr",
+        "free",
+        "freer",
+        "realloc",
+        "reallocr",
+        "malign",
+        "malignr",
+        "mallinfor",
+        "mstats",
+        "mtrim",
+        "valloc",
+        "msize",
+        "mallinfor",
+        "malloptr",
+        "mallstatsr",
+    ]
 
     for i in objs_to_remove:
         try:

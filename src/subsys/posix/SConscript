@@ -51,6 +51,7 @@ glue_files = [
     'glue-fseek.c',
     'glue-fpurge.c',
     'glue-scandir.c',
+    'glue-dlmalloc.c',
 ]
 
 crt0_files = ['crt0.c']
