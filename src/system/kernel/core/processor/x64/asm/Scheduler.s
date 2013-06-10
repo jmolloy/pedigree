@@ -59,6 +59,16 @@ _ZN9Processor9saveStateER17X64SchedulerState:
     mov     [rdi+80], rax
     mov     [rdi+88], rdx
 
+    ;; Save FPU data (if used)
+    mov byte[rdi+96], 0
+    mov     rdx, cr0
+    and     rdx, 8
+    cmp     rdx, 8
+    je      .no_fpu
+    mov byte[rdi+96], 1
+
+.no_fpu:
+
     ;; Return false.
     xor     rax, rax
     ret
@@ -66,6 +76,19 @@ _ZN9Processor9saveStateER17X64SchedulerState:
 ; [rsi] Lock.
 ; [rdi] State pointer.
 _ZN9Processor12restoreStateER17X64SchedulerStatePVm:
+    ;; Check for FPU use.
+    cmp byte [rdi+96], 1
+    je       .uses_fpu
+    mov      rdx, cr0
+    or       rdx, 8
+    mov      cr0, rdx
+    jmp      .fin_fpu
+.uses_fpu:
+    mov      rdx, cr0
+    and      rdx, 0xFFFFFFFFFFFFFFF7
+    mov      cr0, rdx
+.fin_fpu:
+
     ;; Reload all callee-save registers.
     mov     r8, [rdi+0]
     mov     r9, [rdi+8]
