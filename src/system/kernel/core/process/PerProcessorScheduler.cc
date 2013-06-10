@@ -423,7 +423,12 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
         return;
     }
 
+#ifdef X64
+    // x64 breaks if we try and create a reference from the kStack variable.
     Processor::restoreState(*reinterpret_cast<SyscallState*>(kStack), &pCurrentThread->getLock().m_Atom.m_Atom);
+#else
+    Processor::restoreState(reinterpret_cast<SyscallState&>(kStack), &pCurrentThread->getLock().m_Atom.m_Atom);
+#endif
 }
 
 
