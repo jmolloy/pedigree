@@ -331,7 +331,21 @@ uintptr_t pedigree_gfx_get_raw_buffer(void *p)
     /// \todo Exploit: could allow userspace code to be run at ring0
     GraphicsService::GraphicsProvider *pProvider = reinterpret_cast<GraphicsService::GraphicsProvider*>(p);
 
-    return reinterpret_cast<uintptr_t>(pProvider->pFramebuffer->getRawBuffer());
+    void *raw = pProvider->pFramebuffer->getRawBuffer();
+    physical_uintptr_t ret = 0;
+
+    // Return a physical address, the userspace application can mmap this
+    // with MAP_PHYS_OFFSET. This allows us to avoid having to map in areas
+    // of the kernel address space that the application can use.
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    if(va.isMapped(raw))
+    {
+        NOTICE("hi");
+        size_t flags = 0;
+        va.getMapping(raw, ret, flags);
+    }
+
+    return ret;
 }
 
 int pedigree_gfx_create_buffer(void *p, void **b, void *args)

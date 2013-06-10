@@ -22,6 +22,7 @@
 #include <sched.h>
 #include <math.h>
 #include <errno.h>
+#include <sys/mman.h>
 
 #include <map>
 #include <list>
@@ -661,8 +662,30 @@ int main(int argc, char *argv[])
     }
 
     int stride = cairo_format_stride_for_width(format, g_nWidth);
+
+    // Map the framebuffer in to our address space.
+    uintptr_t rawBuffer = (uintptr_t) g_pTopLevelFramebuffer->getRawBuffer();
+    void *framebufferVirt = mmap(
+        0,
+        stride * g_nHeight,
+        PROT_READ | PROT_WRITE,
+        MAP_ANON | MAP_PHYS_OFFSET,
+        -1,
+        rawBuffer);
+
+    if(framebufferVirt == MAP_FAILED)
+    {
+        syslog(LOG_CRIT, "winman: couldn't map framebuffer into address space");
+        return -1;
+    }
+    else
+    {
+        syslog(LOG_INFO, "winman: mapped framebuffer at %p", framebufferVirt);
+    }
+
+    memset(framebufferVirt, 0xff, stride * g_nHeight);
     cairo_surface_t *surface = cairo_image_surface_create_for_data(
-            (uint8_t *) g_pTopLevelFramebuffer->getRawBuffer(),
+            (uint8_t *) framebufferVirt,
             format,
             g_nWidth,
             g_nHeight,

@@ -143,7 +143,7 @@ class VbeFramebuffer : public Framebuffer
                 if(!PhysicalMemoryManager::instance().allocateRegion(
                                             *m_pFramebufferRegion,
                                             nPages,
-                                            0,
+                                            PhysicalMemoryManager::continuous,
                                             VirtualAddressSpace::Write))
                 {
                     delete m_pFramebufferRegion;
