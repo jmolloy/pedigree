@@ -13,7 +13,8 @@ _BEGIN_STD_C
 #define MAP_FIXED 4
 #define MAP_ANON 8
 
-#define MAP_USERSVD 0x10000
+#define MAP_USERSVD         0x10000
+#define MAP_PHYS_OFFSET     0x20000
 
 #define MAP_FAILED ((void*) 0)
 

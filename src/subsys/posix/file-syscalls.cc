@@ -1397,10 +1397,18 @@ void *posix_mmap(void *p)
                 return MAP_FAILED;
             }
 
+            // Do we need to use a physical base?
+            physical_uintptr_t physBase = 0;
+            if(flags & MAP_PHYS_OFFSET)
+            {
+                physBase = off;
+            }
+
             // Got an address and a length, map it in now
             for(size_t i = 0; i < numPages; i++)
             {
-                physical_uintptr_t  phys = PhysicalMemoryManager::instance().allocatePage();
+                physical_uintptr_t  phys = physBase ?
+                    (physBase + (i * pageSz)) : PhysicalMemoryManager::instance().allocatePage();
                 uintptr_t           virt = mapAddress + (i * pageSz);
                 if(!va.isMapped(reinterpret_cast<void*>(virt)))
                 {
