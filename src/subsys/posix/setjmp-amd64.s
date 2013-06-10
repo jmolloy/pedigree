@@ -46,34 +46,43 @@ global _longjmp:function
 extern __pedigree_revoke_signal_context
 
 setjmp:
+  ; Save general-purpose registers
   mov [rdi + 0], rbx
   mov [rdi + 8], rbp
   mov [rdi + 16], r12
   mov [rdi + 24], r13
   mov [rdi + 32], r14
   mov [rdi + 40], r15
-  
-  lea rax, [esp + 8]
-  mov [rsp], rax
+
+  ; Stack.
+  mov [rdi + 48], rsp
+
+  ; Return address.
+  mov rax, [rsp]
   mov [rdi + 56], rax
   
-  mov rax, 0
+  xor rax, rax
   ret
 
 longjmp:
+  ; Return value.
   mov rax, rsi
-  
+
+  ; Revoke any existing signal context (in case we are doing a longjmp
+  ; out of a signal handler.
   call [rel __pedigree_revoke_signal_context wrt ..got]
-  
-  mov rbp, [rdi + 8]
-  
-  mov rsp, [rdi + 48]
-  push qword [rdi + 56]
+
+  ; Restore general-purpose registers.
   mov rbx, [rdi + 0]
-  mov r12, [rdi + 8]
-  mov r13, [rdi + 16]
+  mov rbp, [rdi + 8]
+  mov r12, [rdi + 16]
+  mov r13, [rdi + 24]
   mov r14, [rdi + 32]
   mov r15, [rdi + 40]
+
+  ; Restore stack and push return address.
+  mov rsp, [rdi + 48]
+  push qword [rdi + 56]
   
   ret
 
