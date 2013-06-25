@@ -1067,6 +1067,7 @@ uintptr_t doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
     uintptr_t S = 0;
 
     std::string symbolname = symbolName(*sym, meta);
+    size_t symbolSize = sizeof(uintptr_t);
 
     // Patch in section header?
     if(symtab && ST_TYPE(sym->info) == 3) {
@@ -1088,6 +1089,7 @@ uintptr_t doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
             }
 
             S = lookupsym.value;
+            symbolSize = lookupsym.size;
         }
     }
 
@@ -1110,14 +1112,21 @@ uintptr_t doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
             result = S;
             break;
         case R_386_COPY:
-            result = *((uint32_t *) S);
+            // Only copy if not null.
+            if(S)
+            {
+                memcpy((void *) P, (void *) S, symbolSize);
+                result = P;
+            }
             break;
         case R_386_RELATIVE:
             result = B + A;
             break;
     }
 
-    *((uint32_t *) P) = result;
+    if(R_TYPE(rel.info) != R_386_COPY) {
+        *((uint32_t *) P) = result;
+    }
     return result;
 }
 
@@ -1214,6 +1223,8 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
         case R_X86_64_32S:
             result = (result & 0xFFFFFFFF00000000) | ((S + A) & 0xFFFFFFFF);
             break;
+        default:
+            syslog(LOG_WARNING, "libload: unsupported relocation for '%s' in %s: %d", symbolname.c_str(), meta->filename.c_str(), R_TYPE(rel.info));
     }
     *((uintptr_t *) P) = result;
     return result;
