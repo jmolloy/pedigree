@@ -29,8 +29,9 @@ Ps2Mouse::Ps2Mouse(Device *pDev) : m_pBase(0), m_Buffer(), m_BufferIndex(0), m_B
     setSpecificType(String("ps2-mouse"));
 
     // Install ourselves as the IRQ handler for the mouse
-    setInterruptNumber(12);
+        setInterruptNumber(12);
     Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*>(this));
+    Machine::instance().getIrqManager()->control(getInterruptNumber(), IrqManager::MitigationThreshold, 100);
 }
 
 Ps2Mouse::~Ps2Mouse()
@@ -76,7 +77,11 @@ bool Ps2Mouse::irq(irq_id_t number, InterruptState &state)
             m_Buffer[m_BufferIndex++] = b;
             if(m_BufferIndex == 3)
             {
-                InputManager::instance().mouseUpdate(m_Buffer[1], m_Buffer[2], m_Buffer[0] & 0x3);
+                InputManager::instance().mouseUpdate(
+                        static_cast<ssize_t>(m_Buffer[1]),
+                        static_cast<ssize_t>(m_Buffer[2]),
+                        0,
+                        static_cast<uint32_t>(m_Buffer[0]) & 0x3);
                 m_BufferIndex = 0;
             }
         }
