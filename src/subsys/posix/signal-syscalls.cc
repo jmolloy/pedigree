@@ -46,8 +46,9 @@ extern "C"
 
 char SSIGILL[] = "Illegal instruction\n";
 char SSIGSEGV[] = "Segmentation fault!\n";
+char SSIGABRT[] = "Abort\n";
 
-SIGNAL_HANDLER_EXIT     (sigabrt, SIGABRT)
+SIGNAL_HANDLER_EXITMSG  (sigabrt, SIGABRT, SSIGABRT)
 SIGNAL_HANDLER_EXIT     (sigalrm, SIGALRM)
 SIGNAL_HANDLER_EXIT     (sigbus, SIGBUS)
 SIGNAL_HANDLER_EMPTY    (sigchld)
