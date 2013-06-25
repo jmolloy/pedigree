@@ -900,8 +900,8 @@ bool findSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, Looku
             return true;
     }
 
-    // If we are going to attempt a local lookup first, check for non-weak values locally.
-    if(policy == LocalFirst) {
+    // If we are allowed, check for non-weak symbols in this binary.
+    if(policy != NotThisObject && policy != LocalLast) {
         if(lookupSymbol(symbol, meta, sym, false, false))
             return true;
     }
@@ -914,16 +914,10 @@ bool findSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, Looku
     for(std::list<object_meta_t*>::iterator it = ext_meta->objects.begin();
         it != ext_meta->objects.end();
         ++it) {
-        if(lookupSymbol(symbol, *it, sym, false)) {
-            return true;
-        }
-    }
+        if(*it == meta)
+            continue; // Already handling.
 
-    // Try again but accept weak symbols.
-    for(std::list<object_meta_t*>::iterator it = ext_meta->objects.begin();
-        it != ext_meta->objects.end();
-        ++it) {
-        if(lookupSymbol(symbol, *it, sym, true)) {
+        if(lookupSymbol(symbol, *it, sym, false)) {
             return true;
         }
     }
@@ -933,6 +927,22 @@ bool findSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, Looku
         if(lookupSymbol(symbol, meta, sym, false, false))
             return true;
     }
+
+    // Try libraries again but accept weak symbols.
+    for(std::list<object_meta_t*>::iterator it = ext_meta->objects.begin();
+        it != ext_meta->objects.end();
+        ++it) {
+        if(*it == meta)
+            continue; // Already handling this object.
+
+        if(lookupSymbol(symbol, *it, sym, true)) {
+            return true;
+        }
+    }
+
+    // Try weak symbols in the parent object.
+    if((meta != ext_meta) && lookupSymbol(symbol, ext_meta, sym, true))
+        return true;
 
     // No luck? Try weak symbols in the main object.
     if(policy != NotThisObject)
