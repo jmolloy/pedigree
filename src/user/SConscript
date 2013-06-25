@@ -151,8 +151,9 @@ libload_env = tmp.Clone()
 libload_env['CFLAGS'] += ' -static '
 libload_env['CXXFLAGS'] += ' -static '
 libload_env['CPPPATH'] += ['#/src/system/include/linker',
-                           '#/src/subsys/posix/include/c++/4.3.2',
-                           '#/src/subsys/posix/include/c++/4.3.2/i686-pedigree']
+                           '#/images/local/support/gcc/include/c++/4.5.1',
+                           '#/images/local/support/gcc/include/c++/4.5.1/i686-pedigree',
+                           ]
 libload_env['LIBPATH'] += [builddir, imagesdir + 'libraries']
 libload_env['LIBS'] = ['-lgcc']
 libload = os.path.join(builddir, 'libload.so')
@@ -195,8 +196,9 @@ for i in all_apps:
         e['LIBS'] += ['pedigree', 'stdc++']
         e['LIBPATH'] += [imagesdir + 'libraries']
         e['CPPPATH'] += ['#/src/subsys/native/include',
-                         '#/src/subsys/posix/include/c++/4.3.2',
-                         '#/src/subsys/posix/include/c++/4.3.2/i686-pedigree']
+                         '#/images/local/support/gcc/include/c++/4.5.1',
+                         '#/images/local/support/gcc/include/c++/4.5.1/i686-pedigree',
+                         ]
 
     output = builddir + '/apps/' + i
     files = [Glob(base + '/*.c'), Glob(base + '/*.cc')]

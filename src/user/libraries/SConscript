@@ -57,8 +57,9 @@ for i in libs:
     s = subsys[i]
     if s == 'native':
         incpath += ['#/src/subsys/native/include',
-                    '#/src/subsys/posix/include/c++/4.3.2',
-                    '#/src/subsys/posix/include/c++/4.3.2/i686-pedigree']
+                    '#/images/local/support/gcc/include/c++/4.5.1',
+                    '#/images/local/support/gcc/include/c++/4.5.1/i686-pedigree',
+                    ]
     else:
         print "** Library with subsys '%s' is not buildable - fix src/user/libraries/SConscript!" % (s)
     

@@ -42,8 +42,8 @@ include = [
     '#/src/system/include',
     '#/src/modules/system',
     '#/src/subsys/posix/include',
-    '#/src/subsys/posix/include/c++/4.3.2',
-    '#/src/subsys/posix/include/c++/4.3.2/i686-pedigree',
+    '#/images/local/support/gcc/include/c++/4.5.1',
+    '#/images/local/support/gcc/include/c++/4.5.1/i686-pedigree',
     '.'
 ]
 
