@@ -25,6 +25,10 @@
 extern "C" {
 #endif
 
+#ifdef __PEDIGREE__
+#define _POSIX_TIMERS                   1
+#endif
+
 /* RTEMS adheres to POSIX -- 1003.1b with some features from annexes.  */
 
 #ifdef __rtems__
