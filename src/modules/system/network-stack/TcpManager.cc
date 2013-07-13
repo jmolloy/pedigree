@@ -52,7 +52,10 @@ size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
 
   stateBlock = new StateBlock;
   if(!stateBlock)
+  {
+    delete handle;
     return 0;
+  }
 
   stateBlock->localPort = port;
   stateBlock->remoteHost = handle->remoteHost;
@@ -64,6 +67,20 @@ size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
   stateBlock->endpoint = static_cast<TcpEndpoint*>(e);
 
   stateBlock->numEndpointPackets = 0;
+
+  // Allocate the port now - just about to register the connection.
+  {
+    LockGuard<Mutex> guard(m_TcpMutex);
+    if(m_PortsAvailable.test(port))
+    {
+      ERROR("Can't listen on already-used port " << Dec << port << Hex << "!");
+      delete handle;
+      delete stateBlock;
+      return 0;
+    }
+
+    m_PortsAvailable.set(port);
+  }
 
   {
     LockGuard<Mutex> guard(m_TcpMutex);
@@ -339,10 +356,12 @@ Endpoint* TcpManager::getEndpoint(uint16_t localPort, Network* pCard)
 
     Endpoint* e;
 
-  /// \todo FIXME: Don't let multiple connections use the same local port!
-
     if(localPort == 0)
+    {
       localPort = allocatePort();
+      if(localPort == 0)
+          return 0; // Couldn't allocate port.
+    }
 
     TcpEndpoint* tmp = new TcpEndpoint(localPort, 0);
     if(!tmp)
