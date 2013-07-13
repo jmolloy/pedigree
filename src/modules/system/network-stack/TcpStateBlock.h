@@ -215,7 +215,10 @@ class StateBlock : public TimerHandler
         if((offset + segmentSize) >= nBytes)
         {
           segmentSize = nBytes - offset;
-          flags |= Tcp::PSH;
+          if(nBytes)
+          {
+             flags |= Tcp::PSH;
+          }
         }
 
         seg_seq = snd_nxt;
