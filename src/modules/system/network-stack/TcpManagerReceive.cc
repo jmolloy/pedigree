@@ -744,7 +744,10 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
     if(oldState == Tcp::LAST_ACK || oldState == Tcp::CLOSING)
     {
       TcpManager::instance().returnEndpoint(stateBlock->endpoint);
+      m_TcpMutex.release();
       removeConn(stateBlock->connId);
+      m_TcpMutex.acquire();
     }
+
   }
 }
