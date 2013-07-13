@@ -71,8 +71,8 @@ void TcpEndpoint::close()
 
 int TcpEndpoint::send(size_t nBytes, uintptr_t buffer)
 {
-    /// \todo Send needs to return an error code or something, and PUSH needs to be an option
-    return TcpManager::instance().send(m_ConnId, buffer, true, nBytes);
+    /// \todo Send needs to return an error code or something
+    return TcpManager::instance().send(m_ConnId, buffer, false, nBytes);
 };
 
 int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)

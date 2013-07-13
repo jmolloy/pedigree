@@ -205,8 +205,7 @@ class StateBlock : public TimerHandler
     /// Sends a segment over the network
     bool sendSegment(uint8_t flags, size_t nBytes, uintptr_t payload, bool addToRetransmitQueue)
     {
-      // split the passed buffer up into 1024 byte segments and send each
-      /// \todo MSS!
+      // split the passed buffer up into segments based on the MSS and send each
       size_t offset;
       for(offset = 0; offset < (nBytes == 0 ? 1 : nBytes); offset += tcp_mss)
       {
@@ -214,7 +213,10 @@ class StateBlock : public TimerHandler
 
         size_t segmentSize = tcp_mss;
         if((offset + segmentSize) >= nBytes)
+        {
           segmentSize = nBytes - offset;
+          flags |= Tcp::PSH;
+        }
 
         seg_seq = snd_nxt;
         snd_nxt += segmentSize;
