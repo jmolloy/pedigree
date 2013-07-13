@@ -598,6 +598,12 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           NOTICE(" + Payload: " << String(reinterpret_cast<const char*>(payload)));
           if(stateBlock->endpoint)
           {
+            // Limit the amount of data to the window we have available.
+            if(stateBlock->seg_len > stateBlock->endpoint->m_ShadowDataStream.getRemainingSize())
+            {
+              stateBlock->seg_len = stateBlock->endpoint->m_ShadowDataStream.getRemainingSize();
+            }
+
             /// \todo We should queue this ACK and transmit it when the timer fires (200ms max wait)
             size_t winChange = stateBlock->endpoint->depositPayload(stateBlock->seg_len, payload, stateBlock->seg_seq - stateBlock->irs - 1, (header->flags & Tcp::PSH) == Tcp::PSH);
             stateBlock->rcv_nxt += winChange;
@@ -606,7 +612,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
                 WARNING("TCP: incoming data was larger than rcv_wind");
                 winChange = stateBlock->rcv_wnd;
             }
-            stateBlock->snd_wnd -= stateBlock->endpoint->m_ShadowDataStream.getRemainingSize();
+            stateBlock->snd_wnd -= winChange;
 
             if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0))
               WARNING("TCP: Sending ACK for incoming data failed!");
