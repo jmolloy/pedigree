@@ -73,8 +73,14 @@ public:
   virtual void timer(uint64_t delta, InterruptState &state)
   {
     m_Nanoseconds += delta;
+    if(UNLIKELY(m_Nanoseconds > 200000000ULL))
+    {
+      // 200 ms tick - check for segments that we need to ack.
+    }
+
     if(UNLIKELY(m_Nanoseconds > 500000000ULL))
     {
+      // 500 ms tick - increment sequence number and reset tick counter.
       m_Nanoseconds = 0;
 
       LockGuard<Mutex> guard(m_SequenceMutex);
