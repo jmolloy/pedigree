@@ -71,6 +71,30 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
     stateBlock->snd_wnd = stateBlock->endpoint->m_ShadowDataStream.getRemainingSize();
   }
 
+  // Parse options.
+  uint32_t tcp_mss = stateBlock->tcp_mss;
+  if(((header->flags & Tcp::SYN) != 0) && (header->offset > 5))
+  {
+    uint8_t *opts = reinterpret_cast<uint8_t *>(header + 1);
+    while(*opts)
+    {
+      if(*opts == 1) // NOP
+        ++opts;
+      else
+      {
+        uint8_t code = opts[0];
+        uint8_t len = opts[1];
+
+        if(code == 2) // MSS
+        {
+          tcp_mss = BIG_TO_HOST16(*reinterpret_cast<uint16_t *>(&opts[2]));
+        }
+
+        opts += len;
+      }
+    }
+  }
+
   stateBlock->fin_ack = false;
 
   // has an Ack already been sent in this segment?
@@ -178,6 +202,8 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
         newStateBlock->rcv_wnd = stateBlock->seg_wnd;
         newStateBlock->rcv_up = 0;
 
+        newStateBlock->tcp_mss = tcp_mss;
+
         newStateBlock->seg_seq = newStateBlock->rcv_nxt;
 
         newStateBlock->currentState = Tcp::SYN_RECEIVED;
@@ -266,6 +292,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           if(stateBlock->snd_una > stateBlock->iss)
           {
             stateBlock->currentState = Tcp::ESTABLISHED;
+            stateBlock->tcp_mss = tcp_mss;
 
             if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0))
               WARNING("TCP: Sending ACK due to SYN/ACK while in SYN_SENT state failed.");

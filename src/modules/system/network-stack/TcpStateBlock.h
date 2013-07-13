@@ -59,7 +59,7 @@ class StateBlock : public TimerHandler
       iss(0), snd_nxt(0), snd_una(0), snd_wnd(0), snd_up(0), snd_wl1(0), snd_wl2(0),
       rcv_nxt(0), rcv_wnd(0), rcv_up(0), irs(0),
       seg_seq(0), seg_ack(0), seg_len(0), seg_wnd(0), seg_up(0), seg_prc(0),
-      fin_ack(false), fin_seq(0),
+      fin_ack(false), fin_seq(0), tcp_mss(536), // (standard default for MSS)
       numEndpointPackets(0), /// \todo Remove, obsolete
       waitState(0), endpoint(0), connId(0),
       retransmitQueue(), nRemovedFromRetransmit(0),
@@ -109,6 +109,9 @@ class StateBlock : public TimerHandler
     // FIN information
     bool     fin_ack; // is ACK already set (for use with FIN bit checks)
     uint32_t fin_seq; // last FIN we sent had this sequence number
+
+    // Connection information
+    uint32_t tcp_mss; // maximum segment size
 
     // Number of packets we've deposited into our Endpoint
     // (decremented when a packet is picked up by the receiver)
@@ -205,12 +208,12 @@ class StateBlock : public TimerHandler
       // split the passed buffer up into 1024 byte segments and send each
       /// \todo MSS!
       size_t offset;
-      for(offset = 0; offset < (nBytes == 0 ? 1 : nBytes); offset += 1024)
+      for(offset = 0; offset < (nBytes == 0 ? 1 : nBytes); offset += tcp_mss)
       {
         Segment* seg = new Segment;
 
-        size_t segmentSize = 1024;
-        if((offset + 1024) >= nBytes)
+        size_t segmentSize = tcp_mss;
+        if((offset + segmentSize) >= nBytes)
           segmentSize = nBytes - offset;
 
         seg_seq = snd_nxt;
