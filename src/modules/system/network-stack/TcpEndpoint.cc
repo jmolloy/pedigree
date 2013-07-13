@@ -72,8 +72,6 @@ void TcpEndpoint::close()
 int TcpEndpoint::send(size_t nBytes, uintptr_t buffer)
 {
     /// \todo Send needs to return an error code or something, and PUSH needs to be an option
-    /// \todo The RX window for this connection needs to be set to the space remaining in our
-    ///       receive buffer! Not to some arbitary value that never changes.
     return TcpManager::instance().send(m_ConnId, buffer, true, nBytes);
 };
 

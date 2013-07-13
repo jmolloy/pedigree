@@ -215,6 +215,7 @@ class StateBlock : public TimerHandler
 
         seg_seq = snd_nxt;
         snd_nxt += segmentSize;
+        snd_wnd = endpoint->m_ShadowDataStream.getRemainingSize();
 
         seg->seg_seq = seg_seq;
         seg->seg_ack = rcv_nxt;

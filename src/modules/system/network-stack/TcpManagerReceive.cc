@@ -66,6 +66,11 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
   stateBlock->seg_prc = 0; // IP header contains precedence information
   stateBlock->rcv_wnd = stateBlock->seg_wnd;
 
+  if(stateBlock->endpoint)
+  {
+    stateBlock->snd_wnd = stateBlock->endpoint->m_ShadowDataStream.getRemainingSize();
+  }
+
   stateBlock->fin_ack = false;
 
   // has an Ack already been sent in this segment?
