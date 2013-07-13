@@ -683,20 +683,13 @@ int main(int argc, char *argv[])
         syslog(LOG_INFO, "winman: mapped framebuffer at %p", framebufferVirt);
     }
 
-    memset(framebufferVirt, 0xff, stride * g_nHeight);
     cairo_surface_t *surface = cairo_image_surface_create_for_data(
             (uint8_t *) framebufferVirt,
             format,
             g_nWidth,
             g_nHeight,
             stride);
-
-    //cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, g_nWidth, g_nHeight);
     cairo_t *cr = cairo_create(surface);
-
-    g_pBackbuffer = cairo_image_surface_get_data(surface);
-
-    /// \todo Check for cairo error here...
 
     cairo_user_data_key_t key;
     cairo_font_face_t *font_face;
@@ -719,9 +712,9 @@ int main(int argc, char *argv[])
     else
     {
         // No PNG found, fall back to a blue background.
+        cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
         cairo_set_source_rgba(cr, 0, 0, 1.0, 1.0);
         cairo_rectangle(cr, 0, 0, g_nWidth, g_nHeight);
-        cairo_stroke_preserve(cr);
         cairo_fill(cr);
     }
 
