@@ -321,7 +321,6 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
     case Tcp::CLOSE_WAIT:
     case Tcp::CLOSING:
     case Tcp::LAST_ACK:
-    case Tcp::TIME_WAIT:
 
       // Is SYN set on the incoming packet?
       if(header->flags & Tcp::SYN)
@@ -698,6 +697,15 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
         }
       }
 
+      break;
+
+    case Tcp::TIME_WAIT:
+
+      // Reset timer for TIME_WAIT - further network traffic.
+      // However, don't do anything else at all. Connection has cleanly
+      // gone down.
+      stateBlock->resetTimer(120);
+      stateBlock->waitingForTimeout = true;
       break;
 
     default:
