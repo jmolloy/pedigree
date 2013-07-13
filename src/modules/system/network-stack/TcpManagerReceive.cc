@@ -527,7 +527,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
                 stateBlock->fin_ack = true; // FIN has been acked
               }
             }
-            else if(stateBlock->currentState == Tcp::CLOSING)
+            else if(stateBlock->currentState == Tcp::CLOSING || stateBlock->currentState == Tcp::LAST_ACK)
             {
               if(stateBlock->fin_seq <= stateBlock->seg_ack)
               {
@@ -625,7 +625,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
 
       if(header->flags & Tcp::FIN)
       {
-        if(stateBlock->currentState == Tcp::CLOSED || stateBlock->currentState == Tcp::LISTEN || stateBlock->currentState == Tcp::SYN_SENT)
+        if(stateBlock->currentState == Tcp::CLOSED || stateBlock->currentState == Tcp::LISTEN || stateBlock->currentState == Tcp::SYN_SENT || stateBlock->currentState == Tcp::TIME_WAIT)
           break;
 
         // FIN means the remote host has nothing more to send, so push any remaining data to the application

@@ -193,7 +193,7 @@ void TcpManager::Shutdown(size_t connectionId, bool bOnlyStopReceive)
 
     stateBlock->currentState = Tcp::FIN_WAIT_1;
     stateBlock->seg_wnd = 0;
-    stateBlock->sendSegment(Tcp::FIN | Tcp::ACK, 0, 0, true);
+    stateBlock->sendSegment(Tcp::FIN, 0, 0, true);
     stateBlock->snd_nxt++;
   }
   /** CLOSE_WAIT: FIN received - reply **/
