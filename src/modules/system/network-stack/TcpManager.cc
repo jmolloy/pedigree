@@ -230,9 +230,8 @@ void TcpManager::Disconnect(size_t connectionId)
 
     stateBlock->currentState = Tcp::FIN_WAIT_1;
     stateBlock->seg_wnd = 0;
-    stateBlock->sendSegment(Tcp::FIN | Tcp::ACK, 0, 0, true);
+    stateBlock->sendSegment(Tcp::FIN, 0, 0, true);
     stateBlock->snd_nxt++;
-    //Tcp::send(dest, stateBlock->localPort, stateBlock->remoteHost.remotePort, stateBlock->fin_seq, stateBlock->rcv_nxt, Tcp::FIN | Tcp::ACK, stateBlock->snd_wnd, 0, 0, stateBlock->pCard);
   }
   // received a FIN already
   else if(stateBlock->currentState == Tcp::CLOSE_WAIT)
@@ -243,7 +242,6 @@ void TcpManager::Disconnect(size_t connectionId)
     stateBlock->seg_wnd = 0;
     stateBlock->sendSegment(Tcp::FIN | Tcp::ACK, 0, 0, true);
     stateBlock->snd_nxt++;
-    //Tcp::send(dest, stateBlock->localPort, stateBlock->remoteHost.remotePort, stateBlock->fin_seq, stateBlock->rcv_nxt, Tcp::FIN | Tcp::ACK, stateBlock->snd_wnd, 0, 0, stateBlock->pCard);
   }
   // LISTEN socket closing
   else if(stateBlock->currentState == Tcp::LISTEN)
@@ -251,6 +249,10 @@ void TcpManager::Disconnect(size_t connectionId)
     NOTICE("Disconnect called on a LISTEN socket\n");
     stateBlock->currentState = Tcp::CLOSED;
     removeConn(stateBlock->connId);
+  }
+  else if(stateBlock->currentState == Tcp::LAST_ACK)
+  {
+    // Waiting on final ACK from remote, no need to do anything here.
   }
   else
   {
