@@ -73,25 +73,27 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
 
   // Parse options.
   uint32_t tcp_mss = stateBlock->tcp_mss;
-  if(((header->flags & Tcp::SYN) != 0) && (header->offset > 5))
+  uint32_t headerLength = (header->offset * 4);
+  if(((header->flags & Tcp::SYN) != 0) && (headerLength > 20))
   {
-    uint8_t *opts = reinterpret_cast<uint8_t *>(header + 1);
-    while(*opts)
+    size_t offset = 20;
+    uint8_t *opts = &reinterpret_cast<uint8_t *>(header)[offset];
+    while((*opts) && (offset < headerLength))
     {
-      if(*opts == 1) // NOP
-        ++opts;
-      else
+      uint8_t code = opts[0];
+      uint8_t len = opts[1];
+
+      if(code == 1) // NOP
       {
-        uint8_t code = opts[0];
-        uint8_t len = opts[1];
-
-        if(code == 2) // MSS
-        {
-          tcp_mss = BIG_TO_HOST16(*reinterpret_cast<uint16_t *>(&opts[2]));
-        }
-
-        opts += len;
+        len = 1;
       }
+      if(code == 2) // MSS
+      {
+        tcp_mss = BIG_TO_HOST16(*reinterpret_cast<uint16_t *>(&opts[2]));
+      }
+
+      offset += len;
+      opts = &reinterpret_cast<uint8_t *>(header)[offset];
     }
   }
 
