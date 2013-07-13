@@ -23,6 +23,7 @@
 #include <process/Semaphore.h>
 #include <machine/Network.h>
 #include <process/Mutex.h>
+#include <machine/TimerHandler.h>
 #include <LockGuard.h>
 
 #include <Log.h>
@@ -39,13 +40,26 @@
 /**
  * The Pedigree network stack - TCP Protocol Manager
  */
-class TcpManager : public ProtocolManager
+class TcpManager : public ProtocolManager, public TimerHandler
 {
 public:
   TcpManager() :
-    m_NextTcpSequence(0), m_NextConnId(1), m_StateBlocks(), m_ListeningStateBlocks(),
-    m_CurrentConnections(), m_Endpoints(), m_PortsAvailable(), m_TcpMutex(false)
-  {};
+    m_NextTcpSequence(1), m_NextConnId(1), m_StateBlocks(), m_ListeningStateBlocks(),
+    m_CurrentConnections(), m_Endpoints(), m_PortsAvailable(), m_TcpMutex(false),
+    m_SequenceMutex(false), m_Nanoseconds(0)
+  {
+    // First 1024 ports are not usable for client -> server connections.
+    for(size_t n = 0; n < 1024; ++n)
+    {
+      m_PortsAvailable.set(n);
+    }
+
+    Timer *t = Machine::instance().getTimer();
+    if(t)
+    {
+      t->registerHandler(this);
+    }
+  };
   virtual ~TcpManager()
   {};
 
@@ -53,6 +67,19 @@ public:
   static TcpManager& instance()
   {
     return manager;
+  }
+
+  /** Every half a second, increments sequence number by 64,000. */
+  virtual void timer(uint64_t delta, InterruptState &state)
+  {
+    m_Nanoseconds += delta;
+    if(UNLIKELY(m_Nanoseconds > 500000000ULL))
+    {
+      m_Nanoseconds = 0;
+
+      LockGuard<Mutex> guard(m_SequenceMutex);
+      m_NextTcpSequence += 64000;
+    }
   }
 
   /** Connects to a remote host (blocks until connected) */
@@ -103,11 +130,12 @@ public:
   /** Gets the next sequence number to use */
   uint32_t getNextSequenceNumber()
   {
-    /// \todo Need recursive mutexes!
+    LockGuard<Mutex> guard(m_SequenceMutex);
 
-    /// \todo These need to be randomised to avoid sequence attacks
-    m_NextTcpSequence += 0xffff;
-    return m_NextTcpSequence;
+    /// \todo This needs to be randomised to avoid sequence attacks
+    size_t retSeq = m_NextTcpSequence;
+    m_NextTcpSequence += 64000;
+    return retSeq;
   }
 
   /** Gets a unique connection ID */
@@ -159,37 +187,15 @@ public:
   {
     LockGuard<Mutex> guard(m_TcpMutex);
 
-    static uint16_t lastPort = 32768;
-    return lastPort++;
-
-    // default behaviour: start at 32768
-    /// \todo Meant to be randomised, and this isn't ideal
-    size_t i;
-    for(i = 32768; i <= 0xFFFF; i++)
+    size_t bit = m_PortsAvailable.getFirstClear();
+    if(bit > 0xFFFF)
     {
-      bool* used;
-      if(m_PortsAvailable.lookup(i) == 0)
-      {
-        used = new bool;
-        if(used)
-        {
-          *used = true;
-          m_PortsAvailable.insert(i, used);
-          return static_cast<uint16_t>(i);
-        }
-      }
-      used = m_PortsAvailable.lookup(i);
-      if(used)
-      {
-        if(!*used)
-        {
-          *used = true;
-          return static_cast<uint16_t>(i);
-        }
-      }
+      WARNING("No ports available!");
+      return 0;
     }
-    NOTICE("No ports - i = " << Dec << i << Hex << "!");
-    return 0; // no ports :(
+    m_PortsAvailable.set(bit);
+
+    return bit;
   }
 
 private:
@@ -215,10 +221,19 @@ private:
   Tree<size_t, Endpoint*> m_Endpoints;
 
   /** Port availability */
-  Tree<size_t, bool*> m_PortsAvailable;
+  ExtensibleBitmap m_PortsAvailable;
 
   /** Lock to control access to state blocks. */
   Mutex m_TcpMutex;
+
+  /**
+   * Lock to control access to the sequence number, as it increments every
+   * half a second.
+   */
+  Mutex m_SequenceMutex;
+
+  /** Count of milliseconds, used for timer handler. */
+  uint64_t m_Nanoseconds;
 };
 
 #endif
