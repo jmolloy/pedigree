@@ -197,7 +197,12 @@ class StateBlock : public TimerHandler
     {
       if(seg)
       {
-        return Tcp::send(remoteHost.ip, localPort, remoteHost.remotePort, seg->seg_seq, rcv_nxt, seg->flags, seg->seg_wnd, seg->nBytes, seg->payload);
+        if((seg->flags & Tcp::ACK) == 0)
+        {
+          // If no ACK flag, don't transmit an ACK number.
+          seg->seg_ack = 0;
+        }
+        return Tcp::send(remoteHost.ip, localPort, remoteHost.remotePort, seg->seg_seq, seg->seg_ack, seg->flags, seg->seg_wnd, seg->nBytes, seg->payload);
       }
       return false;
     }
