@@ -70,7 +70,15 @@ typedef	struct _types_fd_set {
        *__tmp++ = 0; \
 }))
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** select, pselect */
 int _EXFUN(select, (int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, struct timeval *timeout));
+
+#ifdef __cplusplus
+}; // extern "C"
+#endif
 
 #endif
