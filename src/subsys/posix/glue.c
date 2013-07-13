@@ -1294,10 +1294,24 @@ int fsync(int fd)
     return 0;
 }
 
-int inet_pton(void)
+int inet_pton(int af, const char *src, void *dst)
 {
-    STUBBED("inet_pton");
-    return -1;
+    if(af != AF_INET)
+    {
+        errno = EAFNOSUPPORT;
+        return -1;
+    }
+
+    in_addr_t conv = inet_addr(src);
+    if(conv == ((in_addr_t) (-1)))
+    {
+        return 0;
+    }
+
+    in_addr_t *out = (in_addr_t *) dst;
+    *out = conv;
+
+    return 1;
 }
 
 const char* inet_ntop(int af, const void* src, char* dst, unsigned long size)
