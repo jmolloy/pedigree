@@ -203,6 +203,7 @@ class StateBlock : public TimerHandler
     bool sendSegment(uint8_t flags, size_t nBytes, uintptr_t payload, bool addToRetransmitQueue)
     {
       // split the passed buffer up into 1024 byte segments and send each
+      /// \todo MSS!
       size_t offset;
       for(offset = 0; offset < (nBytes == 0 ? 1 : nBytes); offset += 1024)
       {
