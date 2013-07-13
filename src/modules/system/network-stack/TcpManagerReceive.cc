@@ -475,6 +475,17 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
             if(stateBlock->seg_ack < stateBlock->snd_una)
               break; // Dupe ack, just skip it and continue
 
+            if((stateBlock->currentState == Tcp::ESTABLISHED) && (header->flags & Tcp::FIN))
+            {
+              // Passive close.
+              stateBlock->currentState = Tcp::CLOSE_WAIT;
+            }
+            if((stateBlock->currentState == Tcp::FIN_WAIT_1) && (((header->flags & (Tcp::FIN|Tcp::ACK)) == Tcp::FIN)))
+            {
+              // Simultaneous close.
+              stateBlock->currentState = Tcp::CLOSING;
+            }
+
             // Remove from retransmission queue any acknowledged packets...
             //stateBlock->retransmitQueue.remove(stateBlock->snd_una - stateBlock->nRemovedFromRetransmit, stateBlock->seg_len);
             //stateBlock->nRemovedFromRetransmit += (stateBlock->seg_ack - stateBlock->snd_una);
