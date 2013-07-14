@@ -142,6 +142,8 @@ size_t TcpManager::Connect(Endpoint::RemoteEndpoint remoteHost, uint16_t localPo
 
   stateBlock->numEndpointPackets = 0;
 
+  stateBlock->tcp_mss = 1460; /// \todo Base this on the MTU of the link, or PMTU Discovery.
+
   {
     LockGuard<Mutex> guard(m_TcpMutex);
     m_StateBlocks.insert(*handle, stateBlock);

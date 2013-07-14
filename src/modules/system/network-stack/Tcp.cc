@@ -103,21 +103,32 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   header->seqnum = HOST_TO_BIG32(seqNumber);
   header->acknum = HOST_TO_BIG32(ackNumber);
   header->offset = sizeof(tcpHeader) / 4;
+  if(flags & Tcp::SYN)
+    header->offset += 1;
 
   header->rsvd = 0;
   header->flags = flags;
   header->winsize = HOST_TO_BIG16(window);
   header->urgptr = 0;
 
+  size_t payloadOffset = sizeof(tcpHeader);
+  if(flags & Tcp::SYN)
+  {
+    // 1460 byte MSS
+    char mss[4] = {0x02, 0x04, 0x05, 0xb4};
+    memcpy(reinterpret_cast<void*>(tcpPacket + payloadOffset), mss, sizeof mss);
+    payloadOffset += 4;
+  }
+
   // Inject the payload
   if(payload && nBytes)
-    memcpy(reinterpret_cast<void*>(tcpPacket + sizeof(tcpHeader)), reinterpret_cast<void*>(payload), nBytes);
+    memcpy(reinterpret_cast<void*>(tcpPacket + payloadOffset), reinterpret_cast<void*>(payload), nBytes);
 
   header->checksum = 0;
-  header->checksum = pIp->ipChecksum(src, dest, IP_TCP, tcpPacket, nBytes + sizeof(tcpHeader));
+  header->checksum = pIp->ipChecksum(src, dest, IP_TCP, tcpPacket, nBytes + payloadOffset);
 
   // Transmit
-  bool success = pIp->send(dest, src, IP_TCP, nBytes + sizeof(tcpHeader), packet, pCard);
+  bool success = pIp->send(dest, src, IP_TCP, nBytes + payloadOffset, packet, pCard);
 
   // Free the created packet
   NetworkStack::instance().getMemPool().free(packet);
