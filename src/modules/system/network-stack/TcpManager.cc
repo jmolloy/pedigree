@@ -195,7 +195,7 @@ void TcpManager::Shutdown(size_t connectionId, bool bOnlyStopReceive)
 
     stateBlock->currentState = Tcp::FIN_WAIT_1;
     stateBlock->seg_wnd = 0;
-    stateBlock->sendSegment(Tcp::FIN, 0, 0, true);
+    stateBlock->sendSegment(Tcp::FIN | Tcp::ACK, 0, 0, true);
     stateBlock->snd_nxt++;
   }
   /** CLOSE_WAIT: FIN received - reply **/
@@ -226,13 +226,13 @@ void TcpManager::Disconnect(size_t connectionId)
   dest = stateBlock->remoteHost.ip;
 
   // no FIN received yet
-  if(stateBlock->currentState >= Tcp::ESTABLISHED && stateBlock->currentState <= Tcp::FIN_WAIT_2)
+  if(stateBlock->currentState == Tcp::ESTABLISHED)
   {
     stateBlock->fin_seq = stateBlock->snd_nxt;
 
     stateBlock->currentState = Tcp::FIN_WAIT_1;
     stateBlock->seg_wnd = 0;
-    stateBlock->sendSegment(Tcp::FIN, 0, 0, true);
+    stateBlock->sendSegment(Tcp::FIN | Tcp::ACK, 0, 0, true);
     stateBlock->snd_nxt++;
   }
   // received a FIN already
