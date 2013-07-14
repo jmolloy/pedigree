@@ -254,6 +254,14 @@ void TcpManager::Disconnect(size_t connectionId)
   {
     // Waiting on final ACK from remote, no need to do anything here.
   }
+  else if(stateBlock->currentState == Tcp::SYN_SENT)
+  {
+    // Sent SYN but need to close now. Possible on non-blocking sockets.
+    // Send an RST to ensure we don't get a late SYN/ACK and close.
+    stateBlock->sendSegment(Tcp::RST, 0, 0, true);
+    stateBlock->currentState = Tcp::CLOSED;
+    removeConn(stateBlock->connId);
+  }
   else
   {
       NOTICE("Connection Id " << Dec << connectionId << Hex << " is trying to close but isn't valid state [" << Tcp::stateString(stateBlock->currentState) << "]!");
