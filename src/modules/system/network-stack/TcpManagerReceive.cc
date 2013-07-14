@@ -601,9 +601,12 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
         }
         else if(stateBlock->seg_seq > stateBlock->rcv_nxt)
         {
-          // Packet has come in out-of-order - drop on the floor.
+          // Packet has come in out-of-order - send dup ACK with the expected sequence number.
           WARNING(" + (sequence out of order)");
-          alreadyAck = true;
+          if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0))
+            WARNING("TCP: Sending ACK for out-of-order data failed!");
+          else
+            alreadyAck = true;
         }
         else if(stateBlock->seg_len)
         {
