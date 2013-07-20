@@ -77,8 +77,6 @@ private:
 
   static NetworkStack stack;
   
-  static int packetThread(void *p);
-  
   struct Packet
   {
       uintptr_t buffer;
