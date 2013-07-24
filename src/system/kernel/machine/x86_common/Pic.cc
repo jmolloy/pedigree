@@ -33,6 +33,7 @@ Pic Pic::m_Instance;
 
 void Pic::tick()
 {
+#if 0
     Spinlock lock;
     lock.acquire();
 
@@ -64,6 +65,7 @@ void Pic::tick()
     }
 
     lock.release();
+#endif
 }
 
 bool Pic::control(uint8_t irq, ControlCode code, size_t argument)
