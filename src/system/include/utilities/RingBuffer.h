@@ -19,6 +19,9 @@
 
 #include <processor/types.h>
 #include <process/Semaphore.h>
+#include <process/Event.h>
+#include <process/Mutex.h>
+#include <utilities/List.h>
 
 namespace RingBufferWait
 {
@@ -71,6 +74,8 @@ class RingBuffer
 
             m_Writer %= m_RingSize;
             m_ReadSem.release();
+
+            notifyMonitors();
         }
 
         /// write - write the given number of objects to the ring buffer.
@@ -94,6 +99,8 @@ class RingBuffer
             m_Writer += n;
             m_ReadSem.release(totalCopied);
 
+            notifyMonitors();
+
             return totalCopied;
         }
 
@@ -105,6 +112,8 @@ class RingBuffer
 
             m_Reader %= m_RingSize;
             m_WriteSem.release();
+
+            notifyMonitors();
 
             return ret;
         }
@@ -132,6 +141,8 @@ class RingBuffer
             memcpy(out, &m_Ring[m_Reader], n * sizeof(T));
             m_Reader += n;
             m_WriteSem.release(totalCopied);
+
+            notifyMonitors();
 
             return totalCopied;
         }
@@ -161,7 +172,66 @@ class RingBuffer
             pSem->release();
         }
 
-        private:
+        /**
+         * \brief monitor - add a new Event to be fired when something happens
+         *
+         * This could be a read or a write event; after receiving the event be
+         * sure to call dataReady() and/or canWrite() to determine the state
+         * of the buffer.
+         *
+         * Do not assume that an event means both a read and write will not
+         * block. In fact, never assume an event means either will not block.
+         * You may need to re-subscribe to the event if something else reads
+         * or writes to the ring buffer between the event trigger and your
+         * handling.
+         */
+        void monitor(Thread *pThread, Event *pEvent)
+        {
+            m_Lock.acquire();
+            m_MonitorTargets.pushBack(new MonitorTarget(pThread, pEvent));
+            m_Lock.release();
+        }
+
+        /// Cull all monitor targets pointing to \p pThread.
+        void cullMonitorTargets(Thread *pThread)
+        {
+            m_Lock.acquire();
+            for (typename List<MonitorTarget*>::Iterator it = m_MonitorTargets.begin();
+                    it != m_MonitorTargets.end();
+                    it++)
+            {
+                MonitorTarget *pMT = *it;
+
+                if (pMT->pThread == pThread)
+                {
+                    delete pMT;
+                    m_MonitorTargets.erase(it);
+                    it = m_MonitorTargets.begin();
+                    if (it == m_MonitorTargets.end())
+                        return;
+                }
+            }
+            m_Lock.release();
+        }
+
+    private:
+        /// Trigger event for threads waiting on us.
+        void notifyMonitors()
+        {
+            m_Lock.acquire();
+            for (typename List<MonitorTarget*>::Iterator it = m_MonitorTargets.begin();
+                    it != m_MonitorTargets.end();
+                    it++)
+            {
+                MonitorTarget *pMT = *it;
+
+                pMT->pThread->sendEvent(pMT->pEvent);
+                delete pMT;
+            }
+            m_MonitorTargets.clear();
+            m_Lock.release();
+        }
+
         size_t m_RingSize;
 
         Semaphore m_ReadSem;
@@ -171,8 +241,21 @@ class RingBuffer
         size_t m_Writer;
 
         T *m_Ring;
-};
 
+        Mutex m_Lock;
+
+        struct MonitorTarget
+        {
+            MonitorTarget(Thread *pT, Event *pE) :
+                pThread(pT), pEvent(pE)
+            {}
+
+            Thread *pThread;
+            Event *pEvent;
+        };
+
+        List<MonitorTarget *> m_MonitorTargets;
+};
 
 #endif
 
