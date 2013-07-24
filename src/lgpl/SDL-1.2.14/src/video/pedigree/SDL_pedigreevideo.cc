@@ -132,8 +132,8 @@ VideoBootStrap PEDIGREE_bootstrap = {
 int PEDIGREE_VideoInit(_THIS, SDL_PixelFormat *vformat)
 {
 	// Default to 16 bpp
-	vformat->BitsPerPixel = 16;
-	vformat->BytesPerPixel = 2;
+	vformat->BitsPerPixel = 32;
+	vformat->BytesPerPixel = 4;
 
     // Bring up the input callbacks
     PEDIGREE_InitInput();
@@ -145,6 +145,8 @@ int PEDIGREE_VideoInit(_THIS, SDL_PixelFormat *vformat)
 SDL_Rect **PEDIGREE_ListModes(_THIS, SDL_PixelFormat *format, Uint32 flags)
 {
     /// \todo Write?
+    /// \note If we bring up a window in VideoInit, we can possibly get its resolution
+    ///       and list it as the only available mode in this list...
    	return (SDL_Rect **) -1;
 }
 
@@ -168,27 +170,19 @@ SDL_Surface *PEDIGREE_SetVideoMode(_THIS, SDL_Surface *current,
     
     _this->hidden->provider = (void*) pFramebuffer;
 
-	_this->hidden->buffer = SDL_malloc(width * height * (bpp / 8));
+	_this->hidden->buffer = SDL_malloc(width * height * 4);
 	if ( ! _this->hidden->buffer ) {
 		SDL_SetError("Couldn't allocate buffer for requested mode");
 		return(NULL);
 	}
 
-	SDL_memset(_this->hidden->buffer, 0, width * height * (bpp / 8));
-
-	/* Allocate the new pixel format for the screen */
-	if ( ! SDL_ReallocFormat(current, bpp, 0, 0, 0, 0) ) {
-		SDL_free(_this->hidden->buffer);
-		_this->hidden->buffer = NULL;
-		SDL_SetError("Couldn't allocate new pixel format for requested mode");
-		return(NULL);
-	}
+	SDL_memset(_this->hidden->buffer, 0, width * height * 4);
 
 	/* Set up the new mode framebuffer */
-	current->flags = (flags & SDL_FULLSCREEN) | SDL_HWPALETTE;
-	_this->hidden->w = current->w = width;
+	current->flags = flags;
+        _this->hidden->w = current->w = width;
 	_this->hidden->h = current->h = height;
-	current->pitch = current->w * (bpp / 8);
+	current->pitch = current->w * 4;
 	current->pixels = _this->hidden->buffer;
 
 	/* We're done */
@@ -233,7 +227,7 @@ static void PEDIGREE_UpdateRects(_THIS, int numrects, SDL_Rect *rects)
     else
         format = PedigreeGraphics::Bits24_Rgb;
 
-    pFramebuffer->draw(_this->hidden->buffer, 0, 0, 0, 0, 800, 600, format);
+    pFramebuffer->draw(_this->hidden->buffer, 0, 0, 0, 0, _this->screen->w, _this->screen->h, format);
     pFramebuffer->redraw(0, 0, 800, 600, true);
     return;
 
