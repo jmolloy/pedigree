@@ -49,6 +49,12 @@ include = [
     './include',
     '#/src/subsys/posix/include',
     '#/src/subsys/native/include',
+    '#/src/user/libraries/libui/include',
+]
+
+cppinclude = include + [
+    '#/images/local/support/gcc/include/c++/4.5.1',
+    '#/images/local/support/gcc/include/c++/4.5.1/i686-pedigree',
 ]
 
 # To add a library add to the list below
@@ -56,17 +62,19 @@ libraries = [
     'gcc',
     'c',
     'm',
+    'ui',
     'pedigree',
     'pedigree-c',
     'pthread',
-    'stdc++'
+    'stdc++',
 ]
 
 # To add a library path add to the list below
 libpaths = [
     '#',
     imagesdir + 'libraries',
-    builddir
+    builddir,
+    builddir + '/libs',
 ]
 
 def fixFlags(f):
@@ -78,7 +86,7 @@ def fixFlags(f):
 
 tmpEnvironment['CFLAGS'] = fixFlags(tmpEnvironment['CFLAGS'])
 tmpEnvironment['CXXFLAGS'] = fixFlags(tmpEnvironment['CXXFLAGS'])
-tmpEnvironment['CPPPATH'] = include
+tmpEnvironment['CPPPATH'] = cppinclude
 tmpEnvironment['LIBS'] = libraries
 tmpEnvironment['LIBPATH'] = libpaths
 tmpEnvironment['CPPDEFINES'] += ['PEDIGREE']

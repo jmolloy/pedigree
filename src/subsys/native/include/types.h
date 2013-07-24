@@ -14,6 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+// stdint.h conflicts (oh goodness)
+#ifndef _STDINT_H
+
 #ifndef NATIVE_TYPES_H
 #define NATIVE_TYPES_H
 
@@ -104,3 +107,6 @@ typedef PROCESSOR_SPECIFIC_NAME(size_t) size_t;
 #undef PROCESSOR_SPECIFIC_NAME
 
 #endif
+
+#endif
+

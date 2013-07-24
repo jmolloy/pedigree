@@ -31,6 +31,9 @@
 #include <syslog.h>
 
 #include <input/Input.h>
+#include <Widget.h>
+
+extern PEDIGREE_SDLWidget *g_Widget;
 
 static SDLKey keymap[256];
 static SDLMod modstate = KMOD_NONE;
@@ -46,6 +49,21 @@ namespace Keyboard
         AltGr   = 1ULL << 59
     };
 }
+
+bool PEDIGREE_SDLwidgetCallback(WidgetMessages message, size_t msgSize, void *msgData)
+{
+    switch(message)
+    {
+        case Reposition:
+            {
+                PedigreeGraphics::Rect *rt = reinterpret_cast<PedigreeGraphics::Rect *>(msgData);
+                g_Widget->reposition(*rt);
+            }
+            break;
+    }
+    return true;
+}
+
 
 // Input handler: receives input notifications and sends them to SDL
 void input_handler(Input::InputNotification &note)
@@ -130,6 +148,7 @@ void PEDIGREE_DestroyInput()
 void PEDIGREE_PumpEvents(_THIS)
 {
 	// Nothing that has to be done here - everything comes in as async events
+    Widget::checkForEvents(true);
 }
 
 void PEDIGREE_InitOSKeymap(_THIS)

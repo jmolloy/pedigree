@@ -706,7 +706,7 @@ int main(int argc, char *argv[])
         fclose(fp);
 
         // A nice wallpaper.
-        wallpaper = new Png("/system/wallpaper/fields.png");
+        wallpaper = new Png("/system/wallpaper/trees.png");
         wallpaper->render(cr, 0, 0, g_nWidth, g_nHeight);
     }
     else

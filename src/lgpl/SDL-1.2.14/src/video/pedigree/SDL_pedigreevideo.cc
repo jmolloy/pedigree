@@ -33,6 +33,8 @@
 
 #include <graphics/Graphics.h>
 
+#include <Widget.h>
+
 #include <syslog.h>
 
 #define PEDIGREEVID_DRIVER_NAME "pedigree"
@@ -57,6 +59,11 @@ static void PEDIGREE_FreeHWSurface(_THIS, SDL_Surface *surface);
 static void PEDIGREE_UpdateRects(_THIS, int numrects, SDL_Rect *rects);
 
 };
+
+/** PEDIGREE SDL Widget type. */
+PEDIGREE_SDLWidget *g_Widget = 0;
+
+bool PEDIGREE_SDLwidgetCallback(WidgetMessages message, size_t msgSize, void *msgData);
 
 /* PEDIGREE driver bootstrap functions */
 
@@ -98,7 +105,7 @@ static SDL_VideoDevice *PEDIGREE_CreateDevice(int devindex)
 	device->ListModes = PEDIGREE_ListModes;
 	device->SetVideoMode = PEDIGREE_SetVideoMode;
 	device->CreateYUVOverlay = NULL;
-	device->SetColors = PEDIGREE_SetColors;
+	device->SetColors = NULL; // PEDIGREE_SetColors;
 	device->UpdateRects = PEDIGREE_UpdateRects;
 	device->VideoQuit = PEDIGREE_VideoQuit;
 	device->AllocHWSurface = PEDIGREE_AllocHWSurface;
@@ -135,6 +142,23 @@ int PEDIGREE_VideoInit(_THIS, SDL_PixelFormat *vformat)
 	vformat->BitsPerPixel = 32;
 	vformat->BytesPerPixel = 4;
 
+        char endpoint[256];
+        sprintf(endpoint, "sdl.%d", getpid());
+
+        // Create widget.
+        if(!g_Widget)
+        {
+            PedigreeGraphics::Rect rt;
+            g_Widget = new PEDIGREE_SDLWidget();
+            if(!g_Widget->construct(endpoint, "SDL", PEDIGREE_SDLwidgetCallback, rt))
+            {
+                fprintf(stderr, "SDL: couldn't construct widget\n");
+                delete g_Widget;
+                return -1;
+            }
+            _this->hidden->widget = g_Widget;
+        }
+
     // Bring up the input callbacks
     PEDIGREE_InitInput();
 
@@ -159,29 +183,21 @@ SDL_Surface *PEDIGREE_SetVideoMode(_THIS, SDL_Surface *current,
 
     syslog(LOG_INFO, "SetVideoMode(%d, %d, %d)", width, height, bpp);
 
-    PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
-    PedigreeGraphics::Framebuffer *pFramebuffer = pRootFramebuffer->createChild(0, 0, width, height);
-    if(!pFramebuffer->getRawBuffer())
-    {
-		_this->hidden->buffer = NULL;
-		SDL_SetError("Couldn't get a framebuffer to use");
-		return(NULL);
-    }
-    
-    _this->hidden->provider = (void*) pFramebuffer;
+    // caveat with real size vs buffer
+    _this->hidden->buffer = _this->hidden->widget->getBackbuffer();
 
-	_this->hidden->buffer = SDL_malloc(width * height * 4);
+	_this->hidden->buffer = SDL_malloc(_this->hidden->widget->getWidth() * _this->hidden->widget->getHeight() * 4);
 	if ( ! _this->hidden->buffer ) {
 		SDL_SetError("Couldn't allocate buffer for requested mode");
 		return(NULL);
 	}
 
-	SDL_memset(_this->hidden->buffer, 0, width * height * 4);
+	SDL_memset(_this->hidden->buffer, 0, _this->hidden->widget->getWidth() * _this->hidden->widget->getHeight() * 4);
 
 	/* Set up the new mode framebuffer */
 	current->flags = flags;
-        _this->hidden->w = current->w = width;
-	_this->hidden->h = current->h = height;
+        _this->hidden->w = current->w = _this->hidden->widget->getWidth();
+	_this->hidden->h = current->h = _this->hidden->widget->getHeight();
 	current->pitch = current->w * 4;
 	current->pixels = _this->hidden->buffer;
 
@@ -212,52 +228,32 @@ static void PEDIGREE_UnlockHWSurface(_THIS, SDL_Surface *surface)
 
 static void PEDIGREE_UpdateRects(_THIS, int numrects, SDL_Rect *rects)
 {
-    if(!_this->hidden->provider)
+    if(!_this->hidden->widget)
         return;
 
-    PedigreeGraphics::Framebuffer *pFramebuffer = reinterpret_cast<PedigreeGraphics::Framebuffer*>(_this->hidden->provider);
-    
-    PedigreeGraphics::PixelFormat format;
-    if(_this->screen->format->BitsPerPixel == 32)
-        format = PedigreeGraphics::Bits32_Rgb;
-    else if(_this->screen->format->BitsPerPixel == 16)
-        format = PedigreeGraphics::Bits16_Rgb565;
-    else if(_this->screen->format->BitsPerPixel == 8)
-        format = PedigreeGraphics::Bits8_Idx;
-    else
-        format = PedigreeGraphics::Bits24_Rgb;
-
-    pFramebuffer->draw(_this->hidden->buffer, 0, 0, 0, 0, _this->screen->w, _this->screen->h, format);
-    pFramebuffer->redraw(0, 0, 800, 600, true);
-    return;
-
+    // Batch into one Rect so we don't have hundreds of little redraws.
+    PedigreeGraphics::Rect dirty;
+    size_t minX = ~0, minY = ~0, maxX = 0, maxY = 0;
     for(int i = 0; i < numrects; i++)
     {
         syslog(LOG_INFO, "UpdateRects: redraw %dx%d [%dx%d]\n", rects[i].x, rects[i].y, rects[i].w, rects[i].h);
-        pFramebuffer->draw(_this->hidden->buffer, rects[i].x, rects[i].y, rects[i].x, rects[i].y, rects[i].w, rects[i].h, format);
-        pFramebuffer->redraw(rects[i].x, rects[i].y, rects[i].w, rects[i].h, true);
+
+        size_t x1 = rects[i].x;
+        size_t x2 = x1 + rects[i].w;
+
+        size_t y1 = rects[i].y;
+        size_t y2 = rects[i].h;
+
+        minX = std::min(minX, x1);
+        minY = std::min(minY, y1);
+
+        maxX = std::max(maxX, x2);
+        maxY = std::max(maxY, y2);
     }
-}
 
-int PEDIGREE_SetColors(_THIS, int firstcolor, int ncolors, SDL_Color *colors)
-{
-    if(!_this->hidden->provider)
-        return 0;
-
-    PedigreeGraphics::Framebuffer *pFramebuffer = reinterpret_cast<PedigreeGraphics::Framebuffer*>(_this->hidden->provider);
-
-    uint32_t *palette = new uint32_t[256];
-    
-    size_t n = 0;
-    for(size_t i = firstcolor; i < (firstcolor + ncolors); i++)
-    {
-        palette[i] = PedigreeGraphics::createRgb(colors[n].r, colors[n].g, colors[n].b);
-        n++;
-    }
-    
-    pFramebuffer->setPalette(palette, 256);
-
-    return 1;
+    // Perform the redraw.
+    dirty.update(minX, minY, maxX - minX, maxY - minY);
+    _this->hidden->widget->redraw(dirty);
 }
 
 /* Note:  If we are terminated, this could be called in the middle of
@@ -265,6 +261,7 @@ int PEDIGREE_SetColors(_THIS, int firstcolor, int ncolors, SDL_Color *colors)
 */
 void PEDIGREE_VideoQuit(_THIS)
 {
+    /// \todo what to do here
 	if (_this->screen->pixels != NULL)
 	{
 		SDL_free(_this->screen->pixels);

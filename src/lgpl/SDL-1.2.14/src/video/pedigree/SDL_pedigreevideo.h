@@ -29,13 +29,60 @@
 /* Hidden "this" pointer for the video functions */
 #define _THIS	SDL_VideoDevice *_this
 
+#ifdef __cplusplus
+#include <Widget.h>
+
+class PEDIGREE_SDLWidget : public Widget
+{
+    public:
+        PEDIGREE_SDLWidget() : Widget()
+        {}
+
+        virtual ~PEDIGREE_SDLWidget()
+        {}
+
+        void reposition(PedigreeGraphics::Rect newrt)
+        {
+            m_nWidth = newrt.getW();
+            m_nHeight = newrt.getH();
+        }
+
+        void *getBackbuffer()
+        {
+            return getRawFramebuffer();
+        }
+
+        virtual bool render(PedigreeGraphics::Rect &rt, PedigreeGraphics::Rect &dirty)
+        {
+            // SDL has its own main loop that will render instead.
+            return true;
+        }
+
+        size_t getWidth() const
+        {
+            return m_nWidth;
+        }
+
+        size_t getHeight() const
+        {
+            return m_nHeight;
+        }
+    private:
+        size_t m_nWidth, m_nHeight;
+};
+#else
+struct PEDIGREE_SDLWidget {};
+#endif
 
 /* Private display data */
 
 struct SDL_PrivateVideoData {
     int w, h;
     void *buffer;
-    void *provider;
+#ifndef __cplusplus
+    struct
+#endif
+    PEDIGREE_SDLWidget *widget;
 };
 
 #endif /* _SDL_nullvideo_h */
