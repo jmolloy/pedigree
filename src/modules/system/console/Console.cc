@@ -24,7 +24,7 @@ ConsoleManager ConsoleManager::m_Instance;
 
 ConsoleFile::ConsoleFile(String consoleName, Filesystem *pFs) :
     File(consoleName, 0, 0, 0, 0xdeadbeef, pFs, 0, 0),
-    m_Flags(DEFAULT_FLAGS), m_Name(), m_RingBuffer(PTY_BUFFER_SIZE)
+    m_Flags(DEFAULT_FLAGS), m_Name(consoleName), m_RingBuffer(PTY_BUFFER_SIZE)
 {
 }
 
@@ -61,16 +61,20 @@ uint64_t ConsoleMasterFile::read(uint64_t location, uint64_t size, uintptr_t buf
         return 0;
     }
 
-    uintptr_t originalBuffer = location;
+    // We need space to put in a NULL terminator.
+    --size;
+
+    uintptr_t originalBuffer = buffer;
     while(m_RingBuffer.dataReady() && size)
     {
-        *reinterpret_cast<char*>(location) = m_RingBuffer.read();
-        ++location;
+        *reinterpret_cast<char*>(buffer) = m_RingBuffer.read();
+        ++buffer;
         --size;
     }
 
-    size_t endSize = outputLineDiscipline(reinterpret_cast<char *>(originalBuffer), location - originalBuffer);
+    size_t endSize = outputLineDiscipline(reinterpret_cast<char *>(originalBuffer), buffer - originalBuffer);
 
+    *reinterpret_cast<char *>(originalBuffer + endSize) = 0;
     return endSize;
 }
 
@@ -85,17 +89,10 @@ uint64_t ConsoleMasterFile::write(uint64_t location, uint64_t size, uintptr_t bu
         return 0;
     }
 
-    uintptr_t originalBuffer = location;
-    while(m_RingBuffer.canWrite() && size)
-    {
-        m_RingBuffer.write(*reinterpret_cast<char*>(location));
-        ++location;
-        --size;
-    }
+    // Pass on to the input discipline, which will write to the slave.
+    inputLineDiscipline(reinterpret_cast<char *>(buffer), size);
 
-    inputLineDiscipline(reinterpret_cast<char *>(originalBuffer), location - originalBuffer);
-
-    return location - originalBuffer;
+    return size;
 }
 
 void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
@@ -316,16 +313,20 @@ uint64_t ConsoleSlaveFile::read(uint64_t location, uint64_t size, uintptr_t buff
         return 0;
     }
 
-    uintptr_t originalBuffer = location;
+    // Space for a null terminator.
+    --size;
+
+    uintptr_t originalBuffer = buffer;
     while(m_RingBuffer.dataReady() && size)
     {
-        *reinterpret_cast<char*>(location) = m_RingBuffer.read();
-        ++location;
+        *reinterpret_cast<char*>(buffer) = m_RingBuffer.read();
+        ++buffer;
         --size;
     }
 
-    size_t endSize = processInput(reinterpret_cast<char *>(originalBuffer), location - originalBuffer);
+    size_t endSize = processInput(reinterpret_cast<char *>(originalBuffer), buffer - originalBuffer);
 
+    *reinterpret_cast<char *>(originalBuffer + endSize) = 0;
     return endSize;
 }
 
@@ -340,15 +341,10 @@ uint64_t ConsoleSlaveFile::write(uint64_t location, uint64_t size, uintptr_t buf
         return 0;
     }
 
-    uintptr_t originalBuffer = location;
-    while(m_RingBuffer.canWrite() && size)
-    {
-        m_RingBuffer.write(*reinterpret_cast<char*>(location));
-        ++location;
-        --size;
-    }
+    // Send straight to the master.
+    m_pOther->inject(reinterpret_cast<char *>(buffer), size);
 
-    return location - originalBuffer;
+    return size;
 }
 
 size_t ConsoleSlaveFile::processInput(char *buf, size_t len)
