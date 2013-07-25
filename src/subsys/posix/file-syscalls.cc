@@ -146,6 +146,40 @@ int posix_open(const char *name, int flags, int mode)
         if (!file)
             file = NullFs::instance().getFile();
     }
+    else if (!strncmp("/dev/pty", name, 8))
+    {
+        // Opening a specific master terminal.
+        String desired(name + strlen("/dev/"));
+        file = ConsoleManager::instance().getConsole(desired);
+        if (!file)
+        {
+            SYSCALL_ERROR(DoesNotExist);
+            return -1;
+        }
+
+        if(!ConsoleManager::instance().lockConsole(file))
+        {
+            SYSCALL_ERROR(Already);
+            return -1;
+        }
+    }
+    else if (!strncmp("/dev/tty", name, 8))
+    {
+        // Opening a specific slave terminal.
+        String desired(name + strlen("/dev/"));
+        file = ConsoleManager::instance().getConsole(desired);
+        if (!file)
+        {
+            SYSCALL_ERROR(DoesNotExist);
+            return -1;
+        }
+
+        // Set the terminal as the new controlling terminal, if needed.
+        if(!(mode & O_NOCTTY))
+        {
+            pProcess->setCtty(file);
+        }
+    }
     else if (!strcmp(name, "/dev/urandom"))
     {
         file = RandomFs::instance().getFile();
