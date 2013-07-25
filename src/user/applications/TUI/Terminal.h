@@ -55,6 +55,10 @@ public:
     size_t queueLength()
     {return m_Len;}
 
+    /** Gets descriptor to select() on for readability to see if we have pending output. */
+    int getSelectFd() const
+    {return m_MasterPty;}
+
     /** Writes the given UTF-8 sequence to the Xterm. */
     void write(char *pStr, DirtyRectangle &rect);
 
@@ -166,6 +170,8 @@ private:
     size_t m_PendingRequestSz;
 
     int m_Pid;
+
+    int m_MasterPty;
 
     size_t m_OffsetLeft, m_OffsetTop;
 

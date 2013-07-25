@@ -318,31 +318,6 @@ void key_input_handler(uint64_t c)
     else
         pT->addToQueue(c);
     rect2.reset();
-    if(!pT->hasPendingRequest() && pT->queueLength() > 0)
-        sz = pT->getPendingRequestSz();
-
-    /** We now have a key on our queue, can we complete a read? */
-
-    char *buffer = new char[sz + 1];
-    char str[64];
-    size_t i = 0;
-    while (i < sz)
-    {
-        char c = pT->getFromQueue();
-        if (c)
-        {
-            buffer[i++] = c;
-            continue;
-        }
-        else break;
-    }
-    g_nLastResponse = i;
-    if (pT->hasPendingRequest())
-    {
-        Syscall::respondToPending(g_nLastResponse, buffer, sz);
-        pT->setHasPendingRequest(false, 0);
-    }
-    delete [] buffer;
 }
 
 /**
@@ -483,6 +458,46 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
         // Check for any events and dispatch callbacks.
         Widget::checkForEvents(true);
 
+        int n = 0;
+
+        fd_set fds;
+        FD_ZERO(&fds);
+        TerminalList *pTL = g_pTermList;
+        while (pTL)
+        {
+            int fd = pTL->term->getSelectFd();
+            FD_SET(fd, &fds);
+            n = std::max(fd, n);
+            pTL = pTL->next;
+        }
+
+        struct timeval tv = {0, 0};
+        int nReady = select(n + 1, &fds, NULL, NULL, &tv);
+
+        if(nReady <= 0)
+            continue;
+
+        bool bShouldRedraw = false;
+
+        DirtyRectangle dirtyRect;
+        pTL = g_pTermList;
+        while (pTL)
+        {
+            int fd = pTL->term->getSelectFd();
+            if(FD_ISSET(fd, &fds))
+            {
+                // Something to read.
+                read(fd, buffer, maxBuffSz);
+                pTL->term->write(buffer, dirtyRect);
+                bShouldRedraw = true;
+            }
+            pTL = pTL->next;
+        }
+
+        if(bShouldRedraw)
+            doRedraw(dirtyRect);
+
+#if 0
         // Check for pending requests in the RequestQueue.
         size_t cmd = Syscall::nextRequestAsync(g_nLastResponse, buffer, &sz, maxBuffSz, &tabId);
         // syslog(LOG_NOTICE, "Command %d received. (term %d, sz %d)", cmd, tabId, sz);
@@ -591,6 +606,7 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
             default:
                 syslog(LOG_ALERT, "Unknown command: %x", cmd);
         }
+#endif
     }
 
     return 0;

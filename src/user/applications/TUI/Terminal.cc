@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <errno.h>
 
 #include <graphics/Graphics.h>
@@ -36,17 +37,6 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
     m_pBuffer(0), m_pFramebuffer(0), m_pXterm(0), m_Len(0), m_WriteBufferLen(0), m_TabId(0), m_bHasPendingRequest(false),
     m_PendingRequestSz(0), m_Pid(0), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop), m_Cancel(0), m_WriteInProgress(0)
 {
-    // Create a new backbuffer.
-    // m_pBuffer = Syscall::newBuffer();
-    // if (!m_pBuffer) log("Buffer not created correctly!");
-
-    //m_pFramebuffer = g_pFramebuffer->createChild(m_OffsetLeft, m_OffsetTop, nWidth, nHeight);
-    //if((!m_pFramebuffer) || (!m_pFramebuffer->getRawBuffer()))
-    //    return;
-
-    //uint32_t backColour = PedigreeGraphics::createRgb(g_MainBackgroundColour.r, g_MainBackgroundColour.g, g_MainBackgroundColour.b);
-    //m_pFramebuffer->rect(0, 0, nWidth, nHeight, backColour, PedigreeGraphics::Bits24_Rgb);
-
     cairo_save(g_Cairo);
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
 
@@ -68,7 +58,17 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
 
     strcpy(m_pName, pName);
 
-    Syscall::createConsole(tabId, pName);
+    // Find a console, open it.
+    char fname[16] = {0};
+    /// \todo actually loop mmk
+    sprintf(fname, "/dev/ptyp0");
+
+    m_MasterPty = open(fname, O_RDWR);
+    if(m_MasterPty < 0)
+    {
+        syslog(LOG_INFO, "TUI: Couldn't create terminal: %s", strerror(errno));
+        return;
+    }
 
 #ifndef NEW_XTERM
     m_pXterm = new Xterm(0, nWidth, nHeight, m_OffsetLeft, m_OffsetTop, this);
@@ -94,7 +94,12 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
         close(0);
         close(1);
         close(2);
-        Syscall::setCtty(pName);
+
+        // Open the slave terminal, this will also set it as our ctty
+        int slave = open("/dev/ttyp0", O_RDWR);
+        dup(slave);
+        dup(slave);
+
         execl("/applications/login", "/applications/login", 0);
         syslog(LOG_ALERT, "Launching login failed (next line is the error in errno...)");
         syslog(LOG_ALERT, strerror(errno));
@@ -306,10 +311,9 @@ void Terminal::addToQueue(char c)
     // Don't allow keys to be pressed past the buffer's size
     if(m_Len >= 256)
         return;
-    m_pQueue[m_Len++] = c;
+    //m_pQueue[m_Len++] = c;
 
-    // Key available in queue, we should notify the upper layers.
-    Syscall::dataAvailable();
+    ::write(m_MasterPty, &c, 1);
 }
 
 void Terminal::setActive(bool b, DirtyRectangle &rect)
