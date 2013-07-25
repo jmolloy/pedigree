@@ -61,9 +61,6 @@ uint64_t ConsoleMasterFile::read(uint64_t location, uint64_t size, uintptr_t buf
         return 0;
     }
 
-    // We need space to put in a NULL terminator.
-    --size;
-
     uintptr_t originalBuffer = buffer;
     while(m_RingBuffer.dataReady() && size)
     {
@@ -74,7 +71,6 @@ uint64_t ConsoleMasterFile::read(uint64_t location, uint64_t size, uintptr_t buf
 
     size_t endSize = outputLineDiscipline(reinterpret_cast<char *>(originalBuffer), buffer - originalBuffer);
 
-    *reinterpret_cast<char *>(originalBuffer + endSize) = 0;
     return endSize;
 }
 
@@ -319,9 +315,6 @@ uint64_t ConsoleSlaveFile::read(uint64_t location, uint64_t size, uintptr_t buff
         return 0;
     }
 
-    // Space for a null terminator.
-    --size;
-
     uintptr_t originalBuffer = buffer;
     while(m_RingBuffer.dataReady() && size)
     {
@@ -332,7 +325,6 @@ uint64_t ConsoleSlaveFile::read(uint64_t location, uint64_t size, uintptr_t buff
 
     size_t endSize = processInput(reinterpret_cast<char *>(originalBuffer), buffer - originalBuffer);
 
-    *reinterpret_cast<char *>(originalBuffer + endSize) = 0;
     return endSize;
 }
 
