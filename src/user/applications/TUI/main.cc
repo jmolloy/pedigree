@@ -487,7 +487,8 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
             if(FD_ISSET(fd, &fds))
             {
                 // Something to read.
-                read(fd, buffer, maxBuffSz);
+                size_t len = read(fd, buffer, maxBuffSz);
+                buffer[len] = 0;
                 pTL->term->write(buffer, dirtyRect);
                 bShouldRedraw = true;
             }
