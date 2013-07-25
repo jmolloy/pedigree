@@ -390,9 +390,10 @@ size_t ConsoleSlaveFile::processInput(char *buf, size_t len)
 
 void ConsoleManager::newConsole(char c, size_t i)
 {
-    String masterName, slaveName;
-    masterName.sprintf("pty%c%d", c, i);
-    slaveName.sprintf("tty%c%d", c, i);
+    char master[] = {'p', 't', 'y', c, (i > 9) ? ('a' + (i % 10)) : ('0' + i), 0};
+    char slave[] = {'t', 't', 'y', c, (i > 9) ? ('a' + (i % 10)) : ('0' + i), 0};
+
+    String masterName(master), slaveName(slave);
 
     ConsoleMasterFile *pMaster = new ConsoleMasterFile(masterName, this);
     ConsoleSlaveFile *pSlave = new ConsoleSlaveFile(slaveName, this);
@@ -405,15 +406,13 @@ void ConsoleManager::newConsole(char c, size_t i)
         m_Consoles.pushBack(pMaster);
         m_Consoles.pushBack(pSlave);
     }
-
-    NOTICE("Console: registered master " << masterName << " with slave " << slaveName << ".");
 }
 
 ConsoleManager::ConsoleManager() :
     m_Consoles(), m_Lock()
 {
     // Create all consoles, so we can look them up easily.
-    for(size_t i = 0; i < 10; ++i)
+    for(size_t i = 0; i < 16; ++i)
     {
         for(char c = 'p'; c <= 'z'; ++c)
         {
