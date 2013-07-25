@@ -24,32 +24,406 @@ ConsoleManager ConsoleManager::m_Instance;
 
 ConsoleFile::ConsoleFile(String consoleName, Filesystem *pFs) :
     File(consoleName, 0, 0, 0, 0xdeadbeef, pFs, 0, 0),
-    m_Name(), m_pBackEnd(0), m_Param(0), m_Flags(DEFAULT_FLAGS),
-    m_LineBuffer(), m_LineBufferSize(0), m_LineBufferFirstNewline(~0UL)
+    m_Flags(DEFAULT_FLAGS), m_Name(), m_RingBuffer(PTY_BUFFER_SIZE)
 {
 }
 
 int ConsoleFile::select(bool bWriting, int timeout)
 {
-    bool ret = false;
-
-    // Console is always writeable
-    /// \todo is it?
-    if(bWriting)
-        return true;
-
-    // Check for data.
-    if(timeout == 0)
-        ret = ConsoleManager::instance().hasDataAvailable(this);
+    if(timeout)
+    {
+        m_RingBuffer.waitFor(bWriting ? RingBufferWait::Writing : RingBufferWait::Reading);
+        return 1;
+    }
     else
-        while(!(ret = ConsoleManager::instance().hasDataAvailable(this))) Scheduler::instance().yield();
+    {
+        if(bWriting)
+            return m_RingBuffer.canWrite();
+        else
+            return m_RingBuffer.dataReady();
+    }
+}
 
-    return (ret ? 1 : 0);
+ConsoleMasterFile::ConsoleMasterFile(String consoleName, Filesystem *pFs) :
+    ConsoleFile(consoleName, pFs), bLocked(false), m_LineBuffer(), m_LineBufferSize(0),
+    m_LineBufferFirstNewline(~0)
+{
+}
+
+uint64_t ConsoleMasterFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+{
+    if(bCanBlock)
+    {
+        m_RingBuffer.waitFor(RingBufferWait::Reading);
+    }
+    else if(!m_RingBuffer.dataReady())
+    {
+        return 0;
+    }
+
+    uintptr_t originalBuffer = location;
+    while(m_RingBuffer.dataReady() && size)
+    {
+        *reinterpret_cast<char*>(location) = m_RingBuffer.read();
+        ++location;
+        --size;
+    }
+
+    size_t endSize = outputLineDiscipline(reinterpret_cast<char *>(originalBuffer), location - originalBuffer);
+
+    return endSize;
+}
+
+uint64_t ConsoleMasterFile::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+{
+    if(bCanBlock)
+    {
+        m_RingBuffer.waitFor(RingBufferWait::Writing);
+    }
+    else if(!m_RingBuffer.canWrite())
+    {
+        return 0;
+    }
+
+    uintptr_t originalBuffer = location;
+    while(m_RingBuffer.canWrite() && size)
+    {
+        m_RingBuffer.write(*reinterpret_cast<char*>(location));
+        ++location;
+        --size;
+    }
+
+    inputLineDiscipline(reinterpret_cast<char *>(originalBuffer), location - originalBuffer);
+
+    return location - originalBuffer;
+}
+
+void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
+{
+    // Handle temios local modes
+    if(m_Flags & (ConsoleManager::LCookedMode|ConsoleManager::LEcho))
+    {
+        // Whether or not the application buffer has already been filled
+        bool bAppBufferComplete = false;
+
+        // Used for raw mode - just a buffer for erase echo etc
+        char *destBuff = new char[len];
+        size_t destBuffOffset = 0;
+
+        // Iterate over the buffer
+        while(!bAppBufferComplete)
+        {
+            for(size_t i = 0; i < len; i++)
+            {
+                // Handle incoming newline
+                if(buf[i] == '\r')
+                {
+                    // LEcho - output the newline. LCookedMode - handle line buffer.
+                    if((m_Flags & ConsoleManager::LEcho) || (m_Flags & ConsoleManager::LCookedMode))
+                    {
+                        // Only echo the newline if we are supposed to
+                        m_LineBuffer[m_LineBufferSize++] = '\n';
+                        if((m_Flags & ConsoleManager::LEchoNewline) || (m_Flags & ConsoleManager::LEcho))
+                            m_RingBuffer.write('\n');
+
+                        if((m_Flags & ConsoleManager::LCookedMode) && !bAppBufferComplete)
+                        {
+                            // Transmit full buffer to slave.
+                            size_t realSize = m_LineBufferSize;
+                            if(m_LineBufferFirstNewline < realSize)
+                            {
+                                realSize = m_LineBufferFirstNewline;
+                                m_LineBufferFirstNewline = ~0UL;
+                            }
+
+                            m_pOther->inject(m_LineBuffer, realSize);
+
+                            // And now move the buffer over the space we just consumed
+                            uint64_t nConsumedBytes = m_LineBufferSize - realSize;
+                            if(nConsumedBytes) // If zero, the buffer was consumed completely
+                                memcpy(m_LineBuffer, &m_LineBuffer[realSize], nConsumedBytes);
+
+                            // Reduce the buffer size now
+                            m_LineBufferSize -= realSize;
+
+                            // The buffer has been filled!
+                            bAppBufferComplete = true;
+                        }
+                        else if((m_Flags & ConsoleManager::LCookedMode) && (m_LineBufferFirstNewline == ~0UL))
+                        {
+                            // Application buffer has already been filled, let future runs know where the limit is
+                            m_LineBufferFirstNewline = m_LineBufferSize - 1;
+                        }
+                        else if(!(m_Flags & ConsoleManager::LCookedMode))
+                        {
+                            // Inject this byte into the slave...
+                            destBuff[destBuffOffset++] = buf[i];
+                        }
+
+                        // Ignore the \n if one is present
+                        if(buf[i+1] == '\n')
+                            i++;
+                    }
+                }
+                else if(buf[i] == '\x08')
+                {
+                    if(m_Flags & (ConsoleManager::LCookedMode|ConsoleManager::LEchoErase))
+                    {
+                        if((m_Flags & ConsoleManager::LCookedMode) && m_LineBufferSize)
+                        {
+                            char ctl[3] = {'\x08', ' ', '\x08'};
+                            m_RingBuffer.write(ctl, 3);
+                            m_LineBufferSize--;
+                        }
+                        else if((!(m_Flags & ConsoleManager::LCookedMode)) && destBuffOffset)
+                        {
+                            char ctl[3] = {'\x08', ' ', '\x08'};
+                            m_RingBuffer.write(ctl, 3);
+                            destBuffOffset--;
+                        }
+                    }
+                }
+                else if(buf[i] < 0x1F)
+                {
+                    /*
+                    if(readBuffer[i] == 0x3)
+                    {
+                        Process *p = Processor::information().getCurrentThread()->getParent();
+                        p->getSubsystem()->kill(Subsystem::Interrupted);
+                    }
+                    */
+                }
+                else
+                {
+                    // Write the character to the console
+                    /// \todo ISIG handling, special characters
+                    if(m_Flags & ConsoleManager::LEcho)
+                        m_RingBuffer.write(buf[i]);
+
+                    // Add to the buffer
+                    if(m_Flags & ConsoleManager::LCookedMode)
+                        m_LineBuffer[m_LineBufferSize++] = buf[i];
+                    else
+                    {
+                        destBuff[destBuffOffset++] = buf[i];
+                    }
+                }
+            }
+
+            // We appear to have hit the top of the line buffer!
+            if(m_LineBufferSize >= LINEBUFFER_MAXIMUM)
+            {
+                // Our best bet is to return early, giving the application what we can of the line buffer
+                size_t numBytesToRemove = m_LineBufferSize;
+
+                // Copy the buffer across
+                m_pOther->inject(m_LineBuffer, numBytesToRemove);
+
+                // And now move the buffer over the space we just consumed
+                uint64_t nConsumedBytes = m_LineBufferSize - numBytesToRemove;
+                if(nConsumedBytes) // If zero, the buffer was consumed completely
+                    memcpy(m_LineBuffer, &m_LineBuffer[numBytesToRemove], nConsumedBytes);
+
+                // Reduce the buffer size now
+                m_LineBufferSize -= numBytesToRemove;
+            }
+
+            /// \todo remove me, this is because of the port
+            break;
+        }
+
+        if(destBuffOffset)
+        {
+            m_pOther->inject(destBuff, len);
+        }
+    }
+    else
+    {
+        m_pOther->inject(buf, len);
+    }
+}
+
+size_t ConsoleMasterFile::outputLineDiscipline(char *buf, size_t len)
+{
+    // Post-process output if enabled.
+    if(m_Flags & (ConsoleManager::OPostProcess))
+    {
+        char *tmpBuff = new char[len];
+        size_t realSize = len;
+
+        char *pC = buf;
+        for (size_t i = 0, j = 0; j < len; j++)
+        {
+            bool bInsert = true;
+
+            // OCRNL: Map CR to NL on output
+            if (pC[j] == '\r' && (m_Flags & ConsoleManager::OMapCRToNL))
+            {
+                tmpBuff[i++] = '\n';
+                continue;
+            }
+
+            // ONLCR: Map NL to CR-NL on output
+            else if (pC[j] == '\n' && (m_Flags & ConsoleManager::OMapNLToCRNL))
+            {
+                realSize++;
+                char *newBuff = new char[realSize];
+                memcpy(newBuff, tmpBuff, i);
+                delete [] tmpBuff;
+                tmpBuff = newBuff;
+
+                // Add the newline and the caused carriage return
+                tmpBuff[i++] = '\r';
+                tmpBuff[i++] = '\n';
+
+                continue;
+            }
+
+            // ONLRET: NL performs CR function
+            if(pC[j] == '\n' && (m_Flags & ConsoleManager::ONLCausesCR))
+            {
+                tmpBuff[i++] = '\r';
+                continue;
+            }
+
+            if(bInsert)
+            {
+                tmpBuff[i++] = pC[j];
+            }
+        }
+
+        memcpy(buf, tmpBuff, realSize);
+        delete [] tmpBuff;
+        len = realSize;
+    }
+
+    return len;
+}
+
+ConsoleSlaveFile::ConsoleSlaveFile(String consoleName, Filesystem *pFs) :
+    ConsoleFile(consoleName, pFs)
+{
+}
+
+uint64_t ConsoleSlaveFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+{
+    if(bCanBlock)
+    {
+        m_RingBuffer.waitFor(RingBufferWait::Reading);
+    }
+    else if(!m_RingBuffer.dataReady())
+    {
+        return 0;
+    }
+
+    uintptr_t originalBuffer = location;
+    while(m_RingBuffer.dataReady() && size)
+    {
+        *reinterpret_cast<char*>(location) = m_RingBuffer.read();
+        ++location;
+        --size;
+    }
+
+    size_t endSize = processInput(reinterpret_cast<char *>(originalBuffer), location - originalBuffer);
+
+    return endSize;
+}
+
+uint64_t ConsoleSlaveFile::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+{
+    if(bCanBlock)
+    {
+        m_RingBuffer.waitFor(RingBufferWait::Writing);
+    }
+    else if(!m_RingBuffer.canWrite())
+    {
+        return 0;
+    }
+
+    uintptr_t originalBuffer = location;
+    while(m_RingBuffer.canWrite() && size)
+    {
+        m_RingBuffer.write(*reinterpret_cast<char*>(location));
+        ++location;
+        --size;
+    }
+
+    return location - originalBuffer;
+}
+
+size_t ConsoleSlaveFile::processInput(char *buf, size_t len)
+{
+    // Perform input processing.
+    char *pC = buf;
+    size_t realLen = len;
+    for (size_t i = 0; i < len; i++)
+    {
+        if (m_Flags & ConsoleManager::IStripToSevenBits)
+            pC[i] = static_cast<uint8_t>(pC[i]) & 0x7F;
+
+        if(pC[i] < 0x1F)
+        {
+            /*
+               if(pC[i] == 0x3)
+               {
+               Thread *t = Processor::information().getCurrentThread();
+               Process *p = t->getParent();
+               p->getSubsystem()->kill(Subsystem::Interrupted, t);
+               }
+               */
+        }
+
+        if (pC[i] == '\n' && (m_Flags & ConsoleManager::IMapNLToCR))
+            pC[i] = '\r';
+        else if (pC[i] == '\r' && (m_Flags & ConsoleManager::IMapCRToNL))
+            pC[i] = '\n';
+        else if (pC[i] == '\r' && (m_Flags & ConsoleManager::IIgnoreCR))
+        {
+            memmove(buf+i, buf+i+1, len-i-1);
+            i--; // Need to process this byte again, its contents have changed.
+            realLen--;
+        }
+    }
+
+    return realLen;
+}
+
+void ConsoleManager::newConsole(char c, size_t i)
+{
+    String masterName, slaveName;
+    masterName.sprintf("pty%c%d", c, i);
+    slaveName.sprintf("tty%c%d", c, i);
+
+    ConsoleMasterFile *pMaster = new ConsoleMasterFile(masterName, this);
+    ConsoleSlaveFile *pSlave = new ConsoleSlaveFile(slaveName, this);
+
+    pMaster->setOther(pSlave);
+    pSlave->setOther(pMaster);
+
+    {
+        LockGuard<Spinlock> guard(m_Lock);
+        m_Consoles.pushBack(pMaster);
+        m_Consoles.pushBack(pSlave);
+    }
+
+    NOTICE("Console: registered master " << masterName << " with slave " << slaveName << ".");
 }
 
 ConsoleManager::ConsoleManager() :
     m_Consoles(), m_Lock()
 {
+    // Create all consoles, so we can look them up easily.
+    for(size_t i = 0; i < 10; ++i)
+    {
+        for(char c = 'p'; c <= 'z'; ++c)
+        {
+            newConsole(c, i);
+        }
+        for(char c = 'a'; c <= 'e'; ++c)
+        {
+            newConsole(c, i);
+        }
+    }
 }
 
 ConsoleManager::~ConsoleManager()
@@ -63,20 +437,8 @@ ConsoleManager &ConsoleManager::instance()
 
 bool ConsoleManager::registerConsole(String consoleName, RequestQueue *backEnd, uintptr_t param)
 {
-    ConsoleFile *pConsole = new ConsoleFile(consoleName, this);
-
-    pConsole->m_Name = consoleName;
-    pConsole->m_pBackEnd = backEnd;
-    pConsole->m_Param = param;
-
-    {
-        LockGuard<Spinlock> guard(m_Lock);
-        m_Consoles.pushBack(pConsole);
-    }
-
-    NOTICE("Registered a console: " << consoleName << ".");
-
-    return true;
+    FATAL("Console: old-style console creation used!");
+    return false;
 }
 
 File* ConsoleManager::getConsole(String consoleName)
@@ -96,17 +458,30 @@ File* ConsoleManager::getConsole(String consoleName)
 
 ConsoleFile *ConsoleManager::getConsoleFile(RequestQueue *pBackend)
 {
-    LockGuard<Spinlock> guard(m_Lock);
-    for (size_t i = 0; i < m_Consoles.count(); i++)
-    {
-        ConsoleFile *pC = m_Consoles[i];
-        if (pC->m_pBackEnd == pBackend)
-        {
-            return pC;
-        }
-    }
-    // Error - not found.
     return 0;
+}
+
+bool ConsoleManager::lockConsole(File *file)
+{
+    if(!isConsole(file))
+        return false;
+
+    /// \todo check it is actually a master
+    ConsoleMasterFile *pConsole = static_cast<ConsoleMasterFile *>(file);
+    if(pConsole->bLocked)
+        return false;
+    pConsole->bLocked = true;
+
+    return true;
+}
+
+void ConsoleManager::unlockConsole(File *file)
+{
+    if(!isConsole(file))
+        return;
+
+    ConsoleMasterFile *pConsole = static_cast<ConsoleMasterFile *>(file);
+    pConsole->bLocked = false;
 }
 
 bool ConsoleManager::isConsole(File* file)
@@ -131,6 +506,7 @@ void ConsoleManager::getAttributes(File* file, size_t *flags)
     *flags = pFile->m_Flags;
 }
 
+#if 0
 uint64_t ConsoleFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
     // Ensure we're safe to go
@@ -475,21 +851,20 @@ void ConsoleFile::truncate()
 {
     m_pBackEnd->addRequest(1, CONSOLE_REFRESH, m_Param);
 }
+#endif
 
 int ConsoleManager::getCols(File* file)
 {
     if(!file)
         return 0;
-    ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
-    return static_cast<int>(pFile->m_pBackEnd->addRequest(1, CONSOLE_GETCOLS, pFile->m_Param));
+    return 80;
 }
 
 int ConsoleManager::getRows(File* file)
 {
     if(!file)
         return 0;
-    ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
-    return static_cast<int>(pFile->m_pBackEnd->addRequest(1, CONSOLE_GETROWS, pFile->m_Param));
+    return 25;
 }
 
 bool ConsoleManager::hasDataAvailable(File* file)
@@ -497,23 +872,11 @@ bool ConsoleManager::hasDataAvailable(File* file)
     if(!file)
         return false;
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
-
-    // If there's data in the line buffer, we're able to read
-    if(pFile->m_Flags & ConsoleManager::LCookedMode)
-        if(pFile->m_LineBufferSize)
-            return true;
-
-    // But otherwise, check via more conventional means
-    return static_cast<bool>(pFile->m_pBackEnd->addRequest(1,CONSOLE_DATA_AVAILABLE, pFile->m_Param));
+    return pFile->select(false, 0);
 }
 
 void ConsoleManager::flush(File *file)
 {
-    if(!file)
-        return;
-
-    ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
-    static_cast<bool>(pFile->m_pBackEnd->addRequest(1, CONSOLE_FLUSH, pFile->m_Param));
 }
 
 static void initConsole()

@@ -21,6 +21,7 @@
 #include <vfs/Filesystem.h>
 #include <utilities/RequestQueue.h>
 #include <utilities/Vector.h>
+#include <utilities/RingBuffer.h>
 #include <Spinlock.h>
 
 #define CONSOLE_READ    1
@@ -33,6 +34,9 @@
 
 #define LINEBUFFER_MAXIMUM 2048
 
+#define PTY_BUFFER_SIZE     32768
+
+
 #define DEFAULT_FLAGS  (ConsoleManager::OPostProcess | \
                         ConsoleManager::IMapCRToNL | \
                         ConsoleManager::OMapNLToCRNL | \
@@ -41,52 +45,104 @@
                         ConsoleManager::LEchoKill | \
                         ConsoleManager::LCookedMode)
 
-/** This lets a Console become a first-class citizen of the VFS,
- * which means it can integrate seamlessly into select() calls
- * and support a clean interface.
- */
+class ConsoleManager;
+class ConsoleMasterFile;
+class ConsoleSlaveFile;
+
 class ConsoleFile : public File
 {
-private:
-    /** Copy constructors are hidden - (mostly) unimplemented (or invalid)! */
-    File& operator =(const File&);
+    friend class ConsoleMasterFile;
+    friend class ConsoleSlaveFile;
+    friend class ConsoleManager;
 
-    ConsoleFile(const ConsoleFile &file);
-    ConsoleFile& operator =(const ConsoleFile &file);
+    public:
+        ConsoleFile(String consoleName, Filesystem *pFs);
+        virtual ~ConsoleFile()
+        {}
 
-    virtual uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
-    virtual uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+        virtual uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true) = 0;
+        virtual uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true) = 0;
 
-    /// Small hack: call truncate to redraw the console
-    virtual void truncate();
+    protected:
 
+        /// select - check and optionally for a particular state.
+        int select(bool bWriting, int timeout);
 
-public:
-    ConsoleFile(String consoleName, Filesystem *pFs);
-    virtual ~ConsoleFile()
-    {}
+        /// inject - inject bytes into the ring buffer
+        void inject(char *buf, size_t len)
+        {
+            m_RingBuffer.write(buf, len);
+            dataChanged();
+        }
 
-    void dataIsReady()
-    {
-        dataChanged();
-    }
+        /// Other side of the console.
+        ConsoleFile *m_pOther;
 
-    /** Similar to POSIX's select() function */
-    virtual int select(bool bWriting = false, int timeout = 0);
+        size_t m_Flags;
 
-    String m_Name;
-    RequestQueue *m_pBackEnd;
-    uintptr_t m_Param;
-    size_t m_Flags;
+    private:
 
-    /** Input line buffer (for canonical mode) */
-    uint8_t m_LineBuffer[LINEBUFFER_MAXIMUM];
+        RingBuffer<char> m_RingBuffer;
+        String m_Name;
 
-    /** Size of the input line buffer */
-    size_t m_LineBufferSize;
+};
 
-    /** Location of the first newline in the line buffer. ~0 if none present. */
-    size_t m_LineBufferFirstNewline;
+class ConsoleMasterFile : public ConsoleFile
+{
+    public:
+        ConsoleMasterFile(String consoleName, Filesystem *pFs);
+        virtual ~ConsoleMasterFile()
+        {}
+
+        virtual uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+        virtual uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+
+        void setOther(ConsoleFile *pOther)
+        {
+            m_pOther = pOther;
+            m_Flags = pOther->m_Flags;
+        }
+
+        /// Is this master locked (ie, already opened)?
+        bool bLocked;
+
+    private:
+
+        /// Input line discipline
+        void inputLineDiscipline(char *buf, size_t len);
+
+        /// Output line discipline
+        size_t outputLineDiscipline(char *buf, size_t len);
+
+        /// Input line buffer.
+        char m_LineBuffer[LINEBUFFER_MAXIMUM];
+
+        /// Size of the input line buffer.
+        size_t m_LineBufferSize;
+
+        /// Location of the first newline in the line buffer. ~0 if none.
+        size_t m_LineBufferFirstNewline;
+};
+
+class ConsoleSlaveFile : public ConsoleFile
+{
+    public:
+        ConsoleSlaveFile(String consoleName, Filesystem *pFs);
+        virtual ~ConsoleSlaveFile()
+        {}
+
+        virtual uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+        virtual uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+
+        void setOther(ConsoleFile *pOther)
+        {
+            m_pOther = pOther;
+        }
+
+    private:
+
+        /// Input processing.
+        size_t processInput(char *buf, size_t len);
 };
 
 /** This class provides a way for consoles (TTYs) to be created to interact with applications.
@@ -138,6 +194,15 @@ public:
 
     File* getConsole(String consoleName);
     ConsoleFile *getConsoleFile(RequestQueue *pBackend);
+
+    /// Acquire a console master in such a way that it cannot be opened by another process.
+    bool lockConsole(File *file);
+
+    /// Release a console master locked as above.
+    void unlockConsole(File *file);
+
+    /// Create a new console - /dev/ptyXY -> /dev/ttyXY, where X is @c and Y is @i.
+    void newConsole(char c, size_t i);
 
     bool isConsole(File* file);
 

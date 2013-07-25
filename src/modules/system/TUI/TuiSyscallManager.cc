@@ -58,6 +58,7 @@ uintptr_t TuiSyscallManager::call(uintptr_t function, uintptr_t p1, uintptr_t p2
 
 uintptr_t TuiSyscallManager::syscall(SyscallState &state)
 {
+#if 0
     uintptr_t p1 = state.getSyscallParameter(0);
     uintptr_t p2 = state.getSyscallParameter(1);
     uintptr_t p3 = state.getSyscallParameter(2);
@@ -155,6 +156,7 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
         }
         default: ERROR ("TuiSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber() << Hex); return 0;
     }
+#endif
     return 0;
 }
 
