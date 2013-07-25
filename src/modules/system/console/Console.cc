@@ -97,6 +97,9 @@ uint64_t ConsoleMasterFile::write(uint64_t location, uint64_t size, uintptr_t bu
 
 void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
 {
+    // Make sure we always have the latest flags from the slave.
+    m_Flags = m_pOther->m_Flags;
+
     // Handle temios local modes
     if(m_Flags & (ConsoleManager::LCookedMode|ConsoleManager::LEcho))
     {
@@ -242,6 +245,9 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
 
 size_t ConsoleMasterFile::outputLineDiscipline(char *buf, size_t len)
 {
+    // Make sure we always have the latest flags from the slave.
+    m_Flags = m_pOther->m_Flags;
+
     // Post-process output if enabled.
     if(m_Flags & (ConsoleManager::OPostProcess))
     {
