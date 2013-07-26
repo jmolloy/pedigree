@@ -374,8 +374,16 @@ void PosixSubsystem::exit(int code)
             }
 
             // Set the new leader
-            pNewLeader->setGroupMembership(PosixProcess::Leader);
-            pGroup->Leader = pNewLeader;
+            if(pNewLeader)
+            {
+                pNewLeader->setGroupMembership(PosixProcess::Leader);
+                pGroup->Leader = pNewLeader;
+            }
+            else
+            {
+                // No new leader! Destroy the group, we're the last process in it.
+                delete pGroup;
+            }
         }
     }
 
