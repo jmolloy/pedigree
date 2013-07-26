@@ -133,9 +133,20 @@ int console_getwinsize(File* file, winsize_t *buf)
     // Error - not a TTY.
     return -1;
   }
-  buf->ws_row = ConsoleManager::instance().getRows(file);
-  buf->ws_col = ConsoleManager::instance().getCols(file);
-  return 0;
+
+  return ConsoleManager::instance().getWindowSize(file, &buf->ws_row, &buf->ws_col);
+}
+
+int console_setwinsize(File *file, const winsize_t *buf)
+{
+  if (!ConsoleManager::instance().isConsole(file))
+  {
+    // Error - not a TTY.
+    return -1;
+  }
+
+  /// \todo Send SIGWINCH to foreground process group (once we have one)
+  return ConsoleManager::instance().setWindowSize(file, buf->ws_row, buf->ws_col);
 }
 
 int console_flush(File *file, void *what)

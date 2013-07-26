@@ -24,7 +24,8 @@ ConsoleManager ConsoleManager::m_Instance;
 
 ConsoleFile::ConsoleFile(String consoleName, Filesystem *pFs) :
     File(consoleName, 0, 0, 0, 0xdeadbeef, pFs, 0, 0),
-    m_Flags(DEFAULT_FLAGS), m_Name(consoleName), m_RingBuffer(PTY_BUFFER_SIZE)
+    m_Flags(DEFAULT_FLAGS), m_Name(consoleName), m_RingBuffer(PTY_BUFFER_SIZE),
+    m_Rows(25), m_Cols(80)
 {
 }
 
@@ -846,18 +847,24 @@ void ConsoleFile::truncate()
 }
 #endif
 
-int ConsoleManager::getCols(File* file)
+int ConsoleManager::getWindowSize(File *file, unsigned short *rows, unsigned short *cols)
 {
     if(!file)
-        return 0;
-    return 80;
+        return -1;
+    ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
+    *rows = pFile->m_Rows;
+    *cols = pFile->m_Cols;
+    return 0;
 }
 
-int ConsoleManager::getRows(File* file)
+int ConsoleManager::setWindowSize(File *file, unsigned short rows, unsigned short cols)
 {
     if(!file)
-        return 0;
-    return 25;
+        return false;
+    ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
+    pFile->m_Rows = rows;
+    pFile->m_Cols = cols;
+    return 0;
 }
 
 bool ConsoleManager::hasDataAvailable(File* file)

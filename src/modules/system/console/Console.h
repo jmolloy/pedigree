@@ -80,6 +80,9 @@ class ConsoleFile : public File
 
         size_t m_Flags;
 
+        unsigned short m_Rows;
+        unsigned short m_Cols;
+
     private:
 
         RingBuffer<char> m_RingBuffer;
@@ -208,8 +211,8 @@ public:
 
     void setAttributes(File* file, size_t flags);
     void getAttributes(File* file, size_t *flags);
-    int  getCols(File* file);
-    int  getRows(File* file);
+    int getWindowSize(File *file, unsigned short *rows, unsigned short *cols);
+    int setWindowSize(File *file, unsigned short rows, unsigned short cols);
     bool hasDataAvailable(File* file);
     void flush(File *file);
 

@@ -964,6 +964,13 @@ int posix_ioctl(int fd, int command, void *buf)
             return console_getwinsize(f->file, reinterpret_cast<winsize_t*>(buf));
         }
 
+        case TIOCSWINSZ:
+        {
+            const winsize_t *ws = reinterpret_cast<const winsize_t*>(buf);
+            F_NOTICE(" -> TIOCSWINSZ " << Dec << ws->ws_col << "x" << ws->ws_row << Hex);
+            return console_setwinsize(f->file, ws);
+        }
+
         case TIOCFLUSH:
         {
             return console_flush(f->file, buf);
