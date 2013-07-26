@@ -2248,3 +2248,72 @@ void _free_r(struct _reent *ptr, void *p)
 {
     free(p);
 }
+
+int posix_openpt(int oflag)
+{
+    int master = 0;
+    char name[16] = {0};
+    const char *x, *y;
+
+    oflag &= O_RDWR | O_NOCTTY;
+
+    strcpy(name, "/dev/ptyXX");
+    for(x = "pqrstuvwxyzabcde"; *x; ++x)
+    {
+        for(y = "0123456789abcdef"; *y; ++y)
+        {
+            name[8] = *x;
+            name[9] = *y;
+
+            master = open(name, oflag);
+            if(master >= 0)
+                return master;
+            else if(errno == ENOENT)
+            {
+                // Console does not exist.
+                return -1;
+            }
+            else
+                continue; // Console already used.
+        }
+    }
+
+    errno = EAGAIN;
+    return -1;
+}
+
+int openpty(int *amaster, int *aslave, char *name, const struct termios *termp, const struct winsize *winp)
+{
+    if(!amaster)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    // Grab the pty master.
+    *amaster = posix_openpt(O_RDWR);
+    if(aslave)
+    {
+        // Grab the slave name (ttyname will just return the master name).
+        // We don't assume BSD or UNIX 98 psuedo-terminals here.
+        char *slavename = ptsname(*amaster);
+        *aslave = open(slavename, O_RDWR | O_NOCTTY);
+        if(name)
+            strcpy(name, slavename);
+    }
+
+    if(termp)
+    {
+        // Set the attributes of the terminal.
+        tcsetattr(*aslave, TCSANOW, termp);
+    }
+
+    if(winp)
+    {
+        // Set the size of the terminal to the requested size.
+        ioctl(*amaster, TIOCSWINSZ, winp);
+    }
+
+    return 0;
+}
+

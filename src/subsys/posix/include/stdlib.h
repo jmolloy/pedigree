@@ -60,6 +60,7 @@ extern __IMPORT int __mb_cur_max;
 #define MB_CUR_MAX __mb_cur_max
 
 char *_EXFUN(ptsname,(int));
+int _EXFUN(posix_openpt,(int));
 
 _VOID	_EXFUN(abort,(_VOID) _ATTRIBUTE ((noreturn)));
 int	_EXFUN(abs,(int));
