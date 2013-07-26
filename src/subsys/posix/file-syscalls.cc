@@ -105,7 +105,8 @@ int posix_open(const char *name, int flags, int mode)
       return -1;
     }
 
-    F_NOTICE("open(" << name << ", " << ((mode & O_RDWR) ? "O_RDWR" : "") << ((mode & O_RDONLY) ? "O_RDONLY" : "") << ((mode & O_WRONLY) ? "O_WRONLY" : "") << ")");
+    F_NOTICE("open(" << name << ", " << ((flags & O_RDWR) ? "O_RDWR" : "") << ((flags & O_RDONLY) ? "O_RDONLY" : "") << ((flags & O_WRONLY) ? "O_WRONLY" : "") << ")");
+    F_NOTICE("  -> actual flags " << flags);
     
     // One of these three must be specified
     /// \bug Breaks /dev/tty open in crt0
@@ -144,7 +145,10 @@ int posix_open(const char *name, int flags, int mode)
     {
         file = pProcess->getCtty();
         if (!file)
+        {
+            WARNING("/dev/tty falling back to NullFs");
             file = NullFs::instance().getFile();
+        }
     }
     else if (!strncmp("/dev/pty", name, 8))
     {
@@ -175,7 +179,7 @@ int posix_open(const char *name, int flags, int mode)
         }
 
         // Set the terminal as the new controlling terminal, if needed.
-        if(!(mode & O_NOCTTY))
+        if(!(flags & O_NOCTTY))
         {
             pProcess->setCtty(file);
         }
