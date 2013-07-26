@@ -380,10 +380,16 @@ struct dirent *readdir(DIR *dir)
     if (!dir)
         return 0;
 
+    int old_errno = errno;
+
     if (syscall2(POSIX_READDIR, dir->fd, (long)&dir->ent) != -1)
         return &dir->ent;
     else
+    {
+        if(!errno)
+            errno = old_errno; // End of directory: errno unchanged.
         return 0;
+    }
 }
 
 void rewinddir(DIR *dir)
