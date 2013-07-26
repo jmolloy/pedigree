@@ -60,17 +60,15 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
 
     strcpy(m_pName, pName);
 
-    // Find a console, open it.
-    char fname[16] = {0};
-    /// \todo actually loop mmk
-    sprintf(fname, "/dev/ptyp0");
-
-    m_MasterPty = open(fname, O_RDWR);
+    m_MasterPty = posix_openpt(O_RDWR);
     if(m_MasterPty < 0)
     {
         syslog(LOG_INFO, "TUI: Couldn't create terminal: %s", strerror(errno));
         return;
     }
+
+    char slavename[16] = {0};
+    strcpy(slavename, ptsname(m_MasterPty));
 
 #ifndef NEW_XTERM
     m_pXterm = new Xterm(0, nWidth, nHeight, m_OffsetLeft, m_OffsetTop, this);
@@ -103,7 +101,7 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
         close(2);
 
         // Open the slave terminal, this will also set it as our ctty
-        int slave = open("/dev/ttyp0", O_RDWR);
+        int slave = open(slavename, O_RDWR);
         dup2(slave, 1);
         dup2(slave, 2);
 
