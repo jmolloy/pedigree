@@ -162,3 +162,60 @@ int console_flush(File *file, void *what)
   return 0;
 }
 
+void console_ptsname(int fd, char *buf)
+{
+  // Lookup this process.
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for one or both of the processes!");
+      return;
+  }
+
+  FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
+  if (!pFd)
+  {
+    // Error - no such file descriptor.
+    return;
+  }
+
+  if (!ConsoleManager::instance().isConsole(pFd->file))
+  {
+    // Error - not a TTY.
+    return;
+  }
+
+  File *slave = ConsoleManager::instance().getOther(pFd->file);
+
+  /// \todo Check if this is actually a master.
+  sprintf(buf, "/dev/%s", static_cast<const char *>(slave->getName()));
+}
+
+void console_ttyname(int fd, char *buf)
+{
+  // Lookup this process.
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+  if(!pSubsystem)
+  {
+      ERROR("No subsystem for one or both of the processes!");
+      return;
+  }
+
+  FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
+  if (!pFd)
+  {
+    // Error - no such file descriptor.
+    return;
+  }
+
+  if (!ConsoleManager::instance().isConsole(pFd->file))
+  {
+    // Error - not a TTY.
+    return;
+  }
+
+  /// \todo Check if this is actually a master.
+  sprintf(buf, "/dev/%s", static_cast<const char *>(pFd->file->getName()));
+}

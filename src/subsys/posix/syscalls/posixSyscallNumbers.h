@@ -178,4 +178,7 @@
 
 #define POSIX_GETPEERNAME       123
 
+#define POSIX_PTSNAME           200
+#define POSIX_TTYNAME           201
+
 #endif

@@ -216,6 +216,8 @@ public:
     bool hasDataAvailable(File* file);
     void flush(File *file);
 
+    File *getOther(File *file);
+
     //
     // Filesystem interface.
     //

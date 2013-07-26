@@ -879,6 +879,14 @@ void ConsoleManager::flush(File *file)
 {
 }
 
+File *ConsoleManager::getOther(File *file)
+{
+    if(!file)
+        return false;
+    ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
+    return pFile->m_pOther;
+}
+
 static void initConsole()
 {
 }

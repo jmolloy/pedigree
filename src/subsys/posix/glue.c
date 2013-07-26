@@ -2181,8 +2181,17 @@ int unlockpt(int fildes)
 
 char *ptsname(int fildes)
 {
-    STUBBED("ptsname");
-    static char *ret = "[fake]";
+    static char ret[256] = {0};
+    ret[0] = 0;
+    syscall2(POSIX_PTSNAME, fildes, (long) ret);
+    return ret;
+}
+
+char *ttyname(int fildes)
+{
+    static char ret[256] = {0};
+    ret[0] = 0;
+    syscall2(POSIX_TTYNAME, fildes, (long) ret);
     return ret;
 }
 
