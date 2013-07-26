@@ -72,6 +72,7 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
         "mallinfor",
         "malloptr",
         "mallstatsr",
+        "ttyname",
     ]
 
     for i in objs_to_remove:
