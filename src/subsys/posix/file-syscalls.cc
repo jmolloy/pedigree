@@ -163,7 +163,7 @@ int posix_open(const char *name, int flags, int mode)
 
         if(!ConsoleManager::instance().lockConsole(file))
         {
-            SYSCALL_ERROR(Already);
+            SYSCALL_ERROR(NoMoreProcesses);
             return -1;
         }
     }
@@ -285,7 +285,7 @@ int posix_open(const char *name, int flags, int mode)
 
     if(file)
     {
-      FileDescriptor *f = new FileDescriptor(file, (flags & O_APPEND) ? file->getSize() : 0, fd, 0, flags | mode);
+      FileDescriptor *f = new FileDescriptor(file, (flags & O_APPEND) ? file->getSize() : 0, fd, 0, flags);
       if(f)
         pSubsystem->addFileDescriptor(fd, f);
     }
