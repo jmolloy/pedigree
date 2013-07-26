@@ -181,8 +181,11 @@ int posix_open(const char *name, int flags, int mode)
         // Set the terminal as the new controlling terminal, if needed.
         if(!(flags & O_NOCTTY))
         {
+            NOTICE("Setting " << desired << " as ctty");
             pProcess->setCtty(file);
         }
+        else
+            NOTICE("Not setting as CTTY because O_NOCTTY was set.");
     }
     else if (!strcmp(name, "/dev/urandom"))
     {

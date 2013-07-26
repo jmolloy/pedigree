@@ -120,7 +120,8 @@ int main(int argc, char **argv)
     // impossible to get out. Everything else I've tried does not work...
     fclose(stdin);
     int fd = open("/dev/tty", 0);
-    dup2(fd, 0);
+    if(fd != 0)
+        dup2(fd, 0);
     stdin = fdopen(fd, "r");
 
     // Get username
