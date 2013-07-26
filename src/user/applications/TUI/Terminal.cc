@@ -23,6 +23,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <termios.h>
+#include <sys/ioctl.h>
 
 #include <graphics/Graphics.h>
 
@@ -87,6 +89,11 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
     m_pXterm = new Vt100(mode, reinterpret_cast<uint8_t*>(m_pBuffer)+nWidth*offsetTop);
 #endif
 
+    struct winsize ptySize;
+    ptySize.ws_row = m_pXterm->getRows();
+    ptySize.ws_col = m_pXterm->getCols();
+    ioctl(m_MasterPty, TIOCSWINSZ, &ptySize);
+
     // Fire up a shell session.
     int pid = m_Pid = fork();
     if (pid == 0)
@@ -97,8 +104,8 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
 
         // Open the slave terminal, this will also set it as our ctty
         int slave = open("/dev/ttyp0", O_RDWR);
-        dup(slave);
-        dup(slave);
+        dup2(slave, 1);
+        dup2(slave, 2);
 
         execl("/applications/login", "/applications/login", 0);
         syslog(LOG_ALERT, "Launching login failed (next line is the error in errno...)");
@@ -122,6 +129,12 @@ Terminal::~Terminal()
 void Terminal::renewBuffer(size_t nWidth, size_t nHeight)
 {
     m_pXterm->resize(nWidth, nHeight, 0);
+
+    /// \todo Send SIGWINCH in console layer.
+    struct winsize ptySize;
+    ptySize.ws_row = m_pXterm->getRows();
+    ptySize.ws_col = m_pXterm->getCols();
+    ioctl(m_MasterPty, TIOCSWINSZ, &ptySize);
 }
 
 void Terminal::addToQueue(uint64_t key)
