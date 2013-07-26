@@ -332,6 +332,18 @@ int posix_read(int fd, char *ptr, int len)
     // Are we allowed to block?
     bool canBlock = !((pFd->flflags & O_NONBLOCK) == O_NONBLOCK);
 
+    // Handle async descriptor that is not ready for reading.
+    // File::read has no mechanism for presenting such an error, other than
+    // returning 0. However, a read() returning 0 is an EOF condition.
+    if(!canBlock)
+    {
+        if(!pFd->file->select(false, 0))
+        {
+            SYSCALL_ERROR(NoMoreProcesses);
+            return -1;
+        }
+    }
+
     uint64_t nRead = 0;
     if (ptr && len)
     {
