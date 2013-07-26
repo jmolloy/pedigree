@@ -852,8 +852,9 @@ int ConsoleManager::getWindowSize(File *file, unsigned short *rows, unsigned sho
     if(!file)
         return -1;
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
-    *rows = pFile->m_Rows;
-    *cols = pFile->m_Cols;
+    /// \todo don't return from other if this is a master.
+    *rows = pFile->m_pOther->m_Rows;
+    *cols = pFile->m_pOther->m_Cols;
     return 0;
 }
 
@@ -862,6 +863,7 @@ int ConsoleManager::setWindowSize(File *file, unsigned short rows, unsigned shor
     if(!file)
         return false;
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
+    /// \todo error or set master if this is a slave.
     pFile->m_Rows = rows;
     pFile->m_Cols = cols;
     return 0;
