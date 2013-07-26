@@ -1002,12 +1002,18 @@ int posix_ioctl(int fd, int command, void *buf)
             {
                 int a = *reinterpret_cast<int *>(buf);
                 if (a)
-                    f->flflags = O_NONBLOCK;
+                {
+                    F_NOTICE("  -> set non-blocking");
+                    f->flflags |= O_NONBLOCK;
+                }
                 else
-                    f->flflags ^= O_NONBLOCK;
+                {
+                    F_NOTICE("  -> set blocking");
+                    f->flflags &= ~O_NONBLOCK;
+                }
             }
             else
-                f->flflags = 0;
+                f->flflags &= ~O_NONBLOCK;
 
             return 0;
         }
@@ -1218,9 +1224,12 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
             f->fdflags = args[0];
             return 0;
         case F_GETFL:
+            F_NOTICE("  -> get flags " << f->flflags);
             return f->flflags;
         case F_SETFL:
-            f->flflags = args[0];
+            F_NOTICE("  -> set flags " << args[0]);
+            f->flflags = args[0] & (O_APPEND | O_NONBLOCK);
+            F_NOTICE("  -> new flags " << f->flflags);
             return 0;
         case F_GETLK: // Get record-locking information
         case F_SETLK: // Set or clear a record lock (without blocking
