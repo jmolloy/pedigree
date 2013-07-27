@@ -24,6 +24,21 @@
 
 class PosixProcess;
 
+class PosixSession
+{
+    public:
+        PosixSession() : Leader(0)
+        {
+        }
+
+        virtual ~PosixSession()
+        {
+        }
+
+        /** Session leader. */
+        PosixProcess *Leader;
+};
+
 class ProcessGroup
 {
     public:
@@ -71,21 +86,42 @@ class PosixProcess : public Process
         };
 
         PosixProcess() :
-            Process(), m_pProcessGroup(0), m_GroupMembership(NoGroup)
+            Process(), m_pSession(0), m_pProcessGroup(0), m_GroupMembership(NoGroup)
         {};
 
-        /** Copy constructor. Newly forked processes will call setpgid in order to set their
-         *  affiliation, and if not, they're not given a process group.
-         */
+        /** Copy constructor. */
         PosixProcess(Process *pParent) :
-            Process(pParent), m_pProcessGroup(0), m_GroupMembership(NoGroup)
-        {};
+            Process(pParent), m_pSession(0), m_pProcessGroup(0), m_GroupMembership(Member)
+        {
+            if(pParent->getType() == Posix)
+            {
+                PosixProcess *pPosixParent = static_cast<PosixProcess *>(pParent);
+                m_pSession = pPosixParent->m_pSession;
+                setProcessGroup(pPosixParent->getProcessGroup());
+                setGroupMembership(Member);
+            }
+        };
 
         virtual ~PosixProcess()
         {};
 
         void setProcessGroup(ProcessGroup *newGroup)
         {
+            // Remove ourselves from our existing group.
+            if(m_pProcessGroup)
+            {
+                for(List<PosixProcess*>::Iterator it = m_pProcessGroup->Members.begin();
+                    it != m_pProcessGroup->Members.end();
+                    ++it)
+                {
+                    if((*it) == this)
+                    {
+                        it = m_pProcessGroup->Members.erase(it);
+                    }
+                }
+            }
+
+            // Now join the real group.
             m_pProcessGroup = newGroup;
             if(m_pProcessGroup)
             {
@@ -109,6 +145,16 @@ class PosixProcess : public Process
             return m_GroupMembership;
         }
 
+        PosixSession *getSession()
+        {
+            return m_pSession;
+        }
+
+        void setSession(PosixSession *p)
+        {
+            m_pSession = p;
+        }
+
         virtual ProcessType getType()
         {
             return Posix;
@@ -118,6 +164,7 @@ class PosixProcess : public Process
         PosixProcess(const PosixProcess&);
         PosixProcess& operator=(const PosixProcess&);
 
+        PosixSession *m_pSession;
         ProcessGroup *m_pProcessGroup;
         Membership m_GroupMembership;
 };

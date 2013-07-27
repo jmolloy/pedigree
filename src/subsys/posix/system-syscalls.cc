@@ -984,11 +984,17 @@ int posix_setsid()
         pProcess->setProcessGroup(0);
 
         /// \todo Remove us from the list
+        /// \todo Remove others from the list!?
         if(pGroup->Members.count() <= 1) // Us or nothing
             delete pGroup;
     }
 
-    // Create the actual group itself
+    // Create the new session.
+    PosixSession *pNewSession = new PosixSession();
+    pNewSession->Leader = pProcess;
+    pProcess->setSession(pNewSession);
+
+    // Create a new process group and join it.
     ProcessGroup *pNewGroup = new ProcessGroup;
     pNewGroup->processGroupId = pProcess->getId();
     pNewGroup->Leader = pProcess;
@@ -998,7 +1004,7 @@ int posix_setsid()
     pProcess->setProcessGroup(pNewGroup);
     pProcess->setGroupMembership(PosixProcess::Leader);
 
-    NOTICE("Now part of a group [id=" << pNewGroup->processGroupId << "]!");
+    NOTICE("setsid: now part of a group [id=" << pNewGroup->processGroupId << "]!");
 
     // Success!
     return pNewGroup->processGroupId;
@@ -1006,7 +1012,82 @@ int posix_setsid()
 
 int posix_setpgid(int pid, int pgid)
 {
-    NOTICE("STUBBED setpgid");
+    // Handle invalid group ID
+    if(pgid < 0)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    // Are we already a leader of a session?
+    PosixProcess *pProcess = static_cast<PosixProcess *>(Processor::information().getCurrentThread()->getParent());
+    ProcessGroup *pGroup = pProcess->getProcessGroup();
+    PosixSession *pSession = pProcess->getSession();
+
+    // Handle zero PID and PGID.
+    if(!pid)
+    {
+        pid = pProcess->getId();
+    }
+    if(!pgid)
+    {
+        pgid = pid;
+    }
+
+    // Is this us or a child of us?
+    /// \todo pid == child, but child not in this session = EPERM
+    if(pid != pProcess->getId())
+    {
+        /// \todo We actually have no way of finding children of a process sanely.
+        SYSCALL_ERROR(PermissionDenied);
+        return 0;
+    }
+
+    if(pGroup && (pGroup->processGroupId == pgid))
+    {
+        // Already a member.
+        return 0;
+    }
+
+    if(pSession && (pSession->Leader == pProcess))
+    {
+        // Already a session leader.
+        SYSCALL_ERROR(PermissionDenied);
+        return 0;
+    }
+
+    // Does the process group exist?
+    Process *check = 0;
+    for(size_t i = 0; i < Scheduler::instance().getNumProcesses(); ++i)
+    {
+        check = Scheduler::instance().getProcess(i);
+        if(check->getType() != Process::Posix)
+            continue;
+
+        PosixProcess *posixCheck = static_cast<PosixProcess *>(check);
+        ProcessGroup *pGroupCheck = posixCheck->getProcessGroup();
+        if(pGroupCheck)
+        {
+            if(pGroupCheck->processGroupId == pgid)
+            {
+                // Join this group.
+                pProcess->setProcessGroup(pGroupCheck);
+                pProcess->setGroupMembership(PosixProcess::Member);
+                return 0;
+            }
+        }
+    }
+
+    // No, the process group does not exist. Create it.
+    ProcessGroup *pNewGroup = new ProcessGroup;
+    pNewGroup->processGroupId = pProcess->getId();
+    pNewGroup->Leader = pProcess;
+    pNewGroup->Members.clear();
+
+    // We're now a group leader - we got promoted!
+    pProcess->setProcessGroup(pNewGroup);
+    pProcess->setGroupMembership(PosixProcess::Leader);
+
     return 0;
 }
 
