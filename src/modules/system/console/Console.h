@@ -36,6 +36,7 @@
 
 #define PTY_BUFFER_SIZE     32768
 
+#define MAX_CONTROL_CHAR    13
 
 #define DEFAULT_FLAGS  (ConsoleManager::OPostProcess | \
                         ConsoleManager::IMapCRToNL | \
@@ -63,6 +64,42 @@ class ConsoleFile : public File
         virtual uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true) = 0;
         virtual uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true) = 0;
 
+        virtual bool isMaster() = 0;
+
+        void setEvent(Event *e)
+        {
+            m_pEvent = e;
+        }
+
+        /**
+         * getLast - get the most recent character we handled.
+         * This is to be used by event handlers, which will be called when
+         * a special character is handled. The event handler can then call
+         * this function to identify the character and perform the relevant
+         * processing it needs to.
+         */
+        virtual char getLast() = 0;
+
+        /**
+         * In order to ensure getLast is always the most recent charcter,
+         * the thread that wrote a special character to the input stream
+         * is put to sleep until the event handler calls this function.
+         */
+        virtual void eventComplete()
+        {
+        }
+
+        Event *getEvent() const
+        {
+            return m_pEvent;
+        }
+
+        /// Grabs the current array of control characters.
+        void getControlCharacters(char *out)
+        {
+            memcpy(out, m_ControlChars, MAX_CONTROL_CHAR);
+        }
+
     protected:
 
         /// select - check and optionally for a particular state.
@@ -79,6 +116,7 @@ class ConsoleFile : public File
         ConsoleFile *m_pOther;
 
         size_t m_Flags;
+        char m_ControlChars[MAX_CONTROL_CHAR];
 
         unsigned short m_Rows;
         unsigned short m_Cols;
@@ -88,6 +126,12 @@ class ConsoleFile : public File
         RingBuffer<char> m_RingBuffer;
         String m_Name;
 
+        /**
+         * Event to fire when an event takes place that needs action. For
+         * example, when ^C is typed. The handler for the event figures
+         * out what to do.
+         */
+        Event *m_pEvent;
 };
 
 class ConsoleMasterFile : public ConsoleFile
@@ -109,6 +153,21 @@ class ConsoleMasterFile : public ConsoleFile
         /// Is this master locked (ie, already opened)?
         bool bLocked;
 
+        virtual bool isMaster()
+        {
+            return true;
+        }
+
+        virtual char getLast()
+        {
+            return m_Last;
+        }
+
+        virtual void eventComplete()
+        {
+            m_EventTrigger.release();
+        }
+
     private:
 
         /// Input line discipline
@@ -125,6 +184,12 @@ class ConsoleMasterFile : public ConsoleFile
 
         /// Location of the first newline in the line buffer. ~0 if none.
         size_t m_LineBufferFirstNewline;
+
+        /// Character that triggered an event.
+        char m_Last;
+
+        /// Locked when we trigger an event, unlocked when eventComplete called.
+        Mutex m_EventTrigger;
 };
 
 class ConsoleSlaveFile : public ConsoleFile
@@ -140,6 +205,16 @@ class ConsoleSlaveFile : public ConsoleFile
         void setOther(ConsoleFile *pOther)
         {
             m_pOther = pOther;
+        }
+
+        virtual bool isMaster()
+        {
+            return false;
+        }
+
+        virtual char getLast()
+        {
+            return 0;
         }
 
     private:
@@ -181,7 +256,8 @@ public:
         LEchoErase     = 1024,
         LEchoKill      = 2048,
         LEchoNewline   = 4096,
-        LCookedMode    = 8192
+        LCookedMode    = 8192,
+        LGenerateEvent = 16384
     };
 
     ConsoleManager();
@@ -208,9 +284,12 @@ public:
     void newConsole(char c, size_t i);
 
     bool isConsole(File* file);
+    bool isMasterConsole(File *file);
 
     void setAttributes(File* file, size_t flags);
     void getAttributes(File* file, size_t *flags);
+    void getControlChars(File *file, void *p);
+    void setControlChars(File *file, void *p);
     int getWindowSize(File *file, unsigned short *rows, unsigned short *cols);
     int setWindowSize(File *file, unsigned short rows, unsigned short cols);
     bool hasDataAvailable(File* file);

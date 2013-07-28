@@ -57,9 +57,6 @@ int posix_tcgetattr(int fd, struct termios *p)
   size_t flags;
   ConsoleManager::instance().getAttributes(pFd->file, &flags);
 
-  memset(p->c_cc, 0, NCCS*sizeof(cc_t));
-  p->c_cc[VEOL] = '\n';
-
   p->c_iflag = ((flags&ConsoleManager::IMapNLToCR)?INLCR:0) | 
                ((flags&ConsoleManager::IMapCRToNL)?ICRNL:0) |
                ((flags&ConsoleManager::IIgnoreCR)?IGNCR:0) |
@@ -74,6 +71,14 @@ int posix_tcgetattr(int fd, struct termios *p)
       ((flags&ConsoleManager::LEchoKill)?ECHOK:0) |
       ((flags&ConsoleManager::LEchoNewline)?ECHONL:0) |
       ((flags&ConsoleManager::LCookedMode)?ICANON:0);
+
+  char controlChars[MAX_CONTROL_CHAR] = {0};
+  ConsoleManager::instance().getControlChars(pFd->file, controlChars);
+
+  // c_cc is of type cc_t, but we don't want to expose that type to ConsoleManager.
+  // By doing this conversion, we can use whatever type we like in the kernel.
+  for(size_t i = 0; i < NCCS; ++i)
+      p->c_cc[i] = controlChars[i];
 
   F_NOTICE("posix_tcgetattr returns {c_iflag=" << p->c_iflag << ", c_oflag=" << p->c_oflag << ", c_lflag=" << p->c_lflag << "} )");
   return 0;
@@ -119,9 +124,15 @@ int posix_tcsetattr(int fd, int optional_actions, struct termios *p)
   if (p->c_lflag&ECHOK)  flags |= ConsoleManager::LEchoKill;
   if (p->c_lflag&ECHONL) flags |= ConsoleManager::LEchoNewline;
   if (p->c_lflag&ICANON) flags |= ConsoleManager::LCookedMode;
+  if (p->c_lflag&ISIG)   flags |= ConsoleManager::LGenerateEvent;
   NOTICE("TCSETATTR: " << Hex << flags);
   /// \todo Sanity checks.
   ConsoleManager::instance().setAttributes(pFd->file, flags);
+
+  char controlChars[MAX_CONTROL_CHAR] = {0};
+  for(size_t i = 0; i < NCCS; ++i)
+    controlChars[i] = p->c_cc[i];
+  ConsoleManager::instance().setControlChars(pFd->file, controlChars);
 
   return 0;
 }

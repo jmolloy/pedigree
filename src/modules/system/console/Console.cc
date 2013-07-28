@@ -20,13 +20,41 @@
 
 #include <process/Scheduler.h>
 
+// c_cc array indices, and their default character.
+#define VEOF        4 // 0x04
+#define VEOL        5 // 0x00
+#define VERASE      2 // 0x08
+#define VINTR       0 // 0x03
+#define VKILL       3 // 0x15
+#define VQUIT       1 // 0x1C
+#define VSTART      11 // 0x11
+#define VSTOP       12 // 0x13
+#define VSUSP       10 // 0x1A
+
+static const char defaultControl[MAX_CONTROL_CHAR] = {
+    0x03, // VINTR
+    0x1C, // VQUIT
+    0x08, // VERASE
+    0x15, // VKILL
+    0x04, // VEOF
+    0x00, // VEOL
+    0x00, // 6
+    0x00, // 7
+    0x00, // 8
+    0x00, // 9
+    0x1A, // VSUSP
+    0x11, // VSTART
+    0x13, // VSTOP
+};
+
 ConsoleManager ConsoleManager::m_Instance;
 
 ConsoleFile::ConsoleFile(String consoleName, Filesystem *pFs) :
     File(consoleName, 0, 0, 0, 0xdeadbeef, pFs, 0, 0),
-    m_Flags(DEFAULT_FLAGS), m_Name(consoleName), m_RingBuffer(PTY_BUFFER_SIZE),
-    m_Rows(25), m_Cols(80)
+    m_Flags(DEFAULT_FLAGS), m_Rows(25), m_Cols(80),
+    m_RingBuffer(PTY_BUFFER_SIZE), m_Name(consoleName), m_pEvent(0)
 {
+    memcpy(m_ControlChars, defaultControl, MAX_CONTROL_CHAR);
 }
 
 int ConsoleFile::select(bool bWriting, int timeout)
@@ -47,7 +75,7 @@ int ConsoleFile::select(bool bWriting, int timeout)
 
 ConsoleMasterFile::ConsoleMasterFile(String consoleName, Filesystem *pFs) :
     ConsoleFile(consoleName, pFs), bLocked(false), m_LineBuffer(), m_LineBufferSize(0),
-    m_LineBufferFirstNewline(~0)
+    m_LineBufferFirstNewline(~0), m_Last(0), m_EventTrigger(true)
 {
 }
 
@@ -95,10 +123,11 @@ uint64_t ConsoleMasterFile::write(uint64_t location, uint64_t size, uintptr_t bu
 void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
 {
     // Make sure we always have the latest flags from the slave.
-    m_Flags = m_pOther->m_Flags;
+    size_t slaveFlags = m_pOther->m_Flags;
+    const char *slaveControlChars = m_pOther->m_ControlChars;
 
     // Handle temios local modes
-    if(m_Flags & (ConsoleManager::LCookedMode|ConsoleManager::LEcho))
+    if(slaveFlags & (ConsoleManager::LCookedMode|ConsoleManager::LEcho))
     {
         // Whether or not the application buffer has already been filled
         bool bAppBufferComplete = false;
@@ -113,17 +142,23 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
             for(size_t i = 0; i < len; i++)
             {
                 // Handle incoming newline
-                if(buf[i] == '\r')
+                bool isCanonical = (slaveFlags & ConsoleManager::LCookedMode);
+                if(
+                        (buf[i] == '\r') ||
+                        (isCanonical && (
+                            (slaveControlChars[VEOL] && buf[i] == slaveControlChars[VEOL]) ||
+                            (slaveControlChars[VEOF] && buf[i] == slaveControlChars[VEOF])
+                        )))
                 {
                     // LEcho - output the newline. LCookedMode - handle line buffer.
-                    if((m_Flags & ConsoleManager::LEcho) || (m_Flags & ConsoleManager::LCookedMode))
+                    if((slaveFlags & ConsoleManager::LEcho) || (slaveFlags & ConsoleManager::LCookedMode))
                     {
                         // Only echo the newline if we are supposed to
                         m_LineBuffer[m_LineBufferSize++] = '\n';
-                        if((m_Flags & ConsoleManager::LEchoNewline) || (m_Flags & ConsoleManager::LEcho))
+                        if((slaveFlags & ConsoleManager::LEchoNewline) || (slaveFlags & ConsoleManager::LEcho))
                             m_RingBuffer.write('\n');
 
-                        if((m_Flags & ConsoleManager::LCookedMode) && !bAppBufferComplete)
+                        if((slaveFlags & ConsoleManager::LCookedMode) && !bAppBufferComplete)
                         {
                             // Transmit full buffer to slave.
                             size_t realSize = m_LineBufferSize;
@@ -146,12 +181,12 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
                             // The buffer has been filled!
                             bAppBufferComplete = true;
                         }
-                        else if((m_Flags & ConsoleManager::LCookedMode) && (m_LineBufferFirstNewline == ~0UL))
+                        else if((slaveFlags & ConsoleManager::LCookedMode) && (m_LineBufferFirstNewline == ~0UL))
                         {
                             // Application buffer has already been filled, let future runs know where the limit is
                             m_LineBufferFirstNewline = m_LineBufferSize - 1;
                         }
-                        else if(!(m_Flags & ConsoleManager::LCookedMode))
+                        else if(!(slaveFlags & ConsoleManager::LCookedMode))
                         {
                             // Inject this byte into the slave...
                             destBuff[destBuffOffset++] = buf[i];
@@ -162,17 +197,17 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
                             i++;
                     }
                 }
-                else if(buf[i] == '\x08')
+                else if(buf[i] == m_ControlChars[VERASE])
                 {
-                    if(m_Flags & (ConsoleManager::LCookedMode|ConsoleManager::LEchoErase))
+                    if(slaveFlags & (ConsoleManager::LCookedMode|ConsoleManager::LEchoErase))
                     {
-                        if((m_Flags & ConsoleManager::LCookedMode) && m_LineBufferSize)
+                        if((slaveFlags & ConsoleManager::LCookedMode) && m_LineBufferSize)
                         {
                             char ctl[3] = {'\x08', ' ', '\x08'};
                             m_RingBuffer.write(ctl, 3);
                             m_LineBufferSize--;
                         }
-                        else if((!(m_Flags & ConsoleManager::LCookedMode)) && destBuffOffset)
+                        else if((!(slaveFlags & ConsoleManager::LCookedMode)) && destBuffOffset)
                         {
                             char ctl[3] = {'\x08', ' ', '\x08'};
                             m_RingBuffer.write(ctl, 3);
@@ -180,25 +215,35 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
                         }
                     }
                 }
-                else if(buf[i] < 0x1F)
-                {
-                    /*
-                    if(readBuffer[i] == 0x3)
-                    {
-                        Process *p = Processor::information().getCurrentThread()->getParent();
-                        p->getSubsystem()->kill(Subsystem::Interrupted);
-                    }
-                    */
-                }
                 else
                 {
-                    // Write the character to the console
-                    /// \todo ISIG handling, special characters
-                    if(m_Flags & ConsoleManager::LEcho)
+                    // ISIG?
+                    if(slaveFlags & ConsoleManager::LGenerateEvent)
+                    {
+                        if(buf[i] && (
+                            buf[i] == slaveControlChars[VINTR] ||
+                            buf[i] == slaveControlChars[VQUIT] ||
+                            buf[i] == slaveControlChars[VSUSP]))
+                        {
+                            Thread *pThread = Processor::information().getCurrentThread();
+                            if(m_pEvent)
+                            {
+                                m_Last = buf[i];
+                                pThread->sendEvent(m_pEvent);
+
+                                // Note that we do not release the mutex here.
+                                m_EventTrigger.acquire();
+                                continue;
+                            }
+                        }
+                    }
+
+                    // Write the character to the slave
+                    if(slaveFlags & ConsoleManager::LEcho)
                         m_RingBuffer.write(buf[i]);
 
                     // Add to the buffer
-                    if(m_Flags & ConsoleManager::LCookedMode)
+                    if(slaveFlags & ConsoleManager::LCookedMode)
                         m_LineBuffer[m_LineBufferSize++] = buf[i];
                     else
                     {
@@ -243,10 +288,10 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
 size_t ConsoleMasterFile::outputLineDiscipline(char *buf, size_t len)
 {
     // Make sure we always have the latest flags from the slave.
-    m_Flags = m_pOther->m_Flags;
+    size_t slaveFlags = m_pOther->m_Flags;
 
     // Post-process output if enabled.
-    if(m_Flags & (ConsoleManager::OPostProcess))
+    if(slaveFlags & (ConsoleManager::OPostProcess))
     {
         char *tmpBuff = new char[len];
         size_t realSize = len;
@@ -257,14 +302,14 @@ size_t ConsoleMasterFile::outputLineDiscipline(char *buf, size_t len)
             bool bInsert = true;
 
             // OCRNL: Map CR to NL on output
-            if (pC[j] == '\r' && (m_Flags & ConsoleManager::OMapCRToNL))
+            if (pC[j] == '\r' && (slaveFlags & ConsoleManager::OMapCRToNL))
             {
                 tmpBuff[i++] = '\n';
                 continue;
             }
 
             // ONLCR: Map NL to CR-NL on output
-            else if (pC[j] == '\n' && (m_Flags & ConsoleManager::OMapNLToCRNL))
+            else if (pC[j] == '\n' && (slaveFlags & ConsoleManager::OMapNLToCRNL))
             {
                 realSize++;
                 char *newBuff = new char[realSize];
@@ -280,7 +325,7 @@ size_t ConsoleMasterFile::outputLineDiscipline(char *buf, size_t len)
             }
 
             // ONLRET: NL performs CR function
-            if(pC[j] == '\n' && (m_Flags & ConsoleManager::ONLCausesCR))
+            if(pC[j] == '\n' && (slaveFlags & ConsoleManager::ONLCausesCR))
             {
                 tmpBuff[i++] = '\r';
                 continue;
@@ -355,18 +400,6 @@ size_t ConsoleSlaveFile::processInput(char *buf, size_t len)
     {
         if (m_Flags & ConsoleManager::IStripToSevenBits)
             pC[i] = static_cast<uint8_t>(pC[i]) & 0x7F;
-
-        if(pC[i] < 0x1F)
-        {
-            /*
-               if(pC[i] == 0x3)
-               {
-               Thread *t = Processor::information().getCurrentThread();
-               Process *p = t->getParent();
-               p->getSubsystem()->kill(Subsystem::Interrupted, t);
-               }
-               */
-        }
 
         if (pC[i] == '\n' && (m_Flags & ConsoleManager::IMapNLToCR))
             pC[i] = '\r';
@@ -460,8 +493,10 @@ bool ConsoleManager::lockConsole(File *file)
     if(!isConsole(file))
         return false;
 
-    /// \todo check it is actually a master
     ConsoleMasterFile *pConsole = static_cast<ConsoleMasterFile *>(file);
+    if(!pConsole->isMaster())
+        return false;
+
     if(pConsole->bLocked)
         return false;
     pConsole->bLocked = true;
@@ -498,6 +533,22 @@ void ConsoleManager::getAttributes(File* file, size_t *flags)
         return;
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
     *flags = pFile->m_Flags;
+}
+
+void ConsoleManager::setControlChars(File *file, void *p)
+{
+    if(!file || !p)
+        return;
+    ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
+    memcpy(pFile->m_ControlChars, p, MAX_CONTROL_CHAR);
+}
+
+void ConsoleManager::getControlChars(File *file, void *p)
+{
+    if(!file || !p)
+        return;
+    ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
+    memcpy(p, pFile->m_ControlChars, MAX_CONTROL_CHAR);
 }
 
 #if 0
@@ -852,9 +903,11 @@ int ConsoleManager::getWindowSize(File *file, unsigned short *rows, unsigned sho
     if(!file)
         return -1;
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
-    /// \todo don't return from other if this is a master.
-    *rows = pFile->m_pOther->m_Rows;
-    *cols = pFile->m_pOther->m_Cols;
+    if(!pFile->isMaster())
+        pFile = pFile->m_pOther;
+
+    *rows = pFile->m_Rows;
+    *cols = pFile->m_Cols;
     return 0;
 }
 
@@ -863,7 +916,11 @@ int ConsoleManager::setWindowSize(File *file, unsigned short rows, unsigned shor
     if(!file)
         return false;
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
-    /// \todo error or set master if this is a slave.
+    if(!pFile->isMaster())
+    {
+        // Ignore. Slave cannot change window size.
+        return 0;
+    }
     pFile->m_Rows = rows;
     pFile->m_Cols = cols;
     return 0;

@@ -12,8 +12,9 @@ typedef unsigned int cc_t;
 typedef unsigned int speed_t;
 typedef unsigned int tcflag_t;
 
+#define NCCS    13 // The number of control characters.
 
-#define NCCS 13 // The number of control characters.
+// Indices into c_cc array.
 #define VEOF   4       /* also VMIN -- thanks, AT&T */
 #define VEOL   5       /* also VTIME -- thanks again */
 #define VERASE 2
