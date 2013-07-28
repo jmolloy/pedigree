@@ -362,11 +362,12 @@ bool ConsoleMasterFile::checkForEvent(size_t flags, char check)
 
 void ConsoleMasterFile::triggerEvent(char cause)
 {
-    if(m_pEvent)
+    if(m_pOther->m_pEvent)
     {
         Thread *pThread = Processor::information().getCurrentThread();
         m_Last = cause;
-        pThread->sendEvent(m_pEvent);
+        pThread->sendEvent(m_pOther->m_pEvent);
+        Scheduler::instance().yield();
 
         // Note that we do not release the mutex here.
         m_EventTrigger.acquire();

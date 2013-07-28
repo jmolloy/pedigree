@@ -69,7 +69,10 @@ class ConsoleFile : public File
 
         void setEvent(Event *e)
         {
-            m_pEvent = e;
+            if(isMaster())
+                m_pOther->m_pEvent = e;
+            else
+                m_pEvent = e;
         }
 
         /**
@@ -88,6 +91,8 @@ class ConsoleFile : public File
          */
         virtual void eventComplete()
         {
+            if(!isMaster())
+                m_pOther->eventComplete();
         }
 
         Event *getEvent() const
@@ -221,7 +226,7 @@ class ConsoleSlaveFile : public ConsoleFile
 
         virtual char getLast()
         {
-            return 0;
+            return m_pOther->getLast();
         }
 
     private:

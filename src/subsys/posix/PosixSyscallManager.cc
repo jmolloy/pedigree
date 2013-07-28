@@ -361,6 +361,10 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_TTYNAME:
             console_ttyname(static_cast<int>(p1), reinterpret_cast<char *>(p2));
             return 0;
+        case POSIX_TCGETPGRP:
+            return posix_tcgetpgrp(static_cast<int>(p1));
+        case POSIX_TCSETPGRP:
+            return posix_tcsetpgrp(static_cast<int>(p1), static_cast<pid_t>(p2));
 
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber() << Hex); return 0;
     }

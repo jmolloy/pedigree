@@ -94,7 +94,7 @@ class PosixTerminalEvent : public Event
 
         virtual bool isDeleteable()
         {
-            return true;
+            return false;
         }
 
     private:
@@ -420,7 +420,7 @@ int posix_tcsetpgrp(int fd, pid_t pgid_id)
     return 0;
 }
 
-pid_t tcgetpgrp(int fd)
+pid_t posix_tcgetpgrp(int fd)
 {
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
