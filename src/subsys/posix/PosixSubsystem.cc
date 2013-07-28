@@ -453,7 +453,6 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType, Inter
             // Send SIGFPE
             sig = getSignalHandler(8);
             break;
-            break;
         case FpuError:
             NOTICE_NOLOCK("    (FPU error)");
             // Send SIGFPE
@@ -483,6 +482,16 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType, Inter
             NOTICE_NOLOCK("    (Stopping a process)");
             // Send SIGTSTP
             sig = getSignalHandler(18);
+            break;
+        case Interrupt:
+            NOTICE_NOLOCK("    (Interrupting a process)");
+            // Send SIGINT
+            sig = getSignalHandler(2);
+            break;
+        case Quit:
+            NOTICE_NOLOCK("    (Requesting quit)");
+            // Send SIGQUIT
+            sig = getSignalHandler(3);
             break;
         default:
             NOTICE_NOLOCK("    (Unknown)");

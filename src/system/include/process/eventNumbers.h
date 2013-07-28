@@ -34,6 +34,8 @@ namespace EventNumbers
 
     const size_t PollEvent        = 39;
 
+    const size_t TerminalEvent    = 40;
+
     const size_t UserStart        = 0xFFFF; ///< Start of user-defined events.
 }
 

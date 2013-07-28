@@ -44,7 +44,8 @@
                         ConsoleManager::LEcho | \
                         ConsoleManager::LEchoErase | \
                         ConsoleManager::LEchoKill | \
-                        ConsoleManager::LCookedMode)
+                        ConsoleManager::LCookedMode | \
+                        ConsoleManager::LGenerateEvent)
 
 class ConsoleManager;
 class ConsoleMasterFile;
@@ -190,6 +191,12 @@ class ConsoleMasterFile : public ConsoleFile
 
         /// Locked when we trigger an event, unlocked when eventComplete called.
         Mutex m_EventTrigger;
+
+        /// Check if the given character requires an event.
+        bool checkForEvent(size_t flags, char check);
+
+        /// Triggers our event.
+        void triggerEvent(char cause);
 };
 
 class ConsoleSlaveFile : public ConsoleFile

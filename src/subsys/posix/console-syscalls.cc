@@ -21,14 +21,133 @@
 #include <vfs/File.h>
 #include <vfs/VFS.h>
 #include <console/Console.h>
+#include <syscallError.h>
 
 #include <Subsystem.h>
 #include <PosixSubsystem.h>
+#include <PosixProcess.h>
 
 #include "file-syscalls.h"
 #include "console-syscalls.h"
 
 typedef Tree<size_t,FileDescriptor*> FdMap;
+
+class PosixTerminalEvent : public Event
+{
+    public:
+        PosixTerminalEvent() :
+            Event(0, false), pGroup(0), pConsole(0)
+        {}
+        PosixTerminalEvent(uintptr_t handlerAddress, ProcessGroup *grp, ConsoleFile *tty, size_t specificNestingLevel=~0UL) :
+            Event(handlerAddress, false, specificNestingLevel),
+            pGroup(grp), pConsole(tty)
+        {
+        }
+        virtual ~PosixTerminalEvent()
+        {
+            // Remove us from the console if needed.
+            if(pConsole->getEvent() == this)
+            {
+                pConsole->setEvent(0);
+            }
+        }
+
+        virtual size_t serialize(uint8_t *pBuffer)
+        {
+            size_t eventNumber = EventNumbers::TerminalEvent;
+            size_t offset = 0;
+            memcpy(pBuffer + offset, &eventNumber, sizeof(eventNumber));
+            offset += sizeof(eventNumber);
+            memcpy(pBuffer + offset, &pGroup, sizeof(pGroup));
+            offset += sizeof(pGroup);
+            memcpy(pBuffer + offset, &pConsole, sizeof(pConsole));
+            offset += sizeof(pConsole);
+            return offset;
+        }
+
+        static bool unserialize(uint8_t *pBuffer, Event &event)
+        {
+            PosixTerminalEvent &t = static_cast<PosixTerminalEvent&>(event);
+            if(Event::getEventType(pBuffer) != EventNumbers::TerminalEvent)
+                return false;
+            size_t offset = sizeof(size_t);
+            memcpy(&t.pGroup, pBuffer + offset, sizeof(t.pGroup));
+            offset += sizeof(t.pGroup);
+            memcpy(&t.pConsole, pBuffer + offset, sizeof(t.pConsole));
+            return true;
+        }
+
+        virtual ProcessGroup *getGroup() const
+        {
+            return pGroup;
+        }
+
+        virtual ConsoleFile *getConsole() const
+        {
+            return pConsole;
+        }
+
+        virtual size_t getNumber()
+        {
+            return EventNumbers::TerminalEvent;
+        }
+
+        virtual bool isDeleteable()
+        {
+            return true;
+        }
+
+    private:
+        ProcessGroup *pGroup;
+        ConsoleFile *pConsole;
+};
+
+void terminalEventHandler(uintptr_t serializeBuffer)
+{
+    PosixTerminalEvent evt;
+    if(!PosixTerminalEvent::unserialize(reinterpret_cast<uint8_t *>(serializeBuffer), evt))
+    {
+        return;
+    }
+
+    ConsoleFile *pConsole = evt.getConsole();
+    ProcessGroup *pGroup = evt.getGroup();
+
+    // Grab the character which caused the event.
+    char which = pConsole->getLast();
+
+    // Grab the special characters - we'll use these to figure out what we hit.
+    char specialChars[NCCS];
+    pConsole->getControlCharacters(specialChars);
+
+    // Identify what happened.
+    Subsystem::ExceptionType what = Subsystem::Other;
+    if(which == specialChars[VINTR])
+        what = Subsystem::Interrupt;
+    else if(which == specialChars[VQUIT])
+        what = Subsystem::Quit;
+    else if(which == specialChars[VSUSP])
+        what = Subsystem::Stop;
+
+    // Dummy interrupt state for Process::threadException
+    InterruptState *state = 0;
+
+    // Send to each process.
+    if(what != Subsystem::Other)
+    {
+        for(List<PosixProcess*>::Iterator it = pGroup->Members.begin();
+            it != pGroup->Members.end();
+            ++it)
+        {
+            PosixProcess *pProcess = *it;
+            PosixSubsystem *pSubsystem = static_cast<PosixSubsystem*>(pProcess->getSubsystem());
+            pSubsystem->threadException(pProcess->getThread(0), what, *state);
+        }
+    }
+
+    // We have finished handling this event.
+    pConsole->eventComplete();
+}
 
 int posix_tcgetattr(int fd, struct termios *p)
 {
@@ -70,7 +189,8 @@ int posix_tcgetattr(int fd, struct termios *p)
       ((flags&ConsoleManager::LEchoErase)?ECHOE:0) |
       ((flags&ConsoleManager::LEchoKill)?ECHOK:0) |
       ((flags&ConsoleManager::LEchoNewline)?ECHONL:0) |
-      ((flags&ConsoleManager::LCookedMode)?ICANON:0);
+      ((flags&ConsoleManager::LCookedMode)?ICANON:0) |
+      ((flags&ConsoleManager::LGenerateEvent)?ISIG:0);
 
   char controlChars[MAX_CONTROL_CHAR] = {0};
   ConsoleManager::instance().getControlChars(pFd->file, controlChars);
@@ -230,3 +350,110 @@ void console_ttyname(int fd, char *buf)
   /// \todo Check if this is actually a master.
   sprintf(buf, "/dev/%s", static_cast<const char *>(pFd->file->getName()));
 }
+
+int posix_tcsetpgrp(int fd, pid_t pgid_id)
+{
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("No subsystem for one or both of the processes!");
+        return -1;
+    }
+
+    FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
+    if (!pFd)
+    {
+        // Error - no such file descriptor.
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
+
+    if ((!pProcess->getCtty()) || (pProcess->getCtty() != pFd->file) || (!ConsoleManager::instance().isConsole(pFd->file)))
+    {
+        SYSCALL_ERROR(NotAConsole);
+        return -1;
+    }
+
+    // Find the group ID.
+    ProcessGroup *pGroup = 0;
+    for(size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+    {
+        Process *p = Scheduler::instance().getProcess(i);
+        if(p->getType() == Process::Posix)
+        {
+            PosixProcess *pPosix = static_cast<PosixProcess *>(p);
+            pGroup = pPosix->getProcessGroup();
+            if(pGroup && (pGroup->processGroupId == pgid_id))
+            {
+                break;
+            }
+            else
+            {
+                pGroup = 0;
+            }
+        }
+    }
+
+    if(!pGroup)
+    {
+        SYSCALL_ERROR(PermissionDenied);
+        return -1;
+    }
+
+    // Okay, we have a group. Create a PosixTerminalEvent with the relevant information.
+    ConsoleFile *pConsole = static_cast<ConsoleFile *>(pProcess->getCtty());
+    PosixTerminalEvent *pEvent = new PosixTerminalEvent(reinterpret_cast<uintptr_t>(terminalEventHandler), pGroup, pConsole);
+
+    // Remove any existing event that might be on the terminal.
+    if(pConsole->getEvent())
+    {
+        PosixTerminalEvent *pOldEvent = static_cast<PosixTerminalEvent *>(pConsole->getEvent());
+        pConsole->setEvent(0);
+        delete pOldEvent;
+    }
+
+    // Set as the new event - we are now the foreground process!
+    /// \todo This doesn't work for SIGTTIN and SIGTTOU...
+    pConsole->setEvent(pEvent);
+
+    return 0;
+}
+
+pid_t tcgetpgrp(int fd)
+{
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("No subsystem for one or both of the processes!");
+        return -1;
+    }
+
+    FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
+    if (!pFd)
+    {
+        // Error - no such file descriptor.
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
+
+    if ((!pProcess->getCtty()) || (pProcess->getCtty() != pFd->file) || (!ConsoleManager::instance().isConsole(pFd->file)))
+    {
+        SYSCALL_ERROR(NotAConsole);
+        return -1;
+    }
+
+    // Remove any existing event that might be on the terminal.
+    ConsoleFile *pConsole = static_cast<ConsoleFile *>(pProcess->getCtty());
+    if(pConsole->getEvent())
+    {
+        PosixTerminalEvent *pEvent = static_cast<PosixTerminalEvent*>(pConsole->getEvent());
+        return pEvent->getGroup()->processGroupId;
+    }
+    else
+    {
+        return (pid_t) ~0;
+    }
+}
+

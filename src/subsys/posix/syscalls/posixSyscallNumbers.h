@@ -180,5 +180,7 @@
 
 #define POSIX_PTSNAME           200
 #define POSIX_TTYNAME           201
+#define POSIX_TCSETPGRP         202
+#define POSIX_TCGETPGRP         203
 
 #endif

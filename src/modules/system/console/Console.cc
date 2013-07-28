@@ -217,25 +217,11 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
                 }
                 else
                 {
-                    // ISIG?
-                    if(slaveFlags & ConsoleManager::LGenerateEvent)
+                    // Do we need to handle this character differently?
+                    if(checkForEvent(slaveFlags, buf[i]))
                     {
-                        if(buf[i] && (
-                            buf[i] == slaveControlChars[VINTR] ||
-                            buf[i] == slaveControlChars[VQUIT] ||
-                            buf[i] == slaveControlChars[VSUSP]))
-                        {
-                            Thread *pThread = Processor::information().getCurrentThread();
-                            if(m_pEvent)
-                            {
-                                m_Last = buf[i];
-                                pThread->sendEvent(m_pEvent);
-
-                                // Note that we do not release the mutex here.
-                                m_EventTrigger.acquire();
-                                continue;
-                            }
-                        }
+                        triggerEvent(buf[i]);
+                        continue;
                     }
 
                     // Write the character to the slave
@@ -281,7 +267,18 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
     }
     else
     {
-        m_pOther->inject(buf, len);
+        for(size_t i = 0; i < len; ++i)
+        {
+            // Do we need to send an event?
+            if(checkForEvent(slaveFlags, buf[i]))
+            {
+                triggerEvent(buf[i]);
+                continue;
+            }
+
+            // No event. Simply write the character out.
+            m_pOther->inject(&buf[i], 1);
+        }
     }
 }
 
@@ -343,6 +340,37 @@ size_t ConsoleMasterFile::outputLineDiscipline(char *buf, size_t len)
     }
 
     return len;
+}
+
+bool ConsoleMasterFile::checkForEvent(size_t flags, char check)
+{
+    const char *slaveControlChars = m_pOther->m_ControlChars;
+
+    // ISIG?
+    if(flags & ConsoleManager::LGenerateEvent)
+    {
+        if(check && (
+                    check == slaveControlChars[VINTR] ||
+                    check == slaveControlChars[VQUIT] ||
+                    check == slaveControlChars[VSUSP]))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+void ConsoleMasterFile::triggerEvent(char cause)
+{
+    if(m_pEvent)
+    {
+        Thread *pThread = Processor::information().getCurrentThread();
+        m_Last = cause;
+        pThread->sendEvent(m_pEvent);
+
+        // Note that we do not release the mutex here.
+        m_EventTrigger.acquire();
+    }
 }
 
 ConsoleSlaveFile::ConsoleSlaveFile(String consoleName, Filesystem *pFs) :

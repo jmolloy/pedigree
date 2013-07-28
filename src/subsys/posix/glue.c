@@ -425,6 +425,16 @@ int tcsetattr(int fd, int optional_actions, struct termios *p)
     return (long)syscall3(POSIX_TCSETATTR, fd, optional_actions, (long)p);
 }
 
+int tcsetpgrp(int fd, pid_t pgid_id)
+{
+    return (int)syscall2(POSIX_TCSETPGRP, fd, pgid_id);
+}
+
+pid_t tcgetpgrp(int fd)
+{
+    return (pid_t)syscall1(POSIX_TCGETPGRP, fd);
+}
+
 int mkfifo(const char *_path, mode_t __mode)
 {
     STUBBED("mkfifo");
@@ -2096,12 +2106,6 @@ int reboot(int howto)
     // Technically we shouldn't actually get here...
     syslog(LOG_ERR, "pedigree_reboot returned?\n");
     return 0;
-}
-
-pid_t tcgetpgrp(int fildes)
-{
-    STUBBED("tcgetpgrp");
-    return -1;
 }
 
 int initgroups(const char *user, gid_t group)

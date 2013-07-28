@@ -67,6 +67,8 @@ class Subsystem
             TerminalOutput = 7, // Output to terminal, but not foreground.
             Continue = 8,
             Stop = 9,
+            Interrupt = 10,
+            Quit = 11,
             Other = 255
         };
 
