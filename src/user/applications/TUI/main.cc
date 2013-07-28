@@ -294,20 +294,9 @@ void key_input_handler(uint64_t c)
     if (c == '\n') c = '\r';
 
     // CTRL + key -> unprintable characters
-    if((c & Keyboard::Ctrl) && !(c & Keyboard::Special))
+    if ((c & Keyboard::Ctrl) && !(c & Keyboard::Special))
     {
         c &= 0x1F;
-        if(c == 0x3)
-        {
-            // Awaken and stop the RequestQueue if it's blocking
-            syscall0(TUI_STOP_REQUEST_QUEUE);
-
-            // Cancel the current write operation, if any
-            g_pCurrentTerm->term->cancel();
-
-            // Send the kill signal
-            kill(g_pCurrentTerm->term->getPid(), SIGINT);
-        }
     }
 
     if(checkCommand(c, rect2))
