@@ -43,6 +43,8 @@ extern "C"
 #define SIGNAL_HANDLER_EXIT(name, errcode) void name(int s) { posix_exit(errcode); }
 #define SIGNAL_HANDLER_EMPTY(name) void name(int s) {}
 #define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int s) { Processor::setInterrupts(true); posix_write(1, msg, strlen(msg)); Scheduler::instance().yield(); posix_exit(errcode); }
+#define SIGNAL_HANDLER_SUSPEND(name) void name(int s) { Processor::information().getCurrentThread()->setStatus(Thread::Sleeping); }
+#define SIGNAL_HANDLER_RESUME(name) void name(int s) { Processor::information().getCurrentThread()->setStatus(Thread::Ready); }
 
 char SSIGILL[] = "Illegal instruction\n";
 char SSIGSEGV[] = "Segmentation fault!\n";
@@ -52,7 +54,7 @@ SIGNAL_HANDLER_EXITMSG  (sigabrt, SIGABRT, SSIGABRT)
 SIGNAL_HANDLER_EXIT     (sigalrm, SIGALRM)
 SIGNAL_HANDLER_EXIT     (sigbus, SIGBUS)
 SIGNAL_HANDLER_EMPTY    (sigchld)
-SIGNAL_HANDLER_EMPTY    (sigcont) /// \todo Continue & Pause execution
+SIGNAL_HANDLER_RESUME   (sigcont)
 SIGNAL_HANDLER_EXIT     (sigfpe, SIGFPE) // floating point exception signal
 SIGNAL_HANDLER_EXIT     (sighup, SIGHUP)
 SIGNAL_HANDLER_EXITMSG  (sigill, SIGILL, SSIGILL)
@@ -61,11 +63,11 @@ SIGNAL_HANDLER_EXIT     (sigkill, SIGKILL)
 SIGNAL_HANDLER_EXIT     (sigpipe, SIGPIPE)
 SIGNAL_HANDLER_EXIT     (sigquit, SIGQUIT)
 SIGNAL_HANDLER_EXITMSG  (sigsegv, SIGSEGV, SSIGSEGV)
-SIGNAL_HANDLER_EMPTY    (sigstop) /// \todo Continue & Pause execution
+SIGNAL_HANDLER_SUSPEND  (sigstop)
 SIGNAL_HANDLER_EXIT     (sigterm, SIGTERM)
-SIGNAL_HANDLER_EMPTY    (sigtstp) // terminal stop
-SIGNAL_HANDLER_EMPTY    (sigttin) // background process attempts read
-SIGNAL_HANDLER_EMPTY    (sigttou) // background process attempts write
+SIGNAL_HANDLER_SUSPEND  (sigtstp) // terminal stop
+SIGNAL_HANDLER_SUSPEND  (sigttin) // background process attempts read
+SIGNAL_HANDLER_SUSPEND  (sigttou) // background process attempts write
 SIGNAL_HANDLER_EMPTY    (sigusr1)
 SIGNAL_HANDLER_EMPTY    (sigusr2)
 SIGNAL_HANDLER_EMPTY    (sigurg) // high bandwdith data available at a sockeet
