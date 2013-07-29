@@ -204,7 +204,6 @@ void Thread::sendEvent(Event *pEvent)
     {
         // Interrupt the sleeping thread, there's an event firing
         m_Status = Ready;
-        m_bInterrupted = true;
         // NOTICE("Set status");
 
         // Notify the scheduler that we're now ready, so we get put into the
