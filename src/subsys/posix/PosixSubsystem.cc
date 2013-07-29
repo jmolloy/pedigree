@@ -493,6 +493,11 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType, Inter
             // Send SIGQUIT
             sig = getSignalHandler(3);
             break;
+        case Child:
+            NOTICE_NOLOCK("    (Child status changed)");
+            // Send SIGCHLD
+            sig = getSignalHandler(20);
+            break;
         default:
             NOTICE_NOLOCK("    (Unknown)");
             // Unknown exception

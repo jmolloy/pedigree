@@ -69,6 +69,7 @@ class Subsystem
             Stop = 9,
             Interrupt = 10,
             Quit = 11,
+            Child = 12, // Child pause/continue/quit.
             Other = 255
         };
 
