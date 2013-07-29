@@ -650,6 +650,7 @@ int posix_waitpid(int pid, int *status, int options)
             ++it)
         {
             Process *pProcess = *it;
+            pid = pProcess->getId();
 
             // Zombie?
             if (pProcess->getThread(0)->getStatus() == Thread::Zombie)
@@ -658,9 +659,9 @@ int posix_waitpid(int pid, int *status, int options)
                     *status = pProcess->getExitStatus();
 
                 // Delete the process; it's been reaped good and proper.
-                SC_NOTICE("waitpid: " << pid << " reaped");
+                SC_NOTICE("waitpid: " << pid << " reaped [" << pProcess->getExitStatus() << "]");
                 delete pProcess;
-                return pProcess->getId();
+                return pid;
             }
             // Suspended (and WUNTRACED)?
             else if((options & 2) && pProcess->hasSuspended())
@@ -669,7 +670,7 @@ int posix_waitpid(int pid, int *status, int options)
                     *status = pProcess->getExitStatus();
 
                 SC_NOTICE("waitpid: " << pid << " suspended.");
-                return pProcess->getId();
+                return pid;
             }
             // Continued (and WCONTINUED)?
             else if((options & 4) && pProcess->hasResumed())
@@ -678,7 +679,7 @@ int posix_waitpid(int pid, int *status, int options)
                     *status = pProcess->getExitStatus();
 
                 SC_NOTICE("waitpid: " << pid << " resumed.");
-                return pProcess->getId();
+                return pid;
             }
         }
 
@@ -689,9 +690,7 @@ int posix_waitpid(int pid, int *status, int options)
         }
 
         // Wait for processes to report in.
-        SC_NOTICE("  -> waiting for processes");
         waitLock.acquire();
-        SC_NOTICE("  -> waitpid done waiting for processes");
 
         // We can get woken up by our process dying. Handle that here.
         if (Processor::information().getCurrentThread()->getUnwindState() == Thread::Exit)
