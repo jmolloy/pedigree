@@ -38,13 +38,15 @@ extern "C"
     extern char sigret_stub_end;
 }
 
+int doProcessKill(Process *p, int sig);
+
 /// \todo These are ok initially, but it'll all have to change at some point
 
 #define SIGNAL_HANDLER_EXIT(name, errcode) void name(int s) { posix_exit(errcode); }
-#define SIGNAL_HANDLER_EMPTY(name) void name(int s) {}
+#define SIGNAL_HANDLER_EMPTY(name) void name(int s) {NOTICE("EMPTY");}
 #define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int s) { Processor::setInterrupts(true); posix_write(1, msg, strlen(msg)); Scheduler::instance().yield(); posix_exit(errcode); }
-#define SIGNAL_HANDLER_SUSPEND(name) void name(int s) { Processor::information().getCurrentThread()->setStatus(Thread::Sleeping); }
-#define SIGNAL_HANDLER_RESUME(name) void name(int s) { Processor::information().getCurrentThread()->setStatus(Thread::Ready); }
+#define SIGNAL_HANDLER_SUSPEND(name) void name(int s) { NOTICE("SUSPEND"); Process *pParent = Processor::information().getCurrentThread()->getParent()->getParent(); doProcessKill(pParent, SIGCHLD); Processor::information().getCurrentThread()->getParent()->suspend(); }
+#define SIGNAL_HANDLER_RESUME(name) void name(int s) { NOTICE("RESUME"); Processor::information().getCurrentThread()->getParent()->resume(); Process *pParent = Processor::information().getCurrentThread()->getParent()->getParent(); doProcessKill(pParent, SIGCHLD); }
 
 char SSIGILL[] = "Illegal instruction\n";
 char SSIGSEGV[] = "Segmentation fault!\n";
@@ -275,6 +277,16 @@ void pedigree_unwind_signal()
 
 int doThreadKill(Thread *p, int sig)
 {
+    // Are we allowed to do this?
+    if(p->getStatus() == Thread::Suspended)
+    {
+        if(!(sig == SIGKILL || sig == SIGCONT))
+        {
+            WARNING("kill: can't send anything other than SIGKILL or SIGCONT to a suspended process.");
+            return -1;
+        }
+    }
+
     // Build the pending signal and pass it in
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(p->getParent()->getSubsystem());
     if(!pSubsystem)
