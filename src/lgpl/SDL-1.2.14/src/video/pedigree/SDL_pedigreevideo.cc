@@ -37,6 +37,8 @@
 
 #include <syslog.h>
 
+#include <cairo/cairo.h>
+
 #define PEDIGREEVID_DRIVER_NAME "pedigree"
 
 extern "C"
@@ -105,7 +107,7 @@ static SDL_VideoDevice *PEDIGREE_CreateDevice(int devindex)
 	device->ListModes = PEDIGREE_ListModes;
 	device->SetVideoMode = PEDIGREE_SetVideoMode;
 	device->CreateYUVOverlay = NULL;
-	device->SetColors = NULL; // PEDIGREE_SetColors;
+	device->SetColors = PEDIGREE_SetColors;
 	device->UpdateRects = PEDIGREE_UpdateRects;
 	device->VideoQuit = PEDIGREE_VideoQuit;
 	device->AllocHWSurface = PEDIGREE_AllocHWSurface;
@@ -183,21 +185,18 @@ SDL_Surface *PEDIGREE_SetVideoMode(_THIS, SDL_Surface *current,
 
     syslog(LOG_INFO, "SetVideoMode(%d, %d, %d)", width, height, bpp);
 
-    // caveat with real size vs buffer
-    _this->hidden->buffer = _this->hidden->widget->getBackbuffer();
-
-	_this->hidden->buffer = SDL_malloc(_this->hidden->widget->getWidth() * _this->hidden->widget->getHeight() * 4);
+	_this->hidden->buffer = SDL_malloc(width * height * 4);
 	if ( ! _this->hidden->buffer ) {
 		SDL_SetError("Couldn't allocate buffer for requested mode");
 		return(NULL);
 	}
 
-	SDL_memset(_this->hidden->buffer, 0, _this->hidden->widget->getWidth() * _this->hidden->widget->getHeight() * 4);
+	SDL_memset(_this->hidden->buffer, 0, width * height * 4);
 
 	/* Set up the new mode framebuffer */
 	current->flags = flags;
-        _this->hidden->w = current->w = _this->hidden->widget->getWidth();
-	_this->hidden->h = current->h = _this->hidden->widget->getHeight();
+        _this->hidden->w = current->w = width;
+	_this->hidden->h = current->h = height;
 	current->pitch = current->w * 4;
 	current->pixels = _this->hidden->buffer;
 
@@ -228,7 +227,7 @@ static void PEDIGREE_UnlockHWSurface(_THIS, SDL_Surface *surface)
 
 static void PEDIGREE_UpdateRects(_THIS, int numrects, SDL_Rect *rects)
 {
-    if(!_this->hidden->widget)
+    if(!(_this->hidden->widget && _this->hidden->buffer))
         return;
 
     // Batch into one Rect so we don't have hundreds of little redraws.
@@ -236,8 +235,6 @@ static void PEDIGREE_UpdateRects(_THIS, int numrects, SDL_Rect *rects)
     size_t minX = ~0, minY = ~0, maxX = 0, maxY = 0;
     for(int i = 0; i < numrects; i++)
     {
-        syslog(LOG_INFO, "UpdateRects: redraw %dx%d [%dx%d]\n", rects[i].x, rects[i].y, rects[i].w, rects[i].h);
-
         size_t x1 = rects[i].x;
         size_t x2 = x1 + rects[i].w;
 
@@ -251,9 +248,65 @@ static void PEDIGREE_UpdateRects(_THIS, int numrects, SDL_Rect *rects)
         maxY = std::max(maxY, y2);
     }
 
+    size_t redrawWidth = maxX - minX;
+    size_t redrawHeight = maxY - minY;
+
+    // Clip.
+    if(minX > _this->hidden->widget->getWidth())
+        return;
+    if(minY > _this->hidden->widget->getHeight())
+        return;
+
+    if((minX + redrawWidth) > _this->hidden->widget->getWidth())
+        redrawWidth = _this->hidden->widget->getWidth() - minX;
+    if((minY + redrawHeight) > _this->hidden->widget->getHeight())
+        redrawHeight = _this->hidden->widget->getHeight() - minY;
+
+    // Grab the buffer to draw to.
+    int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, _this->hidden->widget->getWidth());
+    cairo_surface_t *destSurface = cairo_image_surface_create_for_data(
+            (uint8_t *) _this->hidden->widget->getRawFramebuffer(),
+            CAIRO_FORMAT_ARGB32,
+            _this->hidden->widget->getWidth(),
+            _this->hidden->widget->getHeight(),
+            stride);
+    cairo_t *cr = cairo_create(destSurface);
+
+    // Grab the source buffer.
+    stride = cairo_format_stride_for_width(CAIRO_FORMAT_RGB24, _this->hidden->w);
+    cairo_surface_t *sourceSurface = cairo_image_surface_create_for_data(
+            (uint8_t *) _this->hidden->buffer,
+            CAIRO_FORMAT_RGB24,
+            _this->hidden->w,
+            _this->hidden->h,
+            stride);
+
+    // Set the clip mask to the bounds of the target.
+    cairo_rectangle(cr, minX, minY, redrawWidth, redrawHeight);
+    cairo_clip(cr);
+
+    // Prepare.
+    cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
+    cairo_set_source_surface(cr, sourceSurface, 0.0, 0.0);
+    cairo_paint_with_alpha(cr, 1.0);
+
+    // Flush.
+    cairo_surface_flush(destSurface);
+
+    // Destroy surfaces.
+    cairo_surface_destroy(destSurface);
+    cairo_surface_destroy(sourceSurface);
+    cairo_destroy(cr);
+
     // Perform the redraw.
-    dirty.update(minX, minY, maxX - minX, maxY - minY);
+    dirty.update(minX, minY, redrawWidth, redrawHeight);
     _this->hidden->widget->redraw(dirty);
+}
+
+int PEDIGREE_SetColors(_THIS, int firstcolor, int ncolors, SDL_Color *colors)
+{
+    /* No palette support. */
+    return 1;
 }
 
 /* Note:  If we are terminated, this could be called in the middle of

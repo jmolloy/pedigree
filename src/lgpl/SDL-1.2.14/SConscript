@@ -50,6 +50,9 @@ include = [
     '#/src/subsys/posix/include',
     '#/src/subsys/native/include',
     '#/src/user/libraries/libui/include',
+    '#/images/local/include',
+    '#/images/local/include/pixman-1',
+    '#/images/local/include/freetype2',
 ]
 
 cppinclude = include + [
@@ -67,6 +70,13 @@ libraries = [
     'pedigree-c',
     'pthread',
     'stdc++',
+    'cairo',
+    'pixman-1',
+    'fontconfig',
+    'expat',
+    'freetype',
+    'png',
+    'z',
 ]
 
 # To add a library path add to the list below
