@@ -61,7 +61,8 @@ public:
         Ready,
         Running,
         Sleeping,
-        Zombie
+        Zombie,
+        Suspended, /// Suspended (eg, POSIX SIGSTOP)
     };
 
     /** "Debug state" - higher level state of the thread. */
@@ -199,8 +200,7 @@ public:
     /** Sets our current status. */
     void setStatus(Status s);
 
-    /** Retrieves the exit status of the Thread.
-     * \note Valid only if the Thread is in the Zombie state. */
+    /** Retrieves the exit status of the Thread. */
     int getExitCode()
     {return m_ExitCode;}
 

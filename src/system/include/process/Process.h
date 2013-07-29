@@ -115,6 +115,10 @@ public:
 
     /** Kills the process. */
     void kill();
+    /** Suspends the process. */
+    void suspend();
+    /** Resumes the process from suspend. */
+    void resume();
 
     /** Returns the parent process. */
     Process *getParent()
@@ -218,6 +222,22 @@ public:
         return Stock;
     }
 
+    void addWaiter(Semaphore *pWaiter);
+    void removeWaiter(Semaphore *pWaiter);
+
+    bool hasSuspended()
+    {
+        bool bRet = m_bUnreportedSuspend;
+        m_bUnreportedSuspend = false;
+        return bRet;
+    }
+    bool hasResumed()
+    {
+        bool bRet = m_bUnreportedResume;
+        m_bUnreportedResume = false;
+        return bRet;
+    }
+
 private:
     Process(const Process &);
     Process &operator = (const Process &);
@@ -276,6 +296,24 @@ private:
 
     /** The subsystem for this process */
     Subsystem *m_pSubsystem;
+
+    /** Semaphores to release whenever we are killed, suspended, or resumed. */
+    List<Semaphore *> m_Waiters;
+
+    /** Whether we have suspended but not reported it. */
+    bool m_bUnreportedSuspend;
+
+    /** Whether we have resumed but not reported it. */
+    bool m_bUnreportedResume;
+
+    /**
+     * State we were in before suspend. Ensures if we were sleeping before,
+     * we still will be after a resume.
+     */
+    Thread::Status m_BeforeSuspendState;
+
+    /** Releases all locks in m_Waiters once. */
+    void notifyWaiters();
 
 public:
     Semaphore m_DeadThreads;

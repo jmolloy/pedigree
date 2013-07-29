@@ -34,8 +34,8 @@
 
 Process::Process() :
   m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(0), m_pAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()),
-  m_ExitStatus(0), m_Cwd(0), m_Ctty(0), m_SpaceAllocator(true), m_pUser(0), m_pGroup(0), m_pEffectiveUser(0), m_pEffectiveGroup(0),
-  m_pDynamicLinker(0), m_pSubsystem(0), m_DeadThreads(0)
+  m_ExitStatus(0), m_Cwd(0), m_Ctty(0), m_SpaceAllocator(false), m_pUser(0), m_pGroup(0), m_pEffectiveUser(0), m_pEffectiveGroup(0),
+  m_pDynamicLinker(0), m_pSubsystem(0), m_Waiters(), m_bUnreportedSuspend(false), m_bUnreportedResume(false), m_BeforeSuspendState(Thread::Ready), m_DeadThreads(0)
 {
   m_Id = Scheduler::instance().addProcess(this);
   m_SpaceAllocator.free(m_pAddressSpace->getUserStart(), m_pAddressSpace->getUserReservedStart());
@@ -45,7 +45,7 @@ Process::Process(Process *pParent) :
   m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(pParent), m_pAddressSpace(0),
   m_ExitStatus(0), m_Cwd(pParent->m_Cwd), m_Ctty(pParent->m_Ctty), m_SpaceAllocator(pParent->m_SpaceAllocator),
   m_pUser(pParent->m_pUser), m_pGroup(pParent->m_pGroup), m_pEffectiveUser(pParent->m_pEffectiveUser), m_pEffectiveGroup(pParent->m_pEffectiveGroup),
-  m_pDynamicLinker(pParent->m_pDynamicLinker), m_pSubsystem(0), m_DeadThreads(0)
+  m_pDynamicLinker(pParent->m_pDynamicLinker), m_pSubsystem(0), m_Waiters(), m_bUnreportedSuspend(false), m_bUnreportedResume(false), m_BeforeSuspendState(Thread::Ready), m_DeadThreads(0)
 {
    m_pAddressSpace = pParent->m_pAddressSpace->clone();
    // Copy the heap, but only if it's not the kernel heap (which is static)
@@ -171,7 +171,10 @@ void Process::kill()
 
   // Tell any threads that may be waiting for us to die.
   if (m_pParent)
-      m_pParent->m_DeadThreads.release();
+  {
+      /// \todo Race condition here, if the waiter gets in before our thread is scheduled.
+      notifyWaiters();
+  }
   else
   {
       NOTICE("Adding process to zombie queue for cleanup");
@@ -190,55 +193,55 @@ void Process::kill()
   FATAL("Should never get here");
 }
 
+void Process::suspend()
+{
+    m_bUnreportedSuspend = true;
+    m_ExitStatus = 0x7F;
+    m_BeforeSuspendState = m_Threads[0]->getStatus();
+    notifyWaiters();
+    Processor::information().getScheduler().schedule(Thread::Suspended);
+}
+
+void Process::resume()
+{
+    m_bUnreportedResume = true;
+    m_ExitStatus = 0xFF;
+    notifyWaiters();
+    Processor::information().getScheduler().schedule(m_BeforeSuspendState);
+}
+
 uintptr_t Process::create(uint8_t *elf, size_t elfSize, const char *name)
 {
     FATAL("This function isn't implemented correctly - registration with the dynamic linker is required!");
-  // At this point we're uninterruptible, as we're forking.
-  Spinlock lock;
-  lock.acquire();
+    return 0;
+}
 
-  // Create a new process for the init process.
-  Process *pProcess = new Process(Processor::information().getCurrentThread()->getParent());
+void Process::addWaiter(Semaphore *pWaiter)
+{
+    m_Waiters.pushBack(pWaiter);
+}
 
-  pProcess->description().clear();
-  pProcess->description().append(name);
+void Process::removeWaiter(Semaphore *pWaiter)
+{
+    for(List<Semaphore *>::Iterator it = m_Waiters.begin();
+        it != m_Waiters.end();
+        ++it)
+    {
+        if((*it) == pWaiter)
+        {
+            it = m_Waiters.erase(it);
+        }
+    }
+}
 
-  VirtualAddressSpace &oldAS = Processor::information().getVirtualAddressSpace();
-
-  // Switch to the init process' address space.
-  Processor::switchAddressSpace(*pProcess->getAddressSpace());
-
-  // That will have forked - we don't want to fork, so clear out all the chaff in the new address space that's not
-  // in the kernel address space so we have a clean slate.
-  pProcess->getAddressSpace()->revertToKernelAddressSpace();
-
-
-   Elf initElf;
-//   initElf.load(elf, elfSize);
-//   uintptr_t iter = 0;
-//   const char *lib = initElf.neededLibrary(iter);
-//   initElf.allocateSegments();
-//   initElf.writeSegments();
-
-  for (int j = 0; j < 0x20000; j += 0x1000)
-  {
-    physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-    bool b = Processor::information().getVirtualAddressSpace().map(phys,
-                                                                   reinterpret_cast<void*> (j+0x40000000),
-                                                                   VirtualAddressSpace::Write| VirtualAddressSpace::Execute);
-    if (!b)
-      WARNING("map() failed in init");
-  }
-
-  // Alrighty - lets create a new thread for this program - -8 as PPC assumes the previous stack frame is available...
-  new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(initElf.getEntryPoint()), 0x0 /* parameter */,  reinterpret_cast<void*>(0x40020000-8) /* Stack */);
-
-  // Switch back to the old address space.
-  Processor::switchAddressSpace(oldAS);
-
-  lock.release();
-
-  return pProcess->getId();
+void Process::notifyWaiters()
+{
+    for(List<Semaphore *>::Iterator it = m_Waiters.begin();
+        it != m_Waiters.end();
+        ++it)
+    {
+        (*it)->release();
+    }
 }
 
 #endif

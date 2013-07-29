@@ -545,110 +545,164 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     return 0;
 }
 
+/**
+ * Class intended to be used for RAII to clean up waitpid state on exit.
+ */
+class WaitCleanup
+{
+    public:
+        WaitCleanup(List<Process*> *cleanupList, Semaphore *lock) :
+            m_List(cleanupList), m_Lock(lock)
+        {}
+
+        ~WaitCleanup()
+        {
+            for(List<Process*>::Iterator it = m_List->begin();
+                it != m_List->end();
+                ++it)
+            {
+                (*it)->removeWaiter(m_Lock);
+            }
+        }
+
+    private:
+
+        List<Process *> *m_List;
+        Semaphore *m_Lock;
+};
+
 int posix_waitpid(int pid, int *status, int options)
 {
     SC_NOTICE("waitpid(" << pid << ", " << options << ")");
-    
-    if (options & 1)
-    {
-//        SC_NOTICE("waitpid(pid=" << Dec << pid << Hex << ", WNOHANG)");
-    }
-    else
-    {
-        //       SC_NOTICE("waitpid(pid=" < Dec << pid << Hex << ")");
-    }
 
-    // Don't care about process groups at the moment.
-    if (pid < -1)
-    {
-        pid *= -1;
-    }
+    // Find the set of processes to check.
+    List<Process *> processList;
 
-    while (1)
+    // Our lock, which we will assign to each process (assuming WNOHANG is not set).
+    Semaphore waitLock(0);
+
+    // RAII object to clean up when we return (instead of goto or other ugliness).
+    WaitCleanup cleanup(&processList, &waitLock);
+
+    // Metadata about the calling process.
+    PosixProcess *pThisProcess = static_cast<PosixProcess *>(Processor::information().getCurrentThread()->getParent());
+    ProcessGroup *pThisGroup = pThisProcess->getProcessGroup();
+
+    // Check for the process(es) we need to check for.
+    size_t i = 0;
+    for(; i < Scheduler::instance().getNumProcesses(); ++i)
     {
-        // Is the pid an absolute pid reference?
-        if (pid > 0)
+        Process *pProcess = Scheduler::instance().getProcess(i);
+
+        if ((pid <= 0) && (pProcess->getType() == Process::Posix))
         {
-            // Does this process exist?
-            Process *pProcess = 0;
-            for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+            PosixProcess *pPosixProcess = static_cast<PosixProcess *>(pProcess);
+            ProcessGroup *pGroup = pPosixProcess->getProcessGroup();
+            if (!pGroup)
+                continue;
+            if (pid == 0)
             {
-                pProcess = Scheduler::instance().getProcess(i);
-
-                if (static_cast<int>(pProcess->getId()) == pid)
-                    break;
+                // Any process in the same process group as the caller.
+                if (!pThisGroup)
+                    continue;
+                if(pGroup->processGroupId != pThisGroup->processGroupId)
+                    continue;
             }
-            if (pProcess == 0)
-                return -1;
-
-            if (static_cast<int>(pProcess->getId()) != pid)
+            else if (pid == -1)
             {
-                // ECHILD - process n'existe pas.
-                return -1;
+                // Wait for any child.
+                if(pProcess->getParent() != pThisProcess)
+                    continue;
             }
-
-            // Is it actually our child?
-            if (pProcess->getParent() != Processor::information().getCurrentThread()->getParent())
+            else if(pGroup->processGroupId != (pid * -1))
             {
-                // ECHILD - not our child!
-                return -1;
+                // Absolute group ID reference
+                continue;
             }
+        }
+        else if ((pid > 0) && (static_cast<int>(pProcess->getId()) != pid))
+            continue;
 
-            // Is it zombie?
+        // Okay, the process is good.
+        processList.pushBack(pProcess);
+
+        // If not WNOHANG, subscribe our lock to this process' state changes.
+        if((options & 1) == 0) // 1 == WNOHANG
+        {
+            pProcess->addWaiter(&waitLock);
+        }
+    }
+
+    // No children?
+    if(processList.count() == 0)
+    {
+        SYSCALL_ERROR(NoChildren);
+        SC_NOTICE("  -> no children");
+        return -1;
+    }
+
+    // Main wait loop.
+    while(1)
+    {
+        // Check each process for state.
+        for(List<Process *>::Iterator it = processList.begin();
+            it != processList.end();
+            ++it)
+        {
+            Process *pProcess = *it;
+
+            // Zombie?
             if (pProcess->getThread(0)->getStatus() == Thread::Zombie)
             {
-                // Ph33r the Reaper...
                 if (status)
                     *status = pProcess->getExitStatus();
 
                 // Delete the process; it's been reaped good and proper.
-                SC_NOTICE("(abs) Pid " << pid << " reaped");
+                SC_NOTICE("waitpid: " << pid << " reaped");
                 delete pProcess;
-                return pid;
+                return pProcess->getId();
+            }
+            // Suspended (and WUNTRACED)?
+            else if((options & 2) && pProcess->hasSuspended())
+            {
+                if(status)
+                    *status = pProcess->getExitStatus();
+
+                SC_NOTICE("waitpid: " << pid << " suspended.");
+                return pProcess->getId();
+            }
+            // Continued (and WCONTINUED)?
+            else if((options & 4) && pProcess->hasResumed())
+            {
+                if(status)
+                    *status = pProcess->getExitStatus();
+
+                SC_NOTICE("waitpid: " << pid << " resumed.");
+                return pProcess->getId();
             }
         }
-        else
+
+        // Don't wait for any processes to report status if WNOHANG is set.
+        if(options & 1)
         {
-            // Get any pid.
-            Process *thisP = Processor::information().getCurrentThread()->getParent();
-            bool hadAnyChildren = false;
-            for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
-            {
-                Process *pProcess = Scheduler::instance().getProcess(i);
-
-                if (pProcess->getParent() == thisP)
-                {
-                    hadAnyChildren = true;
-                    if (pProcess->getThread(0)->getStatus() == Thread::Zombie)
-                    {
-                        // Kill 'em all!
-                        if (status)
-                            *status = pProcess->getExitStatus();
-                        pid = pProcess->getId();
-                        SC_NOTICE("(any) Pid " << pid << " reaped");
-                        delete pProcess;
-                        return pid;
-                    }
-                }
-            }
-            if (!hadAnyChildren)
-            {
-                // Error - no children (ECHILD)
-                SYSCALL_ERROR(NoChildren);
-                return -1;
-            }
+            return 0;
         }
 
-        if (options & 1) // WNOHANG set
-            return 0;
+        // Wait for processes to report in.
+        SC_NOTICE("  -> waiting for processes");
+        waitLock.acquire();
+        SC_NOTICE("  -> waitpid done waiting for processes");
 
-        // Sleep...
-        Processor::information().getCurrentThread()->getParent()->m_DeadThreads.acquire();
+        // We can get woken up by our process dying. Handle that here.
         if (Processor::information().getCurrentThread()->getUnwindState() == Thread::Exit)
         {
-            SC_NOTICE("Waitpid: exiting");
+            SC_NOTICE("waitpid: unwind state means exit");
             return -1;
         }
+
+        // We get notified by processes just before they change state.
+        // Make sure they are scheduled into that state by yielding.
+        Scheduler::instance().yield();
     }
 
     return -1;
