@@ -175,6 +175,10 @@ void Semaphore::release(size_t n)
 
   m_BeingModified.acquire();
 
+  // Because we can't wake a suspended thread, and we pop each thread from the queue,
+  // we need to push them back on the queue later.
+  List<Thread *> stillPendingThreads;
+
   while(m_Queue.count() != 0)
   {
     Thread *pThread = m_Queue.popFront();
@@ -193,12 +197,24 @@ void Semaphore::release(size_t n)
         // Don't wake up a thread that isn't sleeping (perhaps suspended?)
         if(pThread->getStatus() == Thread::Zombie)
             WARNING("Semaphore has a zombie thread in its thread queue");
+        else
+            stillPendingThreads.pushBack(pThread);
         continue;
     }
 
     pThread->getLock().acquire();
     pThread->setStatus(Thread::Ready);
     pThread->getLock().release();
+  }
+
+  if(stillPendingThreads.count())
+  {
+      for(List<Thread *>::Iterator it = stillPendingThreads.begin();
+              it != stillPendingThreads.end();
+              ++it)
+      {
+          m_Queue.pushBack(*it);
+      }
   }
 
   m_BeingModified.release();
