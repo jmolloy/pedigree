@@ -145,12 +145,14 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
             {
                 // Handle incoming newline
                 bool isCanonical = (slaveFlags & ConsoleManager::LCookedMode);
-                if(
-                        (buf[i] == '\r') ||
-                        (isCanonical && (
-                            (slaveControlChars[VEOL] && buf[i] == slaveControlChars[VEOL]) ||
-                            (slaveControlChars[VEOF] && buf[i] == slaveControlChars[VEOF])
-                        )))
+                if(isCanonical && (buf[i] == slaveControlChars[VEOF]))
+                {
+                    // EOF. Write it and it alone to the slave.
+                    m_pOther->inject(&buf[i], 1);
+                    return;
+                }
+
+                if((buf[i] == '\r') || (isCanonical && (buf[i] == slaveControlChars[VEOL])))
                 {
                     // LEcho - output the newline. LCookedMode - handle line buffer.
                     if((slaveFlags & ConsoleManager::LEcho) || (slaveFlags & ConsoleManager::LCookedMode))
@@ -433,6 +435,15 @@ size_t ConsoleSlaveFile::processInput(char *buf, size_t len)
     {
         if (m_Flags & ConsoleManager::IStripToSevenBits)
             pC[i] = static_cast<uint8_t>(pC[i]) & 0x7F;
+        if (m_Flags & ConsoleManager::LCookedMode)
+        {
+            if (pC[i] == m_ControlChars[VEOF])
+            {
+                // Zero-length read: EOF.
+                realLen = 0;
+                break;
+            }
+        }
 
         if (pC[i] == '\n' && (m_Flags & ConsoleManager::IMapNLToCR))
             pC[i] = '\r';
