@@ -61,7 +61,7 @@ int ConsoleFile::select(bool bWriting, int timeout)
 {
     if(timeout)
     {
-        m_RingBuffer.waitFor(bWriting ? RingBufferWait::Writing : RingBufferWait::Reading);
+        while(!m_RingBuffer.waitFor(bWriting ? RingBufferWait::Writing : RingBufferWait::Reading));
         return 1;
     }
     else
@@ -83,7 +83,8 @@ uint64_t ConsoleMasterFile::read(uint64_t location, uint64_t size, uintptr_t buf
 {
     if(bCanBlock)
     {
-        m_RingBuffer.waitFor(RingBufferWait::Reading);
+        if(!m_RingBuffer.waitFor(RingBufferWait::Reading))
+            return 0; // Interrupted.
     }
     else if(!m_RingBuffer.dataReady())
     {
@@ -107,7 +108,8 @@ uint64_t ConsoleMasterFile::write(uint64_t location, uint64_t size, uintptr_t bu
 {
     if(bCanBlock)
     {
-        m_RingBuffer.waitFor(RingBufferWait::Writing);
+        if(!m_RingBuffer.waitFor(RingBufferWait::Writing))
+            return 0; // Interrupted.
     }
     else if(!m_RingBuffer.canWrite())
     {
@@ -370,7 +372,7 @@ void ConsoleMasterFile::triggerEvent(char cause)
         Scheduler::instance().yield();
 
         // Note that we do not release the mutex here.
-        m_EventTrigger.acquire();
+        while(!m_EventTrigger.acquire());
     }
 }
 
@@ -383,7 +385,8 @@ uint64_t ConsoleSlaveFile::read(uint64_t location, uint64_t size, uintptr_t buff
 {
     if(bCanBlock)
     {
-        m_RingBuffer.waitFor(RingBufferWait::Reading);
+        if(!m_RingBuffer.waitFor(RingBufferWait::Reading))
+            return 0; // Interrupted
     }
     else if(!m_RingBuffer.dataReady())
     {
@@ -407,7 +410,8 @@ uint64_t ConsoleSlaveFile::write(uint64_t location, uint64_t size, uintptr_t buf
 {
     if(bCanBlock)
     {
-        m_RingBuffer.waitFor(RingBufferWait::Writing);
+        if(!m_RingBuffer.waitFor(RingBufferWait::Writing))
+            return 0; // Interrupted
     }
     else if(!m_RingBuffer.canWrite())
     {

@@ -160,7 +160,7 @@ class RingBuffer
         }
 
         /// waitFor - block until the given condition is true (readable/writeable)
-        void waitFor(RingBufferWait::WaitType wait)
+        bool waitFor(RingBufferWait::WaitType wait)
         {
             Semaphore *pSem = &m_ReadSem;
             if(wait == RingBufferWait::Writing)
@@ -168,8 +168,13 @@ class RingBuffer
                 pSem = &m_WriteSem;
             }
 
-            pSem->acquire();
-            pSem->release();
+            if(pSem->acquire())
+            {
+                pSem->release();
+                return true;
+            }
+
+            return false;
         }
 
         /**
