@@ -207,7 +207,7 @@ void Process::resume()
     m_bUnreportedResume = true;
     m_ExitStatus = 0xFF;
     notifyWaiters();
-    Processor::information().getScheduler().schedule(m_BeforeSuspendState);
+    Processor::information().getScheduler().schedule(Thread::Ready);
 }
 
 uintptr_t Process::create(uint8_t *elf, size_t elfSize, const char *name)

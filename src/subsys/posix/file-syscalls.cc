@@ -344,12 +344,20 @@ int posix_read(int fd, char *ptr, int len)
         }
     }
 
+    // Prepare to handle EINTR.
+    Thread *pThread = Processor::information().getCurrentThread();
+
     uint64_t nRead = 0;
     if (ptr && len)
     {
         /// \todo Sanitise input and check it's mapped etc so we don't segfault the kernel
+        pThread->setInterrupted(false);
         nRead = pFd->file->read(pFd->offset, len, len > 0x500000 ? 0 : reinterpret_cast<uintptr_t>(ptr), canBlock);
-
+        if((!nRead) && (pThread->wasInterrupted()))
+        {
+            SYSCALL_ERROR(Interrupted);
+            return -1;
+        }
         pFd->offset += nRead;
     }
 
