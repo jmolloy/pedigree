@@ -307,7 +307,9 @@ void PosixSubsystem::exit(int code)
     Thread *pThread = Processor::information().getCurrentThread();
 
     Process *pProcess = pThread->getParent();
-    if (pProcess->getExitStatus() == 0)
+    if (pProcess->getExitStatus() == 0 || // Normal exit.
+        pProcess->getExitStatus() == 0x7F || // Suspended.
+        pProcess->getExitStatus() == 0xFF) // Continued.
         pProcess->setExitStatus( (code&0xFF) << 8 );
     if(code)
     {
