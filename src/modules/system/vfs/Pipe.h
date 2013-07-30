@@ -52,6 +52,9 @@ public:
     /** Destructor - doesn't do anything. */
     virtual ~Pipe();
 
+    /** select() */
+    virtual int select(bool bWriting = false, int timeout = 0);
+
     /** Reads from the file. */
     virtual uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
     /** Writes to the file. */

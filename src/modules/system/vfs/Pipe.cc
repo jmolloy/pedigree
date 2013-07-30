@@ -51,6 +51,50 @@ Pipe::~Pipe()
 {
 }
 
+int Pipe::select(bool bWriting, int timeout)
+{
+    if(timeout)
+    {
+        if(bWriting)
+        {
+            if(m_BufAvailable.acquire(1, timeout))
+            {
+                m_BufAvailable.release();
+                return true;
+            }
+        }
+        else
+        {
+            if(m_BufLen.acquire(1, timeout))
+            {
+                m_BufLen.release();
+                return true;
+            }
+        }
+    }
+    else
+    {
+        if(bWriting)
+        {
+            if(m_BufAvailable.tryAcquire())
+            {
+                m_BufAvailable.release();
+                return true;
+            }
+        }
+        else
+        {
+            if(m_BufLen.tryAcquire())
+            {
+                m_BufLen.release();
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 uint64_t Pipe::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
     uint64_t n = 0;
@@ -114,6 +158,8 @@ uint64_t Pipe::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
         m_Back = (m_Back+1) % PIPE_BUF_MAX;
         m_BufLen.release();
         size --;
+
+        dataChanged();
     }
     return n;
 }
