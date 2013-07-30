@@ -232,15 +232,15 @@ static void init()
                                          newInfo.gateway,
                                          String(""),
                                          card);
-
-            // And the actual subnet that the card is on needs to route to... the card.
-            RoutingTable::instance().Add(RoutingTable::DestSubnet,
-                                         newInfo.ipv4,
-                                         newInfo.subnetMask,
-                                         empty,
-                                         String(""),
-                                         card);
         }
+
+        // And the actual subnet that the card is on needs to route to... the card.
+        RoutingTable::instance().Add(RoutingTable::DestSubnet,
+                newInfo.ipv4,
+                newInfo.subnetMask,
+                empty,
+                String(""),
+                card);
 
         // If this isn't already the loopback device, redirect our own IP to 127.0.0.1
         if(newInfo.ipv4.getIp() != Network::convertToIpv4(127, 0, 0, 1))
