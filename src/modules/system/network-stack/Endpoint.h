@@ -81,36 +81,36 @@ public:
     virtual EndpointType getType() = 0;
 
     /** Access to internal information */
-    uint16_t getLocalPort()
+    virtual uint16_t getLocalPort()
     {
         return m_LocalPort;
     }
-    uint16_t getRemotePort()
+    virtual uint16_t getRemotePort()
     {
         return m_RemotePort;
     }
-    IpAddress getLocalIp()
+    virtual IpAddress getLocalIp()
     {
         return m_LocalIp;
     }
-    IpAddress getRemoteIp()
+    virtual IpAddress getRemoteIp()
     {
         return m_RemoteIp;
     }
 
-    void setLocalPort(uint16_t port)
+    virtual void setLocalPort(uint16_t port)
     {
         m_LocalPort = port;
     }
-    void setRemotePort(uint16_t port)
+    virtual void setRemotePort(uint16_t port)
     {
         m_RemotePort = port;
     }
-    void setLocalIp(IpAddress local)
+    virtual void setLocalIp(IpAddress local)
     {
         m_LocalIp = local;
     }
-    void setRemoteIp(IpAddress remote)
+    virtual void setRemoteIp(IpAddress remote)
     {
         m_RemoteIp = remote;
     }

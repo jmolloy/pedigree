@@ -22,6 +22,20 @@
 
 UdpManager UdpManager::manager;
 
+void UdpEndpoint::setLocalPort(uint16_t port)
+{
+    if(!port)
+    {
+        port = UdpManager::instance().allocatePort();
+        if(!port)
+            return;
+    }
+
+    UdpManager::instance().bindEndpoint(this, port);
+
+    Endpoint::setLocalPort(port);
+}
+
 int UdpEndpoint::send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network *pCard)
 {
   bool success = Udp::instance().send(remoteHost.ip, getLocalPort(), remoteHost.remotePort, nBytes, buffer, broadcast, pCard);
@@ -158,11 +172,16 @@ void UdpManager::receive(IpAddress from, IpAddress to, uint16_t sourcePort, uint
 {
   if(!pCard)
     return;
-  
+
   // is there an endpoint for this port?
   ConnectionlessEndpoint* e;
+  {
+    LockGuard<Mutex> guard(m_UdpMutex);
+    e = static_cast<ConnectionlessEndpoint *>(m_Endpoints.lookup(destPort));
+  }
+
   StationInfo cardInfo = pCard->getStationInfo();
-  if((e = static_cast<ConnectionlessEndpoint *>(m_Endpoints.lookup(destPort))) != 0)
+  if(e != 0)
   {
     /** Should we pass on the packet? **/
     bool passOn = false;
@@ -194,6 +213,7 @@ void UdpManager::receive(IpAddress from, IpAddress to, uint16_t sourcePort, uint
 
 void UdpManager::returnEndpoint(Endpoint* e)
 {
+  LockGuard<Mutex> guard(m_UdpMutex);
   if(e)
   {
     m_Endpoints.remove(e->getLocalPort());
@@ -208,27 +228,59 @@ Endpoint* UdpManager::getEndpoint(IpAddress remoteHost, uint16_t localPort, uint
   /// \todo Move into a helper function
   if(localPort == 0)
   {
-    uint16_t base = 32768;
-    while(base < 0xFFFF)
-    {
-      if(m_Endpoints.lookup(base++) == 0)
-        break;
-    }
-    if(base == 0xFFFF)
-      return 0; // no local port available
-    localPort = base;
+    localPort = allocatePort();
+    if(localPort == 0)
+        return 0;
   }
 
-  // Is there an endpoint for this port?
-  /// \note If there is already an Endpoint, we do *not* reallocate it.
-  /// \todo Can UDP endpoints be shared? Is it a good idea?
-  Endpoint* e;
-  if((e = m_Endpoints.lookup(localPort)) == 0)
   {
-    e = new UdpEndpoint(remoteHost, localPort, remotePort);
-    e->setManager(this);
+      LockGuard<Mutex> guard(m_UdpMutex);
 
-    m_Endpoints.insert(localPort, e);
+      // Is there an endpoint for this port?
+      /// \note If there is already an Endpoint, we do *not* reallocate it.
+      /// \todo Can UDP endpoints be shared? Is it a good idea?
+      Endpoint* e;
+      if((e = m_Endpoints.lookup(localPort)) == 0)
+      {
+          e = new UdpEndpoint(remoteHost, localPort, remotePort);
+          e->setManager(this);
+
+          m_Endpoints.insert(localPort, e);
+      }
+
+      return e;
   }
-  return e;
 }
+
+uint16_t UdpManager::allocatePort()
+{
+    LockGuard<Mutex> guard(m_UdpMutex);
+
+    size_t bit = m_PortsAvailable.getFirstClear();
+    if(bit > 0xFFFF)
+    {
+        WARNING("No UDP ports available.");
+        return 0;
+    }
+    m_PortsAvailable.set(bit);
+
+    return static_cast<uint16_t>(bit & 0xFFFF);
+}
+
+void UdpManager::bindEndpoint(Endpoint *p, size_t localPort)
+{
+    LockGuard<Mutex> guard(m_UdpMutex);
+
+    // Already allocated?
+    Endpoint *e = m_Endpoints.lookup(localPort);
+    if(e)
+    {
+        NOTICE("bindEndpoint called with already-used local port");
+        return;
+    }
+
+    // Insert.
+    p->setManager(this);
+    m_Endpoints.insert(localPort, p);
+}
+

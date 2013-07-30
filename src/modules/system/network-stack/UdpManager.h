@@ -20,7 +20,9 @@
 #include <utilities/Tree.h>
 #include <utilities/List.h>
 #include <process/Semaphore.h>
+#include <process/Mutex.h>
 #include <machine/Network.h>
+#include <utilities/ExtensibleBitmap.h>
 
 #include "Manager.h"
 
@@ -79,6 +81,8 @@ class UdpEndpoint : public ConnectionlessEndpoint
         return true;
     }
 
+    virtual void setLocalPort(uint16_t port);
+
   private:
 
     struct DataBlock
@@ -117,10 +121,15 @@ class UdpEndpoint : public ConnectionlessEndpoint
  */
 class UdpManager : public ProtocolManager
 {
+friend class UdpEndpoint;
+
 public:
   UdpManager() :
-    m_Endpoints()
-  {};
+    m_Endpoints(), m_UdpMutex(false), m_PortsAvailable()
+  {
+    // Never allocate port 0.
+    m_PortsAvailable.set(0);
+  };
   virtual ~UdpManager()
   {};
 
@@ -145,6 +154,18 @@ private:
 
   /** Currently known endpoints (all actually UdpEndpoints). */
   Tree<size_t, Endpoint*> m_Endpoints;
+
+  /** Lock to ensure the port bitmap and m_Endpoints are safe. */
+  Mutex m_UdpMutex;
+
+  /** Ports. */
+  ExtensibleBitmap m_PortsAvailable;
+
+protected:
+
+  uint16_t allocatePort();
+
+  void bindEndpoint(Endpoint *p, size_t localPort);
 };
 
 #endif
