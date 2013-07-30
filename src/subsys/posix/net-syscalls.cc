@@ -27,6 +27,7 @@
 #include <network-stack/RoutingTable.h>
 #include <network-stack/Dns.h>
 #include <network-stack/Tcp.h>
+#include <network-stack/UdpManager.h>
 
 #include <Subsystem.h>
 #include <PosixSubsystem.h>
@@ -177,6 +178,9 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
         remoteHost.remotePort = BIG_TO_HOST16(sin->sin_port);
         remoteHost.ip.setIp(sin->sin_addr.s_addr);
 
+        // If no bind has been done, allocate a port and bind.
+        if(!ce->getLocalPort())
+            ce->setLocalPort(0);
         ce->setRemotePort(remoteHost.remotePort);
         ce->setRemoteIp(remoteHost.ip);
         success = true;
