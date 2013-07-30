@@ -224,6 +224,11 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
                     // Do we need to handle this character differently?
                     if(checkForEvent(slaveFlags, buf[i]))
                     {
+                        // Write it to the master nicely (eg, ^C, ^D)
+                        char ctl[3] = {'^', '@' + buf[i], '\n'};
+                        m_RingBuffer.write(ctl, 3);
+
+                        // Trigger the actual event.
                         triggerEvent(buf[i]);
                         continue;
                     }
