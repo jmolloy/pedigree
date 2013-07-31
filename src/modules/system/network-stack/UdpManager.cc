@@ -158,14 +158,12 @@ bool UdpEndpoint::dataReady(bool block, uint32_t tmout)
     if(block)
     {
         if(tmout)
-            m_DataQueueSize.acquire(1, tmout);
+            return m_DataQueueSize.acquire(1, tmout);
         else
-            m_DataQueueSize.acquire();
-
-        if(Processor::information().getCurrentThread()->wasInterrupted())
-            return false;
+            return m_DataQueueSize.acquire();
     }
-    return true;
+
+    return false;
 }
 
 void UdpManager::receive(IpAddress from, IpAddress to, uint16_t sourcePort, uint16_t destPort, uintptr_t payload, size_t payloadSize, Network* pCard)
