@@ -47,7 +47,7 @@ void RoutingTable::Add(Type type, IpAddress dest, IpAddress subIp, String meta, 
 
         // Add the route to the database directly
         String str;
-        str.sprintf("INSERT INTO routes (ipaddr, subip, name, type, iface) VALUES (%u, %u, '%s', %u, %u)", dest.getIp(), subIp.getIp(), static_cast<const char*>(meta), static_cast<int>(type), hash);
+        str.sprintf("INSERT INTO routes (ipaddr, subip, name, type, iface) VALUES (%u, %u, '%s', %u, %u)", BIG_TO_HOST32(dest.getIp()), BIG_TO_HOST32(subIp.getIp()), static_cast<const char*>(meta), static_cast<int>(type), hash);
         pResult = Config::instance().query(str);
         if(!pResult->succeeded())
         {
