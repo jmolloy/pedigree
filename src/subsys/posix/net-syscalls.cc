@@ -147,6 +147,7 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
         // Can't use this interface...
         return false;
     }
+    StationInfo iface_info = iface->getStationInfo();
 
     /// \todo Other protocols
     bool success = false;
@@ -179,6 +180,7 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
         remoteHost.ip.setIp(sin->sin_addr.s_addr);
 
         // If no bind has been done, allocate a port and bind.
+        ce->setLocalIp(iface_info.ipv4);
         if(!ce->getLocalPort())
             ce->setLocalPort(0);
         ce->setRemotePort(remoteHost.remotePort);
@@ -403,6 +405,7 @@ ssize_t posix_recvfrom(void* callInfo)
         struct sockaddr_in* sin = reinterpret_cast<struct sockaddr_in*>(address);
         sin->sin_port = HOST_TO_BIG16(remoteHost.remotePort);
         sin->sin_addr.s_addr = remoteHost.ip.getIp();
+        sin->sin_family = AF_INET;
         *addrlen = sizeof(struct sockaddr_in);
     }
 
