@@ -89,6 +89,7 @@ int posix_socket(int domain, int type, int protocol)
     f->fd = fd;
     pSubsystem->addFileDescriptor(fd, f);
 
+    N_NOTICE("  -> " << Dec << fd << Hex);
     return static_cast<int> (fd);
 }
 
@@ -409,6 +410,7 @@ ssize_t posix_recvfrom(void* callInfo)
         *addrlen = sizeof(struct sockaddr_in);
     }
 
+    N_NOTICE("  -> " << Dec << ret << Hex);
     return ret;
 }
 
