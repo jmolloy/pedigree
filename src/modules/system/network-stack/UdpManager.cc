@@ -48,13 +48,10 @@ int UdpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, RemoteEndpo
   // so using dataReady *again* to see if data is available is *wrong* unless
   // the queue is empty.
   bool bDataReady = false;
-  if(m_DataQueue.count())
+  if(m_DataQueueSize.tryAcquire())
     bDataReady = true;
   else if(bBlock)
-  {
-    if(!dataReady(true, nTimeout))
-      bDataReady = false;
-  }
+    bDataReady = dataReady(true, nTimeout);
   else
     bDataReady = false;
 
@@ -221,9 +218,7 @@ void UdpManager::returnEndpoint(Endpoint* e)
 
 Endpoint* UdpManager::getEndpoint(IpAddress remoteHost, uint16_t localPort, uint16_t remotePort)
 {
-  // Try to find a unique port
-  /// \todo Bitmap! So much neater!
-  /// \todo Move into a helper function
+  // Try to find a unique port.
   if(localPort == 0)
   {
     localPort = allocatePort();
