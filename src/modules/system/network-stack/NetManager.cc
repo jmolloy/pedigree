@@ -55,12 +55,11 @@ void Socket::decreaseRefCount(bool bIsWriter)
     else
         m_nReaders --;
 
-    m_Endpoint->RemoveSocket(this);
-
     if (m_nReaders == 0 && m_nWriters == 0)
     {
         if (m_Endpoint)
         {
+            m_Endpoint->RemoveSocket(this);
             m_Endpoint->shutdown(Endpoint::ShutBoth);
             if(m_Endpoint->getType() == Endpoint::ConnectionBased)
             {
