@@ -102,9 +102,7 @@ class Socket : public File
             }
             else
             {
-                NOTICE("Checking for data...");
                 bool ret = ce->dataReady(timeout > 0, timeout);
-                NOTICE("Data ready: " << ret << ".");
                 return ret ? 1 : 0;
             }
         }
