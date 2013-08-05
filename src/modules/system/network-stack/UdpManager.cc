@@ -48,12 +48,19 @@ int UdpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, RemoteEndpo
   // so using dataReady *again* to see if data is available is *wrong* unless
   // the queue is empty.
   bool bDataReady = false;
-  if(m_DataQueueSize.tryAcquire())
-    bDataReady = true;
-  else if(bBlock)
-    bDataReady = dataReady(true, nTimeout);
-  else
-    bDataReady = false;
+  while(1)
+  {
+      if(dataReady(bBlock, nTimeout))
+      {
+          if(m_DataQueueSize.acquire())
+          {
+              bDataReady = true;
+              break;
+          }
+      }
+      else if(!bBlock)
+          break;
+  }
 
   if(bDataReady)
   {
@@ -145,22 +152,24 @@ size_t UdpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpo
 
 bool UdpEndpoint::dataReady(bool block, uint32_t tmout)
 {
-    // Attempt to avoid setting up the timeout if possible
-    if(m_DataQueueSize.tryAcquire())
-        return true;
-    else if(!block)
-        return false;
-
-    // Otherwise jump straight into blocking
-    if(block)
+    // Fast check for data in queue.
+    bool bResult = m_DataQueueSize.tryAcquire();
+    if(!bResult)
     {
+        // No data, no blocking - no go!
+        if(!block)
+            return false;
+
+        // Block (until a timeout, if one is present)
         if(tmout)
-            return m_DataQueueSize.acquire(1, tmout);
+            bResult = m_DataQueueSize.acquire(1, tmout);
         else
-            return m_DataQueueSize.acquire();
+            bResult = m_DataQueueSize.acquire();
     }
 
-    return false;
+    if(bResult)
+        m_DataQueueSize.release(); // Undo the acquire we just did.
+    return bResult;
 }
 
 void UdpManager::receive(IpAddress from, IpAddress to, uint16_t sourcePort, uint16_t destPort, uintptr_t payload, size_t payloadSize, Network* pCard)
