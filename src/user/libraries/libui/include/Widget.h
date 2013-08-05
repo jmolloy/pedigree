@@ -158,6 +158,18 @@ class Widget
         }
 
         /**
+         * Gets a raw socket that can be used for select() or poll().
+         *
+         * An application can take all widgets it is aware of and select() on them;
+         * when they are readable, a call to Widget::checkForEvents will clear
+         * the queued events that arrived.
+         */
+        int getSocket() const
+        {
+            return m_Socket;
+        }
+
+        /**
          * Handles emptying the pending event queue and dispatch to callbacks
          * for an application automatically.
          */
@@ -183,6 +195,9 @@ class Widget
 
         /** IPC endpoint name for window manager communication. */
         PedigreeIpc::IpcEndpoint *m_Endpoint;
+
+        /** IPC socket for window manager communication (supercedes IPC enpdoint). */
+        int m_Socket;
 
         /** IPC shared message that handles our framebuffer. */
         PedigreeIpc::SharedIpcMessage *m_SharedFramebuffer;

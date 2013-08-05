@@ -23,6 +23,9 @@
 #include <math.h>
 #include <errno.h>
 #include <sys/mman.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <map>
 #include <list>
@@ -30,7 +33,6 @@
 
 #include <graphics/Graphics.h>
 #include <input/Input.h>
-#include <ipc/Ipc.h>
 
 #include <cairo/cairo.h>
 #include <cairo/cairo-ft.h>
@@ -52,7 +54,11 @@ std::map<uint64_t, Window*> *g_Windows;
 
 std::set<WObject*> g_PendingWindows;
 
-PedigreeIpc::IpcEndpoint *g_pEndpoint = 0;
+/// UNIX socket (or UDP before UNIX sockets are implemented)
+int g_iSocket = 0;
+
+/// Control pipe for us to wake the main loop when state changes.
+int g_iControlPipe[2] = {0};
 
 std::string g_StatusField = "";
 
@@ -67,6 +73,13 @@ void startClient()
 {
     if(fork() == 0)
     {
+        // Forked. Close all of our existing handles, we don't really want the
+        // client to inherit them.
+        /// \todo Is it worth making these handles FD_CLOEXEC for this reason?
+        close(g_iControlPipe[0]);
+        close(g_iControlPipe[1]);
+        close(g_iSocket);
+
         execl(CLIENT_DEFAULT, CLIENT_DEFAULT, 0);
         exit(1);
     }
@@ -94,7 +107,7 @@ void fps()
     }
 }
 
-void handleMessage(char *messageData)
+void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
 {
     bool bResult = false;
     LibUiProtocol::WindowManagerMessage *pWinMan =
@@ -104,15 +117,9 @@ void handleMessage(char *messageData)
 
     if(pWinMan->messageCode == LibUiProtocol::Create)
     {
-        PedigreeIpc::IpcMessage *pIpcResponse = new PedigreeIpc::IpcMessage();
-        bool bSuccess = pIpcResponse->initialise();
-
         LibUiProtocol::CreateMessage *pCreate =
         reinterpret_cast<LibUiProtocol::CreateMessage*>(messageData + sizeof(LibUiProtocol::WindowManagerMessage));
-        totalSize += sizeof(LibUiProtocol::CreateMessageResponse);
-        char *responseData = (char *) pIpcResponse->getBuffer();
-
-        PedigreeIpc::IpcEndpoint *pEndpoint = PedigreeIpc::getEndpoint(pCreate->endpoint);
+        char *responseData = new char[totalSize];
 
         Container *pParent = g_pRootContainer;
         if(g_pFocusWindow)
@@ -120,7 +127,11 @@ void handleMessage(char *messageData)
             pParent = g_pFocusWindow->getParent();
         }
 
-        Window *pWindow = new Window(pWinMan->widgetHandle, pEndpoint, pParent);
+        /// \todo Error handling.
+        int iSocket = socket(AF_INET, SOCK_DGRAM, 0);
+        connect(iSocket, src, slen);
+
+        Window *pWindow = new Window(pWinMan->widgetHandle, iSocket, pParent);
         std::string newTitle(pCreate->title);
         pWindow->setTitle(newTitle);
         g_PendingWindows.insert(pWindow);
@@ -141,22 +152,20 @@ void handleMessage(char *messageData)
 
         LibUiProtocol::CreateMessageResponse *pCreateResp =
             reinterpret_cast<LibUiProtocol::CreateMessageResponse*>(responseData + sizeof(LibUiProtocol::WindowManagerMessage));
-        // pCreateResp->provider = pWindow->getContext()->getProvider();
 
         g_Windows->insert(std::make_pair(pWinMan->widgetHandle, pWindow));
 
-        PedigreeIpc::send(pEndpoint, pIpcResponse, true);
+        send(iSocket, responseData, totalSize, 0);
+
+        delete [] responseData;
     }
     else if(pWinMan->messageCode == LibUiProtocol::Sync)
     {
         std::map<uint64_t, Window*>::iterator it = g_Windows->find(pWinMan->widgetHandle);
         if(it != g_Windows->end())
         {
-            PedigreeIpc::IpcMessage *pIpcResponse = new PedigreeIpc::IpcMessage();
-            bool bSuccess = pIpcResponse->initialise();
-
             Window *pWindow = it->second;
-            char *responseData = (char *) pIpcResponse->getBuffer();
+            char *responseData = new char[totalSize];
 
             LibUiProtocol::WindowManagerMessage *pHeader =
                 reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(responseData);
@@ -167,9 +176,10 @@ void handleMessage(char *messageData)
 
             LibUiProtocol::SyncMessageResponse *pSyncResp =
                 reinterpret_cast<LibUiProtocol::SyncMessageResponse*>(responseData + sizeof(LibUiProtocol::WindowManagerMessage));
-            // pSyncResp->provider = pWindow->getContext()->getProvider();
 
-            PedigreeIpc::send(pWindow->getEndpoint(), pIpcResponse, true);
+            send(pWindow->getSocket(), responseData, totalSize, 0);
+
+            delete [] responseData;
         }
     }
     else if(pWinMan->messageCode == LibUiProtocol::RequestRedraw)
@@ -196,17 +206,41 @@ void handleMessage(char *messageData)
     }
 }
 
-void checkForMessages(PedigreeIpc::IpcEndpoint *pEndpoint)
+void checkForMessages()
 {
-    if(!pEndpoint)
-        return;
+    fd_set fds;
+    FD_ZERO(&fds);
 
-    PedigreeIpc::IpcMessage *pRecv = 0;
-    if(PedigreeIpc::recv(pEndpoint, &pRecv, false))
+    // Prepare the set for select()ing on.
+    FD_SET(g_iSocket, &fds);
+    FD_SET(g_iControlPipe[0], &fds);
+    int nMax = std::max(g_iSocket, g_iControlPipe[0]);
+
+    // Do the deed - no timeout.
+    int ret = select(nMax + 1, &fds, 0, 0, 0);
+    if(ret > 0)
     {
-        handleMessage(static_cast<char *>(pRecv->getBuffer()));
+        if(FD_ISSET(g_iSocket, &fds))
+        {
+            // Socket has a datagram ready to handle.
+            // We use recvfrom so we can create a socket back to the client easily.
+            char msg[4096];
+            struct sockaddr saddr;
+            socklen_t slen = 0;
+            ssize_t sz = recvfrom(g_iSocket, msg, 4096, 0, &saddr, &slen);
+            if(sz > 0)
+            {
+                // Handle!
+                handleMessage(msg, &saddr, slen);
+            }
+        }
 
-        delete pRecv;
+        if(FD_ISSET(g_iControlPipe[0], &fds))
+        {
+            // Empty the pipe.
+            char buf[1024];
+            read(g_iControlPipe[0], buf, 1024);
+        }
     }
 }
 
@@ -529,9 +563,7 @@ void systemInputCallback(Input::InputNotification &note)
         if(note.type & Input::Key)
             totalSize += sizeof(LibUiProtocol::KeyEventMessage);
 
-        PedigreeIpc::IpcMessage *pMessage = new PedigreeIpc::IpcMessage();
-        pMessage->initialise();
-        char *buffer = (char *) pMessage->getBuffer();
+        char *buffer = new char[totalSize];
 
         LibUiProtocol::WindowManagerMessage *pHeader =
             reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
@@ -547,26 +579,16 @@ void systemInputCallback(Input::InputNotification &note)
             pKeyEvent->state = LibUiProtocol::Up; /// \todo 'keydown' messages.
             pKeyEvent->key = note.data.key.key;
 
-            PedigreeIpc::send(g_pFocusWindow->getEndpoint(), pMessage, true);
+            send(g_pFocusWindow->getSocket(), buffer, totalSize, 0);
         }
-        else
-        {
-            delete pMessage;
-        }
+
+        delete [] buffer;
     }
 
-    // If we need to wake up the main IPC thread, inject a nothing message.
+    // If we need to wake up the main IPC loop, write to the control pipe.
     if(bWakeup)
     {
-        PedigreeIpc::IpcMessage *pMessage = new PedigreeIpc::IpcMessage();
-        pMessage->initialise();
-        char *buffer = (char *) pMessage->getBuffer();
-
-        LibUiProtocol::WindowManagerMessage *pHeader =
-            reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
-        pHeader->messageCode = LibUiProtocol::Nothing;
-
-        PedigreeIpc::send(g_pEndpoint, pMessage, true);
+        write(g_iControlPipe[1], "w", 1);
     }
 }
 
@@ -608,15 +630,26 @@ int main(int argc, char *argv[])
 {
     syslog(LOG_INFO, "winman: starting up...");
 
-    // Create the window manager IPC endpoint for libui.
-    PedigreeIpc::createEndpoint("pedigree-winman");
-    g_pEndpoint = PedigreeIpc::getEndpoint("pedigree-winman");
+    // Create control pipe.
+    pipe(g_iControlPipe);
 
-    if(!g_pEndpoint)
+    // Create listening socket.
+    /// \todo AF_UNIX
+    g_iSocket = socket(AF_INET, SOCK_DGRAM, 0);
+
+    if(g_iSocket < 0)
     {
         syslog(LOG_CRIT, "error: couldn't create the pedigree-winman IPC endpoint!");
         return 0;
     }
+
+    // Bind.
+    struct sockaddr_in bind_addr;
+    bind_addr.sin_family = AF_INET;
+    bind_addr.sin_addr.s_addr = INADDR_ANY;
+    bind_addr.sin_port = htons(6000);
+    socklen_t socklen = sizeof(bind_addr);
+    bind(g_iSocket, (struct sockaddr *) &bind_addr, socklen);
 
     FT_Library font_library;
     FT_Face ft_face;
@@ -771,7 +804,7 @@ int main(int argc, char *argv[])
     while(true)
     {
         // Check for any messages coming in from windows, asynchronously.
-        checkForMessages(g_pEndpoint);
+        checkForMessages();
 
         // Check for any windows that may need rendering.
         if((!g_PendingWindows.empty()) || g_StatusField.length())

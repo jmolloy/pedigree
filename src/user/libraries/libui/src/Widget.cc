@@ -24,6 +24,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <syslog.h>
+#include <sys/socket.h>
+#include <sys/select.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <map>
 #include <queue>
@@ -42,15 +46,13 @@ static bool defaultEventHandler(WidgetMessages message, size_t dataSize, void *d
 
 static Widget *g_pWidget = 0;
 
-static PedigreeIpc::IpcEndpoint *g_pWinmanEndpoint = 0;
-
 std::map<uint64_t, widgetCallback_t> Widget::m_CallbackMap;
-std::queue<PedigreeIpc::IpcMessage *> g_PendingMessages;
+std::queue<char *> g_PendingMessages;
 
 Widget::Widget() :
     m_bConstructed(false), m_pFramebuffer(0), m_Handle(0),
     m_EventCallback(defaultEventHandler), m_Endpoint(0),
-    m_SharedFramebuffer(0)
+    m_SharedFramebuffer(0), m_Socket(-1)
 {
 }
 
@@ -73,13 +75,22 @@ bool Widget::construct(const char *endpoint, const char *title, widgetCallback_t
     if(!cb)
         return false;
 
-    // Create endpoint, if not already created.
-    /// \todo fail if endpoint already exists.
-    PedigreeIpc::createEndpoint(endpoint);
-    m_Endpoint = PedigreeIpc::getEndpoint(endpoint);
-    if(!g_pWinmanEndpoint)
+    // Create socket for window manager communication.
+    struct sockaddr_in saddr;
+    socklen_t slen = sizeof(saddr);
+    saddr.sin_family = AF_INET;
+    saddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    saddr.sin_port = htons(6000);
+    m_Socket = socket(AF_INET, SOCK_DGRAM, 0);
+    if(m_Socket < 0)
+        return false;
+
+    // Connect to window manager.
+    if(connect(m_Socket, (struct sockaddr *) &saddr, slen) < 0)
     {
-        g_pWinmanEndpoint = PedigreeIpc::getEndpoint(PEDIGREE_WINMAN_ENDPOINT);
+        close(m_Socket);
+        m_Socket = -1;
+        return false;
     }
 
     // Construct the handle first.
@@ -91,16 +102,9 @@ bool Widget::construct(const char *endpoint, const char *title, widgetCallback_t
     m_Handle = (pid << 32) | (widgetPointer);
 #endif
 
-    PedigreeIpc::IpcMessage *pCreateMessage = new PedigreeIpc::IpcMessage();
-    if(!pCreateMessage->initialise())
-    {
-        m_Handle = 0;
-        return false;
-    }
-
     // Prepare a message to send.
     size_t totalSize = sizeof(WindowManagerMessage) + sizeof(CreateMessage);
-    char *messageData = static_cast<char *>(pCreateMessage->getBuffer());
+    char *messageData = new char[totalSize];
     WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
     CreateMessage *pCreate = reinterpret_cast<CreateMessage*>(messageData + sizeof(WindowManagerMessage));
 
@@ -116,48 +120,40 @@ bool Widget::construct(const char *endpoint, const char *title, widgetCallback_t
     pCreate->rigid = true;
 
     // Send the message off to the window manager and wait for a response. The
-    // response will contain a GraphicsProvider that we can use to create our
-    // Framebuffer for drawing on.
-    if(!PedigreeIpc::send(g_pWinmanEndpoint, pCreateMessage, false))
-    {
-        m_Handle = 0;
-        delete pCreateMessage;
-        return false;
-    }
+    // response will contain a shared memory region we can use as our window
+    // framebuffer.
+    send(m_Socket, messageData, totalSize, 0);
+    delete [] messageData;
 
-    PedigreeIpc::IpcMessage *pResponse = 0;
-
+    // Blocking receive.
+    char *responseData = new char[4096];
     while(1)
     {
-        if(!PedigreeIpc::recv(m_Endpoint, &pResponse, false))
-        {
-            m_Handle = 0;
-            return false;
-        }
+        ssize_t len = recv(m_Socket, responseData, 4096, 0);
 
-        if(!(pResponse && pResponse->getBuffer()))
-        {
-            continue;
-        }
+        /// \todo Handle errors better.
+        if(len <= 0)
+            continue; // Timeout, or other error.
 
-        pWinMan = reinterpret_cast<WindowManagerMessage*>(pResponse->getBuffer());
+        pWinMan = reinterpret_cast<WindowManagerMessage*>(responseData);
+
+        // Handle any messages that are not the ACK for this Create message.
+        // This might be a resize or similar, caused by our creation.
         if(!(pWinMan->isResponse && (pWinMan->messageCode == Create)))
         {
-            g_PendingMessages.push(pResponse);
+            g_PendingMessages.push(responseData);
+            responseData = new char[4096];
         }
         else
-        {
-            messageData = static_cast<char *>(pResponse->getBuffer());
             break;
-        }
     }
 
     // Grab the results and use them.
-    CreateMessageResponse *pCreateResp = reinterpret_cast<CreateMessageResponse*>(messageData + sizeof(WindowManagerMessage));
+    CreateMessageResponse *pCreateResp = reinterpret_cast<CreateMessageResponse*>(responseData + sizeof(WindowManagerMessage));
     m_EventCallback = cb;
     m_CallbackMap[m_Handle] = cb;
 
-    delete pResponse;
+    delete [] responseData;
 
     g_pWidget = this;
 
@@ -202,7 +198,7 @@ bool Widget::setProperty(std::string propName, void *propVal, size_t maxSize)
     memcpy(messageData + headerSize, propVal, maxSize);
 
     // Transmit.
-    bool result = sendMessage(messageData, totalSize);
+    bool result = send(m_Socket, messageData, totalSize, 0) == totalSize;
 
     // Clean up.
     delete [] messageData;
@@ -230,16 +226,8 @@ bool Widget::redraw(PedigreeGraphics::Rect &rt)
     if(!m_Handle)
         return false;
 
-    // Allocate the message.
-    PedigreeIpc::IpcMessage *pRedrawMessage = new PedigreeIpc::IpcMessage();
-    if(!pRedrawMessage->initialise())
-    {
-        m_Handle = 0;
-        return false;
-    }
-
     size_t totalSize = sizeof(WindowManagerMessage) + sizeof(RequestRedrawMessage);
-    char *messageData = static_cast<char *>(pRedrawMessage->getBuffer());
+    char *messageData = new char[totalSize];
     WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
     RequestRedrawMessage *pMessage = reinterpret_cast<RequestRedrawMessage*>(messageData + sizeof(WindowManagerMessage));
 
@@ -254,13 +242,11 @@ bool Widget::redraw(PedigreeGraphics::Rect &rt)
     pMessage->height = rt.getH();
 
     // Transmit.
-    if(!PedigreeIpc::send(g_pWinmanEndpoint, pRedrawMessage))
-    {
-        delete pRedrawMessage;
-        return false;
-    }
+    bool bRet = false;
+    bRet = send(m_Socket, messageData, totalSize, 0) == totalSize;
+    delete [] messageData;
 
-    return true;
+    return bRet;
 }
 
 bool Widget::visibility(bool vis)
@@ -283,7 +269,7 @@ bool Widget::visibility(bool vis)
     pMessage->bVisible = vis;
 
     // Transmit.
-    bool result = sendMessage(messageData, totalSize);
+    bool result = send(m_Socket, messageData, totalSize, 0) == totalSize;
 
     // Clean up.
     delete [] messageData;
@@ -310,7 +296,7 @@ void Widget::destroy()
     pWinMan->isResponse = false;
 
     // Transmit.
-    sendMessage(messageData, totalSize);
+    send(m_Socket, messageData, totalSize, 0);
 
     // Clean up.
     delete [] messageData;
@@ -391,46 +377,62 @@ PedigreeGraphics::Framebuffer *Widget::getFramebuffer()
 
 void Widget::checkForEvents(bool bAsync)
 {
+    int max_fd = 0;
+    fd_set fds;
+    FD_ZERO(&fds);
+
     /// \todo ALL created widgets, not just one.
     if(g_pWidget)
     {
-        char *buffer = 0;
-        PedigreeIpc::IpcMessage *pMessage = 0;
+        char *buffer = new char[4096];
         if(g_PendingMessages.empty())
         {
-            PedigreeIpc::recv(g_pWidget->m_Endpoint, &pMessage, bAsync);
+            max_fd = std::max(max_fd, g_pWidget->getSocket());
+            FD_SET(g_pWidget->getSocket(), &fds);
+
+            struct timeval tv;
+            tv.tv_sec = tv.tv_usec = 0;
+
+            // Async - check and don't do anything if no message found.
+            int nready = select(max_fd + 1, &fds, 0, 0, bAsync ? &tv : 0);
+            if(nready)
+            {
+                recv(g_pWidget->getSocket(), buffer, 4096, 0);
+            }
+            else
+            {
+                delete [] buffer;
+                return;
+            }
         }
         else
         {
-            pMessage = g_PendingMessages.front();
+            delete [] buffer;
+            buffer = g_PendingMessages.front();
             g_PendingMessages.pop();
         }
 
-        if(pMessage)
+        LibUiProtocol::WindowManagerMessage *pHeader =
+            reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
+
+        widgetCallback_t cb = m_CallbackMap[pHeader->widgetHandle];
+
+        switch(pHeader->messageCode)
         {
-            buffer = static_cast<char *>(pMessage->getBuffer());
-
-            LibUiProtocol::WindowManagerMessage *pHeader =
-                reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
-
-            widgetCallback_t cb = m_CallbackMap[pHeader->widgetHandle];
-
-            switch(pHeader->messageCode)
-            {
-                case LibUiProtocol::Reposition:
+            case LibUiProtocol::Reposition:
                 {
                     LibUiProtocol::RepositionMessage *pReposition =
                         reinterpret_cast<LibUiProtocol::RepositionMessage*>(buffer + sizeof(LibUiProtocol::WindowManagerMessage));
                     delete g_pWidget->m_SharedFramebuffer;
                     g_pWidget->m_SharedFramebuffer =
-                            new PedigreeIpc::SharedIpcMessage(pReposition->shmem_size, pReposition->shmem_handle);
+                        new PedigreeIpc::SharedIpcMessage(pReposition->shmem_size, pReposition->shmem_handle);
                     g_pWidget->m_SharedFramebuffer->initialise();
 
                     // Run the callback now that the framebuffer is re-created.
                     cb(::Reposition, sizeof(pReposition->rt), &pReposition->rt);
                     break;
                 }
-                case LibUiProtocol::KeyEvent:
+            case LibUiProtocol::KeyEvent:
                 {
                     LibUiProtocol::KeyEventMessage *pKeyEvent =
                         reinterpret_cast<LibUiProtocol::KeyEventMessage*>(buffer + sizeof(LibUiProtocol::WindowManagerMessage));
@@ -438,20 +440,16 @@ void Widget::checkForEvents(bool bAsync)
                     cb(::KeyUp, sizeof(pKeyEvent->key), &pKeyEvent->key);
                     break;
                 }
-                case LibUiProtocol::Focus:
-                    cb(::Focus, 0, 0);
-                    break;
-                case LibUiProtocol::NoFocus:
-                    cb(::NoFocus, 0, 0);
-                    break;
-                default:
-                    syslog(LOG_INFO, "** unknown event");
-            }
+            case LibUiProtocol::Focus:
+                cb(::Focus, 0, 0);
+                break;
+            case LibUiProtocol::NoFocus:
+                cb(::NoFocus, 0, 0);
+                break;
+            default:
+                syslog(LOG_INFO, "** unknown event");
         }
 
-        if(pMessage)
-        {
-            delete pMessage;
-        }
+        delete [] buffer;
     }
 }

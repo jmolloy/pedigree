@@ -16,6 +16,7 @@
 
 #include "winman.h"
 #include <string.h>
+#include <sys/socket.h>
 
 #include <protocol.h>
 
@@ -68,10 +69,10 @@ void WObject::bump(ssize_t bumpX, ssize_t bumpY)
     m_Dimensions.update(x, y, w, h);
 }
 
-Window::Window(uint64_t handle, PedigreeIpc::IpcEndpoint *endpoint, ::Container *pParent) :
-    m_Handle(handle), m_Endpoint(endpoint), m_pParent(pParent),
+Window::Window(uint64_t handle, int sock, ::Container *pParent) :
+    m_Handle(handle), m_Endpoint(0), m_pParent(pParent),
     m_Framebuffer(0), m_Dirty(), m_bPendingDecoration(false), m_bFocus(false),
-    m_bRefresh(true), m_nRegionWidth(0), m_nRegionHeight(0)
+    m_bRefresh(true), m_nRegionWidth(0), m_nRegionHeight(0), m_Socket(sock)
 {
     refreshContext();
     m_pParent->addChild(this);
@@ -111,16 +112,12 @@ void Window::refreshContext()
     m_nRegionWidth = regionWidth;
     m_nRegionHeight = regionHeight;
 
-    if(m_Endpoint && m_Framebuffer)
+    if((m_Socket >= 0) && m_Framebuffer)
     {
         size_t totalSize =
                 sizeof(LibUiProtocol::WindowManagerMessage) +
                 sizeof(LibUiProtocol::RepositionMessage);
-
-        PedigreeIpc::IpcMessage *pMessage = new PedigreeIpc::IpcMessage();
-        pMessage->initialise();
-
-        char *buffer = (char *) pMessage->getBuffer();
+        char *buffer = new char[totalSize];
 
         LibUiProtocol::WindowManagerMessage *pHeader =
             reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
@@ -135,7 +132,10 @@ void Window::refreshContext()
         pReposition->shmem_handle = m_Framebuffer->getHandle();
         pReposition->shmem_size = regionSize;
 
-        PedigreeIpc::send(m_Endpoint, pMessage, true);
+        // Transmit to the client.
+        send(m_Socket, buffer, totalSize, 0);
+
+        delete [] buffer;
     }
 
     m_bPendingDecoration = true;
@@ -247,6 +247,7 @@ void Window::render(cairo_t *cr)
                 me.getH() - WINDOW_CLIENT_LOST_H);
         cairo_clip(cr);
 
+        cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
         cairo_paint(cr);
 
         cairo_surface_destroy(surface);
@@ -295,18 +296,14 @@ void Window::focus()
     m_pParent->setFocusWindow(this);
     m_bPendingDecoration = true;
 
-    PedigreeIpc::IpcMessage *pMessage = new PedigreeIpc::IpcMessage();
-    pMessage->initialise();
-    char *buffer = (char *) pMessage->getBuffer();
-
     LibUiProtocol::WindowManagerMessage *pHeader =
-        reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
+        new LibUiProtocol::WindowManagerMessage;
     pHeader->messageCode = LibUiProtocol::Focus;
     pHeader->widgetHandle = m_Handle;
     pHeader->messageSize = 0;
     pHeader->isResponse = false;
 
-    PedigreeIpc::send(m_Endpoint, pMessage, true);
+    send(m_Socket, pHeader, sizeof(*pHeader), 0);
 }
 
 void Window::nofocus()
@@ -319,13 +316,13 @@ void Window::nofocus()
     char *buffer = (char *) pMessage->getBuffer();
 
     LibUiProtocol::WindowManagerMessage *pHeader =
-        reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
+        new LibUiProtocol::WindowManagerMessage;
     pHeader->messageCode = LibUiProtocol::NoFocus;
     pHeader->widgetHandle = m_Handle;
     pHeader->messageSize = 0;
     pHeader->isResponse = false;
 
-    PedigreeIpc::send(m_Endpoint, pMessage, true);
+    send(m_Socket, pHeader, sizeof(*pHeader), 0);
 }
 
 void Window::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pChild)

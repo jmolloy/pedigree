@@ -441,16 +441,14 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
     size_t tabId;
     while (true)
     {
-        // Don't spin forever (as there may not be events waiting).
-        sched_yield();
-
-        // Check for any events and dispatch callbacks.
-        Widget::checkForEvents(true);
-
         int n = 0;
 
         fd_set fds;
         FD_ZERO(&fds);
+
+        n = std::max(g_pEmu->getSocket(), n);
+        FD_SET(g_pEmu->getSocket(), &fds);
+
         TerminalList *pTL = g_pTermList;
         while (pTL)
         {
@@ -460,11 +458,22 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
             pTL = pTL->next;
         }
 
-        struct timeval tv = {0, 0};
-        int nReady = select(n + 1, &fds, NULL, NULL, &tv);
+        int nReady = select(n + 1, &fds, NULL, NULL, 0);
 
         if(nReady <= 0)
             continue;
+
+        // Check for widget events.
+        if(FD_ISSET(g_pEmu->getSocket(), &fds))
+        {
+            // Dispatch callbacks.
+            Widget::checkForEvents(true);
+
+            // Don't do redraw processing if this was the only descriptor
+            // that was found readable.
+            if(nReady == 1)
+                continue;
+        }
 
         bool bShouldRedraw = false;
 

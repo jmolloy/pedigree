@@ -163,7 +163,7 @@ class WObject
 class Window : public WObject
 {
     public:
-        Window(uint64_t handle, PedigreeIpc::IpcEndpoint *endpoint, ::Container *pParent);
+        Window(uint64_t handle, int sock, ::Container *pParent);
         Window();
 
         virtual ~Window()
@@ -207,9 +207,16 @@ class Window : public WObject
             return m_Framebuffer ? m_Framebuffer->getBuffer() : 0;
         }
 
+        // virtual void sendMessage(const char *msg, size_t len);
+
         PedigreeIpc::IpcEndpoint *getEndpoint() const
         {
             return m_Endpoint;
+        }
+
+        int getSocket() const
+        {
+            return m_Socket;
         }
 
         uint64_t getHandle() const
@@ -277,6 +284,8 @@ class Window : public WObject
 
         size_t m_nRegionWidth;
         size_t m_nRegionHeight;
+
+        int m_Socket;
 };
 
 /**
