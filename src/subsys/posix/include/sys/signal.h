@@ -18,6 +18,11 @@ extern "C" {
 
 typedef unsigned long sigset_t;
 
+typedef struct {
+    int si_signo;
+    int si_code;
+} siginfo_t;
+
 #if defined(__rtems__)
 
 #if defined(_POSIX_REALTIME_SIGNALS)
