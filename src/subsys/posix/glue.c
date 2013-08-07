@@ -2077,13 +2077,13 @@ int pthread_cancel(pthread_t thread)
 
 int sigsetjmp(sigjmp_buf env, int savemask)
 {
-    STUBBED("sigsetjmp");
-    return -1;
+    // mask is not relevant currently.
+    return setjmp(env);
 }
 
 void siglongjmp(sigjmp_buf env, int val)
 {
-    STUBBED("siglongjmp");
+    longjmp(env, val);
 }
 
 char *basename(char *path)
