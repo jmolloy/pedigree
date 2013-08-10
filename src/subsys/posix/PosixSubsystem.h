@@ -100,6 +100,11 @@ class FileDescriptor
         /// File status flags (fcntl)
         int flflags;
 
+        /// Socket metadata.
+        int so_domain;
+        int so_type;
+        File *so_local; // For file-oriented sockets (eg, UNIX), the local bind().
+
         /// Locked file, non-zero if there is an advisory lock on the file
         LockedFile *lockedFile;
 };

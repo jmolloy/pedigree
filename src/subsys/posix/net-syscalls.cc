@@ -35,6 +35,8 @@
 #include "file-syscalls.h"
 #include "net-syscalls.h"
 
+#include <sys/un.h>
+
 #include "newlib.h"
 
 int posix_socket(int domain, int type, int protocol)
@@ -74,6 +76,16 @@ int posix_socket(int domain, int type, int protocol)
         // raw wire-level sockets
         file = NetManager::instance().newEndpoint(NETMAN_TYPE_RAW, 0xff);
     }
+    else if (domain == AF_UNIX)
+    {
+        if (type != SOCK_DGRAM)
+        {
+            SYSCALL_ERROR(InvalidArgument);
+            valid = false;
+        }
+
+        file = 0;
+    }
     else
     {
         WARNING("domain = " << domain << " - not known!");
@@ -87,6 +99,8 @@ int posix_socket(int domain, int type, int protocol)
     f->file = file;
     f->offset = 0;
     f->fd = fd;
+    f->so_domain = domain;
+    f->so_type = type;
     pSubsystem->addFileDescriptor(fd, f);
 
     N_NOTICE("  -> " << Dec << fd << Hex);
@@ -106,12 +120,40 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
     }
 
     FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
-    if (!f || !f->file)
+    if (!f || !f->file || (f->so_domain == AF_UNIX))
     {
+        if(f && ((!f->file) || (f->file == f->so_local)) && (f->so_domain == AF_UNIX))
+        {
+            if(address->sa_family != AF_UNIX)
+            {
+                // EAFNOSUPPORT
+                return -1;
+            }
+
+            // Valid state. But no socket, so do the magic here.
+            struct sockaddr_un *un = (struct sockaddr_un *) address;
+            String pathname(un->sun_path);
+
+            /// \todo Handle things that aren't actually UNIX sockets...
+            f->file = VFS::instance().find(pathname);
+            if(!f->file)
+            {
+                SYSCALL_ERROR(DoesNotExist);
+                return -1;
+            }
+
+            return 0;
+        }
+
         SYSCALL_ERROR(BadFileDescriptor);
         return -1;
     }
     Socket *s = static_cast<Socket *>(f->file);
+    if(f->so_domain != address->sa_family)
+    {
+        // EAFNOSUPPORT
+        return -1;
+    }
 
     Endpoint* p = s->getEndpoint();
     if(p->getType() == Endpoint::ConnectionBased)
@@ -216,6 +258,16 @@ ssize_t posix_send(int sock, const void* buff, size_t bufflen, int flags)
         SYSCALL_ERROR(BadFileDescriptor);
         return -1;
     }
+    else if(f->so_domain == AF_UNIX)
+    {
+        File *fullPathFile = f->file;
+        if(f->so_local)
+            fullPathFile = f->so_local;
+
+        String fullPath = fullPathFile->getFullPath(true);
+        return f->file->write(reinterpret_cast<uintptr_t>(static_cast<const char *>(fullPath)), bufflen, reinterpret_cast<uintptr_t>(buff), (f->flflags & O_NONBLOCK) == 0);
+    }
+
     Socket *s = static_cast<Socket *>(f->file);
 
     Endpoint* p = s->getEndpoint();
@@ -281,6 +333,31 @@ ssize_t posix_sendto(void* callInfo)
         SYSCALL_ERROR(BadFileDescriptor);
         return -1;
     }
+
+    if(f->so_domain != address->sa_family)
+    {
+        // EAFNOSUPPORT
+        return -1;
+    }
+
+    if(f->so_domain == AF_UNIX)
+    {
+        struct sockaddr_un *un = (struct sockaddr_un *) address;
+        File *pFile = VFS::instance().find(String(un->sun_path));
+        if(!pFile)
+        {
+            SYSCALL_ERROR(DoesNotExist);
+            return -1;
+        }
+
+        File *fullPathFile = f->file;
+        if(f->so_local)
+            fullPathFile = f->so_local;
+
+        String fullPath = fullPathFile->getFullPath(true);
+        return pFile->write(reinterpret_cast<uintptr_t>(static_cast<const char *>(fullPath)), bufflen, reinterpret_cast<uintptr_t>(buff), (f->flflags & O_NONBLOCK) == 0);
+    }
+
     Socket *s = static_cast<Socket *>(f->file);
 
     Endpoint* p = s->getEndpoint();
@@ -325,6 +402,10 @@ ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
     {
         SYSCALL_ERROR(BadFileDescriptor);
         return -1;
+    }
+    else if(f->so_domain == AF_UNIX)
+    {
+        return f->so_local->read(0, bufflen, reinterpret_cast<uintptr_t>(buff), (f->flflags & O_NONBLOCK) == 0);
     }
     Socket *s = static_cast<Socket *>(f->file);
 
@@ -378,6 +459,23 @@ ssize_t posix_recvfrom(void* callInfo)
         SYSCALL_ERROR(BadFileDescriptor);
         return -1;
     }
+
+    if(f->so_domain == AF_UNIX)
+    {
+        File *pFile = f->so_local;
+        struct sockaddr_un *un = (struct sockaddr_un *) address;
+        un->sun_family = AF_UNIX;
+
+        ssize_t r = pFile->read(reinterpret_cast<uintptr_t>(un->sun_path), bufflen, reinterpret_cast<uintptr_t>(buff), (f->flflags & O_NONBLOCK) == 0);
+
+        if(r > 0)
+        {
+            *addrlen = sizeof(struct sockaddr_un);
+        }
+
+        return r;
+    }
+
     Socket *s = static_cast<Socket *>(f->file);
 
     Endpoint* p = s->getEndpoint();
@@ -429,6 +527,37 @@ int posix_bind(int sock, const struct sockaddr *address, size_t addrlen)
     FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
     if (!f || !f->file)
     {
+        if(f && (!f->file) && (f->so_domain == AF_UNIX))
+        {
+            if(address->sa_family != AF_UNIX)
+            {
+                // EAFNOSUPPORT
+                return -1;
+            }
+
+            // Valid state. But no socket, so do the magic here.
+            struct sockaddr_un *un = (struct sockaddr_un *) address;
+            String pathname(un->sun_path);
+
+            bool bResult = VFS::instance().createFile(pathname, 0777);
+            if(!bResult)
+            {
+                // errno = ?
+                return -1;
+            }
+
+            // bind() then connect().
+            f->so_local = f->file = VFS::instance().find(pathname);
+            if(!f->file)
+            {
+                // Which error do we use here?
+                SYSCALL_ERROR(DoesNotExist);
+                return -1;
+            }
+
+            return 0;
+        }
+
         SYSCALL_ERROR(BadFileDescriptor);
         return -1;
     }
@@ -466,12 +595,18 @@ int posix_listen(int sock, int backlog)
     }
 
     FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
-    Socket *s = static_cast<Socket *>(f->file);
-    if (!s)
+    if(!(f && f->file))
     {
         SYSCALL_ERROR(BadFileDescriptor);
         return -1;
     }
+    if(f->so_domain != SOCK_STREAM)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    Socket *s = static_cast<Socket *>(f->file);
 
     Endpoint* p = s->getEndpoint();
     if(p->getType() != Endpoint::ConnectionBased)

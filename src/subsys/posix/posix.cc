@@ -19,15 +19,22 @@
 #include <processor/Processor.h>
 #include <process/Process.h>
 #include <process/Scheduler.h>
+#include <vfs/VFS.h>
 #include "PosixSyscallManager.h"
 #include "signal-syscalls.h"
 #include "system-syscalls.h"
+#include "UnixFilesystem.h"
 
 PosixSyscallManager g_PosixSyscallManager;
+
+UnixFilesystem *g_pUnixFilesystem;
 
 static void init()
 {
   g_PosixSyscallManager.initialise();
+  g_pUnixFilesystem = new UnixFilesystem();
+
+  VFS::instance().addAlias(g_pUnixFilesystem, g_pUnixFilesystem->getVolumeLabel());
 }
 
 static void destroy()

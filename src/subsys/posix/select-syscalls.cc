@@ -168,12 +168,27 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
                 break;
             }
         }
+        else
+        {
+            continue;
+        }
+
+        File *pFile = pFd->file;
+        if (pFd->so_domain == AF_UNIX)
+        {
+            // Special magic for UNIX sockets. Yay.
+            if (pFd->so_local && (readfds && FD_ISSET(i, readfds)))
+            {
+                // Check local socket for readability.
+                pFile = pFd->so_local;
+            }
+        }
 
         if (readfds && FD_ISSET(i, readfds))
         {
             // Has the file already got data in it?
             /// \todo Specify read/write/error to select and monitor.
-            if (pFd->file->select(false, 0))
+            if (pFile->select(false, 0))
             {
                 bWillReturnImmediately = true;
                 nRet ++;
@@ -184,9 +199,9 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
             {
                 FD_CLR(i, readfds);
                 // Need to set up a SelectEvent.
-                SelectEvent *pEvent = new SelectEvent(&sem, readfds, i, pFd->file);
+                SelectEvent *pEvent = new SelectEvent(&sem, readfds, i, pFile);
                 reentrancyLock.acquire();
-                pFd->file->monitor(Processor::information().getCurrentThread(), pEvent);
+                pFile->monitor(Processor::information().getCurrentThread(), pEvent);
                 events.pushBack(pEvent);
 
                 // Quickly check again now we've added the monitoring event,
@@ -195,7 +210,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
                 /// \note This is safe because the event above can only be
                 ///       dispatched to this thread, and while we hold the
                 ///       reentrancy spinlock that cannot happen!
-                if (pFd->file->select(false, 0))
+                if (pFile->select(false, 0))
                 {
                     bWillReturnImmediately = true;
                     nRet ++;
@@ -208,7 +223,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         {
             // Has the file already got data in it?
             /// \todo Specify read/write/error to select and monitor.
-            if (pFd->file->select(true, 0))
+            if (pFile->select(true, 0))
             {
                 bWillReturnImmediately = true;
                 nRet ++;
@@ -219,9 +234,9 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
             {
                 FD_CLR(i, writefds);
                 // Need to set up a SelectEvent.
-                SelectEvent *pEvent = new SelectEvent(&sem, writefds, i, pFd->file);
+                SelectEvent *pEvent = new SelectEvent(&sem, writefds, i, pFile);
                 reentrancyLock.acquire();
-                pFd->file->monitor(Processor::information().getCurrentThread(), pEvent);
+                pFile->monitor(Processor::information().getCurrentThread(), pEvent);
                 events.pushBack(pEvent);
 
                 // Quickly check again now we've added the monitoring event,
@@ -230,7 +245,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
                 /// \note This is safe because the event above can only be
                 ///       dispatched to this thread, and while we hold the
                 ///       reentrancy spinlock that cannot happen!
-                if (pFd->file->select(true, 0))
+                if (pFile->select(true, 0))
                 {
                     bWillReturnImmediately = true;
                     nRet ++;

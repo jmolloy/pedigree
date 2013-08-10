@@ -48,7 +48,8 @@ RadixTree<LockedFile*> g_PosixGlobalLockedFiles;
 
 /// Default constructor
 FileDescriptor::FileDescriptor() :
-    file(0), offset(0), fd(0xFFFFFFFF), fdflags(0), flflags(0), lockedFile(0)
+    file(0), offset(0), fd(0xFFFFFFFF), fdflags(0), flflags(0),
+    so_domain(0), so_type(0), so_local(0), lockedFile(0)
 {
 }
 
