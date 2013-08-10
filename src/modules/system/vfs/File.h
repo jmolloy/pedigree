@@ -94,7 +94,7 @@ public:
     // File names cannot be changed.
 
     /** Obtains the full path of the File. */
-    virtual String getFullPath()
+    virtual String getFullPath(bool bWithLabel = false)
     {
         HugeStaticString str;
         HugeStaticString tmp;
@@ -120,6 +120,14 @@ public:
         tmp = str;
         str = "/";
         str += tmp;
+
+        if(bWithLabel)
+        {
+            tmp = str;
+            getFilesystemLabel(str);
+            str += "»";
+            str += tmp;
+        }
 
         return String(str);
     }
@@ -238,6 +246,9 @@ protected:
 
     /** Internal function to notify all registered MonitorTargets. */
     void dataChanged();
+
+    /** Internal function to get the filesystem label for this file. */
+    void getFilesystemLabel(HugeStaticString &s);
 
     String m_Name;
     Time m_AccessedTime;

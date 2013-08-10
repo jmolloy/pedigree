@@ -19,6 +19,7 @@
 #include "Symlink.h"
 #include "Filesystem.h"
 #include <processor/Processor.h>
+#include <process/Scheduler.h>
 #include <Log.h>
 
 File::File() :
@@ -223,7 +224,7 @@ void File::truncate()
 
 void File::dataChanged()
 {
-    LockGuard<Mutex> guard(m_Lock);
+    m_Lock.acquire();
 
     for (List<MonitorTarget*>::Iterator it = m_MonitorTargets.begin();
          it != m_MonitorTargets.end();
@@ -236,6 +237,12 @@ void File::dataChanged()
     }
 
     m_MonitorTargets.clear();
+    m_Lock.release();
+
+    // File::dataChanged can be called in event contexts and can send an event to
+    // the thread that is currently running. As such, releasing the lock before
+    // calling yield is important, as there is a possibility we will re-enter.
+    Scheduler::instance().yield();
 }
 
 void File::cullMonitorTargets(Thread *pThread)
@@ -258,3 +265,9 @@ void File::cullMonitorTargets(Thread *pThread)
         }
     }
 }
+
+void File::getFilesystemLabel(HugeStaticString &s)
+{
+    s = m_pFilesystem->getVolumeLabel();
+}
+
