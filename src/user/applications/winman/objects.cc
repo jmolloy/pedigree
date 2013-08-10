@@ -247,7 +247,7 @@ void Window::render(cairo_t *cr)
                 me.getH() - WINDOW_CLIENT_LOST_H);
         cairo_clip(cr);
 
-        cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
+        // cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
         cairo_paint(cr);
 
         cairo_surface_destroy(surface);
@@ -255,6 +255,17 @@ void Window::render(cairo_t *cr)
 
         // No longer dirty - rendered.
         m_Dirty.update(0, 0, 0, 0);
+
+        // Send back a response to ACK any pending redraw that's waiting.
+        // We wait until after we perform the redraw to permit the client to
+        // continue, as it doesn't make sense for the client to keep hitting
+        // us with redraw messages when we aren't ready.
+        LibUiProtocol::WindowManagerMessage ackmsg;
+        ackmsg.messageCode = LibUiProtocol::RequestRedraw;
+        ackmsg.widgetHandle = m_Handle;
+        ackmsg.messageSize = 0;
+        ackmsg.isResponse = true;
+        send(m_Socket, &ackmsg, sizeof(ackmsg), 0);
     }
 
     if(m_bPendingDecoration)
@@ -304,6 +315,7 @@ void Window::focus()
     pHeader->isResponse = false;
 
     send(m_Socket, pHeader, sizeof(*pHeader), 0);
+    delete pHeader;
 }
 
 void Window::nofocus()
@@ -323,6 +335,7 @@ void Window::nofocus()
     pHeader->isResponse = false;
 
     send(m_Socket, pHeader, sizeof(*pHeader), 0);
+    delete pHeader;
 }
 
 void Window::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pChild)
@@ -331,7 +344,6 @@ void Window::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pChild
     size_t currentWidth = me.getW();
     size_t currentHeight = me.getH();
 
-    syslog(LOG_INFO, "w: resize %d %d", horizDistance, vertDistance);
     reposition(
         me.getX(), me.getY(),
         currentWidth + horizDistance, currentHeight + vertDistance);

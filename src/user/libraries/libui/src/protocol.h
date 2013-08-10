@@ -26,6 +26,9 @@
  *  @{
  */
 
+#define WINMAN_SOCKET_PATH  "unix»/winman.sock"
+#define CLIENT_SOCKET_BASE  "unix»/winman-client-%s.sock"
+
 namespace LibUiProtocol
 {
     /** Sends a message to the window manager. */

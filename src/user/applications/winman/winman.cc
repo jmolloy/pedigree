@@ -26,10 +26,12 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/un.h>
 
 #include <map>
 #include <list>
 #include <set>
+#include <queue>
 
 #include <graphics/Graphics.h>
 #include <input/Input.h>
@@ -61,6 +63,10 @@ int g_iSocket = 0;
 int g_iControlPipe[2] = {0};
 
 std::string g_StatusField = "";
+
+std::queue<Input::InputNotification> g_InputQueue;
+
+void queueInputCallback(Input::InputNotification &note);
 
 size_t g_nWidth = 0;
 size_t g_nHeight = 0;
@@ -128,7 +134,7 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
         }
 
         /// \todo Error handling.
-        int iSocket = socket(AF_INET, SOCK_DGRAM, 0);
+        int iSocket = socket(AF_UNIX, SOCK_DGRAM, 0);
         connect(iSocket, src, slen);
 
         Window *pWindow = new Window(pWinMan->widgetHandle, iSocket, pParent);
@@ -225,21 +231,31 @@ void checkForMessages()
             // Socket has a datagram ready to handle.
             // We use recvfrom so we can create a socket back to the client easily.
             char msg[4096];
-            struct sockaddr saddr;
+            struct sockaddr_un saddr;
             socklen_t slen = 0;
-            ssize_t sz = recvfrom(g_iSocket, msg, 4096, 0, &saddr, &slen);
+            ssize_t sz = recvfrom(g_iSocket, msg, 4096, 0, (struct sockaddr *) &saddr, &slen);
             if(sz > 0)
             {
                 // Handle!
-                handleMessage(msg, &saddr, slen);
+                handleMessage(msg, (struct sockaddr *) &saddr, slen);
             }
         }
 
         if(FD_ISSET(g_iControlPipe[0], &fds))
         {
-            // Empty the pipe.
-            char buf[1024];
-            read(g_iControlPipe[0], buf, 1024);
+            // Read a single byte (which will mean multiple writes to the pipe
+            // will wake select() up multiple times - good for the input queue).
+            char buf[2];
+            read(g_iControlPipe[0], buf, 1);
+
+            // Handle any pending input in the input queue.
+            if(!g_InputQueue.empty())
+            {
+                Input::InputNotification n = g_InputQueue.front();
+                g_InputQueue.pop();
+
+                queueInputCallback(n);
+            }
         }
     }
 }
@@ -257,8 +273,14 @@ enum ActualKey
     Down,
 };
 
-/// System input callback.
-void systemInputCallback(Input::InputNotification &note)
+/**
+ * Handles input, called on notifications stored on a queue.
+ *
+ * This is done so we handle the kernel event very quickly (by pushing onto a
+ * queue), and helps avoid race conditions where we modify global state (such
+ * as the "pending windows" list).
+ */
+void queueInputCallback(Input::InputNotification &note)
 {
     syslog(LOG_INFO, "winman: system input (type=%d)", note.type);
     static bool bResize = false;
@@ -584,12 +606,17 @@ void systemInputCallback(Input::InputNotification &note)
 
         delete [] buffer;
     }
+}
 
-    // If we need to wake up the main IPC loop, write to the control pipe.
-    if(bWakeup)
-    {
-        write(g_iControlPipe[1], "w", 1);
-    }
+/// System input callback.
+void systemInputCallback(Input::InputNotification &note)
+{
+    Input::InputNotification n = note;
+    g_InputQueue.push(n);
+
+    // Wake up any pending select() - input pushed to queue.
+    write(g_iControlPipe[1], "w", 1);
+
 }
 
 void infoPanel(cairo_t *cr)
@@ -634,8 +661,7 @@ int main(int argc, char *argv[])
     pipe(g_iControlPipe);
 
     // Create listening socket.
-    /// \todo AF_UNIX
-    g_iSocket = socket(AF_INET, SOCK_DGRAM, 0);
+    g_iSocket = socket(AF_UNIX, SOCK_DGRAM, 0);
 
     if(g_iSocket < 0)
     {
@@ -644,10 +670,10 @@ int main(int argc, char *argv[])
     }
 
     // Bind.
-    struct sockaddr_in bind_addr;
-    bind_addr.sin_family = AF_INET;
-    bind_addr.sin_addr.s_addr = INADDR_ANY;
-    bind_addr.sin_port = htons(6000);
+    struct sockaddr_un bind_addr;
+    bind_addr.sun_family = AF_UNIX;
+    memset(bind_addr.sun_path, 0, sizeof bind_addr.sun_path);
+    strcpy(bind_addr.sun_path, WINMAN_SOCKET_PATH);
     socklen_t socklen = sizeof(bind_addr);
     bind(g_iSocket, (struct sockaddr *) &bind_addr, socklen);
 
@@ -750,8 +776,6 @@ int main(int argc, char *argv[])
         cairo_rectangle(cr, 0, 0, g_nWidth, g_nHeight);
         cairo_fill(cr);
     }
-
-    syslog(LOG_INFO, "winman: creating tile root");
 
     g_pRootContainer = new RootContainer(g_nWidth, g_nHeight - 24);
 
@@ -898,13 +922,6 @@ int main(int argc, char *argv[])
 
             // Wipe out the dirty rectangle - we're all done.
             renderDirty.reset();
-        }
-        else
-        {
-            // Yield control to the rest of the system. As we do everything we
-            // possibly can asynchronously, if we don't yield we'll pound the
-            // system and not let any other processes work.
-            // sched_yield();
         }
     }
 
