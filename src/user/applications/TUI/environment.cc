@@ -74,7 +74,7 @@ void Syscall::dataAvailable()
 void doRedraw(DirtyRectangle &rect)
 {
     if(rect.getX() == ~0UL && rect.getY() == ~0UL &&
-       rect.getX2() == ~0UL && rect.getY2() == ~0UL)
+       rect.getX2() == 0 && rect.getY2() == 0)
         return;
 
     if(g_pEmu && g_Surface)
