@@ -125,7 +125,10 @@ void modeChanged(size_t width, size_t height)
     cairo_rectangle(g_Cairo, 0, 0, g_nWidth, g_nHeight);
     cairo_fill(g_Cairo);
 
-    g_pHeader->setWidth(width);
+    if(g_pHeader)
+    {
+        g_pHeader->setWidth(width);
+    }
 
     TerminalList *pTL = g_pTermList;
     while (pTL)
@@ -614,20 +617,16 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
 bool callback(WidgetMessages message, size_t msgSize, void *msgData)
 {
     DirtyRectangle dirty;
+
     switch(message)
     {
         case Reposition:
             {
-                /// \todo reposition/re-render/resize
-                syslog(LOG_INFO, "TUI: reposition event");
                 PedigreeGraphics::Rect *rt = reinterpret_cast<PedigreeGraphics::Rect*>(msgData);
-                syslog(LOG_INFO, "** checking framebuffer");
                 g_pEmu->handleReposition(*rt);
                 g_nWidth = g_pEmu->getWidth();
                 g_nHeight = g_pEmu->getHeight();
                 checkFramebuffer();
-                syslog(LOG_INFO, "** checking framebuffer done");
-                syslog(LOG_INFO, "** modeChanged");
                 modeChanged(rt->getW(), rt->getH());
             }
             break;
@@ -670,20 +669,20 @@ int main(int argc, char *argv[])
     PedigreeGraphics::Rect rt;
 
     g_pEmu = new PedigreeTerminalEmulator();
+    syslog(LOG_INFO, "TUI: constructing widget...");
     if(!g_pEmu->construct(endpoint, "Pedigree xterm Emulator", callback, rt))
     {
         syslog(LOG_ERR, "tui: couldn't construct widget");
         delete g_pEmu;
         return 1;
     }
+    syslog(LOG_INFO, "TUI: widget constructed!");
 
     signal(SIGINT, sigint);
 
     // Handle initial reposition event.
-    syslog(LOG_INFO, "handling initial reposition");
     Widget::checkForEvents(true);
 
-    syslog(LOG_INFO, "going live");
     tui_do(0);
 
     return 0;
