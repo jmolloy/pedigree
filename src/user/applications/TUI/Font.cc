@@ -31,7 +31,8 @@ extern cairo_t *g_Cairo;
 
 Font::Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWidth) :
     m_Face(), m_CellWidth(0), m_CellHeight(0), m_nWidth(nWidth), m_Baseline(requestedSize), m_bCache(bCache),
-    m_pCache(0), m_CacheSize(0), key(), m_FontSize(requestedSize)
+    m_pCache(0), m_CacheSize(0), key(), m_FontSize(requestedSize),
+    m_Iconv(0), m_ConversionCache()
 {
     char str[64];
     int error;
@@ -75,68 +76,64 @@ Font::Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWid
     m_CellHeight += extents.descent;
     m_CellWidth = extents.max_x_advance;
 
-    return;
-
-    error = FT_Set_Pixel_Sizes(m_Face, 0, requestedSize);
-    if (error)
+    /// \todo UTF-32 endianness
+    m_Iconv = iconv_open("UTF-8", "UTF-32LE");
+    if(m_Iconv == (iconv_t) -1)
     {
-        syslog(LOG_ALERT, "Freetype set pixel size error: %d", error);
-        return;
-    }
-
-    error = FT_Load_Char(m_Face, '@', FT_LOAD_RENDER);
-
-    m_CellWidth  = (m_Face->glyph->advance.x >> 6); // Because of hinting it's possible to go a pixel over the boundary.
-
-    m_CellHeight = m_Face->size->metrics.height >> 6;
-    m_Baseline = m_CellHeight;
-    m_CellHeight += -(m_Face->size->metrics.descender >> 6);
-
-    if (m_bCache)
-    {
-        m_CacheSize = 32256-1;
-        m_pCache = new CacheEntry *[m_CacheSize];
-        memset(m_pCache, 0, m_CacheSize*sizeof(CacheEntry*));
+        syslog(LOG_WARNING, "TUI: Font instance couldn't create iconv (%s)", strerror(errno));
     }
 }
 
 Font::~Font()
 {
+    iconv_close(m_Iconv);
 }
 
 size_t Font::render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, size_t y, uint32_t f, uint32_t b)
 {
-    uint32_t utf32[] = {c, 0};
-    char *utf32_c = (char *) utf32;
-
-    /// \todo UTF-32 endianness
-    /// \todo Global iconv_t object - we use it a lot... (but that would mean resetting state)
-    iconv_t ic = iconv_open("UTF-8", "UTF-32LE");
-    if(ic == (iconv_t) -1)
+    // Let's try and skip any actual conversion.
+    char *convertOut = 0;
+    std::map<uint32_t,char *>::iterator it = m_ConversionCache.find(c);
+    if(it != m_ConversionCache.end())
     {
-        syslog(LOG_WARNING, "TUI: Font::render couldn't open iconv (%s)", strerror(errno));
-        return 0;
-    }
-
-    char out[100] = {0};
-    char *out_c = (char *) out;
-    size_t utf32_len = 8;
-    size_t out_len = 100;
-    size_t res = iconv(ic, &utf32_c, &utf32_len, &out_c, &out_len);
-
-    iconv_close(ic);
-
-    size_t ret = 0;
-    if(res == ((size_t) -1))
-    {
-        syslog(LOG_WARNING, "TUI: Font::render couldn't convert input UTF-32 %x", c);
+        convertOut = it->second;
     }
     else
     {
-        ret = render(out, x, y, f, b);
+        if(m_Iconv == (iconv_t) -1)
+        {
+            syslog(LOG_WARNING, "TUI: Font instance with bad iconv.");
+            return 0;
+        }
+
+        // Reset iconv conversion state.
+        iconv(m_Iconv, 0, 0, 0, 0);
+
+        // Convert UTF-32 input character to UTF-8 for Cairo rendering.
+        uint32_t utf32[] = {c, 0};
+        char *utf32_c = (char *) utf32;
+        char *out = new char[100];
+        char *out_c = (char *) out;
+        size_t utf32_len = 8;
+        size_t out_len = 100;
+        size_t res = iconv(m_Iconv, &utf32_c, &utf32_len, &out_c, &out_len);
+
+        size_t ret = 0;
+        if(res == ((size_t) -1))
+        {
+            syslog(LOG_WARNING, "TUI: Font::render couldn't convert input UTF-32 %x", c);
+            delete [] out;
+            return 0;
+        }
+        else
+        {
+            convertOut = out;
+            m_ConversionCache[c] = convertOut;
+        }
     }
 
-    return ret;
+    // Perform the render.
+    return render(convertOut, x, y, f, b);
 }
 
 size_t Font::render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b, bool bBack)

@@ -23,11 +23,15 @@
 
 #include <graphics/Graphics.h>
 
+#include <map>
+
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
 #include <cairo/cairo.h>
 #include <cairo/cairo-ft.h>
+
+#include <iconv.h>
 
 class Font
 {
@@ -91,6 +95,10 @@ private:
     cairo_font_face_t *font_face;
 
     size_t m_FontSize;
+
+    iconv_t m_Iconv;
+
+    std::map<uint32_t, char *> m_ConversionCache;
 };
 
 #endif
