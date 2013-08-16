@@ -173,51 +173,54 @@ void Semaphore::release(size_t n)
     assert(magic == 0xdeadbaba);
   m_Counter += n;
 
-  m_BeingModified.acquire();
-
-  // Because we can't wake a suspended thread, and we pop each thread from the queue,
-  // we need to push them back on the queue later.
-  List<Thread *> stillPendingThreads;
-
-  while(m_Queue.count() != 0)
+  if(m_Queue.count())
   {
-    Thread *pThread = m_Queue.popFront();
-    if(!pThread)
-    {
-        WARNING("Null thread in a Semaphore thread queue");
-        continue;
-    }
-    else if(!Scheduler::instance().threadInSchedule(pThread))
-    {
-        WARNING("A thread that was to be woken by a Semaphore is no longer in the scheduler");
-        continue;
-    }
-    else if(pThread->getStatus() != Thread::Sleeping)
-    {
-        // Don't wake up a thread that isn't sleeping (perhaps suspended?)
-        if(pThread->getStatus() == Thread::Zombie)
-            WARNING("Semaphore has a zombie thread in its thread queue");
-        else
-            stillPendingThreads.pushBack(pThread);
-        continue;
-    }
+    m_BeingModified.acquire();
 
-    pThread->getLock().acquire();
-    pThread->setStatus(Thread::Ready);
-    pThread->getLock().release();
-  }
+    // Because we can't wake a suspended thread, and we pop each thread from the queue,
+    // we need to push them back on the queue later.
+    List<Thread *> stillPendingThreads;
 
-  if(stillPendingThreads.count())
-  {
-      for(List<Thread *>::Iterator it = stillPendingThreads.begin();
-              it != stillPendingThreads.end();
-              ++it)
+    while(m_Queue.count() != 0)
+    {
+      Thread *pThread = m_Queue.popFront();
+      if(!pThread)
       {
-          m_Queue.pushBack(*it);
+          WARNING("Null thread in a Semaphore thread queue");
+          continue;
       }
-  }
+      else if(!Scheduler::instance().threadInSchedule(pThread))
+      {
+          WARNING("A thread that was to be woken by a Semaphore is no longer in the scheduler");
+          continue;
+      }
+      else if(pThread->getStatus() != Thread::Sleeping)
+      {
+          // Don't wake up a thread that isn't sleeping (perhaps suspended?)
+          if(pThread->getStatus() == Thread::Zombie)
+              WARNING("Semaphore has a zombie thread in its thread queue");
+          else
+              stillPendingThreads.pushBack(pThread);
+          continue;
+      }
 
-  m_BeingModified.release();
+      pThread->getLock().acquire();
+      pThread->setStatus(Thread::Ready);
+      pThread->getLock().release();
+    }
+
+    if(stillPendingThreads.count())
+    {
+        for(List<Thread *>::Iterator it = stillPendingThreads.begin();
+                it != stillPendingThreads.end();
+                ++it)
+        {
+            m_Queue.pushBack(*it);
+        }
+    }
+
+    m_BeingModified.release();
+  }
 
   #ifdef STRICT_LOCK_ORDERING
     // TODO LockManager::released(*this);
