@@ -142,6 +142,8 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
                 return -1;
             }
 
+            f->so_remotePath = pathname;
+
             return 0;
         }
 
@@ -260,12 +262,7 @@ ssize_t posix_send(int sock, const void* buff, size_t bufflen, int flags)
     }
     else if(f->so_domain == AF_UNIX)
     {
-        File *fullPathFile = f->file;
-        if(f->so_local)
-            fullPathFile = f->so_local;
-
-        String fullPath = fullPathFile->getFullPath(true);
-        return f->file->write(reinterpret_cast<uintptr_t>(static_cast<const char *>(fullPath)), bufflen, reinterpret_cast<uintptr_t>(buff), (f->flflags & O_NONBLOCK) == 0);
+        return f->file->write(reinterpret_cast<uintptr_t>(static_cast<const char *>(f->so_localPath)), bufflen, reinterpret_cast<uintptr_t>(buff), (f->flflags & O_NONBLOCK) == 0);
     }
 
     Socket *s = static_cast<Socket *>(f->file);
@@ -350,12 +347,7 @@ ssize_t posix_sendto(void* callInfo)
             return -1;
         }
 
-        File *fullPathFile = f->file;
-        if(f->so_local)
-            fullPathFile = f->so_local;
-
-        String fullPath = fullPathFile->getFullPath(true);
-        return pFile->write(reinterpret_cast<uintptr_t>(static_cast<const char *>(fullPath)), bufflen, reinterpret_cast<uintptr_t>(buff), (f->flflags & O_NONBLOCK) == 0);
+        return pFile->write(reinterpret_cast<uintptr_t>(static_cast<const char *>(f->so_localPath)), bufflen, reinterpret_cast<uintptr_t>(buff), (f->flflags & O_NONBLOCK) == 0);
     }
 
     Socket *s = static_cast<Socket *>(f->file);
@@ -554,6 +546,8 @@ int posix_bind(int sock, const struct sockaddr *address, size_t addrlen)
                 SYSCALL_ERROR(DoesNotExist);
                 return -1;
             }
+
+            f->so_localPath = pathname;
 
             return 0;
         }

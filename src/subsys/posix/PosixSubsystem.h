@@ -105,6 +105,10 @@ class FileDescriptor
         int so_type;
         File *so_local; // For file-oriented sockets (eg, UNIX), the local bind().
 
+        /// Full file paths, used by UNIX sockets.
+        String so_localPath;
+        String so_remotePath;
+
         /// Locked file, non-zero if there is an advisory lock on the file
         LockedFile *lockedFile;
 };
