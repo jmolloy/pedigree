@@ -117,7 +117,7 @@ class PosixSubsystem : public Subsystem
         /** Default constructor */
         PosixSubsystem() :
             Subsystem(Posix), m_SignalHandlers(), m_SignalHandlersLock(),
-            m_FdMap(), m_NextFd(0), m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
+            m_FdMap(), m_NextFd(0), m_FdLock(), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
             m_MemoryMappedFiles(), m_AltSigStack(), m_SyncObjects(), m_Threads()
         {}
 
@@ -127,7 +127,7 @@ class PosixSubsystem : public Subsystem
         /** Parameterised constructor */
         PosixSubsystem(SubsystemType type) :
             Subsystem(type), m_SignalHandlers(), m_SignalHandlersLock(),
-            m_FdMap(), m_NextFd(0), m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
+            m_FdMap(), m_NextFd(0), m_FdLock(), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
             m_MemoryMappedFiles(), m_AltSigStack(), m_SyncObjects(), m_Threads()
         {}
 
@@ -255,8 +255,14 @@ class PosixSubsystem : public Subsystem
         /** Gets a pointer to a FileDescriptor object from an fd number */
         FileDescriptor *getFileDescriptor(size_t fd)
         {
-            LockGuard<Mutex> guard(m_FdLock);
-            return m_FdMap.lookup(fd);
+            // Enter the critical section, for reading.
+            while(!m_FdLock.enter());
+
+            FileDescriptor *pFd = m_FdMap.lookup(fd);
+
+            m_FdLock.leave();
+
+            return pFd;
         }
 
         /** Inserts a file descriptor */
@@ -265,8 +271,12 @@ class PosixSubsystem : public Subsystem
             freeFd(fd);
             allocateFd(fd);
 
-            LockGuard<Mutex> guard(m_FdLock);
+            // Enter critical section for writing.
+            while(!m_FdLock.acquire());
+
             m_FdMap.insert(fd, pFd);
+
+            m_FdLock.release();
         }
 
         /** Links a MemoryMappedFile */
@@ -446,7 +456,7 @@ class PosixSubsystem : public Subsystem
         /**
          * Lock to guard the next file descriptor while it is being changed.
          */
-        Mutex m_FdLock;
+        UnlikelyLock m_FdLock;
         /**
          * File descriptors used by this process
          */

@@ -128,7 +128,7 @@ FileDescriptor::~FileDescriptor()
 
 PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
     Subsystem(s), m_SignalHandlers(), m_SignalHandlersLock(), m_FdMap(), m_NextFd(s.m_NextFd),
-    m_FdLock(false), m_FdBitmap(), m_LastFd(0), m_FreeCount(s.m_FreeCount),
+    m_FdLock(), m_FdBitmap(), m_LastFd(0), m_FreeCount(s.m_FreeCount),
     m_MemoryMappedFiles(), m_AltSigStack(), m_SyncObjects(), m_Threads()
 {
     m_SignalHandlersLock.acquire();
@@ -165,10 +165,10 @@ PosixSubsystem::~PosixSubsystem()
     assert(--m_FreeCount == 0);
 
     // Ensure that no descriptor operations are taking place (and then, will take place)
-    m_FdLock.acquire();
+    while(!m_FdLock.acquire());
 
     // Modifying signal handlers, ensure that they are not in use
-    m_SignalHandlersLock.acquire();
+    while(!m_SignalHandlersLock.acquire());
 
     // Destroy all signal handlers
     sigHandlerTree &myHandlers = m_SignalHandlers;
@@ -551,7 +551,8 @@ void PosixSubsystem::setSignalHandler(size_t sig, SignalHandler* handler)
 
 size_t PosixSubsystem::getFd()
 {
-    LockGuard<Mutex> guard(m_FdLock);
+    // Enter critical section for writing.
+    while(!m_FdLock.acquire());
 
     // Try to recycle if possible
     for(size_t i = m_LastFd; i < m_NextFd; i++)
@@ -560,6 +561,7 @@ size_t PosixSubsystem::getFd()
         {
             m_LastFd = i;
             m_FdBitmap.set(i);
+            m_FdLock.release();
             return i;
         }
     }
@@ -567,20 +569,28 @@ size_t PosixSubsystem::getFd()
     // Otherwise, allocate
     // m_NextFd will always contain the highest allocated fd
     m_FdBitmap.set(m_NextFd);
-    return m_NextFd++;
+    size_t ret = m_NextFd++;
+    m_FdLock.release();
+    return ret;
 }
 
 void PosixSubsystem::allocateFd(size_t fdNum)
 {
-    LockGuard<Mutex> guard(m_FdLock); // Don't allow any access to the FD data
+    // Enter critical section for writing.
+    while(!m_FdLock.acquire());
+
     if(fdNum >= m_NextFd)
         m_NextFd = fdNum + 1;
     m_FdBitmap.set(fdNum);
+
+    m_FdLock.release();
 }
 
 void PosixSubsystem::freeFd(size_t fdNum)
 {
-    LockGuard<Mutex> guard(m_FdLock); // Don't allow any access to the FD data
+    // Enter critical section for writing.
+    while(!m_FdLock.acquire());
+
     m_FdBitmap.clear(fdNum);
 
     FileDescriptor *pFd = m_FdMap.lookup(fdNum);
@@ -592,6 +602,8 @@ void PosixSubsystem::freeFd(size_t fdNum)
 
     if(fdNum < m_LastFd)
         m_LastFd = fdNum;
+
+    m_FdLock.release();
 }
 
 bool PosixSubsystem::copyDescriptors(PosixSubsystem *pSubsystem)
@@ -602,8 +614,8 @@ bool PosixSubsystem::copyDescriptors(PosixSubsystem *pSubsystem)
     freeMultipleFds();
 
     // Totally changing everything... Don't allow other functions to meddle.
-    LockGuard<Mutex> guard(m_FdLock);
-    LockGuard<Mutex> guardCopyHost(pSubsystem->m_FdLock);
+    while(!m_FdLock.acquire());
+    while(!pSubsystem->m_FdLock.acquire());
 
     // Copy each descriptor across from the original subsystem
     FdMap &map = pSubsystem->m_FdMap;
@@ -625,6 +637,8 @@ bool PosixSubsystem::copyDescriptors(PosixSubsystem *pSubsystem)
         m_FdMap.insert(newFd, pNewFd);
     }
 
+    pSubsystem->m_FdLock.release();
+    m_FdLock.release();
     return true;
 }
 
@@ -632,7 +646,7 @@ void PosixSubsystem::freeMultipleFds(bool bOnlyCloExec, size_t iFirst, size_t iL
 {
     assert(iFirst < iLast);
 
-    LockGuard<Mutex> guard(m_FdLock); // Don't allow any access to the FD data
+    while(!m_FdLock.acquire()); // Don't allow any access to the FD data
 
     // Because removing FDs as we go from the Tree can actually leave the Tree
     // iterators in a dud state, we'll add all the FDs to remove to this list.
@@ -688,4 +702,6 @@ void PosixSubsystem::freeMultipleFds(bool bOnlyCloExec, size_t iFirst, size_t iL
         for(List<void*>::Iterator it = fdsToRemove.begin(); it != fdsToRemove.end(); it++)
             m_FdMap.remove(reinterpret_cast<size_t>(*it));
     }
+
+    m_FdLock.release();
 }
