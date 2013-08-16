@@ -50,7 +50,10 @@ public:
         // acquire, we'll deadlock. Not good. Disable reentrancy by disabling
         // interrupts to guarantee liveness.
         if (m_Atomic >= 100000)
+        {
+            Scheduler::instance().yield();
             return false;
+        }
 
         m_Atomic += 1;
 
@@ -59,6 +62,7 @@ public:
         if (m_Atomic >= 100000)
         {
             m_Atomic -= 1;
+            Scheduler::instance().yield();
             return false;
         }
         
@@ -85,9 +89,11 @@ public:
             // Someone already acquire()d... :(
             m_Atomic -= 100000;
             Processor::setInterrupts(bOldInterrupts);
+            Scheduler::instance().yield();
             return false;
         }
 
+        // Wait for readers to leave the critical section.
         while (m_Atomic > 100000)
         {
             Scheduler::instance().yield();
