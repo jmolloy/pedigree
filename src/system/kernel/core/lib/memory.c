@@ -263,14 +263,14 @@ void *qmemset(void *buf, unsigned long long c, size_t len)
 /// SSE2 register save.
 void sse2_save(char p[SSE2_SAVE_REGION_SIZE])
 {
-    asm volatile("movntdq %%xmm0, 0(%0); \
-                  movntdq %%xmm1, 16(%0); \
-                  movntdq %%xmm2, 32(%0); \
-                  movntdq %%xmm3, 48(%0); \
-                  movntdq %%xmm4, 64(%0); \
-                  movntdq %%xmm5, 80(%0); \
-                  movntdq %%xmm6, 96(%0); \
-                  movntdq %%xmm7, 112(%0);" :: "r" (p) : "memory");
+    asm volatile("movdqu %%xmm0, 0(%0); \
+                  movdqu %%xmm1, 16(%0); \
+                  movdqu %%xmm2, 32(%0); \
+                  movdqu %%xmm3, 48(%0); \
+                  movdqu %%xmm4, 64(%0); \
+                  movdqu %%xmm5, 80(%0); \
+                  movdqu %%xmm6, 96(%0); \
+                  movdqu %%xmm7, 112(%0);" :: "r" (p) : "memory");
 }
 
 /// SSE2 register save.
