@@ -15,6 +15,7 @@
  */
 #include <utilities/utility.h>
 #include <utilities/assert.h>
+#include <compiler.h>
 
 #include <panic.h>
 
@@ -28,6 +29,7 @@
 
 #define SSE_ALIGN_SIZE      0x10
 #define SSE_ALIGN_MASK      0xF
+#define NATURAL_MASK        (sizeof(size_t) - 1)
 
 // Set to 1 to allow SSE to be used.
 #define USE_SSE             0
@@ -253,42 +255,112 @@ void *qmemset(void *buf, unsigned long long c, size_t len)
 
 #ifdef X86_COMMON
 
-#if USE_SSE && USE_SSE_MEMCPY
-inline void *sse2_aligned_memcpy(void *restrict s1, const void *restrict s2, const size_t n)
+#define SSE2_SAVE_REGION_SIZE   (512)
+#define SSE2_SAVE_REGION_ALIGN  __attribute__((aligned(16)))
+
+/// \todo sse2_save/restore should probably use fxsave/fxrstor...
+
+/// SSE2 register save.
+void sse2_save(char p[SSE2_SAVE_REGION_SIZE])
+{
+    asm volatile("movntdq %%xmm0, 0(%0); \
+                  movntdq %%xmm1, 16(%0); \
+                  movntdq %%xmm2, 32(%0); \
+                  movntdq %%xmm3, 48(%0); \
+                  movntdq %%xmm4, 64(%0); \
+                  movntdq %%xmm5, 80(%0); \
+                  movntdq %%xmm6, 96(%0); \
+                  movntdq %%xmm7, 112(%0);" :: "r" (p) : "memory");
+}
+
+/// SSE2 register save.
+void sse2_restore(char p[SSE2_SAVE_REGION_SIZE])
+{
+    asm volatile("movdqu 0(%0), %%xmm0; \
+                  movdqu 16(%0), %%xmm1; \
+                  movdqu 32(%0), %%xmm2; \
+                  movdqu 48(%0), %%xmm3; \
+                  movdqu 64(%0), %%xmm4; \
+                  movdqu 80(%0), %%xmm5; \
+                  movdqu 96(%0), %%xmm6; \
+                  movdqu 112(%0), %%xmm7;" :: "r" (p) : "memory");
+}
+
+/// SSE2-optimised memcpy, where source is unaligned but destination is aligned.
+void *sse2_src_unaligned_memcpy(void *restrict s1, const void *restrict s2, const size_t n)
 {
     uintptr_t p1 = (uintptr_t) s1;
     uintptr_t p2 = (uintptr_t) s2;
-    
-    if(!n) return s1;
-    
+
+    if(UNLIKELY(!n)) return s1;
+
     // Count of 128 byte blocks
-    for(size_t i = 0; i < n; i++)
+    size_t i = n >> 7;
+    for(; i > 0; i--)
     {
         asm volatile("prefetchnta 128(%0); \
-                      prefetchnta 160(%0); \
                       prefetchnta 192(%0); \
-                      prefetchnta 224(%0);" : : "r" (p2));
-    
-        // Read a full 128 bytes.
-        asm volatile("movdqa 0(%0), %%xmm0" : : "r" (p2));
-        asm volatile("movdqa 16(%0), %%xmm1" : : "r" (p2));
-        asm volatile("movdqa 32(%0), %%xmm2" : : "r" (p2));
-        asm volatile("movdqa 48(%0), %%xmm3" : : "r" (p2));
-        asm volatile("movdqa 64(%0), %%xmm4" : : "r" (p2));
-        asm volatile("movdqa 80(%0), %%xmm5" : : "r" (p2));
-        asm volatile("movdqa 96(%0), %%xmm6" : : "r" (p2));
-        asm volatile("movdqa 112(%0), %%xmm7" : : "r" (p2));
-        
-        // Write back to the destination now.
-        asm volatile("movntdq %%xmm0, 0(%0)" : : "r" (p1));
-        asm volatile("movntdq %%xmm1, 16(%0)" : : "r" (p1));
-        asm volatile("movntdq %%xmm2, 32(%0)" : : "r" (p1));
-        asm volatile("movntdq %%xmm3, 48(%0)" : : "r" (p1));
-        asm volatile("movntdq %%xmm4, 64(%0)" : : "r" (p1));
-        asm volatile("movntdq %%xmm5, 80(%0)" : : "r" (p1));
-        asm volatile("movntdq %%xmm6, 96(%0)" : : "r" (p1));
-        asm volatile("movntdq %%xmm7, 112(%0)" : : "r" (p1));
-        
+                      prefetchnta 256(%0); \
+                      prefetchnta 320(%0); \
+                      movdqu 0(%0), %%xmm0; \
+                      movdqu 16(%0), %%xmm1; \
+                      movdqu 32(%0), %%xmm2; \
+                      movdqu 48(%0), %%xmm3; \
+                      movdqu 64(%0), %%xmm4; \
+                      movdqu 80(%0), %%xmm5; \
+                      movdqu 96(%0), %%xmm6; \
+                      movdqu 112(%0), %%xmm7; \
+                      movntdq %%xmm0, 0(%1); \
+                      movntdq %%xmm1, 16(%1); \
+                      movntdq %%xmm2, 32(%1); \
+                      movntdq %%xmm3, 48(%1); \
+                      movntdq %%xmm4, 64(%1); \
+                      movntdq %%xmm5, 80(%1); \
+                      movntdq %%xmm6, 96(%1); \
+                      movntdq %%xmm7, 112(%1);" : : "r" (p2), "r" (p1) : "memory");
+
+        // Increment counters.
+        p1 += 128;
+        p2 += 128;
+    }
+
+    return s1;
+
+}
+
+/// SSE2-optimised memcpy, where s1 and s2 are both unaligned.
+void *sse2_unaligned_memcpy(void *restrict s1, const void *restrict s2, const size_t n)
+{
+    uintptr_t p1 = (uintptr_t) s1;
+    uintptr_t p2 = (uintptr_t) s2;
+
+    if(UNLIKELY(!n)) return s1;
+
+    // Count of 128 byte blocks
+    size_t i = n >> 7;
+    for(; i > 0; i--)
+    {
+        asm volatile("prefetchnta 128(%0); \
+                      prefetchnta 192(%0); \
+                      prefetchnta 256(%0); \
+                      prefetchnta 320(%0); \
+                      movdqu 0(%0), %%xmm0; \
+                      movdqu 16(%0), %%xmm1; \
+                      movdqu 32(%0), %%xmm2; \
+                      movdqu 48(%0), %%xmm3; \
+                      movdqu 64(%0), %%xmm4; \
+                      movdqu 80(%0), %%xmm5; \
+                      movdqu 96(%0), %%xmm6; \
+                      movdqu 112(%0), %%xmm7; \
+                      movdqu %%xmm0, 0(%1); \
+                      movdqu %%xmm1, 16(%1); \
+                      movdqu %%xmm2, 32(%1); \
+                      movdqu %%xmm3, 48(%1); \
+                      movdqu %%xmm4, 64(%1); \
+                      movdqu %%xmm5, 80(%1); \
+                      movdqu %%xmm6, 96(%1); \
+                      movdqu %%xmm7, 112(%1);" : : "r" (p2), "r" (p1) : "memory");
+
         // Increment counters.
         p1 += 128;
         p2 += 128;
@@ -296,146 +368,251 @@ inline void *sse2_aligned_memcpy(void *restrict s1, const void *restrict s2, con
 
     return s1;
 }
-#endif
 
-/** This function courtesy of Josh Cornutt - cheers! */
-void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
+/// SSE2-optimised memcpy with fully aligned inputs.
+void *sse2_aligned_memcpy(void *restrict s1, const void *restrict s2, const size_t n)
 {
-    // Check for bad usage of memcpy
-    if(!n) return s1;
-    
-#if USE_SSE && USE_SSE_MEMCPY
-
-    uintptr_t unused = 0;
-
     uintptr_t p1 = (uintptr_t) s1;
     uintptr_t p2 = (uintptr_t) s2;
-    size_t off1 = 0, off2 = 0, i = 0;
-    
-    asm volatile("prefetchnta 0(%0); \
-                  prefetchnta 16(%0); \
-                  prefetchnta 32(%0); \
-                  prefetchnta 64(%0);" : : "r" (p2));
-    
-    while(((p1 + off1) & SSE_ALIGN_MASK) || ((p2 + off2) & SSE_ALIGN_MASK))
-    {
-        asm volatile("movsb" : : "D" (p1 + off1), "S" (p2 + off2));
-        
-        off1++; off2++;
-        if(off1 >= n)
-            return s1;
-    }
 
-    // Are we copying big blocks with nice power-of-2 sizes?
-    // The SSE2 aligned memcpy will copy 128 bytes at a time. We can use that to
-    // seriously dent the number of bytes we need to transfer.
-    size_t nBigBlocks = (n - off1) >> 7;
-    if(nBigBlocks)
-    {
-        sse2_aligned_memcpy((void*) (p1 + off1), (void*) (p2 + off2), nBigBlocks);
-        off1 += nBigBlocks << 7;
-        off2 += nBigBlocks << 7;
-    }
-    
-    p1 += off1;
-    p2 += off2;
-    
-    size_t nRemaining = n - off1;
-    
-    // Attempt to use SSE transfers for the rest of this data
-    switch(nRemaining >> 4)
-    {
-        case 7:
-            asm volatile("movdqa 96(%0), %%xmm6" : : "r" (p2));
-        case 6:
-            asm volatile("movdqa 80(%0), %%xmm5" : : "r" (p2));
-        case 5:
-            asm volatile("movdqa 64(%0), %%xmm4" : : "r" (p2));
-        case 4:
-            asm volatile("movdqa 48(%0), %%xmm3" : : "r" (p2));
-        case 3:
-            asm volatile("movdqa 32(%0), %%xmm2" : : "r" (p2));
-        case 2:
-            asm volatile("movdqa 16(%0), %%xmm1" : : "r" (p2));
-        case 1:
-            asm volatile("movdqa 0(%0), %%xmm0" : : "r" (p2));
-    };
-    
-    switch(nRemaining >> 4)
-    {
-        case 7:
-            asm volatile("movntdq %%xmm6, 96(%0)" : : "r" (p1));
-        case 6:
-            asm volatile("movntdq %%xmm5, 80(%0)" : : "r" (p1));
-        case 5:
-            asm volatile("movntdq %%xmm4, 64(%0)" : : "r" (p1));
-        case 4:
-            asm volatile("movntdq %%xmm3, 48(%0)" : : "r" (p1));
-        case 3:
-            asm volatile("movntdq %%xmm2, 32(%0)" : : "r" (p1));
-        case 2:
-            asm volatile("movntdq %%xmm1, 16(%0)" : : "r" (p1));
-        case 1:
-            asm volatile("movntdq %%xmm0, 0(%0)" : : "r" (p1));
-        case 0:
-            // No 16-byte blocks left. Transfer using native word sizes.
-#ifdef X64
-            asm volatile("rep movsq" : "=c" (unused) : "D" (p1), "S" (p2), "c" (nRemaining >> 3));
-            p1 += (nRemaining >> 3);
-            p2 += (nRemaining >> 3);
-            nRemaining -= (nRemaining >> 3);
-#endif
+    if(UNLIKELY(!n)) return s1;
 
-            asm volatile("rep movsd" : "=c" (unused) : "D" (p1), "S" (p2), "c" (nRemaining >> 2));
-            p1 += (nRemaining >> 2);
-            p2 += (nRemaining >> 2);
-            nRemaining -= (nRemaining >> 2);
-            
-            asm volatile("rep movsw" : "=c" (unused) : "D" (p1), "S" (p2), "c" (nRemaining >> 1));
-            p1 += (nRemaining >> 1);
-            p2 += (nRemaining >> 1);
-            nRemaining -= (nRemaining >> 1);
-            
-            asm volatile("rep movsb" : "=c" (unused) : "D" (p1), "S" (p2), "c" (nRemaining));
-            p1 += (nRemaining);
-            p2 += (nRemaining);
-            nRemaining -= nRemaining;
-    };
+    // Count of 128 byte blocks
+    size_t i = n >> 7;
+    for(; i > 0; i--)
+    {
+        asm volatile("prefetchnta 128(%0);" \
+                     "prefetchnta 192(%0);" \
+                     "prefetchnta 256(%0);" \
+                     "prefetchnta 320(%0);" \
+                     "movdqa 0(%0), %%xmm0;" \
+                     "movdqa 16(%0), %%xmm1;" \
+                     "movdqa 32(%0), %%xmm2;" \
+                     "movdqa 48(%0), %%xmm3;" \
+                     "movdqa 64(%0), %%xmm4;" \
+                     "movdqa 80(%0), %%xmm5;" \
+                     "movdqa 96(%0), %%xmm6;" \
+                     "movdqa 112(%0), %%xmm7;" \
+                     "movntdq %%xmm0, 0(%1);" \
+                     "movntdq %%xmm1, 16(%1);" \
+                     "movntdq %%xmm2, 32(%1);" \
+                     "movntdq %%xmm3, 48(%1);" \
+                     "movntdq %%xmm4, 64(%1);" \
+                     "movntdq %%xmm5, 80(%1);" \
+                     "movntdq %%xmm6, 96(%1);" \
+                     "movntdq %%xmm7, 112(%1);" : : "r" (p2), "r" (p1) : "memory");
+
+        // Increment counters.
+        p1 += 128;
+        p2 += 128;
+    }
 
     return s1;
+}
 
-#else
+void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
+{
+    static int can_sse = 0;
 
-    char *p1 = (char *)s1;
-    const char *p2 = (const char *)s2;
+    char *restrict p1 = (char *)s1;
+    const char *restrict p2 = (const char *)s2;
 
-    // calculate the distance to the nearest natural boundary
-    size_t offset = (sizeof(size_t) - ((size_t)p1 % sizeof(size_t))) % sizeof(size_t);
+    uintptr_t p1_u = (uintptr_t) p1;
+    uintptr_t p2_u = (uintptr_t) p2;
 
-    size_t unused;
-    // see if it's even worth aligning
-    if(n <= sizeof(size_t))
+    // Check for bad usage of memcpy
+    if(UNLIKELY(!n)) return s1;
+
+    // Check to see if we can now toggle on SSE.
+    if(UNLIKELY(!can_sse))
     {
-        asm volatile("rep movsb;":"=c"(unused):"D"(p1), "S"(p2), "c"(n));
-        return s1;
+        uintptr_t cr0, cr4;
+        asm volatile("mov %%cr0, %0" : "=r" (cr0));
+        if((cr0 & (1 << 2)) == 0)
+        {
+            // EM in CR0 unset. Good to go.
+            can_sse = 1;
+        }
     }
 
-    n -= offset;
+    size_t unused;
 
-    // align p1 on a natural boundary
-    asm volatile("rep movsb;":"=D"(p1), "=S"(p2), "=c"(unused):"D"(p1), "S"(p2), "c"(offset));
+    // Should we do SSE? Note that SSE involves an FPU state save,
+    // so it must be REALLY worth it.
+    if(can_sse && (n > 512))
+    {
+        /// \todo We should NOT save SSE state if the process has not used SSE...
+        char save_state[SSE2_SAVE_REGION_SIZE] SSE2_SAVE_REGION_ALIGN;
 
-    // move in size_t size'd blocks
-#if defined(X64)
-    asm volatile("rep movsq;":"=D"(p1), "=S"(p2), "=c"(unused):"D"(p1), "S"(p2), "c"(n >> 3));
-#elif defined(X86)
-    asm volatile("rep movsl;":"=D"(p1), "=S"(p2), "=c"(unused):"D"(p1), "S"(p2), "c"(n >> 2));
+        int ints = 0;
+        asm volatile("pushf; pop %0; and $0x200, %0; cli" : "=r" (ints));
+        // Save SSE registers, as we are about to destroy them.
+        sse2_save(save_state);
+
+        // Transfer in 128 byte blocks.
+        uintptr_t p1Align = p1_u & SSE_ALIGN_MASK;
+        uintptr_t p2Align = p2_u & SSE_ALIGN_MASK;
+        if(LIKELY(!(p1Align || p2Align)))
+        {
+            // Fully aligned inputs.
+            /// \note Please call memcpy with aligned src/dest as much as
+            ///       possible, as the performance boost is quite nice.
+            sse2_aligned_memcpy(p1, p2, n);
+        }
+        else
+        {
+            // Align destination, use source unaligned.
+            // This allows us to use aligned non-temporal writes, with
+            // (prefetched) unaligned reads from the source.
+            size_t distance = SSE_ALIGN_SIZE - p1Align;
+            switch(distance)
+            {
+                case 15:
+                    *p1++ = *p2++;
+                case 14:
+                    *p1++ = *p2++;
+                case 13:
+                    *p1++ = *p2++;
+                case 12:
+                    *p1++ = *p2++;
+                case 11:
+                    *p1++ = *p2++;
+                case 10:
+                    *p1++ = *p2++;
+                case 9:
+                    *p1++ = *p2++;
+                case 8:
+                    *p1++ = *p2++;
+                case 7:
+                    *p1++ = *p2++;
+                case 6:
+                    *p1++ = *p2++;
+                case 5:
+                    *p1++ = *p2++;
+                case 4:
+                    *p1++ = *p2++;
+                case 3:
+                    *p1++ = *p2++;
+                case 2:
+                    *p1++ = *p2++;
+                case 1:
+                    *p1++ = *p2++;
+                    n -= distance;
+                default:
+                    break;
+            }
+
+            sse2_src_unaligned_memcpy(p1, p2, n);
+        }
+
+        size_t count = n & ~127; // Aligns n to 128 byte boundary.
+        p1 += count;
+        p2 += count;
+
+        // Finish off any trailing bytes that couldn't be transferred as part of a 128 byte block.
+        memcpy(p1, p2, n & 127);
+
+        /// \todo FPU restore here!
+        sse2_restore(save_state);
+        if(ints)
+            asm volatile("sti");
+
+        return s1;
+    }
+    else
+    {
+        // Not enough bytes for SSE to be worth the FPU save.
+
+        // See if it's even worth aligning
+        switch(n)
+        {
+#ifdef X64
+            case 7:
+                *p1++ = *p2++;
+            case 6:
+                *p1++ = *p2++;
+            case 5:
+                *p1++ = *p2++;
+            case 4:
+                *p1++ = *p2++;
 #endif
+            case 3:
+                *p1++ = *p2++;
+            case 2:
+                *p1++ = *p2++;
+            case 1:
+                *p1++ = *p2++;
+                return s1;
+            default:
+                break;
+        }
 
-    // clean up the remaining bytes
-    asm volatile("rep movsb;":"=c"(unused):"D"(p1), "S"(p2), "c"(n % sizeof(size_t)));
+        // calculate the distance to the nearest natural boundary
+        size_t offset = (sizeof(size_t) - (((size_t) p1) & NATURAL_MASK)) & NATURAL_MASK;
 
+        // Align p1 on a natural boundary
+        switch(offset)
+        {
+#ifdef X64
+            case 7:
+                *p1++ = *p2++;
+            case 6:
+                *p1++ = *p2++;
+            case 5:
+                *p1++ = *p2++;
+            case 4:
+                *p1++ = *p2++;
 #endif
+            case 3:
+                *p1++ = *p2++;
+            case 2:
+                *p1++ = *p2++;
+            case 1:
+                *p1++ = *p2++;
+                n -= offset;
+            default:
+                break;
+        }
+
+        // Move in size_t size'd blocks
+#ifdef X64
+        size_t blocks = n >> 3;
+#else
+        size_t blocks = n >> 2;
+#endif
+        if(LIKELY(blocks))
+        {
+#ifdef X64
+            asm volatile("rep movsq;":"=D"(p1), "=S"(p2), "=c"(unused):"D"(p1), "S"(p2), "c"(blocks) : "memory");
+#else
+            asm volatile("rep movsl;":"=D"(p1), "=S"(p2), "=c"(unused):"D"(p1), "S"(p2), "c"(blocks) : "memory");
+#endif
+        }
+
+        // Clean up the remaining bytes
+        size_t tail = n & NATURAL_MASK;
+        switch(tail)
+        {
+#ifdef X64
+            case 7:
+                *p1++ = *p2++;
+            case 6:
+                *p1++ = *p2++;
+            case 5:
+                *p1++ = *p2++;
+            case 4:
+                *p1++ = *p2++;
+#endif
+            case 3:
+                *p1++ = *p2++;
+            case 2:
+                *p1++ = *p2++;
+            case 1:
+                *p1++ = *p2++;
+            default:
+                break;
+        }
+    }
 
     return s1;
 }
@@ -444,7 +621,7 @@ void *memcpy_gcc(void *restrict s1, const void *restrict s2, size_t n)
 {
     char *restrict p1 = s1;
     const char *restrict p2 = s2;
-    while(n)
+    while(n--)
         *p1++ = *p2++;
     return s1;
 }
