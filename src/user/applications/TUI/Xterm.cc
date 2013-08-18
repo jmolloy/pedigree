@@ -544,7 +544,7 @@ Xterm::Window::Window(size_t nRows, size_t nCols, PedigreeGraphics::Framebuffer 
     for (size_t i = 0; i < m_Width*m_Height; i++)
         m_pBuffer[i] = blank;
 
-    if(m_Bg && g_Cairo)
+    if(g_Cairo)
     {
         cairo_save(g_Cairo);
         cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
@@ -954,8 +954,7 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
     size_t bottom2_px = top_px + (m_Height-n)*g_NormalFont->getHeight();
 
     // If we're bitblitting, we need to commit all changes before now.
-    doRedraw(rect);
-    rect.reset();
+    cairo_surface_flush(g_Surface);
 
     cairo_save(g_Cairo);
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);

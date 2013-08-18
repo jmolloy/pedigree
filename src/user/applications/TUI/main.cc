@@ -87,14 +87,16 @@ void checkFramebuffer()
 {
     if(g_pEmu)
     {
-        /// \todo load new cr & surface
         if(g_Surface)
         {
             cairo_surface_destroy(g_Surface);
             cairo_destroy(g_Cairo);
         }
 
+        // Wipe out the framebuffer before we do much with it.
         int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, g_nWidth);
+        memset((void *) g_pEmu->getRawFramebuffer(), 0, g_nHeight * stride);
+
         g_Surface = cairo_image_surface_create_for_data(
                 (uint8_t*) g_pEmu->getRawFramebuffer(),
                 CAIRO_FORMAT_ARGB32,
@@ -103,7 +105,7 @@ void checkFramebuffer()
                 stride);
         g_Cairo = cairo_create(g_Surface);
 
-        syslog(LOG_INFO, "created cairo %p %p %p %dx%d", g_pEmu->getRawFramebuffer(), g_Surface, g_Cairo, g_nWidth, g_nHeight);
+        syslog(LOG_INFO, "created cairo f=%p s=%p cr=%p %dx%d", g_pEmu->getRawFramebuffer(), g_Surface, g_Cairo, g_nWidth, g_nHeight);
     }
 }
 
@@ -121,7 +123,8 @@ void modeChanged(size_t width, size_t height)
     g_nHeight = height;
 
     // Wipe out the framebuffer, start over.
-    cairo_set_source_rgba(g_Cairo, 0, 0, 0.0, 0.8);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+    cairo_set_source_rgba(g_Cairo, 0, 0, 0, 0.8);
     cairo_rectangle(g_Cairo, 0, 0, g_nWidth, g_nHeight);
     cairo_fill(g_Cairo);
 
@@ -145,11 +148,6 @@ void modeChanged(size_t width, size_t height)
         // Resize any clients.
         kill(pTerm->getPid(), SIGWINCH);
 
-        /*
-        g_pHeader->select(pTerm->getTabId());
-        g_pHeader->render(pTerm->getBuffer(), rect);
-        */
-
         pTL = pTL->next;
     }
 
@@ -167,11 +165,6 @@ void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
 
     g_pCurrentTerm->term->setActive(true, rect);
 
-    /*
-    g_pHeader->select(pTL->term->getTabId());
-    g_pHeader->render(pTL->term->getBuffer(), rect);
-    */
-
     pTL->term->redrawAll(rect);
 
     doRedraw(rect);
@@ -179,7 +172,7 @@ void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
 
 Terminal *addTerminal(const char *name, DirtyRectangle &rect)
 {
-    size_t h = 0; // g_pHeader->getHeight()+1;
+    size_t h = 0;
 
     Terminal *pTerm = new Terminal(const_cast<char*>(name), g_nWidth - 3, g_nHeight-h, g_pHeader, 3, h, 0);
 
@@ -200,19 +193,6 @@ Terminal *addTerminal(const char *name, DirtyRectangle &rect)
 
     selectTerminal(pTermList, rect);
 
-    /*
-    TerminalList *pTL = g_pTermList;
-    while (pTL)
-    {
-        DirtyRectangle rect2;
-        g_pHeader->select(pTL->term->getTabId());
-        g_pHeader->render(pTL->term->getBuffer(), rect2);
-        doRedraw(rect2);
-        pTL = pTL->next;
-    }
-    g_pHeader->select(pTermList->term->getTabId());
-    */
-
     return pTerm;
 }
 
@@ -220,62 +200,9 @@ Terminal *addTerminal(const char *name, DirtyRectangle &rect)
 void doRefresh(Terminal *pT)
 {
     // Refresh the given terminal
-    /// \todo Massive caveat with more than one graphics app running
-    ///       at a time - they'll get covered up by this!
     if(g_pCurrentTerm)
         if(g_pCurrentTerm->term == pT)
             pT->refresh(); // Handle any region not redrawn by above
-
-    // Redraw the header
-    /*
-    DirtyRectangle rect;
-    g_pHeader->render(0, rect);
-    doRedraw(rect);
-    */
-}
-
-bool checkCommand(uint64_t key, DirtyRectangle &rect)
-{
-    if ( (key & Keyboard::Ctrl) &&
-         (key & Keyboard::Shift) &&
-         (key & Keyboard::Special) )
-    {
-        uint32_t k = key&0xFFFFFFFFULL;
-        char str[5];
-        memcpy(str, reinterpret_cast<char*>(&k), 4);
-        str[4] = 0;
-
-#ifdef MULTIPLE_CONSOLES
-        if (!strcmp(str, "left"))
-        {
-            if (g_pCurrentTerm->prev)
-            {
-                selectTerminal(g_pCurrentTerm->prev, rect);
-                return true;
-            }
-        }
-        else if (!strcmp(str, "righ"))
-        {
-            if (g_pCurrentTerm->next)
-            {
-                selectTerminal(g_pCurrentTerm->next, rect);
-                return true;
-            }
-        }
-        else if (!strcmp(str, "ins"))
-        {
-            // Create a new terminal.
-            if(nextConsoleNum < 6)
-            {
-                char *pStr = new char[64];
-                sprintf(pStr, "Console%ld", nextConsoleNum++);
-                addTerminal(pStr, rect);
-            }
-            return true;
-        }
-#endif
-    }
-    return false;
 }
 
 Font *g_NormalFont;
@@ -292,8 +219,6 @@ void key_input_handler(uint64_t c)
 
     Terminal *pT = g_pCurrentTerm->term;
 
-    DirtyRectangle rect2;
-
     if (c == '\n') c = '\r';
 
     // CTRL + key -> unprintable characters
@@ -302,14 +227,7 @@ void key_input_handler(uint64_t c)
         c &= 0x1F;
     }
 
-    if(checkCommand(c, rect2))
-    {
-        doRedraw(rect2);
-        return;
-    }
-    else
-        pT->addToQueue(c);
-    rect2.reset();
+    pT->addToQueue(c);
 }
 
 /**
@@ -398,7 +316,8 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
     cairo_set_antialias(g_Cairo, CAIRO_ANTIALIAS_NONE);
     cairo_set_line_width(g_Cairo, 1.0);
 
-    cairo_set_source_rgba(g_Cairo, 0, 0, 0.0, 0.8);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+    cairo_set_source_rgba(g_Cairo, 0, 0, 0, 0.8);
     cairo_rectangle(g_Cairo, 0, 0, g_nWidth, g_nHeight);
     cairo_fill(g_Cairo);
 
@@ -417,18 +336,10 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
         return 0;
     }
 
-    g_NormalFont->render("Hello world from the TUI!", 200, 200, 0xFF0000, 0);
-
-    rgb_t fore = {0xff, 0xff, 0xff, 0xff};
-    rgb_t back = {0, 0, 0, 0};
-
     g_pHeader =  new Header(g_nWidth);
-
     g_pHeader->addTab(const_cast<char*>("The Pedigree Operating System"), 0);
 
     DirtyRectangle rect;
-
-    // DirtyRectangle rect;
     char newTermName[256];
     sprintf(newTermName, "Console%d", getpid());
     Terminal *pCurrentTerminal = addTerminal(newTermName, rect);
@@ -437,11 +348,8 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
 
     doRedraw(rect);
 
-    // Input::installCallback(Input::Key, input_handler);
-
-    size_t maxBuffSz = (32768 * 2) - 1;
-    char *buffer = new char[maxBuffSz + 1];
-    size_t tabId;
+    size_t maxBuffSz = 32768;
+    char buffer[32768];
     while (true)
     {
         int n = 0;
@@ -498,117 +406,6 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
 
         if(bShouldRedraw)
             doRedraw(dirtyRect);
-
-#if 0
-        // Check for pending requests in the RequestQueue.
-        size_t cmd = Syscall::nextRequestAsync(g_nLastResponse, buffer, &sz, maxBuffSz, &tabId);
-        // syslog(LOG_NOTICE, "Command %d received. (term %d, sz %d)", cmd, tabId, sz);
-
-        if(cmd == 0)
-            continue;
-
-        /*if (cmd == TUI_MODE_CHANGED)
-        {
-            uint64_t u = * reinterpret_cast<uint64_t*>(buffer);
-            syslog(LOG_ALERT, "u: %llx", u);
-            modeChanged(u&0xFFFFFFFFULL, (u>>32)&0xFFFFFFFFULL);
-
-            continue;
-        }*/
-
-        Terminal *pT = 0;
-        TerminalList *pTL = g_pTermList;
-        while (pTL)
-        {
-            if (pTL->term->getTabId() == tabId)
-            {
-                pT = pTL->term;
-                break;
-            }
-            pTL = pTL->next;
-        }
-        if (pT == 0)
-        {
-            syslog(LOG_ALERT, "Completely unrecognised terminal ID %ld, aborting.", tabId);
-            continue;
-        }
-
-        // If the current terminal's queue is empty, set the request
-        // pending further input.
-        if (cmd == CONSOLE_READ && pT->queueLength() == 0)
-        {
-            pT->setHasPendingRequest(true, sz);
-            Syscall::requestPending();
-            continue;
-        }
-
-        switch(cmd)
-        {
-            case CONSOLE_WRITE:
-            {
-                DirtyRectangle rect2;
-                buffer[sz] = '\0';
-                buffer[maxBuffSz] = '\0';
-                pT->write(buffer, rect2);
-                g_nLastResponse = sz;
-                doRedraw(rect2);
-                break;
-            }
-
-            case CONSOLE_READ:
-            {
-                size_t i = 0;
-                while (i < sz)
-                {
-                    char c = pT->getFromQueue();
-                    if (c)
-                    {
-                        buffer[i++] = c;
-                        continue;
-                    }
-                    else break;
-                }
-                g_nLastResponse = i;
-                if (pT->hasPendingRequest())
-                {
-                    Syscall::respondToPending(g_nLastResponse, buffer, sz);
-                    pT->setHasPendingRequest(false, 0);
-                }
-                break;
-            }
-
-            case CONSOLE_DATA_AVAILABLE:
-                g_nLastResponse = (pT->queueLength() > 0);
-                break;
-
-            case CONSOLE_GETROWS:
-                g_nLastResponse = pT->getRows();
-                break;
-
-            case CONSOLE_GETCOLS:
-                g_nLastResponse = pT->getCols();
-                break;
-
-            case CONSOLE_REFRESH:
-                doRefresh(pT);
-                break;
-
-            case CONSOLE_FLUSH:
-                syslog(LOG_INFO, "TUI: console flush on %p [existing buffer=%s]", pT, buffer);
-                g_nLastResponse = 0;
-                if(pT->hasPendingRequest())
-                {
-                    Syscall::respondToPending(g_nLastResponse, buffer, 0);
-                    pT->setHasPendingRequest(false, 0);
-                }
-
-                pT->clearQueue();
-                break;
-
-            default:
-                syslog(LOG_ALERT, "Unknown command: %x", cmd);
-        }
-#endif
     }
 
     return 0;
