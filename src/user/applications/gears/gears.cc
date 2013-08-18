@@ -324,7 +324,7 @@ init(void)
 class Gears : public Widget
 {
     public:
-        Gears() : Widget(), fb(NULL), m_bGlInit(false), m_nWidth(0), m_nHeight(0)
+        Gears() : Widget(), fb(NULL), m_bGlInit(false), m_bContextValid(false), m_nWidth(0), m_nHeight(0)
         {};
         virtual ~Gears()
         {}
@@ -357,7 +357,7 @@ class Gears : public Widget
 
         virtual bool render(PedigreeGraphics::Rect &rt, PedigreeGraphics::Rect &dirty)
         {
-            if(!m_bGlInit)
+            if(!(m_bGlInit && m_bContextValid && fb))
             {
                 return false;
             }
@@ -381,8 +381,16 @@ class Gears : public Widget
             }
 
             fb = (uint8_t*) getRawFramebuffer();
+            if(!fb)
+            {
+                m_bContextValid = false;
+                fprintf(stderr, "Couldn't get a framebuffer to use.\n");
+                return false;
+            }
+
             if(!OSMesaMakeCurrent(gl_ctx, fb, GL_UNSIGNED_BYTE, w, h))
             {
+                m_bContextValid = false;
                 fprintf(stderr, "OSMesaMakeCurrent failed.\n");
                 return false;
             }
@@ -392,12 +400,15 @@ class Gears : public Widget
 
             reshape(w, h);
 
+            m_bContextValid = true;
+
             return true;
         }
 
         uint8_t *fb;
 
         bool m_bGlInit;
+        bool m_bContextValid;
 
         OSMesaContext gl_ctx;
 
@@ -411,9 +422,10 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
         case RepaintNeeded:
             {
                 PedigreeGraphics::Rect rt, dirty;
-                g_pGears->render(rt, dirty);
-
-                g_pGears->redraw(dirty);
+                if(g_pGears->render(rt, dirty))
+                {
+                    g_pGears->redraw(dirty);
+                }
             }
             break;
         case Reposition:
