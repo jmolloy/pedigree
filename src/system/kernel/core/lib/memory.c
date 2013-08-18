@@ -31,6 +31,9 @@
 #define SSE_ALIGN_MASK      0xF
 #define NATURAL_MASK        (sizeof(size_t) - 1)
 
+// Below about this size, rep movs{d,q} is in fact faster than SSE.
+#define SSE_THRESHOLD 524288 // 512 KiB
+
 // Set to 1 to allow SSE to be used.
 #define USE_SSE             0
 
@@ -439,7 +442,7 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
 
     // Should we do SSE? Note that SSE involves an FPU state save,
     // so it must be REALLY worth it.
-    if(can_sse && (n > 512))
+    if(can_sse && (n > SSE_THRESHOLD))
     {
         /// \todo We should NOT save SSE state if the process has not used SSE...
         char save_state[SSE2_SAVE_REGION_SIZE] SSE2_SAVE_REGION_ALIGN;
