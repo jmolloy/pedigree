@@ -57,35 +57,6 @@ static GLfloat angle = 0.0;
 static unsigned int frames = 0;
 static unsigned int start_time = 0;
 
-/**
- * This memcpy + memset gets SERIOUSLY optimised by GCC into SSE and other
- * similar magic. For large (ie, multi-MB) memsets/memcpys, this is at least
- * THREE TIMES faster than the newlib memcpy/memset.
- */
-
-void *memcpy(void * __restrict dst, void * __restrict src, size_t len)
-{
-    char *src_c = (char *) src;
-    char *dst_c = (char *) dst;
-    for(; len > 0; --len)
-    {
-        *dst_c = *src_c;
-        ++dst_c; ++src_c;
-    }
-    return dst;
-}
-
-void *memset(void *dst, int c, size_t len)
-{
-    char *dst_c = (char *) dst;
-    for(; len > 0; --len)
-    {
-        *dst_c = c;
-        ++dst_c;
-    }
-    return dst;
-}
-
 void fps()
 {
     struct timeval now;
@@ -99,8 +70,7 @@ void fps()
     {
         GLfloat seconds = now.tv_sec - start_time;
         GLfloat fps = frames / seconds;
-        //printf("%d frames in %3.1f seconds = %6.3f FPS\n", frames, seconds, fps);
-        syslog(LOG_INFO, "%d frames in %3.1f seconds = %6.3f FPS", frames, seconds, fps);
+        syslog(LOG_INFO, "%d frames in %3.1f seconds = %6.3f FPS\n", frames, seconds, fps);
         start_time = now.tv_sec;
         frames = 0;
     }
