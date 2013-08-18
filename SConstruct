@@ -125,6 +125,11 @@ except SCons.Errors.EnvironmentError:
                       tools = ['default'], TARFLAGS='-cz')
 Help(opts.GenerateHelpText(env))
 
+host = os.uname()
+
+env['ON_PEDIGREE'] = host[0] == 'Pedigree'
+env['HOST_PLATFORM'] = host[4]
+
 # Don't use MD5s to determine if files have changed, just check the timestamp
 env.Decider('timestamp-newer')
 
@@ -160,12 +165,16 @@ if env['CC_NOCACHE'] == '':
     env['CC_NOCACHE'] = env['CC']
 
 # Set the compilers if CROSS is not an empty string
-if env['CROSS'] != '':
-    cross = os.path.split(env['CROSS'])
-    crossPath = cross[0]
-    crossTuple = cross[1]
+if env['CROSS'] != '' or env['ON_PEDIGREE']:
+    if not env['ON_PEDIGREE']:
+        cross = os.path.split(env['CROSS'])
+        crossPath = cross[0]
+        crossTuple = cross[1]
+    else:
+        crossPath = crossTuple = ''
 
-    env['ENV']['PATH'] =  os.path.abspath(crossPath) + ':' + env['ENV']['PATH']
+    if crossPath:
+        env['ENV']['PATH'] =  os.path.abspath(crossPath) + ':' + env['ENV']['PATH']
 
     prefix = ''
     if env['distcc']:
@@ -207,8 +216,13 @@ if not os.path.exists(p):
     exit(1)
 
 tmp = re.match('(.*?)\-.*', os.path.basename(env['CROSS']), re.S)
-if(tmp != None):
-    if re.match('i[3456]86',tmp.group(1)) != None:
+if(env['ON_PEDIGREE'] or tmp != None):
+    if env['ON_PEDIGREE']:
+        host_arch = env['HOST_PLATFORM']
+    else:
+        host_arch = tmp.group(1)
+
+    if re.match('i[3456]86',host_arch) != None:
         defines = default_defines['x86']
         env['CFLAGS'] = safeAppend(env['CFLAGS'], default_cflags['x86'])
         env['CXXFLAGS'] = safeAppend(env['CXXFLAGS'], default_cxxflags['x86'])
@@ -217,7 +231,7 @@ if(tmp != None):
         
         env['PEDIGREE_IMAGES_DIR'] = default_imgdir['x86']
         env['ARCH_TARGET'] = 'X86'
-    elif re.match('amd64|x86[_-]64',tmp.group(1)) != None:
+    elif re.match('amd64|x86[_-]64',host_arch) != None:
         defines = default_defines['x64']
         env['CFLAGS'] = safeAppend(env['CFLAGS'], default_cflags['x64'])
         env['CXXFLAGS'] = safeAppend(env['CXXFLAGS'], default_cxxflags['x64'])
@@ -226,11 +240,11 @@ if(tmp != None):
         
         env['PEDIGREE_IMAGES_DIR'] = default_imgdir['x64']
         env['ARCH_TARGET'] = 'X64'
-    elif re.match('ppc|powerpc',tmp.group(1)) != None:
+    elif re.match('ppc|powerpc',host_arch) != None:
         defines += ['PPC']
 
         env['ARCH_TARGET'] = 'PPC'
-    elif re.match('arm',tmp.group(1)) != None:
+    elif re.match('arm',host_arch) != None:
         defines = default_defines['arm']
 
 
@@ -274,8 +288,9 @@ if(tmp != None):
         env['ARCH_TARGET'] = 'ARM'
 
 if(tmp == None or env['ARCH_TARGET'] == ''):
-    print "Unsupported target - have you used scripts/checkBuildSystem.pl to build a cross-compiler?"
-    Exit(1)
+    if not env['ON_PEDIGREE']:
+        print "Unsupported target - have you used scripts/checkBuildSystem.pl to build a cross-compiler?"
+        Exit(1)
 
 if(env['pup']):
     env['PEDIGREE_IMAGES_DIR'] = '#images/local/'
@@ -284,13 +299,19 @@ if(env['pup']):
 if(env['AS'] == ''):
     # NASM is used for X86 and X64 builds
     if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
-        crossPath = os.path.dirname(env['CROSS'])
-        env['AS'] = crossPath + "/nasm"
+        if env['ON_PEDIGREE']:
+            env['AS'] = 'nasm'
+        else:
+            crossPath = os.path.dirname(env['CROSS'])
+            env['AS'] = crossPath + "/nasm"
     else:
-        if(env['CROSS'] == ''):
-            print "Error: Please set AS on the command line."
-            Exit(1)
-        env['AS'] = env['CROSS'] + "as"
+        if env['ON_PEDIGREE']:
+            env['AS'] = 'as'
+        else:
+           if(env['CROSS'] == ''):
+               print "Error: Please set AS on the command line."
+               Exit(1)
+           env['AS'] = env['CROSS'] + "as"
 
 # Detect losetup presence
 if not env['forcemtools']:
