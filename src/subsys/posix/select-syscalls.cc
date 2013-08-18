@@ -319,24 +319,29 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         }
     }
 
-    // Cleanup.
-    reentrancyLock.acquire();
-
-    // Ensure there are no events still pending for this thread.
-    Processor::information().getCurrentThread()->cullEvent(EventNumbers::SelectEvent);
-
-    for (List<SelectEvent*>::Iterator it = events.begin();
-         it != events.end();
-         it++)
+    // Only do cleanup and lock acquire/release if we set events up.
+    if(events.count())
     {
-        SelectEvent *pSE = *it;
-        pSE->getFile()->cullMonitorTargets(Processor::information().getCurrentThread());
-        delete pSE;
-    }
+        // Cleanup.
+        reentrancyLock.acquire();
 
-    reentrancyLock.release();
+        // Ensure there are no events still pending for this thread.
+        Processor::information().getCurrentThread()->cullEvent(EventNumbers::SelectEvent);
+
+        for (List<SelectEvent*>::Iterator it = events.begin();
+                it != events.end();
+                it++)
+        {
+            SelectEvent *pSE = *it;
+            pSE->getFile()->cullMonitorTargets(Processor::information().getCurrentThread());
+            delete pSE;
+        }
+
+        reentrancyLock.release();
+    }
 
     F_NOTICE("    -> " << Dec << ((bError) ? -1 : nRet) << Hex);
 
     return (bError) ? -1 : nRet;
 }
+
