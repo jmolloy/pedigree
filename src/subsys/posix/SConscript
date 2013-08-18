@@ -52,6 +52,7 @@ glue_files = [
     'glue-fpurge.c',
     'glue-scandir.c',
     'glue-dlmalloc.c',
+    'glue-memcpy.c',
 ]
 
 crt0_files = ['crt0.c']
