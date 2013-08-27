@@ -290,6 +290,9 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileo
     // Do we need to do a data copy (for non-shared)?
     if(bShouldCopy)
     {
+        // Do not interrupt - we're about to smash the temporary page for this CPU.
+        Spinlock lock; LockGuard<Spinlock> guard(lock);
+
         // Grab the current process.
         Process *pProcess = Processor::information().getCurrentThread()->getParent();
 
@@ -305,7 +308,7 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileo
             // Rip out the old mapping so we can override it.
             va.unmap(reinterpret_cast<void *>(address));
         }
-        va.map(p, reinterpret_cast<void *>(address), VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
+        va.map(p, reinterpret_cast<void *>(address), VirtualAddressSpace::KernelMode);
 
         // Perform the copy.
         memcpy(reinterpret_cast<uint8_t*>(v), reinterpret_cast<void *>(address), pageSz);
