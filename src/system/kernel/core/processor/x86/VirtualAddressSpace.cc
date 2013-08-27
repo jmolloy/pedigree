@@ -405,9 +405,8 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
   // Map the page
   *pageTableEntry = physicalAddress | Flags;
 
-  // Flush the TLB (if we are marking a page as swapped-out)
-  if ((Flags & PAGE_SWAPPED) == PAGE_SWAPPED)
-    Processor::invalidate(virtualAddress);
+  // Flush the TLB
+  Processor::invalidate(virtualAddress);
 
   return true;
 }
@@ -438,7 +437,8 @@ void X86VirtualAddressSpace::doSetFlags(void *virtualAddress, size_t newFlags)
   // Set the flags
   PAGE_SET_FLAGS(pageTableEntry, toFlags(newFlags));
 
-  // TODO: Might need a TLB flush
+  // Flush TLB - modified the mapping for this address.
+  Processor::invalidate(virtualAddress);
 }
 void X86VirtualAddressSpace::doUnmap(void *virtualAddress)
 {
@@ -450,11 +450,11 @@ void X86VirtualAddressSpace::doUnmap(void *virtualAddress)
   if (getPageTableEntry(virtualAddress, pageTableEntry) == false)
     panic("VirtualAddressSpace::unmap(): function misused");
 
-  // Invalidate the TLB entry
-  Processor::invalidate(virtualAddress);
-
   // Unmap the page
   *pageTableEntry = 0;
+
+  // Invalidate the TLB entry
+  Processor::invalidate(virtualAddress);
 }
 void *X86VirtualAddressSpace::doAllocateStack(size_t sSize)
 {
