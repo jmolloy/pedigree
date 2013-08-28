@@ -31,15 +31,15 @@
 #define PAGE_PRESENT                0x01
 #define PAGE_WRITE                  0x02
 #define PAGE_USER                   0x04
-#define PAGE_WRITE_THROUGH          0x08
+#define PAGE_WRITE_COMBINE          0x08
 #define PAGE_CACHE_DISABLE          0x10
 #define PAGE_4MB                    0x80
+#define PAGE_PAT                    0x80
 #define PAGE_GLOBAL                 0x100
 #define PAGE_SWAPPED                0x200
 #define PAGE_COPY_ON_WRITE          0x400
 #define PAGE_SHARED                 0x800
-#define PAGE_WRITE_COMBINE          0x88 // PAT5 - (PWT|PAT)
-/// \todo Write the PAT MSR to make PAT5 not actually WT, but rather WC...
+#define PAGE_WRITE_THROUGH          (PAGE_PAT | PAGE_WRITE_COMBINE)
 
 //
 // Macros
@@ -426,7 +426,7 @@ void X86VirtualAddressSpace::doGetMapping(void *virtualAddress,
 
   // Extract the physical address and the flags
   physicalAddress = PAGE_GET_PHYSICAL_ADDRESS(pageTableEntry);
-  flags = fromFlags(PAGE_GET_FLAGS(pageTableEntry));
+  flags = fromFlags(PAGE_GET_FLAGS(pageTableEntry), true);
 }
 void X86VirtualAddressSpace::doSetFlags(void *virtualAddress, size_t newFlags)
 {
@@ -529,8 +529,8 @@ uint32_t X86VirtualAddressSpace::toFlags(size_t flags, bool bFinal)
     Flags |= PAGE_USER;
   if ((flags & Write) == Write)
     Flags |= PAGE_WRITE;
-  if ((flags & WriteThrough) == WriteThrough)
-    Flags |= PAGE_WRITE_THROUGH;
+  if ((flags & WriteCombine) == WriteCombine)
+    Flags |= PAGE_WRITE_COMBINE;
   if ((flags & CacheDisable) == CacheDisable)
     Flags |= PAGE_CACHE_DISABLE;
   if ((flags & Swapped) == Swapped)
@@ -541,8 +541,8 @@ uint32_t X86VirtualAddressSpace::toFlags(size_t flags, bool bFinal)
     Flags |= PAGE_COPY_ON_WRITE;
   if ((flags & Shared) == Shared)
     Flags |= PAGE_SHARED;
-  if (bFinal && ((flags & WriteCombine) == WriteCombine))
-    Flags |= PAGE_WRITE_COMBINE;
+  if (bFinal && ((flags & WriteThrough) == WriteThrough))
+    Flags |= PAGE_WRITE_THROUGH;
   return Flags;
 }
 size_t X86VirtualAddressSpace::fromFlags(uint32_t Flags, bool bFinal)
@@ -552,8 +552,8 @@ size_t X86VirtualAddressSpace::fromFlags(uint32_t Flags, bool bFinal)
     flags |= KernelMode;
   if ((Flags & PAGE_WRITE) == PAGE_WRITE)
     flags |= Write;
-  if ((Flags & PAGE_WRITE_THROUGH) == PAGE_WRITE_THROUGH)
-    flags |= WriteThrough;
+  if ((Flags & PAGE_WRITE_COMBINE) == PAGE_WRITE_COMBINE)
+    flags |= WriteCombine;
   if ((Flags & PAGE_CACHE_DISABLE) == PAGE_CACHE_DISABLE)
     flags |= CacheDisable;
   if ((Flags & PAGE_SWAPPED) == PAGE_SWAPPED)
@@ -562,8 +562,8 @@ size_t X86VirtualAddressSpace::fromFlags(uint32_t Flags, bool bFinal)
     flags |= CopyOnWrite;
   if ((Flags & PAGE_SHARED) == PAGE_SHARED)
     flags |= Shared;
-  if (bFinal && ((Flags & PAGE_WRITE_COMBINE) == PAGE_WRITE_COMBINE))
-    flags |= WriteCombine;
+  if (bFinal && ((Flags & PAGE_WRITE_THROUGH) == PAGE_WRITE_THROUGH))
+    flags |= WriteThrough;
   return flags;
 }
 

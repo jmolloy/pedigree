@@ -122,11 +122,11 @@ PAT7 UC
   union pat p;
   p.x = pat_lo | (static_cast<uint64_t>(pat_hi) << 32ULL);
   p.s.pa0 = PAT_WB;
-  p.s.pa1 = PAT_WT;
+  p.s.pa1 = PAT_WC; // Redefine PWT in all page entries to mean WC instead of WT.
   p.s.pa2 = PAT_UCMINUS;
   p.s.pa3 = PAT_UC;
   p.s.pa4 = PAT_WB;
-  p.s.pa5 = PAT_WC; // Redefine PAT5 to be WC instead of the default WT.
+  p.s.pa5 = PAT_WT; // PWT|PAT == WT.
   p.s.pa6 = PAT_UCMINUS;
   p.s.pa7 = PAT_UC;
   pat_lo = static_cast<uint32_t>(p.x);
