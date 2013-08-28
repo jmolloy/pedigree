@@ -38,6 +38,8 @@
 #define PAGE_SWAPPED                0x200
 #define PAGE_COPY_ON_WRITE          0x400
 #define PAGE_SHARED                 0x800
+#define PAGE_WRITE_COMBINE          0x88 // PAT5 - (PWT|PAT)
+/// \todo Write the PAT MSR to make PAT5 not actually WT, but rather WC...
 
 //
 // Macros
@@ -537,6 +539,8 @@ uint32_t X86VirtualAddressSpace::toFlags(size_t flags)
     Flags |= PAGE_COPY_ON_WRITE;
   if ((flags & Shared) == Shared)
     Flags |= PAGE_SHARED;
+  if ((flags & WriteCombine) == WriteCombine)
+    Flags |= PAGE_WRITE_COMBINE;
   return Flags;
 }
 size_t X86VirtualAddressSpace::fromFlags(uint32_t Flags)
@@ -556,6 +560,8 @@ size_t X86VirtualAddressSpace::fromFlags(uint32_t Flags)
     flags |= CopyOnWrite;
   if ((Flags & PAGE_SHARED) == PAGE_SHARED)
     flags |= Shared;
+  if ((Flags & PAGE_WRITE_COMBINE) == PAGE_WRITE_COMBINE)
+    flags |= WriteCombine;
   return flags;
 }
 

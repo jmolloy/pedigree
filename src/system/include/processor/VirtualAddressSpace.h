@@ -56,6 +56,8 @@ class VirtualAddressSpace
     static const size_t Guarded       = 0x100;
     /** If this flag is set, the mapped physical page is shared. */
     static const size_t Shared        = 0x200;
+    /** If this flag is set, the cache strategy is write-combine. */
+    static const size_t WriteCombine  = 0x400;
 
     /** Get the kernel virtual address space
      *\return reference to the kernel virtual address space */
