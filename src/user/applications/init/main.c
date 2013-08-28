@@ -48,23 +48,6 @@ int main(int argc, char **argv)
   }
   syslog(LOG_INFO, "init: preloadd running with pid %d", f);
 
-  f = fork();
-  if(f == 0)
-  {
-      ts();
-      exit(0);
-  }
-
-  f = fork();
-  if(f == 0)
-  {
-      // Needs to wait until the other fork() is up and running...
-      tc();
-      exit(0);
-  }
-
-  while(1) sched_yield();
-
   // Fork out and run the window manager
   /// \todo Need some sort of init script that specifies what we should
   ///       actually load and do here!
