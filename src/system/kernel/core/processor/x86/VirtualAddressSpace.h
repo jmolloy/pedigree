@@ -178,12 +178,14 @@ class X86VirtualAddressSpace : public VirtualAddressSpace
                            uint32_t *&pageTableEntry);
     /** Convert the processor independant flags to the processor's representation of the flags
      *\param[in] flags the processor independant flag representation
+     *\param[in] bFinal whether this is for the actual page or just an intermediate PTE/PDE
      *\return the proessor specific flag representation */
-    uint32_t toFlags(size_t flags);
+    uint32_t toFlags(size_t flags, bool bFinal = false);
     /** Convert processor's representation of the flags to the processor independant representation
      *\param[in] Flags the processor specific flag representation
+     *\param[in] bFinal whether this is for the actual page or just an intermediate PTE/PDE
      *\return the proessor independant flag representation */
-    size_t fromFlags(uint32_t Flags);
+    size_t fromFlags(uint32_t Flags, bool bFinal = false);
 
     /** Begins a "cross-address-space" transaction; maps this address space's
         page directory and a page table in temporarily to the current address

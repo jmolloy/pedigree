@@ -324,13 +324,15 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
 
   LockGuard<Spinlock> guard(m_Lock);
 
-  size_t Flags = toFlags(flags);
+  size_t Flags = toFlags(flags, true);
   size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
   uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(m_VirtualPageDirectory, pageDirectoryIndex);
 
   // Is a page table present?
   if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
   {
+    size_t PdeFlags = toFlags(flags);
+
     // We need a page, but calling the PMM could cause reentrancy issues. We
     // use our alotted page in the escrow cache then set it to zero so that
     // it will be replenished next time it needs to be used.
@@ -338,7 +340,7 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
     g_EscrowPages[Processor::id()] = 0;
 
     // Map the page
-    *pageDirectoryEntry = page | PAGE_USER | ((Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE)) | PAGE_WRITE);
+    *pageDirectoryEntry = page | PAGE_USER | ((PdeFlags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE)) | PAGE_WRITE);
 
     // Zero the page table
     memset(PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, 0),
@@ -363,7 +365,7 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
             Processor::switchAddressSpace(*p->getAddressSpace());
 
             pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(x86VAS->m_VirtualPageDirectory, pageDirectoryIndex);
-            *pageDirectoryEntry = page | PAGE_WRITE | PAGE_USER | (Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
+            *pageDirectoryEntry = page | PAGE_WRITE | PAGE_USER | (PdeFlags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
         }
         if (g_pCurrentlyCloning)
         {
@@ -373,7 +375,7 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
                 Processor::switchAddressSpace(*g_pCurrentlyCloning);
 
                 pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(x86VAS->m_VirtualPageDirectory, pageDirectoryIndex);
-                *pageDirectoryEntry = page | PAGE_WRITE | PAGE_USER | (Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
+                *pageDirectoryEntry = page | PAGE_WRITE | PAGE_USER | (PdeFlags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
             }
         }
         if (&VAS != &getKernelAddressSpace())
@@ -382,7 +384,7 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
             X86VirtualAddressSpace *x86VAS = reinterpret_cast<X86VirtualAddressSpace*> (&getKernelAddressSpace());
 
             pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(x86VAS->m_VirtualPageDirectory, pageDirectoryIndex);
-            *pageDirectoryEntry = page | PAGE_WRITE | PAGE_USER | (Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
+            *pageDirectoryEntry = page | PAGE_WRITE | PAGE_USER | (PdeFlags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE));
 
         }
         Processor::switchAddressSpace(VAS);
@@ -518,7 +520,7 @@ bool X86VirtualAddressSpace::getPageTableEntry(void *virtualAddress,
   return true;
 }
 
-uint32_t X86VirtualAddressSpace::toFlags(size_t flags)
+uint32_t X86VirtualAddressSpace::toFlags(size_t flags, bool bFinal)
 {
   uint32_t Flags = 0;
   if ((flags & KernelMode) == KernelMode)
@@ -539,11 +541,11 @@ uint32_t X86VirtualAddressSpace::toFlags(size_t flags)
     Flags |= PAGE_COPY_ON_WRITE;
   if ((flags & Shared) == Shared)
     Flags |= PAGE_SHARED;
-  if ((flags & WriteCombine) == WriteCombine)
+  if (bFinal && ((flags & WriteCombine) == WriteCombine))
     Flags |= PAGE_WRITE_COMBINE;
   return Flags;
 }
-size_t X86VirtualAddressSpace::fromFlags(uint32_t Flags)
+size_t X86VirtualAddressSpace::fromFlags(uint32_t Flags, bool bFinal)
 {
   size_t flags = Execute;
   if ((Flags & PAGE_USER) != PAGE_USER)
@@ -560,7 +562,7 @@ size_t X86VirtualAddressSpace::fromFlags(uint32_t Flags)
     flags |= CopyOnWrite;
   if ((Flags & PAGE_SHARED) == PAGE_SHARED)
     flags |= Shared;
-  if ((Flags & PAGE_WRITE_COMBINE) == PAGE_WRITE_COMBINE)
+  if (bFinal && ((Flags & PAGE_WRITE_COMBINE) == PAGE_WRITE_COMBINE))
     flags |= WriteCombine;
   return flags;
 }
@@ -709,7 +711,7 @@ uintptr_t X86VirtualAddressSpace::beginCrossSpace(X86VirtualAddressSpace *pOther
 bool X86VirtualAddressSpace::mapCrossSpace(uintptr_t &v, physical_uintptr_t physicalAddress,
                                  void *virtualAddress, size_t flags)
 {
-    size_t Flags = toFlags(flags);
+    size_t Flags = toFlags(flags, true);
     size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
 
     uint32_t *pageDirectoryEntry = PAGE_DIRECTORY_ENTRY(KERNEL_VIRTUAL_TEMP2, pageDirectoryIndex);
@@ -717,9 +719,11 @@ bool X86VirtualAddressSpace::mapCrossSpace(uintptr_t &v, physical_uintptr_t phys
 
     if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
     {
+        size_t PdeFlags = toFlags(flags);
+
         uint32_t page = PhysicalMemoryManager::instance().allocatePage();
         // Set the page.
-        *pageDirectoryEntry = page | ((Flags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE)) | PAGE_WRITE);
+        *pageDirectoryEntry = page | ((PdeFlags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE)) | PAGE_WRITE);
 
         // Map it in.
         v = pageDirectoryIndex;
