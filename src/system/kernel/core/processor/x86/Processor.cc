@@ -120,7 +120,7 @@ PAT7 UC
   asm volatile("rdmsr" : "=a" (pat_lo), "=d" (pat_hi) : "c" (0x277));
 
   union pat p;
-  p.x = pat_lo | (pat_hi << 32ULL);
+  p.x = pat_lo | (static_cast<uint64_t>(pat_hi) << 32ULL);
   p.s.pa0 = PAT_WB;
   p.s.pa1 = PAT_WT;
   p.s.pa2 = PAT_UCMINUS;
