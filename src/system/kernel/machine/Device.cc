@@ -228,7 +228,7 @@ Device::Address::Address(String n, uintptr_t a, size_t s, bool io, size_t pad) :
 #endif
 }
 
-void Device::Address::map(size_t forcedSize, bool bUser)
+void Device::Address::map(size_t forcedSize, bool bUser, bool bWriteCombine, bool bWriteThrough)
 {
     if(!m_Io)
         return;
@@ -242,6 +242,13 @@ void Device::Address::map(size_t forcedSize, bool bUser)
     uint32_t numPages = s / pageSize;
     if (s%pageSize) numPages++;
     
+    size_t cacheFlags = 0;
+    if(bWriteCombine)
+        cacheFlags |= VirtualAddressSpace::WriteCombine;
+    else if(bWriteThrough)
+        cacheFlags |= VirtualAddressSpace::WriteThrough;
+    else
+        cacheFlags |= VirtualAddressSpace::CacheDisable;
     PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
     if (!physicalMemoryManager.allocateRegion(*static_cast<MemoryMappedIo*>(m_Io),
                                                numPages,
@@ -249,7 +256,7 @@ void Device::Address::map(size_t forcedSize, bool bUser)
                                                PhysicalMemoryManager::force,
                                                (bUser ? 0 : VirtualAddressSpace::KernelMode) |
                                                VirtualAddressSpace::Write |
-                                               VirtualAddressSpace::WriteThrough | VirtualAddressSpace::CacheDisable,
+                                               cacheFlags,
                                                m_Address))
     {
         ERROR("Device::Address - map for " << m_Address << " failed!");

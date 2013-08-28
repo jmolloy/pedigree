@@ -59,7 +59,7 @@ public:
     Address(String n, uintptr_t a, size_t s, bool io, size_t pad=1);
     ~Address();
     /** Actually maps this address into memory if not already done. */
-    void map(size_t forcedSize = 0, bool bUser = false);
+    void map(size_t forcedSize = 0, bool bUser = false, bool bWriteCombine = false, bool bWriteThrough = false);
     /** A textual identifier for this address range. */
     String m_Name;
     /** The base of the address range, as the processor sees it (all parental
