@@ -226,29 +226,24 @@ void File::dataChanged()
 {
     m_Lock.acquire();
 
-    bool bCurrent = false;
+    bool bAny = false;
     for (List<MonitorTarget*>::Iterator it = m_MonitorTargets.begin();
          it != m_MonitorTargets.end();
          it++)
     {
         MonitorTarget *pMT = *it;
 
-        if(pMT->pThread == Processor::information().getCurrentThread())
-        {
-            bCurrent = true;
-        }
-
         pMT->pThread->sendEvent(pMT->pEvent);
         delete pMT;
+
+        bAny = true;
     }
 
     m_MonitorTargets.clear();
     m_Lock.release();
 
-    // File::dataChanged can be called in event contexts and can send an event to
-    // the thread that is currently running. As such, releasing the lock before
-    // calling yield is important, as there is a possibility we will re-enter.
-    if(bCurrent)
+    // If anything was waiting on a change, wake it up now.
+    if(bAny)
     {
         Scheduler::instance().yield();
     }
