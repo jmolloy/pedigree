@@ -144,7 +144,7 @@ class VbeFramebuffer : public Framebuffer
                                             *m_pFramebufferRegion,
                                             nPages,
                                             PhysicalMemoryManager::continuous,
-                                            VirtualAddressSpace::Write))
+                                            VirtualAddressSpace::Write | VirtualAddressSpace::WriteCombine))
                 {
                     delete m_pFramebufferRegion;
                     m_pFramebufferRegion = 0;
