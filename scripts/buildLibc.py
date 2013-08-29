@@ -21,6 +21,7 @@ import tempfile
 import shutil
 import os
 import sys
+import subprocess
 
 def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
     
@@ -28,17 +29,20 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
     
     tmpdir = tempfile.mkdtemp()
     
-    buildOut = builddir + "/libc"
+    buildOut = os.path.join(builddir, "libc")
 
     olddir = os.getcwd()
     os.chdir(tmpdir)
 
-    shutil.copy(inputLibcA, tmpdir + "/libc.a")
-    os.system(ar + " x libc.a")
+    shutil.copy(inputLibcA, os.path.join(tmpdir, "libc.a"))
+    res = subprocess.call([ar, "x", "libc.a"], cwd=tmpdir)
+    if res:
+        print "  (failed)"
+        exit(res)
 
     glue = glue_name
-    shutil.copy(glue, tmpdir + "/" + os.path.basename(glue_name))
-    shutil.copy(pedigree_c_name, tmpdir + "/" + os.path.basename(pedigree_c_name))
+    shutil.copy(glue, os.path.join(tmpdir, os.path.basename(glue_name)))
+    shutil.copy(pedigree_c_name, os.path.join(tmpdir, os.path.basename(pedigree_c_name)))
 
     objs_to_remove = [
         "init",
@@ -82,16 +86,21 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
         except:
             continue
     
-    res = os.system(ar + " x " + os.path.basename(glue_name))
+    res = subprocess.call([ar, "x", os.path.basename(glue_name)], cwd=tmpdir)
     if res != 0:
         print "  (failed)"
         exit(res)
 
-    res = os.system(cc + " -nostdlib -shared -Wl,-shared -Wl,-soname,libc.so -o " + buildOut + ".so *.obj *.o -L. -lpedigree-c -lgcc")
+    cc_cmd = [cc, "-nostdlib", "-shared", "-Wl,-shared", "-Wl,-soname,libc.so", "-o", buildOut + ".so", "-L."]
+    objs = [x for x in os.listdir(".") if '.obj' in x or '.o' in x]
+    cc_cmd.extend(objs)
+    cc_cmd.extend(["-lpedigree-c", "-lgcc"])
+    res = subprocess.call(cc_cmd, cwd=tmpdir)
     if res != 0:
         print "  (failed)"
         exit(res)
-    res = os.system(ar + " cru " + buildOut + ".a *.o *.obj")
+
+    res = subprocess.call([ar, "cru", buildOut + ".a"] + objs, cwd=tmpdir)
     if res != 0:
         print "  (failed)"
         os.unlink("%s.so" % (buildOut,))
@@ -101,7 +110,7 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
         os.remove(i)
 
     os.chdir(olddir)
-    os.rmdir(tmpdir)
+    if not os.uname()[0] == 'Pedigree':
+        os.rmdir(tmpdir) # -ENOSYS on Pedigree host. Should fix that.
 
-import sys
 doLibc(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6], "")
