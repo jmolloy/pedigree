@@ -66,9 +66,9 @@ void *memset(void *s, int c, size_t n)
         else
         {
 #ifdef X64
-            asm volatile("xor %%rax,%%rax; rep; stosq" : "=D" (p1), "=c" (unused) : "D" (p1), "c" (blocks) : "memory");
+            asm volatile("xor %%rax,%%rax; rep; stosq" : "=D" (p1), "=c" (unused) : "D" (p1), "c" (blocks) : "memory", "rax");
 #else
-            asm volatile("xor %%eax,%%eax; rep; stosl" : "=D" (p1), "=c" (unused) : "D" (p1), "c" (blocks) : "memory");
+            asm volatile("xor %%eax,%%eax; rep; stosl" : "=D" (p1), "=c" (unused) : "D" (p1), "c" (blocks) : "memory", "eax");
 #endif
         }
     }
