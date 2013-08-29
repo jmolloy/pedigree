@@ -33,6 +33,8 @@
 #define PAGE_USER                   0x04
 #define PAGE_WRITE_COMBINE          0x08
 #define PAGE_CACHE_DISABLE          0x10
+#define PAGE_ACCESSED               0x20
+#define PAGE_DIRTY                  0x40
 #define PAGE_4MB                    0x80
 #define PAGE_PAT                    0x80
 #define PAGE_GLOBAL                 0x100
@@ -541,8 +543,17 @@ uint32_t X86VirtualAddressSpace::toFlags(size_t flags, bool bFinal)
     Flags |= PAGE_COPY_ON_WRITE;
   if ((flags & Shared) == Shared)
     Flags |= PAGE_SHARED;
-  if (bFinal && ((flags & WriteThrough) == WriteThrough))
-    Flags |= PAGE_WRITE_THROUGH;
+  if (bFinal)
+  {
+    if ((flags & WriteThrough) == WriteThrough)
+      Flags |= PAGE_WRITE_THROUGH;
+    if ((flags & Accessed) == Accessed)
+      Flags |= PAGE_ACCESSED;
+    if ((flags & Dirty) == Dirty)
+      Flags |= PAGE_DIRTY;
+    if ((flags & ClearDirty) == ClearDirty)
+      Flags &= ~PAGE_DIRTY;
+  }
   return Flags;
 }
 size_t X86VirtualAddressSpace::fromFlags(uint32_t Flags, bool bFinal)
@@ -562,8 +573,15 @@ size_t X86VirtualAddressSpace::fromFlags(uint32_t Flags, bool bFinal)
     flags |= CopyOnWrite;
   if ((Flags & PAGE_SHARED) == PAGE_SHARED)
     flags |= Shared;
-  if (bFinal && ((Flags & PAGE_WRITE_THROUGH) == PAGE_WRITE_THROUGH))
-    flags |= WriteThrough;
+  if (bFinal)
+  {
+    if ((Flags & PAGE_WRITE_THROUGH) == PAGE_WRITE_THROUGH)
+      flags |= WriteThrough;
+    if ((flags & PAGE_ACCESSED) == PAGE_ACCESSED)
+      flags |= Accessed;
+    if ((flags & PAGE_DIRTY) == PAGE_DIRTY)
+      flags |= Dirty;
+  }
   return flags;
 }
 

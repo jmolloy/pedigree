@@ -58,6 +58,12 @@ class VirtualAddressSpace
     static const size_t Shared        = 0x200;
     /** If this flag is set, the cache strategy is write-combine. */
     static const size_t WriteCombine  = 0x400;
+    /** Whether the page has been accessed. */
+    static const size_t Accessed      = 0x800;
+    /** Whether the page has been dirtied. */
+    static const size_t Dirty         = 0x1000;
+    /** Clear the dirty flag set by the above. */
+    static const size_t ClearDirty    = 0x2000;
 
     /** Get the kernel virtual address space
      *\return reference to the kernel virtual address space */
