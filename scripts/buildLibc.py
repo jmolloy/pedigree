@@ -78,6 +78,7 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
         "mallstatsr",
         "ttyname",
         "memcpy",
+        "memset",
     ]
 
     for i in objs_to_remove:
