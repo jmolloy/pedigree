@@ -21,6 +21,12 @@
 
 #include <compiler.h>
 
+// #define DEBUG_MEMSET
+
+#ifdef DEBUG_MEMSET
+#include <syslog.h>
+#endif
+
 /// \todo If we ever get an ARM newlib... we'll need some #ifdefs.
 
 #define NATURAL_MASK        (sizeof(size_t) - 1)
@@ -30,14 +36,37 @@ void *memset(void *s, int c, size_t n)
     char *p1 = (char *) s;
     size_t unused;
 
-    if(UNLIKELY(!n)) return s;
+#ifdef DEBUG_MEMSET
+    syslog(LOG_INFO, "memset(%p, %d, %d)", s, c, n);
+#endif
 
     // Align to a natural boundary.
     size_t align = sizeof(size_t) - (((uintptr_t) p1) & NATURAL_MASK);
-    while(align-- && n--)
-        *p1++ = c;
+    if(UNLIKELY(align > n)) align = n;
+    switch(align)
+    {
+#ifdef X64
+            case 7:
+                *p1++ = c;
+            case 6:
+                *p1++ = c;
+            case 5:
+                *p1++ = c;
+            case 4:
+                *p1++ = c;
+#endif
+            case 3:
+                *p1++ = c;
+            case 2:
+                *p1++ = c;
+            case 1:
+                *p1++ = c;
+                n -= align;
+            default:
+                break;
+    }
 
-    if(!n)
+    if(UNLIKELY(!n))
         return s;
 
     // Load value. We would like to write a full size_t at a time if possible.
@@ -51,7 +80,11 @@ void *memset(void *s, int c, size_t n)
     size_t blocks = n >> 2;
 #endif
 
-    if(blocks)
+#ifdef DEBUG_MEMSET
+    syslog(LOG_INFO, "  -> aligned %p, %d, %d", s, c, n);
+#endif
+
+    if(LIKELY(blocks))
     {
         if(val)
         {
@@ -75,8 +108,31 @@ void *memset(void *s, int c, size_t n)
 
     // Tail.
     size_t tail = n & NATURAL_MASK;
-    while(tail--)
-        *p1++ = c;
+#ifdef DEBUG_MEMSET
+    syslog(LOG_INFO, "  -> tail %p, %d, %d", p1, c, tail);
+#endif
+    switch(tail)
+    {
+#ifdef X64
+            case 7:
+                *p1++ = c;
+            case 6:
+                *p1++ = c;
+            case 5:
+                *p1++ = c;
+            case 4:
+                *p1++ = c;
+#endif
+            case 3:
+                *p1++ = c;
+            case 2:
+                *p1++ = c;
+            case 1:
+                *p1++ = c;
+                n -= align;
+            default:
+                break;
+    }
 
     return s;
 }
