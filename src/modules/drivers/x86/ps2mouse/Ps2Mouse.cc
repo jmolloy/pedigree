@@ -78,8 +78,8 @@ bool Ps2Mouse::irq(irq_id_t number, InterruptState &state)
             if(m_BufferIndex == 3)
             {
                 InputManager::instance().mouseUpdate(
-                        static_cast<ssize_t>(m_Buffer[1]),
-                        static_cast<ssize_t>(m_Buffer[2]),
+                        static_cast<ssize_t>(static_cast<int8_t>(m_Buffer[1])),
+                        static_cast<ssize_t>(static_cast<int8_t>(m_Buffer[2])),
                         0,
                         static_cast<uint32_t>(m_Buffer[0]) & 0x3);
                 m_BufferIndex = 0;
