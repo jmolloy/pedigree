@@ -89,10 +89,10 @@ void *memset(void *s, int c, size_t n)
         if(val)
         {
 #ifdef X64
-            val = (val << 56) | (val << 48) | (val << 40) | (val << 32) | (val << 24) | (val << 16) | (val << 8) | val;
+            val = (val * 0x0101010101010101ULL);
             asm volatile("rep; stosq" : "=D" (p1), "=c" (unused) : "D" (p1), "c" (blocks), "a" (val) : "memory");
 #else
-            val = (val << 24) | (val << 16) | (val << 8) | val;
+            val = (val * 0x01010101UL);
             asm volatile("rep; stosl" : "=D" (p1), "=c" (unused) : "D" (p1), "c" (blocks), "a" (val) : "memory");
 #endif
         }
@@ -101,7 +101,7 @@ void *memset(void *s, int c, size_t n)
 #ifdef X64
             asm volatile("xor %%rax,%%rax; rep; stosq" : "=D" (p1), "=c" (unused) : "D" (p1), "c" (blocks) : "memory", "rax");
 #else
-            asm volatile("xor %%eax,%%eax; rep; stosl" : "=D" (p1), "=c" (unused) : "D" (p1), "c" (blocks) : "memory", "eax");
+            asm volatile("xor %%eax,%%eax; cld; rep; stosl" : "=D" (p1), "=c" (unused) : "D" (p1), "c" (blocks) : "memory", "eax");
 #endif
         }
     }
