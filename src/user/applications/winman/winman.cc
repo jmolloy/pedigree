@@ -71,6 +71,10 @@ void queueInputCallback(Input::InputNotification &note);
 size_t g_nWidth = 0;
 size_t g_nHeight = 0;
 
+ssize_t g_CursorX = 0, g_LastCursorX = 0;
+ssize_t g_CursorY = 0, g_LastCursorY = 0;
+bool g_bCursorUpdate = false;
+
 /// \todo Make configurable.
 #define CLIENT_DEFAULT "/applications/tui"
 // #define CLIENT_DEFAULT "/applications/gears"
@@ -578,6 +582,30 @@ void queueInputCallback(Input::InputNotification &note)
         }
     }
 
+    if(note.type & Input::Mouse)
+    {
+        // Update our cursor position.
+        /// \todo Need a divisor or something, in case the relative updates
+        ///       are too big for the user's taste.
+        g_CursorX += note.data.pointy.relx;
+        g_CursorY -= note.data.pointy.rely;
+
+        // Constrain.
+        if(g_CursorX < 0)
+            g_CursorX = 0;
+        if(g_CursorY < 0)
+            g_CursorY = 0;
+        if(g_CursorX >= g_nWidth)
+            g_CursorX = g_nWidth - 1;
+        if(g_CursorY >= g_nHeight)
+            g_CursorY = g_nHeight - 1;
+
+        syslog(LOG_INFO, "Cursor update %d, %d [rel %d %d]", g_CursorX, g_CursorY, note.data.pointy.relx, note.data.pointy.rely);
+
+        // Trigger a render.
+        g_bCursorUpdate = true;
+    }
+
     if((!bHandled) && (g_pFocusWindow))
     {
         // Forward event to focus window.
@@ -606,6 +634,7 @@ void queueInputCallback(Input::InputNotification &note)
 
         delete [] buffer;
     }
+
 }
 
 /// System input callback.
@@ -831,12 +860,14 @@ int main(int argc, char *argv[])
         checkForMessages();
 
         // Check for any windows that may need rendering.
-        if((!g_PendingWindows.empty()) || g_StatusField.length())
+        if((!g_PendingWindows.empty()) || g_StatusField.length() || g_bCursorUpdate)
         {
             // Render each window, also ensuring the wallpaper is rendered again
             // so that windows with alpha look correct.
             std::set<WObject*>::iterator it = g_PendingWindows.begin();
             size_t nDirty = g_StatusField.length() ? 1 : 0;
+            if(g_bCursorUpdate)
+                ++nDirty;
             for(; it != g_PendingWindows.end(); ++it)
             {
                 Window *pWindow = 0;
@@ -912,6 +943,25 @@ int main(int argc, char *argv[])
             {
                 infoPanel(cr);
             }
+
+            // After all else is said and done, render the cursor.
+            cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
+            cairo_rectangle(
+                    cr,
+                    g_CursorX,
+                    g_CursorY,
+                    32,
+                    32);
+            cairo_fill(cr);
+            renderDirty.point(g_CursorX, g_CursorY);
+            renderDirty.point(g_CursorX + 32, g_CursorY + 32);
+
+            // We'll want to redraw the area we just obstructed shortly.
+            g_LastCursorX = g_CursorX;
+            g_LastCursorY = g_CursorY;
+
+            // Done drawing cursor.
+            g_bCursorUpdate = false;
 
             // Flush the cairo surface, which will ensure the most recent data is
             // in the framebuffer ready to send to the device.
