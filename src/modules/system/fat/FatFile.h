@@ -55,6 +55,7 @@ public:
   }
 
   uintptr_t readBlock(uint64_t location);
+  void writeBlock(uint64_t location, uintptr_t addr);
 
   void extend(size_t newSize);
 

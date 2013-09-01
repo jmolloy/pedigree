@@ -27,6 +27,7 @@ FatFile::FatFile(String name, Time accessedTime, Time modifiedTime, Time creatio
     File(name,accessedTime,modifiedTime,creationTime,inode,pFs,size,pParent),
     m_DirClus(dirClus), m_DirOffset(dirOffset), m_FileBlockCache()
 {
+    m_FileBlockCache.setCallback(writeCallback, static_cast<File*>(this));
 }
 
 FatFile::~FatFile()
@@ -37,14 +38,17 @@ uintptr_t FatFile::readBlock(uint64_t location)
 {
     FatFilesystem *pFs = reinterpret_cast<FatFilesystem*>(m_pFilesystem);
 
-    /// \note Not freed. Watch out.
-    /// \todo THIS COULD HAVE AWESOME BEHAVIOUR IF THE CACHE GETS COMPACTED
-    ///       BECAUSE THE LAYER CALLING readBlock WON'T KNOW THE PAGES JUST
-    ///       GOT OBLITERATED. FIX THAT.
     uintptr_t buffer = m_FileBlockCache.insert(location);
     pFs->read(this, location, getBlockSize(), buffer);
 
     return buffer;
+}
+
+void FatFile::writeBlock(uint64_t location, uintptr_t addr)
+{
+    FatFilesystem *pFs = reinterpret_cast<FatFilesystem*>(m_pFilesystem);
+
+    pFs->write(this, location, getBlockSize(), addr);
 }
 
 void FatFile::extend(size_t newSize)

@@ -73,6 +73,13 @@ public:
      */
     physical_uintptr_t getPhysicalPage(size_t offset);
 
+    /**
+     * Specifies that the system is done with the physical page retrieved
+     * from getPhysicalPage now. Allows the physical page to be evicted
+     * from the file cache again.
+     */
+    void returnPhysicalPage(size_t offset);
+
     /** Returns the time the file was created. */
     Time getCreationTime();
     /** Sets the time the file was created. */
@@ -232,6 +239,13 @@ protected:
     {
         return 0;
     }
+    /**
+     * Internal function to write a block retrieved with readBlock back to
+     * the file. The address of the block is provided for convenience.
+     */
+    virtual void writeBlock(uint64_t location, uintptr_t addr)
+    {
+    }
     /** Internal function to retrieve the block size returned by readBlock.
         \note This must be constant throughout the life of the file. */
     virtual size_t getBlockSize() const
@@ -250,6 +264,49 @@ protected:
     /** Internal function to get the filesystem label for this file. */
     void getFilesystemLabel(HugeStaticString &s);
 
+    /**
+     * Called by a cache to write back changed data to disk.
+     *
+     * File subclasses that use a Cache for readBlock can utilise this
+     * as the callback on their Cache instance to get a write-back
+     * notification.
+     */
+    static void writeCallback(uintptr_t loc, uintptr_t page, void *meta);
+
+    /**
+     * Pins the given page.
+     *
+     * If your File subclass uses a Cache for readBlock, this method should
+     * be implemented to call Cache::pin. The VFS layer calls this method
+     * when it determines it is about to give a physical page to an upper
+     * layer, and therefore will be unable to guarantee the virtual page's
+     * dirty status is a correct reflection of the page's state.
+     */
+    virtual void pinBlock(uint64_t location)
+    {
+    }
+
+    /**
+     * Unpins the given page.
+     */
+    virtual void unpinBlock(uint64_t location)
+    {
+    }
+
+    /**
+     * Removes the given location from the VFS-level File cache.
+     *
+     * Each File offers read() and write(), which in turn call readBlock.
+     * The result from readBlock is cached at the File object level in such
+     * a way that requires notification from the File subclass when the
+     * address returned from readBlock is no longer valid.
+     */
+    void evict(uint64_t location)
+    {
+        LockGuard<Mutex> guard(m_Lock);
+        m_DataCache.remove(location);
+    }
+
     String m_Name;
     Time m_AccessedTime;
     Time m_ModifiedTime;
@@ -267,7 +324,7 @@ protected:
     size_t m_Gid;
     uint32_t m_Permissions;
 
-    Tree<size_t,size_t> m_DataCache;
+    Tree<uint64_t,size_t> m_DataCache;
 
     Mutex m_Lock;
 

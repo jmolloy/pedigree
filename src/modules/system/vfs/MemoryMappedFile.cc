@@ -338,6 +338,11 @@ void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileo
                 memset(reinterpret_cast<uint8_t*>(v + bufferOffset), 0, pageSz - 1 - bufferOffset);
             }
         }
+
+        // We have now duplicated the original page. Reduce the refcount on
+        // the file accordingly.
+        m_pFile->returnPhysicalPage(readloc);
+
     }
     else
     {

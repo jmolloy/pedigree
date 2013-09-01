@@ -22,6 +22,18 @@
 #include <process/Scheduler.h>
 #include <Log.h>
 
+void File::writeCallback(uintptr_t loc, uintptr_t page, void *meta)
+{
+    File *pFile = reinterpret_cast<File *>(meta);
+
+    // We are given one dirty page. Blocks can be smaller than a page.
+    size_t off = 0;
+    for(; off < PhysicalMemoryManager::getPageSize(); off += pFile->getBlockSize())
+    {
+        pFile->writeBlock(loc + off, page + off);
+    }
+}
+
 File::File() :
     m_Name(""), m_AccessedTime(0), m_ModifiedTime(0),
     m_CreationTime(0), m_Inode(0), m_pFilesystem(0), m_Size(0),
@@ -159,10 +171,32 @@ physical_uintptr_t File::getPhysicalPage(size_t offset)
         size_t flags = 0;
         va.getMapping(reinterpret_cast<void *>(vaddr), phys, flags);
 
+        // Pin this key in the cache down, so we don't lose it.
+        pinBlock(offset);
+
         return phys;
     }
 
     return static_cast<physical_uintptr_t>(~0UL);
+}
+
+void File::returnPhysicalPage(size_t offset)
+{
+    // Sanitise input.
+    size_t blockSize = getBlockSize();
+    offset &= ~(blockSize - 1);
+
+    // Quick and easy exit for bad input.
+    if(offset > m_Size)
+    {
+        return;
+    }
+
+    // Release the page. Beware - this could cause a cache evict, which will
+    // make the next read/write at this offset do real (slow) I/O.
+    m_Lock.acquire();
+    unpinBlock(offset);
+    m_Lock.release();
 }
 
 Time File::getCreationTime()
