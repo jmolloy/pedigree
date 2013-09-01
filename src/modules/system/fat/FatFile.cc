@@ -28,6 +28,12 @@ FatFile::FatFile(String name, Time accessedTime, Time modifiedTime, Time creatio
     m_DirClus(dirClus), m_DirOffset(dirOffset), m_FileBlockCache()
 {
     m_FileBlockCache.setCallback(writeCallback, static_cast<File*>(this));
+
+    // No permissions on FAT - set all to RWX.
+    setPermissions(
+            FILE_UR | FILE_UW | FILE_UX |
+            FILE_GR | FILE_GW | FILE_GX |
+            FILE_OR | FILE_OW | FILE_OX);
 }
 
 FatFile::~FatFile()
