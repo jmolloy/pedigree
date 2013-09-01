@@ -776,6 +776,7 @@ bool FatFilesystem::writeSectorBlock(uint32_t sec, size_t size, uintptr_t buffer
         uintptr_t buff = m_pDisk->read(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(sec)+off);
         memcpy(reinterpret_cast<void*>(buff), reinterpret_cast<void*>(buffer),
                sz);
+        m_pDisk->write(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(sec)+off);
         buffer += sz;
         size -= sz;
         off += sz;
