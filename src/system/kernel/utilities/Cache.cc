@@ -65,7 +65,7 @@ void CacheManager::compactAll()
 }
 
 Cache::Cache() :
-    m_Pages(), m_Lock()
+    m_Pages(), m_Lock(), m_Callback(0), m_Nanoseconds(0), m_bRegisteredHandler(false)
 {
     if (!g_AllocatorInited)
     {
@@ -86,7 +86,7 @@ Cache::Cache() :
 
 Cache::~Cache()
 {
-    m_Lock.acquire();
+    while(!m_Lock.acquire());
 
     // Clean up existing cache pages
     for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
@@ -100,10 +100,11 @@ Cache::~Cache()
             physical_uintptr_t phys;
             size_t flags;
             va.getMapping(reinterpret_cast<void*>(page->location), phys, flags);
+            va.unmap(reinterpret_cast<void*>(page->location));
             PhysicalMemoryManager::instance().freePage(phys);
         }
 
-        m_Allocator.free(reinterpret_cast<uintptr_t>(page), 4096);
+        m_Allocator.free(page->location, 4096);
     }
 
     m_Lock.release();
@@ -113,7 +114,7 @@ Cache::~Cache()
 
 uintptr_t Cache::lookup (uintptr_t key)
 {
-    m_Lock.enter();
+   while(!m_Lock.enter());
 
     CachePage *pPage = m_Pages.lookup(key);
     if (!pPage)
@@ -131,7 +132,7 @@ uintptr_t Cache::lookup (uintptr_t key)
 
 uintptr_t Cache::insert (uintptr_t key)
 {
-    m_Lock.acquire();
+    while(!m_Lock.acquire());
 
     CachePage *pPage = m_Pages.lookup(key);
 
@@ -174,7 +175,7 @@ uintptr_t Cache::insert (uintptr_t key)
 
 uintptr_t Cache::insert (uintptr_t key, size_t size)
 {
-    m_Lock.acquire();
+    while(!m_Lock.acquire());
 
     if(size % 4096)
     {
@@ -241,9 +242,66 @@ uintptr_t Cache::insert (uintptr_t key, size_t size)
     return returnLocation;
 }
 
+void Cache::evict(uintptr_t key)
+{
+    while(!m_Lock.acquire());
+
+    CachePage *pPage = m_Pages.lookup(key);
+    if (!pPage)
+    {
+        m_Lock.leave();
+        return;
+    }
+
+    if (!pPage->refcnt)
+    {
+        // Good to go.
+        VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+        void *loc = reinterpret_cast<void *>(pPage->location);
+        if(va.isMapped(loc))
+        {
+            physical_uintptr_t phys;
+            size_t flags;
+            va.getMapping(loc, phys, flags);
+
+            if(m_Callback && (flags & VirtualAddressSpace::Dirty))
+            {
+                // Dirty - request a write-back before we free the page.
+                m_Callback(key, pPage->location, m_CallbackMeta);
+            }
+
+            va.unmap(loc);
+            PhysicalMemoryManager::instance().freePage(phys);
+        }
+
+        m_Allocator.free(pPage->location, 4096);
+
+        m_Pages.remove(key);
+    }
+
+    m_Lock.leave();
+}
+
+void Cache::pin (uintptr_t key)
+{
+    while(!m_Lock.acquire());
+
+    CachePage *pPage = m_Pages.lookup(key);
+    if (!pPage)
+    {
+        m_Lock.leave();
+        return;
+    }
+
+    assert (pPage->refcnt);
+    pPage->refcnt ++;
+
+    m_Lock.leave();
+}
+
 void Cache::release (uintptr_t key)
 {
-    m_Lock.enter();
+    while(!m_Lock.acquire());
 
     CachePage *pPage = m_Pages.lookup(key);
     if (!pPage)
@@ -255,12 +313,18 @@ void Cache::release (uintptr_t key)
     assert (pPage->refcnt);
     pPage->refcnt --;
 
+    if(!pPage->refcnt)
+    {
+        // Evict this page - refcnt dropped to zero.
+        evict (key);
+    }
+
     m_Lock.leave();
 }
 
 void Cache::compact()
 {
-    m_Lock.acquire();
+    while(!m_Lock.acquire());
 
     Timer &timer = *Machine::instance().getTimer();
     uint32_t now = timer.getUnixTimestamp();
@@ -316,3 +380,61 @@ void Cache::compact()
     
     m_Lock.release();
 }
+
+void Cache::timer(uint64_t delta, InterruptState &state)
+{
+    m_Nanoseconds += delta;
+    if(LIKELY(m_Nanoseconds < (CACHE_WRITEBACK_PERIOD * 1000000ULL)))
+        return;
+    else if(UNLIKELY(m_Callback == 0))
+        return;
+
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+
+    while(!m_Lock.enter());
+
+    for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
+        it != m_Pages.end();
+        it++)
+    {
+        CachePage *page = reinterpret_cast<CachePage*>(it.value());
+        if(va.isMapped(reinterpret_cast<void *>(page->location)))
+        {
+            physical_uintptr_t phys;
+            size_t flags;
+            va.getMapping(reinterpret_cast<void *>(page->location), phys, flags);
+
+            // If dirty, write back to the backing store.
+            if(flags & VirtualAddressSpace::Dirty)
+            {
+                // Callback!
+                m_Callback(it.key(), page->location, m_CallbackMeta);
+
+                // Clear dirty flag - written back.
+                flags &= ~(VirtualAddressSpace::Dirty);
+                va.setFlags(reinterpret_cast<void *>(page->location), flags);
+            }
+        }
+    }
+
+    m_Lock.leave();
+
+    m_Nanoseconds = 0;
+}
+
+void Cache::setCallback(Cache::writeback_t newCallback, void *meta)
+{
+    m_Callback = newCallback;
+    m_CallbackMeta = meta;
+
+    if(!m_bRegisteredHandler)
+    {
+        Timer *t = Machine::instance().getTimer();
+        if(t)
+        {
+            t->registerHandler(this);
+            m_bRegisteredHandler = true;
+        }
+    }
+}
+
