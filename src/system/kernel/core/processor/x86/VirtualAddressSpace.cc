@@ -577,9 +577,9 @@ size_t X86VirtualAddressSpace::fromFlags(uint32_t Flags, bool bFinal)
   {
     if ((Flags & PAGE_WRITE_THROUGH) == PAGE_WRITE_THROUGH)
       flags |= WriteThrough;
-    if ((flags & PAGE_ACCESSED) == PAGE_ACCESSED)
+    if ((Flags & PAGE_ACCESSED) == PAGE_ACCESSED)
       flags |= Accessed;
-    if ((flags & PAGE_DIRTY) == PAGE_DIRTY)
+    if ((Flags & PAGE_DIRTY) == PAGE_DIRTY)
       flags |= Dirty;
   }
   return flags;
