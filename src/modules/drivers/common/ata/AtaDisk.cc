@@ -275,7 +275,8 @@ void AtaDisk::write(uint64_t location)
     if ( !(buffer=m_Cache.lookup(location+offs)) )
         return;
 
-    pParent->addRequest(1, ATA_CMD_WRITE, reinterpret_cast<uint64_t> (this), location+offs);
+    // Asynchronously write back cache to the disk.
+    pParent->addAsyncRequest(1, ATA_CMD_WRITE, reinterpret_cast<uint64_t> (this), location+offs);
 }
 
 void AtaDisk::align(uint64_t location)
