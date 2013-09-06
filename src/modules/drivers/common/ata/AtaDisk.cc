@@ -509,9 +509,14 @@ uint64_t AtaDisk::doWrite(uint64_t location)
     return 0;
 #endif
 
+    uintptr_t nBytes = 65536;
+    location &= ~(nBytes - 1);
     uintptr_t buffer = m_Cache.lookup(location);
 
-    uintptr_t nBytes = 4096;
+    if(!buffer)
+    {
+        FATAL("AtaDisk::doWrite - no buffer (completely misused method)");
+    }
 
     /// \todo DMA?
     // Grab our parent.
@@ -554,6 +559,12 @@ uint64_t AtaDisk::doWrite(uint64_t location)
         uint8_t nSectorsToWrite = (nSectors>255) ? 255 : nSectors;
         nSectors -= nSectorsToWrite;
 
+        bool bDmaSetup = false;
+        if(m_bDma)
+        {
+            bDmaSetup = m_BusMaster->add(buffer, nSectorsToWrite * 512);
+        }
+
         /// \todo CHS
         if (m_SupportsLBA48)
             setupLBA48(location, nSectorsToWrite);
@@ -576,10 +587,11 @@ uint64_t AtaDisk::doWrite(uint64_t location)
         /// \bug Hello! I am a race condition! You find me in poorly written code, like the two lines below. Enjoy!
 
         // Enable IRQs.
-        Machine::instance().getIrqManager()->enable(getParent()->getInterruptNumber(), true);
+        uintptr_t intNumber = pParent->getInterruptNumber();
+        if(intNumber != 0xFF)
+            Machine::instance().getIrqManager()->enable(intNumber, true);
 
-        bool bDmaSetup = false;
-        if(m_bDma)
+        if(m_bDma && bDmaSetup)
         {
             if (!m_SupportsLBA48)
             {
@@ -593,7 +605,6 @@ uint64_t AtaDisk::doWrite(uint64_t location)
             }
 
             // Start the DMA command
-            bDmaSetup = m_BusMaster->add(buffer, nSectorsToWrite * 512);
             bDmaSetup = m_BusMaster->begin(true);
         }
         else
@@ -613,16 +624,45 @@ uint64_t AtaDisk::doWrite(uint64_t location)
         // Acquire the 'outstanding IRQ' mutex.
         while(true)
         {
-            m_IrqReceived.acquire(1, 10);
+            if(intNumber != 0xFF)
+            {
+                m_IrqReceived.acquire(1, 10);
+            }
+            else
+            {
+                // No IRQ line.
+                if(m_bDma && bDmaSetup)
+                {
+                    while(!(m_BusMaster->hasCompleted() || m_BusMaster->hasInterrupt()))
+                    {
+                        Processor::haltUntilInterrupt();
+                    }
+                }
+                else
+                {
+                    /// \todo Write non-DMA case...
+                }
+            }
+
             if(Processor::information().getCurrentThread()->wasInterrupted())
             {
-                // Interrupted! Fail! Assume nothing read so far.
+                // Interrupted! Fail! Assume nothing written so far.
                 WARNING("ATA: Timed out while waiting for IRQ");
                 return 0;
             }
             else if(m_bDma && bDmaSetup)
             {
-                if(m_BusMaster->hasInterrupt())
+                // Ensure we are not busy before we continue handling...
+                status = ataWait(commandRegs);
+                if(status.reg.err)
+                {
+                    /// \todo What's the best way to handle this?
+                    m_BusMaster->commandComplete();
+                    WARNING("ATA: write failed during DMA data transfer");
+                    return 0;
+                }
+
+                if(m_BusMaster->hasInterrupt() || m_BusMaster->hasCompleted())
                 {
                     // commandComplete effectively resets the device state, so we need
                     // to get the error register first.
@@ -648,30 +688,13 @@ uint64_t AtaDisk::doWrite(uint64_t location)
                 {
                     // Ka-boom! Something went wrong :(
                     /// \todo What's the best way to handle this?
-                    WARNING("ATA: read failed during data transfer");
+                    WARNING("ATA: write failed during data transfer");
                     return 0;
                 }
 
-                // Grab the current sector
-                uint8_t *currSector = new uint8_t[512];
-
-                // We got the mutex, so an IRQ must have arrived.
+                // Write the sector to disk.
                 for (int j = 0; j < 256; j++)
                     commandRegs->write16(*tmp++, 0);
-
-                // Delete used memory
-                delete [] currSector;
-            }
-        }
-        else
-        {
-            // Check for an error during the DMA command
-            status = ataWait(commandRegs);
-            if(status.reg.err)
-            {
-                /// \todo What's the best way to handle this?
-                WARNING("ATA: read failed during DMA data transfer");
-                return 0;
             }
         }
     }
