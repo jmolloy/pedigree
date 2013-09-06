@@ -183,7 +183,7 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
         {
           // grab a pointer to the data
           DirLongFilename* lfn = reinterpret_cast<DirLongFilename*>(&buffer[currOffset]);
-          memset(lfn, 0xab, sizeof(DirLongFilename));
+          memset(lfn, 0, sizeof(DirLongFilename));
 
           if(i == 0)
             lfn->LDIR_Ord = 0x40 | (numRequired - 1);
@@ -234,7 +234,7 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
 
       // get a Dir struct for it so we can manipulate the data
       Dir* ent = reinterpret_cast<Dir*>(&buffer[offset]);
-      memset(ent, 0xb0, sizeof(Dir));
+      memset(ent, 0, sizeof(Dir));
       ent->DIR_Attr = type ? ATTR_DIRECTORY : 0;
 
       String shortFilename = pFs->convertFilenameTo(filename);
