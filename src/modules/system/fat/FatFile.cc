@@ -47,6 +47,23 @@ uintptr_t FatFile::readBlock(uint64_t location)
     uintptr_t buffer = m_FileBlockCache.insert(location);
     pFs->read(this, location, getBlockSize(), buffer);
 
+    // Clear any dirty flag that may have been applied to the buffer
+    // by performing this read. Cache uses the dirty flag to figure
+    // out whether or not to write the block back to disk...
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    if(va.isMapped(reinterpret_cast<void *>(buffer)))
+    {
+        physical_uintptr_t phys = 0;
+        size_t flags = 0;
+        va.getMapping(reinterpret_cast<void *>(buffer), phys, flags);
+
+        if(flags & VirtualAddressSpace::Dirty)
+        {
+            flags &= ~(VirtualAddressSpace::Dirty);
+            va.setFlags(reinterpret_cast<void *>(buffer), flags);
+        }
+    }
+
     return buffer;
 }
 
