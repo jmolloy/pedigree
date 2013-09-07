@@ -42,7 +42,7 @@
 class Cache;
 
 /** Provides a clean abstraction to a set of data caches. */
-class CacheManager
+class CacheManager : public TimerHandler
 {
     public:
         CacheManager();
@@ -53,10 +53,14 @@ class CacheManager
             return m_Instance;
         }
 
+        void initialise();
+
         void registerCache(Cache *pCache);
         void unregisterCache(Cache *pCache);
 
         void compactAll();
+
+        virtual void timer(uint64_t delta, InterruptState &state);
     private:
         static CacheManager m_Instance;
 
@@ -64,7 +68,7 @@ class CacheManager
 };
 
 /** Provides an abstraction of a data cache. */
-class Cache : public TimerHandler
+class Cache
 {
 public:
 
@@ -149,6 +153,7 @@ private:
      */
     static int callbackThread(void *meta);
 
+public:
     /**
      * Cache timer handler.
      *
@@ -157,6 +162,8 @@ private:
      * not fire.
      */
     virtual void timer(uint64_t delta, InterruptState &state);
+
+private:
 
     struct CachePage
     {

@@ -54,6 +54,8 @@
 #include <utilities/RadixTree.h>
 #include <utilities/StaticString.h>
 
+#include <utilities/Cache.h>
+
 #include <machine/InputManager.h>
 
 #ifdef THREADS
@@ -204,6 +206,9 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // Initialise the processor-specific interface
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2(bsInf);
+
+  // Bring up the cache subsystem.
+  CacheManager::instance().initialise();
 
   // Initialise the Kernel Elf class
   if (KernelElf::instance().initialise(bsInf) == false)

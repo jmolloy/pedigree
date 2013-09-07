@@ -36,6 +36,15 @@ CacheManager::~CacheManager()
 {
 }
 
+void CacheManager::initialise()
+{
+    Timer *t = Machine::instance().getTimer();
+    if(t)
+    {
+        t->registerHandler(this);
+    }
+}
+
 void CacheManager::registerCache(Cache *pCache)
 {
     m_Caches.pushBack(pCache);
@@ -61,6 +70,16 @@ void CacheManager::compactAll()
         it++)
     {
         (*it)->compact();
+    }
+}
+
+void CacheManager::timer(uint64_t delta, InterruptState &state)
+{
+    for(List<Cache*>::Iterator it = m_Caches.begin();
+        it != m_Caches.end();
+        it++)
+    {
+        (*it)->timer(delta, state);
     }
 }
 
@@ -431,16 +450,6 @@ void Cache::setCallback(Cache::writeback_t newCallback, void *meta)
 {
     m_Callback = newCallback;
     m_CallbackMeta = meta;
-
-    if(!m_bRegisteredHandler)
-    {
-        Timer *t = Machine::instance().getTimer();
-        if(t)
-        {
-            t->registerHandler(this);
-            m_bRegisteredHandler = true;
-        }
-    }
 }
 
 int Cache::callbackThread(void *cache)
