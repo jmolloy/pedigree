@@ -132,6 +132,23 @@ public:
 
 private:
 
+    struct callbackMeta
+    {
+        writeback_t callback;
+        uintptr_t loc;
+        uintptr_t page;
+        void *meta;
+    };
+
+    /**
+     * Callback thread entry point.
+     *
+     * We can't call callbacks from the timer handler directly, as we cannot
+     * allow the timer handler to block when many other things use and require
+     * it to be firing more regularly. So we create a thread for each callback.
+     */
+    static int callbackThread(void *meta);
+
     /**
      * Cache timer handler.
      *

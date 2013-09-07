@@ -408,7 +408,12 @@ void Cache::timer(uint64_t delta, InterruptState &state)
             if(flags & VirtualAddressSpace::Dirty)
             {
                 // Callback!
-                m_Callback(it.key(), page->location, m_CallbackMeta);
+                struct callbackMeta *pMeta = new struct callbackMeta;
+                pMeta->callback = m_Callback;
+                pMeta->loc = it.key();
+                pMeta->page = page->location;
+                pMeta->meta = m_CallbackMeta;
+                new Thread(Processor::information().getCurrentThread()->getParent(), callbackThread, pMeta);
 
                 // Clear dirty flag - written back.
                 flags &= ~(VirtualAddressSpace::Dirty);
@@ -436,5 +441,13 @@ void Cache::setCallback(Cache::writeback_t newCallback, void *meta)
             m_bRegisteredHandler = true;
         }
     }
+}
+
+int Cache::callbackThread(void *cache)
+{
+    struct callbackMeta *pMeta = reinterpret_cast<struct callbackMeta *>(cache);
+    pMeta->callback(pMeta->loc, pMeta->page, pMeta->meta);
+    delete pMeta;
+    return 0;
 }
 
