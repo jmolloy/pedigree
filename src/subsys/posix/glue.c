@@ -1306,8 +1306,7 @@ int symlink(const char *path1, const char *path2)
 
 int fsync(int fd)
 {
-    STUBBED("fsync");
-    return 0;
+    return syscall1(POSIX_FSYNC, fd);
 }
 
 int inet_pton(int af, const char *src, void *dst)

@@ -81,6 +81,8 @@ int posix_access(const char *name, int amode);
 
 int posix_ftruncate(int a, off_t b);
 
+int posix_fsync(int fd);
+
 int posix_fstatvfs(int fd, struct statvfs *buf);
 int posix_statvfs(const char *path, struct statvfs *buf);
 

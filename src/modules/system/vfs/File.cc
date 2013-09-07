@@ -199,6 +199,16 @@ void File::returnPhysicalPage(size_t offset)
     m_Lock.release();
 }
 
+void File::sync()
+{
+    Tree<uint64_t,size_t>::Iterator it;
+    for(it = m_DataCache.begin(); it != m_DataCache.end(); ++it)
+    {
+        // Write back the block via the File subclass.
+        writeBlock(it.key(), it.value());
+    }
+}
+
 Time File::getCreationTime()
 {
     return m_CreationTime;

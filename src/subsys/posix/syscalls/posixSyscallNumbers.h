@@ -178,6 +178,8 @@
 
 #define POSIX_GETPEERNAME       123
 
+#define POSIX_FSYNC             124
+
 #define POSIX_PTSNAME           200
 #define POSIX_TTYNAME           201
 #define POSIX_TCSETPGRP         202

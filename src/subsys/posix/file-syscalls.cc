@@ -1704,6 +1704,32 @@ int posix_ftruncate(int a, off_t b)
 	return -1;
 }
 
+int posix_fsync(int fd)
+{
+    F_NOTICE("fsync(" << fd << ")");
+
+    // Grab the File pointer for this file
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if (!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return -1;
+    }
+
+    FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
+    if (!pFd)
+    {
+        // Error - no such file descriptor.
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
+    File *pFile = pFd->file;
+    pFile->sync();
+
+    return 0;
+}
+
 int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
 {
     NOTICE("pedigree_get_mount(" << Dec << n << Hex << ")");

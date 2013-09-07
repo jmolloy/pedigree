@@ -80,6 +80,15 @@ public:
      */
     void returnPhysicalPage(size_t offset);
 
+    /**
+     * Sync all cached pages for the file back to disk.
+     *
+     * Default implementation calls writeBlock; only override if your
+     * File subclass does not actually expose readBlock/writeBlock, or
+     * if it already overrides read() or write().
+     */
+    virtual void sync();
+
     /** Returns the time the file was created. */
     Time getCreationTime();
     /** Sets the time the file was created. */
