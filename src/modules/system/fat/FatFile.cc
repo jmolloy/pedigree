@@ -54,7 +54,11 @@ void FatFile::writeBlock(uint64_t location, uintptr_t addr)
 {
     FatFilesystem *pFs = reinterpret_cast<FatFilesystem*>(m_pFilesystem);
 
-    pFs->write(this, location, getBlockSize(), addr);
+    // Don't accidentally extend the file when writing the block.
+    size_t sz = location + getBlockSize();
+    if(sz > getSize())
+        sz = getSize() - location;
+    pFs->write(this, location, sz, addr);
 }
 
 void FatFile::extend(size_t newSize)
