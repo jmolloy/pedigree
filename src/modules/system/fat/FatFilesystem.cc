@@ -548,48 +548,40 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
     uint8_t* srcBuffer = reinterpret_cast<uint8_t*>(buffer);
 
     // main write loop
-    while (true)
+    while (bytesWritten < finalSize)
     {
-        // read in the entire cluster
+        // Read in this cluster - we're about to modify it.
         readCluster(clus, reinterpret_cast<uintptr_t> (tmpBuffer));
 
-        // read...
-        while (currOffset < m_BlockSize)
-        {
-            tmpBuffer[currOffset] = srcBuffer[bytesWritten];
+        // Update based on our buffer.
+        size_t len = m_BlockSize;
+        if((bytesWritten + len) > finalSize)
+            len = finalSize - bytesWritten;
 
-            currOffset++;
-            bytesWritten++;
+        // The first write may be in the middle of a cluster, hence currOffset's use.
+        memcpy(&tmpBuffer[currOffset], &srcBuffer[bytesWritten], len);
+        bytesWritten += len;
 
-            if (bytesWritten == finalSize)
-            {
-                // update the size on disk, if needed
-                if (fileSizeChange != 0)
-                {
-                    updateFileSize(pFile, fileSizeChange);
-                    pFile->setSize(pFile->getSize() + fileSizeChange);
-                }
-
-                // and now actually write the updated file contents
-                writeCluster(clus, reinterpret_cast<uintptr_t> (tmpBuffer));
-
-                delete [] tmpBuffer;
-                return bytesWritten;
-            }
-        }
-
+        // Write updated cluster to disk.
         writeCluster(clus, reinterpret_cast<uintptr_t> (tmpBuffer));
 
-        // end of cluster, set the offset back to zero
+        // No longer at the beginning of the write - reset cluster offset to zero.
         currOffset = 0;
 
-        // grab the next cluster, check for EOF
+        // Grab next cluster ready for further writing.
         clus = getClusterEntry(clus, false);
         if (clus == 0)
-            break; // something broke!
+            break;
 
         if (isEof(clus))
             break;
+    }
+
+    // Update the size on disk, if needed.
+    if (fileSizeChange != 0)
+    {
+        updateFileSize(pFile, fileSizeChange);
+        pFile->setSize(pFile->getSize() + fileSizeChange);
     }
 
     delete [] tmpBuffer;
