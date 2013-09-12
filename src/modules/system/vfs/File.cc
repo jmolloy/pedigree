@@ -28,10 +28,12 @@ void File::writeCallback(uintptr_t loc, uintptr_t page, void *meta)
 
     // We are given one dirty page. Blocks can be smaller than a page.
     size_t off = 0;
+    pFile->m_Lock.acquire();
     for(; off < PhysicalMemoryManager::getPageSize(); off += pFile->getBlockSize())
     {
         pFile->writeBlock(loc + off, page + off);
     }
+    pFile->m_Lock.release();
 }
 
 File::File() :
