@@ -59,6 +59,9 @@ public:
 
   void extend(size_t newSize);
 
+  virtual void pinBlock(uint64_t location);
+  virtual void unpinBlock(uint64_t location);
+
 private:
   uint32_t m_DirClus;
   uint32_t m_DirOffset;

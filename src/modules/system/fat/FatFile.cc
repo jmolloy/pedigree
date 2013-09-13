@@ -79,6 +79,16 @@ void FatFile::writeBlock(uint64_t location, uintptr_t addr)
     pFs->write(this, location, sz, addr);
 }
 
+void FatFile::pinBlock(uint64_t location)
+{
+    m_FileBlockCache.pin(location);
+}
+
+void FatFile::unpinBlock(uint64_t location)
+{
+    m_FileBlockCache.release(location);
+}
+
 void FatFile::extend(size_t newSize)
 {
     FatFilesystem *pFs = reinterpret_cast<FatFilesystem*>(m_pFilesystem);
