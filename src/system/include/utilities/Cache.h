@@ -159,6 +159,11 @@ public:
 
 private:
 
+    /**
+     * evict doer
+     */
+    void evict(uintptr_t key, bool bLock);
+
     struct callbackMeta
     {
         CallbackCause cause;

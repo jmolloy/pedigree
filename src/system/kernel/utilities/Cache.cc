@@ -100,6 +100,12 @@ Cache::Cache() :
         g_AllocatorInited = true;
     }
 
+    // Allocate any necessary iterators before we hit a Cache::compact() call.
+    // The heap must not be used during compacting, as a heap allocation could
+    // have been the culprit of the compact.
+    m_Pages.begin();
+    m_Pages.end();
+
     CacheManager::instance().registerCache(this);
 }
 
@@ -251,12 +257,19 @@ uintptr_t Cache::insert (uintptr_t key, size_t size)
 
 void Cache::evict(uintptr_t key)
 {
-    while(!m_Lock.acquire());
+    evict(key, true);
+}
+
+void Cache::evict(uintptr_t key, bool bLock)
+{
+    if(bLock)
+        while(!m_Lock.acquire());
 
     CachePage *pPage = m_Pages.lookup(key);
     if (!pPage)
     {
-        m_Lock.release();
+        if(bLock)
+            m_Lock.release();
         return;
     }
 
@@ -286,9 +299,7 @@ void Cache::evict(uintptr_t key)
             PhysicalMemoryManager::instance().freePage(phys);
         }
 
-        m_AllocatorLock.acquire();
         m_Allocator.free(pPage->location, 4096);
-        m_AllocatorLock.release();
 
         m_Pages.remove(key);
 
@@ -298,7 +309,8 @@ void Cache::evict(uintptr_t key)
         delete pPage;
     }
 
-    m_Lock.release();
+    if(bLock)
+        m_Lock.release();
 }
 
 void Cache::pin (uintptr_t key)
@@ -331,13 +343,13 @@ void Cache::release (uintptr_t key)
     assert (pPage->refcnt);
     pPage->refcnt --;
 
-    m_Lock.release();
-
     if(!pPage->refcnt)
     {
         // Evict this page - refcnt dropped to zero.
-        evict (key);
+        evict (key, false);
     }
+
+    m_Lock.release();
 }
 
 size_t Cache::compact(size_t count)
@@ -354,9 +366,6 @@ size_t Cache::compact(size_t count)
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
-    // For erasing later
-    List<void*> m_PagesToErase;
-
     // Remove anything older than the given time threshold.
     for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
         it != m_Pages.end();
@@ -370,7 +379,7 @@ size_t Cache::compact(size_t count)
 
         if((page->timeAllocated + CACHE_AGE_THRESHOLD) <= now)
         {
-            m_PagesToErase.pushBack(reinterpret_cast<void*>(it.key()));
+            evict(it.key(), false);
 
             if(++nPages >= count)
                 break;
@@ -400,7 +409,11 @@ size_t Cache::compact(size_t count)
                 // Not accessed? Awesome!
                 if(!(flags & VirtualAddressSpace::Accessed))
                 {
-                    m_PagesToErase.pushBack(reinterpret_cast<void*>(it.key()));
+                    // But watch out for dirty pages - they have not been written back yet.
+                    if(flags & VirtualAddressSpace::Dirty)
+                        continue;
+
+                    evict(it.key(), false);
 
                     if(++nPages >= count)
                         break;
@@ -429,7 +442,7 @@ size_t Cache::compact(size_t count)
             if((m_Callback && (page->refcnt > 1)) || ((!m_Callback) && (page->refcnt > 0)))
                 continue;
 
-            m_PagesToErase.pushBack(reinterpret_cast<void*>(it.key()));
+            evict(it.key(), false);
 
             if((i++ >= CACHE_NUM_THRESHOLD) || (++nPages >= count))
                 break;
@@ -437,13 +450,6 @@ size_t Cache::compact(size_t count)
     }
 
     m_Lock.release();
-
-    // We should have pages to erase now...
-    while(m_PagesToErase.count())
-    {
-        uintptr_t key = reinterpret_cast<uintptr_t>(m_PagesToErase.popFront());
-        evict(key);
-    }
 
     return nPages;
 }
