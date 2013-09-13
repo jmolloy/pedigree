@@ -55,19 +55,27 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
     ptr = m_PageStack.allocate(0);
     if(!ptr)
     {
-    /// \bug If caches are compacted, we end up with a massive deadlock somewhere
-#if 0
-        CacheManager::instance().compactAll();
+        m_Lock.release();
 
-        ptr = m_PageStack.allocate(0);
+        ERROR_NOLOCK("High memory pressure - compacting caches...");
+
+        // Try a couple times - high memory pressure so let's fix that.
+        for(size_t i = 0; (i < 2) && !ptr; ++i)
+        {
+            // Rip out five pages - enough to handle vmem tables and a real
+            // mapping target, but not completely destroy the entire system
+            // cache in one fell swoop just because we hit memory pressure.
+            CacheManager::instance().compactAll(5);
+
+            ptr = m_PageStack.allocate(0);
+        }
+
         if(!ptr)
         {
-#endif
-            m_Lock.release();
-            FATAL_NOLOCK("Out of physical memory!");
-#if 0
+            FATAL_NOLOCK("Out of physical memory and !");
         }
-#endif
+
+        m_Lock.acquire();
     }
 
 #if defined(X86) && defined(DEBUGGER)
