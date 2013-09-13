@@ -63,13 +63,13 @@ void CacheManager::unregisterCache(Cache *pCache)
     }
 }
 
-void CacheManager::compactAll()
+void CacheManager::compactAll(size_t count)
 {
     for(List<Cache*>::Iterator it = m_Caches.begin();
-        it != m_Caches.end();
+        (it != m_Caches.end()) && count;
         it++)
     {
-        (*it)->compact();
+        count -= (*it)->compact(count);
     }
 }
 
@@ -105,28 +105,13 @@ Cache::Cache() :
 
 Cache::~Cache()
 {
-    while(!m_Lock.acquire());
-
     // Clean up existing cache pages
     for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
         it != m_Pages.end();
         it++)
     {
-        CachePage *page = reinterpret_cast<CachePage*>(it.value());
-        VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-        if(va.isMapped(reinterpret_cast<void*>(page->location)))
-        {
-            physical_uintptr_t phys;
-            size_t flags;
-            va.getMapping(reinterpret_cast<void*>(page->location), phys, flags);
-            va.unmap(reinterpret_cast<void*>(page->location));
-            PhysicalMemoryManager::instance().freePage(phys);
-        }
-
-        m_Allocator.free(page->location, 4096);
+        evict(it.key());
     }
-
-    m_Lock.release();
 
     CacheManager::instance().unregisterCache(this);
 }
@@ -246,7 +231,10 @@ uintptr_t Cache::insert (uintptr_t key, size_t size)
 
         pPage = new CachePage;
         pPage->location = location;
-        pPage->refcnt = 1;
+
+        // Enter into cache unpinned, but only if we can call an eviction callback.
+        pPage->refcnt = m_Callback ? 0 : 1;
+
         pPage->timeAllocated = timer.getUnixTimestamp();
         m_Pages.insert(key + (page * 4096), pPage);
 
@@ -268,11 +256,16 @@ void Cache::evict(uintptr_t key)
     CachePage *pPage = m_Pages.lookup(key);
     if (!pPage)
     {
-        m_Lock.leave();
+        m_Lock.release();
         return;
     }
 
-    if (!pPage->refcnt)
+    // Sanity check: don't evict pinned pages.
+    // If we have a callback, we can evict refcount=1 pages as we can fire an
+    // eviction event. Pinned pages with a configured callback have a base
+    // refcount of one. Otherwise, we must be at a refcount of precisely zero
+    // to permit the eviction.
+    if((m_Callback && pPage->refcnt <- 1) || ((!m_Callback) && (!pPage->refcnt)))
     {
         // Good to go.
         VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
@@ -286,19 +279,26 @@ void Cache::evict(uintptr_t key)
             if(m_Callback && (flags & VirtualAddressSpace::Dirty))
             {
                 // Dirty - request a write-back before we free the page.
-                m_Callback(key, pPage->location, m_CallbackMeta);
+                m_Callback(WriteBack, key, pPage->location, m_CallbackMeta);
             }
 
             va.unmap(loc);
             PhysicalMemoryManager::instance().freePage(phys);
         }
 
+        m_AllocatorLock.acquire();
         m_Allocator.free(pPage->location, 4096);
+        m_AllocatorLock.release();
 
         m_Pages.remove(key);
+
+        // Eviction callback.
+        m_Callback(Eviction, key, pPage->location, m_CallbackMeta);
+
+        delete pPage;
     }
 
-    m_Lock.leave();
+    m_Lock.release();
 }
 
 void Cache::pin (uintptr_t key)
@@ -308,14 +308,13 @@ void Cache::pin (uintptr_t key)
     CachePage *pPage = m_Pages.lookup(key);
     if (!pPage)
     {
-        m_Lock.leave();
+        m_Lock.release();
         return;
     }
 
-    assert (pPage->refcnt);
     pPage->refcnt ++;
 
-    m_Lock.leave();
+    m_Lock.release();
 }
 
 void Cache::release (uintptr_t key)
@@ -325,45 +324,99 @@ void Cache::release (uintptr_t key)
     CachePage *pPage = m_Pages.lookup(key);
     if (!pPage)
     {
-        m_Lock.leave();
+        m_Lock.release();
         return;
     }
 
     assert (pPage->refcnt);
     pPage->refcnt --;
 
+    m_Lock.release();
+
     if(!pPage->refcnt)
     {
         // Evict this page - refcnt dropped to zero.
         evict (key);
     }
-
-    m_Lock.leave();
 }
 
-void Cache::compact()
+size_t Cache::compact(size_t count)
 {
+    if(!count)
+        return 0;
+
     while(!m_Lock.acquire());
+
+    size_t nPages = 0;
 
     Timer &timer = *Machine::instance().getTimer();
     uint32_t now = timer.getUnixTimestamp();
 
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+
     // For erasing later
     List<void*> m_PagesToErase;
 
-    // Iterate through all pages, checking if any are over the time threshold
-    bool bPagesFreed = false;
+    // Remove anything older than the given time threshold.
     for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
         it != m_Pages.end();
         it++)
     {
         CachePage *page = reinterpret_cast<CachePage*>(it.value());
+
+        // Page has been pinned - completely unsafe to remove.
+        if((m_Callback && (page->refcnt > 1)) || ((!m_Callback) && (page->refcnt > 0)))
+            continue;
+
         if((page->timeAllocated + CACHE_AGE_THRESHOLD) <= now)
-            m_PagesToErase.pushBack(reinterpret_cast<void*>(page->location));
+        {
+            m_PagesToErase.pushBack(reinterpret_cast<void*>(it.key()));
+
+            if(++nPages >= count)
+                break;
+        }
     }
 
-    // If no pages were added to the free list, we need to use a count threshold
-    if(!m_PagesToErase.count())
+    // If we still need to find pages, let's find pages that have not
+    // been accessed since the last compact/writeback.
+    if(nPages < count)
+    {
+        for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
+            it != m_Pages.end();
+            it++)
+        {
+            CachePage *page = reinterpret_cast<CachePage*>(it.value());
+
+            // Page has been pinned - dirty flag is not enough information.
+            if((m_Callback && (page->refcnt > 1)) || ((!m_Callback) && (page->refcnt > 0)))
+                continue;
+
+            if(va.isMapped(reinterpret_cast<void *>(page->location)))
+            {
+                physical_uintptr_t phys;
+                size_t flags;
+                va.getMapping(reinterpret_cast<void *>(page->location), phys, flags);
+
+                // Not accessed? Awesome!
+                if(!(flags & VirtualAddressSpace::Accessed))
+                {
+                    m_PagesToErase.pushBack(reinterpret_cast<void*>(it.key()));
+
+                    if(++nPages >= count)
+                        break;
+                }
+                else
+                {
+                    // Clear the accessed flag, ready for the next compact that might come.
+                    flags &= ~(VirtualAddressSpace::Accessed);
+                    va.setFlags(reinterpret_cast<void *>(page->location), flags);
+                }
+            }
+        }
+    }
+
+    // If no pages were added to the free list, we need to just rip out pages.
+    if(nPages < count)
     {
         int i = 0;
         for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
@@ -371,33 +424,28 @@ void Cache::compact()
             it++)
         {
             CachePage *page = reinterpret_cast<CachePage*>(it.value());
-            m_PagesToErase.pushBack(reinterpret_cast<void*>(page->location));
 
-            if(i++ >= CACHE_NUM_THRESHOLD)
+            // Page has been pinned - completely unsafe to remove.
+            if((m_Callback && (page->refcnt > 1)) || ((!m_Callback) && (page->refcnt > 0)))
+                continue;
+
+            m_PagesToErase.pushBack(reinterpret_cast<void*>(it.key()));
+
+            if((i++ >= CACHE_NUM_THRESHOLD) || (++nPages >= count))
                 break;
         }
     }
 
+    m_Lock.release();
+
     // We should have pages to erase now...
     while(m_PagesToErase.count())
     {
-        void *page = m_PagesToErase.popFront();
-        if(!page)
-            break;
-
-        VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-        if(va.isMapped(page))
-        {
-            physical_uintptr_t phys;
-            size_t flags;
-            va.getMapping(page, phys, flags);
-            PhysicalMemoryManager::instance().freePageUnlocked(phys);
-        }
-
-        m_Allocator.free(reinterpret_cast<uintptr_t>(page), 4096);
+        uintptr_t key = reinterpret_cast<uintptr_t>(m_PagesToErase.popFront());
+        evict(key);
     }
-    
-    m_Lock.release();
+
+    return nPages;
 }
 
 void Cache::timer(uint64_t delta, InterruptState &state)
@@ -428,6 +476,7 @@ void Cache::timer(uint64_t delta, InterruptState &state)
             {
                 // Callback!
                 struct callbackMeta *pMeta = new struct callbackMeta;
+                pMeta->cause = WriteBack;
                 pMeta->callback = m_Callback;
                 pMeta->loc = it.key();
                 pMeta->page = page->location;
@@ -435,7 +484,7 @@ void Cache::timer(uint64_t delta, InterruptState &state)
                 new Thread(Processor::information().getCurrentThread()->getParent(), callbackThread, pMeta);
 
                 // Clear dirty flag - written back.
-                flags &= ~(VirtualAddressSpace::Dirty);
+                flags &= ~(VirtualAddressSpace::Dirty | VirtualAddressSpace::Accessed);
                 va.setFlags(reinterpret_cast<void *>(page->location), flags);
             }
         }
@@ -455,7 +504,7 @@ void Cache::setCallback(Cache::writeback_t newCallback, void *meta)
 int Cache::callbackThread(void *cache)
 {
     struct callbackMeta *pMeta = reinterpret_cast<struct callbackMeta *>(cache);
-    pMeta->callback(pMeta->loc, pMeta->page, pMeta->meta);
+    pMeta->callback(pMeta->cause, pMeta->loc, pMeta->page, pMeta->meta);
     delete pMeta;
     return 0;
 }

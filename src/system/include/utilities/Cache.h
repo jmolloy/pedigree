@@ -58,7 +58,11 @@ class CacheManager : public TimerHandler
         void registerCache(Cache *pCache);
         void unregisterCache(Cache *pCache);
 
-        void compactAll();
+        /**
+         * Compact every cache we know about, until 'count' pages have been
+         * evicted. Default value for count says 'all pages in all caches'.
+         */
+        void compactAll(size_t count = ~0UL);
 
         virtual void timer(uint64_t delta, InterruptState &state);
     private:
@@ -73,6 +77,20 @@ class Cache
 public:
 
     /**
+     * Callback Cause enumeration.
+     *
+     * Callbacks can be called for a number of reasons. Instead of having
+     * a callback for each reason, we just offer this enumeration. Callbacks
+     * can then do a switch on this in order to select which behaviour to
+     * invoke.
+     */
+    enum CallbackCause
+    {
+        WriteBack,
+        Eviction,
+    };
+
+    /**
      * Callback type: for functions called by the write-back timer handler.
      *
      * The write-back handler checks all pages in the cache at a regular
@@ -82,7 +100,7 @@ public:
      *
      * Then, the write-back thread will mark the page as not-dirty.
      */
-    typedef void (*writeback_t)(uintptr_t loc, uintptr_t page, void *meta);
+    typedef void (*writeback_t)(CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta);
 
     /// \todo possibly need a callback type for eviction too...
 
@@ -131,13 +149,19 @@ public:
      *  resource usage by throwing away items in a
      *  least-recently-used fashion. This is called in an
      *  emergency "physical memory getting full" situation by the
-     *  PMM. */
-    void compact ();
+     *  PMM.
+     *
+     * Pass a count to specify that only count pages should be cleared.
+     * If a count is passed, the cache prefers to remove pages that have
+     * not been accessed, rather than the least-recently-used page.
+     */
+    size_t compact (size_t count = ~0UL);
 
 private:
 
     struct callbackMeta
     {
+        CallbackCause cause;
         writeback_t callback;
         uintptr_t loc;
         uintptr_t page;
