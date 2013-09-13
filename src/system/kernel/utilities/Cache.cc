@@ -265,7 +265,7 @@ void Cache::evict(uintptr_t key)
     // eviction event. Pinned pages with a configured callback have a base
     // refcount of one. Otherwise, we must be at a refcount of precisely zero
     // to permit the eviction.
-    if((m_Callback && pPage->refcnt <- 1) || ((!m_Callback) && (!pPage->refcnt)))
+    if((m_Callback && pPage->refcnt <= 1) || ((!m_Callback) && (!pPage->refcnt)))
     {
         // Good to go.
         VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
