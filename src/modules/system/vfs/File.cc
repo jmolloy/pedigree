@@ -22,17 +22,35 @@
 #include <process/Scheduler.h>
 #include <Log.h>
 
-void File::writeCallback(uintptr_t loc, uintptr_t page, void *meta)
+void File::writeCallback(Cache::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta)
 {
     File *pFile = reinterpret_cast<File *>(meta);
 
-    // We are given one dirty page. Blocks can be smaller than a page.
-    size_t off = 0;
     pFile->m_Lock.acquire();
-    for(; off < PhysicalMemoryManager::getPageSize(); off += pFile->getBlockSize())
+
+    switch(cause)
     {
-        pFile->writeBlock(loc + off, page + off);
+        case Cache::WriteBack:
+            {
+                // We are given one dirty page. Blocks can be smaller than a page.
+                size_t off = 0;
+                for(; off < PhysicalMemoryManager::getPageSize(); off += pFile->getBlockSize())
+                {
+                    pFile->writeBlock(loc + off, page + off);
+                }
+            }
+            break;
+        case Cache::Eviction:
+            // Remove this page from our data cache.
+            // Side-effect: if the block size is larger than the page size, the
+            // entire block will be removed. Is this something we care about?
+            pFile->m_DataCache.remove(loc);
+            break;
+        default:
+            WARNING("File: unknown cache callback -- could indicate potential future I/O issues.");
+            break;
     }
+
     pFile->m_Lock.release();
 }
 
