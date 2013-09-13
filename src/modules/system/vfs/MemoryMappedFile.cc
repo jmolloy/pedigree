@@ -186,6 +186,9 @@ void MemoryMappedFile::unload(uintptr_t address)
             // So, if the physical mapping is not what we have on record, free it.
             if (bFreePages && (p != static_cast<physical_uintptr_t>(~0UL)) && (p != it.value()))
                 PhysicalMemoryManager::instance().freePage(p);
+            else
+                // No longer using this page.
+                m_pFile->returnPhysicalPage(it.key());
         }
     }
     m_Mappings.clear();
