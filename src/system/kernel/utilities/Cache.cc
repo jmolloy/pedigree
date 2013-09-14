@@ -296,7 +296,10 @@ void Cache::evict(uintptr_t key, bool bLock)
             }
 
             va.unmap(loc);
-            PhysicalMemoryManager::instance().freePage(phys);
+            if(bLock)
+                PhysicalMemoryManager::instance().freePage(phys);
+            else
+                PhysicalMemoryManager::instance().freePageUnlocked(phys);
         }
 
         m_Allocator.free(pPage->location, 4096);
