@@ -102,14 +102,15 @@ void Debugger::initialise()
 void Debugger::start(InterruptState &state, LargeStaticString &description)
 {
   Log::instance() << " << Flushing log content >>" << Flush;
+  static String graphicsService("graphics");
   
   // Drop out of whatever graphics mode we were in
   GraphicsService::GraphicsProvider provider;
   memset(&provider, 0, sizeof(provider));
   provider.bTextModes = true;
   
-  ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
-  Service         *pService  = ServiceManager::instance().getService(String("graphics"));
+  ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(graphicsService);
+  Service         *pService  = ServiceManager::instance().getService(graphicsService);
   bool bSuccess = false;
   if(pFeatures->provides(ServiceFeatures::probe))
     if(pService)

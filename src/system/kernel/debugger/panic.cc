@@ -113,6 +113,8 @@ void _panic( const char* msg, DebuggerIO* pScreen )
 
 void panic( const char* msg )
 {
+  static String graphicsService("graphics");
+
   Processor::setInterrupts(false);
 
   // Drop out of whatever graphics mode we were in
@@ -120,8 +122,8 @@ void panic( const char* msg )
   memset(&provider, 0, sizeof(provider));
   provider.bTextModes = true;
   
-  ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
-  Service         *pService  = ServiceManager::instance().getService(String("graphics"));
+  ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(graphicsService);
+  Service         *pService  = ServiceManager::instance().getService(graphicsService);
   bool bSuccess = false;
   if(pFeatures->provides(ServiceFeatures::probe))
     if(pService)
