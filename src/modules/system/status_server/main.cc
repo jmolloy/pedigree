@@ -26,33 +26,7 @@
 #include <vfs/VFS.h>
 #include <vfs/Filesystem.h>
 
-class StringCallback : public Log::LogCallback
-{
-    public:
-        StringCallback() : m_Str()
-        {
-        }
-
-        virtual void callback(const char *s)
-        {
-            m_Str += s;
-        }
-
-        virtual inline ~StringCallback()
-        {
-        }
-
-        String &getStr()
-        {
-            return m_Str;
-        }
-    private:
-        String m_Str;
-};
-
 #define LISTEN_PORT     1234
-
-StringCallback *pCallback = 0;
 
 int clientThread(void *p)
 {
@@ -100,12 +74,8 @@ int clientThread(void *p)
 
     bool bNotFound = false;
 
-    bool bNoLog = false;
-
     String path = *firstLine.popFront();
-    if(path == String("/nolog"))
-        bNoLog = true;
-    else if(!(path == String("/")))
+    if(!(path == String("/")))
         bNotFound = true;
 
     // Got a heap of information now - prepare to return
@@ -281,15 +251,6 @@ int clientThread(void *p)
             }
 
             response += "</table>";
-
-            if(!bNoLog)
-            {
-                response += "<h3>Kernel Log</h3>";
-                response += "<pre>";
-                response += pCallback->getStr();
-                response += "</pre>";
-            }
-
             response += "</body></html>";
         }
     }
@@ -326,9 +287,6 @@ int mainThread(void *p)
 
 static void init()
 {
-    pCallback = new StringCallback();
-    Log::instance().installCallback(pCallback);
-
     new Thread(Processor::information().getCurrentThread()->getParent(), mainThread, 0);
 }
 
