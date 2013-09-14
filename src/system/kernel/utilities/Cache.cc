@@ -257,10 +257,10 @@ uintptr_t Cache::insert (uintptr_t key, size_t size)
 
 void Cache::evict(uintptr_t key)
 {
-    evict(key, true);
+    evict(key, true, true);
 }
 
-void Cache::evict(uintptr_t key, bool bLock)
+void Cache::evict(uintptr_t key, bool bLock, bool bRemove)
 {
     if(bLock)
         while(!m_Lock.acquire());
@@ -304,7 +304,8 @@ void Cache::evict(uintptr_t key, bool bLock)
 
         m_Allocator.free(pPage->location, 4096);
 
-        m_Pages.remove(key);
+        if(bRemove)
+            m_Pages.remove(key);
 
         // Eviction callback.
         m_Callback(Eviction, key, pPage->location, m_CallbackMeta);
@@ -349,7 +350,7 @@ void Cache::release (uintptr_t key)
     if(!pPage->refcnt)
     {
         // Evict this page - refcnt dropped to zero.
-        evict (key, false);
+        evict (key, false, false);
     }
 
     m_Lock.release();
@@ -359,8 +360,6 @@ size_t Cache::compact(size_t count)
 {
     if(!count)
         return 0;
-
-    while(!m_Lock.acquire());
 
     size_t nPages = 0;
 
@@ -372,7 +371,7 @@ size_t Cache::compact(size_t count)
     // Remove anything older than the given time threshold.
     for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
         it != m_Pages.end();
-        it++)
+        ++it)
     {
         CachePage *page = reinterpret_cast<CachePage*>(it.value());
 
@@ -382,7 +381,8 @@ size_t Cache::compact(size_t count)
 
         if((page->timeAllocated + CACHE_AGE_THRESHOLD) <= now)
         {
-            evict(it.key(), false);
+            evict(it.key(), false, false);
+            // it = m_Pages.erase(it);
 
             if(++nPages >= count)
                 break;
@@ -395,7 +395,7 @@ size_t Cache::compact(size_t count)
     {
         for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
             it != m_Pages.end();
-            it++)
+            ++it)
         {
             CachePage *page = reinterpret_cast<CachePage*>(it.value());
 
@@ -416,7 +416,8 @@ size_t Cache::compact(size_t count)
                     if(flags & VirtualAddressSpace::Dirty)
                         continue;
 
-                    evict(it.key(), false);
+                    evict(it.key(), false, false);
+                    // it = m_Pages.erase(it);
 
                     if(++nPages >= count)
                         break;
@@ -437,7 +438,7 @@ size_t Cache::compact(size_t count)
         int i = 0;
         for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
             it != m_Pages.end();
-            it++)
+            ++it)
         {
             CachePage *page = reinterpret_cast<CachePage*>(it.value());
 
@@ -445,14 +446,13 @@ size_t Cache::compact(size_t count)
             if((m_Callback && (page->refcnt > 1)) || ((!m_Callback) && (page->refcnt > 0)))
                 continue;
 
-            evict(it.key(), false);
+            evict(it.key(), false, false);
+            // it = m_Pages.erase(it);
 
             if((i++ >= CACHE_NUM_THRESHOLD) || (++nPages >= count))
                 break;
         }
     }
-
-    m_Lock.release();
 
     return nPages;
 }
