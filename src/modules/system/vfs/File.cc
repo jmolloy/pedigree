@@ -26,18 +26,20 @@ void File::writeCallback(Cache::CallbackCause cause, uintptr_t loc, uintptr_t pa
 {
     File *pFile = reinterpret_cast<File *>(meta);
 
-    pFile->m_Lock.acquire();
-
     switch(cause)
     {
         case Cache::WriteBack:
             {
+                pFile->m_Lock.acquire();
+
                 // We are given one dirty page. Blocks can be smaller than a page.
                 size_t off = 0;
                 for(; off < PhysicalMemoryManager::getPageSize(); off += pFile->getBlockSize())
                 {
                     pFile->writeBlock(loc + off, page + off);
                 }
+
+                pFile->m_Lock.release();
             }
             break;
         case Cache::Eviction:
@@ -50,8 +52,6 @@ void File::writeCallback(Cache::CallbackCause cause, uintptr_t loc, uintptr_t pa
             WARNING("File: unknown cache callback -- could indicate potential future I/O issues.");
             break;
     }
-
-    pFile->m_Lock.release();
 }
 
 File::File() :
