@@ -55,8 +55,6 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
     ptr = m_PageStack.allocate(0);
     if(!ptr)
     {
-        m_Lock.release();
-
         ERROR_NOLOCK("High memory pressure - compacting caches...");
 
         // Try a couple times - high memory pressure so let's fix that.
@@ -68,14 +66,18 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
             CacheManager::instance().compactAll(5);
 
             ptr = m_PageStack.allocate(0);
+            if(!ptr)
+                ERROR_NOLOCK("Compact pass #" << Dec << (i + 1) << Hex << " failed to relieve pressure...");
         }
 
         if(!ptr)
         {
-            FATAL_NOLOCK("Out of physical memory and !");
+            FATAL_NOLOCK("Out of physical memory and no caches left to compact!");
         }
-
-        m_Lock.acquire();
+        else
+        {
+            ERROR_NOLOCK("Memory pressure relieved.");
+        }
     }
 
 #if defined(X86) && defined(DEBUGGER)
@@ -103,35 +105,7 @@ void X86CommonPhysicalMemoryManager::freePage(physical_uintptr_t page)
 {
     LockGuard<Spinlock> guard(m_Lock);
 
-#if defined(X86) && defined(DEBUGGER)
-    physical_uintptr_t ptr_bitmap = page / 0x1000;
-    size_t idx = ptr_bitmap / 32;
-    size_t bit = ptr_bitmap % 32;
-    if(!(g_PageBitmap[idx] & (1 << bit)))
-    {
-        m_Lock.release();
-        FATAL_NOLOCK("PhysicalMemoryManager DOUBLE FREE");
-    }
-
-    g_PageBitmap[idx] &= ~(1 << bit);
-#endif
-
-    assert(page != 0);
-    assert((page & 0xFFF) == 0);
-
-    m_PageStack.free(page);
-
-#if defined(TRACK_PAGE_ALLOCATIONS)             
-    if (Processor::m_Initialised == 2)
-    {
-        if (!g_AllocationCommand.isMallocing())
-        {
-            m_Lock.release();
-            g_AllocationCommand.freePage(page);
-            m_Lock.acquire();
-        }
-    }
-#endif
+    freePageUnlocked(page);
 }
 void X86CommonPhysicalMemoryManager::freePageUnlocked(physical_uintptr_t page)
 {
