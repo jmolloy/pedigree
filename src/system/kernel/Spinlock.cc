@@ -55,7 +55,8 @@ void Spinlock::acquire()
       size_t atom = m_Atom;
       m_Atom = true;
 
-    FATAL_NOLOCK("Spinlock has deadlocked, return address of other locker is " << m_Ra << ", spinlock is " << reinterpret_cast<uintptr_t>(this) << ", atom is " << atom << ".");
+    uintptr_t myra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+    FATAL_NOLOCK("Spinlock has deadlocked in acquire, my return address is " << myra << ", return address of other locker is " << m_Ra << ", spinlock is " << reinterpret_cast<uintptr_t>(this) << ", atom is " << atom << ".");
 
     // Panic in case there's a return from the debugger (or the debugger isn't available)
     panic("Spinlock has deadlocked");
@@ -93,7 +94,8 @@ void Spinlock::release()
     size_t atom = m_Atom;
     m_Atom = true;
 
-    FATAL_NOLOCK("Spinlock has deadlocked, return address of other locker is " << m_Ra << ", spinlock is " << reinterpret_cast<uintptr_t>(this) << ", atom is " << atom << ".");
+    uintptr_t myra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+    FATAL_NOLOCK("Spinlock has deadlocked in release, my return address is " << myra << ", return address of other locker is " << m_Ra << ", spinlock is " << reinterpret_cast<uintptr_t>(this) << ", atom is " << atom << ".");
 
     // Panic in case there's a return from the debugger (or the debugger isn't available)
     panic("Spinlock has deadlocked");
