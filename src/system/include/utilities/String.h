@@ -87,12 +87,16 @@ class String
         void free();
 
     private:
+        /** Size of static string storage (over this threshold, the heap is used) */
+        static const size_t StaticSize = 64;
         /** Pointer to the zero-terminated ASCII string */
         char *m_Data;
         /** The string's length */
         size_t m_Length;
         /** The size of the reserved space for the string */
         size_t m_Size;
+        /** Static string storage (avoid heap overhead for small strings) */
+        char m_Static[StaticSize];
 };
 
 /** @} */
@@ -101,16 +105,16 @@ class String
 // Part of the implementation
 //
 String::String()
-    : m_Data(0), m_Length(0), m_Size(0)
+    : m_Data(0), m_Length(0), m_Size(0), m_Static()
 {
 }
 String::String(const char *s)
-    : m_Data(0), m_Length(0), m_Size(0)
+    : m_Data(0), m_Length(0), m_Size(0), m_Static()
 {
     assign(s);
 }
 String::String(const String &x)
-    : m_Data(0), m_Length(0), m_Size(0)
+    : m_Data(0), m_Length(0), m_Size(0), m_Static()
 {
     assign(x);
 }
@@ -131,7 +135,9 @@ String &String::operator = (const char *s)
 }
 String::operator const char *() const
 {
-    if (m_Data == 0)
+    if (m_Length < StaticSize)
+        return m_Static;
+    else if (m_Data == 0)
         return "";
     else
         return m_Data;
@@ -139,21 +145,53 @@ String::operator const char *() const
 
 String &String::operator += (const String &x)
 {
-    reserve(x.length()+m_Length+1);
-    memcpy(&m_Data[m_Length], x.m_Data, x.length()+1);
+    size_t newLength = x.length() + m_Length + 1;
+    if (newLength < StaticSize)
+    {
+        // By the nature of the two lengths combined being below the static
+        // size, we can be assured that we can use the static buffer in
+        // both strings.
+        memcpy(&m_Static[m_Length], x.m_Static, x.length() + 1);
+    }
+    else
+    {
+        reserve(x.length() + m_Length + 1);
+        memcpy(&m_Data[m_Length], x.m_Data, x.length() + 1);
+    }
+
     m_Length += x.length();
     return *this;
 }
 String &String::operator += (const char *s)
 {
-    reserve(strlen(s)+m_Length+1);
-    memcpy(&m_Data[m_Length], s, strlen(s)+1);
-    m_Length += strlen(s);
+    size_t slen = strlen(s);
+    size_t newLength = slen + m_Length + 1;
+    if (newLength < StaticSize)
+    {
+        // By the nature of the two lengths combined being below the static
+        // size, we can be assured that we can use the static buffer in
+        // both strings.
+        memcpy(&m_Static[m_Length], s, slen + 1);
+    }
+    else
+    {
+        reserve(slen + m_Length + 1);
+        memcpy(&m_Data[m_Length], s, slen + 1);
+    }
+
+    m_Length += slen;
     return *this;
 }
 
 bool String::operator == (const String &s)
 {
+    if (m_Length != s.m_Length)
+        return false;
+    else if ((m_Length < StaticSize && s.m_Length >= StaticSize) ||
+            (m_Length >= StaticSize && s.m_Length < StaticSize))
+        return false;
+    else if(m_Length < StaticSize)
+        return !strcmp(m_Static, s.m_Static);
     if (m_Data == 0 && s.m_Data == 0)
         return true;
     else if (m_Data == 0 || s.m_Data == 0)
@@ -164,12 +202,15 @@ bool String::operator == (const String &s)
 
 bool String::operator == (const char *s)
 {
-    if (m_Data == 0 && s == 0)
+    const char *buf = m_Data;
+    if (m_Length < StaticSize)
+        buf = m_Static;
+    if (buf == 0 && s == 0)
         return true;
-    else if (m_Data == 0 || s == 0)
+    else if (buf == 0 || s == 0)
         return false;
     else
-        return !strcmp(m_Data, s);
+        return !strcmp(buf, s);
 }
 
 size_t String::length() const

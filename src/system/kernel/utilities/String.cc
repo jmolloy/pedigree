@@ -21,11 +21,20 @@
 void String::assign(const String &x)
 {
     m_Length = x.length();
-    reserve(m_Length + 1);
-    if (m_Length && x.m_Data)
-        memcpy(m_Data, x.m_Data, m_Length + 1);
+    if (m_Length < StaticSize)
+    {
+        memcpy(m_Static, x.m_Static, m_Length + 1);
+        delete [] m_Data;
+        m_Data = 0;
+    }
     else
-        m_Data[0] = '\0';
+    {
+        reserve(m_Length + 1);
+        if (m_Length && x.m_Data)
+            memcpy(m_Data, x.m_Data, m_Length + 1);
+        else
+            m_Data[0] = '\0';
+    }
 }
 void String::assign(const char *s)
 {
@@ -33,15 +42,25 @@ void String::assign(const char *s)
         m_Length = 0;
     else
         m_Length = strlen(s);
-    reserve(m_Length + 1);
-    if (m_Length && s)
-        memcpy(m_Data, s, m_Length + 1);
+
+    if (m_Length < StaticSize)
+    {
+        memcpy(m_Static, s, m_Length + 1);
+        delete [] m_Data;
+        m_Data = 0;
+    }
     else
-        m_Data[0] = '\0';
+    {
+        reserve(m_Length + 1);
+        if (m_Length && s)
+            memcpy(m_Data, s, m_Length + 1);
+        else
+            m_Data[0] = '\0';
+    }
 }
 void String::reserve(size_t size)
 {
-    if (size > m_Size)
+    if ((size > m_Size) && (size > StaticSize))
     {
         char *tmp = m_Data;
         m_Data = new char [size];
@@ -61,8 +80,12 @@ void String::free()
 
 String String::split(size_t offset)
 {
-    String s(&m_Data[offset]);
-    m_Data[offset] = '\0';
+    char *buf = m_Data;
+    if (m_Length < StaticSize)
+        buf = m_Static;
+
+    String s(&buf[offset]);
+    buf[offset] = '\0';
     m_Length = offset;
 
     return s;
@@ -76,41 +99,49 @@ void String::strip()
 
 void String::lstrip()
 {
+    char *buf = m_Data;
+    if (m_Length < StaticSize)
+        buf = m_Static;
+
     // Sanity check...
-    if(!m_Data)
+    if(!buf)
         return;
     
-    if(m_Data[0] != ' ')
+    if(buf[0] != ' ')
         return;
 
     size_t n = 0;
-    while(n < m_Length && m_Data[n] == ' ')
+    while(n < m_Length && buf[n] == ' ')
         n++;
 
     // Move the data to cover up the whitespace and avoid reallocating m_Data
     m_Length -= n;
-    memmove(m_Data, (m_Data + n), m_Length);
-    m_Data[m_Length] = 0;
+    memmove(buf, (buf + n), m_Length);
+    buf[m_Length] = 0;
 }
 
 void String::rstrip()
 {
+    char *buf = m_Data;
+    if (m_Length < StaticSize)
+        buf = m_Static;
+
     // Sanity check...
-    if(!m_Data)
+    if(!buf)
         return;
 
-    if(m_Data[m_Length - 1] != ' ')
+    if(buf[m_Length - 1] != ' ')
         return;
 
     size_t n = m_Length;
-    while(n > 0 && m_Data[n - 1] == ' ')
+    while(n > 0 && buf[n - 1] == ' ')
         n--;
 
     // m_Size is still valid - it's the size of the buffer. m_Length is now
     // updated to contain the proper length of the string, but the buffer is
     // not reallocated.
     m_Length = n;
-    m_Data[m_Length] = 0;
+    buf[m_Length] = 0;
 }
 
 List<String*> String::tokenise(char token)
@@ -121,7 +152,7 @@ List<String*> String::tokenise(char token)
     size_t idx = 0;
     while (idx < copy.m_Length)
     {
-        if (copy.m_Data[idx] == token)
+        if (copy[idx] == token)
         {
             String tmp = copy.split(idx+1);
 
@@ -129,8 +160,7 @@ List<String*> String::tokenise(char token)
             copy = tmp;
 
             // pStr will include token, so remove the last character from it.
-            pStr->m_Length --;
-            pStr->m_Data[pStr->length()] = '\0';
+            pStr->chomp();
 
             if (pStr->length() == 0)
                 delete pStr;
@@ -150,8 +180,12 @@ List<String*> String::tokenise(char token)
 
 void String::chomp()
 {
+    char *buf = m_Data;
+    if (m_Length < StaticSize)
+        buf = m_Static;
+
     m_Length --;
-    m_Data[m_Length] = '\0';
+    buf[m_Length] = '\0';
 }
 
 void String::sprintf(const char *fmt, ...)
@@ -159,6 +193,9 @@ void String::sprintf(const char *fmt, ...)
     reserve(256);
     va_list vl;
     va_start(vl, fmt);
-    vsprintf(m_Data, fmt, vl);
+    m_Length = vsprintf(m_Data, fmt, vl);
     va_end(vl);
+
+    if (m_Length < StaticSize)
+        memcpy(m_Static, m_Data, m_Length + 1);
 }
