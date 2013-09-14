@@ -44,6 +44,7 @@ uintptr_t FatFile::readBlock(uint64_t location)
 {
     FatFilesystem *pFs = reinterpret_cast<FatFilesystem*>(m_pFilesystem);
 
+    m_FileBlockCache.startAtomic();
     uintptr_t buffer = m_FileBlockCache.insert(location);
     pFs->read(this, location, getBlockSize(), buffer);
 
@@ -63,6 +64,7 @@ uintptr_t FatFile::readBlock(uint64_t location)
             va.setFlags(reinterpret_cast<void *>(buffer), flags);
         }
     }
+    m_FileBlockCache.endAtomic();
 
     return buffer;
 }

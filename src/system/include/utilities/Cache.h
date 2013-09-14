@@ -157,6 +157,28 @@ public:
      */
     size_t compact (size_t count = ~0UL);
 
+    /**
+     * Enters a critical section with respect to this cache. That is, do not
+     * permit write back callbacks to be fired (aside from as a side effect
+     * of eviction) until the section has been left.
+     *
+     * This is especially useful for an 'insert then read into buffer' operation,
+     * which can cause a writeback in the middle of reading (when nothing has
+     * actually changed at all).
+     */
+    void startAtomic()
+    {
+        m_bInCritical = 1;
+    }
+
+    /**
+     * Leaves the critical section for this cache.
+     */
+    void endAtomic()
+    {
+        m_bInCritical = 0;
+    }
+
 private:
 
     /**
@@ -231,6 +253,9 @@ private:
 
     /** Have we registered ourselves as a timer handler yet? */
     bool m_bRegisteredHandler;
+
+    /** Are we currently in a critical section? */
+    Atomic<size_t> m_bInCritical;
 };
 
 #endif

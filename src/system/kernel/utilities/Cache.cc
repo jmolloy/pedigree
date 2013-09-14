@@ -464,6 +464,8 @@ void Cache::timer(uint64_t delta, InterruptState &state)
         return;
     else if(UNLIKELY(m_Callback == 0))
         return;
+    else if(UNLIKELY(m_bInCritical == 1))
+        return;
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
