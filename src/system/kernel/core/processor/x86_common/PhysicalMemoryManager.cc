@@ -73,6 +73,7 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
         if(!ptr)
         {
             FATAL_NOLOCK("Out of physical memory and no caches left to compact!");
+            panic("Out of physical memory and no caches left to compact!");
         }
         else
         {
@@ -505,7 +506,7 @@ void X86CommonPhysicalMemoryManager::initialisationDone()
     extern void *init;
     extern void *code;
 
-    m_Lock.acquire();
+    NOTICE("PhysicalMemoryManager: kernel initialisation complete, cleaning up...");
 
     // Unmap & free the .init section
     VirtualAddressSpace &kernelSpace = VirtualAddressSpace::getKernelAddressSpace();
@@ -523,9 +524,10 @@ void X86CommonPhysicalMemoryManager::initialisationDone()
         kernelSpace.unmap(vAddress);
     }
 
-    // Free the physical page
+    // Free the physical pages
     m_RangeBelow16MB.free(reinterpret_cast<uintptr_t>(&init) - reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_ADDRESS), count * getPageSize());
-    m_Lock.release();
+
+    NOTICE("PhysicalMemoryManager: cleaned up " << Dec << (count * 4) << Hex << "KB of init-only code.");
 }
 
 X86CommonPhysicalMemoryManager::X86CommonPhysicalMemoryManager()
