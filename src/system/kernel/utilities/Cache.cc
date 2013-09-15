@@ -375,18 +375,22 @@ size_t Cache::compact(size_t count)
     {
         CachePage *page = reinterpret_cast<CachePage*>(it.value());
 
-        // Page has been pinned - completely unsafe to remove.
-        if((m_Callback && (page->refcnt > 1)) || ((!m_Callback) && (page->refcnt > 0)))
-            continue;
-
-        if((page->timeAllocated + CACHE_AGE_THRESHOLD) <= now)
+        // If page has been pinned, it is completely unsafe to remove.
+        if(!((m_Callback && (page->refcnt > 1)) || ((!m_Callback) && (page->refcnt > 0))))
         {
-            evict(it.key(), false, false);
-            // it = m_Pages.erase(it);
+            if((page->timeAllocated + CACHE_AGE_THRESHOLD) <= now)
+            {
+                evict(it.key(), false, false);
+                m_Pages.erase(it++);
 
-            if(++nPages >= count)
-                break;
+                if(++nPages >= count)
+                    break;
+            }
+            else
+                ++it;
         }
+        else
+            ++it;
     }
 
     // If we still need to find pages, let's find pages that have not
@@ -399,36 +403,41 @@ size_t Cache::compact(size_t count)
         {
             CachePage *page = reinterpret_cast<CachePage*>(it.value());
 
-            // Page has been pinned - dirty flag is not enough information.
-            if((m_Callback && (page->refcnt > 1)) || ((!m_Callback) && (page->refcnt > 0)))
-                continue;
-
-            if(va.isMapped(reinterpret_cast<void *>(page->location)))
+            // Only if page has not been pinned - dirty flag is not enough information.
+            if(!((m_Callback && (page->refcnt > 1)) || ((!m_Callback) && (page->refcnt > 0))))
             {
-                physical_uintptr_t phys;
-                size_t flags;
-                va.getMapping(reinterpret_cast<void *>(page->location), phys, flags);
-
-                // Not accessed? Awesome!
-                if(!(flags & VirtualAddressSpace::Accessed))
+                if(va.isMapped(reinterpret_cast<void *>(page->location)))
                 {
-                    // But watch out for dirty pages - they have not been written back yet.
-                    if(flags & VirtualAddressSpace::Dirty)
-                        continue;
+                    physical_uintptr_t phys;
+                    size_t flags;
+                    va.getMapping(reinterpret_cast<void *>(page->location), phys, flags);
 
-                    evict(it.key(), false, false);
-                    // it = m_Pages.erase(it);
+                    // Not accessed? Awesome!
+                    if(!(flags & VirtualAddressSpace::Accessed))
+                    {
+                        // But watch out for dirty pages - they have not been written back yet.
+                        if(flags & VirtualAddressSpace::Dirty)
+                            continue;
 
-                    if(++nPages >= count)
-                        break;
-                }
-                else
-                {
-                    // Clear the accessed flag, ready for the next compact that might come.
-                    flags &= ~(VirtualAddressSpace::Accessed);
-                    va.setFlags(reinterpret_cast<void *>(page->location), flags);
+                        evict(it.key(), false, false);
+                        m_Pages.erase(it++);
+
+                        if(++nPages >= count)
+                            break;
+                    }
+                    else
+                    {
+                        // Clear the accessed flag, ready for the next compact that might come.
+                        flags &= ~(VirtualAddressSpace::Accessed);
+                        va.setFlags(reinterpret_cast<void *>(page->location), flags);
+
+                        // Increment iterator as we did not erase.
+                        ++it;
+                    }
                 }
             }
+            else
+                ++it;
         }
     }
 
@@ -437,17 +446,18 @@ size_t Cache::compact(size_t count)
     {
         int i = 0;
         for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
-            it != m_Pages.end();
-            ++it)
+            it != m_Pages.end();)
         {
             CachePage *page = reinterpret_cast<CachePage*>(it.value());
 
-            // Page has been pinned - completely unsafe to remove.
-            if((m_Callback && (page->refcnt > 1)) || ((!m_Callback) && (page->refcnt > 0)))
-                continue;
-
-            evict(it.key(), false, false);
-            // it = m_Pages.erase(it);
+            // Only if page has not been pinned - otherwise completely unsafe to remove.
+            if(!((m_Callback && (page->refcnt > 1)) || ((!m_Callback) && (page->refcnt > 0))))
+            {
+                evict(it.key(), false, false);
+                m_Pages.erase(it++);
+            }
+            else
+                ++it;
 
             if((i++ >= CACHE_NUM_THRESHOLD) || (++nPages >= count))
                 break;
