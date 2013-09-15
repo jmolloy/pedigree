@@ -184,7 +184,7 @@ private:
     /**
      * evict doer
      */
-    void evict(uintptr_t key, bool bLock, bool bRemove);
+    void evict(uintptr_t key, bool bLock, bool bPhysicalLock, bool bRemove);
 
     struct callbackMeta
     {

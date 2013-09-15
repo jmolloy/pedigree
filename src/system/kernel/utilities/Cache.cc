@@ -257,10 +257,10 @@ uintptr_t Cache::insert (uintptr_t key, size_t size)
 
 void Cache::evict(uintptr_t key)
 {
-    evict(key, true, true);
+    evict(key, true, true, true);
 }
 
-void Cache::evict(uintptr_t key, bool bLock, bool bRemove)
+void Cache::evict(uintptr_t key, bool bLock, bool bPhysicalLock, bool bRemove)
 {
     if(bLock)
         while(!m_Lock.acquire());
@@ -296,7 +296,7 @@ void Cache::evict(uintptr_t key, bool bLock, bool bRemove)
             }
 
             va.unmap(loc);
-            if(bLock)
+            if(bPhysicalLock)
                 PhysicalMemoryManager::instance().freePage(phys);
             else
                 PhysicalMemoryManager::instance().freePageUnlocked(phys);
@@ -347,10 +347,10 @@ void Cache::release (uintptr_t key)
     assert (pPage->refcnt);
     pPage->refcnt --;
 
-    if(!pPage->refcnt)
+    if (!pPage->refcnt)
     {
         // Evict this page - refcnt dropped to zero.
-        evict (key, false, false);
+        evict(key, false, true, true);
     }
 
     m_Lock.release();
@@ -380,7 +380,7 @@ size_t Cache::compact(size_t count)
         {
             if((page->timeAllocated + CACHE_AGE_THRESHOLD) <= now)
             {
-                evict(it.key(), false, false);
+                evict(it.key(), false, false, false);
                 m_Pages.erase(it++);
 
                 if(++nPages >= count)
@@ -419,7 +419,7 @@ size_t Cache::compact(size_t count)
                         if(flags & VirtualAddressSpace::Dirty)
                             continue;
 
-                        evict(it.key(), false, false);
+                        evict(it.key(), false, false, false);
                         m_Pages.erase(it++);
 
                         if(++nPages >= count)
@@ -453,7 +453,7 @@ size_t Cache::compact(size_t count)
             // Only if page has not been pinned - otherwise completely unsafe to remove.
             if(!((m_Callback && (page->refcnt > 1)) || ((!m_Callback) && (page->refcnt > 0))))
             {
-                evict(it.key(), false, false);
+                evict(it.key(), false, false, false);
                 m_Pages.erase(it++);
             }
             else
