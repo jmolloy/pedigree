@@ -154,6 +154,8 @@ class Tree
         // Traverse the tree, adding everything encountered.
         traverseNode_Insert(x.root);
 
+        if(m_Begin)
+            delete m_Begin;
         m_Begin = new IteratorNode(root, 0, nItems);
 
         return *this;
@@ -191,6 +193,8 @@ class Tree
         {
             root = n; // We are the root node.
 
+            if(m_Begin)
+                delete m_Begin;
             m_Begin = new IteratorNode(root, 0, nItems);
         }
         else
@@ -327,11 +331,12 @@ class Tree
     }
 
     /** Erase one Element */
-    Iterator erase(Iterator iter)
+    void erase(Iterator iter)
     {
-        /// \todo Implement
-        static Iterator ret(0);
-        return ret;
+        // Remove the key from the tree.
+        remove(iter.key());
+
+        // Passed iterator is now invalid.
     }
 
     /** Get an iterator pointing to the beginning of the Vector
