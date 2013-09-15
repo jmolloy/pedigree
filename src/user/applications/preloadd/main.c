@@ -43,12 +43,15 @@ const char *g_FilesToPreload[] = {
     0
 };
 
+#define BLOCK_READ_SIZE     0x10000
+
 int main(int argc, char **argv)
 {
   syslog(LOG_INFO, "preloadd: starting...");
 
   size_t n = 0;
   const char *s = g_FilesToPreload[n++];
+  char *buf = (char *) malloc(BLOCK_READ_SIZE);
   do
   {
     struct stat st;
@@ -57,9 +60,8 @@ int main(int argc, char **argv)
     {
       syslog(LOG_INFO, "preloadd: preloading %s...", s);
       FILE *fp = fopen(s, "rb");
-      char *buf = (char *) malloc(st.st_size);
-      fread(buf, st.st_size, 1, fp);
-      free(buf);
+      for(off_t off = 0; off < st.st_size; off += BLOCK_READ_SIZE);
+        fread(buf, BLOCK_READ_SIZE, 1, fp);
       fclose(fp);
       syslog(LOG_INFO, "preloadd: preloading %s complete!", s);
     }
@@ -69,6 +71,8 @@ int main(int argc, char **argv)
     }
     s = g_FilesToPreload[n++];
   } while(s);
+
+  free(buf);
 
   /// \todo Fix bug with orphaned processes exiting.
   while(1) sched_yield();
