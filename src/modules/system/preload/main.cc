@@ -54,6 +54,7 @@ int preloadThread(void *p)
         while(sz < pFile->getSize())
         {
             pFile->read(sz, 0x1000, 0);
+            sz += 0x1000;
         }
     }
 

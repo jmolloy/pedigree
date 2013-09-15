@@ -43,7 +43,7 @@ const char *g_FilesToPreload[] = {
     0
 };
 
-#define BLOCK_READ_SIZE     0x10000
+#define BLOCK_READ_SIZE     0x100000
 
 int main(int argc, char **argv)
 {
