@@ -342,19 +342,34 @@ extern "C" int main(int argc, char *argv[])
 }
 
 std::string findObject(std::string name, bool envpath) {
-    std::string fixed_path = name;
     std::list<std::string>::iterator it = g_lSearchPaths.begin();
-    do {
-        struct stat st;
-        int l = stat(fixed_path.c_str(), &st);
-        if((l == 0) && S_ISREG(st.st_mode)) {
-            return fixed_path;
+    if(it != g_lSearchPaths.end())
+    {
+        std::string fixed_path;
+
+        // Don't do fixup for an absolute path.
+        if((name[0] == '.') || (name[0] == '/') || (name.find("»") != std::string::npos))
+            fixed_path = name;
+        else {
+            fixed_path = *it;
+            fixed_path += "/";
+            fixed_path += name;
         }
 
-        fixed_path = *it;
-        fixed_path += "/";
-        fixed_path += name;
-    } while(++it != g_lSearchPaths.end());
+        do {
+            syslog(LOG_INFO, "Trying %s", fixed_path.c_str());
+
+            struct stat st;
+            int l = stat(fixed_path.c_str(), &st);
+            if((l == 0) && S_ISREG(st.st_mode)) {
+                return fixed_path;
+            }
+
+            fixed_path = *it;
+            fixed_path += "/";
+            fixed_path += name;
+        } while(++it != g_lSearchPaths.end());
+    }
 
     if(envpath) {
         // Check $PATH for the file.
@@ -367,7 +382,7 @@ std::string findObject(std::string name, bool envpath) {
                 g_lSearchPaths.push_back(std::string(entry));
 
                 /// \todo Handle environment variables in entry if needed.
-                fixed_path = entry;
+                std::string fixed_path(entry);
                 fixed_path += "/";
                 fixed_path += name;
 
