@@ -146,19 +146,24 @@ String::operator const char *() const
 String &String::operator += (const String &x)
 {
     size_t newLength = x.length() + m_Length + 1;
-    if (newLength < StaticSize)
+
+    char *dst = m_Static;
+
+    // Do we need to transfer static into dynamic for this?
+    if (newLength >= StaticSize)
     {
-        // By the nature of the two lengths combined being below the static
-        // size, we can be assured that we can use the static buffer in
-        // both strings.
-        memcpy(&m_Static[m_Length], x.m_Static, x.length() + 1);
-    }
-    else
-    {
-        reserve(x.length() + m_Length + 1);
-        memcpy(&m_Data[m_Length], x.m_Data, x.length() + 1);
+        reserve(newLength);
+        if (m_Length < StaticSize)
+            memcpy(m_Data, m_Static, m_Length);
+        dst = m_Data;
     }
 
+    const char *src = x.m_Static;
+    if (x.length() > StaticSize)
+        src = x.m_Data;
+
+    // Copy!
+    memcpy(&dst[m_Length], src, x.length() + 1);
     m_Length += x.length();
     return *this;
 }
