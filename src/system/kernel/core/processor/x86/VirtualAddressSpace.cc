@@ -614,6 +614,10 @@ VirtualAddressSpace *X86VirtualAddressSpace::clone()
         if ((*pageDirectoryEntry & PAGE_PRESENT) != PAGE_PRESENT)
             continue;
 
+        // Don't clone 4 MB pages.
+        if ((*pageDirectoryEntry & PAGE_4MB) == PAGE_4MB)
+            continue;
+
         for (uintptr_t j = 0; j < 1024; j++)
         {
             uint32_t *pageTableEntry = PAGE_TABLE_ENTRY(m_VirtualPageTables, i, j);

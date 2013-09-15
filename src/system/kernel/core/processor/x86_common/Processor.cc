@@ -24,6 +24,7 @@
 
 void Processor::initialisationDone()
 {
+    /*
   #if defined(X86)
     // Unmap the identity mapping of the first MBs
     X86VirtualAddressSpace &KernelAddressSpace = static_cast<X86VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace());
@@ -35,6 +36,7 @@ void Processor::initialisationDone()
     *reinterpret_cast<uint64_t*>(KernelAddressSpace.m_PhysicalPML4) = 0;
     invalidate(0);
   #endif
+  */
 
   X86CommonPhysicalMemoryManager::instance().initialisationDone();
 }
