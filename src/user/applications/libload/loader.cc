@@ -117,7 +117,7 @@ extern "C" void *pedigree_sys_request_mem(size_t len);
 
 bool loadObject(const char *filename, object_meta_t *meta, bool envpath = false);
 
-bool loadSharedObjectHelper(const char *filename, object_meta_t *parent, object_meta_t **out = NULL);
+bool loadSharedObjectHelper(const char *filename, object_meta_t *parent, object_meta_t **out = NULL, bool bRelocate = true);
 
 bool findSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, LookupPolicy policy = LocalFirst);
 
@@ -290,7 +290,7 @@ extern "C" int main(int argc, char *argv[])
             it != meta->needed.end();
             ++it) {
             if(g_LoadedObjects.find(*it) == g_LoadedObjects.end())
-                loadSharedObjectHelper(it->c_str(), meta);
+                loadSharedObjectHelper(it->c_str(), meta, NULL, false);
         }
     }
 
@@ -400,7 +400,7 @@ std::string findObject(std::string name, bool envpath) {
     return std::string("<not found>");
 }
 
-bool loadSharedObjectHelper(const char *filename, object_meta_t *parent, object_meta_t **out) {
+bool loadSharedObjectHelper(const char *filename, object_meta_t *parent, object_meta_t **out, bool bRelocate) {
     object_meta_t *object = new object_meta_t;
     bool bSuccess = true;
     if(!loadObject(filename, object)) {
@@ -415,14 +415,22 @@ bool loadSharedObjectHelper(const char *filename, object_meta_t *parent, object_
             for(std::list<std::string>::iterator it = object->needed.begin();
                 it != object->needed.end();
                 ++it) {
-                if(g_LoadedObjects.find(*it) == g_LoadedObjects.end())
-                    bSuccess = loadSharedObjectHelper(it->c_str(), parent);
+                if(g_LoadedObjects.find(*it) == g_LoadedObjects.end()) {
+                    object_meta_t *child = 0;
+                    bSuccess = loadSharedObjectHelper(it->c_str(), parent, &child, bRelocate);
+                }
             }
         }
+
     }
 
     if(out) {
         *out = object;
+    }
+
+    // Relocate object - now loaded.
+    if(bRelocate) {
+        doRelocation(object);
     }
 
     return bSuccess;
@@ -1260,8 +1268,6 @@ void *_libload_dlopen(const char *file, int mode) {
     if(!bLoad) {
         return 0;
     }
-
-    doRelocation(result);
 
     if(result->init_func) {
         init_fini_func_t init = (init_fini_func_t) result->init_func;
