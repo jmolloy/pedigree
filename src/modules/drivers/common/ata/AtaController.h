@@ -54,6 +54,12 @@ public:
     virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
                                   uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8) = 0;
 
+    virtual bool compareRequests(const RequestQueue::Request &a, const RequestQueue::Request &b)
+    {
+        // ATA disk and request location match.
+        return (a.p2 == b.p2) && (a.p3 == b.p3);
+    }
+
     // IRQ handler callback.
     virtual bool irq(irq_id_t number, InterruptState &state)
     {
