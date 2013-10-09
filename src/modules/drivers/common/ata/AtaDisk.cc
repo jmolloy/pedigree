@@ -289,11 +289,23 @@ void AtaDisk::flush(uint64_t location)
     if(location & 0xFFF)
         location &= ~0xFFF;
 
-    uintptr_t buff = m_Cache.lookup(location);
+    // Grab our parent.
+    AtaController *pParent = static_cast<AtaController*> (m_pParent);
+
+    // Look through the align points.
+    uint64_t alignPoint = 0;
+    for (size_t i = 0; i < m_nAlignPoints; i++)
+        if (m_AlignPoints[i] < location && m_AlignPoints[i] > alignPoint)
+            alignPoint = m_AlignPoints[i];
+
+    // Calculate the offset to get location on a page boundary.
+    ssize_t offs =  -((location - alignPoint) % 4096);
+
+    uintptr_t buff = m_Cache.lookup(location+offs);
     if(!buff)
         return;
 
-    doWrite(location);
+    pParent->addRequest(1, ATA_CMD_WRITE, reinterpret_cast<uint64_t> (this), location+offs);
 }
 
 uint64_t AtaDisk::doRead(uint64_t location)
