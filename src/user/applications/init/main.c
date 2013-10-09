@@ -48,6 +48,17 @@ int main(int argc, char **argv)
   }
   syslog(LOG_INFO, "init: preloadd running with pid %d", f);
 
+  // Start up a Python interpreter to kick off a big bytecode compile.
+  // This will make starting up the interpreter later much faster.
+  f = fork();
+  if(f == 0)
+  {
+    syslog(LOG_INFO, "init: starting python...");
+    execl("/applications/python", "/applications/python", "-c", "\"\"", 0);
+    syslog(LOG_INFO, "init: loading python failed: %s", strerror(errno));
+    exit(errno);
+  }
+
   // Fork out and run the window manager
   /// \todo Need some sort of init script that specifies what we should
   ///       actually load and do here!
