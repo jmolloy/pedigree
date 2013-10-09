@@ -70,7 +70,7 @@ protected:
 #ifdef THREADS
                     mutex(true),pThread(0),
 #endif
-                    isAsync(false),bReject(false),next(0) {}
+                    isAsync(false),bReject(false),next(0),refcnt(0) {}
         ~Request() {}
         uint64_t p1,p2,p3,p4,p5,p6,p7,p8;
         uint64_t ret;
@@ -81,6 +81,7 @@ protected:
         bool isAsync;
         bool bReject;
         Request *next;
+        size_t refcnt;
     private:
         Request(const Request&);
         void operator =(const Request&);

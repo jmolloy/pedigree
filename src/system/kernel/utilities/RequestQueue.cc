@@ -72,6 +72,10 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
   pReq->isAsync = false;
   pReq->next = 0;
   pReq->bReject = false;
+  pReq->refcnt = 1;
+
+  // Do we own pReq?
+  bool bOwnRequest = true;
 
   // Add to the request queue.
   m_RequestQueueMutex.acquire();
@@ -83,29 +87,36 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
     Request *p = m_pRequestQueue[priority];
     while (p->next != 0)
     {
-        // Avoid duplicates if the compare function is defined.
+        // Wait for duplicates instead of re-inserting, if the compare function is defined.
         if(compareRequests(*p, *pReq))
         {
+            bOwnRequest = false;
             delete pReq;
-            m_RequestQueueMutex.release();
-            NOTICE_NOLOCK("RequestQueue::addRequest early return - dupe item");
-            return 0;
+            pReq = p;
+            break;
         }
       p = p->next;
     }
 
-    if(compareRequests(*p, *pReq))
+    if(bOwnRequest && compareRequests(*p, *pReq))
     {
+        bOwnRequest = false;
         delete pReq;
-        m_RequestQueueMutex.release();
-        NOTICE_NOLOCK("RequestQueue::addRequest early return - dupe item");
-        return 0;
+        pReq = p;
     }
-    p->next = pReq;
+    else if(bOwnRequest)
+        p->next = pReq;
   }
 
-  pReq->pThread = Processor::information().getCurrentThread();
-  pReq->pThread->addRequest(pReq);
+  if(!bOwnRequest)
+  {
+    ++pReq->refcnt;
+  }
+  else
+  {
+    pReq->pThread = Processor::information().getCurrentThread();
+    pReq->pThread->addRequest(pReq);
+  }
 
   // Increment the number of items on the request queue.
   m_RequestQueueSize.release();
@@ -121,7 +132,8 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
       // Hmm, in the time the RequestQueueMutex was being acquired, we got
       // pre-empted, and then an unexpected exit event happened. The request
       // is to be rejected, so don't acquire the mutex at all.
-      delete pReq;
+      if(!--pReq->refcnt)
+        delete pReq;
       return 0;
   }
 
@@ -140,7 +152,7 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
       // By releasing here, the worker thread can detect that the request was
       // interrupted and clean up by itself.
       NOTICE("RequestQueue::addRequest - interrupted");
-      if(pReq->bReject)
+      if(pReq->bReject && !--pReq->refcnt)
           delete pReq; // Safe to delete, unexpected exit condition
       pReq->mutex.release();
       return 0;
@@ -150,8 +162,12 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
   uintptr_t ret = pReq->ret;
 
   // Delete the request structure.
-  pReq->pThread->removeRequest(pReq);
-  delete pReq;
+  if(bOwnRequest)
+    pReq->pThread->removeRequest(pReq);
+  if(!--pReq->refcnt)
+    delete pReq;
+  else
+    pReq->mutex.release();
 
   return ret;
 #else
