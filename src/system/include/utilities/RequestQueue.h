@@ -86,6 +86,15 @@ protected:
         void operator =(const Request&);
     };
 
+    /**
+     * Defaults to never comparing as equal. Used to determine duplicates
+     * when adding async requests.
+     */
+    virtual bool compareRequests(const Request &a, const Request &b)
+    {
+        return false;
+    }
+
     /** Thread trampoline */
     static int trampoline(void *p);
 

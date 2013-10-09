@@ -72,8 +72,6 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
   pReq->isAsync = false;
   pReq->next = 0;
   pReq->bReject = false;
-  pReq->pThread = Processor::information().getCurrentThread();
-  pReq->pThread->addRequest(pReq);
 
   // Add to the request queue.
   m_RequestQueueMutex.acquire();
@@ -84,9 +82,30 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
   {
     Request *p = m_pRequestQueue[priority];
     while (p->next != 0)
+    {
+        // Avoid duplicates if the compare function is defined.
+        if(compareRequests(*p, *pReq))
+        {
+            delete pReq;
+            m_RequestQueueMutex.release();
+            NOTICE_NOLOCK("RequestQueue::addRequest early return - dupe item");
+            return 0;
+        }
       p = p->next;
+    }
+
+    if(compareRequests(*p, *pReq))
+    {
+        delete pReq;
+        m_RequestQueueMutex.release();
+        NOTICE_NOLOCK("RequestQueue::addRequest early return - dupe item");
+        return 0;
+    }
     p->next = pReq;
   }
+
+  pReq->pThread = Processor::information().getCurrentThread();
+  pReq->pThread->addRequest(pReq);
 
   // Increment the number of items on the request queue.
   m_RequestQueueSize.release();
@@ -152,8 +171,6 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
   pReq->isAsync = true;
   pReq->next = 0;
   pReq->bReject = false;
-  pReq->pThread = Processor::information().getCurrentThread();
-  pReq->pThread->addRequest(pReq);
 
   // Add to the request queue.
   m_RequestQueueMutex.acquire();
@@ -165,21 +182,31 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
     Request *p = m_pRequestQueue[priority];
     while (p->next != 0)
     {
-      if(p == pReq)
+      // Don't add duplicate requests.
+      if(compareRequests(*p, *pReq))
       {
+        delete pReq;
+        m_RequestQueueMutex.release();
+        NOTICE_NOLOCK("RequestQueue::addRequest early return - dupe item");
         return 0;
       }
       p = p->next;
     }
-    if(p != pReq)
+    if(!compareRequests(*p, *pReq))
       p->next = pReq;
     else
     {
+      delete pReq;
+      m_RequestQueueMutex.release();
+      NOTICE_NOLOCK("RequestQueue::addRequest early return - dupe item");
       return 0;
     }
   }
 
   assert_heap_ptr_valid(pReq);
+
+  pReq->pThread = Processor::information().getCurrentThread();
+  pReq->pThread->addRequest(pReq);
 
   // Increment the number of items on the request queue.
   m_RequestQueueSize.release();
