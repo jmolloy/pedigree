@@ -43,17 +43,21 @@ void CacheManager::initialise()
     {
         t->registerHandler(this);
     }
+
+    // Call out to the base class initialise() so the RequestQueue goes live.
+    RequestQueue::initialise();
 }
 
 void CacheManager::registerCache(Cache *pCache)
 {
     m_Caches.pushBack(pCache);
 }
+
 void CacheManager::unregisterCache(Cache *pCache)
 {
     for(List<Cache*>::Iterator it = m_Caches.begin();
         it != m_Caches.end();
-        it++)
+        ++it)
     {
         if((*it) == pCache)
         {
@@ -67,7 +71,7 @@ void CacheManager::compactAll(size_t count)
 {
     for(List<Cache*>::Iterator it = m_Caches.begin();
         (it != m_Caches.end()) && count;
-        it++)
+        ++it)
     {
         count -= (*it)->compact(count);
     }
@@ -77,10 +81,18 @@ void CacheManager::timer(uint64_t delta, InterruptState &state)
 {
     for(List<Cache*>::Iterator it = m_Caches.begin();
         it != m_Caches.end();
-        it++)
+        ++it)
     {
         (*it)->timer(delta, state);
     }
+}
+
+uint64_t CacheManager::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
+                                      uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8) {
+    if(!p1)
+        return 0;
+    Cache *pCache = reinterpret_cast<Cache *>(p1);
+    return pCache->executeRequest(p1, p2, p3, p4, p5, p6, p7, p8);
 }
 
 Cache::Cache() :
@@ -474,8 +486,11 @@ void Cache::timer(uint64_t delta, InterruptState &state)
         return;
     else if(UNLIKELY(m_Callback == 0))
         return;
-    else if(UNLIKELY(m_bInCritical == 1))
+    else if(UNLIKELY(m_bInCritical == 1)) {
+        // Missed - don't smash the system constantly doing this check.
+        m_Nanoseconds = 0;
         return;
+    }
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
@@ -483,7 +498,7 @@ void Cache::timer(uint64_t delta, InterruptState &state)
 
     for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
         it != m_Pages.end();
-        it++)
+        ++it)
     {
         CachePage *page = reinterpret_cast<CachePage*>(it.value());
         if(va.isMapped(reinterpret_cast<void *>(page->location)))
@@ -495,14 +510,8 @@ void Cache::timer(uint64_t delta, InterruptState &state)
             // If dirty, write back to the backing store.
             if(flags & VirtualAddressSpace::Dirty)
             {
-                // Callback!
-                struct callbackMeta *pMeta = new struct callbackMeta;
-                pMeta->cause = WriteBack;
-                pMeta->callback = m_Callback;
-                pMeta->loc = it.key();
-                pMeta->page = page->location;
-                pMeta->meta = m_CallbackMeta;
-                new Thread(Processor::information().getCurrentThread()->getParent(), callbackThread, pMeta);
+                // Queue the callback!
+                CacheManager::instance().addAsyncRequest(1, reinterpret_cast<uint64_t>(this), WriteBack, it.key(), page->location);
 
                 // Clear dirty flag - written back.
                 flags &= ~(VirtualAddressSpace::Dirty | VirtualAddressSpace::Accessed);
@@ -522,11 +531,22 @@ void Cache::setCallback(Cache::writeback_t newCallback, void *meta)
     m_CallbackMeta = meta;
 }
 
-int Cache::callbackThread(void *cache)
+uint64_t Cache::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
+                               uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8)
 {
-    struct callbackMeta *pMeta = reinterpret_cast<struct callbackMeta *>(cache);
-    pMeta->callback(pMeta->cause, pMeta->loc, pMeta->page, pMeta->meta);
-    delete pMeta;
+    if(!m_Callback)
+        return 0;
+
+    // Pin page while we do our writeback
+    pin(p3);
+
+    while(!m_Lock.enter());
+    m_Callback(static_cast<CallbackCause>(p2), p3, p4, m_CallbackMeta);
+    m_Lock.leave();
+
+    // Unpin page, writeback complete
+    release(p3);
+
     return 0;
 }
 

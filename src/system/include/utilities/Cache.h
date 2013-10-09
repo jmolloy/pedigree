@@ -42,7 +42,7 @@
 class Cache;
 
 /** Provides a clean abstraction to a set of data caches. */
-class CacheManager : public TimerHandler
+class CacheManager : public TimerHandler, public RequestQueue
 {
     public:
         CacheManager();
@@ -65,7 +65,26 @@ class CacheManager : public TimerHandler
         void compactAll(size_t count = ~0UL);
 
         virtual void timer(uint64_t delta, InterruptState &state);
+
     private:
+        /**
+         * RequestQueue doer - children give us new jobs, and we call out to
+         * them when they hit the front of the queue.
+         */
+        virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
+                                    uint64_t p6, uint64_t p7, uint64_t p8);
+
+    /**
+     * Used to ensure we only ever fire a WriteBack for the same page once -
+     * that is, we don't constantly write back the same page over and over
+     * while it's still queued.
+     */
+    virtual bool compareRequests(const Request &a, const Request &b)
+    {
+        // p1 = CallbackCause, p2 = key in m_Pages
+        return (a.p1 == b.p1) && (a.p2 == b.p2);
+    }
+
         static CacheManager m_Instance;
 
         List<Cache*> m_Caches;
@@ -193,16 +212,8 @@ private:
         uintptr_t loc;
         uintptr_t page;
         void *meta;
+        UnlikelyLock *cacheLock;
     };
-
-    /**
-     * Callback thread entry point.
-     *
-     * We can't call callbacks from the timer handler directly, as we cannot
-     * allow the timer handler to block when many other things use and require
-     * it to be firing more regularly. So we create a thread for each callback.
-     */
-    static int callbackThread(void *meta);
 
 public:
     /**
@@ -213,6 +224,12 @@ public:
      * not fire.
      */
     virtual void timer(uint64_t delta, InterruptState &state);
+
+    /**
+     * RequestQueue doer, called by the CacheManager instance.
+     */
+    virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
+                                    uint64_t p6, uint64_t p7, uint64_t p8);
 
 private:
 
