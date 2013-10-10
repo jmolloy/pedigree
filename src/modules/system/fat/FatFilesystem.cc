@@ -997,55 +997,75 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value, bool b
     return setEnt;
 }
 
-String FatFilesystem::convertFilenameTo(String filename)
+String FatFilesystem::convertFilenameTo(String fn)
 {
-    static NormalStaticString ret;
-    ret.clear();
-
     // Special dot & dotdot handling. Because periods are eaten by the algorithm, we need to
     // ensure that the dot and dotdot entries are returned with only padding.
-    if (!strcmp(static_cast<const char*>(filename), ".") || !strcmp(static_cast<const char*>(filename), ".."))
+    if (!strcmp(static_cast<const char*>(fn), ".") || !strcmp(static_cast<const char*>(fn), ".."))
     {
-        ret = filename;
-    }
-    else
-    {
-        size_t i;
-        bool bPeriod = false;
-        for (i = 0; i < 11; i++)
-        {
-            if (i >= filename.length())
-                break;
-            if (filename[i] != '.')
-                ret += toUpper(filename[i]);
-            else
-            {
-                bPeriod = true;
-                i++;
-                break;
-            }
-        }
-
-        if (bPeriod)
-        {
-            ret.pad(8);
-
-            size_t j = 0;
-            size_t nChars = 0;
-            while (((i + j) < filename.length()) && (nChars < 3))
-            {
-                ret += toUpper(filename[i + j]);
-                nChars++;
-                j++;
-            }
-        }
+        NormalStaticString ret;
+        ret = fn;
+        ret.pad(11);
+        return String(static_cast<const char *>(ret));
     }
 
-    // And finally, pad out whatever we need to to finish off
-    ret.pad(11);
+    // Strip the filename of any whitespace that might be dangling off the end.
+    fn.rstrip();
 
-    ret += '\0';
-    return String(static_cast<const char*>(ret));
+    NormalStaticString filename, ext;
+
+    // Initial generation loop.
+    size_t lastPeriod = ~0UL;
+    for(size_t i = 0; i < fn.length(); ++i)
+    {
+        // Valid character?
+        if(fn[i] == ' ' || fn[i] == '"' || fn[i] == '/' || fn[i] == '\\' ||
+           fn[i] == '[' || fn[i] == ']' || fn[i] == ':' || fn[i] == ';' ||
+           fn[i] == '=' || fn[i] == ',')
+            continue; // Illegal for SFN.
+        else if(fn[i] == '.')
+        {
+            if((i + 1) >= fn.length())
+            {
+                // Stripped input but whitespace follows. Ignore and terminate loop.
+                break;
+            }
+            lastPeriod = i;
+        }
+        else
+        {
+            filename += toUpper(fn[i]);
+        }
+    }
+
+    // Truncate filename if the filename portion is > 8 characters long
+    if(lastPeriod > 8)
+    {
+        filename.truncate(6);
+        filename += "~1"; /// \todo This should increment if a file is found with the same name!
+    }
+    // Or is the filename now longer than the distance to the last period?
+    else if(lastPeriod != ~0UL)
+    {
+        filename.truncate(lastPeriod);
+    }
+
+    // Pull the extension out, truncated to 3 characters, and skipping the full stoop.
+    for(size_t i = 1; i < 4; ++i)
+    {
+        if((lastPeriod + i) >= fn.length())
+            break;
+        ext += toUpper(fn[lastPeriod + i]);
+    }
+
+    // Pad as necessary.
+    filename.pad(8);
+    ext.pad(3);
+
+    // Merge the two strings and return!
+    filename.append(ext);
+    filename += '\0';
+    return String(static_cast<const char *>(filename));
 }
 
 String FatFilesystem::convertFilenameFrom(String filename)

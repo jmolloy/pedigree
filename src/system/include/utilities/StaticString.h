@@ -186,6 +186,14 @@ public:
       return ret;
   }
 
+  void truncate(size_t len)
+  {
+    if(len > m_Length)
+      return;
+    m_Length = len;
+    m_pData[len] = '\0';
+  }
+
   StaticString left(int n) const
   {
     StaticString<N> str;
