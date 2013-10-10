@@ -72,18 +72,18 @@ class CacheManager : public TimerHandler, public RequestQueue
          * them when they hit the front of the queue.
          */
         virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
-                                    uint64_t p6, uint64_t p7, uint64_t p8);
+                uint64_t p6, uint64_t p7, uint64_t p8);
 
-    /**
-     * Used to ensure we only ever fire a WriteBack for the same page once -
-     * that is, we don't constantly write back the same page over and over
-     * while it's still queued.
-     */
-    virtual bool compareRequests(const Request &a, const Request &b)
-    {
-        // p1 = CallbackCause, p2 = key in m_Pages
-        return (a.p1 == b.p1) && (a.p2 == b.p2);
-    }
+        /**
+         * Used to ensure we only ever fire a WriteBack for the same page once -
+         * that is, we don't constantly write back the same page over and over
+         * while it's still queued.
+         */
+        virtual bool compareRequests(const Request &a, const Request &b)
+        {
+            // p2 = CallbackCause, p3 = key in m_Pages
+            return (a.p2 == b.p2) && (a.p3 == b.p3);
+        }
 
         static CacheManager m_Instance;
 
@@ -229,7 +229,7 @@ public:
      * RequestQueue doer, called by the CacheManager instance.
      */
     virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
-                                    uint64_t p6, uint64_t p7, uint64_t p8);
+            uint64_t p6, uint64_t p7, uint64_t p8);
 
 private:
 
