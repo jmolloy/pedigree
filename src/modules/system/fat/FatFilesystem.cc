@@ -1050,6 +1050,26 @@ String FatFilesystem::convertFilenameTo(String fn)
         filename.truncate(lastPeriod);
     }
 
+    // Is the filename now empty?
+    if(!filename.length())
+    {
+        // Yes, dotfile (eg, .vimrc)
+        ++lastPeriod;
+
+        // .vimrc -> VIMRC~1
+        for(size_t i = 0; i < 6; ++i)
+        {
+            if((lastPeriod + i) >= fn.length())
+                break;
+            filename += toUpper(fn[lastPeriod + i]);
+        }
+
+        // Add tail, pad, and return.
+        filename += "~1"; /// todo Increment on duplicate
+        filename.pad(11);
+        return String(static_cast<const char *>(filename));
+    }
+
     // Pull the extension out, truncated to 3 characters, and skipping the full stoop.
     for(size_t i = 1; i < 4; ++i)
     {
