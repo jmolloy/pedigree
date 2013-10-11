@@ -112,8 +112,8 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
   else
   {
     // each long filename entry is 13 bytes of filename
-    size_t numSplit = fnLength / 13;
-    numRequired += (numSplit) + 1;
+    size_t numSplit = (fnLength + 12) / 13;
+    numRequired += numSplit;
   }
 
   size_t longFilenameOffset = fnLength;
