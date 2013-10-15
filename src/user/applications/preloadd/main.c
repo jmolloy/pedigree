@@ -74,7 +74,5 @@ int main(int argc, char **argv)
 
   free(buf);
 
-  /// \todo Fix bug with orphaned processes exiting.
-  while(1) sched_yield();
   return 0;
 }

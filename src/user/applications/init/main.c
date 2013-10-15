@@ -38,6 +38,9 @@ int main(int argc, char **argv)
 {
   syslog(LOG_INFO, "init: starting...");
 
+  // Start a new process group to run everything under.
+  setpgid(0, 0);
+
   // Fork out and run preloadd.
   pid_t f = fork();
   if(f == 0)
@@ -51,15 +54,15 @@ int main(int argc, char **argv)
 
   // Start up a Python interpreter to kick off a big bytecode compile.
   // This will make starting up the interpreter later much faster.
-  pid_t py = fork();
-  if(py == 0)
+  f = fork();
+  if(f == 0)
   {
     syslog(LOG_INFO, "init: starting python...");
     execl("/applications/python", "/applications/python", "-c", "\"\"", 0);
     syslog(LOG_INFO, "init: loading python failed: %s", strerror(errno));
     exit(errno);
   }
-  syslog(LOG_INFO, "init: python preload is pid %d");
+  syslog(LOG_INFO, "init: python preload is pid %d", f);
 
   // Fork out and run the window manager
   /// \todo Need some sort of init script that specifies what we should
@@ -74,11 +77,14 @@ int main(int argc, char **argv)
   }
   syslog(LOG_INFO, "init: winman running with pid %d", f);
 
-  // Reap the Python process we started earlier now that we've kicked off
-  // the window manager's startup.
-  waitpid(py, 0, 0);
-
   syslog(LOG_INFO, "init: complete!");
-  while(1);
+  while(1) {
+    /// \todo Do we want to eventually recognise that we have no more
+    ///       children, and terminate/shutdown/restart?
+    int status = 0;
+    pid_t changer = waitpid(-1, &status, 0);
+    if(changer > 0)
+      syslog(LOG_INFO, "init: child %d exited with status %d", changer, WEXITSTATUS(status));
+  }
   return 0;
 }
