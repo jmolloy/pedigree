@@ -181,6 +181,8 @@ String &String::operator += (const char *s)
     else
     {
         reserve(slen + m_Length + 1);
+        if (m_Length < StaticSize)
+            memcpy(m_Data, m_Static, m_Length);
         memcpy(&m_Data[m_Length], s, slen + 1);
     }
 
