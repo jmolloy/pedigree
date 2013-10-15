@@ -60,13 +60,19 @@ void String::assign(const char *s)
 }
 void String::reserve(size_t size)
 {
-    if ((size > m_Size) && (size > StaticSize))
+    // Don't reserve if we're a static string.
+    if (size < StaticSize)
+        return;
+    if ((size == m_Size) && (m_Size == StaticSize))
+        ++size; // Switching from static to dynamic.
+
+    if (size > m_Size)
     {
         char *tmp = m_Data;
         m_Data = new char [size];
         if (tmp != 0 && m_Size != 0)
             memcpy(m_Data, tmp, m_Size);
-        delete []tmp;
+        delete [] tmp;
         m_Size = size;
     }
 }
