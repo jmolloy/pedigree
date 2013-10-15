@@ -169,13 +169,8 @@ void Process::kill()
       }
   }
 
-  // Tell any threads that may be waiting for us to die.
-  if (m_pParent)
-  {
-      /// \todo Race condition here, if the waiter gets in before our thread is scheduled.
-      notifyWaiters();
-  }
-  else
+  // Add to the zombie queue if the process is an orphan.
+  if (!m_pParent)
   {
       NOTICE("Adding process to zombie queue for cleanup");
       

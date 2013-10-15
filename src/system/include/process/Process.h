@@ -45,6 +45,7 @@ class DynamicLinker;
  */
 class Process
 {
+    friend class Thread;
 public:
     /** Subsystems may inherit Process to provide custom functionality. However, they need
      *  to know whether a Process pointer is subsystem-specific. This enumeration is designed

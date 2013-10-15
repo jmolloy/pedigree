@@ -164,6 +164,18 @@ void Thread::setStatus(Thread::Status s)
 {
   m_Status = s;
   m_pScheduler->threadStatusChanged(this);
+
+  if(s == Thread::Zombie)
+  {
+    // Notify parent process we have become a zombie.
+    // We do this here to avoid an amazing race between calling notifyWaiters
+    // and scheduling a process into the Zombie state that can cause some
+    // processes to simply never be reaped.
+    if(m_pParent)
+    {
+        m_pParent->notifyWaiters();
+    }
+  }
 }
 
 void Thread::threadExited()
