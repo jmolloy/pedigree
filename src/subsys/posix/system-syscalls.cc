@@ -593,17 +593,17 @@ int posix_waitpid(int pid, int *status, int options)
     for(; i < Scheduler::instance().getNumProcesses(); ++i)
     {
         Process *pProcess = Scheduler::instance().getProcess(i);
+        if(pProcess == pThisProcess)
+            continue; // Don't wait for ourselves.
 
         if ((pid <= 0) && (pProcess->getType() == Process::Posix))
         {
             PosixProcess *pPosixProcess = static_cast<PosixProcess *>(pProcess);
             ProcessGroup *pGroup = pPosixProcess->getProcessGroup();
-            if (!pGroup)
-                continue;
             if (pid == 0)
             {
                 // Any process in the same process group as the caller.
-                if (!pThisGroup)
+                if (!(pGroup && pThisGroup))
                     continue;
                 if(pGroup->processGroupId != pThisGroup->processGroupId)
                     continue;
@@ -614,7 +614,7 @@ int posix_waitpid(int pid, int *status, int options)
                 if(pProcess->getParent() != pThisProcess)
                     continue;
             }
-            else if(pGroup->processGroupId != (pid * -1))
+            else if(pGroup && (pGroup->processGroupId != (pid * -1)))
             {
                 // Absolute group ID reference
                 continue;
@@ -629,6 +629,7 @@ int posix_waitpid(int pid, int *status, int options)
         // If not WNOHANG, subscribe our lock to this process' state changes.
         if((options & 1) == 0) // 1 == WNOHANG
         {
+            SC_NOTICE("  -> adding our wait lock to process " << pProcess->getId());
             pProcess->addWaiter(&waitLock);
         }
     }
