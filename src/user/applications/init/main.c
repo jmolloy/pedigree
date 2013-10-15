@@ -24,6 +24,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/wait.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -50,14 +51,15 @@ int main(int argc, char **argv)
 
   // Start up a Python interpreter to kick off a big bytecode compile.
   // This will make starting up the interpreter later much faster.
-  f = fork();
-  if(f == 0)
+  pid_t py = fork();
+  if(py == 0)
   {
     syslog(LOG_INFO, "init: starting python...");
     execl("/applications/python", "/applications/python", "-c", "\"\"", 0);
     syslog(LOG_INFO, "init: loading python failed: %s", strerror(errno));
     exit(errno);
   }
+  syslog(LOG_INFO, "init: python preload is pid %d");
 
   // Fork out and run the window manager
   /// \todo Need some sort of init script that specifies what we should
@@ -71,6 +73,10 @@ int main(int argc, char **argv)
     exit(errno);
   }
   syslog(LOG_INFO, "init: winman running with pid %d", f);
+
+  // Reap the Python process we started earlier now that we've kicked off
+  // the window manager's startup.
+  waitpid(py, 0, 0);
 
   syslog(LOG_INFO, "init: complete!");
   while(1);
