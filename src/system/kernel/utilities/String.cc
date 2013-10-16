@@ -91,8 +91,21 @@ String String::split(size_t offset)
         buf = m_Static;
 
     String s(&buf[offset]);
-    buf[offset] = '\0';
     m_Length = offset;
+
+    // Handle the case where the split causes our string to suddenly be shorter
+    // than the static size.
+    if((m_Length < StaticSize) && (buf == m_Data))
+    {
+        memcpy(m_Static, buf, m_Length);
+        buf = m_Static;
+
+        delete [] m_Data;
+        m_Data = 0;
+        m_Size = StaticSize;
+    }
+
+    buf[m_Length] = 0;
 
     return s;
 }
