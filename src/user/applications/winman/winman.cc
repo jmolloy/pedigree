@@ -44,6 +44,8 @@
 #include "winman.h"
 #include "Png.h"
 
+#define DEBUG_REDRAWS          0
+
 PedigreeGraphics::Framebuffer *g_pTopLevelFramebuffer = 0;
 
 RootContainer *g_pRootContainer = 0;
@@ -902,6 +904,16 @@ int main(int argc, char *argv[])
                             0, 0,
                             dirty.getW(), dirty.getH(),
                             g_nWidth, g_nHeight);
+#if DEBUG_REDRAWS
+                    cairo_set_source_rgba(cr, 0, 0, 1.0, 1.0);
+                    cairo_rectangle(
+                            cr,
+                            rt.getX() + dirty.getX(),
+                            rt.getY() + dirty.getY(),
+                            dirty.getW(),
+                            dirty.getH());
+                    cairo_stroke(cr);
+#endif
                 }
                 else
                 {
@@ -913,6 +925,9 @@ int main(int argc, char *argv[])
                             rt.getY() + dirty.getY(),
                             dirty.getW(),
                             dirty.getH());
+#if DEBUG_REDRAWS
+                    cairo_stroke_preserve(cr);
+#endif
                     cairo_fill(cr);
                 }
 
