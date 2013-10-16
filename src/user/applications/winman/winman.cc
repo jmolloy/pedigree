@@ -913,7 +913,6 @@ int main(int argc, char *argv[])
                             rt.getY() + dirty.getY(),
                             dirty.getW(),
                             dirty.getH());
-                    cairo_stroke_preserve(cr);
                     cairo_fill(cr);
                 }
 
