@@ -215,38 +215,22 @@ File *Filesystem::findNode(File *pNode, String path)
 
     // Cache lookup.
     File *pFile;
-    if (pDir->m_bCachePopulated)
-    {
-        pFile = pDir->m_Cache.lookup(path);
-
-        if (pFile)
-        {
-            // Cache lookup succeeded, recurse and return.
-            return findNode(pFile, restOfPath);
-        }
-        else
-        {
-            // Cache lookup failed, does not exist.
-            return 0;
-        }
-    }
-    else
+    if (!pDir->m_bCachePopulated)
     {
         // Directory contents not cached - cache them now.
         pDir->cacheDirectoryContents();
-        // Then lookup.
-        pFile = pDir->m_Cache.lookup(path);
+    }
 
-        if (pFile)
-        {
-            // Cache lookup succeeded, recurse and return.
-            return findNode(pFile, restOfPath);
-        }
-        else
-        {
-            // Cache lookup failed, does not exist.
-            return 0;
-        }
+    pFile = pDir->m_Cache.lookup(path);
+    if (pFile)
+    {
+        // Cache lookup succeeded, recurse and return.
+        return findNode(pFile, restOfPath);
+    }
+    else
+    {
+        // Cache lookup failed, does not exist.
+        return 0;
     }
 }
 
