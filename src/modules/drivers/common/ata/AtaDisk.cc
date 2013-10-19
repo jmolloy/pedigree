@@ -309,6 +309,7 @@ void AtaDisk::flush(uint64_t location)
         return;
 
     pParent->addRequest(1, ATA_CMD_WRITE, reinterpret_cast<uint64_t> (this), location+offs);
+#endif
 }
 
 uint64_t AtaDisk::doRead(uint64_t location)
