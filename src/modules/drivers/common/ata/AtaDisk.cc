@@ -255,6 +255,7 @@ uintptr_t AtaDisk::read(uint64_t location)
 
 void AtaDisk::write(uint64_t location)
 {
+#ifndef CRIPPLE_HDD
     if (location % 512)
         FATAL("AtaDisk: write request not on a sector boundary!");
 
@@ -276,6 +277,7 @@ void AtaDisk::write(uint64_t location)
         return;
 
     pParent->addAsyncRequest(1, ATA_CMD_WRITE, reinterpret_cast<uint64_t> (this), location+offs);
+#endif
 }
 
 void AtaDisk::align(uint64_t location)
@@ -286,6 +288,7 @@ void AtaDisk::align(uint64_t location)
 
 void AtaDisk::flush(uint64_t location)
 {
+#ifndef CRIPPLE_HDD
     if(location & 0xFFF)
         location &= ~0xFFF;
 
