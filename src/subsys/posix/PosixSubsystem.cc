@@ -256,7 +256,7 @@ PosixSubsystem::~PosixSubsystem()
     for(Tree<void*, MemoryMappedFile*>::Iterator it = m_MemoryMappedFiles.begin(); it != m_MemoryMappedFiles.end(); it++)
     {
         //uintptr_t addr = reinterpret_cast<uintptr_t>(it.key());
-        MemoryMappedFile *pFile = unmapFile(it.key());
+        MemoryMappedFile *pFile = m_MemoryMappedFiles.lookup(it.key());
         if(pFile->getFile())
         {
             // It better handle files that've already been unmapped...
