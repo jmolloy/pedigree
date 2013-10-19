@@ -53,7 +53,7 @@ glue_files = [
     'glue-scandir.c',
     'glue-dlmalloc.c',
     'glue-memcpy.c',
-    'glue-memset.c',
+    # 'glue-memset.c',
 ]
 
 crt0_files = ['crt0.c']
