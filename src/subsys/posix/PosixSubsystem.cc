@@ -256,7 +256,7 @@ PosixSubsystem::~PosixSubsystem()
     for(Tree<void*, MemoryMappedFile*>::Iterator it = m_MemoryMappedFiles.begin(); it != m_MemoryMappedFiles.end(); it++)
     {
         //uintptr_t addr = reinterpret_cast<uintptr_t>(it.key());
-        MemoryMappedFile *pFile = m_MemoryMappedFiles.lookup(it.key());
+        MemoryMappedFile *pFile = it.value();
         if(pFile->getFile())
         {
             // It better handle files that've already been unmapped...
@@ -291,7 +291,9 @@ PosixSubsystem::~PosixSubsystem()
 
             // Free from the space allocator as well
             m_pProcess->getSpaceAllocator().free(address, extent);
-            delete pFile;
+            if(pFile->decreaseRefCount()) {
+                delete pFile;
+            }
         }
     }
     m_MemoryMappedFiles.clear();
