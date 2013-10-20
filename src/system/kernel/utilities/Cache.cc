@@ -540,9 +540,13 @@ uint64_t Cache::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p
     // Pin page while we do our writeback
     pin(p3);
 
-    while(!m_Lock.enter());
+#ifdef SUPERDEBUG
+    NOTICE("Cache: writeback for off=" << p3 << " @" << p3 << "!");
+#endif
     m_Callback(static_cast<CallbackCause>(p2), p3, p4, m_CallbackMeta);
-    m_Lock.leave();
+#ifdef SUPERDEBUG
+    NOTICE_NOLOCK("Cache: writeback for off=" << p3 << " @" << p3 << " complete!");
+#endif
 
     // Unpin page, writeback complete
     release(p3);

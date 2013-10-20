@@ -437,11 +437,16 @@ uint32_t FatFilesystem::findFreeCluster(bool bLock)
 
 uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
-    NOTICE("FatFilesystem::write");
+#ifdef SUPERDEBUG
+    NOTICE("FatFilesystem::write(" << pFile->getName() << ")");
+#endif
 
     // test whether the entire Filesystem is read-only.
     if (m_bReadOnly)
     {
+#ifdef SUPERDEBUG
+        NOTICE("FAT: readonly filesystem");
+#endif
         SYSCALL_ERROR(ReadOnlyFilesystem);
         return 0;
     }
@@ -547,6 +552,10 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
     uint8_t* tmpBuffer = new uint8_t[m_BlockSize];
     uint8_t* srcBuffer = reinterpret_cast<uint8_t*>(buffer);
 
+#ifdef SUPERDEBUG
+    NOTICE("FAT bytesWritten=" << bytesWritten << " finalSize=" << finalSize);
+#endif
+
     // main write loop
     while (bytesWritten < finalSize)
     {
@@ -563,6 +572,10 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
         bytesWritten += len;
 
         // Write updated cluster to disk.
+#ifdef SUPERDEBUG
+        NOTICE("FAT write - clus=" << clus);
+        NOTICE("FAT write - offset=" << getSectorNumber(clus) * 512);
+#endif
         writeCluster(clus, reinterpret_cast<uintptr_t> (tmpBuffer));
 
         // No longer at the beginning of the write - reset cluster offset to zero.
@@ -574,12 +587,19 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
             break;
 
         if (isEof(clus))
+        {
+            if(bytesWritten < finalSize)
+                FATAL("EOF before written - still " << Dec << (finalSize - bytesWritten) << Hex << " bytes unwritten!!");
             break;
+        }
     }
 
     // Update the size on disk, if needed.
     if (fileSizeChange != 0)
     {
+#ifdef SUPERDEBUG
+        NOTICE("FAT Updating file size on disk change=" << Dec << fileSizeChange << Hex << "!");
+#endif
         updateFileSize(pFile, fileSizeChange);
         pFile->setSize(pFile->getSize() + fileSizeChange);
     }

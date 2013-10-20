@@ -203,7 +203,9 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
       {
         delete pReq;
         m_RequestQueueMutex.release();
-        NOTICE_NOLOCK("RequestQueue::addRequest early return - dupe item");
+#ifdef SUPERDEBUG
+        NOTICE("RequestQueue::addRequest early return - dupe item");
+#endif
         return 0;
       }
       p = p->next;
@@ -214,7 +216,9 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
     {
       delete pReq;
       m_RequestQueueMutex.release();
-      NOTICE_NOLOCK("RequestQueue::addRequest early return - dupe item");
+#ifdef SUPERDEBUG
+      NOTICE("RequestQueue::addRequest early return - dupe item");
+#endif
       return 0;
     }
   }

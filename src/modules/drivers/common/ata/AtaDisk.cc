@@ -533,6 +533,10 @@ uint64_t AtaDisk::doWrite(uint64_t location)
         FATAL("AtaDisk::doWrite - no buffer (completely misused method)");
     }
 
+#ifdef SUPERDEBUG
+    NOTICE("doWrite(" << location << ")");
+#endif
+
     /// \todo DMA?
     // Grab our parent.
     AtaController *pParent = static_cast<AtaController*> (m_pParent);
@@ -728,6 +732,10 @@ uint64_t AtaDisk::doWrite(uint64_t location)
 
     // Ignore any errors that may take place, but wait for this to complete.
     ataWait(commandRegs);
+#endif
+
+#ifdef SUPERDEBUG
+    NOTICE("ATA: successfully wrote " << nBytes << " bytes to disk.");
 #endif
     return nBytes;
 }
