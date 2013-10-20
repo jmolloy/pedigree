@@ -687,18 +687,24 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
             if ((*pageTableEntry & PAGE_PRESENT) != PAGE_PRESENT)
                 continue;
 
-            void *virtualAddress = reinterpret_cast<void*> ( ((i*1024)+j)*4096 );
-            if (getKernelAddressSpace().isMapped(virtualAddress))
-            {
-                bDidSkip = true;
-                continue;
-            }
 
             size_t flags = PAGE_GET_FLAGS(pageTableEntry);
 
             // Grab the physical address for it.
             physical_uintptr_t physicalAddress = PAGE_GET_PHYSICAL_ADDRESS(pageTableEntry);
 
+            void *virtualAddress = reinterpret_cast<void*> ( ((i*1024)+j)*4096 );
+            if (getKernelAddressSpace().isMapped(virtualAddress))
+            {
+                // Only skip if the P for this mapping is the same.
+                physical_uintptr_t kernelPhys = 0;
+                size_t flags = 0;
+                getKernelAddressSpace().getMapping(virtualAddress, kernelPhys, flags);
+                if(kernelPhys == physicalAddress) {
+                    bDidSkip = true;
+                    continue;
+                }
+            }
             // Page mapped in this address space but not in kernel. Unmap it.
             unmap(virtualAddress);
 
