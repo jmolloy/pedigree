@@ -44,7 +44,14 @@ MemoryMappedFile::MemoryMappedFile(size_t anonMapSize) :
 
 MemoryMappedFile::~MemoryMappedFile()
 {
-    LockGuard<Mutex> guard(m_Lock);
+    if(m_RefCount) {
+        FATAL("MemoryMappedFile destroyed with a positive refcount, this is BAD.");
+    }
+
+    if(m_Mappings.count()) {
+        ERROR("MemoryMappedFile::unload() must be called before destroying a MemoryMappedFile.");
+        FATAL("MemoryMappedFile destroyed with " << Dec << m_Mappings.count() << Hex << " mappings still present - this is BAD and that memory is now leaked.");
+    }
 
     /// \note You should call unload() before destroying a MemoryMappedFile.
     ///       as unload() can offset the keys of m_Mappings correctly.
