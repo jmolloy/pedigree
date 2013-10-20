@@ -375,24 +375,30 @@ std::string findObject(std::string name, bool envpath) {
         // Check $PATH for the file.
         char *path = getenv("PATH");
 
+        syslog(LOG_INFO, "PATH is %s", path);
+
         if(path) {
             // Parse, write.
-            const char *entry;
-            while((entry = strtok(path, ":"))) {
-                g_lSearchPaths.push_back(std::string(entry));
+            const char *entry = strtok(path, ":");
+            if(entry) {
+                do {
+                    g_lSearchPaths.push_back(std::string(entry));
 
-                /// \todo Handle environment variables in entry if needed.
-                std::string fixed_path(entry);
-                fixed_path += "/";
-                fixed_path += name;
+                    /// \todo Handle environment variables in entry if needed.
+                    std::string fixed_path(entry);
+                    fixed_path += "/";
+                    fixed_path += name;
 
-                std::string result = findObject(fixed_path, false);
+                    syslog(LOG_INFO, "Trying %s", fixed_path.c_str());
 
-                if(result != "<not found>")
-                    return result;
+                    std::string result = findObject(fixed_path, false);
 
-                // Remove from the search paths - wasn't found.
-                g_lSearchPaths.pop_back();
+                    if(result.compare("<not found>") != 0)
+                        return result;
+
+                    // Remove from the search paths - wasn't found.
+                    g_lSearchPaths.pop_back();
+                } while((entry = strtok(NULL, ":")));
             }
         }
     }
