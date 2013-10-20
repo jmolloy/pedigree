@@ -88,7 +88,9 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
 {
   FatFilesystem *pFs = reinterpret_cast<FatFilesystem *>(m_pFilesystem);
 
-  NOTICE("addEntry(" << filename << ")");
+#ifdef SUPERDEBUG
+  NOTICE("FatDirectory::addEntry(" << filename << ")");
+#endif
   LockGuard<Mutex> guard(m_Lock);
 
   // grab the first cluster of the parent directory
@@ -265,9 +267,16 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
       if(m_bCachePopulated)
         m_Cache.insert(filename, pFile);
 
+#ifdef SUPERDEBUG
+      NOTICE("  -> FatFilesystem::addEntry(" << filename << ") is successful");
+#endif
+
       return true;
     }
   }
+#ifdef SUPERDEBUG
+  NOTICE("  -> FatFilesystem::addEntry(" << filename << ") is not successful");
+#endif
   return false;
 }
 
