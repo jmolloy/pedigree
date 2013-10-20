@@ -124,10 +124,7 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess, size_t extent
         if(p == static_cast<physical_uintptr_t>(~0UL))
         {
             p = m_pFile->getPhysicalPage(it.key());
-        }
-        else
-        {
-            bMapWrite = true;
+            bMapWrite = false;
         }
 
         // Check for cloned address space - which can and does break shared mmaps.
@@ -191,9 +188,12 @@ void MemoryMappedFile::unload(uintptr_t address)
 
             // If we forked and copied this page, we want to delete the second copy.
             // So, if the physical mapping is not what we have on record, free it.
-            if (bFreePages && (p != static_cast<physical_uintptr_t>(~0UL)) && (p != it.value()))
+            if (bFreePages && (p != it.value()))
                 PhysicalMemoryManager::instance().freePage(p);
-            else
+            // Alternatively, if the page isn't mapped shared, it can be destroyed.
+            else if (bFreePages && (p == it.value()) && ((flags & VirtualAddressSpace::Shared) == 0))
+                PhysicalMemoryManager::instance().freePage(p);
+            else if (!bFreePages)
                 // No longer using this page.
                 m_pFile->returnPhysicalPage(it.key());
         }
