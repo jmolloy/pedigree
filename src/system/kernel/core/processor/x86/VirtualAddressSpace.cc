@@ -634,7 +634,7 @@ VirtualAddressSpace *X86VirtualAddressSpace::clone()
 
             if(flags & PAGE_SHARED) {
                 // Handle shared mappings - don't copy the original page.
-                mapCrossSpace(v, physicalAddress, virtualAddress, fromFlags(flags));
+                mapCrossSpace(v, physicalAddress, virtualAddress, fromFlags(flags, true));
                 continue;
             }
 
@@ -654,7 +654,7 @@ VirtualAddressSpace *X86VirtualAddressSpace::clone()
             unmap(KERNEL_VIRTUAL_TEMP1);
 
             // Map in.
-            mapCrossSpace(v, newFrame, virtualAddress, fromFlags(flags));
+            mapCrossSpace(v, newFrame, virtualAddress, fromFlags(flags, true));
         }
     }
 
