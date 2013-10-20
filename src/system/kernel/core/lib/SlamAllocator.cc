@@ -77,6 +77,19 @@ uintptr_t SlamCache::allocate()
         {
             N = const_cast<Node*>(m_PartialLists[thisCpu]);
 
+            if(N && (N->next == reinterpret_cast<Node*>(VIGILANT_MAGIC)))
+            {
+                ERROR_NOLOCK("SlamCache::allocate hit a free block that probably wasn't free");
+                m_PartialLists[thisCpu] = N = 0; // Free list is borked, start over with a new slab
+            }
+#if USING_MAGIC
+            if(N && ((N->magic != TEMP_MAGIC) && (N->magic != MAGIC_VALUE)))
+            {
+                ERROR_NOLOCK("SlamCache::allocate hit a free block that probably wasn't free");
+                m_PartialLists[thisCpu] = N = 0; // Free list is borked, start over with a new slab
+            }
+#endif
+
             if (N == 0)
             {
                 Node *pNode = initialiseSlab(getSlab());
@@ -87,19 +100,6 @@ uintptr_t SlamCache::allocate()
 #endif
                 return slab;
             }
-
-            if(N->next == reinterpret_cast<Node*>(VIGILANT_MAGIC))
-            {
-                ERROR_NOLOCK("SlamCache::allocate hit a free block that probably wasn't free");
-                m_PartialLists[thisCpu] = N = 0; // Free list is borked, start over with a new slab
-            }
-#if USING_MAGIC
-            if((N->magic != TEMP_MAGIC) && (N->magic != MAGIC_VALUE))
-            {
-                ERROR_NOLOCK("SlamCache::allocate hit a free block that probably wasn't free");
-                m_PartialLists[thisCpu] = N = 0; // Free list is borked, start over with a new slab
-            }
-#endif
 
             pNext = N->next;
         } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
