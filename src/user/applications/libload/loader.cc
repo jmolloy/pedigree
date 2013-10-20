@@ -357,7 +357,9 @@ std::string findObject(std::string name, bool envpath) {
         }
 
         do {
+#ifdef SUPERDEBUG
             syslog(LOG_INFO, "Trying %s", fixed_path.c_str());
+#endif
 
             struct stat st;
             int l = stat(fixed_path.c_str(), &st);
@@ -375,8 +377,6 @@ std::string findObject(std::string name, bool envpath) {
         // Check $PATH for the file.
         char *path = getenv("PATH");
 
-        syslog(LOG_INFO, "PATH is %s", path);
-
         if(path) {
             // Parse, write.
             const char *entry = strtok(path, ":");
@@ -389,7 +389,9 @@ std::string findObject(std::string name, bool envpath) {
                     fixed_path += "/";
                     fixed_path += name;
 
+#ifdef SUPERDEBUG
                     syslog(LOG_INFO, "Trying %s", fixed_path.c_str());
+#endif
 
                     std::string result = findObject(fixed_path, false);
 
