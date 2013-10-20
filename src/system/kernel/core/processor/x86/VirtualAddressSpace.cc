@@ -626,10 +626,17 @@ VirtualAddressSpace *X86VirtualAddressSpace::clone()
                 continue;
 
             uint32_t flags = PAGE_GET_FLAGS(pageTableEntry);
+            physical_uintptr_t physicalAddress = PAGE_GET_PHYSICAL_ADDRESS(pageTableEntry);
 
             void *virtualAddress = reinterpret_cast<void*> ( ((i*1024)+j)*4096 );
             if (getKernelAddressSpace().isMapped(virtualAddress))
                 continue;
+
+            if(flags & PAGE_SHARED) {
+                // Handle shared mappings - don't copy the original page.
+                mapCrossSpace(v, physicalAddress, virtualAddress, fromFlags(flags));
+                continue;
+            }
 
             // Page mapped in source address space, but not in kernel.
             /// \todo Copy on write.
