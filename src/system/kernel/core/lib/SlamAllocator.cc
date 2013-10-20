@@ -76,7 +76,18 @@ uintptr_t SlamCache::allocate()
         do
         {
             N = const_cast<Node*>(m_PartialLists[thisCpu]);
-            
+
+            if (N == 0)
+            {
+                Node *pNode = initialiseSlab(getSlab());
+                uintptr_t slab = reinterpret_cast<uintptr_t>(pNode);
+#if CRIPPLINGLY_VIGILANT
+                if (SlamAllocator::instance().getVigilance())
+                    trackSlab(slab);
+#endif
+                return slab;
+            }
+
             if(N->next == reinterpret_cast<Node*>(VIGILANT_MAGIC))
             {
                 ERROR_NOLOCK("SlamCache::allocate hit a free block that probably wasn't free");
@@ -90,17 +101,6 @@ uintptr_t SlamCache::allocate()
             }
 #endif
 
-            if (N == 0)
-            {
-                Node *pNode = initialiseSlab(getSlab());
-                uintptr_t slab = reinterpret_cast<uintptr_t>(pNode);
-#if CRIPPLINGLY_VIGILANT
-                if (SlamAllocator::instance().getVigilance())
-                    trackSlab(slab);
-#endif
-                return slab;
-            }
-            
             pNext = N->next;
         } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
         
