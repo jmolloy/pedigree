@@ -61,7 +61,7 @@ public:
 
     /** Unloads this file.
         \note Should ONLY be called from MemoryMappedFileManager! */
-    void unload(uintptr_t address);
+    void unload(uintptr_t address, uintptr_t fileoffset);
 
     /** Trap occurred. Should be called only from MemoryMappedFileManager!
         \param address The address of the fault.

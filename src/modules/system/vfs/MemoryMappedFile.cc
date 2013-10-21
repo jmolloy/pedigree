@@ -162,7 +162,7 @@ bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess, size_t extent
     return true;
 }
 
-void MemoryMappedFile::unload(uintptr_t address)
+void MemoryMappedFile::unload(uintptr_t address, uintptr_t fileoffset)
 {
     LockGuard<Mutex> guard(m_Lock);
 
@@ -173,7 +173,8 @@ void MemoryMappedFile::unload(uintptr_t address)
          it != m_Mappings.end();
          it++)
     {
-        uintptr_t v = it.key() + address;
+        // Key = file offset + offset into specific memory mapping
+        uintptr_t v = (it.key() - fileoffset) + address;
 
         // Check for shared page.
         bool bFreePages = (it.value() != static_cast<physical_uintptr_t>(~0UL));
@@ -467,7 +468,7 @@ void MemoryMappedFileManager::unmap(MemoryMappedFile *pMmFile)
     {
         if ( (*it)->file == pMmFile )
         {
-            (*it)->file->unload( (*it)->offset );
+            (*it)->file->unload( (*it)->offset, (*it)->fileoffset );
             if ((*it)->file->decreaseRefCount())
             {
                 delete (*it)->file;
@@ -528,7 +529,7 @@ void MemoryMappedFileManager::unmapAll()
          it != pMmFileList->end();
          it = pMmFileList->begin())
     {
-        (*it)->file->unload( (*it)->offset );
+        (*it)->file->unload( (*it)->offset, (*it)->fileoffset );
         if ((*it)->file->decreaseRefCount())
         {
             m_Cache.remove( (*it)->file->getFile() );
