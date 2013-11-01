@@ -20,6 +20,7 @@
 #include <compiler.h>
 #include <BootstrapInfo.h>
 #include <utilities/RangeList.h>
+#include <utilities/HashTable.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <Spinlock.h>
 
@@ -47,6 +48,8 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
                                 size_t pageConstraints,
                                 size_t Flags,
                                 physical_uintptr_t start = -1);
+
+    virtual void pin(physical_uintptr_t page);
 
     /** Initialise the page stack
      *\param[in] Info reference to the multiboot information structure */
@@ -153,6 +156,39 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
 
     /** To guard against multiprocessor reentrancy. */
     Spinlock m_Lock, m_RegionLock;
+
+    /** Utility to wrap a physical address and hash it. */
+    class PageHashable {
+        public:
+            PageHashable() {
+                m_Hash = m_Page = 0;
+            }
+
+            PageHashable(physical_uintptr_t p) {
+                m_Hash = p / getPageSize();
+                m_Page = p;
+            }
+
+            size_t hash() const {
+                return m_Hash;
+            }
+
+            bool operator == (const PageHashable &p) const {
+                return p.m_Page == m_Page;
+            }
+
+        private:
+            size_t m_Hash;
+            physical_uintptr_t m_Page;
+    };
+
+    /** Physical page metadata. */
+    struct page {
+        size_t refcount;
+    };
+
+    /** Page metadata table */
+    HashTable<PageHashable, struct page> m_PageMetadata;
 };
 
 /** @} */

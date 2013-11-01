@@ -113,6 +113,16 @@ void X86CommonPhysicalMemoryManager::freePageUnlocked(physical_uintptr_t page)
     if(!m_Lock.acquired())
         FATAL("X86CommonPhysicalMemoryManager::freePageUnlocked called without an acquired lock");
 
+    // Check for pinned page.
+    PageHashable key(page);
+    struct page *p = m_PageMetadata.lookup(key);
+    if (p)
+    {
+        // Drop the refcount but do not free unless zero.
+        if(--p->refcount)
+            return;
+    }
+
 #if defined(X86) && defined(DEBUGGER)
     physical_uintptr_t ptr_bitmap = page / 0x1000;
     size_t idx = ptr_bitmap / 32;
@@ -139,6 +149,19 @@ void X86CommonPhysicalMemoryManager::freePageUnlocked(physical_uintptr_t page)
         }
     }
 #endif
+}
+void X86CommonPhysicalMemoryManager::pin(physical_uintptr_t page) {
+    LockGuard<Spinlock> guard(m_Lock);
+
+    PageHashable key(page);
+    struct page *p = m_PageMetadata.lookup(key);
+    if (p)
+        ++p->refcount;
+    else {
+        p = new struct page;
+        p->refcount = 1;
+        m_PageMetadata.insert(key, p);
+    }
 }
 bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
                                                     size_t cPages,
@@ -527,6 +550,20 @@ void X86CommonPhysicalMemoryManager::initialisationDone()
     // Free the physical pages
     m_RangeBelow16MB.free(reinterpret_cast<uintptr_t>(&init) - reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_ADDRESS), count * getPageSize());
 
+    // Set up our hash table so it'll allocate only enough entries to
+    // cater for the amount of memory this system has.
+    physical_uintptr_t top = 0;
+    for (size_t i = 0; i < m_PhysicalRanges.size(); ++i)
+    {
+        physical_uintptr_t range_top = m_PhysicalRanges.getRange(i).address + m_PhysicalRanges.getRange(i).length;
+        if (range_top > top)
+        {
+            top = range_top;
+        }
+    }
+
+    m_PageMetadata.initialise(PageHashable(top).hash());
+
     NOTICE("PhysicalMemoryManager: cleaned up " << Dec << (count * 4) << Hex << "KB of init-only code.");
 }
 
@@ -535,7 +572,8 @@ X86CommonPhysicalMemoryManager::X86CommonPhysicalMemoryManager()
 #if defined(ACPI)                               
       m_AcpiRanges(),
 #endif                                              
-      m_MemoryRegions(), m_Lock(false, true), m_RegionLock(false, true)
+      m_MemoryRegions(), m_Lock(false, true), m_RegionLock(false, true),
+      m_PageMetadata()
 {
 }
 X86CommonPhysicalMemoryManager::~X86CommonPhysicalMemoryManager()

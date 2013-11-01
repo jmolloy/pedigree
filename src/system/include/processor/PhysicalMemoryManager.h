@@ -76,6 +76,17 @@ class PhysicalMemoryManager
      *\param[in] page physical address of the page */
     virtual void freePage(physical_uintptr_t page) = 0;
 
+    /**
+     * "Pin" a page, increasing its refcount.
+     *
+     * Every time a pinned page is passed to freePage, its refcount is decreased,
+     * and the page is only freed once the refcount hits zero.
+     *
+     * Note that an unpin function is not provided, as freePage offers the
+     * right semantics.
+     */
+    virtual void pin(physical_uintptr_t page) = 0;
+
     /** Allocate a memory-region with specific constraints the pages need to fullfill.
      *\param[in] Region reference to the MemoryRegion object
      *\param[in] cPages the number of pages to allocate for the MemoryRegion object
