@@ -132,7 +132,7 @@ class HashTable
 
             struct bucket *b = m_Buckets[hash];
             if(!b) {
-                m_Buckets[hash] = 0;
+                m_Buckets[hash] = newb;
             } else {
                 // Add to existing chain.
                 while(b->next) {
@@ -161,10 +161,19 @@ class HashTable
             }
 
             struct bucket *b = m_Buckets[hash];
-            if(b->next) {
+            if(b->key == k) {
                 m_Buckets[hash] = b->next;
             } else {
-                m_Buckets[hash] = 0;
+                struct bucket *p = b;
+                while(b && (b->key != k)) {
+                    p = b;
+                    b = b->next;
+                }
+
+                if(b) {
+                    p->next = b->next;
+                    delete b;
+                }
             }
 
             delete b;
