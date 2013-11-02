@@ -464,23 +464,18 @@ void X86VirtualAddressSpace::doUnmap(void *virtualAddress)
 }
 void *X86VirtualAddressSpace::doAllocateStack(size_t sSize)
 {
-  // LockGuard<Spinlock> guard(m_Lock);
-    m_Lock.acquire();
+  LockGuard<Spinlock> guard(m_Lock);
 
   // Get a virtual address for the stack
   void *pStack = 0;
   if (m_freeStacks.count() != 0)
   {
     pStack = m_freeStacks.popBack();
-
-    m_Lock.release();
   }
   else
   {
     pStack = m_pStackTop;
     m_pStackTop = adjust_pointer(m_pStackTop, -sSize);
-
-    m_Lock.release();
 
     // Map in the top page, then everything else will be demand paged
     uintptr_t stackBottom = reinterpret_cast<uintptr_t>(pStack) - sSize;
@@ -587,11 +582,7 @@ size_t X86VirtualAddressSpace::fromFlags(uint32_t Flags, bool bFinal)
 
 VirtualAddressSpace *X86VirtualAddressSpace::clone()
 {
-    // No lock guard in here - we assume that if we're cloning, nothing will be trying
-    // to map/unmap memory.
-    // Also, we need a way of solving this as we use the map/unmap functions, which
-    // themselves try and grab the lock.
-    /// \bug This assumption is false!
+    LockGuard<Spinlock> guard(m_Lock);
 
     VirtualAddressSpace &thisAddressSpace = Processor::information().getVirtualAddressSpace();
 
@@ -666,7 +657,7 @@ VirtualAddressSpace *X86VirtualAddressSpace::clone()
 
 void X86VirtualAddressSpace::revertToKernelAddressSpace()
 {
-    // Again, similar to clone(), we don't grab the lock. We should, but we don't.
+    LockGuard<Spinlock> guard(m_Lock);
 
     for (uintptr_t i = 0; i < 1024; i++)
     {
