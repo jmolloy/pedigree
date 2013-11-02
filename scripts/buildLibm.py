@@ -5,8 +5,7 @@ import shutil
 import os
 
 def doLibm(builddir, inputLibmA, ar, cc, libgcc):
-    
-    print "Building libm..."
+    print "Building libm...",
     
     tmpdir = tempfile.mkdtemp()
     
@@ -16,9 +15,8 @@ def doLibm(builddir, inputLibmA, ar, cc, libgcc):
     os.chdir(tmpdir)
 
     shutil.copy(inputLibmA, tmpdir + "/libm.a")
-    os.system(ar + " x libm.a")
-    os.system(cc + " -nostdlib -shared -Wl,-shared -Wl,-soname,libm.so -o " + buildOut + ".so *.o -lgcc")
-    os.system(ar + " cru " + buildOut + ".a *.o")
+    shutil.copy(inputLibmA, buildOut + '.a')
+    os.system(cc + " -nostdlib -shared -Wl,-soname,libm.so -L. -o " + buildOut + ".so -Wl,--whole-archive -lm --Wl,--no-whole-archive -lgcc")
 
     for i in os.listdir("."):
         os.remove(i)
@@ -26,5 +24,7 @@ def doLibm(builddir, inputLibmA, ar, cc, libgcc):
     os.chdir(olddir)
     os.rmdir(tmpdir)
 
+    print "ok!"
+
 import sys
-doLibm(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], "") # sys.argv[5])
+doLibm(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], "")

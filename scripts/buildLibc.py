@@ -24,8 +24,7 @@ import sys
 import subprocess
 
 def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
-    
-    print "Building libc..."
+    print "Building libc...",
     
     tmpdir = tempfile.mkdtemp()
     
@@ -34,15 +33,8 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
     olddir = os.getcwd()
     os.chdir(tmpdir)
 
+    # Bring across libc.a so we don't modify the actual master copy
     shutil.copy(inputLibcA, os.path.join(tmpdir, "libc.a"))
-    res = subprocess.call([ar, "x", "libc.a"], cwd=tmpdir)
-    if res:
-        print "  (failed)"
-        exit(res)
-
-    glue = glue_name
-    shutil.copy(glue, os.path.join(tmpdir, os.path.basename(glue_name)))
-    shutil.copy(pedigree_c_name, os.path.join(tmpdir, os.path.basename(pedigree_c_name)))
 
     objs_to_remove = [
         "init",
@@ -81,37 +73,50 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
         # "memset",
     ]
 
-    for i in objs_to_remove:
-        try:
-            os.remove("lib_a-" + i + ".o")
-        except:
-            continue
-    
-    res = subprocess.call([ar, "x", os.path.basename(glue_name)], cwd=tmpdir)
-    if res != 0:
-        print "  (failed)"
+    # Remove the object files we manually override in our glue.
+    args = [ar, "d", "libc.a"]
+    args.extend(['lib_a-%s.o' % (x,) for x in objs_to_remove])
+    res = subprocess.call(args, cwd=tmpdir)
+    if res:
+        print "  (failed -- couldn't remove objects from libc.a)"
         exit(res)
 
-    cc_cmd = [cc, "-nostdlib", "-shared", "-Wl,-shared", "-Wl,-soname,libc.so", "-o", buildOut + ".so", "-L."]
-    objs = [x for x in os.listdir(".") if '.obj' in x or '.o' in x]
-    cc_cmd.extend(objs)
-    cc_cmd.extend(["-lpedigree-c", "-lgcc"])
+    pedigreec_dir = os.path.dirname(pedigree_c_name)
+    glue_dir = os.path.dirname(glue_name)
+
+    cc_cmd = [
+        cc,
+        "-nostdlib",
+        "-shared",
+        "-Wl,-soname,libc.so",
+        "-o", buildOut + ".so",
+        "-L.",
+        "-L%s" % (pedigreec_dir,),
+        "-L%s" % (glue_dir,),
+        "-Wl,--whole-archive",
+        "-lc",
+        "-lpedigree-glue",
+        "-Wl,--no-whole-archive",
+        "-lpedigree-c",
+        "-lgcc",
+    ]
+
     res = subprocess.call(cc_cmd, cwd=tmpdir)
     if res != 0:
-        print "  (failed)"
+        print "  (failed -- to compile libc.so)"
         exit(res)
 
-    res = subprocess.call([ar, "cru", buildOut + ".a"] + objs, cwd=tmpdir)
-    if res != 0:
-        print "  (failed)"
-        os.unlink("%s.so" % (buildOut,))
-        exit(res)
+    # Copy static library out now.
+    shutil.copy(os.path.join(tmpdir, "libc.a"), buildOut)
 
+    # Clean up.
     for i in os.listdir("."):
         os.remove(i)
 
     os.chdir(olddir)
     if not os.uname()[0] == 'Pedigree':
         os.rmdir(tmpdir) # -ENOSYS on Pedigree host. Should fix that.
+
+    print "ok!"
 
 doLibc(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6], "")
