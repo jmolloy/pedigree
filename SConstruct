@@ -63,6 +63,7 @@ opts.AddVariables(
     BoolVariable('genflags', 'Whether or not to generate flags and things dynamically.', 1),
     BoolVariable('ccache', 'Prepend ccache to cross-compiler paths (for use with CROSS)', 0),
     BoolVariable('distcc', 'Prepend distcc to cross-compiler paths (for use with CROSS)', 0),
+    ('iwyu', 'If set, use the given as a the C++ compiler for include-what-you-use. Use -i with scons if you use IWYU.', ''),
     
     BoolVariable('nocache', 'Do not create an options.cache file (NOT recommended).', 0),
     BoolVariable('genversion', 'Whether or not to regenerate Version.cc if it already exists.', 1),
@@ -456,6 +457,13 @@ def create_version_cc(target, source, env):
     f.close()
     
 env.Command('#' + env['BUILDDIR'] + '/Version.cc', None, Action(create_version_cc, None))
+
+# Override CXX if needed.
+if env['iwyu']:
+    env['CXXFLAGS'] = re.sub('\-march\=.* \-mtune\=.*', '', env['CXXFLAGS'])
+    env['CXX'] = env['iwyu']
+
+    print env['CXXFLAGS']
 
 # Save the cache, all the options are configured
 if(not env['nocache']):
