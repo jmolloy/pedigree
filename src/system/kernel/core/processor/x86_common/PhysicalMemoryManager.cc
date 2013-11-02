@@ -119,8 +119,14 @@ void X86CommonPhysicalMemoryManager::freePageUnlocked(physical_uintptr_t page)
     if (p)
     {
         // Drop the refcount but do not free unless zero.
-        if(--p->refcount)
+        if (--p->refcount)
             return;
+        else
+        {
+            // No longer need this page's metadata, refcount is zero.
+            m_PageMetadata.remove(key);
+            delete p;
+        }
     }
 
 #if defined(X86) && defined(DEBUGGER)
@@ -151,8 +157,8 @@ void X86CommonPhysicalMemoryManager::freePageUnlocked(physical_uintptr_t page)
 #endif
 }
 void X86CommonPhysicalMemoryManager::pin(physical_uintptr_t page) {
-    LockGuard<Spinlock> guard(m_Lock);
-
+    /// \todo Atomicity issue here. operator new can call allocatePage,
+    ///       so we can't hold the spinlock. Need recursive locks...
     PageHashable key(page);
     struct page *p = m_PageMetadata.lookup(key);
     if (p)
@@ -331,6 +337,8 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
 {
     NOTICE("memory-map:");
 
+    physical_uintptr_t top = 0;
+
     // Fill the page-stack (usable memory above 16MB)
     // NOTE: We must do the page-stack first, because the range-lists already need the
     //       memory-management
@@ -349,12 +357,19 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
                 if(i >= 0x100000000ULL)
                     break;
                 if (i >= 0x1000000)
+                {
                     m_PageStack.free(i);
+                    if (i >= top)
+                        top = i + 0x1000;
+                }
             }
         }
 
         MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
     }
+
+    /// \todo do this in initialise64 too.
+    m_PageMetadata.initialise(PageHashable(top).hash());
 
     // Fill the range-lists (usable memory below 1/16MB & ACPI)
     MemoryMap = reinterpret_cast<MemoryMapEntry_t*>(Info.mmap_addr);
@@ -549,20 +564,6 @@ void X86CommonPhysicalMemoryManager::initialisationDone()
 
     // Free the physical pages
     m_RangeBelow16MB.free(reinterpret_cast<uintptr_t>(&init) - reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_ADDRESS), count * getPageSize());
-
-    // Set up our hash table so it'll allocate only enough entries to
-    // cater for the amount of memory this system has.
-    physical_uintptr_t top = 0;
-    for (size_t i = 0; i < m_PhysicalRanges.size(); ++i)
-    {
-        physical_uintptr_t range_top = m_PhysicalRanges.getRange(i).address + m_PhysicalRanges.getRange(i).length;
-        if (range_top > top)
-        {
-            top = range_top;
-        }
-    }
-
-    m_PageMetadata.initialise(PageHashable(top).hash());
 
     NOTICE("PhysicalMemoryManager: cleaned up " << Dec << (count * 4) << Hex << "KB of init-only code.");
 }
