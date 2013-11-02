@@ -157,8 +157,8 @@ void X86CommonPhysicalMemoryManager::freePageUnlocked(physical_uintptr_t page)
 #endif
 }
 void X86CommonPhysicalMemoryManager::pin(physical_uintptr_t page) {
-    /// \todo Atomicity issue here. operator new can call allocatePage,
-    ///       so we can't hold the spinlock. Need recursive locks...
+    LockGuard<Spinlock> guard(m_Lock);
+
     PageHashable key(page);
     struct page *p = m_PageMetadata.lookup(key);
     if (p)
