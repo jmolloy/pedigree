@@ -638,23 +638,22 @@ VirtualAddressSpace *X86VirtualAddressSpace::clone()
                 continue;
             }
 
-            // Page mapped in source address space, but not in kernel.
-            /// \todo Copy on write.
-            physical_uintptr_t newFrame = PhysicalMemoryManager::instance().allocatePage();
+            // Map the new page in to the new address space for copy-on-write.
+            // This implies read-only (so we #PF for copy on write).
+            flags |= PAGE_COPY_ON_WRITE;
+            flags &= ~PAGE_WRITE;
+            mapCrossSpace(v, physicalAddress, virtualAddress, fromFlags(flags, true));
 
-            // Temporarily map in.
-            map(newFrame,
-                KERNEL_VIRTUAL_TEMP1,
-                VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
+            // We need to modify the entry in *this* address space as well to
+            // also have the read-only and copy-on-write flag set, as otherwise
+            // writes in the parent process will cause the child process to see
+            // those changes immediately.
+            PAGE_SET_FLAGS(pageTableEntry, flags);
+            Processor::invalidate(virtualAddress);
 
-            // Copy across.
-            memcpy(KERNEL_VIRTUAL_TEMP1, virtualAddress, 0x1000);
-
-            // Unmap.
-            unmap(KERNEL_VIRTUAL_TEMP1);
-
-            // Map in.
-            mapCrossSpace(v, newFrame, virtualAddress, fromFlags(flags, true));
+            // Pin the page twice - once for each side of the clone.
+            PhysicalMemoryManager::instance().pin(physicalAddress);
+            PhysicalMemoryManager::instance().pin(physicalAddress);
         }
     }
 
@@ -708,12 +707,10 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
             // Page mapped in this address space but not in kernel. Unmap it.
             unmap(virtualAddress);
 
-            // And release the physical memory.
-            /// \todo There's going to be a caveat with CoW here...
-            if((flags & (PAGE_SHARED | PAGE_COPY_ON_WRITE)) == 0)
-            {
+            // And release the physical memory if it is not shared with another
+            // process (eg, memory mapped file)
+            if((flags & PAGE_SHARED) == 0)
                 PhysicalMemoryManager::instance().freePage(physicalAddress);
-            }
 
             // This PTE is no longer valid
             *pageTableEntry = 0;
