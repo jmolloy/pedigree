@@ -210,13 +210,11 @@ if env['haveqemuimg']:
         env['haveqemuimg'] = False
 
 # Verify the ISO program
-p = commands.getoutput("which " + env['isoprog'])
-if not os.path.exists(p):
-    print "ISO generation program does not exist - is mkisofs installed? Perhaps you need to add isoprog=genisoimage to the build command line."
-
-    # I'd prefer that this wasn't fatal, but it's REALLY important to get the attention
-    # of the person building Pedigree - it's easiest to test using an ISO after all.
-    exit(1)
+if not env['noiso']:
+    p = commands.getoutput("which " + env['isoprog'])
+    if not os.path.exists(p):
+        print "No program to generate ISOs, not generating an ISO."
+        env['noiso'] = True
 
 tmp = re.match('(.*?)\-.*', os.path.basename(env['CROSS']), re.S)
 if(env['ON_PEDIGREE'] or tmp != None):
