@@ -15,6 +15,7 @@
  */
 #include <Spinlock.h>
 #include <processor/Processor.h>
+#include <process/Thread.h>
 
 #ifdef TRACK_LOCKS
 #include <LocksCommand.h>
@@ -26,6 +27,8 @@
 
 void Spinlock::acquire()
 {
+  Thread *pThread = Processor::information().getCurrentThread();
+
   // Save the current irq status.
 
   // This save to local variable prevents a heinous race condition where the thread is
@@ -48,6 +51,14 @@ void Spinlock::acquire()
 
   while (m_Atom.compareAndSwap(true, false) == false)
   {
+    // Couldn't take the lock - can we re-enter the critical section?
+    if (m_pOwner == pThread)
+    {
+      // Yes.
+      ++m_Level;
+      break;
+    }
+
 #ifndef MULTIPROCESSOR
     /// \note When we hit this breakpoint, we're not able to backtrace as backtracing
     ///       depends on the log spinlock, which may have deadlocked. So we actually
@@ -69,6 +80,12 @@ void Spinlock::acquire()
       g_LocksCommand.lockAcquired(this);
 #endif
 
+  if (!m_pOwner)
+  {
+    m_pOwner = static_cast<void *>(pThread);
+    m_Level = 1;
+  }
+
   m_bInterrupts = bInterrupts;
 
 }
@@ -85,6 +102,14 @@ void Spinlock::release()
   {
       FATAL_NOLOCK("Wrong magic in release.");
   }
+
+  // Don't actually release the lock if we re-entered the critical section.
+  if (--m_Level)
+  {
+    return;
+  }
+
+  m_pOwner = 0;
 
   if (m_Atom.compareAndSwap(false, true) == false)
   {
