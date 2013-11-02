@@ -55,8 +55,12 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
     va.getMapping(reinterpret_cast<void*>(page), phys, flags);
     if (flags & VirtualAddressSpace::CopyOnWrite)
     {
-#if 0
-      static uint8_t buffer[PhysicalMemoryManager::instance().getPageSize()];
+#ifdef SUPERDEBUG
+      NOTICE_NOLOCK(Processor::information().getCurrentThread()->getParent()->getId() << " PageFaultHandler: copy-on-write for v=" << page);
+#endif
+
+      // Save current page content
+      static uint8_t buffer[0x1000]; // PhysicalMemoryManager::instance().getPageSize()];
       memcpy(buffer, reinterpret_cast<uint8_t*>(page), PhysicalMemoryManager::instance().getPageSize());
 
       // Now that we've saved the page content, we can make a new physical page and map it.
@@ -66,15 +70,25 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
         FATAL("PageFaultHandler: Out of memory!");
         return;
       }
+
+      // Remove the old mapping and map in the new page, with similar flags.
       va.unmap(reinterpret_cast<void*>(page));
-      if (!va.map(p, reinterpret_cast<void*>(page), VirtualAddressSpace::Write))
+
+      flags |= VirtualAddressSpace::Write;
+      flags &= ~VirtualAddressSpace::CopyOnWrite;
+      if (!va.map(p, reinterpret_cast<void*>(page), flags))
       {
         FATAL("PageFaultHandler: map() failed.");
         return;
       }
+
+      // Restore the contents of the page to the new mapping.
       memcpy(reinterpret_cast<uint8_t*>(page), buffer, PhysicalMemoryManager::instance().getPageSize());
+
+      // Clean up old reference to memory (may free the page, if we were the
+      // last one to reference the CoW page)
+      PhysicalMemoryManager::instance().freePage(phys);
       return;
-#endif
     }
   }
 
