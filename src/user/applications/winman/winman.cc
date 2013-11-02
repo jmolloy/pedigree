@@ -759,7 +759,7 @@ int main(int argc, char *argv[])
         0,
         stride * g_nHeight,
         PROT_READ | PROT_WRITE,
-        MAP_ANON | MAP_PHYS_OFFSET,
+        MAP_SHARED | MAP_ANON | MAP_PHYS_OFFSET,
         -1,
         rawBuffer);
 

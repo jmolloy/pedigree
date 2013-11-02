@@ -1476,11 +1476,18 @@ void *posix_mmap(void *p)
 
             // Do we need to use a physical base?
             physical_uintptr_t physBase = 0;
-            size_t cacheFlags = 0;
+            size_t mappingFlags = 0;
             if(flags & MAP_PHYS_OFFSET)
             {
                 physBase = off;
-                cacheFlags = VirtualAddressSpace::WriteCombine;
+                mappingFlags |= VirtualAddressSpace::WriteCombine;
+                NOTICE("  -> MAP_PHYS_OFFSET");
+            }
+
+            // Do we need to share the mapping with forked children?
+            if(flags & MAP_SHARED)
+            {
+                mappingFlags |= VirtualAddressSpace::Shared;
             }
 
             // Got an address and a length, map it in now
@@ -1491,7 +1498,7 @@ void *posix_mmap(void *p)
                 uintptr_t           virt = mapAddress + (i * pageSz);
                 if(!va.isMapped(reinterpret_cast<void*>(virt)))
                 {
-                    if(!va.map(phys, reinterpret_cast<void*>(virt), VirtualAddressSpace::Write | cacheFlags))
+                    if(!va.map(phys, reinterpret_cast<void*>(virt), VirtualAddressSpace::Write | mappingFlags))
                     {
                         /// \todo Need to unmap and free all the mappings so far, then return to the space allocator.
                         F_NOTICE("mmap: out of memory");
