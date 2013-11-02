@@ -460,10 +460,14 @@ env.Command('#' + env['BUILDDIR'] + '/Version.cc', None, Action(create_version_c
 
 # Override CXX if needed.
 if env['iwyu']:
-    env['CXXFLAGS'] = re.sub('\-march\=.* \-mtune\=.*', '', env['CXXFLAGS'])
-    env['CXX'] = env['iwyu']
+    oldflags = env['CXXFLAGS']
 
-    print env['CXXFLAGS']
+    # Make sure IWYU is fully freestanding and only refers to our headers.
+    env['CXXFLAGS'] = '-Xiwyu --no_default_mappings -Xiwyu --transitive_includes_only '
+
+    env['CXXFLAGS'] += re.sub('\-march\=.* \-mtune\=.*', '', oldflags)
+    env['CXXFLAGS'] += ' -target i686-unknown-elf '
+    env['CXX'] = env['iwyu']
 
 # Save the cache, all the options are configured
 if(not env['nocache']):
