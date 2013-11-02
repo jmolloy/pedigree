@@ -5,6 +5,7 @@
 
 import os
 import shutil
+import subprocess
 Import(['env'])
 
 # Subsystems always get built first
@@ -171,33 +172,87 @@ def buildImageMtools(target, source, env):
     modsdir = env.Dir(env['PEDIGREE_BUILD_MODULES']).abspath
     drvsdir = env.Dir(env['PEDIGREE_BUILD_DRIVERS']).abspath
 
+    pathToGrub = env.Dir("#images/grub").abspath
+
     outFile = target[0].path
     imageBase = source[0].path
     source = source[1:]
 
+    destDrive = "C:"
+
+    execenv = os.environ.copy()
+    execenv['MTOOLS_SKIP_CHECK'] = '1'
+
+    def domkdir(name):
+        args = [
+            'mmd',
+            '-Do',
+            '%s%s' % (destDrive, name),
+        ]
+
+        subprocess.check_call(args, stdout=subprocess.PIPE, env=execenv)
+
+    def docopy(source, dest):
+        args = [
+            'mcopy',
+            '-Do',
+        ]
+
+        # Multiple sources to the same destination directory
+        if isinstance(source, list):
+            args.extend(source)
+
+        # Recursively copy directories
+        elif os.path.isdir(source):
+            args.extend(['-bms', source])
+
+        # Single, boring source.
+        else:
+            args.append(source)
+
+        args.append('%s%s' % (destDrive, dest))
+
+        # Some of these copies may fail due to missing symlinks etc
+        subprocess.call(args, stdout=subprocess.PIPE, env=execenv)
+
     # Copy the base image to the destination, overwriting any image that
     # may already exist there.
     if('gz' in imageBase):
-        os.system("tar -xzf " + imageBase + " -C .")
-        shutil.move(os.path.basename(imageBase).replace('tar.gz', 'img'), outFile)
+        args = ['tar', '-xzf', imageBase, '-C', os.path.dirname(outFile)]
+        result = subprocess.call(args)
+        if result != 0:
+            return result
+
+        outbasename = os.path.basename(outFile)
+        actualbasename = os.path.basename(imageBase).replace('tar.gz', 'img')
+
+        # Caveat where build/ is on a different filesystem (why would you do this)
+        if outbasename != actualbasename:
+            os.rename(
+                os.path.join(builddir, actualbasename),
+                outFile
+            )
     else:
         shutil.copy(imageBase, outFile)
 
-    # Open for use in mtools
-    mtsetup = env.File("#/scripts/mtsetup.sh").abspath
-    os.system("sh " + mtsetup + " -h " + outFile + " > /dev/null 2>&1")
+    # Calculate the full set of operations we need to do, before running commands.
 
-    destDrive = " C:"
-    os.system("MTOOLS_SKIP_CHECK=1 mcopy -Do " + builddir + "/config.db C:/.pedigree-root > /dev/null 2>&1; rm -f .pedigree-root")
-    os.system("MTOOLS_SKIP_CHECK=1 mcopy -Do " + imagedir + "/../grub/menu-hdd.lst C:/boot/grub/menu.lst > /dev/null 2>&1")
+    mkdirops = [
+        '/tmp',
+        '/config',
+        '/system',
+        '/system/modules',
+    ]
 
-    # Copy the kernel, initrd, and configuration database
-    for i in source[0:3]:
-        os.system("MTOOLS_SKIP_CHECK=1 mcopy -Do " + i.abspath + " C:/boot > /dev/null 2>&1")
-    source = source[3:]
+    copyops = [
+        ([x.abspath for x in source[0:3]], '/boot'),
+        (os.path.join(builddir, 'config.db'), '/.pedigree-root'),
+        (os.path.join(pathToGrub, 'menu-hdd.lst'), '/boot/grub/menu.lst'),
+        (os.path.join(imagedir, '..', 'base', 'config', 'greeting'), '/config/greeting'),
+        (os.path.join(imagedir, '..', 'base', '.bashrc'), '/.bashrc'),
+    ]
 
-    # Copy each input file across
-    for i in source:
+    for i in source[3:]:
         otherPath = ''
         search, prefix = imagedir, ''
 
@@ -222,13 +277,28 @@ def buildImageMtools(target, source, env):
             prefix = '/libraries'
 
         otherPath = prefix + i.abspath.replace(search, '')
-        os.system("MTOOLS_SKIP_CHECK=1 mcopy -bms -Do " + i.path + destDrive + otherPath + " > /dev/null 2>&1")
 
-    os.system("MTOOLS_SKIP_CHECK=1 mmd -Ds C:/tmp C:/config > /dev/null 2>&1")
-    os.system("MTOOLS_SKIP_CHECK=1 mcopy -Do " + imagedir + "/../base/config/greeting C:/config/greeting > /dev/null 2>&1")
-    os.system("MTOOLS_SKIP_CHECK=1 mcopy -Do " + imagedir + "/../base/.bashrc C:/.bashrc > /dev/null 2>&1")
+        copyops.append((i.abspath, otherPath))
 
-    postImageBuild(outFile, env)
+    try:
+        # Open for use in mtools
+        mtsetup = env.File("#/scripts/mtsetup.sh").abspath
+        subprocess.check_call([mtsetup, '-h', outFile, "1"], stdout=subprocess.PIPE)
+
+        for name in mkdirops:
+            # print "mkdir %s" % (name,)
+            domkdir(name)
+
+        for src, dst in copyops:
+            # print "cp %s -> %s" % (src, dst)
+            docopy(src, dst)
+    except subprocess.CalledProcessError as e:
+        os.unlink(outFile)
+        return e.returncode
+    else:
+        postImageBuild(outFile, env)
+
+    return 0
 
 def buildCdImage(target, source, env):
     if env['verbose']:
@@ -238,83 +308,108 @@ def buildCdImage(target, source, env):
 
     builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"]).abspath
     pathToGrub = env.Dir("#images/grub").abspath
-    configDb = source[0].abspath
+
+    # Select correct stage2_eltorito for the target.
     stage2_eltorito = "stage2_eltorito-" + env['ARCH_TARGET'].lower()
-    shutil.copy(pathToGrub + "/" + stage2_eltorito, "./stage2_eltorito")
 
-    cmd = env['isoprog']
-    cmd += " -D -joliet -graft-points -quiet -input-charset ascii -R \
-                 -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 \
-                 -boot-info-table -o " + target[0].path + " -V 'PEDIGREE' \
-                 boot/grub/stage2_eltorito=./stage2_eltorito \
-                 boot/grub/menu.lst=" + pathToGrub + "/menu.lst \
-                 boot/kernel=" + source[2].abspath + " \
-                 boot/initrd.tar=" + source[1].abspath + " \
-                 /livedisk.img=" + source[3].abspath + " \
-                .pedigree-root=" + configDb
-    os.system(cmd)
+    args = [
+        env['isoprog'],
+        '-D',
+        '-joliet',
+        '-graft-points',
+        '-quiet',
+        '-input-charset',
+        'ascii',
+        '-R',
+        '-b',
+        'boot/grub/stage2_eltorito',
+        '-no-emul-boot',
+        '-boot-load-size',
+        '4',
+        '-boot-info-table',
+        '-o',
+        target[0].path,
+        '-V',
+        '"PEDIGREE"',
+        'boot/grub/stage2_eltorito=%s' % (os.path.join(pathToGrub, stage2_eltorito),),
+        'boot/grub/menu.lst=%s' % (os.path.join(pathToGrub, 'menu.lst'),),
+        'boot/kernel=%s' % (source[2].abspath,),
+        'boot/initrd.tar=%s' % (source[1].abspath,),
+        '/livedisk.img=%s' % (source[3].abspath,),
+        '.pedigree-root=%s' % (source[0].abspath,),
+    ]
+    result = subprocess.call(args)
 
-    os.remove("./stage2_eltorito")
+    return result
 
 if not env['ARCH_TARGET'] in ["X86", "X64", "PPC"]:
     print "No hard disk image being built, architecture doesn't need one."
 #elif env["installer"]:
 #    print "Oops, installer images aren't built yet. Tell pcmattman to write Python scripts"
 #    print "to build these images, please."
-else:
+elif not env['nodiskimages']:
     # Define dependencies
     env.Depends(hddimg, 'libs')
     env.Depends(hddimg, 'apps')
     env.Depends(hddimg, 'initrd')
     env.Depends(hddimg, configdb)
-    env.Depends(cdimg, hddimg) # Inherent dependency on libs/apps
+    if not env['noiso']:
+        env.Depends(cdimg, hddimg) # Inherent dependency on libs/apps
 
     fileList = []
+
+    kernel = os.path.join(builddir, 'kernel', 'kernel')
+    initrd = os.path.join(builddir, 'initrd.tar')
+
+    apps = os.path.join(builddir, 'apps')
+    modules = os.path.join(builddir, 'modules')
+    drivers = os.path.join(builddir, 'drivers')
+
+    libc = os.path.join(builddir, 'libc.so')
+    libm = os.path.join(builddir, 'libm.so')
+    libload = os.path.join(builddir, 'libload.so')
 
     # Build the disk images (whichever are the best choice for this system)
     if(env['havelosetup']):
         fileList += ["#/images/hdd_ext2.tar.gz"]
         buildImage = buildImageLosetup
     else:
-        # fileList += ["#/images/hdd_fat16.tar.gz"]
         fileList += ["#/images/hdd_fat32.tar.gz"]
         buildImage = buildImageMtools
 
     # /boot directory
-    fileList += [builddir + '/kernel/kernel', builddir + '/initrd.tar', configdb]
+    fileList += [kernel, initrd, configdb]
 
-    for root, dirs, files in os.walk(imagedir):
-        # Add directory names first
-        for j in dirs:
-            fileList += [root + '/' + j]
+    # Add directories in the images directory.
+    for entry in os.listdir(imagedir):
+        fileList += [os.path.join(imagedir, entry)]
 
-        # Then add filenames
-        for j in files:
-            fileList += [root + '/' + j]
+    # Add applications that we build as part of the build process.
+    for app in os.listdir(apps):
+        fileList += [os.path.join(apps, app)]
 
-        # Recursive copy is performed, so only grab the first directory
-        break
-
-    # Add apps to the input list
-    fileList += [[i[0] + '/' + j for j in i[2]] for i in os.walk(builddir + '/apps')]
-
-    # Add modules and drivers to the input list
-    fileList += [[i[0] + '/' + j for j in i[2]] for i in os.walk(builddir + '/modules')]
-    fileList += [[i[0] + '/' + j for j in i[2]] for i in os.walk(builddir + '/drivers')]
+    # Add modules, and drivers, that we build as part of the build process.
+    for module in os.listdir(modules):
+        fileList += [os.path.join(modules, module)]
+    for driver in os.listdir(drivers):
+        fileList += [os.path.join(drivers, driver)]
 
     # Add libraries
-    fileList += [builddir + '/libc.so',
-                 builddir + '/libm.so',
-                 builddir + '/libload.so',
-#                 builddir + '/libpthread.so',
-                 ]
+    fileList += [
+        libc,
+        libm,
+        libload,
+    ]
 
     if env['ARCH_TARGET'] in ['X86']:
-        fileList += [builddir + '/libSDL.so']
+        fileList += [os.path.join(builddir, 'libSDL.so')]
 
     # Build the hard disk image
     env.Command(hddimg, fileList, Action(buildImage, None))
 
     # Build the live CD ISO
-    env.Command(cdimg, [configdb, builddir + '/initrd.tar', builddir + '/kernel/kernel', hddimg], Action(buildCdImage, None))
-
+    if not env['noiso']:
+        env.Command(
+            cdimg,
+            [configdb, initrd, kernel, hddimg],
+            Action(buildCdImage, None))
