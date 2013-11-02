@@ -24,7 +24,6 @@
 class Thread;
 
 #define REQUEST_QUEUE_NUM_PRIORITIES 4
-#define REQUEST_QUEUE_MAX_QUEUE_SZ   32
 
 /** Implements a request queue, with one worker thread performing
  * all requests. All requests appear synchronous to the calling thread -

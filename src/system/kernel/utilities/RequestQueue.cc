@@ -154,7 +154,8 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
       NOTICE("RequestQueue::addRequest - interrupted");
       if(pReq->bReject && !--pReq->refcnt)
           delete pReq; // Safe to delete, unexpected exit condition
-      pReq->mutex.release();
+      else
+          pReq->mutex.release();
       return 0;
   }
 
@@ -187,6 +188,7 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
   pReq->isAsync = true;
   pReq->next = 0;
   pReq->bReject = false;
+  pReq->refcnt = 1;
 
   // Add to the request queue.
   m_RequestQueueMutex.acquire();
@@ -204,7 +206,7 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
         delete pReq;
         m_RequestQueueMutex.release();
 #ifdef SUPERDEBUG
-        NOTICE("RequestQueue::addRequest early return - dupe item");
+        NOTICE("RequestQueue::addAsyncRequest early return - dupe item");
 #endif
         return 0;
       }
@@ -217,7 +219,7 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
       delete pReq;
       m_RequestQueueMutex.release();
 #ifdef SUPERDEBUG
-      NOTICE("RequestQueue::addRequest early return - dupe item");
+      NOTICE("RequestQueue::addAsyncRequest early return - dupe item");
 #endif
       return 0;
     }
@@ -231,41 +233,7 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
   // Increment the number of items on the request queue.
   m_RequestQueueSize.release();
 
-  // If the queue is too long, make this block.
-  if (m_RequestQueueSize.getValue() > REQUEST_QUEUE_MAX_QUEUE_SZ)
-  {
-      pReq->isAsync = false;
-
-      m_RequestQueueMutex.release();
-
-      // We are waiting on the worker thread - mark the thread as such.
-      Thread *pThread = Processor::information().getCurrentThread();
-      pThread->setBlockingThread(m_pThread);
-
-      // Wait for the request to be satisfied. This should sleep the thread.
-      pReq->mutex.acquire();
-
-      pThread->setBlockingThread(0);
-
-      if(pReq->bReject || pThread->wasInterrupted() || pThread->getUnwindState() == Thread::Exit)
-      {
-          // The request was interrupted somehow. We cannot assume that pReq's
-          // contents are valid, so just return zero. The caller may have to redo
-          // their request.
-          // By releasing here, the worker thread can detect that the request was
-          // interrupted and clean up by itself.
-          NOTICE("RequestQueue::addRequest - interrupted");
-          pReq->pThread->removeRequest(pReq);
-          pReq->mutex.release();
-          return 0;
-      }
-
-      // Delete the request structure.
-      pReq->pThread->removeRequest(pReq);
-      delete pReq;
-  }
-  else
-      m_RequestQueueMutex.release();
+  m_RequestQueueMutex.release();
 
   return 0;
 #endif
