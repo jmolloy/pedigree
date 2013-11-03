@@ -173,9 +173,6 @@ def removeFile(fList, path):
     
         line = line.rstrip()
         if(len(line) == 0 or line[0] == '#'):
-        
-            prevLine = line
-        
             # Handle removing files added by this script
             if(len(line) >= 2 and line[1] == '@'):
                 continue

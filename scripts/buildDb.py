@@ -19,7 +19,6 @@
 
 import os
 import re
-import tempfile
 import subprocess
 
 print "Building configuration database..."

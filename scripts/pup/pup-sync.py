@@ -57,7 +57,7 @@ def main(arglist):
     
     # If the database isn't a valid sqlite database, this will fail
     s = sqlite3.connect(localFile)
-    e = s.execute("select * from packages")
+    s.execute("select * from packages")
     s.close()
     
     os.rename(localFile, localPath + "/packages.pupdb")

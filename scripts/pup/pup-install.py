@@ -19,7 +19,7 @@
     pup-install.py: install a package
 '''
 
-import os, sys, urllib, sqlite3, tarfile, ConfigParser
+import os, sys, urllib, sqlite3, tarfile
 
 import pup_common
 

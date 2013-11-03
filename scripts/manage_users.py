@@ -19,7 +19,7 @@
 # to create users for servers/daemons, or to create a user for the builder to
 # use when logging in to Pedigree.
 
-import os, sys, sqlite3, getpass
+import os, sqlite3, getpass
 
 scriptdir = os.path.dirname(os.path.realpath(__file__))
 imagedir = os.path.realpath(scriptdir + "/../images/local")
@@ -141,6 +141,10 @@ def changepassword():
     # Check for a valid user in the database.
     if not validuser(username):
         return
+
+    # Now grab the user object.
+    q = conn.execute("select uid from users where username=?", [username])
+    user = q.fetchone()
     
     # Confirm the password
     print "Changing password for '%s'..." % (username,)
@@ -213,6 +217,10 @@ def deleteuser():
     # Check for a valid user in the database.
     if not validuser(username):
         return
+
+    # Now grab the user object.
+    q = conn.execute("select uid from users where username=?", [username])
+    user = q.fetchone()
     
     # Delete the user.
     conn.execute("delete from users where uid=?", [user[0]])
