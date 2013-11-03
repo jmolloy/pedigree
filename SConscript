@@ -85,10 +85,14 @@ if env['pyflakes'] or env['sconspyflakes']:
             pyfiles = find_files(rootdir, lambda x: x.endswith('.py'), [imagesroot])
             pyflakes_command('pyflakes', pyfiles)
 
+        # SConscripts are magically run with stuff already imported, so they
+        # will never pass a pyflakes check. :(
+        '''
         if env['sconspyflakes']:
             # Find SConstruct and all SConscripts.
             pyfiles = find_files(rootdir, lambda x: x in ['SConstruct', 'SConscript'], [imagesroot])
             pyflakes_command('sconspyflakes', pyfiles)
+        '''
 
 def makeHeader(target, source, env):
     f = open(target[0].path, "w")
