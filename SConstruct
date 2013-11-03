@@ -366,8 +366,11 @@ if not env['verbose']:
     if env['nocolour'] or os.environ.get('TERM') == 'dumb' or os.environ.get('TERM') is None:
         env['CCCOMSTR']   =    '     Compiling $TARGET'
         env['CXXCOMSTR']  =    '     Compiling $TARGET'
+        env['SHCCCOMSTR'] =    '     Compiling $TARGET (shared)'
+        env['SHCXXCOMSTR']=    '     Compiling $TARGET (shared)'
         env['ASCOMSTR']   =    '    Assembling $TARGET'
         env['LINKCOMSTR'] =    '       Linking $TARGET'
+        env['SHLINKCOMSTR'] =  '       Linking $TARGET'
         env['ARCOMSTR']   =    '     Archiving $TARGET'
         env['RANLIBCOMSTR'] =  '      Indexing $TARGET'
         env['NMCOMSTR']   =    '  Creating map $TARGET'
@@ -376,8 +379,11 @@ if not env['verbose']:
     else:
         env['CCCOMSTR']   =    '     Compiling \033[32m$TARGET\033[0m'
         env['CXXCOMSTR']  =    '     Compiling \033[32m$TARGET\033[0m'
+        env['SHCCCOMSTR'] =    '     Compiling \033[32m$TARGET\033[0m (shared)'
+        env['SHCXXCOMSTR']=    '     Compiling \033[32m$TARGET\033[0m (shared)'
         env['ASCOMSTR']   =    '    Assembling \033[32m$TARGET\033[0m'
         env['LINKCOMSTR'] =    '       Linking \033[32m$TARGET\033[0m'
+        env['SHLINKCOMSTR'] =  '       Linking \033[32m$TARGET\033[0m'
         env['ARCOMSTR']   =    '     Archiving \033[32m$TARGET\033[0m'
         env['RANLIBCOMSTR'] =  '      Indexing \033[32m$TARGET\033[0m'
         env['NMCOMSTR']   =    '  Creating map \033[32m$TARGET\033[0m'
