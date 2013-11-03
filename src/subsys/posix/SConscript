@@ -21,6 +21,7 @@ posix_objname = subsysdir + '/posix.o'
 glue_objname = builddir + '/libpedigree-glue.a'
 crt0_objname = kerneldir + '/crt0.o'
 libpthread_objname = builddir + '/libpthread.a'
+libpthread_shobjname = builddir + '/libpthread.so'
 crti_objname = kerneldir + '/crti.o'
 crtn_objname = kerneldir + '/crtn.o'
 libpedigree_c_objname = builddir + '/libpedigree-c.a'
@@ -31,6 +32,7 @@ env.Alias("crt", [crt0_objname, crti_objname, crtn_objname])
 env.Alias("subsys", posix_objname)
 env.Alias("subsys", glue_objname)
 env.Alias("pthreads", libpthread_objname)
+env.Alias("pthreads", libpthread_shobjname)
 
 env.Depends(libc_objname, glue_objname)
 env.Depends(libc_objname, libpedigree_c_objname)
@@ -102,27 +104,23 @@ libpaths = [
 
 ####################################
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['tmp'])
-tmp['CPPPATH'] = [i for i in include]
-tmp['LIBS'] = [i for i in libraries]
-tmp['LIBPATH'] = [i for i in libpaths]
-#^-- Stupid way of doing it but I plan on adding processing.
+tmp['CPPPATH'] = include
+tmp['LIBS'] = libraries
+tmp['LIBPATH'] = libpaths
 
 if "STATIC_DRIVERS" in env['CPPDEFINES']:
     build = tmp.Program(posix_objname,posix_files,LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',LSCRIPT=File("#src/modules/link_static.ld"))
 else:
     build = tmp.Program(posix_objname,posix_files,LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',LSCRIPT=File("#src/modules/link.ld"))
 
-# TODO: need to set -fPIC for x86, but that means we can't use %ebx for syscalls, which causes an error.
-glueFlags = " -fno-exceptions "
-if env['ARCH_TARGET'] in ['X64', 'ARM']:
-    glueFlags += " -fPIC "
+glueFlags = " -fno-exceptions -fPIC -DUSE_PIC_SYSCALLS "
 
 tmp_glue = tmp.Clone()
 tmp_glue['CFLAGS'] = tmp_glue['CFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
 tmp_glue['CXXFLAGS'] = tmp_glue['CXXFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
 tmp_glue['CFLAGS'] += glueFlags
 tmp_glue['CXXFLAGS'] += glueFlags
-tmp_glue.Library(glue_objname, glue_files) # , LINKFLAGS='-r') # + glueFlags)
+tmp_glue.Library(glue_objname, glue_files)
 
 tmp_crt0 = tmp.Clone()
 
@@ -147,6 +145,7 @@ tmp_pthread['CXXFLAGS'] = tmp_pthread['CXXFLAGS'].replace("mcmodel=kernel", "mcm
 tmp_pthread['CFLAGS'] += glueFlags
 tmp_pthread['CXXFLAGS'] += glueFlags
 tmp_pthread.Library(libpthread_objname, pthread_files)
+tmp_pthread.SharedLibrary(libpthread_shobjname, pthread_files, LINKFLAGS='')
 
 # Build libc/libm
 
