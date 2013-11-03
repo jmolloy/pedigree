@@ -130,6 +130,7 @@ def buildImageLosetup(target, source, env):
     appsdir = env.Dir(env['PEDIGREE_BUILD_APPS']).abspath
     modsdir = env.Dir(env['PEDIGREE_BUILD_MODULES']).abspath
     drvsdir = env.Dir(env['PEDIGREE_BUILD_DRIVERS']).abspath
+    libsdir = os.path.join(builddir, 'libs')
 
     outFile = target[0].path
     imageBase = source[0].path
@@ -176,6 +177,11 @@ def buildImageLosetup(target, source, env):
             search = drvsdir
             prefix = '/system/modules'
 
+        # User Libraries
+        elif libsdir in i.abspath:
+            search = libsdir
+            prefix = '/libraries'
+
         # Additional Libraries
         elif builddir in i.abspath:
             search = builddir
@@ -214,6 +220,7 @@ def buildImageMtools(target, source, env):
     appsdir = env.Dir(env['PEDIGREE_BUILD_APPS']).abspath
     modsdir = env.Dir(env['PEDIGREE_BUILD_MODULES']).abspath
     drvsdir = env.Dir(env['PEDIGREE_BUILD_DRIVERS']).abspath
+    libsdir = os.path.join(builddir, 'libs')
 
     pathToGrub = env.Dir("#images/grub").abspath
 
@@ -314,6 +321,11 @@ def buildImageMtools(target, source, env):
             search = drvsdir
             prefix = '/system/modules'
 
+        # User Libraries
+        elif libsdir in i.abspath:
+            search = libsdir
+            prefix = '/libraries'
+
         # Additional Libraries
         elif builddir in i.abspath:
             search = builddir
@@ -321,7 +333,11 @@ def buildImageMtools(target, source, env):
 
         otherPath = prefix + i.abspath.replace(search, '')
 
-        copyops.append((i.abspath, otherPath))
+        dirname = os.path.dirname(otherPath)
+        if not dirname.endswith('/'):
+            dirname += '/'
+
+        copyops.append((i.abspath, dirname))
 
     try:
         # Open for use in mtools
