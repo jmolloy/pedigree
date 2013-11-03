@@ -369,6 +369,12 @@ elif not env['nodiskimages']:
     libm = os.path.join(builddir, 'libm.so')
     libload = os.path.join(builddir, 'libload.so')
 
+    libpthread = os.path.join(builddir, 'libpthread.so')
+    libpedigree = os.path.join(builddir, 'libpedigree.so')
+    libpedigree_c = os.path.join(builddir, 'libpedigree-c.so')
+
+    libui = os.path.join(builddir, 'libs', 'libui.so')
+
     # Build the disk images (whichever are the best choice for this system)
     if(env['havelosetup']):
         fileList += ["#/images/hdd_ext2.tar.gz"]
@@ -399,6 +405,10 @@ elif not env['nodiskimages']:
         libc,
         libm,
         libload,
+        libpthread,
+        libpedigree,
+        libpedigree_c,
+        libui,
     ]
 
     if env['ARCH_TARGET'] in ['X86']:
