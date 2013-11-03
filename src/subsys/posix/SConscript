@@ -25,6 +25,7 @@ libpthread_shobjname = builddir + '/libpthread.so'
 crti_objname = kerneldir + '/crti.o'
 crtn_objname = kerneldir + '/crtn.o'
 libpedigree_c_objname = builddir + '/libpedigree-c.a'
+libpedigree_c_shobjname = builddir + '/libpedigree-c.so'
 
 libc_objname = builddir + '/libc.so'
 
@@ -36,6 +37,7 @@ env.Alias("pthreads", libpthread_shobjname)
 
 env.Depends(libc_objname, glue_objname)
 env.Depends(libc_objname, libpedigree_c_objname)
+env.Depends(libc_objname, libpedigree_c_shobjname)
 
 # To include a new subdirectory just add to the list.
 subdirs = [

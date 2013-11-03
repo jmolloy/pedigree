@@ -19,9 +19,11 @@ subsysdir = "#" + env["PEDIGREE_BUILD_SUBSYS"]
 # Change to then of this module
 pedigree_c_objname = subsysdir + '/pedigree-c.o'
 libpedigree_c_objname = builddir + '/libpedigree-c.a'
+libpedigree_c_shobjname = builddir + '/libpedigree-c.so'
 
 env.Alias("subsys", pedigree_c_objname)
 env.Alias("subsys", libpedigree_c_objname)
+env.Alias("subsys", libpedigree_c_shobjname)
 
 # To include a new subdirectory just add to the list.
 subdirs = [
@@ -72,9 +74,7 @@ else:
 tmp_lib = tmp.Clone()
 
 # -fPIC for libpedigree-c
-glueFlags = " -fno-exceptions "
-if env['ARCH_TARGET'] in ['X64', 'ARM']:
-    glueFlags += " -fPIC "
+glueFlags = " -fno-exceptions -fPIC -DUSE_PIC_SYSCALLS "
 
 tmp_lib['CFLAGS'] = tmp_lib['CFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
 tmp_lib['CXXFLAGS'] = tmp_lib['CXXFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
@@ -83,3 +83,4 @@ tmp_lib['CXXFLAGS'] += glueFlags
 tmp_lib['LD'] = tmp_lib['LINK'] = tmp_lib['LD'].replace('gcc', 'ld')
 
 tmp_lib.Library(libpedigree_c_objname, libpedigree_c_files)
+tmp_lib.SharedLibrary(libpedigree_c_shobjname, libpedigree_c_files, LINKFLAGS='')
