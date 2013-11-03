@@ -87,6 +87,7 @@ if env['pyflakes'] or env['sconspyflakes']:
 
         if env['sconspyflakes']:
             # Find SConstruct and all SConscripts.
+            pyfiles = find_files(rootdir, lambda x: x in ['SConstruct', 'SConscript'], [imagesroot])
             pyflakes_command('sconspyflakes', pyfiles)
 
 def makeHeader(target, source, env):
