@@ -718,6 +718,11 @@ int main(int argc, char *argv[])
     }
 
     e = FT_New_Face(font_library, "/system/fonts/DejaVuSansMono.ttf", 0, &ft_face);
+    if(e)
+    {
+        syslog(LOG_CRIT, "winman: error: couldn't load required font");
+        return 0;
+    }
 
     // Use the root framebuffer.
     PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
