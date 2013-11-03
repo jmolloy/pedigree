@@ -6,6 +6,7 @@
 import os
 import shutil
 import subprocess
+import commands
 Import(['env'])
 
 # Subsystems always get built first
@@ -31,6 +32,7 @@ SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
 
 rootdir = env.Dir("#").abspath
 builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"]).abspath
+imagesroot = env.Dir("#images").abspath
 imagedir = env.Dir(env['PEDIGREE_IMAGES_DIR']).abspath
 
 # Build the configuration database (no dependencies)
@@ -50,6 +52,42 @@ configSchemas = []
 for i in os.walk(env.Dir("#src").abspath):
     configSchemas += map(lambda x: i[0] + '/' + x, filter(lambda y: y == 'schema', i[2]))
 env.Command(configdb, configSchemas, '@cd ' + rootdir + ' && python ./scripts/buildDb.py')
+
+def find_files(startdir, matcher, skip_paths):
+    x = []
+    for root, dirs, files in os.walk(startdir):
+        ok = True
+        for path in skip_paths:
+            if path in root:
+                ok = False
+                break
+
+        if ok:
+            x.extend([os.path.join(root, f) for f in files if matcher(f)])
+    return x
+
+if env['pyflakes'] or env['sconspyflakes']:
+    # Run pyflakes over .py files, if pyflakes is present.
+    pyflakespath = commands.getoutput("which pyflakes")
+    if os.path.exists(pyflakespath):
+        def pyflakes_command(base, files):
+            for pyfile in files:
+                name = os.path.basename(pyfile)
+                pyflakes = env.Command(
+                    '%s-%s' % (base, name),
+                    [],
+                    '%s %s' % (pyflakespath, pyfile))
+                env.Alias(base, '%s-%s' % (base, name))
+                env.AlwaysBuild(pyflakes)
+
+        if env['pyflakes']:
+            # Find .py files in the tree, excluding the images directory.
+            pyfiles = find_files(rootdir, lambda x: x.endswith('.py'), [imagesroot])
+            pyflakes_command('pyflakes', pyfiles)
+
+        if env['sconspyflakes']:
+            # Find SConstruct and all SConscripts.
+            pyflakes_command('sconspyflakes', pyfiles)
 
 def makeHeader(target, source, env):
     f = open(target[0].path, "w")

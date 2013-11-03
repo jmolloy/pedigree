@@ -63,6 +63,8 @@ opts.AddVariables(
     BoolVariable('genflags', 'Whether or not to generate flags and things dynamically.', 1),
     BoolVariable('ccache', 'Prepend ccache to cross-compiler paths (for use with CROSS)', 0),
     BoolVariable('distcc', 'Prepend distcc to cross-compiler paths (for use with CROSS)', 0),
+    BoolVariable('pyflakes', 'Set to one to run pyflakes over Python scripts in the tree', 0),
+    BoolVariable('sconspyflakes', 'Set to one to run pyflakes over SConstruct/SConscripts in the tree', 0),
     ('iwyu', 'If set, use the given as a the C++ compiler for include-what-you-use. Use -i with scons if you use IWYU.', ''),
     
     BoolVariable('nocache', 'Do not create an options.cache file (NOT recommended).', 0),
