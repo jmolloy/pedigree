@@ -4,8 +4,6 @@
 ####################################
 
 import os
-import shutil
-import tempfile
 Import(['env'])
 
 tmp = env.Clone()
@@ -19,8 +17,10 @@ subsysdir = "#" + env["PEDIGREE_BUILD_SUBSYS"]
 # We output a single library, which applications link against to gain access to
 # the implementation of the native subsystem classes.
 native_userlib_objname = builddir + '/libpedigree.a'
+native_userlib_shobjname = builddir + '/libpedigree.so'
 
 env.Alias("libs", native_userlib_objname)
+env.Alias("libs", native_userlib_shobjname)
 
 # To include a new subdirectory just add to the list.
 subdirs = [
@@ -63,9 +63,7 @@ tmp['LIBS'] = libraries
 tmp['CXXFLAGS'] = tmp['CXXFLAGS'].replace('-nostdinc', '')
 
 # -fPIC for libpedigree
-glueFlags = " -fno-exceptions "
-if env['ARCH_TARGET'] in ['X64', 'ARM']:
-    glueFlags += " -fPIC "
+glueFlags = " -fno-exceptions -fPIC -DUSE_PIC_SYSCALLS "
 
 tmp['CFLAGS'] = tmp['CFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
 tmp['CXXFLAGS'] = tmp['CXXFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
@@ -73,3 +71,4 @@ tmp['CFLAGS'] += glueFlags
 tmp['CXXFLAGS'] += glueFlags
 
 tmp.Library(native_userlib_objname, lib_files)
+tmp.SharedLibrary(native_userlib_shobjname, lib_files, LINKFLAGS='')
