@@ -175,6 +175,7 @@ env.Alias('libs', libload)
 for i in all_apps:
     e = tmp.Clone()
     e['LINKFLAGS'] = ''
+    e['LIBPATH'] = libpath
 
     base = appsbase + i
 
@@ -204,6 +205,7 @@ for i in all_apps:
                          '#/images/local/support/gcc/include/c++/4.5.1/i686-pedigree',
                          ]
         e['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s/libraries/ ' % (e.Dir(imagesdir).abspath,)
+        e['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s/libs/ ' % (e.Dir(builddir).abspath,)
 
     output = builddir + '/apps/' + i
     files = [Glob(base + '/*.c'), Glob(base + '/*.cc')]
