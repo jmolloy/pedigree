@@ -24,6 +24,7 @@
 #include "signal-syscalls.h"
 #include "system-syscalls.h"
 #include "UnixFilesystem.h"
+#include "DevFs.h"
 
 PosixSyscallManager g_PosixSyscallManager;
 
@@ -32,9 +33,13 @@ UnixFilesystem *g_pUnixFilesystem;
 static void init()
 {
   g_PosixSyscallManager.initialise();
+
+  DevFs::instance().initialise(0);
+
   g_pUnixFilesystem = new UnixFilesystem();
 
   VFS::instance().addAlias(g_pUnixFilesystem, g_pUnixFilesystem->getVolumeLabel());
+  VFS::instance().addAlias(&DevFs::instance(), DevFs::instance().getVolumeLabel());
 }
 
 static void destroy()

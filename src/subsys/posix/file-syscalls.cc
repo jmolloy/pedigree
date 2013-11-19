@@ -80,6 +80,41 @@ inline File *traverseSymlink(File *file)
     return file;
 }
 
+inline String normalisePath(const char *name, bool *onDevFs = 0)
+{
+    // Rebase /dev onto the devfs. /dev/tty is special.
+    String nameToOpen;
+    if (!strcmp(name, "/dev/tty"))
+    {
+        // Get controlling console, unless we have none.
+        Process *pProcess = Processor::information().getCurrentThread()->getParent();
+        if (!pProcess->getCtty())
+        {
+            WARNING("/dev/tty falling back to NullFs");
+            nameToOpen = "dev»/null";
+            if (onDevFs)
+                *onDevFs = true;
+        }
+        else
+        {
+            nameToOpen = name;
+        }
+    }
+    else if (!strncmp(name, "/dev", strlen("/dev")))
+    {
+        nameToOpen = "dev»";
+        nameToOpen += (name + strlen("/dev"));
+        if (onDevFs)
+            *onDevFs = true;
+    }
+    else
+    {
+        nameToOpen = name;
+    }
+
+    return nameToOpen;
+}
+
 int posix_close(int fd)
 {
     F_NOTICE("close(" << fd << ")");
@@ -138,75 +173,30 @@ int posix_open(const char *name, int flags, int mode)
 
     size_t fd = pSubsystem->getFd();
 
-    // Check for /dev/tty, and link to our controlling console.
     File* file = 0;
 
-    if (!strcmp(name, "/dev/tty"))
+    bool onDevFs = false;
+    String nameToOpen = normalisePath(name, &onDevFs);
+    if (nameToOpen == "/dev/tty")
     {
         file = pProcess->getCtty();
-        if (!file)
-        {
-            WARNING("/dev/tty falling back to NullFs");
-            file = NullFs::instance().getFile();
-        }
     }
-    else if (!strncmp("/dev/pty", name, 8))
-    {
-        // Opening a specific master terminal.
-        String desired(name + strlen("/dev/"));
-        file = ConsoleManager::instance().getConsole(desired);
-        if (!file)
-        {
-            SYSCALL_ERROR(DoesNotExist);
-            return -1;
-        }
 
-        if(!ConsoleManager::instance().lockConsole(file))
-        {
-            SYSCALL_ERROR(NoMoreProcesses);
-            return -1;
-        }
-    }
-    else if (!strncmp("/dev/tty", name, 8))
-    {
-        // Opening a specific slave terminal.
-        String desired(name + strlen("/dev/"));
-        file = ConsoleManager::instance().getConsole(desired);
-        if (!file)
-        {
-            SYSCALL_ERROR(DoesNotExist);
-            return -1;
-        }
+    F_NOTICE("  -> actual filename to open is '" << nameToOpen << "'");
 
-        // Set the terminal as the new controlling terminal, if needed.
-        if(!(flags & O_NOCTTY))
-        {
-            NOTICE("Setting " << desired << " as ctty");
-            pProcess->setCtty(file);
-        }
-        else
-            NOTICE("Not setting as CTTY because O_NOCTTY was set.");
-    }
-    else if (!strcmp(name, "/dev/urandom"))
+    if (!file)
     {
-        file = RandomFs::instance().getFile();
-    }
-    else if (!strcmp(name, "/dev/null"))
-    {
-        file = NullFs::instance().getFile();
-    }
-    else
-    {
-        file = VFS::instance().find(String(name), GET_CWD());
+        // Find file.
+        file = VFS::instance().find(nameToOpen, GET_CWD());
     }
 
     bool bCreated = false;
     if (!file)
     {
-        if (flags & O_CREAT)
+        if ((flags & O_CREAT) && !onDevFs)
         {
             F_NOTICE("  {O_CREAT}");
-            bool worked = VFS::instance().createFile(String(name), 0777, GET_CWD());
+            bool worked = VFS::instance().createFile(nameToOpen, 0777, GET_CWD());
             if (!worked)
             {
                 F_NOTICE("File does not exist (createFile failed)");
@@ -215,7 +205,7 @@ int posix_open(const char *name, int flags, int mode)
                 return -1;
             }
 
-            file = VFS::instance().find(String(name), GET_CWD());
+            file = VFS::instance().find(nameToOpen, GET_CWD());
             if (!file)
             {
                 F_NOTICE("File does not exist (O_CREAT failed)");
@@ -235,15 +225,6 @@ int posix_open(const char *name, int flags, int mode)
             return -1;
         }
     }
-    else if(flags & O_CREAT)
-    {
-        if(flags & O_EXCL)
-        {
-            F_NOTICE("File exists, exclusive mode is on, and O_CREAT was set.");
-            SYSCALL_ERROR(FileExists);
-            return -1;
-        }
-    }
 
     if(!file)
     {
@@ -256,7 +237,11 @@ int posix_open(const char *name, int flags, int mode)
     file = traverseSymlink(file);
 
     if(!file)
+    {
+        SYSCALL_ERROR(DoesNotExist);
+        pSubsystem->freeFd(fd);
         return -1;
+    }
 
     if (file->isDirectory() && (flags & (O_WRONLY | O_RDWR)))
     {
@@ -276,6 +261,33 @@ int posix_open(const char *name, int flags, int mode)
         return -1;
     }
 
+    // Check for console (as we have special handling needed here)
+    if (ConsoleManager::instance().isConsole(file))
+    {
+        // If a master console, attempt to lock.
+        if(ConsoleManager::instance().isMasterConsole(file))
+        {
+            if(!ConsoleManager::instance().lockConsole(file))
+            {
+                F_NOTICE("Couldn't lock pseudoterminal master");
+                SYSCALL_ERROR(NoMoreProcesses);
+                pSubsystem->freeFd(fd);
+                return -1;
+            }
+        }
+        else
+        {
+            // Slave. Set as the new controlling terminal, if needed.
+            if(!(flags & O_NOCTTY))
+            {
+                NOTICE("Setting " << nameToOpen << " as ctty");
+                pProcess->setCtty(file);
+            }
+            else
+                NOTICE("Not setting as CTTY because O_NOCTTY was set.");
+        }
+    }
+
     if ((flags & O_TRUNC) && ((flags & O_CREAT) || (flags & O_WRONLY) || (flags & O_RDWR)))
     {
         F_NOTICE("  {O_TRUNC}");
@@ -283,19 +295,9 @@ int posix_open(const char *name, int flags, int mode)
         file->truncate();
     }
 
-    if(file)
-    {
-      FileDescriptor *f = new FileDescriptor(file, (flags & O_APPEND) ? file->getSize() : 0, fd, 0, flags);
-      if(f)
+    FileDescriptor *f = new FileDescriptor(file, (flags & O_APPEND) ? file->getSize() : 0, fd, 0, flags);
+    if(f)
         pSubsystem->addFileDescriptor(fd, f);
-    }
-    else
-    {
-      F_NOTICE("File does not exist.");
-      SYSCALL_ERROR(DoesNotExist);
-      pSubsystem->freeFd(fd);
-      return -1;
-    }
 
     F_NOTICE("    -> " << fd);
 
@@ -458,7 +460,9 @@ int posix_readlink(const char* path, char* buf, unsigned int bufsize)
 {
     F_NOTICE("readlink(" << path << ", " << reinterpret_cast<uintptr_t>(buf) << ", " << bufsize << ")");
 
-    File* f = VFS::instance().find(String(path), GET_CWD());
+    String realPath = normalisePath(path);
+
+    File* f = VFS::instance().find(realPath, GET_CWD());
     if (!f)
     {
         SYSCALL_ERROR(DoesNotExist);
@@ -486,7 +490,11 @@ int posix_unlink(char *name)
 {
     F_NOTICE("unlink(" << name << ")");
 
-    if (VFS::instance().remove(String(name), GET_CWD()))
+    /// \todo Check permissions, perhaps!?
+
+    String realPath = normalisePath(name);
+
+    if (VFS::instance().remove(realPath, GET_CWD()))
         return 0;
     else
         return -1; /// \todo SYSCALL_ERROR of some sort
@@ -508,8 +516,11 @@ int posix_rename(const char* source, const char* dst)
 {
     F_NOTICE("rename(" << source << ", " << dst << ")");
 
-    File* src = VFS::instance().find(String(source), GET_CWD());
-    File* dest = VFS::instance().find(String(dst), GET_CWD());
+    String realSource = normalisePath(source);
+    String realDestination = normalisePath(dst);
+
+    File* src = VFS::instance().find(realSource, GET_CWD());
+    File* dest = VFS::instance().find(realDestination, GET_CWD());
 
     if (!src)
     {
@@ -542,8 +553,8 @@ int posix_rename(const char* source, const char* dst)
     }
     else
     {
-        VFS::instance().createFile(String(dst), 0777, GET_CWD());
-        dest = VFS::instance().find(String(dst), GET_CWD());
+        VFS::instance().createFile(realSource, 0777, GET_CWD());
+        dest = VFS::instance().find(realDestination, GET_CWD());
         if (!dest)
             return -1;
     }
@@ -596,11 +607,9 @@ int posix_stat(const char *name, struct stat *st)
         return -1;
     }
 
-    File* file = 0;
-    if (!strcmp(name, "/dev/null"))
-        file = NullFs::instance().getFile();
-    else
-        file = VFS::instance().find(String(name), GET_CWD());
+    String realPath = normalisePath(name);
+
+    File* file = VFS::instance().find(realPath, GET_CWD());
     if (!file)
     {
         F_NOTICE("    -> Not found by VFS");
@@ -743,7 +752,9 @@ int posix_lstat(char *name, struct stat *st)
         return -1;
     }
 
-    File *file = VFS::instance().find(String(name), GET_CWD());
+    String realPath = normalisePath(name);
+
+    File *file = VFS::instance().find(realPath, GET_CWD());
 
     int mode = 0;
     if (!file)
@@ -821,8 +832,9 @@ int posix_opendir(const char *dir, dirent *ent)
 
     size_t fd = pSubsystem->getFd();
 
-    File* file = VFS::instance().find(String(dir), GET_CWD());
+    String realPath = normalisePath(dir);
 
+    File* file = VFS::instance().find(realPath, GET_CWD());
     if (!file)
     {
         // Error - not found.
@@ -1037,7 +1049,9 @@ int posix_chdir(const char *path)
 {
     F_NOTICE("chdir(" << path << ")");
 
-    File *dir = VFS::instance().find(String(path), GET_CWD());
+    String realPath = normalisePath(path);
+
+    File *dir = VFS::instance().find(realPath, GET_CWD());
     if (dir && dir->isDirectory())
     {
         Processor::information().getCurrentThread()->getParent()->setCwd(dir);
@@ -1135,7 +1149,10 @@ int posix_dup2(int fd1, int fd2)
 int posix_mkdir(const char* name, int mode)
 {
     F_NOTICE("mkdir(" << name << ")");
-    bool worked = VFS::instance().createDirectory(String(name), GET_CWD());
+
+    String realPath = normalisePath(name);
+
+    bool worked = VFS::instance().createDirectory(realPath, GET_CWD());
     return worked ? 0 : -1;
 }
 
@@ -1642,8 +1659,10 @@ int posix_access(const char *name, int amode)
         return -1;
     }
 
+    String realPath = normalisePath(name);
+
     // Grab the file
-    File *file = VFS::instance().find(String(name), GET_CWD());
+    File *file = VFS::instance().find(realPath, GET_CWD());
     if (!file)
     {
         SYSCALL_ERROR(DoesNotExist);
@@ -1796,7 +1815,16 @@ int posix_chmod(const char *path, mode_t mode)
         return -1;
     }
 
-    File* file = VFS::instance().find(String(path), GET_CWD());
+    bool onDevFs = false;
+    String realPath = normalisePath(path, &onDevFs);
+
+    if(onDevFs)
+    {
+        // Silently ignore.
+        return 0;
+    }
+
+    File* file = VFS::instance().find(realPath, GET_CWD());
     if (!file)
     {
         SYSCALL_ERROR(DoesNotExist);
@@ -1841,7 +1869,16 @@ int posix_chown(const char *path, uid_t owner, gid_t group)
     if((owner == group) && (owner == static_cast<uid_t>(-1)))
         return 0;
 
-    File* file = VFS::instance().find(String(path), GET_CWD());
+    bool onDevFs = false;
+    String realPath = normalisePath(path, &onDevFs);
+
+    if(onDevFs)
+    {
+        // Silently ignore.
+        return 0;
+    }
+
+    File* file = VFS::instance().find(realPath, GET_CWD());
     if (!file)
     {
         SYSCALL_ERROR(DoesNotExist);
@@ -2065,7 +2102,9 @@ int posix_statvfs(const char *path, struct statvfs *buf)
 {
     F_NOTICE("statvfs(" << path << ")");
 
-    File* file = VFS::instance().find(String(path), GET_CWD());
+    String realPath = normalisePath(path);
+
+    File* file = VFS::instance().find(realPath, GET_CWD());
     if (!file)
     {
         SYSCALL_ERROR(DoesNotExist);
@@ -2079,4 +2118,3 @@ int posix_statvfs(const char *path, struct statvfs *buf)
     
     return statvfs_doer(file->getFilesystem(), buf);
 }
-

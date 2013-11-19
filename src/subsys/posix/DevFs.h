@@ -1,14 +1,30 @@
+/*
+ * Copyright (c) 2013 James Molloy, Jörg Pfähler, Matthew Iselin
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
 #ifndef DEVFS_H
 #define DEVFS_H
 
 #include <vfs/Filesystem.h>
+#include <vfs/Directory.h>
 #include <vfs/File.h>
 
 class RandomFile : public File
 {
     public:
-        RandomFile(String str, Filesystem *pParent) :
-            File(str, 0, 0, 0, 0, pParent, 0, 0)
+        RandomFile(String str, size_t inode, Filesystem *pParentFS, File *pParent) :
+            File(str, 0, 0, 0, inode, pParentFS, 0, pParent)
         {}
         ~RandomFile()
         {}
@@ -17,74 +33,11 @@ class RandomFile : public File
         uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
 };
 
-/** This class provides /dev/urandom */
-class RandomFs : public Filesystem
-{
-    public:
-        RandomFs() :
-            m_pRandom(0)
-        {};
-
-        virtual ~RandomFs()
-        {
-            if(m_pRandom)
-                delete m_pRandom;
-        }
-
-        static RandomFs &instance()
-        {
-            return m_Instance;
-        }
-
-        File* getFile()
-        {
-            if (m_pRandom) return m_pRandom;
-            m_pRandom = new RandomFile(String("/dev/urandom"), this);
-            return m_pRandom;
-        }
-
-        virtual bool initialise(Disk *pDisk)
-        {return false;}
-        virtual File* getRoot()
-        {return 0;}
-        virtual String getVolumeLabel()
-        {return String("urandom");}
-        virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true)
-        {
-            // http://xkcd.com/221/
-            void *pBuffer = reinterpret_cast<void *>(buffer);
-            memset(pBuffer, 4, size);
-            return size;
-        }
-        virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true)
-        {
-            return size;
-        }
-
-    protected:
-        virtual bool createFile(File* parent, String filename, uint32_t mask)
-        {return false;}
-        virtual bool createDirectory(File* parent, String filename)
-        {return false;}
-        virtual bool createSymlink(File* parent, String filename, String value)
-        {return false;}
-        virtual bool remove(File* parent, File* file)
-        {return false;}
-
-    private:
-
-        RandomFs(const RandomFs &);
-        RandomFs &operator = (const RandomFs &);
-
-        File *m_pRandom;
-        static RandomFs m_Instance;
-};
-
 class NullFile : public File
 {
 public:
-    NullFile(String str, Filesystem *pParent) :
-        File(str, 0, 0, 0, 0, pParent, 0, 0)
+    NullFile(String str, size_t inode, Filesystem *pParentFS, File *pParentNode) :
+        File(str, 0, 0, 0, inode, pParentFS, 0, pParentNode)
     {}
     ~NullFile()
     {}
@@ -93,46 +46,55 @@ public:
     uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
 };
 
-/** This class provides /dev/null */
-class NullFs : public Filesystem
+/** This class provides slightly more flexibility for adding files to a directory. */
+class DevFsDirectory : public Directory
+{
+    public:
+        DevFsDirectory(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+            uintptr_t inode, class Filesystem *pFs, size_t size, File *pParent) :
+            Directory(name, accessedTime, modifiedTime, creationTime, inode,
+                pFs, size, pParent)
+        {
+        }
+
+        virtual ~DevFsDirectory()
+        {
+        }
+
+        void addEntry(String name, File *pFile)
+        {
+            m_Cache.insert(name, pFile);
+            m_bCachePopulated = true;
+        }
+};
+
+/** This class provides /dev */
+class DevFs : public Filesystem
 {
 public:
-  NullFs() :
-    m_pNull(0)
-  {};
-
-  virtual ~NullFs()
+  DevFs() : m_pRoot(0)
   {
-    if(m_pNull)
-        delete m_pNull;
   };
 
-  static NullFs &instance()
+  virtual ~DevFs()
+  {
+    delete m_pRoot;
+  };
+
+  static DevFs &instance()
   {
     return m_Instance;
   }
 
-  File* getFile()
-  {
-    if (m_pNull) return m_pNull;
-    m_pNull = new NullFile(String("/dev/null"), this);
-    return m_pNull;
-  }
+  virtual bool initialise(Disk *pDisk);
 
-  virtual bool initialise(Disk *pDisk)
-  {return false;}
   virtual File* getRoot()
-  {return 0;}
-  virtual String getVolumeLabel()
-  {return String("nullfs");}
-  virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true)
   {
-    memset(reinterpret_cast<void*>(buffer), 0, size);
-    return size;
+    return m_pRoot;
   }
-  virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true)
+  virtual String getVolumeLabel()
   {
-    return size;
+    return String("dev");
   }
 
 protected:
@@ -147,11 +109,11 @@ protected:
 
 private:
 
-  NullFs(const NullFs &);
-  NullFs &operator = (const NullFs &);
+  DevFs(const DevFs &);
+  DevFs &operator = (const DevFs &);
 
-  File *m_pNull;
-  static NullFs m_Instance;
+  DevFsDirectory *m_pRoot;
+  static DevFs m_Instance;
 };
 
 #endif
