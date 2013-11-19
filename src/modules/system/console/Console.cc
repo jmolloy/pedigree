@@ -567,6 +567,15 @@ bool ConsoleManager::isConsole(File* file)
     return (file->getInode() == 0xdeadbeef);
 }
 
+bool ConsoleManager::isMasterConsole(File *file)
+{
+    if(!isConsole(file))
+        return false;
+
+    ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
+    return pFile->isMaster();
+}
+
 void ConsoleManager::setAttributes(File* file, size_t flags)
 {
     // \todo Sanity checking of the flags.
