@@ -99,6 +99,9 @@ int h_errno; // required by networking code
 
 // #define MAXNAMLEN 255
 
+const char *safepathchars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-";
+#define SAFE_PATH_LEN (sizeof safepathchars)
+
 #define STUBBED(str) syscall1(POSIX_STUBBED, (long)(str)); \
     errno = ENOSYS;
 
@@ -1719,7 +1722,44 @@ int chroot(const char *path)
 
 char *mkdtemp(char *template)
 {
-    STUBBED("mkdtemp");
+    if(!template)
+    {
+        errno = EINVAL;
+        return 0;
+    }
+
+    // Check for correct template - ends in 6 'X' characters.
+    size_t template_len = strlen(template);
+    if(template_len < 6)
+    {
+        errno = EINVAL;
+        return 0;
+    }
+
+    for(size_t i = (template_len - 6); i < template_len; ++i)
+    {
+        if(template[i] != 'X')
+        {
+            errno = EINVAL;
+            return 0;
+        }
+    }
+
+    while(1)
+    {
+        // Generate a filename.
+        for(size_t i = (template_len - 6); i < template_len; ++i)
+            template[i] = safepathchars[rand() % SAFE_PATH_LEN];
+
+        if(mkdir(template, 0700) == 0)
+            return template;
+        else if(errno != EEXIST)
+        {
+            // eg ENOENT, ENOTDIR, EROFS, etc...
+            return 0;
+        }
+    }
+
     return 0;
 }
 
