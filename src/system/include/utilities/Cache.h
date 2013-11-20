@@ -149,6 +149,13 @@ public:
      */
     void evict (uintptr_t key);
 
+    /**
+     * Empties the cache.
+     *
+     * Will not respect refcounts.
+     */
+    void empty();
+
     /** Decreases \p key 's \c refcnt by one. */
     void release(uintptr_t key);
 

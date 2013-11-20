@@ -272,6 +272,26 @@ void Cache::evict(uintptr_t key)
     evict(key, true, true, true);
 }
 
+void Cache::empty()
+{
+    while(!m_Lock.acquire());
+
+    // Remove anything older than the given time threshold.
+    for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
+        it != m_Pages.end();
+        ++it)
+    {
+        CachePage *page = reinterpret_cast<CachePage*>(it.value());
+        page->refcnt = 0;
+
+        evict(it.key(), false, true, false);
+    }
+
+    m_Pages.clear();
+
+    m_Lock.release();
+}
+
 void Cache::evict(uintptr_t key, bool bLock, bool bPhysicalLock, bool bRemove)
 {
     if(bLock)
@@ -320,7 +340,8 @@ void Cache::evict(uintptr_t key, bool bLock, bool bPhysicalLock, bool bRemove)
             m_Pages.remove(key);
 
         // Eviction callback.
-        m_Callback(Eviction, key, pPage->location, m_CallbackMeta);
+        if(m_Callback)
+            m_Callback(Eviction, key, pPage->location, m_CallbackMeta);
 
         delete pPage;
     }
