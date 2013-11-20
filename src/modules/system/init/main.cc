@@ -39,6 +39,8 @@
 #include <network-stack/RoutingTable.h>
 #include <network-stack/UdpLogger.h>
 
+#include <ramfs/RamFs.h>
+
 #include <users/UserManager.h>
 
 #include <utilities/TimeoutGuard.h>
@@ -126,6 +128,11 @@ static void init()
     {
 //     FATAL("No disks found!");
     }
+
+    // Mount scratch filesystem (ie, pure ram filesystem, for POSIX /tmp etc)
+    RamFs *pRamFs = new RamFs;
+    pRamFs->initialise(0);
+    VFS::instance().addAlias(pRamFs, String("scratch"));
 
     if (VFS::instance().find(String("raw»/")) == 0)
     {

@@ -26,8 +26,54 @@
 #include <processor/types.h>
 #include <machine/Disk.h>
 
+#include <utilities/Cache.h>
+
+class RamFile : public File
+{
+    public:
+        RamFile(String name, uintptr_t inode, Filesystem *pParentFS, File *pParent) :
+            File(name, 0, 0, 0, inode, pParentFS, 0, pParent), m_FileBlocks()
+        {
+            // Full permissions.
+            setPermissions(0777);
+        }
+
+        virtual ~RamFile()
+        {
+        }
+
+        virtual void truncate()
+        {
+            // Empty the cache.
+            m_FileBlocks.empty();
+            setSize(0);
+        }
+
+    protected:
+        virtual uintptr_t readBlock(uint64_t location)
+        {
+            // Super trivial. But we are a ram filesystem... can't compact.
+            uintptr_t buffer = m_FileBlocks.insert(location);
+            pinBlock(location);
+            return buffer;
+        }
+
+        virtual void pinBlock(uint64_t location)
+        {
+            m_FileBlocks.pin(location);
+        }
+
+        virtual void unpinBlock(uint64_t location)
+        {
+            m_FileBlocks.release(location);
+        }
+
+
+    private:
+        Cache m_FileBlocks;
+};
+
 /** Defines a directory in the RamFS */
-/// \todo Support nested directories
 class RamDir : public Directory
 {
 private:
@@ -37,31 +83,13 @@ public:
     RamDir(String name, size_t inode, class Filesystem *pFs, File *pParent);
     virtual ~RamDir();
 
-    uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer)
-    {
-        return 0;
-    }
-    uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer)
-    {
-        return 0;
-    }
-
-    void truncate()
-    {}
-
     virtual void cacheDirectoryContents()
-    {}
+    {
+    }
 
-    virtual bool addEntry(String filename, File *pFile, size_t type);
+    virtual bool addEntry(String filename, File *pFile);
 
     virtual bool removeEntry(File *pFile);
-
-    void fileAttributeChanged()
-    {};
-
-private:
-    // List of files we have available in this directory
-    RadixTree<File*> m_FileTree;
 };
 
 /** Defines a filesystem that is completely in RAM. */
@@ -80,11 +108,6 @@ public:
     {
         return String("ramfs");
     }
-    virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
-    virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer);
-    virtual void truncate(File *pFile);
-    virtual void fileAttributeChanged(File *pFile) {};
-    virtual void cacheDirectoryContents(File *pFile) {};
 
 protected:
     virtual bool createFile(File* parent, String filename, uint32_t mask);
