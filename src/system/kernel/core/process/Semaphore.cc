@@ -48,6 +48,7 @@ Semaphore::Semaphore(size_t nInitialValue)
 Semaphore::~Semaphore()
 {
     assert(magic == 0xdeadbaba);
+    m_Queue.clear();
 }
 
 void Semaphore::removeThread(Thread *pThread)
