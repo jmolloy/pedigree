@@ -167,8 +167,20 @@ File *Filesystem::findNode(File *pNode, String path)
 
     // Grab the next filename component.
     size_t i = 0;
+    size_t nExtra = 0;
     while (path[i] != '/' && path[i] != '\0')
         i = path.nextCharacter(i);
+    while (path[i] != '\0')
+    {
+        size_t n = path.nextCharacter(i);
+        if (path[n] == '/')
+        {
+            i = n;
+            ++nExtra;
+        }
+        else
+            break;
+    }
 
     String restOfPath;
     // Why did the loop exit?
@@ -178,6 +190,10 @@ File *Filesystem::findNode(File *pNode, String path)
         // restOfPath is now 'path', but starting at the next token, and with no leading slash.
         // Unfortunately 'path' now has a trailing slash, so chomp it off.
         path.chomp();
+
+        // Remove any extra slashes, for example in a '/a//b' path.
+        for (size_t z = 0; z < nExtra; ++z)
+            path.chomp();
     }
 
     // At this point 'path' contains the token to search for. 'restOfPath' contains the path for the next recursion (or nil).
