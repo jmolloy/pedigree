@@ -103,7 +103,7 @@ module_subdirs = [
     'TUI',
     'linker',
     'users',
-    #'ramfs',
+    'ramfs',
     'rawfs',
     'lodisk',
     'usb',
