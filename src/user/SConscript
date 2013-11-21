@@ -190,7 +190,8 @@ for i in all_apps:
     # Handle SDL dependencies.
     if i in sdl_apps:
         e['LIBS'] += ['SDL', 'pthread']
-        e['CPPPATH'] += ['#/src/lgpl/SDL-1.2.14/include']
+        e['CPPPATH'] += ['#/src/lgpl/SDL-1.2.14/include',
+                         '#/images/local/include']
     if i in mesa_apps:
         e['LIBS'] += ['OSMesa']
         e['LIBPATH'] += ['%s/libraries' % (imagesdir,)]

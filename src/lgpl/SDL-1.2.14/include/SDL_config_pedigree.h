@@ -50,14 +50,14 @@
 #define HAVE_STDLIB_H 1
 #define HAVE_STDARG_H 1
 #define HAVE_MALLOC_H 1
-#undef HAVE_MEMORY_H
+#define HAVE_MEMORY_H 1
 #define HAVE_STRING_H 1
 #define HAVE_STRINGS_H 1
 #define HAVE_INTTYPES_H 1
 #define HAVE_STDINT_H 1
 #define HAVE_CTYPE_H 1
 #define HAVE_MATH_H 1
-#undef HAVE_ICONV_H
+#define HAVE_ICONV_H 1
 #define HAVE_SIGNAL_H 1
 #undef HAVE_ALTIVEC_H
 
@@ -84,8 +84,8 @@
 #define HAVE_STRLCAT 1
 #define HAVE_STRDUP 1
 #undef HAVE__STRREV
-#undef HAVE__STRUPR
-#undef HAVE__STRLWR
+#define HAVE__STRUPR 1
+#define HAVE__STRLWR 1
 #define HAVE_INDEX 1
 #define HAVE_RINDEX 1
 #define HAVE_STRCHR 1
@@ -113,11 +113,11 @@
 #define HAVE_SSCANF 1
 #define HAVE_SNPRINTF 1
 #define HAVE_VSNPRINTF 1
-#undef HAVE_ICONV
+#define HAVE_ICONV 1
 #define HAVE_SIGACTION 1
-#undef HAVE_SETJMP
+#define HAVE_SETJMP 1
 #define HAVE_NANOSLEEP 1
-#define HAVE_CLOCK_GETTIME 1
+#undef HAVE_CLOCK_GETTIME
 #define HAVE_GETPAGESIZE 1
 #define HAVE_MPROTECT 1
 
