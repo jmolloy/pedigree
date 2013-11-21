@@ -112,6 +112,7 @@ template<typename T>
 RangeList<T>::RangeList(const RangeList<T>& other)
   : m_List()
 {
+    m_bReverse = other.m_bReverse;
     m_List.clear();
     Iterator it(other.m_List.begin());
     for (;
