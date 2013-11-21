@@ -72,8 +72,8 @@ x86_defines = generic_defines + general_x86_defines + x86_32_defines
 x64_defines = ['X64', 'BITS_64']
 
 # x64 CFLAGS and CXXFLAGS
-default_x64_cflags = ' -m64 -mno-red-zone -mcmodel=kernel -march=core2 -mno-sse -mno-mmx '
-default_x64_cxxflags = ' -m64 -mno-red-zone -mcmodel=kernel -march=core2 -mno-sse -mno-mmx '
+default_x64_cflags = ' -m64 -mno-red-zone -mcmodel=kernel -march=k8 -mno-sse -mno-mmx '
+default_x64_cxxflags = ' -m64 -mno-red-zone -mcmodel=kernel -march=k8 -mno-sse -mno-mmx '
 
 # x64 assembler flags
 default_x64_asflags = '64'
