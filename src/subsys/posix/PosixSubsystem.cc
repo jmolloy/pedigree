@@ -284,8 +284,11 @@ PosixSubsystem::~PosixSubsystem()
                     va->getMapping(unmapAddr, phys, flags);
                     va->unmap(reinterpret_cast<void*>(unmapAddr));
 
-                    // Free the physical page
-                    PhysicalMemoryManager::instance().freePage(phys);
+                    // Free the physical page, if we are allowed to.
+                    if ((flags & VirtualAddressSpace::Shared) == 0)
+                    {
+                        PhysicalMemoryManager::instance().freePage(phys);
+                    }
                 }
             }
 
