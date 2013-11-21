@@ -489,6 +489,18 @@ void Widget::checkForEvents(bool bAsync)
                         cb(::KeyUp, sizeof(pKeyEvent->key), &pKeyEvent->key);
                         break;
                     }
+                case LibUiProtocol::RawKeyEvent:
+                    {
+                        LibUiProtocol::RawKeyEventMessage *pKeyEvent =
+                            reinterpret_cast<LibUiProtocol::RawKeyEventMessage*>(buffer + sizeof(LibUiProtocol::WindowManagerMessage));
+
+                        WidgetMessages msg = ::RawKeyUp;
+                        if(pKeyEvent->state == LibUiProtocol::Down)
+                            msg = ::RawKeyDown;
+
+                        cb(msg, sizeof(pKeyEvent->scancode), &pKeyEvent->scancode);
+                    }
+                    break;
                 case LibUiProtocol::Focus:
                     cb(::Focus, 0, 0);
                     break;

@@ -36,6 +36,8 @@ enum WidgetMessages
     MouseUp,
     KeyDown,
     KeyUp,
+    RawKeyDown,
+    RawKeyUp,
     Focus,
     NoFocus,
 };

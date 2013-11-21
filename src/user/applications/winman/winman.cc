@@ -614,22 +614,36 @@ void queueInputCallback(Input::InputNotification &note)
         size_t totalSize = sizeof(LibUiProtocol::WindowManagerMessage);
         if(note.type & Input::Key)
             totalSize += sizeof(LibUiProtocol::KeyEventMessage);
+        else if(note.type & Input::RawKey)
+            totalSize += sizeof(LibUiProtocol::RawKeyEventMessage);
 
         char *buffer = new char[totalSize];
 
         LibUiProtocol::WindowManagerMessage *pHeader =
             reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
-        pHeader->messageCode = LibUiProtocol::KeyEvent;
         pHeader->widgetHandle = g_pFocusWindow->getHandle();
         pHeader->messageSize = totalSize - sizeof(*pHeader);
         pHeader->isResponse = false;
 
         if(note.type & Input::Key)
         {
+            pHeader->messageCode = LibUiProtocol::KeyEvent;
+
             LibUiProtocol::KeyEventMessage *pKeyEvent =
                 reinterpret_cast<LibUiProtocol::KeyEventMessage*>(buffer + sizeof(LibUiProtocol::WindowManagerMessage));
             pKeyEvent->state = LibUiProtocol::Up; /// \todo 'keydown' messages.
             pKeyEvent->key = note.data.key.key;
+
+            send(g_pFocusWindow->getSocket(), buffer, totalSize, 0);
+        }
+        else if(note.type & Input::RawKey)
+        {
+            pHeader->messageCode = LibUiProtocol::RawKeyEvent;
+
+            LibUiProtocol::RawKeyEventMessage *pKeyEvent =
+                reinterpret_cast<LibUiProtocol::RawKeyEventMessage*>(buffer + sizeof(LibUiProtocol::WindowManagerMessage));
+            pKeyEvent->state = note.data.rawkey.keyUp ? LibUiProtocol::Up : LibUiProtocol::Down;
+            pKeyEvent->scancode = note.data.rawkey.scancode;
 
             send(g_pFocusWindow->getSocket(), buffer, totalSize, 0);
         }
@@ -847,7 +861,7 @@ int main(int argc, char *argv[])
     g_Windows = new std::map<uint64_t, Window*>();
 
     // Install our global input callback before we kick off our client.
-    Input::installCallback(Input::Key | Input::Mouse, systemInputCallback);
+    Input::installCallback(Input::RawKey | Input::Key | Input::Mouse, systemInputCallback);
 
     // Render all window decorations and non-client display elements first up.
     g_pRootContainer->render(cr);

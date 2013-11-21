@@ -134,6 +134,12 @@ namespace LibUiProtocol
         KeyEvent,
 
         /**
+         * RawKeyEvent: window manager -> widget. Notifies a widget of a raw
+         * key event, where the key is actually a HID scancode.
+         */
+        RawKeyEvent,
+
+        /**
          * Focus: window manager -> widget. A notification to state that the
          * window has now received focus.
          */
@@ -296,6 +302,13 @@ namespace LibUiProtocol
     {
         ButtonState state;
         uint64_t key;
+    };
+
+    /** RawKeyEvent message data. */
+    struct RawKeyEventMessage
+    {
+        ButtonState state;
+        uint16_t scancode;
     };
 };
 

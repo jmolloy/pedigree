@@ -38,90 +38,65 @@ extern PEDIGREE_SDLWidget *g_Widget;
 static SDLKey keymap[256];
 static SDLMod modstate = KMOD_NONE;
 
-namespace Keyboard
+// Receives a HID scancode, translates it, and submits to SDL.
+static void handle_hid_scancode(uint16_t scancode, bool bUp)
 {
-    enum KeyFlags
-    {
-        Special = 1ULL << 63,
-        Ctrl    = 1ULL << 62,
-        Shift   = 1ULL << 61,
-        Alt     = 1ULL << 60,
-        AltGr   = 1ULL << 59
-    };
-}
+    SDLKey trans = keymap[scancode];
 
-bool PEDIGREE_SDLwidgetCallback(WidgetMessages message, size_t msgSize, void *msgData)
-{
-    switch(message)
+    SDL_keysym sym;
+    sym.scancode = scancode;
+    sym.unicode = 0;
+    sym.mod = KMOD_NONE;
+    sym.sym = trans;
+
+    int mods = static_cast<int>(modstate);
+
+    if(bUp)
     {
-        case Reposition:
-            {
-                PedigreeGraphics::Rect *rt = reinterpret_cast<PedigreeGraphics::Rect *>(msgData);
-                g_Widget->reposition(*rt);
-            }
-            break;
+        if(trans == SDLK_LALT)
+            mods &= ~KMOD_LALT;
+        if(trans == SDLK_RALT)
+            mods &= ~KMOD_RALT;
+        if(trans == SDLK_LSHIFT)
+            mods &= ~KMOD_LSHIFT;
+        if(trans == SDLK_RSHIFT)
+            mods &= ~KMOD_RSHIFT;
+        if(trans == SDLK_LCTRL)
+            mods &= ~KMOD_LCTRL;
+        if(trans == SDLK_RCTRL)
+            mods &= ~KMOD_RCTRL;
+
+        sym.mod = static_cast<SDLMod>(mods);
+
+        SDL_PrivateKeyboard(SDL_RELEASED, &sym);
     }
-    return true;
-}
+    else
+    {
+        if(trans == SDLK_LALT)
+            mods |= KMOD_LALT;
+        if(trans == SDLK_RALT)
+            mods |= KMOD_RALT;
+        if(trans == SDLK_LSHIFT)
+            mods |= KMOD_LSHIFT;
+        if(trans == SDLK_RSHIFT)
+            mods |= KMOD_RSHIFT;
+        if(trans == SDLK_LCTRL)
+            mods |= KMOD_LCTRL;
+        if(trans == SDLK_RCTRL)
+            mods |= KMOD_RCTRL;
 
+        sym.mod = static_cast<SDLMod>(mods);
+
+        SDL_PrivateKeyboard(SDL_PRESSED, &sym);
+    }
+
+    modstate = static_cast<SDLMod>(mods);
+}
 
 // Input handler: receives input notifications and sends them to SDL
-void input_handler(Input::InputNotification &note)
+static void input_handler(Input::InputNotification &note)
 {
-    if(note.type == Input::RawKey)
-    {
-        SDLKey trans = keymap[note.data.rawkey.scancode];
-
-        SDL_keysym sym;
-        sym.scancode = note.data.rawkey.scancode;
-        sym.unicode = 0;
-        sym.mod = KMOD_NONE;
-        sym.sym = trans;
-
-        int mods = static_cast<int>(modstate);
-
-        if(note.data.rawkey.keyUp)
-        {
-            if(trans == SDLK_LALT)
-                mods &= ~KMOD_LALT;
-            if(trans == SDLK_RALT)
-                mods &= ~KMOD_RALT;
-            if(trans == SDLK_LSHIFT)
-                mods &= ~KMOD_LSHIFT;
-            if(trans == SDLK_RSHIFT)
-                mods &= ~KMOD_RSHIFT;
-            if(trans == SDLK_LCTRL)
-                mods &= ~KMOD_LCTRL;
-            if(trans == SDLK_RCTRL)
-                mods &= ~KMOD_RCTRL;
-
-            sym.mod = static_cast<SDLMod>(mods);
-
-            SDL_PrivateKeyboard(SDL_RELEASED, &sym);
-        }
-        else
-        {
-            if(trans == SDLK_LALT)
-                mods |= KMOD_LALT;
-            if(trans == SDLK_RALT)
-                mods |= KMOD_RALT;
-            if(trans == SDLK_LSHIFT)
-                mods |= KMOD_LSHIFT;
-            if(trans == SDLK_RSHIFT)
-                mods |= KMOD_RSHIFT;
-            if(trans == SDLK_LCTRL)
-                mods |= KMOD_LCTRL;
-            if(trans == SDLK_RCTRL)
-                mods |= KMOD_RCTRL;
-
-            sym.mod = static_cast<SDLMod>(mods);
-
-            SDL_PrivateKeyboard(SDL_PRESSED, &sym);
-        }
-
-        modstate = static_cast<SDLMod>(mods);
-    }
-    else if(note.type == Input::Mouse)
+    if(note.type == Input::Mouse)
     {
         for(int i = 0; i < 8; i++)
         {
@@ -137,7 +112,8 @@ void input_handler(Input::InputNotification &note)
 
 void PEDIGREE_InitInput()
 {
-    Input::installCallback(Input::RawKey | Input::Mouse, input_handler);
+    /// \todo Mouse support in the window manager.
+    Input::installCallback(Input::Mouse, input_handler);
 }
 
 void PEDIGREE_DestroyInput()
@@ -149,6 +125,29 @@ void PEDIGREE_PumpEvents(_THIS)
 {
 	// Nothing that has to be done here - everything comes in as async events
     Widget::checkForEvents(true);
+}
+
+bool PEDIGREE_SDLwidgetCallback(WidgetMessages message, size_t msgSize, void *msgData)
+{
+    switch(message)
+    {
+        case Reposition:
+            {
+                PedigreeGraphics::Rect *rt = reinterpret_cast<PedigreeGraphics::Rect *>(msgData);
+                g_Widget->reposition(*rt);
+            }
+            break;
+        case RawKeyUp:
+        case RawKeyDown:
+            {
+                uint16_t scancode = *reinterpret_cast<uint16_t*>(msgData);
+                handle_hid_scancode(scancode, message == RawKeyUp);
+            }
+            break;
+        default:
+            break;
+    }
+    return true;
 }
 
 void PEDIGREE_InitOSKeymap(_THIS)
