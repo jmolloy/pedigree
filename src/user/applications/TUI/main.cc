@@ -450,6 +450,10 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
                 }
             }
             break;
+        case RawKeyDown:
+        case RawKeyUp:
+            // Ignore.
+            break;
         default:
             syslog(LOG_INFO, "TUI: unhandled callback");
     }
