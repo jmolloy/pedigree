@@ -91,7 +91,12 @@ def process_field(f):
 
             backtrace.append(bt)
 
-        counts[size] = counts.get(size, 0) + 1
+        if size not in counts:
+            counts[size] = (size, backtrace)
+        else:
+            c = counts[size]
+            counts[size] = (c[0] + 1, c[1])
+
         if size >= TOO_LARGE_THRESHOLD:
             toolarge[ptr] = (size, backtrace)
 
@@ -126,15 +131,16 @@ def addr2module(addr):
 
     return 0, MODULE_MAPPINGS.get('kernel', 'build/kernel/kernel')
 
-def writebt(bt):
+def writebt(bt, prefix=''):
     for frame in bt:
         # Figure out which module to use
         low, mod = addr2module(frame)
         if os.path.exists(mod):
             # Pretty-print, demangle, print function names.
-            print os.popen('addr2line -p -C -f -e %s 0x%x' % (mod, frame - low)).read(),
+            out = os.popen('addr2line -p -C -f -e %s 0x%x' % (mod, frame - low)).read()
+            print '%s%s' % (prefix, out),
         else:
-            print '%x (unknown module "%s")' % (frame, mod,)
+            print '%s%x (unknown module "%s")' % (prefix, frame, mod,)
 
     print
 
@@ -147,6 +153,8 @@ with open(sys.argv[1], 'rb') as f:
 
     print "Loaded %d allocations and %d frees, and %d metadata items" % (total_allocs, total_frees, len(metadata))
 
+    nobacktrace = 'nobacktrace' in sys.argv
+
     if 'unfreed' in sys.argv:
         print "Unfreed Blocks"
 
@@ -155,16 +163,25 @@ with open(sys.argv[1], 'rb') as f:
             total += size
 
             print "Unfreed %x of size %d:" % (ptr, size)
-            writebt(backtrace)
+            if not nobacktrace:
+                writebt(backtrace, '\t')
 
         print "Total %d bytes left unfreed." % (total)
 
     if 'counts' in sys.argv:
         print "Size Distribution"
 
+        oneandover = 'oneandover' in sys.argv
+
         for size in sorted(counts.keys()):
-            count = counts[size]
-            print "%12d:\t%d\t(%f%%)" % (size, count, (count / float(total_allocs)) * 100.0)
+            count, backtrace = counts[size]
+            percent = (count / float(total_allocs)) * 100.0
+            if oneandover and (percent < 1.0):
+                continue
+
+            print "%12d:\t%d\t(%f%%)" % (size, count, percent)
+            if not nobacktrace:
+                writebt(backtrace, '\t')
 
         print
 
@@ -173,4 +190,5 @@ with open(sys.argv[1], 'rb') as f:
 
         for ptr, (size, backtrace) in toolarge.iteritems():
             print "Block %x should perhaps not be on the heap (it is %d bytes, larger than threshold %d):" % (ptr, size, TOO_LARGE_THRESHOLD)
-            writebt(backtrace)
+            if not nobacktrace:
+                writebt(backtrace, '\t')
