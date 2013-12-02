@@ -21,9 +21,11 @@
 #include <processor/Processor.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <processor/VirtualAddressSpace.h>
+#include <machine/Machine.h>
 #include <Log.h>
 
 #include <utilities/Tree.h>
+#include <utilities/MemoryTracing.h>
 
 Tree<void*, void*> g_FreedPointers;
 
@@ -60,6 +62,112 @@ void initialiseConstructors()
     iterator++;
   }
 }
+
+#ifdef MEMORY_TRACING
+Spinlock traceLock;
+void traceAllocation(void *ptr, MemoryTracing::AllocationTrace type, size_t size)
+{
+    LockGuard<Spinlock> guard(traceLock);
+
+    // Yes, this means we'll lose early init mallocs. Oh well...
+    if(!Machine::instance().isInitialised())
+        return;
+
+    Serial *pSerial = Machine::instance().getSerial(1);
+    if(!pSerial)
+        return;
+
+    char buf[255];
+
+    size_t off = 0;
+
+    // Allocation type.
+    memcpy(&buf[off], &type, 1);
+    ++off;
+
+    // Resulting pointer.
+    memcpy(&buf[off], &ptr, sizeof(void*));
+    off += sizeof(void*);
+
+    // Don't store size or backtrace for frees.
+    if(type == MemoryTracing::Allocation)
+    {
+        // Size of allocation.
+        memcpy(&buf[off], &size, sizeof(size_t));
+        off += sizeof(size_t);
+
+        // Backtrace.
+        do
+        {
+#define DO_BACKTRACE(v, level, buffer, offset) { \
+                if(!__builtin_frame_address(level)) break; \
+                v = __builtin_return_address(level); \
+                memcpy(&buffer[offset], &v, sizeof(void*)); \
+                offset += sizeof(void*); \
+            }
+
+            void *p;
+
+            DO_BACKTRACE(p, 1, buf, off);
+            DO_BACKTRACE(p, 2, buf, off);
+            DO_BACKTRACE(p, 3, buf, off);
+            DO_BACKTRACE(p, 4, buf, off);
+            DO_BACKTRACE(p, 5, buf, off);
+            DO_BACKTRACE(p, 6, buf, off);
+        } while(0);
+
+        // Ensure the trace always ends in a zero frame (ie, end of trace)
+        uintptr_t endoftrace = 0;
+        memcpy(&buf[off], &endoftrace, sizeof(uintptr_t));
+        off += sizeof(uintptr_t);
+    }
+
+    for(size_t i = 0; i < off; ++i)
+    {
+        pSerial->write(buf[i]);
+    }
+}
+
+/**
+ * Adds a metadata field to the memory trace.
+ *
+ * This is typically used to define the region in which a module has been
+ * loaded, so the correct debug symbols can be loaded and used.
+ */
+void traceMetadata(NormalStaticString str, void *p1, void *p2)
+{
+    LockGuard<Spinlock> guard(traceLock);
+
+    // Yes, this means we'll lose early init mallocs. Oh well...
+    if(!Machine::instance().isInitialised())
+        return;
+
+    Serial *pSerial = Machine::instance().getSerial(1);
+    if(!pSerial)
+        return;
+
+    char buf[128];
+    memset(buf, 0, 128);
+
+    size_t off = 0;
+
+    const MemoryTracing::AllocationTrace type = MemoryTracing::Metadata;
+
+    memcpy(&buf[off], &type, 1);
+    ++off;
+    memcpy(&buf[off], static_cast<const char *>(str), str.length());
+    off += 64; // Statically sized segment.
+    memcpy(&buf[off], &p1, sizeof(void*));
+    off += sizeof(void*);
+    memcpy(&buf[off], &p2, sizeof(void*));
+    off += sizeof(void*);
+
+    for(size_t i = 0; i < off; ++i)
+    {
+        pSerial->write(buf[i]);
+    }
+}
+#endif
 
 /// Required for G++ to compile code.
 extern "C" void __cxa_atexit(void (*f)(void *), void *p, void *d)

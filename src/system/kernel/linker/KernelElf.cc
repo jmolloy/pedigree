@@ -19,6 +19,7 @@
 #include <processor/Processor.h>
 #include <processor/VirtualAddressSpace.h>
 #include <processor/PhysicalMemoryManager.h>
+#include <utilities/MemoryTracing.h>
 #include <Log.h>
 
 KernelElf KernelElf::m_Instance;
@@ -238,6 +239,10 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
     module->exit = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleExit"));
     module->depends = reinterpret_cast<const char **> (module->elf.lookupSymbol("g_pDepends"));
     DEBUG("KERNELELF: Preloaded module " << module->name << " at " << module->loadBase);
+
+#ifdef MEMORY_TRACING
+    traceMetadata(NormalStaticString(module->name), reinterpret_cast<void*>(module->loadBase), reinterpret_cast<void*>(module->loadBase + module->loadSize));
+#endif
 
     g_BootProgressCurrent ++;
     if (g_BootProgressUpdate && !silent)

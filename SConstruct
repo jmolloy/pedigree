@@ -39,6 +39,7 @@ opts.AddVariables(
     ('AS','Sets the assembler to use.'),
     ('AR','Sets the archiver to use.'),
     ('LINK','Sets the linker to use.'),
+    ('STRIP','Path to the `strip\' executable.'),
     ('OBJCOPY','Path to `objcopy\' executable.'),
     ('CFLAGS','Sets the C compiler flags.',''),
     ('CXXFLAGS','Sets the C++ compiler flags.',''),
@@ -88,6 +89,7 @@ opts.AddVariables(
     BoolVariable('multiple_consoles', 'If 1, the TUI is built with the ability to create and move between multiple virtual consoles.', 1),
     BoolVariable('memory_log', 'If 1, memory logging on the second serial line is enabled.', 1),
     BoolVariable('memory_log_inline', 'If 1, memory logging will be output alongside conventional serial output.', 0),
+    BoolVariable('memory_tracing', 'If 1, trace memory allocations and frees (for statistics and for leak detection) on the second serial line. EXCEPTIONALLY SLOW.', 0),
     
     BoolVariable('multiprocessor', 'If 1, multiprocessor support is compiled in to the kernel.', 0),
     BoolVariable('apic', 'If 1, APIC support will be built in (not to be confused with ACPI).', 0),
@@ -198,6 +200,7 @@ if env['CROSS'] != '' or env['ON_PEDIGREE']:
     env['AR'] = crossTuple + 'ar'
     env['RANLIB'] = crossTuple + 'ranlib'
     env['LD'] = crossTuple + 'gcc'
+    env['STRIP'] = crossTuple + 'strip'
     env['OBJCOPY'] = crossTuple + 'objcopy'
     env['LINK'] = env['LD']
 env['LD'] = env['LINK']
@@ -298,6 +301,14 @@ if(tmp == None or env['ARCH_TARGET'] == ''):
 
 if(env['pup']):
     env['PEDIGREE_IMAGES_DIR'] = '#images/local/'
+
+if env['debugger']:
+    # Build in debugging information when built with the debugger.
+    # TODO: strip binaries of debug symbols in flight while building images.
+    debug_flags = ' -g3 '
+    env['CFLAGS'] = safeAppend(env['CFLAGS'], debug_flags)
+    env['CXXFLAGS'] = safeAppend(env['CXXFLAGS'], debug_flags)
+    env['ASFLAGS'] = safeAppend(env['ASFLAGS'], debug_flags)
     
 # Configure the assembler
 if(env['AS'] == ''):
@@ -339,10 +350,12 @@ if env['verbose_link'] and not '--verbose' in env['LINKFLAGS']:
     env['LINKFLAGS'] = safeAppend(env['LINKFLAGS'], ' --verbose')
 elif '--verbose' in env['LINKFLAGS']:
     env['LINKFLAGS'] = env['LINKFLAGS'].replace('--verbose', '')
-    
-if env['memory_log']:
+
+if env['memory_tracing']:
+    defines += ['MEMORY_TRACING']
+elif env['memory_log']:
     defines += ['MEMORY_LOGGING_ENABLED']
-if env['memory_log_inline']:
+elif env['memory_log_inline']:
     defines += ['MEMORY_LOG_INLINE']
     
 additionalDefines = ['ipv4_forwarding', 'serial_is_file', 'installer', 'debugger', 'cripple_hdd', 'enable_ctrlc',

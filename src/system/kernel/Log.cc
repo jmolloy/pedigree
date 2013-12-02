@@ -37,7 +37,7 @@ class SerialLogger : public Log::LogCallback
         {
             for(size_t n = 0; n < Machine::instance().getNumSerial(); n++)
             {
-#if defined(MEMORY_LOGGING_ENABLED) && !defined(MEMORY_LOG_INLINE)
+#if defined(MEMORY_TRACING) || (defined(MEMORY_LOGGING_ENABLED) && !defined(MEMORY_LOG_INLINE))
                 if(n == 1) // Don't override memory log.
                     continue;
 #endif
@@ -285,7 +285,7 @@ Log &Log::operator<< (Modifier type)
 
             for(List<LogCallback*>::Iterator it = m_OutputCallbacks.begin();
                 it != m_OutputCallbacks.end();
-                it++)
+                ++it)
             {
                 if(*it)
                     (*it)->callback(static_cast<const char*>(str));

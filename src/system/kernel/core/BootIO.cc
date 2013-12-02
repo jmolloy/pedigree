@@ -51,6 +51,10 @@ void BootIO::write(HugeStaticString &str, Colour foreColour, Colour backColour)
   {
     for(size_t i = 0; i < Machine::instance().getNumSerial(); i++)
     {
+#if defined(MEMORY_TRACING) || (defined(MEMORY_LOGGING_ENABLED) && !defined(MEMORY_LOG_INLINE))
+        if(i == 1) // Don't override memory log.
+          continue;
+#endif
         //startColour(Machine::instance().getSerial(i), foreColour, backColour);
         for(size_t j = 0; j < str.length(); j++)
           Machine::instance().getSerial(i)->write(str[j]);

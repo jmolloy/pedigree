@@ -17,6 +17,7 @@
 #include "SlamAllocator.h"
 
 #include <utilities/assert.h>
+#include <utilities/MemoryTracing.h>
 
 #include <machine/Machine.h>
 #include <processor/Processor.h>
@@ -194,7 +195,8 @@ uintptr_t SlamCache::getSlab()
 
 void SlamCache::freeSlab(uintptr_t slab)
 {
-    /// \todo Implement.
+    /// \todo Implement. Also, call this sometime.
+    ERROR("Request to free slab that couldn't be honoured.");
 }
 
 SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
@@ -393,6 +395,10 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
             m_Caches[i].check();
 #endif
 
+#ifdef MEMORY_TRACING
+    size_t origSize = nBytes;
+#endif
+
     // Return value.
     uintptr_t ret = 0;
 
@@ -456,6 +462,10 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
     assert(ret != 0);
 #endif
 
+#ifdef MEMORY_TRACING
+    traceAllocation(reinterpret_cast<void *>(ret), MemoryTracing::Allocation, origSize);
+#endif
+
     return ret;
 }
 
@@ -513,6 +523,10 @@ void SlamAllocator::free(uintptr_t mem)
 
     // Free the memory
     head->cache->free(mem - sizeof(AllocHeader));
+
+#ifdef MEMORY_TRACING
+   traceAllocation(reinterpret_cast<void *>(mem), MemoryTracing::Free, 0);
+#endif
 }
 
 bool SlamAllocator::isPointerValid(uintptr_t mem)
