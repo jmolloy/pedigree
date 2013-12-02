@@ -53,4 +53,9 @@ libpaths = [
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['tmp'])
 tmp['CPPPATH'] = include
 tmp['LIBS'] = libraries
+
+final_output = native_userlib_objname
+native_userlib_objname = '%s.debug' % (native_userlib_objname,)
+
 tmp.Program(native_userlib_objname, lib_files, LINKFLAGS='-nostdlib -r -T $LSCRIPT', LSCRIPT=File("#src/modules/link.ld"))
+tmp.Command(final_output, native_userlib_objname, action="%s -d -o $TARGET $SOURCE" % env['STRIP'])

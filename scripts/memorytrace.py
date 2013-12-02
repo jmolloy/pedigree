@@ -60,6 +60,9 @@ MODULE_MAPPINGS = {
     'scsi': 'build/drivers/scsi.o.debug',
     'vfs': 'build/modules/vfs.o.debug',
     'kernel': 'build/kernel/kernel.debug',
+    'posix': 'build/subsystems/posix.o.debug',
+    'native': 'build/subsystems/native.o.debug',
+    'pedigree-c': 'build/subsystems/pedigree-c.o.debug',
 }
 
 class EarlyEof(Exception):
