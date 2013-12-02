@@ -92,7 +92,7 @@ def process_field(f):
             backtrace.append(bt)
 
         if size not in counts:
-            counts[size] = (size, backtrace)
+            counts[size] = (1, backtrace)
         else:
             c = counts[size]
             counts[size] = (c[0] + 1, c[1])
