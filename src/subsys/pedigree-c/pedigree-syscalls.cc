@@ -209,9 +209,9 @@ void pedigree_module_load(char *_file)
 
     // Map the module in the memory
     uintptr_t buffer = 0;
-    MemoryMappedFile *pMmFile = MemoryMappedFileManager::instance().map(file, buffer);
+    MemoryMappedObject *pMmFile = MemoryMapManager::instance().mapFile(file, buffer, file->getSize());
     KernelElf::instance().loadModule(reinterpret_cast<uint8_t*>(buffer), file->getSize(), true);
-    MemoryMappedFileManager::instance().unmap(pMmFile);
+    MemoryMapManager::instance().unmap(pMmFile);
 }
 
 // Unload a module

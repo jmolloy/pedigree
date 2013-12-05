@@ -19,600 +19,469 @@
 #include <processor/PhysicalMemoryManager.h>
 #include <Spinlock.h>
 
-MemoryMappedFileManager MemoryMappedFileManager::m_Instance;
+#include <utilities/assert.h>
+
+MemoryMapManager MemoryMapManager::m_Instance;
+
+physical_uintptr_t AnonymousMemoryMap::m_Zero = 0;
 
 /// \todo number of CPUs
 static char g_TrapPage[256][4096] __attribute__((aligned(4096))) = {0};
 
-MemoryMappedFile::MemoryMappedFile(File *pFile, size_t extentOverride, bool bShared) :
-    m_pFile(pFile), m_Mappings(), m_bMarkedForDeletion(false),
-    m_Extent(extentOverride ? extentOverride : pFile->getSize() + 1), m_RefCount(0), m_Lock(),
-    m_bShared(bShared)
+MemoryMappedObject::~MemoryMappedObject()
 {
-    if (m_Extent & ~(PhysicalMemoryManager::getPageSize()-1))
+}
+
+AnonymousMemoryMap::AnonymousMemoryMap(uintptr_t address, size_t length) :
+    MemoryMappedObject(address, true, length), m_Mappings()
+{
+    if(m_Zero == 0)
     {
-        m_Extent = (m_Extent + PhysicalMemoryManager::getPageSize()) &
-            ~(PhysicalMemoryManager::getPageSize()-1);
+        m_Zero = PhysicalMemoryManager::instance().allocatePage();
+        /// \todo Map in the zero page, zero it.
+
+        VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+        va.map(m_Zero, reinterpret_cast<void *>(address), VirtualAddressSpace::Write);
+        memset(reinterpret_cast<void *>(address), 0, PhysicalMemoryManager::getPageSize());
     }
 }
 
-MemoryMappedFile::MemoryMappedFile(size_t anonMapSize) :
-    m_pFile(0), m_Mappings(), m_bMarkedForDeletion(false), m_Extent(anonMapSize),
-    m_RefCount(1), m_Lock()
+MemoryMappedObject *AnonymousMemoryMap::clone()
 {
+    AnonymousMemoryMap *pResult = new AnonymousMemoryMap(m_Address, m_Length);
+    pResult->m_Mappings = m_Mappings;
+    return pResult;
 }
 
-MemoryMappedFile::~MemoryMappedFile()
+void AnonymousMemoryMap::unmap()
 {
-    if(m_RefCount) {
-        FATAL("MemoryMappedFile destroyed with a positive refcount, this is BAD.");
-    }
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
-    if(m_Mappings.count()) {
-        ERROR("MemoryMappedFile::unload() must be called before destroying a MemoryMappedFile.");
-        FATAL("MemoryMappedFile destroyed with " << Dec << m_Mappings.count() << Hex << " mappings still present - this is BAD and that memory is now leaked.");
-    }
-
-    /// \note You should call unload() before destroying a MemoryMappedFile.
-    ///       as unload() can offset the keys of m_Mappings correctly.
-}
-
-bool MemoryMappedFile::load(uintptr_t &address, Process *pProcess, size_t extentOverride)
-{
-    LockGuard<Mutex> guard(m_Lock);
-
-    size_t extent = m_Extent;
-    if(extentOverride)
-        m_Extent = extent = extentOverride;
-
-    // Verify that we're not trying to memory map an empty file
-    /// \todo It's ok to do so if write is enabled!
-    if(extent <= 1)
-        return false;
-
-    if (!pProcess)
-        pProcess = Processor::information().getCurrentThread()->getParent();
-
-    if (address == 0)
+    for(List<void *>::Iterator it = m_Mappings.begin();
+        it != m_Mappings.end();
+        ++it)
     {
-        if (!pProcess->getSpaceAllocator().allocate(extent+PhysicalMemoryManager::getPageSize(), address))
-            return false;
-        if (address & (PhysicalMemoryManager::getPageSize()-1))
+        void *v = *it;
+        if(va.isMapped(v))
         {
-            address = (address + PhysicalMemoryManager::getPageSize()) &
-                ~(PhysicalMemoryManager::getPageSize()-1);
+            size_t flags;
+            physical_uintptr_t phys;
+
+            va.getMapping(v, phys, flags);
+
+            // Clean up. Shared read-only zero page will only have its refcount
+            // decreased by this - it will not hit zero.
+            va.unmap(v);
+            PhysicalMemoryManager::instance().freePage(phys);
         }
+    }
+
+    m_Mappings.clear();
+}
+
+bool AnonymousMemoryMap::trap(uintptr_t address, bool bWrite)
+{
+
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+
+    // Page-align the trap address
+    address = address & ~(pageSz - 1);
+
+    if(!bWrite)
+    {
+        PhysicalMemoryManager::instance().pin(m_Zero);
+        va.map(m_Zero, reinterpret_cast<void *>(address), VirtualAddressSpace::Shared);
+
+        m_Mappings.pushBack(reinterpret_cast<void *>(address));
     }
     else
     {
-        //if (!pProcess->getSpaceAllocator().allocateSpecific(address, extent))
-        //    return false;
+        physical_uintptr_t newPage = PhysicalMemoryManager::instance().allocatePage();
 
-        // If this fails, we generally assume a reservation has been made.
-        /// \todo rework APIs a lot.
-        pProcess->getSpaceAllocator().allocateSpecific(address, extent);
+        if(va.isMapped(reinterpret_cast<void *>(address)))
+        {
+            va.unmap(reinterpret_cast<void *>(address));
+            m_Mappings.pushBack(reinterpret_cast<void *>(address));
+        }
+        va.map(newPage, reinterpret_cast<void *>(address), VirtualAddressSpace::Write);
+
+        // "Copy" on write... but not really :)
+        memset(reinterpret_cast<void *>(address), 0, PhysicalMemoryManager::getPageSize());
+
+        // Drop the refcount on the zero page.
+        PhysicalMemoryManager::instance().freePage(m_Zero);
     }
-
-    NOTICE("MemoryMappedFile: " << Hex << address << " -> " << (address+extent) << " (pid " << pProcess->getId() << ")");
-
-    // Create a spinlock as an easy way of disabling interrupts.
-    Spinlock spinlock;
-    spinlock.acquire();
-
-    VirtualAddressSpace *va = pProcess->getAddressSpace();
-
-    VirtualAddressSpace &oldva = Processor::information().getVirtualAddressSpace();
-
-    if (&oldva != va)
-        Processor::switchAddressSpace(*va);
-
-    // Add all the V->P mappings we currently posess.
-    for (Tree<uintptr_t,uintptr_t>::Iterator it = m_Mappings.begin();
-         it != m_Mappings.end();
-         it++)
-    {
-        uintptr_t v = it.key() + address;
-        uintptr_t p = it.value();
-
-        // Extent overridden means don't map the entire file in...
-        if(it.key() >= extent) {
-            break;
-        }
-
-        // Check for shared page.
-        bool bMapWrite = m_bShared;
-        if(p == static_cast<physical_uintptr_t>(~0UL))
-        {
-            p = m_pFile->getPhysicalPage(it.key());
-            bMapWrite = false;
-        }
-
-        // Check for cloned address space - which can and does break shared mmaps.
-        // Need to remove the cloned page and replace it with the real mapping.
-        if(va->isMapped(reinterpret_cast<void*>(v)))
-        {
-            FATAL("???");
-
-            size_t flags = 0;
-            physical_uintptr_t phys = 0;
-            va->getMapping(reinterpret_cast<void*>(v), phys, flags);
-
-            if(phys == p)
-            {
-                continue;
-            }
-
-            // Cloned address space with new page. Kill it.
-            va->unmap(reinterpret_cast<void*>(v));
-            PhysicalMemoryManager::instance().freePage(phys);
-        }
-
-        if (!va->map(p, reinterpret_cast<void*>(v), VirtualAddressSpace::Execute | (bMapWrite ? VirtualAddressSpace::Write : VirtualAddressSpace::Shared)))
-        {
-            WARNING("MemoryMappedFile: map() failed at " << v);
-            return false;
-        }
-    }
-
-    if (&oldva != va)
-        Processor::switchAddressSpace(oldva);
-
-    spinlock.release();
 
     return true;
 }
 
-void MemoryMappedFile::unload(uintptr_t address, uintptr_t fileoffset)
+MemoryMappedFile::MemoryMappedFile(uintptr_t address, size_t length, size_t offset, File *backing, bool bCopyOnWrite) :
+    MemoryMappedObject(address, bCopyOnWrite, length), m_pBacking(backing), m_Offset(offset), m_Mappings()
 {
-    LockGuard<Mutex> guard(m_Lock);
+    assert(m_pBacking);
+}
 
+MemoryMappedObject *MemoryMappedFile::clone()
+{
+    MemoryMappedFile *pResult = new MemoryMappedFile(m_Address, m_Length, m_Offset, m_pBacking, m_bCopyOnWrite);
+    pResult->m_Mappings = m_Mappings;
+    return pResult;
+}
+
+void MemoryMappedFile::unmap()
+{
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
-    // Remove all the V->P mappings we currently posess.
-    for (Tree<uintptr_t,uintptr_t>::Iterator it = m_Mappings.begin();
-         it != m_Mappings.end();
-         it++)
+    if(!m_Mappings.count())
+        return;
+
+    for(Tree<uintptr_t, uintptr_t>::Iterator it = m_Mappings.begin();
+        it != m_Mappings.end();
+        ++it)
     {
-        // Key = file offset + offset into specific memory mapping
-        uintptr_t v = (it.key() - fileoffset) + address;
+        void *v = reinterpret_cast<void *>(it.key());
+        if(va.isMapped(v))
+            va.unmap(v);
 
-        // Check for shared page.
-        bool bFreePages = (it.value() != static_cast<physical_uintptr_t>(~0UL));
-
-        if (va.isMapped(reinterpret_cast<void*>(v)))
-        {
-            uintptr_t p;
-            size_t flags;
-            va.getMapping(reinterpret_cast<void*>(v), p, flags);
-
-            va.unmap(reinterpret_cast<void*>(v));
-
-            // If we forked and copied this page, we want to delete the second copy.
-            // So, if the physical mapping is not what we have on record, free it.
-            if (bFreePages && (p != it.value()))
-                PhysicalMemoryManager::instance().freePage(p);
-            // Alternatively, if the page isn't mapped shared, it can be destroyed.
-            else if (bFreePages && (p == it.value()) && ((flags & VirtualAddressSpace::Shared) == 0))
-                PhysicalMemoryManager::instance().freePage(p);
-            else if (!bFreePages)
-                // No longer using this page.
-                m_pFile->returnPhysicalPage(it.key());
-        }
+        physical_uintptr_t p = it.value();
+        if(p == static_cast<physical_uintptr_t>(~0UL))
+            m_pBacking->returnPhysicalPage((it.key() - m_Address) + m_Offset);
+        else
+            PhysicalMemoryManager::instance().freePage(p);
     }
+
     m_Mappings.clear();
 }
 
-void MemoryMappedFile::trap(uintptr_t address, uintptr_t offset, uintptr_t fileoffset, bool bIsWrite)
+static physical_uintptr_t getBackingPage(File *pBacking, size_t fileOffset)
 {
-    LockGuard<Mutex> guard(m_Lock);
     size_t pageSz = PhysicalMemoryManager::getPageSize();
 
-    // NOTICE_NOLOCK("trap at " << address << "[" << offset << ", " << fileoffset << "] for " << m_pFile->getName());
-
-    // Quick sanity check...
-    /*
-    if (address-offset > m_Extent)
+    physical_uintptr_t phys = pBacking->getPhysicalPage(fileOffset);
+    if(phys == static_cast<physical_uintptr_t>(~0UL))
     {
-        FATAL_NOLOCK("MemoryMappedFile: trap called with invalid address: " << Hex << address);
-        return;
+        // No page found, trigger a read to fix that!
+        pBacking->read(fileOffset, pageSz, 0);
+        phys = pBacking->getPhysicalPage(fileOffset);
     }
-    */
+
+    return phys;
+}
+
+bool MemoryMappedFile::trap(uintptr_t address, bool bWrite)
+{
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
 
-    uintptr_t v = address & ~(pageSz - 1);
+    // Page-align the trap address
+    address = address & ~(pageSz - 1);
+    size_t mappingOffset = (address - m_Address);
+    size_t fileOffset = m_Offset + mappingOffset;
 
-    uintptr_t offsetIntoMap = (v - offset);
-    uintptr_t alignedOffsetIntoMap = offsetIntoMap & ~(PhysicalMemoryManager::getPageSize() - 1);
+    bool bWillEof = (mappingOffset + pageSz) > m_Length;
+    bool bShouldCopy = bWillEof || bWrite;
 
-    // Add the mapping to our list.
-    uintptr_t readloc = offsetIntoMap + fileoffset;
-    // NOTICE_NOLOCK("  -> readloc: " << readloc << " [v=" << v << ", offset=" << offset << ", extent=" << m_Extent << "]");
-
-    bool bShouldCopy = (!m_bShared) && bIsWrite;
-    if(!m_bShared)
+    if(!bShouldCopy)
     {
-        // Will we need to memset?
-        if((alignedOffsetIntoMap + pageSz) >= m_Extent)
-        {
-            // Yes. Always force a copy - even if just reading.
-            bShouldCopy = true;
-        }
-    }
+        physical_uintptr_t phys = getBackingPage(m_pBacking, fileOffset);
+        if(phys == static_cast<physical_uintptr_t>(~0UL))
+            return false; // Fail.
 
-    // NOTICE_NOLOCK("  -> will " << (bShouldCopy ? "" : "not ") << "copy");
+        size_t flags = VirtualAddressSpace::Shared;
+        if(!m_bCopyOnWrite)
+            flags |= VirtualAddressSpace::Write;
 
-    // Mapped?
-    if(va.isMapped(reinterpret_cast<void *>(v)))
-    {
-        // NOTICE_NOLOCK("  -> clearing existing mapping");
-        if(bShouldCopy)
-        {
-            // Sane state to be in - just unmap the virtual (CoW)
-            m_Mappings.remove(readloc);
-            va.unmap(reinterpret_cast<void *>(v));
-        }
-        else
-        {
-            FATAL_NOLOCK("MemoryMappedFile: trap() on an already-mapped address");
-            return;
-        }
-    }
+        va.map(phys, reinterpret_cast<void *>(address), flags);
 
-    // Grab an existing, or allocate a new, physical page to store the result.
-    bool bDoRead = false;
-    physical_uintptr_t p = m_pFile->getPhysicalPage(readloc);
-    if(p == static_cast<physical_uintptr_t>(~0UL))
-    {
-        // No page found. Read and try again.
-        // NOTICE_NOLOCK("<trap falling back to a no-buffer read for " << m_pFile->getName() << ">");
-        m_pFile->read(readloc, PhysicalMemoryManager::getPageSize(), 0);
-        p = m_pFile->getPhysicalPage(readloc);
-        if(p == static_cast<physical_uintptr_t>(~0UL))
-        {
-            WARNING_NOLOCK("MemoryMappedFile: read() didn't give us a physical address");
-            return;
-        }
-    }
-
-    // NOTICE_NOLOCK("  -> file page is p" << p);
-
-    physical_uintptr_t mapPhys = p;
-    if(bShouldCopy)
-    {
-        mapPhys = PhysicalMemoryManager::instance().allocatePage();
-    }
-
-    // Map the page into the address space.
-    // NOTICE_NOLOCK("trap: " << v << " -> " << mapPhys << " for " << m_pFile->getName());
-    if (!va.map(mapPhys,
-                reinterpret_cast<void *>(v),
-                ((bIsWrite || m_bShared) ? VirtualAddressSpace::Write : VirtualAddressSpace::Shared) |
-                    VirtualAddressSpace::Execute))
-    {
-        FATAL_NOLOCK("MemoryMappedFile: map() failed in trap()");
-        return;
-    }
-
-    // We shouldn't ever free physical pages tied to real file data, but we
-    // can happily free physical pages related to copied data.
-    m_Mappings.insert(readloc, bShouldCopy ? mapPhys : static_cast<physical_uintptr_t>(~0UL));
-
-    // Do we need to do a data copy (for non-shared)?
-    if(bShouldCopy)
-    {
-        // Do not interrupt - we're about to smash the temporary page for this CPU.
-        Spinlock lock; LockGuard<Spinlock> guard(lock);
-
-        // Grab the current process.
-        Process *pProcess = Processor::information().getCurrentThread()->getParent();
-
-        // Get some space in the virtual address space to prepare this copy.
-        /// \todo CPU number here.
-        uintptr_t allocAddress = reinterpret_cast<uintptr_t>(g_TrapPage[0]);
-
-        uintptr_t address = allocAddress;
-        // NOTICE_NOLOCK("** trap: pid=" << pProcess->getId() << ", v=" << v << ", allocAddress=" << allocAddress << ", address=" << address);
-        if(va.isMapped(reinterpret_cast<void*>(address)))
-        {
-            // Early startup, most likely.
-            // Rip out the old mapping so we can override it.
-            va.unmap(reinterpret_cast<void *>(address));
-        }
-        va.map(p, reinterpret_cast<void *>(address), VirtualAddressSpace::KernelMode);
-
-        // Perform the copy.
-        memcpy(reinterpret_cast<uint8_t*>(v), reinterpret_cast<void *>(address), pageSz);
-
-        va.unmap(reinterpret_cast<void *>(address));
-
-        // Fudge bytesRead to be logical.
-        size_t bytesRead = pageSz;
-
-        // Zero out the rest of the page if we hit EOF halfway through.
-        // This is great for things like ELF which can have .bss shoved on the end
-        // of .data, where mmap can't quite fix up the last bytes. When the early
-        // bytes of .bss are accessed, we get paged in, and the beginning of .bss
-        // gets zeroed nicely.
-        // The rest of .bss can obviously be mapped to /dev/null or similar.
-        if((alignedOffsetIntoMap + bytesRead) >= m_Extent)
-        {
-            uintptr_t bufferOffset = m_Extent - alignedOffsetIntoMap;
-            if(UNLIKELY(bufferOffset >= pageSz))
-            {
-                WARNING_NOLOCK("MemoryMappedFile::trap - buffer offset larger than a page, not zeroing anything.");
-            }
-            else
-            {
-                // NOTICE_NOLOCK("  -> zeroing " << (pageSz - 1 - bufferOffset) << " bytes (from " << bufferOffset << " onwards) @" << v << ".");
-                // NOTICE_NOLOCK("  -> zeroing @" << (v + bufferOffset) << " -> " << ((v + bufferOffset) + (pageSz - 1 - bufferOffset)) << ".");
-                memset(reinterpret_cast<uint8_t*>(v + bufferOffset), 0, pageSz - 1 - bufferOffset);
-            }
-        }
-
-        // We have now duplicated the original page. Reduce the refcount on
-        // the file accordingly.
-        m_pFile->returnPhysicalPage(readloc);
-
+        m_Mappings.insert(address, ~0);
     }
     else
     {
-        // NOTICE_NOLOCK("<trap only needed to map a physical page " << p << " for " << m_pFile->getName() << ">");
+        m_Mappings.remove(address);
+
+        // Determine the current physical target of this page.
+        size_t flags;
+        physical_uintptr_t phys;
+        if(va.isMapped(reinterpret_cast<void *>(address)))
+            va.getMapping(reinterpret_cast<void *>(address), phys, flags);
+        else
+        {
+            // Not yet mapped, bring in the page for a copy.
+            phys = getBackingPage(m_pBacking, fileOffset);
+            if(phys == static_cast<physical_uintptr_t>(~0UL))
+                return false; // Fail.
+        }
+
+        // Remap address.
+        physical_uintptr_t newPhys = PhysicalMemoryManager::instance().allocatePage();
+        if(va.isMapped(reinterpret_cast<void *>(address)))
+            va.unmap(reinterpret_cast<void *>(address));
+        va.map(newPhys, reinterpret_cast<void *>(address), VirtualAddressSpace::Write);
+
+        // Do not interrupt - we're about to smash the temporary page for this CPU.
+        Spinlock lock; LockGuard<Spinlock> guard(lock);
+
+        // Get some space in the virtual address space to prepare this copy.
+        /// \todo CPU number here.
+        uintptr_t tempVirt = reinterpret_cast<uintptr_t>(g_TrapPage[0]);
+        if(va.isMapped(reinterpret_cast<void*>(tempVirt)))
+            va.unmap(reinterpret_cast<void *>(tempVirt));
+        va.map(phys, reinterpret_cast<void *>(tempVirt), VirtualAddressSpace::KernelMode);
+
+        // Perform the copy.
+        memcpy(reinterpret_cast<uint8_t*>(address), reinterpret_cast<void *>(tempVirt), pageSz);
+
+        // Remove the temporary mapping.
+        va.unmap(reinterpret_cast<void *>(tempVirt));
+
+        // Handle EOF in the middle of the page we just copied.
+        if((mappingOffset + pageSz) > m_Length)
+        {
+            size_t offset = m_Length - mappingOffset;
+            memset(reinterpret_cast<void *>(address + offset), 0, pageSz - offset - 1);
+        }
+
+        m_pBacking->returnPhysicalPage(fileOffset);
+        m_Mappings.insert(address, newPhys);
     }
 
-    // Now that the file is read and memory written, change the mapping
-    // to read only.
-    // va.setFlags(reinterpret_cast<void*>(v), 0);
+    return true;
 }
 
-MemoryMappedFileManager::MemoryMappedFileManager() :
-    m_MmFileLists(), m_Cache(), m_CacheLock()
+MemoryMapManager::MemoryMapManager() :
+    m_MmObjectLists(), m_Lock()
 {
     PageFaultHandler::instance().registerHandler(this);
 }
 
-MemoryMappedFileManager::~MemoryMappedFileManager()
+MemoryMapManager::~MemoryMapManager()
 {
 }
 
-MemoryMappedFile *MemoryMappedFileManager::map(File *pFile, uintptr_t &address, size_t sizeOverride, size_t offset, bool shared)
+MemoryMappedObject *MemoryMapManager::mapFile(File *pFile, uintptr_t &address, size_t length, size_t offset, bool bCopyOnWrite)
 {
-    MemoryMappedFile *pMmFile = 0;
-    if(shared)
-    {
-        m_CacheLock.acquire();
-
-        // Attempt to find an existing MemoryMappedFile* in the cache.
-        pMmFile = m_Cache.lookup(pFile);
-        if (pMmFile)
-        {
-            // File existed in cache - check if the file has been changed
-            // since it was put in the cache.
-            if (false /*pFile->hasBeenTouched()*/)
-            {
-                pMmFile->markForDeletion();
-                m_Cache.remove(pFile);
-                pMmFile = 0;
-            }
-        }
-
-        // At this point we could have a null file because (a) the initial cache lookup failed
-        // or (b) the file was out of date.
-        if (!pMmFile)
-        {
-            pMmFile = new MemoryMappedFile(pFile, 0, shared);
-            m_Cache.insert(pFile, pMmFile);
-        }
-
-        m_CacheLock.release();
-    }
-    else
-    {
-        pMmFile = new MemoryMappedFile(pFile, 0, shared);
-    }
-
-    if(sizeOverride == 0)
-        sizeOverride = pMmFile->getExtent();
-
-    // Now we know that pMmFile is valid, load it into our address space.
-    if (!pMmFile->load(address, 0, sizeOverride))
-    {
-        ERROR_NOLOCK("MemoryMappedFile: load failed in map()");
-        return 0;
-    }
-
-    pMmFile->increaseRefCount();
-
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
 
     // Make sure the size is page aligned. (we'll fill any space that is past
     // the end of the extent with zeroes).
-    if(sizeOverride & (PhysicalMemoryManager::instance().getPageSize() - 1))
+    size_t actualLength = length;
+    if(length & (pageSz - 1))
     {
-        sizeOverride += 0x1000;
-        sizeOverride &= ~(PhysicalMemoryManager::instance().getPageSize() - 1);
+        length += 0x1000;
+        length &= ~(pageSz - 1);
     }
+
+    if(!sanitiseAddress(address, length))
+        return 0;
+
+    MemoryMappedFile *pMappedFile = new MemoryMappedFile(
+        address, actualLength, offset, pFile, bCopyOnWrite);
 
     {
         // This operation must appear atomic.
-        LockGuard<Mutex> guard(m_CacheLock);
+        LockGuard<Mutex> guard(m_Lock);
 
-        // Add to the MmFileList for this VA space (if it exists).
-        MmFileList *pMmFileList = m_MmFileLists.lookup(&va);
-        if (!pMmFileList)
+        MmObjectList *pMmObjectList = m_MmObjectLists.lookup(&va);
+        if (!pMmObjectList)
         {
-            pMmFileList = new MmFileList();
-            m_MmFileLists.insert(&va, pMmFileList);
+            pMmObjectList = new MmObjectList();
+            m_MmObjectLists.insert(&va, pMmObjectList);
         }
 
-        MmFile *_pMmFile = new MmFile(address, sizeOverride, offset, pMmFile);
-        pMmFileList->pushBack(_pMmFile);
+        pMmObjectList->pushBack(pMappedFile);
     }
 
     // Success.
-    return pMmFile;
+    return pMappedFile;
 }
 
-void MemoryMappedFileManager::unmap(MemoryMappedFile *pMmFile)
+MemoryMappedObject *MemoryMapManager::mapAnon(uintptr_t &address, size_t length)
 {
-    LockGuard<Mutex> guard(m_CacheLock);
-
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
 
-    MmFileList *pMmFileList = m_MmFileLists.lookup(&va);
-    if (!pMmFileList) return;
-
-    for (List<MmFile*>::Iterator it = pMmFileList->begin();
-         it != pMmFileList->end();
-         it++)
+    // Make sure the size is page aligned. (we'll fill any space that is past
+    // the end of the extent with zeroes).
+    if(length & (pageSz - 1))
     {
-        if ( (*it)->file == pMmFile )
+        length += 0x1000;
+        length &= ~(pageSz - 1);
+    }
+
+    if(!sanitiseAddress(address, length))
+        return 0;
+
+    AnonymousMemoryMap *pMap = new AnonymousMemoryMap(address, length);
+
+    {
+        // This operation must appear atomic.
+        LockGuard<Mutex> guard(m_Lock);
+
+        MmObjectList *pMmObjectList = m_MmObjectLists.lookup(&va);
+        if (!pMmObjectList)
         {
-            (*it)->file->unload( (*it)->offset, (*it)->fileoffset );
-            if ((*it)->file->decreaseRefCount())
-            {
-                delete (*it)->file;
-                m_Cache.remove( (*it)->file->getFile() );
-            }
-            delete *it;
-            pMmFileList->erase(it);
-            break;
+            pMmObjectList = new MmObjectList();
+            m_MmObjectLists.insert(&va, pMmObjectList);
         }
+
+        pMmObjectList->pushBack(pMap);
     }
 
-    if (pMmFileList->count() == 0)
-    {
-        delete pMmFileList;
-        m_MmFileLists.remove(&va);
-    }
+    // Success.
+    return pMap;
 }
 
-void MemoryMappedFileManager::clone(Process *pProcess)
+void MemoryMapManager::clone(Process *pProcess)
 {
-    LockGuard<Mutex> guard(m_CacheLock);
+    LockGuard<Mutex> guard(m_Lock);
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-
     VirtualAddressSpace *pOtherVa = pProcess->getAddressSpace();
 
-    MmFileList *pMmFileList = m_MmFileLists.lookup(&va);
-    if (!pMmFileList) return;
+    MmObjectList *pMmObjectList = m_MmObjectLists.lookup(&va);
+    if (!pMmObjectList) return;
 
-    MmFileList *pMmFileList2 = m_MmFileLists.lookup(pOtherVa);
-    if (!pMmFileList2)
+    MmObjectList *pMmObjectList2 = m_MmObjectLists.lookup(pOtherVa);
+    if (!pMmObjectList2)
     {
-        pMmFileList2 = new MmFileList();
-        m_MmFileLists.insert(pOtherVa, pMmFileList2);
+        pMmObjectList2 = new MmObjectList();
+        m_MmObjectLists.insert(pOtherVa, pMmObjectList2);
     }
 
-    for (List<MmFile*>::Iterator it = pMmFileList->begin();
-         it != pMmFileList->end();
+    for (List<MemoryMappedObject*>::Iterator it = pMmObjectList->begin();
+         it != pMmObjectList->end();
          it++)
     {
-        MmFile *pMmFile = new MmFile( (*it)->offset, (*it)->size, (*it)->fileoffset, (*it)->file );
-        pMmFileList2->pushBack(pMmFile);
-
-        (*it)->file->increaseRefCount();
+        MemoryMappedObject *pNewObject = (*it)->clone();
+        pMmObjectList2->pushBack(pNewObject);
     }
 }
 
-void MemoryMappedFileManager::unmapAll()
+void MemoryMapManager::unmap(MemoryMappedObject* pObj)
 {
-    LockGuard<Mutex> guard(m_CacheLock);
+    LockGuard<Mutex> guard(m_Lock);
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
-    MmFileList *pMmFileList = m_MmFileLists.lookup(&va);
-    if (!pMmFileList) return;
+    MmObjectList *pMmObjectList = m_MmObjectLists.lookup(&va);
+    if (!pMmObjectList) return;
 
-    for (List<MmFile*>::Iterator it = pMmFileList->begin();
-         it != pMmFileList->end();
-         it = pMmFileList->begin())
+    for (List<MemoryMappedObject*>::Iterator it = pMmObjectList->begin();
+         it != pMmObjectList->end();
+         ++it)
     {
-        (*it)->file->unload( (*it)->offset, (*it)->fileoffset );
-        if ((*it)->file->decreaseRefCount())
-        {
-            m_Cache.remove( (*it)->file->getFile() );
-            delete (*it)->file;
-        }
-        delete *it;
-        pMmFileList->erase(it);
+        if((*it) != pObj)
+            continue;
+
+        (*it)->unmap();
+        delete (*it);
+        return;
+    }
+}
+
+void MemoryMapManager::unmapAll()
+{
+    LockGuard<Mutex> guard(m_Lock);
+
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+
+    MmObjectList *pMmObjectList = m_MmObjectLists.lookup(&va);
+    if (!pMmObjectList) return;
+
+    for (List<MemoryMappedObject*>::Iterator it = pMmObjectList->begin();
+         it != pMmObjectList->end();
+         it = pMmObjectList->begin())
+    {
+        (*it)->unmap();
+        delete (*it);
+
+        pMmObjectList->erase(it);
     }
 
-    delete pMmFileList;
-    m_MmFileLists.remove(&va);
+    delete pMmObjectList;
+    m_MmObjectLists.remove(&va);
 }
 
 // #define MMFILE_DEBUG
 
-bool MemoryMappedFileManager::trap(uintptr_t address, bool bIsWrite)
+bool MemoryMapManager::trap(uintptr_t address, bool bIsWrite)
 {
 #ifdef MMFILE_DEBUG
     NOTICE_NOLOCK("Trap start: " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
 #endif
 
-    /// \todo Handle read-write maps.
-    if (bIsWrite)
-    {
-        // return false;
-    }
-
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
-    m_CacheLock.acquire();
+    m_Lock.acquire();
 #ifdef MMFILE_DEBUG
     NOTICE_NOLOCK("trap: got lock");
 #endif
 
-    MmFileList *pMmFileList = m_MmFileLists.lookup(&va);
-    if (!pMmFileList)
+    MmObjectList *pMmObjectList = m_MmObjectLists.lookup(&va);
+    if (!pMmObjectList)
     {
-        m_CacheLock.release();
+        m_Lock.release();
         return false;
     }
 
 #ifdef MMFILE_DEBUG
-    NOTICE_NOLOCK("trap: lookup complete " << reinterpret_cast<uintptr_t>(pMmFileList));
+    NOTICE_NOLOCK("trap: lookup complete " << reinterpret_cast<uintptr_t>(pMmObjectList));
 #endif
 
-    for (List<MmFile*>::Iterator it = pMmFileList->begin();
-         it != pMmFileList->end();
+    for (List<MemoryMappedObject*>::Iterator it = pMmObjectList->begin();
+         it != pMmObjectList->end();
          it++)
     {
-        MmFile *pMmFile = *it;
+        MemoryMappedObject *pObject = *it;
 #ifdef MMFILE_DEBUG
-        NOTICE_NOLOCK("mmfile=" << reinterpret_cast<uintptr_t>(pMmFile));
-        if(!pMmFile)
+        NOTICE_NOLOCK("mmobj=" << reinterpret_cast<uintptr_t>(pObject));
+        if(!pObject)
         {
-            NOTICE_NOLOCK("bad mmfile, should create a real #PF and backtrace");
+            NOTICE_NOLOCK("bad mmobj, should create a real #PF and backtrace");
             break;
         }
 #endif
 
-        uintptr_t endAddress = pMmFile->offset + pMmFile->size;
-
-        if ( (address >= pMmFile->offset) && (address < endAddress) )
+        if(pObject->matches(address))
         {
-#ifdef MMFILE_DEBUG
-            NOTICE_NOLOCK("trap: release lock B");
-#endif
-            m_CacheLock.release();
-            pMmFile->file->trap(address, pMmFile->offset, pMmFile->fileoffset, bIsWrite);
-
-#ifdef MMFILE_DEBUG
-            NOTICE_NOLOCK("trap: completed for " << address);
-#endif
-//            NOTICE_NOLOCK("Trap end: " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
-            return true;
+            m_Lock.release();
+            return pObject->trap(address, bIsWrite);
         }
     }
 
 #ifdef MMFILE_DEBUG
     NOTICE_NOLOCK("trap: fell off end");
 #endif
-    m_CacheLock.release();
-
-//    NOTICE_NOLOCK("Trap end (false): " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
+    m_Lock.release();
 
     return false;
+}
+
+bool MemoryMapManager::sanitiseAddress(uintptr_t &address, size_t length)
+{
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
+
+    // Can we get some space for this mapping?
+    if(address == 0)
+    {
+        if(!pProcess->getSpaceAllocator().allocate(length + pageSz, address))
+            return false;
+
+        if(address & (pageSz - 1))
+        {
+            address = (address + pageSz) & ~(pageSz - 1);
+        }
+    }
+    else
+    {
+        // If this fails, we generally assume a reservation has been made.
+        /// \todo rework APIs a lot.
+        pProcess->getSpaceAllocator().allocateSpecific(address, length);
+    }
+
+    return true;
 }

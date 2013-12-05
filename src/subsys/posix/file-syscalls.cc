@@ -1393,6 +1393,7 @@ void *posix_mmap(void *p)
     void *finalAddress = 0;
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
 
     // Sanitise input.
     uintptr_t sanityAddress = reinterpret_cast<uintptr_t>(addr);
@@ -1405,6 +1406,7 @@ void *posix_mmap(void *p)
             {
                 // Invalid input and MAP_FIXED, this is an error.
                 SYSCALL_ERROR(InvalidArgument);
+                F_NOTICE("  -> mmap given invalid fixed address");
                 return MAP_FAILED;
             }
             else
@@ -1416,10 +1418,31 @@ void *posix_mmap(void *p)
     }
     addr = reinterpret_cast<void *>(sanityAddress);
 
+    // Verify the passed length
+    if(!len || (sanityAddress & (pageSz-1)))
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return MAP_FAILED;
+    }
+
     // Valid file passed?
     FileDescriptor* f = pSubsystem->getFileDescriptor(fd);
     if(flags & MAP_ANON)
     {
+        /// \todo PROT_* is currently being ignored...
+        /// \todo MAP_SHARED - persist over clone?
+        /// \todo USERSVD is a thing.
+        MemoryMappedObject *pObject = MemoryMapManager::instance().mapAnon(sanityAddress, len);
+        if(!pObject)
+        {
+            /// \todo Better error?
+            SYSCALL_ERROR(OutOfMemory);
+            return MAP_FAILED;
+        }
+
+        return reinterpret_cast<void *>(sanityAddress);
+
+/*
         // Anonymous mmap instead?
         if(flags & (MAP_ANON | MAP_SHARED))
         {
@@ -1555,6 +1578,8 @@ void *posix_mmap(void *p)
             {
                 memset(finalAddress, 0, numPages * PhysicalMemoryManager::getPageSize());
             }
+
+            NOTICE("  -> returning " << mapAddress);
         }
         else
         {
@@ -1563,6 +1588,7 @@ void *posix_mmap(void *p)
             SYSCALL_ERROR(BadFileDescriptor);
             return MAP_FAILED;
         }
+*/
     }
     else
     {
@@ -1575,15 +1601,10 @@ void *posix_mmap(void *p)
         // MAP_FIXED mappings too
         /// \todo There *should* be proper flag checks here!
         uintptr_t address = reinterpret_cast<uintptr_t>(addr);
-        bool bShared = (flags & MAP_SHARED);
-        MemoryMappedFile *pFile = MemoryMappedFileManager::instance().map(fileToMap, address, len, off, bShared);
+        bool bCopyOnWrite = !(flags & MAP_SHARED);
+        MemoryMappedObject *pFile = MemoryMapManager::instance().mapFile(fileToMap, address, len, off, bCopyOnWrite);
 
-        // Add the offset...
-        // address += off;
         finalAddress = reinterpret_cast<void*>(address);
-
-        // Another memory mapped file to keep track of
-        pSubsystem->memoryMapFile(finalAddress, pFile);
     }
 
     // Complete
@@ -1607,9 +1628,10 @@ int posix_munmap(void *addr, size_t len)
 {
     F_NOTICE("munmap(" << reinterpret_cast<uintptr_t>(addr) << ", " << Dec << len << Hex << ")");
 
-    /// \todo Debug me, fix me! munmap seems to kill stuff somewhere.
+    /// \todo Rewrite.
     return 0;
 
+#if 0
     // Grab the Process subsystem
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
@@ -1658,6 +1680,7 @@ int posix_munmap(void *addr, size_t len)
     }
 
     return 0;
+#endif
 }
 
 int posix_access(const char *name, int amode)

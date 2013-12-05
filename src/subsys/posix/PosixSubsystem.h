@@ -30,7 +30,6 @@
 
 class File;
 class LockedFile;
-class MemoryMappedFile;
 
 // Grabs a subsystem for use.
 #define GRAB_POSIX_SUBSYSTEM(returnValue) \
@@ -122,7 +121,7 @@ class PosixSubsystem : public Subsystem
         PosixSubsystem() :
             Subsystem(Posix), m_SignalHandlers(), m_SignalHandlersLock(),
             m_FdMap(), m_NextFd(0), m_FdLock(), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
-            m_MemoryMappedFiles(), m_AltSigStack(), m_SyncObjects(), m_Threads()
+            m_AltSigStack(), m_SyncObjects(), m_Threads()
         {}
 
         /** Copy constructor */
@@ -132,7 +131,7 @@ class PosixSubsystem : public Subsystem
         PosixSubsystem(SubsystemType type) :
             Subsystem(type), m_SignalHandlers(), m_SignalHandlersLock(),
             m_FdMap(), m_NextFd(0), m_FdLock(), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
-            m_MemoryMappedFiles(), m_AltSigStack(), m_SyncObjects(), m_Threads()
+            m_AltSigStack(), m_SyncObjects(), m_Threads()
         {}
 
         /** Default destructor */
@@ -281,22 +280,6 @@ class PosixSubsystem : public Subsystem
             m_FdMap.insert(fd, pFd);
 
             m_FdLock.release();
-        }
-
-        /** Links a MemoryMappedFile */
-        void memoryMapFile(void* p, MemoryMappedFile *m)
-        {
-            if(m_MemoryMappedFiles.lookup(p))
-                return;
-            m_MemoryMappedFiles.insert(p, m);
-        }
-
-        /** Removes a MemoryMappedFile link */
-        MemoryMappedFile *unmapFile(void* p)
-        {
-            MemoryMappedFile *ret = m_MemoryMappedFiles.lookup(p);
-            m_MemoryMappedFiles.remove(p);
-            return ret;
         }
         
         /**
@@ -473,10 +456,6 @@ class PosixSubsystem : public Subsystem
          * Number of times freed
          */
         int m_FreeCount;
-        /**
-         * Links addresses to their MemoryMappedFiles.
-         */
-        Tree<void*, MemoryMappedFile*> m_MemoryMappedFiles;
         /**
          * Alternate signal stack - if defined, used instead of a system-defined stack
          */

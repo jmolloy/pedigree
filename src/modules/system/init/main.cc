@@ -393,7 +393,7 @@ void init_stage2()
     else
     {
         uintptr_t loadAddr = pProcess->getAddressSpace()->getDynamicLinkerAddress();
-        MemoryMappedFile *pMmFile = MemoryMappedFileManager::instance().map(initProg, loadAddr, 0, 0, false);
+        MemoryMappedObject *pMmFile = MemoryMapManager::instance().mapFile(initProg, loadAddr, initProg->getSize());
         if(!pMmFile)
         {
             FATAL("Couldn't memory map dynamic linker for init program");

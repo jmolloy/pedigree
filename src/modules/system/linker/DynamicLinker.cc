@@ -84,7 +84,7 @@ bool DynamicLinker::loadProgram(File *pFile, bool bDryRun, bool bInterpreter, St
         return false;
 
     uintptr_t buffer = 0;
-    MemoryMappedFile *pMmFile = MemoryMappedFileManager::instance().map(pFile, buffer);
+    MemoryMappedObject *pMmFile = MemoryMapManager::instance().mapFile(pFile, buffer, pFile->getSize());
 
     String fileName;
     pFile->getName(fileName);
@@ -99,7 +99,7 @@ bool DynamicLinker::loadProgram(File *pFile, bool bDryRun, bool bInterpreter, St
         if (!m_pProgramElf->create(reinterpret_cast<uint8_t*>(buffer), pFile->getSize()))
         {
             ERROR("DynamicLinker: Main program ELF failed to create: `" << fileName << "' at " << buffer);
-            MemoryMappedFileManager::instance().unmap(pMmFile);
+            MemoryMapManager::instance().unmap(pMmFile);
 
             delete m_pProgramElf;
             m_pProgramElf = 0;
@@ -109,7 +109,7 @@ bool DynamicLinker::loadProgram(File *pFile, bool bDryRun, bool bInterpreter, St
         if (!m_pProgramElf->allocate(reinterpret_cast<uint8_t*>(buffer), pFile->getSize(), m_ProgramStart, 0, false, &m_ProgramSize))
         {
             ERROR("DynamicLinker: Main program ELF failed to load: `" << fileName << "'");
-            MemoryMappedFileManager::instance().unmap(pMmFile);
+            MemoryMapManager::instance().unmap(pMmFile);
 
             delete m_pProgramElf;
             m_pProgramElf = 0;
@@ -123,7 +123,7 @@ bool DynamicLinker::loadProgram(File *pFile, bool bDryRun, bool bInterpreter, St
         if (!programElf->createNeededOnly(reinterpret_cast<uint8_t*>(buffer), pFile->getSize()))
         {
             ERROR("DynamicLinker: Main program ELF failed to create: `" << fileName << "' at " << buffer);
-            MemoryMappedFileManager::instance().unmap(pMmFile);
+            MemoryMapManager::instance().unmap(pMmFile);
 
             if(!bDryRun)
             {
@@ -149,7 +149,7 @@ bool DynamicLinker::loadProgram(File *pFile, bool bDryRun, bool bInterpreter, St
             m_pProgramElf = 0;
 
             // Unmap this file - any future loadProgram will map it again.
-            MemoryMappedFileManager::instance().unmap(pMmFile);
+            MemoryMapManager::instance().unmap(pMmFile);
         }
         return hasInterpreter;
     }
@@ -220,7 +220,7 @@ bool DynamicLinker::loadObject(File *pFile, bool bDryRun)
     uintptr_t buffer = 0;
     size_t size;
     uintptr_t loadBase;
-    MemoryMappedFile *pMmFile = MemoryMappedFileManager::instance().map(pFile, buffer);
+    MemoryMappedObject *pMmFile = MemoryMapManager::instance().mapFile(pFile, buffer, pFile->getSize());
 
     Elf *pElf = new Elf();
     SharedObject *pSo = 0;

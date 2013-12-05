@@ -88,11 +88,11 @@ private:
     /** A shared object/library. */
     struct SharedObject
     {
-        SharedObject(Elf *e, MemoryMappedFile *f, uintptr_t b, uintptr_t a, size_t s) :
+        SharedObject(Elf *e, MemoryMappedObject *f, uintptr_t b, uintptr_t a, size_t s) :
             elf(e), file(f), buffer(b), address(a), size(s)
         {}
         Elf                 *elf;
-        MemoryMappedFile    *file;
+        MemoryMappedObject    *file;
         uintptr_t           buffer;
         uintptr_t           address;
         size_t              size;

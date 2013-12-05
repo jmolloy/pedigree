@@ -181,7 +181,7 @@ int posix_fork(SyscallState &state)
         pProcess->setLinker(newLinker);
     }
 
-    MemoryMappedFileManager::instance().clone(pProcess);
+    MemoryMapManager::instance().clone(pProcess);
 
     // Copy the file descriptors from the parent
     pSubsystem->copyDescriptors(pParentSubsystem);
@@ -393,8 +393,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
             pProcess->getAddressSpace()->getUserReservedStart());
 
     // Get rid of all the crap from the last elf image.
-    /// \todo Preserve anonymous mmaps etc.
-    MemoryMappedFileManager::instance().unmapAll();
+    MemoryMapManager::instance().unmapAll();
 
     pProcess->getAddressSpace()->revertToKernelAddressSpace();
 
@@ -456,7 +455,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         // with CoW, most of this mapping ends up shared across all address
         // spaces. This means we don't have to be smart about loading the ELF.
         uintptr_t loadAddr = pProcess->getAddressSpace()->getDynamicLinkerAddress();
-        MemoryMappedFile *pMmFile = MemoryMappedFileManager::instance().map(file, loadAddr, 0, 0, false);
+        MemoryMappedObject *pMmFile = MemoryMapManager::instance().mapFile(file, loadAddr, file->getSize());
         if(!pMmFile)
         {
             ERROR("execve: couldn't memory map dynamic linker");

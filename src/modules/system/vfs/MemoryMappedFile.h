@@ -37,153 +37,220 @@
 
 class MemoryMappedFileManager;
 
-/** This class allows a file to be mapped into memory at a specific or
-    at a chosen location. It stores the V->P mappings so they can be
-    reused across multiple address spaces.
-
-    For caching purposes, a static factory function is provided for 
-    acquisition and destruction. */
-class MemoryMappedFile
+/**
+ * Generic base for a memory mapped file or object.
+ *
+ * Provides the interface for implementation, while centralising common
+ * functionality (such as extents, CoW flags, shared state, etc)
+ */
+class MemoryMappedObject
 {
-public:
-    /** Constructor - to be called from MemoryMappedFileManager only! */
-    MemoryMappedFile(File *pFile, size_t extentOverride = 0, bool bShared = false);
+    private:
+        /** Default constructor, don't use. */
+        MemoryMappedObject();
 
-    /** Secondary constructor for anonymous memory mapped "file". */
-    MemoryMappedFile(size_t anonMapSize);
+    public:
+        /** Constructor - bring up common metadata. */
+        MemoryMappedObject(uintptr_t address, bool bCopyOnWrite, size_t length) :
+            m_bCopyOnWrite(bCopyOnWrite), m_Address(address), m_Length(length)
+        {}
 
-    /** Destructor */
-    virtual ~MemoryMappedFile();
+        virtual ~MemoryMappedObject();
 
-    /** Loads this file.
-        \param address Load at the given address, or if address is 0, finds some free space and returns the start address in address. */
-    bool load(uintptr_t &address, Process *pProcess=0, size_t extentOverride = 0);
+        /**
+         * Clones the existing metadata of this object into another.
+         *
+         * Returns a MemoryMappedObject that exactly matches this one,
+         * but which can be used for reference in a new address space.
+         * Used for address space clones.
+         *
+         * Note that mappings are automatically cloned - only clone
+         * metadata in this method.
+         */
+        virtual MemoryMappedObject *clone() = 0;
 
-    /** Unloads this file.
-        \note Should ONLY be called from MemoryMappedFileManager! */
-    void unload(uintptr_t address, uintptr_t fileoffset);
+        /**
+         * Unmaps existing mappings in this object from the address space.
+         *
+         * Implementations are expected to track these as necessary for
+         * the implementation.
+         */
+        virtual void unmap() = 0;
 
-    /** Trap occurred. Should be called only from MemoryMappedFileManager!
-        \param address The address of the fault.
-        \param offset The starting offset of this mmappedfile in memory. */
-    void trap(uintptr_t address, uintptr_t offset, uintptr_t fileoffset, bool bIsWrite);
+        /**
+         * Trap entry
+         *
+         * Implement this in your implementation to actually perform
+         * the mapping of memory into the address space.
+         * \return true if the trap was successful, false otherwise.
+         */
+        virtual bool trap(uintptr_t address, bool bWrite) = 0;
 
-    /** Mark this map for deletion when its reference count drops to zero - i.e. the underlying File has changed. */
-    void markForDeletion()
-    {m_bMarkedForDeletion = true;}
+        /**
+         * Determines if the given address is within this object's mapping.
+         */
+        bool matches(uintptr_t address)
+        {
+            return (m_Address <= address) && (address < (m_Address + m_Length));
+        }
 
-    /** Increase the reference count. */
-    void increaseRefCount()
-    {m_RefCount++;}
+    protected:
 
-    /** Decrease the reference count.
-        \return True if the object should now be deleted, false otherwise.*/
-    bool decreaseRefCount()
-    {
-        m_RefCount--;
-        if (m_RefCount == 0) return true;//m_bMarkedForDeletion;
-        else return false;
-    }
+        /**
+         * Is this a Copy-on-Write mapping?
+         *
+         * A non-copy-on-write mapping will cause writes to hit the
+         * backing store directly. This makes sense for some types of
+         * mapping and not for others.
+         */
+        bool m_bCopyOnWrite;
 
-    size_t getExtent()
-    {return m_Extent;}
+        /**
+         * Base address of this mapping.
+         *
+         * The region from base -> base+length will trap into this
+         * object when an access attempt is made that faults.
+         */
+        uintptr_t m_Address;
 
-    File *getFile()
-    {
-        return m_pFile;
-    }
-private:
-    MemoryMappedFile(const MemoryMappedFile &);
-    MemoryMappedFile &operator = (const MemoryMappedFile &);
+        /**
+         * Size of the object.
+         *
+         * To clarify, this is the size of the mapping itself, not of
+         * the entire backing object.
+         */
+        size_t m_Length;
 
-    /** The file to map. */
-    File *m_pFile;
-
-    /** Map of V->P mappings. */
-    Tree<uintptr_t, uintptr_t> m_Mappings;
-
-    /** True if this file is marked for deletion - this will occur if
-        the underlying file has changed since we were made. */
-    bool m_bMarkedForDeletion;
-
-    /** The size of the file from start to end, rounded (up) to the nearest
-        page. */
-    size_t m_Extent;
-
-    /** Reference count. */
-    size_t m_RefCount;
-
-    Mutex m_Lock;
-
-    /** Whether or not this mmap is shared (ie, data written is available to
-     * other processes in the system).
-     */
-    bool m_bShared;
 };
 
-/** This class is a multiplexing trap handler, to take traps pertaining to
-    MemoryMappedFiles and dispatch them. */
-class MemoryMappedFileManager : public MemoryTrapHandler
+/**
+ * Anonymous memory map object.
+ *
+ * Anonymous memory maps do not map back to an actual file; they back
+ * onto a common page full of zeroes with forced copy-on-write. This
+ * is perfect for mapping in large .bss sections in binaries or for
+ * getting huge amounts of zeroed memory.
+ */
+class AnonymousMemoryMap : public MemoryMappedObject
 {
-public:
-    /** Singleton instance */
-    static MemoryMappedFileManager &instance()
-    {return m_Instance;}
+    public:
+        AnonymousMemoryMap(uintptr_t address, size_t length);
 
-    /** Add a new mapping; Creates or gets from cache a new MemoryMappedFile. 
-        \param pFile The VFS file to map.
-        \param [out] address The address the file gets mapped to. 
-        \return A pointer to a MemoryMappedFile object representing the mapped file. */
-    MemoryMappedFile *map(File *pFile, uintptr_t &address, size_t sizeOverride = 0, size_t offset = 0, bool shared = true);
-
-    /** Remove a specific mapping from this address space.
-        \param pFile The MemoryMappedFile to remove the mapping for. */
-    void unmap(MemoryMappedFile *pFile);
-
-    /** Replicates the mappings in the current address space into the
-        target Process' address space. The newly used regions are allocated
-        from the target Process' memory allocator too.
-        \param pTarget The process to clone into. */
-    void clone(Process *pTarget);
-
-    /** Removes all mappings from this address space. */
-    void unmapAll();
-    
-    //
-    // MemoryTrapHandler interface.
-    //
-    bool trap(uintptr_t address, bool bIsWrite);
-
-private:
-    /** Default and only constructor. Registers with PageFaultHandler. */
-    MemoryMappedFileManager();
-    ~MemoryMappedFileManager();
-
-    /** Singleton instance. */
-    static MemoryMappedFileManager m_Instance;
-
-    /** A virtual address space can have multiple memory mapped files - 
-        This is the type of a particular instantiation of a mmfile. */
-    struct MmFile
-    {
-        MmFile(uintptr_t o, uintptr_t s, uintptr_t fo, MemoryMappedFile *f) :
-            offset(o), size(s), fileoffset(fo), file(f)
+        virtual ~AnonymousMemoryMap()
         {}
-        uintptr_t offset;
-        uintptr_t size;
-        uintptr_t fileoffset;
-        MemoryMappedFile *file;
-    };
-    typedef List<MmFile*> MmFileList;
-    
-    /** Cache of virtual address spaces -> MmFileLists. */
-    Tree<VirtualAddressSpace*, MmFileList*> m_MmFileLists;
 
-    /** Global cache of valid files. */
-    Tree<File*,MemoryMappedFile*> m_Cache;
+        virtual MemoryMappedObject *clone();
 
-    /** Lock for the cache. */
-    Mutex m_CacheLock;
+        virtual void unmap();
+
+        virtual bool trap(uintptr_t address, bool bWrite);
+
+    private:
+        static physical_uintptr_t m_Zero;
+
+        /** List of existing virtual addresses we've mapped in. */
+        List<void *> m_Mappings;
+};
+
+/**
+ * File map object.
+ *
+ * File maps actually provide a backing file for a memory region. These
+ * are used for loading binaries or for opening files for reading without
+ * the overhead of read/write syscalls (assuming the syscall is more
+ * expensive than a page fault).
+ */
+class MemoryMappedFile : public MemoryMappedObject
+{
+    public:
+        MemoryMappedFile(uintptr_t address, size_t length, size_t offset, File *backing, bool bCopyOnWrite);
+
+        virtual ~MemoryMappedFile()
+        {
+        }
+
+        virtual MemoryMappedObject *clone();
+
+        virtual void unmap();
+
+        virtual bool trap(uintptr_t address, bool bWrite);
+
+    private:
+        /** Backing file. */
+        File *m_pBacking;
+
+        /** Offset within the file that this mapping begins at. */
+        size_t m_Offset;
+
+        /** Shared files share the same physical page even on write. */
+        bool m_bShared;
+
+        /** List of existing mappings. */
+        Tree<uintptr_t, physical_uintptr_t> m_Mappings;
+};
+
+/**
+ * This class is a multiplexing trap handler, to handle traps for
+ * MemoryMappedObjects, dispatching them to the right place.
+ */
+class MemoryMapManager : public MemoryTrapHandler
+{
+    public:
+        /** Singleton instance */
+        static MemoryMapManager &instance()
+        {
+            return m_Instance;
+        }
+
+        /**
+         * Map in the given File.
+         */
+        MemoryMappedObject *mapFile(File *pFile, uintptr_t &address, size_t length, size_t offset = 0, bool bCopyOnWrite = true);
+
+        /**
+         * Create a new anonymous memory mapping.
+         */
+        MemoryMappedObject *mapAnon(uintptr_t &address, size_t length);
+
+        /**
+         * Registers the current address space's mappings with the target
+         * process.
+         * \param pTarget The process to clone into.
+         */
+        void clone(Process *pTarget);
+
+        /**
+         * Removes the mappings for the given object from the address space.
+         */
+        void unmap(MemoryMappedObject* pObj);
+
+        /**
+         * Removes all mappings from this address space.
+         */
+        void unmapAll();
+
+        /**
+         * Trap handler, called when a fault takes place.
+         */
+        bool trap(uintptr_t address, bool bIsWrite);
+
+    private:
+        /** Default and only constructor. Registers with PageFaultHandler. */
+        MemoryMapManager();
+        ~MemoryMapManager();
+
+        bool sanitiseAddress(uintptr_t &address, size_t length);
+
+        /** Singleton instance. */
+        static MemoryMapManager m_Instance;
+
+        typedef List<MemoryMappedObject*> MmObjectList;
+
+        /** Cache of virtual address spaces -> MmObjectLists. */
+        Tree<VirtualAddressSpace*, MmObjectList*> m_MmObjectLists;
+
+        /** Lock for the cache. */
+        Mutex m_Lock;
 };
 
 /** @} */

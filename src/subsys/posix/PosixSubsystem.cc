@@ -129,7 +129,7 @@ FileDescriptor::~FileDescriptor()
 PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
     Subsystem(s), m_SignalHandlers(), m_SignalHandlersLock(), m_FdMap(), m_NextFd(s.m_NextFd),
     m_FdLock(), m_FdBitmap(), m_LastFd(0), m_FreeCount(s.m_FreeCount),
-    m_MemoryMappedFiles(), m_AltSigStack(), m_SyncObjects(), m_Threads()
+    m_AltSigStack(), m_SyncObjects(), m_Threads()
 {
     m_SignalHandlersLock.acquire();
     s.m_SignalHandlersLock.enter();
@@ -148,14 +148,6 @@ PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
         myHandlers.insert(key, newSig);
     }
 
-    // Copy memory mapped files
-    /// \todo Is this enough?
-    for(Tree<void*, MemoryMappedFile*>::Iterator it = s.m_MemoryMappedFiles.begin(); it != s.m_MemoryMappedFiles.end(); it++) {
-        if(it.value()->getFile()) {
-            m_MemoryMappedFiles.insert(it.key(), it.value());
-        }
-    }
-    
     s.m_SignalHandlersLock.leave();
     m_SignalHandlersLock.release();
 }
@@ -252,54 +244,8 @@ PosixSubsystem::~PosixSubsystem()
         Processor::switchAddressSpace(*va);
     }
 
-    // Clean up memory mapped files (that haven't been unmapped...)
-    for(Tree<void*, MemoryMappedFile*>::Iterator it = m_MemoryMappedFiles.begin(); it != m_MemoryMappedFiles.end(); it++)
-    {
-        //uintptr_t addr = reinterpret_cast<uintptr_t>(it.key());
-        MemoryMappedFile *pFile = it.value();
-        if(pFile->getFile())
-        {
-            // It better handle files that've already been unmapped...
-            MemoryMappedFileManager::instance().unmap(pFile);
-        }
-        else
-        {
-            size_t extent = pFile->getExtent();
-
-            // Anonymous mmap, manually free the space
-            size_t pageSz = PhysicalMemoryManager::getPageSize();
-            size_t numPages = (extent / pageSz) + (extent % pageSz ? 1 : 0);
-
-            uintptr_t address = reinterpret_cast<uintptr_t>(it.key());
-
-            // Unmap!
-            for (size_t i = 0; i < numPages; i++)
-            {
-                void *unmapAddr = reinterpret_cast<void*>(address + (i * pageSz));
-                if(va->isMapped(unmapAddr))
-                {
-                    // Unmap the virtual address
-                    physical_uintptr_t phys = 0;
-                    size_t flags = 0;
-                    va->getMapping(unmapAddr, phys, flags);
-                    va->unmap(reinterpret_cast<void*>(unmapAddr));
-
-                    // Free the physical page, if we are allowed to.
-                    if ((flags & VirtualAddressSpace::Shared) == 0)
-                    {
-                        PhysicalMemoryManager::instance().freePage(phys);
-                    }
-                }
-            }
-
-            // Free from the space allocator as well
-            m_pProcess->getSpaceAllocator().free(address, extent);
-            if(pFile->decreaseRefCount()) {
-                delete pFile;
-            }
-        }
-    }
-    m_MemoryMappedFiles.clear();
+    // Remove all existing mappings, if any.
+    MemoryMapManager::instance().unmapAll();
 
     if(va != &curr) {
         Processor::switchAddressSpace(curr);
@@ -351,7 +297,7 @@ void PosixSubsystem::exit(int code)
 
     delete pProcess->getLinker();
 
-    MemoryMappedFileManager::instance().unmapAll();
+    MemoryMapManager::instance().unmapAll();
 
     // If it's a POSIX process, remove group membership
     if(pProcess->getType() == Process::Posix)
