@@ -28,6 +28,8 @@ physical_uintptr_t AnonymousMemoryMap::m_Zero = 0;
 /// \todo number of CPUs
 static char g_TrapPage[256][4096] __attribute__((aligned(4096))) = {0};
 
+#define DEBUG_MMOBJECTS
+
 MemoryMappedObject::~MemoryMappedObject()
 {
 }
@@ -55,6 +57,10 @@ MemoryMappedObject *AnonymousMemoryMap::clone()
 
 void AnonymousMemoryMap::unmap()
 {
+#ifdef DEBUG_MMOBJECTS
+    NOTICE("AnonymousMemoryMap::unmap()");
+#endif
+
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
     for(List<void *>::Iterator it = m_Mappings.begin();
@@ -81,6 +87,9 @@ void AnonymousMemoryMap::unmap()
 
 bool AnonymousMemoryMap::trap(uintptr_t address, bool bWrite)
 {
+#ifdef DEBUG_MMOBJECTS
+    NOTICE("AnonymousMemoryMap::trap(" << address << ", " << bWrite << ")");
+#endif
 
     size_t pageSz = PhysicalMemoryManager::getPageSize();
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
@@ -102,15 +111,16 @@ bool AnonymousMemoryMap::trap(uintptr_t address, bool bWrite)
         if(va.isMapped(reinterpret_cast<void *>(address)))
         {
             va.unmap(reinterpret_cast<void *>(address));
+
+            // Drop the refcount on the zero page.
+            PhysicalMemoryManager::instance().freePage(m_Zero);
+
             m_Mappings.pushBack(reinterpret_cast<void *>(address));
         }
         va.map(newPage, reinterpret_cast<void *>(address), VirtualAddressSpace::Write);
 
         // "Copy" on write... but not really :)
         memset(reinterpret_cast<void *>(address), 0, PhysicalMemoryManager::getPageSize());
-
-        // Drop the refcount on the zero page.
-        PhysicalMemoryManager::instance().freePage(m_Zero);
     }
 
     return true;
@@ -126,11 +136,26 @@ MemoryMappedObject *MemoryMappedFile::clone()
 {
     MemoryMappedFile *pResult = new MemoryMappedFile(m_Address, m_Length, m_Offset, m_pBacking, m_bCopyOnWrite);
     pResult->m_Mappings = m_Mappings;
+
+    for(Tree<uintptr_t, uintptr_t>::Iterator it = m_Mappings.begin();
+        it != m_Mappings.end();
+        ++it)
+    {
+        // Bump reference count on backing file page if needed.
+        size_t fileOffset = (it.key() - m_Address) + m_Offset;
+        if(it.value() == static_cast<physical_uintptr_t>(~0UL))
+            m_pBacking->getPhysicalPage(fileOffset);
+    }
+
     return pResult;
 }
 
 void MemoryMappedFile::unmap()
 {
+#ifdef DEBUG_MMOBJECTS
+    NOTICE("MemoryMappedFile::unmap()");
+#endif
+
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
     if(!m_Mappings.count())
@@ -141,14 +166,19 @@ void MemoryMappedFile::unmap()
         ++it)
     {
         void *v = reinterpret_cast<void *>(it.key());
-        if(va.isMapped(v))
-            va.unmap(v);
+        if(!va.isMapped(v))
+            break; // Already unmapped...
+
+        size_t flags = 0;
+        physical_uintptr_t phys = 0;
+        va.getMapping(v, phys, flags);
+        va.unmap(v);
 
         physical_uintptr_t p = it.value();
         if(p == static_cast<physical_uintptr_t>(~0UL))
             m_pBacking->returnPhysicalPage((it.key() - m_Address) + m_Offset);
         else
-            PhysicalMemoryManager::instance().freePage(p);
+            PhysicalMemoryManager::instance().freePage(phys);
     }
 
     m_Mappings.clear();
@@ -171,6 +201,9 @@ static physical_uintptr_t getBackingPage(File *pBacking, size_t fileOffset)
 
 bool MemoryMappedFile::trap(uintptr_t address, bool bWrite)
 {
+#ifdef DEBUG_MMOBJECTS
+    NOTICE("MemoryMappedFile::trap(" << address << ", " << bWrite << ")");
+#endif
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
     size_t pageSz = PhysicalMemoryManager::getPageSize();
@@ -355,7 +388,8 @@ void MemoryMapManager::clone(Process *pProcess)
          it != pMmObjectList->end();
          it++)
     {
-        MemoryMappedObject *pNewObject = (*it)->clone();
+        MemoryMappedObject *obj = *it;
+        MemoryMappedObject *pNewObject = obj->clone();
         pMmObjectList2->pushBack(pNewObject);
     }
 }
@@ -378,6 +412,8 @@ void MemoryMapManager::unmap(MemoryMappedObject* pObj)
 
         (*it)->unmap();
         delete (*it);
+
+        pMmObjectList->erase(it);
         return;
     }
 }
@@ -405,18 +441,16 @@ void MemoryMapManager::unmapAll()
     m_MmObjectLists.remove(&va);
 }
 
-// #define MMFILE_DEBUG
-
 bool MemoryMapManager::trap(uintptr_t address, bool bIsWrite)
 {
-#ifdef MMFILE_DEBUG
+#ifdef DEBUG_MMOBJECTS
     NOTICE_NOLOCK("Trap start: " << address << ", pid:tid " << Processor::information().getCurrentThread()->getParent()->getId() <<":" << Processor::information().getCurrentThread()->getId());
 #endif
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
     m_Lock.acquire();
-#ifdef MMFILE_DEBUG
+#ifdef DEBUG_MMOBJECTS
     NOTICE_NOLOCK("trap: got lock");
 #endif
 
@@ -427,7 +461,7 @@ bool MemoryMapManager::trap(uintptr_t address, bool bIsWrite)
         return false;
     }
 
-#ifdef MMFILE_DEBUG
+#ifdef DEBUG_MMOBJECTS
     NOTICE_NOLOCK("trap: lookup complete " << reinterpret_cast<uintptr_t>(pMmObjectList));
 #endif
 
@@ -436,7 +470,7 @@ bool MemoryMapManager::trap(uintptr_t address, bool bIsWrite)
          it++)
     {
         MemoryMappedObject *pObject = *it;
-#ifdef MMFILE_DEBUG
+#ifdef DEBUG_MMOBJECTS
         NOTICE_NOLOCK("mmobj=" << reinterpret_cast<uintptr_t>(pObject));
         if(!pObject)
         {
@@ -452,7 +486,7 @@ bool MemoryMapManager::trap(uintptr_t address, bool bIsWrite)
         }
     }
 
-#ifdef MMFILE_DEBUG
+#ifdef DEBUG_MMOBJECTS
     NOTICE_NOLOCK("trap: fell off end");
 #endif
     m_Lock.release();
