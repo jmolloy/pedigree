@@ -1378,7 +1378,7 @@ void *posix_mmap(void *p)
     int fd = map_info->fildes;
     off_t off = map_info->off;
 
-    F_NOTICE("addr=" << reinterpret_cast<uintptr_t>(addr) << ", len=" << len << ", prot=" << prot << ", flags=" << flags << ", fildes=" << fd << ", off=" << off << ".");
+    F_NOTICE("  -> addr=" << reinterpret_cast<uintptr_t>(addr) << ", len=" << len << ", prot=" << prot << ", flags=" << flags << ", fildes=" << fd << ", off=" << off << ".");
 
     // Get the File object to map
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -1437,8 +1437,11 @@ void *posix_mmap(void *p)
         {
             /// \todo Better error?
             SYSCALL_ERROR(OutOfMemory);
+            F_NOTICE("  -> failed (mapAnon)!");
             return MAP_FAILED;
         }
+
+        F_NOTICE("  -> " << sanityAddress);
 
         return reinterpret_cast<void *>(sanityAddress);
 
@@ -1601,8 +1604,17 @@ void *posix_mmap(void *p)
         // MAP_FIXED mappings too
         /// \todo There *should* be proper flag checks here!
         uintptr_t address = reinterpret_cast<uintptr_t>(addr);
-        bool bCopyOnWrite = !(flags & MAP_SHARED);
+        bool bCopyOnWrite = (flags & MAP_SHARED) == 0;
         MemoryMappedObject *pFile = MemoryMapManager::instance().mapFile(fileToMap, address, len, off, bCopyOnWrite);
+        if(!pFile)
+        {
+            /// \todo Better error?
+            SYSCALL_ERROR(OutOfMemory);
+            F_NOTICE("  -> failed (mapFile)!");
+            return MAP_FAILED;
+        }
+
+        F_NOTICE("  -> " << address);
 
         finalAddress = reinterpret_cast<void*>(address);
     }
@@ -1703,6 +1715,7 @@ int posix_access(const char *name, int amode)
     }
 
     /// \todo Proper permission checks. For now, the file exists, and you can do what you want with it.
+    F_NOTICE("  -> ok");
     return 0;
 }
 
