@@ -3,6 +3,9 @@
 #include <console/Console.h>
 #include <utilities/assert.h>
 
+#include <graphics/Graphics.h>
+#include <graphics/GraphicsService.h>
+
 DevFs DevFs::m_Instance;
 
 uint64_t RandomFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
@@ -27,6 +30,44 @@ uint64_t NullFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bool
 uint64_t NullFile::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
     return 0;
+}
+
+FramebufferFile::FramebufferFile(String str, size_t inode, Filesystem *pParentFS, File *pParentNode) :
+    File(str, 0, 0, 0, inode, pParentFS, 0, pParentNode), m_pProvider(0)
+{
+    ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
+    Service         *pService  = ServiceManager::instance().getService(String("graphics"));
+    if(pFeatures->provides(ServiceFeatures::probe))
+    {
+        if(pService)
+        {
+            m_pProvider = new GraphicsService::GraphicsProvider;
+            if(!pService->serve(ServiceFeatures::probe, m_pProvider, sizeof(*m_pProvider)))
+            {
+                delete m_pProvider;
+                m_pProvider = 0;
+            }
+            else
+            {
+                // Set the file size to reflect the size of the framebuffer.
+                setSize(m_pProvider->pFramebuffer->getHeight() * m_pProvider->pFramebuffer->getBytesPerLine());
+            }
+        }
+    }
+}
+
+FramebufferFile::~FramebufferFile()
+{
+    delete m_pProvider;
+}
+
+uintptr_t FramebufferFile::readBlock(uint64_t location)
+{
+    if(!m_pProvider)
+        return 0;
+
+    /// \todo If this is NOT virtual, we need to do something about that.
+    return reinterpret_cast<uintptr_t>(m_pProvider->pFramebuffer->getRawBuffer()) + location;
 }
 
 bool DevFs::initialise(Disk *pDisk)
@@ -66,6 +107,10 @@ bool DevFs::initialise(Disk *pDisk)
     // Create /dev/urandom for the RNG.
     RandomFile *pRandom = new RandomFile(String("urandom"), ++baseInode, this, m_pRoot);
     m_pRoot->addEntry(pRandom->getName(), pRandom);
+
+    // Create /dev/fb for the framebuffer device.
+    FramebufferFile *pFb = new FramebufferFile(String("fb"), ++baseInode, this, m_pRoot);
+    m_pRoot->addEntry(pFb->getName(), pFb);
 
     return true;
 }

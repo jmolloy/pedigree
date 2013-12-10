@@ -20,6 +20,9 @@
 #include <vfs/Directory.h>
 #include <vfs/File.h>
 
+#include <graphics/Graphics.h>
+#include <graphics/GraphicsService.h>
+
 class RandomFile : public File
 {
     public:
@@ -44,6 +47,21 @@ public:
 
     uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
     uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+};
+
+class FramebufferFile : public File
+{
+public:
+    FramebufferFile(String str, size_t inode, Filesystem *pParentFS, File *pParentNode);
+    ~FramebufferFile();
+
+    virtual uintptr_t readBlock(uint64_t location);
+
+
+    /// \todo pinBlock/unpinBlock should pin/unpin physical pages!
+
+private:
+    GraphicsService::GraphicsProvider *m_pProvider;
 };
 
 /** This class provides slightly more flexibility for adding files to a directory. */
