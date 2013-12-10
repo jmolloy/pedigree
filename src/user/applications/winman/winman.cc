@@ -22,6 +22,7 @@
 #include <sched.h>
 #include <math.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -738,20 +739,23 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    // Use the root framebuffer.
     PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
     g_pTopLevelFramebuffer = pRootFramebuffer;
 
-    if(!g_pTopLevelFramebuffer->getRawBuffer())
+    // Grab a framebuffer to use.
+    int fb = open("/dev/fb", O_RDWR);
+    if(fb < 0)
     {
-        syslog(LOG_CRIT, "error: no top-level framebuffer could be created.");
-        return -1;
+        syslog(LOG_CRIT, "winman: couldn't open framebuffer device");
+        return 0;
     }
 
-    g_nWidth = g_pTopLevelFramebuffer->getWidth();
-    g_nHeight = g_pTopLevelFramebuffer->getHeight();
+    /// \todo ioctls for this
+    g_nWidth = 1024; // g_pTopLevelFramebuffer->getWidth();
+    g_nHeight = 768; // g_pTopLevelFramebuffer->getHeight();
 
     cairo_format_t format = CAIRO_FORMAT_ARGB32;
+    /*
     if(g_pTopLevelFramebuffer->getFormat() == PedigreeGraphics::Bits24_Rgb)
     {
         if(g_pTopLevelFramebuffer->getBytesPerPixel() != 4)
@@ -769,18 +773,21 @@ int main(int argc, char *argv[])
         syslog(LOG_CRIT, "winman: error: incompatible framebuffer format (possibly BGR or similar)");
         return -1;
     }
+    */
 
     int stride = cairo_format_stride_for_width(format, g_nWidth);
 
     // Map the framebuffer in to our address space.
-    uintptr_t rawBuffer = (uintptr_t) g_pTopLevelFramebuffer->getRawBuffer();
+    // uintptr_t rawBuffer = (uintptr_t) g_pTopLevelFramebuffer->getRawBuffer();
+    syslog(LOG_INFO, "Mapping /dev/fb in...");
     void *framebufferVirt = mmap(
         0,
         stride * g_nHeight,
         PROT_READ | PROT_WRITE,
-        MAP_SHARED | MAP_ANON | MAP_PHYS_OFFSET,
-        -1,
-        rawBuffer);
+        MAP_SHARED,
+        fb,
+        0);
+    syslog(LOG_INFO, "Got %p...", framebufferVirt);
 
     if(framebufferVirt == MAP_FAILED)
     {
@@ -1001,6 +1008,7 @@ int main(int argc, char *argv[])
             cairo_surface_flush(surface);
 
             // Submit a redraw to the graphics card.
+            /// \todo ioctl for this
             g_pTopLevelFramebuffer->redraw(renderDirty.getX(), renderDirty.getY(), renderDirty.getWidth(), renderDirty.getHeight());
 
             // Wipe out the dirty rectangle - we're all done.
