@@ -28,7 +28,7 @@ physical_uintptr_t AnonymousMemoryMap::m_Zero = 0;
 /// \todo number of CPUs
 static char g_TrapPage[256][4096] __attribute__((aligned(4096))) = {0};
 
-#define DEBUG_MMOBJECTS
+// #define DEBUG_MMOBJECTS
 
 MemoryMappedObject::~MemoryMappedObject()
 {
@@ -37,14 +37,29 @@ MemoryMappedObject::~MemoryMappedObject()
 AnonymousMemoryMap::AnonymousMemoryMap(uintptr_t address, size_t length) :
     MemoryMappedObject(address, true, length), m_Mappings()
 {
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+
     if(m_Zero == 0)
     {
         m_Zero = PhysicalMemoryManager::instance().allocatePage();
         /// \todo Map in the zero page, zero it.
 
-        VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
         va.map(m_Zero, reinterpret_cast<void *>(address), VirtualAddressSpace::Write);
         memset(reinterpret_cast<void *>(address), 0, PhysicalMemoryManager::getPageSize());
+        va.unmap(reinterpret_cast<void *>(address));
+    }
+
+    // Because mapping in an anonymous mapping does not have the overhead that
+    // mapping in a file does (ie, pages etc), we can do so upfront. Writes
+    // will still cause an immediate trap.
+    for(size_t i = 0; i < length; i += PhysicalMemoryManager::instance().getPageSize())
+    {
+        void *v = reinterpret_cast<void *>(address + i);
+        if(va.isMapped(v))
+            va.unmap(v); /// \bug Possible leak: assuming this is overriding a MemoryMappedFile...
+
+        va.map(m_Zero, v, VirtualAddressSpace::Shared);
+        PhysicalMemoryManager::instance().pin(m_Zero);
     }
 }
 
@@ -194,6 +209,8 @@ static physical_uintptr_t getBackingPage(File *pBacking, size_t fileOffset)
         // No page found, trigger a read to fix that!
         pBacking->read(fileOffset, pageSz, 0);
         phys = pBacking->getPhysicalPage(fileOffset);
+        if(phys == static_cast<physical_uintptr_t>(~0UL))
+            ERROR("*** Could not manage to get a physical page for a MemoryMappedFile (" << pBacking->getName() << ")!");
     }
 
     return phys;
@@ -214,7 +231,7 @@ bool MemoryMappedFile::trap(uintptr_t address, bool bWrite)
     size_t fileOffset = m_Offset + mappingOffset;
 
     bool bWillEof = (mappingOffset + pageSz) > m_Length;
-    bool bShouldCopy = bWillEof || bWrite;
+    bool bShouldCopy = m_bCopyOnWrite && (bWillEof || bWrite);
 
     if(!bShouldCopy)
     {
