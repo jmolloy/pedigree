@@ -58,6 +58,10 @@ if [ ! -e $script_dir/.easy_os ]; then
 
             real_os="osx"
             ;;
+        openbsd)
+            echo "Installing packages with pkg_add, please wait..."
+            sudo pkg_add scons mtools sqlite cdrtools gmp mpfr libmpc wget sed
+            ;;)
         cygwin|windows|mingw)
             echo "Please ensure you use Cygwin's 'setup.exe', or some other method, to install the following:"
             echo " - Python"
