@@ -173,6 +173,14 @@ void InputManager::joystickUpdate(ssize_t relX, ssize_t relY, ssize_t relZ, uint
 
 void InputManager::putNotification(InputNotification *note)
 {
+    // Early short-circuit - don't push onto the queue if no callbacks present.
+    if(m_Callbacks.count() == 0)
+    {
+        WARNING("InputManager dropping input - no callbacks to send to!");
+        delete note;
+        return;
+    }
+
     LockGuard<Spinlock> guard(m_QueueLock);
 
     // Can we mitigate this notification?
@@ -249,8 +257,7 @@ void InputManager::removeCallback(callback_t callback, Thread *pThread)
 #endif
                 (callback == (*it)->func))
             {
-                m_Callbacks.erase(it);
-                return;
+                it = m_Callbacks.erase(it);
             }
         }
     }
@@ -298,6 +305,14 @@ void InputManager::mainThread()
         InputNotification *pNote = m_InputQueue.popFront();
         m_QueueLock.release();
 
+        if(m_Callbacks.count() == 0)
+        {
+            // Drop the input on the floor - no callbacks to read it in!
+            WARNING("InputManager dropping input - no callbacks to send to!");
+            delete pNote;
+            continue;
+        }
+
         // Don't send the key to applications if it was zero
         if(!pNote)
             continue;
@@ -316,16 +331,16 @@ void InputManager::mainThread()
                     {
                         /// \todo Verify that the callback is in fact in the kernel
                         func(*pNote);
-                        delete pNote;
                         continue;
                     }
 
                     InputEvent *pEvent = new InputEvent(pNote, (*it)->nParam, reinterpret_cast<uintptr_t>(func));
                     pThread->sendEvent(pEvent);
-                    delete pNote;
                 }
             }
         }
+
+        delete pNote;
     }
 #endif
 }
