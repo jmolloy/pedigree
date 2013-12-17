@@ -246,6 +246,10 @@ void progress(const char *text)
 
     if(bFinished)
     {
+        // Clean up font
+        g_pFramebuffer->destroyBuffer(g_pFont);
+        delete [] g_pBuffer;
+
         // Destroy the framebuffer now that we're done
         Graphics::destroyFramebuffer(g_pFramebuffer);
         g_pFramebuffer = 0;
