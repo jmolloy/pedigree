@@ -100,6 +100,10 @@ uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
         uintptr_t offs  = location % blockSize;
         uintptr_t sz    = (size+offs > blockSize) ? blockSize-offs : size;
 
+        // Handle a possible early EOF.
+        if(sz > (m_Size - location))
+            sz = m_Size - location;
+
         m_Lock.acquire();
         uintptr_t buff = m_DataCache.lookup(block*blockSize);
         if (!buff)
