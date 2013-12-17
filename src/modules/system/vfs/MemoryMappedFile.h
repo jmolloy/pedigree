@@ -35,7 +35,7 @@
     
     \todo Handle writing of files, not just reading. */
 
-class MemoryMappedFileManager;
+class MemoryMapManager;
 
 /**
  * Generic base for a memory mapped file or object.
@@ -45,6 +45,8 @@ class MemoryMappedFileManager;
  */
 class MemoryMappedObject
 {
+    friend class MemoryMapManager;
+
     private:
         /** Default constructor, don't use. */
         MemoryMappedObject();
@@ -70,6 +72,24 @@ class MemoryMappedObject
         virtual MemoryMappedObject *clone() = 0;
 
         /**
+         * Splits the metadata of this object at the given address and
+         * creates a new MemoryMappedObject that begins at the page of
+         * the split.
+         */
+        virtual MemoryMappedObject *split(uintptr_t at) = 0;
+
+        /**
+         * Removes pages from the start of this MemoryMappedObject.
+         *
+         * To remove pages from the middle or end of a MemoryMappedObject,
+         * use split() and then remove()/unmap() on the returned object).
+         *
+         * \return true if the remove() has effectively removed the
+         *         entire MemoryMappedObject, false otherwise.
+         */
+        virtual bool remove(size_t length) = 0;
+
+        /**
          * Unmaps existing mappings in this object from the address space.
          *
          * Implementations are expected to track these as necessary for
@@ -92,6 +112,22 @@ class MemoryMappedObject
         bool matches(uintptr_t address)
         {
             return (m_Address <= address) && (address < (m_Address + m_Length));
+        }
+
+        /**
+         * Getter for base address.
+         */
+        uintptr_t address() const
+        {
+            return m_Address;
+        }
+
+        /**
+         * Getter for length.
+         */
+        size_t length() const
+        {
+            return m_Length;
         }
 
     protected:
@@ -140,6 +176,8 @@ class AnonymousMemoryMap : public MemoryMappedObject
         {}
 
         virtual MemoryMappedObject *clone();
+        virtual MemoryMappedObject *split(uintptr_t at);
+        virtual bool remove(size_t length);
 
         virtual void unmap();
 
@@ -170,6 +208,8 @@ class MemoryMappedFile : public MemoryMappedObject
         }
 
         virtual MemoryMappedObject *clone();
+        virtual MemoryMappedObject *split(uintptr_t at);
+        virtual bool remove(size_t length);
 
         virtual void unmap();
 
@@ -218,6 +258,17 @@ class MemoryMapManager : public MemoryTrapHandler
          * \param pTarget The process to clone into.
          */
         void clone(Process *pTarget);
+
+        /**
+         * Removes the given range from whatever objects might own them,
+         * and will cross object boundaries if necessary.
+         *
+         * If this will result in a MemoryMappedObject being completely
+         * unmapped, it will be removed.
+         *
+         * \return number of objects affected by this call.
+         */
+        size_t remove(uintptr_t base, size_t length);
 
         /**
          * Removes the mappings for the given object from the address space.
