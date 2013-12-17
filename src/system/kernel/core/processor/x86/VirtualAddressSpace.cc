@@ -677,39 +677,26 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
             if ((*pageTableEntry & PAGE_PRESENT) != PAGE_PRESENT)
                 continue;
 
-
             size_t flags = PAGE_GET_FLAGS(pageTableEntry);
 
             // Grab the physical address for it.
             physical_uintptr_t physicalAddress = PAGE_GET_PHYSICAL_ADDRESS(pageTableEntry);
 
+            // Unmap it.
             void *virtualAddress = reinterpret_cast<void*> ( ((i*1024)+j)*4096 );
-            if (getKernelAddressSpace().isMapped(virtualAddress))
-            {
-                // Only skip if the P for this mapping is the same.
-                physical_uintptr_t kernelPhys = 0;
-                size_t flags = 0;
-                getKernelAddressSpace().getMapping(virtualAddress, kernelPhys, flags);
-                if(kernelPhys == physicalAddress) {
-                    bDidSkip = true;
-                    continue;
-                }
-            }
-            // Page mapped in this address space but not in kernel. Unmap it.
             unmap(virtualAddress);
 
             // And release the physical memory if it is not shared with another
             // process (eg, memory mapped file)
-            if((flags & PAGE_SHARED) == 0)
+            // Also avoid stumbling over a swapped out page.
+            /// \todo When swap system comes along, we want to remove this page
+            ///       from swap!
+            if((flags & PAGE_SHARED | PAGE_SWAPPED) == 0)
                 PhysicalMemoryManager::instance().freePage(physicalAddress);
 
             // This PTE is no longer valid
             *pageTableEntry = 0;
         }
-
-        // Don't remove the directory entry if we skipped a kernel page
-        if(bDidSkip)
-            continue;
 
         // Remove the page table from the directory
         PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry));
