@@ -211,6 +211,8 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
     if (!va.isMapped(reinterpret_cast<void*>(handlerAddress)))
     {
         ERROR_NOLOCK("checkEventState: Handler address " << handlerAddress << " not mapped!");
+        if (pEvent->isDeletable())
+            delete pEvent;
         Processor::setInterrupts(bWasInterrupts);
         return;
     }
