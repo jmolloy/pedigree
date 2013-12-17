@@ -105,7 +105,7 @@ Png::Png(const char *filename) :
 
     png_destroy_read_struct(&m_PngPtr, &m_InfoPtr, NULL);
 
-    fclose(close);
+    fclose(stream);
 
     syslog(LOG_INFO, "PNG loaded %ul %ul", m_nWidth, m_nHeight);
 }
