@@ -691,7 +691,7 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
             // Also avoid stumbling over a swapped out page.
             /// \todo When swap system comes along, we want to remove this page
             ///       from swap!
-            if((flags & PAGE_SHARED | PAGE_SWAPPED) == 0)
+            if((flags & (PAGE_SHARED|PAGE_SWAPPED)) == 0)
                 PhysicalMemoryManager::instance().freePage(physicalAddress);
 
             // This PTE is no longer valid
