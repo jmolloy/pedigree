@@ -69,7 +69,6 @@ Png::Png(const char *filename) :
                  PNG_TRANSFORM_STRIP_16 | // 16-bit-per-channel down to 8.
                  PNG_TRANSFORM_STRIP_ALPHA | // No alpha
                  PNG_TRANSFORM_PACKING , // Unpack 2 and 4 bit samples.
-
                  reinterpret_cast<void*>(0));
 
     m_pRowPointers = reinterpret_cast<uint8_t**>(png_get_rows(m_PngPtr, m_InfoPtr));
@@ -104,7 +103,11 @@ Png::Png(const char *filename) :
       }
     }
 
-    syslog(LOG_ALERT, "PNG loaded %ul %ul", m_nWidth, m_nHeight);
+    png_destroy_read_struct(&m_PngPtr, &m_InfoPtr, NULL);
+
+    fclose(close);
+
+    syslog(LOG_INFO, "PNG loaded %ul %ul", m_nWidth, m_nHeight);
 }
 
 Png::~Png()
