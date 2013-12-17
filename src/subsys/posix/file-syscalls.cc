@@ -1640,7 +1640,14 @@ int posix_munmap(void *addr, size_t len)
 {
     F_NOTICE("munmap(" << reinterpret_cast<uintptr_t>(addr) << ", " << Dec << len << Hex << ")");
 
-    /// \todo Rewrite.
+    if(!len)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    MemoryMapManager::instance().remove(reinterpret_cast<uintptr_t>(addr), len);
+
     return 0;
 
 #if 0
