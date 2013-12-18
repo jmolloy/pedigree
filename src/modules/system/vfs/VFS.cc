@@ -361,7 +361,7 @@ bool VFS::remove(String path, File *pStartNode)
         Filesystem *pFs = lookupFilesystem(path);
         if (!pFs)
             return false;
-        return pFs->remove(newPath, pStartNode);
+        return pFs->remove(newPath, 0);
     }
 }
 

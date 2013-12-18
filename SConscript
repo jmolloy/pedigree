@@ -288,7 +288,6 @@ def buildImageMtools(target, source, env):
     # Calculate the full set of operations we need to do, before running commands.
 
     mkdirops = [
-        '/tmp',
         '/config',
         '/system',
         '/system/modules',
