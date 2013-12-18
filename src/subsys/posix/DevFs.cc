@@ -87,9 +87,9 @@ bool DevFs::initialise(Disk *pDisk)
     const char *ptyletters = "pqrstuvwxyzabcde";
     for(size_t i = 0; i < 16; ++i)
     {
-        for(; *ptyletters != 0; ++ptyletters)
+        for(const char *ptyc = ptyletters; *ptyc != 0; ++ptyc)
         {
-            char c = *ptyletters;
+            const char c = *ptyc;
             char master[] = {'p', 't', 'y', c, (i > 9) ? ('a' + (i % 10)) : ('0' + i), 0};
             char slave[] = {'t', 't', 'y', c, (i > 9) ? ('a' + (i % 10)) : ('0' + i), 0};
 
