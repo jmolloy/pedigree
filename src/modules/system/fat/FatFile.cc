@@ -81,6 +81,11 @@ void FatFile::writeBlock(uint64_t location, uintptr_t addr)
     pFs->write(this, location, sz, addr);
 }
 
+void FatFile::sync(size_t offset, bool async)
+{
+    m_FileBlockCache.sync(offset, async);
+}
+
 void FatFile::pinBlock(uint64_t location)
 {
     m_FileBlockCache.pin(location);

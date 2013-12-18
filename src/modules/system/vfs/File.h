@@ -90,6 +90,13 @@ public:
      */
     virtual void sync();
 
+    /**
+     * Trigger a sync of an inner cache back to disk.
+     */
+    virtual void sync(size_t offset, bool async)
+    {
+    }
+
     /** Returns the time the file was created. */
     Time getCreationTime();
     /** Sets the time the file was created. */
