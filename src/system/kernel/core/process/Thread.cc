@@ -244,9 +244,9 @@ void Thread::cullEvent(Event *pEvent)
     {
         if (*it == pEvent)
         {
-            it = m_EventQueue.erase(it);
             if ((*it)->isDeletable())
                 delete (*it);
+            it = m_EventQueue.erase(it);
         }
     }
 }
@@ -261,9 +261,9 @@ void Thread::cullEvent(size_t eventNumber)
     {
         if ((*it)->getNumber() == eventNumber)
         {
-            it = m_EventQueue.erase(it);
             if ((*it)->isDeletable())
                 delete (*it);
+            it = m_EventQueue.erase(it);
         }
     }
 }
