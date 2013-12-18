@@ -325,7 +325,11 @@ bool MemoryMappedFile::remove(size_t length)
 
             physical_uintptr_t p = m_Mappings.lookup(virt);
             if(p == static_cast<physical_uintptr_t>(~0UL))
-                m_pBacking->returnPhysicalPage((virt - oldStart) + oldOffset);
+            {
+                size_t fileOffset = (virt - oldStart) + oldOffset;
+                m_pBacking->returnPhysicalPage(fileOffset);
+                m_pBacking->sync(fileOffset, true);
+            }
             else
                 PhysicalMemoryManager::instance().freePage(phys);
         }
@@ -334,6 +338,103 @@ bool MemoryMappedFile::remove(size_t length)
     }
 
     return false;
+}
+
+static physical_uintptr_t getBackingPage(File *pBacking, size_t fileOffset)
+{
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
+
+    physical_uintptr_t phys = pBacking->getPhysicalPage(fileOffset);
+    if(phys == static_cast<physical_uintptr_t>(~0UL))
+    {
+        // No page found, trigger a read to fix that!
+        pBacking->read(fileOffset, pageSz, 0);
+        phys = pBacking->getPhysicalPage(fileOffset);
+        if(phys == static_cast<physical_uintptr_t>(~0UL))
+            ERROR("*** Could not manage to get a physical page for a MemoryMappedFile (" << pBacking->getName() << ")!");
+    }
+
+    return phys;
+}
+
+void MemoryMappedFile::sync(uintptr_t at, bool async)
+{
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
+
+    if(at < m_Address || at >= (m_Address + m_Length))
+    {
+        ERROR("MemoryMappedFile::sync() given bad at parameter (at=" << at << ", address=" << m_Address << ", end=" << (m_Address + m_Length) << ")");
+        return;
+    }
+
+    void *v = reinterpret_cast<void *>(at);
+    if(va.isMapped(v))
+    {
+        size_t flags = 0;
+        physical_uintptr_t phys = 0;
+        va.getMapping(v, phys, flags);
+        if((flags & VirtualAddressSpace::Write) == 0)
+        {
+            // Nothing to sync here! Page not writeable.
+            return;
+        }
+
+        size_t fileOffset = (at - m_Address) + m_Offset;
+
+        physical_uintptr_t p = m_Mappings.lookup(at);
+        if(p == static_cast<physical_uintptr_t>(~0UL))
+            m_pBacking->sync(fileOffset, async);
+    }
+}
+
+void MemoryMappedFile::invalidate(uintptr_t at)
+{
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
+
+    // If we're not actually CoW, don't bother checking.
+    if(!m_bCopyOnWrite)
+    {
+        return;
+    }
+
+    if(at < m_Address || at >= (m_Address + m_Length))
+    {
+        ERROR("MemoryMappedFile::invalidate() given bad at parameter (at=" << at << ", address=" << m_Address << ", end=" << (m_Address + m_Length) << ")");
+        return;
+    }
+
+    size_t fileOffset = (at - m_Address) + m_Offset;
+
+    // Check for already-invalidated.
+    physical_uintptr_t p = m_Mappings.lookup(at);
+    if(p == static_cast<physical_uintptr_t>(~0UL))
+        return;
+    else
+    {
+        void *v = reinterpret_cast<void *>(at);
+
+        if(va.isMapped(v))
+        {
+            // Clean up old...
+            va.unmap(v);
+            PhysicalMemoryManager::instance().freePage(p);
+            m_Mappings.remove(at);
+
+            // Get new...
+            physical_uintptr_t newBacking = getBackingPage(m_pBacking, fileOffset);
+            if(newBacking == static_cast<physical_uintptr_t>(~0UL))
+            {
+                ERROR("MemoryMappedFile::invalidate() couldn't bring in new backing page!");
+                return; // Fail.
+            }
+
+            // Bring in the new backing page.
+            va.map(newBacking, v, VirtualAddressSpace::Shared);
+            m_Mappings.insert(at, static_cast<physical_uintptr_t>(~0UL));
+        }
+    }
 }
 
 void MemoryMappedFile::unmap()
@@ -362,29 +463,16 @@ void MemoryMappedFile::unmap()
 
         physical_uintptr_t p = it.value();
         if(p == static_cast<physical_uintptr_t>(~0UL))
-            m_pBacking->returnPhysicalPage((it.key() - m_Address) + m_Offset);
+        {
+            size_t fileOffset = (it.key() - m_Address) + m_Offset;
+            m_pBacking->returnPhysicalPage(fileOffset);
+            m_pBacking->sync(fileOffset, true);
+        }
         else
             PhysicalMemoryManager::instance().freePage(phys);
     }
 
     m_Mappings.clear();
-}
-
-static physical_uintptr_t getBackingPage(File *pBacking, size_t fileOffset)
-{
-    size_t pageSz = PhysicalMemoryManager::getPageSize();
-
-    physical_uintptr_t phys = pBacking->getPhysicalPage(fileOffset);
-    if(phys == static_cast<physical_uintptr_t>(~0UL))
-    {
-        // No page found, trigger a read to fix that!
-        pBacking->read(fileOffset, pageSz, 0);
-        phys = pBacking->getPhysicalPage(fileOffset);
-        if(phys == static_cast<physical_uintptr_t>(~0UL))
-            ERROR("*** Could not manage to get a physical page for a MemoryMappedFile (" << pBacking->getName() << ")!");
-    }
-
-    return phys;
 }
 
 bool MemoryMappedFile::trap(uintptr_t address, bool bWrite)
@@ -713,6 +801,57 @@ size_t MemoryMapManager::remove(uintptr_t base, size_t length)
     m_Lock.release();
 
     return nAffected;
+}
+
+void MemoryMapManager::op(MemoryMapManager::Ops what, uintptr_t base, size_t length, bool async)
+{
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
+
+    m_Lock.acquire();
+
+    MmObjectList *pMmObjectList = m_MmObjectLists.lookup(&va);
+    if (!pMmObjectList)
+    {
+        m_Lock.release();
+        return;
+    }
+
+    for(uintptr_t address = base; address < (base + length); address += pageSz)
+    {
+        for (List<MemoryMappedObject*>::Iterator it = pMmObjectList->begin();
+             it != pMmObjectList->end();
+             it++)
+        {
+            MemoryMappedObject *pObject = *it;
+            if(pObject->matches(address & ~(pageSz - 1)))
+            {
+                switch(what)
+                {
+                    case Sync:
+                        pObject->sync(address, async);
+                        break;
+                    case Invalidate:
+                        pObject->invalidate(address);
+                        break;
+                    default:
+                        WARNING("Bad 'what' in MemoryMapManager::op()");
+                }
+            }
+        }
+    }
+
+    m_Lock.release();
+}
+
+void MemoryMapManager::sync(uintptr_t base, size_t length, bool async)
+{
+    op(Sync, base, length, async);
+}
+
+void MemoryMapManager::invalidate(uintptr_t base, size_t length)
+{
+    op(Invalidate, base, length, false);
 }
 
 void MemoryMapManager::unmap(MemoryMappedObject* pObj)

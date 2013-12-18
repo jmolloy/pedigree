@@ -90,6 +90,19 @@ class MemoryMappedObject
         virtual bool remove(size_t length) = 0;
 
         /**
+         * Sync back the given page to a backing store, if one exists.
+         */
+        virtual void sync(uintptr_t at, bool async)
+        {}
+
+        /**
+         * If the given page is dirty (and this is a CoW mapping),
+         * restore it to the file's actual content.
+         */
+        virtual void invalidate(uintptr_t at)
+        {}
+
+        /**
          * Unmaps existing mappings in this object from the address space.
          *
          * Implementations are expected to track these as necessary for
@@ -211,6 +224,9 @@ class MemoryMappedFile : public MemoryMappedObject
         virtual MemoryMappedObject *split(uintptr_t at);
         virtual bool remove(size_t length);
 
+        virtual void sync(uintptr_t at, bool async);
+        virtual void invalidate(uintptr_t at);
+
         virtual void unmap();
 
         virtual bool trap(uintptr_t address, bool bWrite);
@@ -271,6 +287,18 @@ class MemoryMapManager : public MemoryTrapHandler
         size_t remove(uintptr_t base, size_t length);
 
         /**
+         * Syncs memory mapped objects within the given range back to
+         * their backing store, if they have one.
+         */
+        void sync(uintptr_t base, size_t length, bool async);
+
+        /**
+         * Takes any pages that differ from the backing file (ie, copied
+         * on write) and restores them to point to the backing file.
+         */
+        void invalidate(uintptr_t base, size_t length);
+
+        /**
          * Removes the mappings for the given object from the address space.
          */
         void unmap(MemoryMappedObject* pObj);
@@ -291,6 +319,14 @@ class MemoryMapManager : public MemoryTrapHandler
         ~MemoryMapManager();
 
         bool sanitiseAddress(uintptr_t &address, size_t length);
+
+        enum Ops
+        {
+            Sync,
+            Invalidate,
+        };
+
+        void op(Ops what, uintptr_t base, size_t length, bool async);
 
         /** Singleton instance. */
         static MemoryMapManager m_Instance;
