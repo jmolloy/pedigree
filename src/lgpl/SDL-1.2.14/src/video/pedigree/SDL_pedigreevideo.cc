@@ -314,11 +314,13 @@ int PEDIGREE_SetColors(_THIS, int firstcolor, int ncolors, SDL_Color *colors)
 */
 void PEDIGREE_VideoQuit(_THIS)
 {
-    /// \todo what to do here
 	if (_this->screen->pixels != NULL)
 	{
 		SDL_free(_this->screen->pixels);
 		_this->screen->pixels = NULL;
 	}
-}
 
+    _this->hidden->widget->destroy();
+    delete _this->hidden->widget;
+    _this->hidden->widget = 0;
+}

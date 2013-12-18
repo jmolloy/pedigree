@@ -209,6 +209,105 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
             g_PendingWindows.insert(pWindow);
         }
     }
+    else if(pWinMan->messageCode == LibUiProtocol::Destroy)
+    {
+        std::map<uint64_t, Window*>::iterator it = g_Windows->find(pWinMan->widgetHandle);
+        if(it != g_Windows->end())
+        {
+            Window *pWindow = it->second;
+
+            Container *myParent = pWindow->getParent();
+            Window *newFocus = 0;
+            WObject *sibling = 0;
+
+            // Find any siblings if we can.
+            WObject *siblingObject = myParent->getLeftSibling(pWindow);
+            if(!siblingObject)
+            {
+                siblingObject = myParent->getRightSibling(pWindow);
+            }
+
+            // Will there be any children left?
+            if(myParent->getChildCount() > 1)
+            {
+                // Yes. Focus adjustment is mostly trivial.
+            }
+            else
+            {
+                // No. Focus adjustment is less trivial.
+                siblingObject = myParent->getLeft(pWindow);
+                if(!siblingObject)
+                {
+                    siblingObject = myParent->getRight(pWindow);
+                }
+                if(!siblingObject)
+                {
+                    siblingObject = myParent->getUp(pWindow);
+                }
+                if(!siblingObject)
+                {
+                    siblingObject = myParent->getDown(pWindow);
+                }
+            }
+
+            // Remove from the parent container.
+            myParent->removeChild(pWindow);
+            if(myParent->getChildCount() > 0)
+            {
+                myParent->retile();
+            }
+            else if(myParent->getParent())
+            {
+                Container *pContainer = static_cast<Container*>(myParent->getParent());
+                pContainer->removeChild(myParent);
+                pContainer->retile();
+                myParent = pContainer;
+            }
+
+            // Assign new focus.
+            if(siblingObject)
+            {
+                while(siblingObject->getType() == WObject::Container)
+                {
+                    Container *pContainer = static_cast<Container*>(siblingObject);
+                    siblingObject = pContainer->getFocusWindow();
+                }
+
+                if(siblingObject->getType() == WObject::Window)
+                {
+                    newFocus = static_cast<Window*>(siblingObject);
+                }
+            }
+
+            // All children are now pending a redraw.
+            g_PendingWindows.insert(myParent);
+
+            // Switch focus, if needed.
+            if(g_pFocusWindow == pWindow)
+            {
+                g_pFocusWindow = newFocus;
+                newFocus->focus();
+
+                g_PendingWindows.insert(newFocus);
+            }
+
+            char *responseData = new char[totalSize];
+            LibUiProtocol::WindowManagerMessage *pHeader =
+                reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(responseData);
+            pHeader->messageCode = LibUiProtocol::Destroy;
+            pHeader->widgetHandle = pWinMan->widgetHandle;
+            pHeader->messageSize = 0;
+            pHeader->isResponse = true;
+
+            send(pWindow->getSocket(), responseData, totalSize, 0);
+
+            delete [] responseData;
+
+            // Clean up!
+            delete pWindow;
+            g_Windows->erase(it);
+        }
+    }
     else if(pWinMan->messageCode == LibUiProtocol::Nothing)
     {
         // We inject this to wake up checkForMessages and move on to rendering.
@@ -345,6 +444,8 @@ void queueInputCallback(Input::InputNotification &note)
                 }
                 else if(c == 'Q')
                 {
+                    /// \todo Would it be better for SIGTERM's handler to call destroy()?
+
                     // Kill the client.
                     uint64_t handle = g_pFocusWindow->getHandle();
                     pid_t pid = (pid_t) ((handle >> 32) & 0xFFFFFFFF);

@@ -60,6 +60,8 @@ Widget::Widget() :
 
 Widget::~Widget()
 {
+    destroy();
+
     if(m_Endpoint) {
         free((void *) m_Endpoint);
     }
@@ -323,7 +325,7 @@ bool Widget::visibility(bool vis)
 
 void Widget::destroy()
 {
-    // Constructed yet?
+    // Constructed yet (or already destroyed)?
     if(!m_Handle)
         return;
 
@@ -340,13 +342,41 @@ void Widget::destroy()
     pWinMan->isResponse = false;
 
     // Transmit.
-    send(m_Socket, messageData, totalSize, 0);
+    bool bRet = send(m_Socket, messageData, totalSize, 0) == totalSize;
 
     // Clean up.
     delete [] messageData;
 
+    // Wait for an ACK message, before we return.
+    // At this point, we will be completely without a framebuffer.
+    if(bRet)
+    {
+        char *responseData = new char[4096];
+        while(1)
+        {
+            ssize_t n = recv(m_Socket, responseData, 4096, 0);
+            if(n > 0)
+            {
+                pWinMan = reinterpret_cast<WindowManagerMessage *>(responseData);
+                if(pWinMan->isResponse && (pWinMan->messageCode == Destroy))
+                {
+                    delete [] responseData;
+                    break;
+                }
+                else
+                {
+                    g_PendingMessages.push(responseData);
+                    responseData = new char[4096];
+                }
+            }
+        }
+    }
+
     // Invalidate this widget now.
     delete m_pFramebuffer;
+    delete m_SharedFramebuffer;
+    m_pFramebuffer = 0;
+    m_SharedFramebuffer = 0;
     m_Handle = 0;
 }
 

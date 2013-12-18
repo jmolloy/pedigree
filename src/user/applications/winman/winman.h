@@ -168,6 +168,10 @@ class Window : public WObject
 
         virtual ~Window()
         {
+            /// \todo Need a way to destroy the old framebuffer without breaking
+            ///       the other side's reference to the same region... Refcount?
+            // delete m_Framebuffer;
+            close(m_Socket);
         }
 
         virtual Type getType() const
