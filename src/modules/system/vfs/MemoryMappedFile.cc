@@ -31,8 +31,8 @@ MemoryMappedObject::~MemoryMappedObject()
 {
 }
 
-AnonymousMemoryMap::AnonymousMemoryMap(uintptr_t address, size_t length) :
-    MemoryMappedObject(address, true, length), m_Mappings()
+AnonymousMemoryMap::AnonymousMemoryMap(uintptr_t address, size_t length, MemoryMappedObject::Permissions perms) :
+    MemoryMappedObject(address, true, length, perms), m_Mappings()
 {
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
@@ -45,6 +45,10 @@ AnonymousMemoryMap::AnonymousMemoryMap(uintptr_t address, size_t length) :
         memset(reinterpret_cast<void *>(address), 0, PhysicalMemoryManager::getPageSize());
         va.unmap(reinterpret_cast<void *>(address));
     }
+
+    // Don't premap if we don't have permission to!
+    if(!(perms & Read))
+        return;
 
     // Because mapping in an anonymous mapping does not have the overhead that
     // mapping in a file does (ie, pages etc), we can do so upfront. Writes
@@ -59,7 +63,7 @@ AnonymousMemoryMap::AnonymousMemoryMap(uintptr_t address, size_t length) :
 
 MemoryMappedObject *AnonymousMemoryMap::clone()
 {
-    AnonymousMemoryMap *pResult = new AnonymousMemoryMap(m_Address, m_Length);
+    AnonymousMemoryMap *pResult = new AnonymousMemoryMap(m_Address, m_Length, m_Permissions);
     pResult->m_Mappings = m_Mappings;
     return pResult;
 }
@@ -83,7 +87,7 @@ MemoryMappedObject *AnonymousMemoryMap::split(uintptr_t at)
     m_Length = at - m_Address;
 
     // New object.
-    AnonymousMemoryMap *pResult = new AnonymousMemoryMap(at, oldLength - m_Length);
+    AnonymousMemoryMap *pResult = new AnonymousMemoryMap(at, oldLength - m_Length, m_Permissions);
 
     // Fix up mapping metadata.
     for(List<void *>::Iterator it = m_Mappings.begin();
@@ -190,10 +194,21 @@ bool AnonymousMemoryMap::trap(uintptr_t address, bool bWrite)
     // Page-align the trap address
     address = address & ~(pageSz - 1);
 
+    // Skip out on a few things if we can.
+    if(bWrite && !(m_Permissions & Write))
+        return false;
+    else if((!bWrite) && !(m_Permissions & Read))
+        return false;
+
+    // Add execute flag.
+    size_t extraFlags = 0;
+    if(m_Permissions & Exec)
+        extraFlags |= VirtualAddressSpace::Execute;
+
     if(!bWrite)
     {
         PhysicalMemoryManager::instance().pin(m_Zero);
-        va.map(m_Zero, reinterpret_cast<void *>(address), VirtualAddressSpace::Shared);
+        va.map(m_Zero, reinterpret_cast<void *>(address), VirtualAddressSpace::Shared | extraFlags);
 
         m_Mappings.pushBack(reinterpret_cast<void *>(address));
     }
@@ -215,22 +230,22 @@ bool AnonymousMemoryMap::trap(uintptr_t address, bool bWrite)
 
         // "Copy" on write... but not really :)
         physical_uintptr_t newPage = PhysicalMemoryManager::instance().allocatePage();
-        va.map(newPage, reinterpret_cast<void *>(address), VirtualAddressSpace::Write);
+        va.map(newPage, reinterpret_cast<void *>(address), VirtualAddressSpace::Write | extraFlags);
         memset(reinterpret_cast<void *>(address), 0, PhysicalMemoryManager::getPageSize());
     }
 
     return true;
 }
 
-MemoryMappedFile::MemoryMappedFile(uintptr_t address, size_t length, size_t offset, File *backing, bool bCopyOnWrite) :
-    MemoryMappedObject(address, bCopyOnWrite, length), m_pBacking(backing), m_Offset(offset), m_Mappings()
+MemoryMappedFile::MemoryMappedFile(uintptr_t address, size_t length, size_t offset, File *backing, bool bCopyOnWrite, MemoryMappedObject::Permissions perms) :
+    MemoryMappedObject(address, bCopyOnWrite, length, perms), m_pBacking(backing), m_Offset(offset), m_Mappings()
 {
     assert(m_pBacking);
 }
 
 MemoryMappedObject *MemoryMappedFile::clone()
 {
-    MemoryMappedFile *pResult = new MemoryMappedFile(m_Address, m_Length, m_Offset, m_pBacking, m_bCopyOnWrite);
+    MemoryMappedFile *pResult = new MemoryMappedFile(m_Address, m_Length, m_Offset, m_pBacking, m_bCopyOnWrite, m_Permissions);
     pResult->m_Mappings = m_Mappings;
 
     for(Tree<uintptr_t, uintptr_t>::Iterator it = m_Mappings.begin();
@@ -269,7 +284,7 @@ MemoryMappedObject *MemoryMappedFile::split(uintptr_t at)
     m_Length = at - m_Address;
 
     // New object.
-    MemoryMappedFile *pResult = new MemoryMappedFile(at, oldLength - m_Length, m_Offset + m_Length, m_pBacking, m_bCopyOnWrite);
+    MemoryMappedFile *pResult = new MemoryMappedFile(at, oldLength - m_Length, m_Offset + m_Length, m_pBacking, m_bCopyOnWrite, m_Permissions);
 
     // Fix up mapping metadata.
     for(uintptr_t virt = at;
@@ -405,6 +420,11 @@ void MemoryMappedFile::invalidate(uintptr_t at)
         return;
     }
 
+    // Add execute flag.
+    size_t extraFlags = 0;
+    if(m_Permissions & Exec)
+        extraFlags |= VirtualAddressSpace::Execute;
+
     size_t fileOffset = (at - m_Address) + m_Offset;
 
     // Check for already-invalidated.
@@ -431,7 +451,7 @@ void MemoryMappedFile::invalidate(uintptr_t at)
             }
 
             // Bring in the new backing page.
-            va.map(newBacking, v, VirtualAddressSpace::Shared);
+            va.map(newBacking, v, VirtualAddressSpace::Shared | extraFlags);
             m_Mappings.insert(at, static_cast<physical_uintptr_t>(~0UL));
         }
     }
@@ -492,6 +512,17 @@ bool MemoryMappedFile::trap(uintptr_t address, bool bWrite)
     bool bWillEof = (mappingOffset + pageSz) > m_Length;
     bool bShouldCopy = m_bCopyOnWrite && (bWillEof || bWrite);
 
+    // Skip out on a few things if we can.
+    if(bWrite && !(m_Permissions & Write))
+        return false;
+    else if((!bWrite) && !(m_Permissions & Read))
+        return false;
+
+    // Add execute flag.
+    size_t extraFlags = 0;
+    if(m_Permissions & Exec)
+        extraFlags |= VirtualAddressSpace::Execute;
+
     if(!bShouldCopy)
     {
         physical_uintptr_t phys = getBackingPage(m_pBacking, fileOffset);
@@ -504,7 +535,7 @@ bool MemoryMappedFile::trap(uintptr_t address, bool bWrite)
             flags |= VirtualAddressSpace::Write;
         }
 
-        va.map(phys, reinterpret_cast<void *>(address), flags);
+        va.map(phys, reinterpret_cast<void *>(address), flags | extraFlags);
 
         m_Mappings.insert(address, ~0);
     }
@@ -522,7 +553,7 @@ bool MemoryMappedFile::trap(uintptr_t address, bool bWrite)
 
         // Okay, map in the new page, and copy across the backing file data.
         physical_uintptr_t newPhys = PhysicalMemoryManager::instance().allocatePage();
-        va.map(newPhys, reinterpret_cast<void *>(address), VirtualAddressSpace::Write);
+        va.map(newPhys, reinterpret_cast<void *>(address), VirtualAddressSpace::Write | extraFlags);
 
         size_t nBytes = m_Length - mappingOffset;
         if(nBytes > pageSz)
@@ -551,7 +582,7 @@ MemoryMapManager::~MemoryMapManager()
 {
 }
 
-MemoryMappedObject *MemoryMapManager::mapFile(File *pFile, uintptr_t &address, size_t length, size_t offset, bool bCopyOnWrite)
+MemoryMappedObject *MemoryMapManager::mapFile(File *pFile, uintptr_t &address, size_t length, MemoryMappedObject::Permissions perms, size_t offset, bool bCopyOnWrite)
 {
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
     size_t pageSz = PhysicalMemoryManager::getPageSize();
@@ -575,7 +606,7 @@ MemoryMappedObject *MemoryMapManager::mapFile(File *pFile, uintptr_t &address, s
     NOTICE("MemoryMapManager::mapFile: " << address << " length " << actualLength << " for " << pFile->getName());
 #endif
     MemoryMappedFile *pMappedFile = new MemoryMappedFile(
-        address, actualLength, offset, pFile, bCopyOnWrite);
+        address, actualLength, offset, pFile, bCopyOnWrite, perms);
 
     {
         // This operation must appear atomic.
@@ -595,7 +626,7 @@ MemoryMappedObject *MemoryMapManager::mapFile(File *pFile, uintptr_t &address, s
     return pMappedFile;
 }
 
-MemoryMappedObject *MemoryMapManager::mapAnon(uintptr_t &address, size_t length)
+MemoryMappedObject *MemoryMapManager::mapAnon(uintptr_t &address, size_t length, MemoryMappedObject::Permissions perms)
 {
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
     size_t pageSz = PhysicalMemoryManager::getPageSize();
@@ -617,7 +648,7 @@ MemoryMappedObject *MemoryMapManager::mapAnon(uintptr_t &address, size_t length)
 #ifdef DEBUG_MMOBJECTS
     NOTICE("MemoryMapManager::mapAnon: " << address << " length " << length);
 #endif
-    AnonymousMemoryMap *pMap = new AnonymousMemoryMap(address, length);
+    AnonymousMemoryMap *pMap = new AnonymousMemoryMap(address, length, perms);
 
     {
         // This operation must appear atomic.

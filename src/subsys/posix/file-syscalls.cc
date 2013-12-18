@@ -1425,14 +1425,32 @@ void *posix_mmap(void *p)
         return MAP_FAILED;
     }
 
-    // Valid file passed?
-    FileDescriptor* f = pSubsystem->getFileDescriptor(fd);
+    // Create permission set.
+    MemoryMappedObject::Permissions perms;
+    if(prot & PROT_NONE)
+    {
+        perms = MemoryMappedObject::None;
+    }
+    else
+    {
+        // Everything implies a readable memory region.
+        perms = MemoryMappedObject::Read;
+        if(prot & PROT_WRITE)
+            perms |= MemoryMappedObject::Write;
+        if(prot & PROT_EXEC)
+            perms |= MemoryMappedObject::Exec;
+    }
+
     if(flags & MAP_ANON)
     {
-        /// \todo PROT_* is currently being ignored...
-        /// \todo MAP_SHARED - persist over clone?
-        /// \todo USERSVD is a thing.
-        MemoryMappedObject *pObject = MemoryMapManager::instance().mapAnon(sanityAddress, len);
+        if(flags & MAP_SHARED)
+        {
+            F_NOTICE("  -> failed (MAP_SHARED cannot be used with MAP_ANONYMOUS)");
+            SYSCALL_ERROR(InvalidArgument);
+            return MAP_FAILED;
+        }
+
+        MemoryMappedObject *pObject = MemoryMapManager::instance().mapAnon(sanityAddress, len, perms);
         if(!pObject)
         {
             /// \todo Better error?
@@ -1443,158 +1461,18 @@ void *posix_mmap(void *p)
 
         F_NOTICE("  -> " << sanityAddress);
 
-        return reinterpret_cast<void *>(sanityAddress);
-
-/*
-        // Anonymous mmap instead?
-        if(flags & (MAP_ANON | MAP_SHARED))
-        {
-            // Allocation information
-            uintptr_t mapAddress = reinterpret_cast<uintptr_t>(addr);
-            size_t pageSz = PhysicalMemoryManager::getPageSize();
-            size_t numPages = (len / pageSz) + (len % pageSz ? 1 : 0);
-
-            // Verify the passed length
-            if(!len || (mapAddress & (pageSz-1)))
-            {
-                SYSCALL_ERROR(InvalidArgument);
-                return MAP_FAILED;
-            }
-
-            // Does the application want a fixed mapping?
-            // A fixed mapping is a direct mapping into the address space by an
-            // application.
-            if(flags & MAP_FIXED)
-            {
-                // Verify the passed address
-                if(!mapAddress)
-                {
-                    SYSCALL_ERROR(InvalidArgument);
-                    return MAP_FAILED;
-                }
-
-                // Unmap existing allocations (before releasing the space to the process'
-                // space allocator though).
-                /// \todo Could this wreak havoc with CoW or shared memory (when we get it)?
-                for (size_t i = 0; i < numPages; i++)
-                {
-                    void *unmapAddr = reinterpret_cast<void*>(mapAddress + (i * pageSz));
-                    if(va.isMapped(unmapAddr))
-                    {
-                        // Unmap the virtual address
-                        physical_uintptr_t phys = 0;
-                        size_t flags = 0;
-                        va.getMapping(unmapAddr, phys, flags);
-                        va.unmap(reinterpret_cast<void*>(unmapAddr));
-
-                        // Free the physical page
-                        PhysicalMemoryManager::instance().freePage(phys);
-                    }
-                }
-
-                // Now, allocate the memory
-                if(!pProcess->getSpaceAllocator().allocateSpecific(mapAddress, numPages * pageSz))
-                {
-                    if(!(flags & MAP_USERSVD))
-                    {
-                        F_NOTICE("mmap: out of memory");
-                        SYSCALL_ERROR(OutOfMemory);
-                        return MAP_FAILED;
-                    }
-                }
-            }
-            else if(flags & (MAP_ANON | MAP_SHARED))
-            {
-                // Anonymous mapping - get an address from the space allocator
-                /// \todo NEED AN ALIGNED ADDRESS. COME ON.
-                if(!pProcess->getSpaceAllocator().allocate(numPages * pageSz, mapAddress))
-                {
-                    F_NOTICE("mmap: out of memory");
-                    SYSCALL_ERROR(OutOfMemory);
-                    return MAP_FAILED;
-                }
-
-                if (mapAddress & (pageSz-1))
-                {
-                    mapAddress = (mapAddress + pageSz) & ~(pageSz - 1);
-                }
-            }
-            else
-            {
-                // Flags not supported
-                F_NOTICE("mmap: flags not supported");
-                SYSCALL_ERROR(NotSupported);
-                return MAP_FAILED;
-            }
-
-            // Do we need to use a physical base?
-            physical_uintptr_t physBase = 0;
-            size_t mappingFlags = 0;
-            if(flags & MAP_PHYS_OFFSET)
-            {
-                physBase = off;
-                mappingFlags |= VirtualAddressSpace::WriteCombine;
-                NOTICE("  -> MAP_PHYS_OFFSET");
-            }
-
-            // Do we need to share the mapping with forked children?
-            if(flags & MAP_SHARED)
-            {
-                mappingFlags |= VirtualAddressSpace::Shared;
-            }
-
-            // Got an address and a length, map it in now
-            for(size_t i = 0; i < numPages; i++)
-            {
-                physical_uintptr_t  phys = physBase ?
-                    (physBase + (i * pageSz)) : PhysicalMemoryManager::instance().allocatePage();
-                uintptr_t           virt = mapAddress + (i * pageSz);
-                if(!va.isMapped(reinterpret_cast<void*>(virt)))
-                {
-                    if(!va.map(phys, reinterpret_cast<void*>(virt), VirtualAddressSpace::Write | mappingFlags))
-                    {
-                        /// \todo Need to unmap and free all the mappings so far, then return to the space allocator.
-                        F_NOTICE("mmap: out of memory");
-                        SYSCALL_ERROR(OutOfMemory);
-                        return MAP_FAILED;
-                    }
-                }
-                else
-                {
-                    // Page is already mapped, that shouldn't be possible.
-                    FATAL("mmap: address " << virt << " is already mapped into the address space");
-                }
-            }
-
-            // And finally, we're ready to go.
-            finalAddress = reinterpret_cast<void*>(mapAddress);
-
-            // Add to the tracker
-            /// \todo This is not really ideal - rather than storing a MMFile
-            ///       we should store an object of some description. Then it'll
-            ///       be something like pSubsystem->addMemoryMap()
-            MemoryMappedFile *pFile = new MemoryMappedFile(len);
-            pSubsystem->memoryMapFile(finalAddress, pFile);
-
-            // Clear the allocated region if needed
-            if(flags & MAP_ANON)
-            {
-                memset(finalAddress, 0, numPages * PhysicalMemoryManager::getPageSize());
-            }
-
-            NOTICE("  -> returning " << mapAddress);
-        }
-        else
-        {
-            // No valid file given, return error
-            F_NOTICE("mmap: invalid file descriptor");
-            SYSCALL_ERROR(BadFileDescriptor);
-            return MAP_FAILED;
-        }
-*/
+        finalAddress = reinterpret_cast<void*>(sanityAddress);
     }
     else
     {
+        // Valid file passed?
+        FileDescriptor* f = pSubsystem->getFileDescriptor(fd);
+        if(!f)
+        {
+            SYSCALL_ERROR(BadFileDescriptor);
+            return MAP_FAILED;
+        }
+
         // Grab the file to map in
         File *fileToMap = f->file;
         
@@ -1602,10 +1480,8 @@ void *posix_mmap(void *p)
 
         // Grab the MemoryMappedFile for it. This will automagically handle
         // MAP_FIXED mappings too
-        /// \todo There *should* be proper flag checks here!
-        uintptr_t address = reinterpret_cast<uintptr_t>(addr);
         bool bCopyOnWrite = (flags & MAP_SHARED) == 0;
-        MemoryMappedObject *pFile = MemoryMapManager::instance().mapFile(fileToMap, address, len, off, bCopyOnWrite);
+        MemoryMappedObject *pFile = MemoryMapManager::instance().mapFile(fileToMap, sanityAddress, len, perms, off, bCopyOnWrite);
         if(!pFile)
         {
             /// \todo Better error?
@@ -1614,9 +1490,9 @@ void *posix_mmap(void *p)
             return MAP_FAILED;
         }
 
-        F_NOTICE("  -> " << address);
+        F_NOTICE("  -> " << sanityAddress);
 
-        finalAddress = reinterpret_cast<void*>(address);
+        finalAddress = reinterpret_cast<void*>(sanityAddress);
     }
 
     // Complete

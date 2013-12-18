@@ -84,7 +84,7 @@ bool DynamicLinker::loadProgram(File *pFile, bool bDryRun, bool bInterpreter, St
         return false;
 
     uintptr_t buffer = 0;
-    MemoryMappedObject *pMmFile = MemoryMapManager::instance().mapFile(pFile, buffer, pFile->getSize());
+    MemoryMappedObject *pMmFile = MemoryMapManager::instance().mapFile(pFile, buffer, pFile->getSize(), MemoryMappedObject::Read);
 
     String fileName;
     pFile->getName(fileName);
@@ -220,7 +220,7 @@ bool DynamicLinker::loadObject(File *pFile, bool bDryRun)
     uintptr_t buffer = 0;
     size_t size;
     uintptr_t loadBase;
-    MemoryMappedObject *pMmFile = MemoryMapManager::instance().mapFile(pFile, buffer, pFile->getSize());
+    MemoryMappedObject *pMmFile = MemoryMapManager::instance().mapFile(pFile, buffer, pFile->getSize(), MemoryMappedObject::Read);
 
     Elf *pElf = new Elf();
     SharedObject *pSo = 0;

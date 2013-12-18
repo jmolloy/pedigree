@@ -455,7 +455,9 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         // with CoW, most of this mapping ends up shared across all address
         // spaces. This means we don't have to be smart about loading the ELF.
         uintptr_t loadAddr = pProcess->getAddressSpace()->getDynamicLinkerAddress();
-        MemoryMappedObject *pMmFile = MemoryMapManager::instance().mapFile(file, loadAddr, file->getSize());
+        NOTICE("Mapping dynamic linker '" << file->getName() << "' at " << loadAddr << "...");
+        MemoryMappedObject::Permissions perms = MemoryMappedObject::Read | MemoryMappedObject::Write | MemoryMappedObject::Exec;
+        MemoryMappedObject *pMmFile = MemoryMapManager::instance().mapFile(file, loadAddr, file->getSize(), perms);
         if(!pMmFile)
         {
             ERROR("execve: couldn't memory map dynamic linker");

@@ -52,9 +52,17 @@ class MemoryMappedObject
         MemoryMappedObject();
 
     public:
+        /** Permissions to assign to a mapping when it is created. */
+        typedef int Permissions;
+
+        static const int None = 0x0;
+        static const int Read = 0x1;
+        static const int Write = 0x2;
+        static const int Exec = 0x4;
+
         /** Constructor - bring up common metadata. */
-        MemoryMappedObject(uintptr_t address, bool bCopyOnWrite, size_t length) :
-            m_bCopyOnWrite(bCopyOnWrite), m_Address(address), m_Length(length)
+        MemoryMappedObject(uintptr_t address, bool bCopyOnWrite, size_t length, Permissions perms) :
+            m_bCopyOnWrite(bCopyOnWrite), m_Address(address), m_Length(length), m_Permissions(perms)
         {}
 
         virtual ~MemoryMappedObject();
@@ -170,6 +178,16 @@ class MemoryMappedObject
          */
         size_t m_Length;
 
+        /**
+         * Permissions for mappings created by this object.
+         *
+         * For example, 'None' would mean that a trap will NEVER succeed,
+         * and that no premapping will be done. 'Read' might mean that
+         * writes will never magically map in a page for writing to.
+         *
+         * 'Exec' only works on systems that support this (eg, x86_64).
+         */
+        Permissions m_Permissions;
 };
 
 /**
@@ -183,7 +201,7 @@ class MemoryMappedObject
 class AnonymousMemoryMap : public MemoryMappedObject
 {
     public:
-        AnonymousMemoryMap(uintptr_t address, size_t length);
+        AnonymousMemoryMap(uintptr_t address, size_t length, Permissions perms);
 
         virtual ~AnonymousMemoryMap()
         {}
@@ -214,7 +232,7 @@ class AnonymousMemoryMap : public MemoryMappedObject
 class MemoryMappedFile : public MemoryMappedObject
 {
     public:
-        MemoryMappedFile(uintptr_t address, size_t length, size_t offset, File *backing, bool bCopyOnWrite);
+        MemoryMappedFile(uintptr_t address, size_t length, size_t offset, File *backing, bool bCopyOnWrite, Permissions perms);
 
         virtual ~MemoryMappedFile()
         {
@@ -261,12 +279,12 @@ class MemoryMapManager : public MemoryTrapHandler
         /**
          * Map in the given File.
          */
-        MemoryMappedObject *mapFile(File *pFile, uintptr_t &address, size_t length, size_t offset = 0, bool bCopyOnWrite = true);
+        MemoryMappedObject *mapFile(File *pFile, uintptr_t &address, size_t length, MemoryMappedObject::Permissions perms, size_t offset = 0, bool bCopyOnWrite = true);
 
         /**
          * Create a new anonymous memory mapping.
          */
-        MemoryMappedObject *mapAnon(uintptr_t &address, size_t length);
+        MemoryMappedObject *mapAnon(uintptr_t &address, size_t length, MemoryMappedObject::Permissions perms);
 
         /**
          * Registers the current address space's mappings with the target
