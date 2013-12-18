@@ -1626,11 +1626,35 @@ void *posix_mmap(void *p)
 int posix_msync(void *p, size_t len, int flags) {
     F_NOTICE("msync");
 
-    // Hacky, more or less just for the dynamic linker to figure out if a page is already mapped.
+    uintptr_t addr = reinterpret_cast<uintptr_t>(p);
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
+
+    // Verify the passed length
+    if(!len || (addr & (pageSz-1)))
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    if((flags & ~(MS_ASYNC | MS_INVALIDATE | MS_SYNC)) != 0)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
     if(!va.isMapped(p)) {
         SYSCALL_ERROR(OutOfMemory);
         return -1;
+    }
+
+    if(flags & MS_INVALIDATE)
+    {
+        MemoryMapManager::instance().invalidate(addr, len);
+    }
+    else
+    {
+        MemoryMapManager::instance().sync(addr, len, flags & MS_ASYNC);
     }
 
     return 0;
@@ -1649,57 +1673,6 @@ int posix_munmap(void *addr, size_t len)
     MemoryMapManager::instance().remove(reinterpret_cast<uintptr_t>(addr), len);
 
     return 0;
-
-#if 0
-    // Grab the Process subsystem
-    Process *pProcess = Processor::information().getCurrentThread()->getParent();
-    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
-    if (!pSubsystem)
-    {
-        ERROR("No subsystem for this process!");
-        return -1;
-    }
-
-    // Lookup the address
-    MemoryMappedFile *pFile = pSubsystem->unmapFile(addr);
-
-    // If it's a valid file, unmap it and we're done
-    if(pFile)
-        MemoryMappedFileManager::instance().unmap(pFile);
-
-    // Otherwise, free the space manually
-    else
-    {
-        // Anonymous mmap, manually free the space
-        size_t pageSz = PhysicalMemoryManager::getPageSize();
-        size_t numPages = (len / pageSz) + (len % pageSz ? 1 : 0);
-
-        uintptr_t address = reinterpret_cast<uintptr_t>(addr);
-
-        // Unmap!
-        VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-        for (size_t i = 0; i < numPages; i++)
-        {
-            void *unmapAddr = reinterpret_cast<void*>(address + (i * pageSz));
-            if(va.isMapped(unmapAddr))
-            {
-                // Unmap the virtual address
-                physical_uintptr_t phys = 0;
-                size_t flags = 0;
-                va.getMapping(unmapAddr, phys, flags);
-                va.unmap(reinterpret_cast<void*>(unmapAddr));
-
-                // Free the physical page
-                PhysicalMemoryManager::instance().freePage(phys);
-            }
-        }
-
-        // Free from the space allocator as well
-        pProcess->getSpaceAllocator().free(address, len);
-    }
-
-    return 0;
-#endif
 }
 
 int posix_access(const char *name, int amode)
