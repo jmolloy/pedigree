@@ -91,6 +91,8 @@ uint64_t ConsoleMasterFile::read(uint64_t location, uint64_t size, uintptr_t buf
         return 0;
     }
 
+    size_t maxSize = size;
+
     uintptr_t originalBuffer = buffer;
     while(m_RingBuffer.dataReady() && size)
     {
@@ -99,7 +101,7 @@ uint64_t ConsoleMasterFile::read(uint64_t location, uint64_t size, uintptr_t buf
         --size;
     }
 
-    size_t endSize = outputLineDiscipline(reinterpret_cast<char *>(originalBuffer), buffer - originalBuffer);
+    size_t endSize = outputLineDiscipline(reinterpret_cast<char *>(originalBuffer), buffer - originalBuffer, maxSize);
 
     return endSize;
 }
@@ -291,7 +293,7 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
     }
 }
 
-size_t ConsoleMasterFile::outputLineDiscipline(char *buf, size_t len)
+size_t ConsoleMasterFile::outputLineDiscipline(char *buf, size_t len, size_t maxSz)
 {
     // Make sure we always have the latest flags from the slave.
     size_t slaveFlags = m_pOther->m_Flags;
@@ -317,6 +319,14 @@ size_t ConsoleMasterFile::outputLineDiscipline(char *buf, size_t len)
             // ONLCR: Map NL to CR-NL on output
             else if (pC[j] == '\n' && (slaveFlags & ConsoleManager::OMapNLToCRNL))
             {
+                if (realSize >= maxSz)
+                {
+                    // We do not have any room to add in the mapped character. Drop it.
+                    WARNING("Console ignored an NL -> CRNL conversion due to a full buffer.");
+                    tmpBuff[i++] = '\n';
+                    continue;
+                }
+
                 realSize++;
                 char *newBuff = new char[realSize];
                 memcpy(newBuff, tmpBuff, i);

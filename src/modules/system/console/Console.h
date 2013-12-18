@@ -180,7 +180,7 @@ class ConsoleMasterFile : public ConsoleFile
         void inputLineDiscipline(char *buf, size_t len);
 
         /// Output line discipline
-        size_t outputLineDiscipline(char *buf, size_t len);
+        size_t outputLineDiscipline(char *buf, size_t len, size_t maxSz);
 
         /// Input line buffer.
         char m_LineBuffer[LINEBUFFER_MAXIMUM];
