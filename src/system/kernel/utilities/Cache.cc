@@ -500,6 +500,30 @@ size_t Cache::compact(size_t count)
     return nPages;
 }
 
+void Cache::sync(uintptr_t key, bool async)
+{
+    if(!m_Callback)
+        return;
+
+    while(!m_Lock.acquire());
+
+    CachePage *pPage = m_Pages.lookup(key);
+    if (!pPage)
+    {
+        m_Lock.release();
+        return;
+    }
+
+    uintptr_t location = pPage->location;
+
+    m_Lock.release();
+
+    if(async)
+        CacheManager::instance().addAsyncRequest(1, reinterpret_cast<uint64_t>(this), WriteBack, key, location);
+    else
+        CacheManager::instance().addRequest(1, reinterpret_cast<uint64_t>(this), WriteBack, key, location);
+}
+
 void Cache::timer(uint64_t delta, InterruptState &state)
 {
     m_Nanoseconds += delta;

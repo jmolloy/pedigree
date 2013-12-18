@@ -184,6 +184,12 @@ public:
     size_t compact (size_t count = ~0UL);
 
     /**
+     * Synchronises the given cache key back to a backing store, if a
+     * callback has been assigned to the Cache.
+     */
+    void sync(uintptr_t key, bool async);
+
+    /**
      * Enters a critical section with respect to this cache. That is, do not
      * permit write back callbacks to be fired (aside from as a side effect
      * of eviction) until the section has been left.
