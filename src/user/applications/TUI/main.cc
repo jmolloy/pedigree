@@ -76,6 +76,8 @@ size_t g_nWidth, g_nHeight;
 size_t nextConsoleNum = 1;
 size_t g_nLastResponse = 0;
 
+bool g_KeyPressed = false;
+
 cairo_t *g_Cairo = 0;
 cairo_surface_t *g_Surface = 0;
 
@@ -175,6 +177,11 @@ Terminal *addTerminal(const char *name, DirtyRectangle &rect)
     size_t h = 0;
 
     Terminal *pTerm = new Terminal(const_cast<char*>(name), g_nWidth - 3, g_nHeight-h, g_pHeader, 3, h, 0);
+    if(!pTerm->initialise())
+    {
+        delete pTerm;
+        return 0;
+    }
 
     TerminalList *pTermList = new TerminalList;
     pTermList->term = pTerm;
@@ -216,6 +223,8 @@ void sigint(int)
 void key_input_handler(uint64_t c)
 {
     /** Add the key to the terminal queue */
+    if(!g_pCurrentTerm)
+        return;
 
     Terminal *pT = g_pCurrentTerm->term;
 
@@ -346,6 +355,23 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
     rect.point(0, 0);
     rect.point(g_nWidth, g_nHeight);
 
+    if(!pCurrentTerminal)
+    {
+        syslog(LOG_ALERT, "TUI: couldn't start up a terminal - failing gracefully...");
+        g_BoldFont->render("There are no pseudo-terminals available.", 5, 5, 0xFFFFFF, 0x000000, false);
+        g_BoldFont->render("Press any key to close this window.", 5, g_BoldFont->getHeight() + 5, 0xFFFFFF, 0x000000, false);
+
+        doRedraw(rect);
+
+        g_KeyPressed = false;
+        while(!g_KeyPressed)
+        {
+            Widget::checkForEvents(false);
+        }
+
+        return 0;
+    }
+
     doRedraw(rect);
 
     size_t maxBuffSz = 32768;
@@ -429,6 +455,7 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
             break;
         case KeyUp:
             {
+                g_KeyPressed = true;
                 key_input_handler(*reinterpret_cast<uint64_t*>(msgData));
             }
             break;
@@ -485,6 +512,8 @@ int main(int argc, char *argv[])
     Widget::checkForEvents(true);
 
     tui_do(0);
+
+    delete g_pEmu;
 
     return 0;
 }

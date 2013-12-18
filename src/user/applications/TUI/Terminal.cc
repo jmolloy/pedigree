@@ -60,16 +60,6 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
 
     strcpy(m_pName, pName);
 
-    m_MasterPty = posix_openpt(O_RDWR);
-    if(m_MasterPty < 0)
-    {
-        syslog(LOG_INFO, "TUI: Couldn't create terminal: %s", strerror(errno));
-        return;
-    }
-
-    char slavename[16] = {0};
-    strcpy(slavename, ptsname(m_MasterPty));
-
 #ifndef NEW_XTERM
     m_pXterm = new Xterm(0, nWidth, nHeight, m_OffsetLeft, m_OffsetTop, this);
 #else
@@ -86,6 +76,19 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
     mode.pf.nPitch = nWidth*3;
     m_pXterm = new Vt100(mode, reinterpret_cast<uint8_t*>(m_pBuffer)+nWidth*offsetTop);
 #endif
+}
+
+bool Terminal::initialise()
+{
+    m_MasterPty = posix_openpt(O_RDWR);
+    if(m_MasterPty < 0)
+    {
+        syslog(LOG_INFO, "TUI: Couldn't create terminal: %s", strerror(errno));
+        return false;
+    }
+
+    char slavename[16] = {0};
+    strcpy(slavename, ptsname(m_MasterPty));
 
     struct winsize ptySize;
     ptySize.ws_row = m_pXterm->getRows();
@@ -114,9 +117,13 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
         write(strerror(errno), rect);
         write("\r\n\r\nYour installation of Pedigree may not be complete, or you may have hit a bug.", rect);
         redrawAll(rect);
+
+        exit(1);
     }
 
     m_Pid = pid;
+
+    return true;
 }
 
 Terminal::~Terminal()
