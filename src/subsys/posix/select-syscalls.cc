@@ -124,12 +124,8 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
     else
     {
         timeoutType = SpecificTimeout;
-        timeoutSecs = timeout->tv_sec;
-        timeoutUSecs = timeout->tv_usec;
-        /// \bug Unfortunately we don't sleep for under one second. So if we
-        ///      end up with secs < 1, we set ourselves to ReturnImmediately.
-        //if (timeoutSecs == 0)
-        //    timeoutType = ReturnImmediately;
+        timeoutSecs = timeout->tv_sec + (timeout->tv_usec / 1000000);
+        timeoutUSecs = timeout->tv_usec % 1000000;
     }
 
     F_NOTICE("select(" << Dec << nfds << ", ?, ?, ?, {" << static_cast<uintptr_t>(timeoutType) << ", " << timeoutSecs << "})" << Hex);
