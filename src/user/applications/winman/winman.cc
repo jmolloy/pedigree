@@ -312,6 +312,19 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
     {
         // We inject this to wake up checkForMessages and move on to rendering.
     }
+    else if(pWinMan->messageCode == LibUiProtocol::SetTitle)
+    {
+        LibUiProtocol::SetTitleMessage *pTitleMsg =
+            reinterpret_cast<LibUiProtocol::SetTitleMessage*>(messageData + sizeof(LibUiProtocol::WindowManagerMessage));
+
+        std::map<uint64_t, Window*>::iterator it = g_Windows->find(pWinMan->widgetHandle);
+        if(it != g_Windows->end())
+        {
+            Window *pWindow = it->second;
+            pWindow->setTitle(std::string(pTitleMsg->newTitle));
+            g_PendingWindows.insert(pWindow);
+        }
+    }
     else
     {
         syslog(LOG_INFO, "winman: unhandled message type");
@@ -1040,6 +1053,7 @@ int main(int argc, char *argv[])
                 infoPanel(cr);
             }
 
+#if 0
             // After all else is said and done, render the cursor.
             cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
             cairo_rectangle(
@@ -1058,6 +1072,7 @@ int main(int argc, char *argv[])
 
             // Done drawing cursor.
             g_bCursorUpdate = false;
+#endif
 
             // Flush the cairo surface, which will ensure the most recent data is
             // in the framebuffer ready to send to the device.

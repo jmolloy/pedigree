@@ -222,6 +222,39 @@ bool Widget::getProperty(std::string propName, char **buffer, size_t maxSize)
     return false;
 }
 
+bool Widget::setTitle(const std::string &newTitle)
+{
+    // Constructed yet?
+    if(!m_Handle)
+        return false;
+
+    size_t titleLength = newTitle.length();
+    if(titleLength > 511)
+        titleLength = 511;
+
+    // Allocate the message.
+    size_t totalSize = sizeof(WindowManagerMessage) + sizeof(SetTitleMessage);
+    char *messageData = new char[totalSize];
+    WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
+    SetTitleMessage *pMessage = reinterpret_cast<SetTitleMessage*>(messageData + sizeof(WindowManagerMessage));
+
+    // Fill the message.
+    pWinMan->messageCode = SetTitle;
+    pWinMan->messageSize = titleLength;
+    pWinMan->widgetHandle = m_Handle;
+    pWinMan->isResponse = false;
+
+    newTitle.copy(pMessage->newTitle, sizeof pMessage->newTitle);
+
+    // Transmit.
+    bool result = send(m_Socket, messageData, totalSize, 0) == totalSize;
+
+    // Clean up.
+    delete [] messageData;
+
+    return result;
+}
+
 void Widget::setParent(Widget *pWidget)
 {
 }

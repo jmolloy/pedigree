@@ -182,6 +182,7 @@ class Window : public WObject
         virtual void setTitle(const std::string &s)
         {
             m_sWindowTitle = s;
+            m_bPendingDecoration = true;
         }
 
         virtual void render(cairo_t *cr);

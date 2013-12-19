@@ -66,23 +66,6 @@ int main(int argc, char **argv)
   return 0;
 #endif
 
-#if 0
-  int pid;
-  if ( (pid=fork()) == 0)
-  {
-      // Environment:
-      char *newenv[1];
-      newenv[0] = 0;
-
-      // Child.
-      execle("/applications/TUI", "/applications/TUI", 0, newenv);
-      execle("/applications/tui", "/applications/TUI", 0, newenv);
-      // If we got here, the exec failed.
-      printf("Unable to launch /applications/TUI: `%s'\n");
-      exit(1);
-  }
-#endif
-
   // New process group for job control. We'll ignore SIGINT for now.
   signal(SIGINT, sigint);
   setsid();
@@ -113,6 +96,9 @@ int main(int argc, char **argv)
 
   while (1)
   {
+    // Set terminal title
+    printf("\033]0;Pedigree Login\007");
+
     // Not running anything
     g_RunningPid = -1;
 
@@ -188,6 +174,9 @@ int main(int argc, char **argv)
     }
     else
     {
+      // Terminal title -> shell name.
+      printf("\033]0;%s\007", pw->pw_shell);
+
       // Logged in successfully - launch the shell.
       int pid;
       if ( (g_RunningPid=pid=fork()) == 0)

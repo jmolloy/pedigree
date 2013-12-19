@@ -91,6 +91,11 @@ namespace LibUiProtocol
         GetProperty,
 
         /**
+         * SetTitle: widget -> window manager. Sets the title of the widget.
+         */
+        SetTitle,
+
+        /**
          * SetParent: widget -> window manager. Requests a move of the widget's tree
          * of children (and itself) to a different parent.
          */
@@ -250,6 +255,14 @@ namespace LibUiProtocol
     {
         char propertyName[256];
         size_t maxValueLength;
+    };
+
+    /**
+     * SetTitle message data.
+     */
+    struct SetTitleMessage
+    {
+        char newTitle[512];
     };
 
     /** SetParent message data. */

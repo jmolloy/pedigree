@@ -107,6 +107,13 @@ class Widget
         bool getProperty(std::string propName, char **buffer, size_t maxSize);
 
         /**
+         * Sets the title of the widget.
+         * \param title New title for the widget.
+         * \return True is the new title was set, False otherwise.
+         */
+        bool setTitle(const std::string &newTitle);
+
+        /**
          * Sets the parent of this widget. This will notify the window manager
          * so that the repaint ordering can be rearranged.
          * \note Should be called before any rendering takes place, as there is

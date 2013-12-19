@@ -39,6 +39,8 @@
 
 #include <cairo/cairo.h>
 
+#include <string>
+
 #define PEDIGREEVID_DRIVER_NAME "pedigree"
 
 extern "C"
@@ -59,6 +61,7 @@ static void PEDIGREE_FreeHWSurface(_THIS, SDL_Surface *surface);
 
 /* etc. */
 static void PEDIGREE_UpdateRects(_THIS, int numrects, SDL_Rect *rects);
+static void PEDIGREE_SetWMCaption(_THIS, const char *title, const char *icon);
 
 };
 
@@ -323,4 +326,12 @@ void PEDIGREE_VideoQuit(_THIS)
     _this->hidden->widget->destroy();
     delete _this->hidden->widget;
     _this->hidden->widget = 0;
+}
+
+static void PEDIGREE_SetWMCaption(_THIS, const char *title, const char *icon)
+{
+    if(!(_this->hidden->widget && _this->hidden->buffer))
+        return;
+
+    _this->hidden->widget->setTitle(std::string(title));
 }
