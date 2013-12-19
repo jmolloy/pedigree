@@ -81,6 +81,12 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
         print "  (failed -- couldn't remove objects from libc.a)"
         exit(res)
 
+    args = [ar, "x", glue_name]
+    res = subprocess.call(args, cwd=tmpdir)
+    if res:
+        print "  (failed -- couldn't extract glue library)"
+        exit(res)
+
     pedigreec_dir = os.path.dirname(pedigree_c_name)
     glue_dir = os.path.dirname(glue_name)
 
@@ -106,8 +112,16 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
         print "  (failed -- to compile libc.so)"
         exit(res)
 
+    # Freshen libc.a with the glue.
+    args = [ar, "r", "libc.a"]
+    args.extend([x for x in os.listdir(tmpdir) if x.endswith('.obj')])
+    res = subprocess.call(args, cwd=tmpdir)
+    if res:
+        print "  (failed -- couldn't add glue back to libc.a)"
+        exit(res)
+
     # Copy static library out now.
-    shutil.copy(os.path.join(tmpdir, "libc.a"), buildOut)
+    shutil.copy(os.path.join(tmpdir, "libc.a"), buildOut + ".a")
 
     # Clean up.
     for i in os.listdir("."):
