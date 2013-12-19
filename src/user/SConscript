@@ -75,7 +75,8 @@ posixc_apps = [
     'crashtest',
     'gears',
     'init',
-    'preloadd'
+    'preloadd',
+    'nyancat',
 ]
 
 # Applications which use Mesa
