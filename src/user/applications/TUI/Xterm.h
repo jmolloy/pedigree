@@ -18,6 +18,8 @@
 
 #include "environment.h"
 
+#include <string>
+
 #include <graphics/Graphics.h>
 
 #define XTERM_BOLD      0x1
@@ -221,12 +223,20 @@ private:
     } XtermCmd;
     XtermCmd m_Cmd;
 
+    typedef struct
+    {
+        std::string params[4];
+        int cur_param;
+    } XtermOsControl;
+    XtermOsControl m_OsCtl;
+
     /// Are we currently interpreting a state change?
     bool m_bChangingState;
 
     /// Did this state include a '['? This changes the way some commands are interpreted.
     bool m_bContainedBracket;
     bool m_bContainedParen;
+    bool m_bIsOsControl;
 
     /// Saved cursor position.
     uint32_t m_SavedX, m_SavedY;

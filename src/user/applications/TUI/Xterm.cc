@@ -35,6 +35,8 @@
 // Fairly buggy unfortunately.
 #define USE_FRAMEBUFFER_LINES       1
 
+#include "environment.h"
+
 #include <config/Config.h>
 #include <graphics/Graphics.h>
 
@@ -87,8 +89,9 @@ static void getXtermColorFromDb(const char *colorName, uint8_t &color)
 }
 
 Xterm::Xterm(PedigreeGraphics::Framebuffer *pFramebuffer, size_t nWidth, size_t nHeight, size_t offsetLeft, size_t offsetTop, Terminal *pT) :
-    m_ActiveBuffer(0), m_Cmd(), m_bChangingState(false), m_bContainedBracket(false),
-    m_bContainedParen(false), m_SavedX(0), m_SavedY(0), m_pT(pT), m_bFbMode(false)
+    m_ActiveBuffer(0), m_Cmd(), m_OsCtl(), m_bChangingState(false), m_bContainedBracket(false),
+    m_bContainedParen(false), m_bIsOsControl(false), m_SavedX(0), m_SavedY(0),
+    m_pT(pT), m_bFbMode(false)
 {
     size_t width = nWidth / g_NormalFont->getWidth();
     size_t height = nHeight / g_NormalFont->getHeight();
@@ -162,6 +165,47 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
             return;
         }
 
+        if(m_bIsOsControl)
+        {
+            // Everything changes once we start working with OS controls.
+            if (utf32 == '\007' || utf32 == '\\')
+            {
+                if(m_OsCtl.cur_param == 0)
+                {
+                    syslog(LOG_INFO, "XTERM: not enough parameters for OS control");
+                }
+                else
+                {
+                    if(m_OsCtl.params[0] == "0"  || // Change Icon Name and Window Title
+                        m_OsCtl.params[0] == "1" || // Change Icon Name
+                        m_OsCtl.params[0] == "2") // Change Window Title
+                    {
+                        syslog(LOG_INFO, "XTERM: OS control - set window title, to '%s'", m_OsCtl.params[1].c_str());
+                        g_pEmu->setTitle(m_OsCtl.params[1]);
+                    }
+                    else
+                    {
+                        syslog(LOG_INFO, "XTERM: unhandled OS control '%s'", m_OsCtl.params[0].c_str());
+                    }
+                }
+
+                m_bChangingState = false;
+            }
+            else
+            {
+                if (utf32 == ';' || utf32 == ':')
+                {
+                    m_OsCtl.cur_param++;
+                }
+                else
+                {
+                    m_OsCtl.params[m_OsCtl.cur_param] += static_cast<char>(utf32);
+                }
+            }
+
+            return;
+        }
+
         switch(utf32)
         {
             case '[':
@@ -169,6 +213,10 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 break;
             case '(':
                 m_bContainedParen = true;
+                break;
+            case ']':
+                if(!(m_bContainedParen || m_bContainedBracket))
+                    m_bIsOsControl = true;
                 break;
 
             // Framebuffer stuff.
@@ -445,6 +493,11 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 // We're still changing state, so keep m_bChangingState = true.
                 break;
 
+            case '\\':
+            case '\007': // Bell/ST (end)
+                m_bChangingState = false;
+                break;
+
             default:
             {
                 syslog(LOG_NOTICE, "XTerm: unhandled escape code: %d/%c", utf32, utf32);
@@ -481,11 +534,17 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 m_bChangingState = true;
                 m_bContainedBracket = false;
                 m_bContainedParen = false;
+                m_bIsOsControl = false;
                 m_Cmd.cur_param = 0;
                 m_Cmd.params[0] = 0;
                 m_Cmd.params[1] = 0;
                 m_Cmd.params[2] = 0;
                 m_Cmd.params[3] = 0;
+                m_OsCtl.cur_param = 0;
+                m_OsCtl.params[0] = "";
+                m_OsCtl.params[1] = "";
+                m_OsCtl.params[2] = "";
+                m_OsCtl.params[3] = "";
                 break;
 
             default:
