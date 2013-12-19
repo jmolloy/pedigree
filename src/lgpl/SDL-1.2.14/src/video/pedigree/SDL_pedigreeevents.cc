@@ -144,6 +144,9 @@ bool PEDIGREE_SDLwidgetCallback(WidgetMessages message, size_t msgSize, void *ms
                 handle_hid_scancode(scancode, message == RawKeyUp);
             }
             break;
+        case Terminate:
+            SDL_PrivateQuit();
+            break;
         default:
             break;
     }

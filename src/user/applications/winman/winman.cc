@@ -444,80 +444,35 @@ void queueInputCallback(Input::InputNotification &note)
                 }
                 else if(c == 'Q')
                 {
-                    /// \todo Would it be better for SIGTERM's handler to call destroy()?
-
-                    // Kill the client.
-                    uint64_t handle = g_pFocusWindow->getHandle();
-                    pid_t pid = (pid_t) ((handle >> 32) & 0xFFFFFFFF);
-                    kill(pid, SIGTERM);
-
-                    // Find any siblings if we can.
-                    WObject *siblingObject = focusParent->getLeftSibling(g_pFocusWindow);
-                    if(!siblingObject)
+                    // Are we the only child of the root container?
+                    bool bSafe = true;
+                    if(focusParent == g_pRootContainer)
                     {
-                        siblingObject = focusParent->getRightSibling(g_pFocusWindow);
-                    }
-
-                    // Will there be any children left?
-                    if(focusParent->getChildCount() > 1)
-                    {
-                        // Yes. Focus adjustment is mostly trivial.
-                    }
-                    else
-                    {
-                        // No. Focus adjustment is less trivial.
-                        siblingObject = focusParent->getLeft(g_pFocusWindow);
-                        if(!siblingObject)
+                        if(focusParent->getChildCount() == 1)
                         {
-                            siblingObject = focusParent->getRight(g_pFocusWindow);
-                        }
-                        if(!siblingObject)
-                        {
-                            siblingObject = focusParent->getUp(g_pFocusWindow);
-                        }
-                        if(!siblingObject)
-                        {
-                            siblingObject = focusParent->getDown(g_pFocusWindow);
+                            syslog(LOG_INFO, "winman: can't (yet) terminate only child of root container!");
+                            bSafe = false;
                         }
                     }
 
-                    // Remove from the parent container.
-                    focusParent->removeChild(g_pFocusWindow);
-                    if(focusParent->getChildCount() > 0)
+                    if(bSafe)
                     {
-                        focusParent->retile();
+                        size_t totalSize = sizeof(LibUiProtocol::WindowManagerMessage);
+                        char *buffer = new char[totalSize];
+
+                        LibUiProtocol::WindowManagerMessage *pHeader =
+                            reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
+                        pHeader->widgetHandle = g_pFocusWindow->getHandle();
+                        pHeader->messageSize = 0;
+                        pHeader->messageCode = LibUiProtocol::Destroy;
+                        pHeader->isResponse = false;
+
+                        send(g_pFocusWindow->getSocket(), buffer, totalSize, 0);
+
+                        delete [] buffer;
+
+                        bHandled = true;
                     }
-                    else if(focusParent->getParent())
-                    {
-                        Container *pContainer = static_cast<Container*>(focusParent->getParent());
-                        pContainer->removeChild(focusParent);
-                        pContainer->retile();
-                        focusParent = pContainer;
-                    }
-
-                    // Assign new focus.
-                    if(siblingObject)
-                    {
-                        while(siblingObject->getType() == WObject::Container)
-                        {
-                            Container *pContainer = static_cast<Container*>(siblingObject);
-                            siblingObject = pContainer->getFocusWindow();
-                        }
-
-                        if(siblingObject->getType() == WObject::Window)
-                        {
-                            newFocus = static_cast<Window*>(siblingObject);
-                        }
-                    }
-
-                    // All children are now pending a redraw.
-                    g_PendingWindows.insert(focusParent);
-
-                    // Clean up.
-                    // delete g_pFocusWindow;
-                    g_pFocusWindow = 0;
-
-                    bHandled = true;
                 }
             }
             else if(c == '\n')

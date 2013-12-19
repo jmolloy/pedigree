@@ -540,6 +540,9 @@ void Widget::checkForEvents(bool bAsync)
                 case LibUiProtocol::RequestRedraw:
                     // Spurious redraw ACK.
                     break;
+                case LibUiProtocol::Destroy:
+                    cb(::Terminate, 0, 0);
+                    break;
                 default:
                     syslog(LOG_INFO, "** unknown event");
             }

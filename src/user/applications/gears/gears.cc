@@ -50,6 +50,8 @@ class Gears;
 
 Gears *g_pGears = NULL;
 
+bool g_bRunning = false;
+
 static GLfloat view_rotx = 20.0, view_roty = 30.0, view_rotz = 0.0;
 static GLint gear1, gear2, gear3;
 static GLfloat angle = 0.0;
@@ -431,6 +433,9 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
                 }
             }
             break;
+        case Terminate:
+            g_bRunning = false;
+            break;
         default:
             syslog(LOG_INFO, "gears: unhandled callback");
     }
@@ -459,9 +464,8 @@ int main (int argc, char ** argv) {
 
     syslog(LOG_INFO, "gears: entering main loop");
 
-    time_t t1, t2;
-
-    while (1) {
+    g_bRunning = true;
+    while (g_bRunning) {
         Widget::checkForEvents(true);
 
         // Cheat a bit, render every frame.
@@ -472,6 +476,7 @@ int main (int argc, char ** argv) {
     }
 
     g_pGears->deinitOpenGL();
+    g_pGears->destroy();
 
     delete g_pGears;
 

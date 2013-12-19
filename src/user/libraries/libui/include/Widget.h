@@ -40,6 +40,7 @@ enum WidgetMessages
     RawKeyUp,
     Focus,
     NoFocus,
+    Terminate,
 };
 
 typedef bool (*widgetCallback_t)(WidgetMessages, size_t, void *);

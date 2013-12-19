@@ -77,6 +77,7 @@ size_t nextConsoleNum = 1;
 size_t g_nLastResponse = 0;
 
 bool g_KeyPressed = false;
+bool g_bRunning = false;
 
 cairo_t *g_Cairo = 0;
 cairo_surface_t *g_Surface = 0;
@@ -376,7 +377,8 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
 
     size_t maxBuffSz = 32768;
     char buffer[32768];
-    while (true)
+    g_bRunning = true;
+    while (g_bRunning)
     {
         int n = 0;
 
@@ -434,6 +436,19 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
             doRedraw(dirtyRect);
     }
 
+    // Clean up.
+    delete pCurrentTerminal;
+
+    delete g_pHeader;
+    g_pHeader = 0;
+
+    delete g_BoldFont;
+    delete g_NormalFont;
+    g_BoldFont = g_NormalFont = 0;
+
+    cairo_surface_destroy(g_Surface);
+    cairo_destroy(g_Cairo);
+
     return 0;
 }
 
@@ -480,6 +495,10 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
         case RawKeyDown:
         case RawKeyUp:
             // Ignore.
+            break;
+        case Terminate:
+            syslog(LOG_INFO, "TUI: termination request");
+            g_bRunning = false;
             break;
         default:
             syslog(LOG_INFO, "TUI: unhandled callback");
