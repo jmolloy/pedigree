@@ -57,6 +57,7 @@ else:
 
 # To add a library path add to the list below
 libpaths = [
+    builddir,
     env['LIBGCC']
 ]
 
@@ -85,7 +86,6 @@ tmp_lib['CFLAGS'] = tmp_lib['CFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
 tmp_lib['CXXFLAGS'] = tmp_lib['CXXFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
 tmp_lib['CFLAGS'] += glueFlags
 tmp_lib['CXXFLAGS'] += glueFlags
-tmp_lib['LD'] = tmp_lib['LINK'] = tmp_lib['LD'].replace('gcc', 'ld')
 
-tmp_lib.Library(libpedigree_c_objname, libpedigree_c_files)
+tmp_lib.StaticLibrary(libpedigree_c_objname, libpedigree_c_files)
 tmp_lib.SharedLibrary(libpedigree_c_shobjname, libpedigree_c_files, LINKFLAGS='')

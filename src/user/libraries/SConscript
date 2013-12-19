@@ -53,7 +53,9 @@ tmp['CFLAGS'] = fixFlags(env['CFLAGS'])
 tmp['CXXFLAGS'] = fixFlags(env['CXXFLAGS'])
 tmp['CPPDEFINES'] += ['PEDIGREE', '__PEDIGREE__']
 tmp['LIBS'] = []
-tmp['LIBPATH'] = []
+tmp['LIBPATH'] = [
+    builddir,
+]
 tmp['CPPPATH'] = []
 
 for i in libs:

@@ -54,12 +54,15 @@ libraries = [
 
 # To add a library path add to the list below
 libpaths = [
+    builddir,
+    env['LIBGCC'],
 ]
 
 ####################################
 SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['tmp'])
 tmp['CPPPATH'] = include
 tmp['LIBS'] = libraries
+tmp['LIBPATH'] = libpaths
 tmp['CXXFLAGS'] = tmp['CXXFLAGS'].replace('-nostdinc', '')
 
 # -fPIC for libpedigree
