@@ -365,6 +365,9 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_TCSETPGRP:
             return posix_tcsetpgrp(static_cast<int>(p1), static_cast<pid_t>(p2));
 
+        case POSIX_USLEEP:
+            return posix_usleep(static_cast<size_t>(p1));
+
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber() << Hex); return 0;
     }
 }

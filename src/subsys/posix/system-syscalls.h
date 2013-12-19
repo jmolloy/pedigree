@@ -56,6 +56,7 @@ int posix_setegid(gid_t egid);
 
 size_t posix_alarm(uint32_t seconds);
 int posix_sleep(uint32_t seconds);
+int posix_usleep(size_t useconds);
 int posix_nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
 int posix_clock_gettime(clockid_t clock_id, struct timespec *tp);
 

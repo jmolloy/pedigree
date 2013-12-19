@@ -538,6 +538,28 @@ int posix_sleep(uint32_t seconds)
     return 0;
 }
 
+int posix_usleep(size_t useconds)
+{
+    SG_NOTICE("usleep");
+
+    Semaphore sem(0);
+
+    size_t seconds = useconds / 1000000;
+    useconds %= 1000000;
+
+    sem.acquire(1, seconds, useconds);
+    if (Processor::information().getCurrentThread()->wasInterrupted())
+    {
+        return 0;
+    }
+    else
+    {
+        ERROR("usleep: acquire was not interrupted?");
+    }
+
+    return -1;
+}
+
 int posix_nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
 {
     SG_NOTICE("nanosleep(" << Dec << rqtp->tv_sec << ":" << rqtp->tv_nsec << Hex << ") - " << Machine::instance().getTimer()->getTickCount() << ".");

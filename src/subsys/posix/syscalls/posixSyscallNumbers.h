@@ -185,4 +185,6 @@
 #define POSIX_TCSETPGRP         202
 #define POSIX_TCGETPGRP         203
 
+#define POSIX_USLEEP            204
+
 #endif

@@ -611,8 +611,7 @@ unsigned int sleep(unsigned int seconds)
 
 int usleep(useconds_t useconds)
 {
-    // Microseconds, TODO: support better granularity than 1 second
-    return (unsigned int)syscall1(POSIX_SLEEP, useconds / 1000000);
+    return (unsigned int)syscall1(POSIX_USLEEP, useconds);
 }
 
 unsigned int alarm(unsigned int seconds)
