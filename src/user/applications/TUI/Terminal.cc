@@ -25,6 +25,7 @@
 #include <errno.h>
 #include <termios.h>
 #include <sys/ioctl.h>
+#include <sys/wait.h>
 
 #include <graphics/Graphics.h>
 
@@ -128,6 +129,12 @@ bool Terminal::initialise()
 
 Terminal::~Terminal()
 {
+    // Kill child.
+    kill(m_Pid, SIGTERM);
+
+    // Reap child.
+    waitpid(m_Pid, 0, 0);
+
     delete m_pXterm;
 }
 
@@ -240,8 +247,7 @@ void Terminal::clearQueue()
     m_Len = 0;
 }
 
-#include <syslog.h>
-void Terminal::write(char *pStr, DirtyRectangle &rect)
+void Terminal::write(const char *pStr, DirtyRectangle &rect)
 {
     m_pXterm->hideCursor(rect);
 

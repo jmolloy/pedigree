@@ -62,7 +62,7 @@ public:
     {return m_MasterPty;}
 
     /** Writes the given UTF-8 sequence to the Xterm. */
-    void write(char *pStr, DirtyRectangle &rect);
+    void write(const char *pStr, DirtyRectangle &rect);
 
     void setHasPendingRequest(bool b, size_t sz)
     {
