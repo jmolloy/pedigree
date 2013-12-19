@@ -174,13 +174,16 @@ echo
 # Build Pedigree.
 scons CROSS=$script_dir/compilers/dir/bin/i686-pedigree-
 
+# One day we might fix this bug (create proper disk image with built apps).
+scons
+
 cd "$old"
 
 echo
 echo
 echo "Pedigree is now ready to be built without running this script."
 echo "To build in future, run the following command in the '$script_dir' directory:"
-echo "scons CROSS=$script_dir/pedigree-compiler/bin/i686-pedigree-"
+echo "scons"
 echo
 echo "If you wish, you can continue to run this script. It won't ask questions"
 echo "anymore, unless you remove the '.easy_os' file in '$script_dir'."

@@ -449,14 +449,20 @@ elif not env['nodiskimages']:
         fileList += [os.path.join(imagedir, entry)]
 
     # Add applications that we build as part of the build process.
-    for app in os.listdir(apps):
-        fileList += [os.path.join(apps, app)]
+    if os.path.exists(apps):
+        for app in os.listdir(apps):
+            fileList += [os.path.join(apps, app)]
+    else:
+        print "Apps directory did not exist at time of build."
+        print "'scons' will need to be run again to fully build the disk image."
 
     # Add modules, and drivers, that we build as part of the build process.
-    for module in os.listdir(modules):
-        fileList += [os.path.join(modules, module)]
-    for driver in os.listdir(drivers):
-        fileList += [os.path.join(drivers, driver)]
+    if os.path.exists(modules):
+        for module in os.listdir(modules):
+            fileList += [os.path.join(modules, module)]
+    if os.path.exists(drivers):
+        for driver in os.listdir(drivers):
+            fileList += [os.path.join(drivers, driver)]
 
     # Add libraries
     fileList += [
