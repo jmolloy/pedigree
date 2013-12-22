@@ -209,8 +209,6 @@ void progress(const char *text)
     // Calculate percentage.
     if(g_BootProgressTotal == 0)
         return;
-    if(!g_pFramebuffer)
-        return;
 
     bool bFinished = false;
     if((g_BootProgressCurrent + 1) >= g_BootProgressTotal)
