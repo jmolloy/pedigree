@@ -98,7 +98,8 @@ cpp_apps = [
     'ipc-test-server',
     'ipc-test-client',
     'winman',
-    'uitest'
+    'uitest',
+    'ttyterm',
 ]
 
 # Custom include paths for specific applications
