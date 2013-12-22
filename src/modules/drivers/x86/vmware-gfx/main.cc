@@ -116,9 +116,9 @@ class VmwareGraphics : public Display
             
             // Disable the command FIFO in case it was already enabled
             writeRegister(SVGA_REG_CONFIG_DONE, 0);
-            
-            // Enable the SVGA now
-            writeRegister(SVGA_REG_ENABLE, 1);
+
+            // Don't yet enable the SVGA.
+            writeRegister(SVGA_REG_ENABLE, 0);
             
             // Initialise the FIFO
             volatile uint32_t *fifo = reinterpret_cast<volatile uint32_t*>(m_CommandRegion->virtualAddress());
@@ -140,9 +140,6 @@ class VmwareGraphics : public Display
                 fifo[SVGA_FIFO_MAX] = cmdSize & ~0x3; // Permit the full FIFO to be used
                 fifo[SVGA_FIFO_NEXT_CMD] = fifo[SVGA_FIFO_STOP] = 16; // Empty FIFO
             }
-            
-            // Start running the FIFO
-            writeRegister(SVGA_REG_CONFIG_DONE, 1);
             
             m_pFramebuffer = new VmwareFramebuffer(reinterpret_cast<uintptr_t>(m_Framebuffer->virtualAddress()), this);
             
@@ -276,6 +273,9 @@ class VmwareGraphics : public Display
         
         void setMode(size_t w, size_t h, size_t bpp)
         {
+            // Enable the SVGA if not already enabled.
+            writeRegister(SVGA_REG_ENABLE, 1);
+
             // Set mode
             writeRegister(SVGA_REG_WIDTH, w);
             writeRegister(SVGA_REG_HEIGHT, h);
@@ -335,6 +335,9 @@ class VmwareGraphics : public Display
 
             // Blank the framebuffer, new mode
             m_pFramebuffer->rect(0, 0, w, h, 0);
+            
+            // Start running the FIFO
+            writeRegister(SVGA_REG_CONFIG_DONE, 1);
             
             NOTICE("vmware-gfx entered mode " << Dec << width << "x" << height << "x" << depth << Hex << ", mode framebuffer is " << (fbBase + fbOffset));
         }
