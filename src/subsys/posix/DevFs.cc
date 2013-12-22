@@ -32,8 +32,45 @@ uint64_t NullFile::write(uint64_t location, uint64_t size, uintptr_t buffer, boo
     return 0;
 }
 
+uint64_t TtyFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+{
+    return 0;
+}
+
+uint64_t TtyFile::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+{
+    if(!(size && buffer))
+        return 0;
+
+    m_pTextIO->write(reinterpret_cast<const char *>(buffer), size);
+    return size;
+}
+
+bool TtyFile::initialise()
+{
+    m_pTextIO = new TextIO;
+    if(!m_pTextIO->initialise(false))
+    {
+        WARNING("POSIX: no /dev/tty - TextIO failed to initialise.");
+        delete m_pTextIO;
+        m_pTextIO = 0;
+        return false;
+    }
+
+    return true;
+}
+
 FramebufferFile::FramebufferFile(String str, size_t inode, Filesystem *pParentFS, File *pParentNode) :
     File(str, 0, 0, 0, inode, pParentFS, 0, pParentNode), m_pProvider(0)
+{
+}
+
+FramebufferFile::~FramebufferFile()
+{
+    delete m_pProvider;
+}
+
+bool FramebufferFile::initialise()
 {
     ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
     Service         *pService  = ServiceManager::instance().getService(String("graphics"));
@@ -46,6 +83,8 @@ FramebufferFile::FramebufferFile(String str, size_t inode, Filesystem *pParentFS
             {
                 delete m_pProvider;
                 m_pProvider = 0;
+
+                return false;
             }
             else
             {
@@ -54,11 +93,8 @@ FramebufferFile::FramebufferFile(String str, size_t inode, Filesystem *pParentFS
             }
         }
     }
-}
 
-FramebufferFile::~FramebufferFile()
-{
-    delete m_pProvider;
+    return true;
 }
 
 uintptr_t FramebufferFile::readBlock(uint64_t location)
@@ -110,7 +146,17 @@ bool DevFs::initialise(Disk *pDisk)
 
     // Create /dev/fb for the framebuffer device.
     FramebufferFile *pFb = new FramebufferFile(String("fb"), ++baseInode, this, m_pRoot);
-    m_pRoot->addEntry(pFb->getName(), pFb);
+    if(pFb->initialise())
+        m_pRoot->addEntry(pFb->getName(), pFb);
+    else
+        delete pFb;
+
+    // Create /dev/textui for the text-only UI device.
+    TtyFile *pTty = new TtyFile(String("textui"), ++baseInode, this, m_pRoot);
+    if(pTty->initialise())
+        m_pRoot->addEntry(pTty->getName(), pTty);
+    else
+        delete pTty;
 
     return true;
 }

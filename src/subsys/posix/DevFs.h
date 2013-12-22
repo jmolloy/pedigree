@@ -20,6 +20,8 @@
 #include <vfs/Directory.h>
 #include <vfs/File.h>
 
+#include <machine/TextIO.h>
+
 #include <graphics/Graphics.h>
 #include <graphics/GraphicsService.h>
 
@@ -55,13 +57,32 @@ public:
     FramebufferFile(String str, size_t inode, Filesystem *pParentFS, File *pParentNode);
     ~FramebufferFile();
 
-    virtual uintptr_t readBlock(uint64_t location);
+    bool initialise();
 
+    virtual uintptr_t readBlock(uint64_t location);
 
     /// \todo pinBlock/unpinBlock should pin/unpin physical pages!
 
 private:
     GraphicsService::GraphicsProvider *m_pProvider;
+};
+
+class TtyFile : public File
+{
+public:
+    TtyFile(String str, size_t inode, Filesystem *pParentFS, File *pParentNode) :
+        File(str, 0, 0, 0, inode, pParentFS, 0, pParentNode)
+    {}
+    ~TtyFile()
+    {}
+
+    bool initialise();
+
+    uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+    uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+
+private:
+    TextIO *m_pTextIO;
 };
 
 /** This class provides slightly more flexibility for adding files to a directory. */
