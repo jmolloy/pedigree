@@ -70,6 +70,12 @@ int main(int argc, char **argv)
   signal(SIGINT, sigint);
   setsid();
 
+  const char *TERM = getenv("TERM");
+  if(!TERM)
+  {
+    TERM = "vt100";
+  }
+
   // Turn on output processing if it's not already on (we depend on it)
   struct termios curt;
   tcgetattr(1, &curt);
@@ -96,8 +102,9 @@ int main(int argc, char **argv)
 
   while (1)
   {
-    // Set terminal title
-    printf("\033]0;Pedigree Login\007");
+    // Set terminal title, if we can.
+    if(!strcmp(TERM, "xterm"))
+      printf("\033]0;Pedigree Login\007");
 
     // Not running anything
     g_RunningPid = -1;
@@ -158,7 +165,10 @@ int main(int argc, char **argv)
         else if (c != '\033')
         {
             password[i++] = c;
-            printf("•");
+            if(!strcmp(TERM, "xterm"))
+              printf("•");
+            else
+              printf("*");
         }
     }
     tcgetattr(0, &curt); curt.c_lflag |= (ECHO|ICANON); tcsetattr(0, TCSANOW, &curt);
@@ -175,7 +185,8 @@ int main(int argc, char **argv)
     else
     {
       // Terminal title -> shell name.
-      printf("\033]0;%s\007", pw->pw_shell);
+      if(!strcmp(TERM, "xterm"))
+        printf("\033]0;%s\007", pw->pw_shell);
 
       // Logged in successfully - launch the shell.
       int pid;
