@@ -162,11 +162,7 @@ static void init()
     // Is there a root disk mounted?
     if(VFS::instance().find(String("root»/.pedigree-root")) == 0)
     {
-#ifndef NOGFX
         FATAL("No root disk (missing .pedigree-root?)");
-#else
-        WARNING("No root disk, but nogfx builds don't need one.");
-#endif
     }
 
     // Fill out the device hash table
@@ -270,9 +266,6 @@ static void init()
     Log::instance().installCallback(logger);
 #endif
 
-#ifdef NOGFX
-    WARNING("-- System booted - no userspace supported in nogfx builds yet. --");
-#else
     str += "Loading init program (root»/applications/init)\n";
     bootIO.write(str, BootIO::White, BootIO::Black);
     str.clear();
@@ -306,7 +299,6 @@ static void init()
     g_InitProgramLoaded.acquire();
 #else
     #warning the init module is almost useless without threads.
-#endif
 #endif
 }
 static void destroy()
