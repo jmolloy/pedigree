@@ -130,6 +130,8 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
     size_t slaveFlags = m_pOther->m_Flags;
     const char *slaveControlChars = m_pOther->m_ControlChars;
 
+    size_t localWritten = 0;
+
     // Handle temios local modes
     if(slaveFlags & (ConsoleManager::LCookedMode|ConsoleManager::LEcho))
     {
@@ -162,7 +164,10 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
                         // Only echo the newline if we are supposed to
                         m_LineBuffer[m_LineBufferSize++] = '\n';
                         if((slaveFlags & ConsoleManager::LEchoNewline) || (slaveFlags & ConsoleManager::LEcho))
+                        {
                             m_RingBuffer.write('\n');
+                            ++localWritten;
+                        }
 
                         if((slaveFlags & ConsoleManager::LCookedMode) && !bAppBufferComplete)
                         {
@@ -212,12 +217,14 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
                             char ctl[3] = {'\x08', ' ', '\x08'};
                             m_RingBuffer.write(ctl, 3);
                             m_LineBufferSize--;
+                            ++localWritten;
                         }
                         else if((!(slaveFlags & ConsoleManager::LCookedMode)) && destBuffOffset)
                         {
                             char ctl[3] = {'\x08', ' ', '\x08'};
                             m_RingBuffer.write(ctl, 3);
                             destBuffOffset--;
+                            ++localWritten;
                         }
                     }
                 }
@@ -229,6 +236,7 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
                         // Write it to the master nicely (eg, ^C, ^D)
                         char ctl[3] = {'^', '@' + buf[i], '\n'};
                         m_RingBuffer.write(ctl, 3);
+                        ++localWritten;
 
                         // Trigger the actual event.
                         triggerEvent(buf[i]);
@@ -237,7 +245,10 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
 
                     // Write the character to the slave
                     if(slaveFlags & ConsoleManager::LEcho)
+                    {
                         m_RingBuffer.write(buf[i]);
+                        ++localWritten;
+                    }
 
                     // Add to the buffer
                     if(slaveFlags & ConsoleManager::LCookedMode)
@@ -291,6 +302,10 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
             m_pOther->inject(&buf[i], 1);
         }
     }
+
+    // Wake up anything waiting on data to read from us.
+    if(localWritten)
+        dataChanged();
 }
 
 size_t ConsoleMasterFile::outputLineDiscipline(char *buf, size_t len, size_t maxSz)
