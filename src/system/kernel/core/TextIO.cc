@@ -320,6 +320,14 @@ void TextIO::write(const char *s, size_t len)
                         m_ScrollStart = 0;
                         m_ScrollEnd = m_pVga->getNumRows() - 1;
                     }
+
+                    if(m_ScrollStart > m_ScrollEnd)
+                    {
+                        size_t tmp = m_ScrollStart;
+                        m_ScrollStart = m_ScrollEnd;
+                        m_ScrollEnd = tmp;
+                    }
+
                     m_bControlSeq = false;
                     break;
 
