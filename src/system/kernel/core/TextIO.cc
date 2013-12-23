@@ -158,8 +158,8 @@ void TextIO::write(const char *s, size_t len)
                     if(m_bParams)
                     {
                         // Set X/Y
-                        m_CursorX = m_Params[0];
-                        m_CursorY = m_Params[1];
+                        m_CursorX = m_Params[1] - 1;
+                        m_CursorY = m_Params[0] - 1;
                     }
                     else
                     {
@@ -307,8 +307,8 @@ void TextIO::write(const char *s, size_t len)
                 case 'r':
                     if(m_bParams)
                     {
-                        m_ScrollStart = m_Params[0];
-                        m_ScrollEnd = m_Params[1];
+                        m_ScrollStart = m_Params[0] - 1;
+                        m_ScrollEnd = m_Params[1] - 1;
 
                         if(m_ScrollStart >= m_pVga->getNumRows())
                             m_ScrollStart = m_pVga->getNumRows() - 1;
