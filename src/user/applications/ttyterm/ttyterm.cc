@@ -40,6 +40,7 @@ int g_MasterPty;
 
 #define ALT_KEY (1ULL << 60)
 #define SHIFT_KEY (1ULL << 61)
+#define CTRL_KEY (1ULL << 62)
 #define SPECIAL_KEY (1ULL << 63)
 
 enum ActualKey
@@ -92,6 +93,11 @@ void handle_input(Input::InputNotification &note)
             {
                 realKey = Down;
             }
+        }
+        else if(c & CTRL_KEY)
+        {
+            // CTRL-key = unprintable (ie, CTRL-C, CTRL-U)
+            c &= 0x1F;
         }
 
         if(c == '\n')
