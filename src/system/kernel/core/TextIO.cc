@@ -231,7 +231,6 @@ void TextIO::write(const char *s, size_t len)
                         {
                             case 0:
                                 // Reset all attributes.
-                                NOTICE("Resetting all colours.");
                                 m_Fore = White;
                                 m_Back = Black;
                                 break;
@@ -412,11 +411,6 @@ void TextIO::write(const char *s, size_t len)
                             if(m_CursorY)
                                 --m_CursorY;
                         }
-
-                        if(m_CursorX < m_pVga->getNumCols())
-                        {
-                            m_pFramebuffer[(m_CursorY * m_pVga->getNumCols()) + m_CursorX] = ' ' | (attributeByte << 8);
-                        }
                         break;
                     case 0x09:
                         m_CursorX = (m_CursorX + 8) & ~7;
@@ -442,21 +436,42 @@ void TextIO::write(const char *s, size_t len)
 
                 // Handle wrapping, if needed.
                 /// \todo Disabling line wrapping is allowed (but does what?)
-                if(0 && m_CursorX >= m_pVga->getNumCols())
+                if(m_CursorX >= m_pVga->getNumCols())
                 {
-                    NOTICE("X wrap!!");
                     m_CursorX = 0;
                     ++m_CursorY;
                 }
 
-                // Create a blank character tha we can use for memsets
-                if(0 && m_CursorY >= m_pVga->getNumRows())
+                if(m_CursorY > m_ScrollEnd)
                 {
-                    NOTICE("Y wrap!!");
-                    memcpy(m_pFramebuffer, &m_pFramebuffer[m_pVga->getNumCols()], (m_pVga->getNumRows() - 1) * m_pVga->getNumCols() * sizeof(uint16_t));
-                    wmemset(&m_pFramebuffer[(m_pVga->getNumRows() - 1) * m_pVga->getNumCols()], blank, m_pVga->getNumCols());
+                    // By how much have we exceeded the scroll region?
+                    size_t numRows = (m_CursorY - m_ScrollEnd);
 
-                    m_CursorY = m_pVga->getNumRows()-1;
+                    // At what position is the top of the scroll?
+                    // ie, to where are we moving the data into place?
+                    size_t startOffset = m_ScrollStart * m_pVga->getNumCols();
+
+                    // Where are we pulling data from?
+                    size_t fromOffset = (m_ScrollStart + numRows) * m_pVga->getNumCols();
+
+                    // How many rows are we moving? This is the distance from
+                    // the 'from' offset to the end of the scroll region.
+                    size_t movedRows = ((m_ScrollEnd + 1) * m_pVga->getNumCols()) - fromOffset;
+
+                    // Where do we begin blanking from?
+                    size_t blankFrom = (((m_ScrollEnd + 1) - numRows) * m_pVga->getNumCols());
+
+                    // How much blanking do we need to do?
+                    size_t blankLength = ((m_ScrollEnd + 1) * m_pVga->getNumCols()) - blankFrom;
+
+                    memmove(&m_pFramebuffer[startOffset],
+                            &m_pFramebuffer[fromOffset],
+                            movedRows * sizeof(uint16_t));
+                    wmemset(&m_pFramebuffer[blankFrom],
+                            blank,
+                            blankLength);
+
+                    m_CursorY = m_ScrollEnd;
                 }
             }
         }
