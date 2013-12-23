@@ -173,7 +173,7 @@ void TextIO::write(const char *s, size_t len)
                     if(!m_bParams)
                     {
                         // Erase from current line to end of screen.
-                        wmemset(&m_pFramebuffer[(m_pVga->getNumRows() - 1) * m_pVga->getNumCols()],
+                        wmemset(&m_pFramebuffer[m_CursorY * m_pVga->getNumCols()],
                                 blank,
                                 (m_pVga->getNumRows() - m_CursorY) * m_pVga->getNumCols());
                     }
