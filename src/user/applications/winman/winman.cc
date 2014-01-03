@@ -82,6 +82,8 @@ bool g_bCursorUpdate = false;
 #define CLIENT_DEFAULT "/applications/tui"
 // #define CLIENT_DEFAULT "/applications/gears"
 
+#define TEXTONLY_DEFAULT "/applications/ttyterm"
+
 void startClient()
 {
     if(fork() == 0)
@@ -772,6 +774,18 @@ int main(int argc, char *argv[])
 {
     syslog(LOG_INFO, "winman: starting up...");
 
+    // Can we get a framebuffer?
+    PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
+    g_pTopLevelFramebuffer = pRootFramebuffer;
+
+    if(!pRootFramebuffer)
+    {
+        syslog(LOG_INFO, "winman: no framebuffer could be created, falling back to text...");
+
+        execl(TEXTONLY_DEFAULT, TEXTONLY_DEFAULT, 0);
+        exit(1);
+    }
+
     // Create control pipe.
     pipe(g_iControlPipe);
 
@@ -807,9 +821,6 @@ int main(int argc, char *argv[])
         syslog(LOG_CRIT, "winman: error: couldn't load required font");
         return 0;
     }
-
-    PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
-    g_pTopLevelFramebuffer = pRootFramebuffer;
 
     // Grab a framebuffer to use.
     int fb = open("/dev/fb", O_RDWR);
