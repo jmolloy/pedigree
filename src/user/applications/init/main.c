@@ -33,6 +33,12 @@
 extern int tc();
 extern int ts();
 
+#ifdef NOGFX
+#define MAIN_PROGRAM "/applications/ttyterm"
+#else
+#define MAIN_PROGRAM "/applications/winman"
+#endif
+
 #include <sched.h>
 int main(int argc, char **argv)
 {
@@ -70,12 +76,12 @@ int main(int argc, char **argv)
   f = fork();
   if(f == 0)
   {
-    syslog(LOG_INFO, "init: starting winman...");
-    execl("/applications/winman", "/applications/winman", 0);
-    syslog(LOG_INFO, "init: loading winman failed: %s", strerror(errno));
+    syslog(LOG_INFO, "init: starting %s...", MAIN_PROGRAM);
+    execl(MAIN_PROGRAM, MAIN_PROGRAM, 0);
+    syslog(LOG_INFO, "init: loading %s failed: %s", MAIN_PROGRAM, strerror(errno));
     exit(errno);
   }
-  syslog(LOG_INFO, "init: winman running with pid %d", f);
+  syslog(LOG_INFO, "init: %s running with pid %d", MAIN_PROGRAM, f);
 
   syslog(LOG_INFO, "init: complete!");
   while(1) {
