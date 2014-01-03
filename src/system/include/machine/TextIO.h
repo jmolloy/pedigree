@@ -21,6 +21,8 @@
 
 class Vga;
 
+#define MAX_TEXTIO_PARAMS 16
+
 /**
  * Provides exceptionally simple VT100 emulation to the Vga class, if
  * one exists. Note that this is NOT xterm emulation.
@@ -28,6 +30,8 @@ class Vga;
 class TextIO
 {
 private:
+    static const int COLOUR_BRIGHT_ADDEND = 8;
+
     enum VgaColour
     {
         Black       =0,
@@ -46,6 +50,38 @@ private:
         LightMagenta=13,
         Yellow      =14,
         White       =15
+    };
+
+    VgaColour adjustColour(int colour, bool up)
+    {
+        if(up)
+        {
+            return static_cast<VgaColour>(colour + COLOUR_BRIGHT_ADDEND);
+        }
+        else
+        {
+            return static_cast<VgaColour>(colour - COLOUR_BRIGHT_ADDEND);
+        }
+    }
+
+    enum TerminalModes
+    {
+        LineFeedNewLine = 0x1,
+        CursorKey       = 0x2,
+        AnsiVt52        = 0x4,
+        Column          = 0x8,
+        Scrolling       = 0x10,
+        Screen          = 0x20,
+        Origin          = 0x40,
+        AutoWrap        = 0x80,
+        AutoRepeat      = 0x100,
+        Interlace       = 0x200,
+
+        /// AKA: 'Negative'
+        Inverse         = 0x100000,
+
+        /// AKA: 'Bold'
+        Bright          = 0x200000,
     };
 
 public:  
@@ -68,22 +104,48 @@ public:
     void write(const char *s, size_t len);
 
 private:
+    static const ssize_t BACKBUFFER_COLS_WIDE = 132;
+    static const ssize_t BACKBUFFER_COLS_NORMAL = 80;
+    static const ssize_t BACKBUFFER_ROWS = 25;
+
+    static const ssize_t BACKBUFFER_STRIDE = BACKBUFFER_COLS_WIDE;
+
     void setColour(VgaColour *which, size_t param, bool bBright = false);
+
+    void doBackspace();
+    void doLinefeed();
+    void doCarriageReturn();
+    void doHorizontalTab();
+
+    void checkScroll();
+    void checkWrap();
+
+    /**
+     * Present backbuffer to the VGA instance.
+     */
+    void flip();
 
     bool m_bInitialised;
     bool m_bControlSeq;
     bool m_bBracket;
+    bool m_bParenthesis;
     bool m_bParams;
-    size_t m_CursorX, m_CursorY;
-    size_t m_SavedCursorX, m_SavedCursorY;
-    size_t m_ScrollStart, m_ScrollEnd;
+    bool m_bQuestionMark;
+    ssize_t m_CursorX, m_CursorY;
+    ssize_t m_SavedCursorX, m_SavedCursorY;
+    ssize_t m_ScrollStart, m_ScrollEnd;
+    ssize_t m_LeftMargin, m_RightMargin;
     size_t m_CurrentParam;
-    size_t m_Params[4];
+    size_t m_Params[MAX_TEXTIO_PARAMS];
+    int m_CurrentModes;
 
     VgaColour m_Fore, m_Back;
 
     uint16_t *m_pFramebuffer;
+    uint16_t *m_pBackbuffer;
     Vga *m_pVga;
+
+    char m_TabStops[BACKBUFFER_STRIDE];
 };
 
 #endif

@@ -22,15 +22,19 @@
 
 TextIO::TextIO() :
     m_bInitialised(false), m_bControlSeq(false), m_bBracket(false),
-    m_bParams(false), m_CursorX(0), m_CursorY(0), m_SavedCursorX(0),
-    m_SavedCursorY(0), m_ScrollStart(0), m_ScrollEnd(0), m_CurrentParam(0),
-    m_Params(), m_Fore(TextIO::White), m_Back(TextIO::Black),
-    m_pFramebuffer(0), m_pVga(0)
+    m_bParenthesis(false), m_bParams(false), m_bQuestionMark(false),
+    m_CursorX(0), m_CursorY(0), m_SavedCursorX(0), m_SavedCursorY(0),
+    m_ScrollStart(0), m_ScrollEnd(0), m_LeftMargin(0), m_RightMargin(0),
+    m_CurrentParam(0), m_Params(), m_Fore(TextIO::LightGrey), m_Back(TextIO::Black),
+    m_pFramebuffer(0), m_pBackbuffer(0), m_pVga(0), m_TabStops()
 {
+    m_pBackbuffer = new uint16_t[BACKBUFFER_STRIDE * BACKBUFFER_ROWS];
 }
 
 TextIO::~TextIO()
 {
+    delete [] m_pBackbuffer;
+    m_pBackbuffer = 0;
 }
 
 bool TextIO::initialise(bool bClear)
@@ -40,12 +44,16 @@ bool TextIO::initialise(bool bClear)
     m_bControlSeq = false;
     m_bBracket = false;
     m_bParams = false;
+    m_bQuestionMark = false;
     m_pFramebuffer = 0;
     m_CurrentParam = 0;
     m_CursorX = m_CursorY = 0;
     m_ScrollStart = m_ScrollEnd = 0;
+    m_LeftMargin = m_RightMargin = 0;
     m_SavedCursorX = m_SavedCursorY = 0;
-    memset(m_Params, 0, sizeof(size_t) * 4);
+    m_CurrentModes = 0;
+    memset(m_Params, 0, sizeof(size_t) * MAX_TEXTIO_PARAMS);
+    memset(m_TabStops, 0, BACKBUFFER_STRIDE);
 
     m_pVga = Machine::instance().getVga(0);
     if(m_pVga)
@@ -55,11 +63,22 @@ bool TextIO::initialise(bool bClear)
         if(m_pFramebuffer != 0)
         {
             if(bClear)
+            {
                 memset(m_pFramebuffer, 0, m_pVga->getNumRows() * m_pVga->getNumCols() * sizeof(uint16_t));
+                memset(m_pBackbuffer, 0, BACKBUFFER_STRIDE * BACKBUFFER_ROWS);
+            }
 
             m_bInitialised = true;
             m_ScrollStart = 0;
             m_ScrollEnd = m_pVga->getNumRows() - 1;
+            m_LeftMargin = 0;
+            m_RightMargin = m_pVga->getNumCols();
+
+            m_CurrentModes = AnsiVt52;
+
+            // Set default tab stops.
+            for(size_t i = 0; i < BACKBUFFER_STRIDE; i += 8)
+                m_TabStops[i] = '|';
         }
     }
 
@@ -81,12 +100,40 @@ void TextIO::write(const char *s, size_t len)
 
     while((*s) && (len--))
     {
-        uint8_t attributeByte = (m_Back << 4) | (m_Fore & 0x0F);
+        uint8_t attributeByte = 0;
+        if(m_CurrentModes & Inverse)
+        {
+            attributeByte = (m_Fore << 4) | (m_Back & 0x0F);
+        }
+        else
+        {
+            attributeByte = (m_Back << 4) | (m_Fore & 0x0F);
+        }
         uint16_t blank = ' ' | (attributeByte << 8);
+
         if(m_bControlSeq && m_bBracket)
         {
             switch(*s)
             {
+                case 0x08:
+                    doBackspace();
+                    break;
+
+                case '\n':
+                case 0x0B:
+                    if(m_CurrentModes & LineFeedNewLine)
+                        doCarriageReturn();
+                    doLinefeed();
+                    break;
+
+                case '\r':
+                    doCarriageReturn();
+                    break;
+
+                case '?':
+                    m_bQuestionMark = true;
+                    break;
+
                 case '0':
                 case '1':
                 case '2':
@@ -103,41 +150,49 @@ void TextIO::write(const char *s, size_t len)
 
                 case ';':
                     ++m_CurrentParam;
+                    if(m_CurrentParam >= MAX_TEXTIO_PARAMS)
+                        FATAL("TextIO: too many parameters!");
                     break;
 
                 case 'A':
                     // Cursor up.
                     if(m_CursorY)
                     {
-                        if(m_bParams)
+                        if(m_bParams && m_Params[0])
                             m_CursorY -= m_Params[0];
                         else
                             --m_CursorY;
                     }
+
+                    if(m_CursorY < m_ScrollStart)
+                        m_CursorY = m_ScrollStart;
+
                     m_bControlSeq = false;
                     break;
 
                 case 'B':
                     // Cursor down.
-                    if(m_bParams)
+                    if(m_bParams && m_Params[0])
                         m_CursorY += m_Params[0];
                     else
                         ++m_CursorY;
-                    
-                    if(m_CursorY >= m_pVga->getNumRows())
-                        m_CursorY = m_pVga->getNumRows() - 1;
+
+                    if(m_CursorY > m_ScrollEnd)
+                        m_CursorY = m_ScrollEnd;
+
                     m_bControlSeq = false;
                     break;
 
                 case 'C':
                     // Cursor right.
-                    if(m_bParams)
+                    if(m_bParams && m_Params[0])
                         m_CursorX += m_Params[0];
                     else
                         ++m_CursorX;
                     
-                    if(m_CursorX >= m_pVga->getNumCols())
-                        m_CursorX = m_pVga->getNumCols() - 1;
+                    if(m_CursorX >= m_RightMargin)
+                        m_CursorX = m_RightMargin - 1;
+
                     m_bControlSeq = false;
                     break;
 
@@ -145,97 +200,319 @@ void TextIO::write(const char *s, size_t len)
                     // Cursor left.
                     if(m_CursorX)
                     {
-                        if(m_bParams)
+                        if(m_bParams && m_Params[0])
                             m_CursorX -= m_Params[0];
                         else
                             --m_CursorX;
                     }
+
+                    if(m_CursorX < m_LeftMargin)
+                        m_CursorX = m_LeftMargin;
+
                     m_bControlSeq = false;
                     break;
 
                 case 'H':
                 case 'f':
+                    // CUP/HVP commands
                     if(m_bParams)
                     {
+                        size_t xmove = m_Params[1] ? m_Params[1] - 1 : 0;
+                        size_t ymove = m_Params[0] ? m_Params[0] - 1 : 0;
+
                         // Set X/Y
-                        m_CursorX = m_Params[1] - 1;
-                        m_CursorY = m_Params[0] - 1;
+                        if(m_CurrentModes & Origin)
+                        {
+                            // Line/Column numbers are relative.
+                            m_CursorX = m_LeftMargin + xmove;
+                            m_CursorY = m_ScrollStart + ymove;
+                        }
+                        else
+                        {
+                            m_CursorX = xmove;
+                            m_CursorY = ymove;
+                        }
                     }
                     else
                     {
                         // Reset X/Y
-                        m_CursorX = m_CursorY = 0;
+                        if(m_CurrentModes & Origin)
+                        {
+                            m_CursorX = m_LeftMargin;
+                            m_CursorY = m_ScrollStart;
+                        }
+                        else
+                        {
+                            m_CursorX = m_CursorY = 0;
+                        }
                     }
+
                     m_bControlSeq = false;
                     break;
 
                 case 'J':
-                    if(!m_bParams)
+                    if((!m_bParams) || (!m_Params[0]))
                     {
-                        // Erase from current line to end of screen.
-                        wmemset(&m_pFramebuffer[m_CursorY * m_pVga->getNumCols()],
+                        // Erase from current position to end of screen.
+                        wmemset(&m_pBackbuffer[(m_CursorY * BACKBUFFER_STRIDE) + m_CursorX],
                                 blank,
-                                (m_pVga->getNumRows() - m_CursorY) * m_pVga->getNumCols());
+                                ((BACKBUFFER_ROWS - m_CursorY) * BACKBUFFER_STRIDE) - m_CursorX);
                     }
                     else if(m_Params[0] == 1)
                     {
-                        // Erase from current line to top of screen.
-                        wmemset(m_pFramebuffer,
+                        // Erase from current position to top of screen.
+                        wmemset(m_pBackbuffer,
                                 blank,
-                                m_CursorY * m_pVga->getNumCols());
+                                (m_CursorY * BACKBUFFER_STRIDE) + m_CursorX + 1);
                     }
                     else if(m_Params[0] == 2)
                     {
                         // Erase entire screen, move to home.
-                        wmemset(m_pFramebuffer,
+                        wmemset(m_pBackbuffer,
                                 blank,
-                                m_pVga->getNumRows() * m_pVga->getNumCols());
-                        m_CursorX = m_CursorY = 0;
+                                BACKBUFFER_ROWS * BACKBUFFER_STRIDE);
                     }
                     m_bControlSeq = false;
                     break;
 
                 case 'K':
-                    if(!m_bParams)
+                    if((!m_bParams) || (!m_Params[0]))
                     {
                         // Erase to end of line.
-                        wmemset(&m_pFramebuffer[(m_CursorY * m_pVga->getNumCols()) + m_CursorX],
+                        wmemset(&m_pBackbuffer[(m_CursorY * BACKBUFFER_STRIDE) + m_CursorX],
                                 blank,
-                                m_pVga->getNumCols() - m_CursorX);
+                                BACKBUFFER_STRIDE - m_CursorX - 1);
                     }
                     else if(m_Params[0] == 1)
                     {
                         // Erase to start of line.
-                        wmemset(&m_pFramebuffer[m_CursorY * m_pVga->getNumCols()],
+                        wmemset(&m_pBackbuffer[m_CursorY * BACKBUFFER_STRIDE],
                                 blank,
-                                m_CursorX);
+                                m_CursorX + 1);
                     }
                     else if(m_Params[0] == 2)
                     {
                         // Erase entire line.
-                        wmemset(&m_pFramebuffer[m_CursorY * m_pVga->getNumCols()],
+                        wmemset(&m_pBackbuffer[m_CursorY * BACKBUFFER_STRIDE],
                                 blank,
-                                m_pVga->getNumCols());
+                                BACKBUFFER_STRIDE);
                     }
                     m_bControlSeq = false;
                     break;
 
-                case 'm':
-                    // Handle \e[0m
-                    if(m_bParams && !m_CurrentParam)
-                        ++m_CurrentParam;
+                case 'g':
+                    if(m_Params[0])
+                    {
+                        if(m_Params[0] == 3)
+                        {
+                            memset(m_TabStops, 0, BACKBUFFER_STRIDE);
+                        }
+                    }
+                    else
+                    {
+                        m_TabStops[m_CursorX] = 0;
+                    }
+                    m_bControlSeq = false;
+                    break;
 
-                    for(size_t i = 0; i < m_CurrentParam; ++i)
+                case 'h':
+                case 'l':
+                    {
+                    int modesToChange = 0;
+
+                    if(m_bQuestionMark & m_bParams)
+                    {
+                        for(size_t i = 0; i <= m_CurrentParam; ++i)
+                        {
+                            switch(m_Params[i])
+                            {
+                                case 1:
+                                    modesToChange |= CursorKey;
+                                    break;
+                                case 2:
+                                    modesToChange |= AnsiVt52;
+                                    break;
+                                case 3:
+                                    modesToChange |= Column;
+                                    break;
+                                case 4:
+                                    modesToChange |= Scrolling;
+                                    break;
+                                case 5:
+                                    modesToChange |= Screen;
+                                    break;
+                                case 6:
+                                    modesToChange |= Origin;
+                                    break;
+                                case 7:
+                                    modesToChange |= AutoWrap;
+                                    break;
+                                case 8:
+                                    modesToChange |= AutoRepeat;
+                                    break;
+                                case 9:
+                                    modesToChange |= Interlace;
+                                    break;
+                                default:
+                                    WARNING("TextIO: unknown 'DEC Private Mode Set' mode '" << m_Params[i] << "'");
+                                    break;
+                            }
+                        }
+                    }
+                    else if(m_bParams)
+                    {
+                        for(size_t i = 0; i <= m_CurrentParam; ++i)
+                        {
+                            switch(m_Params[i])
+                            {
+                                case 20:
+                                    modesToChange |= LineFeedNewLine;
+                                    break;
+                                default:
+                                    WARNING("TextIO: unknown 'Set Mode' mode '" << m_Params[i] << "'");
+                                    break;
+                            }
+                        }
+                    }
+
+                    if(*s == 'h')
+                    {
+                        // Set modes.
+                        m_CurrentModes |= modesToChange;
+
+                        // Setting modes
+                        if(modesToChange & Origin)
+                        {
+                            // Reset origin to margins.
+                            m_CursorX = m_LeftMargin;
+                            m_CursorY = m_ScrollStart;
+                        }
+                        else if(modesToChange & Column)
+                        {
+                            m_RightMargin = BACKBUFFER_COLS_WIDE;
+
+                            // Clear screen as a side-effect.
+                            wmemset(m_pBackbuffer,
+                                    blank,
+                                    BACKBUFFER_STRIDE * BACKBUFFER_ROWS);
+
+                            // Reset margins.
+                            m_LeftMargin = 0;
+                            m_ScrollStart = 0;
+                            m_ScrollEnd = BACKBUFFER_ROWS - 1;
+
+                            // Home the cursor.
+                            m_CursorX = 0;
+                            m_CursorY = 0;
+                        }
+                    }
+                    else
+                    {
+                        // Reset modes.
+                        m_CurrentModes &= ~(modesToChange);
+
+                        // Resetting modes
+                        if(modesToChange & Origin)
+                        {
+                            // Reset origin to top left corner.
+                            m_CursorX = 0;
+                            m_CursorY = 0;
+                        }
+                        else if(modesToChange & Column)
+                        {
+                            m_RightMargin = BACKBUFFER_COLS_NORMAL;
+
+                            // Clear screen as a side-effect.
+                            wmemset(m_pBackbuffer,
+                                    blank,
+                                    BACKBUFFER_STRIDE * BACKBUFFER_ROWS);
+
+                            // Reset margins.
+                            m_LeftMargin = 0;
+                            m_ScrollStart = 0;
+                            m_ScrollEnd = BACKBUFFER_ROWS - 1;
+
+                            // Home the cursor.
+                            m_CursorX = 0;
+                            m_CursorY = 0;
+                        }
+                    }
+
+                    if(modesToChange & Screen)
+                    {
+                        VgaColour defaultBack = Black, defaultFore = LightGrey;
+
+                        if(m_CurrentModes & Screen)
+                        {
+                            m_Fore = Black;
+                            m_Back = LightGrey;
+                        }
+                        else
+                        {
+                            m_Fore = LightGrey;
+                            m_Back = Black;
+
+                            defaultBack = LightGrey;
+                            defaultFore = Black;
+                        }
+
+                        // Invert the framebuffer.
+                        for(size_t i = 0; i < (BACKBUFFER_STRIDE * BACKBUFFER_ROWS); ++i)
+                        {
+                            uint8_t c = m_pBackbuffer[i] & 0xFF;
+                            uint8_t attrib = (m_pBackbuffer[i] >> 8) & 0xFF;
+
+                            uint8_t back = (attrib >> 4) & 0xF;
+                            uint8_t fore = attrib & 0xF;
+
+                            if(back == defaultBack && fore == defaultFore)
+                            {
+                                attrib = (m_Back << 4) | (m_Fore & 0xF);
+                            }
+
+                            /// \todo This breaks characters with the 'negative' attribute.
+                            m_pBackbuffer[i] = c | (attrib << 8);
+                        }
+                    }
+
+                    m_bControlSeq = false;
+                    }
+                    break;
+
+                case 'm':
+                    for(size_t i = 0; i <= m_CurrentParam; ++i)
                     {
                         switch(m_Params[i])
                         {
                             case 0:
                                 // Reset all attributes.
-                                m_Fore = White;
+                                m_Fore = LightGrey;
                                 m_Back = Black;
+                                m_CurrentModes &= ~(Inverse | Bright);
                                 break;
 
-                            /// \todo Hidden? Inverse?
+                            case 1:
+                                if(!(m_CurrentModes & Bright))
+                                {
+                                    m_CurrentModes |= Bright;
+                                    m_Fore = adjustColour(m_Fore, true);
+                                }
+                                break;
+
+                            case 2:
+                                if(m_CurrentModes & Bright)
+                                {
+                                    m_CurrentModes &= ~Bright;
+                                    m_Fore = adjustColour(m_Fore, false);
+                                }
+                                break;
+
+                            case 7:
+                                if(!(m_CurrentModes & Inverse))
+                                {
+                                    m_CurrentModes |= Inverse;
+                                }
+                                break;
 
                             case 30:
                             case 31:
@@ -250,7 +527,7 @@ void TextIO::write(const char *s, size_t len)
                             case 38:
                                 if(m_Params[i + 1] == 5)
                                 {
-                                    setColour(&m_Fore, m_Params[i + 2]);
+                                    setColour(&m_Fore, m_Params[i + 2], m_CurrentModes & Bright);
                                     i += 3;
                                 }
                                 break;
@@ -268,7 +545,7 @@ void TextIO::write(const char *s, size_t len)
                             case 48:
                                 if(m_Params[i + 1] == 5)
                                 {
-                                    setColour(&m_Back, m_Params[i + 2]);
+                                    setColour(&m_Back, m_Params[i + 2], m_CurrentModes & Bright);
                                     i += 3;
                                 }
                                 break;
@@ -309,15 +586,15 @@ void TextIO::write(const char *s, size_t len)
                         m_ScrollStart = m_Params[0] - 1;
                         m_ScrollEnd = m_Params[1] - 1;
 
-                        if(m_ScrollStart >= m_pVga->getNumRows())
-                            m_ScrollStart = m_pVga->getNumRows() - 1;
-                        if(m_ScrollEnd >= m_pVga->getNumRows())
-                            m_ScrollEnd = m_pVga->getNumRows() - 1;
+                        if(m_ScrollStart >= BACKBUFFER_ROWS)
+                            m_ScrollStart = BACKBUFFER_ROWS - 1;
+                        if(m_ScrollEnd >= BACKBUFFER_ROWS)
+                            m_ScrollEnd = BACKBUFFER_ROWS - 1;
                     }
                     else
                     {
                         m_ScrollStart = 0;
-                        m_ScrollEnd = m_pVga->getNumRows() - 1;
+                        m_ScrollEnd = BACKBUFFER_ROWS - 1;
                     }
 
                     if(m_ScrollStart > m_ScrollEnd)
@@ -325,6 +602,17 @@ void TextIO::write(const char *s, size_t len)
                         size_t tmp = m_ScrollStart;
                         m_ScrollStart = m_ScrollEnd;
                         m_ScrollEnd = tmp;
+                    }
+
+                    if(m_CurrentModes & Origin)
+                    {
+                        m_CursorX = m_LeftMargin;
+                        m_CursorY = m_ScrollStart;
+                    }
+                    else
+                    {
+                        m_CursorX = 0;
+                        m_CursorY = 0;
                     }
 
                     m_bControlSeq = false;
@@ -348,13 +636,81 @@ void TextIO::write(const char *s, size_t len)
                     break;
             }
         }
-        else if(m_bControlSeq && !m_bBracket)
+        else if(m_bControlSeq && m_bParenthesis)
         {
             switch(*s)
             {
+                default:
+                    ERROR("TextIO: unknown character set sequence character '" << *s << "'!");
+                    m_bControlSeq = false;
+                    break;
+            }
+        }
+        else if(m_bControlSeq && (!m_bBracket) && (!m_bParenthesis))
+        {
+            switch(*s)
+            {
+                case 0x08:
+                    doBackspace();
+                    break;
+
+                case 'D':
+                    // Index - cursor down one line, scroll if necessary.
+                    doLinefeed();
+                    m_bControlSeq = false;
+                    break;
+
+                case 'E':
+                    // Next Line - move to start of next line.
+                    doCarriageReturn();
+                    doLinefeed();
+                    m_bControlSeq = false;
+                    break;
+
+                case 'H':
+                    // Horizontal tabulation set.
+                    m_TabStops[m_CursorX] = '|';
+                    m_bControlSeq = false;
+                    break;
+
+                case 'M':
+                case 'I':
+                    // Reverse Index - cursor up one line, or scroll up if at top.
+                    --m_CursorY;
+                    checkScroll();
+                    m_bControlSeq = false;
+                    break;
+
+                case '#':
+                    // DEC commands
+                    ++s;
+                    switch(*s)
+                    {
+                        case '8':
+                            {
+                            // DEC Screen Alignment Test (DECALN)
+                            // Fills screen with 'E' characters.
+                            uint16_t set = 'E' | (attributeByte << 8);
+                            wmemset(m_pBackbuffer,
+                                    set,
+                                    BACKBUFFER_STRIDE * BACKBUFFER_ROWS);
+                            }
+                            break;
+
+                        default:
+                            ERROR("TextIO: unknown DEC command '" << *s << "'");
+                            break;
+                    }
+                    m_bControlSeq = false;
+                    break;
+
                 case '[':
                     m_bBracket = true;
                     break;
+
+                case '(':
+                case ')':
+                    m_bParenthesis = true;
 
                 case '7':
                     m_SavedCursorX = m_CursorX;
@@ -366,21 +722,6 @@ void TextIO::write(const char *s, size_t len)
                     m_CursorX = m_SavedCursorX;
                     m_CursorY = m_SavedCursorY;
                     m_bControlSeq = false;
-                    break;
-
-                case 'D':
-                    // Scroll everything down one line.
-                    memmove(&m_pFramebuffer[m_ScrollEnd * m_pVga->getNumCols()],
-                            &m_pFramebuffer[m_ScrollStart * m_pVga->getNumCols()],
-                            (m_ScrollEnd - m_ScrollStart) * m_pVga->getNumCols() * sizeof(uint16_t));
-                    break;
-
-                case 'M':
-                    // Scroll everything up one line.
-                    // Scroll everything down one line.
-                    memmove(&m_pFramebuffer[m_ScrollStart * m_pVga->getNumCols()],
-                            &m_pFramebuffer[m_ScrollEnd * m_pVga->getNumCols()],
-                            (m_ScrollEnd - m_ScrollStart) * m_pVga->getNumCols() * sizeof(uint16_t));
                     break;
 
                 default:
@@ -395,85 +736,61 @@ void TextIO::write(const char *s, size_t len)
                 m_bControlSeq = true;
                 m_bBracket = false;
                 m_bParams = false;
+                m_bParenthesis = false;
+                m_bQuestionMark = true;
                 m_CurrentParam = 0;
-                memset(m_Params, 0, sizeof(size_t) * 4);
+                memset(m_Params, 0, sizeof(size_t) * MAX_TEXTIO_PARAMS);
             }
             else
             {
                 switch(*s)
                 {
                     case 0x08:
-                        if(m_CursorX)
-                            --m_CursorX;
-                        else
-                        {
-                            m_CursorX = m_pVga->getNumCols() - 1;
-                            if(m_CursorY)
-                                --m_CursorY;
-                        }
+                        doBackspace();
                         break;
                     case 0x09:
-                        m_CursorX = (m_CursorX + 8) & ~7;
+                        doHorizontalTab();
                         break;
                     case '\r':
-                        m_CursorX = 0;
+                        doCarriageReturn();
                         break;
                     case '\n':
-                        m_CursorX = 0;
-                        ++m_CursorY;
+                    case 0x0B:
+                        if(m_CurrentModes & LineFeedNewLine)
+                            doCarriageReturn();
+                        doLinefeed();
+                        break;
+                    case 0x0E:
+                    case 0x0F:
+                        NOTICE("TextIO: unhandled SHIFT-IN/SHIFT-OUT");
                         break;
                     default:
                         if(*s >= ' ')
                         {
-                            if(m_CursorX < m_pVga->getNumCols())
+                            // We must handle wrapping *just before* we write
+                            // the next printable, because otherwise things
+                            // like BS at the right margin fail to work correctly.
+                            checkWrap();
+
+                            if(m_CursorX < BACKBUFFER_STRIDE)
                             {
-                                m_pFramebuffer[(m_CursorY * m_pVga->getNumCols()) + m_CursorX] = *s | (attributeByte << 8);
-                                m_CursorX++;
+                                m_pBackbuffer[(m_CursorY * BACKBUFFER_STRIDE) + m_CursorX] = *s | (attributeByte << 8);
+                                ++m_CursorX;
+                            }
+                            else
+                            {
+                                ERROR("TextIO: X co-ordinate is beyond the end of a backbuffer line: " << m_CursorX << " vs " << BACKBUFFER_STRIDE << "?");
                             }
                         }
                         break;
                 }
-
-                // Handle wrapping, if needed.
-                /// \todo Disabling line wrapping is allowed (but does what?)
-                if(m_CursorX >= m_pVga->getNumCols())
-                {
-                    m_CursorX = 0;
-                    ++m_CursorY;
-                }
-
-                if(m_CursorY > m_ScrollEnd)
-                {
-                    // By how much have we exceeded the scroll region?
-                    size_t numRows = (m_CursorY - m_ScrollEnd);
-
-                    // At what position is the top of the scroll?
-                    // ie, to where are we moving the data into place?
-                    size_t startOffset = m_ScrollStart * m_pVga->getNumCols();
-
-                    // Where are we pulling data from?
-                    size_t fromOffset = (m_ScrollStart + numRows) * m_pVga->getNumCols();
-
-                    // How many rows are we moving? This is the distance from
-                    // the 'from' offset to the end of the scroll region.
-                    size_t movedRows = ((m_ScrollEnd + 1) * m_pVga->getNumCols()) - fromOffset;
-
-                    // Where do we begin blanking from?
-                    size_t blankFrom = (((m_ScrollEnd + 1) - numRows) * m_pVga->getNumCols());
-
-                    // How much blanking do we need to do?
-                    size_t blankLength = ((m_ScrollEnd + 1) * m_pVga->getNumCols()) - blankFrom;
-
-                    memmove(&m_pFramebuffer[startOffset],
-                            &m_pFramebuffer[fromOffset],
-                            movedRows * sizeof(uint16_t));
-                    wmemset(&m_pFramebuffer[blankFrom],
-                            blank,
-                            blankLength);
-
-                    m_CursorY = m_ScrollEnd;
-                }
             }
+        }
+
+        if(m_CursorX < m_LeftMargin)
+        {
+            WARNING("TextIO: X co-ordinate ended up befor the left margin.");
+            m_CursorX = m_LeftMargin;
         }
 
         ++s;
@@ -482,6 +799,9 @@ void TextIO::write(const char *s, size_t len)
     // Assume we moved the cursor, and update where it is displayed
     // accordingly.
     m_pVga->moveCursor(m_CursorX, m_CursorY);
+
+    // This write is now complete.
+    flip();
 }
 
 void TextIO::setColour(TextIO::VgaColour *which, size_t param, bool bBright)
@@ -514,5 +834,147 @@ void TextIO::setColour(TextIO::VgaColour *which, size_t param, bool bBright)
             break;
         default:
             break;
+    }
+}
+
+void TextIO::doBackspace()
+{
+    // If we are at a position where we would expect to wrap, step back one
+    // extra character position so we don't wrap.
+    if(m_CursorX == m_RightMargin)
+        --m_CursorX;
+
+    // Backspace will not do anything if we are already on the left margin.
+    if(m_CursorX > m_LeftMargin)
+        --m_CursorX;
+}
+
+void TextIO::doLinefeed()
+{
+    ++m_CursorY;
+    checkScroll();
+}
+
+void TextIO::doCarriageReturn()
+{
+    m_CursorX = m_LeftMargin;
+}
+
+void TextIO::doHorizontalTab()
+{
+    bool tabStopFound = false;
+
+    // Move to the next tab stop from the current position.
+    for(size_t x = (m_CursorX + 1); x < m_RightMargin; ++x)
+    {
+        if(m_TabStops[x] != 0)
+        {
+            m_CursorX = x;
+            tabStopFound = true;
+            break;
+        }
+    }
+
+    if(!tabStopFound)
+    {
+        // Tab to the right margin, if no tab stop was found at all.
+        m_CursorX = m_RightMargin - 1;
+    }
+    else if(m_CursorX >= m_RightMargin)
+        m_CursorX = m_RightMargin - 1;
+}
+
+void TextIO::checkScroll()
+{
+    uint8_t attributeByte = (m_Back << 4) | (m_Fore & 0x0F);
+    uint16_t blank = ' ' | (attributeByte << 8);
+
+    // Handle scrolling, which can take place due to linefeeds and
+    // other such cursor movements.
+    if(m_CursorY < m_ScrollStart)
+    {
+        // By how much have we exceeded the scroll region?
+        size_t numRows = (m_ScrollStart - m_CursorY);
+
+        // Top of the scrolling area
+        size_t sourceRow = m_ScrollStart;
+        size_t destRow = m_ScrollStart + numRows;
+
+        // Bottom of the scrolling area
+        size_t sourceEnd = m_ScrollEnd + 1 - numRows;
+        size_t destEnd = m_ScrollEnd + 1;
+
+        // Move data.
+        memmove(&m_pBackbuffer[destRow * BACKBUFFER_STRIDE],
+                &m_pBackbuffer[sourceRow * BACKBUFFER_STRIDE],
+                (sourceEnd - sourceRow) * BACKBUFFER_STRIDE * sizeof(uint16_t));
+
+        // Clear out the start of the region now.
+        wmemset(&m_pBackbuffer[sourceRow * BACKBUFFER_STRIDE],
+                blank,
+                (destRow - sourceRow) * BACKBUFFER_STRIDE);
+
+        m_CursorY = m_ScrollStart;
+    }
+    else if(m_CursorY > m_ScrollEnd)
+    {
+        // By how much have we exceeded the scroll region?
+        size_t numRows = (m_CursorY - m_ScrollEnd);
+
+        // At what position is the top of the scroll?
+        // ie, to where are we moving the data into place?
+        size_t startOffset = m_ScrollStart * BACKBUFFER_STRIDE;
+
+        // Where are we pulling data from?
+        size_t fromOffset = (m_ScrollStart + numRows) * BACKBUFFER_STRIDE;
+
+        // How many rows are we moving? This is the distance from
+        // the 'from' offset to the end of the scroll region.
+        size_t movedRows = ((m_ScrollEnd + 1) * BACKBUFFER_STRIDE) - fromOffset;
+
+        // Where do we begin blanking from?
+        size_t blankFrom = (((m_ScrollEnd + 1) - numRows) * BACKBUFFER_STRIDE);
+
+        // How much blanking do we need to do?
+        size_t blankLength = ((m_ScrollEnd + 1) * BACKBUFFER_STRIDE) - blankFrom;
+
+        memmove(&m_pBackbuffer[startOffset],
+                &m_pBackbuffer[fromOffset],
+                movedRows * sizeof(uint16_t));
+        wmemset(&m_pBackbuffer[blankFrom],
+                blank,
+                blankLength);
+
+        m_CursorY = m_ScrollEnd;
+    }
+}
+
+void TextIO::checkWrap()
+{
+    if(m_CursorX >= m_RightMargin)
+    {
+        // Default autowrap mode is off - new characters at
+        // the right margin replace any that are already there.
+        if(m_CurrentModes & AutoWrap)
+        {
+            m_CursorX = m_LeftMargin;
+            ++m_CursorY;
+
+            checkScroll();
+        }
+        else
+        {
+            m_CursorX = m_RightMargin - 1;
+        }
+    }
+}
+
+void TextIO::flip()
+{
+    for(size_t y = 0; y < m_pVga->getNumRows(); ++y)
+    {
+        memcpy(&m_pFramebuffer[y * m_pVga->getNumCols()],
+                &m_pBackbuffer[y * BACKBUFFER_STRIDE],
+                m_pVga->getNumCols() * sizeof(uint16_t));
     }
 }
