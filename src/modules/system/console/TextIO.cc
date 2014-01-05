@@ -899,7 +899,7 @@ void TextIO::write(const char *s, size_t len)
                     break;
 
                 case '<':
-                    m_CurrentModes = AnsiVt52;
+                    m_CurrentModes |= AnsiVt52;
                     m_bControlSeq = false;
                     break;
 
