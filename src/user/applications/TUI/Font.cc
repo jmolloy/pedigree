@@ -82,6 +82,11 @@ Font::Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWid
     {
         syslog(LOG_WARNING, "TUI: Font instance couldn't create iconv (%s)", strerror(errno));
     }
+
+    for(uint32_t c = 32; c < 127; ++c)
+    {
+        precache(c);
+    }
 }
 
 Font::~Font()
@@ -91,45 +96,12 @@ Font::~Font()
 
 size_t Font::render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, size_t y, uint32_t f, uint32_t b)
 {
-    // Let's try and skip any actual conversion.
-    char *convertOut = 0;
-    std::map<uint32_t,char *>::iterator it = m_ConversionCache.find(c);
-    if(it != m_ConversionCache.end())
+    // Cache the character, if not already.
+    const char *convertOut = precache(c);
+    if(!convertOut)
     {
-        convertOut = it->second;
-    }
-    else
-    {
-        if(m_Iconv == (iconv_t) -1)
-        {
-            syslog(LOG_WARNING, "TUI: Font instance with bad iconv.");
-            return 0;
-        }
-
-        // Reset iconv conversion state.
-        iconv(m_Iconv, 0, 0, 0, 0);
-
-        // Convert UTF-32 input character to UTF-8 for Cairo rendering.
-        uint32_t utf32[] = {c, 0};
-        char *utf32_c = (char *) utf32;
-        char *out = new char[100];
-        char *out_c = (char *) out;
-        size_t utf32_len = 8;
-        size_t out_len = 100;
-        size_t res = iconv(m_Iconv, &utf32_c, &utf32_len, &out_c, &out_len);
-
-        size_t ret = 0;
-        if(res == ((size_t) -1))
-        {
-            syslog(LOG_WARNING, "TUI: Font::render couldn't convert input UTF-32 %x", c);
-            delete [] out;
-            return 0;
-        }
-        else
-        {
-            convertOut = out;
-            m_ConversionCache[c] = convertOut;
-        }
+        syslog(LOG_WARNING, "TUI: Character '%x' was not able to be precached?", c);
+        return 0;
     }
 
     // Perform the render.
@@ -172,139 +144,45 @@ size_t Font::render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b, b
     return m_CellWidth * len;
 }
 
-void Font::drawGlyph(PedigreeGraphics::Framebuffer *pFb, Glyph *pBitmap, int left, int top)
+const char *Font::precache(uint32_t c)
 {
-    if(!g_pFramebuffer)
-        return;
-
-    pFb->blit(pBitmap->pBlitBuffer, 0, 0, left, top, m_CellWidth, m_CellHeight);
-
-    /*
-    for (size_t y = top; y < top+m_CellHeight; y++)
+    if(m_Iconv == (iconv_t) -1)
     {
-        size_t idx = y*m_nWidth+left;
-
-        memcpy(reinterpret_cast<uint8_t*>(&pFb[idx]),
-               reinterpret_cast<uint8_t*>(&pBitmap->buffer[(y-top)*m_CellWidth]),
-               m_CellWidth*sizeof(rgb_t));
-    }
-    */
-}
-
-void Font::precacheGlyph(uint32_t c, uint32_t f, uint32_t b)
-{
-    generateGlyph(c, f, b);
-}
-
-Font::Glyph *Font::generateGlyph(uint32_t c, uint32_t f, uint32_t b)
-{
-    Glyph *pGlyph = 0;
-    if((pGlyph = cacheLookup(c, f, b)))
-        return pGlyph;
-
-    pGlyph = new Glyph;
-    pGlyph->buffer = new rgb_t[m_CellWidth*m_CellHeight];
-
-    rgb_t back, front;
-    back.r = (b & 0xFF0000) >> 16;
-    back.g = (b & 0xFF00) >> 8;
-    back.b = (b & 0xFF);
-    front.r = (f & 0xFF0000) >> 16;
-    front.g = (f & 0xFF00) >> 8;
-    front.b = (f & 0xFF);
-    front.a = back.a = 0;
-
-    // Erase to background colour.
-    for (size_t i = 0; i < m_CellWidth*m_CellHeight; i++)
-        pGlyph->buffer[i] = back;
-
-    int error = FT_Load_Char(m_Face, c, FT_LOAD_RENDER);
-    if (error)
-    {
-        syslog(LOG_ALERT, "Freetype load char error: %d", error);
+        syslog(LOG_WARNING, "TUI: Font instance with bad iconv.");
         return 0;
     }
 
-    for (ssize_t r = 0; r < m_Face->glyph->bitmap.rows; r++)
+    // Let's try and skip any actual conversion.
+    std::map<uint32_t,char *>::iterator it = m_ConversionCache.find(c);
+    if(it == m_ConversionCache.end())
     {
-        if (r >= static_cast<ssize_t>(m_CellHeight)) break;
-        for (ssize_t c = 0; c < m_Face->glyph->bitmap.width; c++)
+        // Reset iconv conversion state.
+        iconv(m_Iconv, 0, 0, 0, 0);
+
+        // Convert UTF-32 input character to UTF-8 for Cairo rendering.
+        uint32_t utf32[] = {c, 0};
+        char *utf32_c = (char *) utf32;
+        char *out = new char[100];
+        char *out_c = (char *) out;
+        size_t utf32_len = 8;
+        size_t out_len = 100;
+        size_t res = iconv(m_Iconv, &utf32_c, &utf32_len, &out_c, &out_len);
+
+        if(res == ((size_t) -1))
         {
-            if (c >= static_cast<ssize_t>(m_CellWidth)) break;
-            size_t idx = (r+m_Baseline-m_Face->glyph->bitmap_top)*m_CellWidth + (m_Face->glyph->bitmap_left+c);
-            if ((static_cast<int32_t>(idx) < 0) || idx >= m_CellWidth*m_CellHeight)
-                continue;
-            size_t gidx = (r*m_Face->glyph->bitmap.pitch)+c;
-            pGlyph->buffer[idx] = interpolateColour(front, back, m_Face->glyph->bitmap.buffer[gidx]);
-        }
-    }
-
-    pGlyph->pBlitBuffer = g_pFramebuffer->createBuffer(pGlyph->buffer, PedigreeGraphics::Bits32_Rgb, m_CellWidth, m_CellHeight);
-
-    return pGlyph;
-}
-
-Font::Glyph *Font::cacheLookup(uint32_t c, uint32_t f, uint32_t b)
-{
-    if (m_pCache == 0) return 0;
-
-    // Hash key is made up of the foreground, background and lower 16-bits of the character.
-    uint64_t key = (static_cast<uint64_t>(f) << 40ULL) | (static_cast<uint64_t>(b) << 16ULL) | (c & 0xFFFF);
-
-    key %= m_CacheSize;
-
-    // Grab the bucket value.
-    CacheEntry *pBucket = m_pCache[key];
-
-    int i = 0;
-    while (pBucket)
-    {
-        if (pBucket->c == c &&
-            pBucket->f == f &&
-            pBucket->b == b)
-        {
-            return pBucket->value;
+            syslog(LOG_WARNING, "TUI: Font::render couldn't convert input UTF-32 %x", c);
+            delete [] out;
         }
         else
-            pBucket = pBucket->next;
-        i++;
+        {
+            m_ConversionCache[c] = out;
+            return out;
+        }
+    }
+    else
+    {
+        return it->second;
     }
 
     return 0;
-}
-
-void Font::cacheInsert(Glyph *pGlyph, uint32_t c, uint32_t f, uint32_t b)
-{
-    if (m_pCache == 0) return;
-
-    // Hash key is made up of the foreground, background and lower 16-bits of the character.
-    uint64_t key = (static_cast<uint64_t>(f) << 40ULL) | (static_cast<uint64_t>(b) << 16ULL) | (c & 0xFFFF);
-
-    key %= m_CacheSize;
-
-    // Grab the bucket value.
-    CacheEntry *pBucket = m_pCache[key];
-
-    if (!pBucket)
-    {
-        pBucket = new CacheEntry;
-        pBucket->c = c;
-        pBucket->f = f;
-        pBucket->b = b;
-        pBucket->value = pGlyph;
-        pBucket->next = 0;
-
-        m_pCache[key] = pBucket;
-        return;
-    }
-    while (pBucket->next)
-        pBucket = pBucket->next;
-
-    // Last node in chain.
-    pBucket->next = new CacheEntry;
-    pBucket->next->c = c;
-    pBucket->next->f = f;
-    pBucket->next->b = b;
-    pBucket->next->value = pGlyph;
-    pBucket->next->next = 0;
 }

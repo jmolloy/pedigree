@@ -53,7 +53,7 @@ public:
         m_nWidth = w;
     }
 
-    void precacheGlyph(uint32_t c, uint32_t f, uint32_t b);
+    const char *precache(uint32_t c);
 
 private:
 
