@@ -543,7 +543,7 @@ void TextIO::write(const char *s, size_t len)
                             case 35:
                             case 36:
                             case 37:
-                                setColour(&m_Fore, m_Params[i] - 30);
+                                setColour(&m_Fore, m_Params[i] - 30, m_CurrentModes & Bright);
                                 break;
                             case 38:
                                 if(m_Params[i + 1] == 5)
@@ -551,6 +551,9 @@ void TextIO::write(const char *s, size_t len)
                                     setColour(&m_Fore, m_Params[i + 2], m_CurrentModes & Bright);
                                     i += 3;
                                 }
+                                break;
+                            case 39:
+                                setColour(&m_Back, LightGrey, m_CurrentModes & Bright);
                                 break;
 
                             case 40:
@@ -561,7 +564,7 @@ void TextIO::write(const char *s, size_t len)
                             case 45:
                             case 46:
                             case 47:
-                                setColour(&m_Back, m_Params[i] - 40);
+                                setColour(&m_Back, m_Params[i] - 40, m_CurrentModes & Bright);
                                 break;
                             case 48:
                                 if(m_Params[i + 1] == 5)
@@ -569,6 +572,9 @@ void TextIO::write(const char *s, size_t len)
                                     setColour(&m_Back, m_Params[i + 2], m_CurrentModes & Bright);
                                     i += 3;
                                 }
+                                break;
+                            case 49:
+                                setColour(&m_Back, Black, m_CurrentModes & Bright);
                                 break;
 
                             case 90:
@@ -974,6 +980,7 @@ void TextIO::write(const char *s, size_t len)
                         break;
                     case '\n':
                     case 0x0B:
+                    case 0x0C:
                         if(m_CurrentModes & LineFeedNewLine)
                             doCarriageReturn();
                         doLinefeed();
