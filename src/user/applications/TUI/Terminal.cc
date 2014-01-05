@@ -109,6 +109,9 @@ bool Terminal::initialise()
         dup2(slave, 1);
         dup2(slave, 2);
 
+        // We emulate an xterm, so ensure that's set in the environment.
+        setenv("TERM", "xterm", 1);
+
         execl("/applications/login", "/applications/login", 0);
         syslog(LOG_ALERT, "Launching login failed (next line is the error in errno...)");
         syslog(LOG_ALERT, strerror(errno));

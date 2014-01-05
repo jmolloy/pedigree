@@ -145,9 +145,6 @@ int main(int argc, char **argv)
     signal(SIGINT, sigint);
     setsid();
 
-    // Text UI is only vt100-compatible (not an xterm)
-    setenv("TERM", "ansi", 1);
-
     // Get a PTY and the main TTY.
     int tty = open("/dev/textui", O_WRONLY);
     if(tty < 0)
@@ -193,6 +190,9 @@ int main(int argc, char **argv)
         int slave = open(slavename, O_RDWR);
         dup2(slave, 1);
         dup2(slave, 2);
+
+        // Text UI is only vt100-compatible (not an xterm)
+        setenv("TERM", "vt100", 1);
 
         syslog(LOG_INFO, "Starting up 'login' on pty %s", slavename);
         execl("/applications/login", "/applications/login", 0);
