@@ -114,10 +114,19 @@ void TextIO::write(const char *s, size_t len)
         }
         uint16_t blank = ' ' | (attributeByte << 8);
 
+        // NOTICE("Dispatching '" << (*s) << "'");
+
         if(m_bControlSeq && m_bBracket)
         {
             switch(*s)
             {
+                case '"':
+                case '$':
+                case '!':
+                case '>':
+                    // Eat unhandled characters.
+                    break;
+
                 case 0x08:
                     doBackspace();
                     break;
@@ -635,6 +644,15 @@ void TextIO::write(const char *s, size_t len)
                     m_bControlSeq = false;
                     break;
 
+                case 'p':
+                    // Depending on parameters and symbols in the sequence, this
+                    // could be "Set Conformance Level" (DECSCL),
+                    // "Soft Terminal Reset" (DECSTR), etc, etc... so ignore for now.
+                    /// \todo Should we handle this?
+                    WARNING("TextIO: dropping command after seeing 'p' command sequence terminator.");
+                    m_bControlSeq = false;
+                    break;
+
                 case 'q':
                     // Load LEDs
                     /// \todo hook in to Keyboard::setLedState!
@@ -795,8 +813,17 @@ void TextIO::write(const char *s, size_t len)
                     break;
 
                 case 'H':
-                    // Horizontal tabulation set.
-                    m_TabStops[m_CursorX] = '|';
+                    if(m_CurrentModes & AnsiVt52)
+                    {
+                        // Horizontal tabulation set.
+                        m_TabStops[m_CursorX] = '|';
+                    }
+                    else
+                    {
+                        // Cursor to Home
+                        m_CursorX = 0;
+                        m_CursorY = 0;
+                    }
                     m_bControlSeq = false;
                     break;
 
@@ -820,8 +847,8 @@ void TextIO::write(const char *s, size_t len)
 
                 case 'Y':
                     {
-                        uint8_t row = (*(++s)) - 0x1F;
-                        uint8_t col = (*s) - 0x1F;
+                        uint8_t row = (*(++s)) - 0x20;
+                        uint8_t col = (*(++s)) - 0x20;
 
                         /// \todo Sanity check.
                         m_CursorX = col;
