@@ -134,11 +134,6 @@ void Process::kill()
   else
 	NOTICE("Kill: " << m_Id << " (parent: <orphan>)");
 
-  // Redraw on kill.
-  /// \todo Caveat with redirection, maybe? Hmm...
-  if(m_Ctty)
-      m_Ctty->truncate();
-
   // Bye bye process - have we got any zombie children?
   for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
   {
