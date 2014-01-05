@@ -209,15 +209,25 @@ int main(int argc, char **argv)
         fd_set fds;
         FD_ZERO(&fds);
         FD_SET(g_MasterPty, &fds);
+        FD_SET(tty, &fds);
 
         int nReady = select(g_MasterPty + 1, &fds, NULL, NULL, NULL);
         if(nReady > 0)
         {
+            // Handle incoming data from the PTY.
             if(FD_ISSET(g_MasterPty, &fds))
             {
                 size_t len = read(g_MasterPty, buffer, maxBuffSize);
                 buffer[len] = 0;
                 write(tty, buffer, len);
+            }
+
+            // Handle incoming data from the TTY.
+            if(FD_ISSET(tty, &fds))
+            {
+                size_t len = read(tty, buffer, maxBuffSize);
+                buffer[len] = 0;
+                write(g_MasterPty, buffer, len);
             }
         }
     }

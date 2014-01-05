@@ -32,34 +32,6 @@ uint64_t NullFile::write(uint64_t location, uint64_t size, uintptr_t buffer, boo
     return 0;
 }
 
-uint64_t TtyFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
-{
-    return 0;
-}
-
-uint64_t TtyFile::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
-{
-    if(!(size && buffer))
-        return 0;
-
-    m_pTextIO->write(reinterpret_cast<const char *>(buffer), size);
-    return size;
-}
-
-bool TtyFile::initialise()
-{
-    m_pTextIO = new TextIO;
-    if(!m_pTextIO->initialise(false))
-    {
-        WARNING("POSIX: no /dev/tty - TextIO failed to initialise.");
-        delete m_pTextIO;
-        m_pTextIO = 0;
-        return false;
-    }
-
-    return true;
-}
-
 FramebufferFile::FramebufferFile(String str, size_t inode, Filesystem *pParentFS, File *pParentNode) :
     File(str, 0, 0, 0, inode, pParentFS, 0, pParentNode), m_pProvider(0)
 {
@@ -152,11 +124,16 @@ bool DevFs::initialise(Disk *pDisk)
         delete pFb;
 
     // Create /dev/textui for the text-only UI device.
-    TtyFile *pTty = new TtyFile(String("textui"), ++baseInode, this, m_pRoot);
+    TextIO *pTty = new TextIO(String("textui"), ++baseInode, this, m_pRoot);
     if(pTty->initialise())
+    {
         m_pRoot->addEntry(pTty->getName(), pTty);
+    }
     else
+    {
+        WARNING("POSIX: no /dev/tty - TextIO failed to initialise.");
         delete pTty;
+    }
 
     return true;
 }

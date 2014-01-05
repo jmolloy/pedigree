@@ -18,16 +18,20 @@
 #define TEXTIO_H
 
 #include <processor/types.h>
+#include <utilities/RingBuffer.h>
+
+#include <vfs/File.h>
 
 class Vga;
 
 #define MAX_TEXTIO_PARAMS 16
+#define TEXTIO_RINGBUFFER_SIZE 1024
 
 /**
  * Provides exceptionally simple VT100 emulation to the Vga class, if
  * one exists. Note that this is NOT xterm emulation.
  */
-class TextIO
+class TextIO : public File
 {
 private:
     static const int COLOUR_BRIGHT_ADDEND = 8;
@@ -84,9 +88,9 @@ private:
         Bright          = 0x200000,
     };
 
-public:  
-    TextIO();
-    ~TextIO();
+public:
+    TextIO(String str, size_t inode, Filesystem *pParentFS, File *pParent);
+    virtual ~TextIO();
 
     /**
      * Initialise and prepare for rendering.
@@ -102,6 +106,13 @@ public:
      * \param str The string to write.
      */
     void write(const char *s, size_t len);
+
+    /**
+     * VFS File interface.
+     */
+    virtual uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+    virtual uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+    virtual int select(bool bWriting = false, int timeout = 0);
 
 private:
     static const ssize_t BACKBUFFER_COLS_WIDE = 132;
@@ -146,6 +157,12 @@ private:
     Vga *m_pVga;
 
     char m_TabStops[BACKBUFFER_STRIDE];
+
+    /**
+     * Output buffer - data that we as the emulator want to write back to
+     * the application (eg, cursor position reports)
+     */
+    RingBuffer<char> m_OutBuffer;
 };
 
 #endif

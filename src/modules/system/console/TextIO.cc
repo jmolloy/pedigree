@@ -14,19 +14,22 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <machine/TextIO.h>
 #include <machine/Machine.h>
 #include <machine/Vga.h>
 #include <processor/Processor.h>
 #include <Log.h>
 
-TextIO::TextIO() :
+#include "TextIO.h"
+
+TextIO::TextIO(String str, size_t inode, Filesystem *pParentFS, File *pParent) :
+    File(str, 0, 0, 0, inode, pParentFS, 0, pParent),
     m_bInitialised(false), m_bControlSeq(false), m_bBracket(false),
     m_bParenthesis(false), m_bParams(false), m_bQuestionMark(false),
     m_CursorX(0), m_CursorY(0), m_SavedCursorX(0), m_SavedCursorY(0),
     m_ScrollStart(0), m_ScrollEnd(0), m_LeftMargin(0), m_RightMargin(0),
     m_CurrentParam(0), m_Params(), m_Fore(TextIO::LightGrey), m_Back(TextIO::Black),
-    m_pFramebuffer(0), m_pBackbuffer(0), m_pVga(0), m_TabStops()
+    m_pFramebuffer(0), m_pBackbuffer(0), m_pVga(0), m_TabStops(),
+    m_OutBuffer(TEXTIO_RINGBUFFER_SIZE)
 {
     m_pBackbuffer = new uint16_t[BACKBUFFER_STRIDE * BACKBUFFER_ROWS];
 }
@@ -296,6 +299,21 @@ void TextIO::write(const char *s, size_t len)
                         wmemset(&m_pBackbuffer[m_CursorY * BACKBUFFER_STRIDE],
                                 blank,
                                 BACKBUFFER_STRIDE);
+                    }
+                    m_bControlSeq = false;
+                    break;
+
+                case 'c':
+                    if(m_Params[0])
+                    {
+                        ERROR("TextIO: Device Attributes command with non-zero parameter.");
+                    }
+                    else
+                    {
+                        // We mosly support the 'Advanced Video Option'.
+                        // (apart from underline/blink)
+                        const char *attribs = "\e[?1;2c";
+                        m_OutBuffer.write(const_cast<char *>(attribs), strlen(attribs));
                     }
                     m_bControlSeq = false;
                     break;
@@ -580,6 +598,49 @@ void TextIO::write(const char *s, size_t len)
                     m_bControlSeq = false;
                     break;
 
+                case 'n':
+                    switch(m_Params[0])
+                    {
+                        case 5:
+                            {
+                                // Report ready with no malfunctions detected.
+                                const char *status = "\e[0n";
+                                m_OutBuffer.write(const_cast<char *>(status), strlen(status));
+                            }
+                            break;
+                        case 6:
+                            {
+                                // Report cursor position.
+                                // CPR - \e[ Y ; X R
+                                NormalStaticString response("\e[");
+
+                                size_t reportX = m_CursorX + 1;
+                                size_t reportY = m_CursorY + 1;
+
+                                if(m_CurrentModes & Origin)
+                                {
+                                    // Only report relative if the cursor is within the
+                                    // margins and scroll region! Otherwise, absolute.
+                                    if((reportX > m_LeftMargin) && (reportX <= m_RightMargin))
+                                        reportX -= m_LeftMargin;
+                                    if((reportY > m_ScrollStart) && (reportY <= m_ScrollEnd))
+                                        reportY -= m_ScrollStart;
+                                }
+
+                                response.append(reportY);
+                                response.append(";");
+                                response.append(reportX);
+                                response.append("R");
+                                m_OutBuffer.write(const_cast<char *>(static_cast<const char *>(response)), response.length());
+                            }
+                            break;
+                        default:
+                            NOTICE("TextIO: unknown device status request " << Dec << m_Params[0] << Hex << ".");
+                            break;
+                    }
+                    m_bControlSeq = false;
+                    break;
+
                 case 'r':
                     if(m_bParams)
                     {
@@ -627,6 +688,38 @@ void TextIO::write(const char *s, size_t len)
                 case 'u':
                     m_CursorX = m_SavedCursorX;
                     m_CursorY = m_SavedCursorY;
+                    m_bControlSeq = false;
+                    break;
+
+                case 'x':
+                    // Request Terminal Parameters
+                    if(m_Params[0] > 1)
+                    {
+                        ERROR("TextIO: invalid 'sol' parameter for 'Request Terminal Parameters'");
+                    }
+                    else
+                    {
+                        // Send back a parameter report.
+                        // Parameters:
+                        // * Reporting on request
+                        // * No parity
+                        // * 8 bits per character
+                        // * 19200 bits per second xspeed
+                        // * 19200 bits per second rspeed
+                        // * 16x bit rate multiplier
+                        // * No STP option, so no flags
+                        const char *termparms = 0;
+                        if(m_Params[0])
+                            termparms = "\e[3;1;1;120;120;1;0x";
+                        else
+                            termparms = "\e[2;1;1;120;120;1;0x";
+                        m_OutBuffer.write(const_cast<char *>(termparms), strlen(termparms));
+                    }
+                    m_bControlSeq = false;
+                    break;
+
+                case 'y':
+                    // Invoke Confidence Test (no-op)
                     m_bControlSeq = false;
                     break;
 
@@ -802,6 +895,10 @@ void TextIO::write(const char *s, size_t len)
 
     // This write is now complete.
     flip();
+
+    // Wake up anything waiting on output from us if needed.
+    if(m_OutBuffer.dataReady())
+        dataChanged();
 }
 
 void TextIO::setColour(TextIO::VgaColour *which, size_t param, bool bBright)
@@ -976,5 +1073,50 @@ void TextIO::flip()
         memcpy(&m_pFramebuffer[y * m_pVga->getNumCols()],
                 &m_pBackbuffer[y * BACKBUFFER_STRIDE],
                 m_pVga->getNumCols() * sizeof(uint16_t));
+    }
+}
+
+uint64_t TextIO::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+{
+    if(bCanBlock)
+    {
+        if(!m_OutBuffer.waitFor(RingBufferWait::Reading))
+            return 0; // Interrupted.
+    }
+    else if(!m_OutBuffer.dataReady())
+    {
+        return 0;
+    }
+
+    uintptr_t originalBuffer = buffer;
+    while(m_OutBuffer.dataReady() && size)
+    {
+        *reinterpret_cast<char*>(buffer) = m_OutBuffer.read();
+        ++buffer;
+        --size;
+    }
+
+    return buffer - originalBuffer;
+}
+
+uint64_t TextIO::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+{
+    write(reinterpret_cast<const char *>(buffer), size);
+    return size;
+}
+
+int TextIO::select(bool bWriting, int timeout)
+{
+    if(bWriting)
+        return 1;
+
+    if(timeout)
+    {
+        while(!m_OutBuffer.waitFor(RingBufferWait::Reading));
+        return 1;
+    }
+    else
+    {
+        return m_OutBuffer.dataReady();
     }
 }
