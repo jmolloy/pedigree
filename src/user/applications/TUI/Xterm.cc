@@ -191,28 +191,6 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                     m_bIsOsControl = true;
                 break;
 
-            // Framebuffer stuff.
-            case '%':
-            {
-                m_bFbMode = true;
-                uintptr_t fb = reinterpret_cast<uintptr_t>(m_pWindows[0]->m_pFramebuffer);
-                fb += m_pWindows[0]->m_FbWidth*m_pWindows[0]->m_OffsetTop*sizeof(rgb_t);
-                char str[64];
-                sprintf(str, "%dx%d@%lx\n", m_pWindows[0]->m_FbWidth, m_pWindows[0]->m_Height*g_NormalFont->getHeight(), fb);
-                for (int i = 0; str[i] != 0; i++)
-                    m_pT->addToQueue(str[i]);
-                m_bChangingState = false;
-                break;
-            }
-            case 'u':
-            {
-                rect.point (m_Cmd.params[0], m_Cmd.params[1]);
-                rect.point (m_Cmd.params[0]+m_Cmd.params[2], m_Cmd.params[1]+m_Cmd.params[3]);
-                m_bChangingState = false;
-                break;
-            }
-
-
             case '0':
             case '1':
             case '2':
