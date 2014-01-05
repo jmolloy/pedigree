@@ -251,6 +251,9 @@ void progress(const char *text)
         // Destroy the framebuffer now that we're done
         Graphics::destroyFramebuffer(g_pFramebuffer);
         g_pFramebuffer = 0;
+
+        // No longer wanting any progress callback.
+        g_BootProgressUpdate = 0;
     }
 
 #endif
