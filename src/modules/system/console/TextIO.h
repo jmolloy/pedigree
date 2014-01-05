@@ -131,6 +131,9 @@ private:
     void checkScroll();
     void checkWrap();
 
+    void eraseEOS(uint16_t blank);
+    void eraseEOL(uint16_t blank);
+
     /**
      * Present backbuffer to the VGA instance.
      */

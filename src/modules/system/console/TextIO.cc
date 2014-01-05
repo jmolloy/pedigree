@@ -256,10 +256,7 @@ void TextIO::write(const char *s, size_t len)
                 case 'J':
                     if((!m_bParams) || (!m_Params[0]))
                     {
-                        // Erase from current position to end of screen.
-                        wmemset(&m_pBackbuffer[(m_CursorY * BACKBUFFER_STRIDE) + m_CursorX],
-                                blank,
-                                ((BACKBUFFER_ROWS - m_CursorY) * BACKBUFFER_STRIDE) - m_CursorX);
+                        eraseEOS(blank);
                     }
                     else if(m_Params[0] == 1)
                     {
@@ -281,10 +278,7 @@ void TextIO::write(const char *s, size_t len)
                 case 'K':
                     if((!m_bParams) || (!m_Params[0]))
                     {
-                        // Erase to end of line.
-                        wmemset(&m_pBackbuffer[(m_CursorY * BACKBUFFER_STRIDE) + m_CursorX],
-                                blank,
-                                BACKBUFFER_STRIDE - m_CursorX - 1);
+                        eraseEOL(blank);
                     }
                     else if(m_Params[0] == 1)
                     {
@@ -641,6 +635,12 @@ void TextIO::write(const char *s, size_t len)
                     m_bControlSeq = false;
                     break;
 
+                case 'q':
+                    // Load LEDs
+                    /// \todo hook in to Keyboard::setLedState!
+                    m_bControlSeq = false;
+                    break;
+
                 case 'r':
                     if(m_bParams)
                     {
@@ -747,9 +747,37 @@ void TextIO::write(const char *s, size_t len)
                     doBackspace();
                     break;
 
+                case 'A':
+                    if(m_CursorY > m_ScrollStart)
+                        --m_CursorY;
+                    m_bControlSeq = false;
+                    break;
+
+                case 'B':
+                    if(m_CursorY < m_ScrollEnd)
+                        ++m_CursorY;
+                    m_bControlSeq = false;
+                    break;
+
+                case 'C':
+                    ++m_CursorX;
+                    if(m_CursorX >= m_RightMargin)
+                        m_CursorX = m_RightMargin - 1;
+                    m_bControlSeq = false;
+                    break;
+
                 case 'D':
-                    // Index - cursor down one line, scroll if necessary.
-                    doLinefeed();
+                    if(m_CurrentModes & AnsiVt52)
+                    {
+                        // Index - cursor down one line, scroll if necessary.
+                        doLinefeed();
+                    }
+                    else
+                    {
+                        // Cursor Left
+                        if(m_CursorX > m_LeftMargin)
+                            --m_CursorX;
+                    }
                     m_bControlSeq = false;
                     break;
 
@@ -757,6 +785,12 @@ void TextIO::write(const char *s, size_t len)
                     // Next Line - move to start of next line.
                     doCarriageReturn();
                     doLinefeed();
+                    m_bControlSeq = false;
+                    break;
+
+                case 'F':
+                case 'G':
+                    ERROR("TextIO: graphics mode is not implemented.");
                     m_bControlSeq = false;
                     break;
 
@@ -771,6 +805,40 @@ void TextIO::write(const char *s, size_t len)
                     // Reverse Index - cursor up one line, or scroll up if at top.
                     --m_CursorY;
                     checkScroll();
+                    m_bControlSeq = false;
+                    break;
+
+                case 'J':
+                    eraseEOS(blank);
+                    m_bControlSeq = false;
+                    break;
+
+                case 'K':
+                    eraseEOL(blank);
+                    m_bControlSeq = false;
+                    break;
+
+                case 'Y':
+                    {
+                        uint8_t row = (*(++s)) - 0x1F;
+                        uint8_t col = (*s) - 0x1F;
+
+                        /// \todo Sanity check.
+                        m_CursorX = col;
+                        m_CursorY = row;
+                    }
+                    m_bControlSeq = false;
+                    break;
+
+                case 'Z':
+                    {
+                        const char *identifier = 0;
+                        if(m_CurrentModes & AnsiVt52)
+                            identifier = "\e[?1;2c";
+                        else
+                            identifier = "\e/Z";
+                        m_OutBuffer.write(const_cast<char *>(identifier), strlen(identifier));
+                    }
                     m_bControlSeq = false;
                     break;
 
@@ -797,6 +865,23 @@ void TextIO::write(const char *s, size_t len)
                     m_bControlSeq = false;
                     break;
 
+                case '=':
+                    /// \todo implement me!
+                    ERROR("TextIO: alternate keypad mode is not implemented.");
+                    m_bControlSeq = false;
+                    break;
+
+                case '<':
+                    m_CurrentModes = AnsiVt52;
+                    m_bControlSeq = false;
+                    break;
+
+                case '>':
+                    /// \todo implement me!
+                    ERROR("TextIO: alternate keypad mode is not implemented.");
+                    m_bControlSeq = false;
+                    break;
+
                 case '[':
                     m_bBracket = true;
                     break;
@@ -814,6 +899,12 @@ void TextIO::write(const char *s, size_t len)
                 case '8':
                     m_CursorX = m_SavedCursorX;
                     m_CursorY = m_SavedCursorY;
+                    m_bControlSeq = false;
+                    break;
+
+                case 'c':
+                    // Power-up reset!
+                    initialise(true);
                     m_bControlSeq = false;
                     break;
 
@@ -838,6 +929,13 @@ void TextIO::write(const char *s, size_t len)
             {
                 switch(*s)
                 {
+                    case 0x05:
+                        {
+                            // Reply with our answerback.
+                            const char *answerback = "\e[1;2c";
+                            m_OutBuffer.write(const_cast<char *>(answerback), strlen(answerback));
+                        }
+                        break;
                     case 0x08:
                         doBackspace();
                         break;
@@ -1064,6 +1162,22 @@ void TextIO::checkWrap()
             m_CursorX = m_RightMargin - 1;
         }
     }
+}
+
+void TextIO::eraseEOS(uint16_t blank)
+{
+    // Erase from current position to end of screen.
+    wmemset(&m_pBackbuffer[(m_CursorY * BACKBUFFER_STRIDE) + m_CursorX],
+            blank,
+            ((BACKBUFFER_ROWS - m_CursorY) * BACKBUFFER_STRIDE) - m_CursorX);
+}
+
+void TextIO::eraseEOL(uint16_t blank)
+{
+    // Erase to end of line.
+    wmemset(&m_pBackbuffer[(m_CursorY * BACKBUFFER_STRIDE) + m_CursorX],
+            blank,
+            BACKBUFFER_STRIDE - m_CursorX - 1);
 }
 
 void TextIO::flip()
