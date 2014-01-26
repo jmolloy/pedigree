@@ -45,7 +45,7 @@ public:
     void renewBuffer(size_t nWidth, size_t nHeight);
 
     /** Adds a 64-bit keycode from the Keyboard class. */
-    void addToQueue(uint64_t key);
+    void processKey(uint64_t key);
 
     /** Wipes out the queue for this terminal. */
     void clearQueue();

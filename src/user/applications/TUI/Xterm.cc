@@ -90,17 +90,28 @@ static void getXtermColorFromDb(const char *colorName, uint8_t &color)
 
 Xterm::Xterm(PedigreeGraphics::Framebuffer *pFramebuffer, size_t nWidth, size_t nHeight, size_t offsetLeft, size_t offsetTop, Terminal *pT) :
     m_ActiveBuffer(0), m_Cmd(), m_OsCtl(), m_bChangingState(false), m_bContainedBracket(false),
-    m_bContainedParen(false), m_bIsOsControl(false), m_SavedX(0), m_SavedY(0),
-    m_pT(pT), m_bFbMode(false)
+    m_bContainedParen(false), m_bIsOsControl(false), m_Flags(0), m_Modes(0), m_TabStops(0),
+    m_SavedX(0), m_SavedY(0), m_pT(pT), m_bFbMode(false)
 {
     size_t width = nWidth / g_NormalFont->getWidth();
     size_t height = nHeight / g_NormalFont->getHeight();
 
-    m_pWindows[0] = new Window(height, width, pFramebuffer, 1000, offsetLeft, offsetTop, nWidth);
-    m_pWindows[1] = new Window(height, width, pFramebuffer, 1000, offsetLeft, offsetTop, nWidth);
+    m_pWindows[0] = new Window(height, width, pFramebuffer, 1000, offsetLeft, offsetTop, nWidth, this);
+    m_pWindows[1] = new Window(height, width, pFramebuffer, 1000, offsetLeft, offsetTop, nWidth, this);
 
     getXtermColorFromDb("xterm-bg", g_DefaultBg);
     getXtermColorFromDb("xterm-fg", g_DefaultFg);
+
+    // Set default tab stops.
+    m_TabStops = new char[width];
+    memset(m_TabStops, 0, width);
+    for(size_t i = 0; i < width; i += 8)
+    {
+        m_TabStops[i] = '|';
+    }
+
+    // Set default modes.
+    m_Modes |= AnsiVt52;
 }
 
 Xterm::~Xterm()
@@ -109,366 +120,234 @@ Xterm::~Xterm()
     delete m_pWindows[1];
 }
 
+void Xterm::processKey(uint64_t key)
+{
+    if (key & Keyboard::Special)
+    {
+        // Handle specially.
+        uint32_t utf32 = key & ~0UL;
+        char *str = reinterpret_cast<char*> (&utf32);
+        if (!strncmp(str, "left", 4))
+        {
+            m_pT->addToQueue('\e');
+            if((m_Modes & AnsiVt52) == AnsiVt52)
+            {
+                if(m_Modes & CursorKey)
+                    m_pT->addToQueue('O');
+                else
+                    m_pT->addToQueue('[');
+            }
+            m_pT->addToQueue('D');
+        }
+        if (!strncmp(str, "righ", 4))
+        {
+            m_pT->addToQueue('\e');
+            if((m_Modes & AnsiVt52) == AnsiVt52)
+            {
+                if(m_Modes & CursorKey)
+                    m_pT->addToQueue('O');
+                else
+                    m_pT->addToQueue('[');
+            }
+            m_pT->addToQueue('C');
+        }
+        if (!strncmp(str, "up", 2))
+        {
+            m_pT->addToQueue('\e');
+            if((m_Modes & AnsiVt52) == AnsiVt52)
+            {
+                if(m_Modes & CursorKey)
+                    m_pT->addToQueue('O');
+                else
+                    m_pT->addToQueue('[');
+            }
+            m_pT->addToQueue('A');
+        }
+        if (!strncmp(str, "down", 4))
+        {
+            m_pT->addToQueue('\e');
+            if((m_Modes & AnsiVt52) == AnsiVt52)
+            {
+                if(m_Modes & CursorKey)
+                    m_pT->addToQueue('O');
+                else
+                    m_pT->addToQueue('[');
+            }
+            m_pT->addToQueue('B');
+        }
+    }
+    else if (key & Keyboard::Alt)
+    {
+        // Xterm ALT escape = ESC <char>
+        m_pT->addToQueue('\e');
+        m_pT->addToQueue(key & 0x7F);
+    }
+    else if(key == '\n')
+    {
+        m_pT->addToQueue('\r');
+        if(m_Modes & LineFeedNewLine)
+            m_pT->addToQueue('\n');
+    }
+    else
+    {
+        uint32_t utf32 = key&0xFFFFFFFF;
+
+        // Begin Utf-32 -> Utf-8 conversion.
+        char buf[4];
+        size_t nbuf = 0;
+        if (utf32 <= 0x7F)
+        {
+            buf[0] = utf32&0x7F;
+            nbuf = 1;
+        }
+        else if (utf32 <= 0x7FF)
+        {
+            buf[0] = 0xC0 | ((utf32>>6) & 0x1F);
+            buf[1] = 0x80 | (utf32 & 0x3F);
+            nbuf = 2;
+        }
+        else if (utf32 <= 0xFFFF)
+        {
+            buf[0] = 0xE0 | ((utf32>>12) & 0x0F);
+            buf[1] = 0x80 | ((utf32>>6) & 0x3F);
+            buf[2] = 0x80 | (utf32 & 0x3F);
+            nbuf = 3;
+        }
+        else if (utf32 <= 0x10FFFF)
+        {
+            buf[0] = 0xE0 | ((utf32>>18) & 0x07);
+            buf[1] = 0x80 | ((utf32>>12) & 0x3F);
+            buf[2] = 0x80 | ((utf32>>6) & 0x3F);
+            buf[3] = 0x80 | (utf32 & 0x3F);
+            nbuf = 4;
+        }
+
+        // End Utf-32 -> Utf-8 conversion.
+        for (size_t i = 0; i < nbuf; i++)
+            m_pT->addToQueue(buf[i]);
+    }
+}
+
+void Xterm::setFlagsForUtf32(uint32_t utf32)
+{
+    switch(utf32)
+    {
+        case '\e':
+            m_Flags |= Escape;
+            break;
+
+        case '?':
+            m_Flags |= Question;
+            break;
+
+        case ' ':
+            m_Flags |= Space;
+            break;
+
+        case '#':
+            m_Flags |= Hash;
+            break;
+
+        case '%':
+            m_Flags |= Percent;
+            break;
+
+        case '(':
+            m_Flags |= LeftRound;
+            break;
+
+        case ')':
+            m_Flags |= RightRound;
+            break;
+
+        case '[':
+            m_Flags |= LeftSquare;
+            break;
+
+        case ']':
+            m_Flags |= RightSquare;
+            break;
+
+        case '_':
+            m_Flags |= Underscore;
+            break;
+
+        case '/':
+            m_Flags |= Slash;
+            break;
+
+        case '.':
+            m_Flags |= Period;
+            break;
+
+        case '-':
+            m_Flags |= Minus;
+            break;
+
+        case '+':
+            m_Flags |= Plus;
+            break;
+
+        case '*':
+            m_Flags |= Asterisk;
+            break;
+
+        case '\\':
+            m_Flags |= Backslash;
+            break;
+
+        case '!':
+            m_Flags |= Bang;
+            break;
+
+        case '\'':
+            m_Flags |= Apostrophe;
+            break;
+
+        case '"':
+            m_Flags |= Quote;
+            break;
+
+        case '$':
+            m_Flags |= Dollar;
+            break;
+
+        default:
+            break;
+    }
+}
+
 void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 {
 //    char str[64];
 //    sprintf(str, "XTerm: Write: %c/%x", utf32, utf32);
 //    log(str);
 
-    if(m_bChangingState)
+    if(!m_Flags)
     {
-        // syslog(LOG_NOTICE, "XTerm: Command '%c'", utf32);
-
-        if(utf32 == '?') return; // Useless character.
-
-        if (m_bContainedParen)
-        {
-            if (utf32 == '0')
-            {
-                // \e(0 -- enter alternate character mode.
-                m_pWindows[m_ActiveBuffer]->setLineRenderMode(true);
-            }
-            else if (utf32 == 'B')
-            {
-                // \e(B -- exit line drawing mode.
-                m_pWindows[m_ActiveBuffer]->setLineRenderMode(false);
-            }
-            m_bChangingState = false;
-            return;
-        }
-
-        if(m_bIsOsControl)
-        {
-            // Everything changes once we start working with OS controls.
-            if (utf32 == '\007' || utf32 == '\\')
-            {
-                if(m_OsCtl.cur_param == 0)
-                {
-                    syslog(LOG_INFO, "XTERM: not enough parameters for OS control");
-                }
-                else
-                {
-                    if(m_OsCtl.params[0] == "0"  || // Change Icon Name and Window Title
-                        m_OsCtl.params[0] == "1" || // Change Icon Name
-                        m_OsCtl.params[0] == "2") // Change Window Title
-                    {
-                        syslog(LOG_INFO, "XTERM: OS control - set window title, to '%s'", m_OsCtl.params[1].c_str());
-                        g_pEmu->setTitle(m_OsCtl.params[1]);
-                    }
-                    else
-                    {
-                        syslog(LOG_INFO, "XTERM: unhandled OS control '%s'", m_OsCtl.params[0].c_str());
-                    }
-                }
-
-                m_bChangingState = false;
-            }
-            else
-            {
-                if (utf32 == ';' || utf32 == ':')
-                {
-                    m_OsCtl.cur_param++;
-                }
-                else
-                {
-                    m_OsCtl.params[m_OsCtl.cur_param] += static_cast<char>(utf32);
-                }
-            }
-
-            return;
-        }
-
         switch(utf32)
         {
-            case '[':
-                m_bContainedBracket = true;
-                break;
-            case '(':
-                m_bContainedParen = true;
-                break;
-            case ']':
-                if(!(m_bContainedParen || m_bContainedBracket))
-                    m_bIsOsControl = true;
-                break;
-
-            case '0':
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-            case '7':
-            case '8':
-            case '9':
-                m_Cmd.params[m_Cmd.cur_param] = m_Cmd.params[m_Cmd.cur_param] * 10 + (utf32-'0');
-                break;
-            case ';':
-            case ',':
-                m_Cmd.cur_param++;
-                break;
-
-            case 'h':
-                // 1049h is the code to switch to the alternate window.
-                if (m_Cmd.params[0] == 1049)
+            case 0x05:
                 {
-                  m_ActiveBuffer = 1;
-                  m_pWindows[m_ActiveBuffer]->renderAll(rect, m_pWindows[0]);
-                }
-                m_bChangingState = false;
-                break;
-            case 'l':
-                // 1049l is the code to switch back to the main window.
-                if (m_Cmd.params[0] == 1049)
-                {
-                  m_ActiveBuffer = 0;
-                  m_pWindows[m_ActiveBuffer]->renderAll(rect, m_pWindows[1]);
-                }
-                m_bChangingState = false;
-                break;
-
-            case 'H':
-            {
-                size_t x = (m_Cmd.params[1]) ? m_Cmd.params[1]-1 : 0;
-                size_t y = (m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0;
-                m_pWindows[m_ActiveBuffer]->setCursor(x, y, rect);
-                m_bChangingState = false;
-                break;
-            }
-
-            case 'A':
-                m_pWindows[m_ActiveBuffer]->setCursorY(m_pWindows[m_ActiveBuffer]->getCursorY() -
-                                                        ((m_Cmd.params[0]) ? m_Cmd.params[0] : 1), rect);
-                m_bChangingState = false;
-                break;
-            case 'B':
-                m_pWindows[m_ActiveBuffer]->setCursorY(m_pWindows[m_ActiveBuffer]->getCursorY() +
-                                                        ((m_Cmd.params[0]) ? m_Cmd.params[0] : 1), rect);
-                m_bChangingState = false;
-                break;
-            case 'C':
-                m_pWindows[m_ActiveBuffer]->setCursorX(m_pWindows[m_ActiveBuffer]->getCursorX() +
-                                                        ((m_Cmd.params[0]) ? m_Cmd.params[0] : 1), rect);
-                m_bChangingState = false;
-                break;
-
-
-            case 'D':
-                if (m_bContainedBracket)
-                {
-                    // If it contained a bracket, it's a cursor command.
-                    m_pWindows[m_ActiveBuffer]->setCursorX(m_pWindows[m_ActiveBuffer]->getCursorX() -
-                                                          ((m_Cmd.params[0]) ? m_Cmd.params[0] : 1), rect);
-                }
-                else
-                {
-                    // Else, it's a scroll downwards command.
-                    //m_pWindows[m_ActiveBuffer]->scrollDown(1, rect);
-                }
-                m_bChangingState = false;
-                break;
-
-            case 'd':
-                // Absolute row reference. (XTERM)
-                m_pWindows[m_ActiveBuffer]->setCursorY((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0, rect);
-                m_bChangingState = false;
-                break;
-
-            case 'G':
-                // Absolute column reference. (XTERM)
-                m_pWindows[m_ActiveBuffer]->setCursorX((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0, rect);
-                m_bChangingState = false;
-                break;
-
-            case 'M':
-            case 'T':
-            {
-                size_t nScrollLines = (m_Cmd.params[0]) ? m_Cmd.params[0] : 1;
-                m_pWindows[m_ActiveBuffer]->scrollUp(nScrollLines, rect);
-                m_bChangingState = false;
-                break;
-            }
-            case 'S':
-            {
-                size_t nScrollLines = (m_Cmd.params[0]) ? m_Cmd.params[0] : 1;
-                m_pWindows[m_ActiveBuffer]->scrollDown(nScrollLines, rect);
-                m_bChangingState = false;
-                break;
-            }
-
-            case 'P':
-                 m_pWindows[m_ActiveBuffer]->deleteCharacters((m_Cmd.params[0]) ? m_Cmd.params[0] : 1, rect);
-                m_bChangingState = false;
-                break;
-            case 'J':
-                switch (m_Cmd.params[0])
-                {
-                    case 0: // Erase down.
-                         m_pWindows[m_ActiveBuffer]->eraseDown(rect);
-                        break;
-                    case 1: // Erase up.
-                        m_pWindows[m_ActiveBuffer]->eraseUp(rect);
-                        break;
-                    case 2: // Erase entire screen and move to home.
-                        m_pWindows[m_ActiveBuffer]->eraseScreen(rect);
-                        break;
-                }
-                m_bChangingState = false;
-                break;
-            case 'K':
-                switch (m_Cmd.params[0])
-                {
-                    case 0: // Erase end of line.
-                        m_pWindows[m_ActiveBuffer]->eraseEOL(rect);
-                        break;
-                    case 1: // Erase start of line.
-                        m_pWindows[m_ActiveBuffer]->eraseSOL(rect);
-                        break;
-                    case 2: // Erase entire line.
-                        m_pWindows[m_ActiveBuffer]->eraseLine(rect);
-                        break;
-                }
-                m_bChangingState = false;
-                break;
-            case 'X': // Erase characters (XTERM)
-                 m_pWindows[m_ActiveBuffer]->eraseChars((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 1, rect);
-                m_bChangingState = false;
-                break;
-
-            case 'r':
-                m_pWindows[m_ActiveBuffer]->setScrollRegion((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : ~0,
-                                                            (m_Cmd.params[1]) ? m_Cmd.params[1]-1 : ~0);
-                m_bChangingState = false;
-                break;
-
-            case 'm':
-            {
-                // Colours, yay!
-                for (int i = 0; i < m_Cmd.cur_param+1; i++)
-                {
-                    switch (m_Cmd.params[i])
+                    // Reply with answerback.
+                    const char *answerback = "\e[1;2c";
+                    while(*answerback)
                     {
-                        case 0:
-                        {
-                            // Reset all attributes.
-                            syslog(LOG_INFO, "reset all");
-                            m_pWindows[m_ActiveBuffer]->setFlags(0);
-                            m_pWindows[m_ActiveBuffer]->setForeColour(g_DefaultFg);
-                            m_pWindows[m_ActiveBuffer]->setBackColour(g_DefaultBg);
-                            break;
-                        }
-                        case 1:
-                        {
-                            // Bold
-                            uint8_t flags = m_pWindows[m_ActiveBuffer]->getFlags();
-                            if(!(flags & XTERM_BOLD))
-                            {
-                                flags |= XTERM_BOLD;
-                                m_pWindows[m_ActiveBuffer]->setFlags(flags);
-                            }
-                            break;
-                        }
-                        case 7:
-                        {
-                            // Inverse
-                            uint8_t flags = m_pWindows[m_ActiveBuffer]->getFlags();
-                            if(flags & XTERM_INVERSE)
-                                flags &= ~XTERM_INVERSE;
-                            else
-                                flags |= XTERM_INVERSE;
-                            m_pWindows[m_ActiveBuffer]->setFlags(flags);
-                            break;
-                        }
-                        case 30:
-                        case 31:
-                        case 32:
-                        case 33:
-                        case 34:
-                        case 35:
-                        case 36:
-                        case 37:
-                            // Foreground.
-                            m_pWindows[m_ActiveBuffer]->setForeColour(m_Cmd.params[i]-30);
-                            break;
-                        case 38:
-                            // xterm-256 foreground
-                            if(m_Cmd.params[i+1] == 5)
-                            {
-                                m_pWindows[m_ActiveBuffer]->setForeColour(m_Cmd.params[i+2]);
-                                i += 3;
-                            }
-                            break;
-                        case 40:
-                        case 41:
-                        case 42:
-                        case 43:
-                        case 44:
-                        case 45:
-                        case 46:
-                        case 47:
-                            // Background.
-                            m_pWindows[m_ActiveBuffer]->setBackColour(m_Cmd.params[i]-40);
-                            break;
-                        case 48:
-                            // xterm-256 background
-                            if(m_Cmd.params[i+1] == 5)
-                            {
-                                m_pWindows[m_ActiveBuffer]->setBackColour(m_Cmd.params[i+2]);
-                                i += 3;
-                            }
-                            break;
-
-                        default:
-                            // Do nothing.
-                            break;
+                        m_pT->addToQueue(*answerback);
+                        ++answerback;
                     }
                 }
-                m_bChangingState = false;
-                break;
-            }
-            case '\e':
-                // We received another VT100 command while expecting a terminating command - this must mean it's one of \e7 or \e8.
-                switch (m_Cmd.params[0])
-                {
-                    case 7: // Save cursor.
-                        m_SavedX = m_pWindows[m_ActiveBuffer]->getCursorX();
-                        m_SavedY = m_pWindows[m_ActiveBuffer]->getCursorY();
-                        m_Cmd.cur_param = 0; m_Cmd.params[0] = 0;
-                        break;
-                    case 8: // Restore cursor.
-                        m_pWindows[m_ActiveBuffer]->setCursor(m_SavedX, m_SavedY, rect);
-                        m_Cmd.cur_param = 0; m_Cmd.params[0] = 0;
-                        break;
-                };
-                // We're still changing state, so keep m_bChangingState = true.
-                break;
-
-            case '\\':
-            case '\007': // Bell/ST (end)
-                m_bChangingState = false;
-                break;
-
-            default:
-            {
-                syslog(LOG_NOTICE, "XTerm: unhandled escape code: %d/%c", utf32, utf32);
-
-                m_bChangingState = false;
-            }
-            break;
-        };
-    }
-    else
-    {
-//        if (m_bFbMode && utf32 != '\e')
-//            return;
-        switch (utf32)
-        {
-            case '\x08':
-                m_pWindows[m_ActiveBuffer]->cursorLeft(rect);
+            case 0x08:
+                m_pWindows[m_ActiveBuffer]->backspace(rect);
                 break;
 
             case '\n':
-                m_pWindows[m_ActiveBuffer]->cursorDown(1, rect); //AndLeftToMargin(rect);
+            case 0x0B:
+            case 0x0C:
+                if(m_Modes & LineFeedNewLine)
+                    m_pWindows[m_ActiveBuffer]->cursorDownAndLeftToMargin(rect);
+                else
+                    m_pWindows[m_ActiveBuffer]->cursorDown(1, rect);
                 break;
 
             case '\t':
@@ -479,37 +358,29 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 m_pWindows[m_ActiveBuffer]->cursorLeftToMargin(rect);
                 break;
 
-            // VT100 - command start
+            case 0x0E:
+            case 0x0F:
+                // SHIFT-IN, SHIFT-OUT (character sets)
+                break;
+
             case '\e':
-                m_bChangingState = true;
-                m_bContainedBracket = false;
-                m_bContainedParen = false;
-                m_bIsOsControl = false;
+                m_Flags = Escape;
+
                 m_Cmd.cur_param = 0;
-                m_Cmd.params[0] = 0;
-                m_Cmd.params[1] = 0;
-                m_Cmd.params[2] = 0;
-                m_Cmd.params[3] = 0;
+                memset(m_Cmd.params, 0, sizeof(m_Cmd.params[0]) * XTERM_MAX_PARAMS);
+
                 m_OsCtl.cur_param = 0;
-                m_OsCtl.params[0] = "";
-                m_OsCtl.params[1] = "";
-                m_OsCtl.params[2] = "";
-                m_OsCtl.params[3] = "";
+                for(size_t i = 0; i < XTERM_MAX_PARAMS; ++i)
+                {
+                    m_OsCtl.params[i] = "";
+                }
                 break;
 
             default:
-                // Line drawing
-#if USE_FRAMEBUFFER_LINES
+                // Handle line drawing.
                 if(m_pWindows[m_ActiveBuffer]->getLineRenderMode())
                 {
-                    m_pWindows[m_ActiveBuffer]->lineRender(utf32, rect);
-                }
-                else if (utf32 >= 32)
-                    m_pWindows[m_ActiveBuffer]->addChar(utf32, rect);
-#else
-                if(m_pWindows[m_ActiveBuffer]->getLineRenderMode())
-                {
-                    switch (utf32)
+                    switch(utf32)
                     {
                         case 'j': utf32 = 0x2518; break; // Lower right corner
                         case 'k': utf32 = 0x2510; break; // Upper right corner
@@ -526,10 +397,810 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                         ;
                     }
                 }
-                if (utf32 >= 32)
+
+                // Printable character?
+                if(utf32 >= 32)
+                {
                     m_pWindows[m_ActiveBuffer]->addChar(utf32, rect);
-#endif
+                }
         }
+    }
+    else if((m_Flags & (Escape | LeftSquare | RightSquare | Underscore)) == (Escape | LeftSquare))
+    {
+        setFlagsForUtf32(utf32);
+
+        switch(utf32)
+        {
+            case 0x08:
+                // Backspace within control sequence.
+                m_pWindows[m_ActiveBuffer]->backspace(rect);
+                break;
+
+            case '\n':
+            case 0x0B:
+                if(m_Modes & LineFeedNewLine)
+                    m_pWindows[m_ActiveBuffer]->cursorLeftToMargin(rect);
+                m_pWindows[m_ActiveBuffer]->cursorDown(1, rect);
+                break;
+
+            case '\r':
+                m_pWindows[m_ActiveBuffer]->cursorLeftToMargin(rect);
+                break;
+
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                m_Cmd.params[m_Cmd.cur_param] = m_Cmd.params[m_Cmd.cur_param] * 10 + (utf32-'0');
+                break;
+
+            case ';':
+            case ',':
+                m_Cmd.cur_param++;
+                break;
+
+            case '@':
+                m_pWindows[m_ActiveBuffer]->insertCharacters(m_Cmd.params[0] ? m_Cmd.params[0] : 1, rect);
+                m_Flags = 0;
+                break;
+
+            case 'A':
+                m_pWindows[m_ActiveBuffer]->cursorUpWithinMargin(1, rect);
+                m_Flags = 0;
+                break;
+
+            case 'B':
+                m_pWindows[m_ActiveBuffer]->cursorDownWithinMargin(1, rect);
+                m_Flags = 0;
+                break;
+
+            case 'C':
+                m_pWindows[m_ActiveBuffer]->cursorRightWithinMargin(1, rect);
+                m_Flags = 0;
+                break;
+
+            case 'D':
+                m_pWindows[m_ActiveBuffer]->cursorLeftWithinMargin(1, rect);
+                m_Flags = 0;
+                break;
+
+            case 'E':
+                m_pWindows[m_ActiveBuffer]->cursorLeftToMargin(rect);
+                m_pWindows[m_ActiveBuffer]->cursorDown(m_Cmd.params[0] ? m_Cmd.params[0] : 1, rect);
+                m_Flags = 0;
+                break;
+
+            case 'F':
+                m_pWindows[m_ActiveBuffer]->cursorLeftToMargin(rect);
+                m_pWindows[m_ActiveBuffer]->cursorUp(m_Cmd.params[0] ? m_Cmd.params[0] : 1, rect);
+                m_Flags = 0;
+                break;
+
+            case 'G':
+                // Absolute column reference. (XTERM)
+                m_pWindows[m_ActiveBuffer]->setCursorX((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0, rect);
+                m_Flags = 0;
+                break;
+
+            case 'H':
+            case 'f':
+                {
+                    size_t x = (m_Cmd.params[1]) ? m_Cmd.params[1]-1 : 0;
+                    size_t y = (m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0;
+                    m_pWindows[m_ActiveBuffer]->setCursor(x, y, rect);
+                    m_Flags = 0;
+                }
+                break;
+
+            case 'I':
+                if(!m_Cmd.params[0])
+                    ++m_Cmd.params[0];
+
+                for(int n = 0; n < m_Cmd.params[0]; ++n)
+                {
+                    m_pWindows[m_ActiveBuffer]->cursorTab(rect);
+                }
+                m_Flags = 0;
+                break;
+
+            case 'J':
+                switch (m_Cmd.params[0])
+                {
+                    case 0: // Erase down.
+                         m_pWindows[m_ActiveBuffer]->eraseDown(rect);
+                        break;
+                    case 1: // Erase up.
+                        m_pWindows[m_ActiveBuffer]->eraseUp(rect);
+                        break;
+                    case 2: // Erase entire screen and move to home.
+                        m_pWindows[m_ActiveBuffer]->eraseScreen(rect);
+                        break;
+                }
+                m_Flags = 0;
+                break;
+
+            case 'K':
+                switch (m_Cmd.params[0])
+                {
+                    case 0: // Erase end of line.
+                        m_pWindows[m_ActiveBuffer]->eraseEOL(rect);
+                        break;
+                    case 1: // Erase start of line.
+                        m_pWindows[m_ActiveBuffer]->eraseSOL(rect);
+                        break;
+                    case 2: // Erase entire line.
+                        m_pWindows[m_ActiveBuffer]->eraseLine(rect);
+                        break;
+                }
+                m_Flags = 0;
+                break;
+
+            case 'L':
+                m_pWindows[m_ActiveBuffer]->insertLines(m_Cmd.params[0] ? m_Cmd.params[0] : 1, rect);
+                m_Flags = 0;
+                break;
+
+            case 'M':
+                m_pWindows[m_ActiveBuffer]->deleteLines(m_Cmd.params[0] ? m_Cmd.params[0] : 1, rect);
+                m_Flags = 0;
+                break;
+
+            case 'P':
+                m_pWindows[m_ActiveBuffer]->deleteCharacters((m_Cmd.params[0]) ? m_Cmd.params[0] : 1, rect);
+                m_Flags = 0;
+                break;
+
+            case 'S':
+                {
+                    size_t nScrollLines = (m_Cmd.params[0]) ? m_Cmd.params[0] : 1;
+                    m_pWindows[m_ActiveBuffer]->scrollDown(nScrollLines, rect);
+                    m_Flags = 0;
+                }
+                break;
+
+            case 'T':
+                if(m_Flags & RightAngle)
+                {
+                    /// \todo Changes how title modes are set...
+                }
+                else if(m_Cmd.cur_param > 1)
+                {
+                    syslog(LOG_INFO, "XTERM: highlight mouse tracking is not supported.");
+                }
+                else
+                {
+                    size_t nScrollLines = (m_Cmd.params[0]) ? m_Cmd.params[0] : 1;
+                    m_pWindows[m_ActiveBuffer]->scrollUp(nScrollLines, rect);
+                }
+                m_Flags = 0;
+                break;
+
+            case 'X': // Erase characters (XTERM)
+                 m_pWindows[m_ActiveBuffer]->eraseChars((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 1, rect);
+                m_Flags = 0;
+                break;
+
+            case 'Z':
+                if(!m_Cmd.params[0])
+                    ++m_Cmd.params[0];
+
+                for(int n = 0; n < m_Cmd.params[0]; ++n)
+                {
+                    m_pWindows[m_ActiveBuffer]->cursorTabBack(rect);
+                }
+                m_Flags = 0;
+                break;
+
+            case 'c':
+                if(m_Cmd.params[0])
+                {
+                    syslog(LOG_INFO, "XTERM: Device Attributes command with non-zero parameter");
+                }
+                else if(m_Flags & RightAngle)
+                {
+                    // Secondary Device Attributes
+                    const char *attribs = "\e[?85;95;0c";
+                    while(*attribs)
+                    {
+                        m_pT->addToQueue(*attribs);
+                        ++attribs;
+                    }
+                }
+                else
+                {
+                    // Primary Device Attributes
+                    const char *attribs = "\e[?1;2c";
+                    while(*attribs)
+                    {
+                        m_pT->addToQueue(*attribs);
+                        ++attribs;
+                    }
+                }
+                m_Flags = 0;
+                break;
+
+            case 'd':
+                // Absolute row reference. (XTERM)
+                m_pWindows[m_ActiveBuffer]->setCursorY((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0, rect);
+                m_Flags = 0;
+                break;
+
+            case 'e':
+                // Relative row reference. (XTERM)
+                m_pWindows[m_ActiveBuffer]->cursorDown((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 1, rect);
+                m_Flags = 0;
+                break;
+
+            case 'g':
+                if(m_Cmd.params[0] != 3)
+                    m_pWindows[m_ActiveBuffer]->clearTabStop();
+                else
+                    m_pWindows[m_ActiveBuffer]->clearAllTabStops();
+                m_Flags = 0;
+                break;
+
+            case 'h':
+            case 'l':
+                {
+                size_t modesToChange = 0;
+
+                if(m_Flags & Question)
+                {
+                    // DEC private mode set.
+                    for(int i = 0; i <= m_Cmd.cur_param; ++i)
+                    {
+                        switch(m_Cmd.params[i])
+                        {
+                            case 1:
+                                modesToChange |= CursorKey;
+                                break;
+                            case 2:
+                                modesToChange |= AnsiVt52;
+                                break;
+                            case 3:
+                                // DECCOLM is ignored.
+                                break;
+                            case 4:
+                                modesToChange |= Scrolling;
+                                break;
+                            case 5:
+                                if((utf32 == 'h') && ((m_Modes & Screen) == 0))
+                                    modesToChange |= Screen;
+                                else if((utf32 == 'l') && ((m_Modes & Screen) != 0))
+                                    modesToChange |= Screen;
+                                break;
+                            case 6:
+                                modesToChange |= Origin;
+                                break;
+                            case 7:
+                                modesToChange |= AutoWrap;
+                                break;
+                            case 8:
+                                modesToChange |= AutoRepeat;
+                                break;
+                            case 67:
+                                modesToChange |= AppKeypad;
+                                break;
+                            case 69:
+                                modesToChange |= Margin;
+                                break;
+                            case 1048:
+                            case 1049:
+                                if(utf32 == 'h')
+                                {
+                                    m_SavedX = m_pWindows[m_ActiveBuffer]->getCursorX();
+                                    m_SavedY = m_pWindows[m_ActiveBuffer]->getCursorY();
+                                }
+                                else
+                                {
+                                    m_pWindows[m_ActiveBuffer]->setCursor(m_SavedX, m_SavedY, rect);
+                                }
+                            case 47:
+                            case 1047:
+                                // 1048 is only save/restore cursor.
+                                if(m_Cmd.params[i] != 1048)
+                                {
+                                    m_ActiveBuffer = (utf32 == 'h') ? 1 : 0;
+                                    if((utf32 == 'h') && (m_Cmd.params[i] == 1049))
+                                    {
+                                        // Clear new buffer.
+                                        m_pWindows[m_ActiveBuffer]->eraseScreen(rect);
+                                    }
+                                    else
+                                    {
+                                        // Merely switch to the new buffer.
+                                        m_pWindows[m_ActiveBuffer]->renderAll(rect, m_pWindows[0]);
+                                    }
+                                }
+                                break;
+                            default:
+                                syslog(LOG_INFO, "XTERM: unknown DEC Private Mode %d", m_Cmd.params[i]);
+                                break;
+                        }
+                    }
+                }
+                else
+                {
+                    for(int i = 0; i <= m_Cmd.cur_param; ++i)
+                    {
+                        switch(m_Cmd.params[i])
+                        {
+                            case 20:
+                                modesToChange |= LineFeedNewLine;
+                                break;
+                            default:
+                                syslog(LOG_INFO, "XTERM: unknown standard mode %d", m_Cmd.params[i]);
+                                break;
+                        }
+                    }
+                }
+
+                if(utf32 == 'h')
+                {
+                    m_Modes |= modesToChange;
+                }
+                else
+                {
+                    m_Modes &= ~(modesToChange);
+                }
+
+                // Setting some modes causes things to change.
+                if(modesToChange & Origin)
+                {
+                    // Move to top left corner.
+                    m_pWindows[m_ActiveBuffer]->setCursor(0, 0, rect);
+                }
+
+                if(modesToChange & Screen)
+                {
+                    // Invert the entire screen.
+                    m_pWindows[m_ActiveBuffer]->invert(rect);
+                }
+
+                }
+                m_Flags = 0;
+                break;
+
+            case 'm':
+                {
+                    // Character attributes.
+                    for (int i = 0; i < m_Cmd.cur_param+1; i++)
+                    {
+                        switch (m_Cmd.params[i])
+                        {
+                            case 0:
+                            {
+                                // Reset all attributes.
+                                m_pWindows[m_ActiveBuffer]->setFlags(0);
+                                m_pWindows[m_ActiveBuffer]->setForeColour(g_DefaultFg);
+                                m_pWindows[m_ActiveBuffer]->setBackColour(g_DefaultBg);
+                                break;
+                            }
+                            case 1:
+                            {
+                                // Bold
+                                uint8_t flags = m_pWindows[m_ActiveBuffer]->getFlags();
+                                if(!(flags & XTERM_BOLD))
+                                {
+                                    flags |= XTERM_BOLD;
+                                    m_pWindows[m_ActiveBuffer]->setFlags(flags);
+                                }
+                                break;
+                            }
+                            case 7:
+                            {
+                                // Inverse
+                                uint8_t flags = m_pWindows[m_ActiveBuffer]->getFlags();
+                                if(flags & XTERM_INVERSE)
+                                    flags &= ~XTERM_INVERSE;
+                                else
+                                    flags |= XTERM_INVERSE;
+                                m_pWindows[m_ActiveBuffer]->setFlags(flags);
+                                break;
+                            }
+                            case 30:
+                            case 31:
+                            case 32:
+                            case 33:
+                            case 34:
+                            case 35:
+                            case 36:
+                            case 37:
+                                // Foreground.
+                                m_pWindows[m_ActiveBuffer]->setForeColour(m_Cmd.params[i]-30);
+                                break;
+                            case 38:
+                                // xterm-256 foreground
+                                if(m_Cmd.params[i+1] == 5)
+                                {
+                                    m_pWindows[m_ActiveBuffer]->setForeColour(m_Cmd.params[i+2]);
+                                    i += 3;
+                                }
+                                break;
+                            case 39:
+                                m_pWindows[m_ActiveBuffer]->setForeColour(g_DefaultFg);
+                                break;
+                            case 40:
+                            case 41:
+                            case 42:
+                            case 43:
+                            case 44:
+                            case 45:
+                            case 46:
+                            case 47:
+                                // Background.
+                                m_pWindows[m_ActiveBuffer]->setBackColour(m_Cmd.params[i]-40);
+                                break;
+                            case 48:
+                                // xterm-256 background
+                                if(m_Cmd.params[i+1] == 5)
+                                {
+                                    m_pWindows[m_ActiveBuffer]->setBackColour(m_Cmd.params[i+2]);
+                                    i += 3;
+                                }
+                                break;
+                            case 49:
+                                m_pWindows[m_ActiveBuffer]->setForeColour(g_DefaultBg);
+                                break;
+
+                            default:
+                                // Do nothing.
+                                syslog(LOG_INFO, "XTERM: unknown character attribute %d", m_Cmd.params[i]);
+                                break;
+                        }
+                    }
+                    m_Flags = 0;
+                }
+                break;
+
+            case 'n':
+                if((m_Flags & RightAngle) == 0)
+                {
+                    // Device Status Reports
+                    switch(m_Cmd.params[0])
+                    {
+                        case 5:
+                            {
+                                // Ready, no malfunction status.
+                                const char *status = "\e[0n";
+                                while(*status)
+                                {
+                                    m_pT->addToQueue(*status);
+                                    ++status;
+                                }
+                            }
+                            break;
+
+                        case 6:
+                            {
+                                // Report cursor position.
+                                char buf[128];
+                                sprintf(buf, "\e[%d;%dR", m_pWindows[m_ActiveBuffer]->getCursorY() + 1, m_pWindows[m_ActiveBuffer]->getCursorX() + 1);
+                                const char *p = (const char *) buf;
+                                while(*p)
+                                {
+                                    m_pT->addToQueue(*p);
+                                    ++p;
+                                }
+                            }
+                            break;
+
+                        default:
+                            syslog(LOG_INFO, "XTERM: unknown device status request %d", m_Cmd.params[0]);
+                            break;
+                    }
+                }
+                m_Flags = 0;
+                break;
+
+            case 'p':
+                // Could be soft terminal reset, request ANSI mode, set resource level, etc...
+                m_Flags = 0;
+                break;
+
+            case 'q':
+                if(m_Flags & Space)
+                {
+                    // Set cursor style.
+                }
+
+                m_Flags = 0;
+                break;
+
+            case 'r':
+                if((m_Flags & Question) == 0)
+                {
+                    m_pWindows[m_ActiveBuffer]->setScrollRegion((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : ~0,
+                                                                (m_Cmd.params[1]) ? m_Cmd.params[1]-1 : ~0);
+                }
+                m_Flags = 0;
+                break;
+
+            case 's':
+                if(m_Cmd.cur_param == 0)
+                {
+                    if((m_Modes & Margin) == 0)
+                    {
+                        m_SavedX = m_pWindows[m_ActiveBuffer]->getCursorX();
+                        m_SavedY = m_pWindows[m_ActiveBuffer]->getCursorY();
+                    }
+                }
+                else if(m_Modes & Margin)
+                {
+                    // Set left/right margins.
+                    m_pWindows[m_ActiveBuffer]->setMargins((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : ~0,
+                                                           (m_Cmd.params[1]) ? m_Cmd.params[1]-1 : ~0);
+                }
+                m_Flags = 0;
+                break;
+
+            case 'u':
+                if((m_Flags & Space) == 0)
+                {
+                    m_pWindows[m_ActiveBuffer]->setCursor(m_SavedX, m_SavedY, rect);
+                }
+                m_Flags = 0;
+                break;
+
+            case 'x':
+                if((m_Flags & Asterisk) == 0)
+                {
+                    if(m_Cmd.params[0] <= 1)
+                    {
+                        const char *termparams = 0;
+                        if(m_Cmd.params[0] == 0)
+                            termparams = "\e[3;1;1;120;120;1;0x";
+                        else
+                            termparams = "\e[2;1;1;120;120;1;0x";
+
+                        while(*termparams)
+                        {
+                            m_pT->addToQueue(*termparams);
+                            ++termparams;
+                        }
+                    }
+                }
+                m_Flags = 0;
+                break;
+
+            default:
+                break;
+        }
+    }
+    else if((m_Flags & (Escape | LeftSquare | RightSquare | Underscore)) == Escape)
+    {
+        setFlagsForUtf32(utf32);
+
+        switch(utf32)
+        {
+            case 0x08:
+                // Backspace within escape sequence.
+                m_pWindows[m_ActiveBuffer]->backspace(rect);
+                break;
+
+            case '0':
+                if(m_Flags & LeftRound) // \e(0
+                {
+                    // Set DEC Special Character and Line Drawing Set
+                    m_pWindows[m_ActiveBuffer]->setLineRenderMode(true);
+                }
+                m_Flags = 0;
+                break;
+
+            case '7':
+                m_SavedX = m_pWindows[m_ActiveBuffer]->getCursorX();
+                m_SavedY = m_pWindows[m_ActiveBuffer]->getCursorY();
+                m_Flags = 0;
+                break;
+
+            case '8':
+                if(m_Flags & Hash)
+                {
+                    // DEC Screen Alignment Test (fill screen with 'E')
+                    // ...
+                }
+                else
+                {
+                    m_pWindows[m_ActiveBuffer]->setCursor(m_SavedX, m_SavedY, rect);
+                }
+                m_Flags = 0;
+                break;
+
+            case '<':
+                m_Modes |= AnsiVt52;
+                m_Flags = 0;
+                break;
+
+            case '>':
+                /// \todo Alternate keypad mode
+                m_Flags = 0;
+                break;
+
+            case 'A':
+                m_pWindows[m_ActiveBuffer]->cursorUpWithinMargin(1, rect);
+                m_Flags = 0;
+                break;
+
+            case 'B':
+                if(m_Flags & LeftRound) // \e(B
+                {
+                    // Set USASCII character set.
+                    m_pWindows[m_ActiveBuffer]->setLineRenderMode(false);
+                }
+                else
+                {
+                    m_pWindows[m_ActiveBuffer]->cursorDownWithinMargin(1, rect);
+                }
+                m_Flags = 0;
+                break;
+
+            case 'C':
+                m_pWindows[m_ActiveBuffer]->cursorRightWithinMargin(1, rect);
+                m_Flags = 0;
+                break;
+
+            case 'D':
+                if(m_Modes & AnsiVt52)
+                {
+                    m_pWindows[m_ActiveBuffer]->cursorDown(1, rect);
+                }
+                else
+                {
+                    m_pWindows[m_ActiveBuffer]->cursorLeftWithinMargin(1, rect);
+                }
+                m_Flags = 0;
+                break;
+
+            case 'E':
+                m_pWindows[m_ActiveBuffer]->cursorDownAndLeftToMargin(rect);
+                m_Flags = 0;
+                break;
+
+            case 'F':
+                /// \note We don't handle "\e F" (7-bit controls)
+                // \eF is enabled by the hpLowerleftBugCompat resource
+
+                /// \todo In VT52 mode, we need to go into VT52 graphics mode...
+                m_Flags = 0;
+                break;
+
+            case 'G':
+                /// \todo In VT52 mode, exit VT52 graphics mode...
+                m_Flags = 0;
+                break;
+
+            case 'H':
+                if(m_Modes & AnsiVt52)
+                {
+                    // Set tab stop.
+                    m_TabStops[m_pWindows[m_ActiveBuffer]->getCursorX()] = '|';
+                }
+                else
+                {
+                    // Cursor to home.
+                    m_pWindows[m_ActiveBuffer]->setCursor(0, 0, rect);
+                }
+                m_Flags = 0;
+                break;
+
+            case 'I':
+                if(!(m_Modes & AnsiVt52))
+                {
+                    // Reverse line feed.
+                    m_pWindows[m_ActiveBuffer]->cursorUp(1, rect);
+                }
+                m_Flags = 0;
+                break;
+
+            case 'J':
+                if(!(m_Modes & AnsiVt52))
+                {
+                    m_pWindows[m_ActiveBuffer]->eraseDown(rect);
+                }
+                m_Flags = 0;
+                break;
+
+            case 'K':
+                if(!(m_Modes & AnsiVt52))
+                {
+                    m_pWindows[m_ActiveBuffer]->eraseEOL(rect);
+                }
+                m_Flags = 0;
+                break;
+
+            case 'M':
+                if((m_Modes & AnsiVt52) && !(m_Flags & Space))
+                {
+                    // Reverse Index.
+                    m_pWindows[m_ActiveBuffer]->cursorUp(1, rect);
+                }
+                m_Flags = 0;
+                break;
+
+            case 'N':
+            case 'O':
+                // Single shift select for G2/3 character sets.
+                m_Flags = 0;
+                break;
+
+            case 'Y':
+                if(!(m_Modes & AnsiVt52))
+                {
+                    // Set cursor position.
+                    /// \todo Do this, somehow. Need readahead or something.
+                }
+                m_Flags = 0;
+                break;
+
+            case 'Z':
+                // Terminal identification.
+                {
+                    const char *answerback = 0;
+                    if(m_Modes & AnsiVt52)
+                        answerback = "\e[1;2c";
+                    else
+                        answerback = "\e/Z";
+
+                    while(*answerback)
+                    {
+                        m_pT->addToQueue(*answerback);
+                        ++answerback;
+                    }
+                }
+                m_Flags = 0;
+                break;
+        }
+    }
+    else if((m_Flags & (Escape | LeftSquare | RightSquare | Underscore)) == (Escape | RightSquare))
+    {
+        switch(utf32)
+        {
+            case '\007':
+            case 0x9C:
+                if(!m_OsCtl.cur_param)
+                {
+                    syslog(LOG_INFO, "XTERM: not enough parameters for OS control");
+                }
+                else
+                {
+                    if(m_OsCtl.params[0] == "0" ||
+                        m_OsCtl.params[0] == "1" ||
+                        m_OsCtl.params[0] == "2")
+                    {
+                        g_pEmu->setTitle(m_OsCtl.params[1]);
+                    }
+                    else
+                    {
+                        syslog(LOG_INFO, "XTERM: unhandled OS control '%s'", m_OsCtl.params[0].c_str());
+                    }
+                }
+                m_Flags = 0;
+                break;
+
+            case ';':
+            case ':':
+                m_OsCtl.cur_param++;
+                break;
+
+            default:
+                if(utf32 >= ' ')
+                {
+                    m_OsCtl.params[m_OsCtl.cur_param] += static_cast<char>(utf32);
+                }
+                break;
+        }
+    }
+    else if((m_Flags & (Escape | LeftSquare | RightSquare | Underscore)) == (Escape | Underscore))
+    {
+        // No application program commands in xterm.
+        if(utf32 == 0x9C)
+            m_Flags = 0;
     }
 }
 
@@ -538,9 +1209,9 @@ void Xterm::renderAll(DirtyRectangle &rect)
     m_pWindows[m_ActiveBuffer]->renderAll(rect, 0);
 }
 
-Xterm::Window::Window(size_t nRows, size_t nCols, PedigreeGraphics::Framebuffer *pFb, size_t nMaxScrollback, size_t offsetLeft, size_t offsetTop, size_t fbWidth) :
+Xterm::Window::Window(size_t nRows, size_t nCols, PedigreeGraphics::Framebuffer *pFb, size_t nMaxScrollback, size_t offsetLeft, size_t offsetTop, size_t fbWidth, Xterm *parent) :
     m_pBuffer(0), m_BufferLength(nRows*nCols), m_pFramebuffer(pFb), m_FbWidth(fbWidth), m_Width(nCols), m_Height(nRows), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop), m_nMaxScrollback(nMaxScrollback), m_CursorX(0), m_CursorY(0), m_ScrollStart(0), m_ScrollEnd(nRows-1),
-    m_pInsert(0), m_pView(0), m_Fg(g_DefaultFg), m_Bg(g_DefaultBg), m_Flags(0), m_bCursorFilled(true), m_bLineRender(false)
+    m_pInsert(0), m_pView(0), m_Fg(g_DefaultFg), m_Bg(g_DefaultBg), m_Flags(0), m_bCursorFilled(true), m_bLineRender(false), m_pParentXterm(parent)
 {
     // Using malloc() instead of new[] so we can use realloc()
     m_pBuffer = reinterpret_cast<TermChar*>(malloc(m_Width*m_Height*sizeof(TermChar)));
@@ -572,6 +1243,9 @@ Xterm::Window::Window(size_t nRows, size_t nCols, PedigreeGraphics::Framebuffer 
     }
 
     m_pInsert = m_pView = m_pBuffer;
+
+    m_LeftMargin = 0;
+    m_RightMargin = m_Width;
 }
 
 Xterm::Window::~Window()
@@ -650,6 +1324,20 @@ void Xterm::Window::resize(size_t nWidth, size_t nHeight, bool bActive)
         m_CursorX = 0;
     if (m_CursorY >= m_Height)
         m_CursorY = 0;
+
+    if(m_RightMargin > cols)
+        m_RightMargin = cols;
+    if(m_LeftMargin > cols)
+        m_LeftMargin = cols;
+
+    // Set default tab stops.
+    delete [] m_pParentXterm->m_TabStops;
+    m_pParentXterm->m_TabStops = new char[cols];
+    memset(m_pParentXterm->m_TabStops, 0, cols);
+    for(size_t i = 0; i < cols; i += 8)
+    {
+        m_pParentXterm->m_TabStops[i] = '|';
+    }
 }
 
 void Xterm::Window::setScrollRegion(int start, int end)
@@ -740,6 +1428,78 @@ void Xterm::Window::cursorDown(size_t n, DirtyRectangle &rect)
     }
 }
 
+void Xterm::Window::cursorUp(size_t n, DirtyRectangle &rect)
+{
+    size_t amount = 0;
+    if (n > m_CursorY)
+    {
+        amount = n - m_CursorY;
+        m_CursorY = 0;
+    }
+    else
+        m_CursorY -= n;
+
+    if (amount)
+    {
+        if (m_ScrollStart == 0 && m_ScrollEnd == m_Height-1)
+        {
+            scrollRegionDown(amount, rect);
+        }
+        else
+        {
+            scrollRegionDown(amount, rect);
+        }
+    }
+}
+
+void Xterm::Window::cursorUpWithinMargin(size_t n, DirtyRectangle &rect)
+{
+    if (n > m_CursorY)
+        n = m_CursorY;
+
+    m_CursorY -= n;
+
+    if (m_CursorY < m_ScrollStart)
+        m_CursorY = m_ScrollStart;
+}
+
+void Xterm::Window::cursorLeftWithinMargin(size_t n, DirtyRectangle &)
+{
+    if (n > m_CursorX)
+        n = m_CursorX;
+
+    m_CursorX -= n;
+
+    if (m_CursorX < m_LeftMargin)
+        m_CursorX = m_LeftMargin;
+}
+
+void Xterm::Window::cursorRightWithinMargin(size_t n, DirtyRectangle &)
+{
+    m_CursorX += n;
+
+    if (m_CursorX >= m_RightMargin)
+        m_CursorY = m_RightMargin - 1;
+}
+
+void Xterm::Window::cursorDownWithinMargin(size_t n, DirtyRectangle &)
+{
+    m_CursorY += n;
+
+    if (m_CursorY > m_ScrollEnd)
+        m_CursorY = m_ScrollEnd;
+}
+
+
+void Xterm::Window::backspace(DirtyRectangle &rect)
+{
+    if(m_CursorX == m_RightMargin)
+        --m_CursorX;
+
+    if(m_CursorX > m_LeftMargin)
+        --m_CursorX;
+}
+
 void Xterm::Window::render(DirtyRectangle &rect, size_t flags, size_t x, size_t y)
 {
     if (x == ~0UL) x = m_CursorX;
@@ -762,7 +1522,7 @@ void Xterm::Window::render(DirtyRectangle &rect, size_t flags, size_t x, size_t 
         fg = g_BrightColours[c.fore];
     uint32_t bg = g_Colours[c.back];
     if (flags & XTERM_BRIGHTBG)
-        bg = g_BrightColours[c.fore];
+        bg = g_BrightColours[c.back];
 
     if (flags & XTERM_INVERSE)
     {
@@ -1096,17 +1856,54 @@ void Xterm::Window::cursorLeftNum(size_t n, DirtyRectangle &rect)
 void Xterm::Window::cursorDownAndLeftToMargin(DirtyRectangle &rect)
 {
     cursorDown(1, rect);
-    m_CursorX = 0;
+    m_CursorX = m_LeftMargin;
 }
 
 void Xterm::Window::cursorLeftToMargin(DirtyRectangle &rect)
 {
-    m_CursorX = 0;
+    m_CursorX = m_LeftMargin;
 }
 
 void Xterm::Window::cursorTab(DirtyRectangle &rect)
 {
-    m_CursorX = (m_CursorX + 8) & ~7;
+    bool tabStopFound = false;
+    for(size_t x = (m_CursorX + 1); x < m_RightMargin; ++x)
+    {
+        if(m_pParentXterm->m_TabStops[x] != 0)
+        {
+            m_CursorX = x;
+            tabStopFound = true;
+            break;
+        }
+    }
+
+    if(!tabStopFound)
+    {
+        m_CursorX = m_RightMargin - 1;
+    }
+    else if(m_CursorX >= m_RightMargin)
+        m_CursorX = m_RightMargin - 1;
+}
+
+void Xterm::Window::cursorTabBack(DirtyRectangle &rect)
+{
+    bool tabStopFound = false;
+    for(ssize_t x = (m_CursorX - 1); x >= 0; --x)
+    {
+        if(m_pParentXterm->m_TabStops[x] != 0)
+        {
+            m_CursorX = x;
+            tabStopFound = true;
+            break;
+        }
+    }
+
+    if(!tabStopFound)
+    {
+        m_CursorX = m_LeftMargin;
+    }
+    else if(m_CursorX < m_LeftMargin)
+        m_CursorX = m_LeftMargin;
 }
 
 void Xterm::Window::addChar(uint32_t utf32, DirtyRectangle &rect)
@@ -1407,6 +2204,113 @@ void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
     }
 }
 
+void Xterm::Window::insertCharacters(size_t n, DirtyRectangle &rect)
+{
+    // Start of the insertion region
+    size_t insertStart = m_CursorX;
+
+    // End of the insertion region
+    size_t insertEnd = insertStart + n;
+
+    // Number of characters to shift.
+    size_t numChars = m_Width - insertEnd;
+
+    // Shift characters.
+    memmove(&m_pBuffer[(m_CursorY * m_Width) + insertEnd], &m_pBuffer[(m_CursorY * m_Width) + insertStart], numChars);
+
+    // Now that the characters have been shifted, clear the space inside the region we inserted
+    size_t left = insertStart * g_NormalFont->getWidth();
+    size_t top = m_CursorY * g_NormalFont->getHeight();
+
+    cairo_save(g_Cairo);
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+
+    cairo_set_source_rgba(
+            g_Cairo,
+            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            0.8);
+
+    cairo_rectangle(g_Cairo, left, top, n * g_NormalFont->getWidth(), g_NormalFont->getHeight());
+    cairo_fill(g_Cairo);
+
+    cairo_restore(g_Cairo);
+
+    // Update the inserted section
+    size_t row = m_CursorY, col = 0;
+    for(col = insertStart; col < insertEnd; col++)
+    {
+        setChar(' ', col, row);
+    }
+
+    // Update the moved section
+    for(col = insertStart; col < m_Width; col++)
+    {
+        render(rect, 0, col, row);
+    }
+}
+
+void Xterm::Window::insertLines(size_t n, DirtyRectangle &rect)
+{
+    // If we'll go past the end of the screen in doing this, we can just erase.
+    if((m_CursorY + 1 + n) >= m_ScrollEnd)
+    {
+        ++m_CursorY;
+        eraseDown(rect);
+        --m_CursorY;
+    }
+    else
+    {
+        // Otherwise, we need to scroll and then do an erase.
+        size_t oldStart = m_ScrollStart;
+        m_ScrollStart = m_CursorY + 1;
+
+        scrollRegionDown(n, rect);
+
+        size_t savedY = m_CursorY;
+        for(size_t newY = savedY + 1; newY < (savedY + 1 + n); ++newY)
+        {
+            m_CursorY = newY;
+            eraseLine(rect);
+        }
+        m_CursorY = savedY;
+
+        m_ScrollStart = oldStart;
+    }
+}
+
+void Xterm::Window::deleteLines(size_t n, DirtyRectangle &rect)
+{
+    /// \todo I have no idea if this will actually work.
+
+    // If we'll go past the end of the screen in doing this, we can just erase.
+    if((m_CursorY + 1 + n) >= m_ScrollEnd)
+    {
+        ++m_CursorY;
+        eraseDown(rect);
+        --m_CursorY;
+    }
+    else
+    {
+        // Otherwise, we need to scroll and then do an erase.
+        size_t oldStart = m_ScrollStart;
+        m_ScrollStart = m_CursorY + 1;
+
+        scrollScreenUp(n, rect);
+
+        size_t savedY = m_CursorY;
+        for(size_t newY = savedY + n + 1; newY < (savedY + 1 + n); ++newY)
+        {
+            m_CursorY = newY;
+            eraseLine(rect);
+        }
+        m_CursorY = savedY;
+
+        m_ScrollStart = oldStart;
+    }
+}
+
 void Xterm::Window::lineRender(uint32_t utf32, DirtyRectangle &rect)
 {
     syslog(LOG_NOTICE, "line render: %c", utf32);
@@ -1641,3 +2545,39 @@ void Xterm::Window::lineRender(uint32_t utf32, DirtyRectangle &rect)
     cairo_restore(g_Cairo);
 }
 
+void Xterm::Window::invert(DirtyRectangle &rect)
+{
+    // Invert the entire screen, if using default colours.
+    TermChar *pNew = m_pView;
+    for (size_t y = 0; y < m_Height; y++)
+    {
+        for (size_t x = 0; x < m_Width; x++)
+        {
+            TermChar *pChar = &m_pView[(y * m_Width) + x];
+            if((pChar->fore == g_DefaultFg) && (pChar->back == g_DefaultBg))
+            {
+                uint8_t fore = pChar->fore;
+                pChar->fore = pChar->back;
+                pChar->back = fore;
+            }
+        }
+    }
+
+    // Redraw.
+    renderAll(rect, this);
+}
+
+void Xterm::Window::setTabStop()
+{
+    m_pParentXterm->m_TabStops[m_CursorX] = '|';
+}
+
+void Xterm::Window::clearTabStop()
+{
+    m_pParentXterm->m_TabStops[m_CursorX] = 0;
+}
+
+void Xterm::Window::clearAllTabStops()
+{
+    memset(m_pParentXterm->m_TabStops, 0, m_Width);
+}

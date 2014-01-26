@@ -229,15 +229,13 @@ void key_input_handler(uint64_t c)
 
     Terminal *pT = g_pCurrentTerm->term;
 
-    if (c == '\n') c = '\r';
-
     // CTRL + key -> unprintable characters
     if ((c & Keyboard::Ctrl) && !(c & Keyboard::Special))
     {
         c &= 0x1F;
     }
 
-    pT->addToQueue(c);
+    pT->processKey(c);
 }
 
 /**

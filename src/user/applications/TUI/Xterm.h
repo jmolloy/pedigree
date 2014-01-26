@@ -29,6 +29,8 @@
 #define XTERM_BRIGHTBG  0x10
 #define XTERM_BORDER    0x20
 
+#define XTERM_MAX_PARAMS        16
+
 class Xterm
 {
 public:
@@ -70,6 +72,9 @@ public:
         m_pWindows[m_ActiveBuffer]->setCursorStyle(bFilled);
     }
 
+    /** Processes the given key and injects to the terminal, based on xterm modes. */
+    void processKey(uint64_t key);
+
 private:
     class Window
     {
@@ -98,7 +103,7 @@ private:
             };
 
         public:
-            Window(size_t nRows, size_t nCols, PedigreeGraphics::Framebuffer *pFb, size_t nMaxScrollback, size_t offsetLeft, size_t offsetTop, size_t fbWidth);
+            Window(size_t nRows, size_t nCols, PedigreeGraphics::Framebuffer *pFb, size_t nMaxScrollback, size_t offsetLeft, size_t offsetTop, size_t fbWidth, Xterm *parent);
             ~Window();
 
             void showCursor(DirtyRectangle &rect);
@@ -111,6 +116,17 @@ private:
             void setBackColour(uint8_t bgColour);
             void setFlags(uint8_t flags);
             uint8_t getFlags();
+
+            void setMargins(size_t left, size_t right)
+            {
+                if(left > m_Width)
+                    left = m_Width;
+                if(right > m_Width)
+                    right = m_Width;
+
+                m_LeftMargin = left;
+                m_RightMargin = right;
+            }
 
             void renderAll(DirtyRectangle &rect, Window *pPrevious);
             void setChar(uint32_t utf32, size_t x, size_t y);
@@ -132,10 +148,19 @@ private:
             void cursorLeftNum(size_t n, DirtyRectangle &rect);
             void cursorLeftToMargin(DirtyRectangle &rect);
             void cursorDown(size_t n, DirtyRectangle &);
+            void cursorUp(size_t n, DirtyRectangle &);
+
+            void backspace(DirtyRectangle &rect);
+
+            void cursorUpWithinMargin(size_t n, DirtyRectangle &);
+            void cursorLeftWithinMargin(size_t n, DirtyRectangle &);
+            void cursorRightWithinMargin(size_t n, DirtyRectangle &);
+            void cursorDownWithinMargin(size_t n, DirtyRectangle &);
 
             void cursorDownAndLeftToMargin(DirtyRectangle &rect);
             void cursorDownAndLeft(DirtyRectangle &rect);
             void cursorTab(DirtyRectangle &rect);
+            void cursorTabBack(DirtyRectangle &rect);
 
             void render(DirtyRectangle &rect, size_t flags=0, size_t x=~0UL, size_t y=~0UL);
 
@@ -164,6 +189,23 @@ private:
 
             /** Deletes n characters */
             void deleteCharacters(size_t n, DirtyRectangle &rect);
+            /** Inserts n blank characters */
+            void insertCharacters(size_t n, DirtyRectangle &rect);
+
+            /** Inserts n blank lines */
+            void insertLines(size_t n, DirtyRectangle &rect);
+            /** Deletes n lines */
+            void deleteLines(size_t n, DirtyRectangle &rect);
+
+            /** Sets a tab stop at the current X position */
+            void setTabStop();
+            /** Clears a tab stop at the current X position */
+            void clearTabStop();
+            /** Clears all tab stops */
+            void clearAllTabStops();
+
+            /* Inverts the display, if the character has the default colours. */
+            void invert(DirtyRectangle &rect);
 
             void setLineRenderMode(bool b)
             {
@@ -195,6 +237,7 @@ private:
             size_t m_CursorX, m_CursorY;
 
             size_t m_ScrollStart, m_ScrollEnd;
+            size_t m_LeftMargin, m_RightMargin;
 
             TermChar *m_pInsert;
             TermChar *m_pView;
@@ -205,6 +248,8 @@ private:
             bool m_bCursorFilled;
 
             bool m_bLineRender;
+
+            Xterm *m_pParentXterm;
     };
 
     Xterm(const Xterm &);
@@ -218,14 +263,14 @@ private:
     /// Set of parameters for the XTerm commands
     typedef struct
     {
-        int params[4];
+        int params[XTERM_MAX_PARAMS];
         int cur_param;
     } XtermCmd;
     XtermCmd m_Cmd;
 
     typedef struct
     {
-        std::string params[4];
+        std::string params[XTERM_MAX_PARAMS];
         int cur_param;
     } XtermOsControl;
     XtermOsControl m_OsCtl;
@@ -237,6 +282,102 @@ private:
     bool m_bContainedBracket;
     bool m_bContainedParen;
     bool m_bIsOsControl;
+
+    enum TerminalModes
+    {
+        LineFeedNewLine = 0x1,
+        CursorKey       = 0x2,
+        AnsiVt52        = 0x4,
+        Column          = 0x8,
+        Scrolling       = 0x10,
+        Screen          = 0x20,
+        Origin          = 0x40,
+        AutoWrap        = 0x80,
+        AutoRepeat      = 0x100,
+        Interlace       = 0x200,
+        AppKeypad       = 0x400,
+        Margin          = 0x800,
+    };
+
+    enum TerminalFlags
+    {
+        /// Seen a '?' character.
+        Question        = 0x1,
+
+        /// Seen a '<' character.
+        LeftAngle       = 0x2,
+
+        /// Seen a '>' character.
+        RightAngle      = 0x4,
+
+        /// Seen a '[' character.
+        LeftSquare      = 0x8,
+
+        /// Seen a ']' character.
+        RightSquare     = 0x10,
+
+        /// Seen a '(' character.
+        LeftRound       = 0x20,
+
+        /// Seen a ')' character.
+        RightRound      = 0x40,
+
+        /// Seen a '$' character.
+        Dollar          = 0x80,
+
+        /// Seen a '\'' character.
+        Apostrophe      = 0x100,
+
+        /// Seen a '"' character.
+        Quote           = 0x200,
+
+        /// Seen a ' ' character.
+        Space           = 0x400,
+
+        /// Seen a '!' character.
+        Bang            = 0x800,
+
+        /// Seen a '\e' (ESC) character.
+        Escape          = 0x1000,
+
+        /// Seen a '%' character.
+        Percent         = 0x2000,
+
+        /// Seen a '*' character.
+        Asterisk        = 0x4000,
+
+        /// Seen a '+' character.
+        Plus            = 0x8000,
+
+        /// Seen a '-' character.
+        Minus           = 0x10000,
+
+        /// Seen a '.' character.
+        Period          = 0x20000,
+
+        /// Seen a '/' character.
+        Slash           = 0x40000,
+
+        /// Seen a '#' character.
+        Hash            = 0x80000,
+
+        /// Seen a '\' character.
+        Backslash       = 0x100000,
+
+        /// Seen a '_' character.
+        Underscore      = 0x200000,
+    };
+
+    void setFlagsForUtf32(uint32_t utf32);
+
+    /// Flags for this particular sequence.
+    size_t m_Flags;
+
+    /// Currently active modes.
+    size_t m_Modes;
+
+    /// Tab stops.
+    char *m_TabStops;
 
     /// Saved cursor position.
     uint32_t m_SavedX, m_SavedY;

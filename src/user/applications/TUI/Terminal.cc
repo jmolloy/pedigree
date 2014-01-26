@@ -152,82 +152,9 @@ void Terminal::renewBuffer(size_t nWidth, size_t nHeight)
     ioctl(m_MasterPty, TIOCSWINSZ, &ptySize);
 }
 
-void Terminal::addToQueue(uint64_t key)
+void Terminal::processKey(uint64_t key)
 {
-    if (key & Keyboard::Special)
-    {
-        // Handle specially.
-        uint32_t utf32 = key & ~0UL;
-        char *str = reinterpret_cast<char*> (&utf32);
-        if (!strncmp(str, "left", 4))
-        {
-            addToQueue('\e');
-            addToQueue('[');
-            addToQueue('D');
-        }
-        if (!strncmp(str, "righ", 4))
-        {
-            addToQueue('\e');
-            addToQueue('[');
-            addToQueue('C');
-        }
-        if (!strncmp(str, "up", 2))
-        {
-            addToQueue('\e');
-            addToQueue('[');
-            addToQueue('A');
-        }
-        if (!strncmp(str, "down", 4))
-        {
-            addToQueue('\e');
-            addToQueue('[');
-            addToQueue('B');
-        }
-
-    }
-    else if (key & Keyboard::Alt)
-    {
-        // Xterm ALT escape = ESC <char>
-        addToQueue('\e');
-        addToQueue(key&0x7F);
-    }
-    else
-    {
-        uint32_t utf32 = key&0xFFFFFFFF;
-
-        // Begin Utf-32 -> Utf-8 conversion.
-        char buf[4];
-        size_t nbuf = 0;
-        if (utf32 <= 0x7F)
-        {
-            buf[0] = utf32&0x7F;
-            nbuf = 1;
-        }
-        else if (utf32 <= 0x7FF)
-        {
-            buf[0] = 0xC0 | ((utf32>>6) & 0x1F);
-            buf[1] = 0x80 | (utf32 & 0x3F);
-            nbuf = 2;
-        }
-        else if (utf32 <= 0xFFFF)
-        {
-            buf[0] = 0xE0 | ((utf32>>12) & 0x0F);
-            buf[1] = 0x80 | ((utf32>>6) & 0x3F);
-            buf[2] = 0x80 | (utf32 & 0x3F);
-            nbuf = 3;
-        }
-        else if (utf32 <= 0x10FFFF)
-        {
-            buf[0] = 0xE0 | ((utf32>>18) & 0x07);
-            buf[1] = 0x80 | ((utf32>>12) & 0x3F);
-            buf[2] = 0x80 | ((utf32>>6) & 0x3F);
-            buf[3] = 0x80 | (utf32 & 0x3F);
-            nbuf = 4;
-        }
-        // End Utf-32 -> Utf-8 conversion.
-        for (size_t i = 0; i < nbuf; i++)
-            addToQueue(buf[i]);
-    }
+    m_pXterm->processKey(key);
 }
 
 char Terminal::getFromQueue()
@@ -243,7 +170,6 @@ char Terminal::getFromQueue()
     else
         return 0;
 }
-
 
 void Terminal::clearQueue()
 {
