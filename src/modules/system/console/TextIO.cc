@@ -553,7 +553,7 @@ void TextIO::write(const char *s, size_t len)
                                 }
                                 break;
                             case 39:
-                                setColour(&m_Back, LightGrey, m_CurrentModes & Bright);
+                                setColour(&m_Back, 7, m_CurrentModes & Bright);
                                 break;
 
                             case 40:
@@ -574,7 +574,7 @@ void TextIO::write(const char *s, size_t len)
                                 }
                                 break;
                             case 49:
-                                setColour(&m_Back, Black, m_CurrentModes & Bright);
+                                setColour(&m_Back, 0, m_CurrentModes & Bright);
                                 break;
 
                             case 90:
