@@ -255,63 +255,6 @@ void input_handler(Input::InputNotification &note)
     key_input_handler(c);
 }
 
-int TUImain (int argc, char **argv)
-{
-    FILE *fp = fopen("/config/TUI/.tui.lck", "r");
-    if(fp)
-    {
-        fclose(fp);
-        syslog(LOG_EMERG, "TUI is already running\n");
-        return 1;
-    }
-
-    struct stat info;
-    int err = stat("/config", &info);
-    if((err < 0) && (errno == ENOENT))
-    {
-        if(mkdir("/config", 0777) < 0)
-        {
-            syslog(LOG_EMERG, "TUI: couldn't create /config: %s!", strerror(errno));
-            return 1;
-        }
-    }
-    else if(err < 0)
-    {
-        syslog(LOG_EMERG, "TUI: couldn't stat /config for some reason: %s!", strerror(errno));
-        return 1;
-    }
-
-    err = stat("/config/TUI", &info);
-    if((err < 0) && (errno == ENOENT))
-    {
-        if(mkdir("/config/TUI", 0777) < 0)
-        {
-            syslog(LOG_EMERG, "TUI: couldn't create /config/TUI: %s!", strerror(errno));
-            return 1;
-        }
-    }
-    else if(err < 0)
-    {
-        syslog(LOG_EMERG, "TUI: couldn't stat /config/TUI for some reason: %s!", strerror(errno));
-        return 1;
-    }
-
-    fp = fopen("/config/TUI/.tui.lck", "w+");
-    if(!fp)
-    {
-        syslog(LOG_EMERG, "TUI: couldn't create lock file: %s", strerror(errno));
-        return 1;
-    }
-    fclose(fp);
-
-    signal(SIGINT, sigint);
-
-    // Connect to the graphics service
-    PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
-//    g_pFramebuffer = pRootFramebuffer->createChild(0, 0, pRootFramebuffer->getWidth(), pRootFramebuffer->getHeight());
-    return 0;
-}
-
 int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
 {
     g_pFramebuffer = pFramebuffer;
