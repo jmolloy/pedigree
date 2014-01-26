@@ -146,7 +146,7 @@ private:
     Terminal(const Terminal &);
     Terminal &operator = (const Terminal &);
 
-    void addToQueue(char c);
+    void addToQueue(char c, bool bFlush = false);
 
 
     rgb_t *m_pBuffer;

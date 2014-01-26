@@ -259,14 +259,22 @@ void Terminal::write(const char *pStr, DirtyRectangle &rect)
     m_pXterm->showCursor(rect);
 }
 
-void Terminal::addToQueue(char c)
+void Terminal::addToQueue(char c, bool bFlush)
 {
     // Don't allow keys to be pressed past the buffer's size
     if(m_Len >= 256)
         return;
-    //m_pQueue[m_Len++] = c;
+    if((c == 0) && (!m_Len))
+        return;
 
-    ::write(m_MasterPty, &c, 1);
+    if(c)
+        m_pQueue[m_Len++] = c;
+
+    if(bFlush)
+    {
+        ::write(m_MasterPty, m_pQueue, m_Len);
+        m_Len = 0;
+    }
 }
 
 void Terminal::setActive(bool b, DirtyRectangle &rect)

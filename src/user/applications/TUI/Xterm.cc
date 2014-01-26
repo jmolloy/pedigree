@@ -226,6 +226,8 @@ void Xterm::processKey(uint64_t key)
         for (size_t i = 0; i < nbuf; i++)
             m_pT->addToQueue(buf[i]);
     }
+
+    m_pT->addToQueue(0, true);
 }
 
 void Xterm::setFlagsForUtf32(uint32_t utf32)
@@ -1202,6 +1204,8 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
         if(utf32 == 0x9C)
             m_Flags = 0;
     }
+
+    m_pT->addToQueue(0, true);
 }
 
 void Xterm::renderAll(DirtyRectangle &rect)
