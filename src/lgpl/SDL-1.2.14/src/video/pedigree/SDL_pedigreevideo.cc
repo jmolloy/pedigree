@@ -122,7 +122,7 @@ static SDL_VideoDevice *PEDIGREE_CreateDevice(int devindex)
 	device->UnlockHWSurface = PEDIGREE_UnlockHWSurface;
 	device->FlipHWSurface = NULL;
 	device->FreeHWSurface = PEDIGREE_FreeHWSurface;
-	device->SetCaption = NULL;
+	device->SetCaption = PEDIGREE_SetWMCaption;
 	device->SetIcon = NULL;
 	device->IconifyWindow = NULL;
 	device->GrabInput = NULL;
@@ -330,7 +330,7 @@ void PEDIGREE_VideoQuit(_THIS)
 
 static void PEDIGREE_SetWMCaption(_THIS, const char *title, const char *icon)
 {
-    if(!(_this->hidden->widget && _this->hidden->buffer))
+    if(!_this->hidden->widget)
         return;
 
     _this->hidden->widget->setTitle(std::string(title));
