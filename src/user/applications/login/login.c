@@ -70,6 +70,9 @@ int main(int argc, char **argv)
   signal(SIGINT, sigint);
   setsid();
 
+  // Set ourselves as the terminal's foreground process group.
+  tcsetpgrp(1, getpgrp());
+
   const char *TERM = getenv("TERM");
   if(!TERM)
   {
