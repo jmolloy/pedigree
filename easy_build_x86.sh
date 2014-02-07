@@ -69,6 +69,8 @@ if [ ! -e $script_dir/.easy_os ]; then
             echo " - libgmp, libmpc, libmpfr"
             echo " - mkisofs/genisoimage"
             echo " - sqlite"
+            echo " - patch"
+            echo " - GNU make"
             echo "You will need to find alternative sources for the following:"
             echo " - mtools"
             echo " - scons"
