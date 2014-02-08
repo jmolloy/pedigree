@@ -317,9 +317,12 @@ void console_ptsname(int fd, char *buf)
     return;
   }
 
-  File *slave = ConsoleManager::instance().getOther(pFd->file);
+  File *slave = pFd->file;
+  if(ConsoleManager::instance().isMasterConsole(slave))
+  {
+    slave = ConsoleManager::instance().getOther(pFd->file);
+  }
 
-  /// \todo Check if this is actually a master.
   sprintf(buf, "/dev/%s", static_cast<const char *>(slave->getName()));
 }
 
@@ -347,8 +350,13 @@ void console_ttyname(int fd, char *buf)
     return;
   }
 
-  /// \todo Check if this is actually a master.
-  sprintf(buf, "/dev/%s", static_cast<const char *>(pFd->file->getName()));
+  File *master = pFd->file;
+  if(!ConsoleManager::instance().isMasterConsole(master))
+  {
+    master = ConsoleManager::instance().getOther(pFd->file);
+  }
+
+  sprintf(buf, "/dev/%s", static_cast<const char *>(master->getName()));
 }
 
 int posix_tcsetpgrp(int fd, pid_t pgid_id)
