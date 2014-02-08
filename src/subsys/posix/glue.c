@@ -428,6 +428,62 @@ int tcsetattr(int fd, int optional_actions, struct termios *p)
     return (long)syscall3(POSIX_TCSETATTR, fd, optional_actions, (long)p);
 }
 
+int tcsendbreak(int fildes, int duration)
+{
+    STUBBED("tcsendbreak");
+    return 0;
+}
+
+int tcdrain(int fd)
+{
+    STUBBED("tcdrain");
+    return -1;
+}
+
+int tcflush(int fd, int queue_selector)
+{
+    return ioctl(fd, TIOCFLUSH, (void *) queue_selector);
+}
+
+int tcflow(int fd, int action)
+{
+    STUBBED("tcflow");
+    return 0;
+}
+
+void cfmakeraw(struct termios *t)
+{
+    t->c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+    t->c_oflag &= ~OPOST;
+    t->c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+    t->c_cflag &= ~(CSIZE | PARENB);
+    t->c_cflag |= CS8;
+}
+
+int cfgetospeed(const struct termios *t)
+{
+    STUBBED("cfgetospeed");
+    return 0;
+}
+
+int cfgetispeed(const struct termios *t)
+{
+    STUBBED("cfgetispeed");
+    return 0;
+}
+
+int cfsetospeed(const struct termios *t, int speed)
+{
+    STUBBED("cfsetospeed");
+    return 0;
+}
+
+int cfsetispeed(const struct termios *t, int speed)
+{
+    STUBBED("cfsetispeed");
+    return 0;
+}
+
 int tcsetpgrp(int fd, pid_t pgid_id)
 {
     return (int)syscall2(POSIX_TCSETPGRP, fd, pgid_id);
@@ -496,24 +552,6 @@ int	sethostname(char *name, size_t len)
 int ioctl(int fd, int command, void *buf)
 {
     return (long)syscall3(POSIX_IOCTL, fd, command, (long)buf);
-}
-
-int tcflow(int fd, int action)
-{
-    STUBBED("tcflow");
-    return 0;
-}
-
-int tcflush(int fd, int queue_selector)
-{
-    STUBBED("tcflush");
-    return 0;
-}
-
-int tcdrain(int fd)
-{
-    STUBBED("tcdrain");
-    return -1;
 }
 
 int gettimeofday(struct timeval *tv, void *tz)
@@ -674,31 +712,6 @@ long fpathconf(int filedes, int name)
     STUBBED("fpathconf");
     return 0;
 }
-
-int cfgetospeed(const struct termios *t)
-{
-    STUBBED("cfgetospeed");
-    return 0;
-}
-
-int cfgetispeed(const struct termios *t)
-{
-    STUBBED("cfgetispeed");
-    return 0;
-}
-
-int cfsetospeed(const struct termios *t, int speed)
-{
-    STUBBED("cfsetospeed");
-    return 0;
-}
-
-int cfsetispeed(const struct termios *t, int speed)
-{
-    STUBBED("cfsetispeed");
-    return 0;
-}
-
 
 int select(int nfds, struct fd_set * readfds,
            struct fd_set * writefds, struct fd_set * errorfds,
@@ -2099,12 +2112,6 @@ struct if_nameindex* if_nameindex()
 void if_freenameindex(struct if_nameindex *nameindex)
 {
     STUBBED("if_freenameindex");
-}
-
-int tcsendbreak(int fildes, int duration)
-{
-    STUBBED("tcsendbreak");
-    return 0;
 }
 
 int pthread_cancel(pthread_t thread)
