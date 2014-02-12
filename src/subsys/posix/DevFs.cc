@@ -203,6 +203,11 @@ int FramebufferFile::command(const int command, void *buffer)
                     desiredDepth -= 8;
                 }
 
+                if(bSet)
+                {
+                    setSize(m_pProvider->pFramebuffer->getHeight() * m_pProvider->pFramebuffer->getBytesPerLine());
+                }
+
                 return bSet ? 0 : -1;
             }
             break;
