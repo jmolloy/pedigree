@@ -10,6 +10,8 @@ int printf(const char* fmt, ...)
     va_list argptr;
     va_start(argptr, fmt);
     int ret = vsprintf(print_temp, fmt, argptr);
+    if(print_temp[ret - 1] == '\n')
+        print_temp[--ret] = 0;
     NOTICE(print_temp);
     va_end(argptr);
     return ret;
