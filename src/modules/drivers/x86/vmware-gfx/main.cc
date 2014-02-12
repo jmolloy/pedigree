@@ -231,6 +231,12 @@ class VmwareGraphics : public Display
                 
                 sms.pushBack(pMode);
             }
+
+            // Add 'disable SVGA' mode.
+            Display::ScreenMode *pMode = new Display::ScreenMode;
+            pMode->id = 0;
+            
+            sms.pushBack(pMode);
             
             return true;
         }
