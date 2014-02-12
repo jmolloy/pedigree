@@ -97,6 +97,9 @@ int strncmp(const char *p1, const char *p2, int n);
 char *strcat(char *dest, const char *src);
 char *strncat(char *dest, const char *src, int n);
 
+void srand(uint64_t seed);
+uint64_t rand();
+
 const char *strchr(const char *str, int target);
 const char *strrchr(const char *str, int target);
 
