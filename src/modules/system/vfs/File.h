@@ -249,6 +249,18 @@ public:
     /** Walks the monitor-target queue, removing all for \p pThread .*/
     void cullMonitorTargets(Thread *pThread);
 
+    /** Does this File object support the given integer-based command? */
+    virtual bool supports(const int command)
+    {
+        return false;
+    }
+
+    /** Handle a command. */
+    virtual int command(const int command, void *buffer)
+    {
+        return 0;
+    }
+
 protected:
 
     /** Internal function to retrieve an aligned 512byte section of the file. */
