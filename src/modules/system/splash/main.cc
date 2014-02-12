@@ -34,9 +34,7 @@
 
 Framebuffer *g_pFramebuffer = 0;
 
-#ifdef NOGFX
 extern BootIO bootIO;
-#endif
 
 static uint8_t *g_pBuffer = 0;
 static Graphics::Buffer *g_pFont = 0;
@@ -60,6 +58,12 @@ static GraphicsService::GraphicsProvider pProvider;
 
 static size_t g_Previous = 0;
 static bool g_LogMode = false;
+
+#ifdef NOGFX
+static bool g_NoGraphics = true;
+#else
+static bool g_NoGraphics = false;
+#endif
 
 Mutex g_PrintLock(false);
 
@@ -124,24 +128,27 @@ void printChar(char c)
 
 void printString(const char *str)
 {
-#ifndef NOGFX
-    for(size_t i = 0; i < strlen(str); i++)
-        printChar(str[i]);
-#else
-    static HugeStaticString s;
-    s += str;
-    
-    BootIO::Colour c = BootIO::LightGrey;
-    if(str[1] == 'W')
-        c = BootIO::Orange;
-    else if(str[1] == 'E' || str[1] == 'F')
-        c = BootIO::Red;
-    else if(str[1] == 'D')
-        c = BootIO::DarkGrey;
+    if(g_NoGraphics)
+    {
+        for(size_t i = 0; i < strlen(str); i++)
+            printChar(str[i]);
+    }
+    else
+    {
+        static HugeStaticString s;
+        s += str;
         
-    bootIO.write(s, c, BootIO::Black);
-    s.clear();
-#endif
+        BootIO::Colour c = BootIO::LightGrey;
+        if(str[1] == 'W')
+            c = BootIO::Orange;
+        else if(str[1] == 'E' || str[1] == 'F')
+            c = BootIO::Red;
+        else if(str[1] == 'D')
+            c = BootIO::DarkGrey;
+            
+        bootIO.write(s, c, BootIO::Black);
+        s.clear();
+    }
 }
 
 void printStringAt(const char *str, size_t x, size_t y)
@@ -180,7 +187,6 @@ class StreamingScreenLogger : public Log::LogCallback
 
 static StreamingScreenLogger g_StreamLogger;
 
-#ifndef NOGFX
 void keyCallback(InputManager::InputNotification &note)
 {
     if(note.type != InputManager::Key)
@@ -202,7 +208,6 @@ void keyCallback(InputManager::InputNotification &note)
         g_LogH = g_Height;
     }
 }
-#endif
 
 void progress(const char *text)
 {
@@ -214,11 +219,12 @@ void progress(const char *text)
     if((g_BootProgressCurrent + 1) >= g_BootProgressTotal)
     {
         Log::instance().removeCallback(&g_StreamLogger);
-        
-#ifndef NOGFX
+
 #ifdef DEBUGGER
-        InputManager::instance().removeCallback(keyCallback);
-#endif
+        if(g_NoGraphics)
+        {
+            InputManager::instance().removeCallback(keyCallback);
+        }
 #endif
 
         bFinished = true;
@@ -226,37 +232,36 @@ void progress(const char *text)
 
     if(g_LogMode)
         return;
-        
-#ifndef NOGFX
 
-    size_t w = (g_ProgressW * g_BootProgressCurrent) / g_BootProgressTotal;
-    if(g_Previous <= g_BootProgressCurrent)
-        g_pFramebuffer->rect(g_ProgressX, g_ProgressY, w, g_ProgressH, g_ProgressColour, g_ColorFormat);
-    else
-        g_pFramebuffer->rect(g_ProgressX + w, g_ProgressY, g_ProgressW-w, g_ProgressH, g_BackgroundColour, g_ColorFormat);
-    g_Previous = g_BootProgressCurrent;
-
-    char buf[80];
-    sprintf(buf, "%d%%", ((g_BootProgressCurrent * 100) / g_BootProgressTotal));
-    centerStringAt(buf, g_ProgressX + (g_ProgressW / 2), g_ProgressY - FONT_HEIGHT);
-
-    g_pFramebuffer->redraw(g_ProgressX, g_ProgressY - (FONT_HEIGHT * 2), g_ProgressW, g_ProgressH + (FONT_HEIGHT * 2), true);
-
-    if(bFinished)
+    if(!g_NoGraphics)
     {
-        // Clean up font
-        g_pFramebuffer->destroyBuffer(g_pFont);
-        delete [] g_pBuffer;
+        size_t w = (g_ProgressW * g_BootProgressCurrent) / g_BootProgressTotal;
+        if(g_Previous <= g_BootProgressCurrent)
+            g_pFramebuffer->rect(g_ProgressX, g_ProgressY, w, g_ProgressH, g_ProgressColour, g_ColorFormat);
+        else
+            g_pFramebuffer->rect(g_ProgressX + w, g_ProgressY, g_ProgressW-w, g_ProgressH, g_BackgroundColour, g_ColorFormat);
+        g_Previous = g_BootProgressCurrent;
 
-        // Destroy the framebuffer now that we're done
-        Graphics::destroyFramebuffer(g_pFramebuffer);
-        g_pFramebuffer = 0;
+        char buf[80];
+        sprintf(buf, "%d%%", ((g_BootProgressCurrent * 100) / g_BootProgressTotal));
+        centerStringAt(buf, g_ProgressX + (g_ProgressW / 2), g_ProgressY - FONT_HEIGHT);
 
-        // No longer wanting any progress callback.
-        g_BootProgressUpdate = 0;
+        g_pFramebuffer->redraw(g_ProgressX, g_ProgressY - (FONT_HEIGHT * 2), g_ProgressW, g_ProgressH + (FONT_HEIGHT * 2), true);
+
+        if(bFinished)
+        {
+            // Clean up font
+            g_pFramebuffer->destroyBuffer(g_pFont);
+            delete [] g_pBuffer;
+
+            // Destroy the framebuffer now that we're done
+            Graphics::destroyFramebuffer(g_pFramebuffer);
+            g_pFramebuffer = 0;
+
+            // No longer wanting any progress callback.
+            g_BootProgressUpdate = 0;
+        }
     }
-
-#endif
 }
 
 static void getColor(const char *colorName, uint32_t &color)
@@ -320,11 +325,9 @@ static void getDesiredMode(size_t &width, size_t &height, size_t &bpp)
 static void init()
 {
 #ifdef NOGFX
-
     Log::instance().installCallback(&g_StreamLogger, true);
 
     g_BootProgressUpdate = &progress;
-
 #else
     getColor("splash-background", g_BackgroundColour);
     getColor("splash-foreground", g_ForegroundColour);
@@ -343,7 +346,10 @@ static void init()
 
     if(!bSuccess)
     {
-        FATAL("splash: couldn't find any graphics providers - at least one is required to run Pedigree!");
+        Log::instance().installCallback(&g_StreamLogger, true);
+        g_BootProgressUpdate = &progress;
+        g_NoGraphics = true;
+        return;
     }
 
     Display *pDisplay = pProvider.pDisplay;
@@ -389,11 +395,18 @@ static void init()
                     if(!pDisplay->setScreenMode(640, 480, 16))
                     {
                         ERROR("splash: Couldn't find a suitable display mode for this system (tried: 1024x768, 800x600, 640x480).");
-                        return;
+                        g_NoGraphics = true;
                     }
                 }
             }
         }
+    }
+
+    if(g_NoGraphics)
+    {
+        Log::instance().installCallback(&g_StreamLogger, true);
+        g_BootProgressUpdate = &progress;
+        return;
     }
 
     Framebuffer *pParentFramebuffer = pProvider.pFramebuffer;
