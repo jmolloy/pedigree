@@ -128,7 +128,7 @@ void printChar(char c)
 
 void printString(const char *str)
 {
-    if(g_NoGraphics)
+    if(!g_NoGraphics)
     {
         for(size_t i = 0; i < strlen(str); i++)
             printChar(str[i]);
@@ -221,7 +221,7 @@ void progress(const char *text)
         Log::instance().removeCallback(&g_StreamLogger);
 
 #ifdef DEBUGGER
-        if(g_NoGraphics)
+        if(!g_NoGraphics)
         {
             InputManager::instance().removeCallback(keyCallback);
         }
@@ -346,6 +346,7 @@ static void init()
 
     if(!bSuccess)
     {
+        NOTICE("splash: this system does not support graphics, using fallback log callback");
         Log::instance().installCallback(&g_StreamLogger, true);
         g_BootProgressUpdate = &progress;
         g_NoGraphics = true;
@@ -404,6 +405,7 @@ static void init()
 
     if(g_NoGraphics)
     {
+        NOTICE("splash: this system does not support graphics, using fallback log callback");
         Log::instance().installCallback(&g_StreamLogger, true);
         g_BootProgressUpdate = &progress;
         return;
