@@ -158,6 +158,9 @@ uintptr_t Bios::malloc (int n)
 
 void Bios::executeInterrupt (int i)
 {
+    bool bInterrupts = Processor::getInterrupts();
+    Processor::setInterrupts(false);
+
     // Switch into the kernel address space before we do anything here.
     // We would prefer to persist the original mapping in the kernel, than
     // continuously map in the low MB (creating page tables and the like)
@@ -188,6 +191,8 @@ void Bios::executeInterrupt (int i)
     // Switch back to the old address space.
     if(&va != &kernva)
         Processor::switchAddressSpace(va);
+
+    Processor::setInterrupts(true);
 }
 
 void Bios::setAx (int n)
