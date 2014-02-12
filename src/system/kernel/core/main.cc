@@ -291,6 +291,8 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   pFeatures->add(ServiceFeatures::probe);
   ServiceManager::instance().addService(String("graphics"), pService, pFeatures);
 
+  /// \todo Seed random number generator.
+
 #if defined(THREADS)
   new Thread(Processor::information().getCurrentThread()->getParent(), &loadModules, static_cast<void*>(&bsInf), 0);
 #else

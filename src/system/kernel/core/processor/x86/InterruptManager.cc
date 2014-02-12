@@ -28,6 +28,8 @@
 #include <Subsystem.h>
 #endif
 
+#include <utilities/utility.h>
+
 #define SYSCALL_INTERRUPT_NUMBER 255
 
 const char* g_ExceptionNames[] =
@@ -139,6 +141,9 @@ bool X86InterruptManager::registerSyscallHandler(Service_t Service, SyscallHandl
 void X86InterruptManager::interrupt(InterruptState &interruptState)
 {
   size_t nIntNumber = interruptState.getInterruptNumber();
+
+  // Trigger the next value in the PRNG sequence, so interrupt jitter improves randomness.
+  rand();
 
   #if defined(DEBUGGER)
   {
