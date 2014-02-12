@@ -23,12 +23,15 @@
 #include <sys/stat.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <syslog.h>
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+
+#include <sys/fb.h>
 
 #include <input/Input.h>
 
@@ -144,6 +147,17 @@ int main(int argc, char **argv)
     // New process group for job control. We'll ignore SIGINT for now.
     signal(SIGINT, sigint);
     setsid();
+
+    // Ensure we are in fact in text mode.
+    int fb = open("/dev/fb", O_RDWR);
+    if(fb != 0)
+    {
+        /// \todo error handling?
+        syslog(LOG_INFO, "ttyterm: forcing text mode");
+        pedigree_fb_modeset mode = {0, 0, 0};
+        int fd = ioctl(fb, PEDIGREE_FB_SETMODE, &mode);
+        close(fb);
+    }
 
     // Get a PTY and the main TTY.
     int tty = open("/dev/textui", O_WRONLY);

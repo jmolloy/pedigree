@@ -28,6 +28,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/un.h>
+#include <sys/ioctl.h>
+
+#include <sys/fb.h>
 
 #include <map>
 #include <list>
@@ -46,8 +49,6 @@
 #include "Png.h"
 
 #define DEBUG_REDRAWS          0
-
-PedigreeGraphics::Framebuffer *g_pTopLevelFramebuffer = 0;
 
 RootContainer *g_pRootContainer = 0;
 
@@ -774,16 +775,62 @@ int main(int argc, char *argv[])
 {
     syslog(LOG_INFO, "winman: starting up...");
 
-    // Can we get a framebuffer?
-    PedigreeGraphics::Framebuffer *pRootFramebuffer = new PedigreeGraphics::Framebuffer();
-    g_pTopLevelFramebuffer = pRootFramebuffer;
-
-    if(!pRootFramebuffer)
+    // Grab a framebuffer to use.
+    int fb = open("/dev/fb", O_RDWR);
+    if(fb < 0)
     {
-        syslog(LOG_INFO, "winman: no framebuffer could be created, falling back to text...");
+        syslog(LOG_INFO, "winman: no framebuffer device");
+        fprintf(stderr, "winman: couldn't open framebuffer device");
+        return 1;
+    }
 
-        execl(TEXTONLY_DEFAULT, TEXTONLY_DEFAULT, 0);
-        exit(1);
+    // Can we set the graphics mode we want?
+    /// \todo Read from a config file!
+    pedigree_fb_modeset mode = {1024, 768, 32};
+    int result = ioctl(fb, PEDIGREE_FB_SETMODE, &mode);
+    if(result < 0)
+    {
+        // No! Bad!
+        /// \note Mode set logic will try and find a mode in a lower colour depth
+        ///       if the desired one cannot be set.
+        syslog(LOG_INFO, "winman: can't set the desired mode");
+        fprintf(stderr, "winman: could not set desired mode (%dx%d) in any colour depth.");
+        return 1;
+    }
+
+    pedigree_fb_mode set_mode;
+    result = ioctl(fb, PEDIGREE_FB_GETMODE, &set_mode);
+    if(result < 0)
+    {
+        syslog(LOG_INFO, "winman: can't get mode info");
+        fprintf(stderr, "winman: could not get mode information after setting mode.");
+
+        // Back to text.
+        memset(&mode, 0, sizeof(mode));
+        ioctl(fb, PEDIGREE_FB_SETMODE, &mode);
+        return 1;
+    }
+
+    g_nWidth = set_mode.width;
+    g_nHeight = set_mode.height;
+
+    cairo_format_t format = CAIRO_FORMAT_ARGB32;
+    if(set_mode.format == PedigreeGraphics::Bits24_Rgb)
+    {
+        if(set_mode.bytes_per_pixel != 4)
+        {
+            fprintf(stderr, "winman: error: incompatible framebuffer format (bytes per pixel)");
+            return 1;
+        }
+    }
+    else if(set_mode.format == PedigreeGraphics::Bits16_Rgb565)
+    {
+        format = CAIRO_FORMAT_RGB16_565;
+    }
+    else if(set_mode.format > PedigreeGraphics::Bits32_Rgb)
+    {
+        fprintf(stderr, "winman: error: incompatible framebuffer format (possibly BGR or similar)");
+        return 1;
     }
 
     // Create control pipe.
@@ -822,43 +869,9 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    // Grab a framebuffer to use.
-    int fb = open("/dev/fb", O_RDWR);
-    if(fb < 0)
-    {
-        syslog(LOG_CRIT, "winman: couldn't open framebuffer device");
-        return 0;
-    }
-
-    /// \todo ioctls for this
-    g_nWidth = 1024; // g_pTopLevelFramebuffer->getWidth();
-    g_nHeight = 768; // g_pTopLevelFramebuffer->getHeight();
-
-    cairo_format_t format = CAIRO_FORMAT_ARGB32;
-    /*
-    if(g_pTopLevelFramebuffer->getFormat() == PedigreeGraphics::Bits24_Rgb)
-    {
-        if(g_pTopLevelFramebuffer->getBytesPerPixel() != 4)
-        {
-            syslog(LOG_CRIT, "winman: error: incompatible framebuffer format (bytes per pixel)");
-            return -1;
-        }
-    }
-    else if(g_pTopLevelFramebuffer->getFormat() == PedigreeGraphics::Bits16_Rgb565)
-    {
-        format = CAIRO_FORMAT_RGB16_565;
-    }
-    else if(g_pTopLevelFramebuffer->getFormat() > PedigreeGraphics::Bits32_Rgb)
-    {
-        syslog(LOG_CRIT, "winman: error: incompatible framebuffer format (possibly BGR or similar)");
-        return -1;
-    }
-    */
-
     int stride = cairo_format_stride_for_width(format, g_nWidth);
 
     // Map the framebuffer in to our address space.
-    // uintptr_t rawBuffer = (uintptr_t) g_pTopLevelFramebuffer->getRawBuffer();
     syslog(LOG_INFO, "Mapping /dev/fb in...");
     void *framebufferVirt = mmap(
         0,
@@ -955,7 +968,7 @@ int main(int argc, char *argv[])
 
     // Kick off the first render before any windows are open.
     cairo_surface_flush(surface);
-    g_pTopLevelFramebuffer->redraw();
+    ioctl(fb, PEDIGREE_FB_REDRAW, 0);
 
     // Load first tile.
     startClient();
@@ -1090,13 +1103,15 @@ int main(int argc, char *argv[])
             cairo_surface_flush(surface);
 
             // Submit a redraw to the graphics card.
-            /// \todo ioctl for this
-            g_pTopLevelFramebuffer->redraw(renderDirty.getX(), renderDirty.getY(), renderDirty.getWidth(), renderDirty.getHeight());
+            pedigree_fb_rect fbdirty = {renderDirty.getX(), renderDirty.getY(), renderDirty.getWidth(), renderDirty.getHeight()};
+            ioctl(fb, PEDIGREE_FB_REDRAW, &fbdirty);
 
             // Wipe out the dirty rectangle - we're all done.
             renderDirty.reset();
         }
     }
+
+    /// \todo Clean up?
 
     return 0;
 }
