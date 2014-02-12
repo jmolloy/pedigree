@@ -85,7 +85,7 @@ for i in libs:
     files = [Glob(base + '/src/*.c'), Glob(base + '/src/*.cc')]
 
     e.Library(output, files)
-    e.SharedLibrary(shoutput, files, LINKFLAGS='')
+    e.SharedLibrary(shoutput, files, LINKFLAGS='-nostdlib')
 
     env.Alias("libs", output)
     env.Alias("libs", shoutput)

@@ -88,4 +88,4 @@ tmp_lib['CFLAGS'] += glueFlags
 tmp_lib['CXXFLAGS'] += glueFlags
 
 tmp_lib.StaticLibrary(libpedigree_c_objname, libpedigree_c_files)
-tmp_lib.SharedLibrary(libpedigree_c_shobjname, libpedigree_c_files, LINKFLAGS='')
+tmp_lib.SharedLibrary(libpedigree_c_shobjname, libpedigree_c_files, LINKFLAGS='-nostdlib')
