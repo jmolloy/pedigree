@@ -61,10 +61,15 @@ public:
 
     virtual uintptr_t readBlock(uint64_t location);
 
+    virtual bool supports(const int command);
+    virtual int command(const int command, void *buffer);
+
     /// \todo pinBlock/unpinBlock should pin/unpin physical pages!
 
 private:
     GraphicsService::GraphicsProvider *m_pProvider;
+
+    bool m_bTextMode;
 };
 
 /** This class provides slightly more flexibility for adding files to a directory. */

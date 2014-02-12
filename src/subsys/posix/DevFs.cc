@@ -1,19 +1,61 @@
 #include "DevFs.h"
 
+#define MACHINE_FORWARD_DECL_ONLY
+#include <machine/Machine.h>
+#include <machine/Vga.h>
+
 #include <console/Console.h>
 #include <utilities/assert.h>
 
 #include <graphics/Graphics.h>
 #include <graphics/GraphicsService.h>
 
+#include <utilities/utility.h>
+
+#include <sys/fb.h>
+
 DevFs DevFs::m_Instance;
 
 uint64_t RandomFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
-    // http://xkcd.com/221/
-    /// \todo a real RNG could be nice...
-    memset(reinterpret_cast<void *>(buffer), 4, size);
-    return size;
+    /// \todo Endianness issues?
+
+    size_t realSize = size;
+
+    if(size < sizeof(uint64_t))
+    {
+        uint64_t val = rand();
+        char *pBuffer = reinterpret_cast<char *>(buffer);
+        while(size--)
+        {
+            *pBuffer++ = val & 0xFF;
+            val >>= 8;
+        }
+    }
+    else
+    {
+        // Align.
+        char *pBuffer = reinterpret_cast<char *>(buffer);
+        if(size % 8)
+        {
+            uint64_t align = rand();
+            while(size % 8)
+            {
+                *pBuffer++ = align & 0xFF;
+                --size;
+                align >>= 8;
+            }
+        }
+
+        uint64_t *pBuffer64 = reinterpret_cast<uint64_t *>(buffer);
+        while(size)
+        {
+            *pBuffer64++ = rand();
+            size -= 8;
+        }
+    }
+
+    return realSize - size;
 }
 
 uint64_t RandomFile::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
@@ -33,7 +75,7 @@ uint64_t NullFile::write(uint64_t location, uint64_t size, uintptr_t buffer, boo
 }
 
 FramebufferFile::FramebufferFile(String str, size_t inode, Filesystem *pParentFS, File *pParentNode) :
-    File(str, 0, 0, 0, inode, pParentFS, 0, pParentNode), m_pProvider(0)
+    File(str, 0, 0, 0, inode, pParentFS, 0, pParentNode), m_pProvider(0), m_bTextMode(false)
 {
 }
 
@@ -76,6 +118,118 @@ uintptr_t FramebufferFile::readBlock(uint64_t location)
 
     /// \todo If this is NOT virtual, we need to do something about that.
     return reinterpret_cast<uintptr_t>(m_pProvider->pFramebuffer->getRawBuffer()) + location;
+}
+
+bool FramebufferFile::supports(const int command)
+{
+    return (PEDIGREE_FB_CMD_MIN <= command) && (command <= PEDIGREE_FB_CMD_MAX);
+}
+
+int FramebufferFile::command(const int command, void *buffer)
+{
+    NOTICE("FramebufferFile::command(" << command << ", " << reinterpret_cast<uintptr_t>(buffer) << ")");
+    if(!m_pProvider)
+    {
+        ERROR("FramebufferFile::command called on an invalid FramebufferFile");
+        return -1;
+    }
+
+    Display *pDisplay = m_pProvider->pDisplay;
+    Framebuffer *pFramebuffer = m_pProvider->pFramebuffer;
+
+    switch(command)
+    {
+        case PEDIGREE_FB_SETMODE:
+            {
+                pedigree_fb_modeset *arg = reinterpret_cast<pedigree_fb_modeset *>(buffer);
+                size_t desiredWidth = arg->width;
+                size_t desiredHeight = arg->height;
+                size_t desiredDepth = arg->depth;
+
+                // Are we seeking a text mode?
+                if(!(desiredWidth && desiredHeight && desiredDepth))
+                {
+                    bool bSuccess = false;
+                    if(!m_pProvider->bTextModes)
+                    {
+                        bSuccess = pDisplay->setScreenMode(0);
+                    }
+                    else
+                    {
+                        // Set via VGA method.
+                        if(Machine::instance().getNumVga())
+                        {
+                            /// \todo What if there is no text mode!?
+                            Vga *pVga = Machine::instance().getVga(0);
+                            pVga->rememberMode();
+                            pVga->setLargestTextMode();
+
+                            m_bTextMode = true;
+
+                            bSuccess = true;
+                        }
+                    }
+
+                    if(bSuccess)
+                    {
+                        NOTICE("FramebufferFile: set text mode");
+                        return 0;
+                    }
+                    else
+                    {
+                        return -1;
+                    }
+                }
+                else if(m_pProvider->bTextModes && m_bTextMode)
+                {
+                    // Okay, we need to 'undo' the text mode.
+                    if(Machine::instance().getNumVga())
+                    {
+                        /// \todo What if there is no text mode!?
+                        Vga *pVga = Machine::instance().getVga(0);
+                        pVga->restoreMode();
+                    }
+                }
+
+                bool bSet = false;
+                while(desiredDepth > 8)
+                {
+                    if(pDisplay->setScreenMode(desiredWidth, desiredHeight, desiredDepth))
+                    {
+                        NOTICE("FramebufferFile: set mode " << Dec << desiredWidth << "x" << desiredHeight << "x" << desiredDepth << Hex << ".");
+                        bSet = true;
+                        break;
+                    }
+                    desiredDepth -= 8;
+                }
+
+                return bSet ? 0 : -1;
+            }
+            break;
+        case PEDIGREE_FB_GETMODE:
+            {
+                pedigree_fb_mode *arg = reinterpret_cast<pedigree_fb_mode *>(buffer);
+                arg->width = pFramebuffer->getWidth();
+                arg->height = pFramebuffer->getHeight();
+                arg->bytes_per_pixel = pFramebuffer->getBytesPerPixel();
+                arg->format = pFramebuffer->getFormat();
+
+                return 0;
+            }
+            break;
+        case PEDIGREE_FB_REDRAW:
+            {
+                pedigree_fb_rect *arg = reinterpret_cast<pedigree_fb_rect *>(buffer);
+                pFramebuffer->redraw(arg->x, arg->y, arg->w, arg->h, true);
+
+                return 0;
+            }
+            break;
+        default:
+            return -1;
+    }
+
+    return -1;
 }
 
 bool DevFs::initialise(Disk *pDisk)
@@ -134,6 +288,12 @@ bool DevFs::initialise(Disk *pDisk)
         WARNING("POSIX: no /dev/tty - TextIO failed to initialise.");
         delete pTty;
     }
+
+    NOTICE("POSIX: random: " << rand());
+    NOTICE("POSIX: random: " << rand());
+    NOTICE("POSIX: random: " << rand());
+    NOTICE("POSIX: random: " << rand());
+    NOTICE("POSIX: random: " << rand());
 
     return true;
 }
