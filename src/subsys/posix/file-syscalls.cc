@@ -1006,6 +1006,11 @@ int posix_ioctl(int fd, int command, void *buf)
         // Error - no such FD.
     }
 
+    if (f->file->supports(command))
+    {
+        return f->file->command(command, buf);
+    }
+
     switch (command)
     {
         case TIOCGWINSZ:
@@ -1050,6 +1055,7 @@ int posix_ioctl(int fd, int command, void *buf)
         default:
         {
             // Error - no such ioctl.
+            SYSCALL_ERROR(InvalidArgument);
             return -1;
         }
     }
