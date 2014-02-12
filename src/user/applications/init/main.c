@@ -36,7 +36,7 @@ extern int ts();
 #ifdef NOGFX
 #define MAIN_PROGRAM "/applications/ttyterm"
 #else
-#define MAIN_PROGRAM "/applications/winman"
+#define MAIN_PROGRAM "/applications/ttyterm"
 #endif
 
 #include <sched.h>
