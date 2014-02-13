@@ -794,7 +794,7 @@ int main(int argc, char *argv[])
         /// \note Mode set logic will try and find a mode in a lower colour depth
         ///       if the desired one cannot be set.
         syslog(LOG_INFO, "winman: can't set the desired mode");
-        fprintf(stderr, "winman: could not set desired mode (%dx%d) in any colour depth.");
+        fprintf(stderr, "winman: could not set desired mode (%dx%d) in any colour depth.\n", mode.width, mode.height);
         return 1;
     }
 
@@ -803,7 +803,7 @@ int main(int argc, char *argv[])
     if(result < 0)
     {
         syslog(LOG_INFO, "winman: can't get mode info");
-        fprintf(stderr, "winman: could not get mode information after setting mode.");
+        fprintf(stderr, "winman: could not get mode information after setting mode.\n");
 
         // Back to text.
         memset(&mode, 0, sizeof(mode));
@@ -814,12 +814,14 @@ int main(int argc, char *argv[])
     g_nWidth = set_mode.width;
     g_nHeight = set_mode.height;
 
+    syslog(LOG_INFO, "Actual mode is %dx%d", g_nWidth, g_nHeight);
+
     cairo_format_t format = CAIRO_FORMAT_ARGB32;
     if(set_mode.format == PedigreeGraphics::Bits24_Rgb)
     {
         if(set_mode.bytes_per_pixel != 4)
         {
-            fprintf(stderr, "winman: error: incompatible framebuffer format (bytes per pixel)");
+            fprintf(stderr, "winman: error: incompatible framebuffer format (bytes per pixel)\n");
             return 1;
         }
     }
@@ -829,9 +831,40 @@ int main(int argc, char *argv[])
     }
     else if(set_mode.format > PedigreeGraphics::Bits32_Rgb)
     {
-        fprintf(stderr, "winman: error: incompatible framebuffer format (possibly BGR or similar)");
+        fprintf(stderr, "winman: error: incompatible framebuffer format (possibly BGR or similar)\n");
         return 1;
     }
+
+    int stride = cairo_format_stride_for_width(format, g_nWidth);
+
+    // Map the framebuffer in to our address space.
+    syslog(LOG_INFO, "Mapping /dev/fb in (sz=%x)...", stride * g_nHeight);
+    void *framebufferVirt = mmap(
+        0,
+        stride * g_nHeight,
+        PROT_READ | PROT_WRITE,
+        MAP_SHARED,
+        fb,
+        0);
+    syslog(LOG_INFO, "Got %p...", framebufferVirt);
+
+    if(framebufferVirt == MAP_FAILED)
+    {
+        syslog(LOG_CRIT, "winman: couldn't map framebuffer into address space");
+        return -1;
+    }
+    else
+    {
+        syslog(LOG_INFO, "winman: mapped framebuffer at %p", framebufferVirt);
+    }
+
+    cairo_surface_t *surface = cairo_image_surface_create_for_data(
+            (uint8_t *) framebufferVirt,
+            format,
+            g_nWidth,
+            g_nHeight,
+            stride);
+    cairo_t *cr = cairo_create(surface);
 
     // Create control pipe.
     pipe(g_iControlPipe);
@@ -868,37 +901,6 @@ int main(int argc, char *argv[])
         syslog(LOG_CRIT, "winman: error: couldn't load required font");
         return 0;
     }
-
-    int stride = cairo_format_stride_for_width(format, g_nWidth);
-
-    // Map the framebuffer in to our address space.
-    syslog(LOG_INFO, "Mapping /dev/fb in...");
-    void *framebufferVirt = mmap(
-        0,
-        stride * g_nHeight,
-        PROT_READ | PROT_WRITE,
-        MAP_SHARED,
-        fb,
-        0);
-    syslog(LOG_INFO, "Got %p...", framebufferVirt);
-
-    if(framebufferVirt == MAP_FAILED)
-    {
-        syslog(LOG_CRIT, "winman: couldn't map framebuffer into address space");
-        return -1;
-    }
-    else
-    {
-        syslog(LOG_INFO, "winman: mapped framebuffer at %p", framebufferVirt);
-    }
-
-    cairo_surface_t *surface = cairo_image_surface_create_for_data(
-            (uint8_t *) framebufferVirt,
-            format,
-            g_nWidth,
-            g_nHeight,
-            stride);
-    cairo_t *cr = cairo_create(surface);
 
     cairo_user_data_key_t key;
     cairo_font_face_t *font_face;
