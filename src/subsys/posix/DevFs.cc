@@ -24,7 +24,7 @@ uint64_t RandomFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bo
 
     if(size < sizeof(uint64_t))
     {
-        uint64_t val = rand();
+        uint64_t val = random_next();
         char *pBuffer = reinterpret_cast<char *>(buffer);
         while(size--)
         {
@@ -38,7 +38,7 @@ uint64_t RandomFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bo
         char *pBuffer = reinterpret_cast<char *>(buffer);
         if(size % 8)
         {
-            uint64_t align = rand();
+            uint64_t align = random_next();
             while(size % 8)
             {
                 *pBuffer++ = align & 0xFF;
@@ -50,7 +50,7 @@ uint64_t RandomFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bo
         uint64_t *pBuffer64 = reinterpret_cast<uint64_t *>(buffer);
         while(size)
         {
-            *pBuffer64++ = rand();
+            *pBuffer64++ = random_next();
             size -= 8;
         }
     }
@@ -115,6 +115,12 @@ uintptr_t FramebufferFile::readBlock(uint64_t location)
 {
     if(!m_pProvider)
         return 0;
+
+    if(location > getSize())
+    {
+        ERROR("FramebufferFile::readBlock with location > size: " << location);
+        return 0;
+    }
 
     /// \todo If this is NOT virtual, we need to do something about that.
     return reinterpret_cast<uintptr_t>(m_pProvider->pFramebuffer->getRawBuffer()) + location;
@@ -205,7 +211,7 @@ int FramebufferFile::command(const int command, void *buffer)
 
                 if(bSet)
                 {
-                    setSize(m_pProvider->pFramebuffer->getHeight() * m_pProvider->pFramebuffer->getBytesPerLine());
+                    setSize(pFramebuffer->getHeight() * pFramebuffer->getBytesPerLine());
                 }
 
                 return bSet ? 0 : -1;
@@ -225,7 +231,15 @@ int FramebufferFile::command(const int command, void *buffer)
         case PEDIGREE_FB_REDRAW:
             {
                 pedigree_fb_rect *arg = reinterpret_cast<pedigree_fb_rect *>(buffer);
-                pFramebuffer->redraw(arg->x, arg->y, arg->w, arg->h, true);
+                if(!arg)
+                {
+                    // Redraw all.
+                    pFramebuffer->redraw(0, 0, pFramebuffer->getWidth(), pFramebuffer->getHeight(), true);
+                }
+                else
+                {
+                    pFramebuffer->redraw(arg->x, arg->y, arg->w, arg->h, true);
+                }
 
                 return 0;
             }
@@ -293,12 +307,6 @@ bool DevFs::initialise(Disk *pDisk)
         WARNING("POSIX: no /dev/tty - TextIO failed to initialise.");
         delete pTty;
     }
-
-    NOTICE("POSIX: random: " << rand());
-    NOTICE("POSIX: random: " << rand());
-    NOTICE("POSIX: random: " << rand());
-    NOTICE("POSIX: random: " << rand());
-    NOTICE("POSIX: random: " << rand());
 
     return true;
 }
