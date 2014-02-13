@@ -167,6 +167,7 @@ int FramebufferFile::command(const int command, void *buffer)
                         {
                             /// \todo What if there is no text mode!?
                             Vga *pVga = Machine::instance().getVga(0);
+                            pVga->setMode(3); /// \todo Magic number.
                             pVga->rememberMode();
                             pVga->setLargestTextMode();
 
@@ -186,16 +187,6 @@ int FramebufferFile::command(const int command, void *buffer)
                         return -1;
                     }
                 }
-                else if(m_pProvider->bTextModes && m_bTextMode)
-                {
-                    // Okay, we need to 'undo' the text mode.
-                    if(Machine::instance().getNumVga())
-                    {
-                        /// \todo What if there is no text mode!?
-                        Vga *pVga = Machine::instance().getVga(0);
-                        pVga->restoreMode();
-                    }
-                }
 
                 bool bSet = false;
                 while(desiredDepth > 8)
@@ -212,6 +203,19 @@ int FramebufferFile::command(const int command, void *buffer)
                 if(bSet)
                 {
                     setSize(pFramebuffer->getHeight() * pFramebuffer->getBytesPerLine());
+
+                    if(m_pProvider->bTextModes && m_bTextMode)
+                    {
+                        // Okay, we need to 'undo' the text mode.
+                        if(Machine::instance().getNumVga())
+                        {
+                            /// \todo What if there is no text mode!?
+                            Vga *pVga = Machine::instance().getVga(0);
+                            pVga->restoreMode();
+
+                            m_bTextMode = false;
+                        }
+                    }
                 }
 
                 return bSet ? 0 : -1;
