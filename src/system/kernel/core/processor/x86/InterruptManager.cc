@@ -143,7 +143,7 @@ void X86InterruptManager::interrupt(InterruptState &interruptState)
   size_t nIntNumber = interruptState.getInterruptNumber();
 
   // Trigger the next value in the PRNG sequence, so interrupt jitter improves randomness.
-  rand();
+  random_next();
 
   #if defined(DEBUGGER)
   {
