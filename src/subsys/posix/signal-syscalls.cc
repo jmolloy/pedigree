@@ -287,11 +287,13 @@ int doThreadKill(Thread *p, int sig)
         }
     }
 
+    Process *pThisProcess = Processor::information().getCurrentThread()->getParent();
+
     // Build the pending signal and pass it in
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(p->getParent()->getSubsystem());
     if(!pSubsystem)
     {
-        ERROR("posix_kill: no subsystem");
+        ERROR("posix_kill: no subsystem on process " << p->getParent()->getId());
         return -1;
     }
     PosixSubsystem::SignalHandler* signalHandler = pSubsystem->getSignalHandler(sig);
@@ -300,11 +302,15 @@ int doThreadKill(Thread *p, int sig)
         // Fire the event
         p->sendEvent(reinterpret_cast<Event*>(signalHandler->pEvent));
 
-        // Switch to that context in order to handle the event
-        bool bWasInterrupts = Processor::getInterrupts();
-        Processor::setInterrupts(false);
-        Processor::information().getScheduler().schedule(Thread::Ready, p);
-        Processor::setInterrupts(bWasInterrupts);
+        // Don't schedule to the process if that process is us.
+        if (p->getParent() != pThisProcess)
+        {
+            // Switch to that context in order to handle the event
+            bool bWasInterrupts = Processor::getInterrupts();
+            Processor::setInterrupts(false);
+            Processor::information().getScheduler().schedule(Thread::Ready, p);
+            Processor::setInterrupts(bWasInterrupts);
+        }
     }
 
     return 0;
@@ -319,104 +325,88 @@ int posix_kill(int pid, int sig)
 {
     SG_NOTICE("kill(" << pid << ", " << sig << ")");
 
-    // Does this process exist?
-    Process *p = 0;
-    for(size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
-    {
-        p = Scheduler::instance().getProcess(i);
+    List<Process *> processList;
 
-        if (static_cast<int>(p->getId()) == pid)
-            break;
-    }
+    // Metadata about the calling process.
+    PosixProcess *pThisProcess = static_cast<PosixProcess *>(Processor::information().getCurrentThread()->getParent());
+    ProcessGroup *pThisGroup = pThisProcess->getProcessGroup();
 
-    // Does its subsystem exist?
-    if(!p->getSubsystem())
-    {
-        // Hasn't initialised yet!
-        /// \todo SYSCALL_ERROR of some sort
-        WARNING("posix_kill called on a process without a subsystem");
-        return -1;
-    }
+    bool bKillingSelf = false;
 
-    // Ok, so we have a subsystem, but is it a POSIX one?
-    Subsystem *pGenericSubsystem = p->getSubsystem();
-    if(pGenericSubsystem->getType() != Subsystem::Posix)
+    // Check for the process(es) we are about to kill.
+    size_t i = 0;
+    for(; i < Scheduler::instance().getNumProcesses(); ++i)
     {
-        WARNING("posix_kill called on a non-POSIX process");
-        return -1;
-    }
+        Process *pProcess = Scheduler::instance().getProcess(i);
 
-    // If it does, handle the kill request
-    if (p)
-    {
-        // If the process is part of a group, and the pid is the process group ID, send to
-        // the group.
-        PosixProcess *pPosixProcess = static_cast<PosixProcess *>(p);
-        if(
-            (p->getType() == Process::Posix) &&
-            (pPosixProcess->getGroupMembership() == PosixProcess::Leader) &&
-            (pPosixProcess->getProcessGroup() != 0)
-            )
+        if (pProcess->getThread(0)->getStatus() == Thread::Zombie)
         {
+            // Oops, process already been terminated.
+            continue;
+        }
+        else if ((pid <= 0) && (pProcess->getType() == Process::Posix))
+        {
+            PosixProcess *pPosixProcess = static_cast<PosixProcess *>(pProcess);
             ProcessGroup *pGroup = pPosixProcess->getProcessGroup();
-
-            // Create a temporary list that contains all the PosixProcess
-            // objects that we'll be sending signals too. This is because
-            // we can't rely on the state of the real list as objects may
-            // be removed from it as a result of this signal.
-            List<PosixProcess*> tmpList;
-            for(List<PosixProcess *>::Iterator it = pGroup->Members.begin(); it != pGroup->Members.end(); it++)
+            if (pid == 0)
             {
-                PosixProcess *member = *it;
-                if(member)
-                {
-                    // Verify that the subsystem is valid
-                    if(!p->getSubsystem())
-                    {
-                        // Hasn't initialised yet!
-                        /// \todo SYSCALL_ERROR of some sort
-                        WARNING("posix_kill: a process in this process group did not have a subsystem, signal not being sent");
-                        continue;
-                    }
-
-                    // Ok, so we have a subsystem, but is it a POSIX one?
-                    Subsystem *pGenericSubsystem = p->getSubsystem();
-                    if(pGenericSubsystem->getType() != Subsystem::Posix)
-                    {
-                        WARNING("posix_kill: a process in this process group had a subsystem, but it wasn't a POSIX one, signal not being sent");
-                        return -1;
-                    }
-
-                    // It seems to be all in order. doThreadKill will determine if the signal handler is valid.
-                    tmpList.pushBack(member);
-                }
+                // Any process in the same process group as the caller.
+                if (!(pGroup && pThisGroup))
+                    continue;
+                if(pGroup->processGroupId != pThisGroup->processGroupId)
+                    continue;
             }
-
-            // Now we can safely send the signals
-            for(List<PosixProcess *>::Iterator it = tmpList.begin(); it != tmpList.end(); it++)
+            else if (pid == -1)
             {
-                PosixProcess *member = *it;
-                if(member)
-                    doProcessKill(member, sig);
+                // Kill all processes we have permission to kill (limit to only direct children for now)
+                if(pProcess->getParent() != pThisProcess)
+                    continue;
+            }
+            else if(pGroup && (pGroup->processGroupId != (pid * -1)))
+            {
+                // Absolute group ID reference
+                continue;
             }
         }
-        else
-        {
-            doProcessKill(p, sig);
+        else if ((pid > 0) && (static_cast<int>(pProcess->getId()) != pid))
+            continue;
+        else if (pProcess->getType() != Process::Posix)
+            continue;
 
-            // If it was us, try to handle the signal *now*, or else we're going to end up who-knows-where on return.
-            if(pid == posix_getpid())
-                Processor::information().getScheduler().checkEventState(0);
-        }
+        // Okay, the process is good.
+        processList.pushBack(pProcess);
     }
-    else
+
+    // No process(es) found?
+    if(processList.count() == 0)
     {
         SYSCALL_ERROR(NoSuchProcess);
+        SG_NOTICE("  -> no such process");
         return -1;
+    }
+
+    // Go ahead and kill each process.
+    for(List<Process *>::Iterator it = processList.begin();
+        it != processList.end();
+        ++it)
+    {
+        PosixProcess *member = static_cast<PosixProcess *>(*it);
+        if(member != pThisProcess)
+            doProcessKill(member, sig);
+        else
+            bKillingSelf = true;
     }
 
     // Yield to allow the events to be propagated across the process(es)
     Scheduler::instance().yield();
+
+    if(bKillingSelf)
+    {
+        doProcessKill(pThisProcess, sig);
+
+        // If it was us, try to handle the signal *now*, or else we're going to end up who-knows-where on return.
+        Processor::information().getScheduler().checkEventState(0);
+    }
 
     return 0;
 }
