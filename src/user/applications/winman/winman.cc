@@ -29,6 +29,7 @@
 #include <arpa/inet.h>
 #include <sys/un.h>
 #include <sys/ioctl.h>
+#include <sys/wait.h>
 
 #include <sys/fb.h>
 
@@ -784,10 +785,53 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Grab the current mode so we can restore it if we die.
+    pedigree_fb_mode current_mode;
+    int result = ioctl(fb, PEDIGREE_FB_GETMODE, &current_mode);
+    if(result < 0)
+    {
+        fprintf(stderr, "winman: could not get current mode information.\n");
+        return 1;
+    }
+
+    // Kick off a 'window manager' process group, fork to run the modeset shim.
+    setpgid(0, 0);
+    pid_t child = fork();
+    if(child != 0)
+    {
+        // Wait for the child (ie, real window manager process) to terminate.
+        int status = 0;
+        waitpid(child, &status, 0);
+
+        // Restore old graphics mode.
+        pedigree_fb_modeset old_mode = {current_mode.width, current_mode.height, current_mode.depth};
+        ioctl(fb, PEDIGREE_FB_SETMODE, &old_mode);
+
+        close(fb);
+
+        // Termination information
+        if(WIFEXITED(status))
+        {
+            fprintf(stderr, "winman: terminated with status %d\n", WEXITSTATUS(status));
+        }
+        else if(WIFSIGNALED(status))
+        {
+            fprintf(stderr, "winman: terminated by signal %d\n", WTERMSIG(status));
+        }
+        else
+        {
+            fprintf(stderr, "winman: terminated by unknown means\n");
+        }
+
+        // Terminate our process group.
+        kill(0, SIGTERM);
+        return 0;
+    }
+
     // Can we set the graphics mode we want?
     /// \todo Read from a config file!
     pedigree_fb_modeset mode = {1024, 768, 32};
-    int result = ioctl(fb, PEDIGREE_FB_SETMODE, &mode);
+    result = ioctl(fb, PEDIGREE_FB_SETMODE, &mode);
     if(result < 0)
     {
         // No! Bad!
