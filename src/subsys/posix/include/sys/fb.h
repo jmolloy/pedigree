@@ -22,6 +22,7 @@ typedef struct {
 typedef struct {
     size_t width;
     size_t height;
+    size_t depth;
     size_t bytes_per_pixel;
     uint32_t format;
 } pedigree_fb_mode;

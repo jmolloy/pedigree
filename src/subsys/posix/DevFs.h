@@ -70,6 +70,7 @@ private:
     GraphicsService::GraphicsProvider *m_pProvider;
 
     bool m_bTextMode;
+    size_t m_nDepth;
 };
 
 /** This class provides slightly more flexibility for adding files to a directory. */

@@ -75,7 +75,7 @@ uint64_t NullFile::write(uint64_t location, uint64_t size, uintptr_t buffer, boo
 }
 
 FramebufferFile::FramebufferFile(String str, size_t inode, Filesystem *pParentFS, File *pParentNode) :
-    File(str, 0, 0, 0, inode, pParentFS, 0, pParentNode), m_pProvider(0), m_bTextMode(false)
+    File(str, 0, 0, 0, inode, pParentFS, 0, pParentNode), m_pProvider(0), m_bTextMode(false), m_nDepth(0)
 {
 }
 
@@ -171,6 +171,7 @@ int FramebufferFile::command(const int command, void *buffer)
                             pVga->rememberMode();
                             pVga->setLargestTextMode();
 
+                            m_nDepth = 0;
                             m_bTextMode = true;
 
                             bSuccess = true;
@@ -202,6 +203,8 @@ int FramebufferFile::command(const int command, void *buffer)
 
                 if(bSet)
                 {
+                    m_nDepth = desiredDepth;
+
                     setSize(pFramebuffer->getHeight() * pFramebuffer->getBytesPerLine());
 
                     if(m_pProvider->bTextModes && m_bTextMode)
@@ -224,10 +227,18 @@ int FramebufferFile::command(const int command, void *buffer)
         case PEDIGREE_FB_GETMODE:
             {
                 pedigree_fb_mode *arg = reinterpret_cast<pedigree_fb_mode *>(buffer);
-                arg->width = pFramebuffer->getWidth();
-                arg->height = pFramebuffer->getHeight();
-                arg->bytes_per_pixel = pFramebuffer->getBytesPerPixel();
-                arg->format = pFramebuffer->getFormat();
+                if(m_bTextMode)
+                {
+                    memset(arg, 0, sizeof(*arg));
+                }
+                else
+                {
+                    arg->width = pFramebuffer->getWidth();
+                    arg->height = pFramebuffer->getHeight();
+                    arg->depth = m_nDepth;
+                    arg->bytes_per_pixel = pFramebuffer->getBytesPerPixel();
+                    arg->format = pFramebuffer->getFormat();
+                }
 
                 return 0;
             }
