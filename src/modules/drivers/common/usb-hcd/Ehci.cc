@@ -385,6 +385,9 @@ void Ehci::interrupt(size_t number, InterruptState &state)
 #endif
         ;
     }
+
+    // ACK the cause of the interrupt early.
+    m_pBase->write32(nStatus, m_nOpRegsOffset + EHCI_STS);
     
     if(nStatus & 0x16)
     {
@@ -492,7 +495,8 @@ void Ehci::interrupt(size_t number, InterruptState &state)
 
                             // Interrupt on Async Advance Doorbell - will run the dequeue thread to
                             // clear bits in the QH and qTD bitmaps
-                            m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) | (1 << 6), m_nOpRegsOffset + EHCI_CMD);
+                            size_t cmdReg = m_pBase->read32(m_nOpRegsOffset + EHCI_CMD);
+                            m_pBase->write32(cmdReg | (1 << 6), m_nOpRegsOffset + EHCI_CMD);
                             
                             // Now ready for dequeue.
                             pQH->pMetaData->bIgnore = true;
@@ -540,8 +544,6 @@ void Ehci::interrupt(size_t number, InterruptState &state)
 
     if(nStatus & EHCI_STS_ASYNCADVANCE)
         new Thread(Processor::information().getCurrentThread()->getParent(), threadStub, reinterpret_cast<void*>(this));
-
-    m_pBase->write32(nStatus, m_nOpRegsOffset + EHCI_STS);
 
 #ifdef X86_COMMON
     return true;
@@ -714,6 +716,14 @@ void Ehci::doAsync(uintptr_t nTransaction, void (*pCallback)(uintptr_t, ssize_t)
     pQH->pMetaData->pCallback = pCallback;
     pQH->pMetaData->pParam = pParam;
     pQH->pMetaData->pLastQTD->bIoc = 1;
+
+    // Only one transaction on this QH?
+    if(pQH->pMetaData->pFirstQTD == pQH->pMetaData->pLastQTD)
+    {
+        // Update IOC bit in Transfer Overlay as well (as we have just changed)
+        pQH->overlay.bIoc = 1;
+    }
+
 #ifdef USB_VERBOSE_DEBUG
     DEBUG_LOG("START #" << Dec << nTransaction << Hex << " " << Dec << pQH->nAddress << ":" << pQH->nEndpoint << Hex);
 #endif
@@ -750,7 +760,6 @@ void Ehci::doAsync(uintptr_t nTransaction, void (*pCallback)(uintptr_t, ssize_t)
 
             // Finally, fix the linked list
             pOldTail->pMetaData->pNext = pQH;
-            pOldTail->pMetaData->pPrev = pQH;
         }
 
         // No longer reclaiming
