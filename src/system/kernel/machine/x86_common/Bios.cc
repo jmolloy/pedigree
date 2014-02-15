@@ -192,7 +192,7 @@ void Bios::executeInterrupt (int i)
     if(&va != &kernva)
         Processor::switchAddressSpace(va);
 
-    Processor::setInterrupts(true);
+    Processor::setInterrupts(bInterrupts);
 }
 
 void Bios::setAx (int n)
