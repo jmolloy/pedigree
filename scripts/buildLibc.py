@@ -99,11 +99,13 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
         "-L.",
         "-L%s" % (pedigreec_dir,),
         "-L%s" % (glue_dir,),
+        "-Wl,-Bstatic",
         "-Wl,--whole-archive",
         "-lc",
         "-lpedigree-glue",
-        "-Wl,--no-whole-archive",
         "-lpedigree-c",
+        "-Wl,--no-whole-archive",
+        "-Wl,-Bdynamic",
         "-lgcc",
     ]
 
