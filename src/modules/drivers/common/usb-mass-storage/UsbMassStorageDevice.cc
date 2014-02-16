@@ -24,7 +24,7 @@
 #include "UsbMassStorageDevice.h"
 
 UsbMassStorageDevice::UsbMassStorageDevice(UsbDevice *dev) :
-    UsbDevice(dev), ScsiController(), m_nUnits(0), m_pInEndpoint(0), m_pOutEndpoint(0)
+    ScsiController(), UsbDevice(dev), m_nUnits(0), m_pInEndpoint(0), m_pOutEndpoint(0)
 {
 }
 

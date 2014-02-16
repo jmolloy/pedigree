@@ -48,6 +48,7 @@ public:
     Controller, ///< A device which exposes other devices but requires a driver, and does no address space translation.
     UsbController, ///< Same as Controller, but exposes USB devices.
     UsbGeneric, ///< Same as Generic, but for USB devices.
+    UsbContainer,///< Wraps a UsbDevice (which does not inherit Device) in a Device so it can be in the tree.
   };
   /** Each device may have one or more disjoint regions of address space. This can be in I/O space
       or memory space. */

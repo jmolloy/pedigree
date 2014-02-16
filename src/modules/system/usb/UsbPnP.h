@@ -51,7 +51,7 @@ class UsbPnP
         void registerCallback(uint8_t nClass, uint8_t nSubclass, uint8_t nProtocol, callback_t callback);
 
         /// Tries to find a suitable driver for the given USB device
-        bool probeDevice(UsbDevice *pDevice);
+        bool probeDevice(Device *pDeviceBase);
 
     private:
         /// Static instance

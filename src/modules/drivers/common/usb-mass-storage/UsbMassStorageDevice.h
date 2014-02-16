@@ -22,7 +22,7 @@
 #include <usb/UsbConstants.h>
 #include <scsi/ScsiController.h>
 
-class UsbMassStorageDevice : public UsbDevice, public ScsiController
+class UsbMassStorageDevice : public ScsiController, public UsbDevice
 {
     public:
         UsbMassStorageDevice(UsbDevice *dev);
@@ -32,9 +32,19 @@ class UsbMassStorageDevice : public UsbDevice, public ScsiController
 
         virtual bool sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite);
 
-        virtual void getName(String &str)
+        virtual void getUsbDeviceName(String &str)
         {
             str = "USB Mass Storage Device";
+        }
+
+        virtual bool hasSubtree() const
+        {
+            return true;
+        }
+
+        virtual Device *getDevice()
+        {
+            return this;
         }
 
     private:

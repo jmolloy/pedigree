@@ -20,8 +20,14 @@
 
 UsbPnP UsbPnP::m_Instance;
 
-bool UsbPnP::probeDevice(UsbDevice *pDevice)
+bool UsbPnP::probeDevice(Device *pDeviceBase)
 {
+    // Sanity check.
+    if(!(pDeviceBase->getType() == Device::UsbContainer))
+        return false;
+
+    UsbDevice *pDevice = static_cast<UsbDeviceContainer *>(pDeviceBase)->getUsbDevice();
+
     // Is this device already handled by a driver?
     if(pDevice->getUsbState() == UsbDevice::HasDriver)
         return false;
@@ -63,8 +69,10 @@ bool UsbPnP::probeDevice(UsbDevice *pDevice)
         // Did the device go into the driver state?
         if(pNewDevice->getUsbState() == UsbDevice::HasDriver)
         {
-            // Replace the old device with the new one, delete the old one and return true
-            pDevice->getParent()->replaceChild(pDevice, pNewDevice);
+            // Replace the old device with the new one
+            UsbDeviceContainer *pContainer = pDevice->getContainer();
+            pContainer->getParent()->replaceChild(pContainer, new UsbDeviceContainer(pNewDevice));
+            delete pContainer;
             delete pDevice;
             return true;
         }
@@ -78,13 +86,13 @@ void UsbPnP::reprobeDevices(Device *pParent)
 {
     for(size_t i = 0; i < pParent->getNumChildren(); i++)
     {
-        UsbDevice *pDevice = static_cast<UsbDevice*>(pParent->getChild(i));
-        if(pDevice &&
-            ((pDevice->getType() == Device::UsbGeneric) ||
-            (pDevice->getType() == Device::UsbController)))
+        Device *pDevice = pParent->getChild(i);
+        if(pDevice && (pDevice->getType() == Device::UsbContainer))
+        {
             probeDevice(pDevice);
+        }
 
-        reprobeDevices(pParent->getChild(i));
+        reprobeDevices(pDevice);
     }
 }
 

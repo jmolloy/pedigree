@@ -142,28 +142,24 @@ uint32_t UsbHubDevice::getPortStatus(size_t port)
 
 void UsbHubDevice::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid pid, uintptr_t pBuffer, size_t nBytes)
 {
-    UsbHub *pParent = static_cast<UsbHub*>(UsbDevice::m_pParent);
-    pParent->addTransferToTransaction(pTransaction, bToggle, pid, pBuffer, nBytes);
+    m_pHub->addTransferToTransaction(pTransaction, bToggle, pid, pBuffer, nBytes);
 }
 
 uintptr_t UsbHubDevice::createTransaction(UsbEndpoint endpointInfo)
 {
-    UsbHub *pParent = static_cast<UsbHub*>(UsbDevice::m_pParent);
     if((m_Speed == HighSpeed) && (endpointInfo.speed != HighSpeed) && !endpointInfo.nHubAddress)
         endpointInfo.nHubAddress = m_nAddress;
-    return pParent->createTransaction(endpointInfo);
+    return m_pHub->createTransaction(endpointInfo);
 }
 
 void UsbHubDevice::doAsync(uintptr_t pTransaction, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
-    UsbHub *pParent = static_cast<UsbHub*>(UsbDevice::m_pParent);
-    pParent->doAsync(pTransaction, pCallback, pParam);
+    m_pHub->doAsync(pTransaction, pCallback, pParam);
 }
 
 void UsbHubDevice::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, uint16_t nBytes, void (*pCallback)(uintptr_t, ssize_t), uintptr_t pParam)
 {
-    UsbHub *pParent = static_cast<UsbHub*>(UsbDevice::m_pParent);
     if((m_Speed == HighSpeed) && (endpointInfo.speed != HighSpeed) && (!endpointInfo.nHubAddress))
         endpointInfo.nHubAddress = m_nAddress;
-    pParent->addInterruptInHandler(endpointInfo, pBuffer, nBytes, pCallback, pParam);
+    m_pHub->addInterruptInHandler(endpointInfo, pBuffer, nBytes, pCallback, pParam);
 }

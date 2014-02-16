@@ -23,8 +23,13 @@
 #include <usb/Usb.h>
 #include <usb/UsbDescriptors.h>
 
-class UsbDevice : public Device
+class UsbHub;
+class UsbDeviceContainer;
+
+class UsbDevice
 {
+    friend class UsbDeviceContainer;
+
     public:
 
         struct Setup
@@ -150,7 +155,7 @@ class UsbDevice : public Device
         };
 
         /// Default constructor
-        UsbDevice(uint8_t nPort, UsbSpeed speed);
+        UsbDevice(UsbHub *pHub, uint8_t nPort, UsbSpeed speed);
 
         /// Copy constructor
         UsbDevice(UsbDevice *pDev);
@@ -164,15 +169,9 @@ class UsbDevice : public Device
         /// Implemented by the driver class, initialises driver-specific stuff
         virtual void initialiseDriver() {}
 
-        /// Access to internal information
-        virtual void getName(String &str)
+        virtual void getUsbDeviceName(String &str)
         {
-            str = "USB Device";
-        }
-
-        virtual Type getType()
-        {
-            return UsbGeneric;
+            str = "Generic USB Device";
         }
 
         /// Returns the current address of the device
@@ -223,6 +222,25 @@ class UsbDevice : public Device
         /// Switches to the given interface
         void useInterface(uint8_t nInterface);
 
+        /// Gets our Device container, for replacing parents on hubs etc.
+        UsbDeviceContainer *getContainer() const
+        {
+            return m_pContainer;
+        }
+
+        /// Do we expose our own Device tree?
+        virtual bool hasSubtree() const
+        {
+            return false;
+        }
+
+        /// Get a usable Device for this particular UsbDevice, if it has a subtree.
+        /// \return NULL if this operation is not supported.
+        virtual Device *getDevice()
+        {
+            return 0;
+        }
+
     protected:
 
         // Sync transfer methods
@@ -271,10 +289,62 @@ class UsbDevice : public Device
         /// Interface in use
         Interface *m_pInterface;
 
+        /// Parent USB hub.
+        UsbHub *m_pHub;
+
+        /// Our current container.
+        UsbDeviceContainer *m_pContainer;
+
     private:
 
         UsbDevice(const UsbDevice &d);
         const UsbDevice& operator = (const UsbDevice& d);
+};
+
+class UsbDeviceContainer : public Device
+{
+    public:
+        UsbDeviceContainer(UsbDevice *pDev) : Device(), m_pUsbDevice(pDev)
+        {
+            pDev->m_pContainer = this;
+
+            // Classes that expose a subtree can be converted to Device.
+            // But, we need to do this so children will continue to have
+            // the correct parents.
+            if(pDev->hasSubtree())
+            {
+                Device *pChild = pDev->getDevice();
+                addChild(pChild);
+                pChild->setParent(this);
+            }
+        }
+
+        virtual ~UsbDeviceContainer()
+        {
+        }
+
+        UsbDevice *getUsbDevice() const
+        {
+            return m_pUsbDevice;
+        }
+
+        virtual void getName(String &str)
+        {
+            m_pUsbDevice->getUsbDeviceName(str);
+        }
+
+        virtual Type getType()
+        {
+            return Device::UsbContainer;
+        }
+
+        virtual void dump(String &str)
+        {
+            str = "Generic USB Device";
+        }
+
+    private:
+        UsbDevice *m_pUsbDevice;
 };
 
 #endif

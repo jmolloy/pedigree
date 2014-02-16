@@ -56,8 +56,7 @@ bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
         NOTICE("USB: Allocated device on port " << Dec << nPort << Hex << " address " << nAddress);
 
         // Create the UsbDevice instance and set us as parent
-        pDevice = new UsbDevice(nPort, speed);
-        pDevice->setParent(this);
+        pDevice = new UsbDevice(this, nPort, speed);
 
         // Initialise the device - it basically sets the address and gets the descriptors
         pDevice->initialise(nAddress);
@@ -123,7 +122,9 @@ bool UsbHub::deviceConnected(uint8_t nPort, UsbSpeed speed)
         pDevice->useInterface(i);
 
         // Add the device as a child
-        addChild(pDevice);
+        UsbDeviceContainer *pContainer = new UsbDeviceContainer(pDevice);
+        addChild(pContainer);
+        pContainer->setParent(this);
 
         NOTICE("USB: Device (address " << nAddress << "): " << pDescriptor->sVendor << " " << pDescriptor->sProduct << ", class " << Dec << pInterface->nClass << ":" << pInterface->nSubclass << ":" << pInterface->nProtocol << Hex);
 
@@ -141,7 +142,7 @@ void UsbHub::deviceDisconnected(uint8_t nPort)
 
     for(size_t i = 0; i < m_Children.count(); i++)
     {
-        UsbDevice *pDevice = static_cast<UsbDevice*>(m_Children[i]);
+        UsbDevice *pDevice = static_cast<UsbDeviceContainer*>(m_Children[i])->getUsbDevice();
 
         if(!pDevice)
             continue;

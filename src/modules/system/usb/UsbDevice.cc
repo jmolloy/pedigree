@@ -25,9 +25,10 @@
 
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
-UsbDevice::UsbDevice(uint8_t nPort, UsbSpeed speed) :
+UsbDevice::UsbDevice(UsbHub *pHub, uint8_t nPort, UsbSpeed speed) :
     m_nAddress(0), m_nPort(nPort), m_Speed(speed), m_UsbState(Connected),
-    m_pDescriptor(0), m_pConfiguration(0), m_pInterface(0)
+    m_pDescriptor(0), m_pConfiguration(0), m_pInterface(0), m_pHub(pHub),
+    m_pContainer(0)
 {
 }
 
@@ -36,7 +37,7 @@ UsbDevice::UsbDevice(UsbDevice *pDev) :
     m_pDescriptor(pDev->m_pDescriptor), m_pConfiguration(pDev->m_pConfiguration), m_pInterface(pDev->m_pInterface)
 {
     // We have the same parent as pDev
-    m_pParent = pDev->m_pParent;
+    m_pHub = pDev->m_pHub;
 }
 
 UsbDevice::~UsbDevice()
@@ -276,7 +277,7 @@ ssize_t UsbDevice::doSync(UsbDevice::Endpoint *pEndpoint, UsbPid pid, uintptr_t 
         return -TransactionError;
     }
 
-    UsbHub *pParentHub = static_cast<UsbHub*>(m_pParent);
+    UsbHub *pParentHub = m_pHub;
     if(!pParentHub)
     {
         ERROR("USB: Orphaned UsbDevice!");
@@ -333,7 +334,7 @@ void UsbDevice::addInterruptInHandler(Endpoint *pEndpoint, uintptr_t pBuffer, ui
         return;
     }
 
-    UsbHub *pParentHub = static_cast<UsbHub*>(m_pParent);
+    UsbHub *pParentHub = m_pHub;
     if(!pParentHub)
     {
         ERROR("USB: Orphaned UsbDevice!");
@@ -359,7 +360,7 @@ bool UsbDevice::controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t 
     Setup *pSetup = new Setup(nRequestType, nRequest, nValue, nIndex, nLength);
     PointerGuard<Setup> guard(pSetup);
 
-    UsbHub *pParentHub = static_cast<UsbHub*>(m_pParent);
+    UsbHub *pParentHub = m_pHub;
     if(!pParentHub)
     {
         ERROR("USB: Orphaned UsbDevice!");
