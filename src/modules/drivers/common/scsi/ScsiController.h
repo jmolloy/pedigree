@@ -19,16 +19,28 @@
 
 #include <processor/types.h>
 #include <machine/Controller.h>
+#include <utilities/RequestQueue.h>
+
+#define SCSI_REQUEST_READ       1
+#define SCSI_REQUEST_WRITE      2
+#define SCSI_REQUEST_SYNC       3
 
 /** Generic class for Scsi Controllers */
-class ScsiController: public Controller
+class ScsiController: public Controller, public RequestQueue
 {
     public:
 
-        inline ScsiController(){}
+        inline ScsiController()
+        {
+            // Start the RequestQueue
+            initialise();
+        }
         inline virtual ~ScsiController(){}
 
         virtual bool sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite) =0;
+
+        virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
+                                        uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8);
 
     protected:
 

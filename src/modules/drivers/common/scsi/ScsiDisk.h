@@ -72,12 +72,18 @@ class ScsiDisk : public Disk
 
         virtual uintptr_t read(uint64_t location);
         virtual void write(uint64_t location);
+        virtual void flush(uint64_t location);
         virtual void align(uint64_t location);
 
         virtual void getName(String &str)
         {
             str = String("SCSI Disk");
         }
+
+        // These are the internal functions that the controller calls when it is ready to process our request.
+        virtual uint64_t doRead(uint64_t location);
+        virtual uint64_t doWrite(uint64_t location);
+        virtual uint64_t doSync(uint64_t location);
 
     private:
 

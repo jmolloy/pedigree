@@ -300,6 +300,169 @@ namespace ScsiCommands
                 uint8_t nControl;
             } PACKED command;
     };
+
+    class Write10 : public ScsiCommand
+    {
+        public:
+            inline Write10(uint32_t nLba, uint32_t nSectors)
+            {
+                memset(&command, 0, sizeof(command));
+                command.nOpCode = 0x2A;
+                command.nLba = HOST_TO_BIG32(nLba);
+                command.nSectors = HOST_TO_BIG16(nSectors);
+            }
+
+            virtual size_t serialise(uintptr_t &addr)
+            {
+                addr = reinterpret_cast<uintptr_t>(&command);
+                return sizeof(command);
+            }
+
+            struct command
+            {
+                uint8_t nOpCode;
+                uint8_t obs : 1;
+                uint8_t bFUA_NV : 1;
+                uint8_t res1 : 1;
+                uint8_t bFUA : 1;
+                uint8_t bDPO : 1;
+                uint8_t nWrProtect : 3;
+                uint32_t nLba;
+                uint8_t res2;
+                uint16_t nSectors;
+                uint8_t nControl;
+            } PACKED command;
+    };
+
+    class Write12 : public ScsiCommand
+    {
+        public:
+            inline Write12(uint32_t nLba, uint32_t nSectors)
+            {
+                memset(&command, 0, sizeof(command));
+                command.nOpCode = 0xAA;
+                command.nLba = HOST_TO_BIG32(nLba);
+                command.nSectors = HOST_TO_BIG32(nSectors);
+            }
+
+            virtual size_t serialise(uintptr_t &addr)
+            {
+                addr = reinterpret_cast<uintptr_t>(&command);
+                return sizeof(command);
+            }
+
+            struct command
+            {
+                uint8_t nOpCode;
+                uint8_t obs : 1;
+                uint8_t bFUA_NV : 1;
+                uint8_t res1 : 1;
+                uint8_t bFUA : 1;
+                uint8_t bDPO : 1;
+                uint8_t nWrProtect : 3;
+                uint32_t nLba;
+                uint32_t nSectors;
+                uint8_t res2;
+                uint8_t nControl;
+            } PACKED command;
+    };
+
+    class Write16 : public ScsiCommand
+    {
+        public:
+            inline Write16(uint32_t nLba, uint32_t nSectors)
+            {
+                memset(&command, 0, sizeof(command));
+                command.nOpCode = 0x8A;
+                command.nLba = HOST_TO_BIG64(nLba);
+                command.nSectors = HOST_TO_BIG32(nSectors);
+            }
+
+            virtual size_t serialise(uintptr_t &addr)
+            {
+                addr = reinterpret_cast<uintptr_t>(&command);
+                return sizeof(command);
+            }
+
+            struct command
+            {
+                uint8_t nOpCode;
+                uint8_t obs : 1;
+                uint8_t bFUA_NV : 1;
+                uint8_t res1 : 1;
+                uint8_t bFUA : 1;
+                uint8_t bDPO : 1;
+                uint8_t nWrProtect : 3;
+                uint64_t nLba;
+                uint32_t nSectors;
+                uint8_t res2;
+                uint8_t nControl;
+            } PACKED command;
+    };
+
+    class Synchronise10 : public ScsiCommand
+    {
+        public:
+            inline Synchronise10(uint32_t nLba, uint32_t nSectors)
+            {
+                memset(&command, 0, sizeof(command));
+                command.nOpCode = 0x35;
+                command.nLba = HOST_TO_BIG32(nLba);
+                command.nBlocks = HOST_TO_BIG16(nSectors);
+            }
+
+            virtual size_t serialise(uintptr_t &addr)
+            {
+                addr = reinterpret_cast<uintptr_t>(&command);
+                return sizeof(command);
+            }
+
+            struct command
+            {
+                uint8_t nOpCode;
+                uint8_t obs : 1;
+                uint8_t bImmed : 1;
+                uint8_t bSyncNV : 1;
+                uint8_t rsvd1 : 5;
+                uint32_t nLba;
+                uint8_t nGroup : 5;
+                uint8_t rsvd2 : 3;
+                uint16_t nBlocks;
+                uint8_t nControl;
+            } PACKED command;
+    };
+
+    class Synchronise16 : public ScsiCommand
+    {
+        public:
+            inline Synchronise16(uint32_t nLba, uint32_t nSectors)
+            {
+                memset(&command, 0, sizeof(command));
+                command.nOpCode = 0x91;
+                command.nLba = HOST_TO_BIG64(nLba);
+                command.nBlocks = HOST_TO_BIG32(nSectors);
+            }
+
+            virtual size_t serialise(uintptr_t &addr)
+            {
+                addr = reinterpret_cast<uintptr_t>(&command);
+                return sizeof(command);
+            }
+
+            struct command
+            {
+                uint8_t nOpCode;
+                uint8_t obs : 1;
+                uint8_t bImmed : 1;
+                uint8_t bSyncNV : 1;
+                uint8_t rsvd1 : 5;
+                uint64_t nLba;
+                uint32_t nBlocks;
+                uint8_t nGroup : 5;
+                uint8_t rsvd2 : 3;
+                uint8_t nControl;
+            } PACKED command;
+    };
 };
 
 #endif
