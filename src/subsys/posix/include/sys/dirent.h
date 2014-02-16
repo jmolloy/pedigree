@@ -40,6 +40,11 @@ struct dirent *readdir(DIR *);
 void rewinddir(DIR *);
 int closedir(DIR *);
 
+int alphasort(const struct dirent **d1, const struct dirent **d2);
+int scandir(const char *dir, struct dirent ***namelist,
+       int (*sel)(const struct dirent *),
+       int (*compar)(const struct dirent **, const struct dirent **));
+
 #ifdef __cplusplus
 }
 #endif
