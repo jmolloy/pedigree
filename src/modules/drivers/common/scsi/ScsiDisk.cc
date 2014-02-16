@@ -25,7 +25,7 @@
 
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
-ScsiDisk::ScsiDisk() : m_Cache(), m_nAlignPoints(0), m_NumBlocks(0), m_BlockSize(0)
+ScsiDisk::ScsiDisk() : Disk(), m_Cache(), m_nAlignPoints(0), m_NumBlocks(0), m_BlockSize(0)
 {
 }
 
