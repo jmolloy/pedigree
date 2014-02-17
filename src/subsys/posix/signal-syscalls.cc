@@ -648,15 +648,35 @@ int posix_sigaltstack(const struct stack_t *stack, struct stack_t *oldstack)
 void pedigree_init_sigret()
 {
     SG_NOTICE("init_sigret");
+    static physical_uintptr_t sigretPhys = 0;
+
+    // Handle allocation if needed.
+    if(sigretPhys == 0)
+    {
+        sigretPhys = PhysicalMemoryManager::instance().allocatePage();
+        PhysicalMemoryManager::instance().pin(sigretPhys);
+
+        // Map trampoline page in and bring across the sigret code.
+        Processor::information().getVirtualAddressSpace().map(
+                sigretPhys,
+                reinterpret_cast<void*> (EVENT_HANDLER_TRAMPOLINE),
+                VirtualAddressSpace::Write | VirtualAddressSpace::Shared | VirtualAddressSpace::Execute);
+
+        memcpy(reinterpret_cast<void*>(EVENT_HANDLER_TRAMPOLINE), reinterpret_cast<void*>(sigret_stub), (reinterpret_cast<uintptr_t>(&sigret_stub_end) - reinterpret_cast<uintptr_t>(sigret_stub)));
+
+        // Mark read-only now that we have mapped in the page.
+        Processor::information().getVirtualAddressSpace().setFlags(
+                reinterpret_cast<void*> (EVENT_HANDLER_TRAMPOLINE),
+                VirtualAddressSpace::Execute | VirtualAddressSpace::Shared);
+    }
 
     // Map the signal return stub to the correct location
     if(!Processor::information().getVirtualAddressSpace().isMapped(reinterpret_cast<void *>(EVENT_HANDLER_TRAMPOLINE)))
     {
-        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-        Processor::information().getVirtualAddressSpace().map(phys,
+        Processor::information().getVirtualAddressSpace().map(
+                sigretPhys,
                 reinterpret_cast<void*> (EVENT_HANDLER_TRAMPOLINE),
-                                                              VirtualAddressSpace::Write|VirtualAddressSpace::Execute);
-        memcpy(reinterpret_cast<void*>(EVENT_HANDLER_TRAMPOLINE), reinterpret_cast<void*>(sigret_stub), (reinterpret_cast<uintptr_t>(&sigret_stub_end) - reinterpret_cast<uintptr_t>(sigret_stub)));
+                VirtualAddressSpace::Shared | VirtualAddressSpace::Execute);
     }
 
     // Install default signal handlers
