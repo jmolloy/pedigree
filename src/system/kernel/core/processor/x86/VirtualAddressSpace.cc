@@ -620,7 +620,8 @@ VirtualAddressSpace *X86VirtualAddressSpace::clone()
             physical_uintptr_t physicalAddress = PAGE_GET_PHYSICAL_ADDRESS(pageTableEntry);
 
             void *virtualAddress = reinterpret_cast<void*> ( ((i*1024)+j)*4096 );
-            if (getKernelAddressSpace().isMapped(virtualAddress))
+            if ((virtualAddress < USERSPACE_VIRTUAL_START) ||
+                (virtualAddress >= KERNEL_SPACE_START))
                 continue;
 
             if(flags & PAGE_SHARED) {
@@ -652,6 +653,30 @@ VirtualAddressSpace *X86VirtualAddressSpace::clone()
 
     g_pCurrentlyCloning = 0;
 
+    X86VirtualAddressSpace *pX86Clone = static_cast<X86VirtualAddressSpace *>(pClone);
+
+    // Before returning the address space, bring across metadata.
+    // Note though that if the parent of the clone (ie, this address space)
+    // is the kernel address space, we mustn't copy metadata or else the
+    // userspace defaults in the constructor get wiped out.
+
+    if(m_pStackTop < KERNEL_SPACE_START)
+    {
+        pX86Clone->m_pStackTop = m_pStackTop;
+        for(Vector<void*>::Iterator it = m_freeStacks.begin();
+            it != m_freeStacks.end();
+            ++it)
+        {
+            pX86Clone->m_freeStacks.pushBack(*it);
+        }
+    }
+
+    if(m_Heap < KERNEL_SPACE_START)
+    {
+        pX86Clone->m_Heap = m_Heap;
+        pX86Clone->m_HeapEnd = m_HeapEnd;
+    }
+
     return pClone;
 }
 
@@ -667,6 +692,8 @@ void X86VirtualAddressSpace::revertToKernelAddressSpace()
             continue;
 
         if (reinterpret_cast<void*>(i*1024*4096) >= KERNEL_SPACE_START)
+            continue;
+        if (reinterpret_cast<void*>(i*1024*4096) < USERSPACE_VIRTUAL_START)
             continue;
 
         bool bDidSkip = false;
