@@ -201,6 +201,11 @@ class PosixSubsystem : public Subsystem
 
             SignalHandler &operator = (const SignalHandler &s)
             {
+                if(pEvent)
+                {
+                    delete pEvent;
+                }
+
                 sig = s.sig;
                 pEvent = new SignalEvent(*(s.pEvent));
                 sigMask = s.sigMask;
@@ -231,7 +236,7 @@ class PosixSubsystem : public Subsystem
         /** Gets a signal handler */
         SignalHandler* getSignalHandler(size_t sig)
         {
-            m_SignalHandlersLock.enter();
+            while(!m_SignalHandlersLock.enter());
             SignalHandler *ret = reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig % 32));
             m_SignalHandlersLock.leave();
             return ret;

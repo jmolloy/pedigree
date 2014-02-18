@@ -131,13 +131,11 @@ PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
     m_FdLock(), m_FdBitmap(), m_LastFd(0), m_FreeCount(s.m_FreeCount),
     m_AltSigStack(), m_SyncObjects(), m_Threads()
 {
-    m_SignalHandlersLock.acquire();
-    s.m_SignalHandlersLock.enter();
+    while(!m_SignalHandlersLock.acquire());
+    while(!s.m_SignalHandlersLock.enter());
 
     // Copy all signal handlers
-    sigHandlerTree &parentHandlers = s.m_SignalHandlers;
-    sigHandlerTree &myHandlers = m_SignalHandlers;
-    for(sigHandlerTree::Iterator it = parentHandlers.begin(); it != parentHandlers.end(); it++)
+    for(sigHandlerTree::Iterator it = s.m_SignalHandlers.begin(); it != s.m_SignalHandlers.end(); it++)
     {
         size_t key = it.key();
         void *value = it.value();
@@ -145,7 +143,7 @@ PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
             continue;
 
         SignalHandler *newSig = new SignalHandler(*reinterpret_cast<SignalHandler *>(value));
-        myHandlers.insert(key, newSig);
+        m_SignalHandlers.insert(key, newSig);
     }
 
     s.m_SignalHandlersLock.leave();
@@ -163,9 +161,7 @@ PosixSubsystem::~PosixSubsystem()
     while(!m_SignalHandlersLock.acquire());
 
     // Destroy all signal handlers
-    sigHandlerTree &myHandlers = m_SignalHandlers;
-    List<void*> signalsToRemove;
-    for(sigHandlerTree::Iterator it = myHandlers.begin(); it != myHandlers.end(); it++)
+    for(sigHandlerTree::Iterator it = m_SignalHandlers.begin(); it != m_SignalHandlers.end(); it++)
     {
         // Get the signal handler and remove it. Note that there shouldn't be null
         // SignalHandlers, at all.
@@ -177,7 +173,7 @@ PosixSubsystem::~PosixSubsystem()
     }
 
     // And now that the signals are destroyed, remove them from the Tree
-    myHandlers.clear();
+    m_SignalHandlers.clear();
 
     m_SignalHandlersLock.release();
 
@@ -474,7 +470,7 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType, Inter
 
 void PosixSubsystem::setSignalHandler(size_t sig, SignalHandler* handler)
 {
-    m_SignalHandlersLock.acquire();
+    while(!m_SignalHandlersLock.acquire());
 
     sig %= 32;
     if(handler)
