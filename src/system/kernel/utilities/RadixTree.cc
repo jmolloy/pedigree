@@ -30,6 +30,7 @@ RadixTree<void*>::RadixTree() :
 RadixTree<void*>::~RadixTree()
 {
     clear();
+    delete m_pRoot;
 }
 
 RadixTree<void*>::RadixTree(const RadixTree &x) :
