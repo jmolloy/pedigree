@@ -24,13 +24,14 @@
 
 #include <processor/types.h>
 #include <processor/PhysicalMemoryManager.h>
+#include <utilities/MemoryAllocator.h>
 #include <Log.h>
+
+#include <Spinlock.h>
 
 #ifdef DEBUGGER
 #include <SlamCommand.h>
 #endif
-
-extern void *dlmallocSbrk(ssize_t incr);
 
 /// Size of each slab in 4096-byte pages
 #define SLAB_SIZE                       1
@@ -173,6 +174,14 @@ class SlamAllocator
             return m_Instance;
         }
 
+        size_t heapPageCount() const
+        {
+            return m_HeapPageCount;
+        }
+
+        uintptr_t getSlab(size_t fullSize);
+        void freeSlab(uintptr_t address, size_t length);
+
 #ifdef USE_DEBUG_ALLOCATOR
     inline size_t headerSize()
     {
@@ -231,6 +240,11 @@ private:
 #if CRIPPLINGLY_VIGILANT
     bool m_bVigilant;
 #endif
+
+    MemoryAllocator m_SlabRegion;
+    size_t m_HeapPageCount;
+
+    Spinlock m_SlabRegionLock;
 };
 
 #endif

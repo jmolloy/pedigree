@@ -18,9 +18,12 @@
 
 #include <utilities/assert.h>
 #include <utilities/MemoryTracing.h>
+#include <LockGuard.h>
 
 #include <machine/Machine.h>
 #include <processor/Processor.h>
+#include <processor/VirtualAddressSpace.h>
+#include <processor/PhysicalMemoryManager.h>
 #include <panic.h>
 
 #include <Backtrace.h>
@@ -184,19 +187,14 @@ bool SlamCache::isPointerValid(uintptr_t object)
     return true;
 }
 
-Spinlock s;
 uintptr_t SlamCache::getSlab()
 {
-    s.acquire();
-    uintptr_t ret = reinterpret_cast<uintptr_t>(dlmallocSbrk(m_SlabSize));
-    s.release();
-    return ret;
+    return SlamAllocator::instance().getSlab(m_SlabSize);
 }
 
 void SlamCache::freeSlab(uintptr_t slab)
 {
-    /// \todo Implement. Also, call this sometime.
-    ERROR("Request to free slab that couldn't be honoured.");
+    SlamAllocator::instance().freeSlab(slab, m_SlabSize);
 }
 
 SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
@@ -366,7 +364,9 @@ SlamAllocator::SlamAllocator() :
 #if CRIPPLINGLY_VIGILANT
     , m_bVigilant(false)
 #endif
+    , m_SlabRegion(), m_HeapPageCount(0), m_SlabRegionLock(false)
 {
+    m_SlabRegion.clear();
 }
 
 SlamAllocator::~SlamAllocator()
@@ -375,9 +375,104 @@ SlamAllocator::~SlamAllocator()
 
 void SlamAllocator::initialise()
 {
+    LockGuard<Spinlock> guard(m_SlabRegionLock);
+
+    // Bring up caches early so we can set the RangeList.
+    /// \note The RangeList will use ONE cache, which will bootstrap the rest.
     for (size_t i =0; i < 32; i++)
+    {
         m_Caches[i].initialise(1ULL << i);
+    }
+
     m_bInitialised = true;
+
+    uintptr_t base = VirtualAddressSpace::getKernelAddressSpace().getKernelHeapStart() + PhysicalMemoryManager::getPageSize();
+    uintptr_t end = VirtualAddressSpace::getKernelAddressSpace().getKernelHeapEnd();
+    m_SlabRegion.free(base, end - base);
+}
+
+uintptr_t SlamAllocator::getSlab(size_t fullSize)
+{
+    uintptr_t ret = 0;
+    if(!m_HeapPageCount)
+    {
+        if(fullSize > PhysicalMemoryManager::getPageSize())
+            panic("First SlamAllocator::getSlab is for too large an allocation!");
+
+        // Special case: don't allocate from the MemoryAllocator, as that is
+        // a chicken-and-egg problem.
+        ret = VirtualAddressSpace::getKernelAddressSpace().getKernelHeapStart();
+    }
+    else
+    {
+        LockGuard<Spinlock> guard(m_SlabRegionLock);
+        if(!m_SlabRegion.allocate(fullSize, ret))
+            FATAL("SlamAllocator: couldn't allocate a slab!");
+    }
+
+#ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
+    VirtualAddressSpace &currva = Processor::information().getVirtualAddressSpace();
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
+    if (Processor::m_Initialised == 2)
+        Processor::switchAddressSpace(va);
+#endif
+
+    for(uintptr_t base = ret; base < (ret + fullSize); base += PhysicalMemoryManager::getPageSize())
+    {
+        void *p = reinterpret_cast<void *>(base);
+        if(va.isMapped(p))
+            FATAL("SlamAllocator: page " << base << " already mapped in getSlab!");
+
+        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+        va.map(phys, p, VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+    }
+
+#ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
+    if (Processor::m_Initialised == 2)
+        Processor::switchAddressSpace(currva);
+#endif
+
+    m_HeapPageCount += fullSize / PhysicalMemoryManager::getPageSize();
+
+    return ret;
+}
+
+void SlamAllocator::freeSlab(uintptr_t address, size_t length)
+{
+    // Avoid freeing the 'bootstrap' page (ie, the virtual page which starts
+    // us off, so we don't depend on ourselves for the MemoryAllocator)
+    if(address == VirtualAddressSpace::getKernelAddressSpace().getKernelHeapStart())
+        return;
+
+    LockGuard<Spinlock> guard(m_SlabRegionLock);
+    m_SlabRegion.free(address, length);
+
+#ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
+    VirtualAddressSpace &currva = Processor::information().getVirtualAddressSpace();
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
+    if (Processor::m_Initialised == 2)
+        Processor::switchAddressSpace(va);
+#endif
+
+    for(uintptr_t base = address; base < (address + length); base += PhysicalMemoryManager::getPageSize())
+    {
+        void *p = reinterpret_cast<void *>(base);
+        physical_uintptr_t phys; size_t flags;
+        if(va.isMapped(p))
+        {
+            va.getMapping(p, phys, flags);
+            va.unmap(p);
+
+            PhysicalMemoryManager::instance().freePage(phys);
+        }
+    }
+
+#ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
+    if (Processor::m_Initialised == 2)
+        Processor::switchAddressSpace(currva);
+#endif
+
+    m_HeapPageCount -= length / PhysicalMemoryManager::getPageSize();
 }
 
 uintptr_t SlamAllocator::allocate(size_t nBytes)

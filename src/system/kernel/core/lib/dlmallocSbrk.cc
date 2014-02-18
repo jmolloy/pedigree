@@ -24,6 +24,8 @@
 
 void *dlmallocSbrk(ssize_t incr)
 {
+    FATAL("TODO: remove dlmallocSbrk");
+
   // NOTE: incr is already page aligned
 
   //Spinlock lock;
