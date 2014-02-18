@@ -340,6 +340,9 @@ void InputManager::mainThread()
             }
         }
 
+        // Yield to run the events we just transmitted.
+        Scheduler::instance().yield();
+
         delete pNote;
     }
 #endif
