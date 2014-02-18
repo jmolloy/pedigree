@@ -111,6 +111,12 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
   if(!bOwnRequest)
   {
     ++pReq->refcnt;
+
+    // No longer an async request - something cares about its result.
+    if(pReq->isAsync)
+    {
+        pReq->isAsync = false;
+    }
   }
   else
   {
@@ -163,7 +169,7 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
   uintptr_t ret = pReq->ret;
 
   // Delete the request structure.
-  if(bOwnRequest)
+  if(bOwnRequest && pReq->pThread)
     pReq->pThread->removeRequest(pReq);
   if(!--pReq->refcnt)
     delete pReq;
@@ -188,7 +194,7 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
   pReq->isAsync = true;
   pReq->next = 0;
   pReq->bReject = false;
-  pReq->refcnt = 1;
+  pReq->refcnt = 0;
 
   // Add to the request queue.
   m_RequestQueueMutex.acquire();
@@ -283,9 +289,12 @@ int RequestQueue::work()
     // Verify that it's still valid to run the request
     if(pReq->bReject)
     {
-        WARNING("RequestQueue: request rejected");
         if(pReq->isAsync)
+        {
+            if(pReq->pThread)
+                pReq->pThread->removeRequest(pReq);
             delete pReq;
+        }
         continue;
     }
 
@@ -297,7 +306,8 @@ int RequestQueue::work()
         // and grab the next request from the queue. The calling thread has long since stopped
         // caring about whether we're done or not.
         NOTICE("RequestQueue::work - caller interrupted");
-        pReq->pThread->removeRequest(pReq);
+        if(pReq->pThread)
+            pReq->pThread->removeRequest(pReq);
         continue;
     }
     switch (Processor::information().getCurrentThread()->getUnwindState())
@@ -314,12 +324,14 @@ int RequestQueue::work()
     bool bAsync = pReq->isAsync;
 
     // Request finished - post the request's mutex to wake the calling thread.
+    pReq->bCompleted = true;
     pReq->mutex.release();
 
     // If the request was asynchronous, destroy the request structure.
     if (bAsync)
     {
-        pReq->pThread->removeRequest(pReq);
+        if(pReq->pThread)
+            pReq->pThread->removeRequest(pReq);
         delete pReq;
     }
   }

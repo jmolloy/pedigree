@@ -158,6 +158,50 @@ Thread::~Thread()
   
   if(m_pTlsBase)
     delete m_pTlsBase;
+
+  if(m_PendingRequests.count())
+  {
+    for(List<RequestQueue::Request *>::Iterator it = m_PendingRequests.begin();
+        it != m_PendingRequests.end();
+        ++it)
+    {
+        if((*it)->bCompleted)
+        {
+            // Already completed - destroy if we can.
+            if((*it)->refcnt <= 1)
+                delete (*it);
+            else
+            {
+                (*it)->refcnt--;
+                if((*it)->pThread == this)
+                    (*it)->pThread = 0;
+            }
+            it = m_PendingRequests.erase(it);
+        }
+        else
+        {
+            // Not completed yet. Convert to an 'async' object, which will
+            // be cleaned up automatically when this request completes.
+            // ... that is, unless more than one thread is waiting on it.
+            if((*it)->refcnt > 1)
+            {
+                (*it)->refcnt--;
+                if((*it)->pThread == this)
+                    (*it)->pThread = 0;
+                it = m_PendingRequests.erase(it);
+            }
+            else
+            {
+                (*it)->bReject = true;
+                (*it)->isAsync = true;
+            }
+        }
+    }
+
+    // Let the RequestQueue do its thing - processing and rejecting our requests.
+    while(m_PendingRequests.count())
+        Scheduler::instance().yield();
+  }
 }
 
 void Thread::setStatus(Thread::Status s)
