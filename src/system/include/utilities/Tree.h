@@ -20,6 +20,8 @@
 #include <processor/types.h>
 #include <utilities/Iterator.h>
 
+#include <Log.h>
+
 #include <new>
 
 /** @addtogroup kernelutilities
@@ -143,6 +145,11 @@ class Tree
     /** The destructor, deallocates memory */
     ~Tree()
     {
+        if(count())
+        {
+            ERROR("Tree: probable leak, Tree destructor called with items in tree.");
+            clear();
+        }
         delete m_Begin;
     }
 
