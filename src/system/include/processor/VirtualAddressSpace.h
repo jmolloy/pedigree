@@ -174,6 +174,12 @@ class VirtualAddressSpace
     /** Gets address of the dynamic linker in the address space. */
     virtual uintptr_t getDynamicLinkerAddress() const = 0;
 
+    /** Gets address of the start of the kernel's heap region. */
+    virtual uintptr_t getKernelHeapStart() const = 0;
+
+    /** Gets address of the end of the kernel's heap region. */
+    virtual uintptr_t getKernelHeapEnd() const = 0;
+
     /** Pointer to the beginning of the heap */
     void *m_Heap;
     /** Pointer to the current heap end */
