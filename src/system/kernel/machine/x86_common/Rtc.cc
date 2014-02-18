@@ -20,6 +20,8 @@
 #include <process/Thread.h>
 #include "Rtc.h"
 
+#include <SlamAllocator.h>
+
 #define INITIAL_RTC_HZ 512
 #define BCD_TO_BIN8(x) (((((x) & 0xF0) >> 4) * 10) + ((x) & 0x0F))
 #define BIN_TO_BCD8(x) ((((x) / 10) * 16) + ((x) % 10))
@@ -326,7 +328,7 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
     Serial *pSerial = Machine::instance().getSerial(1);
     NormalStaticString str;
     str += "Heap: ";
-    str += (reinterpret_cast<uintptr_t>(VirtualAddressSpace::getKernelAddressSpace().m_HeapEnd)-0xC0000000) / 1024;
+    str += SlamAllocator::instance().heapPageCount() * 4;
     str += "K\tPages: ";
     str += (g_AllocedPages * 4096) / 1024;
     str += "K\t Free: ";
