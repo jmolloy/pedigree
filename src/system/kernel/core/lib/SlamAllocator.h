@@ -29,10 +29,6 @@
 
 #include <Spinlock.h>
 
-#ifdef DEBUGGER
-#include <SlamCommand.h>
-#endif
-
 /// Size of each slab in 4096-byte pages
 #define SLAB_SIZE                       1
 
@@ -112,11 +108,19 @@ public:
     /** Frees an object. */
     void free(uintptr_t object);
 
+    /** Attempt to recover slabs from this cache. */
+    size_t recovery(size_t maxSlabs);
+
     bool isPointerValid(uintptr_t object);
 
-    inline size_t objectSize()
+    inline size_t objectSize() const
     {
         return m_ObjectSize;
+    }
+
+    inline size_t slabSize() const
+    {
+        return m_SlabSize;
     }
 
 #if CRIPPLINGLY_VIGILANT
@@ -152,6 +156,14 @@ private:
 #if CRIPPLINGLY_VIGILANT
     uintptr_t m_FirstSlab;
 #endif
+
+    /**
+     * Recovery cannot be done trivially.
+     * Spinlock disables interrupts as part of its operation, so we can
+     * use it to ensure recovery isn't interrupted. Note recovery is a
+     * per-CPU thing.
+     */
+    Spinlock m_RecoveryLock;
 };
 
 class SlamAllocator
@@ -164,6 +176,8 @@ class SlamAllocator
 
         uintptr_t allocate(size_t nBytes);
         void free(uintptr_t mem);
+
+        size_t recovery(size_t maxSlabs = 1);
 
         bool isPointerValid(uintptr_t mem);
 

@@ -38,6 +38,7 @@ SlamCache::SlamCache() :
 #if CRIPPLINGLY_VIGILANT
     ,m_FirstSlab()
 #endif
+    , m_RecoveryLock(false)
 {
 }
 
@@ -195,6 +196,109 @@ uintptr_t SlamCache::getSlab()
 void SlamCache::freeSlab(uintptr_t slab)
 {
     SlamAllocator::instance().freeSlab(slab, m_SlabSize);
+}
+
+size_t SlamCache::recovery(size_t maxSlabs)
+{
+    LockGuard<Spinlock> guard(m_RecoveryLock);
+
+#ifdef MULTIPROCESSOR
+    size_t thisCpu = Processor::id();
+#else
+    size_t thisCpu = 0;
+#endif
+
+    volatile Node *N = m_PartialLists[thisCpu];
+    if (!N)
+    {
+        // Nothing available for recovery!
+        return 0;
+    }
+
+    size_t origMaxSlabs = maxSlabs;
+
+    while (N && maxSlabs)
+    {
+        // Check for particularly large objects (ie, 1 object per slab)
+        if(m_ObjectSize >= PhysicalMemoryManager::getPageSize())
+        {
+            Node *pNext = N->next;
+
+            // N can be outright freed.
+            if(N->magic == MAGIC_VALUE)
+            {
+                uintptr_t slab = reinterpret_cast<uintptr_t>(N);
+                if (N->next)
+                    N->next->prev = N->prev;
+                if (N->prev)
+                    N->prev->next = N->next;
+                freeSlab(slab);
+
+                __sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext);
+            }
+
+            N = pNext;
+            continue;
+        }
+
+        // Not a page or larger, we can just round down to get the slab.
+        uintptr_t slab = reinterpret_cast<uintptr_t>(N) & ~(PhysicalMemoryManager::getPageSize() - 1);
+
+        bool bSlabNotFree = false;
+        for (size_t i = 0; i < (m_SlabSize / m_ObjectSize); ++i)
+        {
+            Node *pNode = reinterpret_cast<Node*> (slab + (i * m_ObjectSize));
+            if(pNode->magic != MAGIC_VALUE)
+            {
+                // Not free.
+                N = N->next;
+                bSlabNotFree = true;
+                break;
+            }
+        }
+
+        if(bSlabNotFree)
+            continue;
+
+        // Find next node to iterate to (must not be on this slab!)
+        Node *pNext = N->next;
+        while(pNext)
+        {
+            uintptr_t nextSlab = reinterpret_cast<uintptr_t>(pNext) & ~(PhysicalMemoryManager::getPageSize() - 1);
+            // Not on the same slab!
+            if(nextSlab != slab)
+            {
+                break;
+            }
+            pNext = pNext->next;
+        }
+
+        // Adjust head of partial list, if we are the head.
+        __sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext);
+
+        // Prepare for next iteration.
+        N = pNext;
+
+        // Slab free. Unlink all items from the partial list.
+        for (size_t i = 0; i < (m_SlabSize / m_ObjectSize); ++i)
+        {
+            Node *pNode = reinterpret_cast<Node*> (slab + (i * m_ObjectSize));
+            if(pNode->next)
+                pNode->next->prev = pNode->prev;
+            if(pNode->prev)
+                pNode->prev->next = pNode->next;
+
+            // Replace partial list head, if needed.
+            __sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pNode, pNext);
+        }
+
+        // Kill off the slab!
+        freeSlab(slab);
+
+        --maxSlabs;
+    }
+
+    return origMaxSlabs - maxSlabs;
 }
 
 SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
@@ -664,6 +768,29 @@ void SlamAllocator::freeSlab(uintptr_t address, size_t length)
     }
 
     m_HeapPageCount -= length / PhysicalMemoryManager::getPageSize();
+}
+
+size_t SlamAllocator::recovery(size_t maxSlabs)
+{
+    size_t nSlabs = 0;
+    size_t nPages = 0;
+
+    for (size_t i = 0; i < 32; ++i)
+    {
+        // Things without slabs don't get recovered.
+        if(!m_Caches[i].slabSize())
+            continue;
+
+        size_t thisSlabs = m_Caches[i].recovery(maxSlabs);
+        nPages += thisSlabs / m_Caches[i].slabSize();
+        nSlabs += thisSlabs;
+        if(nSlabs >= maxSlabs)
+        {
+            break;
+        }
+    }
+
+    return nPages;
 }
 
 uintptr_t SlamAllocator::allocate(size_t nBytes)
