@@ -66,6 +66,8 @@
 
 #include <graphics/GraphicsService.h>
 
+#include <SlamAllocator.h>
+
 void apmm()
 {
 }
@@ -310,7 +312,8 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // This will run when nothing else is available to run
   for (;;)
   {
-    // Kernel idle thread.
+    // Kernel idle thread - perform SLAM recovery.
+    SlamAllocator::instance().recovery(5);
     Processor::haltUntilInterrupt();
 
 #ifdef THREADS
