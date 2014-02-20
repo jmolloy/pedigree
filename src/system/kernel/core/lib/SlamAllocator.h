@@ -245,6 +245,11 @@ private:
     size_t m_HeapPageCount;
 
     Spinlock m_SlabRegionLock;
+
+    uint64_t *m_SlabRegionBitmap;
+    size_t m_SlabRegionBitmapEntries;
+
+    uintptr_t m_Base;
 };
 
 #endif

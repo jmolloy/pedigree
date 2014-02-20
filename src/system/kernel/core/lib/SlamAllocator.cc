@@ -377,38 +377,23 @@ void SlamAllocator::initialise()
 {
     LockGuard<Spinlock> guard(m_SlabRegionLock);
 
-    // Bring up caches early so we can set the RangeList.
-    /// \note The RangeList will use ONE cache, which will bootstrap the rest.
-    for (size_t i =0; i < 32; i++)
+    // We need to allocate our bitmap for this purpose.
+    uintptr_t bitmapBase = VirtualAddressSpace::getKernelAddressSpace().getKernelHeapStart();
+    uintptr_t heapEnd = VirtualAddressSpace::getKernelAddressSpace().getKernelHeapEnd();
+    size_t heapSize = heapEnd - bitmapBase;
+    size_t bitmapBytes = (heapSize / PhysicalMemoryManager::getPageSize()) / 8;
+
+    m_SlabRegionBitmap = reinterpret_cast<uint64_t *>(bitmapBase);
+    m_SlabRegionBitmapEntries = bitmapBytes / sizeof(uint64_t);
+
+    // Ensure the bitmap size is now page-aligned before we allocate it.
+    if(bitmapBytes & (PhysicalMemoryManager::getPageSize() - 1))
     {
-        m_Caches[i].initialise(1ULL << i);
+        bitmapBytes &= ~(PhysicalMemoryManager::getPageSize() - 1);
+        bitmapBytes += PhysicalMemoryManager::getPageSize();
     }
 
-    m_bInitialised = true;
-
-    uintptr_t base = VirtualAddressSpace::getKernelAddressSpace().getKernelHeapStart() + PhysicalMemoryManager::getPageSize();
-    uintptr_t end = VirtualAddressSpace::getKernelAddressSpace().getKernelHeapEnd();
-    m_SlabRegion.free(base, end - base);
-}
-
-uintptr_t SlamAllocator::getSlab(size_t fullSize)
-{
-    uintptr_t ret = 0;
-    if(!m_HeapPageCount)
-    {
-        if(fullSize > PhysicalMemoryManager::getPageSize())
-            panic("First SlamAllocator::getSlab is for too large an allocation!");
-
-        // Special case: don't allocate from the MemoryAllocator, as that is
-        // a chicken-and-egg problem.
-        ret = VirtualAddressSpace::getKernelAddressSpace().getKernelHeapStart();
-    }
-    else
-    {
-        LockGuard<Spinlock> guard(m_SlabRegionLock);
-        if(!m_SlabRegion.allocate(fullSize, ret))
-            FATAL("SlamAllocator: couldn't allocate a slab!");
-    }
+    m_Base = bitmapBase + bitmapBytes;
 
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
     VirtualAddressSpace &currva = Processor::information().getVirtualAddressSpace();
@@ -417,12 +402,198 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
         Processor::switchAddressSpace(va);
 #endif
 
-    for(uintptr_t base = ret; base < (ret + fullSize); base += PhysicalMemoryManager::getPageSize())
+    // Allocate bitmap.
+    for(uintptr_t addr = bitmapBase; addr < m_Base; addr += PhysicalMemoryManager::getPageSize())
     {
-        void *p = reinterpret_cast<void *>(base);
-        if(va.isMapped(p))
-            FATAL("SlamAllocator: page " << base << " already mapped in getSlab!");
+        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+        va.map(phys, reinterpret_cast<void *>(addr), VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+    }
 
+#ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
+    if (Processor::m_Initialised == 2)
+        Processor::switchAddressSpace(currva);
+#endif
+
+    // Good to go - wipe the bitmap and we are now configured.
+    memset(m_SlabRegionBitmap, 0, bitmapBytes);
+
+    NOTICE("Kernel heap range prepared from " << m_Base << " to " << heapEnd << ", size: " << (heapEnd - m_Base));
+
+    for (size_t i =0; i < 32; i++)
+    {
+        m_Caches[i].initialise(1ULL << i);
+    }
+
+    m_bInitialised = true;
+}
+
+uintptr_t SlamAllocator::getSlab(size_t fullSize)
+{
+    size_t nPages = fullSize / PhysicalMemoryManager::getPageSize();
+    if(!nPages)
+    {
+        panic("Attempted to get a slab smaller than the native page size.");
+    }
+
+    LockGuard<Spinlock> guard(m_SlabRegionLock);
+
+    // Try to find space for this allocation.
+    size_t entry = 0;
+    size_t bit = ~0UL;
+    if(nPages == 1)
+    {
+        // Fantastic - easy search.
+        for(entry = 0; entry < m_SlabRegionBitmapEntries; ++entry)
+        {
+            if(!m_SlabRegionBitmap[entry])
+            {
+                bit = 0;
+                break;
+            }
+            else if(m_SlabRegionBitmap[entry] != 0xFFFFFFFFFFFFFFFFULL)
+            {
+                // First set of the INVERTED entry will be the first zero bit.
+                // Note - the check for this block ensures we always get a
+                // result from ffsll here.
+                bit =  __builtin_ffsll(~m_SlabRegionBitmap[entry]) - 1;
+                break;
+            }
+        }
+    }
+    else if(nPages > 64)
+    {
+        // This allocation does not fit within a single bitmap entry.
+        for(entry = 0; entry < m_SlabRegionBitmapEntries; ++entry)
+        {
+            // If there are any bits set in this entry, we must disregard it.
+            if(m_SlabRegionBitmap[entry])
+                continue;
+
+            // This entry has 64 free pages. Now we need to see if we can get
+            // contiguously free bitmap entries.
+            size_t needed = nPages - 64;
+            size_t checkEntry = entry + 1;
+            while(needed >= 64)
+            {
+                // If the entry has any set bits whatsoever, it's no good.
+                if(m_SlabRegionBitmap[checkEntry])
+                    break;
+
+                // Success.
+                ++checkEntry;
+                needed -= 64;
+            }
+
+            // Nothing found?
+            if(needed >= 64)
+                continue;
+
+            // Possible! Can we get enough leading zeroes in the next entry to
+            // make this work?
+            size_t leading = __builtin_clzll(m_SlabRegionBitmap[entry + 1]);
+            if(leading >= needed)
+            {
+                // Perfect. Got a full region.
+                bit = 0;
+                break;
+            }
+        }
+    }
+    else
+    {
+        // Have to search within entries.
+        for(entry = 0; entry < m_SlabRegionBitmapEntries; ++entry)
+        {
+            if(!m_SlabRegionBitmap[entry])
+            {
+                bit = 0;
+                break;
+            }
+            else if(m_SlabRegionBitmap[entry] != 0xFFFFFFFFFFFFFFFFULL)
+            {
+                // Need to find a sequence of bits.
+                // Try for the beginning or end of the entry, as these are builtins.
+                size_t trailing = __builtin_ctzll(m_SlabRegionBitmap[entry]);
+                if(trailing < nPages)
+                {
+                    size_t leading = __builtin_clzll(m_SlabRegionBitmap[entry]);
+                    if(leading < nPages)
+                    {
+                        // No or not enough leading/trailing zeroes. Have to
+                        // fall back to a more linear search.
+
+                        size_t c = 0;
+                        size_t b = ~0UL;
+                        size_t len = 64;
+                        uint64_t v = m_SlabRegionBitmap[entry];
+                        while(len--)
+                        {
+                            if(v & 1)
+                            {
+                                c = 0;
+                                b = ~0;
+                            }
+                            else
+                            {
+                                // Bits count from zero.
+                                if(b == ~0UL)
+                                    b = 63 - len;
+
+                                if(++c >= nPages)
+                                    break;
+                            }
+
+                            v >>= 1;
+                        }
+
+                        if(c >= nPages)
+                        {
+                            bit = b;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        bit = 64 - leading;
+                        break;
+                    }
+                }
+                else
+                {
+                    bit = 0;
+                    break;
+                }
+            }
+        }
+    }
+
+    if(bit == ~0UL)
+    {
+        FATAL("SlamAllocator::getSlab cannot find a place to allocate this slab (" << Dec << fullSize << Hex << " bytes)!");
+    }
+
+    uintptr_t slab = m_Base + (((entry * 64) + bit) * PhysicalMemoryManager::getPageSize());
+
+#ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
+    VirtualAddressSpace &currva = Processor::information().getVirtualAddressSpace();
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
+    if (Processor::m_Initialised == 2)
+        Processor::switchAddressSpace(va);
+#endif
+
+    // Map and mark as used.
+    for(size_t i = 0; i < nPages; ++i)
+    {
+        m_SlabRegionBitmap[entry] |= 1 << bit;
+
+        // Handle crossing a bitmap entry boundary.
+        if((++bit) >= 64)
+        {
+            ++entry;
+            bit = 0;
+        }
+
+        void *p = reinterpret_cast<void *>(slab + (i * PhysicalMemoryManager::getPageSize()));
         physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
         va.map(phys, p, VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
     }
@@ -434,18 +605,20 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
 
     m_HeapPageCount += fullSize / PhysicalMemoryManager::getPageSize();
 
-    return ret;
+    return slab;
 }
 
 void SlamAllocator::freeSlab(uintptr_t address, size_t length)
 {
-    // Avoid freeing the 'bootstrap' page (ie, the virtual page which starts
-    // us off, so we don't depend on ourselves for the MemoryAllocator)
-    if(address == VirtualAddressSpace::getKernelAddressSpace().getKernelHeapStart())
-        return;
+    size_t nPages = length / PhysicalMemoryManager::getPageSize();
+    if(!nPages)
+    {
+        panic("Attempted to free a slab smaller than the native page size.");
+    }
 
     LockGuard<Spinlock> guard(m_SlabRegionLock);
-    m_SlabRegion.free(address, length);
+
+    // Perform unmapping first (so we can just modify 'address').
 
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
     VirtualAddressSpace &currva = Processor::information().getVirtualAddressSpace();
@@ -471,6 +644,24 @@ void SlamAllocator::freeSlab(uintptr_t address, size_t length)
     if (Processor::m_Initialised == 2)
         Processor::switchAddressSpace(currva);
 #endif
+
+    // Adjust bitmap.
+    address -= m_Base;
+    address /= PhysicalMemoryManager::getPageSize();
+    size_t entry = address / 64;
+    size_t bit = address % 64;
+
+    for(size_t i = 0; i < nPages; ++i)
+    {
+        m_SlabRegionBitmap[entry] &= ~(1 << bit);
+
+        // Handle overflow (eg, if we cross a bitmap entry.)
+        if((++bit) >= 64)
+        {
+            ++entry;
+            bit = 0;
+        }
+    }
 
     m_HeapPageCount -= length / PhysicalMemoryManager::getPageSize();
 }
