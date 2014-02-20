@@ -28,6 +28,10 @@
   #endif
 #endif
 
+#ifdef DEBUGGER
+#include <SlamCommand.h>
+#endif
+
 #include <SlamAllocator.h>
 
 X86Keyboard::X86Keyboard(uint32_t portBase) :

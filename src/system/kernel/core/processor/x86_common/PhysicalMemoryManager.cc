@@ -39,6 +39,8 @@ uint32_t g_PageBitmap[16384] = {0};
 #include <commands/AllocationCommand.h>
 #endif
 
+#include <SlamAllocator.h>
+
 X86CommonPhysicalMemoryManager X86CommonPhysicalMemoryManager::m_Instance;
 
 PhysicalMemoryManager &PhysicalMemoryManager::instance()
@@ -52,10 +54,20 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
 
     physical_uintptr_t ptr;
 
+    /// \todo We should actually know how many pages are left, and do this
+    ///       at a high water mark. Some ways in which we can resolve this
+    ///       actually require allocating small amounts of RAM.
     ptr = m_PageStack.allocate(0);
-    if(!ptr)
+    while(!ptr)
     {
         ERROR_NOLOCK("High memory pressure - compacting caches...");
+
+        // Can we just ditch some kernel heap memory?
+        SlamAllocator::instance().recovery(10);
+
+        ptr = m_PageStack.allocate(0);
+        if(ptr)
+            break;
 
         // Try a couple times - high memory pressure so let's fix that.
         for(size_t i = 0; (i < 2) && !ptr; ++i)
@@ -78,6 +90,7 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
         else
         {
             ERROR_NOLOCK("Memory pressure relieved.");
+            break;
         }
     }
 
