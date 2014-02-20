@@ -688,7 +688,7 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
     // Map and mark as used.
     for(size_t i = 0; i < nPages; ++i)
     {
-        m_SlabRegionBitmap[entry] |= 1 << bit;
+        m_SlabRegionBitmap[entry] |= 1ULL << bit;
 
         // Handle crossing a bitmap entry boundary.
         if((++bit) >= 64)
@@ -757,7 +757,7 @@ void SlamAllocator::freeSlab(uintptr_t address, size_t length)
 
     for(size_t i = 0; i < nPages; ++i)
     {
-        m_SlabRegionBitmap[entry] &= ~(1 << bit);
+        m_SlabRegionBitmap[entry] &= ~(1ULL << bit);
 
         // Handle overflow (eg, if we cross a bitmap entry.)
         if((++bit) >= 64)
