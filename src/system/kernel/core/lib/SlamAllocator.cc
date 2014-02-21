@@ -588,19 +588,26 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
                 needed -= 64;
             }
 
-            // Nothing found?
-            if(needed >= 64)
-                continue;
-
-            // Possible! Can we get enough leading zeroes in the next entry to
-            // make this work?
-            size_t leading = __builtin_clzll(m_SlabRegionBitmap[entry + 1]);
-            if(leading >= needed)
+            // Check for the ideal case.
+            if(needed == 0)
             {
-                // Perfect. Got a full region.
                 bit = 0;
                 break;
             }
+            else if(needed < 64)
+            {
+                // Possible! Can we get enough trailing zeroes in the next entry to
+                // make this work?
+                size_t leading = __builtin_ctzll(m_SlabRegionBitmap[checkEntry]);
+                if(leading >= needed)
+                {
+                    bit = 0;
+                    break;
+                }
+            }
+
+            // Skip already-checked entries.
+            entry = checkEntry;
         }
     }
     else
@@ -613,7 +620,7 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
                 bit = 0;
                 break;
             }
-            else if(m_SlabRegionBitmap[entry] != 0xFFFFFFFFFFFFFFFFULL)
+            else if(__builtin_popcountll(~m_SlabRegionBitmap[entry]) >= nPages)
             {
                 // Need to find a sequence of bits.
                 // Try for the beginning or end of the entry, as these are builtins.
@@ -630,6 +637,29 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
                         size_t b = ~0UL;
                         size_t len = 64;
                         uint64_t v = m_SlabRegionBitmap[entry];
+
+                        // Try and reduce the number of bits we need to scan.
+                        if((v & 0xFFFFFFFFULL) == 0xFFFFFFFFULL)
+                        {
+                            len -= 32;
+                            v >>= 32;
+                        }
+                        if((v & 0xFFFFULL) == 0xFFFFULL)
+                        {
+                            len -= 16;
+                            v >>= 16;
+                        }
+                        if((v & 0xFFULL) == 0xFFULL)
+                        {
+                            len -= 8;
+                            v >>= 8;
+                        }
+                        if((v & 0xFULL) == 0xFULL)
+                        {
+                            len -= 4;
+                            v >>= 4;
+                        }
+
                         while(len--)
                         {
                             if(v & 1)
@@ -650,7 +680,7 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
                             v >>= 1;
                         }
 
-                        if(c >= nPages)
+                        if(LIKELY(b != ~0))
                         {
                             bit = b;
                             break;
