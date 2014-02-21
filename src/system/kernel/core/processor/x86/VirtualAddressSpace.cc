@@ -632,6 +632,7 @@ VirtualAddressSpace *X86VirtualAddressSpace::clone()
 
             // Map the new page in to the new address space for copy-on-write.
             // This implies read-only (so we #PF for copy on write).
+            bool bWasCopyOnWrite = (flags & PAGE_COPY_ON_WRITE);
             flags |= PAGE_COPY_ON_WRITE;
             flags &= ~PAGE_WRITE;
             mapCrossSpace(v, physicalAddress, virtualAddress, fromFlags(flags, true));
@@ -644,7 +645,11 @@ VirtualAddressSpace *X86VirtualAddressSpace::clone()
             Processor::invalidate(virtualAddress);
 
             // Pin the page twice - once for each side of the clone.
-            PhysicalMemoryManager::instance().pin(physicalAddress);
+            // But only pin for the parent if the parent page is not already
+            // copy on write. If we pin the CoW page, it'll be leaked when
+            // both parent and child terminate if the parent clone()s again.
+            if(!bWasCopyOnWrite)
+                PhysicalMemoryManager::instance().pin(physicalAddress);
             PhysicalMemoryManager::instance().pin(physicalAddress);
         }
     }
