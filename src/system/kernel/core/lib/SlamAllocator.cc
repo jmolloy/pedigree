@@ -200,7 +200,7 @@ void SlamCache::freeSlab(uintptr_t slab)
 
 size_t SlamCache::recovery(size_t maxSlabs)
 {
-    LockGuard<Spinlock> guard(m_RecoveryLock);
+    size_t origMaxSlabs = maxSlabs;
 
 #ifdef MULTIPROCESSOR
     size_t thisCpu = Processor::id();
@@ -208,94 +208,126 @@ size_t SlamCache::recovery(size_t maxSlabs)
     size_t thisCpu = 0;
 #endif
 
-    volatile Node *N = m_PartialLists[thisCpu];
-    if (!N)
-    {
-        // Nothing available for recovery!
+    if(!m_PartialLists[thisCpu])
         return 0;
-    }
 
-    size_t origMaxSlabs = maxSlabs;
+    Node *N = 0;
 
-    while (N && maxSlabs)
+    if(m_ObjectSize < PhysicalMemoryManager::getPageSize())
     {
-        // Check for particularly large objects (ie, 1 object per slab)
-        if(m_ObjectSize >= PhysicalMemoryManager::getPageSize())
+        Node *reinsertHead = 0;
+        Node *reinsertTail = 0;
+        while(maxSlabs--)
         {
-            Node *pNext = N->next;
-
-            // N can be outright freed.
-            if(N->magic == MAGIC_VALUE)
+            Node *N =0, *pNext =0;
+            do
             {
-                uintptr_t slab = reinterpret_cast<uintptr_t>(N);
-                if (N->next)
-                    N->next->prev = N->prev;
-                if (N->prev)
-                    N->prev->next = N->next;
-                freeSlab(slab);
+                N = const_cast<Node*>(m_PartialLists[thisCpu]);
+                if(N == 0)
+                {
+                    break;
+                }
+                pNext = N->next;
+            } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
 
-                __sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext);
-            }
-
-            N = pNext;
-            continue;
-        }
-
-        // Not a page or larger, we can just round down to get the slab.
-        uintptr_t slab = reinterpret_cast<uintptr_t>(N) & ~(PhysicalMemoryManager::getPageSize() - 1);
-
-        bool bSlabNotFree = false;
-        for (size_t i = 0; i < (m_SlabSize / m_ObjectSize); ++i)
-        {
-            Node *pNode = reinterpret_cast<Node*> (slab + (i * m_ObjectSize));
-            if(pNode->magic != MAGIC_VALUE)
+            if(N == 0)
             {
-                // Not free.
-                N = N->next;
-                bSlabNotFree = true;
+                // Okay, we've emptied the partial lists.
+                // Let's link in our reinsert nodes.
+                Node *pHead = 0;
+                do
+                {
+                    pHead = const_cast<Node*>(m_PartialLists[thisCpu]);
+                    reinsertTail->next = pHead;
+                } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pHead, reinsertHead));
+
+                pHead->prev = reinsertTail;
+
                 break;
             }
-        }
 
-        if(bSlabNotFree)
-            continue;
+            uintptr_t slab = reinterpret_cast<uintptr_t>(N) & ~(PhysicalMemoryManager::getPageSize() - 1);
 
-        // Find next node to iterate to (must not be on this slab!)
-        Node *pNext = N->next;
-        while(pNext)
-        {
-            uintptr_t nextSlab = reinterpret_cast<uintptr_t>(pNext) & ~(PhysicalMemoryManager::getPageSize() - 1);
-            // Not on the same slab!
-            if(nextSlab != slab)
+            // A possible node found! Any luck?
+            bool bSlabNotFree = false;
+            for (size_t i = 0; i < (m_SlabSize / m_ObjectSize); ++i)
             {
+                Node *pNode = reinterpret_cast<Node*> (slab + (i * m_ObjectSize));
+                if(pNode->magic != MAGIC_VALUE)
+                {
+                    // Not free.
+                    bSlabNotFree = true;
+                    break;
+                }
+            }
+
+            if(bSlabNotFree)
+            {
+                if(!reinsertHead)
+                    reinsertHead = reinsertTail = N;
+                else
+                {
+                    N->prev = 0;
+                    N->next = reinsertHead;
+                    reinsertHead->prev = N;
+                }
+
+                continue;
+            }
+
+            // Slab free. Unlink all items and remove.
+            for (size_t i = 0; i < (m_SlabSize / m_ObjectSize); ++i)
+            {
+                Node *pNode = reinterpret_cast<Node*> (slab + (i * m_ObjectSize));
+                Node *pNext = pNode->next;
+                if(pNode->next)
+                    pNode->next->prev = pNode->prev;
+                if(pNode->prev)
+                    pNode->prev->next = pNode->next;
+
+                // If this node became the partial list head, make sure it is
+                // no longer the head.
+                __sync_val_compare_and_swap(&m_PartialLists[thisCpu], pNode, pNext);
+            }
+
+            // Kill off the slab!
+            freeSlab(slab);
+        }
+    }
+    else
+    {
+        while(maxSlabs--)
+        {
+            if(!m_PartialLists[thisCpu])
+                break;
+
+            Node *N =0, *pNext =0;
+            do
+            {
+                N = const_cast<Node*>(m_PartialLists[thisCpu]);
+                if(N == 0)
+                {
+                    break;
+                }
+                pNext = N->next;
+            } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
+
+            if(N == 0)
+            {
+                // Emptied the partial list!
                 break;
             }
-            pNext = pNext->next;
+
+            assert(N->magic == MAGIC_VALUE);
+
+            uintptr_t slab = reinterpret_cast<uintptr_t>(N);
+            if (N->next)
+                N->next->prev = N->prev;
+            if (N->prev)
+                N->prev->next = N->next;
+
+            freeSlab(slab);
         }
-
-        // Adjust head of partial list, if we are the head.
-        __sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext);
-
-        // Prepare for next iteration.
-        N = pNext;
-
-        // Slab free. Unlink all items from the partial list.
-        for (size_t i = 0; i < (m_SlabSize / m_ObjectSize); ++i)
-        {
-            Node *pNode = reinterpret_cast<Node*> (slab + (i * m_ObjectSize));
-            if(pNode->next)
-                pNode->next->prev = pNode->prev;
-            if(pNode->prev)
-                pNode->prev->next = pNode->next;
-
-            // Replace partial list head, if needed.
-            __sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pNode, pNext);
-        }
-
-        // Kill off the slab!
-        freeSlab(slab);
-
-        --maxSlabs;
     }
 
     return origMaxSlabs - maxSlabs;
@@ -680,7 +712,7 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
                             v >>= 1;
                         }
 
-                        if(LIKELY(b != ~0))
+                        if(LIKELY(b != ~0UL))
                         {
                             bit = b;
                             break;
