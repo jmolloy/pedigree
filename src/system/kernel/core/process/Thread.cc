@@ -199,8 +199,22 @@ Thread::~Thread()
     }
 
     // Let the RequestQueue do its thing - processing and rejecting our requests.
-    while(m_PendingRequests.count())
+    // However, we need to keep the system running eventually, so don't wait
+    // for each request to be completely done.
+    for(size_t i = 0; i < m_PendingRequests.count(); ++i)
         Scheduler::instance().yield();
+
+    // If any left, make sure they don't refer back to us.
+    if(m_PendingRequests.count())
+    {
+        for(List<RequestQueue::Request *>::Iterator it = m_PendingRequests.begin();
+            it != m_PendingRequests.end();
+            ++it)
+        {
+            if((*it)->pThread == this)
+                (*it)->pThread = 0;
+        }
+    }
   }
 }
 
