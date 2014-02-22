@@ -93,6 +93,8 @@ public:
 
     void threadStatusChanged(Thread *pThread);
 
+    void setIdle(Thread *pThread);
+
 private:
     /** Copy-constructor
      *  \note Not implemented - singleton class. */
@@ -118,6 +120,8 @@ private:
     List<void*> m_NewThreadData;
     
     static int processorAddThread(void *instance);
+
+    Thread *m_pIdleThread;
 
 #ifdef ARM_BEAGLE
     size_t m_TickCount;

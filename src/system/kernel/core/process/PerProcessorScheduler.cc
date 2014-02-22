@@ -40,7 +40,7 @@
 
 PerProcessorScheduler::PerProcessorScheduler() :
     m_pSchedulingAlgorithm(0), m_NewThreadDataLock(false), m_NewThreadDataCount(0),
-    m_NewThreadData()
+    m_NewThreadData(), m_pIdleThread(0)
 #ifdef ARM_BEAGLE
     , m_TickCount(0)
 #endif
@@ -118,12 +118,27 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThre
         {
             // If we're supposed to be sleeping, this isn't a good place to be
             if(nextStatus != Thread::Ready)
-                FATAL("No threads to switch to and the current thread is leaving the ready state!");
+            {
+                if (m_pIdleThread == 0)
+                {
+                    FATAL("No idle thread available, and the current thread is leaving the ready state!");
+                }
+                else
+                {
+                    pNextThread = m_pIdleThread;
 
-            // Nothing to switch to, just return.
-            pCurrentThread->getLock().release();
-            Processor::setInterrupts(bWasInterrupts);
-            return;
+                    // The SchedulingAlgorithm normally does this.
+                    if(pNextThread != pCurrentThread)
+                        pNextThread->getLock().acquire();
+                }
+            }
+            else
+            {
+                // Nothing to switch to, but we aren't sleeping. Just return.
+                pCurrentThread->getLock().release();
+                Processor::setInterrupts(bWasInterrupts);
+                return;
+            }
         }
     }
     else
@@ -134,7 +149,8 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThre
     }
 
     // Now neither thread can be moved, we're safe to switch.
-    pCurrentThread->setStatus(nextStatus);
+    if (pCurrentThread != m_pIdleThread)
+        pCurrentThread->setStatus(nextStatus);
     pNextThread->setStatus(Thread::Running);
     Processor::information().setCurrentThread(pNextThread);
 
@@ -350,7 +366,8 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
     m_pSchedulingAlgorithm->addThread(pThread);
 
     // Now neither thread can be moved, we're safe to switch.
-    pCurrentThread->setStatus(Thread::Ready);
+    if (pCurrentThread != m_pIdleThread)
+        pCurrentThread->setStatus(Thread::Ready);
     pThread->setStatus(Thread::Running);
     Processor::information().setCurrentThread(pThread);
     Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
@@ -403,7 +420,8 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
 
     // Now neither thread can be moved, we're safe to switch.
 
-    pCurrentThread->setStatus(Thread::Ready);
+    if (pCurrentThread != m_pIdleThread)
+        pCurrentThread->setStatus(Thread::Ready);
     pThread->setStatus(Thread::Running);
     Processor::information().setCurrentThread(pThread);
     Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
@@ -453,11 +471,19 @@ void PerProcessorScheduler::killCurrentThread()
     // This will also get the lock for the returned thread.
     Thread *pNextThread = m_pSchedulingAlgorithm->getNext(pThread);
 
-    if (pNextThread == 0)
+    if (pNextThread == 0 && m_pIdleThread == 0)
     {
         // Nothing to switch to, we're in a VERY bad situation.
         panic("Attempting to kill only thread on this processor!");
         return;
+    }
+    else if (pNextThread == 0)
+    {
+        pNextThread = m_pIdleThread;
+
+        // The SchedulingAlgorithm normally does this.
+        if(pNextThread != pThread)
+            pNextThread->getLock().acquire();
     }
 
     pNextThread->setStatus(Thread::Running);
@@ -517,6 +543,11 @@ void PerProcessorScheduler::timer(uint64_t delta, InterruptState &state)
 void PerProcessorScheduler::threadStatusChanged(Thread *pThread)
 {
     m_pSchedulingAlgorithm->threadStatusChanged(pThread);
+}
+
+void PerProcessorScheduler::setIdle(Thread *pThread)
+{
+    m_pIdleThread = pThread;
 }
 
 #endif

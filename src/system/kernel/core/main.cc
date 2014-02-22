@@ -83,26 +83,23 @@ void apMain()
 {
   NOTICE("Processor #" << Processor::id() << " started.");
 
+#ifdef THREADS
+  // Add us as the idle thread for this CPU.
+  Processor::information().getScheduler().setIdle(Processor::information().getCurrentThread());
+#endif
+
   Processor::setInterrupts(true);
   for (;;)
   {
+    // Idle - perform SLAM recovery.
+    SlamAllocator::instance().recovery(5);
+    Processor::haltUntilInterrupt();
+
 #ifdef THREADS
     Scheduler::instance().yield();
 #endif
   }
 }
-
-/** A processor idle function. */
-/*int idle(void *)
-{
-  NOTICE("Idle " << Processor::information().getCurrentThread()->getId());
-  Processor::setInterrupts(true);
-  for (;;)
-  {
-    Scheduler::instance().yield();
-  }
-  return 0;
-}*/
 
 #ifdef STATIC_DRIVERS
 extern uintptr_t start_modinfo;
@@ -306,7 +303,8 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #endif
 
 #ifdef THREADS
-  Processor::information().getCurrentThread()->setPriority(MAX_PRIORITIES-1);
+  // Add us as the idle thread for this CPU.
+  Processor::information().getScheduler().setIdle(Processor::information().getCurrentThread());
 #endif
 
   // This will run when nothing else is available to run
