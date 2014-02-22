@@ -336,6 +336,11 @@ Event *Thread::getNextEvent()
     return 0;
 }
 
+bool Thread::hasEvents()
+{
+    return m_EventQueue.count() != 0;
+}
+
 uintptr_t Thread::getTlsBase()
 {
     if(!m_StateLevels[0].m_pKernelStack)
