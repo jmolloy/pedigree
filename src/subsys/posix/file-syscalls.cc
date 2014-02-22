@@ -32,7 +32,6 @@
 #include <network-stack/NetManager.h>
 #include <network-stack/Tcp.h>
 #include <utilities/utility.h>
-#include <utilities/TimedTask.h>
 
 #include <Subsystem.h>
 #include <PosixSubsystem.h>
