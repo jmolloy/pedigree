@@ -480,6 +480,22 @@ void PerProcessorScheduler::removeThread(Thread *pThread)
     m_pSchedulingAlgorithm->removeThread(pThread);
 }
 
+void PerProcessorScheduler::sleep(Spinlock *pLock)
+{
+    // Before sleeping, check for any pending events, and process them.
+    // Looping ensures any events that come in while we're processing an
+    // event still get handled.
+    Thread *pThread = Processor::information().getCurrentThread();
+    if(pThread->hasEvents())
+    {
+        checkEventState(0);
+        return; // Sleep interrupted by event.
+    }
+
+    // Now we can happily sleep.
+    schedule(Thread::Sleeping, 0, pLock);
+}
+
 void PerProcessorScheduler::timer(uint64_t delta, InterruptState &state)
 {
 #ifdef ARM_BEAGLE // Timer at 1 tick per ms, we want to run every 100 ms

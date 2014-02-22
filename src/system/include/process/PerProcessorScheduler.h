@@ -84,10 +84,7 @@ public:
         \note This function is here because it acts on the current thread. Its
               counterpart, wake(), is in Scheduler as it could be called from
               any thread. */
-    inline void sleep(Spinlock *pLock=0)
-    {
-        schedule(Thread::Sleeping, 0, pLock);
-    }
+    void sleep(Spinlock *pLock=0);
 
     /** TimerHandler callback. */
     void timer(uint64_t delta, InterruptState &state);
