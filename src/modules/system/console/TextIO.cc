@@ -757,6 +757,17 @@ void TextIO::write(const char *s, size_t len)
         {
             switch(*s)
             {
+                case '0':
+                    m_CurrentModes |= LineDrawing;
+                    m_bControlSeq = false;
+                    break;
+
+                case 'A':
+                case 'B':
+                    m_CurrentModes &= ~LineDrawing;
+                    m_bControlSeq = false;
+                    break;
+
                 default:
                     ERROR("TextIO: unknown character set sequence character '" << *s << "'!");
                     m_bControlSeq = false;
@@ -922,6 +933,7 @@ void TextIO::write(const char *s, size_t len)
                 case '(':
                 case ')':
                     m_bParenthesis = true;
+                    break;
 
                 case '7':
                     m_SavedCursorX = m_CursorX;
@@ -943,6 +955,7 @@ void TextIO::write(const char *s, size_t len)
 
                 default:
                     ERROR("TextIO: unknown escape sequence character '" << *s << "'!");
+                    m_bControlSeq = false;
                     break;
             }
         }
@@ -990,7 +1003,56 @@ void TextIO::write(const char *s, size_t len)
                         NOTICE("TextIO: unhandled SHIFT-IN/SHIFT-OUT");
                         break;
                     default:
-                        if(*s >= ' ')
+
+                        uint8_t c = *s;
+
+                        if(m_CurrentModes & LineDrawing)
+                        {
+                            switch(c)
+                            {
+                                case '_': c = ' '; break; // Blank
+
+                                // Symbols and line control.
+                                case 'a': c = 0xB2; break; // Checkerboard
+                                case 'b': // Horizontal tab
+                                    doHorizontalTab();
+                                    c = 0;
+                                    break;
+                                case 'c': // Form feed
+                                case 'h': // Newline
+                                case 'i': // Vertical tab.
+                                    if(m_CurrentModes & LineFeedNewLine)
+                                        doCarriageReturn();
+                                    doLinefeed();
+                                    c = 0;
+                                    break;
+                                case 'd': // Carriage return
+                                    doCarriageReturn();
+                                    c = 0;
+                                    break;
+                                case 'e': // Linefeed
+                                    doLinefeed();
+                                    c = 0;
+                                    break;
+                                case 'f': c = 0xF8; break; // Degree symbol
+                                case 'g': c = 0xF1; break; // Plus-minus
+
+                                // Line-drawing.
+                                case 'j': c = 0xBC; break; // Lower right corner
+                                case 'k': c = 0xBB; break; // Upper right corner
+                                case 'l': c = 0xC9; break; // Upper left corner
+                                case 'm': c = 0xC8; break; // Lower left corner
+                                case 'n': c = 0xCE; break; // Crossing lines.
+                                case 'q': c = 0xCD; break; // Horizontal line.
+                                case 't': c = 0xCC; break; // Left 'T'
+                                case 'u': c = 0xB9; break; // Right 'T'
+                                case 'v': c = 0xCA; break; // Bottom 'T'
+                                case 'w': c = 0xCB; break; // Top 'T'
+                                case 'x': c = 0xBA; break; // Vertical bar
+                            }
+                        }
+
+                        if(c >= ' ')
                         {
                             // We must handle wrapping *just before* we write
                             // the next printable, because otherwise things
@@ -999,7 +1061,7 @@ void TextIO::write(const char *s, size_t len)
 
                             if(m_CursorX < BACKBUFFER_STRIDE)
                             {
-                                m_pBackbuffer[(m_CursorY * BACKBUFFER_STRIDE) + m_CursorX] = *s | (attributeByte << 8);
+                                m_pBackbuffer[(m_CursorY * BACKBUFFER_STRIDE) + m_CursorX] = c | (attributeByte << 8);
                                 ++m_CursorX;
                             }
                             else
