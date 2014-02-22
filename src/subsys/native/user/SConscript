@@ -22,6 +22,10 @@ native_userlib_shobjname = builddir + '/libpedigree.so'
 env.Alias("libs", native_userlib_objname)
 env.Alias("libs", native_userlib_shobjname)
 
+# XXX: We have an unfortunate dependency on libc.
+libc_objname = builddir + '/libc.so'
+env.Depends(native_userlib_shobjname, libc_objname)
+
 # To include a new subdirectory just add to the list.
 subdirs = [
 

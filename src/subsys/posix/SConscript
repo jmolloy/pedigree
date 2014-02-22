@@ -37,7 +37,7 @@ env.Alias("pthreads", libpthread_shobjname)
 
 env.Depends(libc_objname, glue_objname)
 env.Depends(libc_objname, libpedigree_c_objname)
-env.Depends(libc_objname, libpedigree_c_shobjname)
+env.Depends(libpedigree_c_shobjname, libc_objname)
 
 # To include a new subdirectory just add to the list.
 subdirs = [
