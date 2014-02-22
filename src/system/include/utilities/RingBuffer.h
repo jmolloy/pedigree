@@ -42,9 +42,6 @@ namespace RingBufferWait
  * The idea of the waitFor function is to provide a way for applications
  * desiring integration with a select()-style interface to block until the
  * condition is met.
- *
- * \todo implement something similar to File::monitor, which fires an event
- *       when any activity takes place in the File.
  */
 template <class T>
 class RingBuffer
