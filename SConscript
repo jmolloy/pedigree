@@ -192,6 +192,7 @@ def buildImageTargetdir(target, source, env):
     os.system("mkdir -p %s/tmp" % (targetDir,))
     os.system("mkdir -p %s/config" % (targetDir,))
     os.system("cp -u " + imagedir + "/../base/config/greeting %s/config/greeting" % (targetDir,))
+    os.system("cp -Ru " + imagedir + "/../base/config/term %s/config/term" % (targetDir,))
     os.system("cp -u " + imagedir + "/../base/.bashrc %s/.bashrc" % (targetDir,))
 
     if os.path.exists(outFile):
