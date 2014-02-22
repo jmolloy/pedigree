@@ -263,13 +263,28 @@ size_t SlamCache::recovery(size_t maxSlabs)
 
             if(bSlabNotFree)
             {
+                // Unlink N, if needed, as it's about to be linked into the
+                // reinsert list.
+                if(N->next)
+                {
+                    N->next->prev = N->prev;
+                }
+                if(N->prev)
+                {
+                    N->prev->next = N->next;
+                }
+
                 if(!reinsertHead)
+                {
                     reinsertHead = reinsertTail = N;
+                    N->next = N->prev = 0;
+                }
                 else
                 {
                     N->prev = 0;
                     N->next = reinsertHead;
                     reinsertHead->prev = N;
+                    reinsertHead = N;
                 }
 
                 continue;
@@ -279,15 +294,19 @@ size_t SlamCache::recovery(size_t maxSlabs)
             for (size_t i = 0; i < (m_SlabSize / m_ObjectSize); ++i)
             {
                 Node *pNode = reinterpret_cast<Node*> (slab + (i * m_ObjectSize));
-                Node *pNext = pNode->next;
+                Node *pNodeNext = pNode->next;
                 if(pNode->next)
+                {
                     pNode->next->prev = pNode->prev;
+                }
                 if(pNode->prev)
+                {
                     pNode->prev->next = pNode->next;
+                }
 
                 // If this node became the partial list head, make sure it is
                 // no longer the head.
-                __sync_val_compare_and_swap(&m_PartialLists[thisCpu], pNode, pNext);
+                __sync_val_compare_and_swap(&m_PartialLists[thisCpu], pNode, pNodeNext);
             }
 
             // Kill off the slab!
