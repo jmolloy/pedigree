@@ -86,6 +86,10 @@ private:
 
         /// AKA: 'Bold'
         Bright          = 0x200000,
+
+        Blink           = 0x400000,
+
+        LineDrawing     = 0x800000,
     };
 
 public:

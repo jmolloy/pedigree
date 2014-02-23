@@ -82,6 +82,8 @@ bool TextIO::initialise(bool bClear)
             // Set default tab stops.
             for(size_t i = 0; i < BACKBUFFER_STRIDE; i += 8)
                 m_TabStops[i] = '|';
+
+            m_pVga->clearControl(Vga::Blink);
         }
     }
 
@@ -112,6 +114,12 @@ void TextIO::write(const char *s, size_t len)
         {
             attributeByte = (m_Back << 4) | (m_Fore & 0x0F);
         }
+
+        if(m_CurrentModes & Blink)
+        {
+            attributeByte |= 0x80;
+        }
+
         uint16_t blank = ' ' | (attributeByte << 8);
 
         // NOTICE("Dispatching '" << (*s) << "'");
@@ -509,7 +517,8 @@ void TextIO::write(const char *s, size_t len)
                                 // Reset all attributes.
                                 m_Fore = LightGrey;
                                 m_Back = Black;
-                                m_CurrentModes &= ~(Inverse | Bright);
+                                m_CurrentModes &= ~(Inverse | Bright | Blink);
+                                m_pVga->clearControl(Vga::Blink);
                                 break;
 
                             case 1:
@@ -525,6 +534,15 @@ void TextIO::write(const char *s, size_t len)
                                 {
                                     m_CurrentModes &= ~Bright;
                                     m_Fore = adjustColour(m_Fore, false);
+                                }
+                                break;
+
+                            case 5:
+                                // Set blinking text.
+                                if(!(m_CurrentModes & Blink))
+                                {
+                                    m_CurrentModes |= Blink;
+                                    m_pVga->setControl(Vga::Blink);
                                 }
                                 break;
 
