@@ -29,7 +29,7 @@ TextIO::TextIO(String str, size_t inode, Filesystem *pParentFS, File *pParent) :
     m_ScrollStart(0), m_ScrollEnd(0), m_LeftMargin(0), m_RightMargin(0),
     m_CurrentParam(0), m_Params(), m_Fore(TextIO::LightGrey), m_Back(TextIO::Black),
     m_pFramebuffer(0), m_pBackbuffer(0), m_pVga(0), m_TabStops(),
-    m_OutBuffer(TEXTIO_RINGBUFFER_SIZE)
+    m_OutBuffer(TEXTIO_RINGBUFFER_SIZE), m_G0('B'), m_G1('B')
 {
     m_pBackbuffer = new uint16_t[BACKBUFFER_STRIDE * BACKBUFFER_ROWS];
 }
@@ -77,13 +77,15 @@ bool TextIO::initialise(bool bClear)
             m_LeftMargin = 0;
             m_RightMargin = m_pVga->getNumCols();
 
-            m_CurrentModes = AnsiVt52;
+            m_CurrentModes = AnsiVt52 | CharacterSetG0;
 
             // Set default tab stops.
             for(size_t i = 0; i < BACKBUFFER_STRIDE; i += 8)
                 m_TabStops[i] = '|';
 
             m_pVga->clearControl(Vga::Blink);
+
+            m_G0 = m_G1 = 'B';
         }
     }
 
@@ -121,8 +123,6 @@ void TextIO::write(const char *s, size_t len)
         }
 
         uint16_t blank = ' ' | (attributeByte << 8);
-
-        // NOTICE("Dispatching '" << (*s) << "'");
 
         if(m_bControlSeq && m_bBracket)
         {
@@ -771,27 +771,6 @@ void TextIO::write(const char *s, size_t len)
                     break;
             }
         }
-        else if(m_bControlSeq && m_bParenthesis)
-        {
-            switch(*s)
-            {
-                case '0':
-                    m_CurrentModes |= LineDrawing;
-                    m_bControlSeq = false;
-                    break;
-
-                case 'A':
-                case 'B':
-                    m_CurrentModes &= ~LineDrawing;
-                    m_bControlSeq = false;
-                    break;
-
-                default:
-                    ERROR("TextIO: unknown character set sequence character '" << *s << "'!");
-                    m_bControlSeq = false;
-                    break;
-            }
-        }
         else if(m_bControlSeq && (!m_bBracket) && (!m_bParenthesis))
         {
             switch(*s)
@@ -950,7 +929,32 @@ void TextIO::write(const char *s, size_t len)
 
                 case '(':
                 case ')':
-                    m_bParenthesis = true;
+                case '*':
+                case '+':
+                case '-':
+                case '.':
+                case '/':
+                    {
+                        char curr = *s;
+                        char next = *(++s);
+
+                        // Portugese or DEC supplementary graphics (to ignore VT300 command)
+                        if(next == '%')
+                            next = *(++s);
+
+                        if((next >= '0' && next <= '2') || (next >= 'A' && next <= 'B'))
+                        {
+                            // Designate G0 character set.
+                            if(curr == '(')
+                                m_G0 = next;
+                            // Designate G1 character set.
+                            else if(curr == ')')
+                                m_G1 = next;
+                            else
+                                WARNING("TextIO: only 'ESC(C' and 'ESC)C' are supported on a VT100.");
+                        }
+                        m_bControlSeq = false;
+                    }
                     break;
 
                 case '7':
@@ -1017,14 +1021,24 @@ void TextIO::write(const char *s, size_t len)
                         doLinefeed();
                         break;
                     case 0x0E:
+                        // Shift-Out - invoke G1 character set.
+                        m_CurrentModes &= ~CharacterSetG0;
+                        m_CurrentModes |= CharacterSetG1;
+                        break;
                     case 0x0F:
-                        NOTICE("TextIO: unhandled SHIFT-IN/SHIFT-OUT");
+                        // Shift-In - invoke G0 character set.
+                        m_CurrentModes &= ~CharacterSetG1;
+                        m_CurrentModes |= CharacterSetG0;
                         break;
                     default:
 
                         uint8_t c = *s;
 
-                        if(m_CurrentModes & LineDrawing)
+                        uint8_t characterSet = m_G0;
+                        if(m_CurrentModes & CharacterSetG1)
+                            characterSet = m_G1;
+
+                        if(characterSet >= '0' && characterSet <= '2')
                         {
                             switch(c)
                             {
@@ -1032,26 +1046,14 @@ void TextIO::write(const char *s, size_t len)
 
                                 // Symbols and line control.
                                 case 'a': c = 0xB2; break; // Checkerboard
-                                case 'b': // Horizontal tab
-                                    doHorizontalTab();
-                                    c = 0;
-                                    break;
-                                case 'c': // Form feed
+                                case 'b': c = 0xAF; break; // Horizontal tab
+                                case 'c': c = 0x9F; break; // Form feed
                                 case 'h': // Newline
-                                case 'i': // Vertical tab.
-                                    if(m_CurrentModes & LineFeedNewLine)
-                                        doCarriageReturn();
-                                    doLinefeed();
-                                    c = 0;
-                                    break;
-                                case 'd': // Carriage return
-                                    doCarriageReturn();
-                                    c = 0;
-                                    break;
                                 case 'e': // Linefeed
-                                    doLinefeed();
-                                    c = 0;
+                                    c = 'n';
                                     break;
+                                case 'i': c = 'v'; break; // Vertical tab.
+                                case 'd': c = 'r'; break; // Carriage return
                                 case 'f': c = 0xF8; break; // Degree symbol
                                 case 'g': c = 0xF1; break; // Plus-minus
 

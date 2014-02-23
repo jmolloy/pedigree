@@ -89,7 +89,9 @@ private:
 
         Blink           = 0x400000,
 
-        LineDrawing     = 0x800000,
+        // Character sets.
+        CharacterSetG0  = 0x1000000,
+        CharacterSetG1  = 0x2000000,
     };
 
 public:
@@ -170,6 +172,12 @@ private:
      * the application (eg, cursor position reports)
      */
     RingBuffer<char> m_OutBuffer;
+
+    /**
+     * Designated character sets - simply store the character which is used
+     * to designate a character set (eg, '1', 'A').
+     */
+    uint8_t m_G0, m_G1;
 };
 
 #endif
