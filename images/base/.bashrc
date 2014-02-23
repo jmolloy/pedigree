@@ -1,6 +1,15 @@
 export PATH=/applications
-export TERM=xterm
-export RUBYLIB=/libraries/ruby
+
+case "$TERM" in
+    xterm) export TERM=xterm-256color;;
+esac
+
+if [ -x /applications/dircolors ]; then
+    alias ls='ls --color=auto'
+    alias grep='grep --color=auto'
+fi
+
+alias ll='ls -alF'
 
 export PS1="\[\e[34;1m\][\t]\[\e[0m\] \w \[\e[34;1m\]$\[\e[0m\] "
 
