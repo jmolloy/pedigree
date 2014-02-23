@@ -19,6 +19,7 @@
 #include <Log.h>
 
 #include <process/Event.h>
+#include <process/Scheduler.h>
 
 // Incoming relative mouse movements are divided by this
 #define MOUSE_REDUCE_FACTOR     1
