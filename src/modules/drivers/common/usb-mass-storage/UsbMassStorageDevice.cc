@@ -97,8 +97,6 @@ bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t
 
     ssize_t nResult = syncOut(m_pOutEndpoint, reinterpret_cast<uintptr_t>(pCbw), 31);
 
-    DEBUG_LOG("USB: MSD: CBW finished with " << Dec << nResult << Hex);
-
     // Handle stall
     if(nResult == -Stall)
     {
@@ -126,8 +124,6 @@ bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t
             nResult = syncOut(m_pOutEndpoint, pRespBuffer, nRespBytes);
         else
             nResult = syncIn(m_pInEndpoint, pRespBuffer, nRespBytes);
-
-        DEBUG_LOG("USB: MSD: Result: " << Dec << nResult << Hex << ".");
 
         /// \todo Should probably just be transaction errors and stalls
         if((nResult < 0) || ((nResult < nRespBytes) && (!bWrite))) // == -Stall)
@@ -220,8 +216,6 @@ bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t
             }
         }
     }
-
-    DEBUG_LOG("USB: MSD: Command finished STS = " << pCsw->nStatus << " SIG=" << pCsw->nSig);
 
     return !pCsw->nStatus;
 }
