@@ -112,6 +112,23 @@ void removeIsaAta(Device *pDev)
 
 static void searchNode(Device *pDev, bool bFallBackISA)
 {
+#if 0
+    // Check to see if this is an AHCI controller.
+    for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
+    {
+        Device *pChild = pDev->getChild(i);
+        // Class 1 = Mass Storage. Subclass 6 = SATA.
+        if(pChild->getPciClassCode() == 0x01 &&
+            pChild->getPciSubclassCode() == 0x06)
+        {
+            /// \todo Do more checks.
+            FATAL("Found a SATA controller of some sort.");
+        }
+        // Recurse.
+        searchNode(pChild, false);
+    }
+#endif
+
     // Try for a PIIX IDE controller first. We prefer the PIIX as it enables us
     // to use DMA (and is a little easier to use for device detection).
     static bool bPiixControllerFound = false;
