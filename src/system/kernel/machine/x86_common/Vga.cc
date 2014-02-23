@@ -30,12 +30,49 @@ X86Vga::X86Vga(uint32_t nRegisterBase, uint32_t nFramebufferBase) :
   m_nWidth(80),
   m_nHeight(25),
   m_ModeStack(0),
-  m_nMode(3)
+  m_nMode(3),
+  m_nControls(0)
 {
 }
 
 X86Vga::~X86Vga()
 {
+}
+
+uint8_t X86Vga::getControls()
+{
+    // Go into index state.
+    m_RegisterPort.read8(VGA_INSTAT_READ);
+
+    // Get current.
+    m_RegisterPort.write8(VGA_REG_ATTR_MODE_CTL | VGA_PAS, VGA_AC_INDEX);
+    return m_RegisterPort.read8(VGA_AC_READ);
+}
+
+void X86Vga::setControls(uint8_t newControls)
+{
+    m_nControls = newControls;
+
+    // Ensure we are in index state again.
+    m_RegisterPort.read8(VGA_INSTAT_READ);
+
+    // Set!
+    m_RegisterPort.write8(VGA_REG_ATTR_MODE_CTL | VGA_PAS, VGA_AC_INDEX);
+    m_RegisterPort.write8(m_nControls, VGA_AC_WRITE);
+}
+
+void X86Vga::setControl(Vga::VgaControl which)
+{
+    uint8_t current = getControls();
+    current |= 1 << static_cast<uint8_t>(which);
+    setControls(current);
+}
+
+void X86Vga::clearControl(Vga::VgaControl which)
+{
+    uint8_t current = getControls();
+    current &= ~(1 << static_cast<uint8_t>(which));
+    setControls(current);
 }
 
 bool X86Vga::setMode (int mode)
@@ -71,6 +108,8 @@ void X86Vga::rememberMode()
     Bios::instance().setEs (0x0000);
     Bios::instance().setDi (0x0000);
     Bios::instance().executeInterrupt (0x10);
+
+    setControls(m_nControls);
   }
 }
 
@@ -87,6 +126,8 @@ void X86Vga::restoreMode()
     Bios::instance().setEs (0x0000);
     Bios::instance().setDi (0x0000);
     Bios::instance().executeInterrupt (0x10);
+
+    setControls(m_nControls);
   }
 }
 
@@ -134,4 +175,6 @@ bool X86Vga::initialise()
                                               PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory,
                                               VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write | VirtualAddressSpace::WriteThrough,
                                               reinterpret_cast<uintptr_t>(m_pFramebuffer));
+
+  m_nControls = getControls();
 }

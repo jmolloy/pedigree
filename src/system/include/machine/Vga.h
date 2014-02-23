@@ -25,7 +25,23 @@
 class Vga
 {
 public:
+  enum VgaControl
+  {
+    LineGraphics = 2,
+    Blink = 3,
+  };
+
   virtual ~Vga() {}
+
+  /**
+   * Sets the given attribute mode control.
+   */
+  virtual void setControl(VgaControl which) =0;
+
+  /**
+   * Clears the given attribute mode control.
+   */
+  virtual void clearControl(VgaControl which) =0;
 
   /**
    * Changes the mode the VGA device is in.
