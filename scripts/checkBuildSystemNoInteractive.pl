@@ -39,7 +39,7 @@ my @download = ( {'url' => "ftp://ftp.gnu.org/gnu/gcc/gcc-$gcc_version/gcc-core-
                   'name' => 'Nasm',
                   'filename' => "nasm-$nasm_version.tar.bz2",
                   'extract' => "tar -xjf nasm-$nasm_version.tar.bz2",
-                  'arch' => 'i686-pedigree amd64-pedigree i686-elf amd64-elf'} );
+                  'arch' => 'i686-pedigree x86_64-pedigree amd64-pedigree i686-elf amd64-elf'} );
 
 my @patch = ( {'cwd' => "gcc-$gcc_version",
                'name' => "Gcc pedigree target patch",
