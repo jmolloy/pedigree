@@ -35,6 +35,7 @@ env.Alias("subsys", glue_objname)
 env.Alias("pthreads", libpthread_objname)
 env.Alias("pthreads", libpthread_shobjname)
 
+env.Depends(libc_objname, "crt")
 env.Depends(libc_objname, glue_objname)
 env.Depends(libc_objname, libpedigree_c_objname)
 env.Depends(libpedigree_c_shobjname, libc_objname)

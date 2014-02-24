@@ -79,3 +79,5 @@ tmp['CXXFLAGS'] += glueFlags
 
 tmp.Library(native_userlib_objname, lib_files)
 tmp.SharedLibrary(native_userlib_shobjname, lib_files, LINKFLAGS='')
+
+env.Depends(native_userlib_shobjname, "crt")
