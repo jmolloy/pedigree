@@ -58,12 +58,12 @@ tmp['LIBPATH'] = [
 ]
 tmp['CPPPATH'] = []
 
-for i in libs:
+for library in libs:
     e = tmp.Clone()
     
     # Determine the subsystem and include directories for this library
     incpath = []
-    s = subsys[i]
+    s = subsys[library]
     if s == 'native':
         incpath += ['#/src/subsys/native/include',
                     '#/images/local/support/gcc/include/c++/4.5.1',
@@ -71,20 +71,20 @@ for i in libs:
                     ]
     else:
         print "** Library with subsys '%s' is not buildable - fix src/user/libraries/SConscript!" % (s)
-    
-    base = "#/src/user/libraries/%s" % (i)
+
+    srcdir = env.Dir(library).srcnode().abspath
 
     # Handle extra include directories within the library
-    if(os.path.exists(Dir(base).abspath + '/include')):
-        incpath += [base + '/include']
-        
+    if(os.path.exists(os.path.join(srcdir, 'include'))):
+        incpath.append(os.path.join(srcdir, 'include'))
+
     e['CPPPATH'] = incpath
 
-    output = os.path.join(builddir, 'libs', '%s.a' % (i,))
-    shoutput = os.path.join(builddir, 'libs', '%s.so' % (i,))
-    files = [Glob(base + '/src/*.c'), Glob(base + '/src/*.cc')]
+    output = os.path.join(builddir, 'libs', '%s.a' % (library,))
+    shoutput = os.path.join(builddir, 'libs', '%s.so' % (library,))
+    files = [Glob(os.path.join(library, 'src', '*.c')), Glob(os.path.join(library, 'src', '*.cc'))]
 
-    e.Library(output, files)
+    e.StaticLibrary(output, files)
     e.SharedLibrary(shoutput, files, LINKFLAGS='')
 
     env.Alias("libs", output)
