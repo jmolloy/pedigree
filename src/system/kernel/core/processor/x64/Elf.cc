@@ -53,6 +53,10 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
     if (pSh && pSh->addr == 0)
         return true; // Not a fatal error.
 
+    // Avoid NONE relocations.
+    if(R_TYPE(rel.info) == R_X86_64_NONE)
+        return true;
+
     // Get the address of the unit to be relocated.
     uint64_t address = ((pSh) ? pSh->addr : loadBase) + rel.offset;
 
