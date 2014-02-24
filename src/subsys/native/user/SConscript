@@ -40,14 +40,15 @@ lib_files = [
 ]
 
 # To include a new directory for includes, just add it to the list
+cpp_base = '#/images/local/support/gcc/include/c++/%s' % (env['COMPILER_VERSION'],)
 include = [
     '../include',
     '#/src/subsys',
     '#/src/system/include',
     '#/src/modules/system',
     '#/src/subsys/posix/include',
-    '#/images/local/support/gcc/include/c++/4.5.1',
-    '#/images/local/support/gcc/include/c++/4.5.1/i686-pedigree',
+    cpp_base,
+    '%s/%s' % (cpp_base, env['COMPILER_TARGET']),
     '.'
 ]
 

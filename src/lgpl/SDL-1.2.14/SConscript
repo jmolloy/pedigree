@@ -55,9 +55,10 @@ include = [
     '#/images/local/include/freetype2',
 ]
 
+cpp_base = '#/images/local/support/gcc/include/c++/%s' % (env['COMPILER_VERSION'],)
 cppinclude = include + [
-    '#/images/local/support/gcc/include/c++/4.5.1',
-    '#/images/local/support/gcc/include/c++/4.5.1/i686-pedigree',
+    cpp_base,
+    '%s/%s' % (cpp_base, env['COMPILER_TARGET']),
 ]
 
 # To add a library add to the list below

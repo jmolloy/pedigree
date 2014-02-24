@@ -65,9 +65,10 @@ for library in libs:
     incpath = []
     s = subsys[library]
     if s == 'native':
+        cpp_base = '#/images/local/support/gcc/include/c++/%s' % (env['COMPILER_VERSION'],)
         incpath += ['#/src/subsys/native/include',
-                    '#/images/local/support/gcc/include/c++/4.5.1',
-                    '#/images/local/support/gcc/include/c++/4.5.1/i686-pedigree',
+                    cpp_base,
+                    '%s/%s' % (cpp_base, env['COMPILER_TARGET']),
                     ]
     else:
         print "** Library with subsys '%s' is not buildable - fix src/user/libraries/SConscript!" % (s)

@@ -155,9 +155,10 @@ tmp['CPPPATH'] = incpath
 libload_env = tmp.Clone()
 libload_env['CFLAGS'] += ' -static '
 libload_env['CXXFLAGS'] += ' -static '
+cpp_base = '#/images/local/support/gcc/include/c++/%s' % (env['COMPILER_VERSION'],)
 libload_env['CPPPATH'] += ['#/src/system/include/linker',
-                           '#/images/local/support/gcc/include/c++/4.5.1',
-                           '#/images/local/support/gcc/include/c++/4.5.1/i686-pedigree',
+                           cpp_base,
+                           '%s/%s' % (cpp_base, env['COMPILER_TARGET']),
                            ]
 libload_env['LIBPATH'] += [builddir, imagesdir + 'libraries']
 libload_env['LIBS'] = ['-lgcc']
@@ -201,11 +202,12 @@ for i in all_apps:
 
     # Handle C++-related dependencies.
     if i in cpp_apps or i in sdl_apps or i in mesa_apps:
+        cpp_base = '#/images/local/support/gcc/include/c++/%s' % (env['COMPILER_VERSION'],)
         e['LIBS'] += ['pedigree', 'stdc++']
         e['LIBPATH'] += [imagesdir + 'libraries']
         e['CPPPATH'] += ['#/src/subsys/native/include',
-                         '#/images/local/support/gcc/include/c++/4.5.1',
-                         '#/images/local/support/gcc/include/c++/4.5.1/i686-pedigree',
+                         cpp_base,
+                         '%s/%s' % (cpp_base, env['COMPILER_TARGET'],),
                          ]
         e['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s/libraries/ ' % (e.Dir(imagesdir).abspath,)
         e['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s/libs/ ' % (e.Dir(builddir).abspath,)
