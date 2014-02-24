@@ -168,9 +168,12 @@ env['PEDIGREE_BUILD_SUBSYS'] = env['BUILDDIR'] + '/subsystems'
 env['PEDIGREE_BUILD_APPS'] = env['BUILDDIR'] + '/apps'
 
 def safeAppend(a, b):
-    if not b in a:
-        a += b
-    return a
+    a = a.split()
+    b = b.split()
+    for item in b:
+        if not item in a:
+            a.append(item)
+    return ' '.join(a)
 
 if env['CC_NOCACHE'] == '':
     env['CC_NOCACHE'] = env['CC']
