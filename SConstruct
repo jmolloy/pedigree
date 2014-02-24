@@ -321,9 +321,13 @@ if(env['pup']):
 
 if env['debugger']:
     # Build in debugging information when built with the debugger.
-    debug_flags = ' -g3 -ggdb '
+    # Use DWARF, as the stabs format is not very useful (32 bits of reloc)
+    debug_flags = ' -g3 -ggdb -gdwarf-2 '
     env['CFLAGS'] = safeAppend(env['CFLAGS'], debug_flags)
     env['CXXFLAGS'] = safeAppend(env['CXXFLAGS'], debug_flags)
+
+    # TODO: for targets using `as` instead of `nasm`, this can in fact be DWARF!
+    debug_flags = ''
     env['ASFLAGS'] = safeAppend(env['ASFLAGS'], debug_flags)
     
 # Configure the assembler
