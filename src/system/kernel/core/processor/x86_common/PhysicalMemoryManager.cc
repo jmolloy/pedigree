@@ -60,6 +60,7 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
     ptr = m_PageStack.allocate(0);
     while(!ptr)
     {
+#if 0
         ERROR_NOLOCK("High memory pressure - compacting caches...");
 
         // Can we just ditch some kernel heap memory?
@@ -92,6 +93,9 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
             ERROR_NOLOCK("Memory pressure relieved.");
             break;
         }
+#else
+        panic("Out of memory.");
+#endif
     }
 
 #if defined(X86) && defined(DEBUGGER)
