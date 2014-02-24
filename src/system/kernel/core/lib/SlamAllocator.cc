@@ -550,9 +550,10 @@ void SlamAllocator::initialise()
 
     m_Base = bitmapBase + bitmapBytes;
 
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
+
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
     VirtualAddressSpace &currva = Processor::information().getVirtualAddressSpace();
-    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
     if (Processor::m_Initialised == 2)
         Processor::switchAddressSpace(va);
 #endif
@@ -759,9 +760,10 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
 
     uintptr_t slab = m_Base + (((entry * 64) + bit) * PhysicalMemoryManager::getPageSize());
 
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
+
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
     VirtualAddressSpace &currva = Processor::information().getVirtualAddressSpace();
-    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
     if (Processor::m_Initialised == 2)
         Processor::switchAddressSpace(va);
 #endif
@@ -805,9 +807,10 @@ void SlamAllocator::freeSlab(uintptr_t address, size_t length)
 
     // Perform unmapping first (so we can just modify 'address').
 
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
+
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
     VirtualAddressSpace &currva = Processor::information().getVirtualAddressSpace();
-    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
     if (Processor::m_Initialised == 2)
         Processor::switchAddressSpace(va);
 #endif

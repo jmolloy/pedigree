@@ -135,6 +135,18 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
         return reinterpret_cast<uintptr_t>(USERSPACE_DYNAMIC_LINKER_LOCATION);
     }
 
+    /** Gets address of the start of the kernel's heap region. */
+    virtual uintptr_t getKernelHeapStart() const
+    {
+        return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_HEAP);
+    }
+
+    /** Gets address of the end of the kernel's heap region. */
+    virtual uintptr_t getKernelHeapEnd() const
+    {
+        return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_HEAP) + KERNEL_VIRTUAL_HEAP_SIZE;
+    }
+
   private:
     /** The default constructor */
     X64VirtualAddressSpace();

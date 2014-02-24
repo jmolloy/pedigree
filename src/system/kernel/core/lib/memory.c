@@ -62,7 +62,8 @@ inline void *memset_nonzero(void *buf, int c, size_t n)
 #ifdef BITS_64
         if((n % 8) == 0)
         {
-            uint64_t word = (c << 56) | (c << 48) | (c << 40) | (c << 32) | (c << 24) | (c << 16) | (c << 8) | c;
+            uint64_t c64 = c;
+            uint64_t word = (c64 << 56ULL) | (c64 << 48ULL) | (c64 << 40ULL) | (c64 << 32ULL) | (c64 << 24ULL) | (c64 << 16ULL) | (c64 << 8ULL) | c64;
             asm volatile("rep stosq" : "=c" (unused) : "D" (p), "c" (n / 8), "a" (word));
             n = 0;
         }
@@ -447,7 +448,7 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
         /// \todo We should NOT save SSE state if the process has not used SSE...
         char save_state[SSE2_SAVE_REGION_SIZE] SSE2_SAVE_REGION_ALIGN;
 
-        int ints = 0;
+        long ints = 0;
         asm volatile("pushf; pop %0; and $0x200, %0; cli" : "=r" (ints));
         // Save SSE registers, as we are about to destroy them.
         sse2_save(save_state);
