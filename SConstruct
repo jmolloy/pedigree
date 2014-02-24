@@ -48,6 +48,8 @@ opts.AddVariables(
     ('BUILDDIR','Directory to place build files in.','build'),
     ('LIBGCC','The folder containing libgcc.a.',''),
     ('LOCALISEPREFIX', 'Prefix to add to all compiler invocations whose output is parsed. Used to ensure locales are right, this must be a locale which outputs US English.', 'LANG=C'),
+    ('COMPILER_TARGET', 'Compiler target (eg, i686-pedigree). Autodetected.', ''),
+    ('COMPILER_VERSION', 'Compiler version (eg, 4.5.1). Autodetected.', ''),
 
     BoolVariable('cripple_hdd','Disable writing to hard disks at runtime.',1),
     BoolVariable('debugger','Whether or not to enable the kernel debugger.',1),
@@ -179,7 +181,11 @@ if env['CROSS'] != '' or env['ON_PEDIGREE']:
         cross = os.path.split(env['CROSS'])
         crossPath = cross[0]
         crossTuple = cross[1]
+
+        env['COMPILER_TARGET'] = crossTuple.strip('-')
     else:
+        # TODO: parse 'gcc -v' to get COMPILER_TARGET
+        env['COMPILER_TARGET'] = 'FIXME'
         crossPath = crossTuple = ''
 
     if crossPath:
@@ -204,6 +210,13 @@ if env['CROSS'] != '' or env['ON_PEDIGREE']:
     env['STRIP'] = crossTuple + 'strip'
     env['OBJCOPY'] = crossTuple + 'objcopy'
     env['LINK'] = env['LD']
+
+    p = commands.getoutput('%s -v' % (env['CC'],))
+    for line in p.splitlines():
+        if line.startswith('gcc version'):
+            # TODO: fix this, this is horrible!
+            env['COMPILER_VERSION'] = line.split(' ')[2]
+
 env['LD'] = env['LINK']
 
 if(len(env['CC']) > 0 and env['LIBGCC'] == ''):
