@@ -1,6 +1,6 @@
-diff -rupN gcc-4.3.2-orig/config.sub gcc-4.3.2/config.sub
---- gcc-4.3.2-orig/config.sub	2008-01-23 12:37:40.000000000 +1000
-+++ gcc-4.3.2/config.sub	2009-03-12 15:16:17.000000000 +1000
+diff -rupN gcc-4.5.1.orig/config.sub gcc-4.5.1/config.sub
+--- gcc-4.5.1.orig/config.sub	2014-02-25 18:49:05.420575390 +1000
++++ gcc-4.5.1/config.sub	2014-02-25 18:50:28.116985477 +1000
 @@ -1450,6 +1450,9 @@ case $os in
  		;;
          -nacl*)
@@ -11,9 +11,9 @@ diff -rupN gcc-4.3.2-orig/config.sub gcc-4.3.2/config.sub
  	-none)
  		;;
  	*)
-diff -rupN gcc-4.3.2-orig/gcc/config/pedigree.h gcc-4.3.2/gcc/config/pedigree.h
---- gcc-4.3.2-orig/gcc/config/pedigree.h	1970-01-01 10:00:00.000000000 +1000
-+++ gcc-4.3.2/gcc/config/pedigree.h	2009-03-12 15:20:51.000000000 +1000
+diff -rupN gcc-4.5.1.orig/gcc/config/pedigree.h gcc-4.5.1/gcc/config/pedigree.h
+--- gcc-4.5.1.orig/gcc/config/pedigree.h	1970-01-01 10:00:00.000000000 +1000
++++ gcc-4.5.1/gcc/config/pedigree.h	2014-02-25 18:58:02.219237234 +1000
 @@ -0,0 +1,44 @@
 +#define NO_IMPLICIT_EXTERN_C
 +
@@ -58,11 +58,21 @@ diff -rupN gcc-4.3.2-orig/gcc/config/pedigree.h gcc-4.3.2/gcc/config/pedigree.h
 +                     }"
 +
 +#undef TARGET_VERSION
-+#define TARGET_VERSION fprintf(stderr, " (i386/x86_64 pedigree)")
-diff -rupN gcc-4.3.2-orig/gcc/config.gcc gcc-4.3.2/gcc/config.gcc
---- gcc-4.3.2-orig/gcc/config.gcc	2008-06-10 02:32:15.000000000 +1000
-+++ gcc-4.3.2/gcc/config.gcc	2009-03-12 16:51:59.000000000 +1000
-@@ -584,6 +584,12 @@ case ${target} in
++#define TARGET_VERSION fprintf(stderr, " (i386/x86_64/arm pedigree)")
+diff -rupN gcc-4.5.1.orig/gcc/config/t-pedigree gcc-4.5.1/gcc/config/t-pedigree
+--- gcc-4.5.1.orig/gcc/config/t-pedigree	1970-01-01 10:00:00.000000000 +1000
++++ gcc-4.5.1/gcc/config/t-pedigree	2014-02-25 18:50:28.224985993 +1000
+@@ -0,0 +1,6 @@
++EXTRA_MULTILIB_PARTS= crtbegin.o crtend.o crtbeginS.o crtendS.o
++
++# Always build crtstuff with PIC.
++CRTSTUFF_T_CFLAGS_S = $(CRTSTUFF_T_CFLAGS) -fPIC
++
++TARGET_LIBGCC2_CFLAGS = -fPIC
+diff -rupN gcc-4.5.1.orig/gcc/config.gcc gcc-4.5.1/gcc/config.gcc
+--- gcc-4.5.1.orig/gcc/config.gcc	2014-02-25 18:46:05.423682845 +1000
++++ gcc-4.5.1/gcc/config.gcc	2014-02-25 19:01:12.844182491 +1000
+@@ -606,6 +606,12 @@ case ${target} in
      *) echo 'Unknown thread configuration for VxWorks'; exit 1 ;;
    esac
    ;;
@@ -75,9 +85,9 @@ diff -rupN gcc-4.3.2-orig/gcc/config.gcc gcc-4.3.2/gcc/config.gcc
  *-*-elf)
    # Assume that newlib is being used and so __cxa_atexit is provided.
    default_use_cxa_atexit=yes
-@@ -1014,6 +1014,16 @@ hppa[12]*-*-hpux11*)
- 	use_collect2=yes
- 	gas=yes
+@@ -1084,6 +1090,31 @@ hppa[12]*-*-hpux11*)
+ 		;;
+ 	esac
  	;;
 +i[3-7]86-*-pedigree*)
 +  tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h i386/i386elf.h pedigree.h"
@@ -89,13 +99,59 @@ diff -rupN gcc-4.3.2-orig/gcc/config.gcc gcc-4.3.2/gcc/config.gcc
 +  tmake_file="i386/t-i386elf i386/t-crtstuff t-pedigree"
 +  use_fixproto=yes
 +  ;;
++arm*-*-pedigree*)
++	# The BPABI long long divmod functions return a 128-bit value in
++	# registers r0-r3.  Correctly modeling that requires the use of
++	# TImode.
++	need_64bit_hwint=yes
++	default_use_cxa_atexit=yes
++	tm_file="dbxelf.h elfos.h arm/unknown-elf.h arm/elf.h arm/bpabi.h pedigree.h"
++	tmake_file="arm/t-arm arm/t-arm-elf t-pedigree"
++	tm_file="$tm_file arm/eabi.h newlib-stdint.h"
++	tmake_file="${tmake_file} arm/t-bpabi"
++	extra_options="${extra_options} arm/eabi.opt"
++	use_gcc_stdint=wrap
++	tm_file="${tm_file} arm/aout.h arm/arm.h"
++	tmake_file="${tmake_file} arm/t-arm-softfp soft-fp/t-softfp"
++	;;
  i[34567]86-*-darwin*)
  	need_64bit_hwint=yes
+ 	need_64bit_isa=yes
+diff -rupN gcc-4.5.1.orig/gcc/configure gcc-4.5.1/gcc/configure
+--- gcc-4.5.1.orig/gcc/configure	2014-02-25 18:46:46.335885703 +1000
++++ gcc-4.5.1/gcc/configure	2014-02-25 18:50:28.212985929 +1000
+@@ -7434,7 +7434,7 @@ $as_echo "$as_me: WARNING:
+ *** Info documentation will not be built." >&2;}
+   BUILD_INFO=
+ else
+-  BUILD_INFO=info
++  BUILD_INFO=
+ fi
  
-diff -rupN gcc-4.3.2-orig/libstdc++-v3/crossconfig.m4 gcc-4.3.2/libstdc++-v3/crossconfig.m4
---- gcc-4.3.2-orig/libstdc++-v3/crossconfig.m4	2008-01-15 10:15:43.000000000 +1000
-+++ gcc-4.3.2/libstdc++-v3/crossconfig.m4	2009-03-21 10:46:35.000000000 +1000
-@@ -140,6 +140,11 @@ case "${host}" in
+ 
+diff -rupN gcc-4.5.1.orig/libgcc/config.host gcc-4.5.1/libgcc/config.host
+--- gcc-4.5.1.orig/libgcc/config.host	2014-02-25 18:49:09.308594664 +1000
++++ gcc-4.5.1/libgcc/config.host	2014-02-25 19:02:33.064580287 +1000
+@@ -288,6 +288,15 @@ i[34567]86-*-netbsd*)
+ 	;;
+ x86_64-*-netbsd*)
+ 	;;
++i[34567]86-*-pedigree*)
++	extra_parts="crtbegin.o crtend.o crtbeginS.o crtendS.o"
++	;;
++x86_64-*-pedigree* | amd64-*-pedigree*)
++	extra_parts="crtbegin.o crtend.o crtbeginS.o crtendS.o"
++	;;
++arm*-*-pedigree*)
++	extra_parts="crtbegin.o crtend.o crtbeginS.o crtendS.o"
++	;;
+ i[34567]86-*-openbsd2.*|i[34567]86-*openbsd3.[0123])
+ 	;;
+ i[34567]86-*-openbsd*)
+diff -rupN gcc-4.5.1.orig/libstdc++-v3/crossconfig.m4 gcc-4.5.1/libstdc++-v3/crossconfig.m4
+--- gcc-4.5.1.orig/libstdc++-v3/crossconfig.m4	2014-02-25 18:47:29.312098796 +1000
++++ gcc-4.5.1/libstdc++-v3/crossconfig.m4	2014-02-25 18:50:28.160985676 +1000
+@@ -150,6 +150,11 @@ case "${host}" in
      GCC_CHECK_TLS
      AM_ICONV
      ;;
@@ -107,10 +163,10 @@ diff -rupN gcc-4.3.2-orig/libstdc++-v3/crossconfig.m4 gcc-4.3.2/libstdc++-v3/cro
    *-mingw32*)
      GLIBCXX_CHECK_LINKER_FEATURES
      GLIBCXX_CHECK_MATH_SUPPORT
-diff -rupN gcc-4.5.1-orig/libtool.m4 gcc-4.5.1/libtool.m4
---- gcc-4.5.1-orig/libtool.m4  2009-04-17 21:58:42.000000000 +1000
-+++ gcc-4.5.1/libtool.m4  2009-08-17 16:51:35.312742600 +1000
-@@ -5117,7 +5117,9 @@
+diff -rupN gcc-4.5.1.orig/libtool.m4 gcc-4.5.1/libtool.m4
+--- gcc-4.5.1.orig/libtool.m4	2014-02-25 18:49:07.380585113 +1000
++++ gcc-4.5.1/libtool.m4	2014-02-25 18:50:28.164985702 +1000
+@@ -5370,7 +5370,9 @@ if test -n "$compiler"; then
    _LT_LINKER_SHLIBS($1)
    _LT_SYS_DYNAMIC_LINKER($1)
    _LT_LINKER_HARDCODE_LIBPATH($1)
@@ -119,42 +175,5 @@ diff -rupN gcc-4.5.1-orig/libtool.m4 gcc-4.5.1/libtool.m4
 +    LT_SYS_DLOPEN_SELF
 +  fi
    _LT_CMD_STRIPLIB
-
+ 
    # Report which library types will actually be built
-diff -rupN gcc-4.4.1-orig/libgcc/config.host gcc-4.4.1/libgcc/config.host
---- gcc-4.4.1-orig/libgcc/config.host	2009-04-17 21:58:42.000000000 +1000
-+++ gcc-4.4.1/libgcc/config.host	2009-08-17 16:51:35.312742600 +1000
-@@ -287,6 +287,12 @@ i[34567]86-*-netbsd*)
- 	;;
- x86_64-*-netbsd*)
- 	;;
-+i[34567]86-*-pedigree*)
-+	extra_parts="crtbegin.o crtend.o crtbeginS.o crtendS.o"
-+	;;
-+x86_64-*-pedigree* | amd64-*-pedigree*)
-+	extra_parts="crtbegin.o crtend.o crtbeginS.o crtendS.o"
-+	;;
- i[34567]86-*-openbsd2.*|i[34567]86-*openbsd3.[0123])
- 	;;
- i[34567]86-*-openbsd*)
-diff -rup gcc/configure{.old,}
---- a/gcc/configure.old	2013-05-28 22:06:14.604629002 +1000
-+++ b/gcc/configure	2013-05-28 22:06:37.668072645 +1000
-@@ -7434,7 +7434,7 @@ $as_echo "$as_me: WARNING:
- *** Info documentation will not be built." >&2;}
-   BUILD_INFO=
- else
--  BUILD_INFO=info
-+  BUILD_INFO=
- fi
- 
- 
---- /dev/null	2013-05-15 13:32:17.906234052 +1000
-+++ b/gcc/config/t-pedigree	2013-05-29 16:40:50.359743858 +1000
-@@ -0,0 +1,6 @@
-+EXTRA_MULTILIB_PARTS= crtbegin.o crtend.o crtbeginS.o crtendS.o
-+
-+# Always build crtstuff with PIC.
-+CRTSTUFF_T_CFLAGS_S = $(CRTSTUFF_T_CFLAGS) -fPIC
-+
-+TARGET_LIBGCC2_CFLAGS = -fPIC
