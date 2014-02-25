@@ -161,7 +161,7 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
 
           X64VirtualAddressSpace *x64VAS = reinterpret_cast<X64VirtualAddressSpace*> (p->getAddressSpace());
           uint64_t *pml4Entry = TABLE_ENTRY(x64VAS->m_PhysicalPML4, pml4Index);
-          *pml4Entry = thisPml4Entry;  
+          *pml4Entry = thisPml4Entry;
       }
   }
 
@@ -186,12 +186,12 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
   if ((*pageTableEntry & PAGE_PRESENT) == PAGE_PRESENT)
     return false;
 
+  // Map the page
+  *pageTableEntry = physAddress | Flags;
+
   // Flush the TLB (if we are marking a page as swapped-out)
   if ((Flags & PAGE_SWAPPED) == PAGE_SWAPPED)
     Processor::invalidate(virtualAddress);
-
-  // Map the page
-  *pageTableEntry = physAddress | Flags;
 
   return true;
 }
@@ -675,6 +675,11 @@ bool X64VirtualAddressSpace::conditionalTableEntryAllocation(uint64_t *tableEntr
            0,
            PhysicalMemoryManager::getPageSize());
   }
+  else if(((*tableEntry & PAGE_USER) != PAGE_USER) && (flags & PAGE_USER))
+  {
+    // Flags request user mapping, entry doesn't have that.
+    *tableEntry |= PAGE_USER;
+  }
 
   return true;
 }
@@ -695,6 +700,11 @@ bool X64VirtualAddressSpace::conditionalTableEntryMapping(uint64_t *tableEntry,
            PhysicalMemoryManager::getPageSize());
 
     return true;
+  }
+  else if(((*tableEntry & PAGE_USER) != PAGE_USER) && (flags & PAGE_USER))
+  {
+    // Flags request user mapping, entry doesn't have that.
+    *tableEntry |= PAGE_USER;
   }
 
   return false;
