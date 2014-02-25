@@ -315,8 +315,7 @@ List<void*>::Iterator List<void*>::erase(Iterator &Iter)
   --m_Count;
 
   node_t *pNext = Node->m_Next;
-  if(!pNext)
-    pNext = Node;
+  // If pNext is NULL, this will be the same as 'end()'.
   Iterator tmp(pNext);
   delete Node;
   return tmp;
@@ -335,8 +334,7 @@ List<void*>::ReverseIterator List<void*>::erase(ReverseIterator &Iter)
   --m_Count;
 
   node_t *pNext = Node->m_Previous;
-  if(!pNext)
-    pNext = Node;
+  // If pNext is NULL, this will be the same as 'rend()'.
   ReverseIterator tmp(pNext);
   delete Node;
   return tmp;
