@@ -115,12 +115,14 @@ class PosixProcess : public Process
             {
                 for(List<PosixProcess*>::Iterator it = m_pProcessGroup->Members.begin();
                     it != m_pProcessGroup->Members.end();
-                    ++it)
+                    )
                 {
                     if((*it) == this)
                     {
                         it = m_pProcessGroup->Members.erase(it);
                     }
+                    else
+                        ++it;
                 }
             }
 

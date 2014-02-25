@@ -141,12 +141,14 @@ void VFS::removeAllAliases(Filesystem *pFs)
 
     for (RadixTree<Filesystem*>::Iterator it = m_Aliases.begin();
          it != m_Aliases.end();
-         it++)
+         )
     {
         if (pFs == (*it))
         {
             it = m_Aliases.erase(it);
         }
+        else
+            ++it;
     }
     
     /// \todo Locking.

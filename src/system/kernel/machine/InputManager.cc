@@ -248,7 +248,7 @@ void InputManager::removeCallback(callback_t callback, Thread *pThread)
     LockGuard<Spinlock> guard(m_QueueLock);
     for(List<CallbackItem*>::Iterator it = m_Callbacks.begin();
         it != m_Callbacks.end();
-        it++)
+        )
     {
         if(*it)
         {
@@ -258,9 +258,13 @@ void InputManager::removeCallback(callback_t callback, Thread *pThread)
 #endif
                 (callback == (*it)->func))
             {
+                delete *it;
                 it = m_Callbacks.erase(it);
+                continue;
             }
         }
+
+        ++it;
     }
 }
 
@@ -270,16 +274,19 @@ bool InputManager::removeCallbackByThread(Thread *pThread)
     LockGuard<Spinlock> guard(m_QueueLock);
     for(List<CallbackItem*>::Iterator it = m_Callbacks.begin();
         it != m_Callbacks.end();
-        it++)
+        )
     {
         if(*it)
         {
             if(pThread == (*it)->pThread)
             {
-                m_Callbacks.erase(it);
-                return true;
+                delete *it;
+                it = m_Callbacks.erase(it);
+                continue;
             }
         }
+
+        ++it;
     }
 
     return false;

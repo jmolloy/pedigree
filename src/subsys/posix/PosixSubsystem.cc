@@ -315,12 +315,16 @@ void PosixSubsystem::exit(int code)
         {
             // Pick a new process to be the leader, remove this one from the list
             PosixProcess *pNewLeader = 0;
-            for(List<PosixProcess*>::Iterator it = pGroup->Members.begin(); it != pGroup->Members.end(); it++)
+            for(List<PosixProcess*>::Iterator it = pGroup->Members.begin(); it != pGroup->Members.end();)
             {
                 if((*it) == p)
                     it = pGroup->Members.erase(it);
-                else if(!pNewLeader)
-                    pNewLeader = *it;
+                else
+                {
+                    if(!pNewLeader)
+                        pNewLeader = *it;
+                    ++it;
+                }
             }
 
             // Set the new leader

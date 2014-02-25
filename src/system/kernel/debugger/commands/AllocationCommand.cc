@@ -278,7 +278,7 @@ void AllocationCommand::postProcess()
             }
         }
 
-        it = m_Frees.erase(it);
+        m_Frees.erase(it);
         it = m_Frees.begin();
     }
     NOTICE("End free-list post processing.");
