@@ -90,10 +90,8 @@ longjmp:
   jmp [rdi + 56]
 
 _setjmp:
-    call [rel setjmp wrt ..got]
-    ret
+    jmp [rel setjmp wrt ..got]
 
 _longjmp:
-    call [rel longjmp wrt ..got]
-    ret
+    jmp [rel longjmp wrt ..got]
 
