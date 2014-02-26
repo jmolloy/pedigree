@@ -1234,6 +1234,21 @@ extern "C" uintptr_t _libload_dofixup(uintptr_t id, uintptr_t symbol) {
     object_meta_t *meta = (object_meta_t *) id;
     uintptr_t returnaddr = 0;
 
+    // Save FP state (glue may use SSE, and we are not called by normal means
+    // so there's no caller-save).
+    typedef float xmm_t __attribute__((__vector_size__(16)));
+    xmm_t fixup_xmm_save[8];
+#define XMM_SAVE(N) asm volatile("movdqa %%xmm" #N ", %0" : "=m" (fixup_xmm_save[N]));
+#define XMM_RESTORE(N) asm volatile("movdqa %0, %%xmm" #N :: "m" (fixup_xmm_save[N]));
+    XMM_SAVE(0);
+    XMM_SAVE(1);
+    XMM_SAVE(2);
+    XMM_SAVE(3);
+    XMM_SAVE(4);
+    XMM_SAVE(5);
+    XMM_SAVE(6);
+    XMM_SAVE(7);
+
 #ifdef BITS_32
     ElfRel_t rel = meta->plt_rel[symbol / sizeof(ElfRel_t)];
 #else
@@ -1247,13 +1262,21 @@ extern "C" uintptr_t _libload_dofixup(uintptr_t id, uintptr_t symbol) {
     }
 
     ElfSymbol_t *sym = &meta->dyn_symtab[R_SYM(rel.info)];
-    std::string symbolname = symbolName(*sym, meta);
 
     uintptr_t result = doThisRelocation(rel, meta);
     if(result == (uintptr_t) ~0UL) {
         fprintf(stderr, "symbol lookup failed (couldn't relocate)\n");
         abort();
     }
+
+    XMM_RESTORE(0);
+    XMM_RESTORE(1);
+    XMM_RESTORE(2);
+    XMM_RESTORE(3);
+    XMM_RESTORE(4);
+    XMM_RESTORE(5);
+    XMM_RESTORE(6);
+    XMM_RESTORE(7);
 
     return result;
 }

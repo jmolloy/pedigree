@@ -14,14 +14,15 @@ _libload_resolve_symbol:
     push r8
     push r9
     push r10
-    push r11
+    push rax
 
     mov rdi, [rsp + 64]
     mov rsi, [rsp + 72]
     call _libload_dofixup
+    mov r11, rax
 
     ; Restore caller-save registers.
-    pop r11
+    pop rax
     pop r10
     pop r9
     pop r8
@@ -31,4 +32,5 @@ _libload_resolve_symbol:
     pop rcx
 
     add rsp, 16
-    jmp rax
+    jmp r11
+
