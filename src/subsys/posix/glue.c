@@ -1558,7 +1558,13 @@ int uname(struct utsname *n)
     strcpy(n->sysname, "Pedigree");
     strcpy(n->release, "Foster");
     strcpy(n->version, "0.1");
+#ifdef defined(X86)
     strcpy(n->machine, "i686");
+#elif defined(X64)
+    strcpy(n->machine, "x86_64");
+#else
+    strcpy(n->machine, "<unknown>");
+#endif
     gethostname(n->nodename, 128);
     return 0;
 }
