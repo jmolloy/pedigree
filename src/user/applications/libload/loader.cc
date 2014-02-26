@@ -1204,14 +1204,8 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
             // Only copy if not null.
             if(S)
             {
-                if(symbolSize > sizeof(uintptr_t))
-                {
-                    memcpy(
-                        (void *) (P + sizeof(uintptr_t)),
-                        (void *) (S + sizeof(uintptr_t)),
-                        symbolSize - sizeof(uintptr_t));
-                }
-                result = *((uintptr_t *) S);
+                memcpy((void *) P, (void *) S, symbolSize);
+                result = P;
             }
             break;
         case R_X86_64_JUMP_SLOT:
@@ -1228,7 +1222,11 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
         default:
             syslog(LOG_WARNING, "libload: unsupported relocation for '%s' in %s: %d", symbolname.c_str(), meta->filename.c_str(), R_TYPE(rel.info));
     }
-    *((uintptr_t *) P) = result;
+
+    if(R_TYPE(rel.info) != R_X86_64_COPY)
+    {
+        *((uintptr_t *) P) = result;
+    }
     return result;
 }
 
