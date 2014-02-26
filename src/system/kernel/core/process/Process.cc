@@ -211,12 +211,14 @@ void Process::removeWaiter(Semaphore *pWaiter)
 {
     for(List<Semaphore *>::Iterator it = m_Waiters.begin();
         it != m_Waiters.end();
-        ++it)
+        )
     {
         if((*it) == pWaiter)
         {
             it = m_Waiters.erase(it);
         }
+        else
+            ++it;
     }
 }
 

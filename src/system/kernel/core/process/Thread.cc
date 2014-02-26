@@ -163,7 +163,7 @@ Thread::~Thread()
   {
     for(List<RequestQueue::Request *>::Iterator it = m_PendingRequests.begin();
         it != m_PendingRequests.end();
-        ++it)
+        )
     {
         if((*it)->bCompleted)
         {
@@ -194,27 +194,15 @@ Thread::~Thread()
             {
                 (*it)->bReject = true;
                 (*it)->isAsync = true;
+
+                ++it;
             }
         }
     }
 
     // Let the RequestQueue do its thing - processing and rejecting our requests.
-    // However, we need to keep the system running eventually, so don't wait
-    // for each request to be completely done.
-    for(size_t i = 0; i < m_PendingRequests.count(); ++i)
+    while(m_PendingRequests.count())
         Scheduler::instance().yield();
-
-    // If any left, make sure they don't refer back to us.
-    if(m_PendingRequests.count())
-    {
-        for(List<RequestQueue::Request *>::Iterator it = m_PendingRequests.begin();
-            it != m_PendingRequests.end();
-            ++it)
-        {
-            if((*it)->pThread == this)
-                (*it)->pThread = 0;
-        }
-    }
   }
 }
 
@@ -315,7 +303,7 @@ void Thread::cullEvent(size_t eventNumber)
 
     for (List<Event*>::Iterator it = m_EventQueue.begin();
          it != m_EventQueue.end();
-         it++)
+         )
     {
         if ((*it)->getNumber() == eventNumber)
         {
@@ -323,6 +311,8 @@ void Thread::cullEvent(size_t eventNumber)
                 delete (*it);
             it = m_EventQueue.erase(it);
         }
+        else
+            ++it;
     }
 }
 

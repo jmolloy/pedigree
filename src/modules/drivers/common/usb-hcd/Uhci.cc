@@ -421,7 +421,7 @@ bool Uhci::irq(irq_id_t number, InterruptState &state)
         LockGuard<Spinlock> guard(m_AsyncQueueListChangeLock);
         for(List<QH*>::Iterator it = persistList.begin();
             it != persistList.end();
-            it++)
+            )
         {
             m_AsyncSchedule.pushBack(*it);
             it = persistList.erase(it);

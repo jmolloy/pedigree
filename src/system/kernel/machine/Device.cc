@@ -113,7 +113,7 @@ void Device::removeChild(size_t n)
   {
     if (i == n)
     {
-      it = m_Children.erase(it);
+      m_Children.erase(it);
       break;
     }
   }

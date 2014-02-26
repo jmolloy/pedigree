@@ -53,6 +53,10 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
     if (pSh && pSh->addr == 0)
         return true; // Not a fatal error.
 
+    // Avoid NONE relocations.
+    if(R_TYPE(rel.info) == R_X86_64_NONE)
+        return true;
+
     // Get the address of the unit to be relocated.
     uint64_t address = ((pSh) ? pSh->addr : loadBase) + rel.offset;
 
@@ -98,7 +102,10 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
         S = pSymtab->lookup(String(pStr), this, policy);
 
         if (S == 0)
+        {
             WARNING("Relocation failed for symbol \"" << pStr << "\" (relocation=" << R_TYPE(rel.info) << ")");
+            WARNING("Relocation at " << address << " (offset=" << rel.offset << ")...");
+        }
         // This is a weak relocation, but it was undefined.
         else if(S == ~0UL)
             WARNING("Weak relocation == 0 [undefined] for \""<< pStr << "\".");

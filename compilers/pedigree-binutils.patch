@@ -1,7 +1,7 @@
-diff -urN binutils-2.20.1-orig//bfd/config.bfd binutils-2.20.1/bfd/config.bfd
---- binutils-2.20.1-orig//bfd/config.bfd	2009-08-06 18:38:00.000000000 +0100
-+++ binutils-2.20.1/bfd/config.bfd	2010-08-27 13:30:50.000000000 +0100
-@@ -603,6 +603,15 @@
+diff -rupN binutils-2.20.1.orig/bfd/config.bfd binutils-2.20.1/bfd/config.bfd
+--- binutils-2.20.1.orig/bfd/config.bfd	2014-02-25 18:30:39.743092645 +1000
++++ binutils-2.20.1/bfd/config.bfd	2014-02-25 18:32:28.139630134 +1000
+@@ -603,6 +603,19 @@ case "${targ}" in
      targ_selvecs="i386linux_vec i386pei_vec"
      targ64_selvecs="bfd_elf64_x86_64_vec bfd_elf64_l1om_vec"
      ;;
@@ -14,13 +14,17 @@ diff -urN binutils-2.20.1-orig//bfd/config.bfd binutils-2.20.1/bfd/config.bfd
 +  x86_64-*-pedigree*)
 +    targ_defvec=bfd_elf64_x86_64_vec
 +    ;;
++  arm*-*-pedigree*)
++    targ_defvec=bfd_elf32_littlearm_vec
++    targ_selvecs=bfd_elf32_bigarm_vec
++    ;;
  #ifdef BFD64
    x86_64-*-darwin*)
      targ_defvec=mach_o_le_vec
-diff -urN binutils-2.20.1-orig//config.sub binutils-2.20.1/config.sub
---- binutils-2.20.1-orig//config.sub	2009-08-17 05:10:29.000000000 +0100
-+++ binutils-2.20.1/config.sub	2010-08-27 13:30:50.000000000 +0100
-@@ -1426,6 +1426,9 @@
+diff -rupN binutils-2.20.1.orig/config.sub binutils-2.20.1/config.sub
+--- binutils-2.20.1.orig/config.sub	2014-02-25 18:30:39.699092404 +1000
++++ binutils-2.20.1/config.sub	2014-02-25 18:30:53.799162344 +1000
+@@ -1426,6 +1426,9 @@ case $os in
  	-dicos*)
  		os=-dicos
  		;;
@@ -30,10 +34,10 @@ diff -urN binutils-2.20.1-orig//config.sub binutils-2.20.1/config.sub
  	-none)
  		;;
  	*)
-diff -urN binutils-2.20.1-orig//gas/configure.tgt binutils-2.20.1/gas/configure.tgt
---- binutils-2.20.1-orig//gas/configure.tgt	2009-09-09 09:13:28.000000000 +0100
-+++ binutils-2.20.1/gas/configure.tgt	2010-08-27 13:31:54.000000000 +0100
-@@ -236,6 +236,10 @@
+diff -rupN binutils-2.20.1.orig/gas/configure.tgt binutils-2.20.1/gas/configure.tgt
+--- binutils-2.20.1.orig/gas/configure.tgt	2014-02-25 18:30:39.507091459 +1000
++++ binutils-2.20.1/gas/configure.tgt	2014-02-25 18:34:46.808317761 +1000
+@@ -236,6 +236,11 @@ case ${generic_target} in
    i386-*-chaos)				fmt=elf ;;
    i386-*-rdos*)				fmt=elf ;;
    i386-*-darwin*)			fmt=macho ;;
@@ -41,24 +45,45 @@ diff -urN binutils-2.20.1-orig//gas/configure.tgt binutils-2.20.1/gas/configure.
 +  i386-*-pedigree*)   fmt=elf ;;
 +  amd64-*-pedigree*)  fmt=elf ;;
 +  x86_64-*-pedigree*) fmt=elf ;;
++  arm*-*-pedigree*)			fmt=elf em=armeabi ;;
  
    i860-*-*)				fmt=elf endian=little ;;
  
-diff -urN binutils-2.20.1-orig//ld/configure.tgt binutils-2.20.1/ld/configure.tgt
---- binutils-2.20.1-orig//ld/configure.tgt	2009-08-06 18:38:03.000000000 +0100
-+++ binutils-2.20.1/ld/configure.tgt	2010-08-27 13:30:50.000000000 +0100
-@@ -282,6 +282,8 @@
+diff -rupN binutils-2.20.1.orig/ld/configure.tgt binutils-2.20.1/ld/configure.tgt
+--- binutils-2.20.1.orig/ld/configure.tgt	2014-02-25 18:30:39.783092828 +1000
++++ binutils-2.20.1/ld/configure.tgt	2014-02-25 18:35:33.624549904 +1000
+@@ -282,6 +282,9 @@ i[3-7]86-*-beos*)	targ_emul=elf_i386_be
  i[3-7]86-*-vxworks*)	targ_emul=elf_i386_vxworks ;;
  i[3-7]86-*-chaos)	targ_emul=elf_i386_chaos
  			;;
 +i[3-7]86-*-pedigree*)  targ_emul=pedigree_i386 ;;
 +x86_64-*-pedigree*)    targ_emul=pedigree_x86_64 ;;
++arm*-*-pedigree*)        targ_emul=pedigree_arm ;;
  i860-*-coff)		targ_emul=coff_i860 ;;
  i860-stardent-sysv4* | i860-stardent-elf*)
  			targ_emul=elf32_i860
-diff -urN binutils-2.20.1-orig//ld/emulparams/pedigree_i386.sh binutils-2.20.1/ld/emulparams/pedigree_i386.sh
---- binutils-2.20.1-orig//ld/emulparams/pedigree_i386.sh	1970-01-01 01:00:00.000000000 +0100
-+++ binutils-2.20.1/ld/emulparams/pedigree_i386.sh	2010-08-27 13:30:50.000000000 +0100
+diff -rupN binutils-2.20.1.orig/ld/emulparams/pedigree_arm.sh binutils-2.20.1/ld/emulparams/pedigree_arm.sh
+--- binutils-2.20.1.orig/ld/emulparams/pedigree_arm.sh	1970-01-01 10:00:00.000000000 +1000
++++ binutils-2.20.1/ld/emulparams/pedigree_arm.sh	2014-02-25 18:41:05.882197483 +1000
+@@ -0,0 +1,15 @@
++MACHINE=
++SCRIPT_NAME=elf
++OUTPUT_FORMAT="elf32-littlearm"
++BIG_OUTPUT_FORMAT="elf32-bgarm"
++LITTLE_OUTPUT_FORMAT="elf32-littlearm"
++TEXT_START_ADDR=0x8000
++MAXPAGESIZE="CONSTANT (MAXPAGESIZE)"
++COMMONPAGESIZE="CONSTANT (COMMONPAGESIZE)"
++ARCH=arm
++TEMPLATE_NAME=elf32
++EXTRA_EM_FILE=armelf
++GENERATE_SHLIB_SCRIPT=yes
++GENERATE_PIE_SCRIPT=yes
++NO_SMALL_DATA=yes
++EMBEDDED=yes
+diff -rupN binutils-2.20.1.orig/ld/emulparams/pedigree_i386.sh binutils-2.20.1/ld/emulparams/pedigree_i386.sh
+--- binutils-2.20.1.orig/ld/emulparams/pedigree_i386.sh	1970-01-01 10:00:00.000000000 +1000
++++ binutils-2.20.1/ld/emulparams/pedigree_i386.sh	2014-02-25 18:30:53.799162344 +1000
 @@ -0,0 +1,13 @@
 +SCRIPT_NAME=elf
 +OUTPUT_FORMAT="elf32-i386"
@@ -73,9 +98,9 @@ diff -urN binutils-2.20.1-orig//ld/emulparams/pedigree_i386.sh binutils-2.20.1/l
 +GENERATE_PIE_SCRIPT=yes
 +NO_SMALL_DATA=yes
 +SEPARATE_GOTPLT=12
-diff -urN binutils-2.20.1-orig//ld/emulparams/pedigree_x86_64.sh binutils-2.20.1/ld/emulparams/pedigree_x86_64.sh
---- binutils-2.20.1-orig//ld/emulparams/pedigree_x86_64.sh	1970-01-01 01:00:00.000000000 +0100
-+++ binutils-2.20.1/ld/emulparams/pedigree_x86_64.sh	2010-08-27 13:30:50.000000000 +0100
+diff -rupN binutils-2.20.1.orig/ld/emulparams/pedigree_x86_64.sh binutils-2.20.1/ld/emulparams/pedigree_x86_64.sh
+--- binutils-2.20.1.orig/ld/emulparams/pedigree_x86_64.sh	1970-01-01 10:00:00.000000000 +1000
++++ binutils-2.20.1/ld/emulparams/pedigree_x86_64.sh	2014-02-25 18:30:53.799162344 +1000
 @@ -0,0 +1,13 @@
 +SCRIPT_NAME=elf
 +OUTPUT_FORMAT="elf64-x86-64"
@@ -90,10 +115,10 @@ diff -urN binutils-2.20.1-orig//ld/emulparams/pedigree_x86_64.sh binutils-2.20.1
 +GENERATE_PIE_SCRIPT=yes
 +NO_SMALL_DATA=yes
 +SEPARATE_GOTPLT=24
-diff -urN binutils-2.20.1-orig//ld/Makefile.in binutils-2.20.1/ld/Makefile.in
---- binutils-2.20.1-orig//ld/Makefile.in	2010-03-03 14:06:21.000000000 +0000
-+++ binutils-2.20.1/ld/Makefile.in	2010-08-27 13:30:50.000000000 +0100
-@@ -2452,6 +2452,10 @@
+diff -rupN binutils-2.20.1.orig/ld/Makefile.in binutils-2.20.1/ld/Makefile.in
+--- binutils-2.20.1.orig/ld/Makefile.in	2014-02-25 18:30:39.783092828 +1000
++++ binutils-2.20.1/ld/Makefile.in	2014-02-25 18:38:00.601278737 +1000
+@@ -2452,6 +2452,12 @@ eelf64ltsmip.c: $(srcdir)/emulparams/elf
  eelf_i386.c: $(srcdir)/emulparams/elf_i386.sh \
    $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
  	${GENSCRIPTS} elf_i386 "$(tdir_elf_i386)"
@@ -101,6 +126,8 @@ diff -urN binutils-2.20.1-orig//ld/Makefile.in binutils-2.20.1/ld/Makefile.in
 +	${GENSCRIPTS} pedigree_i386 "$(tdir_pedigree_i386)"
 +epedigree_x86_64.c: $(srcdir)/emulparams/pedigree_x86_64.sh $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
 +	${GENSCRIPTS} pedigree_x86_64 "$(tdir_pedigree_x86_64)"
++epedigree_arm.c: $(srcdir)/emulparams/pedigree_arm.sh $(ELF_DEPS) $(srcdir)/emultempl/armelf.em $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
++	${GENSCRIPTS} pedigree_arm "$(tdir_pedigree_arm)"
  eelf_x86_64.c: $(srcdir)/emulparams/elf_x86_64.sh \
    $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
  	${GENSCRIPTS} elf_x86_64 "$(tdir_elf_x86_64)"

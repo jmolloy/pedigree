@@ -558,7 +558,7 @@ void Ohci::interrupt(size_t number, InterruptState &state)
         LockGuard<Spinlock> guard(m_ScheduleChangeLock);
         for(List<ED*>::Iterator it = persistList.begin();
             it != persistList.end();
-            it++)
+            )
         {
             m_FullSchedule.pushBack(*it);
             it = persistList.erase(it);

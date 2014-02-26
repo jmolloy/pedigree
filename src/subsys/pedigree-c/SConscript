@@ -3,10 +3,11 @@
 ## Tyler Kennedy (AKA Linuxhq AKA TkTech)
 ####################################
 
-import os
-import shutil
-import tempfile
 Import(['env'])
+
+import os
+
+import buildutils.userspace
 
 tmp = env.Clone()
 
@@ -80,10 +81,10 @@ else:
 tmp_lib = tmp.Clone()
 
 # -fPIC for libpedigree-c
-glueFlags = " -fno-exceptions -fPIC -DUSE_PIC_SYSCALLS "
+glueFlags = " -fPIC -DUSE_PIC_SYSCALLS "
 
-tmp_lib['CFLAGS'] = tmp_lib['CFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
-tmp_lib['CXXFLAGS'] = tmp_lib['CXXFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
+tmp_lib['CFLAGS'] = buildutils.userspace.fixFlags(env, tmp_lib['CFLAGS'])
+tmp_lib['CXXFLAGS'] = buildutils.userspace.fixFlags(env, tmp_lib['CXXFLAGS'])
 tmp_lib['CFLAGS'] += glueFlags
 tmp_lib['CXXFLAGS'] += glueFlags
 

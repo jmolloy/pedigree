@@ -32,7 +32,10 @@
 #define PAGE_USER                   0x04
 #define PAGE_WRITE_THROUGH          0x08
 #define PAGE_CACHE_DISABLE          0x10
+#define PAGE_ACCESSED               0x20
+#define PAGE_DIRTY                  0x40
 #define PAGE_2MB                    0x80
+#define PAGE_PAT                    0x80
 #define PAGE_GLOBAL                 0x100
 #define PAGE_SWAPPED                0x200
 #define PAGE_COPY_ON_WRITE          0x400
@@ -136,7 +139,7 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
 {
   LockGuard<Spinlock> guard(m_Lock);
   
-  size_t Flags = toFlags(flags);
+  size_t Flags = toFlags(flags, true);
   size_t pml4Index = PML4_INDEX(virtualAddress);
   uint64_t *pml4Entry = TABLE_ENTRY(m_PhysicalPML4, pml4Index);
 
@@ -145,7 +148,7 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
   bool pdWasPresent = (*pml4Entry & PAGE_PRESENT) != PAGE_PRESENT;
 
   // Is a page directory pointer table present?
-  if (conditionalTableEntryAllocation(pml4Entry, Flags) == false)
+  if (conditionalTableEntryAllocation(pml4Entry, flags) == false)
     return false;
 
   // If there wasn't a PDPT already present, and the address is in the kernel area
@@ -169,14 +172,14 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
   uint64_t *pageDirectoryPointerEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pml4Entry), pageDirectoryPointerIndex);
 
   // Is a page directory present?
-  if (conditionalTableEntryAllocation(pageDirectoryPointerEntry, Flags) == false)
+  if (conditionalTableEntryAllocation(pageDirectoryPointerEntry, flags) == false)
     return false;
 
   size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
   uint64_t *pageDirectoryEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryPointerEntry), pageDirectoryIndex);
 
   // Is a page table present?
-  if (conditionalTableEntryAllocation(pageDirectoryEntry, Flags) == false)
+  if (conditionalTableEntryAllocation(pageDirectoryEntry, flags) == false)
     return false;
 
   size_t pageTableIndex = PAGE_TABLE_INDEX(virtualAddress);
@@ -189,9 +192,8 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
   // Map the page
   *pageTableEntry = physAddress | Flags;
 
-  // Flush the TLB (if we are marking a page as swapped-out)
-  if ((Flags & PAGE_SWAPPED) == PAGE_SWAPPED)
-    Processor::invalidate(virtualAddress);
+  // Flush the TLB
+  Processor::invalidate(virtualAddress);
 
   return true;
 }
@@ -211,7 +213,7 @@ void X64VirtualAddressSpace::getMapping(void *virtualAddress,
 
   // Extract the physical address and the flags
   physAddress = PAGE_GET_PHYSICAL_ADDRESS(pageTableEntry);
-  flags = fromFlags(PAGE_GET_FLAGS(pageTableEntry));
+  flags = fromFlags(PAGE_GET_FLAGS(pageTableEntry), true);
 }
 void X64VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
 {
@@ -227,9 +229,10 @@ void X64VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
   }
 
   // Set the flags
-  PAGE_SET_FLAGS(pageTableEntry, toFlags(newFlags));
+  PAGE_SET_FLAGS(pageTableEntry, toFlags(newFlags, true));
 
-  // TODO: Might need a TLB flush
+  // Flush TLB - modified the mapping for this address.
+  Processor::invalidate(virtualAddress);
 }
 void X64VirtualAddressSpace::unmap(void *virtualAddress)
 {
@@ -244,20 +247,18 @@ void X64VirtualAddressSpace::unmap(void *virtualAddress)
     return;
   }
 
-  // Invalidate the TLB entry
-  Processor::invalidate(virtualAddress);
-
   // Unmap the page
   *pageTableEntry = 0;
+
+  // Invalidate the TLB entry
+  Processor::invalidate(virtualAddress);
 }
 
 VirtualAddressSpace *X64VirtualAddressSpace::clone()
 {
-    // No lock guard in here - we assume that if we're cloning, nothing will be trying
-    // to map/unmap memory.
-    // Also, we need a way of solving this as we use the map/unmap functions, which
-    // themselves try and grab the lock.
-    /// \bug This assumption is false!
+    LockGuard<Spinlock> guard(m_Lock);
+
+    VirtualAddressSpace &thisAddressSpace = Processor::information().getVirtualAddressSpace();
 
     // Create a new virtual address space
     VirtualAddressSpace *pClone = VirtualAddressSpace::create();
@@ -288,6 +289,8 @@ VirtualAddressSpace *X64VirtualAddressSpace::clone()
                     continue;
 
                 /// \todo Deal with 2MB pages here.
+                if ((*pdEntry & PAGE_2MB) == PAGE_2MB)
+                    continue;
 
                 for (uint64_t l = 0; l < 512; l++)
                 {
@@ -296,28 +299,69 @@ VirtualAddressSpace *X64VirtualAddressSpace::clone()
                         continue;
                   
                     uint64_t flags = PAGE_GET_FLAGS(ptEntry);
+                    physical_uintptr_t physicalAddress = PAGE_GET_PHYSICAL_ADDRESS(ptEntry);
 
                     void *virtualAddress = reinterpret_cast<void*> ( ((i & 0x100)?(~0ULL << 48):0ULL) | /* Sign-extension. */
                                                                      (i << 39) |
                                                                      (j << 30) |
                                                                      (k << 21) |
                                                                      (l << 12) );
-                  
-                    if (getKernelAddressSpace().isMapped(virtualAddress))
+
+
+                    if(flags & PAGE_SHARED) {
+                        // Handle shared mappings - don't copy the original page.
+                        pClone->map(physicalAddress, virtualAddress, fromFlags(flags, true));
                         continue;
+                    }
 
-                    // Page mapped in source address space, but not in kernel.
-                    /// \todo Copy on write.
-                    physical_uintptr_t newFrame = PhysicalMemoryManager::instance().allocatePage();
+                    // Map the new page in to the new address space for copy-on-write.
+                    // This implies read-only (so we #PF for copy on write).
+                    bool bWasCopyOnWrite = (flags & PAGE_COPY_ON_WRITE);
+                    flags |= PAGE_COPY_ON_WRITE;
+                    flags &= ~PAGE_WRITE;
+                    pClone->map(physicalAddress, virtualAddress, fromFlags(flags, true));
 
-                    // Copy.
-                    memcpy(reinterpret_cast<void*>(physicalAddress(newFrame)), reinterpret_cast<void*>(physicalAddress(PAGE_GET_PHYSICAL_ADDRESS(ptEntry))), 0x1000);
-                  
-                    // Map in.
-                    pClone->map(newFrame, virtualAddress, fromFlags(flags));
+                    // We need to modify the entry in *this* address space as well to
+                    // also have the read-only and copy-on-write flag set, as otherwise
+                    // writes in the parent process will cause the child process to see
+                    // those changes immediately.
+                    PAGE_SET_FLAGS(ptEntry, flags);
+                    Processor::invalidate(virtualAddress);
+
+                    // Pin the page twice - once for each side of the clone.
+                    // But only pin for the parent if the parent page is not already
+                    // copy on write. If we pin the CoW page, it'll be leaked when
+                    // both parent and child terminate if the parent clone()s again.
+                    if(!bWasCopyOnWrite)
+                        PhysicalMemoryManager::instance().pin(physicalAddress);
+                    PhysicalMemoryManager::instance().pin(physicalAddress);
                 }
             }
         }
+    }
+
+    X64VirtualAddressSpace *pX64Clone = static_cast<X64VirtualAddressSpace *>(pClone);
+
+    // Before returning the address space, bring across metadata.
+    // Note though that if the parent of the clone (ie, this address space)
+    // is the kernel address space, we mustn't copy metadata or else the
+    // userspace defaults in the constructor get wiped out.
+
+    if(m_pStackTop < KERNEL_SPACE_START)
+    {
+        pX64Clone->m_pStackTop = m_pStackTop;
+        for(Vector<void*>::Iterator it = m_freeStacks.begin();
+            it != m_freeStacks.end();
+            ++it)
+        {
+            pX64Clone->m_freeStacks.pushBack(*it);
+        }
+    }
+
+    if(m_Heap < KERNEL_SPACE_START)
+    {
+        pX64Clone->m_Heap = m_Heap;
+        pX64Clone->m_HeapEnd = m_HeapEnd;
     }
 
     return pClone;
@@ -367,22 +411,18 @@ void X64VirtualAddressSpace::revertToKernelAddressSpace()
                     void *virtualAddress = reinterpret_cast<void *>(
                         reinterpret_cast<uintptr_t>(regionVirtualAddress) | (l << 12));
 
-                    // A little inefficient?
-                    if(getKernelAddressSpace().isMapped(virtualAddress))
-                    {
-                        bDidSkipPD = true;
-                        continue;
-                    }
-
                     size_t flags = PAGE_GET_FLAGS(ptEntry);
                     physical_uintptr_t physicalAddress = PAGE_GET_PHYSICAL_ADDRESS(ptEntry);
 
                     // Free the page.
                     unmap(virtualAddress);
 
-                    // And release the physical memory.
-                    /// \todo There's going to be a caveat with CoW here...
-                    if((flags & (PAGE_SHARED | PAGE_COPY_ON_WRITE)) == 0)
+                    // And release the physical memory if it is not shared with another
+                    // process (eg, memory mapped file)
+                    // Also avoid stumbling over a swapped out page.
+                    /// \todo When swap system comes along, we want to remove this page
+                    ///       from swap!
+                    if((flags & (PAGE_SHARED | PAGE_SWAPPED)) == 0)
                     {
                         PhysicalMemoryManager::instance().freePage(physicalAddress);
                     }
@@ -609,17 +649,19 @@ bool X64VirtualAddressSpace::getPageTableEntry(void *virtualAddress,
 
   return true;
 }
-uint64_t X64VirtualAddressSpace::toFlags(size_t flags)
+uint64_t X64VirtualAddressSpace::toFlags(size_t flags, bool bFinal)
 {
-  uint64_t Flags = PAGE_PRESENT;
+  uint64_t Flags = 0;
   if ((flags & KernelMode) == KernelMode)
     Flags |= PAGE_GLOBAL;
   else
     Flags |= PAGE_USER;
   if ((flags & Write) == Write)
     Flags |= PAGE_WRITE;
-  if ((flags & WriteThrough) == WriteThrough)
-    Flags |= PAGE_WRITE_THROUGH;
+  /*
+  if ((flags & WriteCombine) == WriteCombine)
+    Flags |= PAGE_WRITE_COMBINE;
+  */
   if ((flags & CacheDisable) == CacheDisable)
     Flags |= PAGE_CACHE_DISABLE;
   if ((flags & Execute) != Execute)
@@ -632,9 +674,20 @@ uint64_t X64VirtualAddressSpace::toFlags(size_t flags)
     Flags |= PAGE_COPY_ON_WRITE;
   if ((flags & Shared) == Shared)
     Flags |= PAGE_SHARED;
+  if (bFinal)
+  {
+    if ((flags & WriteThrough) == WriteThrough)
+      Flags |= PAGE_WRITE_THROUGH;
+    if ((flags & Accessed) == Accessed)
+      Flags |= PAGE_ACCESSED;
+    if ((flags & Dirty) == Dirty)
+      Flags |= PAGE_DIRTY;
+    if ((flags & ClearDirty) == ClearDirty)
+      Flags &= ~PAGE_DIRTY;
+  }
   return Flags;
 }
-size_t X64VirtualAddressSpace::fromFlags(uint64_t Flags)
+size_t X64VirtualAddressSpace::fromFlags(uint64_t Flags, bool bFinal)
 {
   size_t flags = 0;
   if ((Flags & PAGE_USER) != PAGE_USER)
@@ -653,6 +706,15 @@ size_t X64VirtualAddressSpace::fromFlags(uint64_t Flags)
     flags |= CopyOnWrite;
   if ((Flags & PAGE_SHARED) == PAGE_SHARED)
     flags |= Shared;
+  if (bFinal)
+  {
+    if ((Flags & PAGE_WRITE_THROUGH) == PAGE_WRITE_THROUGH)
+      flags |= WriteThrough;
+    if ((Flags & PAGE_ACCESSED) == PAGE_ACCESSED)
+      flags |= Accessed;
+    if ((Flags & PAGE_DIRTY) == PAGE_DIRTY)
+      flags |= Dirty;
+  }
   return flags;
 }
 
@@ -665,6 +727,8 @@ bool X64VirtualAddressSpace::conditionalTableEntryAllocation(uint64_t *tableEntr
     uint64_t page = PMemoryManager.allocatePage();
     if (page == 0)
       return false;
+
+    flags = toFlags(flags);
 
     // Map the page. Add the WRITE and USER flags so that these can be controlled
     // on a page-granularity level.
@@ -690,6 +754,8 @@ bool X64VirtualAddressSpace::conditionalTableEntryMapping(uint64_t *tableEntry,
 {
   if ((*tableEntry & PAGE_PRESENT) != PAGE_PRESENT)
   {
+    flags = toFlags(flags);
+
     // Map the page. Add the WRITE and USER flags so that these can be controlled
     // on a page-granularity level.
     *tableEntry = physAddress | ((flags & ~(PAGE_GLOBAL | PAGE_NX | PAGE_SWAPPED | PAGE_COPY_ON_WRITE)) | PAGE_WRITE | PAGE_USER);

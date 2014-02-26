@@ -23,10 +23,27 @@ sigret_stub:
 
   ; Grab the handler address
   mov rax, rdi
+
+  ; Check for serialisation buffer
+  xor r8, r8
+  cmp rsi, 0
+  jz .justRun
+  mov r8, [rsi]
+  and r8, 0xff
   
-  ; First argument is the buffer
-  mov rdi, rsi
-  
+  ; TODO: Push the handler address too and call a common stub of some sort...
+
+.justRun:
+
+  ; First parameter: event number.
+  mov rdi, r8
+
+  ; Third parameter: buffer.
+  mov rdx, rsi
+
+  ; Second parameter: handler address.
+  mov rsi, rax
+
   ; Call the handler
   call rax
   
@@ -48,7 +65,7 @@ pthread_stub:
   ; Call the entry function
   mov rbx, 0
   mov rax, 0x10051
-  syscall                       
+  syscall
 
   ; First parameter: entry point.
   mov rax, rdi

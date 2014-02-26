@@ -425,7 +425,7 @@ void init_stage2()
 
     uintptr_t *env_loc = reinterpret_cast<uintptr_t *>(0x20020400);
 
-    uintptr_t *stack = reinterpret_cast<uintptr_t*>(0x20020000 - 24);
+    void *stack = Processor::information().getVirtualAddressSpace().allocateStack();
 
 #if 0
     system_reset();
@@ -444,7 +444,7 @@ void init_stage2()
             pProcess,
             reinterpret_cast<Thread::ThreadStartFunc>(entryPoint),
             argv_loc /* parameter */,
-            reinterpret_cast<void*>(stack) /* Stack */);
+            stack /* Stack */);
 
     g_InitProgramLoaded.release();
 #endif

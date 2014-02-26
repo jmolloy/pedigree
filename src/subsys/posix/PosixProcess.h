@@ -108,19 +108,21 @@ class PosixProcess : public Process
         virtual ~PosixProcess()
         {};
 
-        void setProcessGroup(ProcessGroup *newGroup)
+        void setProcessGroup(ProcessGroup *newGroup, bool bRemoveFromGroup = true)
         {
             // Remove ourselves from our existing group.
-            if(m_pProcessGroup)
+            if(m_pProcessGroup && bRemoveFromGroup)
             {
                 for(List<PosixProcess*>::Iterator it = m_pProcessGroup->Members.begin();
                     it != m_pProcessGroup->Members.end();
-                    ++it)
+                    )
                 {
                     if((*it) == this)
                     {
                         it = m_pProcessGroup->Members.erase(it);
                     }
+                    else
+                        ++it;
                 }
             }
 

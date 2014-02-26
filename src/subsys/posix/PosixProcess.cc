@@ -26,7 +26,7 @@ ProcessGroup::~ProcessGroup()
         if(*it)
         {
             (*it)->setGroupMembership(PosixProcess::NoGroup);
-            (*it)->setProcessGroup(0);
+            (*it)->setProcessGroup(0, false);
         }
     }
 

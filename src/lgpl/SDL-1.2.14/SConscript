@@ -3,8 +3,11 @@
 ## Tyler Kennedy (AKA Linuxhq AKA TkTech)
 ####################################
 
-import os.path
 Import(['env'])
+
+import os
+
+import buildutils.userspace
 
 # Temporary copy of the global environment so we can fiddle with flags
 tmpEnvironment = env.Clone()
@@ -89,15 +92,8 @@ libpaths = [
     builddir + '/libs',
 ]
 
-def fixFlags(f):
-    f = f.replace('-mcmodel=kernel', '-mcmodel=small')
-    f = f.replace('-mno-sse', '')
-    f = f.replace('-mno-mmx', '')
-    f = f.replace('-mno-red-zone', '')
-    return f
-
-tmpEnvironment['CFLAGS'] = fixFlags(tmpEnvironment['CFLAGS'])
-tmpEnvironment['CXXFLAGS'] = fixFlags(tmpEnvironment['CXXFLAGS'])
+tmpEnvironment['CFLAGS'] = buildutils.userspace.fixFlags(env, tmpEnvironment['CFLAGS'])
+tmpEnvironment['CXXFLAGS'] = buildutils.userspace.fixFlags(env, tmpEnvironment['CXXFLAGS'])
 tmpEnvironment['CPPPATH'] = cppinclude
 tmpEnvironment['LIBS'] = libraries
 tmpEnvironment['LIBPATH'] = libpaths

@@ -92,7 +92,7 @@ MemoryMappedObject *AnonymousMemoryMap::split(uintptr_t at)
     // Fix up mapping metadata.
     for(List<void *>::Iterator it = m_Mappings.begin();
         it != m_Mappings.end();
-        ++it)
+        )
     {
         uintptr_t v = reinterpret_cast<uintptr_t>(*it);
         if(v >= at)
@@ -100,6 +100,8 @@ MemoryMappedObject *AnonymousMemoryMap::split(uintptr_t at)
             pResult->m_Mappings.pushBack(*it);
             it = m_Mappings.erase(it);
         }
+        else
+            ++it;
     }
 
     return pResult;
@@ -128,7 +130,7 @@ bool AnonymousMemoryMap::remove(size_t length)
     // Remove any existing mappings in this range.
     for(List<void *>::Iterator it = m_Mappings.begin();
         it != m_Mappings.end();
-        ++it)
+        )
     {
         uintptr_t virt = reinterpret_cast<uintptr_t>(*it);
         if(virt >= m_Address)

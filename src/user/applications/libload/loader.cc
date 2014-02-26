@@ -1204,14 +1204,8 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
             // Only copy if not null.
             if(S)
             {
-                if(symbolSize > sizeof(uintptr_t))
-                {
-                    memcpy(
-                        (void *) (P + sizeof(uintptr_t)),
-                        (void *) (S + sizeof(uintptr_t)),
-                        symbolSize - sizeof(uintptr_t));
-                }
-                result = *((uintptr_t *) S);
+                memcpy((void *) P, (void *) S, symbolSize);
+                result = P;
             }
             break;
         case R_X86_64_JUMP_SLOT:
@@ -1228,13 +1222,32 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
         default:
             syslog(LOG_WARNING, "libload: unsupported relocation for '%s' in %s: %d", symbolname.c_str(), meta->filename.c_str(), R_TYPE(rel.info));
     }
-    *((uintptr_t *) P) = result;
+
+    if(R_TYPE(rel.info) != R_X86_64_COPY)
+    {
+        *((uintptr_t *) P) = result;
+    }
     return result;
 }
 
 extern "C" uintptr_t _libload_dofixup(uintptr_t id, uintptr_t symbol) {
     object_meta_t *meta = (object_meta_t *) id;
     uintptr_t returnaddr = 0;
+
+    // Save FP state (glue may use SSE, and we are not called by normal means
+    // so there's no caller-save).
+    typedef float xmm_t __attribute__((__vector_size__(16)));
+    xmm_t fixup_xmm_save[8];
+#define XMM_SAVE(N) asm volatile("movdqa %%xmm" #N ", %0" : "=m" (fixup_xmm_save[N]));
+#define XMM_RESTORE(N) asm volatile("movdqa %0, %%xmm" #N :: "m" (fixup_xmm_save[N]));
+    XMM_SAVE(0);
+    XMM_SAVE(1);
+    XMM_SAVE(2);
+    XMM_SAVE(3);
+    XMM_SAVE(4);
+    XMM_SAVE(5);
+    XMM_SAVE(6);
+    XMM_SAVE(7);
 
 #ifdef BITS_32
     ElfRel_t rel = meta->plt_rel[symbol / sizeof(ElfRel_t)];
@@ -1249,13 +1262,21 @@ extern "C" uintptr_t _libload_dofixup(uintptr_t id, uintptr_t symbol) {
     }
 
     ElfSymbol_t *sym = &meta->dyn_symtab[R_SYM(rel.info)];
-    std::string symbolname = symbolName(*sym, meta);
 
     uintptr_t result = doThisRelocation(rel, meta);
     if(result == (uintptr_t) ~0UL) {
         fprintf(stderr, "symbol lookup failed (couldn't relocate)\n");
         abort();
     }
+
+    XMM_RESTORE(0);
+    XMM_RESTORE(1);
+    XMM_RESTORE(2);
+    XMM_RESTORE(3);
+    XMM_RESTORE(4);
+    XMM_RESTORE(5);
+    XMM_RESTORE(6);
+    XMM_RESTORE(7);
 
     return result;
 }

@@ -2,6 +2,9 @@
 
 #include <processor/types.h>
 
+#define _COMPILING_NEWLIB
+#include <newlib.h>
+
 #include <limits.h>
 #include <unistd.h>
 #include <errno.h>

@@ -3,8 +3,11 @@
 ## Tyler Kennedy (AKA Linuxhq AKA TkTech)
 ####################################
 
-import os
 Import(['env'])
+
+import os
+
+import buildutils.userspace
 
 tmp = env.Clone()
 
@@ -71,10 +74,10 @@ tmp['LIBPATH'] = libpaths
 tmp['CXXFLAGS'] = tmp['CXXFLAGS'].replace('-nostdinc', '')
 
 # -fPIC for libpedigree
-glueFlags = " -fno-exceptions -fPIC -DUSE_PIC_SYSCALLS "
+glueFlags = " -fPIC -DUSE_PIC_SYSCALLS "
 
-tmp['CFLAGS'] = tmp['CFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
-tmp['CXXFLAGS'] = tmp['CXXFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
+tmp['CFLAGS'] = buildutils.userspace.fixFlags(env, tmp['CFLAGS'])
+tmp['CXXFLAGS'] = buildutils.userspace.fixFlags(env, tmp['CXXFLAGS'])
 tmp['CFLAGS'] += glueFlags
 tmp['CXXFLAGS'] += glueFlags
 
