@@ -176,12 +176,14 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
                            uint64_t *&pageTableEntry);
     /** Convert the processor independant flags to the processor's representation of the flags
      *\param[in] flags the processor independant flag representation
+     *\param[in] bFinal whether this is for the actual page or just an intermediate PTE/PDE
      *\return the proessor specific flag representation */
-    uint64_t toFlags(size_t flags);
+    uint64_t toFlags(size_t flags, bool bFinal = false);
     /** Convert processor's representation of the flags to the processor independant representation
      *\param[in] Flags the processor specific flag representation
+     *\param[in] bFinal whether this is for the actual page or just an intermediate PTE/PDE
      *\return the proessor independant flag representation */
-    size_t fromFlags(uint64_t Flags);
+    size_t fromFlags(uint64_t Flags, bool bFinal = false);
     /** Allocate and map the table entry if none is present
      *\param[in] tableEntry pointer to the current table entry
      *\param[in] flags flags that are used for the mapping
