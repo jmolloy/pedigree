@@ -441,7 +441,7 @@ void X86VirtualAddressSpace::doSetFlags(void *virtualAddress, size_t newFlags)
     panic("VirtualAddressSpace::setFlags(): function misused");
 
   // Set the flags
-  PAGE_SET_FLAGS(pageTableEntry, toFlags(newFlags));
+  PAGE_SET_FLAGS(pageTableEntry, toFlags(newFlags, true));
 
   // Flush TLB - modified the mapping for this address.
   Processor::invalidate(virtualAddress);
