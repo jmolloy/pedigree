@@ -44,6 +44,8 @@ static char sccsid[] = "@(#)scandir.c	5.10 (Berkeley) 2/23/91";
  * struct dirent (through namelist). Returns -1 if there were any errors.
  */
 
+#include <newlib.h>
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>

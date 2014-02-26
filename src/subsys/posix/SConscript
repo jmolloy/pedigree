@@ -121,11 +121,33 @@ else:
     build = tmp.Program(posix_objname,posix_files,LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',LSCRIPT=File("#src/modules/link.ld"))
     tmp.Command(final_output, posix_objname, action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
 
-glueFlags = " -fno-exceptions -fPIC -DUSE_PIC_SYSCALLS "
+glueFlags = " -fPIC -DUSE_PIC_SYSCALLS "
 
 tmp_glue = tmp.Clone()
-tmp_glue['CFLAGS'] = tmp_glue['CFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
-tmp_glue['CXXFLAGS'] = tmp_glue['CXXFLAGS'].replace("mcmodel=kernel", "mcmodel=small")
+
+def fixGlueFlags(flags):
+    flags = flags.replace('-nostdinc', '')
+    flags = flags.replace('-ffreestanding', '')
+    flags = flags.replace('-nostdlib', '')
+    flags = flags.replace('-fno-builtin', '')
+    if env['ARCH_TARGET'] in ['X86', 'X64']:
+        flags = flags.replace('-mno-mmx', '')
+        flags = flags.replace('-mno-sse', '')
+        flags = flags.replace('-fno-exceptions', '')
+        flags = flags.replace('-fno-rtti', '')
+        flags += ' -msse2 -mfpmath=sse '
+    if env['ARCH_TARGET'] == 'X64':
+        flags = flags.replace('-mcmodel=kernel', '-mcmodel=small')
+        flags = flags.replace('-mno-red-zone', '')
+        flags = flags.replace('-mno-mmx', '')
+        flags = flags.replace('-mno-sse', '')
+        flags += ' -msse2 -mfpmath=sse '
+    if env['ARCH_TARGET'] == 'PPC':
+        flags += ' -U__svr4__ '
+    return flags
+
+tmp_glue['CFLAGS'] = fixGlueFlags(tmp_glue['CFLAGS'])
+tmp_glue['CXXFLAGS'] = fixGlueFlags(tmp_glue['CXXFLAGS'])
 tmp_glue['CFLAGS'] += glueFlags
 tmp_glue['CXXFLAGS'] += glueFlags
 tmp_glue.Library(glue_objname, glue_files)
@@ -135,7 +157,7 @@ tmp_crt0 = tmp.Clone()
 # No libraries needed for CRT0
 tmp_crt0['LIBS'] = ''
 tmp_crt0.Program(crt0_objname, crt0_files, LINKFLAGS='-nostdlib -r')
-    
+
 # CRTI
 tmp_crti = tmp.Clone()
 tmp_crti['LIBS'] = ''

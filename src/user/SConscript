@@ -33,7 +33,6 @@ def fixFlags(flags):
         flags = flags.replace('-mno-mmx', '')
         flags = flags.replace('-mno-sse', '')
         flags += ' -msse2 -mfpmath=sse '
-        print flags
     if env['ARCH_TARGET'] == 'PPC':
         flags += ' -U__svr4__ '
     return flags

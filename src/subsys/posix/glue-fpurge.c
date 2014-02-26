@@ -42,6 +42,8 @@ No supporting OS subroutines are required.
 
 #define _COMPILING_NEWLIB
 
+#include <newlib.h>
+
 #include <_ansi.h>
 #include <stdio.h>
 #include <errno.h>

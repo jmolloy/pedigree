@@ -521,6 +521,18 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
   improvement at the expense of carrying around more memory.
 */
 
+/** XXX: For building in Pedigree's libc glue **/
+#define _COMPILING_NEWLIB
+#include <newlib.h>
+#include <_ansi.h>
+
+// Define errno before including syscall.h.
+#include "errno.h"
+#define errno (*__errno())
+extern int *__errno (void);
+/** XXX: End required code for building in Pedigree's libc glue **/
+
+
 /* Version identifier to allow people to support multiple versions */
 #ifndef DLMALLOC_VERSION
 #define DLMALLOC_VERSION 20806
