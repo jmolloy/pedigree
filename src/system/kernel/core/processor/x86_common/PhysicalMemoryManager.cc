@@ -32,6 +32,10 @@
 #endif
 
 #if defined(X86) && defined(DEBUGGER)
+#define USE_BITMAP
+#endif
+
+#ifdef USE_BITMAP
 uint32_t g_PageBitmap[16384] = {0};
 #endif
 
@@ -98,7 +102,7 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
 #endif
     }
 
-#if defined(X86) && defined(DEBUGGER)
+#ifdef USE_BITMAP
     physical_uintptr_t ptr_bitmap = ptr / 0x1000;
     size_t idx = ptr_bitmap / 32;
     size_t bit = ptr_bitmap % 32;
@@ -146,7 +150,7 @@ void X86CommonPhysicalMemoryManager::freePageUnlocked(physical_uintptr_t page)
         }
     }
 
-#if defined(X86) && defined(DEBUGGER)
+#ifdef USE_BITMAP
     physical_uintptr_t ptr_bitmap = page / 0x1000;
     size_t idx = ptr_bitmap / 32;
     size_t bit = ptr_bitmap % 32;
