@@ -73,16 +73,18 @@ Process::~Process()
   if(m_pSubsystem)
     delete m_pSubsystem;
 
-  Spinlock lock;
-  lock.acquire(); // Disables interrupts.
   VirtualAddressSpace &VAddressSpace = Processor::information().getVirtualAddressSpace();
+
+  bool bInterrupts = Processor::getInterrupts();
+  Processor::setInterrupts(false);
 
   Processor::switchAddressSpace(*m_pAddressSpace);
   m_pAddressSpace->revertToKernelAddressSpace();
   Processor::switchAddressSpace(VAddressSpace);
 
   delete m_pAddressSpace;
-  lock.release();
+
+  Processor::setInterrupts(bInterrupts);
 }
 
 size_t Process::addThread(Thread *pThread)
