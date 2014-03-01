@@ -575,9 +575,6 @@ X64VirtualAddressSpace::~X64VirtualAddressSpace()
 {
   PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
 
-  // Switch to the kernel's virtual address space
-  Processor::switchAddressSpace(VirtualAddressSpace::getKernelAddressSpace());
-
   // TODO: Free other things, perhaps in VirtualAddressSpace
   //       We can't do this in VirtualAddressSpace destructor though!
 
