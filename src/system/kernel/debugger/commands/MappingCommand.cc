@@ -82,7 +82,9 @@ bool MappingCommand::execute(const HugeStaticString &input, HugeStaticString &ou
     else
         output += "    Not mapped in this address space.\n";
 
+#ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
     Processor::switchAddressSpace(kernelVa);
+#endif
 
     if (kernelVa.isMapped(vAddr))
     {
@@ -97,7 +99,9 @@ bool MappingCommand::execute(const HugeStaticString &input, HugeStaticString &ou
     else
         output += "    Not mapped in the kernel address space.\n";
 
+#ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
     Processor::switchAddressSpace(thisVa);
+#endif
 
     return true;
 }
