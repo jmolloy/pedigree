@@ -451,6 +451,11 @@ def buildCdImage(target, source, env):
     # Select correct stage2_eltorito for the target.
     stage2_eltorito = "stage2_eltorito-" + env['ARCH_TARGET'].lower()
 
+    # mkisofs modifies stage2_eltorito to do its work.
+    pathToStage2 = os.path.join(pathToGrub, stage2_eltorito)
+    shutil.copy(pathToStage2, '%s.mkisofs' % (pathToStage2,))
+    pathToStage2 += '.mkisofs'
+
     args = [
         env['isoprog'],
         '-D',
@@ -470,7 +475,7 @@ def buildCdImage(target, source, env):
         target[0].path,
         '-V',
         '"PEDIGREE"',
-        'boot/grub/stage2_eltorito=%s' % (os.path.join(pathToGrub, stage2_eltorito),),
+        'boot/grub/stage2_eltorito=%s' % (pathToStage2,),
         'boot/grub/menu.lst=%s' % (os.path.join(pathToGrub, 'menu.lst'),),
         'boot/kernel=%s' % (source[2].abspath,),
         'boot/initrd.tar=%s' % (source[1].abspath,),
@@ -478,6 +483,8 @@ def buildCdImage(target, source, env):
         '.pedigree-root=%s' % (source[0].abspath,),
     ]
     result = subprocess.call(args)
+
+    os.unlink(pathToStage2)
 
     return result
 
