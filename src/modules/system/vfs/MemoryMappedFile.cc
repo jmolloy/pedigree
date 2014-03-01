@@ -34,30 +34,15 @@ MemoryMappedObject::~MemoryMappedObject()
 AnonymousMemoryMap::AnonymousMemoryMap(uintptr_t address, size_t length, MemoryMappedObject::Permissions perms) :
     MemoryMappedObject(address, true, length, perms), m_Mappings()
 {
-    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-
     if(m_Zero == 0)
     {
         m_Zero = PhysicalMemoryManager::instance().allocatePage();
         PhysicalMemoryManager::instance().pin(m_Zero);
 
+        VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
         va.map(m_Zero, reinterpret_cast<void *>(address), VirtualAddressSpace::Write);
         memset(reinterpret_cast<void *>(address), 0, PhysicalMemoryManager::getPageSize());
         va.unmap(reinterpret_cast<void *>(address));
-    }
-
-    // Don't premap if we don't have permission to!
-    if(!(perms & Read))
-        return;
-
-    // Because mapping in an anonymous mapping does not have the overhead that
-    // mapping in a file does (ie, pages etc), we can do so upfront. Writes
-    // will still cause an immediate trap.
-    for(size_t i = 0; i < length; i += PhysicalMemoryManager::instance().getPageSize())
-    {
-        void *v = reinterpret_cast<void *>(address + i);
-        va.map(m_Zero, v, VirtualAddressSpace::Shared);
-        PhysicalMemoryManager::instance().pin(m_Zero);
     }
 }
 
