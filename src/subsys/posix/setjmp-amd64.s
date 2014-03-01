@@ -72,7 +72,11 @@ setjmp:
 longjmp:
   ; Revoke any existing signal context (in case we are doing a longjmp
   ; out of a signal handler.
+  push rdi ; Preserve RDI/RSI across function call & syscall.
+  push rsi
   call [rel __pedigree_revoke_signal_context wrt ..got]
+  pop rsi
+  pop rdi
 
   ; Return value.
   mov rax, rsi
@@ -87,11 +91,12 @@ longjmp:
   mov rsp, [rdi + 48]
 
   ; Jump to saved location.
-  jmp [rdi + 56]
+  mov rdx, [rdi + 56]
+  jmp rdx
 
 _setjmp:
-    jmp [rel setjmp wrt ..got]
+    jmp setjmp
 
 _longjmp:
-    jmp [rel longjmp wrt ..got]
+    jmp longjmp
 
