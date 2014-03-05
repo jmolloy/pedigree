@@ -462,13 +462,20 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType, Inter
     // If we're good to go, send the signal.
     if(sig && sig->pEvent)
     {
-        bool bWasInterrupts = Processor::getInterrupts();
-        Processor::setInterrupts(false);
+        Thread *pCurrentThread = Processor::information().getCurrentThread();
 
         pThread->sendEvent(sig->pEvent);
 
-        Processor::setInterrupts(bWasInterrupts);
-        Scheduler::instance().yield();
+        if(pCurrentThread == pThread)
+        {
+            // Attempt to execute the new event immediately.
+            Processor::information().getScheduler().checkEventState(0);
+        }
+        else
+        {
+            // Yield so the event can fire.
+            Scheduler::instance().yield();
+        }
     }
 }
 

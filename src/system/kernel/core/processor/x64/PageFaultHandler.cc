@@ -184,13 +184,13 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
     if(pSubsystem)
         pSubsystem->threadException(pThread, Subsystem::PageFault, state);
     else
+    {
         pProcess->kill();
 
-    //  kill member function also calls yield(), so shouldn't get here.
-    for(;;) ;
+        //  kill member function also calls yield(), so shouldn't get here.
+        for(;;) ;
+    }
   }
-
-  //  Currently, no code paths return from a PFE.
 }
 
 PageFaultHandler::PageFaultHandler() :
