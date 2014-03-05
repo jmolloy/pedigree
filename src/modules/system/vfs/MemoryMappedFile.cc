@@ -1076,6 +1076,36 @@ size_t MemoryMapManager::setPermissions(uintptr_t base, size_t length, MemoryMap
     return nAffected;
 }
 
+bool MemoryMapManager::contains(uintptr_t base, size_t length)
+{
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
+
+    LockGuard<Mutex> guard(m_Lock);
+
+    MmObjectList *pMmObjectList = m_MmObjectLists.lookup(&va);
+    if (!pMmObjectList)
+    {
+        return false;
+    }
+
+    for(uintptr_t address = base; address < (base + length); address += pageSz)
+    {
+        for (List<MemoryMappedObject*>::Iterator it = pMmObjectList->begin();
+             it != pMmObjectList->end();
+             it++)
+        {
+            MemoryMappedObject *pObject = *it;
+            if(pObject->matches(address & ~(pageSz - 1)))
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 void MemoryMapManager::op(MemoryMapManager::Ops what, uintptr_t base, size_t length, bool async)
 {
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();

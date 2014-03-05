@@ -324,6 +324,12 @@ class MemoryMapManager : public MemoryTrapHandler
         size_t setPermissions(uintptr_t base, size_t length, MemoryMappedObject::Permissions perms);
 
         /**
+         * Returns true if at least one memory mapped object is in the range
+         * given, false otherwise.
+         */
+        bool contains(uintptr_t base, size_t length);
+
+        /**
          * Syncs memory mapped objects within the given range back to
          * their backing store, if they have one.
          */
