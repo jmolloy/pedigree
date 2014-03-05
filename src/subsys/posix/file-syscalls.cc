@@ -1523,8 +1523,9 @@ int posix_msync(void *p, size_t len, int flags) {
         return -1;
     }
 
-    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-    if(!va.isMapped(p)) {
+    // Make sure there's at least one object we'll touch.
+    if(!MemoryMapManager::instance().contains(addr, len))
+    {
         SYSCALL_ERROR(OutOfMemory);
         return -1;
     }
@@ -1552,6 +1553,13 @@ int posix_mprotect(void *p, size_t len, int prot)
     if(!len || (addr & (pageSz-1)))
     {
         SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    // Make sure there's at least one object we'll touch.
+    if(!MemoryMapManager::instance().contains(addr, len))
+    {
+        SYSCALL_ERROR(OutOfMemory);
         return -1;
     }
 
