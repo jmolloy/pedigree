@@ -18,6 +18,8 @@
 #include <unistd.h>
 #include <setjmp.h>
 
+extern void test_mprotect();
+
 static jmp_buf buf;
 
 void fail()
@@ -36,6 +38,7 @@ int main(int argc, char *argv[])
     printf("Running tests...\n");
 
     // Add calls to test functions here...
+    test_mprotect();
 
     printf("Tests complete!\n");
     return 0;
