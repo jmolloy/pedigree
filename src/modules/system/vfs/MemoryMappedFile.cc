@@ -139,6 +139,64 @@ bool AnonymousMemoryMap::remove(size_t length)
     return false;
 }
 
+void AnonymousMemoryMap::setPermissions(MemoryMappedObject::Permissions perms)
+{
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+
+    if(perms == MemoryMappedObject::None)
+    {
+        unmap();
+    }
+    else
+    {
+        size_t newFlags = 0;
+
+        // Remap any existing mappings to use the new flags.
+        if(perms & MemoryMappedObject::Write)
+            newFlags |= VirtualAddressSpace::Write;
+        if(perms & MemoryMappedObject::Exec)
+            newFlags |= VirtualAddressSpace::Execute;
+
+        // Adjust any existing mappings in this object.
+        for(List<void *>::Iterator it = m_Mappings.begin();
+            it != m_Mappings.end();
+            ++it)
+        {
+            void *v = *it;
+            if(va.isMapped(v))
+            {
+                physical_uintptr_t p;
+                size_t f;
+                va.getMapping(v, p, f);
+
+                // Shared pages will have write/exec added to them when written to.
+                if(!(f & VirtualAddressSpace::Shared))
+                {
+                    // Make sure we remove permissions as well as add them.
+                    if(perms & MemoryMappedObject::Write)
+                        f |= VirtualAddressSpace::Write;
+                    else
+                        f &= ~VirtualAddressSpace::Write;
+
+                    if(perms & MemoryMappedObject::Exec)
+                        f |= VirtualAddressSpace::Execute;
+                    else
+                        f &= ~VirtualAddressSpace::Execute;
+
+                    va.setFlags(v, f);
+                }
+                else if(perms & MemoryMappedObject::Exec)
+                {
+                    // We can however still make these pages executable.
+                    va.setFlags(v, f | VirtualAddressSpace::Execute);
+                }
+            }
+        }
+    }
+
+    m_Permissions = perms;
+}
+
 void AnonymousMemoryMap::unmap()
 {
 #ifdef DEBUG_MMOBJECTS
@@ -340,6 +398,66 @@ bool MemoryMappedFile::remove(size_t length)
     }
 
     return false;
+}
+
+void MemoryMappedFile::setPermissions(MemoryMappedObject::Permissions perms)
+{
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+
+    if(perms == MemoryMappedObject::None)
+    {
+        unmap();
+    }
+    else
+    {
+        size_t newFlags = 0;
+
+        // Adjust any existing mappings in this object.
+        for(Tree<uintptr_t, uintptr_t>::Iterator it = m_Mappings.begin();
+            it != m_Mappings.end();
+            ++it)
+        {
+            void *v = reinterpret_cast<void *>(it.key());
+            if(va.isMapped(v))
+            {
+                physical_uintptr_t p;
+                size_t f;
+                va.getMapping(v, p, f);
+
+                // Modify executable state - applies to shared/copied...
+                if(perms & MemoryMappedObject::Exec)
+                    f |= VirtualAddressSpace::Execute;
+                else
+                    f &= ~VirtualAddressSpace::Execute;
+
+                if(f & VirtualAddressSpace::Shared)
+                {
+                    // Shared pages can be written to if not CoW.
+                    // If CoW, setting m_Permissions will sort the rest out.
+                    if(!m_bCopyOnWrite)
+                    {
+                        if(perms & MemoryMappedObject::Write)
+                            f |= VirtualAddressSpace::Write;
+                        else
+                            f &= ~VirtualAddressSpace::Write;
+                    }
+                }
+                else
+                {
+                    // Adjust permissions as needed. Not a shared page, specific
+                    // to this address space.
+                    if(perms & MemoryMappedObject::Write)
+                        f |= VirtualAddressSpace::Write;
+                    else
+                        f &= ~VirtualAddressSpace::Write;
+                }
+
+                va.setFlags(v, newFlags);
+            }
+        }
+    }
+
+    m_Permissions = perms;
 }
 
 static physical_uintptr_t getBackingPage(File *pBacking, size_t fileOffset)
@@ -809,6 +927,143 @@ size_t MemoryMapManager::remove(uintptr_t base, size_t length)
         {
 #ifdef DEBUG_MMOBJECTS
             NOTICE("MemoryMapManager::remove() - doing nothing!");
+#endif
+            continue;
+        }
+
+        ++nAffected;
+    }
+
+    m_Lock.release();
+
+    return nAffected;
+}
+
+size_t MemoryMapManager::setPermissions(uintptr_t base, size_t length, MemoryMappedObject::Permissions perms)
+{
+#ifdef DEBUG_MMOBJECTS
+    NOTICE("MemoryMapManager::setPermissions(" << base << ", " << length << ")");
+#endif
+
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
+
+    size_t nAffected = 0;
+
+    if(length & (pageSz - 1))
+    {
+        length += pageSz;
+        length &= ~(pageSz - 1);
+    }
+
+    uintptr_t removeEnd = base + length;
+
+    m_Lock.acquire();
+
+    MmObjectList *pMmObjectList = m_MmObjectLists.lookup(&va);
+    if(!pMmObjectList)
+    {
+        m_Lock.release();
+        return 0;
+    }
+
+    for(List<MemoryMappedObject*>::Iterator it = pMmObjectList->begin();
+        it != pMmObjectList->end();
+        ++it)
+    {
+        MemoryMappedObject *pObject = *it;
+
+        uintptr_t objEnd = pObject->address() + pObject->length();
+
+#ifdef DEBUG_MMOBJECTS
+        NOTICE("MemoryMapManager::setPermissions() - object at " << pObject->address() << " -> " << objEnd << ".");
+#endif
+
+        uintptr_t objAlignEnd = objEnd;
+        if(objAlignEnd & (pageSz - 1))
+        {
+            objAlignEnd += pageSz;
+            objAlignEnd &= ~(pageSz - 1);
+        }
+
+        // Avoid?
+        if(pObject->address() == removeEnd)
+        {
+            continue;
+        }
+
+        // Direct?
+        else if(pObject->address() == base)
+        {
+#ifdef DEBUG_MMOBJECTS
+            NOTICE("MemoryMapManager::setPermissions() - a direct set");
+#endif
+            if(pObject->length() > length)
+            {
+                // Split needed.
+                MemoryMappedObject *pNewObject = pObject->split(base + length);
+                pMmObjectList->pushBack(pNewObject);
+            }
+
+            pObject->setPermissions(perms);
+        }
+
+        // Object fully contains parameters.
+        else if((pObject->address() < base) && (removeEnd <= objAlignEnd))
+        {
+#ifdef DEBUG_MMOBJECTS
+            NOTICE("MemoryMapManager::setPermissions() - fully enclosed set");
+#endif
+            MemoryMappedObject *pNewObject = pObject->split(base);
+
+            if(removeEnd < objAlignEnd)
+            {
+                MemoryMappedObject *pTailObject = pNewObject->split(removeEnd);
+                pMmObjectList->pushBack(pTailObject);
+            }
+
+            pNewObject->setPermissions(perms);
+            pMmObjectList->pushBack(pNewObject);
+        }
+
+        // Object in the middle of the parameters (neither begin or end inside)
+        else if((pObject->address() > base) && (objEnd >= base) && (objEnd <= removeEnd))
+        {
+#ifdef DEBUG_MMOBJECTS
+            NOTICE("MemoryMapManager::setPermissions() - begin before start, end after object end");
+#endif
+            // Outright set.
+            pObject->setPermissions(perms);
+        }
+
+        // End is within the object, start is before the object.
+        else if((pObject->address() > base) && (removeEnd >= pObject->address()) && (removeEnd <= objEnd))
+        {
+#ifdef DEBUG_MMOBJECTS
+            NOTICE("MemoryMapManager::setPermissions() - begin outside, end inside");
+#endif
+            MemoryMappedObject *pNewObject = pObject->split(removeEnd);
+
+            pObject->setPermissions(perms);
+            pMmObjectList->pushBack(pNewObject);
+        }
+
+        // Start is within the object, end is past the end of the object.
+        else if((pObject->address() < base) && (base < objEnd) && (removeEnd >= objEnd))
+        {
+#ifdef DEBUG_MMOBJECTS
+            NOTICE("MemoryMapManager::setPermissions() - begin inside, end outside");
+#endif
+            MemoryMappedObject *pNewObject = pObject->split(base);
+            pNewObject->setPermissions(perms);
+            pMmObjectList->pushBack(pNewObject);
+        }
+
+        // Nothing!
+        else
+        {
+#ifdef DEBUG_MMOBJECTS
+            NOTICE("MemoryMapManager::setPermissions() - doing nothing!");
 #endif
             continue;
         }

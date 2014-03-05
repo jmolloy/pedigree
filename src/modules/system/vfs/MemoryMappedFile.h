@@ -98,6 +98,13 @@ class MemoryMappedObject
         virtual bool remove(size_t length) = 0;
 
         /**
+         * Sets permissions on this object.
+         *
+         * This may trigger unmaps if the new permissions.
+         */
+        virtual void setPermissions(Permissions perms) = 0;
+
+        /**
          * Sync back the given page to a backing store, if one exists.
          */
         virtual void sync(uintptr_t at, bool async)
@@ -210,6 +217,8 @@ class AnonymousMemoryMap : public MemoryMappedObject
         virtual MemoryMappedObject *split(uintptr_t at);
         virtual bool remove(size_t length);
 
+        virtual void setPermissions(MemoryMappedObject::Permissions perms);
+
         virtual void unmap();
 
         virtual bool trap(uintptr_t address, bool bWrite);
@@ -241,6 +250,8 @@ class MemoryMappedFile : public MemoryMappedObject
         virtual MemoryMappedObject *clone();
         virtual MemoryMappedObject *split(uintptr_t at);
         virtual bool remove(size_t length);
+
+        virtual void setPermissions(MemoryMappedObject::Permissions perms);
 
         virtual void sync(uintptr_t at, bool async);
         virtual void invalidate(uintptr_t at);
@@ -303,6 +314,14 @@ class MemoryMapManager : public MemoryTrapHandler
          * \return number of objects affected by this call.
          */
         size_t remove(uintptr_t base, size_t length);
+
+        /**
+         * Adjusts permissions across the given range, crossing object
+         * boundaries if necessary.
+         *
+         * \return number of objects affected by this call.
+         */
+        size_t setPermissions(uintptr_t base, size_t length, MemoryMappedObject::Permissions perms);
 
         /**
          * Syncs memory mapped objects within the given range back to
