@@ -368,6 +368,9 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_USLEEP:
             return posix_usleep(static_cast<size_t>(p1));
 
+        case POSIX_MPROTECT:
+            return posix_mprotect(reinterpret_cast<void *>(p1), static_cast<size_t>(p2), static_cast<int>(p3));
+
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber() << Hex); return 0;
     }
 }

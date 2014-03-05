@@ -76,6 +76,7 @@ int posix_isatty(int fd);
 void *posix_mmap(void *p);
 int posix_msync(void *p, size_t len, int flags);
 int posix_munmap(void *addr, size_t len);
+int posix_mprotect(void *addr, size_t len, int prot);
 
 int posix_access(const char *name, int amode);
 

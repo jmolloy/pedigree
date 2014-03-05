@@ -2196,8 +2196,7 @@ int getdtablesize()
 
 int mprotect(void *addr, size_t len, int prot)
 {
-    STUBBED("mprotect");
-    return 0;
+    return syscall3(POSIX_MPROTECT, (long) addr, len, prot);
 }
 
 int nanosleep(const struct timespec *rqtp, struct timespec *rmtp)

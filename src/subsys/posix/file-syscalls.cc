@@ -1541,6 +1541,43 @@ int posix_msync(void *p, size_t len, int flags) {
     return 0;
 }
 
+int posix_mprotect(void *p, size_t len, int prot)
+{
+    F_NOTICE("mprotect");
+
+    uintptr_t addr = reinterpret_cast<uintptr_t>(p);
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
+
+    // Verify the passed length
+    if(!len || (addr & (pageSz-1)))
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    // Create permission set.
+    MemoryMappedObject::Permissions perms;
+    if(prot & PROT_NONE)
+    {
+        perms = MemoryMappedObject::None;
+    }
+    else
+    {
+        // Everything implies a readable memory region.
+        perms = MemoryMappedObject::Read;
+        if(prot & PROT_WRITE)
+            perms |= MemoryMappedObject::Write;
+        if(prot & PROT_EXEC)
+            perms |= MemoryMappedObject::Exec;
+    }
+
+    /// \todo EACCESS
+
+    MemoryMapManager::instance().setPermissions(addr, len, perms);
+
+    return 0;
+}
+
 int posix_munmap(void *addr, size_t len)
 {
     F_NOTICE("munmap(" << reinterpret_cast<uintptr_t>(addr) << ", " << Dec << len << Hex << ")");
