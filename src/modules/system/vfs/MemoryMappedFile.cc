@@ -410,8 +410,6 @@ void MemoryMappedFile::setPermissions(MemoryMappedObject::Permissions perms)
     }
     else
     {
-        size_t newFlags = 0;
-
         // Adjust any existing mappings in this object.
         for(Tree<uintptr_t, uintptr_t>::Iterator it = m_Mappings.begin();
             it != m_Mappings.end();
@@ -452,7 +450,7 @@ void MemoryMappedFile::setPermissions(MemoryMappedObject::Permissions perms)
                         f &= ~VirtualAddressSpace::Write;
                 }
 
-                va.setFlags(v, newFlags);
+                va.setFlags(v, f);
             }
         }
     }
