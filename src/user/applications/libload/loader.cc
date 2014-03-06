@@ -65,7 +65,10 @@ typedef struct _object_meta {
     std::list<std::pair<void*, size_t> > memory_regions;
 
     ElfProgramHeader_t *phdrs;
+    size_t num_phdrs;
+
     ElfSectionHeader_t *shdrs;
+    size_t num_shdrs;
 
     ElfSectionHeader_t *sh_symtab;
     ElfSectionHeader_t *sh_strtab;
@@ -517,7 +520,9 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
     meta->mapped_file = (void *) pBuffer;
 
     meta->phdrs = (ElfProgramHeader_t *) &pBuffer[header.phoff];
+    meta->num_phdrs = header.phnum;
     meta->shdrs = (ElfSectionHeader_t *) &pBuffer[header.shoff];
+    meta->num_phdrs = header.shnum;
 
     if(header.type == ET_REL) {
         meta->relocated = true;
@@ -652,15 +657,6 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                     dyn++;
                 }
             } else if(meta->phdrs[i].type == PT_LOAD) {
-                // Loadable data - use the flags to determine how we'll mmap.
-                int flags = PROT_READ;
-                if(meta->phdrs[i].flags & PF_X)
-                    flags |= PROT_EXEC;
-                if(meta->phdrs[i].flags & PF_W)
-                    flags |= PROT_WRITE;
-                if((meta->phdrs[i].flags & PF_R) == 0)
-                    flags &= ~PROT_READ;
-
                 if(meta->relocated) {
                     meta->phdrs[i].vaddr += meta->load_base;
                 }
@@ -694,7 +690,7 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                     }
 
                     int map_fd = fd;
-                    if((flags & PROT_WRITE) == 0)
+                    if((meta->phdrs[i].flags & PF_W) == 0)
                     {
                         // If the program header is read-only, we can quite
                         // happily share the mapping and reduce memory
@@ -736,11 +732,6 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
 
                     meta->memory_regions.push_back(std::pair<void *, size_t>(p, mapsz));
                 }
-
-                // mprotect accordingly.
-                size_t alignExtra = meta->phdrs[i].vaddr & (getpagesize() - 1);
-                uintptr_t protectaddr = meta->phdrs[i].vaddr & ~(getpagesize() - 1);
-                mprotect((void *) protectaddr, meta->phdrs[i].memsz + alignExtra, flags);
             }
         }
 
@@ -1011,6 +1002,26 @@ void doRelocation(object_meta_t *meta) {
                 *addr += base;
             }
         }
+    }
+
+    // Now that relocation is complete, set permissions for program headers.
+    for(size_t i = 0; i < meta->num_phdrs; i++) {
+        if(meta->phdrs[i].type != PT_LOAD)
+            continue;
+
+        // Loadable data - use the flags to determine how we'll mmap.
+        int flags = PROT_READ;
+        if(meta->phdrs[i].flags & PF_X)
+            flags |= PROT_EXEC;
+        if(meta->phdrs[i].flags & PF_W)
+            flags |= PROT_WRITE;
+        if((meta->phdrs[i].flags & PF_R) == 0)
+            flags &= ~PROT_READ;
+
+        // mprotect accordingly.
+        size_t alignExtra = meta->phdrs[i].vaddr & (getpagesize() - 1);
+        uintptr_t protectaddr = meta->phdrs[i].vaddr & ~(getpagesize() - 1);
+        mprotect((void *) protectaddr, meta->phdrs[i].memsz + alignExtra, flags);
     }
 }
 
