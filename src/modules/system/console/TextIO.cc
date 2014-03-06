@@ -467,7 +467,6 @@ void TextIO::write(const char *s, size_t len)
                                 if(!(m_CurrentModes & Bright))
                                 {
                                     m_CurrentModes |= Bright;
-                                    m_Fore = adjustColour(m_Fore, true);
                                 }
                                 break;
 
@@ -475,7 +474,6 @@ void TextIO::write(const char *s, size_t len)
                                 if(m_CurrentModes & Bright)
                                 {
                                     m_CurrentModes &= ~Bright;
-                                    m_Fore = adjustColour(m_Fore, false);
                                 }
                                 break;
 
@@ -491,11 +489,6 @@ void TextIO::write(const char *s, size_t len)
                                 if(!(m_CurrentModes & Inverse))
                                 {
                                     m_CurrentModes |= Inverse;
-
-                                    // Invert colours.
-                                    VgaColour tmp = m_Fore;
-                                    m_Fore = m_Back;
-                                    m_Back = tmp;
                                 }
                                 break;
 
@@ -528,17 +521,17 @@ void TextIO::write(const char *s, size_t len)
                             case 45:
                             case 46:
                             case 47:
-                                setColour(&m_Back, m_Params[i] - 40, m_CurrentModes & Bright);
+                                setColour(&m_Back, m_Params[i] - 40, m_CurrentModes);
                                 break;
                             case 48:
                                 if(m_Params[i + 1] == 5)
                                 {
-                                    setColour(&m_Back, m_Params[i + 2], m_CurrentModes & Bright);
+                                    setColour(&m_Back, m_Params[i + 2], m_CurrentModes);
                                     i += 3;
                                 }
                                 break;
                             case 49:
-                                setColour(&m_Back, 0, m_CurrentModes & Bright);
+                                setColour(&m_Back, 0, m_CurrentModes);
                                 break;
 
                             case 90:
@@ -1342,13 +1335,28 @@ void TextIO::flip(bool timer, bool hideState)
                     pCell->hidden = false; // Unhide if blink removed.
             }
 
-            uint8_t attrib = (pCell->back << 4) | (pCell->fore & 0x0F);;
+            VgaColour fore = pCell->fore;
+            VgaColour back = pCell->back;
+
+            // Bold.
+            if((pCell->flags & Bright) && (fore < DarkGrey))
+                fore = adjustColour(fore, true);
+
+            if(pCell->flags & Inverse)
+            {
+                // Invert colours.
+                VgaColour tmp = fore;
+                fore = back;
+                back = tmp;
+            }
+
+            uint8_t attrib = (back << 4) | (fore & 0x0F);
             if(m_CurrentModes & Screen)
             {
                 // DECSCNM only applies to cells without colours.
                 if(pCell->fore == defaultFore && pCell->back == defaultBack)
                 {
-                    attrib = (pCell->fore << 4) | (pCell->back & 0x0F);
+                    attrib = (fore << 4) | (back & 0x0F);
                 }
             }
 
