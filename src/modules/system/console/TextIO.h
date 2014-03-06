@@ -20,6 +20,8 @@
 #include <processor/types.h>
 #include <utilities/RingBuffer.h>
 
+#include <machine/TimerHandler.h>
+
 #include <vfs/File.h>
 
 class Vga;
@@ -27,11 +29,14 @@ class Vga;
 #define MAX_TEXTIO_PARAMS 16
 #define TEXTIO_RINGBUFFER_SIZE 1024
 
+// Blink period in milliseconds.
+#define BLINK_PERIOD 1000
+
 /**
  * Provides exceptionally simple VT100 emulation to the Vga class, if
  * one exists. Note that this is NOT xterm emulation.
  */
-class TextIO : public File
+class TextIO : public File, public TimerHandler
 {
 private:
     static const int COLOUR_BRIGHT_ADDEND = 8;
@@ -120,6 +125,8 @@ public:
     virtual uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
     virtual int select(bool bWriting = false, int timeout = 0);
 
+    virtual void timer(uint64_t delta, InterruptState &state);
+
 private:
     static const ssize_t BACKBUFFER_COLS_WIDE = 132;
     static const ssize_t BACKBUFFER_COLS_NORMAL = 80;
@@ -137,13 +144,29 @@ private:
     void checkScroll();
     void checkWrap();
 
-    void eraseEOS(uint16_t blank);
-    void eraseEOL(uint16_t blank);
+    void eraseSOS();
+    void eraseEOS();
+    void eraseEOL();
+    void eraseSOL();
+    void eraseLine();
+
+    void eraseScreen(uint8_t character);
 
     /**
      * Present backbuffer to the VGA instance.
      */
-    void flip();
+    void flip(bool timer = false);
+
+    typedef struct
+    {
+        uint8_t character;
+        VgaColour fore;
+        VgaColour back;
+        size_t flags;
+
+        /** Used for blink and maybe privacy mode? Renders an empty cell. */
+        bool hidden;
+    } VgaCell;
 
     bool m_bInitialised;
     bool m_bControlSeq;
@@ -162,7 +185,7 @@ private:
     VgaColour m_Fore, m_Back;
 
     uint16_t *m_pFramebuffer;
-    uint16_t *m_pBackbuffer;
+    VgaCell *m_pBackbuffer;
     Vga *m_pVga;
 
     char m_TabStops[BACKBUFFER_STRIDE];
@@ -178,6 +201,9 @@ private:
      * to designate a character set (eg, '1', 'A').
      */
     uint8_t m_G0, m_G1;
+
+    /** Timer interface: number of nanoseconds counted so far in the timer handler. */
+    uint64_t m_Nanoseconds;
 };
 
 #endif

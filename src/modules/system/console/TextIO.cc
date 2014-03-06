@@ -29,9 +29,16 @@ TextIO::TextIO(String str, size_t inode, Filesystem *pParentFS, File *pParent) :
     m_ScrollStart(0), m_ScrollEnd(0), m_LeftMargin(0), m_RightMargin(0),
     m_CurrentParam(0), m_Params(), m_Fore(TextIO::LightGrey), m_Back(TextIO::Black),
     m_pFramebuffer(0), m_pBackbuffer(0), m_pVga(0), m_TabStops(),
-    m_OutBuffer(TEXTIO_RINGBUFFER_SIZE), m_G0('B'), m_G1('B')
+    m_OutBuffer(TEXTIO_RINGBUFFER_SIZE), m_G0('B'), m_G1('B'),
+    m_Nanoseconds(0)
 {
-    m_pBackbuffer = new uint16_t[BACKBUFFER_STRIDE * BACKBUFFER_ROWS];
+    m_pBackbuffer = new VgaCell[BACKBUFFER_STRIDE * BACKBUFFER_ROWS];
+
+    Timer *t = Machine::instance().getTimer();
+    if(t)
+    {
+        t->registerHandler(this);
+    }
 }
 
 TextIO::~TextIO()
@@ -107,23 +114,6 @@ void TextIO::write(const char *s, size_t len)
 
     while((*s) && (len--))
     {
-        uint8_t attributeByte = 0;
-        if(m_CurrentModes & Inverse)
-        {
-            attributeByte = (m_Fore << 4) | (m_Back & 0x0F);
-        }
-        else
-        {
-            attributeByte = (m_Back << 4) | (m_Fore & 0x0F);
-        }
-
-        if(m_CurrentModes & Blink)
-        {
-            attributeByte |= 0x80;
-        }
-
-        uint16_t blank = ' ' | (attributeByte << 8);
-
         if(m_bControlSeq && m_bBracket)
         {
             switch(*s)
@@ -273,21 +263,16 @@ void TextIO::write(const char *s, size_t len)
                 case 'J':
                     if((!m_bParams) || (!m_Params[0]))
                     {
-                        eraseEOS(blank);
+                        eraseEOS();
                     }
                     else if(m_Params[0] == 1)
                     {
-                        // Erase from current position to top of screen.
-                        wmemset(m_pBackbuffer,
-                                blank,
-                                (m_CursorY * BACKBUFFER_STRIDE) + m_CursorX + 1);
+                        eraseSOS();
                     }
                     else if(m_Params[0] == 2)
                     {
                         // Erase entire screen, move to home.
-                        wmemset(m_pBackbuffer,
-                                blank,
-                                BACKBUFFER_ROWS * BACKBUFFER_STRIDE);
+                        eraseScreen(' ');
                     }
                     m_bControlSeq = false;
                     break;
@@ -295,21 +280,17 @@ void TextIO::write(const char *s, size_t len)
                 case 'K':
                     if((!m_bParams) || (!m_Params[0]))
                     {
-                        eraseEOL(blank);
+                        eraseEOL();
                     }
                     else if(m_Params[0] == 1)
                     {
                         // Erase to start of line.
-                        wmemset(&m_pBackbuffer[m_CursorY * BACKBUFFER_STRIDE],
-                                blank,
-                                m_CursorX + 1);
+                        eraseSOL();
                     }
                     else if(m_Params[0] == 2)
                     {
                         // Erase entire line.
-                        wmemset(&m_pBackbuffer[m_CursorY * BACKBUFFER_STRIDE],
-                                blank,
-                                BACKBUFFER_STRIDE);
+                        eraseLine();
                     }
                     m_bControlSeq = false;
                     break;
@@ -421,9 +402,7 @@ void TextIO::write(const char *s, size_t len)
                             m_RightMargin = BACKBUFFER_COLS_WIDE;
 
                             // Clear screen as a side-effect.
-                            wmemset(m_pBackbuffer,
-                                    blank,
-                                    BACKBUFFER_STRIDE * BACKBUFFER_ROWS);
+                            eraseScreen(' ');
 
                             // Reset margins.
                             m_LeftMargin = 0;
@@ -452,9 +431,7 @@ void TextIO::write(const char *s, size_t len)
                             m_RightMargin = BACKBUFFER_COLS_NORMAL;
 
                             // Clear screen as a side-effect.
-                            wmemset(m_pBackbuffer,
-                                    blank,
-                                    BACKBUFFER_STRIDE * BACKBUFFER_ROWS);
+                            eraseScreen(' ');
 
                             // Reset margins.
                             m_LeftMargin = 0;
@@ -464,43 +441,6 @@ void TextIO::write(const char *s, size_t len)
                             // Home the cursor.
                             m_CursorX = 0;
                             m_CursorY = 0;
-                        }
-                    }
-
-                    if(modesToChange & Screen)
-                    {
-                        VgaColour defaultBack = Black, defaultFore = LightGrey;
-
-                        if(m_CurrentModes & Screen)
-                        {
-                            m_Fore = Black;
-                            m_Back = LightGrey;
-                        }
-                        else
-                        {
-                            m_Fore = LightGrey;
-                            m_Back = Black;
-
-                            defaultBack = LightGrey;
-                            defaultFore = Black;
-                        }
-
-                        // Invert the framebuffer.
-                        for(size_t i = 0; i < (BACKBUFFER_STRIDE * BACKBUFFER_ROWS); ++i)
-                        {
-                            uint8_t c = m_pBackbuffer[i] & 0xFF;
-                            uint8_t attrib = (m_pBackbuffer[i] >> 8) & 0xFF;
-
-                            uint8_t back = (attrib >> 4) & 0xF;
-                            uint8_t fore = attrib & 0xF;
-
-                            if(back == defaultBack && fore == defaultFore)
-                            {
-                                attrib = (m_Back << 4) | (m_Fore & 0xF);
-                            }
-
-                            /// \todo This breaks characters with the 'negative' attribute.
-                            m_pBackbuffer[i] = c | (attrib << 8);
                         }
                     }
 
@@ -518,7 +458,6 @@ void TextIO::write(const char *s, size_t len)
                                 m_Fore = LightGrey;
                                 m_Back = Black;
                                 m_CurrentModes &= ~(Inverse | Bright | Blink);
-                                m_pVga->clearControl(Vga::Blink);
                                 break;
 
                             case 1:
@@ -542,7 +481,6 @@ void TextIO::write(const char *s, size_t len)
                                 if(!(m_CurrentModes & Blink))
                                 {
                                     m_CurrentModes |= Blink;
-                                    m_pVga->setControl(Vga::Blink);
                                 }
                                 break;
 
@@ -550,6 +488,11 @@ void TextIO::write(const char *s, size_t len)
                                 if(!(m_CurrentModes & Inverse))
                                 {
                                     m_CurrentModes |= Inverse;
+
+                                    // Invert colours.
+                                    VgaColour tmp = m_Fore;
+                                    m_Fore = m_Back;
+                                    m_Back = tmp;
                                 }
                                 break;
 
@@ -850,12 +793,12 @@ void TextIO::write(const char *s, size_t len)
                     break;
 
                 case 'J':
-                    eraseEOS(blank);
+                    eraseEOS();
                     m_bControlSeq = false;
                     break;
 
                 case 'K':
-                    eraseEOL(blank);
+                    eraseEOL();
                     m_bControlSeq = false;
                     break;
 
@@ -889,14 +832,9 @@ void TextIO::write(const char *s, size_t len)
                     switch(*s)
                     {
                         case '8':
-                            {
                             // DEC Screen Alignment Test (DECALN)
                             // Fills screen with 'E' characters.
-                            uint16_t set = 'E' | (attributeByte << 8);
-                            wmemset(m_pBackbuffer,
-                                    set,
-                                    BACKBUFFER_STRIDE * BACKBUFFER_ROWS);
-                            }
+                            eraseScreen('E');
                             break;
 
                         default:
@@ -1081,7 +1019,11 @@ void TextIO::write(const char *s, size_t len)
 
                             if(m_CursorX < BACKBUFFER_STRIDE)
                             {
-                                m_pBackbuffer[(m_CursorY * BACKBUFFER_STRIDE) + m_CursorX] = c | (attributeByte << 8);
+                                VgaCell *pCell = &m_pBackbuffer[(m_CursorY * BACKBUFFER_STRIDE) + m_CursorX];
+                                pCell->character = c;
+                                pCell->fore = m_Fore;
+                                pCell->back = m_Back;
+                                pCell->flags = m_CurrentModes;
                                 ++m_CursorX;
                             }
                             else
@@ -1218,12 +1160,17 @@ void TextIO::checkScroll()
         // Move data.
         memmove(&m_pBackbuffer[destRow * BACKBUFFER_STRIDE],
                 &m_pBackbuffer[sourceRow * BACKBUFFER_STRIDE],
-                (sourceEnd - sourceRow) * BACKBUFFER_STRIDE * sizeof(uint16_t));
+                (sourceEnd - sourceRow) * BACKBUFFER_STRIDE * sizeof(VgaCell));
 
         // Clear out the start of the region now.
-        wmemset(&m_pBackbuffer[sourceRow * BACKBUFFER_STRIDE],
-                blank,
-                (destRow - sourceRow) * BACKBUFFER_STRIDE);
+        for(size_t i = 0; i < ((destRow - sourceRow) * BACKBUFFER_STRIDE); ++i)
+        {
+            VgaCell *pCell = &m_pBackbuffer[(sourceRow * BACKBUFFER_STRIDE) + i];
+            pCell->character = ' ';
+            pCell->back = m_Back;
+            pCell->fore = m_Fore;
+            pCell->flags = 0;
+        }
 
         m_CursorY = m_ScrollStart;
     }
@@ -1251,10 +1198,15 @@ void TextIO::checkScroll()
 
         memmove(&m_pBackbuffer[startOffset],
                 &m_pBackbuffer[fromOffset],
-                movedRows * sizeof(uint16_t));
-        wmemset(&m_pBackbuffer[blankFrom],
-                blank,
-                blankLength);
+                movedRows * sizeof(VgaCell));
+        for(size_t i = 0; i < blankLength; ++i)
+        {
+            VgaCell *pCell = &m_pBackbuffer[blankFrom + i];
+            pCell->character = ' ';
+            pCell->back = m_Back;
+            pCell->fore = m_Fore;
+            pCell->flags = 0;
+        }
 
         m_CursorY = m_ScrollEnd;
     }
@@ -1280,29 +1232,126 @@ void TextIO::checkWrap()
     }
 }
 
-void TextIO::eraseEOS(uint16_t blank)
+void TextIO::eraseSOS()
 {
-    // Erase from current position to end of screen.
-    wmemset(&m_pBackbuffer[(m_CursorY * BACKBUFFER_STRIDE) + m_CursorX],
-            blank,
-            ((BACKBUFFER_ROWS - m_CursorY) * BACKBUFFER_STRIDE) - m_CursorX);
+    // Erase to the start of the line.
+    eraseSOL();
+
+    // Erase the screen above, and this line.
+    for(size_t y = 0; y < m_CursorY; ++y)
+    {
+        for(size_t x = 0; x < BACKBUFFER_STRIDE; ++x)
+        {
+            VgaCell *pCell = &m_pBackbuffer[(y * BACKBUFFER_STRIDE) + x];
+            pCell->character = ' ';
+            pCell->fore = m_Fore;
+            pCell->back = m_Back;
+            pCell->flags = 0;
+        }
+    }
 }
 
-void TextIO::eraseEOL(uint16_t blank)
+void TextIO::eraseEOS()
+{
+    // Erase to the end of line first...
+    eraseEOL();
+
+    // Then the rest of the screen.
+    for(size_t y = m_CursorY + 1; y < BACKBUFFER_ROWS; ++y)
+    {
+        for(size_t x = 0; x < BACKBUFFER_STRIDE; ++x)
+        {
+            VgaCell *pCell = &m_pBackbuffer[(y * BACKBUFFER_STRIDE) + x];
+            pCell->character = ' ';
+            pCell->back = m_Back;
+            pCell->fore = m_Fore;
+            pCell->flags = 0;
+        }
+    }
+}
+
+void TextIO::eraseEOL()
 {
     // Erase to end of line.
-    wmemset(&m_pBackbuffer[(m_CursorY * BACKBUFFER_STRIDE) + m_CursorX],
-            blank,
-            BACKBUFFER_STRIDE - m_CursorX - 1);
+    for(size_t x = m_CursorX; x < BACKBUFFER_STRIDE; ++x)
+    {
+        VgaCell *pCell = &m_pBackbuffer[(m_CursorY * BACKBUFFER_STRIDE) + x];
+        pCell->character = ' ';
+        pCell->back = m_Back;
+        pCell->fore = m_Fore;
+        pCell->flags = 0;
+    }
 }
 
-void TextIO::flip()
+void TextIO::eraseSOL()
 {
+    for(size_t x = 0; x <= m_CursorX; ++x)
+    {
+        VgaCell *pCell = &m_pBackbuffer[(m_CursorY * BACKBUFFER_STRIDE) + x];
+        pCell->character = ' ';
+        pCell->fore = m_Fore;
+        pCell->back = m_Back;
+        pCell->flags = 0;
+    }
+}
+
+void TextIO::eraseLine()
+{
+    for(size_t x = 0; x < BACKBUFFER_STRIDE; ++x)
+    {
+        VgaCell *pCell = &m_pBackbuffer[(m_CursorY * BACKBUFFER_STRIDE) + x];
+        pCell->character = ' ';
+        pCell->fore = m_Fore;
+        pCell->back = m_Back;
+        pCell->flags = 0;
+    }
+}
+
+void TextIO::eraseScreen(uint8_t character)
+{
+    for(size_t y = 0; y < BACKBUFFER_ROWS; ++y)
+    {
+        for(size_t x = 0; x < BACKBUFFER_STRIDE; ++x)
+        {
+            VgaCell *pCell = &m_pBackbuffer[(y * BACKBUFFER_STRIDE) + x];
+            pCell->character = character;
+            pCell->fore = m_Fore;
+            pCell->back = m_Back;
+            pCell->flags = 0;
+        }
+    }
+}
+
+void TextIO::flip(bool timer)
+{
+    const VgaColour defaultBack = Black, defaultFore = LightGrey;
+
     for(size_t y = 0; y < m_pVga->getNumRows(); ++y)
     {
-        memcpy(&m_pFramebuffer[y * m_pVga->getNumCols()],
-                &m_pBackbuffer[y * BACKBUFFER_STRIDE],
-                m_pVga->getNumCols() * sizeof(uint16_t));
+        for(size_t x = 0; x < m_pVga->getNumCols(); ++x)
+        {
+            VgaCell *pCell = &m_pBackbuffer[(y * BACKBUFFER_STRIDE) + x];
+            if(timer)
+            {
+                if(pCell->flags & Blink)
+                    pCell->hidden = !pCell->hidden;
+                else
+                    pCell->hidden = false; // Unhide if blink removed.
+            }
+
+            uint8_t attrib = (pCell->back << 4) | (pCell->fore & 0x0F);;
+            if(m_CurrentModes & Screen)
+            {
+                // DECSCNM only applies to cells without colours.
+                if(pCell->fore == defaultFore && pCell->back == defaultBack)
+                {
+                    attrib = (pCell->fore << 4) | (pCell->back & 0x0F);
+                }
+            }
+
+            uint16_t front = (pCell->hidden ? ' ' : pCell->character) | (attrib << 8);
+            m_pFramebuffer[(y * m_pVga->getNumCols()) + x] = front;
+        }
     }
 }
 
@@ -1349,4 +1398,16 @@ int TextIO::select(bool bWriting, int timeout)
     {
         return m_OutBuffer.dataReady();
     }
+}
+
+void TextIO::timer(uint64_t delta, InterruptState &state)
+{
+    m_Nanoseconds += delta;
+    if(LIKELY(m_Nanoseconds < (BLINK_PERIOD * 1000000ULL)))
+        return;
+
+    // Flip (triggered by timer).
+    flip(true);
+
+    m_Nanoseconds = 0;
 }
