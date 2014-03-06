@@ -29,8 +29,10 @@ class Vga;
 #define MAX_TEXTIO_PARAMS 16
 #define TEXTIO_RINGBUFFER_SIZE 1024
 
-// Blink period in milliseconds.
-#define BLINK_PERIOD 1000
+// Blink periods in milliseconds.
+// We show text for 2x as long as the text is hidden.
+#define BLINK_ON_PERIOD 1000
+#define BLINK_OFF_PERIOD (BLINK_ON_PERIOD / 2)
 
 /**
  * Provides exceptionally simple VT100 emulation to the Vga class, if
@@ -155,7 +157,7 @@ private:
     /**
      * Present backbuffer to the VGA instance.
      */
-    void flip(bool timer = false);
+    void flip(bool timer = false, bool hideState = false);
 
     typedef struct
     {
@@ -204,6 +206,9 @@ private:
 
     /** Timer interface: number of nanoseconds counted so far in the timer handler. */
     uint64_t m_Nanoseconds;
+
+    /** Next interval to wait for (milliseconds). */
+    uint64_t m_NextInterval;
 };
 
 #endif

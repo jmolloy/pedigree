@@ -93,6 +93,9 @@ bool TextIO::initialise(bool bClear)
             m_pVga->clearControl(Vga::Blink);
 
             m_G0 = m_G1 = 'B';
+
+            m_Nanoseconds = 0;
+            m_NextInterval = BLINK_OFF_PERIOD;
         }
     }
 
@@ -1322,7 +1325,7 @@ void TextIO::eraseScreen(uint8_t character)
     }
 }
 
-void TextIO::flip(bool timer)
+void TextIO::flip(bool timer, bool hideState)
 {
     const VgaColour defaultBack = Black, defaultFore = LightGrey;
 
@@ -1334,7 +1337,7 @@ void TextIO::flip(bool timer)
             if(timer)
             {
                 if(pCell->flags & Blink)
-                    pCell->hidden = !pCell->hidden;
+                    pCell->hidden = hideState;
                 else
                     pCell->hidden = false; // Unhide if blink removed.
             }
@@ -1403,11 +1406,17 @@ int TextIO::select(bool bWriting, int timeout)
 void TextIO::timer(uint64_t delta, InterruptState &state)
 {
     m_Nanoseconds += delta;
-    if(LIKELY(m_Nanoseconds < (BLINK_PERIOD * 1000000ULL)))
+    if(LIKELY(m_Nanoseconds < (m_NextInterval * 1000000ULL)))
         return;
 
+    bool bBlinkOn = m_NextInterval != BLINK_ON_PERIOD;
+    if(bBlinkOn)
+        m_NextInterval = BLINK_ON_PERIOD;
+    else
+        m_NextInterval = BLINK_OFF_PERIOD;
+
     // Flip (triggered by timer).
-    flip(true);
+    flip(true, !bBlinkOn);
 
     m_Nanoseconds = 0;
 }
