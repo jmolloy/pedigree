@@ -373,4 +373,6 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
 
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber() << Hex); return 0;
     }
+
+    return 0;
 }
