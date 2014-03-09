@@ -176,6 +176,16 @@ class BusMasterIde
          *        after calling this function.
          */
         void commandComplete();
+
+        /** \brief Is there currently a DMA transaction taking place?
+         *
+         * Calling begin() will begin a transaction, and calling commandComplete
+         * will end it. This is useful for controllers that may need to ACK
+         * an interrupt status for non-DMA transfers on IRQ. Simply clearing
+         * the status manually would cause pending DMA transfers to lose their
+         * status information.
+         */
+        bool isActive() const { return m_bActive; }
     private:
         /** Internal I/O base */
         IoBase *m_pBase;
@@ -194,6 +204,9 @@ class BusMasterIde
 
         /** MemoryRegion for the PRD table */
         MemoryRegion m_PrdTableMemRegion;
+
+        /** Whether or not a DMA transfer is currently active. */
+        bool m_bActive;
 
         /** Register layout */
         enum BusMasterIdeRegs

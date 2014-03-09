@@ -24,7 +24,7 @@
 
 BusMasterIde::BusMasterIde() :
     m_pBase(0), m_PrdTableLock(false), m_PrdTable(0), m_LastPrdTableOffset(0),
-    m_PrdTablePhys(0), m_PrdTableMemRegion("bus-master-ide")
+    m_PrdTablePhys(0), m_PrdTableMemRegion("bus-master-ide"), m_bActive(false)
 {
 }
 
@@ -65,6 +65,9 @@ bool BusMasterIde::initialise(IoBase *pBase)
         m_PrdTablePhys = m_PrdTableMemRegion.physicalAddress();
         NOTICE("BusMasterIde: PRD table at v=" << reinterpret_cast<uintptr_t>(m_PrdTableMemRegion.virtualAddress()) << ", p=" << m_PrdTablePhys << ".");
     }
+
+    // Reset active state.
+    m_bActive = false;
 
     // All is well, set our internal port base and return success!
     m_pBase = pBase;
@@ -152,6 +155,9 @@ bool BusMasterIde::add(uintptr_t buffer, size_t nBytes)
 
 bool BusMasterIde::begin(bool bWrite)
 {
+    // Beginning a DMA transfer.
+    m_bActive = true;
+
     // If no other command is running, set the PRD physical address and
     // begin the command.
     uint8_t statusReg = m_pBase->read8(Status);
@@ -169,6 +175,8 @@ bool BusMasterIde::begin(bool bWrite)
     }
     else
     {
+        // Oops, something went wrong - no more transfer.
+        m_bActive = false;
         return false;
     }
 
@@ -253,6 +261,9 @@ void BusMasterIde::commandComplete()
 
     // And ack whatever's in the status register too
     m_pBase->write8(statusReg, Status);
+
+    // Now cleared the status register - okay.
+    m_bActive = false;
 
     // This transfer is now complete.
     m_LastPrdTableOffset = 0;
