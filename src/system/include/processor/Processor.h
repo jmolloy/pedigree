@@ -169,6 +169,8 @@ class Processor
 
     /** Wait for an IRQ to fire. Possible HALT or low-power state. */
     static inline void haltUntilInterrupt();
+    /** Pause CPU during a tight polling loop. */
+    static inline void pause();
 
     /** Enable/Disable IRQs
      *\param[in] bEnable true to enable IRSs, false otherwise */

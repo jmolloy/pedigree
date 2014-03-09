@@ -27,6 +27,11 @@ void Processor::halt()
     asm volatile("hlt");
 }
 
+void Processor::pause()
+{
+    asm volatile("pause");
+}
+
 void Processor::reset()
 {
     // Load null IDT for now
