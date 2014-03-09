@@ -254,8 +254,7 @@ bool AtapiDisk::initialise()
       // ABORT?
       if(err & 0x4)
       {
-          WARNING("ATAPI: GET MEDIA STATUS command aborted by device");
-          return false;
+          WARNING("ATAPI: device does not support GET MEDIA STATUS.");
       }
       else if(err & 2)
       {
