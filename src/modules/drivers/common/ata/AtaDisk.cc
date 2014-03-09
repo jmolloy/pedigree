@@ -400,7 +400,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
         /// \bug Hello! I am a race condition! You find me in poorly written code, like the two lines below. Enjoy!
 
         // Enable IRQs.
-        uintptr_t intNumber = pParent->getInterruptNumber();
+        uintptr_t intNumber = getInterruptNumber();
         if(intNumber != 0xFF)
             Machine::instance().getIrqManager()->enable(intNumber, true);
 
@@ -606,7 +606,7 @@ uint64_t AtaDisk::doWrite(uint64_t location)
         /// \bug Hello! I am a race condition! You find me in poorly written code, like the two lines below. Enjoy!
 
         // Enable IRQs.
-        uintptr_t intNumber = pParent->getInterruptNumber();
+        uintptr_t intNumber = getInterruptNumber();
         if(intNumber != 0xFF)
             Machine::instance().getIrqManager()->enable(intNumber, true);
 

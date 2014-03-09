@@ -31,6 +31,10 @@
 /// \todo Make portable
 /// \todo GET MEDIA STATUS to find out if there's actually media!
 
+/// \todo Integrate all this with ScsiDisk. SCSI commands are sent with the
+///       'PACKET' command. Note that this does things like READ TOC, which
+///       the current ScsiDisk implementation does not support.
+
 // Note the IrqReceived mutex is deliberately started in the locked state.
 AtapiDisk::AtapiDisk(AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs, BusMasterIde *busMaster) :
   AtaDisk(pDev, isMaster, commandRegs, controlRegs, busMaster), m_IsMaster(isMaster), m_SupportsLBA28(true),
@@ -54,7 +58,12 @@ bool AtapiDisk::initialise()
   // Commented out - unused variable.
   IoBase *controlRegs = m_ControlRegs;
 
+  // Bring up and configure the device.
+  // nIEN=0 (IRQs enabled), SRST=0 (don't reset), HOB=0 (no LBA48 readback)
+  controlRegs->write8(0, 2);
+
   // Drive spin-up (go from standby to active, if necessary)
+  setFeatures(0x06, 0, 0, 0, 0);
   setFeatures(0x07, 0, 0, 0, 0);
 
   // Check for device presence
@@ -84,7 +93,7 @@ bool AtapiDisk::initialise()
   // Start IDENTIFY command.
   //
 
-  // Send IDENTIFY.
+  // Send IDENTIFY DEVICE.
   uint8_t status = commandRegs->read8(7);
   commandRegs->write8(0xEC, 7);
 
@@ -268,13 +277,6 @@ bool AtapiDisk::initialise()
       }
   }
 
-  // Grab the capacity of the disk for future reference
-  if(!getCapacityInternal(&m_NumBlocks, &m_BlockSize))
-  {
-    WARNING("Couldn't get internal capacity on ATAPI device!");
-    return false;
-  }
-
   // Send an INQUIRY command to find more information about the disk
   Inquiry inquiry;
   struct InquiryCommand
@@ -305,6 +307,20 @@ bool AtapiDisk::initialise()
   {
     /// \todo Testing needs to be done on more than just CD/DVD and block devices...
     WARNING("Pedigree currently only supports CD/DVD and block ATAPI devices.");
+    return false;
+  }
+
+  // Wait for unit readiness before doing much more.
+  if(!unitReady())
+  {
+    WARNING("ATAPI: device is not ready.");
+    return false;
+  }
+
+  // Grab the capacity of the disk for future reference
+  if(!getCapacityInternal(&m_NumBlocks, &m_BlockSize))
+  {
+    WARNING("Couldn't get internal capacity on ATAPI device!");
     return false;
   }
 
@@ -446,6 +462,12 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
     return false;
   }
 
+  // Ensure interrupts are actually enabled now.
+  /// \todo Find the module that's being naughty and disabling interrupts
+  bool oldInterrupts = Processor::getInterrupts();
+  if(!oldInterrupts)
+    Processor::setInterrupts(true);
+
   AtaStatus status;
 
   // Grab our parent.
@@ -469,29 +491,35 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
   status = ataWait(commandRegs);
 
   // Select the device to transmit to
-  uint8_t devSelect = (m_IsMaster) ? 0xA0 : 0xB0;
+  uint8_t devSelect = m_IsMaster ? 0xA0 : 0xB0; // (m_IsMaster ? 0 : 1) << 4;
   commandRegs->write8(devSelect, 6);
 
   // Wait for it to be selected
   status = ataWait(commandRegs);
 
   // Verify that it's the correct device
-  if(commandRegs->read8(6) != devSelect)
+  if((commandRegs->read8(6) & devSelect) != devSelect)
   {
       WARNING("ATAPI: Device was not selected");
       return false;
   }
 
+  bool bDmaSetup = false;
+  if(m_bDma && nRespBytes)
+  {
+    bDmaSetup = m_BusMaster->add(respBuff, nRespBytes);
+  }
+
   // PACKET command
-  if((m_pIdent[62] & (1 << 15)) && m_bDma) // Device requires DMADIR for Packet DMA commands
+  if((m_pIdent[62] & (1 << 15)) && bDmaSetup) // Device requires DMADIR for Packet DMA commands
       commandRegs->write8((bWrite ? 1 : 5), 1); // Transfer to host, DMA
-  else if(m_bDma)
+  else if(bDmaSetup)
       commandRegs->write8(1, 1); // No overlap, DMA
   else
     commandRegs->write8(0, 1); // No overlap, no DMA
   commandRegs->write8(0, 2); // Tag = 0
   commandRegs->write8(0, 3); // N/A for PACKET command
-  if(m_bDma)
+  if(bDmaSetup)
   {
       commandRegs->write8(0, 4); // Byte count limit = 0 for DMA
       commandRegs->write8(0, 5);
@@ -501,7 +529,6 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
       commandRegs->write8(nRespBytes & 0xFF, 4); // Byte count limit
       commandRegs->write8(((nRespBytes >> 8) & 0xFF), 5);
   }
-  commandRegs->write8(0xA0, 7);
 
   // Wait for the device to be ready to accept the command packet
 #if 0
@@ -518,6 +545,11 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
       status = commandRegs->read8(7);
   }
 #endif
+
+  // Transmit the PACKET command, wait for the device to be ready for the command.
+  commandRegs->write8(0xA0, 7);
+
+  // Wait for sensible status.
   status = ataWait(commandRegs);
 
   // Error?
@@ -527,48 +559,100 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
     return false;
   }
 
-  // If DMA is enabled, set that up now
-  bool bDmaSetup = false;
-  if(m_bDma && nRespBytes)
-  {
-      bDmaSetup = m_BusMaster->add(respBuff, nRespBytes);
-      if(bDmaSetup)
-        bDmaSetup = m_BusMaster->begin(bWrite);
-  }
-
-  // Ensure interrupts are actually enabled now.
-  /// \todo Find the module that's being naughty and disabling interrupts
-  bool oldInterrupts = Processor::getInterrupts();
-  Processor::setInterrupts(true);
-
-  Machine::instance().getIrqManager()->enable(getParent()->getInterruptNumber(), true);
-
   // Transmit the command (padded as needed)
   for(size_t i = 0; i < (m_PacketSize / 2); i++)
-    commandRegs->write16(tmpPacket[i], 0);
-
-  // Wait for the busy bit to be cleared once again
-  while(true)
   {
-    m_IrqReceived.acquire();
-    if(m_bDma && bDmaSetup)
+    commandRegs->write16(tmpPacket[i], 0);
+  }
+
+  // Check for errors...
+  uint8_t statusreg = commandRegs->read8(7);
+  if((statusreg & 1) && !(statusreg & 0x80))
+  {
+    // CHK = 1, BSY = 0
+    uint8_t error = commandRegs->read8(1);
+    if(error & 0x4)
     {
-        if(m_BusMaster->hasInterrupt())
-        {
-            // commandComplete effectively resets the device state, so we need
-            // to get the error register first.
-            bool bError = m_BusMaster->hasError();
-            m_BusMaster->commandComplete();
-            if(bError)
-                return 0;
-            else
-                break;
-        }
+        WARNING("ATAPI command failed (ABORT)");
     }
     else
-        break;
+    {
+        WARNING("ATAPI error with status " << statusreg << " [error=" << error << "]");
+    }
+
+    return false;
   }
-  Processor::setInterrupts(oldInterrupts);
+
+  // If DMA is set up, begin that now, before sending the SCSI command.
+  if(m_bDma && nRespBytes && bDmaSetup)
+  {
+    bDmaSetup = m_BusMaster->begin(bWrite);
+  }
+
+    // Grab the IRQ mutex before enabling device IRQs.
+    m_IrqReceived.tryAcquire();
+
+    // Enable IRQs.
+    size_t intNumber = getInterruptNumber();
+    if(intNumber != 0xFF)
+    Machine::instance().getIrqManager()->enable(intNumber, true);
+
+  // Wait for the busy bit to be cleared once again
+    while(true)
+    {
+        if(intNumber != 0xFF)
+        {
+            if(!m_IrqReceived.acquire(1, 10))
+            {
+                // Fail! Assume nothing read so far.
+                WARNING("ATAPI: Timed out while waiting for IRQ");
+                return false;
+            }
+        }
+        else
+        {
+            // No IRQ line.
+            if(m_bDma && bDmaSetup)
+            {
+                while(!(m_BusMaster->hasCompleted() || m_BusMaster->hasInterrupt()))
+                {
+                    Processor::haltUntilInterrupt();
+                }
+            }
+            else
+            {
+                /// \todo Write non-DMA case (if needed?)
+                ERROR("TODO: non-DMA polling check!");
+            }
+        }
+
+        if(m_bDma && bDmaSetup)
+        {
+            // Ensure we are not busy before continuing handling.
+            status = ataWait(commandRegs);
+            if(status.reg.err)
+            {
+                /// \todo What's the best way to handle this?
+                m_BusMaster->commandComplete();
+                WARNING("ATAPI: read failed during DMA data transfer");
+                return false;
+            }
+
+            if(m_BusMaster->hasInterrupt() || m_BusMaster->hasCompleted())
+            {
+                // commandComplete effectively resets the device state, so we need
+                // to get the error register first.
+                bool bError = m_BusMaster->hasError();
+                m_BusMaster->commandComplete();
+                if(bError)
+                    return false;
+                else
+                    break;
+            }
+        }
+        else
+            break;
+    }
   
   status = ataWait(commandRegs);
 

@@ -53,7 +53,10 @@ inline AtaStatus ataWait(IoBase *pBase)
     // Wait for BSY to be unset. Until BSY is unset, no other bits in the
     // register are considered valid.
     while(status & 0x80)
+    {
+        Processor::pause();
         status = pBase->read8(7);
+    }
 
     // We no longer check DRQ as some commands depend on DRQ being set.
     // For example, a data transfe uses DRQ to say data is available for
@@ -66,6 +69,7 @@ inline AtaStatus ataWait(IoBase *pBase)
     {
         while(!(status & 0x41))
         {
+            Processor::pause();
             status = pBase->read8(7);
             
             // If for some reason the original check for zero gave back something

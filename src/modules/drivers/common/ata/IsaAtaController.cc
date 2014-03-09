@@ -88,6 +88,9 @@ IsaAtaController::IsaAtaController(Controller *pDev, int nController) :
   AtaDisk *pMaster = new AtaDisk(this, true, m_pCommandRegs, m_pControlRegs);
   AtaDisk *pSlave = new AtaDisk(this, false, m_pCommandRegs, m_pControlRegs);
 
+  pMaster->setInterruptNumber(getInterruptNumber());
+  pSlave->setInterruptNumber(getInterruptNumber());
+
   // Try and initialise the disks.
   bool masterInitialised = pMaster->initialise();
   bool slaveInitialised = pSlave->initialise();
@@ -102,6 +105,8 @@ IsaAtaController::IsaAtaController(Controller *pDev, int nController) :
     delete pMaster;
     AtapiDisk *pMasterAtapi = new AtapiDisk(this, true, m_pCommandRegs, m_pControlRegs);
     addChild(pMasterAtapi);
+
+    pMasterAtapi->setInterruptNumber(getInterruptNumber());
     if(!pMasterAtapi->initialise())
     {
       removeChild(pMasterAtapi);
@@ -116,6 +121,8 @@ IsaAtaController::IsaAtaController(Controller *pDev, int nController) :
     delete pSlave;
     AtapiDisk *pSlaveAtapi = new AtapiDisk(this, false, m_pCommandRegs, m_pControlRegs);
     addChild(pSlaveAtapi);
+
+    pSlaveAtapi->setInterruptNumber(getInterruptNumber());
     if(!pSlaveAtapi->initialise())
     {
       removeChild(pSlaveAtapi);

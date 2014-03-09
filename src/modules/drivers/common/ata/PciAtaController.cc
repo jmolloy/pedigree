@@ -20,6 +20,10 @@
 #include <machine/Pci.h>
 #include <Log.h>
 
+#include "ata-common.h"
+
+#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
+
 PciAtaController::PciAtaController(Controller *pDev, int nController) :
     AtaController(pDev, nController), m_PciControllerType(UnknownController)
 {
@@ -109,22 +113,28 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
 
     // Fiddle with the IDE timing registers
     uint32_t ideTiming = PciBus::instance().readConfigSpace(pDev, 0x10);
-    ideTiming = 0xCCE0 | (3 << 4) | 4;
+    // TIME0, TIME1, IE0, IE1, PPE0, PPE1, DTE0, DTE1, minimum recovery time,
+    // minimum IORDY sample point, IDE decode enable.
+    ideTiming = 0xB3FF;
+    // Apply to both channels.
     ideTiming |= (ideTiming << 16);
     PciBus::instance().writeConfigSpace(pDev, 0x10, ideTiming);
 
     // Write the interrupt line into the PCI space if needed.
-    uint32_t miscFields = PciBus::instance().readConfigSpace(pDev, 0xF);
-    if((miscFields & 0xF) != getInterruptNumber())
+    // This is only meaningful for < PIIX3...
+    if(m_PciControllerType == PIIX)
     {
-        if(getInterruptNumber())
+        uint32_t miscFields = PciBus::instance().readConfigSpace(pDev, 0xF);
+        if((miscFields & 0xF) != getInterruptNumber())
         {
-            NOTICE("    - Configured PCI space for interrupt line " << getInterruptNumber());
-            miscFields &= ~0xF;
-            miscFields |= getInterruptNumber() & 0xF;
+            if(getInterruptNumber())
+            {
+                miscFields &= ~0xF;
+                miscFields |= getInterruptNumber() & 0xF;
+            }
         }
+        PciBus::instance().writeConfigSpace(pDev, 0xF, miscFields);
     }
-    PciBus::instance().writeConfigSpace(pDev, 0xF, miscFields);
 
     // The controller must be able to perform BusMaster IDE DMA transfers, or
     // else we have to fall back to PIO transfers.
@@ -208,31 +218,52 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
     if(!slaveControl->allocate(0x374, 4))
         ERROR("Couldn't allocate slave control ports");
 
+    // Kick off an SRST on each control port.
+    masterControl->write8(0x4, 2);
+    slaveControl->write8(0x4, 2);
+    Processor::pause(); // Hold SRST for 5 nanoseconds. /// \todo Better way of doing this?
+    masterControl->write8(0, 2);
+    slaveControl->write8(0, 2);
+    delay(2); // Wait 2 ms after clearing.
+
+    // Wait for each to become active (BSY=0)
+    /// \todo Check return status for errors!
+    ataWait(masterCommand);
+    ataWait(slaveCommand);
+
     // Install our IRQ handler
     if(getInterruptNumber() != 0xFF)
         Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*> (this));
 
+    /// \todo Detect PCI IRQ, don't use ISA IRQs in native mode (etc...)
+    size_t primaryIrq = 14, secondaryIrq = 15;
+    if(primaryIrq != getInterruptNumber())
+        Machine::instance().getIrqManager()->registerIsaIrqHandler(primaryIrq, static_cast<IrqHandler*> (this));
+    if(secondaryIrq != getInterruptNumber())
+        Machine::instance().getIrqManager()->registerIsaIrqHandler(secondaryIrq, static_cast<IrqHandler*> (this));
+
     // And finally, create disks
-    diskHelper(true, masterCommand, masterControl, primaryBusMaster);
-    diskHelper(false, masterCommand, masterControl, primaryBusMaster);
-    diskHelper(true, slaveCommand, slaveControl, secondaryBusMaster);
-    diskHelper(false, slaveCommand, slaveControl, secondaryBusMaster);
+    diskHelper(true, masterCommand, masterControl, primaryBusMaster, primaryIrq);
+    diskHelper(false, masterCommand, masterControl, primaryBusMaster, primaryIrq);
+    diskHelper(true, slaveCommand, slaveControl, secondaryBusMaster, secondaryIrq);
+    diskHelper(false, slaveCommand, slaveControl, secondaryBusMaster, secondaryIrq);
 }
 
 PciAtaController::~PciAtaController()
 {
 }
 
-void PciAtaController::diskHelper(bool master, IoBase *cmd, IoBase *ctl, BusMasterIde *dma)
+void PciAtaController::diskHelper(bool master, IoBase *cmd, IoBase *ctl, BusMasterIde *dma, size_t irq)
 {
     AtaDisk *pDisk = new AtaDisk(this, master, cmd, ctl, dma);
+    pDisk->setInterruptNumber(irq);
     if(!pDisk->initialise())
     {
         delete pDisk;
         AtapiDisk *pAtapiDisk = new AtapiDisk(this, master, cmd, ctl, dma);
-
         addChild(pAtapiDisk);
 
+        pAtapiDisk->setInterruptNumber(irq);
         if(!pAtapiDisk->initialise())
         {
             removeChild(pAtapiDisk);
@@ -260,13 +291,16 @@ bool PciAtaController::irq(irq_id_t number, InterruptState &state)
   for (unsigned int i = 0; i < getNumChildren(); i++)
   {
     AtaDisk *pDisk = static_cast<AtaDisk*> (getChild(i));
-    if(pDisk->isAtapi())
+    if(pDisk->getInterruptNumber() != number)
+      continue;
+
+    BusMasterIde *pBusMaster = pDisk->getBusMaster();
+    if(pBusMaster && !pBusMaster->isActive())
     {
-        AtapiDisk *pAtapiDisk = static_cast<AtapiDisk*>(pDisk);
-        pAtapiDisk->irqReceived();
+        // No active DMA transfer - clear interrupt/error bits.
+        pBusMaster->commandComplete();
     }
-    else
-        pDisk->irqReceived();
+    pDisk->irqReceived();
   }
   return false; // Keep the IRQ disabled - level triggered.
 }

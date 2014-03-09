@@ -59,13 +59,15 @@ public:
 
     // Called by our controller when an IRQ has been received.
     // It may not actually apply to us!
-    void irqReceived();
+    virtual void irqReceived();
 
     // Is this an ATAPI device?
     inline virtual bool isAtapi()
     {
       return false;
     }
+
+    virtual BusMasterIde *getBusMaster() const { return m_BusMaster; }
 
 private:
     /** Sets the drive up for reading from address 'n' in LBA28 mode. */

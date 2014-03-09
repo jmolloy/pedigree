@@ -203,7 +203,7 @@ static void entry()
 {
   // Walk the device tree looking for controllers that have 
   // "control" and "command" addresses.
-  Device *pDev = &Device::root();  
+  Device *pDev = &Device::root();
   searchNode(pDev, true);
 }
 
