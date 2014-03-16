@@ -29,7 +29,6 @@
 #include "ata-common.h"
 
 /// \todo Make portable
-/// \todo GET MEDIA STATUS to find out if there's actually media!
 
 /// \todo Integrate all this with ScsiDisk. SCSI commands are sent with the
 ///       'PACKET' command. Note that this does things like READ TOC, which
@@ -530,26 +529,10 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
       commandRegs->write8(((nRespBytes >> 8) & 0xFF), 5);
   }
 
-  // Wait for the device to be ready to accept the command packet
-#if 0
-  status = commandRegs->read8(7);
-  while((status&0x80) || !(status&0x9))
-         /*
-         ! // This is "right" according to the spec, but it makes QEMU die :(
-         ((status & 0x80) == 0) && // BSY cleared to zero
-         ((status & 0x20) == 0) && // DMRD cleared to zero
-         ((status & 0x08) == 1) && // DRQ set to one
-         ((status & 0x01) == 0)))  // CHK cleared to zero
-         */
-  {
-      status = commandRegs->read8(7);
-  }
-#endif
-
   // Transmit the PACKET command, wait for the device to be ready for the command.
   commandRegs->write8(0xA0, 7);
 
-  // Wait for sensible status.
+  // Wait for sensible status before writing command packet.
   status = ataWait(commandRegs);
 
   // Error?
@@ -589,71 +572,71 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
     bDmaSetup = m_BusMaster->begin(bWrite);
   }
 
-    // Grab the IRQ mutex before enabling device IRQs.
-    m_IrqReceived.tryAcquire();
+  // Grab the IRQ mutex before enabling device IRQs.
+  m_IrqReceived.tryAcquire();
 
-    // Enable IRQs.
-    size_t intNumber = getInterruptNumber();
-    if(intNumber != 0xFF)
+  // Enable IRQs.
+  size_t intNumber = getInterruptNumber();
+  if(intNumber != 0xFF)
     Machine::instance().getIrqManager()->enable(intNumber, true);
 
   // Wait for the busy bit to be cleared once again
-    while(true)
+  while(true)
+  {
+    if(intNumber != 0xFF)
     {
-        if(intNumber != 0xFF)
+        if(!m_IrqReceived.acquire(1, 10))
         {
-            if(!m_IrqReceived.acquire(1, 10))
-            {
-                // Fail! Assume nothing read so far.
-                WARNING("ATAPI: Timed out while waiting for IRQ");
-                return false;
-            }
+            // Fail! Assume nothing read so far.
+            WARNING("ATAPI: Timed out while waiting for IRQ");
+            return false;
         }
-        else
-        {
-            // No IRQ line.
-            if(m_bDma && bDmaSetup)
-            {
-                while(!(m_BusMaster->hasCompleted() || m_BusMaster->hasInterrupt()))
-                {
-                    Processor::haltUntilInterrupt();
-                }
-            }
-            else
-            {
-                /// \todo Write non-DMA case (if needed?)
-                ERROR("TODO: non-DMA polling check!");
-            }
-        }
-
+    }
+    else
+    {
+        // No IRQ line.
         if(m_bDma && bDmaSetup)
         {
-            // Ensure we are not busy before continuing handling.
-            status = ataWait(commandRegs);
-            if(status.reg.err)
+            while(!(m_BusMaster->hasCompleted() || m_BusMaster->hasInterrupt()))
             {
-                /// \todo What's the best way to handle this?
-                m_BusMaster->commandComplete();
-                WARNING("ATAPI: read failed during DMA data transfer");
-                return false;
-            }
-
-            if(m_BusMaster->hasInterrupt() || m_BusMaster->hasCompleted())
-            {
-                // commandComplete effectively resets the device state, so we need
-                // to get the error register first.
-                bool bError = m_BusMaster->hasError();
-                m_BusMaster->commandComplete();
-                if(bError)
-                    return false;
-                else
-                    break;
+                Processor::haltUntilInterrupt();
             }
         }
         else
-            break;
+        {
+            /// \todo Write non-DMA case (if needed?)
+            ERROR("TODO: non-DMA polling check!");
+        }
     }
-  
+
+    if(m_bDma && bDmaSetup)
+    {
+        // Ensure we are not busy before continuing handling.
+        status = ataWait(commandRegs);
+        if(status.reg.err)
+        {
+            /// \todo What's the best way to handle this?
+            m_BusMaster->commandComplete();
+            WARNING("ATAPI: read failed during DMA data transfer");
+            return false;
+        }
+
+        if(m_BusMaster->hasInterrupt() || m_BusMaster->hasCompleted())
+        {
+            // commandComplete effectively resets the device state, so we need
+            // to get the error register first.
+            bool bError = m_BusMaster->hasError();
+            m_BusMaster->commandComplete();
+            if(bError)
+                return false;
+            else
+                break;
+        }
+    }
+    else
+        break;
+  }
+
   status = ataWait(commandRegs);
 
   if(status.reg.err)
