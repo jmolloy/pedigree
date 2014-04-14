@@ -1,5 +1,9 @@
 /*
- * Copyright (c) 2010 Matthew Iselin
+ * 
+ * Copyright (c) 2008-2014, Pedigree Developers
+ *
+ * Please see the CONTRIB file in the root of the source tree for a full
+ * list of contributors.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,7 +17,8 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
- #include <utilities/ZombieQueue.h>
+
+#include <utilities/ZombieQueue.h>
 
 ZombieQueue ZombieQueue::m_Instance;
 
