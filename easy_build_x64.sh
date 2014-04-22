@@ -158,9 +158,6 @@ $script_dir/run_pup.py install cairo
 $script_dir/run_pup.py install expat
 $script_dir/run_pup.py install mesa
 
-# Install gcc for libstdc++.
-$script_dir/run_pup.py install gcc
-
 set -e
 
 echo
