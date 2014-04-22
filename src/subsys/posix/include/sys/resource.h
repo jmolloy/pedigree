@@ -37,8 +37,12 @@ typedef struct rlimit {
 } rlimit_t;
 #define rlim_cur rlim_curr
 
+_BEGIN_STD_C
+
 int _EXFUN(getrlimit, (int resource, struct rlimit *rlp));
 int _EXFUN(setrlimit, (int resource, const struct rlimit *rlp));
+
+_END_STD_C
 
 #endif
 
