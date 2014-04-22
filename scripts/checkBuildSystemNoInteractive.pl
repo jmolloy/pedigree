@@ -3,9 +3,9 @@
 use strict;
 use warnings;
 
-my $gcc_version = "4.5.1";
-my $binutils_version = "2.20.1";
-my $nasm_version = "2.07";
+my $gcc_version = "4.8.2";
+my $binutils_version = "2.24";
+my $nasm_version = "2.11.02";
 
 my $gcc_configure_special = " --disable-werror ";
 my $binutils_configure_special = " --disable-werror ";
@@ -20,15 +20,10 @@ for(my $i = 2; $i < @ARGV; $i++)
     }
 }
 
-my @download = ( {'url' => "ftp://ftp.gnu.org/gnu/gcc/gcc-$gcc_version/gcc-core-$gcc_version.tar.bz2",
-                  'name' => 'Gcc core files',
-                  'filename' => "gcc-core-$gcc_version.tar.bz2",
-                  'extract' => "tar -xjf gcc-core-$gcc_version.tar.bz2",
-                  'arch' => 'all'},
-                 {'url' => "ftp://ftp.gnu.org/gnu/gcc/gcc-$gcc_version/gcc-g++-$gcc_version.tar.bz2",
-                  'name' => 'G++',
-                  'filename' => "gcc-g++-$gcc_version.tar.bz2",
-                  'extract' => "tar -xjf gcc-g++-$gcc_version.tar.bz2",
+my @download = ( {'url' => "ftp://ftp.gnu.org/gnu/gcc/gcc-$gcc_version/gcc-$gcc_version.tar.bz2",
+                  'name' => 'GCC',
+                  'filename' => "gcc-$gcc_version.tar.bz2",
+                  'extract' => "tar -xjf gcc-$gcc_version.tar.bz2",
                   'arch' => 'all'},
                  {'url' => "ftp://ftp.gnu.org/gnu/binutils/binutils-$binutils_version.tar.bz2",
                   'name' => 'Binutils',
