@@ -26,3 +26,4 @@ scripts/pup/pup.conf
 *.obj
 *.swp
 .tags
+src/subsys/posix/include/c++
