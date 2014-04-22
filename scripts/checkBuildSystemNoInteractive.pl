@@ -36,6 +36,15 @@ my @download = ( {'url' => "ftp://ftp.gnu.org/gnu/gcc/gcc-$gcc_version/gcc-$gcc_
                   'extract' => "tar -xjf nasm-$nasm_version.tar.bz2",
                   'arch' => 'i686-pedigree x86_64-pedigree amd64-pedigree i686-elf amd64-elf'} );
 
+my @command = ( {'cwd' => "gcc-$gcc_version",
+                 'name' => "fixing autoconf version dependency",
+                 'cmd' => "autoconf -V | grep autoconf | tr ' ' '\n' | tail -1 | xargs printf '-i \"s/2.64/\%s/g\" ./config/override.m4' | xargs sed",
+                 'arch' => 'all'},
+                {'cwd' => "gcc-$gcc_version/libstdc++-v3",
+                 'name' => "libstdc++ crossconfig",
+                 'cmd' => "autoconf",
+                 'arch' => 'all'} );
+
 my @patch = ( {'cwd' => "gcc-$gcc_version",
                'name' => "Gcc pedigree target patch",
                'flags' => '-p1',
@@ -65,8 +74,8 @@ my @compile = ( {'dir' => "nasm-$nasm_version",
                 {'dir' => "gcc-$gcc_version",
                  'name' => "Gcc",
                  'configure' => "--target=\$TARGET $gcc_configure_special --prefix=\$PREFIX --disable-nls --enable-languages=c,c++ --without-headers --without-newlib",
-                 'make' => "all-gcc all-target-libgcc",
-                 'install' => "install-gcc install-target-libgcc",
+                 'make' => "all-gcc all-target-libgcc all-target-libstdc++-v3",
+                 'install' => "install-gcc install-target-libgcc install-target-libstdc++-v3",
                  'arch' => 'i686-pedigree amd64-pedigree x86_64-pedigree i686-elf amd64-elf arm-elf ppc-elf powerpc-elf',
                  'test' => './bin/!TARGET-gcc'},
                 {'dir' => "gcc-$gcc_version",
@@ -171,6 +180,25 @@ foreach (@patch) {
 }
 
 print "\n";
+
+# Run everything we need to.
+print "Running: ";
+foreach (@command) {
+  my %command = %$_;
+
+  if ($command{arch} =~ m/($target)|(all)/i) {
+    print "$command{name} ";
+    my $stdout = `cd ./compilers/dir/build_tmp/$command{cwd}; $command{cmd} 2>&1`;
+    if ($? != 0) {
+      print "\nFailed - output:\n$stdout";
+      `rm -r ./compilers/dir/build_tmp`;
+      exit 1;
+    }
+  }
+}
+
+print "\n";
+
 
 # Compile everything we need to.
 print "Compiling:\n";
