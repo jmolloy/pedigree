@@ -1,20 +1,74 @@
-diff -rupN gcc-4.5.1.orig/config.sub gcc-4.5.1/config.sub
---- gcc-4.5.1.orig/config.sub	2014-02-25 18:49:05.420575390 +1000
-+++ gcc-4.5.1/config.sub	2014-02-25 18:50:28.116985477 +1000
-@@ -1450,6 +1450,9 @@ case $os in
+From a6abc6ec3cd4885a1d9633016de030a64f5b404f Mon Sep 17 00:00:00 2001
+From: Matthew Iselin <matthew@theiselins.net>
+Date: Tue, 22 Apr 2014 15:26:33 +1000
+Subject: [PATCH] Pedigree OS target
+
+---
+ config.sub                  |  3 +++
+ gcc/config.gcc              | 16 ++++++++++++++++
+ gcc/config/pedigree.h       | 42 ++++++++++++++++++++++++++++++++++++++++++
+ gcc/config/t-pedigree       |  7 +++++++
+ libgcc/config.host          |  9 +++++++++
+ libstdc++-v3/crossconfig.m4 |  5 +++++
+ libtool.m4                  |  4 +++-
+ 7 files changed, 85 insertions(+), 1 deletion(-)
+ create mode 100644 gcc/config/pedigree.h
+ create mode 100644 gcc/config/t-pedigree
+
+diff --git a/config.sub b/config.sub
+index 707e9e2..5c71437 100755
+--- a/config.sub
++++ b/config.sub
+@@ -1510,6 +1510,9 @@ case $os in
  		;;
-         -nacl*)
- 	        ;;
+ 	-nacl*)
+ 		;;
 +	-pedigree*)
 +		os=-pedigree
 +		;;
  	-none)
  		;;
  	*)
-diff -rupN gcc-4.5.1.orig/gcc/config/pedigree.h gcc-4.5.1/gcc/config/pedigree.h
---- gcc-4.5.1.orig/gcc/config/pedigree.h	1970-01-01 10:00:00.000000000 +1000
-+++ gcc-4.5.1/gcc/config/pedigree.h	2014-02-25 18:58:02.219237234 +1000
-@@ -0,0 +1,44 @@
+diff --git a/gcc/config.gcc b/gcc/config.gcc
+index 92d57dd..871f92f 100644
+--- a/gcc/config.gcc
++++ b/gcc/config.gcc
+@@ -807,6 +807,12 @@ case ${target} in
+     *) echo 'Unknown thread configuration for VxWorks'; exit 1 ;;
+   esac
+   ;;
++*-*-pedigree*)
++  extra_parts="crtbegin.o crtend.o crtbeginS.o crtendS.o"
++  gas=yes
++  gnu_ld=yes
++  default_use_cxa_atexit=yes
++  ;;
+ *-*-elf)
+   # Assume that newlib is being used and so __cxa_atexit is provided.
+   default_use_cxa_atexit=yes
+@@ -1215,6 +1221,16 @@ i[34567]86-*-elf*)
+ x86_64-*-elf*)
+ 	tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h newlib-stdint.h i386/i386elf.h i386/x86-64.h"
+ 	;;
++i[34567]86-*-pedigree*)
++    tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h i386/i386elf.h pedigree.h"
++    tmake_file="i386/t-i386elf i386/t-crtstuff t-pedigree"
++    use_fixproto=yes
++    ;;
++x86_64-*-pedigree*)
++    tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h i386/i386elf.h i386/x86-64.h pedigree.h"
++    tmake_file="i386/t-i386elf i386/t-crtstuff t-pedigree"
++    use_fixproto=yes
++    ;;
+ i[34567]86-*-rdos*)
+     tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h newlib-stdint.h i386/i386elf.h i386/rdos.h"
+     ;;
+diff --git a/gcc/config/pedigree.h b/gcc/config/pedigree.h
+new file mode 100644
+index 0000000..95e66a5
+--- /dev/null
++++ b/gcc/config/pedigree.h
+@@ -0,0 +1,42 @@
 +#define NO_IMPLICIT_EXTERN_C
 +
 +#undef STARTFILE_SPEC
@@ -32,7 +86,7 @@ diff -rupN gcc-4.5.1.orig/gcc/config/pedigree.h gcc-4.5.1/gcc/config/pedigree.h
 +#undef LIB_SPEC
 +#define LIB_SPEC \
 +    "%{pthread:-lpthread} \
-+     -lc"
++    -lc"
 +
 +#undef TARGET_OS_CPP_BUILTINS
 +#define TARGET_OS_CPP_BUILTINS()                \
@@ -57,116 +111,67 @@ diff -rupN gcc-4.5.1.orig/gcc/config/pedigree.h gcc-4.5.1/gcc/config/pedigree.h
 +                       } \
 +                     }"
 +
-+#undef TARGET_VERSION
-+#define TARGET_VERSION fprintf(stderr, " (i386/x86_64/arm pedigree)")
-diff -rupN gcc-4.5.1.orig/gcc/config/t-pedigree gcc-4.5.1/gcc/config/t-pedigree
---- gcc-4.5.1.orig/gcc/config/t-pedigree	1970-01-01 10:00:00.000000000 +1000
-+++ gcc-4.5.1/gcc/config/t-pedigree	2014-02-25 18:50:28.224985993 +1000
-@@ -0,0 +1,6 @@
+diff --git a/gcc/config/t-pedigree b/gcc/config/t-pedigree
+new file mode 100644
+index 0000000..af244ea
+--- /dev/null
++++ b/gcc/config/t-pedigree
+@@ -0,0 +1,7 @@
 +EXTRA_MULTILIB_PARTS= crtbegin.o crtend.o crtbeginS.o crtendS.o
 +
-+# Always build crtstuff with PIC.
++# always build crtstuff with PIC.
 +CRTSTUFF_T_CFLAGS_S = $(CRTSTUFF_T_CFLAGS) -fPIC
 +
 +TARGET_LIBGCC2_CFLAGS = -fPIC
-diff -rupN gcc-4.5.1.orig/gcc/config.gcc gcc-4.5.1/gcc/config.gcc
---- gcc-4.5.1.orig/gcc/config.gcc	2014-02-25 18:46:05.423682845 +1000
-+++ gcc-4.5.1/gcc/config.gcc	2014-02-25 19:01:12.844182491 +1000
-@@ -606,6 +606,12 @@ case ${target} in
-     *) echo 'Unknown thread configuration for VxWorks'; exit 1 ;;
++
+diff --git a/libgcc/config.host b/libgcc/config.host
+index 259c9a7..63984b4 100644
+--- a/libgcc/config.host
++++ b/libgcc/config.host
+@@ -222,6 +222,9 @@ case ${host} in
+       ;;
    esac
    ;;
 +*-*-pedigree*)
 +  extra_parts="crtbegin.o crtend.o crtbeginS.o crtendS.o"
-+  gas=yes
-+  gnu_ld=yes
-+  default_use_cxa_atexit=yes
 +  ;;
- *-*-elf)
-   # Assume that newlib is being used and so __cxa_atexit is provided.
-   default_use_cxa_atexit=yes
-@@ -1084,6 +1090,31 @@ hppa[12]*-*-hpux11*)
- 		;;
- 	esac
- 	;;
-+i[3-7]86-*-pedigree*)
-+  tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h i386/i386elf.h pedigree.h"
-+  tmake_file="i386/t-i386elf i386/t-crtstuff t-pedigree"
-+  use_fixproto=yes
-+  ;;
-+x86_64-*-pedigree* | amd64-*-pedigree*)
-+  tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h i386/i386elf.h i386/x86-64.h pedigree.h"
-+  tmake_file="i386/t-i386elf i386/t-crtstuff t-pedigree"
-+  use_fixproto=yes
-+  ;;
-+arm*-*-pedigree*)
-+	# The BPABI long long divmod functions return a 128-bit value in
-+	# registers r0-r3.  Correctly modeling that requires the use of
-+	# TImode.
-+	need_64bit_hwint=yes
-+	default_use_cxa_atexit=yes
-+	tm_file="dbxelf.h elfos.h arm/unknown-elf.h arm/elf.h arm/bpabi.h pedigree.h"
-+	tmake_file="arm/t-arm arm/t-arm-elf t-pedigree"
-+	tm_file="$tm_file arm/eabi.h newlib-stdint.h"
-+	tmake_file="${tmake_file} arm/t-bpabi"
-+	extra_options="${extra_options} arm/eabi.opt"
-+	use_gcc_stdint=wrap
-+	tm_file="${tm_file} arm/aout.h arm/arm.h"
-+	tmake_file="${tmake_file} arm/t-arm-softfp soft-fp/t-softfp"
-+	;;
- i[34567]86-*-darwin*)
- 	need_64bit_hwint=yes
- 	need_64bit_isa=yes
-diff -rupN gcc-4.5.1.orig/gcc/configure gcc-4.5.1/gcc/configure
---- gcc-4.5.1.orig/gcc/configure	2014-02-25 18:46:46.335885703 +1000
-+++ gcc-4.5.1/gcc/configure	2014-02-25 18:50:28.212985929 +1000
-@@ -7434,7 +7434,7 @@ $as_echo "$as_me: WARNING:
- *** Info documentation will not be built." >&2;}
-   BUILD_INFO=
- else
--  BUILD_INFO=info
-+  BUILD_INFO=
- fi
- 
- 
-diff -rupN gcc-4.5.1.orig/libgcc/config.host gcc-4.5.1/libgcc/config.host
---- gcc-4.5.1.orig/libgcc/config.host	2014-02-25 18:49:09.308594664 +1000
-+++ gcc-4.5.1/libgcc/config.host	2014-02-25 19:02:33.064580287 +1000
-@@ -288,6 +288,15 @@ i[34567]86-*-netbsd*)
- 	;;
- x86_64-*-netbsd*)
+ *-*-rtems*)
+   tmake_file="$tmake_file t-rtems"
+   extra_parts="crtbegin.o crtend.o"
+@@ -501,6 +504,12 @@ i[34567]86-*-elf*)
+ x86_64-*-elf*)
+ 	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic"
  	;;
 +i[34567]86-*-pedigree*)
-+	extra_parts="crtbegin.o crtend.o crtbeginS.o crtendS.o"
++	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic"
 +	;;
-+x86_64-*-pedigree* | amd64-*-pedigree*)
-+	extra_parts="crtbegin.o crtend.o crtbeginS.o crtendS.o"
++x86_64-*-pedigree*)
++	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic"
 +	;;
-+arm*-*-pedigree*)
-+	extra_parts="crtbegin.o crtend.o crtbeginS.o crtendS.o"
-+	;;
- i[34567]86-*-openbsd2.*|i[34567]86-*openbsd3.[0123])
+ i[34567]86-*-freebsd*)
+ 	tmake_file="${tmake_file} i386/t-freebsd i386/t-crtstuff"
  	;;
- i[34567]86-*-openbsd*)
-diff -rupN gcc-4.5.1.orig/libstdc++-v3/crossconfig.m4 gcc-4.5.1/libstdc++-v3/crossconfig.m4
---- gcc-4.5.1.orig/libstdc++-v3/crossconfig.m4	2014-02-25 18:47:29.312098796 +1000
-+++ gcc-4.5.1/libstdc++-v3/crossconfig.m4	2014-02-25 18:50:28.160985676 +1000
-@@ -150,6 +150,11 @@ case "${host}" in
-     GCC_CHECK_TLS
-     AM_ICONV
+diff --git a/libstdc++-v3/crossconfig.m4 b/libstdc++-v3/crossconfig.m4
+index 943ea67..11c46b6 100644
+--- a/libstdc++-v3/crossconfig.m4
++++ b/libstdc++-v3/crossconfig.m4
+@@ -173,6 +173,11 @@ case "${host}" in
+       AC_DEFINE(HAVE_ISNANL)
+     fi
      ;;
 +  *-pedigree*)
 +    AC_CHECK_HEADERS([sys/types.h locale.h float.h])
 +    GLIBCXX_CHECK_LINKER_FEATURES
 +    GLIBCXX_CHECK_COMPLEX_MATH_SUPPORT
 +    ;;
-   *-mingw32*)
-     GLIBCXX_CHECK_LINKER_FEATURES
-     GLIBCXX_CHECK_MATH_SUPPORT
-diff -rupN gcc-4.5.1.orig/libtool.m4 gcc-4.5.1/libtool.m4
---- gcc-4.5.1.orig/libtool.m4	2014-02-25 18:49:07.380585113 +1000
-+++ gcc-4.5.1/libtool.m4	2014-02-25 18:50:28.164985702 +1000
-@@ -5370,7 +5370,9 @@ if test -n "$compiler"; then
+   *-qnx6.1* | *-qnx6.2*)
+     SECTION_FLAGS='-ffunction-sections -fdata-sections'
+     AC_SUBST(SECTION_FLAGS) 
+diff --git a/libtool.m4 b/libtool.m4
+index 8a14e2b..e94d1a0 100644
+--- a/libtool.m4
++++ b/libtool.m4
+@@ -5371,7 +5371,9 @@ if test -n "$compiler"; then
    _LT_LINKER_SHLIBS($1)
    _LT_SYS_DYNAMIC_LINKER($1)
    _LT_LINKER_HARDCODE_LIBPATH($1)
@@ -177,3 +182,6 @@ diff -rupN gcc-4.5.1.orig/libtool.m4 gcc-4.5.1/libtool.m4
    _LT_CMD_STRIPLIB
  
    # Report which library types will actually be built
+-- 
+1.9.1.423.g4596e3a
+

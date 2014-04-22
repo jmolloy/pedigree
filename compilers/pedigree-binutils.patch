@@ -1,133 +1,238 @@
-diff -rupN binutils-2.20.1.orig/bfd/config.bfd binutils-2.20.1/bfd/config.bfd
---- binutils-2.20.1.orig/bfd/config.bfd	2014-02-25 18:30:39.743092645 +1000
-+++ binutils-2.20.1/bfd/config.bfd	2014-02-25 18:32:28.139630134 +1000
-@@ -603,6 +603,19 @@ case "${targ}" in
-     targ_selvecs="i386linux_vec i386pei_vec"
-     targ64_selvecs="bfd_elf64_x86_64_vec bfd_elf64_l1om_vec"
+From 7b9cfe82e3f18c1c55bcbf4ba58003a11508fcf3 Mon Sep 17 00:00:00 2001
+From: Matthew Iselin <matthew@theiselins.net>
+Date: Tue, 22 Apr 2014 14:57:26 +1000
+Subject: [PATCH] Pedigree OS target
+
+---
+ bfd/config.bfd                   | 13 +++++++++++++
+ config.sub                       |  3 +++
+ gas/configure.tgt                |  2 ++
+ ld/Makefile.in                   | 10 ++++++++++
+ ld/configure.tgt                 |  3 +++
+ ld/emulparams/pedigree_arm.sh    | 35 +++++++++++++++++++++++++++++++++++
+ ld/emulparams/pedigree_i386.sh   | 16 ++++++++++++++++
+ ld/emulparams/pedigree_x86_64.sh | 26 ++++++++++++++++++++++++++
+ 8 files changed, 108 insertions(+)
+ create mode 100644 ld/emulparams/pedigree_arm.sh
+ create mode 100644 ld/emulparams/pedigree_i386.sh
+ create mode 100644 ld/emulparams/pedigree_x86_64.sh
+
+diff --git a/bfd/config.bfd b/bfd/config.bfd
+index 5324d39..fb6254d 100644
+--- a/bfd/config.bfd
++++ b/bfd/config.bfd
+@@ -345,6 +345,10 @@ case "${targ}" in
+     targ_defvec=bfd_elf32_littlearm_symbian_vec
+     targ_selvecs=bfd_elf32_bigarm_symbian_vec
+     ;;
++  arm*-*-pedigree*)
++    targ_defvec=bfd_elf32_littlearm_vec
++    targ_selvecs=bfd_el32_bigarm_vec
++    ;;
+   arm9e-*-elf)
+     targ_defvec=bfd_elf32_littlearm_vec
+     targ_selvecs=bfd_elf32_bigarm_vec
+@@ -514,6 +518,15 @@ case "${targ}" in
+     targ_defvec=bfd_elf32_i386_vec
+     targ_selvecs=i386coff_vec
      ;;
 +  i[3-7]86-*-pedigree*)
 +    targ_defvec=bfd_elf32_i386_vec
 +    ;;
-+  amd64-*-pedigree*)
-+    targ_defvec=bfd_elf64_x86_64_vec
-+    ;;
++#ifdef BFD64
++  amd64-*-pedigree* | \
 +  x86_64-*-pedigree*)
 +    targ_defvec=bfd_elf64_x86_64_vec
 +    ;;
-+  arm*-*-pedigree*)
-+    targ_defvec=bfd_elf32_littlearm_vec
-+    targ_selvecs=bfd_elf32_bigarm_vec
-+    ;;
- #ifdef BFD64
-   x86_64-*-darwin*)
-     targ_defvec=mach_o_le_vec
-diff -rupN binutils-2.20.1.orig/config.sub binutils-2.20.1/config.sub
---- binutils-2.20.1.orig/config.sub	2014-02-25 18:30:39.699092404 +1000
-+++ binutils-2.20.1/config.sub	2014-02-25 18:30:53.799162344 +1000
-@@ -1426,6 +1426,9 @@ case $os in
- 	-dicos*)
- 		os=-dicos
++#endif
+   i[3-7]86-*-solaris2*)
+     targ_defvec=bfd_elf32_i386_sol2_vec
+     targ_selvecs="i386coff_vec"
+diff --git a/config.sub b/config.sub
+index 61cb4bc..2a6239e 100755
+--- a/config.sub
++++ b/config.sub
+@@ -1508,6 +1508,9 @@ case $os in
  		;;
-+  -pedigree*)
-+    os=-pedigree
-+    ;;
+ 	-nacl*)
+ 		;;
++	-pedigree*)
++		os=-pedigree
++		;;
  	-none)
  		;;
  	*)
-diff -rupN binutils-2.20.1.orig/gas/configure.tgt binutils-2.20.1/gas/configure.tgt
---- binutils-2.20.1.orig/gas/configure.tgt	2014-02-25 18:30:39.507091459 +1000
-+++ binutils-2.20.1/gas/configure.tgt	2014-02-25 18:34:46.808317761 +1000
-@@ -236,6 +236,11 @@ case ${generic_target} in
+diff --git a/gas/configure.tgt b/gas/configure.tgt
+index 77c1d9b..26f0e82 100644
+--- a/gas/configure.tgt
++++ b/gas/configure.tgt
+@@ -150,6 +150,7 @@ case ${generic_target} in
+ 					fmt=coff em=wince-pe ;;
+   arm-*-pe)				fmt=coff em=pe ;;
+   arm-*-riscix*)			fmt=aout em=riscix ;;
++  arm*-*-pedigree*)                     fmt=elf em=armeabi ;;
+ 
+   avr-*-*)				fmt=elf bfd_gas=yes ;;
+ 
+@@ -270,6 +271,7 @@ case ${generic_target} in
    i386-*-chaos)				fmt=elf ;;
    i386-*-rdos*)				fmt=elf ;;
    i386-*-darwin*)			fmt=macho ;;
-+  
-+  i386-*-pedigree*)   fmt=elf ;;
-+  amd64-*-pedigree*)  fmt=elf ;;
-+  x86_64-*-pedigree*) fmt=elf ;;
-+  arm*-*-pedigree*)			fmt=elf em=armeabi ;;
++  i386-*-pedigree*)                     fmt=elf ;;
  
    i860-*-*)				fmt=elf endian=little ;;
  
-diff -rupN binutils-2.20.1.orig/ld/configure.tgt binutils-2.20.1/ld/configure.tgt
---- binutils-2.20.1.orig/ld/configure.tgt	2014-02-25 18:30:39.783092828 +1000
-+++ binutils-2.20.1/ld/configure.tgt	2014-02-25 18:35:33.624549904 +1000
-@@ -282,6 +282,9 @@ i[3-7]86-*-beos*)	targ_emul=elf_i386_be
- i[3-7]86-*-vxworks*)	targ_emul=elf_i386_vxworks ;;
- i[3-7]86-*-chaos)	targ_emul=elf_i386_chaos
- 			;;
-+i[3-7]86-*-pedigree*)  targ_emul=pedigree_i386 ;;
-+x86_64-*-pedigree*)    targ_emul=pedigree_x86_64 ;;
-+arm*-*-pedigree*)        targ_emul=pedigree_arm ;;
- i860-*-coff)		targ_emul=coff_i860 ;;
- i860-stardent-sysv4* | i860-stardent-elf*)
- 			targ_emul=elf32_i860
-diff -rupN binutils-2.20.1.orig/ld/emulparams/pedigree_arm.sh binutils-2.20.1/ld/emulparams/pedigree_arm.sh
---- binutils-2.20.1.orig/ld/emulparams/pedigree_arm.sh	1970-01-01 10:00:00.000000000 +1000
-+++ binutils-2.20.1/ld/emulparams/pedigree_arm.sh	2014-02-25 18:41:05.882197483 +1000
-@@ -0,0 +1,15 @@
+diff --git a/ld/Makefile.in b/ld/Makefile.in
+index b95a3d1..1b831b2 100644
+--- a/ld/Makefile.in
++++ b/ld/Makefile.in
+@@ -2234,6 +2234,10 @@ earmelf_nacl.c: $(srcdir)/emulparams/armelf_nacl.sh \
+   $(ELF_DEPS) $(srcdir)/emultempl/armelf.em \
+   $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
+ 	${GENSCRIPTS} armelf_nacl "$(tdir_armelf_nacl)"
++epedigree_arm.c: $(srcdir)/emulparams/pedigree_arm.sh \
++  $(ELF_DEPS) $(srcdir)/emultempl/armelf.em \
++  $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
++	${GENSCRIPTS} pedigree_arm "$(tdir_pedigree_arm)"
+ earmelf_nbsd.c: $(srcdir)/emulparams/armelf_nbsd.sh \
+   $(srcdir)/emulparams/armelf.sh \
+   $(ELF_DEPS) $(srcdir)/emultempl/armelf.em \
+@@ -2770,6 +2774,9 @@ eelf_i386_nacl.c: $(srcdir)/emulparams/elf_i386_nacl.sh \
+   $(srcdir)/emulparams/elf_nacl.sh \
+   $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
+ 	${GENSCRIPTS} elf_i386_nacl "$(tdir_elf_i386_nacl)"
++epedigree_i386.c: $(srcdir)/emulparams/pedigree_i386.sh \
++  $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
++	${GENSCRIPTS} pedigree_i386 "$(tdir_pedigree_i386)"
+ eelf_i386_sol2.c: $(srcdir)/emulparams/elf_i386_sol2.sh \
+   $(srcdir)/emulparams/solaris2.sh \
+   $(srcdir)/emultempl/solaris2.em \
+@@ -3631,6 +3638,9 @@ eelf_x86_64_nacl.c: $(srcdir)/emulparams/elf_x86_64_nacl.sh \
+   $(srcdir)/emulparams/elf_nacl.sh \
+   $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
+ 	${GENSCRIPTS} elf_x86_64_nacl "$(tdir_elf_x86_64_nacl)"
++epedigree_x86_64.c: $(srcdir)/emulparams/pedigree_x86_64.sh \
++  $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
++	${GENSCRIPTS} pedigree_x86_64 "$(tdir_pedigree_x86_64)"
+ eelf_x86_64_sol2.c: $(srcdir)/emulparams/elf_x86_64_sol2.sh \
+   $(srcdir)/emulparams/elf_x86_64.sh \
+   $(srcdir)/emulparams/solaris2.sh \
+diff --git a/ld/configure.tgt b/ld/configure.tgt
+index c50730b..c866dd5 100644
+--- a/ld/configure.tgt
++++ b/ld/configure.tgt
+@@ -92,6 +92,7 @@ arm-*-netbsd*)		targ_emul=armnbsd;
+ 			targ_extra_emuls="armelf armelf_nbsd armelfb_nbsd"  ;;
+ arm-*-nto*)		targ_emul=armnto ;;
+ arm-*-openbsd*)		targ_emul=armnbsd ;;
++arm-*-pedigree*)	targ_emul=pedigree_arm ;;
+ arm-*-rtems*)		targ_emul=armelf ;;
+ armeb-*-elf)		targ_emul=armelfb ;;
+ arm-*-elf | arm*-*-eabi*)
+@@ -218,6 +219,8 @@ i[3-7]86-*-lynxos*)	targ_emul=i386lynx ;;
+ i[3-7]86-*-coff)	targ_emul=i386coff ;;
+ i[3-7]86-*-rtems*)	targ_emul=elf_i386 ;;
+ i[3-7]86-*-aros*)	targ_emul=elf_i386 ;;
++i[3-7]86-*-pedigree*)	targ_emul=pedigree_i386 ;;
++x86_64-*-pedigree*)	targ_emul=pedigree_x86_64 ;;
+ i[3-7]86-*-rdos*)	targ_emul=elf_i386 ;;
+ x86_64-*-rdos*)		targ_emul=elf64rdos ;;
+ i[3-7]86-*-bsd)		targ_emul=i386bsd ;;
+diff --git a/ld/emulparams/pedigree_arm.sh b/ld/emulparams/pedigree_arm.sh
+new file mode 100644
+index 0000000..672b208
+--- /dev/null
++++ b/ld/emulparams/pedigree_arm.sh
+@@ -0,0 +1,35 @@
 +MACHINE=
 +SCRIPT_NAME=elf
 +OUTPUT_FORMAT="elf32-littlearm"
-+BIG_OUTPUT_FORMAT="elf32-bgarm"
++BIG_OUTPUT_FORMAT="elf32-bigarm"
 +LITTLE_OUTPUT_FORMAT="elf32-littlearm"
 +TEXT_START_ADDR=0x8000
-+MAXPAGESIZE="CONSTANT (MAXPAGESIZE)"
-+COMMONPAGESIZE="CONSTANT (COMMONPAGESIZE)"
-+ARCH=arm
 +TEMPLATE_NAME=elf32
 +EXTRA_EM_FILE=armelf
++OTHER_TEXT_SECTIONS='*(.glue_7t) *(.glue_7) *(.vfp11_veneer) *(.v4_bx)'
++OTHER_BSS_SYMBOLS='__bss_start__ = .;'
++OTHER_BSS_END_SYMBOLS='_bss_end__ = . ; __bss_end__ = . ;'
++OTHER_END_SYMBOLS='__end__ = . ;'
++OTHER_SECTIONS='.note.gnu.arm.ident 0 : { KEEP (*(.note.gnu.arm.ident)) }'
++ATTRS_SECTIONS='.ARM.attributes 0 : { KEEP (*(.ARM.attributes)) KEEP (*(.gnu.attributes)) }'
++OTHER_READONLY_SECTIONS="
++  .ARM.extab ${RELOCATING-0} : { *(.ARM.extab${RELOCATING+* .gnu.linkonce.armextab.*}) }
++  ${RELOCATING+ PROVIDE_HIDDEN (__exidx_start = .); }
++  .ARM.exidx ${RELOCATING-0} : { *(.ARM.exidx${RELOCATING+* .gnu.linkonce.armexidx.*}) }
++  ${RELOCATING+ PROVIDE_HIDDEN (__exidx_end = .); }"
++
++DATA_START_SYMBOLS='__data_start = . ;';
++
 +GENERATE_SHLIB_SCRIPT=yes
-+GENERATE_PIE_SCRIPT=yes
-+NO_SMALL_DATA=yes
++
++ARCH=arm
++MACHINE=
++MAXPAGESIZE="CONSTANT (MAXPAGESIZE)"
++ENTRY=_start
 +EMBEDDED=yes
-diff -rupN binutils-2.20.1.orig/ld/emulparams/pedigree_i386.sh binutils-2.20.1/ld/emulparams/pedigree_i386.sh
---- binutils-2.20.1.orig/ld/emulparams/pedigree_i386.sh	1970-01-01 10:00:00.000000000 +1000
-+++ binutils-2.20.1/ld/emulparams/pedigree_i386.sh	2014-02-25 18:30:53.799162344 +1000
-@@ -0,0 +1,13 @@
++
++# This sets the stack to the top of the simulator memory (2^19 bytes).
++STACK_ADDR=0x80000
++
++# ARM does not support .s* sections.
++NO_SMALL_DATA=yes
+diff --git a/ld/emulparams/pedigree_i386.sh b/ld/emulparams/pedigree_i386.sh
+new file mode 100644
+index 0000000..d5502aa
+--- /dev/null
++++ b/ld/emulparams/pedigree_i386.sh
+@@ -0,0 +1,16 @@
++. ${srcdir}/emulparams/plt_unwind.sh
 +SCRIPT_NAME=elf
 +OUTPUT_FORMAT="elf32-i386"
++NO_RELA_RELOCS=yes
 +TEXT_START_ADDR=0x08048000
 +MAXPAGESIZE="CONSTANT (MAXPAGESIZE)"
 +COMMONPAGESIZE="CONSTANT (COMMONPAGESIZE)"
 +ARCH=i386
 +MACHINE=
-+NOP=0x90909090
 +TEMPLATE_NAME=elf32
 +GENERATE_SHLIB_SCRIPT=yes
 +GENERATE_PIE_SCRIPT=yes
 +NO_SMALL_DATA=yes
-+SEPARATE_GOTPLT=12
-diff -rupN binutils-2.20.1.orig/ld/emulparams/pedigree_x86_64.sh binutils-2.20.1/ld/emulparams/pedigree_x86_64.sh
---- binutils-2.20.1.orig/ld/emulparams/pedigree_x86_64.sh	1970-01-01 10:00:00.000000000 +1000
-+++ binutils-2.20.1/ld/emulparams/pedigree_x86_64.sh	2014-02-25 18:30:53.799162344 +1000
-@@ -0,0 +1,13 @@
++SEPARATE_GOTPLT="SIZEOF (.got.plt) >= 12 ? 12 : 0"
++IREL_IN_PLT=
++
+diff --git a/ld/emulparams/pedigree_x86_64.sh b/ld/emulparams/pedigree_x86_64.sh
+new file mode 100644
+index 0000000..43a1855
+--- /dev/null
++++ b/ld/emulparams/pedigree_x86_64.sh
+@@ -0,0 +1,26 @@
++. ${srcdir}/emulparams/plt_unwind.sh
 +SCRIPT_NAME=elf
++ELFSIZE=64
 +OUTPUT_FORMAT="elf64-x86-64"
-+TEXT_START_ADDR=0x08048000
++NO_REL_RELOCS=yes
++TEXT_START_ADDR=0x400000
 +MAXPAGESIZE="CONSTANT (MAXPAGESIZE)"
 +COMMONPAGESIZE="CONSTANT (COMMONPAGESIZE)"
-+ARCH=i386:x86-64
++ARCH="i386:x86-64"
 +MACHINE=
-+NOP=0x90909090
 +TEMPLATE_NAME=elf32
 +GENERATE_SHLIB_SCRIPT=yes
 +GENERATE_PIE_SCRIPT=yes
 +NO_SMALL_DATA=yes
-+SEPARATE_GOTPLT=24
-diff -rupN binutils-2.20.1.orig/ld/Makefile.in binutils-2.20.1/ld/Makefile.in
---- binutils-2.20.1.orig/ld/Makefile.in	2014-02-25 18:30:39.783092828 +1000
-+++ binutils-2.20.1/ld/Makefile.in	2014-02-25 18:38:00.601278737 +1000
-@@ -2452,6 +2452,12 @@ eelf64ltsmip.c: $(srcdir)/emulparams/elf
- eelf_i386.c: $(srcdir)/emulparams/elf_i386.sh \
-   $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
- 	${GENSCRIPTS} elf_i386 "$(tdir_elf_i386)"
-+epedigree_i386.c: $(srcdir)/emulparams/pedigree_i386.sh $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
-+	${GENSCRIPTS} pedigree_i386 "$(tdir_pedigree_i386)"
-+epedigree_x86_64.c: $(srcdir)/emulparams/pedigree_x86_64.sh $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
-+	${GENSCRIPTS} pedigree_x86_64 "$(tdir_pedigree_x86_64)"
-+epedigree_arm.c: $(srcdir)/emulparams/pedigree_arm.sh $(ELF_DEPS) $(srcdir)/emultempl/armelf.em $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
-+	${GENSCRIPTS} pedigree_arm "$(tdir_pedigree_arm)"
- eelf_x86_64.c: $(srcdir)/emulparams/elf_x86_64.sh \
-   $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
- 	${GENSCRIPTS} elf_x86_64 "$(tdir_elf_x86_64)"
++LARGE_SECTIONS=yes
++LARGE_BSS_AFTER_BSS=
++SEPARATE_GOTPLT="SIZEOF (.got.plt) >= 24 ? 24 : 0"
++IREL_IN_PLT=
++
++if [ "x${host}" = "x${target}" ]; then
++  case " $EMULATION_LIBPATH " in
++    *" ${EMULATION_NAME} "*)
++      NATIVE=yes
++  esac
++fi
++
+-- 
+1.9.1.423.g4596e3a
+
