@@ -3,12 +3,19 @@
 use strict;
 use warnings;
 
+die ("No target given!") unless scalar @ARGV > 0;
+
+my $target = $ARGV[0];
+
 my $gcc_version = "4.8.2";
 my $binutils_version = "2.24";
 my $nasm_version = "2.11.02";
 
 my $gcc_configure_special = " --disable-werror ";
 my $binutils_configure_special = " --disable-werror ";
+
+my $gcc_libcpp_make = "";
+my $gcc_libcpp_install = "";
 
 # Handle special arguments. These are given to change the behaviour of the script, or to
 # work around issues with specific operating systems.
@@ -17,6 +24,11 @@ for(my $i = 2; $i < @ARGV; $i++)
     if($ARGV[$i] eq "osx-compat")
     {
         $gcc_configure_special .= " --with-gmp=/opt/local --with-libiconv-prefix=/opt/local ";
+    }
+    elsif($ARGV[$i] eq "libcpp")
+    {
+        $gcc_libcpp_make = "all-target-libstdc++-v3";
+        $gcc_libcpp_install = "install-target-libstdc++-v3";
     }
 }
 
@@ -74,10 +86,18 @@ my @compile = ( {'dir' => "nasm-$nasm_version",
                 {'dir' => "gcc-$gcc_version",
                  'name' => "Gcc",
                  'configure' => "--target=\$TARGET $gcc_configure_special --prefix=\$PREFIX --disable-nls --enable-languages=c,c++ --without-headers --without-newlib",
-                 'make' => "all-gcc all-target-libgcc all-target-libstdc++-v3",
-                 'install' => "install-gcc install-target-libgcc install-target-libstdc++-v3",
+                 'make' => "all-gcc all-target-libgcc",
+                 'install' => "install-gcc install-target-libgcc",
                  'arch' => 'i686-pedigree amd64-pedigree x86_64-pedigree i686-elf amd64-elf arm-elf ppc-elf powerpc-elf',
                  'test' => './bin/!TARGET-gcc'},
+                {'dir' => "gcc-$gcc_version",
+                 'ok' => $gcc_libcpp_make ne "",
+                 'name' => "libstdc++",
+                 'configure' => "--target=\$TARGET $gcc_configure_special --prefix=\$PREFIX --disable-nls --enable-languages=c,c++ --without-headers --without-newlib",
+                 'make' => "all-gcc $gcc_libcpp_make",
+                 'install' => "install-gcc $gcc_libcpp_install",
+                 'arch' => 'i686-pedigree amd64-pedigree x86_64-pedigree i686-elf amd64-elf arm-elf ppc-elf powerpc-elf',
+                 'test' => './!TARGET/lib/libstdc++.a'},
                 {'dir' => "gcc-$gcc_version",
                  'name' => "Gcc (mips)",
                  'configure' => "--target=\$TARGET $gcc_configure_special --prefix=\$PREFIX --disable-nls --enable-languages=c,c++ --without-headers --without-newlib --with-llsc=yes",
@@ -89,9 +109,6 @@ my @compile = ( {'dir' => "nasm-$nasm_version",
 ###################################################################################
 # Script start.
 
-die ("No target given!") unless scalar @ARGV > 0;
-
-my $target = $ARGV[0];
 $ENV{CC} = "";
 $ENV{CXX} = "";
 $ENV{AS} = "";
@@ -125,6 +142,8 @@ unless (-l "./compilers/dir") {
 my $all_installed = 1;
 foreach (@compile) {
   my %compile = %$_;
+
+  next if (defined $compile{ok} and !$compile{ok});
 
   if ($compile{arch} =~ m/($target)|(all)/i) {
     # Already installed?
@@ -204,6 +223,8 @@ print "\n";
 print "Compiling:\n";
 foreach (@compile) {
   my %compile = %$_;
+
+  next if (defined $compile{ok} and !$compile{ok});
 
   if ($compile{arch} =~ m/($target)|(all)/i) {
     # Already installed?

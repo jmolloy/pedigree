@@ -134,6 +134,16 @@ if [ $? != 0 ]; then
     fi
 fi
 
+set -e
+
+# Run a quick build of libc and libm for the rest of the build system.
+scons CROSS=$script_dir/compilers/dir/bin/x86_64-pedigree- build/libc.so build/libm.so
+
+# Build GCC again with access to the newly built libc.
+$script_dir/scripts/checkBuildSystemNoInteractive.pl x86_64-pedigree $script_dir/pedigree-compiler $compiler_build_options "libcpp"
+
+set +e
+
 echo
 echo "Ensuring CDI is up-to-date."
 
