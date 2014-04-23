@@ -16,7 +16,7 @@ def doLibm(builddir, inputLibmA, ar, cc, libgcc):
 
     shutil.copy(inputLibmA, tmpdir + "/libm.a")
     shutil.copy(inputLibmA, buildOut + '.a')
-    os.system(cc + " -nostdlib -shared -Wl,-soname,libm.so -L. -o " + buildOut + ".so -Wl,--whole-archive -lm --Wl,--no-whole-archive -lgcc")
+    os.system(cc + " -nostdlib -shared -Wl,-soname,libm.so -L. -o " + buildOut + ".so -Wl,--whole-archive -lm -Wl,--no-whole-archive -lgcc")
 
     for i in os.listdir("."):
         os.remove(i)
