@@ -155,13 +155,12 @@ diff --git a/libstdc++-v3/crossconfig.m4 b/libstdc++-v3/crossconfig.m4
 index 943ea67..11c46b6 100644
 --- a/libstdc++-v3/crossconfig.m4
 +++ b/libstdc++-v3/crossconfig.m4
-@@ -173,6 +173,11 @@ case "${host}" in
+@@ -173,6 +173,10 @@ case "${host}" in
        AC_DEFINE(HAVE_ISNANL)
      fi
      ;;
 +  *-pedigree*)
 +    AC_CHECK_HEADERS([sys/types.h locale.h float.h])
-+    GLIBCXX_CHECK_LINKER_FEATURES
 +    GLIBCXX_CHECK_COMPLEX_MATH_SUPPORT
 +    ;;
    *-qnx6.1* | *-qnx6.2*)
