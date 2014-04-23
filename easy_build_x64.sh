@@ -20,7 +20,7 @@ real_os=""
 if [ ! -e $script_dir/.easy_os ]; then
 
     echo "Checking for dependencies... Which operating system are you running on?"
-    echo "Cygwin, Debian/Ubuntu, OpenSuSE, Fedora or some other system?"
+    echo "Cygwin, Debian/Ubuntu, OpenSuSE, Fedora, OSX, or some other system?"
 
     if [ $# == 0 ]; then
         read os
@@ -58,13 +58,19 @@ if [ ! -e $script_dir/.easy_os ]; then
 
             real_os="osx"
             ;;
+        openbsd)
+            echo "Installing packages with pkg_add, please wait..."
+            sudo pkg_add scons mtools sqlite cdrtools gmp mpfr libmpc wget sed
+            ;;
         cygwin|windows|mingw)
-            echo "Please ensure you use Cygwin's 'setup.exe' to install the following:"
+            echo "Please ensure you use Cygwin's 'setup.exe', or some other method, to install the following:"
             echo " - Python"
             echo " - GCC & binutils"
             echo " - libgmp, libmpc, libmpfr"
             echo " - mkisofs/genisoimage"
             echo " - sqlite"
+            echo " - patch"
+            echo " - GNU make"
             echo "You will need to find alternative sources for the following:"
             echo " - mtools"
             echo " - scons"
@@ -167,13 +173,16 @@ echo
 # Build Pedigree.
 scons CROSS=$script_dir/compilers/dir/bin/x86_64-pedigree-
 
+# One day we might fix this bug (create proper disk image with built apps).
+scons
+
 cd "$old"
 
 echo
 echo
 echo "Pedigree is now ready to be built without running this script."
 echo "To build in future, run the following command in the '$script_dir' directory:"
-echo "scons CROSS=$script_dir/pedigree-compiler/bin/x86_64-pedigree-"
+echo "scons"
 echo
 echo "If you wish, you can continue to run this script. It won't ask questions"
 echo "anymore, unless you remove the '.easy_os' file in '$script_dir'."
