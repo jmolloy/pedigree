@@ -186,6 +186,10 @@ if env['CROSS'] != '' or env['ON_PEDIGREE']:
         crossTuple = cross[1]
 
         env['COMPILER_TARGET'] = crossTuple.strip('-')
+        if 'i686' in crossTuple:
+            print "Please run 'easy_build_x64.sh' to create a 64-bit toolchain."
+            print "32-bit builds of Pedigree are no longer supported."
+            exit(1)
     else:
         # TODO: parse 'gcc -v' to get COMPILER_TARGET
         env['COMPILER_TARGET'] = 'FIXME'
