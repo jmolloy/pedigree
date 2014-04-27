@@ -121,17 +121,10 @@ cd $script_dir
 
 set +e
 
-# Update the local working copy, only if the working copy is not dirty and we
-# are not a developer.
-git remote -v | grep ssh > /dev/null 2>&1
-if [ $? != 0 ]; then
-    # Not a developer - check for clean working copy
-    if [[ $(git diff --shortstat 2> /dev/null | tail -n1) == "" ]]; then
-        echo
-        echo "Please wait, checking for a newer revision of the Pedigree source code."
-        echo "If one is found, it will be downloaded and your local copy will be automatically updated."
-        git fetch && git rebase origin/master > /dev/null 2>&1
-    fi
+# Update the local working copy only if it is clean.
+changed=`git status -s -uno`
+if [ -z "$changed" ]; then
+    git pull --rebase > /dev/null 2>&1
 fi
 
 set -e
