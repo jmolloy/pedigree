@@ -1,5 +1,9 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * 
+ * Copyright (c) 2008-2014, Pedigree Developers
+ *
+ * Please see the CONTRIB file in the root of the source tree for a full
+ * list of contributors.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -12,11 +16,6 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- *
- * Highly inspired by a talk with Peter Bindels (aka. Candy) in #osdev and his singleton code for AtlantisOS
- * ( http://atlantisos.svn.sourceforge.net/viewvc/atlantisos/include/gof/singleton?view=markup ). Glad to
- * see you back osdeving. :-)
- *
  */
 
 #ifndef KERNEL_SINGLETON_H
