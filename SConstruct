@@ -348,6 +348,10 @@ if(tmp == None or env['ARCH_TARGET'] == ''):
 if(env['pup']):
     env['PEDIGREE_IMAGES_DIR'] = '#images/local/'
 
+    imagesdir = env.Dir(env['PEDIGREE_IMAGES_DIR']).abspath
+    if not os.path.exists(imagesdir):
+        os.makedirs(imagesdir)
+
 if env['debugger']:
     # Build in debugging information when built with the debugger.
     # Use DWARF, as the stabs format is not very useful (32 bits of reloc)
