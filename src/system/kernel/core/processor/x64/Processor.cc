@@ -33,6 +33,35 @@
   #include "../x86_common/Multiprocessor.h"
 #endif
 
+#define PAT_UC      0x00
+#define PAT_WC      0x01
+#define PAT_WT      0x04
+#define PAT_WP      0x05
+#define PAT_WB      0x06
+#define PAT_UCMINUS 0x07
+
+union pat {
+    struct {
+        uint32_t pa0 : 3;
+        uint32_t rsvd0 : 5;
+        uint32_t pa1 : 3;
+        uint32_t rsvd1 : 5;
+        uint32_t pa2 : 3;
+        uint32_t rsvd2 : 5;
+        uint32_t pa3 : 3;
+        uint32_t rsvd3 : 5;
+        uint32_t pa4 : 3;
+        uint32_t rsvd4 : 5;
+        uint32_t pa5 : 3;
+        uint32_t rsvd5 : 5;
+        uint32_t pa6 : 3;
+        uint32_t rsvd6 : 5;
+        uint32_t pa7 : 3;
+        uint32_t rsvd7 : 5;
+    } s;
+    uint64_t x;
+};
+
 void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
 {
   const X64VirtualAddressSpace &x64AddressSpace = static_cast<const X64VirtualAddressSpace&>(AddressSpace);
@@ -70,6 +99,41 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
   // Initialise the I/O Manager
   IoPortManager &ioPortManager = IoPortManager::instance();
   ioPortManager.initialise(0, 0x10000);
+
+  /// todo move to a better place
+  // Write PAT MSR.
+  // MSR 0x277
+
+/*
+PAT Entry
+Memory Type Following Power-up or Reset
+PAT0 WB
+PAT1 WT
+PAT2 UC-
+PAT3 UC
+PAT4 WB
+PAT5 WT
+PAT6 UC-
+PAT7 UC
+*/
+  //
+  uint32_t pat_lo, pat_hi;
+  asm volatile("rdmsr" : "=a" (pat_lo), "=d" (pat_hi) : "c" (0x277));
+
+  union pat p;
+  p.x = pat_lo | (static_cast<uint64_t>(pat_hi) << 32ULL);
+  p.s.pa0 = PAT_WB;
+  p.s.pa1 = PAT_WC; // Redefine PWT in all page entries to mean WC instead of WT.
+  p.s.pa2 = PAT_UCMINUS;
+  p.s.pa3 = PAT_UC;
+  p.s.pa4 = PAT_WB;
+  p.s.pa5 = PAT_WT; // PWT|PAT == WT.
+  p.s.pa6 = PAT_UCMINUS;
+  p.s.pa7 = PAT_UC;
+  pat_lo = static_cast<uint32_t>(p.x);
+  pat_hi = static_cast<uint32_t>(p.x >> 32ULL);
+
+  asm volatile("wrmsr" :: "a" (pat_lo), "d" (pat_hi), "c" (0x277));
 
   m_Initialised = 1;
 }
