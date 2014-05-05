@@ -34,7 +34,7 @@
 #define PAGE_PRESENT                0x01
 #define PAGE_WRITE                  0x02
 #define PAGE_USER                   0x04
-#define PAGE_WRITE_THROUGH          0x08
+#define PAGE_WRITE_COMBINE          0x08
 #define PAGE_CACHE_DISABLE          0x10
 #define PAGE_ACCESSED               0x20
 #define PAGE_DIRTY                  0x40
@@ -45,6 +45,7 @@
 #define PAGE_COPY_ON_WRITE          0x400
 #define PAGE_SHARED                 0x800
 #define PAGE_NX                     0x8000000000000000
+#define PAGE_WRITE_THROUGH          (PAGE_PAT | PAGE_WRITE_COMBINE)
 
 //
 // Macros
@@ -660,10 +661,8 @@ uint64_t X64VirtualAddressSpace::toFlags(size_t flags, bool bFinal)
     Flags |= PAGE_USER;
   if ((flags & Write) == Write)
     Flags |= PAGE_WRITE;
-  /*
   if ((flags & WriteCombine) == WriteCombine)
     Flags |= PAGE_WRITE_COMBINE;
-  */
   if ((flags & CacheDisable) == CacheDisable)
     Flags |= PAGE_CACHE_DISABLE;
   if ((flags & Execute) != Execute)
@@ -696,8 +695,8 @@ size_t X64VirtualAddressSpace::fromFlags(uint64_t Flags, bool bFinal)
     flags |= KernelMode;
   if ((Flags & PAGE_WRITE) == PAGE_WRITE)
     flags |= Write;
-  if ((Flags & PAGE_WRITE_THROUGH) == PAGE_WRITE_THROUGH)
-    flags |= WriteThrough;
+  if ((Flags & PAGE_WRITE_COMBINE) == PAGE_WRITE_COMBINE)
+    flags |= WriteCombine;
   if ((Flags & PAGE_CACHE_DISABLE) == PAGE_CACHE_DISABLE)
     flags |= CacheDisable;
   if ((Flags & PAGE_NX) != PAGE_NX)
@@ -722,6 +721,9 @@ size_t X64VirtualAddressSpace::fromFlags(uint64_t Flags, bool bFinal)
 
 bool X64VirtualAddressSpace::conditionalTableEntryAllocation(uint64_t *tableEntry, uint64_t flags)
 {
+  // Convert VirtualAddressSpace::* flags to X64 flags.
+  flags = toFlags(flags);
+
   if ((*tableEntry & PAGE_PRESENT) != PAGE_PRESENT)
   {
     // Allocate a page
@@ -732,7 +734,6 @@ bool X64VirtualAddressSpace::conditionalTableEntryAllocation(uint64_t *tableEntr
 
     // Add the WRITE and USER flags so that these can be controlled
     // on a page-granularity level.
-    flags = toFlags(flags);
     flags &= ~(PAGE_GLOBAL | PAGE_NX | PAGE_SWAPPED | PAGE_COPY_ON_WRITE);
     flags |= PAGE_WRITE | PAGE_USER;
 
@@ -757,10 +758,11 @@ bool X64VirtualAddressSpace::conditionalTableEntryMapping(uint64_t *tableEntry,
                                                           uint64_t physAddress,
                                                           uint64_t flags)
 {
+  // Convert VirtualAddressSpace::* flags to X64 flags.
+  flags = toFlags(flags, true);
+
   if ((*tableEntry & PAGE_PRESENT) != PAGE_PRESENT)
   {
-    flags = toFlags(flags, true);
-
     // Map the page. Add the WRITE and USER flags so that these can be controlled
     // on a page-granularity level.
     *tableEntry = physAddress | ((flags & ~(PAGE_GLOBAL | PAGE_NX | PAGE_SWAPPED | PAGE_COPY_ON_WRITE)) | PAGE_WRITE | PAGE_USER);
