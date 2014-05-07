@@ -184,6 +184,17 @@ class VirtualAddressSpace
     /** Gets address of the end of the kernel's heap region. */
     virtual uintptr_t getKernelHeapEnd() const = 0;
 
+    /**
+     * Gets address of the start of the dynamic memory mapping area.
+     * This is an area in which memory mappings can be created for userspace
+     * applications.
+     * Systems that do not have room in the address space for this may return
+     * zero.
+     */
+    virtual uintptr_t getDynamicStart() const { return 0; }
+    /** Gets address of the end of the dynamic memory mapping area. */
+    virtual uintptr_t getDynamicEnd() const { return 0; }
+
     /** Pointer to the beginning of the heap */
     void *m_Heap;
     /** Pointer to the current heap end */

@@ -40,6 +40,8 @@
 #define USERSPACE_VIRTUAL_STACK_SIZE            0x100000
 #define USERSPACE_VIRTUAL_MAX_STACK_SIZE        0x100000
 #define USERSPACE_VIRTUAL_LOWEST_STACK          reinterpret_cast<void*>(0x70000000)
+#define USERSPACE_DYNAMIC_START                 reinterpret_cast<void*>(0xC0000000)
+#define USERSPACE_DYNAMIC_END                   reinterpret_cast<void*>(0x00007FFFFFFFFFFF)
 #define KERNEL_VIRTUAL_HEAP                     reinterpret_cast<void*>(0xFFFFFFFF00000000)
 #define KERNEL_VIRTUAL_HEAP_SIZE                0x7FC00000
 #define KERNEL_VIRTUAL_ADDRESS                  reinterpret_cast<void*>(0xFFFFFFFF7FF00000)
@@ -149,6 +151,18 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
     virtual uintptr_t getKernelHeapEnd() const
     {
         return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_HEAP) + KERNEL_VIRTUAL_HEAP_SIZE;
+    }
+
+    /** Gets address of the start of dynamic memory mapping area. */
+    virtual uintptr_t getDynamicStart() const
+    {
+        return reinterpret_cast<uintptr_t>(USERSPACE_DYNAMIC_START);
+    }
+
+    /** Gets address of the end of dynamic memory mapping area. */
+    virtual uintptr_t getDynamicEnd() const
+    {
+        return reinterpret_cast<uintptr_t>(USERSPACE_DYNAMIC_END);
     }
 
   private:
