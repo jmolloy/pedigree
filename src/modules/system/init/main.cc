@@ -330,7 +330,13 @@ void init_stage2()
     pProcess->getSpaceAllocator().clear();
     pProcess->getSpaceAllocator().free(
             pProcess->getAddressSpace()->getUserStart(),
-            pProcess->getAddressSpace()->getUserReservedStart());
+            pProcess->getAddressSpace()->getUserReservedStart() - pProcess->getAddressSpace()->getUserStart());
+    if(pProcess->getAddressSpace()->getDynamicStart())
+    {
+        pProcess->getSpaceAllocator().free(
+            pProcess->getAddressSpace()->getDynamicStart(),
+            pProcess->getAddressSpace()->getDynamicEnd() - pProcess->getAddressSpace()->getDynamicEnd());
+    }
     pProcess->getAddressSpace()->revertToKernelAddressSpace();
 
     DynamicLinker *pLinker = new DynamicLinker();

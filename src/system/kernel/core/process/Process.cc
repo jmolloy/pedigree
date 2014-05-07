@@ -42,7 +42,15 @@ Process::Process() :
   m_pDynamicLinker(0), m_pSubsystem(0), m_Waiters(), m_bUnreportedSuspend(false), m_bUnreportedResume(false), m_BeforeSuspendState(Thread::Ready), m_DeadThreads(0)
 {
   m_Id = Scheduler::instance().addProcess(this);
-  m_SpaceAllocator.free(m_pAddressSpace->getUserStart(), m_pAddressSpace->getUserReservedStart());
+  getSpaceAllocator().free(
+      getAddressSpace()->getUserStart(),
+      getAddressSpace()->getUserReservedStart() - getAddressSpace()->getUserStart());
+  if(getAddressSpace()->getDynamicStart())
+  {
+    getSpaceAllocator().free(
+        getAddressSpace()->getDynamicStart(),
+        getAddressSpace()->getDynamicEnd() - getAddressSpace()->getDynamicEnd());
+  }
 }
 
 Process::Process(Process *pParent) :

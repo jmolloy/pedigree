@@ -394,7 +394,13 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     pProcess->getSpaceAllocator().clear();
     pProcess->getSpaceAllocator().free(
             pProcess->getAddressSpace()->getUserStart(),
-            pProcess->getAddressSpace()->getUserReservedStart());
+            pProcess->getAddressSpace()->getUserReservedStart() - pProcess->getAddressSpace()->getUserStart());
+    if(pProcess->getAddressSpace()->getDynamicStart())
+    {
+        pProcess->getSpaceAllocator().free(
+            pProcess->getAddressSpace()->getDynamicStart(),
+            pProcess->getAddressSpace()->getDynamicEnd() - pProcess->getAddressSpace()->getDynamicEnd());
+    }
 
     // Get rid of all the crap from the last elf image.
     MemoryMapManager::instance().unmapAll();
