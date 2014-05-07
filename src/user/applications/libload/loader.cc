@@ -1041,6 +1041,7 @@ void doRelocation(object_meta_t *meta) {
         // mprotect accordingly.
         size_t alignExtra = meta->phdrs[i].vaddr & (getpagesize() - 1);
         uintptr_t protectaddr = meta->phdrs[i].vaddr & ~(getpagesize() - 1);
+        syslog(LOG_INFO, "map %s %x -> %x [%x] %s%s%s", meta->filename.c_str(), meta->phdrs[i].vaddr, meta->phdrs[i].vaddr + meta->phdrs[i].memsz, meta->phdrs[i].offset, flags & PROT_READ ? "r" : "-", flags & PROT_WRITE ? "w" : "-", flags & PROT_EXEC ? "x" : "-");
         mprotect((void *) protectaddr, meta->phdrs[i].memsz + alignExtra, flags);
     }
 }
