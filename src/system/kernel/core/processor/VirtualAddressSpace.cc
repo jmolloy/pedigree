@@ -33,6 +33,33 @@ void *VirtualAddressSpace::expandHeap(ssize_t incr, size_t flags)
   
   m_HeapEnd = reinterpret_cast<void*> (reinterpret_cast<uintptr_t>(m_HeapEnd) & ~(PhysicalMemoryManager::getPageSize()-1));
 
+  uintptr_t newEnd = reinterpret_cast<uintptr_t>(newHeapEnd);
+
+  // Are we already at the end of the heap region?
+  if(newEnd >= getKernelHeapStart())
+  {
+    // Kernel check - except SLAM doesn't use expandHeap.
+    FATAL("expandHeap called for kernel heap!");
+    return 0;
+  }
+  else if(getDynamicStart())
+  {
+    if(newEnd >= getDynamicStart())
+    {
+      // Heap is about to run over into the dynamic memory mapping region.
+      // This is not allowed.
+      ERROR("Heap expansion no longer allowed; about to run into dynamic memory area.");
+      return 0;
+    }
+  }
+  else if(newEnd >= getKernelStart())
+  {
+    // Nasty way of checking because by this point we'll have overrun the stack,
+    // but the best we can do.
+    ERROR("Heap expansion no longer allowed; have run over userspace stacks and about to run into kernel area.");
+    return 0;
+  }
+
   int i = 0;
   if(incr < 0)
   {
