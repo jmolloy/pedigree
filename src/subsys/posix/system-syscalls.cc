@@ -399,7 +399,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     {
         pProcess->getSpaceAllocator().free(
             pProcess->getAddressSpace()->getDynamicStart(),
-            pProcess->getAddressSpace()->getDynamicEnd() - pProcess->getAddressSpace()->getDynamicEnd());
+            pProcess->getAddressSpace()->getDynamicEnd() - pProcess->getAddressSpace()->getDynamicStart());
     }
 
     // Get rid of all the crap from the last elf image.

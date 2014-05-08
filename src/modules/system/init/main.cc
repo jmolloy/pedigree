@@ -335,7 +335,7 @@ void init_stage2()
     {
         pProcess->getSpaceAllocator().free(
             pProcess->getAddressSpace()->getDynamicStart(),
-            pProcess->getAddressSpace()->getDynamicEnd() - pProcess->getAddressSpace()->getDynamicEnd());
+            pProcess->getAddressSpace()->getDynamicEnd() - pProcess->getAddressSpace()->getDynamicStart());
     }
     pProcess->getAddressSpace()->revertToKernelAddressSpace();
 

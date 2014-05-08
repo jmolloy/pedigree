@@ -49,7 +49,7 @@ Process::Process() :
   {
     getSpaceAllocator().free(
         getAddressSpace()->getDynamicStart(),
-        getAddressSpace()->getDynamicEnd() - getAddressSpace()->getDynamicEnd());
+        getAddressSpace()->getDynamicEnd() - getAddressSpace()->getDynamicStart());
   }
 }
 
