@@ -32,6 +32,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
 
 // PID of the process we're running
 int g_RunningPid = -1;
@@ -73,6 +74,9 @@ int main(int argc, char **argv)
   // New process group for job control. We'll ignore SIGINT for now.
   signal(SIGINT, sigint);
   setsid();
+
+  // Make sure we still have the terminal, though.
+  ioctl(1, TIOCSCTTY, 0);
 
   // Set ourselves as the terminal's foreground process group.
   tcsetpgrp(1, getpgrp());
