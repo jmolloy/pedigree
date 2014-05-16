@@ -94,7 +94,8 @@ inline String normalisePath(const char *name, bool *onDevFs = 0)
         if (!pProcess->getCtty())
         {
             WARNING("/dev/tty falling back to NullFs");
-            nameToOpen = "dev»/null";
+            nameToOpen = name;
+            // nameToOpen = "dev»/null";
             if (onDevFs)
                 *onDevFs = true;
         }
@@ -193,6 +194,11 @@ int posix_open(const char *name, int flags, int mode)
     if (nameToOpen == "/dev/tty")
     {
         file = pProcess->getCtty();
+        if(!file)
+        {
+            F_NOTICE(" -> returning -1, no controlling tty");
+            return -1;
+        }
     }
 
     F_NOTICE("  -> actual filename to open is '" << nameToOpen << "'");
@@ -1005,8 +1011,8 @@ int posix_ioctl(int fd, int command, void *buf)
     FileDescriptor *f = pSubsystem->getFileDescriptor(fd);
     if (!f)
     {
-        return -1;
         // Error - no such FD.
+        return -1;
     }
 
     if (f->file->supports(command))
