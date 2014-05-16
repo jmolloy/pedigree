@@ -598,7 +598,7 @@ int posix_listen(int sock, int backlog)
         SYSCALL_ERROR(BadFileDescriptor);
         return -1;
     }
-    if(f->so_domain != SOCK_STREAM)
+    if(f->so_type != SOCK_STREAM)
     {
         SYSCALL_ERROR(InvalidArgument);
         return -1;
