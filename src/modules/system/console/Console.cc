@@ -78,7 +78,7 @@ int ConsoleFile::select(bool bWriting, int timeout)
 }
 
 ConsoleMasterFile::ConsoleMasterFile(String consoleName, Filesystem *pFs) :
-    ConsoleFile(consoleName, pFs), bLocked(false), m_LineBuffer(), m_LineBufferSize(0),
+    ConsoleFile(consoleName, pFs), bLocked(false), pLocker(0), m_LineBuffer(), m_LineBufferSize(0),
     m_LineBufferFirstNewline(~0), m_Last(0), m_EventTrigger(true)
 {
 }
@@ -575,9 +575,10 @@ bool ConsoleManager::lockConsole(File *file)
     if(!pConsole->isMaster())
         return false;
 
-    if(pConsole->bLocked)
+    if(pConsole->bLocked && Processor::information().getCurrentThread()->getParent() != pConsole->pLocker)
         return false;
     pConsole->bLocked = true;
+    pConsole->pLocker = Processor::information().getCurrentThread()->getParent();
 
     return true;
 }
@@ -589,6 +590,7 @@ void ConsoleManager::unlockConsole(File *file)
 
     ConsoleMasterFile *pConsole = static_cast<ConsoleMasterFile *>(file);
     pConsole->bLocked = false;
+    pConsole->pLocker = 0;
 }
 
 bool ConsoleManager::isConsole(File* file)

@@ -164,6 +164,10 @@ class ConsoleMasterFile : public ConsoleFile
         /// Is this master locked (ie, already opened)?
         bool bLocked;
 
+        /// Who holds the lock on the console? (ie, same process can 'lock'
+        /// twice...)
+        Process *pLocker;
+
         virtual bool isMaster()
         {
             return true;
