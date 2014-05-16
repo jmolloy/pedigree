@@ -174,6 +174,7 @@ File* NetManager::accept(File* f)
 
         File *ret = new Socket(sock->getProtocol(), client, this);
         ret->increaseRefCount(false);
+        client->AddSocket(static_cast<Socket*>(ret));
         return ret;
     }
     return 0;
