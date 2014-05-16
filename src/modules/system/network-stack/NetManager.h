@@ -143,7 +143,10 @@ class Socket : public File
                     // Not established = let the application get EOF
                     else if(state > Tcp::ESTABLISHED)
                         return 1;
-                    // Before ESTABLISHED, not ready
+                    // Before ESTABLISHED, handle listen
+                    else if(state == Tcp::LISTEN)
+                        return ce->dataReady(timeout > 0, timeout);
+                    // Before ESTABLISHED and not LISTEN, never data ready.
                     else
                         return 0;
                 }

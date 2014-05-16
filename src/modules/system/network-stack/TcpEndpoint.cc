@@ -32,6 +32,12 @@ int TcpEndpoint::state()
 
 Endpoint* TcpEndpoint::accept()
 {
+    if (TcpManager::instance().getState(m_ConnId) != Tcp::LISTEN)
+    {
+      ERROR("TcpEndpoint::accept() called but not in the LISTEN state!?");
+      return 0;
+    }
+
     // acquire() will return true when there is at least one connection waiting
     m_IncomingConnectionCount.acquire();
 
@@ -176,6 +182,23 @@ size_t TcpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, uint32_t se
 
 bool TcpEndpoint::dataReady(bool block, uint32_t tmout)
 {
+    if (TcpManager::instance().getState(m_ConnId) == Tcp::LISTEN)
+    {
+      if (block)
+      {
+        // Wait for incoming connection.
+        bool bRet = false;
+        if((bRet = m_IncomingConnectionCount.acquire(tmout)))
+          m_IncomingConnectionCount.release();
+        return bRet;
+      }
+      else
+      {
+        LockGuard<Mutex> guard(m_IncomingConnectionLock);
+        return m_IncomingConnections.count() > 0;
+      }
+    }
+
     if (block)
     {
         TimeoutGuard guard(tmout);

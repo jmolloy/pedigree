@@ -121,6 +121,10 @@ class TcpEndpoint : public ConnectionBasedEndpoint
           m_IncomingConnections.pushBack(static_cast<Endpoint*>(conn));
         }
         m_IncomingConnectionCount.release();
+
+        // Wake up listeners that might be waiting for an incoming connection.
+        /// \todo This is a hack - fix stateChanged to be aware of more states.
+        stateChanged(Tcp::ESTABLISHED);
       }
     }
 

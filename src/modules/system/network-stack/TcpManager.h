@@ -129,11 +129,20 @@ public:
 
     StateBlockHandle* handle;
     if((handle = m_CurrentConnections.lookup(connId)) == 0)
+    {
+      WARNING("getState couldn't find a connection for ID " << connId);
       return Tcp::UNKNOWN;
+    }
 
     StateBlock* stateBlock;
-    if((stateBlock = m_StateBlocks.lookup(*handle)) == 0)
-      return Tcp::UNKNOWN;
+    if((stateBlock = m_ListeningStateBlocks.lookup(*handle)) == 0)
+    {
+      if((stateBlock = m_StateBlocks.lookup(*handle)) == 0)
+      {
+        WARNING("getState couldn't find a state block for ID " << connId);
+        return Tcp::UNKNOWN;
+      }
+    }
 
     return stateBlock->currentState;
   }
