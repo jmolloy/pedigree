@@ -1033,6 +1033,12 @@ int posix_ioctl(int fd, int command, void *buf)
             return console_flush(f->file, buf);
         }
 
+        case TIOCSCTTY:
+        {
+            F_NOTICE(" -> TIOCSCTTY");
+            return console_setctty(fd, reinterpret_cast<uintptr_t>(buf) == 1);
+        }
+
         case FIONBIO:
         {
             // set/unset non-blocking

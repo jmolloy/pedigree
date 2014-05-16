@@ -363,6 +363,58 @@ void console_ttyname(int fd, char *buf)
   sprintf(buf, "/dev/%s", static_cast<const char *>(master->getName()));
 }
 
+int console_setctty(int fd, bool steal)
+{
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("No subsystem for one or both of the processes!");
+        return -1;
+    }
+
+    FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
+    if (!pFd)
+    {
+        // Error - no such file descriptor.
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
+
+    if(!ConsoleManager::instance().isConsole(pFd->file))
+    {
+        SYSCALL_ERROR(NotAConsole);
+        return -1;
+    }
+
+    // If a master console, attempt to lock.
+    if(ConsoleManager::instance().isMasterConsole(pFd->file))
+    {
+        if(!ConsoleManager::instance().lockConsole(pFd->file))
+        {
+            NOTICE("ouch");
+            SYSCALL_ERROR(NoMoreProcesses);
+            return -1;
+        }
+    }
+
+    if(pProcess->getCtty())
+    {
+        // Already have a controlling terminal!
+        /// \todo SYSCALL_ERROR of some sort.
+        return -1;
+    }
+
+    /// \todo Check we are session leader.
+    /// \todo If we are root and steal == 1, we can steal a ctty from another
+    ///       session group.
+
+    // All is well.
+    pProcess->setCtty(pFd->file);
+
+    return 0;
+}
+
 int posix_tcsetpgrp(int fd, pid_t pgid_id)
 {
     Process *pProcess = Processor::information().getCurrentThread()->getParent();

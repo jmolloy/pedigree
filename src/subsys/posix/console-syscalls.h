@@ -34,6 +34,9 @@ int console_flush(File *file, void *what);
 void console_ptsname(int fd, char *buf);
 void console_ttyname(int fd, char *buf);
 
+int console_setctty(int fd, bool steal);
+int console_notty(int fd);
+
 pid_t posix_tcgetpgrp(int fd);
 int posix_tcsetpgrp(int fd, pid_t pgid_id);
 
