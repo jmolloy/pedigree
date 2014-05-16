@@ -54,6 +54,8 @@
 #include <PosixProcess.h>
 
 #include <users/UserManager.h>
+#include <console/Console.h>
+
 //
 // Syscalls pertaining to system operations.
 //
@@ -1068,6 +1070,15 @@ int posix_setsid()
     // We're now a group leader - we got promoted!
     pProcess->setProcessGroup(pNewGroup);
     pProcess->setGroupMembership(PosixProcess::Leader);
+
+    // If there's an existing controlling terminal, unlock it.
+    if(pProcess->getCtty())
+    {
+        ConsoleManager::instance().unlockConsole(pProcess->getCtty());
+    }
+
+    // Remove controlling terminal.
+    pProcess->setCtty(0);
 
     NOTICE("setsid: now part of a group [id=" << pNewGroup->processGroupId << "]!");
 
