@@ -367,7 +367,23 @@ int console_ttyname(int fd, char *buf)
   sprintf(buf, "/dev/%s", static_cast<const char *>(tty->getName()));
 }
 
-  sprintf(buf, "/dev/%s", static_cast<const char *>(master->getName()));
+static void setConsoleGroup(Process *pProcess, ProcessGroup *pGroup)
+{
+    // Okay, we have a group. Create a PosixTerminalEvent with the relevant information.
+    ConsoleFile *pConsole = static_cast<ConsoleFile *>(pProcess->getCtty());
+    PosixTerminalEvent *pEvent = new PosixTerminalEvent(reinterpret_cast<uintptr_t>(terminalEventHandler), pGroup, pConsole);
+
+    // Remove any existing event that might be on the terminal.
+    if(pConsole->getEvent())
+    {
+        PosixTerminalEvent *pOldEvent = static_cast<PosixTerminalEvent *>(pConsole->getEvent());
+        pConsole->setEvent(0);
+        delete pOldEvent;
+    }
+
+    // Set as the new event - we are now the foreground process!
+    /// \todo This doesn't work for SIGTTIN and SIGTTOU...
+    pConsole->setEvent(pEvent);
 }
 
 int console_setctty(int fd, bool steal)
@@ -394,17 +410,6 @@ int console_setctty(int fd, bool steal)
         return -1;
     }
 
-    // If a master console, attempt to lock.
-    if(ConsoleManager::instance().isMasterConsole(pFd->file))
-    {
-        if(!ConsoleManager::instance().lockConsole(pFd->file))
-        {
-            NOTICE("ouch");
-            SYSCALL_ERROR(NoMoreProcesses);
-            return -1;
-        }
-    }
-
     if(pProcess->getCtty())
     {
         // Already have a controlling terminal!
@@ -419,11 +424,20 @@ int console_setctty(int fd, bool steal)
     // All is well.
     pProcess->setCtty(pFd->file);
 
+    PosixProcess *pPosixProcess = static_cast<PosixProcess *>(pProcess);
+    ProcessGroup *pProcessGroup = pPosixProcess->getProcessGroup();
+    if(pProcessGroup)
+    {
+      // Move the terminal into the same process group as this process.
+      setConsoleGroup(pProcess, pProcessGroup);
+    }
+
     return 0;
 }
 
 int posix_tcsetpgrp(int fd, pid_t pgid_id)
 {
+  NOTICE("tcsetpgrp (" << fd << ", " << pgid_id << ")");
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
     if(!pSubsystem)
@@ -472,21 +486,7 @@ int posix_tcsetpgrp(int fd, pid_t pgid_id)
         return -1;
     }
 
-    // Okay, we have a group. Create a PosixTerminalEvent with the relevant information.
-    ConsoleFile *pConsole = static_cast<ConsoleFile *>(pProcess->getCtty());
-    PosixTerminalEvent *pEvent = new PosixTerminalEvent(reinterpret_cast<uintptr_t>(terminalEventHandler), pGroup, pConsole);
-
-    // Remove any existing event that might be on the terminal.
-    if(pConsole->getEvent())
-    {
-        PosixTerminalEvent *pOldEvent = static_cast<PosixTerminalEvent *>(pConsole->getEvent());
-        pConsole->setEvent(0);
-        delete pOldEvent;
-    }
-
-    // Set as the new event - we are now the foreground process!
-    /// \todo This doesn't work for SIGTTIN and SIGTTOU...
-    pConsole->setEvent(pEvent);
+    setConsoleGroup(pProcess, pGroup);
 
     return 0;
 }
@@ -517,14 +517,20 @@ pid_t posix_tcgetpgrp(int fd)
 
     // Remove any existing event that might be on the terminal.
     ConsoleFile *pConsole = static_cast<ConsoleFile *>(pProcess->getCtty());
+
+    pid_t result = 0;
     if(pConsole->getEvent())
     {
         PosixTerminalEvent *pEvent = static_cast<PosixTerminalEvent*>(pConsole->getEvent());
-        return pEvent->getGroup()->processGroupId;
+        result = pEvent->getGroup()->processGroupId;
     }
     else
     {
-        return (pid_t) ~0;
+      // Return a group ID greater than one, and not an existing process group ID.
+      result = ProcessGroupManager::instance().allocateGroupId();
     }
+
+    NOTICE("tcgetpgrp -> " << result);
+    return result;
 }
 
