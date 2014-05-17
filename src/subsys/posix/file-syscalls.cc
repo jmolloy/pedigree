@@ -93,9 +93,7 @@ inline String normalisePath(const char *name, bool *onDevFs = 0)
         Process *pProcess = Processor::information().getCurrentThread()->getParent();
         if (!pProcess->getCtty())
         {
-            WARNING("/dev/tty falling back to NullFs");
             nameToOpen = name;
-            // nameToOpen = "dev»/null";
             if (onDevFs)
                 *onDevFs = true;
         }
@@ -138,6 +136,23 @@ int posix_close(int fd)
     {
         ERROR("No subsystem for this process!");
         return -1;
+    }
+
+    FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
+    if (!pFd)
+    {
+        // Error - no such file descriptor.
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
+
+    // If this was a master psuedoterminal, we should unlock it now.
+    if(ConsoleManager::instance().isConsole(pFd->file))
+    {
+        if(ConsoleManager::instance().isMasterConsole(pFd->file))
+        {
+            ConsoleManager::instance().unlockConsole(pFd->file);
+        }
     }
 
     pSubsystem->freeFd(fd);
@@ -198,6 +213,12 @@ int posix_open(const char *name, int flags, int mode)
         {
             F_NOTICE(" -> returning -1, no controlling tty");
             return -1;
+        }
+        else if(ConsoleManager::instance().isMasterConsole(file))
+        {
+            // If we happened to somehow open a master console, get its slave.
+            F_NOTICE(" -> controlling terminal was not a slave (??)");
+            file = ConsoleManager::instance().getOther(file);
         }
     }
 
@@ -286,24 +307,15 @@ int posix_open(const char *name, int flags, int mode)
         // If a master console, attempt to lock.
         if(ConsoleManager::instance().isMasterConsole(file))
         {
+            // Lock the master, we now own it.
+            // Or, we don't - if someone else has it open for example.
             if(!ConsoleManager::instance().lockConsole(file))
             {
                 F_NOTICE("Couldn't lock pseudoterminal master");
-                SYSCALL_ERROR(NoMoreProcesses);
+                SYSCALL_ERROR(DeviceBusy);
                 pSubsystem->freeFd(fd);
                 return -1;
             }
-        }
-        else
-        {
-            // Slave. Set as the new controlling terminal, if needed.
-            if(!(flags & O_NOCTTY))
-            {
-                NOTICE("Setting " << nameToOpen << " as ctty");
-                pProcess->setCtty(file);
-            }
-            else
-                NOTICE("Not setting as CTTY because O_NOCTTY was set.");
         }
     }
 
@@ -1206,8 +1218,9 @@ int posix_isatty(int fd)
         return 0;
     }
 
-    NOTICE("isatty(" << fd << ") -> " << ((ConsoleManager::instance().isConsole(pFd->file)) ? 1 : 0));
-    return (ConsoleManager::instance().isConsole(pFd->file)) ? 1 : 0;
+    int result = ConsoleManager::instance().isConsole(pFd->file) ? 1 : 0;
+    NOTICE("isatty(" << fd << ") -> " << result);
+    return result;
 }
 
 int posix_fcntl(int fd, int cmd, int num, int* args)
