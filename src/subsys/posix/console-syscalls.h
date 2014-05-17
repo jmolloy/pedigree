@@ -31,8 +31,8 @@ int console_getwinsize(File* file, winsize_t *buf);
 int console_setwinsize(File *file, const winsize_t *buf);
 int console_flush(File *file, void *what);
 
-void console_ptsname(int fd, char *buf);
-void console_ttyname(int fd, char *buf);
+int console_ptsname(int fd, char *buf);
+int console_ttyname(int fd, char *buf);
 
 int console_setctty(int fd, bool steal);
 int console_notty(int fd);

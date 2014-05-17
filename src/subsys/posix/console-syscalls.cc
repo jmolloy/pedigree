@@ -297,7 +297,7 @@ int console_flush(File *file, void *what)
   return 0;
 }
 
-void console_ptsname(int fd, char *buf)
+int console_ptsname(int fd, char *buf)
 {
   // Lookup this process.
   Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -305,20 +305,22 @@ void console_ptsname(int fd, char *buf)
   if(!pSubsystem)
   {
       ERROR("No subsystem for one or both of the processes!");
-      return;
+      return -1;
   }
 
   FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
   if (!pFd)
   {
     // Error - no such file descriptor.
-    return;
+    SYSCALL_ERROR(BadFileDescriptor);
+    return -1;
   }
 
   if (!ConsoleManager::instance().isConsole(pFd->file))
   {
     // Error - not a TTY.
-    return;
+    SYSCALL_ERROR(NotAConsole);
+    return -1;
   }
 
   File *slave = pFd->file;
@@ -326,11 +328,16 @@ void console_ptsname(int fd, char *buf)
   {
     slave = ConsoleManager::instance().getOther(pFd->file);
   }
+  else
+  {
+    return -1;
+  }
 
   sprintf(buf, "/dev/%s", static_cast<const char *>(slave->getName()));
+  return 0;
 }
 
-void console_ttyname(int fd, char *buf)
+int console_ttyname(int fd, char *buf)
 {
   // Lookup this process.
   Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -338,27 +345,27 @@ void console_ttyname(int fd, char *buf)
   if(!pSubsystem)
   {
       ERROR("No subsystem for one or both of the processes!");
-      return;
+      return -1;
   }
 
   FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
   if (!pFd)
   {
     // Error - no such file descriptor.
-    return;
+    SYSCALL_ERROR(BadFileDescriptor);
+    return -1;
   }
 
   if (!ConsoleManager::instance().isConsole(pFd->file))
   {
     // Error - not a TTY.
-    return;
+    SYSCALL_ERROR(NotAConsole);
+    return -1;
   }
 
-  File *master = pFd->file;
-  if(!ConsoleManager::instance().isMasterConsole(master))
-  {
-    master = ConsoleManager::instance().getOther(pFd->file);
-  }
+  File *tty = pFd->file;
+  sprintf(buf, "/dev/%s", static_cast<const char *>(tty->getName()));
+}
 
   sprintf(buf, "/dev/%s", static_cast<const char *>(master->getName()));
 }

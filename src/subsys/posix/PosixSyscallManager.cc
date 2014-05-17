@@ -359,11 +359,9 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             return posix_fsync(static_cast<int>(p1));
 
         case POSIX_PTSNAME:
-            console_ptsname(static_cast<int>(p1), reinterpret_cast<char *>(p2));
-            return 0;
+            return console_ptsname(static_cast<int>(p1), reinterpret_cast<char *>(p2));
         case POSIX_TTYNAME:
-            console_ttyname(static_cast<int>(p1), reinterpret_cast<char *>(p2));
-            return 0;
+            return console_ttyname(static_cast<int>(p1), reinterpret_cast<char *>(p2));
         case POSIX_TCGETPGRP:
             return posix_tcgetpgrp(static_cast<int>(p1));
         case POSIX_TCSETPGRP:

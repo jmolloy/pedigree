@@ -2262,7 +2262,9 @@ char *ptsname(int fildes)
 {
     static char ret[256] = {0};
     ret[0] = 0;
-    syscall2(POSIX_PTSNAME, fildes, (long) ret);
+    int res = syscall2(POSIX_PTSNAME, fildes, (long) ret);
+    if(res < 0)
+        return 0;
     return ret;
 }
 
@@ -2270,7 +2272,9 @@ char *ttyname(int fildes)
 {
     static char ret[256] = {0};
     ret[0] = 0;
-    syscall2(POSIX_TTYNAME, fildes, (long) ret);
+    int res = syscall2(POSIX_TTYNAME, fildes, (long) ret);
+    if(res < 0)
+        return 0;
     return ret;
 }
 
