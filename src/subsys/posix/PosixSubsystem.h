@@ -64,6 +64,60 @@ class LockedFile;
 /// \todo Locking!
 extern RadixTree<LockedFile*> g_PosixGlobalLockedFiles;
 
+/**
+ * Process group ID control.
+ */
+class ProcessGroupManager
+{
+    public:
+        ProcessGroupManager() : m_GroupIds()
+        {
+            m_GroupIds.set(0);
+        }
+
+        virtual ~ProcessGroupManager() {}
+
+        static ProcessGroupManager &instance()
+        {
+            return m_Instance;
+        }
+
+        /** Allocates a new process group ID, that hasn't yet been used. */
+        size_t allocateGroupId()
+        {
+            size_t bit = m_GroupIds.getFirstClear();
+            m_GroupIds.set(bit);
+            return bit;
+        }
+
+        /** Forcibly set the given group ID as taken. */
+        void setGroupId(size_t gid)
+        {
+            if(m_GroupIds.test(gid))
+                WARNING("ProcessGroupManager: setGroupId called on a group ID that existed already!");
+            m_GroupIds.set(gid);
+        }
+
+        /** Checks whether the given process group ID is used or not. */
+        bool isGroupIdValid(size_t gid)
+        {
+            return m_GroupIds.test(gid);
+        }
+
+        /** Returns the given process group ID to the available pool. */
+        void returnGroupId(size_t gid)
+        {
+            m_GroupIds.clear(gid);
+        }
+
+    private:
+        static ProcessGroupManager m_Instance;
+        /**
+         * Bitmap of available group IDs.
+         */
+        ExtensibleBitmap m_GroupIds;
+};
+
 /** Abstraction of a file descriptor, which defines an open file
   * and related flags.
   */

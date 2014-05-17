@@ -137,6 +137,8 @@ class PosixProcess : public Process
             {
                 m_pProcessGroup->Members.pushBack(this);
                 NOTICE(">>>>>> Adding self to the members list, new size = " << m_pProcessGroup->Members.count() << ".");
+
+                ProcessGroupManager::instance().setGroupId(m_pProcessGroup->processGroupId);
             }
         }
 

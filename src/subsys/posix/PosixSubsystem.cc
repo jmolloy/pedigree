@@ -50,6 +50,8 @@ typedef Tree<size_t, FileDescriptor*> FdMap;
 
 RadixTree<LockedFile*> g_PosixGlobalLockedFiles;
 
+ProcessGroupManager ProcessGroupManager::m_Instance;
+
 /// Default constructor
 FileDescriptor::FileDescriptor() :
     file(0), offset(0), fd(0xFFFFFFFF), fdflags(0), flflags(0),

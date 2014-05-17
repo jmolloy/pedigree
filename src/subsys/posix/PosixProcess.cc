@@ -34,6 +34,8 @@ ProcessGroup::~ProcessGroup()
         }
     }
 
+    ProcessGroupManager::instance().returnGroupId(processGroupId);
+
     // All have been removed, update our list accordingly
     Members.clear();
 }
