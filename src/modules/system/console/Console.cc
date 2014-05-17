@@ -575,10 +575,12 @@ bool ConsoleManager::lockConsole(File *file)
     if(!pConsole->isMaster())
         return false;
 
-    if(pConsole->bLocked && Processor::information().getCurrentThread()->getParent() != pConsole->pLocker)
+    if(pConsole->bLocked)
         return false;
+
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
     pConsole->bLocked = true;
-    pConsole->pLocker = Processor::information().getCurrentThread()->getParent();
+    pConsole->pLocker = pProcess;
 
     return true;
 }
@@ -589,8 +591,15 @@ void ConsoleManager::unlockConsole(File *file)
         return;
 
     ConsoleMasterFile *pConsole = static_cast<ConsoleMasterFile *>(file);
+    if(!pConsole->isMaster())
+        return;
+
+    // Make sure we are the owner of the master.
+    // Forked children shouldn't be able to close() and steal a master pty.
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    if(pConsole->pLocker != pProcess)
+        return;
     pConsole->bLocked = false;
-    pConsole->pLocker = 0;
 }
 
 bool ConsoleManager::isConsole(File* file)
