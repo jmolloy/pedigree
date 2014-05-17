@@ -1011,7 +1011,7 @@ int posix_dlclose(void* handle)
 
 int posix_setsid()
 {
-    NOTICE("setsid");
+    SC_NOTICE("setsid");
 
     // Not a POSIX process
     Process *pStockProcess = Processor::information().getCurrentThread()->getParent();
@@ -1034,13 +1034,13 @@ int posix_setsid()
         // Are we the group leader of that other group?
         if(myMembership == PosixProcess::Leader)
         {
-            NOTICE("setsid() called while the leader of another group");
+            SC_NOTICE("setsid() called while the leader of another group");
             SYSCALL_ERROR(PermissionDenied);
             return -1;
         }
         else
         {
-            NOTICE("setsid() called while a member of another group");
+            SC_NOTICE("setsid() called while a member of another group");
         }
     }
 
@@ -1071,16 +1071,10 @@ int posix_setsid()
     pProcess->setProcessGroup(pNewGroup);
     pProcess->setGroupMembership(PosixProcess::Leader);
 
-    // If there's an existing controlling terminal, unlock it.
-    if(pProcess->getCtty())
-    {
-        ConsoleManager::instance().unlockConsole(pProcess->getCtty());
-    }
-
     // Remove controlling terminal.
     pProcess->setCtty(0);
 
-    NOTICE("setsid: now part of a group [id=" << pNewGroup->processGroupId << "]!");
+    SC_NOTICE("setsid: now part of a group [id=" << pNewGroup->processGroupId << "]!");
 
     // Success!
     return pNewGroup->processGroupId;
@@ -1088,6 +1082,8 @@ int posix_setsid()
 
 int posix_setpgid(int pid, int pgid)
 {
+    SC_NOTICE("setpgid(" << pid << ", " << pgid << ")");
+
     // Handle invalid group ID
     if(pgid < 0)
     {
@@ -1169,14 +1165,19 @@ int posix_setpgid(int pid, int pgid)
 
 int posix_getpgrp()
 {
-    NOTICE("getpgrp");
+    SC_NOTICE("getpgrp");
 
     PosixProcess *pProcess = static_cast<PosixProcess *>(Processor::information().getCurrentThread()->getParent());
     ProcessGroup *pGroup = pProcess->getProcessGroup();
+
+    int result = 0;
     if(pGroup)
-        return pProcess->getProcessGroup()->processGroupId;
+        result = pProcess->getProcessGroup()->processGroupId;
     else
-        return pProcess->getId(); // Fallback if no ProcessGroup pointer yet
+        result = pProcess->getId(); // Fallback if no ProcessGroup pointer yet
+
+    SC_NOTICE(" -> " << result);
+    return result;
 }
 
 int posix_syslog(const char *msg, int prio)
