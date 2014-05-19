@@ -175,7 +175,7 @@ class CppFile(SourceFile):
     def license_header(self):
         license_lines = self.license.splitlines()
         license_lines = [('\n * %s' % (x,)).rstrip() for x in license_lines]
-        return '/*\n * %s\n */\n' % (''.join(license_lines),)
+        return '/*%s\n */\n' % (''.join(license_lines),)
 
     def check(self):
         # Does the file even start with a multiline comment?
