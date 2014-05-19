@@ -2,7 +2,9 @@
 	"folders":
 	[
 		{
-			"path": "../"
+			"path": "../",
+            "folder_exclude_patterns": ["pedigree-compiler", "compilers/dir", "images/local"],
+            "follow_symlinks": true
 		}
 	],
     "settings":
@@ -28,6 +30,8 @@
             "-I${folder:${project_path:SConstruct}}/src/user/libraries/libui/include",
             "-I${folder:${project_path:SConstruct}}/src/user/libraries/libui/src",
             "-I${folder:${project_path:SConstruct}}/src/user/applications/TUI/include"
-        ]
-    }
+        ],
+        "tab_size": 4,
+        "translate_tabs_to_spaces": true
+    },
 }
