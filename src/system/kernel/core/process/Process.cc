@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -199,6 +198,9 @@ void Process::suspend()
     m_ExitStatus = 0x7F;
     m_BeforeSuspendState = m_Threads[0]->getStatus();
     notifyWaiters();
+    // Notify parent that we're suspending.
+    if(m_pParent && m_pParent->getSubsystem())
+        m_pParent->getSubsystem()->threadException(m_pParent->getThread(0), Subsystem::Child);
     Processor::information().getScheduler().schedule(Thread::Suspended);
 }
 

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -190,7 +189,7 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
     Process *pProcess = pThread->getParent();
     Subsystem *pSubsystem = pProcess->getSubsystem();
     if(pSubsystem)
-        pSubsystem->threadException(pThread, Subsystem::PageFault, state);
+        pSubsystem->threadException(pThread, Subsystem::PageFault);
     else
         pProcess->kill();
 

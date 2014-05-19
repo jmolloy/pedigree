@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -107,7 +106,7 @@ class Subsystem
         virtual bool kill(KillReason killReason, Thread *pThread = 0);
 
         /** A thread has thrown an exception! */
-        virtual void threadException(Thread *pThread, ExceptionType eType, InterruptState &state);
+        virtual void threadException(Thread *pThread, ExceptionType eType);
 
         /** Gets the type of this subsystem */
         SubsystemType getType()

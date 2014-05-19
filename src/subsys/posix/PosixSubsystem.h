@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -200,7 +199,7 @@ class PosixSubsystem : public Subsystem
         virtual bool kill(KillReason killReason, Thread *pThread);
 
         /** A thread has thrown an exception! */
-        virtual void threadException(Thread *pThread, ExceptionType eType, InterruptState &state);
+        virtual void threadException(Thread *pThread, ExceptionType eType);
 
         /** Alternate signal stack */
         /// \todo Figure out how to make this work for more than just the current process (ie, work

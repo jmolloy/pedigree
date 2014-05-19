@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -343,8 +342,16 @@ void PosixSubsystem::exit(int code)
             {
                 // No new leader! Destroy the group, we're the last process in it.
                 delete pGroup;
+                pGroup = 0;
             }
         }
+    }
+
+    // Notify parent that we terminated (we may be in a separate process group).
+    Process *pParent = pProcess->getParent();
+    if(pParent && pParent->getSubsystem())
+    {
+        pParent->getSubsystem()->threadException(pParent->getThread(0), Child);
     }
 
     // Clean up the descriptor table
@@ -385,7 +392,7 @@ bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)
     return true;
 }
 
-void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType, InterruptState &state)
+void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType)
 {
     NOTICE_NOLOCK("PosixSubsystem::threadException");
 

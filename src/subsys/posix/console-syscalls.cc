@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -133,19 +132,24 @@ void terminalEventHandler(uintptr_t serializeBuffer)
     else if(which == specialChars[VSUSP])
         what = Subsystem::Stop;
 
-    // Dummy interrupt state for Process::threadException
-    InterruptState *state = 0;
-
     // Send to each process.
     if(what != Subsystem::Other)
     {
-        for(List<PosixProcess*>::Iterator it = pGroup->Members.begin();
-            it != pGroup->Members.end();
+        // It's possible that in doing this, we'll terminate the last process
+        // that belongs to this group, thus destroying the group. Which then
+        // causes an access of a freed heap pointer.
+        // We also can't just iterate over the group members, because that
+        // list will be being modified if processes are terminated. That will
+        // invalidate our iterator but we have no way of knowing whether that
+        // actually happens.
+        List<PosixProcess *> targets = pGroup->Members;
+        for(List<PosixProcess*>::Iterator it = targets.begin();
+            it != targets.end();
             ++it)
         {
             PosixProcess *pProcess = *it;
             PosixSubsystem *pSubsystem = static_cast<PosixSubsystem*>(pProcess->getSubsystem());
-            pSubsystem->threadException(pProcess->getThread(0), what, *state);
+            pSubsystem->threadException(pProcess->getThread(0), what);
         }
     }
 
