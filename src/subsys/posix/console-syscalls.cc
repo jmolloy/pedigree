@@ -188,7 +188,7 @@ int posix_tcgetattr(int fd, struct termios *p)
                ((flags&ConsoleManager::OMapCRToNL)?OCRNL:0) |
                ((flags&ConsoleManager::OMapNLToCRNL)?ONLCR:0) |
                ((flags&ConsoleManager::ONLCausesCR)?ONLRET:0);
-  p->c_cflag = 0;
+  p->c_cflag = CREAD | CS8 | HUPCL | B38400;
   p->c_lflag = ((flags&ConsoleManager::LEcho)?ECHO:0) |
       ((flags&ConsoleManager::LEchoErase)?ECHOE:0) |
       ((flags&ConsoleManager::LEchoKill)?ECHOK:0) |

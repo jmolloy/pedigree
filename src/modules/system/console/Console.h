@@ -41,7 +41,7 @@
 
 #define PTY_BUFFER_SIZE     32768
 
-#define MAX_CONTROL_CHAR    13
+#define MAX_CONTROL_CHAR    17
 
 #define DEFAULT_FLAGS  (ConsoleManager::OPostProcess | \
                         ConsoleManager::IMapCRToNL | \

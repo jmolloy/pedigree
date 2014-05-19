@@ -49,6 +49,10 @@ static const char defaultControl[MAX_CONTROL_CHAR] = {
     0x1A, // VSUSP
     0x11, // VSTART
     0x13, // VSTOP
+    0x00, // 13
+    0x17, // VWERASE
+    0x16, // VLNEXT
+    0x00, // VEOL2
 };
 
 ConsoleManager ConsoleManager::m_Instance;
