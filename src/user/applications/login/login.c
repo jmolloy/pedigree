@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -81,10 +80,12 @@ int main(int argc, char **argv)
   // Set ourselves as the terminal's foreground process group.
   tcsetpgrp(1, getpgrp());
 
+  // Get/fix $TERM.
   const char *TERM = getenv("TERM");
   if(!TERM)
   {
     TERM = "vt100";
+    setenv("TERM", TERM, 1);
   }
 
   // Turn on output processing if it's not already on (we depend on it)
@@ -207,11 +208,13 @@ int main(int argc, char **argv)
         g_RunningPid = -1;
 
         // Environment:
-        char *newenv[2];
+        char *newenv[3];
         newenv[0] = (char*)malloc(256);
-        newenv[1] = 0;
+        newenv[1] = (char*)malloc(256);
+        newenv[2] = 0;
 
         sprintf(newenv[0], "HOME=%s", pw->pw_dir);
+        sprintf(newenv[1], "TERM=%s", TERM);
 
         // Child.
         execle(pw->pw_shell, pw->pw_shell, 0, newenv);
