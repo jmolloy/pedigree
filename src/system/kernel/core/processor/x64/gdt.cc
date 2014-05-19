@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -68,7 +67,6 @@ void X64GdtManager::initialise(size_t processorCount)
     processorInfo->setTlsSelector((i + 8) << 3);
   }
 #else
-  setSegmentDescriptor(8, 0, 0xFFFFF, 0xF2, 0xC); // User TLS data
   
   X64TaskStateSegment *Tss = new X64TaskStateSegment;
   initialiseTss(Tss);
@@ -83,16 +81,6 @@ void X64GdtManager::initialise(size_t processorCount)
   static X64TaskStateSegment DFTss;
   initialiseDoubleFaultTss(&DFTss);
   setTssDescriptor(9, reinterpret_cast<uint64_t>(&DFTss));
-#endif
-}
-
-void X64GdtManager::setTlsBase(uintptr_t base)
-{
-#ifdef MULTIPROCESSOR
-  /// \todo One TLS base per CPU
-  setSegmentDescriptor(Processor::information().getTlsSelector() >> 3, base, 0xFFFFF, 0xF2, 0xC);
-#else
-  setSegmentDescriptor(8, base, 0xFFFFF, 0xF2, 0xC); // User TLS data
 #endif
 }
 

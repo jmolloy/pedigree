@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -178,10 +177,8 @@ void Processor::identify(HugeStaticString &str)
 
 void Processor::setTlsBase(uintptr_t newBase)
 {
-    X64GdtManager::instance().setTlsBase(newBase);
-    
-    // Reload FS/GS
+    // Set FS.base MSR.
     uint16_t newseg = newBase ? Processor::information().getTlsSelector() | 3 : 0x23;
-    // asm volatile("mov %0, %%bx; mov %%bx, %%fs; mov %%bx, %%gs" :: "r" (newseg) : "ebx");
+    asm volatile("wrmsr" :: "a" (newBase), "d" (newBase >> 32ULL), "c" (0xC0000100));
 }
 

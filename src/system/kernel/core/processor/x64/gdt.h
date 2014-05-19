@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -44,9 +43,6 @@ class X64GdtManager
      *\note This should only be called from initialiseProcessor2()
      *\todo and some smp/acpi function */
     static void initialiseProcessor() INITIALISATION_ONLY;
-    
-    /** Sets up the TLS base for the current CPU to point to the given base. */
-    void setTlsBase(uintptr_t base);
 
   private:
     /** The constructor */
