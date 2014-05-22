@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -832,9 +831,13 @@ size_t MemoryMapManager::remove(uintptr_t base, size_t length)
 
     for(List<MemoryMappedObject*>::Iterator it = pMmObjectList->begin();
         it != pMmObjectList->end();
-        ++it)
+        )
     {
         MemoryMappedObject *pObject = *it;
+
+        // Whether or not  it = x.erase() was called - because we should not
+        // increment an iterator if so.
+        bool bErased = false;
 
         uintptr_t objEnd = pObject->address() + pObject->length();
 
@@ -852,6 +855,7 @@ size_t MemoryMapManager::remove(uintptr_t base, size_t length)
         // Avoid?
         if(pObject->address() == removeEnd)
         {
+            ++it;
             continue;
         }
 
@@ -866,6 +870,7 @@ size_t MemoryMapManager::remove(uintptr_t base, size_t length)
             {
                 it = pMmObjectList->erase(it);
                 delete pObject;
+                bErased = true;
             }
         }
 
@@ -892,9 +897,10 @@ size_t MemoryMapManager::remove(uintptr_t base, size_t length)
 #endif
             // Outright unmap.
             pObject->unmap();
-            delete pObject;
 
             it = pMmObjectList->erase(it);
+            delete pObject;
+            bErased = true;
         }
 
         // End is within the object, start is before the object.
@@ -906,9 +912,10 @@ size_t MemoryMapManager::remove(uintptr_t base, size_t length)
             MemoryMappedObject *pNewObject = pObject->split(removeEnd);
 
             pObject->unmap();
-            delete pObject;
 
             it = pMmObjectList->erase(it);
+            delete pObject;
+            bErased = true;
 
             pMmObjectList->pushBack(pNewObject);
         }
@@ -930,7 +937,13 @@ size_t MemoryMapManager::remove(uintptr_t base, size_t length)
 #ifdef DEBUG_MMOBJECTS
             NOTICE("MemoryMapManager::remove() - doing nothing!");
 #endif
+            ++it;
             continue;
+        }
+
+        if(!bErased)
+        {
+            ++it;
         }
 
         ++nAffected;
