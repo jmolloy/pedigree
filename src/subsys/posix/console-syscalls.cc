@@ -159,6 +159,8 @@ void terminalEventHandler(uintptr_t serializeBuffer)
 
 int posix_tcgetattr(int fd, struct termios *p)
 {
+  F_NOTICE("posix_tcgetattr(" << fd << ")");
+
   // Lookup this process.
   Process *pProcess = Processor::information().getCurrentThread()->getParent();
   PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());

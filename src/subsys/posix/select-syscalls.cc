@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -138,6 +137,12 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
     if (!pSubsystem)
     {
         ERROR("No subsystem for this process!");
+        return -1;
+    }
+
+    if(nfds == 0)
+    {
+        SYSCALL_ERROR(InvalidArgument);
         return -1;
     }
 

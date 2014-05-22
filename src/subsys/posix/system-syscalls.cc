@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -1186,18 +1185,18 @@ int posix_syslog(const char *msg, int prio)
     if(id <= 1)
     {
         if(prio <= LOG_CRIT)
-            FATAL("[" << id << "] " << msg);
+            FATAL("[" << Dec << id << Hex << "]\tsyslog: " << msg);
     }
 
     if(prio <= LOG_ERR)
-        ERROR("[" << id << "] " << msg);
+        ERROR("[" << Dec << id << Hex << "]\tsyslog: " << msg);
     else if(prio == LOG_WARNING)
-        WARNING("[" << id << "] " << msg);
+        WARNING("[" << Dec << id << Hex << "]\tsyslog: " << msg);
     else if(prio == LOG_NOTICE || prio == LOG_INFO)
-        NOTICE("[" << id << "] " << msg);
+        NOTICE("[" << Dec << id << Hex << "]\tsyslog: " << msg);
 #if DEBUGGER
     else
-        NOTICE("[" << id << "] " << msg);
+        NOTICE("[" << Dec << id << Hex << "]\tsyslog: " << msg);
 #endif
     return 0;
 }

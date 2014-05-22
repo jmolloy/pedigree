@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -1617,7 +1616,7 @@ int posix_mprotect(void *p, size_t len, int prot)
 
 int posix_munmap(void *addr, size_t len)
 {
-    F_NOTICE("munmap(" << reinterpret_cast<uintptr_t>(addr) << ", " << Dec << len << Hex << ")");
+    F_NOTICE("munmap(" << reinterpret_cast<uintptr_t>(addr) << ", " << len << ")");
 
     if(!len)
     {
