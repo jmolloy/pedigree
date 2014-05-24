@@ -46,6 +46,9 @@ from datetime import *
 sys.path += ['./scripts']
 from defaultFlags import *
 
+# Pull in buildutils so we can initialise it.
+import buildutils
+
 ####################################
 # Default build flags (Also used to auto-generate help)
 ####################################
@@ -160,9 +163,6 @@ host = os.uname()
 
 env['ON_PEDIGREE'] = host[0] == 'Pedigree'
 env['HOST_PLATFORM'] = host[4]
-
-# Don't use MD5s to determine if files have changed, just check the timestamp
-env.Decider('timestamp-newer')
 
 # Avoid any form of RCS scan (git etc)
 env.SourceCode(".", None)
@@ -444,6 +444,9 @@ if not env['verbose']:
         env['NMCOMSTR']   =    '  Creating map $TARGET'
         env['DOCCOMSTR']  =    '   Documenting $TARGET'
         env['TARCOMSTR']  =    '      Creating $TARGET'
+        env['TARXCOMSTR'] =    '    Extracting $SOURCE'
+        env['DLCOMSTR']   =    '   Downloading $TARGET'
+        env['PTCOMSTR']   =    '      Patching $TARGET'
     else:
         env['CCCOMSTR']   =    '     Compiling \033[32m$TARGET\033[0m'
         env['CXXCOMSTR']  =    '     Compiling \033[32m$TARGET\033[0m'
@@ -457,6 +460,9 @@ if not env['verbose']:
         env['NMCOMSTR']   =    '  Creating map \033[32m$TARGET\033[0m'
         env['DOCCOMSTR']  =    '   Documenting \033[32m$TARGET\033[0m'
         env['TARCOMSTR']  =    '      Creating \033[32m$TARGET\033[0m'
+        env['TARXCOMSTR'] =    '    Extracting \033[32m$SOURCE\033[0m'
+        env['DLCOMSTR']   =    '   Downloading \033[32m$TARGET\033[0m'
+        env['PTCOMSTR']   =    '      Patching \033[32m$TARGET\033[0m'
 
 ####################################
 # Generate Version.cc
@@ -546,6 +552,15 @@ if env['iwyu']:
 # Save the cache, all the options are configured
 if(not env['nocache']):
     opts.Save('options.cache', env)
+
+# If we're on OSX, make sure we're using a sane tar.
+if sys.platform == 'darwin':
+    # Don't override an overridden TAR variable.
+    if env['TAR'] == 'tar':
+        env['TAR'] = 'gnutar'
+
+# Generate custom builders and add to environment.
+buildutils.generate(env)
 
 ####################################
 # Progress through all our sub-directories

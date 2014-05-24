@@ -360,32 +360,9 @@ env.Depends(initrdFile, "modules")
 env.Depends(initrdFile, "subsys")
 env.Alias("initrd", initrdFile)
 
-def tarBuild(target, source, env):
-    if env['verbose']:
-        print '      Creating ' + os.path.basename(target[0].path)
-    else:
-        print '      Creating \033[32m' + os.path.basename(target[0].path) + '\033[0m'
-
-    update_source = []
-
-    # Copy all files to a temporary directory
-    tmp = tempfile.mkdtemp()
-    for i in source:
-        fn = os.path.basename(i.path)
-
-        dest = os.path.join(tmp, fn)
-        shutil.copyfile(i.path, dest)
-
-        update_source += [fn]
-    
-    # TODO: Use something other than os.system.
-    os.system('cd ' + tmp + ' && ' + env['TAR'] + ' -czf ' + target[0].abspath + ' ' + ' '.join(update_source))
-
-    shutil.rmtree(tmp)
-
 if('STATIC_DRIVERS' in env['CPPDEFINES']):
     env.Depends("kernel", initrdList) # Kernel depends on all drivers/modules
     env['INITRD_LIST'] = initrdList
 else:
-    env.Command(initrdFile, initrdList, env.Action(tarBuild, None))
+    env.CreateTar(initrdFile, initrdList)
 

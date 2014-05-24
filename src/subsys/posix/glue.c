@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -417,7 +416,7 @@ int closedir(DIR *dir)
     return 0;
 }
 
-int rename(const char *old, const char *new)
+int _rename(const char *old, const char *new)
 {
     return (long)syscall2(POSIX_RENAME, (long) old, (long) new);
 }
@@ -646,14 +645,10 @@ int setresgid(gid_t rgid, gid_t egid, gid_t sgid)
     return -1;
 }
 
-unsigned int sleep(unsigned int seconds)
+int issetugid()
 {
-    return (unsigned int)syscall1(POSIX_SLEEP, seconds);
-}
-
-int usleep(useconds_t useconds)
-{
-    return (unsigned int)syscall1(POSIX_USLEEP, useconds);
+    STUBBED("issetugid");
+    return 0;
 }
 
 unsigned int alarm(unsigned int seconds)
@@ -1427,11 +1422,6 @@ _sig_func_ptr signal(int s, _sig_func_ptr func)
 
     // errno set by sigaction
     return (_sig_func_ptr) -1;
-}
-
-int raise(int sig)
-{
-    return (long)syscall1(POSIX_RAISE, sig);
 }
 
 int kill(pid_t pid, int sig)

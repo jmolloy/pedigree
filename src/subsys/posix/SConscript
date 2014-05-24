@@ -62,7 +62,7 @@ env.Depends(libpedigree_c_shobjname, libc_objname)
 
 # To include a new subdirectory just add to the list.
 subdirs = [
-    
+    'newlib',
 ]
 
 # To include new files just add to the list, or Glob("*.cpp")
@@ -126,7 +126,7 @@ libpaths = [
 ]
 
 ####################################
-SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['tmp'])
+SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
 tmp['CPPPATH'] = include
 tmp['LIBS'] = libraries
 tmp['LIBPATH'] = libpaths
@@ -187,12 +187,13 @@ elif env['ARCH_TARGET'] == 'PPC':
 elif env['ARCH_TARGET'] == 'ARM':
     libc_arch = 'arm'
 
+buildDir = tmp.Dir(builddir)
+
 base = tmp.Dir("#")
-baseLibc = tmp.File("#src/subsys/posix/newlib-" + libc_arch + "-libc.a")
-baseLibm = tmp.File("#src/subsys/posix/newlib-" + libc_arch + "-libm.a")
+baseLibc = tmp.File(builddir + "/stock-libc.a")
+baseLibm = tmp.File(builddir + "/stock-libm.a")
 baseInclude = tmp.Dir("#src/subsys/posix/include")
 
-buildDir = tmp.Dir(builddir)
 buildLibc = tmp.File(builddir + '/libc.so')
 buildLibm = tmp.File(builddir + '/libm.so')
 buildLibcA = tmp.File(builddir + '/libc.a')

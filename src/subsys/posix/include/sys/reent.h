@@ -1,3 +1,22 @@
+/*
+ * Copyright (c) 2008-2014, Pedigree Developers
+ *
+ * Please see the CONTRIB file in the root of the source tree for a full
+ * list of contributors.
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
 /* This header file provides the reentrancy.  */
 
 /* WARNING: All identifiers here must begin with an underscore.  This file is
@@ -33,6 +52,8 @@ typedef unsigned __Long __ULong;
 #define __Long __int32_t
 typedef __uint32_t __ULong;
 #endif
+
+struct _reent;
 
 /*
  * If _REENT_SMALL is defined, we make struct _reent as small as possible,
@@ -181,11 +202,12 @@ struct __sFILE {
   /* operations */
   _PTR	_cookie;	/* cookie passed to io functions */
 
-  _READ_WRITE_RETURN_TYPE _EXFUN((*_read),(_PTR _cookie, char *_buf, int _n));
-  _READ_WRITE_RETURN_TYPE _EXFUN((*_write),(_PTR _cookie, const char *_buf,
-					    int _n));
-  _fpos_t _EXFUN((*_seek),(_PTR _cookie, _fpos_t _offset, int _whence));
-  int	_EXFUN((*_close),(_PTR _cookie));
+  _READ_WRITE_RETURN_TYPE _EXFUN((*_read),(struct _reent *, _PTR,
+             char *, int));
+  _READ_WRITE_RETURN_TYPE _EXFUN((*_write),(struct _reent *, _PTR,
+              const char *, int));
+  _fpos_t _EXFUN((*_seek),(struct _reent *, _PTR, _fpos_t, int));
+  int _EXFUN((*_close),(struct _reent *, _PTR));
 
   /* separate buffer for long sequences of ungetc() */
   struct __sbuf _ub;	/* ungetc buffer */
@@ -210,6 +232,8 @@ struct __sFILE {
 #ifndef __SINGLE_THREAD__
   _flock_t _lock;	/* for thread-safety locking */
 #endif
+  _mbstate_t _mbstate;  /* for wide char stdio functions. */
+  int   _flags2;        /* for future use */
 };
 
 #ifdef __LARGE64_FILES

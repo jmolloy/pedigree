@@ -17,4 +17,33 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
-from misc import generate
+
+import os
+import shutil
+import urllib2
+
+import SCons
+
+
+def UrlDownloader(target, source, env):
+    assert len(source) == 1
+    assert len(target) == 1
+
+    # Already exists, don't re-open target.
+    if os.path.exists(target[0].abspath):
+        return None
+
+    stream = urllib2.urlopen(str(source[0]))
+    with open(target[0].abspath, "wb") as f:
+        shutil.copyfileobj(stream, f)
+    stream.close()
+
+    return None
+
+
+def generate(env):
+    action = SCons.Action.Action(UrlDownloader, env.get('DLCOMSTR'))
+    builder = env.Builder(action=action, target_factory=env.File,
+        source_factory=env.Value, single_source=1)
+
+    env.Append(BUILDERS={'Download': builder})

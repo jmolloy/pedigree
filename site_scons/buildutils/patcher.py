@@ -17,4 +17,25 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
-from misc import generate
+
+import os
+import subprocess
+
+import SCons
+
+
+def Patcher(target, source, env):
+    patchbin = env.get('PATCH', ['patch'])
+    patchopts = env.get('PATCHOPTS', ['-p1'])
+
+    args = patchbin + patchopts
+    args.extend(['-i', source[0].abspath])
+
+    subprocess.check_call(args, cwd=target[0].abspath)
+
+def generate(env):
+    action = SCons.Action.Action(Patcher, env.get('PTCOMSTR'))
+    builder = env.Builder(action=action, target_factory=env.Dir,
+        source_factory=env.File)
+
+    env.Append(BUILDERS={'Patch': builder})

@@ -17,4 +17,14 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
-from misc import generate
+
+
+import buildutils.downloader
+import buildutils.patcher
+import buildutils.tar
+
+
+def generate(env):
+    buildutils.downloader.generate(env)
+    buildutils.patcher.generate(env)
+    buildutils.tar.generate(env)
