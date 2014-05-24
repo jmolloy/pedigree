@@ -36,15 +36,11 @@ NEWLIB_OUTPUT_LIBM = env.File(builddir + '/stock-libm.a')
 NEWLIB_PATCH = '#/compilers/pedigree-newlib.patch'
 NEWLIB_BUILDER = '#/scripts/build-newlib.sh'
 
-env.Download(
+downloaded = env.Download(
     NEWLIB_FILENAME,
     'ftp://sourceware.org/pub/newlib/%s' % (NEWLIB_FILENAME,))
 
-env.ExtractTar(NEWLIB_CONFIGURE, NEWLIB_FILENAME)
-
-# Make sure the tarball is extracted before we patch it.
-env.Depends(NEWLIB_BASENAME, NEWLIB_CONFIGURE)
-env.Patch(NEWLIB_BASENAME, NEWLIB_PATCH)
+env.ExtractAndPatchTar(NEWLIB_BASENAME, [NEWLIB_FILENAME, NEWLIB_PATCH])
 
 def buildNewlib(target, source, env):
     # Pass some information down to the child.
@@ -57,7 +53,7 @@ def buildNewlib(target, source, env):
 
     subprocess.check_call([source[0].abspath], cwd=source[1].abspath, env=childenv)
 
-env.Command(
+output_libs = env.Command(
     [NEWLIB_OUTPUT_LIBC, NEWLIB_OUTPUT_LIBM],
     [NEWLIB_BUILDER, NEWLIB_BASENAME],
     Action(buildNewlib, env['CCCOMSTR']))

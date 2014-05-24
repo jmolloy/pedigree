@@ -25,11 +25,19 @@ import tarfile
 
 import SCons
 
+from buildutils.patcher import Patcher
+
 
 def Extract(target, source, env):
     with tarfile.open(source[0].abspath, 'r') as f:
         f.extractall(source[0].dir.abspath)
-    return None
+
+    # Apply patches, if any.
+    r = None
+    if len(source) > 1:
+        r = Patcher(target, source[1:], env)
+
+    return r
 
 def Create(target, source, env):
     update_source = []
@@ -44,9 +52,11 @@ def generate(env):
     untar_action = SCons.Action.Action(Extract, env.get('TARXCOMSTR'))
     tar_action = SCons.Action.Action(Create, env.get('TARCOMSTR'))
 
-    untar_builder = env.Builder(action=untar_action, target_factory=env.File,
+    untar_builder = env.Builder(action=untar_action, target_factory=env.Dir,
         source_factory=env.File)
     tar_builder = env.Builder(action=tar_action, target_factory=env.Dir,
         source_factory=env.File)
 
-    env.Append(BUILDERS={'ExtractTar': untar_builder, 'CreateTar': tar_builder})
+    env.Append(BUILDERS={
+        'ExtractAndPatchTar': untar_builder,
+        'CreateTar': tar_builder})
