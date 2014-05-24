@@ -1,0 +1,42 @@
+diff -rupN newlib-1.17.0.old/newlib/configure.host newlib-1.17.0/newlib/configure.host
+--- newlib-1.17.0.old/newlib/configure.host	2008-12-18 10:09:09.000000000 +1100
++++ newlib-1.17.0/newlib/configure.host	2014-05-23 17:24:26.361078565 +1000
+@@ -341,6 +341,14 @@ case "${host}" in
+ 	signal_dir=
+ 	sys_dir=netware
+ 	;;
++  *-*-pedigree*)
++  unix_dir=unix
++  posix_dir=posix
++  crt1=
++  crt1_dir=
++  newlib_cflags="${newlib_cflags} -D_I386MACH_ALLOW_HW_INTERRUPTS"
++  newlib_cflags="${newlib_cflags} -fPIC -D_I386MACH_NEED_SOTYPE_FUNCTION"
++  ;;
+   *-*-rtems*)			# generic RTEMS support
+ 	sys_dir=rtems
+ 	posix_dir=posix
+@@ -527,6 +535,15 @@ case "${host}" in
+ 	newlib_cflags="${newlib_cflags} -DHAVE_OPENDIR -DHAVE_RENAME -DSIGNAL_PROVIDED -D_COMPILING_NEWLIB -DHAVE_BLKSIZE -DHAVE_FCNTL -DMALLOC_PROVIDED"
+ 	syscall_dir=syscalls
+ 	;;
++  *-*-pedigree*)
++  default_newlib_io_c99_formats="yes"
++  default_newlib_io_long_double="yes"
++  default_newlib_io_long_long="yes"
++  default_newlib_io_pos_args="yes"
++  newlib_cflags="${newlib_cflags} -DHAVE_OPENDIR -DHAVE_RENAME -DSIGNAL_PROVIDED -D_COMPILING_NEWLIB -DHAVE_BLKSIZE -DHAVE_FCNTL -DMALLOC_PROVIDED -DHAVE_NANOSLEEP"
++  newlib_cflags="${newlib_cflags} -D_NO_GETPWENT -DMISSING_SYSCALL_NAMES"
++  syscall_dir=
++  ;;
+ # RTEMS supplies its own versions of some routines:
+ #       malloc()            (reentrant version)
+ #       exit()              RTEMS has a "global" reent to flush
+--- newlib-1.17.0.old/newlib/libc/stdlib/mallocr.c  2014-05-24 12:36:54.000000000 +1000
++++ newlib-1.17.0/newlib/libc/stdlib/mallocr.c  2014-05-24 12:38:01.000000000 +1000
+@@ -1,4 +1,2 @@
+-#ifdef MALLOC_PROVIDED
+-int _dummy_mallocr = 1;
+-#else
++#ifndef MALLOC_PROVIDED
+ /* ---------- To make a malloc.h, start cutting here ------------ */
