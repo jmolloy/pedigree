@@ -46,6 +46,34 @@ index 92d57dd..871f92f 100644
  *-*-elf)
    # Assume that newlib is being used and so __cxa_atexit is provided.
    default_use_cxa_atexit=yes
+@@ -910,7 +910,7 @@ arm*-*-uclinux*eabi*)		# ARM ucLinux
+ 	# The EABI requires the use of __cxa_atexit.
+ 	default_use_cxa_atexit=yes
+ 	;;
+-arm*-*-eabi* | arm*-*-symbianelf* | arm*-*-rtems*)
++arm*-*-eabi* | arm*-*-symbianelf* | arm*-*-rtems* | arm*-*-pedigree*)
+ 	case ${target} in
+ 	arm*eb-*-eabi*)
+ 	  tm_defines="${tm_defines} TARGET_BIG_ENDIAN_DEFAULT=1"
+@@ -923,10 +923,17 @@ arm*-*-eabi* | arm*-*-symbianelf* | arm*-*-rtems*)
+ 	tm_file="dbxelf.h elfos.h arm/unknown-elf.h arm/elf.h arm/bpabi.h"
+ 	tmake_file="arm/t-arm arm/t-arm-elf"
+ 	case ${target} in
+-	arm*-*-eabi*)
++	arm*-*-eabi* | arm*-*-pedigree*)
+ 	  tm_file="$tm_file newlib-stdint.h"
+ 	  tmake_file="${tmake_file} arm/t-bpabi"
+ 	  use_gcc_stdint=wrap
++
++	  case ${target} in
++	  arm*-*-pedigree*)
++	    tm_file="$tm_file pedigree.h"
++	    tmake_file="${tmake_file} t-pedigree"
++	    ;;
++	  esac
+ 	  ;;
+ 	arm*-*-rtems*)
+ 	  tm_file="${tm_file} rtems.h arm/rtems-eabi.h newlib-stdint.h"
 @@ -1215,6 +1221,16 @@ i[34567]86-*-elf*)
  x86_64-*-elf*)
  	tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h newlib-stdint.h i386/i386elf.h i386/x86-64.h"
@@ -138,6 +166,20 @@ index 259c9a7..63984b4 100644
  *-*-rtems*)
    tmake_file="$tmake_file t-rtems"
    extra_parts="crtbegin.o crtend.o"
+@@ -340,11 +340,11 @@ arm*-*-uclinux*)		# ARM ucLinux
+ 	tmake_file="$tmake_file arm/t-arm arm/t-elf t-softfp-sfdf t-softfp-excl arm/t-softfp t-softfp"
+ 	extra_parts="$extra_parts crti.o crtn.o"
+ 	;;
+-arm*-*-eabi* | arm*-*-symbianelf* | arm*-*-rtems*)
++arm*-*-eabi* | arm*-*-symbianelf* | arm*-*-rtems* | arm*-*-pedigree*)
+ 	tmake_file="${tmake_file} arm/t-arm arm/t-elf t-fixedpoint-gnu-prefix"
+ 	tm_file="$tm_file arm/bpabi-lib.h"
+ 	case ${host} in
+-	arm*-*-eabi* | arm*-*-rtems*)
++	arm*-*-eabi* | arm*-*-rtems* | arm*-*-pedigree*)
+ 	  tmake_file="${tmake_file} arm/t-bpabi"
+ 	  extra_parts="crtbegin.o crtend.o crti.o crtn.o"
+ 	  ;;
 @@ -501,6 +504,12 @@ i[34567]86-*-elf*)
  x86_64-*-elf*)
  	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic"

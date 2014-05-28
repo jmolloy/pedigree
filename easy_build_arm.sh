@@ -94,7 +94,7 @@ if [ ! -e $script_dir/.easy_os ]; then
 else
     real_os=`cat $script_dir/.easy_os`
 
-    if [ $real_os == $1 ]; then
+    if [ $real_os == "$1" ]; then
         shift
     fi
 fi
@@ -111,7 +111,7 @@ case $real_os in
 esac
 
 # Install cross-compilers
-$script_dir/scripts/checkBuildSystemNoInteractive.pl arm-elf $script_dir/pedigree-compiler $compiler_build_options
+$script_dir/scripts/checkBuildSystemNoInteractive.pl arm-pedigree $script_dir/pedigree-compiler $compiler_build_options
 
 old=$(pwd)
 cd $script_dir
@@ -145,7 +145,7 @@ echo "Beginning the Pedigree build."
 echo
 
 # Build Pedigree.
-scons CROSS=$script_dir/compilers/dir/bin/arm-elf- $*
+scons CROSS=$script_dir/compilers/dir/bin/arm-pedigree- arm_beagle=1 armv7=1 arm_cortex_a8=1 $*
 
 cd "$old"
 
@@ -153,7 +153,7 @@ echo
 echo
 echo "Pedigree is now ready to be built without running this script."
 echo "To build in future, run the following command in the '$script_dir' directory:"
-echo "scons CROSS=$script_dir/pedigree-compiler/bin/i686-pedigree-"
+echo "scons CROSS=$script_dir/pedigree-compiler/bin/arm-pedigree-"
 echo
 echo "If you wish, you can continue to run this script. It won't ask questions"
 echo "anymore, unless you remove the '.easy_os' file in '$script_dir'."

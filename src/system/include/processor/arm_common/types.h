@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -33,9 +32,9 @@ typedef signed short ARMint16_t;
 /** Define an 16bit unsigned integer type */
 typedef unsigned short ARMuint16_t;
 /** Define a 32bit signed integer type */
-typedef signed long ARMint32_t;
+typedef signed int ARMint32_t;
 /** Define a 32bit unsigned integer type */
-typedef unsigned long ARMuint32_t;
+typedef unsigned int ARMuint32_t;
 /** Define a 64bit signed integer type */
 typedef signed long long ARMint64_t;
 /** Define a 64bit unsigned integer type */

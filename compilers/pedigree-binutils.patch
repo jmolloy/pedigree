@@ -21,17 +21,19 @@ diff --git a/bfd/config.bfd b/bfd/config.bfd
 index 5324d39..fb6254d 100644
 --- a/bfd/config.bfd
 +++ b/bfd/config.bfd
-@@ -345,6 +345,10 @@ case "${targ}" in
-     targ_defvec=bfd_elf32_littlearm_symbian_vec
-     targ_selvecs=bfd_elf32_bigarm_symbian_vec
+@@ -301,7 +302,11 @@ case "${targ}" in
+     targ_underscore=no
+     targ_cflags="-DARM_WINCE -DARM_COFF_BUGFIX"
      ;;
-+  arm*-*-pedigree*)
+-  arm-*-pe*)
++   arm*-*-pedigree*)
 +    targ_defvec=bfd_elf32_littlearm_vec
-+    targ_selvecs=bfd_el32_bigarm_vec
++    targ_selvecs=bfd_elf32_bigarm_vec
 +    ;;
-   arm9e-*-elf)
-     targ_defvec=bfd_elf32_littlearm_vec
-     targ_selvecs=bfd_elf32_bigarm_vec
++ arm-*-pe*)
+     targ_defvec=armpe_little_vec
+     targ_selvecs="armpe_little_vec armpe_big_vec armpei_little_vec armpei_big_vec"
+     targ_underscore=yes
 @@ -514,6 +518,15 @@ case "${targ}" in
      targ_defvec=bfd_elf32_i386_vec
      targ_selvecs=i386coff_vec

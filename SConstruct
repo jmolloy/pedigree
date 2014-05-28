@@ -324,8 +324,8 @@ if(env['ON_PEDIGREE'] or tmp != None):
             defines += ['ARMV7']
             if env['arm_cortex_a8']:
                 # TODO: actually need to use VFP, not FPA
-                cflags = safeAppend(cflags, ' -mcpu=cortex-a8 -mtune=cortex-a8 -mfpu=fpa ')
-                cxxflags = safeAppend(cxxflags, ' -mcpu=cortex-a8 -mtune=cortex-a8 -mfpu=fpa ')
+                cflags = safeAppend(cflags, ' -mcpu=cortex-a8 -mtune=cortex-a8 -mfpu=vfp ')
+                cxxflags = safeAppend(cxxflags, ' -mcpu=cortex-a8 -mtune=cortex-a8 -mfpu=vfp ')
 
         env['CFLAGS'] = safeAppend(env['CFLAGS'], cflags)
         env['CXXFLAGS'] = safeAppend(env['CXXFLAGS'], cxxflags)
