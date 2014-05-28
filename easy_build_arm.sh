@@ -17,7 +17,7 @@ cd $old
 compiler_build_options=""
 
 real_os=""
-if [ ! -e $script_dir/.easy_os ]; then
+if [ ! -e "$script_dir/.easy_os" ]; then
 
     echo "Checking for dependencies... Which operating system are you running on?"
     echo "Cygwin, Debian/Ubuntu, OpenSuSE, Fedora, OSX, or some other system?"
@@ -33,7 +33,7 @@ if [ ! -e $script_dir/.easy_os ]; then
 
     real_os=$os
 
-    case $real_os in
+    case "$real_os" in
         debian)
             # TODO: Not sure if the package list is any different for debian vs ubuntu?
             echo "Installing packages with apt-get, please wait..."
@@ -87,14 +87,14 @@ if [ ! -e $script_dir/.easy_os ]; then
 
     shopt -u nocasematch
     
-    echo $real_os > $script_dir/.easy_os
+    echo $real_os > "$script_dir/.easy_os"
 
     echo
 
 else
-    real_os=`cat $script_dir/.easy_os`
+    real_os=`cat "$script_dir/.easy_os"`
 
-    if [ $real_os == "$1" ]; then
+    if [ "$real_os" == "$1" ]; then
         shift
     fi
 fi
@@ -111,24 +111,17 @@ case $real_os in
 esac
 
 # Install cross-compilers
-$script_dir/scripts/checkBuildSystemNoInteractive.pl arm-pedigree $script_dir/pedigree-compiler $compiler_build_options
+"$script_dir/scripts/checkBuildSystemNoInteractive.pl" arm-pedigree "$script_dir/pedigree-compiler" $compiler_build_options
 
 old=$(pwd)
-cd $script_dir
+cd "$script_dir"
 
 set +e
 
-# Update the local working copy, only if the working copy is not dirty and we
-# are not a developer.
-git remote -v | grep ssh > /dev/null 2>&1
-if [ $? != 0 ]; then
-    # Not a developer - check for clean working copy
-    if [[ $(git diff --shortstat 2> /dev/null | tail -n1) == "" ]]; then
-        echo
-        echo "Please wait, checking for a newer revision of the Pedigree source code."
-        echo "If one is found, it will be downloaded and your local copy will be automatically updated."
-        git fetch && git rebase origin/master > /dev/null 2>&1
-    fi
+# Update the local working copy only if it is clean.
+changed=`git status -s -uno`
+if [ -z "$changed" ]; then
+    git pull --rebase > /dev/null 2>&1
 fi
 
 echo
@@ -145,7 +138,7 @@ echo "Beginning the Pedigree build."
 echo
 
 # Build Pedigree.
-scons CROSS=$script_dir/compilers/dir/bin/arm-pedigree- arm_beagle=1 armv7=1 arm_cortex_a8=1 $*
+scons CROSS="$script_dir/compilers/dir/bin/arm-pedigree-" arm_beagle=1 armv7=1 arm_cortex_a8=1 $*
 
 cd "$old"
 
@@ -153,7 +146,7 @@ echo
 echo
 echo "Pedigree is now ready to be built without running this script."
 echo "To build in future, run the following command in the '$script_dir' directory:"
-echo "scons CROSS=$script_dir/pedigree-compiler/bin/arm-pedigree-"
+echo "scons CROSS='$script_dir/pedigree-compiler/bin/arm-pedigree-'"
 echo
 echo "If you wish, you can continue to run this script. It won't ask questions"
 echo "anymore, unless you remove the '.easy_os' file in '$script_dir'."
