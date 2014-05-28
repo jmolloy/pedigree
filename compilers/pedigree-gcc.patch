@@ -96,7 +96,7 @@ new file mode 100644
 index 0000000..95e66a5
 --- /dev/null
 +++ b/gcc/config/pedigree.h
-@@ -0,0 +1,42 @@
+@@ -0,0 +1,47 @@
 +#define NO_IMPLICIT_EXTERN_C
 +
 +#undef STARTFILE_SPEC
@@ -138,6 +138,11 @@ index 0000000..95e66a5
 +                       %{!dynamic-linker:-dynamic-linker /libraries/libload.so} \
 +                       } \
 +                     }"
++
++/* Override size_t type for Pedigree, as Pedigree uses 'unsigned long' for all
++   targets. */
++#undef SIZE_TYPE
++#define SIZE_TYPE "long unsigned int"
 +
 diff --git a/gcc/config/t-pedigree b/gcc/config/t-pedigree
 new file mode 100644
