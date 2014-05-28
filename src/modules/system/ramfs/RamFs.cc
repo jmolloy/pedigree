@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -110,7 +109,4 @@ void destroy()
 {
 }
 
-MODULE_NAME("ramfs");
-MODULE_ENTRY(&entry);
-MODULE_EXIT(&destroy);
-MODULE_DEPENDS("vfs");
+MODULE_INFO("ramfs", &entry, &destroy, "vfs");
