@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -171,8 +170,12 @@ Ohci::Ohci(Device* pDev) : UsbHub(pDev), m_Mutex(false), m_ScheduleChangeLock(),
     // new Thread(Processor::information().getCurrentThread()->getParent(), threadStub, reinterpret_cast<void*>(this));
 
     // Install the IRQ handler
+#ifdef X86_COMMON
     Machine::instance().getIrqManager()->registerPciIrqHandler(this, this);
-    Machine::instance().getIrqManager()->control(getInterruptNumber(), IrqManager::MitigationThreshold, (1500000 / 64)); // 12KB/ms (12Mbps) in bytes, divided by 64 bytes maximum per transfer/IRQ
+    Machine::instance().getIrqManager()->control(getInterruptNumber(), IrqManager::MitigationThreshold, (1500000 / 64)); // 12KB/ms (12Mbps) in bytes, divided by 64 bytes maximum per transfer/IRQ-#else
+#else
+    InterruptManager::instance().registerInterruptHandler(pDev->getInterruptNumber(), this);
+#endif
 
     // Get the number of ports and delay for power-up for this root hub. 
     uint32_t rhDescA = m_pBase->read32(OhciRhDescriptorA);
