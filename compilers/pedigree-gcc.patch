@@ -33,7 +33,7 @@ diff --git a/gcc/config.gcc b/gcc/config.gcc
 index 92d57dd..871f92f 100644
 --- a/gcc/config.gcc
 +++ b/gcc/config.gcc
-@@ -807,6 +807,12 @@ case ${target} in
+@@ -807,6 +807,13 @@ case ${target} in
      *) echo 'Unknown thread configuration for VxWorks'; exit 1 ;;
    esac
    ;;
@@ -42,6 +42,7 @@ index 92d57dd..871f92f 100644
 +  gas=yes
 +  gnu_ld=yes
 +  default_use_cxa_atexit=yes
++  use_gcc_stdint=provide
 +  ;;
  *-*-elf)
    # Assume that newlib is being used and so __cxa_atexit is provided.
@@ -55,7 +56,7 @@ index 92d57dd..871f92f 100644
  	case ${target} in
  	arm*eb-*-eabi*)
  	  tm_defines="${tm_defines} TARGET_BIG_ENDIAN_DEFAULT=1"
-@@ -923,10 +923,17 @@ arm*-*-eabi* | arm*-*-symbianelf* | arm*-*-rtems*)
+@@ -923,10 +923,18 @@ arm*-*-eabi* | arm*-*-symbianelf* | arm*-*-rtems*)
  	tm_file="dbxelf.h elfos.h arm/unknown-elf.h arm/elf.h arm/bpabi.h"
  	tmake_file="arm/t-arm arm/t-arm-elf"
  	case ${target} in
@@ -69,6 +70,7 @@ index 92d57dd..871f92f 100644
 +	  arm*-*-pedigree*)
 +	    tm_file="$tm_file pedigree.h"
 +	    tmake_file="${tmake_file} t-pedigree"
++	    use_gcc_stdint=provide
 +	    ;;
 +	  esac
  	  ;;
@@ -79,12 +81,12 @@ index 92d57dd..871f92f 100644
  	tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h newlib-stdint.h i386/i386elf.h i386/x86-64.h"
  	;;
 +i[34567]86-*-pedigree*)
-+    tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h i386/i386elf.h pedigree.h"
++    tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h i386/i386elf.h pedigree.h newlib-stdint.h"
 +    tmake_file="i386/t-i386elf i386/t-crtstuff t-pedigree"
 +    use_fixproto=yes
 +    ;;
 +x86_64-*-pedigree*)
-+    tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h i386/i386elf.h i386/x86-64.h pedigree.h"
++    tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h i386/i386elf.h i386/x86-64.h pedigree.h newlib-stdint.h"
 +    tmake_file="i386/t-i386elf i386/t-crtstuff t-pedigree"
 +    use_fixproto=yes
 +    ;;

@@ -135,15 +135,18 @@ final_output = posix_objname
 posix_objname = '%s.debug' % (posix_objname,)
 
 if "STATIC_DRIVERS" in env['CPPDEFINES']:
-    build = tmp.Program(posix_objname,posix_files,LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',LSCRIPT=File("#src/modules/link_static.ld"))
-    tmp.Command(final_output, posix_objname, action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
+    tmp['LSCRIPT'] = File("#src/modules/link_static.ld")
 else:
-    build = tmp.Program(posix_objname,posix_files,LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',LSCRIPT=File("#src/modules/link.ld"))
-    tmp.Command(final_output, posix_objname, action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
+    tmp['LSCRIPT'] = File("#src/modules/link.ld")
+
+tmp.Program(posix_objname,posix_files,LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT')
+tmp.Command(final_output, posix_objname, action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
 
 glueFlags = " -fPIC -DUSE_PIC_SYSCALLS "
 
 tmp_glue = tmp.Clone()
+
+# TODO: rip out stdint.h, make sure GCC target provides it.
 
 tmp_glue['CFLAGS'] = buildutils.userspace.fixFlags(env, tmp_glue['CFLAGS'])
 tmp_glue['CXXFLAGS'] = buildutils.userspace.fixFlags(env, tmp_glue['CXXFLAGS'])

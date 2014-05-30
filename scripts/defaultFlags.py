@@ -22,7 +22,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #------------------------- All Architectures -------------------------#
 
 # Generic entry-level flags (that everyone should have)
-generic_cflags = '-std=gnu99 -fno-builtin -nostdinc -nostdlib -ffreestanding -O3 '
+generic_cflags = '-std=gnu99 -fno-builtin -nostdlib -ffreestanding -O3 '
 generic_cxxflags = generic_cflags.replace('-std=gnu99', '-std=gnu++98') + ' -fno-exceptions -fno-rtti -fno-asynchronous-unwind-tables ' # c++0x
 
 # Warning flags (that force us to write betterish code)
@@ -39,7 +39,7 @@ warning_flags_off = '-Wno-unused -Wno-unused-variable -Wno-conversion -Wno-forma
 generic_asflags = '-f elf'
 
 # Generic link flags (that everyone should have)
-generic_linkflags = '-nostdlib -nostdinc -nostartfiles'
+generic_linkflags = '-nostdlib -nostartfiles'
 
 # Generic defines
 generic_defines = [
