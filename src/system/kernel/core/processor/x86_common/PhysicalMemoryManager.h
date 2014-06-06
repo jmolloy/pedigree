@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -112,6 +111,8 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
         /** The destructor does nothing */
         inline ~PageStack(){}
 
+        inline size_t freePages() const { return m_FreePages; }
+
       private:
         /** The copy-constructor
          *\note Not implemented */
@@ -133,6 +134,8 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
         size_t m_StackMax[StackCount];
         /** Currently used size of the stack */
         size_t m_StackSize[StackCount];
+        /** Current pages available. */
+        size_t m_FreePages;
     };
 
     /** The page stack */

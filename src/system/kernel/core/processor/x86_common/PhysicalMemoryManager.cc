@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -48,6 +47,7 @@ uint32_t g_PageBitmap[16384] = {0};
 #endif
 
 #include <SlamAllocator.h>
+#include <process/MemoryPressureManager.h>
 
 X86CommonPhysicalMemoryManager X86CommonPhysicalMemoryManager::m_Instance;
 
@@ -58,52 +58,32 @@ PhysicalMemoryManager &PhysicalMemoryManager::instance()
 
 physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
 {
+    static bool bDidHitWatermark = false;
+
     m_Lock.acquire();
 
     physical_uintptr_t ptr;
 
-    /// \todo We should actually know how many pages are left, and do this
-    ///       at a high water mark. Some ways in which we can resolve this
-    ///       actually require allocating small amounts of RAM.
-    ptr = m_PageStack.allocate(0);
-    while(!ptr)
+    if(m_PageStack.freePages() < MemoryPressureManager::getHighWatermark())
     {
-#if 0
-        ERROR_NOLOCK("High memory pressure - compacting caches...");
-
-        // Can we just ditch some kernel heap memory?
-        SlamAllocator::instance().recovery(10);
-
-        ptr = m_PageStack.allocate(0);
-        if(ptr)
-            break;
-
-        // Try a couple times - high memory pressure so let's fix that.
-        for(size_t i = 0; (i < 2) && !ptr; ++i)
-        {
-            // Rip out five pages - enough to handle vmem tables and a real
-            // mapping target, but not completely destroy the entire system
-            // cache in one fell swoop just because we hit memory pressure.
-            CacheManager::instance().compactAll(5);
-
-            ptr = m_PageStack.allocate(0);
-            if(!ptr)
-                ERROR_NOLOCK("Compact pass #" << Dec << (i + 1) << Hex << " failed to relieve pressure...");
-        }
-
-        if(!ptr)
-        {
-            FATAL_NOLOCK("Out of physical memory and no caches left to compact!");
-            panic("Out of physical memory and no caches left to compact!");
-        }
+        WARNING_NOLOCK("Memory pressure encountered, performing a compact...");
+        if(!MemoryPressureManager::instance().compact())
+            ERROR_NOLOCK("Compact did not alleviate any memory pressure.");
         else
-        {
-            ERROR_NOLOCK("Memory pressure relieved.");
-            break;
-        }
-#else
+            NOTICE_NOLOCK("Compact was successful.");
+
+        bDidHitWatermark = true;
+    }
+    else if(bDidHitWatermark)
+    {
+        ERROR_NOLOCK("<pressure was hit, but is no longer being hit>");
+        bDidHitWatermark = false;
+    }
+
+    ptr = m_PageStack.allocate(0);
+    if(!ptr)
+    {
         panic("Out of memory.");
-#endif
     }
 
 #ifdef USE_BITMAP
@@ -706,6 +686,8 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::PageStack::allocate(size_t co
             result = *(reinterpret_cast<uint64_t*>(m_Stack[index]) + m_StackSize[index] / 8);
         }
     }
+
+    --m_FreePages;
     return result;
 }
 void X86CommonPhysicalMemoryManager::PageStack::free(uint64_t physicalAddress)
@@ -774,6 +756,7 @@ void X86CommonPhysicalMemoryManager::PageStack::free(uint64_t physicalAddress)
             *(reinterpret_cast<uint64_t*>(m_Stack[index]) + m_StackSize[index] / 8) = physicalAddress;
             m_StackSize[index] += 8;
         }
+        ++m_FreePages;
     }
     X86CommonPhysicalMemoryManager::PageStack::PageStack()
     {
@@ -789,4 +772,6 @@ void X86CommonPhysicalMemoryManager::PageStack::free(uint64_t physicalAddress)
         m_Stack[1] = KERNEL_VIRTUAL_PAGESTACK_ABV4GB1;
         m_Stack[2] = KERNEL_VIRTUAL_PAGESTACK_ABV4GB2;
 #endif
+
+        m_FreePages = 0;
     }
