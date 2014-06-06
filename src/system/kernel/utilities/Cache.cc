@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -48,6 +47,8 @@ void CacheManager::initialise()
         t->registerHandler(this);
     }
 
+    MemoryPressureManager::instance().registerHandler(this);
+
     // Call out to the base class initialise() so the RequestQueue goes live.
     RequestQueue::initialise();
 }
@@ -71,14 +72,19 @@ void CacheManager::unregisterCache(Cache *pCache)
     }
 }
 
-void CacheManager::compactAll(size_t count)
+bool CacheManager::compactAll(size_t count)
 {
+    size_t totalEvicted = 0;
     for(List<Cache*>::Iterator it = m_Caches.begin();
         (it != m_Caches.end()) && count;
         ++it)
     {
-        count -= (*it)->compact(count);
+        size_t evicted = (*it)->compact(count);
+        totalEvicted += evicted;
+        count -= evicted;
     }
+
+    return totalEvicted != 0;
 }
 
 void CacheManager::timer(uint64_t delta, InterruptState &state)

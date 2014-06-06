@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -31,6 +30,7 @@
 #include <machine/TimerHandler.h>
 
 #include <processor/PhysicalMemoryManager.h>
+#include <process/MemoryPressureManager.h>
 
 /// The age at which a cache page is considered "old" and can be evicted
 /// This is expressed in seconds.
@@ -47,7 +47,7 @@
 class Cache;
 
 /** Provides a clean abstraction to a set of data caches. */
-class CacheManager : public TimerHandler, public RequestQueue
+class CacheManager : public TimerHandler, public RequestQueue, public MemoryPressureHandler
 {
     public:
         CacheManager();
@@ -67,7 +67,12 @@ class CacheManager : public TimerHandler, public RequestQueue
          * Compact every cache we know about, until 'count' pages have been
          * evicted. Default value for count says 'all pages in all caches'.
          */
-        void compactAll(size_t count = ~0UL);
+        bool compactAll(size_t count = ~0UL);
+
+        virtual bool compact()
+        {
+            return compactAll();
+        }
 
         virtual void timer(uint64_t delta, InterruptState &state);
 
@@ -125,8 +130,6 @@ public:
      * Then, the write-back thread will mark the page as not-dirty.
      */
     typedef void (*writeback_t)(CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta);
-
-    /// \todo possibly need a callback type for eviction too...
 
     Cache();
     virtual ~Cache();
