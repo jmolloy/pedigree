@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -217,6 +216,7 @@ size_t SlamCache::recovery(size_t maxSlabs)
 
     Node *N = 0;
 
+    size_t freedSlabs = 0;
     if(m_ObjectSize < PhysicalMemoryManager::getPageSize())
     {
         Node *reinsertHead = 0;
@@ -315,6 +315,7 @@ size_t SlamCache::recovery(size_t maxSlabs)
 
             // Kill off the slab!
             freeSlab(slab);
+            ++freedSlabs;
         }
     }
     else
@@ -350,10 +351,11 @@ size_t SlamCache::recovery(size_t maxSlabs)
                 N->prev->next = N->next;
 
             freeSlab(slab);
+            ++freedSlabs;
         }
     }
 
-    return origMaxSlabs - maxSlabs;
+    return freedSlabs;
 }
 
 SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
@@ -870,7 +872,7 @@ size_t SlamAllocator::recovery(size_t maxSlabs)
             continue;
 
         size_t thisSlabs = m_Caches[i].recovery(maxSlabs);
-        nPages += thisSlabs / m_Caches[i].slabSize();
+        nPages += (thisSlabs * m_Caches[i].slabSize()) / PhysicalMemoryManager::getPageSize();
         nSlabs += thisSlabs;
         if(nSlabs >= maxSlabs)
         {
