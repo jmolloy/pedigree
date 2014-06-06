@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -47,6 +46,7 @@
 #include <process/Thread.h>
 #include <process/Scheduler.h>
 #include <process/SchedulingAlgorithm.h>
+#include <process/MemoryPressureManager.h>
 
 #include <machine/Device.h>
 
@@ -81,6 +81,16 @@ BootIO bootIO;
 /** Global copy of the bootstrap information. */
 BootstrapStruct_t *g_pBootstrapInfo;
 
+/** Handles doing recovery on SLAM if memory pressure is encountered. */
+class SlamRecovery : public MemoryPressureHandler
+{
+  public:
+    virtual bool compact()
+    {
+      return SlamAllocator::instance().recovery(5) != 0;
+    }
+};
+
 /** Kernel entry point for application processors (after processor/machine has been initialised
     on the particular processor */
 void apMain()
@@ -95,8 +105,6 @@ void apMain()
   Processor::setInterrupts(true);
   for (;;)
   {
-    // Idle - perform SLAM recovery.
-    SlamAllocator::instance().recovery(5);
     Processor::haltUntilInterrupt();
 
 #ifdef THREADS
@@ -294,6 +302,10 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   pFeatures->add(ServiceFeatures::probe);
   ServiceManager::instance().addService(String("graphics"), pService, pFeatures);
 
+  // Set up SLAM recovery memory pressure handler.
+  SlamRecovery recovery;
+  MemoryPressureManager::instance().registerHandler(&recovery);
+
   /// \todo Seed random number generator.
 
 #if defined(THREADS)
@@ -314,8 +326,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // This will run when nothing else is available to run
   for (;;)
   {
-    // Kernel idle thread - perform SLAM recovery.
-    SlamAllocator::instance().recovery(5);
     Processor::haltUntilInterrupt();
 
 #ifdef THREADS
