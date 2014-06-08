@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -159,7 +158,13 @@
 /** The maximum length of an individual static log entry. */
 #define LOG_LENGTH  128
 /** The maximum number of static entries in the log. */
+#ifdef HUGE_STATIC_LOG
+// 2MB static log buffer
 #define LOG_ENTRIES ((1<<21)/sizeof(LogEntry))
+#else
+// 64K static log buffer
+#define LOG_ENTRIES ((1<<16)/sizeof(LogEntry))
+#endif
 
 /** Radix for Log's integer output */
 enum NumberType
