@@ -58,6 +58,11 @@ class CacheManager : public TimerHandler, public RequestQueue, public MemoryPres
             return m_Instance;
         }
 
+        virtual const String getMemoryPressureDescription()
+        {
+          return String("Global cache compact.");
+        }
+
         void initialise();
 
         void registerCache(Cache *pCache);
@@ -71,7 +76,7 @@ class CacheManager : public TimerHandler, public RequestQueue, public MemoryPres
 
         virtual bool compact()
         {
-            return compactAll();
+            return compactAll(5);
         }
 
         virtual void timer(uint64_t delta, InterruptState &state);

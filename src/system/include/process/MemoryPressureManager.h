@@ -23,12 +23,21 @@
 
 #include <processor/types.h>
 #include <utilities/List.h>
+#include <utilities/String.h>
 
+/** Maximum memory pressure handler priority (one list per priority level). */
+#define MAX_MEMPRESSURE_PRIORITY    16
+
+/**
+ * MemoryPressureHandler: interface for memory pressure handlers.
+ */
 class MemoryPressureHandler
 {
     public:
         MemoryPressureHandler() {}
         virtual ~MemoryPressureHandler() {}
+
+        virtual const String getMemoryPressureDescription() = 0;
 
         /**
          * Called by MemoryPressureManager to request this handler to take
@@ -37,7 +46,6 @@ class MemoryPressureHandler
          */
         virtual bool compact() = 0;
 };
-
 
 /**
  * MemoryPressureManager: global memory pressure handling.
@@ -51,6 +59,12 @@ class MemoryPressureManager
     public:
         MemoryPressureManager() : m_Handlers() {}
         ~MemoryPressureManager() {}
+
+        const static size_t HighestPriority = 0;
+        const static size_t HighPriority = MAX_MEMPRESSURE_PRIORITY / 3;
+        const static size_t MediumPriority = MAX_MEMPRESSURE_PRIORITY / 2;
+        const static size_t LowPriority = (MAX_MEMPRESSURE_PRIORITY * 2) / 3;
+        const static size_t LowestPriority = MAX_MEMPRESSURE_PRIORITY - 1;
 
         static MemoryPressureManager &instance()
         {
@@ -75,7 +89,7 @@ class MemoryPressureManager
         /**
          * Register a new handler.
          */
-        void registerHandler(MemoryPressureHandler *pHandler);
+        void registerHandler(size_t prio, MemoryPressureHandler *pHandler);
 
         /**
          * Remove a handler.
@@ -85,7 +99,7 @@ class MemoryPressureManager
     private:
         static MemoryPressureManager m_Instance;
 
-        List<MemoryPressureHandler *> m_Handlers;
+        List<MemoryPressureHandler *> m_Handlers[MAX_MEMPRESSURE_PRIORITY];
 };
 
 

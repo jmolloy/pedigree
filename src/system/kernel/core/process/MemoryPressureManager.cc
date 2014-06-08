@@ -19,42 +19,55 @@
 
 
 #include <process/MemoryPressureManager.h>
+#include <Log.h>
 
 MemoryPressureManager MemoryPressureManager::m_Instance;
 
 bool MemoryPressureManager::compact()
 {
-    for (List<MemoryPressureHandler *>::Iterator it = m_Handlers.begin();
-        it != m_Handlers.end();
-        ++it)
+    for(size_t i = 0; i < MAX_MEMPRESSURE_PRIORITY; ++i)
     {
-        if((*it)->compact())
+        for (List<MemoryPressureHandler *>::Iterator it = m_Handlers[i].begin();
+            it != m_Handlers[i].end();
+            ++it)
         {
-            return true;
+            NOTICE("Compact: " << (*it)->getMemoryPressureDescription());
+            if((*it)->compact())
+            {
+                NOTICE("  -> pages released!");
+                return true;
+            }
+            NOTICE("  -> no pages released.");
         }
     }
 
     return false;
 }
 
-void MemoryPressureManager::registerHandler(MemoryPressureHandler *pHandler)
+void MemoryPressureManager::registerHandler(size_t prio, MemoryPressureHandler *pHandler)
 {
-    m_Handlers.pushBack(pHandler);
+    if(prio >= MAX_MEMPRESSURE_PRIORITY)
+        prio = MAX_MEMPRESSURE_PRIORITY - 1;
+
+    m_Handlers[prio].pushBack(pHandler);
 }
 
 void MemoryPressureManager::removeHandler(MemoryPressureHandler *pHandler)
 {
-    for (List<MemoryPressureHandler *>::Iterator it = m_Handlers.begin();
-        it != m_Handlers.end();
-        )
+    for(size_t i = 0; i < MAX_MEMPRESSURE_PRIORITY; ++i)
     {
-        if ((*it) == pHandler)
+        for (List<MemoryPressureHandler *>::Iterator it = m_Handlers[i].begin();
+            it != m_Handlers[i].end();
+            )
         {
-            it = m_Handlers.erase(it);
-        }
-        else
-        {
-            ++it;
+            if ((*it) == pHandler)
+            {
+                it = m_Handlers[i].erase(it);
+            }
+            else
+            {
+                ++it;
+            }
         }
     }
 }

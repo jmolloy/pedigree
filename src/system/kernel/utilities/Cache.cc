@@ -47,7 +47,7 @@ void CacheManager::initialise()
         t->registerHandler(this);
     }
 
-    MemoryPressureManager::instance().registerHandler(this);
+    MemoryPressureManager::instance().registerHandler(MemoryPressureManager::MediumPriority, this);
 
     // Call out to the base class initialise() so the RequestQueue goes live.
     RequestQueue::initialise();

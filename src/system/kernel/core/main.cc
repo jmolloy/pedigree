@@ -85,6 +85,11 @@ BootstrapStruct_t *g_pBootstrapInfo;
 class SlamRecovery : public MemoryPressureHandler
 {
   public:
+    virtual const String getMemoryPressureDescription()
+    {
+      return String("SLAM recovery; freeing unused slabs.");
+    }
+
     virtual bool compact()
     {
       return SlamAllocator::instance().recovery(5) != 0;
@@ -297,7 +302,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   // Set up SLAM recovery memory pressure handler.
   SlamRecovery recovery;
-  MemoryPressureManager::instance().registerHandler(&recovery);
+  MemoryPressureManager::instance().registerHandler(MemoryPressureManager::HighestPriority, &recovery);
 
   // Bring up the cache subsystem.
   CacheManager::instance().initialise();
