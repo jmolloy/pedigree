@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -530,12 +529,15 @@ bool X64VirtualAddressSpace::mapPageStructuresAbove4GB(physical_uintptr_t physAd
 }
 void *X64VirtualAddressSpace::allocateStack()
 {
-    return doAllocateStack(USERSPACE_VIRTUAL_STACK_SIZE);
+    size_t sz = USERSPACE_VIRTUAL_STACK_SIZE;
+    if(this == &m_KernelSpace)
+      sz = KERNEL_STACK_SIZE;
+    return doAllocateStack(sz);
 }
 void *X64VirtualAddressSpace::allocateStack(size_t stackSz)
 {
     if(stackSz == 0)
-        stackSz = USERSPACE_VIRTUAL_STACK_SIZE;
+      return allocateStack();
     return doAllocateStack(stackSz);
 }
 void *X64VirtualAddressSpace::doAllocateStack(size_t sSize)
