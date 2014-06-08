@@ -59,25 +59,34 @@ PhysicalMemoryManager &PhysicalMemoryManager::instance()
 physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
 {
     static bool bDidHitWatermark = false;
+    static bool bHandlingPressure = false;
 
     m_Lock.acquire();
 
     physical_uintptr_t ptr;
 
-    if(m_PageStack.freePages() < MemoryPressureManager::getHighWatermark())
+    // Some methods of handling memory pressure require allocating pages, so
+    // we need to not end up recursively trying to release the pressure.
+    if(!bHandlingPressure)
     {
-        WARNING_NOLOCK("Memory pressure encountered, performing a compact...");
-        if(!MemoryPressureManager::instance().compact())
-            ERROR_NOLOCK("Compact did not alleviate any memory pressure.");
-        else
-            NOTICE_NOLOCK("Compact was successful.");
+        if(m_PageStack.freePages() < MemoryPressureManager::getHighWatermark())
+        {
+            bHandlingPressure = true;
 
-        bDidHitWatermark = true;
-    }
-    else if(bDidHitWatermark)
-    {
-        ERROR_NOLOCK("<pressure was hit, but is no longer being hit>");
-        bDidHitWatermark = false;
+            WARNING_NOLOCK("Memory pressure encountered, performing a compact...");
+            if(!MemoryPressureManager::instance().compact())
+                ERROR_NOLOCK("Compact did not alleviate any memory pressure.");
+            else
+                NOTICE_NOLOCK("Compact was successful.");
+
+            bDidHitWatermark = true;
+            bHandlingPressure = false;
+        }
+        else if(bDidHitWatermark)
+        {
+            ERROR_NOLOCK("<pressure was hit, but is no longer being hit>");
+            bDidHitWatermark = false;
+        }
     }
 
     ptr = m_PageStack.allocate(0);
@@ -676,9 +685,6 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::PageStack::allocate(size_t co
         {
             m_StackSize[0] -= 4;
             result = *(reinterpret_cast<uint32_t*>(m_Stack[0]) + m_StackSize[0] / 4);
-            /// \note Testing.
-            g_FreePages --;
-            g_AllocedPages ++;
         }
         else
         {
@@ -687,7 +693,16 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::PageStack::allocate(size_t co
         }
     }
 
-    --m_FreePages;
+    if(result)
+    {
+        /// \note Testing.
+        if(g_FreePages)
+            g_FreePages --;
+        g_AllocedPages ++;
+
+        if(m_FreePages)
+            --m_FreePages;
+    }
     return result;
 }
 void X86CommonPhysicalMemoryManager::PageStack::free(uint64_t physicalAddress)
@@ -746,16 +761,18 @@ void X86CommonPhysicalMemoryManager::PageStack::free(uint64_t physicalAddress)
         {
             *(reinterpret_cast<uint32_t*>(m_Stack[0]) + m_StackSize[0] / 4) = static_cast<uint32_t>(physicalAddress);
             m_StackSize[0] += 4;
-            /// \note Testing.
-            g_FreePages ++;
-            if (g_AllocedPages > 0)
-                g_AllocedPages --;
         }
         else
         {
             *(reinterpret_cast<uint64_t*>(m_Stack[index]) + m_StackSize[index] / 8) = physicalAddress;
             m_StackSize[index] += 8;
         }
+
+        /// \note Testing.
+        g_FreePages ++;
+        if (g_AllocedPages > 0)
+            g_AllocedPages --;
+
         ++m_FreePages;
     }
     X86CommonPhysicalMemoryManager::PageStack::PageStack()
