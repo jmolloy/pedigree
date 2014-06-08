@@ -20,6 +20,7 @@
 #include "MemoryMappedFile.h"
 
 #include <processor/PhysicalMemoryManager.h>
+#include <process/MemoryPressureManager.h>
 #include <Spinlock.h>
 
 #include <utilities/assert.h>
@@ -678,14 +679,96 @@ bool MemoryMappedFile::trap(uintptr_t address, bool bWrite)
     return true;
 }
 
+bool MemoryMappedFile::compact()
+{
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
+
+    uintptr_t base = m_Address;
+    uintptr_t end = base + m_Length;
+
+    bool bReleased = false;
+
+    // Is this mapping even writeable?
+    // CoW mappings can't be removed as we have no way of saving their data.
+    if((m_Permissions & Write) && !m_bCopyOnWrite)
+    {
+        // Yes - can we get any dirty pages?
+        for(uintptr_t addr = base; addr < end; addr += pageSz)
+        {
+            physical_uintptr_t p = m_Mappings.lookup(addr);
+            if(p != static_cast<physical_uintptr_t>(~0UL))
+                continue;
+
+            size_t flags = 0;
+            physical_uintptr_t phys = 0;
+            va.getMapping(reinterpret_cast<void *>(addr), phys, flags);
+
+            // Avoid read-only pages for now.
+            if(!(flags & VirtualAddressSpace::Write))
+                continue;
+
+            size_t mappingOffset = (addr - m_Address);
+            size_t fileOffset = m_Offset + mappingOffset;
+
+            // Sync data back to file, synchronously
+            m_pBacking->sync(fileOffset, false);
+
+            // Wipe out the mapping so we have to trap again.
+            va.unmap(reinterpret_cast<void *>(addr));
+
+            // Unpin the page, allowing the cache subsystem to evict it.
+            m_pBacking->returnPhysicalPage(fileOffset);
+            m_Mappings.remove(addr);
+
+            bReleased = true;
+        }
+    }
+
+    // Read-only page pass.
+    if(!bReleased)
+    {
+        for(uintptr_t addr = base; addr < end; addr += pageSz)
+        {
+            physical_uintptr_t p = m_Mappings.lookup(addr);
+            if(p != static_cast<physical_uintptr_t>(~0UL))
+                continue;
+
+            size_t flags = 0;
+            physical_uintptr_t phys = 0;
+            va.getMapping(reinterpret_cast<void *>(addr), phys, flags);
+
+            // Avoid writeable pages in this pass.
+            if((flags & VirtualAddressSpace::Write))
+                continue;
+
+            size_t mappingOffset = (addr - m_Address);
+            size_t fileOffset = m_Offset + mappingOffset;
+
+            // Wipe out the mapping so we have to trap again.
+            va.unmap(reinterpret_cast<void *>(addr));
+
+            // Unpin the page, allowing the cache subsystem to evict it.
+            m_pBacking->returnPhysicalPage(fileOffset);
+            m_Mappings.remove(addr);
+
+            bReleased = true;
+        }
+    }
+
+    return bReleased;
+}
+
 MemoryMapManager::MemoryMapManager() :
     m_MmObjectLists(), m_Lock()
 {
     PageFaultHandler::instance().registerHandler(this);
+    MemoryPressureManager::instance().registerHandler(MemoryPressureManager::HighPriority, this);
 }
 
 MemoryMapManager::~MemoryMapManager()
 {
+    MemoryPressureManager::instance().removeHandler(this);
 }
 
 MemoryMappedObject *MemoryMapManager::mapFile(File *pFile, uintptr_t &address, size_t length, MemoryMappedObject::Permissions perms, size_t offset, bool bCopyOnWrite)
@@ -1301,4 +1384,41 @@ bool MemoryMapManager::sanitiseAddress(uintptr_t &address, size_t length)
     }
 
     return true;
+}
+
+bool MemoryMapManager::compact()
+{
+    // Track current address space as we need to switch into each known address
+    // space in order to compact them.
+    VirtualAddressSpace &currva = Processor::information().getVirtualAddressSpace();
+
+    bool bCompact = false;
+    for(Tree<VirtualAddressSpace*, MmObjectList*>::Iterator it = m_MmObjectLists.begin();
+        it != m_MmObjectLists.end();
+        ++it)
+    {
+        Processor::switchAddressSpace(*it.key());
+
+        for(MmObjectList::Iterator it2 = it.value()->begin();
+            it2 != it.value()->end();
+            ++it2)
+        {
+            bCompact = (*it2)->compact();
+            if(bCompact)
+                break;
+        }
+
+        if(bCompact)
+            break;
+    }
+
+    // Restore old address space now.
+    Processor::switchAddressSpace(currva);
+
+    // Memory mapped files tend to un-pin pages for the Cache system to
+    // release, so we never return success (as we never actually released
+    // pages and therefore didn't resolve any memory pressure).
+    if(bCompact)
+        NOTICE("    -> success, hoping for Cache eviction...");
+    return false;
 }

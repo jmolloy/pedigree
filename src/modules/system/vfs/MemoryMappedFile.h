@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -24,6 +23,7 @@
 #include "File.h"
 
 #include <processor/PageFaultHandler.h>
+#include <process/MemoryPressureManager.h>
 #include <utilities/Tree.h>
 #include <utilities/List.h>
 #include <process/Mutex.h>
@@ -138,6 +138,16 @@ class MemoryMappedObject
          * \return true if the trap was successful, false otherwise.
          */
         virtual bool trap(uintptr_t address, bool bWrite) = 0;
+
+        /**
+         * Release memory that can be released.
+         *
+         * Default implementation returns 'no pages released'.
+         */
+        virtual bool compact()
+        {
+            return false;
+        }
 
         /**
          * Determines if the given address is within this object's mapping.
@@ -265,6 +275,23 @@ class MemoryMappedFile : public MemoryMappedObject
 
         virtual bool trap(uintptr_t address, bool bWrite);
 
+        /**
+         * Syncs back all dirty pages to their respective backing store.
+         *
+         * Compacting begins by doing a pass to find any pages that can be
+         * synced and then unpinned, allowing a future Cache eviction.
+         * Should that pass successfully free memory, the compact will be
+         * considered successful.
+         *
+         * If that pass is not successful, read-only pages are evicted. At this
+         * stage, this is done in a linear fashion; there is no LRU or other
+         * type of algorithm at play.
+         * \todo Improve this.
+         *
+         * \return true if at least one page was released, false otherwise.
+         */
+        virtual bool compact();
+
     private:
         /** Backing file. */
         File *m_pBacking;
@@ -283,7 +310,7 @@ class MemoryMappedFile : public MemoryMappedObject
  * This class is a multiplexing trap handler, to handle traps for
  * MemoryMappedObjects, dispatching them to the right place.
  */
-class MemoryMapManager : public MemoryTrapHandler
+class MemoryMapManager : public MemoryTrapHandler, public MemoryPressureHandler
 {
     public:
         /** Singleton instance */
@@ -360,6 +387,18 @@ class MemoryMapManager : public MemoryTrapHandler
          * Trap handler, called when a fault takes place.
          */
         bool trap(uintptr_t address, bool bIsWrite);
+
+        /**
+         * Trigger a compact in all address spaces.
+         *
+         * This may switch in and out of several address spaces.
+         */
+        virtual bool compact();
+
+        virtual const String getMemoryPressureDescription()
+        {
+          return String("Unmap safe pages from memory mapped files.");
+        }
 
     private:
         /** Default and only constructor. Registers with PageFaultHandler. */
