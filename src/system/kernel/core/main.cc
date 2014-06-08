@@ -217,10 +217,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // Initialise the processor-specific interface
   // Bootup of the other Application Processors and related tasks
   Processor::initialise2(bsInf);
-
-  // Bring up the cache subsystem.
-  CacheManager::instance().initialise();
-
+  
   // Initialise the Kernel Elf class
   if (KernelElf::instance().initialise(bsInf) == false)
     panic("KernelElf::initialise() failed");
@@ -236,18 +233,11 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   Processor::setInterrupts(true);
 
-  // Initialise the input manager
-  InputManager::instance().initialise();
-
-#ifdef THREADS
-  ZombieQueue::instance().initialise();
-#endif
-
   // Initialise the boot output.
   bootIO.initialise();
 
   // Spew out a starting string.
-  HugeStaticString str;
+  HugeStaticString str, ident;
   str += "Pedigree - revision ";
   str += g_pBuildRevision;
 #ifndef DONT_LOG_TO_SERIAL
@@ -283,7 +273,8 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   str.clear();
   str += "Processor information: ";
-  Processor::identify(str);
+  Processor::identify(ident);
+  str += ident;
 #ifndef DONT_LOG_TO_SERIAL
   str += "\r\n";
 #else
@@ -296,15 +287,27 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #endif
 
   // Set up the graphics service for drivers to register with
+#ifndef NOGFX
   GraphicsService *pService = new GraphicsService;
   ServiceFeatures *pFeatures = new ServiceFeatures;
   pFeatures->add(ServiceFeatures::touch);
   pFeatures->add(ServiceFeatures::probe);
   ServiceManager::instance().addService(String("graphics"), pService, pFeatures);
+#endif
 
   // Set up SLAM recovery memory pressure handler.
   SlamRecovery recovery;
   MemoryPressureManager::instance().registerHandler(&recovery);
+
+  // Bring up the cache subsystem.
+  CacheManager::instance().initialise();
+
+  // Initialise the input manager
+  InputManager::instance().initialise();
+
+#ifdef THREADS
+  ZombieQueue::instance().initialise();
+#endif
 
   /// \todo Seed random number generator.
 
