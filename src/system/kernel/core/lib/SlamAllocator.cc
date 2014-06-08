@@ -245,7 +245,8 @@ size_t SlamCache::recovery(size_t maxSlabs)
                     reinsertTail->next = pHead;
                 } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pHead, reinsertHead));
 
-                pHead->prev = reinsertTail;
+                if(pHead)
+                    pHead->prev = reinsertTail;
 
                 break;
             }
