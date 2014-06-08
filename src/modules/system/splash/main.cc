@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -344,7 +343,7 @@ static void init()
     ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
     Service         *pService  = ServiceManager::instance().getService(String("graphics"));
     bool bSuccess = false;
-    if(pFeatures->provides(ServiceFeatures::probe))
+    if(pFeatures && pFeatures->provides(ServiceFeatures::probe))
         if(pService)
             bSuccess = pService->serve(ServiceFeatures::probe, reinterpret_cast<void*>(&pProvider), sizeof(pProvider));
 

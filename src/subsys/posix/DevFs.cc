@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -108,7 +107,7 @@ bool FramebufferFile::initialise()
 {
     ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
     Service         *pService  = ServiceManager::instance().getService(String("graphics"));
-    if(pFeatures->provides(ServiceFeatures::probe))
+    if(pFeatures && pFeatures->provides(ServiceFeatures::probe))
     {
         if(pService)
         {
@@ -128,7 +127,7 @@ bool FramebufferFile::initialise()
         }
     }
 
-    return true;
+    return pFeatures && pService;
 }
 
 uintptr_t FramebufferFile::readBlock(uint64_t location)
@@ -329,7 +328,11 @@ bool DevFs::initialise(Disk *pDisk)
     if(pFb->initialise())
         m_pRoot->addEntry(pFb->getName(), pFb);
     else
+    {
+        WARNING("POSIX: no /dev/fb - framebuffer failed to initialise.");
+        --baseInode;
         delete pFb;
+    }
 
     // Create /dev/textui for the text-only UI device.
     TextIO *pTty = new TextIO(String("textui"), ++baseInode, this, m_pRoot);
@@ -340,6 +343,7 @@ bool DevFs::initialise(Disk *pDisk)
     else
     {
         WARNING("POSIX: no /dev/tty - TextIO failed to initialise.");
+        --baseInode;
         delete pTty;
     }
 
