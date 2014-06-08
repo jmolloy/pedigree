@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -85,7 +84,7 @@ void RadixTree<void*>::insert(String key, void *value)
             }
             case Node::NoMatch:
             {
-                FATAL("RadixTree: Algorithmic error (insert)");
+                FATAL("RadixTree: algorithmic error!");
                 break;
             }
             case Node::PartialMatch:
@@ -253,7 +252,7 @@ void RadixTree<void*>::remove(String key)
                 //       pNode's and its. This doesn't affect anything farther up the tree and so no recursion is needed.
 
                 Node *pParent = 0;
-                if (pNode->m_nChildren == 0)
+                if (pNode->m_Children.count() == 0)
                 {
                     // Leaf node, can just delete.
                     pParent = pNode->getParent();
@@ -266,12 +265,12 @@ void RadixTree<void*>::remove(String key)
                     {
                         if (pNode == m_pRoot) return;
 
-                        if (pNode->m_nChildren == 1 && pNode->getValue() == 0)
+                        if (pNode->m_Children.count() == 1 && pNode->getValue() == 0)
                             // Break out of this loop and get caught in the next
                             // if(pNode->m_nChildren == 1)
                             break;
 
-                        if (pNode->m_nChildren == 0 && pNode->getValue() == 0)
+                        if (pNode->m_Children.count() == 0 && pNode->getValue() == 0)
                         {
                             // Leaf node, can just delete.
                             pParent = pNode->getParent();
@@ -285,7 +284,7 @@ void RadixTree<void*>::remove(String key)
                     }
                 }
 
-                if (pNode->m_nChildren == 1)
+                if (pNode->m_Children.count() == 1)
                 {
                     // Change the child's key to be the concatenation of ours and 
                     // its.
@@ -338,14 +337,12 @@ RadixTree<void*>::Node *RadixTree<void*>::cloneNode(Node *pNode, Node *pParent)
     n->setKey(pNode->m_pKey);
     n->setValue(pNode->value);
     n->setParent(pParent);
-    for (size_t i = 0; i < 16; i++)
+
+    for(RadixTree<void*>::Node::childlist_t::Iterator it = pNode->m_Children.begin();
+        it != pNode->m_Children.end();
+        ++it)
     {
-        if (pNode->m_pChildren[i] == 0) continue;
-        for (size_t j = 0; j < 16; j++)
-        {
-            if (pNode->m_pChildren[i]->p[j] == 0) continue;
-            n->addChild(cloneNode(pNode->m_pChildren[i]->p[j], n));
-        }
+        n->addChild(cloneNode((*it), pParent));
     }
 
     return n;
@@ -367,76 +364,60 @@ RadixTree<void*>::Node::~Node()
 {
     delete [] m_pKey;
 
-    for (size_t i = 0; i < 16; i++)
+    for(RadixTree<void*>::Node::childlist_t::Iterator it = m_Children.begin();
+        it != m_Children.end();
+        ++it)
     {
-        if (m_pChildren[i] == 0) continue;
-        for (size_t j = 0; j < 16; j++)
-        {
-            if (m_pChildren[i]->p[j] == 0) continue;
-            delete m_pChildren[i]->p[j];
-        }
-        delete m_pChildren[i];
+        delete (*it);
     }
 }
 
 RadixTree<void*>::Node *RadixTree<void*>::Node::findChild(const uint8_t *cpKey)
 {
-    // Grab the lookahead token.
-    uint8_t token = cpKey[0];
-    
-    uint8_t i = (token >> 4) & 0xF;
-    uint8_t j = token & 0xF;
-    if (m_pChildren[i] == 0) return 0;
-
-    return m_pChildren[i]->p[j];
+    for(RadixTree<void*>::Node::childlist_t::Iterator it = m_Children.begin();
+        it != m_Children.end();
+        ++it)
+    {
+        if((*it)->matchKey(cpKey) != NoMatch)
+        {
+            return (*it);
+        }
+    }
+    return 0;
 }
 
 void RadixTree<void*>::Node::addChild(Node *pNode)
 {
-    // Grab the lookahead token.
-    uint8_t token = pNode->m_pKey[0];
-    
-    uint8_t i = (token >> 4) & 0xF;
-    uint8_t j = token & 0xF;
-    if (m_pChildren[i] == 0)
-    {
-        m_pChildren[i] = new NodePtr;
-        memset(reinterpret_cast<uint8_t*>(m_pChildren[i]), 0, sizeof(NodePtr));
-    }
-    m_pChildren[i]->p[j] = pNode;
-
-    m_nChildren ++;
+    m_Children.pushBack(pNode);
 }
 
 void RadixTree<void*>::Node::replaceChild(Node *pNodeOld, Node *pNodeNew)
 {
-    // Grab the lookahead token.
-    uint8_t token = pNodeOld->m_pKey[0];
-
-    uint8_t i = (token >> 4) & 0xF;
-    uint8_t j = token & 0xF;
-    if (m_pChildren[i] == 0)
+    for(RadixTree<void*>::Node::childlist_t::Iterator it = m_Children.begin();
+        it != m_Children.end();
+        ++it)
     {
-        FATAL("RadixTree::replaceChild: Algorithmic error.");
-        return;
+        if((*it) == pNodeOld)
+        {
+            // Is this even doable!?
+            (*it) = pNodeNew;
+            break;
+        }
     }
-    m_pChildren[i]->p[j] = pNodeNew;
 }
 
 void RadixTree<void*>::Node::removeChild(Node *pChild)
 {
-    // Grab the lookahead token.
-    uint8_t token = pChild->m_pKey[0];
-    
-    uint8_t i = (token >> 4) & 0xF;
-    uint8_t j = token & 0xF;
-    if (m_pChildren[i] == 0)
+    for(RadixTree<void*>::Node::childlist_t::Iterator it = m_Children.begin();
+        it != m_Children.end();
+        ++it)
     {
-        FATAL("RadixTree::removeChild: Algorithmic error.");
-        return;
+        if((*it) == this)
+        {
+            m_Children.erase(it);
+            break;
+        }
     }
-    m_pChildren[i]->p[j] = 0;
-    m_nChildren --;
 }
 
 RadixTree<void*>::Node::MatchType RadixTree<void*>::Node::matchKey(const uint8_t *cpKey)
@@ -480,15 +461,9 @@ void RadixTree<void*>::Node::setKey(const uint8_t *cpKey)
 
 RadixTree<void*>::Node *RadixTree<void*>::Node::getFirstChild()
 {
-    for (size_t i = 0; i < 16; i++)
-    {
-        if (m_pChildren[i] == 0) continue;
-        for (size_t j = 0; j < 16; j++)
-        {
-            if (m_pChildren[i]->p[j] == 0) continue;
-            return m_pChildren[i]->p[j];
-        }
-    }
+    if(m_Children.count())
+        return *m_Children.begin();
+
     return 0;
 }
 
@@ -517,7 +492,7 @@ RadixTree<void*>::Node *RadixTree<void*>::Node::doNext()
     while ( (pNode == this) || (pNode && (pNode->value == 0)) )
     {
         Node *tmp;
-        if (pNode->m_nChildren)
+        if (pNode->m_Children.count())
             pNode = pNode->getFirstChild();
         else
         {
@@ -540,19 +515,16 @@ RadixTree<void*>::Node *RadixTree<void*>::Node::getNextSibling()
     if (!m_pParent) return 0;
 
     bool b = false;
-    for (size_t i = 0; i < 16; i++)
+    for(RadixTree<void*>::Node::childlist_t::Iterator it = m_pParent->m_Children.begin();
+        it != m_pParent->m_Children.end();
+        ++it)
     {
-        if (m_pParent->m_pChildren[i] == 0) continue;
-        for (size_t j = 0; j < 16; j++)
-        {
-            if (m_pParent->m_pChildren[i]->p[j] == 0) continue;
-
-            if (b)
-                return m_pParent->m_pChildren[i]->p[j];
-            if (m_pParent->m_pChildren[i]->p[j] == this)
-                b = true;
-        }
+        if(b)
+            return (*it);
+        if((*it) == this)
+            b = true;
     }
+
     return 0;
 }
 

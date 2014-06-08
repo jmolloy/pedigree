@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -51,9 +50,7 @@ private:
     class Node
     {
     public:
-        struct NodePtr
-        {Node *p[16];};
-
+        typedef Vector<Node *> childlist_t;
         enum MatchType
         {
             ExactMatch,   ///< Key matched node key exactly.
@@ -63,9 +60,8 @@ private:
         };
 
         Node() :
-            m_pKey(0),value(0),m_pParent(0),m_nChildren(0)
+            m_pKey(0),value(0),m_Children(),m_pParent(0)
         {
-            memset(reinterpret_cast<uint8_t*>(m_pChildren), 0, 16*sizeof(NodePtr*));
         }
 
         ~Node ();
@@ -121,11 +117,9 @@ private:
                   member be called 'value'. */
         void *value;
         /** Array of 16 pointers to 16 nodes (256 total). */
-        NodePtr *m_pChildren[16];
+        childlist_t m_Children;
         /** Parent node. */
         Node *m_pParent;
-        /** Number of children. */
-        size_t m_nChildren;
 
     private:
         Node(const Node&);
@@ -216,7 +210,7 @@ private:
     Node *cloneNode(Node *node, Node *parent);
 
     /** Number of items in the tree. */
-    int m_nItems;
+    size_t m_nItems;
     /** The tree's root. */
     Node *m_pRoot;
 };
