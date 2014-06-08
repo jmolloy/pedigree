@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -58,9 +57,11 @@ static struct nic potential_nics[] = {
 
 #define NUM_POTENTIAL_NICS (sizeof(potential_nics) / sizeof(potential_nics[0]))
 
+static bool bFound = false;
+
 static void probeDevice(Device *pDev)
 {
-    NOTICE("3C90x found");
+    bFound = true;
 
     // Create a new node
     Nic3C90x *pCard = new Nic3C90x(reinterpret_cast<Network*>(pDev));
@@ -70,10 +71,12 @@ static void probeDevice(Device *pDev)
     pDev->getParent()->replaceChild(pDev, pCard);
 }
 
-static void entry()
+static bool entry()
 {
     for(unsigned int i = 0; i < NUM_POTENTIAL_NICS; i++)
         Device::root().searchByVendorIdAndDeviceId(potential_nics[i].vendor, potential_nics[i].device, probeDevice);
+
+    return bFound;
 }
 
 static void exit()

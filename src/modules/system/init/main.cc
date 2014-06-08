@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -123,15 +122,12 @@ static bool findDisks(Device *pDev)
 /// program entry point thread is running.
 Mutex g_InitProgramLoaded(true);
 
-static void init()
+static bool init()
 {
     static HugeStaticString str;
 
     // Mount all available filesystems.
-    if (!findDisks(&Device::root()))
-    {
-//     FATAL("No disks found!");
-    }
+    findDisks(&Device::root());
 
     // Mount scratch filesystem (ie, pure ram filesystem, for POSIX /tmp etc)
     RamFs *pRamFs = new RamFs;
@@ -141,6 +137,7 @@ static void init()
     if (VFS::instance().find(String("raw»/")) == 0)
     {
         FATAL("No raw partition!");
+        return false;
     }
 
     // Are we running a live CD?
@@ -304,6 +301,8 @@ static void init()
 #else
     #warning the init module is almost useless without threads.
 #endif
+
+    return true;
 }
 static void destroy()
 {
@@ -461,10 +460,14 @@ void init_stage2()
 }
 
 #ifdef X86_COMMON
-#define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "TUI", "linker", "network-stack", "vbe", "users", "pedigree-c", "native"
+#define __MOD_DEPS "vfs", "posix", "partition", "linker", "network-stack", "users", "pedigree-c", "native"
+#define __MOD_DEPS_OPT "ext2", "fat", "TUI", "vbe"
 #elif PPC_COMMON
 #define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "TUI", "linker", "network-stack", "users", "pedigree-c", "native"
 #elif ARM_COMMON
 #define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "linker", "network-stack", "users", "pedigree-c", "native"
 #endif
 MODULE_INFO("init", &init, &destroy, __MOD_DEPS);
+#ifdef __MOD_DEPS_OPT
+MODULE_OPTIONAL_DEPENDS(__MOD_DEPS_OPT);
+#endif

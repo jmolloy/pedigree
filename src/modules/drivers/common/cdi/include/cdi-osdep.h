@@ -34,8 +34,9 @@ struct cdi_driver;
  * @param deps List of names of other drivers on which this driver depends
  * \endenglish
  */
+ /// \todo Be able to fail and have CDI modules auto-unload if they fail.
 #define CDI_DRIVER(name, drvobj, deps...) \
-    static void mod_entry() {(drvobj).drv.init(); cdi_pedigree_walk_dev_list_init((struct cdi_driver*)&(drvobj));} \
+    static bool mod_entry() {(drvobj).drv.init(); return cdi_pedigree_walk_dev_list_init((struct cdi_driver*)&(drvobj));} \
     static void mod_exit() {cdi_pedigree_walk_dev_list_destroy((struct cdi_driver*)&(drvobj)); (drvobj).drv.destroy();} \
     MODULE_INFO(name, &mod_entry, &mod_exit, "cdi" deps)
 
@@ -52,7 +53,7 @@ extern "C" {
  * @param driver Driver struct containing the list of devices and function
  *               pointers.
  */
-void cdi_pedigree_walk_dev_list_init(struct cdi_driver *dev);
+bool cdi_pedigree_walk_dev_list_init(struct cdi_driver *dev);
 
 /**
  * \english

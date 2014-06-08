@@ -101,8 +101,9 @@ bool RamFs::remove(File* parent, File* file)
     return p->removeEntry(file);
 }
 
-void entry()
+bool entry()
 {
+    return true;
 }
 
 void destroy()

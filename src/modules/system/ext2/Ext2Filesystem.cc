@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -451,9 +450,10 @@ void Ext2Filesystem::ensureInodeTableLoaded(size_t group)
     }
 }
 
-static void initExt2()
+static bool initExt2()
 {
     VFS::instance().addProbeCallback(&Ext2Filesystem::probe);
+    return true;
 }
 
 static void destroyExt2()

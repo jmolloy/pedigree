@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -26,6 +25,8 @@
 #include "Ne2k.h"
 #include <Log.h>
 
+static bool bFound = false;
+
 void probeDevice(Device *pDev)
 {
     NOTICE("NE2K found");
@@ -36,11 +37,15 @@ void probeDevice(Device *pDev)
     // Replace pDev with pNe2k.
     pNe2k->setParent(pDev->getParent());
     pDev->getParent()->replaceChild(pDev, pNe2k);
+
+    bFound = true;
 }
 
-void entry()
+bool entry()
 {
     Device::root().searchByVendorIdAndDeviceId(NE2K_VENDOR_ID, NE2K_DEVICE_ID, probeDevice);
+
+    return bFound;
 }
 
 void exit()

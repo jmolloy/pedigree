@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -492,15 +491,21 @@ class VmwareGraphics : public Display
         Device::Address *m_pFramebufferRawAddress;
 };
 
+static bool bFound = false;
+
 void callback(Device *pDevice)
 {
     VmwareGraphics *pGraphics = new VmwareGraphics(pDevice);
+
+    bFound = true;
 }
 
-void entry()
+bool entry()
 {
     // Don't care about non-SVGA2 devices, just use VBE for them.
     Device::root().searchByVendorIdAndDeviceId(PCI_VENDOR_ID_VMWARE, PCI_DEVICE_ID_VMWARE_SVGA2, callback);
+
+    return bFound;
 }
 
 void exit()

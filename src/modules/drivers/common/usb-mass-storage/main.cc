@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -28,9 +27,10 @@ UsbDevice *massStorageConnected(UsbDevice *pDevice)
     return new UsbMassStorageDevice(pDevice);
 }
 
-static void entry()
+static bool entry()
 {
     UsbPnP::instance().registerCallback(8, SubclassNone, ProtocolNone, massStorageConnected);
+    return true;
 }
 
 static void exit()

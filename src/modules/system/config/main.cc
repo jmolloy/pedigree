@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -388,7 +387,7 @@ sqlite3 *g_pSqlite = 0;
 #include "config_database.h"
 #endif
 
-static void init()
+static bool init()
 {
 #ifndef STATIC_DRIVERS
     if (!g_pBootstrapInfo->isDatabaseLoaded())
@@ -432,6 +431,8 @@ static void init()
     sqlite3_create_function(g_pSqlite, "pedigree_callback", 1, SQLITE_ANY, 0, &xCallback0, 0, 0);
     sqlite3_create_function(g_pSqlite, "pedigree_callback", 2, SQLITE_ANY, 0, &xCallback1, 0, 0);
     sqlite3_create_function(g_pSqlite, "pedigree_callback", 3, SQLITE_ANY, 0, &xCallback2, 0, 0);
+
+    return true;
 }
 
 static void destroy()

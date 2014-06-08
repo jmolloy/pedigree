@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -144,7 +143,7 @@ void NetworkStack::deRegisterDevice(Network *pDevice)
 extern Ipv6Service *g_pIpv6Service;
 extern ServiceFeatures *g_pIpv6Features;
 
-static void entry()
+static bool entry()
 {
     // Initialise the DNS implementation
     Dns::instance().initialise();
@@ -154,6 +153,8 @@ static void entry()
     g_pIpv6Features = new ServiceFeatures;
     g_pIpv6Features->add(ServiceFeatures::touch);
     ServiceManager::instance().addService(String("ipv6"), g_pIpv6Service, g_pIpv6Features);
+
+    return true;
 }
 
 static void exit()

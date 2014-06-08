@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -46,7 +45,7 @@ Device *findPs2Mouse(Device *base)
     return 0;
 }
 
-void entry()
+bool entry()
 {
     Device *root = &Device::root();
     Device *pDevice = findPs2Mouse(root);
@@ -63,8 +62,14 @@ void entry()
         {
             delete g_Ps2Mouse;
             g_Ps2Mouse = 0;
+
+            return false;
         }
     }
+    else
+        return false;
+
+    return true;
 }
 
 void unload()

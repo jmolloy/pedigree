@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -106,6 +105,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
     #endif
     m_nSectionHeaders = pBootstrap.num;
 
+#ifdef DEBUGGER
     if (m_pSymbolTable && m_pStringTable)
     {
         ElfSymbol_t *pSymbol = reinterpret_cast<ElfSymbol_t *>(m_pSymbolTable);
@@ -156,6 +156,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
             pSymbol++;
         }
     }
+#endif
     
     return true;
 }
@@ -164,7 +165,7 @@ KernelElf::KernelElf() :
     #if defined(X86_COMMON)
     m_AdditionalSections("Kernel ELF Sections"),
     #endif
-    m_Modules(), m_LoadedModules(), m_PendingModules(), m_ModuleAllocator()
+    m_Modules(), m_LoadedModules(), m_FailedModules(), m_PendingModules(), m_ModuleAllocator()
 {
 }
 
@@ -239,9 +240,10 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
         return 0;
     }
     module->name = *pName;
-    module->entry = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleEntry"));
+    module->entry = *reinterpret_cast<bool (**)()> (module->elf.lookupSymbol("g_pModuleEntry"));
     module->exit = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleExit"));
     module->depends = reinterpret_cast<const char **> (module->elf.lookupSymbol("g_pDepends"));
+    module->depends_opt = reinterpret_cast<const char **> (module->elf.lookupSymbol("g_pOptionalDepends"));
     DEBUG("KERNELELF: Preloaded module " << module->name << " at " << module->loadBase);
 
 #ifdef MEMORY_TRACING
@@ -274,7 +276,9 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
             {
                 if (moduleDependenciesSatisfied(*it))
                 {
-                    executeModule(*it);
+                    if(!executeModule(*it))
+                        module = 0;
+
                     g_BootProgressCurrent ++;
                     if (g_BootProgressUpdate && !silent)
                         g_BootProgressUpdate("moduleexec");
@@ -330,7 +334,7 @@ Module *KernelElf::loadModule(struct ModuleInfo *info, bool silent)
             somethingLoaded = false;
             for (Vector<Module*>::Iterator it = m_PendingModules.begin();
                 it != m_PendingModules.end();
-                it++)
+                )
             {
                 if (moduleDependenciesSatisfied(*it))
                 {
@@ -339,10 +343,12 @@ Module *KernelElf::loadModule(struct ModuleInfo *info, bool silent)
                     if (g_BootProgressUpdate && !silent)
                         g_BootProgressUpdate("moduleexec");
 
-                    m_PendingModules.erase(it);
+                    it = m_PendingModules.erase(it);
                     somethingLoaded = true;
                     break;
                 }
+                else
+                    ++it;
             }
         }
     }
@@ -355,7 +361,7 @@ Module *KernelElf::loadModule(struct ModuleInfo *info, bool silent)
 }
 #endif
 
-void KernelElf::unloadModule(char *name, bool silent)
+void KernelElf::unloadModule(const char *name, bool silent, bool progress)
 {
     for (Vector<Module*>::Iterator it = m_LoadedModules.begin();
         it != m_LoadedModules.end();
@@ -363,21 +369,24 @@ void KernelElf::unloadModule(char *name, bool silent)
     {
         if(!strcmp((*it)->name, name))
         {
-            unloadModule(it, silent);
+            unloadModule(it, silent, progress);
             return;
         }
     }
     ERROR("KERNELELF: Module " << name << " not found");
 }
 
-void KernelElf::unloadModule(Vector<Module*>::Iterator it, bool silent)
+void KernelElf::unloadModule(Vector<Module*>::Iterator it, bool silent, bool progress)
 {
     Module *module = *it;
     NOTICE("KERNELELF: Unloading module " << module->name);
 
-    g_BootProgressCurrent --;
-    if (g_BootProgressUpdate && !silent)
-        g_BootProgressUpdate("moduleunload");
+    if(progress)
+    {
+        g_BootProgressCurrent --;
+        if (g_BootProgressUpdate && !silent)
+            g_BootProgressUpdate("moduleunload");
+    }
 
     if(module->exit)
         module->exit();
@@ -399,9 +408,12 @@ void KernelElf::unloadModule(Vector<Module*>::Iterator it, bool silent)
 
     m_SymbolTable.eraseByElf(&module->elf);
 
-    g_BootProgressCurrent --;
-    if (g_BootProgressUpdate && !silent)
-        g_BootProgressUpdate("moduleunloaded");
+    if(progress)
+    {
+        g_BootProgressCurrent --;
+        if (g_BootProgressUpdate && !silent)
+            g_BootProgressUpdate("moduleunloaded");
+    }
 
     m_LoadedModules.erase(it);
     //m_Modules.erase(it);
@@ -430,6 +442,8 @@ void KernelElf::unloadModule(Vector<Module*>::Iterator it, bool silent)
     }
 
     m_ModuleAllocator.free(module->loadBase, module->loadSize);
+
+    delete module;
 }
 
 void KernelElf::unloadModules()
@@ -481,6 +495,44 @@ char *KernelElf::getDependingModule(char *name)
 bool KernelElf::moduleDependenciesSatisfied(Module *module)
 {
     int i = 0;
+
+    // First pass: optional dependencies.
+    if (module->depends_opt)
+    {
+        while(module->depends_opt[i])
+        {
+            bool found = false;
+            for (size_t j = 0; j < m_LoadedModules.count(); ++j)
+            {
+                if (!strcmp(m_LoadedModules[j]->name, module->depends_opt[i]))
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            if(!found)
+            {
+                for (size_t j = 0; j < m_FailedModules.count(); ++j)
+                {
+                    if (!strcmp(static_cast<const char *>(*m_FailedModules[j]), module->depends_opt[i]))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                // Optional dependency has not yet had any attempt to load.
+                if(!found)
+                    return false;
+            }
+
+            ++i;
+        }
+    }
+
+    // Second pass: mandatory dependencies.
+    i = 0;
     if (!module->depends) return true;
 
     while (module->depends[i])
@@ -501,7 +553,7 @@ bool KernelElf::moduleDependenciesSatisfied(Module *module)
     return true;
 }
 
-void KernelElf::executeModule(Module *module)
+bool KernelElf::executeModule(Module *module)
 {
     m_LoadedModules.pushBack(module);
 
@@ -510,7 +562,7 @@ void KernelElf::executeModule(Module *module)
         if (!module->elf.finaliseModule(module->buffer, module->buflen))
         {
             FATAL ("KERNELELF: Module relocation failed");
-            return;
+            return false;
         }
 
         // Check for a constructors list and execute.
@@ -531,10 +583,21 @@ void KernelElf::executeModule(Module *module)
 
     NOTICE("KERNELELF: Executing module " << module->name);
 
+    bool bSuccess = true;
     if (module->entry)
-        module->entry();
+    {
+        if(!(bSuccess = module->entry()))
+        {
+            NOTICE("KERNELELF: Module " << module->name << " failed, unloading.");
+            m_FailedModules.pushBack(new String(module->name));
+            unloadModule(module->name, true, false);
+        }
+    }
 
-    NOTICE("KERNELELF: Module " << module->name << " finished executing");
+    if(bSuccess)
+        NOTICE("KERNELELF: Module " << module->name << " finished executing");
+
+    return bSuccess;
 }
 
 uintptr_t KernelElf::globalLookupSymbol(const char *pName)

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -290,9 +289,10 @@ int mainThread(void *p)
     return 0;
 }
 
-static void init()
+static bool init()
 {
     new Thread(Processor::information().getCurrentThread()->getParent(), mainThread, 0);
+    return true;
 }
 
 static void destroy()

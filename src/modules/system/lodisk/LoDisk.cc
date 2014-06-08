@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -120,8 +119,9 @@ void FileDisk::align(uint64_t location)
     m_AlignPoints[m_nAlignPoints++] = location;
 }
 
-static void init()
+static bool init()
 {
+    return true;
 }
 
 static void destroy()

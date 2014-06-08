@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -164,8 +163,11 @@ uintptr_t TuiSyscallManager::syscall(SyscallState &state)
     return 0;
 }
 
-static void init()
+static bool init()
 {
+    // Dead module now.
+    return false;
+
     g_TuiSyscallManager.initialise();
 }
 

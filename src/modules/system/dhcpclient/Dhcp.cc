@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -581,13 +580,15 @@ bool DhcpService::serve(ServiceFeatures::Type type, void *pData, size_t dataLen)
     return false;
 }
 
-static void entry()
+static bool entry()
 {
     // Install the DHCP Service
     pService = new DhcpService;
     pFeatures = new ServiceFeatures;
     pFeatures->add(ServiceFeatures::touch);
     ServiceManager::instance().addService(String("dhcp"), pService, pFeatures);
+
+    return true;
 }
 
 static void exit()

@@ -99,8 +99,16 @@ void cdi_init(void)
     iterateDeviceTree(root);
 }
 
-void cdi_pedigree_walk_dev_list_init(struct cdi_driver *dev)
+bool cdi_module_init()
 {
+    cdi_init();
+    return true;
+}
+
+bool cdi_pedigree_walk_dev_list_init(struct cdi_driver *dev)
+{
+    bool bFound = false;
+
     struct cdi_driver* driver = dev;
     struct cdi_bus_data* device;
     int i;
@@ -110,9 +118,12 @@ void cdi_pedigree_walk_dev_list_init(struct cdi_driver *dev)
             if(p)
             {
                 p->driver = driver;
+                bFound = true;
             }
         }
     }
+
+    return bFound;
 }
 
 void cdi_pedigree_walk_dev_list_destroy(struct cdi_driver *dev)
@@ -226,4 +237,4 @@ int cdi_provide_device(struct cdi_bus_data *device)
     return -1;
 }
 
-MODULE_INFO("cdi", &cdi_init, &cdi_destroy, "dma", "network-stack", "vfs");
+MODULE_INFO("cdi", &cdi_module_init, &cdi_destroy, "dma", "network-stack", "vfs");

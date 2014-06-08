@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -413,9 +412,10 @@ bool DLTrapHandler::trap(uintptr_t address, bool bIsWrite)
     return pL->trap(address);
 }
 
-static void init()
+static bool init()
 {
     KernelCoreSyscallManager::instance().registerSyscall(KernelCoreSyscallManager::link, &DynamicLinker::resolvePlt);
+    return true;
 }
 
 static void destroy()

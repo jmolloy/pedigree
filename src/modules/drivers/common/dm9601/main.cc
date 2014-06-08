@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -39,10 +38,12 @@ UsbDevice *dm9601Connected(UsbDevice *pDevice)
     return new Dm9601(pDevice);
 }
 
-static void entry()
+static bool entry()
 {
     for(size_t i = 0; i < NUM_DEVICES; i++)
         UsbPnP::instance().registerCallback(g_Devices[i].vendor, g_Devices[i].product, dm9601Connected);
+
+    return true;
 }
 
 static void exit()

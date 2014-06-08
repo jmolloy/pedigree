@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -28,9 +27,10 @@ UsbDevice *ftdiConnected(UsbDevice *pDevice)
     return new FtdiSerialDevice(pDevice);
 }
 
-static void entry()
+static bool entry()
 {
     UsbPnP::instance().registerCallback(0x0403, 0x6001, ftdiConnected);
+    return true;
 }
 
 void exit()

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -1048,8 +1047,9 @@ File *ConsoleManager::getOther(File *file)
     return pFile->m_pOther;
 }
 
-static void initConsole()
+static bool initConsole()
 {
+    return true;
 }
 
 static void destroyConsole()

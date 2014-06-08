@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -38,6 +37,8 @@ enum HcdConstants {
     HCI_PROGIF_XHCI = 0x30, // xHCI PCI programming interface
 };
 
+static bool bFound = false;
+
 void probeXhci(Device *pDev)
 {
     WARNING("USB: xHCI found, not implemented yet!");
@@ -61,6 +62,8 @@ void probeEhci(Device *pDev)
     // Replace pDev with pEhci, then delete pDev
     pDev->getParent()->replaceChild(pDev, pEhci);
     delete pDev;
+
+    bFound = true;
 }
 
 void probeOhci(Device *pDev)
@@ -73,6 +76,8 @@ void probeOhci(Device *pDev)
     // Replace pDev with pOhci, then delete pDev
     pDev->getParent()->replaceChild(pDev, pOhci);
     delete pDev;
+
+    bFound = true;
 }
 
 #ifdef X86_COMMON
@@ -86,10 +91,12 @@ void probeUhci(Device *pDev)
     // Replace pDev with pUhci, then delete pDev
     pDev->getParent()->replaceChild(pDev, pUhci);
     delete pDev;
+
+    bFound = true;
 }
 #endif
 
-static void entry()
+static bool entry()
 {
     // Interrupts may get disabled on the way here, so make sure they are enabled
     Processor::setInterrupts(true);
@@ -99,6 +106,8 @@ static void entry()
 #ifdef X86_COMMON
     Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_UHCI, probeUhci);
 #endif
+
+    return bFound;
 }
 
 static void exit()

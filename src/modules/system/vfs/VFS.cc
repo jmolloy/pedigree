@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -371,8 +370,9 @@ bool VFS::remove(String path, File *pStartNode)
     }
 }
 
-static void initVFS()
+static bool initVFS()
 {
+    return true;
 }
 
 static void destroyVFS()

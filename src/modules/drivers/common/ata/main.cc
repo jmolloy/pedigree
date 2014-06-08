@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -31,6 +30,8 @@
 
 static int nController = 0;
 
+static bool bFound = false;
+
 void probeIsaDevice(Controller *pDev)
 {
   // Create a new AtaController device node.
@@ -44,6 +45,8 @@ void probeIsaDevice(Controller *pDev)
   // And delete pDev for good measure.
   //  - Deletion not needed now that AtaController(pDev) destroys pDev. See Device::Device(Device *)
   //delete pDev;
+
+  bFound = true;
 }
 
 void probePiixController(Device *pDev)
@@ -76,6 +79,8 @@ void probePiixController(Device *pDev)
   // And now we must delete pDev because of the unique way we do this - it's
   // actually totally useless at this stage, and it's been replaced.
   delete pDev;
+
+  bFound = true;
 }
 
 /// Removes the ISA ATA controllers added early in boot
@@ -203,12 +208,14 @@ static void searchNode(Device *pDev, bool bFallBackISA)
     }
 }
 
-static void entry()
+static bool entry()
 {
   // Walk the device tree looking for controllers that have 
   // "control" and "command" addresses.
   Device *pDev = &Device::root();
   searchNode(pDev, true);
+
+  return bFound;
 }
 
 static void exit()

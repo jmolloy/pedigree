@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -853,6 +852,7 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster, bool bLock)
 
         m_FatCache.insert(fatOffset / m_Superblock.BPB_BytsPerSec, reinterpret_cast<uintptr_t>(fatBlocks));
         m_FatCache.insert((fatOffset / m_Superblock.BPB_BytsPerSec) + 1, reinterpret_cast<uintptr_t>(fatBlocks + m_Superblock.BPB_BytsPerSec));
+        NOTICE("FAT Cache now has " << m_FatCache.count() << " sectors.");
 
         m_FatLock.release();
     }
@@ -1411,9 +1411,10 @@ bool FatFilesystem::remove(File* parent, File* file)
     return true;
 }
 
-static void initFat()
+static bool initFat()
 {
     VFS::instance().addProbeCallback(&FatFilesystem::probe);
+    return true;
 }
 
 static void destroyFat()

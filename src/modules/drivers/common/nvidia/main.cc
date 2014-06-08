@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -29,6 +28,8 @@
 #include <processor/MemoryMappedIo.h>
 
 #include "Dma.h"
+
+static bool bFound = false;
 
 void probeDevice(Device *pDev)
 {
@@ -70,11 +71,15 @@ void probeDevice(Device *pDev)
     pDma->fillRectangle(600, 600, 100, 100);
 
     for(;;);
+
+    bFound = true;
 }
 
-void entry()
+bool entry()
 {
     Device::root().searchByVendorId(0x10DE, probeDevice);
+
+    return bFound;
 }
 
 void exit()

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -41,9 +40,10 @@ class Module
         Module() : elf(), name(0), entry(0), exit(0), depends(0), buffer(0), buflen(0) {}
         Elf elf;
         const char *name;
-        void (*entry)();
+        bool (*entry)();
         void (*exit)();
         const char **depends;
+        const char **depends_opt;
         uint8_t *buffer;
         size_t buflen;
         uintptr_t loadBase;
@@ -76,8 +76,8 @@ class KernelElf : public Elf
 #endif
 
         /** Unloads the specified module. */
-        void unloadModule(char *name, bool silent=false);
-        void unloadModule(Vector<Module*>::Iterator it, bool silent=false);
+        void unloadModule(const char *name, bool silent=false, bool progress=true);
+        void unloadModule(Vector<Module*>::Iterator it, bool silent=false, bool progress=true);
 
         /** Unloads all loaded modules. */
         void unloadModules();
@@ -109,7 +109,7 @@ class KernelElf : public Elf
         KernelElf &operator = (const KernelElf &);
 
         bool moduleDependenciesSatisfied(Module *module);
-        void executeModule(Module *module);
+        bool executeModule(Module *module);
 
         #if defined(X86_COMMON)
         MemoryRegion m_AdditionalSections;
@@ -122,6 +122,8 @@ class KernelElf : public Elf
         Vector<Module*> m_Modules;
         /** List of successfully loaded modules. */
         Vector<Module*> m_LoadedModules;
+        /** List of unsuccessfully loaded modules. */
+        Vector<String*> m_FailedModules;
         /** List of pending modules - modules whose dependencies have not yet been
             satisfied. */
         Vector<Module*> m_PendingModules;

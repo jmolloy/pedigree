@@ -325,7 +325,7 @@ static void getDesiredMode(size_t &width, size_t &height, size_t &bpp)
     delete pResult;
 }
 
-static void init()
+static bool init()
 {
 #ifdef NOGFX
     Log::instance().installCallback(&g_StreamLogger, true);
@@ -353,7 +353,7 @@ static void init()
         Log::instance().installCallback(&g_StreamLogger, true);
         g_BootProgressUpdate = &progress;
         g_NoGraphics = true;
-        return;
+        return true;
     }
 
     Display *pDisplay = pProvider.pDisplay;
@@ -411,7 +411,7 @@ static void init()
         NOTICE("splash: this system does not support graphics, using fallback log callback");
         Log::instance().installCallback(&g_StreamLogger, true);
         g_BootProgressUpdate = &progress;
-        return;
+        return true;
     }
 
     Framebuffer *pParentFramebuffer = pProvider.pFramebuffer;
@@ -509,7 +509,9 @@ static void init()
     InputManager::instance().installCallback(InputManager::Key, keyCallback);
 #endif
 
-#endif    
+#endif
+
+    return true;
 }
 
 static void destroy()

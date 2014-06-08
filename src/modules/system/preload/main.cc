@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -69,7 +68,7 @@ int preloadThread(void *p)
     return 0;
 }
 
-static void init()
+static bool init()
 {
     size_t n = 0;
     const char *s = g_FilesToPreload[n++];
@@ -82,6 +81,9 @@ static void init()
 
     g_Preloads.acquire(n - 1);
     NOTICE("PRELOAD: preloaded " << n << " files.");
+
+    // Trick: return false, which unloads this module (its purpose is complete.)
+    return false;
 }
 
 static void destroy()

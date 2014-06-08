@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,7 +22,11 @@
 
 #include <utilities/utility.h>
 
-typedef void (*ModuleEntry)();
+#ifndef __cplusplus
+#include <stdbool.h>
+#endif
+
+typedef bool (*ModuleEntry)();
 typedef void (*ModuleExit)();
 
 #ifdef STATIC_DRIVERS
@@ -59,6 +62,8 @@ struct ModuleInfo
 #define MODULE_EXIT(x) ModuleExit g_pModuleExit __attribute__((section(".modinfo"))) = x
 #define MODULE_DEPENDS(...) const char *g_pDepends[] __attribute__((section(".modinfo"))) = {__VA_ARGS__, 0}
 #define MODULE_DEPENDS2(...) const char *g_pDepends[] __attribute__((section(".modinfo"))) = {__VA_ARGS__}
+
+#define MODULE_OPTIONAL_DEPENDS(...) const char *g_pOptionalDepends[] __attribute__((section(".modinfo"))) = {__VA_ARGS__, 0}
 
 #define MODULE_INFO2(name, entry, exit, ...) MODULE_NAME(name); \
                                             MODULE_ENTRY(entry); \

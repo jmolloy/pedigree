@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -312,9 +311,10 @@ File *Iso9660Filesystem::fileFromDirRecord(Iso9660DirRecord &dir, size_t inodeNu
   }
 }
 
-static void initIso9660()
+static bool initIso9660()
 {
   VFS::instance().addProbeCallback(&Iso9660Filesystem::probe);
+  return true;
 }
 
 static void destroyIso9660()

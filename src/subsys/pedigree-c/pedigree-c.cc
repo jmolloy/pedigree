@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -27,9 +26,10 @@
 
 PedigreeCSyscallManager g_PedigreeCSyscallManager;
 
-static void init()
+static bool init()
 {
     g_PedigreeCSyscallManager.initialise();
+    return true;
 }
 
 static void destroy()

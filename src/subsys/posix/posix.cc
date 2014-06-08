@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -34,7 +33,7 @@ PosixSyscallManager g_PosixSyscallManager;
 
 UnixFilesystem *g_pUnixFilesystem;
 
-static void init()
+static bool init()
 {
   g_PosixSyscallManager.initialise();
 
@@ -44,6 +43,8 @@ static void init()
 
   VFS::instance().addAlias(g_pUnixFilesystem, g_pUnixFilesystem->getVolumeLabel());
   VFS::instance().addAlias(&DevFs::instance(), DevFs::instance().getVolumeLabel());
+
+  return true;
 }
 
 static void destroy()
@@ -53,5 +54,5 @@ static void destroy()
 #ifdef ARM_COMMON
 MODULE_INFO("posix", &init, &destroy, "console");
 #else
-MODULE_INFO("posix", &init, &destroy, "console", "network-stack", "TUI");
+MODULE_INFO("posix", &init, &destroy, "console", "network-stack");
 #endif

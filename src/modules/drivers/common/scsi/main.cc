@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -20,9 +19,9 @@
 
 #include <Module.h>
 
-static void entry()
+static bool entry()
 {
-
+    return true;
 }
 
 static void exit()

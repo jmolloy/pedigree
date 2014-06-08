@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -106,7 +105,7 @@ const char *getDevice (uint16_t vendor, uint16_t device)
   return "";
 }
 
-static void entry()
+static bool entry()
 {
   for (int iBus = 0; iBus < MAX_BUS; iBus++)
   {
@@ -204,6 +203,8 @@ static void entry()
       delete pBus;
     }
   }
+
+  return true;
 }
 
 static void exit()

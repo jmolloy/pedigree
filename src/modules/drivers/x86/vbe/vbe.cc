@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -187,8 +186,12 @@ class VbeFramebuffer : public Framebuffer
         MemoryRegion *m_pFramebufferRegion;
 };
 
-void entry()
+bool entry()
 {
+#ifdef NOGFX
+  NOTICE("Not starting VBE module, NOGFX is defined.");
+  return false;
+#endif
 
   List<Display::ScreenMode*> modeList;
 
@@ -208,7 +211,7 @@ void entry()
     ERROR("VBE: VESA not supported!");
     Bios::instance().free(reinterpret_cast<uintptr_t>(info));
     Bios::instance().free(reinterpret_cast<uintptr_t>(mode));
-    return;
+    return false;
   }
 
   VbeDisplay::VbeVersion vbeVersion;
@@ -227,7 +230,7 @@ void entry()
       ERROR("VBE: Unrecognised VESA version: " << Hex << info->version);
       Bios::instance().free(reinterpret_cast<uintptr_t>(info));
       Bios::instance().free(reinterpret_cast<uintptr_t>(mode));
-      return;
+      return false;
   }
 
   size_t maxWidth = 0;
@@ -303,7 +306,7 @@ void entry()
   if (!pDevice)
   {
     ERROR("VBE: Device mapped to framebuffer address '" << Hex << fbAddr << "' not found.");
-    return;
+    return false;
   }
 
   // Create a new VbeDisplay device node.
@@ -371,6 +374,8 @@ void entry()
   // Replace pDev with pDisplay.
   pDisplay->setParent(pDevice->getParent());
   pDevice->getParent()->replaceChild(pDevice, pDisplay);
+
+  return true;
 }
 
 void exit()

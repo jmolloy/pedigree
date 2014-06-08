@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -32,9 +31,10 @@ UsbDevice *hidConnected(UsbDevice *pDevice)
     return new UsbHumanInterfaceDevice(pDevice);
 }
 
-static void entry()
+static bool entry()
 {
     UsbPnP::instance().registerCallback(3, SubclassNone, ProtocolNone, hidConnected);
+    return true;
 }
 
 static void exit()

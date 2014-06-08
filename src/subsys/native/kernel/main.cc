@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,9 +22,10 @@
 
 NativeSyscallManager g_NativeSyscallManager;
 
-static void init()
+static bool init()
 {
     g_NativeSyscallManager.initialise();
+    return true;
 }
 
 static void destroy()

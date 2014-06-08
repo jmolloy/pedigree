@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -28,9 +27,10 @@ UsbDevice *hubConnected(UsbDevice *pDevice)
     return new UsbHubDevice(pDevice);
 }
 
-static void entry()
+static bool entry()
 {
     UsbPnP::instance().registerCallback(9, SubclassNone, ProtocolNone, hubConnected);
+    return true;
 }
 
 static void exit()

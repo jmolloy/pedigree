@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -104,13 +103,15 @@ void rescanTree()
     searchNode(&Device::root(), pD);
 }
 
-void init()
+bool init()
 {
     g_pRawFs = new RawFs();
     VFS::instance().addMountCallback(&rescanTree);
     rescanTree();
     String alias("raw");
     VFS::instance().addAlias(g_pRawFs, alias);
+
+    return true;
 }
 
 void destroy()

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -99,7 +98,7 @@ bool PartitionService::serve(ServiceFeatures::Type type, void *pData, size_t dat
     return false;
 }
 
-static void entry()
+static bool entry()
 {
     // Install the Partition Service
     pService = new PartitionService;
@@ -110,6 +109,10 @@ static void entry()
     // Walk the device tree looking for disks that don't have "partition" children.
     Device *pDev = &Device::root();
     searchNode(pDev);
+
+    // Never fail, even if no partitions found. The partition service is still
+    // critical to the system.
+    return true;
 }
 
 static void exit()

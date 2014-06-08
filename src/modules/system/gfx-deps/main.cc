@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -24,10 +23,14 @@
 #include <Module.h>
 
 #ifdef X86_COMMON
-#define __MOD_DEPS "vbe", "vmware-gfx"
+#define __MOD_DEPS 0
+#define __MOD_DEPS_OPT "vbe", "vmware-gfx"
 #elif PPC_COMMON
 #define __MOD_DEPS 0
 #elif ARM_COMMON
 #define __MOD_DEPS 0
 #endif
 MODULE_INFO("gfx-deps", 0, 0, __MOD_DEPS);
+#ifdef __MOD_DEPS_OPT
+MODULE_OPTIONAL_DEPENDS(__MOD_DEPS_OPT);
+#endif
