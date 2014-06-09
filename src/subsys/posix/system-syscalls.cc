@@ -634,6 +634,8 @@ int posix_waitpid(int pid, int *status, int options)
         }
         else if ((pid > 0) && (static_cast<int>(pProcess->getId()) != pid))
             continue;
+        else if (pProcess->getType() != Process::Posix)
+            continue;
 
         // Okay, the process is good.
         processList.pushBack(pProcess);
