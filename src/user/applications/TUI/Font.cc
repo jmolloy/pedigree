@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -19,6 +18,7 @@
  */
 
 #include "Font.h"
+#include <cmath>
 
 #include <iconv.h>
 
@@ -76,9 +76,13 @@ Font::Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWid
     cairo_font_extents(g_Cairo, &extents);
     cairo_restore(g_Cairo);
 
-    m_CellHeight = m_Baseline = extents.height;
-    m_CellHeight += extents.descent;
-    m_CellWidth = extents.max_x_advance;
+    m_CellHeight = m_Baseline = std::ceil(extents.height);
+    double ascent_descent = std::ceil(extents.ascent + extents.descent);
+    if(m_CellHeight < ascent_descent)
+        m_CellHeight = ascent_descent;
+    else
+        m_CellHeight += std::ceil(extents.descent);
+    m_CellWidth = std::ceil(extents.max_x_advance);
 
     /// \todo UTF-32 endianness
     m_Iconv = iconv_open("UTF-8", "UTF-32LE");
