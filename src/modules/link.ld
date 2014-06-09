@@ -35,4 +35,13 @@ SECTIONS
     end_ctors = .;
 
   }
+  
+  . = ALIGN(4096);
+  .module_dtors :
+  {
+    start_dtors = .;
+    *(.dtors)
+    end_dtors = .;
+
+  }
 }
