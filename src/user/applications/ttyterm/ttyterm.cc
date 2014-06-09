@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -70,6 +69,23 @@ void sigint(int sig)
 
 void handle_input(Input::InputNotification &note)
 {
+    pedigree_fb_mode current_mode;
+    int fb = open("/dev/fb", O_RDWR);
+    if(fb >= 0)
+    {
+        int result = ioctl(fb, PEDIGREE_FB_GETMODE, &current_mode);
+        close(fb);
+
+        if(!result)
+        {
+            if(current_mode.width && current_mode.height && current_mode.depth)
+            {
+                syslog(LOG_INFO, "ttyterm: dropping input, currently in graphics mode!");
+                return;
+            }
+        }
+    }
+
     syslog(LOG_INFO, "ttyterm: system input (type=%d)", note.type);
 
     if(note.type & Input::Key)

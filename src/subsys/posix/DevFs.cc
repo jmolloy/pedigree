@@ -152,7 +152,6 @@ bool FramebufferFile::supports(const int command)
 
 int FramebufferFile::command(const int command, void *buffer)
 {
-    NOTICE("FramebufferFile::command(" << command << ", " << reinterpret_cast<uintptr_t>(buffer) << ")");
     if(!m_pProvider)
     {
         ERROR("FramebufferFile::command called on an invalid FramebufferFile");
