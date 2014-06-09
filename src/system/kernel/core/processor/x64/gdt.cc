@@ -76,11 +76,6 @@ void X64GdtManager::initialise(size_t processorCount)
   processorInfo.setTss(Tss);
   processorInfo.setTssSelector(7 << 3);
   processorInfo.setTlsSelector(8 << 3);
-
-  // Create the double-fault handler TSS
-  static X64TaskStateSegment DFTss;
-  initialiseDoubleFaultTss(&DFTss);
-  setTssDescriptor(9, reinterpret_cast<uint64_t>(&DFTss));
 #endif
 }
 
@@ -90,7 +85,10 @@ void X64GdtManager::initialiseProcessor()
   {
     uint16_t size;
     uint64_t gdt;
-  } PACKED gdtr = {m_Instance.m_DescriptorCount * 8 - 1, reinterpret_cast<uint64_t>(m_Instance.m_Gdt)};
+  } PACKED gdtr;
+
+  gdtr.size = (m_Instance.m_DescriptorCount * 8) - 1;
+  gdtr.gdt = reinterpret_cast<uint64_t>(m_Instance.m_Gdt);
 
   asm volatile("lgdt %0" :: "m"(gdtr));
   asm volatile("ltr %%ax" :: "a" (Processor::information().getTssSelector()));
@@ -125,12 +123,12 @@ void X64GdtManager::setTssDescriptor(size_t index, uint64_t base)
 void X64GdtManager::initialiseTss(X64TaskStateSegment *pTss)
 {
   memset( reinterpret_cast<void*> (pTss), 0, sizeof(X64TaskStateSegment) );
+
+  pTss->ist[1] = reinterpret_cast<uint64_t>(g_SafeStack) + 8192;
 }
 
 void X64GdtManager::initialiseDoubleFaultTss(X64TaskStateSegment *pTss)
 {
-    /// \todo Write.
-    
-    return;
+  // IST used on amd64
 }
 

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -184,6 +183,4 @@ void X86GdtManager::initialiseDoubleFaultTss(X86TaskStateSegment *pTss)
 #else
     pTss->cr3 = Processor::readCr3();
 #endif
-
-    return;
 }

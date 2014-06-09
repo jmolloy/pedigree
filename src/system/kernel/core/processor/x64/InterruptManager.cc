@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -181,6 +180,16 @@ void X64InterruptManager::interrupt(InterruptState &interruptState)
       e.append(", errorcode 0x");
       e.append(interruptState.m_Errorcode, 16, 8, '0');
     }
+
+    if (nIntNumber == 8)
+    {
+      // On amd64, we actually have a functional InterruptState.
+      ERROR_NOLOCK("(double fault, system is very unhappy)");
+
+      uint64_t cr2;
+      asm volatile("mov %%cr2, %%rax" : "=a" (cr2));
+      NOTICE_NOLOCK("  -> #DF possibly caused by #PF at " << cr2 << ".");
+    }
 #if defined(DEBUGGER)
     Debugger::instance().start(interruptState, e);
 #else
@@ -217,6 +226,13 @@ void X64InterruptManager::setInterruptGate(size_t nInterruptNumber,
   m_IDT[nInterruptNumber].res = 0;
 }
 
+void X64InterruptManager::setIst(size_t nInterruptNumber, size_t ist)
+{
+  if(ist > 7)
+    return;
+  m_IDT[nInterruptNumber].ist = ist;
+}
+
 X64InterruptManager::X64InterruptManager()
   : m_Lock()
 {
@@ -233,6 +249,9 @@ X64InterruptManager::X64InterruptManager()
   extern uintptr_t interrupt_handler_array[];
   for (size_t i = 0;i < 256;i++)
     setInterruptGate(i, interrupt_handler_array[i]);
+
+  // Set double fault handler IST entry.
+  setIst(8, 1);
 }
 X64InterruptManager::~X64InterruptManager()
 {

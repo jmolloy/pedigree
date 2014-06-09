@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -62,6 +61,10 @@ class X64InterruptManager : public ::InterruptManager
      *\param[in] interruptHandler address of the assembler interrupt handler stub
      *\note This function is defined in kernel/processor/ARCH/interrupt.cc */
     void setInterruptGate(size_t nInterruptNumber, uintptr_t interruptHandler) INITIALISATION_ONLY;
+    /** Sets the IST field for a given interrupt gate
+     *\param[in] interruptNumber the interrupt number
+     *\param[in] ist IST index to use */
+    void setIst(size_t nInterruptNumber, size_t ist);
     /** The constructor */
     X64InterruptManager() INITIALISATION_ONLY;
     /** Copy constructor
