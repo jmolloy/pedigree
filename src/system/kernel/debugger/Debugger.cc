@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -116,7 +115,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(graphicsService);
   Service         *pService  = ServiceManager::instance().getService(graphicsService);
   bool bSuccess = false;
-  if(pFeatures->provides(ServiceFeatures::probe))
+  if(pFeatures && pFeatures->provides(ServiceFeatures::probe))
     if(pService)
       bSuccess = pService->serve(ServiceFeatures::probe, reinterpret_cast<void*>(&provider), sizeof(provider));
   
