@@ -542,41 +542,94 @@ void *X64VirtualAddressSpace::allocateStack(size_t stackSz)
 }
 void *X64VirtualAddressSpace::doAllocateStack(size_t sSize)
 {
+  size_t flags = 0;
+  bool bMapAll = false;
+  if(this == &m_KernelSpace)
+  {
+    // Don't demand map kernel mode stacks.
+    flags = VirtualAddressSpace::KernelMode;
+    bMapAll = true;
+  }
+
   m_Lock.acquire();
-  
-  // Get a virtual address for the stack
+
+  size_t pageSz = PhysicalMemoryManager::getPageSize();
+
+  // Grab a new stack pointer. Use the list of freed stacks if we can, otherwise
+  // adjust the internal stack pointer. Using the list of freed stacks helps
+  // avoid having the virtual address creep downwards.
   void *pStack = 0;
   if (m_freeStacks.count() != 0)
   {
     pStack = m_freeStacks.popBack();
-    m_Lock.release();
   }
   else
   {
     pStack = m_pStackTop;
-    m_pStackTop = adjust_pointer(m_pStackTop, -sSize);
-    
-    m_Lock.release();
 
-    // Map it in
-    uintptr_t stackBottom = reinterpret_cast<uintptr_t>(pStack) - sSize;
-    for (size_t j = 0; j < sSize; j += PhysicalMemoryManager::getPageSize())
+    // Always leave one page unmapped between each stack to catch overflow.
+    m_pStackTop = adjust_pointer(m_pStackTop, -(sSize + pageSz));
+  }
+
+  m_Lock.release();
+
+  // Map the top of the stack in proper.
+  uintptr_t firstPage = reinterpret_cast<uintptr_t>(pStack) - pageSz;
+  physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+  if(!bMapAll)
+    PhysicalMemoryManager::instance().pin(phys);
+  if(!map(phys, reinterpret_cast<void *>(firstPage), flags | VirtualAddressSpace::Write))
+    WARNING("map() failed in doAllocateStack");
+
+  // Bring in the rest of the stack as CoW.
+  uintptr_t stackBottom = reinterpret_cast<uintptr_t>(pStack) - sSize;
+  for (uintptr_t addr = stackBottom; addr < firstPage; addr += pageSz)
+  {
+    size_t map_flags = 0;
+
+    if(!bMapAll)
     {
-        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-        bool b = map(phys,
-                 reinterpret_cast<void*> (j + stackBottom),
-                 VirtualAddressSpace::Write);
-        if (!b)
-            WARNING("map() failed in doAllocateStack");
+      // Copy first stack page on write.
+      PhysicalMemoryManager::instance().pin(phys);
+      map_flags = VirtualAddressSpace::CopyOnWrite;
     }
+    else
+    {
+      phys = PhysicalMemoryManager::instance().allocatePage();
+      map_flags = VirtualAddressSpace::Write;
+    }
+
+    if(!map(phys, reinterpret_cast<void *>(addr), flags | map_flags))
+      WARNING("CoW map() failed in doAllocateStack");
   }
 
   return pStack;
 }
 void X64VirtualAddressSpace::freeStack(void *pStack)
 {
+  size_t pageSz = PhysicalMemoryManager::getPageSize();
+
+  // Clean up the stack
+  uintptr_t stackTop = reinterpret_cast<uintptr_t>(pStack);
+  while(true)
+  {
+    stackTop -= pageSz;
+    void *v = reinterpret_cast<void *>(stackTop);
+    if(!isMapped(v))
+      break; // Hit end of stack.
+
+    size_t flags = 0;
+    physical_uintptr_t phys = 0;
+    getMapping(v, phys, flags);
+
+    unmap(v);
+    PhysicalMemoryManager::instance().freePage(phys);
+  }
+
   // Add the stack to the list
+  m_Lock.acquire();
   m_freeStacks.pushBack(pStack);
+  m_Lock.release();
 }
 
 X64VirtualAddressSpace::~X64VirtualAddressSpace()
