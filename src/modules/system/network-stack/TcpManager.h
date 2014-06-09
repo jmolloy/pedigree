@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -42,6 +41,8 @@
 #include "TcpEndpoint.h"
 #include "TcpStateBlock.h"
 
+#define BASE_EPHEMERAL_PORT 32768
+
 /**
  * The Pedigree network stack - TCP Protocol Manager
  */
@@ -50,13 +51,13 @@ class TcpManager : public ProtocolManager, public TimerHandler
 public:
   TcpManager() :
     m_NextTcpSequence(1), m_NextConnId(1), m_StateBlocks(), m_ListeningStateBlocks(),
-    m_CurrentConnections(), m_Endpoints(), m_PortsAvailable(), m_TcpMutex(false),
-    m_SequenceMutex(false), m_Nanoseconds(0)
+    m_CurrentConnections(), m_Endpoints(), m_ListenPorts(), m_EphemeralPorts(),
+    m_TcpMutex(false), m_SequenceMutex(false), m_Nanoseconds(0)
   {
-    // First 1024 ports are not usable for client -> server connections.
-    for(size_t n = 0; n < 1024; ++n)
+    // Ports 32768 -> 65535 are ephemeral ports for client->server connections.
+    for(size_t n = 0; n < BASE_EPHEMERAL_PORT; ++n)
     {
-      m_PortsAvailable.set(n);
+      m_EphemeralPorts.set(n);
     }
 
     Timer *t = Machine::instance().getTimer();
@@ -207,13 +208,14 @@ public:
   {
     LockGuard<Mutex> guard(m_TcpMutex);
 
-    size_t bit = m_PortsAvailable.getFirstClear();
+    /// \todo Handle cleaning up these ports when connections terminate!!!
+    size_t bit = m_EphemeralPorts.getFirstClear();
     if(bit > 0xFFFF)
     {
       WARNING("No ports available!");
       return 0;
     }
-    m_PortsAvailable.set(bit);
+    m_EphemeralPorts.set(bit);
 
     return bit;
   }
@@ -240,8 +242,10 @@ private:
   /** Currently known endpoints (all actually TcpEndpoints). */
   Tree<size_t, Endpoint*> m_Endpoints;
 
-  /** Port availability */
-  ExtensibleBitmap m_PortsAvailable;
+  /** Listen port availability */
+  ExtensibleBitmap m_ListenPorts;
+  /** Ephemeral ports. */
+  ExtensibleBitmap m_EphemeralPorts;
 
   /** Lock to control access to state blocks. */
   Mutex m_TcpMutex;

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -75,7 +74,15 @@ size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
   // Allocate the port now - just about to register the connection.
   {
     LockGuard<Mutex> guard(m_TcpMutex);
-    if(m_PortsAvailable.test(port))
+    if((port >= BASE_EPHEMERAL_PORT) && m_EphemeralPorts.test(port))
+    {
+      ERROR("Ephemeral port " << Dec << port << Hex << " cannot be listened on!");
+      delete handle;
+      delete stateBlock;
+      return 0;
+    }
+
+    if(m_ListenPorts.test(port))
     {
       ERROR("Can't listen on already-used port " << Dec << port << Hex << "!");
       delete handle;
@@ -83,7 +90,7 @@ size_t TcpManager::Listen(Endpoint* e, uint16_t port, Network* pCard)
       return 0;
     }
 
-    m_PortsAvailable.set(port);
+    m_ListenPorts.set(port);
   }
 
   {
