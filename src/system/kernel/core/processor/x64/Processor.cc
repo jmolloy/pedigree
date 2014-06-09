@@ -89,6 +89,10 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
   // Initialise this processor's syscall handling
   X64SyscallManager::initialiseProcessor();
 
+  // Enable Write-Protect so the kernel can write to CoW pages and not break
+  // that contract.
+  asm volatile("mov %%cr0, %%rax; or $0x10000, %%rax; mov %%rax, %%cr0" ::: "rax");
+
   PageFaultHandler::instance().initialise();
 
   // Initialise the physical memory-management

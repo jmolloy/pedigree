@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -532,39 +531,13 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
                  j < (m_pSectionHeaders[i].addr + m_pSectionHeaders[i].size) + 0x1000; /// \todo This isn't the correct formula - fix.
                  j += 0x1000)
             {
-                bool bCanWrite = m_pSectionHeaders[i].flags & SHF_WRITE;
-                bool bCanExecute = m_pSectionHeaders[i].flags & SHF_EXECINSTR;
-                
                 void *virt = reinterpret_cast<void*> (j&~(PhysicalMemoryManager::getPageSize()-1));
                 if(!Processor::information().getVirtualAddressSpace().isMapped(virt))
                 {
                     physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
                     Processor::information().getVirtualAddressSpace().map(phys,
                                                                           virt,
-                                                                          (bCanWrite ? VirtualAddressSpace::Write : 0) | VirtualAddressSpace::KernelMode | (bCanExecute ? VirtualAddressSpace::Execute : 0));
-                }
-                else
-                {
-                    // Already mapped: check to see if we need to make the area writable/executable now
-                    size_t flags = 0; physical_uintptr_t phys = 0;
-                    Processor::information().getVirtualAddressSpace().getMapping(virt, phys, flags);
-                    if((flags & VirtualAddressSpace::Write) == 0)
-                    {
-                        if(bCanWrite)
-                        {
-                            flags |= VirtualAddressSpace::Write;
-                        }
-                    }
-                    
-                    if((flags & VirtualAddressSpace::Execute) == 0)
-                    {
-                        if(bCanExecute)
-                        {
-                            flags |= VirtualAddressSpace::Execute;
-                        }
-                    }
-                    
-                    Processor::information().getVirtualAddressSpace().setFlags(virt, flags);
+                                                                          VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
                 }
             }
 
@@ -711,7 +684,50 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
 
 bool Elf::finaliseModule(uint8_t *pBuffer, size_t length)
 {
-    return relocate(pBuffer, length);
+    bool bRelocate = relocate(pBuffer, length);
+    if(!bRelocate)
+        return bRelocate;
+
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
+    size_t pageMask = pageSz - 1;
+
+    // Set permissions on sections now that relocation is done.
+    for (size_t i = 0; i < m_nSectionHeaders; i++)
+    {
+        if (m_pSectionHeaders[i].flags & SHF_ALLOC)
+        {
+            size_t flags = VirtualAddressSpace::KernelMode;
+            if(m_pSectionHeaders[i].flags & SHF_WRITE)
+                flags |= VirtualAddressSpace::Write;
+            if(m_pSectionHeaders[i].flags & SHF_EXECINSTR)
+                flags |= VirtualAddressSpace::Execute;
+
+            uintptr_t base = m_pSectionHeaders[i].addr;
+            uintptr_t top = base + m_pSectionHeaders[i].size;
+
+            if((base & ~pageMask) == (top & ~pageMask))
+            {
+                // Align to next page if the base and top are the same page.
+                top = (top & ~pageMask) + pageSz;
+            }
+
+            // Mark the section not-writeable, now that it is relocated.
+            for (uintptr_t j = m_pSectionHeaders[i].addr; j < top; j += pageSz)
+            {
+                void *virt = reinterpret_cast<void*> (j&~(PhysicalMemoryManager::getPageSize()-1));
+                if(!Processor::information().getVirtualAddressSpace().isMapped(virt))
+                {
+                    FATAL("Elf: fatal algorithmic error");
+                }
+                else
+                {
+                    Processor::information().getVirtualAddressSpace().setFlags(virt, flags);
+                }
+            }
+        }
+    }
+
+    return true;
 }
 
 bool Elf::allocate(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, SymbolTable *pSymtab, bool bAllocate, size_t *pSize)

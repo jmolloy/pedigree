@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -315,7 +314,14 @@ void posix_pthread_exit(void *ret)
 void pedigree_init_pthreads()
 {
     PT_NOTICE("init_pthreads");
+    // Make sure we can write to the trampoline area.
+    Processor::information().getVirtualAddressSpace().setFlags(
+            reinterpret_cast<void*> (EVENT_HANDLER_TRAMPOLINE),
+            VirtualAddressSpace::Write);
     memcpy(reinterpret_cast<void*>(EVENT_HANDLER_TRAMPOLINE2), reinterpret_cast<void*>(pthread_stub), (reinterpret_cast<uintptr_t>(&pthread_stub_end) - reinterpret_cast<uintptr_t>(pthread_stub)));
+    Processor::information().getVirtualAddressSpace().setFlags(
+            reinterpret_cast<void*> (EVENT_HANDLER_TRAMPOLINE),
+            VirtualAddressSpace::Execute | VirtualAddressSpace::Shared);
 }
 
 void* posix_pthread_getspecific(pthread_key_t key)
