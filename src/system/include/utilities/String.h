@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -149,7 +148,7 @@ String::operator const char *() const
 
 String &String::operator += (const String &x)
 {
-    size_t newLength = x.length() + m_Length + 1;
+    size_t newLength = x.length() + m_Length;
 
     char *dst = m_Static;
 
@@ -174,7 +173,7 @@ String &String::operator += (const String &x)
 String &String::operator += (const char *s)
 {
     size_t slen = strlen(s);
-    size_t newLength = slen + m_Length + 1;
+    size_t newLength = slen + m_Length;
     if (newLength < StaticSize)
     {
         // By the nature of the two lengths combined being below the static
