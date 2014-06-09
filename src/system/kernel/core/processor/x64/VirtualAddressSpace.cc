@@ -312,6 +312,13 @@ VirtualAddressSpace *X64VirtualAddressSpace::clone()
                                                                      (l << 12) );
 
                     if(flags & PAGE_SHARED) {
+                        // The physical address is now referenced (shared) in
+                        // two address spaces, so make sure we hold another
+                        // reference on it. Otherwise, if one of the two
+                        // address spaces frees the page, the other may still
+                        // refer to the bad page (and eventually double-free).
+                        PhysicalMemoryManager::instance().pin(physicalAddress);
+
                         // Handle shared mappings - don't copy the original page.
                         pClone->map(physicalAddress, virtualAddress, fromFlags(flags, true));
                         continue;
@@ -320,7 +327,8 @@ VirtualAddressSpace *X64VirtualAddressSpace::clone()
                     // Map the new page in to the new address space for copy-on-write.
                     // This implies read-only (so we #PF for copy on write).
                     bool bWasCopyOnWrite = (flags & PAGE_COPY_ON_WRITE);
-                    flags |= PAGE_COPY_ON_WRITE;
+                    if(flags & PAGE_WRITE)
+                      flags |= PAGE_COPY_ON_WRITE;
                     flags &= ~PAGE_WRITE;
                     pClone->map(physicalAddress, virtualAddress, fromFlags(flags, true));
 
@@ -372,6 +380,8 @@ VirtualAddressSpace *X64VirtualAddressSpace::clone()
 
 void X64VirtualAddressSpace::revertToKernelAddressSpace()
 {
+    LockGuard<Spinlock> guard(m_Lock);
+
     // The userspace area is only the bottom half of the address space - the top 256 PML4 entries are for
     // the kernel, and these should be mapped anyway.
     for (uint64_t i = 0; i < 256; i++)
@@ -419,10 +429,6 @@ void X64VirtualAddressSpace::revertToKernelAddressSpace()
                     size_t flags = PAGE_GET_FLAGS(ptEntry);
                     physical_uintptr_t physicalAddress = PAGE_GET_PHYSICAL_ADDRESS(ptEntry);
 
-                    // Free the page.
-                    *ptEntry = 0;
-                    Processor::invalidate(virtualAddress);
-
                     // Release the physical memory if it is not shared with another
                     // process (eg, memory mapped file)
                     // Also avoid stumbling over a swapped out page.
@@ -432,6 +438,10 @@ void X64VirtualAddressSpace::revertToKernelAddressSpace()
                     {
                         PhysicalMemoryManager::instance().freePage(physicalAddress);
                     }
+
+                    // Free the page.
+                    *ptEntry = 0;
+                    Processor::invalidate(virtualAddress);
                 }
 
                 // Remove the table.
