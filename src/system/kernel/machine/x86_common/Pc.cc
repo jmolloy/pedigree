@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -175,6 +174,12 @@ void Pc::initialiseDeviceTree()
   pPs2Base->setInterruptNumber(1); // 12 for mouse, handled by the driver
   pIsa->addChild(pPs2Base);
   pPs2Base->setParent(pIsa);
+
+  // IB700 Watchdog Timer
+  Device *pWatchdog = new Device();
+  pWatchdog->addresses().pushBack(new Device::Address(String("ib700-base"), 0x441, 4, true));
+  pIsa->addChild(pWatchdog);
+  pWatchdog->setParent(pIsa);
 
   Device::root().addChild(pIsa);
   pIsa->setParent(&Device::root());
