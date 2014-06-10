@@ -34,7 +34,7 @@ index 5324d39..fb6254d 100644
      targ_defvec=armpe_little_vec
      targ_selvecs="armpe_little_vec armpe_big_vec armpei_little_vec armpei_big_vec"
      targ_underscore=yes
-@@ -514,6 +518,15 @@ case "${targ}" in
+@@ -514,6 +518,16 @@ case "${targ}" in
      targ_defvec=bfd_elf32_i386_vec
      targ_selvecs=i386coff_vec
      ;;
@@ -45,6 +45,7 @@ index 5324d39..fb6254d 100644
 +  amd64-*-pedigree* | \
 +  x86_64-*-pedigree*)
 +    targ_defvec=bfd_elf64_x86_64_vec
++    targ_selvecs=bfd_elf32_i386_vec
 +    ;;
 +#endif
    i[3-7]86-*-solaris2*)
