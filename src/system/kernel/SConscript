@@ -187,9 +187,13 @@ SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
 
 final_output = objname
 objname = '%s.debug' % (objname,)
+stripped_objname = final_output
 
 if env['ARCH_TARGET'] == 'X64':
     tmpEnvironment['LINKFLAGS'] += ' -m64 -mcmodel=kernel'
-tmpEnvironment.Program(objname, files)
-tmpEnvironment.Command(final_output, objname, action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
+    stripped_objname = '%s.stripped' % (objname,)
 
+tmpEnvironment.Program(objname, files)
+tmpEnvironment.Command(stripped_objname, objname, action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
+if final_output != stripped_objname:
+    tmpEnvironment.Command(final_output, stripped_objname, action="%s -I elf64-x86-64 -O elf32-i386 $SOURCE $TARGET" % env['OBJCOPY'])

@@ -129,6 +129,10 @@ class KernelElf : public Elf
         Vector<Module*> m_PendingModules;
         /** Memory allocator for modules - where they can be loaded. */
         MemoryAllocator m_ModuleAllocator;
+
+        /** Override Elf base class members. */
+        Elf32SectionHeader_t   *m_pSectionHeaders;
+        Elf32Symbol_t          *m_pSymbolTable;
 };
 
 /** @} */

@@ -27,6 +27,39 @@
 
 KernelElf KernelElf::m_Instance;
 
+/**
+ * Extend the given pointer by adding its canonical prefix again.
+ * This is because in the conversion to a 32-bit object, we manage to lose
+ * the prefix (as all addresses get truncated to 32 bits)
+ */
+
+template<class T>
+static T *extend(T *p)
+{
+#ifdef BITS_32
+    return p;
+#else
+    uintptr_t u = reinterpret_cast<uintptr_t>(p);
+    if(u < 0xFFFFFFFF00000000ULL)
+        u += 0xFFFFFFFF00000000ULL;
+    return reinterpret_cast<T*>(u);
+#endif
+}
+
+template<class T>
+static uintptr_t extend(T p)
+{
+#ifdef BITS_32
+    return p;
+#else
+    // Must assign to a possibly-larger type before arithmetic.
+    uintptr_t u = p;
+    if(u < 0xFFFFFFFF00000000ULL)
+        u += 0xFFFFFFFF00000000ULL;
+    return u;
+#endif
+}
+
 bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 {
     #if defined(X86_COMMON)
@@ -36,11 +69,17 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
     physical_uintptr_t end   = pBootstrap.addr + pBootstrap.num * pBootstrap.size;
     for (size_t i = 1; i < pBootstrap.num; i++)
     {
-        ElfSectionHeader_t *pSh = reinterpret_cast<ElfSectionHeader_t*>(pBootstrap.addr + i * pBootstrap.size);
+        // Force 32-bit section header type as we are a 32-bit ELF object
+        // even on 64-bit targets.
+        Elf32SectionHeader_t *pSh = reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.addr + i * pBootstrap.size);
 
         if ((pSh->flags & SHF_ALLOC) != SHF_ALLOC)
+        {
             if (pSh->addr >= end)
+            {
                 end = pSh->addr + pSh->size;
+            }
+        }
     }
 
     // Allocate the range
@@ -56,12 +95,13 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
     #endif
 
     // Get the string table
-    const char *tmpStringTable = reinterpret_cast<const char*>(reinterpret_cast<ElfSectionHeader_t*>(pBootstrap.addr + pBootstrap.shndx * pBootstrap.size)->addr);
+    const char *tmpStringTable = reinterpret_cast<const char*>(reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.addr + pBootstrap.shndx * pBootstrap.size)->addr);
+
 
     // Search for the symbol/string table and adjust sections
     for (size_t i = 1; i < pBootstrap.num; i++)
     {
-        ElfSectionHeader_t *pSh = reinterpret_cast<ElfSectionHeader_t*>(pBootstrap.addr + i * pBootstrap.size);
+        Elf32SectionHeader_t *pSh = reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.addr + i * pBootstrap.size);
 
         #if defined(X86_COMMON)
 
@@ -79,47 +119,47 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 
         if (pSh->type == SHT_SYMTAB)
         {
-            m_pSymbolTable = reinterpret_cast<ElfSymbol_t*> (pSh->addr);
+            m_pSymbolTable = extend(reinterpret_cast<Elf32Symbol_t*> (pSh->addr));
             m_nSymbolTableSize = pSh->size;
         }
         else if (!strcmp(pStr, ".strtab"))
         {
-            m_pStringTable = reinterpret_cast<char*> (pSh->addr);
+            m_pStringTable = extend(reinterpret_cast<char*> (pSh->addr));
         }
         else if (!strcmp(pStr, ".shstrtab"))
         {
-            m_pShstrtab = reinterpret_cast<char*> (pSh->addr);
+            m_pShstrtab = extend(reinterpret_cast<char*> (pSh->addr));
         }
         else if (!strcmp(pStr, ".debug_frame"))
         {
-            m_pDebugTable = reinterpret_cast<uint8_t*> (pSh->addr);
+            m_pDebugTable = extend(reinterpret_cast<uint8_t*> (pSh->addr));
             m_nDebugTableSize = pSh->size;
         }
     }
 
     // Initialise remaining member variables
-    #if defined(X86_COMMON)
-    m_pSectionHeaders = m_AdditionalSections.convertPhysicalPointer<ElfSectionHeader_t>(pBootstrap.addr);
-    #else
-    m_pSectionHeaders = reinterpret_cast<ElfSectionHeader_t*>(pBootstrap.addr);
-    #endif
+#if defined(X86_COMMON)
+    m_pSectionHeaders = m_AdditionalSections.convertPhysicalPointer<Elf32SectionHeader_t>(pBootstrap.addr);
+#else
+    m_pSectionHeaders = reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.addr);
+#endif
     m_nSectionHeaders = pBootstrap.num;
 
 #ifdef DEBUGGER
     if (m_pSymbolTable && m_pStringTable)
     {
-        ElfSymbol_t *pSymbol = reinterpret_cast<ElfSymbol_t *>(m_pSymbolTable);
+        Elf32Symbol_t *pSymbol = reinterpret_cast<Elf32Symbol_t *>(m_pSymbolTable);
 
         const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable);
 
-        for (size_t i = 1; i < m_nSymbolTableSize / sizeof(ElfSymbol_t); i++)
+        for (size_t i = 1; i < m_nSymbolTableSize / sizeof(Elf32Symbol_t); i++)
         {
             const char *pStr = 0;
 
             if (ST_TYPE(pSymbol->info) == 3)
             {
                 // Section type - the name will be the name of the section header it refers to.
-                ElfSectionHeader_t *pSh = &m_pSectionHeaders[pSymbol->shndx];
+                Elf32SectionHeader_t *pSh = &m_pSectionHeaders[pSymbol->shndx];
                 // If it's not allocated, it's a link-once-only section that we can ignore.
                 if (!(pSh->flags & SHF_ALLOC))
                 {
@@ -151,13 +191,13 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 
             if (pStr && (*pStr != '\0'))
             {
-                m_SymbolTable.insert(String(pStr), binding, this, pSymbol->value);
+                m_SymbolTable.insert(String(pStr), binding, this, extend(pSymbol->value));
             }
             pSymbol++;
         }
     }
 #endif
-    
+
     return true;
 }
 
@@ -165,7 +205,8 @@ KernelElf::KernelElf() :
     #if defined(X86_COMMON)
     m_AdditionalSections("Kernel ELF Sections"),
     #endif
-    m_Modules(), m_LoadedModules(), m_FailedModules(), m_PendingModules(), m_ModuleAllocator()
+    m_Modules(), m_LoadedModules(), m_FailedModules(), m_PendingModules(), m_ModuleAllocator(),
+    m_pSectionHeaders(0), m_pSymbolTable(0)
 {
 }
 

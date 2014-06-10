@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -155,6 +154,15 @@ typedef uint32_t Elf_Word;
 typedef  int32_t Elf_Sword;
 typedef uint64_t Elf_Xword;
 typedef  int64_t Elf_Sxword;
+
+// Compatibility types for 64-bit kernel, which is actually a 32-bit ELF.
+typedef uint32_t Elf32_Addr;
+typedef uint32_t Elf32_Off;
+typedef uint16_t Elf32_Half;
+typedef uint32_t Elf32_Word;
+typedef  int32_t Elf32_Sword;
+typedef uint32_t Elf32_Xword;
+typedef  int32_t Elf32_Sxword;
 
 #endif
 
@@ -314,6 +322,24 @@ class Elf
             Elf_Xword entsize;
         } PACKED;
 
+#ifdef BITS_64
+        struct Elf32SectionHeader_t
+        {
+            Elf32_Word name;
+            Elf32_Word type;
+            Elf32_Xword flags;
+            Elf32_Addr addr;
+            Elf32_Off offset;
+            Elf32_Xword size;
+            Elf32_Word link;
+            Elf32_Word info;
+            Elf32_Xword addralign;
+            Elf32_Xword entsize;
+        } PACKED;
+#else
+        typedef ElfSectionHeader_t Elf32SectionHeader_t;
+#endif
+
         struct ElfSymbol_t
         {
             Elf_Word name;
@@ -330,6 +356,20 @@ class Elf
             Elf_Half shndx;
             #endif
         } PACKED;
+
+#ifdef BITS_64
+        struct Elf32Symbol_t
+        {
+            Elf32_Word name;
+            Elf32_Addr value;
+            Elf32_Xword size;
+            uint8_t  info;
+            uint8_t  other;
+            Elf32_Half shndx;
+        } PACKED;
+#else
+        typedef ElfSymbol_t Elf32Symbol_t;
+#endif
 
         struct ElfHash_t
         {

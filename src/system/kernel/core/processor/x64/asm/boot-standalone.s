@@ -24,8 +24,6 @@ MBOOT_HEADER_MAGIC equ 0x1BADB002
 MBOOT_HEADER_FLAGS equ MBOOT_PAGE_ALIGN | MBOOT_MEM_INFO
 MBOOT_CHECKSUM     equ -(MBOOT_HEADER_MAGIC + MBOOT_HEADER_FLAGS)
 
-[BITS 64]
-
 [SECTION .init.multiboot]
 align 4
 mboot:
@@ -39,9 +37,71 @@ mboot:
 [EXTERN init]
 [EXTERN end]
 
-[SECTION .init.text]
 KERNEL_BASE        equ 0xFFFFFFFF7FF00000
+
+[SECTION .init.text]
+[BITS 32]
 start:
+  cli
+
+  ; TODO: check for long mode support (and do what, exactly, if not available?)
+
+  ; Disable paging if it was otherwise configured.
+  mov eax, cr0
+  and eax, 0x7fffffff
+  mov cr0, eax
+
+  ; Create temporary paging structures so we can get into long mode
+  mov edi, startup_32bit_region - KERNEL_BASE
+  mov cr3, edi
+  mov ecx, 0x1000
+  xor eax, eax
+  rep stosd
+
+  mov edi, cr3
+  mov dword [edi], (startup_32bit_region + 0x1003) - KERNEL_BASE
+  add edi, 0x1000
+  mov dword [edi], (startup_32bit_region + 0x2003) - KERNEL_BASE
+  add edi, 0x1000
+  mov dword [edi], (startup_32bit_region + 0x3003) - KERNEL_BASE
+  add edi, 0x1000
+
+  mov esi, ebx
+
+  ; Identity map first 2 MB
+  mov ebx, 0x3
+  mov ecx, 512
+  .set:
+    mov dword [edi], ebx
+    add ebx, 0x1000
+    add edi, 8
+    dec ecx
+    jnz short .set
+
+  ; Bring back EBX - it holds the address of the multiboot info structure.
+  mov ebx, esi
+
+  ; Enable PAE
+  mov eax, cr4
+  or eax, 0x20
+  mov cr4, eax
+
+  ; Enable LM-bit and paging
+  mov ecx, 0xC0000080
+  rdmsr
+  or eax, 0x100
+  wrmsr
+
+  mov eax, cr0
+  or eax, 0x80000000
+  mov cr0, eax
+
+  ; Now in IA32e mode. Enter 64-bit with a temporary GDT.
+  lgdt [CODE32GDTR - KERNEL_BASE]
+  jmp 0x08:start64 - KERNEL_BASE
+
+[BITS 64]
+start64:
   cli
   push rbx
 
@@ -264,6 +324,9 @@ ___startup_init_fpu_sse:
   ret
 
 [SECTION .data]
+  CODE32GDTR:
+    dw 23
+    dq GDT - KERNEL_BASE
   GDTR:
     dw 23
     dq GDT
@@ -280,6 +343,13 @@ ___startup_init_fpu_sse:
     dw 0
 
 [SECTION .asm.bss nobits]
+align 4096
+startup_32bit_region:
+  resb 4096
+  resb 4096
+  resb 4096
+  resb 4096
+
 pml4:
   resb 4096
 
