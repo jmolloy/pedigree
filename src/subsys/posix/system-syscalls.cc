@@ -210,6 +210,14 @@ int posix_fork(SyscallState &state)
 
 int posix_execve(const char *name, const char **argv, const char **env, SyscallState &state)
 {
+    /// \todo Check argv/env??
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(name), PATH_MAX, PosixSubsystem::SafeRead))
+    {
+        SC_NOTICE("execve -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     SC_NOTICE("execve(\"" << name << "\")");
 
     String myArgv;
@@ -588,6 +596,13 @@ class WaitCleanup
 
 int posix_waitpid(int pid, int *status, int options)
 {
+    if(status && !PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(status), sizeof(int), PosixSubsystem::SafeWrite))
+    {
+        SC_NOTICE("waitpid -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     SC_NOTICE("waitpid(" << pid << ", " << options << ")");
 
     // Find the set of processes to check.
@@ -759,6 +774,13 @@ int posix_getpid()
 
 int posix_gettimeofday(timeval *tv, struct timezone *tz)
 {
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(tv), sizeof(timeval), PosixSubsystem::SafeWrite))
+    {
+        SC_NOTICE("gettimeofday -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     SC_NOTICE("gettimeofday");
     
     Timer *pTimer = Machine::instance().getTimer();
@@ -781,6 +803,14 @@ char *store_str_to(char *str, char *strend, String s)
 
 int posix_getpwent(passwd *pw, int n, char *str)
 {
+    /// \todo 'str' is not very nice here, can we do this better?
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(pw), sizeof(passwd), PosixSubsystem::SafeWrite))
+    {
+        SC_NOTICE("getpwent -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     SC_NOTICE("getpwent(" << Dec << n << Hex << ")");
 
     // Grab the given user.
@@ -813,6 +843,15 @@ int posix_getpwent(passwd *pw, int n, char *str)
 
 int posix_getpwnam(passwd *pw, const char *name, char *str)
 {
+    /// \todo Again, str is not very nice here.
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(pw), sizeof(passwd), PosixSubsystem::SafeWrite) &&
+        PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(name), PATH_MAX, PosixSubsystem::SafeRead)))
+    {
+        SC_NOTICE("readdir -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     SC_NOTICE("getpwname(" << name << ")");
     
     // Grab the given user.
@@ -941,6 +980,13 @@ int posix_setegid(gid_t egid)
 
 int pedigree_login(int uid, const char *password)
 {
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(password), PATH_MAX, PosixSubsystem::SafeRead))
+    {
+        SC_NOTICE("pedigree_login -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     // Grab the given user.
     User *pUser = UserManager::instance().getUser(uid);
     if (!pUser) return -1;
@@ -951,65 +997,21 @@ int pedigree_login(int uid, const char *password)
         return -1;
 }
 
-/// \note Currently all functionality can be provided without any extra storage in the handle.
-struct dlHandle
-{
-    int mode;
-};
-
 uintptr_t posix_dlopen(const char* file, int mode, void* p)
 {
-    SC_NOTICE("dlopen(" << file << ")");
-
-    File *pFile = VFS::instance().find(String(file), GET_CWD());
-
-    if (!pFile)
-    {
-        SYSCALL_ERROR(DoesNotExist);
-        return 0;
-    }
-
-    while (pFile->isSymlink())
-        pFile = Symlink::fromFile(pFile)->followLink();
-
-    if (pFile->isDirectory())
-    {
-        // Error - is directory.
-        SYSCALL_ERROR(IsADirectory);
-        return 0;
-    }
-
-    Process *pProcess = Processor::information().getCurrentThread()->getParent();
-
-    if (!pProcess->getLinker()->loadObject(pFile))
-    {
-        ERROR("dlopen: couldn't load " << String(file) << ".");
-        return 0;
-    }
-
-    dlHandle* handle = reinterpret_cast<dlHandle*>(p);
-
-    return reinterpret_cast<uintptr_t>(handle);
+    FATAL("posix_dlopen called!");
+    return 0;
 }
-
-// m_ProcessObjects should be better to use!
 
 uintptr_t posix_dlsym(void* handle, const char* name)
 {
-    SC_NOTICE("dlsym(" << name << ")");
-
-    if (!handle)
-        return 0;
-
-    Process *pProcess = Processor::information().getCurrentThread()->getParent();
-
-    return pProcess->getLinker()->resolve(String(name));
+    FATAL("posix_dlsym called!");
+    return 0;
 }
 
 int posix_dlclose(void* handle)
 {
-    SC_NOTICE("dlclose");
-
+    FATAL("posix_dlclose called!");
     return 0;
 }
 
@@ -1186,6 +1188,13 @@ int posix_getpgrp()
 
 int posix_syslog(const char *msg, int prio)
 {
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(msg), PATH_MAX, PosixSubsystem::SafeRead))
+    {
+        SC_NOTICE("syslog -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     uint64_t id = Processor::information().getCurrentThread()->getParent()->getId();
     if(id <= 1)
     {
