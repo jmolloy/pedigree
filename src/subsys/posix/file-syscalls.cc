@@ -337,6 +337,12 @@ int posix_open(const char *name, int flags, int mode)
 int posix_read(int fd, char *ptr, int len)
 {
     F_NOTICE("read(" << Dec << fd << Hex << ", " << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(ptr), len, PosixSubsystem::SafeWrite))
+    {
+        F_NOTICE("  -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
 
     // Lookup this process.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -400,15 +406,16 @@ int posix_read(int fd, char *ptr, int len)
 
 int posix_write(int fd, char *ptr, int len)
 {
-    if (ptr)
+    F_NOTICE("write(" << fd << ", " << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(ptr), len, PosixSubsystem::SafeRead))
     {
-        char c = ptr[len];
-        ptr[len] = 0;
-        F_NOTICE("write(" << fd << ", " << ptr << ", " << len << ")");
-        ptr[len] = c;
+        F_NOTICE("  -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
     }
 
-    F_NOTICE("write(" << fd << ", " << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
+    if(ptr)
+        F_NOTICE("write(" << fd << ", " << ptr << ", " << len << ")");
 
     // Lookup this process.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -488,6 +495,14 @@ int posix_link(char *old, char *_new)
 
 int posix_readlink(const char* path, char* buf, unsigned int bufsize)
 {
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(path), PATH_MAX, PosixSubsystem::SafeRead) &&
+        PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(buf), bufsize, PosixSubsystem::SafeWrite)))
+    {
+        F_NOTICE("readlink -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     F_NOTICE("readlink(" << path << ", " << reinterpret_cast<uintptr_t>(buf) << ", " << bufsize << ")");
 
     String realPath = normalisePath(path);
@@ -520,8 +535,10 @@ int posix_realpath(const char *path, char *buf, size_t bufsize)
 {
     F_NOTICE("realpath");
 
-    if(!(path && buf))
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(path), PATH_MAX, PosixSubsystem::SafeRead) &&
+        PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(buf), bufsize, PosixSubsystem::SafeWrite)))
     {
+        F_NOTICE("realpath -> invalid address");
         SYSCALL_ERROR(InvalidArgument);
         return -1;
     }
@@ -564,6 +581,13 @@ int posix_realpath(const char *path, char *buf, size_t bufsize)
 
 int posix_unlink(char *name)
 {
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(name), PATH_MAX, PosixSubsystem::SafeRead))
+    {
+        F_NOTICE("unlink -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     F_NOTICE("unlink(" << name << ")");
 
     /// \todo Check permissions, perhaps!?
@@ -578,6 +602,14 @@ int posix_unlink(char *name)
 
 int posix_symlink(char *target, char *link)
 {
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(target), PATH_MAX, PosixSubsystem::SafeRead) &&
+        PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(link), PATH_MAX, PosixSubsystem::SafeRead)))
+    {
+        F_NOTICE("symlink -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     F_NOTICE("symlink(" << target << ", " << link << ")");
 
     bool worked = VFS::instance().createSymlink(String(link), String(target), GET_CWD());
@@ -590,6 +622,14 @@ int posix_symlink(char *target, char *link)
 
 int posix_rename(const char* source, const char* dst)
 {
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(source), PATH_MAX, PosixSubsystem::SafeRead) &&
+        PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(dst), PATH_MAX, PosixSubsystem::SafeRead)))
+    {
+        F_NOTICE("rename -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     F_NOTICE("rename(" << source << ", " << dst << ")");
 
     String realSource = normalisePath(source);
@@ -648,10 +688,14 @@ int posix_rename(const char* source, const char* dst)
 
 char* posix_getcwd(char* buf, size_t maxlen)
 {
-    F_NOTICE("getcwd(" << maxlen << ")");
-
-    if (buf == 0)
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(buf), maxlen, PosixSubsystem::SafeWrite))
+    {
+        F_NOTICE("getcwd -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
         return 0;
+    }
+
+    F_NOTICE("getcwd(" << maxlen << ")");
 
     File* curr = GET_CWD();
     String str = curr->getFullPath();
@@ -666,6 +710,14 @@ char* posix_getcwd(char* buf, size_t maxlen)
 
 int posix_stat(const char *name, struct stat *st)
 {
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(name), PATH_MAX, PosixSubsystem::SafeRead) &&
+        PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(st), sizeof(struct stat), PosixSubsystem::SafeWrite)))
+    {
+        F_NOTICE("stat -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     F_NOTICE("stat(" << name << ")");
 
     // verify the filename - don't try to open a dud file (otherwise we'll open the cwd)
@@ -746,6 +798,13 @@ int posix_stat(const char *name, struct stat *st)
 
 int posix_fstat(int fd, struct stat *st)
 {
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(st), sizeof(struct stat), PosixSubsystem::SafeWrite))
+    {
+        F_NOTICE("fstat -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     F_NOTICE("fstat(" << Dec << fd << Hex << ")");
     if(!st)
     {
@@ -821,6 +880,14 @@ int posix_fstat(int fd, struct stat *st)
 
 int posix_lstat(char *name, struct stat *st)
 {
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(name), PATH_MAX, PosixSubsystem::SafeRead) &&
+        PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(st), sizeof(struct stat), PosixSubsystem::SafeWrite)))
+    {
+        F_NOTICE("lstat -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     F_NOTICE("lstat(" << name << ")");
     if(!st)
     {
@@ -889,8 +956,10 @@ int posix_lstat(char *name, struct stat *st)
 
 int posix_opendir(const char *dir, dirent *ent)
 {
-    if(!dir)
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(dir), PATH_MAX, PosixSubsystem::SafeRead) &&
+        PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(ent), sizeof(dirent), PosixSubsystem::SafeWrite)))
     {
+        F_NOTICE("opendir -> invalid address");
         SYSCALL_ERROR(InvalidArgument);
         return -1;
     }
@@ -965,6 +1034,13 @@ int posix_opendir(const char *dir, dirent *ent)
 
 int posix_readdir(int fd, dirent *ent)
 {
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(ent), sizeof(dirent), PosixSubsystem::SafeWrite))
+    {
+        F_NOTICE("readdir -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     F_NOTICE("readdir(" << fd << ")");
 
     if (fd == -1)
@@ -1015,8 +1091,18 @@ int posix_readdir(int fd, dirent *ent)
 
 void posix_rewinddir(int fd, dirent *ent)
 {
-    if (fd == -1)
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(ent), sizeof(dirent), PosixSubsystem::SafeWrite))
+    {
+        F_NOTICE("rewinddir -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
         return;
+    }
+
+    if (fd == -1)
+    {
+        SYSCALL_ERROR(BadFileDescriptor);
+        return;
+    }
 
     F_NOTICE("rewinddir(" << fd << ")");
 
@@ -1071,6 +1157,8 @@ int posix_ioctl(int fd, int command, void *buf)
         // Error - no such FD.
         return -1;
     }
+
+    /// \todo Sanitise buf, if it has meaning for the command.
 
     if (f->file->supports(command))
     {
@@ -1135,6 +1223,13 @@ int posix_ioctl(int fd, int command, void *buf)
 
 int posix_chdir(const char *path)
 {
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(path), PATH_MAX, PosixSubsystem::SafeRead))
+    {
+        F_NOTICE("chdir -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     F_NOTICE("chdir(" << path << ")");
 
     String realPath = normalisePath(path);
@@ -1236,6 +1331,13 @@ int posix_dup2(int fd1, int fd2)
 
 int posix_mkdir(const char* name, int mode)
 {
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(name), PATH_MAX, PosixSubsystem::SafeRead))
+    {
+        F_NOTICE("mkdir -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     F_NOTICE("mkdir(" << name << ")");
 
     String realPath = normalisePath(name);
@@ -1270,6 +1372,7 @@ int posix_isatty(int fd)
 
 int posix_fcntl(int fd, int cmd, int num, int* args)
 {
+    /// \todo Same as ioctl, figure out how best to sanitise input addresses
     if (num)
         F_NOTICE("fcntl(" << fd << ", " << cmd << ", " << num << ", " << args[0] << ")");
     /// \note Added braces. Compiler warned about ambiguity if F_NOTICE isn't enabled. It seems to be able
@@ -1443,8 +1546,13 @@ struct _mmap_tmp
 void *posix_mmap(void *p)
 {
     F_NOTICE("mmap");
-    if(!p)
-        return 0;
+
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(p), sizeof(_mmap_tmp), PosixSubsystem::SafeRead))
+    {
+        F_NOTICE("mmap -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return MAP_FAILED;
+    }
 
     // Grab the parameter list
     _mmap_tmp *map_info = reinterpret_cast<_mmap_tmp*>(p);
@@ -1677,6 +1785,13 @@ int posix_munmap(void *addr, size_t len)
 
 int posix_access(const char *name, int amode)
 {
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(name), PATH_MAX, PosixSubsystem::SafeRead))
+    {
+        F_NOTICE("access -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     F_NOTICE("access(" << (name ? name : "n/a") << ", " << Dec << amode << Hex << ")");
     if(!name)
     {
@@ -1784,6 +1899,14 @@ int posix_fsync(int fd)
 
 int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
 {
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(mount_buf), PATH_MAX, PosixSubsystem::SafeWrite) &&
+        PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(info_buf), PATH_MAX, PosixSubsystem::SafeWrite)))
+    {
+        F_NOTICE("pedigree_get_mount -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     NOTICE("pedigree_get_mount(" << Dec << n << Hex << ")");
     
     typedef List<String*> StringList;
@@ -1831,6 +1954,13 @@ int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
 
 int posix_chmod(const char *path, mode_t mode)
 {
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(path), PATH_MAX, PosixSubsystem::SafeRead))
+    {
+        F_NOTICE("chmod -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     F_NOTICE("chmod(" << String(path) << ", " << Oct << mode << Hex << ")");
     
     /// \todo EACCESS, EPERM
@@ -1887,6 +2017,13 @@ int posix_chmod(const char *path, mode_t mode)
 
 int posix_chown(const char *path, uid_t owner, gid_t group)
 {
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(path), PATH_MAX, PosixSubsystem::SafeRead))
+    {
+        F_NOTICE("chown -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     F_NOTICE("chown(" << String(path) << ", " << owner << ", " << group << ")");
     
     /// \todo EACCESS, EPERM
@@ -2100,6 +2237,13 @@ int statvfs_doer(Filesystem *pFs, struct statvfs *buf)
 
 int posix_fstatvfs(int fd, struct statvfs *buf)
 {
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(buf), sizeof(struct statvfs), PosixSubsystem::SafeWrite))
+    {
+        F_NOTICE("fstatvfs -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     F_NOTICE("fstatvfs(" << fd << ")");
     
     // Lookup this process.
@@ -2126,6 +2270,14 @@ int posix_fstatvfs(int fd, struct statvfs *buf)
 
 int posix_statvfs(const char *path, struct statvfs *buf)
 {
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(path), PATH_MAX, PosixSubsystem::SafeRead) &&
+        PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(buf), sizeof(struct statvfs), PosixSubsystem::SafeWrite)))
+    {
+        F_NOTICE("statvfs -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     F_NOTICE("statvfs(" << path << ")");
 
     String realPath = normalisePath(path);
