@@ -160,12 +160,11 @@ int posix_close(int fd)
 
 int posix_open(const char *name, int flags, int mode)
 {
-    // Verify that the filename is valid
-    if(!name)
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(name), PATH_MAX, PosixSubsystem::SafeRead))
     {
-      F_NOTICE("open called with null filename");
-      SYSCALL_ERROR(DoesNotExist);
-      return -1;
+        F_NOTICE("open -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
     }
 
     F_NOTICE("open(" << name << ", " << ((flags & O_RDWR) ? "O_RDWR" : "") << ((flags & O_RDONLY) ? "O_RDONLY" : "") << ((flags & O_WRONLY) ? "O_WRONLY" : "") << ")");
