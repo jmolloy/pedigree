@@ -383,6 +383,9 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     pProcess->description() = String(name);
 
     /// \todo Write pActualFile->getFullPath() into argv[0]
+    // Make sure the dynamic linker loads the correct program.
+    String actualPath = pActualFile->getFullPath();
+    savedArgv.pushFront(&actualPath);
 
     // Save the argv and env lists so they aren't destroyed when we overwrite the address space.
     save_string_array(argv, savedArgv);

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -73,6 +72,12 @@ class Vector<void*>
     /** Remove the element from the back and return it
      *\return the removed element */
     void *popBack();
+    /** Add an element to the front of the Vector
+     *\param[in] value the element */
+    void pushFront(void *value);
+    /** Remove the element from the front and return it
+     *\return the removed element */
+    void *popFront();
 
     /** Clear the Vector */
     void clear();
@@ -173,6 +178,14 @@ class Vector<T*>
      *\return the removed element */
     inline T *popBack()
       {return reinterpret_cast<T*>(m_VoidVector.popBack());}
+    /** Add an element to the front of the Vector
+     *\param[in] value the element */
+    inline void pushFront(T *value)
+      {m_VoidVector.pushFront(reinterpret_cast<void*>(value));}
+    /** Remove the element from the front and return it
+     *\return the removed element */
+    inline T *popFront()
+      {return reinterpret_cast<T*>(m_VoidVector.popFront());}
 
     /** Clear the Vector */
     inline void clear()
@@ -270,6 +283,14 @@ class Vector<size_t>
      *\return the removed element */
     inline size_t popBack()
       {return reinterpret_cast<size_t>(m_VoidVector.popBack());}
+    /** Add an element to the front of the Vector
+     *\param[in] value the element */
+    inline void pushFront(size_t value)
+      {m_VoidVector.pushFront(reinterpret_cast<void*>(value));}
+    /** Remove the element from the front and return it
+     *\return the removed element */
+    inline size_t popFront()
+      {return reinterpret_cast<size_t>(m_VoidVector.popFront());}
 
     /** Clear the Vector */
     inline void clear()

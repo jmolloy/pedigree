@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -359,7 +358,9 @@ extern "C" int main(int argc, char *argv[])
         init();
     }
 
-    meta->entry(argv, environ);
+    // argv[0] is passed to us by the kernel and holds the path to the binary
+    // we need to load. argv[1:] is the original argv.
+    meta->entry(&argv[1], environ);
 
     return 0;
 }

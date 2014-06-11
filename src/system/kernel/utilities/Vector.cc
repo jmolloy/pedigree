@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -73,6 +72,21 @@ void *Vector<void*>::popBack()
 {
   m_Count--;
   return m_Data[m_Count];
+}
+void Vector<void*>::pushFront(void *value)
+{
+  reserve(m_Count + 1, true);
+  memmove(&m_Data[1], &m_Data[0], m_Count * sizeof(void*));
+
+  m_Data[0] = value;
+  m_Count++;
+}
+void *Vector<void*>::popFront()
+{
+  void *ret = m_Data[0];
+  m_Count--;
+  memmove(&m_Data[0], &m_Data[1], m_Count * sizeof(void*));
+  return ret;
 }
 void Vector<void*>::clear()
 {
