@@ -216,8 +216,12 @@ int main(int argc, char **argv)
         sprintf(newenv[0], "HOME=%s", pw->pw_dir);
         sprintf(newenv[1], "TERM=%s", TERM);
 
+        // Make sure we're starting a login shell.
+        char *shell = (char *) malloc(strlen(pw->pw_shell) + 1);
+        sprintf(shell, "-%s", pw->pw_shell);
+
         // Child.
-        execle(pw->pw_shell, pw->pw_shell, 0, newenv);
+        execle(pw->pw_shell, shell, 0, newenv);
 
         // If we got here, the exec failed.
         printf("Unable to launch default shell: `%s'\n", pw->pw_shell);
