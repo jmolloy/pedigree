@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -116,12 +115,21 @@ bool Terminal::initialise()
         // We emulate an xterm, so ensure that's set in the environment.
         setenv("TERM", "xterm", 1);
 
-        execl("/applications/login", "/applications/login", 0);
-        syslog(LOG_ALERT, "Launching login failed (next line is the error in errno...)");
+        // Program to run.
+        const char *prog = getenv("SHELL");
+        if(!prog)
+        {
+            // Fall back to bash
+            syslog(LOG_WARNING, "$SHELL unset, falling back to /applications/bash");
+            prog = "/applications/bash";
+        }
+
+        execl(prog, prog, 0);
+        syslog(LOG_ALERT, "Launching shell failed (next line is the error in errno...)");
         syslog(LOG_ALERT, strerror(errno));
 
         DirtyRectangle rect;
-        write("Couldn't load 'login' for this terminal... ", rect);
+        write("Couldn't load shell for this terminal... ", rect);
         write(strerror(errno), rect);
         write("\r\n\r\nYour installation of Pedigree may not be complete, or you may have hit a bug.", rect);
         redrawAll(rect);
