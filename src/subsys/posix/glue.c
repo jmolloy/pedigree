@@ -257,14 +257,10 @@ _ssize_t read(int file, void *ptr, size_t len)
         errno = EBADF;
         return -1;
     }
-    if(!ptr)
-    {
-        syslog(LOG_NOTICE, "[%d] read: bad buffer given\n", getpid());
-        return 0;
-    }
     if(len == 0)
     {
         syslog(LOG_NOTICE, "[%d] read: bad length given\n", getpid());
+        errno = EINVAL;
         return 0;
     }
     return (_ssize_t) syscall3(POSIX_READ, file, (long)ptr, len);
