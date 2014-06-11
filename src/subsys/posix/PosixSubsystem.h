@@ -175,6 +175,11 @@ class PosixSubsystem : public Subsystem
 {
     public:
 
+        /** Sanitise flags. */
+        static const size_t SafeRegion = 0x0; // Region check is always done.
+        static const size_t SafeRead = 0x1;
+        static const size_t SafeWrite = 0x2;
+
         /** Default constructor */
         PosixSubsystem() :
             Subsystem(Posix), m_SignalHandlers(), m_SignalHandlersLock(),
@@ -194,6 +199,15 @@ class PosixSubsystem : public Subsystem
 
         /** Default destructor */
         virtual ~PosixSubsystem();
+
+        /**
+         * Check whether a given region of memory is safe for the given
+         * operations.
+         *
+         * This is important to do as we can get pointers from anywhere in the
+         * POSIX subsystem, and making sure they are sane and safe is crucial.
+         */
+        static bool checkAddress(uintptr_t addr, size_t extent, size_t flags);
 
         /** A thread needs to be killed! */
         virtual bool kill(KillReason killReason, Thread *pThread);

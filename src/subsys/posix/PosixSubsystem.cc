@@ -38,6 +38,8 @@
 #include <vfs/File.h>
 #include <vfs/LockedFile.h>
 
+// #define POSIX_SUBSYS_DEBUG
+
 #define O_RDONLY    0
 #define O_WRONLY    1
 #define O_RDWR      2
@@ -253,6 +255,71 @@ PosixSubsystem::~PosixSubsystem()
     }
 
     spinlock.release();
+}
+
+bool PosixSubsystem::checkAddress(uintptr_t addr, size_t extent, size_t flags)
+{
+#ifdef POSIX_SUBSYS_DEBUG
+    NOTICE("PosixSubsystem::checkAddress(" << addr << ", " << extent << ", " << flags << ")");
+#endif
+
+    // No memory access expected, all good.
+    if(!extent)
+    {
+#ifdef POSIX_SUBSYS_DEBUG
+        NOTICE("  -> zero extent, address is sane.");
+#endif
+        return true;
+    }
+
+    // Check address range.
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    if((addr < va.getUserStart()) || (addr >= va.getKernelStart()))
+    {
+#ifdef POSIX_SUBSYS_DEBUG
+        NOTICE("  -> outside of user address area.");
+#endif
+        return false;
+    }
+
+    // Short-circuit if this is a memory mapped region.
+    if(MemoryMapManager::instance().contains(addr, extent))
+    {
+#ifdef POSIX_SUBSYS_DEBUG
+        NOTICE("  -> inside memory map.");
+#endif
+        return true;
+    }
+
+    // Check the range.
+    for(size_t i = 0; i < extent; i+= PhysicalMemoryManager::getPageSize())
+    {
+        void *pAddr = reinterpret_cast<void *>(addr + i);
+        if(!va.isMapped(pAddr))
+        {
+#ifdef POSIX_SUBSYS_DEBUG
+            NOTICE("  -> not mapped.");
+#endif
+            return false;
+        }
+
+        if(flags & SafeWrite)
+        {
+            size_t vFlags = 0;
+            physical_uintptr_t phys = 0;
+            va.getMapping(pAddr, phys, vFlags);
+
+            if(!(vFlags & VirtualAddressSpace::Write))
+            {
+#ifdef POSIX_SUBSYS_DEBUG
+                NOTICE("  -> not writeable.");
+#endif
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 void PosixSubsystem::exit(int code)
