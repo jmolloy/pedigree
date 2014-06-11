@@ -1,5 +1,3 @@
-export PATH=/applications
-
 case "$TERM" in
     xterm) export TERM=xterm-256color;;
 esac
@@ -13,6 +11,6 @@ alias ll='ls -alF'
 
 export PS1="\[\e[34;1m\][\t]\[\e[0m\] \w \[\e[34;1m\]$\[\e[0m\] "
 
-echo "Welcome to the Pedigree operating system.
+shopt -q login_shell && echo "Welcome to the Pedigree operating system.
 
 Please don't feed the code monkeys - they bite."

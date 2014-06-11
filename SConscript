@@ -213,6 +213,7 @@ def buildImageTargetdir(target, source, env):
     os.system("cp -u " + imagedir + "/../base/config/greeting %s/config/greeting" % (targetDir,))
     os.system("cp -Ru " + imagedir + "/../base/config/term %s/config/term" % (targetDir,))
     os.system("cp -u " + imagedir + "/../base/.bashrc %s/.bashrc" % (targetDir,))
+    os.system("cp -u " + imagedir + "/../base/.profile %s/.profile" % (targetDir,))
 
     if os.path.exists(outFile):
         os.unlink(outFile)
@@ -301,6 +302,7 @@ def buildImageLosetup(target, source, env):
     os.system("sudo mkdir -p ./tmp/config")
     os.system("sudo cp " + imagedir + "/../base/config/greeting ./tmp/config/greeting")
     os.system("sudo cp " + imagedir + "/../base/.bashrc ./tmp/.bashrc")
+    os.system("sudo cp " + imagedir + "/../base/.profile ./tmp/.profile")
     os.system("sudo umount ./tmp")
 
     for i in os.listdir("tmp"):
@@ -399,6 +401,7 @@ def buildImageMtools(target, source, env):
         (os.path.join(pathToGrub, 'menu-hdd.lst'), '/boot/grub/menu.lst'),
         (os.path.join(imagedir, '..', 'base', 'config', 'greeting'), '/config/greeting'),
         (os.path.join(imagedir, '..', 'base', '.bashrc'), '/.bashrc'),
+        (os.path.join(imagedir, '..', 'base', '.profile'), '/.profile'),
     ]
 
     for i in source[3:]:
