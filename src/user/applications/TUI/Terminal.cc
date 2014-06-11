@@ -29,6 +29,7 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <sys/wait.h>
+#include <pwd.h>
 
 #include <graphics/Graphics.h>
 
@@ -106,24 +107,44 @@ bool Terminal::initialise()
         close(0);
         close(1);
         close(2);
+        close(m_MasterPty);
 
-        // Open the slave terminal, this will also set it as our ctty
+        // Open the slave terminal, dup into FD 1, 2
         int slave = open(slavename, O_RDWR);
         dup2(slave, 1);
         dup2(slave, 2);
 
+        // Create a new session for the shell, which will also wipe any
+        // existing CTTY.
+        setsid();
+
+        // Mark opened slave as our ctty.
+        syslog(LOG_INFO, "Trying to set CTTY");
+        ioctl(1, TIOCSCTTY, 0);
+
+        // Set ourselves as the terminal's foreground process group.
+        tcsetpgrp(1, getpgrp());
+
         // We emulate an xterm, so ensure that's set in the environment.
         setenv("TERM", "xterm", 1);
 
+        // Get current user's shell.
+        struct passwd *pw = getpwuid(getuid());
+
         // Program to run.
-        const char *prog = getenv("SHELL");
+        const char *prog = pw->pw_shell;
         if(!prog)
         {
-            // Fall back to bash
-            syslog(LOG_WARNING, "$SHELL unset, falling back to /applications/bash");
-            prog = "/applications/bash";
+            prog = getenv("SHELL");
+            if(!prog)
+            {
+                // Fall back to bash
+                syslog(LOG_WARNING, "$SHELL unset, falling back to /applications/bash");
+                prog = "/applications/bash";
+            }
         }
 
+        // Launch the shell now.
         execl(prog, prog, 0);
         syslog(LOG_ALERT, "Launching shell failed (next line is the error in errno...)");
         syslog(LOG_ALERT, strerror(errno));
