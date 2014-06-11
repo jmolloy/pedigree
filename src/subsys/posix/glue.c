@@ -2134,13 +2134,13 @@ void siglongjmp(sigjmp_buf env, int val)
 char *basename(char *path)
 {
     static char bad[2] = {'.', 0};
-    if(!path)
+    if((!path) || (path && !*path))
         return bad;
     char *p = strrchr(path, '/');
     if(!p)
         return path;
     else
-        return p;
+        return p + 1;
 }
 
 int reboot(int howto)
