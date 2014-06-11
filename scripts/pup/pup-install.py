@@ -79,7 +79,10 @@ def main(arglist):
     gid = os.getgid()
     for f in t.getmembers():
         name = os.path.join(installRoot, f.name)
-        linkname = os.path.join(installRoot, f.linkname)
+        linkname = f.linkname
+        if not linkname.startswith('/'):
+            linkname = os.path.join(os.path.dirname(name), linkname)
+        linkname = os.path.join(installRoot, linkname)
         mode = f.mode
 
         # Make sure the caller can write to the file always.
@@ -100,6 +103,7 @@ def main(arglist):
                 os.unlink(name)
             try:
                 os.symlink(linkname, name)
+                print "%s -> %s" % (name, linkname)
             except OSError:
                 print "Extracting %s failed, target %s does not exist." % (f.name, f.linkname)
         elif f.islnk():
