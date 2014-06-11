@@ -18,7 +18,7 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
-import os, sys, urllib, sqlite3, tarfile
+import os, sys, stat, shutil, urllib, sqlite3, tarfile
 
 import pup_common
 
@@ -73,7 +73,47 @@ def main(arglist):
     # TODO: track installed packages in a local database
     
     t = tarfile.open(localFile)
-    t.extractall(installRoot)
+
+    # Perform extraction, but ignore owner/group information
+    uid = os.getuid()
+    gid = os.getgid()
+    for f in t.getmembers():
+        name = os.path.join(installRoot, f.name)
+        linkname = os.path.join(installRoot, f.linkname)
+        mode = f.mode
+
+        # Make sure the caller can write to the file always.
+        mode |= stat.S_IWRITE
+
+        # We need to create the file now.
+        if f.isdir():
+            if not os.path.exists(name):
+                os.makedirs(name)
+        elif f.isfile() or f.isreg():
+            buf = t.extractfile(f)
+            with open(name, 'w') as g:
+                shutil.copyfileobj(buf, g)
+
+            os.chmod(name, mode)
+        elif f.issym():
+            if os.path.lexists(name):
+                os.unlink(name)
+            try:
+                os.symlink(linkname, name)
+            except OSError:
+                print "Extracting %s failed, target %s does not exist." % (f.name, f.linkname)
+        elif f.islnk():
+            if os.path.lexists(name):
+                os.unlink(name)
+            try:
+                os.link(linkname, name)
+            except OSError:
+                print "Extracting %s failed, target %s does not exist." % (f.name, f.linkname)
+        else:
+            print "(%s is not a sane file type)" % (f.name,)
+
+        #print name
+    #t.extractall(installRoot)
     
     print "Package %s [%s] is now installed." % (packageName, desiredArch)
 
