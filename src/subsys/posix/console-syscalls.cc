@@ -17,6 +17,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <syscallError.h>
 #include <processor/types.h>
 #include <processor/Processor.h>
 #include <process/Process.h>
@@ -159,6 +160,13 @@ void terminalEventHandler(uintptr_t serializeBuffer)
 
 int posix_tcgetattr(int fd, struct termios *p)
 {
+  if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(p), sizeof(struct termios), PosixSubsystem::SafeWrite))
+  {
+      NOTICE("tcgetattr -> invalid address");
+      SYSCALL_ERROR(InvalidArgument);
+      return -1;
+  }
+
   F_NOTICE("posix_tcgetattr(" << fd << ")");
 
   // Lookup this process.
@@ -216,6 +224,13 @@ int posix_tcgetattr(int fd, struct termios *p)
 
 int posix_tcsetattr(int fd, int optional_actions, struct termios *p)
 {
+  if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(p), sizeof(struct termios), PosixSubsystem::SafeRead))
+  {
+      F_NOTICE("tcsetattr -> invalid address");
+      SYSCALL_ERROR(InvalidArgument);
+      return -1;
+  }
+
   F_NOTICE("posix_tcsetattr(" << fd << ", " << optional_actions << ", {c_iflag=" << p->c_iflag << ", c_oflag=" << p->c_oflag << ", c_lflag=" << p->c_lflag << "} )");
 
   // Lookup this process.
@@ -269,6 +284,13 @@ int posix_tcsetattr(int fd, int optional_actions, struct termios *p)
 
 int console_getwinsize(File* file, winsize_t *buf)
 {
+  if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(buf), sizeof(winsize_t), PosixSubsystem::SafeWrite))
+  {
+      NOTICE("getwinsize -> invalid address");
+      SYSCALL_ERROR(InvalidArgument);
+      return -1;
+  }
+
   if (!ConsoleManager::instance().isConsole(file))
   {
     // Error - not a TTY.
@@ -280,6 +302,13 @@ int console_getwinsize(File* file, winsize_t *buf)
 
 int console_setwinsize(File *file, const winsize_t *buf)
 {
+  if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(buf), sizeof(winsize_t), PosixSubsystem::SafeRead))
+  {
+      NOTICE("setwinsize -> invalid address");
+      SYSCALL_ERROR(InvalidArgument);
+      return -1;
+  }
+
   if (!ConsoleManager::instance().isConsole(file))
   {
     // Error - not a TTY.
@@ -305,6 +334,13 @@ int console_flush(File *file, void *what)
 
 int console_ptsname(int fd, char *buf)
 {
+  if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(buf), PATH_MAX, PosixSubsystem::SafeWrite))
+  {
+      NOTICE("ptsname -> invalid address");
+      SYSCALL_ERROR(InvalidArgument);
+      return -1;
+  }
+
   // Lookup this process.
   Process *pProcess = Processor::information().getCurrentThread()->getParent();
   PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
@@ -345,6 +381,13 @@ int console_ptsname(int fd, char *buf)
 
 int console_ttyname(int fd, char *buf)
 {
+  if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(buf), PATH_MAX, PosixSubsystem::SafeWrite))
+  {
+      NOTICE("ttyname -> invalid address");
+      SYSCALL_ERROR(InvalidArgument);
+      return -1;
+  }
+
   // Lookup this process.
   Process *pProcess = Processor::information().getCurrentThread()->getParent();
   PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
@@ -371,6 +414,7 @@ int console_ttyname(int fd, char *buf)
 
   File *tty = pFd->file;
   sprintf(buf, "/dev/%s", static_cast<const char *>(tty->getName()));
+  return 0;
 }
 
 static void setConsoleGroup(Process *pProcess, ProcessGroup *pGroup)
