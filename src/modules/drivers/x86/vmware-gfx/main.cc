@@ -355,6 +355,11 @@ class VmwareGraphics : public Display
         {
             // Disable the command FIFO while we link the command
             writeRegister(SVGA_REG_CONFIG_DONE, 0);
+
+            if(w > m_pFramebuffer->getWidth())
+                w = m_pFramebuffer->getWidth();
+            if(h > m_pFramebuffer->getHeight())
+                h = m_pFramebuffer->getHeight();
             
             writeFifo(SVGA_CMD_UPDATE);
             writeFifo(x);
