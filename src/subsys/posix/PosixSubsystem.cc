@@ -309,7 +309,7 @@ bool PosixSubsystem::checkAddress(uintptr_t addr, size_t extent, size_t flags)
             physical_uintptr_t phys = 0;
             va.getMapping(pAddr, phys, vFlags);
 
-            if(!(vFlags & VirtualAddressSpace::Write))
+            if(!(vFlags & (VirtualAddressSpace::Write | VirtualAddressSpace::CopyOnWrite)))
             {
 #ifdef POSIX_SUBSYS_DEBUG
                 NOTICE("  -> not writeable.");
