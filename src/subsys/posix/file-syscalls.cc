@@ -516,6 +516,52 @@ int posix_readlink(const char* path, char* buf, unsigned int bufsize)
     return Symlink::fromFile(f)->followLink(buf, bufsize);
 }
 
+int posix_realpath(const char *path, char *buf, size_t bufsize)
+{
+    F_NOTICE("realpath");
+
+    if(!(path && buf))
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    String realPath = normalisePath(path);
+    F_NOTICE("  -> traversing " << realPath);
+    File* f = VFS::instance().find(realPath, GET_CWD());
+    if (!f)
+    {
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+    }
+
+    f = traverseSymlink(f);
+    if(!f)
+    {
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+    }
+
+    if(!f->isDirectory())
+    {
+        SYSCALL_ERROR(NotADirectory);
+        return -1;
+    }
+
+    String actualPath = f->getFullPath();
+    if(actualPath.length() > (bufsize - 1))
+    {
+        SYSCALL_ERROR(NameTooLong);
+        return -1;
+    }
+
+    // File is good, copy it now.
+    F_NOTICE("  -> returning " << actualPath);
+    strncpy(buf, static_cast<const char *>(actualPath), bufsize);
+
+    return 0;
+}
+
 int posix_unlink(char *name)
 {
     F_NOTICE("unlink(" << name << ")");

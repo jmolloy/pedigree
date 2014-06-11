@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -52,6 +51,7 @@ int posix_symlink(char *target, char *link);
 
 char* posix_getcwd(char* buf, size_t maxlen);
 int posix_readlink(const char* path, char* buf, unsigned int bufsize);
+int posix_realpath(const char *path, char *buf, size_t bufsize);
 
 // Returns DIR->fd, takes &dir->ent.
 int posix_opendir(const char *dir, dirent *ent);

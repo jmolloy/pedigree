@@ -1871,15 +1871,22 @@ size_t getpagesize(void)
 
 char *realpath(const char *file_name, char *resolved_name)
 {
-    STUBBED("realpath");
-    if(resolved_name && file_name)
+    if(!file_name)
     {
-        strcpy(resolved_name, file_name);
-        return resolved_name;
+        errno = EINVAL;
+        return 0;
     }
 
-    errno = EINVAL;
-    return 0;
+    if(!resolved_name)
+    {
+        resolved_name = (char *) malloc(PATH_MAX);
+    }
+
+    int n = syscall3(POSIX_REALPATH, (long) file_name, (long) resolved_name, PATH_MAX);
+    if(n != 0)
+        return 0;
+
+    return resolved_name;
 }
 
 pid_t setsid(void)

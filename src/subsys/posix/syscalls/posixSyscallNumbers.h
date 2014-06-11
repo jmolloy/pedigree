@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -185,6 +184,8 @@
 #define POSIX_FSYNC             124
 
 #define POSIX_MPROTECT          125
+
+#define POSIX_REALPATH          126
 
 #define POSIX_PTSNAME           200
 #define POSIX_TTYNAME           201

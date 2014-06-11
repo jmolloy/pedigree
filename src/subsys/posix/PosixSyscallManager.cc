@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -372,6 +371,9 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
 
         case POSIX_MPROTECT:
             return posix_mprotect(reinterpret_cast<void *>(p1), static_cast<size_t>(p2), static_cast<int>(p3));
+
+        case POSIX_REALPATH:
+            return posix_realpath(reinterpret_cast<const char *>(p1), reinterpret_cast<char *>(p2), static_cast<size_t>(p3));
 
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber() << Hex); return 0;
     }
