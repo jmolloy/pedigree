@@ -78,6 +78,8 @@ class Vector<void*>
     /** Remove the element from the front and return it
      *\return the removed element */
     void *popFront();
+    /** Set an element at the given index, if it exists. */
+    void setAt(size_t idx, void *value);
 
     /** Clear the Vector */
     void clear();
@@ -186,6 +188,9 @@ class Vector<T*>
      *\return the removed element */
     inline T *popFront()
       {return reinterpret_cast<T*>(m_VoidVector.popFront());}
+    /** Set an element at the given index, if it exists. */
+    inline void setAt(size_t idx, void *value)
+      {m_VoidVector.setAt(idx, value);}
 
     /** Clear the Vector */
     inline void clear()
@@ -291,6 +296,9 @@ class Vector<size_t>
      *\return the removed element */
     inline size_t popFront()
       {return reinterpret_cast<size_t>(m_VoidVector.popFront());}
+    /** Set an element at the given index, if it exists. */
+    inline void setAt(size_t idx, size_t value)
+      {m_VoidVector.setAt(idx, reinterpret_cast<void*>(value));}
 
     /** Clear the Vector */
     inline void clear()

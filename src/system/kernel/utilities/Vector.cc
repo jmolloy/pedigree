@@ -88,6 +88,11 @@ void *Vector<void*>::popFront()
   memmove(&m_Data[0], &m_Data[1], m_Count * sizeof(void*));
   return ret;
 }
+void Vector<void*>::setAt(size_t idx, void *value)
+{
+  if(idx < m_Count)
+    m_Data[idx] = value;
+}
 void Vector<void*>::clear()
 {
   m_Count = 0;

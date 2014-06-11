@@ -364,44 +364,35 @@ RadixTree<void*>::Node::~Node()
 {
     delete [] m_pKey;
 
-    for(RadixTree<void*>::Node::childlist_t::Iterator it = m_Children.begin();
-        it != m_Children.end();
-        ++it)
+    for(size_t n = 0; n < m_Children.count(); ++n)
     {
-        delete (*it);
+        delete m_Children[n];
     }
 }
 
 RadixTree<void*>::Node *RadixTree<void*>::Node::findChild(const uint8_t *cpKey)
 {
-    for(RadixTree<void*>::Node::childlist_t::Iterator it = m_Children.begin();
-        it != m_Children.end();
-        ++it)
+    for(size_t n = 0; n < m_Children.count(); ++n)
     {
-        if((*it)->matchKey(cpKey) != NoMatch)
-        {
-            return (*it);
-        }
+        if(m_Children[n]->matchKey(cpKey) != NoMatch)
+            return m_Children[n];
     }
     return 0;
 }
 
 void RadixTree<void*>::Node::addChild(Node *pNode)
 {
-    m_Children.pushBack(pNode);
+    if(pNode)
+        m_Children.pushBack(pNode);
 }
 
 void RadixTree<void*>::Node::replaceChild(Node *pNodeOld, Node *pNodeNew)
 {
-    for(RadixTree<void*>::Node::childlist_t::Iterator it = m_Children.begin();
-        it != m_Children.end();
-        ++it)
+    for(size_t n = 0; n < m_Children.count(); ++n)
     {
-        if((*it) == pNodeOld)
+        if(m_Children[n] == pNodeOld)
         {
-            // Is this even doable!?
-            (*it) = pNodeNew;
-            break;
+            m_Children.setAt(n, pNodeNew);
         }
     }
 }
@@ -410,13 +401,14 @@ void RadixTree<void*>::Node::removeChild(Node *pChild)
 {
     for(RadixTree<void*>::Node::childlist_t::Iterator it = m_Children.begin();
         it != m_Children.end();
-        ++it)
+        )
     {
-        if((*it) == this)
+        if((*it) == pChild)
         {
-            m_Children.erase(it);
-            break;
+            it = m_Children.erase(it);
         }
+        else
+            ++it;
     }
 }
 
@@ -462,7 +454,7 @@ void RadixTree<void*>::Node::setKey(const uint8_t *cpKey)
 RadixTree<void*>::Node *RadixTree<void*>::Node::getFirstChild()
 {
     if(m_Children.count())
-        return *m_Children.begin();
+        return m_Children[0];
 
     return 0;
 }
