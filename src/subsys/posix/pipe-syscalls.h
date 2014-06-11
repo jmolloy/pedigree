@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -25,6 +24,8 @@
 #include <vfs/File.h>
 #include <vfs/Filesystem.h>
 #include <network-stack/TcpMisc.h>
+
+#include "newlib.h"
 
 int posix_pipe(int filedes[2]);
 

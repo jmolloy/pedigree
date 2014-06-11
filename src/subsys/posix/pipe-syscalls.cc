@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -18,6 +17,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <syscallError.h>
+
 #include "pipe-syscalls.h"
 #include "file-syscalls.h"
 #include <vfs/VFS.h>
@@ -35,6 +36,13 @@ typedef Tree<size_t,FileDescriptor*> FdMap;
 
 int posix_pipe(int filedes[2])
 {
+  if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(filedes), sizeof(int) * 2, PosixSubsystem::SafeWrite))
+  {
+      F_NOTICE("pipe -> invalid address");
+      SYSCALL_ERROR(InvalidArgument);
+      return -1;
+  }
+
   F_NOTICE("pipe");
 
   Process *pProcess = Processor::information().getCurrentThread()->getParent();
