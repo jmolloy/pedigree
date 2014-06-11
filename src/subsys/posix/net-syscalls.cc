@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -113,6 +112,13 @@ int posix_socket(int domain, int type, int protocol)
 
 int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
 {
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(address), addrlen, PosixSubsystem::SafeRead))
+    {
+        N_NOTICE("connect -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     N_NOTICE("posix_connect(" << sock << ", " << reinterpret_cast<uintptr_t>(address) << ", " << addrlen << ")");
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -248,6 +254,13 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
 
 ssize_t posix_send(int sock, const void* buff, size_t bufflen, int flags)
 {
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(buff), bufflen, PosixSubsystem::SafeRead))
+    {
+        N_NOTICE("send -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     N_NOTICE("posix_send");
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -309,6 +322,8 @@ struct special_send_recv_data
 
 ssize_t posix_sendto(void* callInfo)
 {
+    /// \todo Check addresses...
+
     N_NOTICE("posix_sendto");
 
     /// \todo Ugly - constructor would be nicer.
@@ -383,6 +398,13 @@ ssize_t posix_sendto(void* callInfo)
 
 ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
 {
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(buff), bufflen, PosixSubsystem::SafeWrite))
+    {
+        N_NOTICE("recv -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     N_NOTICE("posix_recv");
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -430,6 +452,8 @@ ssize_t posix_recv(int sock, void* buff, size_t bufflen, int flags)
 
 ssize_t posix_recvfrom(void* callInfo)
 {
+    /// \todo Check pointer.....
+
     N_NOTICE("posix_recvfrom");
 
     /// \todo Ugly - constructor would be nicer.
@@ -510,6 +534,13 @@ ssize_t posix_recvfrom(void* callInfo)
 
 int posix_bind(int sock, const struct sockaddr *address, size_t addrlen)
 {
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(address), addrlen, PosixSubsystem::SafeRead))
+    {
+        N_NOTICE("bind -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     N_NOTICE("posix_bind");
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -632,6 +663,14 @@ int posix_listen(int sock, int backlog)
 
 int posix_accept(int sock, struct sockaddr* address, size_t* addrlen)
 {
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(address), sizeof(struct sockaddr_storage), PosixSubsystem::SafeWrite) &&
+        PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(addrlen), sizeof(size_t), PosixSubsystem::SafeWrite)))
+    {
+        N_NOTICE("accept -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     N_NOTICE("posix_accept");
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -686,6 +725,8 @@ int posix_gethostbyaddr(const void* addr, size_t len, int type, void* ent)
 
 int posix_gethostbyname(const char* name, void* hostinfo, int offset)
 {
+    /// \todo Sanity check pointers
+
     N_NOTICE("gethostbyname");
 
     // Sanity checks
@@ -856,6 +897,14 @@ int posix_shutdown(int socket, int how)
 
 int posix_getpeername(int socket, struct sockaddr *address, socklen_t *address_len)
 {
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(address), sizeof(struct sockaddr_storage), PosixSubsystem::SafeWrite) &&
+        PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(address_len), sizeof(size_t), PosixSubsystem::SafeWrite)))
+    {
+        N_NOTICE("getpeername -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     N_NOTICE("posix_getpeername");
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
