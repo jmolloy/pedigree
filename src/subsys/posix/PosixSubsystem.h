@@ -206,6 +206,13 @@ class PosixSubsystem : public Subsystem
          *
          * This is important to do as we can get pointers from anywhere in the
          * POSIX subsystem, and making sure they are sane and safe is crucial.
+         * \todo This has a security flaw in that between the check and the use
+         *       of the actual pointer, the pointer can become invalid due to
+         *       other threads being active in the process. It may be worth
+         *       having a Process-wide UnlikelyLock which has the mmap family
+         *       of functions, sbrk, etc... as writers, and all other syscalls
+         *       as readers. This would ensure a multithreaded application is
+         *       not able to crash the kernel.
          */
         static bool checkAddress(uintptr_t addr, size_t extent, size_t flags);
 
