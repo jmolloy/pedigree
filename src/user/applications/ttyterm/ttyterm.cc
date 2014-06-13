@@ -164,6 +164,15 @@ int main(int argc, char **argv)
 {
     syslog(LOG_INFO, "ttyterm: starting up...");
 
+    // Create ourselves a lock file so we don't end up getting run twice.
+    int fd = open("runtime»/ttyterm.lck", O_WRONLY | O_EXCL | O_CREAT);
+    if(fd < 0)
+    {
+        fprintf(stderr, "ttyterm: lock file exists, terminating.\n");
+        return 1;
+    }
+    close(fd);
+
     // New process group for job control. We'll ignore SIGINT for now.
     signal(SIGINT, sigint);
     setsid();

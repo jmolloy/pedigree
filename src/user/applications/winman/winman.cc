@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -780,6 +779,16 @@ void infoPanel(cairo_t *cr)
 int main(int argc, char *argv[])
 {
     syslog(LOG_INFO, "winman: starting up...");
+
+    // Create ourselves a lock file so we don't end up getting run twice.
+    /// \todo Revisit this when exiting the window manager is possible.
+    int fd = open("runtime»/winman.lck", O_WRONLY | O_EXCL | O_CREAT);
+    if(fd < 0)
+    {
+        fprintf(stderr, "winman: lock file exists, terminating.\n");
+        return 1;
+    }
+    close(fd);
 
     // Grab a framebuffer to use.
     int fb = open("/dev/fb", O_RDWR);
