@@ -551,7 +551,10 @@ elif (not env['nodiskimages']) or (env['distdir']):
         fileList += ["#/images/hdd_ext2.tar.gz"]
         buildImage = buildImageLosetup
     else:
-        fileList += ["#/images/hdd_fat32.tar.gz"]
+        if env.File('#/images/hdd_fat32.img').exists():
+            fileList += ["#/images/hdd_fat32.img"]
+        else:
+            fileList += ["#/images/hdd_fat32.tar.gz"]
         buildImage = buildImageMtools
 
     # /boot directory
