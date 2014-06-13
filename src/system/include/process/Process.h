@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -243,6 +242,16 @@ public:
         return bRet;
     }
 
+    bool isTerminating() const
+    {
+        return m_bTerminating;
+    }
+
+    void markTerminating()
+    {
+        m_bTerminating = true;
+    }
+
 private:
     Process(const Process &);
     Process &operator = (const Process &);
@@ -310,6 +319,9 @@ private:
 
     /** Whether we have resumed but not reported it. */
     bool m_bUnreportedResume;
+
+    /** Whether we are in the process of terminating. */
+    bool m_bTerminating;
 
     /**
      * State we were in before suspend. Ensures if we were sleeping before,
