@@ -134,6 +134,15 @@ static bool init()
     pRamFs->initialise(0);
     VFS::instance().addAlias(pRamFs, String("scratch"));
 
+    // Mount runtime filesystem.
+    // The runtime filesystem assigns a Process ownership to each file, only
+    // that process can modify/remove it. If the Process terminates without
+    // removing the file, the file is not removed.
+    RamFs *pRuntimeFs = new RamFs;
+    pRuntimeFs->initialise(0);
+    pRuntimeFs->setProcessOwnership(true);
+    VFS::instance().addAlias(pRuntimeFs, String("runtime"));
+
     if (VFS::instance().find(String("raw»/")) == 0)
     {
         FATAL("No raw partition!");

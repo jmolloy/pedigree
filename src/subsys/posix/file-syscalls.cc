@@ -118,6 +118,11 @@ inline String normalisePath(const char *name, bool *onDevFs = 0)
         nameToOpen = "scratch»";
         nameToOpen += (name + strlen("/tmp"));
     }
+    else if (!strncmp(name, "/var/run", strlen("/var/run")))
+    {
+        nameToOpen = "runtime";
+        nameToOpen += (name + strlen("/var/run"));
+    }
     else
     {
         nameToOpen = name;
