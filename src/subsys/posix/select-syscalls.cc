@@ -116,6 +116,26 @@ void selectEventHandler(uint8_t *pBuffer)
 
 int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, timeval *timeout)
 {
+    bool bValidAddresses = true;
+    if(readfds)
+        bValidAddresses = bValidAddresses && PosixSubsystem::checkAddress(
+            reinterpret_cast<uintptr_t>(readfds), sizeof(fd_set), PosixSubsystem::SafeWrite);
+    if(writefds)
+        bValidAddresses = bValidAddresses && PosixSubsystem::checkAddress(
+            reinterpret_cast<uintptr_t>(writefds), sizeof(fd_set), PosixSubsystem::SafeWrite);
+    if(errorfds)
+        bValidAddresses = bValidAddresses && PosixSubsystem::checkAddress(
+            reinterpret_cast<uintptr_t>(errorfds), sizeof(fd_set), PosixSubsystem::SafeWrite);
+    if(timeout)
+        bValidAddresses = bValidAddresses && PosixSubsystem::checkAddress(
+            reinterpret_cast<uintptr_t>(timeout), sizeof(timeval), PosixSubsystem::SafeWrite);
+
+    if(!bValidAddresses)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     // Investigate the timeout parameter.
     TimeoutType timeoutType;
     size_t timeoutSecs = 0, timeoutUSecs = 0;
