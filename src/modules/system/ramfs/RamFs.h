@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -37,10 +36,13 @@ class RamFile : public File
 {
     public:
         RamFile(String name, uintptr_t inode, Filesystem *pParentFS, File *pParent) :
-            File(name, 0, 0, 0, inode, pParentFS, 0, pParent), m_FileBlocks()
+            File(name, 0, 0, 0, inode, pParentFS, 0, pParent), m_FileBlocks(),
+            m_nOwnerPid(0)
         {
             // Full permissions.
             setPermissions(0777);
+
+            m_nOwnerPid = Processor::information().getCurrentThread()->getParent()->getId();
         }
 
         virtual ~RamFile()
@@ -49,10 +51,22 @@ class RamFile : public File
 
         virtual void truncate()
         {
-            // Empty the cache.
-            m_FileBlocks.empty();
-            setSize(0);
+            if(canWrite())
+            {
+                // Empty the cache.
+                m_FileBlocks.empty();
+                setSize(0);
+            }
         }
+
+        virtual uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true)
+        {
+            if(canWrite())
+                return File::write(location, size, buffer, bCanBlock);
+            return 0;
+        }
+
+        bool canWrite();
 
     protected:
         virtual uintptr_t readBlock(uint64_t location)
@@ -76,6 +90,8 @@ class RamFile : public File
 
     private:
         Cache m_FileBlocks;
+
+        size_t m_nOwnerPid;
 };
 
 /** Defines a directory in the RamFS */
@@ -105,6 +121,17 @@ public:
     virtual ~RamFs();
 
     virtual bool initialise(Disk *pDisk);
+
+    void setProcessOwnership(bool bEnable)
+    {
+        m_bProcessOwners = bEnable;
+    }
+
+    bool getProcessOwnership() const
+    {
+        return m_bProcessOwners;
+    }
+
     virtual File* getRoot()
     {
         return m_pRoot;
@@ -125,6 +152,8 @@ protected:
 
     /** Root filesystem node. */
     File *m_pRoot;
+
+    bool m_bProcessOwners;
 };
 
 #endif

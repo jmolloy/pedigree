@@ -22,6 +22,18 @@
 #include <Module.h>
 #include "RamFs.h"
 
+bool RamFile::canWrite()
+{
+    RamFs *pParent = static_cast<RamFs *>(getFilesystem());
+    if(!pParent->getProcessOwnership())
+    {
+        return true;
+    }
+
+    size_t pid = Processor::information().getCurrentThread()->getParent()->getId();
+    return pid == m_nOwnerPid;
+}
+
 RamDir::RamDir(String name, size_t inode, class Filesystem *pFs, File *pParent) :
             Directory(name, 0, 0, 0, inode, pFs, 0, pParent)
 {
@@ -41,6 +53,10 @@ bool RamDir::addEntry(String filename, File *pFile)
 
 bool RamDir::removeEntry(File *pFile)
 {
+    RamFile *pRamFile = static_cast<RamFile *>(pFile);
+    if(!pRamFile->canWrite())
+        return false;
+
     // Release memory used by the file.
     pFile->truncate();
 
@@ -49,7 +65,7 @@ bool RamDir::removeEntry(File *pFile)
     return true;
 }
 
-RamFs::RamFs() : m_pRoot(0)
+RamFs::RamFs() : m_pRoot(0), m_bProcessOwners(false)
 {}
 
 RamFs::~RamFs()
