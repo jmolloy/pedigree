@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -118,11 +117,16 @@ void pollEventHandler(uint8_t *pBuffer)
 /** poll: determine if a set of file descriptors are writable/readable.
  *
  *  Permits any number of descriptors, unlike select().
- *  \todo Timeout
  */
 int posix_poll(struct pollfd* fds, unsigned int nfds, int timeout)
 {
     F_NOTICE("poll(" << Dec << nfds << ", " << timeout << Hex << ")");
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(fds), nfds * sizeof(struct pollfd), PosixSubsystem::SafeWrite))
+    {
+        F_NOTICE(" -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
 
     // Investigate the timeout parameter.
     TimeoutType timeoutType;
