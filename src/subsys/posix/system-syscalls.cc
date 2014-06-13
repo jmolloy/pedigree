@@ -620,6 +620,7 @@ int posix_waitpid(int pid, int *status, int options)
 
     // Check for the process(es) we need to check for.
     size_t i = 0;
+    bool bBlock = (options & WNOHANG) != WNOHANG;
     for(; i < Scheduler::instance().getNumProcesses(); ++i)
     {
         Process *pProcess = Scheduler::instance().getProcess(i);
@@ -659,10 +660,13 @@ int posix_waitpid(int pid, int *status, int options)
         processList.pushBack(pProcess);
 
         // If not WNOHANG, subscribe our lock to this process' state changes.
-        if((options & 1) == 0) // 1 == WNOHANG
+        // If the process is in the process of terminating, we can add our
+        // lock and hope for the best.
+        if(bBlock || pProcess->isTerminating())
         {
             SC_NOTICE("  -> adding our wait lock to process " << pProcess->getId());
             pProcess->addWaiter(&waitLock);
+            bBlock = true;
         }
     }
 
@@ -716,8 +720,9 @@ int posix_waitpid(int pid, int *status, int options)
             }
         }
 
-        // Don't wait for any processes to report status if WNOHANG is set.
-        if(options & 1)
+        // Don't wait for any processes to report status if we are not meant
+        // to be blocking.
+        if(!bBlock)
         {
             return 0;
         }

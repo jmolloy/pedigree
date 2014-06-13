@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -47,6 +46,7 @@
 #include <sys/termios.h>
 #include <sys/signal.h>
 #include <sys/select.h>
+#include <sys/wait.h>
 #include <sys/uio.h>
 #include <grp.h>
 
