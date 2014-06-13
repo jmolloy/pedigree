@@ -118,6 +118,12 @@ _sig_func_ptr default_sig_handlers[32] =
 int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact)
 {
     SG_NOTICE("sigaction(" << Dec << sig << Hex << ", " << reinterpret_cast<uintptr_t>(act) << ", " << reinterpret_cast<uintptr_t>(oact) << ")");
+    if((act && !PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(act), sizeof(struct sigaction), PosixSubsystem::SafeRead)) ||
+        (oact && !PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(oact), sizeof(struct sigaction), PosixSubsystem::SafeWrite)))
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
 
     Thread *pThread = Processor::information().getCurrentThread();
     Process *pProcess = pThread->getParent();
@@ -555,6 +561,14 @@ int posix_usleep(size_t useconds)
 
 int posix_nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
 {
+    if((!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(rqtp), sizeof(struct timespec), PosixSubsystem::SafeRead)) ||
+        (rmtp && !PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(rmtp), sizeof(struct timespec), PosixSubsystem::SafeWrite)))
+    {
+        SG_NOTICE("nanosleep -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
     SG_NOTICE("nanosleep(" << Dec << rqtp->tv_sec << ":" << rqtp->tv_nsec << Hex << ") - " << Machine::instance().getTimer()->getTickCount() << ".");
 
     Semaphore sem(0);
@@ -586,6 +600,11 @@ int posix_nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
 int posix_clock_gettime(clockid_t clock_id, struct timespec *tp)
 {
     SG_NOTICE("clock_gettime");
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(tp), sizeof(struct timespec), PosixSubsystem::SafeWrite))
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
     
     // All clocks are equal, but some are more equal than others.
     // Seriously though, we don't currently care about the id value.
@@ -600,6 +619,8 @@ int posix_clock_gettime(clockid_t clock_id, struct timespec *tp)
 
 int posix_sigaltstack(const struct stack_t *stack, struct stack_t *oldstack)
 {
+    /// \todo Check stacks are sane (checkAddress).
+
     // Verify arguments
     if(!stack && !oldstack)
     {
