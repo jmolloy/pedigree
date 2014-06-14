@@ -662,7 +662,7 @@ int posix_waitpid(int pid, int *status, int options)
         // If not WNOHANG, subscribe our lock to this process' state changes.
         // If the process is in the process of terminating, we can add our
         // lock and hope for the best.
-        if(bBlock || pProcess->isTerminating())
+        if(bBlock || (pProcess->getState() == Process::Terminating))
         {
             SC_NOTICE("  -> adding our wait lock to process " << pProcess->getId());
             pProcess->addWaiter(&waitLock);

@@ -62,6 +62,18 @@ public:
         Posix
     };
 
+    /**
+     * Processes have their own state, aside from the state of their threads.
+     * These states are very general and don't reflect the current scheduling
+     * state of the process as a whole in intricate detail.
+     */
+    enum ProcessState
+    {
+        Active,
+        Suspended,
+        Terminating,
+    };
+
     /** Default constructor. */
     Process();
 
@@ -242,14 +254,14 @@ public:
         return bRet;
     }
 
-    bool isTerminating() const
+    ProcessState getState() const
     {
-        return m_bTerminating;
+        return m_State;
     }
 
     void markTerminating()
     {
-        m_bTerminating = true;
+        m_State = Terminating;
     }
 
 private:
@@ -320,8 +332,8 @@ private:
     /** Whether we have resumed but not reported it. */
     bool m_bUnreportedResume;
 
-    /** Whether we are in the process of terminating. */
-    bool m_bTerminating;
+    /** Our current state. */
+    ProcessState m_State;
 
     /**
      * State we were in before suspend. Ensures if we were sleeping before,
