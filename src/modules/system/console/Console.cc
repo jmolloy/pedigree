@@ -607,6 +607,8 @@ void ConsoleManager::unlockConsole(File *file)
 
 bool ConsoleManager::isConsole(File* file)
 {
+    if(!file)
+        return false;
     return (file->getInode() == 0xdeadbeef);
 }
 
