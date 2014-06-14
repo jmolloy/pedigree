@@ -21,6 +21,7 @@
 #define __SYS_CONFIG_H__
 
 #include <machine/ieeefp.h>  /* floating point macros */
+#include <limits.h>
 
 /* exceptions first */
 #if defined(__H8500__) || defined(__W65__)
@@ -172,7 +173,7 @@
 #  define __LONG_MAX__ LONG_MAX
 # else
 #  if defined (__alpha__) || (defined (__sparc__) && defined(__arch64__)) \
-      || defined (__sparcv9) || defined(__LP64__)
+      || defined (__sparcv9) || defined(__LP64__) || (defined(__pedigree__)
 #   define __LONG_MAX__ 9223372036854775807L
 #  else
 #   define __LONG_MAX__ 2147483647L
