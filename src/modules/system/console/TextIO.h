@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -163,6 +162,9 @@ private:
      */
     void flip(bool timer = false, bool hideState = false);
 
+    /** Translate given UTF32 codepoint to an ASCII character for display. */
+    uint8_t translate(uint32_t codepoint);
+
     typedef struct
     {
         uint8_t character;
@@ -213,6 +215,15 @@ private:
 
     /** Next interval to wait for (milliseconds). */
     uint64_t m_NextInterval;
+
+    /** Are we dealing with a UTF-8 codepoint currently? */
+    bool m_bUtf8;
+
+    /** Current codepoint for handling. */
+    uint32_t m_nCharacter;
+
+    /** Number of Utf8 bits handled so far in this sequence. */
+    size_t m_nUtf8Handled;
 };
 
 #endif

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -34,7 +33,7 @@ TextIO::TextIO(String str, size_t inode, Filesystem *pParentFS, File *pParent) :
     m_CurrentParam(0), m_Params(), m_Fore(TextIO::LightGrey), m_Back(TextIO::Black),
     m_pFramebuffer(0), m_pBackbuffer(0), m_pVga(0), m_TabStops(),
     m_OutBuffer(TEXTIO_RINGBUFFER_SIZE), m_G0('B'), m_G1('B'),
-    m_Nanoseconds(0)
+    m_Nanoseconds(0), m_bUtf8(false), m_nCharacter(0), m_nUtf8Handled(0)
 {
     m_pBackbuffer = new VgaCell[BACKBUFFER_STRIDE * BACKBUFFER_ROWS];
 
@@ -121,9 +120,83 @@ void TextIO::write(const char *s, size_t len)
 
     while((*s) && (len--))
     {
+        // UTF8 -> UTF32 conversion.
+        uint8_t byte = *reinterpret_cast<const uint8_t*>(s);
+        if(m_bUtf8)
+        {
+            if((byte & 0xC0) != 0x80)
+            {
+                // All good to use m_nCharacter now!
+                m_bUtf8 = false;
+                --s;
+                ++len;
+
+                // Ignore the codepoint if it is bad.
+                if(m_nCharacter > 0x10FFFF)
+                {
+                    ERROR("TextIO: invalid UTF8 sequence encountered.");
+                    continue;
+                }
+            }
+            else if(m_nUtf8Handled >= 6)
+            {
+                m_nUtf8Handled -= 6;
+                m_nCharacter |= (byte & 0x3F) << m_nUtf8Handled;
+                ++s;
+                continue;
+            }
+            else if(m_nUtf8Handled < 6)
+            {
+                ERROR("TextIO: too many continuation bytes for a UTF8 sequence!");
+                m_bUtf8 = false;
+                ++s;
+                continue;
+            }
+        }
+        else if((byte & 0xC0) == 0xC0)
+        {
+            m_bUtf8 = true;
+
+            uint8_t byte = *reinterpret_cast<const uint8_t*>(s);
+            if((byte & 0xF8) == 0xF0)
+            {
+                // 4-byte sequence.
+                m_nCharacter = (byte & 0x7) << 18;
+                m_nUtf8Handled = 18;
+            }
+            else if((byte & 0xF0) == 0xE0)
+            {
+                // 3-byte sequence.
+                m_nCharacter = (byte & 0xF) << 12;
+                m_nUtf8Handled = 12;
+            }
+            else if((byte & 0xE0) == 0xC0)
+            {
+                // 2-byte sequence.
+                m_nCharacter = (byte & 0x1F) << 6;
+                m_nUtf8Handled = 6;
+            }
+            else
+            {
+                ERROR("TextIO: invalid UTF8 leading byte (possible 5- or 6-byte sequence?)");
+                m_bUtf8 = false;
+            }
+
+            ++s;
+            continue;
+        }
+        else if((byte & 0x80) == 0x80)
+        {
+            ERROR("TextIO: invalid ASCII character " << byte << " (not a UTF8 leading byte)");
+            ++s;
+            continue;
+        }
+        else
+            m_nCharacter = *s;
+
         if(m_bControlSeq && m_bBracket)
         {
-            switch(*s)
+            switch(m_nCharacter)
             {
                 case '"':
                 case '$':
@@ -161,7 +234,7 @@ void TextIO::write(const char *s, size_t len)
                 case '7':
                 case '8':
                 case '9':
-                    m_Params[m_CurrentParam] = (m_Params[m_CurrentParam] * 10) + ((*s) - '0');
+                    m_Params[m_CurrentParam] = (m_Params[m_CurrentParam] * 10) + (m_nCharacter - '0');
                     m_bParams = true;
                     break;
 
@@ -392,7 +465,7 @@ void TextIO::write(const char *s, size_t len)
                         }
                     }
 
-                    if(*s == 'h')
+                    if(m_nCharacter == 'h')
                     {
                         // Set modes.
                         m_CurrentModes |= modesToChange;
@@ -709,14 +782,14 @@ void TextIO::write(const char *s, size_t len)
                     break;
 
                 default:
-                    ERROR("TextIO: unknown control sequence character '" << *s << "'!");
+                    ERROR("TextIO: unknown control sequence character '" << m_nCharacter << "'!");
                     m_bControlSeq = false;
                     break;
             }
         }
         else if(m_bControlSeq && (!m_bBracket) && (!m_bParenthesis))
         {
-            switch(*s)
+            switch(m_nCharacter)
             {
                 case 0x08:
                     doBackspace();
@@ -829,7 +902,8 @@ void TextIO::write(const char *s, size_t len)
                 case '#':
                     // DEC commands
                     ++s;
-                    switch(*s)
+                    m_nCharacter = *s; /// \todo Error out if is Utf8
+                    switch(m_nCharacter)
                     {
                         case '8':
                             // DEC Screen Alignment Test (DECALN)
@@ -838,7 +912,7 @@ void TextIO::write(const char *s, size_t len)
                             break;
 
                         default:
-                            ERROR("TextIO: unknown DEC command '" << *s << "'");
+                            ERROR("TextIO: unknown DEC command '" << m_nCharacter << "'");
                             break;
                     }
                     m_bControlSeq = false;
@@ -873,7 +947,7 @@ void TextIO::write(const char *s, size_t len)
                 case '.':
                 case '/':
                     {
-                        char curr = *s;
+                        char curr = m_nCharacter;
                         char next = *(++s);
 
                         // Portugese or DEC supplementary graphics (to ignore VT300 command)
@@ -914,14 +988,14 @@ void TextIO::write(const char *s, size_t len)
                     break;
 
                 default:
-                    ERROR("TextIO: unknown escape sequence character '" << *s << "'!");
+                    ERROR("TextIO: unknown escape sequence character '" << m_nCharacter << "'!");
                     m_bControlSeq = false;
                     break;
             }
         }
         else
         {
-            if(*s == '\e')
+            if(m_nCharacter == '\e')
             {
                 m_bControlSeq = true;
                 m_bBracket = false;
@@ -933,7 +1007,7 @@ void TextIO::write(const char *s, size_t len)
             }
             else
             {
-                switch(*s)
+                switch(m_nCharacter)
                 {
                     case 0x05:
                         {
@@ -970,7 +1044,7 @@ void TextIO::write(const char *s, size_t len)
                         break;
                     default:
 
-                        uint8_t c = *s;
+                        uint8_t c = translate(m_nCharacter);
 
                         uint8_t characterSet = m_G0;
                         if(m_CurrentModes & CharacterSetG1)
@@ -1431,4 +1505,19 @@ void TextIO::timer(uint64_t delta, InterruptState &state)
     flip(true, !bBlinkOn);
 
     m_Nanoseconds = 0;
+}
+
+uint8_t TextIO::translate(uint32_t codepoint)
+{
+    switch(codepoint)
+    {
+        // Extended ASCII.
+        case 0xAB: return 0xAE; // «
+        case 0xBB: return 0xAF; // »
+    }
+
+    if(codepoint <= 0xFF)
+        return codepoint & 0xFF;
+    else
+        return 219; // ASCII shaded box.
 }
