@@ -155,7 +155,40 @@ void handle_input(Input::InputNotification &note)
         }
         else if(c)
         {
-            write(g_MasterPty, &c, 1);
+            uint32_t utf32 = c & 0xFFFFFFFF;
+
+            // UTF32 -> UTF8
+            char buf[4];
+            size_t nbuf = 0;
+            if (utf32 <= 0x7F)
+            {
+                buf[0] = utf32&0x7F;
+                nbuf = 1;
+            }
+            else if (utf32 <= 0x7FF)
+            {
+                buf[0] = 0xC0 | ((utf32>>6) & 0x1F);
+                buf[1] = 0x80 | (utf32 & 0x3F);
+                nbuf = 2;
+            }
+            else if (utf32 <= 0xFFFF)
+            {
+                buf[0] = 0xE0 | ((utf32>>12) & 0x0F);
+                buf[1] = 0x80 | ((utf32>>6) & 0x3F);
+                buf[2] = 0x80 | (utf32 & 0x3F);
+                nbuf = 3;
+            }
+            else if (utf32 <= 0x10FFFF)
+            {
+                buf[0] = 0xE0 | ((utf32>>18) & 0x07);
+                buf[1] = 0x80 | ((utf32>>12) & 0x3F);
+                buf[2] = 0x80 | ((utf32>>6) & 0x3F);
+                buf[3] = 0x80 | (utf32 & 0x3F);
+                nbuf = 4;
+            }
+
+            // UTF8 conversion complete.
+            write(g_MasterPty, buf, nbuf);
         }
     }
 }
