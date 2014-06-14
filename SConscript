@@ -591,7 +591,7 @@ elif (not env['nodiskimages']) or (env['distdir']):
         libui,
     ]
 
-    if env['ARCH_TARGET'] in ['X86']:
+    if env['ARCH_TARGET'] in ['X86', 'X64']:
         fileList += [os.path.join(builddir, 'libSDL.so')]
 
     # Build the hard disk image
