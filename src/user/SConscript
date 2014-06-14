@@ -108,7 +108,6 @@ custom_incpath = {
              '#/src/modules/system/TUI',
              '#/images/local/include',
              '#/images/local/include/freetype2'],
-             #'#/src/user/applications/TUI/include'],
     'uitest' : ['#/src/user/libraries/libui/include'],
     'gears' : ['#/src/user/libraries/libui/include'],
     'winman' : ['#/src/user/libraries/libui/include',
@@ -120,15 +119,19 @@ custom_incpath = {
 
 # Custom libraries for specific applications
 custom_libs = {
-    'TUI' : ['cairo', 'pixman-1', 'fontconfig', 'expat', 'freetype', 'png', 'z', 'ui', 'iconv'],
+    'TUI' : ['cairo', 'freetype', 'png', 'ui', 'iconv', 'pedigree'],
+    'config': ['pedigree'],
+    'ipc-test-server': ['pedigree'],
+    'ipc-test-client': ['pedigree'],
+    'ttyterm': ['pedigree'],
     'thread-test' : ['pthread'],
-    'uitest' : ['ui'],
+    'uitest' : ['ui', 'pedigree'],
     'gears' : ['ui'],
-    'winman': ['cairo', 'pixman-1', 'fontconfig', 'expat', 'freetype', 'png', 'z'],
+    'winman': ['cairo', 'freetype', 'png', 'pedigree'],
 }
 
 # Default libraries for all applications
-default_libs = ['gcc', 'c', 'm', 'pedigree-c']
+default_libs = ['pthread']
 
 # Search paths for libraries
 libpath = [
@@ -187,7 +190,7 @@ for i in all_apps:
 
     # Handle SDL dependencies.
     if i in sdl_apps:
-        e['LIBS'] += ['SDL', 'pthread', 'ui', 'cairo']
+        e['LIBS'] += ['SDL']
         e['CPPPATH'] += ['#/src/lgpl/SDL-1.2.14/include',
                          '#/images/local/include']
     if i in mesa_apps:
@@ -197,15 +200,13 @@ for i in all_apps:
 
     # Handle C++-related dependencies.
     if i in cpp_apps or i in sdl_apps or i in mesa_apps:
-        cpp_base = '#/images/local/support/gcc/include/c++/%s' % (env['COMPILER_VERSION'],)
-        e['LIBS'] += ['pedigree', 'stdc++']
         e['LIBPATH'] += [imagesdir + 'libraries']
-        e['CPPPATH'] += ['#/src/subsys/native/include',
-                         cpp_base,
-                         '%s/%s' % (cpp_base, env['COMPILER_TARGET'],),
-                         ]
-        e['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s/libraries/ ' % (e.Dir(imagesdir).abspath,)
-        e['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s/libs/ ' % (e.Dir(builddir).abspath,)
+        e['CPPPATH'] += ['#/src/subsys/native/include',]
+        e['LINK'] = env['CXX']
+
+    e['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s/libraries/ ' % (e.Dir(imagesdir).abspath,)
+    e['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s/libs/ ' % (e.Dir(builddir).abspath,)
+    e['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s ' % (e.Dir(builddir).abspath,)
 
     output = builddir + '/apps/' + i
     files = [Glob(base + '/*.c'), Glob(base + '/*.cc')]

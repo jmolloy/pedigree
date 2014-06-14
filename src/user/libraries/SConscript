@@ -48,6 +48,10 @@ subsys = {
     'libui' : 'native'
 }
 
+lib_deps = {
+    'libui': 'pedigree',
+}
+
 tmp['CFLAGS'] = buildutils.userspace.fixFlags(env, env['CFLAGS'])
 tmp['CXXFLAGS'] = buildutils.userspace.fixFlags(env, env['CXXFLAGS'])
 tmp['CPPDEFINES'] += ['PEDIGREE', '__PEDIGREE__']
@@ -79,6 +83,7 @@ for library in libs:
         incpath.append(os.path.join(srcdir, 'include'))
 
     e['CPPPATH'] = incpath
+    e['LIBS'] = lib_deps[library]
 
     output = os.path.join(builddir, 'libs', '%s.a' % (library,))
     shoutput = os.path.join(builddir, 'libs', '%s.so' % (library,))
