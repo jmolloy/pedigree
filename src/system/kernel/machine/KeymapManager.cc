@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -24,6 +23,14 @@
 #include <Log.h>
 
 #include <machine/keymaps/KeymapEnUs.h>
+
+// #define DEBUG_KEYMAP
+
+#ifdef DEBUG_KEYMAP
+#define KM_NOTICE NOTICE
+#else
+#define KM_NOTICE(...)
+#endif
 
 #define KEYMAP_INDEX(combinator, modifiers, scancode) (((combinator & 0xFF) << 11) | ((modifiers & 0xF) << 7) | (scancode & 0x7F))
 #define KEYMAP_MAX_INDEX KEYMAP_INDEX(0xFF,0xF,0x7F)
@@ -79,6 +86,8 @@ bool KeymapManager::handleHidModifier(uint8_t keyCode, bool bDown)
 
 uint64_t KeymapManager::resolveHidKeycode(uint8_t keyCode)
 {
+    KM_NOTICE("resolveHidKeycode(" << keyCode << ")");
+
     // Get the modifiers
     bool bCtrl = m_bLeftCtrl || m_bRightCtrl;
     bool bShift = m_bLeftShift || m_bRightShift;
@@ -93,19 +102,36 @@ uint64_t KeymapManager::resolveHidKeycode(uint8_t keyCode)
     KeymapEntry *pKeymapEntry = getKeymapEntry(bCtrl, bShift, bAlt, bAltGr, m_nCombinator, keyCode);
     // Fallback and try without combinator
     if(!pKeymapEntry || (!pKeymapEntry->value && !pKeymapEntry->flags))
+    {
+        KM_NOTICE("keymap: falling back: -combinator");
         pKeymapEntry = getKeymapEntry(bCtrl, bShift, bAlt, bAltGr, 0, keyCode);
+    }
     // Fallback and try without combinator and Ctrl
     if(!pKeymapEntry || (!pKeymapEntry->value && !pKeymapEntry->flags))
+    {
+        KM_NOTICE("keymap: falling back: -combinator, -ctrl");
         pKeymapEntry = getKeymapEntry(false, bShift, bAlt, bAltGr, 0, keyCode);
+    }
     // Fallback and try with only Shift
     if(!pKeymapEntry || (!pKeymapEntry->value && !pKeymapEntry->flags))
+    {
+        KM_NOTICE("keymap: falling back: -combinator, -ctrl, -alt");
         pKeymapEntry = getKeymapEntry(false, bShift, false, false, 0, keyCode);
+    }
     // Fallback and try with no modifier enabled
     if(!pKeymapEntry || (!pKeymapEntry->value && !pKeymapEntry->flags))
+    {
+        KM_NOTICE("keymap: falling back: -combinator, -ctrl, -alt, -shift");
         pKeymapEntry = getKeymapEntry(false, false, false, false, 0, keyCode);
+    }
     // This key has no entry at all in the keymap
     if(!pKeymapEntry || (!pKeymapEntry->value && !pKeymapEntry->flags))
+    {
+        KM_NOTICE("keymap: no fallback possible, key not in keymap");
         return 0;
+    }
+
+    KM_NOTICE("keymap: successfully got a keymap entry");
 
     // Does this key set any combinator?
     uint32_t nCombinator = pKeymapEntry->flags & 0xFF;
@@ -155,6 +181,8 @@ uint64_t KeymapManager::resolveHidKeycode(uint8_t keyCode)
 
 KeymapManager::KeymapEntry *KeymapManager::getKeymapEntry(bool bCtrl, bool bShift, bool bAlt, bool bAltGr, uint8_t nCombinator, uint8_t keyCode)
 {
+    KM_NOTICE("getKeymapEntry(ctrl=" << bCtrl << ", shift=" << bShift << ", alt=" << bAlt << ", altgr=" << bAltGr << ", comb=" << nCombinator << ", code=" << keyCode << ")");
+
     // Grab the keymap table index for this key
     size_t modifiers = 0;
     if(bCtrl)
@@ -166,6 +194,8 @@ KeymapManager::KeymapEntry *KeymapManager::getKeymapEntry(bool bCtrl, bool bShif
     if(bAltGr)
         modifiers |= IndexAltGr;
     size_t nIndex = KEYMAP_INDEX(nCombinator, modifiers, keyCode);
+
+    KM_NOTICE("idx=" << nIndex << ", mods=" << modifiers << ", code=" << keyCode);
 
     // Now walk the sparse tree
     size_t bisect = (KEYMAP_MAX_INDEX + 1) / 2;
@@ -276,8 +306,12 @@ uint8_t KeymapManager::convertPc102ScancodeToHidKeycode(uint8_t scancode, Escape
     if(escape)
     {
         escape = EscapeNone;
+        KM_NOTICE("keymap: using escape table to convert PC102 scancode " << scancode);
         return pc102ToHidTableEscape[scancode & 0x7F];
     }
     else
+    {
+        KM_NOTICE("keymap: using normal table to convert PC102 scancode " << scancode);
         return pc102ToHidTableNormal[scancode & 0x7F];
+    }
 }
