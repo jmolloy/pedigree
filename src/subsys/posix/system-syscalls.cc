@@ -1102,8 +1102,15 @@ int posix_setpgid(int pid, int pgid)
         return -1;
     }
 
+    Process *pBaseProcess = Processor::information().getCurrentThread()->getParent();
+    if(pBaseProcess->getType() != Process::Posix)
+    {
+        SC_NOTICE("  -> not a posix process");
+        return -1;
+    }
+
     // Are we already a leader of a session?
-    PosixProcess *pProcess = static_cast<PosixProcess *>(Processor::information().getCurrentThread()->getParent());
+    PosixProcess *pProcess = static_cast<PosixProcess *>(pBaseProcess);
     ProcessGroup *pGroup = pProcess->getProcessGroup();
     PosixSession *pSession = pProcess->getSession();
 

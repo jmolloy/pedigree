@@ -57,8 +57,8 @@ Process::Process(Process *pParent) :
   m_Threads(), m_NextTid(0), m_Id(0), str(), m_pParent(pParent), m_pAddressSpace(0),
   m_ExitStatus(0), m_Cwd(pParent->m_Cwd), m_Ctty(pParent->m_Ctty), m_SpaceAllocator(pParent->m_SpaceAllocator),
   m_pUser(pParent->m_pUser), m_pGroup(pParent->m_pGroup), m_pEffectiveUser(pParent->m_pEffectiveUser), m_pEffectiveGroup(pParent->m_pEffectiveGroup),
-  m_pDynamicLinker(pParent->m_pDynamicLinker), m_pSubsystem(0), m_Waiters(), m_bUnreportedSuspend(false), m_State(Active),
-  m_bUnreportedResume(false), m_BeforeSuspendState(Thread::Ready), m_DeadThreads(0)
+  m_pDynamicLinker(pParent->m_pDynamicLinker), m_pSubsystem(0), m_Waiters(), m_bUnreportedSuspend(false), m_bUnreportedResume(false),
+  m_State(pParent->getState()), m_BeforeSuspendState(Thread::Ready), m_DeadThreads(0)
 {
    m_pAddressSpace = pParent->m_pAddressSpace->clone();
 
