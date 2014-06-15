@@ -113,6 +113,11 @@ inline String normalisePath(const char *name, bool *onDevFs = 0)
         nameToOpen = "/applications";
         nameToOpen += (name + strlen("/bin"));
     }
+    else if (!strncmp(name, "/etc", strlen("/etc")))
+    {
+        nameToOpen = "/config";
+        nameToOpen += (name + strlen("/etc"));
+    }
     else if (!strncmp(name, "/tmp", strlen("/tmp")))
     {
         nameToOpen = "scratch»";
