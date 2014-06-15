@@ -78,6 +78,7 @@ glue_files = [
     'glue-scandir.c',
     'glue-dlmalloc.c',
     'glue-memcpy.c',
+    'glue-strcasecmp.c',
     # 'glue-memset.c',
 ]
 

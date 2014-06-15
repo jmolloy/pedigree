@@ -17,9 +17,42 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _STRINGS_H_
-#define _STRINGS_H_
 
-#include <string.h>
 
-#endif
+#include "newlib.h"
+
+#include <stdint.h>
+#include <wctype.h>
+
+/**
+ * An override for strcasecmp, which is slightly more technically correct
+ * compared to Newlib's implementation, which simply calls 'tolower' on every
+ * byte of the input string and compares the result. Here, we make sure to
+ * perform a conversion if needed and then do a case conversion on the resulting
+ * codepoint.
+ */
+int strcasecmp(const char *s1, const char *s2)
+{
+    if(!(s1 && s2))
+        return 0; // Same, but NULL.
+
+    int r = 0;
+    while(*s1)
+    {
+        wchar_t c1, c2;
+        int s1_stride = mbtowc(&c1, s1, 6);
+        int s2_stride = mbtowc(&c2, s2, 6);
+        r = towlower(c1) - towlower(c2);
+        if(r)
+            goto done;
+        s1 += s1_stride; s2 += s2_stride;
+    }
+
+    if(*s1 && !*s2)
+        r = -1;
+    else if(!*s1 && *s2)
+        r = 1;
+
+done:
+    return r;
+}
