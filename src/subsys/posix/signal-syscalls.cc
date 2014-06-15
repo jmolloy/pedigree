@@ -47,7 +47,7 @@ int doProcessKill(Process *p, int sig);
 
 #define SIGNAL_HANDLER_EXIT(name, errcode) void name(int s) { posix_exit(errcode); }
 #define SIGNAL_HANDLER_EMPTY(name) void name(int s) {NOTICE("EMPTY");}
-#define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int s) { Processor::setInterrupts(true); posix_write(1, msg, strlen(msg)); Scheduler::instance().yield(); posix_exit(errcode); }
+#define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int s) { Processor::setInterrupts(true); posix_write(1, msg, strlen(msg), true); Scheduler::instance().yield(); posix_exit(errcode); }
 #define SIGNAL_HANDLER_SUSPEND(name) void name(int s) { NOTICE("SUSPEND"); Process *pParent = Processor::information().getCurrentThread()->getParent()->getParent(); Processor::information().getCurrentThread()->getParent()->suspend(); }
 #define SIGNAL_HANDLER_RESUME(name) void name(int s) { NOTICE("RESUME"); Processor::information().getCurrentThread()->getParent()->resume(); Process *pParent = Processor::information().getCurrentThread()->getParent()->getParent(); }
 

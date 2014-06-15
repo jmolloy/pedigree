@@ -39,7 +39,7 @@
 int posix_close(int fd);
 int posix_open(const char *name, int flags, int mode);
 int posix_read(int fd, char *ptr, int len);
-int posix_write(int fd, char *ptr, int len);
+int posix_write(int fd, char *ptr, int len, bool nocheck = false);
 off_t posix_lseek(int file, off_t ptr, int dir);
 int posix_link(char *old, char *_new);
 int posix_unlink(char *name);

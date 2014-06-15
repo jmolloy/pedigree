@@ -408,10 +408,10 @@ int posix_read(int fd, char *ptr, int len)
     return static_cast<int>(nRead);
 }
 
-int posix_write(int fd, char *ptr, int len)
+int posix_write(int fd, char *ptr, int len, bool nocheck)
 {
     F_NOTICE("write(" << fd << ", " << reinterpret_cast<uintptr_t>(ptr) << ", " << len << ")");
-    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(ptr), len, PosixSubsystem::SafeRead))
+    if(!nocheck && !PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(ptr), len, PosixSubsystem::SafeRead))
     {
         F_NOTICE("  -> invalid address");
         SYSCALL_ERROR(InvalidArgument);
