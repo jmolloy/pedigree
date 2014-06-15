@@ -124,8 +124,23 @@ void TextIO::write(const char *s, size_t len)
         uint8_t byte = *reinterpret_cast<const uint8_t*>(s);
         if(m_bUtf8)
         {
-            if((byte & 0xC0) != 0x80)
+            if(m_nUtf8Handled >= 6)
             {
+                m_nUtf8Handled -= 6;
+                m_nCharacter |= (byte & 0x3F) << m_nUtf8Handled;
+
+                if(m_nUtf8Handled)
+                {
+                    ++s;
+                    continue;
+                }
+            }
+
+            if((m_nUtf8Handled == 0) || ((byte & 0xC0) != 0x80))
+            {
+                if(m_nUtf8Handled > 0)
+                    ERROR("TextIO: expected a continuation byte, but didn't get one");
+
                 // All good to use m_nCharacter now!
                 m_bUtf8 = false;
                 --s;
@@ -137,13 +152,6 @@ void TextIO::write(const char *s, size_t len)
                     ERROR("TextIO: invalid UTF8 sequence encountered.");
                     continue;
                 }
-            }
-            else if(m_nUtf8Handled >= 6)
-            {
-                m_nUtf8Handled -= 6;
-                m_nCharacter |= (byte & 0x3F) << m_nUtf8Handled;
-                ++s;
-                continue;
             }
             else if(m_nUtf8Handled < 6)
             {
