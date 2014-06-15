@@ -7,6 +7,9 @@ if [ -x /applications/dircolors ]; then
     alias grep='grep --color=auto'
 fi
 
+# Make sure we can type UTF-8 characters (eg, altgr + >)
+export LANG=en_US.UTF-8
+
 alias ll='ls -alF'
 
 export PS1="\[\e[34;1m\][\t]\[\e[0m\] \w \[\e[34;1m\]$\[\e[0m\] "
