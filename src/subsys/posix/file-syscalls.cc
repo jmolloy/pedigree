@@ -1031,9 +1031,8 @@ int posix_opendir(const char *dir, dirent *ent)
     }
     else
     {
-        // fail! no children!
-        delete f;
-        return -1;
+        // No file here.
+        memset(ent, 0, sizeof(*ent));
     }
 
     pSubsystem->addFileDescriptor(fd, f);

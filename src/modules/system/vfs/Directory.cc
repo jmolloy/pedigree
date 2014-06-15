@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -44,6 +43,9 @@ File* Directory::getChild(size_t n)
         cacheDirectoryContents();
         m_bCachePopulated = true;
     }
+
+    if(!m_Cache.count())
+        return 0;
 
     unsigned int i = 0;
     for (RadixTree<File*>::Iterator it = m_Cache.begin();
