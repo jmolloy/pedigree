@@ -1246,10 +1246,6 @@ int posix_chdir(const char *path)
     if (dir && dir->isDirectory())
     {
         Processor::information().getCurrentThread()->getParent()->setCwd(dir);
-
-        char tmp[1024];
-        posix_getcwd(tmp, 1024);
-        return 0;
     }
     else if(dir && !dir->isDirectory())
     {
