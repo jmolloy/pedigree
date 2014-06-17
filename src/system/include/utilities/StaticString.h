@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -186,6 +185,16 @@ public:
     int ret = strtoul(m_pData, const_cast<char **> (&pEnd), nBase);
     if (pEnd == m_pData)
       return -1; // Failed to find anything.
+    else
+      return ret;
+  }
+
+  uintptr_t uintptrValue(int nBase=0) const
+  {
+    const char *pEnd;
+    uintptr_t ret = strtoul(m_pData, const_cast<char **> (&pEnd), nBase);
+    if (pEnd == m_pData)
+      return ~0UL; // Failed to find anything.
     else
       return ret;
   }

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -392,8 +391,8 @@ bool MemoryInspector::tryGoto(LargeStaticString &str, uintptr_t &result, Interru
       return true;
     }
   }
-  int n = str.intValue();
-  if (n == -1)
+  uintptr_t n = str.uintptrValue();
+  if (n == ~0UL)
     return false;
   else
   {

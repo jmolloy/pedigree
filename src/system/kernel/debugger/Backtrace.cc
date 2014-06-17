@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -44,6 +43,8 @@ void Backtrace::performBacktrace(InterruptState &state)
     performDwarfBacktrace(state);
     return;
   }
+#else
+  WARNING_NOLOCK("Backtracer built without DWARF enabled.");
 #endif
   // Can we perform a "normal", base-pointer-linked-list backtrace?
   // Don't lock on the log - we may have hit a backtrace because the Log lock deadlocked
