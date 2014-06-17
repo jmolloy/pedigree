@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -266,6 +265,11 @@ public:
         return 0;
     }
 
+    /** Function to retrieve the block size returned by readBlock.
+        \note This must be constant throughout the life of the file. */
+    virtual size_t getBlockSize() const
+    {return PhysicalMemoryManager::getPageSize();}
+
 protected:
 
     /** Internal function to retrieve an aligned 512byte section of the file. */
@@ -280,10 +284,6 @@ protected:
     virtual void writeBlock(uint64_t location, uintptr_t addr)
     {
     }
-    /** Internal function to retrieve the block size returned by readBlock.
-        \note This must be constant throughout the life of the file. */
-    virtual size_t getBlockSize() const
-    {return PhysicalMemoryManager::getPageSize();}
 
     /** Internal function to extend a file to be at least the given size. */
     virtual void extend(size_t newSize)
