@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -535,8 +534,10 @@ void pedigree_event_return()
 void *pedigree_sys_request_mem(size_t len) {
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     uintptr_t mapAddress = 0;
-    if(!pProcess->getSpaceAllocator().allocate(len, mapAddress)) {
-        return 0;
+    if(!pProcess->getDynamicSpaceAllocator().allocate(len, mapAddress)) {
+        if(!pProcess->getSpaceAllocator().allocate(len, mapAddress)) {
+            return 0;
+        }
     }
 
     return reinterpret_cast<void *>(mapAddress);

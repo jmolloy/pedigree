@@ -165,10 +165,15 @@ public:
     }
 
 
-    /** Returns the memory space allocator for shared libraries. */
+    /** Returns the memory space allocator for primary address space. */
     MemoryAllocator &getSpaceAllocator()
     {
         return m_SpaceAllocator;
+    }
+    /** Returns the memory space allocator for dynamic address space. */
+    MemoryAllocator &getDynamicSpaceAllocator()
+    {
+        return m_DynamicSpaceAllocator;
     }
 
     /** Gets the current user. */
@@ -305,9 +310,13 @@ private:
      */
     File *m_Ctty;
     /**
-     * Memory allocator for shared libraries - free parts of the address space.
+     * Memory allocator for primary address space.
      */
     MemoryAllocator m_SpaceAllocator;
+    /**
+     * Memory allocator for dynamic address space, if any.
+     */
+    MemoryAllocator m_DynamicSpaceAllocator;
     /** Current user. */
     User *m_pUser;
     /** Current group. */

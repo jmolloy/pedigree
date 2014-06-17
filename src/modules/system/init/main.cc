@@ -336,12 +336,13 @@ void init_stage2()
     // have a clean slate.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     pProcess->getSpaceAllocator().clear();
+    pProcess->getDynamicSpaceAllocator().clear();
     pProcess->getSpaceAllocator().free(
             pProcess->getAddressSpace()->getUserStart(),
             pProcess->getAddressSpace()->getUserReservedStart() - pProcess->getAddressSpace()->getUserStart());
     if(pProcess->getAddressSpace()->getDynamicStart())
     {
-        pProcess->getSpaceAllocator().free(
+        pProcess->getDynamicSpaceAllocator().free(
             pProcess->getAddressSpace()->getDynamicStart(),
             pProcess->getAddressSpace()->getDynamicEnd() - pProcess->getAddressSpace()->getDynamicStart());
     }

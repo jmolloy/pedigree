@@ -529,8 +529,6 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
 
     meta->mapped_file_sz = st.st_size;
 
-    /// \todo BUG: this can be put at the same address as the binary to load!
-    ///       Need to be able to shove this somewhere HIGH in the address space.
     const char *pBuffer = (const char *) mmap(0, meta->mapped_file_sz, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
     if(pBuffer == MAP_FAILED) {
 #ifdef DEBUG_LIBLOAD

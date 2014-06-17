@@ -1380,8 +1380,9 @@ bool MemoryMapManager::sanitiseAddress(uintptr_t &address, size_t length)
     // Can we get some space for this mapping?
     if(address == 0)
     {
-        if(!pProcess->getSpaceAllocator().allocate(length + pageSz, address))
-            return false;
+        if(!pProcess->getDynamicSpaceAllocator().allocate(length + pageSz, address))
+            if(!pProcess->getSpaceAllocator().allocate(length + pageSz, address))
+                return false;
 
         if(address & (pageSz - 1))
         {
@@ -1392,6 +1393,8 @@ bool MemoryMapManager::sanitiseAddress(uintptr_t &address, size_t length)
     {
         // If this fails, we generally assume a reservation has been made.
         /// \todo rework APIs a lot.
+        /// \todo allocateSpecific in the dynamic space allocator if address is
+        ///       within that range.
         pProcess->getSpaceAllocator().allocateSpecific(address, length);
     }
 

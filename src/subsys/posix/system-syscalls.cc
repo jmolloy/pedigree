@@ -409,12 +409,13 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
     // Prepare the new address space regions.
     pProcess->getSpaceAllocator().clear();
+    pProcess->getDynamicSpaceAllocator().clear();
     pProcess->getSpaceAllocator().free(
             pProcess->getAddressSpace()->getUserStart(),
             pProcess->getAddressSpace()->getUserReservedStart() - pProcess->getAddressSpace()->getUserStart());
     if(pProcess->getAddressSpace()->getDynamicStart())
     {
-        pProcess->getSpaceAllocator().free(
+        pProcess->getDynamicSpaceAllocator().free(
             pProcess->getAddressSpace()->getDynamicStart(),
             pProcess->getAddressSpace()->getDynamicEnd() - pProcess->getAddressSpace()->getDynamicStart());
     }
