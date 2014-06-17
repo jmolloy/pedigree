@@ -245,9 +245,19 @@ bool AnonymousMemoryMap::trap(uintptr_t address, bool bWrite)
 
     // Skip out on a few things if we can.
     if(bWrite && !(m_Permissions & Write))
+    {
+#ifdef DEBUG_MMOBJECTS
+        NOTICE("  -> no write permission");
+#endif
         return false;
+    }
     else if((!bWrite) && !(m_Permissions & Read))
+    {
+#ifdef DEBUG_MMOBJECTS
+        NOTICE("  -> no read permission");
+#endif
         return false;
+    }
 
     // Add execute flag.
     size_t extraFlags = 0;
@@ -257,7 +267,8 @@ bool AnonymousMemoryMap::trap(uintptr_t address, bool bWrite)
     if(!bWrite)
     {
         PhysicalMemoryManager::instance().pin(m_Zero);
-        va.map(m_Zero, reinterpret_cast<void *>(address), VirtualAddressSpace::Shared | extraFlags);
+        if(!va.map(m_Zero, reinterpret_cast<void *>(address), VirtualAddressSpace::Shared | extraFlags))
+            ERROR("map() failed for AnonymousMemoryMap::trap() - read");
 
         m_Mappings.pushBack(reinterpret_cast<void *>(address));
     }
@@ -279,7 +290,8 @@ bool AnonymousMemoryMap::trap(uintptr_t address, bool bWrite)
 
         // "Copy" on write... but not really :)
         physical_uintptr_t newPage = PhysicalMemoryManager::instance().allocatePage();
-        va.map(newPage, reinterpret_cast<void *>(address), VirtualAddressSpace::Write | extraFlags);
+        if(!va.map(newPage, reinterpret_cast<void *>(address), VirtualAddressSpace::Write | extraFlags))
+            ERROR("map() failed in AnonymousMemoryMap::trap() - write");
         memset(reinterpret_cast<void *>(address), 0, PhysicalMemoryManager::getPageSize());
     }
 
