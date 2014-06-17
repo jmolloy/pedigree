@@ -798,7 +798,7 @@ int posix_stat(const char *name, struct stat *st)
     st->st_atime = static_cast<int>(file->getAccessedTime());
     st->st_mtime = static_cast<int>(file->getModifiedTime());
     st->st_ctime = static_cast<int>(file->getCreationTime());
-    st->st_blksize = static_cast<int>(pFd->file->getBlockSize());
+    st->st_blksize = static_cast<int>(file->getBlockSize());
     st->st_blocks = (st->st_size / st->st_blksize) + ((st->st_size % st->st_blksize) ? 1 : 0);
 
     F_NOTICE("    -> Success");
@@ -957,7 +957,7 @@ int posix_lstat(char *name, struct stat *st)
     st->st_atime = static_cast<int>(file->getAccessedTime());
     st->st_mtime = static_cast<int>(file->getModifiedTime());
     st->st_ctime = static_cast<int>(file->getCreationTime());
-    st->st_blksize = static_cast<int>(pFd->file->getBlockSize());
+    st->st_blksize = static_cast<int>(file->getBlockSize());
     st->st_blocks = (st->st_size / st->st_blksize) + ((st->st_size % st->st_blksize) ? 1 : 0);
 
     return 0;
