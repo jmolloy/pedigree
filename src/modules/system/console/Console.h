@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -109,6 +108,11 @@ class ConsoleFile : public File
         void getControlCharacters(char *out)
         {
             memcpy(out, m_ControlChars, MAX_CONTROL_CHAR);
+        }
+
+        virtual size_t getBlockSize() const
+        {
+            return PTY_BUFFER_SIZE;
         }
 
     protected:

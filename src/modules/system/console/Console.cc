@@ -1044,7 +1044,7 @@ void ConsoleManager::flush(File *file)
 File *ConsoleManager::getOther(File *file)
 {
     if(!file)
-        return false;
+        return 0;
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
     return pFile->m_pOther;
 }
