@@ -656,8 +656,8 @@ const char *KernelElf::globalLookupSymbol(uintptr_t addr, uintptr_t *startAddr)
         return ret;
 
     // OK, try every module.
-    for (Vector<Module*>::Iterator it = m_Modules.begin();
-        it != m_Modules.end();
+    for (Vector<Module*>::Iterator it = m_LoadedModules.begin();
+        it != m_LoadedModules.end();
         it++)
     {
         if ((ret = (*it)->elf.lookupSymbol(addr, startAddr)))
