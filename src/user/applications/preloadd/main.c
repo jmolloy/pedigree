@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -36,9 +35,9 @@ const char *g_FilesToPreload[] = {
     "/applications/make",
     "/applications/gcc",
     "/applications/ld",
-    "/support/gcc/libexec/gcc/i686-pedigree/4.5.1/cc1",
-    "/support/gcc/libexec/gcc/i686-pedigree/4.5.1/cc1plus",
-    "/support/gcc/libexec/gcc/i686-pedigree/4.5.1/collect2",
+    "/support/gcc/libexec/gcc/x86_64-pedigree/4.8.2/cc1",
+    "/support/gcc/libexec/gcc/x86_64-pedigree/4.8.2/cc1plus",
+    "/support/gcc/libexec/gcc/x86_64-pedigree/4.8.2/collect2",
     "/libraries/libc.so",
     "/libraries/libm.so",
     "/libraries/libgmp.so",
