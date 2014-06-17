@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -35,7 +34,7 @@
 
 #define USERSPACE_VIRTUAL_START                 reinterpret_cast<void*>(0x400000)
 #define USERSPACE_VIRTUAL_HEAP                  reinterpret_cast<void*>(0x50000000)
-#define USERSPACE_RESERVED_START                USERSPACE_VIRTUAL_HEAP
+#define USERSPACE_RESERVED_START                USERSPACE_DYNAMIC_LINKER_LOCATION
 #define USERSPACE_VIRTUAL_STACK_SIZE            0x100000
 #define USERSPACE_VIRTUAL_MAX_STACK_SIZE        0x100000
 #define USERSPACE_DYNAMIC_START                 reinterpret_cast<void*>(0x100000000)
