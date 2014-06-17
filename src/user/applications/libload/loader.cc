@@ -1183,7 +1183,7 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
         P += B;
     }
 
-    uintptr_t A = *((uintptr_t*) P);
+    uintptr_t A = rel.addend;
     uintptr_t S = 0;
 
     std::string symbolname = symbolName(*sym, meta);
