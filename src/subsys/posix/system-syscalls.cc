@@ -403,6 +403,11 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     for(int sig = 0; sig < 32; sig++)
         Processor::information().getCurrentThread()->inhibitEvent(sig, true);
 
+    // Wipe out old address space.
+    MemoryMapManager::instance().unmapAll();
+    pProcess->getAddressSpace()->revertToKernelAddressSpace();
+
+    // Prepare the new address space regions.
     pProcess->getSpaceAllocator().clear();
     pProcess->getSpaceAllocator().free(
             pProcess->getAddressSpace()->getUserStart(),
@@ -413,11 +418,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
             pProcess->getAddressSpace()->getDynamicStart(),
             pProcess->getAddressSpace()->getDynamicEnd() - pProcess->getAddressSpace()->getDynamicStart());
     }
-
-    // Get rid of all the crap from the last elf image.
-    MemoryMapManager::instance().unmapAll();
-
-    pProcess->getAddressSpace()->revertToKernelAddressSpace();
 
     if(pLinker)
     {
