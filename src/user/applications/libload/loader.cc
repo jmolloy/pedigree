@@ -529,6 +529,8 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
 
     meta->mapped_file_sz = st.st_size;
 
+    /// \todo BUG: this can be put at the same address as the binary to load!
+    ///       Need to be able to shove this somewhere HIGH in the address space.
     const char *pBuffer = (const char *) mmap(0, meta->mapped_file_sz, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
     if(pBuffer == MAP_FAILED) {
 #ifdef DEBUG_LIBLOAD
@@ -1231,7 +1233,7 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
             result = S + A;
             break;
         case R_X86_64_PC32:
-            result = (result & 0xFFFFFFFF00000000) | ((S + A - P) & 0xFFFFFFFF);
+            result = (S + A - P) & 0xFFFFFFFF;
             break;
         case R_X86_64_COPY:
             // Only copy if not null.
@@ -1250,7 +1252,11 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
             break;
         case R_X86_64_32:
         case R_X86_64_32S:
-            result = (result & 0xFFFFFFFF00000000) | ((S + A) & 0xFFFFFFFF);
+            // From SysV AMD64 ABI 4.4.1
+            // "The linker must verify that the generated value for the
+            // R_X86_64_32 (R_X86_64_32S) relocation zero-extends (sign-extends) to the
+            // original 64-bit value"
+            result = (S + A) & 0xFFFFFFFF;
             break;
         default:
             syslog(LOG_WARNING, "libload: unsupported relocation for '%s' in %s: %d", symbolname.c_str(), meta->filename.c_str(), R_TYPE(rel.info));
