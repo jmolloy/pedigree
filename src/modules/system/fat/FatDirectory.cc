@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -247,6 +246,7 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
       memcpy(ent->DIR_Name, static_cast<const char*>(shortFilename), 11);
       ent->DIR_FstClusLO = pFile->getInode() & 0xFFFF;
       ent->DIR_FstClusHI = (pFile->getInode() >> 16) & 0xFFFF;
+      /// \todo Fill in other fields (eg, timestamps)
 
       pFs->writeDirectoryPortion(clus, buffer);
 
@@ -475,7 +475,7 @@ void FatDirectory::cacheDirectoryContents()
         File *pF;
         if((attr & ATTR_DIRECTORY) == ATTR_DIRECTORY)
           pF = new FatDirectory(filename, fileCluster, pFs, this, info);
-        else
+        else /// \todo Do symlink magic here! :D
         {
           pF = new FatFile(
                             filename,

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -151,13 +150,18 @@ protected:
     Timestamp* sTime = reinterpret_cast<Timestamp*>(&time);
     Date* sDate = reinterpret_cast<Date*>(&date);
 
+    // Sanity check.
+    if(!(sTime->secCount + sTime->minutes + sTime->hours))
+      if(!(sDate->day + sDate->month + sDate->years))
+        return 0;
+
     // grab the time information
     uint32_t seconds = sTime->secCount * 2;
     uint32_t minutes = sTime->minutes;
     uint32_t hours = sTime->hours;
 
     // grab the date information
-    uint32_t day = sDate->day - 1;
+    uint32_t day = sDate->day ? sDate->day - 1 : 0;
     uint32_t month = sDate->month;
     uint32_t years = sDate->years + 10; // FAT timestamps start at 1980
 
@@ -170,7 +174,7 @@ protected:
     // to get the proper offset into the year. The leap days are added to this as
     // well to give the proper final answer.
     static uint16_t cumulativeDays[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365};
-    uint32_t cumulDays = cumulativeDays[month - 1];
+    uint32_t cumulDays = cumulativeDays[month ? month - 1 : 0];
 
     Time ret = 0;
 

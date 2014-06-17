@@ -1292,7 +1292,22 @@ File *FatFilesystem::createFile(File *parentDir, String filename, uint32_t mask,
     // require a cluster (to keep the "." and ".." entries from jumping in)
     File *pFile;
     if (bDirectory)
+    {
         pFile = new FatDirectory(filename, dirClus, this, parentDir, info);
+
+        char *buffer = new char[m_BlockSize];
+        memset(buffer, 0, m_BlockSize);
+
+        // Clean out the clusters for the directory before creating ./.. entries.
+        uint32_t clus = dirClus;
+        do
+        {
+            // Write zero cluster.
+            writeCluster(clus, reinterpret_cast<uintptr_t>(buffer));
+            clus = getClusterEntry(clus);
+        }
+        while(!isEof(clus));
+    }
     else
     {
         // Deviation from the spec here: Because the 'inode' is used for fstat,
