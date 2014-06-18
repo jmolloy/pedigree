@@ -543,7 +543,7 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
     meta->phdrs = (ElfProgramHeader_t *) &pBuffer[header.phoff];
     meta->num_phdrs = header.phnum;
     meta->shdrs = (ElfSectionHeader_t *) &pBuffer[header.shoff];
-    meta->num_phdrs = header.shnum;
+    meta->num_shdrs = header.shnum;
 
     if(header.type == ET_REL) {
         meta->relocated = true;
