@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -68,6 +67,11 @@ public:
 
 protected:
     File *m_pCachedSymlink;
+
+    String m_sTarget;
+
+    /** Read the symlink target. Allows this to be done lazily. */
+    void initialise(bool bForce = false);
 };
 
 #endif

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -61,7 +60,8 @@ void File::writeCallback(Cache::CallbackCause cause, uintptr_t loc, uintptr_t pa
 File::File() :
     m_Name(""), m_AccessedTime(0), m_ModifiedTime(0),
     m_CreationTime(0), m_Inode(0), m_pFilesystem(0), m_Size(0),
-    m_pParent(0), m_nWriters(0), m_nReaders(0), m_Uid(0), m_Gid(0), m_Permissions(0), m_DataCache(), m_Lock(), m_MonitorTargets()
+    m_pParent(0), m_nWriters(0), m_nReaders(0), m_Uid(0), m_Gid(0),
+    m_Permissions(0), m_DataCache(), m_Lock(), m_MonitorTargets()
 {
 }
 
@@ -69,7 +69,8 @@ File::File(String name, Time accessedTime, Time modifiedTime, Time creationTime,
            uintptr_t inode, Filesystem *pFs, size_t size, File *pParent) :
     m_Name(name), m_AccessedTime(accessedTime), m_ModifiedTime(modifiedTime),
     m_CreationTime(creationTime), m_Inode(inode), m_pFilesystem(pFs),
-    m_Size(size), m_pParent(pParent), m_nWriters(0), m_nReaders(0), m_Uid(0), m_Gid(0), m_Permissions(0), m_DataCache(), m_Lock(), m_MonitorTargets()
+    m_Size(size), m_pParent(pParent), m_nWriters(0), m_nReaders(0), m_Uid(0),
+    m_Gid(0), m_Permissions(0), m_DataCache(), m_Lock(), m_MonitorTargets()
 {
 }
 
