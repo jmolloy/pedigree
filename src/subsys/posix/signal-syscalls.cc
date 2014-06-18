@@ -51,13 +51,14 @@ int doProcessKill(Process *p, int sig);
 #define SIGNAL_HANDLER_SUSPEND(name) void name(int s) { NOTICE("SUSPEND"); Process *pParent = Processor::information().getCurrentThread()->getParent()->getParent(); Processor::information().getCurrentThread()->getParent()->suspend(); }
 #define SIGNAL_HANDLER_RESUME(name) void name(int s) { NOTICE("RESUME"); Processor::information().getCurrentThread()->getParent()->resume(); Process *pParent = Processor::information().getCurrentThread()->getParent()->getParent(); }
 
-char SSIGILL[] = "Illegal instruction\n";
-char SSIGSEGV[] = "Segmentation fault!\n";
-char SSIGABRT[] = "Abort\n";
+char SSIGILL[] = "Illegal instruction.\n";
+char SSIGSEGV[] = "Segmentation fault.\n";
+char SSIGBUS[] = "Bus error.\n";
+char SSIGABRT[] = "Abort.\n";
 
 SIGNAL_HANDLER_EXITMSG  (sigabrt, SIGABRT, SSIGABRT)
 SIGNAL_HANDLER_EXIT     (sigalrm, SIGALRM)
-SIGNAL_HANDLER_EXIT     (sigbus, SIGBUS)
+SIGNAL_HANDLER_EXITMSG  (sigbus, SIGBUS, SSIGBUS)
 SIGNAL_HANDLER_EMPTY    (sigchld)
 SIGNAL_HANDLER_RESUME   (sigcont)
 SIGNAL_HANDLER_EXIT     (sigfpe, SIGFPE) // floating point exception signal

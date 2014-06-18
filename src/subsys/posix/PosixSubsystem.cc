@@ -482,7 +482,7 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType)
         case GeneralProtectionFault:
             NOTICE_NOLOCK("    (General Fault)");
             // Send SIGSEGV
-            sig = getSignalHandler(11);
+            sig = getSignalHandler(14);
             break;
         case DivideByZero:
             NOTICE_NOLOCK("    (Division by zero)");
