@@ -89,6 +89,14 @@ class String
         void reserve(size_t size);
         void free();
 
+        /** Does this string end with the given string? */
+        bool endswith(const String &s) const;
+        bool endswith(const char *s) const;
+
+        /** Does this string start with the given string? */
+        bool startswith(const String &s) const;
+        bool startswith(const char *s) const;
+
     private:
         /** Size of static string storage (over this threshold, the heap is used) */
         static const size_t StaticSize = 64;
@@ -100,6 +108,8 @@ class String
         size_t m_Size;
         /** Static string storage (avoid heap overhead for small strings) */
         char m_Static[StaticSize];
+        /** Is the given character whitespace? (for *strip()) */
+        bool iswhitespace(const char c) const;
 };
 
 /** @} */

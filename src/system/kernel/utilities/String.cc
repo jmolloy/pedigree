@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -130,17 +129,26 @@ void String::lstrip()
     if(!buf)
         return;
     
-    if(buf[0] != ' ')
+    if(!iswhitespace(buf[0]))
         return;
 
     size_t n = 0;
-    while(n < m_Length && buf[n] == ' ')
+    while(n < m_Length && iswhitespace(buf[n]))
         n++;
 
     // Move the data to cover up the whitespace and avoid reallocating m_Data
     m_Length -= n;
     memmove(buf, (buf + n), m_Length);
     buf[m_Length] = 0;
+
+    // Did we suddenly drop below the static size?
+    if ((buf == m_Data) && (m_Length < StaticSize))
+    {
+        memcpy(m_Static, m_Data, m_Length + 1);
+        m_Size = StaticSize;
+        delete [] m_Data;
+        m_Data = 0;
+    }
 }
 
 void String::rstrip()
@@ -153,11 +161,11 @@ void String::rstrip()
     if(!buf)
         return;
 
-    if(buf[m_Length - 1] != ' ')
+    if(!iswhitespace(buf[m_Length - 1]))
         return;
 
     size_t n = m_Length;
-    while(n > 0 && buf[n - 1] == ' ')
+    while(n > 0 && iswhitespace(buf[n - 1]))
         n--;
 
     // m_Size is still valid - it's the size of the buffer. m_Length is now
@@ -165,6 +173,15 @@ void String::rstrip()
     // not reallocated.
     m_Length = n;
     buf[m_Length] = 0;
+
+    // Did we suddenly drop below the static size?
+    if ((buf == m_Data) && (m_Length < StaticSize))
+    {
+        memcpy(m_Static, m_Data, m_Length + 1);
+        m_Size = StaticSize;
+        delete [] m_Data;
+        m_Data = 0;
+    }
 }
 
 List<String*> String::tokenise(char token)
@@ -209,6 +226,15 @@ void String::chomp()
 
     m_Length --;
     buf[m_Length] = '\0';
+
+    // Did we suddenly drop below the static size?
+    if ((buf == m_Data) && (m_Length < StaticSize))
+    {
+        memcpy(m_Static, m_Data, m_Length + 1);
+        m_Size = StaticSize;
+        delete [] m_Data;
+        m_Data = 0;
+    }
 }
 
 void String::sprintf(const char *fmt, ...)
@@ -220,5 +246,70 @@ void String::sprintf(const char *fmt, ...)
     va_end(vl);
 
     if (m_Length < StaticSize)
+    {
         memcpy(m_Static, m_Data, m_Length + 1);
+        m_Size = StaticSize;
+        delete [] m_Data;
+        m_Data = 0;
+    }
+}
+
+bool String::endswith(const String &s) const
+{
+    // Not a suffix check.
+    if(m_Length == s.length())
+        return *this == s;
+
+    // Suffix exceeds our length.
+    if(m_Length < s.length())
+        return false;
+
+    const char *mybuf = m_Data;
+    if(m_Length < StaticSize)
+        mybuf = m_Static;
+    mybuf += m_Length - s.length();
+
+    const char *otherbuf = s.m_Data;
+    if(s.length() < StaticSize)
+        otherbuf = s.m_Static;
+
+    // Do the check.
+    return !memcmp(mybuf, otherbuf, s.length());
+}
+
+bool String::endswith(const char *s) const
+{
+    return endswith(String(s));
+}
+
+bool String::startswith(const String &s) const
+{
+    // Not a prefix check.
+    if(m_Length == s.length())
+        return *this == s;
+
+    // Prefix exceeds our length.
+    if(m_Length < s.length())
+        return false;
+
+    const char *mybuf = m_Data;
+    if(m_Length < StaticSize)
+        mybuf = m_Static;
+
+    const char *otherbuf = s.m_Data;
+    if(s.length() < StaticSize)
+        otherbuf = s.m_Static;
+
+    // Do the check.
+    return !memcmp(mybuf, otherbuf, s.length());
+}
+
+bool String::startswith(const char *s) const
+{
+    return startswith(String(s));
+}
+
+bool String::iswhitespace(const char c) const
+{
+    return (c <= ' ' || c == '\x7f');
 }
