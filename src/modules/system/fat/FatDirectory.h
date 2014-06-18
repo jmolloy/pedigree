@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -80,6 +79,11 @@ public:
   void setDirOffset(uint32_t custom)
   {
     m_DirOffset = custom;
+  }
+
+  static const String &symlinkSuffix() {
+    static String s(".__sym");
+    return s;
   }
 
 private:

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -38,7 +37,8 @@ private:
 public:
   /** Constructor, should be called only by a Filesystem. */
   FatFile(String name, Time accessedTime, Time modifiedTime, Time creationTime,
-       uintptr_t inode, class Filesystem *pFs, size_t size, uint32_t dirClus = 0, uint32_t dirOffset = 0, File *pParent = 0);
+       uintptr_t inode, class Filesystem *pFs, size_t size, uint32_t dirClus = 0,
+       uint32_t dirOffset = 0, File *pParent = 0);
   /** Destructor - doesn't do anything. */
   virtual ~FatFile();
 

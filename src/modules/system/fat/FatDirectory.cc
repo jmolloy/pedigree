@@ -22,6 +22,7 @@
 #include <syscallError.h>
 #include <LockGuard.h>
 #include "FatFile.h"
+#include "FatSymlink.h"
 
 #include "fat.h"
 
@@ -250,12 +251,19 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
 
       pFs->writeDirectoryPortion(clus, buffer);
 
-      if(type)
+      if(pFile->isDirectory())
       {
         FatDirectory *fatDir = static_cast<FatDirectory *>(pFile);
 
         fatDir->setDirCluster(clus);
         fatDir->setDirOffset(offset);
+      }
+      else if(pFile->isSymlink())
+      {
+        FatSymlink *fatLink = static_cast<FatSymlink *>(pFile);
+
+        fatLink->setDirCluster(clus);
+        fatLink->setDirOffset(offset);
       }
       else
       {
@@ -265,11 +273,13 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
         fatFile->setDirOffset(offset);
       }
 
-      // If the cache is *not yet* populated, don't add the entry to the cache. This allows
-      // cacheDirectoryContents to build the cache properly.
-      // NOTICE("Adding " << filename << "...");
+      // If the cache is *not yet* populated, don't add the entry to the cache.
+      // This allows cacheDirectoryContents to build the cache properly.
+      // We need to use the File::getName() method because it is now possible to
+      // add a directory entry with a name that does not match the VFS name (FAT
+      // symlinks).
       if(m_bCachePopulated)
-        m_Cache.insert(filename, pFile);
+        m_Cache.insert(pFile->getName(), pFile);
 
 #ifdef SUPERDEBUG
       NOTICE("  -> FatFilesystem::addEntry(" << filename << ") is successful");
@@ -289,13 +299,24 @@ bool FatDirectory::removeEntry(File *pFile)
   FatFilesystem *pFs = static_cast<FatFilesystem *>(m_pFilesystem);
   FatDirectory *fatDir = static_cast<FatDirectory *>(pFile);
   FatFile *fatFile = static_cast<FatFile *>(pFile);
+  FatSymlink *fatLink = static_cast<FatSymlink *>(pFile);
   String filename = pFile->getName();
+  String real_filename(filename);
+
+  // Adjust filename if we must.
+  if(pFile->isSymlink())
+    filename += symlinkSuffix();
 
   uint32_t dirClus, dirOffset;
   if(pFile->isDirectory())
   {
     dirClus = fatDir->getDirCluster();
     dirOffset = fatDir->getDirOffset();
+  }
+  else if(pFile->isSymlink())
+  {
+    dirClus = fatLink->getDirCluster();
+    dirOffset = fatLink->getDirOffset();
   }
   else
   {
@@ -355,7 +376,7 @@ bool FatDirectory::removeEntry(File *pFile)
 
   pFs->writeDirectoryEntry(dir, dirClus, dirOffset);
   if(m_bCachePopulated)
-    m_Cache.remove(filename);
+    m_Cache.remove(real_filename);
   return true;
 }
 
@@ -475,20 +496,23 @@ void FatDirectory::cacheDirectoryContents()
         File *pF;
         if((attr & ATTR_DIRECTORY) == ATTR_DIRECTORY)
           pF = new FatDirectory(filename, fileCluster, pFs, this, info);
-        else /// \todo Do symlink magic here! :D
+        else
         {
-          pF = new FatFile(
-                            filename,
-                            accTime,
-                            writeTime,
-                            createTime,
-                            fileCluster,
-                            pFs,
-                            ent->DIR_FileSize,
-                            clus,
-                            i,
-                            this
-          );
+          if(filename.endswith(symlinkSuffix()))
+          {
+            // Remove the suffix (this is very ugly)
+            /// \todo String::chomp should take an N parameter (default 1)
+            for(size_t z = 0; z < symlinkSuffix().length(); ++z)
+              filename.chomp();
+
+            pF = new FatSymlink(filename, accTime, writeTime, createTime,
+              fileCluster, pFs, ent->DIR_FileSize, clus, i, this);
+          }
+          else
+          {
+            pF = new FatFile(filename, accTime, writeTime, createTime,
+              fileCluster, pFs, ent->DIR_FileSize, clus, i, this);
+          }
         }
 
         // NOTICE("Inserting '" << filename << "'.");

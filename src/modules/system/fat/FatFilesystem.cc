@@ -29,6 +29,7 @@
 
 #include "fat.h"
 #include "FatFile.h"
+#include "FatSymlink.h"
 #include "FatFilesystem.h"
 #include "FatDirectory.h"
 
@@ -1387,8 +1388,50 @@ bool FatFilesystem::createDirectory(File* parent, String filename)
 
 bool FatFilesystem::createSymlink(File* parent, String filename, String value)
 {
-    /// \todo Figure out a way to do FAT symlinks - per-directory table perhaps?
-    return false;
+    // Validate input
+    if(!parent->isDirectory())
+    {
+      return false;
+    }
+
+    FatFileInfo info;
+    info.creationTime = 0;
+    info.modifiedTime = 0;
+    info.accessedTime = 0;
+
+    // Deviation from the spec here: Because the 'inode' is used for fstat,
+    // we can't leave it at zero or else all newly created files without
+    // data will look the same!
+    uint32_t clus = findFreeCluster();
+    setClusterEntry(clus, eofValue());
+    File *pFile = new FatSymlink(
+        filename,
+        0,
+        0,
+        0,
+        clus,
+        this,
+        0,
+        0xdeadbeef, // Sentinel values that'll throw an error if they're used
+        0xbeefdead, // before being set to correct values.
+        parent
+    );
+
+    filename += FatDirectory::symlinkSuffix();
+
+    FatDirectory *fatParent = static_cast<FatDirectory *>(Directory::fromFile(parent));
+    if (!fatParent->addEntry(filename, pFile, 0))
+    {
+        delete pFile;
+        return 0;
+    }
+
+    // Write symlink target.
+    pFile->write(0, value.length(),
+        reinterpret_cast<uintptr_t>(static_cast<const char *>(value)));
+
+    return pFile;
+
 }
 
 bool FatFilesystem::remove(File* parent, File* file)
