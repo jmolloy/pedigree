@@ -118,6 +118,8 @@ void TextIO::write(const char *s, size_t len)
         return;
     }
 
+    const char *orig = s;
+
     while((*s) && (len--))
     {
         // UTF8 -> UTF32 conversion.
@@ -143,8 +145,16 @@ void TextIO::write(const char *s, size_t len)
 
                 // All good to use m_nCharacter now!
                 m_bUtf8 = false;
-                --s;
-                ++len;
+
+                // If we terminated due to a byte that is not a continuation, we
+                // need to adjust the string pointer so we end up handling this
+                // character again, as a character that is not part of this UTF8
+                // sequence.
+                if(((byte & 0xC0) != 0x80) && (s != orig))
+                {
+                    --s;
+                    ++len;
+                }
 
                 // Ignore the codepoint if it is bad.
                 if(m_nCharacter > 0x10FFFF)
