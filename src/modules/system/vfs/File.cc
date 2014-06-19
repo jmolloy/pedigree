@@ -348,3 +348,40 @@ void File::getFilesystemLabel(HugeStaticString &s)
     s = m_pFilesystem->getVolumeLabel();
 }
 
+String File::getFullPath(bool bWithLabel)
+{
+    HugeStaticString str;
+    HugeStaticString tmp;
+    str.clear();
+    tmp.clear();
+
+    if (getParent() != 0)
+        str = getName();
+
+    File* f = this;
+    while ((f = f->getParent()))
+    {
+        // This feels a bit weird considering the while loop's subject...
+        if (f->getParent())
+        {
+            tmp = str;
+            str = f->getName();
+            str += "/";
+            str += tmp;
+        }
+    }
+
+    tmp = str;
+    str = "/";
+    str += tmp;
+
+    if(bWithLabel)
+    {
+        tmp = str;
+        getFilesystemLabel(str);
+        str += "»";
+        str += tmp;
+    }
+
+    return String(str);
+}

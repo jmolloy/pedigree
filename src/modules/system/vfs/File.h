@@ -122,43 +122,7 @@ public:
     // File names cannot be changed.
 
     /** Obtains the full path of the File. */
-    virtual String getFullPath(bool bWithLabel = false)
-    {
-        HugeStaticString str;
-        HugeStaticString tmp;
-        str.clear();
-        tmp.clear();
-
-        if (getParent() != 0)
-            str = getName();
-
-        File* f = this;
-        while ((f = f->getParent()))
-        {
-            // This feels a bit weird considering the while loop's subject...
-            if (f->getParent())
-            {
-                tmp = str;
-                str = f->getName();
-                str += "/";
-                str += tmp;
-            }
-        }
-
-        tmp = str;
-        str = "/";
-        str += tmp;
-
-        if(bWithLabel)
-        {
-            tmp = str;
-            getFilesystemLabel(str);
-            str += "»";
-            str += tmp;
-        }
-
-        return String(str);
-    }
+    virtual String getFullPath(bool bWithLabel = true);
 
     /** Delete all data from the file. */
     virtual void truncate();
