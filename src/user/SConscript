@@ -102,6 +102,11 @@ cpp_apps = [
     'ttyterm',
 ]
 
+# Applications which require C++11
+cpp_11_apps = [
+    'which',
+]
+
 # Custom include paths for specific applications
 custom_incpath = {
     'TUI' : ['#/src/user/libraries/libui/include',
@@ -145,7 +150,7 @@ incpath = [
     '#/src/subsys/posix/syscalls',
 ]
 
-all_apps = posixc_apps + sdl_apps + cpp_apps
+all_apps = posixc_apps + sdl_apps + cpp_apps + cpp_11_apps
 
 tmp['CFLAGS'] = buildutils.userspace.fixFlags(env, env['CFLAGS'])
 tmp['CXXFLAGS'] = buildutils.userspace.fixFlags(env, env['CXXFLAGS'])
@@ -199,7 +204,7 @@ for i in all_apps:
         e['CPPPATH'] += ['%s/include' % (imagesdir,)]
 
     # Handle C++-related dependencies.
-    if i in cpp_apps or i in sdl_apps or i in mesa_apps:
+    if i in cpp_apps or i in sdl_apps or i in mesa_apps or i in cpp_11_apps:
         e['LIBPATH'] += [imagesdir + 'libraries']
         e['CPPPATH'] += ['#/src/subsys/native/include',]
         e['LINK'] = env['CXX']
@@ -207,6 +212,9 @@ for i in all_apps:
     e['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s/libraries/ ' % (e.Dir(imagesdir).abspath,)
     e['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s/libs/ ' % (e.Dir(builddir).abspath,)
     e['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s ' % (e.Dir(builddir).abspath,)
+
+    if i in cpp_11_apps:
+        e['CXXFLAGS'] += '-std=c++11 '
 
     output = builddir + '/apps/' + i
     files = [Glob(base + '/*.c'), Glob(base + '/*.cc')]
