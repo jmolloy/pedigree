@@ -20,7 +20,7 @@ real_os=""
 if [ ! -e $script_dir/.easy_os ]; then
 
     echo "Checking for dependencies... Which operating system are you running on?"
-    echo "Cygwin, Debian/Ubuntu, OpenSuSE, Fedora, OSX, or some other system?"
+    echo "Cygwin, Debian/Ubuntu, OpenSuSE, Fedora, OSX, Arch, or some other system?"
 
     if [ $# == 0 ]; then
         read os
@@ -77,6 +77,10 @@ if [ ! -e $script_dir/.easy_os ]; then
 
             real_os="cygwin"
             ;;
+        arch)
+            echo "Installing packages with pacman, please wait..."
+            sudo pacman -S gcc binutils gmp libmpc mpfr sqlite texinfo scons wget cdrtools mtools tar
+            ;;
         *)
             echo "Operating system '$os' is not supported yet."
             echo "You will need to find alternative sources for the following:"
@@ -87,6 +91,8 @@ if [ ! -e $script_dir/.easy_os ]; then
             echo " - sqlite"
             echo " - mtools"
             echo " - scons"
+            echo " - wget"
+            echo " - sed"
             echo
             echo "If you can modify this script to support '$os', please provide patches."
             ;;
@@ -177,6 +183,8 @@ $script_dir/run_pup.py install pixman
 $script_dir/run_pup.py install cairo
 $script_dir/run_pup.py install expat
 $script_dir/run_pup.py install mesa
+$script_dir/run_pup.py install ncurses
+$script_dir/run_pup.py install gettext
 
 # Install GCC to pull in shared libstdc++.
 $script_dir/run_pup.py install gcc
