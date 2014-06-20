@@ -157,6 +157,8 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, strip, libg
         print "  (failed -- couldn't add glue back to libc.a)"
         exit(res)
 
+    shutil.copy(os.path.join(tmpdir, "libg.a"), debugBuildOut + ".a")
+
     strip_command = [
         strip,
         "-g",
