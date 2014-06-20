@@ -23,6 +23,8 @@ Import(['env'])
 import os
 import subprocess
 
+import buildutils.userspace
+
 builddir = "#" + env["PEDIGREE_BUILD_BASE"]
 
 NEWLIB_VERSION = '1.17.0'
@@ -30,7 +32,7 @@ NEWLIB_BASENAME = 'newlib-%s' % (NEWLIB_VERSION,)
 NEWLIB_FILENAME = '%s.tar.gz' % (NEWLIB_BASENAME,)
 NEWLIB_CONFIGURE = os.path.join(NEWLIB_BASENAME, 'newlib', 'configure')
 
-NEWLIB_OUTPUT_LIBC = env.File(builddir + '/stock-libc.a')
+NEWLIB_OUTPUT_LIBC = env.File(builddir + '/stock-libg.a')
 NEWLIB_OUTPUT_LIBM = env.File(builddir + '/stock-libm.a')
 
 NEWLIB_PATCH = '#/compilers/pedigree-newlib.patch'
@@ -48,6 +50,7 @@ def buildNewlib(target, source, env):
     childenv['COMPILER_TARGET'] = env['COMPILER_TARGET']
     childenv['XGCC'] = env['CC_NOCACHE']
     childenv['XLD'] = env['LINK']
+    childenv['XCFLAGS'] = buildutils.userspace.fixFlags(env, env['CFLAGS'])
     childenv['SRCDIR'] = env.Dir('#').abspath
     childenv['DROPDIR'] = target[0].dir.abspath
 

@@ -44,18 +44,19 @@ import os
 import sys
 import subprocess
 
-def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
+def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, strip, libgcc):
     print "Building libc...",
     
     tmpdir = tempfile.mkdtemp()
     
     buildOut = os.path.join(builddir, "libc")
+    debugBuildOut = os.path.join(builddir, "libg")
 
     olddir = os.getcwd()
     os.chdir(tmpdir)
 
-    # Bring across libc.a so we don't modify the actual master copy
-    shutil.copy(inputLibcA, os.path.join(tmpdir, "libc.a"))
+    # Bring across libg.a so we don't modify the actual master copy
+    shutil.copy(inputLibcA, os.path.join(tmpdir, "libg.a"))
 
     objs_to_remove = [
         "init",
@@ -95,7 +96,7 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
     ]
 
     # Remove the object files we manually override in our glue.
-    args = [ar, "d", "libc.a"]
+    args = [ar, "d", "libg.a"]
     args.extend(['lib_a-%s.o' % (x,) for x in objs_to_remove])
     res = subprocess.call(args, cwd=tmpdir)
     if res:
@@ -115,14 +116,15 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
         cc,
         "-nostdlib",
         "-shared",
+        "-g3", "-ggdb", "-gdwarf-2",
         "-Wl,-soname,libc.so",
-        "-o", buildOut + ".so",
+        "-o", debugBuildOut + ".so",
         "-L.",
         "-L%s" % (pedigreec_dir,),
         "-L%s" % (glue_dir,),
         "-Wl,-Bstatic",
         "-Wl,--whole-archive",
-        "-lc",
+        "-lg",
         "-lpedigree-glue",
         "-lpedigree-c",
         "-Wl,--no-whole-archive",
@@ -132,19 +134,40 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
 
     res = subprocess.call(cc_cmd, cwd=tmpdir)
     if res != 0:
-        print "  (failed -- to compile libc.so)"
+        print "  (failed -- to compile libg.so)"
+        exit(res)
+
+    strip_command = [
+        strip,
+        "-g",
+        "-o", buildOut + ".so",
+        debugBuildOut + ".so",
+    ]
+
+    res = subprocess.call(strip_command, cwd=tmpdir)
+    if res != 0:
+        print "  (failed -- to strip libg.so)"
         exit(res)
 
     # Freshen libc.a with the glue.
-    args = [ar, "r", "libc.a"]
+    args = [ar, "r", "libg.a"]
     args.extend([x for x in os.listdir(tmpdir) if x.endswith('.obj')])
     res = subprocess.call(args, cwd=tmpdir)
     if res:
         print "  (failed -- couldn't add glue back to libc.a)"
         exit(res)
 
-    # Copy static library out now.
-    shutil.copy(os.path.join(tmpdir, "libc.a"), buildOut + ".a")
+    strip_command = [
+        strip,
+        "-g",
+        "-o", buildOut + ".a",
+        debugBuildOut + ".a",
+    ]
+
+    res = subprocess.call(strip_command, cwd=tmpdir)
+    if res != 0:
+        print "  (failed -- to strip libg.a)"
+        exit(res)
 
     # Clean up.
     for i in os.listdir("."):
@@ -156,4 +179,4 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, libgcc):
 
     print "ok!"
 
-doLibc(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6], "")
+doLibc(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6], sys.argv[7], "")

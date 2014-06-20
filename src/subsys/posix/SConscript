@@ -194,7 +194,7 @@ elif env['ARCH_TARGET'] == 'ARM':
 buildDir = tmp.Dir(builddir)
 
 base = tmp.Dir("#")
-baseLibc = tmp.File(builddir + "/stock-libc.a")
+baseLibc = tmp.File(builddir + "/stock-libg.a")
 baseLibm = tmp.File(builddir + "/stock-libm.a")
 baseInclude = tmp.Dir("#src/subsys/posix/include")
 
@@ -211,7 +211,7 @@ env.Alias("crt0", "crt")
 # base libc.a file is changed.
 env.Command([buildLibc],
             [glue_objname, baseLibc],
-            "@python " + base.abspath + "/scripts/buildLibc.py " + buildDir.abspath + " " + baseLibc.abspath + " " + tmp.File(glue_objname).abspath + " " + tmp.File(libpedigree_c_objname).abspath + " " + env["AR"] + " " + env["CC_NOCACHE"]
+            "@python " + base.abspath + "/scripts/buildLibc.py " + buildDir.abspath + " " + baseLibc.abspath + " " + tmp.File(glue_objname).abspath + " " + tmp.File(libpedigree_c_objname).abspath + " " + env["AR"] + " " + env["CC_NOCACHE"] + " " + env["STRIP"]
             )
 
 # libm will only ever be rebuilt if the libm.a file changes
