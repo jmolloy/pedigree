@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -48,8 +47,16 @@ void X64StackFrame::construct(ProcessorState &state,
                               unsigned int nParams,
                               ...)
 {
+  // Align the stack to a 16-byte boundary. SysV AMD64 ABI supplement, Sn 3.2.2.
+  uintptr_t stack = state.getStackPointer();
+  if (stack & 0xF)
+  {
+    WARNING("StackFrame: given stack was not ABI-compliant, fixing.");
+    stack &= ~0xF;
+  }
+
   // Obtain the stack pointer.
-  uintptr_t *pStack = reinterpret_cast<uintptr_t*> (state.getStackPointer());
+  uintptr_t *pStack = reinterpret_cast<uintptr_t*> (stack);
   
   // How many parameters do we need to push?
   // We push in reverse order but must iterate through the va_list in forward order,
@@ -70,7 +77,6 @@ void X64StackFrame::construct(ProcessorState &state,
   for(size_t i = 0; i < nParams; i++)
   {
     uintptr_t arg = va_arg(list, uintptr_t);
-    NOTICE("Setting " << Hex << i << ", " << arg);
     switch (i)
     {
       case 0: state.rdi = arg; break;
