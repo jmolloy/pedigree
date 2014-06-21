@@ -156,7 +156,7 @@ void usage()
 {
     cout << "Usage: which [options] [--] COMMAND [...]" << endl;
     cout << "Write the full path of COMMAND(s) to standard output." << endl;
-    cout << "" << endl;
+    cout << endl;
     cout << "  --version, -[vV] Print version and exit successfully." << endl;
     cout << "  --help,          Print this help and exit successfully." << endl;
     cout << "  --skip-dot       Skip directories in PATH that start with a dot." << endl;
@@ -169,7 +169,7 @@ void usage()
     cout << "  --skip-alias     Ignore option --read-alias; don't read stdin." << endl;
     cout << "  --read-functions Read shell functions from stdin." << endl;
     cout << "  --skip-functions Ignore option --read-functions; don't read stdin." << endl;
-    cout << "" << endl;
+    cout << endl;
     cout << "Recommended use is to write the output of (alias; declare -f) to standard" << endl;
     cout << "input, so that which can show aliases and shell functions. See which(1) fo" << endl;
     cout << "examples." << endl;
