@@ -2063,7 +2063,7 @@ void syslog(int prio, const char *fmt, ...)
     static char print_temp[1024];
     va_list argptr;
     va_start(argptr, fmt);
-    vsprintf(print_temp, fmt, argptr);
+    vsnprintf(print_temp, sizeof print_temp, fmt, argptr);
     syscall2(POSIX_SYSLOG, (long) print_temp, prio);
     va_end(argptr);
 }
