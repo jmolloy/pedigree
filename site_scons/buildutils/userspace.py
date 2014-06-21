@@ -30,13 +30,12 @@ def fixFlags(env, flags):
         flags = flags.replace('-mno-sse', '')
         flags = flags.replace('-fno-exceptions', '')
         flags = flags.replace('-fno-rtti', '')
-        flags += ' -msse2 -mfpmath=sse '
+        flags += ' -msse2 -mfpmath=both '
     if env['ARCH_TARGET'] == 'X64':
         flags = flags.replace('-mcmodel=kernel', '-mcmodel=small')
         flags = flags.replace('-mno-red-zone', '')
         flags = flags.replace('-mno-mmx', '')
         flags = flags.replace('-mno-sse', '')
-        flags += ' -msse2 -mfpmath=sse '
     if env['ARCH_TARGET'] == 'PPC':
         flags += ' -U__svr4__ '
     return flags
