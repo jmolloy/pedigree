@@ -246,6 +246,9 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         return -1;
     }
 
+    // Grab the thread we're going to return into - need to tweak it.
+    Thread *pThread = pProcess->getThread(0);
+
     // Ensure we only have one thread running (us).
     if (pProcess->getNumThreads() > 1)
     {
@@ -494,13 +497,20 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         elf->create(reinterpret_cast<uint8_t*>(loadAddr), file->getSize());
     }
 
+    // Wipe out old state, prepare for the new process.
+    memset(&state, 0, sizeof(state));
+
+    // Prepare new state for the process.
     ProcessorState pState = state;
-    //pState.setStackPointer(STACK_START-8);
-    pState.setStackPointer(newStack-8);
+    pState.setStackPointer(newStack);
     pState.setInstructionPointer(elf->getEntryPoint());
 
+    // Generate a stack frame in pState. Unfortunately, this will not create
+    // one in the SyscallState we were passed. Register parameters have to be
+    // copied manually (see below for X64).
     StackFrame::construct(pState, 0, 2, argv, env);
 
+    // Load up the SyscallState with the newly constructed stack frame.
     state.setStackPointer(pState.getStackPointer());
     state.setInstructionPointer(elf->getEntryPoint());
 
@@ -561,6 +571,12 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     {
         delete elf;
     }
+
+    // Before we enter the new address space, wipe out the scheduler state.
+    // This is a new scheduling entity.
+    SchedulerState s;
+    memset(&s, 0, sizeof(s));
+    pThread->state() = s;
 
     // Allow signals again now that everything's loaded
     for(int sig = 0; sig < 32; sig++)
