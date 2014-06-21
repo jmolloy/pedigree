@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <list>
 #include <map>
 #include <regex>
 #include <sstream>
@@ -40,8 +41,9 @@ using std::endl;
 using std::map;
 using std::string;
 using std::stringstream;
-using std::vector;
+using std::list;
 using std::regex;
+using std::vector;
 
 
 int processOpts(int argc, char *argv[]);
@@ -77,7 +79,7 @@ public:
     int skipTilde;
 } static opts;
 
-static vector<string> aliases, functions;
+static list<string> aliases, functions;
 static string home, cwd;
 
 
