@@ -1,9 +1,20 @@
 /*
- * Copyright (c) 2004, 2005 by
- * Ralf Corsepius, Ulm/Germany. All rights reserved.
+ * Copyright (c) 2008-2014, Pedigree Developers
  *
- * Permission to use, copy, modify, and distribute this software
- * is freely granted, provided that this notice is preserved.
+ * Please see the CONTRIB file in the root of the source tree for a full
+ * list of contributors.
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
 /**
@@ -272,19 +283,20 @@ typedef struct {
   intmax_t	rem;
 } imaxdiv_t;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-extern intmax_t  imaxabs(intmax_t j);
-extern imaxdiv_t imaxdiv(intmax_t numer, intmax_t denomer);
-extern intmax_t  strtoimax(const char *__restrict, char **__restrict, int);
-extern uintmax_t strtoumax(const char *__restrict, char **__restrict, int);
-extern intmax_t  wcstoimax(const wchar_t *__restrict, wchar_t **__restrict, int);
-extern uintmax_t wcstoumax(const wchar_t *__restrict, wchar_t **__restrict, int);
-
-#ifdef __cplusplus
-}
+#ifdef __LP64__
+#define imaxabs     llabs
+#define imaxdiv     lldiv
+#define strtoimax   strtoll
+#define strtoumax   strtoull
+#define wcstoimax   wcstoll
+#define wcstoumax   wcstoull
+#else
+#define imaxabs     labs
+#define imaxdiv     ldiv
+#define strtoimax   strtol
+#define strtoumax   strtoul
+#define wcstoimax   wcstol
+#define wcstoumax   wcstoul
 #endif
 
 #endif
