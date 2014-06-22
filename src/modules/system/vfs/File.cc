@@ -375,12 +375,16 @@ String File::getFullPath(bool bWithLabel)
     str = "/";
     str += tmp;
 
-    if(bWithLabel)
+    if (bWithLabel && m_pFilesystem)
     {
         tmp = str;
         getFilesystemLabel(str);
         str += "»";
         str += tmp;
+    }
+    else if (bWithLabel && !m_pFilesystem)
+    {
+        ERROR("File::getFullPath called without a filesystem!");
     }
 
     return String(str);
