@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -122,6 +121,7 @@ class HashTable
                     return;
                 }
                 m_Buckets = new struct bucket*[m_MaxBucket];
+                memset(m_Buckets, 0, sizeof(struct bucket*) * m_MaxBucket);
             }
 
             size_t hash = k.hash();
