@@ -1,3 +1,22 @@
+/*
+ * Copyright (c) 2008-2014, Pedigree Developers
+ *
+ * Please see the CONTRIB file in the root of the source tree for a full
+ * list of contributors.
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
 #ifndef	_SYS_STAT_H
 #define	_SYS_STAT_H
 
@@ -38,17 +57,19 @@ struct	stat
   time_t	st_mtime;
   time_t	st_ctime;
 #else
-  time_t	st_atime;
-  long		st_spare1;
-  time_t	st_mtime;
-  long		st_spare2;
-  time_t	st_ctime;
-  long		st_spare3;
+  struct timespec	st_atim;
+  struct timespec	st_mtim;
+  struct timespec	st_ctim;
   long		st_blksize;
   long		st_blocks;
   long	st_spare4[2];
 #endif
 };
+
+// Compatibility defines
+#define st_atime st_atim.tv_sec
+#define st_mtime st_mtim.tv_sec
+#define st_ctime st_ctim.tv_sec
 #endif
 
 #define	_IFMT		0170000	/* type of file */
