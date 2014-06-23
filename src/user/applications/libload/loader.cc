@@ -487,12 +487,16 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
     if(n < 0) {
 #ifdef DEBUG_LIBLOAD
         fprintf(stderr, "libload.so: couldn't read file header (%s)\n", strerror(errno));
+#else
+        syslog(LOG_INFO, "libload.so: couldn't read file header (%s)", strerror(errno));
 #endif
         close(fd);
         return false;
     } else if(n != sizeof(header)) {
 #ifdef DEBUG_LIBLOAD
         fprintf(stderr, "libload.so: read was not the correct size\n");
+#else
+        syslog(LOG_INFO, "libload.so: read was not the correct size");
 #endif
         close(fd);
         errno = ENOEXEC;
@@ -505,6 +509,8 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
        header.ident[0] != 127) {
 #ifdef DEBUG_LIBLOAD
         fprintf(stderr, "libload.so: bad ELF magic\n");
+#else
+        syslog(LOG_INFO, "libload.so: bad ELF magic");
 #endif
         close(fd);
         errno = ENOEXEC;
@@ -515,6 +521,8 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
     if(!(header.ident[4] == 1 || header.ident[4] == 2)) {
 #ifdef DEBUG_LIBLOAD
         fprintf(stderr, "libload.so: not a valid ELF class\n");
+#else
+        syslog(LOG_INFO, "libload.so: not a valid ELF class");
 #endif
         close(fd);
         errno = ENOEXEC;
@@ -533,6 +541,8 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
     if(pBuffer == MAP_FAILED) {
 #ifdef DEBUG_LIBLOAD
         fprintf(stderr, "libload.so: could not mmap binary\n");
+#else
+        syslog(LOG_INFO, "libload.so: could not mmap binary");
 #endif
         close(fd);
         errno = ENOEXEC;
@@ -606,6 +616,7 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
             if(!p) {
                 munmap((void *) pBuffer, meta->mapped_file_sz);
                 errno = ENOEXEC;
+                syslog(LOG_INFO, "libload.so: couldn't get memory for relocated object");
                 return false;
             }
 
@@ -728,7 +739,7 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                     // Zero out additional space.
                     if(meta->phdrs[i].memsz > meta->phdrs[i].filesz)
                     {
-                        uintptr_t vaddr_start = meta->phdrs[i].vaddr + meta->phdrs[i].filesz;
+                        uintptr_t vaddr_start = meta->phdrs[i].vaddr + meta->phdrs[i].filesz + getpagesize();
                         uintptr_t vaddr_end = meta->phdrs[i].vaddr + meta->phdrs[i].memsz;
                         if((vaddr_start & ~(getpagesize() - 1)) !=
                             (vaddr_end & ~(getpagesize() - 1)))
@@ -736,13 +747,13 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                             // Not the same page, won't be mapped in with the
                             // rest of the program header. Map the rest as an
                             // anonymous mapping.
-                            vaddr_start += getpagesize();
                             vaddr_start &= ~(getpagesize() - 1);
                             size_t totalLength = vaddr_end - vaddr_start;
                             void *p = mmap((void *) vaddr_start, totalLength, PROT_READ | PROT_WRITE, mapflags | MAP_ANON, 0, 0);
                             if(p == MAP_FAILED)
                             {
                                 /// \todo cleanup.
+                                syslog(LOG_INFO, "libload.so: mmap failed for program header (anonymous section)");
                                 errno = ENOEXEC;
                                 return false;
                             }
@@ -754,6 +765,7 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                     if(p == MAP_FAILED) {
                         /// \todo cleanup.
                         errno = ENOEXEC;
+                        syslog(LOG_INFO, "libload.so: mmap failed for program header");
                         return false;
                     }
 
@@ -1342,6 +1354,7 @@ void *_libload_dlopen(const char *file, int mode) {
 
     bool bLoad = loadSharedObjectHelper(file, g_MainObject, &result);
     if(!bLoad) {
+        fprintf(stderr, "Loading object '%s' failed.\n", file);
         return 0;
     }
 
