@@ -5,6 +5,8 @@
 
 set -e
 
+ARM_SCONS_OPTS="arm_beagle=1 armv7=1 arm_cortex_a8=1"
+
 echo "Pedigree Easy Build script"
 echo "This script will ask a couple questions and then automatically install"
 echo "dependencies and compile Pedigree for you."
@@ -127,7 +129,7 @@ fi
 set -e
 
 # Run a quick build of libc and libm for the rest of the build system.
-scons CROSS=$script_dir/compilers/dir/bin/x86_64-pedigree- build/libc.so build/libm.so
+scons CROSS=$script_dir/compilers/dir/bin/arm-pedigree- $ARM_SCONS_OPTS build/libc.so build/libm.so
 
 # Pull down libtool.
 echo
@@ -143,7 +145,7 @@ $script_dir/setup_pup.py arm
 # again to build it against the shared libstdc++. Once a working shared
 # libstdc++ exists, the static one built here is no longer relevant.
 # What a mess!
-$script_dir/scripts/checkBuildSystemNoInteractive.pl x86_64-pedigree $script_dir/pedigree-compiler $compiler_build_options "libcpp"
+$script_dir/scripts/checkBuildSystemNoInteractive.pl arm-pedigree $script_dir/pedigree-compiler $compiler_build_options "libcpp"
 
 set +e
 
@@ -166,7 +168,7 @@ echo "Beginning the Pedigree build."
 echo
 
 # Build Pedigree.
-scons CROSS="$script_dir/compilers/dir/bin/arm-pedigree-" arm_beagle=1 armv7=1 arm_cortex_a8=1 $*
+scons CROSS="$script_dir/compilers/dir/bin/arm-pedigree-" $ARM_SCONS_OPTS $*
 
 cd "$old"
 
