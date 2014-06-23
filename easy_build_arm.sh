@@ -124,12 +124,40 @@ if [ -z "$changed" ]; then
     git pull --rebase > /dev/null 2>&1
 fi
 
+set -e
+
+# Run a quick build of libc and libm for the rest of the build system.
+scons CROSS=$script_dir/compilers/dir/bin/x86_64-pedigree- build/libc.so build/libm.so
+
+# Pull down libtool.
+echo
+echo "Configuring the Pedigree UPdater..."
+
+$script_dir/setup_pup.py arm
+
+# TODO: build some ARM packages...
+
+# Build GCC again with access to the newly built libc.
+# This will create a libstdc++ that can be used by pedigree-apps to build GCC
+# again, this time with a shared libstdc++. pedigree-apps should then build GCC
+# again to build it against the shared libstdc++. Once a working shared
+# libstdc++ exists, the static one built here is no longer relevant.
+# What a mess!
+$script_dir/scripts/checkBuildSystemNoInteractive.pl x86_64-pedigree $script_dir/pedigree-compiler $compiler_build_options "libcpp"
+
+set +e
+
 echo
 echo "Ensuring CDI is up-to-date."
 
 # Setup all submodules, make sure they are up-to-date
 git submodule init > /dev/null 2>&1
 git submodule update > /dev/null 2>&1
+
+echo
+echo "Installing a base set of packages..."
+
+# TODO: build some ARM packages...
 
 set -e
 
@@ -146,7 +174,7 @@ echo
 echo
 echo "Pedigree is now ready to be built without running this script."
 echo "To build in future, run the following command in the '$script_dir' directory:"
-echo "scons CROSS='$script_dir/pedigree-compiler/bin/arm-pedigree-'"
+echo "scons"
 echo
 echo "If you wish, you can continue to run this script. It won't ask questions"
 echo "anymore, unless you remove the '.easy_os' file in '$script_dir'."
