@@ -656,14 +656,20 @@ int posix_rename(const char* source, const char* dst)
     // traverse symlink
     src = traverseSymlink(src);
     if(!src)
+    {
+        SYSCALL_ERROR(DoesNotExist);
         return -1;
+    }
 
     if (dest)
     {
         // traverse symlink
         dest = traverseSymlink(dest);
         if(!dest)
+        {
+            SYSCALL_ERROR(DoesNotExist);
             return -1;
+        }
 
         if (dest->isDirectory() && !src->isDirectory())
         {
@@ -678,10 +684,13 @@ int posix_rename(const char* source, const char* dst)
     }
     else
     {
-        VFS::instance().createFile(realSource, 0777, GET_CWD());
+        VFS::instance().createFile(realDestination, 0777, GET_CWD());
         dest = VFS::instance().find(realDestination, GET_CWD());
         if (!dest)
+        {
+            // Failed to create the file?
             return -1;
+        }
     }
 
     // Gay algorithm.
