@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -18,90 +17,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-//
-// Should only be included from ./syscall.h. This contains the syscall functions.
-//
+#define SERVICE POSIX_SYSCALL_SERVICE
+#define SERVICE_INIT
+#define SERVICE_ERROR errno
 
-static long syscall0(long function)
-{
-    long num = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
-    long ret;
-    asm volatile("mov r0, %1; \
-                  swi #0; \
-                  mov %0, r0; \
-                  mov %0, r1" : "=r" (ret), "=r" (errno) : "r" (num));
-    return ret;
-}
-
-static long syscall1(long function, long p1)
-{
-    long num = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
-    long ret;
-    asm volatile("mov r0, %1; \
-                  mov r1, %1; \
-                  swi #0; \
-                  mov %0, r0; \
-                  mov %0, r1" : "=r" (ret), "=r" (errno) : "r" (num), "r" (p1));
-    return ret;
-}
-
-static long syscall2(long function, long p1, long p2)
-{
-    long num = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
-    long ret;
-    asm volatile("mov r0, %1; \
-                  mov r1, %1; \
-                  mov r2, %1; \
-                  swi #0; \
-                  mov %0, r0; \
-                  mov %0, r1" : "=r" (ret), "=r" (errno) : "r" (num), "r" (p1), "r" (p2));
-    return ret;
-}
-
-static long syscall3(long function, long p1, long p2, long p3)
-{
-    long num = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
-    long ret;
-    asm volatile("mov r0, %1; \
-                  mov r1, %1; \
-                  mov r2, %1; \
-                  mov r3, %1; \
-                  swi #0; \
-                  mov %0, r0; \
-                  mov %0, r1" : "=r" (ret), "=r" (errno) : "r" (num), "r" (p1), "r" (p2), "r" (p3));
-    return ret;
-}
-
-/// \todo Handle >= 4 parameters properly
-
-static long syscall4(long function, long p1, long p2, long p3, long p4)
-{
-    long num = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
-    long ret = 0;
-    /*
-    asm volatile("mov r0, %1; \
-                  mov r1, %1; \
-                  mov r2, %1; \
-                  mov r3, %1; \
-                  swi #0; \
-                  mov %0, r0; \
-                  mov %0, r1" : "=r" (ret), "=r" (errno) : "r" (num), "r" (p1), "r" (p2), "r" (p3));
-    */
-    return ret;
-}
-
-static long syscall5(long function, long p1, long p2, long p3, long p4, long p5)
-{
-    long num = ((POSIX_SYSCALL_SERVICE&0xFFFF) << 16) | (function&0xFFFF);
-    long ret = 0;
-    /*
-    asm volatile("mov r0, %1; \
-                  mov r1, %1; \
-                  mov r2, %1; \
-                  mov r3, %1; \
-                  swi #0; \
-                  mov %0, r0; \
-                  mov %0, r1" : "=r" (ret), "=r" (errno) : "r" (num), "r" (p1), "r" (p2), "r" (p3));
-    */
-    return ret;
-}
+#ifdef ARMV7
+#include <processor/armv7/syscall-stubs.h>
+#else
+#error No syscall support for this ARM processor.
+#endif

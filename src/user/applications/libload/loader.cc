@@ -1279,6 +1279,7 @@ extern "C" uintptr_t _libload_dofixup(uintptr_t id, uintptr_t symbol) {
 
     // Save FP state (glue may use SSE, and we are not called by normal means
     // so there's no caller-save).
+#ifdef X86_COMMON
     typedef float xmm_t __attribute__((__vector_size__(16)));
     xmm_t fixup_xmm_save[8];
 #define XMM_SAVE(N) asm volatile("movdqa %%xmm" #N ", %0" : "=m" (fixup_xmm_save[N]));
@@ -1291,6 +1292,7 @@ extern "C" uintptr_t _libload_dofixup(uintptr_t id, uintptr_t symbol) {
     XMM_SAVE(5);
     XMM_SAVE(6);
     XMM_SAVE(7);
+#endif
 
 #ifdef BITS_32
     ElfRel_t rel = meta->plt_rel[symbol / sizeof(ElfRel_t)];
@@ -1312,6 +1314,7 @@ extern "C" uintptr_t _libload_dofixup(uintptr_t id, uintptr_t symbol) {
         abort();
     }
 
+#ifdef X86_COMMON
     XMM_RESTORE(0);
     XMM_RESTORE(1);
     XMM_RESTORE(2);
@@ -1320,6 +1323,7 @@ extern "C" uintptr_t _libload_dofixup(uintptr_t id, uintptr_t symbol) {
     XMM_RESTORE(5);
     XMM_RESTORE(6);
     XMM_RESTORE(7);
+#endif
 
     return result;
 }

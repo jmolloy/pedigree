@@ -31,7 +31,7 @@
   */
 
 #define USERSPACE_DYNAMIC_LINKER_LOCATION       reinterpret_cast<void*>(0x1FA00000)
-#define USERSPACE_VIRTUAL_START                 reinterpret_cast<void*>(0x100000)
+#define USERSPACE_VIRTUAL_START                 reinterpret_cast<void*>(0x1000)
 #define USERSPACE_VIRTUAL_HEAP                  reinterpret_cast<void*>(0x20000000)
 #define USERSPACE_RESERVED_START                USERSPACE_DYNAMIC_LINKER_LOCATION
 #define USERSPACE_VIRTUAL_STACK                 reinterpret_cast<void*>(0x3FE00000)

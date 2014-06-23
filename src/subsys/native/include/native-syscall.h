@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -36,6 +35,11 @@
 
 #ifdef PPC_COMMON
 #include "native-syscall-ppc.h"
+#define SYSCALL_TARGET_FOUND
+#endif
+
+#ifdef ARM_COMMON
+#include "native-syscall-arm.h"
 #define SYSCALL_TARGET_FOUND
 #endif
 

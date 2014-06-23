@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -18,3 +17,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#define SERVICE NATIVE_SYSCALL_SERVICE
+#define SERVICE_INIT int ign = 0
+#define SERVICE_ERROR ign
+
+#ifdef ARMV7
+#include <processor/armv7/syscall-stubs.h>
+#else
+#error No syscall support for this ARM processor.
+#endif

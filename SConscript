@@ -34,8 +34,7 @@ subdirs = [
     'src/subsys/pedigree-c'
 ]
 
-# Currently the native API is only supported on x86 architectures
-if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
+if env['ARCH_TARGET'] in ['X86', 'X64', 'ARM']:
     subdirs += ['src/subsys/native']
 
 # Then modules and the system proper get built
