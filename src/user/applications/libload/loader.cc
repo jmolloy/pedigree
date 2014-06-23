@@ -548,9 +548,15 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
     if(header.type == ET_REL) {
         meta->relocated = true;
     } else if(header.type == ET_EXEC || header.type == ET_DYN) {
-        // First program header zero?
+        // First PT_LOAD program header zero?
         if(header.phnum) {
-            meta->relocated = (meta->phdrs[0].vaddr & ~(getpagesize() - 1)) == 0;
+            for(size_t i = 0; i < header.phnum; ++i) {
+                if(meta->phdrs[i].type != PT_LOAD)
+                    continue;
+
+                meta->relocated = (meta->phdrs[i].vaddr & ~(getpagesize() - 1)) == 0;
+                break;
+            }
         }
     }
 
