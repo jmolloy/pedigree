@@ -74,8 +74,10 @@ void String::reserve(size_t size)
         char *tmp = m_Data;
         m_Data = new char [size];
         if (tmp != 0 && m_Size != 0)
+        {
             memcpy(m_Data, tmp, m_Size);
-        delete [] tmp;
+            delete [] tmp;
+        }
         m_Size = size;
     }
 }

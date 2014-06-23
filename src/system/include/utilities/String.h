@@ -165,7 +165,7 @@ String &String::operator += (const String &x)
     // Do we need to transfer static into dynamic for this?
     if (newLength >= StaticSize)
     {
-        reserve(newLength);
+        reserve(newLength + 1);
         if (m_Length < StaticSize)
             memcpy(m_Data, m_Static, m_Length);
         dst = m_Data;
