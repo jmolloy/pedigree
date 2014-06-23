@@ -104,11 +104,11 @@ index 0000000..95e66a5
 +#undef STARTFILE_SPEC
 +#define STARTFILE_SPEC \
 +    "%{!shared: %{!pg:crt0.o%s}} \
-+    crti.o%s %{!shared:crtbegin.o%s} %{shared:crtbeginS.o%s}"
++    crti.o%s %{!shared:crtbegin.o%s} %{shared:%:if-exists-else(crtbeginS.o%s crtbegin.o%s)}"
 +
 +#undef ENDFILE_SPEC
 +#define ENDFILE_SPEC \
-+    "%{!shared:crtend.o%s} %{shared:crtendS.o%s} crtn.o%s"
++    "%{!shared:crtend.o%s} %{shared:%:if-exists-else(crtendS.o%s crtend.o%s)} crtn.o%s"
 +
 +#undef CPLUSPLUS_CPP_SPEC
 +#define CPLUSPLUS_CPP_SPEC "-D_GNU_SOURCE %(cpp)"
@@ -173,7 +173,7 @@ index 259c9a7..63984b4 100644
  *-*-rtems*)
    tmake_file="$tmake_file t-rtems"
    extra_parts="crtbegin.o crtend.o"
-@@ -340,11 +340,11 @@ arm*-*-uclinux*)		# ARM ucLinux
+@@ -337,14 +340,18 @@ arm*-*-uclinux*)		# ARM ucLinux
  	tmake_file="$tmake_file arm/t-arm arm/t-elf t-softfp-sfdf t-softfp-excl arm/t-softfp t-softfp"
  	extra_parts="$extra_parts crti.o crtn.o"
  	;;
@@ -187,6 +187,13 @@ index 259c9a7..63984b4 100644
  	  tmake_file="${tmake_file} arm/t-bpabi"
  	  extra_parts="crtbegin.o crtend.o crti.o crtn.o"
  	  ;;
++	  arm*-*-pedigree*)
++	    tmake_file="${tmake_file} arm/t-bpapi"
++	    extra_parts="crtbegin.o crtend.o"
++	    ;;
+ 	arm*-*-symbianelf*)
+ 	  tmake_file="${tmake_file} arm/t-symbian t-slibgcc-nolc-override"
+ 	  tm_file="$tm_file arm/symbian-lib.h"
 @@ -501,6 +504,12 @@ i[34567]86-*-elf*)
  x86_64-*-elf*)
  	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic"

@@ -172,8 +172,14 @@ void traceMetadata(NormalStaticString str, void *p1, void *p2)
 }
 #endif
 
+#ifdef ARM_COMMON
+#define ATEXIT __aeabi_atexit
+#else
+#define ATEXIT __cxa_atexit
+#endif
+
 /// Required for G++ to compile code.
-extern "C" void __cxa_atexit(void (*f)(void *), void *p, void *d)
+extern "C" void ATEXIT(void (*f)(void *), void *p, void *d)
 {
 }
 

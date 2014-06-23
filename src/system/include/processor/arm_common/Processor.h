@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -34,6 +33,19 @@ void Processor::breakpoint()
 void Processor::reset()
 {
   //
+}
+
+void Processor::haltUntilInterrupt()
+{
+    bool bOldInterrupts = getInterrupts();
+    setInterrupts(true);
+    asm volatile("wfi");
+    setInterrupts(bOldInterrupts);
+}
+
+void Processor::pause()
+{
+    asm volatile("yield");
 }
 
 #endif

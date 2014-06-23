@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -43,6 +42,8 @@ class ArmV7PhysicalMemoryManager : public PhysicalMemoryManager
     //
     virtual physical_uintptr_t allocatePage();
     virtual void freePage(physical_uintptr_t page);
+    /// \todo Implement pin()
+    virtual void pin(physical_uintptr_t page) {};
     virtual bool allocateRegion(MemoryRegion &Region,
                                 size_t cPages,
                                 size_t pageConstraints,

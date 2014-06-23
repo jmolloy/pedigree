@@ -77,10 +77,12 @@ glue_files = [
     'glue-fpurge.c',
     'glue-scandir.c',
     'glue-dlmalloc.c',
-    'glue-memcpy.c',
     'glue-strcasecmp.c',
     # 'glue-memset.c',
 ]
+
+if env['ARCH_TARGET'] in ['X86', 'X64']:
+    glue_files.extend(['glue-memcpy.c',])
 
 crt0_files = ['crt0.c']
 

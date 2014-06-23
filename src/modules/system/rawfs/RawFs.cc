@@ -103,7 +103,7 @@ void rescanTree()
     searchNode(&Device::root(), pD);
 }
 
-bool init()
+static bool init()
 {
     g_pRawFs = new RawFs();
     VFS::instance().addMountCallback(&rescanTree);
@@ -114,7 +114,7 @@ bool init()
     return true;
 }
 
-void destroy()
+static void destroy()
 {
 }
 

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -26,6 +25,32 @@
 
 /** @addtogroup kernelprocessorArmV7
  * @{ */
+
+/** 1 GB given to userspace, 3 GB given to the kernel.
+  * The 3 GB region also contains all MMIO regions.
+  */
+
+#define USERSPACE_DYNAMIC_LINKER_LOCATION       reinterpret_cast<void*>(0x1FA00000)
+#define USERSPACE_VIRTUAL_START                 reinterpret_cast<void*>(0x100000)
+#define USERSPACE_VIRTUAL_HEAP                  reinterpret_cast<void*>(0x20000000)
+#define USERSPACE_RESERVED_START                USERSPACE_DYNAMIC_LINKER_LOCATION
+#define USERSPACE_VIRTUAL_STACK                 reinterpret_cast<void*>(0x3FE00000)
+#define USERSPACE_PAGEDIR                       reinterpret_cast<void*>(0x3FFFF000) /// Top two page tables are allocated during initialisation to enable mapping here.
+#define USERSPACE_PAGETABLES                    reinterpret_cast<void*>(0x3FE00000)
+#define USERSPACE_VIRTUAL_STACK_SIZE            0x100000
+#define KERNEL_SPACE_START                      reinterpret_cast<void*>(0x40000000)
+#define KERNEL_VIRTUAL_HEAP                     reinterpret_cast<void*>(0x40000000)
+#define KERNEL_VIRTUAL_HEAP_SIZE                0x40000000
+#define KERNEL_VIRTUAL_ADDRESS                  reinterpret_cast<void*>(0x80008000)
+#define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS     reinterpret_cast<void*>(0xB0000000)
+#define KERNEL_VIRTUAL_PAGESTACK_4GB            reinterpret_cast<void*>(0xF0000000)
+#define KERNEL_VIRTUAL_STACK                    reinterpret_cast<void*>(0xFEFFF000)
+#define KERNEL_TEMP0                            reinterpret_cast<void*>(0xFE000000)
+#define KERNEL_TEMP1                            reinterpret_cast<void*>(0xFE001000)
+#define KERNEL_PAGEDIR                          reinterpret_cast<void*>(0xFFFB0000) // 0xFFFF0000 is where we'll put the exception base vectors
+#define KERNEL_PAGETABLES                       reinterpret_cast<void*>(0xFF000000)
+#define KERNEL_VIRTUAL_MEMORYREGION_SIZE        0x30000000
+#define KERNEL_STACK_SIZE                       0x20000
 
 /** The ArmV7VirtualAddressSpace implements the VirtualAddressSpace class for the ARMv7
   * architecture.
@@ -83,6 +108,42 @@ class ArmV7VirtualAddressSpace : public VirtualAddressSpace
     /** Undo a clone() - this happens when an application is Exec()'d - we destroy all mappings
         not in the kernel address space so the space is 'clean'.*/
     virtual void revertToKernelAddressSpace() {};
+
+    /** Gets start address of the kernel in the address space. */
+    virtual uintptr_t getKernelStart() const
+    {
+        return reinterpret_cast<uintptr_t>(KERNEL_SPACE_START);
+    }
+
+    /** Gets start address of the region usable and cloneable for userspace. */
+    virtual uintptr_t getUserStart() const
+    {
+        return reinterpret_cast<uintptr_t>(USERSPACE_VIRTUAL_START);
+    }
+
+    /** Gets start address of reserved areas of the userpace address space. */
+    virtual uintptr_t getUserReservedStart() const
+    {
+        return reinterpret_cast<uintptr_t>(USERSPACE_RESERVED_START);
+    }
+
+    /** Gets address of the dynamic linker in the address space. */
+    virtual uintptr_t getDynamicLinkerAddress() const
+    {
+        return reinterpret_cast<uintptr_t>(USERSPACE_DYNAMIC_LINKER_LOCATION);
+    }
+
+    /** Gets address of the start of the kernel's heap region. */
+    virtual uintptr_t getKernelHeapStart() const
+    {
+        return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_HEAP);
+    }
+
+    /** Gets address of the end of the kernel's heap region. */
+    virtual uintptr_t getKernelHeapEnd() const
+    {
+        return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_HEAP) + KERNEL_VIRTUAL_HEAP_SIZE;
+    }
 
   protected:
     /** The destructor does nothing */
@@ -304,28 +365,5 @@ class ArmV7KernelVirtualAddressSpace : public ArmV7VirtualAddressSpace
 };
 
 /** @} */
-
-/** 1 GB given to userspace, 3 GB given to the kernel.
-  * The 3 GB region also contains all MMIO regions.
-  */
-
-#define USERSPACE_VIRTUAL_HEAP                  reinterpret_cast<void*>(0x20000000)
-#define USERSPACE_VIRTUAL_STACK                 reinterpret_cast<void*>(0x30000000)
-#define USERSPACE_PAGEDIR                       reinterpret_cast<void*>(0x3FFFF000) /// Top two page tables are allocated during initialisation to enable mapping here.
-#define USERSPACE_PAGETABLES                    reinterpret_cast<void*>(0x3FE00000)
-#define USERSPACE_VIRTUAL_STACK_SIZE            0x100000
-#define KERNEL_SPACE_START                      reinterpret_cast<void*>(0x40000000)
-#define KERNEL_VIRTUAL_HEAP                     reinterpret_cast<void*>(0x40000000)
-#define KERNEL_VIRTUAL_HEAP_SIZE                0x40000000
-#define KERNEL_VIRTUAL_ADDRESS                  reinterpret_cast<void*>(0x80008000)
-#define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS     reinterpret_cast<void*>(0xB0000000)
-#define KERNEL_VIRTUAL_PAGESTACK_4GB            reinterpret_cast<void*>(0xF0000000)
-#define KERNEL_VIRTUAL_STACK                    reinterpret_cast<void*>(0xFEFFF000)
-#define KERNEL_TEMP0                            reinterpret_cast<void*>(0xFE000000)
-#define KERNEL_TEMP1                            reinterpret_cast<void*>(0xFE001000)
-#define KERNEL_PAGEDIR                          reinterpret_cast<void*>(0xFFFB0000) // 0xFFFF0000 is where we'll put the exception base vectors
-#define KERNEL_PAGETABLES                       reinterpret_cast<void*>(0xFF000000)
-#define KERNEL_VIRTUAL_MEMORYREGION_SIZE        0x30000000
-#define KERNEL_STACK_SIZE                       0x20000
 
 #endif

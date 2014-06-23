@@ -65,6 +65,10 @@ typedef ARMuint16_t ARMio_port_t;
 /** Define the size of one physical page */
 #define PAGE_SIZE 4096
 
+/** Clean up preprocessor namespace to force use of our types. */
+#undef __INTPTR_TYPE__
+#undef __UINTPTR_TYPE__
+
 /** @} */
 
 #endif

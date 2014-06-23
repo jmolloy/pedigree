@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -21,9 +20,12 @@
 #include <Module.h>
 #include "UsbUlpi.h"
 
-static void entry()
+static bool entry()
 {
     UsbUlpi::instance().initialise();
+
+    /// \todo If the system does not have USB, we want to unload here.
+    return true;
 }
 
 static void exit()

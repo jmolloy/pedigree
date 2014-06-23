@@ -117,12 +117,12 @@ bool RamFs::remove(File* parent, File* file)
     return p->removeEntry(file);
 }
 
-bool entry()
+static bool entry()
 {
     return true;
 }
 
-void destroy()
+static void destroy()
 {
 }
 

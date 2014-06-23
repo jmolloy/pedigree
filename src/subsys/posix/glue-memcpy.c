@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -27,6 +26,8 @@
 #include <compiler.h>
 
 /// \todo If we ever get an ARM newlib... we'll need some #ifdefs.
+
+#ifdef X86_COMMON
 
 #define SSE_ALIGN_SIZE      0x10
 #define SSE_ALIGN_MASK      0xF
@@ -333,4 +334,10 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
 
     return s1;
 }
+
+#else
+
+/* No custom memcpy on ARM. */
+
+#endif
 

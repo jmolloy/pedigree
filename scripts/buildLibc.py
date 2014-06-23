@@ -91,9 +91,20 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, strip, libg
         "mallstatsr",
         "ttyname",
         'strcasecmp',
-        "memcpy",
+        # "memcpy",
         # "memset",
     ]
+
+    # What target are we using?
+    if cc == 'gcc':
+        # TODO: fix platform detection on Pedigree
+        exit(2)
+    else:
+        target = cc.split('-')[0]
+        if target in ['x86_64', 'amd64', 'i686']:
+            objs_to_remove.extend(['memcpy',])
+        elif target in ['arm']:
+            objs_to_remove.extend(['access',])
 
     # Remove the object files we manually override in our glue.
     args = [ar, "d", "libg.a"]
