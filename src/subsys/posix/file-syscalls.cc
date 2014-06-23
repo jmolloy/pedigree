@@ -716,7 +716,7 @@ char* posix_getcwd(char* buf, size_t maxlen)
     F_NOTICE("getcwd(" << maxlen << ")");
 
     File* curr = GET_CWD();
-    String str = curr->getFullPath();
+    String str = curr->getFullPath(false);
 
     size_t maxLength = str.length();
     if(maxLength > maxlen)
