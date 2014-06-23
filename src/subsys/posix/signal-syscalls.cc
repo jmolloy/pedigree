@@ -721,6 +721,7 @@ void pedigree_init_sigret()
         // setup of the signal handlers (except, of course, the handler location).
         PosixSubsystem::SignalHandler* sigHandler = new PosixSubsystem::SignalHandler;
         sigHandler->sig = i;
+        sigHandler->type = 1; // SIG_DFL - default handler now.
 
         uintptr_t newHandler = reinterpret_cast<uintptr_t>(default_sig_handlers[i]);
 
