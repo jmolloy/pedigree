@@ -592,8 +592,18 @@ class WaitCleanup
 {
     public:
         WaitCleanup(List<Process*> *cleanupList, Semaphore *lock) :
-            m_List(cleanupList), m_Lock(lock)
+            m_List(cleanupList), m_Lock(lock), m_pTerminated(0)
         {}
+
+        /**
+         * Call this with the process that terminated most recently, which
+         * is necessary because otherwise upon exit from waitpid() we attempt
+         * to access the (deleted) Process object, which is not safe.
+         */
+        void terminated(Process *pProcess)
+        {
+            m_pTerminated = pProcess;
+        }
 
         ~WaitCleanup()
         {
@@ -601,6 +611,9 @@ class WaitCleanup
                 it != m_List->end();
                 ++it)
             {
+                if((*it) == m_pTerminated)
+                    continue;
+
                 (*it)->removeWaiter(m_Lock);
             }
         }
@@ -609,6 +622,7 @@ class WaitCleanup
 
         List<Process *> *m_List;
         Semaphore *m_Lock;
+        Process *m_pTerminated;
 };
 
 int posix_waitpid(int pid, int *status, int options)
@@ -714,6 +728,7 @@ int posix_waitpid(int pid, int *status, int options)
 
                 // Delete the process; it's been reaped good and proper.
                 SC_NOTICE("waitpid: " << pid << " reaped [" << pProcess->getExitStatus() << "]");
+                cleanup.terminated(pProcess);
                 delete pProcess;
                 return pid;
             }
