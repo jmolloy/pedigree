@@ -1418,9 +1418,16 @@ void TextIO::flip(bool timer, bool hideState)
 {
     const VgaColour defaultBack = Black, defaultFore = LightGrey;
 
-    for(size_t y = 0; y < m_pVga->getNumRows(); ++y)
+    // Avoid flipping if we do not have a VGA instance.
+    if(!m_pVga)
+        return;
+
+    size_t numRows = m_pVga->getNumRows();
+    size_t numCols = m_pVga->getNumCols();
+
+    for(size_t y = 0; y < numRows; ++y)
     {
-        for(size_t x = 0; x < m_pVga->getNumCols(); ++x)
+        for(size_t x = 0; x < numCols; ++x)
         {
             VgaCell *pCell = &m_pBackbuffer[(y * BACKBUFFER_STRIDE) + x];
             if(timer)
@@ -1457,7 +1464,7 @@ void TextIO::flip(bool timer, bool hideState)
             }
 
             uint16_t front = (pCell->hidden ? ' ' : pCell->character) | (attrib << 8);
-            m_pFramebuffer[(y * m_pVga->getNumCols()) + x] = front;
+            m_pFramebuffer[(y * numCols) + x] = front;
         }
     }
 }
