@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -98,13 +97,19 @@ class Iterator
     /** Preincrement operator */
     Iterator &operator ++ ()
     {
-      m_Node = (m_Node->*FunctionNext)();
+      if (m_Node)
+        m_Node = (m_Node->*FunctionNext)();
       return *this;
     }
     /** Predecrement operator */
     Iterator &operator -- ()
     {
-      m_Node = (m_Node->*FunctionPrev)();
+      if (m_Node)
+      {
+        Struct *newNode = (m_Node->*FunctionPrev)();
+        if (newNode)
+          m_Node = newNode;
+      }
       return *this;
     }
     /** Dereference operator yields the element value */
