@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -29,6 +28,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/wait.h>
+#include <utmpx.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -43,50 +43,63 @@ extern int ts();
 #define MAIN_PROGRAM "/applications/ttyterm"
 #endif
 
-#include <sched.h>
+void start(const char *proc)
+{
+  pid_t f = fork();
+  if(f == 0)
+  {
+    syslog(LOG_INFO, "init: starting %s...", proc);
+    execl(proc, proc, 0);
+    syslog(LOG_INFO, "init: loading %s failed: %s", proc, strerror(errno));
+    exit(errno);
+  }
+  syslog(LOG_INFO, "init: %s running with pid %d", proc, f);
+
+  // Add a utmp entry.
+  setutxent();
+  struct utmpx init;
+  struct timeval tv;
+  memset(&init, 0, sizeof(init));
+  gettimeofday(&tv, NULL);
+  init.ut_type = INIT_PROCESS;
+  init.ut_pid = f;
+  init.ut_tv = tv;
+  strcpy(init.ut_id, basename(proc));
+  pututxline(&init);
+  endutxent();
+}
+
 int main(int argc, char **argv)
 {
   syslog(LOG_INFO, "init: starting...");
 
-  // Start a new process group to run everything under.
-  setpgid(0, 0);
+  // Make sure we have a utmp file.
+  int fd = open(UTMP_FILE, O_CREAT | O_RDWR);
+  if(fd >= 0)
+    close(fd);
 
-  // Fork out and run preloadd.
-  pid_t f = fork();
-  if(f == 0)
-  {
-    syslog(LOG_INFO, "init: starting preloadd...");
-    execl("/applications/preloadd", "/applications/preloadd", 0);
-    syslog(LOG_INFO, "init: loading preloadd failed: %s", strerror(errno));
-    exit(errno);
-  }
-  syslog(LOG_INFO, "init: preloadd running with pid %d", f);
+  // Set up utmp.
+  setutxent();
 
-  // Start up a Python interpreter to kick off a big bytecode compile.
-  // This will make starting up the interpreter later much faster.
-  f = fork();
-  if(f == 0)
-  {
-    syslog(LOG_INFO, "init: starting python...");
-    execl("/applications/python", "/applications/python", "-c", "\"\"", 0);
-    syslog(LOG_INFO, "init: loading python failed: %s", strerror(errno));
-    exit(errno);
-  }
-  syslog(LOG_INFO, "init: python preload is pid %d", f);
+  // Boot time (for uptime etc).
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
 
-  // Fork out and run the window manager
-  /// \todo Need some sort of init script that specifies what we should
-  ///       actually load and do here!
-  f = fork();
-  if(f == 0)
-  {
-    syslog(LOG_INFO, "init: starting %s...", MAIN_PROGRAM);
-    execl(MAIN_PROGRAM, MAIN_PROGRAM, 0);
-    syslog(LOG_INFO, "init: loading %s failed: %s", MAIN_PROGRAM, strerror(errno));
-    exit(errno);
-  }
-  syslog(LOG_INFO, "init: %s running with pid %d", MAIN_PROGRAM, f);
+  struct utmpx boot;
+  memset(&boot, 0, sizeof(boot));
+  boot.ut_type = BOOT_TIME;
+  boot.ut_tv = tv;
+  pututxline(&boot);
 
+  // All done with utmp.
+  endutxent();
+
+  // Fork out and run startup programs.
+  start("/applications/preloadd");
+  start("/applications/python");
+  start(MAIN_PROGRAM);
+
+  // Done, enter PID reaping loop.
   syslog(LOG_INFO, "init: complete!");
   while(1) {
     /// \todo Do we want to eventually recognise that we have no more
@@ -95,6 +108,32 @@ int main(int argc, char **argv)
     pid_t changer = waitpid(-1, &status, 0);
     if(changer > 0)
       syslog(LOG_INFO, "init: child %d exited with status %d", changer, WEXITSTATUS(status));
+
+    // Register the dead process now.
+    struct utmpx *p = 0;
+    setutxent();
+    do {
+      p = getutxent();
+      if(p && (p->ut_type == INIT_PROCESS && p->ut_pid == changer))
+        break;
+    } while(p);
+
+    if(!p)
+    {
+      endutxent();
+      continue;
+    }
+
+    setutxent();
+    struct utmpx dead;
+    memset(&dead, 0, sizeof(dead));
+    gettimeofday(&tv, NULL);
+    dead.ut_type = DEAD_PROCESS;
+    dead.ut_pid = changer;
+    dead.ut_tv = tv;
+    strcpy(dead.ut_id, p->ut_id);
+    pututxline(&dead);
+    endutxent();
   }
   return 0;
 }
