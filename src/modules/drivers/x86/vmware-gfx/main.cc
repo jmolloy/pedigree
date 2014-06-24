@@ -158,7 +158,7 @@ class VmwareGraphics : public Display
             // Register with the graphics service
             ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
             Service         *pService  = ServiceManager::instance().getService(String("graphics"));
-            if(pFeatures->provides(ServiceFeatures::touch))
+            if(pFeatures && pFeatures->provides(ServiceFeatures::touch))
                 if(pService)
                     pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(pProvider), sizeof(*pProvider));
         }
