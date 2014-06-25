@@ -30,6 +30,7 @@
 #include <sys/ioctl.h>
 #include <sys/wait.h>
 #include <pwd.h>
+#include <utmpx.h>
 
 #include <graphics/Graphics.h>
 
@@ -143,6 +144,21 @@ bool Terminal::initialise()
                 prog = "/applications/bash";
             }
         }
+
+        // Create utmpx entry.
+        /// \todo Clean it up when the child terminates.
+        struct utmpx ut;
+        ut.ut_type = USER_PROCESS;
+        ut.ut_pid = getpid();
+        const char *ttyid = slavename + strlen("/dev/");
+        strcpy(ut.ut_id, ttyid + strlen("tty"));
+        strcpy(ut.ut_line, ttyid);
+        strcpy(ut.ut_user, pw->pw_name);
+        gettimeofday(&ut.ut_tv, NULL);
+
+        setutxent();
+        pututxline(&ut);
+        endutxent();
 
         // Launch the shell now.
         execl(prog, prog, 0);
