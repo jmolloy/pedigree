@@ -739,7 +739,7 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                     // Zero out additional space.
                     if(meta->phdrs[i].memsz > meta->phdrs[i].filesz)
                     {
-                        uintptr_t vaddr_start = meta->phdrs[i].vaddr + meta->phdrs[i].filesz + getpagesize();
+                        uintptr_t vaddr_start = meta->phdrs[i].vaddr + meta->phdrs[i].filesz;
                         uintptr_t vaddr_end = meta->phdrs[i].vaddr + meta->phdrs[i].memsz;
                         if((vaddr_start & ~(getpagesize() - 1)) !=
                             (vaddr_end & ~(getpagesize() - 1)))
@@ -747,8 +747,11 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                             // Not the same page, won't be mapped in with the
                             // rest of the program header. Map the rest as an
                             // anonymous mapping.
+                            vaddr_start += getpagesize();
                             vaddr_start &= ~(getpagesize() - 1);
                             size_t totalLength = vaddr_end - vaddr_start;
+                            if(!totalLength)
+                                totalLength = getpagesize();
                             void *p = mmap((void *) vaddr_start, totalLength, PROT_READ | PROT_WRITE, mapflags | MAP_ANON, 0, 0);
                             if(p == MAP_FAILED)
                             {
@@ -759,6 +762,8 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                             }
                             meta->memory_regions.push_back(std::pair<void *, size_t>(p, totalLength));
                         }
+                        else
+                            syslog(LOG_INFO, "libload.so: not mapping filesz section at %p", vaddr_start);
                     }
 
                     void *p = mmap((void *) phdr_base, mapsz, PROT_READ | PROT_WRITE, mapflags, map_fd, map_fd ? offset : 0);
