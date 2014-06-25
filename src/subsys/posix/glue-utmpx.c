@@ -27,6 +27,18 @@
 
 static FILE *utmp = 0;
 
+#define CHECK_UTMP_FILE(badval) do { \
+        if (!utmp) \
+        { \
+            utmp = fopen(UTMP_FILE, "w+"); \
+            if (!utmp) \
+                return badval; \
+        } \
+    } while(0)
+
+/**
+ * endutxent is a notification from the application that it is done with utmp.
+ */
 void endutxent(void)
 {
     if (utmp)
@@ -36,16 +48,14 @@ void endutxent(void)
     }
 }
 
+/**
+ * getutxent reads a line from the current file position.
+ */
 struct utmpx *getutxent(void)
 {
     static struct utmpx ut;
 
-    if (!utmp)
-    {
-        utmp = fopen(UTMP_FILE, "w+");
-        if (!utmp)
-            return 0;
-    }
+    CHECK_UTMP_FILE(0);
 
     size_t n = fread(&ut, sizeof(struct utmpx), 1, utmp);
     if (!n)
@@ -54,31 +64,9 @@ struct utmpx *getutxent(void)
     return &ut;
 }
 
-struct utmpx *do_getutxid(const struct utmpx *ut, int pid_check)
-{
-    struct utmpx *p = 0;
-    do
-    {
-        p = getutxent();
-        if (p)
-        {
-            if ((ut->ut_type == BOOT_TIME || ut->ut_type == OLD_TIME ||
-                 ut->ut_type == NEW_TIME) && (p->ut_type == ut->ut_type))
-            {
-                break;
-            }
-            else if ((p->ut_type == ut->ut_type) && (!strcmp(p->ut_id, ut->ut_id)))
-            {
-                break;
-            }
-            else if (p->ut_pid == ut->ut_pid)
-                break;
-        }
-    } while(p);
-
-    return p;
-}
-
+/**
+ * getutxid searches forward to find a match for ut (based on ut_id).
+ */
 struct utmpx *getutxid(const struct utmpx *ut)
 {
     if ((!ut) || (ut->ut_type == EMPTY))
@@ -87,22 +75,33 @@ struct utmpx *getutxid(const struct utmpx *ut)
         return 0;
     }
 
-    if (!utmp)
+    CHECK_UTMP_FILE(0);
+
+    // Search forwards.
+    struct utmpx *p = 0;
+    do
     {
-        utmp = fopen(UTMP_FILE, "w+");
-        if (!utmp)
-            return 0;
-    }
+        p = getutxent();
+        if (p)
+        {
+            if ((ut->ut_type >= RUN_LVL && ut->ut_type <= NEW_TIME) &&
+                (p->ut_type == ut->ut_type))
+            {
+                break;
+            }
+            else if (!strcmp(p->ut_id, ut->ut_id))
+            {
+                break;
+            }
+        }
+    } while(p);
 
-    // Search forwards, save our place.
-    off_t at = ftell(utmp);
-
-    struct utmpx *p = do_getutxid(ut, 0);
-
-    fseek(utmp, at, SEEK_SET);
     return p;
 }
 
+/**
+ * getutxline searches forward to find a match for ut (based on ut_line).
+ */
 struct utmpx *getutxline(const struct utmpx *ut)
 {
     if (!ut)
@@ -111,15 +110,7 @@ struct utmpx *getutxline(const struct utmpx *ut)
         return 0;
     }
 
-    if (!utmp)
-    {
-        utmp = fopen(UTMP_FILE, "w+");
-        if (!utmp)
-            return 0;
-    }
-
-    // Search forwards, save our place.
-    off_t at = ftell(utmp);
+    CHECK_UTMP_FILE(0);
 
     struct utmpx *p = 0;
     do
@@ -130,28 +121,29 @@ struct utmpx *getutxline(const struct utmpx *ut)
             if ((p->ut_type == LOGIN_PROCESS) || (p->ut_type == USER_PROCESS))
             {
                 if (!strcmp(ut->ut_line, p->ut_line))
-                    goto done;
+                    break;
             }
         }
     } while(p);
 
-done:
-    fseek(utmp, at, SEEK_SET);
     return p;
 }
 
+/**
+ * pututxline writes ut to the utmp file.
+ */
 struct utmpx *pututxline(const struct utmpx *ut)
 {
-    if (!utmp)
+    if (!ut)
     {
-        utmp = fopen(UTMP_FILE, "w+");
-        if (!utmp)
-            return 0;
+        errno = EINVAL;
+        return 0;
     }
 
-    // Search forwards, save our place.
-    off_t at = ftell(utmp);
-    struct utmpx *p = do_getutxid(ut, 1);
+    CHECK_UTMP_FILE(0);
+
+    // Fidn a match for the given entry.
+    struct utmpx *p = getutxid(ut);
     if (p)
     {
         // Found a match, replace it.
@@ -163,11 +155,13 @@ struct utmpx *pututxline(const struct utmpx *ut)
         fseek(utmp, 0, SEEK_END);
         fwrite(ut, sizeof(struct utmpx), 1, utmp);
     }
-    fseek(utmp, at, SEEK_SET);
 
-    return getutxid(ut);
+    return ut;
 }
 
+/**
+ * setutxent rewinds to the beginning of the file.
+ */
 void setutxent()
 {
     if (utmp)
