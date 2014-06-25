@@ -33,6 +33,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <utmpx.h>
 
 #include <sys/fb.h>
 
@@ -269,6 +270,20 @@ int main(int argc, char **argv)
 
         // Text UI is only vt100-compatible (not an xterm)
         setenv("TERM", "vt100", 1);
+
+        // Add a utmp entry for this new process.
+        setutxent();
+        struct utmpx ut;
+        struct timeval tv;
+        memset(&ut, 0, sizeof(ut));
+        gettimeofday(&tv, NULL);
+        ut.ut_type = LOGIN_PROCESS;
+        ut.ut_pid = getpid();
+        ut.ut_tv = tv;
+        strcpy(ut.ut_id, "/");
+        strcpy(ut.ut_line, "console"); // ttyterm is the console
+        pututxline(&ut);
+        endutxent();
 
         syslog(LOG_INFO, "Starting up 'login' on pty %s", slavename);
         execl("/applications/login", "/applications/login", 0);

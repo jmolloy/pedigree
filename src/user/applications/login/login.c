@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <utmpx.h>
 
 // PID of the process we're running
 int g_RunningPid = -1;
@@ -199,6 +200,31 @@ int main(int argc, char **argv)
       // Terminal title -> shell name.
       if(!strcmp(TERM, "xterm"))
         printf("\033]0;%s\007", pw->pw_shell);
+
+      // Successful login.
+      struct utmpx *p = 0;
+      setutxent();
+      do {
+        p = getutxent();
+        if(p && (p->ut_type == LOGIN_PROCESS && p->ut_pid == getpid()))
+          break;
+      } while(p);
+
+      if (p)
+      {
+        struct utmpx ut;
+        memcpy(&ut, p, sizeof(ut));
+
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        ut.ut_tv = tv;
+        ut.ut_type = USER_PROCESS;
+        strcpy(ut.ut_user, pw->pw_name);
+
+        setutxent();
+        pututxline(&ut);
+      }
+      endutxent();
 
       // Logged in successfully - launch the shell.
       int pid;
