@@ -22,8 +22,9 @@
 
 #include <sys/types.h>
 #include <sys/time.h>
+#include <paths.h>
 
-#define UTMP_FILE "/system/utmp"
+#define UTMP_FILE _PATH_UTMP
 #define WTMP_FILE "/system/wtmp"
 #define PATH_WTMP WTMP_FILE
 
@@ -51,13 +52,14 @@ struct utmp {
 #define ut_name ut_user
 
 #define EMPTY           0
-#define BOOT_TIME       1
-#define OLD_TIME        2
-#define NEW_TIME        3
-#define USER_PROCESS    4
-#define INIT_PROCESS    5
-#define LOGIN_PROCESS   6
-#define DEAD_PROCESS    7
+#define RUN_LVL         1
+#define BOOT_TIME       2
+#define OLD_TIME        3
+#define NEW_TIME        4
+#define USER_PROCESS    5
+#define INIT_PROCESS    6
+#define LOGIN_PROCESS   7
+#define DEAD_PROCESS    8
 
 extern void          endutxent(void);
 extern struct utmpx *getutxent(void);
