@@ -380,6 +380,14 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         pLinker = 0;
         pProcess->setLinker(pLinker);
     }
+    else
+    {
+        /// \todo Assume the interpreter is libload.so.
+        WARNING("execve: no interpreter for " << name << ".");
+        delete pLinker;
+        SYSCALL_ERROR(ExecFormatError);
+        return -1;
+    }
 
     // Can we load the new image? Check before we clean out the last ELF image...
     if(pLinker && !pLinker->checkDependencies(file))

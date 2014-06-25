@@ -144,7 +144,7 @@ bool DynamicLinker::loadProgram(File *pFile, bool bDryRun, bool bInterpreter, St
         if(!sInterpreter)
             return false;
         *sInterpreter = programElf->getInterpreter();
-        bool hasInterpreter = (*sInterpreter != "");
+        bool hasInterpreter = sInterpreter->length() > 0;
         if(bDryRun)
         {
             // Clean up the ELF
