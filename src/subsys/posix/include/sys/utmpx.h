@@ -23,8 +23,8 @@
 #include <sys/types.h>
 #include <sys/time.h>
 
-#define UTMP_FILE "/var/run/utmp"
-#define WTMP_FILE "/var/run/wtmp"
+#define UTMP_FILE "/system/utmp"
+#define WTMP_FILE "/system/wtmp"
 #define PATH_WTMP WTMP_FILE
 
 #define UT_LINESIZE     64
