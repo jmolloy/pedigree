@@ -31,13 +31,21 @@
 #define UT_NAMESIZE     64
 #define UT_HOSTSIZE     256
 
-struct utmpx {
-    char ut_user[UT_NAMESIZE];
-    char ut_id[UT_LINESIZE];
-    char ut_line[UT_LINESIZE];
-    pid_t ut_pid;
-    short ut_type;
+#define _UTMP_MEMBERS \
+    char ut_user[UT_NAMESIZE]; \
+    char ut_id[UT_LINESIZE]; \
+    char ut_line[UT_LINESIZE]; \
+    pid_t ut_pid; \
+    short ut_type; \
     struct timeval ut_tv;
+
+// Expose struct utmpx and struct utmp for legacy compatibility.
+struct utmpx {
+    _UTMP_MEMBERS
+};
+
+struct utmp {
+    _UTMP_MEMBERS
 };
 
 #define ut_name ut_user
