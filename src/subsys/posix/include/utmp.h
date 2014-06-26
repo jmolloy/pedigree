@@ -17,10 +17,23 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#ifndef _UTMP_H
+#define _UTMP_H
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include <sys/utmpx.h>
+#define __UTMP_STRUCT utmp
+#include <sys/_utmp.h>
+
+extern void         setutent(void);
+extern void         endutent(void);
+extern void         utmpname(const char *);
+extern struct utmp *getutent(void);
+extern struct utmp *getutid(struct utmp *);
+extern struct utmp *getutline(struct utmp *);
 #ifdef __cplusplus
 }
+#endif
+
 #endif

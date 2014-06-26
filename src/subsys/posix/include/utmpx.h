@@ -17,11 +17,23 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#ifndef _UTMPX_H
+#define _UTMPX_h
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include <sys/utmpx.h>
+#define __UTMP_STRUCT utmpx
+#include <sys/_utmp.h>
+
+extern void          setutxent(void);
+extern void          endutxent(void);
+extern struct utmpx *getutxent(void);
+extern struct utmpx *getutxid(const struct utmpx *);
+extern struct utmpx *getutxline(const struct utmpx *);
+extern struct utmpx *pututxline(const struct utmpx *);
 #ifdef __cplusplus
 }
 #endif
 
+#endif

@@ -32,21 +32,13 @@
 #define UT_NAMESIZE     64
 #define UT_HOSTSIZE     256
 
-#define _UTMP_MEMBERS \
-    char ut_user[UT_NAMESIZE]; \
-    char ut_id[UT_LINESIZE]; \
-    char ut_line[UT_LINESIZE]; \
-    pid_t ut_pid; \
-    short ut_type; \
+struct __UTMP_STRUCT {
+    char ut_user[UT_NAMESIZE];
+    char ut_id[UT_LINESIZE];
+    char ut_line[UT_LINESIZE];
+    pid_t ut_pid;
+    short ut_type;
     struct timeval ut_tv;
-
-// Expose struct utmpx and struct utmp for legacy compatibility.
-struct utmpx {
-    _UTMP_MEMBERS
-};
-
-struct utmp {
-    _UTMP_MEMBERS
 };
 
 #define ut_name ut_user
@@ -60,12 +52,5 @@ struct utmp {
 #define INIT_PROCESS    6
 #define LOGIN_PROCESS   7
 #define DEAD_PROCESS    8
-
-extern void          endutxent(void);
-extern struct utmpx *getutxent(void);
-extern struct utmpx *getutxid(const struct utmpx *);
-extern struct utmpx *getutxline(const struct utmpx *);
-extern struct utmpx *pututxline(const struct utmpx *);
-extern void          setutxent(void);
 
 #endif
