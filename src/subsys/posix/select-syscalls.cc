@@ -160,7 +160,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         return -1;
     }
 
-    if(nfds == 0)
+    if((nfds == 0) && (timeout == 0))
     {
         SYSCALL_ERROR(InvalidArgument);
         return -1;
