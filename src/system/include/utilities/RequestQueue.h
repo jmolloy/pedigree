@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -56,6 +55,16 @@ public:
     uint64_t addAsyncRequest(size_t priority, uint64_t p1=0, uint64_t p2=0, uint64_t p3=0, uint64_t p4=0, uint64_t p5=0,
                              uint64_t p6=0, uint64_t p7=0, uint64_t p8=0);
 
+    /**
+     * Halt RequestQueue operations, but do not terminate the worker thread.
+     */
+    void halt();
+
+    /**
+     * Resume RequestQueue operations.
+     */
+    void resume();
+
 protected:
     /** Callback - classes are expected to inherit and override this function. It's called when a
         request needs to be executed (by the worker thread). */
@@ -86,6 +95,7 @@ protected:
         bool bCompleted;
         Request *next;
         size_t refcnt;
+        RequestQueue *owner;
     private:
         Request(const Request&);
         void operator =(const Request&);
@@ -100,6 +110,11 @@ protected:
         return false;
     }
 
+    /**
+     * Check whether the given request is still valid in terms of this RequestQueue.
+     */
+    bool isRequestValid(const Request *r);
+
     /** Thread trampoline */
     static int trampoline(void *p);
 
@@ -113,7 +128,7 @@ protected:
     volatile bool m_Stop;
 
     /** Mutex to be held when the request queue is being changed. */
-    Spinlock m_RequestQueueMutex;
+    Mutex m_RequestQueueMutex;
 
 #ifdef THREADS
     /** The semaphore giving the number of items in the queue. */
@@ -121,6 +136,9 @@ protected:
     
     Thread *m_pThread;
 #endif
+
+    bool m_Halted;
+    Mutex m_HaltAcknowledged;
 };
 
 #endif

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -30,6 +29,7 @@ RequestQueue::RequestQueue() :
 #ifdef THREADS
   , m_RequestQueueSize(0), m_pThread(0)
 #endif
+  , m_Halted(false), m_HaltAcknowledged(false)
 {
     for (size_t i = 0; i < REQUEST_QUEUE_NUM_PRIORITIES; i++)
         m_pRequestQueue[i] = 0;
@@ -77,6 +77,7 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
   pReq->next = 0;
   pReq->bReject = false;
   pReq->refcnt = 1;
+  pReq->owner = this;
 
   // Do we own pReq?
   bool bOwnRequest = true;
@@ -199,6 +200,7 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
   pReq->next = 0;
   pReq->bReject = false;
   pReq->refcnt = 0;
+  pReq->owner = this;
 
   // Add to the request queue.
   m_RequestQueueMutex.acquire();
@@ -249,6 +251,30 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
 #endif
 }
 
+void RequestQueue::halt()
+{
+  if(!m_Halted)
+  {
+    m_Halted = true;
+    m_RequestQueueMutex.acquire();
+
+    // Wait for halt to take place.
+    // If the mutex has not been posted, the RequestQueue is already halted and
+    // will remain halted if another item is added by the mutex we've now locked.
+    if (m_RequestQueueMutex.getValue())
+      m_HaltAcknowledged.acquire();
+  }
+}
+
+void RequestQueue::resume()
+{
+  if(m_Halted)
+  {
+    m_RequestQueueMutex.release();
+    m_Halted = false;
+  }
+}
+
 int RequestQueue::trampoline(void *p)
 {
   RequestQueue *pRQ = reinterpret_cast<RequestQueue*> (p);
@@ -260,6 +286,14 @@ int RequestQueue::work()
 #ifdef THREADS
   while (true)
   {
+    // Are we halted?
+    if (m_Halted)
+    {
+      // We will halt as soon as we hit the mutex acquire - all good for the
+      // caller of halt() to continue now.
+      m_HaltAcknowledged.release();
+    }
+
     // Sleep on the queue length semaphore - wake when there's something to do.
     m_RequestQueueSize.acquire();
 
@@ -319,6 +353,7 @@ int RequestQueue::work()
         case Thread::Continue:
             break;
         case Thread::Exit:
+            WARNING("RequestQueue: unwind state is Exit, request not cleaned up. Leak?");
             return 0;
         case Thread::ReleaseBlockingThread:
             Processor::information().getCurrentThread()->setUnwindState(Thread::Continue);
@@ -334,11 +369,31 @@ int RequestQueue::work()
     // If the request was asynchronous, destroy the request structure.
     if (bAsync)
     {
-        if(pReq->pThread)
+        if (pReq->pThread)
             pReq->pThread->removeRequest(pReq);
         delete pReq;
     }
   }
 #endif
   return 0;
+}
+
+bool RequestQueue::isRequestValid(const Request *r)
+{
+  // Halted RequestQueue already has the RequestQueue mutex held.
+  LockGuard<Mutex> guard(m_RequestQueueMutex, !m_Halted);
+
+  for (size_t priority = 0; priority < REQUEST_QUEUE_NUM_PRIORITIES - 1; ++priority)
+  {
+    Request *pReq = m_pRequestQueue[priority];
+    while (pReq)
+    {
+      if (pReq == r)
+        return true;
+
+      pReq = pReq->next;
+    }
+  }
+
+  return false;
 }
