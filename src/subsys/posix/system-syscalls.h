@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -32,11 +31,6 @@
 #else
 #define SC_NOTICE(x)
 #endif
-
-#define STACK_END    0x40000000
-#define STACK_START  0x40020000
-#define ARGV_ENV_LOC 0x40100000
-#define ARGV_ENV_LEN 0x8000
 
 long posix_sbrk(int delta);
 int posix_fork(SyscallState &state);

@@ -62,13 +62,16 @@
 #define GET_CWD() (Processor::information().getCurrentThread()->getParent()->getCwd())
 
 /// Saves a char** array in the Vector of String*s given.
-static void save_string_array(const char **array, Vector<String*> &rArray)
+static size_t save_string_array(const char **array, Vector<String*> &rArray)
 {
+    size_t result = 0;
     while (*array)
     {
         String *pStr = new String(*array);
         rArray.pushBack(pStr);
         array++;
+
+        result += pStr->length();
     }
 }
 /// Creates a char** array, properly null-terminated, from the Vector of String*s given, at the location "arrayLoc",
@@ -220,6 +223,8 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
     SC_NOTICE("execve(\"" << name << "\")");
 
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
+
     String myArgv;
     int i = 0;
     while (argv[i])
@@ -229,8 +234,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         i++;
     }
     SC_NOTICE("  {" << myArgv << "}");
-
-    Processor::setInterrupts(false);
 
     if (argv == 0 || env == 0)
     {
@@ -407,8 +410,8 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     savedArgv.pushFront(&actualPath);
 
     // Save the argv and env lists so they aren't destroyed when we overwrite the address space.
-    save_string_array(argv, savedArgv);
-    save_string_array(env, savedEnv);
+    size_t argv_len = save_string_array(argv, savedArgv);
+    size_t env_len = save_string_array(env, savedEnv);
 
     // Inhibit all signals from coming in while we trash the address space...
     for(int sig = 0; sig < 32; sig++)
@@ -454,26 +457,45 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     // Close all FD_CLOEXEC descriptors.
     pSubsystem->freeMultipleFds(true);
 
+    // Clean up the thread now.
+    /// \todo This doesn't actually free any stacks.
+    while (pThread->getStateLevel())
+        pThread->popState();
+
     // Create a new stack.
     uintptr_t newStack = reinterpret_cast<uintptr_t>(Processor::information().getVirtualAddressSpace().allocateStack());
+    /// \todo Free previous stack, or actually use it??
 
-    // Create room for the argv and env list.
-    for (int j = 0; j < ARGV_ENV_LEN; j += PhysicalMemoryManager::getPageSize())
+    // Allocate space for argv and the new environment.
+    uintptr_t argvAddress = 0;
+    size_t totalArgvSpace = argv_len + env_len + (sizeof(void *) * (savedArgv.size() + savedEnv.size()));
+
+    // Align to a page boundary as needed.
+    if (totalArgvSpace & (pageSz - 1))
     {
-        void *pVirt = reinterpret_cast<void*> (j+ARGV_ENV_LOC);
-        if (!Processor::information().getVirtualAddressSpace().isMapped(pVirt))
-        {
-            physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-            bool b = Processor::information().getVirtualAddressSpace().map(phys,
-                                                                           pVirt,
-                                                                           VirtualAddressSpace::Write);
-            if (!b)
-                WARNING("map() failed in execve (2)");
-        }
+        totalArgvSpace = (totalArgvSpace + pageSz) & ~(pageSz - 1);
     }
 
-    // Load the saved argv and env into this address space, starting at "location".
-    uintptr_t location = ARGV_ENV_LOC;
+    // Get space now.
+    if (pProcess->getAddressSpace()->getDynamicStart())
+        pProcess->getDynamicSpaceAllocator().allocate(totalArgvSpace, argvAddress);
+    if (!argvAddress)
+        pProcess->getSpaceAllocator().allocate(totalArgvSpace, argvAddress);
+
+    // Map in argv/env
+    for (uintptr_t j = argvAddress; j < (argvAddress + totalArgvSpace); j += pageSz)
+    {
+        void *pVirt = reinterpret_cast<void*> (j);
+        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+        bool b = Processor::information().getVirtualAddressSpace().map(phys,
+                                                                       pVirt,
+                                                                       VirtualAddressSpace::Write);
+        if (!b)
+            WARNING("map() failed in execve when mapping argv/env");
+    }
+
+    // Load the saved argv and env into this address space now.
+    uintptr_t location = argvAddress;
     argv = const_cast<const char**> (load_string_array(savedArgv, location, location));
     env  = const_cast<const char**> (load_string_array(savedEnv , location, location));
 
