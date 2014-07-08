@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -28,14 +27,16 @@ template<class T>
 class LockGuard
 {
   public:
-    inline LockGuard(T &Lock)
-      : m_Lock(Lock)
+    inline LockGuard(T &Lock, bool Condition = true)
+      : m_Lock(Lock), m_bCondition(Condition)
     {
-      m_Lock.acquire();
+      if (m_bCondition)
+        m_Lock.acquire();
     }
     inline virtual ~LockGuard()
     {
-      m_Lock.release();
+      if (m_bCondition)
+        m_Lock.release();
     }
 
   private:
@@ -44,6 +45,7 @@ class LockGuard
     LockGuard &operator = (const LockGuard &);
 
     T &m_Lock;
+    bool m_bCondition;
 };
 
 /** @} */
