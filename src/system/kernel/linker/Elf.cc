@@ -494,8 +494,10 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
         }
     }
     if(loadSize & 0xFFF)    // Make sure two modules don't accidentally end up in the same page.
+    {
         loadSize += 0x1000; // ie, end page == start page of another module.
-    loadSize = (loadSize+0x1000)&0xFFFFF000;
+        loadSize &= ~0xFFF;
+    }
     if (!KernelElf::instance().getModuleAllocator().allocate(loadSize, loadBase))
     {
         return false;
@@ -696,12 +698,6 @@ bool Elf::finaliseModule(uint8_t *pBuffer, size_t length)
     {
         if (m_pSectionHeaders[i].flags & SHF_ALLOC)
         {
-            size_t flags = VirtualAddressSpace::KernelMode;
-            if(m_pSectionHeaders[i].flags & SHF_WRITE)
-                flags |= VirtualAddressSpace::Write;
-            if(m_pSectionHeaders[i].flags & SHF_EXECINSTR)
-                flags |= VirtualAddressSpace::Execute;
-
             uintptr_t base = m_pSectionHeaders[i].addr;
             uintptr_t top = base + m_pSectionHeaders[i].size;
 
@@ -711,8 +707,17 @@ bool Elf::finaliseModule(uint8_t *pBuffer, size_t length)
                 top = (top & ~pageMask) + pageSz;
             }
 
+            // Set flags on page boundaries.
+            base &= ~pageMask;
+
+            size_t flags = VirtualAddressSpace::KernelMode;
+            if(m_pSectionHeaders[i].flags & SHF_WRITE)
+                flags |= VirtualAddressSpace::Write;
+            if(m_pSectionHeaders[i].flags & SHF_EXECINSTR)
+                flags |= VirtualAddressSpace::Execute;
+
             // Mark the section not-writeable, now that it is relocated.
-            for (uintptr_t j = m_pSectionHeaders[i].addr; j < top; j += pageSz)
+            for (uintptr_t j = base; j < top; j += pageSz)
             {
                 void *virt = reinterpret_cast<void*> (j&~(PhysicalMemoryManager::getPageSize()-1));
                 if(!Processor::information().getVirtualAddressSpace().isMapped(virt))
