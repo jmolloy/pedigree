@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -73,6 +72,12 @@ void X64SyscallManager::syscall(SyscallState &syscallState)
       NOTICE("Unwind state exit, in interrupt handler");
       Processor::information().getCurrentThread()->getParent()->getSubsystem()->exit(0);
     }
+  }
+
+  // Make sure we come back out with interrupts enabled at all times.
+  if ((syscallState.m_RFlagsR11 & 0x200) != 0x200)
+  {
+    syscallState.m_RFlagsR11 |= 0x200;
   }
 }
 

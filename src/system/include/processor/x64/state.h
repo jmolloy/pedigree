@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -162,6 +161,7 @@ class X64InterruptState
 class X64SyscallState
 {
   friend class X64ProcessorState;
+  friend class X64SyscallManager;
   public:
     //
     // General Interface (InterruptState, SyscallState & ProcessorState)
@@ -219,7 +219,7 @@ class X64SyscallState
     inline void setSyscallReturnValue(uintptr_t val);
     inline void setSyscallErrno(uintptr_t val);
 
-  private:
+  public:
     /** The R15 general purpose register */
     uint64_t m_R15;
     /** The R14 general purpose register */
