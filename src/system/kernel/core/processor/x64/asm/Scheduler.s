@@ -216,6 +216,9 @@ _ZN9Processor8jumpUserEPVmmmmmmm:
     mov     rdx, r9
     mov     r15, [rsp+8]    ; Note different register from calling convention: RCX get clobbered!
 
+    ;; Trigger a load of a possible CoW stack while on a safe stack.
+    mov     qword [r12-8], 0
+
     ;; Change stacks.
     mov     rsp, r12
 
