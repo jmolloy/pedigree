@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -213,6 +212,8 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
     bool bWasInterrupts = Processor::getInterrupts();
     Processor::setInterrupts(false);
 
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
+
     Thread *pThread = Processor::information().getCurrentThread();
     if (!pThread) return;
 
@@ -245,7 +246,7 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
     if(!(flags & VirtualAddressSpace::KernelMode))
     {
       if(userStack != 0)
-        va.getMapping(reinterpret_cast<void*>(userStack), page, flags);
+        va.getMapping(reinterpret_cast<void*>(userStack - pageSz), page, flags);
       if(userStack == 0 || (flags & VirtualAddressSpace::KernelMode))
       {
           userStack = reinterpret_cast<uintptr_t>(pThread->getStateUserStack());
@@ -258,7 +259,7 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
           else
           {
               // Verify that the stack is mapped
-              if(!va.isMapped(reinterpret_cast<void*>(userStack)))
+              if(!va.isMapped(reinterpret_cast<void*>(userStack - pageSz)))
               {
                   /// \todo This is a quickfix for a bigger problem. I imagine
                   ///       it has something to do with calling execve directly
