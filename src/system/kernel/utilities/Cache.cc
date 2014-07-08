@@ -102,6 +102,26 @@ uint64_t CacheManager::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uin
     if(!p1)
         return 0;
     Cache *pCache = reinterpret_cast<Cache *>(p1);
+
+    // Valid registered cache?
+    bool bCacheFound = false;
+    for(List<Cache*>::Iterator it = m_Caches.begin();
+        it != m_Caches.end();
+        ++it)
+    {
+        if((*it) == pCache)
+        {
+            bCacheFound = true;
+            break;
+        }
+    }
+
+    if(!bCacheFound)
+    {
+        ERROR("CacheManager::executeRequest for an unregistered cache!");
+        return 0;
+    }
+
     return pCache->executeRequest(p1, p2, p3, p4, p5, p6, p7, p8);
 }
 
