@@ -71,9 +71,13 @@ class RamFile : public File
     protected:
         virtual uintptr_t readBlock(uint64_t location)
         {
-            // Super trivial. But we are a ram filesystem... can't compact.
-            uintptr_t buffer = m_FileBlocks.insert(location);
-            pinBlock(location);
+            uintptr_t buffer = m_FileBlocks.lookup(location);
+            if(!buffer)
+            {
+                // Super trivial. But we are a ram filesystem... can't compact.
+                buffer = m_FileBlocks.insert(location);
+                pinBlock(location);
+            }
             return buffer;
         }
 
