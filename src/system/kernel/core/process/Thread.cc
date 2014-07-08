@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -41,7 +40,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
     m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler()), m_Priority(DEFAULT_PRIORITY),
-    m_PendingRequests(), m_pTlsBase(0)
+    m_PendingRequests(), m_pTlsBase(0), m_bRemovingRequests(false)
 {
   if (pParent == 0)
   {
@@ -91,7 +90,7 @@ Thread::Thread(Process *pParent) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Running), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
     m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler()), m_Priority(DEFAULT_PRIORITY),
-    m_PendingRequests(), m_pTlsBase(0)
+    m_PendingRequests(), m_pTlsBase(0), m_bRemovingRequests(false)
 {
   if (pParent == 0)
   {
@@ -108,7 +107,7 @@ Thread::Thread(Process *pParent, SyscallState &state) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
     m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler()), m_Priority(DEFAULT_PRIORITY),
-    m_PendingRequests(), m_pTlsBase(0)
+    m_PendingRequests(), m_pTlsBase(0), m_bRemovingRequests(false)
 {
   if (pParent == 0)
   {
@@ -163,24 +162,56 @@ Thread::~Thread()
   if(m_pTlsBase)
     delete m_pTlsBase;
 
+  // We are now removing requests from this thread - deny any other thread from
+  // doing so, as that may invalidate our iterators.
+  m_bRemovingRequests = true;
+
   if(m_PendingRequests.count())
   {
     for(List<RequestQueue::Request *>::Iterator it = m_PendingRequests.begin();
         it != m_PendingRequests.end();
         )
     {
-        if((*it)->bCompleted)
+        RequestQueue::Request *pReq = *it;
+        RequestQueue *pQueue = pReq->owner;
+
+        if (!pQueue)
         {
-            // Already completed - destroy if we can.
-            if((*it)->refcnt <= 1)
+            ERROR("Thread::~Thread: request in pending requests list has no owner!");
+            continue;
+        }
+
+        // Halt the owning RequestQueue while we tweak this request.
+        pReq->owner->halt();
+
+        // During the halt, we may have lost a request. Check.
+        if (!pQueue->isRequestValid(pReq))
+        {
+            // Resume queue and skip this request - it's dead.
+            /// \todo this may leak the request, if it was not async.
+            WARNING("Thread::~Thread: request in pending list was executed during halt.");
+            pQueue->resume();
+            ++it;
+            continue;
+        }
+
+        // Check for an already completed request. If we called addRequest, the
+        // request will not have been destroyed as the RequestQueue is expecting
+        // the calling thread to handle it.
+        if(pReq->bCompleted && !pReq->isAsync)
+        {
+            // Only destroy if the refcount allows us to - other threads may be
+            // also referencing this request (as RequestQueue has dedup).
+            if(pReq->refcnt <= 1)
                 delete (*it);
             else
             {
-                (*it)->refcnt--;
-                if((*it)->pThread == this)
-                    (*it)->pThread = 0;
+                pReq->refcnt--;
+
+                // Ensure the RequestQueue is not referencing us - we're dying.
+                if(pReq->pThread == this)
+                    pReq->pThread = 0;
             }
-            it = m_PendingRequests.erase(it);
         }
         else
         {
@@ -192,21 +223,25 @@ Thread::~Thread()
                 (*it)->refcnt--;
                 if((*it)->pThread == this)
                     (*it)->pThread = 0;
-                it = m_PendingRequests.erase(it);
             }
             else
             {
-                (*it)->bReject = true;
+                // Convert to an async request, so the request still completes.
+                // This is important, as the request might be crucial to system
+                // consistency (eg, filesystem request).
+                // Unlink this thread from the request, however.
+                if((*it)->pThread == this)
+                    (*it)->pThread = 0;
                 (*it)->isAsync = true;
-
-                ++it;
             }
         }
-    }
 
-    // Let the RequestQueue do its thing - processing and rejecting our requests.
-    while(m_PendingRequests.count())
-        Scheduler::instance().yield();
+        // Allow the queue to resume operation now.
+        pQueue->resume();
+
+        // Remove the request from our internal list.
+        it = m_PendingRequests.erase(it);
+    }
   }
 }
 
@@ -347,6 +382,45 @@ Event *Thread::getNextEvent()
 bool Thread::hasEvents()
 {
     return m_EventQueue.count() != 0;
+}
+
+void Thread::addRequest(RequestQueue::Request *req)
+{
+    if(m_bRemovingRequests)
+        return;
+
+    m_PendingRequests.pushBack(req);
+}
+
+void Thread::removeRequest(RequestQueue::Request *req)
+{
+    if(m_bRemovingRequests)
+        return;
+
+    for(List<RequestQueue::Request *>::Iterator it = m_PendingRequests.begin();
+        it != m_PendingRequests.end();
+        it++)
+    {
+        if(req == *it)
+        {
+            m_PendingRequests.erase(it);
+            return;
+        }
+    }
+}
+
+void Thread::unexpectedExit()
+{
+    if(m_bRemovingRequests)
+        return;
+
+    for(List<RequestQueue::Request *>::Iterator it = m_PendingRequests.begin();
+        it != m_PendingRequests.end();
+        it++)
+    {
+        (*it)->bReject = true;
+        (*it)->mutex.release();
+    }
 }
 
 uintptr_t Thread::getTlsBase()

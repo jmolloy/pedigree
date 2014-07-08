@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -318,37 +317,13 @@ public:
     {return m_Priority;}
 
     /** Adds a request to the Thread's pending request list */
-    void addRequest(RequestQueue::Request *req)
-    {
-        m_PendingRequests.pushBack(req);
-    }
+    void addRequest(RequestQueue::Request *req);
 
     /** Removes a request from the Thread's pending request list */
-    void removeRequest(RequestQueue::Request *req)
-    {
-        for(List<RequestQueue::Request *>::Iterator it = m_PendingRequests.begin();
-            it != m_PendingRequests.end();
-            it++)
-        {
-            if(req == *it)
-            {
-                m_PendingRequests.erase(it);
-                return;
-            }
-        }
-    }
+    void removeRequest(RequestQueue::Request *req);
 
     /** An unexpected exit has occurred, perform cleanup */
-    void unexpectedExit()
-    {
-        for(List<RequestQueue::Request *>::Iterator it = m_PendingRequests.begin();
-            it != m_PendingRequests.end();
-            it++)
-        {
-            (*it)->bReject = true;
-            (*it)->mutex.release();
-        }
-    }
+    void unexpectedExit();
     
     /** Gets the TLS base address for this thread. */
     uintptr_t getTlsBase();
@@ -492,6 +467,9 @@ private:
     size_t
 #endif
     m_ProcId;
+
+    /** Are we in the process of removing tracked RequestQueue::Request objects? */
+    bool m_bRemovingRequests;
 };
 
 #endif
