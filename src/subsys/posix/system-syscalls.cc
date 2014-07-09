@@ -71,8 +71,10 @@ static size_t save_string_array(const char **array, Vector<String*> &rArray)
         rArray.pushBack(pStr);
         array++;
 
-        result += pStr->length();
+        result += pStr->length() + 1;
     }
+
+    return result;
 }
 /// Creates a char** array, properly null-terminated, from the Vector of String*s given, at the location "arrayLoc",
 /// returning the end of the char** array created in arrayEndLoc and the start as the function return value.
