@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -253,6 +252,7 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
       case Thread::Ready:   Line += "R"; break;
       case Thread::Sleeping:Line += "S"; break;
       case Thread::Zombie:  Line += "Z"; break;
+      case Thread::AwaitingJoin:Line += "J"; break;
       case Thread::Suspended:Line += "s"; break;
       default: Line += "?"; break;
     }
@@ -291,6 +291,7 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
       case Thread::Ready:   Line += "R"; break;
       case Thread::Sleeping:Line += "S"; break;
       case Thread::Zombie:  Line += "Z"; break;
+      case Thread::AwaitingJoin:Line += "J"; break;
       case Thread::Suspended:Line += "s"; break;
       default: Line += "?"; break;
     }

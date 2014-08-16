@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -34,7 +33,7 @@ void initialiseMultitasking()
 {
   // Create the kernel idle process.
   Process *pProcess = new Process();
-  pProcess->description() += "Kernel idle process";
+  pProcess->description() += "Kernel Process";
 
 #ifdef MULTIPROCESSOR
   pProcess->description() += " - Processor #";
@@ -43,6 +42,7 @@ void initialiseMultitasking()
   
   // Create the main kernel thread.
   Thread *pThread = new Thread(pProcess);
+  pThread->detach();
   
   // Initialise the scheduler.
   Scheduler::instance().initialise();
@@ -56,13 +56,14 @@ void initialiseMultitasking()
   {
     // Create the kernel idle process.
     Process *pProcess = new Process();
-    pProcess->description() += "Kernel idle process";
+    pProcess->description() += "Kernel Process";
 
     pProcess->description() += " - Processor #";
     pProcess->description() += Processor::id();
 
     // Create the kernel idle thread.
     Thread *pThread = new Thread(pProcess);
+    pThread->detach();
     Processor::information().getScheduler().initialise(pThread);
   }
 #endif

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -547,7 +546,10 @@ void Ehci::interrupt(size_t number, InterruptState &state)
     }
 
     if(nStatus & EHCI_STS_ASYNCADVANCE)
-        new Thread(Processor::information().getCurrentThread()->getParent(), threadStub, reinterpret_cast<void*>(this));
+    {
+        Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(), threadStub, reinterpret_cast<void*>(this));
+        pThread->detach();
+    }
 
 #ifdef X86_COMMON
     return true;

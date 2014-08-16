@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -115,9 +114,10 @@ Ne2k::Ne2k(Network* pDev) :
 
   // register the packet queue handler before we install the IRQ
 #ifdef THREADS
-  new Thread(Processor::information().getCurrentThread()->getParent(),
-             reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
-             reinterpret_cast<void*> (this));
+  Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
+                               reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
+                               reinterpret_cast<void*> (this));
+  pThread->detach();
 #endif
 
   // install the IRQ

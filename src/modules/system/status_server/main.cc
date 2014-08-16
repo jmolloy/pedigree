@@ -283,7 +283,8 @@ int mainThread(void *p)
         ConnectionBasedEndpoint *pClient = static_cast<ConnectionBasedEndpoint*>(pEndpoint->accept());
         if(!pClient)
             continue;
-        new Thread(Processor::information().getCurrentThread()->getParent(), clientThread, pClient);
+        Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(), clientThread, pClient);
+        pThread->detach();
     }
 
     return 0;
@@ -291,7 +292,8 @@ int mainThread(void *p)
 
 static bool init()
 {
-    new Thread(Processor::information().getCurrentThread()->getParent(), mainThread, 0);
+    Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(), mainThread, 0);
+    pThread->detach();
     return true;
 }
 

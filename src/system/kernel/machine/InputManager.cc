@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -112,6 +111,8 @@ InputManager::InputManager() :
 
 InputManager::~InputManager()
 {
+    /// \todo Provide a way for this thread to be terminated.
+    // m_pThread->join();
 }
 
 void InputManager::initialise()

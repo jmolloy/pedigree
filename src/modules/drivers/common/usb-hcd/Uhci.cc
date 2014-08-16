@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -97,7 +96,8 @@ Uhci::Uhci(Device* pDev) :
     m_pCurrentAsyncQueueTail = m_pCurrentAsyncQueueHead = pDummyQH;
     
     // Dequeue main thread
-    new Thread(Processor::information().getCurrentThread()->getParent(), threadStub, reinterpret_cast<void*>(this));
+    Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(), threadStub, reinterpret_cast<void*>(this));
+    pThread->detach();
 
     // Install the IRQ handler
     Machine::instance().getIrqManager()->registerPciIrqHandler(this, this);

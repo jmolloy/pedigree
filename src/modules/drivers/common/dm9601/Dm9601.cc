@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -124,8 +123,10 @@ void Dm9601::initialiseDriver()
         delay(100);
     }
 
-    new Thread(Processor::information().getCurrentThread()->getParent(), trampoline, this);
-    new Thread(Processor::information().getCurrentThread()->getParent(), recvTrampoline, this);
+    Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(), trampoline, this);
+    pThread->detach();
+    pThread = new Thread(Processor::information().getCurrentThread()->getParent(), recvTrampoline, this);
+    pThread->detach();
 
     NetworkStack::instance().registerDevice(this);
 

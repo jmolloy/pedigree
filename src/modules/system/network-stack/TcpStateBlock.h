@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -309,9 +308,10 @@ class StateBlock : public TimerHandler
             currentState = Tcp::CLOSED;
 
             // create the cleanup thread
-            new Thread(Processor::information().getCurrentThread()->getParent(),
-              reinterpret_cast<Thread::ThreadStartFunc> (&stateBlockFree),
-              reinterpret_cast<void*> (this));
+            Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
+                                         reinterpret_cast<Thread::ThreadStartFunc> (&stateBlockFree),
+                                         reinterpret_cast<void*> (this));
+            pThread->detach();
           }
         }
       }

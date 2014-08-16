@@ -204,7 +204,8 @@ int posix_fork(SyscallState &state)
         Processor::information().getCurrentThread()->inhibitEvent(sig, false);
 
     // Create a new thread for the new process.
-    new Thread(pProcess, state);
+    Thread *pThread = new Thread(pProcess, state);
+    pThread->detach();
 
     // Kick off the new thread immediately.
     Scheduler::instance().yield();

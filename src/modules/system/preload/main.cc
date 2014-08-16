@@ -75,7 +75,8 @@ static bool init()
     do
     {
         NOTICE("PRELOAD: Queue " << s);
-        new Thread(Processor::information().getCurrentThread()->getParent(), preloadThread, const_cast<char*>(s));
+        Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(), preloadThread, const_cast<char*>(s));
+        pThread->detach();
         s = g_FilesToPreload[n++];
     } while(s);
 

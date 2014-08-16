@@ -317,7 +317,8 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   /// \todo Seed random number generator.
 
 #if defined(THREADS)
-  new Thread(Processor::information().getCurrentThread()->getParent(), &loadModules, static_cast<void*>(&bsInf), 0);
+  Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(), &loadModules, static_cast<void*>(&bsInf), 0);
+  pThread->detach();
 #else
   loadModules(&bsInf);
 #endif

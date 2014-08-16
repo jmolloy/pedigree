@@ -301,7 +301,8 @@ static bool init()
     PosixSubsystem *pSubsystem = new PosixSubsystem;
     pProcess->setSubsystem(pSubsystem);
 
-    new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(&init_stage2), 0x0 /* parameter */);
+    Thread *pThread = new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(&init_stage2), 0x0 /* parameter */);
+    pThread->detach();
 
     lock.release();
 
@@ -459,11 +460,12 @@ void init_stage2()
 
     // Alrighty - lets create a new thread for this program - -8 as PPC assumes
     // the previous stack frame is available...
-    new Thread(
+    Thread *pThread = new Thread(
             pProcess,
             reinterpret_cast<Thread::ThreadStartFunc>(entryPoint),
             argv_loc /* parameter */,
             stack /* Stack */);
+    pThread->detach();
 
     g_InitProgramLoaded.release();
 #endif
