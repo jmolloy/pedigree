@@ -59,8 +59,9 @@ private:
             OverMatch     ///< Key matched node key, and had extra characters.
         };
 
-        Node() :
-            m_pKey(0),value(0),m_Children(),m_pParent(0)
+        Node(bool bCaseSensitive) :
+            m_pKey(0),value(0),m_Children(),m_pParent(0),
+            m_bCaseSensitive(bCaseSensitive)
         {
         }
 
@@ -120,6 +121,8 @@ private:
         childlist_t m_Children;
         /** Parent node. */
         Node *m_pParent;
+        /** Controls case-sensitive matching. */
+        bool m_bCaseSensitive;
 
     private:
         Node(const Node&);
@@ -144,6 +147,8 @@ public:
     /** The copy-constructor
      *\param[in] x the reference object to copy */
     RadixTree(const RadixTree<void*> &x);
+    /** Constructor that offers case sensitivity adjustment. */
+    RadixTree(bool bCaseSensitive);
     /** The destructor, deallocates memory */
     ~RadixTree();
 
@@ -160,7 +165,7 @@ public:
     void insert(String key, void *value);
     /** Attempts to find an element with the given key.
      *\return the element found, or NULL if not found. */
-    void *lookup(String key);
+    void *lookup(String key) const;
     /** Attempts to remove an element with the given key. */
     void remove(String key);
 
@@ -213,6 +218,8 @@ private:
     size_t m_nItems;
     /** The tree's root. */
     Node *m_pRoot;
+    /** Whether matches are case-sensitive or not. */
+    bool m_bCaseSensitive;
 };
 
 /** RadixTree template specialisation for pointers. Just forwards to the
@@ -234,6 +241,9 @@ public:
      *\param[in] x reference object */
     inline RadixTree(const RadixTree &x)
         : m_VoidRadixTree(x.m_VoidRadixTree){}
+    /** Constructor with case-sensitivity. */
+    inline RadixTree(bool bCaseSensitive)
+        : m_VoidRadixTree(bCaseSensitive){}
     /** Destructor, deallocates memory */
     inline ~RadixTree()
     {}
@@ -256,7 +266,7 @@ public:
     {
         m_VoidRadixTree.insert(key, reinterpret_cast<void*>(const_cast<typename nonconst_type<T>::type*>(value)));
     }
-    inline T *lookup(String key)
+    inline T *lookup(String key) const
     {
         return reinterpret_cast<T*>(m_VoidRadixTree.lookup(key));
     }

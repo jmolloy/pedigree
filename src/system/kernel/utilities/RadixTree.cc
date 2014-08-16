@@ -26,7 +26,12 @@
 const uint8_t nullKey[] = {0};
 
 RadixTree<void*>::RadixTree() :
-    m_nItems(0), m_pRoot(0)
+    m_nItems(0), m_pRoot(0), m_bCaseSensitive(true)
+{
+}
+
+RadixTree<void*>::RadixTree(bool bCaseSensitive) :
+    m_nItems(0), m_pRoot(0), m_bCaseSensitive(bCaseSensitive)
 {
 }
 
@@ -37,7 +42,7 @@ RadixTree<void*>::~RadixTree()
 }
 
 RadixTree<void*>::RadixTree(const RadixTree &x) :
-    m_nItems(0), m_pRoot(0)
+    m_nItems(0), m_pRoot(0), m_bCaseSensitive(x.m_bCaseSensitive)
 {
     clear();
     delete m_pRoot;
@@ -51,6 +56,7 @@ RadixTree<void*> &RadixTree<void*>::operator =(const RadixTree &x)
     delete m_pRoot;
     m_pRoot = cloneNode (x.m_pRoot, 0);
     m_nItems = x.m_nItems;
+    m_bCaseSensitive = x.m_bCaseSensitive;
     return *this;
 }
 
@@ -65,7 +71,7 @@ void RadixTree<void*>::insert(String key, void *value)
     {
         // The root node always exists and is a lambda transition node (zero-length
         // key). This removes the need for most special cases.
-        m_pRoot = new Node();
+        m_pRoot = new Node(m_bCaseSensitive);
         m_pRoot->setKey(nullKey);
     }
 
@@ -94,10 +100,14 @@ void RadixTree<void*>::insert(String key, void *value)
 
                 // Find the common key prefix.
                 size_t i = 0;
-                while (cpKey[i] == pNode->m_pKey[i])
-                    i++;
+                if (m_bCaseSensitive)
+                    while (cpKey[i] == pNode->m_pKey[i])
+                        i++;
+                else
+                    while (toLower(cpKey[i]) == toLower(pNode->m_pKey[i]))
+                        i++;
 
-                Node *pInter = new Node();
+                Node *pInter = new Node(m_bCaseSensitive);
                 
                 // Intermediate node's key is the common prefix of both keys.
                 pInter->m_pKey = new uint8_t[i+1];
@@ -122,7 +132,7 @@ void RadixTree<void*>::insert(String key, void *value)
                 // to create another node, a child of pInter.
                 if (cpKey[i] != 0)
                 {
-                    Node *pChild = new Node();
+                    Node *pChild = new Node(m_bCaseSensitive);
                     pChild->setKey(&cpKey[i]);
                     pChild->setValue(value);
                     pChild->setParent(pInter);
@@ -154,7 +164,7 @@ void RadixTree<void*>::insert(String key, void *value)
                 else
                 {
                     // No child - create a new one.
-                    pChild = new Node();
+                    pChild = new Node(m_bCaseSensitive);
                     pChild->setKey(cpKey);
                     pChild->setValue(value);
                     pChild->setParent(pNode);
@@ -168,15 +178,12 @@ void RadixTree<void*>::insert(String key, void *value)
     }
 }
 
-void *RadixTree<void*>::lookup(String key)
+void *RadixTree<void*>::lookup(String key) const
 {
     Node *pOldRoot = m_pRoot;
     if (!m_pRoot)
     {
-        // The root node always exists and is a lambda transition node (zero-length
-        // key). This removes the need for most special cases.
-        m_pRoot = new Node();
-        m_pRoot->setKey(nullKey);
+        return 0;
     }
 
     Node *pNode = m_pRoot;
@@ -217,7 +224,7 @@ void RadixTree<void*>::remove(String key)
     {
         // The root node always exists and is a lambda transition node (zero-length
         // key). This removes the need for most special cases.
-        m_pRoot = new Node();
+        m_pRoot = new Node(m_bCaseSensitive);
         m_pRoot->setKey(nullKey);
     }
 
@@ -333,7 +340,7 @@ RadixTree<void*>::Node *RadixTree<void*>::cloneNode(Node *pNode, Node *pParent)
     if (!pNode)
         return 0;
 
-    Node *n = new Node();
+    Node *n = new Node(m_bCaseSensitive);
     n->setKey(pNode->m_pKey);
     n->setValue(pNode->value);
     n->setParent(pParent);
@@ -351,7 +358,7 @@ RadixTree<void*>::Node *RadixTree<void*>::cloneNode(Node *pNode, Node *pParent)
 void RadixTree<void*>::clear()
 {
     delete m_pRoot;
-    m_pRoot = new Node();
+    m_pRoot = new Node(m_bCaseSensitive);
     m_pRoot->setKey(nullKey);
     m_nItems = 0;
 }
@@ -419,7 +426,17 @@ RadixTree<void*>::Node::MatchType RadixTree<void*>::Node::matchKey(const uint8_t
     size_t i = 0;
     while (cpKey[i] && m_pKey[i])
     {
-        if (cpKey[i] != m_pKey[i])
+        bool bMatch = false;
+        if (m_bCaseSensitive)
+        {
+            bMatch = cpKey[i] == m_pKey[i];
+        }
+        else
+        {
+            bMatch = toLower(cpKey[i]) == toLower(m_pKey[i]);
+        }
+
+        if (!bMatch)
             return (i==0) ? NoMatch : PartialMatch;
         i++;
     }
