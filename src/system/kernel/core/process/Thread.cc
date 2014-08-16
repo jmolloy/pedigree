@@ -40,7 +40,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
     m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler()), m_Priority(DEFAULT_PRIORITY),
-    m_PendingRequests(), m_pTlsBase(0), m_bRemovingRequests(false)
+    m_PendingRequests(), m_pTlsBase(0), m_bRemovingRequests(false), m_pWaiter(0), m_bDetached(false)
 {
   if (pParent == 0)
   {
@@ -90,7 +90,7 @@ Thread::Thread(Process *pParent) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Running), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
     m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler()), m_Priority(DEFAULT_PRIORITY),
-    m_PendingRequests(), m_pTlsBase(0), m_bRemovingRequests(false)
+    m_PendingRequests(), m_pTlsBase(0), m_bRemovingRequests(false), m_pWaiter(0), m_bDetached(false)
 {
   if (pParent == 0)
   {
@@ -107,7 +107,7 @@ Thread::Thread(Process *pParent, SyscallState &state) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
     m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler()), m_Priority(DEFAULT_PRIORITY),
-    m_PendingRequests(), m_pTlsBase(0), m_bRemovingRequests(false)
+    m_PendingRequests(), m_pTlsBase(0), m_bRemovingRequests(false), m_pWaiter(0), m_bDetached(false)
 {
   if (pParent == 0)
   {
@@ -161,6 +161,13 @@ Thread::~Thread()
   
   if(m_pTlsBase)
     delete m_pTlsBase;
+}
+
+void Thread::shutdown()
+{
+  // We are now removing requests from this thread - deny any other thread from
+  // doing so, as that may invalidate our iterators.
+  m_bRemovingRequests = true;
 
   // We are now removing requests from this thread - deny any other thread from
   // doing so, as that may invalidate our iterators.
@@ -242,6 +249,19 @@ Thread::~Thread()
         // Remove the request from our internal list.
         it = m_PendingRequests.erase(it);
     }
+  }
+
+  // Notify any waiters on this thread.
+  if (m_pWaiter) {
+    m_pWaiter->getLock().acquire();
+    m_pWaiter->setStatus(Thread::Ready);
+    m_pWaiter->getLock().release();
+  }
+
+  // Mark us as waiting for a join if we aren't detached. This ensures that join
+  // will not block waiting for this thread if it is called after this point.
+  if (!m_bDetached) {
+    m_Status = AwaitingJoin;
   }
 }
 
@@ -411,9 +431,11 @@ void Thread::removeRequest(RequestQueue::Request *req)
 
 void Thread::unexpectedExit()
 {
+    NOTICE("Thread::unexpectedExit");
     if(m_bRemovingRequests)
         return;
 
+#if 0
     for(List<RequestQueue::Request *>::Iterator it = m_PendingRequests.begin();
         it != m_PendingRequests.end();
         it++)
@@ -421,6 +443,9 @@ void Thread::unexpectedExit()
         (*it)->bReject = true;
         (*it)->mutex.release();
     }
+#endif
+
+    NOTICE("Thread::unexpectedExit COMPLETE");
 }
 
 uintptr_t Thread::getTlsBase()
@@ -458,4 +483,65 @@ uintptr_t Thread::getTlsBase()
     return reinterpret_cast<uintptr_t>(m_pTlsBase->virtualAddress());
 }
 
-#endif
+bool Thread::join()
+{
+  if (m_bDetached) {
+    return false;
+  }
+
+  Thread *pThisThread = Processor::information().getCurrentThread();
+
+  m_Lock.acquire();
+  // Check thread state. Perhaps the join is just a matter of terminating this
+  // thread, as it has died.
+  if (m_Status != AwaitingJoin)
+  {
+    if (m_pWaiter)
+    {
+      // Another thread is already join()ing.
+      m_Lock.release();
+      return false;
+    }
+
+    m_pWaiter = pThisThread;
+    m_Lock.release();
+
+    while (1)
+    {
+      Processor::information().getScheduler().sleep(0);
+      if (!(pThisThread->wasInterrupted() || pThisThread->getUnwindState() != Thread::Continue))
+        break;
+    }
+  }
+  else
+  {
+    m_Lock.release();
+  }
+
+  // Thread has terminated, we may now clean up.
+  delete this;
+  return true;
+}
+
+bool Thread::detach()
+{
+  if (m_Status == AwaitingJoin)
+  {
+    WARNING("Thread::detach() called on a thread that has already exited.");
+    return join();
+  }
+  else
+  {
+    LockGuard<Spinlock> guard(m_Lock);
+
+    if (m_pWaiter) {
+      ERROR("Thread::detach() called while other threads are joining.");
+      return false;
+    }
+
+    m_bDetached = true;
+    return true;
+  }
+}
+
+#endif // THREADS

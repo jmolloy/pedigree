@@ -98,7 +98,8 @@ void PerProcessorScheduler::initialise(Thread *pThread)
 
     Machine::instance().getSchedulerTimer()->registerHandler(this);
     
-    new Thread(pThread->getParent(), processorAddThread, reinterpret_cast<void*>(this), 0, false, true);
+    Thread *pAddThread = new Thread(pThread->getParent(), processorAddThread, reinterpret_cast<void*>(this), 0, false, true);
+    pAddThread->detach();
 }
 
 void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThread, Spinlock *pLock)
@@ -463,6 +464,9 @@ void PerProcessorScheduler::killCurrentThread()
 
     Thread *pThread = Processor::information().getCurrentThread();
 
+    // Start shutting down the current thread while we can still schedule it.
+    pThread->shutdown();
+
     // Removing the current thread. Grab its lock.
     pThread->getLock().acquire();
 
@@ -503,7 +507,10 @@ void PerProcessorScheduler::killCurrentThread()
 
 void PerProcessorScheduler::deleteThread(Thread *pThread)
 {
-    delete pThread;
+    if (pThread->detached())
+    {
+        delete pThread;
+    }
 }
 
 void PerProcessorScheduler::removeThread(Thread *pThread)

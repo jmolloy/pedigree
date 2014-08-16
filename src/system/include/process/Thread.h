@@ -65,6 +65,7 @@ public:
         Running,
         Sleeping,
         Zombie,
+        AwaitingJoin,
         Suspended, /// Suspended (eg, POSIX SIGSTOP)
     };
 
@@ -110,6 +111,14 @@ public:
      * The destructor unregisters itself with the Scheduler and parent process - this
      * does not need to be done manually. */
     virtual ~Thread();
+
+    /**
+     * Performs termination steps on the thread, while the thread is still able
+     * to reschedule. Required as ~Thread() is called in a context where the
+     * thread has been removed from the scheduler, and triggering a reschedule
+     * may add the thread back to the ready queue by accident.
+     */
+    void shutdown();
 
     /** Returns a reference to the Thread's saved context. This function is intended only
      * for use by the Scheduler. */
@@ -353,6 +362,32 @@ public:
     }
 
     /**
+     * Blocks until the Thread returns.
+     *
+     * After join() returns successfully, the thread object is NOT valid.
+     *
+     * \return whether the thread was joined or not.
+     */
+    bool join();
+
+    /**
+     * Marks the thread as detached.
+     *
+     * A detached thread cannot be joined and will be automatically cleaned up
+     * when the thread entry point returns, or the thread is otherwise
+     * terminated. A thread cannot be detached if another thread is already
+     * join()ing it.
+     */
+    bool detach();
+
+    /**
+     * Checks detached state of the thread.
+     */
+    bool detached() const {
+        return m_bDetached;
+    }
+
+    /**
      * Sets the exit code of the Thread and sets the state to Zombie, if it is being waited on;
      * if it is not being waited on the Thread is destroyed.
      * \note This is meant to be called only by the thread trampoline - this is the only reason it
@@ -470,6 +505,12 @@ private:
 
     /** Are we in the process of removing tracked RequestQueue::Request objects? */
     bool m_bRemovingRequests;
+
+    /** Waiters on this thread. */
+    Thread *m_pWaiter;
+
+    /** Whether this thread has been detached or not. */
+    bool m_bDetached;
 };
 
 #endif

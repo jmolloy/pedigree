@@ -48,6 +48,8 @@ void RequestQueue::initialise()
     WARNING("RequestQueue initialised multiple times - don't do this.");
     return;
   }
+
+  m_Halted = m_Stop = false;
   m_pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
                        reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
                        reinterpret_cast<void*> (this));
@@ -59,6 +61,9 @@ void RequestQueue::initialise()
 void RequestQueue::destroy()
 {
 #ifdef THREADS
+  // Detach the worker thread so it will clean itself up.
+  if (m_pThread)
+    m_pThread->detach();
   // Cause the worker thread to stop.
   m_Stop = true;
   // Post to the queue length semaphore to ensure the worker thread wakes up.
@@ -255,14 +260,9 @@ void RequestQueue::halt()
 {
   if(!m_Halted)
   {
-    m_Halted = true;
-    m_RequestQueueMutex.acquire();
-
-    // Wait for halt to take place.
-    // If the mutex has not been posted, the RequestQueue is already halted and
-    // will remain halted if another item is added by the mutex we've now locked.
-    if (m_RequestQueueMutex.getValue())
-      m_HaltAcknowledged.acquire();
+    m_Halted = m_Stop = true;
+    m_pThread->join();
+    m_pThread = 0;
   }
 }
 
@@ -270,8 +270,7 @@ void RequestQueue::resume()
 {
   if(m_Halted)
   {
-    m_RequestQueueMutex.release();
-    m_Halted = false;
+    initialise();
   }
 }
 
