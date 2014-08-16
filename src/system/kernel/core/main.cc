@@ -17,6 +17,66 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+/**
+ * \mainpage
+ *
+ * \section main_intro Introduction
+ * Pedigree is a hobby operating system primarily designed by James Molloy and
+ * Joerg Pfahler and primarily implemented by James Molloy, Joerg Pfahler, and
+ * Matthew Iselin.
+ *
+ * The objectives of Pedigree are to develop a solid yet portable operating
+ * system from the ground up with an object oriented architecture where
+ * possible. The goal is to support multiple different subsystems to allow many
+ * different applications to run natively on Pedigree. At the moment a POSIX
+ * subsystem exists, with plans for the implementation of a native subsystem.
+ * Pedigree also caters for two different driver interfaces: our native, C++
+ * interface, and the C "CDI" interface (ported from the Tyndur operating
+ * system).
+ *
+ * At this stage Pedigree has a variety of substantial features. Pedigree has a
+ * functional TCP/IP stack that can be used for anything from connecting to IRC
+ * or browsing the internet. Some SDL applications can be compiled to run on
+ * Pedigree, and the graphics framework provides a robust C++ API for
+ * applications that need direct, unhindered access to the video framebuffer.
+ * Many POSIX applications can run on Pedigree with a simple recompile, all
+ * built upon the solid POSIX subsystem - including popular applications such as
+ * bash, lynx, and Apache. Pedigree also supports a variety of USB devices
+ * including mass storage devices, keyboards, mice, and DM9601-based USB
+ * ethernet adapters.
+ *
+ * The OS currently supports the following architectures in various degrees;
+ *
+ * - x64 / x86-64 (x86/IA32 support has been deprecated)
+ * - MIPS - Little endian, 32-bit, release 1, processors R4000 and later,
+ *   specifically the Malta and Malta/CoreBonito64 development boards.
+ * - ARM - Version 9, specifically the versatile and integrator boards emulated
+ *   by QEMU.
+ * - PowerPC - Runs on Apple iBooks, G4 towers etc.
+ *
+ * \section main_docs This Documentation
+ *
+ * This documentation is generated for each commit made to the repository, and
+ * also on a nightly basis. Patches and pull requests to improve the state of
+ * documentation across the codebase are always appreciated.
+ *
+ * Some parts of the online generated documentation may be incomplete as the
+ * documentation is generated with preprocessor definitions typically used to
+ * build for X86-64.
+ *
+ * Find a bug in documentation, or incorrect documentation? Please let us know
+ * by following the escalation path described in the \ref main_resources
+ * section.
+ *
+ * \section main_resources Resources
+ * The main repository for Pedigree is at https://github.com/miselin/pedigree.
+ *
+ * If you are interested in contributing, have found a bug, or have any other
+ * queries, please open a ticket on the tracker at http://pedigree.plan.io.
+ *
+ * You can also find us in \#pedigree on irc.freenode.net.
+ */
+
 #include "BootstrapInfo.h"
 
 #ifdef DEBUGGER
