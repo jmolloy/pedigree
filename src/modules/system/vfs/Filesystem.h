@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -94,6 +93,12 @@ public:
     bool isReadOnly()
     {
         return m_bReadOnly;
+    }
+
+    /** Does the filesystem care about case sensitivity? */
+    virtual bool isCaseSensitive()
+    {
+        return true;
     }
 
 protected:
