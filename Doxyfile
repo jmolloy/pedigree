@@ -796,6 +796,8 @@ EXCLUDE                = src/system/kernel/debugger/libudis86
 EXCLUDE                += src/modules/system/config/sqlite3.c
 EXCLUDE                += src/modules/system/config/sqlite3.h
 EXCLUDE                += src/modules/system/config/sqlite3ext.h
+# Exclude CDI's mainpage docs.
+EXCLUDE                += src/modules/drivers/cdi/doc/doc.h
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded

@@ -68,6 +68,11 @@
  * by following the escalation path described in the \ref main_resources
  * section.
  *
+ * \section main_links Components
+ * The following lists the various components across the operating system.
+ *
+ * - \ref module_main
+ *
  * \section main_resources Resources
  * The main repository for Pedigree is at https://github.com/miselin/pedigree.
  *
