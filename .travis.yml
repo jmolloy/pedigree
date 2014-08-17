@@ -12,6 +12,9 @@ matrix:
   exclude:
     - os: linux
     - compiler: gcc
+before_script:
+  - sudo apt-get update
+  - sudo apt-get install qemu
 script:
   - ./easy_build_$EASY_BUILD.sh $OS
   - ./scripts/runtest.py
