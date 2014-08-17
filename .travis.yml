@@ -1,18 +1,17 @@
 language: cpp
-compiler:
-  - gcc
 matrix:
   include:
     - os: linux
       env: OS=ubuntu EASY_BUILD=x64
     - os: linux
       env: OS=ubuntu EASY_BUILD=arm
-    - os: osx
-      env: OS=osx EASY_BUILD=x64
-    - os: osx
-      env: OS=osx EASY_BUILD=arm
+    # - os: osx
+    #  env: OS=osx EASY_BUILD=x64
+    # - os: osx
+    #   env: OS=osx EASY_BUILD=arm
   exclude:
     - os: linux
+    - compiler: gcc
 script:
   - ./easy_build_$EASY_BUILD.sh $OS
 install: true
