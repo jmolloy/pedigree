@@ -128,7 +128,7 @@ die "Please use target '[arch]-pedigree'." unless $target =~ /(i686|x86_64|arm|a
 # Firstly, find out where to store the compilers.
 unless (-l "./compilers/dir") {
   print "This appears to be the first time you've compiled this checkout. Where should I look for / store my compilers?\n";
-  print "<interactive, using $dir>\n";
+  print "<not interactive, using $dir>\n";
   chomp $dir;
  `mkdir -p $dir`;
   my $stdout = `ln -s $dir ./compilers/dir`;
@@ -246,7 +246,7 @@ foreach (@compile) {
       exit 1;
     }
     print "Compiling ";
-    $stdout = `cd $build_dir; make $compile{make} 2>&1`;
+    $stdout = `cd $build_dir; make $compile{make} 2>&1 & pid=\$!; while kill -0 \$pid; do printf "." 1>&2; sleep 10; done`;
     if ($? != 0) {
       print "Failed. Output: $stdout\n";
       exit 1;
