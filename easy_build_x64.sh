@@ -3,6 +3,10 @@
 # Script that can be run to set up a Pedigree repository for building with minimal
 # effort.
 
+# Handle running on Travis-CI.
+TRAVIS_OPTIONS=
+[ ! -z "$TRAVIS" ] && TRAVIS_OPTIONS="travis=$TRAVIS"
+
 set -e
 
 echo "Pedigree Easy Build script"
@@ -196,10 +200,10 @@ echo "Beginning the Pedigree build."
 echo
 
 # Build Pedigree.
-scons CROSS=$script_dir/compilers/dir/bin/x86_64-pedigree-
+scons CROSS=$script_dir/compilers/dir/bin/x86_64-pedigree- $TRAVIS_OPTIONS
 
 # One day we might fix this bug (create proper disk image with built apps).
-scons
+scons $TRAVIS_OPTIONS
 
 cd "$old"
 

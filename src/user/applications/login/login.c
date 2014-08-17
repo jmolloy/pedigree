@@ -71,6 +71,11 @@ int main(int argc, char **argv)
   return 0;
 #endif
 
+  // Are we on Travis-CI?
+#ifdef TRAVIS
+  syslog(LOG_INFO, "-- Hello, Travis! --");
+#endif
+
   // New process group for job control. We'll ignore SIGINT for now.
   signal(SIGINT, sigint);
   setsid();

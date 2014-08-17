@@ -3,6 +3,10 @@
 # Script that can be run to set up a Pedigree repository for building with minimal
 # effort.
 
+# Handle running on Travis-CI.
+TRAVIS_OPTIONS=
+[ ! -z "$TRAVIS" ] && TRAVIS_OPTIONS="travis=$TRAVIS"
+
 set -e
 
 ARM_SCONS_OPTS="arm_beagle=1 armv7=1 arm_cortex_a8=1"
@@ -168,7 +172,7 @@ echo "Beginning the Pedigree build."
 echo
 
 # Build Pedigree.
-scons CROSS="$script_dir/compilers/dir/bin/arm-pedigree-" $ARM_SCONS_OPTS $*
+scons CROSS="$script_dir/compilers/dir/bin/arm-pedigree-" $ARM_SCONS_OPTS $TRAVIS_OPTIONS $*
 
 cd "$old"
 
