@@ -246,7 +246,7 @@ foreach (@compile) {
       exit 1;
     }
     print "Compiling ";
-    $stdout = `cd $build_dir; make $compile{make} 2>&1 & pid=\$!; while kill -0 \$pid; do printf "." 1>&2; sleep 10; done`;
+    $stdout = `cd $build_dir; make $compile{make} 2>&1 & pid=\$!; while kill -0 \$pid &>/dev/null; do printf "." 1>&2; sleep 10; done`;
     if ($? != 0) {
       print "Failed. Output: $stdout\n";
       exit 1;
