@@ -70,7 +70,6 @@ def main(argv):
     # Open UDP socket for the serial port.
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
     sock.bind(('127.0.0.1', 4556))
 
     # Kick off the QEMU instance in the background.
