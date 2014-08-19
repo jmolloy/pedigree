@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,11 +22,13 @@
 
 #include <processor/Processor.h>
 #include <process/Scheduler.h>
-#include <Atomic.h>
+#include <process/Semaphore.h>
 
 /** \file UnlikelyLock.h
     \author James Molloy
     \date 16 September 2009 */
+
+#define UNLIKELY_LOCK_MAX_READERS 9999
 
 /** An "Unlikely lock" is a lock which normally any number of threads can access
     concurrently, but when locked, all threads must exit and never reenter.
@@ -48,77 +49,20 @@ public:
 
     /** Enters the critical section.
         \return True if the lock was able to be acquired, false otherwise. */
-    inline bool enter()
-    {
-        // If we manage to enter the critical section then reenter and try and
-        // acquire, we'll deadlock. Not good. Disable reentrancy by disabling
-        // interrupts to guarantee liveness.
-        if (m_Atomic >= 100000)
-        {
-            Scheduler::instance().yield();
-            return false;
-        }
+    bool enter();
 
-        m_Atomic += 1;
-
-        // If the value was over the treshold - i.e. we're acquired, decrement 
-        // again and return.
-        if (m_Atomic >= 100000)
-        {
-            m_Atomic -= 1;
-            Scheduler::instance().yield();
-            return false;
-        }
-        
-        return true;
-    }
     /** Leaving the critical section. */
-    inline void leave()
-    {
-        m_Atomic -= 1;
-    }
+    void leave();
 
     /** Locks the lock. Will not return until all other threads have exited
         the critical region. */
-    inline bool acquire()
-    {
-        bool bOldInterrupts = Processor::getInterrupts();
-        if(bOldInterrupts)
-            Processor::setInterrupts(false);
+    bool acquire();
 
-        m_Atomic += 100000;
-
-        if (m_Atomic >= 200000)
-        {
-            // Someone already acquire()d... :(
-            m_Atomic -= 100000;
-            Processor::setInterrupts(bOldInterrupts);
-            Scheduler::instance().yield();
-            return false;
-        }
-
-        // Wait for readers to leave the critical section.
-        while (m_Atomic > 100000)
-        {
-            Scheduler::instance().yield();
-        }
-        
-        m_bInterrupts = bOldInterrupts;
-
-        return true;
-    }
     /** Releases the lock. */
-    inline void release()
-    {
-        // Reset counter to one.
-        m_Atomic -= 100000;
-        Processor::setInterrupts(m_bInterrupts);
-    }
+    void release();
 
 private:
-    Atomic<size_t> m_Atomic;
-    
-    bool m_bInterrupts;
+    Semaphore m_Semaphore;
 };
 
 #endif

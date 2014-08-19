@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -21,7 +20,7 @@
 #include <utilities/UnlikelyLock.h>
 
 UnlikelyLock::UnlikelyLock() :
-    m_Atomic(0), m_bInterrupts(false)
+    m_Semaphore(UNLIKELY_LOCK_MAX_READERS + 1)
 {
 }
 
@@ -29,3 +28,26 @@ UnlikelyLock::~UnlikelyLock()
 {
 }
 
+bool UnlikelyLock::enter()
+{
+    return m_Semaphore.acquire(1);
+}
+
+void UnlikelyLock::leave()
+{
+    m_Semaphore.release(1);
+}
+
+bool UnlikelyLock::acquire()
+{
+    // acquire() is defined to not return until all other threads have left
+    // the critical section, so we simply loop in case the Semaphore fails to
+    // acquire after blocking (eg, interrupted).
+    while(!m_Semaphore.acquire(UNLIKELY_LOCK_MAX_READERS + 1))
+        Scheduler::instance().yield();
+}
+
+void UnlikelyLock::release()
+{
+    m_Semaphore.release(UNLIKELY_LOCK_MAX_READERS + 1);
+}
