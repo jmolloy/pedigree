@@ -89,7 +89,8 @@ my @compile = ( {'dir' => "nasm-$nasm_version",
                  'make' => "all-gcc all-target-libgcc",
                  'install' => "install-gcc install-target-libgcc",
                  'arch' => 'i686-pedigree amd64-pedigree x86_64-pedigree arm-pedigree i686-elf amd64-elf arm-elf ppc-elf powerpc-elf',
-                 'test' => './bin/!TARGET-gcc'},
+                 'test' => './bin/!TARGET-gcc',
+                 'clean' => $gcc_libcpp_make eq ""},
                 {'dir' => "gcc-$gcc_version",
                  'ok' => $gcc_libcpp_make ne "",
                  'name' => "libstdc++",
@@ -258,7 +259,11 @@ foreach (@compile) {
       exit 1;
     }
     print "\n";
-    `rm -rf ./compilers/dir/build_tmp/build`;
+
+    # Only clean out the build directory if required (helps with libcpp build).
+    if ((!defined $compile{clean}) || (defined $compile{clean} and $compile{clean})) {
+      `rm -rf ./compilers/dir/build_tmp/build`;
+    }
   }
 }
 
