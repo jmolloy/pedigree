@@ -317,6 +317,8 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
         void (*fn)(size_t) = reinterpret_cast<void (*)(size_t)>(handlerAddress);
         fn(addr);
         pThread->popState();
+
+        Processor::setInterrupts(bWasInterrupts);
         return;
     }
     else if (userStack != 0)
@@ -460,12 +462,12 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
 
 void PerProcessorScheduler::killCurrentThread()
 {
-    Processor::setInterrupts(false);
-
     Thread *pThread = Processor::information().getCurrentThread();
 
     // Start shutting down the current thread while we can still schedule it.
     pThread->shutdown();
+
+    Processor::setInterrupts(false);
 
     // Removing the current thread. Grab its lock.
     pThread->getLock().acquire();
