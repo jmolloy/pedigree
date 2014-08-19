@@ -73,7 +73,8 @@ public:
     enum DebugState
     {
         None,
-        SemWait
+        SemWait,
+        Joining
     };
 
     /** Thread start function type. */
@@ -474,6 +475,9 @@ private:
 
     /** Lock for schedulers. */
     Spinlock m_Lock;
+
+    /** General concurrency lock, not touched by schedulers. */
+    Spinlock m_ConcurrencyLock;
 
     /** Queue of Events ready to run. */
     List<Event*> m_EventQueue;

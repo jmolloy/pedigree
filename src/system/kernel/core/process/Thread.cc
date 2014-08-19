@@ -38,7 +38,7 @@
 Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
                void *pStack, bool semiUser, bool bDontPickCore) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
-    m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
+    m_Errno(0), m_bInterrupted(false), m_Lock(), m_ConcurrencyLock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
     m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler()), m_Priority(DEFAULT_PRIORITY),
     m_PendingRequests(), m_pTlsBase(0), m_bRemovingRequests(false), m_pWaiter(0), m_bDetached(false)
 {
@@ -88,7 +88,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
 
 Thread::Thread(Process *pParent) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Running), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
-    m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
+    m_Errno(0), m_bInterrupted(false), m_Lock(), m_ConcurrencyLock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
     m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler()), m_Priority(DEFAULT_PRIORITY),
     m_PendingRequests(), m_pTlsBase(0), m_bRemovingRequests(false), m_pWaiter(0), m_bDetached(false)
 {
@@ -105,7 +105,7 @@ Thread::Thread(Process *pParent) :
 
 Thread::Thread(Process *pParent, SyscallState &state) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
-    m_Errno(0), m_bInterrupted(false), m_Lock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
+    m_Errno(0), m_bInterrupted(false), m_Lock(), m_ConcurrencyLock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
     m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler()), m_Priority(DEFAULT_PRIORITY),
     m_PendingRequests(), m_pTlsBase(0), m_bRemovingRequests(false), m_pWaiter(0), m_bDetached(false)
 {
@@ -134,6 +134,12 @@ Thread::~Thread()
   {
     WARNING("A thread is being removed, but it never removed itself from InputManager.");
     WARNING("This warning indicates an application or kernel module is buggy!");
+  }
+
+  // Before removing from the scheduler, terminate if needed.
+  if (!m_bRemovingRequests)
+  {
+      shutdown();
   }
 
   // Remove us from the scheduler.
@@ -169,10 +175,6 @@ void Thread::shutdown()
   // doing so, as that may invalidate our iterators.
   m_bRemovingRequests = true;
 
-  // We are now removing requests from this thread - deny any other thread from
-  // doing so, as that may invalidate our iterators.
-  m_bRemovingRequests = true;
-
   if(m_PendingRequests.count())
   {
     for(List<RequestQueue::Request *>::Iterator it = m_PendingRequests.begin();
@@ -184,7 +186,8 @@ void Thread::shutdown()
 
         if (!pQueue)
         {
-            ERROR("Thread::~Thread: request in pending requests list has no owner!");
+            ERROR("Thread::shutdown: request in pending requests list has no owner!");
+            ++it;
             continue;
         }
 
@@ -196,7 +199,7 @@ void Thread::shutdown()
         {
             // Resume queue and skip this request - it's dead.
             /// \todo this may leak the request, if it was not async.
-            WARNING("Thread::~Thread: request in pending list was executed during halt.");
+            FATAL("Thread::shutdown: request in pending list was executed during halt.");
             pQueue->resume();
             ++it;
             continue;
@@ -205,12 +208,12 @@ void Thread::shutdown()
         // Check for an already completed request. If we called addRequest, the
         // request will not have been destroyed as the RequestQueue is expecting
         // the calling thread to handle it.
-        if(pReq->bCompleted && !pReq->isAsync)
+        if(pReq->bCompleted)
         {
             // Only destroy if the refcount allows us to - other threads may be
             // also referencing this request (as RequestQueue has dedup).
             if(pReq->refcnt <= 1)
-                delete (*it);
+                delete pReq;
             else
             {
                 pReq->refcnt--;
@@ -222,24 +225,21 @@ void Thread::shutdown()
         }
         else
         {
-            // Not completed yet. Convert to an 'async' object, which will
-            // be cleaned up automatically when this request completes.
-            // ... that is, unless more than one thread is waiting on it.
-            if((*it)->refcnt > 1)
+            // Not completed yet and the queue is halted. If there's more than
+            // one thread waiting on the request, we can just decrease the
+            // refcount and carry on. Otherwise, we can kill off the request.
+            if (pReq->refcnt > 1)
             {
-                (*it)->refcnt--;
-                if((*it)->pThread == this)
-                    (*it)->pThread = 0;
+                pReq->refcnt--;
+                if (pReq->pThread == this)
+                    pReq->pThread = 0;
             }
             else
             {
-                // Convert to an async request, so the request still completes.
-                // This is important, as the request might be crucial to system
-                // consistency (eg, filesystem request).
-                // Unlink this thread from the request, however.
-                if((*it)->pThread == this)
-                    (*it)->pThread = 0;
-                (*it)->isAsync = true;
+                // Terminate.
+                pReq->bReject = true;
+                pReq->pThread = 0;
+                pReq->mutex.release();
             }
         }
 
@@ -260,9 +260,11 @@ void Thread::shutdown()
 
   // Mark us as waiting for a join if we aren't detached. This ensures that join
   // will not block waiting for this thread if it is called after this point.
+  m_ConcurrencyLock.acquire();
   if (!m_bDetached) {
     m_Status = AwaitingJoin;
   }
+  m_ConcurrencyLock.release();
 }
 
 void Thread::setStatus(Thread::Status s)
@@ -485,13 +487,17 @@ uintptr_t Thread::getTlsBase()
 
 bool Thread::join()
 {
-  if (m_bDetached) {
+  Thread *pThisThread = Processor::information().getCurrentThread();
+
+  m_ConcurrencyLock.acquire();
+
+  // Can't join a detached thread.
+  if (m_bDetached)
+  {
+    m_ConcurrencyLock.release();
     return false;
   }
 
-  Thread *pThisThread = Processor::information().getCurrentThread();
-
-  m_Lock.acquire();
   // Check thread state. Perhaps the join is just a matter of terminating this
   // thread, as it has died.
   if (m_Status != AwaitingJoin)
@@ -499,12 +505,13 @@ bool Thread::join()
     if (m_pWaiter)
     {
       // Another thread is already join()ing.
-      m_Lock.release();
+      m_ConcurrencyLock.release();
       return false;
     }
 
     m_pWaiter = pThisThread;
-    m_Lock.release();
+    pThisThread->setDebugState(Joining, reinterpret_cast<uintptr_t>(__builtin_return_address(0)));
+    m_ConcurrencyLock.release();
 
     while (1)
     {
@@ -512,10 +519,12 @@ bool Thread::join()
       if (!(pThisThread->wasInterrupted() || pThisThread->getUnwindState() != Thread::Continue))
         break;
     }
+
+    pThisThread->setDebugState(None, 0);
   }
   else
   {
-    m_Lock.release();
+    m_ConcurrencyLock.release();
   }
 
   // Thread has terminated, we may now clean up.
@@ -532,7 +541,7 @@ bool Thread::detach()
   }
   else
   {
-    LockGuard<Spinlock> guard(m_Lock);
+    LockGuard<Spinlock> guard(m_ConcurrencyLock);
 
     if (m_pWaiter) {
       ERROR("Thread::detach() called while other threads are joining.");
