@@ -404,7 +404,11 @@ bool MemoryMappedFile::remove(size_t length)
             {
                 size_t fileOffset = (virt - oldStart) + oldOffset;
                 m_pBacking->returnPhysicalPage(fileOffset);
-                m_pBacking->sync(fileOffset, true);
+
+                // Only sync back to the backing store if the page was actually
+                // mapped in writable (ie, shared and not CoW)
+                if((flags & VirtualAddressSpace::Write) == VirtualAddressSpace::Write)
+                    m_pBacking->sync(fileOffset, true);
             }
             else
                 PhysicalMemoryManager::instance().freePage(phys);
@@ -518,7 +522,9 @@ void MemoryMappedFile::sync(uintptr_t at, bool async)
 
         physical_uintptr_t p = m_Mappings.lookup(at);
         if(p == static_cast<physical_uintptr_t>(~0UL))
+        {
             m_pBacking->sync(fileOffset, async);
+        }
     }
 }
 
@@ -605,7 +611,11 @@ void MemoryMappedFile::unmap()
         {
             size_t fileOffset = (it.key() - m_Address) + m_Offset;
             m_pBacking->returnPhysicalPage(fileOffset);
-            m_pBacking->sync(fileOffset, true);
+
+            // Only sync back to the backing store if the page was actually
+            // mapped in writable (ie, shared and not CoW)
+            if((flags & VirtualAddressSpace::Write) == VirtualAddressSpace::Write)
+                m_pBacking->sync(fileOffset, true);
         }
         else
             PhysicalMemoryManager::instance().freePage(phys);
