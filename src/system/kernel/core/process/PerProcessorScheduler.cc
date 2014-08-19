@@ -499,6 +499,7 @@ void PerProcessorScheduler::killCurrentThread()
     Processor::information().setCurrentThread(pNextThread);
     Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pNextThread->getKernelStack()) );
     Processor::switchAddressSpace( *pNextThread->getParent()->getAddressSpace() );
+    Processor::setTlsBase(pNextThread->getTlsBase());
 
     pNextThread->getLock().release();
 
