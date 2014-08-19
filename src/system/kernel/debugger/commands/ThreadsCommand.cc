@@ -265,9 +265,15 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
     Line += "] ";
 
     uintptr_t ip = 0;
-    if (tehThread->getDebugState(ip) == Thread::SemWait)
+    Thread::DebugState state = tehThread->getDebugState(ip);
+    if (state != Thread::None)
     {
-        Line += "Sem-Wait @ ";
+        if (state == Thread::SemWait)
+          Line += "Sem-Wait @ ";
+        else if (state == Thread::Joining)
+          Line += "Joining @";
+        else
+          Line += "<unknown DebugState> @";
         Line.append(ip, 16);
 
         uintptr_t symStart;
@@ -300,9 +306,15 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
     Line += "] - CURRENT";
 
     uintptr_t ip = 0;
-    if (tehThread->getDebugState(ip) == Thread::SemWait)
+    Thread::DebugState state = tehThread->getDebugState(ip);
+    if (state != Thread::None)
     {
-        Line += " - Sem-Wait @ ";
+        if (state == Thread::SemWait)
+          Line += "Sem-Wait @ ";
+        else if (state == Thread::Joining)
+          Line += "Joining @";
+        else
+          Line += "<unknown DebugState> @";
         Line.append(ip, 16);
 
         uintptr_t symStart;

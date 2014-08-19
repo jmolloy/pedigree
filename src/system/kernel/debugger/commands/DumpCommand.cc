@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -39,6 +38,8 @@ bool DumpCommand::execute(const HugeStaticString &input, HugeStaticString &outpu
 {
   if (state.kernelMode() == true)
     output += "kernel-mode\n";
+  else
+    output += "user-mode\n";
 
   // Output all the other registers
   size_t curLength = output.length();
@@ -62,5 +63,6 @@ bool DumpCommand::execute(const HugeStaticString &input, HugeStaticString &outpu
         output += ' ';
     }
   }
+
   return true;
 }
