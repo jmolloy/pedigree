@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -49,7 +48,7 @@ public:
     inline static Scheduler &instance() {return m_Instance;}
 
     /** Initialises the scheduler. */
-    bool initialise();
+    bool initialise(Process *pKernelProcess);
 
     /** Adds a thread to be load-balanced and accounted.
         \param pThread The new thread.
@@ -80,6 +79,11 @@ public:
 
     void threadStatusChanged(Thread *pThread);
 
+    Process *getKernelProcess() const
+    {
+        return m_pKernelProcess;
+    }
+
 private:
     /** Default constructor
      *  \note Private - singleton class. */
@@ -108,6 +112,9 @@ private:
 
     /** Map of thread->processor mappings. */
     Tree<Thread*, PerProcessorScheduler*> m_TPMap;
+
+    /** Pointer to the kernel process. */
+    Process *m_pKernelProcess;
 };
 
 #endif

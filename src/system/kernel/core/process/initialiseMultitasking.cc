@@ -45,7 +45,7 @@ void initialiseMultitasking()
   pThread->detach();
   
   // Initialise the scheduler.
-  Scheduler::instance().initialise();
+  Scheduler::instance().initialise(pProcess);
 
   // Initialise the per-process scheduler.
   Processor::information().getScheduler().initialise(pThread);

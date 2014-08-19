@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -41,7 +40,7 @@
 Scheduler Scheduler::m_Instance;
 
 Scheduler::Scheduler() :
-    m_Processes(), m_NextPid(0), m_PTMap(), m_TPMap()
+    m_Processes(), m_NextPid(0), m_PTMap(), m_TPMap(), m_pKernelProcess(0)
 {
 }
 
@@ -49,10 +48,12 @@ Scheduler::~Scheduler()
 {
 }
 
-bool Scheduler::initialise()
+bool Scheduler::initialise(Process *pKernelProcess)
 {
   RoundRobinCoreAllocator *pRoundRobin = new RoundRobinCoreAllocator();
   ProcessorThreadAllocator::instance().setAlgorithm(pRoundRobin);
+
+  m_pKernelProcess = pKernelProcess;
   
   List<PerProcessorScheduler*> procList;
   
