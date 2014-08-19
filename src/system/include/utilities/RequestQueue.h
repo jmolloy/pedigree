@@ -82,7 +82,8 @@ protected:
 #ifdef THREADS
                     mutex(true),pThread(0),
 #endif
-                    isAsync(false),bReject(false),bCompleted(false),next(0),refcnt(0) {}
+                    bReject(false),bCompleted(false),next(0),refcnt(0),
+                    owner(0),priority(0) {}
         ~Request() {}
         uint64_t p1,p2,p3,p4,p5,p6,p7,p8;
         uint64_t ret;
@@ -90,12 +91,12 @@ protected:
         Mutex mutex;
         Thread *pThread;
 #endif
-        bool isAsync;
         bool bReject;
         bool bCompleted;
         Request *next;
         size_t refcnt;
         RequestQueue *owner;
+        size_t priority;
     private:
         Request(const Request&);
         void operator =(const Request&);
@@ -117,6 +118,9 @@ protected:
 
     /** Thread trampoline */
     static int trampoline(void *p);
+
+    /** Asynchronous thread trampoline */
+    static int doAsync(void *p);
 
     /** Thread worker function */
     int work();
