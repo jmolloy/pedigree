@@ -74,18 +74,33 @@ Process::Process(Process *pParent) :
 
 Process::~Process()
 {
+  bool isSelf = Processor::information().getCurrentThread()->getParent() == this;
+
+  for(Vector<Thread*>::Iterator it = m_Threads.begin();
+      it != m_Threads.end();
+      ++it)
+  {
+    Thread *pThread = (*it);
+
+    // When the thread gets cleaned up, make sure it does not attempt to remove
+    // the thread from this process (as we are about to do that anyway).
+    pThread->setParent(0);
+
+    if (pThread != Processor::information().getCurrentThread())
+    {
+      // Child thread is not current thread - terminate the child properly.
+      pThread->setStatus(Thread::Zombie);
+      pThread->shutdown();
+      if (pThread->detached())
+      {
+        // Destroy the thread - it was detached.
+        delete pThread;
+      }
+    }
+  }
+
   Scheduler::instance().removeProcess(this);
-  Thread *pThread = m_Threads[0];
-  if(m_Threads.count())
-    m_Threads.erase(m_Threads.begin());
-  else
-      WARNING("Process with an empty thread list, potentially unstable situation");
-  if(!pThread && m_Threads.count())
-      WARNING("Process with a null entry for the first thread, potentially unstable situation");
-  if (pThread != Processor::information().getCurrentThread())
-      delete pThread; // Calls Scheduler::remove and this::remove.
-  else if(pThread)
-      pThread->setParent(0);
+
   if(m_pSubsystem)
     delete m_pSubsystem;
 
@@ -101,6 +116,12 @@ Process::~Process()
   delete m_pAddressSpace;
 
   Processor::setInterrupts(bInterrupts);
+
+  if (isSelf)
+  {
+      // Killed current process, so kill off the thread too.
+      Processor::information().getScheduler().killCurrentThread();
+  }
 }
 
 size_t Process::addThread(Thread *pThread)
@@ -144,9 +165,9 @@ void Process::kill()
   Processor::setInterrupts(false);
 
   if(m_pParent)
-	NOTICE("Kill: " << m_Id << " (parent: " << m_pParent->getId() << ")");
+	  NOTICE("Kill: " << m_Id << " (parent: " << m_pParent->getId() << ")");
   else
-	NOTICE("Kill: " << m_Id << " (parent: <orphan>)");
+	  NOTICE("Kill: " << m_Id << " (parent: <orphan>)");
 
   // Bye bye process - have we got any zombie children?
   for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
@@ -162,26 +183,16 @@ void Process::kill()
       }
       else
       {
+        /// \todo Actually, the child process should be reparented to 'init'...
         pProcess->m_pParent = 0;
       }
     }
   }
 
-  // Kill all our threads except one, which exists in Zombie state.
-  while (m_Threads.count() > 1)
-  {
-      Thread *pThread = m_Threads[0];
-      if (pThread != Processor::information().getCurrentThread())
-      {
-          m_Threads.erase(m_Threads.begin());
-          delete pThread; // Calls Scheduler::remove and this::remove.
-      }
-  }
-
   // Add to the zombie queue if the process is an orphan.
   if (!m_pParent)
   {
-      NOTICE("Adding process to zombie queue for cleanup");
+      NOTICE("Process::kill() - process is an orphan, adding to ZombieQueue.");
       
       ZombieQueue::instance().addObject(new ZombieProcess(this));
       Processor::information().getScheduler().killCurrentThread();
@@ -191,7 +202,7 @@ void Process::kill()
   }
 
   // We'll get reaped elsewhere
-  NOTICE("Not adding process to zombie queue for cleanup");
+  NOTICE("Process::kill() - not adding to ZombieQueue, process has a parent.");
   Processor::information().getScheduler().schedule(Thread::Zombie);
 
   FATAL("Should never get here");
