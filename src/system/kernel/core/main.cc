@@ -400,11 +400,11 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // This will run when nothing else is available to run
   for (;;)
   {
+    // Always enable interrupts in the idle thread, and halt. There is no point
+    // yielding as if this code is running, no other thread is ready (and cannot
+    // be made ready without an interrupt).
+    Processor::setInterrupts(true);
     Processor::haltUntilInterrupt();
-
-#ifdef THREADS
-    Scheduler::instance().yield();
-#endif
   }
 }
 
