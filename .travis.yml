@@ -3,8 +3,9 @@ matrix:
   include:
     - os: linux
       env: OS=ubuntu EASY_BUILD=x64
-    - os: linux
-      env: OS=ubuntu EASY_BUILD=arm
+    # The ARM toolchain managed to get built with a broken libgcc (???)
+    #- os: linux
+    #  env: OS=ubuntu EASY_BUILD=arm
     # - os: osx
     #  env: OS=osx EASY_BUILD=x64
     # - os: osx
