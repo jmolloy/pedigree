@@ -3,9 +3,11 @@
 # Script that can be run to set up a Pedigree repository for building with minimal
 # effort.
 
-# Handle running on Travis-CI.
-TRAVIS_OPTIONS=
-[ ! -z "$TRAVIS" ] && TRAVIS_OPTIONS="travis=$TRAVIS"
+old=$(pwd)
+script_dir=$(cd -P -- "$(dirname -- "$0")" && pwd -P) && script_dir=$script_dir
+cd $old
+
+. $script_dir/build-etc/travis.sh
 
 set -e
 
@@ -13,10 +15,6 @@ echo "Pedigree Easy Build script"
 echo "This script will ask a couple questions and then automatically install"
 echo "dependencies and compile Pedigree for you."
 echo
-
-old=$(pwd)
-script_dir=$(cd -P -- "$(dirname -- "$0")" && pwd -P) && script_dir=$script_dir
-cd $old
 
 compiler_build_options=""
 
