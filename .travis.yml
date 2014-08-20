@@ -13,8 +13,9 @@ matrix:
     - os: linux
     - compiler: gcc
 before_script:
-  - sudo apt-get update
-  - sudo apt-get install qemu
+  - sudo add-apt-repository ppa:miselin/pedigree-compilers -y
+  - sudo apt-get update -q
+  - sudo apt-get install qemu travis-compilers
 script:
   - ./easy_build_$EASY_BUILD.sh $OS
   - ./scripts/runtest.py

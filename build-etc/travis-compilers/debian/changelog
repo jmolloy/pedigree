@@ -1,0 +1,59 @@
+travis-compilers (1.0.7-1) trusty; urgency=medium
+
+  * Add build dependency on autoconf and automake.
+
+ -- Matthew Iselin <matthew@theiselins.net>  Wed, 20 Aug 2014 17:13:06 +1000
+
+travis-compilers (1.0.6-1) trusty; urgency=medium
+
+  * Include GCC/NASM/Binutils tarballs in source tarball.
+
+ -- Matthew Iselin <matthew@theiselins.net>  Wed, 20 Aug 2014 17:13:06 +1000
+
+travis-compilers (1.0.5-1) trusty; urgency=medium
+
+  * Print result on stdout when tarball download fails.
+
+ -- Matthew Iselin <matthew@theiselins.net>  Wed, 20 Aug 2014 17:13:06 +1000
+
+travis-compilers (1.0.4-1) trusty; urgency=medium
+
+  * Build-Depends is now on source package, where it belongs.
+
+ -- Matthew Iselin <matthew@theiselins.net>  Wed, 20 Aug 2014 17:13:06 +1000
+
+travis-compilers (1.0.3-1) trusty; urgency=medium
+
+  * Build-Depends is now on binary package, not source package.
+
+ -- Matthew Iselin <matthew@theiselins.net>  Wed, 20 Aug 2014 17:13:06 +1000
+
+travis-compilers (1.0.2-1) trusty; urgency=medium
+
+  * Bumped version (new source files).
+
+ -- Matthew Iselin <matthew@theiselins.net>  Wed, 20 Aug 2014 17:13:06 +1000
+
+travis-compilers (1.0.1-1ubuntu2) trusty; urgency=medium
+
+  * Fix Build-Depends section (initial set of dependencies).
+
+ -- Matthew Iselin <matthew@theiselins.net>  Wed, 20 Aug 2014 17:10:37 +1000
+
+travis-compilers (1.0.1-1ubuntu1) trusty; urgency=medium
+
+  * Actually fixed Makefile so it doesn't have hardcoded paths now.
+
+ -- Matthew Iselin <matthew@theiselins.net>  Wed, 20 Aug 2014 17:03:34 +1000
+
+travis-compilers (1.0.0-1ubuntu1) trusty; urgency=medium
+
+  * Fixed Makefile so it doesn't have hardcoded paths.
+
+ -- Matthew Iselin <matthew@theiselins.net>  Wed, 20 Aug 2014 16:59:38 +1000
+
+travis-compilers (1.0.0-1) trusty; urgency=low
+
+  * Initial release
+
+ -- Matthew Iselin <matthew@theiselins.net>  Wed, 20 Aug 2014 11:24:31 +1000

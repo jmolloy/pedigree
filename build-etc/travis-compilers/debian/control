@@ -1,0 +1,17 @@
+Source: travis-compilers
+Section: devel
+Priority: optional
+Maintainer: Matthew Iselin <matthew@theiselins.net>
+Build-Depends: debhelper (>= 9.0.0), wget, perl, libmpfr-dev, libmpc-dev, libgmp3-dev, texinfo, autoconf, automake, libtool
+Standards-Version: 3.9.5
+Homepage: https://pedigree-project.org
+Vcs-Git: git://github.com/miselin/pedigree.git
+Vcs-Browser: https://github.com/miselin/pedigree
+
+Package: travis-compilers
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Pedigree cross-compilers for running on Travis.
+ This package provides a full Pedigree cross-toolchain that can be used on
+ Travis to build Pedigree. This is made available as building the toolchain
+ often takes substantially longer than the rest of the build process.
