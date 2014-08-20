@@ -154,7 +154,7 @@ foreach (@compile) {
   }
 }
 
-exit 0 if $all_installed;
+goto SYMLINKS if $all_installed;
 
 `mkdir -p ./compilers/dir/dl_cache`;
 `mkdir -p ./compilers/dir/build_tmp`;
@@ -266,6 +266,8 @@ foreach (@compile) {
     }
   }
 }
+
+SYMLINKS:
 
 print "Complete; linking crt*.o...\n";
 
