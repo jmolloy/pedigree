@@ -9,7 +9,7 @@ Vcs-Git: git://github.com/miselin/pedigree.git
 Vcs-Browser: https://github.com/miselin/pedigree
 
 Package: travis-compilers
-Architecture: any
+Architecture: amd64
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Pedigree cross-compilers for running on Travis.
  This package provides a full Pedigree cross-toolchain that can be used on

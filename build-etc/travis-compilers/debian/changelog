@@ -1,3 +1,21 @@
+travis-compilers (1.0.8-1ubuntu1~trusty) trusty; urgency=medium
+
+  * Trusty build with updated version numbering.
+
+ -- Matthew Iselin <matthew@theiselins.net>  Wed, 20 Aug 2014 17:13:06 +1000
+
+travis-compilers (1.0.8-1ubuntu1~precise) precise; urgency=medium
+
+  * Target precise as that is what Travis-CI uses.
+
+ -- Matthew Iselin <matthew@theiselins.net>  Wed, 20 Aug 2014 17:13:06 +1000
+
+travis-compilers (1.0.8-1) trusty; urgency=medium
+
+  * Only build for amd64.
+
+ -- Matthew Iselin <matthew@theiselins.net>  Wed, 20 Aug 2014 17:13:06 +1000
+
 travis-compilers (1.0.7-1) trusty; urgency=medium
 
   * Add build dependency on autoconf and automake.
