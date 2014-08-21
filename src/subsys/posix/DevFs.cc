@@ -90,7 +90,7 @@ uint64_t NullFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bool
 
 uint64_t NullFile::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
-    return 0;
+    return size;
 }
 
 FramebufferFile::FramebufferFile(String str, size_t inode, Filesystem *pParentFS, File *pParentNode) :
