@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -105,25 +104,25 @@ uint64_t Pipe::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
     uint8_t *pBuf = reinterpret_cast<uint8_t*>(buffer);
     while (size)
     {
-        if (m_bIsEOF || n > 0)
+        if (m_bIsEOF)
         {
-            // If EOF has been signalled or we already have some data, we mustn't block, so tentatively attempt to tryAcquire until it fails.
+            // If EOF has been signalled or we already have some data,
+            // we mustn't block, so tentatively attempt to tryAcquire until
+            // it fails.
             if (!m_BufLen.tryAcquire())
             {
-                // No data left and/or EOF given - END.
+                // No data left and currently EOF - END.
                 return n;
             }
 
-            // Perhaps EOF was hit - don't return one null byte!
+            // Otherwise, we may have an un-acked EOF.
+            /// \note There is a possibility that the pipe is actually full here
+            ///       and that, should this return zero, we'll lose the data in
+            ///       the pipe...
             if (m_Front == m_Back)
             {
                 return n;
             }
-
-            pBuf[n++] = m_Buffer[m_Front];
-            m_Front = (m_Front+1) % PIPE_BUF_MAX;
-            m_BufAvailable.release();
-            size --;
         }
         else
         {
@@ -131,22 +130,27 @@ uint64_t Pipe::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
             if(bCanBlock)
                 m_BufLen.acquire();
             else
-                if(!m_BufLen.tryAcquire())
-                    return n;
-
-            // However, *here*, we must check if EOF is now signalled. When EOF comes in and there is no data, m_BufLen will be posted to
-            // wake us up. We need to check if there was data available.
-            if (m_Front == m_Back)
             {
-                // We were woken with no data available. This means we must return now.
-                return 0;
+                if(!m_BufLen.tryAcquire())
+                {
+                    return n;
+                }
             }
 
-            pBuf[n++] = m_Buffer[m_Front];
-            m_Front = (m_Front+1) % PIPE_BUF_MAX;
-            m_BufAvailable.release();
-            size --;
+            // Is EOF signalled (is this why we were woken?)
+            if (m_bIsEOF)
+            {
+                // Yes, the next call will probably return zero.
+                return n;
+            }
         }
+
+        // Otherwise, there is data available. If m_Front == m_Back, the
+        // pipe is currently *full*.
+        pBuf[n++] = m_Buffer[m_Front];
+        m_Front = (m_Front+1) % PIPE_BUF_MAX;
+        m_BufAvailable.release();
+        size --;
     }
     return n;
 }
@@ -162,9 +166,9 @@ uint64_t Pipe::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
         m_Back = (m_Back+1) % PIPE_BUF_MAX;
         m_BufLen.release();
         size --;
-
-        dataChanged();
     }
+
+    dataChanged();
     return n;
 }
 
@@ -200,6 +204,8 @@ void Pipe::decreaseRefCount(bool bIsWriter)
                 // No data available - post the m_BufLen semaphore to wake any readers up.
                 m_BufLen.release();
             }
+
+            dataChanged();
         }
     }
     else

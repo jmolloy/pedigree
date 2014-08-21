@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -66,7 +65,7 @@ public:
     virtual uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
 
     /** Returns true if the File is actually a pipe. */
-    virtual bool isPipe()
+    virtual bool isPipe() const
     {return true;}
 
     virtual void increaseRefCount(bool bIsWriter);
