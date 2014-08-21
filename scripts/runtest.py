@@ -88,6 +88,7 @@ def main(argv):
                             close_fds=True, cwd=os.path.join(scriptdir, '..'))
 
     success = False
+    serial = []
     try:
         with Timeout(15):
             last = ''
@@ -96,11 +97,15 @@ def main(argv):
                 serial_lines = serial_data.split('\n')
                 last = serial_lines.pop()
 
+                serial.extend(serial_lines)
+
                 if '-- Hello, Travis! --' in '\n'.join(serial_lines):
                     success = True
                     break
     except TimeoutError:
         print 'Runtime test failure: Pedigree did not boot to the login prompt.'
+        print 'Most recent serial lines:'
+        print '\n'.join(serial[-15:])
     else:
         print 'Runtime test success: Pedigree booted to the login prompt.'
 
