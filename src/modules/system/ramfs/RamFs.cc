@@ -57,9 +57,6 @@ bool RamDir::removeEntry(File *pFile)
     if(!pRamFile->canWrite())
         return false;
 
-    // Release memory used by the file.
-    pFile->truncate();
-
     // Remove from cache.
     m_Cache.remove(pFile->getName());
     return true;

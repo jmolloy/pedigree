@@ -47,6 +47,7 @@ class RamFile : public File
 
         virtual ~RamFile()
         {
+            truncate();
         }
 
         virtual void truncate()
