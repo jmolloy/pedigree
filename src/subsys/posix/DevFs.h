@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -50,6 +49,19 @@ public:
         File(str, 0, 0, 0, inode, pParentFS, 0, pParentNode)
     {}
     ~NullFile()
+    {}
+
+    uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+    uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
+};
+
+class ZeroFile : public File
+{
+public:
+    ZeroFile(String str, size_t inode, Filesystem *pParentFS, File *pParentNode) :
+        File(str, 0, 0, 0, inode, pParentFS, 0, pParentNode)
+    {}
+    ~ZeroFile()
     {}
 
     uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);

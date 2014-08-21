@@ -84,11 +84,21 @@ uint64_t RandomFile::write(uint64_t location, uint64_t size, uintptr_t buffer, b
 
 uint64_t NullFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
+    return 0;
+}
+
+uint64_t NullFile::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+{
+    return size;
+}
+
+uint64_t ZeroFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+{
     memset(reinterpret_cast<void *>(buffer), 0, size);
     return size;
 }
 
-uint64_t NullFile::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+uint64_t ZeroFile::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
     return size;
 }
@@ -293,7 +303,7 @@ bool DevFs::initialise(Disk *pDisk)
 
     // Create /dev/null and /dev/zero nodes
     NullFile *pNull = new NullFile(String("null"), ++baseInode, this, m_pRoot);
-    NullFile *pZero = new NullFile(String("zero"), ++baseInode, this, m_pRoot);
+    ZeroFile *pZero = new ZeroFile(String("zero"), ++baseInode, this, m_pRoot);
     m_pRoot->addEntry(pNull->getName(), pNull);
     m_pRoot->addEntry(pZero->getName(), pZero);
 
