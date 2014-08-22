@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -30,7 +29,7 @@
 
 #include <panic.h>
 
-void Spinlock::acquire()
+bool Spinlock::acquire()
 {
   Thread *pThread = Processor::information().getCurrentThread();
 
@@ -72,7 +71,10 @@ void Spinlock::acquire()
       m_Atom = true;
 
     uintptr_t myra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
-    FATAL_NOLOCK("Spinlock has deadlocked in acquire, my return address is " << myra << ", return address of other locker is " << m_Ra << ", spinlock is " << reinterpret_cast<uintptr_t>(this) << ", atom is " << atom << ".");
+    ERROR_NOLOCK("Spinlock has deadlocked in acquire");
+    ERROR_NOLOCK("Spinlock has deadlocked, level is " << m_Level);
+    ERROR_NOLOCK("Spinlock has deadlocked, my return address is " << myra << ", return address of other locker is " << m_Ra);
+    FATAL_NOLOCK("Spinlock has deadlocked, spinlock is " << reinterpret_cast<uintptr_t>(this) << ", atom is " << atom << ".");
 
     // Panic in case there's a return from the debugger (or the debugger isn't available)
     panic("Spinlock has deadlocked");
@@ -93,15 +95,17 @@ void Spinlock::acquire()
 
   m_bInterrupts = bInterrupts;
 
+  return true;
+
 }
-void Spinlock::release()
+
+void Spinlock::exit()
 {
   bool bWasInterrupts = Processor::getInterrupts();
   if (bWasInterrupts == true)
   {
       FATAL_NOLOCK("Spinlock: release() called with interrupts enabled.");
   }
-  bool bInterrupts = m_bInterrupts;
 
   if (m_Magic != 0xdeadbaba)
   {
@@ -109,9 +113,12 @@ void Spinlock::release()
   }
 
   // Don't actually release the lock if we re-entered the critical section.
-  if (--m_Level)
+  if (m_Level)
   {
-    return;
+    if (--m_Level)
+    {
+      return;
+    }
   }
 
   m_pOwner = 0;
@@ -135,10 +142,24 @@ void Spinlock::release()
 //  if (!m_bAvoidTracking)
     g_LocksCommand.lockReleased(this);
 #endif
+}
+
+void Spinlock::release()
+{
+  bool bInterrupts = m_bInterrupts;
+
+  exit();
 
   // Reenable irqs if they were enabled before
   if (bInterrupts)
   {
     Processor::setInterrupts(true);
   }
+}
+
+void Spinlock::unwind()
+{
+  // We're about to be forcefully unlocked, so we must unwind entirely.
+  m_Level = 0;
+  m_pOwner = 0;
 }

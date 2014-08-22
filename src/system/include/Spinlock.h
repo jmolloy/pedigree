@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -33,7 +32,12 @@ class Spinlock
         m_bAvoidTracking(bAvoidTracking), m_Magic(0xdeadbaba),
         m_pOwner(0), m_Level(0) {}
 
-    void acquire();
+    bool acquire();
+
+    /** Exit the critical section, without restoring interrupts. */
+    void exit();
+
+    /** Exit the critical section, restoring previous interrupt state. */
     void release();
 
     bool acquired()
@@ -47,6 +51,9 @@ class Spinlock
     }
 
   private:
+    /** Unwind the spinlock because a thread is releasing it. */
+    void unwind();
+
     volatile bool m_bInterrupts;
     Atomic<bool> m_Atom;
 
