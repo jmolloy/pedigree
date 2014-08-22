@@ -3,7 +3,7 @@
 	[
 		{
 			"path": "../",
-            "folder_exclude_patterns": ["pedigree-compiler", "compilers/dir", "images/local"],
+            "folder_exclude_patterns": ["pedigree-compiler", "compilers/dir", "images/local", "docs/doxygen"],
             "follow_symlinks": true
 		}
 	],
