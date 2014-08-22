@@ -636,6 +636,7 @@ class WaitCleanup
         void terminated(Process *pProcess)
         {
             m_pTerminated = pProcess;
+            pProcess->removeWaiter(m_Lock);
         }
 
         ~WaitCleanup()
@@ -690,6 +691,9 @@ int posix_waitpid(int pid, int *status, int options)
         Process *pProcess = Scheduler::instance().getProcess(i);
         if(pProcess == pThisProcess)
             continue; // Don't wait for ourselves.
+
+        if (pProcess->getState() == Process::Reaped)
+            continue; // Reaped but not yet destroyed.
 
         if ((pid <= 0) && (pProcess->getType() == Process::Posix))
         {
@@ -754,7 +758,7 @@ int posix_waitpid(int pid, int *status, int options)
             pid = pProcess->getId();
 
             // Zombie?
-            if (pProcess->getThread(0)->getStatus() == Thread::Zombie)
+            if (pProcess->getState() == Process::Terminated)
             {
                 if (status)
                     *status = pProcess->getExitStatus();
@@ -762,7 +766,10 @@ int posix_waitpid(int pid, int *status, int options)
                 // Delete the process; it's been reaped good and proper.
                 SC_NOTICE("waitpid: " << pid << " reaped [" << pProcess->getExitStatus() << "]");
                 cleanup.terminated(pProcess);
-                delete pProcess;
+                if (pProcess->waiterCount() < 1)
+                    delete pProcess;
+                else
+                    pProcess->reap();
                 return pid;
             }
             // Suspended (and WUNTRACED)?
