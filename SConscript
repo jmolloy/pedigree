@@ -25,6 +25,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 import os
 import shutil
 import subprocess
+import tempfile
 import commands
 Import(['env'])
 
@@ -366,7 +367,44 @@ def buildImageMtools(target, source, env):
         args.append('%s%s' % (destDrive, dest))
 
         # Some of these copies may fail due to missing symlinks etc
-        subprocess.call(args, stdout=subprocess.PIPE, env=execenv)
+        subprocess.call(args, stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT, env=execenv)
+
+        sources = source
+        if not isinstance(source, list):
+            sources = [source]
+
+        filelist = []
+        for item in sources:
+            if os.path.isdir(item):
+                for (p, _, n) in os.walk(item):
+                    filelist.extend([os.path.join(p, x) for x in n])
+            else:
+                filelist.append(item)
+
+        for path in filelist:
+            if os.path.islink(path):
+                realpath = os.path.relpath(path, imagedir)
+                target = os.readlink(path)
+                common = os.path.commonprefix([target, imagedir])
+                if common == imagedir:
+                    target = os.path.relpath(target, imagedir)
+                    target = '/%s' % (target,)
+
+                # Delete old file from the image.
+                args = ['mdel', os.path.join(destDrive, realpath)]
+                subprocess.call(args, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, env=execenv)
+
+                # Create symlink.
+                with tempfile.NamedTemporaryFile() as f:
+                    f.write(target)
+                    f.flush()
+
+                    args = ['mcopy', '-Do', f.name,
+                            os.path.join(destDrive, '%s.__sym' % (realpath,))]
+                    subprocess.call(args, stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT, env=execenv)
 
     # Copy the base image to the destination, overwriting any image that
     # may already exist there.
