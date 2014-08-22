@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -138,6 +137,7 @@ bool Semaphore::acquire(size_t n, size_t timeoutSecs, size_t timeoutUsecs)
     removeThread(pThread);
 
     // Why were we woken?
+    bool bState = true;
     if (pThread->wasInterrupted() || pThread->getUnwindState() != Thread::Continue)
     {
         // We were deliberately interrupted - most likely because of a timeout.
@@ -147,13 +147,20 @@ bool Semaphore::acquire(size_t n, size_t timeoutSecs, size_t timeoutUsecs)
           delete pEvent;
         }
 
-        // Restore interrupt state. It turns out that we can sometimes come
-        // back without interrupts enabled in some circumstances when they were
-        // enabled previously, which is a terrible side-effect for a timed-out
-        // Semaphore acquire to have.
-        Processor::setInterrupts(bWasInterrupts);
-        return false;
+        bState = false;
     }
+
+    // Restore interrupt state. If we are woken by an event (eg, timeout, user
+    // input, etc), we seem to fail to restore the correct interrupt state when
+    // we unwind the event state. This is not great - it leaves us in a weird
+    // state where interrupts are disabled, and means any further iterations of
+    // the acquire loop will believe that interrupts were entirely disabled.
+    // A side-effect of acquiring a Semaphore should not be that interrupts are
+    // disabled, unless they were disabled before acquire() was called!
+    Processor::setInterrupts(bWasInterrupts);
+
+    if (!bState)
+      return false;
   }
 
 }
@@ -186,6 +193,10 @@ void Semaphore::release(size_t n)
     // we need to push them back on the queue later.
     List<Thread *> stillPendingThreads;
 
+    // We should wake threads without holding the modification lock, so this
+    // list holds the threads that we need to wake.
+    List<Thread *> wakeupThreads;
+
     while(m_Queue.count() != 0)
     {
       Thread *pThread = m_Queue.popFront();
@@ -209,9 +220,7 @@ void Semaphore::release(size_t n)
           continue;
       }
 
-      pThread->getLock().acquire();
-      pThread->setStatus(Thread::Ready);
-      pThread->getLock().release();
+      wakeupThreads.pushBack(pThread);
     }
 
     if(stillPendingThreads.count())
@@ -220,11 +229,25 @@ void Semaphore::release(size_t n)
                 it != stillPendingThreads.end();
                 ++it)
         {
-            m_Queue.pushBack(*it);
+            Thread *pThread = *it;
+            m_Queue.pushBack(pThread);
         }
     }
 
     m_BeingModified.release();
+
+    if (wakeupThreads.count())
+    {
+        for(List<Thread *>::Iterator it = wakeupThreads.begin();
+                it != wakeupThreads.end();
+                ++it)
+        {
+            Thread *pThread = *it;
+            pThread->getLock().acquire();
+            pThread->setStatus(Thread::Ready);
+            pThread->getLock().release();
+        }
+    }
   }
 
   #ifdef STRICT_LOCK_ORDERING
