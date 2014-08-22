@@ -126,6 +126,8 @@ Process::~Process()
 
 size_t Process::addThread(Thread *pThread)
 {
+  if (!pThread)
+    return ~0;
   m_Threads.pushBack(pThread);
   return (m_NextTid += 1);
 }
@@ -188,6 +190,8 @@ void Process::kill()
       }
     }
   }
+
+  m_State = Terminated;
 
   // Add to the zombie queue if the process is an orphan.
   if (!m_pParent)
@@ -254,6 +258,11 @@ void Process::removeWaiter(Semaphore *pWaiter)
         else
             ++it;
     }
+}
+
+size_t Process::waiterCount() const
+{
+  return m_Waiters.count();
 }
 
 void Process::notifyWaiters()

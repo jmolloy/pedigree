@@ -72,6 +72,8 @@ public:
         Active,
         Suspended,
         Terminating,
+        Terminated,
+        Reaped, /// Reaped means the process has had a status retrieved.
     };
 
     /** Default constructor. */
@@ -127,6 +129,12 @@ public:
     int getExitStatus()
     {
         return m_ExitStatus;
+    }
+
+    /** Marks the process as reaped. */
+    void reap()
+    {
+        m_State = Reaped;
     }
 
     /** Kills the process. */
@@ -245,6 +253,7 @@ public:
 
     void addWaiter(Semaphore *pWaiter);
     void removeWaiter(Semaphore *pWaiter);
+    size_t waiterCount() const;
 
     bool hasSuspended()
     {
