@@ -529,6 +529,10 @@ void PerProcessorScheduler::sleep(Spinlock *pLock)
     Thread *pThread = Processor::information().getCurrentThread();
     if(pThread->hasEvents())
     {
+        // We're about to handle an event, so release the lock (as the schedule
+        // would have done that had we not handled an event).
+        if (pLock)
+            pLock->release();
         checkEventState(0);
         return; // Sleep interrupted by event.
     }
