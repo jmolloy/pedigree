@@ -138,7 +138,7 @@ uint64_t Pipe::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
             }
 
             // Is EOF signalled (is this why we were woken?)
-            if (m_bIsEOF)
+            if (m_bIsEOF && (m_Front == m_Back))
             {
                 // Yes, the next call will probably return zero.
                 return n;
