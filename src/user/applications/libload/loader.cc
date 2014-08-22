@@ -46,7 +46,7 @@
 #define STB_LOPROC     13
 #define STB_HIPROC     15
 
-typedef void (*entry_point_t)(char*[], char **);
+typedef void (*entry_point_t)(const char*[], char **);
 typedef void (*init_fini_func_t)();
 
 enum LookupPolicy {
@@ -174,7 +174,7 @@ extern char __end_bss;
 
 extern "C" void _init();
 extern "C" void _fini();
-extern "C" int _start(char *argv[], char *env[]);
+extern "C" int _start(const char *argv[], const char *env[]);
 
 size_t elfhash(const char *name) {
     size_t h = 0, g = 0;
@@ -196,7 +196,7 @@ extern char **environ;
  * the init and fini functions around the call to crt0's _start, which is
  * the normal entry point for an application.
  */
-extern "C" int _libload_main(char *argv[], char *env[])
+extern "C" int _libload_main(const char *argv[], const char *env[])
 {
     /// \note THIS IS CALLED BEFORE CRT0. Do not use argc/argv/environ,
     ///       and keep everything as minimal as possible.
@@ -223,7 +223,7 @@ extern "C" int _libload_main(char *argv[], char *env[])
     return ret;
 }
 
-extern "C" int main(int argc, char *argv[])
+extern "C" int main(int argc, const char *argv[])
 {
     // Sanity check: do we actually have a program to load?
     if(argc == 0) {
@@ -356,6 +356,22 @@ extern "C" int main(int argc, char *argv[])
     if(meta->init_func) {
         init_fini_func_t init = (init_fini_func_t) meta->init_func;
         init();
+    }
+
+    // Register fini functions with atexit for loaded objects.
+    for(std::list<struct _object_meta *>::iterator it = meta->objects.begin();
+        it != meta->objects.end();
+        ++it) {
+        if((*it)->fini_func) {
+            init_fini_func_t fini = (init_fini_func_t) (*it)->fini_func;
+            atexit(fini);
+        }
+    }
+
+    // Register fini function for this object with atexit.
+    if (meta->fini_func) {
+        init_fini_func_t fini = (init_fini_func_t) meta->fini_func;
+        atexit(fini);
     }
 
     // argv[0] is passed to us by the kernel and holds the path to the binary
