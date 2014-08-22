@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -18,15 +17,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-extern int write(int,int,int);
-extern int open(const char*,int,int);
+#include <newlib.h>
+#include <fcntl.h>
+
 extern int main(int,char**,char**);
-extern int _exit(int);
-extern int sprintf(char*, const char*, ...);
-extern void setenv(char*,char*,int);
-
-extern char **environ;
-
 extern void _init_signals(void);
 
 void _start(char **argv, char **env)
@@ -35,9 +29,9 @@ void _start(char **argv, char **env)
 
   if (write(2,0,0) == -1)
   {
-    open("/dev/tty", 0, 0);
-    open("/dev/tty", 0, 0);
-    open("/dev/tty", 0, 0);
+    open("/dev/tty", O_RDONLY, 0);
+    open("/dev/tty", O_WRONLY, 0);
+    open("/dev/tty", O_WRONLY, 0);
   }
 
   // Count how many args we have.
@@ -73,7 +67,7 @@ void _start(char **argv, char **env)
     }
   }
 
-  _exit(main(argc, argv, env));
+  exit(main(argc, argv, env));
 
   // Unreachable.
   for (;;);
