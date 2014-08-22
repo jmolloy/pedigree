@@ -177,7 +177,7 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThre
         // unlock it.
         if (pLock->m_bInterrupts)
             bWasInterrupts = true;
-        pLock->m_Atom.m_Atom = 1;
+        pLock->exit();
 #ifdef TRACK_LOCKS
         g_LocksCommand.lockReleased(pLock);
 #endif
@@ -204,6 +204,7 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThre
 #ifdef TRACK_LOCKS
     g_LocksCommand.lockReleased(&pCurrentThread->getLock());
 #endif
+    pCurrentThread->getLock().unwind();
     Processor::restoreState(pNextThread->state(), &pCurrentThread->getLock().m_Atom.m_Atom);
     // Not reached.
 }
@@ -383,7 +384,10 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
     Processor::setTlsBase(pThread->getTlsBase());
 
     // This thread is safe from being moved as its status is now "running".
+    // It is worth noting that we can't just call exit() here, as the lock is
+    // not necessarily actually taken.
     if (pThread->getLock().m_bInterrupts) bWasInterrupts = true;
+    pThread->getLock().unwind();
     pThread->getLock().m_Atom.m_Atom = 1;
 #ifdef TRACK_LOCKS
     g_LocksCommand.lockReleased(&pThread->getLock());
@@ -396,6 +400,7 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
         return;
     }
 
+    pCurrentThread->getLock().unwind();
     if (bUsermode)
         Processor::jumpUser(&pCurrentThread->getLock().m_Atom.m_Atom,
                             reinterpret_cast<uintptr_t>(pStartFunction),
@@ -437,7 +442,14 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
     Processor::setTlsBase(pThread->getTlsBase());
 
     // This thread is safe from being moved as its status is now "running".
+    // It is worth noting that we can't just call exit() here, as the lock is
+    // not necessarily actually taken.
+    if (pThread->getLock().m_bInterrupts) bWasInterrupts = true;
+    pThread->getLock().unwind();
     pThread->getLock().m_Atom.m_Atom = 1;
+#ifdef TRACK_LOCKS
+    g_LocksCommand.lockReleased(&pThread->getLock());
+#endif
 
     // Copy the SyscallState into this thread's kernel stack.
     uintptr_t kStack = reinterpret_cast<uintptr_t>(pThread->getKernelStack());
@@ -451,6 +463,7 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
         return;
     }
 
+    pCurrentThread->getLock().unwind();
 #ifdef X64
     // x64 breaks if we try and create a reference from the kStack variable.
     Processor::restoreState(*reinterpret_cast<SyscallState*>(kStack), &pCurrentThread->getLock().m_Atom.m_Atom);
@@ -503,7 +516,7 @@ void PerProcessorScheduler::killCurrentThread()
     Processor::switchAddressSpace( *pNextThread->getParent()->getAddressSpace() );
     Processor::setTlsBase(pNextThread->getTlsBase());
 
-    pNextThread->getLock().release();
+    pNextThread->getLock().exit();
 
     deleteThreadThenRestoreState(pThread, pNextThread->state());
 }
