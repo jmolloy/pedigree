@@ -255,7 +255,12 @@ int main(int argc, char **argv)
 
     // Start up child process.
     g_RunningPid = fork();
-    if(g_RunningPid == 0)
+    if(g_RunningPid == -1)
+    {
+        syslog(LOG_ALERT, "ttyterm: couldn't fork: %s", strerror(errno));
+        return EXIT_FAILURE;
+    }
+    else if(g_RunningPid == 0)
     {
         close(0);
         close(1);

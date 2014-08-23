@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -41,6 +40,7 @@ int test_open(void)
   else
   {
     printf("FAIL - errno %d (%s)\n", errno, strerror(errno));
+    return FAIL;
   }
 
   printf ("\tOpen nonexistant file - ");
@@ -53,6 +53,7 @@ int test_open(void)
   else
   {
     printf ("FAIL - errno %d (%s)\n", errno, strerror(errno));
+    return FAIL;
   }
 
   printf ("\tCreate file - ");
@@ -65,6 +66,7 @@ int test_open(void)
   else
   {
     printf("FAIL - errno %d (%s)\n", errno, strerror(errno));
+    return FAIL;
   }
 
   printf("\tRecycle descriptors - ");
@@ -79,10 +81,19 @@ int test_open(void)
   else
   {
     printf("FAIL - %d, %d\n", fd4, fd5);
+    return FAIL;
   }
 
   int hahaha = open("/applications/bash", O_RDWR);
-  if(fork() == 0)
+  pid_t pid = fork();
+
+  if(pid == -1)
+  {
+      printf("FAIL - fork failed\n");
+      return FAIL;
+  }
+
+  if(pid == 0)
   {
       close(hahaha);
       int rofl = open("/applications/bash", O_RDWR);
@@ -111,7 +122,8 @@ int main (int argc, char **argv)
   printf("optind: %d\n", optind);
   printf ("Syscall test starting...\n");
 
-  test_open ();
-  return 0;
-
+  if (test_open() == PASS)
+      return EXIT_SUCCESS;
+  else
+      return EXIT_FAILURE;
 }

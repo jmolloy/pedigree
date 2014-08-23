@@ -46,6 +46,11 @@ extern int ts();
 void start(const char *proc)
 {
   pid_t f = fork();
+  if(f == -1)
+  {
+    syslog(LOG_ALERT, "init: fork failed %s", strerror(errno));
+    exit(errno);
+  }
   if(f == 0)
   {
     syslog(LOG_INFO, "init: starting %s...", proc);
