@@ -106,6 +106,10 @@ bool Terminal::initialise()
     if (pid == -1)
     {
         syslog(LOG_INFO, "TUI: Couldn't fork: %s", strerror(errno));
+        DirtyRectangle rect;
+        write("Couldn't fork: ", rect);
+        write(strerror(errno), rect);
+        redrawAll(rect);
         return false;
     }
     else if (pid == 0)
