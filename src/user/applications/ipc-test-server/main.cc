@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -31,7 +30,12 @@ int main(int argc, char *argv[])
     printf("IPC Test: Server, daemonising\n");
 
     pid_t id = fork();
-    if(!id)
+    if (id == -1)
+    {
+        printf("Forking failed.");
+        return 1;
+    }
+    else if(id == 0)
     {
         // Grab an endpoint to use.
         createEndpoint("ipc-test");

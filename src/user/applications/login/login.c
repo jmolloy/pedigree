@@ -233,7 +233,14 @@ int main(int argc, char **argv)
 
       // Logged in successfully - launch the shell.
       int pid;
-      if ( (g_RunningPid=pid=fork()) == 0)
+      pid = g_RunningPid = fork();
+
+      if (pid == -1)
+      {
+        printf("Fork failed %s\n", strerror(errno));
+        exit(errno);
+      }
+      else if (pid == 0)
       {
         // Child...
         g_RunningPid = -1;

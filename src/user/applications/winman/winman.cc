@@ -92,7 +92,12 @@ bool g_bCursorUpdate = false;
 
 void startClient()
 {
-    if(fork() == 0)
+    pid_t pid = fork();
+    if(pid == -1)
+    {
+        syslog(LOG_CRIT, "winman: fork failed: %s\n", strerror(errno));
+    }
+    else if(pid == 0)
     {
         // Forked. Close all of our existing handles, we don't really want the
         // client to inherit them.
@@ -805,13 +810,18 @@ int main(int argc, char *argv[])
     if(result < 0)
     {
         fprintf(stderr, "winman: could not get current mode information.\n");
-        return 1;
+        return EXIT_FAILURE;
     }
 
     // Kick off a 'window manager' process group, fork to run the modeset shim.
     setpgid(0, 0);
     pid_t child = fork();
-    if(child != 0)
+    if(child == -1)
+    {
+        fprintf(stderr, "winman: could not fork: %s\n", strerror(errno));
+        return 1;
+    }
+    else if(child != 0)
     {
         // Wait for the child (ie, real window manager process) to terminate.
         int status = 0;

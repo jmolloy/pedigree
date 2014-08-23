@@ -103,7 +103,12 @@ bool Terminal::initialise()
 
     // Fire up a shell session.
     int pid = m_Pid = fork();
-    if (pid == 0)
+    if (pid == -1)
+    {
+        syslog(LOG_INFO, "TUI: Couldn't fork: %s", strerror(errno));
+        return false;
+    }
+    else if (pid == 0)
     {
         close(0);
         close(1);

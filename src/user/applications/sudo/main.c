@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -109,8 +108,13 @@ int main(int argc, char *argv[])
     if(iRunShell)
     {
         // Execute root's shell
-        int pid;
-        if((pid = fork()) == 0)
+        int pid = fork();
+        if(pid == -1)
+        {
+            fprintf(stderr, "sudo: couldn't fork: %s\n", strerror(errno));
+            exit(errno);
+        }
+        else if(pid == 0)
         {
             // Run the command
             execlp(pw->pw_shell, pw->pw_shell, 0);
@@ -136,8 +140,13 @@ int main(int argc, char *argv[])
     else
     {
         // Run the command
-        int pid;
-        if((pid = fork()) == 0)
+        int pid = fork();
+        if(pid == -1)
+        {
+            fprintf(stderr, "sudo: couldn't fork: %s\n", strerror(errno));
+            exit(errno);
+        }
+        else if(pid == 0)
         {
             // Run the command
             execvp(argv[nStart], &argv[nStart]);
