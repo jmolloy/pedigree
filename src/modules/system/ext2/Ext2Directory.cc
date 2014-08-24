@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -174,14 +173,50 @@ void Ext2Directory::cacheDirectoryContents()
                pDir->d_inode != 0
                )
         {
-            char *filename = new char[pDir->d_namelen+1];
-            memcpy(filename, pDir->d_name, pDir->d_namelen);
-            filename[pDir->d_namelen] = '\0';
+            size_t namelen = pDir->d_namelen + 1;
+
+            // Can we get the file type from the directory entry?
+            size_t fileType = EXT2_UNKNOWN;
+            if (m_pExt2Fs->checkRequiredFeature(2))
+            {
+                // Directory entry holds file type.
+                fileType = pDir->d_file_type;
+            }
+            else
+            {
+                // Inode holds file type.
+                Inode *inode = m_pExt2Fs->getInode(pDir->d_inode);
+                size_t inode_ftype = inode->i_mode & 0xF000;
+                switch (inode_ftype)
+                {
+                    case EXT2_S_IFLNK:
+                        fileType = EXT2_SYMLINK;
+                        break;
+                    case EXT2_S_IFREG:
+                        fileType = EXT2_FILE;
+                        break;
+                    case EXT2_S_IFDIR:
+                        fileType = EXT2_DIRECTORY;
+                        break;
+                    default:
+                        ERROR("EXT2: Inode has unsupported file type: " << inode_ftype << ".");
+                        break;
+                }
+
+                // In this case, the file type entry is the top 8 bits of the
+                // filename length.
+                namelen |= pDir->d_file_type << 8;
+            }
+
+            // Grab filename from the entry.
+            char *filename = new char[namelen];
+            memcpy(filename, pDir->d_name, namelen - 1);
+            filename[namelen - 1] = '\0';
             String sFilename(filename);
             delete [] filename;
 
             File *pFile = 0;
-            switch (pDir->d_file_type)
+            switch (fileType)
             {
                 case EXT2_FILE:
                     pFile = new Ext2File(sFilename, LITTLE_TO_HOST32(pDir->d_inode), m_pExt2Fs->getInode(LITTLE_TO_HOST32(pDir->d_inode)), m_pExt2Fs, this);
@@ -193,7 +228,7 @@ void Ext2Directory::cacheDirectoryContents()
                     pFile = new Ext2Symlink(sFilename, LITTLE_TO_HOST32(pDir->d_inode), m_pExt2Fs->getInode(LITTLE_TO_HOST32(pDir->d_inode)), m_pExt2Fs, this);
                     break;
                 default:
-                    ERROR("EXT2: Unrecognised file type: " << pDir->d_file_type);
+                    ERROR("EXT2: Unrecognised file type for '" << sFilename << "': " << pDir->d_file_type);
             }
 
             // Add to cache.

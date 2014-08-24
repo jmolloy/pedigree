@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -76,6 +75,10 @@ private:
     void ensureFreeBlockBitmapLoaded(size_t group);
     void ensureFreeInodeBitmapLoaded(size_t group);
     void ensureInodeTableLoaded(size_t group);
+
+    bool checkOptionalFeature(size_t feature);
+    bool checkRequiredFeature(size_t feature);
+    bool checkReadOnlyFeature(size_t feature);
 
     /** Our superblock. */
     Superblock *m_pSuperblock;

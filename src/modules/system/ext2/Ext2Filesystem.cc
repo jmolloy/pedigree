@@ -56,7 +56,9 @@ Ext2Filesystem::~Ext2Filesystem()
 
 bool Ext2Filesystem::initialise(Disk *pDisk)
 {
+    String devName;
     m_pDisk = pDisk;
+    pDisk->getName(devName);
 
     // Attempt to read the superblock.
     uintptr_t block = m_pDisk->read(1024ULL);
@@ -65,11 +67,25 @@ bool Ext2Filesystem::initialise(Disk *pDisk)
     // Read correctly?
     if (LITTLE_TO_HOST16(m_pSuperblock->s_magic) != 0xEF53)
     {
-        String devName;
-        pDisk->getName(devName);
         ERROR("Ext2: Superblock not found on device " << devName);
         return false;
     }
+
+    // Clean?
+    if (LITTLE_TO_HOST16(m_pSuperblock->s_state) != EXT2_STATE_CLEAN)
+    {
+        WARNING("Ext2: filesystem on device " << devName << " is not clean.");
+    }
+
+    // Compressed filesystem?
+    if (checkRequiredFeature(1))
+    {
+        ERROR("Ext2: filesystem on device " << devName << " requires compression, cannot mount.");
+        return false;
+    }
+
+    /// \todo Check for journal required features.
+    /// \todo Check all read-only features.
 
     // Calculate the block size.
     m_BlockSize = 1024 << LITTLE_TO_HOST32(m_pSuperblock->s_log_block_size);
@@ -113,8 +129,8 @@ Filesystem *Ext2Filesystem::probe(Disk *pDisk)
     Ext2Filesystem *pFs = new Ext2Filesystem();
     if (!pFs->initialise(pDisk))
     {
-        /// \todo Why's this bad boy here?
-        // delete pFs;
+        // No ext2 filesystem found - don't leak the filesystem object.
+        delete pFs;
         return 0;
     }
     else
@@ -389,6 +405,22 @@ Inode *Ext2Filesystem::getInode(uint32_t inode)
 
     return reinterpret_cast<Inode*> (block+blockOff);
 }
+
+bool Ext2Filesystem::checkOptionalFeature(size_t feature)
+{
+    return m_pSuperblock->s_feature_compat & feature;
+}
+
+bool Ext2Filesystem::checkRequiredFeature(size_t feature)
+{
+    return m_pSuperblock->s_feature_incompat & feature;
+}
+
+bool Ext2Filesystem::checkReadOnlyFeature(size_t feature)
+{
+    return m_pSuperblock->s_feature_ro_compat & feature;
+}
+
 
 void Ext2Filesystem::ensureFreeBlockBitmapLoaded(size_t group)
 {

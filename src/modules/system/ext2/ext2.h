@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -32,6 +31,9 @@
 #define EXT2_SOCKET    0x6
 #define EXT2_SYMLINK   0x7
 #define EXT2_MAX       0x8
+
+#define EXT2_STATE_CLEAN    1
+#define EXT2_STATE_UNCLEAN  2
 
 #define EXT2_S_IFSOCK  0xC000
 #define EXT2_S_IFLNK   0xA000
@@ -87,7 +89,7 @@ struct Superblock
     uint32_t s_def_resuid;
     uint32_t s_def_resgid;
 //   -- EXT2_DYNAMIC_REV Specific --
-    //uint32_t s_first_ino; // - Should this actually be commented out? it makes the volume name align up properly... :S
+    uint32_t s_first_ino; // - Should this actually be commented out? it makes the volume name align up properly... :S
     uint16_t s_inode_size;
     uint16_t s_block_group_nr;
     uint32_t s_feature_compat;
