@@ -391,11 +391,11 @@ if not env['forcemtools']:
     else:
         env['havelosetup'] = 0
 
-        tmp = commands.getoutput("which genext2fs")
-        if len(tmp) and not "no genext2fs" in tmp:
-            env['havegenext2fs'] = 1
-        else:
-            env['havegenext2fs'] = 0
+    tmp = commands.getoutput("which genext2fs")
+    if len(tmp) and not "no genext2fs" in tmp:
+        env['havegenext2fs'] = 1
+    else:
+        env['havegenext2fs'] = 0
 else:
     env['havegenext2fs'] = 0
     env['havelosetup'] = 0

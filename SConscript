@@ -312,13 +312,24 @@ def buildImageGenExt2Fs(target, source, env):
     shutil.copyfile(os.path.join(imagedir, '..', 'base', '.profile'),
                     os.path.join(imagedir, '.profile'))
 
+    # Fix symlinks, if they exist.
+    for (dirpath, _, files) in os.walk(imagedir):
+        for filename in files:
+            fn = os.path.join(dirpath, filename)
+            if os.path.islink(fn):
+                target = os.readlink(fn)
+                if target.startswith(dirpath):
+                    os.unlink(fn)
+                    target = target[len(dirpath):].lstrip('/')
+                    os.symlink(target, fn)
+
     # Generate the image.
     args = [
         'genext2fs',
         '-d',
         imagedir,
         '-b',
-        '976563',  # 1 GiB in 512-byte blocks.
+        '976563',  # 1 GiB in 1024-byte blocks.
         '-U',  # Mark all files owned by 'root' (UID 0)
         outFile,
     ]
