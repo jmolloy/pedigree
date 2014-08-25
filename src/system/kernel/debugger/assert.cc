@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -43,12 +42,12 @@ void _assert(bool b, const char *file, int line, const char *func)
 
     if(Processor::m_Initialised)
     {
-        ERROR("Assertion failed in file " << file);
-        ERROR("In function '" << func << "'");
-        ERROR("On line " << Dec << line << Hex << ".");
+        ERROR_NOLOCK("Assertion failed in file " << file);
+        ERROR_NOLOCK("In function '" << func << "'");
+        ERROR_NOLOCK("On line " << Dec << line << Hex << ".");
         Processor::breakpoint();
 
-        ERROR("You may not resume after a failed assertion.");
+        ERROR_NOLOCK("You may not resume after a failed assertion.");
     }
 
     // Best reason for a return is that the debugger isn't active. Either way, it's an error condition, panic.
