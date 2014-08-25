@@ -72,6 +72,7 @@
  * The following lists the various components across the operating system.
  *
  * - \ref module_main
+ * - \ref mmap_main
  *
  * \section main_resources Resources
  * The main repository for Pedigree is at https://github.com/miselin/pedigree.

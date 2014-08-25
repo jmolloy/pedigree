@@ -33,6 +33,60 @@
 /** \addtogroup vfs
     @{ */
 
+/**
+ * \page module_mmap Memory Mapped Files
+ * Pedigree supports memory mapped files to allow mapping File objects into
+ * the address space.
+ *
+ * \section mmap_overview Overview
+ * Pedigree's memory mapped file support includes support for both anonymous and
+ * proper file-backed mappings. An anonymous mapping is one that only backs onto
+ * memory (there is no file behind it). A file-backed mapping backs onto a file
+ * and demand-maps it as necessary.
+ *
+ * File memory maps can be mapped shared or copy-on-write. Shared maps allow
+ * writes directly to the file in memory (and need to be synced to appear on
+ * disk). Copy-on-write maps never affect the file.
+ *
+ * \section mmap_vfs VFS Requirements
+ * Memory mapped files do not work out-of-the-box with every filesystem. In
+ * particular, filesystems that cannot guarantee page-aligned (and page-size)
+ * blocks returned from File::readBlock will not work immediately.
+ *
+ * The basic requirements for a memory mapped file to work correctly are:
+ * - File::read must be able to accept a NULL buffer, which will prime
+ *     File::readBlock, rather than read into a buffer.
+ * - File::readBlock must return a page-aligned, page-size block.
+ * - File::pinBlock must be able to pin a block so it cannot be freed.
+ * - File::unpinBlock must be able to unpin a block so it can be freed.
+ *
+ * Optionally, the following can be provided to enable extra functionality:
+ * - File::sync(size_t, bool) which syncs a block back to disk (or some other
+ *     backing store, if the File is not backed by disk).
+ * - File::writeBlock which triggers a write of a block back to disk (or some
+ *     other backing store).
+ *
+ * \section mmap_trap Trap Handling
+ * At first, no mappings for the file exist in the address space. When a process
+ * attempts to access a mapping, a page fault is triggered which is handled by
+ * MemoryMapManager::trap.
+ *
+ * For anonymous memory maps, reads get mapped to a single zero page. This
+ * means anonymous memory maps that have not been written to use minimal amounts
+ * of memory. When an anonymous memory map is written to, a new page is mapped
+ * and zeroed.
+ *
+ * For file memory maps, reads get mapped to the physical page for the virtual
+ * page returned by File::readBlock. It is for this reason that File::pinBlock
+ * is necessary -- the physical page cannot disappear underneath the file, as
+ * this would cause the mapping's contents to change (and leak data from other
+ * processes).
+ *
+ * A file memory map that is mapped shared will allow this physical page to be
+ * modified on write. A copy-on-write file memory map will trigger a copy of the
+ * page, and further writes will go to the copy of this page.
+ */
+
 /** \file
     \brief Memory-mapped file interface
 
