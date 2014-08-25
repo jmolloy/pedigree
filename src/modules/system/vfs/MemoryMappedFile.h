@@ -34,7 +34,7 @@
     @{ */
 
 /**
- * \page module_mmap Memory Mapped Files
+ * \page mmap_main Memory Mapped Files
  * Pedigree supports memory mapped files to allow mapping File objects into
  * the address space.
  *
