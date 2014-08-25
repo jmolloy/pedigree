@@ -282,6 +282,13 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     while (file->isSymlink())
         file = Symlink::fromFile(file)->followLink();
 
+    if (!file)
+    {
+        // Not found after symlink traversal.
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+    }
+
     if (file->isDirectory())
     {
         // Error - is directory.
