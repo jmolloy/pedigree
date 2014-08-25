@@ -546,8 +546,12 @@ void PerProcessorScheduler::sleep(Spinlock *pLock)
         // would have done that had we not handled an event).
         if (pLock)
             pLock->release();
+
         checkEventState(0);
-        return; // Sleep interrupted by event.
+
+        // Reacquire lock ready for sleep.
+        if (pLock)
+            pLock->acquire();
     }
 
     // Now we can happily sleep.
