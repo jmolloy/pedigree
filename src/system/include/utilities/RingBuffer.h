@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -56,24 +55,23 @@ class RingBuffer
         /// Constructor - pass in the desired size of the ring buffer.
         RingBuffer(size_t ringSize) :
             m_RingSize(ringSize), m_ReadSem(0), m_WriteSem(ringSize),
-            m_Reader(0), m_Writer(0), m_Ring(0)
+            m_Ring()
         {
-            m_Ring = new T[ringSize];
         }
 
         /// Destructor - destroys the ring; ensure nothing is calling waitFor.
         virtual ~RingBuffer()
         {
-            delete [] m_Ring;
         }
 
         /// write - write a byte to the ring buffer.
         void write(T obj)
         {
+            // Acquire write semaphore to make sure we have space in the buffer.
             m_WriteSem.acquire();
-            m_Ring[m_Writer++] = obj;
+            m_Ring.pushBack(obj);
 
-            m_Writer %= m_RingSize;
+            // All good, there is now a byte ready to read.
             m_ReadSem.release();
 
             notifyMonitors();
@@ -82,36 +80,29 @@ class RingBuffer
         /// write - write the given number of objects to the ring buffer.
         size_t write(T *obj, size_t n)
         {
-            if(n > m_RingSize)
+            if (n > m_RingSize)
                 n = m_RingSize;
 
             m_WriteSem.acquire(n);
-            size_t totalCopied = n;
-            if((m_Writer + n) > m_RingSize)
+            for (size_t i = 0; i < n; ++i)
             {
-                size_t copySize = m_RingSize - m_Writer;
-                memcpy(&m_Ring[m_Writer], obj, copySize * sizeof(T));
-                n -= copySize;
-                obj += copySize;
-                m_Writer = 0;
+                m_Ring.pushBack(obj[i]);
             }
-
-            memcpy(&m_Ring[m_Writer], obj, n * sizeof(T));
-            m_Writer += n;
-            m_ReadSem.release(totalCopied);
+            m_ReadSem.release(n);
 
             notifyMonitors();
 
-            return totalCopied;
+            return n;
         }
 
         /// read - read a byte from the ring buffer.
         T read()
         {
+            // Acquire read semaphore to make sure there's data ready.
             m_ReadSem.acquire();
-            T ret = m_Ring[m_Reader++];
+            T ret = m_Ring.popFront();
 
-            m_Reader %= m_RingSize;
+            // Notify writers that a new slot is available.
             m_WriteSem.release();
 
             notifyMonitors();
@@ -122,30 +113,19 @@ class RingBuffer
         /// read - read up to the given number of objects from the ring buffer
         size_t read(T *out, size_t n)
         {
-            if(n > m_RingSize)
+            if (n > m_RingSize)
                 n = m_RingSize;
 
-            if(n > m_ReadSem.getValue())
-                n = m_ReadSem.getValue();
-
             m_ReadSem.acquire(n);
-            size_t totalCopied = n;
-            if((m_Reader + n) > m_RingSize)
+            for (size_t i = 0; i < n; ++i)
             {
-                size_t copySize = m_RingSize - m_Reader;
-                memcpy(out, &m_Ring[m_Reader], copySize * sizeof(T));
-                n -= copySize;
-                out += copySize;
-                m_Reader = 0;
+                out[i] = m_Ring.popFront();
             }
-
-            memcpy(out, &m_Ring[m_Reader], n * sizeof(T));
-            m_Reader += n;
-            m_WriteSem.release(totalCopied);
+            m_WriteSem.release(n);
 
             notifyMonitors();
 
-            return totalCopied;
+            return n;
         }
 
         /// dataReady - is data ready for reading from the ring buffer?
@@ -243,10 +223,7 @@ class RingBuffer
         Semaphore m_ReadSem;
         Semaphore m_WriteSem;
 
-        size_t m_Reader;
-        size_t m_Writer;
-
-        T *m_Ring;
+        List<T> m_Ring;
 
         Mutex m_Lock;
 
