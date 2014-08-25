@@ -89,7 +89,7 @@ class ConsoleFile : public File
         virtual char getLast() = 0;
 
         /**
-         * In order to ensure getLast is always the most recent charcter,
+         * In order to ensure getLast is always the most recent character,
          * the thread that wrote a special character to the input stream
          * is put to sleep until the event handler calls this function.
          */

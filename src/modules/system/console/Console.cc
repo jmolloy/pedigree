@@ -117,10 +117,10 @@ uint64_t ConsoleMasterFile::write(uint64_t location, uint64_t size, uintptr_t bu
 {
     if(bCanBlock)
     {
-        if(!m_RingBuffer.waitFor(RingBufferWait::Writing))
+        if(!m_pOther->m_RingBuffer.waitFor(RingBufferWait::Writing))
             return 0; // Interrupted.
     }
-    else if(!m_RingBuffer.canWrite())
+    else if(!m_pOther->m_RingBuffer.canWrite())
     {
         return 0;
     }
@@ -240,6 +240,18 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
                     // Do we need to handle this character differently?
                     if(checkForEvent(slaveFlags, buf[i]))
                     {
+                        // So, normally we'll be fine to print nicely, but if
+                        // we can't write to the ring buffer, we must not try
+                        // to do so. This event may be necessary to unblock the
+                        // buffer!
+                        if (!m_RingBuffer.canWrite())
+                        {
+                            // Forcefully clear out bytes so we can write what
+                            // we need to to the ring buffer.
+                            char buf[3];
+                            m_RingBuffer.read(buf, 3);
+                        }
+
                         // Write it to the master nicely (eg, ^C, ^D)
                         char ctl[3] = {'^', '@' + buf[i], '\n'};
                         m_RingBuffer.write(ctl, 3);
@@ -344,7 +356,7 @@ size_t ConsoleMasterFile::outputLineDiscipline(char *buf, size_t len, size_t max
                 if (realSize >= maxSz)
                 {
                     // We do not have any room to add in the mapped character. Drop it.
-                    WARNING("Console ignored an NL -> CRNL conversion due to a full buffer.");
+                    // WARNING("Console ignored an NL -> CRNL conversion due to a full buffer.");
                     tmpBuff[i++] = '\n';
                     continue;
                 }
@@ -449,10 +461,10 @@ uint64_t ConsoleSlaveFile::write(uint64_t location, uint64_t size, uintptr_t buf
 {
     if(bCanBlock)
     {
-        if(!m_RingBuffer.waitFor(RingBufferWait::Writing))
-            return 0; // Interrupted
+        if(!m_pOther->m_RingBuffer.waitFor(RingBufferWait::Writing))
+            return 0; // Interrupted.
     }
-    else if(!m_RingBuffer.canWrite())
+    else if(!m_pOther->m_RingBuffer.canWrite())
     {
         return 0;
     }
