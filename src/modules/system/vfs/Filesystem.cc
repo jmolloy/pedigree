@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -153,8 +152,11 @@ bool Filesystem::remove(String path, File *pStartNode)
         FATAL("Filesystem::remove: Massive algorithmic error (2)");
         return false;
     }
-    pDParent->m_Cache.remove(filename);
-    return remove(pParent, pFile);
+
+    bool bRemoved = remove(pParent, pFile);
+    if (bRemoved)
+        pDParent->m_Cache.remove(filename);
+    return bRemoved;
 }
 
 File *Filesystem::findNode(File *pNode, String path)
