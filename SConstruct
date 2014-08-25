@@ -99,6 +99,7 @@ opts.AddVariables(
     
     ('distdir', 'Directory to install a Pedigree directory structure to, instead of a disk image. Empty will use disk images.', ''),
     BoolVariable('havelosetup', 'Whether or not `losetup` is available.', 0),
+    BoolVariable('havegenext2fs', 'Whether or not `genext2fs` is available.', 0),
     BoolVariable('forcemtools', 'Force use of mtools (and the FAT filesystem) even if losetup is available.', 1),
     BoolVariable('haveqemuimg', 'Whether or not `qemu-img` is available (for VDI/VMDK creation).', 0),
     BoolVariable('createvdi', 'Convert the created hard disk image to a VDI file for VirtualBox after it is created.', 0),
@@ -382,14 +383,21 @@ if(env['AS'] == ''):
                Exit(1)
            env['AS'] = env['CROSS'] + "as"
 
-# Detect losetup presence
+# Detect losetup/genext2fs presence
 if not env['forcemtools']:
     tmp = commands.getoutput("which losetup")
     if(len(tmp) and not "no losetup" in tmp):
         env['havelosetup'] = 1
     else:
         env['havelosetup'] = 0
+
+        tmp = commands.getoutput("which genext2fs")
+        if len(tmp) and not "no genext2fs" in tmp:
+            env['havegenext2fs'] = 1
+        else:
+            env['havegenext2fs'] = 0
 else:
+    env['havegenext2fs'] = 0
     env['havelosetup'] = 0
 
 # Extra build flags

@@ -221,6 +221,111 @@ def buildImageTargetdir(target, source, env):
     with open(outFile, 'w') as f:
         pass
 
+def buildImageGenExt2Fs(target, source, env):
+    if env['verbose']:
+        print '      Creating ' + os.path.basename(target[0].path)
+    else:
+        print '      Creating \033[32m' + os.path.basename(target[0].path) + '\033[0m'
+
+    builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"]).abspath
+    imagedir = env.Dir(env['PEDIGREE_IMAGES_DIR']).abspath
+    appsdir = env.Dir(env['PEDIGREE_BUILD_APPS']).abspath
+    modsdir = env.Dir(env['PEDIGREE_BUILD_MODULES']).abspath
+    drvsdir = env.Dir(env['PEDIGREE_BUILD_DRIVERS']).abspath
+    libsdir = os.path.join(builddir, 'libs')
+
+    outFile = target[0].path
+
+    # TODO(miselin): this image will not have GRUB on it.
+
+    # Copy files into the local images directory, ready for creation.
+    shutil.copyfile(os.path.join(builddir, 'config.db'),
+                    os.path.join(imagedir, '.pedigree-root'))
+
+    def makedirs(p):
+        if not os.path.exists(p):
+            os.makedirs(p)
+
+    # Create target directories.
+    makedirs(os.path.join(imagedir, 'boot'))
+    makedirs(os.path.join(imagedir, 'applications'))
+    makedirs(os.path.join(imagedir, 'libraries'))
+    makedirs(os.path.join(imagedir, 'system/modules'))
+    makedirs(os.path.join(imagedir, 'config'))
+
+    # Copy the kernel, initrd, and configuration database
+    for i in source[0:3]:
+        shutil.copyfile(i.abspath,
+                        os.path.join(imagedir, 'boot', i.name))
+    source = source[3:]
+
+    # Copy each input file across
+    for i in source:
+        otherPath = ''
+        search, prefix = imagedir, ''
+
+        # Applications
+        if appsdir in i.abspath:
+            search = appsdir
+            prefix = 'applications'
+
+        # Modules
+        elif modsdir in i.abspath:
+            search = modsdir
+            prefix = 'system/modules'
+
+        # Drivers
+        elif drvsdir in i.abspath:
+            search = drvsdir
+            prefix = 'system/modules'
+
+        # User Libraries
+        elif libsdir in i.abspath:
+            search = libsdir
+            prefix = 'libraries'
+
+        # Additional Libraries
+        elif builddir in i.abspath:
+            search = builddir
+            prefix = 'libraries'
+
+        # Already in the image.
+        elif imagedir in i.abspath:
+            continue
+
+        otherPath = prefix + i.abspath.replace(search, '')
+
+        # Clean out the last directory name if needed
+        fn = shutil.copyfile
+        if os.path.isdir(i.abspath):
+            fn = shutil.copytree
+
+        fn(i.path, os.path.join(imagedir, otherPath))
+
+    # Copy etc bits.
+    shutil.copyfile(os.path.join(imagedir, '..', 'base', 'config', 'greeting'),
+                    os.path.join(imagedir, 'config', 'greeting'))
+    shutil.copyfile(os.path.join(imagedir, '..', 'base', 'config', 'inputrc'),
+                    os.path.join(imagedir, 'config', 'inputrc'))
+    shutil.copyfile(os.path.join(imagedir, '..', 'base', '.bashrc'),
+                    os.path.join(imagedir, '.bashrc'))
+    shutil.copyfile(os.path.join(imagedir, '..', 'base', '.profile'),
+                    os.path.join(imagedir, '.profile'))
+
+    # Generate the image.
+    args = [
+        'genext2fs',
+        '-d',
+        imagedir,
+        '-b',
+        '976563',  # 1 GiB in 512-byte blocks.
+        '-U',  # Mark all files owned by 'root' (UID 0)
+        outFile,
+    ]
+    subprocess.check_call(args)
+
+    postImageBuild(outFile, env)
+
 def buildImageLosetup(target, source, env):
     if env['verbose']:
         print '      Creating ' + os.path.basename(target[0].path)
@@ -587,6 +692,8 @@ elif (not env['nodiskimages']) or (env['distdir']):
     if env['distdir']:
         fileList.append(env['distdir'])
         buildImage = buildImageTargetdir
+    elif env['havegenext2fs']:
+        buildImage = buildImageGenExt2Fs
     elif(env['havelosetup']):
         fileList += ["#/images/hdd_ext2.tar.gz"]
         buildImage = buildImageLosetup
