@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -32,8 +31,12 @@ Ext2File::Ext2File(String name, uintptr_t inode_num, Inode *inode,
          static_cast<Filesystem*>(pFs),
          LITTLE_TO_HOST32(inode->i_size), /// \todo Deal with >4GB files here.
          pParent),
-    Ext2Node(inode_num, inode, pFs)
+    Ext2Node(inode_num, inode, pFs),
+    m_FileBlockCache()
 {
+    // Enable cache writebacks for this file.
+    m_FileBlockCache.setCallback(writeCallback, static_cast<File*>(this));
+
     uint32_t mode = LITTLE_TO_HOST32(inode->i_mode);
     uint32_t permissions = 0;
     if (mode & EXT2_S_IRUSR) permissions |= FILE_UR;
@@ -57,7 +60,23 @@ Ext2File::~Ext2File()
 
 uintptr_t Ext2File::readBlock(uint64_t location)
 {
-    return static_cast<Ext2Node*>(this)->readBlock(location);
+    m_FileBlockCache.startAtomic();
+    uintptr_t buffer = m_FileBlockCache.insert(location);
+    static_cast<Ext2Node*>(this)->doRead(location, getBlockSize(), buffer);
+    m_FileBlockCache.endAtomic();
+
+    return buffer;
+}
+
+void Ext2File::writeBlock(uint64_t location, uintptr_t addr)
+{
+    // Don't accidentally extend the file when writing the block.
+    size_t sz = getBlockSize();
+    uint64_t end = location + sz;
+    if(end > getSize())
+        sz = getSize() - location;
+
+    static_cast<Ext2Node*>(this)->doWrite(location, sz, addr);
 }
 
 void Ext2File::truncate()
@@ -70,4 +89,19 @@ void Ext2File::truncate()
 void Ext2File::fileAttributeChanged()
 {
     static_cast<Ext2Node*>(this)->fileAttributeChanged(m_Size, m_AccessedTime, m_ModifiedTime, m_CreationTime);
+}
+
+void Ext2File::sync(size_t offset, bool async)
+{
+    m_FileBlockCache.sync(offset, async);
+}
+
+void Ext2File::pinBlock(uint64_t location)
+{
+    m_FileBlockCache.pin(location);
+}
+
+void Ext2File::unpinBlock(uint64_t location)
+{
+    m_FileBlockCache.release(location);
 }

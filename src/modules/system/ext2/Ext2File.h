@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -46,13 +45,24 @@ public:
     /** Updates inode attributes. */
     void fileAttributeChanged();
 
+    virtual void pinBlock(uint64_t location);
+    virtual void unpinBlock(uint64_t location);
+
+    virtual void sync(size_t offset, bool async);
+
 protected:
     /** Performs a read-to-cache. */
     uintptr_t readBlock(uint64_t location);
+    void writeBlock(uint64_t location, uintptr_t addr);
+    /*
     size_t getBlockSize() const
     {
         return reinterpret_cast<Ext2Filesystem*>(m_pFilesystem)->m_BlockSize;
     }
+    */
+
+private:
+    Cache m_FileBlockCache;
 };
 
 #endif

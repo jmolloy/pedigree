@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -56,13 +55,13 @@ Ext2Symlink::~Ext2Symlink()
 
 uint64_t Ext2Symlink::read(uint64_t location, uint64_t size, uintptr_t buffer, bool canBlock)
 {
-    return static_cast<Ext2Node*>(this)->read(location, size, buffer);
+    return static_cast<Ext2Node*>(this)->doRead(location, size, buffer);
     m_Size = m_nSize;
 }
 
 uint64_t Ext2Symlink::write(uint64_t location, uint64_t size, uintptr_t buffer, bool canBlock)
 {
-    return static_cast<Ext2Node*>(this)->write(location, size, buffer);
+    return static_cast<Ext2Node*>(this)->doWrite(location, size, buffer);
     m_Size = m_nSize;
 }
 

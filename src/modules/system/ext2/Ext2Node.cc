@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -38,7 +37,7 @@ Ext2Node::~Ext2Node()
 {
 }
 
-uint64_t Ext2Node::read(uint64_t location, uint64_t size, uintptr_t buffer)
+uint64_t Ext2Node::doRead(uint64_t location, uint64_t size, uintptr_t buffer)
 {
     // Reads get clamped to the filesize.
     if (location >= m_nSize) return 0;
@@ -98,7 +97,7 @@ uint64_t Ext2Node::read(uint64_t location, uint64_t size, uintptr_t buffer)
     return size;
 }
 
-uint64_t Ext2Node::write(uint64_t location, uint64_t size, uintptr_t buffer)
+uint64_t Ext2Node::doWrite(uint64_t location, uint64_t size, uintptr_t buffer)
 {
     ensureLargeEnough(location+size);
 

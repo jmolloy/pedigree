@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -47,8 +46,8 @@ public:
     /** Updates inode attributes. */
     void fileAttributeChanged(size_t size, size_t atime, size_t mtime, size_t ctime);
 
-    uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer);
-    uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer);
+    uint64_t doRead(uint64_t location, uint64_t size, uintptr_t buffer);
+    uint64_t doWrite(uint64_t location, uint64_t size, uintptr_t buffer);
 
     void truncate();
 
