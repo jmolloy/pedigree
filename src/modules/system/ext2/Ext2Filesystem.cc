@@ -307,7 +307,36 @@ bool Ext2Filesystem::createSymlink(File* parent, String filename, String value)
 
 bool Ext2Filesystem::remove(File* parent, File* file)
 {
-    return true;
+    // Quick sanity check.
+    if (!parent->isDirectory())
+    {
+        SYSCALL_ERROR(IoError);
+        return false;
+    }
+
+    Ext2Node *pNode = 0;
+    String filename;
+    if (file->isDirectory())
+    {
+        Ext2Directory *pDirectory = static_cast<Ext2Directory *>(file);
+        pNode = pDirectory;
+        filename = pDirectory->getName();
+    }
+    else if (file->isSymlink())
+    {
+        Ext2Symlink *pSymlink = static_cast<Ext2Symlink *>(file);
+        pNode = pSymlink;
+        filename = pSymlink->getName();
+    }
+    else
+    {
+        Ext2File *pFile = static_cast<Ext2File *>(file);
+        pNode = pFile;
+        filename = pFile->getName();
+    }
+
+    Ext2Directory *pE2Parent = reinterpret_cast<Ext2Directory*>(parent);
+    return pE2Parent->removeEntry(filename, pNode);
 }
 
 uintptr_t Ext2Filesystem::readBlock(uint32_t block)

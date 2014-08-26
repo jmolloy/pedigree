@@ -24,7 +24,8 @@
 
 Ext2Node::Ext2Node(uintptr_t inode_num, Inode *pInode, Ext2Filesystem *pFs) :
     m_pInode(pInode), m_InodeNumber(inode_num), m_pExt2Fs(pFs), m_pBlocks(0),
-    m_nBlocks(LITTLE_TO_HOST32(pInode->i_blocks)), m_nSize(LITTLE_TO_HOST32(pInode->i_size))
+    m_nBlocks(LITTLE_TO_HOST32(pInode->i_blocks)),
+    m_nSize(LITTLE_TO_HOST32(pInode->i_size))
 {
     m_pBlocks = new uint32_t[m_nBlocks];
     memset(m_pBlocks, ~0, sizeof(uint32_t)*m_nBlocks);

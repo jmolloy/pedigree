@@ -76,24 +76,40 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
         ensureBlockLoaded(i);
         uintptr_t buffer = m_pExt2Fs->readBlock(m_pBlocks[i]);
         pDir = reinterpret_cast<Dir*>(buffer);
-        while (pDir->d_inode != 0 &&
-               reinterpret_cast<uintptr_t>(pDir) < buffer+m_pExt2Fs->m_BlockSize)
+        while (reinterpret_cast<uintptr_t>(pDir) < buffer+m_pExt2Fs->m_BlockSize)
         {
             // What's the minimum length of this directory entry?
             size_t thisReclen = 4 + 2 + 1 + 1 + pDir->d_namelen;
-            // Is there enough space to add this dirent?
-            /// \todo Ensure 4-byte alignment.
-            if (pDir->d_reclen - thisReclen >= length)
+
+            // Valid directory entry?
+            if (pDir->d_inode > 0)
             {
+                // Is there enough space to add this dirent?
+                /// \todo Ensure 4-byte alignment.
+                if (pDir->d_reclen - thisReclen >= length)
+                {
+                    bFound = true;
+                    // Save the current reclen.
+                    uint16_t oldReclen = pDir->d_reclen;
+                    // Adjust the current record's reclen field to the minimum.
+                    pDir->d_reclen = thisReclen;
+                    // Move to the new directory entry location.
+                    pDir = reinterpret_cast<Dir*> (reinterpret_cast<uintptr_t>(pDir)+thisReclen);
+                    // set the new record length.
+                    pDir->d_reclen = oldReclen-thisReclen;
+                    break;
+                }
+            }
+            else if (pDir->d_reclen == 0)
+            {
+                // No more entries to follow.
+                break;
+            }
+            else if (pDir->d_reclen - thisReclen >= length)
+            {
+                // We can use this unused entry - we fit into it.
+                // The record length does not need to be adjusted.
                 bFound = true;
-                // Save the current reclen.
-                uint16_t oldReclen = pDir->d_reclen;
-                // Adjust the current record's reclen field to the minimum.
-                pDir->d_reclen = thisReclen;
-                // Move to the new directory entry location.
-                pDir = reinterpret_cast<Dir*> (reinterpret_cast<uintptr_t>(pDir)+thisReclen);
-                // set the new record length.
-                pDir->d_reclen = oldReclen-thisReclen;
                 break;
             }
 
@@ -106,7 +122,7 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
     if (!bFound)
     {
         // Need to make a new block.
-        uint32_t block = m_pExt2Fs->findFreeBlock(m_InodeNumber);
+        uint32_t block = m_pExt2Fs->findFreeBlock(getInodeNumber());
         if (block == 0)
         {
             // We had a problem.
@@ -118,6 +134,10 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
 
         m_Size = m_nBlocks * m_pExt2Fs->m_BlockSize;
         fileAttributeChanged();
+
+        /// \todo Previous directory entry might need its reclen updated to
+        ///       point to this new entry (as directory entries cannot cross
+        ///       block boundaries).
 
         memset(pBuffer, 0, m_pExt2Fs->m_BlockSize);
         pDir = reinterpret_cast<Dir*> (pBuffer);
@@ -153,10 +173,72 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
     return true;
 }
 
-bool Ext2Directory::removeEntry(Ext2Node *pFile)
+bool Ext2Directory::removeEntry(const String &filename, Ext2Node *pFile)
 {
+    // Find this file in the directory.
+    size_t fileInode = pFile->getInodeNumber();
+
+    NOTICE("ext2: remove " << filename);
+    NOTICE("inode: " << pFile->getInodeNumber());
+
+    bool bFound = false;
+
+    uint32_t i;
+    Dir *pDir;
+    for (i = 0; i < m_nBlocks; i++)
+    {
+        ensureBlockLoaded(i);
+        uintptr_t buffer = m_pExt2Fs->readBlock(m_pBlocks[i]);
+        pDir = reinterpret_cast<Dir*>(buffer);
+        while (reinterpret_cast<uintptr_t>(pDir) < buffer + m_pExt2Fs->m_BlockSize)
+        {
+            NOTICE("inode: " << LITTLE_TO_HOST32(pDir->d_inode) << " vs " << fileInode);
+            if (LITTLE_TO_HOST32(pDir->d_inode) == fileInode)
+            {
+                NOTICE("namelen: " << pDir->d_namelen << " vs " << filename.length());
+                if (pDir->d_namelen == filename.length())
+                {
+                    if (!strncmp(pDir->d_name, static_cast<const char *>(filename), pDir->d_namelen))
+                    {
+                        // Wipe out the directory entry.
+                        uint16_t old_reclen = pDir->d_reclen;
+                        memset(pDir, 0, sizeof(Dir));
+                        pDir->d_reclen = old_reclen;
+
+                        /// \todo Okay, this is not quite enough. The previous
+                        ///       entry needs to be updated to skip past this
+                        ///       now-empty entry. If this was the first entry,
+                        ///       a blank record must be created to point to
+                        ///       either the next entry or the end of the block.
+
+                        bFound = true;
+                        break;
+                    }
+                }
+            }
+            else if (!pDir->d_reclen)
+            {
+                // No more entries.
+                NOTICE("ext2: end of directory block");
+                break;
+            }
+            pDir = reinterpret_cast<Dir*> (reinterpret_cast<uintptr_t>(pDir) + LITTLE_TO_HOST16(pDir->d_reclen));
+        }
+
+        if (bFound) break;
+    }
+
     m_Size = m_nSize;
-    return false;
+
+    if (bFound)
+    {
+        return true;
+    }
+    else
+    {
+        SYSCALL_ERROR(DoesNotExist);
+        return false;
+    }
 }
 
 void Ext2Directory::cacheDirectoryContents()
@@ -169,10 +251,24 @@ void Ext2Directory::cacheDirectoryContents()
         uintptr_t buffer = m_pExt2Fs->readBlock(m_pBlocks[i]);
         pDir = reinterpret_cast<Dir*>(buffer);
 
-        while (reinterpret_cast<uintptr_t>(pDir) < buffer+m_pExt2Fs->m_BlockSize &&
-               pDir->d_inode != 0
-               )
+        while (reinterpret_cast<uintptr_t>(pDir) < buffer+m_pExt2Fs->m_BlockSize)
         {
+            Dir *pNextDir = reinterpret_cast<Dir*> (reinterpret_cast<uintptr_t>(pDir) + LITTLE_TO_HOST16(pDir->d_reclen));
+
+            if (pDir->d_inode == 0)
+            {
+                if (pDir == pNextDir)
+                {
+                    // No further iteration possible (null entry).
+                    break;
+                }
+
+                // Oops, not a valid entry (possibly deleted file). Skip.
+                pDir = pNextDir;
+                continue;
+
+            }
+
             size_t namelen = pDir->d_namelen + 1;
 
             // Can we get the file type from the directory entry?
@@ -215,17 +311,25 @@ void Ext2Directory::cacheDirectoryContents()
             String sFilename(filename);
             delete [] filename;
 
+            NOTICE("file " << sFilename << " has inode " << LITTLE_TO_HOST32(pDir->d_inode));
+
+            uint32_t inode = LITTLE_TO_HOST32(pDir->d_inode);
+
             File *pFile = 0;
             switch (fileType)
             {
                 case EXT2_FILE:
-                    pFile = new Ext2File(sFilename, LITTLE_TO_HOST32(pDir->d_inode), m_pExt2Fs->getInode(LITTLE_TO_HOST32(pDir->d_inode)), m_pExt2Fs, this);
+                    {
+                    pFile = new Ext2File(sFilename, inode, m_pExt2Fs->getInode(inode), m_pExt2Fs, this);
+                    Ext2File *pE = reinterpret_cast<Ext2File *>(pFile);
+                    NOTICE("file " << sFilename << " has inodes " << inode << ", " << pE->getInodeNumber() << ", " << pFile->getInode());
+                    }
                     break;
                 case EXT2_DIRECTORY:
-                    pFile = new Ext2Directory(sFilename, LITTLE_TO_HOST32(pDir->d_inode), m_pExt2Fs->getInode(LITTLE_TO_HOST32(pDir->d_inode)), m_pExt2Fs, this);
+                    pFile = new Ext2Directory(sFilename, inode, m_pExt2Fs->getInode(inode), m_pExt2Fs, this);
                     break;
                 case EXT2_SYMLINK:
-                    pFile = new Ext2Symlink(sFilename, LITTLE_TO_HOST32(pDir->d_inode), m_pExt2Fs->getInode(LITTLE_TO_HOST32(pDir->d_inode)), m_pExt2Fs, this);
+                    pFile = new Ext2Symlink(sFilename, inode, m_pExt2Fs->getInode(inode), m_pExt2Fs, this);
                     break;
                 default:
                     ERROR("EXT2: Unrecognised file type for '" << sFilename << "': " << pDir->d_file_type);
@@ -235,7 +339,7 @@ void Ext2Directory::cacheDirectoryContents()
             m_Cache.insert(sFilename, pFile);
 
             // Next.
-            pDir = reinterpret_cast<Dir*> (reinterpret_cast<uintptr_t>(pDir)+LITTLE_TO_HOST16(pDir->d_reclen));
+            pDir = pNextDir;
         }
     }
 

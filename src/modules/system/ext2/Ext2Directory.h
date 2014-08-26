@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -55,7 +54,7 @@ public:
     /** Adds a directory entry. */
     virtual bool addEntry(String filename, File *pFile, size_t type);
     /** Removes a directory entry. */
-    virtual bool removeEntry(Ext2Node *pFile);
+    virtual bool removeEntry(const String &filename, Ext2Node *pFile);
 
     /** Updates inode attributes. */
     void fileAttributeChanged();
