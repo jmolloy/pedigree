@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -245,7 +244,11 @@ uintptr_t AtaDisk::read(uint64_t location)
     NOTICE("Started read request at " << Dec << now << Hex);
 #endif
 
-    pParent->addRequest(0, ATA_CMD_READ, reinterpret_cast<uint64_t> (this), location+offs);
+    // Align to native block size.
+    /// \todo magic number here!
+    size_t loc = (location + offs) & ~0xFFFF;
+
+    pParent->addRequest(0, ATA_CMD_READ, reinterpret_cast<uint64_t> (this), loc);
 
 #if 0
     uint64_t end = timer.getTickCount();
@@ -254,7 +257,7 @@ uintptr_t AtaDisk::read(uint64_t location)
 
     /// \todo Add speculative loading here.
 
-    return m_Cache.lookup(location+offs) - offs;
+    return m_Cache.lookup(location + offs) - offs;
 }
 
 void AtaDisk::write(uint64_t location)
@@ -280,7 +283,11 @@ void AtaDisk::write(uint64_t location)
     if ( !(buffer=m_Cache.lookup(location+offs)) )
         return;
 
-    pParent->addAsyncRequest(1, ATA_CMD_WRITE, reinterpret_cast<uint64_t> (this), location+offs);
+    // Align to native block size.
+    /// \todo magic number here!
+    size_t loc = (location + offs) & ~0xFFFF;
+
+    pParent->addAsyncRequest(1, ATA_CMD_WRITE, reinterpret_cast<uint64_t> (this), loc);
 #endif
 }
 
@@ -312,7 +319,11 @@ void AtaDisk::flush(uint64_t location)
     if(!buff)
         return;
 
-    pParent->addRequest(1, ATA_CMD_WRITE, reinterpret_cast<uint64_t> (this), location+offs);
+    // Align to native block size.
+    /// \todo magic number here!
+    size_t loc = (location + offs) & ~0xFFFF;
+
+    pParent->addRequest(1, ATA_CMD_WRITE, reinterpret_cast<uint64_t> (this), loc);
 #endif
 }
 
