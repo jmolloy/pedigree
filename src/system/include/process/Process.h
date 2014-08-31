@@ -359,6 +359,9 @@ private:
      */
     Thread::Status m_BeforeSuspendState;
 
+    /** Concurrency lock for complex Process data structures. */
+    Spinlock m_Lock;
+
     /** Releases all locks in m_Waiters once. */
     void notifyWaiters();
 
