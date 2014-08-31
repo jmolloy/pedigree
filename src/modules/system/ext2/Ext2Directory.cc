@@ -80,6 +80,8 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
         {
             // What's the minimum length of this directory entry?
             size_t thisReclen = 4 + 2 + 1 + 1 + pDir->d_namelen;
+            // Align to 4-byte boundary.
+            thisReclen += 4 - (thisReclen % 4);
 
             // Valid directory entry?
             if (pDir->d_inode > 0)
@@ -94,9 +96,11 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
                     // Adjust the current record's reclen field to the minimum.
                     pDir->d_reclen = thisReclen;
                     // Move to the new directory entry location.
-                    pDir = reinterpret_cast<Dir*> (reinterpret_cast<uintptr_t>(pDir)+thisReclen);
-                    // set the new record length.
-                    pDir->d_reclen = oldReclen-thisReclen;
+                    pDir = reinterpret_cast<Dir*> (reinterpret_cast<uintptr_t>(pDir) + thisReclen);
+                    // New record length.
+                    uint16_t newReclen = oldReclen - thisReclen;
+                    // Set the new record length.
+                    pDir->d_reclen = newReclen;
                     break;
                 }
             }
@@ -114,7 +118,7 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
             }
 
             // Next.
-            pDir = reinterpret_cast<Dir*> (reinterpret_cast<uintptr_t>(pDir)+pDir->d_reclen);
+            pDir = reinterpret_cast<Dir*> (reinterpret_cast<uintptr_t>(pDir) + pDir->d_reclen);
         }
         if (bFound) break;
     }
@@ -147,26 +151,38 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
     // Set the directory contents.
     pDir->d_inode = HOST_TO_LITTLE32(pFile->getInode());
 
-    switch (type)
+    if (m_pExt2Fs->checkRequiredFeature(2))
     {
-        case EXT2_S_IFREG:
-            pDir->d_file_type = EXT2_FILE;
-            break;
-        case EXT2_S_IFDIR:
-            pDir->d_file_type = EXT2_DIRECTORY;
-            break;
-        case EXT2_S_IFLNK:
-            pDir->d_file_type = EXT2_SYMLINK;
-            break;
-        default:
-            ERROR("Unrecognised filetype.");
+        // File type in directory entry.
+        switch (type)
+        {
+            case EXT2_S_IFREG:
+                pDir->d_file_type = EXT2_FILE;
+                break;
+            case EXT2_S_IFDIR:
+                pDir->d_file_type = EXT2_DIRECTORY;
+                break;
+            case EXT2_S_IFLNK:
+                pDir->d_file_type = EXT2_SYMLINK;
+                break;
+            default:
+                ERROR("Unrecognised filetype.");
+        }
+    }
+    else
+    {
+        // No file type in directory entries.
+        pDir->d_file_type = 0;
     }
 
     pDir->d_namelen = filename.length();
-    memcpy(pDir->d_name, filename, filename.length());
+    memcpy(pDir->d_name, static_cast<const char *>(filename), filename.length());
 
     // We're all good - add the directory to our cache.
     m_Cache.insert(filename, pFile);
+
+    // Trigger write back to disk.
+    m_pExt2Fs->writeBlock(m_pBlocks[i]);
 
     m_Size = m_nSize;
 
@@ -178,32 +194,27 @@ bool Ext2Directory::removeEntry(const String &filename, Ext2Node *pFile)
     // Find this file in the directory.
     size_t fileInode = pFile->getInodeNumber();
 
-    NOTICE("ext2: remove " << filename);
-    NOTICE("inode: " << pFile->getInodeNumber());
-
     bool bFound = false;
 
     uint32_t i;
-    Dir *pDir;
+    Dir *pDir, *pLastDir = 0;
     for (i = 0; i < m_nBlocks; i++)
     {
         ensureBlockLoaded(i);
         uintptr_t buffer = m_pExt2Fs->readBlock(m_pBlocks[i]);
         pDir = reinterpret_cast<Dir*>(buffer);
+        pLastDir = 0;
         while (reinterpret_cast<uintptr_t>(pDir) < buffer + m_pExt2Fs->m_BlockSize)
         {
-            NOTICE("inode: " << LITTLE_TO_HOST32(pDir->d_inode) << " vs " << fileInode);
             if (LITTLE_TO_HOST32(pDir->d_inode) == fileInode)
             {
-                NOTICE("namelen: " << pDir->d_namelen << " vs " << filename.length());
                 if (pDir->d_namelen == filename.length())
                 {
                     if (!strncmp(pDir->d_name, static_cast<const char *>(filename), pDir->d_namelen))
                     {
                         // Wipe out the directory entry.
-                        uint16_t old_reclen = pDir->d_reclen;
-                        memset(pDir, 0, sizeof(Dir));
-                        pDir->d_reclen = old_reclen;
+                        uint16_t old_reclen = LITTLE_TO_HOST16(pDir->d_reclen);
+                        memset(pDir, 0, old_reclen);
 
                         /// \todo Okay, this is not quite enough. The previous
                         ///       entry needs to be updated to skip past this
@@ -211,6 +222,17 @@ bool Ext2Directory::removeEntry(const String &filename, Ext2Node *pFile)
                         ///       a blank record must be created to point to
                         ///       either the next entry or the end of the block.
 
+                        /*
+                        if (pLastDir)
+                        {
+                            uint16_t new_reclen = old_reclen + LITTLE_TO_HOST16(pLastDir->d_reclen);
+                            pLastDir->d_reclen = HOST_TO_LITTLE16(new_reclen);
+                        }
+                        */
+
+                        pDir->d_reclen = HOST_TO_LITTLE16(old_reclen);
+
+                        m_pExt2Fs->writeBlock(m_pBlocks[i]);
                         bFound = true;
                         break;
                     }
@@ -219,9 +241,10 @@ bool Ext2Directory::removeEntry(const String &filename, Ext2Node *pFile)
             else if (!pDir->d_reclen)
             {
                 // No more entries.
-                NOTICE("ext2: end of directory block");
                 break;
             }
+
+            pLastDir = pDir;
             pDir = reinterpret_cast<Dir*> (reinterpret_cast<uintptr_t>(pDir) + LITTLE_TO_HOST16(pDir->d_reclen));
         }
 
@@ -232,6 +255,7 @@ bool Ext2Directory::removeEntry(const String &filename, Ext2Node *pFile)
 
     if (bFound)
     {
+        m_pExt2Fs->releaseInode(fileInode);
         return true;
     }
     else
@@ -311,19 +335,13 @@ void Ext2Directory::cacheDirectoryContents()
             String sFilename(filename);
             delete [] filename;
 
-            NOTICE("file " << sFilename << " has inode " << LITTLE_TO_HOST32(pDir->d_inode));
-
             uint32_t inode = LITTLE_TO_HOST32(pDir->d_inode);
 
             File *pFile = 0;
             switch (fileType)
             {
                 case EXT2_FILE:
-                    {
                     pFile = new Ext2File(sFilename, inode, m_pExt2Fs->getInode(inode), m_pExt2Fs, this);
-                    Ext2File *pE = reinterpret_cast<Ext2File *>(pFile);
-                    NOTICE("file " << sFilename << " has inodes " << inode << ", " << pE->getInodeNumber() << ", " << pFile->getInode());
-                    }
                     break;
                 case EXT2_DIRECTORY:
                     pFile = new Ext2Directory(sFilename, inode, m_pExt2Fs->getInode(inode), m_pExt2Fs, this);

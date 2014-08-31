@@ -52,6 +52,7 @@ public:
     void truncate();
 
     uintptr_t readBlock(uint64_t location);
+    void writeBlock(uint64_t location);
 
 protected:
     /** Ensures the inode is at least 'size' big. */

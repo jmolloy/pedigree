@@ -64,11 +64,14 @@ private:
 
     /** Reads a block of data from the disk. */
     uintptr_t readBlock(uint32_t block);
+    /** Writes a block of data to the disk. */
+    void writeBlock(uint32_t block);
 
     uint32_t findFreeBlock(uint32_t inode);
     uint32_t findFreeInode();
 
     void releaseBlock(uint32_t block);
+    void releaseInode(uint32_t inode);
 
     Inode *getInode(uint32_t num);
 

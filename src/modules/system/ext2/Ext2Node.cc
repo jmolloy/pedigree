@@ -108,12 +108,16 @@ uint64_t Ext2Node::doWrite(uint64_t location, uint64_t size, uintptr_t buffer)
     uint32_t nBlock = location / nBs;
     while (nBytes)
     {
+        ensureBlockLoaded(nBlock);
+
+        // Create a buffer for the block.
+        uintptr_t buf = m_pExt2Fs->readBlock(m_pBlocks[nBlock]);
+        uintptr_t at = location;
+
         // If the current location is block-aligned and we have to write at least a
         // block out, we can write directly to the buffer.
         if ( (location % nBs) == 0 && nBytes >= nBs )
         {
-            ensureBlockLoaded(nBlock);
-            uintptr_t buf = m_pExt2Fs->readBlock(m_pBlocks[nBlock]);
             memcpy(reinterpret_cast<uint8_t*>(buf),
                    reinterpret_cast<uint8_t*>(buffer),
                    nBs);
@@ -125,9 +129,6 @@ uint64_t Ext2Node::doWrite(uint64_t location, uint64_t size, uintptr_t buffer)
         // Else we have to read in a block, partially edit it and write back.
         else
         {
-            // Create a buffer for the block.
-            ensureBlockLoaded(nBlock);
-            uintptr_t buf = m_pExt2Fs->readBlock(m_pBlocks[nBlock]);
             // memcpy the relevant block area.
             uintptr_t start = location % nBs;
             uintptr_t size = (start+nBytes >= nBs) ? nBs-start : nBytes;
@@ -138,6 +139,9 @@ uint64_t Ext2Node::doWrite(uint64_t location, uint64_t size, uintptr_t buffer)
             nBytes -= size;
             nBlock++;
         }
+
+        // Trigger writeback.
+        writeBlock(at);
     }
 
     return size;
@@ -153,6 +157,18 @@ uintptr_t Ext2Node::readBlock(uint64_t location)
 
     ensureBlockLoaded(nBlock);
     return m_pExt2Fs->readBlock(m_pBlocks[nBlock]);
+}
+
+void Ext2Node::writeBlock(uint64_t location)
+{
+    ensureLargeEnough(location+m_pExt2Fs->m_BlockSize);
+
+    size_t nBs = m_pExt2Fs->m_BlockSize;
+
+    uint32_t nBlock = location / nBs;
+
+    ensureBlockLoaded(nBlock);
+    return m_pExt2Fs->writeBlock(m_pBlocks[nBlock]);
 }
 
 void Ext2Node::truncate()
@@ -272,8 +288,6 @@ bool Ext2Node::getBlockNumberTriindirect(uint32_t inode_block, size_t nBlocks, s
     getBlockNumberBiindirect(LITTLE_TO_HOST32(buffer[nBiBlock]),
                              nBlocks+nBiBlock*nPerBlock*nPerBlock, nBlock);
 
-    delete [] buffer;
-
     return true;
 }
 
@@ -354,11 +368,6 @@ bool Ext2Node::addBlock(uint32_t blockValue)
 
         // Set the correct entry.
         pBlock[indirectIdx] = HOST_TO_LITTLE32(blockValue);
-
-        /// This causes a assertion failed in SlamAllocator when copying some file on a ext2 volume
-        /// (eddyb)
-        // Done.
-        //delete [] pBlock;
     }
     else
     {

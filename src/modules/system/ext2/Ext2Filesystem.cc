@@ -347,6 +347,13 @@ uintptr_t Ext2Filesystem::readBlock(uint32_t block)
     return m_pDisk->read(static_cast<uint64_t>(m_BlockSize)*static_cast<uint64_t>(block));
 }
 
+void Ext2Filesystem::writeBlock(uint32_t block)
+{
+    assert(block);
+    if (block != 0)
+        m_pDisk->write(static_cast<uint64_t>(m_BlockSize) * static_cast<uint64_t>(block));
+}
+
 uint32_t Ext2Filesystem::findFreeBlock(uint32_t inode)
 {
     inode--; // Inode zero is undefined, so it's not used.
@@ -397,12 +404,20 @@ uint32_t Ext2Filesystem::findFreeBlock(uint32_t inode)
                     *ptr |= (1 << j);
                     pDesc->bg_free_blocks_count--;
 
+                    // Update superblock.
+                    m_pSuperblock->s_free_blocks_count--;
+                    m_pDisk->write(1024ULL);
+
+                    // Update on disk.
+                    uint32_t desc_block = LITTLE_TO_HOST32(m_pGroupDescriptors[group]->bg_block_bitmap) + idx;
+                    writeBlock(desc_block);
+
                     // First block of this group...
                     uint32_t block = group * LITTLE_TO_HOST32(m_pSuperblock->s_blocks_per_group);
                     // Blocks skipped so far (i == offset in bytes)...
                     block += i * 8;
                     // Blocks skipped so far (j == bits ie blocks)...
-                    block += j;
+                    block += j + 1;
                     // Return block.
                     return block;
                 }
@@ -463,12 +478,20 @@ uint32_t Ext2Filesystem::findFreeInode()
                     *ptr |= (1 << j);
                     pDesc->bg_free_inodes_count--;
 
+                    // Update superblock.
+                    m_pSuperblock->s_free_inodes_count--;
+                    m_pDisk->write(1024ULL);
+
+                    // Update on disk.
+                    uint32_t desc_block = LITTLE_TO_HOST32(m_pGroupDescriptors[group]->bg_inode_bitmap) + idx;
+                    writeBlock(desc_block);
+
                     // First inode of this group...
                     uint32_t inode = group * LITTLE_TO_HOST32(m_pSuperblock->s_inodes_per_group);
                     // Inodes skipped so far (i == offset in bytes)...
                     inode += i * 8;
                     // Inodes skipped so far (j == bits ie inodes)...
-                    inode += j;
+                    inode += j + 1;
                     // Return inode.
                     return inode;
                 }
@@ -484,6 +507,10 @@ uint32_t Ext2Filesystem::findFreeInode()
 }
 
 void Ext2Filesystem::releaseBlock(uint32_t block)
+{
+}
+
+void Ext2Filesystem::releaseInode(uint32_t inode)
 {
 }
 
