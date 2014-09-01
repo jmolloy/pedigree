@@ -99,7 +99,7 @@ opts.AddVariables(
     
     ('distdir', 'Directory to install a Pedigree directory structure to, instead of a disk image. Empty will use disk images.', ''),
     BoolVariable('havelosetup', 'Whether or not `losetup` is available.', 0),
-    BoolVariable('havegenext2fs', 'Whether or not `genext2fs` is available.', 0),
+    BoolVariable('havee2fsprogs', 'Whether or not the e2fsprogs are available.', 0),
     BoolVariable('forcemtools', 'Force use of mtools (and the FAT filesystem) even if losetup is available.', 1),
     BoolVariable('haveqemuimg', 'Whether or not `qemu-img` is available (for VDI/VMDK creation).', 0),
     BoolVariable('createvdi', 'Convert the created hard disk image to a VDI file for VirtualBox after it is created.', 0),
@@ -107,6 +107,7 @@ opts.AddVariables(
     BoolVariable('nodiskimages', 'Whether or not to avoid building disk images for distribution.', 0),
     BoolVariable('noiso', 'Whether or not to avoid building an ISO.', 0),
     ('isoprog', 'Program to use to generate ISO images. The default of `mkisofs\' should be fine for most.', 'mkisofs'),
+    ('e2fsprogs_path', 'Where to find e2fsprogs binaries.', '/sbin'),
     
     BoolVariable('pup', 'If 1, you are managing your images/local directory with the Pedigree UPdater (pup) and want that instead of the images/<arch> directory.', 1),
     
@@ -383,7 +384,7 @@ if(env['AS'] == ''):
                Exit(1)
            env['AS'] = env['CROSS'] + "as"
 
-# Detect losetup/genext2fs presence
+# Detect losetup/e2fsprogs presence
 if not env['forcemtools']:
     tmp = commands.getoutput("which losetup")
     if(len(tmp) and not "no losetup" in tmp):
@@ -391,13 +392,19 @@ if not env['forcemtools']:
     else:
         env['havelosetup'] = 0
 
-    tmp = commands.getoutput("which genext2fs")
-    if len(tmp) and not "no genext2fs" in tmp:
-        env['havegenext2fs'] = 1
-    else:
-        env['havegenext2fs'] = 0
+    env['havee2fsprogs'] = 0
+
+    d = env['e2fsprogs_path']
+    if os.path.isdir(d):
+        mke2fs = os.path.join(d, 'mke2fs')
+        debugfs = os.path.join(d, 'debugfs')
+
+        if os.path.isfile(mke2fs) and os.path.isfile(debugfs):
+            env['MKE2FS'] = mke2fs
+            env['DEBUGFS'] = debugfs
+            env['havee2fsprogs'] = 1
 else:
-    env['havegenext2fs'] = 0
+    env['havee2fsprogs'] = 0
     env['havelosetup'] = 0
 
 # Extra build flags

@@ -221,7 +221,7 @@ def buildImageTargetdir(target, source, env):
     with open(outFile, 'w') as f:
         pass
 
-def buildImageGenExt2Fs(target, source, env):
+def buildImageE2fsprogs(target, source, env):
     if env['verbose']:
         print '      Creating ' + os.path.basename(target[0].path)
     else:
@@ -312,28 +312,68 @@ def buildImageGenExt2Fs(target, source, env):
     shutil.copyfile(os.path.join(imagedir, '..', 'base', '.profile'),
                     os.path.join(imagedir, '.profile'))
 
-    # Fix symlinks, if they exist.
-    for (dirpath, _, files) in os.walk(imagedir):
-        for filename in files:
-            fn = os.path.join(dirpath, filename)
-            if os.path.islink(fn):
-                target = os.readlink(fn)
-                if target.startswith(dirpath):
-                    os.unlink(fn)
-                    target = target[len(dirpath):].lstrip('/')
-                    os.symlink(target, fn)
+    # Create image.
+    with open(outFile, 'w') as f:
+        # 1GiB
+        f.truncate(1 << 30)
 
-    # Generate the image.
+    # Generate ext2 filesystem.
     args = [
-        'genext2fs',
-        '-d',
-        imagedir,
-        '-b',
-        '976563',  # 1 GiB in 1024-byte blocks.
-        '-U',  # Mark all files owned by 'root' (UID 0)
+        env['MKE2FS'],
+        '-q',
+        '-E', 'root_owner=0:0',  # Don't use UID/GID from host system.
+        '-O', '^dir_index',  # Don't (yet) use directory b-trees.
+        '-F',
+        '-L',
+        'pedigree',
         outFile,
     ]
     subprocess.check_call(args)
+
+    # Populate the image.
+    cmdlist = []
+    for (dirpath, dirs, files) in os.walk(imagedir):
+        target_dirpath = dirpath.replace(imagedir, '')
+        if not target_dirpath:
+            target_dirpath = '/'
+
+        for d in dirs:
+            cmdlist.append('mkdir %s' % (os.path.join(target_dirpath, d),))
+
+        # The 'write' command doesn't actually take a filespec. If we don't
+        # 'cd' to the correct directory first, debugfs writes a file with
+        # forward slashes in the name (which is not very useful!)
+        cmdlist.append("cd %s" % (target_dirpath,))
+
+        for f in files:
+            source = os.path.join(dirpath, f)
+            target = f
+            if os.path.islink(source):
+                link_target = os.readlink(source)
+                if link_target.startswith(dirpath):
+                    link_target = link_target.replace(dirpath, '').lstrip('/')
+
+                cmdlist.append('symlink %s %s' % (target, link_target))
+            elif os.path.isfile(source):
+                cmdlist.append('write %s %s' % (source, target))
+
+        # Reset working directory for mkdir.
+        cmdlist.append("cd /")
+
+    with tempfile.NamedTemporaryFile() as f:
+        f.write('\n'.join(cmdlist))
+        f.flush()
+
+        args = [
+            env['DEBUGFS'],
+            '-w',
+            '-f',
+            f.name,
+            outFile,
+        ]
+
+        with tempfile.NamedTemporaryFile() as t:
+            subprocess.check_call(args, stdout=t)
 
     postImageBuild(outFile, env)
 
@@ -703,8 +743,8 @@ elif (not env['nodiskimages']) or (env['distdir']):
     if env['distdir']:
         fileList.append(env['distdir'])
         buildImage = buildImageTargetdir
-    elif env['havegenext2fs']:
-        buildImage = buildImageGenExt2Fs
+    elif env['havee2fsprogs']:
+        buildImage = buildImageE2fsprogs
     elif(env['havelosetup']):
         fileList += ["#/images/hdd_ext2.tar.gz"]
         buildImage = buildImageLosetup
