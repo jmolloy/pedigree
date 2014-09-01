@@ -60,6 +60,30 @@
 #define EXT2_BOOT_LOADER_INO 0x05 // boot loader inode
 #define EXT2_UNDEL_DIR_INO   0x06
 
+#define EXT2_LZV1_ALG        0x01
+#define EXT2_LZRW3A_ALG      0x02
+#define EXT2_GZIP_ALG        0x04
+#define EXT2_BZIP2_ALG       0x08
+#define EXT2_LZO_ALG         0x10
+
+#define EXT2_SECRM_FL        0x00000001
+#define EXT2_UNRM_FL         0x00000002
+#define EXT2_COMPR_FL        0x00000004
+#define EXT2_SYNC_FL         0x00000008
+#define EXT2_IMMUTABLE_FL    0x00000010
+#define EXT2_APPEND_FL       0x00000020
+#define EXT2_NODUMP_FL       0x00000040
+#define EXT2_NOATIME_FL      0x00000080
+#define EXT2_DIRTY_FL        0x00000100
+#define EXT2_COMPRBLK_FL     0x00000200
+#define EXT2_NOCOMPR_FL      0x00000400
+#define EXT2_ECOMPR_FL       0x00000800
+#define EXT2_BTREE_FL        0x00001000
+#define EXT2_INDEX_FL        0x00001000
+#define EXT2_IMAGIC_FL       0x00002000
+#define EXT3_JOURNAL_DATA_FL 0x00004000
+#define EXT2_RESERVED_FL     0x80000000
+
 /** The Ext2 superblock structure. */
 struct Superblock
 {
@@ -86,10 +110,10 @@ struct Superblock
     uint32_t s_checkinterval;
     uint32_t s_creator_os;
     uint32_t s_rev_level;
-    uint32_t s_def_resuid;
-    uint32_t s_def_resgid;
+    uint16_t s_def_resuid;
+    uint16_t s_def_resgid;
 //   -- EXT2_DYNAMIC_REV Specific --
-    uint32_t s_first_ino; // - Should this actually be commented out? it makes the volume name align up properly... :S
+    uint32_t s_first_ino;
     uint16_t s_inode_size;
     uint16_t s_block_group_nr;
     uint32_t s_feature_compat;

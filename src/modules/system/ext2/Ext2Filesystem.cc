@@ -80,8 +80,31 @@ bool Ext2Filesystem::initialise(Disk *pDisk)
     // Compressed filesystem?
     if (checkRequiredFeature(1))
     {
-        ERROR("Ext2: filesystem on device " << devName << " requires compression, cannot mount.");
-        return false;
+        WARNING("Ext2: filesystem on device " << devName << " requires compression, some files may fail to read.");
+
+        // Compression type.
+        uint32_t algo_bitmap = LITTLE_TO_HOST32(m_pSuperblock->s_algo_bitmap);
+        switch(algo_bitmap)
+        {
+            case EXT2_LZV1_ALG:
+                NOTICE("Ext2: filesystem on device '" << devName << "' uses compression algorithm LZV1.");
+                break;
+            case EXT2_LZRW3A_ALG:
+                NOTICE("Ext2: filesystem on device '" << devName << "' uses compression algorithm LZRW3A.");
+                break;
+            case EXT2_GZIP_ALG:
+                NOTICE("Ext2: filesystem on device '" << devName << "' uses compression algorithm gzip.");
+                break;
+            case EXT2_BZIP2_ALG:
+                NOTICE("Ext2: filesystem on device '" << devName << "' uses compression algorithm bzip2.");
+                break;
+            case EXT2_LZO_ALG:
+                NOTICE("Ext2: filesystem on device '" << devName << "' uses compression algorithm LZO.");
+                break;
+            default:
+                ERROR("Ext2: unknown compression algorithm " << algo_bitmap << " on device '" << devName << "' -- cannot mount!");
+                return false;
+        }
     }
 
     /// \todo Check for journal required features.
@@ -90,17 +113,8 @@ bool Ext2Filesystem::initialise(Disk *pDisk)
     // If we can, check extended superblock fields.
     if (LITTLE_TO_HOST32(m_pSuperblock->s_rev_level) >= 1)
     {
-        // Verify inode size (we don't yet support non-standard inode sizes).
-        /// \todo Support non-standard inode sizes.
-        if (LITTLE_TO_HOST16(m_pSuperblock->s_inode_size) != sizeof(Inode))
-        {
-            ERROR("Ext2: filesystem on device " << devName << " has a non-standard inode size.");
-            return false;
-        }
-        else
-        {
-            m_InodeSize = LITTLE_TO_HOST16(m_pSuperblock->s_inode_size);
-        }
+        // Non-standard inode sizes are permitted, handle that.
+        m_InodeSize = LITTLE_TO_HOST16(m_pSuperblock->s_inode_size);
     }
     else
     {
@@ -216,7 +230,7 @@ bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, St
     // Populate the inode.
     /// \todo Endianness!
     Inode *newInode = getInode(inode_num);
-    memset(reinterpret_cast<uint8_t*>(newInode), 0, sizeof(Inode));
+    memset(reinterpret_cast<uint8_t*>(newInode), 0, m_InodeSize);
     newInode->i_mode = HOST_TO_LITTLE16(mask | type);
     newInode->i_uid = HOST_TO_LITTLE16(uid);
     newInode->i_atime = newInode->i_ctime = newInode->i_mtime = HOST_TO_LITTLE32(pTimer->getUnixTimestamp());
@@ -282,6 +296,10 @@ bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, St
     // Edit the atime and mtime of the parent directory.
     parent->setAccessedTime(pTimer->getUnixTimestamp());
     parent->setModifiedTime(pTimer->getUnixTimestamp());
+
+    // Write updated inodes.
+    writeInode(inode_num);
+    writeInode(pE2Parent->getInodeNumber());
 
     return true;
 }
@@ -349,7 +367,6 @@ uintptr_t Ext2Filesystem::readBlock(uint32_t block)
 
 void Ext2Filesystem::writeBlock(uint32_t block)
 {
-    assert(block);
     if (block != 0)
         m_pDisk->write(static_cast<uint64_t>(m_BlockSize) * static_cast<uint64_t>(block));
 }
@@ -491,6 +508,7 @@ uint32_t Ext2Filesystem::findFreeInode()
                     // Inodes skipped so far (i == offset in bytes)...
                     inode += i * 8;
                     // Inodes skipped so far (j == bits ie inodes)...
+                    // Note: inodes start counting at one, not zero.
                     inode += j + 1;
                     // Return inode.
                     return inode;
@@ -525,12 +543,32 @@ Inode *Ext2Filesystem::getInode(uint32_t inode)
     ensureInodeTableLoaded(group);
     Vector<size_t> &list = m_pInodeTables[group];
 
-    size_t blockNum = (index * sizeof(Inode)) / m_BlockSize;
-    size_t blockOff = (index * sizeof(Inode)) % m_BlockSize;
+    size_t blockNum = (index * m_InodeSize) / m_BlockSize;
+    size_t blockOff = (index * m_InodeSize) % m_BlockSize;
 
     uintptr_t block = list[blockNum];
 
-    return reinterpret_cast<Inode*> (block+blockOff);
+    Inode *pInode = reinterpret_cast<Inode*> (block+blockOff);
+    if (pInode->i_flags & EXT2_COMPRBLK_FL)
+    {
+        WARNING("Ext2: inode " << inode << " has compressed blocks - not yet supported!");
+    }
+    return pInode;
+}
+
+void Ext2Filesystem::writeInode(uint32_t inode)
+{
+    inode--; // Inode zero is undefined, so it's not used.
+
+    uint32_t inodesPerGroup = LITTLE_TO_HOST32(m_pSuperblock->s_inodes_per_group);
+    uint32_t group = inode / inodesPerGroup;
+    uint32_t index = inode % inodesPerGroup;
+
+    ensureInodeTableLoaded(group);
+
+    size_t blockNum = (index * m_InodeSize) / m_BlockSize;
+    uint64_t diskBlock = LITTLE_TO_HOST32(m_pGroupDescriptors[group]->bg_inode_table) + blockNum;
+    writeBlock(diskBlock);
 }
 
 bool Ext2Filesystem::checkOptionalFeature(size_t feature)
@@ -612,8 +650,8 @@ void Ext2Filesystem::ensureInodeTableLoaded(size_t group)
 
     // Determine how many blocks to load to bring in the full inode table.
     uint32_t inodesPerGroup = LITTLE_TO_HOST32(m_pSuperblock->s_inodes_per_group);
-    size_t nBlocks = (inodesPerGroup * sizeof(Inode)) / m_BlockSize;
-    if ((inodesPerGroup * sizeof(Inode)) / m_BlockSize)
+    size_t nBlocks = (inodesPerGroup * m_InodeSize) / m_BlockSize;
+    if ((inodesPerGroup * m_InodeSize) / m_BlockSize)
         nBlocks ++;
 
     // Load each block in the inode table.

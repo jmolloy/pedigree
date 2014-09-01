@@ -74,6 +74,7 @@ private:
     void releaseInode(uint32_t inode);
 
     Inode *getInode(uint32_t num);
+    void writeInode(uint32_t num);
 
     void ensureFreeBlockBitmapLoaded(size_t group);
     void ensureFreeInodeBitmapLoaded(size_t group);
