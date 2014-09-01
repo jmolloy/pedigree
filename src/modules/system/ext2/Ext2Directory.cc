@@ -81,7 +81,10 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
             // What's the minimum length of this directory entry?
             size_t thisReclen = 4 + 2 + 1 + 1 + pDir->d_namelen;
             // Align to 4-byte boundary.
-            thisReclen += 4 - (thisReclen % 4);
+            if (thisReclen % 4)
+            {
+                thisReclen += 4 - (thisReclen % 4);
+            }
 
             // Valid directory entry?
             if (pDir->d_inode > 0)
@@ -167,6 +170,7 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
                 break;
             default:
                 ERROR("Unrecognised filetype.");
+                pDir->d_file_type = EXT2_UNKNOWN;
         }
     }
     else
