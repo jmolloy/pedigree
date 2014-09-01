@@ -24,11 +24,14 @@
 
 Ext2Node::Ext2Node(uintptr_t inode_num, Inode *pInode, Ext2Filesystem *pFs) :
     m_pInode(pInode), m_InodeNumber(inode_num), m_pExt2Fs(pFs), m_pBlocks(0),
-    m_nBlocks(LITTLE_TO_HOST32(pInode->i_blocks)),
-    m_nSize(LITTLE_TO_HOST32(pInode->i_size))
+    m_nBlocks(0), m_nSize(LITTLE_TO_HOST32(pInode->i_size))
 {
+    // i_blocks == # of 512-byte blocks. Convert to FS block count.
+    uint32_t blockCount = LITTLE_TO_HOST32(pInode->i_blocks);
+    m_nBlocks = (blockCount * 512) / m_pExt2Fs->m_BlockSize;
+
     m_pBlocks = new uint32_t[m_nBlocks];
-    memset(m_pBlocks, ~0, sizeof(uint32_t)*m_nBlocks);
+    memset(m_pBlocks, ~0, sizeof(uint32_t) * m_nBlocks);
 
     for (size_t i = 0; i < 12 && i < m_nBlocks; i++)
         m_pBlocks[i] = LITTLE_TO_HOST32(m_pInode->i_block[i]);
@@ -184,6 +187,9 @@ void Ext2Node::truncate()
 
     m_pInode->i_size = 0;
     m_pInode->i_blocks = 0;
+
+    // Write updated inode.
+    m_pExt2Fs->writeInode(getInodeNumber());
 }
 
 bool Ext2Node::ensureLargeEnough(size_t size)
@@ -383,7 +389,13 @@ bool Ext2Node::addBlock(uint32_t blockValue)
     m_pBlocks[m_nBlocks] = blockValue;
 
     m_nBlocks++;
-    m_pInode->i_blocks = HOST_TO_LITTLE32(m_nBlocks);
+
+    // Inode i_blocks field is actually the count of 512-byte blocks.
+    uint32_t i_blocks = (m_nBlocks * m_pExt2Fs->m_BlockSize) / 512;
+    m_pInode->i_blocks = HOST_TO_LITTLE32(i_blocks);
+
+    // Write updated inode.
+    m_pExt2Fs->writeInode(getInodeNumber());
 
     return true;
 }
@@ -391,9 +403,13 @@ bool Ext2Node::addBlock(uint32_t blockValue)
 void Ext2Node::fileAttributeChanged(size_t size, size_t atime, size_t mtime, size_t ctime)
 {
     // Reconstruct the inode from the cached fields.
-    m_pInode->i_blocks = HOST_TO_LITTLE32(m_nBlocks);
+    uint32_t i_blocks = (m_nBlocks * m_pExt2Fs->m_BlockSize) / 512;
+    m_pInode->i_blocks = HOST_TO_LITTLE32(i_blocks);
     m_pInode->i_size = HOST_TO_LITTLE32(size); /// \todo 4GB files.
     m_pInode->i_atime = HOST_TO_LITTLE32(atime);
     m_pInode->i_mtime = HOST_TO_LITTLE32(mtime);
     m_pInode->i_ctime = HOST_TO_LITTLE32(ctime);
+
+    // Write updated inode.
+    m_pExt2Fs->writeInode(getInodeNumber());
 }
