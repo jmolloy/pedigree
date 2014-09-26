@@ -30,7 +30,7 @@ static FILE *utmp = 0;
 #define CHECK_UTMP_FILE(badval) do { \
         if (!utmp) \
         { \
-            utmp = fopen(UTMP_FILE, "w+"); \
+            utmp = fopen(UTMP_FILE, "a"); \
             if (!utmp) \
                 return badval; \
         } \
