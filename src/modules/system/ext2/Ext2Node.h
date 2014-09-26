@@ -49,7 +49,8 @@ public:
     uint64_t doRead(uint64_t location, uint64_t size, uintptr_t buffer);
     uint64_t doWrite(uint64_t location, uint64_t size, uintptr_t buffer);
 
-    void truncate();
+    /** Wipes the node of data - frees all blocks. */
+    void wipe();
 
     uintptr_t readBlock(uint64_t location);
     void writeBlock(uint64_t location);

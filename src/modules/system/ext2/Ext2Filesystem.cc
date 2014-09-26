@@ -376,7 +376,6 @@ uint32_t Ext2Filesystem::findFreeBlock(uint32_t inode)
     inode--; // Inode zero is undefined, so it's not used.
 
     uint32_t group = inode / LITTLE_TO_HOST32(m_pSuperblock->s_inodes_per_group);
-    group = 0;
 
     for (; group < m_nGroupDescriptors; group++)
     {
@@ -434,7 +433,7 @@ uint32_t Ext2Filesystem::findFreeBlock(uint32_t inode)
                     // Blocks skipped so far (i == offset in bytes)...
                     block += i * 8;
                     // Blocks skipped so far (j == bits ie blocks)...
-                    block += j + 1;
+                    block += j;
                     // Return block.
                     return block;
                 }
@@ -526,10 +525,83 @@ uint32_t Ext2Filesystem::findFreeInode()
 
 void Ext2Filesystem::releaseBlock(uint32_t block)
 {
+    uint32_t blocksPerGroup = LITTLE_TO_HOST32(m_pSuperblock->s_blocks_per_group);
+    uint32_t group = block / blocksPerGroup;
+    uint32_t index = block % blocksPerGroup;
+
+    ensureFreeBlockBitmapLoaded(group);
+
+    // Free block.
+    GroupDesc *pDesc = m_pGroupDescriptors[group];
+    pDesc->bg_free_blocks_count++;
+    m_pSuperblock->s_free_blocks_count++;
+
+    // Index = block offset from the start of this block.
+    size_t bitmapField = (index / 8) / m_BlockSize;
+    size_t bitmapOffset = (index / 8) % m_BlockSize;
+
+    Vector<size_t> &list = m_pBlockBitmaps[group];
+    uintptr_t diskBlock = list[bitmapField];
+    uint8_t *ptr = reinterpret_cast<uint8_t*> (diskBlock + bitmapOffset);
+    *ptr &= ~(1 << (index % 8));
+
+    // Update superblock.
+    m_pDisk->write(1024ULL);
+
+    // Update on disk.
+    uint32_t desc_block = LITTLE_TO_HOST32(m_pGroupDescriptors[group]->bg_block_bitmap) + bitmapField;
+    writeBlock(desc_block);
 }
 
-void Ext2Filesystem::releaseInode(uint32_t inode)
+bool Ext2Filesystem::releaseInode(uint32_t inode)
 {
+    Inode *pInode = getInode(inode);
+    --inode; // Inode zero is undefined, so it's not used.
+
+    uint32_t inodesPerGroup = LITTLE_TO_HOST32(m_pSuperblock->s_inodes_per_group);
+    uint32_t group = inode / inodesPerGroup;
+    uint32_t index = inode % inodesPerGroup;
+
+    bool bRemove = pInode->i_links_count <= 1;
+    if (pInode->i_links_count)
+        pInode->i_links_count--;
+
+    // Do we need to free this inode?
+    if (bRemove)
+    {
+        // Rip out blocks.
+        //
+
+        // Set dtime on inode.
+        Timer *pTimer = Machine::instance().getTimer();
+        pInode->i_dtime = HOST_TO_LITTLE32(pTimer->getUnixTimestamp());
+
+        ensureFreeInodeBitmapLoaded(group);
+
+        // Free inode.
+        GroupDesc *pDesc = m_pGroupDescriptors[group];
+        pDesc->bg_free_inodes_count++;
+        m_pSuperblock->s_free_inodes_count++;
+
+        // Index = inode offset from the start of this block.
+        size_t bitmapField = (index / 8) / m_BlockSize;
+        size_t bitmapOffset = (index / 8) % m_BlockSize;
+
+        Vector<size_t> &list = m_pInodeBitmaps[group];
+        uintptr_t block = list[bitmapField];
+        uint8_t *ptr = reinterpret_cast<uint8_t*> (block + bitmapOffset);
+        *ptr &= ~(1 << (index % 8));
+
+        // Update superblock.
+        m_pDisk->write(1024ULL);
+
+        // Update on disk.
+        uint32_t desc_block = LITTLE_TO_HOST32(m_pGroupDescriptors[group]->bg_inode_bitmap) + bitmapField;
+        writeBlock(desc_block);
+    }
+
+    writeInode(inode);
+    return bRemove;
 }
 
 Inode *Ext2Filesystem::getInode(uint32_t inode)

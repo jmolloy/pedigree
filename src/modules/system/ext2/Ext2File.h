@@ -40,7 +40,7 @@ public:
     /** Destructor */
     virtual ~Ext2File();
 
-    void truncate();
+    virtual void truncate();
 
     /** Updates inode attributes. */
     void fileAttributeChanged();

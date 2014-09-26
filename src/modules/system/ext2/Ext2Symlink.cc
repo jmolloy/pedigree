@@ -67,7 +67,7 @@ uint64_t Ext2Symlink::write(uint64_t location, uint64_t size, uintptr_t buffer, 
 
 void Ext2Symlink::truncate()
 {
-    static_cast<Ext2Node*>(this)->truncate();
+    Ext2Node::wipe();
     m_Size = m_nSize;
 }
 

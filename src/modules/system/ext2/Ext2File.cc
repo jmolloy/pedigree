@@ -65,6 +65,8 @@ uintptr_t Ext2File::readBlock(uint64_t location)
     static_cast<Ext2Node*>(this)->doRead(location, getBlockSize(), buffer);
     m_FileBlockCache.endAtomic();
 
+    /// \todo buffer is now dirty.
+
     return buffer;
 }
 
@@ -81,8 +83,13 @@ void Ext2File::writeBlock(uint64_t location, uintptr_t addr)
 
 void Ext2File::truncate()
 {
-    static_cast<Ext2Node*>(this)->truncate();
+    // Wipe all our blocks. (Ext2Node).
+    Ext2Node::wipe();
+
+    // Clear caches.
     m_DataCache.clear();
+    // empty() wipes out the cache, and outright ignores refcounts.
+    m_FileBlockCache.empty();
     m_Size = m_nSize;
 }
 

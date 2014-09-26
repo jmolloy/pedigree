@@ -174,7 +174,7 @@ void Ext2Node::writeBlock(uint64_t location)
     return m_pExt2Fs->writeBlock(m_pBlocks[nBlock]);
 }
 
-void Ext2Node::truncate()
+void Ext2Node::wipe()
 {
     for (size_t i = 0; i < m_nBlocks; i++)
     {

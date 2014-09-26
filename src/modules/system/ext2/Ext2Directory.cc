@@ -259,7 +259,11 @@ bool Ext2Directory::removeEntry(const String &filename, Ext2Node *pFile)
 
     if (bFound)
     {
-        m_pExt2Fs->releaseInode(fileInode);
+        if (m_pExt2Fs->releaseInode(fileInode))
+        {
+            // Remove all blocks for the file, inode has hit zero refcount.
+            pFile->wipe();
+        }
         return true;
     }
     else

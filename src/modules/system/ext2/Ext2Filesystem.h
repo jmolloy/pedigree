@@ -71,7 +71,8 @@ private:
     uint32_t findFreeInode();
 
     void releaseBlock(uint32_t block);
-    void releaseInode(uint32_t inode);
+    /** Releases the given inode, returns true if the inode had no more links. */
+    bool releaseInode(uint32_t inode);
 
     Inode *getInode(uint32_t num);
     void writeInode(uint32_t num);
