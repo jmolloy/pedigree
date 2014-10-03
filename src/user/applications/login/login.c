@@ -38,7 +38,7 @@
 int g_RunningPid = -1;
 
 // Pedigree function, defined in glue.c
-extern int login(int uid, char *password);
+extern int login(int uid, const char *password);
 
 // SIGINT handler
 void sigint(int sig)
@@ -138,6 +138,10 @@ int main(int argc, char **argv)
     // Get username
     printf("Username: ");
 
+#ifdef FORCE_LOGIN_USER
+    const char *username = FORCE_LOGIN_USER;
+    printf("%s\n", username);
+#else
     char buffer[256];
     char *username = fgets(buffer, 256, stdin);
     if(!username)
@@ -148,6 +152,7 @@ int main(int argc, char **argv)
 
     // Knock off the newline character
     username[strlen(username)-1] = '\0';
+#endif
 
     struct passwd *pw = getpwnam(username);
     if (!pw)
@@ -157,10 +162,12 @@ int main(int argc, char **argv)
     }
 
     // Get password
-
-    // Use own way - display *
-
     printf("Password: ");
+#ifdef FORCE_LOGIN_PASS
+    const char *password = FORCE_LOGIN_PASS;
+    printf("<forced>\n");
+#else
+    // Use own way - display *
     fflush(stdout);
     char password[256], c;
     int i = 0;
@@ -193,6 +200,7 @@ int main(int argc, char **argv)
     printf("\n");
 
     password[i] = '\0';
+#endif
 
     // Perform login - this function is in glue.c.
     if(login(pw->pw_uid, password) != 0)

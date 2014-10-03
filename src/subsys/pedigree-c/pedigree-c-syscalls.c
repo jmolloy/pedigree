@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -174,7 +173,7 @@ char *pedigree_config_escape_string(const char *str)
 }
 
 // Pedigree-specific function: login with given uid and password.
-int login(uid_t uid, char *password)
+int login(uid_t uid, const char *password)
 {
     return (long)syscall2(PEDIGREE_LOGIN, uid, (long)password);
 }
