@@ -574,6 +574,7 @@ void Cache::timer(uint64_t delta, InterruptState &state)
         // IGNORE the timer firing for this particular callback.
         // We cannot block here as we are in the context of a timer IRQ.
         WARNING_NOLOCK("Cache: writeback timer fired, but couldn't get lock");
+        m_Nanoseconds = 0;
         return;
     }
 
