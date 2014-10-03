@@ -30,7 +30,7 @@ UnlikelyLock::~UnlikelyLock()
 
 bool UnlikelyLock::enter()
 {
-    return m_Semaphore.acquire(1);
+    return m_Semaphore.tryAcquire(1);
 }
 
 void UnlikelyLock::leave()
@@ -45,6 +45,8 @@ bool UnlikelyLock::acquire()
     // acquire after blocking (eg, interrupted).
     while(!m_Semaphore.acquire(UNLIKELY_LOCK_MAX_READERS + 1))
         Scheduler::instance().yield();
+
+    return true;
 }
 
 void UnlikelyLock::release()
