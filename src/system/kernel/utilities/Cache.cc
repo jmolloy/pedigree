@@ -569,7 +569,13 @@ void Cache::timer(uint64_t delta, InterruptState &state)
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
-    while(!m_Lock.enter());
+    if(!m_Lock.enter())
+    {
+        // IGNORE the timer firing for this particular callback.
+        // We cannot block here as we are in the context of a timer IRQ.
+        WARNING_NOLOCK("Cache: writeback timer fired, but couldn't get lock");
+        return;
+    }
 
     for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
         it != m_Pages.end();
