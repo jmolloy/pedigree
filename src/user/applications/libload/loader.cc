@@ -27,6 +27,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <syslog.h>
+#include <malloc.h>
 
 #include <string>
 #include <list>
@@ -1306,6 +1307,11 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
     return result;
 }
 
+#ifdef X86_COMMON
+typedef float xmm_t __attribute__((__vector_size__(16)));
+xmm_t fixup_xmm_save[8] __attribute__((aligned(16)));
+#endif
+
 extern "C" uintptr_t _libload_dofixup(uintptr_t id, uintptr_t symbol) {
     object_meta_t *meta = (object_meta_t *) id;
     uintptr_t returnaddr = 0;
@@ -1313,8 +1319,7 @@ extern "C" uintptr_t _libload_dofixup(uintptr_t id, uintptr_t symbol) {
     // Save FP state (glue may use SSE, and we are not called by normal means
     // so there's no caller-save).
 #ifdef X86_COMMON
-    typedef float xmm_t __attribute__((__vector_size__(16)));
-    xmm_t fixup_xmm_save[8];
+    xmm_t *fixup_xmm_save = (xmm_t *) memalign(16, sizeof(xmm_t) * 8);
 #define XMM_SAVE(N) asm volatile("movdqa %%xmm" #N ", %0" : "=m" (fixup_xmm_save[N]));
 #define XMM_RESTORE(N) asm volatile("movdqa %0, %%xmm" #N :: "m" (fixup_xmm_save[N]));
     XMM_SAVE(0);
@@ -1330,7 +1335,7 @@ extern "C" uintptr_t _libload_dofixup(uintptr_t id, uintptr_t symbol) {
 #ifdef BITS_32
     ElfRel_t rel = meta->plt_rel[symbol / sizeof(ElfRel_t)];
 #else
-    ElfRela_t rel = meta->plt_rela[symbol]; // / sizeof(ElfRela_t)];
+    ElfRela_t rel = meta->plt_rela[symbol];
 #endif
 
     // Verify the symbol is sane.
@@ -1356,6 +1361,7 @@ extern "C" uintptr_t _libload_dofixup(uintptr_t id, uintptr_t symbol) {
     XMM_RESTORE(5);
     XMM_RESTORE(6);
     XMM_RESTORE(7);
+    free(fixup_xmm_save);
 #endif
 
     return result;
