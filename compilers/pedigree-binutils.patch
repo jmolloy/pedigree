@@ -132,12 +132,13 @@ index c50730b..c866dd5 100644
  arm-*-rtems*)		targ_emul=armelf ;;
  armeb-*-elf)		targ_emul=armelfb ;;
  arm-*-elf | arm*-*-eabi*)
-@@ -218,6 +219,8 @@ i[3-7]86-*-lynxos*)	targ_emul=i386lynx ;;
+@@ -218,6 +219,9 @@ i[3-7]86-*-lynxos*)	targ_emul=i386lynx ;;
  i[3-7]86-*-coff)	targ_emul=i386coff ;;
  i[3-7]86-*-rtems*)	targ_emul=elf_i386 ;;
  i[3-7]86-*-aros*)	targ_emul=elf_i386 ;;
 +i[3-7]86-*-pedigree*)	targ_emul=pedigree_i386 ;;
-+x86_64-*-pedigree*)	targ_emul=pedigree_x86_64 ;;
++x86_64-*-pedigree*)	targ_emul=pedigree_x86_64
++                       targ_extra_emuls="elf_i386 pedigree_i386" ;;
  i[3-7]86-*-rdos*)	targ_emul=elf_i386 ;;
  x86_64-*-rdos*)		targ_emul=elf64rdos ;;
  i[3-7]86-*-bsd)		targ_emul=i386bsd ;;
