@@ -193,30 +193,54 @@ void Pipe::increaseRefCount(bool bIsWriter)
 
 void Pipe::decreaseRefCount(bool bIsWriter)
 {
-    if (bIsWriter)
+    // Make sure only one thread decreases the refcount at a time. This is
+    // important as we add ourselves to the ZombieQueue if the refcount ticks
+    // to zero. Getting pre-empted by another thread that also decreases the
+    // refcount between the decrement and the check for zero may mean the pipe
+    // is added to the ZombieQueue twice, which causes a double free.
+    bool bDataChanged = false;
     {
-        m_nWriters --;
-        if (m_nWriters == 0)
-        {
-            m_bIsEOF = true;
-            if (m_Front == m_Back)
-            {
-                // No data available - post the m_BufLen semaphore to wake any readers up.
-                m_BufLen.release();
-            }
+        LockGuard<Mutex> guard(m_Lock);
 
-            dataChanged();
+        if (m_nReaders == 0 && m_nWriters == 0)
+        {
+            // Refcount is already zero - don't decrement! (also, bad.)
+            ERROR("Pipe: decreasing refcount when refcount is already zero.");
+            return;
+        }
+
+        if (bIsWriter)
+        {
+            m_nWriters --;
+            if (m_nWriters == 0)
+            {
+                m_bIsEOF = true;
+                if (m_Front == m_Back)
+                {
+                    // No data available - post the m_BufLen semaphore to wake any readers up.
+                    m_BufLen.release();
+                }
+
+                bDataChanged = true;
+            }
+        }
+        else
+            m_nReaders --;
+
+        if (m_nReaders == 0 && m_nWriters == 0)
+        {
+            // If we're anonymous, die completely.
+            if (m_bIsAnonymous)
+            {
+                size_t pid = Processor::information().getCurrentThread()->getParent()->getId();
+                ZombieQueue::instance().addObject(new ZombiePipe(this));
+                bDataChanged = false;
+            }
         }
     }
-    else
-        m_nReaders --;
 
-    if (m_nReaders == 0 && m_nWriters == 0)
+    if (bDataChanged)
     {
-        // If we're anonymous, die completely.
-        if (m_bIsAnonymous)
-        {
-            ZombieQueue::instance().addObject(new ZombiePipe(this));
-        }
+        dataChanged();
     }
 }
