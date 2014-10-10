@@ -133,7 +133,10 @@ Cache::Cache() :
 #if defined(X86)
         m_Allocator.free(0xE0000000, 0x10000000);
 #elif defined(X64)
+        // Pull in two regions: space directly after the heap, and space
+        // directly after the MemoryRegion area.
         m_Allocator.free(0xFFFFFFFFD0000000, 0x10000000);
+        m_Allocator.free(0xFFFFFFFF40000000, 0x3FC00000);
 #elif defined(ARM_BEAGLE)
         m_Allocator.free(0xA0000000, 0x10000000);
 #else
