@@ -178,23 +178,40 @@ public:
     }
 
     void setPermissions(uint32_t perms)
-    {m_Permissions = perms;}
+    {
+        m_Permissions = perms;
+        fileAttributeChanged();
+    }
 
     uint32_t getPermissions()
-    {return m_Permissions;}
+    {
+        return m_Permissions;
+    }
 
     void setUid(size_t uid)
-    {m_Uid = uid;}
+    {
+        m_Uid = uid;
+        fileAttributeChanged();
+    }
     size_t getUid()
-    {return m_Uid;}
+    {
+        return m_Uid;
+    }
 
     void setGid(size_t gid)
-    {m_Gid = gid;}
+    {
+        m_Gid = gid;
+        fileAttributeChanged();
+    }
     size_t getGid()
-    {return m_Gid;}
+    {
+        return m_Gid;
+    }
 
     File *getParent()
-    {return m_pParent;}
+    {
+        return m_pParent;
+    }
 
     /** Similar to POSIX's select() function
      * \return 1 if ready for reading/writing, 0 otherwise

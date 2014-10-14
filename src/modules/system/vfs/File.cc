@@ -158,6 +158,10 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
         memcpy(reinterpret_cast<void*>(buff+offs),
                reinterpret_cast<void*>(buffer),
                sz);
+
+        // Trigger an immediate write-back - write-through cache.
+        writeBlock(block * blockSize, buff);
+
         location += sz;
         buffer += sz;
         size -= sz;
