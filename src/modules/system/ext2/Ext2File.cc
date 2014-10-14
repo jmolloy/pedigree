@@ -63,9 +63,28 @@ uintptr_t Ext2File::readBlock(uint64_t location)
     m_FileBlockCache.startAtomic();
     uintptr_t buffer = m_FileBlockCache.insert(location);
     static_cast<Ext2Node*>(this)->doRead(location, getBlockSize(), buffer);
-    m_FileBlockCache.endAtomic();
 
-    /// \todo buffer is now dirty.
+    // Clear any dirty flag that may have been applied to the buffer
+    // by performing this read. Cache uses the dirty flag to figure
+    // out whether or not to write the block back to disk...
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+    for (size_t off = 0; off < getBlockSize(); off += PhysicalMemoryManager::getPageSize())
+    {
+        void *p = reinterpret_cast<void *>(buffer + off);
+        if(va.isMapped(p))
+        {
+            physical_uintptr_t phys = 0;
+            size_t flags = 0;
+            va.getMapping(p, phys, flags);
+
+            if(flags & VirtualAddressSpace::Dirty)
+            {
+                flags &= ~(VirtualAddressSpace::Dirty);
+                va.setFlags(p, flags);
+            }
+        }
+    }
+    m_FileBlockCache.endAtomic();
 
     return buffer;
 }
@@ -96,6 +115,19 @@ void Ext2File::truncate()
 void Ext2File::fileAttributeChanged()
 {
     static_cast<Ext2Node*>(this)->fileAttributeChanged(m_Size, m_AccessedTime, m_ModifiedTime, m_CreationTime);
+
+    uint32_t mode = 0;
+    uint32_t permissions = getPermissions();
+    if (permissions & FILE_UR) mode |= EXT2_S_IRUSR;
+    if (permissions & FILE_UW) mode |= EXT2_S_IWUSR;
+    if (permissions & FILE_UX) mode |= EXT2_S_IXUSR;
+    if (permissions & FILE_GR) mode |= EXT2_S_IRGRP;
+    if (permissions & FILE_GW) mode |= EXT2_S_IWGRP;
+    if (permissions & FILE_GX) mode |= EXT2_S_IXGRP;
+    if (permissions & FILE_OR) mode |= EXT2_S_IROTH;
+    if (permissions & FILE_OW) mode |= EXT2_S_IWOTH;
+    if (permissions & FILE_OX) mode |= EXT2_S_IXOTH;
+    static_cast<Ext2Node*>(this)->updateMetadata(getUid(), getGid(), mode);
 }
 
 void Ext2File::sync(size_t offset, bool async)
