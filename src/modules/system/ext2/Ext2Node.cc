@@ -103,7 +103,12 @@ uint64_t Ext2Node::doRead(uint64_t location, uint64_t size, uintptr_t buffer)
 
 uint64_t Ext2Node::doWrite(uint64_t location, uint64_t size, uintptr_t buffer)
 {
-    ensureLargeEnough(location+size);
+    if (!ensureLargeEnough(location+size))
+    {
+        // Couldn't expand file.
+        ERROR("Ext2Node::doWrite failed to extend file.");
+        return 0;
+    }
 
     size_t nBs = m_pExt2Fs->m_BlockSize;
 
@@ -152,11 +157,12 @@ uint64_t Ext2Node::doWrite(uint64_t location, uint64_t size, uintptr_t buffer)
 
 uintptr_t Ext2Node::readBlock(uint64_t location)
 {
-    ensureLargeEnough(location+m_pExt2Fs->m_BlockSize);
-
-    size_t nBs = m_pExt2Fs->m_BlockSize;
-
-    uint32_t nBlock = location / nBs;
+    // Sanity check.
+    uint32_t nBlock = location / m_pExt2Fs->m_BlockSize;
+    if (nBlock > m_nBlocks)
+        return 0;
+    if (location > m_nSize)
+        return 0;
 
     ensureBlockLoaded(nBlock);
     return m_pExt2Fs->readBlock(m_pBlocks[nBlock]);
@@ -164,12 +170,14 @@ uintptr_t Ext2Node::readBlock(uint64_t location)
 
 void Ext2Node::writeBlock(uint64_t location)
 {
-    ensureLargeEnough(location+m_pExt2Fs->m_BlockSize);
+    // Sanity check.
+    uint32_t nBlock = location / m_pExt2Fs->m_BlockSize;
+    if (nBlock > m_nBlocks)
+        return;
+    if (location > m_nSize)
+        return;
 
-    size_t nBs = m_pExt2Fs->m_BlockSize;
-
-    uint32_t nBlock = location / nBs;
-
+    // Update on disk.
     ensureBlockLoaded(nBlock);
     return m_pExt2Fs->writeBlock(m_pBlocks[nBlock]);
 }
@@ -211,7 +219,11 @@ bool Ext2Node::ensureLargeEnough(size_t size)
             SYSCALL_ERROR(NoSpaceLeftOnDevice);
             return false;
         }
-        if (!addBlock(block)) return false;
+        if (!addBlock(block))
+        {
+            ERROR("Adding block " << block << " failed!");
+            return false;
+        }
         // Load the block and zero it.
         uint8_t *pBuffer = reinterpret_cast<uint8_t*>(m_pExt2Fs->readBlock(block));
         memset(pBuffer, 0, m_pExt2Fs->m_BlockSize);
@@ -409,6 +421,21 @@ void Ext2Node::fileAttributeChanged(size_t size, size_t atime, size_t mtime, siz
     m_pInode->i_atime = HOST_TO_LITTLE32(atime);
     m_pInode->i_mtime = HOST_TO_LITTLE32(mtime);
     m_pInode->i_ctime = HOST_TO_LITTLE32(ctime);
+
+    // Write updated inode.
+    m_pExt2Fs->writeInode(getInodeNumber());
+}
+
+void Ext2Node::updateMetadata(uint16_t uid, uint16_t gid, uint32_t perms)
+{
+    // Avoid wiping out extra mode bits that Pedigree doesn't yet care about.
+    uint32_t curr_mode = LITTLE_TO_HOST32(m_pInode->i_mode);
+    curr_mode &= ~((1 << 9) - 1);
+    curr_mode |= perms;
+
+    m_pInode->i_uid = HOST_TO_LITTLE16(uid);
+    m_pInode->i_gid = HOST_TO_LITTLE16(gid);
+    m_pInode->i_mode = HOST_TO_LITTLE32(curr_mode);
 
     // Write updated inode.
     m_pExt2Fs->writeInode(getInodeNumber());

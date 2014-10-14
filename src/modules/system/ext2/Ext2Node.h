@@ -46,6 +46,9 @@ public:
     /** Updates inode attributes. */
     void fileAttributeChanged(size_t size, size_t atime, size_t mtime, size_t ctime);
 
+    /** Updates inode metadata. */
+    void updateMetadata(uint16_t uid, uint16_t gid, uint32_t perms);
+
     uint64_t doRead(uint64_t location, uint64_t size, uintptr_t buffer);
     uint64_t doWrite(uint64_t location, uint64_t size, uintptr_t buffer);
 
