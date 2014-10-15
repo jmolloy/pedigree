@@ -98,7 +98,7 @@ new file mode 100644
 index 0000000..95e66a5
 --- /dev/null
 +++ b/gcc/config/pedigree.h
-@@ -0,0 +1,47 @@
+@@ -0,0 +1,49 @@
 +#define NO_IMPLICIT_EXTERN_C
 +
 +#undef STARTFILE_SPEC
@@ -133,11 +133,14 @@ index 0000000..95e66a5
 +#endif
 +
 +#undef LINK_SPEC
-+#define LINK_SPEC "%{shared:-shared} \
++#define LINK_SPEC \
++                   "%{m32:-mpedigree_i386} \
++                    %{shared:-shared} \
++                    %{static:-Bstatic} \
 +                    %{!shared: \
 +                      %{!static: \
-+                       %{rdynamic:-export-dynamic} \
-+                       %{!dynamic-linker:-dynamic-linker /libraries/libload.so} \
++                        %{rdynamic:-export-dynamic} \
++                        %{!dynamic-linker:-dynamic-linker /libraries/libload.so} \
 +                       } \
 +                     }"
 +
