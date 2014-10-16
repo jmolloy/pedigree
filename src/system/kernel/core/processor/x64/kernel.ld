@@ -86,6 +86,9 @@ SECTIONS
 
   /DISCARD/ : { *(.comment) *(.eh_frame) }
 
-  . = ALIGN(4096);
-  end = .; _end = .; __end = .;
+  .end : AT(ADDR(.end) - 0xFFFFFFFF7FF00000)
+  {
+    . = ALIGN(4096);
+    end = .; _end = .; __end = .;
+  }
 }

@@ -62,10 +62,14 @@ static uintptr_t extend(T p)
 
 bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 {
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
+
 #if defined(X86_COMMON)
-    // Calculate the range
-    physical_uintptr_t start = pBootstrap.getSectionHeaders();
-    physical_uintptr_t end   = start + pBootstrap.getSectionHeaderCount() * pBootstrap.getSectionHeaderEntrySize();
+    NOTICE("KernelElf: section headers are at physical " << pBootstrap.getSectionHeaders());
+
+    // Map in additional, non-code sections.
+    physical_uintptr_t start = ~0;
+    physical_uintptr_t end   = 0;
     for (size_t i = 1; i < pBootstrap.getSectionHeaderCount(); i++)
     {
         // Force 32-bit section header type as we are a 32-bit ELF object
@@ -74,6 +78,11 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 
         if ((pSh->flags & SHF_ALLOC) != SHF_ALLOC)
         {
+            if (pSh->addr <= start)
+            {
+                start = pSh->addr;
+            }
+
             if (pSh->addr >= end)
             {
                 end = pSh->addr + pSh->size;
@@ -81,11 +90,11 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
         }
     }
 
-    // Allocate the range
+    // Map in all non-alloc sections.
     // TODO: PhysicalMemoryManager::nonRamMemory?
     PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
     if (physicalMemoryManager.allocateRegion(m_AdditionalSections,
-                                            (end - start + PhysicalMemoryManager::getPageSize() - 1) / PhysicalMemoryManager::getPageSize(),
+                                            (end - start + pageSz - 1) / pageSz,
                                             PhysicalMemoryManager::continuous, VirtualAddressSpace::KernelMode, start) == false)
     {
         ERROR("KernelElf::initialise failed to allocate for m_AdditionalSections");
@@ -135,7 +144,19 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 
     // Initialise remaining member variables
 #if defined(X86_COMMON)
-    m_pSectionHeaders = m_AdditionalSections.convertPhysicalPointer<Elf32SectionHeader_t>(pBootstrap.getSectionHeaders());
+    // Dirty and dangerous heuristic...
+    // Essentially, if the section headers are in the starting page of the region
+    // we just mapped, then use the mapped region, otherwise use the <1MB identity map.
+    /// \todo Fix this. We assume far too much about the bootloader.
+    if (start == pBootstrap.getSectionHeaders())
+        m_pSectionHeaders = m_AdditionalSections.convertPhysicalPointer<Elf32SectionHeader_t>(start);
+    else
+    {
+        uintptr_t shdrs = pBootstrap.getSectionHeaders();
+        if (shdrs >= 0x100000)
+            panic("never mapped section headers");
+        m_pSectionHeaders = reinterpret_cast<Elf32SectionHeader_t *>(shdrs);
+    }
 #else
     m_pSectionHeaders = reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.getSectionHeaders());
 #endif
