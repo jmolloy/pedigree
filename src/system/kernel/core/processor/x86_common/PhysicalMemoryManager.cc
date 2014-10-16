@@ -356,14 +356,18 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
     // Fill the page-stack (usable memory above 16MB)
     // NOTE: We must do the page-stack first, because the range-lists already need the
     //       memory-management
-    MemoryMapEntry_t *MemoryMap = reinterpret_cast<MemoryMapEntry_t*>(Info.mmap_addr);
-    while (reinterpret_cast<uintptr_t>(MemoryMap) < (Info.mmap_addr + Info.mmap_length))
+    void *MemoryMap = Info.getMemoryMap();
+    if (!MemoryMap)
+        panic("no memory map provided by the bootloader");
+    while (MemoryMap)
     {
-        NOTICE(" " << Hex << MemoryMap->address << " - " << (MemoryMap->address + MemoryMap->length) << ", type: " << MemoryMap->type);
+        NOTICE(" " << Hex << Info.getMemoryMapEntryAddress(MemoryMap) << " - " << (Info.getMemoryMapEntryAddress(MemoryMap) + Info.getMemoryMapEntryLength(MemoryMap)) << ", type: " << Info.getMemoryMapEntryType(MemoryMap));
 
-        if (MemoryMap->type == 1)
+        if (Info.getMemoryMapEntryType(MemoryMap) == 1)
         {
-            for (uint64_t i = MemoryMap->address;i < (MemoryMap->length + MemoryMap->address);i += getPageSize())
+            for (uint64_t i = Info.getMemoryMapEntryAddress(MemoryMap);
+                 i < (Info.getMemoryMapEntryAddress(MemoryMap) + Info.getMemoryMapEntryLength(MemoryMap));
+                 i += getPageSize())
             {
                 // Worry about regions > 4 GB once we've got regions under 4 GB completely done.
                 // We can't do anything over 4 GB because the PageStack class uses
@@ -379,43 +383,43 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
             }
         }
 
-        MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
+        MemoryMap = Info.nextMemoryMapEntry(MemoryMap);
     }
 
     /// \todo do this in initialise64 too.
     m_PageMetadata.initialise(PageHashable(top).hash());
 
     // Fill the range-lists (usable memory below 1/16MB & ACPI)
-    MemoryMap = reinterpret_cast<MemoryMapEntry_t*>(Info.mmap_addr);
-    while (reinterpret_cast<uintptr_t>(MemoryMap) < (Info.mmap_addr + Info.mmap_length))
+    MemoryMap = Info.getMemoryMap();
+    while (MemoryMap)
     {
-        if (MemoryMap->type == 1)
+        if (Info.getMemoryMapEntryType(MemoryMap) == 1)
         {
-            if (MemoryMap->address < 0x100000)
+            if (Info.getMemoryMapEntryAddress(MemoryMap) < 0x100000)
             {
                 // NOTE: Assumes that the entry/entries starting below 1MB don't cross the
                 //       1MB barrier
-                if ((MemoryMap->address + MemoryMap->length) >= 0x100000)
+                if ((Info.getMemoryMapEntryAddress(MemoryMap) + Info.getMemoryMapEntryLength(MemoryMap)) >= 0x100000)
                     panic("PhysicalMemoryManager: strange memory-map");
 
-                m_RangeBelow1MB.free(MemoryMap->address, MemoryMap->length);
+                m_RangeBelow1MB.free(Info.getMemoryMapEntryAddress(MemoryMap), Info.getMemoryMapEntryLength(MemoryMap));
             }
-            else if (MemoryMap->address < 0x1000000)
+            else if (Info.getMemoryMapEntryAddress(MemoryMap) < 0x1000000)
             {
-                uint64_t upperBound = MemoryMap->address + MemoryMap->length;
-                if (upperBound >= 0x1000000)upperBound = 0x1000000;
+                uint64_t upperBound = Info.getMemoryMapEntryAddress(MemoryMap) + Info.getMemoryMapEntryLength(MemoryMap);
+                if (upperBound >= 0x1000000) upperBound = 0x1000000;
 
-                m_RangeBelow16MB.free(MemoryMap->address, upperBound - MemoryMap->address);
+                m_RangeBelow16MB.free(Info.getMemoryMapEntryAddress(MemoryMap), upperBound - Info.getMemoryMapEntryAddress(MemoryMap));
             }
         }
 #if defined(ACPI)                                               
-        else if (MemoryMap->type == 3 || MemoryMap->type == 4)
+        else if (Info.getMemoryMapEntryType(MemoryMap) == 3 || Info.getMemoryMapEntryType(MemoryMap) == 4)
         {
-            m_AcpiRanges.free(MemoryMap->address, MemoryMap->length);
+            m_AcpiRanges.free(Info.getMemoryMapEntryAddress(MemoryMap), Info.getMemoryMapEntryLength(MemoryMap));
         }
 #endif
 
-        MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
+        MemoryMap = Info.nextMemoryMapEntry(MemoryMap);
     }
 
     // Remove the pages used by the kernel from the range-list (below 16MB)
@@ -445,23 +449,23 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
 
     // Initialise the free physical ranges
     m_PhysicalRanges.free(0, 0x100000000ULL);
-    MemoryMap = reinterpret_cast<MemoryMapEntry_t*>(Info.mmap_addr);
-    while (reinterpret_cast<uintptr_t>(MemoryMap) < (Info.mmap_addr + Info.mmap_length))
+    MemoryMap = Info.getMemoryMap();
+    while (MemoryMap)
     {
         // Only map if the variable fits into a uintptr_t - no overflow!
-        if((MemoryMap->address) > ((uintptr_t) -1))
+        if((Info.getMemoryMapEntryAddress(MemoryMap)) > ((uintptr_t) -1))
         {
-            WARNING("Memory region " << MemoryMap->address << " not used.");
+            WARNING("Memory region " << Info.getMemoryMapEntryAddress(MemoryMap) << " not used.");
         }
-        else if(MemoryMap->address >= 0x100000000ULL)
+        else if(Info.getMemoryMapEntryAddress(MemoryMap) >= 0x100000000ULL)
         {
             // Skip >= 4 GB for now, done in initialise64
             break;
         }
-        else if (m_PhysicalRanges.allocateSpecific(MemoryMap->address, MemoryMap->length) == false)
+        else if (m_PhysicalRanges.allocateSpecific(Info.getMemoryMapEntryAddress(MemoryMap), Info.getMemoryMapEntryLength(MemoryMap)) == false)
             panic("PhysicalMemoryManager: Failed to create the list of ranges of free physical space");
 
-        MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
+        MemoryMap = Info.nextMemoryMapEntry(MemoryMap);
     }
 
     // Print the ranges
@@ -485,38 +489,40 @@ void X86CommonPhysicalMemoryManager::initialise64(const BootstrapStruct_t &Info)
     // Fill the page-stack (usable memory above 16MB)
     // NOTE: We must do the page-stack first, because the range-lists already need the
     //       memory-management
-    MemoryMapEntry_t *MemoryMap = reinterpret_cast<MemoryMapEntry_t*>(Info.mmap_addr);
-    while (reinterpret_cast<uintptr_t>(MemoryMap) < (Info.mmap_addr + Info.mmap_length))
+    void *MemoryMap = Info.getMemoryMap();
+    while (MemoryMap)
     {
-        if(MemoryMap->address >= 0x100000000ULL)
+        if(Info.getMemoryMapEntryAddress(MemoryMap) >= 0x100000000ULL)
         {
-            NOTICE(" " << Hex << MemoryMap->address << " - " << (MemoryMap->address + MemoryMap->length) << ", type: " << MemoryMap->type);
+            NOTICE(" " << Hex << Info.getMemoryMapEntryAddress(MemoryMap) << " - " << (Info.getMemoryMapEntryAddress(MemoryMap) + Info.getMemoryMapEntryLength(MemoryMap)) << ", type: " << Info.getMemoryMapEntryType(MemoryMap));
 
-            if (MemoryMap->type == 1)
+            if (Info.getMemoryMapEntryType(MemoryMap) == 1)
             {
-                for (uint64_t i = MemoryMap->address;i < (MemoryMap->length + MemoryMap->address);i += getPageSize())
+                for (uint64_t i = Info.getMemoryMapEntryAddress(MemoryMap);
+                     i < (Info.getMemoryMapEntryAddress(MemoryMap) + Info.getMemoryMapEntryLength(MemoryMap));
+                     i += getPageSize())
                 {
                     m_PageStack.free(i);
                 }
 
-                m_PhysicalRanges.free(MemoryMap->address, MemoryMap->length);
+                m_PhysicalRanges.free(Info.getMemoryMapEntryAddress(MemoryMap), Info.getMemoryMapEntryLength(MemoryMap));
             }
         }
         
-        MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
+        MemoryMap = Info.nextMemoryMapEntry(MemoryMap);
     }
 
     // Fill the range-lists (usable memory below 1/16MB & ACPI)
 #if defined(ACPI)
-    MemoryMap = reinterpret_cast<MemoryMapEntry_t*>(Info.mmap_addr);
-    while (reinterpret_cast<uintptr_t>(MemoryMap) < (Info.mmap_addr + Info.mmap_length))
+    MemoryMap = Info.getMemoryMap();
+    while (MemoryMap)
     {
-        if ((MemoryMap->type == 3 || MemoryMap->type == 4) && MemoryMap->address >= 0x100000000ULL)
+        if ((Info.getMemoryMapEntryType(MemoryMap) == 3 || Info.getMemoryMapEntryType(MemoryMap) == 4) && Info.getMemoryMapEntryAddress(MemoryMap) >= 0x100000000ULL)
         {
-            m_AcpiRanges.free(MemoryMap->address, MemoryMap->length);
+            m_AcpiRanges.free(Info.getMemoryMapEntryAddress(MemoryMap), Info.getMemoryMapEntryLength(MemoryMap));
         }
 
-        MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
+        MemoryMap = Info.nextMemoryMapEntry(MemoryMap);
     }
     
 #if defined(VERBOSE_MEMORY_MANAGER)
@@ -528,18 +534,18 @@ void X86CommonPhysicalMemoryManager::initialise64(const BootstrapStruct_t &Info)
 #endif
 
     // Initialise the free physical ranges
-    MemoryMap = reinterpret_cast<MemoryMapEntry_t*>(Info.mmap_addr);
-    while (reinterpret_cast<uintptr_t>(MemoryMap) < (Info.mmap_addr + Info.mmap_length))
+    MemoryMap = Info.getMemoryMap();
+    while (MemoryMap)
     {
         // Only map if the variable fits into a uintptr_t - no overflow!
-        if((MemoryMap->address) > ((uintptr_t) -1))
+        if((Info.getMemoryMapEntryAddress(MemoryMap)) > ((uintptr_t) -1))
         {
-            WARNING("Memory region " << MemoryMap->address << " not used.");
+            WARNING("Memory region " << Info.getMemoryMapEntryAddress(MemoryMap) << " not used.");
         }
-        else if ((MemoryMap->address >= 0x100000000ULL) && (m_PhysicalRanges.allocateSpecific(MemoryMap->address, MemoryMap->length) == false))
+        else if ((Info.getMemoryMapEntryAddress(MemoryMap) >= 0x100000000ULL) && (m_PhysicalRanges.allocateSpecific(Info.getMemoryMapEntryAddress(MemoryMap), Info.getMemoryMapEntryLength(MemoryMap)) == false))
             panic("PhysicalMemoryManager: Failed to create the list of ranges of free physical space");
 
-        MemoryMap = adjust_pointer(MemoryMap, MemoryMap->size + 4);
+        MemoryMap = Info.nextMemoryMapEntry(MemoryMap);
     }
 
     // Print the ranges

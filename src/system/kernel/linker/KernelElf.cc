@@ -62,16 +62,15 @@ static uintptr_t extend(T p)
 
 bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 {
-    #if defined(X86_COMMON)
-
+#if defined(X86_COMMON)
     // Calculate the range
-    physical_uintptr_t start = pBootstrap.addr;
-    physical_uintptr_t end   = pBootstrap.addr + pBootstrap.num * pBootstrap.size;
-    for (size_t i = 1; i < pBootstrap.num; i++)
+    physical_uintptr_t start = pBootstrap.getSectionHeaders();
+    physical_uintptr_t end   = start + pBootstrap.getSectionHeaderCount() * pBootstrap.getSectionHeaderEntrySize();
+    for (size_t i = 1; i < pBootstrap.getSectionHeaderCount(); i++)
     {
         // Force 32-bit section header type as we are a 32-bit ELF object
         // even on 64-bit targets.
-        Elf32SectionHeader_t *pSh = reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.addr + i * pBootstrap.size);
+        Elf32SectionHeader_t *pSh = reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.getSectionHeaders() + i * pBootstrap.getSectionHeaderEntrySize());
 
         if ((pSh->flags & SHF_ALLOC) != SHF_ALLOC)
         {
@@ -89,30 +88,27 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
                                             (end - start + PhysicalMemoryManager::getPageSize() - 1) / PhysicalMemoryManager::getPageSize(),
                                             PhysicalMemoryManager::continuous, VirtualAddressSpace::KernelMode, start) == false)
     {
+        ERROR("KernelElf::initialise failed to allocate for m_AdditionalSections");
         return false;
     }
-
-    #endif
+#endif
 
     // Get the string table
-    const char *tmpStringTable = reinterpret_cast<const char*>(reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.addr + pBootstrap.shndx * pBootstrap.size)->addr);
-
+    const char *tmpStringTable = reinterpret_cast<const char*>(reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.getSectionHeaders() + pBootstrap.getSectionHeaderStringTableIndex() * pBootstrap.getSectionHeaderEntrySize())->addr);
 
     // Search for the symbol/string table and adjust sections
-    for (size_t i = 1; i < pBootstrap.num; i++)
+    for (size_t i = 1; i < pBootstrap.getSectionHeaderCount(); i++)
     {
-        Elf32SectionHeader_t *pSh = reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.addr + i * pBootstrap.size);
+        Elf32SectionHeader_t *pSh = reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.getSectionHeaders() + i * pBootstrap.getSectionHeaderEntrySize());
 
-        #if defined(X86_COMMON)
-
+#if defined(X86_COMMON)
         // Adjust the section
         if ((pSh->flags & SHF_ALLOC) != SHF_ALLOC)
         {
             pSh->addr = reinterpret_cast<uintptr_t>(m_AdditionalSections.convertPhysicalPointer<void>(pSh->addr));
             pSh->offset = pSh->addr;
         }
-
-        #endif
+#endif
 
         // Save the symbol/string table
         const char *pStr = tmpStringTable + pSh->name;
@@ -139,11 +135,11 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 
     // Initialise remaining member variables
 #if defined(X86_COMMON)
-    m_pSectionHeaders = m_AdditionalSections.convertPhysicalPointer<Elf32SectionHeader_t>(pBootstrap.addr);
+    m_pSectionHeaders = m_AdditionalSections.convertPhysicalPointer<Elf32SectionHeader_t>(pBootstrap.getSectionHeaders());
 #else
-    m_pSectionHeaders = reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.addr);
+    m_pSectionHeaders = reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.getSectionHeaders());
 #endif
-    m_nSectionHeaders = pBootstrap.num;
+    m_nSectionHeaders = pBootstrap.getSectionHeaderCount();
 
 #ifdef DEBUGGER
     if (m_pSymbolTable && m_pStringTable)

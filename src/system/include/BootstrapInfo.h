@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,7 +22,6 @@
 
 #include <compiler.h>
 #include <processor/types.h>
-#include <utilities/String.h>
 
 /** @addtogroup kernel
  * @{ */
@@ -45,8 +43,31 @@
 
 #ifndef PPC_COMMON
 
-struct BootstrapStruct_t
+class BootstrapStruct_t
 {
+public:
+    bool isInitrdLoaded() const;
+    uint8_t *getInitrdAddress() const;
+    size_t getInitrdSize() const;
+
+    bool isDatabaseLoaded() const;
+    uint8_t *getDatabaseAddress() const;
+    size_t getDatabaseSize() const;
+
+    char *getCommandLine() const;
+
+    size_t getSectionHeaderCount() const;
+    size_t getSectionHeaderEntrySize() const;
+    size_t getSectionHeaderStringTableIndex() const;
+    uintptr_t getSectionHeaders() const;
+
+    void *getMemoryMap() const;
+    uint64_t getMemoryMapEntryAddress(void *opaque) const;
+    uint64_t getMemoryMapEntryLength(void *opaque) const;
+    uint32_t getMemoryMapEntryType(void *opaque) const;
+    void *nextMemoryMapEntry(void *opaque) const;
+
+private:
     // If we are passed via grub, this information will be completely different to
     // via the bootstrapper.
     uint32_t flags;
@@ -85,45 +106,6 @@ struct BootstrapStruct_t
     uint32_t vbe_interface_seg;
     uint32_t vbe_interface_off;
     uint32_t vbe_interface_len;
-
-    inline bool isInitrdLoaded() const
-    {
-        return (mods_count != 0);
-    }
-    inline uint8_t *getInitrdAddress() const
-    {
-        return reinterpret_cast<uint8_t*>(*reinterpret_cast<uint32_t*>(mods_addr));
-    }
-    inline size_t getInitrdSize() const
-    {
-        return *reinterpret_cast<uint32_t*>(mods_addr + 4) -
-            *reinterpret_cast<uint32_t*>(mods_addr);
-    }
-    inline size_t isDatabaseLoaded() const
-    {
-        return (mods_count > 1);
-    }
-    inline uint8_t *getDatabaseAddress() const
-    {
-        return reinterpret_cast<uint8_t*>(*reinterpret_cast<uint32_t*>(mods_addr+16));
-    }
-    inline size_t getDatabaseSize() const
-    {
-        return *reinterpret_cast<uint32_t*>(mods_addr + 20) -
-            *reinterpret_cast<uint32_t*>(mods_addr + 16);
-    }
-    inline char *getCommandLine() const
-    {
-        return (flags&MULTIBOOT_FLAG_CMDLINE?reinterpret_cast<char *>(cmdline):0);
-    }
-} PACKED;
-
-struct MemoryMapEntry_t
-{
-    uint32_t size;
-    uint64_t address;
-    uint64_t length;
-    uint32_t type;
 } PACKED;
 
 #else
