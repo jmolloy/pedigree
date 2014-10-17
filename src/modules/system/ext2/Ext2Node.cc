@@ -359,9 +359,11 @@ bool Ext2Node::addBlock(uint32_t blockValue)
         }
 
         // Now we can set the block.
-        uint32_t *buffer = reinterpret_cast<uint32_t*>(m_pExt2Fs->readBlock(LITTLE_TO_HOST32(m_pInode->i_block[12])));
+        uint32_t bufferBlock = LITTLE_TO_HOST32(m_pInode->i_block[12]);
+        uint32_t *buffer = reinterpret_cast<uint32_t*>(m_pExt2Fs->readBlock(bufferBlock));
 
-        buffer[m_nBlocks-12] = HOST_TO_LITTLE32(blockValue);
+        buffer[indirectIdx] = HOST_TO_LITTLE32(blockValue);
+        m_pExt2Fs->writeBlock(bufferBlock);
     }
     else if (m_nBlocks < 12 + nEntriesPerBlock + nEntriesPerBlock*nEntriesPerBlock)
     {
@@ -391,7 +393,8 @@ bool Ext2Node::addBlock(uint32_t blockValue)
         }
 
         // Now we can safely read the bi-indirect block.
-        uint32_t *pBlock = reinterpret_cast<uint32_t*>(m_pExt2Fs->readBlock(LITTLE_TO_HOST32(m_pInode->i_block[13])));
+        uint32_t bufferBlock = LITTLE_TO_HOST32(m_pInode->i_block[13]);
+        uint32_t *pBlock = reinterpret_cast<uint32_t*>(m_pExt2Fs->readBlock(bufferBlock));
 
         // Do we need to start a new indirect block?
         if (indirectIdx == 0)
@@ -405,6 +408,8 @@ bool Ext2Node::addBlock(uint32_t blockValue)
                 return false;
             }
 
+            m_pExt2Fs->writeBlock(bufferBlock);
+
             void *buffer = reinterpret_cast<void *>(m_pExt2Fs->readBlock(newBlock));
             memset(buffer, 0, m_pExt2Fs->m_BlockSize);
         }
@@ -417,6 +422,7 @@ bool Ext2Node::addBlock(uint32_t blockValue)
 
         // Set the correct entry.
         pBlock[indirectIdx] = HOST_TO_LITTLE32(blockValue);
+        m_pExt2Fs->writeBlock(nIndirectBlockNum);
     }
     else
     {
