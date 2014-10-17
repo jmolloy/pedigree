@@ -265,8 +265,8 @@ bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, St
             Ext2Directory *pDotDot = new Ext2Directory(String(".."), pE2Parent->getInodeNumber(), parentInode, this, pE2Dir);
 
             // Add created dot/dotdot entries to the new directory.
-            pE2Dir->addEntry(String(".."), pDotDot, EXT2_S_IFDIR);
             pE2Dir->addEntry(String("."), pDot, EXT2_S_IFDIR);
+            pE2Dir->addEntry(String(".."), pDotDot, EXT2_S_IFDIR);
             break;
         }
         case EXT2_S_IFLNK:
