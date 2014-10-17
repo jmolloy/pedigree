@@ -58,6 +58,15 @@ Ext2File::~Ext2File()
 {
 }
 
+void Ext2File::extend(size_t newSize)
+{
+    if (newSize > m_Size)
+    {
+        ensureLargeEnough(newSize);
+        m_Size = newSize;
+    }
+}
+
 uintptr_t Ext2File::readBlock(uint64_t location)
 {
     m_FileBlockCache.startAtomic();
