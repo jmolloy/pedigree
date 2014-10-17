@@ -64,9 +64,6 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
         1 + /* 8-bit file type */
         filename.length(); /* Don't leave space for NULL-terminator, not needed. */
 
-    // Load in and scan the directory, looking for a space large enough to fit our directory descriptor.
-    uint8_t *pBuffer = new uint8_t[m_pExt2Fs->m_BlockSize];
-
     bool bFound = false;
 
     uint32_t i;
@@ -146,8 +143,11 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
         ///       point to this new entry (as directory entries cannot cross
         ///       block boundaries).
 
-        memset(pBuffer, 0, m_pExt2Fs->m_BlockSize);
-        pDir = reinterpret_cast<Dir*> (pBuffer);
+        ensureBlockLoaded(i);
+        uintptr_t buffer = m_pExt2Fs->readBlock(m_pBlocks[i]);
+
+        memset(reinterpret_cast<void *>(buffer), 0, m_pExt2Fs->m_BlockSize);
+        pDir = reinterpret_cast<Dir *>(buffer);
         pDir->d_reclen = m_pExt2Fs->m_BlockSize;
     }
 
