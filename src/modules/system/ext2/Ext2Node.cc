@@ -422,6 +422,9 @@ void Ext2Node::fileAttributeChanged(size_t size, size_t atime, size_t mtime, siz
     m_pInode->i_mtime = HOST_TO_LITTLE32(mtime);
     m_pInode->i_ctime = HOST_TO_LITTLE32(ctime);
 
+    // Update our internal record of the file size accordingly.
+    m_nSize = size;
+
     // Write updated inode.
     m_pExt2Fs->writeInode(getInodeNumber());
 }
