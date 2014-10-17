@@ -341,6 +341,7 @@ bool Ext2Node::addBlock(uint32_t blockValue)
     else if (m_nBlocks < 12 + nEntriesPerBlock)
     {
         // Indirect addressing needed.
+        size_t indirectIdx = m_nBlocks - 12;
 
         // If this is the first indirect block, we need to reserve a new table block.
         if (m_nBlocks == 12)
