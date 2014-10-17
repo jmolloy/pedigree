@@ -85,6 +85,9 @@ private:
     bool checkRequiredFeature(size_t feature);
     bool checkReadOnlyFeature(size_t feature);
 
+    void increaseInodeRefcount(uint32_t inode);
+    bool decreaseInodeRefcount(uint32_t inode);
+
     /** Our superblock. */
     Superblock *m_pSuperblock;
 

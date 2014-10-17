@@ -235,7 +235,6 @@ bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, St
     newInode->i_uid = HOST_TO_LITTLE16(uid);
     newInode->i_atime = newInode->i_ctime = newInode->i_mtime = HOST_TO_LITTLE32(pTimer->getUnixTimestamp());
     newInode->i_gid = HOST_TO_LITTLE16(gid);
-    newInode->i_links_count = HOST_TO_LITTLE16(1);
 
     // If we have a value to store, and it's small enough, use the block indices.
     if (value.length() && value.length() < 4*15)
@@ -562,9 +561,7 @@ bool Ext2Filesystem::releaseInode(uint32_t inode)
     uint32_t group = inode / inodesPerGroup;
     uint32_t index = inode % inodesPerGroup;
 
-    bool bRemove = pInode->i_links_count <= 1;
-    if (pInode->i_links_count)
-        pInode->i_links_count--;
+    bool bRemove = decreaseInodeRefcount(inode + 1);
 
     // Do we need to free this inode?
     if (bRemove)
@@ -732,6 +729,33 @@ void Ext2Filesystem::ensureInodeTableLoaded(size_t group)
         uint32_t blockNumber = LITTLE_TO_HOST32(m_pGroupDescriptors[group]->bg_inode_table) + i;
         list.pushBack(readBlock(blockNumber));
     }
+}
+
+void Ext2Filesystem::increaseInodeRefcount(uint32_t inode)
+{
+    Inode *pInode = getInode(inode);
+    if (!pInode)
+        return;
+
+    uint32_t current_count = LITTLE_TO_HOST32(pInode->i_links_count);
+    pInode->i_links_count = HOST_TO_LITTLE32(current_count + 1);
+
+    writeInode(inode);
+}
+
+bool Ext2Filesystem::decreaseInodeRefcount(uint32_t inode)
+{
+    Inode *pInode = getInode(inode);
+    if (!pInode)
+        return true;  // No inode found - but didn't decrement to zero.
+
+    uint32_t current_count = LITTLE_TO_HOST32(pInode->i_links_count);
+    bool bRemove = current_count <= 1;
+    if (current_count)
+        pInode->i_links_count = HOST_TO_LITTLE32(current_count - 1);
+
+    writeInode(inode);
+    return bRemove;
 }
 
 static bool initExt2()

@@ -152,7 +152,9 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
     }
 
     // Set the directory contents.
-    pDir->d_inode = HOST_TO_LITTLE32(pFile->getInode());
+    uint32_t entryInode = pFile->getInode();
+    pDir->d_inode = HOST_TO_LITTLE32(entryInode);
+    m_pExt2Fs->increaseInodeRefcount(entryInode);
 
     if (m_pExt2Fs->checkRequiredFeature(2))
     {
