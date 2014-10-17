@@ -58,6 +58,8 @@ public:
     uintptr_t readBlock(uint64_t location);
     void writeBlock(uint64_t location);
 
+    void trackBlock(uint32_t block);
+
 protected:
     /** Ensures the inode is at least 'size' big. */
     bool ensureLargeEnough(size_t size);

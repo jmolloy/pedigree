@@ -182,6 +182,24 @@ void Ext2Node::writeBlock(uint64_t location)
     return m_pExt2Fs->writeBlock(m_pBlocks[nBlock]);
 }
 
+void Ext2Node::trackBlock(uint32_t block)
+{
+    uint32_t *pTmp = new uint32_t[m_nBlocks + 1];
+    memcpy(pTmp, m_pBlocks, m_nBlocks * sizeof(uint32_t));
+
+    delete [] m_pBlocks;
+    m_pBlocks = pTmp;
+
+    m_pBlocks[m_nBlocks++] = block;
+
+    // Inode i_blocks field is actually the count of 512-byte blocks.
+    uint32_t i_blocks = (m_nBlocks * m_pExt2Fs->m_BlockSize) / 512;
+    m_pInode->i_blocks = HOST_TO_LITTLE32(i_blocks);
+
+    // Write updated inode.
+    m_pExt2Fs->writeInode(getInodeNumber());
+}
+
 void Ext2Node::wipe()
 {
     for (size_t i = 0; i < m_nBlocks; i++)
@@ -195,6 +213,7 @@ void Ext2Node::wipe()
 
     m_pInode->i_size = 0;
     m_pInode->i_blocks = 0;
+    memset(m_pInode->i_block, 0, sizeof(uint32_t) * 15);
 
     // Write updated inode.
     m_pExt2Fs->writeInode(getInodeNumber());
@@ -326,13 +345,17 @@ bool Ext2Node::addBlock(uint32_t blockValue)
         // If this is the first indirect block, we need to reserve a new table block.
         if (m_nBlocks == 12)
         {
-            m_pInode->i_block[12] = HOST_TO_LITTLE32(m_pExt2Fs->findFreeBlock(m_InodeNumber));
+            uint32_t newBlock = m_pExt2Fs->findFreeBlock(m_InodeNumber);
+            m_pInode->i_block[12] = HOST_TO_LITTLE32(newBlock);
             if (m_pInode->i_block[12] == 0)
             {
                 // We had a problem.
                 SYSCALL_ERROR(NoSpaceLeftOnDevice);
                 return false;
             }
+
+            void *buffer = reinterpret_cast<void *>(m_pExt2Fs->readBlock(newBlock));
+            memset(buffer, 0, m_pExt2Fs->m_BlockSize);
         }
 
         // Now we can set the block.
@@ -354,13 +377,17 @@ bool Ext2Node::addBlock(uint32_t blockValue)
         // If this is the first bi-indirect block, we need to reserve a bi-indirect table block.
         if (biIdx == 0)
         {
-            m_pInode->i_block[13] = HOST_TO_LITTLE32(m_pExt2Fs->findFreeBlock(m_InodeNumber));
+            uint32_t newBlock = m_pExt2Fs->findFreeBlock(m_InodeNumber);
+            m_pInode->i_block[13] = HOST_TO_LITTLE32(newBlock);
             if (m_pInode->i_block[13] == 0)
             {
                 // We had a problem.
                 SYSCALL_ERROR(NoSpaceLeftOnDevice);
                 return false;
             }
+
+            void *buffer = reinterpret_cast<void *>(m_pExt2Fs->readBlock(newBlock));
+            memset(buffer, 0, m_pExt2Fs->m_BlockSize);
         }
 
         // Now we can safely read the bi-indirect block.
@@ -369,13 +396,17 @@ bool Ext2Node::addBlock(uint32_t blockValue)
         // Do we need to start a new indirect block?
         if (indirectIdx == 0)
         {
-            pBlock[indirectBlock] = HOST_TO_LITTLE32(m_pExt2Fs->findFreeBlock(m_InodeNumber));
+            uint32_t newBlock = m_pExt2Fs->findFreeBlock(m_InodeNumber);
+            pBlock[indirectBlock] = HOST_TO_LITTLE32(newBlock);
             if (pBlock[indirectBlock] == 0)
             {
                 // We had a problem.
                 SYSCALL_ERROR(NoSpaceLeftOnDevice);
                 return false;
             }
+
+            void *buffer = reinterpret_cast<void *>(m_pExt2Fs->readBlock(newBlock));
+            memset(buffer, 0, m_pExt2Fs->m_BlockSize);
         }
 
         // Cache this as it gets clobbered by the readBlock call (using the same buffer).
@@ -394,20 +425,7 @@ bool Ext2Node::addBlock(uint32_t blockValue)
         return false;
     }
 
-    uint32_t *pTmp = new uint32_t[m_nBlocks+1];
-    memcpy(pTmp, m_pBlocks, m_nBlocks*4);
-    delete [] m_pBlocks;
-    m_pBlocks = pTmp;
-    m_pBlocks[m_nBlocks] = blockValue;
-
-    m_nBlocks++;
-
-    // Inode i_blocks field is actually the count of 512-byte blocks.
-    uint32_t i_blocks = (m_nBlocks * m_pExt2Fs->m_BlockSize) / 512;
-    m_pInode->i_blocks = HOST_TO_LITTLE32(i_blocks);
-
-    // Write updated inode.
-    m_pExt2Fs->writeInode(getInodeNumber());
+    trackBlock(blockValue);
 
     return true;
 }
