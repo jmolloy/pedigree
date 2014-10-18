@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -32,8 +31,23 @@ RawFsFile::RawFsFile(String name, RawFs *pFs, File *pParent, Disk *pDisk) :
 	      pParent),
     m_pDisk(pDisk)
 {
+    // Owned by root:root
+    setUid(0);
+    setGid(0);
+
+    // RW for root, readable only by others.
+    uint32_t permissions = FILE_UR | FILE_UW | FILE_GR | FILE_OR;
+    setPermissions(permissions);
+
+    // Disk size.
+    setSize(m_pDisk->getSize());
 }
-    
+
+size_t RawFsFile::getBlockSize() const
+{
+    return m_pDisk->getBlockSize();
+}
+
 uintptr_t RawFsFile::readBlock(uint64_t location)
 {
     return m_pDisk->read(location);

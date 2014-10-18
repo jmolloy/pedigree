@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -73,6 +72,9 @@ public:
     }
 
     virtual BusMasterIde *getBusMaster() const { return m_BusMaster; }
+
+    virtual size_t getSize() const;
+    virtual size_t getBlockSize() const;
 
 private:
     /** Sets the drive up for reading from address 'n' in LBA28 mode. */

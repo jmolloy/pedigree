@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -31,6 +30,10 @@ RawFsDir::RawFsDir(String name, RawFs *pFs, File *pParent) :
 	      0 /* Size */,
 	      pParent)
 {
+    // RW for root, readable only by others.
+    uint32_t permissions =
+        FILE_UR | FILE_UW | FILE_UX | FILE_GR | FILE_GX | FILE_OR | FILE_OX;
+    setPermissions(permissions);
 }
 
 void RawFsDir::addEntry(File *pEntry)

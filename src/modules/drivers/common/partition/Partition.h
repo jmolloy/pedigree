@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -94,11 +93,22 @@ public:
     pParent->write(location+m_Start);
   }
 
+  virtual size_t getSize() const
+  {
+    return getLength();
+  }
+
+  virtual size_t getBlockSize() const
+  {
+    const Disk *pParent = static_cast<const Disk*> (getParent());
+    return pParent->getBlockSize();
+  }
+
   /** Returns the first byte of the parent disk that is in this partition. */
   uint64_t getStart();
 
   /** Returns the length of this partition. */
-  uint64_t getLength()
+  uint64_t getLength() const
   {
     return m_Length;
   }

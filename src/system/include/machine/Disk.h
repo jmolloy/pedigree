@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -102,6 +101,28 @@ public:
     virtual void align(uint64_t location)
     {
         return;
+    }
+
+    /**
+     * \brief Gets the size of the disk.
+     *
+     * This is the size in bytes of the disk. Reads or writes beyond this size
+     * will fail.
+     */
+    virtual size_t getSize() const
+    {
+        return 0;
+    }
+
+    /**
+     * \brief Gets the block size of the disk.
+     *
+     * This is the native block size with which all reads and writes are
+     * performed, regardless of how much data is available to be read/written.
+     */
+    virtual size_t getBlockSize() const
+    {
+        return 0;
     }
 
     /**

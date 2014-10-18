@@ -834,3 +834,14 @@ void AtaDisk::setFeatures(uint8_t command, uint8_t countreg, uint8_t lowreg, uin
     commandRegs->write8(0xEF, 7);
 }
 
+size_t AtaDisk::getSize() const
+{
+    const uint64_t *sz = reinterpret_cast<const uint64_t *>(&m_pIdent[100]);
+    return (*sz) * 512;
+}
+
+size_t AtaDisk::getBlockSize() const
+{
+    /// \todo magic number
+    return 65536;
+}

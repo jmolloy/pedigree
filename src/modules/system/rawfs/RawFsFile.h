@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -37,6 +36,8 @@ public:
     ~RawFsFile() {}
     
     virtual uintptr_t readBlock(uint64_t location);
+
+    virtual size_t getBlockSize() const;
 
     virtual void fileAttributeChanged() {}
 private:
