@@ -111,9 +111,10 @@ class KernelElf : public Elf
         bool moduleDependenciesSatisfied(Module *module);
         bool executeModule(Module *module);
 
-        #if defined(X86_COMMON)
-        MemoryRegion m_AdditionalSections;
-        #endif
+#if defined(X86_COMMON)
+        MemoryRegion m_AdditionalSectionContents;
+        MemoryRegion *m_AdditionalSectionHeaders;
+#endif
 
         /** Instance of the KernelElf class */
         static KernelElf m_Instance;

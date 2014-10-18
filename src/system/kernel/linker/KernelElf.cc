@@ -62,19 +62,33 @@ static uintptr_t extend(T p)
 
 bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 {
+    PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
     size_t pageSz = PhysicalMemoryManager::getPageSize();
 
 #if defined(X86_COMMON)
-    NOTICE("KernelElf: section headers are at physical " << pBootstrap.getSectionHeaders());
+    m_AdditionalSectionHeaders = new MemoryRegion("Kernel ELF Section Headers");
 
-    // Map in additional, non-code sections.
+    // Map in section headers.
+    size_t sectionHeadersLength = pBootstrap.getSectionHeaderCount() * pBootstrap.getSectionHeaderEntrySize();
+    if (physicalMemoryManager.allocateRegion(*m_AdditionalSectionHeaders,
+                                             (sectionHeadersLength + pageSz - 1) / pageSz,
+                                             PhysicalMemoryManager::continuous,
+                                             VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write,
+                                             pBootstrap.getSectionHeaders()) == false)
+    {
+        ERROR("KernelElf::initialise failed to allocate for m_AdditionalSectionHeaders");
+        return false;
+    }
+
+    // Determine the layout of the contents of non-code sections.
     physical_uintptr_t start = ~0;
     physical_uintptr_t end   = 0;
     for (size_t i = 1; i < pBootstrap.getSectionHeaderCount(); i++)
     {
         // Force 32-bit section header type as we are a 32-bit ELF object
         // even on 64-bit targets.
-        Elf32SectionHeader_t *pSh = reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.getSectionHeaders() + i * pBootstrap.getSectionHeaderEntrySize());
+        uintptr_t shdr_addr = pBootstrap.getSectionHeaders() + i * pBootstrap.getSectionHeaderEntrySize();
+        Elf32SectionHeader_t *pSh = m_AdditionalSectionHeaders->convertPhysicalPointer<Elf32SectionHeader_t>(shdr_addr);
 
         if ((pSh->flags & SHF_ALLOC) != SHF_ALLOC)
         {
@@ -90,14 +104,22 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
         }
     }
 
-    // Map in all non-alloc sections.
-    // TODO: PhysicalMemoryManager::nonRamMemory?
-    PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
-    if (physicalMemoryManager.allocateRegion(m_AdditionalSections,
-                                            (end - start + pageSz - 1) / pageSz,
-                                            PhysicalMemoryManager::continuous, VirtualAddressSpace::KernelMode, start) == false)
+    // Is there an overlap between headers and section data?
+    if ((start & ~(pageSz - 1)) == (pBootstrap.getSectionHeaders() & ~(pageSz - 1)))
     {
-        ERROR("KernelElf::initialise failed to allocate for m_AdditionalSections");
+        // Yes, there is. Point the section headers MemoryRegion to the Contents.
+        delete m_AdditionalSectionHeaders;
+        m_AdditionalSectionHeaders = &m_AdditionalSectionContents;
+    }
+
+    // Map in all non-alloc sections.
+    if (physicalMemoryManager.allocateRegion(m_AdditionalSectionContents,
+                                             (end - start + pageSz - 1) / pageSz,
+                                             PhysicalMemoryManager::continuous,
+                                             VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write,
+                                             start) == false)
+    {
+        ERROR("KernelElf::initialise failed to allocate for m_AdditionalSectionContents");
         return false;
     }
 #endif
@@ -108,13 +130,14 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
     // Search for the symbol/string table and adjust sections
     for (size_t i = 1; i < pBootstrap.getSectionHeaderCount(); i++)
     {
-        Elf32SectionHeader_t *pSh = reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.getSectionHeaders() + i * pBootstrap.getSectionHeaderEntrySize());
+        uintptr_t shdr_addr = pBootstrap.getSectionHeaders() + i * pBootstrap.getSectionHeaderEntrySize();
+        Elf32SectionHeader_t *pSh = m_AdditionalSectionHeaders->convertPhysicalPointer<Elf32SectionHeader_t>(shdr_addr);
 
 #if defined(X86_COMMON)
         // Adjust the section
         if ((pSh->flags & SHF_ALLOC) != SHF_ALLOC)
         {
-            pSh->addr = reinterpret_cast<uintptr_t>(m_AdditionalSections.convertPhysicalPointer<void>(pSh->addr));
+            pSh->addr = reinterpret_cast<uintptr_t>(m_AdditionalSectionContents.convertPhysicalPointer<void>(pSh->addr));
             pSh->offset = pSh->addr;
         }
 #endif
@@ -144,19 +167,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 
     // Initialise remaining member variables
 #if defined(X86_COMMON)
-    // Dirty and dangerous heuristic...
-    // Essentially, if the section headers are in the starting page of the region
-    // we just mapped, then use the mapped region, otherwise use the <1MB identity map.
-    /// \todo Fix this. We assume far too much about the bootloader.
-    if (start == pBootstrap.getSectionHeaders())
-        m_pSectionHeaders = m_AdditionalSections.convertPhysicalPointer<Elf32SectionHeader_t>(start);
-    else
-    {
-        uintptr_t shdrs = pBootstrap.getSectionHeaders();
-        if (shdrs >= 0x100000)
-            panic("never mapped section headers");
-        m_pSectionHeaders = reinterpret_cast<Elf32SectionHeader_t *>(shdrs);
-    }
+    m_pSectionHeaders = m_AdditionalSectionHeaders->convertPhysicalPointer<Elf32SectionHeader_t>(pBootstrap.getSectionHeaders());
 #else
     m_pSectionHeaders = reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.getSectionHeaders());
 #endif
@@ -219,9 +230,10 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 }
 
 KernelElf::KernelElf() :
-    #if defined(X86_COMMON)
-    m_AdditionalSections("Kernel ELF Sections"),
-    #endif
+#if defined(X86_COMMON)
+    m_AdditionalSectionContents("Kernel ELF Section Data"),
+    m_AdditionalSectionHeaders(0),
+#endif
     m_Modules(), m_LoadedModules(), m_FailedModules(), m_PendingModules(), m_ModuleAllocator(),
     m_pSectionHeaders(0), m_pSymbolTable(0)
 {

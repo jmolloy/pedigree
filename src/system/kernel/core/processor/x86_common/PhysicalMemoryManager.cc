@@ -194,6 +194,9 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
     // Allocate a specific physical memory region (always physically continuous)
     if (start != static_cast<physical_uintptr_t>(-1))
     {
+        // Page-align the start address.
+        start &= ~(getPageSize() - 1);
+
         if ((pageConstraints & continuous) != continuous)
             panic("PhysicalMemoryManager::allocateRegion(): function misused");
 
