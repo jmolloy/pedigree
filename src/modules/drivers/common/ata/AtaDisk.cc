@@ -205,12 +205,76 @@ bool AtaDisk::initialise()
 
         if (m_pIdent.data.validity.multiword_dma_valid)
         {
-            /// \todo Handle checking for current Multiword DMA state.
+            size_t highest_mode = ~0U;
+            if (m_pIdent.data.multiword_dma.mode0)
+                highest_mode = 0;
+            if (m_pIdent.data.multiword_dma.mode1)
+                highest_mode = 1;
+            if (m_pIdent.data.multiword_dma.mode2)
+                highest_mode = 2;
+
+            size_t sel_mode = ~0U;
+            if (m_pIdent.data.multiword_dma.sel_mode0)
+                sel_mode = 0;
+            if (m_pIdent.data.multiword_dma.sel_mode1)
+                sel_mode = 1;
+            if (m_pIdent.data.multiword_dma.sel_mode2)
+                sel_mode = 2;
+
+            if (highest_mode != ~0U && sel_mode != ~0U)
+            {
+                NOTICE("ATA: Device Multiword DMA: supports up to mode" << Dec << highest_mode << Hex);
+                NOTICE("ATA: Device Multiword DMA: mode" << Dec << sel_mode << Hex << " is enabled");
+            }
+            else
+            {
+                NOTICE("ATA: Device Multiword DMA: no support");
+            }
         }
 
         if (m_pIdent.data.validity.ultra_dma_valid)
         {
-            /// \todo Handle checking for current Ultra DMA state.
+            size_t highest_mode = ~0U;
+            if (m_pIdent.data.ultra_dma.supp_mode0)
+                highest_mode = 0;
+            if (m_pIdent.data.ultra_dma.supp_mode1)
+                highest_mode = 1;
+            if (m_pIdent.data.ultra_dma.supp_mode2)
+                highest_mode = 2;
+            if (m_pIdent.data.ultra_dma.supp_mode3)
+                highest_mode = 3;
+            if (m_pIdent.data.ultra_dma.supp_mode4)
+                highest_mode = 4;
+            if (m_pIdent.data.ultra_dma.supp_mode5)
+                highest_mode = 5;
+            if (m_pIdent.data.ultra_dma.supp_mode6)
+                highest_mode = 6;
+
+            size_t sel_mode = ~0U;
+            if (m_pIdent.data.ultra_dma.sel_mode0)
+                sel_mode = 0;
+            if (m_pIdent.data.ultra_dma.sel_mode1)
+                sel_mode = 1;
+            if (m_pIdent.data.ultra_dma.sel_mode2)
+                sel_mode = 2;
+            if (m_pIdent.data.ultra_dma.sel_mode3)
+                sel_mode = 3;
+            if (m_pIdent.data.ultra_dma.sel_mode4)
+                sel_mode = 4;
+            if (m_pIdent.data.ultra_dma.sel_mode5)
+                sel_mode = 5;
+            if (m_pIdent.data.ultra_dma.sel_mode6)
+                sel_mode = 6;
+
+            if (highest_mode != ~0U && sel_mode != ~0U)
+            {
+                NOTICE("ATA: Device Ultra DMA: supports up to mode" << Dec << highest_mode << Hex);
+                NOTICE("ATA: Device Ultra DMA: mode" << Dec << sel_mode << Hex << " is enabled");
+            }
+            else
+            {
+                NOTICE("ATA: Device Ultra DMA: no support");
+            }
         }
     }
 
