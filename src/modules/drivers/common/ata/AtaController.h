@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -60,8 +59,8 @@ public:
 
     virtual bool compareRequests(const RequestQueue::Request &a, const RequestQueue::Request &b)
     {
-        // ATA disk and request location match.
-        return (a.p2 == b.p2) && (a.p3 == b.p3);
+        // Request type, ATA disk, and request location match.
+        return (a.p1 == b.p1) && (a.p2 == b.p2) && (a.p3 == b.p3);
     }
 
     // IRQ handler callback.
