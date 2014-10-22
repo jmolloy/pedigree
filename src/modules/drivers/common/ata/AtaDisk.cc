@@ -32,7 +32,7 @@
 
 // Note the IrqReceived mutex is deliberately started in the locked state.
 AtaDisk::AtaDisk(AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs, BusMasterIde *busMaster) :
-        Disk(), m_IsMaster(isMaster), m_SupportsLBA28(true), m_SupportsLBA48(false),
+        Disk(), m_IsMaster(isMaster), m_SupportsLBA28(true), m_SupportsLBA48(false), m_BlockSize(65536),
         m_IrqReceived(true), m_Cache(), m_nAlignPoints(0), m_CommandRegs(commandRegs),
         m_ControlRegs(controlRegs), m_BusMaster(busMaster), m_PrdTableLock(false), m_PrdTable(0),
         m_LastPrdTableOffset(0), m_PrdTablePhys(0), m_PrdTableMemRegion("ata-prdtable"), m_bDma(true)
@@ -110,7 +110,7 @@ bool AtaDisk::initialise()
     // Read the data.
     for (int i = 0; i < 256; i++)
     {
-        m_pIdent[i] = commandRegs->read16(0);
+        m_pIdent.__raw[i] = commandRegs->read16(0);
     }
 
     if(commandRegs->read8(7) & 1)
@@ -119,19 +119,34 @@ bool AtaDisk::initialise()
         return false;
     }
 
+    // Do we have integrity data?
+    if (m_pIdent.data.signature == 0xA5)
+    {
+        // Yes. Run a checksum.
+        uint8_t sum = 0;
+        uint8_t *bytes = reinterpret_cast<uint8_t *>(m_pIdent.__raw);
+        for (size_t i = 0; i < 512; ++i)
+            sum += bytes[i];
+
+        // The result should be zero if the checksum is in fact correct.
+        if (sum)
+        {
+            WARNING("ATA IDENTIFY data failed checksum!");
+            return false;
+        }
+    }
+
     // Interpret the data.
 
-    // Get the device name.
-    for (int i = 0; i < 20; i++)
+    // Good device?
+    if (m_pIdent.data.general_config.not_ata)
     {
-#ifdef LITTLE_ENDIAN
-        m_pName[i*2] = m_pIdent[0x1B+i] >> 8;
-        m_pName[i*2+1] = m_pIdent[0x1B+i] & 0xFF;
-#else
-        m_pName[i*2] = m_pIdent[0x1B+i] & 0xFF;
-        m_pName[i*2+1] = m_pIdent[0x1B+i] >> 8;
-#endif
+        ERROR("ATA: Device does not conform to the ATA specification.");
+        return false;
     }
+
+    // Get the device name.
+    ataLoadSwapped(m_pName, m_pIdent.data.model_number, 20);
 
     // The device name is padded by spaces. Backtrack through converting spaces into NULL bytes.
     for (int i = 39; i > 0; i--)
@@ -142,18 +157,8 @@ bool AtaDisk::initialise()
     }
     m_pName[40] = '\0';
 
-
     // Get the serial number.
-    for (int i = 0; i < 10; i++)
-    {
-#ifdef LITTLE_ENDIAN
-        m_pSerialNumber[i*2] = m_pIdent[0x0A+i] >> 8;
-        m_pSerialNumber[i*2+1] = m_pIdent[0x0A+i] & 0xFF;
-#else
-        m_pSerialNumber[i*2] = m_pIdent[0x0A+i] & 0xFF;
-        m_pSerialNumber[i*2+1] = m_pIdent[0x0A+i] >> 8;
-#endif
-    }
+    ataLoadSwapped(m_pSerialNumber, m_pIdent.data.serial_number, 10);
 
     // The serial number is padded by spaces. Backtrack through converting spaces into NULL bytes.
     for (int i = 19; i > 0; i--)
@@ -165,16 +170,7 @@ bool AtaDisk::initialise()
     m_pSerialNumber[20] = '\0';
 
     // Get the firmware revision.
-    for (int i = 0; i < 4; i++)
-    {
-#ifdef LITTLE_ENDIAN
-        m_pFirmwareRevision[i*2] = m_pIdent[0x17+i] >> 8;
-        m_pFirmwareRevision[i*2+1] = m_pIdent[0x17+i] & 0xFF;
-#else
-        m_pFirmwareRevision[i*2] = m_pIdent[0x17+i] & 0xFF;
-        m_pFirmwareRevision[i*2+1] = m_pIdent[0x17+i] >> 8;
-#endif
-    }
+    ataLoadSwapped(m_pFirmwareRevision, m_pIdent.data.firmware_revision, 4);
 
     // The device name is padded by spaces. Backtrack through converting spaces into NULL bytes.
     for (int i = 7; i > 0; i--)
@@ -185,30 +181,85 @@ bool AtaDisk::initialise()
     }
     m_pFirmwareRevision[8] = '\0';
 
-    NOTICE("can transfer " << Dec << (LITTLE_TO_HOST16(m_pIdent[47]) & 0xFF) << Hex << " blocks per transfer");
-    NOTICE("word 63: " << m_pIdent[63]);
-    NOTICE("word 88: " << m_pIdent[88]);
-
-    uint16_t word83 = LITTLE_TO_HOST16(m_pIdent[83]);
-    if (word83 & (1<<10))
+    // Check that LBA48 is actually enabled.
+    if (m_pIdent.data.command_sets_support.address48)
     {
-        m_SupportsLBA48 = true;
+        m_SupportsLBA48 = m_pIdent.data.command_sets_enabled.address48;
+        if (!m_SupportsLBA48)
+            WARNING("ATA: Device supports LBA48 but it isn't enabled.");
     }
 
-
-    // Any form of DMA support?
-    if(!(m_pIdent[49] & (1 << 8)))
+    // And check for LBA28 support, just in case.
+    if (!m_pIdent.data.caps.lba)
     {
-        NOTICE("ATA: Device does not support DMA");
+        ERROR("ATA: Device does not support LBA.");
+        return false;
+    }
+
+    // Do we have DMA?
+    m_bDma = false;
+    if (m_pIdent.data.caps.dma)
+    {
+        m_bDma = true;
+        NOTICE("ATA: Device supports DMA.");
+
+        if (m_pIdent.data.validity.multiword_dma_valid)
+        {
+            /// \todo Handle checking for current Multiword DMA state.
+        }
+
+        if (m_pIdent.data.validity.ultra_dma_valid)
+        {
+            /// \todo Handle checking for current Ultra DMA state.
+        }
+    }
+
+    // Do we have a bus master with which to work with?
+    // ISA ATA does not.
+    if(!m_BusMaster)
+    {
+        WARNING("ATA: Controller does not support DMA");
         m_bDma = false;
     }
-    else if(!m_BusMaster)
+
+    if (m_pIdent.data.sector_size.logical_larger_than_512b ||
+        m_pIdent.data.sector_size.multiple_logical_per_physical)
     {
-        NOTICE("ATA: Controller does not support DMA");
-        m_bDma = false;
+        // Large physical sectors.
+        size_t logical_size = 512;
+        if (m_pIdent.data.sector_size.logical_larger_than_512b)
+            logical_size = m_pIdent.data.words_per_logical * sizeof(uint16_t);
+
+        // Logical sectors per physical sector.
+        size_t log_per_phys = 1 << m_pIdent.data.sector_size.logical_per_physical;
+        size_t physical_size = log_per_phys * logical_size;
+
+        NOTICE("ATA: Physical sector size is " << Dec << physical_size << Hex << " bytes.");
+        NOTICE("ATA: Logical sector size is " << Dec << logical_size << Hex << " bytes.");
+
+        if (physical_size > 512)
+        {
+            // Non-standard physical sectors; align block size to this.
+            if (m_BlockSize % physical_size)
+            {
+                // Default block size doesn't map to physical sectors well.
+                WARNING("ATA: Default block size doesn't map well to physical sectors, performance may be degraded.");
+            }
+
+            // Always make sure our blocks are bigger than physical sectors.
+            if (m_BlockSize < physical_size)
+                m_BlockSize = physical_size;
+        }
+        else
+        {
+            // Standard physical sectors - default block size is okay.
+        }
     }
+
+    NOTICE("ATA: IRQ" << Dec << getInterruptNumber() << Hex << ".");
 
     NOTICE("Detected ATA device '" << m_pName << "', '" << m_pSerialNumber << "', '" << m_pFirmwareRevision << "'");
+
     return true;
 }
 
@@ -217,7 +268,9 @@ uintptr_t AtaDisk::read(uint64_t location)
     if (location % 512)
         FATAL("AtaDisk: write request not on a sector boundary!");
 
-    /// \todo Bounds checking.
+    // Are we reading outside the range of the disk?
+    if (location >= getSize())
+        return 0;
 
     // Grab our parent.
     AtaController *pParent = static_cast<AtaController*> (m_pParent);
@@ -229,33 +282,29 @@ uintptr_t AtaDisk::read(uint64_t location)
             alignPoint = m_AlignPoints[i];
 
     // Calculate the offset to get location on a page boundary.
-    ssize_t offs =  -((location - alignPoint) % 4096);
+    ssize_t offs = -((location - alignPoint) % 4096);
 
-    // Create room in the cache.
+    // Check for already-cached.
     uintptr_t buffer;
-    if ( (buffer=m_Cache.lookup(location+offs)) )
+    if ((buffer = m_Cache.lookup(location + offs)))
     {
-        return buffer-offs;
+        return buffer - offs;
     }
 
-#if 0
-    Timer &timer = *Machine::instance().getTimer();
-    uint64_t now = timer.getTickCount();
-    NOTICE("Started read request at " << Dec << now << Hex);
-#endif
-
     // Align to native block size.
-    /// \todo magic number here!
-    size_t loc = (location + offs) & ~0xFFFF;
+    size_t loc = (location + offs) & ~(getBlockSize() - 1);
 
     pParent->addRequest(0, ATA_CMD_READ, reinterpret_cast<uint64_t> (this), loc);
 
+    // Speculate the next loads to prime the disk cache.
 #if 0
-    uint64_t end = timer.getTickCount();
-    NOTICE("Ended read request at " << Dec << end << " [" << (end - now) << " seconds]");
+    size_t next1 = loc + getBlockSize();
+    size_t next2 = loc + (getBlockSize() * 2);
+    if (next1 < getSize() && !m_Cache.lookup(next1))
+        pParent->addAsyncRequest(0, ATA_CMD_READ, reinterpret_cast<uint64_t> (this), next1);
+    if (next2 < getSize() && !m_Cache.lookup(next2))
+        pParent->addAsyncRequest(0, ATA_CMD_READ, reinterpret_cast<uint64_t> (this), next2);
 #endif
-
-    /// \todo Add speculative loading here.
 
     return m_Cache.lookup(location + offs) - offs;
 }
@@ -265,6 +314,10 @@ void AtaDisk::write(uint64_t location)
 #ifndef CRIPPLE_HDD
     if (location % 512)
         FATAL("AtaDisk: write request not on a sector boundary!");
+
+    // Are we writing outside the range of the disk?
+    if (location >= getSize())
+        return;
 
     // Grab our parent.
     AtaController *pParent = static_cast<AtaController*> (m_pParent);
@@ -281,11 +334,13 @@ void AtaDisk::write(uint64_t location)
     // Find the cache page.
     uintptr_t buffer;
     if ( !(buffer=m_Cache.lookup(location+offs)) )
+    {
+        WARNING("AtaDisk::write -- location is not in cache.");
         return;
+    }
 
     // Align to native block size.
-    /// \todo magic number here!
-    size_t loc = (location + offs) & ~0xFFFF;
+    size_t loc = (location + offs) & ~(getBlockSize() - 1);
 
     pParent->addAsyncRequest(1, ATA_CMD_WRITE, reinterpret_cast<uint64_t> (this), loc);
 #endif
@@ -300,6 +355,10 @@ void AtaDisk::align(uint64_t location)
 void AtaDisk::flush(uint64_t location)
 {
 #ifndef CRIPPLE_HDD
+    // Are we flushing outside the range of the disk?
+    if (location >= getSize())
+        return;
+
     if(location & 0xFFF)
         location &= ~0xFFF;
 
@@ -317,11 +376,13 @@ void AtaDisk::flush(uint64_t location)
 
     uintptr_t buff = m_Cache.lookup(location+offs);
     if(!buff)
+    {
+        WARNING("AtaDisk::flush -- location is not in cache.");
         return;
+    }
 
     // Align to native block size.
-    /// \todo magic number here!
-    size_t loc = (location + offs) & ~0xFFFF;
+    size_t loc = (location + offs) & ~(getBlockSize() - 1);
 
     pParent->addRequest(1, ATA_CMD_WRITE, reinterpret_cast<uint64_t> (this), loc);
 #endif
@@ -331,7 +392,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
 {
     // Handle the case where a read took place while we were waiting in the
     // RequestQueue - don't double up the cache.
-    size_t nBytes = 65536;
+    size_t nBytes = getBlockSize();
     uint64_t oldLocation = location;
     location &= ~(nBytes - 1);
     uintptr_t buffer = m_Cache.lookup(location);
@@ -359,6 +420,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
     uint16_t *pTarget = reinterpret_cast<uint16_t*> (buffer);
 
     // How many sectors do we need to read?
+    /// \todo logical sector size here
     uint32_t nSectors = nBytes / 512;
 
     // Wait for BSY and DRQ to be zero before selecting the device
@@ -392,7 +454,6 @@ uint64_t AtaDisk::doRead(uint64_t location)
             bDmaSetup = m_BusMaster->add(buffer, nSectorsToRead * 512);
         }
 
-        /// \todo CHS
         if (m_SupportsLBA48)
             setupLBA48(location, nSectorsToRead);
         else
@@ -526,6 +587,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
             }
         }
     }
+
     return 0;
 }
 
@@ -539,7 +601,7 @@ uint64_t AtaDisk::doWrite(uint64_t location)
     return 0;
 #endif
 
-    uintptr_t nBytes = 65536;
+    uintptr_t nBytes = getBlockSize();
     location &= ~(nBytes - 1);
     uintptr_t buffer = m_Cache.lookup(location);
 
@@ -563,6 +625,7 @@ uint64_t AtaDisk::doWrite(uint64_t location)
 #endif
 
     // How many sectors do we need to read?
+    /// \todo logical sector size here
     uint32_t nSectors = nBytes / 512;
     if (nBytes%512) nSectors++;
 
@@ -599,7 +662,6 @@ uint64_t AtaDisk::doWrite(uint64_t location)
             bDmaSetup = m_BusMaster->add(buffer, nSectorsToWrite * 512);
         }
 
-        /// \todo CHS
         if (m_SupportsLBA48)
             setupLBA48(location, nSectorsToWrite);
         else
@@ -836,12 +898,33 @@ void AtaDisk::setFeatures(uint8_t command, uint8_t countreg, uint8_t lowreg, uin
 
 size_t AtaDisk::getSize() const
 {
-    const uint64_t *sz = reinterpret_cast<const uint64_t *>(&m_pIdent[100]);
-    return (*sz) * 512;
+    // Determine sector count.
+    size_t sector_count = 0;
+    if (m_SupportsLBA48)
+    {
+        // Try for the LBA48 sector count.
+        if (m_pIdent.data.max_user_lba48)
+            sector_count = m_pIdent.data.max_user_lba48;
+        else
+            sector_count = m_pIdent.data.sector_count;
+    }
+    else
+    {
+        sector_count = m_pIdent.data.sector_count;
+    }
+
+    // Determine sector size.
+    size_t sector_size = 512;
+    if (m_pIdent.data.sector_size.logical_larger_than_512b)
+    {
+        // Calculate.
+        sector_size = m_pIdent.data.words_per_logical * sizeof(uint16_t);
+    }
+
+    return sector_count * sector_size;
 }
 
 size_t AtaDisk::getBlockSize() const
 {
-    /// \todo magic number
-    return 65536;
+    return m_BlockSize;
 }

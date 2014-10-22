@@ -30,6 +30,8 @@
 #include <processor/PhysicalMemoryManager.h>
 #include "BusMasterIde.h"
 
+#include "ata-common.h"
+
 /** An ATA disk device. Most read/write commands get channeled upstream
  * to the controller, as it has to multiplex between multiple disks. */
 class AtaDisk : public Disk
@@ -86,7 +88,7 @@ private:
     bool m_IsMaster;
 
     /** The result of the IDENTIFY command. */
-    uint16_t m_pIdent[256];
+    IdentifyData m_pIdent;
     /** The model name of the device. */
     char m_pName[64];
     /** The serial number of the device. */
@@ -97,6 +99,8 @@ private:
     bool m_SupportsLBA28;
     /** Does the device support LBA48? */
     bool m_SupportsLBA48;
+    /** Block size in bytes for all read/write operations. */
+    size_t m_BlockSize;
 
     /** This mutex is released by the IRQ handler when an IRQ is received, to wake the working thread.
      * \todo A condvar would really be better here. */
