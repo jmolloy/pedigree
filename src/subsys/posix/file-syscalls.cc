@@ -1252,7 +1252,10 @@ int posix_chdir(const char *path)
     String realPath = normalisePath(path);
 
     File *dir = VFS::instance().find(realPath, GET_CWD());
-    if (dir && dir->isDirectory())
+    File *target = 0;
+    if (dir->isSymlink())
+        target = traverseSymlink(dir);
+    if (dir && (dir->isDirectory() || (dir->isSymlink() && target->isDirectory())))
     {
         Processor::information().getCurrentThread()->getParent()->setCwd(dir);
     }
