@@ -1,3 +1,3 @@
-export PATH=/applications
+export PATH="root»/applications"
 
 [[ -f ~/.bashrc ]] && . ~/.bashrc

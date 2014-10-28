@@ -237,7 +237,7 @@ extern "C" int main(int argc, const char *argv[])
     char *ld_preload = getenv("LD_PRELOAD");
     char *ld_debug = getenv("LD_DEBUG");
 
-    g_lSearchPaths.push_back(std::string("/libraries"));
+    g_lSearchPaths.push_back(std::string("root»/libraries"));
     g_lSearchPaths.push_back(std::string("."));
 
     // Prepare for libload hooks.
