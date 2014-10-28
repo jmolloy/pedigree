@@ -377,11 +377,17 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     String interpreter("");
     if(pLinker->checkInterpreter(file, interpreter))
     {
+        // Handle interpreter on root alias while we're on a different alias.
+        File *root = VFS::instance().find(String("root»/"));
+
         // Switch to the interpreter.
         // argv can stay the same, as the interpreter will pass it on directly.
         file = VFS::instance().find(interpreter, Processor::information().getCurrentThread()->getParent()->getCwd());
-        if(!file)
+        if ((!file) && root)
+            file = VFS::instance().find(interpreter, root);
+        if (!file)
         {
+            ERROR("execve: interpreter '" << interpreter << "' not found.");
             SYSCALL_ERROR(DoesNotExist);
             delete pLinker;
             return -1;
