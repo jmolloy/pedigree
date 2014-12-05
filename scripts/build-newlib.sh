@@ -23,5 +23,5 @@ CC="$XGCC $XCFLAGS" LD="$XLD" \
 
 make >>newlib.log 2>&1
 
-cp libg.a $DROPDIR/stock-libg.a
-cp libm.a $DROPDIR/stock-libm.a
+cp libg.a "$DROPDIR/stock-libg.a"
+cp libm.a "$DROPDIR/stock-libm.a"
