@@ -3,6 +3,5 @@ installroot=$installRoot
 localdb=$localDb
 
 [remotes]
-server0=http://pup.pedigree-project.org/pup
-server1=http://www.theiselins.net/pup
+server0=http://pup.pedigree-project.org
 
