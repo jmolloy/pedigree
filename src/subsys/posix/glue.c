@@ -36,6 +36,7 @@ int h_errno; // required by networking code
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <semaphore.h>
+#include <malloc.h>
 
 #include <sys/resource.h>
 #include <sys/mount.h>
@@ -422,7 +423,7 @@ int tcgetattr(int fd, struct termios *p)
     return (long)syscall2(POSIX_TCGETATTR, fd, (long)p);
 }
 
-int tcsetattr(int fd, int optional_actions, struct termios *p)
+int tcsetattr(int fd, int optional_actions, const struct termios *p)
 {
     return (long)syscall3(POSIX_TCSETATTR, fd, optional_actions, (long)p);
 }
@@ -441,7 +442,8 @@ int tcdrain(int fd)
 
 int tcflush(int fd, int queue_selector)
 {
-    return ioctl(fd, TIOCFLUSH, (void *) queue_selector);
+    intptr_t selector = queue_selector;
+    return ioctl(fd, TIOCFLUSH, (void *) selector);
 }
 
 int tcflow(int fd, int action)
@@ -547,9 +549,16 @@ int	sethostname(char *name, size_t len)
     return 0;
 }
 
-/// \todo ioctl is actually supposed to take varargs, not a single buffer
-int ioctl(int fd, int command, void *buf)
+int ioctl(int fd, int command, ...)
 {
+    va_list ap;
+    va_start(ap, command);
+
+    /// \todo Properly handle the varargs here.
+    void *buf = va_arg(ap, void*);
+
+    va_end(ap);
+
     return (long)syscall3(POSIX_IOCTL, fd, command, (long)buf);
 }
 
@@ -1349,7 +1358,7 @@ const char* inet_ntop(int af, const void* src, char* dst, unsigned long size)
 
     /// \todo endianness is terrible here.
     uint32_t addr = *((uint32_t *) src);
-    int n = snprintf(dst, size, "%u.%u.%u.%u", addr & 0xff, (addr & 0xff00) >> 8, (addr & 0xff0000) >> 16, (addr & 0xff000000) >> 24);
+    unsigned long n = snprintf(dst, size, "%u.%u.%u.%u", addr & 0xff, (addr & 0xff00) >> 8, (addr & 0xff0000) >> 16, (addr & 0xff000000) >> 24);
     if(n > size)
     {
         errno = ENOSPC;
@@ -1548,7 +1557,7 @@ int uname(struct utsname *n)
     strcpy(n->sysname, "Pedigree");
     strcpy(n->release, "Foster");
     strcpy(n->version, "0.1");
-#ifdef defined(X86)
+#if defined(X86)
     strcpy(n->machine, "i686");
 #elif defined(X64)
     strcpy(n->machine, "x86_64");

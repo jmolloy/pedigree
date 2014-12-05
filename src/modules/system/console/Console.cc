@@ -253,7 +253,8 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
                         }
 
                         // Write it to the master nicely (eg, ^C, ^D)
-                        char ctl[3] = {'^', '@' + buf[i], '\n'};
+                        char ctl_c = '@' + buf[i];
+                        char ctl[3] = {'^', ctl_c, '\n'};
                         m_RingBuffer.write(ctl, 3);
                         ++localWritten;
 
@@ -511,8 +512,12 @@ size_t ConsoleSlaveFile::processInput(char *buf, size_t len)
 
 void ConsoleManager::newConsole(char c, size_t i)
 {
-    char master[] = {'p', 't', 'y', c, (i > 9) ? ('a' + (i % 10)) : ('0' + i), 0};
-    char slave[] = {'t', 't', 'y', c, (i > 9) ? ('a' + (i % 10)) : ('0' + i), 0};
+    char a = 'a' + (i % 10);
+    if (i <= 9)
+        a = '0' + i;
+
+    char master[] = {'p', 't', 'y', c, a, 0};
+    char slave[] = {'t', 't', 'y', c, a, 0};
 
     String masterName(master), slaveName(slave);
 

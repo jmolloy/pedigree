@@ -314,8 +314,11 @@ bool DevFs::initialise(Disk *pDisk)
         for(const char *ptyc = ptyletters; *ptyc != 0; ++ptyc)
         {
             const char c = *ptyc;
-            char master[] = {'p', 't', 'y', c, (i > 9) ? ('a' + (i % 10)) : ('0' + i), 0};
-            char slave[] = {'t', 't', 'y', c, (i > 9) ? ('a' + (i % 10)) : ('0' + i), 0};
+            char a = 'a' + (i % 10);
+            if(i <= 9)
+                a = '0' + i;
+            char master[] = {'p', 't', 'y', c, a, 0};
+            char slave[] = {'t', 't', 'y', c, a, 0};
 
             String masterName(master), slaveName(slave);
 

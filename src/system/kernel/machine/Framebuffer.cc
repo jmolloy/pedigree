@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -54,7 +53,7 @@ Graphics::Buffer *Framebuffer::swCreateBuffer(const void *srcData, Graphics::Pix
     if(!bSuccess)
     {
         delete pRegion;
-        return false;
+        return 0;
     }
 
     // Copy the buffer in full

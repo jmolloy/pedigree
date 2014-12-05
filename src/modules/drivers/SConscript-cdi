@@ -39,6 +39,10 @@ for driver in cdi_drivers:
     localenv['CPPPATH'] = include_dirs
     localenv['CPPPATH'] += [directory + '/include']
 
+    # TOOD: do a warning fixup in CDI
+    localenv['CFLAGS'] = localenv['CFLAGS'].replace('-Werror', '')
+    localenv['CXXFLAGS'] = localenv['CXXFLAGS'].replace('-Werror', '')
+
     localenv.Program(objname, driverFiles, LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT', LSCRIPT=File("#src/modules/link.ld"))
 
 

@@ -158,7 +158,7 @@ class FileDescriptor
         int flflags;
 
         /// Socket metadata.
-        int so_domain;
+        uint32_t so_domain;
         int so_type;
         File *so_local; // For file-oriented sockets (eg, UNIX), the local bind().
 

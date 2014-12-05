@@ -77,15 +77,15 @@ std::queue<Input::InputNotification> g_InputQueue;
 
 void queueInputCallback(Input::InputNotification &note);
 
-size_t g_nWidth = 0;
-size_t g_nHeight = 0;
+ssize_t g_nWidth = 0;
+ssize_t g_nHeight = 0;
 
 ssize_t g_CursorX = 0, g_LastCursorX = 0;
 ssize_t g_CursorY = 0, g_LastCursorY = 0;
 bool g_bCursorUpdate = false;
 
 /// \todo Make configurable.
-#define CLIENT_DEFAULT "/applications/tui"
+#define CLIENT_DEFAULT "/applications/TUI"
 // #define CLIENT_DEFAULT "/applications/gears"
 
 #define TEXTONLY_DEFAULT "/applications/ttyterm"

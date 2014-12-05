@@ -120,6 +120,10 @@ tmpEnvironment['LIBPATH'] = libpaths
 tmpEnvironment['CPPDEFINES'] += ['PEDIGREE']
 tmpEnvironment['ASFLAGS'] += ' -I' + env.Dir('#src/lgpl/SDL-1.2.14/src/hermes').path + '/ '
 
+# Remove -Werror as SDL is an external package.
+tmpEnvironment['CFLAGS'] = tmpEnvironment['CFLAGS'].replace('-Werror', '')
+tmpEnvironment['CXXFLAGS'] = tmpEnvironment['CXXFLAGS'].replace('-Werror', '')
+
 if env['ARCH_TARGET'] in ['X86', 'X64']:
     tmpEnvironment.SharedLibrary(sobjname, files, LINKFLAGS="")
 tmpEnvironment.Library(objname, files, LINKFLAGS="")

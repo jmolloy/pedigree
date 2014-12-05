@@ -1176,8 +1176,9 @@ int posix_setsid()
     return pNewGroup->processGroupId;
 }
 
-int posix_setpgid(int pid, int pgid)
+int posix_setpgid(int pid_, int pgid)
 {
+    size_t pid = pid_;
     SC_NOTICE("setpgid(" << pid << ", " << pgid << ")");
 
     // Handle invalid group ID

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -119,7 +118,7 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   if(flags & Tcp::SYN)
   {
     // 1460 byte MSS
-    char mss[4] = {0x02, 0x04, 0x05, 0xb4};
+    unsigned char mss[4] = {0x02, 0x04, 0x05, 0xb4};
     memcpy(reinterpret_cast<void*>(tcpPacket + payloadOffset), mss, sizeof mss);
     payloadOffset += 4;
   }

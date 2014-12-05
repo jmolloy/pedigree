@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -337,7 +336,7 @@ void HidReport::InputBlock::feedInput(uint8_t *pBuffer, uint8_t *pOldBuffer, siz
     }
 
     // Compute the size of this block
-    size_t nBlockSize = state.nReportCount * state.nReportSize;
+    int64_t nBlockSize = state.nReportCount * state.nReportSize;
 
     // We don't want to cross the end of the buffer and we can skip constant inputs
     if((nBitOffset + nBlockSize > nBufferSize * 8) || type == Constant)
@@ -347,7 +346,7 @@ void HidReport::InputBlock::feedInput(uint8_t *pBuffer, uint8_t *pOldBuffer, siz
     }
 
     // Process each field
-    for(size_t i = 0; i < state.nReportCount; i++)
+    for(int64_t i = 0; i < state.nReportCount; i++)
     {
         uint64_t nValue = HidUtils::getBufferField(pBuffer, nBitOffset + i * state.nReportSize, state.nReportSize);
         int64_t nRelativeValue = 0;
@@ -375,7 +374,7 @@ void HidReport::InputBlock::feedInput(uint8_t *pBuffer, uint8_t *pOldBuffer, siz
                 {
                     // Check if this array entry is new
                     bool bNew = true;
-                    for(size_t j = 0; j < state.nReportCount; j++)
+                    for(int64_t j = 0; j < state.nReportCount; j++)
                     {
                         if(HidUtils::getBufferField(pOldBuffer, nBitOffset + j * state.nReportSize, state.nReportSize) == nValue)
                         {
@@ -399,14 +398,14 @@ void HidReport::InputBlock::feedInput(uint8_t *pBuffer, uint8_t *pOldBuffer, siz
     // (keys/buttons that were released since last time)
     if(type == Array)
     {
-        for(size_t i = 0; i < state.nReportCount; i++)
+        for(int64_t i = 0; i < state.nReportCount; i++)
         {
             uint64_t nOldValue = HidUtils::getBufferField(pOldBuffer, nBitOffset + i * state.nReportSize, state.nReportSize);
             if(nOldValue)
             {
                 // Check if this array entry disapeared
                 bool bDisapeared = true;
-                for(size_t j = 0; j < state.nReportCount; j++)
+                for(int64_t j = 0; j < state.nReportCount; j++)
                 {
                     if(HidUtils::getBufferField(pBuffer, nBitOffset + j * state.nReportSize, state.nReportSize) == nOldValue)
                     {

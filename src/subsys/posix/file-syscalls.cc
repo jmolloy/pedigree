@@ -225,7 +225,7 @@ int posix_open(const char *name, int flags, int mode)
         else if(ConsoleManager::instance().isMasterConsole(file))
         {
             // If we happened to somehow open a master console, get its slave.
-            F_NOTICE(" -> controlling terminal was not a slave (??)");
+            F_NOTICE(" -> controlling terminal was not a slave");
             file = ConsoleManager::instance().getOther(file);
         }
     }

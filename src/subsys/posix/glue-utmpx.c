@@ -156,7 +156,7 @@ struct utmpx *pututxline(const struct utmpx *ut)
         fwrite(ut, sizeof(struct utmpx), 1, utmp);
     }
 
-    return ut;
+    return getutxid(ut);
 }
 
 /**

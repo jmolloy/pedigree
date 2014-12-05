@@ -167,7 +167,12 @@ custom_cxxflags = {
 
 # Flags from CXXFLAGS and CFLAGS to *remove* for a module
 remove_flags = {
-    'config' : ['-ffreestanding', '-fno-builtin']
+    # We always remove -Werror from the config module as sqlite is noisy.
+    'config' : ['-ffreestanding', '-fno-builtin', '-Werror'],
+    # CDI drivers
+    'e1000': ['-Werror'],
+    'pcnet': ['-Werror'],
+    'rtl8139': ['-Werror'],
 }
 
 # Try and follow this subdirectory scheme for platform code in modules to

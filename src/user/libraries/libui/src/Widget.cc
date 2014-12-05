@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -59,7 +58,7 @@ std::queue<char *> g_PendingMessages;
 Widget::Widget() :
     m_bConstructed(false), m_pFramebuffer(0), m_Handle(0),
     m_EventCallback(defaultEventHandler), m_Endpoint(0),
-    m_SharedFramebuffer(0), m_Socket(-1)
+    m_Socket(-1), m_SharedFramebuffer(0)
 {
 }
 
@@ -195,8 +194,8 @@ bool Widget::setProperty(std::string propName, void *propVal, size_t maxSize)
 
     // Allocate the message.
     /// \todo Sanitise maxSize once large messages can be sent.
-    size_t headerSize = sizeof(WindowManagerMessage) + sizeof(SetPropertyMessage);
-    size_t totalSize = headerSize + maxSize;
+    ssize_t headerSize = sizeof(WindowManagerMessage) + sizeof(SetPropertyMessage);
+    ssize_t totalSize = headerSize + maxSize;
     char *messageData = new char[totalSize];
     WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
     SetPropertyMessage *pMessage = reinterpret_cast<SetPropertyMessage*>(messageData + sizeof(WindowManagerMessage));
@@ -238,7 +237,7 @@ bool Widget::setTitle(const std::string &newTitle)
         titleLength = 511;
 
     // Allocate the message.
-    size_t totalSize = sizeof(WindowManagerMessage) + sizeof(SetTitleMessage);
+    ssize_t totalSize = sizeof(WindowManagerMessage) + sizeof(SetTitleMessage);
     char *messageData = new char[totalSize];
     WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
     SetTitleMessage *pMessage = reinterpret_cast<SetTitleMessage*>(messageData + sizeof(WindowManagerMessage));
@@ -275,7 +274,7 @@ bool Widget::redraw(PedigreeGraphics::Rect &rt)
     if(!m_Handle)
         return false;
 
-    size_t totalSize = sizeof(WindowManagerMessage) + sizeof(RequestRedrawMessage);
+    ssize_t totalSize = sizeof(WindowManagerMessage) + sizeof(RequestRedrawMessage);
     char *messageData = new char[totalSize];
     WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
     RequestRedrawMessage *pMessage = reinterpret_cast<RequestRedrawMessage*>(messageData + sizeof(WindowManagerMessage));
@@ -340,7 +339,7 @@ bool Widget::visibility(bool vis)
         return false;
 
     // Allocate the message.
-    size_t totalSize = sizeof(WindowManagerMessage) + sizeof(SetVisibilityMessage);
+    ssize_t totalSize = sizeof(WindowManagerMessage) + sizeof(SetVisibilityMessage);
     char *messageData = new char[totalSize];
     WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
     SetVisibilityMessage *pMessage = reinterpret_cast<SetVisibilityMessage*>(messageData + sizeof(WindowManagerMessage));
@@ -368,7 +367,7 @@ void Widget::destroy()
         return;
 
     // Allocate the message.
-    size_t totalSize = sizeof(WindowManagerMessage) + sizeof(DestroyMessage);
+    ssize_t totalSize = sizeof(WindowManagerMessage) + sizeof(DestroyMessage);
     char *messageData = new char[totalSize];
     WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
     DestroyMessage *pMessage = reinterpret_cast<DestroyMessage*>(messageData + sizeof(WindowManagerMessage));

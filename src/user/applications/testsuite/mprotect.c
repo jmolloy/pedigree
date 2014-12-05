@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -76,7 +75,7 @@ static void sigsegv(int s)
                 mprotect(p, 0x1000, PROT_WRITE);
                 i = -1;
                 *((unsigned char *) p) = 0xC3; // ret
-                fn f = (fn *) p;
+                fn f = (fn) p;
                 mprotect(p, 0x1000, PROT_EXEC);
                 f();
                 i = 2;
@@ -86,7 +85,7 @@ static void sigsegv(int s)
         default:
             printf("Attempting to return to original context...\n");
             mprotect(p, 0x1000, PROT_READ | PROT_WRITE);
-            longjmp(&buf, 1);
+            longjmp(buf, 1);
     }
 
     ++i;
@@ -94,7 +93,7 @@ static void sigsegv(int s)
 
 static void sigsegv_jumper(int s)
 {
-    longjmp(&buf, 1);
+    longjmp(buf, 1);
 }
 
 static void status(const char *s)
@@ -122,7 +121,7 @@ void test_mprotect()
 
     // Start the test!
     printf("Testing mprotect(2)...\n");
-    setjmp(&buf);
+    setjmp(buf);
     *p = 'X';
     printf("mprotect(2) initial test was successful!\n");
 
@@ -143,7 +142,7 @@ void test_mprotect()
     // Check for 100% enclosed.
     mprotect(adjust_pointer(p, -0x1000), 0x12000, PROT_WRITE);
     status("Test B... ");
-    if(setjmp(&buf) == 1)
+    if(setjmp(buf) == 1)
         fail();
     *p = 'X';
     p[0x10000 - 1] = 'X';
@@ -153,10 +152,10 @@ void test_mprotect()
     // Check for overlap at beginning.
     mprotect(adjust_pointer(p, -0x1000), 0x5000, PROT_WRITE);
     status("Test C... ");
-    if(setjmp(&buf) == 1)
+    if(setjmp(buf) == 1)
         fail();
     *p = 'X';
-    if(setjmp(&buf) == 0)
+    if(setjmp(buf) == 0)
     {
         p[0x5001] = 'X';
         fail();
@@ -167,10 +166,10 @@ void test_mprotect()
     // Check for overlap at end.
     mprotect(adjust_pointer(p, 0x5000), 0x6000, PROT_WRITE);
     status("Test D... ");
-    if(setjmp(&buf) == 1)
+    if(setjmp(buf) == 1)
         fail();
     p[0x5000] = 'X';
-    if(setjmp(&buf) == 0)
+    if(setjmp(buf) == 0)
     {
         *p = 'X';
         fail();
@@ -181,16 +180,16 @@ void test_mprotect()
     // Check middle.
     mprotect(adjust_pointer(p, 0x2000), 0x6000, PROT_WRITE);
     status("Test E... ");
-    if(setjmp(&buf) == 1)
+    if(setjmp(buf) == 1)
         fail();
     p[0x2000] = 'X';
-    if(setjmp(&buf) == 0)
+    if(setjmp(buf) == 0)
     {
         *p = 'X';
         fail();
     }
 
-    if(setjmp(&buf) == 0)
+    if(setjmp(buf) == 0)
     {
         p[0x8001] = 'X';
         fail();

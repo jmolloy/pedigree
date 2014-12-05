@@ -29,6 +29,7 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <utmpx.h>
+#include <libgen.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -60,6 +61,10 @@ void start(const char *proc)
   }
   syslog(LOG_INFO, "init: %s running with pid %d", proc, f);
 
+  // Avoid calling basename() on the given parameter, as basename is non-const.
+  char basename_buf[PATH_MAX];
+  strcpy(basename_buf, proc);
+
   // Add a utmp entry.
   setutxent();
   struct utmpx init;
@@ -69,7 +74,7 @@ void start(const char *proc)
   init.ut_type = INIT_PROCESS;
   init.ut_pid = f;
   init.ut_tv = tv;
-  strcpy(init.ut_id, basename(proc));
+  strcpy(init.ut_id, basename(basename_buf));
   pututxline(&init);
   endutxent();
 }

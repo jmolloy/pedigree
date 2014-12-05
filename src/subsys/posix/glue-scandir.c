@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -101,7 +100,7 @@ scandir(dirname, namelist, select, dcomp)
 	register struct dirent *d, *p, **names;
 	register size_t nitems;
 	struct stat stb;
-	long arraysz;
+	size_t arraysz;
 	DIR *dirp;
 
 	if ((dirp = opendir(dirname)) == NULL)

@@ -150,6 +150,15 @@ incpath = [
     '#/src/subsys/posix/syscalls',
 ]
 
+# Flags from CXXFLAGS and CFLAGS to *remove* for an app
+remove_flags = {
+    # fire is more or less pre-C99 code.
+    'fire' : ['-Werror'],
+    # TODO: fix nyancat's code to not be warning-heavy...
+    'nyancat': ['-Werror'],
+    'which': ['-Werror'],
+}
+
 all_apps = posixc_apps + sdl_apps + cpp_apps + cpp_11_apps
 
 tmp['CFLAGS'] = buildutils.userspace.fixFlags(env, env['CFLAGS'])
@@ -218,6 +227,11 @@ for i in all_apps:
 
     if i in cpp_11_apps:
         e['CXXFLAGS'] += '-std=c++11 '
+
+    if(remove_flags.has_key(i)):
+        for flag in remove_flags[i]:
+            e['CFLAGS'] = e['CFLAGS'].replace(flag, ' ')
+            e['CXXFLAGS'] = e['CXXFLAGS'].replace(flag, ' ')
 
     output = builddir + '/apps/' + i
     files = [Glob(base + '/*.c'), Glob(base + '/*.cc')]

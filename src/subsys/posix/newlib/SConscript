@@ -54,6 +54,9 @@ def buildNewlib(target, source, env):
     childenv['SRCDIR'] = env.Dir('#').abspath
     childenv['DROPDIR'] = target[0].dir.abspath
 
+    # Remove -Werror if it exists in CFLAGS for the newlib build.
+    childenv['XCFLAGS'] = childenv['XCFLAGS'].replace('-Werror', '')
+
     subprocess.check_call([source[0].abspath], cwd=source[1].abspath, env=childenv)
 
 output_libs = env.Command(

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -156,7 +155,7 @@ typedef struct winsize
 } winsize_t;
 
 int _EXFUN(tcgetattr, (int, termios_t *));
-int _EXFUN(tcsetattr, (int, int, struct termios *));
+int _EXFUN(tcsetattr, (int, int, const struct termios *));
 int _EXFUN(tcflow, (int fd, int action));
 int _EXFUN(tcflush, (int fd, int queue_selector));
 int _EXFUN(tcdrain, (int fd));

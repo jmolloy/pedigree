@@ -56,8 +56,8 @@ struct vbeModeInfo {
   unsigned short realFctPtr[2];
   short pitch; // chars per scanline
 
-  short Xres, Yres;
-  char Wchar, Ychar, planes, bpp, banks;
+  unsigned short Xres, Yres;
+  unsigned char Wchar, Ychar, planes, bpp, banks;
   uint8_t memory_model, bank_size, image_pages;
   char reserved0;
 

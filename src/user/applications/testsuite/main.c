@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -28,12 +27,12 @@ static jmp_buf buf;
 
 void fail()
 {
-    longjmp(&buf, 1);
+    longjmp(buf, 1);
 }
 
 int main(int argc, char *argv[])
 {
-    if(setjmp(&buf) == 1)
+    if(setjmp(buf) == 1)
     {
         printf("FAILED\n");
         return 1;

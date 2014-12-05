@@ -675,8 +675,8 @@ void TextIO::write(const char *s, size_t len)
                                 // CPR - \e[ Y ; X R
                                 NormalStaticString response("\e[");
 
-                                size_t reportX = m_CursorX + 1;
-                                size_t reportY = m_CursorY + 1;
+                                ssize_t reportX = m_CursorX + 1;
+                                ssize_t reportY = m_CursorY + 1;
 
                                 if(m_CurrentModes & Origin)
                                 {
@@ -1210,7 +1210,7 @@ void TextIO::doHorizontalTab()
     bool tabStopFound = false;
 
     // Move to the next tab stop from the current position.
-    for(size_t x = (m_CursorX + 1); x < m_RightMargin; ++x)
+    for(ssize_t x = (m_CursorX + 1); x < m_RightMargin; ++x)
     {
         if(m_TabStops[x] != 0)
         {
@@ -1330,7 +1330,7 @@ void TextIO::eraseSOS()
     eraseSOL();
 
     // Erase the screen above, and this line.
-    for(size_t y = 0; y < m_CursorY; ++y)
+    for(ssize_t y = 0; y < m_CursorY; ++y)
     {
         for(size_t x = 0; x < BACKBUFFER_STRIDE; ++x)
         {
@@ -1377,7 +1377,7 @@ void TextIO::eraseEOL()
 
 void TextIO::eraseSOL()
 {
-    for(size_t x = 0; x <= m_CursorX; ++x)
+    for(ssize_t x = 0; x <= m_CursorX; ++x)
     {
         VgaCell *pCell = &m_pBackbuffer[(m_CursorY * BACKBUFFER_STRIDE) + x];
         pCell->character = ' ';
