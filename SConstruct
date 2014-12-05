@@ -411,7 +411,7 @@ else:
 if not env['warnings'] and not '-Werror' in env['CXXFLAGS']:
     env['CXXFLAGS'] = safeAppend(env['CXXFLAGS'], ' -Werror')
     env['CFLAGS'] = safeAppend(env['CFLAGS'], ' -Werror')
-elif '-Werror' in env['CXXFLAGS']:
+elif env['warnings'] and '-Werror' in env['CXXFLAGS']:
     env['CXXFLAGS'] = env['CXXFLAGS'].replace('-Werror', '')
     env['CFLAGS'] = env['CFLAGS'].replace('-Werror', '')
 
@@ -589,3 +589,4 @@ SConscript('SConscript', variant_dir = env['BUILDDIR'], exports = ['env'], dupli
 print
 print "**** This build of Pedigree (at rev %s, for %s, by %s) started at %s ****" % (env['PEDIGREE_REVISION'], env['ARCH_TARGET'], env['PEDIGREE_USER'], datetime.today())
 print
+
