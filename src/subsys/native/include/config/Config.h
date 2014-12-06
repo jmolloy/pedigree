@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -24,8 +23,6 @@
 #include <types.h>
 #include <string>
 
-using namespace std;
-
 namespace Config
 {
     class Result
@@ -37,7 +34,7 @@ namespace Config
             /// Returns true if the result is valid, false if there was an error
             bool succeeded();
             /// Returns the error message
-            string errorMessage(size_t buffSz = 256);
+            std::string errorMessage(size_t buffSz = 256);
 
             /// Returns the number of rows
             size_t rows();
@@ -45,17 +42,17 @@ namespace Config
             size_t cols();
 
             /// Returns the name of the col'th column
-            string getColumnName(size_t col, size_t buffSz = 256);
+            std::string getColumnName(size_t col, size_t buffSz = 256);
 
             /// Returns the value in column 'col' of the result, in string form
-            string getStr(size_t row, size_t col, size_t buffSz = 256);
+            std::string getStr(size_t row, size_t col, size_t buffSz = 256);
             /// Returns the value in column 'col' of the result, in number form
             size_t getNum(size_t row, size_t col);
             /// Returns the value in column 'col' of the result, in boolean form
             bool getBool(size_t row, size_t col);
 
             /// Returns the value in the column called 'col', in string form
-            string getStr(size_t row, const char *col, size_t buffSz = 256);
+            std::string getStr(size_t row, const char *col, size_t buffSz = 256);
             /// Returns the value in the column called 'col', in number form
             size_t getNum(size_t row, const char *col);
             /// Returns the value in the column called 'col', in boolean form

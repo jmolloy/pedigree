@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -43,7 +42,7 @@ size_t g_FontSize = 16;
 static void getRgbColorFromDb(const char *colorName, uint32_t &color)
 {
     // The query string
-    string sQuery;
+    std::string sQuery;
 
     // Create the query string
     sQuery += "select r,g,b from 'colour_scheme' where name='";

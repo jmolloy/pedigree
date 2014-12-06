@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -32,7 +31,7 @@ bool Config::Result::succeeded()
     return !pedigree_config_was_successful(m_nResultIdx);
 }
 
-string Config::Result::errorMessage(size_t buffSz)
+std::string Config::Result::errorMessage(size_t buffSz)
 {
     // Allocate a buffer of the given  (or default) size, zero it,
     // get the string in it, then put the buffer contents into a nice string
@@ -40,7 +39,7 @@ string Config::Result::errorMessage(size_t buffSz)
     char *pBuffer = new char [buffSz];
     memset(pBuffer, 0, buffSz);
     pedigree_config_get_error_message(m_nResultIdx, pBuffer, buffSz);
-    string str(pBuffer);
+    std::string str(pBuffer);
     delete [] pBuffer;
     return str;
 }
@@ -55,7 +54,7 @@ size_t Config::Result::cols()
     return pedigree_config_numcols(m_nResultIdx);
 }
 
-string Config::Result::getColumnName(size_t col, size_t buffSz)
+std::string Config::Result::getColumnName(size_t col, size_t buffSz)
 {
     // Allocate a buffer of the given  (or default) size, zero it,
     // get the string in it, then put the buffer contents into a nice string
@@ -63,12 +62,12 @@ string Config::Result::getColumnName(size_t col, size_t buffSz)
     char *pBuffer = new char [buffSz];
     memset(pBuffer, 0, buffSz);
     pedigree_config_getcolname(m_nResultIdx, col, pBuffer, buffSz);
-    string str(pBuffer);
+    std::string str(pBuffer);
     delete [] pBuffer;
     return str;
 }
 
-string Config::Result::getStr(size_t row, size_t col, size_t buffSz)
+std::string Config::Result::getStr(size_t row, size_t col, size_t buffSz)
 {
     // Allocate a buffer of the given  (or default) size, zero it,
     // get the string in it, then put the buffer contents into a nice string
@@ -76,7 +75,7 @@ string Config::Result::getStr(size_t row, size_t col, size_t buffSz)
     char *pBuffer = new char [buffSz];
     memset(pBuffer, 0, buffSz);
     pedigree_config_getstr_n(m_nResultIdx, row, col, pBuffer, buffSz);
-    string str(pBuffer);
+    std::string str(pBuffer);
     delete [] pBuffer;
     return str;
 }
@@ -91,7 +90,7 @@ bool Config::Result::getBool(size_t row, size_t col)
     return pedigree_config_getbool_n(m_nResultIdx, row, col);
 }
 
-string Config::Result::getStr(size_t row, const char *col, size_t buffSz)
+std::string Config::Result::getStr(size_t row, const char *col, size_t buffSz)
 {
     // Allocate a buffer of the given  (or default) size, zero it,
     // get the string in it, then put the buffer contents into a nice string
@@ -99,7 +98,7 @@ string Config::Result::getStr(size_t row, const char *col, size_t buffSz)
     char *pBuffer = new char [buffSz];
     memset(pBuffer, 0, buffSz);
     pedigree_config_getstr_s(m_nResultIdx, row, col, pBuffer, buffSz);
-    string str(pBuffer);
+    std::string str(pBuffer);
     delete [] pBuffer;
     return str;
 }

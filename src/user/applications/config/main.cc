@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -25,8 +24,8 @@
 
 void usage()
 {
-    cout << "config: Query and update the Pedigree configuration manager." << endl
-         << "usage: config <sql>" << endl;
+    std::cout << "config: Query and update the Pedigree configuration manager." << std::endl
+              << "usage: config <sql>" << std::endl;
 }
 
 int main(int argc, char **argv)
@@ -44,14 +43,14 @@ int main(int argc, char **argv)
     // Check for query fail
     if(!pResult)
     {
-        cerr << "Unable to query" << endl;
+        std::cerr << "Unable to query" << std::endl;
         return 0;
     }
 
     // Check for query error
     if(!pResult->succeeded())
     {
-        cerr << "error: " << pResult->errorMessage() << endl;
+        std::cerr << "error: " << pResult->errorMessage() << std::endl;
         delete pResult;
         return 1;
     }
@@ -59,7 +58,7 @@ int main(int argc, char **argv)
     // Is this an empty set?
     if(!pResult->rows())
     {
-        cout << "Ø" << endl;
+        std::cout << "Ø" << std::endl;
         delete pResult;
         return 0;
     }
@@ -70,41 +69,41 @@ int main(int argc, char **argv)
     // Print the column names
     for(size_t col = 0; col < cols; col++)
     {
-        string colName = pResult->getColumnName(col);
-        cout << " " << colName;
+        std::string colName = pResult->getColumnName(col);
+        std::cout << " " << colName;
         col_lens[col] = colName.length();
         while(col_lens[col] < 15)
         {
-            cout << " ";
+            std::cout << " ";
             col_lens[col]++;
         }
-        cout << " |";
+        std::cout << " |";
     }
-    cout << endl;
+    std::cout << std::endl;
 
     // Print delimiter row
     for(size_t col = 0; col < cols; col++)
     {
-        cout << "-";
+        std::cout << "-";
         for(size_t i = 0; i < col_lens[col]; i++)
-            cout << "-";
-        cout << "-+";
+            std::cout << "-";
+        std::cout << "-+";
     }
-    cout << endl;
+    std::cout << std::endl;
 
     // Print the results
     for(size_t row = 0; row < pResult->rows(); row++)
     {
         for(size_t col = 0; col < cols; col++)
         {
-            string value = pResult->getStr(row, col);
-            cout << " " << value << "\t";
+            std::string value = pResult->getStr(row, col);
+            std::cout << " " << value << "\t";
             for(size_t i = value.length(); i < col_lens[col]; i++)
-                cout << " ";
-            cout << " |";
+                std::cout << " ";
+            std::cout << " |";
 
         }
-        cout << endl;
+        std::cout << std::endl;
     }
 
     // Cleanup

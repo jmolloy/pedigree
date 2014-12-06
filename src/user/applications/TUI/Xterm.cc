@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -62,7 +61,7 @@ extern cairo_surface_t *g_Surface;
 static void getXtermColorFromDb(const char *colorName, uint8_t &color)
 {
     // The query string
-    string sQuery;
+    std::string sQuery;
 
     // Create the query string
     sQuery += "select r from 'colour_scheme' where name='";
