@@ -540,6 +540,7 @@ void Widget::checkForEvents(bool bAsync)
                         LibUiProtocol::RepositionMessage *pReposition =
                             reinterpret_cast<LibUiProtocol::RepositionMessage*>(buffer + sizeof(LibUiProtocol::WindowManagerMessage));
                         delete g_pWidget->m_SharedFramebuffer;
+                        /// \todo this won't fly on Linux
                         g_pWidget->m_SharedFramebuffer =
                             new PedigreeIpc::SharedIpcMessage(pReposition->shmem_size, pReposition->shmem_handle);
                         g_pWidget->m_SharedFramebuffer->initialise();

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,6 +22,7 @@
 
 #include <stdint.h>
 #include <syslog.h>
+#include <unistd.h>
 
 #include <vector>
 #include <string>
@@ -36,6 +36,8 @@
 /** \addtogroup PedigreeGUI
  *  @{
  */
+
+class SharedBuffer;
 
 #define WINDOW_BORDER_X 2
 #define WINDOW_BORDER_Y 2
@@ -212,17 +214,9 @@ class Window : public WObject
 
         virtual void refreshContext();
 
-        void *getFramebuffer() const
-        {
-            return m_Framebuffer ? m_Framebuffer->getBuffer() : 0;
-        }
+        void *getFramebuffer() const;
 
         // virtual void sendMessage(const char *msg, size_t len);
-
-        PedigreeIpc::IpcEndpoint *getEndpoint() const
-        {
-            return m_Endpoint;
-        }
 
         int getSocket() const
         {
@@ -276,11 +270,9 @@ class Window : public WObject
 
         uint64_t m_Handle;
 
-        PedigreeIpc::IpcEndpoint *m_Endpoint;
-
         ::Container *m_pParent;
 
-        PedigreeIpc::SharedIpcMessage *m_Framebuffer;
+        SharedBuffer *m_Framebuffer;
 
         std::string m_sWindowTitle;
 

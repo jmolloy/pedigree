@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,6 +22,8 @@
 #include <sys/socket.h>
 
 #include <protocol.h>
+
+#include "util.h"
 
 static size_t g_nextContextId = 1;
 
@@ -74,9 +75,9 @@ void WObject::bump(ssize_t bumpX, ssize_t bumpY)
 }
 
 Window::Window(uint64_t handle, int sock, ::Container *pParent) :
-    m_Handle(handle), m_Endpoint(0), m_pParent(pParent),
-    m_Framebuffer(0), m_Dirty(), m_bPendingDecoration(false), m_bFocus(false),
-    m_bRefresh(true), m_nRegionWidth(0), m_nRegionHeight(0), m_Socket(sock)
+    m_Handle(handle), m_pParent(pParent), m_Framebuffer(0), m_Dirty(),
+    m_bPendingDecoration(false), m_bFocus(false), m_bRefresh(true),
+    m_nRegionWidth(0), m_nRegionHeight(0), m_Socket(sock)
 {
     refreshContext();
     m_pParent->addChild(this);
@@ -92,10 +93,6 @@ void Window::refreshContext()
         return;
     }
 
-    /// \todo Need a way to destroy the old framebuffer without freeing the
-    ///       shared region. Refcount on the region perhaps?
-    // delete m_Framebuffer;
-
     if((me.getW() < WINDOW_CLIENT_LOST_W) || (me.getH() < WINDOW_CLIENT_LOST_H))
     {
         // We have some basic requirements for window sizes.
@@ -104,13 +101,14 @@ void Window::refreshContext()
 
     /// \todo get a cairo context from somewhere, wipe out the old dimensions...
 
+    delete m_Framebuffer;
+
     // Size of the IPC region we need to allocate.
     size_t regionWidth = me.getW() - WINDOW_CLIENT_LOST_W;
     size_t regionHeight = me.getH() - WINDOW_CLIENT_LOST_H;
     int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, regionWidth);
     size_t regionSize = regionHeight * stride;
-    m_Framebuffer = new PedigreeIpc::SharedIpcMessage(regionSize, 0);
-    m_Framebuffer->initialise();
+    m_Framebuffer = new SharedBuffer(regionSize);
     memset(m_Framebuffer->getBuffer(), 0, regionSize);
 
     m_nRegionWidth = regionWidth;
@@ -143,6 +141,11 @@ void Window::refreshContext()
     }
 
     m_bPendingDecoration = true;
+}
+
+void *Window::getFramebuffer() const
+{
+    return m_Framebuffer ? m_Framebuffer->getBuffer() : 0;
 }
 
 void Window::setDirty(PedigreeGraphics::Rect &dirty)
@@ -327,9 +330,8 @@ void Window::nofocus()
     m_bFocus = false;
     m_bPendingDecoration = true;
 
-    PedigreeIpc::IpcMessage *pMessage = new PedigreeIpc::IpcMessage();
-    pMessage->initialise();
-    char *buffer = (char *) pMessage->getBuffer();
+    size_t totalSize = sizeof(LibUiProtocol::WindowManagerMessage);
+    char *buffer = new char[totalSize];
 
     LibUiProtocol::WindowManagerMessage *pHeader =
         new LibUiProtocol::WindowManagerMessage;
@@ -338,8 +340,8 @@ void Window::nofocus()
     pHeader->messageSize = 0;
     pHeader->isResponse = false;
 
-    send(m_Socket, pHeader, sizeof(*pHeader), 0);
-    delete pHeader;
+    send(m_Socket, buffer, totalSize, 0);
+    delete [] buffer;
 }
 
 void Window::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pChild)

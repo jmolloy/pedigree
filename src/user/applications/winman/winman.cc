@@ -34,8 +34,7 @@
 #include <sys/un.h>
 #include <sys/ioctl.h>
 #include <sys/wait.h>
-
-#include <sys/fb.h>
+#include <sys/time.h>
 
 #include <map>
 #include <list>
@@ -50,8 +49,13 @@
 
 #include <protocol.h>
 
+#ifdef TARGET_LINUX
+#include <SDL/SDL.h>
+#endif
+
 #include "winman.h"
 #include "Png.h"
+#include "util.h"
 
 #define DEBUG_REDRAWS          0
 
@@ -89,6 +93,12 @@ bool g_bCursorUpdate = false;
 // #define CLIENT_DEFAULT "/applications/gears"
 
 #define TEXTONLY_DEFAULT "/applications/ttyterm"
+
+#ifdef TARGET_LINUX
+#define DEJAVU_FONT "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
+#else
+#define DEJAVU_FONT "/system/fonts/DejaVuSansMono.ttf"
+#endif
 
 void startClient()
 {
@@ -346,6 +356,38 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
 
 void checkForMessages()
 {
+#ifdef TARGET_LINUX
+    bool bTerminate = false;
+
+    /// \todo Figure out how to also check for socket messages.
+
+    SDL_Event event;
+    int result = SDL_WaitEvent(&event);
+    if (result)
+    {
+        switch (event.type)
+        {
+            case SDL_KEYDOWN:
+                if (event.key.keysym.sym == SDLK_ESCAPE)
+                    bTerminate = true;
+                else
+                {
+                    /// \todo Create an input notification.
+                }
+                break;
+
+            case SDL_QUIT:
+                bTerminate = true;
+                break;
+        }
+    }
+
+    if (bTerminate)
+    {
+        SDL_Quit();
+        exit(0);
+    }
+#else
     fd_set fds;
     FD_ZERO(&fds);
 
@@ -390,6 +432,7 @@ void checkForMessages()
             }
         }
     }
+#endif
 }
 
 #define ALT_KEY (1ULL << 60)
@@ -787,31 +830,23 @@ int main(int argc, char *argv[])
 
     // Create ourselves a lock file so we don't end up getting run twice.
     /// \todo Revisit this when exiting the window manager is possible.
-    int fd = open("runtime»/winman.lck", O_WRONLY | O_EXCL | O_CREAT);
+    int fd = open("runtime»/winman.lck", O_WRONLY | O_EXCL | O_CREAT, 0500);
     if(fd < 0)
     {
         fprintf(stderr, "winman: lock file exists, terminating.\n");
-        return 1;
+        return EXIT_FAILURE;
     }
     close(fd);
 
-    // Grab a framebuffer to use.
-    int fb = open("/dev/fb", O_RDWR);
-    if(fb < 0)
+    Framebuffer *pFramebuffer = new Framebuffer();
+    if (!pFramebuffer->initialise())
     {
-        syslog(LOG_INFO, "winman: no framebuffer device");
-        fprintf(stderr, "winman: couldn't open framebuffer device");
-        return 1;
-    }
-
-    // Grab the current mode so we can restore it if we die.
-    pedigree_fb_mode current_mode;
-    int result = ioctl(fb, PEDIGREE_FB_GETMODE, &current_mode);
-    if(result < 0)
-    {
-        fprintf(stderr, "winman: could not get current mode information.\n");
+        fprintf(stderr, "winman: framebuffer initialisation failed\n");
         return EXIT_FAILURE;
     }
+
+    // Save current mode so we can restore it on quit.
+    pFramebuffer->storeMode();
 
     // Kick off a 'window manager' process group, fork to run the modeset shim.
     setpgid(0, 0);
@@ -828,10 +863,8 @@ int main(int argc, char *argv[])
         waitpid(child, &status, 0);
 
         // Restore old graphics mode.
-        pedigree_fb_modeset old_mode = {current_mode.width, current_mode.height, current_mode.depth};
-        ioctl(fb, PEDIGREE_FB_SETMODE, &old_mode);
-
-        close(fb);
+        pFramebuffer->restoreMode();
+        delete pFramebuffer;
 
         // Termination information
         if(WIFEXITED(status))
@@ -852,79 +885,30 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+#ifdef TARGET_LINUX
+    if (SDL_Init(SDL_INIT_VIDEO) != 0)
+    {
+        fprintf(stderr, "winman: SDL initialisation failed.\n");
+        return EXIT_FAILURE;
+    }
+#endif
+
     // Can we set the graphics mode we want?
     /// \todo Read from a config file!
-    pedigree_fb_modeset mode = {1024, 768, 32};
-    result = ioctl(fb, PEDIGREE_FB_SETMODE, &mode);
-    if(result < 0)
-    {
-        // No! Bad!
-        /// \note Mode set logic will try and find a mode in a lower colour depth
-        ///       if the desired one cannot be set.
-        syslog(LOG_INFO, "winman: can't set the desired mode");
-        fprintf(stderr, "winman: could not set desired mode (%dx%d) in any colour depth.\n", mode.width, mode.height);
-        return 1;
-    }
+    int result = pFramebuffer->enterMode(1024, 768, 32);
+    if (result != 0)
+        return result;
 
-    pedigree_fb_mode set_mode;
-    result = ioctl(fb, PEDIGREE_FB_GETMODE, &set_mode);
-    if(result < 0)
-    {
-        syslog(LOG_INFO, "winman: can't get mode info");
-        fprintf(stderr, "winman: could not get mode information after setting mode.\n");
-
-        // Back to text.
-        memset(&mode, 0, sizeof(mode));
-        ioctl(fb, PEDIGREE_FB_SETMODE, &mode);
-        return 1;
-    }
-
-    g_nWidth = set_mode.width;
-    g_nHeight = set_mode.height;
+    g_nWidth = pFramebuffer->getWidth();
+    g_nHeight = pFramebuffer->getHeight();
 
     syslog(LOG_INFO, "Actual mode is %dx%d", g_nWidth, g_nHeight);
 
-    cairo_format_t format = CAIRO_FORMAT_ARGB32;
-    if(set_mode.format == PedigreeGraphics::Bits24_Rgb)
-    {
-        if(set_mode.bytes_per_pixel != 4)
-        {
-            fprintf(stderr, "winman: error: incompatible framebuffer format (bytes per pixel)\n");
-            return 1;
-        }
-    }
-    else if(set_mode.format == PedigreeGraphics::Bits16_Rgb565)
-    {
-        format = CAIRO_FORMAT_RGB16_565;
-    }
-    else if(set_mode.format > PedigreeGraphics::Bits32_Rgb)
-    {
-        fprintf(stderr, "winman: error: incompatible framebuffer format (possibly BGR or similar)\n");
-        return 1;
-    }
+    cairo_format_t format = pFramebuffer->getFormat();
 
     int stride = cairo_format_stride_for_width(format, g_nWidth);
 
-    // Map the framebuffer in to our address space.
-    syslog(LOG_INFO, "Mapping /dev/fb in (sz=%x)...", stride * g_nHeight);
-    void *framebufferVirt = mmap(
-        0,
-        stride * g_nHeight,
-        PROT_READ | PROT_WRITE,
-        MAP_SHARED,
-        fb,
-        0);
-    syslog(LOG_INFO, "Got %p...", framebufferVirt);
-
-    if(framebufferVirt == MAP_FAILED)
-    {
-        syslog(LOG_CRIT, "winman: couldn't map framebuffer into address space");
-        return -1;
-    }
-    else
-    {
-        syslog(LOG_INFO, "winman: mapped framebuffer at %p", framebufferVirt);
-    }
+    void *framebufferVirt = pFramebuffer->getFramebuffer();
 
     cairo_surface_t *surface = cairo_image_surface_create_for_data(
             (uint8_t *) framebufferVirt,
@@ -963,7 +947,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    e = FT_New_Face(font_library, "/system/fonts/DejaVuSansMono.ttf", 0, &ft_face);
+    e = FT_New_Face(font_library, DEJAVU_FONT, 0, &ft_face);
     if(e)
     {
         syslog(LOG_CRIT, "winman: error: couldn't load required font");
@@ -1001,44 +985,21 @@ int main(int argc, char *argv[])
 
     infoPanel(cr);
 
-#if 0
-    Container *pMiddle = new Container(g_pRootContainer);
-    pMiddle->setLayout(Container::Stacked);
-
-    Container *another = new Container(pMiddle);
-    another->setLayout(Container::SideBySide);
-
-    Window *pLeft = new Window(0, 0, g_pRootContainer);
-    g_pRootContainer->addChild(pMiddle);
-    Window *pRight = new Window(0, 0, g_pRootContainer);
-
-    // Should be evenly split down the screen after retile()
-    Window *pTop = new Window(0, 0, pMiddle);
-    Window *pMiddleWindow = new Window(0, 0, pMiddle);
-    Window *pBottom = new Window(0, 0, pMiddle);
-
-    pMiddle->addChild(another);
-
-    Window *more = new Window(0, 0, another);
-    Window *evenmore = new Window(0, 0, another);
-
-    g_pFocusWindow = pLeft;
-    pLeft->focus();
-#endif
-
     syslog(LOG_INFO, "winman: entering main loop pid=%d", getpid());
 
     g_Windows = new std::map<uint64_t, Window*>();
 
     // Install our global input callback before we kick off our client.
+#ifndef TARGET_LINUX
     Input::installCallback(Input::RawKey | Input::Key | Input::Mouse, systemInputCallback);
+#endif
 
     // Render all window decorations and non-client display elements first up.
     g_pRootContainer->render(cr);
 
     // Kick off the first render before any windows are open.
     cairo_surface_flush(surface);
-    ioctl(fb, PEDIGREE_FB_REDRAW, 0);
+    pFramebuffer->flush(0, 0, g_nWidth, g_nHeight);
 
     // Load first tile.
     startClient();
@@ -1173,8 +1134,10 @@ int main(int argc, char *argv[])
             cairo_surface_flush(surface);
 
             // Submit a redraw to the graphics card.
-            pedigree_fb_rect fbdirty = {renderDirty.getX(), renderDirty.getY(), renderDirty.getWidth(), renderDirty.getHeight()};
-            ioctl(fb, PEDIGREE_FB_REDRAW, &fbdirty);
+            pFramebuffer->flush(renderDirty.getX(),
+                                renderDirty.getY(),
+                                renderDirty.getWidth(),
+                                renderDirty.getHeight());
 
             // Wipe out the dirty rectangle - we're all done.
             renderDirty.reset();
