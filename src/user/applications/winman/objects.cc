@@ -76,7 +76,7 @@ void WObject::bump(ssize_t bumpX, ssize_t bumpY)
     m_Dimensions.update(x, y, w, h);
 }
 
-Window::Window(uint64_t handle, int sock, struct sockaddr *sa, socklen_t sa_len,
+Window::Window(uint64_t handle, int sock, struct sockaddr *sa, size_t sa_len,
                ::Container *pParent) :
     m_Handle(handle), m_pParent(pParent), m_Framebuffer(0), m_Dirty(),
     m_bPendingDecoration(false), m_bFocus(false), m_bRefresh(true),
@@ -163,9 +163,7 @@ void *Window::getFramebuffer() const
 void Window::sendMessage(const char *msg, size_t len)
 {
     struct sockaddr_un *sun = (struct sockaddr_un *) m_Sa;
-    fprintf(stderr, "sending %d bytes to %s\n", len, sun->sun_path);
-    int r = sendto(m_Socket, msg, len, 0, m_Sa, m_SaLen);
-    fprintf(stderr, "result: %d [%s]\n", r, strerror(errno));
+    sendto(m_Socket, msg, len, 0, m_Sa, m_SaLen);
 }
 
 void Window::setDirty(PedigreeGraphics::Rect &dirty)

@@ -170,7 +170,7 @@ class WObject
 class Window : public WObject
 {
     public:
-        Window(uint64_t handle, int sock, struct sockaddr *sa, socklen_t sa_len,
+        Window(uint64_t handle, int sock, struct sockaddr *sa, size_t sa_len,
             ::Container *pParent);
         Window();
 
@@ -279,7 +279,7 @@ class Window : public WObject
 
         int m_Socket;
         struct sockaddr *m_Sa;
-        socklen_t m_SaLen;
+        size_t m_SaLen;
 };
 
 /**
