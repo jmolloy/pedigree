@@ -30,7 +30,6 @@
 #include <sched.h>
 
 #include "environment.h"
-#include <tui-syscall.h>
 #include <syslog.h>
 
 #include <pthread.h>
@@ -58,8 +57,13 @@
 #define CONSOLE_REFRESH 10
 #define CONSOLE_FLUSH   11
 
+#ifdef TARGET_LINUX
+#define NORMAL_FONT_PATH    "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
+#define BOLD_FONT_PATH      "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
+#else
 #define NORMAL_FONT_PATH    "/system/fonts/DejaVuSansMono.ttf"
 #define BOLD_FONT_PATH      "/system/fonts/DejaVuSansMono-Bold.ttf"
+#endif
 
 #define FONT_SIZE           14
 
@@ -167,7 +171,6 @@ void selectTerminal(TerminalList *pTL, DirtyRectangle &rect)
         g_pCurrentTerm->term->setActive(false, rect);
 
     g_pCurrentTerm = pTL;
-    Syscall::setCurrentConsole(pTL->term->getTabId());
 
     g_pCurrentTerm->term->setActive(true, rect);
 
@@ -205,15 +208,6 @@ Terminal *addTerminal(const char *name, DirtyRectangle &rect)
     selectTerminal(pTermList, rect);
 
     return pTerm;
-}
-
-// Restores the full contents of the active terminal
-void doRefresh(Terminal *pT)
-{
-    // Refresh the given terminal
-    if(g_pCurrentTerm)
-        if(g_pCurrentTerm->term == pT)
-            pT->refresh(); // Handle any region not redrawn by above
 }
 
 Font *g_NormalFont;
@@ -341,7 +335,9 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
             pTL = pTL->next;
         }
 
+        fprintf(stderr, "sleeping for %d fds\n", n);
         int nReady = select(n + 1, &fds, NULL, NULL, 0);
+        fprintf(stderr, "%d fds ready\n", nReady);
 
         if(nReady <= 0)
             continue;
@@ -350,7 +346,9 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
         if(FD_ISSET(g_pEmu->getSocket(), &fds))
         {
             // Dispatch callbacks.
+            fprintf(stderr, "dispatching callbacks...\n");
             Widget::checkForEvents(true);
+            fprintf(stderr, "dispatching callbacks complete...\n");
 
             // Don't do redraw processing if this was the only descriptor
             // that was found readable.
@@ -367,8 +365,10 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
             int fd = pTL->term->getSelectFd();
             if(FD_ISSET(fd, &fds))
             {
+                fprintf(stderr, "reading from terminal\n");
                 // Something to read.
                 size_t len = read(fd, buffer, maxBuffSz);
+                fprintf(stderr, "rx %d bytes from terminal\n", len);
                 buffer[len] = 0;
                 pTL->term->write(buffer, dirtyRect);
                 bShouldRedraw = true;
@@ -460,7 +460,7 @@ int main(int argc, char *argv[])
     PedigreeGraphics::Rect rt;
 
     g_pEmu = new PedigreeTerminalEmulator();
-    syslog(LOG_INFO, "TUI: constructing widget...");
+    syslog(LOG_INFO, "TUI: constructing widget '%s'...", endpoint);
     if(!g_pEmu->construct(endpoint, "Pedigree xterm Emulator", callback, rt))
     {
         syslog(LOG_ERR, "tui: couldn't construct widget");

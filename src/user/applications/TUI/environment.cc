@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -19,7 +18,6 @@
  */
 
 #include "environment.h"
-#include <tui-syscall.h>
 
 #include <graphics/Graphics.h>
 
@@ -28,52 +26,6 @@
 extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
 
 extern cairo_surface_t *g_Surface;
-
-size_t Syscall::nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t buffersz, size_t *terminalId)
-{
-    size_t ret = syscall5(TUI_NEXT_REQUEST, responseToLast, reinterpret_cast<size_t>(buffer), reinterpret_cast<size_t>(sz), buffersz, reinterpret_cast<size_t>(terminalId));
-    // Memory barrier, "sz" will have changed. Reload.
-    asm volatile ("" : : : "memory");
-    return ret;
-}
-
-size_t Syscall::nextRequestAsync(size_t responseToLast, char *buffer, size_t *sz, size_t buffersz, size_t *terminalId)
-{
-    size_t ret = syscall5(TUI_NEXT_REQUEST_ASYNC, responseToLast, reinterpret_cast<size_t>(buffer), reinterpret_cast<size_t>(sz), buffersz, reinterpret_cast<size_t>(terminalId));
-    // Memory barrier, "sz" will have changed. Reload.
-    asm volatile ("" : : : "memory");
-    return ret;
-}
-
-void Syscall::requestPending()
-{
-    syscall0(TUI_REQUEST_PENDING);
-}
-
-void Syscall::respondToPending(size_t response, char *buffer, size_t sz)
-{
-    syscall3(TUI_RESPOND_TO_PENDING, response, reinterpret_cast<size_t>(buffer), sz);
-}
-
-void Syscall::createConsole(size_t tabId, char *pName)
-{
-    syscall2(TUI_CREATE_CONSOLE, tabId, reinterpret_cast<size_t>(pName));
-}
-
-void Syscall::setCtty(char *pName)
-{
-    syscall1(TUI_SET_CTTY, reinterpret_cast<size_t>(pName));
-}
-
-void Syscall::setCurrentConsole(size_t tabId)
-{
-    syscall1(TUI_SET_CURRENT_CONSOLE, tabId);
-}
-
-void Syscall::dataAvailable()
-{
-    syscall0(TUI_DATA_CHANGED);
-}
 
 void doRedraw(DirtyRectangle &rect)
 {

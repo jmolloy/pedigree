@@ -17,11 +17,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#ifdef TARGET_LINUX
+
 #include <fcntl.h>
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <syslog.h>
+#include <errno.h>
 
 #include <SDL/SDL.h>
 
@@ -85,7 +89,11 @@ void Framebuffer::flush(size_t x, size_t y, size_t w, size_t h)
 SharedBuffer::SharedBuffer(size_t size) : m_ShmName(), m_ShmFd(-1),
     m_pBuffer(0), m_Size(size)
 {
+    memset(m_ShmName, 0, sizeof m_ShmName);
+    strcpy(m_ShmName, "wm_x");
+
     m_ShmFd = shm_open("wm_x", O_RDWR | O_CREAT, 0777);
+    fprintf(stderr, "shm fd=%d [%s]\n", m_ShmFd, strerror(errno));
     ftruncate(m_ShmFd, size);
 
     m_pBuffer = mmap(
@@ -132,3 +140,5 @@ void *SharedBuffer::getBuffer()
 {
     return m_pBuffer;
 }
+
+#endif

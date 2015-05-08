@@ -170,16 +170,11 @@ class WObject
 class Window : public WObject
 {
     public:
-        Window(uint64_t handle, int sock, ::Container *pParent);
+        Window(uint64_t handle, int sock, struct sockaddr *sa, socklen_t sa_len,
+            ::Container *pParent);
         Window();
 
-        virtual ~Window()
-        {
-            /// \todo Need a way to destroy the old framebuffer without breaking
-            ///       the other side's reference to the same region... Refcount?
-            // delete m_Framebuffer;
-            close(m_Socket);
-        }
+        virtual ~Window();
 
         virtual Type getType() const
         {
@@ -216,12 +211,7 @@ class Window : public WObject
 
         void *getFramebuffer() const;
 
-        // virtual void sendMessage(const char *msg, size_t len);
-
-        int getSocket() const
-        {
-            return m_Socket;
-        }
+        virtual void sendMessage(const char *msg, size_t len);
 
         uint64_t getHandle() const
         {
@@ -288,6 +278,8 @@ class Window : public WObject
         size_t m_nRegionHeight;
 
         int m_Socket;
+        struct sockaddr *m_Sa;
+        socklen_t m_SaLen;
 };
 
 /**

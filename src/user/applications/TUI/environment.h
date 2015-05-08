@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -136,18 +135,6 @@ public:
 private:
     size_t m_X, m_Y, m_X2, m_Y2;
 };
-
-namespace Syscall
-{
-    size_t nextRequest(size_t responseToLast, char *buffer, size_t *sz, size_t buffersz, size_t *terminalId);
-    size_t nextRequestAsync(size_t responseToLast, char *buffer, size_t *sz, size_t buffersz, size_t *terminalId);
-    void requestPending();
-    void respondToPending(size_t response, char *buffer, size_t sz);
-    void createConsole(size_t tabId, char *pName);
-    void setCtty(char *pName);
-    void setCurrentConsole(size_t tabId);
-    void dataAvailable();
-}
 
 void doRedraw(DirtyRectangle &rect);
 

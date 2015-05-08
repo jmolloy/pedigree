@@ -88,9 +88,17 @@ ssize_t g_CursorX = 0, g_LastCursorX = 0;
 ssize_t g_CursorY = 0, g_LastCursorY = 0;
 bool g_bCursorUpdate = false;
 
+#define ALT_KEY (1ULL << 60)
+#define SHIFT_KEY (1ULL << 61)
+#define CTRL_KEY (1ULL << 62)
+#define SPECIAL_KEY (1ULL << 63)
+
 /// \todo Make configurable.
+#ifdef TARGET_LINUX
+#define CLIENT_DEFAULT "./tui"
+#else
 #define CLIENT_DEFAULT "/applications/TUI"
-// #define CLIENT_DEFAULT "/applications/gears"
+#endif
 
 #define TEXTONLY_DEFAULT "/applications/ttyterm"
 
@@ -164,10 +172,11 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
         }
 
         /// \todo Error handling.
-        int iSocket = socket(AF_UNIX, SOCK_DGRAM, 0);
-        connect(iSocket, src, slen);
+        // int iSocket = socket(AF_UNIX, SOCK_DGRAM, 0);
 
-        Window *pWindow = new Window(pWinMan->widgetHandle, iSocket, pParent);
+        /// \todo verify source is AF_UNIX etc
+
+        Window *pWindow = new Window(pWinMan->widgetHandle, g_iSocket, src, slen, pParent);
         std::string newTitle(pCreate->title);
         pWindow->setTitle(newTitle);
         g_PendingWindows.insert(pWindow);
@@ -191,7 +200,7 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
 
         g_Windows->insert(std::make_pair(pWinMan->widgetHandle, pWindow));
 
-        send(iSocket, responseData, totalSize, 0);
+        pWindow->sendMessage(responseData, totalSize);
 
         delete [] responseData;
     }
@@ -213,7 +222,7 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
             LibUiProtocol::SyncMessageResponse *pSyncResp =
                 reinterpret_cast<LibUiProtocol::SyncMessageResponse*>(responseData + sizeof(LibUiProtocol::WindowManagerMessage));
 
-            send(pWindow->getSocket(), responseData, totalSize, 0);
+            pWindow->sendMessage(responseData, totalSize);
 
             delete [] responseData;
         }
@@ -322,7 +331,7 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
             pHeader->messageSize = 0;
             pHeader->isResponse = true;
 
-            send(pWindow->getSocket(), responseData, totalSize, 0);
+            pWindow->sendMessage(responseData, totalSize);
 
             delete [] responseData;
 
@@ -359,10 +368,8 @@ void checkForMessages()
 #ifdef TARGET_LINUX
     bool bTerminate = false;
 
-    /// \todo Figure out how to also check for socket messages.
-
     SDL_Event event;
-    int result = SDL_WaitEvent(&event);
+    int result = SDL_PollEvent(&event);
     if (result)
     {
         switch (event.type)
@@ -373,6 +380,27 @@ void checkForMessages()
                 else
                 {
                     /// \todo Create an input notification.
+                    Input::InputNotification note;
+                    memset(&note, 0, sizeof(note));
+                    note.type = Input::Key;
+                    if (event.key.keysym.mod & KMOD_SHIFT)
+                        note.data.key.key |= SHIFT_KEY;
+                    if (event.key.keysym.mod & KMOD_ALT)
+                        note.data.key.key |= ALT_KEY;
+                    if (event.key.keysym.mod & KMOD_CTRL)
+                        note.data.key.key |= CTRL_KEY;
+
+                    note.data.key.key |= event.key.keysym.sym;
+
+                    // Make sure we're getting a modified key, not the actual
+                    // modifier itself.
+                    if (event.key.keysym.sym != SDLK_LALT &&
+                        event.key.keysym.sym != SDLK_RALT &&
+                        event.key.keysym.sym != SDLK_LSHIFT &&
+                        event.key.keysym.sym != SDLK_RSHIFT &&
+                        event.key.keysym.sym != SDLK_LCTRL &&
+                        event.key.keysym.sym != SDLK_RCTRL)
+                        queueInputCallback(note);
                 }
                 break;
 
@@ -387,7 +415,10 @@ void checkForMessages()
         SDL_Quit();
         exit(0);
     }
-#else
+
+    SDL_Delay(1);
+#endif
+
     fd_set fds;
     FD_ZERO(&fds);
 
@@ -396,8 +427,15 @@ void checkForMessages()
     FD_SET(g_iControlPipe[0], &fds);
     int nMax = std::max(g_iSocket, g_iControlPipe[0]);
 
+    struct timeval tv = {0, 0};  // Poll quickly.
+
+    struct timeval *timeout = 0;
+#ifdef TARGET_LINUX
+    timeout = &tv;
+#endif
+
     // Do the deed - no timeout.
-    int ret = select(nMax + 1, &fds, 0, 0, 0);
+    int ret = select(nMax + 1, &fds, 0, 0, timeout);
     if(ret > 0)
     {
         if(FD_ISSET(g_iSocket, &fds))
@@ -406,7 +444,7 @@ void checkForMessages()
             // We use recvfrom so we can create a socket back to the client easily.
             char msg[4096];
             struct sockaddr_un saddr;
-            socklen_t slen = 0;
+            socklen_t slen = sizeof(saddr);
             ssize_t sz = recvfrom(g_iSocket, msg, 4096, 0, (struct sockaddr *) &saddr, &slen);
             if(sz > 0)
             {
@@ -432,12 +470,7 @@ void checkForMessages()
             }
         }
     }
-#endif
 }
-
-#define ALT_KEY (1ULL << 60)
-#define SHIFT_KEY (1ULL << 61)
-#define SPECIAL_KEY (1ULL << 63)
 
 enum ActualKey
 {
@@ -536,7 +569,7 @@ void queueInputCallback(Input::InputNotification &note)
                         pHeader->messageCode = LibUiProtocol::Destroy;
                         pHeader->isResponse = false;
 
-                        send(g_pFocusWindow->getSocket(), buffer, totalSize, 0);
+                        g_pFocusWindow->sendMessage(buffer, totalSize);
 
                         delete [] buffer;
 
@@ -544,7 +577,7 @@ void queueInputCallback(Input::InputNotification &note)
                     }
                 }
             }
-            else if(c == '\n')
+            else if(c == '\n' || c == '\r')
             {
                 // Add window to active container.
                 startClient();
@@ -760,7 +793,7 @@ void queueInputCallback(Input::InputNotification &note)
             pKeyEvent->state = LibUiProtocol::Up; /// \todo 'keydown' messages.
             pKeyEvent->key = note.data.key.key;
 
-            send(g_pFocusWindow->getSocket(), buffer, totalSize, 0);
+            g_pFocusWindow->sendMessage(buffer, totalSize);
         }
         else if(note.type & Input::RawKey)
         {
@@ -771,7 +804,7 @@ void queueInputCallback(Input::InputNotification &note)
             pKeyEvent->state = note.data.rawkey.keyUp ? LibUiProtocol::Up : LibUiProtocol::Down;
             pKeyEvent->scancode = note.data.rawkey.scancode;
 
-            send(g_pFocusWindow->getSocket(), buffer, totalSize, 0);
+            g_pFocusWindow->sendMessage(buffer, totalSize);
         }
 
         delete [] buffer;
@@ -827,6 +860,7 @@ void infoPanel(cairo_t *cr)
 int main(int argc, char *argv[])
 {
     syslog(LOG_INFO, "winman: starting up...");
+    fprintf(stderr, "I am PID %d\n", getpid());
 
     // Create ourselves a lock file so we don't end up getting run twice.
     /// \todo Revisit this when exiting the window manager is possible.
@@ -885,6 +919,35 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+    // Create control pipe.
+    int result = pipe(g_iControlPipe);
+    if (result != 0)
+    {
+        fprintf(stderr, "winman: couldn't create control pipe [%s]\n", strerror(errno));
+        return EXIT_FAILURE;
+    }
+
+    // Create listening socket.
+    g_iSocket = socket(AF_UNIX, SOCK_DGRAM, 0);
+    if(g_iSocket < 0)
+    {
+        fprintf(stderr, "error: couldn't create the pedigree-winman IPC endpoint! [%s]", strerror(errno));
+        return EXIT_FAILURE;
+    }
+
+    // Bind.
+    struct sockaddr_un bind_addr;
+    bind_addr.sun_family = AF_UNIX;
+    memset(bind_addr.sun_path, 0, sizeof bind_addr.sun_path);
+    strcpy(bind_addr.sun_path, WINMAN_SOCKET_PATH);
+    socklen_t socklen = sizeof(bind_addr);
+    result = bind(g_iSocket, (struct sockaddr *) &bind_addr, socklen);
+    if (result != 0)
+    {
+        fprintf(stderr, "winman: couldn't bind to %s [%s]\n", WINMAN_SOCKET_PATH, strerror(errno));
+        return EXIT_FAILURE;
+    }
+
 #ifdef TARGET_LINUX
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
     {
@@ -895,7 +958,7 @@ int main(int argc, char *argv[])
 
     // Can we set the graphics mode we want?
     /// \todo Read from a config file!
-    int result = pFramebuffer->enterMode(1024, 768, 32);
+    result = pFramebuffer->enterMode(1024, 768, 32);
     if (result != 0)
         return result;
 
@@ -917,26 +980,6 @@ int main(int argc, char *argv[])
             g_nHeight,
             stride);
     cairo_t *cr = cairo_create(surface);
-
-    // Create control pipe.
-    pipe(g_iControlPipe);
-
-    // Create listening socket.
-    g_iSocket = socket(AF_UNIX, SOCK_DGRAM, 0);
-
-    if(g_iSocket < 0)
-    {
-        syslog(LOG_CRIT, "error: couldn't create the pedigree-winman IPC endpoint!");
-        return 0;
-    }
-
-    // Bind.
-    struct sockaddr_un bind_addr;
-    bind_addr.sun_family = AF_UNIX;
-    memset(bind_addr.sun_path, 0, sizeof bind_addr.sun_path);
-    strcpy(bind_addr.sun_path, WINMAN_SOCKET_PATH);
-    socklen_t socklen = sizeof(bind_addr);
-    bind(g_iSocket, (struct sockaddr *) &bind_addr, socklen);
 
     FT_Library font_library;
     FT_Face ft_face;

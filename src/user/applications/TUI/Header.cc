@@ -41,6 +41,8 @@ size_t g_FontSize = 16;
 
 static void getRgbColorFromDb(const char *colorName, uint32_t &color)
 {
+    // Use defaults on Linux.
+#ifndef TARGET_LINUX
     // The query string
     std::string sQuery;
 
@@ -70,13 +72,18 @@ static void getRgbColorFromDb(const char *colorName, uint32_t &color)
 
     // Dispose of the query result
     delete pResult;
+#endif
 }
 
 Header::Header(size_t nWidth) :
     m_nWidth(nWidth), m_Page(0), m_LastPage(0), m_pFont(0),
     m_pTabs(0), m_NextTabId(0), m_pFramebuffer(0)
 {
+#ifdef TARGET_LINUX
+    m_pFont = new Font(g_FontSize, "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", false, nWidth);
+#else
     m_pFont = new Font(g_FontSize, "/system/fonts/DejaVuSansMono-Bold.ttf", false, nWidth);
+#endif
     g_FontSize = m_pFont->getHeight();
 
     getRgbColorFromDb("border", g_BorderColour);

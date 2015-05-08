@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -31,8 +30,13 @@
  *  @{
  */
 
+#ifdef TARGET_LINUX
+#define WINMAN_SOCKET_PATH  "sockets/winman.sock"
+#define CLIENT_SOCKET_BASE  "sockets/winman-client-%s.sock"
+#else
 #define WINMAN_SOCKET_PATH  "unix»/winman.sock"
 #define CLIENT_SOCKET_BASE  "unix»/winman-client-%s.sock"
+#endif
 
 namespace LibUiProtocol
 {

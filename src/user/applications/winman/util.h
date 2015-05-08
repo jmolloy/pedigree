@@ -26,10 +26,6 @@
 #include <ipc/Ipc.h>
 #else
 #include <SDL/SDL.h>
-
-// Replace syslog with fprintf on Linux.
-#undef syslog
-#define syslog(level, ...) fprintf(stderr, __VA_ARGS__)
 #endif
 
 #include <cairo/cairo.h>

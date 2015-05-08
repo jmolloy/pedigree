@@ -18,6 +18,7 @@
  */
 
 #include "Font.h"
+#include <cerrno>
 #include <cmath>
 
 #include <iconv.h>

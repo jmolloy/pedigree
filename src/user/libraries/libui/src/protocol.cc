@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -19,7 +18,6 @@
  */
 
 #include "protocol.h"
-#include <ipc/Ipc.h>
 
 /// \todo GTFO libc!
 #include <string.h>

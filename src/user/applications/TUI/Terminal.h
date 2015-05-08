@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -22,7 +21,6 @@
 #define TERMINAL_H
 
 #include "environment.h"
-#include <tui-syscall.h>
 #include <syslog.h>
 
 #ifndef NEW_XTERM

@@ -26,6 +26,7 @@
 
 /// \todo GTFO libc!
 #include <stdio.h>
+#include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 #include <syslog.h>
@@ -34,6 +35,10 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/un.h>
+
+#ifdef TARGET_LINUX
+#include <bsd/string.h>  // strlcpy
+#endif
 
 #include <map>
 #include <queue>
@@ -57,7 +62,7 @@ std::queue<char *> g_PendingMessages;
 
 Widget::Widget() :
     m_bConstructed(false), m_pFramebuffer(0), m_Handle(0),
-    m_EventCallback(defaultEventHandler), m_Endpoint(0),
+    m_EventCallback(defaultEventHandler),
     m_Socket(-1), m_SharedFramebuffer(0)
 {
 }
@@ -65,10 +70,6 @@ Widget::Widget() :
 Widget::~Widget()
 {
     destroy();
-
-    if(m_Endpoint) {
-        free((void *) m_Endpoint);
-    }
 }
 
 bool Widget::construct(const char *endpoint, const char *title, widgetCallback_t cb, PedigreeGraphics::Rect &dimensions)
@@ -84,14 +85,13 @@ bool Widget::construct(const char *endpoint, const char *title, widgetCallback_t
         return false;
 
     struct sockaddr_un meaddr;
+    memset(&meaddr, 0, sizeof(meaddr));
     meaddr.sun_family = AF_UNIX;
-    memset(meaddr.sun_path, 0, sizeof meaddr.sun_path);
     sprintf(meaddr.sun_path, CLIENT_SOCKET_BASE, endpoint);
 
     struct sockaddr_un saddr;
-    socklen_t slen = sizeof(saddr);
+    memset(&saddr, 0, sizeof(saddr));
     saddr.sun_family = AF_UNIX;
-    memset(saddr.sun_path, 0, sizeof saddr.sun_path);
     strcpy(saddr.sun_path, WINMAN_SOCKET_PATH);
 
     // Create socket for window manager communication.
@@ -100,9 +100,17 @@ bool Widget::construct(const char *endpoint, const char *title, widgetCallback_t
         return false;
 
     // Connect to window manager.
-    bind(m_Socket, (struct sockaddr *) &meaddr, slen);
-    if(connect(m_Socket, (struct sockaddr *) &saddr, slen) < 0)
+    fprintf(stderr, "binding to %s\n", meaddr.sun_path);
+    if(bind(m_Socket, (struct sockaddr *) &meaddr, sizeof(meaddr)) != 0)
     {
+        fprintf(stderr, "socket bind failed [%s]\n", strerror(errno));
+        close(m_Socket);
+        m_Socket = -1;
+        return false;
+    }
+    if(connect(m_Socket, (struct sockaddr *) &saddr, sizeof(saddr)) != 0)
+    {
+        fprintf(stderr, "no connection to socket [%s]\n", strerror(errno));
         close(m_Socket);
         m_Socket = -1;
         return false;
@@ -144,7 +152,9 @@ bool Widget::construct(const char *endpoint, const char *title, widgetCallback_t
     char *responseData = new char[4096];
     while(1)
     {
+        fprintf(stderr, "widget: waiting for data\n");
         ssize_t len = recv(m_Socket, responseData, 4096, 0);
+        fprintf(stderr, "widget: rx %d bytes\n", len);
 
         /// \todo Handle errors better.
         if(len <= 0)
@@ -420,70 +430,6 @@ void Widget::destroy()
 PedigreeGraphics::Framebuffer *Widget::getFramebuffer()
 {
     return 0;
-
-    /*
-    // Constructed yet?
-    if(!m_Handle)
-        return 0;
-
-    // No framebuffer yet?
-    if(!m_pFramebuffer)
-        return 0;
-
-    // Allocate the message.
-    size_t totalSize = sizeof(WindowManagerMessage) + sizeof(SyncMessage);
-    char *messageData = new char[totalSize];
-    WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
-    SyncMessage *pMessage = reinterpret_cast<SyncMessage*>(messageData + sizeof(WindowManagerMessage));
-
-    // Fill the message.
-    pWinMan->messageCode = Sync;
-    pWinMan->messageSize = sizeof(SyncMessage);
-    pWinMan->widgetHandle = m_Handle;
-    pWinMan->isResponse = false;
-
-    // Transmit, synchronously.
-    syslog(LOG_INFO, "TX Sync [%d]", getpid());
-    sendMessage(messageData, totalSize);
-    syslog(LOG_INFO, "TX complete");
-
-    delete [] messageData;
-
-    // Get the response.
-    totalSize = 1024;
-    messageData = new char[totalSize];
-
-    while(1)
-    {
-        if(!recvMessage(m_Endpoint, messageData, totalSize))
-        {
-            m_Handle = 0;
-            delete [] messageData;
-            return 0;
-        }
-
-        pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
-        if(!(pWinMan->isResponse && (pWinMan->messageCode == Sync)))
-        {
-            g_PendingMessages.push(messageData);
-            messageData = new char[totalSize];
-        }
-        else
-        {
-            break;
-        }
-    }
-
-    SyncMessageResponse *pSyncResp = reinterpret_cast<SyncMessageResponse*>(messageData + sizeof(WindowManagerMessage));
-    if(m_pFramebuffer->getProvider().contextId !=
-        pSyncResp->provider.contextId)
-    {
-        delete m_pFramebuffer;
-        m_pFramebuffer = new PedigreeGraphics::Framebuffer(pSyncResp->provider);
-    }
-
-    return m_pFramebuffer;
-    */
 }
 
 void Widget::checkForEvents(bool bAsync)
@@ -540,10 +486,13 @@ void Widget::checkForEvents(bool bAsync)
                         LibUiProtocol::RepositionMessage *pReposition =
                             reinterpret_cast<LibUiProtocol::RepositionMessage*>(buffer + sizeof(LibUiProtocol::WindowManagerMessage));
                         delete g_pWidget->m_SharedFramebuffer;
-                        /// \todo this won't fly on Linux
+#ifdef TARGET_LINUX
+                        g_pWidget->m_SharedFramebuffer = new SharedBuffer(pReposition->shmem_size, pReposition->shmem_handle);
+#else
                         g_pWidget->m_SharedFramebuffer =
                             new PedigreeIpc::SharedIpcMessage(pReposition->shmem_size, pReposition->shmem_handle);
                         g_pWidget->m_SharedFramebuffer->initialise();
+#endif
 
                         // Run the callback now that the framebuffer is re-created.
                         cb(::Reposition, sizeof(pReposition->rt), &pReposition->rt);

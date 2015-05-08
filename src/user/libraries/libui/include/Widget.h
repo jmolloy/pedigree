@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -21,9 +20,17 @@
 #ifndef _WIDGET_H
 #define _WIDGET_H
 
+#ifdef TARGET_LINUX
+#include <stdint.h>
+#include <unistd.h>
+
+#include <util.h>
+#else
 #include <types.h>
-#include <graphics/Graphics.h>
 #include <ipc/Ipc.h>
+#endif
+
+#include <graphics/Graphics.h>
 
 #include <string>
 #include <map>
@@ -208,14 +215,16 @@ class Widget
         /** Widget event handler. */
         widgetCallback_t m_EventCallback;
 
-        /** IPC endpoint name for window manager communication. */
-        PedigreeIpc::IpcEndpoint *m_Endpoint;
-
         /** IPC socket for window manager communication (supercedes IPC enpdoint). */
         int m_Socket;
 
+#ifdef TARGET_LINUX
+        /** Shared memory region on Linux, using shmem. */
+        SharedBuffer *m_SharedFramebuffer;
+#else
         /** IPC shared message that handles our framebuffer. */
         PedigreeIpc::SharedIpcMessage *m_SharedFramebuffer;
+#endif
 
         /** Handle -> Callback mapping. For event handler. */
         static std::map<uint64_t, widgetCallback_t> m_CallbackMap;

@@ -86,13 +86,17 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
 
 bool Terminal::initialise()
 {
-    m_MasterPty = posix_openpt(O_RDWR);
+    m_MasterPty = posix_openpt(O_RDWR | O_NOCTTY);
     if(m_MasterPty < 0)
     {
         syslog(LOG_INFO, "TUI: Couldn't create terminal: %s", strerror(errno));
         return false;
     }
 
+#ifdef TARGET_LINUX
+    grantpt(m_MasterPty);
+    unlockpt(m_MasterPty);
+#endif
     char slavename[16] = {0};
     strcpy(slavename, ptsname(m_MasterPty));
 
@@ -119,14 +123,20 @@ bool Terminal::initialise()
         close(2);
         close(m_MasterPty);
 
-        // Open the slave terminal, dup into FD 1, 2
-        int slave = open(slavename, O_RDWR);
-        dup2(slave, 1);
-        dup2(slave, 2);
-
         // Create a new session for the shell, which will also wipe any
         // existing CTTY.
         setsid();
+
+        // Open the slave terminal with correct rights.
+        int n = open(slavename, O_RDONLY);
+        open(slavename, O_WRONLY);
+        open(slavename, O_WRONLY);
+
+        if (n < 0)
+        {
+            syslog(LOG_INFO, "opening %s failed", slavename);
+            syslog(LOG_INFO, "opening stdin failed %d %s", errno, strerror(errno));
+        }
 
         // Mark opened slave as our ctty.
         syslog(LOG_INFO, "Trying to set CTTY");
@@ -155,6 +165,7 @@ bool Terminal::initialise()
         }
 
         // Create utmpx entry.
+#ifndef TARGET_LINUX
         /// \todo Clean it up when the child terminates.
         struct utmpx ut;
         ut.ut_type = USER_PROCESS;
@@ -163,11 +174,12 @@ bool Terminal::initialise()
         strcpy(ut.ut_id, ttyid + strlen("tty"));
         strcpy(ut.ut_line, ttyid);
         strcpy(ut.ut_user, pw->pw_name);
-        gettimeofday(&ut.ut_tv, NULL);
+        gettimeofday((struct timeval *) &ut.ut_tv, NULL);
 
         setutxent();
         pututxline(&ut);
         endutxent();
+#endif
 
         // Launch the shell now.
         execl(prog, prog, 0);

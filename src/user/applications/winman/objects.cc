@@ -20,6 +20,8 @@
 #include "winman.h"
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/un.h>
+#include <errno.h>
 
 #include <protocol.h>
 
@@ -74,13 +76,23 @@ void WObject::bump(ssize_t bumpX, ssize_t bumpY)
     m_Dimensions.update(x, y, w, h);
 }
 
-Window::Window(uint64_t handle, int sock, ::Container *pParent) :
+Window::Window(uint64_t handle, int sock, struct sockaddr *sa, socklen_t sa_len,
+               ::Container *pParent) :
     m_Handle(handle), m_pParent(pParent), m_Framebuffer(0), m_Dirty(),
     m_bPendingDecoration(false), m_bFocus(false), m_bRefresh(true),
-    m_nRegionWidth(0), m_nRegionHeight(0), m_Socket(sock)
+    m_nRegionWidth(0), m_nRegionHeight(0), m_Socket(sock), m_Sa(sa),
+    m_SaLen(sa_len)
 {
     refreshContext();
     m_pParent->addChild(this);
+}
+
+Window::~Window()
+{
+    /// \todo Need a way to destroy the old framebuffer without breaking
+    ///       the other side's reference to the same region... Refcount?
+    // delete m_Framebuffer;
+    delete m_Sa;
 }
 
 void Window::refreshContext()
@@ -135,7 +147,7 @@ void Window::refreshContext()
         pReposition->shmem_size = regionSize;
 
         // Transmit to the client.
-        send(m_Socket, buffer, totalSize, 0);
+        sendMessage(buffer, totalSize);
 
         delete [] buffer;
     }
@@ -146,6 +158,14 @@ void Window::refreshContext()
 void *Window::getFramebuffer() const
 {
     return m_Framebuffer ? m_Framebuffer->getBuffer() : 0;
+}
+
+void Window::sendMessage(const char *msg, size_t len)
+{
+    struct sockaddr_un *sun = (struct sockaddr_un *) m_Sa;
+    fprintf(stderr, "sending %d bytes to %s\n", len, sun->sun_path);
+    int r = sendto(m_Socket, msg, len, 0, m_Sa, m_SaLen);
+    fprintf(stderr, "result: %d [%s]\n", r, strerror(errno));
 }
 
 void Window::setDirty(PedigreeGraphics::Rect &dirty)
@@ -272,7 +292,7 @@ void Window::render(cairo_t *cr)
         ackmsg.widgetHandle = m_Handle;
         ackmsg.messageSize = 0;
         ackmsg.isResponse = true;
-        send(m_Socket, &ackmsg, sizeof(ackmsg), 0);
+        sendMessage((const char *) &ackmsg, sizeof(ackmsg));
     }
 
     if(m_bPendingDecoration)
@@ -321,7 +341,7 @@ void Window::focus()
     pHeader->messageSize = 0;
     pHeader->isResponse = false;
 
-    send(m_Socket, pHeader, sizeof(*pHeader), 0);
+    sendMessage((const char *) pHeader, sizeof(*pHeader));
     delete pHeader;
 }
 
@@ -340,7 +360,7 @@ void Window::nofocus()
     pHeader->messageSize = 0;
     pHeader->isResponse = false;
 
-    send(m_Socket, buffer, totalSize, 0);
+    sendMessage(buffer, totalSize);
     delete [] buffer;
 }
 

@@ -60,6 +60,8 @@ extern cairo_surface_t *g_Surface;
 
 static void getXtermColorFromDb(const char *colorName, uint8_t &color)
 {
+    // Use defaults on Linux.
+#ifndef TARGET_LINUX
     // The query string
     std::string sQuery;
 
@@ -89,6 +91,7 @@ static void getXtermColorFromDb(const char *colorName, uint8_t &color)
 
     // Dispose of the query result
     delete pResult;
+#endif
 }
 
 Xterm::Xterm(PedigreeGraphics::Framebuffer *pFramebuffer, size_t nWidth, size_t nHeight, size_t offsetLeft, size_t offsetTop, Terminal *pT) :
