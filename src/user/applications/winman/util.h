@@ -125,6 +125,8 @@ class SharedBuffer
 
         void *m_pBuffer;
         size_t m_Size;
+
+        static size_t m_NextId;
 #else
         PedigreeIpc::SharedIpcMessage *m_pFramebuffer;
 #endif

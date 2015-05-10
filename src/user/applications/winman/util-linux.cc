@@ -31,6 +31,8 @@
 
 #include "util.h"
 
+size_t SharedBuffer::m_NextId = 0;
+
 Framebuffer::Framebuffer() : m_pFramebuffer(0), m_FramebufferSize(0),
     m_Format(), m_Width(0), m_Height(0), m_pScreen(0), m_pBackbuffer(0)
 {
@@ -89,10 +91,12 @@ void Framebuffer::flush(size_t x, size_t y, size_t w, size_t h)
 SharedBuffer::SharedBuffer(size_t size) : m_ShmName(), m_ShmFd(-1),
     m_pBuffer(0), m_Size(size)
 {
-    memset(m_ShmName, 0, sizeof m_ShmName);
-    strcpy(m_ShmName, "wm_x");
+    size_t bufferId = m_NextId++;
 
-    m_ShmFd = shm_open("wm_x", O_RDWR | O_CREAT, 0777);
+    memset(m_ShmName, 0, sizeof m_ShmName);
+    sprintf(m_ShmName, "wm%d", bufferId);
+
+    m_ShmFd = shm_open(m_ShmName, O_RDWR | O_CREAT, 0777);
     fprintf(stderr, "shm fd=%d [%s]\n", m_ShmFd, strerror(errno));
     ftruncate(m_ShmFd, size);
 
