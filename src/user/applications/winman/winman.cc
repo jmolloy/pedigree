@@ -176,7 +176,10 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
 
         /// \todo verify source is AF_UNIX etc
 
-        Window *pWindow = new Window(pWinMan->widgetHandle, g_iSocket, src, slen, pParent);
+        struct sockaddr_un *sun = new struct sockaddr_un;
+        *sun = *((struct sockaddr_un *) src);
+
+        Window *pWindow = new Window(pWinMan->widgetHandle, g_iSocket, (struct sockaddr *) sun, slen, pParent);
         std::string newTitle(pCreate->title);
         pWindow->setTitle(newTitle);
         g_PendingWindows.insert(pWindow);
