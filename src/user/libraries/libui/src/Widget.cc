@@ -152,9 +152,7 @@ bool Widget::construct(const char *endpoint, const char *title, widgetCallback_t
     char *responseData = new char[4096];
     while(1)
     {
-        fprintf(stderr, "widget: waiting for data\n");
         ssize_t len = recv(m_Socket, responseData, 4096, 0);
-        fprintf(stderr, "widget: rx %d bytes\n", len);
 
         /// \todo Handle errors better.
         if(len <= 0)
@@ -477,6 +475,11 @@ void Widget::checkForEvents(bool bAsync)
             LibUiProtocol::WindowManagerMessage *pHeader =
                 reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
 
+            if (m_CallbackMap.find(pHeader->widgetHandle) == m_CallbackMap.end())
+            {
+                syslog(LOG_ALERT, "no callback known for handle %p", getpid(), pHeader->widgetHandle);
+                return;
+            }
             widgetCallback_t cb = m_CallbackMap[pHeader->widgetHandle];
 
             switch(pHeader->messageCode)
