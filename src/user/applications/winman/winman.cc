@@ -393,7 +393,32 @@ void checkForMessages()
                     if (event.key.keysym.mod & KMOD_CTRL)
                         note.data.key.key |= CTRL_KEY;
 
-                    note.data.key.key |= event.key.keysym.sym;
+                    bool bSpecial = false;
+                    if (event.key.keysym.sym == SDLK_LEFT)
+                    {
+                        memcpy(&note.data.key.key, "left", 4);
+                        bSpecial = true;
+                    }
+                    else if (event.key.keysym.sym == SDLK_RIGHT)
+                    {
+                        memcpy(&note.data.key.key, "righ", 4);
+                        bSpecial = true;
+                    }
+                    else if (event.key.keysym.sym == SDLK_UP)
+                    {
+                        memcpy(&note.data.key.key, "up", 4);
+                        bSpecial = true;
+                    }
+                    else if (event.key.keysym.sym == SDLK_DOWN)
+                    {
+                        memcpy(&note.data.key.key, "down", 4);
+                        bSpecial = true;
+                    }
+
+                    if (bSpecial)
+                        note.data.key.key |= SPECIAL_KEY;
+                    else
+                        note.data.key.key |= event.key.keysym.sym;
 
                     // Make sure we're getting a modified key, not the actual
                     // modifier itself.
