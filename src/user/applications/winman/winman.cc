@@ -859,6 +859,10 @@ void infoPanel(cairo_t *cr)
 
 int main(int argc, char *argv[])
 {
+#ifdef TARGET_LINUX
+    openlog("winman", LOG_PID, LOG_USER);
+#endif
+
     syslog(LOG_INFO, "winman: starting up...");
     fprintf(stderr, "I am PID %d\n", getpid());
 

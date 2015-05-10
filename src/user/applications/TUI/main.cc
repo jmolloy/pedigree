@@ -454,6 +454,10 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
 
 int main(int argc, char *argv[])
 {
+#ifdef TARGET_LINUX
+    openlog("tui", LOG_PID, LOG_USER);
+#endif
+
     char endpoint[256];
     sprintf(endpoint, "tui.%d", getpid());
 
