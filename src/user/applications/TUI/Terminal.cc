@@ -202,13 +202,31 @@ bool Terminal::initialise()
 
 Terminal::~Terminal()
 {
-    // Kill child.
-    kill(m_Pid, SIGTERM);
+    if (m_Pid)
+    {
+        // Kill child.
+        kill(m_Pid, SIGTERM);
 
-    // Reap child.
-    waitpid(m_Pid, 0, 0);
+        // Reap child.
+        waitpid(m_Pid, 0, 0);
+    }
 
     delete m_pXterm;
+}
+
+bool Terminal::isAlive()
+{
+    if (m_Pid)
+    {
+        // Is our child still alive?
+        pid_t result = waitpid(m_Pid, 0, WNOHANG);
+        if (result == m_Pid)
+        {
+            m_Pid = 0;
+            return false;
+        }
+    }
+    return true;
 }
 
 void Terminal::renewBuffer(size_t nWidth, size_t nHeight)

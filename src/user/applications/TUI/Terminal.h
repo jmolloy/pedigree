@@ -43,6 +43,9 @@ public:
 
     bool initialise();
 
+    /** Verifies whether the terminal and its child are alive. */
+    bool isAlive();
+
     /** Kills and recreates the terminal's buffer, with a change in size. */
     void renewBuffer(size_t nWidth, size_t nHeight);
 

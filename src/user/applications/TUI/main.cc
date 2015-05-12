@@ -329,15 +329,22 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
         TerminalList *pTL = g_pTermList;
         while (pTL)
         {
+            if (!pTL->term->isAlive())
+            {
+                g_bRunning = false;
+                break;
+            }
+
             int fd = pTL->term->getSelectFd();
             FD_SET(fd, &fds);
             n = std::max(fd, n);
             pTL = pTL->next;
         }
 
-        fprintf(stderr, "sleeping for %d fds\n", n);
+        if (!g_bRunning)
+            continue;
+
         int nReady = select(n + 1, &fds, NULL, NULL, 0);
-        fprintf(stderr, "%d fds ready\n", nReady);
 
         if(nReady <= 0)
             continue;
@@ -346,9 +353,7 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
         if(FD_ISSET(g_pEmu->getSocket(), &fds))
         {
             // Dispatch callbacks.
-            fprintf(stderr, "dispatching callbacks...\n");
             Widget::checkForEvents(true);
-            fprintf(stderr, "dispatching callbacks complete...\n");
 
             // Don't do redraw processing if this was the only descriptor
             // that was found readable.
@@ -365,14 +370,16 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
             int fd = pTL->term->getSelectFd();
             if(FD_ISSET(fd, &fds))
             {
-                fprintf(stderr, "reading from terminal\n");
                 // Something to read.
-                size_t len = read(fd, buffer, maxBuffSz);
-                fprintf(stderr, "rx %d bytes from terminal\n", len);
-                buffer[len] = 0;
-                pTL->term->write(buffer, dirtyRect);
-                bShouldRedraw = true;
+                ssize_t len = read(fd, buffer, maxBuffSz);
+                if (len > 0)
+                {
+                    buffer[len] = 0;
+                    pTL->term->write(buffer, dirtyRect);
+                    bShouldRedraw = true;
+                }
             }
+
             pTL = pTL->next;
         }
 
