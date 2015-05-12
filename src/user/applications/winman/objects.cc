@@ -102,18 +102,24 @@ void Window::refreshContext()
     {
         // Not refreshing context currently.
         m_bPendingDecoration = true;
+        syslog(LOG_DEBUG, "not refreshing context, marking for redecoration");
         return;
     }
 
     if((me.getW() < WINDOW_CLIENT_LOST_W) || (me.getH() < WINDOW_CLIENT_LOST_H))
     {
         // We have some basic requirements for window sizes.
+        syslog(LOG_DEBUG, "extents %dx%d are too small for a new context",
+               me.getW(), me.getH());
         return;
     }
 
     /// \todo get a cairo context from somewhere, wipe out the old dimensions...
 
+    syslog(LOG_DEBUG, "destroying old framebuffer...");
     delete m_Framebuffer;
+    m_Framebuffer = 0;
+    syslog(LOG_DEBUG, "destroying old framebuffer complete");
 
     // Size of the IPC region we need to allocate.
     size_t regionWidth = me.getW() - WINDOW_CLIENT_LOST_W;
@@ -122,6 +128,9 @@ void Window::refreshContext()
     size_t regionSize = regionHeight * stride;
     m_Framebuffer = new SharedBuffer(regionSize);
     memset(m_Framebuffer->getBuffer(), 0, regionSize);
+
+    syslog(LOG_DEBUG, "new framebuffer created: %d bytes @%p", regionSize,
+           m_Framebuffer->getBuffer());
 
     m_nRegionWidth = regionWidth;
     m_nRegionHeight = regionHeight;
@@ -147,6 +156,8 @@ void Window::refreshContext()
         pReposition->shmem_size = regionSize;
 
         // Transmit to the client.
+        syslog(LOG_INFO, "sending new framebuffer to client (handle %p)",
+               m_Handle);
         sendMessage(buffer, totalSize);
 
         delete [] buffer;

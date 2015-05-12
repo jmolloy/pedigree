@@ -577,6 +577,7 @@ void queueInputCallback(Input::InputNotification &note)
             {
                 if(c == 'R')
                 {
+                    syslog(LOG_INFO, "winman: retiling");
                     g_pRootContainer->retile();
                     bHandled = true;
                 }

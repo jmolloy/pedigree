@@ -97,7 +97,7 @@ SharedBuffer::SharedBuffer(size_t size) : m_ShmName(), m_ShmFd(-1),
     sprintf(m_ShmName, "wm%d", bufferId);
 
     m_ShmFd = shm_open(m_ShmName, O_RDWR | O_CREAT, 0777);
-    fprintf(stderr, "shm fd=%d [%s]\n", m_ShmFd, strerror(errno));
+    syslog(LOG_INFO, "opening shm %s [fd=%d]", m_ShmName, m_ShmFd);
     ftruncate(m_ShmFd, size);
 
     m_pBuffer = mmap(
@@ -116,6 +116,7 @@ SharedBuffer::SharedBuffer(size_t size, void *handle) : m_ShmName(),
     memcpy(m_ShmName, &handle, 8);
 
     m_ShmFd = shm_open(m_ShmName, O_RDWR, 0777);
+    syslog(LOG_INFO, "opening client shm %s [fd=%d]", m_ShmName, m_ShmFd);
 
     m_pBuffer = mmap(
         0,
@@ -128,6 +129,7 @@ SharedBuffer::SharedBuffer(size_t size, void *handle) : m_ShmName(),
 
 SharedBuffer::~SharedBuffer()
 {
+    syslog(LOG_INFO, "unmapping %d bytes @%p", m_Size, m_pBuffer);
     munmap(m_pBuffer, m_Size);
     close(m_ShmFd);
     shm_unlink(m_ShmName);

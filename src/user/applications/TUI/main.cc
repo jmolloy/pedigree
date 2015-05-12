@@ -411,12 +411,19 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
     {
         case Reposition:
             {
+                syslog(LOG_INFO, "-- REPOSITION --");
                 PedigreeGraphics::Rect *rt = reinterpret_cast<PedigreeGraphics::Rect*>(msgData);
+                syslog(LOG_INFO, " -> handling...");
                 g_pEmu->handleReposition(*rt);
                 g_nWidth = g_pEmu->getWidth();
                 g_nHeight = g_pEmu->getHeight();
+                syslog(LOG_INFO, " -> new extents are %dx%d", g_nWidth,
+                       g_nHeight);
+                syslog(LOG_INFO, " -> creating new framebuffer");
                 checkFramebuffer();
+                syslog(LOG_INFO, " -> registering the mode change");
                 modeChanged(rt->getW(), rt->getH());
+                syslog(LOG_INFO, " -> reposition complete!");
             }
             break;
         case KeyUp:
@@ -464,6 +471,8 @@ int main(int argc, char *argv[])
 #ifdef TARGET_LINUX
     openlog("tui", LOG_PID, LOG_USER);
 #endif
+
+    syslog(LOG_INFO, "I am %d", getpid());
 
     char endpoint[256];
     sprintf(endpoint, "tui.%d", getpid());

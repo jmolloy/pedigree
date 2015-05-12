@@ -100,17 +100,17 @@ bool Widget::construct(const char *endpoint, const char *title, widgetCallback_t
         return false;
 
     // Connect to window manager.
-    fprintf(stderr, "binding to %s\n", meaddr.sun_path);
+    syslog(LOG_DEBUG, "widget binding to %s", meaddr.sun_path);
     if(bind(m_Socket, (struct sockaddr *) &meaddr, sizeof(meaddr)) != 0)
     {
-        fprintf(stderr, "socket bind failed [%s]\n", strerror(errno));
+        syslog(LOG_ALERT, "widget bind failed: %s", strerror(errno));
         close(m_Socket);
         m_Socket = -1;
         return false;
     }
     if(connect(m_Socket, (struct sockaddr *) &saddr, sizeof(saddr)) != 0)
     {
-        fprintf(stderr, "no connection to socket [%s]\n", strerror(errno));
+        syslog(LOG_ALERT, "widget connection failed: %s", strerror(errno));
         close(m_Socket);
         m_Socket = -1;
         return false;
@@ -147,6 +147,8 @@ bool Widget::construct(const char *endpoint, const char *title, widgetCallback_t
     // framebuffer.
     send(m_Socket, messageData, totalSize, 0);
     delete [] messageData;
+
+    syslog(LOG_INFO, "new widget handle is %p\n", m_Handle);
 
     // Blocking receive.
     char *responseData = new char[4096];
@@ -477,7 +479,7 @@ void Widget::checkForEvents(bool bAsync)
 
             if (m_CallbackMap.find(pHeader->widgetHandle) == m_CallbackMap.end())
             {
-                syslog(LOG_ALERT, "no callback known for handle %p", getpid(), pHeader->widgetHandle);
+                syslog(LOG_ALERT, "no callback known for handle %p", pHeader->widgetHandle);
                 return;
             }
             widgetCallback_t cb = m_CallbackMap[pHeader->widgetHandle];
