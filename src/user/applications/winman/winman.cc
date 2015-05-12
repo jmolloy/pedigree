@@ -428,7 +428,15 @@ void checkForMessages()
                         event.key.keysym.sym != SDLK_RSHIFT &&
                         event.key.keysym.sym != SDLK_LCTRL &&
                         event.key.keysym.sym != SDLK_RCTRL)
+                    {
+                        if (note.data.key.key & SHIFT_KEY)
+                        {
+                            char c = note.data.key.key & 0xFF;
+                            note.data.key.key &= ~0xFFFFFFFFUl;
+                            note.data.key.key |= toupper(c);
+                        }
                         queueInputCallback(note);
+                    }
                 }
                 break;
 
