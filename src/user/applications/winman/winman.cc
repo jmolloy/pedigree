@@ -461,7 +461,14 @@ void checkForMessages()
                         {
                             char c = note.data.key.key & 0xFF;
                             note.data.key.key &= ~0xFFFFFFFFUl;
-                            note.data.key.key |= toupper(c);
+                            if (isalpha(c))
+                            {
+                                note.data.key.key |= toupper(c);
+                            }
+                            else if (isdigit(c))
+                            {
+                                note.data.key.key = c - 0x10;
+                            }
                         }
                         queueInputCallback(note);
                     }
