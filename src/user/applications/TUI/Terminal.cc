@@ -33,6 +33,8 @@
 
 #include <graphics/Graphics.h>
 
+#include <cairo/cairo.h>
+
 extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
 
 extern rgb_t g_MainBackgroundColour;

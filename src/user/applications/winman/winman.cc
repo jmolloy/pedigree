@@ -897,11 +897,12 @@ void systemInputCallback(Input::InputNotification &note)
 
 }
 
-void sigchld(int s, siginfo_t *info, void *opaque)
+void sigchld(int s)
 {
     /// \todo Handle SIGCHLD by figuring out what died and how, and then
     /// removing any windows owned by the dead process. This is a one-sided
     /// operation as the process owning the window is gone.
+    /// We can use waitpid() to pick up dead children and use that.
     syslog(LOG_INFO, "SIGCHLD");
 }
 
@@ -1135,7 +1136,7 @@ int main(int argc, char *argv[])
     // Prepare for SIGCHLD messages from children.
     struct sigaction act;
     memset(&act, 0, sizeof(act));
-    act.sa_sigaction = sigchld;
+    act.sa_handler = sigchld;
     sigemptyset(&act.sa_mask);
     act.sa_flags = SA_NOCLDSTOP | SA_SIGINFO;
     sigaction(SIGCHLD, &act, NULL);
