@@ -19,7 +19,6 @@
 
 #include "environment.h"
 #include "Terminal.h"
-#include "Header.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -36,13 +35,12 @@
 
 extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
 
-extern Header *g_pHeader;
 extern rgb_t g_MainBackgroundColour;
 
 extern cairo_t *g_Cairo;
 
-Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground) :
-    m_pBuffer(0), m_pFramebuffer(0), m_pXterm(0), m_Len(0), m_WriteBufferLen(0), m_TabId(0), m_bHasPendingRequest(false),
+Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground) :
+    m_pBuffer(0), m_pFramebuffer(0), m_pXterm(0), m_Len(0), m_WriteBufferLen(0), m_bHasPendingRequest(false),
     m_PendingRequestSz(0), m_Pid(0), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop), m_Cancel(0), m_WriteInProgress(0)
 {
     cairo_save(g_Cairo);
@@ -59,10 +57,6 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, Header *pHeader, 
     cairo_fill(g_Cairo);
 
     cairo_restore(g_Cairo);
-
-    size_t tabId = pHeader->addTab(pName, TAB_SELECTABLE);
-
-    setTabId(tabId);
 
     strcpy(m_pName, pName);
 
@@ -101,6 +95,7 @@ bool Terminal::initialise()
     strcpy(slavename, ptsname(m_MasterPty));
 
     struct winsize ptySize;
+    memset(&ptySize, 0, sizeof(ptySize));
     ptySize.ws_row = m_pXterm->getRows();
     ptySize.ws_col = m_pXterm->getCols();
     ioctl(m_MasterPty, TIOCSWINSZ, &ptySize);

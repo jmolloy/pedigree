@@ -78,7 +78,6 @@ struct TerminalList
 size_t sz;
 TerminalList * volatile g_pTermList = 0;
 TerminalList * volatile g_pCurrentTerm = 0;
-Header *g_pHeader = 0;
 size_t g_nWidth, g_nHeight;
 size_t nextConsoleNum = 1;
 size_t g_nLastResponse = 0;
@@ -138,11 +137,6 @@ void modeChanged(size_t width, size_t height)
     cairo_rectangle(g_Cairo, 0, 0, g_nWidth, g_nHeight);
     cairo_fill(g_Cairo);
 
-    if(g_pHeader)
-    {
-        g_pHeader->setWidth(width);
-    }
-
     TerminalList *pTL = g_pTermList;
     while (pTL)
     {
@@ -183,7 +177,7 @@ Terminal *addTerminal(const char *name, DirtyRectangle &rect)
 {
     size_t h = 0;
 
-    Terminal *pTerm = new Terminal(const_cast<char*>(name), g_nWidth - 3, g_nHeight-h, g_pHeader, 3, h, 0);
+    Terminal *pTerm = new Terminal(const_cast<char*>(name), g_nWidth - 3, g_nHeight-h, 3, h, 0);
     if(!pTerm->initialise())
     {
         delete pTerm;
@@ -283,9 +277,6 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
         syslog(LOG_EMERG, "Error: Font '%s' not loaded!", BOLD_FONT_PATH);
         return 0;
     }
-
-    g_pHeader =  new Header(g_nWidth);
-    g_pHeader->addTab(const_cast<char*>("The Pedigree Operating System"), 0);
 
     DirtyRectangle rect;
     char newTermName[256];
@@ -389,9 +380,6 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
 
     // Clean up.
     delete pCurrentTerminal;
-
-    delete g_pHeader;
-    g_pHeader = 0;
 
     delete g_BoldFont;
     delete g_NormalFont;

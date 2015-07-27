@@ -122,6 +122,7 @@ Xterm::Xterm(PedigreeGraphics::Framebuffer *pFramebuffer, size_t nWidth, size_t 
 
 Xterm::~Xterm()
 {
+    delete [] m_TabStops;
     delete m_pWindows[0];
     delete m_pWindows[1];
 }

@@ -70,6 +70,14 @@ Widget::Widget() :
 Widget::~Widget()
 {
     destroy();
+
+    // Wipe out any pending messages that might be left behind.
+    while (!g_PendingMessages.empty())
+    {
+        char *p = g_PendingMessages.front();
+        delete [] p;
+        g_PendingMessages.pop();
+    }
 }
 
 bool Widget::construct(const char *endpoint, const char *title, widgetCallback_t cb, PedigreeGraphics::Rect &dimensions)

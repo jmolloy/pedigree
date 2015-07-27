@@ -101,6 +101,15 @@ Font::Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWid
 Font::~Font()
 {
     iconv_close(m_Iconv);
+    FT_Done_Face(m_Face);
+
+    // Destroy our precached glyphs.
+    for (std::map<uint32_t,char *>::iterator it = m_ConversionCache.begin();
+         it != m_ConversionCache.end();
+         ++it)
+    {
+        delete [] it->second;
+    }
 }
 
 size_t Font::render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, size_t y, uint32_t f, uint32_t b)

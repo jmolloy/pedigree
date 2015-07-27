@@ -38,7 +38,7 @@ class Terminal
 public:
     friend class Xterm;
     Terminal(char *pName, size_t nWidth, size_t nHeight,
-             class Header *pHeader, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground);
+             size_t offsetLeft, size_t offsetTop, rgb_t *pBackground);
     ~Terminal();
 
     bool initialise();
@@ -83,12 +83,6 @@ public:
     {
         return m_PendingRequestSz;
     }
-
-    size_t getTabId()
-    {return m_TabId;}
-
-    void setTabId(size_t tabId)
-    {m_TabId = tabId;}
 
     void setActive(bool b, DirtyRectangle &rect);
 
@@ -153,7 +147,6 @@ private:
 
     void addToQueue(char c, bool bFlush = false);
 
-
     rgb_t *m_pBuffer;
     
     PedigreeGraphics::Framebuffer *m_pFramebuffer;
@@ -170,8 +163,6 @@ private:
 
     char m_pWriteBuffer[4];
     size_t m_WriteBufferLen;
-
-    size_t m_TabId;
 
     bool m_bHasPendingRequest;
     size_t m_PendingRequestSz;
