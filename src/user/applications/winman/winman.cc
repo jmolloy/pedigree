@@ -897,6 +897,14 @@ void systemInputCallback(Input::InputNotification &note)
 
 }
 
+void sigchld(int s, siginfo_t *info, void *opaque)
+{
+    /// \todo Handle SIGCHLD by figuring out what died and how, and then
+    /// removing any windows owned by the dead process. This is a one-sided
+    /// operation as the process owning the window is gone.
+    syslog(LOG_INFO, "SIGCHLD");
+}
+
 void infoPanel(cairo_t *cr)
 {
     // Create a nice little bar at the bottom of the screen.
@@ -1123,6 +1131,14 @@ int main(int argc, char *argv[])
     // Kick off the first render before any windows are open.
     cairo_surface_flush(surface);
     pFramebuffer->flush(0, 0, g_nWidth, g_nHeight);
+
+    // Prepare for SIGCHLD messages from children.
+    struct sigaction act;
+    memset(&act, 0, sizeof(act));
+    act.sa_sigaction = sigchld;
+    sigemptyset(&act.sa_mask);
+    act.sa_flags = SA_NOCLDSTOP | SA_SIGINFO;
+    sigaction(SIGCHLD, &act, NULL);
 
     // Load first tile.
     startClient();
