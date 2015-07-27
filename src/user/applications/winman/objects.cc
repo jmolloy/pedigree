@@ -91,7 +91,9 @@ Window::~Window()
 {
     /// \todo Need a way to destroy the old framebuffer without breaking
     ///       the other side's reference to the same region... Refcount?
-    // delete m_Framebuffer;
+#ifdef TARGET_LINUX
+    delete m_Framebuffer;
+#endif
     delete m_Sa;
 }
 
@@ -141,6 +143,7 @@ void Window::refreshContext()
                 sizeof(LibUiProtocol::WindowManagerMessage) +
                 sizeof(LibUiProtocol::RepositionMessage);
         char *buffer = new char[totalSize];
+        memset(buffer, 0, totalSize);
 
         LibUiProtocol::WindowManagerMessage *pHeader =
             reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
@@ -297,6 +300,7 @@ void Window::render(cairo_t *cr)
         // continue, as it doesn't make sense for the client to keep hitting
         // us with redraw messages when we aren't ready.
         LibUiProtocol::WindowManagerMessage ackmsg;
+        memset(&ackmsg, 0, sizeof(ackmsg));
         ackmsg.messageCode = LibUiProtocol::RequestRedraw;
         ackmsg.widgetHandle = m_Handle;
         ackmsg.messageSize = 0;
@@ -345,6 +349,7 @@ void Window::focus()
 
     LibUiProtocol::WindowManagerMessage *pHeader =
         new LibUiProtocol::WindowManagerMessage;
+    memset(pHeader, 0, sizeof(*pHeader));
     pHeader->messageCode = LibUiProtocol::Focus;
     pHeader->widgetHandle = m_Handle;
     pHeader->messageSize = 0;
@@ -359,18 +364,16 @@ void Window::nofocus()
     m_bFocus = false;
     m_bPendingDecoration = true;
 
-    size_t totalSize = sizeof(LibUiProtocol::WindowManagerMessage);
-    char *buffer = new char[totalSize];
-
     LibUiProtocol::WindowManagerMessage *pHeader =
         new LibUiProtocol::WindowManagerMessage;
+    memset(pHeader, 0, sizeof(*pHeader));
     pHeader->messageCode = LibUiProtocol::NoFocus;
     pHeader->widgetHandle = m_Handle;
     pHeader->messageSize = 0;
     pHeader->isResponse = false;
 
-    sendMessage(buffer, totalSize);
-    delete [] buffer;
+    sendMessage((const char *) pHeader, sizeof(*pHeader));
+    delete pHeader;
 }
 
 void Window::resize(ssize_t horizDistance, ssize_t vertDistance, WObject *pChild)

@@ -299,7 +299,8 @@ class Container : public WObject
         };
 
         Container(WObject *pParent) :
-            m_Children(), m_pParent(pParent), m_Layout(SideBySide), m_pFocusWindow(0)
+            m_Children(), m_pParent(pParent), m_Layout(SideBySide),
+            m_pFocusWindow(NULL)
         {
         }
 
@@ -341,7 +342,7 @@ class Container : public WObject
             // insertion breaks retile() somehow.
             //insertChild(m_pFocusWindow, pChild);
             m_Children.push_back(pChild);
-            if((pChild->getType() == WObject::Window) && (m_pFocusWindow == 0))
+            if((pChild->getType() == WObject::Window) && (m_pFocusWindow == NULL))
             {
                 m_pFocusWindow = static_cast< ::Window*>(pChild);
             }
@@ -527,9 +528,8 @@ class Container : public WObject
     protected:
         std::vector<WObject*> m_Children;
 
-        Container()
+        Container() : Container(0)
         {
-            Container(0);
         }
 
     private:

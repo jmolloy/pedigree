@@ -40,7 +40,7 @@ Framebuffer::Framebuffer() : m_pFramebuffer(0), m_FramebufferSize(0),
 
 Framebuffer::~Framebuffer()
 {
-    // ...
+    SDL_FreeSurface(m_pBackbuffer);
 }
 
 bool Framebuffer::initialise()

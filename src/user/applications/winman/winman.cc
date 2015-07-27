@@ -36,6 +36,8 @@
 #include <sys/wait.h>
 #include <sys/time.h>
 
+#include <cassert>
+
 #include <map>
 #include <list>
 #include <set>
@@ -88,6 +90,8 @@ ssize_t g_CursorX = 0, g_LastCursorX = 0;
 ssize_t g_CursorY = 0, g_LastCursorY = 0;
 bool g_bCursorUpdate = false;
 
+bool g_bAlive = true;
+
 #define ALT_KEY (1ULL << 60)
 #define SHIFT_KEY (1ULL << 61)
 #define CTRL_KEY (1ULL << 62)
@@ -106,6 +110,15 @@ bool g_bCursorUpdate = false;
 #define DEJAVU_FONT "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
 #else
 #define DEJAVU_FONT "/system/fonts/DejaVuSansMono.ttf"
+#endif
+
+#ifdef TARGET_LINUX
+// Under Linux, where we want to run GDB on the window manager, we need to
+// make sure the wrapper which, in Pedigree, resets our graphics mode, is not
+// run. This helps track and debug the correct process.
+#undef WINMAN_FORK_WRAPPER
+#else
+#define WINMAN_FORK_WRAPPER 1
 #endif
 
 void startClient()
@@ -164,6 +177,7 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
         LibUiProtocol::CreateMessage *pCreate =
         reinterpret_cast<LibUiProtocol::CreateMessage*>(messageData + sizeof(LibUiProtocol::WindowManagerMessage));
         char *responseData = new char[totalSize];
+        memset(responseData, 0, totalSize);
 
         Container *pParent = g_pRootContainer;
         if(g_pFocusWindow)
@@ -179,9 +193,11 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
         struct sockaddr_un *sun = new struct sockaddr_un;
         *sun = *((struct sockaddr_un *) src);
 
-        Window *pWindow = new Window(pWinMan->widgetHandle, g_iSocket, (struct sockaddr *) sun, slen, pParent);
         std::string newTitle(pCreate->title);
+        Window *pWindow = new Window(pWinMan->widgetHandle, g_iSocket,
+                (struct sockaddr *) sun, slen, pParent);
         pWindow->setTitle(newTitle);
+
         g_PendingWindows.insert(pWindow);
 
         if(g_pFocusWindow)
@@ -214,6 +230,7 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
         {
             Window *pWindow = it->second;
             char *responseData = new char[totalSize];
+            memset(responseData, 0, totalSize);
 
             LibUiProtocol::WindowManagerMessage *pHeader =
                 reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(responseData);
@@ -321,12 +338,15 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
             if(g_pFocusWindow == pWindow)
             {
                 g_pFocusWindow = newFocus;
-                newFocus->focus();
-
-                g_PendingWindows.insert(newFocus);
+                if (newFocus)
+                {
+                    newFocus->focus();
+                    g_PendingWindows.insert(newFocus);
+                }
             }
 
             char *responseData = new char[totalSize];
+            memset(responseData, 0, totalSize);
             LibUiProtocol::WindowManagerMessage *pHeader =
                 reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(responseData);
             pHeader->messageCode = LibUiProtocol::Destroy;
@@ -341,6 +361,14 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
             // Clean up!
             delete pWindow;
             g_Windows->erase(it);
+
+            // If we couldn't find a new focus window, we're devoid of windows.
+            if (!newFocus)
+            {
+                syslog(LOG_INFO, "winman: no new focus window, terminating");
+                assert(g_Windows->size() == 0);
+                g_bAlive = false;
+            }
         }
     }
     else if(pWinMan->messageCode == LibUiProtocol::Nothing)
@@ -598,6 +626,7 @@ void queueInputCallback(Input::InputNotification &note)
                     {
                         size_t totalSize = sizeof(LibUiProtocol::WindowManagerMessage);
                         char *buffer = new char[totalSize];
+                        memset(buffer, 0, totalSize);
 
                         LibUiProtocol::WindowManagerMessage *pHeader =
                             reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
@@ -814,6 +843,7 @@ void queueInputCallback(Input::InputNotification &note)
             totalSize += sizeof(LibUiProtocol::RawKeyEventMessage);
 
         char *buffer = new char[totalSize];
+        memset(buffer, 0, totalSize);
 
         LibUiProtocol::WindowManagerMessage *pHeader =
             reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
@@ -925,6 +955,7 @@ int main(int argc, char *argv[])
 
     // Kick off a 'window manager' process group, fork to run the modeset shim.
     setpgid(0, 0);
+#ifdef WINMAN_FORK_WRAPPER
     pid_t child = fork();
     if(child == -1)
     {
@@ -959,6 +990,7 @@ int main(int argc, char *argv[])
         kill(0, SIGTERM);
         return 0;
     }
+#endif
 
     // Create control pipe.
     int result = pipe(g_iControlPipe);
@@ -1090,7 +1122,8 @@ int main(int argc, char *argv[])
 
     // Main loop: logic & message handling goes here!
     DirtyRectangle renderDirty;
-    while(true)
+    g_bAlive = true;
+    while(g_bAlive)
     {
         // Check for any messages coming in from windows, asynchronously.
         checkForMessages();
@@ -1229,6 +1262,28 @@ int main(int argc, char *argv[])
     }
 
     /// \todo Clean up?
+    syslog(LOG_INFO, "winman terminating");
+
+    // Clean up wallpaper, if one exists.
+    if(wallpaper)
+    {
+        delete wallpaper;
+    }
+
+    // Clean up Freetype
+    FT_Done_Face(ft_face);
+    FT_Done_FreeType(font_library);
+
+    // Clean up our Cairo objects.
+    cairo_font_face_destroy(font_face);
+    cairo_surface_destroy(surface);
+
+    // Clean up the framebuffer finally.
+    delete pFramebuffer;
+
+#ifdef TARGET_LINUX
+    SDL_Quit();
+#endif
 
     return 0;
 }

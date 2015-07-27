@@ -128,6 +128,7 @@ bool Widget::construct(const char *endpoint, const char *title, widgetCallback_t
     // Prepare a message to send.
     size_t totalSize = sizeof(WindowManagerMessage) + sizeof(CreateMessage);
     char *messageData = new char[totalSize];
+    memset(messageData, 0, totalSize);
     WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
     CreateMessage *pCreate = reinterpret_cast<CreateMessage*>(messageData + sizeof(WindowManagerMessage));
 
@@ -249,6 +250,7 @@ bool Widget::setTitle(const std::string &newTitle)
     // Allocate the message.
     ssize_t totalSize = sizeof(WindowManagerMessage) + sizeof(SetTitleMessage);
     char *messageData = new char[totalSize];
+    memset(messageData, 0, totalSize);
     WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
     SetTitleMessage *pMessage = reinterpret_cast<SetTitleMessage*>(messageData + sizeof(WindowManagerMessage));
 
@@ -286,6 +288,7 @@ bool Widget::redraw(PedigreeGraphics::Rect &rt)
 
     ssize_t totalSize = sizeof(WindowManagerMessage) + sizeof(RequestRedrawMessage);
     char *messageData = new char[totalSize];
+    memset(messageData, 0, totalSize);
     WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
     RequestRedrawMessage *pMessage = reinterpret_cast<RequestRedrawMessage*>(messageData + sizeof(WindowManagerMessage));
 
@@ -351,6 +354,7 @@ bool Widget::visibility(bool vis)
     // Allocate the message.
     ssize_t totalSize = sizeof(WindowManagerMessage) + sizeof(SetVisibilityMessage);
     char *messageData = new char[totalSize];
+    memset(messageData, 0, totalSize);
     WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
     SetVisibilityMessage *pMessage = reinterpret_cast<SetVisibilityMessage*>(messageData + sizeof(WindowManagerMessage));
 
@@ -379,6 +383,7 @@ void Widget::destroy()
     // Allocate the message.
     ssize_t totalSize = sizeof(WindowManagerMessage) + sizeof(DestroyMessage);
     char *messageData = new char[totalSize];
+    memset(messageData, 0, totalSize);
     WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
     DestroyMessage *pMessage = reinterpret_cast<DestroyMessage*>(messageData + sizeof(WindowManagerMessage));
 
