@@ -1277,12 +1277,13 @@ int main(int argc, char *argv[])
         delete wallpaper;
     }
 
-    // Clean up Freetype
+    delete g_pRootContainer;
+
+    cairo_font_face_destroy(font_face);
+
     FT_Done_Face(ft_face);
     FT_Done_FreeType(font_library);
 
-    // Clean up our Cairo objects.
-    cairo_font_face_destroy(font_face);
     cairo_surface_destroy(surface);
 
     // Clean up the framebuffer finally.
