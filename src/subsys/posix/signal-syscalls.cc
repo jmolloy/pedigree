@@ -352,7 +352,10 @@ int posix_kill(int pid, int sig)
         if (pProcess->getThread(0)->getStatus() == Thread::Zombie)
         {
             // Oops, process already been terminated.
-            continue;
+            if (static_cast<int>(pProcess->getId()) == pid)
+                break;
+            else
+                continue;
         }
         else if ((pid <= 0) && (pProcess->getType() == Process::Posix))
         {
