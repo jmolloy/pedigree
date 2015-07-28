@@ -198,7 +198,7 @@ echo "Beginning the Pedigree build."
 echo
 
 # Build Pedigree.
-scons LINUX=1 CROSS=$script_dir/compilers/dir/bin/x86_64-pedigree- $TRAVIS_OPTIONS
+scons linux=1 CROSS=$script_dir/compilers/dir/bin/x86_64-pedigree- $TRAVIS_OPTIONS
 
 # One day we might fix this bug (create proper disk image with built apps).
 scons $TRAVIS_OPTIONS
