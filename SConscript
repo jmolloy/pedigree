@@ -17,6 +17,26 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
+# vim: set filetype=python:
+'''
+Copyright (c) 2008-2014, Pedigree Developers
+
+Please see the CONTRIB file in the root of the source tree for a full
+list of contributors.
+
+Permission to use, copy, modify, and distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+'''
+
 ####################################
 # SCons build system for Pedigree
 ## Tyler Kennedy (AKA Linuxhq AKA TkTech)
@@ -27,6 +47,7 @@ import shutil
 import subprocess
 import tempfile
 import commands
+import struct
 Import(['env'])
 
 # Subsystems always get built first
@@ -248,10 +269,15 @@ def buildImageE2fsprogs(target, source, env):
 
     # Create target directories.
     makedirs(os.path.join(imagedir, 'boot'))
+    makedirs(os.path.join(imagedir, 'boot', 'grub'))
     makedirs(os.path.join(imagedir, 'applications'))
     makedirs(os.path.join(imagedir, 'libraries'))
     makedirs(os.path.join(imagedir, 'system/modules'))
     makedirs(os.path.join(imagedir, 'config'))
+
+    # Add GRUB config.
+    shutil.copyfile(os.path.join(imagedir, '..', 'grub', 'menu-hdd.lst'),
+                    os.path.join(imagedir, 'boot', 'grub', 'menu.lst'))
 
     # Copy the kernel, initrd, and configuration database
     for i in source[0:3]:
@@ -312,10 +338,10 @@ def buildImageE2fsprogs(target, source, env):
     shutil.copyfile(os.path.join(imagedir, '..', 'base', '.profile'),
                     os.path.join(imagedir, '.profile'))
 
-    # Create image.
+    # Create image - 1GiB.
+    sz = 1 << 30
     with open(outFile, 'w') as f:
-        # 1GiB
-        f.truncate(1 << 30)
+        f.truncate(sz)
 
     # Generate ext2 filesystem.
     args = [
@@ -323,6 +349,7 @@ def buildImageE2fsprogs(target, source, env):
         '-q',
         '-E', 'root_owner=0:0',  # Don't use UID/GID from host system.
         '-O', '^dir_index',  # Don't (yet) use directory b-trees.
+        '-I', '128',  # Use 128-byte inodes, as grub-legacy can't use bigger.
         '-F',
         '-L',
         'pedigree',
@@ -374,6 +401,61 @@ def buildImageE2fsprogs(target, source, env):
 
         with tempfile.NamedTemporaryFile() as t:
             subprocess.check_call(args, stdout=t)
+
+    # Now, we want to add a partition table to the front of the image.
+    temp = '%s.part' % (outFile,)
+    partition_offset = 0x10000
+    with open(temp, 'w') as f:
+        # TODO(miselin): this whole process is kind of ugly.
+        f.truncate(sz + partition_offset)
+
+        hpc = 16  # Heads per cylinder
+        spt = 63  # Sectors per track
+
+        # LBA sector count.
+        lba = sz // 512
+        end_cyl = lba // (spt * hpc)
+        end_head = (lba // spt) % hpc
+        end_sector = (lba % spt) + 1
+
+        # Sector start LBA.
+        start_lba = partition_offset // 512
+        start_cyl = start_lba // (spt * hpc)
+        start_head = (start_lba // spt) % hpc
+        start_sector = (start_lba % spt) + 1
+
+        # Partition entry.
+        entry = '\x80'  # Partition is active/bootable.
+        entry += struct.pack('BBB',
+                             start_head & 0xFF,
+                             start_sector & 0xFF,
+                             start_cyl & 0xFF)
+        entry += '\x83'  # ext2 partition - ie, a Linux native filesystem.
+        entry += struct.pack('BBB',
+                             end_head & 0xFF,
+                             end_sector & 0xFF,
+                             end_cyl & 0xFF)
+        entry += struct.pack('=L', start_lba)
+        entry += struct.pack('=L', lba)
+
+        # Build partition table.
+        partition = '\x00' * 446
+        partition += entry
+        partition += '\x00' * 48
+        partition += '\x55\xAA'
+        f.write(partition)
+
+    # Load the ext2 partition now that the partition table is written.
+    subprocess.check_call([
+        'dd',
+        'if=%s' % (outFile,),
+        'of=%s' % (temp),
+        'seek=%d' % (start_lba,),
+        'obs=512',  # LBA = sector, sector = 512 bytes.
+    ])
+
+    # Finish.
+    os.rename(temp, outFile)
 
     postImageBuild(outFile, env)
 
@@ -699,6 +781,7 @@ def buildCdImage(target, source, env):
         'boot/initrd.tar=%s' % (source[1].abspath,),
         '/livedisk.img=%s' % (source[3].abspath,),
         '.pedigree-root=%s' % (source[0].abspath,),
+        'config.db=%s' % (source[0].abspath,),
     ]
     result = subprocess.call(args)
 
