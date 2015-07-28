@@ -26,12 +26,9 @@
 
 RawFs *g_pRawFs;
 
-RawFs::RawFs() :
-    m_pRoot(0)
+RawFs::RawFs() : m_pRoot(0)
 {
-    m_pRoot = new RawFsDir(String(""),
-                           this,
-                           0);
+    m_pRoot = new RawFsDir(String(""), this, 0);
 }
 
 RawFs::~RawFs()

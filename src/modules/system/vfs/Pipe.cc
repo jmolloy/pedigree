@@ -29,6 +29,7 @@ class ZombiePipe : public ZombieObject
         }
         virtual ~ZombiePipe()
         {
+            NOTICE("ZombiePipe: freeing " << reinterpret_cast<uintptr_t>(m_pPipe));
             delete m_pPipe;
         }
     private:
@@ -39,6 +40,7 @@ Pipe::Pipe() :
     File(), m_bIsAnonymous(true), m_bIsEOF(false), m_BufLen(0),
     m_BufAvailable(PIPE_BUF_MAX), m_Front(0), m_Back(0)
 {
+    NOTICE("Pipe: new anonymous pipe " << reinterpret_cast<uintptr_t>(this));
 }
 
 Pipe::Pipe(String name, Time accessedTime, Time modifiedTime, Time creationTime,
@@ -48,6 +50,7 @@ Pipe::Pipe(String name, Time accessedTime, Time modifiedTime, Time creationTime,
     m_bIsAnonymous(bIsAnonymous), m_bIsEOF(false), m_BufLen(0),
     m_BufAvailable(PIPE_BUF_MAX), m_Front(0), m_Back(0)
 {
+    NOTICE("Pipe: new " << (bIsAnonymous ? "anonymous" : "named") << " pipe " << reinterpret_cast<uintptr_t>(this));
 }
 
 Pipe::~Pipe()
@@ -200,7 +203,9 @@ void Pipe::decreaseRefCount(bool bIsWriter)
     // is added to the ZombieQueue twice, which causes a double free.
     bool bDataChanged = false;
     {
+        NOTICE("Pipe::decreaseRefCount");
         LockGuard<Mutex> guard(m_Lock);
+        NOTICE("Pipe::decreaseRefCount -- LOCKED");
 
         if (m_nReaders == 0 && m_nWriters == 0)
         {
@@ -233,6 +238,7 @@ void Pipe::decreaseRefCount(bool bIsWriter)
             if (m_bIsAnonymous)
             {
                 size_t pid = Processor::information().getCurrentThread()->getParent()->getId();
+                NOTICE("Adding pipe [" << pid << "] " << reinterpret_cast<uintptr_t>(this) << " to ZombieQueue");
                 ZombieQueue::instance().addObject(new ZombiePipe(this));
                 bDataChanged = false;
             }
@@ -241,6 +247,8 @@ void Pipe::decreaseRefCount(bool bIsWriter)
 
     if (bDataChanged)
     {
+        NOTICE("Pipe::decreaseRefCount -- dataChanged");
         dataChanged();
+        NOTICE("Pipe::decreaseRefCount -- dataChanged DONE");
     }
 }

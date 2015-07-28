@@ -29,10 +29,13 @@
 
 #define PIPE_BUF_MAX 2048
 
+class ZombiePipe;
+
 /** A first-in-first-out buffer node. */
 class Pipe : public File
 {
     friend class Filesystem;
+    friend class ZombiePipe;
 
 public:
     /** Eases the pain of casting, and performs a sanity check. */

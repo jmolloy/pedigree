@@ -22,6 +22,11 @@
 #include <Module.h>
 #include <utilities/utility.h>
 
+/// \todo Figure out a way to clean up files after deletion. Directory::remove()
+///       is not the right place to do this. There needs to be a way to add a
+///       File to some sort of queue that cleans it up once it hits refcount
+///       zero or something like that.
+
 VFS VFS::m_Instance;
 
 VFS &VFS::instance()
