@@ -97,7 +97,6 @@ cpp_apps = [
     'thread-test',
     'ipc-test-server',
     'ipc-test-client',
-    'winman',
     'uitest',
     'ttyterm',
 ]
@@ -105,6 +104,7 @@ cpp_apps = [
 # Applications which require C++11
 cpp_11_apps = [
     'which',
+    'winman',
 ]
 
 # Custom include paths for specific applications
