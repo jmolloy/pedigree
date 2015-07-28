@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -111,7 +110,7 @@ Png::Png(const char *filename) :
 
     fclose(stream);
 
-    syslog(LOG_INFO, "PNG loaded %ul %ul", m_nWidth, m_nHeight);
+    syslog(LOG_INFO, "PNG loaded %zd %zd", m_nWidth, m_nHeight);
 }
 
 Png::~Png()

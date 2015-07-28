@@ -137,7 +137,7 @@ void startClient()
         close(g_iControlPipe[1]);
         close(g_iSocket);
 
-        execl(CLIENT_DEFAULT, CLIENT_DEFAULT, 0);
+        execl(CLIENT_DEFAULT, CLIENT_DEFAULT, NULL);
         exit(1);
     }
 }
@@ -357,6 +357,8 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
         if(it != g_Windows->end())
         {
             Window *pWindow = it->second;
+            // Remove from the tracked windows before handling the destroy.
+            g_Windows->erase(it);
             handleDestroy(pWindow);
 
             char *responseData = new char[totalSize];
@@ -373,7 +375,6 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
             delete [] responseData;
 
             delete pWindow;
-            g_Windows->erase(it);
         }
     }
     else if(pWinMan->messageCode == LibUiProtocol::Nothing)
@@ -534,10 +535,10 @@ void checkForMessages()
             // Read a single byte (which will mean multiple writes to the pipe
             // will wake select() up multiple times - good for the input queue).
             char buf[2];
-            read(g_iControlPipe[0], buf, 1);
+            ssize_t bytes = read(g_iControlPipe[0], buf, 1);
 
             // Handle any pending input in the input queue.
-            if(!g_InputQueue.empty())
+            if((bytes > 0) && (!g_InputQueue.empty()))
             {
                 Input::InputNotification n = g_InputQueue.front();
                 g_InputQueue.pop();
@@ -839,7 +840,7 @@ void queueInputCallback(Input::InputNotification &note)
         if(g_CursorY >= g_nHeight)
             g_CursorY = g_nHeight - 1;
 
-        syslog(LOG_INFO, "Cursor update %d, %d [rel %d %d]", g_CursorX, g_CursorY, note.data.pointy.relx, note.data.pointy.rely);
+        syslog(LOG_INFO, "Cursor update %zd, %zd [rel %zd %zd]", g_CursorX, g_CursorY, note.data.pointy.relx, note.data.pointy.rely);
 
         // Trigger a render.
         g_bCursorUpdate = true;
@@ -898,7 +899,11 @@ void systemInputCallback(Input::InputNotification &note)
     g_InputQueue.push(n);
 
     // Wake up any pending select() - input pushed to queue.
-    write(g_iControlPipe[1], "w", 1);
+    ssize_t r = 0;
+    while(r <= 0)
+    {
+        r = write(g_iControlPipe[1], "w", 1);
+    }
 }
 
 void sigchld(int s)
@@ -920,6 +925,7 @@ void sigchld(int s)
     {
         uint64_t handle = it->first;
         pid_t window_pid = (handle >> 32ULL) & 0xFFFFFFFFU;
+        syslog(LOG_INFO, "%d vs %d", window_pid, pid);
         if (window_pid == pid)
         {
             syslog(LOG_INFO, "Found a child window for the terminated child.");
@@ -1083,7 +1089,7 @@ int main(int argc, char *argv[])
     g_nWidth = pFramebuffer->getWidth();
     g_nHeight = pFramebuffer->getHeight();
 
-    syslog(LOG_INFO, "Actual mode is %dx%d", g_nWidth, g_nHeight);
+    syslog(LOG_INFO, "Actual mode is %zdx%zd", g_nWidth, g_nHeight);
 
     cairo_format_t format = pFramebuffer->getFormat();
 

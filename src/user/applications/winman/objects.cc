@@ -111,7 +111,7 @@ void Window::refreshContext()
     if((me.getW() < WINDOW_CLIENT_LOST_W) || (me.getH() < WINDOW_CLIENT_LOST_H))
     {
         // We have some basic requirements for window sizes.
-        syslog(LOG_DEBUG, "extents %dx%d are too small for a new context",
+        syslog(LOG_DEBUG, "extents %zdx%zd are too small for a new context",
                me.getW(), me.getH());
         return;
     }
@@ -131,7 +131,7 @@ void Window::refreshContext()
     m_Framebuffer = new SharedBuffer(regionSize);
     memset(m_Framebuffer->getBuffer(), 0, regionSize);
 
-    syslog(LOG_DEBUG, "new framebuffer created: %d bytes @%p", regionSize,
+    syslog(LOG_DEBUG, "new framebuffer created: %zd bytes @%p", regionSize,
            m_Framebuffer->getBuffer());
 
     m_nRegionWidth = regionWidth;
@@ -159,7 +159,7 @@ void Window::refreshContext()
         pReposition->shmem_size = regionSize;
 
         // Transmit to the client.
-        syslog(LOG_INFO, "sending new framebuffer to client (handle %p)",
+        syslog(LOG_INFO, "sending new framebuffer to client (handle %lx)",
                m_Handle);
         sendMessage(buffer, totalSize);
 

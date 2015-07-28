@@ -179,9 +179,9 @@ bool Terminal::initialise()
 #endif
 
         // Launch the shell now.
-        execl(prog, prog, 0);
+        execl(prog, prog, NULL);
         syslog(LOG_ALERT, "Launching shell failed (next line is the error in errno...)");
-        syslog(LOG_ALERT, strerror(errno));
+        syslog(LOG_ALERT, "error: %s", strerror(errno));
 
         DirtyRectangle rect;
         write("Couldn't load shell for this terminal... ", rect);
@@ -357,8 +357,18 @@ void Terminal::addToQueue(char c, bool bFlush)
 
     if(bFlush)
     {
-        ::write(m_MasterPty, m_pQueue, m_Len);
-        m_Len = 0;
+        ssize_t result = ::write(m_MasterPty, m_pQueue, m_Len);
+        if (result >= 0)
+        {
+            size_t missing = m_Len - result;
+            if (missing)
+                memmove(m_pQueue, &m_pQueue[result], missing);
+            m_Len = missing;
+        }
+        else
+        {
+            syslog(LOG_ALERT, "Terminal::addToQueue flush failed");
+        }
     }
 }
 

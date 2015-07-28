@@ -157,7 +157,7 @@ bool Widget::construct(const char *endpoint, const char *title, widgetCallback_t
     send(m_Socket, messageData, totalSize, 0);
     delete [] messageData;
 
-    syslog(LOG_INFO, "new widget handle is %p\n", m_Handle);
+    syslog(LOG_INFO, "new widget handle is %lx\n", m_Handle);
 
     // Blocking receive.
     char *responseData = new char[4096];
@@ -420,6 +420,7 @@ void Widget::destroy()
                 pWinMan = reinterpret_cast<WindowManagerMessage *>(responseData);
                 if(pWinMan->isResponse && (pWinMan->messageCode == Destroy))
                 {
+                    syslog(LOG_INFO, "got the destroy message");
                     delete [] responseData;
                     break;
                 }
@@ -492,7 +493,7 @@ void Widget::checkForEvents(bool bAsync)
 
             if (m_CallbackMap.find(pHeader->widgetHandle) == m_CallbackMap.end())
             {
-                syslog(LOG_ALERT, "no callback known for handle %p", pHeader->widgetHandle);
+                syslog(LOG_ALERT, "no callback known for handle %lx", pHeader->widgetHandle);
                 return;
             }
             widgetCallback_t cb = m_CallbackMap[pHeader->widgetHandle];

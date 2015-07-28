@@ -114,7 +114,9 @@ void checkFramebuffer()
                 stride);
         g_Cairo = cairo_create(g_Surface);
 
-        syslog(LOG_INFO, "created cairo f=%p s=%p cr=%p %dx%d", g_pEmu->getRawFramebuffer(), g_Surface, g_Cairo, g_nWidth, g_nHeight);
+        syslog(LOG_INFO, "created cairo f=%p s=%p cr=%p %zdx%zd",
+                g_pEmu->getRawFramebuffer(), g_Surface, g_Cairo, g_nWidth,
+                g_nHeight);
     }
 }
 
@@ -126,7 +128,7 @@ void modeChanged(size_t width, size_t height)
         return;
     }
 
-    syslog(LOG_ALERT, "w: %d, h: %d", width, height);
+    syslog(LOG_ALERT, "w: %zd, h: %zd", width, height);
 
     g_nWidth = width;
     g_nHeight = height;
@@ -405,7 +407,7 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
                 g_pEmu->handleReposition(*rt);
                 g_nWidth = g_pEmu->getWidth();
                 g_nHeight = g_pEmu->getHeight();
-                syslog(LOG_INFO, " -> new extents are %dx%d", g_nWidth,
+                syslog(LOG_INFO, " -> new extents are %zdx%zd", g_nWidth,
                        g_nHeight);
                 syslog(LOG_INFO, " -> creating new framebuffer");
                 checkFramebuffer();

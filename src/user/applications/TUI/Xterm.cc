@@ -890,7 +890,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                             {
                                 // Report cursor position.
                                 char buf[128];
-                                sprintf(buf, "\e[%d;%dR", m_pWindows[m_ActiveBuffer]->getCursorY() + 1, m_pWindows[m_ActiveBuffer]->getCursorX() + 1);
+                                sprintf(buf, "\e[%zd;%zdR", m_pWindows[m_ActiveBuffer]->getCursorY() + 1, m_pWindows[m_ActiveBuffer]->getCursorX() + 1);
                                 const char *p = (const char *) buf;
                                 while(*p)
                                 {
@@ -2180,7 +2180,7 @@ void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
     memmove(&m_pBuffer[(m_CursorY * m_Width) + deleteStart], &m_pBuffer[(m_CursorY * m_Width) + deleteEnd], numChars * sizeof(TermChar));
 
     // Now that the characters have been shifted, clear the space after the region we copied
-    syslog(LOG_INFO, "w=%d h=%d", m_Width, m_Height);
+    syslog(LOG_INFO, "w=%zd h=%zd", m_Width, m_Height);
     size_t left = (m_Width - n) * g_NormalFont->getWidth();
     size_t top = m_CursorY * g_NormalFont->getHeight();
 

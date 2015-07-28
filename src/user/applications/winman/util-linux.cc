@@ -26,6 +26,7 @@
 #include <sys/mman.h>
 #include <syslog.h>
 #include <errno.h>
+#include <assert.h>
 
 #include <SDL/SDL.h>
 
@@ -94,11 +95,12 @@ SharedBuffer::SharedBuffer(size_t size) : m_ShmName(), m_ShmFd(-1),
     size_t bufferId = m_NextId++;
 
     memset(m_ShmName, 0, sizeof m_ShmName);
-    sprintf(m_ShmName, "wm%d", bufferId);
+    sprintf(m_ShmName, "wm%zd", bufferId);
 
     m_ShmFd = shm_open(m_ShmName, O_RDWR | O_CREAT, 0777);
     syslog(LOG_INFO, "opening shm %s [fd=%d]", m_ShmName, m_ShmFd);
-    ftruncate(m_ShmFd, size);
+    int r = ftruncate(m_ShmFd, size);
+    assert(r == 0);
 
     m_pBuffer = mmap(
         0,
@@ -129,7 +131,7 @@ SharedBuffer::SharedBuffer(size_t size, void *handle) : m_ShmName(),
 
 SharedBuffer::~SharedBuffer()
 {
-    syslog(LOG_INFO, "unmapping %d bytes @%p", m_Size, m_pBuffer);
+    syslog(LOG_INFO, "unmapping %zd bytes @%p", m_Size, m_pBuffer);
     munmap(m_pBuffer, m_Size);
     close(m_ShmFd);
     shm_unlink(m_ShmName);
