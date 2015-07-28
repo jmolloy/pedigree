@@ -168,9 +168,10 @@ foreach (@download) {
     # Download applies to us.
     print "$download{name} ";
     unless (-f "./compilers/dir/dl_cache/$download{filename}") {
-      `cd ./compilers/dir/dl_cache; wget $download{url} 2>&1`;
+      my $stdout = `cd ./compilers/dir/dl_cache; wget $download{url} 2>&1`;
       if ($? != 0) {
         print "Failed (download).\n";
+        print $stdout;
         exit 1;
       }
     }
