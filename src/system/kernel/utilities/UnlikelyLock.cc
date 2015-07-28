@@ -18,6 +18,7 @@
  */
 
 #include <utilities/UnlikelyLock.h>
+#include <process/Scheduler.h>
 
 UnlikelyLock::UnlikelyLock() :
     m_Semaphore(UNLIKELY_LOCK_MAX_READERS + 1)
@@ -30,7 +31,11 @@ UnlikelyLock::~UnlikelyLock()
 
 bool UnlikelyLock::enter()
 {
-    return m_Semaphore.tryAcquire(1);
+    // Yield if we fail to enter - let some other timeslice run.
+    bool result = false;
+    if (!(result = m_Semaphore.tryAcquire(1)))
+        Scheduler::instance().yield();
+    return result;
 }
 
 void UnlikelyLock::leave()
