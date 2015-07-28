@@ -917,7 +917,21 @@ void sigchld(int s)
         return;
     }
 
-    syslog(LOG_INFO, "Child %d terminated.", pid);
+    if (WIFEXITED(status))
+    {
+        int exit_status = WEXITSTATUS(status);
+        syslog(LOG_INFO, "Child %d exited with status %d.", pid, exit_status);
+    }
+    else if(WIFSIGNALED(status))
+    {
+        int term_signal = WTERMSIG(status);
+        syslog(LOG_INFO, "Child %d terminated with signal %d.", pid, term_signal);
+    }
+    else
+    {
+        syslog(LOG_INFO, "Child %d terminated for an unknown reason.", pid);
+    }
+
     // Now, we don't know what resources it held.
     for (std::map<uint64_t, Window*>::iterator it = g_Windows->begin();
          it != g_Windows->end();
