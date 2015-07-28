@@ -434,6 +434,7 @@ if env['travis']:
 
 if env['linux']:
     defines += ['LINUX']
+    defines = [x for x in defines if x not in ["X86_COMMON"]]
 
 additionalDefines = ['ipv4_forwarding', 'serial_is_file', 'installer', 'debugger', 'cripple_hdd', 'enable_ctrlc',
                      'multiple_consoles', 'multiprocessor', 'smp', 'apic', 'acpi', 'debug_logging', 'superdebug', 'usb_verbose_debug',
