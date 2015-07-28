@@ -431,7 +431,10 @@ elif env['memory_log_inline']:
 
 if env['travis']:
     defines += ['TRAVIS']
-    
+
+if env['linux']:
+    defines += ['LINUX']
+
 additionalDefines = ['ipv4_forwarding', 'serial_is_file', 'installer', 'debugger', 'cripple_hdd', 'enable_ctrlc',
                      'multiple_consoles', 'multiprocessor', 'smp', 'apic', 'acpi', 'debug_logging', 'superdebug', 'usb_verbose_debug',
                      'nogfx']
