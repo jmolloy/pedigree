@@ -59,7 +59,7 @@ generic_defines = [
 #------------------------- x86 (+x64) -------------------------#
 
 # x86 defines - udis86 uses __UD_STANDALONE__
-general_x86_defines = ['MACH_PC', 'X86_COMMON', 'LITTLE_ENDIAN', '__UD_STANDALONE__', 'THREADS', 'KERNEL_STANDALONE']
+general_x86_defines = ['X86_COMMON', 'LITTLE_ENDIAN', '__UD_STANDALONE__', 'THREADS', 'KERNEL_STANDALONE']
 
 #---------- x86, 32-bit ----------#
 

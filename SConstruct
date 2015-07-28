@@ -127,6 +127,9 @@ opts.AddVariables(
     
     BoolVariable('nogfx', 'If 1, the standard 80x25 text mode will be used. Will not load userspace if set to 1.', 0),
 
+    # PC architecture options.
+    BoolVariable('mach_pc', 'Target a typical PC architecture.', 0),
+
     # ARM options
     BoolVariable('arm_integrator', 'Target the Integrator/CP development board', 0),
     BoolVariable('arm_versatile', 'Target the Versatile/PB development board', 0),
@@ -350,6 +353,11 @@ if(tmp == None or env['ARCH_TARGET'] == ''):
         print "Unsupported target - have you used scripts/checkBuildSystem.pl to build a cross-compiler?"
         Exit(1)
 
+if env['ARCH_TARGET'] in ['X86', 'X64']:
+    # TODO(miselin): if more options are available, this should only be the
+    # default.
+    env['mach_pc'] = 1
+
 if(env['pup']):
     env['PEDIGREE_IMAGES_DIR'] = '#images/local/'
 
@@ -438,7 +446,7 @@ if env['linux']:
 
 additionalDefines = ['ipv4_forwarding', 'serial_is_file', 'installer', 'debugger', 'cripple_hdd', 'enable_ctrlc',
                      'multiple_consoles', 'multiprocessor', 'smp', 'apic', 'acpi', 'debug_logging', 'superdebug', 'usb_verbose_debug',
-                     'nogfx']
+                     'nogfx', 'mach_pc']
 for i in additionalDefines:
     if(env[i] and not i in defines):
         defines += [i.upper()]
