@@ -17,34 +17,24 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
-####################################
-# SCons build system for Pedigree
-## Tyler Kennedy (AKA Linuxhq AKA TkTech)
-####################################
+import os
 
-import os.path
 Import(['env'])
 
-# Temporary copy of the global environment so we can fiddle with flags
-tmpEnvironment = env.Clone()
+# Take a copy of the SCons environment as we tweak flags.
+env_clone = env.Clone()
 
-# Change to then name of this module
 kerneldir = "#" + env["PEDIGREE_BUILD_KERNEL"]
 imagesdir = env["PEDIGREE_IMAGES_DIR"]
 builddir = env["PEDIGREE_BUILD_BASE"]
-objname = kerneldir + '/kernel'
+objname = os.path.join(kerneldir, 'kernel')
 
 env.Alias("kernel", objname)
 
-# To include a new subdirectory just add to the list.
-subdirs = [
-
-]
-
-# To include new files just add to the list, or Glob("*.cpp")
+# Base set of kernel files, common to all architectures.
 files = [
     'Log.cc',
-    '#' + builddir + '/Version.cc',
+    '#' + os.path.join(builddir, 'Version.cc'),
     'Archive.cc',
     'Spinlock.cc',
     'Subsystem.cc',
@@ -65,27 +55,26 @@ files = [
     Glob('graphics/*.cc'),
 ]
 
+# Static drivers build all drivers directly into the kernel rather than building
+# them as actual modules.
 if 'STATIC_DRIVERS' in env['CPPDEFINES']:
     files += env['INITRD_LIST']
 
+# The debugger creates its own set of unique dependencies that must be handled.
 if 'DEBUGGER' in env['CPPDEFINES']:
     files += [
         Glob('debugger/*.cc'),
         Glob('debugger/commands/*.cc')
     ]
 else:
-	files += [
-		Glob('debugger/panic.cc'),
-		Glob('debugger/SerialIO.cc'),
-		Glob('debugger/LocalIO.cc'),
-		Glob('debugger/DebuggerIO.cc'),
-	]
+    files += [
+        Glob('debugger/panic.cc'),
+        Glob('debugger/SerialIO.cc'),
+        Glob('debugger/LocalIO.cc'),
+        Glob('debugger/DebuggerIO.cc'),
+    ]
 
-libudis86_files = [
-]
-
-# To include a new directory for includes, just add it to the list
-include = [
+include_dirs = [
     '#/src/system/include',
     '#/src/modules/system',
     '#/src/modules',
@@ -96,18 +85,6 @@ include = [
     'core/',
     'core/lib/',
     '.'
-]
-
-# To add a library add to the list below
-libraries = [
-    'gcc'
-]
-
-# To add a library path add to the list below
-libpaths = [
-    '#',
-    imagesdir + 'libraries',
-    # env['LIBGCC']
 ]
 
 #####################################
@@ -125,16 +102,18 @@ if env['mach_pc']:
         'machine/mach_pc/x86emu/sys.c',
     ]
 
-    include += ['machine/mach_pc/x86_emu/x86emu']
+    include_dirs += ['machine/mach_pc/x86_emu/x86emu']
 elif env['arm_versatile']:
     files += [
         Glob('machine/arm_versatile/*.cc'),
     ]
 
-    include += ['machine/arm_versatile']
+    include_dirs += ['machine/arm_versatile']
 elif env['arm_beagle']:
-    files += [Glob('machine/arm_beagle/*.cc')]
-    files += [Glob('machine/arm_beagle/*.c')]
+    files += [
+        Glob('machine/arm_beagle/*.cc'),
+        Glob('machine/arm_beagle/*.c'),
+    ]
 
 #####################################
 # Architecture-specific files
@@ -142,7 +121,7 @@ elif env['arm_beagle']:
 if 'X86_COMMON' in env['CPPDEFINES']:
     commonFiles = Glob('core/processor/x86_common/*.cc')
 
-    if 'DEBUGGER' in env['CPPDEFINES']:
+    if env['debugger']:
         files += [Glob('debugger/libudis86/*.c')]
         files += commonFiles
     else:
@@ -158,10 +137,9 @@ if 'X86_COMMON' in env['CPPDEFINES']:
             'core/processor/x86/asm/InterruptManager.s',
             'core/processor/x86/asm/Processor.s',
             'core/processor/x86/asm/Scheduler.s',
-            # 'core/processor/x86/asm/multiprocessor.s'
         ]
 
-        if 'MULTIPROCESSOR' in env['CPPDEFINES']:
+        if env['multiprocessor']:
             files += ['core/processor/x86/asm/trampoline.s']
     elif env['ARCH_TARGET'] == 'X64':
         files += [
@@ -174,32 +152,42 @@ if 'X86_COMMON' in env['CPPDEFINES']:
             'core/processor/x64/asm/gdt.s'
         ]
 elif env['arm_9']:
-    files += [Glob('core/processor/arm_926e/*.cc')]
-    files += [Glob('core/processor/arm_926e/asm/*.S')]
+    files += [
+        Glob('core/processor/arm_926e/*.cc'),
+        Glob('core/processor/arm_926e/asm/*.S'),
+    ]
 elif env['armv7']:
-    files += [Glob('core/processor/armv7/*.cc')]
-    files += [Glob('core/processor/armv7/asm/*.S')]
+    files += [
+        Glob('core/processor/armv7/*.cc'),
+        Glob('core/processor/armv7/asm/*.S'),
+    ]
 
 # Generic ARM bits.
 if env['ARCH_TARGET'] == 'ARM':
-    files += ['boot-arm.cc']
-    files += [Glob('core/processor/arm_common/*.cc')]
+    files += [
+        'boot-arm.cc',
+        Glob('core/processor/arm_common/*.cc'),
+    ]
 
-tmpEnvironment['CPPPATH'] = include
-tmpEnvironment['LIBS'] = libraries
-tmpEnvironment['LIBPATH'] = libpaths
-
-SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
+# Set flags in the cloned environment for the build.
+env_clone['CPPPATH'] = include_dirs
+env_clone['LIBS'] = ['gcc']
+env_clone['LIBPATH'] = ['#', os.path.join(imagesdir, 'libraries')]
 
 final_output = objname
-objname = '%s.debug' % (objname,)
 stripped_objname = final_output
+objname = '%s.debug' % objname
 
 if env['ARCH_TARGET'] == 'X64':
-    tmpEnvironment['LINKFLAGS'] += ' -m64 -mcmodel=kernel'
+    # TODO(miselin): this is not brilliant.
+    env_clone['LINKFLAGS'] += ' -m64 -mcmodel=kernel'
     stripped_objname = '%s.stripped' % (objname,)
 
-tmpEnvironment.Program(objname, files)
-tmpEnvironment.Command(stripped_objname, objname, action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
+env_clone.Program(objname, files)
+env_clone.Command(stripped_objname, objname,
+                  action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
+
 if final_output != stripped_objname:
-    tmpEnvironment.Command(final_output, stripped_objname, action="%s -I elf64-x86-64 -O elf32-i386 $SOURCE $TARGET" % env['OBJCOPY'])
+    action = "%s -I elf64-x86-64 -O elf32-i386 $SOURCE $TARGET" % env['OBJCOPY']
+    env_clone.Command(final_output, stripped_objname, action=action)
+
