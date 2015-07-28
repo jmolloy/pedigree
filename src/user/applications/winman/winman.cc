@@ -164,6 +164,96 @@ void fps()
     }
 }
 
+void handleDestroy(Window *pWindow)
+{
+    Container *myParent = pWindow->getParent();
+    Window *newFocus = 0;
+    WObject *sibling = 0;
+
+    // Find any siblings if we can.
+    WObject *siblingObject = myParent->getLeftSibling(pWindow);
+    if(!siblingObject)
+    {
+        siblingObject = myParent->getRightSibling(pWindow);
+    }
+
+    // Will there be any children left?
+    if(myParent->getChildCount() > 1)
+    {
+        // Yes. Focus adjustment is mostly trivial.
+    }
+    else
+    {
+        // No. Focus adjustment is less trivial.
+        siblingObject = myParent->getLeft(pWindow);
+        if(!siblingObject)
+        {
+            siblingObject = myParent->getRight(pWindow);
+        }
+        if(!siblingObject)
+        {
+            siblingObject = myParent->getUp(pWindow);
+        }
+        if(!siblingObject)
+        {
+            siblingObject = myParent->getDown(pWindow);
+        }
+    }
+
+    // Remove from the parent container.
+    myParent->removeChild(pWindow);
+    if(myParent->getChildCount() > 0)
+    {
+        myParent->retile();
+    }
+    else if(myParent->getParent())
+    {
+        Container *pContainer = static_cast<Container*>(myParent->getParent());
+        pContainer->removeChild(myParent);
+        pContainer->retile();
+        myParent = pContainer;
+    }
+
+    // Assign new focus.
+    if(siblingObject)
+    {
+        while(siblingObject->getType() == WObject::Container)
+        {
+            Container *pContainer = static_cast<Container*>(siblingObject);
+            siblingObject = pContainer->getFocusWindow();
+        }
+
+        if(siblingObject->getType() == WObject::Window)
+        {
+            newFocus = static_cast<Window*>(siblingObject);
+        }
+    }
+
+    // All children are now pending a redraw.
+    g_PendingWindows.insert(myParent);
+
+    // Switch focus, if needed.
+    if(g_pFocusWindow == pWindow)
+    {
+        g_pFocusWindow = newFocus;
+        if (newFocus)
+        {
+            newFocus->focus();
+            g_PendingWindows.insert(newFocus);
+        }
+    }
+
+    // If we couldn't find a new focus window, we're devoid of windows.
+    if (!newFocus)
+    {
+        // assertion may be taking place before we remove the final window
+        // from g_Windows - hence the <= 1.
+        syslog(LOG_INFO, "winman: no new focus window, terminating");
+        assert(g_Windows->size() <= 1);
+        g_bAlive = false;
+    }
+}
+
 void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
 {
     bool bResult = false;
@@ -267,83 +357,7 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
         if(it != g_Windows->end())
         {
             Window *pWindow = it->second;
-
-            Container *myParent = pWindow->getParent();
-            Window *newFocus = 0;
-            WObject *sibling = 0;
-
-            // Find any siblings if we can.
-            WObject *siblingObject = myParent->getLeftSibling(pWindow);
-            if(!siblingObject)
-            {
-                siblingObject = myParent->getRightSibling(pWindow);
-            }
-
-            // Will there be any children left?
-            if(myParent->getChildCount() > 1)
-            {
-                // Yes. Focus adjustment is mostly trivial.
-            }
-            else
-            {
-                // No. Focus adjustment is less trivial.
-                siblingObject = myParent->getLeft(pWindow);
-                if(!siblingObject)
-                {
-                    siblingObject = myParent->getRight(pWindow);
-                }
-                if(!siblingObject)
-                {
-                    siblingObject = myParent->getUp(pWindow);
-                }
-                if(!siblingObject)
-                {
-                    siblingObject = myParent->getDown(pWindow);
-                }
-            }
-
-            // Remove from the parent container.
-            myParent->removeChild(pWindow);
-            if(myParent->getChildCount() > 0)
-            {
-                myParent->retile();
-            }
-            else if(myParent->getParent())
-            {
-                Container *pContainer = static_cast<Container*>(myParent->getParent());
-                pContainer->removeChild(myParent);
-                pContainer->retile();
-                myParent = pContainer;
-            }
-
-            // Assign new focus.
-            if(siblingObject)
-            {
-                while(siblingObject->getType() == WObject::Container)
-                {
-                    Container *pContainer = static_cast<Container*>(siblingObject);
-                    siblingObject = pContainer->getFocusWindow();
-                }
-
-                if(siblingObject->getType() == WObject::Window)
-                {
-                    newFocus = static_cast<Window*>(siblingObject);
-                }
-            }
-
-            // All children are now pending a redraw.
-            g_PendingWindows.insert(myParent);
-
-            // Switch focus, if needed.
-            if(g_pFocusWindow == pWindow)
-            {
-                g_pFocusWindow = newFocus;
-                if (newFocus)
-                {
-                    newFocus->focus();
-                    g_PendingWindows.insert(newFocus);
-                }
-            }
+            handleDestroy(pWindow);
 
             char *responseData = new char[totalSize];
             memset(responseData, 0, totalSize);
@@ -358,17 +372,8 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
 
             delete [] responseData;
 
-            // Clean up!
             delete pWindow;
             g_Windows->erase(it);
-
-            // If we couldn't find a new focus window, we're devoid of windows.
-            if (!newFocus)
-            {
-                syslog(LOG_INFO, "winman: no new focus window, terminating");
-                assert(g_Windows->size() == 0);
-                g_bAlive = false;
-            }
         }
     }
     else if(pWinMan->messageCode == LibUiProtocol::Nothing)
@@ -894,16 +899,40 @@ void systemInputCallback(Input::InputNotification &note)
 
     // Wake up any pending select() - input pushed to queue.
     write(g_iControlPipe[1], "w", 1);
-
 }
 
 void sigchld(int s)
 {
-    /// \todo Handle SIGCHLD by figuring out what died and how, and then
-    /// removing any windows owned by the dead process. This is a one-sided
-    /// operation as the process owning the window is gone.
-    /// We can use waitpid() to pick up dead children and use that.
     syslog(LOG_INFO, "SIGCHLD");
+    int status = 0;
+    pid_t pid = waitpid(-1, &status, WNOHANG);
+    if (pid <= 0)
+    {
+        syslog(LOG_ALERT, "SIGCHLD handler called but no children to reap.");
+        return;
+    }
+
+    syslog(LOG_INFO, "Child %d terminated.", pid);
+    // Now, we don't know what resources it held.
+    for (std::map<uint64_t, Window*>::iterator it = g_Windows->begin();
+         it != g_Windows->end();
+         )
+    {
+        uint64_t handle = it->first;
+        pid_t window_pid = (handle >> 32ULL) & 0xFFFFFFFFU;
+        if (window_pid == pid)
+        {
+            syslog(LOG_INFO, "Found a child window for the terminated child.");
+            handleDestroy(it->second);
+            delete it->second;
+
+            g_Windows->erase(it++);
+        }
+        else
+        {
+            ++it;
+        }
+    }
 }
 
 void infoPanel(cairo_t *cr)
