@@ -111,73 +111,79 @@ libpaths = [
 ]
 
 #####################################
-## Architecture-specific files
+# Machine-specific files.
 #####################################
-if 'X86_COMMON' in env['CPPDEFINES']:
+if env['mach_pc']:
     files += [
-        Glob('machine/x86_common/*.cc'),
-        'machine/x86_common/x86emu/debug.c',
-        'machine/x86_common/x86emu/decode.c',
-        'machine/x86_common/x86emu/fpu.c',
-        'machine/x86_common/x86emu/ops.c',
-        'machine/x86_common/x86emu/ops2.c',
-        'machine/x86_common/x86emu/prim_ops.c',
-        'machine/x86_common/x86emu/sys.c',
+        Glob('machine/mach_pc/*.cc'),
+        'machine/mach_pc/x86emu/debug.c',
+        'machine/mach_pc/x86emu/decode.c',
+        'machine/mach_pc/x86emu/fpu.c',
+        'machine/mach_pc/x86emu/ops.c',
+        'machine/mach_pc/x86emu/ops2.c',
+        'machine/mach_pc/x86emu/prim_ops.c',
+        'machine/mach_pc/x86emu/sys.c',
     ]
 
+    include += ['machine/mach_pc/x86_emu/x86emu']
+elif env['arm_versatile']:
+    files += [
+        Glob('machine/arm_versatile/*.cc'),
+    ]
+
+    include += ['machine/arm_versatile']
+elif env['arm_beagle']:
+    files += [Glob('machine/arm_beagle/*.cc')]
+    files += [Glob('machine/arm_beagle/*.c')]
+
+#####################################
+# Architecture-specific files
+#####################################
+if 'X86_COMMON' in env['CPPDEFINES']:
     commonFiles = Glob('core/processor/x86_common/*.cc')
 
     if 'DEBUGGER' in env['CPPDEFINES']:
         files += [Glob('debugger/libudis86/*.c')]
         files += commonFiles
     else:
-		files += filter(lambda x: x.path not in [env.File('core/processor/x86_common/Disassembler.cc').path], commonFiles)
-    include += ['machine/x86_common/x86_emu/x86emu/']
+        files += [x for x in commonFiles
+                  if x.path not in [
+                      env.File('core/processor/x86_common/Disassembler.cc').path
+                  ]]
 
-if 'ARM_VERSATILE' in env['CPPDEFINES']:
-    files += [
-        Glob('machine/arm_versatile/*.cc'),
+    if env['ARCH_TARGET'] == 'X86':
+        files += [
+            Glob('core/processor/x86/*.cc'),
+            'core/processor/x86/asm/boot-standalone.s',
+            'core/processor/x86/asm/InterruptManager.s',
+            'core/processor/x86/asm/Processor.s',
+            'core/processor/x86/asm/Scheduler.s',
+            # 'core/processor/x86/asm/multiprocessor.s'
         ]
-    include += ['machine/arm_versatile']
 
-if env['arm_9']:
+        if 'MULTIPROCESSOR' in env['CPPDEFINES']:
+            files += ['core/processor/x86/asm/trampoline.s']
+    elif env['ARCH_TARGET'] == 'X64':
+        files += [
+            Glob('core/processor/x64/*.cc'),
+            'core/processor/x64/asm/boot-standalone.s',
+            'core/processor/x64/asm/InterruptManager.s',
+            'core/processor/x64/asm/SyscallManager.s',
+            'core/processor/x64/asm/Processor.s',
+            'core/processor/x64/asm/Scheduler.s',
+            'core/processor/x64/asm/gdt.s'
+        ]
+elif env['arm_9']:
     files += [Glob('core/processor/arm_926e/*.cc')]
     files += [Glob('core/processor/arm_926e/asm/*.S')]
 elif env['armv7']:
     files += [Glob('core/processor/armv7/*.cc')]
     files += [Glob('core/processor/armv7/asm/*.S')]
 
+# Generic ARM bits.
 if env['ARCH_TARGET'] == 'ARM':
     files += ['boot-arm.cc']
     files += [Glob('core/processor/arm_common/*.cc')]
-
-if env['arm_beagle']:
-    files += [Glob('machine/arm_beagle/*.cc')]
-    files += [Glob('machine/arm_beagle/*.c')]
-
-if env['ARCH_TARGET'] == 'X86':
-    files += [
-        Glob('core/processor/x86/*.cc'),
-        'core/processor/x86/asm/boot-standalone.s',
-        'core/processor/x86/asm/InterruptManager.s',
-        'core/processor/x86/asm/Processor.s',
-        'core/processor/x86/asm/Scheduler.s',
-        # 'core/processor/x86/asm/multiprocessor.s'
-    ]
-
-    if 'MULTIPROCESSOR' in env['CPPDEFINES']:
-        files += ['core/processor/x86/asm/trampoline.s']
-
-if env['ARCH_TARGET'] == 'X64':
-    files += [
-        Glob('core/processor/x64/*.cc'),
-        'core/processor/x64/asm/boot-standalone.s',
-        'core/processor/x64/asm/InterruptManager.s',
-        'core/processor/x64/asm/SyscallManager.s',
-        'core/processor/x64/asm/Processor.s',
-        'core/processor/x64/asm/Scheduler.s',
-        'core/processor/x64/asm/gdt.s'
-    ]
 
 tmpEnvironment['CPPPATH'] = include
 tmpEnvironment['LIBS'] = libraries
