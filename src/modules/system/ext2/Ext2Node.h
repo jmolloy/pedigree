@@ -27,6 +27,8 @@
 /** A node in an ext2 filesystem. */
 class Ext2Node
 {
+    friend class Ext2Filesystem;
+
 private:
     /** Copy constructors are hidden - unused! */
     Ext2Node(const Ext2Node &file);

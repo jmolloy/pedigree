@@ -126,6 +126,7 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
     if (!bFound)
     {
         // Need to make a new block.
+        NOTICE("blocks: " << m_nBlocks);
         uint32_t block = m_pExt2Fs->findFreeBlock(getInodeNumber());
         if (block == 0)
         {
@@ -133,6 +134,7 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
             SYSCALL_ERROR(NoSpaceLeftOnDevice);
             return false;
         }
+        NOTICE("allocated new block " << block << " for directory");
         if (!addBlock(block)) return false;
         i = m_nBlocks-1;
 
@@ -149,6 +151,8 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
         memset(reinterpret_cast<void *>(buffer), 0, m_pExt2Fs->m_BlockSize);
         pDir = reinterpret_cast<Dir *>(buffer);
         pDir->d_reclen = m_pExt2Fs->m_BlockSize;
+
+        /// \todo Update our i_size for our directory.
     }
 
     // Set the directory contents.
@@ -188,6 +192,7 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
     m_Cache.insert(filename, pFile);
 
     // Trigger write back to disk.
+    NOTICE("writing back " << m_pBlocks[i]);
     m_pExt2Fs->writeBlock(m_pBlocks[i]);
 
     m_Size = m_nSize;
@@ -264,6 +269,7 @@ bool Ext2Directory::removeEntry(const String &filename, Ext2Node *pFile)
         if (m_pExt2Fs->releaseInode(fileInode))
         {
             // Remove all blocks for the file, inode has hit zero refcount.
+            NOTICE("inode release hit zero refcount");
             pFile->wipe();
         }
         return true;

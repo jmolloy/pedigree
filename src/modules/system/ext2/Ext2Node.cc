@@ -202,9 +202,11 @@ void Ext2Node::trackBlock(uint32_t block)
 
 void Ext2Node::wipe()
 {
+    NOTICE("wipe: " << m_nBlocks << " blocks, size is " << m_nSize << "...");
     for (size_t i = 0; i < m_nBlocks; i++)
     {
         ensureBlockLoaded(i);
+        NOTICE("wipe: releasing block");
         m_pExt2Fs->releaseBlock(m_pBlocks[i]);
     }
 
@@ -217,6 +219,7 @@ void Ext2Node::wipe()
 
     // Write updated inode.
     m_pExt2Fs->writeInode(getInodeNumber());
+    NOTICE("wipe done");
 }
 
 bool Ext2Node::ensureLargeEnough(size_t size)

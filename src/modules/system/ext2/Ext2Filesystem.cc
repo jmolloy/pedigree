@@ -524,6 +524,7 @@ uint32_t Ext2Filesystem::findFreeInode()
 
 void Ext2Filesystem::releaseBlock(uint32_t block)
 {
+    NOTICE("release block: " << Dec << block << Hex);
     uint32_t blocksPerGroup = LITTLE_TO_HOST32(m_pSuperblock->s_blocks_per_group);
     uint32_t group = block / blocksPerGroup;
     uint32_t index = block % blocksPerGroup;
@@ -532,8 +533,6 @@ void Ext2Filesystem::releaseBlock(uint32_t block)
 
     // Free block.
     GroupDesc *pDesc = m_pGroupDescriptors[group];
-    pDesc->bg_free_blocks_count++;
-    m_pSuperblock->s_free_blocks_count++;
 
     // Index = block offset from the start of this block.
     size_t bitmapField = (index / 8) / m_BlockSize;
@@ -542,7 +541,14 @@ void Ext2Filesystem::releaseBlock(uint32_t block)
     Vector<size_t> &list = m_pBlockBitmaps[group];
     uintptr_t diskBlock = list[bitmapField];
     uint8_t *ptr = reinterpret_cast<uint8_t*> (diskBlock + bitmapOffset);
-    *ptr &= ~(1 << (index % 8));
+    size_t bit = index % 8;
+    if ((*ptr & (1 << bit)) == 0)
+        ERROR("bit already freed for block " << Dec << block << Hex);
+    *ptr &= ~(1 << bit);
+
+    // Update hints.
+    pDesc->bg_free_blocks_count++;
+    m_pSuperblock->s_free_blocks_count++;
 
     // Update superblock.
     m_pDisk->write(1024ULL);
@@ -566,9 +572,6 @@ bool Ext2Filesystem::releaseInode(uint32_t inode)
     // Do we need to free this inode?
     if (bRemove)
     {
-        // Rip out blocks.
-        //
-
         // Set dtime on inode.
         Timer *pTimer = Machine::instance().getTimer();
         pInode->i_dtime = HOST_TO_LITTLE32(pTimer->getUnixTimestamp());
