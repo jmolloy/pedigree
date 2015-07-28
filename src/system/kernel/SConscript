@@ -74,12 +74,12 @@ if 'DEBUGGER' in env['CPPDEFINES']:
         Glob('debugger/commands/*.cc')
     ]
 else:
-    files += [
-        Glob('debugger/panic.cc'),
-        Glob('debugger/SerialIO.cc'),
-        Glob('debugger/LocalIO.cc'),
-        Glob('debugger/DebuggerIO.cc'),
-    ]
+	files += [
+		Glob('debugger/panic.cc'),
+		Glob('debugger/SerialIO.cc'),
+		Glob('debugger/LocalIO.cc'),
+		Glob('debugger/DebuggerIO.cc'),
+	]
 
 libudis86_files = [
 ]
@@ -123,25 +123,16 @@ if 'X86_COMMON' in env['CPPDEFINES']:
         'machine/x86_common/x86emu/ops2.c',
         'machine/x86_common/x86emu/prim_ops.c',
         'machine/x86_common/x86emu/sys.c',
-
-    ]
-    include += ['machine/x86_common/x86_emu/x86emu/']
-
-elif env['linux']:
-    files += [
-        Glob('machine/linux/*.cc'),
     ]
 
-# 32-bit x86 is no longer supported.
-if 'X64' in env['CPPDEFINES']:
-    # Generic x86/x86_64 files that are not hardware-specific
     commonFiles = Glob('core/processor/x86_common/*.cc')
 
     if 'DEBUGGER' in env['CPPDEFINES']:
         files += [Glob('debugger/libudis86/*.c')]
         files += commonFiles
     else:
-        files += filter(lambda x: x.path not in [env.File('core/processor/x86_common/Disassembler.cc').path], commonFiles)
+		files += filter(lambda x: x.path not in [env.File('core/processor/x86_common/Disassembler.cc').path], commonFiles)
+    include += ['machine/x86_common/x86_emu/x86emu/']
 
 if 'ARM_VERSATILE' in env['CPPDEFINES']:
     files += [
@@ -178,20 +169,15 @@ if env['ARCH_TARGET'] == 'X86':
         files += ['core/processor/x86/asm/trampoline.s']
 
 if env['ARCH_TARGET'] == 'X64':
-    if env['linux']:
-        files += [
-            Glob('core/processor/x64_linux/*.cc'),
-        ]
-    else:
-        files += [
-            Glob('core/processor/x64/*.cc'),
-            'core/processor/x64/asm/boot-standalone.s',
-            'core/processor/x64/asm/InterruptManager.s',
-            'core/processor/x64/asm/SyscallManager.s',
-            'core/processor/x64/asm/Processor.s',
-            'core/processor/x64/asm/Scheduler.s',
-            'core/processor/x64/asm/gdt.s'
-        ]
+    files += [
+        Glob('core/processor/x64/*.cc'),
+        'core/processor/x64/asm/boot-standalone.s',
+        'core/processor/x64/asm/InterruptManager.s',
+        'core/processor/x64/asm/SyscallManager.s',
+        'core/processor/x64/asm/Processor.s',
+        'core/processor/x64/asm/Scheduler.s',
+        'core/processor/x64/asm/gdt.s'
+    ]
 
 tmpEnvironment['CPPPATH'] = include
 tmpEnvironment['LIBS'] = libraries
