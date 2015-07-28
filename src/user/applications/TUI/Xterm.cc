@@ -1516,6 +1516,7 @@ void Xterm::Window::render(DirtyRectangle &rect, size_t flags, size_t x, size_t 
     if (x == ~0UL) x = m_CursorX;
     if (y == ~0UL) y = m_CursorY;
 
+    syslog(LOG_INFO, "getting char at %zd vs %zd", (y*m_Width+x), ((y * m_Width) + x));
     TermChar c = m_pView[y*m_Width+x];
 
     // If both flags and c.flags have inverse, invert the inverse by
@@ -1732,6 +1733,7 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
     size_t top2_px   = n * g_NormalFont->getHeight();
 
     size_t bottom2_px = top_px + (m_Height-n)*g_NormalFont->getHeight();
+    syslog(LOG_INFO, "m_Height %zd n %zd", m_Height, n);
 
     // If we're bitblitting, we need to commit all changes before now.
     cairo_surface_flush(g_Surface);
@@ -1795,7 +1797,7 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
             m_pBuffer = reinterpret_cast<TermChar*>(realloc(m_pBuffer, (amount+m_BufferLength)*sizeof(TermChar)));
 
             m_pInsert = reinterpret_cast<TermChar*>(reinterpret_cast<uintptr_t>(m_pBuffer) + pInsOffset);
-            m_pView   = reinterpret_cast<TermChar*>( reinterpret_cast<uintptr_t>(m_pBuffer) + pViewOffset);
+            m_pView   = reinterpret_cast<TermChar*>(reinterpret_cast<uintptr_t>(m_pBuffer) + pViewOffset);
 
             TermChar blank;
             blank.fore = m_Fg;

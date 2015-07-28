@@ -206,8 +206,8 @@ Terminal *addTerminal(const char *name, DirtyRectangle &rect)
     return pTerm;
 }
 
-Font *g_NormalFont;
-Font *g_BoldFont;
+Font *g_NormalFont = NULL;
+Font *g_BoldFont = NULL;
 
 void sigint(int)
 {
@@ -379,6 +379,8 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
         if(bShouldRedraw)
             doRedraw(dirtyRect);
     }
+
+    syslog(LOG_INFO, "TUI shutting down cleanly.");
 
     // Clean up.
     delete pCurrentTerminal;
