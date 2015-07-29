@@ -18,73 +18,59 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
-####################################
-# SCons build system for Pedigree
-## Tyler Kennedy (AKA Linuxhq AKA TkTech)
-####################################
-
-Import(['env'])
-
 import os
 
 import buildutils.userspace
 
-# Temporary copy of the global environment so we can fiddle with flags
-tmpEnvironment = env.Clone()
+Import(['env'])
 
-# Change to then name of this module
+env_clone = env.Clone()
+
 builddir = "#" + env["PEDIGREE_BUILD_BASE"]
 imagesdir = env["PEDIGREE_IMAGES_DIR"]
-objname = builddir + '/libSDL.a'
-sobjname = builddir + '/libSDL.so'
+objname = os.path.join(builddir, 'libSDL.a')
+sobjname = os.path.join(builddir, 'libSDL.so')
 
-# To include a new subdirectory just add to the list.
-subdirs = [
-    
-]
-
-# To include new files just add to the list, or Glob("*.cpp")
 files = [
-    Glob('src/*.c'),
-    Glob('src/hermes/*.asm'),
-    Glob('src/audio/*.c'),
-    Glob('src/cdrom/*.c'),
-    Glob('src/cpuinfo/*.c'),
-    Glob('src/events/*.c'),
-    Glob('src/file/*.c'),
-    Glob('src/joystick/*.c'),
-    Glob('src/stdlib/*.c'),
-    Glob('src/thread/*.c'),
-    Glob('src/timer/*.c'),
-    Glob('src/video/*.c'),
-    Glob('src/audio/dummy/*.c'),
-    Glob('src/video/pedigree/*.c'),
-    Glob('src/video/pedigree/*.cc'),
-    Glob('src/joystick/dummy/*.c'),
-    Glob('src/cdrom/dummy/*.c'),
-    Glob('src/thread/pthread/*.c'),
-    Glob('src/timer/unix/*.c'),
-    Glob('src/loadso/dlopen/*.c'),
+    Glob(os.path.join('src', '*.c')),
+    Glob(os.path.join('src', 'hermes', '*.asm')),
+    Glob(os.path.join('src', 'audio', '*.c')),
+    Glob(os.path.join('src', 'cdrom', '*.c')),
+    Glob(os.path.join('src', 'cpuinfo', '*.c')),
+    Glob(os.path.join('src', 'events', '*.c')),
+    Glob(os.path.join('src', 'file', '*.c')),
+    Glob(os.path.join('src', 'joystick', '*.c')),
+    Glob(os.path.join('src', 'stdlib', '*.c')),
+    Glob(os.path.join('src', 'thread', '*.c')),
+    Glob(os.path.join('src', 'timer', '*.c')),
+    Glob(os.path.join('src', 'video', '*.c')),
+    Glob(os.path.join('src', 'audio/dummy', '*.c')),
+    Glob(os.path.join('src', 'video/pedigree', '*.c')),
+    Glob(os.path.join('src', 'video/pedigree', '*.cc')),
+    Glob(os.path.join('src', 'joystick/dummy', '*.c')),
+    Glob(os.path.join('src', 'cdrom/dummy', '*.c')),
+    Glob(os.path.join('src', 'thread/pthread', '*.c')),
+    Glob(os.path.join('src', 'timer/unix', '*.c')),
+    Glob(os.path.join('src', 'loadso/dlopen', '*.c')),
 ]
 
 # To include a new directory for includes, just add it to the list
 include = [
     './include',
-    '#/src/subsys/posix/include',
-    '#/src/subsys/native/include',
-    '#/src/user/libraries/libui/include',
-    '#/images/local/include',
-    '#/images/local/include/pixman-1',
-    '#/images/local/include/freetype2',
+    '#src/subsys/posix/include',
+    '#src/subsys/native/include',
+    '#src/user/libraries/libui/include',
+    '#images/local/include',
+    '#images/local/include/pixman-1',
+    '#images/local/include/freetype2',
 ]
 
-cpp_base = '#/images/local/support/gcc/include/c++/%s' % (env['COMPILER_VERSION'],)
+cpp_base = '#images/local/support/gcc/include/c++/%s' % env['COMPILER_VERSION']
 cppinclude = include + [
     cpp_base,
-    '%s/%s' % (cpp_base, env['COMPILER_TARGET']),
+    os.path.join(cpp_base, env['COMPILER_TARGET']),
 ]
 
-# To add a library add to the list below
 libraries = [
     'gcc',
     'c',
@@ -107,28 +93,26 @@ libraries = [
 # To add a library path add to the list below
 libpaths = [
     '#',
-    imagesdir + 'libraries',
+    os.path.join(imagesdir, 'libraries'),
     builddir,
-    builddir + '/libs',
+    os.path.join(builddir, 'libs'),
 ]
 
-tmpEnvironment['CFLAGS'] = buildutils.userspace.fixFlags(env, tmpEnvironment['CFLAGS'])
-tmpEnvironment['CXXFLAGS'] = buildutils.userspace.fixFlags(env, tmpEnvironment['CXXFLAGS'])
-tmpEnvironment['CPPPATH'] = cppinclude
-tmpEnvironment['LIBS'] = libraries
-tmpEnvironment['LIBPATH'] = libpaths
-tmpEnvironment['CPPDEFINES'] += ['PEDIGREE']
-tmpEnvironment['ASFLAGS'] += ' -I' + env.Dir('#src/lgpl/SDL-1.2.14/src/hermes').path + '/ '
+env_clone['CFLAGS'] = buildutils.userspace.fixFlags(env, env_clone['CFLAGS'])
+env_clone['CXXFLAGS'] = buildutils.userspace.fixFlags(env, env_clone['CXXFLAGS'])
+env_clone['CPPPATH'] = cppinclude
+env_clone['LIBS'] = libraries
+env_clone['LIBPATH'] = libpaths
+env_clone['CPPDEFINES'] += ['PEDIGREE']
+env_clone['ASFLAGS'] += ' -I' + env.Dir('#src/lgpl/SDL-1.2.14/src/hermes').path + ' '
 
 # Remove -Werror as SDL is an external package.
-tmpEnvironment['CFLAGS'] = tmpEnvironment['CFLAGS'].replace('-Werror', '')
-tmpEnvironment['CXXFLAGS'] = tmpEnvironment['CXXFLAGS'].replace('-Werror', '')
+env_clone['CFLAGS'] = env_clone['CFLAGS'].replace('-Werror', '')
+env_clone['CXXFLAGS'] = env_clone['CXXFLAGS'].replace('-Werror', '')
 
-if env['ARCH_TARGET'] in ['X86', 'X64']:
-    tmpEnvironment.SharedLibrary(sobjname, files, LINKFLAGS="")
-tmpEnvironment.Library(objname, files, LINKFLAGS="")
+if env['ARCH_TARGET'] in ('X86', 'X64'):
+    env_clone.SharedLibrary(sobjname, files, LINKFLAGS="")
+env_clone.Library(objname, files, LINKFLAGS="")
 
 env.Alias(sobjname, 'libs')
 env.Alias(objname, 'libs')
-
-SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])

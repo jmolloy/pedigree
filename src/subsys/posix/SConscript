@@ -19,6 +19,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
 import os
+import pipes
 
 import buildutils.userspace
 
@@ -71,7 +72,7 @@ glue_files = [
     'glue-scandir.c',
     'glue-dlmalloc.c',
     'glue-strcasecmp.c',
-    'glue-uenv_clonex.c',
+    'glue-utmpx.c',
     # 'glue-memset.c',
 ]
 
@@ -202,15 +203,24 @@ buildInclude = env_clone.Dir(builddir + '/include-posix')
 env.Alias("libs", [buildLibc, buildLibm])
 env.Alias("crt0", "crt")
 
-env_clon.Command([buildLibc], [glue_objname, baseLibc],
-    "@python " + base.abspath + "/scripts/buildLibc.py " + buildDir.abspath + " " + baseLibc.abspath + " " + env_clone.File(glue_objname).abspath + " " + env_clone.File(libpedigree_c_objname).abspath + " " + env["AR"] + " " + env["CC_NOCACHE"] + " " + env["STRIP"]
-            )
+env_clone.Command([buildLibc], [glue_objname, baseLibc],
+    " ".join(pipes.quote(s) for s in [
+        "@python", os.path.join(base.abspath, "scripts", "buildLibc.py"),
+        buildDir.abspath, baseLibc.abspath,
+        env_clone.File(glue_objname).abspath,
+        env_clone.File(libpedigree_c_objname).abspath, env["AR"],
+        env["CC_NOCACHE"], env["STRIP"]
+        ]
+    )
+)
 
 env_clone.Command([buildLibm], [baseLibm],
-                  "@python %s %s %s %s %s" % (
-                      os.path.join(base.abspath, 'scripts', 'buildLibm.py'),
-                      buildDir.abspath, baseLibm.abspath, env["AR"],
-                      env["CC_NOCACHE"]))
+    " ".join(pipes.quote(s) for s in [
+        '@python', os.path.join(base.abspath, 'scripts', 'buildLibm.py'),
+        buildDir.abspath, baseLibm.abspath, env["AR"], env['CC_NOCACHE'],
+        ]
+    )
+)
 
 SConscript(os.path.join('newlib', 'SConscript'), exports=['env'])
 

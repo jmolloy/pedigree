@@ -190,4 +190,3 @@ env_clone.Command(stripped_objname, objname,
 if final_output != stripped_objname:
     action = "%s -I elf64-x86-64 -O elf32-i386 $SOURCE $TARGET" % env['OBJCOPY']
     env_clone.Command(final_output, stripped_objname, action=action)
-

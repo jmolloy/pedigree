@@ -18,29 +18,18 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
-####################################
-# SCons build system for Pedigree
-## Tyler Kennedy (AKA Linuxhq AKA TkTech)
-####################################
-
-Import(['env'])
-
 import os
 
 import buildutils.userspace
 
-# Build libraries & other support directories before applications.
-subdirs = ['libraries']
-SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['env'])
+Import(['env'])
 
-tmp = env.Clone()
+env_clone = env.Clone()
 
-####### APPLICATION BUILDS #######
-
-appsbase = 'applications/'
-appoutputdir    = "#" + env["PEDIGREE_BUILD_APPS"]
-imagesdir       = env["PEDIGREE_IMAGES_DIR"]
-builddir        = "#" + env["PEDIGREE_BUILD_BASE"]
+appsbase = 'applications'
+appoutputdir = "#" + env["PEDIGREE_BUILD_APPS"]
+imagesdir = env["PEDIGREE_IMAGES_DIR"]
+builddir = "#" + env["PEDIGREE_BUILD_BASE"]
 
 suffix = '-noarch'
 if env['ARCH_TARGET'] == 'X86':
@@ -52,103 +41,99 @@ elif env['ARCH_TARGET'] == 'PPC':
 elif env['ARCH_TARGET'] == 'ARM':
     suffix = '-arm'
 
-# libloader (userspace dynamic linker)
+# libloader (userspace dynamic linker).
 libload_sources = [
     'loader.cc',
-    'stubs%s.s' % (suffix,)
+    'stubs%s.s' % suffix,
 ]
 
-# Applications which just use POSIX libc/libm
+# Applications which just use POSIX libc/libm.
 posixc_apps = [
-    'syscall-test',
-    'net-test',
-    'login',
-    'keymap',
-    'mount',
-    'display-mode',
-    'reboot',
-    'sudo',
-    'modload',
-    'modunload',
-    'modlist',
     'crashtest',
+    'display-mode',
     'gears',
     'init',
-    'preloadd',
+    'keymap',
+    'login',
+    'modlist',
+    'modload',
+    'modunload',
+    'mount',
+    'net-test',
     'nyancat',
+    'preloadd',
+    'reboot',
+    'sudo',
+    'syscall-test',
     'testsuite',
 ]
 
-# Applications which use Mesa
+# Applications which use Mesa (affects libraries & headers).
 mesa_apps = [
     'gears',
 ]
 
-# Applications which use libSDL
+# Applications which use libSDL (affects libraries & headers).
 sdl_apps = [
     'fire'
 ]
 
-# Applications which use libpedigree and/or libstdc++
+# Applications which use libpedigree and/or libstdc++.
 cpp_apps = [
-    'TUI',
     'apptest',
     'config',
-    'thread-test',
-    'ipc-test-server',
     'ipc-test-client',
-    'uitest',
+    'ipc-test-server',
+    'thread-test',
     'ttyterm',
+    'TUI',
+    'uitest',
 ]
 
-# Applications which require C++11
+# Applications which require C++11.
 cpp_11_apps = [
     'which',
     'winman',
 ]
 
-# Custom include paths for specific applications
+# Applications which use libui (affects libraries & headers).
+libui_apps = [
+    'gears',
+    'TUI',
+    'uitest',
+]
+
+# Custom include paths for specific applications.
 custom_incpath = {
-    'TUI' : ['#/src/user/libraries/libui/include',
-             '#/src/modules/system/TUI',
-             '#/images/local/include',
-             '#/images/local/include/freetype2'],
-    'uitest' : ['#/src/user/libraries/libui/include'],
-    'gears' : ['#/src/user/libraries/libui/include'],
-    'winman' : ['#/src/user/libraries/libui/include',
-                '#/src/user/libraries/libui/src',
-                '#/images/local/include',
-                '#/images/local/include/pixman-1',
-                '#/images/local/include/freetype2']
+    'TUI' : ['#images/local/include',
+             '#images/local/include/freetype2'],
+    'winman' : ['#src/user/libraries/libui/include',
+                '#src/user/libraries/libui/src',
+                '#images/local/include',
+                '#images/local/include/pixman-1',
+                '#images/local/include/freetype2']
 }
 
 # Custom libraries for specific applications
 custom_libs = {
-    'TUI' : ['cairo', 'freetype', 'png', 'ui', 'iconv', 'pedigree'],
     'config': ['pedigree'],
-    'ipc-test-server': ['pedigree'],
     'ipc-test-client': ['pedigree'],
-    'ttyterm': ['pedigree'],
+    'ipc-test-server': ['pedigree'],
     'thread-test' : ['pthread'],
-    'uitest' : ['ui', 'pedigree'],
-    'gears' : ['ui'],
+    'ttyterm': ['pedigree'],
+    'TUI' : ['cairo', 'freetype', 'png', 'iconv', 'pedigree'],
+    'uitest' : ['pedigree'],
     'winman': ['cairo', 'freetype', 'png', 'pedigree'],
     'apptest': ['pedigree'],
 }
 
 # Default libraries for all applications
-default_libs = ['pthread']
-
-# Search paths for libraries
-libpath = [
-    builddir,
-    builddir + '/libs',
-]
+base_libs = ['pthread']
 
 # Default include paths
-incpath = [
-    '#/src/subsys/posix/include',
-    '#/src/subsys/posix/syscalls',
+base_include_dirs = [
+    '#src/subsys/posix/include',
+    '#src/subsys/posix/syscalls',
 ]
 
 # Flags from CXXFLAGS and CFLAGS to *remove* for an app
@@ -160,24 +145,20 @@ remove_flags = {
     'which': ['-Werror'],
 }
 
-all_apps = posixc_apps + sdl_apps + cpp_apps + cpp_11_apps
-
-tmp['CFLAGS'] = buildutils.userspace.fixFlags(env, env['CFLAGS'])
-tmp['CXXFLAGS'] = buildutils.userspace.fixFlags(env, env['CXXFLAGS'])
-tmp['CPPDEFINES'] += ['PEDIGREE', '__PEDIGREE__']
-tmp['LIBS'] = default_libs
-tmp['LIBPATH'] = libpath
-tmp['CPPPATH'] = incpath
+env_clone['CFLAGS'] = buildutils.userspace.fixFlags(env, env['CFLAGS'])
+env_clone['CXXFLAGS'] = buildutils.userspace.fixFlags(env, env['CXXFLAGS'])
+env_clone['CPPDEFINES'] += ['PEDIGREE', '__PEDIGREE__']
+env_clone['LIBS'] = base_libs
+env_clone['LIBPATH'] = [builddir, os.path.join(builddir, 'libs')]
+env_clone['CPPPATH'] = base_include_dirs
 
 # -static stops GCC placing the path to the dynamic linker into the binary, and creates a non-relocateable executable.
-libload_env = tmp.Clone()
+libload_env = env_clone.Clone()
 libload_env['CFLAGS'] += ' -static '
 libload_env['CXXFLAGS'] += ' -static '
-cpp_base = '#/images/local/support/gcc/include/c++/%s' % (env['COMPILER_VERSION'],)
-libload_env['CPPPATH'] += ['#/src/system/include/linker',
-                           cpp_base,
-                           '%s/%s' % (cpp_base, env['COMPILER_TARGET']),
-                           ]
+cpp_base = '#images/local/support/gcc/include/c++/%s' % env['COMPILER_VERSION']
+libload_env['CPPPATH'] += ['#src/system/include/linker', cpp_base,
+                           os.path.join(cpp_base, env['COMPILER_TARGET'])]
 libload_env['LIBPATH'] += [builddir, imagesdir + 'libraries']
 libload_env['LIBS'] = ['-lstdc++', '-lc', '-lpedigree', '-lpedigree-c', '-lgcc']
 libload = os.path.join(builddir, 'libload.so')
@@ -186,60 +167,76 @@ if env['ARCH_TARGET'] == 'ARM':
 else:
     libload_linkscript = libload_env.File(os.path.join(appsbase, 'libload', 'libload.ld'))
 in_files = [os.path.join(appsbase, 'libload', x) for x in libload_sources]
-libload_env.Program(libload, in_files, LINKFLAGS="-static -Wl,-Bstatic -Wl,--no-whole-archive -nodefaultlibs -T%s " % (libload_linkscript,))
+libload_env.Program(libload, in_files,
+    LINKFLAGS="-static -Wl,-Bstatic -Wl,--no-whole-archive -nodefaultlibs -T%s " % libload_linkscript)
 libload_env.Depends(libload, "crt0")
 
 env.Alias('libs', libload)
 
-for i in all_apps:
-    e = tmp.Clone()
-    e['LINKFLAGS'] = ''
-    e['LIBPATH'] = libpath
+for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + libui_apps):
+    app_env = env_clone.Clone()
+    app_env['LINKFLAGS'] = ''
 
-    base = appsbase + i
+    base = os.path.join(appsbase, app)
 
     # Handle custom paths and libraries.
-    if(os.path.exists(base + '/include')):
-        e['CPPPATH'] += [base + '/include']
-    if(custom_incpath.has_key(i)):
-        e['CPPPATH'] += custom_incpath[i]
-    if(custom_libs.has_key(i)):
-        e['LIBS'] += custom_libs[i]
+    custom_include_path = os.path.join(base, 'include')
+    if os.path.exists(custom_include_path):
+        app_env['CPPPATH'] += [custom_include_path]
+
+    custom_include_path = custom_incpath.get(app)
+    if custom_include_path:
+        app_env['CPPPATH'] += custom_include_path
+
+    custom_link_libs = custom_libs.get(app)
+    if custom_link_libs:
+        app_env['LIBS'] += custom_link_libs
 
     # Handle SDL dependencies.
-    if i in sdl_apps:
-        e['LIBS'] += ['SDL']
-        e['CPPPATH'] += ['#/src/lgpl/SDL-1.2.14/include',
-                         '#/images/local/include']
-    if i in mesa_apps:
-        e['LIBS'] += ['OSMesa']
-        e['LIBPATH'] += ['%s/libraries' % (imagesdir,)]
-        e['CPPPATH'] += ['%s/include' % (imagesdir,)]
+    if app in sdl_apps:
+        app_env['LIBS'] += ['SDL']
+        app_env['CPPPATH'] += ['#src/lgpl/SDL-1.2.14/include',
+                               '#images/local/include']
+
+    # Handle Mesa dependencies.
+    if app in mesa_apps:
+        app_env['LIBS'] += ['OSMesa']
+        app_env['LIBPATH'] += ['%s/libraries' % imagesdir]
+        app_env['CPPPATH'] += ['%s/include' % imagesdir]
 
     # Handle C++-related dependencies.
-    if i in cpp_apps or i in sdl_apps or i in mesa_apps or i in cpp_11_apps:
-        e['LIBPATH'] += [imagesdir + 'libraries']
-        e['CPPPATH'] += ['#/src/subsys/native/include',]
-        e['LINK'] = env['CXX']
+    if app in set(cpp_apps + sdl_apps + mesa_apps + cpp_11_apps):
+        app_env['LIBPATH'] += [os.path.join(imagesdir, 'libraries')]
+        app_env['CPPPATH'] += ['#src/subsys/native/include']
+        app_env['LINK'] = env['CXX']
 
-    e['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s/libraries/ ' % (e.Dir(imagesdir).abspath,)
-    e['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s/libs/ ' % (e.Dir(builddir).abspath,)
-    e['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s ' % (e.Dir(builddir).abspath,)
+    # Handle libui-related dependencies.
+    if app in libui_apps:
+        app_env['CPPPATH'] += ['#src/user/libraries/libui/include']
+        app_env['LIBS'] += ['ui']
 
-    if i in cpp_11_apps:
-        e['CXXFLAGS'] += '-std=c++11 '
+    app_env['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s/libraries/ ' % (
+        app_env.Dir(imagesdir).abspath,)
+    app_env['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s/libs/ ' % (
+        app_env.Dir(builddir).abspath,)
+    app_env['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s ' % (
+        app_env.Dir(builddir).abspath,)
 
-    if(remove_flags.has_key(i)):
-        for flag in remove_flags[i]:
-            e['CFLAGS'] = e['CFLAGS'].replace(flag, ' ')
-            e['CXXFLAGS'] = e['CXXFLAGS'].replace(flag, ' ')
+    if app in cpp_11_apps:
+        app_env['CXXFLAGS'] += '-std=gnu++11 '
 
-    output = builddir + '/apps/' + i
-    files = [Glob(base + '/*.c'), Glob(base + '/*.cc')]
-    e.Program(output, files)
+    for flag in remove_flags.get(app, []):
+        app_env['CFLAGS'] = app_env['CFLAGS'].replace(flag, ' ')
+        app_env['CXXFLAGS'] = app_env['CXXFLAGS'].replace(flag, ' ')
+
+    output = os.path.join(builddir, 'apps', app)
+    files = [Glob(os.path.join(base, '*.c')), Glob(os.path.join(base, '*.cc'))]
+
+    app_env.Program(output, files)
 
     env.Alias("apps", output)
 
     env.Depends(output, "crt0")
     env.Depends(output, "libs")
 
+SConscript(os.path.join('libraries', 'SConscript'), exports=['env'])

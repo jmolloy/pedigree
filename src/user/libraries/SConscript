@@ -18,51 +18,42 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
-####################################
-# SCons build system for Pedigree
-## Tyler Kennedy (AKA Linuxhq AKA TkTech)
-####################################
-
-Import(['env'])
-
 import os
 
 import buildutils.userspace
 
-tmp = env.Clone()
+Import(['env'])
 
-####### END-USER LIBRARY BUILDS #######
+env_clone = env.Clone()
 
-libsbase        = 'libraries/'
+libsbase        = 'libraries'
 appoutputdir    = "#" + env["PEDIGREE_BUILD_APPS"]
 imagesdir       = env["PEDIGREE_IMAGES_DIR"]
 builddir        = "#" + env["PEDIGREE_BUILD_BASE"]
 
 # Libraries to compile
 libs = [
-    'libui'
+    'libui',
 ]
 
 # Subsystem for each set of libraries
 subsys = {
-    'libui' : 'native'
+    'libui' : 'native',
 }
 
 lib_deps = {
-    'libui': 'pedigree',
+    'libui': ['pedigree'],
 }
 
-tmp['CFLAGS'] = buildutils.userspace.fixFlags(env, env['CFLAGS'])
-tmp['CXXFLAGS'] = buildutils.userspace.fixFlags(env, env['CXXFLAGS'])
-tmp['CPPDEFINES'] += ['PEDIGREE', '__PEDIGREE__']
-tmp['LIBS'] = []
-tmp['LIBPATH'] = [
-    builddir,
-]
-tmp['CPPPATH'] = []
+env_clone['CFLAGS'] = buildutils.userspace.fixFlags(env, env['CFLAGS'])
+env_clone['CXXFLAGS'] = buildutils.userspace.fixFlags(env, env['CXXFLAGS'])
+env_clone['CPPDEFINES'] += ['PEDIGREE', '__PEDIGREE__']
+env_clone['LIBS'] = []
+env_clone['LIBPATH'] = [builddir]
+env_clone['CPPPATH'] = []
 
 for library in libs:
-    e = tmp.Clone()
+    library_env = env_clone.Clone()
     
     # Determine the subsystem and include directories for this library
     incpath = []
@@ -79,23 +70,24 @@ for library in libs:
     srcdir = env.Dir(library).srcnode().abspath
 
     # Handle extra include directories within the library
-    if(os.path.exists(os.path.join(srcdir, 'include'))):
-        incpath.append(os.path.join(srcdir, 'include'))
+    custom_include_dir = os.path.join(srcdir, 'include')
+    if(os.path.exists(custom_include_dir)):
+        incpath.append(custom_include_dir)
 
-    e['CPPPATH'] = incpath
-    e['LIBS'] = lib_deps[library]
+    library_env['CPPPATH'] = incpath
+    library_env['LIBS'] = lib_deps.get(library, [])
 
-    output = os.path.join(builddir, 'libs', '%s.a' % (library,))
-    shoutput = os.path.join(builddir, 'libs', '%s.so' % (library,))
-    files = [Glob(os.path.join(library, 'src', '*.c')), Glob(os.path.join(library, 'src', '*.cc'))]
+    output = os.path.join(builddir, 'libs', '%s.a' % library)
+    shoutput = os.path.join(builddir, 'libs', '%s.so' % library)
+    files = [Glob(os.path.join(library, 'src', '*.c')),
+             Glob(os.path.join(library, 'src', '*.cc'))]
 
-    e.StaticLibrary(output, files)
-    e.SharedLibrary(shoutput, files, LINKFLAGS='')
+    library_env.StaticLibrary(output, files)
+    library_env.SharedLibrary(shoutput, files, LINKFLAGS='')
 
     env.Alias("libs", output)
     env.Alias("libs", shoutput)
 
     # XXX: We have an unfortunate dependency on libc.
-    libc_objname = builddir + '/libc.so'
+    libc_objname = os.path.join(builddir, 'libc.so')
     env.Depends(shoutput, libc_objname)
-
