@@ -61,7 +61,7 @@ if 'STATIC_DRIVERS' in env['CPPDEFINES']:
     files += env['INITRD_LIST']
 
 # The debugger creates its own set of unique dependencies that must be handled.
-if 'DEBUGGER' in env['CPPDEFINES']:
+if env['debugger']:
     files += [
         Glob('debugger/*.cc'),
         Glob('debugger/commands/*.cc')
