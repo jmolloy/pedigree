@@ -104,7 +104,7 @@ env_clone['CPPPATH'] = cppinclude
 env_clone['LIBS'] = libraries
 env_clone['LIBPATH'] = libpaths
 env_clone['CPPDEFINES'] += ['PEDIGREE']
-env_clone['ASFLAGS'] += ' -I' + env.Dir('#src/lgpl/SDL-1.2.14/src/hermes').path + ' '
+env_clone['ASFLAGS'] += ' -I' + env.Dir('#src/lgpl/SDL-1.2.14/src/hermes').path + '/ '
 
 # Remove -Werror as SDL is an external package.
 env_clone['CFLAGS'] = env_clone['CFLAGS'].replace('-Werror', '')
