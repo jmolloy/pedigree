@@ -542,3 +542,10 @@ void *pedigree_sys_request_mem(size_t len) {
 
     return reinterpret_cast<void *>(mapAddress);
 }
+
+void pedigree_haltfs()
+{
+    // Synchronises all filesystems and disks and unloads them.
+    /// \todo Implement
+    NOTICE("Stubbed: pedigree_haltfs");
+}

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -170,6 +169,9 @@ uintptr_t PedigreeCSyscallManager::syscall(SyscallState &state)
             return 0;
         case PEDIGREE_SYS_REQUEST_MEM:
             return reinterpret_cast<uintptr_t>(pedigree_sys_request_mem(static_cast<size_t>(p1)));
+        case PEDIGREE_HALTFS:
+            pedigree_haltfs();
+            return 0;
         default: ERROR ("PedigreeCSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
 }

@@ -41,6 +41,11 @@ void pedigree_reboot()
     syscall0(PEDIGREE_REBOOT);
 }
 
+void pedigree_haltfs()
+{
+    syscall0(PEDIGREE_HALTFS);
+}
+
 int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
 {
     return syscall3(PEDIGREE_GET_MOUNT, (long) mount_buf, (long) info_buf, n);

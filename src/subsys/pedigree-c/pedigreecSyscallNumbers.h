@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -52,6 +51,8 @@
 #define PEDIGREE_INPUT_REMOVE_CALLBACK      26
 
 #define PEDIGREE_SYS_REQUEST_MEM            27
+
+#define PEDIGREE_HALTFS                     28
 
 #define PEDIGREE_EVENT_RETURN               60
 

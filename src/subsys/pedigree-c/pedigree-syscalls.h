@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -80,6 +79,8 @@ int pedigree_module_get_depending(char *name, char *buf, size_t bufsz);
 int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n);
 
 void *pedigree_sys_request_mem(size_t len);
+
+void pedigree_haltfs();
 
 /** Pedigree graphics framework system calls */
 
