@@ -62,31 +62,48 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
       NOTICE_NOLOCK(Processor::information().getCurrentThread()->getParent()->getId() << " PageFaultHandler: copy-on-write for v=" << page);
 #endif
 
-      // Save current page content
-      static uint8_t buffer[0x1000]; // PhysicalMemoryManager::instance().getPageSize()];
-      memcpy(buffer, reinterpret_cast<uint8_t*>(page), PhysicalMemoryManager::instance().getPageSize());
+      Process *pProcess = Processor::information().getCurrentThread()->getParent();
+      size_t pageSz = PhysicalMemoryManager::instance().getPageSize();
 
-      // Now that we've saved the page content, we can make a new physical page and map it.
-      physical_uintptr_t p = PhysicalMemoryManager::instance().allocatePage();
-      if (!p)
+      // Get a temporary page in which we can store the current mapping for copy.
+      uintptr_t tempAddr = 0;
+      pProcess->getSpaceAllocator().allocate(pageSz, tempAddr);
+
+      // Map temporary page to the old page.
+      if (!va.map(phys, reinterpret_cast<void *>(tempAddr), VirtualAddressSpace::KernelMode))
       {
-        FATAL("PageFaultHandler: Out of memory!");
+        FATAL("PageFaultHandler: CoW temporary map() failed");
         return;
       }
 
-      // Remove the old mapping and map in the new page, with similar flags.
+      // OK, we can now unmap the old page - we hold a valid temporary mapping.
       va.unmap(reinterpret_cast<void*>(page));
 
+      // Allocate new page for the new memory region.
+      physical_uintptr_t p = PhysicalMemoryManager::instance().allocatePage();
+      if (!p)
+      {
+        FATAL("PageFaultHandler: CoW OOM'd!");
+        return;
+      }
+
+      // Map in the new page, making sure to mark it not CoW.
       flags |= VirtualAddressSpace::Write;
       flags &= ~VirtualAddressSpace::CopyOnWrite;
       if (!va.map(p, reinterpret_cast<void*>(page), flags))
       {
-        FATAL("PageFaultHandler: map() failed.");
+        FATAL("PageFaultHandler: CoW new map() failed.");
         return;
       }
 
-      // Restore the contents of the page to the new mapping.
-      memcpy(reinterpret_cast<uint8_t*>(page), buffer, PhysicalMemoryManager::instance().getPageSize());
+      // Perform the actual copy.
+      memcpy(reinterpret_cast<uint8_t*>(page),
+             reinterpret_cast<uint8_t*>(tempAddr),
+             pageSz);
+
+      // Release temporary page.
+      va.unmap(reinterpret_cast<void *>(tempAddr));
+      pProcess->getSpaceAllocator().free(tempAddr, pageSz);
 
       // Clean up old reference to memory (may free the page, if we were the
       // last one to reference the CoW page)
