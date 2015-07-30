@@ -33,7 +33,9 @@ warning_flags_c = '-Wnested-externs '
 warning_flags_cxx = ''
 
 # Turn off some warnings (because they kill the build)
-warning_flags_off = '-Wno-unused -Wno-unused-variable -Wno-conversion -Wno-format -Wno-empty-body'
+# -Wno-packed-bitfield-compat is because packed bitfields were fixed in GCC 4.4,
+# which broke ABIs (naturally). We're okay though, so we don't need the warning.
+warning_flags_off = '-Wno-unused -Wno-unused-variable -Wno-conversion -Wno-format -Wno-empty-body -Wno-packed-bitfield-compat'
 
 # Generic assembler flags
 generic_asflags = '-f elf'
