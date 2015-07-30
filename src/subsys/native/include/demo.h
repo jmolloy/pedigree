@@ -17,17 +17,21 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _PEDIGREE_OBJECT_H
-#define _PEDIGREE_OBJECT_H
+#ifndef _PEDIGREE_DEMO_H
+#define _PEDIGREE_DEMO_H
 
 #include <types.h>
 
+#include <Object.h>
+
 /** Object is merely the base class for all native subsystem objects. */
-class Object
+class Demo : public Object
 {
     public:
-        Object();
-        virtual ~Object();
+        Demo();
+        virtual ~Demo();
+
+        void something();
 
         /**
          * Retrieves the global unique identifier for this class.
@@ -37,7 +41,10 @@ class Object
          * must match with the kernel's mapping of identifiers to kernel classes
          * otherwise the system calls will fail in unexpected ways.
          */
-        virtual uint64_t guid() const = 0;
+        virtual uint64_t guid() const
+        {
+            return 0xdeadbeef;
+        }
 };
 
 #endif

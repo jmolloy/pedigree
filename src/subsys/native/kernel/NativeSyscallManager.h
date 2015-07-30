@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -24,6 +23,10 @@
 #include <processor/types.h>
 #include <processor/SyscallHandler.h>
 
+#include <native-base.h>
+
+#include <utilities/Tree.h>
+
 class NativeSyscallManager : public SyscallHandler
 {
 public:
@@ -47,6 +50,12 @@ private:
   /** The copy-constructor
    *\note Not implemented (singleton) */
   NativeSyscallManager &operator = (const NativeSyscallManager &);
+
+  /** Creates native subsystem objects from global unique IDs. */
+  NativeBase *factory(uint64_t guid);
+
+  /** Maps userspace object pointers to their respective kernel object. */
+  Tree<void *, NativeBase *> m_NativeObjects;
 };
 
 #endif

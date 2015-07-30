@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -96,8 +95,92 @@ uintptr_t NativeSyscallManager::syscall(SyscallState &state)
             return reinterpret_cast<uintptr_t>(getEndpoint(reinterpret_cast<const char *>(p1)));
             break;
 
+        /** New IPC system. **/
+        case NATIVE_REGISTER_OBJECT:
+            NOTICE("NativeSyscallManager: register object");
+            {
+                uint64_t guid = p1;
+                void *ptr = reinterpret_cast<void *>(p2);
+
+                NativeBase *kptr = factory(guid);
+                if (kptr)
+                {
+                    m_NativeObjects.insert(ptr, kptr);
+                    return true;
+                }
+
+                return false;
+            }
+            break;
+        case NATIVE_UNREGISTER_OBJECT:
+            NOTICE("NativeSyscallManager: unregister object");
+            {
+                void *ptr = reinterpret_cast<void *>(p1);
+                NativeBase *kptr = m_NativeObjects.lookup(ptr);
+                if (kptr)
+                {
+                    delete kptr;
+                    m_NativeObjects.remove(ptr);
+                }
+            }
+            return true;
+        case NATIVE_CALL:
+            NOTICE("NativeSyscallManager: call");
+            {
+                void *ptr = reinterpret_cast<void *>(p1);
+                uint64_t subid = p2;
+                void *params = reinterpret_cast<void *>(p3);
+                size_t params_size = p4;
+                ReturnState *state = reinterpret_cast<ReturnState *>(p5);
+
+                /// \todo check that pointer parameters are mapped.
+
+                NativeBase *kptr = m_NativeObjects.lookup(ptr);
+                if (kptr)
+                {
+                    *state = kptr->syscall(subid, params, params_size);
+                }
+                else
+                {
+                    state->success = false;
+                    state->meta = META_ERROR_BADOBJECT;
+                }
+            }
+            break;
+
         default: ERROR ("NativeSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber()); return 0;
     }
 
+    return 0;
+}
+
+class Foo : public NativeBase
+{
+    public:
+        virtual ReturnState syscall(uint64_t subid, void *params, size_t params_size)
+        {
+            NOTICE("syscall subid=" << subid);
+
+            ReturnState ret;
+            switch(subid)
+            {
+                case 0x1234:
+                    ret.success = true;
+                    ret.value = 0x4321;
+                    break;
+                default:
+                    ret.success = false;
+                    ret.meta = 0;
+            }
+
+            return ret;
+        }
+};
+
+NativeBase *NativeSyscallManager::factory(uint64_t guid)
+{
+    NOTICE("NativeSyscallManager::factory(" << guid << ")");
+    if (guid == 0xdeadbeef)
+        return new Foo();
     return 0;
 }

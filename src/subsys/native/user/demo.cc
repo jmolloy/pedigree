@@ -17,27 +17,21 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _PEDIGREE_OBJECT_H
-#define _PEDIGREE_OBJECT_H
+#include <demo.h>
+#include <native-protocol.h>
 
-#include <types.h>
-
-/** Object is merely the base class for all native subsystem objects. */
-class Object
+Demo::Demo()
 {
-    public:
-        Object();
-        virtual ~Object();
+    register_object(this);
+}
 
-        /**
-         * Retrieves the global unique identifier for this class.
-         *
-         * The global unique identifier is used when creating a new object to
-         * register the application object with the kernel. This identifier
-         * must match with the kernel's mapping of identifiers to kernel classes
-         * otherwise the system calls will fail in unexpected ways.
-         */
-        virtual uint64_t guid() const = 0;
-};
+Demo::~Demo()
+{
+}
 
-#endif
+void Demo::something()
+{
+    ReturnState result = native_call(this, 0x1234, 0, 0);
+    if (!result.success)
+        throw 0xdeadbeef;
+}

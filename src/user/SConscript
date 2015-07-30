@@ -133,6 +133,7 @@ custom_libs = {
     'uitest' : ['ui', 'pedigree'],
     'gears' : ['ui'],
     'winman': ['cairo', 'freetype', 'png', 'pedigree'],
+    'apptest': ['pedigree'],
 }
 
 # Default libraries for all applications

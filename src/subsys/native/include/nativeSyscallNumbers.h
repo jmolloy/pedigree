@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -33,5 +32,14 @@
 #define IPC_CREATE_ENDPOINT                     9
 #define IPC_REMOVE_ENDPOINT                     10
 #define IPC_GET_ENDPOINT                        11
+
+// "New" native API.
+#define NATIVE_REGISTER_OBJECT              0x1000
+#define NATIVE_UNREGISTER_OBJECT            0x1001
+
+#define NATIVE_CALL                         0x2000
+
+/** Native API class unique identifiers */
+#define NATIVE_GUID_CONFIG                  0x00000001
 
 #endif

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,6 +22,26 @@
 
 #include <Object.h>
 
+// Values for the 'meta' field in ReturnState.
+#define META_ERROR_MASK         0xFFFF
+#define META_ERROR_BADOBJECT    0x0001
+
+struct ReturnState
+{
+    /** Success: whether or not the syscall was successful. */
+    bool success;
+    /**
+     * Value: 64-bit integral value returned from kernel (relevance determined
+     * by caller)
+     */
+    uint64_t value;
+    /**
+     * Meta: 64-bit extra metadata, typically used to report exception
+     * information from the kernel for the purpose of bubbling exceptions.
+     */
+    uint64_t meta;
+};
+
 /** Performs a native API system call.
  *
  * @param pObject Object which is creating the call
@@ -32,5 +51,29 @@
  * \todo Event system integration
  */
 int _syscall(Object *pObject, size_t nOp);
+
+/**
+ * Register the given native API object with the kernel.
+ *
+ * Throws an exception if the registration fails.
+ */
+void register_object(Object *pObject);
+
+/**
+ * Unregister the given native API object with the kernel.
+ *
+ * \return true if successful, false otherwise.
+ */
+void unregister_object(Object *pObject);
+
+/**
+ * Perform a native system call.
+ *
+ * \param pObject registered object on which to perform the call
+ * \param subid method call ID
+ * \param params pointer to parameter block for the system call
+ * \return ReturnState object containing the result of the system call
+ */
+ReturnState native_call(Object *pObject, uint64_t subid, void *params, size_t params_size);
 
 #endif

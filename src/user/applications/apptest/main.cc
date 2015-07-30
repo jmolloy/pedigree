@@ -17,7 +17,18 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifdef X86
+#if 1
+
+#include <demo.h>
+
+int main(int argc, char **argv)
+{
+    Demo demo;
+    demo.something();
+    return 0;
+}
+
+#elif defined(X86)
 
 #include <types.h>
 #include <test.h>
