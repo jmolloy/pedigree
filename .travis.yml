@@ -39,3 +39,7 @@ addons:
       - genisoimage
       - e2fsprogs
       - qemu
+cache:
+  directories:
+  - $HOME/.ccache
+  - $HOME/pedigree/pedigree-compiler
