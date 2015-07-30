@@ -42,4 +42,4 @@ addons:
 cache:
   directories:
   - $HOME/.ccache
-  - $HOME/pedigree/pedigree-compiler
+  - $HOME/pedigree-compiler
