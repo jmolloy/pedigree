@@ -1,3 +1,4 @@
+sudo: false
 language: cpp
 matrix:
   include:
@@ -8,15 +9,11 @@ matrix:
   - os: linux
     env: OS=ubuntu EASY_BUILD=hosted
   exclude:
-  - os: linux
-  - compiler: gcc
-before_script:
-- sudo add-apt-repository ppa:miselin/pedigree-compilers -y
-- sudo apt-get update -q
-- sudo apt-get install qemu travis-compilers
+    - os: linux
+    - compiler: gcc
 script:
-- ./easy_build_$EASY_BUILD.sh $OS
-- ./scripts/runtest.py
+  - ./easy_build_$EASY_BUILD.sh nosudo $OS
+  # - ./scripts/runtest.py
 install: true
 notifications:
   email: false
@@ -30,3 +27,14 @@ notifications:
     on_failure: always
   slack:
     secure: T9GJHictl8hUOgGh5RRVmRMExqlWJByssoSYdgnFuHA8ugLXyvHyYaVjLPVcFE9yv7w+sQgki0ZIzCyUH/Hg6/UPwRaH8W4Cm57vQwhE+TUvfy6eRRvYT118X/9X3xkYwhNUks+uydP6oI9YTnvr1XrzB6L4htA7Ma/YKBDhLhg=
+addons:
+  apt:
+    packages:
+      - libmpfr-dev
+      - libmpc-dev
+      - libgmp3-dev
+      - sqlite3
+      - texinfo
+      - scons
+      - genisoimage
+      - e2fsprogs

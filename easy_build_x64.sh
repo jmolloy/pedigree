@@ -19,6 +19,7 @@ echo
 compiler_build_options=""
 
 real_os=""
+nosudo=0
 if [ ! -e $script_dir/.easy_os ]; then
 
     echo "Checking for dependencies... Which operating system are you running on?"
@@ -28,6 +29,10 @@ if [ ! -e $script_dir/.easy_os ]; then
         read os
     else
         os=$1
+        if [ "$os" = "nosudo" ]; then
+            os=$2
+            nosudo=1
+        fi
     fi
 
     shopt -s nocasematch
@@ -38,11 +43,11 @@ if [ ! -e $script_dir/.easy_os ]; then
         debian)
             # TODO: Not sure if the package list is any different for debian vs ubuntu?
             echo "Installing packages with apt-get, please wait..."
-            sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage
+            [ $nosudo = 0 ] && sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage
             ;;
         ubuntu)
             echo "Installing packages with apt-get, please wait..."
-            sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage e2fsprogs
+            [ $nosudo = 0 ] && sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage e2fsprogs
             ;;
         opensuse)
             echo "Installing packages with zypper, please wait..."
