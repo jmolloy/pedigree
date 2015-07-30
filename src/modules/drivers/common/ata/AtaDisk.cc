@@ -992,3 +992,13 @@ size_t AtaDisk::getBlockSize() const
 {
     return m_BlockSize;
 }
+
+void AtaDisk::pin(uint64_t location)
+{
+    m_Cache.pin(location);
+}
+
+void AtaDisk::unpin(uint64_t location)
+{
+    m_Cache.release(location);
+}

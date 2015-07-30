@@ -78,6 +78,9 @@ public:
     virtual size_t getSize() const;
     virtual size_t getBlockSize() const;
 
+    virtual void pin(uint64_t location);
+    virtual void unpin(uint64_t location);
+
 private:
     /** Sets the drive up for reading from address 'n' in LBA28 mode. */
     void setupLBA28(uint64_t n, uint32_t nSectors);
