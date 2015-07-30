@@ -365,6 +365,9 @@ def buildImageE2fsprogs(target, source, env):
             target_dirpath = '/'
 
         for d in dirs:
+            source = os.path.join(dirpath, d)
+            if os.path.islink(source):
+                continue
             cmdlist.append('mkdir %s' % (os.path.join(target_dirpath, d),))
 
         # The 'write' command doesn't actually take a filespec. If we don't
@@ -372,7 +375,7 @@ def buildImageE2fsprogs(target, source, env):
         # forward slashes in the name (which is not very useful!)
         cmdlist.append("cd %s" % (target_dirpath,))
 
-        for f in files:
+        for f in files + dirs:
             source = os.path.join(dirpath, f)
             target = f
             if os.path.islink(source):
