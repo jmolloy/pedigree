@@ -45,10 +45,10 @@ libpedigree_c_files = Glob("*.c")
 # To include a new directory for includes, just add it to the list
 include_dirs = [
     './include',
-    '#/src/modules',
-    '#/src/system/include',
-    '#/src/modules/system',
-	'#/src/subsys/posix/include',
+    '#src/modules',
+    '#src/system/include',
+    '#src/modules/system',
+	'#src/subsys/posix/include',
     '.'
 ]
 
@@ -71,7 +71,6 @@ if "STATIC_DRIVERS" in env['CPPDEFINES']:
     env_clone.Command(final_output, pedigree_c_objname,
         action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
 else:
-    print [x.path for x in kernel_module_files]
     env_clone.Program(pedigree_c_objname, kernel_module_files,
         LINKFLAGS='-nostdlib -r -T $LSCRIPT',
         LSCRIPT=File("#src/modules/link.ld"))
@@ -81,7 +80,7 @@ else:
 # -fPIC for libpedigree-c
 glueFlags = " -fPIC -DUSE_PIC_SYSCALLS "
 
-libs_clone = env.Clone()
+libs_clone = env_clone.Clone()
 
 libs_clone['CFLAGS'] = buildutils.userspace.fixFlags(env, libs_clone['CFLAGS'])
 libs_clone['CXXFLAGS'] = buildutils.userspace.fixFlags(env, libs_clone['CXXFLAGS'])
