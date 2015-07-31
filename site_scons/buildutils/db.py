@@ -52,7 +52,7 @@ def BuildSqliteDB(target, source, env):
 
 
 def generate(env):
-    action = SCons.Action.Action(BuildSqliteDB)
+    action = SCons.Action.Action(BuildSqliteDB, env.get('TARCOMSTR'))
     builder = env.Builder(action=action, target_factory=env.File,
         source_factory=env.File, single_source=False)
 
