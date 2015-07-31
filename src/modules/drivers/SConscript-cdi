@@ -42,13 +42,16 @@ for driver in cdi_drivers:
 
     directory = os.path.join("cdi", driver)
     
-    objname = os.path.join('#' + env["PEDIGREE_BUILD_DRIVERS"], driver + '.o')
+    objname = os.path.join(env["PEDIGREE_BUILD_DRIVERS"], driver + '.o')
     
     driverFiles = [Glob(os.path.join(directory, '*.c'))]
     
     env_clone['LIBS'] = libraries
     env_clone['CPPPATH'] = include_dirs
-    env_clone['CPPPATH'] += [os.path.join(directory, 'include')]
+
+    custom_include = os.path.join(directory, 'include')
+    if os.path.isdir(custom_include)
+        env_clone['CPPPATH'] += [custom_include]
 
     # TOOD: do a warning fixup in CDI
     env_clone['CFLAGS'] = env_clone['CFLAGS'].replace('-Werror', '')
