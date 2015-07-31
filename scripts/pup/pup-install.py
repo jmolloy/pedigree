@@ -21,7 +21,6 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 import os
 import sys
 import stat
-import shutil
 import urllib
 import sqlite3
 import tarfile
