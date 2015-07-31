@@ -193,6 +193,7 @@ if(len(localisePrefix) > 0):
     localisePrefix += ' '
 
 # Pedigree binary locations
+env['BUILDDIR'] = env.Dir(env['BUILDDIR']).abspath  # Normalise path.
 env['PEDIGREE_BUILD_BASE'] = env['BUILDDIR']
 env['PEDIGREE_BUILD_MODULES'] = os.path.join(env['BUILDDIR'], 'modules')
 env['PEDIGREE_BUILD_KERNEL'] = os.path.join(env['BUILDDIR'], 'kernel')
