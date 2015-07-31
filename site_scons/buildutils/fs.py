@@ -18,16 +18,26 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
 
-import buildutils.downloader
-import buildutils.header
-import buildutils.patcher
-import buildutils.pyflakes
-import buildutils.tar
+import os
 
+def find_files(startdir, matcher, skip_paths):
+    """Find files in the given directory, with blacklist and custom matcher.
 
-def generate(env):
-    buildutils.downloader.generate(env)
-    buildutils.header.generate(env)
-    buildutils.patcher.generate(env)
-    buildutils.pyflakes.generate(env)
-    buildutils.tar.generate(env)
+    Args:
+        startdir: base directory to walk
+        matcher: function that takes a filename and returns True or False to
+            determine whether the file should be added to the list
+        skip_paths: iterable of paths to not pass over
+
+    Returns:
+        A list of paths to files.
+    """
+    x = []
+    for root, dirs, files in os.walk(startdir):
+        for path in skip_paths:
+            if path in root:
+                break
+        else:
+            x.extend([os.path.join(root, f) for f in files if matcher(f)])
+
+    return sorted(x)

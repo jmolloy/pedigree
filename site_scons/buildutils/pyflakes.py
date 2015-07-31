@@ -18,16 +18,31 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
 
-import buildutils.downloader
-import buildutils.header
-import buildutils.patcher
-import buildutils.pyflakes
-import buildutils.tar
+import commands
+import os
+
+import SCons
+
+
+def Pyflakes(target, source, env):
+    if not (env['pyflakes'] or env['sconspyflakes']):
+        return
+
+    # Run pyflakes over .py files, if pyflakes is present.
+    pyflakespath = commands.getoutput("which pyflakes")
+    if not os.path.exists(pyflakespath):
+        return
+
+    for i, pyfile in enumerate(source):
+        realpath = pyfile.abspath
+        name = os.path.basename(realpath)
+        pyflakes = env.Command('pyflakes-%s%d' % (name, i), pyfile, '%s %s' % (pyflakespath, realpath))
+        env.AlwaysBuild(pyflakes)
 
 
 def generate(env):
-    buildutils.downloader.generate(env)
-    buildutils.header.generate(env)
-    buildutils.patcher.generate(env)
-    buildutils.pyflakes.generate(env)
-    buildutils.tar.generate(env)
+    action = SCons.Action.Action(Pyflakes)
+    builder = env.Builder(action=action, target_factory=env.File,
+        source_factory=env.File, single_source=False)
+
+    env.Append(BUILDERS={'Pyflakes': builder})

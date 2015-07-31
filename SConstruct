@@ -42,12 +42,12 @@ import SCons
 from socket import gethostname
 from datetime import *
 
+from buildutils import misc
+
 # Grab all the default flags for each architecture
 sys.path += ['./scripts']
 from defaultFlags import *
 
-# Pull in buildutils so we can initialise it.
-import buildutils
 
 ####################################
 # Default build flags (Also used to auto-generate help)
@@ -593,7 +593,7 @@ if sys.platform == 'darwin':
         env['TAR'] = 'gnutar'
 
 # Generate custom builders and add to environment.
-buildutils.generate(env)
+misc.generate(env)
 
 ####################################
 # Progress through all our sub-directories

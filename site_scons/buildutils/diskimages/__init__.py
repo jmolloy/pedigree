@@ -17,17 +17,3 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
-
-import buildutils.downloader
-import buildutils.header
-import buildutils.patcher
-import buildutils.pyflakes
-import buildutils.tar
-
-
-def generate(env):
-    buildutils.downloader.generate(env)
-    buildutils.header.generate(env)
-    buildutils.patcher.generate(env)
-    buildutils.pyflakes.generate(env)
-    buildutils.tar.generate(env)

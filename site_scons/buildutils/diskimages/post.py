@@ -18,16 +18,21 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
 
-import buildutils.downloader
-import buildutils.header
-import buildutils.patcher
-import buildutils.pyflakes
-import buildutils.tar
+def postImageBuild(img, env):
+    if env['haveqemuimg']:
+        builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"]).abspath
 
+        additional_images = {}
+        if env['createvdi'] or env['createvmdk']:
+            additional_images = {
+                'vdi': env.File(builddir + '/hdd.vdi'),
+                'vmdk' : env.File(builddir + '/hdd.vmdk')
+            }
 
-def generate(env):
-    buildutils.downloader.generate(env)
-    buildutils.header.generate(env)
-    buildutils.patcher.generate(env)
-    buildutils.pyflakes.generate(env)
-    buildutils.tar.generate(env)
+        if env['createvdi'] and 'vdi' in additional_images:
+            target = additional_images['vdi'].path
+            env.Command(target, 'qemu-img convert -O vpc %s %s' % (img, target))
+
+        if env['createvmdk'] and 'vmdk' in additional_images:
+            target = additional_images['vmdk'].path
+            env.Command(target, 'qemu-img convert -f raw -O vmdk %s %s' % (img, target))
