@@ -26,10 +26,10 @@ Import(['env'])
 env_clone = env.Clone()
 
 # Build directories
-builddir = "#" + env["PEDIGREE_BUILD_BASE"]
-kerneldir = "#" + env["PEDIGREE_BUILD_KERNEL"]
-moduledir = "#" + env["PEDIGREE_BUILD_MODULES"]
-subsysdir = "#" + env["PEDIGREE_BUILD_SUBSYS"]
+builddir = env["PEDIGREE_BUILD_BASE"]
+kerneldir = env["PEDIGREE_BUILD_KERNEL"]
+moduledir = env["PEDIGREE_BUILD_MODULES"]
+subsysdir = env["PEDIGREE_BUILD_SUBSYS"]
 
 # We output a single library, which applications link against to gain access to
 # the implementation of the native subsystem classes.

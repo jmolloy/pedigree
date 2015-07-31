@@ -26,7 +26,7 @@ Import(['env'])
 
 env_clone = env.Clone()
 
-builddir = "#" + env["PEDIGREE_BUILD_BASE"]
+builddir = env["PEDIGREE_BUILD_BASE"]
 imagesdir = env["PEDIGREE_IMAGES_DIR"]
 objname = os.path.join(builddir, 'libSDL.a')
 sobjname = os.path.join(builddir, 'libSDL.so')
@@ -112,7 +112,7 @@ env_clone['CXXFLAGS'] = env_clone['CXXFLAGS'].replace('-Werror', '')
 
 if env['ARCH_TARGET'] in ('X86', 'X64'):
     env_clone.SharedLibrary(sobjname, files, LINKFLAGS="")
-env_clone.Library(objname, files, LINKFLAGS="")
+    env.Alias('libs', sobjname)
 
-env.Alias(sobjname, 'libs')
-env.Alias(objname, 'libs')
+obj = env_clone.Library(objname, files, LINKFLAGS="")
+env.Alias('libs', obj)

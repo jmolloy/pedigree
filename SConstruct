@@ -194,11 +194,11 @@ if(len(localisePrefix) > 0):
 
 # Pedigree binary locations
 env['PEDIGREE_BUILD_BASE'] = env['BUILDDIR']
-env['PEDIGREE_BUILD_MODULES'] = env['BUILDDIR'] + '/modules'
-env['PEDIGREE_BUILD_KERNEL'] = env['BUILDDIR'] + '/kernel'
-env['PEDIGREE_BUILD_DRIVERS'] = env['BUILDDIR'] + '/drivers'
-env['PEDIGREE_BUILD_SUBSYS'] = env['BUILDDIR'] + '/subsystems'
-env['PEDIGREE_BUILD_APPS'] = env['BUILDDIR'] + '/apps'
+env['PEDIGREE_BUILD_MODULES'] = os.path.join(env['BUILDDIR'], 'modules')
+env['PEDIGREE_BUILD_KERNEL'] = os.path.join(env['BUILDDIR'], 'kernel')
+env['PEDIGREE_BUILD_DRIVERS'] = os.path.join(env['BUILDDIR'], 'drivers')
+env['PEDIGREE_BUILD_SUBSYS'] = os.path.join(env['BUILDDIR'], 'subsystems')
+env['PEDIGREE_BUILD_APPS'] = os.path.join(env['BUILDDIR'], 'apps')
 
 def safeAppend(a, b):
     a = a.split()
@@ -497,16 +497,6 @@ if not env['verbose']:
         env['DLCOMSTR']   =    '   Downloading \033[32m$TARGET\033[0m'
         env['PTCOMSTR']   =    '      Patching \033[32m$TARGET\033[0m'
 
-####################################
-# Generate Version.cc
-# Exports:
-## PEDIGREE_BUILDTIME
-## PEDIGREE_REVISION
-## PEDIGREE_FLAGS
-## PEDIGREE_USER
-## PEDIGREE_MACHINE
-####################################
-
 # Grab the date (rather than using the `date' program)
 env['PEDIGREE_BUILDTIME'] = datetime.today().isoformat()
 
@@ -569,7 +559,7 @@ def create_version_cc(target, source, env):
     f.write('\n'.join(version_out))
     f.close()
     
-env.Command('#' + env['BUILDDIR'] + '/Version.cc', None, Action(create_version_cc, None))
+env.Command(os.path.join(env['PEDIGREE_BUILD_BASE'], 'Version.cc'), None, Action(create_version_cc, None))
 
 # Override CXX if needed.
 if env['iwyu']:
@@ -595,10 +585,7 @@ if sys.platform == 'darwin':
 # Generate custom builders and add to environment.
 misc.generate(env)
 
-####################################
-# Progress through all our sub-directories
-####################################
-SConscript('SConscript', variant_dir = env['BUILDDIR'], exports = ['env'], duplicate = 0)
+SConscript('SConscript', variant_dir=env['BUILDDIR'], exports=['env'], duplicate=0)
 
 print
 print "**** This build of Pedigree (at rev %s, for %s, by %s) started at %s ****" % (env['PEDIGREE_REVISION'], env['ARCH_TARGET'], env['PEDIGREE_USER'], datetime.today())

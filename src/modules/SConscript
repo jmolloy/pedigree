@@ -21,8 +21,8 @@ import os
 
 Import(['env'])
 
-driverdir = "#" + env["PEDIGREE_BUILD_DRIVERS"]
-moduledir = "#" + env["PEDIGREE_BUILD_MODULES"]
+driverdir = env["PEDIGREE_BUILD_DRIVERS"]
+moduledir = env["PEDIGREE_BUILD_MODULES"]
 imagesdir = env["PEDIGREE_IMAGES_DIR"]
 
 # Common drivers - order is important
@@ -314,8 +314,8 @@ for cdi_driver in cdi_drivers:
     buildModule(cdi_env, cdi_driver, driverdir, 'drivers')
 
 # Ready to generate the initrd...
-builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"])
-initrdFile = env.File("#" + env["PEDIGREE_BUILD_BASE"] + "/initrd.tar")
+builddir = env.Dir(env["PEDIGREE_BUILD_BASE"])
+initrdFile = env.File(os.path.join(env["PEDIGREE_BUILD_BASE"], "initrd.tar"))
 
 # initrd lists
 

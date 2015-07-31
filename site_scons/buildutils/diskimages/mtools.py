@@ -29,7 +29,7 @@ def buildImageMtools(target, source, env):
     else:
         print '      Creating \033[32m' + os.path.basename(target[0].path) + '\033[0m'
 
-    builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"]).abspath
+    builddir = env.Dir(env["PEDIGREE_BUILD_BASE"]).abspath
     imagedir = env.Dir(env['PEDIGREE_IMAGES_DIR']).abspath
     appsdir = env.Dir(env['PEDIGREE_BUILD_APPS']).abspath
     modsdir = env.Dir(env['PEDIGREE_BUILD_MODULES']).abspath

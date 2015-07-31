@@ -31,7 +31,7 @@ import SCons
 
 
 def buildDiskImages(env, config_database):
-    builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"]).abspath
+    builddir = env.Dir(env["PEDIGREE_BUILD_BASE"]).abspath
     imagedir = env.Dir(env['PEDIGREE_IMAGES_DIR']).abspath
 
     hddimg = os.path.join(builddir, 'hdd.img')

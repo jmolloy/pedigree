@@ -24,7 +24,7 @@ Import(['env'])
 # Take a copy of the SCons environment as we tweak flags.
 env_clone = env.Clone()
 
-kerneldir = "#" + env["PEDIGREE_BUILD_KERNEL"]
+kerneldir = env["PEDIGREE_BUILD_KERNEL"]
 imagesdir = env["PEDIGREE_IMAGES_DIR"]
 builddir = env["PEDIGREE_BUILD_BASE"]
 objname = os.path.join(kerneldir, 'kernel')
@@ -34,7 +34,7 @@ env.Alias("kernel", objname)
 # Base set of kernel files, common to all architectures.
 files = [
     'Log.cc',
-    '#' + os.path.join(builddir, 'Version.cc'),
+    os.path.join(builddir, 'Version.cc'),
     'Archive.cc',
     'Spinlock.cc',
     'Subsystem.cc',

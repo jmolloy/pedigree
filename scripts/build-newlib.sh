@@ -14,12 +14,14 @@ rm -rf mybuild
 mkdir -p mybuild
 cd mybuild
 
+date >newlib.log 2>&1
+
 CC="$XGCC $XCFLAGS" LD="$XLD" \
 ../newlib/configure --host=$COMPILER_TARGET --target=$COMPILER_TARGET \
                     --enable-newlib-multithread --enable-newlib-mb \
                     --disable-newlib-supplied-syscalls --with-pic \
                     --disable-newlib-iconv \
-                    >newlib.log 2>&1
+                    >>newlib.log 2>&1
 
 make >>newlib.log 2>&1
 

@@ -18,6 +18,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
 
+import buildutils.db
 import buildutils.downloader
 import buildutils.header
 import buildutils.patcher
@@ -26,6 +27,7 @@ import buildutils.tar
 
 
 def generate(env):
+    buildutils.db.generate(env)
     buildutils.downloader.generate(env)
     buildutils.header.generate(env)
     buildutils.patcher.generate(env)

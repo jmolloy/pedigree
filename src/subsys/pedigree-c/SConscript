@@ -25,10 +25,10 @@ Import(['env'])
 
 env_clone = env.Clone()
 
-builddir = "#" + env["PEDIGREE_BUILD_BASE"]
-kerneldir = "#" + env["PEDIGREE_BUILD_KERNEL"]
-moduledir = "#" + env["PEDIGREE_BUILD_MODULES"]
-subsysdir = "#" + env["PEDIGREE_BUILD_SUBSYS"]
+builddir = env["PEDIGREE_BUILD_BASE"]
+kerneldir = env["PEDIGREE_BUILD_KERNEL"]
+moduledir = env["PEDIGREE_BUILD_MODULES"]
+subsysdir = env["PEDIGREE_BUILD_SUBSYS"]
 
 pedigree_c_objname = os.path.join(subsysdir, 'pedigree-c.o')
 libpedigree_c_objname = os.path.join(builddir, 'libpedigree-c.a')

@@ -27,9 +27,9 @@ Import(['env'])
 env_clone = env.Clone()
 
 appsbase = 'applications'
-appoutputdir = "#" + env["PEDIGREE_BUILD_APPS"]
+appoutputdir = env["PEDIGREE_BUILD_APPS"]
 imagesdir = env["PEDIGREE_IMAGES_DIR"]
-builddir = "#" + env["PEDIGREE_BUILD_BASE"]
+builddir = env["PEDIGREE_BUILD_BASE"]
 
 suffix = '-noarch'
 if env['ARCH_TARGET'] == 'X86':

@@ -23,10 +23,10 @@ Import(['env'])
 
 env_clone = env.Clone()
 
-builddir = "#" + env["PEDIGREE_BUILD_BASE"]
-kerneldir = "#" + env["PEDIGREE_BUILD_KERNEL"]
-moduledir = "#" + env["PEDIGREE_BUILD_MODULES"]
-subsysdir = "#" + env["PEDIGREE_BUILD_SUBSYS"]
+builddir = env["PEDIGREE_BUILD_BASE"]
+kerneldir = env["PEDIGREE_BUILD_KERNEL"]
+moduledir = env["PEDIGREE_BUILD_MODULES"]
+subsysdir = env["PEDIGREE_BUILD_SUBSYS"]
 
 native_userlib_objname = os.path.join(subsysdir, 'native.o')
 

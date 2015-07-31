@@ -22,7 +22,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 import os
 import commands
 
-from buildutils import fs
+from buildutils import fs, db
 from buildutils.diskimages import build
 
 Import(['env'])
@@ -46,7 +46,6 @@ if not env['ARCH_TARGET'] in ['X86', 'X64']:
 
 rootdir = env.Dir("#").abspath
 imagesroot = env.Dir("#images").abspath
-builddir = env["PEDIGREE_BUILD_BASE"]
 
 if env['pyflakes'] or env['sconspyflakes']:
     # Find .py files in the tree, excluding the images directory.
@@ -55,10 +54,10 @@ if env['pyflakes'] or env['sconspyflakes']:
     env.AlwaysBuild(pyflakes)
 
 # Build the configuration database (no dependencies)
-config_database = os.path.join(builddir, 'config.db')
+config_database = os.path.join(env["PEDIGREE_BUILD_BASE"], 'config.db')
 
-configSchemas = fs.find_files(env.Dir('#src').path, lambda x: x == 'schema', [])
-env.Command(config_database, configSchemas, '@python %s' % os.path.join(rootdir, 'scripts', 'buildDb.py'))
+configSchemas = fs.find_files(env.Dir('#src').abspath, lambda x: x == 'schema', [])
+env.Sqlite(config_database, configSchemas)
 
 if 'STATIC_DRIVERS' in env['CPPDEFINES']:
     # Generate config database header file for static inclusion.
