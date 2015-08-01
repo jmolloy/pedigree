@@ -347,10 +347,14 @@ void Terminal::write(const char *pStr, DirtyRectangle &rect)
 void Terminal::addToQueue(char c, bool bFlush)
 {
     // Don't allow keys to be pressed past the buffer's size
-    if(m_Len >= 256)
+    if((c != 0) && (m_Len >= 256))
+    {
         return;
+    }
     if((c == 0) && (!m_Len))
+    {
         return;
+    }
 
     if(c)
         m_pQueue[m_Len++] = c;
