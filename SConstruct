@@ -100,7 +100,7 @@ opts.AddVariables(
     ('distdir', 'Directory to install a Pedigree directory structure to, instead of a disk image. Empty will use disk images.', ''),
     BoolVariable('havelosetup', 'Whether or not `losetup` is available.', 0),
     BoolVariable('havee2fsprogs', 'Whether or not the e2fsprogs are available.', 0),
-    BoolVariable('forcemtools', 'Force use of mtools (and the FAT filesystem) even if losetup is available.', 1),
+    BoolVariable('forcemtools', 'Force use of mtools (and the FAT filesystem) even if losetup is available.', 0),
     BoolVariable('haveqemuimg', 'Whether or not `qemu-img` is available (for VDI/VMDK creation).', 0),
     BoolVariable('createvdi', 'Convert the created hard disk image to a VDI file for VirtualBox after it is created.', 0),
     BoolVariable('createvmdk', 'Convert the created hard disk image to a VMDK file for VMware after it is created.', 0),
