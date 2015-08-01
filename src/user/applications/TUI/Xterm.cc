@@ -2556,7 +2556,13 @@ void Xterm::Window::eraseDown(DirtyRectangle &rect)
     syslog(LOG_INFO, "Xterm::Window::eraseDown()");
 #endif
 
-    size_t top = m_CursorY * g_NormalFont->getHeight();
+    // Erase to the end of the line first. Essentially, we're erasing from the
+    // current position to the end of the screen.
+    eraseEOL(rect);
+
+    size_t eraseStart = m_CursorY + 1;
+
+    size_t top = eraseStart * g_NormalFont->getHeight();
 
     cairo_save(g_Cairo);
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
@@ -2574,17 +2580,17 @@ void Xterm::Window::eraseDown(DirtyRectangle &rect)
             ((g_Colours[bg]) & 0xFF) / 256.0,
             0.8);
 
-    cairo_rectangle(g_Cairo, m_OffsetLeft, m_OffsetTop + top, m_FbWidth, g_NormalFont->getHeight() * (m_Height - m_CursorY));
+    cairo_rectangle(g_Cairo, m_OffsetLeft, m_OffsetTop + top, m_FbWidth, g_NormalFont->getHeight() * (m_Height - eraseStart));
     cairo_fill(g_Cairo);
 
     cairo_restore(g_Cairo);
 
-    // m_pFramebuffer->rect(0, top, m_FbWidth, g_NormalFont->getHeight() * (m_Height - m_CursorY), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
+    // m_pFramebuffer->rect(0, top, m_FbWidth, g_NormalFont->getHeight() * (m_Height - eraseStart), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
 
     rect.point(m_OffsetLeft, top + m_OffsetTop);
-    rect.point(m_OffsetLeft + m_FbWidth, top + m_OffsetTop + ((m_Height - m_CursorY) * g_NormalFont->getHeight()));
+    rect.point(m_OffsetLeft + m_FbWidth, top + m_OffsetTop + ((m_Height - eraseStart) * g_NormalFont->getHeight()));
 
-    for(size_t row = m_CursorY; row < m_Height; row++)
+    for(size_t row = eraseStart; row < m_Height; row++)
     {
         for(size_t col = 0; col < m_Width; col++)
         {

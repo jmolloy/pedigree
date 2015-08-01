@@ -35,8 +35,8 @@
 #define XTERM_STANDARD          80
 #define XTERM_MIN_WIDTH         132
 
-#define XTERM_DEBUG
-#define XTERM_DEBUG_EXTRA
+// #define XTERM_DEBUG
+// #define XTERM_DEBUG_EXTRA
 
 class Xterm
 {
