@@ -35,7 +35,8 @@
 #define XTERM_STANDARD          80
 #define XTERM_MIN_WIDTH         132
 
-// #define XTERM_DEBUG
+#define XTERM_DEBUG
+#define XTERM_DEBUG_EXTRA
 
 class Xterm
 {
@@ -145,12 +146,12 @@ private:
             void setCursor(size_t x, size_t y, DirtyRectangle &rect);
             void setCursorX(size_t x, DirtyRectangle &rect);
             void setCursorY(size_t y, DirtyRectangle &rect);
-            size_t getCursorX();
-            size_t getCursorY();
+            ssize_t getCursorX() const;
+            ssize_t getCursorY() const;
             /** The RelOrigin versions retrieve relative when inside the
               * page area, and the normal x/y if not. */
-            size_t getCursorXRelOrigin();
-            size_t getCursorYRelOrigin();
+            ssize_t getCursorXRelOrigin() const;
+            ssize_t getCursorYRelOrigin() const;
             void setCursorStyle(bool bFilled)
             {
                 m_bCursorFilled = bFilled;
@@ -254,10 +255,10 @@ private:
             size_t m_OffsetLeft, m_OffsetTop;
 
             size_t m_nMaxScrollback;
-            size_t m_CursorX, m_CursorY;
+            ssize_t m_CursorX, m_CursorY;
 
-            size_t m_ScrollStart, m_ScrollEnd;
-            size_t m_LeftMargin, m_RightMargin;
+            ssize_t m_ScrollStart, m_ScrollEnd;
+            ssize_t m_LeftMargin, m_RightMargin;
 
             TermChar *m_pInsert;
             TermChar *m_pView;

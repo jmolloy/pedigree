@@ -341,8 +341,8 @@ void Xterm::setFlagsForUtf32(uint32_t utf32)
 
 void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 {
-#ifdef XTERM_DEBUG
-    // syslog(LOG_INFO, "XTerm::write(%c/%x)", (char) utf32, utf32);
+#ifdef XTERM_DEBUG_EXTRA
+    syslog(LOG_INFO, "XTerm::write(%c/%x)", (char) utf32, utf32);
 #endif
 
     if(!m_Flags)
@@ -1627,11 +1627,7 @@ void Xterm::Window::cursorUp(size_t n, DirtyRectangle &rect)
     syslog(LOG_INFO, "Xterm::Window::cursorUp(%zd)", n);
 #endif
 
-    if (n > m_CursorY)
-        n = m_CursorY;
-    else
-        m_CursorY -= n;
-
+    m_CursorY -= n;
     checkScroll(rect);
 }
 
@@ -1641,11 +1637,7 @@ void Xterm::Window::cursorUpWithinMargin(size_t n, DirtyRectangle &rect)
     syslog(LOG_INFO, "Xterm::Window::cursorUpWithinMargin(%zd)", n);
 #endif
 
-    if (n > m_CursorY)
-        n = m_CursorY;
-
     m_CursorY -= n;
-
     if (m_CursorY < m_ScrollStart)
         m_CursorY = m_ScrollStart;
 }
@@ -1655,9 +1647,6 @@ void Xterm::Window::cursorLeftWithinMargin(size_t n, DirtyRectangle &)
 #ifdef XTERM_DEBUG
     syslog(LOG_INFO, "Xterm::Window::cursorLeftWithinMargin(%zd)", n);
 #endif
-
-    if (n > m_CursorX)
-        n = m_CursorX;
 
     m_CursorX -= n;
 
@@ -2095,16 +2084,16 @@ void Xterm::Window::setCursorY(size_t y, DirtyRectangle &rect)
     setCursor(m_CursorX, y, rect);
 }
 
-size_t Xterm::Window::getCursorX()
+ssize_t Xterm::Window::getCursorX() const
 {
     return m_CursorX;
 }
-size_t Xterm::Window::getCursorY()
+ssize_t Xterm::Window::getCursorY() const
 {
     return m_CursorY;
 }
 
-size_t Xterm::Window::getCursorXRelOrigin()
+ssize_t Xterm::Window::getCursorXRelOrigin() const
 {
     if((m_CursorX > m_LeftMargin) && (m_CursorX <= m_RightMargin))
         return m_CursorX - m_LeftMargin;
@@ -2112,7 +2101,7 @@ size_t Xterm::Window::getCursorXRelOrigin()
     return m_CursorX;
 }
 
-size_t Xterm::Window::getCursorYRelOrigin()
+ssize_t Xterm::Window::getCursorYRelOrigin() const
 {
     if((m_CursorY > m_ScrollStart) && (m_CursorY <= m_ScrollEnd))
         return m_CursorY - m_ScrollStart;
@@ -2145,9 +2134,6 @@ void Xterm::Window::cursorLeftNum(size_t n, DirtyRectangle &rect)
 #ifdef XTERM_DEBUG
     syslog(LOG_INFO, "Xterm::Window::cursorLeftNum(%zd)", n);
 #endif
-
-    if (n > m_CursorX)
-        n = m_CursorX;
 
     m_CursorX -= n;
 
@@ -2230,9 +2216,6 @@ void Xterm::Window::fillChar(uint32_t utf32, DirtyRectangle &rect)
     syslog(LOG_INFO, "Xterm::Window::fillChar(%c)", (char) utf32);
 #endif
 
-    syslog(LOG_INFO, "fill character '%c': %zdx%zd -> %zdx%zd",
-        (char) utf32, m_LeftMargin, m_ScrollStart, m_RightMargin, m_ScrollEnd);
-
     for (size_t y = m_ScrollStart; y < m_ScrollEnd; ++y)
     {
         for (size_t x = m_LeftMargin; x < m_RightMargin; ++x)
@@ -2247,7 +2230,7 @@ void Xterm::Window::fillChar(uint32_t utf32, DirtyRectangle &rect)
 
 void Xterm::Window::addChar(uint32_t utf32, DirtyRectangle &rect)
 {
-#ifdef XTERM_DEBUG
+#ifdef XTERM_DEBUG_EXTRA
     syslog(LOG_INFO, "Xterm::Window::addChar(%c) [@ %zd, %zd]", (char) utf32, m_CursorX, m_CursorY);
 #endif
 
