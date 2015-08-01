@@ -793,6 +793,9 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                     {
                         switch(m_Cmd.params[i])
                         {
+                            case 4:
+                                modesToChange |= Insert;
+                                break;
                             case 20:
                                 modesToChange |= LineFeedNewLine;
                                 break;
@@ -2241,6 +2244,12 @@ void Xterm::Window::addChar(uint32_t utf32, DirtyRectangle &rect)
         if (m_CursorX >= m_Stride)
             return;
 
+        if (m_pParentXterm->getModes() & Insert)
+        {
+            // We need some space, first.
+            insertCharacters(1, rect);
+        }
+
         TermChar tc = getChar();
         setChar(utf32, m_CursorX, m_CursorY);
         if (getChar() != tc)
@@ -2575,19 +2584,24 @@ void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
 #endif
 
     // Start of the delete region
-    size_t deleteStart = m_CursorX;
+    ssize_t deleteStart = m_CursorX;
 
     // End of the delete region
-    size_t deleteEnd = (deleteStart + n);
+    ssize_t deleteEnd = deleteStart + n;
+    if (deleteEnd > m_RightMargin)
+        deleteEnd = m_RightMargin;
 
     // Number of characters to shift
-    size_t numChars = m_RightMargin - deleteEnd;
+    ssize_t numChars = m_RightMargin - deleteEnd;
 
     // Shift all the characters across from the end of the delete area to the start.
-    memmove(&m_pBuffer[(m_CursorY * m_Stride) + deleteStart], &m_pBuffer[(m_CursorY * m_Stride) + deleteEnd], numChars * sizeof(TermChar));
+    memmove(&m_pBuffer[(m_CursorY * m_Stride) + deleteStart],
+            &m_pBuffer[(m_CursorY * m_Stride) + deleteEnd],
+            numChars * sizeof(TermChar));
 
-    // Now that the characters have been shifted, clear the space after the region we copied
-    size_t left = (m_Stride - n) * g_NormalFont->getWidth();
+    // Now that the characters have been shifted, clear the space after
+    // the region we copied.
+    size_t left = (m_RightMargin - n) * g_NormalFont->getWidth();
     size_t top = m_CursorY * g_NormalFont->getHeight();
 
     cairo_save(g_Cairo);
@@ -2606,22 +2620,21 @@ void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
             ((g_Colours[bg]) & 0xFF) / 256.0,
             0.8);
 
-    cairo_rectangle(g_Cairo, left, top, n * g_NormalFont->getWidth(), g_NormalFont->getHeight());
+    cairo_rectangle(g_Cairo, m_OffsetLeft + left, m_OffsetTop + top,
+        n * g_NormalFont->getWidth(), g_NormalFont->getHeight());
     cairo_fill(g_Cairo);
 
     cairo_restore(g_Cairo);
 
-    // m_pFramebuffer->rect(left, top, n * g_NormalFont->getWidth(), g_NormalFont->getHeight(), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
-
     // Update the moved section
     size_t row = m_CursorY, col = 0;
-    for(col = deleteStart; col < (m_Width - n); col++)
+    for(col = deleteStart; col < (m_RightMargin - n); col++)
     {
         render(rect, 0, col, row);
     }
 
     // And then update the cleared section
-    for(col = (m_Width - n); col < m_Width; col++)
+    for(col = (m_RightMargin - n); col < m_RightMargin; col++)
     {
         setChar(' ', col, row);
     }
@@ -2643,7 +2656,9 @@ void Xterm::Window::insertCharacters(size_t n, DirtyRectangle &rect)
     size_t numChars = m_RightMargin - insertEnd;
 
     // Shift characters.
-    memmove(&m_pBuffer[(m_CursorY * m_Stride) + insertEnd], &m_pBuffer[(m_CursorY * m_Stride) + insertStart], numChars);
+    memmove(&m_pBuffer[(m_CursorY * m_Stride) + insertEnd],
+            &m_pBuffer[(m_CursorY * m_Stride) + insertStart],
+            numChars * sizeof(TermChar));
 
     // Now that the characters have been shifted, clear the space inside the region we inserted
     size_t left = insertStart * g_NormalFont->getWidth();
@@ -2665,10 +2680,14 @@ void Xterm::Window::insertCharacters(size_t n, DirtyRectangle &rect)
             ((g_Colours[bg]) & 0xFF) / 256.0,
             0.8);
 
-    cairo_rectangle(g_Cairo, left, top, n * g_NormalFont->getWidth(), g_NormalFont->getHeight());
+    cairo_rectangle(g_Cairo, m_OffsetLeft + left, m_OffsetTop + top,
+        n * g_NormalFont->getWidth(), g_NormalFont->getHeight());
     cairo_fill(g_Cairo);
 
     cairo_restore(g_Cairo);
+
+    rect.point(m_OffsetLeft + left, m_OffsetTop + top);
+    rect.point(m_OffsetLeft + left + (n * g_NormalFont->getWidth()), m_OffsetTop + top + g_NormalFont->getHeight());
 
     // Update the inserted section
     size_t row = m_CursorY, col = 0;
@@ -2678,7 +2697,7 @@ void Xterm::Window::insertCharacters(size_t n, DirtyRectangle &rect)
     }
 
     // Update the moved section
-    for(col = insertStart; col < m_Width; col++)
+    for(col = insertStart; col < m_RightMargin; col++)
     {
         render(rect, 0, col, row);
     }
@@ -2690,31 +2709,13 @@ void Xterm::Window::insertLines(size_t n, DirtyRectangle &rect)
     syslog(LOG_INFO, "Xterm::Window::insertLines(%zd)", n);
 #endif
 
-    // If we'll go past the end of the screen in doing this, we can just erase.
-    if((m_CursorY + 1 + n) >= m_ScrollEnd)
-    {
-        ++m_CursorY;
-        eraseDown(rect);
-        --m_CursorY;
-    }
-    else
-    {
-        // Otherwise, we need to scroll and then do an erase.
-        size_t oldStart = m_ScrollStart;
-        m_ScrollStart = m_CursorY + 1;
+    if (m_CursorY + n >= m_ScrollEnd)
+        n = m_ScrollEnd - m_CursorY;
 
-        scrollRegionDown(n, rect);
-
-        size_t savedY = m_CursorY;
-        for(size_t newY = savedY + 1; newY < (savedY + 1 + n); ++newY)
-        {
-            m_CursorY = newY;
-            eraseLine(rect);
-        }
-        m_CursorY = savedY;
-
-        m_ScrollStart = oldStart;
-    }
+    // This will perform the correct scroll down, but then we need to erase
+    // the current line to actually give the illusion of insertion.
+    eraseLine(rect);
+    scrollRegionDown(n, rect);
 }
 
 void Xterm::Window::deleteLines(size_t n, DirtyRectangle &rect)
@@ -2723,33 +2724,11 @@ void Xterm::Window::deleteLines(size_t n, DirtyRectangle &rect)
     syslog(LOG_INFO, "Xterm::Window::deleteLines(%zd)", n);
 #endif
 
-    /// \todo I have no idea if this will actually work.
+    if (m_CursorY + n >= m_ScrollEnd)
+        n = m_ScrollEnd - m_CursorY;
 
-    // If we'll go past the end of the screen in doing this, we can just erase.
-    if((m_CursorY + 1 + n) >= m_ScrollEnd)
-    {
-        ++m_CursorY;
-        eraseDown(rect);
-        --m_CursorY;
-    }
-    else
-    {
-        // Otherwise, we need to scroll and then do an erase.
-        size_t oldStart = m_ScrollStart;
-        m_ScrollStart = m_CursorY + 1;
-
-        scrollScreenUp(n, rect);
-
-        size_t savedY = m_CursorY;
-        for(size_t newY = savedY + n + 1; newY < (savedY + 1 + n); ++newY)
-        {
-            m_CursorY = newY;
-            eraseLine(rect);
-        }
-        m_CursorY = savedY;
-
-        m_ScrollStart = oldStart;
-    }
+    // This will scroll the rest of the lines into this one.
+    scrollRegionUp(n, rect);
 }
 
 void Xterm::Window::lineRender(uint32_t utf32, DirtyRectangle &rect)

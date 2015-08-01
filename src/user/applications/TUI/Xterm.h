@@ -320,6 +320,7 @@ private:
         Interlace       = 0x200,
         AppKeypad       = 0x400,
         Margin          = 0x800,
+        Insert          = 0x1000,
     };
 
     enum TerminalFlags
