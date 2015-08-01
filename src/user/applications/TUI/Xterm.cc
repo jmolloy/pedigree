@@ -116,9 +116,9 @@ Xterm::Xterm(PedigreeGraphics::Framebuffer *pFramebuffer, size_t nWidth, size_t 
     getXtermColorFromDb("xterm-fg", g_DefaultFg);
 
     // Set default tab stops.
-    m_TabStops = new char[width];
-    memset(m_TabStops, 0, width);
-    for(size_t i = 0; i < width; i += 8)
+    m_TabStops = new char[getStride()];
+    memset(m_TabStops, 0, getStride());
+    for(size_t i = 0; i < getStride(); i += 8)
     {
         m_TabStops[i] = '|';
     }
@@ -829,13 +829,17 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 
                 if (modesToChange & Column)
                 {
-                    syslog(LOG_ALERT, "warning, DECCOLM is not yet fully supported.");
-
-                    /// \todo change right margin to correct margin (132/80).
-                    m_pWindows[m_ActiveBuffer]->eraseScreen(rect);
-
                     // Reset margins.
-                    m_pWindows[m_ActiveBuffer]->setMargins(0, 80);
+                    if (m_Modes & Column)
+                    {
+                        m_pWindows[m_ActiveBuffer]->setMargins(0, XTERM_WIDE);
+                    }
+                    else
+                    {
+                        m_pWindows[m_ActiveBuffer]->setMargins(0, XTERM_STANDARD);
+                    }
+
+                    m_pWindows[m_ActiveBuffer]->eraseScreen(rect);
                     m_pWindows[m_ActiveBuffer]->setScrollRegion(-1, -1);
 
                     // Cursor to home.
@@ -1113,9 +1117,15 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                     // DECALN: DEC Screen Alignment Test (fill screen with 'E')
 
                     // DECALN resets margins
-                    /// \todo Column mode (we don't yet backbuffer safely for Column to work).
-                    m_pWindows[m_ActiveBuffer]->setMargins(0, 80);
-                    m_pWindows[m_ActiveBuffer]->setScrollRegion(0, 25);
+                    if (m_Modes & Column)
+                    {
+                        m_pWindows[m_ActiveBuffer]->setMargins(0, XTERM_WIDE);
+                    }
+                    else
+                    {
+                        m_pWindows[m_ActiveBuffer]->setMargins(0, XTERM_STANDARD);
+                    }
+                    m_pWindows[m_ActiveBuffer]->setScrollRegion(-1, -1);
 
                     // Fill the space with 'E'.
                     m_pWindows[m_ActiveBuffer]->fillChar('E', rect);
@@ -1330,18 +1340,27 @@ void Xterm::renderAll(DirtyRectangle &rect)
 }
 
 Xterm::Window::Window(size_t nRows, size_t nCols, PedigreeGraphics::Framebuffer *pFb, size_t nMaxScrollback, size_t offsetLeft, size_t offsetTop, size_t fbWidth, Xterm *parent) :
-    m_pBuffer(0), m_BufferLength(nRows*nCols), m_pFramebuffer(pFb), m_FbWidth(fbWidth), m_Width(nCols), m_Height(nRows), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop), m_nMaxScrollback(nMaxScrollback), m_CursorX(0), m_CursorY(0), m_ScrollStart(0), m_ScrollEnd(nRows-1),
+    m_pBuffer(0), m_BufferLength(0), m_pFramebuffer(pFb), m_FbWidth(fbWidth), m_Width(nCols), m_Height(nRows), m_Stride(XTERM_MIN_WIDTH), m_OffsetLeft(offsetLeft), m_OffsetTop(offsetTop), m_nMaxScrollback(nMaxScrollback), m_CursorX(0), m_CursorY(0), m_ScrollStart(0), m_ScrollEnd(nRows-1),
     m_pInsert(0), m_pView(0), m_Fg(g_DefaultFg), m_Bg(g_DefaultBg), m_Flags(0), m_bCursorFilled(true), m_bLineRender(false), m_pParentXterm(parent)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::Window() dimensions %zdx%zd", nCols, nRows);
+#endif
+
+    if (m_Width > m_Stride)
+        m_Stride = m_Width;
+
     // Using malloc() instead of new[] so we can use realloc()
-    m_pBuffer = reinterpret_cast<TermChar*>(malloc(m_Width*m_Height*sizeof(TermChar)));
+    m_pBuffer = reinterpret_cast<TermChar*>(malloc(m_Stride * m_Height * sizeof(TermChar)));
+
+    m_BufferLength = m_Stride * m_Height;
 
     TermChar blank;
     blank.fore = m_Fg;
     blank.back = m_Bg;
     blank.utf32 = ' ';
     blank.flags = 0;
-    for (size_t i = 0; i < m_Width*m_Height; i++)
+    for (size_t i = 0; i < m_Stride * m_Height; i++)
         m_pBuffer[i] = blank;
 
     if(g_Cairo)
@@ -1378,6 +1397,7 @@ void Xterm::Window::showCursor(DirtyRectangle &rect)
 #ifdef XTERM_DEBUG
     syslog(LOG_INFO, "Xterm::Window::showCursor");
 #endif
+
     render(rect, m_bCursorFilled ? XTERM_INVERSE : XTERM_BORDER);
 }
 
@@ -1386,6 +1406,7 @@ void Xterm::Window::hideCursor(DirtyRectangle &rect)
 #ifdef XTERM_DEBUG
     syslog(LOG_INFO, "Xterm::Window::hideCursor");
 #endif
+
     render(rect);
 }
 
@@ -1429,31 +1450,39 @@ void Xterm::Window::resize(size_t nWidth, size_t nHeight, bool bActive)
         cairo_restore(g_Cairo);
     }
 
-    TermChar *newBuf = reinterpret_cast<TermChar*>(malloc(cols*rows*sizeof(TermChar)));
+    size_t previousStride = m_Stride;
+
+    if (m_Stride < XTERM_MIN_WIDTH)
+        m_Stride = XTERM_MIN_WIDTH;
+
+    if (cols > m_Stride)
+        m_Stride = cols;
+
+    TermChar *newBuf = reinterpret_cast<TermChar*>(malloc(m_Stride * rows * sizeof(TermChar)));
 
     TermChar blank;
     blank.fore = m_Fg;
     blank.back = m_Bg;
     blank.utf32 = ' ';
     blank.flags = 0;
-    for (size_t i = 0; i < cols*rows; i++)
+    for (size_t i = 0; i < m_Stride * rows; i++)
         newBuf[i] = blank;
 
     for (size_t r = 0; r < m_Height; r++)
     {
         if (r >= rows) break;
-        for (size_t c = 0; c < m_Width; c++)
+        for (size_t c = 0; c < m_Stride; c++)
         {
             if (c >= cols) break;
 
-            newBuf[r*cols + c] = m_pInsert[r*m_Width + c];
+            newBuf[r * m_Stride + c] = m_pInsert[r * previousStride + c];
         }
     }
 
     free(m_pBuffer);
 
     m_pInsert = m_pView = m_pBuffer = newBuf;
-    m_BufferLength = rows*cols;
+    m_BufferLength = rows * m_Stride;
 
     if(m_RightMargin > cols)
         m_RightMargin = cols;
@@ -1472,9 +1501,9 @@ void Xterm::Window::resize(size_t nWidth, size_t nHeight, bool bActive)
 
     // Set default tab stops.
     delete [] m_pParentXterm->m_TabStops;
-    m_pParentXterm->m_TabStops = new char[cols];
-    memset(m_pParentXterm->m_TabStops, 0, cols);
-    for(size_t i = 0; i < cols; i += 8)
+    m_pParentXterm->m_TabStops = new char[m_Stride];
+    memset(m_pParentXterm->m_TabStops, 0, m_Stride);
+    for(size_t i = 0; i < m_Stride; i += 8)
     {
         m_pParentXterm->m_TabStops[i] = '|';
     }
@@ -1527,6 +1556,21 @@ uint8_t Xterm::Window::getFlags()
     return m_Flags;
 }
 
+void Xterm::Window::setMargins(size_t left, size_t right)
+{
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::setMargins(%zd, %zd)", left, right);
+#endif
+
+    if(left > m_Stride)
+        left = m_Stride;
+    if(right > m_Stride)
+        right = m_Stride;
+
+    m_LeftMargin = left;
+    m_RightMargin = right;
+}
+
 void Xterm::Window::renderAll(DirtyRectangle &rect, Xterm::Window *pPrevious)
 {
     TermChar *pOld = (pPrevious) ? pPrevious->m_pView : 0;
@@ -1546,12 +1590,12 @@ void Xterm::Window::renderAll(DirtyRectangle &rect, Xterm::Window *pPrevious)
 
 void Xterm::Window::setChar(uint32_t utf32, size_t x, size_t y)
 {
-    if(x > m_Width)
+    if(x > m_Stride)
         return;
     if(y > m_Height)
         return;
 
-    TermChar *c = &m_pInsert[y*m_Width+x];
+    TermChar *c = &m_pInsert[y * m_Stride + x];
 
     c->fore = m_Fg;
     c->back = m_Bg;
@@ -1564,7 +1608,7 @@ Xterm::Window::TermChar Xterm::Window::getChar(size_t x, size_t y)
 {
     if (x == ~0UL) x = m_CursorX;
     if (y == ~0UL) y = m_CursorY;
-    return m_pInsert[y*m_Width+x];
+    return m_pInsert[y * m_Stride + x];
 }
 
 void Xterm::Window::cursorDown(size_t n, DirtyRectangle &rect)
@@ -1665,11 +1709,10 @@ void Xterm::Window::render(DirtyRectangle &rect, size_t flags, size_t x, size_t 
     if (y == ~0UL) y = m_CursorY;
     if (x > m_Width || y > m_Height)
     {
-        syslog(LOG_ALERT, "%zdx%zd is outside the terminal size", m_Width, m_Height);
         return;
     }
 
-    TermChar c = m_pView[y*m_Width+x];
+    TermChar c = m_pView[y * m_Stride + x];
 
     // If both flags and c.flags have inverse, invert the inverse by
     // unsetting it in both sets of flags.
@@ -1815,16 +1858,16 @@ void Xterm::Window::scrollRegionUp(size_t numRows, DirtyRectangle &rect)
     rect.point(m_OffsetLeft, m_OffsetTop + (targetY + g_NormalFont->getHeight()));
     rect.point(m_FbWidth, m_OffsetTop + ((blankFrom + blankLength) * g_NormalFont->getHeight()));
 
-    memmove(&m_pBuffer[targetY * m_Width],
-            &m_pBuffer[sourceY * m_Width],
-            movedRows * m_Width * sizeof(TermChar));
+    memmove(&m_pBuffer[targetY * m_Stride],
+            &m_pBuffer[sourceY * m_Stride],
+            movedRows * m_Stride * sizeof(TermChar));
 
     TermChar blank;
     blank.fore = m_Fg;
     blank.back = m_Bg;
     blank.utf32 = ' ';
     blank.flags = 0;
-    for (size_t i = blankFrom * m_Width; i < (blankFrom + blankLength) * m_Width; i++)
+    for (size_t i = blankFrom * m_Stride; i < (blankFrom + blankLength) * m_Stride; i++)
         m_pBuffer[i] = blank;
 }
 
@@ -1889,16 +1932,16 @@ void Xterm::Window::scrollRegionDown(size_t numRows, DirtyRectangle &rect)
     rect.point(m_OffsetLeft, m_OffsetTop + (targetY + g_NormalFont->getHeight()));
     rect.point(m_FbWidth, m_OffsetTop + ((blankFrom + blankLength) * g_NormalFont->getHeight()));
 
-    memmove(&m_pBuffer[targetY * m_Width],
-            &m_pBuffer[sourceY * m_Width],
-            movedRows * m_Width * sizeof(TermChar));
+    memmove(&m_pBuffer[targetY * m_Stride],
+            &m_pBuffer[sourceY * m_Stride],
+            movedRows * m_Stride * sizeof(TermChar));
 
     TermChar blank;
     blank.fore = m_Fg;
     blank.back = m_Bg;
     blank.utf32 = ' ';
     blank.flags = 0;
-    for (size_t i = blankFrom * m_Width; i < (blankFrom + blankLength) * m_Width; i++)
+    for (size_t i = blankFrom * m_Stride; i < (blankFrom + blankLength) * m_Stride; i++)
         m_pBuffer[i] = blank;
 }
 
@@ -1951,12 +1994,12 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
     rect.point(m_OffsetLeft + m_FbWidth, bottom2_px + (n * g_NormalFont->getHeight()) + m_OffsetTop);
 
     bool bViewEqual = (m_pView == m_pInsert);
-    memmove(m_pInsert, &m_pInsert[n*m_Width], ((m_Width * m_Height) - (n * m_Width)) * sizeof(TermChar));
+    memmove(m_pInsert, &m_pInsert[n * m_Stride], ((m_Stride * m_Height) - (n * m_Stride)) * sizeof(TermChar));
     if(bViewEqual)
         m_pView = m_pInsert;
 
     // Blank out the remainder after moving the buffer
-    for(size_t i = ((m_Width * m_Height) - (n * m_Width)); i < (m_Width * m_Height); i++)
+    for(size_t i = ((m_Stride * m_Height) - (n * m_Stride)); i < (m_Stride * m_Height); i++)
     {
         TermChar blank;
         blank.fore = m_Fg;
@@ -1968,15 +2011,15 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
     //m_pInsert += n*m_Width;
 
     // Have we gone off the end of the scroll area?
-    if (m_pInsert + m_Height*m_Width >= (m_pBuffer+m_BufferLength))
+    if (m_pInsert + m_Height * m_Stride >= (m_pBuffer+m_BufferLength))
     {
         // Either expand the buffer (if the length is less than the scrollback size) or memmove data up a bit.
-        if (m_BufferLength < m_nMaxScrollback*m_Width)
+        if (m_BufferLength < m_nMaxScrollback * m_Stride)
         {
             // Expand.
-            size_t amount = m_Width*m_Height;
-            if (amount+m_BufferLength > m_nMaxScrollback*m_Width)
-                amount = (m_nMaxScrollback*m_Width)-m_BufferLength;
+            size_t amount = m_Stride * m_Height;
+            if (amount+m_BufferLength > m_nMaxScrollback * m_Stride)
+                amount = (m_nMaxScrollback * m_Stride)-m_BufferLength;
 
             uintptr_t pInsOffset  = reinterpret_cast<uintptr_t>(m_pInsert) - reinterpret_cast<uintptr_t>(m_pBuffer);
             uintptr_t pViewOffset = reinterpret_cast<uintptr_t>(m_pView) - reinterpret_cast<uintptr_t>(m_pBuffer);
@@ -1998,18 +2041,18 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
         }
         else
         {
-            memmove(&m_pBuffer[m_Width*m_Height],
+            memmove(&m_pBuffer[m_Stride * m_Height],
                     &m_pBuffer[0],
-                    m_Width*m_Height*sizeof(TermChar));
+                    m_Stride * m_Height * sizeof(TermChar));
             TermChar blank;
             blank.fore = m_Fg;
             blank.back = m_Bg;
             blank.utf32 = ' ';
             blank.flags = 0;
-            for (size_t i = m_BufferLength-m_Width*m_Height; i < m_BufferLength; i++)
+            for (size_t i = m_BufferLength - m_Stride * m_Height; i < m_BufferLength; i++)
                 m_pBuffer[i] = blank;
 
-            m_BufferLength += m_Width*m_Height;
+            m_BufferLength += m_Stride * m_Height;
         }
     }
 }
@@ -2187,8 +2230,8 @@ void Xterm::Window::fillChar(uint32_t utf32, DirtyRectangle &rect)
     syslog(LOG_INFO, "Xterm::Window::fillChar(%c)", (char) utf32);
 #endif
 
-    syslog(LOG_INFO, "fill character: %zdx%zd -> %zdx%zd",
-        m_LeftMargin, m_ScrollStart, m_RightMargin, m_ScrollEnd);
+    syslog(LOG_INFO, "fill character '%c': %zdx%zd -> %zdx%zd",
+        (char) utf32, m_LeftMargin, m_ScrollStart, m_RightMargin, m_ScrollEnd);
 
     for (size_t y = m_ScrollStart; y < m_ScrollEnd; ++y)
     {
@@ -2212,7 +2255,7 @@ void Xterm::Window::addChar(uint32_t utf32, DirtyRectangle &rect)
     {
         checkWrap(rect);
 
-        if (m_CursorX >= m_Width)
+        if (m_CursorX >= m_Stride)
             return;
 
         TermChar tc = getChar();
@@ -2558,10 +2601,10 @@ void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
     size_t numChars = m_RightMargin - deleteEnd;
 
     // Shift all the characters across from the end of the delete area to the start.
-    memmove(&m_pBuffer[(m_CursorY * m_Width) + deleteStart], &m_pBuffer[(m_CursorY * m_Width) + deleteEnd], numChars * sizeof(TermChar));
+    memmove(&m_pBuffer[(m_CursorY * m_Stride) + deleteStart], &m_pBuffer[(m_CursorY * m_Stride) + deleteEnd], numChars * sizeof(TermChar));
 
     // Now that the characters have been shifted, clear the space after the region we copied
-    size_t left = (m_Width - n) * g_NormalFont->getWidth();
+    size_t left = (m_Stride - n) * g_NormalFont->getWidth();
     size_t top = m_CursorY * g_NormalFont->getHeight();
 
     cairo_save(g_Cairo);
@@ -2617,7 +2660,7 @@ void Xterm::Window::insertCharacters(size_t n, DirtyRectangle &rect)
     size_t numChars = m_RightMargin - insertEnd;
 
     // Shift characters.
-    memmove(&m_pBuffer[(m_CursorY * m_Width) + insertEnd], &m_pBuffer[(m_CursorY * m_Width) + insertStart], numChars);
+    memmove(&m_pBuffer[(m_CursorY * m_Stride) + insertEnd], &m_pBuffer[(m_CursorY * m_Stride) + insertStart], numChars);
 
     // Now that the characters have been shifted, clear the space inside the region we inserted
     size_t left = insertStart * g_NormalFont->getWidth();
@@ -2734,7 +2777,7 @@ void Xterm::Window::lineRender(uint32_t utf32, DirtyRectangle &rect)
     size_t top = m_OffsetTop + (m_ScrollStart * g_NormalFont->getHeight()) + (m_CursorY * g_NormalFont->getHeight());
 
     checkWrap(rect);
-    if (m_CursorX < m_Width)
+    if (m_CursorX < m_RightMargin)
         ++m_CursorX;
 
     size_t fullWidth = g_NormalFont->getWidth();
@@ -3010,7 +3053,7 @@ void Xterm::Window::invert(DirtyRectangle &rect)
     {
         for (size_t x = 0; x < m_Width; x++)
         {
-            TermChar *pChar = &m_pView[(y * m_Width) + x];
+            TermChar *pChar = &m_pView[(y * m_Stride) + x];
             if((pChar->fore == g_DefaultFg) && (pChar->back == g_DefaultBg))
             {
                 uint8_t fore = pChar->fore;
@@ -3048,6 +3091,6 @@ void Xterm::Window::clearAllTabStops()
     syslog(LOG_INFO, "Xterm::Window::clearAllTabStops()");
 #endif
 
-    memset(m_pParentXterm->m_TabStops, 0, m_Width);
+    memset(m_pParentXterm->m_TabStops, 0, m_Stride);
 }
 

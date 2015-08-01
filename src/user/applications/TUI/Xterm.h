@@ -28,6 +28,15 @@
 
 #define XTERM_MAX_PARAMS        16
 
+// We must always support at least 132 columns. Normally, the margins would be
+// set to whatever the screen supports, but for DECCOLM support we will need to
+// be able to expand to 132 columns and only render the visible portion.
+#define XTERM_WIDE              132
+#define XTERM_STANDARD          80
+#define XTERM_MIN_WIDTH         132
+
+// #define XTERM_DEBUG
+
 class Xterm
 {
 public:
@@ -40,13 +49,17 @@ public:
     /** Performs a full re-render. */
     void renderAll(DirtyRectangle &rect);
 
-    size_t getRows()
+    size_t getRows() const
     {
         return m_pWindows[0]->m_Height;
     }
-    size_t getCols()
+    size_t getCols() const
     {
         return m_pWindows[0]->m_Width;
+    }
+    size_t getStride() const
+    {
+        return m_pWindows[0]->m_Stride;
     }
 
     void showCursor(DirtyRectangle &rect)
@@ -119,16 +132,7 @@ private:
             void setFlags(uint8_t flags);
             uint8_t getFlags();
 
-            void setMargins(size_t left, size_t right)
-            {
-                if(left > m_Width)
-                    left = m_Width;
-                if(right > m_Width)
-                    right = m_Width;
-
-                m_LeftMargin = left;
-                m_RightMargin = right;
-            }
+            void setMargins(size_t left, size_t right);
 
             void renderAll(DirtyRectangle &rect, Window *pPrevious);
             void setChar(uint32_t utf32, size_t x, size_t y);
@@ -245,7 +249,7 @@ private:
             PedigreeGraphics::Framebuffer *m_pFramebuffer;
 
             size_t m_FbWidth;
-            size_t m_Width, m_Height;
+            size_t m_Width, m_Height, m_Stride;
 
             size_t m_OffsetLeft, m_OffsetTop;
 
