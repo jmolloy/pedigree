@@ -202,7 +202,7 @@ void Xterm::processKey(uint64_t key)
         m_pT->addToQueue('\e');
         m_pT->addToQueue(key & 0x7F);
     }
-    else if(key == '\n')
+    else if(key == '\n' || key == '\r')
     {
         m_pT->addToQueue('\r');
         if(m_Modes & LineFeedNewLine)
@@ -250,8 +250,9 @@ void Xterm::processKey(uint64_t key)
     m_pT->addToQueue(0, true);
 }
 
-void Xterm::setFlagsForUtf32(uint32_t utf32)
+bool Xterm::setFlagsForUtf32(uint32_t utf32)
 {
+    size_t oldFlags = m_Flags;
     switch(utf32)
     {
         case '\e':
@@ -337,6 +338,8 @@ void Xterm::setFlagsForUtf32(uint32_t utf32)
         default:
             break;
     }
+
+    return oldFlags != m_Flags;
 }
 
 void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
@@ -981,7 +984,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 
                                 // Report cursor position.
                                 char buf[128];
-                                sprintf(buf, "\e[%zd;%zdR", reportX, reportY);
+                                sprintf(buf, "\e[%zd;%zdR", reportY, reportX);
                                 const char *p = (const char *) buf;
                                 while(*p)
                                 {
@@ -1069,7 +1072,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                     if(m_Cmd.params[0] <= 1)
                     {
                         const char *termparams = 0;
-                        if(m_Cmd.params[0] == 0)
+                        if(m_Cmd.params[0] == 1)
                             termparams = "\e[3;1;1;120;120;1;0x";
                         else
                             termparams = "\e[2;1;1;120;120;1;0x";
@@ -1090,7 +1093,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
     }
     else if((m_Flags & (Escape | LeftSquare | RightSquare | Underscore)) == Escape)
     {
-        setFlagsForUtf32(utf32);
+        bool seenFlag = setFlagsForUtf32(utf32);
 
         switch(utf32)
         {
@@ -1105,6 +1108,11 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                     // Set DEC Special Character and Line Drawing Set
                     m_pWindows[m_ActiveBuffer]->setLineRenderMode(true);
                 }
+                m_Flags = 0;
+                break;
+
+            case '6':
+                syslog(LOG_ALERT, "XTERM: double-width lines not supported");
                 m_Flags = 0;
                 break;
 
@@ -1285,6 +1293,14 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                     }
                 }
                 m_Flags = 0;
+                break;
+
+            default:
+                if (!seenFlag)
+                {
+                    syslog(LOG_INFO, "XTERM: unknown ESCAPE control '%c'", utf32);
+                    m_Flags = 0;
+                }
                 break;
         }
     }
@@ -2628,15 +2644,13 @@ void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
 
     // Update the moved section
     size_t row = m_CursorY, col = 0;
-    for(col = deleteStart; col < (m_RightMargin - n); col++)
-    {
-        render(rect, 0, col, row);
-    }
-
-    // And then update the cleared section
     for(col = (m_RightMargin - n); col < m_RightMargin; col++)
     {
         setChar(' ', col, row);
+    }
+    for(col = deleteStart; col < m_RightMargin; col++)
+    {
+        render(rect, 0, col, row);
     }
 }
 

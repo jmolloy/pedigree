@@ -392,7 +392,7 @@ private:
         Underscore      = 0x200000,
     };
 
-    void setFlagsForUtf32(uint32_t utf32);
+    bool setFlagsForUtf32(uint32_t utf32);
 
     /// Flags for this particular sequence.
     size_t m_Flags;
