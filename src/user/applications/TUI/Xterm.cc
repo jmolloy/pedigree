@@ -1503,9 +1503,9 @@ void Xterm::Window::resize(size_t nWidth, size_t nHeight, bool bActive)
     m_pInsert = m_pView = m_pBuffer = newBuf;
     m_BufferLength = rows * m_Stride;
 
-    if(m_RightMargin > cols)
+    if(m_RightMargin > (ssize_t) cols)
         m_RightMargin = cols;
-    if(m_LeftMargin > cols)
+    if(m_LeftMargin > (ssize_t) cols)
         m_LeftMargin = cols;
 
     m_FbWidth = cols * g_NormalFont->getWidth();
@@ -1549,9 +1549,9 @@ void Xterm::Window::setScrollRegion(int start, int end)
         m_ScrollEnd = tmp;
     }
 
-    if(m_ScrollStart >= m_Height)
+    if(m_ScrollStart >= (ssize_t) m_Height)
         m_ScrollStart = m_Height - 1;
-    if(m_ScrollEnd >= m_Height)
+    if(m_ScrollEnd >= (ssize_t) m_Height)
         m_ScrollEnd = m_Height - 1;
 }
 
@@ -2186,7 +2186,7 @@ void Xterm::Window::cursorTab(DirtyRectangle &rect)
 #endif
 
     bool tabStopFound = false;
-    for(size_t x = (m_CursorX + 1); x < m_RightMargin; ++x)
+    for(ssize_t x = (m_CursorX + 1); x < m_RightMargin; ++x)
     {
         if(m_pParentXterm->m_TabStops[x] != 0)
         {
@@ -2235,9 +2235,9 @@ void Xterm::Window::fillChar(uint32_t utf32, DirtyRectangle &rect)
     syslog(LOG_INFO, "Xterm::Window::fillChar(%c)", (char) utf32);
 #endif
 
-    for (size_t y = m_ScrollStart; y < m_ScrollEnd; ++y)
+    for (ssize_t y = m_ScrollStart; y < m_ScrollEnd; ++y)
     {
-        for (size_t x = m_LeftMargin; x < m_RightMargin; ++x)
+        for (ssize_t x = m_LeftMargin; x < m_RightMargin; ++x)
         {
             setChar(utf32, x, y);
         }
@@ -2257,7 +2257,7 @@ void Xterm::Window::addChar(uint32_t utf32, DirtyRectangle &rect)
     {
         checkWrap(rect);
 
-        if (m_CursorX >= m_Stride)
+        if (m_CursorX >= (ssize_t) m_Stride)
             return;
 
         if (m_pParentXterm->getModes() & Insert)
@@ -2415,7 +2415,7 @@ void Xterm::Window::eraseSOL(DirtyRectangle &rect)
         m_OffsetTop + ((m_CursorY + 1) * g_NormalFont->getHeight()));
 
     size_t row = m_CursorY;
-    for(size_t col = 0; col <= m_CursorX; col++)
+    for(ssize_t col = 0; col <= m_CursorX; col++)
     {
         setChar(' ', col, row);
     }
@@ -2468,7 +2468,7 @@ void Xterm::Window::eraseChars(size_t n, DirtyRectangle &rect)
 
     // Again, one fillRect should do it.
     size_t left = (m_CursorX * g_NormalFont->getWidth());
-    if((m_CursorX + n) > m_RightMargin)
+    if((m_CursorX + (ssize_t) n) > m_RightMargin)
         n = m_RightMargin - m_CursorX;
     size_t width = n * g_NormalFont->getWidth();
 
@@ -2541,7 +2541,7 @@ void Xterm::Window::eraseUp(DirtyRectangle &rect)
     rect.point(m_OffsetLeft, m_OffsetTop);
     rect.point(m_OffsetLeft + m_FbWidth, m_OffsetTop + ((m_CursorY + 1) * g_NormalFont->getHeight()));
 
-    for(size_t row = 0; row < m_CursorY; row++)
+    for(ssize_t row = 0; row < m_CursorY; row++)
     {
         for(size_t col = 0; col < m_Width; col++)
         {
@@ -2649,7 +2649,7 @@ void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
     cairo_restore(g_Cairo);
 
     // Update the moved section
-    size_t row = m_CursorY, col = 0;
+    ssize_t row = m_CursorY, col = 0;
     for(col = (m_RightMargin - n); col < m_RightMargin; col++)
     {
         setChar(' ', col, row);
@@ -2667,13 +2667,13 @@ void Xterm::Window::insertCharacters(size_t n, DirtyRectangle &rect)
 #endif
 
     // Start of the insertion region
-    size_t insertStart = m_CursorX;
+    ssize_t insertStart = m_CursorX;
 
     // End of the insertion region
-    size_t insertEnd = insertStart + n;
+    ssize_t insertEnd = insertStart + n;
 
     // Number of characters to shift.
-    size_t numChars = m_RightMargin - insertEnd;
+    ssize_t numChars = m_RightMargin - insertEnd;
 
     // Shift characters.
     memmove(&m_pBuffer[(m_CursorY * m_Stride) + insertEnd],
@@ -2710,7 +2710,7 @@ void Xterm::Window::insertCharacters(size_t n, DirtyRectangle &rect)
     rect.point(m_OffsetLeft + left + (n * g_NormalFont->getWidth()), m_OffsetTop + top + g_NormalFont->getHeight());
 
     // Update the inserted section
-    size_t row = m_CursorY, col = 0;
+    ssize_t row = m_CursorY, col = 0;
     for(col = insertStart; col < insertEnd; col++)
     {
         setChar(' ', col, row);
@@ -2729,7 +2729,7 @@ void Xterm::Window::insertLines(size_t n, DirtyRectangle &rect)
     syslog(LOG_INFO, "Xterm::Window::insertLines(%zd)", n);
 #endif
 
-    if (m_CursorY + n >= m_ScrollEnd)
+    if (m_CursorY + (ssize_t) n >= m_ScrollEnd)
         n = m_ScrollEnd - m_CursorY;
 
     // This will perform the correct scroll down, but then we need to erase
@@ -2744,7 +2744,7 @@ void Xterm::Window::deleteLines(size_t n, DirtyRectangle &rect)
     syslog(LOG_INFO, "Xterm::Window::deleteLines(%zd)", n);
 #endif
 
-    if (m_CursorY + n >= m_ScrollEnd)
+    if (m_CursorY + (ssize_t) n >= m_ScrollEnd)
         n = m_ScrollEnd - m_CursorY;
 
     // This will scroll the rest of the lines into this one.
