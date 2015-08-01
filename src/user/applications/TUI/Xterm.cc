@@ -23,6 +23,13 @@
 #include <syslog.h>
 #include <time.h>
 
+#define XTERM_BOLD      0x1
+#define XTERM_UNDERLINE 0x2
+#define XTERM_INVERSE   0x4
+#define XTERM_BRIGHTFG  0x8
+#define XTERM_BRIGHTBG  0x10
+#define XTERM_BORDER    0x20
+
 #define C_BLACK   0
 #define C_RED     1
 #define C_GREEN   2
@@ -118,6 +125,12 @@ Xterm::Xterm(PedigreeGraphics::Framebuffer *pFramebuffer, size_t nWidth, size_t 
 
     // Set default modes.
     m_Modes |= AnsiVt52;
+
+    m_Cmd.cur_param = 0;
+    m_Cmd.has_param = false;
+
+    m_OsCtl.cur_param = 0;
+    m_OsCtl.has_param = false;
 }
 
 Xterm::~Xterm()
@@ -328,9 +341,9 @@ void Xterm::setFlagsForUtf32(uint32_t utf32)
 
 void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 {
-//    char str[64];
-//    sprintf(str, "XTerm: Write: %c/%x", utf32, utf32);
-//    log(str);
+#ifdef XTERM_DEBUG
+    // syslog(LOG_INFO, "XTerm::write(%c/%x)", (char) utf32, utf32);
+#endif
 
     if(!m_Flags)
     {
@@ -376,9 +389,11 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 m_Flags = Escape;
 
                 m_Cmd.cur_param = 0;
+                m_Cmd.has_param = false;
                 memset(m_Cmd.params, 0, sizeof(m_Cmd.params[0]) * XTERM_MAX_PARAMS);
 
                 m_OsCtl.cur_param = 0;
+                m_OsCtl.has_param = false;
                 for(size_t i = 0; i < XTERM_MAX_PARAMS; ++i)
                 {
                     m_OsCtl.params[i] = "";
@@ -447,6 +462,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
             case '8':
             case '9':
                 m_Cmd.params[m_Cmd.cur_param] = m_Cmd.params[m_Cmd.cur_param] * 10 + (utf32-'0');
+                m_Cmd.has_param = true;
                 break;
 
             case ';':
@@ -460,22 +476,34 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 break;
 
             case 'A':
-                m_pWindows[m_ActiveBuffer]->cursorUpWithinMargin(1, rect);
+                if (m_Cmd.has_param && m_Cmd.params[0])
+                    m_pWindows[m_ActiveBuffer]->cursorUpWithinMargin(m_Cmd.params[0], rect);
+                else
+                    m_pWindows[m_ActiveBuffer]->cursorUpWithinMargin(1, rect);
                 m_Flags = 0;
                 break;
 
             case 'B':
-                m_pWindows[m_ActiveBuffer]->cursorDownWithinMargin(1, rect);
+                if (m_Cmd.has_param && m_Cmd.params[0])
+                    m_pWindows[m_ActiveBuffer]->cursorDownWithinMargin(m_Cmd.params[0], rect);
+                else
+                    m_pWindows[m_ActiveBuffer]->cursorDownWithinMargin(1, rect);
                 m_Flags = 0;
                 break;
 
             case 'C':
-                m_pWindows[m_ActiveBuffer]->cursorRightWithinMargin(1, rect);
+                if (m_Cmd.has_param && m_Cmd.params[0])
+                    m_pWindows[m_ActiveBuffer]->cursorRightWithinMargin(m_Cmd.params[0], rect);
+                else
+                    m_pWindows[m_ActiveBuffer]->cursorRightWithinMargin(1, rect);
                 m_Flags = 0;
                 break;
 
             case 'D':
-                m_pWindows[m_ActiveBuffer]->cursorLeftWithinMargin(1, rect);
+                if (m_Cmd.has_param && m_Cmd.params[0])
+                    m_pWindows[m_ActiveBuffer]->cursorLeftWithinMargin(m_Cmd.params[0], rect);
+                else
+                    m_pWindows[m_ActiveBuffer]->cursorLeftWithinMargin(1, rect);
                 m_Flags = 0;
                 break;
 
@@ -500,9 +528,30 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
             case 'H':
             case 'f':
                 {
-                    size_t x = (m_Cmd.params[1]) ? m_Cmd.params[1]-1 : 0;
-                    size_t y = (m_Cmd.params[0]) ? m_Cmd.params[0]-1 : 0;
-                    m_pWindows[m_ActiveBuffer]->setCursor(x, y, rect);
+                    if (m_Cmd.has_param)
+                    {
+                        size_t x = (m_Cmd.params[1]) ? m_Cmd.params[1] - 1 : 0;
+                        size_t y = (m_Cmd.params[0]) ? m_Cmd.params[0] - 1 : 0;
+                        if (m_Modes & Origin)
+                        {
+                            m_pWindows[m_ActiveBuffer]->setCursorRelOrigin(x, y, rect);
+                        }
+                        else
+                        {
+                            m_pWindows[m_ActiveBuffer]->setCursor(x, y, rect);
+                        }
+                    }
+                    else
+                    {
+                        if (m_Modes & Origin)
+                        {
+                            m_pWindows[m_ActiveBuffer]->cursorToOrigin();
+                        }
+                        else
+                        {
+                            m_pWindows[m_ActiveBuffer]->setCursor(0, 0, rect);
+                        }
+                    }
                     m_Flags = 0;
                 }
                 break;
@@ -647,9 +696,9 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 break;
 
             case 'g':
-                if(m_Cmd.params[0] != 3)
+                if((!m_Cmd.has_param) || (m_Cmd.params[0] == 0))
                     m_pWindows[m_ActiveBuffer]->clearTabStop();
-                else
+                else if(m_Cmd.has_param && (m_Cmd.params[0] == 3))
                     m_pWindows[m_ActiveBuffer]->clearAllTabStops();
                 m_Flags = 0;
                 break;
@@ -673,16 +722,13 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                                 modesToChange |= AnsiVt52;
                                 break;
                             case 3:
-                                // DECCOLM is ignored.
+                                modesToChange |= Column;
                                 break;
                             case 4:
                                 modesToChange |= Scrolling;
                                 break;
                             case 5:
-                                if((utf32 == 'h') && ((m_Modes & Screen) == 0))
-                                    modesToChange |= Screen;
-                                else if((utf32 == 'l') && ((m_Modes & Screen) != 0))
-                                    modesToChange |= Screen;
+                                modesToChange |= Screen;
                                 break;
                             case 6:
                                 modesToChange |= Origin;
@@ -692,6 +738,13 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                                 break;
                             case 8:
                                 modesToChange |= AutoRepeat;
+                                break;
+                            case 40:
+                                /// \todo Do something about this.
+                                syslog(LOG_INFO, "(Dis)Allowing 80->132 mode.");
+                                break;
+                            case 45:
+                                syslog(LOG_INFO, "Reverse-wraparound mode.");
                                 break;
                             case 67:
                                 modesToChange |= AppKeypad;
@@ -762,14 +815,36 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 // Setting some modes causes things to change.
                 if(modesToChange & Origin)
                 {
-                    // Move to top left corner.
+                    if (m_Modes & Origin)
+                    {
+                        // Reset origin to margins.
+                        m_pWindows[m_ActiveBuffer]->cursorToOrigin();
+                    }
+                    else
+                    {
+                        // Move to top left corner.
+                        m_pWindows[m_ActiveBuffer]->setCursor(0, 0, rect);
+                    }
+                }
+
+                if (modesToChange & Column)
+                {
+                    syslog(LOG_ALERT, "warning, DECCOLM is not yet fully supported.");
+
+                    /// \todo change right margin to correct margin (132/80).
+                    m_pWindows[m_ActiveBuffer]->eraseScreen(rect);
+
+                    // Reset margins.
+                    m_pWindows[m_ActiveBuffer]->setMargins(0, 80);
+                    m_pWindows[m_ActiveBuffer]->setScrollRegion(-1, -1);
+
+                    // Cursor to home.
                     m_pWindows[m_ActiveBuffer]->setCursor(0, 0, rect);
                 }
 
-                if(modesToChange & Screen)
+                if (modesToChange & Screen)
                 {
-                    // Invert the entire screen.
-                    m_pWindows[m_ActiveBuffer]->invert(rect);
+                    renderAll(rect);
                 }
 
                 }
@@ -779,7 +854,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
             case 'm':
                 {
                     // Character attributes.
-                    for (int i = 0; i < m_Cmd.cur_param+1; i++)
+                    for (int i = 0; i < m_Cmd.cur_param + 1; i++)
                     {
                         switch (m_Cmd.params[i])
                         {
@@ -888,9 +963,18 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
 
                         case 6:
                             {
+                                size_t reportX = m_pWindows[m_ActiveBuffer]->getCursorX() + 1;
+                                size_t reportY = m_pWindows[m_ActiveBuffer]->getCursorY() + 1;
+
+                                if (m_Modes & Origin)
+                                {
+                                    reportX = m_pWindows[m_ActiveBuffer]->getCursorXRelOrigin() + 1;
+                                    reportY = m_pWindows[m_ActiveBuffer]->getCursorYRelOrigin() + 1;
+                                }
+
                                 // Report cursor position.
                                 char buf[128];
-                                sprintf(buf, "\e[%zd;%zdR", m_pWindows[m_ActiveBuffer]->getCursorY() + 1, m_pWindows[m_ActiveBuffer]->getCursorX() + 1);
+                                sprintf(buf, "\e[%zd;%zdR", reportX, reportY);
                                 const char *p = (const char *) buf;
                                 while(*p)
                                 {
@@ -925,14 +1009,29 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
             case 'r':
                 if((m_Flags & Question) == 0)
                 {
-                    m_pWindows[m_ActiveBuffer]->setScrollRegion((m_Cmd.params[0]) ? m_Cmd.params[0]-1 : ~0,
-                                                                (m_Cmd.params[1]) ? m_Cmd.params[1]-1 : ~0);
+                    if (m_Cmd.has_param)
+                    {
+                        m_pWindows[m_ActiveBuffer]->setScrollRegion(m_Cmd.params[0] - 1, m_Cmd.params[1] - 1);
+                    }
+                    else
+                    {
+                        m_pWindows[m_ActiveBuffer]->setScrollRegion(-1, -1);
+                    }
+
+                    if (m_Modes & Origin)
+                    {
+                        m_pWindows[m_ActiveBuffer]->cursorToOrigin();
+                    }
+                    else
+                    {
+                        m_pWindows[m_ActiveBuffer]->setCursor(0, 0, rect);
+                    }
                 }
                 m_Flags = 0;
                 break;
 
             case 's':
-                if(m_Cmd.cur_param == 0)
+                if(!m_Cmd.has_param)
                 {
                     if((m_Modes & Margin) == 0)
                     {
@@ -1011,8 +1110,18 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
             case '8':
                 if(m_Flags & Hash)
                 {
-                    // DEC Screen Alignment Test (fill screen with 'E')
-                    // ...
+                    // DECALN: DEC Screen Alignment Test (fill screen with 'E')
+
+                    // DECALN resets margins
+                    /// \todo Column mode (we don't yet backbuffer safely for Column to work).
+                    m_pWindows[m_ActiveBuffer]->setMargins(0, 80);
+                    m_pWindows[m_ActiveBuffer]->setScrollRegion(0, 25);
+
+                    // Fill the space with 'E'.
+                    m_pWindows[m_ActiveBuffer]->fillChar('E', rect);
+
+                    // Cursor to home.
+                    m_pWindows[m_ActiveBuffer]->setCursor(0, 0, rect);
                 }
                 else
                 {
@@ -1088,7 +1197,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 if(m_Modes & AnsiVt52)
                 {
                     // Set tab stop.
-                    m_TabStops[m_pWindows[m_ActiveBuffer]->getCursorX()] = '|';
+                    m_pWindows[m_ActiveBuffer]->setTabStop();
                 }
                 else
                 {
@@ -1172,7 +1281,7 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
         {
             case '\007':
             case 0x9C:
-                if(!m_OsCtl.cur_param)
+                if(!m_OsCtl.has_param)
                 {
                     syslog(LOG_INFO, "XTERM: not enough parameters for OS control");
                 }
@@ -1266,32 +1375,52 @@ Xterm::Window::~Window()
 
 void Xterm::Window::showCursor(DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::showCursor");
+#endif
     render(rect, m_bCursorFilled ? XTERM_INVERSE : XTERM_BORDER);
 }
 
 void Xterm::Window::hideCursor(DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::hideCursor");
+#endif
     render(rect);
 }
 
 void Xterm::Window::resize(size_t nWidth, size_t nHeight, bool bActive)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::resize(%zd, %zd)", nWidth, nHeight);
+#endif
+
     m_pFramebuffer = 0;
 
     size_t cols = nWidth / g_NormalFont->getWidth();
     size_t rows = nHeight / g_NormalFont->getHeight();
+
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, " -> cols %zd, %zd", nWidth, nHeight);
+#endif
 
     g_NormalFont->setWidth(nWidth);
     g_BoldFont->setWidth(nWidth);
 
     if(bActive && m_Bg && g_Cairo)
     {
+        size_t bg = m_Bg;
+        if ((m_pParentXterm->getModes() & Screen) && (bg == g_DefaultBg))
+        {
+            bg = m_Fg;
+        }
+
         cairo_save(g_Cairo);
         cairo_set_source_rgba(
                 g_Cairo,
-                ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
-                ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
-                ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+                ((g_Colours[bg] >> 16) & 0xFF) / 256.0,
+                ((g_Colours[bg] >> 8) & 0xFF) / 256.0,
+                ((g_Colours[bg]) & 0xFF) / 256.0,
                 1.0);
 
         cairo_rectangle(g_Cairo, m_OffsetLeft, m_OffsetTop, nWidth, nHeight);
@@ -1326,20 +1455,20 @@ void Xterm::Window::resize(size_t nWidth, size_t nHeight, bool bActive)
     m_pInsert = m_pView = m_pBuffer = newBuf;
     m_BufferLength = rows*cols;
 
-    m_FbWidth = nWidth;
-    m_Width = cols;
-    m_Height = rows;
-    m_ScrollStart = 0;
-    m_ScrollEnd = rows-1;
-    if (m_CursorX >= m_Width)
-        m_CursorX = 0;
-    if (m_CursorY >= m_Height)
-        m_CursorY = 0;
-
     if(m_RightMargin > cols)
         m_RightMargin = cols;
     if(m_LeftMargin > cols)
         m_LeftMargin = cols;
+
+    m_FbWidth = cols * g_NormalFont->getWidth();
+    m_Width = cols;
+    m_Height = rows;
+    m_ScrollStart = 0;
+    m_ScrollEnd = rows - 1;
+    if (m_CursorX >= m_RightMargin)
+        m_CursorX = m_RightMargin - 1;
+    if (m_CursorY > m_ScrollEnd)
+        m_CursorY = m_ScrollEnd;
 
     // Set default tab stops.
     delete [] m_pParentXterm->m_TabStops;
@@ -1356,9 +1485,26 @@ void Xterm::Window::setScrollRegion(int start, int end)
     if (start == -1)
         start = 0;
     if (end == -1)
-        end = m_Height-1;
+        end = m_Height - 1;
+
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::setScrollRegion(%d, %d)", start, end);
+#endif
+
     m_ScrollStart = start;
     m_ScrollEnd = end;
+
+    if (m_ScrollStart > m_ScrollEnd)
+    {
+        size_t tmp = m_ScrollStart;
+        m_ScrollStart = m_ScrollEnd;
+        m_ScrollEnd = tmp;
+    }
+
+    if(m_ScrollStart >= m_Height)
+        m_ScrollStart = m_Height - 1;
+    if(m_ScrollEnd >= m_Height)
+        m_ScrollEnd = m_Height - 1;
 }
 
 void Xterm::Window::setForeColour(uint8_t fgColour)
@@ -1423,48 +1569,34 @@ Xterm::Window::TermChar Xterm::Window::getChar(size_t x, size_t y)
 
 void Xterm::Window::cursorDown(size_t n, DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::cursorDown(%zd)", n);
+#endif
+
     m_CursorY += n;
-    if (m_CursorY > m_ScrollEnd)
-    {
-        size_t amount = m_CursorY-m_ScrollEnd;
-        if (m_ScrollStart == 0 && m_ScrollEnd == m_Height-1)
-        {
-            scrollScreenUp(amount, rect);
-        }
-        else
-        {
-            scrollRegionUp(amount, rect);
-        }
-        m_CursorY = m_ScrollEnd;
-    }
+    checkScroll(rect);
 }
 
 void Xterm::Window::cursorUp(size_t n, DirtyRectangle &rect)
 {
-    size_t amount = 0;
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::cursorUp(%zd)", n);
+#endif
+
     if (n > m_CursorY)
-    {
-        amount = n - m_CursorY;
-        m_CursorY = 0;
-    }
+        n = m_CursorY;
     else
         m_CursorY -= n;
 
-    if (amount)
-    {
-        if (m_ScrollStart == 0 && m_ScrollEnd == m_Height-1)
-        {
-            scrollRegionDown(amount, rect);
-        }
-        else
-        {
-            scrollRegionDown(amount, rect);
-        }
-    }
+    checkScroll(rect);
 }
 
 void Xterm::Window::cursorUpWithinMargin(size_t n, DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::cursorUpWithinMargin(%zd)", n);
+#endif
+
     if (n > m_CursorY)
         n = m_CursorY;
 
@@ -1476,6 +1608,10 @@ void Xterm::Window::cursorUpWithinMargin(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::cursorLeftWithinMargin(size_t n, DirtyRectangle &)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::cursorLeftWithinMargin(%zd)", n);
+#endif
+
     if (n > m_CursorX)
         n = m_CursorX;
 
@@ -1487,14 +1623,22 @@ void Xterm::Window::cursorLeftWithinMargin(size_t n, DirtyRectangle &)
 
 void Xterm::Window::cursorRightWithinMargin(size_t n, DirtyRectangle &)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::cursorRightWithinMargin(%zd)", n);
+#endif
+
     m_CursorX += n;
 
     if (m_CursorX >= m_RightMargin)
-        m_CursorY = m_RightMargin - 1;
+        m_CursorX = m_RightMargin - 1;
 }
 
 void Xterm::Window::cursorDownWithinMargin(size_t n, DirtyRectangle &)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::cursorDownWithinMargin(%zd)", n);
+#endif
+
     m_CursorY += n;
 
     if (m_CursorY > m_ScrollEnd)
@@ -1504,6 +1648,10 @@ void Xterm::Window::cursorDownWithinMargin(size_t n, DirtyRectangle &)
 
 void Xterm::Window::backspace(DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::backspace()");
+#endif
+
     if(m_CursorX == m_RightMargin)
         --m_CursorX;
 
@@ -1515,8 +1663,12 @@ void Xterm::Window::render(DirtyRectangle &rect, size_t flags, size_t x, size_t 
 {
     if (x == ~0UL) x = m_CursorX;
     if (y == ~0UL) y = m_CursorY;
+    if (x > m_Width || y > m_Height)
+    {
+        syslog(LOG_ALERT, "%zdx%zd is outside the terminal size", m_Width, m_Height);
+        return;
+    }
 
-    syslog(LOG_INFO, "getting char at %zd vs %zd", (y*m_Width+x), ((y * m_Width) + x));
     TermChar c = m_pView[y*m_Width+x];
 
     // If both flags and c.flags have inverse, invert the inverse by
@@ -1541,6 +1693,17 @@ void Xterm::Window::render(DirtyRectangle &rect, size_t flags, size_t x, size_t 
         uint32_t tmp = fg;
         fg = bg;
         bg = tmp;
+    }
+
+    if (m_pParentXterm->getModes() & Screen)
+    {
+        // DECSCNM only applies to cells without custom color.
+        if (c.fore == g_DefaultFg && c.back == g_DefaultBg)
+        {
+            uint32_t tmp = fg;
+            fg = bg;
+            bg = tmp;
+        }
     }
 
     uint32_t utf32 = c.utf32;
@@ -1591,149 +1754,167 @@ void Xterm::Window::render(DirtyRectangle &rect, size_t flags, size_t x, size_t 
     }
 }
 
-void Xterm::Window::scrollRegionUp(size_t n, DirtyRectangle &rect)
+void Xterm::Window::scrollRegionUp(size_t numRows, DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::scrollRegionUp(%zd)", numRows);
+#endif
 
-    /*
-    +----------+
-    |          |
-    |----------| Top2       ^
-    |----------| Top1       |
-    |          |
-    |----------| Bottom2    ^
-    |----------| Bottom1    |
-    |          |
-    +----------+
+    size_t targetY = m_ScrollStart;
+    size_t sourceY = m_ScrollStart + numRows;
 
-    */
+    size_t movedRows = (m_ScrollEnd + 1) - sourceY;
+    size_t blankFrom = (m_ScrollEnd + 1) - numRows;
+    size_t blankLength = (m_ScrollEnd + 1) - blankFrom;
 
-    size_t top1_y   = (m_ScrollStart+n) * g_NormalFont->getHeight();
-    size_t top2_y   = m_ScrollStart * g_NormalFont->getHeight();
-
-    // ScrollStart and ScrollEnd are *inclusive*, so add one to make the end exclusive.
-    size_t bottom1_y   = (m_ScrollEnd+1) * g_NormalFont->getHeight();
-    size_t bottom2_y   = (m_ScrollEnd+1-n) * g_NormalFont->getHeight();
-
-    rect.point(m_OffsetLeft, top2_y + m_OffsetTop);
-    rect.point(m_OffsetLeft + m_FbWidth, bottom1_y + m_OffsetTop);
-
-    // If we're bitblitting, we need to commit all changes before now.
+    // Because we need to bitblit to copy, we need to flush anything that hasn't
+    // been written just yet.
+    rect.point(m_OffsetLeft, m_OffsetTop + (targetY + g_NormalFont->getHeight()));
+    rect.point(m_OffsetLeft + m_FbWidth, m_OffsetTop + ((blankFrom + blankLength) * g_NormalFont->getHeight()));
     doRedraw(rect);
     rect.reset();
 
     cairo_save(g_Cairo);
-    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
-    cairo_set_source_surface(g_Cairo, g_Surface, 0, -((double) top1_y));
 
-    cairo_rectangle(g_Cairo, m_OffsetLeft, top2_y, m_FbWidth, bottom2_y - top2_y);
-    cairo_fill(g_Cairo);
-
-    cairo_set_source_rgba(
-            g_Cairo,
-            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
-            0.8);
-
-    cairo_rectangle(g_Cairo, m_OffsetLeft, bottom2_y, m_FbWidth, bottom1_y - bottom2_y);
-    cairo_fill(g_Cairo);
-
-    cairo_restore(g_Cairo);
-
-    // m_pFramebuffer->copy(0, top1_y, m_OffsetLeft, top2_y, m_FbWidth, bottom2_y - top2_y);
-    // m_pFramebuffer->rect(0, bottom2_y, m_FbWidth, bottom1_y - bottom2_y, g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
-
-    rect.point(m_OffsetLeft, top2_y + m_OffsetTop);
-    rect.point(m_OffsetLeft + m_FbWidth, bottom1_y + m_OffsetTop);
-
-    memmove(&m_pBuffer[m_ScrollStart*m_Width], &m_pBuffer[(m_ScrollStart+n)*m_Width], (m_ScrollEnd+1-n-m_ScrollStart)*m_Width*sizeof(TermChar));
-
-    TermChar blank;
-    blank.fore = m_Fg;
-    blank.back = m_Bg;
-    blank.utf32 = ' ';
-    blank.flags = 0;
-    for (size_t i = m_Width*(m_ScrollEnd+1-n); i < m_Width*(m_ScrollEnd+1); i++)
-        m_pBuffer[i] = blank;
-}
-
-void Xterm::Window::scrollRegionDown(size_t n, DirtyRectangle &rect)
-{
-    /*
-    +----------+
-    |          |
-    |----------| Top1       |
-    |----------| Top2       v
-    |          |
-    |----------| Bottom1    |
-    |----------| Bottom2    v
-    |          |
-    +----------+
-
-    */
-
-    size_t top1_y   = m_ScrollStart * g_NormalFont->getHeight();
-    size_t top2_y   = (m_ScrollStart+n) * g_NormalFont->getHeight();
-
-    // ScrollStart and ScrollEnd are *inclusive*, so add one to make the end exclusive.
-    size_t bottom1_y   = (m_ScrollEnd+1-n) * g_NormalFont->getHeight();
-    size_t bottom2_y   = (m_ScrollEnd+1) * g_NormalFont->getHeight();
-
-    rect.point(m_OffsetLeft, top1_y + m_OffsetTop);
-    rect.point(m_OffsetLeft + m_FbWidth, bottom2_y + m_OffsetTop);
-
-    // If we're bitblitting, we need to commit all changes before now.
-    doRedraw(rect);
-    rect.reset();
-
-    cairo_save(g_Cairo);
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
 
-    cairo_rectangle(g_Cairo, m_OffsetLeft, top2_y, m_FbWidth, bottom2_y - top2_y);
+    // Copying the scroll region.
+    cairo_rectangle(g_Cairo,
+        m_OffsetLeft, m_OffsetTop + (targetY * g_NormalFont->getHeight()),
+        m_FbWidth - m_OffsetLeft, movedRows * g_NormalFont->getHeight());
 
     cairo_push_group(g_Cairo);
-    cairo_set_source_surface(g_Cairo, g_Surface, 0, top2_y);
+    cairo_set_source_surface(g_Cairo, g_Surface,
+        0, -((double) (numRows * g_NormalFont->getHeight())));
     cairo_fill_preserve(g_Cairo);
     cairo_pop_group_to_source(g_Cairo);
 
     cairo_fill(g_Cairo);
 
+    size_t bg = m_Bg;
+    if ((m_pParentXterm->getModes() & Screen) && (bg == g_DefaultBg))
+    {
+        bg = m_Fg;
+    }
+
     cairo_set_source_rgba(
             g_Cairo,
-            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[bg]) & 0xFF) / 256.0,
             0.8);
 
-    cairo_rectangle(g_Cairo, m_OffsetLeft, top1_y, m_FbWidth, top2_y - top1_y);
+    // Blanking the region that used to exist.
+    cairo_rectangle(g_Cairo,
+        m_OffsetLeft, m_OffsetTop + (blankFrom * g_NormalFont->getHeight()),
+        m_FbWidth - m_OffsetLeft, blankLength * g_NormalFont->getHeight());
     cairo_fill(g_Cairo);
 
     cairo_restore(g_Cairo);
 
-    // m_pFramebuffer->copy(0, top1_y, 0, top2_y, m_FbWidth, bottom2_y - top2_y);
-    // m_pFramebuffer->rect(0, top1_y, m_FbWidth, top2_y - top1_y, g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
+    rect.point(m_OffsetLeft, m_OffsetTop + (targetY + g_NormalFont->getHeight()));
+    rect.point(m_FbWidth, m_OffsetTop + ((blankFrom + blankLength) * g_NormalFont->getHeight()));
 
-    rect.point(m_OffsetLeft, top1_y);
-    rect.point(m_OffsetLeft + m_FbWidth, bottom2_y);
-
-    memmove(&m_pBuffer[(m_ScrollStart+n)*m_Width], &m_pBuffer[((m_ScrollStart))*m_Width], ((m_ScrollEnd+1)-n-m_ScrollStart)*m_Width*sizeof(TermChar));
+    memmove(&m_pBuffer[targetY * m_Width],
+            &m_pBuffer[sourceY * m_Width],
+            movedRows * m_Width * sizeof(TermChar));
 
     TermChar blank;
     blank.fore = m_Fg;
     blank.back = m_Bg;
     blank.utf32 = ' ';
     blank.flags = 0;
-    for (size_t i = m_Width*m_ScrollStart; i < m_Width*(m_ScrollStart+n); i++)
+    for (size_t i = blankFrom * m_Width; i < (blankFrom + blankLength) * m_Width; i++)
+        m_pBuffer[i] = blank;
+}
+
+void Xterm::Window::scrollRegionDown(size_t numRows, DirtyRectangle &rect)
+{
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::scrollRegionDown(%zd)", numRows);
+#endif
+
+    size_t targetY = m_ScrollStart + numRows;
+    size_t sourceY = m_ScrollStart;
+
+    size_t movedRows = (m_ScrollEnd + 1) - targetY;
+    size_t blankFrom = sourceY;
+    size_t blankLength = numRows;
+
+    // Because we need to bitblit to copy, we need to flush anything that hasn't
+    // been written just yet.
+    rect.point(m_OffsetLeft, m_OffsetTop + (sourceY + g_NormalFont->getHeight()));
+    rect.point(m_OffsetLeft + m_FbWidth, m_OffsetTop + (movedRows * g_NormalFont->getHeight()));
+    doRedraw(rect);
+    rect.reset();
+
+    cairo_save(g_Cairo);
+
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
+
+    // Copying the scroll region.
+    cairo_rectangle(g_Cairo,
+        m_OffsetLeft, m_OffsetTop + (targetY * g_NormalFont->getHeight()),
+        m_FbWidth - m_OffsetLeft, movedRows * g_NormalFont->getHeight());
+
+    cairo_push_group(g_Cairo);
+    cairo_set_source_surface(g_Cairo, g_Surface,
+        0, (double) (numRows * g_NormalFont->getHeight()));
+    cairo_fill_preserve(g_Cairo);
+    cairo_pop_group_to_source(g_Cairo);
+
+    cairo_fill(g_Cairo);
+
+    size_t bg = m_Bg;
+    if ((m_pParentXterm->getModes() & Screen) && (bg == g_DefaultBg))
+    {
+        bg = m_Fg;
+    }
+
+    cairo_set_source_rgba(
+            g_Cairo,
+            ((g_Colours[bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[bg]) & 0xFF) / 256.0,
+            0.8);
+
+    // Blanking the region that used to exist.
+    cairo_rectangle(g_Cairo,
+        m_OffsetLeft, m_OffsetTop + (blankFrom * g_NormalFont->getHeight()),
+        m_FbWidth - m_OffsetLeft, blankLength * g_NormalFont->getHeight());
+    cairo_fill(g_Cairo);
+
+    cairo_restore(g_Cairo);
+
+    rect.point(m_OffsetLeft, m_OffsetTop + (targetY + g_NormalFont->getHeight()));
+    rect.point(m_FbWidth, m_OffsetTop + ((blankFrom + blankLength) * g_NormalFont->getHeight()));
+
+    memmove(&m_pBuffer[targetY * m_Width],
+            &m_pBuffer[sourceY * m_Width],
+            movedRows * m_Width * sizeof(TermChar));
+
+    TermChar blank;
+    blank.fore = m_Fg;
+    blank.back = m_Bg;
+    blank.utf32 = ' ';
+    blank.flags = 0;
+    for (size_t i = blankFrom * m_Width; i < (blankFrom + blankLength) * m_Width; i++)
         m_pBuffer[i] = blank;
 }
 
 void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::scrollScreenUp(%zd)", n);
+#endif
+
+    if (n > m_Height)
+        m_Height = n;
+
     size_t top_px   = 0;
     size_t top2_px   = n * g_NormalFont->getHeight();
 
     size_t bottom2_px = top_px + (m_Height-n)*g_NormalFont->getHeight();
-    syslog(LOG_INFO, "m_Height %zd n %zd", m_Height, n);
 
     // If we're bitblitting, we need to commit all changes before now.
     cairo_surface_flush(g_Surface);
@@ -1745,11 +1926,17 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
     cairo_rectangle(g_Cairo, 0, top_px, m_FbWidth, (m_Height - n) * g_NormalFont->getHeight());
     cairo_fill(g_Cairo);
 
+    size_t bg = m_Bg;
+    if ((m_pParentXterm->getModes() & Screen) && (bg == g_DefaultBg))
+    {
+        bg = m_Fg;
+    }
+
     cairo_set_source_rgba(
             g_Cairo,
-            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[bg]) & 0xFF) / 256.0,
             0.8);
 
     cairo_rectangle(g_Cairo, 0, bottom2_px, m_FbWidth, n * g_NormalFont->getHeight());
@@ -1827,18 +2014,41 @@ void Xterm::Window::scrollScreenUp(size_t n, DirtyRectangle &rect)
     }
 }
 
+void Xterm::Window::setCursorRelOrigin(size_t x, size_t y, DirtyRectangle &rect)
+{
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::setCursorRelOrigin(%zd, %zd)", x, y);
+#endif
+
+    x += m_LeftMargin;
+    y += m_ScrollStart;
+    setCursor(x, y, rect);
+}
+
 void Xterm::Window::setCursor(size_t x, size_t y, DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::setCursor(%zd, %zd)", x, y);
+#endif
+
     m_CursorX = x;
     m_CursorY = y;
 }
 
 void Xterm::Window::setCursorX(size_t x, DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::setCursorX(%zd)", x);
+#endif
+
     setCursor(x, m_CursorY, rect);
 }
 void Xterm::Window::setCursorY(size_t y, DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::setCursorY(%zd)", y);
+#endif
+
     setCursor(m_CursorX, y, rect);
 }
 
@@ -1851,34 +2061,82 @@ size_t Xterm::Window::getCursorY()
     return m_CursorY;
 }
 
+size_t Xterm::Window::getCursorXRelOrigin()
+{
+    if((m_CursorX > m_LeftMargin) && (m_CursorX <= m_RightMargin))
+        return m_CursorX - m_LeftMargin;
+
+    return m_CursorX;
+}
+
+size_t Xterm::Window::getCursorYRelOrigin()
+{
+    if((m_CursorY > m_ScrollStart) && (m_CursorY <= m_ScrollEnd))
+        return m_CursorY - m_ScrollStart;
+
+    return m_CursorY;
+}
+
+void Xterm::Window::cursorToOrigin()
+{
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::cursorToOrigin()");
+#endif
+
+    m_CursorX = m_LeftMargin;
+    m_CursorY = m_ScrollStart;
+}
+
 void Xterm::Window::cursorLeft(DirtyRectangle &rect)
 {
-    if (m_CursorX == 0) return;
-    m_CursorX --;
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::cursorLeft()");
+#endif
+
+    if (m_CursorX > m_LeftMargin)
+        --m_CursorX;
 }
 
 void Xterm::Window::cursorLeftNum(size_t n, DirtyRectangle &rect)
 {
-    if (m_CursorX == 0) return;
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::cursorLeftNum(%zd)", n);
+#endif
 
-    if(n > m_CursorX) n = m_CursorX;
+    if (n > m_CursorX)
+        n = m_CursorX;
 
     m_CursorX -= n;
+
+    if (m_CursorX < m_LeftMargin)
+        m_CursorX = m_LeftMargin;
 }
 
 void Xterm::Window::cursorDownAndLeftToMargin(DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::cursorDownAndLeftToMargin()");
+#endif
+
     cursorDown(1, rect);
     m_CursorX = m_LeftMargin;
 }
 
 void Xterm::Window::cursorLeftToMargin(DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::cursorLeftToMargin()");
+#endif
+
     m_CursorX = m_LeftMargin;
 }
 
 void Xterm::Window::cursorTab(DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::cursorTab()");
+#endif
+
     bool tabStopFound = false;
     for(size_t x = (m_CursorX + 1); x < m_RightMargin; ++x)
     {
@@ -1900,6 +2158,10 @@ void Xterm::Window::cursorTab(DirtyRectangle &rect)
 
 void Xterm::Window::cursorTabBack(DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::cursorTabBack()");
+#endif
+
     bool tabStopFound = false;
     for(ssize_t x = (m_CursorX - 1); x >= 0; --x)
     {
@@ -1919,41 +2181,87 @@ void Xterm::Window::cursorTabBack(DirtyRectangle &rect)
         m_CursorX = m_LeftMargin;
 }
 
+void Xterm::Window::fillChar(uint32_t utf32, DirtyRectangle &rect)
+{
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::fillChar(%c)", (char) utf32);
+#endif
+
+    syslog(LOG_INFO, "fill character: %zdx%zd -> %zdx%zd",
+        m_LeftMargin, m_ScrollStart, m_RightMargin, m_ScrollEnd);
+
+    for (size_t y = m_ScrollStart; y < m_ScrollEnd; ++y)
+    {
+        for (size_t x = m_LeftMargin; x < m_RightMargin; ++x)
+        {
+            setChar(utf32, x, y);
+        }
+    }
+
+    /// \todo don't use renderAll
+    renderAll(rect, this);
+}
+
 void Xterm::Window::addChar(uint32_t utf32, DirtyRectangle &rect)
 {
-    TermChar tc = getChar();
-    setChar(utf32, m_CursorX, m_CursorY);
-    if (getChar() != tc)
-        render(rect);
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::addChar(%c) [@ %zd, %zd]", (char) utf32, m_CursorX, m_CursorY);
+#endif
 
-    m_CursorX++;
-    if ((m_CursorX % m_Width) == 0)
+    if (utf32 >= ' ')
     {
-        m_CursorX = 0;
-        cursorDown(1, rect);
+        checkWrap(rect);
+
+        if (m_CursorX >= m_Width)
+            return;
+
+        TermChar tc = getChar();
+        setChar(utf32, m_CursorX, m_CursorY);
+        if (getChar() != tc)
+            render(rect);
+
+        ++m_CursorX;
     }
 }
 
 void Xterm::Window::scrollUp(size_t n, DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::scrollUp(%zd)", n);
+#endif
+
     scrollRegionDown(n, rect);
 }
 
 void Xterm::Window::scrollDown(size_t n, DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::scrollDown(%zd)", n);
+#endif
+
     scrollRegionUp(n, rect);
 }
 
 void Xterm::Window::eraseScreen(DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::eraseScreen()");
+#endif
+
     cairo_save(g_Cairo);
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
 
+    size_t bg = m_Bg;
+    if ((m_pParentXterm->getModes() & Screen) && (bg == g_DefaultBg))
+    {
+        bg = m_Fg;
+    }
+
     cairo_set_source_rgba(
             g_Cairo,
-            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[bg]) & 0xFF) / 256.0,
             0.8);
 
     cairo_rectangle(g_Cairo, 0, 0, m_FbWidth, m_Height * g_NormalFont->getHeight());
@@ -1978,19 +2286,31 @@ void Xterm::Window::eraseScreen(DirtyRectangle &rect)
 
 void Xterm::Window::eraseEOL(DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::eraseEOL()");
+#endif
+
     size_t l = (m_CursorX * g_NormalFont->getWidth());
 
     cairo_save(g_Cairo);
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
 
+    size_t bg = m_Bg;
+    if ((m_pParentXterm->getModes() & Screen) && (bg == g_DefaultBg))
+    {
+        bg = m_Fg;
+    }
+
     cairo_set_source_rgba(
             g_Cairo,
-            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[bg]) & 0xFF) / 256.0,
             0.8);
 
-    cairo_rectangle(g_Cairo, l, m_CursorY * g_NormalFont->getHeight(), m_FbWidth - l, g_NormalFont->getHeight());
+    cairo_rectangle(g_Cairo,
+        m_OffsetLeft + l, m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()),
+        m_FbWidth - l, g_NormalFont->getHeight());
     cairo_fill(g_Cairo);
 
     cairo_restore(g_Cairo);
@@ -2010,29 +2330,41 @@ void Xterm::Window::eraseEOL(DirtyRectangle &rect)
 
 void Xterm::Window::eraseSOL(DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::eraseSOL()");
+#endif
+
     cairo_save(g_Cairo);
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
 
+    size_t bg = m_Bg;
+    if ((m_pParentXterm->getModes() & Screen) && (bg == g_DefaultBg))
+    {
+        bg = m_Fg;
+    }
+
     cairo_set_source_rgba(
             g_Cairo,
-            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[bg]) & 0xFF) / 256.0,
             0.8);
 
-    cairo_rectangle(g_Cairo, 0, m_CursorY * g_NormalFont->getHeight(), m_CursorY * g_NormalFont->getWidth(), g_NormalFont->getHeight());
+    cairo_rectangle(g_Cairo,
+        m_OffsetLeft, m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()),
+        (m_CursorX + 1) * g_NormalFont->getWidth(), g_NormalFont->getHeight());
     cairo_fill(g_Cairo);
 
     cairo_restore(g_Cairo);
 
-    // Again, one fillRect should do it.
-    // m_pFramebuffer->rect(0, m_CursorY * g_NormalFont->getHeight(), m_CursorX * g_NormalFont->getWidth(), g_NormalFont->getHeight(), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
-
-    rect.point(m_OffsetLeft, m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()));
-    rect.point(m_OffsetLeft + (m_CursorX * g_NormalFont->getWidth()), m_OffsetTop + ((m_CursorY + 1) * g_NormalFont->getHeight()));
+    rect.point(
+        m_OffsetLeft, m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()));
+    rect.point(
+        m_OffsetLeft + ((m_CursorX + 1) * g_NormalFont->getWidth()),
+        m_OffsetTop + ((m_CursorY + 1) * g_NormalFont->getHeight()));
 
     size_t row = m_CursorY;
-    for(size_t col = 0; col < m_CursorX; col++)
+    for(size_t col = 0; col <= m_CursorX; col++)
     {
         setChar(' ', col, row);
     }
@@ -2040,23 +2372,32 @@ void Xterm::Window::eraseSOL(DirtyRectangle &rect)
 
 void Xterm::Window::eraseLine(DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::eraseLine()");
+#endif
+
     cairo_save(g_Cairo);
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
 
+    size_t bg = m_Bg;
+    if ((m_pParentXterm->getModes() & Screen) && (bg == g_DefaultBg))
+    {
+        bg = m_Fg;
+    }
+
     cairo_set_source_rgba(
             g_Cairo,
-            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[bg]) & 0xFF) / 256.0,
             0.8);
 
-    cairo_rectangle(g_Cairo, 0, m_CursorY * g_NormalFont->getHeight(), m_FbWidth - m_OffsetLeft, g_NormalFont->getHeight());
+    cairo_rectangle(g_Cairo,
+        m_OffsetLeft, m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()),
+        m_FbWidth - m_OffsetLeft, g_NormalFont->getHeight());
     cairo_fill(g_Cairo);
 
     cairo_restore(g_Cairo);
-
-    // Again, one fillRect should do it.
-    //m_pFramebuffer->rect(0, m_CursorY * g_NormalFont->getHeight(), m_FbWidth - m_OffsetLeft, g_NormalFont->getHeight(), g_Colours[m_Bg], PedigreeGraphics::Bits24_Rgb);
 
     rect.point(m_OffsetLeft, m_OffsetTop + (m_CursorY * g_NormalFont->getHeight()));
     rect.point(m_OffsetLeft + m_FbWidth, m_OffsetTop + ((m_CursorY + 1) * g_NormalFont->getHeight()));
@@ -2070,20 +2411,30 @@ void Xterm::Window::eraseLine(DirtyRectangle &rect)
 
 void Xterm::Window::eraseChars(size_t n, DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::eraseChars(%zd)", n);
+#endif
+
     // Again, one fillRect should do it.
     size_t left = (m_CursorX * g_NormalFont->getWidth());
-    if((m_CursorX + n) > m_Width)
-        n = m_Width - m_CursorX;
+    if((m_CursorX + n) > m_RightMargin)
+        n = m_RightMargin - m_CursorX;
     size_t width = n * g_NormalFont->getWidth();
 
     cairo_save(g_Cairo);
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
 
+    size_t bg = m_Bg;
+    if ((m_pParentXterm->getModes() & Screen) && (bg == g_DefaultBg))
+    {
+        bg = m_Fg;
+    }
+
     cairo_set_source_rgba(
             g_Cairo,
-            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[bg]) & 0xFF) / 256.0,
             0.8);
 
     cairo_rectangle(g_Cairo, left, m_CursorY * g_NormalFont->getHeight(), width, g_NormalFont->getHeight());
@@ -2105,17 +2456,31 @@ void Xterm::Window::eraseChars(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::eraseUp(DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::eraseUp()");
+#endif
+
+    // Erase to the start of the line first. Essentially, we're erasing from the
+    // current position to the top of the screen.
+    eraseSOL(rect);
+
     cairo_save(g_Cairo);
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
 
+    size_t bg = m_Bg;
+    if ((m_pParentXterm->getModes() & Screen) && (bg == g_DefaultBg))
+    {
+        bg = m_Fg;
+    }
+
     cairo_set_source_rgba(
             g_Cairo,
-            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[bg]) & 0xFF) / 256.0,
             0.8);
 
-    cairo_rectangle(g_Cairo, 0, 0, m_FbWidth, g_NormalFont->getHeight() * m_CursorY);
+    cairo_rectangle(g_Cairo, m_OffsetLeft, m_OffsetTop, m_FbWidth, g_NormalFont->getHeight() * m_CursorY);
     cairo_fill(g_Cairo);
 
     cairo_restore(g_Cairo);
@@ -2136,19 +2501,29 @@ void Xterm::Window::eraseUp(DirtyRectangle &rect)
 
 void Xterm::Window::eraseDown(DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::eraseDown()");
+#endif
+
     size_t top = m_CursorY * g_NormalFont->getHeight();
 
     cairo_save(g_Cairo);
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
 
+    size_t bg = m_Bg;
+    if ((m_pParentXterm->getModes() & Screen) && (bg == g_DefaultBg))
+    {
+        bg = m_Fg;
+    }
+
     cairo_set_source_rgba(
             g_Cairo,
-            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[bg]) & 0xFF) / 256.0,
             0.8);
 
-    cairo_rectangle(g_Cairo, 0, top, m_FbWidth, g_NormalFont->getHeight() * (m_Height - m_CursorY));
+    cairo_rectangle(g_Cairo, m_OffsetLeft, m_OffsetTop + top, m_FbWidth, g_NormalFont->getHeight() * (m_Height - m_CursorY));
     cairo_fill(g_Cairo);
 
     cairo_restore(g_Cairo);
@@ -2169,6 +2544,10 @@ void Xterm::Window::eraseDown(DirtyRectangle &rect)
 
 void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::deleteCharacters(%zd)", n);
+#endif
+
     // Start of the delete region
     size_t deleteStart = m_CursorX;
 
@@ -2176,24 +2555,29 @@ void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
     size_t deleteEnd = (deleteStart + n);
 
     // Number of characters to shift
-    size_t numChars = m_Width - deleteEnd;
+    size_t numChars = m_RightMargin - deleteEnd;
 
     // Shift all the characters across from the end of the delete area to the start.
     memmove(&m_pBuffer[(m_CursorY * m_Width) + deleteStart], &m_pBuffer[(m_CursorY * m_Width) + deleteEnd], numChars * sizeof(TermChar));
 
     // Now that the characters have been shifted, clear the space after the region we copied
-    syslog(LOG_INFO, "w=%zd h=%zd", m_Width, m_Height);
     size_t left = (m_Width - n) * g_NormalFont->getWidth();
     size_t top = m_CursorY * g_NormalFont->getHeight();
 
     cairo_save(g_Cairo);
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
 
+    size_t bg = m_Bg;
+    if ((m_pParentXterm->getModes() & Screen) && (bg == g_DefaultBg))
+    {
+        bg = m_Fg;
+    }
+
     cairo_set_source_rgba(
             g_Cairo,
-            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[bg]) & 0xFF) / 256.0,
             0.8);
 
     cairo_rectangle(g_Cairo, left, top, n * g_NormalFont->getWidth(), g_NormalFont->getHeight());
@@ -2219,6 +2603,10 @@ void Xterm::Window::deleteCharacters(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::insertCharacters(size_t n, DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::insertCharacters(%zd)", n);
+#endif
+
     // Start of the insertion region
     size_t insertStart = m_CursorX;
 
@@ -2226,7 +2614,7 @@ void Xterm::Window::insertCharacters(size_t n, DirtyRectangle &rect)
     size_t insertEnd = insertStart + n;
 
     // Number of characters to shift.
-    size_t numChars = m_Width - insertEnd;
+    size_t numChars = m_RightMargin - insertEnd;
 
     // Shift characters.
     memmove(&m_pBuffer[(m_CursorY * m_Width) + insertEnd], &m_pBuffer[(m_CursorY * m_Width) + insertStart], numChars);
@@ -2238,11 +2626,17 @@ void Xterm::Window::insertCharacters(size_t n, DirtyRectangle &rect)
     cairo_save(g_Cairo);
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
 
+    size_t bg = m_Bg;
+    if ((m_pParentXterm->getModes() & Screen) && (bg == g_DefaultBg))
+    {
+        bg = m_Fg;
+    }
+
     cairo_set_source_rgba(
             g_Cairo,
-            ((g_Colours[m_Bg] >> 16) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg] >> 8) & 0xFF) / 256.0,
-            ((g_Colours[m_Bg]) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 16) & 0xFF) / 256.0,
+            ((g_Colours[bg] >> 8) & 0xFF) / 256.0,
+            ((g_Colours[bg]) & 0xFF) / 256.0,
             0.8);
 
     cairo_rectangle(g_Cairo, left, top, n * g_NormalFont->getWidth(), g_NormalFont->getHeight());
@@ -2266,6 +2660,10 @@ void Xterm::Window::insertCharacters(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::insertLines(size_t n, DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::insertLines(%zd)", n);
+#endif
+
     // If we'll go past the end of the screen in doing this, we can just erase.
     if((m_CursorY + 1 + n) >= m_ScrollEnd)
     {
@@ -2295,6 +2693,10 @@ void Xterm::Window::insertLines(size_t n, DirtyRectangle &rect)
 
 void Xterm::Window::deleteLines(size_t n, DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::deleteLines(%zd)", n);
+#endif
+
     /// \todo I have no idea if this will actually work.
 
     // If we'll go past the end of the screen in doing this, we can just erase.
@@ -2328,22 +2730,12 @@ void Xterm::Window::lineRender(uint32_t utf32, DirtyRectangle &rect)
 {
     syslog(LOG_NOTICE, "line render: %c", utf32);
 
-    /*
-    if(m_CursorX > m_Width)
-        return;
-    if(m_CursorY > m_Height)
-        return;
-    */
+    size_t left = m_OffsetLeft + (m_LeftMargin * g_NormalFont->getWidth()) + (m_CursorX * g_NormalFont->getWidth());
+    size_t top = m_OffsetTop + (m_ScrollStart * g_NormalFont->getHeight()) + (m_CursorY * g_NormalFont->getHeight());
 
-    size_t left = m_OffsetLeft + (m_CursorX * g_NormalFont->getWidth());
-    size_t top = m_OffsetTop + (m_CursorY * g_NormalFont->getHeight());
-
-    m_CursorX++;
-    if(m_CursorX > m_Width)
-    {
-        m_CursorX = 0;
-        cursorDown(1, rect);
-    }
+    checkWrap(rect);
+    if (m_CursorX < m_Width)
+        ++m_CursorX;
 
     size_t fullWidth = g_NormalFont->getWidth();
     size_t fullHeight = g_NormalFont->getHeight();
@@ -2351,8 +2743,16 @@ void Xterm::Window::lineRender(uint32_t utf32, DirtyRectangle &rect)
     size_t halfWidth = (fullWidth / 2) + 1;
     size_t halfHeight = (fullHeight / 2) + 1;
 
-    uint32_t bgColourInt = g_Colours[m_Bg];
-    uint32_t fgColourInt = g_Colours[m_Fg];
+    size_t bg = m_Bg;
+    size_t fg = m_Fg;
+    if ((m_pParentXterm->getModes() & Screen) && (bg == g_DefaultBg) && (fg == g_DefaultFg))
+    {
+        bg = m_Fg;
+        fg = m_Bg;
+    }
+
+    uint32_t bgColourInt = g_Colours[bg];
+    uint32_t fgColourInt = g_Colours[fg];
 
 
     cairo_save(g_Cairo);
@@ -2558,8 +2958,52 @@ void Xterm::Window::lineRender(uint32_t utf32, DirtyRectangle &rect)
     cairo_restore(g_Cairo);
 }
 
+void Xterm::Window::checkWrap(DirtyRectangle &rect)
+{
+    if(m_CursorX >= m_RightMargin)
+    {
+        // Default autowrap mode is off - new characters at
+        // the right margin replace any that are already there.
+        if(m_pParentXterm->getModes() & AutoWrap)
+        {
+            m_CursorX = m_LeftMargin;
+            ++m_CursorY;
+
+            checkScroll(rect);
+        }
+        else
+        {
+            m_CursorX = m_RightMargin - 1;
+        }
+    }
+}
+
+void Xterm::Window::checkScroll(DirtyRectangle &rect)
+{
+    // Handle scrolling, which can take place due to linefeeds and
+    // other such cursor movements.
+    if(m_CursorY < m_ScrollStart)
+    {
+        // By how much have we exceeded the scroll region?
+        size_t numRows = (m_ScrollStart - m_CursorY);
+        scrollRegionDown(numRows, rect);
+        m_CursorY = m_ScrollStart;
+    }
+    else if(m_CursorY > m_ScrollEnd)
+    {
+        // By how much have we exceeded the scroll region?
+        size_t numRows = (m_CursorY - m_ScrollEnd);
+        scrollRegionUp(numRows, rect);
+        m_CursorY = m_ScrollEnd;
+    }
+}
+
 void Xterm::Window::invert(DirtyRectangle &rect)
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::invert()");
+#endif
+
     // Invert the entire screen, if using default colours.
     TermChar *pNew = m_pView;
     for (size_t y = 0; y < m_Height; y++)
@@ -2582,15 +3026,28 @@ void Xterm::Window::invert(DirtyRectangle &rect)
 
 void Xterm::Window::setTabStop()
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::setTabStop() [@%zd]", m_CursorX);
+#endif
+
     m_pParentXterm->m_TabStops[m_CursorX] = '|';
 }
 
 void Xterm::Window::clearTabStop()
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::clearTabStop() [@%zd]", m_CursorX);
+#endif
+
     m_pParentXterm->m_TabStops[m_CursorX] = 0;
 }
 
 void Xterm::Window::clearAllTabStops()
 {
+#ifdef XTERM_DEBUG
+    syslog(LOG_INFO, "Xterm::Window::clearAllTabStops()");
+#endif
+
     memset(m_pParentXterm->m_TabStops, 0, m_Width);
 }
+

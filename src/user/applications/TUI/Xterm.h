@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -26,13 +25,6 @@
 #include <string>
 
 #include <graphics/Graphics.h>
-
-#define XTERM_BOLD      0x1
-#define XTERM_UNDERLINE 0x2
-#define XTERM_INVERSE   0x4
-#define XTERM_BRIGHTFG  0x8
-#define XTERM_BRIGHTBG  0x10
-#define XTERM_BORDER    0x20
 
 #define XTERM_MAX_PARAMS        16
 
@@ -64,6 +56,11 @@ public:
     void hideCursor(DirtyRectangle &rect)
     {
         m_pWindows[m_ActiveBuffer]->hideCursor(rect);
+    }
+
+    size_t getModes() const
+    {
+        return m_Modes;
     }
 
     void resize(size_t w, size_t h, PedigreeGraphics::Framebuffer *pFb)
@@ -137,17 +134,25 @@ private:
             void setChar(uint32_t utf32, size_t x, size_t y);
             TermChar getChar(size_t x=~0UL, size_t y=~0UL);
 
+            void fillChar(uint32_t utf32, DirtyRectangle &rect);
             void addChar(uint32_t utf32, DirtyRectangle &rect);
 
+            void setCursorRelOrigin(size_t x, size_t y, DirtyRectangle &rect);
             void setCursor(size_t x, size_t y, DirtyRectangle &rect);
             void setCursorX(size_t x, DirtyRectangle &rect);
             void setCursorY(size_t y, DirtyRectangle &rect);
             size_t getCursorX();
             size_t getCursorY();
+            /** The RelOrigin versions retrieve relative when inside the
+              * page area, and the normal x/y if not. */
+            size_t getCursorXRelOrigin();
+            size_t getCursorYRelOrigin();
             void setCursorStyle(bool bFilled)
             {
                 m_bCursorFilled = bFilled;
             }
+
+            void cursorToOrigin();
 
             void cursorLeft(DirtyRectangle &rect);
             void cursorLeftNum(size_t n, DirtyRectangle &rect);
@@ -208,6 +213,12 @@ private:
             void clearTabStop();
             /** Clears all tab stops */
             void clearAllTabStops();
+
+            /** Checks for wrapping and wraps if needed. */
+            void checkWrap(DirtyRectangle &rect);
+
+            /** Checks for scrolling and scrolls if needed. */
+            void checkScroll(DirtyRectangle &rect);
 
             /* Inverts the display, if the character has the default colours. */
             void invert(DirtyRectangle &rect);
@@ -270,6 +281,7 @@ private:
     {
         int params[XTERM_MAX_PARAMS];
         int cur_param;
+        bool has_param;
     } XtermCmd;
     XtermCmd m_Cmd;
 
@@ -277,6 +289,7 @@ private:
     {
         std::string params[XTERM_MAX_PARAMS];
         int cur_param;
+        bool has_param;
     } XtermOsControl;
     XtermOsControl m_OsCtl;
 
