@@ -23,66 +23,88 @@
 
 #include <iostream>
 
-using namespace std;
 using namespace PedigreeGraphics;
 
 class TestWidget : public Widget
 {
     public:
-        TestWidget() : Widget()
+        TestWidget(uint32_t rgb) : Widget(), m_Rgb(rgb)
         {};
         virtual ~TestWidget()
         {}
 
         virtual bool render(Rect &rt, Rect &dirty)
         {
-            cout << "uitest: rendering widget." << endl;
+            std::cout << "uitest: rendering widget." << std::endl;
 
             Framebuffer *pFramebuffer = getFramebuffer();
-            pFramebuffer->rect(rt.getX(), rt.getY(), rt.getW(), rt.getH(), createRgb(0xFF, 0, 0), Bits24_Rgb);
+            pFramebuffer->rect(rt.getX(), rt.getY(), rt.getW(), rt.getH(), m_Rgb, Bits24_Rgb);
 
             return true;
         }
+
+    private:
+        uint32_t m_Rgb;
 };
 
 volatile bool bRun = true;
 
 bool callback(WidgetMessages message, size_t msgSize, const void *msgData)
 {
-    cout << "uitest: callback for '" << static_cast<int>(message) << "'." << endl;
+    std::cout << "uitest: callback for '" << static_cast<int>(message) << "'." << std::endl;
+
+    if (message == Terminate)
+    {
+        bRun = false;
+    }
 
     return true;
 }
 
 int main(int argc, char *argv[])
 {
-    cout << "uitest: starting up" << endl;
+    std::cout << "uitest: starting up" << std::endl;
 
     Rect rt(20, 20, 100, 100);
 
-    Widget *pWidget = new TestWidget();
-    if(!pWidget->construct("uitest", "UI Test", callback, rt))
+    Widget *pWidgetA = new TestWidget(createRgb(0xFF, 0, 0));
+    if(!pWidgetA->construct("uitest.A", "UI Test A", callback, rt))
     {
-        cerr << "uitest: widget construction failed" << endl;
-        delete pWidget;
+        std::cerr << "uitest: widget A construction failed" << std::endl;
+        delete pWidgetA;
         return 1;
     }
 
-    cout << "uitest: widget created (handle is " << pWidget->getHandle() << ")." << endl;
+    Widget *pWidgetB = new TestWidget(createRgb(0, 0xFF, 0));
+    if(!pWidgetB->construct("uitest.B", "UI Test B", callback, rt))
+    {
+        std::cerr << "uitest: widget B construction failed" << std::endl;
+        delete pWidgetA;
+        delete pWidgetB;
+        return 1;
+    }
 
-    pWidget->visibility(true);
+    std::cout << "uitest: widgets created (handles are " << pWidgetA->getHandle() << ", " << pWidgetB->getHandle() << ")." << std::endl;
 
-    cout << "Widget visible!" << endl;
+    pWidgetA->visibility(true);
+    pWidgetB->visibility(true);
+
+    std::cout << "Widgets are visible!" << std::endl;
 
     Rect dirty;
-    pWidget->render(rt, dirty);
-    pWidget->redraw(dirty);
+    pWidgetA->render(rt, dirty);
+    pWidgetB->render(rt, dirty);
+    pWidgetA->redraw(dirty);
+    pWidgetB->redraw(dirty);
 
     // Main loop
     while(bRun)
     {
         Widget::checkForEvents();
     }
+
+    delete pWidgetB;
+    delete pWidgetA;
 
     return 0;
 }
