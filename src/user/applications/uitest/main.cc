@@ -37,8 +37,15 @@ class TestWidget : public Widget
         {
             std::cout << "uitest: rendering widget." << std::endl;
 
-            Framebuffer *pFramebuffer = getFramebuffer();
-            pFramebuffer->rect(rt.getX(), rt.getY(), rt.getW(), rt.getH(), m_Rgb, Bits24_Rgb);
+            void *pFramebuffer = getRawFramebuffer();
+            uint32_t *buffer = (uint32_t *) pFramebuffer;
+            for (size_t y = 0; y < rt.getH(); ++y)
+            {
+                for (size_t x = 0; x < rt.getW(); ++x)
+                    buffer[y * rt.getW() + x] = m_Rgb;
+            }
+
+            dirty.update(0, 0, rt.getW(), rt.getH());
 
             return true;
         }
@@ -65,7 +72,7 @@ int main(int argc, char *argv[])
 {
     std::cout << "uitest: starting up" << std::endl;
 
-    Rect rt(20, 20, 100, 100);
+    Rect rt(20, 20, 20, 20);
 
     Widget *pWidgetA = new TestWidget(createRgb(0xFF, 0, 0));
     if(!pWidgetA->construct("uitest.A", "UI Test A", callback, rt))
@@ -91,11 +98,11 @@ int main(int argc, char *argv[])
 
     std::cout << "Widgets are visible!" << std::endl;
 
-    Rect dirty;
-    pWidgetA->render(rt, dirty);
-    pWidgetB->render(rt, dirty);
-    pWidgetA->redraw(dirty);
-    pWidgetB->redraw(dirty);
+    Rect dirtyA, dirtyB;
+    pWidgetA->render(rt, dirtyA);
+    pWidgetB->render(rt, dirtyB);
+    pWidgetA->redraw(dirtyA);
+    pWidgetB->redraw(dirtyB);
 
     // Main loop
     while(bRun)
