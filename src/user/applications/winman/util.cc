@@ -127,6 +127,9 @@ int Framebuffer::enterMode(size_t desiredW, size_t desiredH, size_t desiredBpp)
         return EXIT_FAILURE;
     }
 
+    m_Width = set_mode.width;
+    m_Height = set_mode.height;
+
     m_Format = CAIRO_FORMAT_ARGB32;
     if(set_mode.format == PedigreeGraphics::Bits24_Rgb)
     {
