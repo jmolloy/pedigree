@@ -275,9 +275,6 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
             pParent = g_pFocusWindow->getParent();
         }
 
-        /// \todo Error handling.
-        // int iSocket = socket(AF_UNIX, SOCK_DGRAM, 0);
-
         /// \todo verify source is AF_UNIX etc
 
         struct sockaddr_un *sun = new struct sockaddr_un;
@@ -1103,7 +1100,7 @@ int main(int argc, char *argv[])
     g_nWidth = pFramebuffer->getWidth();
     g_nHeight = pFramebuffer->getHeight();
 
-    syslog(LOG_INFO, "Actual mode is %zdx%zd", g_nWidth, g_nHeight);
+    syslog(LOG_INFO, "Actual mode is %ux%u", g_nWidth, g_nHeight);
 
     cairo_format_t format = pFramebuffer->getFormat();
 

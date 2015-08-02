@@ -41,7 +41,7 @@ class PEDIGREE_SDLWidget : public Widget
         virtual ~PEDIGREE_SDLWidget()
         {}
 
-        void reposition(PedigreeGraphics::Rect newrt)
+        void reposition(const PedigreeGraphics::Rect newrt)
         {
             m_nWidth = newrt.getW();
             m_nHeight = newrt.getH();

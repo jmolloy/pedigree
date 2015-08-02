@@ -250,10 +250,18 @@ void input_handler(Input::InputNotification &note)
 
 int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
 {
+    syslog(LOG_INFO, "TUI: preparing for main loop");
+
     g_pFramebuffer = pFramebuffer;
 
     g_nWidth = g_pEmu->getWidth();
     g_nHeight = g_pEmu->getHeight();
+
+    if (!g_Cairo)
+    {
+        syslog(LOG_ALERT, "TUI: g_Cairo is not yet valid!");
+        return 1;
+    }
 
     cairo_set_line_cap(g_Cairo, CAIRO_LINE_CAP_SQUARE);
     cairo_set_line_join(g_Cairo, CAIRO_LINE_JOIN_MITER);
@@ -395,7 +403,7 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
     return 0;
 }
 
-bool callback(WidgetMessages message, size_t msgSize, void *msgData)
+bool callback(WidgetMessages message, size_t msgSize, const void *msgData)
 {
     DirtyRectangle dirty;
 
@@ -404,7 +412,7 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
         case Reposition:
             {
                 syslog(LOG_INFO, "-- REPOSITION --");
-                PedigreeGraphics::Rect *rt = reinterpret_cast<PedigreeGraphics::Rect*>(msgData);
+                const PedigreeGraphics::Rect *rt = reinterpret_cast<const PedigreeGraphics::Rect*>(msgData);
                 syslog(LOG_INFO, " -> handling...");
                 g_pEmu->handleReposition(*rt);
                 g_nWidth = g_pEmu->getWidth();
@@ -421,7 +429,7 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
         case KeyUp:
             {
                 g_KeyPressed = true;
-                key_input_handler(*reinterpret_cast<uint64_t*>(msgData));
+                key_input_handler(*reinterpret_cast<const uint64_t*>(msgData));
             }
             break;
         case Focus:
@@ -492,4 +500,3 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-

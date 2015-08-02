@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -407,7 +406,7 @@ class Gears : public Widget
         size_t m_nWidth, m_nHeight;
 };
 
-bool callback(WidgetMessages message, size_t msgSize, void *msgData)
+bool callback(WidgetMessages message, size_t msgSize, const void *msgData)
 {
     switch(message)
     {
@@ -422,32 +421,31 @@ bool callback(WidgetMessages message, size_t msgSize, void *msgData)
             break;
         case Reposition:
             {
-                PedigreeGraphics::Rect dirty;
-                PedigreeGraphics::Rect *rt = reinterpret_cast<PedigreeGraphics::Rect*>(msgData);
+                const PedigreeGraphics::Rect *rt = reinterpret_cast<const PedigreeGraphics::Rect*>(msgData);
                 g_pGears->reposition(*rt);
             }
             break;
         case KeyUp:
             {
-                uint64_t *key = reinterpret_cast<uint64_t*>(msgData);
+                const uint64_t *key = reinterpret_cast<const uint64_t*>(msgData);
                 syslog(LOG_INFO, "gears: keypress %d '%c'", (uint32_t) *key, (char) (*key & 0xFF));
 
                 // What do we have?
                 /// \todo don't do this this is silly.
-                *key &= 0xFF;
-                if(*key == 'a')
+                char realChar = *key & 0xFF;
+                if(realChar == 'a')
                 {
                     view_roty += 5.0;
                 }
-                else if(*key == 'd')
+                else if(realChar == 'd')
                 {
                     view_roty -= 5.0;
                 }
-                else if(*key == 'w')
+                else if(realChar == 'w')
                 {
                     view_rotx += 5.0;
                 }
-                else if(*key == 's')
+                else if(realChar == 's')
                 {
                     view_rotx -= 5.0;
                 }

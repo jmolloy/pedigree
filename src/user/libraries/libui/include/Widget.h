@@ -55,7 +55,7 @@ enum WidgetMessages
     Terminate,
 };
 
-typedef bool (*widgetCallback_t)(WidgetMessages, size_t, void *);
+typedef bool (*widgetCallback_t)(WidgetMessages, size_t, const void *);
 
 /// Base class for all GUI widgets in the system. Defines the interface for all
 /// widgets to use.
@@ -202,6 +202,18 @@ class Widget
         PedigreeGraphics::Framebuffer *getFramebuffer();
 
     private:
+
+        /**
+         * Waits for a message of the given type, queuing other messages along
+         * the way.
+         */
+        static void checkForMessage(size_t which, bool bResponse=false);
+
+        /** Handle the given message. */
+        static void handleMessage(const char *pMessageBuffer);
+
+        /** Clear out pending messages. */
+        static bool handlePendingMessages();
 
         /** Has this widget been constructed yet? */
         bool m_bConstructed;

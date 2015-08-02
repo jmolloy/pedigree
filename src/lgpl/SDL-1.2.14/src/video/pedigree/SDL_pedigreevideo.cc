@@ -68,7 +68,7 @@ static void PEDIGREE_SetWMCaption(_THIS, const char *title, const char *icon);
 /** PEDIGREE SDL Widget type. */
 PEDIGREE_SDLWidget *g_Widget = 0;
 
-bool PEDIGREE_SDLwidgetCallback(WidgetMessages message, size_t msgSize, void *msgData);
+bool PEDIGREE_SDLwidgetCallback(WidgetMessages message, size_t msgSize, const void *msgData);
 
 /* PEDIGREE driver bootstrap functions */
 

@@ -111,12 +111,10 @@ void Window::refreshContext()
     if((me.getW() < WINDOW_CLIENT_LOST_W) || (me.getH() < WINDOW_CLIENT_LOST_H))
     {
         // We have some basic requirements for window sizes.
-        syslog(LOG_DEBUG, "extents %zdx%zd are too small for a new context",
+        syslog(LOG_DEBUG, "extents %ux%u are too small for a new context",
                me.getW(), me.getH());
         return;
     }
-
-    /// \todo get a cairo context from somewhere, wipe out the old dimensions...
 
     syslog(LOG_DEBUG, "destroying old framebuffer...");
     delete m_Framebuffer;
@@ -159,8 +157,6 @@ void Window::refreshContext()
         pReposition->shmem_size = regionSize;
 
         // Transmit to the client.
-        syslog(LOG_INFO, "sending new framebuffer to client (handle %lx)",
-               m_Handle);
         sendMessage(buffer, totalSize);
 
         delete [] buffer;

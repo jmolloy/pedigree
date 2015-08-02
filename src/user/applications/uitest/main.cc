@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -48,7 +47,7 @@ class TestWidget : public Widget
 
 volatile bool bRun = true;
 
-bool callback(WidgetMessages message, size_t msgSize, void *msgData)
+bool callback(WidgetMessages message, size_t msgSize, const void *msgData)
 {
     cout << "uitest: callback for '" << static_cast<int>(message) << "'." << endl;
 

@@ -127,20 +127,20 @@ void PEDIGREE_PumpEvents(_THIS)
     Widget::checkForEvents(true);
 }
 
-bool PEDIGREE_SDLwidgetCallback(WidgetMessages message, size_t msgSize, void *msgData)
+bool PEDIGREE_SDLwidgetCallback(WidgetMessages message, size_t msgSize, const void *msgData)
 {
     switch(message)
     {
         case Reposition:
             {
-                PedigreeGraphics::Rect *rt = reinterpret_cast<PedigreeGraphics::Rect *>(msgData);
+                const PedigreeGraphics::Rect *rt = reinterpret_cast<const PedigreeGraphics::Rect *>(msgData);
                 g_Widget->reposition(*rt);
             }
             break;
         case RawKeyUp:
         case RawKeyDown:
             {
-                uint16_t scancode = *reinterpret_cast<uint16_t*>(msgData);
+                uint16_t scancode = *reinterpret_cast<const uint16_t*>(msgData);
                 handle_hid_scancode(scancode, message == RawKeyUp);
             }
             break;

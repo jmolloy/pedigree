@@ -59,7 +59,7 @@ class PedigreeTerminalEmulator : public Widget
             return true;
         }
 
-        void handleReposition(PedigreeGraphics::Rect &rt)
+        void handleReposition(const PedigreeGraphics::Rect &rt)
         {
             m_nWidth = rt.getW();
             m_nHeight = rt.getH();
