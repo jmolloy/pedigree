@@ -105,18 +105,6 @@ namespace LibUiProtocol
         SetTitle,
 
         /**
-         * SetParent: widget -> window manager. Requests a move of the widget's tree
-         * of children (and itself) to a different parent.
-         */
-        SetParent,
-
-        /**
-         * GetParent: widget -> window manager. Requests the parent of the given
-         * widget.
-         */
-        GetParent,
-
-        /**
          * RequestRedraw: widget -> window manager. Requests a redraw of the given
          * area. Causes a redraw to propagate if the widget is visible and the area
          * is not obstructed by another widget.

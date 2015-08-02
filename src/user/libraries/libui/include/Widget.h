@@ -91,33 +91,12 @@ class Widget
          * \param endpoint Unique IPC endpoint name to listen on for this widget
          * \param cb Event handler callback.
          * \param dimensions Dimensions of the widget to be created.
+         * \note The window manager may elect to override the requested dimensions
+         *       for the purpose of rendering. Handling a Reposition event in the
+         *       event handler callback will reveal the assigned dimensions.
          * \return True if the widget was successfully constructed, False otherwise.
          */
         bool construct(const char *endpoint, const char *title, widgetCallback_t cb, PedigreeGraphics::Rect &dimensions);
-
-        /**
-         * Sets an internal property of the widget. Properties can be read by
-         * the window manager, or created and read by the application developer
-         * for an internal use. Creating a property is as simple as passing a
-         * string that has not been used as a property name yet.
-         * \note The window manager may choose to ignore or reject setting some
-         *       properties if it determines changing the property would have a
-         *       negative impact on the system or widget.
-         * \param propName Name of the property to set.
-         * \param propVal Pointer to a buffer containing the value to set.
-         * \param maxSize Size of the buffer pointed to by propVal.
-         * \return True if the property was set, False otherwise.
-         */
-        bool setProperty(std::string propName, void *propVal, size_t maxSize);
-
-        /**
-         * Gets an internal property of the widget.
-         * \param propName Name of the property to set.
-         * \param buffer Pointer to a pointer to a buffer to hold the value.
-         * \param maxSize Maximum size of the buffer to read.
-         * \return True if the read was successful, False otherwise.
-         */
-        bool getProperty(std::string propName, char **buffer, size_t maxSize);
 
         /**
          * Sets the title of the widget.
@@ -125,22 +104,6 @@ class Widget
          * \return True is the new title was set, False otherwise.
          */
         bool setTitle(const std::string &newTitle);
-
-        /**
-         * Sets the parent of this widget. This will notify the window manager
-         * so that the repaint ordering can be rearranged.
-         * \note Should be called before any rendering takes place, as there is
-         *       no "default parent".
-         * \param pWidget Pointer to a widget to set as the new parent.
-         */
-        void setParent(Widget *pWidget);
-
-        /**
-         * Gets the current parent of this widget.
-         * \return Pointer to the current parent of this widget. Null if there
-         *         is no parent.
-         */
-        Widget *getParent();
 
         /**
          * Called to actually render the widget. Would normally be called by the
@@ -197,10 +160,6 @@ class Widget
          * for an application automatically.
          */
         static void checkForEvents(bool bAsync = false);
-
-    protected:
-
-        PedigreeGraphics::Framebuffer *getFramebuffer();
 
     private:
 

@@ -178,52 +178,6 @@ bool Widget::construct(const char *endpoint, const char *title, widgetCallback_t
     return true;
 }
 
-bool Widget::setProperty(std::string propName, void *propVal, size_t maxSize)
-{
-    // Constructed yet?
-    if(!m_Handle)
-        return false;
-
-    // Are the arguments sane?
-    if(!propVal)
-        return false;
-    if(maxSize > 0x1000)
-        return false;
-
-    // Allocate the message.
-    /// \todo Sanitise maxSize once large messages can be sent.
-    ssize_t headerSize = sizeof(WindowManagerMessage) + sizeof(SetPropertyMessage);
-    ssize_t totalSize = headerSize + maxSize;
-    char *messageData = new char[totalSize];
-    WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
-    SetPropertyMessage *pMessage = reinterpret_cast<SetPropertyMessage*>(messageData + sizeof(WindowManagerMessage));
-
-    // Fill the message.
-    pWinMan->messageCode = SetProperty;
-    pWinMan->messageSize = sizeof(SetPropertyMessage) + maxSize;
-    pWinMan->widgetHandle = m_Handle;
-    pWinMan->isResponse = false;
-
-    propName.copy(pMessage->propertyName, sizeof pMessage->propertyName);
-    pMessage->valueLength = maxSize;
-
-    // Copy in the property data.
-    memcpy(messageData + headerSize, propVal, maxSize);
-
-    // Transmit.
-    bool result = send(m_Socket, messageData, totalSize, 0) == totalSize;
-
-    // Clean up.
-    delete [] messageData;
-
-    return result;
-}
-
-bool Widget::getProperty(std::string propName, char **buffer, size_t maxSize)
-{
-    return false;
-}
-
 bool Widget::setTitle(const std::string &newTitle)
 {
     // Constructed yet?
@@ -256,15 +210,6 @@ bool Widget::setTitle(const std::string &newTitle)
     delete [] messageData;
 
     return result;
-}
-
-void Widget::setParent(Widget *pWidget)
-{
-}
-
-Widget *Widget::getParent()
-{
-    return 0;
 }
 
 bool Widget::redraw(PedigreeGraphics::Rect &rt)
@@ -372,11 +317,6 @@ void Widget::destroy()
     m_pFramebuffer = 0;
     m_SharedFramebuffer = 0;
     m_Handle = 0;
-}
-
-PedigreeGraphics::Framebuffer *Widget::getFramebuffer()
-{
-    return m_pFramebuffer;
 }
 
 void Widget::checkForEvents(bool bAsync)
