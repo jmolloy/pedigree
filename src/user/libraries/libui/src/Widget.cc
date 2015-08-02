@@ -55,28 +55,33 @@ static bool defaultEventHandler(WidgetMessages message, size_t dataSize, const v
     return false;
 }
 
-static Widget *g_pWidget = 0;
-
-std::map<uint64_t, widgetCallback_t> Widget::m_CallbackMap;
-std::queue<char *> g_PendingMessages;
+std::map<uint64_t, Widget *> Widget::s_KnownWidgets;
+std::queue<char *> Widget::s_PendingMessages;
+size_t Widget::s_NumWidgets;
 
 Widget::Widget() :
     m_bConstructed(false), m_pFramebuffer(0), m_Handle(0),
     m_EventCallback(defaultEventHandler),
     m_Socket(-1), m_SharedFramebuffer(0)
 {
+    ++s_NumWidgets;
 }
 
 Widget::~Widget()
 {
     destroy();
 
+    --s_NumWidgets;
+
     // Wipe out any pending messages that might be left behind.
-    while (!g_PendingMessages.empty())
+    if (!s_NumWidgets)
     {
-        char *p = g_PendingMessages.front();
-        delete [] p;
-        g_PendingMessages.pop();
+        while (!Widget::s_PendingMessages.empty())
+        {
+            char *p = Widget::s_PendingMessages.front();
+            delete [] p;
+            Widget::s_PendingMessages.pop();
+        }
     }
 }
 
@@ -156,17 +161,19 @@ bool Widget::construct(const char *endpoint, const char *title, widgetCallback_t
     send(m_Socket, messageData, totalSize, 0);
     delete [] messageData;
 
-    g_pWidget = this;
+    s_KnownWidgets.insert(std::make_pair(m_Handle, this));
 
     // Wait for the ACK.
     Widget::checkForMessage(Create, true);
 
     m_EventCallback = cb;
-    m_CallbackMap[m_Handle] = cb;
 
     // Wait for the initial Reposition message to come in, as it is needed to
     // properly allocate a window buffer.
     Widget::checkForMessage(LibUiProtocol::Reposition, false);
+
+    // Handle any remaining messages before we consider ourselves constructed.
+    Widget::checkForEvents(true);
 
     return true;
 }
@@ -369,7 +376,7 @@ void Widget::destroy()
 
 PedigreeGraphics::Framebuffer *Widget::getFramebuffer()
 {
-    return 0;
+    return m_pFramebuffer;
 }
 
 void Widget::checkForEvents(bool bAsync)
@@ -380,39 +387,48 @@ void Widget::checkForEvents(bool bAsync)
     fd_set fds;
     FD_ZERO(&fds);
 
-    /// \todo ALL created widgets, not just one.
-    if(g_pWidget)
+    while(bContinue)
     {
-        while(bContinue)
+        // Check for pending messages that we could handle easily.
+        if (Widget::handlePendingMessages())
+            return;  // Messages were handled, we're done here.
+
+        char *buffer = new char[4096];
+
+        for (std::map<uint64_t, Widget *>::iterator it = s_KnownWidgets.begin();
+             it != s_KnownWidgets.end();
+             ++it)
         {
-            // Check for pending messages that we could handle easily.
-            if (Widget::handlePendingMessages())
-                return;  // Messages were handled, we're done here.
-
-            char *buffer = new char[4096];
-
-            max_fd = std::max(max_fd, g_pWidget->getSocket());
-            FD_SET(g_pWidget->getSocket(), &fds);
-
-            struct timeval tv;
-            tv.tv_sec = tv.tv_usec = 0;
-
-            // Async - check and don't do anything if no message found.
-            int nready = select(max_fd + 1, &fds, 0, 0, bAsync ? &tv : 0);
-            if(nready)
-            {
-                recv(g_pWidget->getSocket(), buffer, 4096, 0);
-                bContinue = false;
-            }
-            else if(bAsync)
-            {
-                delete [] buffer;
-                return;
-            }
-
-            Widget::handleMessage(buffer);
-            delete [] buffer;
+            Widget *pWidget = it->second;
+            max_fd = std::max(max_fd, pWidget->getSocket());
+            FD_SET(pWidget->getSocket(), &fds);
         }
+
+        struct timeval tv;
+        tv.tv_sec = tv.tv_usec = 0;
+
+        // Async - check and don't do anything if no message found.
+        int nready = select(max_fd + 1, &fds, 0, 0, bAsync ? &tv : 0);
+        if(nready)
+        {
+            for (int i = 0; i <= max_fd; ++i)
+            {
+                if (FD_ISSET(i, &fds))
+                {
+                    recv(i, buffer, 4096, 0);
+                    bContinue = false;
+                    break;
+                }
+            }
+        }
+        else if(bAsync)
+        {
+            delete [] buffer;
+            break;
+        }
+
+        Widget::handleMessage(buffer);
+        delete [] buffer;
     }
 }
 
@@ -421,11 +437,11 @@ void Widget::checkForMessage(size_t which, bool bResponse)
     bool bContinue = true;
 
     // Check for one that might be hiding in the pending messages queue.
-    size_t messagesToCheck = g_PendingMessages.size();
+    size_t messagesToCheck = s_PendingMessages.size();
     for (; messagesToCheck > 0; --messagesToCheck)
     {
-        char *buffer = g_PendingMessages.front();
-        g_PendingMessages.pop();
+        char *buffer = s_PendingMessages.front();
+        s_PendingMessages.pop();
 
         LibUiProtocol::WindowManagerMessage *pHeader =
             reinterpret_cast<LibUiProtocol::WindowManagerMessage*>(buffer);
@@ -436,7 +452,7 @@ void Widget::checkForMessage(size_t which, bool bResponse)
             return;
         }
 
-        g_PendingMessages.push(buffer);
+        s_PendingMessages.push(buffer);
     }
 
     int max_fd = 0;
@@ -447,8 +463,14 @@ void Widget::checkForMessage(size_t which, bool bResponse)
     {
         char *buffer = new char[4096];
 
-        max_fd = std::max(max_fd, g_pWidget->getSocket());
-        FD_SET(g_pWidget->getSocket(), &fds);
+        for (std::map<uint64_t, Widget *>::iterator it = s_KnownWidgets.begin();
+             it != s_KnownWidgets.end();
+             ++it)
+        {
+            Widget *pWidget = it->second;
+            max_fd = std::max(max_fd, pWidget->getSocket());
+            FD_SET(pWidget->getSocket(), &fds);
+        }
 
         struct timeval tv;
         tv.tv_sec = tv.tv_usec = 0;
@@ -456,7 +478,22 @@ void Widget::checkForMessage(size_t which, bool bResponse)
         int nready = select(max_fd + 1, &fds, 0, 0, 0);
         if(nready)
         {
-            recv(g_pWidget->getSocket(), buffer, 4096, 0);
+            bool gotMessage = false;
+            for (int i = 0; i <= max_fd; ++i)
+            {
+                if (FD_ISSET(i, &fds))
+                {
+                    recv(i, buffer, 4096, 0);
+                    gotMessage = true;
+                    break;
+                }
+            }
+
+            if (!gotMessage)
+            {
+                delete [] buffer;
+                continue;
+            }
         }
         else
         {
@@ -476,7 +513,7 @@ void Widget::checkForMessage(size_t which, bool bResponse)
         else
         {
             // Not what we wanted, mark the message pending and try again.
-            g_PendingMessages.push(buffer);
+            s_PendingMessages.push(buffer);
         }
     }
 }
@@ -486,14 +523,19 @@ void Widget::handleMessage(const char *pMessageBuffer)
     const LibUiProtocol::WindowManagerMessage *pMessage =
         reinterpret_cast<const LibUiProtocol::WindowManagerMessage*>(pMessageBuffer);
 
-    if (m_CallbackMap.find(pMessage->widgetHandle) == m_CallbackMap.end())
+    std::map<uint64_t, Widget *>::iterator it;
+    if ((it = s_KnownWidgets.find(pMessage->widgetHandle)) == s_KnownWidgets.end())
     {
-        // Create messages almost always won't have a callback yet.
-        if (pMessage->messageCode != Create)
-            syslog(LOG_ALERT, "no callback known for handle %lx", pMessage->widgetHandle);
+        syslog(LOG_ALERT, "no widget known for handle %lx", pMessage->widgetHandle);
         return;
     }
-    widgetCallback_t cb = m_CallbackMap[pMessage->widgetHandle];
+
+    Widget *pWidget = it->second;
+    widgetCallback_t cb = pWidget->getCallback();
+    if (!cb)
+    {
+        return;
+    }
 
     switch(pMessage->messageCode)
     {
@@ -501,13 +543,13 @@ void Widget::handleMessage(const char *pMessageBuffer)
             {
                 const LibUiProtocol::RepositionMessage *pReposition =
                     reinterpret_cast<const LibUiProtocol::RepositionMessage*>(pMessageBuffer + sizeof(LibUiProtocol::WindowManagerMessage));
-                delete g_pWidget->m_SharedFramebuffer;
+                delete pWidget->m_SharedFramebuffer;
 #ifdef TARGET_LINUX
-                g_pWidget->m_SharedFramebuffer = new SharedBuffer(pReposition->shmem_size, pReposition->shmem_handle);
+                pWidget->m_SharedFramebuffer = new SharedBuffer(pReposition->shmem_size, pReposition->shmem_handle);
 #else
-                g_pWidget->m_SharedFramebuffer =
+                pWidget->m_SharedFramebuffer =
                     new PedigreeIpc::SharedIpcMessage(pReposition->shmem_size, pReposition->shmem_handle);
-                g_pWidget->m_SharedFramebuffer->initialise();
+                pWidget->m_SharedFramebuffer->initialise();
 #endif
 
                 // Run the callback now that the framebuffer is re-created.
@@ -547,17 +589,17 @@ void Widget::handleMessage(const char *pMessageBuffer)
             cb(::Terminate, 0, 0);
             break;
         default:
-            syslog(LOG_INFO, "** unknown event");
+            syslog(LOG_INFO, "** unknown event %d", pMessage->messageCode);
     }
 }
 
 bool Widget::handlePendingMessages()
 {
-    bool bHandled = !g_PendingMessages.empty();
-    while(!g_PendingMessages.empty())
+    bool bHandled = !s_PendingMessages.empty();
+    while(!s_PendingMessages.empty())
     {
-        char *buffer = g_PendingMessages.front();
-        g_PendingMessages.pop();
+        char *buffer = s_PendingMessages.front();
+        s_PendingMessages.pop();
 
         Widget::handleMessage(buffer);
         delete [] buffer;

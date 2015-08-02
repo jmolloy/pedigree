@@ -34,6 +34,7 @@
 
 #include <string>
 #include <map>
+#include <queue>
 
 /** \addtogroup PedigreeGUI
  *  @{
@@ -215,6 +216,12 @@ class Widget
         /** Clear out pending messages. */
         static bool handlePendingMessages();
 
+        /** Get the Widget's callback. */
+        widgetCallback_t getCallback() const
+        {
+            return m_EventCallback;
+        }
+
         /** Has this widget been constructed yet? */
         bool m_bConstructed;
 
@@ -239,7 +246,13 @@ class Widget
 #endif
 
         /** Handle -> Callback mapping. For event handler. */
-        static std::map<uint64_t, widgetCallback_t> m_CallbackMap;
+        static std::map<uint64_t, Widget *> s_KnownWidgets;
+
+        /** Queue of messages that have not yet been delivered to a callback. */
+        static std::queue<char *> s_PendingMessages;
+
+        /** # of Widgets currently active. */
+        static size_t s_NumWidgets;
 };
 
 /** @} */
