@@ -18,42 +18,24 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
-####################################
-# SCons build system for Pedigree
-## Tyler Kennedy (AKA Linuxhq AKA TkTech)
-## ToDO:
-## ! Make the script suck less
-## ! Add a check for -fno-stack-protector
-## ! Make a flexible system for build defines
-####################################
-EnsureSConsVersion(0,98,0)
-
-####################################
-# Import various python libraries
-## Do not use anything non-std
-####################################
-import os
-import sys
 import commands
-import re
-import string
 import getpass
+import os
+import re
 import SCons
+import sys
+
 from socket import gethostname
-from datetime import *
+from datetime import datetime
 
 from buildutils import misc
 
-# Grab all the default flags for each architecture
 sys.path += ['./scripts']
 from defaultFlags import *
 
+EnsureSConsVersion(0, 98, 0)
 
-####################################
-# Default build flags (Also used to auto-generate help)
-####################################
 opts = Variables('options.cache')
-#^-- Load saved settings (if they exist)
 opts.AddVariables(
     ('CROSS','Base for cross-compilers, tool names will be appended automatically',''),
     ('CC','Sets the C compiler to use.'),
