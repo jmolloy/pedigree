@@ -114,8 +114,8 @@ except ValueError:
     pass  # Not found.
 
 if env['ARCH_TARGET'] in ('X86', 'X64'):
-    env_clone.SharedLibrary(sobjname, files, LINKFLAGS="")
+    env_clone.SharedLibrary(sobjname, files, LINKFLAGS='')
     env.Alias('libs', sobjname)
 
-obj = env_clone.Library(objname, files, LINKFLAGS="")
+obj = env_clone.Library(objname, files)
 env.Alias('libs', obj)

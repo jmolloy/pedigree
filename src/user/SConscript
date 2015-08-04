@@ -215,12 +215,12 @@ for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + lib
         app_env['CPPPATH'] += ['#src/user/libraries/libui/include']
         app_env['LIBS'] += ['ui']
 
-    app_env['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s/libraries/ ' % (
-        app_env.Dir(imagesdir).abspath,)
-    app_env['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s/libs/ ' % (
-        app_env.Dir(builddir).abspath,)
     app_env['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s ' % (
         app_env.Dir(builddir).abspath,)
+    app_env['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s/libs/ ' % (
+        app_env.Dir(builddir).abspath,)
+    app_env['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s/libraries/ ' % (
+        app_env.Dir(imagesdir).abspath,)
 
     if app in cpp_11_apps:
         app_env['CXXFLAGS'].remove('-std=gnu++98')
