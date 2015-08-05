@@ -156,7 +156,7 @@ env_clone['CPPPATH'] = base_include_dirs
 libload_env = env_clone.Clone()
 libload_env['CFLAGS'] += ' -static '
 libload_env['CXXFLAGS'] += ' -static '
-cpp_base = '#images/local/support/gcc/include/c++/%s' % env['COMPILER_VERSION']
+cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
 libload_env['CPPPATH'] += ['#src/system/include/linker', cpp_base,
                            os.path.join(cpp_base, env['COMPILER_TARGET'])]
 libload_env['LIBPATH'] += [builddir, imagesdir + 'libraries']

@@ -111,21 +111,14 @@ include = [
     '.'
 ]
 
-# To add a library add to the list below
-if 'STATIC_DRIVERS' in env['CPPDEFINES']:
-    libraries = []
-else:
-    libraries = ['gcc']
-
 # To add a library path add to the list below
 libpaths = [
-	builddir,
-    env['LIBGCC']
+	builddir
 ]
 
 ####################################
 env_clone['CPPPATH'] = include
-env_clone['LIBS'] = libraries
+env_clone['LIBS'] = []
 env_clone['LIBPATH'] = libpaths
 
 final_output = posix_objname

@@ -52,14 +52,9 @@ include_dirs = [
     '.'
 ]
 
-if 'STATIC_DRIVERS' in env['CPPDEFINES']:
-    libraries = []
-else:
-    libraries = ['gcc']
-
 env_clone['CPPPATH'] = include_dirs
-env_clone['LIBS'] = libraries
-env_clone['LIBPATH'] = [builddir, env['LIBGCC']]
+env_clone['LIBS'] = []
+env_clone['LIBPATH'] = [builddir]
 
 final_output = pedigree_c_objname
 pedigree_c_objname = '%s.debug' % (pedigree_c_objname,)

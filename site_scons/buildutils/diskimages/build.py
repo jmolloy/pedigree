@@ -69,17 +69,19 @@ def buildDiskImages(env, config_database):
     libui = os.path.join(builddir, 'libs', 'libui.so')
 
     # Build the disk images (whichever are the best choice for this system)
-    if env['distdir']:
+    forcemtools = env['forcemtools']
+    if (not forcemtools) and env['distdir']:
         fileList.append(env['distdir'])
 
         buildImage = targetdir.buildImageTargetdir
-    elif env['havee2fsprogs']:
+    elif not forcemtools and (env['MKE2FS'] is not None and env['DEBUGFS'] is not None):
         buildImage = debugfs.buildImageE2fsprogs
-    elif env['havelosetup']:
+    elif not forcemtools and (env['LOSETUP'] is not None):
         fileList += ["#images/hdd_ext2.tar.gz"]
 
         buildImage = losetup.buildImageLosetup
-    else:
+
+    if forcemtools or buildImage is None:
         if env.File('#images/hdd_fat32.img').exists():
             fileList += ["#images/hdd_fat32.img"]
         else:

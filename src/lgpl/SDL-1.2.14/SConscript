@@ -65,7 +65,7 @@ include = [
     '#images/local/include/freetype2',
 ]
 
-cpp_base = '#images/local/support/gcc/include/c++/%s' % env['COMPILER_VERSION']
+cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
 cppinclude = include + [
     cpp_base,
     os.path.join(cpp_base, env['COMPILER_TARGET']),

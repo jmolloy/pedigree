@@ -17,22 +17,26 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
+import os
+
 
 def postImageBuild(img, env):
-    if env['haveqemuimg']:
-        builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"]).abspath
+    if env['QEMU_IMG'] is None:
+        return
 
-        additional_images = {}
-        if env['createvdi'] or env['createvmdk']:
-            additional_images = {
-                'vdi': env.File(builddir + '/hdd.vdi'),
-                'vmdk' : env.File(builddir + '/hdd.vmdk')
-            }
+    builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"]).abspath
 
-        if env['createvdi'] and 'vdi' in additional_images:
-            target = additional_images['vdi'].path
-            env.Command(target, 'qemu-img convert -O vpc %s %s' % (img, target))
+    additional_images = {}
+    if env['createvdi'] or env['createvmdk']:
+        additional_images = {
+            'vdi': env.File(os.path.join(builddir, 'hdd.vdi')),
+            'vmdk' : env.File(os.path.join(builddir, 'hdd.vmdk')),
+        }
 
-        if env['createvmdk'] and 'vmdk' in additional_images:
-            target = additional_images['vmdk'].path
-            env.Command(target, 'qemu-img convert -f raw -O vmdk %s %s' % (img, target))
+    if env['createvdi'] and 'vdi' in additional_images:
+        target = additional_images['vdi'].path
+        env.Command(target, img, '$QEMU_IMG convert -O vpc $SOURCE $TARGET')
+
+    if env['createvmdk'] and 'vmdk' in additional_images:
+        target = additional_images['vmdk'].path
+        env.Command(target, img, '$QEMU_IMG convert -f raw -O vmdk $SOURCE $TARGET')

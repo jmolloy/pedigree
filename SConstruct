@@ -52,9 +52,7 @@ opts.AddVariables(
     ('LINKFLAGS','Sets the linker flags',''),
     ('BUILDDIR','Directory to place build files in.','build'),
     ('LIBGCC','The folder containing libgcc.a.',''),
-    ('LOCALISEPREFIX', 'Prefix to add to all compiler invocations whose output is parsed. Used to ensure locales are right, this must be a locale which outputs US English.', 'LANG=C'),
     ('COMPILER_TARGET', 'Compiler target (eg, i686-pedigree). Autodetected.', ''),
-    ('COMPILER_VERSION', 'Compiler version (eg, 4.5.1). Autodetected.', ''),
 
     BoolVariable('cripple_hdd','Disable writing to hard disks at runtime.',1),
     BoolVariable('debugger','Whether or not to enable the kernel debugger.',1),
@@ -80,16 +78,11 @@ opts.AddVariables(
     BoolVariable('genversion', 'Whether or not to regenerate Version.cc if it already exists.', 1),
     
     ('distdir', 'Directory to install a Pedigree directory structure to, instead of a disk image. Empty will use disk images.', ''),
-    BoolVariable('havelosetup', 'Whether or not `losetup` is available.', 0),
-    BoolVariable('havee2fsprogs', 'Whether or not the e2fsprogs are available.', 0),
-    BoolVariable('forcemtools', 'Force use of mtools (and the FAT filesystem) even if losetup is available.', 0),
-    BoolVariable('haveqemuimg', 'Whether or not `qemu-img` is available (for VDI/VMDK creation).', 0),
+    BoolVariable('forcemtools', 'Force use of mtools (and the FAT filesystem) even if losetup is available.', 1),
     BoolVariable('createvdi', 'Convert the created hard disk image to a VDI file for VirtualBox after it is created.', 0),
     BoolVariable('createvmdk', 'Convert the created hard disk image to a VMDK file for VMware after it is created.', 0),
     BoolVariable('nodiskimages', 'Whether or not to avoid building disk images for distribution.', 0),
     BoolVariable('noiso', 'Whether or not to avoid building an ISO.', 0),
-    ('isoprog', 'Program to use to generate ISO images. The default of `mkisofs\' should be fine for most.', 'mkisofs'),
-    ('e2fsprogs_path', 'Where to find e2fsprogs binaries.', '/sbin'),
     
     BoolVariable('pup', 'If 1, you are managing your images/local directory with the Pedigree UPdater (pup) and want that instead of the images/<arch> directory.', 1),
     
@@ -149,8 +142,27 @@ except SCons.Errors.EnvironmentError:
                       tools = ['default'], TARFLAGS='-cz')
 Help(opts.GenerateHelpText(env))
 
-host = os.uname()
+# Look for things we care about for the build.
+env['QEMU_IMG'] = env.Detect('qemu-img')
+env['LOSETUP'] = env.Detect('losetup')
+env['MKE2FS'] = env.Detect('mke2fs')
+env['DEBUGFS'] = env.Detect('debugfs')
+env['CCACHE'] = env.Detect('ccache')
+env['DISTCC'] = env.Detect('distcc')
+env['PYFLAKES'] = env.Detect('pyflakes')
+env['MTOOLS_MMD'] = env.Detect('mmd')
+env['MTOOLS_MCOPY'] = env.Detect('mcopy')
+env['MTOOLS_MDEL'] = env.Detect('mdel')
+env['MKISOFS'] = env.Detect(['mkisofs', 'genisoimage'])
+env['SQLITE'] = env.Detect('sqlite3')
 
+# Look for things we absolutely must have.
+required_tools = ['SQLITE']
+if not all([env[x] is not None for x in required_tools]):
+    raise SCons.Errors.UserError('Could not find all needed tools (need: %r)' % required_tools)
+
+# Learn some more about the platform on which we're running.
+host = os.uname()
 env['ON_PEDIGREE'] = host[0] == 'Pedigree'
 env['HOST_PLATFORM'] = host[4]
 
@@ -165,14 +177,9 @@ if not os.path.exists('.git/hooks/pre-commit'):
     print "Enforcing pre-commit script."
     os.symlink('../../scripts/pre-commit.sh', '.git/hooks/pre-commit')
 
-# Reset the suffixes
+# Reset object file suffixes.
 env['OBJSUFFIX'] = '.obj'
 env['PROGSUFFIX'] = ''
-
-# Grab the locale prefix
-localisePrefix = env['LOCALISEPREFIX']
-if(len(localisePrefix) > 0):
-    localisePrefix += ' '
 
 # Pedigree binary locations
 env['BUILDDIR'] = env.Dir(env['BUILDDIR']).abspath  # Normalise path.
@@ -184,8 +191,8 @@ env['PEDIGREE_BUILD_SUBSYS'] = os.path.join(env['BUILDDIR'], 'subsystems')
 env['PEDIGREE_BUILD_APPS'] = os.path.join(env['BUILDDIR'], 'apps')
 
 def safeAppend(a, b):
-    a = a.split()
-    b = b.split()
+    a = str(a).split()
+    b = str(b).split()
     for item in b:
         if not item in a:
             a.append(item)
@@ -215,10 +222,12 @@ if env['CROSS'] != '' or env['ON_PEDIGREE']:
         env['ENV']['PATH'] =  os.path.abspath(crossPath) + ':' + env['ENV']['PATH']
 
     prefix = ''
+    '''
     if env['distcc']:
         prefix = 'distcc '
     if env['ccache']:
         prefix = 'ccache ' + prefix
+    '''
     env['CC'] = prefix + crossTuple + 'gcc'
     env['CC_NOCACHE'] = crossTuple + 'gcc'
     env['CXX'] = prefix + crossTuple + 'g++'
@@ -229,35 +238,24 @@ if env['CROSS'] != '' or env['ON_PEDIGREE']:
     # AR and LD never have the prefix added. They must run on the host.
     env['AR'] = crossTuple + 'ar'
     env['RANLIB'] = crossTuple + 'ranlib'
-    env['LD'] = crossTuple + 'gcc'
+    env['LINK'] = crossTuple + 'gcc'
     env['STRIP'] = crossTuple + 'strip'
     env['OBJCOPY'] = crossTuple + 'objcopy'
-    env['LINK'] = env['LD']
 
-    p = commands.getoutput('%s -v' % (env['CC'],))
-    for line in p.splitlines():
-        if line.startswith('gcc version'):
-            # TODO: fix this, this is horrible!
-            env['COMPILER_VERSION'] = line.split(' ')[2]
-
-env['LD'] = env['LINK']
+    # Reset the compiler version as needed.
+    # XXX: nasty hack, but older SCons doesn't allow a CC override.
+    SCons.Tool.gcc.compilers = [env['CC']]
+    env.Tool('gcc')
 
 if(len(env['CC']) > 0 and env['LIBGCC'] == ''):
     a = os.popen(env['CC'] + ' --print-libgcc-file-name')
     env['LIBGCC'] = os.path.dirname(a.read())
     a.close()
 
-if env['haveqemuimg']:
-    p = commands.getoutput("which qemu-img")
-    if not os.path.exists(p):
-        env['haveqemuimg'] = False
-
 # Verify the ISO program
-if not env['noiso']:
-    p = commands.getoutput("which " + env['isoprog'])
-    if not os.path.exists(p):
-        print "No program to generate ISOs, not generating an ISO."
-        env['noiso'] = True
+if env['MKISOFS'] is None:
+    print 'No program to generate ISOs, not generating an ISO.'
+    env['noiso'] = True
 
 tmp = re.match('(.*?)\-.*', os.path.basename(env['CROSS']), re.S)
 if(env['ON_PEDIGREE'] or tmp != None):
@@ -376,29 +374,6 @@ if(env['AS'] == ''):
                print "Error: Please set AS on the command line."
                Exit(1)
            env['AS'] = env['CROSS'] + "as"
-
-# Detect losetup/e2fsprogs presence
-if not env['forcemtools']:
-    tmp = commands.getoutput("which losetup")
-    if(len(tmp) and not "no losetup" in tmp):
-        env['havelosetup'] = 1
-    else:
-        env['havelosetup'] = 0
-
-    env['havee2fsprogs'] = 0
-
-    d = env['e2fsprogs_path']
-    if os.path.isdir(d):
-        mke2fs = os.path.join(d, 'mke2fs')
-        debugfs = os.path.join(d, 'debugfs')
-
-        if os.path.isfile(mke2fs) and os.path.isfile(debugfs):
-            env['MKE2FS'] = mke2fs
-            env['DEBUGFS'] = debugfs
-            env['havee2fsprogs'] = 1
-else:
-    env['havee2fsprogs'] = 0
-    env['havelosetup'] = 0
 
 # Extra build flags
 if not env['warnings'] and not '-Werror' in env['CXXFLAGS']:

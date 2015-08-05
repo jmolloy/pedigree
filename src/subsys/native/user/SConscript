@@ -52,7 +52,7 @@ files = [
     Glob("ipc/*.cc")
 ]
 
-cpp_base = '#images/local/support/gcc/include/c++/%s' % env['COMPILER_VERSION']
+cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
 include_dirs = [
     '../include',
     '#/src/subsys',

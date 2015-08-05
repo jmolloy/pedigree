@@ -218,19 +218,9 @@ custom_incpath = {
 custom_libs = {
 }
 
-# Default libraries for module builds
-if 'STATIC_DRIVERS' in env['CPPDEFINES']:
-    default_libs = []
-else:
-    if env['ARCH_TARGET'] == 'X64':
-        default_libs = ['gcc'] # , 'kernelrtti-nopic']
-    else:
-        default_libs = ['gcc'] # , 'kernelrtti']
-
 # Default library paths
 default_libpath = [
     imagesdir + '/libraries',
-    env['LIBGCC']
 ]
 
 # Default include paths
@@ -242,7 +232,7 @@ default_incpath = [
 ]
 
 env_clone = env.Clone()
-env_clone['LIBS'] = default_libs
+env_clone['LIBS'] = []
 env_clone['LIBPATH'] = default_libpath
 env_clone['CPPPATH'] = default_incpath
 
