@@ -206,6 +206,7 @@ env['MTOOLS_MDEL'] = env.Detect('mdel')
 env['MKISOFS'] = env.Detect(['mkisofs', 'genisoimage'])
 env['SQLITE'] = env.Detect('sqlite3')
 env['MKIMAGE'] = env.Detect('mkimage')
+env['GIT'] = env.Detect('git')
 
 # If we're on OSX, make sure we're using a sane tar.
 if sys.platform == 'darwin':
@@ -471,9 +472,8 @@ env['PEDIGREE_USER'] = getpass.getuser()
 env['PEDIGREE_MACHINE'] = gethostname() # The name of the computer (not the type or OS)
 
 # Grab the git revision of the repo
-gitpath = commands.getoutput("which git")
-if os.path.exists(gitpath) and env['genversion'] == '1':
-    env['PEDIGREE_REVISION'] = commands.getoutput(gitpath + ' rev-parse --verify HEAD --short')
+if env['GIT'] and env['genversion'] == '1':
+    env['PEDIGREE_REVISION'] = commands.getoutput('%s rev-parse --verify HEAD --short' % env['GIT'])
 else:
     env['PEDIGREE_REVISION'] = "(unknown)"
 

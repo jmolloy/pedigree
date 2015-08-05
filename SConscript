@@ -20,7 +20,6 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # vim: set filetype=python:
 
 import os
-import commands
 
 from buildutils import fs, db
 from buildutils.diskimages import build
