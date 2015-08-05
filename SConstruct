@@ -143,15 +143,16 @@ autogen_env = Environment(options=autogen_opts, tools=[])
 if autogen_env['reset_flags']:
     autogen_env['reset_flags'] = False
 
-    processed_lines = []
-    with open('options.cache') as f:
-        for line in f:
-            fields = [x.strip() for x in line.split('=', 1)]
-            if not fields[0].lower().endswith('flags'):
-                processed_lines.append(line)
+    if os.path.isfile('options.cache'):
+        processed_lines = []
+        with open('options.cache') as f:
+            for line in f:
+                fields = [x.strip() for x in line.split('=', 1)]
+                if not fields[0].lower().endswith('flags'):
+                    processed_lines.append(line)
 
-    with open('options.cache', 'w') as f:
-        f.write('\n'.join(processed_lines))
+        with open('options.cache', 'w') as f:
+            f.write('\n'.join(processed_lines))
 
 # Explicitly limit the set of tools to try and find instead of using 'default'.
 # This stops SCons from trying to find Fortran tools and the like.
