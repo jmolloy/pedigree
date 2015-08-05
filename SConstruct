@@ -205,6 +205,7 @@ env['MTOOLS_MCOPY'] = env.Detect('mcopy')
 env['MTOOLS_MDEL'] = env.Detect('mdel')
 env['MKISOFS'] = env.Detect(['mkisofs', 'genisoimage'])
 env['SQLITE'] = env.Detect('sqlite3')
+env['MKIMAGE'] = env.Detect('mkimage')
 
 # If we're on OSX, make sure we're using a sane tar.
 if sys.platform == 'darwin':
@@ -536,6 +537,9 @@ if env['iwyu']:
 
     env['CC'] = env['iwyu']
     env['CXX'] = env['iwyu']
+
+    # We don't want disk images when doing an IWYU run.
+    env['nodiskimages'] = True
 
 # Save the cache, all the options are configured
 if env['cache']:
