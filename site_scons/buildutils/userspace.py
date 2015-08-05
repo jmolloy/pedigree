@@ -17,6 +17,9 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
+import misc
+
+
 REMOVAL_FLAGS = set(['-nostdinc', '-ffreestanding', '-nostdlib',
                      '-fno-builtin'])
 
@@ -41,4 +44,9 @@ def fixFlags(env, flags):
     if env['ARCH_TARGET'] == 'PPC':
         additions.add('-U__svr4__')
 
-    return list(additions | (set(flags) - removals))
+    flags = misc.removeFlags(flags, removals)
+    for addition in additions:
+        if addition not in flags:
+            flags.append(addition)
+
+    return flags

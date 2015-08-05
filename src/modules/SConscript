@@ -19,6 +19,8 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 import os
 
+import buildutils.misc
+
 Import(['env'])
 
 driverdir = env["PEDIGREE_BUILD_DRIVERS"]
@@ -259,10 +261,8 @@ def buildModule(env, path, outputBase, targetAlias):
         'CXXFLAGS': custom_cxxflags.get(module, []),
     })
 
-    flags_to_remove = set(remove_flags.get(module, []))
-    module_env['CFLAGS'] = list(set(module_env['CFLAGS']) - flags_to_remove)
-    module_env['CXXFLAGS'] = list(set(module_env['CXXFLAGS']) - flags_to_remove)
-    
+    buildutils.misc.removeFromAllFlags(module_env, set(remove_flags.get(module, [])))
+
     output = os.path.join(outputBase, module + '.o')
     files = [Glob(os.path.join(base, '*.c')), Glob(os.path.join(base, '*.cc'))]
     for d in custom_subdirs.get(module, []):

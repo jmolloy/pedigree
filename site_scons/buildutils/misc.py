@@ -80,3 +80,32 @@ def prettifyBuildMessages(env):
             env['TARXCOMSTR'] =    '    Extracting \033[32m$SOURCE\033[0m'
             env['DLCOMSTR']   =    '   Downloading \033[32m$TARGET\033[0m'
             env['PTCOMSTR']   =    '      Patching \033[32m$TARGET\033[0m'
+
+
+def removeFlags(flags, removal):
+    """Safely removes the given set of removal words from the given flags.
+
+    It's not possible to simply use set operations as this can remove flags
+    that are actually appropriately duplicated within a command line.
+
+    Args:
+        flags: flags to remove words from
+        removal: iterable of words to remove
+
+    Returns:
+        Updated flags.
+    """
+    for flag in removal:
+        try:
+            flags.remove(flag)
+        except ValueError:
+            pass  # No error.
+
+    return flags
+
+
+def removeFromAllFlags(env, removal):
+    """Remove words from all compilation flags in the given Environment."""
+    env['CFLAGS'] = buildutils.misc.removeFlags(env['CFLAGS'], removal)
+    env['CCFLAGS'] = buildutils.misc.removeFlags(env['CCFLAGS'], removal)
+    env['CXXFLAGS'] = buildutils.misc.removeFlags(env['CXXFLAGS'], removal)

@@ -21,6 +21,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 import os
 
 import buildutils.userspace
+import buildutils.misc
 
 Import(['env'])
 
@@ -223,13 +224,13 @@ for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + lib
         app_env.Dir(imagesdir).abspath,)
 
     if app in cpp_11_apps:
-        app_env['CXXFLAGS'].remove('-std=gnu++98')
+        try:
+            app_env['CXXFLAGS'].remove('-std=gnu++98')
+        except ValueError:
+            pass  # Not found.
         app_env.MergeFlags({'CXXFLAGS': '-std=gnu++11'})
 
-    flags_to_remove = set(remove_flags.get(app, []))
-    app_env['CFLAGS'] = list(set(app_env['CFLAGS']) - flags_to_remove)
-    app_env['CCFLAGS'] = list(set(app_env['CCFLAGS']) - flags_to_remove)
-    app_env['CXXFLAGS'] = list(set(app_env['CXXFLAGS']) - flags_to_remove)
+    buildutils.misc.removeFromAllFlags(app_env, set(remove_flags.get(app, [])))
 
     output = os.path.join(builddir, 'apps', app)
     files = [Glob(os.path.join(base, '*.c')), Glob(os.path.join(base, '*.cc'))]
