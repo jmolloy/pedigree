@@ -131,6 +131,13 @@ autogen_opts.AddVariables(
     BoolVariable('ON_PEDIGREE', 'Whether we are on Pedigree or not.', False),
 )
 
+# Explicitly limit the set of tools to try and find instead of using 'default'.
+# This stops SCons from trying to find Fortran tools and the like.
+tools_to_find = [
+    'gnulink', 'gcc', 'g++', 'gas', 'ar', 'textfile', 'filesystem', 'tar',
+    'cc', 'c++', 'link',
+]
+
 # Copy the host environment and install our options. If we use env.Platform()
 # after this point, the Platform() call will override ENV and we don't want that
 # or env['ENV']['PATH'] won't be the user's $PATH from the shell environment.
@@ -139,10 +146,11 @@ autogen_opts.AddVariables(
 system_path = os.environ.get('PATH', '')
 try:
     env = Environment(options=opts, platform='posix', ENV={'PATH': system_path},
-                      tools=['default', 'textfile'], TARFLAGS='-cz')
+                      tools=tools_to_find, TARFLAGS='-cz')
 except SCons.Errors.EnvironmentError:
+    tools_to_find.remove('textfile')
     env = Environment(options=opts, platform='posix', ENV={'PATH': system_path},
-                      tools=['default'], TARFLAGS='-cz')
+                      tools=tools_to_find, TARFLAGS='-cz')
 Help(opts.GenerateHelpText(env))
 
 # Perform timestamp checks first, then MD5 checks, to figure out if things change.
@@ -153,6 +161,9 @@ env.SourceCode('.', None)
 
 # Cache file checksums after 60 seconds
 SetOption('max_drift', 60)
+
+# Restrict suffixes we consider C++ to avoid searching for Fortran, .m, etc
+env['CPPSUFFIXES'] = ['.c', '.C', '.cc', '.h', '.hpp', '.cpp', '.S']
 
 # Look for things we care about for the build.
 env['QEMU_IMG'] = env.Detect('qemu-img')
