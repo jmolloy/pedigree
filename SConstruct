@@ -29,9 +29,7 @@ from socket import gethostname
 from datetime import datetime
 
 from buildutils import misc
-
-sys.path += ['./scripts']
-from defaultFlags import *
+from defaults import *
 
 EnsureSConsVersion(0, 98, 0)
 
