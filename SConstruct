@@ -528,13 +528,13 @@ env.Command(os.path.join(env['PEDIGREE_BUILD_BASE'], 'Version.cc'), None, Action
 
 # Override CXX if needed.
 if env['iwyu']:
-    oldflags = env['CXXFLAGS']
-
     # Make sure IWYU is fully freestanding and only refers to our headers.
-    env['CXXFLAGS'] = '-Xiwyu --no_default_mappings -Xiwyu --transitive_includes_only '
+    env['iwyu'] += ' -Xiwyu --no_default_mappings'
+    env['iwyu'] += ' -Xiwyu --transitive_includes_only'
 
-    env['CXXFLAGS'] += re.sub('\-march\=.* \-mtune\=.*', '', oldflags)
-    env['CXXFLAGS'] += ' -target i686-unknown-elf '
+    env['CXXFLAGS'] = env['CFLAGS'] = []
+
+    env['CC'] = env['iwyu']
     env['CXX'] = env['iwyu']
 
 # Save the cache, all the options are configured
