@@ -146,6 +146,7 @@ remove_flags = {
 }
 
 env_clone['CFLAGS'] = buildutils.userspace.fixFlags(env, env['CFLAGS'])
+env_clone['CCFLAGS'] = buildutils.userspace.fixFlags(env, env['CCFLAGS'])
 env_clone['CXXFLAGS'] = buildutils.userspace.fixFlags(env, env['CXXFLAGS'])
 env_clone['CPPDEFINES'] += ['PEDIGREE', '__PEDIGREE__']
 env_clone['LIBS'] = base_libs
@@ -154,8 +155,7 @@ env_clone['CPPPATH'] = base_include_dirs
 
 # -static stops GCC placing the path to the dynamic linker into the binary, and creates a non-relocateable executable.
 libload_env = env_clone.Clone()
-libload_env['CFLAGS'] += ' -static '
-libload_env['CXXFLAGS'] += ' -static '
+libload_env.MergeFlags('-static')
 cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
 libload_env['CPPPATH'] += ['#src/system/include/linker', cpp_base,
                            os.path.join(cpp_base, env['COMPILER_TARGET'])]
@@ -223,11 +223,13 @@ for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + lib
         app_env.Dir(builddir).abspath,)
 
     if app in cpp_11_apps:
-        app_env['CXXFLAGS'] += '-std=gnu++11 '
+        app_env['CXXFLAGS'].remove('-std=gnu++98')
+        app_env.MergeFlags({'CXXFLAGS': '-std=gnu++11'})
 
-    for flag in remove_flags.get(app, []):
-        app_env['CFLAGS'] = app_env['CFLAGS'].replace(flag, ' ')
-        app_env['CXXFLAGS'] = app_env['CXXFLAGS'].replace(flag, ' ')
+    flags_to_remove = set(remove_flags.get(app, []))
+    app_env['CFLAGS'] = list(set(app_env['CFLAGS']) - flags_to_remove)
+    app_env['CCFLAGS'] = list(set(app_env['CCFLAGS']) - flags_to_remove)
+    app_env['CXXFLAGS'] = list(set(app_env['CXXFLAGS']) - flags_to_remove)
 
     output = os.path.join(builddir, 'apps', app)
     files = [Glob(os.path.join(base, '*.c')), Glob(os.path.join(base, '*.cc'))]

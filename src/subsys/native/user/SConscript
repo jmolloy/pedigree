@@ -67,15 +67,14 @@ include_dirs = [
 env_clone['CPPPATH'] = include_dirs
 env_clone['LIBS'] = ['gcc']
 env_clone['LIBPATH'] = [builddir]
-env_clone['CXXFLAGS'] = env_clone['CXXFLAGS'].replace('-nostdinc', '')
 
 # -fPIC for libpedigree
-glueFlags = " -fPIC -DUSE_PIC_SYSCALLS "
+glueFlags = ['-fPIC', '-DUSE_PIC_SYSCALLS']
+env_clone.MergeFlags(glueFlags)
 
 env_clone['CFLAGS'] = buildutils.userspace.fixFlags(env, env_clone['CFLAGS'])
+env_clone['CCFLAGS'] = buildutils.userspace.fixFlags(env, env_clone['CCFLAGS'])
 env_clone['CXXFLAGS'] = buildutils.userspace.fixFlags(env, env_clone['CXXFLAGS'])
-env_clone['CFLAGS'] += glueFlags
-env_clone['CXXFLAGS'] += glueFlags
 
 env_clone.Library(native_userlib_objname, files)
 env_clone.SharedLibrary(native_userlib_shobjname, files, LINKFLAGS='')

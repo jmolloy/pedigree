@@ -17,25 +17,28 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
+REMOVAL_FLAGS = set(['-nostdinc', '-ffreestanding', '-nostdlib',
+                     '-fno-builtin'])
+
+X86_REMOVAL_FLAGS = set(['-mno-mmx', '-mno-sse', 'fno-exceptions', '-fno-rtti'])
+X64_REMOVAL_FLAGS = set(['-mno-red-zone', '-mcmodel=kernel'])
+
 
 # Cleans a set of flags so we can build proper applications rather than
 # freestanding binaries.
 def fixFlags(env, flags):
-    flags = flags.replace('-nostdinc', '')
-    flags = flags.replace('-ffreestanding', '')
-    flags = flags.replace('-nostdlib', '')
-    flags = flags.replace('-fno-builtin', '')
+    removals = set()
+    additions = set()
+
+    removals.update(REMOVAL_FLAGS)
+
     if env['ARCH_TARGET'] in ['X86', 'X64']:
-        flags = flags.replace('-mno-mmx', '')
-        flags = flags.replace('-mno-sse', '')
-        flags = flags.replace('-fno-exceptions', '')
-        flags = flags.replace('-fno-rtti', '')
-        flags += ' -msse2 -mfpmath=both '
+        removals.update(X86_REMOVAL_FLAGS)
+        additions.add('-msse2')
+        additions.add('-mfpmath=both')
     if env['ARCH_TARGET'] == 'X64':
-        flags = flags.replace('-mcmodel=kernel', '-mcmodel=small')
-        flags = flags.replace('-mno-red-zone', '')
-        flags = flags.replace('-mno-mmx', '')
-        flags = flags.replace('-mno-sse', '')
+        removals.update(X64_REMOVAL_FLAGS)
     if env['ARCH_TARGET'] == 'PPC':
-        flags += ' -U__svr4__ '
-    return flags
+        additions.add('-U__svr4__')
+
+    return list(additions | (set(flags) - removals))

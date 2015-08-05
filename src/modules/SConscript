@@ -157,6 +157,10 @@ custom_cflags = {
                 '-DSQLITE_OMIT_FLOATING_POINT=1']
 }
 
+# Custom C/C++ flags for specific modules.
+custom_ccflags = {
+}
+
 # Custom CXXFLAGS for specific modules
 custom_cxxflags = {
 }
@@ -249,11 +253,15 @@ def buildModule(env, path, outputBase, targetAlias):
 
     module_env['CPPPATH'] += custom_incpath.get(module, [])
     module_env['LIBS'] += custom_libs.get(module, [])
-    module_env['CFLAGS'] += ' ' + ' '.join(custom_cflags.get(module, ''))
-    module_env['CXXFLAGS'] += ' ' + ' '.join(custom_cxxflags.get(module, ''))
-    for flag in remove_flags.get(module, []):
-        module_env['CFLAGS'] = module_env['CFLAGS'].replace(flag, ' ')
-        module_env['CXXFLAGS'] = module_env['CXXFLAGS'].replace(flag, ' ')
+    module_env.MergeFlags({
+        'CFLAGS': custom_cflags.get(module, []),
+        'CCFLAGS': custom_ccflags.get(module, []),
+        'CXXFLAGS': custom_cxxflags.get(module, []),
+    })
+
+    flags_to_remove = set(remove_flags.get(module, []))
+    module_env['CFLAGS'] = list(set(module_env['CFLAGS']) - flags_to_remove)
+    module_env['CXXFLAGS'] = list(set(module_env['CXXFLAGS']) - flags_to_remove)
     
     output = os.path.join(outputBase, module + '.o')
     files = [Glob(os.path.join(base, '*.c')), Glob(os.path.join(base, '*.cc'))]
@@ -270,7 +278,7 @@ def buildModule(env, path, outputBase, targetAlias):
     
     if "STATIC_DRIVERS" in env['CPPDEFINES']:
         module_env.Program(unstripped_temporary, files,
-            LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',
+            LINKFLAGS='-nostdlib -Wl,-r -T$LSCRIPT',
             LSCRIPT=File("#src/modules/link_static.ld"))
         module_env.Command(final_output, unstripped_temporary,
             action="%s -d -o $TARGET $SOURCE" % env['STRIP'])

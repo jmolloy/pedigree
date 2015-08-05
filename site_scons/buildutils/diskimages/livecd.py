@@ -40,7 +40,7 @@ def buildCdImage(target, source, env):
     pathToStage2 += '.mkisofs'
 
     args = [
-        env['isoprog'],
+        env['MKISOFS'],
         '-D',
         '-joliet',
         '-graft-points',

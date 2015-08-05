@@ -99,16 +99,19 @@ libpaths = [
 ]
 
 env_clone['CFLAGS'] = buildutils.userspace.fixFlags(env, env_clone['CFLAGS'])
+env_clone['CCFLAGS'] = buildutils.userspace.fixFlags(env, env_clone['CCFLAGS'])
 env_clone['CXXFLAGS'] = buildutils.userspace.fixFlags(env, env_clone['CXXFLAGS'])
 env_clone['CPPPATH'] = cppinclude
 env_clone['LIBS'] = libraries
 env_clone['LIBPATH'] = libpaths
 env_clone['CPPDEFINES'] += ['PEDIGREE']
-env_clone['ASFLAGS'] += ' -I' + env.Dir('#src/lgpl/SDL-1.2.14/src/hermes').path + '/ '
+env_clone['ASFLAGS'] += ['-I%s/' % env.Dir('#src/lgpl/SDL-1.2.14/src/hermes').path]
 
 # Remove -Werror as SDL is an external package.
-env_clone['CFLAGS'] = env_clone['CFLAGS'].replace('-Werror', '')
-env_clone['CXXFLAGS'] = env_clone['CXXFLAGS'].replace('-Werror', '')
+try:
+    env_clone['CFLAGS'].remove('-Werror')
+except ValueError:
+    pass  # Not found.
 
 if env['ARCH_TARGET'] in ('X86', 'X64'):
     env_clone.SharedLibrary(sobjname, files, LINKFLAGS="")

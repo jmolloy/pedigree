@@ -180,7 +180,7 @@ objname = '%s.debug' % objname
 
 if env['ARCH_TARGET'] == 'X64':
     # TODO(miselin): this is not brilliant.
-    env_clone['LINKFLAGS'] += ' -m64 -mcmodel=kernel'
+    env_clone.MergeFlags({'LINKFLAGS': ['-m64', '-mcmodel=kernel']})
     stripped_objname = '%s.stripped' % (objname,)
 
 env_clone.Program(objname, files)

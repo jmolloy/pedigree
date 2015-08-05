@@ -132,42 +132,31 @@ else:
 env_clone.Program(posix_objname,posix_files,LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT')
 env_clone.Command(final_output, posix_objname, action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
 
-glueFlags = " -fPIC -DUSE_PIC_SYSCALLS "
+posix_env = env_clone.Clone()
+posix_env['CFLAGS'] = buildutils.userspace.fixFlags(env, posix_env['CFLAGS'])
+posix_env['CCFLAGS'] = buildutils.userspace.fixFlags(env, posix_env['CCFLAGS'])
+posix_env['CXXFLAGS'] = buildutils.userspace.fixFlags(env, posix_env['CXXFLAGS'])
 
-env_clone_glue = env_clone.Clone()
+pic_clone = posix_env.Clone()
+pic_clone.MergeFlags('-fPIC -DUSE_PIC_SYSCALLS')
 
 # TODO: rip out stdint.h, make sure GCC target provides it.
 
-env_clone_glue['CFLAGS'] = buildutils.userspace.fixFlags(env, env_clone_glue['CFLAGS'])
-env_clone_glue['CXXFLAGS'] = buildutils.userspace.fixFlags(env, env_clone_glue['CXXFLAGS'])
-env_clone_glue['CFLAGS'] += glueFlags
-env_clone_glue['CXXFLAGS'] += glueFlags
-env_clone_glue.Library(glue_objname, glue_files)
-
-env_clone_crt0 = env_clone.Clone()
+pic_clone.Library(glue_objname, glue_files)
 
 # No libraries needed for CRT0
-env_clone_crt0['LIBS'] = ''
-env_clone_crt0.Program(crt0_objname, crt0_files, LINKFLAGS='-nostdlib -r')
+pic_clone.Program(crt0_objname, crt0_files, LINKFLAGS='-nostdlib -r')
 
 # CRTI
-env_clone_crti = env_clone.Clone()
-env_clone_crti['LIBS'] = ''
-env_clone_crti.Program(crti_objname, crti_files, LINKFLAGS='-nostdlib -r')
+pic_clone.Program(crti_objname, crti_files, LINKFLAGS='-nostdlib -r')
 
 # CRTN
-env_clone_crtn = env_clone.Clone()
-env_clone_crtn['LIBS'] = ''
-env_clone_crtn.Program(crtn_objname, crtn_files, LINKFLAGS='-nostdlib -r')
+pic_clone.Program(crtn_objname, crtn_files, LINKFLAGS='-nostdlib -r')
 
 # libpthread
-env_clone_pthread = env_clone.Clone()
-env_clone_pthread['CFLAGS'] = buildutils.userspace.fixFlags(env, env_clone_pthread['CFLAGS'])
-env_clone_pthread['CXXFLAGS'] = buildutils.userspace.fixFlags(env, env_clone_pthread['CXXFLAGS'])
-env_clone_pthread['CFLAGS'] += glueFlags
-env_clone_pthread['CXXFLAGS'] += glueFlags
+env_clone_pthread = pic_clone.Clone()
 env_clone_pthread.Library(libpthread_objname, pthread_files)
-env_clone_pthread.SharedLibrary(libpthread_shobjname, pthread_files, LINKFLAGS='')
+env_clone_pthread.SharedLibrary(libpthread_shobjname, pthread_files)
 
 # Build libc/libm
 
@@ -202,7 +191,7 @@ env_clone.Command([buildLibc], [glue_objname, baseLibc],
         buildDir.abspath, baseLibc.abspath,
         env_clone.File(glue_objname).abspath,
         env_clone.File(libpedigree_c_objname).abspath, env["AR"],
-        env["CC_NOCACHE"], env["STRIP"]
+        env["LINK"], env["STRIP"]
         ]
     )
 )
@@ -210,7 +199,7 @@ env_clone.Command([buildLibc], [glue_objname, baseLibc],
 env_clone.Command([buildLibm], [baseLibm],
     " ".join(pipes.quote(s) for s in [
         '@python', os.path.join(base.abspath, 'scripts', 'buildLibm.py'),
-        buildDir.abspath, baseLibm.abspath, env["AR"], env['CC_NOCACHE'],
+        buildDir.abspath, baseLibm.abspath, env["LINK"], env['CC'],
         ]
     )
 )

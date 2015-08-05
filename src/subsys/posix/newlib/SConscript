@@ -47,7 +47,7 @@ def buildNewlib(target, source, env):
     # Pass some information down to the child.
     childenv = {}
     childenv['COMPILER_TARGET'] = env['COMPILER_TARGET']
-    childenv['XGCC'] = env['CC_NOCACHE']
+    childenv['XGCC'] = env['CC']
     childenv['XLD'] = env['LINK']
     childenv['XCFLAGS'] = buildutils.userspace.fixFlags(env, env['CFLAGS'])
     childenv['SRCDIR'] = env.Dir('#').abspath

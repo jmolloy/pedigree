@@ -250,7 +250,7 @@ int open(const char *name, int flags, ...) // , mode_t mode)
     return (long)syscall3(POSIX_OPEN, (long)name, flags, mode);
 }
 
-_ssize_t read(int file, void *ptr, size_t len)
+_READ_WRITE_RETURN_TYPE read(int file, void *ptr, size_t len)
 {
     if(file < 0)
     {
@@ -264,7 +264,7 @@ _ssize_t read(int file, void *ptr, size_t len)
         errno = EINVAL;
         return 0;
     }
-    return (_ssize_t) syscall3(POSIX_READ, file, (long)ptr, len);
+    return (_READ_WRITE_RETURN_TYPE) syscall3(POSIX_READ, file, (long)ptr, len);
 }
 
 void *sbrk(ptrdiff_t incr)
@@ -308,7 +308,7 @@ int waitpid(int pid, int *status, int options)
     return (long)syscall3(POSIX_WAITPID, pid, (long)status, options);
 }
 
-_ssize_t write(int file, const void *ptr, size_t len)
+_READ_WRITE_RETURN_TYPE write(int file, const void *ptr, size_t len)
 {
     if(file < 0)
     {
@@ -316,7 +316,7 @@ _ssize_t write(int file, const void *ptr, size_t len)
         errno = EBADF;
         return -1;
     }
-    return (_ssize_t) syscall3(POSIX_WRITE, file, (long)ptr, len);
+    return (_READ_WRITE_RETURN_TYPE) syscall3(POSIX_WRITE, file, (long)ptr, len);
 }
 
 ssize_t readv(int fd, const struct iovec *iov, int iovcnt)

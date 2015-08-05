@@ -70,6 +70,7 @@ def buildDiskImages(env, config_database):
 
     # Build the disk images (whichever are the best choice for this system)
     forcemtools = env['forcemtools']
+    buildImage = None
     if (not forcemtools) and env['distdir']:
         fileList.append(env['distdir'])
 
