@@ -24,7 +24,7 @@ def postImageBuild(img, env):
     if env['QEMU_IMG'] is None:
         return
 
-    builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"]).abspath
+    builddir = env.Dir(env["PEDIGREE_BUILD_BASE"]).abspath
 
     additional_images = {}
     if env['createvdi'] or env['createvmdk']:
