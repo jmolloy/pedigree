@@ -74,6 +74,8 @@
  * - \ref module_main
  * - \ref mmap_main
  * - \ref module_nativeapi
+ * - \ref registry
+ * - \ref event_system
  *
  * \section main_resources Resources
  * The main repository for Pedigree is at https://github.com/miselin/pedigree.
