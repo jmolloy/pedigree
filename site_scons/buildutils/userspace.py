@@ -21,9 +21,9 @@ import misc
 
 
 REMOVAL_FLAGS = set(['-nostdinc', '-ffreestanding', '-nostdlib',
-                     '-fno-builtin'])
+                     '-fno-builtin', '-fno-exceptions', '-fno-rtti'])
 
-X86_REMOVAL_FLAGS = set(['-mno-mmx', '-mno-sse', 'fno-exceptions', '-fno-rtti'])
+X86_REMOVAL_FLAGS = set(['-mno-mmx', '-mno-sse'])
 X64_REMOVAL_FLAGS = set(['-mno-red-zone', '-mcmodel=kernel'])
 
 
