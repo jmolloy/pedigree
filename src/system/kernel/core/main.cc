@@ -25,6 +25,8 @@
  * Joerg Pfahler and primarily implemented by James Molloy, Joerg Pfahler, and
  * Matthew Iselin.
  *
+ * Just a user looking for help? Head straight to \ref user_guide.
+ *
  * The objectives of Pedigree are to develop a solid yet portable operating
  * system from the ground up with an object oriented architecture where
  * possible. The goal is to support multiple different subsystems to allow many
@@ -67,6 +69,10 @@
  * Find a bug in documentation, or incorrect documentation? Please let us know
  * by following the escalation path described in the \ref main_resources
  * section.
+ *
+ * \section user_guide Pedigree User Guide
+ *
+ * - \ref pedigree_whatsdifferent
  *
  * \section main_links Components
  * The following lists the various components across the operating system.
