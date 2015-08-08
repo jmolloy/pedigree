@@ -18,9 +18,11 @@
  */
 
 #include <newlib.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <fcntl.h>
 
-extern int main(int,char**,char**);
+extern int main(int, char**, char**);
 extern void _init_signals(void);
 
 void _start(char **argv, char **env)

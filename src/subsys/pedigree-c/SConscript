@@ -17,97 +17,69 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
-####################################
-# SCons build system for Pedigree
-## Tyler Kennedy (AKA Linuxhq AKA TkTech)
-####################################
-
-Import(['env'])
-
 import os
 
 import buildutils.userspace
 
-tmp = env.Clone()
+Import(['env'])
 
-# Build directories
-builddir = "#" + env["PEDIGREE_BUILD_BASE"]
-kerneldir = "#" + env["PEDIGREE_BUILD_KERNEL"]
-moduledir = "#" + env["PEDIGREE_BUILD_MODULES"]
-subsysdir = "#" + env["PEDIGREE_BUILD_SUBSYS"]
+env_clone = env.Clone()
 
-# Change to then of this module
-pedigree_c_objname = subsysdir + '/pedigree-c.o'
-libpedigree_c_objname = builddir + '/libpedigree-c.a'
-libpedigree_c_shobjname = builddir + '/libpedigree-c.so'
+builddir = env["PEDIGREE_BUILD_BASE"]
+kerneldir = env["PEDIGREE_BUILD_KERNEL"]
+moduledir = env["PEDIGREE_BUILD_MODULES"]
+subsysdir = env["PEDIGREE_BUILD_SUBSYS"]
+
+pedigree_c_objname = os.path.join(subsysdir, 'pedigree-c.o')
+libpedigree_c_objname = os.path.join(builddir, 'libpedigree-c.a')
+libpedigree_c_shobjname = os.path.join(builddir, 'libpedigree-c.so')
 
 env.Alias("subsys", pedigree_c_objname)
 env.Alias("subsys", libpedigree_c_objname)
 env.Alias("subsys", libpedigree_c_shobjname)
 
-# To include a new subdirectory just add to the list.
-subdirs = [
-    
-]
+kernel_module_files = Glob("*.cc")
 
-# To include new files just add to the list, or Glob("*.cpp")
-pedigree_c_files = [
-    Glob("*.cc")
-]
-
-libpedigree_c_files = [
-    Glob("*.c")
-]
+libpedigree_c_files = Glob("*.c")
 
 # To include a new directory for includes, just add it to the list
-include = [
+include_dirs = [
     './include',
-    '#/src/modules',
-    '#/src/system/include',
-    '#/src/modules/system',
-	'#/src/subsys/posix/include',
+    '#src/modules',
+    '#src/system/include',
+    '#src/modules/system',
+	'#src/subsys/posix/include',
     '.'
 ]
 
-# To add a library add to the list below
-if 'STATIC_DRIVERS' in env['CPPDEFINES']:
-    libraries = []
-else:
-    libraries = ['gcc']
-
-# To add a library path add to the list below
-libpaths = [
-    builddir,
-    env['LIBGCC']
-]
-
-####################################
-SConscript([os.path.join(i, 'SConscript') for i in subdirs],exports = ['tmp'])
-tmp['CPPPATH'] = include
-tmp['LIBS'] = libraries
-tmp['LIBPATH'] = libpaths
+env_clone['CPPPATH'] = include_dirs
+env_clone['LIBS'] = []
+env_clone['LIBPATH'] = [builddir]
 
 final_output = pedigree_c_objname
 pedigree_c_objname = '%s.debug' % (pedigree_c_objname,)
 
 if "STATIC_DRIVERS" in env['CPPDEFINES']:
-    build = tmp.Program(pedigree_c_objname, pedigree_c_files,LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',LSCRIPT=File("#src/modules/link_static.ld"))
-    tmp.Command(final_output, pedigree_c_objname, action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
+    env_clone.Program(pedigree_c_objname, kernel_module_files,
+        LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',
+        LSCRIPT=File("#src/modules/link_static.ld"))
+    env_clone.Command(final_output, pedigree_c_objname,
+        action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
 else:
-    build = tmp.Program(pedigree_c_objname, pedigree_c_files,LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',LSCRIPT=File("#src/modules/link.ld"))
-    tmp.Command(final_output, pedigree_c_objname, action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
-    
-tmp_lib = tmp.Clone()
+    env_clone.Program(pedigree_c_objname, kernel_module_files,
+        LINKFLAGS='-nostdlib -r -T $LSCRIPT',
+        LSCRIPT=File("#src/modules/link.ld"))
+    env_clone.Command(final_output, pedigree_c_objname,
+        action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
 
-# -fPIC for libpedigree-c
-glueFlags = " -fPIC -DUSE_PIC_SYSCALLS "
+libs_clone = env_clone.Clone()
+libs_clone.MergeFlags('-fPIC -DUSE_PIC_SYSCALLS')
 
-tmp_lib['CFLAGS'] = buildutils.userspace.fixFlags(env, tmp_lib['CFLAGS'])
-tmp_lib['CXXFLAGS'] = buildutils.userspace.fixFlags(env, tmp_lib['CXXFLAGS'])
-tmp_lib['CFLAGS'] += glueFlags
-tmp_lib['CXXFLAGS'] += glueFlags
+libs_clone['CFLAGS'] = buildutils.userspace.fixFlags(env, libs_clone['CFLAGS'])
+libs_clone['CCFLAGS'] = buildutils.userspace.fixFlags(env, libs_clone['CCFLAGS'])
+libs_clone['CXXFLAGS'] = buildutils.userspace.fixFlags(env, libs_clone['CXXFLAGS'])
 
-tmp_lib.StaticLibrary(libpedigree_c_objname, libpedigree_c_files)
-tmp_lib.SharedLibrary(libpedigree_c_shobjname, libpedigree_c_files, LINKFLAGS='')
+libs_clone.StaticLibrary(libpedigree_c_objname, libpedigree_c_files)
+libs_clone.SharedLibrary(libpedigree_c_shobjname, libpedigree_c_files, LINKFLAGS='')
 
 env.Depends(libpedigree_c_shobjname, "crt")

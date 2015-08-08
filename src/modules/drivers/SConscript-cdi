@@ -1,10 +1,24 @@
-####################################
-# SCons build system for Pedigree
-# CDI-specific build system integration
-# Matthew Iselin
-####################################
+'''
+Copyright (c) 2008-2014, Pedigree Developers
 
-import os.path
+Please see the CONTRIB file in the root of the source tree for a full
+list of contributors.
+
+Permission to use, copy, modify, and distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+'''
+
+import os
+
 Import(['env'])
 
 cdi_drivers = env['cdi_driver_list']
@@ -12,10 +26,10 @@ cdi_drivers = env['cdi_driver_list']
 # Meh. cdi-osdep.h is in both locations, this isn't ideal.
 # TODO: Fix me!
 include_dirs = [
-    '#/src/system/include',
-    '#/src/modules/drivers',
-    '#/src/modules/drivers/common/cdi/include',
-    '#/src/modules/drivers/cdi/include'
+    '#src/system/include',
+    '#src/modules/drivers',
+    '#src/modules/drivers/common/cdi/include',
+    '#src/modules/drivers/cdi/include'
 ]
 
 libraries = [
@@ -24,25 +38,28 @@ libraries = [
 
 # For each driver, handle its compilation
 for driver in cdi_drivers:
-    localenv = env.Clone()
+    env_clone = env.Clone()
 
-    directory = "cdi/" + driver
+    directory = os.path.join("cdi", driver)
     
-    objname = '#' + env["PEDIGREE_BUILD_DRIVERS"]
-    objname += '/' + driver + '.o'
+    objname = os.path.join(env["PEDIGREE_BUILD_DRIVERS"], driver + '.o')
     
-    env.Alias("drivers", objname)
+    driverFiles = [Glob(os.path.join(directory, '*.c'))]
     
-    driverFiles = [Glob(directory + '/*.c')]
-    
-    localenv['LIBS'] = libraries
-    localenv['CPPPATH'] = include_dirs
-    localenv['CPPPATH'] += [directory + '/include']
+    env_clone['LIBS'] = libraries
+    env_clone['CPPPATH'] = include_dirs
+
+    custom_include = os.path.join(directory, 'include')
+    if os.path.isdir(custom_include)
+        env_clone['CPPPATH'] += [custom_include]
 
     # TOOD: do a warning fixup in CDI
-    localenv['CFLAGS'] = localenv['CFLAGS'].replace('-Werror', '')
-    localenv['CXXFLAGS'] = localenv['CXXFLAGS'].replace('-Werror', '')
+    env_clone['CFLAGS'] = env_clone['CFLAGS'].replace('-Werror', '')
+    env_clone['CXXFLAGS'] = env_clone['CXXFLAGS'].replace('-Werror', '')
 
-    localenv.Program(objname, driverFiles, LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT', LSCRIPT=File("#src/modules/link.ld"))
+    env_clone.Program(objname, driverFiles,
+        LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',
+        LSCRIPT=File("#src/modules/link.ld"))
 
+    env.Alias("drivers", objname)
 

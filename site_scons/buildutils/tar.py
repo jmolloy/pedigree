@@ -18,8 +18,6 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
 
-import os
-import shutil
 import subprocess
 import tarfile
 
@@ -40,8 +38,6 @@ def Extract(target, source, env):
     return r
 
 def Create(target, source, env):
-    update_source = []
-
     args = [env['TAR'], '--transform', 's,.*/,,g', '-czPf', target[0].abspath]
     args.extend([x.abspath for x in source])
 

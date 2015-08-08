@@ -31,7 +31,6 @@
 #include <machine/Machine.h>
 #include <panic.h>
 #include <Log.h>
-#include <machine/x86_common/LocalApic.h>
 #include <utilities/assert.h>
 #include <process/PerProcessorScheduler.h>
 #include <process/RoundRobinCoreAllocator.h>

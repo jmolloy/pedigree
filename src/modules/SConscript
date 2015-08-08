@@ -17,18 +17,15 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
-####################################
-# SCons build system for Pedigree
-## Tyler Kennedy (AKA Linuxhq AKA TkTech)
-####################################
+import os
 
-import os.path, tempfile, shutil
+import buildutils.misc
+
 Import(['env'])
 
-driverdir = "#" + env["PEDIGREE_BUILD_DRIVERS"]
-moduledir = "#" + env["PEDIGREE_BUILD_MODULES"]
+driverdir = env["PEDIGREE_BUILD_DRIVERS"]
+moduledir = env["PEDIGREE_BUILD_MODULES"]
 imagesdir = env["PEDIGREE_IMAGES_DIR"]
-objname = driverdir + '/vmware-gfx.o'
 
 # Common drivers - order is important
 driver_common_subdirs = [
@@ -82,22 +79,22 @@ cdi_drivers = [
 ]
 
 # Architecture-specific drivers
-if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
+if env['ARCH_TARGET'] in ('X86', 'X64'):
     driver_arch = 'x86'
     driver_arch_subdirs = [
         'ib700_wdt',
-        'pci',
         'ne2k',
+        'pci',
         'ps2mouse',
         'vbe',
-        'vmware-gfx'
+        'vmware-gfx',
     ]
 elif env['ARCH_TARGET'] == 'PPC':
     driver_arch = 'ppc'
     driver_arch_subdirs = [
         'ata-specific',
         'framebuffer',
-        'test'
+        'test',
     ]
 elif env['ARCH_TARGET'] == 'ARM':
     driver_arch = 'arm'
@@ -106,7 +103,8 @@ elif env['ARCH_TARGET'] == 'ARM':
     ]
 
     # Filter out useless drivers for ARM
-    driver_common_subdirs = filter(lambda x: x not in ['ata', 'dma', 'cdi', 'nvidia', '3c90x'], driver_common_subdirs)
+    driver_common_subdirs = [x for x in driver_common_subdirs
+                             if x not in ['ata', 'dma', 'cdi', 'nvidia', '3c90x']]
     cdi_drivers = []
 
 env['cdi_driver_list'] = cdi_drivers
@@ -140,14 +138,14 @@ else:
     module_subdirs += ['init']
 
 if env['ARCH_TARGET'] == 'ARM':
-    module_subdirs = filter(lambda x: x not in ['splash', 'TUI'], module_subdirs)
+    module_subdirs = [x for x in module_subdirs if x not in ['splash', 'TUI']]
 
 # No difference yet, load all modules
 initrd_modules = module_subdirs
 
-drivers = ['drivers/' + driver_arch + '/' + i for i in driver_arch_subdirs]
-drivers += ['drivers/common/' + i for i in driver_common_subdirs]
-modules = ['system/' + i for i in module_subdirs]
+drivers = [os.path.join('drivers', driver_arch, i) for i in driver_arch_subdirs]
+drivers += [os.path.join('drivers', 'common', i) for i in driver_common_subdirs]
+modules = [os.path.join('system', i) for i in module_subdirs]
 
 all_modules = drivers + modules
 
@@ -159,6 +157,10 @@ custom_cflags = {
                 '-DSQLITE_DISABLE_LFS=1',
                 '-DSQLITE_OMIT_LOCALTIME=1',
                 '-DSQLITE_OMIT_FLOATING_POINT=1']
+}
+
+# Custom C/C++ flags for specific modules.
+custom_ccflags = {
 }
 
 # Custom CXXFLAGS for specific modules
@@ -190,7 +192,7 @@ else:
     arch_subdir = 'unknown'
 
 def dma_fix(s):
-    if s == 'X86' or s == 'X64':
+    if s in ('X86', 'X64'):
         return 'X86'
     else:
         return s
@@ -203,7 +205,7 @@ custom_subdirs = {
 
 # Custom files to add to the file list
 custom_files = {
-    'linker'        : [arch_subdir + '/asm-' + arch_subdir + '.s']
+    'linker'        : [os.path.join(arch_subdir, 'asm-' + arch_subdir + '.s')]
 }
 
 # Custom include paths for specific modules
@@ -222,19 +224,9 @@ custom_incpath = {
 custom_libs = {
 }
 
-# Default libraries for module builds
-if 'STATIC_DRIVERS' in env['CPPDEFINES']:
-    default_libs = []
-else:
-    if env['ARCH_TARGET'] == 'X64':
-        default_libs = ['gcc'] # , 'kernelrtti-nopic']
-    else:
-        default_libs = ['gcc'] # , 'kernelrtti']
-
 # Default library paths
 default_libpath = [
     imagesdir + '/libraries',
-    env['LIBGCC']
 ]
 
 # Default include paths
@@ -245,125 +237,119 @@ default_incpath = [
     '#/src/modules/drivers/common',
 ]
 
-tmp = env.Clone()
-tmp['LIBS'] = default_libs
-tmp['LIBPATH'] = default_libpath
-tmp['CPPPATH'] = default_incpath
+env_clone = env.Clone()
+env_clone['LIBS'] = []
+env_clone['LIBPATH'] = default_libpath
+env_clone['CPPPATH'] = default_incpath
 
 def buildModule(env, path, outputBase, targetAlias):
-    e = env.Clone()
+    module_env = env.Clone()
 
     # Handle extra include directories
     base = path
-    i = os.path.basename(path)
-    if(os.path.exists(base + '/include')):
-        e['CPPPATH'] += [base + '/include']
-    if(custom_incpath.has_key(i)):
-        e['CPPPATH'] += custom_incpath[i]
-    if(custom_libs.has_key(i)):
-        e['LIBS'] += custom_libs[i]
-    if(custom_cflags.has_key(i)):
-        e['CFLAGS'] += ' ' + ' '.join(custom_cflags[i])
-    if(custom_cxxflags.has_key(i)):
-        e['CXXFLAGS'] += ' ' + ' '.join(custom_cxxflags[i])
-    if(remove_flags.has_key(i)):
-        for flag in remove_flags[i]:
-            e['CFLAGS'] = e['CFLAGS'].replace(flag, ' ')
-            e['CXXFLAGS'] = e['CXXFLAGS'].replace(flag, ' ')
-    
-    output = outputBase + '/' + i + '.o'
-    files = [Glob(base + '/*.c'), Glob(base + '/*.cc')]
-    if custom_subdirs.has_key(i):
-        for d in custom_subdirs[i]:
-            files += [Glob(base + '/' + d + '/*.c'), Glob(base + '/' + d + '/*.cc')]
-    if custom_files.has_key(i):
-        for f in custom_files[i]:
-            files += [base + '/' + f]
+    module = os.path.basename(path)
+
+    custom_include_path = os.path.join(base, 'include')
+    if(os.path.exists(custom_include_path)):
+        module_env['CPPPATH'] += [custom_include_path]
+
+    module_env['CPPPATH'] += custom_incpath.get(module, [])
+    module_env['LIBS'] += custom_libs.get(module, [])
+    module_env.MergeFlags({
+        'CFLAGS': custom_cflags.get(module, []),
+        'CCFLAGS': custom_ccflags.get(module, []),
+        'CXXFLAGS': custom_cxxflags.get(module, []),
+    })
+
+    buildutils.misc.removeFromAllFlags(module_env, set(remove_flags.get(module, [])))
+
+    output = os.path.join(outputBase, module + '.o')
+    files = [Glob(os.path.join(base, '*.c')), Glob(os.path.join(base, '*.cc'))]
+    for d in custom_subdirs.get(module, []):
+        files += [
+            Glob(os.path.join(base, d, '*.c')),
+            Glob(os.path.join(base, d, '*.cc')),
+        ]
+    for f in custom_files.get(module, []):
+        files += [os.path.join(base, f)]
 
     final_output = output
     unstripped_temporary = output = '%s.debug' % (output,)
     
     if "STATIC_DRIVERS" in env['CPPDEFINES']:
-        e.Program(unstripped_temporary, files, LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT', LSCRIPT = File("#src/modules/link_static.ld"))
-        e.Command(final_output, unstripped_temporary, action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
+        module_env.Program(unstripped_temporary, files,
+            LINKFLAGS='-nostdlib -Wl,-r -T$LSCRIPT',
+            LSCRIPT=File("#src/modules/link_static.ld"))
+        module_env.Command(final_output, unstripped_temporary,
+            action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
     else:
-        e.Program(unstripped_temporary, files, LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT', LSCRIPT = File("#src/modules/link.ld"))
-        e.Command(final_output, unstripped_temporary, action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
+        module_env.Program(unstripped_temporary, files,
+            LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',
+            LSCRIPT=File("#src/modules/link.ld"))
+        module_env.Command(final_output, unstripped_temporary,
+            action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
     
     env.Alias(targetAlias, final_output)
 
-for i in modules:
-    buildModule(tmp, i, moduledir, 'modules')
+for module in modules:
+    buildModule(env_clone, module, moduledir, 'modules')
 
-for i in drivers:
-    buildModule(tmp, i, driverdir, 'drivers')
+for driver in drivers:
+    buildModule(env_clone, driver, driverdir, 'drivers')
 
 # Special handling for CDI drivers
-tmp['CPPPATH'] += ['#/src/modules/drivers/common/cdi/include',
-                   '#/src/modules/drivers/cdi/include']
+env_clone['CPPPATH'] += ['#/src/modules/drivers/common/cdi/include',
+                         '#/src/modules/drivers/cdi/include']
 
-for i in cdi_drivers:
-    oldpath = tmp['CPPPATH']
-    
+for cdi_driver in cdi_drivers:
+    cdi_env = env_clone.Clone()
+
     # Patch up the path and add any include directory to the path
-    i = 'drivers/cdi/' + i
-    incdir = env.Dir('#/src/modules/' + i + '/include')
-    if(os.path.exists(incdir.abspath)):
-        tmp['CPPPATH'] += [incdir]
-    buildModule(tmp, i, driverdir, 'drivers')
-    
-    tmp['CPPPATH'] = oldpath
-
-# SConscript([os.path.join(i, 'SConscript') for i in drivers],exports = ['env'])
-# SConscript(['drivers/SConscript-cdi'],exports = ['env'])
-# SConscript([os.path.join(i, 'SConscript') for i in modules],exports = ['env'])
+    cdi_driver = os.path.join('drivers', 'cdi', cdi_driver)
+    incdir = env.Dir(os.path.join('#src', 'modules', cdi_driver, 'include'))
+    if os.path.exists(incdir.abspath):
+        cdi_env['CPPPATH'] += [incdir]
+    buildModule(cdi_env, cdi_driver, driverdir, 'drivers')
 
 # Ready to generate the initrd...
-builddir = env.Dir("#" + env["PEDIGREE_BUILD_BASE"])
-initrdFile = env.File("#" + env["PEDIGREE_BUILD_BASE"] + "/initrd.tar")
+builddir = env.Dir(env["PEDIGREE_BUILD_BASE"])
+initrdFile = env.File(os.path.join(env["PEDIGREE_BUILD_BASE"], "initrd.tar"))
 
 # initrd lists
 
 # Ensure graphics drivers are loaded before splash
 initrdList = []
 forceModuleOrder = ['config', 'pci', 'vbe', 'vmware-gfx', 'gfx-deps', 'splash']
-for mod in forceModuleOrder:
-    if mod in module_subdirs:
-        initrdList += [builddir.abspath + '/modules/' + mod + '.o']
-        module_subdirs.remove(mod)
-    elif (mod in driver_arch_subdirs) or (mod in driver_common_subdirs) or (mod in cdi_drivers):
-        initrdList += [builddir.abspath + '/drivers/' + mod + '.o']
-        
-        # Can't think of a more elegant way to do this at 11 PM at night. - Matt
-        if mod in driver_arch_subdirs:
-            driver_arch_subdirs.remove(mod)
-        elif mod in driver_common_subdirs:
-            driver_common_subdirs.remove(mod)
-        elif mod in cdi_drivers:
-            cdi_drivers.remove(mod)
+all_drivers = driver_arch_subdirs + driver_common_subdirs + cdi_drivers
+for module in forceModuleOrder:
+    if module in initrd_modules:
+        initrdList += [os.path.join(builddir.abspath, 'modules', module + '.o')]
+        initrd_modules.remove(module)
+    elif module in all_drivers:
+        initrdList += [os.path.join(builddir.abspath, 'drivers', module + '.o')]
+        all_drivers.remove(module)
 
 # Add all drivers.
 # TODO: Installation should detect hardware and install a custom initrd with
 # 		only the necessary drivers to boot up (and then drivers should be
 #		loaded on-demand or something)
-initrdList += [builddir.abspath + '/drivers/' + i + '.o' for i in driver_arch_subdirs]
-initrdList += [builddir.abspath + '/drivers/' + i + '.o' for i in driver_common_subdirs]
-initrdList += [builddir.abspath + '/drivers/' + i + '.o' for i in cdi_drivers]
+initrdList += [os.path.join(builddir.abspath, 'drivers', i + '.o') for i in all_drivers]
 
 # Only some modules are actually needed for the actual boot of the system
 # The rest can be loaded via some form of autoload mechanism (run in the init
 # module perhaps?) or on demand via modload.
-initrdList += [builddir.abspath + '/modules/' + i + '.o' for i in initrd_modules]
+initrdList += [os.path.join(builddir.abspath, 'modules', i + '.o') for i in initrd_modules]
 
 # Subsystems
-initrdList += [builddir.abspath + '/subsystems/posix.o']
-initrdList += [builddir.abspath + '/subsystems/pedigree-c.o']
-if env['ARCH_TARGET'] == 'X86' or env['ARCH_TARGET'] == 'X64':
-    initrdList += [builddir.abspath + '/subsystems/native.o']
+initrdList += [os.path.join(builddir.abspath, 'subsystems', 'posix.o')]
+initrdList += [os.path.join(builddir.abspath, 'subsystems', 'pedigree-c.o')]
+if env['ARCH_TARGET'] in ('X86', 'X64'):
+    initrdList += [os.path.join(builddir.abspath, 'subsystems', 'native.o')]
 
 env.Depends(initrdFile, "drivers")
 env.Depends(initrdFile, "modules")
 env.Depends(initrdFile, "subsys")
+
 env.Alias("initrd", initrdFile)
 
 if('STATIC_DRIVERS' in env['CPPDEFINES']):
@@ -371,4 +357,3 @@ if('STATIC_DRIVERS' in env['CPPDEFINES']):
     env['INITRD_LIST'] = initrdList
 else:
     env.CreateTar(initrdFile, initrdList)
-

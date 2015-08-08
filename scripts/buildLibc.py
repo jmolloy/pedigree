@@ -18,24 +18,6 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
 # coding=utf8
-'''
-Copyright (c) 2008-2014, Pedigree Developers
-
-Please see the CONTRIB file in the root of the source tree for a full
-list of contributors.
-
-Permission to use, copy, modify, and distribute this software for any
-purpose with or without fee is hereby granted, provided that the above
-copyright notice and this permission notice appear in all copies.
-
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-'''
 
 
 import tempfile
@@ -44,7 +26,7 @@ import os
 import sys
 import subprocess
 
-def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, strip, libgcc):
+def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, link, strip, libgcc):
     print "Building libc...",
     
     tmpdir = tempfile.mkdtemp()
@@ -91,16 +73,16 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, strip, libg
         "mallstatsr",
         "ttyname",
         'strcasecmp',
-        # "memcpy",
+        "memcpy",
         # "memset",
     ]
 
     # What target are we using?
-    if cc == 'gcc':
+    if link == 'gcc':
         # TODO: fix platform detection on Pedigree
         exit(2)
     else:
-        target = cc.split('-')[0]
+        target = link.split('-')[0]
         if target in ['x86_64', 'amd64', 'i686']:
             objs_to_remove.extend(['memcpy',])
         elif target in ['arm']:
@@ -123,8 +105,8 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, strip, libg
     pedigreec_dir = os.path.dirname(pedigree_c_name)
     glue_dir = os.path.dirname(glue_name)
 
-    cc_cmd = [
-        cc,
+    link_cmd = [
+        link,
         "-nostdlib",
         "-shared",
         "-g3", "-ggdb", "-gdwarf-2",
@@ -143,7 +125,7 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, cc, strip, libg
         "-lgcc",
     ]
 
-    res = subprocess.call(cc_cmd, cwd=tmpdir)
+    res = subprocess.call(link_cmd, cwd=tmpdir)
     if res != 0:
         print "  (failed -- to compile libg.so)"
         exit(res)
