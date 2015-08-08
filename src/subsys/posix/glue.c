@@ -35,6 +35,7 @@ int h_errno; // required by networking code
 #include <string.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <semaphore.h>
 #include <malloc.h>
 
@@ -113,6 +114,9 @@ const char *safepathchars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNO
 
 // For getopt(3).
 int optreset = 0;
+
+const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
+const struct in6_addr in6addr_loopback = IN6ADDR_LOOPBACK_INIT;
 
 // Defines an fork handler
 struct forkHandler

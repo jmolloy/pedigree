@@ -1,3 +1,22 @@
+/*
+ * Copyright (c) 2008-2014, Pedigree Developers
+ *
+ * Please see the CONTRIB file in the root of the source tree for a full
+ * list of contributors.
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
 #ifndef _NETINET_IN_H
 #define _NETINET_IN_H
 
@@ -39,13 +58,30 @@ struct sockaddr_in
 #define IPPORT_RESERVED         1024
 #define IPPORT_USERRESERVED     1024
 
-#define IN_CLASSA_NSHIFT 24
-
 #define INADDR_ANY        0
 #define INADDR_BROADCAST  0xffffffff
 #define INADDR_LOOPBACK   0x0100007f /// \todo endianness
 #define INADDR_LOCALHOST  INADDR_LOOPBACK
 
 #define INET_ADDRSTRLEN   16
+
+
+#define IN_CLASSA(a)        (!((a) & 0x80000000)) // No starting bits.
+#define IN_CLASSB(a)        ((((a) & 0xC0000000) == 0x80000000)) // Starting bits = 10
+#define IN_CLASSC(a)        ((((a) & 0xE0000000) == 0xC0000000)) // Starting bits = 110
+
+#define IN_CLASSA_NSHIFT    24
+#define IN_CLASSA_NET       0xFF000000
+#define IN_CLASSA_HOST      0x00FFFFFF
+
+#define IN_CLASSB_NSHIFT    16
+#define IN_CLASSB_NET       0xFFFF0000
+#define IN_CLASSB_HOST      0x0000FFFF
+
+#define IN_CLASSC_NSHIFT    8
+#define IN_CLASSC_NET       0xFFFFFF00
+#define IN_CLASSC_HOST      0x000000FF
+
+#include <netinet/in6.h>
 
 #endif

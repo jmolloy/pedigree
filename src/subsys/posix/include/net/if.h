@@ -58,6 +58,7 @@ struct ifconf
 #define SIOCGIFCONF         4
 #define SIOCGIFFLAGS        5
 #define SIOCGIFNETMASK      6
+#define SIOCGIFADDR         7
 
 #define IFF_UP              1
 #define IFF_LOOPBACK        2
