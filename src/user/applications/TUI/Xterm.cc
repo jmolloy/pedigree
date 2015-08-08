@@ -348,6 +348,22 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
     syslog(LOG_INFO, "XTerm::write(%c/%x)", (char) utf32, utf32);
 #endif
 
+    // Special cases, for controls that require readahead.
+    if (m_Flags & Vt52SetCursorWaitY)
+    {
+        m_Cmd.params[0] = (char) utf32 - 32;
+        m_Flags &= ~Vt52SetCursorWaitY;
+        m_Flags |= Vt52SetCursorWaitX;
+        return;
+    }
+    else if (m_Flags & Vt52SetCursorWaitX)
+    {
+        m_Cmd.params[1] = (char) utf32 - 32;
+        m_pWindows[m_ActiveBuffer]->setCursor(m_Cmd.params[1], m_Cmd.params[0], rect);
+        m_Flags = 0;
+        return;
+    }
+
     if(!m_Flags)
     {
         switch(utf32)
@@ -1111,6 +1127,21 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 m_Flags = 0;
                 break;
 
+            case '3':
+                syslog(LOG_ALERT, "XTERM: double-height lines not supported");
+                m_Flags = 0;
+                break;
+
+            case '4':
+                syslog(LOG_ALERT, "XTERM: double-height lines not supported");
+                m_Flags = 0;
+                break;
+
+            case '5':
+                // Single-width line set.
+                m_Flags = 0;
+                break;
+
             case '6':
                 syslog(LOG_ALERT, "XTERM: double-width lines not supported");
                 m_Flags = 0;
@@ -1272,9 +1303,12 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                 if(!(m_Modes & AnsiVt52))
                 {
                     // Set cursor position.
-                    /// \todo Do this, somehow. Need readahead or something.
+                    m_Flags |= Vt52SetCursorWaitY;
                 }
-                m_Flags = 0;
+                else
+                {
+                    m_Flags = 0;
+                }
                 break;
 
             case 'Z':

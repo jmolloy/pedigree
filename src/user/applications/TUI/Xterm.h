@@ -310,7 +310,7 @@ private:
     {
         LineFeedNewLine = 0x1,
         CursorKey       = 0x2,
-        AnsiVt52        = 0x4,
+        AnsiVt52        = 0x4,  // ANSI vs VT52 mode toggle.
         Column          = 0x8,
         Scrolling       = 0x10,
         Screen          = 0x20,
@@ -390,6 +390,12 @@ private:
 
         /// Seen a '_' character.
         Underscore      = 0x200000,
+
+        /// VT52: set cursor, waiting for Y.
+        Vt52SetCursorWaitY = 0x400000,
+
+        /// VT52: set cursor, waiting for X.
+        Vt52SetCursorWaitX = 0x800000,
     };
 
     bool setFlagsForUtf32(uint32_t utf32);
