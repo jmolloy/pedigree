@@ -1,33 +1,28 @@
 language: cpp
 matrix:
   include:
-    - os: linux
-      env: OS=ubuntu EASY_BUILD=x64
-    # The ARM toolchain managed to get built with a broken libgcc (???)
-    #- os: linux
-    #  env: OS=ubuntu EASY_BUILD=arm
-    # - os: osx
-    #  env: OS=osx EASY_BUILD=x64
-    # - os: osx
-    #   env: OS=osx EASY_BUILD=arm
+  - os: linux
+    env: OS=ubuntu EASY_BUILD=x64
   exclude:
-    - os: linux
-    - compiler: gcc
+  - os: linux
+  - compiler: gcc
 before_script:
-  - sudo add-apt-repository ppa:miselin/pedigree-compilers -y
-  - sudo apt-get update -q
-  - sudo apt-get install qemu travis-compilers
+- sudo add-apt-repository ppa:miselin/pedigree-compilers -y
+- sudo apt-get update -q
+- sudo apt-get install qemu travis-compilers
 script:
-  - ./easy_build_$EASY_BUILD.sh $OS
-  - ./scripts/runtest.py
+- ./easy_build_$EASY_BUILD.sh $OS
+- ./scripts/runtest.py
 install: true
 notifications:
   email: false
   irc:
     channels:
-      - "chat.freenode.net#pedigree"
+    - chat.freenode.net#pedigree
     template:
-      - "%{repository}/%{branch} (%{commit} - %{author}): %{message}"
-      - "Build details: %{build_url}"
+    - ! '%{repository}/%{branch} (%{commit} - %{author}): %{message}'
+    - ! 'Build details: %{build_url}'
     on_success: change
     on_failure: always
+  slack:
+    secure: T9GJHictl8hUOgGh5RRVmRMExqlWJByssoSYdgnFuHA8ugLXyvHyYaVjLPVcFE9yv7w+sQgki0ZIzCyUH/Hg6/UPwRaH8W4Cm57vQwhE+TUvfy6eRRvYT118X/9X3xkYwhNUks+uydP6oI9YTnvr1XrzB6L4htA7Ma/YKBDhLhg=
