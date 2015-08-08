@@ -112,7 +112,7 @@ Font::~Font()
     }
 }
 
-size_t Font::render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, size_t y, uint32_t f, uint32_t b)
+size_t Font::render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, size_t y, uint32_t f, uint32_t b, bool bBack)
 {
     // Cache the character, if not already.
     const char *convertOut = precache(c);
@@ -123,7 +123,7 @@ size_t Font::render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, si
     }
 
     // Perform the render.
-    return render(convertOut, x, y, f, b);
+    return render(convertOut, x, y, f, b, bBack);
 }
 
 size_t Font::render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b, bool bBack)

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -43,7 +42,7 @@ public:
     Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWidth);
     virtual ~Font();
 
-    virtual size_t render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, size_t y, uint32_t f, uint32_t b);
+    virtual size_t render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, size_t y, uint32_t f, uint32_t b, bool bBack = true);
 
     virtual size_t render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b, bool bBack = true);
 
@@ -51,6 +50,8 @@ public:
     {return m_CellWidth;}
     size_t getHeight()
     {return m_CellHeight;}
+    size_t getBaseline()
+    {return m_Baseline;}
 
     void setWidth(size_t w)
     {
