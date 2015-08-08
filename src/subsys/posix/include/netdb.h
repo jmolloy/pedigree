@@ -1,3 +1,22 @@
+/*
+ * Copyright (c) 2008-2014, Pedigree Developers
+ *
+ * Please see the CONTRIB file in the root of the source tree for a full
+ * list of contributors.
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
 #ifndef _NETDB_H
 #define _NETDB_H
 
@@ -85,10 +104,8 @@ extern int h_errno;
 #define EAI_SYSTEM      8
 #define EAI_OVERFLOW    9
 
-#if defined(_BSD_SOURCE) || defined(_SVID_SOURCE) || defined(_GNU_SOURCE)
 #define NI_MAXHOST      1025
 #define NI_MAXSERV      32
-#endif
 
 #ifdef __cplusplus
 extern "C" {

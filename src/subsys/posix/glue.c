@@ -133,6 +133,12 @@ int ftruncate(int a, off_t b)
 	return syscall2(POSIX_FTRUNCATE, a, (long) b);
 }
 
+int truncate(const char *path, off_t length)
+{
+    STUBBED("truncate");
+    return -1;
+}
+
 char* getcwd(char *buf, unsigned long size)
 {
     // Because the developers of bash can't be assed following a specification,
@@ -282,6 +288,12 @@ int times(void *buf)
 {
     STUBBED("times");
     errno = ENOSYS;
+    return -1;
+}
+
+int utimes(const char *filename, const struct timeval times[2])
+{
+    STUBBED("utimes");
     return -1;
 }
 #else
