@@ -135,7 +135,6 @@ private:
 
             void setMargins(size_t left, size_t right);
 
-            void renderAll(DirtyRectangle &rect, Window *pPrevious);
             void setChar(uint32_t utf32, size_t x, size_t y);
             TermChar getChar(size_t x=~0UL, size_t y=~0UL);
 
@@ -177,12 +176,12 @@ private:
             void cursorTab(DirtyRectangle &rect);
             void cursorTabBack(DirtyRectangle &rect);
 
+            void renderAll(DirtyRectangle &rect, Window *pPrevious);
             void render(DirtyRectangle &rect, size_t flags=0, size_t x=~0UL, size_t y=~0UL);
+            void renderArea(DirtyRectangle &rect, size_t x=~0UL, size_t y=~0UL, size_t w=~0UL, size_t h=~0UL);
 
             void scrollRegionUp(size_t n, DirtyRectangle &rect);
             void scrollRegionDown(size_t n, DirtyRectangle &rect);
-
-            void scrollScreenUp(size_t n, DirtyRectangle &rect);
 
             void scrollUp(size_t n, DirtyRectangle &rect);
             void scrollDown(size_t n, DirtyRectangle &rect);
