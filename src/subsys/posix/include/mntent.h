@@ -17,9 +17,22 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef MNTTAB_H
-#define MNTTAB_H
+#ifndef _MNTENT_H
+#define _MNTENT_H
 
-#include <sys/mnttab.h>
+#include <sys/reent.h>
+
+struct mntent {
+  char mnt_fsname[PATH_MAX];
+  char mnt_dir[PATH_MAX];
+  char mnt_type[64];
+  char mnt_opts[256];
+  int mnt_freq;
+  int mnt_passno;
+};
+
+FILE *setmntent(const char *filename, const char *type);
+struct mntent *getmntent(FILE *fp);
+int endmntent(FILE *fp);
 
 #endif

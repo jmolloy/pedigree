@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -35,6 +34,9 @@ int h_errno; // required by networking code
 
 // Define to 1 to get verbose debugging (hinders performance) in some functions
 #define PTHREAD_DEBUG       0
+
+#define STUBBED(str) syscall1(POSIX_STUBBED, (long)(str)); \
+    errno = ENOSYS;
 
 typedef void (*pthread_once_func_t)(void);
 int onceFunctions[32] = {0};
@@ -401,6 +403,19 @@ int pthread_mutexattr_destroy(pthread_mutexattr_t *attr)
     return 0;
 }
 
+int pthread_mutexattr_gettype(const pthread_mutexattr_t *attr, int *type)
+{
+    *type = *attr;
+    return 0;
+}
+
+int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type)
+{
+    *attr = type;
+    return 0;
+}
+
+
 /**
  * Some background on how I've decided to handle condvars...
  *
@@ -503,6 +518,18 @@ int pthread_condattr_init(pthread_condattr_t *attr)
     return 0;
 }
 
+int pthread_condattr_getclock(const pthread_condattr_t *restrict attr, clockid_t *restrict clock_id)
+{
+    STUBBED("pthread_condattr_getclock");
+    return -1;
+}
+
+int pthread_condattr_setclock(pthread_condattr_t *attr, clockid_t clock_id)
+{
+    STUBBED("pthread_condattr_setclock");
+    return -1;
+}
+
 void* pthread_getspecific(pthread_key_t key)
 {
     return (void*) syscall1(POSIX_PTHREAD_GETSPECIFIC, key);
@@ -538,7 +565,59 @@ int pthread_key_delete(pthread_key_t key)
     return syscall1(POSIX_PTHREAD_KEY_DELETE, key);
 }
 
+int pthread_rwlockattr_init(pthread_rwlockattr_t *attr)
+{
+    STUBBED("pthread_rwlockattr_init");
+    return -1;
+}
 
+int pthread_rwlock_destroy(pthread_rwlock_t *lock)
+{
+    STUBBED("pthread_rwlock_destroy");
+    return -1;
+}
+
+int pthread_rwlock_init(pthread_rwlock_t *lock, const pthread_rwlockattr_t *attr)
+{
+    STUBBED("pthread_rwlock_init");
+    return -1;
+}
+
+int pthread_rwlock_rdlock(pthread_rwlock_t *lock)
+{
+    STUBBED("pthread_rwlock_rdlock");
+    return -1;
+}
+
+int pthread_rwlock_tryrdlock(pthread_rwlock_t *lock)
+{
+    STUBBED("pthread_rwlock_tryrdlock");
+    return -1;
+}
+
+int pthread_rwlock_trywrlock(pthread_rwlock_t *lock)
+{
+    STUBBED("pthread_rwlock_trywrlock");
+    return -1;
+}
+
+int pthread_rwlock_unlock(pthread_rwlock_t *lock)
+{
+    STUBBED("pthread_rwlock_unlock");
+    return -1;
+}
+
+int pthread_rwlock_wrlock(pthread_rwlock_t *lock)
+{
+    STUBBED("pthread_rwlock_wrlock");
+    return -1;
+}
+
+int pthread_rwlockattr_destroy(pthread_rwlockattr_t *attr)
+{
+    STUBBED("pthread_rwlockattr_destroy");
+    return -1;
+}
 
 int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
 {

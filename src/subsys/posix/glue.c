@@ -38,6 +38,7 @@ int h_errno; // required by networking code
 #include <netinet/in.h>
 #include <semaphore.h>
 #include <malloc.h>
+#include <mntent.h>
 
 #include <sys/resource.h>
 #include <sys/mount.h>
@@ -1535,12 +1536,6 @@ void herror(const char *s)
     printf("%s: %s\n", s, buff);
 }
 
-int makedev(void)
-{
-    STUBBED("makedev");
-    return -1;
-}
-
 unsigned int htonl(unsigned int n)
 {
     return HOST_TO_BIG32(n);
@@ -1947,6 +1942,24 @@ int setrlimit(int resource, const struct rlimit *rlp)
 int getmntinfo(struct statvfs **mntbufp, int flags)
 {
     STUBBED("getmntinfo");
+    return -1;
+}
+
+FILE *setmntent(const char *filename, const char *type)
+{
+    STUBBED("setmntent");
+    return 0;
+}
+
+struct mntent *getmntent(FILE *fp)
+{
+    STUBBED("getmntent");
+    return 0;
+}
+
+int endmntent(FILE *fp)
+{
+    STUBBED("endmntent");
     return -1;
 }
 
