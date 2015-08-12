@@ -48,7 +48,7 @@
 #define PTHREAD_EXPLICIT_SCHED
 #define PTHREAD_INHERIT_SCHED
 
-#define PTHREAD_MUTEX_INITIALIZER       {0, 0, 0}
+#define PTHREAD_MUTEX_INITIALIZER       {0, 0, 0, 0, 0}
 
 #define PTHREAD_ONCE_INIT               0
 

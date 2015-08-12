@@ -33,7 +33,7 @@ int h_errno; // required by networking code
 #define _PTHREAD_ATTR_MAGIC 0xdeadbeef
 
 // Define to 1 to get verbose debugging (hinders performance) in some functions
-#define PTHREAD_DEBUG       0
+#define PTHREAD_DEBUG       1
 
 #define STUBBED(str) syscall1(POSIX_STUBBED, (long)(str)); \
     errno = ENOSYS;
@@ -244,6 +244,11 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
     __pedigree_init_lock(mutex, 1);
     mutex->q = mutex->back = mutex->front = 0;
 
+    if (attr)
+    {
+        mutex->attr = *attr;
+    }
+
     return 0;
 }
 
@@ -272,8 +277,15 @@ int pthread_mutex_destroy(pthread_mutex_t *mutex)
 int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
 #if PTHREAD_DEBUG
-    syslog(LOG_NOTICE, "pthread_mutex_lock(%x)", mutex);
+    syslog(LOG_NOTICE, "pthread_mutex_lock(%p) [return: %p]", mutex, __builtin_return_address(0));
 #endif
+
+    /**
+     * A mutex in this case is just a binary Semaphore.
+     * The initial value therefore is '1' (ie, unlocked).
+     * When locking, this is reduced to zero, and then lower if we recurse.
+     * The lock can only be taken if the counter is non-zero.
+     */
 
     if(!mutex)
     {
@@ -286,7 +298,20 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     if((val - 1) >= 0)
     {
         if(__sync_bool_compare_and_swap(&mutex->value, val, val - 1))
+        {
+            mutex->owner = pthread_self();
             return 0;
+        }
+    }
+
+    if (mutex->attr == PTHREAD_MUTEX_RECURSIVE)
+    {
+        if (pthread_self() == mutex->owner)
+        {
+            syslog(LOG_INFO, "pthread_mutex_lock recursing");
+            if(__sync_bool_compare_and_swap(&mutex->value, val, val - 1))
+                return 0;
+        }
     }
 
     // Couldn't acquire, lock
@@ -324,9 +349,34 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
 
         return 0;
     }
-    pedigree_thrsleep(i->thr);
+    if (pedigree_thrsleep(i->thr) < 0)
+    {
+        // Oops, this isn't good at all. We might have been about to deadlock.
+        pthread_spin_lock(&mutex->lock);
+        if (!old_q)
+        {
+            // Just wipe the queue.
+            mutex->q = mutex->front = mutex->back = 0;
+        }
+        else if (old_back->next == i)
+        {
+            // Good, we can clean up.
+            old_back->next = 0;
+        }
+        else
+        {
+            syslog(LOG_ALERT, "pthread_mutex_lock failed pedigree_thrsleep, but can't clean up");
+        }
+        free(i);
+        return -1;
+    }
+    mutex->owner = pthread_self();
 
     free(i);
+
+    syslog(LOG_INFO, "coming out of sleep [%d]", mutex->value);
+
+    /// \todo hang on, this surely isn't correct? mutex->value will be >= 0...
 
     // Locked
     return 0;
@@ -351,6 +401,16 @@ int pthread_mutex_trylock(pthread_mutex_t *mutex)
             return 0;
     }
 
+    if (mutex->attr == PTHREAD_MUTEX_RECURSIVE)
+    {
+        if (pthread_self() == mutex->owner)
+        {
+            syslog(LOG_INFO, "pthread_mutex_lock recursing");
+            if(__sync_bool_compare_and_swap(&mutex->value, val, val - 1))
+                return 0;
+        }
+    }
+
     errno = EBUSY;
     return -1;
 }
@@ -368,7 +428,14 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
     }
 
     // Mutexes are binary semaphores.
-    __sync_val_compare_and_swap(&mutex->value, 0, 1);
+    int32_t val = mutex->value;
+    __sync_val_compare_and_swap(&mutex->value, val, val + 1);
+
+    if ((val + 1) <= 0)
+    {
+        syslog(LOG_INFO, "pthread_mutex_unlock undoing recursion");
+        return 0;
+    }
 
     pthread_spin_lock(&mutex->lock);
     if((!mutex->q) || (!mutex->front))
@@ -395,6 +462,7 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
 
 int pthread_mutexattr_init(pthread_mutexattr_t *attr)
 {
+    *attr = PTHREAD_MUTEX_DEFAULT;
     return 0;
 }
 
@@ -449,6 +517,10 @@ int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr)
 
 int pthread_cond_destroy(pthread_cond_t *cond)
 {
+#if PTHREAD_DEBUG
+    syslog(LOG_NOTICE, "pthread_cond_destroy(%x)", cond);
+#endif
+
     if(!cond)
     {
         errno = EINVAL;
@@ -460,6 +532,10 @@ int pthread_cond_destroy(pthread_cond_t *cond)
 
 int pthread_cond_broadcast(pthread_cond_t *cond)
 {
+#if PTHREAD_DEBUG
+    syslog(LOG_NOTICE, "pthread_cond_broadcast(%x)", cond);
+#endif
+
     if(!cond)
     {
         errno = EINVAL;
@@ -481,17 +557,29 @@ int pthread_cond_broadcast(pthread_cond_t *cond)
 
 int pthread_cond_signal(pthread_cond_t *cond)
 {
+#if PTHREAD_DEBUG
+    syslog(LOG_NOTICE, "pthread_cond_signal(%x)", cond);
+#endif
+
     return pthread_mutex_unlock(cond);
 }
 
 int pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *tm)
 {
+#if PTHREAD_DEBUG
+    syslog(LOG_NOTICE, "pthread_cond_timedwait(%x)", cond);
+#endif
+
     errno = ENOSYS;
     return -1;
 }
 
 int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 {
+#if PTHREAD_DEBUG
+    syslog(LOG_NOTICE, "pthread_cond_wait(%x, %x)", cond, mutex);
+#endif
+
     if((!cond) || (!mutex))
     {
         errno = EINVAL;
@@ -520,14 +608,14 @@ int pthread_condattr_init(pthread_condattr_t *attr)
 
 int pthread_condattr_getclock(const pthread_condattr_t *restrict attr, clockid_t *restrict clock_id)
 {
-    STUBBED("pthread_condattr_getclock");
-    return -1;
+    *clock_id = *attr;
+    return 0;
 }
 
 int pthread_condattr_setclock(pthread_condattr_t *attr, clockid_t clock_id)
 {
-    STUBBED("pthread_condattr_setclock");
-    return -1;
+    *attr = clock_id;
+    return 0;
 }
 
 void* pthread_getspecific(pthread_key_t key)
@@ -567,56 +655,75 @@ int pthread_key_delete(pthread_key_t key)
 
 int pthread_rwlockattr_init(pthread_rwlockattr_t *attr)
 {
-    STUBBED("pthread_rwlockattr_init");
-    return -1;
+    return 0;
 }
 
 int pthread_rwlock_destroy(pthread_rwlock_t *lock)
 {
-    STUBBED("pthread_rwlock_destroy");
-    return -1;
+#if PTHREAD_DEBUG
+    syslog(LOG_NOTICE, "pthread_rwlock_destroy(%x)", lock);
+#endif
+
+    return pthread_mutex_destroy(&lock->mutex);
 }
 
 int pthread_rwlock_init(pthread_rwlock_t *lock, const pthread_rwlockattr_t *attr)
 {
-    STUBBED("pthread_rwlock_init");
-    return -1;
+#if PTHREAD_DEBUG
+    syslog(LOG_NOTICE, "pthread_rwlock_init(%x)", lock);
+#endif
+
+    return pthread_mutex_init(&lock->mutex, 0);
 }
 
 int pthread_rwlock_rdlock(pthread_rwlock_t *lock)
 {
-    STUBBED("pthread_rwlock_rdlock");
-    return -1;
+#if PTHREAD_DEBUG
+    syslog(LOG_NOTICE, "pthread_rwlock_rdlock(%x)", lock);
+#endif
+
+    return pthread_mutex_lock(&lock->mutex);
 }
 
 int pthread_rwlock_tryrdlock(pthread_rwlock_t *lock)
 {
-    STUBBED("pthread_rwlock_tryrdlock");
-    return -1;
+#if PTHREAD_DEBUG
+    syslog(LOG_NOTICE, "pthread_rwlock_tryrdlock(%x)", lock);
+#endif
+
+    return pthread_mutex_trylock(&lock->mutex);
 }
 
 int pthread_rwlock_trywrlock(pthread_rwlock_t *lock)
 {
-    STUBBED("pthread_rwlock_trywrlock");
-    return -1;
+#if PTHREAD_DEBUG
+    syslog(LOG_NOTICE, "pthread_rwlock_trywrlock(%x)", lock);
+#endif
+
+    return pthread_mutex_trylock(&lock->mutex);
 }
 
 int pthread_rwlock_unlock(pthread_rwlock_t *lock)
 {
-    STUBBED("pthread_rwlock_unlock");
-    return -1;
+#if PTHREAD_DEBUG
+    syslog(LOG_NOTICE, "pthread_rwlock_unlock(%x)", lock);
+#endif
+
+    return pthread_mutex_unlock(&lock->mutex);
 }
 
 int pthread_rwlock_wrlock(pthread_rwlock_t *lock)
 {
-    STUBBED("pthread_rwlock_wrlock");
-    return -1;
+#if PTHREAD_DEBUG
+    syslog(LOG_NOTICE, "pthread_rwlock_wrlock(%x)", lock);
+#endif
+
+    return pthread_mutex_lock(&lock->mutex);
 }
 
 int pthread_rwlockattr_destroy(pthread_rwlockattr_t *attr)
 {
-    STUBBED("pthread_rwlockattr_destroy");
-    return -1;
+    return 0;
 }
 
 int pthread_spin_init(pthread_spinlock_t *lock, int pshared)

@@ -408,7 +408,6 @@ typedef int pthread_condattr_t;
 typedef int pthread_key_t;
 typedef int pthread_mutexattr_t;
 typedef int pthread_once_t;
-typedef int pthread_rwlock_t;
 typedef int pthread_rwlockattr_t;
 
 typedef struct _mutex_q_item
@@ -428,6 +427,8 @@ typedef struct _pthread_mutex_t
 {
     int value;
     mutex_q_item *q, *back, *front;
+    pthread_t owner;
+    pthread_mutexattr_t attr;
     
     pthread_spinlock_t lock;
 } pthread_mutex_t;
@@ -440,6 +441,11 @@ typedef struct _pthread_attr_t
     int detachState;
     __uint32_t magic; // == _PTHREAD_ATTR_MAGIC when initialised
 } pthread_attr_t;
+
+typedef struct _pthread_rwlock_t
+{
+  pthread_mutex_t mutex;
+} pthread_rwlock_t;
 #endif
 
 typedef unsigned long fsblkcnt_t;
