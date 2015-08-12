@@ -71,7 +71,7 @@ static int _pthread_is_valid(pthread_t p)
     return p.__internal.kthread >= 0;
 }
 
-static int _pthread_make_invalid(pthread_t *p)
+static void _pthread_make_invalid(pthread_t *p)
 {
     p->__internal.kthread = -1;
 }
@@ -726,7 +726,7 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
     }
 
     int r = 0;
-    while(!(r = pthread_spin_trylock(&lock)))
+    while(!(r = pthread_spin_trylock(lock)))
     {
         if(pthread_equal(lock->__internal.locker, pthread_self()))
         {
