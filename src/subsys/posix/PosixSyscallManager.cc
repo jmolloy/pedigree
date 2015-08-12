@@ -251,13 +251,11 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_PTHREAD_CREATE:
             return posix_pthread_create(reinterpret_cast<pthread_t*>(p1), reinterpret_cast<const pthread_attr_t*>(p2), reinterpret_cast<pthreadfn>(p3), reinterpret_cast<void*>(p4));
         case POSIX_PTHREAD_JOIN:
-            return posix_pthread_join(static_cast<pthread_t>(p1), reinterpret_cast<void **>(p2));
+            return posix_pthread_join(reinterpret_cast<pthread_t*>(p1), reinterpret_cast<void **>(p2));
         case POSIX_PTHREAD_DETACH:
-            return posix_pthread_detach(static_cast<pthread_t>(p1));
-        case POSIX_PTHREAD_SELF:
-            return posix_pthread_self();
+            return posix_pthread_detach(reinterpret_cast<pthread_t*>(p1));
         case POSIX_PTHREAD_KILL:
-            return posix_pthread_kill(static_cast<pthread_t>(p1), static_cast<int>(p2));
+            return posix_pthread_kill(reinterpret_cast<pthread_t*>(p1), static_cast<int>(p2));
         case POSIX_PTHREAD_SIGMASK:
             return posix_pthread_sigmask(static_cast<int>(p1), reinterpret_cast<const uint32_t*>(p2), reinterpret_cast<uint32_t*>(p3));
         case POSIX_PTHREAD_MUTEX_INIT:
@@ -273,13 +271,13 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_PTHREAD_KEY_CREATE:
             return posix_pthread_key_create(reinterpret_cast<pthread_key_t*>(p1), reinterpret_cast<key_destructor>(p2));
         case POSIX_PTHREAD_KEY_DELETE:
-            return posix_pthread_key_delete(static_cast<pthread_key_t>(p1));
+            return posix_pthread_key_delete(reinterpret_cast<pthread_key_t*>(p1));
         case POSIX_PTHREAD_GETSPECIFIC:
-            return reinterpret_cast<uintptr_t>(posix_pthread_getspecific(static_cast<pthread_key_t>(p1)));
+            return reinterpret_cast<uintptr_t>(posix_pthread_getspecific(reinterpret_cast<pthread_key_t*>(p1)));
         case POSIX_PTHREAD_SETSPECIFIC:
-            return posix_pthread_setspecific(static_cast<pthread_key_t>(p1), reinterpret_cast<const void*>(p2));
+            return posix_pthread_setspecific(reinterpret_cast<pthread_key_t*>(p1), reinterpret_cast<const void*>(p2));
         case POSIX_PTHREAD_KEY_DESTRUCTOR:
-            return reinterpret_cast<uintptr_t>(posix_pthread_key_destructor(static_cast<pthread_key_t>(p1)));
+            return reinterpret_cast<uintptr_t>(posix_pthread_key_destructor(reinterpret_cast<pthread_key_t*>(p1)));
 
         case POSIX_SYSLOG:
             return posix_syslog(reinterpret_cast<const char*>(p1), static_cast<int>(p2));
@@ -307,10 +305,6 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_SCHED_YIELD:
             Scheduler::instance().yield();
             return 0;
-        case POSIX_PEDIGREE_THRWAKEUP:
-            return posix_pedigree_thrwakeup(static_cast<pthread_t>(p1));
-        case POSIX_PEDIGREE_THRSLEEP:
-            return posix_pedigree_thrsleep(static_cast<pthread_t>(p1));
         
         case POSIX_NANOSLEEP:
             return posix_nanosleep(reinterpret_cast<struct timespec*>(p1), reinterpret_cast<struct timespec*>(p2));
@@ -374,6 +368,16 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
 
         case POSIX_REALPATH:
             return posix_realpath(reinterpret_cast<const char *>(p1), reinterpret_cast<char *>(p2), static_cast<size_t>(p3));
+
+        case POSIX_PEDIGREE_CREATE_WAITER:
+            return reinterpret_cast<uintptr_t>(posix_pedigree_create_waiter());
+        case POSIX_PEDIGREE_DESTROY_WAITER:
+            posix_pedigree_destroy_waiter(reinterpret_cast<void *>(p1));
+            break;
+        case POSIX_PEDIGREE_THREAD_WAIT_FOR:
+            return posix_pedigree_thread_wait_for(reinterpret_cast<void *>(p1));
+        case POSIX_PEDIGREE_THREAD_TRIGGER:
+            return posix_pedigree_thread_trigger(reinterpret_cast<void *>(p1));
 
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber() << Hex); return 0;
     }

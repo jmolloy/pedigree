@@ -48,7 +48,7 @@ void *consumer(void *ptr)
 {
     int i;
 
-    printf("Consumer TID %lu\n", (unsigned long) pthread_self());
+    printf("Consumer TID %lu\n", (unsigned long) ptr);
 
     while (1)
     {
@@ -96,20 +96,24 @@ int main()
     // syslog used to split up debug logs.
     syslog(LOG_INFO, "TEST 0");
     printf("Locking with deadlock\n");
+    pthread_mutex_t deadlock_mutex;
     errno = 0;
-    i = pthread_mutex_lock(&mutex);
+    pthread_mutex_init(&deadlock_mutex, 0);
+    i = pthread_mutex_lock(&deadlock_mutex);
     printf("First lock: %d (%s)\n", i, strerror(errno));
-    i = pthread_mutex_lock(&mutex);
+    i = pthread_mutex_lock(&deadlock_mutex);
     if (errno != EDEADLK) printf("Didn't get EDEADLK!\n");
     printf("Second lock: %d (%s)\n", i, strerror(errno));
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&deadlock_mutex);
 
     syslog(LOG_INFO, "TEST 1");
 
     printf("Locking without any contention...\n");
-    pthread_mutex_lock(&mutex);
+    pthread_mutex_t contention_mutex;
+    pthread_mutex_init(&contention_mutex, 0);
+    pthread_mutex_lock(&contention_mutex);
     printf("Acquired\n");
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&contention_mutex);
     printf("Released!\n");
 
     syslog(LOG_INFO, "TEST 2");
@@ -127,7 +131,10 @@ int main()
     pthread_mutex_unlock(&recursive);
     pthread_mutex_unlock(&recursive);
     pthread_mutex_unlock(&recursive);
-    pthread_mutex_unlock(&recursive);
+    int r = pthread_mutex_unlock(&recursive);
+    if (r >= 0) printf("Final unlock was not an error, not OK.\n");
+    printf("Testing re-acquire...\n");
+    pthread_mutex_lock(&recursive);
     printf("OK!\n");
 
     // Creating the list content...
@@ -138,8 +145,8 @@ int main()
     gettimeofday(&tv1, NULL);
 
     syslog(LOG_INFO, "TEST 3");
-    pthread_create(&thr1, NULL, consumer, NULL);
-    pthread_create(&thr2, NULL, consumer, NULL);
+    pthread_create(&thr1, NULL, consumer, (void *) 1);
+    pthread_create(&thr2, NULL, consumer, (void *) 2);
 
     pthread_join(thr1, NULL);
     pthread_join(thr2, NULL);

@@ -33,36 +33,63 @@ int h_errno; // required by networking code
 #define _PTHREAD_ATTR_MAGIC 0xdeadbeef
 
 // Define to 1 to get verbose debugging (hinders performance) in some functions
-#define PTHREAD_DEBUG       1
+#define PTHREAD_DEBUG       0
 
 #define STUBBED(str) syscall1(POSIX_STUBBED, (long)(str)); \
     errno = ENOSYS;
 
 typedef void (*pthread_once_func_t)(void);
-int onceFunctions[32] = {0};
+static int onceFunctions[32] = {0};
 
-static int pedigree_thrwakeup(pthread_t t)
+static void *_pedigree_create_waiter()
 {
-    return syscall1(POSIX_PEDIGREE_THRWAKEUP, (long) t);
+    return (void *) syscall0(POSIX_PEDIGREE_CREATE_WAITER);
+    return 0;
 }
 
-static int pedigree_thrsleep(pthread_t t)
+static void _pedigree_destroy_waiter(void *waiter)
 {
-    return syscall1(POSIX_PEDIGREE_THRSLEEP, (long) t);
+    syscall1(POSIX_PEDIGREE_DESTROY_WAITER, (long) waiter);
+}
+static int _pedigree_thread_wait_for(void *waiter)
+{
+    if (!waiter)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    return syscall1(POSIX_PEDIGREE_THREAD_WAIT_FOR, (long) waiter);
+}
+
+static int _pedigree_thread_trigger(void *waiter)
+{
+    return syscall1(POSIX_PEDIGREE_THREAD_TRIGGER, (long) waiter);
+}
+
+static int _pthread_is_valid(pthread_t p)
+{
+    return p.__internal.kthread >= 0;
+}
+
+static int _pthread_make_invalid(pthread_t *p)
+{
+    p->__internal.kthread = -1;
 }
 
 int pthread_once(pthread_once_t *once_control, pthread_once_func_t init_routine)
 {
-    if(!once_control || (*once_control > 32))
+    int control = once_control->__internal.control;
+    if(!control || (control > 32))
     {
         syslog(LOG_DEBUG, "[%d] pthread_once called with an invalid once_control (> 32)", getpid());
         return -1;
     }
 
-    if(!onceFunctions[*once_control])
+    if(!onceFunctions[control])
     {
         init_routine();
-        onceFunctions[*once_control] = 1;
+        onceFunctions[control] = 1;
+        ++once_control->__internal.control;
     }
 
     return 0;
@@ -75,7 +102,7 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_
 
 int pthread_join(pthread_t thread, void **value_ptr)
 {
-    return syscall2(POSIX_PTHREAD_JOIN, (long) thread, (long) value_ptr);
+    return syscall2(POSIX_PTHREAD_JOIN, (long) &thread, (long) value_ptr);
 }
 
 void pthread_exit(void *ret)
@@ -85,31 +112,31 @@ void pthread_exit(void *ret)
 
 int pthread_detach(pthread_t thread)
 {
-    return syscall1(POSIX_PTHREAD_DETACH, thread);
+    return syscall1(POSIX_PTHREAD_DETACH, (long) &thread);
 }
 
 pthread_t pthread_self()
 {
-    pthread_t ret = 0;
+    pthread_t result;
 #ifdef X86_COMMON
-    asm volatile("mov %%fs:0, %0" : "=r" (ret));
+    asm volatile("mov %%fs:0, %0" : "=r" (result.__internal.kthread));
 #endif
 
 #ifdef ARMV7
-    asm volatile("mrc p15,0,%0,c13,c0,3" : "=r" (ret));
+    asm volatile("mrc p15,0,%0,c13,c0,3" : "=r" (result.__internal.kthread));
 #endif
 
-    return ret;
+    return result;
 }
 
 int pthread_equal(pthread_t t1, pthread_t t2)
 {
-    return (t1 == t2) ? 1 : 0;
+    return t1.__internal.kthread == t2.__internal.kthread;
 }
 
 int pthread_kill(pthread_t thread, int sig)
 {
-    return syscall2(POSIX_PTHREAD_KILL, (long) thread, sig);
+    return syscall2(POSIX_PTHREAD_KILL, (long) &thread, sig);
 }
 
 int pthread_sigmask(int how, const sigset_t *set, sigset_t *oset)
@@ -125,15 +152,15 @@ int pthread_attr_init(pthread_attr_t *attr)
         return -1;
     }
 
-    if(attr->magic == _PTHREAD_ATTR_MAGIC)
+    if(attr->__internal.magic == _PTHREAD_ATTR_MAGIC)
     {
         errno = EBUSY;
         return -1;
     }
 
-    attr->stackSize = 0x100000;
-    attr->detachState = 0;
-    attr->magic = _PTHREAD_ATTR_MAGIC;
+    attr->__internal.stackSize = 0x100000;
+    attr->__internal.detachState = 0;
+    attr->__internal.magic = _PTHREAD_ATTR_MAGIC;
     return 0;
 }
 
@@ -145,7 +172,7 @@ int pthread_attr_destroy(pthread_attr_t *attr)
         return -1;
     }
 
-    if(attr->magic != _PTHREAD_ATTR_MAGIC)
+    if(attr->__internal.magic != _PTHREAD_ATTR_MAGIC)
     {
         errno = EINVAL;
         return -1;
@@ -156,54 +183,52 @@ int pthread_attr_destroy(pthread_attr_t *attr)
 
 int pthread_attr_getdetachstate(const pthread_attr_t *attr, int *ret)
 {
-    if(!attr || (attr->magic != _PTHREAD_ATTR_MAGIC) || !ret)
+    if(!attr || (attr->__internal.magic != _PTHREAD_ATTR_MAGIC) || !ret)
     {
         errno = EINVAL;
         return -1;
     }
 
-    *ret = attr->detachState;
+    *ret = attr->__internal.detachState;
     return -1;
 }
 
 int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate)
 {
-    if(
-        (!attr || (attr->magic != _PTHREAD_ATTR_MAGIC))
-        ||
-        (detachstate != PTHREAD_CREATE_DETACHED && detachstate != PTHREAD_CREATE_JOINABLE)
-        )
+    if((!attr || (attr->__internal.magic != _PTHREAD_ATTR_MAGIC)) ||
+        (detachstate != PTHREAD_CREATE_DETACHED && detachstate != PTHREAD_CREATE_JOINABLE))
     {
         errno = EINVAL;
         return -1;
     }
 
-    attr->detachState = detachstate;
+    attr->__internal.detachState = detachstate;
     return -1;
 }
 
 int pthread_attr_getstacksize(const pthread_attr_t *attr, size_t *sz)
 {
-    if(!attr || (attr->magic != _PTHREAD_ATTR_MAGIC) || !sz)
+    if(!attr || (attr->__internal.magic != _PTHREAD_ATTR_MAGIC) || !sz)
     {
         errno = EINVAL;
         return -1;
     }
 
-    *sz = attr->stackSize;
+    *sz = attr->__internal.stackSize;
 
     return 0;
 }
 
 int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize)
 {
-    if(!attr || (attr->magic != _PTHREAD_ATTR_MAGIC) || (stacksize < PTHREAD_STACK_MIN) || (stacksize > (1 << 24)))
+    if(!attr || (attr->__internal.magic != _PTHREAD_ATTR_MAGIC) ||
+        (stacksize < PTHREAD_STACK_MIN) || (stacksize > (1 << 24)))
     {
         errno = EINVAL;
         return -1;
     }
 
-    attr->stackSize = stacksize;
+    attr->__internal.stackSize = stacksize;
 
     return 0;
 }
@@ -216,12 +241,6 @@ int pthread_attr_getschedparam(const pthread_attr_t *attr, struct sched_param *p
 int pthread_attr_setschedparam(pthread_attr_t *attr, const struct sched_param *param)
 {
     return 0;
-}
-
-/// Uses a pthread_mutex_t but really works for both semaphores and mutexes
-void __pedigree_init_lock(pthread_mutex_t *mutex, int startValue)
-{
-    mutex->value = startValue;
 }
 
 int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
@@ -238,15 +257,13 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
 
     memset(mutex, 0, sizeof(pthread_mutex_t));
 
-    if(pthread_spin_init(&mutex->lock, 0) < 0)
-        return -1; // errno from the function
-
-    __pedigree_init_lock(mutex, 1);
-    mutex->q = mutex->back = mutex->front = 0;
+    mutex->__internal.value = 1;
+    _pthread_make_invalid(&mutex->__internal.owner);
+    mutex->__internal.waiter = _pedigree_create_waiter();
 
     if (attr)
     {
-        mutex->attr = *attr;
+        mutex->__internal.attr = *attr;
     }
 
     return 0;
@@ -264,10 +281,8 @@ int pthread_mutex_destroy(pthread_mutex_t *mutex)
         return -1;
     }
 
-    mutex->value = 0;
-    mutex->q = mutex->back = mutex->front = 0;
-
-    pthread_spin_destroy(&mutex->lock);
+    mutex->__internal.value = 0;
+    _pedigree_destroy_waiter(mutex->__internal.waiter);
 
     memset(mutex, 0, sizeof(pthread_mutex_t));
 
@@ -293,93 +308,29 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
         return -1;
     }
 
-    // Attempt a direct acquire
-    int32_t val = mutex->value;
-    if((val - 1) >= 0)
+    while(1)
     {
-        if(__sync_bool_compare_and_swap(&mutex->value, val, val - 1))
+        int r = pthread_mutex_trylock(mutex);
+        if ((r < 0) && (errno != EBUSY))
         {
-            mutex->owner = pthread_self();
+            // Error!
+            return r;
+        }
+        else if (r == 0)
+        {
+            // Acquired!
             return 0;
-        }
-    }
-
-    if (mutex->attr == PTHREAD_MUTEX_RECURSIVE)
-    {
-        if (pthread_self() == mutex->owner)
-        {
-            syslog(LOG_INFO, "pthread_mutex_lock recursing");
-            if(__sync_bool_compare_and_swap(&mutex->value, val, val - 1))
-                return 0;
-        }
-    }
-
-    // Couldn't acquire, lock
-    mutex_q_item *i = (mutex_q_item*) malloc(sizeof(mutex_q_item));
-    i->thr = pthread_self();
-    i->next = 0;
-
-    mutex_q_item *old_front = mutex->front;
-    mutex_q_item *old_back = mutex->back;
-    mutex_q_item *old_q = mutex->q;
-
-    pthread_spin_lock(&mutex->lock);
-    if(!mutex->q)
-    {
-        mutex->back = mutex->front = i;
-        mutex->q = mutex->front;
-    }
-    else
-    {
-        mutex->back->next = i;
-        mutex->back = i;
-    }
-
-    pthread_spin_unlock(&mutex->lock);
-
-    // Check for mutex unlock while we've been manipulating the queue!
-    if(val == (mutex->value - 1))
-    {
-        pthread_spin_lock(&mutex->lock);
-        mutex->back = old_back;
-        mutex->front = old_front;
-        mutex->q = old_q;
-        free(i);
-        pthread_spin_unlock(&mutex->lock);
-
-        return 0;
-    }
-    if (pedigree_thrsleep(i->thr) < 0)
-    {
-        // Oops, this isn't good at all. We might have been about to deadlock.
-        pthread_spin_lock(&mutex->lock);
-        if (!old_q)
-        {
-            // Just wipe the queue.
-            mutex->q = mutex->front = mutex->back = 0;
-        }
-        else if (old_back->next == i)
-        {
-            // Good, we can clean up.
-            old_back->next = 0;
         }
         else
         {
-            syslog(LOG_ALERT, "pthread_mutex_lock failed pedigree_thrsleep, but can't clean up");
+            // Busy.
+            if (_pedigree_thread_wait_for(mutex->__internal.waiter) < 0)
+            {
+                // Error comes from the syscall.
+                return -1;
+            }
         }
-        free(i);
-        return -1;
     }
-    mutex->owner = pthread_self();
-
-    free(i);
-
-    syslog(LOG_INFO, "coming out of sleep [%d]", mutex->value);
-
-    /// \todo hang on, this surely isn't correct? mutex->value will be >= 0...
-
-    // Locked
-    return 0;
 }
 
 int pthread_mutex_trylock(pthread_mutex_t *mutex)
@@ -394,23 +345,29 @@ int pthread_mutex_trylock(pthread_mutex_t *mutex)
         return -1;
     }
 
-    int32_t val = mutex->value;
+    int32_t val = mutex->__internal.value;
     if((val - 1) >= 0)
     {
-        if(__sync_bool_compare_and_swap(&mutex->value, val, val - 1))
-            return 0;
+        if(__sync_bool_compare_and_swap(&mutex->__internal.value, val, val - 1))
+            goto locked;
     }
 
-    if (mutex->attr == PTHREAD_MUTEX_RECURSIVE)
+    if (mutex->__internal.attr.__internal.type == PTHREAD_MUTEX_RECURSIVE)
     {
-        if (pthread_self() == mutex->owner)
+        if (pthread_equal(pthread_self(), mutex->__internal.owner))
         {
-            syslog(LOG_INFO, "pthread_mutex_lock recursing");
-            if(__sync_bool_compare_and_swap(&mutex->value, val, val - 1))
-                return 0;
+            // Recurse.
+            if(__sync_bool_compare_and_swap(&mutex->__internal.value, val, val - 1))
+                goto locked;
         }
     }
 
+    goto err;
+
+locked:
+    mutex->__internal.owner = pthread_self();
+    return 0;
+err:
     errno = EBUSY;
     return -1;
 }
@@ -427,42 +384,45 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
         return -1;
     }
 
-    // Mutexes are binary semaphores.
-    int32_t val = mutex->value;
-    __sync_val_compare_and_swap(&mutex->value, val, val + 1);
+    // Is the mutex OK?
+    if (!_pthread_is_valid(mutex->__internal.owner))
+    {
+        errno = EPERM;
+        return -1;
+    }
 
+    // Are we allowed to unlock this mutex?
+    if (!pthread_equal(mutex->__internal.owner, pthread_self()))
+    {
+        errno = EPERM;
+        return -1;
+    }
+
+    // Perform the actual unlock.
+    int32_t val = mutex->__internal.value;
+    if (!__sync_bool_compare_and_swap(&mutex->__internal.value, val, val + 1))
+    {
+        // Someone may have reached there first. But how? Weird.
+        syslog(LOG_ALERT, "CaS failed in pthread_mutex_unlock!");
+    }
+
+    // If the result ended up not actually unlocking the lock (eg, recursion),
+    // don't wake up any threads just yet.
     if ((val + 1) <= 0)
     {
-        syslog(LOG_INFO, "pthread_mutex_unlock undoing recursion");
         return 0;
     }
 
-    pthread_spin_lock(&mutex->lock);
-    if((!mutex->q) || (!mutex->front))
-    {
-        pthread_spin_unlock(&mutex->lock);
-        return 0;
-    }
-
-    // Wake up the next waiting thread.
-    mutex_q_item *front = mutex->front;
-    if(front)
-    {
-        mutex->front = front->next;
-        mutex->q = mutex->front;
-
-        pthread_t thr = front->thr;
-        pedigree_thrwakeup(thr);
-    }
-
-    pthread_spin_unlock(&mutex->lock);
+    // Otherwise we're good to wake stuff up.
+    _pthread_make_invalid(&mutex->__internal.owner);
+    _pedigree_thread_trigger(mutex->__internal.waiter);
 
     return 0;
 }
 
 int pthread_mutexattr_init(pthread_mutexattr_t *attr)
 {
-    *attr = PTHREAD_MUTEX_DEFAULT;
+    attr->__internal.type = PTHREAD_MUTEX_DEFAULT;
     return 0;
 }
 
@@ -473,13 +433,14 @@ int pthread_mutexattr_destroy(pthread_mutexattr_t *attr)
 
 int pthread_mutexattr_gettype(const pthread_mutexattr_t *attr, int *type)
 {
-    *type = *attr;
+    *type = attr->__internal.type;
     return 0;
 }
 
 int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type)
 {
-    *attr = type;
+    /// \todo erorr checking...
+    attr->__internal.type = type;
     return 0;
 }
 
@@ -542,15 +503,11 @@ int pthread_cond_broadcast(pthread_cond_t *cond)
         return -1;
     }
 
-    pthread_spin_lock(&cond->lock);
-    while(cond->front)
+    do
     {
-        __sync_fetch_and_sub(&cond->value, 1);
-
-        pedigree_thrwakeup(cond->front->thr);
-        cond->front = cond->front->next;
+        __sync_fetch_and_sub(&cond->__internal.value, 1);
     }
-    pthread_spin_unlock(&cond->lock);
+    while(_pedigree_thread_trigger(cond->__internal.waiter) > 0);
 
     return 0;
 }
@@ -603,29 +560,30 @@ int pthread_condattr_destroy(pthread_condattr_t *attr)
 
 int pthread_condattr_init(pthread_condattr_t *attr)
 {
+    attr->__internal.clock_id = CLOCK_MONOTONIC;
     return 0;
 }
 
 int pthread_condattr_getclock(const pthread_condattr_t *restrict attr, clockid_t *restrict clock_id)
 {
-    *clock_id = *attr;
+    *clock_id = attr->__internal.clock_id;
     return 0;
 }
 
 int pthread_condattr_setclock(pthread_condattr_t *attr, clockid_t clock_id)
 {
-    *attr = clock_id;
+    attr->__internal.clock_id = clock_id;
     return 0;
 }
 
 void* pthread_getspecific(pthread_key_t key)
 {
-    return (void*) syscall1(POSIX_PTHREAD_GETSPECIFIC, key);
+    return (void*) syscall1(POSIX_PTHREAD_GETSPECIFIC, (long) &key);
 }
 
 int pthread_setspecific(pthread_key_t key, const void *data)
 {
-    return syscall2(POSIX_PTHREAD_SETSPECIFIC, key, (long) data);
+    return syscall2(POSIX_PTHREAD_SETSPECIFIC, (long) &key, (long) data);
 }
 
 int pthread_key_create(pthread_key_t *key, void (*destructor)(void *))
@@ -637,7 +595,7 @@ typedef void (*key_destructor)(void*);
 
 key_destructor pthread_key_destructor(pthread_key_t key)
 {
-    return (key_destructor) syscall1(POSIX_PTHREAD_KEY_DESTRUCTOR, key);
+    return (key_destructor) syscall1(POSIX_PTHREAD_KEY_DESTRUCTOR, (long) &key);
 }
 
 int pthread_key_delete(pthread_key_t key)
@@ -650,7 +608,7 @@ int pthread_key_delete(pthread_key_t key)
     key_destructor a = pthread_key_destructor(key);
     if(a)
         a(buff);
-    return syscall1(POSIX_PTHREAD_KEY_DELETE, key);
+    return syscall1(POSIX_PTHREAD_KEY_DELETE, (long) &key);
 }
 
 int pthread_rwlockattr_init(pthread_rwlockattr_t *attr)
@@ -734,9 +692,9 @@ int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
         return -1;
     }
 
-    lock->atom = 1;
-    lock->owner = pthread_self();
-    lock->locker = -1;
+    lock->__internal.atom = 1;
+    lock->__internal.owner = pthread_self();
+    _pthread_make_invalid(&lock->__internal.locker);
     return 0;
 }
 
@@ -748,13 +706,14 @@ int pthread_spin_destroy(pthread_spinlock_t *lock)
         return -1;
     }
 
-    if(lock->locker >= 0)
+    if(_pthread_is_valid(lock->__internal.locker))
     {
         errno = EBUSY;
         return -1;
     }
 
-    lock->owner = lock->locker = -1;
+    _pthread_make_invalid(&lock->__internal.locker);
+    _pthread_make_invalid(&lock->__internal.owner);
     return 0;
 }
 
@@ -766,20 +725,21 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
         return -1;
     }
 
-    while(!__sync_bool_compare_and_swap(&lock->atom, 1, 0))
+    int r = 0;
+    while(!(r = pthread_spin_trylock(&lock)))
     {
-        if(lock->locker == pthread_self())
+        if(pthread_equal(lock->__internal.locker, pthread_self()))
         {
             // Attempt to lock the lock... but we've already acquired it!
             errno = EDEADLK;
             return -1;
         }
 
-        /// \todo If there are no other threads running, this should throw EDEADLK
+        /// \todo EDEADLK from other sources?
         sched_yield();
     }
 
-    lock->locker = pthread_self();
+    lock->__internal.locker = pthread_self();
 
     return 0;
 }
@@ -792,13 +752,13 @@ int pthread_spin_trylock(pthread_spinlock_t *lock)
         return -1;
     }
 
-    if(!__sync_bool_compare_and_swap(&lock->atom, 1, 0))
+    if(!__sync_bool_compare_and_swap(&lock->__internal.atom, 1, 0))
     {
         errno = EBUSY;
         return -1;
     }
 
-    lock->locker = pthread_self();
+    lock->__internal.locker = pthread_self();
 
     return 0;
 }
@@ -811,14 +771,15 @@ int pthread_spin_unlock(pthread_spinlock_t *lock)
         return -1;
     }
 
-    if(lock->locker < 0)
+    // No locker.
+    if(!_pthread_is_valid(lock->__internal.locker))
     {
         errno = EPERM;
         return -1;
     }
 
-    lock->locker = -1;
-    __sync_bool_compare_and_swap(&lock->atom, 0, 1);
+    _pthread_make_invalid(&lock->__internal.locker);
+    __sync_bool_compare_and_swap(&lock->__internal.atom, 0, 1);
 
     // Avoids a case where, in a loop constantly performing an acquire, no other
     // thread can access the spinlock.

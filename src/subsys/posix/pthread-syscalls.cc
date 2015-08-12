@@ -95,8 +95,8 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
     size_t stackSize = 0;
     if(attr)
     {
-        if(attr->stackSize >= PTHREAD_STACK_MIN)
-            stackSize = attr->stackSize;
+        if(attr->__internal.stackSize >= PTHREAD_STACK_MIN)
+            stackSize = attr->__internal.stackSize;
     }
 
     // Grab the subsystem
@@ -133,12 +133,12 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
     // Take information from the attributes
     if(attr)
     {
-        p->isDetached = (attr->detachState == PTHREAD_CREATE_DETACHED);
+        p->isDetached = (attr->__internal.detachState == PTHREAD_CREATE_DETACHED);
     }
 
     // Insert the thread
     pSubsystem->insertThread(pThread->getId(), p);
-    *thread = static_cast<pthread_t>(pThread->getId());
+    thread->__internal.kthread = pThread->getId();
 
     // All done!
     return 0;
@@ -151,7 +151,7 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
  * the passed thread completes execution. The return value from the thread is
  * stored in value_ptr.
  */
-int posix_pthread_join(pthread_t thread, void **value_ptr)
+int posix_pthread_join(pthread_t *thread, void **value_ptr)
 {
     PT_NOTICE("pthread_join");
 
@@ -165,7 +165,7 @@ int posix_pthread_join(pthread_t thread, void **value_ptr)
     }
 
     // Grab the thread information structure and verify it
-    PosixSubsystem::PosixThread *p = pSubsystem->getThread(thread);
+    PosixSubsystem::PosixThread *p = pSubsystem->getThread(thread->__internal.kthread);
     if(!p)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -185,7 +185,7 @@ int posix_pthread_join(pthread_t thread, void **value_ptr)
         *value_ptr = p->returnValue;
 
     // Clean up - we're never going to use this again
-    pSubsystem->removeThread(thread);
+    pSubsystem->removeThread(thread->__internal.kthread);
     delete p;
 
     // Success!
@@ -200,7 +200,7 @@ int posix_pthread_join(pthread_t thread, void **value_ptr)
  *
  * Similar to join, but without caring about the return value.
  */
-int posix_pthread_detach(pthread_t thread)
+int posix_pthread_detach(pthread_t *thread)
 {
     PT_NOTICE("pthread_detach");
 
@@ -214,7 +214,7 @@ int posix_pthread_detach(pthread_t thread)
     }
 
     // Grab the thread information structure and verify it
-    PosixSubsystem::PosixThread *p = pSubsystem->getThread(thread);
+    PosixSubsystem::PosixThread *p = pSubsystem->getThread(thread->__internal.kthread);
     if(!p)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -232,7 +232,7 @@ int posix_pthread_detach(pthread_t thread)
     if(p->isRunning.tryAcquire())
     {
         // Clean up - we're never going to use this again
-        pSubsystem->removeThread(thread);
+        pSubsystem->removeThread(thread->__internal.kthread);
         delete p;
     }
     else
@@ -243,11 +243,11 @@ int posix_pthread_detach(pthread_t thread)
 }
 
 /**
- * posix_pthread_self: Returns the thread ID for the current thread.
+ * kernel_pthread_self: Returns the thread ID for the current thread.
  */
-pthread_t posix_pthread_self()
+static size_t kernel_pthread_self()
 {
-    PT_NOTICE("pthread_self");
+    PT_NOTICE("kernel_pthread_self");
     Thread *pThread = Processor::information().getCurrentThread();
     PT_NOTICE("    -> " << Dec << pThread->getId() << Hex);
     return pThread->getId();
@@ -339,7 +339,7 @@ void pedigree_init_pthreads()
     pSubsystem->insertThread(pThread->getId(), p);
 }
 
-void* posix_pthread_getspecific(pthread_key_t key)
+void* posix_pthread_getspecific(pthread_key_t *key)
 {
     PT_NOTICE("pthread_getspecific");
     
@@ -353,7 +353,7 @@ void* posix_pthread_getspecific(pthread_key_t key)
     }
 
     // Grab the current thread id
-    pthread_t threadId = posix_pthread_self();
+    size_t threadId = kernel_pthread_self();
     PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(threadId);
     if(!pThread)
     {
@@ -362,7 +362,7 @@ void* posix_pthread_getspecific(pthread_key_t key)
     }
 
     // Grab the data
-    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(key);
+    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(key->__internal.key);
     if(!data)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -373,7 +373,7 @@ void* posix_pthread_getspecific(pthread_key_t key)
     return data->buffer;
 }
 
-int posix_pthread_setspecific(pthread_key_t key, const void *buff)
+int posix_pthread_setspecific(pthread_key_t *key, const void *buff)
 {
     PT_NOTICE("pthread_setspecific");
     
@@ -387,7 +387,7 @@ int posix_pthread_setspecific(pthread_key_t key, const void *buff)
     }
 
     // Grab the current thread id
-    pthread_t threadId = posix_pthread_self();
+    size_t threadId = kernel_pthread_self();
     PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(threadId);
     if(!pThread)
     {
@@ -396,7 +396,7 @@ int posix_pthread_setspecific(pthread_key_t key, const void *buff)
     }
 
     // Grab the data
-    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(key);
+    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(key->__internal.key);
     if(!data)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -423,7 +423,7 @@ int posix_pthread_key_create(pthread_key_t *okey, key_destructor destructor)
     }
 
     // Grab the current thread id
-    pthread_t threadId = posix_pthread_self();
+    size_t threadId = kernel_pthread_self();
     PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(threadId);
     if(!pThread)
     {
@@ -457,11 +457,11 @@ int posix_pthread_key_create(pthread_key_t *okey, key_destructor destructor)
     pThread->addThreadData(key, data);
 
     // Success!
-    *okey = key;
+    okey->__internal.key = key;
     return 0;
 }
 
-key_destructor posix_pthread_key_destructor(pthread_key_t key)
+key_destructor posix_pthread_key_destructor(pthread_key_t *key)
 {
     PT_NOTICE("pthread_key_destructor");
     
@@ -475,7 +475,7 @@ key_destructor posix_pthread_key_destructor(pthread_key_t key)
     }
 
     // Grab the current thread id
-    pthread_t threadId = posix_pthread_self();
+    size_t threadId = kernel_pthread_self();
     PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(threadId);
     if(!pThread)
     {
@@ -484,7 +484,7 @@ key_destructor posix_pthread_key_destructor(pthread_key_t key)
     }
 
     // Grab the data
-    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(key);
+    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(key->__internal.key);
     if(!data)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -494,7 +494,7 @@ key_destructor posix_pthread_key_destructor(pthread_key_t key)
     return data->destructor;
 }
 
-int posix_pthread_key_delete(pthread_key_t key)
+int posix_pthread_key_delete(pthread_key_t *key)
 {
     PT_NOTICE("pthread_key_delete");
     
@@ -508,7 +508,7 @@ int posix_pthread_key_delete(pthread_key_t key)
     }
 
     // Grab the current thread id
-    pthread_t threadId = posix_pthread_self();
+    size_t threadId = kernel_pthread_self();
     PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(threadId);
     if(!pThread)
     {
@@ -517,7 +517,8 @@ int posix_pthread_key_delete(pthread_key_t key)
     }
 
     // Grab the data
-    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(key);
+    size_t ikey = key->__internal.key;
+    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(ikey);
     if(!data)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -525,11 +526,11 @@ int posix_pthread_key_delete(pthread_key_t key)
     }
 
     // Remove the key from the thread
-    pThread->removeThreadData(key);
+    pThread->removeThreadData(ikey);
 
     // It's now safe to let other calls use this key
-    pThread->lastDataKey = key;
-    pThread->m_ThreadKeys.clear(key);
+    pThread->lastDataKey = ikey;
+    pThread->m_ThreadKeys.clear(ikey);
 
     // Destroy it
     delete data;
@@ -537,62 +538,42 @@ int posix_pthread_key_delete(pthread_key_t key)
     return 0;
 }
 
-int posix_pedigree_thrwakeup(pthread_t thr)
+void *posix_pedigree_create_waiter()
 {
-    // Grab the subsystem
-    Process *pProcess = Processor::information().getCurrentThread()->getParent();
-    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
-    if(!pSubsystem)
-    {
-        ERROR("No subsystem for this process!");
-        return -1;
-    }
-
-    // Grab the thread
-    PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(thr);
-    if(!pThread)
-    {
-        ERROR("Not a valid POSIX thread?");
-        return -1;
-    }
-    
-    // Wake it up
-    pThread->pThread->getLock().acquire();
-    pThread->pThread->setStatus(Thread::Ready);
-    pThread->pThread->getLock().release();
-    
-    return 0;
+    Semaphore *sem = new Semaphore(0);
+    return reinterpret_cast<void *>(sem);
 }
 
-int posix_pedigree_thrsleep(pthread_t thr)
+int posix_pedigree_thread_wait_for(void *waiter)
 {
-    // Grab the subsystem
+    Semaphore *sem = reinterpret_cast<Semaphore *>(waiter);
+    
+    // Deadlock detection - don't wait if nothing can wake this waiter.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
-    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
-    if(!pSubsystem)
-    {
-        ERROR("No subsystem for this process!");
-        return -1;
-    }
-
-    // Grab the thread
-    PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(thr);
-    if(!pThread)
-    {
-        ERROR("Not a valid POSIX thread?");
-        return -1;
-    }
-
-    // About to deadlock the process.
     if (pProcess->getNumThreads() <= 1)
     {
-        WARNING("posix_pedigree_thrsleep: deadlock, only one thread");
         SYSCALL_ERROR(Deadlock);
         return -1;
     }
-    
-    // Put it to sleep
-    Processor::information().getScheduler().sleep();
-    
+
+    while(!sem->acquire(1));
+
     return 0;
+}
+
+int posix_pedigree_thread_trigger(void *waiter)
+{
+    Semaphore *sem = reinterpret_cast<Semaphore *>(waiter);
+    if (sem->getValue())
+        return 0;  // Nothing to wake up.
+
+    // Wake up a waiter.
+    sem->release();
+    return 1;
+}
+
+void posix_pedigree_destroy_waiter(void *waiter)
+{
+    Semaphore *sem = reinterpret_cast<Semaphore *>(waiter);
+    delete sem;
 }

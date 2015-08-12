@@ -424,7 +424,7 @@ int posix_kill(int pid, int sig)
     return 0;
 }
 
-int posix_pthread_kill(pthread_t thread, int sig)
+int posix_pthread_kill(pthread_t *thread, int sig)
 {
     PT_NOTICE("pthread_kill");
 
@@ -446,7 +446,7 @@ int posix_pthread_kill(pthread_t thread, int sig)
     }
 
     // Grab the target thread, send the signal
-    PosixSubsystem::PosixThread *pTarget = pSubsystem->getThread(thread);
+    PosixSubsystem::PosixThread *pTarget = pSubsystem->getThread(thread->__internal.kthread);
     if(pTarget && pTarget->pThread)
     {
         return doThreadKill(pTarget->pThread, sig);

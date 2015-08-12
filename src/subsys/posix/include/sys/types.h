@@ -402,50 +402,147 @@ typedef struct {
 
 #ifndef _POSIX_THREAD_TYPES_DEFINED
 #define _POSIX_THREAD_TYPES_DEFINED
-// Pedigree pthread types
-typedef int pthread_t;
-typedef int pthread_condattr_t;
-typedef int pthread_key_t;
-typedef int pthread_mutexattr_t;
-typedef int pthread_once_t;
-typedef int pthread_rwlockattr_t;
 
-typedef struct _mutex_q_item
+#define _PTHREAD_TYPE_MINSIZE    128
+
+typedef struct _pthread_attr_t
 {
-    pthread_t thr;
-    struct _mutex_q_item *next;
-} mutex_q_item;
+    union
+    {
+        struct
+        {
+            size_t stackSize;
+            int detachState;
+            __uint32_t magic; // == _PTHREAD_ATTR_MAGIC when initialised
+        } __internal;
+
+        char __pad[_PTHREAD_TYPE_MINSIZE];
+    };
+} pthread_attr_t;
+
+typedef struct _pthread_condattr_t
+{
+    union
+    {
+        struct
+        {
+            clockid_t clock_id;
+        } __internal;
+
+        char __pad[_PTHREAD_TYPE_MINSIZE];
+    };
+} pthread_condattr_t;
+
+typedef struct _pthread_mutexattr_t
+{
+    union
+    {
+        struct
+        {
+            int type; // PTHREAD_MUTEX_NORMAL,PTHREAD_MUTEX_RECURSIVE, etc
+        } __internal;
+
+        char __pad[_PTHREAD_TYPE_MINSIZE];
+    };
+} pthread_mutexattr_t;
+
+typedef struct _pthread_rwlockattr_t
+{
+    union
+    {
+        struct
+        {
+        } __internal;
+
+        char __pad[_PTHREAD_TYPE_MINSIZE];
+    };
+} pthread_rwlockattr_t;
+
+typedef struct _pthread_key_t
+{
+    union
+    {
+        struct
+        {
+            size_t key;
+        } __internal;
+
+        char __pad[_PTHREAD_TYPE_MINSIZE];
+    };
+} pthread_key_t;
+
+typedef struct _pthread_once_t
+{
+    union
+    {
+        struct
+        {
+            int control;
+        } __internal;
+
+        char __pad[_PTHREAD_TYPE_MINSIZE];
+    };
+} pthread_once_t;
+
+typedef struct _pthread_t
+{
+    union
+    {
+        struct
+        {
+            int kthread;
+        } __internal;
+
+        char __pad[_PTHREAD_TYPE_MINSIZE];
+    };
+} pthread_t;
 
 typedef struct _pthread_spinlock_t
 {
-    char atom;
-    pthread_t owner;
-    pthread_t locker;
+    union
+    {
+        struct
+        {
+            char atom;
+            pthread_t owner;
+            pthread_t locker;
+        } __internal;
+
+        char __pad[_PTHREAD_TYPE_MINSIZE];
+    };
 } pthread_spinlock_t;
 
 typedef struct _pthread_mutex_t
 {
-    int value;
-    mutex_q_item *q, *back, *front;
-    pthread_t owner;
-    pthread_mutexattr_t attr;
-    
-    pthread_spinlock_t lock;
+    union
+    {
+        struct
+        {
+            __int32_t value;
+
+            // Stored attributes of the mutex.
+            pthread_t owner;
+            pthread_mutexattr_t attr;
+
+            // Synchronisation components.
+            void *waiter;
+        } __internal;
+
+        char __pad[_PTHREAD_TYPE_MINSIZE];
+    };
 } pthread_mutex_t;
 
 #define pthread_cond_t pthread_mutex_t
 
-typedef struct _pthread_attr_t
-{
-    size_t stackSize;
-    int detachState;
-    __uint32_t magic; // == _PTHREAD_ATTR_MAGIC when initialised
-} pthread_attr_t;
-
 typedef struct _pthread_rwlock_t
 {
-  pthread_mutex_t mutex;
+    union
+    {
+        pthread_mutex_t mutex;
+        char __pad[_PTHREAD_TYPE_MINSIZE];
+    };
 } pthread_rwlock_t;
+
 #endif
 
 typedef unsigned long fsblkcnt_t;

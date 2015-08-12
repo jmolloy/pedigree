@@ -99,7 +99,12 @@ void SDL_SYS_SetupThread(void)
 /* WARNING:  This may not work for systems with 64-bit pid_t */
 Uint32 SDL_ThreadID(void)
 {
+#if 0
 	return((Uint32)((size_t)pthread_self()));
+#else
+    /// \note pthread_t is not required to be an arithmetic type.
+    return((Uint32)((size_t)pthread_self().__internal.kthread));
+#endif
 }
 
 void SDL_SYS_WaitThread(SDL_Thread *thread)

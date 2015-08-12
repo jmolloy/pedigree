@@ -549,7 +549,7 @@ class PosixSubsystem : public Subsystem
          */
         Tree<size_t, PosixSyncObject*> m_SyncObjects;
         /**
-         * Links some file descriptors to Threads.
+         * Links some thread handles to Threads.
          */
         Tree<size_t, PosixThread*> m_Threads;
 };
