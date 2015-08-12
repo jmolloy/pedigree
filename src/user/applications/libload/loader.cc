@@ -338,8 +338,6 @@ extern "C" int main(int argc, const char *argv[])
     // Do initial relocation of the binary (non-GOT entries)
     doRelocation(meta);
 
-    syslog(LOG_INFO, "libload.so running entry point");
-
     // All done - run the program!
     meta->running = true;
 
@@ -348,6 +346,7 @@ extern "C" int main(int argc, const char *argv[])
         it != meta->objects.end();
         ++it) {
         if((*it)->init_func) {
+            syslog(LOG_INFO, "libload.so running init_func for %s", (*it)->filename.c_str());
             init_fini_func_t init = (init_fini_func_t) (*it)->init_func;
             init();
         }
@@ -356,6 +355,7 @@ extern "C" int main(int argc, const char *argv[])
     // Run init function, if one exists.
     if(meta->init_func) {
         init_fini_func_t init = (init_fini_func_t) meta->init_func;
+            syslog(LOG_INFO, "libload.so running init_func for %s", meta->filename.c_str());
         init();
     }
 
@@ -377,6 +377,7 @@ extern "C" int main(int argc, const char *argv[])
 
     // argv[0] is passed to us by the kernel and holds the path to the binary
     // we need to load. argv[1:] is the original argv.
+    syslog(LOG_INFO, "libload.so running entry point");
     meta->entry(&argv[1], environ);
 
     return 0;
