@@ -156,7 +156,7 @@ pic_clone.Program(crtn_objname, crtn_files, LINKFLAGS='-nostdlib -r')
 # libpthread
 env_clone_pthread = pic_clone.Clone()
 env_clone_pthread.Library(libpthread_objname, pthread_files)
-env_clone_pthread.SharedLibrary(libpthread_shobjname, pthread_files)
+env_clone_pthread.SharedLibrary(libpthread_shobjname, pthread_files, LINKFLAGS='')
 
 # Build libc/libm
 
