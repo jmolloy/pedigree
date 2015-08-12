@@ -582,6 +582,14 @@ int posix_pedigree_thrsleep(pthread_t thr)
         ERROR("Not a valid POSIX thread?");
         return -1;
     }
+
+    // About to deadlock the process.
+    if (pProcess->getNumThreads() <= 1)
+    {
+        WARNING("posix_pedigree_thrsleep: deadlock, only one thread");
+        SYSCALL_ERROR(Deadlock);
+        return -1;
+    }
     
     // Put it to sleep
     Processor::information().getScheduler().sleep();

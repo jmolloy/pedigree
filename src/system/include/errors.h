@@ -53,6 +53,7 @@ namespace Error
     IllegalSeek          =29,
     ReadOnlyFilesystem   =30,
     BrokenPipe           =32,
+    Deadlock             =45,
     NameTooLong          =91,
     LoopExists           =92,
     OperationNotSupported=95,
