@@ -322,6 +322,21 @@ void pedigree_init_pthreads()
     Processor::information().getVirtualAddressSpace().setFlags(
             reinterpret_cast<void*> (EVENT_HANDLER_TRAMPOLINE),
             VirtualAddressSpace::Execute | VirtualAddressSpace::Shared);
+
+    // Make sure the main thread is actually known.
+    Thread *pThread = Processor::information().getCurrentThread();
+    Process *pProcess = pThread->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return;
+    }
+
+    PosixSubsystem::PosixThread *p = new PosixSubsystem::PosixThread;
+    p->pThread = pThread;
+    p->returnValue = 0;
+    pSubsystem->insertThread(pThread->getId(), p);
 }
 
 void* posix_pthread_getspecific(pthread_key_t key)
@@ -430,6 +445,7 @@ int posix_pthread_key_create(pthread_key_t *okey, key_destructor destructor)
     }
     if(key == ~0UL)
     {
+        key = pThread->nextDataKey;
         pThread->m_ThreadKeys.set(pThread->nextDataKey);
         pThread->nextDataKey++;
     }
