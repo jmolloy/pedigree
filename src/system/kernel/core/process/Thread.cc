@@ -56,17 +56,26 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
 
   // If we've been given a user stack pointer, we are a user mode thread.
   bool bUserMode = true;
+  void *requestedStack = pStack;
   if (pStack == 0)
   {
     bUserMode = false;
     pStack = m_StateLevels[0].m_pAuxillaryStack = m_StateLevels[0].m_pKernelStack;
     m_StateLevels[0].m_pKernelStack = 0; // No kernel stack if kernel mode thread - causes bug on PPC
   }
-  else if(semiUser)
+
+  if(semiUser)
   {
       // Still have a kernel stack for when we jump to user mode, but start the
       // thread in kernel mode first.
       bUserMode = false;
+
+      // If no stack was given and we allocated, extract that allocated stack
+      // back out again so we have a kernel stack proper.
+      if (!requestedStack)
+      {
+        m_StateLevels[0].m_pKernelStack = m_StateLevels[0].m_pAuxillaryStack;
+      }
   }
 
   m_Id = m_pParent->addThread(this);

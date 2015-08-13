@@ -33,6 +33,7 @@ struct pthreadInfoBlock
 {
     void *entry;
     void *arg;
+    void *stack;
 } __attribute__((packed));
 
 /**
@@ -56,6 +57,7 @@ int pthread_kernel_enter(void *blk)
     pthreadInfoBlock *args = reinterpret_cast<pthreadInfoBlock*>(blk);
     void *entry = args->entry;
     void *new_args = args->arg;
+    void *new_stack = args->stack;
 
     // It's grabbed now, so we don't need any more room on the bag rack.
     delete args;
@@ -65,7 +67,7 @@ int pthread_kernel_enter(void *blk)
     // Just keep using our current stack, don't bother to save any state. We'll
     // never return, so there's no need to be sentimental (and no need to worry
     // about return addresses etc)
-    uintptr_t stack = Processor::getStackPointer();
+    uintptr_t stack = reinterpret_cast<uintptr_t>(new_stack) - sizeof(uintptr_t);
     if(!stack) // Because sanity costs little.
         return -1;
 
@@ -109,7 +111,7 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
     }
 
     // Allocate a stack for this thread
-    void *stack = Processor::information().getVirtualAddressSpace().allocateStack(stackSize);
+    void *stack = pProcess->getAddressSpace()->allocateStack(stackSize);
     if(!stack)
     {
         ERROR("posix_pthread_create: couldn't get a stack!");
@@ -121,9 +123,10 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
     pthreadInfoBlock *dat = new pthreadInfoBlock;
     dat->entry = reinterpret_cast<void*>(start_addr);
     dat->arg = arg;
+    dat->stack = stack;
 
     // Create the thread
-    Thread *pThread = new Thread(pProcess, pthread_kernel_enter, reinterpret_cast<void*>(dat), stack, true);
+    Thread *pThread = new Thread(pProcess, pthread_kernel_enter, reinterpret_cast<void*>(dat), 0, true);
 
     // Create our information structure, shove in the initial elements
     PosixSubsystem::PosixThread *p = new PosixSubsystem::PosixThread;

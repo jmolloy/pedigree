@@ -402,10 +402,12 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
 
     pCurrentThread->getLock().unwind();
     if (bUsermode)
+    {
         Processor::jumpUser(&pCurrentThread->getLock().m_Atom.m_Atom,
                             reinterpret_cast<uintptr_t>(pStartFunction),
                             reinterpret_cast<uintptr_t>(pStack),
                             reinterpret_cast<uintptr_t>(pParam));
+    }
     else
     {
         Processor::jumpKernel(&pCurrentThread->getLock().m_Atom.m_Atom,
