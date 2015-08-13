@@ -1,13 +1,15 @@
 
 BUILDDIR := build
 
-CXX := g++
+CXX := ccache g++
 
 CFLAGS:=-I../../../subsys/native/include `freetype-config --cflags` -O2
 CFLAGS:=$(CFLAGS) `libpng-config --cflags` `sdl-config --cflags`
+CFLAGS:=$(CFLAGS) `pkg-config --cflags cairo pangocairo pango`
 CFLAGS:=$(CFLAGS) -I../../libraries/libui/src -I../../libraries/libui/include
 CFLAGS:=$(CFLAGS) -DTARGET_LINUX -DPNG_SKIP_SETJMP_CHECK -I.
-LIBS:=`freetype-config --libs` `libpng-config --libs` `sdl-config --libs` -lcairo
+LIBS:=`freetype-config --libs` `libpng-config --libs` `sdl-config --libs`
+LIBS:=$(LIBS) `pkg-config --libs cairo pangocairo pango`
 LIBS:=$(LIBS) -lrt
 
 TUI_LIBS:=-L$(BUILDDIR) -lui -lbsd
