@@ -56,7 +56,7 @@ class SharedBuffer;
 #define WINDOW_CLIENT_LOST_W (WINDOW_CLIENT_START_X + WINDOW_CLIENT_END_X + 1)
 #define WINDOW_CLIENT_LOST_H (WINDOW_CLIENT_START_Y + WINDOW_CLIENT_END_Y + 1)
 
-#define WINMAN_PANGO_FONT "DejaVu Sans Mono 13"
+#define WINMAN_PANGO_FONT "DejaVu Sans Mono 12"
 
 /**
  * DirtyRectangle: receives a number of points, uses these to determine the full

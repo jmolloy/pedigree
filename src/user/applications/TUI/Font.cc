@@ -37,53 +37,24 @@ extern cairo_t *g_Cairo;
 Font::Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWidth) :
     m_Face(), m_CellWidth(0), m_CellHeight(0), m_nWidth(nWidth), m_Baseline(requestedSize), m_bCache(bCache),
     m_pCache(0), m_CacheSize(0), key(), m_FontSize(requestedSize),
-    m_Iconv(0), m_ConversionCache()
+    m_Iconv(0), m_ConversionCache(), m_FontDesc(0)
 {
-    char str[64];
-    int error;
-    if (!m_bLibraryInitialised)
-    {
-        error = FT_Init_FreeType(&m_Library);
-        if (error)
-        {
-            syslog(LOG_ALERT, "Freetype init error: %d", error);
-            return;
-        }
-        m_bLibraryInitialised = true;
-    }
+    m_FontDesc = pango_font_description_from_string(pFilename);
 
-    error = FT_New_Face(m_Library, pFilename, 0,
-                        &m_Face);
-    if (error == FT_Err_Unknown_File_Format)
-    {
-        syslog(LOG_ALERT, "Freetype font format error");
-        return;
-    }
-    else if (error)
-    {
-        syslog(LOG_ALERT, "Freetype font load error: %d", error);
-        return;
-    }
+    PangoFontMetrics *metrics = 0;
+    PangoFontMap *fontmap = pango_cairo_font_map_get_default();
+    PangoContext *context = pango_cairo_font_map_create_context((PangoCairoFontMap*) fontmap);
+    pango_context_set_font_description(context, m_FontDesc);
+    metrics = pango_context_get_metrics(context, m_FontDesc, NULL);
+    g_object_unref(context);
 
-    font_face = cairo_ft_font_face_create_for_ft_face(m_Face, 0);
-    cairo_font_face_set_user_data(font_face, &key,
-                                  m_Face, (cairo_destroy_func_t) FT_Done_Face);
+    m_CellWidth = pango_font_metrics_get_approximate_char_width(metrics) / PANGO_SCALE;
+    m_CellHeight = (pango_font_metrics_get_ascent(metrics) + pango_font_metrics_get_descent(metrics)) / PANGO_SCALE;
+    m_Baseline = pango_font_metrics_get_ascent(metrics) / PANGO_SCALE;
 
-    cairo_save(g_Cairo);
-    cairo_set_font_face(g_Cairo, font_face);
-    cairo_set_font_size(g_Cairo, m_FontSize);
+    syslog(LOG_INFO, "metrics: %dx%d", m_CellWidth, m_CellHeight);
 
-    cairo_font_extents_t extents;
-    cairo_font_extents(g_Cairo, &extents);
-    cairo_restore(g_Cairo);
-
-    m_CellHeight = m_Baseline = std::ceil(extents.height);
-    double ascent_descent = std::ceil(extents.ascent + extents.descent);
-    if(m_CellHeight < ascent_descent)
-        m_CellHeight = ascent_descent;
-    else
-        m_CellHeight += std::ceil(extents.descent);
-    m_CellWidth = std::ceil(extents.max_x_advance);
+    pango_font_metrics_unref(metrics);
 
     /// \todo UTF-32 endianness
     m_Iconv = iconv_open("UTF-8", "UTF-32LE");
@@ -101,7 +72,6 @@ Font::Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWid
 Font::~Font()
 {
     iconv_close(m_Iconv);
-    FT_Done_Face(m_Face);
 
     // Destroy our precached glyphs.
     for (std::map<uint32_t,char *>::iterator it = m_ConversionCache.begin();
@@ -110,9 +80,11 @@ Font::~Font()
     {
         delete [] it->second;
     }
+
+    pango_font_description_free(m_FontDesc);
 }
 
-size_t Font::render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, size_t y, uint32_t f, uint32_t b, bool bBack)
+size_t Font::render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, size_t y, uint32_t f, uint32_t b, bool bBack, bool bBold, bool bItalic, bool bUnderline)
 {
     // Cache the character, if not already.
     const char *convertOut = precache(c);
@@ -123,20 +95,44 @@ size_t Font::render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, si
     }
 
     // Perform the render.
-    return render(convertOut, x, y, f, b, bBack);
+    return render(convertOut, x, y, f, b, bBack, bBold, bItalic, bUnderline);
 }
 
-size_t Font::render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b, bool bBack)
+size_t Font::render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b,
+    bool bBack, bool bBold, bool bItalic, bool bUnderline)
 {
-    cairo_save(g_Cairo);
-    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
-    size_t len = strlen(s);
+    PangoAttrList *attrs = pango_attr_list_new();
+    if (bBold)
+    {
+        PangoAttribute *attr = pango_attr_weight_new(PANGO_WEIGHT_BOLD);
+        pango_attr_list_insert(attrs, attr);
+    }
+    if (bItalic)
+    {
+        PangoAttribute *attr = pango_attr_style_new(PANGO_STYLE_OBLIQUE);
+        pango_attr_list_insert(attrs, attr);
+    }
+    if (bUnderline)
+    {
+        PangoAttribute *attr = pango_attr_underline_new(PANGO_UNDERLINE_SINGLE);
+        pango_attr_list_insert(attrs, attr);
+    }
 
-    cairo_set_font_face(g_Cairo, font_face);
-    cairo_set_font_size(g_Cairo, m_FontSize);
+    cairo_save(g_Cairo);
+    PangoLayout *layout = pango_cairo_create_layout(g_Cairo);
+    pango_layout_set_attributes(layout, attrs);
+    pango_layout_set_font_description(layout, m_FontDesc);
+    pango_layout_set_text(layout, s, -1);  // Not using markup here - intentional.
+    pango_attr_list_unref(attrs);
+
+    int width = 0, height = 0;
+    pango_layout_get_size(layout, &width, &height);
+    width /= PANGO_SCALE;
+    height /= PANGO_SCALE;
 
     if(bBack)
     {
+        cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
         cairo_set_source_rgba(
                 g_Cairo,
                 ((b >> 16) & 0xFF) / 256.0,
@@ -144,10 +140,13 @@ size_t Font::render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b, b
                 ((b) & 0xFF) / 256.0,
                 0.8);
 
-        cairo_rectangle(g_Cairo, x, y, m_CellWidth * len, m_CellHeight);
+        size_t fillW = m_CellWidth > width ? m_CellWidth : width;
+        size_t fillH = m_CellHeight > height ? m_CellHeight : height;
+        cairo_rectangle(g_Cairo, x, y, fillW, fillH);
         cairo_fill(g_Cairo);
     }
 
+    cairo_set_operator(g_Cairo, CAIRO_OPERATOR_OVER);
     cairo_set_source_rgba(
             g_Cairo,
             ((f >> 16) & 0xFF) / 256.0,
@@ -155,11 +154,13 @@ size_t Font::render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b, b
             ((f) & 0xFF) / 256.0,
             1.0);
 
-    cairo_move_to(g_Cairo, x, y + m_Baseline);
-    cairo_show_text(g_Cairo, s);
+    cairo_move_to(g_Cairo, x, y);
+    pango_cairo_show_layout(g_Cairo, layout);
+
+    g_object_unref(layout);
     cairo_restore(g_Cairo);
 
-    return m_CellWidth * len;
+    return width;
 }
 
 const char *Font::precache(uint32_t c)

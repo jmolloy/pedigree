@@ -107,6 +107,7 @@ libui_apps = [
 # Applications which need pango for text rendering.
 pango_apps = [
     'winman',
+    'TUI',
 ]
 
 # Custom include paths for specific applications.

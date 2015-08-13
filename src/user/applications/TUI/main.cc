@@ -57,6 +57,7 @@
 #define CONSOLE_REFRESH 10
 #define CONSOLE_FLUSH   11
 
+#if 0
 #ifdef TARGET_LINUX
 #define NORMAL_FONT_PATH    "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
 #define BOLD_FONT_PATH      "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
@@ -64,8 +65,12 @@
 #define NORMAL_FONT_PATH    "/system/fonts/DejaVuSansMono.ttf"
 #define BOLD_FONT_PATH      "/system/fonts/DejaVuSansMono-Bold.ttf"
 #endif
+#endif
 
 #define FONT_SIZE           14
+
+#define NORMAL_FONT_PATH    "DejaVu Sans Mono 10"
+#define BOLD_FONT_PATH      "DejaVu Sans Mono 10"
 
 /** End code from InputManager */
 
