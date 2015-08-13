@@ -507,6 +507,29 @@ class PosixSubsystem : public Subsystem
             m_Threads.remove(n); /// \todo It might be safe to delete the pointer... We'll see.
         }
 
+        /** Gets a thread waiter object given a descriptor */
+        Semaphore *getThreadWaiter(void *n)
+        {
+            return m_ThreadWaiters.lookup(n);
+        }
+
+        /** Inserts a thread waiter object, returns a descriptor */
+        void *insertThreadWaiter(Semaphore *waiter)
+        {
+            void *descriptor = reinterpret_cast<void *>(m_NextThreadWaiter++);
+            Semaphore *t = m_ThreadWaiters.lookup(descriptor);
+            if(t)
+                m_ThreadWaiters.remove(descriptor);
+            m_ThreadWaiters.insert(descriptor, waiter);
+            return descriptor;
+        }
+
+        /** Removes a thread waiter object given a descriptor */
+        void removeThreadWaiter(void *n)
+        {
+            m_ThreadWaiters.remove(n);
+        }
+
     private:
 
         /** Signal handlers */
@@ -552,6 +575,11 @@ class PosixSubsystem : public Subsystem
          * Links some thread handles to Threads.
          */
         Tree<size_t, PosixThread*> m_Threads;
+        /**
+         * Links waiter objects to Semaphores.
+         */
+        Tree<void *, Semaphore *> m_ThreadWaiters;
+        size_t m_NextThreadWaiter;
 };
 
 #endif

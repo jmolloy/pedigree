@@ -136,7 +136,8 @@ FileDescriptor::~FileDescriptor()
 PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
     Subsystem(s), m_SignalHandlers(), m_SignalHandlersLock(), m_FdMap(), m_NextFd(s.m_NextFd),
     m_FdLock(), m_FdBitmap(), m_LastFd(0), m_FreeCount(s.m_FreeCount),
-    m_AltSigStack(), m_SyncObjects(), m_Threads()
+    m_AltSigStack(), m_SyncObjects(), m_Threads(), m_ThreadWaiters(),
+    m_NextThreadWaiter(1)
 {
     while(!m_SignalHandlersLock.acquire());
     while(!s.m_SignalHandlersLock.enter());
@@ -232,6 +233,18 @@ PosixSubsystem::~PosixSubsystem()
     }
 
     m_SyncObjects.clear();
+
+    for(Tree<void *, Semaphore *>::Iterator it = m_ThreadWaiters.begin();
+        it != m_ThreadWaiters.end();
+        ++it)
+    {
+        // Wake up everything waiting and then destroy the waiter object.
+        Semaphore *sem = it.value();
+        sem->release(-sem->getValue());
+        delete sem;
+    }
+
+    m_ThreadWaiters.clear();
 
     // Spinlock as a quick way of disabling interrupts.
     Spinlock spinlock;

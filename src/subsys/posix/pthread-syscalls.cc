@@ -554,18 +554,41 @@ void *posix_pedigree_create_waiter()
 {
     PT_NOTICE("posix_pedigree_create_waiter");
 
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return 0;
+    }
+
     Semaphore *sem = new Semaphore(0);
-    return reinterpret_cast<void *>(sem);
+    void *descriptor = pSubsystem->insertThreadWaiter(sem);
+    if (!descriptor)
+    {
+        delete sem;
+    }
+
+    return descriptor;
 }
 
 int posix_pedigree_thread_wait_for(void *waiter)
 {
     PT_NOTICE("posix_pedigree_thread_wait_for");
 
-    Semaphore *sem = reinterpret_cast<Semaphore *>(waiter);
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return -1;
+    }
+
+    Semaphore *sem = pSubsystem->getThreadWaiter(waiter);
     
     // Deadlock detection - don't wait if nothing can wake this waiter.
-    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    /// \todo Check for more than just one thread - there's probably other
+    ///       detections we can do here.
     if (pProcess->getNumThreads() <= 1)
     {
         SYSCALL_ERROR(Deadlock);
@@ -581,7 +604,15 @@ int posix_pedigree_thread_trigger(void *waiter)
 {
     PT_NOTICE("posix_pedigree_thread_trigger");
 
-    Semaphore *sem = reinterpret_cast<Semaphore *>(waiter);
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return 0;
+    }
+
+    Semaphore *sem = pSubsystem->getThreadWaiter(waiter);
     if (sem->getValue())
         return 0;  // Nothing to wake up.
 
@@ -594,6 +625,15 @@ void posix_pedigree_destroy_waiter(void *waiter)
 {
     PT_NOTICE("posix_pedigree_destroy_waiter");
 
-    Semaphore *sem = reinterpret_cast<Semaphore *>(waiter);
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return;
+    }
+
+    Semaphore *sem = pSubsystem->getThreadWaiter(waiter);
+    pSubsystem->removeThreadWaiter(waiter);
     delete sem;
 }
