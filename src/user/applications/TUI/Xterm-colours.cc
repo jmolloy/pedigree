@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -38,7 +37,7 @@ uint32_t g_Colours[] =
     0x800000,
     0x008000,
     0x808000,
-    0x000080,
+    0x6495ed, // Cornflower Blue - much less dark! (was: 0x000080, )
     0x800080,
     0x008080,
     0xc0c0c0, // 7
