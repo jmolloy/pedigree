@@ -156,6 +156,20 @@ PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
 
     s.m_SignalHandlersLock.leave();
     m_SignalHandlersLock.release();
+
+    // Copy across waiter state.
+    for(Tree<void *, Semaphore *>::Iterator it = s.m_ThreadWaiters.begin();
+        it != s.m_ThreadWaiters.end();
+        ++it)
+    {
+        void *key = it.key();
+        Semaphore *orig = it.value();
+
+        Semaphore *sem = new Semaphore(0);
+        m_ThreadWaiters.insert(key, sem);
+    }
+
+    m_NextThreadWaiter = s.m_NextThreadWaiter;
 }
 
 PosixSubsystem::~PosixSubsystem()

@@ -317,6 +317,40 @@ void posix_pthread_exit(void *ret)
 }
 
 /**
+ * Forcefully registers the given thread with the given PosixSubsystem.
+ */
+void pedigree_copy_posix_thread(Thread *origThread, PosixSubsystem *origSubsystem, Thread *newThread, PosixSubsystem *newSubsystem)
+{
+    PosixSubsystem::PosixThread *pOldPosixThread = origSubsystem->getThread(origThread->getId());
+    if (!pOldPosixThread)
+    {
+        // Nothing to see here.
+        return;
+    }
+
+    PosixSubsystem::PosixThread *pNewPosixThread = new PosixSubsystem::PosixThread;
+    pNewPosixThread->pThread = newThread;
+    pNewPosixThread->returnValue = 0;
+
+    // Copy thread-specific data across.
+    for (Tree<size_t, PosixSubsystem::PosixThreadKey *>::Iterator it = pOldPosixThread->m_ThreadData.begin();
+        it != pOldPosixThread->m_ThreadData.end();
+        ++it)
+    {
+        size_t key = it.key();
+        PosixSubsystem::PosixThreadKey *data = it.value();
+
+        pNewPosixThread->addThreadData(key, data);
+        pNewPosixThread->m_ThreadKeys.set(key);
+    }
+
+    pNewPosixThread->lastDataKey = pOldPosixThread->lastDataKey;
+    pNewPosixThread->nextDataKey = pOldPosixThread->nextDataKey;
+
+    newSubsystem->insertThread(newThread->getId(), pNewPosixThread);
+}
+
+/**
  * pedigree_init_pthreads
  *
  * This function copies the user mode thread wrapper from the kernel to a known
@@ -345,10 +379,10 @@ void pedigree_init_pthreads()
         return;
     }
 
-    PosixSubsystem::PosixThread *p = new PosixSubsystem::PosixThread;
-    p->pThread = pThread;
-    p->returnValue = 0;
-    pSubsystem->insertThread(pThread->getId(), p);
+    PosixSubsystem::PosixThread *pPosixThread = new PosixSubsystem::PosixThread;
+    pPosixThread->pThread = pThread;
+    pPosixThread->returnValue = 0;
+    pSubsystem->insertThread(pThread->getId(), pPosixThread);
 }
 
 void* posix_pthread_getspecific(pthread_key_t *key)
@@ -585,7 +619,11 @@ int posix_pedigree_thread_wait_for(void *waiter)
     }
 
     Semaphore *sem = pSubsystem->getThreadWaiter(waiter);
-    
+    if (!sem)
+    {
+        return -1;
+    }
+
     // Deadlock detection - don't wait if nothing can wake this waiter.
     /// \todo Check for more than just one thread - there's probably other
     ///       detections we can do here.
@@ -613,6 +651,8 @@ int posix_pedigree_thread_trigger(void *waiter)
     }
 
     Semaphore *sem = pSubsystem->getThreadWaiter(waiter);
+    if (!sem)
+        return 0;
     if (sem->getValue())
         return 0;  // Nothing to wake up.
 
@@ -634,6 +674,10 @@ void posix_pedigree_destroy_waiter(void *waiter)
     }
 
     Semaphore *sem = pSubsystem->getThreadWaiter(waiter);
+    if (!sem)
+    {
+        return;
+    }
     pSubsystem->removeThreadWaiter(waiter);
     delete sem;
 }

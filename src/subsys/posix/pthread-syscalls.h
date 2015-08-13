@@ -30,7 +30,7 @@
 
 #include "newlib.h"
 
-#if 0
+#if 1
 #define PT_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "." << Processor::information().getCurrentThread()->getId() << "]\t" << Hex << x)
 #else
 #define PT_NOTICE(x)
@@ -62,6 +62,7 @@ int posix_pthread_key_delete(pthread_key_t *key);
 key_destructor posix_pthread_key_destructor(pthread_key_t *key);
 
 void pedigree_init_pthreads();
+void pedigree_copy_posix_thread(Thread *, PosixSubsystem *, Thread *, PosixSubsystem *);
 
 /// Creates a new wait object that threads can use to synchronise.
 void *posix_pedigree_create_waiter();

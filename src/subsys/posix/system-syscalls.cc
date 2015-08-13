@@ -207,6 +207,11 @@ int posix_fork(SyscallState &state)
     Thread *pThread = new Thread(pProcess, state);
     pThread->detach();
 
+    // Fix up the main thread in the child.
+    pedigree_copy_posix_thread(
+        Processor::information().getCurrentThread(), pParentSubsystem,
+        pThread, pSubsystem);
+
     // Kick off the new thread immediately.
     Scheduler::instance().yield();
 
