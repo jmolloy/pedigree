@@ -30,7 +30,7 @@
 
 #include "newlib.h"
 
-#if 1
+#if 0
 #define PT_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "." << Processor::information().getCurrentThread()->getId() << "]\t" << Hex << x)
 #else
 #define PT_NOTICE(x)
