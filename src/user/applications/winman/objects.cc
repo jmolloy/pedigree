@@ -25,6 +25,8 @@
 
 #include <protocol.h>
 
+#include <pango/pangocairo.h>
+
 #include "util.h"
 
 static size_t g_nextContextId = 1;
@@ -215,14 +217,6 @@ void Window::render(cairo_t *cr)
     size_t w = me.getW() - (WINDOW_BORDER_X * 2);
     size_t h = me.getH() - (WINDOW_BORDER_Y * 2);
 
-    double r = 0.0, g = 0.0, b = 0.0;
-    if(m_bFocus)
-        r = 1.0;
-    else if(m_pParent->getFocusWindow() == this)
-        r = 0.5;
-    else
-        r = g = b = 1.0;
-
     // Draw the child framebuffer before window decorations.
     void *pBuffer = getFramebuffer();
     if(pBuffer && (isDirty() && m_bRefresh))
@@ -306,10 +300,23 @@ void Window::render(cairo_t *cr)
 
     if(m_bPendingDecoration)
     {
+        double r = 0.0, g = 0.0, b = 0.0;
+        if(m_bFocus)
+            r = 1.0;
+        else if(m_pParent->getFocusWindow() == this)
+            r = 0.5;
+        else
+            r = g = b = 1.0;
+
         cairo_save(cr);
-        cairo_set_line_cap(cr, CAIRO_LINE_CAP_SQUARE);
-        cairo_set_line_join(cr, CAIRO_LINE_JOIN_MITER);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+
+        PangoLayout *layout = pango_cairo_create_layout(cr);
+        PangoFontDescription *desc = pango_font_description_from_string(WINMAN_PANGO_FONT);
+        pango_layout_set_font_description(layout, desc);
+        pango_font_description_free(desc);
+
+        gchar *safe_markup = g_markup_escape_text(m_sWindowTitle.c_str(), -1);
+        pango_layout_set_markup(layout, safe_markup, -1);
 
         // Window title bar.
         cairo_set_line_width(cr, 0);
@@ -317,20 +324,30 @@ void Window::render(cairo_t *cr)
         cairo_rectangle(cr, x, y, w, WINDOW_TITLE_H);
         cairo_fill(cr);
 
-        // Window title.
-        cairo_text_extents_t extents;
-        cairo_set_font_size(cr, 13);
-        cairo_text_extents(cr, m_sWindowTitle.c_str(), &extents);
-        cairo_move_to(cr, me.getX() + ((w / 2) - (extents.width / 2)), me.getY() + WINDOW_CLIENT_START_Y - 3);
+        cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
         cairo_set_source_rgba(cr, 0.7, 0.7, 0.7, 1.0);
-        cairo_show_text(cr, m_sWindowTitle.c_str());
+
+        // Window title.
+        int width = 0, height = 0;
+        pango_layout_get_size(layout, &width, &height);
+        cairo_move_to(cr,
+            x + ((w / 2) - ((width / PANGO_SCALE) / 2)),
+            y);
+        pango_cairo_show_layout(cr, layout);
 
         // Window border.
+        cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
         cairo_set_source_rgba(cr, r, g, b, 1.0);
+        cairo_set_line_cap(cr, CAIRO_LINE_CAP_SQUARE);
+        cairo_set_line_join(cr, CAIRO_LINE_JOIN_MITER);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
         cairo_set_line_width(cr, 1.0);
 
         cairo_rectangle(cr, x, y, w, h);
         cairo_stroke(cr);
+
+        g_object_unref(layout);
+        g_free(safe_markup);
         cairo_restore(cr);
     }
 

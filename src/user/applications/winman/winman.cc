@@ -108,8 +108,6 @@ bool g_bAlive = true;
 
 #define TEXTONLY_DEFAULT "/applications/ttyterm"
 
-#define PANGO_FONT "Sans 13"
-
 #ifdef TARGET_LINUX
 #define DEJAVU_FONT "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
 #else
@@ -967,23 +965,23 @@ void infoPanel(cairo_t *cr)
     cairo_fill(cr);
 
     PangoLayout *layout = pango_cairo_create_layout(cr);
-    PangoFontDescription *desc = pango_font_description_from_string(PANGO_FONT);
+    PangoFontDescription *desc = pango_font_description_from_string(WINMAN_PANGO_FONT);
 
     pango_layout_set_markup(layout, "The Pedigree Operating System", -1);
 
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
 
-    cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
-
     cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
+    cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
     cairo_move_to(cr, 3, (g_nHeight - 24) + 3);
     pango_cairo_show_layout(cr, layout);
 
     if(g_StatusField.length())
     {
-        pango_layout_set_markup(layout, g_StatusField.c_str(), -1);
-        int width, height;
+        gchar *safe_markup = g_markup_escape_text(g_StatusField.c_str(), -1);
+        pango_layout_set_markup(layout, safe_markup, -1);
+        int width = 0, height = 0;
         pango_layout_get_size(layout, &width, &height);
 
         cairo_move_to(
@@ -992,8 +990,10 @@ void infoPanel(cairo_t *cr)
                 (g_nHeight - 24) + 3);
         pango_cairo_show_layout(cr, layout);
         g_StatusField.clear();
+        g_free(safe_markup);
     }
 
+    g_object_unref(layout);
     cairo_restore(cr);
 }
 
