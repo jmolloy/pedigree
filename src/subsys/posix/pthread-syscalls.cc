@@ -34,6 +34,7 @@ struct pthreadInfoBlock
     void *entry;
     void *arg;
     void *stack;
+    Mutex *mutex;
 } __attribute__((packed));
 
 /**
@@ -58,6 +59,7 @@ int pthread_kernel_enter(void *blk)
     void *entry = args->entry;
     void *new_args = args->arg;
     void *new_stack = args->stack;
+    Mutex *mutex = args->mutex;
 
     // It's grabbed now, so we don't need any more room on the bag rack.
     delete args;
@@ -75,6 +77,7 @@ int pthread_kernel_enter(void *blk)
     // depths of the Userland River. We'll take with us our current stack, a
     // map to our destination, and some additional information that may come
     // in handy when we arrive.
+    mutex->acquire();  // Block before jumping to userspace.
     Processor::jumpUser(0, EVENT_HANDLER_TRAMPOLINE2, stack, reinterpret_cast<uintptr_t>(entry), reinterpret_cast<uintptr_t>(new_args), 0, 0);
 
     // If we get here, we probably got catapaulted many miles back to the
@@ -120,10 +123,12 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
     }
 
     // Build the information structure to pass to the pthread entry function
+    Mutex *pStartMutex = new Mutex(true);
     pthreadInfoBlock *dat = new pthreadInfoBlock;
     dat->entry = reinterpret_cast<void*>(start_addr);
     dat->arg = arg;
     dat->stack = stack;
+    dat->mutex = pStartMutex;
 
     // Create the thread
     Thread *pThread = new Thread(pProcess, pthread_kernel_enter, reinterpret_cast<void*>(dat), 0, true);
@@ -142,6 +147,10 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
     // Insert the thread
     pSubsystem->insertThread(pThread->getId(), p);
     thread->__internal.kthread = pThread->getId();
+
+    // We've now registered the thread properly, we can let it actually jump to
+    // userspace and start running now.
+    pStartMutex->release();
 
     // All done!
     return 0;
@@ -543,12 +552,16 @@ int posix_pthread_key_delete(pthread_key_t *key)
 
 void *posix_pedigree_create_waiter()
 {
+    PT_NOTICE("posix_pedigree_create_waiter");
+
     Semaphore *sem = new Semaphore(0);
     return reinterpret_cast<void *>(sem);
 }
 
 int posix_pedigree_thread_wait_for(void *waiter)
 {
+    PT_NOTICE("posix_pedigree_thread_wait_for");
+
     Semaphore *sem = reinterpret_cast<Semaphore *>(waiter);
     
     // Deadlock detection - don't wait if nothing can wake this waiter.
@@ -566,6 +579,8 @@ int posix_pedigree_thread_wait_for(void *waiter)
 
 int posix_pedigree_thread_trigger(void *waiter)
 {
+    PT_NOTICE("posix_pedigree_thread_trigger");
+
     Semaphore *sem = reinterpret_cast<Semaphore *>(waiter);
     if (sem->getValue())
         return 0;  // Nothing to wake up.
@@ -577,6 +592,8 @@ int posix_pedigree_thread_trigger(void *waiter)
 
 void posix_pedigree_destroy_waiter(void *waiter)
 {
+    PT_NOTICE("posix_pedigree_destroy_waiter");
+
     Semaphore *sem = reinterpret_cast<Semaphore *>(waiter);
     delete sem;
 }
