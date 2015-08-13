@@ -274,9 +274,8 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
     cairo_set_line_width(g_Cairo, 1.0);
 
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
-    cairo_set_source_rgba(g_Cairo, 0, 0, 0, 0.8);
-    cairo_rectangle(g_Cairo, 0, 0, g_nWidth, g_nHeight);
-    cairo_fill(g_Cairo);
+    cairo_set_source_rgba(g_Cairo, 0, 0, 0, 1.0);
+    cairo_paint(g_Cairo);
 
     g_NormalFont = new Font(FONT_SIZE, NORMAL_FONT_PATH,
                             true, g_nWidth);
