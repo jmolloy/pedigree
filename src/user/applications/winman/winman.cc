@@ -49,6 +49,8 @@
 #include <cairo/cairo.h>
 #include <cairo/cairo-ft.h>
 
+#include <pango/pangocairo.h>
+
 #include <protocol.h>
 
 #ifdef TARGET_LINUX
@@ -105,6 +107,8 @@ bool g_bAlive = true;
 #endif
 
 #define TEXTONLY_DEFAULT "/applications/ttyterm"
+
+#define PANGO_FONT "Sans 13"
 
 #ifdef TARGET_LINUX
 #define DEJAVU_FONT "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
@@ -962,24 +966,31 @@ void infoPanel(cairo_t *cr)
     cairo_rectangle(cr, 0, g_nHeight - 24, g_nWidth, 24);
     cairo_fill(cr);
 
-    cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
+    PangoLayout *layout = pango_cairo_create_layout(cr);
+    PangoFontDescription *desc = pango_font_description_from_string(PANGO_FONT);
 
-    cairo_set_font_size(cr, 13);
-    cairo_font_extents_t extents;
-    cairo_font_extents(cr, &extents);
+    pango_layout_set_markup(layout, "The Pedigree Operating System", -1);
 
-    cairo_move_to(cr, 3, (g_nHeight - 24) + 3 + extents.height);
+    pango_layout_set_font_description(layout, desc);
+    pango_font_description_free(desc);
+
     cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
-    cairo_show_text(cr, "The Pedigree Operating System");
+
+    cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
+    cairo_move_to(cr, 3, (g_nHeight - 24) + 3);
+    pango_cairo_show_layout(cr, layout);
 
     if(g_StatusField.length())
     {
+        pango_layout_set_markup(layout, g_StatusField.c_str(), -1);
+        int width, height;
+        pango_layout_get_size(layout, &width, &height);
+
         cairo_move_to(
                 cr,
-                g_nWidth - 3 - (extents.max_x_advance * g_StatusField.length()),
-                (g_nHeight - 24) + 3 + extents.height);
-        cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
-        cairo_show_text(cr, g_StatusField.c_str());
+                g_nWidth - 3 - width,
+                (g_nHeight - 24) + 3);
+        pango_cairo_show_layout(cr, layout);
         g_StatusField.clear();
     }
 

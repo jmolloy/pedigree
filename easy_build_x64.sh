@@ -188,6 +188,11 @@ $script_dir/run_pup.py install mesa
 $script_dir/run_pup.py install ncurses
 $script_dir/run_pup.py install gettext
 
+$script_dir/run_pup.py install pango
+$script_dir/run_pup.py install glib
+$script_dir/run_pup.py install harfbuzz
+$script_dir/run_pup.py install libffi
+
 # Install GCC to pull in shared libstdc++.
 $script_dir/run_pup.py install gcc
 

@@ -104,6 +104,11 @@ libui_apps = [
     'uitest',
 ]
 
+# Applications which need pango for text rendering.
+pango_apps = [
+    'winman',
+]
+
 # Custom include paths for specific applications.
 custom_incpath = {
     'TUI' : ['#images/local/include',
@@ -215,6 +220,20 @@ for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + lib
     if app in libui_apps:
         app_env['CPPPATH'] += ['#src/user/libraries/libui/include']
         app_env['LIBS'] += ['ui']
+
+    if app in pango_apps:
+        app_env['LIBPATH'] += [os.path.join(imagesdir, 'libraries')]
+        app_env['CPPPATH'] += [
+            '#images/local/libraries/glib-2.0/include',
+            '#images/local/include/glib-2.0',
+            '#images/local/include/pango-1.0',
+            '#images/local/include/cairo',
+        ]
+
+        # pango pulls in a lot of dependencies.
+        app_env['LIBS'] += ['cairo', 'pangocairo-1.0', 'pangoft2-1.0',
+            'pango-1.0', 'harfbuzz', 'fontconfig', 'gobject-2.0', 'glib-2.0',
+            'ffi']
 
     app_env['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s ' % (
         app_env.Dir(builddir).abspath,)
