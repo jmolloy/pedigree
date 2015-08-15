@@ -96,6 +96,8 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
 {
     PT_NOTICE("pthread_create");
 
+    pthread_t result = *thread;
+
     // Build some defaults for the attributes, if needed
     size_t stackSize = 0;
     if(attr)
@@ -146,7 +148,7 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
 
     // Insert the thread
     pSubsystem->insertThread(pThread->getId(), p);
-    thread->__internal.kthread = pThread->getId();
+    result->__internal.kthread = pThread->getId();
 
     // We've now registered the thread properly, we can let it actually jump to
     // userspace and start running now.
@@ -163,7 +165,7 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
  * the passed thread completes execution. The return value from the thread is
  * stored in value_ptr.
  */
-int posix_pthread_join(pthread_t *thread, void **value_ptr)
+int posix_pthread_join(pthread_t thread, void **value_ptr)
 {
     PT_NOTICE("pthread_join");
 
@@ -212,7 +214,7 @@ int posix_pthread_join(pthread_t *thread, void **value_ptr)
  *
  * Similar to join, but without caring about the return value.
  */
-int posix_pthread_detach(pthread_t *thread)
+int posix_pthread_detach(pthread_t thread)
 {
     PT_NOTICE("pthread_detach");
 

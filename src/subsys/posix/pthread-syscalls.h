@@ -40,10 +40,10 @@ typedef void (*pthreadfn)(void*);
 typedef void (*key_destructor)(void*);
 
 int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadfn start_addr, void *arg);
-int posix_pthread_join(pthread_t *thread, void **value_ptr);
-int posix_pthread_detach(pthread_t *thread);
+int posix_pthread_join(pthread_t thread, void **value_ptr);
+int posix_pthread_detach(pthread_t thread);
 
-int posix_pthread_kill(pthread_t *thread, int sig);
+int posix_pthread_kill(pthread_t thread, int sig);
 int posix_pthread_sigmask(int how, const uint32_t *set, uint32_t *oset);
 
 int posix_pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr);

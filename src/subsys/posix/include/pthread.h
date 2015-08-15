@@ -50,7 +50,7 @@
 
 #define PTHREAD_MUTEX_INITIALIZER       {0, 0, 0, 0, 0}
 
-#define PTHREAD_ONCE_INIT               0
+#define PTHREAD_ONCE_INIT               {{0}}
 
 #define PTHREAD_PROCESS_SHARED          1
 #define PTHREAD_PROCESS_PRIVATE         2

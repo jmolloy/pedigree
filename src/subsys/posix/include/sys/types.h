@@ -495,7 +495,7 @@ typedef struct _pthread_t
 
         char __pad[_PTHREAD_TYPE_MINSIZE];
     };
-} pthread_t;
+} *pthread_t;
 
 typedef struct _pthread_spinlock_t
 {

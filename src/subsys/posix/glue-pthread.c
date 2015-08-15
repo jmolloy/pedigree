@@ -68,10 +68,10 @@ static int _pedigree_thread_trigger(void *waiter)
 
 static int _pthread_is_valid(pthread_t p)
 {
-    return p.__internal.kthread >= 0;
+    return p && p->__internal.kthread >= 0;
 }
 
-static void _pthread_make_invalid(pthread_t *p)
+static void _pthread_make_invalid(pthread_t p)
 {
     p->__internal.kthread = -1;
 }
@@ -97,12 +97,15 @@ int pthread_once(pthread_once_t *once_control, pthread_once_func_t init_routine)
 
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void*), void *arg)
 {
+    *thread = (pthread_t) malloc(sizeof(**thread));
     return syscall4(POSIX_PTHREAD_CREATE, (long) thread, (long) attr, (long) start_routine, (long) arg);
 }
 
 int pthread_join(pthread_t thread, void **value_ptr)
 {
-    return syscall2(POSIX_PTHREAD_JOIN, (long) &thread, (long) value_ptr);
+    int result = syscall2(POSIX_PTHREAD_JOIN, (long) thread, (long) value_ptr);
+    free(thread);
+    return result;
 }
 
 void pthread_exit(void *ret)
@@ -112,12 +115,13 @@ void pthread_exit(void *ret)
 
 int pthread_detach(pthread_t thread)
 {
-    return syscall1(POSIX_PTHREAD_DETACH, (long) &thread);
+    return syscall1(POSIX_PTHREAD_DETACH, (long) thread);
 }
 
 pthread_t pthread_self()
 {
-    pthread_t result;
+    /// \todo this is not brilliant.
+    static struct _pthread_t result;
 #ifdef X86_COMMON
     asm volatile("mov %%fs:0, %0" : "=r" (result.__internal.kthread));
 #endif
@@ -126,17 +130,19 @@ pthread_t pthread_self()
     asm volatile("mrc p15,0,%0,c13,c0,3" : "=r" (result.__internal.kthread));
 #endif
 
-    return result;
+    return &result;
 }
 
 int pthread_equal(pthread_t t1, pthread_t t2)
 {
-    return t1.__internal.kthread == t2.__internal.kthread;
+    if (!(t1 && t2))
+        return 0;
+    return t1->__internal.kthread == t2->__internal.kthread;
 }
 
 int pthread_kill(pthread_t thread, int sig)
 {
-    return syscall2(POSIX_PTHREAD_KILL, (long) &thread, sig);
+    return syscall2(POSIX_PTHREAD_KILL, (long) thread, sig);
 }
 
 int pthread_sigmask(int how, const sigset_t *set, sigset_t *oset)
@@ -258,7 +264,7 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
     memset(mutex, 0, sizeof(pthread_mutex_t));
 
     mutex->__internal.value = 1;
-    _pthread_make_invalid(&mutex->__internal.owner);
+    _pthread_make_invalid(mutex->__internal.owner);
     mutex->__internal.waiter = _pedigree_create_waiter();
 
     if (attr)
@@ -414,7 +420,7 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
     }
 
     // Otherwise we're good to wake stuff up.
-    _pthread_make_invalid(&mutex->__internal.owner);
+    _pthread_make_invalid(mutex->__internal.owner);
     _pedigree_thread_trigger(mutex->__internal.waiter);
 
     return 0;
@@ -694,7 +700,7 @@ int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
 
     lock->__internal.atom = 1;
     lock->__internal.owner = pthread_self();
-    _pthread_make_invalid(&lock->__internal.locker);
+    _pthread_make_invalid(lock->__internal.locker);
     return 0;
 }
 
@@ -712,8 +718,8 @@ int pthread_spin_destroy(pthread_spinlock_t *lock)
         return -1;
     }
 
-    _pthread_make_invalid(&lock->__internal.locker);
-    _pthread_make_invalid(&lock->__internal.owner);
+    _pthread_make_invalid(lock->__internal.locker);
+    _pthread_make_invalid(lock->__internal.owner);
     return 0;
 }
 
@@ -778,7 +784,7 @@ int pthread_spin_unlock(pthread_spinlock_t *lock)
         return -1;
     }
 
-    _pthread_make_invalid(&lock->__internal.locker);
+    _pthread_make_invalid(lock->__internal.locker);
     __sync_bool_compare_and_swap(&lock->__internal.atom, 0, 1);
 
     // Avoids a case where, in a loop constantly performing an acquire, no other

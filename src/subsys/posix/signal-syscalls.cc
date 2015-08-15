@@ -424,7 +424,7 @@ int posix_kill(int pid, int sig)
     return 0;
 }
 
-int posix_pthread_kill(pthread_t *thread, int sig)
+int posix_pthread_kill(pthread_t thread, int sig)
 {
     PT_NOTICE("pthread_kill");
 
