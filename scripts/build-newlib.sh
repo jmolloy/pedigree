@@ -20,7 +20,6 @@ CC="$XGCC $XCFLAGS" LD="$XLD" \
 ../newlib/configure --host=$COMPILER_TARGET --target=$COMPILER_TARGET \
                     --enable-newlib-multithread --enable-newlib-mb \
                     --disable-newlib-supplied-syscalls --with-pic \
-                    --disable-newlib-iconv \
                     >>newlib.log 2>&1
 
 make >>newlib.log 2>&1
