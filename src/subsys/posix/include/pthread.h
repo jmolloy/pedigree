@@ -69,7 +69,7 @@ int         _EXFUN(pthread_create, (pthread_t *thread, const pthread_attr_t *att
 int         _EXFUN(pthread_join, (pthread_t thread, void **value_ptr));
 void        _EXFUN(pthread_exit, (void *value_ptr));
 int         _EXFUN(pthread_detach, (pthread_t thread));
-pthread_t   _EXFUN(pthread_self, ());
+pthread_t   _EXFUN(pthread_self, (void));
 int         _EXFUN(pthread_equal, (pthread_t t1, pthread_t t2));
 int         _EXFUN(pthread_atfork, (void (*prepare)(void), void (*parent)(void), void (*child)(void)));
 int         _EXFUN(pthread_kill, (pthread_t thread, int sig));
