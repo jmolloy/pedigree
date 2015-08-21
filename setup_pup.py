@@ -44,7 +44,7 @@ def main():
     cfg = SafeConfigParser()
     cfg.read(pupConfigDefault)
 
-    cfg.set('paths', 'instalroot', '%s/images/local' % scriptdir)
+    cfg.set('paths', 'installroot', '%s/images/local' % scriptdir)
     cfg.set('paths', 'localdb', '%s/images/local/support/pup/db' % scriptdir)
 
     cfg.set('settings', 'arch', target_arch)
