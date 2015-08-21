@@ -24,7 +24,6 @@ import SCons
 Import(['env'])
 
 builddir = env['BUILDDIR']
-srcdir = Dir('#').abspath
 kerneldir = env['PEDIGREE_BUILD_KERNEL']
 objname = os.path.join(builddir, 'bootloader')
 uimage = os.path.join(builddir, 'uImage.bin')
@@ -47,7 +46,7 @@ if env['arm_beagle']:
 
 env_clone.FileAsHeader('autogen.h', kernel)
 
-env_clone['CPPPATH'] += [env.File('autogen.h').get_dir()]
+env_clone['CPPPATH'] = [env.File('autogen.h').get_dir()]
 env_clone.Program(objname, files, LINKFLAGS='-nostdlib -T$LSCRIPT',
                   LSCRIPT=File('#src/system/boot/arm/link-arm-beagle.ld'))
 

@@ -95,6 +95,9 @@ def removeFlags(flags, removal):
     Returns:
         Updated flags.
     """
+    if isinstance(flags, str):
+        flags = flags.split(' ')
+
     for flag in removal:
         try:
             flags.remove(flag)

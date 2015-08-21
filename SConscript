@@ -61,6 +61,6 @@ env.Sqlite(config_database, configSchemas)
 if 'STATIC_DRIVERS' in env['CPPDEFINES']:
     # Generate config database header file for static inclusion.
     config_header = env.File('#src/modules/system/config/config_database.h')
-    env.FileToHeader(config_header, config_database)
+    env.FileAsHeader(config_header, config_database)
 
 build.buildDiskImages(env, config_database)

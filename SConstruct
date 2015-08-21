@@ -348,12 +348,12 @@ if env['ON_PEDIGREE'] or env['COMPILER_TARGET']:
         host_arch = env['COMPILER_TARGET']
 
     extra_defines = []
-    if re.match('i[3456]86',host_arch) is not None:
+    if re.match('i[3456]86', host_arch) is not None:
         flags_arch = 'x86'
 
         env['PEDIGREE_IMAGES_DIR'] = default_imgdir['x86']
         env['ARCH_TARGET'] = 'X86'
-    elif re.match('amd64|x86[_-]64',host_arch) is not None:
+    elif re.match('amd64|x86[_-]64', host_arch) is not None:
         flags_arch = 'x64'
 
         env['PEDIGREE_IMAGES_DIR'] = default_imgdir['x64']
@@ -365,11 +365,6 @@ if env['ON_PEDIGREE'] or env['COMPILER_TARGET']:
         env['ARCH_TARGET'] = 'PPC'
     elif re.match('arm',host_arch) is not None:
         flags_arch = 'arm'
-
-        # TODO(miselin): this is broken with the MergeFlags stuff.
-
-        raise SCons.Errors.UserError('ARM needs to be updated to use '
-            'correct MergeFlags calls for sub-architectures.')
 
         # Handle input options
         mach = ''
@@ -383,10 +378,11 @@ if env['ON_PEDIGREE'] or env['COMPILER_TARGET']:
             extra_defines += ['ARM_BEAGLE']
             mach = 'beagle'
 
+        ccflags = default_flags['arm']
         cflags = default_cflags['arm']
         cxxflags = default_cxxflags['arm']
-        asflags = default_asflags['arm']
-        linkflags = default_linkflags['arm'].replace('[mach]', mach)
+        default_linkflags['arm'] = [x.replace('[mach]', mach) for x in
+                                    default_linkflags['arm']]
 
         if env['arm_9']:
             extra_defines += ['ARM926E'] # TODO: too specific.
@@ -394,8 +390,12 @@ if env['ON_PEDIGREE'] or env['COMPILER_TARGET']:
             extra_defines += ['ARMV7']
             if env['arm_cortex_a8']:
                 # TODO: actually need to use VFP, not FPA
-                cflags = misc.safeAppend(cflags, ' -mcpu=cortex-a8 -mtune=cortex-a8 -mfpu=vfp ')
-                cxxflags = misc.safeAppend(cxxflags, ' -mcpu=cortex-a8 -mtune=cortex-a8 -mfpu=vfp ')
+                arm_flags = ['-mcpu=cortex-a8', '-mtune=cortex-a8', '-mfpu=vfp']
+                ccflags += arm_flags
+
+        default_flags['arm'] = ccflags
+        default_cflags['arm'] = cflags
+        default_cxxflags['arm'] = cxxflags
 
         if env['arm_bigendian']:
             extra_defines += ['BIG_ENDIAN']
