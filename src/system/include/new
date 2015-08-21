@@ -19,14 +19,14 @@
 #include <processor/types.h>
 
 // Conventional new
-void *operator new (size_t size);
-void *operator new[] (size_t size);
+void *operator new (size_t size) throw();
+void *operator new[] (size_t size) throw();
 void operator delete (void * p);
 void operator delete[] (void * p);
 
 // Placement new
-void* operator new(size_t, void* p);
-void* operator new[](size_t, void* p);
+void* operator new(size_t, void* p) throw();
+void* operator new[](size_t, void* p) throw();
 void  operator delete  (void*, void*);
 void  operator delete[](void*, void*);
 

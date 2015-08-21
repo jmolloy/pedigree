@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -37,8 +36,8 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
     /// \todo Unmap.
     VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
     
-    uintptr_t mapBase   = Info.mods_addr;
-    size_t mapLen       = Info.mods_count;
+    uintptr_t mapBase   = reinterpret_cast<uintptr_t>(Info.getModuleBase());
+    size_t mapLen       = Info.getModuleCount();
 
     for(size_t i = 0; i < mapLen; i+= 0x1000)
     {

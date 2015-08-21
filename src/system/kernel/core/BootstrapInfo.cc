@@ -173,4 +173,20 @@ void *BootstrapStruct_t::nextMemoryMapEntry(void *opaque) const
         return new_opaque;
 }
 
+size_t BootstrapStruct_t::getModuleCount() const
+{
+    if (flags & MULTIBOOT_FLAG_MODS)
+        return mods_count;
+    else
+        return 0;
+}
+
+void *BootstrapStruct_t::getModuleBase() const
+{
+    if (flags & MULTIBOOT_FLAG_MODS)
+        return reinterpret_cast<void *>(mods_addr);
+    else
+        return 0;
+}
+
 #endif

@@ -131,7 +131,11 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
     for (size_t i = 1; i < pBootstrap.getSectionHeaderCount(); i++)
     {
         uintptr_t shdr_addr = pBootstrap.getSectionHeaders() + i * pBootstrap.getSectionHeaderEntrySize();
+#ifdef X86_COMMON
         Elf32SectionHeader_t *pSh = m_AdditionalSectionHeaders->convertPhysicalPointer<Elf32SectionHeader_t>(shdr_addr);
+#else
+        Elf32SectionHeader_t *pSh = reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.getSectionHeaders());
+#endif
 
 #if defined(X86_COMMON)
         // Adjust the section

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -713,30 +712,9 @@ void *memmove(void *s1, const void *s2, size_t n)
     memcpy(s1, s2, n);
   else
   {
-    uint8_t *dest8 = (uint8_t*)s1 + n;
-    const uint8_t *src8 = (const uint8_t*)s2 + n;
-
-    while ((((uintptr_t)dest8 - 1) % 4) != 0 && n != 0)
-    {
-      *--dest8 = *--src8;
-      --n;
-    }
-
-    uint32_t *dest32 = (uint32_t*)dest8;
-    const uint32_t *src32 = (const uint32_t*)src8;
-    while (n >= 4)
-    {
-      *--dest32 = *--src32;
-      n -= 4;
-    }
-
-    dest8 = (uint8_t*)dest32;
-    src8 = (const uint8_t*)src32;
-    while (n != 0)
-    {
-      *--dest8 = *--src8;
-      --n;
-    }
+    const unsigned char *sp = (const unsigned char *) s2 + n;
+    unsigned char *dp = (unsigned char *) s1 + n;
+    for (; n != 0; n--) *dp-- = *sp--;
   }
   return s1;
 }

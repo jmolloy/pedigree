@@ -67,6 +67,9 @@ public:
     uint32_t getMemoryMapEntryType(void *opaque) const;
     void *nextMemoryMapEntry(void *opaque) const;
 
+    size_t getModuleCount() const;
+    void *getModuleBase() const;
+
 private:
     // If we are passed via grub, this information will be completely different to
     // via the bootstrapper.
