@@ -58,7 +58,7 @@ opts.AddVariables(
     BoolVariable('verbose','Display verbose build output.',0),
     BoolVariable('nocolour','Don\'t use colours in build output.',0),
     BoolVariable('verbose_link','Display verbose linker output.',0),
-    BoolVariable('warnings', 'If nonzero, compilation without -Werror', 1),
+    BoolVariable('warnings', 'If nonzero, compilation without -Werror', 0),
     BoolVariable('installer', 'Build the installer', 0),
     BoolVariable('genflags', 'Whether or not to generate flags and things dynamically.', 1),
     BoolVariable('ccache', 'Prepend ccache to cross-compiler paths (for use with CROSS)', 0),
