@@ -35,7 +35,7 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
     // Map in the base ELF file we loaded from
     /// \todo Unmap.
     VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
-    
+
     uintptr_t mapBase   = reinterpret_cast<uintptr_t>(Info.getModuleBase());
     size_t mapLen       = Info.getModuleCount();
 
@@ -183,9 +183,9 @@ void Processor::setInterrupts(bool bEnable)
         uint32_t cpsr = 0;
         asm volatile("MRS %0, cpsr" : "=r" (cpsr));
         if(bEnable)
-            cpsr ^= 0x80;
+            cpsr ^= 0xC0;
         else
-            cpsr |= 0x80;
+            cpsr |= 0xC0;
         asm volatile("MSR cpsr_c, %0" : : "r" (cpsr));
     }
 }
@@ -197,7 +197,7 @@ bool Processor::getInterrupts()
     {
         uint32_t cpsr = 0;
         asm volatile("MRS %0, cpsr" : "=r" (cpsr));
-        return !(cpsr & 0x80);
+        return !(cpsr & 0xC0);
     }
     else
         return false;
