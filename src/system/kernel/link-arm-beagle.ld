@@ -55,6 +55,7 @@ SECTIONS
     {
         . = ALIGN(4096);
         bss = .; _bss = .; __bss = .;
+        *(.stacks);
         *(.asm.bss);
         *(.bss*);
         *(.sbss);

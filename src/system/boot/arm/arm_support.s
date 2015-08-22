@@ -43,7 +43,7 @@ start:
     ldr sp, =stack_irq + 0x1000
     
     # Concept from lk (geist) - a location to dump stuff during IRQ handling
-    # ldr r13, =irq_save
+    ldr r13, =irq_save
     
     # Read the CPSR, mask out the lower 6 bits, and enter SVC mode
     mrs r0, cpsr
@@ -55,7 +55,7 @@ start:
 
     bl __start
 
-.section .stacks
+.section .stacks @nobits
 .lcomm stack_svc, 0x10000
 .lcomm stack_irq, 0x1000
 .lcomm stack_fiq, 0x1000
