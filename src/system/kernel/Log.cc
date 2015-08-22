@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -67,11 +66,11 @@ Log::Log () :
     m_StaticEntryEnd(0),
     m_Buffer(),
     m_NumberType(Dec),
-    #ifdef DONT_LOG_TO_SERIAL
+#ifdef DONT_LOG_TO_SERIAL
     m_EchoToSerial(false)
-    #else
+#else
     m_EchoToSerial(true)
-    #endif
+#endif
 {
 }
 

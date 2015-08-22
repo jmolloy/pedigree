@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -129,6 +128,18 @@ struct atag {
         struct atag_cmdline      cmdline;
     } u;
 };
+
+#define MULTIBOOT_FLAG_MEM     0x001
+#define MULTIBOOT_FLAG_DEVICE  0x002
+#define MULTIBOOT_FLAG_CMDLINE 0x004
+#define MULTIBOOT_FLAG_MODS    0x008
+#define MULTIBOOT_FLAG_AOUT    0x010
+#define MULTIBOOT_FLAG_ELF     0x020
+#define MULTIBOOT_FLAG_MMAP    0x040
+#define MULTIBOOT_FLAG_CONFIG  0x080
+#define MULTIBOOT_FLAG_LOADER  0x100
+#define MULTIBOOT_FLAG_APM     0x200
+#define MULTIBOOT_FLAG_VBE     0x400
 
 /// Bootstrap structure passed to the kernel entry point.
 struct BootstrapStruct_t
@@ -754,7 +765,7 @@ struct SecondLevelDescriptor
 extern "C" void __start(uint32_t r0, uint32_t machineType, struct atag *tagList)
 {
     BeagleGpio gpio;
-    
+
     bool b = uart_softreset(3);
     if(!b)
         while(1);
@@ -780,7 +791,7 @@ extern "C" void __start(uint32_t r0, uint32_t machineType, struct atag *tagList)
 
     writeStr(3, "\r\nPlease press the USER button on the board to continue.\r\n");
 
-    while(!gpio.capturepin(7));
+    // while(!gpio.capturepin(7));
 
     writeStr(3, "USER button pressed, continuing...\r\n\r\n");
 
@@ -902,10 +913,12 @@ extern "C" void __start(uint32_t r0, uint32_t machineType, struct atag *tagList)
     bs->num = elf.m_pHeader->shnum;
     bs->size = elf.m_pHeader->shentsize;
     bs->addr = (unsigned int)elf.m_pSectionHeaders;
+    bs->flags |= MULTIBOOT_FLAG_ELF;
 
     // Repurpose these variables a little....
     bs->mods_addr = reinterpret_cast<uint32_t>(elf.m_pBuffer);
     bs->mods_count = (sizeof file) + 0x1000;
+    bs->flags |= MULTIBOOT_FLAG_MODS;
 
     // For every section header, set .addr = .offset + m_pBuffer.
     for (int i = 0; i < elf.m_pHeader->shnum; i++)

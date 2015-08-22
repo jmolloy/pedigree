@@ -580,7 +580,7 @@ void SlamAllocator::initialise()
     // Good to go - wipe the bitmap and we are now configured.
     memset(m_SlabRegionBitmap, 0, bitmapBytes);
 
-    NOTICE("Kernel heap range prepared from " << m_Base << " to " << heapEnd << ", size: " << (heapEnd - m_Base));
+    NOTICE("Kernel heap range prepared from " << Hex << m_Base << " to " << heapEnd << ", size: " << (heapEnd - m_Base));
     DEBUG_LOG("  -> kernel heap bitmap is " << Dec << (bitmapBytes / 1024) << Hex << "K");
 
     for (size_t i =0; i < 32; i++)
