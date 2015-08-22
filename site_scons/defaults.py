@@ -139,10 +139,10 @@ default_arm_linkflags = ['-Tsrc/system/kernel/link-arm-[mach].ld']
 default_arm_imgdir = '#images/arm'
 
 # arm final variables
-arm_flags = default_arm_flags + generic_flags + warning_flags + warning_flags_off
-arm_cflags = default_arm_cflags + warning_flags_c
-arm_cxxflags = default_arm_cxxflags + warning_flags_cxx
-arm_asflags = default_arm_asflags
+arm_flags = generic_flags + default_arm_flags + warning_flags + warning_flags_off
+arm_cflags = generic_cflags + default_arm_cflags + warning_flags_c
+arm_cxxflags = generic_cxxflags + default_arm_cxxflags + warning_flags_cxx
+arm_asflags = generic_asflags + default_arm_asflags
 arm_linkflags = generic_linkflags + default_arm_linkflags
 arm_defines = [x for x in generic_defines if x != "SERIAL_IS_FILE"] + general_arm_defines
 
