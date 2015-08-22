@@ -3,4 +3,6 @@
 #qemu-system-arm -M versatilepb -kernel bootloader -serial /dev/tty
 #qemu-system-arm -M integratorcp -kernel bootloader -serial /dev/tty
 
-qemu-system-arm -M beaglexm -drive if=sd,cache=writeback,file=build/hdd.img -clock unix -serial stdio -device usb-kbd -usb
+# linaro beaglexm emulation
+
+qemu-system-arm -M beaglexm -vga none -drive if=sd,cache=writeback,file=build/hdd.img -clock unix -serial stdio -device usb-kbd -usb $*

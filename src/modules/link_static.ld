@@ -5,6 +5,7 @@ SECTIONS
   .text : {*(.text.*)}
   .module_ctors :
   {
+    *(.init_array)
     *(.ctors)
   }
 
