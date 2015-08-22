@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -162,6 +161,29 @@ uintptr_t ARMV7InterruptManager::syscall(Service_t service,
     return 0;
 }
 
+// Handles data aborts, but with a stack frame.
+void kdata_abort(uintptr_t linkreg)
+{
+  InterruptState state;
+
+  // Grab the aborted address. PC comes from lr, which comes from the naked
+  // function previously.
+  uintptr_t dfar = 0;
+  asm volatile("MRC p15,0,%0,c6,c0,0" : "=r" (dfar));
+
+#ifdef DEBUGGER
+  static LargeStaticString sError;
+  sError.clear();
+  sError.append("Data Abort at 0x");
+  sError.append(dfar, 16, 8, '0');
+  sError.append(", at PC 0x");
+  sError.append(linkreg, 16, 8, '0');
+  Debugger::instance().start(state, sError);
+#endif
+
+  while( 1 );
+}
+
 extern "C" void arm_swint_handler() __attribute__((interrupt("SWI")));
 extern "C" void arm_instundef_handler()__attribute__((naked));
 extern "C" void arm_fiq_handler() __attribute__((interrupt("FIQ")));
@@ -210,21 +232,10 @@ extern "C" void arm_data_abort_handler()
 {
   NOTICE_NOLOCK("data abort");
 
-  uintptr_t dfar = 0;
-  asm volatile("MRC p15,0,%0,c6,c0,0" : "=r" (dfar));
-
-  NOTICE_NOLOCK("Address: " << dfar);
-
-  uint32_t dfsr = 0;
-  asm volatile("MRC p15,0,%0,c5,c0,0" : "=r" (dfsr));
-
-  NOTICE_NOLOCK("Status: " << dfsr);
-
   uintptr_t linkreg = 0;
   asm volatile("mov %0, lr" : "=r" (linkreg));
-  NOTICE_NOLOCK("Link register: " << linkreg);
 
-  while( 1 );
+  kdata_abort(linkreg);
 }
 
 extern "C" void arm_addrexcept_handler()
