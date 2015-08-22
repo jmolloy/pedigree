@@ -82,7 +82,7 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, link, strip, li
         # TODO: fix platform detection on Pedigree
         exit(2)
     else:
-        target = link.split('-')[0]
+        target = os.path.basename(link).split('-')[0]
         if target in ['x86_64', 'amd64', 'i686']:
             objs_to_remove.extend(['memcpy',])
         elif target in ['arm']:
