@@ -445,7 +445,9 @@ if env['debugger']:
     debug_flags = {'CCFLAGS': ['-g3', '-ggdb', '-gdwarf-2']}
     env.MergeFlags(debug_flags)
 
-    # TODO(miselin): do the same for GNU AS targets
+    if 'nasm' not in env['AS']:
+        debug_flags = {'ASFLAGS': debug_flags['CCFLAGS']}
+        env.MergeFlags(debug_flags)
 
 # NASM is used for X86 and X64 builds
 if env['ARCH_TARGET'] in ('X86', 'X64'):
