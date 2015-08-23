@@ -222,9 +222,6 @@ int loadModules(void *inf)
 
         tags++;
     }
-
-    return 0;
-
 #else
     BootstrapStruct_t bsInf = *static_cast<BootstrapStruct_t*>(inf);
 
@@ -250,8 +247,14 @@ int loadModules(void *inf)
         Processor::initialisationDone();
     #endif
 
-    return 0;
 #endif
+
+    if(KernelElf::instance().hasPendingModules())
+    {
+      FATAL("At least one module's dependencies were never met.");
+    }
+
+    return 0;
 }
 
 /** Kernel entry point. */

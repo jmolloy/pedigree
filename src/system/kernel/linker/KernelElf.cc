@@ -699,3 +699,8 @@ const char *KernelElf::globalLookupSymbol(uintptr_t addr, uintptr_t *startAddr)
     WARNING_NOLOCK("KERNELELF: GlobalLookupSymbol(" << Hex << addr << ") failed.");
     return 0;
 }
+
+bool KernelElf::hasPendingModules() const
+{
+    return m_PendingModules.count() != 0;
+}

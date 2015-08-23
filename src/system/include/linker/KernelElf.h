@@ -96,6 +96,9 @@ class KernelElf : public Elf
         /** Returns the address space allocator for modules. */
         MemoryAllocator &getModuleAllocator() {return m_ModuleAllocator;}
 
+        /** Do we have pending modules still? */
+        bool hasPendingModules() const;
+
     private:
         /** Default constructor does nothing */
         KernelElf() INITIALISATION_ONLY;
