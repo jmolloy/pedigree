@@ -162,12 +162,9 @@ uintptr_t ARMV7InterruptManager::syscall(Service_t service,
 }
 
 // Handles data aborts, but with a stack frame.
-void kdata_abort(uintptr_t linkreg)
+void kdata_abort(InterruptState &state)
 {
-  InterruptState state;
-
-  // Grab the aborted address. PC comes from lr, which comes from the naked
-  // function previously.
+  // Grab the aborted address.
   uintptr_t dfar = 0;
   asm volatile("MRC p15,0,%0,c6,c0,0" : "=r" (dfar));
 
@@ -177,7 +174,7 @@ void kdata_abort(uintptr_t linkreg)
   sError.append("Data Abort at 0x");
   sError.append(dfar, 16, 8, '0');
   sError.append(", at PC 0x");
-  sError.append(linkreg, 16, 8, '0');
+  sError.append(state.getInstructionPointer() - 4, 16, 8, '0');
   Debugger::instance().start(state, sError);
 #endif
 
@@ -190,7 +187,7 @@ extern "C" void arm_fiq_handler() __attribute__((interrupt("FIQ")));
 extern "C" void arm_irq_handler(InterruptState &state);
 extern "C" void arm_reset_handler() __attribute__((naked));
 extern "C" void arm_prefetch_abort_handler() __attribute__((naked));
-extern "C" void arm_data_abort_handler() __attribute__((naked));
+extern "C" void arm_data_abort_handler(InterruptState &state) __attribute__((naked));
 extern "C" void arm_addrexcept_handler() __attribute__((naked));
 
 extern "C" void arm_swint_handler()
@@ -212,7 +209,6 @@ extern "C" void arm_fiq_handler()
 
 extern "C" void arm_irq_handler(InterruptState &state)
 {
-  // InterruptState state; /// \todo Do something useful with this
   ARMV7InterruptManager::interrupt(state);
 }
 
@@ -228,14 +224,9 @@ extern "C" void arm_prefetch_abort_handler()
   while( 1 );
 }
 
-extern "C" void arm_data_abort_handler()
+extern "C" void arm_data_abort_handler(InterruptState &state)
 {
-  NOTICE_NOLOCK("data abort");
-
-  uintptr_t linkreg = 0;
-  asm volatile("mov %0, lr" : "=r" (linkreg));
-
-  kdata_abort(linkreg);
+  kdata_abort(state);
 }
 
 extern "C" void arm_addrexcept_handler()

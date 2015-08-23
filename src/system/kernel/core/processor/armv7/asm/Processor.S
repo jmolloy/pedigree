@@ -193,8 +193,8 @@ init_stacks:
     orr r1, r0, #0x12
     msr cpsr_c, r1
 
+    # stack_irq has 0x10 bytes on top of it for saving extra data.
     ldr sp, =stack_irq + 0x10000
-    ldr r13, =irq_save + 0x10
 
     # Read the CPSR, mask out the lower 6 bits, and re-enter SVC mode
     mrs r0, cpsr
@@ -207,9 +207,20 @@ init_stacks:
 
     bx lr
 
-.section .stacks @nobits
-.comm irq_save, 0x10
-.comm stack_irq, 0x10000
+.section .stacks.irq @nobits
+.align 8
+# irq_save is 16 bytes at the top of the normal IRQ stack, to which scratch
+# data is stored (eg, registers that we need to trash to create an IRQ frame).
+.comm stack_irq, 0x10010
+
+.section .stacks.fiq @nobits
+.align 8
 .comm stack_fiq, 0x10000
+
+.section .stacks.abort @nobits
+.align 8
 .comm stack_abort, 0x10000
+
+.section .stacks.svc @nobits
+.align 8
 .comm stack_svc, 0x20000

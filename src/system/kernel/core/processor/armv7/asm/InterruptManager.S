@@ -45,7 +45,7 @@ __arm_vector_table:
         ldr pc,=arm_prefetch_abort_handler
 # 0x10 - DATA ABORT
     __armvec_dataabort:
-        ldr pc,=arm_data_abort_handler
+        ldr pc,=arm_asm_data_abort
 # 0x14 - NOT USED
         ldr pc,=arm_addrexcept_handler
 # 0x18 - IRQ (interrupt)
@@ -58,35 +58,58 @@ __end_arm_vector_table:
 
 .section .text
 
-arm_asm_irq_handler:
+##
 
-    # Save r4-r6
-    stmia r13, {r4 - r6}
+.macro __arm_interrupt entrypoint
+    # Save some registers so we can trash them to get interrupt info.
+    stmia r13, {r4-r6}
+
+    # Save this point on the stack so we can restore r4-r5.
     mov r4, r13
     sub r5, lr, #4
-    mrs r6, spsr
-    
-    msr cpsr_c, #(3<<6 | 0x13)
-    
-    # Save return address
-    stmfd sp!, {r5}
-    
-    # C call trashed registers, and the supervisor LR
-    stmfd sp!, {r0-r3, r12, lr}
-    
-    # Save SPSR
-    stmfd sp!, {r6}
-    
-    # Restore R4-R6
-    ldmia r4, {r4 - r6}
 
-    # Call into the kernel - give it an interrupt frame
+    # Retrieve old stack pointer.
+    add r6, r4, #12
+
+    # Now that we've preserved registers via the IRQ save area, switch into
+    # SVC mode to properly handle the IRQ. Disable IRQs while we're at it.
+    msr cpsr_c, #(3<<6 | 0x13)
+
+    # Push return address (lr - 4).
+    stmfd sp!, {r5}
+
+    # Push old stack pointer. (nb: this isn't correct yet)
+    stmfd sp!, {r6}
+
+    # Restore trashed registers.
+    ldmia r4, {r4-r6}
+
+    # Save registers from the IRQ, and the given LR.
+    stmfd sp!, {r0-r12, lr}
+
+    # Finally save SPSR.
+    mrs r0, spsr
+    stmfd sp!, {r0}
+
+    # InterruptState
     mov r0, sp
-    bl arm_irq_handler
-    
+    bl \entrypoint
+
     # Restore SPSR
     ldmfd sp!, {r0}
     msr spsr_cxsf, r0
-    
-    # Restore to where we were before the interrupt
-    ldmfd   sp!, { r0-r3, r12, lr, pc }^
+
+    # Restore to where we were before the interrupt.
+    # We need to skip over the saved stack before popping pc.
+    ldmfd sp!, {r0-r12, lr}
+    add sp, sp, #4
+    ldmfd sp!, {pc}
+.endm
+
+##
+
+arm_asm_data_abort:
+    __ARM_INTERRUPT arm_data_abort_handler
+
+arm_asm_irq_handler:
+    __ARM_INTERRUPT arm_irq_handler
