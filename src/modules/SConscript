@@ -343,7 +343,7 @@ initrdList += [os.path.join(builddir.abspath, 'modules', i + '.o') for i in init
 # Subsystems
 initrdList += [os.path.join(builddir.abspath, 'subsystems', 'posix.o')]
 initrdList += [os.path.join(builddir.abspath, 'subsystems', 'pedigree-c.o')]
-if env['ARCH_TARGET'] in ('X86', 'X64'):
+if env['ARCH_TARGET'] in ('X86', 'X64', 'ARM'):
     initrdList += [os.path.join(builddir.abspath, 'subsystems', 'native.o')]
 
 env.Depends(initrdFile, "drivers")
