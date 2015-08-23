@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -157,7 +156,8 @@ void UsbUlpi::initialise()
     usbClearBits(InterfaceControl, 1 << 2); // Disable carkit mode
 
     // Set the controller as active
-    usbClearBits(OtgControl, 2); // Disable the D+ pull-down resistor
+    /// \todo OtgControl is invalid on Linaro's beaglexm qemu emulation.
+    // usbClearBits(OtgControl, 2); // Disable the D+ pull-down resistor
     usbSetBits(0xAC, 1 << 5); // Enable OTG - 0xAC = POWER_CTRL
     usbSetBits(FunctionControl, 4); // FS termination enabled
     usbClearBits(FunctionControl, 0x1B); // Enable the HS transceiver
@@ -167,7 +167,7 @@ void UsbUlpi::initialise()
     Prcm::instance().SelectClockPLL(4, (12 << 0) | (120 << 8));
     Prcm::instance().SelectClockPLL(5, 1);
     Prcm::instance().SetClockPLL(2, (7 << 4) | 7);
-    Prcm::instance().WaitPllIdleStatus(2, 0, false); // Waiting for the bit to go to one
+    Prcm::instance().WaitPllIdleStatus(2, 0, true); // Waiting for the bit to go to one
 
     // Configure the L3 and L4 clocks
     Prcm::instance().SelectClockCORE(0, Prcm::L3_CLK_DIV2);
