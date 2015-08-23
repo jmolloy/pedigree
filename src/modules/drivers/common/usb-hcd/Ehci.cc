@@ -159,16 +159,25 @@ Ehci::Ehci(Device* pDev) : UsbHub(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
     }
 #endif
     
+#ifdef USB_VERBOSE_DEBUG
+    DEBUG_LOG("USB: EHCI: disabling running schedules");
+#endif
     // Disable any running schedules gracefully before halting the controller
     m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) & ~(EHCI_CMD_ASYNCLE | EHCI_CMD_PERIODICLE), m_nOpRegsOffset + EHCI_CMD);
     while(m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & 0xC000)
         delay(5);
 
+#ifdef USB_VERBOSE_DEBUG
+    DEBUG_LOG("USB: EHCI: pausing controller");
+#endif
     // Don't reset a running controller, make sure it's paused
     m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) & ~EHCI_CMD_RUN, m_nOpRegsOffset + EHCI_CMD);
     while(!(m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & EHCI_STS_HALTED))
         delay(5);
 
+#ifdef USB_VERBOSE_DEBUG
+    DEBUG_LOG("USB: EHCI: resetting controller");
+#endif
     // Write host controller reset command and wait for it to complete
     m_pBase->write32(EHCI_CMD_HCRES, m_nOpRegsOffset + EHCI_CMD);
     while(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) & EHCI_CMD_HCRES)
