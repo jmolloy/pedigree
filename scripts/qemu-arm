@@ -5,4 +5,7 @@
 
 # linaro beaglexm emulation
 
-qemu-system-arm -M beaglexm -vga none -drive if=sd,cache=writeback,file=build/hdd.img -clock unix -serial stdio -device usb-kbd -usb $*
+qemu-system-arm -M beaglexm -drive if=sd,cache=writeback,file=build/sdcard.img \
+    -clock unix -serial stdio -device usb-kbd -usb \
+    -drive if=none,id=usbstick,file=build/hdd.img \
+    -device usb-storage,drive=usbstick $*

@@ -144,8 +144,12 @@ def buildImageMtools(target, source, env):
         '/system/modules',
     ]
 
+    nth = 3
+    if 'STATIC_DRIVERS' in env['CPPDEFINES']:
+        nth = 2
+
     copyops = [
-        ([x.abspath for x in source[0:3]], '/boot'),
+        ([x.abspath for x in source[0:nth]], '/boot'),
         (os.path.join(builddir, 'config.db'), '/.pedigree-root'),
         (os.path.join(pathToGrub, 'menu-hdd.lst'), '/boot/grub/menu.lst'),
         (os.path.join(imagedir, '..', 'base', 'config', 'greeting'), '/config/greeting'),
@@ -154,7 +158,7 @@ def buildImageMtools(target, source, env):
         (os.path.join(imagedir, '..', 'base', '.profile'), '/.profile'),
     ]
 
-    for i in source[3:]:
+    for i in source[nth:]:
         otherPath = ''
         search, prefix = imagedir, ''
 

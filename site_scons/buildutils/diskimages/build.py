@@ -37,13 +37,18 @@ def buildDiskImages(env, config_database):
     hddimg = os.path.join(builddir, 'hdd.img')
     cdimg = os.path.join(builddir, 'pedigree.iso')
 
-    if not env['ARCH_TARGET'] in ['X86', 'X64', 'PPC'] or not (env['distdir'] or not env['nodiskimages']):
+    if (not env['ARCH_TARGET'] in ['X86', 'X64', 'PPC', 'ARM'] or
+            not (env['distdir'] or not env['nodiskimages'])):
         print 'No hard disk image being built.'
         return
 
     env.Depends(hddimg, 'libs')
-    env.Depends(hddimg, 'apps')
-    env.Depends(hddimg, 'initrd')
+
+    if env['ARCH_TARGET'] != 'ARM':
+        env.Depends(hddimg, 'apps')
+
+    if not 'STATIC_DRIVERS' in env['CPPDEFINES']:
+        env.Depends(hddimg, 'initrd')
     env.Depends(hddimg, config_database)
 
     if not env['nodiskimages'] and not env['noiso']:
@@ -60,13 +65,18 @@ def buildDiskImages(env, config_database):
 
     libc = os.path.join(builddir, 'libc.so')
     libm = os.path.join(builddir, 'libm.so')
-    libload = os.path.join(builddir, 'libload.so')
+
+    # TODO(miselin): more ARM userspace
+    if env['ARCH_TARGET'] != 'ARM':
+        libload = os.path.join(builddir, 'libload.so')
+        libui = os.path.join(builddir, 'libs', 'libui.so')
+    else:
+        libload = None
+        libui = None
 
     libpthread = os.path.join(builddir, 'libpthread.so')
     libpedigree = os.path.join(builddir, 'libpedigree.so')
     libpedigree_c = os.path.join(builddir, 'libpedigree-c.so')
-
-    libui = os.path.join(builddir, 'libs', 'libui.so')
 
     # Build the disk images (whichever are the best choice for this system)
     forcemtools = env['forcemtools']
@@ -91,7 +101,10 @@ def buildDiskImages(env, config_database):
         buildImage = mtools.buildImageMtools
 
     # /boot directory
-    fileList += [kernel, initrd, config_database]
+    if 'STATIC_DRIVERS' in env['CPPDEFINES']:
+        fileList += [kernel, config_database]
+    else:
+        fileList += [kernel, initrd, config_database]
 
     # Add directories in the images directory.
     for entry in os.listdir(imagedir):
@@ -128,6 +141,7 @@ def buildDiskImages(env, config_database):
     if env['ARCH_TARGET'] in ['X86', 'X64']:
         fileList += [os.path.join(builddir, 'libSDL.so')]
 
+    fileList = [x for x in fileList if x]
     env.Command(hddimg, fileList, SCons.Action.Action(buildImage, None))
 
     # Build the live CD ISO

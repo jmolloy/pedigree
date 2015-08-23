@@ -459,6 +459,10 @@ if env['ARCH_TARGET'] in ('X86', 'X64'):
 if env['AS'] is None:
     raise SCons.Errors.UserError('No assembler was found - make sure nasm/as are installed.')
 
+# No ISO images for ARM.
+if env['ARCH_TARGET'] == 'ARM':
+    env['noiso'] = True
+
 # Add optional flags.
 warning_flag = '-Wno-error'
 if env['warnings']:

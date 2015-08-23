@@ -55,9 +55,12 @@ def buildImageLosetup(target, source, env):
     os.system("sudo cp " + imagedir + "/../grub/menu-hdd.lst ./tmp/boot/grub/menu.lst")
 
     # Copy the kernel, initrd, and configuration database
-    for i in source[0:3]:
+    nth = 3
+    if 'STATIC_DRIVERS' in env['CPPDEFINES']:
+        nth = 2
+    for i in source[0:nth]:
         os.system("sudo cp " + i.abspath + " ./tmp/boot/")
-    source = source[3:]
+    source = source[nth:]
 
     # Copy each input file across
     for i in source:
