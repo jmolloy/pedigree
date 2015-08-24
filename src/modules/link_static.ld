@@ -2,12 +2,18 @@
 
 SECTIONS
 {
-  .text : {*(.text.*)}
+  .text : {*(.text*)}
+  .data : {*(.data*)}
+  .rodata : {*(.rodata*)}
+  .bss : {*(.bss*)}
+
   .module_ctors :
   {
-    *(.init_array)
-    *(.ctors)
+    *(.init_array*)
+    *(.ctors*)
   }
 
-  /DISCARD/ : { *(.comment) *(.eh_frame) *(.debug_abbrev) *(.debug_info) *(.debug_line) *(.debug_loc) *(.debug_pubnames) *(.debug_aranges) *(.debug_str) *(.debug_macinfo) *(.debug_ranges) *(.stab) *(.stabstr) }
+  /* We do a strip to create a real kernel binary, so don't wipe out debug
+   * data from the kernel binary here. */
+  /DISCARD/ : { *(.comment) *(.eh_frame) }
 }
