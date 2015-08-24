@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -19,62 +18,9 @@
  */
 
 #include "Elf32.h"
+#include "support.h"
 
 extern volatile unsigned char *uart3;
-
-extern "C"
-{
-int strncpy(char *dest, const char *src, int len)
-{
-  int i = 0;
-  while (*src && len)
-  {
-    *dest++ = *src++;
-    len--;
-    i++;
-  }
-  *dest = '\0';
-  return i;
-}
-int memset(void *buf, int c, size_t len)
-{
-  int i = 0;
-  unsigned char *tmp = (unsigned char *)buf;
-  while(len--)
-  {
-    *tmp++ = c;
-    i++;
-  }
-  return i;
-}
-
-void memcpy(void *dest, const void *src, size_t len)
-{
-  const unsigned char *sp = (const unsigned char *)src;
-  unsigned char *dp = (unsigned char *)dest;
-  for (; len != 0; len--) *dp++ = *sp++;
-}
-
-int strcmp(const char *p1, const char *p2)
-{
-  int i = 0;
-  int failed = 0;
-  while(p1[i] != '\0' && p2[i] != '\0')
-  {
-    if(p1[i] != p2[i])
-    {
-      failed = 1;
-      break;
-    }
-    i++;
-  }
-  // why did the loop exit?
-  if( (p1[i] == '\0' && p2[i] != '\0') || (p1[i] != '\0' && p2[i] == '\0') )
-    failed = 1;
-
-  return failed;
-}
-}
 
 Elf32::Elf32(const char *name) :
   m_pHeader(0),

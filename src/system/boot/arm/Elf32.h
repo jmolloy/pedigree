@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -20,6 +19,8 @@
 
 #ifndef ELF32_H
 #define ELF32_H
+
+#include "support.h"
 
 #define SHT_PROGBITS      0x1     // The data is contained in the program file.
 #define SHT_SYMTAB        0x2     // Symbol table
@@ -47,13 +48,8 @@
 #define ELF32_ST_TYPE(i)	((i)&0xf)
 #define ELF32_ST_INFO(b, t)	(((b)<<4)+((t)&0xf))
 #define PACKED __attribute__((packed))
-class BootstrapInfo;
 
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
-typedef int int32_t;
-typedef unsigned int size_t;
+class BootstrapInfo;
 
 /**
  * Provides an implementation of a 32-bit Executable and Linker format file parser.

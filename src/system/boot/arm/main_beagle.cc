@@ -20,6 +20,7 @@
 // C++ entry point
 
 #include "Elf32.h"
+#include "support.h"
 
 // autogen.h contains the full kernel binary in a char array
 #include "autogen.h"
@@ -28,7 +29,6 @@ extern "C" {
 volatile unsigned char *uart1 = (volatile unsigned char*) 0x4806A000;
 volatile unsigned char *uart2 = (volatile unsigned char*) 0x4806C000;
 volatile unsigned char *uart3 = (volatile unsigned char*) 0x49020000;
-extern int memset(void *buf, int c, size_t len);
 };
 
 // http://www.simtec.co.uk/products/SWLINUX/files/booting_article.html

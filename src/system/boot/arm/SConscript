@@ -38,7 +38,8 @@ env_clone = env.Clone()
 
 files = [
     'Elf32.cc',
-    'arm_support.s'
+    'arm_support.s',
+    'support.cc',
 ]
 
 if env['arm_beagle']:
