@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -240,6 +239,8 @@ void Device::Address::map(size_t forcedSize, bool bUser, bool bWriteCombine, boo
     if(m_IsIoSpace)
         return;
 #endif
+    if(m_bMapped)
+      return;
     
     size_t pageSize = PhysicalMemoryManager::getPageSize();
     size_t s = forcedSize ? forcedSize : m_Size;
@@ -265,6 +266,10 @@ void Device::Address::map(size_t forcedSize, bool bUser, bool bWriteCombine, boo
     {
         ERROR("Device::Address - map for " << m_Address << " failed!");
     }
+
+    NOTICE("Device::Address: mapped " << m_Address << " -> " << reinterpret_cast<uintptr_t>(static_cast<MemoryMappedIo*>(m_Io)->virtualAddress()));
+
+    m_bMapped = true;
 }
 
 Device::Address::~Address()
