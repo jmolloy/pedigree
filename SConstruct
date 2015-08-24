@@ -438,6 +438,16 @@ if env['pup']:
     if not os.path.isdir(imagesdir):
         os.makedirs(imagesdir)
 
+# NASM is used for X86 and X64 builds
+if env['ARCH_TARGET'] in ('X86', 'X64'):
+    env['AS'] = None
+    if env['ON_PEDIGREE']:
+        env['AS'] = env.Detect('nasm')
+    else:
+        env['AS'] = os.path.join(env['XCOMPILER_PATH'], 'nasm')
+if env['AS'] is None:
+    raise SCons.Errors.UserError('No assembler was found - make sure nasm/as are installed.')
+
 # Handle extra debugging components.
 if env['debugger']:
     # Build in debugging information when built with the debugger.
@@ -448,16 +458,6 @@ if env['debugger']:
     if 'nasm' not in env['AS']:
         debug_flags = {'ASFLAGS': debug_flags['CCFLAGS']}
         env.MergeFlags(debug_flags)
-
-# NASM is used for X86 and X64 builds
-if env['ARCH_TARGET'] in ('X86', 'X64'):
-    env['AS'] = None
-    if env['ON_PEDIGREE']:
-        env['AS'] = env.Detect('nasm')
-    else:
-        env['AS'] = os.path.join(env['XCOMPILER_PATH'], 'nasm')
-if env['AS'] is None:
-    raise SCons.Errors.UserError('No assembler was found - make sure nasm/as are installed.')
 
 # No ISO images for ARM.
 if env['ARCH_TARGET'] == 'ARM':
