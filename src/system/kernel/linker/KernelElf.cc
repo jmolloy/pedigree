@@ -466,6 +466,8 @@ void KernelElf::unloadModule(Vector<Module*>::Iterator it, bool silent, bool pro
         module->exit();
 
     // Check for a destructors list and execute.
+    // Note: static drivers have their ctors/dtors all shared.
+#ifndef STATIC_DRIVERS
     uintptr_t startDtors = module->elf.lookupSymbol("start_dtors");
     uintptr_t endDtors = module->elf.lookupSymbol("end_dtors");
 
@@ -481,6 +483,7 @@ void KernelElf::unloadModule(Vector<Module*>::Iterator it, bool silent, bool pro
     }
 
     m_SymbolTable.eraseByElf(&module->elf);
+#endif
 
     if(progress)
     {
@@ -490,10 +493,10 @@ void KernelElf::unloadModule(Vector<Module*>::Iterator it, bool silent, bool pro
     }
 
     m_LoadedModules.erase(it);
-    //m_Modules.erase(it);
 
     NOTICE("KERNELELF: Module " << module->name << " unloaded.");
 
+#ifndef STATIC_DRIVERS
     size_t pageSz = PhysicalMemoryManager::getPageSize();
     size_t numPages = (module->loadSize / pageSz) + (module->loadSize % pageSz ? 1 : 0);
 
@@ -516,6 +519,7 @@ void KernelElf::unloadModule(Vector<Module*>::Iterator it, bool silent, bool pro
     }
 
     m_ModuleAllocator.free(module->loadBase, module->loadSize);
+#endif
 
     delete module;
 }

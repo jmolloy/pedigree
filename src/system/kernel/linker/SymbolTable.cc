@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -130,8 +129,8 @@ void SymbolTable::eraseByElf(Elf *pParent)
                 it = pList->erase(it);
 
                 /// \todo Epic quick hack, rewrite
-                if(*it == *pList->end())
-                break;
+                if(it == pList->end())
+                    break;
             }
         }
     }
