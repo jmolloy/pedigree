@@ -56,12 +56,15 @@ do \
 Ehci::Ehci(Device* pDev) : UsbHub(pDev), m_pCurrentQueueTail(0), m_pCurrentQueueHead(0), m_EhciMR("Ehci-MR")
 {
     setSpecificType(String("EHCI"));
+}
 
+bool Ehci::initialiseController()
+{
     // Allocate the pages we need
     if(!PhysicalMemoryManager::instance().allocateRegion(m_EhciMR, 4, PhysicalMemoryManager::continuous, VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write))
     {
         ERROR("USB: EHCI: Couldn't allocate Memory Region!");
-        return;
+        return false;
     }
 
     uintptr_t virtualBase   = reinterpret_cast<uintptr_t>(m_EhciMR.virtualAddress());
@@ -88,14 +91,27 @@ Ehci::Ehci(Device* pDev) : UsbHub(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
     m_pBase = m_Addresses[0]->m_Io;
     NOTICE("EHCI: Working off: " << (m_Addresses[0]->m_IsIoSpace ? "P" : "MM") << "IO");
     m_Addresses[0]->map();
-    m_nOpRegsOffset = m_pBase->read8(EHCI_CAPLENGTH);
+
+    uint32_t hccapbase = m_pBase->read32(EHCI_CAPLENGTH);
+    uint16_t version = hccapbase >> 16;
+
+    m_nOpRegsOffset = hccapbase & 0xF;
 #ifdef USB_VERBOSE_DEBUG
     NOTICE("EHCI operation registers are at offset " << m_nOpRegsOffset);
 #endif
+    if(m_nOpRegsOffset == 0)
+    {
+        // No offset for operational base: this is almost certainly not really
+        // a controller.
+        return false;
+    }
+
+    NOTICE("EHCI controller version " << ((version & 0xFF) >> 8) << "." << (version & 0xFF));
 
     // Get structural capabilities to determine the number of physical ports
     // we have available to us.
-    m_nPorts = m_pBase->read32(EHCI_HCSPARAMS) & 0xF;
+    uint32_t hcsparams = m_pBase->read32(EHCI_HCSPARAMS);
+    m_nPorts = hcsparams & 0xF;
 #ifdef USB_VERBOSE_DEBUG
     NOTICE("EHCI controller has " << Dec << m_nPorts << Hex << " physical ports.");
 #endif
@@ -112,9 +128,9 @@ Ehci::Ehci(Device* pDev) : UsbHub(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
     DEBUG_LOG("EHCI: Host controller " << (hccparams & 1 ? "does" : "does not") << " require 64-bit data structures.");
     DEBUG_LOG("      Host controller " << (hccparams & 2 ? "does" : "does not") << " allow us to use frame lists with anything other than 1024 items in them.");
     DEBUG_LOG("      Host controller " << (hccparams & 4 ? "does" : "does not") << " support the asynchronous schedule park capability.");
-    DEBUG_LOG("      CAPLENGTH is " << m_pBase->read8(EHCI_CAPLENGTH));
+    DEBUG_LOG("      HCCAPBASE is " << hccapbase);
     DEBUG_LOG("      HCCPARAMS is " << hccparams);
-    DEBUG_LOG("      HCSPARAMS is " << m_pBase->read32(EHCI_HCSPARAMS));
+    DEBUG_LOG("      HCSPARAMS is " << hcsparams);
     DEBUG_LOG("      EECP is " << eecp);
 #endif
 
@@ -167,13 +183,17 @@ Ehci::Ehci(Device* pDev) : UsbHub(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
     while(m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & 0xC000)
         delay(5);
 
+    uint32_t status = m_pBase->read32(m_nOpRegsOffset + EHCI_STS);
+    if(!(status & EHCI_STS_HALTED))
+    {
 #ifdef USB_VERBOSE_DEBUG
-    DEBUG_LOG("USB: EHCI: pausing controller");
+        DEBUG_LOG("USB: EHCI: pausing controller");
 #endif
-    // Don't reset a running controller, make sure it's paused
-    m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) & ~EHCI_CMD_RUN, m_nOpRegsOffset + EHCI_CMD);
-    while(!(m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & EHCI_STS_HALTED))
-        delay(5);
+        // Must halt the controller, it's not yet halted.
+        m_pBase->write32(m_pBase->read32(m_nOpRegsOffset + EHCI_CMD) & ~EHCI_CMD_RUN, m_nOpRegsOffset + EHCI_CMD);
+        while(!(m_pBase->read32(m_nOpRegsOffset + EHCI_STS) & EHCI_STS_HALTED))
+            delay(5);
+    }
 
 #ifdef USB_VERBOSE_DEBUG
     DEBUG_LOG("USB: EHCI: resetting controller");
@@ -294,6 +314,8 @@ Ehci::Ehci(Device* pDev) : UsbHub(pDev), m_pCurrentQueueTail(0), m_pCurrentQueue
     // Enable port status change interrupt and clear it from status
     m_pBase->write32(EHCI_STS_PORTCH, m_nOpRegsOffset + EHCI_STS);
     m_pBase->write32(0x3f, m_nOpRegsOffset + EHCI_INTR);
+
+    return true;
 }
 
 Ehci::~Ehci()

@@ -58,6 +58,12 @@ void probeEhci(Device *pDev)
 
     // Create a new Ehci node
     Ehci *pEhci = new Ehci(pDev);
+    bool success = pEhci->initialiseController();
+    if(!success)
+    {
+        NOTICE("USB: EHCI failed to initialise");
+        return;
+    }
 
     // Replace pDev with pEhci, then delete pDev
     pDev->getParent()->replaceChild(pDev, pEhci);
