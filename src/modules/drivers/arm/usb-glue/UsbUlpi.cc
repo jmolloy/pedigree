@@ -204,7 +204,8 @@ void UsbUlpi::initialise()
     tll_base[0x10 / 4] = (1 << 2) | (1 << 3) | (1 << 8);
 
     volatile uint32_t *uhh_base = reinterpret_cast<volatile uint32_t*>(m_MemRegionUHH.virtualAddress());
-    NOTICE("USB UHH: Revision " << Dec << ((uhh_base[0] >> 4) & 0xF) << "." << (uhh_base[0] & 0xF) << Hex << ".");
+    uint32_t uhh_version = uhh_base[0];
+    NOTICE("USB UHH: Revision " << Dec << ((uhh_version >> 4) & 0xF) << "." << (uhh_version & 0xF) << Hex << ".");
 
     // Reset the entire USB module
     uhh_base[0x10 / 4] = 2;
