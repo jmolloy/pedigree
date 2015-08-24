@@ -138,8 +138,12 @@ echo
 echo "Configuring the Pedigree UPdater..."
 
 $script_dir/setup_pup.py arm
+$script_dir/run_pup.py sync
 
-# TODO: build some ARM packages...
+$script_dir/run_pup.py install libtool
+
+# Enforce using our libtool.
+export LIBTOOL=$script_dir/../images/local/applications:$PATH
 
 # Build GCC again with access to the newly built libc.
 # This will create a libstdc++ that can be used by pedigree-apps to build GCC
@@ -161,7 +165,24 @@ git submodule update > /dev/null 2>&1
 echo
 echo "Installing a base set of packages..."
 
-# TODO: build some ARM packages...
+$script_dir/run_pup.py install pedigree-base
+$script_dir/run_pup.py install libpng
+$script_dir/run_pup.py install libfreetype
+$script_dir/run_pup.py install libiconv
+$script_dir/run_pup.py install zlib
+
+$script_dir/run_pup.py install bash
+$script_dir/run_pup.py install coreutils
+$script_dir/run_pup.py install fontconfig
+$script_dir/run_pup.py install pixman
+$script_dir/run_pup.py install cairo
+$script_dir/run_pup.py install expat
+$script_dir/run_pup.py install mesa
+$script_dir/run_pup.py install ncurses
+$script_dir/run_pup.py install gettext
+
+# Install GCC to pull in shared libstdc++.
+$script_dir/run_pup.py install gcc
 
 set -e
 
