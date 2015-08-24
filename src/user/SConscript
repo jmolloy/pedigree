@@ -164,8 +164,9 @@ env_clone['CPPPATH'] = base_include_dirs
 libload_env = env_clone.Clone()
 libload_env.MergeFlags('-static')
 cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
+cpp_arch_base = os.path.join(cpp_base, env['COMPILER_TARGET'])
 libload_env['CPPPATH'] += ['#src/system/include/linker', cpp_base,
-                           os.path.join(cpp_base, env['COMPILER_TARGET'])]
+                           cpp_arch_base]
 libload_env['LIBPATH'] += [builddir, imagesdir + 'libraries']
 libload_env['LIBS'] = ['-lstdc++', '-lc', '-lpedigree', '-lpedigree-c', '-lgcc']
 libload = os.path.join(builddir, 'libload.so')
@@ -214,7 +215,8 @@ for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + lib
     # Handle C++-related dependencies.
     if app in set(cpp_apps + sdl_apps + mesa_apps + cpp_11_apps):
         app_env['LIBPATH'] += [os.path.join(imagesdir, 'libraries')]
-        app_env['CPPPATH'] += ['#src/subsys/native/include']
+        app_env['CPPPATH'] += [cpp_base, '#src/subsys/native/include',
+                               cpp_arch_base]
         app_env['LINK'] = env['CXX']
 
     # Handle libui-related dependencies.
