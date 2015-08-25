@@ -25,6 +25,8 @@
 
 #include <compiler.h>
 
+#pragma GCC optimize ("no-tree-loop-distribute-patterns")
+
 /// \todo If we ever get an ARM newlib... we'll need some #ifdefs.
 
 #ifdef X86_COMMON

@@ -23,6 +23,8 @@
 
 #include <panic.h>
 
+#pragma GCC optimize ("no-tree-loop-distribute-patterns")
+
 /**
     x86 note:
     Pedigree requires at least an SSE2-capable CPU in order to run. This allows

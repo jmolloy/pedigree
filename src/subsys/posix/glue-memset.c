@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -31,6 +30,8 @@
 #ifdef DEBUG_MEMSET
 #include <syslog.h>
 #endif
+
+#pragma GCC optimize ("no-tree-loop-distribute-patterns")
 
 /// \todo If we ever get an ARM newlib... we'll need some #ifdefs.
 

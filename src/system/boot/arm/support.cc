@@ -20,6 +20,8 @@
 
 #include "support.h"
 
+#pragma GCC optimize ("no-tree-loop-distribute-patterns")
+
 extern "C"
 {
 
