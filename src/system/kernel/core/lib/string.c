@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -24,37 +23,36 @@
 
 size_t strlen(const char *src)
 {
-  size_t i = 0;
-  while (*src++)
-    i++;
-  return i;
+  const char *orig = src;
+  while (*src) ++src;
+  return src - orig;
 }
 
 int strcpy(char *dest, const char *src)
 {
-  int n = 0;
+  const char *orig_dest = dest;
   while (*src)
   {
-    *dest++ = *src++;
-    n++;
+    *dest = *src;
+    ++dest; ++src;
   }
   *dest = '\0';
 
-  return n;
+  return dest - src;
 }
 
 int strncpy(char *dest, const char *src, int len)
 {
-  int n = 0;
-  while (*src && len)
+  const char *orig_dest = dest;
+  while ((*src) && len)
   {
-    *dest++ = *src++;
-    len--;
-    n++;
+    *dest = *src;
+    ++dest; ++src;
+    --len;
   }
   *dest = '\0';
 
-  return n;
+  return orig_dest - dest;
 }
 
 int sprintf(char *buf, const char *fmt, ...)
