@@ -41,7 +41,7 @@ int strncpy(char *dest, const char *src, int len)
 int memset(void *buf, int c, size_t len)
 {
   size_t count = len;
-  volatile char *tmp = (volatile char *) buf;
+  char *tmp = (char *) buf;
   while(len--)
   {
     *tmp++ = (char) c;
