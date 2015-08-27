@@ -138,18 +138,13 @@ void Backtrace::performArmBacktrace(uintptr_t base, uintptr_t instruction)
         uintptr_t *returnAddressPointer = reinterpret_cast<uintptr_t *>(base - sizeof(uintptr_t));
 
         // Sanity check: would we fault by reading this address?
-        if (va.isMapped(nextFramePointer) && va.isMapped(returnAddressPointer))
+        if (va.isMapped(nextFramePointer) && (i && va.isMapped(returnAddressPointer)))
         {
             // EABI frame pointer layout:
             // FP[-1] = lr (return address)
             // FP[-3] = previous frame (fp)
 
             uintptr_t nextFrame = *nextFramePointer;
-            if (nextFrame == 0)
-            {
-                break;
-            }
-
             m_pReturnAddresses[i] = *returnAddressPointer;
             m_pBasePointers[i] = nextFrame;
             base = nextFrame;
@@ -158,6 +153,11 @@ void Backtrace::performArmBacktrace(uintptr_t base, uintptr_t instruction)
             m_pStates[i].setInstructionPointer(m_pReturnAddresses[i]);
 
             i++;
+
+            if (nextFrame == 0)
+            {
+                break;
+            }
         }
         else
         {
