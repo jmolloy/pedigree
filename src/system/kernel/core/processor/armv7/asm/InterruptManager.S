@@ -39,10 +39,10 @@ __arm_vector_table:
         ldr pc,=arm_instundef_handler
 # 0x08 - SUPERVISOR CALL
     __armvec_swint:
-        ldr pc,=arm_swint_handler
+        ldr pc,=arm_asm_swint_handler
 # 0x0C - PREFETCH ABORT
     __armvec_prefetchabort:
-        ldr pc,=arm_prefetch_abort_handler
+        ldr pc,=arm_asm_prefetch_abort_handler
 # 0x10 - DATA ABORT
     __armvec_dataabort:
         ldr pc,=arm_asm_data_abort
@@ -60,56 +60,63 @@ __end_arm_vector_table:
 
 ##
 
-.macro __arm_interrupt entrypoint
-    # Save some registers so we can trash them to get interrupt info.
-    stmia r13, {r4-r6}
+# Align stack to 8 bytes, preserving old stack in given register.
+.macro stack_align reg
+    mov \reg, sp
+    tst sp, #4
+    subeq sp, #4
+    push {\reg}
+.endm
 
-    # Save this point on the stack so we can restore r4-r5.
-    mov r4, r13
-    sub r5, lr, #4
+# Undo stack_align
+.macro stack_unwind reg
+    pop {\reg}
+    mov sp, \reg
+.endm
 
-    # Retrieve old stack pointer.
-    add r6, r4, #12
+# Generic exception/interrupt handling.
+.macro __arm_interrupt entrypoint lr_sub
+    # SPSR and R14 can be saved in one operation, so we preserve current SPSR
+    # and the return address before switching to SVC mode.
+    sub lr, #\lr_sub
+    srsdb #0x13!
 
-    # Now that we've preserved registers via the IRQ save area, switch into
-    # SVC mode to properly handle the IRQ. Disable IRQs while we're at it.
-    msr cpsr_c, #(3<<6 | 0x13)
+    # Disable IRQs and switch to SVC mode.
+    cpsid i, #0x13
 
-    # Push return address (lr - 4).
-    stmfd sp!, {r5}
+    # Save registers we care about.
+    push {r0-r12, lr}
 
-    # Push old stack pointer. (nb: this isn't correct yet)
-    stmfd sp!, {r6}
+    # Save user stack, lr
+    sub sp, #8
+    stmia sp, {r13, r14}^
 
-    # Restore trashed registers.
-    ldmia r4, {r4-r6}
-
-    # Save registers from the IRQ, and the given LR.
-    stmfd sp!, {r0-r12, lr}
-
-    # Finally save SPSR.
-    mrs r0, spsr
-    stmfd sp!, {r0}
-
-    # InterruptState
-    mov r0, sp
+    # Align stack, present InterruptState in r0
+    stack_align r0
     bl \entrypoint
+    stack_unwind r0
 
-    # Restore SPSR
-    ldmfd sp!, {r0}
-    msr spsr_cxsf, r0
+    # Restore user stack, lr
+    ldmia sp, {r13, r14}^
+    add sp, #8
 
-    # Restore to where we were before the interrupt.
-    # We need to skip over the saved stack before popping pc.
-    ldmfd sp!, {r0-r12, lr}
-    add sp, sp, #4
-    ldmfd sp!, {pc}
+    # Restore saved registers.
+    pop {r0-r12, r14}
+
+    # Inverse of srsdb above - return to caller.
+    rfeia sp!
 .endm
 
 ##
 
 arm_asm_data_abort:
-    __ARM_INTERRUPT arm_data_abort_handler
+    __ARM_INTERRUPT arm_data_abort_handler 8
 
 arm_asm_irq_handler:
-    __ARM_INTERRUPT arm_irq_handler
+    __ARM_INTERRUPT arm_irq_handler 4
+
+arm_asm_prefetch_abort_handler:
+    __ARM_INTERRUPT arm_prefetch_abort_handler 4
+
+arm_asm_swint_handler:
+    __ARM_INTERRUPT arm_swint_handler 0

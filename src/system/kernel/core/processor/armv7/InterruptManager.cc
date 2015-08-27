@@ -164,35 +164,132 @@ uintptr_t ARMV7InterruptManager::syscall(Service_t service,
 // Handles data aborts, but with a stack frame.
 void kdata_abort(InterruptState &state)
 {
+#ifdef DEBUGGER
   // Grab the aborted address.
   uintptr_t dfar = 0;
+  uintptr_t dfsr = 0;
   asm volatile("MRC p15,0,%0,c6,c0,0" : "=r" (dfar));
+  asm volatile("MRC p15,0,%0,c5,c0,0" : "=r" (dfsr));
 
+  // Status.
+  bool bWrite = !!(dfsr & (1 << 11));
+  uint32_t status = (dfsr & (1 << 10) ? 1 << 4 : 0) | (dfsr & 0xF);
+
+  static LargeStaticString sError;
+  sError.clear();
+  sError.append("Data Abort: ");
+  if(bWrite)
+    sError.append("W ");
+  else
+    sError.append("R ");
+  sError.append("0x");
+  sError.append(dfar, 16, 8, '0');
+  sError.append(" @ 0x");
+  sError.append(state.getInstructionPointer(), 16, 8, '0');
+  sError.append("\n");
+
+  switch (status)
+  {
+    case 0b00001:
+      sError.append("Alignment fault");
+      break;
+    case 0b00101:
+    case 0b00111:
+      sError.append("Translation fault");
+      break;
+    case 0b00011:
+    case 0b00110:
+      sError.append("Access flag fault");
+      break;
+    case 0b01001:
+    case 0b01011:
+      {
+        uint32_t domain = (dfsr >> 4) & 0xF;
+        sError.append("Domain fault for domain 0x");
+        sError.append(domain, 16, 8, '0');
+        break;
+      }
+    case 0b01101:
+    case 0b01111:
+      sError.append("Permission fault");
+      break;
+    case 0b00010:
+      sError.append("Debug event");
+      break;
+    case 0b01000:
+      sError.append("Sync external abort");
+      break;
+    case 0b10110:
+      sError.append("Async external abort");
+      break;
+    default:
+      sError.append("Unknown fault");
+  }
+
+  ERROR_NOLOCK(static_cast<const char *>(sError));
+  Debugger::instance().start(state, sError);
+#else
+  panic("data abort");
+#endif
+
+  while( 1 );
+}
+
+void kprefetch_abort(InterruptState &state)
+{
 #ifdef DEBUGGER
   static LargeStaticString sError;
   sError.clear();
-  sError.append("Data Abort at 0x");
-  sError.append(dfar, 16, 8, '0');
-  sError.append(", at PC 0x");
-  sError.append(state.getInstructionPointer() - 4, 16, 8, '0');
+  sError.append("Prefetch Abort at 0x");
+  sError.append(state.getInstructionPointer(), 16, 8, '0');
   Debugger::instance().start(state, sError);
 #endif
 
   while( 1 );
 }
 
-extern "C" void arm_swint_handler() __attribute__((interrupt("SWI")));
+void kswi_handler(InterruptState &state)
+{
+  // Grab SWI number.
+  const uint32_t *at = reinterpret_cast<const uint32_t *>(state.getInstructionPointer() - 4);
+  uint32_t swi = (*at) & 0xFFFFFFUL;
+
+  NOTICE("swi #" << Hex << swi);
+  if(swi == 0xdeee)
+  {
+    // Dump state.
+    for(size_t i = 0; i < state.getRegisterCount(); ++i)
+    {
+      NOTICE(state.getRegisterName(i) << "=" << Hex << state.getRegister(i));
+    }
+  }
+#ifdef DEBUGGER
+  else if(swi == 0xdeb16)
+  {
+    static LargeStaticString sError;
+    sError.clear();
+    sError.append("Debugger Trap at 0x");
+    sError.append(state.getInstructionPointer(), 16, 8, '0');
+    Debugger::instance().start(state, sError);
+    return;
+  }
+#endif
+}
+
+/// \note We don't use the interrupt attribute for everything as we do a lot of
+///       the register saving ourselves before jumping into the kernel.
+extern "C" void arm_swint_handler(InterruptState &state);
 extern "C" void arm_instundef_handler()__attribute__((naked));
 extern "C" void arm_fiq_handler() __attribute__((interrupt("FIQ")));
 extern "C" void arm_irq_handler(InterruptState &state);
 extern "C" void arm_reset_handler() __attribute__((naked));
-extern "C" void arm_prefetch_abort_handler() __attribute__((naked));
+extern "C" void arm_prefetch_abort_handler(InterruptState &state) __attribute__((naked));
 extern "C" void arm_data_abort_handler(InterruptState &state) __attribute__((naked));
 extern "C" void arm_addrexcept_handler() __attribute__((naked));
 
-extern "C" void arm_swint_handler()
+extern "C" void arm_swint_handler(InterruptState &state)
 {
-  NOTICE_NOLOCK("swi");
+  kswi_handler(state);
 }
 
 extern "C" void arm_instundef_handler()
@@ -218,9 +315,9 @@ extern "C" void arm_reset_handler()
   while( 1 );
 }
 
-extern "C" void arm_prefetch_abort_handler()
+extern "C" void arm_prefetch_abort_handler(InterruptState &state)
 {
-  NOTICE_NOLOCK("prefetch abort");
+  kprefetch_abort(state);
   while( 1 );
 }
 

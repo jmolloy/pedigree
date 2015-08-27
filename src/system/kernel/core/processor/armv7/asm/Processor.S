@@ -25,16 +25,16 @@
 .global _ZN9Processor14getDebugStatusEv
 
 _ZN9Processor14getBasePointerEv:
-  mov r0,fp
-  mov pc,lr
+  mov r0, fp
+  bx lr
 
 _ZN9Processor15getStackPointerEv:
-  mov r0,sp
-  mov pc,lr
+  mov r0, sp
+  bx lr
 
 _ZN9Processor21getInstructionPointerEv:
-  mov r0,pc
-  mov pc,lr
+  sub r0, lr, #4
+  bx lr
 
 # bool Processor::saveState(SchedulerState &)
 .global _ZN9Processor9saveStateER19ARMV7SchedulerState
@@ -57,34 +57,26 @@ _ZN9Processor21getInstructionPointerEv:
 .extern _ZN21PerProcessorScheduler12deleteThreadEP6Thread
 
 _ZN9Processor9saveStateER19ARMV7SchedulerState:
-    # Store state
-    mov r12, lr
-    stmia r0, {r4 - r11, r12, sp}^
-    # , r13, r14}^
+    # Store state.
+    stmia r0, {r4 - r12, sp, lr}
 
-    mov r0, #0
+    # Return zero - "not context restored".
+    eor r0, r0
     bx lr
 
 _ZN9Processor12restoreStateER19ARMV7SchedulerStatePVm:
-    # Load state
-    ldmia r0, {r4 - r11, r12, sp}^
-    # , r13, r14}^
-    mov lr, r12
-    
-    # mov sp, r0
-    
-    # TODO: Save r4
-    
+    # Load state.
+    ldmia r0, {r4 - r12, sp, lr}
+
     # Check for a passed lock, unlock if it exists
     cmp r1, #0
     beq .no_lock
-    mov r4, #1
-    str r4, [r1]
+    mov r0, #1
+    str r0, [r1]
 .no_lock:
-    
-    # Restore old stack
-    # add sp, r0, #(11 * 4)
-    
+
+    # Context restored, return 1.
+    mov r0, #1
     bx lr
 
 _ZN9Processor12restoreStateER19ARMV7InterruptStatePVm:
@@ -107,31 +99,24 @@ _ZN9Processor12restoreStateER19ARMV7InterruptStatePVm:
 # void Processor::jumpKernel(volatile uintptr_t *, uintptr_t, uintptr_t,
 #                            uintptr_t, uintptr_t, uintptr_t, uintptr_t)
 _ZN9Processor10jumpKernelEPVmmmmmmm:
-    
-    # Load the lock pointer
-    mov r8, r0
-    
-    # Save the jump destination for future reference
-    mov r9, r1
-    
     # Note: we don't save all the registers we smash here because we're never
     # returning from this function to the caller.
-    
-    # Load parameters
+
+    # Load parameters to pass to the new function.
     mov r4, r3
     ldr r5, [sp]
     ldr r6, [sp, #4]
     ldr r7, [sp, #8]
-    
+
     # Load the new stack pointer
     cmp r2, #0
     movne sp, r2
-    
+
     # Check for a passed lock, unlock if it exists
-    cmp r8, #0
+    cmp r0, #0
     beq .no_lock2
-    mov r11, #1
-    str r11, [r8]
+    mov r2, #1
+    str r2, [r0]
 .no_lock2:
 
     # Enable interrupts
@@ -139,15 +124,19 @@ _ZN9Processor10jumpKernelEPVmmmmmmm:
     orr r0, r0, #0x80
     msr cpsr_c, r0
 
+    # Return address.
+    mov ip, r1
+
     # Load parameters for the call
     mov r0, r4
     mov r1, r5
     mov r2, r6
     mov r3, r7
-    
+
     # Jump to the address - never to return
     ldr lr, =_ZN6Thread12threadExitedEv
-    bx r9
+    eor fp, fp
+    bx ip
 
 _ZN9Processor8jumpUserEPVmmmmmmm:
     bx lr
@@ -158,7 +147,7 @@ _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR19ARMV7Schedul
     # r1 = New thread state
 
     # Load state, including stack pointer
-    ldmia r1, {r4 - r11, r12, sp}^
+    ldmia r1, {r4 - r11, r12, sp}
     mov lr, r12
    
     # Delete the thread completely (r0 preserved above)

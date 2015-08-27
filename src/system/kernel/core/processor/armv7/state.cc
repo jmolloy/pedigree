@@ -21,7 +21,6 @@
 
 const char *ARMV7InterruptStateRegisterName[17] =
 {
-  "spsr",
   "r0",
   "r1",
   "r2",
@@ -37,7 +36,8 @@ const char *ARMV7InterruptStateRegisterName[17] =
   "r12",
   "lr",
   "pc",
-  "sp",
+  "usersp",
+  "userlr",
 };
 
 ARMV7InterruptState::ARMV7InterruptState() :
@@ -65,29 +65,30 @@ ARMV7InterruptState & ARMV7InterruptState::operator=(const ARMV7InterruptState &
 
 size_t ARMV7InterruptState::getRegisterCount() const
 {
-  return 17;
+  return 18;
 }
 processor_register_t ARMV7InterruptState::getRegister(size_t index) const
 {
   switch (index)
   {
-    case 0: return m_spsr;
-    case 1: return m_r0;
-    case 2: return m_r1;
-    case 3: return m_r2;
-    case 4: return m_r3;
-    case 5: return m_r4;
-    case 6: return m_r5;
-    case 7: return m_r6;
-    case 8: return m_r7;
-    case 9: return m_r8;
-    case 10: return m_r9;
-    case 11: return m_r10;
-    case 12: return m_r11;
-    case 13: return m_r12;
-    case 14: return m_lr;
-    case 15: return m_pc;
-    case 16: return m_r13;
+    case 0: return m_r0;
+    case 1: return m_r1;
+    case 2: return m_r2;
+    case 3: return m_r3;
+    case 4: return m_r4;
+    case 5: return m_r5;
+    case 6: return m_r6;
+    case 7: return m_r7;
+    case 8: return m_r8;
+    case 9: return m_r9;
+    case 10: return m_r10;
+    case 11: return m_r11;
+    case 12: return m_r12;
+    case 13: return m_lr;
+    case 14: return m_pc;
+    case 15: return m_usersp;
+    case 16: return m_userlr;
+    case 17: return m_spsr;
     default: return 0;
   }
 }

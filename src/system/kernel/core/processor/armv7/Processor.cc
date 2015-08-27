@@ -183,9 +183,9 @@ void Processor::setInterrupts(bool bEnable)
         uint32_t cpsr = 0;
         asm volatile("MRS %0, cpsr" : "=r" (cpsr));
         if(bEnable)
-            cpsr ^= 0xC0;
+            cpsr &= ~0x80;
         else
-            cpsr |= 0xC0;
+            cpsr |= 0x80;
         asm volatile("MSR cpsr_c, %0" : : "r" (cpsr));
     }
 }
@@ -197,7 +197,7 @@ bool Processor::getInterrupts()
     {
         uint32_t cpsr = 0;
         asm volatile("MRS %0, cpsr" : "=r" (cpsr));
-        return !(cpsr & 0xC0);
+        return !(cpsr & 0x80);
     }
     else
         return false;

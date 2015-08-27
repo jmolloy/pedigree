@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -142,16 +141,6 @@ void ArmV7VirtualAddressSpace::getMapping(void *virtualAddress,
 void ArmV7VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
 {
     return doSetFlags(virtualAddress, newFlags);
-}
-
-void *ArmV7VirtualAddressSpace::allocateStack()
-{
-  return doAllocateStack(USERSPACE_VIRTUAL_STACK_SIZE);
-}
-
-void *ArmV7VirtualAddressSpace::allocateStack(size_t stackSz)
-{
-  return doAllocateStack(stackSz);
 }
 
 bool ArmV7VirtualAddressSpace::doIsMapped(void *virtualAddress)
@@ -406,8 +395,29 @@ void ArmV7VirtualAddressSpace::doUnmap(void *virtualAddress)
     }
 }
 
+void *ArmV7VirtualAddressSpace::allocateStack()
+{
+  size_t sz = USERSPACE_VIRTUAL_STACK_SIZE;
+  if(this == &VirtualAddressSpace::getKernelAddressSpace())
+    sz = KERNEL_STACK_SIZE;
+  return doAllocateStack(USERSPACE_VIRTUAL_STACK_SIZE);
+}
+
+void *ArmV7VirtualAddressSpace::allocateStack(size_t stackSz)
+{
+  if(stackSz == 0)
+    return allocateStack();
+  return doAllocateStack(stackSz);
+}
+
 void *ArmV7VirtualAddressSpace::doAllocateStack(size_t sSize)
 {
+    size_t flags = 0;
+    if(this == &VirtualAddressSpace::getKernelAddressSpace())
+    {
+        flags == VirtualAddressSpace::KernelMode;
+    }
+
     m_Lock.acquire();
 
     // Get a virtual address for the stack
@@ -415,7 +425,6 @@ void *ArmV7VirtualAddressSpace::doAllocateStack(size_t sSize)
     if (m_freeStacks.count() != 0)
     {
         pStack = m_freeStacks.popBack();
-
         m_Lock.release();
     }
     else
@@ -432,7 +441,7 @@ void *ArmV7VirtualAddressSpace::doAllocateStack(size_t sSize)
             physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
             bool b = map(phys,
                      reinterpret_cast<void*> (j + stackBottom),
-                     VirtualAddressSpace::Write);
+                     flags | VirtualAddressSpace::Write);
             if (!b)
                 WARNING("map() failed in doAllocateStack");
         }
