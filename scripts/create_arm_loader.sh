@@ -14,7 +14,7 @@ fi
 
 CYLINDER_SIZE=8225280
 
-if [ ! -e "A$bits/out.img" ]; then
+if [ ! -e "$bits/out.img" ]; then
     dd if=/dev/zero of="$bits/out.img" bs=$CYLINDER_SIZE count=100
 fi
 
