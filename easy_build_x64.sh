@@ -42,7 +42,7 @@ if [ ! -e $script_dir/.easy_os ]; then
             ;;
         ubuntu)
             echo "Installing packages with apt-get, please wait..."
-            sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage
+            sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage e2fsprogs
             ;;
         opensuse)
             echo "Installing packages with zypper, please wait..."
