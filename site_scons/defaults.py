@@ -125,7 +125,7 @@ x64_defines = generic_defines + general_x86_defines + x64_defines
 general_arm_defines = ['ARM_COMMON', 'BITS_32', 'THREADS', 'STATIC_DRIVERS']
 
 # ARM CFLAGS and CXXFLAGS
-default_arm_flags = []
+default_arm_flags = ['-fno-omit-frame-pointer', '-mabi=aapcs', '-mapcs-frame']
 default_arm_cflags = []
 default_arm_cxxflags = []
 
