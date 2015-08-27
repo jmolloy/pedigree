@@ -248,24 +248,14 @@ void GPTimer::interrupt(size_t nInterruptnumber, InterruptState &state)
     }
 
     // Check for alarms.
-    while (true)
+    for (List<Alarm*>::Iterator it = m_Alarms.begin(); it != m_Alarms.end(); it++)
     {
-        bool bDispatched = false;
-        for (List<Alarm*>::Iterator it = m_Alarms.begin();
-        it != m_Alarms.end();
-        it++)
+        Alarm *pA = *it;
+        if ( pA->m_Time <= m_TickCount )
         {
-            Alarm *pA = *it;
-            if ( pA->m_Time <= m_TickCount )
-            {
-                pA->m_pThread->sendEvent(pA->m_pEvent);
-                m_Alarms.erase(it);
-                bDispatched = true;
-                break;
-            }
+            pA->m_pThread->sendEvent(pA->m_pEvent);
+            it = m_Alarms.erase(it);
         }
-        if (!bDispatched)
-            break;
     }
 
     // Ack the interrupt source
