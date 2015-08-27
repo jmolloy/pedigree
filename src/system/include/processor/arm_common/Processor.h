@@ -24,7 +24,7 @@
 
 void Processor::halt()
 {
-  panic("halted");
+  while(1);
 }
 
 void Processor::breakpoint()
