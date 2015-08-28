@@ -17,23 +17,20 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/** Metamodule to handle dependencies on graphics devices so splash only runs
- *  after all graphics drivers have been loaded. */
+#include <stdio.h>
+#include <memory.h>
 
-#include <Module.h>
+#include "BootstrapInfo.h"
 
-#ifdef X86_COMMON
-#define __MOD_DEPS 0
-#define __MOD_DEPS_OPT "vbe", "vmware-gfx", "nvidia"
-#elif PPC_COMMON
-#define __MOD_DEPS 0
-#elif ARM_COMMON
-#define __MOD_DEPS 0
-#elif HOSTED
-/// \todo probably want some sort of SDL thing here.
-#define __MOD_DEPS 0
-#endif
-MODULE_INFO("gfx-deps", 0, 0, __MOD_DEPS);
-#ifdef __MOD_DEPS_OPT
-MODULE_OPTIONAL_DEPENDS(__MOD_DEPS_OPT);
-#endif
+extern "C" void _main(BootstrapStruct_t &bs);
+
+int main(int argc, char *argv[])
+{
+    fprintf(stderr, "Pedigree is starting...\n");
+
+    BootstrapStruct_t bs;
+    memset(&bs, 0, sizeof(bs));
+    _main(bs);
+
+    return 1;
+}

@@ -114,6 +114,11 @@ elif env['arm_beagle']:
         Glob('machine/arm_beagle/*.cc'),
         Glob('machine/arm_beagle/*.c'),
     ]
+elif env['hosted']:
+    files += [
+        Glob('machine/hosted/*.cc'),
+        Glob('machine/hosted/*.c'),
+    ]
 
 #####################################
 # Architecture-specific files
@@ -161,6 +166,13 @@ elif env['armv7']:
         Glob('core/processor/armv7/*.cc'),
         Glob('core/processor/armv7/asm/*.S'),
     ]
+elif env['hosted']:
+    files += [
+        'boot-hosted.cc',
+        Glob('core/processor/x86_common/Disassembler.cc'),
+        Glob('debugger/libudis86/*.c'),
+        Glob('core/processor/hosted/*.cc'),
+    ]
 
 # Generic ARM bits.
 if env['ARCH_TARGET'] == 'ARM':
@@ -172,7 +184,8 @@ if env['ARCH_TARGET'] == 'ARM':
 # Set flags in the cloned environment for the build.
 env_clone['CPPPATH'] = include_dirs
 env_clone['LIBS'] = ['gcc']
-env_clone['LIBPATH'] = ['#', os.path.join(imagesdir, 'libraries')]
+if not env['hosted']:  # Don't let the kernel link against Pedigree .so objects
+    env_clone['LIBPATH'] = ['#', os.path.join(imagesdir, 'libraries')]
 
 final_output = objname
 stripped_objname = final_output

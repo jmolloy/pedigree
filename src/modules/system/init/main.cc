@@ -478,6 +478,8 @@ void init_stage2()
 #define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "TUI", "linker", "network-stack", "users", "pedigree-c", "native"
 #elif ARM_COMMON
 #define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "linker", "network-stack", "users", "pedigree-c", "native"
+#elif defined(HOSTED)
+#define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "network-stack", "users", "pedigree-c", "native"
 #endif
 MODULE_INFO("init", &init, &destroy, __MOD_DEPS);
 #ifdef __MOD_DEPS_OPT

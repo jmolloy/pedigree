@@ -26,8 +26,9 @@ from buildutils.diskimages import build
 
 Import(['env'])
 
-SConscript(os.path.join('src', 'subsys', 'posix', 'SConscript'), exports=['env'])
-SConscript(os.path.join('src', 'subsys', 'pedigree-c', 'SConscript'), exports=['env'])
+if not env['hosted']:
+    SConscript(os.path.join('src', 'subsys', 'posix', 'SConscript'), exports=['env'])
+    SConscript(os.path.join('src', 'subsys', 'pedigree-c', 'SConscript'), exports=['env'])
 
 if env['ARCH_TARGET'] in ['X86', 'X64', 'ARM']:
     SConscript(os.path.join('src', 'subsys', 'native', 'SConscript'), exports=['env'])

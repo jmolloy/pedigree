@@ -39,7 +39,9 @@ Tree<void*, void*> g_FreedPointers;
 #define DEBUG_ALLOCATOR_CHECK_UNDERFLOWS
 
 // Required for G++ to link static init/destructors.
+#ifndef HOSTED
 void *__dso_handle;
+#endif
 
 // Defined in the linker.
 extern uintptr_t start_ctors;

@@ -17,23 +17,17 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/** Metamodule to handle dependencies on graphics devices so splash only runs
- *  after all graphics drivers have been loaded. */
+#ifndef KERNEL_MACHINE_HOSTED_TYPES_H
+#define KERNEL_MACHINE_HOSTED_TYPES_H
 
-#include <Module.h>
+#include <processor/types.h>
 
-#ifdef X86_COMMON
-#define __MOD_DEPS 0
-#define __MOD_DEPS_OPT "vbe", "vmware-gfx", "nvidia"
-#elif PPC_COMMON
-#define __MOD_DEPS 0
-#elif ARM_COMMON
-#define __MOD_DEPS 0
-#elif HOSTED
-/// \todo probably want some sort of SDL thing here.
-#define __MOD_DEPS 0
-#endif
-MODULE_INFO("gfx-deps", 0, 0, __MOD_DEPS);
-#ifdef __MOD_DEPS_OPT
-MODULE_OPTIONAL_DEPENDS(__MOD_DEPS_OPT);
+/** @addtogroup kernelmachinehostedcommon
+ * @{ */
+
+/** Define a type for IRQ identifications */
+typedef uint8_t HostedCommonirq_id_t;
+
+/** @} */
+
 #endif

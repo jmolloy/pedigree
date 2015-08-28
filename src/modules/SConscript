@@ -106,6 +106,14 @@ elif env['ARCH_TARGET'] == 'ARM':
     driver_common_subdirs = [x for x in driver_common_subdirs
                              if x not in ['ata', 'dma', 'cdi', 'nvidia', '3c90x']]
     cdi_drivers = []
+elif env['ARCH_TARGET'] == 'HOSTED':
+    driver_arch = 'hosted'
+    driver_arch_subdirs = []
+
+    # Filter out useless drivers for HOSTED
+    driver_common_subdirs = [x for x in driver_common_subdirs
+                             if x in ['loopback', 'partition', 'scsi']]
+    cdi_drivers = []
 
 env['cdi_driver_list'] = cdi_drivers
 
@@ -139,6 +147,8 @@ else:
 
 if env['ARCH_TARGET'] == 'ARM':
     module_subdirs = [x for x in module_subdirs if x not in ['splash', 'TUI']]
+elif env['hosted']:
+    module_subdirs = [x for x in module_subdirs if x not in ['linker']]
 
 # No difference yet, load all modules
 initrd_modules = module_subdirs
@@ -341,8 +351,9 @@ initrdList += [os.path.join(builddir.abspath, 'drivers', i + '.o') for i in all_
 initrdList += [os.path.join(builddir.abspath, 'modules', i + '.o') for i in initrd_modules]
 
 # Subsystems
-initrdList += [os.path.join(builddir.abspath, 'subsystems', 'posix.o')]
-initrdList += [os.path.join(builddir.abspath, 'subsystems', 'pedigree-c.o')]
+if not env['hosted']:
+    initrdList += [os.path.join(builddir.abspath, 'subsystems', 'posix.o')]
+    initrdList += [os.path.join(builddir.abspath, 'subsystems', 'pedigree-c.o')]
 if env['ARCH_TARGET'] in ('X86', 'X64', 'ARM'):
     initrdList += [os.path.join(builddir.abspath, 'subsystems', 'native.o')]
 

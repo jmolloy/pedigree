@@ -255,6 +255,8 @@ KernelElf::~KernelElf()
 #define MOD_START 0xFFFFFFFFF0000000
 #elif defined(ARMV7)
 #define MOD_START 0x60000000
+#elif defined(HOSTED)
+#define MOD_START 0x100000000
 #endif
 #define MOD_LEN 0x400000
 

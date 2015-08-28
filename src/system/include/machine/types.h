@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -36,6 +35,10 @@
 #ifdef PPC_COMMON
   #include <machine/ppc_common/types.h>
   #define MACHINE_SPECIFIC_NAME(x) PPCCommon##x
+#endif
+#ifdef HOSTED
+  #include <machine/hosted/types.h>
+  #define MACHINE_SPECIFIC_NAME(x) HostedCommon##x
 #endif
 
 // NOTE: This throws a compile-time error if this header is not adapted for

@@ -33,7 +33,7 @@ NetworkStack::NetworkStack() :
 {
   initialise();
 
-#if defined(X86_COMMON)
+#if defined(X86_COMMON) || defined(HOSTED)
   // Lots of RAM to burn! Try 16 MB, then 8 MB, then 4 MB, then give up
   if(!m_MemPool.initialise(4096, 1600))
       if(!m_MemPool.initialise(2048, 1600))

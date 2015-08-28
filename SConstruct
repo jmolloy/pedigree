@@ -111,7 +111,7 @@ opts.AddVariables(
 
     BoolVariable('arm_bigendian', 'Is this ARM target big-endian?', 0),
 
-    BoolVariable('linux', 'Is this build to run on Linux?', 0),
+    BoolVariable('hosted', 'Is this build to run on another host OS?', 0),
     
     ('uimage_target', 'Where to copy the generated uImage.bin file to.', '~'),
 )
@@ -218,6 +218,10 @@ env['CPPSUFFIXES'] = ['.c', '.C', '.cc', '.h', '.hpp', '.cpp', '.S']
 # Bring across autogen variables to the main environment.
 for k in autogen_opts.keys():
     env[k] = autogen_env.get(k)
+
+# If building as a hosted system, don't use a cross-compiler.
+if env['hosted']:
+    env['CROSS'] = ''
 
 # Look for things we care about for the build.
 env['QEMU_IMG'] = env.Detect('qemu-img')
@@ -340,9 +344,19 @@ if env['CROSS'] or env['ON_PEDIGREE']:
     env['LINK'] = tools['gcc']
     env['STRIP'] = tools['strip']
     env['OBJCOPY'] = tools['objcopy']
+elif env['hosted']:
+    # Reset all tools to the host's tools.
+    for hosted_tool in reversed(tools_to_find):
+        env.Tool(hosted_tool)
+
+    env['COMPILER_TARGET'] = 'HOSTED'
+else:
+    raise SCons.Errors.UserError('No cross-compiler specified and not on '
+        'Pedigree, and not building a hosted system. Check flags and try '
+        'again.')
 
 if env['ON_PEDIGREE'] or env['COMPILER_TARGET']:
-    if env['ON_PEDIGREE']:
+    if env['ON_PEDIGREE'] or env['hosted']:
         host_arch = env['HOST_PLATFORM']
     else:
         host_arch = env['COMPILER_TARGET']
@@ -441,7 +455,7 @@ if env['pup']:
 # NASM is used for X86 and X64 builds
 if env['ARCH_TARGET'] in ('X86', 'X64'):
     env['AS'] = None
-    if env['ON_PEDIGREE']:
+    if env['ON_PEDIGREE'] or env['hosted']:
         env['AS'] = env.Detect('nasm')
     else:
         env['AS'] = os.path.join(env['XCOMPILER_PATH'], 'nasm')
@@ -472,13 +486,36 @@ env.MergeFlags({'CFLAGS': warning_flag})
 if env['memory_log']:
     defines.append('MEMORY_LOGGING_ENABLED')
 
-if env['linux']:
-    # TODO(miselin): do this better.
-    defines = [x for x in defines if x not in ["X86_COMMON"]]
+if env['hosted']:
+    removal_defines = ('X86', 'X64', 'X86_COMMON')
+    defines = [x for x in defines if x not in removal_defines]
 
-additionalDefines = ['ipv4_forwarding', 'serial_is_file', 'installer', 'debugger', 'cripple_hdd', 'enable_ctrlc',
-                     'multiple_consoles', 'multiprocessor', 'smp', 'apic', 'acpi', 'debug_logging', 'superdebug', 'usb_verbose_debug',
-                     'nogfx', 'mach_pc', 'memory_tracing', 'memory_log_inline', 'travis', 'linux']
+    # Reset flags.
+    env['CCFLAGS'] = generic_flags + warning_flags
+    env['CFLAGS'] = generic_cflags + warning_flags_c
+    env['CXXFLAGS'] = generic_cxxflags + warning_flags_cxx
+    env['LINKFLAGS'] = []
+
+    # Build no images at all for hosted systems; it doesn't make sense.
+    env['nodiskimages'] = True
+
+    # Not a PC.
+    env['mach_pc'] = False
+
+    # Static drivers on hosted systems.
+    # TODO(miselin): this is absolutely not necessary, but makes things simpler
+    # to start with during the port.
+    defines += ['STATIC_DRIVERS']
+
+    # Now ditch any ARCH_TARGET-related hooks - we don't need it anymore.
+    env['ARCH_TARGET'] = 'HOSTED'
+
+additionalDefines = ['ipv4_forwarding', 'serial_is_file', 'installer',
+                     'debugger', 'cripple_hdd', 'enable_ctrlc',
+                     'multiple_consoles', 'multiprocessor', 'smp', 'apic',
+                     'acpi', 'debug_logging', 'superdebug', 'nogfx', 'mach_pc',
+                     'usb_verbose_debug', 'memory_tracing', 'travis', 'hosted',
+                     'memory_log_inline']
 for i in additionalDefines:
     if i not in env:
         continue

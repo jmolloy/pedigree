@@ -17,23 +17,36 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/** Metamodule to handle dependencies on graphics devices so splash only runs
- *  after all graphics drivers have been loaded. */
+#ifndef KERNEL_PROCESSOR_HOSTED_PROCESSOR_H
+#define KERNEL_PROCESSOR_HOSTED_PROCESSOR_H
 
-#include <Module.h>
+void Processor::breakpoint()
+{
+    // This is OK on hosted platforms that are X86.
+    /// \todo Do this more generally.
+    asm volatile ("int $3");
+}
 
-#ifdef X86_COMMON
-#define __MOD_DEPS 0
-#define __MOD_DEPS_OPT "vbe", "vmware-gfx", "nvidia"
-#elif PPC_COMMON
-#define __MOD_DEPS 0
-#elif ARM_COMMON
-#define __MOD_DEPS 0
-#elif HOSTED
-/// \todo probably want some sort of SDL thing here.
-#define __MOD_DEPS 0
-#endif
-MODULE_INFO("gfx-deps", 0, 0, __MOD_DEPS);
-#ifdef __MOD_DEPS_OPT
-MODULE_OPTIONAL_DEPENDS(__MOD_DEPS_OPT);
+void Processor::halt()
+{
+    // Abnormal exit.
+    __builtin_trap();
+}
+
+void Processor::pause()
+{
+    asm volatile("pause");
+}
+
+void Processor::reset()
+{
+    Processor::_reset();
+}
+
+void Processor::haltUntilInterrupt()
+{
+    Processor::_haltUntilInterrupt();
+}
+
+
 #endif

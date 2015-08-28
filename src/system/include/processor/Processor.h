@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -284,6 +283,12 @@ class Processor
     /** How far has the processor-specific interface been initialised */
     static size_t m_Initialised;
   private:
+    #if defined(HOSTED)
+      /** Implementation of reset(), haltUntilInterrupt() */
+      static void _reset();
+      static void _haltUntilInterrupt();
+    #endif
+
     /** If we have only one processor, we define the ProcessorInformation class here
      *  otherwise we use an array of ProcessorInformation structures */
     #if !defined(MULTIPROCESSOR)
@@ -309,6 +314,8 @@ class Processor
   #include <processor/arm_common/Processor.h>
 #elif defined(PPC_COMMON)
   #include <processor/ppc_common/Processor.h>
+#elif defined(HOSTED)
+  #include <processor/hosted/Processor.h>
 #endif
 
 #ifdef X86
