@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -41,6 +40,8 @@ class MemoryRegion
   friend class PpcCommonPhysicalMemoryManager;
   /** As does ArmV7PhysicalMemoryManager. */
   friend class ArmV7PhysicalMemoryManager;
+  /** As does HostedPhysicalMemoryManager. */
+  friend class HostedPhysicalMemoryManager;
   public:
     /** The default constructor does nothing  */
     inline MemoryRegion(const char *pName)

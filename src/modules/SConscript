@@ -148,7 +148,7 @@ else:
 if env['ARCH_TARGET'] == 'ARM':
     module_subdirs = [x for x in module_subdirs if x not in ['splash', 'TUI']]
 elif env['hosted']:
-    module_subdirs = [x for x in module_subdirs if x not in ['linker']]
+    module_subdirs = [x for x in module_subdirs if x not in ['linker', 'init']]
 
 # No difference yet, load all modules
 initrd_modules = module_subdirs

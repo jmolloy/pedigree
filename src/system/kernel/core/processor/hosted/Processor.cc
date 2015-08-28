@@ -18,11 +18,80 @@
  */
 
 #include <processor/Processor.h>
-// #include "PhysicalMemoryManager.h"
+#include "PhysicalMemoryManager.h"
+#include <process/initialiseMultitasking.h>
 
 void Processor::initialisationDone()
 {
-  // HostedPhysicalMemoryManager::instance().initialisationDone();
+  HostedPhysicalMemoryManager::instance().initialisationDone();
+}
+
+void Processor::initialise1(const BootstrapStruct_t &Info)
+{
+  HostedPhysicalMemoryManager &physicalMemoryManager = HostedPhysicalMemoryManager::instance();
+  physicalMemoryManager.initialise(Info);
+  m_Initialised = 1;
+}
+
+void Processor::initialise2(const BootstrapStruct_t &Info)
+{
+  initialiseMultitasking();
+  m_Initialised = 2;
+}
+
+void Processor::identify(HugeStaticString &str)
+{
+  str.clear();
+  str.append("Hosted Processor");
+}
+
+uintptr_t Processor::getInstructionPointer()
+{
+  return reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+}
+
+uintptr_t Processor::getStackPointer()
+{
+  return 0;
+}
+
+uintptr_t Processor::getBasePointer()
+{
+  return reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
+}
+
+bool Processor::saveState(SchedulerState &state)
+{
+  /// \todo implement (green thread style context switch)
+  return true;
+}
+
+void Processor::restoreState(SchedulerState &state, volatile uintptr_t *pLock)
+{
+  /// \todo implement (green thread style context switch)
+}
+
+void Processor::restoreState(SyscallState &state, volatile uintptr_t *pLock)
+{
+  /// \todo implement (green thread style context switch)
+}
+
+void Processor::jumpKernel(volatile uintptr_t *pLock, uintptr_t address,
+  uintptr_t stack, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4)
+{
+}
+
+void Processor::jumpUser(volatile uintptr_t *pLock, uintptr_t address,
+  uintptr_t stack, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4)
+{
+}
+
+void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
+{
+}
+
+void Processor::setTlsBase(uintptr_t newBase)
+{
 }
 
 size_t Processor::getDebugBreakpointCount()
@@ -87,4 +156,9 @@ void Processor::_reset()
 void Processor::_haltUntilInterrupt()
 {
     __processor_cc_hosted::pause();
+}
+
+/// \todo not here
+void PerProcessorScheduler::deleteThreadThenRestoreState(Thread *pThread, SchedulerState &newState)
+{
 }

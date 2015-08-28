@@ -111,50 +111,7 @@ class HostedInterruptState
      *\note NOT implemented */
     ~HostedInterruptState();
 
-    /** The R15 general purpose register */
-    uint64_t m_R15;
-    /** The R14 general purpose register */
-    uint64_t m_R14;
-    /** The R13 general purpose register */
-    uint64_t m_R13;
-    /** The R12 general purpose register */
-    uint64_t m_R12;
-    /** The R11 general purpose register */
-    uint64_t m_R11;
-    /** The R10 general purpose register */
-    uint64_t m_R10;
-    /** The R9 general purpose register */
-    uint64_t m_R9;
-    /** The R8 general purpose register */
-    uint64_t m_R8;
-    /** The base-pointer */
-    uint64_t m_Rbp;
-    /** The RSI general purpose register */
-    uint64_t m_Rsi;
-    /** The RDI general purpose register */
-    uint64_t m_Rdi;
-    /** The RDX general purpose register */
-    uint64_t m_Rdx;
-    /** The RCX general purpose register */
-    uint64_t m_Rcx;
-    /** The RBX general purpose register */
-    uint64_t m_Rbx;
-    /** The RAX general purpose register */
-    uint64_t m_Rax;
-    /** The interrupt number */
-    uint64_t m_IntNumber;
-    /** The error-code (if any) */
-    uint64_t m_Errorcode;
-    /** The instruction-pointer */
-    uint64_t m_Rip;
-    /** The CS segment register */
-    uint64_t m_Cs;
-    /** The RFlags register */
-    uint64_t m_Rflags;
-    /** The stack-pointer */
-    uint64_t m_Rsp;
-    /** The SS segment register */
-    uint64_t m_Ss;
+    uint64_t state;
 } PACKED;
 
 /** x64 Syscall State */
@@ -220,40 +177,7 @@ class HostedSyscallState
     inline void setSyscallErrno(uintptr_t val);
 
   public:
-    /** The R15 general purpose register */
-    uint64_t m_R15;
-    /** The R14 general purpose register */
-    uint64_t m_R14;
-    /** The R14 general purpose register */
-    uint64_t m_R13;
-    /** The R12 general purpose register */
-    uint64_t m_R12;
-    /** The R10 general purpose register */
-    uint64_t m_R10;
-    /** The R9 general purpose register */
-    uint64_t m_R9;
-    /** The R8 general purpose register */
-    uint64_t m_R8;
-    /** The base-pointer */
-    uint64_t m_Rbp;
-  public:
-    /** The RSI general purpose register */
-    uint64_t m_Rsi;
-    /** The RDI general purpose register */
-    uint64_t m_Rdi;
-  private:
-    /** The RDX general purpose register */
-    uint64_t m_Rdx;
-    /** The RBX general purpose register */
-    uint64_t m_Rbx;
-    /** The RAX general purpose register */
-    uint64_t m_Rax;
-    /** The R11/RFlags register */
-    uint64_t m_RFlagsR11;
-    /** The RIP/RCX register */
-    uint64_t m_RipRcx;
-    /** The stack-pointer */
-    uint64_t m_Rsp;
+    uint64_t state;
 } PACKED;
 
 /** x64 ProcessorState */
@@ -304,42 +228,7 @@ class HostedProcessorState
      *\param[in] basePointer the new base-pointer */
     inline void setBasePointer(uintptr_t basePointer);
 
-    /** The R15 general purpose register */
-    uint64_t r15;
-    /** The R14 general purpose register */
-    uint64_t r14;
-    /** The R13 general purpose register */
-    uint64_t r13;
-    /** The R12 general purpose register */
-    uint64_t r12;
-    /** The R11 general purpose register */
-    uint64_t r11;
-    /** The R10 general purpose register */
-    uint64_t r10;
-    /** The R9 general purpose register */
-    uint64_t r9;
-    /** The R8 general purpose register */
-    uint64_t r8;
-    /** The base-pointer */
-    uint64_t rbp;
-    /** The RSI general purpose register */
-    uint64_t rsi;
-    /** The RDI general purpose register */
-    uint64_t rdi;
-    /** The RDX general purpose register */
-    uint64_t rdx;
-    /** The RCX general purpose register */
-    uint64_t rcx;
-    /** The RBX general purpose register */
-    uint64_t rbx;
-    /** The RAX general purpose register */
-    uint64_t rax;
-    /** The instruction-pointer */
-    uint64_t rip;
-    /** The RFlags register */
-    uint64_t rflags;
-    /** The stack-pointer */
-    uint64_t rsp;
+    uint64_t state;
 };
 
 /** x64 SchedulerState */
@@ -366,199 +255,122 @@ public:
 //
 uintptr_t HostedInterruptState::getStackPointer() const
 {
-  return m_Rsp;
+  return 0;
 }
 void HostedInterruptState::setStackPointer(uintptr_t stackPointer)
 {
-  m_Rsp = stackPointer;
 }
 uintptr_t HostedInterruptState::getInstructionPointer() const
 {
-  return m_Rip;
+  return 0;
 }
 void HostedInterruptState::setInstructionPointer(uintptr_t instructionPointer)
 {
-  m_Rip = instructionPointer;
 }
 uintptr_t HostedInterruptState::getBasePointer() const
 {
-  return m_Rbp;
+  return 0;
 }
 void HostedInterruptState::setBasePointer(uintptr_t basePointer)
 {
-  m_Rbp = basePointer;
 }
 size_t HostedInterruptState::getRegisterSize(size_t index) const
 {
-  return 8;
+  return sizeof(processor_register_t);
 }
 
 bool HostedInterruptState::kernelMode() const
 {
-  return (m_Cs == 0x08);
+  return true;
 }
 size_t HostedInterruptState::getInterruptNumber() const
 {
-  return m_IntNumber;
+  return 0;
 }
 
 uint64_t HostedInterruptState::getFlags() const
 {
-  return m_Rflags;
+  return 0;
 }
 void HostedInterruptState::setFlags(uint64_t flags)
 {
-  m_Rflags = flags;
 }
 
 uintptr_t HostedSyscallState::getStackPointer() const
 {
-  return m_Rsp;
+  return 0;
 }
 void HostedSyscallState::setStackPointer(uintptr_t stackPointer)
 {
-  m_Rsp = stackPointer;
 }
 uintptr_t HostedSyscallState::getInstructionPointer() const
 {
-  return m_RipRcx;
+  return 0;
 }
 void HostedSyscallState::setInstructionPointer(uintptr_t instructionPointer)
 {
-  m_RipRcx = instructionPointer;
 }
 uintptr_t HostedSyscallState::getBasePointer() const
 {
-  return m_Rbp;
+  return 0;
 }
 void HostedSyscallState::setBasePointer(uintptr_t basePointer)
 {
-  m_Rbp = basePointer;
 }
 size_t HostedSyscallState::getRegisterSize(size_t index) const
 {
-  return 8;
+  return sizeof(processor_register_t);
 }
 
 size_t HostedSyscallState::getSyscallService() const
 {
-  return ((m_Rax >> 16) & 0xFFFF);
+  return 0;
 }
 size_t HostedSyscallState::getSyscallNumber() const
 {
-  return (m_Rax & 0xFFFF);
+  return 0;
 }
 uintptr_t HostedSyscallState::getSyscallParameter(size_t n) const
 {
-  switch (n)
-  {
-    case 0: return m_Rbx;
-    case 1: return m_Rdx;
-    case 2: return m_Rsi;
-    case 3: return m_Rdi;
-    case 4: return m_R8;
-    default:
-      WARNING("Bad syscall parameter requested: " << Dec << n);
-      return 0;
-  }
+  return 0;
 }
 void HostedSyscallState::setSyscallReturnValue(uintptr_t val)
 {
-  m_Rax = val;
 }
 void HostedSyscallState::setSyscallErrno(uintptr_t val)
 {
-  m_Rbx = val;
 }
 
 
 HostedProcessorState::HostedProcessorState()
-  : r15(), r14(), r13(), r12(), r11(), r10(), r9(), r8(), rbp(), rsi(), rdi(),
-    rdx(), rcx(), rbx(), rax(), rip(), rflags(), rsp()
+  : state()
 {
 }
 HostedProcessorState::HostedProcessorState(const HostedProcessorState &x)
-  : r15(x.r15), r14(x.r14), r13(x.r13), r12(x.r12), r11(x.r11), r10(x.r10), r9(x.r9), r8(x.r8),
-    rbp(x.rbp), rsi(x.rsi), rdi(x.rdi), rdx(x.rdx), rcx(x.rcx), rbx(x.rbx), rax(x.rax), rip(x.rip),
-    rflags(x.rflags), rsp(x.rsp)
+  : state(x.state)
 {
 }
 HostedProcessorState::HostedProcessorState(const HostedInterruptState &x)
-  : r15(x.m_R15), r14(x.m_R14), r13(x.m_R13), r12(x.m_R12), r11(x.m_R11), r10(x.m_R10), r9(x.m_R9),
-    r8(x.m_R8), rbp(x.m_Rbp), rsi(x.m_Rsi), rdi(x.m_Rdi), rdx(x.m_Rdx), rcx(x.m_Rcx), rbx(x.m_Rbx),
-    rax(x.m_Rax), rip(x.m_Rip), rflags(x.m_Rflags), rsp(x.m_Rsp)
+  : state(x.state)
 {
 }
 HostedProcessorState::HostedProcessorState(const HostedSyscallState &x)
-  : r15(x.m_R15), r14(x.m_R14), r13(x.m_R13), r12(x.m_R12), r11(x.m_RFlagsR11), r10(x.m_R10), r9(x.m_R9),
-    r8(x.m_R8), rbp(x.m_Rbp), rsi(x.m_Rsi), rdi(x.m_Rdi), rdx(x.m_Rdx), rcx(x.m_RipRcx), rbx(x.m_Rbx),
-    rax(x.m_Rax), rip(x.m_RipRcx), rflags(x.m_RFlagsR11), rsp(x.m_Rsp)
+  : state(x.state)
 {
 }
 HostedProcessorState &HostedProcessorState::operator = (const HostedProcessorState &x)
 {
-  r15 = x.r15;
-  r14 = x.r14;
-  r13 = x.r13;
-  r12 = x.r12;
-  r11 = x.r11;
-  r10 = x.r10;
-  r9 = x.r9;
-  r8 = x.r8;
-  rbp = x.rbp;
-  rsi = x.rsi;
-  rdi = x.rdi;
-  rdx = x.rdx;
-  rcx = x.rcx;
-  rbx = x.rbx;
-  rax = x.rax;
-  rip = x.rip;
-  rflags = x.rflags;
-  rsp = x.rsp;
+  state = x.state;
   return *this;
 }
 HostedProcessorState &HostedProcessorState::operator = (const HostedInterruptState &x)
 {
-  r15 = x.m_R15;
-  r14 = x.m_R14;
-  r13 = x.m_R13;
-  r12 = x.m_R12;
-  r11 = x.m_R11;
-  r10 = x.m_R10;
-  r9 = x.m_R9;
-  r8 = x.m_R8;
-  rbp = x.m_Rbp;
-  rsi = x.m_Rsi;
-  rdi = x.m_Rdi;
-  rdx = x.m_Rdx;
-  rcx = x.m_Rcx;
-  rbx = x.m_Rbx;
-  rax = x.m_Rax;
-  rip = x.m_Rip;
-  rflags = x.m_Rflags;
-  rsp = x.m_Rsp;
+  state = x.state;
   return *this;
 }
 HostedProcessorState &HostedProcessorState::operator = (const HostedSyscallState &x)
 {
-  r15 = x.m_R15;
-  r14 = x.m_R14;
-  r13 = x.m_R13;
-  r12 = x.m_R12;
-  r11 = x.m_RFlagsR11;
-  r10 = x.m_R10;
-  r9 = x.m_R9;
-  r8 = x.m_R8;
-  rbp = x.m_Rbp;
-  rsi = x.m_Rsi;
-  rdi = x.m_Rdi;
-  rdx = x.m_Rdx;
-  rcx = x.m_RipRcx;
-  rbx = x.m_Rbx;
-  rax = x.m_Rax;
-  rip = x.m_RipRcx;
-  rflags = x.m_RFlagsR11;
-  rsp = x.m_Rsp;
+  state = x.state;
   return *this;
 }
 HostedProcessorState::~HostedProcessorState()
@@ -567,27 +379,24 @@ HostedProcessorState::~HostedProcessorState()
 
 uintptr_t HostedProcessorState::getStackPointer() const
 {
-  return rsp;
+  return 0;
 }
 void HostedProcessorState::setStackPointer(uintptr_t stackPointer)
 {
-  rsp = stackPointer;
 }
 uintptr_t HostedProcessorState::getInstructionPointer() const
 {
-  return rip;
+  return 0;
 }
 void HostedProcessorState::setInstructionPointer(uintptr_t instructionPointer)
 {
-  rip = instructionPointer;
 }
 uintptr_t HostedProcessorState::getBasePointer() const
 {
-  return rbp;
+  return 0;
 }
 void HostedProcessorState::setBasePointer(uintptr_t basePointer)
 {
-  rbp = basePointer;
 }
 
 #endif

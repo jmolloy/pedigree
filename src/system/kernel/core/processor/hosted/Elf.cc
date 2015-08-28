@@ -17,22 +17,16 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <processor/StackFrame.h>
-#include <stdarg.h>
+#include <linker/Elf.h>
 #include <Log.h>
+#include <linker/KernelElf.h>
 
-#if defined(DEBUGGER)
-
-uintptr_t HostedStackFrame::getParameter(size_t n)
+bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolTable *pSymtab, uintptr_t loadBase, SymbolTable::Policy policy)
 {
-  return 0;
+  return false;
 }
 
-#endif
-
-void HostedStackFrame::construct(ProcessorState &state,
-                              uintptr_t returnAddress,
-                              unsigned int nParams,
-                              ...)
+bool Elf::applyRelocation(ElfRela_t rela, ElfSectionHeader_t *pSh, SymbolTable *pSymtab, uintptr_t loadBase, SymbolTable::Policy policy)
 {
+  return false;
 }

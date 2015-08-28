@@ -17,81 +17,47 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "Machine.h"
+#include <processor/state.h>
 
-#include <Log.h>
-#include <panic.h>
-
-#include <machine/Device.h>
-#include <machine/Bus.h>
-#include <machine/Disk.h>
-#include <machine/Controller.h>
-
-HostedMachine HostedMachine::m_Instance;
-
-Machine &Machine::instance()
+const char *HostedInterruptStateRegisterName[1] =
 {
-  return HostedMachine::instance();
+  "state",
+};
+
+const char *HostedSyscallStateRegisterName[1] =
+{
+  "state",
+};
+
+size_t HostedInterruptState::getRegisterCount() const
+{
+  return 1;
 }
-
-void HostedMachine::initialise()
+processor_register_t HostedInterruptState::getRegister(size_t index) const
 {
-  // ...
-  m_bInitialised = true;
-}
-
-void HostedMachine::initialiseDeviceTree()
-{
-}
-
-Serial *HostedMachine::getSerial(size_t n)
-{
+  if (index == 0) return state;
   return 0;
 }
-
-size_t HostedMachine::getNumSerial()
+const char *HostedInterruptState::getRegisterName(size_t index) const
 {
+  return HostedInterruptStateRegisterName[index];
+}
+
+size_t HostedSyscallState::getRegisterCount() const
+{
+  return 1;
+}
+processor_register_t HostedSyscallState::getRegister(size_t index) const
+{
+  if (index == 0)return state;
   return 0;
 }
+const char *HostedSyscallState::getRegisterName(size_t index) const
+{
+  return HostedSyscallStateRegisterName[index];
+}
 
-Vga *HostedMachine::getVga(size_t n)
+HostedInterruptState *HostedInterruptState::construct(HostedProcessorState &state, bool userMode)
 {
   return 0;
-}
-
-size_t HostedMachine::getNumVga()
-{
-  return 0;
-}
-
-IrqManager *HostedMachine::getIrqManager()
-{
-  return 0;
-}
-
-SchedulerTimer *HostedMachine::getSchedulerTimer()
-{
-  return 0;
-}
-
-Timer *HostedMachine::getTimer()
-{
-  return 0;
-}
-
-Keyboard *HostedMachine::getKeyboard()
-{
-  return 0;
-}
-
-void HostedMachine::setKeyboard(Keyboard *kb)
-{
-}
-
-HostedMachine::HostedMachine()
-{
-}
-
-HostedMachine::~HostedMachine()
-{
 }

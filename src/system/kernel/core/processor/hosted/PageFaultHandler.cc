@@ -17,81 +17,31 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "Machine.h"
-
 #include <Log.h>
+#include <Debugger.h>
+#include <processor/PageFaultHandler.h>
+#include <process/Scheduler.h>
 #include <panic.h>
+#include <processor/PhysicalMemoryManager.h>
+#include "VirtualAddressSpace.h"
 
-#include <machine/Device.h>
-#include <machine/Bus.h>
-#include <machine/Disk.h>
-#include <machine/Controller.h>
+PageFaultHandler PageFaultHandler::m_Instance;
 
-HostedMachine HostedMachine::m_Instance;
-
-Machine &Machine::instance()
+bool PageFaultHandler::initialise()
 {
-  return HostedMachine::instance();
+  /// \todo handle SIGSEGV, SIGBUS
+  return false;
+  /*InterruptManager &IntManager = InterruptManager::instance();
+
+  return(IntManager.registerInterruptHandler(PAGE_FAULT_EXCEPTION, this));*/
 }
 
-void HostedMachine::initialise()
+void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
 {
-  // ...
-  m_bInitialised = true;
+  panic("page fault");
 }
 
-void HostedMachine::initialiseDeviceTree()
-{
-}
-
-Serial *HostedMachine::getSerial(size_t n)
-{
-  return 0;
-}
-
-size_t HostedMachine::getNumSerial()
-{
-  return 0;
-}
-
-Vga *HostedMachine::getVga(size_t n)
-{
-  return 0;
-}
-
-size_t HostedMachine::getNumVga()
-{
-  return 0;
-}
-
-IrqManager *HostedMachine::getIrqManager()
-{
-  return 0;
-}
-
-SchedulerTimer *HostedMachine::getSchedulerTimer()
-{
-  return 0;
-}
-
-Timer *HostedMachine::getTimer()
-{
-  return 0;
-}
-
-Keyboard *HostedMachine::getKeyboard()
-{
-  return 0;
-}
-
-void HostedMachine::setKeyboard(Keyboard *kb)
-{
-}
-
-HostedMachine::HostedMachine()
-{
-}
-
-HostedMachine::~HostedMachine()
+PageFaultHandler::PageFaultHandler() :
+    m_Handlers()
 {
 }

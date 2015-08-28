@@ -187,6 +187,10 @@ env_clone['LIBS'] = ['gcc']
 if not env['hosted']:  # Don't let the kernel link against Pedigree .so objects
     env_clone['LIBPATH'] = ['#', os.path.join(imagesdir, 'libraries')]
 
+if env['hosted']:
+    env_clone['LSCRIPT'] = env.File('#src/system/kernel/core/processor/hosted/kernel.ld')
+    env_clone['LINKFLAGS'] += ['-T$LSCRIPT']
+
 final_output = objname
 stripped_objname = final_output
 objname = '%s.debug' % objname
