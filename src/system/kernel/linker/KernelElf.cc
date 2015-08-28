@@ -706,5 +706,11 @@ const char *KernelElf::globalLookupSymbol(uintptr_t addr, uintptr_t *startAddr)
 
 bool KernelElf::hasPendingModules() const
 {
+    for (Vector<Module*>::ConstIterator it = m_PendingModules.begin();
+         it != m_PendingModules.end();
+         ++it)
+    {
+        NOTICE("Pending module: " << (*it)->name);
+    }
     return m_PendingModules.count() != 0;
 }
