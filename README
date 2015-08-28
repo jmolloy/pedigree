@@ -49,7 +49,7 @@ Then you can run:
     ./run_pup.py install <package>
 to install a package.
 
-If you visit http://pup.pedigree-project.org/pup you can see a list of all
+If you visit http://pup.pedigree-project.org you can see a list of all
 packages that are available and can be downloaded.
 
 Remember to re-run SCons after installing a package to ensure your disk image
