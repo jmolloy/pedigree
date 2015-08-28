@@ -3,7 +3,7 @@
 # Handle running on Travis-CI.
 TRAVIS_OPTIONS=
 if [ ! -z "$TRAVIS" ]; then
-    TRAVIS_OPTIONS="travis=$TRAVIS forcemtools=0"
+    TRAVIS_OPTIONS="travis=$TRAVIS forcemtools=1"
 
     # The toolchain .deb file installs all files owned as root, which is not
     # useful when we want to symlink our crt* and POSIX headers. So, fix that.
