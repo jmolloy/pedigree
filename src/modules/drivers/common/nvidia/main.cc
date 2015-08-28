@@ -86,4 +86,4 @@ void exit()
 {
 }
 
-MODULE_INFO("nvidia", &entry, &exit, "TUI", "pci", "vbe");
+MODULE_INFO("nvidia", &entry, &exit, "pci");

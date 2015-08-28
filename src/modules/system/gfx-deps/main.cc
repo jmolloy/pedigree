@@ -24,7 +24,7 @@
 
 #ifdef X86_COMMON
 #define __MOD_DEPS 0
-#define __MOD_DEPS_OPT "vbe", "vmware-gfx"
+#define __MOD_DEPS_OPT "vbe", "vmware-gfx", "nvidia"
 #elif PPC_COMMON
 #define __MOD_DEPS 0
 #elif ARM_COMMON
