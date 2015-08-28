@@ -21,6 +21,7 @@
 #define KERNEL_MACHINE_HOSTED_PC_H
 
 #include <machine/Machine.h>
+#include "Serial.h"
 
 /**
  * Concretion of the abstract Machine class for hosted systems
@@ -55,6 +56,8 @@ class HostedMachine : public Machine
     * Virtual destructor, does nothing.
     */
     virtual ~HostedMachine();
+
+    HostedSerial m_Serial[1];
 
     static HostedMachine m_Instance;
 };

@@ -36,7 +36,8 @@ HostedVirtualAddressSpace HostedVirtualAddressSpace::m_KernelSpace(
 
 VirtualAddressSpace *g_pCurrentlyCloning = 0;
 
-VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace() {
+VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
+{
   return HostedVirtualAddressSpace::m_KernelSpace;
 }
 
@@ -233,6 +234,7 @@ HostedVirtualAddressSpace::HostedVirtualAddressSpace()
       m_Lock(false, true) {
 }
 
+#include <stdio.h>
 HostedVirtualAddressSpace::HostedVirtualAddressSpace(void *Heap, void *VirtualStack)
     : VirtualAddressSpace(Heap),
       m_pStackTop(VirtualStack),

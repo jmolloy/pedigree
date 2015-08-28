@@ -481,9 +481,9 @@ HostedPhysicalMemoryManager::PageStack::PageStack()
     }
 
     // Set the locations for the page stacks in the virtual address space
-    m_Stack[0] = KERNEL_VIRTUAL_PAGESTACK_4GB;
-    m_Stack[1] = KERNEL_VIRTUAL_PAGESTACK_ABV4GB1;
-    m_Stack[2] = KERNEL_VIRTUAL_PAGESTACK_ABV4GB2;
+    m_Stack[0] = new char[getPageSize()];
+    m_Stack[1] = new char[getPageSize()];
+    m_Stack[2] = new char[getPageSize()];
 
     m_FreePages = 0;
 }

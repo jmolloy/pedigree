@@ -34,6 +34,13 @@ Tree<void*, void*> g_FreedPointers;
 
 #include "SlamAllocator.h"
 
+extern "C"
+{
+    void *malloc(size_t);
+    void *realloc(void *, size_t);
+    void free(void *);
+}
+
 /// If the debug allocator is enabled, this switches it into underflow detection
 /// mode.
 #define DEBUG_ALLOCATOR_CHECK_UNDERFLOWS
@@ -52,6 +59,8 @@ Spinlock allocLock;
 uintptr_t heapBase = 0x60000000; // 0xC0000000;
 #endif
 
+#include <stdio.h>
+
 /// Calls the constructors for all global objects.
 /// Call this before using any global objects.
 void initialiseConstructors()
@@ -60,12 +69,15 @@ void initialiseConstructors()
   // The .ctors section is just an array of function pointers.
   // iterate through, calling each in turn.
   uintptr_t *iterator = reinterpret_cast<uintptr_t*>(&start_ctors);
+  printf("A\n");
   while (iterator < reinterpret_cast<uintptr_t*>(&end_ctors))
   {
     void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
+    printf("%p\n", fp);
     fp();
     iterator++;
   }
+  printf("B\n");
 }
 
 #ifdef MEMORY_TRACING
@@ -180,10 +192,12 @@ void traceMetadata(NormalStaticString str, void *p1, void *p2)
 #define ATEXIT __cxa_atexit
 #endif
 
+#ifndef HOSTED
 /// Required for G++ to compile code.
 extern "C" void ATEXIT(void (*f)(void *), void *p, void *d)
 {
 }
+#endif
 
 /// Called by G++ if a pure virtual function is called. Bad Thing, should never happen!
 extern "C" void __cxa_pure_virtual()
@@ -201,12 +215,20 @@ extern "C" void __cxa_guard_release()
   // TODO
 }
 
+#ifdef HOSTED
+extern "C" void *_malloc(size_t sz)
+#else
 extern "C" void *malloc(size_t sz)
+#endif
 {
     return reinterpret_cast<void *>(new uint8_t[sz]); //SlamAllocator::instance().allocate(sz));
 }
 
+#ifdef HOSTED
+extern "C" void _free(void *p)
+#else
 extern "C" void free(void *p)
+#endif
 {
     if (p == 0)
         return;
@@ -214,7 +236,11 @@ extern "C" void free(void *p)
     delete reinterpret_cast<uint8_t*>(p);
 }
 
+#ifdef HOSTED
+extern "C" void *_realloc(void *p, size_t sz)
+#else
 extern "C" void *realloc(void *p, size_t sz)
+#endif
 {
     if (p == 0)
         return malloc(sz);
@@ -309,7 +335,7 @@ void *operator new (size_t size) throw()
 
 #endif
 
-#elif defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON)
+#elif defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON) || defined(HOSTED)
     void *ret = reinterpret_cast<void *>(SlamAllocator::instance().allocate(size));
     return ret;
 #else
@@ -367,7 +393,7 @@ void *operator new[] (size_t size) throw()
     // All done, return the address
     return reinterpret_cast<void*>(dataPointer);
 
-#elif defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON)
+#elif defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON) || defined(HOSTED)
     void *ret = reinterpret_cast<void *>(SlamAllocator::instance().allocate(size));
     return ret;
 #else
@@ -396,7 +422,7 @@ void operator delete (void * p)
     return;
 #endif
 
-#if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON)
+#if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON) || defined(HOSTED)
     if (p == 0) return;
     if(SlamAllocator::instance().isPointerValid(reinterpret_cast<uintptr_t>(p)))
         SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
@@ -416,7 +442,7 @@ void operator delete[] (void * p)
     return;
 #endif
 
-#if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON)
+#if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON) || defined(HOSTED)
     if (p == 0) return;
     if(SlamAllocator::instance().isPointerValid(reinterpret_cast<uintptr_t>(p)))
         SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
@@ -465,3 +491,27 @@ bool __sync_bool_compare_and_swap_4(void *ptr, void *oldval, void *newval)
 
 #endif
 
+#ifdef HOSTED
+extern "C"
+{
+
+void *__wrap_malloc(size_t sz)
+{
+    printf("malloc(%zx)\n", sz);
+  return _malloc(sz);
+}
+
+void *__wrap_realloc(void *p, size_t sz)
+{
+    printf("realloc(%p, %zx)\n", p, sz);
+  return _realloc(p, sz);
+}
+
+void __wrap_free(void *p)
+{
+    printf("free(%p)\n", p);
+  return _free(p);
+}
+
+}
+#endif

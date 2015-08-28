@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -57,7 +56,7 @@
 #define OBJECT_MINIMUM_SIZE             (sizeof(SlamCache::Node))
 
 /// Outputs information during each function call
-#define DEBUGGING_SLAB_ALLOCATOR        0
+#define DEBUGGING_SLAB_ALLOCATOR        1
 
 /// Adds magic numbers to the start of free blocks, to check for
 /// buffer overruns.

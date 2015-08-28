@@ -17,80 +17,40 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "Machine.h"
-
+#include "Serial.h"
 #include <Log.h>
-#include <panic.h>
 
-#include <machine/Device.h>
-#include <machine/Bus.h>
-#include <machine/Disk.h>
-#include <machine/Controller.h>
+#include <stdio.h>
 
-HostedMachine HostedMachine::m_Instance;
-
-Machine &Machine::instance()
-{
-  return HostedMachine::instance();
-}
-
-void HostedMachine::initialise()
-{
-  m_bInitialised = true;
-}
-
-void HostedMachine::initialiseDeviceTree()
+HostedSerial::HostedSerial()
 {
 }
 
-Serial *HostedMachine::getSerial(size_t n)
-{
-  return &m_Serial[0];
-}
-
-size_t HostedMachine::getNumSerial()
-{
-  return 1;
-}
-
-Vga *HostedMachine::getVga(size_t n)
-{
-  return 0;
-}
-
-size_t HostedMachine::getNumVga()
-{
-  return 0;
-}
-
-IrqManager *HostedMachine::getIrqManager()
-{
-  return 0;
-}
-
-SchedulerTimer *HostedMachine::getSchedulerTimer()
-{
-  return 0;
-}
-
-Timer *HostedMachine::getTimer()
-{
-  return 0;
-}
-
-Keyboard *HostedMachine::getKeyboard()
-{
-  return 0;
-}
-
-void HostedMachine::setKeyboard(Keyboard *kb)
+HostedSerial::~HostedSerial()
 {
 }
 
-HostedMachine::HostedMachine()
+void HostedSerial::setBase(uintptr_t nBaseAddr)
 {
 }
 
-HostedMachine::~HostedMachine()
+char HostedSerial::read()
 {
+  return getchar();
+}
+
+char HostedSerial::readNonBlock()
+{
+  /// \todo non-blocking
+  return getchar();
+}
+
+void HostedSerial::write(char c)
+{
+  putchar(c);
+}
+
+bool HostedSerial::isConnected()
+{
+  return true;
 }

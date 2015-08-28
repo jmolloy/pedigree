@@ -462,17 +462,6 @@ if env['ARCH_TARGET'] in ('X86', 'X64'):
 if env['AS'] is None:
     raise SCons.Errors.UserError('No assembler was found - make sure nasm/as are installed.')
 
-# Handle extra debugging components.
-if env['debugger']:
-    # Build in debugging information when built with the debugger.
-    # Use DWARF, as the stabs format is not very useful (32 bits of reloc)
-    debug_flags = {'CCFLAGS': ['-g3', '-ggdb', '-gdwarf-2']}
-    env.MergeFlags(debug_flags)
-
-    if 'nasm' not in env['AS']:
-        debug_flags = {'ASFLAGS': debug_flags['CCFLAGS']}
-        env.MergeFlags(debug_flags)
-
 # No ISO images for ARM.
 if env['ARCH_TARGET'] == 'ARM':
     env['noiso'] = True
@@ -491,10 +480,13 @@ if env['hosted']:
     defines = [x for x in defines if x not in removal_defines]
 
     # Reset flags.
-    env['CCFLAGS'] = generic_flags + warning_flags + ['-mcmodel=large']
+    env['CCFLAGS'] = generic_flags + warning_flags
     env['CFLAGS'] = generic_cflags + warning_flags_c
     env['CXXFLAGS'] = generic_cxxflags + warning_flags_cxx
-    env['LINKFLAGS'] = ['-mcmodel=large']
+    env['LINKFLAGS'] = []
+
+    # Don't omit frame pointers for debugging.
+    env.MergeFlags({'CCFLAGS': '-fno-omit-frame-pointer'})
 
     # Build no images at all for hosted systems; it doesn't make sense.
     env['nodiskimages'] = True
@@ -509,6 +501,17 @@ if env['hosted']:
 
     # Now ditch any ARCH_TARGET-related hooks - we don't need it anymore.
     env['ARCH_TARGET'] = 'HOSTED'
+
+# Handle extra debugging components.
+if env['debugger']:
+    # Build in debugging information when built with the debugger.
+    # Use DWARF, as the stabs format is not very useful (32 bits of reloc)
+    debug_flags = {'CCFLAGS': ['-g3', '-ggdb', '-gdwarf-2']}
+    env.MergeFlags(debug_flags)
+
+    if 'nasm' not in env['AS']:
+        debug_flags = {'ASFLAGS': debug_flags['CCFLAGS']}
+        env.MergeFlags(debug_flags)
 
 additionalDefines = ['ipv4_forwarding', 'serial_is_file', 'installer',
                      'debugger', 'cripple_hdd', 'enable_ctrlc',

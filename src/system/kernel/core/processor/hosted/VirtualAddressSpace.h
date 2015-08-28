@@ -40,16 +40,13 @@
 #define USERSPACE_DYNAMIC_START                 reinterpret_cast<void*>(0x100000000)
 #define USERSPACE_DYNAMIC_END                   reinterpret_cast<void*>(0x00000FFFFFFFFFFF)
 #define USERSPACE_VIRTUAL_LOWEST_STACK          reinterpret_cast<void*>(USERSPACE_DYNAMIC_END + USERSPACE_VIRTUAL_MAX_STACK_SIZE)
-#define USERSPACE_VIRTUAL_STACK                 reinterpret_cast<void*>(0x00007FFFFFFFF000)
+#define USERSPACE_VIRTUAL_STACK                 reinterpret_cast<void*>(0x0000700000000000 - 8)
 #define KERNEL_VIRTUAL_HEAP                     reinterpret_cast<void*>(0x0000700000000000)
 #define KERNEL_VIRTUAL_HEAP_SIZE                0x40000000
 #define KERNEL_VIRTUAL_ADDRESS                  reinterpret_cast<void*>(0x400000)
 #define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS     reinterpret_cast<void*>(0x0000700040000000)
 #define KERNEL_VIRTUAL_MEMORYREGION_SIZE        0x40000000
-#define KERNEL_VIRTUAL_PAGESTACK_4GB            reinterpret_cast<void*>(0x0000700080000000)
-#define KERNEL_VIRTUAL_PAGESTACK_ABV4GB1        reinterpret_cast<void*>(0x0000700090000000) // First page stack above 4 GB holds 0x200000000 8-byte addresses
-#define KERNEL_VIRTUAL_PAGESTACK_ABV4GB2        reinterpret_cast<void*>(0x00007000A0000000) // Second page stack holds all addresses above the end of the first page stack (massive number)
-#define KERNEL_VIRTUAL_STACK                    reinterpret_cast<void*>(-0x9000)
+#define KERNEL_VIRTUAL_STACK                    reinterpret_cast<void*>(0x00007FFFFFFFF000)
 #define KERNEL_STACK_SIZE                       0x8000
 
 /** @addtogroup kernelprocessorhosted
