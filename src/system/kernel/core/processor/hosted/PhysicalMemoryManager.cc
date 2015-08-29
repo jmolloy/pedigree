@@ -36,6 +36,8 @@
 #include <SlamAllocator.h>
 #include <process/MemoryPressureManager.h>
 
+using namespace __pedigree_hosted;
+
 #include <unistd.h>
 #include <stdio.h>
 #include <fcntl.h>

@@ -37,7 +37,10 @@ Machine &Machine::instance()
 void HostedMachine::initialise()
 {
   m_Serial[0].setBase(0);
+  m_Serial[1].setBase(1);
   m_Vga.initialise();
+  HostedTimer::instance().initialise();
+  HostedSchedulerTimer::instance().initialise();
   m_bInitialised = true;
 }
 
@@ -47,12 +50,12 @@ void HostedMachine::initialiseDeviceTree()
 
 Serial *HostedMachine::getSerial(size_t n)
 {
-  return &m_Serial[0];
+  return &m_Serial[n];
 }
 
 size_t HostedMachine::getNumSerial()
 {
-  return 1;
+  return 2;
 }
 
 Vga *HostedMachine::getVga(size_t n)
@@ -67,17 +70,17 @@ size_t HostedMachine::getNumVga()
 
 IrqManager *HostedMachine::getIrqManager()
 {
-  return 0;
+  return &HostedIrqManager::instance();
 }
 
 SchedulerTimer *HostedMachine::getSchedulerTimer()
 {
-  return 0;
+  return &HostedSchedulerTimer::instance();
 }
 
 Timer *HostedMachine::getTimer()
 {
-  return 0;
+  return &HostedTimer::instance();
 }
 
 Keyboard *HostedMachine::getKeyboard()

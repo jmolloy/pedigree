@@ -148,14 +148,6 @@ void *HostedVirtualAddressSpace::allocateStack(size_t stackSz) {
 }
 
 void *HostedVirtualAddressSpace::doAllocateStack(size_t sSize) {
-  size_t flags = 0;
-  bool bMapAll = false;
-  if (this == &getKernelAddressSpace()) {
-    // Don't demand map kernel mode stacks.
-    flags = VirtualAddressSpace::KernelMode;
-    bMapAll = true;
-  }
-
   m_Lock.acquire();
 
   size_t pageSz = PhysicalMemoryManager::getPageSize();
@@ -175,29 +167,18 @@ void *HostedVirtualAddressSpace::doAllocateStack(size_t sSize) {
 
   m_Lock.release();
 
-  // Map the top of the stack in proper.
-  uintptr_t firstPage = reinterpret_cast<uintptr_t>(pStack) - pageSz;
-  physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-  if (!bMapAll) PhysicalMemoryManager::instance().pin(phys);
-  if (!map(phys, reinterpret_cast<void *>(firstPage),
-           flags | VirtualAddressSpace::Write))
-    WARNING("map() failed in doAllocateStack");
-
-  // Bring in the rest of the stack as CoW.
+  // Map the stack.
+  uintptr_t firstPage = reinterpret_cast<uintptr_t>(pStack);
   uintptr_t stackBottom = reinterpret_cast<uintptr_t>(pStack) - sSize;
   for (uintptr_t addr = stackBottom; addr < firstPage; addr += pageSz) {
     size_t map_flags = 0;
 
-    if (!bMapAll) {
-      // Copy first stack page on write.
-      PhysicalMemoryManager::instance().pin(phys);
-      map_flags = VirtualAddressSpace::CopyOnWrite;
-    } else {
-      phys = PhysicalMemoryManager::instance().allocatePage();
-      map_flags = VirtualAddressSpace::Write;
-    }
+    physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+    map_flags = VirtualAddressSpace::Write;
 
-    if (!map(phys, reinterpret_cast<void *>(addr), flags | map_flags))
+    NOTICE("mapping stack: " << addr);
+
+    if (!map(phys, reinterpret_cast<void *>(addr), map_flags))
       WARNING("CoW map() failed in doAllocateStack");
   }
 
