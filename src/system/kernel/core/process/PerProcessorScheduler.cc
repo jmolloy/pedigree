@@ -96,6 +96,11 @@ void PerProcessorScheduler::initialise(Thread *pThread)
     Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
     Processor::setTlsBase(pThread->getTlsBase());
 
+    SchedulerTimer *pTimer = Machine::instance().getSchedulerTimer();
+    if(!pTimer)
+    {
+        panic("No scheduler timer present.");
+    }
     Machine::instance().getSchedulerTimer()->registerHandler(this);
     
     Thread *pAddThread = new Thread(pThread->getParent(), processorAddThread, reinterpret_cast<void*>(this), 0, false, true);
