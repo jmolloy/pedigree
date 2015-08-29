@@ -43,7 +43,10 @@ class HostedPhysicalMemoryManager : public PhysicalMemoryManager
   public:
     /** Get the HostedPhysicalMemoryManager instance
      *\return instance of the HostedPhysicalMemoryManager */
-    inline static HostedPhysicalMemoryManager &instance(){return m_Instance;}
+    inline static HostedPhysicalMemoryManager &instance()
+    {
+      return m_Instance;
+    }
 
     //
     // PhysicalMemoryManager Interface
@@ -124,7 +127,7 @@ class HostedPhysicalMemoryManager : public PhysicalMemoryManager
         PageStack &operator = (const PageStack &);
 
         /** The number of Stacks */
-        static const size_t StackCount = 3;
+        static const size_t StackCount = 1;
 
         /** Pointer to the base address of the stack. The stack grows upwards. */
         void *m_Stack[StackCount];
@@ -145,9 +148,6 @@ class HostedPhysicalMemoryManager : public PhysicalMemoryManager
     /** Virtual-memory available for MemoryRegions
      *\todo rename this member (conflicts with PhysicalMemoryManager::m_MemoryRegions) */
     RangeList<uintptr_t> m_MemoryRegions;
-
-    /** The HostedPhysicalMemoryManager class instance */
-    static HostedPhysicalMemoryManager m_Instance;
 
     /** To guard against multiprocessor reentrancy. */
     Spinlock m_Lock, m_RegionLock;
@@ -187,6 +187,9 @@ class HostedPhysicalMemoryManager : public PhysicalMemoryManager
 
     /** Hosted: backing file for physical memory. */
     int m_BackingFile;
+
+    /** Static instance. */
+    static HostedPhysicalMemoryManager m_Instance;
 };
 
 /** @} */

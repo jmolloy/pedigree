@@ -535,15 +535,12 @@ SlamAllocator::~SlamAllocator()
 {
 }
 
-#include <stdio.h>
 void SlamAllocator::initialise()
 {
     LockGuard<Spinlock> guard(m_SlabRegionLock);
 
     // We need to allocate our bitmap for this purpose.
-    printf("a\n");
     uintptr_t bitmapBase = VirtualAddressSpace::getKernelAddressSpace().getKernelHeapStart();
-    printf("b\n");
     uintptr_t heapEnd = VirtualAddressSpace::getKernelAddressSpace().getKernelHeapEnd();
     size_t heapSize = heapEnd - bitmapBase;
     size_t bitmapBytes = (heapSize / PhysicalMemoryManager::getPageSize()) / 8;

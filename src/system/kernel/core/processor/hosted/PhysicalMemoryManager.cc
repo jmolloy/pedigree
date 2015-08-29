@@ -390,19 +390,6 @@ size_t g_AllocedPages = 0;
 physical_uintptr_t HostedPhysicalMemoryManager::PageStack::allocate(size_t constraints)
 {
     size_t index = 0;
-#if defined(X64)                                                    
-    if (constraints == HostedPhysicalMemoryManager::below4GB)
-    index = 0;
-    else if (constraints == HostedPhysicalMemoryManager::below64GB)
-        index = 1;
-    else
-        index = 2;
-
-    if (index == 2 && m_StackMax[2] == m_StackSize[2])
-        index = 1;
-    if (index == 1 && m_StackMax[1] == m_StackSize[1])
-        index = 0;
-#endif
 
     physical_uintptr_t result = 0;
     if ( (m_StackMax[index] != m_StackSize[index]) && m_StackSize[index])
@@ -434,56 +421,43 @@ physical_uintptr_t HostedPhysicalMemoryManager::PageStack::allocate(size_t const
 
 void HostedPhysicalMemoryManager::PageStack::free(uint64_t physicalAddress)
 {
-    // Select the right stack
-    size_t index = 0;
-    if (physicalAddress >= 0x100000000ULL)
+    // Don't attempt to map address zero.
+    if(!m_Stack[0])
+        return;
+
+    // Expand the stack if necessary
+    if (m_StackMax[0] == m_StackSize[0])
     {
-        index = 1;
-        if (physicalAddress >= 0x1000000000ULL)
-            index = 2;
+        // Map the next increment of the stack to the page we are freeing.
+        // The next free will actually move StackMax, and write to the newly
+        // allocated page.
+        if(VirtualAddressSpace::getKernelAddressSpace().map(physicalAddress, adjust_pointer(m_Stack[0], m_StackMax[0]), VirtualAddressSpace::Write))
+        {
+            return;
+        }
+        m_StackMax[0] += getPageSize();
     }
 
-        // Don't attempt to map address zero.
-        if(!m_Stack[index])
-            return;
+    *(reinterpret_cast<uint32_t*>(m_Stack[0]) + m_StackSize[0] / 4) = static_cast<uint32_t>(physicalAddress);
+    m_StackSize[0] += 4;
 
-        // Expand the stack if necessary
-        if (m_StackMax[index] == m_StackSize[index])
-        {
-            m_StackMax[index] += getPageSize();
-        }
+    /// \note Testing.
+    g_FreePages ++;
+    if (g_AllocedPages > 0)
+        g_AllocedPages --;
 
-        if (index == 0)
-        {
-            *(reinterpret_cast<uint32_t*>(m_Stack[0]) + m_StackSize[0] / 4) = static_cast<uint32_t>(physicalAddress);
-            m_StackSize[0] += 4;
-        }
-        else
-        {
-            *(reinterpret_cast<uint64_t*>(m_Stack[index]) + m_StackSize[index] / 8) = physicalAddress;
-            m_StackSize[index] += 8;
-        }
-
-        /// \note Testing.
-        g_FreePages ++;
-        if (g_AllocedPages > 0)
-            g_AllocedPages --;
-
-        ++m_FreePages;
+    ++m_FreePages;
 }
 
 HostedPhysicalMemoryManager::PageStack::PageStack()
 {
-    for (size_t i = 0;i < StackCount;i++)
+    for (size_t i = 0; i < StackCount; i++)
     {
         m_StackMax[i] = 0;
         m_StackSize[i] = 0;
     }
 
     // Set the locations for the page stacks in the virtual address space
-    m_Stack[0] = new char[getPageSize()];
-    m_Stack[1] = new char[getPageSize()];
-    m_Stack[2] = new char[getPageSize()];
-
+    m_Stack[0] = KERNEL_VIRTUAL_PAGESTACK_4GB;
     m_FreePages = 0;
 }

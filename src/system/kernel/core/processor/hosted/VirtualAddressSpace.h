@@ -46,6 +46,7 @@
 #define KERNEL_VIRTUAL_ADDRESS                  reinterpret_cast<void*>(0x400000)
 #define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS     reinterpret_cast<void*>(0x0000700040000000)
 #define KERNEL_VIRTUAL_MEMORYREGION_SIZE        0x40000000
+#define KERNEL_VIRTUAL_PAGESTACK_4GB            reinterpret_cast<void*>(0x0000700080000000)
 #define KERNEL_VIRTUAL_STACK                    reinterpret_cast<void*>(0x00007FFFFFFFF000)
 #define KERNEL_STACK_SIZE                       0x8000
 
@@ -201,8 +202,6 @@ class HostedVirtualAddressSpace : public VirtualAddressSpace
     /** Lock to guard against multiprocessor reentrancy. */
     Spinlock m_Lock;
 
-
-    /** The kernel virtual address space */
     static HostedVirtualAddressSpace m_KernelSpace;
 };
 

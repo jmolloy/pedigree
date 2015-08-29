@@ -69,15 +69,12 @@ void initialiseConstructors()
   // The .ctors section is just an array of function pointers.
   // iterate through, calling each in turn.
   uintptr_t *iterator = reinterpret_cast<uintptr_t*>(&start_ctors);
-  printf("A\n");
   while (iterator < reinterpret_cast<uintptr_t*>(&end_ctors))
   {
     void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
-    printf("%p\n", fp);
     fp();
     iterator++;
   }
-  printf("B\n");
 }
 
 #ifdef MEMORY_TRACING

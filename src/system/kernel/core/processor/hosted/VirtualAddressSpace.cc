@@ -31,10 +31,9 @@
 #include <sys/mman.h>
 #include <errno.h>
 
-HostedVirtualAddressSpace HostedVirtualAddressSpace::m_KernelSpace(
-  KERNEL_VIRTUAL_HEAP, KERNEL_VIRTUAL_STACK);
-
 VirtualAddressSpace *g_pCurrentlyCloning = 0;
+
+HostedVirtualAddressSpace HostedVirtualAddressSpace::m_KernelSpace(KERNEL_VIRTUAL_HEAP, KERNEL_VIRTUAL_STACK);
 
 VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
 {
@@ -82,6 +81,14 @@ bool HostedVirtualAddressSpace::isMapped(void *virtualAddress) {
 bool HostedVirtualAddressSpace::map(physical_uintptr_t physAddress,
                                  void *virtualAddress, size_t flags) {
   LockGuard<Spinlock> guard(m_Lock);
+
+  // mmap() won't fail if the address is already mapped, but we need to.
+  if(isMapped(virtualAddress))
+  {
+    return false;
+  }
+
+  // Map, backed onto the "physical memory" of the system.
   int prot = toFlags(flags, true);
   void *r = mmap(virtualAddress, PhysicalMemoryManager::getPageSize(), prot,
                  MAP_FIXED | MAP_PRIVATE,
@@ -131,7 +138,7 @@ bool HostedVirtualAddressSpace::mapPageStructuresAbove4GB(
 
 void *HostedVirtualAddressSpace::allocateStack() {
   size_t sz = USERSPACE_VIRTUAL_STACK_SIZE;
-  if (this == &m_KernelSpace) sz = KERNEL_STACK_SIZE;
+  if (this == &getKernelAddressSpace()) sz = KERNEL_STACK_SIZE;
   return doAllocateStack(sz);
 }
 
@@ -143,7 +150,7 @@ void *HostedVirtualAddressSpace::allocateStack(size_t stackSz) {
 void *HostedVirtualAddressSpace::doAllocateStack(size_t sSize) {
   size_t flags = 0;
   bool bMapAll = false;
-  if (this == &m_KernelSpace) {
+  if (this == &getKernelAddressSpace()) {
     // Don't demand map kernel mode stacks.
     flags = VirtualAddressSpace::KernelMode;
     bMapAll = true;
@@ -234,7 +241,6 @@ HostedVirtualAddressSpace::HostedVirtualAddressSpace()
       m_Lock(false, true) {
 }
 
-#include <stdio.h>
 HostedVirtualAddressSpace::HostedVirtualAddressSpace(void *Heap, void *VirtualStack)
     : VirtualAddressSpace(Heap),
       m_pStackTop(VirtualStack),
