@@ -39,6 +39,9 @@ class HostedSerial : public Serial
     virtual void write(char c);
   private:
     bool isConnected();
+
+    int m_File;
+    uintptr_t m_nFileNumber;
 };
 
 #endif

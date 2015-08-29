@@ -36,6 +36,8 @@ Machine &Machine::instance()
 
 void HostedMachine::initialise()
 {
+  m_Serial[0].setBase(0);
+  m_Vga.initialise();
   m_bInitialised = true;
 }
 
@@ -55,12 +57,12 @@ size_t HostedMachine::getNumSerial()
 
 Vga *HostedMachine::getVga(size_t n)
 {
-  return 0;
+  return &m_Vga;
 }
 
 size_t HostedMachine::getNumVga()
 {
-  return 0;
+  return 1;
 }
 
 IrqManager *HostedMachine::getIrqManager()

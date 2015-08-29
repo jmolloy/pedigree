@@ -22,6 +22,7 @@
 
 #include <machine/Machine.h>
 #include "Serial.h"
+#include "Vga.h"
 
 /**
  * Concretion of the abstract Machine class for hosted systems
@@ -58,6 +59,7 @@ class HostedMachine : public Machine
     virtual ~HostedMachine();
 
     HostedSerial m_Serial[1];
+    HostedVga m_Vga;
 
     static HostedMachine m_Instance;
 };
