@@ -287,6 +287,8 @@ class Processor
       /** Implementation of reset(), haltUntilInterrupt() */
       static void _reset();
       static void _haltUntilInterrupt();
+
+      static bool m_bInterrupts;
     #endif
 
     /** If we have only one processor, we define the ProcessorInformation class here

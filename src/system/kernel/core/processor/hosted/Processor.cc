@@ -20,6 +20,15 @@
 #include <processor/Processor.h>
 #include "PhysicalMemoryManager.h"
 #include <process/initialiseMultitasking.h>
+#include <process/Thread.h>
+
+using namespace __pedigree_hosted;
+
+#include <signal.h>
+
+bool Processor::m_bInterrupts;
+
+typedef void (*jump_func_t)(uintptr_t, uintptr_t, uintptr_t, uintptr_t);
 
 void Processor::initialisationDone()
 {
@@ -30,6 +39,7 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
 {
   HostedPhysicalMemoryManager &physicalMemoryManager = HostedPhysicalMemoryManager::instance();
   physicalMemoryManager.initialise(Info);
+  setInterrupts(false);
   m_Initialised = 1;
 }
 
@@ -62,13 +72,12 @@ uintptr_t Processor::getBasePointer()
 
 bool Processor::saveState(SchedulerState &state)
 {
-  /// \todo implement (green thread style context switch)
-  return true;
+  return setjmp(state.state) == 1;
 }
 
 void Processor::restoreState(SchedulerState &state, volatile uintptr_t *pLock)
 {
-  /// \todo implement (green thread style context switch)
+  longjmp(state.state, 0);
 }
 
 void Processor::restoreState(SyscallState &state, volatile uintptr_t *pLock)
@@ -79,6 +88,23 @@ void Processor::restoreState(SyscallState &state, volatile uintptr_t *pLock)
 void Processor::jumpKernel(volatile uintptr_t *pLock, uintptr_t address,
   uintptr_t stack, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4)
 {
+    if(pLock)
+        *pLock = 1;
+
+    register uintptr_t p1_r = p1;
+    register uintptr_t p2_r = p2;
+    register uintptr_t p3_r = p3;
+    register uintptr_t p4_r = p4;
+    register jump_func_t target = reinterpret_cast<jump_func_t>(address);
+
+    if(stack)
+    {
+      asm volatile("mov %0, %%rsp" :: "r" (stack));
+    }
+    asm volatile("" ::: "memory");
+
+    target(p1_r, p2_r, p3_r, p4_r);
+    Thread::threadExited();
 }
 
 void Processor::jumpUser(volatile uintptr_t *pLock, uintptr_t address,
@@ -123,13 +149,22 @@ void Processor::disableDebugBreakpoint(size_t nBpNumber)
 
 void Processor::setInterrupts(bool bEnable)
 {
-  /// \todo use signal masks
+  // Block signals to toggle "interrupts".
+  int how = SIG_BLOCK;
+  if(bEnable)
+    how = SIG_UNBLOCK;
+
+  sigset_t set;
+  sigfillset(&set);
+
+  sigprocmask(how, &set, 0);
+
+  m_bInterrupts = bEnable;
 }
 
 bool Processor::getInterrupts()
 {
-  /// \todo use signal masks
-  return false;
+  return m_bInterrupts;
 }
 
 void Processor::setSingleStep(bool bEnable, InterruptState &state)

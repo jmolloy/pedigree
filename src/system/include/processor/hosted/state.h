@@ -24,6 +24,11 @@
 #include <processor/types.h>
 #include <Log.h>
 
+namespace __pedigree_hosted
+{
+    #include <setjmp.h>
+}
+
 /** @addtogroup kernelprocessorhosted
  * @{ */
 
@@ -235,17 +240,7 @@ class HostedProcessorState
 class HostedSchedulerState
 {
 public:
-    uint64_t r8,r9,r10,r11,r12,r13,r14,r15;
-    uint64_t rbx;
-    uint64_t rbp;
-    uint64_t rsp;
-    uint64_t rip;
-    
-    // bit 0: Has FPU
-    // bit 1: Used SSE
-    uint32_t flags;
-    
-    uint8_t x87FPU_MMX_XMM_MXCSR_State[512+16] __attribute__((aligned(16)));
+    __pedigree_hosted::jmp_buf state;
 };
 
 /** @} */
