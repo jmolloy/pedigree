@@ -172,6 +172,7 @@ elif env['hosted']:
         Glob('core/processor/x86_common/Disassembler.cc'),
         Glob('debugger/libudis86/*.c'),
         Glob('core/processor/hosted/*.cc'),
+        Glob('core/processor/hosted/asm/*.s'),
     ]
 
 # Generic ARM bits.

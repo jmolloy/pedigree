@@ -494,19 +494,16 @@ extern "C"
 
 void *__wrap_malloc(size_t sz)
 {
-    printf("malloc(%zx)\n", sz);
   return _malloc(sz);
 }
 
 void *__wrap_realloc(void *p, size_t sz)
 {
-    printf("realloc(%p, %zx)\n", p, sz);
   return _realloc(p, sz);
 }
 
 void __wrap_free(void *p)
 {
-    printf("free(%p)\n", p);
   return _free(p);
 }
 

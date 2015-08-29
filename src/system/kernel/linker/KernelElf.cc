@@ -65,6 +65,19 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
     PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
     size_t pageSz = PhysicalMemoryManager::getPageSize();
 
+    // Do we even have section headers to peek at?
+    if(pBootstrap.getSectionHeaderCount() == 0)
+    {
+        WARNING("No ELF object available to extract symbol table from.");
+#ifdef STATIC_DRIVERS
+        // Don't need the ELF object to load modules.
+        return true;
+#else
+        // Need the ELF object to load modules.
+        return false;
+#endif
+    }
+
 #if defined(X86_COMMON)
     m_AdditionalSectionHeaders = new MemoryRegion("Kernel ELF Section Headers");
 

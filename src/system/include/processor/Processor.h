@@ -284,7 +284,8 @@ class Processor
     static size_t m_Initialised;
   private:
     #if defined(HOSTED)
-      /** Implementation of reset(), haltUntilInterrupt() */
+      /** Implementation of breakpoint(), reset(), haltUntilInterrupt() */
+      static void _breakpoint();
       static void _reset();
       static void _haltUntilInterrupt();
 

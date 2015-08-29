@@ -169,14 +169,13 @@ void *HostedVirtualAddressSpace::doAllocateStack(size_t sSize) {
 
   // Map the stack.
   uintptr_t firstPage = reinterpret_cast<uintptr_t>(pStack);
+  NOTICE("new stack at " << firstPage);
   uintptr_t stackBottom = reinterpret_cast<uintptr_t>(pStack) - sSize;
   for (uintptr_t addr = stackBottom; addr < firstPage; addr += pageSz) {
     size_t map_flags = 0;
 
     physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
     map_flags = VirtualAddressSpace::Write;
-
-    NOTICE("mapping stack: " << addr);
 
     if (!map(phys, reinterpret_cast<void *>(addr), map_flags))
       WARNING("CoW map() failed in doAllocateStack");

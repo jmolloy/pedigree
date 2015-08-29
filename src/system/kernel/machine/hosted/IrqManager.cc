@@ -27,6 +27,9 @@ using namespace __pedigree_hosted;
 
 #include <signal.h>
 
+static int irqToSignal[2] = {0};
+static int signalToIrq[16] = {0};
+
 // TODO: Needs locking
 
 HostedIrqManager HostedIrqManager::m_Instance;
@@ -48,7 +51,7 @@ irq_id_t HostedIrqManager::registerIsaIrqHandler(uint8_t irq, IrqHandler *handle
   // Save the IrqHandler
   m_Handler[irq].pushBack(handler);
 
-  return irq + SIGUSR1;
+  return irqToSignal[irq];
 }
 
 irq_id_t HostedIrqManager::registerPciIrqHandler(IrqHandler *handler, Device *pDevice)
@@ -62,7 +65,7 @@ irq_id_t HostedIrqManager::registerPciIrqHandler(IrqHandler *handler, Device *pD
   // Save the IrqHandler
   m_Handler[irq].pushBack(handler);
 
-  return irq + SIGUSR1;
+  return irqToSignal[irq];
 }
 
 void HostedIrqManager::acknowledgeIrq(irq_id_t Id)
@@ -71,7 +74,7 @@ void HostedIrqManager::acknowledgeIrq(irq_id_t Id)
 
 void HostedIrqManager::unregisterHandler(irq_id_t Id, IrqHandler *handler)
 {
-  size_t irq = (Id - SIGUSR1);
+  size_t irq = signalToIrq[Id];
 
   // Remove the handler
   for(List<IrqHandler*>::Iterator it = m_Handler[irq].begin();
@@ -90,9 +93,16 @@ bool HostedIrqManager::initialise()
 {
   // Register the interrupts
   InterruptManager &IntManager = InterruptManager::instance();
-  for (size_t i = 0; i < 2; i++)
-    if (IntManager.registerInterruptHandler(SIGUSR1 + i, this) == false)
-      return false;
+  if (IntManager.registerInterruptHandler(SIGUSR1, this) == false)
+    return false;
+  if (IntManager.registerInterruptHandler(SIGUSR2, this) == false)
+    return false;
+
+  irqToSignal[0] = SIGUSR1;
+  irqToSignal[1] = SIGUSR2;
+
+  signalToIrq[SIGUSR1] = 0;
+  signalToIrq[SIGUSR2] = 1;
 
   return true;
 }
@@ -107,7 +117,7 @@ HostedIrqManager::HostedIrqManager() : m_Lock(false)
 
 void HostedIrqManager::interrupt(size_t interruptNumber, InterruptState &state)
 {
-  size_t irq = (interruptNumber - SIGUSR1);
+  size_t irq = signalToIrq[interruptNumber];
 
   // Call the irq handler, if any
   if (LIKELY(m_Handler[irq].count() != 0))

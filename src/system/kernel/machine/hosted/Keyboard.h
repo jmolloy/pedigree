@@ -17,34 +17,34 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef KERNEL_PROCESSOR_HOSTED_PROCESSOR_H
-#define KERNEL_PROCESSOR_HOSTED_PROCESSOR_H
+#ifndef MACHINE_HOSTED_KEYBOARD_H
+#define MACHINE_HOSTED_KEYBOARD_H
 
-void Processor::breakpoint()
+#include <machine/Keyboard.h>
+#include <processor/types.h>
+
+class HostedKeyboard : public Keyboard
 {
-    Processor::_breakpoint();
-}
+    public:
+        HostedKeyboard ();
+        virtual ~HostedKeyboard();
 
-void Processor::halt()
-{
-    // Abnormal exit.
-    __builtin_trap();
-}
+        virtual void initialise();
 
-void Processor::pause()
-{
-    asm volatile("pause");
-}
+        virtual void setDebugState(bool enableDebugState);
+        virtual bool getDebugState();
 
-void Processor::reset()
-{
-    Processor::_reset();
-}
+        virtual char getChar();
+        virtual char getCharNonBlock();
+    
+        virtual char getLedState();
+        virtual void setLedState(char state);
 
-void Processor::haltUntilInterrupt()
-{
-    Processor::_haltUntilInterrupt();
-}
+    private:
+        /// True if we're in debug state
+        bool m_bDebugState;
 
+        void blocking(bool enable);
+};
 
 #endif

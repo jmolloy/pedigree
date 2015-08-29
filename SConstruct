@@ -480,13 +480,15 @@ if env['hosted']:
     defines = [x for x in defines if x not in removal_defines]
 
     # Reset flags.
-    env['CCFLAGS'] = generic_flags + warning_flags
+    env['CCFLAGS'] = generic_flags + warning_flags + ['-U_FORTIFY_SOURCE']
     env['CFLAGS'] = generic_cflags + warning_flags_c
     env['CXXFLAGS'] = generic_cxxflags + warning_flags_cxx
     env['LINKFLAGS'] = []
 
     # Don't omit frame pointers for debugging.
-    env.MergeFlags({'CCFLAGS': '-fno-omit-frame-pointer'})
+    env.MergeFlags({
+        'CCFLAGS': ['-fno-omit-frame-pointer', '-Wno-deprecated-declarations']
+    })
 
     # Build no images at all for hosted systems; it doesn't make sense.
     env['nodiskimages'] = True

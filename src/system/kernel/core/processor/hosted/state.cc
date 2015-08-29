@@ -29,6 +29,14 @@ const char *HostedSyscallStateRegisterName[1] =
   "state",
 };
 
+HostedInterruptState::HostedInterruptState() : state(0), which(0)
+{
+}
+
+HostedInterruptState::~HostedInterruptState()
+{
+}
+
 size_t HostedInterruptState::getRegisterCount() const
 {
   return 1;

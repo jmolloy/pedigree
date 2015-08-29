@@ -49,7 +49,7 @@ void Backtrace::performBacktrace(InterruptState &state)
   // Can we perform a "normal", base-pointer-linked-list backtrace?
   // Don't lock on the log - we may have hit a backtrace because the Log lock deadlocked
   WARNING_NOLOCK("Dwarf backtracing not available.");
-#if defined(X86_COMMON)
+#if defined(X86_COMMON) || defined(HOSTED)
   performBpBacktrace(state.getBasePointer(), state.getInstructionPointer());
 #elif defined(ARM_COMMON)
   performArmBacktrace(state.getBasePointer(), state.getInstructionPointer());

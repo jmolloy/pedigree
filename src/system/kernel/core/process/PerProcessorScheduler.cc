@@ -157,6 +157,9 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThre
             pNextThread->getLock().acquire();
     }
 
+    if(pNextThread == pNewThread)
+        WARNING("scheduler: next thread IS new thread");
+
     // Now neither thread can be moved, we're safe to switch.
     if (pCurrentThread != m_pIdleThread)
         pCurrentThread->setStatus(nextStatus);

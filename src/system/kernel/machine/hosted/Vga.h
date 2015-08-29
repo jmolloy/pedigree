@@ -148,6 +148,16 @@ private:
   size_t m_nHeight;
 
   /**
+   * Cursor X.
+   */
+  size_t m_CursorX;
+
+  /**
+   * Cursor Y.
+   */
+  size_t m_CursorY;
+
+  /**
    * We keep a count of the number of times we've entered the debugger without leaving it - when we enter the debugger,
    * we increment this. When we leave, we decrement. If we leave and it reaches zero, we change out of mode 0x3 into
    * the current video mode.

@@ -56,7 +56,7 @@
 #define OBJECT_MINIMUM_SIZE             (sizeof(SlamCache::Node))
 
 /// Outputs information during each function call
-#define DEBUGGING_SLAB_ALLOCATOR        1
+#define DEBUGGING_SLAB_ALLOCATOR        0
 
 /// Adds magic numbers to the start of free blocks, to check for
 /// buffer overruns.

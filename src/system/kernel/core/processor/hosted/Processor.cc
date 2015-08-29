@@ -19,6 +19,7 @@
 
 #include <processor/Processor.h>
 #include "PhysicalMemoryManager.h"
+#include "InterruptManager.h"
 #include <process/initialiseMultitasking.h>
 #include <process/Thread.h>
 
@@ -37,8 +38,8 @@ void Processor::initialisationDone()
 
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
-  HostedPhysicalMemoryManager &physicalMemoryManager = HostedPhysicalMemoryManager::instance();
-  physicalMemoryManager.initialise(Info);
+  HostedInterruptManager::initialiseProcessor();
+  HostedPhysicalMemoryManager::instance().initialise(Info);
   setInterrupts(false);
   m_Initialised = 1;
 }
@@ -72,39 +73,19 @@ uintptr_t Processor::getBasePointer()
 
 bool Processor::saveState(SchedulerState &state)
 {
-  return setjmp(state.state) == 1;
+  return sigsetjmp(state.state, 0) == 1;
 }
 
 void Processor::restoreState(SchedulerState &state, volatile uintptr_t *pLock)
 {
-  longjmp(state.state, 0);
+  if(pLock)
+      *pLock = 1;
+  siglongjmp(state.state, 0);
 }
 
 void Processor::restoreState(SyscallState &state, volatile uintptr_t *pLock)
 {
   /// \todo implement (green thread style context switch)
-}
-
-void Processor::jumpKernel(volatile uintptr_t *pLock, uintptr_t address,
-  uintptr_t stack, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4)
-{
-    if(pLock)
-        *pLock = 1;
-
-    register uintptr_t p1_r = p1;
-    register uintptr_t p2_r = p2;
-    register uintptr_t p3_r = p3;
-    register uintptr_t p4_r = p4;
-    register jump_func_t target = reinterpret_cast<jump_func_t>(address);
-
-    if(stack)
-    {
-      asm volatile("mov %0, %%rsp" :: "r" (stack));
-    }
-    asm volatile("" ::: "memory");
-
-    target(p1_r, p2_r, p3_r, p4_r);
-    Thread::threadExited();
 }
 
 void Processor::jumpUser(volatile uintptr_t *pLock, uintptr_t address,
@@ -150,14 +131,13 @@ void Processor::disableDebugBreakpoint(size_t nBpNumber)
 void Processor::setInterrupts(bool bEnable)
 {
   // Block signals to toggle "interrupts".
-  int how = SIG_BLOCK;
-  if(bEnable)
-    how = SIG_UNBLOCK;
-
   sigset_t set;
-  sigfillset(&set);
+  if(bEnable)
+    sigemptyset(&set);
+  else
+    sigfillset(&set);
 
-  sigprocmask(how, &set, 0);
+  sigprocmask(SIG_SETMASK, &set, 0);
 
   m_bInterrupts = bEnable;
 }
@@ -180,20 +160,37 @@ void Processor::invalidate(void *pAddress)
 namespace __processor_cc_hosted {
     #include <unistd.h>
     #include <stdlib.h>
+    #include <signal.h>
+    #include <sched.h>
+}
+
+using namespace __processor_cc_hosted;
+
+void Processor::_breakpoint()
+{
+    sigset_t set;
+    sigemptyset(&set);
+    sigaddset(&set, SIGTRAP);
+    //sigprocmask(SIG_UNBLOCK, &set, 0);
+    raise(SIGTRAP);
 }
 
 void Processor::_reset()
 {
     // Just exit.
-    __processor_cc_hosted::exit(0);
+    exit(0);
 }
 
 void Processor::_haltUntilInterrupt()
 {
-    __processor_cc_hosted::pause();
+    sigset_t set;
+    sigemptyset(&set);
+    sigsuspend(&set);
+    NOTICE("b");
 }
 
 /// \todo not here
 void PerProcessorScheduler::deleteThreadThenRestoreState(Thread *pThread, SchedulerState &newState)
 {
+  panic("PerProcessorScheduler::deleteThreadThenRestoreState is not implemented.");
 }

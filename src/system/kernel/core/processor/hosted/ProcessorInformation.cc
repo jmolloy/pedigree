@@ -17,34 +17,24 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef KERNEL_PROCESSOR_HOSTED_PROCESSOR_H
-#define KERNEL_PROCESSOR_HOSTED_PROCESSOR_H
+#include <processor/types.h>
+#include <processor/hosted/ProcessorInformation.h>
+#include <processor/hosted/VirtualAddressSpace.h>
+#include <Log.h>
 
-void Processor::breakpoint()
+using namespace __pedigree_hosted;
+
+#include <signal.h>
+
+void HostedProcessorInformation::setKernelStack(uintptr_t stack)
 {
-    Processor::_breakpoint();
+    if (stack)
+    {
+        stack_t s;
+        memset(&s, 0, sizeof(s));
+        s.ss_sp = reinterpret_cast<void*>(stack);
+        s.ss_size = KERNEL_STACK_SIZE;
+        sigaltstack(&s, 0);
+        m_KernelStack = stack;
+    }
 }
-
-void Processor::halt()
-{
-    // Abnormal exit.
-    __builtin_trap();
-}
-
-void Processor::pause()
-{
-    asm volatile("pause");
-}
-
-void Processor::reset()
-{
-    Processor::_reset();
-}
-
-void Processor::haltUntilInterrupt()
-{
-    Processor::_haltUntilInterrupt();
-}
-
-
-#endif

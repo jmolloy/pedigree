@@ -51,6 +51,9 @@ class HostedInterruptManager : public ::InterruptManager
      *      Multiprocessor::applicationProcessorStartup() */
     static void initialiseProcessor() INITIALISATION_ONLY;
 
+    /** Signal handling shim for InterruptState protected access. */
+    void signalShim(int which, void *siginfo);
+
   private:
     /** Called when an interrupt was triggered
      *\param[in] interruptState reference to the usermode/kernel state before the interrupt */

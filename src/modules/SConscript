@@ -147,8 +147,6 @@ else:
 
 if env['ARCH_TARGET'] == 'ARM':
     module_subdirs = [x for x in module_subdirs if x not in ['splash', 'TUI']]
-elif env['hosted']:
-    module_subdirs = [x for x in module_subdirs if x not in ['linker', 'init']]
 
 # No difference yet, load all modules
 initrd_modules = module_subdirs
@@ -198,6 +196,8 @@ elif env['ARCH_TARGET'] == 'ARM':
     arch_subdir = 'arm'
 elif env['ARCH_TARGET'] == 'PPC':
     arch_subdir = 'ppc'
+elif env['ARCH_TARGET'] == 'HOSTED':
+    arch_subdir = 'hosted'
 else:
     arch_subdir = 'unknown'
 
@@ -217,6 +217,9 @@ custom_subdirs = {
 custom_files = {
     'linker'        : [os.path.join(arch_subdir, 'asm-' + arch_subdir + '.s')]
 }
+
+if env['hosted']:
+    custom_files['linker'] = []
 
 # Custom include paths for specific modules
 custom_incpath = {

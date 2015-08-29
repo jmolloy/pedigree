@@ -103,8 +103,7 @@ class HostedInterruptState
     static HostedInterruptState *construct(class HostedProcessorState &state, bool userMode);
 
   private:
-    /** The default constructor
-     *\note NOT implemented */
+    /** The default constructor */
     HostedInterruptState();
     /** The copy-constructor
      *\note NOT implemented */
@@ -112,11 +111,11 @@ class HostedInterruptState
     /** The assignement operator
      *\note NOT implemented */
     HostedInterruptState &operator = (const HostedInterruptState &);
-    /** The destructor
-     *\note NOT implemented */
+    /** The destructor */
     ~HostedInterruptState();
 
     uint64_t state;
+    uint64_t which;
 } PACKED;
 
 /** x64 Syscall State */
@@ -240,7 +239,7 @@ class HostedProcessorState
 class HostedSchedulerState
 {
 public:
-    __pedigree_hosted::jmp_buf state;
+    __pedigree_hosted::sigjmp_buf state;
 };
 
 /** @} */
@@ -280,7 +279,7 @@ bool HostedInterruptState::kernelMode() const
 }
 size_t HostedInterruptState::getInterruptNumber() const
 {
-  return 0;
+  return which;
 }
 
 uint64_t HostedInterruptState::getFlags() const

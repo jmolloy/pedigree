@@ -122,8 +122,8 @@ static void exit()
     delete pFeatures;
 }
 
-#ifndef ARM_COMMON // No ATA controller
-MODULE_INFO("partition", &entry, &exit, "ata");
-#else
+#if defined(ARM_COMMON) || defined(HOSTED) // No ATA controller
 MODULE_INFO("partition", &entry, &exit);
+#else
+MODULE_INFO("partition", &entry, &exit, "ata");
 #endif

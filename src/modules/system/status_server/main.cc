@@ -301,4 +301,4 @@ static void destroy()
 {
 }
 
-MODULE_INFO("Status Server", &init, &destroy, "network-stack", "init", "vfs");
+MODULE_INFO("Status Server", &init, &destroy, "network-stack", "init", "vfs", "config");

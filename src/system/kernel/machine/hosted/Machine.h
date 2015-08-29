@@ -26,6 +26,7 @@
 #include "Timer.h"
 #include "IrqManager.h"
 #include "SchedulerTimer.h"
+#include "Keyboard.h"
 
 /**
  * Concretion of the abstract Machine class for hosted systems
@@ -63,6 +64,7 @@ class HostedMachine : public Machine
 
     HostedSerial m_Serial[2];
     HostedVga m_Vga;
+    Keyboard *m_Keyboard;
 
     static HostedMachine m_Instance;
 };

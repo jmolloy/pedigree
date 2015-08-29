@@ -25,6 +25,8 @@
 HostedVga::HostedVga() :
   m_nWidth(80),
   m_nHeight(25),
+  m_CursorX(0),
+  m_CursorY(0),
   m_ModeStack(0),
   m_nMode(3),
   m_nControls(0),
@@ -85,6 +87,9 @@ void HostedVga::pokeBuffer (uint8_t *pBuffer, size_t nBufLen)
 
     memcpy(m_pBackbuffer, pBuffer, nBufLen);
 
+    size_t savedCursorX = m_CursorX;
+    size_t savedCursorY = m_CursorY;
+
     moveCursor(0, 0);
     for (size_t y = 0; y < m_nHeight; ++y)
     {
@@ -99,6 +104,8 @@ void HostedVga::pokeBuffer (uint8_t *pBuffer, size_t nBufLen)
 
         putchar('\n');
     }
+
+    moveCursor(savedCursorX, savedCursorY);
 }
 
 void HostedVga::peekBuffer (uint8_t *pBuffer, size_t nBufLen)
@@ -111,6 +118,8 @@ void HostedVga::moveCursor (size_t nX, size_t nY)
     if (!m_pBackbuffer)
         return;
 
+    m_CursorX = nX;
+    m_CursorY = nY;
     printf("\033[%zu;%zuH", nY, nX);
 }
 

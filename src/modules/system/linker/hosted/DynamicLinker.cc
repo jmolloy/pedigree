@@ -17,34 +17,13 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef KERNEL_PROCESSOR_HOSTED_PROCESSOR_H
-#define KERNEL_PROCESSOR_HOSTED_PROCESSOR_H
+#include "DynamicLinker.h"
 
-void Processor::breakpoint()
+void DynamicLinker::initPlt(Elf *pElf, uintptr_t value)
 {
-    Processor::_breakpoint();
 }
 
-void Processor::halt()
+uintptr_t DynamicLinker::resolvePltSymbol(uintptr_t libraryId, uintptr_t symIdx)
 {
-    // Abnormal exit.
-    __builtin_trap();
+  return 0;
 }
-
-void Processor::pause()
-{
-    asm volatile("pause");
-}
-
-void Processor::reset()
-{
-    Processor::_reset();
-}
-
-void Processor::haltUntilInterrupt()
-{
-    Processor::_haltUntilInterrupt();
-}
-
-
-#endif

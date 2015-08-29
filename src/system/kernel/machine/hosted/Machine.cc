@@ -36,11 +36,14 @@ Machine &Machine::instance()
 
 void HostedMachine::initialise()
 {
+  HostedIrqManager::instance().initialise();
   m_Serial[0].setBase(0);
   m_Serial[1].setBase(1);
   m_Vga.initialise();
   HostedTimer::instance().initialise();
   HostedSchedulerTimer::instance().initialise();
+  m_Keyboard = new HostedKeyboard();
+  m_Keyboard->initialise();
   m_bInitialised = true;
 }
 
@@ -85,11 +88,12 @@ Timer *HostedMachine::getTimer()
 
 Keyboard *HostedMachine::getKeyboard()
 {
-  return 0;
+  return m_Keyboard;
 }
 
 void HostedMachine::setKeyboard(Keyboard *kb)
 {
+  m_Keyboard = kb;
 }
 
 HostedMachine::HostedMachine()

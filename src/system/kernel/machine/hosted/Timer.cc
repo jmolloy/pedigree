@@ -205,6 +205,8 @@ bool HostedTimer::initialise()
         timer_delete(m_Timer);
         return false;
     }
+
+    return true;
 }
 
 void HostedTimer::synchronise()

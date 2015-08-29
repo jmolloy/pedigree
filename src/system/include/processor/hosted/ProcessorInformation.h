@@ -20,10 +20,11 @@
 #ifndef KERNEL_PROCESSOR_HOSTED_PROCESSORINFORMATION_H
 #define KERNEL_PROCESSOR_HOSTED_PROCESSORINFORMATION_H
 
-#include <process/Thread.h>
 #include <process/PerProcessorScheduler.h>
 #include <processor/types.h>
 #include <processor/VirtualAddressSpace.h>
+
+class Thread;
 
 /** @addtogroup kernelprocessorhosted
  * @{ */
@@ -49,7 +50,7 @@ class HostedProcessorInformation
       {m_VirtualAddressSpace = &virtualAddressSpace;}
 
     inline uintptr_t getKernelStack() const;
-    inline void setKernelStack(uintptr_t stack);
+    void setKernelStack(uintptr_t stack);
     inline Thread *getCurrentThread() const
       {return m_pCurrentThread;}
     inline void setCurrentThread(Thread *pThread)
@@ -99,10 +100,6 @@ class HostedProcessorInformation
 uintptr_t HostedProcessorInformation::getKernelStack() const
 {
   return m_KernelStack;
-}
-void HostedProcessorInformation::setKernelStack(uintptr_t stack)
-{
-  m_KernelStack = stack;
 }
 
 #endif
