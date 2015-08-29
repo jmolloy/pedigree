@@ -30,7 +30,7 @@ class Spinlock
     inline Spinlock(bool bLocked = false, bool bAvoidTracking = false)
         : m_bInterrupts(), m_Atom(!bLocked), m_Ra(0),
         m_bAvoidTracking(bAvoidTracking), m_Magic(0xdeadbaba),
-        m_pOwner(0), m_Level(0) {}
+        m_pOwner(0), m_bOwned(false), m_Level(0) {}
 
     bool acquire();
 
@@ -62,6 +62,7 @@ class Spinlock
     uint32_t m_Magic;
 
     void *m_pOwner;
+    bool m_bOwned;
     size_t m_Level;
 };
 
