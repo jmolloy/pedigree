@@ -53,6 +53,8 @@ void *__dso_handle;
 // Defined in the linker.
 extern uintptr_t start_ctors;
 extern uintptr_t end_ctors;
+extern uintptr_t start_dtors;
+extern uintptr_t end_dtors;
 
 #ifdef USE_DEBUG_ALLOCATOR
 Spinlock allocLock;
@@ -70,6 +72,17 @@ void initialiseConstructors()
   // iterate through, calling each in turn.
   uintptr_t *iterator = reinterpret_cast<uintptr_t*>(&start_ctors);
   while (iterator < reinterpret_cast<uintptr_t*>(&end_ctors))
+  {
+    void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
+    fp();
+    iterator++;
+  }
+}
+
+void runKernelDestructors()
+{
+  uintptr_t *iterator = reinterpret_cast<uintptr_t*>(&start_dtors);
+  while (iterator < reinterpret_cast<uintptr_t*>(&end_dtors))
   {
     void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
     fp();
@@ -189,12 +202,10 @@ void traceMetadata(NormalStaticString str, void *p1, void *p2)
 #define ATEXIT __cxa_atexit
 #endif
 
-#ifndef HOSTED
 /// Required for G++ to compile code.
 extern "C" void ATEXIT(void (*f)(void *), void *p, void *d)
 {
 }
-#endif
 
 /// Called by G++ if a pure virtual function is called. Bad Thing, should never happen!
 extern "C" void __cxa_pure_virtual()

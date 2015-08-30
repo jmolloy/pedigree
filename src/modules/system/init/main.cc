@@ -173,6 +173,7 @@ static bool init()
     if(VFS::instance().find(String("root»/.pedigree-root")) == 0)
     {
         FATAL("No root disk (missing .pedigree-root?)");
+        return false;
     }
 
     // Fill out the device hash table

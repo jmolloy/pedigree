@@ -37,7 +37,8 @@
 class Module
 {
     public:
-        Module() : elf(), name(0), entry(0), exit(0), depends(0), buffer(0), buflen(0) {}
+        Module() : elf(), name(0), entry(0), exit(0), depends(0),
+            depends_opt(0), buffer(0), buflen(0) {}
         Elf elf;
         const char *name;
         bool (*entry)();
@@ -135,8 +136,19 @@ class KernelElf : public Elf
         MemoryAllocator m_ModuleAllocator;
 
         /** Override Elf base class members. */
+#if defined(X86_COMMON)
         Elf32SectionHeader_t   *m_pSectionHeaders;
         Elf32Symbol_t          *m_pSymbolTable;
+
+        typedef Elf32SectionHeader_t KernelElfSectionHeader_t;
+        typedef Elf32Symbol_t KernelElfSymbol_t;
+#else
+        ElfSectionHeader_t   *m_pSectionHeaders;
+        ElfSymbol_t          *m_pSymbolTable;
+
+        typedef ElfSectionHeader_t KernelElfSectionHeader_t;
+        typedef ElfSymbol_t KernelElfSymbol_t;
+#endif
 };
 
 /** @} */

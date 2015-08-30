@@ -147,6 +147,8 @@ else:
 
 if env['ARCH_TARGET'] == 'ARM':
     module_subdirs = [x for x in module_subdirs if x not in ['splash', 'TUI']]
+elif env['hosted']:
+    module_subdirs = [x for x in module_subdirs if x not in ['splash', 'TUI']]
 
 # No difference yet, load all modules
 initrd_modules = module_subdirs
@@ -362,7 +364,8 @@ if env['ARCH_TARGET'] in ('X86', 'X64', 'ARM'):
 
 env.Depends(initrdFile, "drivers")
 env.Depends(initrdFile, "modules")
-env.Depends(initrdFile, "subsys")
+if not env['hosted']:
+    env.Depends(initrdFile, "subsys")
 
 env.Alias("initrd", initrdFile)
 

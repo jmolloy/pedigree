@@ -91,7 +91,7 @@ bool HostedVirtualAddressSpace::map(physical_uintptr_t physAddress,
   // Map, backed onto the "physical memory" of the system.
   int prot = toFlags(flags, true);
   void *r = mmap(virtualAddress, PhysicalMemoryManager::getPageSize(), prot,
-                 MAP_FIXED | MAP_PRIVATE,
+                 MAP_FIXED | MAP_SHARED,
                  HostedPhysicalMemoryManager::instance().getBackingFile(),
                  physAddress);
 
@@ -108,7 +108,8 @@ void HostedVirtualAddressSpace::getMapping(void *virtualAddress,
 
 void HostedVirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags) {
   LockGuard<Spinlock> guard(m_Lock);
-  mprotect(virtualAddress, PhysicalMemoryManager::getPageSize(), toFlags(newFlags, true));
+  size_t flags = toFlags(newFlags, true);
+  mprotect(virtualAddress, PhysicalMemoryManager::getPageSize(), flags);
 }
 
 void HostedVirtualAddressSpace::unmap(void *virtualAddress) {

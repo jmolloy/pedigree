@@ -27,7 +27,7 @@
  * @{ */
 
 // Again, if we're passed via grub these multiboot #defines will be valid, otherwise they won't.
-#if defined(KERNEL_STANDALONE) || defined(MIPS_COMMON) || defined(ARM_COMMON)
+#if defined(KERNEL_STANDALONE) || defined(MIPS_COMMON) || defined(ARM_COMMON) || defined(HOSTED)
 #define MULTIBOOT_FLAG_MEM     0x001
 #define MULTIBOOT_FLAG_DEVICE  0x002
 #define MULTIBOOT_FLAG_CMDLINE 0x004
@@ -45,6 +45,9 @@
 
 class BootstrapStruct_t
 {
+#ifdef HOSTED
+    friend int main(int argc, char *argv[]);
+#endif
 public:
     bool isInitrdLoaded() const;
     uint8_t *getInitrdAddress() const;

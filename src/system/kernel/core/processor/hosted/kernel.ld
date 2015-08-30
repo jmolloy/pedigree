@@ -14,12 +14,12 @@ SECTIONS
         end_ctors = .;
 
         . = ALIGN(4096);
-        start_module_ctors = .;
-        *(.module_ctors*)
-        end_module_ctors = .;
+        start_dtors = .;
+        *(.fini_array*)
+        end_dtors = .;
 
         start_modinfo = .;
-        *(.modinfo*);
+        KEEP(*(.modinfo*));
         end_modinfo = .;
     }
 

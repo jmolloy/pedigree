@@ -496,10 +496,8 @@ if env['hosted']:
     # Not a PC.
     env['mach_pc'] = False
 
-    # Static drivers on hosted systems.
-    # TODO(miselin): this is absolutely not necessary, but makes things simpler
-    # to start with during the port.
-    defines += ['STATIC_DRIVERS']
+    # Fix tar flags to not build compressed tarballs.
+    env['TAR_NOCOMPRESS'] = True
 
     # Now ditch any ARCH_TARGET-related hooks - we don't need it anymore.
     env['ARCH_TARGET'] = 'HOSTED'

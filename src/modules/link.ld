@@ -31,17 +31,17 @@ SECTIONS
   .module_ctors :
   {
     start_ctors = .;
-    *(.ctors)
+    *(.init_array*)
+    *(.ctors*)
     end_ctors = .;
-
   }
   
   . = ALIGN(4096);
   .module_dtors :
   {
     start_dtors = .;
-    *(.dtors)
+    *(.fini_array*)
+    *(.dtors*)
     end_dtors = .;
-
   }
 }

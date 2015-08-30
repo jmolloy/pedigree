@@ -399,6 +399,11 @@ static bool init()
     if ((reinterpret_cast<physical_uintptr_t>(pPhys) & (PhysicalMemoryManager::getPageSize() - 1)) != 0)
         panic("Config: Alignment issues");
 
+#ifdef HOSTED
+    g_pFile = new uint8_t[sSize];
+    memcpy(g_pFile, pPhys, sSize);
+    g_FileSz = sSize;
+#else
     MemoryRegion region("Config");
 
     if (PhysicalMemoryManager::instance().allocateRegion(region,
@@ -414,15 +419,14 @@ static bool init()
     g_pFile = new uint8_t[sSize];
     memcpy(g_pFile, region.virtualAddress(), sSize);
     g_FileSz = sSize;
-    NOTICE("region.va: " << (uintptr_t)region.virtualAddress());
+#endif // HOSTED
 #else
     g_pFile = file;
     g_FileSz = sizeof file;
 #endif
+
     sqlite3_initialize();
-    NOTICE("Initialize fin");
     int ret = sqlite3_open("root»/.pedigree-root", &g_pSqlite);
-    NOTICE("Open fin");
     if (ret)
     {
         FATAL("sqlite3 error: " << sqlite3_errmsg(g_pSqlite));

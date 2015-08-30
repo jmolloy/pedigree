@@ -169,10 +169,13 @@ using namespace __processor_cc_hosted;
 void Processor::_breakpoint()
 {
     sigset_t set;
+    sigset_t oset;
     sigemptyset(&set);
+    sigemptyset(&oset);
     sigaddset(&set, SIGTRAP);
-    //sigprocmask(SIG_UNBLOCK, &set, 0);
+    sigprocmask(SIG_UNBLOCK, &set, &oset);
     raise(SIGTRAP);
+    sigprocmask(SIG_SETMASK, &oset, 0);
 }
 
 void Processor::_reset()
@@ -186,11 +189,14 @@ void Processor::_haltUntilInterrupt()
     sigset_t set;
     sigemptyset(&set);
     sigsuspend(&set);
-    NOTICE("b");
 }
 
-/// \todo not here
+/// \todo not here - this needs to switch to the new thread's stack etc
+///       and then call the deletion routine.
 void PerProcessorScheduler::deleteThreadThenRestoreState(Thread *pThread, SchedulerState &newState)
 {
+  if(Processor::saveState(pThread->state()))
+    while(1) sched_yield();
+  Processor::restoreState(newState);
   panic("PerProcessorScheduler::deleteThreadThenRestoreState is not implemented.");
 }
