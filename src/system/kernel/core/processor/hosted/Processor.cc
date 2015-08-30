@@ -91,14 +91,22 @@ void Processor::restoreState(SyscallState &state, volatile uintptr_t *pLock)
 void Processor::jumpUser(volatile uintptr_t *pLock, uintptr_t address,
   uintptr_t stack, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4)
 {
+  // Same thing as jumping to kernel space.
+  jumpKernel(pLock, address, stack, p1, p2, p3, p4);
 }
 
 void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
 {
+  ProcessorInformation &info = Processor::information();
+  if(&info.getVirtualAddressSpace() != &AddressSpace)
+  {
+      ERROR("Processor::switchAddressSpace unimplemented");
+  }
 }
 
 void Processor::setTlsBase(uintptr_t newBase)
 {
+  ERROR("Processor::setTlsBase unimplemented");
 }
 
 size_t Processor::getDebugBreakpointCount()
@@ -194,14 +202,4 @@ void Processor::_haltUntilInterrupt()
     sigset_t set;
     sigemptyset(&set);
     sigsuspend(&set);
-}
-
-/// \todo not here - this needs to switch to the new thread's stack etc
-///       and then call the deletion routine.
-void PerProcessorScheduler::deleteThreadThenRestoreState(Thread *pThread, SchedulerState &newState)
-{
-  if(Processor::saveState(pThread->state()))
-    while(1) sched_yield();
-  Processor::restoreState(newState);
-  panic("PerProcessorScheduler::deleteThreadThenRestoreState is not implemented.");
 }
