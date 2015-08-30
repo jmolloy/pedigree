@@ -609,9 +609,6 @@ if env['hosted']:
         'CCFLAGS': ['-fno-omit-frame-pointer', '-Wno-deprecated-declarations']
     })
 
-    # Build no images at all for hosted systems; it doesn't make sense.
-    env['nodiskimages'] = True
-
     # Not a PC.
     env['mach_pc'] = False
 
@@ -625,6 +622,15 @@ if env['hosted']:
 
     # Now ditch any ARCH_TARGET-related hooks - we don't need it anymore.
     env['ARCH_TARGET'] = 'HOSTED'
+
+    # Do we have clang?
+    if 0:
+        clang = env.Detect('clang')
+        clangxx = env.Detect('clang++')
+        if clang and clangxx:
+            env['CC'] = clang
+            env['CXX'] = clangxx
+            env['LINK'] = clang
 
     fixDebugFlags(env)
 

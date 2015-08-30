@@ -41,18 +41,21 @@ int main(int argc, char *argv[])
     int initrd = -1;
     int configdb = -1;
     int kernel = -1;
+    int diskimage = -1;
     void *initrd_mapping = MAP_FAILED;
     void *configdb_mapping = MAP_FAILED;
     void *kernel_mapping = MAP_FAILED;
+    void *diskimage_mapping = MAP_FAILED;
     uint32_t *module_region = (uint32_t *) MAP_FAILED;
     size_t initrd_length = 0;
     size_t configdb_length = 0;
     size_t kernel_length = 0;
+    size_t diskimage_length = 0;
     Elf64_Ehdr *ehdr = 0;
     Elf64_Shdr *shdrs = 0;
     if(argc < 3)
     {
-        fprintf(stderr, "Usage: kernel [initrd] [config_database]\n");
+        fprintf(stderr, "Usage: kernel initrd config_database [diskimage]\n");
         goto fail;
     }
 
@@ -146,6 +149,37 @@ int main(int argc, char *argv[])
     bs.mods_addr = reinterpret_cast<uint32_t>(module_region);
     bs.mods_count = 2;
 
+    if (argc > 3)
+    {
+        diskimage = open(argv[3], O_RDWR);
+        if(diskimage < 0)
+        {
+            fprintf(stderr, "Can't open disk image: %s\n", strerror(errno));
+            goto fail;
+        }
+
+        r = fstat(diskimage, &st);
+        if(r != 0)
+        {
+            fprintf(stderr, "Can't stat disk image: %s\n", strerror(errno));
+            goto fail;
+        }
+
+        diskimage_length = st.st_size;
+        diskimage_mapping = mmap(0, diskimage_length, PROT_READ | PROT_WRITE,
+                                 MAP_PRIVATE | MAP_NORESERVE, diskimage, 0);
+        if(diskimage_mapping == MAP_FAILED)
+        {
+            fprintf(stderr, "Can't map disk image: %s\n", strerror(errno));
+            goto fail;
+        }
+
+        // Add to the multiboot info.
+        bs.mods_count++;
+        *((uint64_t*) &module_region[8]) = reinterpret_cast<uintptr_t>(diskimage_mapping);
+        module_region[10] = reinterpret_cast<uint32_t>(diskimage_mapping) + diskimage_length;
+    }
+
     // Load ELF header to add ELF information.
     ehdr = reinterpret_cast<Elf64_Ehdr*>(kernel_mapping);
     bs.shndx = ehdr->e_shstrndx;
@@ -173,12 +207,15 @@ fail:
 cleanup:
     if(module_region != MAP_FAILED)
         munmap(module_region, 0x1000);
+    if(diskimage_mapping != MAP_FAILED)
+        munmap(diskimage_mapping, diskimage_length);
     if(kernel_mapping != MAP_FAILED)
         munmap(kernel_mapping, kernel_length);
     if(configdb_mapping != MAP_FAILED)
         munmap(configdb_mapping, kernel_length);
     if(initrd_mapping != MAP_FAILED)
         munmap(initrd_mapping, initrd_length);
+    close(diskimage);
     close(kernel);
     close(configdb);
     close(initrd);
