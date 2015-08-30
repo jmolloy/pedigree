@@ -23,9 +23,10 @@ import pipes
 
 import buildutils.userspace
 
-Import(['env'])
+Import(['env', 'userspace_env'])
 
 env_clone = env.Clone()
+userspace_env_clone = userspace_env.Clone()
 
 builddir = env["PEDIGREE_BUILD_BASE"]
 kerneldir = env["PEDIGREE_BUILD_KERNEL"]
@@ -76,19 +77,19 @@ glue_files = [
     # 'glue-memset.c',
 ]
 
-if env['ARCH_TARGET'] in ['X86', 'X64']:
+if userspace_env['ARCH_TARGET'] in ['X86', 'X64']:
     glue_files.extend(['glue-memcpy.c',])
 
 crt0_files = ['crt0.c']
 
 suffix = '-noarch'
-if env['ARCH_TARGET'] == 'X86':
+if userspace_env['ARCH_TARGET'] == 'X86':
     suffix = '-i686'
-elif env['ARCH_TARGET'] == 'X64':
+elif userspace_env['ARCH_TARGET'] == 'X64':
     suffix = '-amd64'
-elif env['ARCH_TARGET'] == 'PPC':
+elif userspace_env['ARCH_TARGET'] == 'PPC':
     suffix = '-ppc'
-elif env['ARCH_TARGET'] == 'ARM':
+elif userspace_env['ARCH_TARGET'] == 'ARM':
     suffix = '-arm'
 
 posix_files += ["sigret" + suffix + ".s"]
@@ -129,13 +130,16 @@ if "STATIC_DRIVERS" in env['CPPDEFINES']:
 else:
     env_clone['LSCRIPT'] = File("#src/modules/link.ld")
 
-env_clone.Program(posix_objname,posix_files,LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT')
+env_clone['AS'] = userspace_env_clone['AS']
+env_clone['ASFLAGS'] = userspace_env_clone['ASFLAGS']
+env_clone.Program(posix_objname, posix_files, LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT')
 env_clone.Command(final_output, posix_objname, action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
 
-posix_env = env_clone.Clone()
-posix_env['CFLAGS'] = buildutils.userspace.fixFlags(env, posix_env['CFLAGS'])
-posix_env['CCFLAGS'] = buildutils.userspace.fixFlags(env, posix_env['CCFLAGS'])
-posix_env['CXXFLAGS'] = buildutils.userspace.fixFlags(env, posix_env['CXXFLAGS'])
+posix_env = userspace_env_clone.Clone()
+posix_env['CPPPATH'] = include
+posix_env['CFLAGS'] = buildutils.userspace.fixFlags(userspace_env_clone, posix_env['CFLAGS'])
+posix_env['CCFLAGS'] = buildutils.userspace.fixFlags(userspace_env_clone, posix_env['CCFLAGS'])
+posix_env['CXXFLAGS'] = buildutils.userspace.fixFlags(userspace_env_clone, posix_env['CXXFLAGS'])
 
 pic_clone = posix_env.Clone()
 pic_clone.MergeFlags('-fPIC -DUSE_PIC_SYSCALLS')
@@ -160,13 +164,13 @@ env_clone_pthread.SharedLibrary(libpthread_shobjname, pthread_files, LINKFLAGS='
 
 # Build libc/libm
 
-if env['ARCH_TARGET'] == 'X86':
+if userspace_env['ARCH_TARGET'] == 'X86':
     libc_arch = 'i686'
-elif env['ARCH_TARGET'] == 'X64':
+elif userspace_env['ARCH_TARGET'] == 'X64':
     libc_arch = 'amd64'
-elif env['ARCH_TARGET'] == 'PPC':
+elif userspace_env['ARCH_TARGET'] == 'PPC':
     libc_arch = 'ppc'
-elif env['ARCH_TARGET'] == 'ARM':
+elif userspace_env['ARCH_TARGET'] == 'ARM':
     libc_arch = 'arm'
 
 buildDir = env_clone.Dir(builddir)
@@ -190,8 +194,8 @@ env_clone.Command([buildLibc], [glue_objname, baseLibc],
         "@python", os.path.join(base.abspath, "scripts", "buildLibc.py"),
         buildDir.abspath, baseLibc.abspath,
         env_clone.File(glue_objname).abspath,
-        env_clone.File(libpedigree_c_objname).abspath, env["AR"],
-        env["LINK"], env["STRIP"]
+        env_clone.File(libpedigree_c_objname).abspath,
+        userspace_env["AR"], userspace_env["LINK"], userspace_env["STRIP"]
         ]
     )
 )
@@ -199,10 +203,11 @@ env_clone.Command([buildLibc], [glue_objname, baseLibc],
 env_clone.Command([buildLibm], [baseLibm],
     " ".join(pipes.quote(s) for s in [
         '@python', os.path.join(base.abspath, 'scripts', 'buildLibm.py'),
-        buildDir.abspath, baseLibm.abspath, env["LINK"], env['CC'],
+        buildDir.abspath, baseLibm.abspath, userspace_env["LINK"],
+        userspace_env['CC'],
         ]
     )
 )
 
-SConscript(os.path.join('newlib', 'SConscript'), exports=['env'])
+SConscript(os.path.join('newlib', 'SConscript'), exports=['userspace_env'])
 

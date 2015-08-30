@@ -23,6 +23,7 @@
 #include "IrqManager.h"
 #include <LockGuard.h>
 
+namespace __pedigree_hosted {}; // In case it doesn't exist yet.
 using namespace __pedigree_hosted;
 
 #include <signal.h>

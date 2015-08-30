@@ -23,7 +23,9 @@ import os
 import buildutils.userspace
 import buildutils.misc
 
-Import(['env'])
+Import(['userspace_env'])
+
+env = userspace_env
 
 env_clone = env.Clone()
 

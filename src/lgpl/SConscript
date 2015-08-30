@@ -20,6 +20,8 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 import os
 
-Import(['env'])
+Import(['env', 'userspace_env'])
+
+env = userspace_env
 
 SConscript(os.path.join('SDL-1.2.14', 'SConscript'), exports=['env'])

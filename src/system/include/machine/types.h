@@ -38,7 +38,9 @@
 #endif
 #ifdef HOSTED
   #include <machine/hosted/types.h>
+  #ifndef MACHINE_SPECIFIC_NAME
   #define MACHINE_SPECIFIC_NAME(x) HostedCommon##x
+  #endif
 #endif
 
 // NOTE: This throws a compile-time error if this header is not adapted for

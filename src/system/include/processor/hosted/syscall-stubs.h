@@ -17,40 +17,54 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _PEDIGREE_SYSCALL_H
-#define _PEDIGREE_SYSCALL_H
-
-// If you change this, ensure you change src/system/include/processor/Syscalls.h !
-#define PEDIGREE_C_SYSCALL_SERVICE 4
-
-#if defined(HOSTED) && !defined(SYSCALL_TARGET_FOUND)
-#include "pedigree-c-syscall-hosted.h"
-#define SYSCALL_TARGET_FOUND
+#ifndef SERVICE
+#error syscall-stubs.h requires SERVICE to be defined
+#endif
+#ifndef SERVICE_ERROR
+#error syscall-stubs.h requires SERVICE_ERROR to be defined
+#endif
+#ifndef SERVICE_INIT
+#error syscall-stubs.h requires SERVICE_INIT to be defined
 #endif
 
-#if defined(X86) && !defined(SYSCALL_TARGET_FOUND)
-#include "pedigree-c-syscall-i686.h"
-#define SYSCALL_TARGET_FOUND
-#endif
+static long syscall0(long function)
+{
+  SERVICE_INIT;
+  __builtin_trap();
+  return 0;
+}
 
-#if defined(X64) && !defined(SYSCALL_TARGET_FOUND)
-#include "pedigree-c-syscall-amd64.h"
-#define SYSCALL_TARGET_FOUND
-#endif
+static long syscall1(long function, long p1)
+{
+  SERVICE_INIT;
+  __builtin_trap();
+  return 0;
+}
 
-#if defined(PPC_COMMON) && !defined(SYSCALL_TARGET_FOUND)
-#include "pedigree-c-syscall-ppc.h"
-#define SYSCALL_TARGET_FOUND
-#endif
+static long syscall2(long function, long p1, long p2)
+{
+  SERVICE_INIT;
+  __builtin_trap();
+  return 0;
+}
 
-#if defined(ARM_COMMON) && !defined(SYSCALL_TARGET_FOUND)
-#include "pedigree-c-syscall-arm.h"
-#define SYSCALL_TARGET_FOUND
-#endif
+static long syscall3(long function, long p1, long p2, long p3)
+{
+  SERVICE_INIT;
+  __builtin_trap();
+  return 0;
+}
 
-#ifndef SYSCALL_TARGET_FOUND
-#error Syscall target not found!
-#endif
+static long syscall4(long function, long p1, long p2, long p3, long p4)
+{
+  SERVICE_INIT;
+  __builtin_trap();
+  return 0;
+}
 
-
-#endif
+static long syscall5(long function, long p1, long p2, long p3, long p4, long p5)
+{
+  SERVICE_INIT;
+  __builtin_trap();
+  return 0;
+}

@@ -98,11 +98,79 @@ size_t HostedInterruptManager::getDebugInterruptNumber()
 
 #endif
 
+
+#include <process/Scheduler.h>
+extern void system_reset();
+static int pedigree_reboot()
+{
+    WARNING("System shutting down...");
+    for(int i = Scheduler::instance().getNumProcesses() - 1; i >= 0; i--)
+    {
+        // Grab the process and subsystem. Don't grab a POSIX subsystem object,
+        // because we may be hitting native processes here.
+        Process *proc = Scheduler::instance().getProcess(i);
+        Subsystem *subsys = reinterpret_cast<Subsystem*>(proc->getSubsystem());
+
+        // DO NOT COMMIT SUICIDE. That's called a hang with undefined state, chilldren.
+        if(proc == Processor::information().getCurrentThread()->getParent())
+            continue;
+
+        if(subsys)
+        {
+            // If there's a subsystem, kill it that way.
+            /// \todo Proper KillReason
+            subsys->kill(Subsystem::Unknown, proc->getThread(0));
+        }
+        else
+        {
+            // If no subsystem, outright kill the process without sending a signal
+            Scheduler::instance().removeProcess(proc);
+
+            /// \todo Process::kill() acts as if that process is already running.
+            ///       It needs to allow other Processes to call it without causing
+            ///       the calling thread to become a zombie.
+            //proc->kill();
+        }
+    }
+
+    // Wait for every other process to die or be in zombie state.
+
+    while (true)
+    {
+        Processor::setInterrupts(false);
+        if (Scheduler::instance().getNumProcesses() <= 1)
+            break;
+        bool allZombie = true;
+        for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
+        {
+            if (Scheduler::instance().getProcess(i) == Processor::information().getCurrentThread()->getParent())
+                continue;
+            if (Scheduler::instance().getProcess(i)->getThread(0)->getStatus() != Thread::Zombie)
+                allZombie = false;
+        }
+
+        if (allZombie) break;
+        Processor::setInterrupts(true);
+
+        Scheduler::instance().yield();
+    }
+
+    // All dead, reap them all.
+    while (Scheduler::instance().getNumProcesses() > 1)
+    {
+        if (Scheduler::instance().getProcess(0) == Processor::information().getCurrentThread()->getParent())
+            continue;
+        delete Scheduler::instance().getProcess(0);
+    }
+
+    // Reset the system
+    system_reset();
+    return 0;
+}
+
 void HostedInterruptManager::interrupt(InterruptState &interruptState)
 {
     size_t nIntNumber = interruptState.getInterruptNumber();
-
-    NOTICE("int: " << nIntNumber);
 
 #if defined(DEBUGGER)
     {
@@ -135,6 +203,13 @@ void HostedInterruptManager::interrupt(InterruptState &interruptState)
     {
         pHandler->interrupt(nIntNumber, interruptState);
         return;
+    }
+
+    if (UNLIKELY(nIntNumber == SIGINT))
+    {
+        // Shut down.
+        pedigree_reboot();
+        panic("shutdown failed");
     }
 
     // unhandled interrupt, check for an exception
@@ -181,7 +256,7 @@ void HostedInterruptManager::initialiseProcessor()
     // Set up our handler for every signal we want to trap.
     for (int i = 0; i < MAX_SIGNAL; ++i)
     {
-        if(!(i == SIGUSR1 || i == SIGUSR2 || i == SIGTRAP))
+        if(!(i == SIGUSR1 || i == SIGUSR2 || i == SIGTRAP || i == SIGINT))
             continue;
         struct sigaction act;
         memset(&act, 0, sizeof(act));

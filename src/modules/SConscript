@@ -356,16 +356,14 @@ initrdList += [os.path.join(builddir.abspath, 'drivers', i + '.o') for i in all_
 initrdList += [os.path.join(builddir.abspath, 'modules', i + '.o') for i in initrd_modules]
 
 # Subsystems
-if not env['hosted']:
-    initrdList += [os.path.join(builddir.abspath, 'subsystems', 'posix.o')]
-    initrdList += [os.path.join(builddir.abspath, 'subsystems', 'pedigree-c.o')]
-if env['ARCH_TARGET'] in ('X86', 'X64', 'ARM'):
+initrdList += [os.path.join(builddir.abspath, 'subsystems', 'posix.o')]
+initrdList += [os.path.join(builddir.abspath, 'subsystems', 'pedigree-c.o')]
+if env['ARCH_TARGET'] in ('X86', 'X64', 'ARM', 'HOSTED'):
     initrdList += [os.path.join(builddir.abspath, 'subsystems', 'native.o')]
 
 env.Depends(initrdFile, "drivers")
 env.Depends(initrdFile, "modules")
-if not env['hosted']:
-    env.Depends(initrdFile, "subsys")
+env.Depends(initrdFile, "subsys")
 
 env.Alias("initrd", initrdFile)
 
