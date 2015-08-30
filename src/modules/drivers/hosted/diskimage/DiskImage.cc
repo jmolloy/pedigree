@@ -31,21 +31,20 @@ bool DiskImage::initialise()
         return false;
     }
 
-    NOTICE("extracting location of disk image");
     uintptr_t baseAddress = *reinterpret_cast<uintptr_t*>(adjust_pointer(g_pBootstrapInfo->getModuleBase(), 32));
-    uint32_t endAddress = *reinterpret_cast<uint32_t*>(adjust_pointer(g_pBootstrapInfo->getModuleBase(), 40));
-    NOTICE("location extracted");
+    uintptr_t endAddress = *reinterpret_cast<uintptr_t*>(adjust_pointer(g_pBootstrapInfo->getModuleBase(), 40));
 
     m_pBase = reinterpret_cast<void *>(baseAddress);
     m_nSize = endAddress - baseAddress;
-    NOTICE("image is at " << reinterpret_cast<uintptr_t>(m_pBase) << ", size is " << m_nSize);
     return true;
 }
 
 uintptr_t DiskImage::read(uint64_t location)
 {
     if(location > m_nSize)
+    {
         return 0;
+    }
 
     if(m_pBase)
     {

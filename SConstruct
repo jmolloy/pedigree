@@ -599,7 +599,8 @@ if env['hosted']:
     env['CPPDEFINES'] += ['HOSTED_%s' % x for x in userspace_env['CPPDEFINES']]
 
     # Reset flags.
-    env['CCFLAGS'] = generic_flags + warning_flags + ['-U_FORTIFY_SOURCE', '-U__linux__']
+    env['CCFLAGS'] = generic_flags + warning_flags + ['-U_FORTIFY_SOURCE',
+                                                      '-U__linux__']
     env['CFLAGS'] = generic_cflags + warning_flags_c
     env['CXXFLAGS'] = generic_cxxflags + warning_flags_cxx
     env['LINKFLAGS'] = []
