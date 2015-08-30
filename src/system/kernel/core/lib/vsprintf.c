@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -47,7 +46,7 @@ static int skip_atoi(const char **s)
 #define SPECIAL	32		/* 0x */
 #define SMALL	64		/* use 'abcdef' instead of 'ABCDEF' */
 
-#ifdef X86_COMMON
+#if defined(X86_COMMON) || defined(HOSTED_X86_COMMON)
 #define do_div(n,base) ({ \
 int __res; \
 __asm__("divl %4":"=a" (n),"=d" (__res):"0" (n),"1" (0),"r" (base)); \

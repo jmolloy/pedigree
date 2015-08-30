@@ -135,7 +135,12 @@ void Processor::setInterrupts(bool bEnable)
   if(bEnable)
     sigemptyset(&set);
   else
+  {
     sigfillset(&set);
+
+    // Make sure we can be nicely killed by the host.
+    sigdelset(&set, SIGTERM);
+  }
 
   sigprocmask(SIG_SETMASK, &set, 0);
 

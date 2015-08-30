@@ -281,6 +281,10 @@ static bool init()
     bootIO.write(str, BootIO::White, BootIO::Black);
     str.clear();
 
+#ifdef HOSTED
+    return true;
+#endif
+
 #ifdef THREADS
     // At this point we're uninterruptible, as we're forking.
     Spinlock lock;
@@ -299,10 +303,8 @@ static bool init()
     pProcess->setCwd(VFS::instance().find(String("root»/")));
     pProcess->setCtty(0);
 
-#ifndef HOSTED
     PosixSubsystem *pSubsystem = new PosixSubsystem;
     pProcess->setSubsystem(pSubsystem);
-#endif
 
     Thread *pThread = new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(&init_stage2), 0x0 /* parameter */);
     pThread->detach();
@@ -387,10 +389,8 @@ void init_stage2()
     }
 
     // Initialise the sigret and pthreads shizzle.
-#ifndef HOSTED
     pedigree_init_sigret();
     pedigree_init_pthreads();
-#endif
 
     class RunInitEvent : public Event
     {
@@ -484,7 +484,7 @@ void init_stage2()
 #elif ARM_COMMON
 #define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "linker", "network-stack", "users", "pedigree-c", "native"
 #elif defined(HOSTED)
-#define __MOD_DEPS "vfs", "ext2", "fat", "partition", "network-stack", "users" // , "pedigree-c", "native", "posix"
+#define __MOD_DEPS "vfs", "ext2", "fat", "partition", "network-stack", "users", "pedigree-c", "native", "posix"
 #endif
 MODULE_INFO("init", &init, &destroy, __MOD_DEPS);
 #ifdef __MOD_DEPS_OPT
