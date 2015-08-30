@@ -21,12 +21,13 @@
 #define DISKIMAGE_H
 
 #include <machine/Disk.h>
+#include <utilities/Cache.h>
 
 /** Loads a disk image as a usable disk device. */
 class DiskImage : public Disk
 {
 public:
-    DiskImage() : Disk(), m_pBase(0), m_nSize(0)
+    DiskImage() : Disk(), m_pBase(0), m_nSize(0), m_Cache()
     {
     }
 
@@ -54,9 +55,16 @@ public:
     {
         return 4096;
     }
+
+    virtual void pin(uint64_t location);
+
+    virtual void unpin(uint64_t location);
+
 private:
     void *m_pBase;
     size_t m_nSize;
+
+    Cache m_Cache;
 };
 
 #endif

@@ -281,10 +281,6 @@ static bool init()
     bootIO.write(str, BootIO::White, BootIO::Black);
     str.clear();
 
-#ifdef HOSTED
-    return true;
-#endif
-
 #ifdef THREADS
     // At this point we're uninterruptible, as we're forking.
     Spinlock lock;
@@ -343,6 +339,8 @@ void init_stage2()
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     pProcess->getSpaceAllocator().clear();
     pProcess->getDynamicSpaceAllocator().clear();
+    uintptr_t a = pProcess->getAddressSpace()->getUserStart();
+    uintptr_t b = pProcess->getAddressSpace()->getUserReservedStart();
     pProcess->getSpaceAllocator().free(
             pProcess->getAddressSpace()->getUserStart(),
             pProcess->getAddressSpace()->getUserReservedStart() - pProcess->getAddressSpace()->getUserStart());
@@ -352,15 +350,19 @@ void init_stage2()
             pProcess->getAddressSpace()->getDynamicStart(),
             pProcess->getAddressSpace()->getDynamicEnd() - pProcess->getAddressSpace()->getDynamicStart());
     }
+    NOTICE("A");
     pProcess->getAddressSpace()->revertToKernelAddressSpace();
+    NOTICE("B");
 
     DynamicLinker *pLinker = new DynamicLinker();
     pProcess->setLinker(pLinker);
+    NOTICE("C");
 
     // Should we actually load this file, or request another program load the file?
     String interpreter("");
     if(pLinker->checkInterpreter(initProg, interpreter))
     {
+        NOTICE("C.1");
         // Switch to the interpreter.
         initProg = VFS::instance().find(interpreter, pProcess->getCwd());
         if(!initProg)
@@ -368,17 +370,21 @@ void init_stage2()
             FATAL("Unable to find init program interpreter '" << interpreter << "'!");
             return;
         }
+        NOTICE("C.2");
 
         // Using the interpreter - don't worry about dynamic linking.
         delete pLinker;
         pLinker = 0;
         pProcess->setLinker(pLinker);
+        NOTICE("C.3");
     }
+    NOTICE("D");
 
     if (pLinker && !pLinker->loadProgram(initProg))
     {
         FATAL("Init program failed to load!");
     }
+    NOTICE("E");
 
     for (int j = 0; j < 0x21000; j += 0x1000)
     {
@@ -387,10 +393,12 @@ void init_stage2()
         if (!b)
             WARNING("map() failed in init");
     }
+    NOTICE("F");
 
     // Initialise the sigret and pthreads shizzle.
     pedigree_init_sigret();
     pedigree_init_pthreads();
+    NOTICE("G");
 
     class RunInitEvent : public Event
     {
@@ -402,6 +410,7 @@ void init_stage2()
         size_t getNumber() {return ~0UL;}
     };
 
+    NOTICE("H");
     Elf *elf = 0;
     if(pLinker)
     {
@@ -422,6 +431,7 @@ void init_stage2()
         elf = new Elf();
         elf->create(reinterpret_cast<uint8_t*>(loadAddr), initProg->getSize());
     }
+    NOTICE("I");
 
     if(pLinker)
     {
@@ -442,15 +452,18 @@ void init_stage2()
             Scheduler::instance().yield();
         }
     }
+    NOTICE("J");
 
     uintptr_t *argv_loc = reinterpret_cast<uintptr_t *>(0x20020000);
     memset(argv_loc, 0, PhysicalMemoryManager::instance().getPageSize());
     argv_loc[0] = reinterpret_cast<uintptr_t>(&argv_loc[2]);
     memcpy(&argv_loc[2], static_cast<const char *>(fname), fname.length());
+    NOTICE("K");
 
     uintptr_t *env_loc = reinterpret_cast<uintptr_t *>(0x20020400);
 
     void *stack = Processor::information().getVirtualAddressSpace().allocateStack();
+    NOTICE("L");
 
 #if 0
     system_reset();
@@ -462,6 +475,7 @@ void init_stage2()
         // Free up resources used in the metadata-only ELF object.
         delete elf;
     }
+    NOTICE("M");
 
     // Alrighty - lets create a new thread for this program - -8 as PPC assumes
     // the previous stack frame is available...
@@ -472,6 +486,7 @@ void init_stage2()
             stack /* Stack */);
     pThread->detach();
 
+    NOTICE("N");
     g_InitProgramLoaded.release();
 #endif
 }

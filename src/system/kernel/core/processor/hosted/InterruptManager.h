@@ -28,6 +28,8 @@
 /** @addtogroup kernelprocessorhosted
  * @{ */
 
+#define MAX_SIGNAL  32
+
 /** The interrupt manager on hosted systems */
 class HostedInterruptManager : public ::InterruptManager
 {
@@ -83,10 +85,10 @@ class HostedInterruptManager : public ::InterruptManager
     Spinlock m_Lock;
 
     /** The normal interrupt handlers */
-    InterruptHandler *m_pHandler[256];
+    InterruptHandler *m_pHandler[MAX_SIGNAL];
     #ifdef DEBUGGER
       /** The debugger interrupt handlers */
-      InterruptHandler *m_pDbgHandler[256];
+      InterruptHandler *m_pDbgHandler[MAX_SIGNAL];
     #endif
 
     /** The instance of the interrupt manager  */

@@ -63,12 +63,15 @@ def buildImageE2fsprogs(target, source, env):
                     os.path.join(imagedir, 'boot', 'grub', 'menu.lst'))
 
     # Copy the kernel, initrd, and configuration database
-    nth = 3
-    if 'STATIC_DRIVERS' in env['CPPDEFINES']:
-        nth = 2
-    for i in source[0:nth]:
-        shutil.copyfile(i.abspath,
-                        os.path.join(imagedir, 'boot', i.name))
+    if env['kernel_on_disk']:
+        nth = 3
+        if 'STATIC_DRIVERS' in env['CPPDEFINES']:
+            nth = 2
+        for i in source[0:nth]:
+            shutil.copyfile(i.abspath,
+                            os.path.join(imagedir, 'boot', i.name))
+    else:
+        nth = 0
     source = source[nth:]
 
     # Copy each input file across

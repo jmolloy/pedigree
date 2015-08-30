@@ -114,8 +114,14 @@ class HostedInterruptState
     /** The destructor */
     ~HostedInterruptState();
 
+    /**
+     * State data - generally a pointer to the object asking for the interrupt.
+     */
     uint64_t state;
+    /** Signal number */
     uint64_t which;
+    /** siginfo_t structure */
+    uint64_t extra;
 } PACKED;
 
 /** x64 Syscall State */

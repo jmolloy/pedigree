@@ -19,9 +19,10 @@
 
 #include <processor/state.h>
 
-const char *HostedInterruptStateRegisterName[1] =
+const char *HostedInterruptStateRegisterName[2] =
 {
   "state",
+  "extra",
 };
 
 const char *HostedSyscallStateRegisterName[1] =
@@ -39,11 +40,12 @@ HostedInterruptState::~HostedInterruptState()
 
 size_t HostedInterruptState::getRegisterCount() const
 {
-  return 1;
+  return 2;
 }
 processor_register_t HostedInterruptState::getRegister(size_t index) const
 {
   if (index == 0) return state;
+  if (index == 1) return extra;
   return 0;
 }
 const char *HostedInterruptState::getRegisterName(size_t index) const

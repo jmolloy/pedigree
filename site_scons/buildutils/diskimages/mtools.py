@@ -144,9 +144,12 @@ def buildImageMtools(target, source, env):
         '/system/modules',
     ]
 
-    nth = 3
-    if 'STATIC_DRIVERS' in env['CPPDEFINES']:
-        nth = 2
+    if env['kernel_on_disk']:
+        nth = 3
+        if 'STATIC_DRIVERS' in env['CPPDEFINES']:
+            nth = 2
+    else:
+        nth = 0
 
     copyops = [
         ([x.abspath for x in source[0:nth]], '/boot'),

@@ -18,6 +18,7 @@
  */
 
 #include <processor/Processor.h>
+#include <processor/PageFaultHandler.h>
 #include "PhysicalMemoryManager.h"
 #include "InterruptManager.h"
 #include <process/initialiseMultitasking.h>
@@ -39,6 +40,7 @@ void Processor::initialisationDone()
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
   HostedInterruptManager::initialiseProcessor();
+  PageFaultHandler::instance().initialise();
   HostedPhysicalMemoryManager::instance().initialise(Info);
   setInterrupts(false);
   m_Initialised = 1;
@@ -144,10 +146,13 @@ void Processor::setInterrupts(bool bEnable)
     sigemptyset(&set);
   else
   {
-    sigfillset(&set);
+    sigemptyset(&set);
 
-    // Make sure we can be nicely killed by the host.
-    sigdelset(&set, SIGTERM);
+    // Only SIGUSR1 and SIGUSR2 are true "interrupts". The rest are all
+    // more like exceptions, which we are okay with triggering even if bEnable
+    // is false.
+    sigaddset(&set, SIGUSR1);
+    sigaddset(&set, SIGUSR2);
   }
 
   sigprocmask(SIG_SETMASK, &set, 0);

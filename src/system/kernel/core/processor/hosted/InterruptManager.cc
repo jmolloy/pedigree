@@ -32,11 +32,16 @@
 
 using namespace __pedigree_hosted;
 
+#include <stdio.h>
+#include <errno.h>
 #include <signal.h>
 
-HostedInterruptManager HostedInterruptManager::m_Instance;
+namespace __pedigree_interrupt_manager_cc
+{
+    #include <string.h>
+}
 
-#define MAX_SIGNAL  16
+HostedInterruptManager HostedInterruptManager::m_Instance;
 
 InterruptManager &InterruptManager::instance()
 {
@@ -70,9 +75,6 @@ bool HostedInterruptManager::registerInterruptHandlerDebugger(size_t nInterruptN
 {
     // Lock the class until the end of the function
     LockGuard<Spinlock> lock(m_Lock);
-
-    if(nInterruptNumber == SIGTRAP)
-        NOTICE("registering debugger interrupt for SIGTRAP");
 
     // Sanity checks
     if (UNLIKELY(nInterruptNumber >= MAX_SIGNAL))
@@ -205,15 +207,36 @@ void HostedInterruptManager::interrupt(InterruptState &interruptState)
         return;
     }
 
-    if (UNLIKELY(nIntNumber == SIGINT))
+    if (UNLIKELY(nIntNumber == SIGINT || nIntNumber == SIGTERM))
     {
         // Shut down.
         pedigree_reboot();
         panic("shutdown failed");
     }
 
+    // Were we running in the kernel, or user space?
+    // User space processes have a subsystem, kernel ones do not.
+#ifdef THREADS
+    Thread *pThread = Processor::information().getCurrentThread();
+    Process *pProcess = pThread->getParent();
+    Subsystem *pSubsystem = pProcess->getSubsystem();
+    if (pSubsystem)
+    {
+        if (UNLIKELY(nIntNumber == SIGILL))
+        {
+            pSubsystem->threadException(pThread, Subsystem::InvalidOpcode);
+            return;
+        }
+        else if (UNLIKELY(nIntNumber == SIGFPE))
+        {
+            pSubsystem->threadException(pThread, Subsystem::FpuError);
+            return;
+        }
+    }
+#endif
+
     // unhandled interrupt, check for an exception
-    if (LIKELY(nIntNumber != SIGTRAP && nIntNumber != SIGUSR1 && nIntNumber != SIGUSR2))
+    if (LIKELY(nIntNumber != SIGTRAP))
     {
         // TODO:: Check for debugger initialisation.
         // TODO: register dump, maybe a breakpoint so the deubbger can take over?
@@ -247,6 +270,7 @@ void HostedInterruptManager::signalShim(int which, void *siginfo)
 
     InterruptState state;
     state.which = which;
+    state.extra = reinterpret_cast<uint64_t>(info);
     state.state = reinterpret_cast<uint64_t>(info->si_value.sival_ptr);
     interrupt(state);
 }
@@ -254,14 +278,14 @@ void HostedInterruptManager::signalShim(int which, void *siginfo)
 void HostedInterruptManager::initialiseProcessor()
 {
     // Set up our handler for every signal we want to trap.
-    for (int i = 0; i < MAX_SIGNAL; ++i)
+    for (int i = 1; i < MAX_SIGNAL; ++i)
     {
-        if(!(i == SIGUSR1 || i == SIGUSR2 || i == SIGTRAP || i == SIGINT))
-            continue;
         struct sigaction act;
         memset(&act, 0, sizeof(act));
         act.sa_sigaction = handler;
-        sigfillset(&act.sa_mask);
+        sigemptyset(&act.sa_mask);
+        sigaddset(&act.sa_mask, SIGUSR1);
+        sigaddset(&act.sa_mask, SIGUSR2);
         act.sa_flags = SA_SIGINFO | SA_ONSTACK | SA_NODEFER;
 
         sigaction(i, &act, 0);
@@ -272,7 +296,7 @@ HostedInterruptManager::HostedInterruptManager()
     : m_Lock()
 {
     // Initialise the pointers to the pHandler
-    for (size_t i = 0; i < 256; i++)
+    for (size_t i = 0; i < MAX_SIGNAL; i++)
     {
         m_pHandler[i] = 0;
 #ifdef DEBUGGER

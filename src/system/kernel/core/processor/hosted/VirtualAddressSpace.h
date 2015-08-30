@@ -30,9 +30,9 @@
 //
 #define KERNEL_SPACE_START                      reinterpret_cast<void*>(0x0000700000000000)
 
-#define USERSPACE_DYNAMIC_LINKER_LOCATION       reinterpret_cast<void*>(0x0000600000000000)
+#define USERSPACE_DYNAMIC_LINKER_LOCATION       reinterpret_cast<void*>(0x4FA00000)
 
-#define USERSPACE_VIRTUAL_START                 reinterpret_cast<void*>(0x400000)
+#define USERSPACE_VIRTUAL_START                 reinterpret_cast<void*>(0x30000000)
 #define USERSPACE_VIRTUAL_HEAP                  reinterpret_cast<void*>(0x50000000)
 #define USERSPACE_RESERVED_START                USERSPACE_DYNAMIC_LINKER_LOCATION
 #define USERSPACE_VIRTUAL_STACK_SIZE            0x100000
@@ -89,27 +89,6 @@ class HostedVirtualAddressSpace : public VirtualAddressSpace
 
     virtual VirtualAddressSpace *clone();
     virtual void revertToKernelAddressSpace();
-
-    //
-    // Needed for the PhysicalMemoryManager
-    //
-    /** Map the page directory pointer table, the page directory, the page table or the page
-     *  frame if none is currently present
-     *\note This should only be used from the PhysicalMemoryManager
-     *\param[in] physAddress the physical page that should be used as page table or page frame
-     *\param[in] virtualAddress the virtual address that should be checked for the existance
-     *                          of a page directory pointer table, page directory, page table 
-     *                          or page frame
-     *\param[in] flags the flags used for the mapping
-     *\return true, if a page table/frame is already mapped for that address, false if the
-     *        physicalAddress has been used as a page directory pointer table, page directory,
-     *        page table or page frame. */
-    bool mapPageStructures(physical_uintptr_t physAddress,
-                           void *virtualAddress,
-                           size_t flags);
-    bool mapPageStructuresAbove4GB(physical_uintptr_t physAddress,
-                           void *virtualAddress,
-                           size_t flags);
 
     /** The destructor cleans up the address space */
     virtual ~HostedVirtualAddressSpace();
@@ -193,6 +172,14 @@ class HostedVirtualAddressSpace : public VirtualAddressSpace
     /** Allocates a stack with a given size. */
     void *doAllocateStack(size_t sSize);
 
+    typedef struct
+    {
+      bool active;
+      void *vaddr;
+      physical_uintptr_t paddr;
+      size_t flags; // Real flags, not the mmap-specific ones.
+    } mapping_t;
+
     /** Current top of the stacks */
     void *m_pStackTop;
     /** List of free stacks */
@@ -201,6 +188,14 @@ class HostedVirtualAddressSpace : public VirtualAddressSpace
     bool m_bKernelSpace;
     /** Lock to guard against multiprocessor reentrancy. */
     Spinlock m_Lock;
+    /** Tracks the current mappings made in this address space. */
+    mapping_t *m_pKnownMaps;
+    /** Tracks the size of the known mappings list. */
+    size_t m_KnownMapsSize;
+    /** Tracks the number of known mappings we have. */
+    size_t m_numKnownMaps;
+    /** Last unmap for easier finding of places to fit entries. */
+    size_t m_nLastUnmap;
 
     static HostedVirtualAddressSpace m_KernelSpace;
 };

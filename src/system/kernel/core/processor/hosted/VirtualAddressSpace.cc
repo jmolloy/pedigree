@@ -30,10 +30,34 @@
 
 #include <sys/mman.h>
 #include <errno.h>
+#include <dlfcn.h>
 
 VirtualAddressSpace *g_pCurrentlyCloning = 0;
 
 HostedVirtualAddressSpace HostedVirtualAddressSpace::m_KernelSpace(KERNEL_VIRTUAL_HEAP, KERNEL_VIRTUAL_STACK);
+
+typedef void *(*malloc_t)(size_t);
+typedef void *(*realloc_t)(void *, size_t);
+typedef void (*free_t)(void *);
+
+#include <stdio.h>
+void *__libc_malloc(size_t n)
+{
+  static malloc_t local = (malloc_t) dlsym(RTLD_NEXT, "malloc");
+  return local(n);
+}
+
+void *__libc_realloc(void *p, size_t n)
+{
+  static realloc_t local = (realloc_t) dlsym(RTLD_NEXT, "realloc");
+  return local(p, n);
+}
+
+void __libc_free(void *p)
+{
+  static free_t local = (free_t) dlsym(RTLD_NEXT, "free");
+  local(p);
+}
 
 VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
 {
@@ -75,7 +99,14 @@ bool HostedVirtualAddressSpace::isMapped(void *virtualAddress) {
     }
   }
 
-  return true;
+  // Find this mapping if we can.
+  for(size_t i = 0; i < m_KnownMapsSize; ++i)
+  {
+    if(m_pKnownMaps[i].active && m_pKnownMaps[i].vaddr == virtualAddress)
+      return true;
+  }
+
+  return false;
 }
 
 bool HostedVirtualAddressSpace::map(physical_uintptr_t physAddress,
@@ -95,46 +126,142 @@ bool HostedVirtualAddressSpace::map(physical_uintptr_t physAddress,
                  HostedPhysicalMemoryManager::instance().getBackingFile(),
                  physAddress);
 
-  return r != MAP_FAILED;
+  if(UNLIKELY(r == MAP_FAILED))
+    return false;
+
+  // Extend list of known maps if we can't fit this one in.
+  if(m_numKnownMaps == m_KnownMapsSize)
+  {
+    size_t oldSize = m_KnownMapsSize;
+    if(m_KnownMapsSize == 0)
+      m_KnownMapsSize = 1;
+
+    m_KnownMapsSize *= 2;
+
+    size_t newSizeBytes = sizeof(mapping_t) * m_KnownMapsSize;
+    if(!m_pKnownMaps)
+      m_pKnownMaps = (mapping_t *) __libc_malloc(newSizeBytes);
+    else
+      m_pKnownMaps = (mapping_t *) __libc_realloc(m_pKnownMaps, newSizeBytes);
+
+    // Mark all inactive.
+    for(size_t i = oldSize; i < m_KnownMapsSize; ++i)
+      m_pKnownMaps[i].active = false;
+  }
+
+  // Register in the list of known mappings.
+  bool bRegistered = false;
+  size_t idx = m_nLastUnmap;
+  for(; idx < m_KnownMapsSize; ++idx)
+  {
+    if(m_pKnownMaps[idx].active)
+      continue;
+
+    bRegistered = true;
+    break;
+  }
+  if(!bRegistered)
+  {
+    // Try again from the beginning.
+    for(idx = 0; idx < m_nLastUnmap; ++idx)
+    {
+      if(m_pKnownMaps[idx].active)
+        continue;
+
+      bRegistered = true;
+      break;
+    }
+  }
+
+  if(!bRegistered)
+    panic("Fatal algorithmic error in HostedVirtualAddressSpace::map");
+
+  m_pKnownMaps[idx].active = true;
+  m_pKnownMaps[idx].vaddr = virtualAddress;
+  m_pKnownMaps[idx].paddr = physAddress;
+  m_pKnownMaps[idx].flags = flags;
+
+  ++m_numKnownMaps;
+
+  return true;
 }
 
 void HostedVirtualAddressSpace::getMapping(void *virtualAddress,
                                         physical_uintptr_t &physAddress,
                                         size_t &flags) {
-  /// \todo implement
-  physAddress = 0;
-  flags = 0;
+  LockGuard<Spinlock> guard(m_Lock);
+
+  size_t pageSize = PhysicalMemoryManager::getPageSize();
+  uintptr_t alignedVirtualAddress = reinterpret_cast<uintptr_t>(virtualAddress) & ~(pageSize - 1);
+  virtualAddress = reinterpret_cast<void*>(alignedVirtualAddress);
+
+  // Find this mapping if we can.
+  for(size_t i = 0; i < m_KnownMapsSize; ++i)
+  {
+    if(m_pKnownMaps[i].active && m_pKnownMaps[i].vaddr == virtualAddress)
+    {
+      physAddress = m_pKnownMaps[i].paddr;
+      flags = fromFlags(m_pKnownMaps[i].flags, true);
+      return;
+    }
+  }
+
+  panic("HostedVirtualAddressSpace::getMapping - function misused");
 }
 
 void HostedVirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags) {
   LockGuard<Spinlock> guard(m_Lock);
+
+  for(size_t i = 0; i < m_KnownMapsSize; ++i)
+  {
+    if(m_pKnownMaps[i].active && m_pKnownMaps[i].vaddr == virtualAddress)
+    {
+      m_pKnownMaps[i].flags = newFlags;
+      break;
+    }
+  }
+
   size_t flags = toFlags(newFlags, true);
   mprotect(virtualAddress, PhysicalMemoryManager::getPageSize(), flags);
 }
 
 void HostedVirtualAddressSpace::unmap(void *virtualAddress) {
   LockGuard<Spinlock> guard(m_Lock);
+
+  for(size_t i = 0; i < m_KnownMapsSize; ++i)
+  {
+    if(m_pKnownMaps[i].active && m_pKnownMaps[i].vaddr == virtualAddress)
+    {
+      m_pKnownMaps[i].active = false;
+      m_nLastUnmap = i;
+      break;
+    }
+  }
+
   munmap(virtualAddress, PhysicalMemoryManager::getPageSize());
 }
 
 VirtualAddressSpace *HostedVirtualAddressSpace::clone() {
-  /// \todo implement somehow (different backing file?)
-  return 0;
+  LockGuard<Spinlock> guard(m_Lock);
+
+  HostedVirtualAddressSpace *pNew = new HostedVirtualAddressSpace();
+
+  // Copy over the known maps so the new address space can find them.
+  pNew->m_pKnownMaps = (mapping_t *) __libc_malloc(m_KnownMapsSize * sizeof(mapping_t));
+  memcpy(pNew->m_pKnownMaps, m_pKnownMaps, m_KnownMapsSize * sizeof(mapping_t));
+  pNew->m_KnownMapsSize = m_KnownMapsSize;
+  pNew->m_numKnownMaps = m_numKnownMaps;
+  pNew->m_nLastUnmap = m_nLastUnmap;
+
+  return pNew;
 }
 
 void HostedVirtualAddressSpace::revertToKernelAddressSpace() {
+  LockGuard<Spinlock> guard(m_Lock);
+
+  // Just unmap everything we know about.
+  // BUT - only when switching address spaces is implemented!
   /// \todo implement
-}
-
-bool HostedVirtualAddressSpace::mapPageStructures(physical_uintptr_t physAddress,
-                                               void *virtualAddress,
-                                               size_t flags) {
-  return true;
-}
-
-bool HostedVirtualAddressSpace::mapPageStructuresAbove4GB(
-    physical_uintptr_t physAddress, void *virtualAddress, size_t flags) {
-  return true;
 }
 
 void *HostedVirtualAddressSpace::allocateStack() {
@@ -219,7 +346,11 @@ HostedVirtualAddressSpace::HostedVirtualAddressSpace()
       m_pStackTop(USERSPACE_VIRTUAL_STACK),
       m_freeStacks(),
       m_bKernelSpace(false),
-      m_Lock(false, true) {
+      m_Lock(false, true),
+      m_pKnownMaps(0),
+      m_numKnownMaps(0),
+      m_nLastUnmap(0)
+{
 }
 
 HostedVirtualAddressSpace::HostedVirtualAddressSpace(void *Heap, void *VirtualStack)
@@ -227,7 +358,12 @@ HostedVirtualAddressSpace::HostedVirtualAddressSpace(void *Heap, void *VirtualSt
       m_pStackTop(VirtualStack),
       m_freeStacks(),
       m_bKernelSpace(true),
-      m_Lock(false, true) {}
+      m_Lock(false, true),
+      m_pKnownMaps(0),
+      m_numKnownMaps(0),
+      m_nLastUnmap(0)
+{
+}
 
 uint64_t HostedVirtualAddressSpace::toFlags(size_t flags, bool bFinal) {
   uint64_t Flags = 0;
@@ -241,9 +377,5 @@ uint64_t HostedVirtualAddressSpace::toFlags(size_t flags, bool bFinal) {
 }
 
 size_t HostedVirtualAddressSpace::fromFlags(uint64_t Flags, bool bFinal) {
-  size_t flags = 0;
-  if (!(Flags & PROT_READ)) flags |= Swapped; /// \todo probably not right
-  if (Flags & PROT_WRITE) flags |= Write;
-  if (Flags & PROT_EXEC) flags |= Execute;
-  return flags;
+  return Flags;
 }

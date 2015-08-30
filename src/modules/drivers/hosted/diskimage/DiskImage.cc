@@ -41,20 +41,37 @@ bool DiskImage::initialise()
 
 uintptr_t DiskImage::read(uint64_t location)
 {
-    if(location > m_nSize)
+    if((location > m_nSize) || !m_pBase)
     {
-        return 0;
+        return ~0;
     }
 
-    if(m_pBase)
+    uint64_t offset = location % getBlockSize();
+    location &= ~(getBlockSize() - 1);
+
+    uintptr_t buffer = m_Cache.lookup(location);
+    if(buffer)
     {
-        return reinterpret_cast<uintptr_t>(adjust_pointer(m_pBase, location));
+        return buffer;
     }
 
-    return 0;
+    buffer = m_Cache.insert(location, getBlockSize());
+    memcpy(reinterpret_cast<void*>(buffer), adjust_pointer(m_pBase, location), getBlockSize());
+
+    return buffer + offset;
 }
 
 size_t DiskImage::getSize() const
 {
     return m_nSize;
+}
+
+void DiskImage::pin(uint64_t location)
+{
+    m_Cache.pin(location);
+}
+
+void DiskImage::unpin(uint64_t location)
+{
+    m_Cache.release(location);
 }

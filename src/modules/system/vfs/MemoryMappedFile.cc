@@ -29,7 +29,7 @@ MemoryMapManager MemoryMapManager::m_Instance;
 
 physical_uintptr_t AnonymousMemoryMap::m_Zero = 0;
 
-// #define DEBUG_MMOBJECTS
+#define DEBUG_MMOBJECTS
 
 MemoryMappedObject::~MemoryMappedObject()
 {
@@ -643,9 +643,24 @@ bool MemoryMappedFile::trap(uintptr_t address, bool bWrite)
 
     // Skip out on a few things if we can.
     if(bWrite && !(m_Permissions & Write))
+    {
+#ifdef DEBUG_MMOBJECTS
+        DEBUG_LOG(" -> ignoring, was a write and this is not a writable mapping.");
+#endif
         return false;
+    }
     else if((!bWrite) && !(m_Permissions & Read))
+    {
+#ifdef DEBUG_MMOBJECTS
+        DEBUG_LOG(" -> ignoring, was a read and this is not a readable mapping.");
+#endif
         return false;
+    }
+
+#ifdef DEBUG_MMOBJECTS
+    DEBUG_LOG(" -> mapping offset is " << mappingOffset << ", file offset: " << fileOffset);
+    DEBUG_LOG(" -> will eof: " << bWillEof << ", should copy: " << bShouldCopy);
+#endif
 
     // Add execute flag.
     size_t extraFlags = 0;
@@ -656,7 +671,10 @@ bool MemoryMappedFile::trap(uintptr_t address, bool bWrite)
     {
         physical_uintptr_t phys = getBackingPage(m_pBacking, fileOffset);
         if(phys == static_cast<physical_uintptr_t>(~0UL))
+        {
+            ERROR("MemoryMappedFile::trap couldn't get a backing page");
             return false; // Fail.
+        }
 
         size_t flags = VirtualAddressSpace::Shared;
         if(!m_bCopyOnWrite)
@@ -664,7 +682,13 @@ bool MemoryMappedFile::trap(uintptr_t address, bool bWrite)
             flags |= VirtualAddressSpace::Write;
         }
 
-        va.map(phys, reinterpret_cast<void *>(address), flags | extraFlags);
+        NOTICE("mmap target: " << phys);
+        bool r = va.map(phys, reinterpret_cast<void *>(address), flags | extraFlags);
+        if(!r)
+        {
+            ERROR("map() failed in MemoryMappedFile::trap (no-copy)");
+            return false;
+        }
 
         m_Mappings.insert(address, ~0);
     }
@@ -682,7 +706,12 @@ bool MemoryMappedFile::trap(uintptr_t address, bool bWrite)
 
         // Okay, map in the new page, and copy across the backing file data.
         physical_uintptr_t newPhys = PhysicalMemoryManager::instance().allocatePage();
-        va.map(newPhys, reinterpret_cast<void *>(address), VirtualAddressSpace::Write | extraFlags);
+        bool r = va.map(newPhys, reinterpret_cast<void *>(address), VirtualAddressSpace::Write | extraFlags);
+        if(!r)
+        {
+            ERROR("map() failed in MemoryMappedFile::trap (copy)");
+            return false;
+        }
 
         size_t nBytes = m_Length - mappingOffset;
         if(nBytes > pageSz)

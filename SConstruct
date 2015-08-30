@@ -112,6 +112,8 @@ opts.AddVariables(
     BoolVariable('arm_bigendian', 'Is this ARM target big-endian?', 0),
 
     BoolVariable('hosted', 'Is this build to run on another host OS?', 0),
+
+    BoolVariable('kernel_on_disk', 'Put the kernel & needed bits onto hard disk images?', 1),
     
     ('uimage_target', 'Where to copy the generated uImage.bin file to.', '~'),
 )
@@ -612,6 +614,11 @@ if env['hosted']:
 
     # Not a PC.
     env['mach_pc'] = False
+
+    # Don't build an ISO, but disk images are okay. Don't put kernel on the
+    # disk, as we only want to rebuild it if the files change.
+    env['kernel_on_disk'] = False
+    env['noiso'] = True
 
     # Fix tar flags to not build compressed tarballs.
     env['TAR_NOCOMPRESS'] = True
