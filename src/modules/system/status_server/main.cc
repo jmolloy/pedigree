@@ -274,7 +274,7 @@ int clientThread(void *p)
 
 int mainThread(void *p)
 {
-    ConnectionBasedEndpoint *pEndpoint = static_cast<ConnectionBasedEndpoint*>(TcpManager::instance().getEndpoint(LISTEN_PORT, RoutingTable::instance().DefaultRoute()));
+    ConnectionBasedEndpoint *pEndpoint = reinterpret_cast<ConnectionBasedEndpoint *>(p);
 
     pEndpoint->listen();
 
@@ -292,7 +292,14 @@ int mainThread(void *p)
 
 static bool init()
 {
-    Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(), mainThread, 0);
+    ConnectionBasedEndpoint *pEndpoint = static_cast<ConnectionBasedEndpoint*>(TcpManager::instance().getEndpoint(LISTEN_PORT, RoutingTable::instance().DefaultRoute()));
+    if(!pEndpoint)
+    {
+        WARNING("Status server can't start, couldn't get a TCP endpoint.");
+        return false;
+    }
+
+    Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(), mainThread, pEndpoint);
     pThread->detach();
     return true;
 }
