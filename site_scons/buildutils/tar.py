@@ -38,7 +38,11 @@ def Extract(target, source, env):
     return r
 
 def Create(target, source, env):
-    args = [env['TAR'], '--transform', 's,.*/,,g', '-czPf', target[0].abspath]
+    compress = 'z'
+    if env.get('TAR_NOCOMPRESS', False):
+        compress = ''
+    args = [env['TAR'], '--transform', 's,.*/,,g', '-c%sPf' % compress,
+            target[0].abspath]
     args.extend([x.abspath for x in source])
 
     subprocess.check_call(args)
