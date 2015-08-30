@@ -76,6 +76,7 @@ Log::Log () :
 
 Log::~Log ()
 {
+    *this << Notice << "-- Log Terminating --" << Flush;
 }
 
 void Log::initialise1()
