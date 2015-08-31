@@ -120,7 +120,7 @@ libpaths = [
 ####################################
 env_clone['CPPPATH'] = include
 env_clone['LIBS'] = []
-env_clone['LIBPATH'] = libpaths
+env_clone['LIBPATH'] = []
 
 final_output = posix_objname
 posix_objname = '%s.debug' % (posix_objname,)
@@ -137,6 +137,7 @@ env_clone.Command(final_output, posix_objname, action="%s -d -o $TARGET $SOURCE"
 
 posix_env = userspace_env_clone.Clone()
 posix_env['CPPPATH'] = include
+posix_env['LIBPATH'] = libpaths
 posix_env['CFLAGS'] = buildutils.userspace.fixFlags(userspace_env_clone, posix_env['CFLAGS'])
 posix_env['CCFLAGS'] = buildutils.userspace.fixFlags(userspace_env_clone, posix_env['CCFLAGS'])
 posix_env['CXXFLAGS'] = buildutils.userspace.fixFlags(userspace_env_clone, posix_env['CXXFLAGS'])
