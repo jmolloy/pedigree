@@ -99,6 +99,13 @@ bool HostedVirtualAddressSpace::isMapped(void *virtualAddress) {
     }
   }
 
+  if(this != &getKernelAddressSpace())
+  {
+    bool r = getKernelAddressSpace().isMapped(virtualAddress);
+    if(r)
+      return r;
+  }
+
   // Find this mapping if we can.
   for(size_t i = 0; i < m_KnownMapsSize; ++i)
   {
@@ -112,6 +119,10 @@ bool HostedVirtualAddressSpace::isMapped(void *virtualAddress) {
 bool HostedVirtualAddressSpace::map(physical_uintptr_t physAddress,
                                  void *virtualAddress, size_t flags) {
   LockGuard<Spinlock> guard(m_Lock);
+
+  // If this should be a kernel mapping, use the kernel address space.
+  if ((flags & KernelMode) && (this != &getKernelAddressSpace()))
+    return getKernelAddressSpace().map(physAddress, virtualAddress, flags);
 
   // mmap() won't fail if the address is already mapped, but we need to.
   if(isMapped(virtualAddress))
@@ -191,6 +202,16 @@ void HostedVirtualAddressSpace::getMapping(void *virtualAddress,
                                         size_t &flags) {
   LockGuard<Spinlock> guard(m_Lock);
 
+  // Handle kernel mappings, if needed.
+  if (this != &getKernelAddressSpace())
+  {
+    if(getKernelAddressSpace().isMapped(virtualAddress))
+    {
+      getKernelAddressSpace().getMapping(virtualAddress, physAddress, flags);
+      return;
+    }
+  }
+
   size_t pageSize = PhysicalMemoryManager::getPageSize();
   uintptr_t alignedVirtualAddress = reinterpret_cast<uintptr_t>(virtualAddress) & ~(pageSize - 1);
   virtualAddress = reinterpret_cast<void*>(alignedVirtualAddress);
@@ -212,6 +233,18 @@ void HostedVirtualAddressSpace::getMapping(void *virtualAddress,
 void HostedVirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags) {
   LockGuard<Spinlock> guard(m_Lock);
 
+  // Check for kernel mappings.
+  if (this != &getKernelAddressSpace())
+  {
+    if(getKernelAddressSpace().isMapped(virtualAddress))
+    {
+      getKernelAddressSpace().setFlags(virtualAddress, newFlags);
+      return;
+    }
+    else if(newFlags & KernelMode)
+      WARNING("setFlags called with KernelMode as a flag, page is not mapped in kernel.");
+  }
+
   for(size_t i = 0; i < m_KnownMapsSize; ++i)
   {
     if(m_pKnownMaps[i].active && m_pKnownMaps[i].vaddr == virtualAddress)
@@ -228,6 +261,16 @@ void HostedVirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags) 
 void HostedVirtualAddressSpace::unmap(void *virtualAddress) {
   LockGuard<Spinlock> guard(m_Lock);
 
+  // Check for kernel mappings.
+  if (this != &getKernelAddressSpace())
+  {
+    if(getKernelAddressSpace().isMapped(virtualAddress))
+    {
+      getKernelAddressSpace().unmap(virtualAddress);
+      return;
+    }
+  }
+
   for(size_t i = 0; i < m_KnownMapsSize; ++i)
   {
     if(m_pKnownMaps[i].active && m_pKnownMaps[i].vaddr == virtualAddress)
@@ -242,16 +285,18 @@ void HostedVirtualAddressSpace::unmap(void *virtualAddress) {
 }
 
 VirtualAddressSpace *HostedVirtualAddressSpace::clone() {
-  LockGuard<Spinlock> guard(m_Lock);
-
   HostedVirtualAddressSpace *pNew = new HostedVirtualAddressSpace();
 
-  // Copy over the known maps so the new address space can find them.
-  pNew->m_pKnownMaps = (mapping_t *) __libc_malloc(m_KnownMapsSize * sizeof(mapping_t));
-  memcpy(pNew->m_pKnownMaps, m_pKnownMaps, m_KnownMapsSize * sizeof(mapping_t));
-  pNew->m_KnownMapsSize = m_KnownMapsSize;
-  pNew->m_numKnownMaps = m_numKnownMaps;
-  pNew->m_nLastUnmap = m_nLastUnmap;
+  {
+    LockGuard<Spinlock> guard(m_Lock);
+
+    // Copy over the known maps so the new address space can find them.
+    pNew->m_pKnownMaps = (mapping_t *) __libc_malloc(m_KnownMapsSize * sizeof(mapping_t));
+    memcpy(pNew->m_pKnownMaps, m_pKnownMaps, m_KnownMapsSize * sizeof(mapping_t));
+    pNew->m_KnownMapsSize = m_KnownMapsSize;
+    pNew->m_numKnownMaps = m_numKnownMaps;
+    pNew->m_nLastUnmap = m_nLastUnmap;
+  }
 
   return pNew;
 }
@@ -259,9 +304,17 @@ VirtualAddressSpace *HostedVirtualAddressSpace::clone() {
 void HostedVirtualAddressSpace::revertToKernelAddressSpace() {
   LockGuard<Spinlock> guard(m_Lock);
 
-  // Just unmap everything we know about.
-  // BUT - only when switching address spaces is implemented!
-  /// \todo implement
+  for(size_t i = 0; i < m_KnownMapsSize; ++i)
+  {
+    if(m_pKnownMaps[i].active)
+    {
+      if(getKernelAddressSpace().isMapped(m_pKnownMaps[i].vaddr))
+        continue;
+
+      munmap(m_pKnownMaps[i].vaddr, PhysicalMemoryManager::getPageSize());
+      m_pKnownMaps[i].active = false;
+    }
+  }
 }
 
 void *HostedVirtualAddressSpace::allocateStack() {
@@ -378,4 +431,38 @@ uint64_t HostedVirtualAddressSpace::toFlags(size_t flags, bool bFinal) {
 
 size_t HostedVirtualAddressSpace::fromFlags(uint64_t Flags, bool bFinal) {
   return Flags;
+}
+
+void HostedVirtualAddressSpace::switchAddressSpace(VirtualAddressSpace &a, VirtualAddressSpace &b)
+{
+  HostedVirtualAddressSpace &oldSpace = static_cast<HostedVirtualAddressSpace&>(a);
+  HostedVirtualAddressSpace &newSpace = static_cast<HostedVirtualAddressSpace&>(b);
+
+  if(&oldSpace != &getKernelAddressSpace())
+  {
+    for(size_t i = 0; i < oldSpace.m_KnownMapsSize; ++i)
+    {
+      if(oldSpace.m_pKnownMaps[i].active)
+      {
+        if(getKernelAddressSpace().isMapped(oldSpace.m_pKnownMaps[i].vaddr))
+          continue;
+
+        munmap(oldSpace.m_pKnownMaps[i].vaddr, PhysicalMemoryManager::getPageSize());
+      }
+    }
+  }
+
+  for(size_t i = 0; i < newSpace.m_KnownMapsSize; ++i)
+  {
+    if(newSpace.m_pKnownMaps[i].active)
+    {
+      if(getKernelAddressSpace().isMapped(newSpace.m_pKnownMaps[i].vaddr))
+        continue;
+
+      mmap(newSpace.m_pKnownMaps[i].vaddr, PhysicalMemoryManager::getPageSize(),
+           newSpace.toFlags(newSpace.m_pKnownMaps[i].flags, true), MAP_FIXED | MAP_SHARED,
+           HostedPhysicalMemoryManager::instance().getBackingFile(),
+           newSpace.m_pKnownMaps[i].paddr);
+    }
+  }
 }

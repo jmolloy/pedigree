@@ -37,6 +37,7 @@
 
 #include <SlamAllocator.h>
 
+namespace __pedigree_hosted {};
 using namespace __pedigree_hosted;
 
 #include <unistd.h>

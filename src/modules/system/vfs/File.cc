@@ -202,9 +202,7 @@ physical_uintptr_t File::getPhysicalPage(size_t offset)
     {
         physical_uintptr_t phys = 0;
         size_t flags = 0;
-        NOTICE("getting mapping for backing page");
         va.getMapping(reinterpret_cast<void *>(vaddr), phys, flags);
-        NOTICE("get mapping returned " << phys << " / " << flags);
 
         // Pin this key in the cache down, so we don't lose it.
         pinBlock(offset);

@@ -22,6 +22,7 @@
 #include <processor/hosted/VirtualAddressSpace.h>
 #include <Log.h>
 
+namespace __pedigree_hosted {};
 using namespace __pedigree_hosted;
 
 #include <signal.h>

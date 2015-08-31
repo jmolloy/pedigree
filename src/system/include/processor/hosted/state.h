@@ -24,11 +24,6 @@
 #include <processor/types.h>
 #include <Log.h>
 
-namespace __pedigree_hosted
-{
-    #include <setjmp.h>
-}
-
 /** @addtogroup kernelprocessorhosted
  * @{ */
 
@@ -245,7 +240,9 @@ class HostedProcessorState
 class HostedSchedulerState
 {
 public:
-    __pedigree_hosted::sigjmp_buf state;
+    // Don't pull in sigjmp_buf here - leave a lot of room for various hosted
+    // jmp_buf types.
+    uint64_t state[128];
 };
 
 /** @} */

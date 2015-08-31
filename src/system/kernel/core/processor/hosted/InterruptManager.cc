@@ -30,6 +30,7 @@
 #include <Subsystem.h>
 #endif
 
+namespace __pedigree_hosted {};
 using namespace __pedigree_hosted;
 
 #include <stdio.h>
@@ -210,7 +211,8 @@ void HostedInterruptManager::interrupt(InterruptState &interruptState)
     if (UNLIKELY(nIntNumber == SIGINT || nIntNumber == SIGTERM))
     {
         // Shut down.
-        pedigree_reboot();
+        Processor::reset();
+        //pedigree_reboot();
         panic("shutdown failed");
     }
 

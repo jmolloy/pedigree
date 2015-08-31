@@ -32,7 +32,7 @@
 
 #define USERSPACE_DYNAMIC_LINKER_LOCATION       reinterpret_cast<void*>(0x4FA00000)
 
-#define USERSPACE_VIRTUAL_START                 reinterpret_cast<void*>(0x30000000)
+#define USERSPACE_VIRTUAL_START                 reinterpret_cast<void*>(0x400000)
 #define USERSPACE_VIRTUAL_HEAP                  reinterpret_cast<void*>(0x50000000)
 #define USERSPACE_RESERVED_START                USERSPACE_DYNAMIC_LINKER_LOCATION
 #define USERSPACE_VIRTUAL_STACK_SIZE            0x100000
@@ -157,6 +157,9 @@ class HostedVirtualAddressSpace : public VirtualAddressSpace
     /** The copy-constructor
      *\note Not implemented */
     HostedVirtualAddressSpace &operator = (const HostedVirtualAddressSpace &);
+
+    /** Switch address spaces. */
+    static void switchAddressSpace(VirtualAddressSpace &oldSpace, VirtualAddressSpace &newSpace);
 
     /** Convert the processor independant flags to the processor's representation of the flags
      *\param[in] flags the processor independant flag representation

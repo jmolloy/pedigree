@@ -194,6 +194,7 @@ if env['hosted']:
                                '-Wl,-wrap=realloc', '-Wl,-wrap=free',
                                '-Wl,-wrap=strtoul', '-Wl,-wrap=strchr']
     env_clone['LIBS'] += ['rt', 'dl']
+    env_clone.Depends(objname, env_clone['LSCRIPT'])
 
 final_output = objname
 stripped_objname = final_output

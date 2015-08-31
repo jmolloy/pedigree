@@ -29,7 +29,7 @@ MemoryMapManager MemoryMapManager::m_Instance;
 
 physical_uintptr_t AnonymousMemoryMap::m_Zero = 0;
 
-#define DEBUG_MMOBJECTS
+// #define DEBUG_MMOBJECTS
 
 MemoryMappedObject::~MemoryMappedObject()
 {
@@ -682,7 +682,6 @@ bool MemoryMappedFile::trap(uintptr_t address, bool bWrite)
             flags |= VirtualAddressSpace::Write;
         }
 
-        NOTICE("mmap target: " << phys);
         bool r = va.map(phys, reinterpret_cast<void *>(address), flags | extraFlags);
         if(!r)
         {

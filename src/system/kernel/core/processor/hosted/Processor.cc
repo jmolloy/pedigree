@@ -21,12 +21,15 @@
 #include <processor/PageFaultHandler.h>
 #include "PhysicalMemoryManager.h"
 #include "InterruptManager.h"
+#include "VirtualAddressSpace.h"
 #include <process/initialiseMultitasking.h>
 #include <process/Thread.h>
 
+namespace __pedigree_hosted {};
 using namespace __pedigree_hosted;
 
 #include <signal.h>
+#include <setjmp.h>
 
 bool Processor::m_bInterrupts;
 
@@ -75,14 +78,23 @@ uintptr_t Processor::getBasePointer()
 
 bool Processor::saveState(SchedulerState &state)
 {
-  return sigsetjmp(state.state, 0) == 1;
+  jmp_buf _state;
+  if(sigsetjmp(_state, 0) == 1)
+    return true;
+
+  // Handle opaque types.
+  memcpy(state.state, _state, sizeof(jmp_buf));
+  return false;
 }
 
 void Processor::restoreState(SchedulerState &state, volatile uintptr_t *pLock)
 {
+  jmp_buf _state;
   if(pLock)
       *pLock = 1;
-  siglongjmp(state.state, 0);
+  memcpy(_state, state.state, sizeof(jmp_buf));
+  siglongjmp(_state, 0);
+  // Does not return.
 }
 
 void Processor::restoreState(SyscallState &state, volatile uintptr_t *pLock)
@@ -102,7 +114,8 @@ void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
   ProcessorInformation &info = Processor::information();
   if(&info.getVirtualAddressSpace() != &AddressSpace)
   {
-      ERROR("Processor::switchAddressSpace unimplemented");
+      HostedVirtualAddressSpace::switchAddressSpace(
+        info.getVirtualAddressSpace(), AddressSpace);
   }
 }
 
