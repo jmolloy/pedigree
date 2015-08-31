@@ -55,7 +55,7 @@ include_dirs = [
 
 env_clone['CPPPATH'] = include_dirs
 env_clone['LIBS'] = []
-env_clone['LIBPATH'] = [builddir]
+env_clone['LIBPATH'] = []
 
 final_output = pedigree_c_objname
 pedigree_c_objname = '%s.debug' % (pedigree_c_objname,)
@@ -76,6 +76,7 @@ else:
 libs_clone = userspace_env_clone.Clone()
 libs_clone.MergeFlags('-fPIC -DUSE_PIC_SYSCALLS')
 libs_clone['CPPPATH'] = include_dirs
+libs_clone['LIBPATH'] = [builddir]
 
 libs_clone['CFLAGS'] = buildutils.userspace.fixFlags(userspace_env, libs_clone['CFLAGS'])
 libs_clone['CCFLAGS'] = buildutils.userspace.fixFlags(userspace_env, libs_clone['CCFLAGS'])
