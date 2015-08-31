@@ -102,6 +102,7 @@ void Processor::restoreState(SchedulerState &state, volatile uintptr_t *pLock)
 void Processor::restoreState(SyscallState &state, volatile uintptr_t *pLock)
 {
   /// \todo implement (green thread style context switch)
+  panic("Processor::restoreState(SyscallState&) NOT implemented.");
 }
 
 void Processor::jumpUser(volatile uintptr_t *pLock, uintptr_t address,

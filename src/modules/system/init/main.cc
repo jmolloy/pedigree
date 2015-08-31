@@ -390,7 +390,6 @@ void init_stage2()
         size_t getNumber() {return ~0UL;}
     };
 
-    NOTICE("H");
     Elf *elf = 0;
     if(pLinker)
     {
