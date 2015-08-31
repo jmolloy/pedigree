@@ -27,44 +27,42 @@
 #error syscall-stubs.h requires SERVICE_INIT to be defined
 #endif
 
+typedef long (*syscall_caller_t)(long service, long function, void *error, long p1, long p2, long p3, long p4, long p5);
+
+static syscall_caller_t __hosted_syscall = (syscall_caller_t) 0x399000;
+
 static long syscall0(long function)
 {
   SERVICE_INIT;
-  __builtin_trap();
-  return 0;
+  return __hosted_syscall(SERVICE, function, &SERVICE_ERROR, 0, 0, 0, 0, 0);
 }
 
 static long syscall1(long function, long p1)
 {
   SERVICE_INIT;
-  __builtin_trap();
-  return 0;
+  return __hosted_syscall(SERVICE, function, &SERVICE_ERROR, p1, 0, 0, 0, 0);
 }
 
 static long syscall2(long function, long p1, long p2)
 {
   SERVICE_INIT;
-  __builtin_trap();
-  return 0;
+  return __hosted_syscall(SERVICE, function, &SERVICE_ERROR, p1, p2, 0, 0, 0);
 }
 
 static long syscall3(long function, long p1, long p2, long p3)
 {
   SERVICE_INIT;
-  __builtin_trap();
-  return 0;
+  return __hosted_syscall(SERVICE, function, &SERVICE_ERROR, p1, p2, p3, 0, 0);
 }
 
 static long syscall4(long function, long p1, long p2, long p3, long p4)
 {
   SERVICE_INIT;
-  __builtin_trap();
-  return 0;
+  return __hosted_syscall(SERVICE, function, &SERVICE_ERROR, p1, p2, p3, p4, 0);
 }
 
 static long syscall5(long function, long p1, long p2, long p3, long p4, long p5)
 {
   SERVICE_INIT;
-  __builtin_trap();
-  return 0;
+  return __hosted_syscall(SERVICE, function, &SERVICE_ERROR, p1, p2, p3, p4, p5);
 }

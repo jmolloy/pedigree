@@ -182,7 +182,11 @@ class HostedSyscallState
     inline void setSyscallErrno(uintptr_t val);
 
   public:
-    uint64_t state;
+    uint64_t service;
+    uint64_t number;
+    uint64_t p1, p2, p3, p4, p5;
+    uint64_t error;
+    uint64_t result;
 } PACKED;
 
 /** x64 ProcessorState */
@@ -321,21 +325,28 @@ size_t HostedSyscallState::getRegisterSize(size_t index) const
 
 size_t HostedSyscallState::getSyscallService() const
 {
-  return 0;
+  return service;
 }
 size_t HostedSyscallState::getSyscallNumber() const
 {
-  return 0;
+  return number;
 }
 uintptr_t HostedSyscallState::getSyscallParameter(size_t n) const
 {
+    if(n == 0) return p1;
+    if(n == 1) return p2;
+    if(n == 2) return p3;
+    if(n == 3) return p4;
+    if(n == 4) return p5;
   return 0;
 }
 void HostedSyscallState::setSyscallReturnValue(uintptr_t val)
 {
+    result = val;
 }
 void HostedSyscallState::setSyscallErrno(uintptr_t val)
 {
+    error = val;
 }
 
 
@@ -352,7 +363,6 @@ HostedProcessorState::HostedProcessorState(const HostedInterruptState &x)
 {
 }
 HostedProcessorState::HostedProcessorState(const HostedSyscallState &x)
-  : state(x.state)
 {
 }
 HostedProcessorState &HostedProcessorState::operator = (const HostedProcessorState &x)
@@ -367,7 +377,6 @@ HostedProcessorState &HostedProcessorState::operator = (const HostedInterruptSta
 }
 HostedProcessorState &HostedProcessorState::operator = (const HostedSyscallState &x)
 {
-  state = x.state;
   return *this;
 }
 HostedProcessorState::~HostedProcessorState()

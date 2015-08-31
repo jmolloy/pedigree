@@ -25,11 +25,6 @@ const char *HostedInterruptStateRegisterName[2] =
   "extra",
 };
 
-const char *HostedSyscallStateRegisterName[1] =
-{
-  "state",
-};
-
 HostedInterruptState::HostedInterruptState() : state(0), which(0)
 {
 }
@@ -55,16 +50,17 @@ const char *HostedInterruptState::getRegisterName(size_t index) const
 
 size_t HostedSyscallState::getRegisterCount() const
 {
-  return 1;
-}
-processor_register_t HostedSyscallState::getRegister(size_t index) const
-{
-  if (index == 0)return state;
   return 0;
 }
+
+processor_register_t HostedSyscallState::getRegister(size_t index) const
+{
+  return 0;
+}
+
 const char *HostedSyscallState::getRegisterName(size_t index) const
 {
-  return HostedSyscallStateRegisterName[index];
+  return "<no registers>";
 }
 
 HostedInterruptState *HostedInterruptState::construct(HostedProcessorState &state, bool userMode)

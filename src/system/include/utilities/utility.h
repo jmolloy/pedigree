@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -149,6 +148,13 @@ inline char toLower(char c)
       T t = a;
       a = b;
       b = t;
+  }
+
+  /** Return b - a. */
+  template<typename T1, typename T2>
+  inline intptr_t pointer_diff(T1 *a, T2 *b)
+  {
+    return reinterpret_cast<uintptr_t>(b) - reinterpret_cast<uintptr_t>(a);
   }
 
   inline uint8_t checksum(const uint8_t *pMemory, size_t sMemory)

@@ -24,6 +24,10 @@
 
 HostedSyscallManager HostedSyscallManager::m_Instance;
 
+// Used on hosted systems to provide a syscall entry point.
+uintptr_t syscall_shim(Service_t service, uintptr_t function, uintptr_t *error,
+  uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5) __attribute__((section(".syscall")));
+
 SyscallManager &SyscallManager::instance()
 {
   return HostedSyscallManager::instance();
@@ -98,4 +102,22 @@ HostedSyscallManager::HostedSyscallManager()
 
 HostedSyscallManager::~HostedSyscallManager()
 {
+}
+
+uintptr_t syscall_shim(Service_t service, uintptr_t function, uintptr_t *error,
+  uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5)
+{
+  HostedSyscallState state;
+  state.service = service;
+  state.number = function;
+  state.p1 = p1;
+  state.p2 = p2;
+  state.p3 = p3;
+  state.p4 = p4;
+  state.p5 = p5;
+  state.error = 0;
+  state.result = 0;
+  HostedSyscallManager::instance().syscall(state);
+  *error = state.error;
+  return state.result;
 }

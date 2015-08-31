@@ -21,6 +21,7 @@
 #include <processor/PageFaultHandler.h>
 #include "PhysicalMemoryManager.h"
 #include "InterruptManager.h"
+#include "SyscallManager.h"
 #include "VirtualAddressSpace.h"
 #include <process/initialiseMultitasking.h>
 #include <process/Thread.h>
@@ -45,6 +46,7 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
   HostedInterruptManager::initialiseProcessor();
   PageFaultHandler::instance().initialise();
   HostedPhysicalMemoryManager::instance().initialise(Info);
+  HostedSyscallManager::initialiseProcessor();
   setInterrupts(false);
   m_Initialised = 1;
 }

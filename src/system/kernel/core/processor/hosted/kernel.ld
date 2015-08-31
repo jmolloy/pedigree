@@ -23,6 +23,15 @@ SECTIONS
         end_modinfo = .;
     }
 
+    old_loc = .;
+    .syscall (0x399000) :
+    {
+        start_syscall = .;
+        *(.syscall*)
+        end_syscall = .;
+    }
+    . = old_loc;
+
     .bss :
     {
         . = ALIGN(4096);

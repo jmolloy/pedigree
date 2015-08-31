@@ -194,11 +194,13 @@ if env['hosted']:
                                '-Wl,-wrap=realloc', '-Wl,-wrap=free',
                                '-Wl,-wrap=strtoul', '-Wl,-wrap=strchr']
     env_clone['LIBS'] += ['rt', 'dl']
-    env_clone.Depends(objname, env_clone['LSCRIPT'])
 
 final_output = objname
 stripped_objname = final_output
 objname = '%s.debug' % objname
+
+if 'LSCRIPT' in env_clone:
+    env_clone.Depends(objname, env_clone['LSCRIPT'])
 
 if env['ARCH_TARGET'] == 'X64':
     # TODO(miselin): this is not brilliant.
