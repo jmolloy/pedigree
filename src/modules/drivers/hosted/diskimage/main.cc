@@ -26,7 +26,10 @@ bool entry()
     if(!pDiskImage->initialise())
     {
         delete pDiskImage;
-        return false;
+
+        // Don't mess up the rest of the startup - we may still be able to
+        // run without a disk.
+        return true;
     }
 
     Device::root().addChild(pDiskImage);
