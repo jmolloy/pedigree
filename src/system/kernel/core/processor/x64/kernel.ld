@@ -32,6 +32,9 @@ SECTIONS
     start_ctors = .;
     *(.ctors)
     end_ctors = .;
+    start_dtors = .;
+    *(.dtors)
+    end_dtors = .;
     
     start_module_ctors = .;
     *(.module_ctors)

@@ -61,8 +61,6 @@ Spinlock allocLock;
 uintptr_t heapBase = 0x60000000; // 0xC0000000;
 #endif
 
-#include <stdio.h>
-
 /// Calls the constructors for all global objects.
 /// Call this before using any global objects.
 void initialiseConstructors()
