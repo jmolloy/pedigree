@@ -23,6 +23,10 @@
 #include <stdarg.h>
 #include <processor/types.h>
 
+#ifdef __cplusplus
+#include <processor/PhysicalMemoryManager.h>  // getPageSize()
+#endif
+
 /** @addtogroup kernelutilities
  * @{ */
 
@@ -140,6 +144,13 @@ inline char toLower(char c)
   inline T *adjust_pointer(T *pointer, size_t offset)
   {
     return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(pointer) + offset);
+  }
+
+  /** Page-align the given pointer. */
+  template<typename T>
+  inline T *page_align(T *p)
+  {
+    return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(p) & ~(PhysicalMemoryManager::getPageSize() -1 ));
   }
 
   template<typename T>

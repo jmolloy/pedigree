@@ -119,6 +119,7 @@ void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
   {
       HostedVirtualAddressSpace::switchAddressSpace(
         info.getVirtualAddressSpace(), AddressSpace);
+      info.setVirtualAddressSpace(AddressSpace);
   }
 }
 

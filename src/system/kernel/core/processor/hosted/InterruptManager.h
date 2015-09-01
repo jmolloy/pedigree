@@ -54,7 +54,7 @@ class HostedInterruptManager : public ::InterruptManager
     static void initialiseProcessor() INITIALISATION_ONLY;
 
     /** Signal handling shim for InterruptState protected access. */
-    void signalShim(int which, void *siginfo);
+    void signalShim(int which, void *siginfo, void *meta);
 
   private:
     /** Called when an interrupt was triggered

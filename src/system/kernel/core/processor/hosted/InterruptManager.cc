@@ -101,76 +101,6 @@ size_t HostedInterruptManager::getDebugInterruptNumber()
 
 #endif
 
-
-#include <process/Scheduler.h>
-extern void system_reset();
-static int pedigree_reboot()
-{
-    WARNING("System shutting down...");
-    for(int i = Scheduler::instance().getNumProcesses() - 1; i >= 0; i--)
-    {
-        // Grab the process and subsystem. Don't grab a POSIX subsystem object,
-        // because we may be hitting native processes here.
-        Process *proc = Scheduler::instance().getProcess(i);
-        Subsystem *subsys = reinterpret_cast<Subsystem*>(proc->getSubsystem());
-
-        // DO NOT COMMIT SUICIDE. That's called a hang with undefined state, chilldren.
-        if(proc == Processor::information().getCurrentThread()->getParent())
-            continue;
-
-        if(subsys)
-        {
-            // If there's a subsystem, kill it that way.
-            /// \todo Proper KillReason
-            subsys->kill(Subsystem::Unknown, proc->getThread(0));
-        }
-        else
-        {
-            // If no subsystem, outright kill the process without sending a signal
-            Scheduler::instance().removeProcess(proc);
-
-            /// \todo Process::kill() acts as if that process is already running.
-            ///       It needs to allow other Processes to call it without causing
-            ///       the calling thread to become a zombie.
-            //proc->kill();
-        }
-    }
-
-    // Wait for every other process to die or be in zombie state.
-
-    while (true)
-    {
-        Processor::setInterrupts(false);
-        if (Scheduler::instance().getNumProcesses() <= 1)
-            break;
-        bool allZombie = true;
-        for (size_t i = 0; i < Scheduler::instance().getNumProcesses(); i++)
-        {
-            if (Scheduler::instance().getProcess(i) == Processor::information().getCurrentThread()->getParent())
-                continue;
-            if (Scheduler::instance().getProcess(i)->getThread(0)->getStatus() != Thread::Zombie)
-                allZombie = false;
-        }
-
-        if (allZombie) break;
-        Processor::setInterrupts(true);
-
-        Scheduler::instance().yield();
-    }
-
-    // All dead, reap them all.
-    while (Scheduler::instance().getNumProcesses() > 1)
-    {
-        if (Scheduler::instance().getProcess(0) == Processor::information().getCurrentThread()->getParent())
-            continue;
-        delete Scheduler::instance().getProcess(0);
-    }
-
-    // Reset the system
-    system_reset();
-    return 0;
-}
-
 void HostedInterruptManager::interrupt(InterruptState &interruptState)
 {
     size_t nIntNumber = interruptState.getInterruptNumber();
@@ -210,9 +140,9 @@ void HostedInterruptManager::interrupt(InterruptState &interruptState)
 
     if (UNLIKELY(nIntNumber == SIGINT || nIntNumber == SIGTERM))
     {
-        // Shut down.
+        // Shut down (uncleanly for now).
+        /// \todo Provide a better entry point for system shutdown.
         Processor::reset();
-        //pedigree_reboot();
         panic("shutdown failed");
     }
 
@@ -260,13 +190,12 @@ void HostedInterruptManager::interrupt(InterruptState &interruptState)
 // Functions only usable in the kernel initialisation phase
 //
 
-static void handler(int which, siginfo_t *info, void *p)
+static void handler(int which, siginfo_t *info, void *ptr)
 {
-    HostedInterruptManager *instance = reinterpret_cast<HostedInterruptManager *>(p);
-    instance->signalShim(which, info);
+    HostedInterruptManager::instance().signalShim(which, info, ptr);
 }
 
-void HostedInterruptManager::signalShim(int which, void *siginfo)
+void HostedInterruptManager::signalShim(int which, void *siginfo, void *meta)
 {
     siginfo_t *info = reinterpret_cast<siginfo_t *>(siginfo);
 
@@ -274,6 +203,7 @@ void HostedInterruptManager::signalShim(int which, void *siginfo)
     state.which = which;
     state.extra = reinterpret_cast<uint64_t>(info);
     state.state = reinterpret_cast<uint64_t>(info->si_value.sival_ptr);
+    state.meta = reinterpret_cast<uint64_t>(meta);
     interrupt(state);
 }
 

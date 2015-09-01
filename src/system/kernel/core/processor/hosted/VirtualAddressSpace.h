@@ -32,7 +32,7 @@
 
 #define USERSPACE_DYNAMIC_LINKER_LOCATION       reinterpret_cast<void*>(0x4FA00000)
 
-#define USERSPACE_VIRTUAL_START                 reinterpret_cast<void*>(0x400000)
+#define USERSPACE_VIRTUAL_START                 reinterpret_cast<void*>(0x20000000)
 #define USERSPACE_VIRTUAL_HEAP                  reinterpret_cast<void*>(0x50000000)
 #define USERSPACE_RESERVED_START                USERSPACE_DYNAMIC_LINKER_LOCATION
 #define USERSPACE_VIRTUAL_STACK_SIZE            0x100000
@@ -40,7 +40,7 @@
 #define USERSPACE_DYNAMIC_START                 reinterpret_cast<void*>(0x100000000)
 #define USERSPACE_DYNAMIC_END                   reinterpret_cast<void*>(0x00000FFFFFFFFFFF)
 #define USERSPACE_VIRTUAL_LOWEST_STACK          reinterpret_cast<void*>(USERSPACE_DYNAMIC_END + USERSPACE_VIRTUAL_MAX_STACK_SIZE)
-#define USERSPACE_VIRTUAL_STACK                 reinterpret_cast<void*>(0x0000700000000000 - 8)
+#define USERSPACE_VIRTUAL_STACK                 reinterpret_cast<void*>(0x0000700000000000)
 #define KERNEL_VIRTUAL_HEAP                     reinterpret_cast<void*>(0x0000700000000000)
 #define KERNEL_VIRTUAL_HEAP_SIZE                0x40000000
 #define KERNEL_VIRTUAL_ADDRESS                  reinterpret_cast<void*>(0x400000)

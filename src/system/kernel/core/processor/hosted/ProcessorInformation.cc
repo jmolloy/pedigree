@@ -33,7 +33,7 @@ void HostedProcessorInformation::setKernelStack(uintptr_t stack)
     {
         stack_t s;
         memset(&s, 0, sizeof(s));
-        s.ss_sp = reinterpret_cast<void*>(stack);
+        s.ss_sp = reinterpret_cast<void*>(stack - KERNEL_STACK_SIZE);
         s.ss_size = KERNEL_STACK_SIZE;
         sigaltstack(&s, 0);
         m_KernelStack = stack;

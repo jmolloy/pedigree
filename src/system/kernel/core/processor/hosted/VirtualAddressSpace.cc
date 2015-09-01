@@ -90,6 +90,9 @@ bool HostedVirtualAddressSpace::isAddressValid(void *virtualAddress) {
 
 bool HostedVirtualAddressSpace::isMapped(void *virtualAddress) {
   LockGuard<Spinlock> guard(m_Lock);
+
+  virtualAddress = page_align(virtualAddress);
+
   int r = msync(virtualAddress, PhysicalMemoryManager::getPageSize(), MS_ASYNC);
   if (r < 0)
   {
@@ -119,6 +122,8 @@ bool HostedVirtualAddressSpace::isMapped(void *virtualAddress) {
 bool HostedVirtualAddressSpace::map(physical_uintptr_t physAddress,
                                  void *virtualAddress, size_t flags) {
   LockGuard<Spinlock> guard(m_Lock);
+
+  virtualAddress = page_align(virtualAddress);
 
   // If this should be a kernel mapping, use the kernel address space.
   if ((flags & KernelMode) && (this != &getKernelAddressSpace()))
@@ -202,6 +207,8 @@ void HostedVirtualAddressSpace::getMapping(void *virtualAddress,
                                         size_t &flags) {
   LockGuard<Spinlock> guard(m_Lock);
 
+  virtualAddress = page_align(virtualAddress);
+
   // Handle kernel mappings, if needed.
   if (this != &getKernelAddressSpace())
   {
@@ -233,6 +240,8 @@ void HostedVirtualAddressSpace::getMapping(void *virtualAddress,
 void HostedVirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags) {
   LockGuard<Spinlock> guard(m_Lock);
 
+  virtualAddress = page_align(virtualAddress);
+
   // Check for kernel mappings.
   if (this != &getKernelAddressSpace())
   {
@@ -260,6 +269,8 @@ void HostedVirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags) 
 
 void HostedVirtualAddressSpace::unmap(void *virtualAddress) {
   LockGuard<Spinlock> guard(m_Lock);
+
+  virtualAddress = page_align(virtualAddress);
 
   // Check for kernel mappings.
   if (this != &getKernelAddressSpace())
@@ -309,7 +320,11 @@ void HostedVirtualAddressSpace::revertToKernelAddressSpace() {
     if(m_pKnownMaps[i].active)
     {
       if(getKernelAddressSpace().isMapped(m_pKnownMaps[i].vaddr))
+      {
+        m_pKnownMaps[i].active = false;
+        m_nLastUnmap = i;
         continue;
+      }
 
       munmap(m_pKnownMaps[i].vaddr, PhysicalMemoryManager::getPageSize());
       m_pKnownMaps[i].active = false;
@@ -329,6 +344,15 @@ void *HostedVirtualAddressSpace::allocateStack(size_t stackSz) {
 }
 
 void *HostedVirtualAddressSpace::doAllocateStack(size_t sSize) {
+  size_t flags = 0;
+  bool bMapAll = false;
+  if(this == &m_KernelSpace)
+  {
+    // Don't demand map kernel mode stacks.
+    flags = VirtualAddressSpace::KernelMode;
+    bMapAll = true;
+  }
+
   m_Lock.acquire();
 
   size_t pageSz = PhysicalMemoryManager::getPageSize();
@@ -337,9 +361,12 @@ void *HostedVirtualAddressSpace::doAllocateStack(size_t sSize) {
   // adjust the internal stack pointer. Using the list of freed stacks helps
   // avoid having the virtual address creep downwards.
   void *pStack = 0;
-  if (m_freeStacks.count() != 0) {
+  if (m_freeStacks.count() != 0)
+  {
     pStack = m_freeStacks.popBack();
-  } else {
+  }
+  else
+  {
     pStack = m_pStackTop;
 
     // Always leave one page unmapped between each stack to catch overflow.
@@ -348,17 +375,34 @@ void *HostedVirtualAddressSpace::doAllocateStack(size_t sSize) {
 
   m_Lock.release();
 
-  // Map the stack.
-  uintptr_t firstPage = reinterpret_cast<uintptr_t>(pStack);
-  NOTICE("new stack at " << firstPage);
+  // Map the top of the stack in proper.
+  uintptr_t firstPage = reinterpret_cast<uintptr_t>(pStack) - pageSz;
+  NOTICE("mapping a stack at " << firstPage);
+  physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+  if(!bMapAll)
+    PhysicalMemoryManager::instance().pin(phys);
+  if(!map(phys, reinterpret_cast<void *>(firstPage), flags | VirtualAddressSpace::Write))
+    WARNING("map() failed in doAllocateStack");
+
+  // Bring in the rest of the stack as CoW.
   uintptr_t stackBottom = reinterpret_cast<uintptr_t>(pStack) - sSize;
-  for (uintptr_t addr = stackBottom; addr < firstPage; addr += pageSz) {
+  for (uintptr_t addr = stackBottom; addr < firstPage; addr += pageSz)
+  {
     size_t map_flags = 0;
 
-    physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-    map_flags = VirtualAddressSpace::Write;
+    if(!bMapAll)
+    {
+      // Copy first stack page on write.
+      PhysicalMemoryManager::instance().pin(phys);
+      map_flags = VirtualAddressSpace::CopyOnWrite;
+    }
+    else
+    {
+      phys = PhysicalMemoryManager::instance().allocatePage();
+      map_flags = VirtualAddressSpace::Write;
+    }
 
-    if (!map(phys, reinterpret_cast<void *>(addr), map_flags))
+    if(!map(phys, reinterpret_cast<void *>(addr), flags | map_flags))
       WARNING("CoW map() failed in doAllocateStack");
   }
 
@@ -445,7 +489,13 @@ void HostedVirtualAddressSpace::switchAddressSpace(VirtualAddressSpace &a, Virtu
       if(oldSpace.m_pKnownMaps[i].active)
       {
         if(getKernelAddressSpace().isMapped(oldSpace.m_pKnownMaps[i].vaddr))
+        {
           continue;
+        }
+        else if(oldSpace.m_pKnownMaps[i].flags & KernelMode)
+        {
+          continue;
+        }
 
         munmap(oldSpace.m_pKnownMaps[i].vaddr, PhysicalMemoryManager::getPageSize());
       }
@@ -457,7 +507,9 @@ void HostedVirtualAddressSpace::switchAddressSpace(VirtualAddressSpace &a, Virtu
     if(newSpace.m_pKnownMaps[i].active)
     {
       if(getKernelAddressSpace().isMapped(newSpace.m_pKnownMaps[i].vaddr))
+      {
         continue;
+      }
 
       mmap(newSpace.m_pKnownMaps[i].vaddr, PhysicalMemoryManager::getPageSize(),
            newSpace.toFlags(newSpace.m_pKnownMaps[i].flags, true), MAP_FIXED | MAP_SHARED,

@@ -19,10 +19,11 @@
 
 #include <processor/state.h>
 
-const char *HostedInterruptStateRegisterName[2] =
+const char *HostedInterruptStateRegisterName[3] =
 {
   "state",
   "extra",
+  "meta",
 };
 
 HostedInterruptState::HostedInterruptState() : state(0), which(0)
@@ -35,12 +36,13 @@ HostedInterruptState::~HostedInterruptState()
 
 size_t HostedInterruptState::getRegisterCount() const
 {
-  return 2;
+  return 3;
 }
 processor_register_t HostedInterruptState::getRegister(size_t index) const
 {
   if (index == 0) return state;
   if (index == 1) return extra;
+  if (index == 2) return meta;
   return 0;
 }
 const char *HostedInterruptState::getRegisterName(size_t index) const

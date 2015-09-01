@@ -185,7 +185,11 @@ env.Alias('libs', libload)
 
 for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + libui_apps):
     app_env = env_clone.Clone()
-    app_env['LINKFLAGS'] = ''
+    if env['hosted']:
+        app_env['LSCRIPT'] = app_env.File(os.path.join('#src/system/kernel/core/processor/hosted/app.ld'))
+        app_env['LINKFLAGS'] = '-T$LSCRIPT'
+    else:
+        app_env['LINKFLAGS'] = ''
 
     base = os.path.join(appsbase, app)
 
@@ -262,6 +266,9 @@ for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + lib
     app_env.Program(output, files)
 
     env.Alias("apps", output)
+
+    if 'LSCRIPT' in app_env:
+        env.Depends(output, app_env['LSCRIPT'])
 
     env.Depends(output, "crt0")
     env.Depends(output, "libs")

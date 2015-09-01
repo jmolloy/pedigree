@@ -29,6 +29,7 @@ namespace __pedigree_hosted {};
 using namespace __pedigree_hosted;
 
 #include <signal.h>
+#include <ucontext.h>
 
 PageFaultHandler PageFaultHandler::m_Instance;
 
@@ -124,6 +125,13 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
         }
     }
 
+    // Extra information comes from the ucontext_t structure passed to the
+    // signal handler (SIGSEGV).
+    uintptr_t ucontext_loc = state.getRegister(2);
+    ucontext_t *ctx = reinterpret_cast<ucontext_t *>(ucontext_loc);
+    state.setInstructionPointer(ctx->uc_mcontext.gregs[REG_RIP]);
+    state.setStackPointer(ctx->uc_mcontext.gregs[REG_RSP]);
+    state.setBasePointer(ctx->uc_mcontext.gregs[REG_RBP]);
 
     //  Get PFE location and error code
     static LargeStaticString sError;
@@ -132,6 +140,8 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
     sError.append(page, 16, 8, '0');
     sError.append(", error code 0x");
     sError.append(code, 16, 8, '0');
+    sError.append(", EIP 0x");
+    sError.append(state.getInstructionPointer(), 16, 8, '0');
 
     //  Extract error code information
     static LargeStaticString sCode;

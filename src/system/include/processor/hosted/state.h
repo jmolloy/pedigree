@@ -117,6 +117,16 @@ class HostedInterruptState
     uint64_t which;
     /** siginfo_t structure */
     uint64_t extra;
+    /**
+     * Third argument to the sigaction handler (has meaning for certain signals
+     * such as SIGSEGV).
+     */
+    uint64_t meta;
+
+    /** Extra pieces that can be filled before entering debugger. */
+    uintptr_t m_basePointer;
+    uintptr_t m_instructionPointer;
+    uintptr_t m_stackPointer;
 } PACKED;
 
 /** x64 Syscall State */
@@ -256,24 +266,27 @@ public:
 //
 uintptr_t HostedInterruptState::getStackPointer() const
 {
-  return 0;
+  return m_stackPointer;
 }
 void HostedInterruptState::setStackPointer(uintptr_t stackPointer)
 {
+    m_stackPointer = stackPointer;
 }
 uintptr_t HostedInterruptState::getInstructionPointer() const
 {
-  return 0;
+  return m_instructionPointer;
 }
 void HostedInterruptState::setInstructionPointer(uintptr_t instructionPointer)
 {
+  m_instructionPointer = instructionPointer;
 }
 uintptr_t HostedInterruptState::getBasePointer() const
 {
-  return 0;
+  return m_basePointer;
 }
 void HostedInterruptState::setBasePointer(uintptr_t basePointer)
 {
+  m_basePointer = basePointer;
 }
 size_t HostedInterruptState::getRegisterSize(size_t index) const
 {
