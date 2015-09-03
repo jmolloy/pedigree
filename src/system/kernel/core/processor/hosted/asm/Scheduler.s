@@ -27,6 +27,16 @@ extern _ZN6Thread12threadExitedEv
 extern _ZN21PerProcessorScheduler12deleteThreadEP6Thread
 ; void Processor::restoreState(SchedulerState &, volatile uintptr_t *)
 extern _ZN9Processor12restoreStateER20HostedSchedulerStatePVm
+
+; uintptr_t syscall_shim(Service_t service, uintptr_t function, uintptr_t *error,
+;  uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5)
+extern _Z12syscall_shim9Service_tmPmmmmmm
+
+; syscall entry method
+global syscall_enter
+
+; Processor::m_ProcessorInformation
+extern _ZN9Processor22m_ProcessorInformationE
         
 [bits 64]
 [section .text]
@@ -93,6 +103,48 @@ _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR20HostedSchedu
     mov rdi, rcx
     xor rsi, rsi
     jmp _ZN9Processor12restoreStateER20HostedSchedulerStatePVm 
+
+[section .syscall exec]
+; [rsp+0x10] p5
+; [rsp+0x8] p4
+; [rsp+0x0] (return address)
+; [r9]     p3
+; [r8]     p2
+; [rcx]    p1
+; [rdx]    Error*
+; [rsi]    Function
+; [rdi]    Service
+syscall_enter:
+    ; We need to save stack-based registers as we might switch stack.
+    mov r10, [rsp + 8]
+    mov r11, [rsp + 16]
+
+    ; Preserve current stack.
+    push r12
+    push rbx
+    mov r12, rsp
+
+    ; Switch stacks, if needed.
+    ; Processor::m_Information + 0x158 = kernel stack
+    mov rax, _ZN9Processor22m_ProcessorInformationE
+    add rax, 0x158
+    mov rbx, [rax]
+    cmp rbx, 0
+    je .nostack
+    mov rsp, rbx
+.nostack:
+
+    ; Add stack parameters; rest have been kept in registers.
+    push r11
+    push r10
+    call _Z12syscall_shim9Service_tmPmmmmmm
+    pop r10
+    pop r11
+
+    mov rsp, r12
+    pop rbx
+    pop r12
+    ret
 
 [section .bss]
 safe_stack:

@@ -26,7 +26,7 @@ HostedSyscallManager HostedSyscallManager::m_Instance;
 
 // Used on hosted systems to provide a syscall entry point.
 uintptr_t syscall_shim(Service_t service, uintptr_t function, uintptr_t *error,
-  uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5) __attribute__((section(".syscall")));
+  uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5);
 
 SyscallManager &SyscallManager::instance()
 {
