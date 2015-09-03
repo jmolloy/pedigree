@@ -345,7 +345,7 @@ void *HostedVirtualAddressSpace::allocateStack(size_t stackSz) {
 
 void *HostedVirtualAddressSpace::doAllocateStack(size_t sSize) {
   size_t flags = 0;
-  bool bMapAll = false;
+  bool bMapAll = true;
   if(this == &m_KernelSpace)
   {
     // Don't demand map kernel mode stacks.
@@ -377,7 +377,6 @@ void *HostedVirtualAddressSpace::doAllocateStack(size_t sSize) {
 
   // Map the top of the stack in proper.
   uintptr_t firstPage = reinterpret_cast<uintptr_t>(pStack) - pageSz;
-  NOTICE("mapping a stack at " << firstPage);
   physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
   if(!bMapAll)
     PhysicalMemoryManager::instance().pin(phys);
