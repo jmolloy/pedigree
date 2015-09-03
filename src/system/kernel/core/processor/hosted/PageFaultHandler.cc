@@ -31,6 +31,8 @@ using namespace __pedigree_hosted;
 #include <signal.h>
 #include <ucontext.h>
 
+#define SUPERDEBUG
+
 PageFaultHandler PageFaultHandler::m_Instance;
 
 bool PageFaultHandler::initialise()
@@ -46,7 +48,8 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
 {
     siginfo_t *info = reinterpret_cast<siginfo_t *>(state.getRegister(1));
 
-    uintptr_t page = reinterpret_cast<uintptr_t>(info->si_addr);
+    uintptr_t page = reinterpret_cast<uintptr_t>(page_align(info->si_addr));
+    uintptr_t unaligned_page = reinterpret_cast<uintptr_t>(info->si_addr);
     uintptr_t code = info->si_code;
 
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
@@ -137,7 +140,7 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
     static LargeStaticString sError;
     sError.clear();
     sError.append("Page Fault Exception at 0x");
-    sError.append(page, 16, 8, '0');
+    sError.append(unaligned_page, 16, 8, '0');
     sError.append(", error code 0x");
     sError.append(code, 16, 8, '0');
     sError.append(", EIP 0x");

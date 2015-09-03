@@ -24,6 +24,7 @@
 #include "SyscallManager.h"
 #include "VirtualAddressSpace.h"
 #include <process/initialiseMultitasking.h>
+#include <process/Scheduler.h>
 #include <process/Thread.h>
 
 namespace __pedigree_hosted {};
@@ -80,29 +81,33 @@ uintptr_t Processor::getBasePointer()
 
 bool Processor::saveState(SchedulerState &state)
 {
-  jmp_buf _state;
+  sigjmp_buf _state;
   if(sigsetjmp(_state, 0) == 1)
     return true;
 
   // Handle opaque types.
-  memcpy(state.state, _state, sizeof(jmp_buf));
+  memcpy(state.state, _state, sizeof(sigjmp_buf));
   return false;
 }
 
 void Processor::restoreState(SchedulerState &state, volatile uintptr_t *pLock)
 {
-  jmp_buf _state;
+  sigjmp_buf _state;
   if(pLock)
       *pLock = 1;
-  memcpy(_state, state.state, sizeof(jmp_buf));
+  memcpy(_state, state.state, sizeof(sigjmp_buf));
   siglongjmp(_state, 0);
   // Does not return.
 }
 
 void Processor::restoreState(SyscallState &state, volatile uintptr_t *pLock)
 {
-  /// \todo implement (green thread style context switch)
-  panic("Processor::restoreState(SyscallState&) NOT implemented.");
+  sigjmp_buf _state;
+  if(pLock)
+      *pLock = 1;
+  memcpy(_state, state.return_state, sizeof(sigjmp_buf));
+  siglongjmp(_state, 0);
+  // Does not return.
 }
 
 void Processor::jumpUser(volatile uintptr_t *pLock, uintptr_t address,
@@ -117,9 +122,9 @@ void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
   ProcessorInformation &info = Processor::information();
   if(&info.getVirtualAddressSpace() != &AddressSpace)
   {
+      info.setVirtualAddressSpace(AddressSpace);
       HostedVirtualAddressSpace::switchAddressSpace(
         info.getVirtualAddressSpace(), AddressSpace);
-      info.setVirtualAddressSpace(AddressSpace);
   }
 }
 
