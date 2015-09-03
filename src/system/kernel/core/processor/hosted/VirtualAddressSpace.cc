@@ -307,6 +307,28 @@ VirtualAddressSpace *HostedVirtualAddressSpace::clone() {
     pNew->m_KnownMapsSize = m_KnownMapsSize;
     pNew->m_numKnownMaps = m_numKnownMaps;
     pNew->m_nLastUnmap = m_nLastUnmap;
+
+    // Readjust flags on the new mappings if needed.
+    for(size_t i = 0; i < pNew->m_KnownMapsSize; ++i)
+    {
+      mapping_t *mapping = &pNew->m_pKnownMaps[i];
+
+      PhysicalMemoryManager::instance().pin(mapping->paddr);
+
+      if(mapping->flags & Shared)
+      {
+        continue;
+      }
+
+      if(!(mapping->flags & CopyOnWrite))
+        PhysicalMemoryManager::instance().pin(mapping->paddr);
+
+      if(mapping->flags & Write)
+      {
+        mapping->flags |= CopyOnWrite;
+      }
+      mapping->flags &= ~Write;
+    }
   }
 
   return pNew;
