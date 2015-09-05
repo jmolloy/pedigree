@@ -46,6 +46,11 @@ using namespace __pedigree_hosted;
 
 HostedKeyboard::HostedKeyboard() : m_bDebugState(false)
 {
+    // Eat any pending input.
+    blocking(false);
+    char buf[64] = {0};
+    while(read(0, buf, 64) == 64);
+    blocking(true);
 }
 
 HostedKeyboard::~HostedKeyboard()
@@ -68,8 +73,10 @@ char HostedKeyboard::getChar()
 
     blocking(true);
 
-    char buf[2];
-    read(0, buf, 1);
+    char buf[2] = {0};
+    ssize_t n = read(0, buf, 1);
+    if (n != 1)
+        return 0;
     return buf[0];
 }
 
@@ -80,7 +87,7 @@ char HostedKeyboard::getCharNonBlock()
 
     blocking(false);
 
-    char buf[2];
+    char buf[2] = {0};
     ssize_t n = read(0, buf, 1);
     if(n != 1)
         return 0;
@@ -110,7 +117,9 @@ void HostedKeyboard::blocking(bool enable)
 {
     int flags = fcntl(0, F_GETFL);
     if(flags < 0)
+    {
         return;
+    }
     if(enable)
         flags &= ~O_NONBLOCK;
     else
