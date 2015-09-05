@@ -20,6 +20,10 @@
 global _ZN9Processor10jumpKernelEPVmmmmmmm
 ; void PerProcessorScheduler::deleteThreadThenRestoreState(Thread*, SchedulerState&)
 global _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR20HostedSchedulerState
+; syscall entry method (at syscall entry address)
+global syscall_enter
+; void Processor::restoreState(volatile uintptr_t *, SyscallState &)
+global _ZN9Processor12restoreStateER18HostedSyscallStatePVm
 
 ; void Thread::threadExited()
 extern _ZN6Thread12threadExitedEv
@@ -28,15 +32,11 @@ extern _ZN21PerProcessorScheduler12deleteThreadEP6Thread
 ; void Processor::restoreState(SchedulerState &, volatile uintptr_t *)
 extern _ZN9Processor12restoreStateER20HostedSchedulerStatePVm
 
-; uintptr_t syscall_shim(Service_t service, uintptr_t function, uintptr_t *error,
-;  uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5)
-extern _Z12syscall_shim9Service_tmPmmmmmm
-
-; syscall entry method
-global syscall_enter
-
+; void HostedSyscallManager::syscall(SyscallState &syscallState)
+extern _ZN20HostedSyscallManager7syscallER18HostedSyscallState
 ; Processor::m_ProcessorInformation
 extern _ZN9Processor22m_ProcessorInformationE
+
         
 [bits 64]
 [section .text]
@@ -116,33 +116,86 @@ _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR20HostedSchedu
 ; [rdi]    Service
 syscall_enter:
     ; We need to save stack-based registers as we might switch stack.
-    mov r10, [rsp + 8]
-    mov r11, [rsp + 16]
+    mov r10, [rsp + 8]  ; p4
+    mov r11, [rsp + 16] ; p5
 
     ; Preserve current stack.
     push r12
-    push rbx
     mov r12, rsp
 
-    ; Switch stacks, if needed.
+    ; Switch stacks (MUST be a kernel stack).
     ; Processor::m_Information + 0x158 = kernel stack
     mov rax, _ZN9Processor22m_ProcessorInformationE
     add rax, 0x158
-    mov rbx, [rax]
-    cmp rbx, 0
-    je .nostack
-    mov rsp, rbx
-.nostack:
+    mov rsp, [rax]
 
-    ; Add stack parameters; rest have been kept in registers.
+    ; Create the SyscallState
+    sub rsp, 8  ; align to 16-byte boundary
+    push r12
+    push 0    ; result (return value)
+    push rdx  ; error pointer
+    push 0    ; error (to write into [rdx])
     push r11
     push r10
-    call _Z12syscall_shim9Service_tmPmmmmmm
+    push r9
+    push r8
+    push rcx
+    push rsi
+    push rdi
+    mov rdi, rsp
+    call _ZN20HostedSyscallManager7syscallER18HostedSyscallState
+    pop rdi
+    pop rsi
+    pop rcx
+    pop r8
+    pop r9
     pop r10
     pop r11
 
-    mov rsp, r12
-    pop rbx
+    ; error value (modified by syscall)
+    pop rax
+    pop rdx
+    mov [rdx], rax
+
+    ; return value from syscall
+    pop rax
+
+    ; Bring back the old stack.
+    pop rsp
+    pop r12
+    ret
+
+; [rsi] Lock
+; [rdi] State pointer.
+_ZN9Processor12restoreStateER18HostedSyscallStatePVm:
+    ; The state pointer is on the current thread kernel stack, so change to it.
+    mov     rsp, rdi
+
+    ; Stack changed, now we can unlock the old thread.
+    cmp     rsi, 0
+    jz      .no_lock
+    ; Release lock.
+    mov     qword [rsi], 1
+.no_lock:
+
+    pop rdi
+    pop rsi
+    pop rcx
+    pop r8
+    pop r9
+    pop r10
+    pop r11
+
+    ; error value
+    pop rax
+    pop rdx
+    mov [rdx], rax
+
+    ; return value from syscall
+    pop rax
+
+    ; Bring back the old stack.
+    pop rsp
     pop r12
     ret
 

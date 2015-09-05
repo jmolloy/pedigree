@@ -196,7 +196,9 @@ class HostedSyscallState
     uint64_t number;
     uint64_t p1, p2, p3, p4, p5;
     uint64_t error;
+    uint64_t error_ptr; // pointer to error
     uint64_t result;
+    uint64_t rsp;
 } PACKED;
 
 /** x64 ProcessorState */
@@ -312,10 +314,11 @@ void HostedInterruptState::setFlags(uint64_t flags)
 
 uintptr_t HostedSyscallState::getStackPointer() const
 {
-  return 0;
+  return rsp;
 }
 void HostedSyscallState::setStackPointer(uintptr_t stackPointer)
 {
+    rsp = stackPointer;
 }
 uintptr_t HostedSyscallState::getInstructionPointer() const
 {

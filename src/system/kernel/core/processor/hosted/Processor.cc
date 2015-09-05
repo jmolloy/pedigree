@@ -100,16 +100,6 @@ void Processor::restoreState(SchedulerState &state, volatile uintptr_t *pLock)
   // Does not return.
 }
 
-void Processor::restoreState(SyscallState &state, volatile uintptr_t *pLock)
-{
-  sigjmp_buf _state;
-  if(pLock)
-      *pLock = 1;
-  memcpy(_state, state.return_state, sizeof(sigjmp_buf));
-  siglongjmp(_state, 0);
-  // Does not return.
-}
-
 void Processor::jumpUser(volatile uintptr_t *pLock, uintptr_t address,
   uintptr_t stack, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4)
 {

@@ -30,7 +30,6 @@
 /** The syscall manager on x64 processors */
 class HostedSyscallManager : public ::SyscallManager
 {
-  friend uintptr_t syscall_shim(Service_t, uintptr_t, uintptr_t *, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t);
   public:
     /** Get the HostedSyscallManager class instance
      *\return instance of the HostedSyscallManager class */
