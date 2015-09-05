@@ -82,24 +82,20 @@ inline File *traverseSymlink(File *file)
     return file;
 }
 
-inline String normalisePath(const char *name, bool *onDevFs = 0)
+static void normalisePath(String &nameToOpen, const char *name, bool *onDevFs = 0)
 {
     // Rebase /dev onto the devfs. /dev/tty is special.
-    String nameToOpen;
     if (!strcmp(name, "/dev/tty"))
     {
         // Get controlling console, unless we have none.
         Process *pProcess = Processor::information().getCurrentThread()->getParent();
         if (!pProcess->getCtty())
         {
-            nameToOpen = name;
             if (onDevFs)
                 *onDevFs = true;
         }
-        else
-        {
-            nameToOpen = name;
-        }
+
+        nameToOpen = name;
     }
     else if (!strncmp(name, "/dev", strlen("/dev")))
     {
@@ -132,8 +128,6 @@ inline String normalisePath(const char *name, bool *onDevFs = 0)
     {
         nameToOpen = name;
     }
-
-    return nameToOpen;
 }
 
 int posix_close(int fd)
@@ -213,7 +207,8 @@ int posix_open(const char *name, int flags, int mode)
     File* file = 0;
 
     bool onDevFs = false;
-    String nameToOpen = normalisePath(name, &onDevFs);
+    String nameToOpen;
+    normalisePath(nameToOpen, name, &onDevFs);
     if (nameToOpen == "/dev/tty")
     {
         file = pProcess->getCtty();
@@ -514,7 +509,8 @@ int posix_readlink(const char* path, char* buf, unsigned int bufsize)
 
     F_NOTICE("readlink(" << path << ", " << reinterpret_cast<uintptr_t>(buf) << ", " << bufsize << ")");
 
-    String realPath = normalisePath(path);
+    String realPath;
+    normalisePath(realPath, path);
 
     File* f = VFS::instance().find(realPath, GET_CWD());
     if (!f)
@@ -552,7 +548,8 @@ int posix_realpath(const char *path, char *buf, size_t bufsize)
         return -1;
     }
 
-    String realPath = normalisePath(path);
+    String realPath;
+    normalisePath(realPath, path);
     F_NOTICE("  -> traversing " << realPath);
     File* f = VFS::instance().find(realPath, GET_CWD());
     if (!f)
@@ -601,7 +598,8 @@ int posix_unlink(char *name)
 
     /// \todo Check permissions, perhaps!?
 
-    String realPath = normalisePath(name);
+    String realPath;
+    normalisePath(realPath, name);
 
     if (VFS::instance().remove(realPath, GET_CWD()))
         return 0;
@@ -641,8 +639,10 @@ int posix_rename(const char* source, const char* dst)
 
     F_NOTICE("rename(" << source << ", " << dst << ")");
 
-    String realSource = normalisePath(source);
-    String realDestination = normalisePath(dst);
+    String realSource;
+    String realDestination;
+    normalisePath(realSource, source);
+    normalisePath(realDestination, dst);
 
     File* src = VFS::instance().find(realSource, GET_CWD());
     File* dest = VFS::instance().find(realDestination, GET_CWD());
@@ -753,7 +753,8 @@ int posix_stat(const char *name, struct stat *st)
         return -1;
     }
 
-    String realPath = normalisePath(name);
+    String realPath;
+    normalisePath(realPath, name);
 
     File* file = VFS::instance().find(realPath, GET_CWD());
     if (!file)
@@ -913,7 +914,8 @@ int posix_lstat(char *name, struct stat *st)
         return -1;
     }
 
-    String realPath = normalisePath(name);
+    String realPath;
+    normalisePath(realPath, name);
 
     File *file = VFS::instance().find(realPath, GET_CWD());
 
@@ -995,7 +997,8 @@ int posix_opendir(const char *dir, dirent *ent)
 
     size_t fd = pSubsystem->getFd();
 
-    String realPath = normalisePath(dir);
+    String realPath;
+    normalisePath(realPath, dir);
 
     File* file = VFS::instance().find(realPath, GET_CWD());
     if (!file)
@@ -1249,7 +1252,8 @@ int posix_chdir(const char *path)
 
     F_NOTICE("chdir(" << path << ")");
 
-    String realPath = normalisePath(path);
+    String realPath;
+    normalisePath(realPath, path);
 
     File *dir = VFS::instance().find(realPath, GET_CWD());
     File *target = 0;
@@ -1356,7 +1360,8 @@ int posix_mkdir(const char* name, int mode)
 
     F_NOTICE("mkdir(" << name << ")");
 
-    String realPath = normalisePath(name);
+    String realPath;
+    normalisePath(realPath, name);
 
     bool worked = VFS::instance().createDirectory(realPath, GET_CWD());
     return worked ? 0 : -1;
@@ -1815,7 +1820,8 @@ int posix_access(const char *name, int amode)
         return -1;
     }
 
-    String realPath = normalisePath(name);
+    String realPath;
+    normalisePath(realPath, name);
 
     // Grab the file
     File *file = VFS::instance().find(realPath, GET_CWD());
@@ -1988,7 +1994,8 @@ int posix_chmod(const char *path, mode_t mode)
     }
 
     bool onDevFs = false;
-    String realPath = normalisePath(path, &onDevFs);
+    String realPath;
+    normalisePath(realPath, path, &onDevFs);
 
     if(onDevFs)
     {
@@ -2049,7 +2056,8 @@ int posix_chown(const char *path, uid_t owner, gid_t group)
         return 0;
 
     bool onDevFs = false;
-    String realPath = normalisePath(path, &onDevFs);
+    String realPath;
+    normalisePath(realPath, path, &onDevFs);
 
     if(onDevFs)
     {
@@ -2296,7 +2304,8 @@ int posix_statvfs(const char *path, struct statvfs *buf)
 
     F_NOTICE("statvfs(" << path << ")");
 
-    String realPath = normalisePath(path);
+    String realPath;
+    normalisePath(realPath, path);
 
     File* file = VFS::instance().find(realPath, GET_CWD());
     if (!file)
