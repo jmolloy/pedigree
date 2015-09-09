@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -149,6 +148,7 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
         bDma = true;
     }
 
+#ifndef KERNEL_PROCESSOR_NO_PORT_IO
     IoPort *masterCommand = new IoPort("pci-ide-master-cmd");
     IoPort *slaveCommand = new IoPort("pci-ide-slave-cmd");
     IoPort *masterControl = new IoPort("pci-ide-master-ctl");
@@ -251,6 +251,9 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
     diskHelper(false, masterCommand, masterControl, primaryBusMaster, primaryIrq);
     diskHelper(true, slaveCommand, slaveControl, secondaryBusMaster, secondaryIrq);
     diskHelper(false, slaveCommand, slaveControl, secondaryBusMaster, secondaryIrq);
+#else
+    ERROR("PCI ATA: no good, this machine has no port I/O");
+#endif
 }
 
 PciAtaController::~PciAtaController()

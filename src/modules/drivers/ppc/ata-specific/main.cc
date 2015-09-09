@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -91,10 +90,13 @@ static void searchNode(Device *pDev)
 }
 
 
-void entry()
+bool entry()
 {
   Device *pDev = &Device::root();
   searchNode(pDev);
+
+  /// \todo return false if nothing found
+  return true;
 }
 
 void exit()

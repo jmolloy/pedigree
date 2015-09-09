@@ -139,6 +139,9 @@ Cache::Cache() :
         m_Allocator.free(0xFFFFFFFF40000000, 0x3FC00000);
 #elif defined(ARM_BEAGLE)
         m_Allocator.free(0xA0000000, 0x10000000);
+#elif defined(PPC_MAC)
+        /// \todo real region addresses
+        m_Allocator.free(0x1000, 0x1000);
 #else
         #error Implement your architecture memory map area for caches into Cache::Cache
 #endif

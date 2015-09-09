@@ -26,6 +26,7 @@
 #include <usb/Usb.h>
 #include <utilities/assert.h>
 #include <Log.h>
+#include <LockGuard.h>
 #include "Ehci.h"
 
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n * 1000);}while(0)

@@ -419,6 +419,8 @@ if env['ON_PEDIGREE'] or env['COMPILER_TARGET']:
         defines = default_defines[flags_arch] + extra_defines
 
         env.MergeFlags(mapping)
+    else:
+        defines = generic_defines
 
 # Handle no valid target sensibly.
 if not env['ARCH_TARGET'] and not env['ON_PEDIGREE']:
@@ -464,9 +466,9 @@ if env['ARCH_TARGET'] == 'ARM':
     env['noiso'] = True
 
 # Add optional flags.
-warning_flag = '-Wno-error'
+warning_flag = ['-Wno-error']
 if env['warnings']:
-    warning_flag = '-Werror'
+    warning_flag = ['-Werror']
 env.MergeFlags({'CFLAGS': warning_flag})
 
 if env['memory_log']:
