@@ -485,7 +485,7 @@ uintptr_t Thread::getTlsBase()
         }
         else
         {
-          NOTICE("Thread [" << Dec << m_Id << Hex << "]: allocated TLS area at " << reinterpret_cast<uintptr_t>(m_pTlsBase->virtualAddress()) << ".");
+          NOTICE("Thread [" << Dec << m_pParent->getId() << ":" << m_Id << Hex << "]: allocated TLS area at " << reinterpret_cast<uintptr_t>(m_pTlsBase->virtualAddress()) << ".");
           
           uint32_t *tlsBase = reinterpret_cast<uint32_t*>(m_pTlsBase->virtualAddress());
           *tlsBase = static_cast<uint32_t>(m_Id);
