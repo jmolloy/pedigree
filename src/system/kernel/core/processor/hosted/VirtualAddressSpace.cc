@@ -126,8 +126,9 @@ bool HostedVirtualAddressSpace::map(physical_uintptr_t physAddress,
   virtualAddress = page_align(virtualAddress);
 
   // If this should be a kernel mapping, use the kernel address space.
-  if ((flags & KernelMode) && (this != &getKernelAddressSpace()))
-    return getKernelAddressSpace().map(physAddress, virtualAddress, flags);
+  if (this != &getKernelAddressSpace())
+    if ((virtualAddress >= KERNEL_SPACE_START) || (flags & KernelMode))
+      return getKernelAddressSpace().map(physAddress, virtualAddress, flags);
 
   // mmap() won't fail if the address is already mapped, but we need to.
   if(isMapped(virtualAddress))
@@ -312,6 +313,8 @@ VirtualAddressSpace *HostedVirtualAddressSpace::clone() {
     for(size_t i = 0; i < pNew->m_KnownMapsSize; ++i)
     {
       mapping_t *mapping = &pNew->m_pKnownMaps[i];
+      if(!mapping->active)
+        continue;
 
       PhysicalMemoryManager::instance().pin(mapping->paddr);
 
@@ -347,6 +350,8 @@ void HostedVirtualAddressSpace::revertToKernelAddressSpace() {
         m_nLastUnmap = i;
         continue;
       }
+      else if(m_pKnownMaps[i].vaddr > KERNEL_SPACE_START)
+        continue;
 
       munmap(m_pKnownMaps[i].vaddr, PhysicalMemoryManager::getPageSize());
 
