@@ -24,9 +24,9 @@
 
 using namespace __pedigree_hosted;
 
-/** Hundred hertz frequency. */
+/** 10 hertz frequency. */
 #define ONE_SECOND 1000000000
-#define HZ 100
+#define HZ 10
 
 HostedSchedulerTimer HostedSchedulerTimer::m_Instance;
 
@@ -46,7 +46,7 @@ bool HostedSchedulerTimer::initialise()
     sv.sigev_notify = SIGEV_SIGNAL;
     sv.sigev_signo = SIGUSR2;
     sv.sigev_value.sival_ptr = this;
-    int r = timer_create(CLOCK_MONOTONIC, &sv, &m_Timer);
+    int r = timer_create(CLOCK_REALTIME, &sv, &m_Timer);
     if(r != 0)
     {
         /// \todo error message or something

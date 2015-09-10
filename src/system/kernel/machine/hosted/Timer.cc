@@ -180,7 +180,7 @@ bool HostedTimer::initialise()
     sv.sigev_notify = SIGEV_SIGNAL;
     sv.sigev_signo = SIGUSR1;
     sv.sigev_value.sival_ptr = this;
-    int r = timer_create(CLOCK_REALTIME, &sv, &m_Timer);
+    int r = timer_create(CLOCK_MONOTONIC, &sv, &m_Timer);
     if(r != 0)
     {
         /// \todo error message or something

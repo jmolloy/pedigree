@@ -606,7 +606,7 @@ if env['hosted']:
 
     # Reset flags.
     env['CCFLAGS'] = generic_flags + warning_flags + ['-U_FORTIFY_SOURCE',
-                                                      '-U__linux__', '-O0']
+                                                      '-U__linux__']
     env['CFLAGS'] = generic_cflags + warning_flags_c
     env['CXXFLAGS'] = generic_cxxflags + warning_flags_cxx
     env['LINKFLAGS'] = []
