@@ -199,6 +199,7 @@ class HostedSyscallState
     uint64_t error_ptr; // pointer to error
     uint64_t result;
     uint64_t rsp;
+    uint64_t _align0; // deterministically pad to 16 bytes
 } PACKED;
 
 /** x64 ProcessorState */
@@ -256,8 +257,6 @@ class HostedProcessorState
 class HostedSchedulerState
 {
 public:
-    // Don't pull in sigjmp_buf here - leave a lot of room for various hosted
-    // jmp_buf types.
     uint64_t state[128];
 };
 

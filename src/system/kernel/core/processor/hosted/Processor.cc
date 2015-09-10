@@ -81,12 +81,13 @@ uintptr_t Processor::getBasePointer()
 
 bool Processor::saveState(SchedulerState &state)
 {
+  ERROR("Processor::saveState is NOT safe on HOSTED builds.");
+
   sigjmp_buf _state;
   if(sigsetjmp(_state, 0) == 1)
     return true;
 
-  // Handle opaque types.
-  memcpy(state.state, _state, sizeof(sigjmp_buf));
+  memcpy(state.state, _state, sizeof(_state));
   return false;
 }
 
@@ -95,7 +96,7 @@ void Processor::restoreState(SchedulerState &state, volatile uintptr_t *pLock)
   sigjmp_buf _state;
   if(pLock)
       *pLock = 1;
-  memcpy(_state, state.state, sizeof(sigjmp_buf));
+  memcpy(_state, state.state, sizeof(_state));
   siglongjmp(_state, 0);
   // Does not return.
 }
@@ -105,6 +106,53 @@ void Processor::jumpUser(volatile uintptr_t *pLock, uintptr_t address,
 {
   // Same thing as jumping to kernel space.
   jumpKernel(pLock, address, stack, p1, p2, p3, p4);
+}
+
+void Processor::switchState(bool bInterrupts, SchedulerState &a, SchedulerState &b, volatile uintptr_t *pLock)
+{
+  sigjmp_buf _state;
+  if(sigsetjmp(_state, 0) == 1)
+  {
+    return;
+  }
+
+  memcpy(a.state, _state, sizeof(_state));
+  restoreState(b, pLock);
+}
+
+void Processor::switchState(bool bInterrupts, SchedulerState &a, SyscallState &b, volatile uintptr_t *pLock)
+{
+  sigjmp_buf _state;
+  if(sigsetjmp(_state, 0) == 1)
+  {
+    if (bInterrupts) Processor::setInterrupts(true);
+    return;
+  }
+
+  memcpy(a.state, _state, sizeof(_state));
+  Processor::restoreState(b, pLock);
+}
+
+void Processor::saveAndJumpKernel(bool bInterrupts, SchedulerState &s, volatile uintptr_t *pLock,
+                              uintptr_t address, uintptr_t stack, uintptr_t p1,
+                              uintptr_t p2, uintptr_t p3, uintptr_t p4)
+{
+  sigjmp_buf _state;
+  if(sigsetjmp(_state, 0) == 1)
+  {
+    if (bInterrupts) Processor::setInterrupts(true);
+    return;
+  }
+
+  memcpy(s.state, _state, sizeof(_state));
+  Processor::jumpKernel(pLock, address, stack, p1, p2, p3, p4);
+}
+
+void Processor::saveAndJumpUser(bool bInterrupts, SchedulerState &s, volatile uintptr_t *pLock,
+                              uintptr_t address, uintptr_t stack, uintptr_t p1,
+                              uintptr_t p2, uintptr_t p3, uintptr_t p4)
+{
+  Processor::saveAndJumpKernel(bInterrupts, s, pLock, address, stack, p1, p2, p3, p4);
 }
 
 void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
@@ -120,7 +168,6 @@ void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
 
 void Processor::setTlsBase(uintptr_t newBase)
 {
-  ERROR("Processor::setTlsBase unimplemented");
 }
 
 size_t Processor::getDebugBreakpointCount()

@@ -600,9 +600,13 @@ if env['hosted']:
     # Copy across userspace defines as HOSTED_*
     env['CPPDEFINES'] += ['HOSTED_%s' % x for x in userspace_env['CPPDEFINES']]
 
+    # setjmp/longjmp context switching - we can't return from the function
+    # calling setjmp without invoking undefined behaviour.
+    env['CPPDEFINES'] += ['SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH']
+
     # Reset flags.
     env['CCFLAGS'] = generic_flags + warning_flags + ['-U_FORTIFY_SOURCE',
-                                                      '-U__linux__']
+                                                      '-U__linux__', '-O0']
     env['CFLAGS'] = generic_cflags + warning_flags_c
     env['CXXFLAGS'] = generic_cxxflags + warning_flags_cxx
     env['LINKFLAGS'] = []

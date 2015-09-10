@@ -102,15 +102,51 @@ class Processor
     /** Save the current processor state.
         \param[out] state SchedulerState to save into.
         \return False if the save saved the state. True if a restoreState occurs. */
-    static bool saveState(SchedulerState &state);
+    static bool saveState(SchedulerState &state)
+#ifdef SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH
+    DEPRECATED
+#endif
+    ;
     /** Restore a previous scheduler state.
         \param[in] state The state to restore.
         \param[out] pLock Optional lock to release. */
-    static void restoreState(SchedulerState &state, volatile uintptr_t *pLock=0);
+    static void restoreState(SchedulerState &state, volatile uintptr_t *pLock=0) NORETURN;
     /** Restore a previous syscall state.
         \param[out] pLock Optional lock to release (for none, set as 0)
         \param[in]  state Syscall state to restore. */
-    static void restoreState(SyscallState &state, volatile uintptr_t *pLock=0);
+    static void restoreState(SyscallState &state, volatile uintptr_t *pLock=0) NORETURN;
+#ifdef SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH
+    /** Switch between two states, safely. */
+    static void switchState(bool bInterrupts, SchedulerState &a, SchedulerState &b, volatile uintptr_t *pLock=0);
+    /** Switch between two states, safely. */
+    static void switchState(bool bInterrupts, SchedulerState &a, SyscallState &b, volatile uintptr_t *pLock=0);
+    /** Jumps to an address, in kernel mode, and sets up a calling frame with
+        the given parameters. Saves the current state before doing so.
+        \param bInterrupts Interrupt state to restore in saved context.
+        \param pLock       Optional lock to release.
+        \param address     Address to jump to.
+        \param stack       Stack to use (set to 0 for current stack).
+        \param param1      First parameter.
+        \param param2      Second parameter.
+        \param param3      Third parameter.
+        \param param4      Fourth parameter. */
+    static void saveAndJumpKernel(bool bInterrupts, SchedulerState &s, volatile uintptr_t *pLock,
+                                  uintptr_t address, uintptr_t stack, uintptr_t p1=0,
+                                  uintptr_t p2=0, uintptr_t p3=0, uintptr_t p4=0);
+    /** Jumps to an address, in user mode, and sets up a calling frame with
+        the given parameters. Saves the current state before doing so.
+        \param bInterrupts Interrupt state to restore in saved context.
+        \param pLock       Optional lock to release.
+        \param address     Address to jump to.
+        \param stack       Stack to use (set to 0 for current stack).
+        \param param1      First parameter.
+        \param param2      Second parameter.
+        \param param3      Third parameter.
+        \param param4      Fourth parameter. */
+    static void saveAndJumpUser(bool bInterrupts, SchedulerState &s, volatile uintptr_t *pLock,
+                                  uintptr_t address, uintptr_t stack, uintptr_t p1=0,
+                                  uintptr_t p2=0, uintptr_t p3=0, uintptr_t p4=0);
+#endif // SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH
     /** Jumps to an address, in kernel mode, and sets up a calling frame with
         the given parameters.
         \param pLock   Optional lock to release.
@@ -121,7 +157,7 @@ class Processor
         \param param3  Third parameter.
         \param param4  Fourth parameter. */
     static void jumpKernel(volatile uintptr_t *pLock, uintptr_t address, uintptr_t stack,
-                           uintptr_t p1=0, uintptr_t p2=0, uintptr_t p3=0, uintptr_t p4=0);
+                           uintptr_t p1=0, uintptr_t p2=0, uintptr_t p3=0, uintptr_t p4=0) NORETURN;
     /** Jumps to an address, in user mode, and sets up a calling frame with
         the given parameters.
         \param pLock   Optional lock to release.
@@ -132,7 +168,7 @@ class Processor
         \param param3  Third parameter.
         \param param4  Fourth parameter. */
     static void jumpUser(volatile uintptr_t *pLock, uintptr_t address, uintptr_t stack,
-                           uintptr_t p1=0, uintptr_t p2=0, uintptr_t p3=0, uintptr_t p4=0);
+                           uintptr_t p1=0, uintptr_t p2=0, uintptr_t p3=0, uintptr_t p4=0) NORETURN;
 
     /** Trigger a breakpoint */
     inline static void breakpoint() ALWAYS_INLINE;

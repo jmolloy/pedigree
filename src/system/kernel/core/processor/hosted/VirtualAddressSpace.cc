@@ -349,6 +349,11 @@ void HostedVirtualAddressSpace::revertToKernelAddressSpace() {
       }
 
       munmap(m_pKnownMaps[i].vaddr, PhysicalMemoryManager::getPageSize());
+
+      // Clean up references to physical memory as needed.
+      if ((m_pKnownMaps[i].flags & (Shared | Swapped)) == 0)
+        PhysicalMemoryManager::instance().freePage(m_pKnownMaps[i].paddr);
+
       m_pKnownMaps[i].active = false;
     }
   }

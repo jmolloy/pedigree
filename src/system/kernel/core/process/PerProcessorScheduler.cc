@@ -193,6 +193,12 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThre
 
     pNextThread->getLock().release();
 
+#ifdef SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH
+    pCurrentThread->getLock().unwind();
+    Processor::switchState(bWasInterrupts, pCurrentThread->state(), pNextThread->state(), &pCurrentThread->getLock().m_Atom.m_Atom);
+    Processor::setInterrupts(bWasInterrupts);
+    checkEventState(0);
+#else
     // NOTICE_NOLOCK("calling saveState [schedule]");
     if (Processor::saveState(pCurrentThread->state()))
     {
@@ -215,6 +221,7 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThre
     pCurrentThread->getLock().unwind();
     Processor::restoreState(pNextThread->state(), &pCurrentThread->getLock().m_Atom.m_Atom);
     // Not reached.
+#endif
 }
 
 void PerProcessorScheduler::checkEventState(uintptr_t userStack)
@@ -311,12 +318,14 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
 
     pEvent->serialize(reinterpret_cast<uint8_t*>(addr));
 
+#ifndef SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH
     if (Processor::saveState(oldState))
     {
         // Just context-restored.
         Processor::setInterrupts(bWasInterrupts);
         return;
     }
+#endif
 
     if (pEvent->isDeletable())
         delete pEvent;
@@ -332,8 +341,12 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
     }
     else if (userStack != 0)
     {
+#ifdef SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH
+        Processor::saveAndJumpUser(bWasInterrupts, oldState, 0, EVENT_HANDLER_TRAMPOLINE, userStack, handlerAddress, addr);
+#else
         Processor::jumpUser(0, EVENT_HANDLER_TRAMPOLINE, userStack, handlerAddress, addr);
         // Not reached.
+#endif
     }
 }
 
@@ -401,6 +414,25 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
     g_LocksCommand.lockReleased(&pThread->getLock());
 #endif
 
+#ifdef SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH
+    pCurrentThread->getLock().unwind();
+    if (bUsermode)
+    {
+        Processor::saveAndJumpUser(bWasInterrupts, pCurrentThread->state(),
+                            &pCurrentThread->getLock().m_Atom.m_Atom,
+                            reinterpret_cast<uintptr_t>(pStartFunction),
+                            reinterpret_cast<uintptr_t>(pStack),
+                            reinterpret_cast<uintptr_t>(pParam));
+    }
+    else
+    {
+        Processor::saveAndJumpKernel(bWasInterrupts, pCurrentThread->state(),
+                              &pCurrentThread->getLock().m_Atom.m_Atom,
+                              reinterpret_cast<uintptr_t>(pStartFunction),
+                              reinterpret_cast<uintptr_t>(pStack),
+                              reinterpret_cast<uintptr_t>(pParam));
+    }
+#else // SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH
     if (Processor::saveState(pCurrentThread->state()))
     {
         // Just context-restored.
@@ -423,6 +455,7 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
                               reinterpret_cast<uintptr_t>(pStack),
                               reinterpret_cast<uintptr_t>(pParam));
     }
+#endif // SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH
 }
 
 void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
@@ -466,6 +499,18 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
     kStack -= sizeof(SyscallState);
     memcpy(reinterpret_cast<void*>(kStack), reinterpret_cast<void*>(&state), sizeof(SyscallState));
 
+#if defined(X64) || defined(HOSTED_X64)
+    // x64 breaks if we try and create a reference from the kStack variable.
+    SyscallState &newState = *reinterpret_cast<SyscallState *>(kStack);
+#else
+    SyscallState &newState = reinterpret_cast<SyscallState &>(kStack);
+#endif
+
+#ifdef SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH
+    pCurrentThread->getLock().unwind();
+    NOTICE("restoring (new) syscall state");
+    Processor::switchState(bWasInterrupts, pCurrentThread->state(), newState, &pCurrentThread->getLock().m_Atom.m_Atom);
+#else
     if (Processor::saveState(pCurrentThread->state()))
     {
         // Just context-restored.
@@ -474,11 +519,7 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
     }
 
     pCurrentThread->getLock().unwind();
-#if defined(X64) || defined(HOSTED_X64)
-    // x64 breaks if we try and create a reference from the kStack variable.
-    Processor::restoreState(*reinterpret_cast<SyscallState*>(kStack), &pCurrentThread->getLock().m_Atom.m_Atom);
-#else
-    Processor::restoreState(reinterpret_cast<SyscallState&>(kStack), &pCurrentThread->getLock().m_Atom.m_Atom);
+    Processor::restoreState(newState, &pCurrentThread->getLock().m_Atom.m_Atom);
 #endif
 }
 

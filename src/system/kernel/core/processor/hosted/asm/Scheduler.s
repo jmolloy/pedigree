@@ -15,9 +15,6 @@
 ; ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 ; OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-; void Processor::jumpKernel(volatile uintptr_t *, uintptr_t, uintptr_t,
-;                            uintptr_t, uintptr_t, uintptr_t, uintptr_t)
-global _ZN9Processor10jumpKernelEPVmmmmmmm
 ; void PerProcessorScheduler::deleteThreadThenRestoreState(Thread*, SchedulerState&)
 global _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR20HostedSchedulerState
 ; syscall entry method (at syscall entry address)
@@ -25,8 +22,6 @@ global syscall_enter
 ; void Processor::restoreState(volatile uintptr_t *, SyscallState &)
 global _ZN9Processor12restoreStateER18HostedSyscallStatePVm
 
-; void Thread::threadExited()
-extern _ZN6Thread12threadExitedEv
 ; void PerProcessorScheduler::deleteThread(Thread *)
 extern _ZN21PerProcessorScheduler12deleteThreadEP6Thread
 ; void Processor::restoreState(SchedulerState &, volatile uintptr_t *)
@@ -37,50 +32,11 @@ extern _ZN20HostedSyscallManager7syscallER18HostedSyscallState
 ; Processor::m_ProcessorInformation
 extern _ZN9Processor22m_ProcessorInformationE
 
-        
+; void *safe_stack_top
+global safe_stack_top
+
 [bits 64]
 [section .text]
-
-; [rsp+0x8] param3
-; [rsp+0x0] return address
-; [r9]     param2
-; [r8]     param1
-; [rcx]    param0
-; [rdx]    stack
-; [rsi]    address
-; [rdi]    Lock
-_ZN9Processor10jumpKernelEPVmmmmmmm:
-    ;; Load the lock pointer, address and stack to scratch registers.
-    mov     r10, rdi
-    mov     rax, rsi
-    mov     r12, rdx
-
-    ;; Load the parameters into regcall registers.
-    mov     rdi, rcx
-    mov     rsi, r8
-    mov     rdx, r9
-    mov     rcx, [rsp+8]
-
-    ;; Change stacks.
-    cmp     r12, 0
-    jz      .no_stack_change
-    mov     rsp, r12
-.no_stack_change:
-
-    ;; Stack changed, now we can unlock the old thread.
-    cmp     r10, 0
-    jz      .no_lock
-    ;; Release lock.
-    mov     qword [r10], 1
-.no_lock:
-
-    ;; Push return address.
-    mov     r10, _ZN6Thread12threadExitedEv
-    push    r10
-
-    ;; New stack frame.
-    xor     rbp, rbp
-    jmp     rax
 
 _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR20HostedSchedulerState:
     ; Load the state pointer
@@ -102,7 +58,41 @@ _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR20HostedSchedu
     ; Get out of here (no need to pass a lock).
     mov rdi, rcx
     xor rsi, rsi
-    jmp _ZN9Processor12restoreStateER20HostedSchedulerStatePVm 
+    jmp _ZN9Processor12restoreStateER20HostedSchedulerStatePVm
+
+; [rsi] Lock
+; [rdi] State pointer.
+_ZN9Processor12restoreStateER18HostedSyscallStatePVm:
+    ; The state pointer is on the current thread kernel stack, so change to it.
+    mov     rsp, rdi
+
+    ; Stack changed, now we can unlock the old thread.
+    cmp     rsi, 0
+    jz      .no_lock
+    ; Release lock.
+    mov     qword [rsi], 1
+.no_lock:
+
+    pop rdi
+    pop rsi
+    pop rcx
+    pop r8
+    pop r9
+    pop r10
+    pop r11
+
+    ; error value
+    pop rax
+    pop rdx
+    mov [rdx], rax
+
+    ; return value from syscall
+    pop rax
+
+    ; Bring back the old stack.
+    pop rsp
+    pop r12
+    ret
 
 [section .syscall exec]
 ; [rsp+0x10] p5
@@ -130,11 +120,11 @@ syscall_enter:
     mov rsp, [rax]
 
     ; Create the SyscallState
-    sub rsp, 8  ; align to 16-byte boundary
+    sub rsp, 8 ; align to 16-byte boundary
     push r12
-    push 0    ; result (return value)
-    push rdx  ; error pointer
-    push 0    ; error (to write into [rdx])
+    push 0     ; result (return value)
+    push rdx   ; error pointer
+    push 0     ; error (to write into [rdx])
     push r11
     push r10
     push r9
@@ -153,40 +143,6 @@ syscall_enter:
     pop r11
 
     ; error value (modified by syscall)
-    pop rax
-    pop rdx
-    mov [rdx], rax
-
-    ; return value from syscall
-    pop rax
-
-    ; Bring back the old stack.
-    pop rsp
-    pop r12
-    ret
-
-; [rsi] Lock
-; [rdi] State pointer.
-_ZN9Processor12restoreStateER18HostedSyscallStatePVm:
-    ; The state pointer is on the current thread kernel stack, so change to it.
-    mov     rsp, rdi
-
-    ; Stack changed, now we can unlock the old thread.
-    cmp     rsi, 0
-    jz      .no_lock
-    ; Release lock.
-    mov     qword [rsi], 1
-.no_lock:
-
-    pop rdi
-    pop rsi
-    pop rcx
-    pop r8
-    pop r9
-    pop r10
-    pop r11
-
-    ; error value
     pop rax
     pop rdx
     mov [rdx], rax
