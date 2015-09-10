@@ -43,6 +43,12 @@ using namespace __pedigree_hosted;
 #include <stdio.h>
 #include <fcntl.h>
 
+#define USE_BITMAP
+
+#ifdef USE_BITMAP
+uint32_t g_PageBitmap[16384] = {0};
+#endif
+
 HostedPhysicalMemoryManager HostedPhysicalMemoryManager::m_Instance;
 
 PhysicalMemoryManager &PhysicalMemoryManager::instance()
@@ -93,6 +99,11 @@ physical_uintptr_t HostedPhysicalMemoryManager::allocatePage()
     physical_uintptr_t ptr_bitmap = ptr / 0x1000;
     size_t idx = ptr_bitmap / 32;
     size_t bit = ptr_bitmap % 32;
+    if(g_PageBitmap[idx] & (1 << bit))
+    {
+        m_Lock.release();
+        FATAL_NOLOCK("PhysicalMemoryManager allocate()d a page twice");
+    }
     g_PageBitmap[idx] |= (1 << bit);
 #endif
     
