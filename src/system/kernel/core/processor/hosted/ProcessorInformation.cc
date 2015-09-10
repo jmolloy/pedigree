@@ -68,7 +68,11 @@ void HostedProcessorInformation::setKernelStack(uintptr_t stack)
             memset(&s, 0, sizeof(s));
             s.ss_sp = new_sp;
             s.ss_size = KERNEL_STACK_SIZE;
-            trickSigaltstack(stack, &s);
+            int r = sigaltstack(&s, 0);
+            if (r < 0 && errno == EPERM)
+            {
+                trickSigaltstack(stack, &s);
+            }
         }
 
     }
@@ -77,7 +81,11 @@ void HostedProcessorInformation::setKernelStack(uintptr_t stack)
         stack_t s;
         sigaltstack(0, &s);
         s.ss_flags |= SS_DISABLE;
-        trickSigaltstack(stack, &s);
+        int r = sigaltstack(&s, 0);
+        if (r < 0 && errno == EPERM)
+        {
+            trickSigaltstack(stack, &s);
+        }
     }
 
     m_KernelStack = stack;
