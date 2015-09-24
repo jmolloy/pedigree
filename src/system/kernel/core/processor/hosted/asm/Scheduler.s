@@ -84,7 +84,10 @@ _ZN9Processor12restoreStateER18HostedSyscallStatePVm:
     ; error value
     pop rax
     pop rdx
+    cmp rdx, 0
+    je .noerror
     mov [rdx], rax
+.noerror:
 
     ; return value from syscall
     pop rax
@@ -145,7 +148,10 @@ syscall_enter:
     ; error value (modified by syscall)
     pop rax
     pop rdx
+    cmp rdx, 0
+    je .noerror
     mov [rdx], rax
+.noerror:
 
     ; return value from syscall
     pop rax
