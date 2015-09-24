@@ -73,29 +73,7 @@ _ZN9Processor12restoreStateER18HostedSyscallStatePVm:
     mov     qword [rsi], 1
 .no_lock:
 
-    pop rdi
-    pop rsi
-    pop rcx
-    pop r8
-    pop r9
-    pop r10
-    pop r11
-
-    ; error value
-    pop rax
-    pop rdx
-    cmp rdx, 0
-    je .noerror
-    mov [rdx], rax
-.noerror:
-
-    ; return value from syscall
-    pop rax
-
-    ; Bring back the old stack.
-    pop rsp
-    pop r12
-    ret
+    jmp syscall_tail
 
 [section .syscall exec]
 ; [rsp+0x10] p5
@@ -112,8 +90,13 @@ syscall_enter:
     mov r10, [rsp + 8]  ; p4
     mov r11, [rsp + 16] ; p5
 
-    ; Preserve current stack.
+    ; Preserve callee-save registers, and the current stack.
+    push rbp
+    push rbx
     push r12
+    push r13
+    push r14
+    push r15
     mov r12, rsp
 
     ; Switch stacks (MUST be a kernel stack).
@@ -137,6 +120,7 @@ syscall_enter:
     push rdi
     mov rdi, rsp
     call _ZN20HostedSyscallManager7syscallER18HostedSyscallState
+syscall_tail:
     pop rdi
     pop rsi
     pop rcx
@@ -156,9 +140,14 @@ syscall_enter:
     ; return value from syscall
     pop rax
 
-    ; Bring back the old stack.
+    ; Bring back the old stack and callee-save registers.
     pop rsp
+    pop r15
+    pop r14
+    pop r13
     pop r12
+    pop rbx
+    pop rbp
     ret
 
 [section .bss]
