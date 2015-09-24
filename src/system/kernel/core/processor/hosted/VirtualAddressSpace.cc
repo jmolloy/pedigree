@@ -297,7 +297,7 @@ void HostedVirtualAddressSpace::unmap(void *virtualAddress) {
 }
 
 VirtualAddressSpace *HostedVirtualAddressSpace::clone() {
-  HostedVirtualAddressSpace *pNew = new HostedVirtualAddressSpace();
+  HostedVirtualAddressSpace *pNew = static_cast<HostedVirtualAddressSpace *>(VirtualAddressSpace::create());
 
   {
     LockGuard<Spinlock> guard(m_Lock);
@@ -332,6 +332,24 @@ VirtualAddressSpace *HostedVirtualAddressSpace::clone() {
       }
       mapping->flags &= ~Write;
     }
+  }
+
+  if(m_pStackTop < KERNEL_SPACE_START)
+  {
+      pNew->m_pStackTop = m_pStackTop;
+      for(Vector<void*>::Iterator it = m_freeStacks.begin();
+          it != m_freeStacks.end();
+          ++it)
+      {
+          pNew->m_freeStacks.pushBack(*it);
+      }
+  }
+
+  if(m_Heap < KERNEL_SPACE_START)
+  {
+      pNew->m_Heap = m_Heap;
+      pNew->m_HeapEnd = m_HeapEnd;
+      NOTICE("clone: heap=" << m_Heap << " end=" << m_HeapEnd);
   }
 
   return pNew;
