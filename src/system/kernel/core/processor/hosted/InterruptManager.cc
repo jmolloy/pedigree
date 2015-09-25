@@ -197,6 +197,14 @@ static void handler(int which, siginfo_t *info, void *ptr)
 
 void HostedInterruptManager::signalShim(int which, void *siginfo, void *meta)
 {
+    if(!Processor::getInterrupts())
+    {
+        if(which == SIGUSR1 || which == SIGUSR2)
+        {
+            FATAL_NOLOCK("interrupts disabled but interrupts are firing");
+        }
+    }
+
     siginfo_t *info = reinterpret_cast<siginfo_t *>(siginfo);
 
     InterruptState state;
@@ -205,6 +213,10 @@ void HostedInterruptManager::signalShim(int which, void *siginfo, void *meta)
     state.state = reinterpret_cast<uint64_t>(info->si_value.sival_ptr);
     state.meta = reinterpret_cast<uint64_t>(meta);
     interrupt(state);
+
+    // Update return signal mask.
+    ucontext_t *ctx = reinterpret_cast<ucontext_t*>(meta);
+    sigprocmask(0, 0, &ctx->uc_sigmask);
 }
 
 void HostedInterruptManager::initialiseProcessor()
@@ -216,8 +228,6 @@ void HostedInterruptManager::initialiseProcessor()
         memset(&act, 0, sizeof(act));
         act.sa_sigaction = handler;
         sigemptyset(&act.sa_mask);
-        sigaddset(&act.sa_mask, SIGUSR1);
-        sigaddset(&act.sa_mask, SIGUSR2);
         act.sa_flags = SA_SIGINFO | SA_ONSTACK | SA_NODEFER;
 
         sigaction(i, &act, 0);

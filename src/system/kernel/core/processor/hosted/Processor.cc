@@ -84,7 +84,7 @@ bool Processor::saveState(SchedulerState &state)
   ERROR("Processor::saveState is NOT safe on HOSTED builds.");
 
   sigjmp_buf _state;
-  if(sigsetjmp(_state, 1) == 1)
+  if(sigsetjmp(_state, 0) == 1)
     return true;
 
   memcpy(state.state, _state, sizeof(_state));
@@ -111,8 +111,9 @@ void Processor::jumpUser(volatile uintptr_t *pLock, uintptr_t address,
 void Processor::switchState(bool bInterrupts, SchedulerState &a, SchedulerState &b, volatile uintptr_t *pLock)
 {
   sigjmp_buf _state;
-  if(sigsetjmp(_state, 1) == 1)
+  if(sigsetjmp(_state, 0) == 1)
   {
+    if (bInterrupts) Processor::setInterrupts(true);
     return;
   }
 
@@ -123,7 +124,7 @@ void Processor::switchState(bool bInterrupts, SchedulerState &a, SchedulerState 
 void Processor::switchState(bool bInterrupts, SchedulerState &a, SyscallState &b, volatile uintptr_t *pLock)
 {
   sigjmp_buf _state;
-  if(sigsetjmp(_state, 1) == 1)
+  if(sigsetjmp(_state, 0) == 1)
   {
     if (bInterrupts) Processor::setInterrupts(true);
     return;
@@ -138,7 +139,7 @@ void Processor::saveAndJumpKernel(bool bInterrupts, SchedulerState &s, volatile 
                               uintptr_t p2, uintptr_t p3, uintptr_t p4)
 {
   sigjmp_buf _state;
-  if(sigsetjmp(_state, 1) == 1)
+  if(sigsetjmp(_state, 0) == 1)
   {
     if (bInterrupts) Processor::setInterrupts(true);
     return;
