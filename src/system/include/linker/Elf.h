@@ -404,6 +404,8 @@ class Elf
 
 #ifndef _NO_ELF_CLASS
     private:
+        template<typename T>
+        static T *elfCopy(uint8_t *, ElfProgramHeader_t *, size_t, T *, size_t);
 
         bool relocate(uint8_t *pBuffer, uintptr_t length);
         bool relocateModinfo(uint8_t *pBuffer, uintptr_t length);

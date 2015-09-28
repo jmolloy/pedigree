@@ -28,7 +28,7 @@
 
 /** Helper function: copies data into a new buffer given a certain number of bytes */
 template <typename T>
-T *copy(T *buff, size_t numBytes)
+static T *copy(T *buff, size_t numBytes)
 {
     T *ret = new T[numBytes / sizeof(T)];
     memcpy(ret, buff, numBytes);
@@ -38,7 +38,7 @@ T *copy(T *buff, size_t numBytes)
 /** Helper function: iterates through all program headers given to find where pCurrent resides, then copies that data into a new
     buffer and returns it.*/
 template<typename T>
-T *elfCopy(uint8_t *pBuffer, Elf::ElfProgramHeader_t *pProgramHeaders, size_t nProgramHeaders, T *pCurrent, size_t size)
+T *Elf::elfCopy(uint8_t *pBuffer, Elf::ElfProgramHeader_t *pProgramHeaders, size_t nProgramHeaders, T *pCurrent, size_t size)
 {
     for (size_t i = 0; i < nProgramHeaders; i++)
     {

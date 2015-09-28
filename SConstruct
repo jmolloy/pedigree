@@ -476,7 +476,7 @@ if env['ARCH_TARGET'] == 'ARM':
 warning_flag = '-Wno-error'
 if env['warnings']:
     warning_flag = '-Werror'
-env.MergeFlags({'CFLAGS': warning_flag})
+env.MergeFlags({'CCFLAGS': warning_flag})
 
 if env['memory_log']:
     defines.append('MEMORY_LOGGING_ENABLED')
@@ -616,6 +616,9 @@ if env['hosted']:
         'CCFLAGS': ['-fno-omit-frame-pointer', '-Wno-deprecated-declarations']
     })
 
+    if env['warnings']:
+        env.MergeFlags({'CCFLAGS': '-Werror'})
+
     # Not a PC.
     env['mach_pc'] = False
 
@@ -636,7 +639,7 @@ if env['hosted']:
     env['ARCH_TARGET'] = 'HOSTED'
 
     # Do we have clang?
-    if 0:
+    if env.Detect('clang') is not None:
         clang = env.Detect('clang')
         clangxx = env.Detect('clang++')
         if clang and clangxx:

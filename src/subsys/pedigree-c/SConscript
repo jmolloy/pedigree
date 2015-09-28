@@ -62,13 +62,13 @@ pedigree_c_objname = '%s.debug' % (pedigree_c_objname,)
 
 if "STATIC_DRIVERS" in env['CPPDEFINES']:
     env_clone.Program(pedigree_c_objname, kernel_module_files,
-        LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',
+        LINKFLAGS='-nostdlib -Wl,-r -Wl,-T,$LSCRIPT',
         LSCRIPT=File("#src/modules/link_static.ld"))
     env_clone.Command(final_output, pedigree_c_objname,
         action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
 else:
     env_clone.Program(pedigree_c_objname, kernel_module_files,
-        LINKFLAGS='-nostdlib -r -T $LSCRIPT',
+        LINKFLAGS='-nostdlib -Wl,-r -Wl,-T,$LSCRIPT',
         LSCRIPT=File("#src/modules/link.ld"))
     env_clone.Command(final_output, pedigree_c_objname,
         action="%s -d -o $TARGET $SOURCE" % env['STRIP'])

@@ -24,6 +24,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <assert.h>
 
 #include <elf.h>
 
@@ -33,6 +34,14 @@
 
 extern "C" void _main(BootstrapStruct_t &bs);
 
+static uint32_t ptr_to_u32(void *p)
+{
+    uintptr_t ptr = reinterpret_cast<uintptr_t>(p);
+    assert((ptr >> 32ULL) == 0);
+    return static_cast<uint32_t>(ptr) & 0xFFFFFFFFUL;
+}
+
+extern "C"
 int main(int argc, char *argv[])
 {
     struct stat st;
@@ -53,6 +62,9 @@ int main(int argc, char *argv[])
     size_t diskimage_length = 0;
     Elf64_Ehdr *ehdr = 0;
     Elf64_Shdr *shdrs = 0;
+    BootstrapStruct_t bs;
+    memset(&bs, 0, sizeof(bs));
+
     if(argc < 3)
     {
         fprintf(stderr, "Usage: kernel initrd config_database [diskimage]\n");
@@ -60,9 +72,6 @@ int main(int argc, char *argv[])
     }
 
     fprintf(stderr, "Pedigree is starting...\n");
-
-    BootstrapStruct_t bs;
-    memset(&bs, 0, sizeof(bs));
 
     // Load initrd and config database into RAM.
     initrd = open(argv[1], O_RDONLY);
@@ -139,14 +148,14 @@ int main(int argc, char *argv[])
     memset(module_region, 0, 0x1000);
 
     // initrd
-    module_region[0] = reinterpret_cast<uint32_t>(initrd_mapping);
-    module_region[1] = reinterpret_cast<uint32_t>(initrd_mapping) + initrd_length;
+    module_region[0] = ptr_to_u32(initrd_mapping);
+    module_region[1] = ptr_to_u32(initrd_mapping) + initrd_length;
 
     // config database
-    module_region[4] = reinterpret_cast<uint32_t>(configdb_mapping);
-    module_region[5] = reinterpret_cast<uint32_t>(configdb_mapping) + configdb_length;
+    module_region[4] = ptr_to_u32(configdb_mapping);
+    module_region[5] = ptr_to_u32(configdb_mapping) + configdb_length;
 
-    bs.mods_addr = reinterpret_cast<uint32_t>(module_region);
+    bs.mods_addr = ptr_to_u32(module_region);
     bs.mods_count = 2;
 
     if (argc > 3)
@@ -185,7 +194,7 @@ int main(int argc, char *argv[])
     bs.shndx = ehdr->e_shstrndx;
     bs.num = ehdr->e_shnum;
     bs.size = ehdr->e_shentsize;
-    bs.addr = reinterpret_cast<uint32_t>(kernel_mapping) + ehdr->e_shoff;
+    bs.addr = ptr_to_u32(kernel_mapping) + ehdr->e_shoff;
 
     // Fix up section headers with no addresses.
     shdrs = reinterpret_cast<Elf64_Shdr *>(bs.addr);

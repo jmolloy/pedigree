@@ -43,10 +43,13 @@
 
 #ifndef PPC_COMMON
 
+// Required to specify linkage of the 'main' symbol for the friend declaration.
+extern "C" int main(int argc, char *argv[]);
+
 class BootstrapStruct_t
 {
 #ifdef HOSTED
-    friend int main(int argc, char *argv[]);
+    friend int ::main(int argc, char *argv[]);
 #endif
 public:
     bool isInitrdLoaded() const;

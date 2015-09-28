@@ -284,7 +284,7 @@ bool dhcpClient(Network *pCard)
 
         // Throw into the send buffer and send it out
         // memcpy(buff, &dhcp, sizeof(dhcp));
-        bool success = e->send((sizeof(dhcp) - sizeof(DhcpPacket::options)) + byteOffset, reinterpret_cast<uintptr_t>(&dhcp), remoteHost, true, pCard) >= 0;
+        bool success = e->send((sizeof(dhcp) - sizeof(MAX_OPTIONS_SIZE)) + byteOffset, reinterpret_cast<uintptr_t>(&dhcp), remoteHost, true, pCard) >= 0;
         if(!success)
         {
             WARNING("DHCP: Couldn't send DHCP DISCOVER packet on an interface!");

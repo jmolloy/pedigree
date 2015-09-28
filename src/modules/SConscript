@@ -297,11 +297,11 @@ def buildModule(env, path, outputBase, targetAlias):
         # No need for a stripped module: they get linked into the kernel,
         # which then gets stripped itself.
         module_env.Program(final_output, files,
-            LINKFLAGS='-nostdlib -Wl,-r -T$LSCRIPT',
+            LINKFLAGS='-nostdlib -Wl,-r -Wl,-T,$LSCRIPT',
             LSCRIPT=File("#src/modules/link_static.ld"))
     else:
         module_env.Program(unstripped_temporary, files,
-            LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',
+            LINKFLAGS='-nostdlib -Wl,-r -Wl,-T,$LSCRIPT',
             LSCRIPT=File("#src/modules/link.ld"))
         module_env.Command(final_output, unstripped_temporary,
             action="%s -d -o $TARGET $SOURCE" % env['STRIP'])

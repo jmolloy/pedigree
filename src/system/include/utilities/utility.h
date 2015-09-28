@@ -27,6 +27,11 @@
 #include <processor/PhysicalMemoryManager.h>  // getPageSize()
 #endif
 
+#ifdef HOSTED
+// Override headers we are replacing.
+#define _STRING_H 1
+#endif
+
 /** @addtogroup kernelutilities
  * @{ */
 

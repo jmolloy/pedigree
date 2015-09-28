@@ -58,7 +58,7 @@ else:
     env_clone['LSCRIPT'] = File("#src/modules/link.ld")
 
 env_clone.Program(native_userlib_objname, files,
-                  LINKFLAGS='-nostdlib -r -T $LSCRIPT')
+                  LINKFLAGS='-nostdlib -Wl,-r -Wl,-T,$LSCRIPT')
 env_clone.Command(final_output, native_userlib_objname,
                   action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
 
