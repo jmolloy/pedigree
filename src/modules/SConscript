@@ -111,6 +111,16 @@ elif env['ARCH_TARGET'] == 'ARM':
     driver_common_subdirs = [x for x in driver_common_subdirs
                              if x not in ['ata', 'dma', 'cdi', 'nvidia', '3c90x']]
     cdi_drivers = []
+elif env['ARCH_TARGET'] == 'HOSTED':
+    driver_arch = 'hosted'
+    driver_arch_subdirs = [
+        'diskimage',
+    ]
+
+    # Filter out useless drivers for HOSTED
+    driver_common_subdirs = [x for x in driver_common_subdirs
+                             if x in ['loopback', 'partition', 'scsi']]
+    cdi_drivers = []
 
 env['cdi_driver_list'] = cdi_drivers
 
@@ -143,6 +153,8 @@ else:
     module_subdirs += ['init']
 
 if env['ARCH_TARGET'] == 'ARM':
+    module_subdirs = [x for x in module_subdirs if x not in ['splash', 'TUI']]
+elif env['hosted']:
     module_subdirs = [x for x in module_subdirs if x not in ['splash', 'TUI']]
 
 # No difference yet, load all modules
@@ -193,6 +205,8 @@ elif env['ARCH_TARGET'] == 'ARM':
     arch_subdir = 'arm'
 elif env['ARCH_TARGET'] == 'PPC':
     arch_subdir = 'ppc'
+elif env['ARCH_TARGET'] == 'HOSTED':
+    arch_subdir = 'hosted'
 else:
     arch_subdir = 'unknown'
 
@@ -212,6 +226,9 @@ custom_subdirs = {
 custom_files = {
     'linker'        : [os.path.join(arch_subdir, 'asm-' + arch_subdir + '.s')]
 }
+
+if env['hosted']:
+    custom_files['linker'] = []
 
 # Custom include paths for specific modules
 custom_incpath = {
@@ -285,11 +302,11 @@ def buildModule(env, path, outputBase, targetAlias):
         # No need for a stripped module: they get linked into the kernel,
         # which then gets stripped itself.
         module_env.Program(final_output, files,
-            LINKFLAGS='-nostdlib -Wl,-r -T$LSCRIPT',
+            LINKFLAGS='-nostdlib -Wl,-r -Wl,-T,$LSCRIPT',
             LSCRIPT=File("#src/modules/link_static.ld"))
     else:
         module_env.Program(unstripped_temporary, files,
-            LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',
+            LINKFLAGS='-nostdlib -Wl,-r -Wl,-T,$LSCRIPT',
             LSCRIPT=File("#src/modules/link.ld"))
         module_env.Command(final_output, unstripped_temporary,
             action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
@@ -348,7 +365,7 @@ initrdList += [os.path.join(builddir.abspath, 'modules', i + '.o') for i in init
 # Subsystems
 initrdList += [os.path.join(builddir.abspath, 'subsystems', 'posix.o')]
 initrdList += [os.path.join(builddir.abspath, 'subsystems', 'pedigree-c.o')]
-if env['ARCH_TARGET'] in ('X86', 'X64', 'ARM'):
+if env['ARCH_TARGET'] in ('X86', 'X64', 'ARM', 'HOSTED'):
     initrdList += [os.path.join(builddir.abspath, 'subsystems', 'native.o')]
 
 env.Depends(initrdFile, "drivers")

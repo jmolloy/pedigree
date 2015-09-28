@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,6 +22,15 @@
 
 #include <stdarg.h>
 #include <processor/types.h>
+
+#ifdef __cplusplus
+#include <processor/PhysicalMemoryManager.h>  // getPageSize()
+#endif
+
+#ifdef HOSTED
+// Override headers we are replacing.
+#define _STRING_H 1
+#endif
 
 /** @addtogroup kernelutilities
  * @{ */
@@ -143,12 +151,26 @@ inline char toLower(char c)
     return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(pointer) + offset);
   }
 
+  /** Page-align the given pointer. */
+  template<typename T>
+  inline T *page_align(T *p)
+  {
+    return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(p) & ~(PhysicalMemoryManager::getPageSize() -1 ));
+  }
+
   template<typename T>
   inline void swap(T a, T b)
   {
       T t = a;
       a = b;
       b = t;
+  }
+
+  /** Return b - a. */
+  template<typename T1, typename T2>
+  inline intptr_t pointer_diff(T1 *a, T2 *b)
+  {
+    return reinterpret_cast<uintptr_t>(b) - reinterpret_cast<uintptr_t>(a);
   }
 
   inline uint8_t checksum(const uint8_t *pMemory, size_t sMemory)

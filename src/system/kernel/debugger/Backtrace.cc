@@ -49,7 +49,7 @@ void Backtrace::performBacktrace(InterruptState &state)
   // Can we perform a "normal", base-pointer-linked-list backtrace?
   // Don't lock on the log - we may have hit a backtrace because the Log lock deadlocked
   WARNING_NOLOCK("Dwarf backtracing not available.");
-#if defined(X86_COMMON)
+#if defined(X86_COMMON) || defined(HOSTED)
   performBpBacktrace(state.getBasePointer(), state.getInstructionPointer());
 #elif defined(ARM_COMMON)
   performArmBacktrace(state.getBasePointer(), state.getInstructionPointer());
@@ -104,15 +104,24 @@ void Backtrace::performBpBacktrace(uintptr_t base, uintptr_t instruction)
             Processor::information().getVirtualAddressSpace().isMapped(reinterpret_cast<void*>(base+sizeof(uintptr_t))))
         {
             uintptr_t nextAddress = *reinterpret_cast<uintptr_t *>(base);
-            if (nextAddress == 0) break;
-            m_pReturnAddresses[i] = *reinterpret_cast<uintptr_t *>(base+sizeof(uintptr_t));
+
+            m_pReturnAddresses[i] = *reinterpret_cast<uintptr_t *>(base + sizeof(uintptr_t));
             m_pBasePointers[i] = nextAddress;
+
             base = nextAddress;
+
             m_pStates[i].setBasePointer(m_pBasePointers[i]);
             m_pStates[i].setInstructionPointer(m_pReturnAddresses[i]);
+
             i++;
+
+            if (nextAddress == 0) break;
         }
-        else break;
+        else
+        {
+          NOTICE("not mapped: " << base);
+          break;
+        }
     }
   
     m_nStackFrames = i;

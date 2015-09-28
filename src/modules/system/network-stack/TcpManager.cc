@@ -376,6 +376,8 @@ Endpoint* TcpManager::getEndpoint(uint16_t localPort, Network* pCard)
 {
     if(!pCard)
         pCard = RoutingTable::instance().DefaultRoute();
+    if(!pCard)
+        return 0;
 
     Endpoint* e;
 

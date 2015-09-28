@@ -117,7 +117,7 @@ struct ModuleInfo
 };
 
 #define MODULE_INFO2(name, entry, exit, ...) \
-    static const char *__mod_deps[] = {__VA_ARGS__}; \
+    static const char *__mod_deps[] = {__VA_ARGS__, 0}; \
     static ModuleInfo __module __attribute__((section(".modinfo"))) (name, entry, exit, __mod_deps);
 
 #else

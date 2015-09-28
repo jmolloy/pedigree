@@ -24,21 +24,26 @@ import os
 from buildutils import fs, db
 from buildutils.diskimages import build
 
-Import(['env'])
+Import(['env', 'userspace_env'])
 
-SConscript(os.path.join('src', 'subsys', 'posix', 'SConscript'), exports=['env'])
-SConscript(os.path.join('src', 'subsys', 'pedigree-c', 'SConscript'), exports=['env'])
+SConscript(os.path.join('src', 'subsys', 'posix', 'SConscript'),
+           exports=['env', 'userspace_env'])
+SConscript(os.path.join('src', 'subsys', 'pedigree-c', 'SConscript'),
+           exports=['env', 'userspace_env'])
 
-if env['ARCH_TARGET'] in ['X86', 'X64', 'ARM']:
-    SConscript(os.path.join('src', 'subsys', 'native', 'SConscript'), exports=['env'])
+if env['ARCH_TARGET'] in ['X86', 'X64', 'ARM', 'HOSTED']:
+    SConscript(os.path.join('src', 'subsys', 'native', 'SConscript'),
+               exports=['env', 'userspace_env'])
 
 SConscript(os.path.join('src', 'modules', 'SConscript'), exports=['env'])
 SConscript(os.path.join('src', 'system', 'kernel', 'SConscript'), exports=['env'])
 
 # On X86, X64 and PPC we build applications and LGPL libraries
-if env['ARCH_TARGET'] in ['X86', 'X64']:  # , 'PPC']:
-    SConscript(os.path.join('src', 'user', 'SConscript'), exports=['env'])
-    SConscript(os.path.join('src', 'lgpl', 'SConscript'), exports=['env'])
+if env['ARCH_TARGET'] in ['X86', 'X64', 'HOSTED']:  # 'PPC'
+    SConscript(os.path.join('src', 'user', 'SConscript'),
+               exports=['env', 'userspace_env'])
+    SConscript(os.path.join('src', 'lgpl', 'SConscript'),
+               exports=['env', 'userspace_env'])
 
 if not env['ARCH_TARGET'] in ['X86', 'X64']:
     SConscript(os.path.join('src', 'system', 'boot', 'SConscript'), exports=['env'])

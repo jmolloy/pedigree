@@ -111,7 +111,9 @@ opts.AddVariables(
 
     BoolVariable('arm_bigendian', 'Is this ARM target big-endian?', 0),
 
-    BoolVariable('linux', 'Is this build to run on Linux?', 0),
+    BoolVariable('hosted', 'Is this build to run on another host OS?', 0),
+
+    BoolVariable('kernel_on_disk', 'Put the kernel & needed bits onto hard disk images?', 1),
     
     ('uimage_target', 'Where to copy the generated uImage.bin file to.', '~'),
 )
@@ -319,6 +321,7 @@ if env['CROSS'] or env['ON_PEDIGREE']:
 
     # Reset the compiler version as needed.
     # XXX: nasty hack, but older SCons doesn't allow a CC override.
+    SCons.Tool.gcc.preserved_compilers = SCons.Tool.gcc.compilers
     SCons.Tool.gcc.compilers = [tools['gcc']]
     env.Tool('gcc')
 
@@ -341,8 +344,24 @@ if env['CROSS'] or env['ON_PEDIGREE']:
     env['STRIP'] = tools['strip']
     env['OBJCOPY'] = tools['objcopy']
 
+    userspace_env = env
+elif not env['hosted']:
+    raise SCons.Errors.UserError('No cross-compiler specified and not on '
+        'Pedigree, and not building a hosted system. Check flags and try '
+        'again.')
+
+if env['hosted']:
+    # Do we have a userspace environment?
+    try:
+        _ = userspace_env
+    except NameError:
+        raise SCons.Errors.UserError('Hosted builds still require a '
+            'cross-compiler to build userspace components.')
+
+    # We fix tools later in SConstruct.
+
 if env['ON_PEDIGREE'] or env['COMPILER_TARGET']:
-    if env['ON_PEDIGREE']:
+    if env['ON_PEDIGREE'] or env['hosted']:
         host_arch = env['HOST_PLATFORM']
     else:
         host_arch = env['COMPILER_TARGET']
@@ -419,6 +438,7 @@ if env['ON_PEDIGREE'] or env['COMPILER_TARGET']:
         defines = default_defines[flags_arch] + extra_defines
 
         env.MergeFlags(mapping)
+        userspace_env.MergeFlags(mapping)
     else:
         defines = generic_defines
 
@@ -450,17 +470,6 @@ if env['ARCH_TARGET'] in ('X86', 'X64'):
 if env['AS'] is None:
     raise SCons.Errors.UserError('No assembler was found - make sure nasm/as are installed.')
 
-# Handle extra debugging components.
-if env['debugger']:
-    # Build in debugging information when built with the debugger.
-    # Use DWARF, as the stabs format is not very useful (32 bits of reloc)
-    debug_flags = {'CCFLAGS': ['-g3', '-ggdb', '-gdwarf-2']}
-    env.MergeFlags(debug_flags)
-
-    if 'nasm' not in env['AS']:
-        debug_flags = {'ASFLAGS': debug_flags['CCFLAGS']}
-        env.MergeFlags(debug_flags)
-
 # No ISO images for ARM.
 if env['ARCH_TARGET'] == 'ARM':
     env['noiso'] = True
@@ -468,19 +477,33 @@ if env['ARCH_TARGET'] == 'ARM':
 # Add optional flags.
 warning_flag = ['-Wno-error']
 if env['warnings']:
-    warning_flag = ['-Werror']
-env.MergeFlags({'CFLAGS': warning_flag})
+    warning_flag = '-Werror'
+env.MergeFlags({'CCFLAGS': warning_flag})
 
 if env['memory_log']:
     defines.append('MEMORY_LOGGING_ENABLED')
 
-if env['linux']:
-    # TODO(miselin): do this better.
-    defines = [x for x in defines if x not in ["X86_COMMON"]]
+def fixDebugFlags(environment):
+    # Handle extra debugging components.
+    if not environment['debugger']:
+        return
 
-additionalDefines = ['ipv4_forwarding', 'serial_is_file', 'installer', 'debugger', 'cripple_hdd', 'enable_ctrlc',
-                     'multiple_consoles', 'multiprocessor', 'smp', 'apic', 'acpi', 'debug_logging', 'superdebug', 'usb_verbose_debug',
-                     'nogfx', 'mach_pc', 'memory_tracing', 'memory_log_inline', 'travis', 'linux']
+    # Build in debugging information when built with the debugger.
+    # Use DWARF, as the stabs format is not very useful (32 bits of reloc)
+    debug_flags = {'CCFLAGS': ['-g3', '-ggdb', '-gdwarf-2']}
+    environment.MergeFlags(debug_flags)
+
+    if 'nasm' not in environment['AS']:
+        debug_flags = {'ASFLAGS': debug_flags['CCFLAGS']}
+        environment.MergeFlags(debug_flags)
+fixDebugFlags(env)
+
+additionalDefines = ['ipv4_forwarding', 'serial_is_file', 'installer',
+                     'debugger', 'cripple_hdd', 'enable_ctrlc',
+                     'multiple_consoles', 'multiprocessor', 'smp', 'apic',
+                     'acpi', 'debug_logging', 'superdebug', 'nogfx', 'mach_pc',
+                     'usb_verbose_debug', 'memory_tracing', 'travis', 'hosted',
+                     'memory_log_inline']
 for i in additionalDefines:
     if i not in env:
         continue
@@ -562,6 +585,72 @@ def create_version_cc(target, source, env):
     
 env.Command(os.path.join(env['PEDIGREE_BUILD_BASE'], 'Version.cc'), None, Action(create_version_cc, None))
 
+if env['hosted']:
+    userspace_env = env.Clone()
+
+    # Fix tools to use host.
+    SCons.Tool.gcc.compilers = SCons.Tool.gcc.preserved_compilers
+    for hosted_tool in reversed(tools_to_find):
+        env.Tool(hosted_tool)
+
+    env['COMPILER_TARGET'] = 'HOSTED'
+
+    removal_defines = ('X86', 'X64', 'X86_COMMON')
+    env['CPPDEFINES'] = [x for x in env['CPPDEFINES'] if x not in removal_defines]
+    env['CPPDEFINES'] += ['__pedigree__']
+
+    # Copy across userspace defines as HOSTED_*
+    env['CPPDEFINES'] += ['HOSTED_%s' % x for x in userspace_env['CPPDEFINES']]
+
+    # setjmp/longjmp context switching - we can't return from the function
+    # calling setjmp without invoking undefined behaviour.
+    env['CPPDEFINES'] += ['SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH']
+
+    # Reset flags.
+    env['CCFLAGS'] = generic_flags + warning_flags + ['-U_FORTIFY_SOURCE',
+                                                      '-U__linux__']
+    env['CFLAGS'] = generic_cflags + warning_flags_c
+    env['CXXFLAGS'] = generic_cxxflags + warning_flags_cxx
+    env['LINKFLAGS'] = []
+
+    # Don't omit frame pointers for debugging.
+    env.MergeFlags({
+        'CCFLAGS': ['-fno-omit-frame-pointer', '-Wno-deprecated-declarations']
+    })
+
+    if env['warnings']:
+        env.MergeFlags({'CCFLAGS': '-Werror'})
+
+    # Not a PC.
+    env['mach_pc'] = False
+
+    # Don't build an ISO, but disk images are okay. Don't put kernel on the
+    # disk, as we only want to rebuild it if the files change.
+    env['kernel_on_disk'] = False
+    env['noiso'] = True
+
+    # Fix tar flags to not build compressed tarballs.
+    env['TAR_NOCOMPRESS'] = True
+
+    # Fix assembler config.
+    if env['ARCH_TARGET'] in ('X86', 'X64'):
+        env['AS'] = env.Detect('nasm')
+    env['ASFLAGS'] = userspace_env['ASFLAGS']
+
+    # Now ditch any ARCH_TARGET-related hooks - we don't need it anymore.
+    env['ARCH_TARGET'] = 'HOSTED'
+
+    # Do we have clang?
+    if env.Detect('clang') is not None:
+        clang = env.Detect('clang')
+        clangxx = env.Detect('clang++')
+        if clang and clangxx:
+            env['CC'] = clang
+            env['CXX'] = clangxx
+            env['LINK'] = clang
+
+    fixDebugFlags(env)
+
 # Override CXX if needed.
 if env['iwyu']:
     # Make sure IWYU is fully freestanding and only refers to our headers.
@@ -585,11 +674,14 @@ if env['cache']:
 
 # Make build messages much prettier.
 misc.prettifyBuildMessages(env)
+misc.prettifyBuildMessages(userspace_env)
 
 # Generate custom builders and add to environment.
 misc.generate(env)
+misc.generate(userspace_env)
 
-SConscript('SConscript', variant_dir=env['BUILDDIR'], exports=['env'], duplicate=0)
+SConscript('SConscript', variant_dir=env['BUILDDIR'],
+           exports=['env', 'userspace_env'], duplicate=0)
 
 print
 print "**** This build of Pedigree (at rev %s, for %s, by %s) started at %s ****" % (env['PEDIGREE_REVISION'], env['ARCH_TARGET'], env['PEDIGREE_USER'], datetime.today())

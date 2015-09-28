@@ -29,6 +29,9 @@
 #define __MOD_DEPS 0
 #elif ARM_COMMON
 #define __MOD_DEPS 0
+#elif HOSTED
+/// \todo probably want some sort of SDL thing here.
+#define __MOD_DEPS 0
 #endif
 MODULE_INFO("gfx-deps", 0, 0, __MOD_DEPS);
 #ifdef __MOD_DEPS_OPT

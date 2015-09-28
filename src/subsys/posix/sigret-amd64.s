@@ -16,6 +16,7 @@
 ; OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 [bits 64]
+[section .text]
 
 [GLOBAL sigret_stub]
 [GLOBAL sigret_stub_end]

@@ -70,6 +70,7 @@ int preloadThread(void *p)
 
 static bool init()
 {
+    return false;
     size_t n = 0;
     const char *s = g_FilesToPreload[n++];
     do

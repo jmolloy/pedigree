@@ -63,7 +63,7 @@ for library in libs:
     library_env = env_clone.Clone()
     
     # Determine the subsystem and include directories for this library
-    incpath = []
+    incpath = base_include_dirs[:]
     s = subsys[library]
     if s == 'native':
         cpp_base = '#/images/local/support/gcc/include/c++/%s' % (env['CCVERSION'],)

@@ -23,22 +23,27 @@
 // If you change this, ensure you change src/system/include/processor/Syscalls.h !
 #define NATIVE_SYSCALL_SERVICE 3
 
-#ifdef X86
+#if defined(HOSTED) && !defined(SYSCALL_TARGET_FOUND)
+#include "native-syscall-hosted.h"
+#define SYSCALL_TARGET_FOUND
+#endif
+
+#if defined(X86) && !defined(SYSCALL_TARGET_FOUND)
 #include "native-syscall-i686.h"
 #define SYSCALL_TARGET_FOUND
 #endif
 
-#ifdef X64
+#if defined(X64) && !defined(SYSCALL_TARGET_FOUND)
 #include "native-syscall-amd64.h"
 #define SYSCALL_TARGET_FOUND
 #endif
 
-#ifdef PPC_COMMON
+#if defined(PPC_COMMON) && !defined(SYSCALL_TARGET_FOUND)
 #include "native-syscall-ppc.h"
 #define SYSCALL_TARGET_FOUND
 #endif
 
-#ifdef ARM_COMMON
+#if defined(ARM_COMMON) && !defined(SYSCALL_TARGET_FOUND)
 #include "native-syscall-arm.h"
 #define SYSCALL_TARGET_FOUND
 #endif

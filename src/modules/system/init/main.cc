@@ -173,6 +173,7 @@ static bool init()
     if(VFS::instance().find(String("root»/.pedigree-root")) == 0)
     {
         FATAL("No root disk (missing .pedigree-root?)");
+        return false;
     }
 
     // Fill out the device hash table
@@ -375,14 +376,6 @@ void init_stage2()
         FATAL("Init program failed to load!");
     }
 
-    for (int j = 0; j < 0x21000; j += 0x1000)
-    {
-        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-        bool b = Processor::information().getVirtualAddressSpace().map(phys, reinterpret_cast<void*> (j+0x20000000), VirtualAddressSpace::Write);
-        if (!b)
-            WARNING("map() failed in init");
-    }
-
     // Initialise the sigret and pthreads shizzle.
     pedigree_init_sigret();
     pedigree_init_pthreads();
@@ -438,12 +431,24 @@ void init_stage2()
         }
     }
 
-    uintptr_t *argv_loc = reinterpret_cast<uintptr_t *>(0x20020000);
-    memset(argv_loc, 0, PhysicalMemoryManager::instance().getPageSize());
-    argv_loc[0] = reinterpret_cast<uintptr_t>(&argv_loc[2]);
-    memcpy(&argv_loc[2], static_cast<const char *>(fname), fname.length());
+    // can we get some space for the argv loc
+    uintptr_t argv_loc;
+    if (pProcess->getAddressSpace()->getDynamicStart())
+    {
+        pProcess->getDynamicSpaceAllocator().allocate(PhysicalMemoryManager::instance().getPageSize(), argv_loc);
+    }
+    if (!argv_loc)
+    {
+        pProcess->getSpaceAllocator().allocate(PhysicalMemoryManager::instance().getPageSize(), argv_loc);
+    }
 
-    uintptr_t *env_loc = reinterpret_cast<uintptr_t *>(0x20020400);
+    physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+    Processor::information().getVirtualAddressSpace().map(phys, reinterpret_cast<void*> (argv_loc), VirtualAddressSpace::Write);
+
+    uintptr_t *argv = reinterpret_cast<uintptr_t*>(argv_loc);
+    memset(argv, 0, PhysicalMemoryManager::instance().getPageSize());
+    argv[0] = reinterpret_cast<uintptr_t>(&argv[2]);
+    memcpy(&argv[2], static_cast<const char *>(fname), fname.length());
 
     void *stack = Processor::information().getVirtualAddressSpace().allocateStack();
 
@@ -463,7 +468,7 @@ void init_stage2()
     Thread *pThread = new Thread(
             pProcess,
             reinterpret_cast<Thread::ThreadStartFunc>(entryPoint),
-            argv_loc /* parameter */,
+            argv /* parameter */,
             stack /* Stack */);
     pThread->detach();
 
@@ -478,6 +483,8 @@ void init_stage2()
 #define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "TUI", "linker", "network-stack", "users", "pedigree-c", "native"
 #elif ARM_COMMON
 #define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "linker", "network-stack", "users", "pedigree-c", "native"
+#elif defined(HOSTED)
+#define __MOD_DEPS "vfs", "ext2", "fat", "partition", "network-stack", "users", "pedigree-c", "native", "posix"
 #endif
 MODULE_INFO("init", &init, &destroy, __MOD_DEPS);
 #ifdef __MOD_DEPS_OPT

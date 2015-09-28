@@ -37,7 +37,7 @@ def buildDiskImages(env, config_database):
     hddimg = os.path.join(builddir, 'hdd.img')
     cdimg = os.path.join(builddir, 'pedigree.iso')
 
-    if (not env['ARCH_TARGET'] in ['X86', 'X64', 'PPC', 'ARM'] or
+    if (not env['ARCH_TARGET'] in ['X86', 'X64', 'PPC', 'ARM', 'HOSTED'] or
             not (env['distdir'] or not env['nodiskimages'])):
         print 'No hard disk image being built.'
         return
@@ -101,10 +101,11 @@ def buildDiskImages(env, config_database):
         buildImage = mtools.buildImageMtools
 
     # /boot directory
-    if 'STATIC_DRIVERS' in env['CPPDEFINES']:
-        fileList += [kernel, config_database]
-    else:
-        fileList += [kernel, initrd, config_database]
+    if env['kernel_on_disk']:
+        if 'STATIC_DRIVERS' in env['CPPDEFINES']:
+            fileList += [kernel, config_database]
+        else:
+            fileList += [kernel, initrd, config_database]
 
     # Add directories in the images directory.
     for entry in os.listdir(imagedir):

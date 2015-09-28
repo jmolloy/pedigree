@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -44,6 +43,9 @@
 #elif defined(ARMV7)
   #include <processor/armv7/StackFrame.h>
   #define PROCESSOR_SPECIFIC_NAME(x) ARMV7##x
+#elif defined(HOSTED)
+  #include <processor/hosted/StackFrame.h>
+  #define PROCESSOR_SPECIFIC_NAME(x) Hosted##x
 #endif
 
 // NOTE: This throws a compile-time error if this header is not adapted for

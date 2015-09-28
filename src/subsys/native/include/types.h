@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -24,22 +23,22 @@
 #ifndef NATIVE_TYPES_H
 #define NATIVE_TYPES_H
 
-#if defined(X86)
+#if defined(X86) || defined(HOSTED_X86)
   #include <x86/types.h>
   #define PROCESSOR_SPECIFIC_NAME(x) X86##x
-#elif defined(X64)
+#elif defined(X64) || defined(HOSTED_X64)
   #include <x64/types.h>
   #define PROCESSOR_SPECIFIC_NAME(x) X64##x
-#elif defined(MIPS32)
+#elif defined(MIPS32) || defined(HOSTED_MIPS32)
   #include <mips32/types.h>
   #define PROCESSOR_SPECIFIC_NAME(x) MIPS32##x
-#elif defined(MIPS64)
+#elif defined(MIPS64) || defined(HOSTED_MIPS64)
   #include <mips64/types.h>
   #define PROCESSOR_SPECIFIC_NAME(x) MIPS64##x
-#elif defined(ARM_COMMON)
+#elif defined(ARM_COMMON) || defined(HOSTED_ARM_COMMON)
   #include <arm_common/types.h>
   #define PROCESSOR_SPECIFIC_NAME(x) ARM##x
-#elif defined(PPC32)
+#elif defined(PPC32) || defined(HOSTED_PPC32)
   #include <ppc32/types.h>
   #define PROCESSOR_SPECIFIC_NAME(x) PPC32##x
 #endif

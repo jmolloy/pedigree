@@ -56,7 +56,7 @@ bool Spinlock::acquire()
   while (m_Atom.compareAndSwap(true, false) == false)
   {
     // Couldn't take the lock - can we re-enter the critical section?
-    if (m_pOwner == pThread)
+    if (m_bOwned && (m_pOwner == pThread))
     {
       // Yes.
       ++m_Level;
@@ -87,9 +87,10 @@ bool Spinlock::acquire()
       g_LocksCommand.lockAcquired(this);
 #endif
 
-  if (!m_pOwner)
+  if (!m_bOwned)
   {
     m_pOwner = static_cast<void *>(pThread);
+    m_bOwned = true;
     m_Level = 1;
   }
 
@@ -122,6 +123,7 @@ void Spinlock::exit()
   }
 
   m_pOwner = 0;
+  m_bOwned = false;
 
   if (m_Atom.compareAndSwap(false, true) == false)
   {
@@ -161,5 +163,6 @@ void Spinlock::unwind()
 {
   // We're about to be forcefully unlocked, so we must unwind entirely.
   m_Level = 0;
+  m_bOwned = false;
   m_pOwner = 0;
 }

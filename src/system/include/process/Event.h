@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -31,7 +30,7 @@
     After this, the process will be terminated. */
 #define MAX_NESTED_EVENTS 16
 
-#if defined(X86) || defined(X64) || defined(PPC32)
+#if defined(X86) || defined(X64) || defined(PPC32) || defined(HOSTED)
   #define EVENT_BASE                0x80000000
 #elif defined(ARMV7)
   #define EVENT_BASE                0xF0000000

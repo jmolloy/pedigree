@@ -139,6 +139,12 @@
 
 #include <SlamAllocator.h>
 
+#ifdef HOSTED
+namespace __pedigree_hosted {}; // In case it's not defined.
+using namespace __pedigree_hosted;
+#include <stdio.h>
+#endif
+
 void apmm()
 {
 }
@@ -230,7 +236,7 @@ int loadModules(void *inf)
     Archive initrd(bsInf.getInitrdAddress(), bsInf.getInitrdSize());
     
     size_t nFiles = initrd.getNumFiles();
-    g_BootProgressTotal = nFiles*2; // Each file has to be preloaded and executed.
+    g_BootProgressTotal = nFiles * 2; // Each file has to be preloaded and executed.
     for (size_t i = 0; i < nFiles; i++)
     {
         Processor::setInterrupts(true);
@@ -253,6 +259,10 @@ int loadModules(void *inf)
     {
       FATAL("At least one module's dependencies were never met.");
     }
+
+#ifdef HOSTED
+    fprintf(stderr, "Pedigree has started: all modules have been loaded.\n");
+#endif
 
     return 0;
 }
@@ -417,5 +427,7 @@ void system_reset()
 {
     NOTICE("Resetting...");
     KernelElf::instance().unloadModules();
+    NOTICE("All modules unloaded. Running destructors and terminating...");
+    runKernelDestructors();
     Processor::reset();
 }

@@ -38,11 +38,11 @@ if [ ! -e $script_dir/.easy_os ]; then
         debian)
             # TODO: Not sure if the package list is any different for debian vs ubuntu?
             echo "Installing packages with apt-get, please wait..."
-            sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage
+            sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage nasm
             ;;
         ubuntu)
             echo "Installing packages with apt-get, please wait..."
-            sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage
+            sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage nasm
             ;;
         opensuse)
             echo "Installing packages with zypper, please wait..."
@@ -135,10 +135,8 @@ if [ -z "$changed" ]; then
     git pull --rebase > /dev/null 2>&1
 fi
 
-set -e
-
 # Run a quick build of libc and libm for the rest of the build system.
-scons CROSS=$script_dir/compilers/dir/bin/x86_64-pedigree- build/libc.so build/libm.so
+scons hosted=1 CROSS=$script_dir/compilers/dir/bin/x86_64-pedigree- build/libc.so build/libm.so
 
 # Pull down libtool.
 echo
@@ -188,6 +186,11 @@ $script_dir/run_pup.py install mesa
 $script_dir/run_pup.py install ncurses
 $script_dir/run_pup.py install gettext
 
+$script_dir/run_pup.py install pango
+$script_dir/run_pup.py install glib
+$script_dir/run_pup.py install harfbuzz
+$script_dir/run_pup.py install libffi
+
 # Install GCC to pull in shared libstdc++.
 $script_dir/run_pup.py install gcc
 
@@ -198,10 +201,10 @@ echo "Beginning the Pedigree build."
 echo
 
 # Build Pedigree.
-scons linux=1 CROSS=$script_dir/compilers/dir/bin/x86_64-pedigree- $TRAVIS_OPTIONS
+scons hosted=1 CROSS=$script_dir/compilers/dir/bin/x86_64-pedigree- $TRAVIS_OPTIONS
 
 # One day we might fix this bug (create proper disk image with built apps).
-scons $TRAVIS_OPTIONS
+scons hosted=1 $TRAVIS_OPTIONS
 
 cd "$old"
 

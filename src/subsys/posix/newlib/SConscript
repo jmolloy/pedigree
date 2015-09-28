@@ -22,7 +22,9 @@ import subprocess
 
 import buildutils.userspace
 
-Import(['env'])
+Import(['userspace_env'])
+
+env = userspace_env
 
 builddir = env["PEDIGREE_BUILD_BASE"]
 

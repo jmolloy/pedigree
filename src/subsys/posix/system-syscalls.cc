@@ -548,32 +548,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         elf->create(reinterpret_cast<uint8_t*>(loadAddr), file->getSize());
     }
 
-    // Wipe out old state, prepare for the new process.
-    memset(&state, 0, sizeof(state));
-
-    // Prepare new state for the process.
-    ProcessorState pState = state;
-    pState.setStackPointer(newStack);
-    pState.setInstructionPointer(elf->getEntryPoint());
-
-    // Generate a stack frame in pState. Unfortunately, this will not create
-    // one in the SyscallState we were passed. Register parameters have to be
-    // copied manually (see below for X64).
-    StackFrame::construct(pState, 0, 2, argv, env);
-
-    // Load up the SyscallState with the newly constructed stack frame.
-    state.setStackPointer(pState.getStackPointer());
-    state.setInstructionPointer(elf->getEntryPoint());
-
-    /// \todo The below is abysmal and needs to be generic because
-    ///       it will need to be done for every architecture that
-    ///       takes function parameters in registers!
-#ifdef X64
-    // x86_64 passes parameters in registers.
-    state.m_Rdi = pState.rdi;
-    state.m_Rsi = pState.rsi;
-#endif
-
     // JAMESM: I don't think the sigret code actually needs to be called from userspace. Here should do just fine, no?
 
     pedigree_init_sigret();
@@ -633,6 +607,12 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     for(int sig = 0; sig < 32; sig++)
         Processor::information().getCurrentThread()->inhibitEvent(sig, false);
 
+    // Jump to the new process.
+    Processor::setInterrupts(true);
+    Processor::jumpUser(0, elf->getEntryPoint(), newStack,
+        reinterpret_cast<uintptr_t>(argv), reinterpret_cast<uintptr_t>(env));
+
+    // Never reaches this point.
     return 0;
 }
 

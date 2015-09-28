@@ -19,8 +19,8 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 import os
 
-Import(['env'])
+Import(['env', 'userspace_env'])
 
 SConscript(os.path.join('kernel', 'SConscript'), exports=['env'])
-SConscript(os.path.join('user', 'SConscript'), exports=['env'])
+SConscript(os.path.join('user', 'SConscript'), exports=['env', 'userspace_env'])
 

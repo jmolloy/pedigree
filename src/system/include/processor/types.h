@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -39,6 +38,9 @@
 #elif defined(PPC32)
   #include <processor/ppc32/types.h>
   #define PROCESSOR_SPECIFIC_NAME(x) PPC32##x
+#elif defined(HOSTED)
+  #include <processor/hosted/types.h>
+  #define PROCESSOR_SPECIFIC_NAME(x) HOSTED##x
 #endif
 
 // NOTE: This throws a compile-time error if this header is not adapted for

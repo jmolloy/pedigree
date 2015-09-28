@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -24,22 +23,27 @@
 // If you change this, ensure you change src/system/include/processor/Syscalls.h !
 #define POSIX_SYSCALL_SERVICE 1
 
-#ifdef X86
+#if defined(HOSTED) && !defined(SYSCALL_TARGET_FOUND)
+#include "posix-syscall-hosted.h"
+#define SYSCALL_TARGET_FOUND
+#endif
+
+#if defined(X86) && !defined(SYSCALL_TARGET_FOUND)
 #include "posix-syscall-i686.h"
 #define SYSCALL_TARGET_FOUND
 #endif
 
-#ifdef X64
+#if defined(X64) && !defined(SYSCALL_TARGET_FOUND)
 #include "posix-syscall-amd64.h"
 #define SYSCALL_TARGET_FOUND
 #endif
 
-#ifdef PPC_COMMON
+#if defined(PPC_COMMON) && !defined(SYSCALL_TARGET_FOUND)
 #include "posix-syscall-ppc.h"
 #define SYSCALL_TARGET_FOUND
 #endif
 
-#ifdef ARM_COMMON
+#if defined(ARM_COMMON) && !defined(SYSCALL_TARGET_FOUND)
 #include "posix-syscall-arm.h"
 #define SYSCALL_TARGET_FOUND
 #endif

@@ -20,6 +20,13 @@
 #ifndef NEWLIB_H
 #define NEWLIB_H
 
+#ifdef HOSTED
+#ifdef __cplusplus
+namespace __pedigree_hosted {};
+using namespace __pedigree_hosted;
+#endif
+#endif
+
 #ifndef _COMPILING_SUBSYS
 #define _COMPILING_SUBSYS
 #endif
@@ -30,7 +37,8 @@
 
 #ifdef _EXFUN
 #undef _EXFUN
-#define _EXFUN(x, y)
+#undef _ANSIDECL_H_
+#include <_ansi.h>
 #endif
 
 #define _POSIX_THREADS

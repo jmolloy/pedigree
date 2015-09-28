@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -43,6 +42,9 @@ typedef size_t ProcessorId;
 #elif defined(PPC_COMMON)
   #include <processor/ppc_common/ProcessorInformation.h>
   #define PROCESSOR_SPECIFIC_NAME(x) PPCCommon##x
+#elif defined(HOSTED)
+  #include <processor/hosted/ProcessorInformation.h>
+  #define PROCESSOR_SPECIFIC_NAME(x) Hosted##x
 #endif
 
 // NOTE: This throws a compile-time error if this header is not adapted for

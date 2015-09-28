@@ -36,7 +36,7 @@ KernelElf KernelElf::m_Instance;
 template<class T>
 static T *extend(T *p)
 {
-#ifdef BITS_32
+#if defined(BITS_32) || defined(HOSTED)
     return p;
 #else
     uintptr_t u = reinterpret_cast<uintptr_t>(p);
@@ -49,7 +49,7 @@ static T *extend(T *p)
 template<class T>
 static uintptr_t extend(T p)
 {
-#ifdef BITS_32
+#if defined(BITS_32) || defined(HOSTED)
     return p;
 #else
     // Must assign to a possibly-larger type before arithmetic.
@@ -64,6 +64,19 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 {
     PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
     size_t pageSz = PhysicalMemoryManager::getPageSize();
+
+    // Do we even have section headers to peek at?
+    if(pBootstrap.getSectionHeaderCount() == 0)
+    {
+        WARNING("No ELF object available to extract symbol table from.");
+#ifdef STATIC_DRIVERS
+        // Don't need the ELF object to load modules.
+        return true;
+#else
+        // Need the ELF object to load modules.
+        return false;
+#endif
+    }
 
 #if defined(X86_COMMON)
     m_AdditionalSectionHeaders = new MemoryRegion("Kernel ELF Section Headers");
@@ -125,7 +138,15 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 #endif
 
     // Get the string table
-    const char *tmpStringTable = reinterpret_cast<const char*>(reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.getSectionHeaders() + pBootstrap.getSectionHeaderStringTableIndex() * pBootstrap.getSectionHeaderEntrySize())->addr);
+    uintptr_t stringTableHeader = (pBootstrap.getSectionHeaders() +
+        pBootstrap.getSectionHeaderStringTableIndex() *
+        pBootstrap.getSectionHeaderEntrySize());
+#ifdef X86_COMMON
+    Elf32SectionHeader_t *stringTableShdr = reinterpret_cast<Elf32SectionHeader_t*>(stringTableHeader);
+#else
+    KernelElfSectionHeader_t *stringTableShdr = reinterpret_cast<KernelElfSectionHeader_t*>(stringTableHeader);
+#endif
+    const char *tmpStringTable = reinterpret_cast<const char*>(stringTableShdr->addr);
 
     // Search for the symbol/string table and adjust sections
     for (size_t i = 1; i < pBootstrap.getSectionHeaderCount(); i++)
@@ -134,7 +155,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 #ifdef X86_COMMON
         Elf32SectionHeader_t *pSh = m_AdditionalSectionHeaders->convertPhysicalPointer<Elf32SectionHeader_t>(shdr_addr);
 #else
-        Elf32SectionHeader_t *pSh = reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.getSectionHeaders());
+        KernelElfSectionHeader_t *pSh = reinterpret_cast<KernelElfSectionHeader_t*>(shdr_addr);
 #endif
 
 #if defined(X86_COMMON)
@@ -151,7 +172,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 
         if (pSh->type == SHT_SYMTAB)
         {
-            m_pSymbolTable = extend(reinterpret_cast<Elf32Symbol_t*> (pSh->addr));
+            m_pSymbolTable = extend(reinterpret_cast<KernelElfSymbol_t*> (pSh->addr));
             m_nSymbolTableSize = pSh->size;
         }
         else if (!strcmp(pStr, ".strtab"))
@@ -173,25 +194,25 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 #if defined(X86_COMMON)
     m_pSectionHeaders = m_AdditionalSectionHeaders->convertPhysicalPointer<Elf32SectionHeader_t>(pBootstrap.getSectionHeaders());
 #else
-    m_pSectionHeaders = reinterpret_cast<Elf32SectionHeader_t*>(pBootstrap.getSectionHeaders());
+    m_pSectionHeaders = reinterpret_cast<KernelElfSectionHeader_t*>(pBootstrap.getSectionHeaders());
 #endif
     m_nSectionHeaders = pBootstrap.getSectionHeaderCount();
 
 #ifdef DEBUGGER
     if (m_pSymbolTable && m_pStringTable)
     {
-        Elf32Symbol_t *pSymbol = reinterpret_cast<Elf32Symbol_t *>(m_pSymbolTable);
+        KernelElfSymbol_t *pSymbol = reinterpret_cast<KernelElfSymbol_t *>(m_pSymbolTable);
 
         const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable);
 
-        for (size_t i = 1; i < m_nSymbolTableSize / sizeof(Elf32Symbol_t); i++)
+        for (size_t i = 1; i < m_nSymbolTableSize / sizeof(*pSymbol); i++)
         {
             const char *pStr = 0;
 
             if (ST_TYPE(pSymbol->info) == 3)
             {
                 // Section type - the name will be the name of the section header it refers to.
-                Elf32SectionHeader_t *pSh = &m_pSectionHeaders[pSymbol->shndx];
+                KernelElfSectionHeader_t *pSh = &m_pSectionHeaders[pSymbol->shndx];
                 // If it's not allocated, it's a link-once-only section that we can ignore.
                 if (!(pSh->flags & SHF_ALLOC))
                 {
@@ -223,6 +244,14 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 
             if (pStr && (*pStr != '\0'))
             {
+#ifdef HOSTED
+                // If name starts with __wrap_, rewrite it in flight as it's
+                // a wrapped symbol on hosted systems.
+                if(!strncmp(pStr, "__wrap_", 7))
+                {
+                    pStr += 7;
+                }
+#endif
                 m_SymbolTable.insert(String(pStr), binding, this, extend(pSymbol->value));
             }
             pSymbol++;
@@ -255,6 +284,8 @@ KernelElf::~KernelElf()
 #define MOD_START 0xFFFFFFFFF0000000
 #elif defined(ARMV7)
 #define MOD_START 0x60000000
+#elif defined(HOSTED)
+#define MOD_START 0x10000000
 #endif
 #define MOD_LEN 0x400000
 
@@ -602,7 +633,9 @@ bool KernelElf::moduleDependenciesSatisfied(Module *module)
 
                 // Optional dependency has not yet had any attempt to load.
                 if(!found)
+                {
                     return false;
+                }
             }
 
             ++i;

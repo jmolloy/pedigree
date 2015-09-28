@@ -161,7 +161,11 @@ int isalpha(char c)
 }
 
 #define ULONG_MAX -1
+#ifdef HOSTED
+unsigned long _strtoul(const char *nptr, char **endptr, int base)
+#else
 unsigned long strtoul(const char *nptr, char **endptr, int base)
+#endif
 {
   register const char *s = nptr;
   register unsigned long acc;
@@ -226,7 +230,11 @@ const char *strrchr(const char *str, int target)
   return (const char*)0;
 }
 
+#ifdef HOSTED
+const char *_strchr(const char *str, int target)
+#else
 const char *strchr(const char *str, int target)
+#endif
 {
   size_t i;
   for (i = 0; i < strlen(str); i++)
@@ -234,3 +242,15 @@ const char *strchr(const char *str, int target)
       return (const char*)&str[i];
   return (const char*)0;
 }
+
+#ifdef HOSTED
+unsigned long __wrap_strtoul(const char *nptr, char **endptr, int base)
+{
+  return _strtoul(nptr, endptr, base);
+}
+
+const char *__wrap_strchr(const char *str, int target)
+{
+  return _strchr(str, target);
+}
+#endif
