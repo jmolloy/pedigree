@@ -39,7 +39,7 @@ SConscript(os.path.join('src', 'modules', 'SConscript'), exports=['env'])
 SConscript(os.path.join('src', 'system', 'kernel', 'SConscript'), exports=['env'])
 
 # On X86, X64 and PPC we build applications and LGPL libraries
-if env['ARCH_TARGET'] in ['X86', 'X64', 'PPC', 'HOSTED']:
+if env['ARCH_TARGET'] in ['X86', 'X64', 'HOSTED']:  # 'PPC'
     SConscript(os.path.join('src', 'user', 'SConscript'),
                exports=['env', 'userspace_env'])
     SConscript(os.path.join('src', 'lgpl', 'SConscript'),

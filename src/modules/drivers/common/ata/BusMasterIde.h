@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -26,6 +25,7 @@
 #include <processor/IoPort.h>
 #include <processor/MemoryRegion.h>
 #include <processor/PhysicalMemoryManager.h>
+#include <process/Mutex.h>
 
 /**
  * If set to 1, the BusMasterIde object will log fairly verbosely (outcome of

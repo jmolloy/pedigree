@@ -22,6 +22,8 @@ import pipes
 
 Import(['env'])
 
+env_clone = env.Clone()
+
 basedir = "#"
 kerneldir = "#" + env["PEDIGREE_BUILD_KERNEL"]
 objname = 'bootloader'
@@ -39,7 +41,7 @@ env_clone.Program(objname, files, LINKFLAGS="-T$LSCRIPT",
     LSCRIPT=os.path.join(basedir, "/src/system/boot/ppc/link-arm.ld"))
 env_clone.Command("autogen.h", None,
     " ".join(pipes.quote(s) for s in [
-        "@perl", os.path.join(basedir, src/system/boot/ppc/mkheader.pl),
+        "@perl", os.path.join(basedir, 'src/system/boot/ppc/mkheader.pl'),
         os.path.join(kerneldir, 'kernel')
         ]
     )

@@ -439,6 +439,8 @@ if env['ON_PEDIGREE'] or env['COMPILER_TARGET']:
 
         env.MergeFlags(mapping)
         userspace_env.MergeFlags(mapping)
+    else:
+        defines = generic_defines
 
 # Handle no valid target sensibly.
 if not env['ARCH_TARGET'] and not env['ON_PEDIGREE']:
@@ -473,7 +475,7 @@ if env['ARCH_TARGET'] == 'ARM':
     env['noiso'] = True
 
 # Add optional flags.
-warning_flag = '-Wno-error'
+warning_flag = ['-Wno-error']
 if env['warnings']:
     warning_flag = '-Werror'
 env.MergeFlags({'CCFLAGS': warning_flag})

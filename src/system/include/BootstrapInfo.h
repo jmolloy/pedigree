@@ -143,6 +143,12 @@ struct BootstrapStruct_t
     {
         return initrd_end - initrd_start;
     }
+
+    char *getCommandLine() const
+    {
+        static char buf[1] = {0};
+        return buf;
+    }
 };
 
 #endif

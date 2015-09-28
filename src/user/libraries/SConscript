@@ -45,6 +45,7 @@ lib_deps = {
     'libui': ['pedigree'],
 }
 
+# Default include paths
 base_include_dirs = [
     '#src/subsys/posix/include',
     '#src/subsys/posix/syscalls',
@@ -56,7 +57,7 @@ env_clone['CXXFLAGS'] = buildutils.userspace.fixFlags(env, env['CXXFLAGS'])
 env_clone['CPPDEFINES'] += ['PEDIGREE', '__PEDIGREE__']
 env_clone['LIBS'] = []
 env_clone['LIBPATH'] = [builddir]
-env_clone['CPPPATH'] = []
+env_clone['CPPPATH'] = base_include_dirs
 
 for library in libs:
     library_env = env_clone.Clone()
@@ -80,7 +81,7 @@ for library in libs:
     if(os.path.exists(custom_include_dir)):
         incpath.append(custom_include_dir)
 
-    library_env['CPPPATH'] = incpath
+    library_env['CPPPATH'] += incpath
     library_env['LIBS'] = lib_deps.get(library, [])
 
     output = os.path.join(builddir, 'libs', '%s.a' % library)

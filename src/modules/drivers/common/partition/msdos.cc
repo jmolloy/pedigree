@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,6 +22,7 @@
 #include <Log.h>
 #include "Partition.h"
 #include <Spinlock.h>
+#include <LockGuard.h>
 
 // Partition number for a DOS extended partition (another partition table)
 const uint8_t g_ExtendedPartitionNumber = 5;

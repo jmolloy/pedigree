@@ -146,11 +146,40 @@ arm_asflags = generic_asflags + default_arm_asflags
 arm_linkflags = generic_linkflags + default_arm_linkflags
 arm_defines = [x for x in generic_defines if x != "SERIAL_IS_FILE"] + general_arm_defines
 
+#---------- PowerPC ----------#
+
+# ppc defines
+ppc_defines = ['PPC', 'PPC_COMMON', 'BIG_ENDIAN', 'BITS_32', 'PPC32', 'THREADS',
+        'KERNEL_PROCESSOR_NO_PORT_IO', 'OMIT_FRAMEPOINTER', 'PPC_MAC',
+        'OPENFIRMWARE']
+
+# ppc CFLAGS and CXXFLAGS
+default_ppc_flags = ['-fno-stack-protector', '-fomit-frame-pointer']
+default_ppc_cflags = []
+default_ppc_cxxflags = []
+
+# ppc assembler flags
+default_ppc_asflags = []
+
+# ppc linker flags
+default_ppc_linkflags = ['-Tsrc/system/kernel/link-ppc.ld']
+
+# ppc images directory
+default_ppc_imgdir = '#images/ppc'
+
+# ppc final variables
+ppc_flags = generic_flags + default_ppc_flags + warning_flags + warning_flags_off
+ppc_cflags = generic_cflags + default_ppc_cflags + warning_flags_c
+ppc_cxxflags = generic_cxxflags + default_ppc_cxxflags + warning_flags_cxx
+ppc_asflags = generic_asflags + default_ppc_asflags
+ppc_linkflags = generic_linkflags + default_ppc_linkflags
+ppc_defines = generic_defines + ppc_defines
+
 #------------------------- Import Dictionaries -------------------------#
-default_flags       = {'x86' : x86_flags, 'x64' : x64_flags , 'arm' : arm_flags}
-default_cflags      = {'x86' : x86_cflags, 'x64' : x64_cflags , 'arm' : arm_cflags}
-default_cxxflags    = {'x86' : x86_cxxflags, 'x64' : x64_cxxflags, 'arm' : arm_cxxflags }
-default_asflags     = {'x86' : x86_asflags, 'x64' : x64_asflags, 'arm' : arm_asflags }
-default_linkflags   = {'x86' : x86_linkflags, 'x64' : x64_linkflags, 'arm' : arm_linkflags }
-default_imgdir      = {'x86' : default_x86_imgdir, 'x64' : default_x64_imgdir, 'arm' : default_arm_imgdir }
-default_defines     = {'x86' : x86_defines, 'x64' : x64_defines, 'arm' : arm_defines }
+default_flags       = {'x86' : x86_flags, 'x64' : x64_flags , 'arm' : arm_flags, 'ppc' : ppc_flags}
+default_cflags      = {'x86' : x86_cflags, 'x64' : x64_cflags , 'arm' : arm_cflags, 'ppc' : ppc_cflags}
+default_cxxflags    = {'x86' : x86_cxxflags, 'x64' : x64_cxxflags, 'arm' : arm_cxxflags, 'ppc' : ppc_cxxflags }
+default_asflags     = {'x86' : x86_asflags, 'x64' : x64_asflags, 'arm' : arm_asflags, 'ppc' : ppc_asflags }
+default_linkflags   = {'x86' : x86_linkflags, 'x64' : x64_linkflags, 'arm' : arm_linkflags, 'ppc' : ppc_linkflags }
+default_imgdir      = {'x86' : default_x86_imgdir, 'x64' : default_x64_imgdir, 'arm' : default_arm_imgdir, 'ppc' : default_ppc_imgdir }
+default_defines     = {'x86' : x86_defines, 'x64' : x64_defines, 'arm' : arm_defines, 'ppc' : ppc_defines }

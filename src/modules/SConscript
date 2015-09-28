@@ -93,9 +93,14 @@ elif env['ARCH_TARGET'] == 'PPC':
     driver_arch = 'ppc'
     driver_arch_subdirs = [
         'ata-specific',
-        'framebuffer',
+        # 'framebuffer',
         'test',
     ]
+
+    # Filter out useless drivers for PPC
+    driver_common_subdirs = [x for x in driver_common_subdirs
+                             if x not in ['cdi', 'nvidia', 'dma']]
+    cdi_drivers = []
 elif env['ARCH_TARGET'] == 'ARM':
     driver_arch = 'arm'
     driver_arch_subdirs = [
