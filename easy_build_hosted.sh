@@ -38,11 +38,11 @@ if [ ! -e $script_dir/.easy_os ]; then
         debian)
             # TODO: Not sure if the package list is any different for debian vs ubuntu?
             echo "Installing packages with apt-get, please wait..."
-            sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage
+            sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage nasm
             ;;
         ubuntu)
             echo "Installing packages with apt-get, please wait..."
-            sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage
+            sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage nasm
             ;;
         opensuse)
             echo "Installing packages with zypper, please wait..."
