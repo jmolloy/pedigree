@@ -209,6 +209,9 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
     uint8_t *pData = reinterpret_cast<uint8_t*> (m_nData);
     int32_t nCodeAlignmentFactor   = decodeUleb128(pData, nCie);
     int32_t nDataAlignmentFactor   = decodeSleb128(pData, nCie);
+#ifndef HOSTED
+    uint32_t nReturnAddressRegister = decodeUleb128(pData, nCie);
+#endif
     
     DwarfCfiAutomaton automaton;
     automaton.initialise (startState, m_nData+nCie, nCieEnd-nCie, nCodeAlignmentFactor,
