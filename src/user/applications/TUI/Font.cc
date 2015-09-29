@@ -43,7 +43,7 @@ Font::Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWid
 
     PangoFontMetrics *metrics = 0;
     PangoFontMap *fontmap = pango_cairo_font_map_get_default();
-    PangoContext *context = pango_cairo_font_map_create_context((PangoCairoFontMap*) fontmap);
+    PangoContext *context = pango_font_map_create_context(fontmap);
     pango_context_set_font_description(context, m_FontDesc);
     metrics = pango_context_get_metrics(context, m_FontDesc, NULL);
     g_object_unref(context);
@@ -127,6 +127,12 @@ size_t Font::render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b,
 
     int width = 0, height = 0;
     pango_layout_get_size(layout, &width, &height);
+    if ((width < 0) || (height < 0))
+    {
+        // Bad layout size.
+        /// \todo cleanup
+        return 0;
+    }
     width /= PANGO_SCALE;
     height /= PANGO_SCALE;
 
@@ -140,8 +146,9 @@ size_t Font::render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b,
                 ((b) & 0xFF) / 256.0,
                 0.8);
 
-        size_t fillW = m_CellWidth > width ? m_CellWidth : width;
-        size_t fillH = m_CellHeight > height ? m_CellHeight : height;
+        // Precondition above allows this cast to be safe.
+        size_t fillW = m_CellWidth > static_cast<size_t>(width) ? m_CellWidth : width;
+        size_t fillH = m_CellHeight > static_cast<size_t>(height) ? m_CellHeight : height;
         cairo_rectangle(g_Cairo, x, y, fillW, fillH);
         cairo_fill(g_Cairo);
     }

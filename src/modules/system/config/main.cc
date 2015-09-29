@@ -68,9 +68,9 @@ int xClose(sqlite3_file *file)
 int xRead(sqlite3_file *file, void *ptr, int iAmt, sqlite3_int64 iOfst)
 {
     int ret = 0;
-    if ((iOfst + static_cast<unsigned int>(iAmt)) >= g_FileSz)
+    if ((static_cast<size_t>(iOfst + iAmt)) >= g_FileSz)
     {
-        if(static_cast<unsigned int>(iAmt) > g_FileSz)
+        if(static_cast<size_t>(iAmt) > g_FileSz)
             iAmt = g_FileSz;
         memset(ptr, 0, iAmt);
         iAmt = g_FileSz - iOfst;
@@ -89,7 +89,7 @@ int xReadFail(sqlite3_file *file, void *ptr, int iAmt, sqlite3_int64 iOfst)
 int xWrite(sqlite3_file *file, const void *ptr, int iAmt, sqlite3_int64 iOfst)
 {
     // Write past the end of the file?
-    if((iOfst + static_cast<unsigned int>(iAmt)) >= g_FileSz)
+    if(static_cast<size_t>(iOfst + iAmt) >= g_FileSz)
     {
         // How many extra bytes do we need?
         size_t nNewSize = iOfst + iAmt + 1; // We know the read crosses the EOF, so this is correct
