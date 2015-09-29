@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -44,7 +43,7 @@ public:
               class Iso9660Filesystem *pFs, File *pParent, Iso9660DirRecord &dirRec,
               Time accessedTime = 0, Time modifiedTime = 0, Time creationTime = 0) :
     Directory(name, accessedTime, modifiedTime, creationTime, inode, pFs, 0, pParent),
-    m_Dir(dirRec), m_pFs(pFs)
+    m_pFs(pFs), m_Dir(dirRec)
   {}
   virtual ~Iso9660Directory() {};
 
@@ -164,11 +163,11 @@ public:
   }
 
 private:
-  // Our internal directory information (info about *this* directory, not the child)
-  Iso9660DirRecord m_Dir;
-
   // Filesystem object
   Iso9660Filesystem *m_pFs;
+
+  // Our internal directory information (info about *this* directory, not the child)
+  Iso9660DirRecord m_Dir;
 };
 
 #endif

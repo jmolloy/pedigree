@@ -294,9 +294,6 @@ private:
     /** Metadata to pass to a callback. */
     void *m_CallbackMeta;
 
-    /** Have we registered ourselves as a timer handler yet? */
-    bool m_bRegisteredHandler;
-
     /** Are we currently in a critical section? */
     Atomic<size_t> m_bInCritical;
 };

@@ -71,7 +71,6 @@ private:
 
 #ifdef HOSTED
   uint8_t *m_pBase;
-  size_t m_nSize;
 #else
   MemoryRegion m_Region;
 #endif

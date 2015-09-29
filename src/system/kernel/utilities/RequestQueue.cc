@@ -77,8 +77,6 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
                                   uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8)
 {
 #ifdef THREADS
-  Thread *pCurrent = Processor::information().getCurrentThread();
-
   // Create a new request object.
   Request *pReq = new Request();
   pReq->p1 = p1; pReq->p2 = p2; pReq->p3 = p3; pReq->p4 = p4; pReq->p5 = p5; pReq->p6 = p6; pReq->p7 = p7; pReq->p8 = p8;

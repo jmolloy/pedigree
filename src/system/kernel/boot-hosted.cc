@@ -30,8 +30,6 @@
 
 #include "BootstrapInfo.h"
 
-#pragma GCC diagnostic warning "-fpermissive"
-
 extern "C" void _main(BootstrapStruct_t &bs);
 
 static uint32_t ptr_to_u32(void *p)
@@ -185,8 +183,9 @@ int main(int argc, char *argv[])
 
         // Add to the multiboot info.
         bs.mods_count++;
-        *((uint64_t*) &module_region[8]) = reinterpret_cast<uintptr_t>(diskimage_mapping);
-        *((uint64_t*) &module_region[10]) = reinterpret_cast<uintptr_t>(diskimage_mapping) + diskimage_length;
+        uint64_t *module_region64 = reinterpret_cast<uint64_t *>(module_region);
+        module_region64[4] = reinterpret_cast<uintptr_t>(diskimage_mapping);
+        module_region64[5] = reinterpret_cast<uintptr_t>(diskimage_mapping) + diskimage_length;
     }
 
     // Load ELF header to add ELF information.

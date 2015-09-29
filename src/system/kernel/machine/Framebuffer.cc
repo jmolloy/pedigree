@@ -364,7 +364,7 @@ void Framebuffer::swCopy(size_t srcx, size_t srcy, size_t destx, size_t desty, s
 
     size_t bytesPerLine = m_nBytesPerLine;
     size_t bytesPerPixel = m_nBytesPerPixel;
-    size_t sourceBytesPerLine = w * bytesPerPixel;
+    /// \todo consider source bytes per line?
 
     // Easy memcpy?
     if(UNLIKELY(((!srcx) && (!destx)) && (w == m_nWidth)))

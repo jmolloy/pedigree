@@ -307,7 +307,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     /// \todo This could probably be cleaned up a little.
 
     // Try and read the shebang, if any
-    String theShebang, *oldPath = 0;
+    String theShebang;
     static char tmpBuff[128 + 1];
     file->read(0, 128, reinterpret_cast<uintptr_t>(tmpBuff));
     tmpBuff[128] = '\0';

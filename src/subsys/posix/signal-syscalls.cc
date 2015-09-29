@@ -195,8 +195,7 @@ int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact
             sigHandler->type = 0;
         }
 
-        size_t nLevel = pThread->getStateLevel();
-        sigHandler->pEvent = new SignalEvent(newHandler, static_cast<size_t>(sig)); //, nLevel);
+        sigHandler->pEvent = new SignalEvent(newHandler, static_cast<size_t>(sig));
         SG_NOTICE("Creating the event (" << reinterpret_cast<uintptr_t>(sigHandler->pEvent) << ").");
         pSubsystem->setSignalHandler(sig, sigHandler);
     }
@@ -728,8 +727,7 @@ void pedigree_init_sigret()
 
         uintptr_t newHandler = reinterpret_cast<uintptr_t>(default_sig_handlers[i]);
 
-        size_t nLevel = pThread->getStateLevel();
-        sigHandler->pEvent = new SignalEvent(newHandler, i); //, nLevel);
+        sigHandler->pEvent = new SignalEvent(newHandler, i);
 
         pSubsystem->setSignalHandler(i, sigHandler);
     }

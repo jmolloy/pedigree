@@ -126,7 +126,7 @@ uint64_t CacheManager::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uin
 }
 
 Cache::Cache() :
-    m_Pages(), m_Lock(), m_Callback(0), m_Nanoseconds(0), m_bRegisteredHandler(false)
+    m_Pages(), m_Lock(), m_Callback(0), m_Nanoseconds(0)
 {
     if (!g_AllocatorInited)
     {
@@ -174,7 +174,7 @@ Cache::~Cache()
 
 uintptr_t Cache::lookup (uintptr_t key)
 {
-   while(!m_Lock.enter());
+   while(!m_Lock.enter()) Processor::pause();
 
     CachePage *pPage = m_Pages.lookup(key);
     if (!pPage)

@@ -432,7 +432,7 @@ void init_stage2()
     }
 
     // can we get some space for the argv loc
-    uintptr_t argv_loc;
+    uintptr_t argv_loc = 0;
     if (pProcess->getAddressSpace()->getDynamicStart())
     {
         pProcess->getDynamicSpaceAllocator().allocate(PhysicalMemoryManager::instance().getPageSize(), argv_loc);

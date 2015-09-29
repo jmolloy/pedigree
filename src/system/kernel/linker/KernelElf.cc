@@ -62,9 +62,6 @@ static uintptr_t extend(T p)
 
 bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 {
-    PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
-    size_t pageSz = PhysicalMemoryManager::getPageSize();
-
     // Do we even have section headers to peek at?
     if(pBootstrap.getSectionHeaderCount() == 0)
     {
@@ -79,6 +76,9 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
     }
 
 #if defined(X86_COMMON)
+    PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
+
     m_AdditionalSectionHeaders = new MemoryRegion("Kernel ELF Section Headers");
 
     // Map in section headers.

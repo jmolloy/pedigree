@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -106,7 +105,6 @@ void HidInputManager::timer(uint64_t delta, InterruptState &state)
 {
     LockGuard<Spinlock> guard(m_KeyLock);
 
-    KeymapManager &keymapManager = KeymapManager::instance();
     for(Tree<uint8_t, KeyState*>::Iterator it = m_KeyStates.begin(); it != m_KeyStates.end(); ++it)
     {
         KeyState *keyState = it.value();

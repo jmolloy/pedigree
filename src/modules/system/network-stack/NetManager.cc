@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -223,7 +222,6 @@ uint64_t NetManager::write(File *pFile, uint64_t location, uint64_t size, uintpt
     {
         ConnectionlessEndpoint *ce = static_cast<ConnectionlessEndpoint *>(p);
 
-        Network *pCard = 0;
         Endpoint::RemoteEndpoint remoteHost;
         IpAddress remoteIp = p->getRemoteIp();
         if(sock->getProtocol() == NETMAN_TYPE_UDP)

@@ -498,7 +498,6 @@ static physical_uintptr_t getBackingPage(File *pBacking, size_t fileOffset)
 void MemoryMappedFile::sync(uintptr_t at, bool async)
 {
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-    size_t pageSz = PhysicalMemoryManager::getPageSize();
 
     if(at < m_Address || at >= (m_Address + m_Length))
     {
@@ -531,7 +530,6 @@ void MemoryMappedFile::sync(uintptr_t at, bool async)
 void MemoryMappedFile::invalidate(uintptr_t at)
 {
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-    size_t pageSz = PhysicalMemoryManager::getPageSize();
 
     // If we're not actually CoW, don't bother checking.
     if(!m_bCopyOnWrite)

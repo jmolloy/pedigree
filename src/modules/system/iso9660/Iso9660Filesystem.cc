@@ -214,8 +214,6 @@ uintptr_t Iso9660Filesystem::readBlock(File *pFile, uint64_t location)
   if (pFile->isDirectory())
     return 0;
 
-  size_t size = 2048;
-
   Iso9660File *file = reinterpret_cast<Iso9660File*>(pFile);
   Iso9660DirRecord rec = file->getDirRecord();
 

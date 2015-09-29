@@ -792,7 +792,6 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
     if (userBlock < endBlock)
     {
         // Create room for all the pointers to aliases
-        uintptr_t aliasPointerBlock = userBlock;
         entry->h_aliases = reinterpret_cast<char**>(userBlock);
         userBlock += sizeof(char*) * (host.aliases.count() + 1);
 
@@ -926,8 +925,6 @@ int posix_getpeername(int socket, struct sockaddr *address, socklen_t *address_l
     Endpoint* p = s->getEndpoint();
     if (s->getProtocol() == NETMAN_TYPE_TCP)
     {
-        ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(p);
-
         /// todo this may not be accurate.
         struct sockaddr_in* sin = reinterpret_cast<struct sockaddr_in*>(address);
         sin->sin_port = HOST_TO_BIG16(p->getRemotePort());

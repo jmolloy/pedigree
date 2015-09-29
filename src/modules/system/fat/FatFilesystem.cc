@@ -1221,7 +1221,6 @@ void FatFilesystem::extend(File *pFile, size_t size)
     }
 
     uint32_t finalOffset = size;
-    uint32_t offsetSector = pFile->getSize() / m_Superblock.BPB_BytsPerSec;
     uint32_t clus = 0;
 
     // Figure out how many (if any) additional clusters we need to link in now.

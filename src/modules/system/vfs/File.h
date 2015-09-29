@@ -143,7 +143,7 @@ public:
     }
 
     /** Returns true if the File is actually a pipe. */
-    virtual bool isPipe()
+    virtual bool isPipe() const
     {
         return false;
     }

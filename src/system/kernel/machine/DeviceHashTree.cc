@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -89,11 +88,9 @@ size_t DeviceHashTree::getHash(Device *pChild)
     String name, dump;
     pChild->getName(name);
     pChild->dump(dump);
-    uint32_t a, b, c;
     uint32_t bus = pChild->getPciBusPosition();
     uint32_t dev = pChild->getPciDevicePosition();
     uint32_t func = pChild->getPciFunctionNumber();
-    uint16_t devId = pChild->getPciDeviceId();
 
     // Build the string to be hashed
     NormalStaticString theString;

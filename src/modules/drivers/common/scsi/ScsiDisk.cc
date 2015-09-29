@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -338,9 +337,6 @@ uint64_t ScsiDisk::doRead(uint64_t location)
         FATAL("ScsiDisk::doRead - no buffer");
     }
 
-    // Grab our parent.
-    ScsiController *pParent = static_cast<ScsiController*> (m_pParent);
-
     bool bOk;
     ScsiCommand *pCommand;
     
@@ -402,9 +398,6 @@ uint64_t ScsiDisk::doWrite(uint64_t location)
         return 0;
     }
 
-    // Grab our parent.
-    ScsiController *pParent = static_cast<ScsiController*> (m_pParent);
-
     bool bOk;
     ScsiCommand *pCommand;
 
@@ -465,9 +458,6 @@ uint64_t ScsiDisk::doSync(uint64_t location)
         ERROR("ScsiDisk::doSync - unit not ready");
         return 0;
     }
-
-    // Grab our parent.
-    ScsiController *pParent = static_cast<ScsiController*> (m_pParent);
 
     bool bOk;
     ScsiCommand *pCommand;

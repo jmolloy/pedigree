@@ -30,7 +30,6 @@ size_t strlen(const char *src)
 
 int strcpy(char *dest, const char *src)
 {
-  const char *orig_dest = dest;
   while (*src)
   {
     *dest = *src;

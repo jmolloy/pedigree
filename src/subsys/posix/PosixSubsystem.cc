@@ -163,7 +163,6 @@ PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
         ++it)
     {
         void *key = it.key();
-        Semaphore *orig = it.value();
 
         Semaphore *sem = new Semaphore(0);
         m_ThreadWaiters.insert(key, sem);
@@ -476,7 +475,6 @@ bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)
 
     if(sig && sig->pEvent)
     {
-        size_t pid = pThread->getParent()->getId();
         // Send the kill event
         pThread->sendEvent(sig->pEvent);
 

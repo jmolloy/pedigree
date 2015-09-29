@@ -99,7 +99,7 @@ uintptr_t FileDisk::read(uint64_t location)
     buffer = m_Cache.insert(readPage);
 
     // Read the data from the file itself
-    uint64_t sz = m_pFile->read(readPage, 4096, buffer);
+    m_pFile->read(readPage, 4096, buffer);
 
     return buffer + pageOffset;
 }

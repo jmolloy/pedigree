@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -26,14 +25,13 @@ extern "C" void __cyg_profile_func_enter (void *func_address, void *call_site)
 extern "C" void __cyg_profile_func_exit (void *func_address, void *call_site)
   __attribute__((no_instrument_function));
 
-#ifdef X86_COMMON
+#if defined(X86_COMMON) || defined(HOSTED)
 #define OUT(c) asm volatile ("outb %%al, %%dx" :: "d"(0x2f8), "a"(c))
-#else
-#define OUT(C)
 #endif
 
 extern "C" void __cyg_profile_func_enter (void *func_address, void *call_site)
 {
+#ifdef OUT
     uint32_t _func_address = reinterpret_cast<uintptr_t>(func_address)&0xFFFFFFFF;
     uint32_t _call_site = reinterpret_cast<uintptr_t>(call_site)&0xFFFFFFFF;
 
@@ -59,6 +57,7 @@ extern "C" void __cyg_profile_func_enter (void *func_address, void *call_site)
     OUT('0' + ((_call_site>>(32-32))&0xF));
     OUT('\n');
 //    asm volatile("push %0; popf" ::"r" (eflags));
+#endif
 }
 
 extern "C" void __cyg_profile_func_exit (void *func_address, void *call_site)

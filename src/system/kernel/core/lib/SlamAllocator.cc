@@ -203,8 +203,6 @@ void SlamCache::freeSlab(uintptr_t slab)
 
 size_t SlamCache::recovery(size_t maxSlabs)
 {
-    size_t origMaxSlabs = maxSlabs;
-
 #ifdef MULTIPROCESSOR
     size_t thisCpu = Processor::id();
 #else
@@ -213,8 +211,6 @@ size_t SlamCache::recovery(size_t maxSlabs)
 
     if(!m_PartialLists[thisCpu])
         return 0;
-
-    Node *N = 0;
 
     size_t freedSlabs = 0;
     if(m_ObjectSize < PhysicalMemoryManager::getPageSize())
@@ -593,7 +589,7 @@ void SlamAllocator::initialise()
 
 uintptr_t SlamAllocator::getSlab(size_t fullSize)
 {
-    size_t nPages = fullSize / PhysicalMemoryManager::getPageSize();
+    ssize_t nPages = fullSize / PhysicalMemoryManager::getPageSize();
     if(!nPages)
     {
         panic("Attempted to get a slab smaller than the native page size.");
@@ -684,16 +680,16 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
             {
                 // Need to find a sequence of bits.
                 // Try for the beginning or end of the entry, as these are builtins.
-                size_t trailing = __builtin_ctzll(m_SlabRegionBitmap[entry]);
+                ssize_t trailing = __builtin_ctzll(m_SlabRegionBitmap[entry]);
                 if(trailing < nPages)
                 {
-                    size_t leading = __builtin_clzll(m_SlabRegionBitmap[entry]);
+                    ssize_t leading = __builtin_clzll(m_SlabRegionBitmap[entry]);
                     if(leading < nPages)
                     {
                         // No or not enough leading/trailing zeroes. Have to
                         // fall back to a more linear search.
 
-                        size_t c = 0;
+                        ssize_t c = 0;
                         size_t b = ~0UL;
                         size_t len = 64;
                         uint64_t v = m_SlabRegionBitmap[entry];
@@ -777,7 +773,7 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
 #endif
 
     // Map and mark as used.
-    for(size_t i = 0; i < nPages; ++i)
+    for(ssize_t i = 0; i < nPages; ++i)
     {
         m_SlabRegionBitmap[entry] |= 1ULL << bit;
 

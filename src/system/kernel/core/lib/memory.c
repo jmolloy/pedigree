@@ -23,7 +23,9 @@
 
 #include <panic.h>
 
+#ifndef __clang__
 #pragma GCC optimize ("no-tree-loop-distribute-patterns")
+#endif
 
 /**
     x86 note:
