@@ -476,7 +476,7 @@ if env['ARCH_TARGET'] == 'ARM':
 
 # Add optional flags.
 warning_flag = ['-Wno-error']
-if env['warnings']:
+if not env['warnings']:
     warning_flag = '-Werror'
 env.MergeFlags({'CCFLAGS': warning_flag})
 
@@ -618,7 +618,7 @@ if env['hosted']:
         'CCFLAGS': ['-fno-omit-frame-pointer', '-Wno-deprecated-declarations']
     })
 
-    if env['warnings']:
+    if not env['warnings']:
         env.MergeFlags({'CCFLAGS': '-Werror'})
 
     # Not a PC.
