@@ -434,6 +434,14 @@ if env['ON_PEDIGREE'] or env['COMPILER_TARGET']:
             'LINKFLAGS': default_linkflags[flags_arch],
         }
 
+        for k in mapping:
+            try:
+                # Force a recreation of the flags.
+                del env[k]
+            except KeyError:
+                # Doesn't exist.
+                pass
+
         env['PEDIGREE_IMAGES_DIR'] = default_imgdir[flags_arch]
         defines = default_defines[flags_arch] + extra_defines
 
