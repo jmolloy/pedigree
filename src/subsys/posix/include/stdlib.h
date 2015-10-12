@@ -142,9 +142,7 @@ float	_EXFUN(strtof,(const char *__n, char **__end_PTR));
 #endif
 long	_EXFUN(strtol,(const char *__n, char **__end_PTR, int __base));
 long	_EXFUN(_strtol_r,(struct _reent *,const char *__n, char **__end_PTR, int __base));
-#ifndef STRTOUL_DEFINED
 unsigned long _EXFUN(strtoul,(const char *__n, char **__end_PTR, int __base));
-#endif
 unsigned long _EXFUN(_strtoul_r,(struct _reent *,const char *__n, char **__end_PTR, int __base));
 
 int	_EXFUN(system,(const char *__string));

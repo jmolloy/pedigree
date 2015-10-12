@@ -160,11 +160,7 @@ int isalpha(char c)
 }
 
 #define ULONG_MAX -1
-#ifdef HOSTED
-unsigned long _strtoul(const char *nptr, char **endptr, int base)
-#else
-unsigned long strtoul(const char *nptr, char const **endptr, int base)
-#endif
+unsigned long pedigree_strtoul(const char *nptr, char const **endptr, int base)
 {
   register const char *s = nptr;
   register unsigned long acc;

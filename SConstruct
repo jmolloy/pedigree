@@ -615,8 +615,8 @@ if env['hosted']:
     env['CPPDEFINES'] += ['SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH']
 
     # Reset flags.
-    env['CCFLAGS'] = generic_flags + warning_flags + ['-U_FORTIFY_SOURCE',
-                                                      '-U__linux__']
+    env['CCFLAGS'] = (generic_flags + warning_flags + warning_flags_off +
+                      ['-U_FORTIFY_SOURCE', '-U__linux__'])
     env['CFLAGS'] = generic_cflags + warning_flags_c
     env['CXXFLAGS'] = generic_cxxflags + warning_flags_cxx
     env['LINKFLAGS'] = []
@@ -656,6 +656,9 @@ if env['hosted']:
             env['CC'] = clang
             env['CXX'] = clangxx
             env['LINK'] = clang
+
+        # Don't break the build on clang warnings.
+        env['CCFLAGS'].remove('-Werror')
 
     fixDebugFlags(env)
 

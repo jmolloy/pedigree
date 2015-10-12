@@ -115,8 +115,7 @@ uint64_t random_next();
 const char *strchr(const char *str, int target);
 const char *strrchr(const char *str, int target);
 
-#define STRTOUL_DEFINED 1
-unsigned long strtoul(const char *nptr, char const **endptr, int base);
+unsigned long pedigree_strtoul(const char *nptr, char const **endptr, int base);
 
 inline char toUpper(char c)
 {
