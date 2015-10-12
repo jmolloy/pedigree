@@ -39,6 +39,7 @@ addons:
       - genisoimage
       - e2fsprogs
       - qemu
+      - nasm
 cache:
   directories:
   - $HOME/.ccache
