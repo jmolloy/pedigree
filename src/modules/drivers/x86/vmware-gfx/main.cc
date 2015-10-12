@@ -260,6 +260,11 @@ class VmwareGraphics : public Display
             }
             return true;
         }
+
+        virtual bool setScreenMode(size_t modeId)
+        {
+            return Display::setScreenMode(modeId);
+        }
         
         virtual bool setScreenMode(size_t nWidth, size_t nHeight, size_t nBpp)
         {
@@ -421,7 +426,7 @@ class VmwareGraphics : public Display
                 
                 virtual inline void copy(size_t srcx, size_t srcy,
                                          size_t destx, size_t desty,
-                                         size_t w, size_t h)
+                                         size_t w, size_t h, bool bLowestCall = true)
                 {
                     /// \todo Caps to determine whether to fall back to software
                     if(1)

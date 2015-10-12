@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -66,14 +65,14 @@ void *VirtualAddressSpace::expandHeap(ssize_t incr, size_t flags)
     while (reinterpret_cast<uintptr_t>(newHeapEnd) < reinterpret_cast<uintptr_t>(m_HeapEnd))
     {
         /// \note Should this be m_HeapEnd - getPageSize?
-        void *unmapAddr = reinterpret_cast<void*>(m_HeapEnd);
+        void *unmapAddr = m_HeapEnd;
         if(isMapped(unmapAddr))
         {
             // Unmap the virtual address
             physical_uintptr_t phys = 0;
             size_t flags = 0;
             getMapping(unmapAddr, phys, flags);
-            unmap(reinterpret_cast<void*>(unmapAddr));
+            unmap(unmapAddr);
 
             // Free the physical page
             PMemoryManager.freePage(phys);

@@ -93,7 +93,7 @@ size_t	 _EXFUN(strnlen,(const char *, size_t));
 char 	*_EXFUN(strsep,(char **, const char *));
 // char	*_EXFUN(strlwr,(char *));
 char	*_EXFUN(strupr,(char *));
-char  *_EXFUN(strsignal, (int __signo));
+const char  *_EXFUN(strsignal, (int __signo));
 int     _EXFUN(strtosigno, (const char *__name));
 
 /* These function names are used on Windows and perhaps other systems.  */

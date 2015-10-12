@@ -567,8 +567,7 @@ Nic3C90x::Nic3C90x(Network* pDev) :
     // register the packet queue handler
 #ifdef THREADS
     Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
-                                 reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
-                                 reinterpret_cast<void*> (this));
+                                 &trampoline, reinterpret_cast<void*>(this));
     pThread->detach();
 #endif
 

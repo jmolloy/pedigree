@@ -133,7 +133,6 @@ module_subdirs = [
     'network-stack',
     'dhcpclient',
     'console',
-    'TUI',
     'linker',
     'users',
     'ramfs',
@@ -153,9 +152,9 @@ else:
     module_subdirs += ['init']
 
 if env['ARCH_TARGET'] == 'ARM':
-    module_subdirs = [x for x in module_subdirs if x not in ['splash', 'TUI']]
+    module_subdirs = [x for x in module_subdirs if x not in ['splash']]
 elif env['hosted']:
-    module_subdirs = [x for x in module_subdirs if x not in ['splash', 'TUI']]
+    module_subdirs = [x for x in module_subdirs if x not in ['splash']]
 
 # No difference yet, load all modules
 initrd_modules = module_subdirs
@@ -235,7 +234,6 @@ custom_incpath = {
     'cdi'           : ['#/src/modules/drivers/common/cdi/include',
                        '#/src/modules/drivers/cdi/include'],
     'status_server' : ['#/src/system/kernel'],
-    'TUI'           : ['#/src/system/kernel'],
     'init'          : ['#/src/system/kernel', '#/src'],
     'splash'        : ['#/src/system/kernel'], # For nogfx
     'linker'        : ['#/src/modules/system/linker'],

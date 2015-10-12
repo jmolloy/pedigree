@@ -36,7 +36,7 @@ long posix_sbrk(int delta);
 int posix_fork(SyscallState &state);
 int posix_execve(const char *name, const char **argv, const char **env, SyscallState &state);
 int posix_waitpid(int pid, int *status, int options);
-int posix_exit(int code);
+int posix_exit(int code) NORETURN;
 int posix_getpid();
 
 int posix_gettimeofday(timeval *tv, struct timezone *tz);
@@ -59,10 +59,6 @@ int posix_nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
 int posix_clock_gettime(clockid_t clock_id, struct timespec *tp);
 
 int pedigree_sigret();
-
-uintptr_t posix_dlopen(const char* file, int mode, void* p);
-uintptr_t posix_dlsym(void* handle, const char* name);
-int       posix_dlclose(void* handle);
 
 int posix_setsid();
 int posix_setpgid(int pid, int pgid);

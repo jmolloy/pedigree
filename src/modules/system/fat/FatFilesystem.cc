@@ -311,7 +311,7 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
         return 0; // can't do it
 
     // validity checking
-    if (static_cast<size_t>(location) >= pFile->getSize())
+    if (location >= pFile->getSize())
     {
         WARNING("FAT: Attempting to read past the EOF [loc=" << location << ", sz=" << size << ", fsz=" << pFile->getSize() << "]");
         return 0;
@@ -319,7 +319,7 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
 
     uint64_t endOffset = location + size;
     uint64_t finalSize = size;
-    if (static_cast<size_t>(endOffset) > pFile->getSize())
+    if (endOffset > pFile->getSize())
     {
         finalSize = pFile->getSize() - location;
 
@@ -1221,7 +1221,6 @@ void FatFilesystem::extend(File *pFile, size_t size)
     }
 
     uint32_t finalOffset = size;
-    uint32_t offsetSector = pFile->getSize() / m_Superblock.BPB_BytsPerSec;
     uint32_t clus = 0;
 
     // Figure out how many (if any) additional clusters we need to link in now.

@@ -120,8 +120,7 @@ void InputManager::initialise()
     // Start the worker thread.
 #ifdef THREADS
     m_pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
-                           reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
-                           reinterpret_cast<void*> (this));
+                           &trampoline, reinterpret_cast<void*>(this));
 #else
     WARNING("InputManager: No thread support, no worker thread will be active");
 #endif
@@ -302,7 +301,6 @@ int InputManager::trampoline(void *ptr)
 {
     InputManager *p = reinterpret_cast<InputManager *>(ptr);
     p->mainThread();
-    return 0;
 }
 
 void InputManager::mainThread()

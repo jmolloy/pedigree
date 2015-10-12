@@ -74,7 +74,7 @@ Png::Png(const char *filename) :
                  PNG_TRANSFORM_PACKING , // Unpack 2 and 4 bit samples.
                  reinterpret_cast<void*>(0));
 
-    m_pRowPointers = reinterpret_cast<uint8_t**>(png_get_rows(m_PngPtr, m_InfoPtr));
+    m_pRowPointers = png_get_rows(m_PngPtr, m_InfoPtr);
 
     // Grab the info header information.
     int bit_depth, color_type, interlace_type, compression_type, filter_method;

@@ -26,21 +26,30 @@ import SCons
 # Generic entry-level flags (that everyone should have)
 generic_flags = ['-fno-builtin', '-nostdlib', '-ffreestanding', '-O3']
 generic_cflags = ['-std=gnu99']
-generic_cxxflags = ['-std=gnu++98', '-fno-exceptions', '-fno-rtti',
+generic_cxxflags = ['-std=gnu++11', '-fno-exceptions', '-fno-rtti',
                     '-fno-asynchronous-unwind-tables']
 
 # Warning flags (that force us to write betterish code)
-warning_flags = ['-Wall', '-Wextra', '-Wpointer-arith', '-Wcast-align',
-                 '-Wwrite-strings', '-Wno-long-long', '-Wno-variadic-macros',
-                 '-Wno-unused-parameter']
+# , '-pedantic'
+warning_flags = [
+    '-Wall', '-Wextra', '-Wpointer-arith', '-Wcast-align',
+    '-Wwrite-strings', '-Wno-long-long', '-Wvariadic-macros',
+    '-Wno-unused-parameter', '-Wuninitialized', '-Wstrict-aliasing',
+    '-Wsuggest-attribute=noreturn', '-Wtrampolines', '-Wfloat-equal',
+    '-Wundef', '-Wcast-qual', '-Wlogical-op', '-Wdisabled-optimization']
 
 # Language-specific warnings
-warning_flags_c = ['-Wnested-externs']
-warning_flags_cxx = []
+warning_flags_c = ['-Wnested-externs', '-Wbad-function-cast']
+# Note: Enabling a subset of warnings from -Weffc++
+warning_flags_cxx = ['-Wsign-promo', '-Woverloaded-virtual',
+                     '-Wnon-virtual-dtor', '-Wctor-dtor-privacy', '-Wabi',
+                     '-Wuseless-cast']
 
 # Turn off some warnings (because they kill the build)
-warning_flags_off = ['-Wno-unused', '-Wno-unused-variable', '-Wno-conversion',
-                     '-Wno-format', '-Wno-empty-body', '-Wno-packed-bitfield-compat']
+# TODO(miselin): we really shouldn't disable -Wconversion...
+warning_flags_off = [
+    '-Wno-unused', '-Wno-unused-variable', '-Wno-conversion', '-Wno-format',
+    '-Wno-packed-bitfield-compat', '-Wno-error=disabled-optimization']
 
 # Generic assembler flags
 generic_asflags = []
@@ -52,13 +61,16 @@ generic_linkflags = ['-nostdlib', '-nostartfiles']
 generic_defines = [
     'DEBUGGER_QWERTY',          # Enable the QWERTY keymap
     'ADDITIONAL_CHECKS',
-    'VERBOSE_LINKER',           # Increases the verbosity of messages from the Elf and KernelElf classes
+    # Increases the verbosity of messages from the Elf and KernelElf classes
+    'VERBOSE_LINKER',
 ]
 
 #------------------------- x86 (+x64) -------------------------#
 
 # x86 defines - udis86 uses __UD_STANDALONE__
-general_x86_defines = ['X86_COMMON', 'LITTLE_ENDIAN', '__UD_STANDALONE__', 'THREADS', 'KERNEL_STANDALONE']
+general_x86_defines = [
+    'X86_COMMON', 'LITTLE_ENDIAN', '__UD_STANDALONE__', 'THREADS',
+    'KERNEL_STANDALONE']
 
 #---------- x86, 32-bit ----------#
 
@@ -81,7 +93,8 @@ default_x86_linkflags = ['-Tsrc/system/kernel/core/processor/x86/kernel.ld']
 default_x86_imgdir = '#images/x86'
 
 # x86 final variables
-x86_flags = default_x86_flags + generic_flags + warning_flags + warning_flags_off
+x86_flags = (
+    default_x86_flags + generic_flags + warning_flags + warning_flags_off)
 x86_cflags = default_x86_cflags + generic_cflags + warning_flags_c
 x86_cxxflags = default_x86_cxxflags + generic_cxxflags + warning_flags_cxx
 x86_asflags = generic_asflags + default_x86_asflags
@@ -111,7 +124,8 @@ default_x64_linkflags = ['-Tsrc/system/kernel/core/processor/x64/kernel.ld']
 default_x64_imgdir = '#images/x64'
 
 # x64 final variables
-x64_flags = generic_flags + default_x64_flags + warning_flags + warning_flags_off
+x64_flags = (
+    generic_flags + default_x64_flags + warning_flags + warning_flags_off)
 x64_cflags = generic_cflags + default_x64_cflags + warning_flags_c
 x64_cxxflags = generic_cxxflags + default_x64_cxxflags + warning_flags_cxx
 x64_asflags = generic_asflags + default_x64_asflags
@@ -139,19 +153,21 @@ default_arm_linkflags = ['-Tsrc/system/kernel/link-arm-[mach].ld']
 default_arm_imgdir = '#images/arm'
 
 # arm final variables
-arm_flags = generic_flags + default_arm_flags + warning_flags + warning_flags_off
+arm_flags = (
+    generic_flags + default_arm_flags + warning_flags + warning_flags_off)
 arm_cflags = generic_cflags + default_arm_cflags + warning_flags_c
 arm_cxxflags = generic_cxxflags + default_arm_cxxflags + warning_flags_cxx
 arm_asflags = generic_asflags + default_arm_asflags
 arm_linkflags = generic_linkflags + default_arm_linkflags
-arm_defines = [x for x in generic_defines if x != "SERIAL_IS_FILE"] + general_arm_defines
+arm_defines = [x for x in generic_defines if x !=
+               'SERIAL_IS_FILE'] + general_arm_defines
 
 #---------- PowerPC ----------#
 
 # ppc defines
 ppc_defines = ['PPC', 'PPC_COMMON', 'BIG_ENDIAN', 'BITS_32', 'PPC32', 'THREADS',
-        'KERNEL_PROCESSOR_NO_PORT_IO', 'OMIT_FRAMEPOINTER', 'PPC_MAC',
-        'OPENFIRMWARE']
+               'KERNEL_PROCESSOR_NO_PORT_IO', 'OMIT_FRAMEPOINTER', 'PPC_MAC',
+               'OPENFIRMWARE']
 
 # ppc CFLAGS and CXXFLAGS
 default_ppc_flags = ['-fno-stack-protector', '-fomit-frame-pointer']
@@ -168,7 +184,8 @@ default_ppc_linkflags = ['-Tsrc/system/kernel/link-ppc.ld']
 default_ppc_imgdir = '#images/ppc'
 
 # ppc final variables
-ppc_flags = generic_flags + default_ppc_flags + warning_flags + warning_flags_off
+ppc_flags = (
+    generic_flags + default_ppc_flags + warning_flags + warning_flags_off)
 ppc_cflags = generic_cflags + default_ppc_cflags + warning_flags_c
 ppc_cxxflags = generic_cxxflags + default_ppc_cxxflags + warning_flags_cxx
 ppc_asflags = generic_asflags + default_ppc_asflags
@@ -176,10 +193,45 @@ ppc_linkflags = generic_linkflags + default_ppc_linkflags
 ppc_defines = generic_defines + ppc_defines
 
 #------------------------- Import Dictionaries -------------------------#
-default_flags       = {'x86' : x86_flags, 'x64' : x64_flags , 'arm' : arm_flags, 'ppc' : ppc_flags}
-default_cflags      = {'x86' : x86_cflags, 'x64' : x64_cflags , 'arm' : arm_cflags, 'ppc' : ppc_cflags}
-default_cxxflags    = {'x86' : x86_cxxflags, 'x64' : x64_cxxflags, 'arm' : arm_cxxflags, 'ppc' : ppc_cxxflags }
-default_asflags     = {'x86' : x86_asflags, 'x64' : x64_asflags, 'arm' : arm_asflags, 'ppc' : ppc_asflags }
-default_linkflags   = {'x86' : x86_linkflags, 'x64' : x64_linkflags, 'arm' : arm_linkflags, 'ppc' : ppc_linkflags }
-default_imgdir      = {'x86' : default_x86_imgdir, 'x64' : default_x64_imgdir, 'arm' : default_arm_imgdir, 'ppc' : default_ppc_imgdir }
-default_defines     = {'x86' : x86_defines, 'x64' : x64_defines, 'arm' : arm_defines, 'ppc' : ppc_defines }
+default_flags = {
+    'x86': x86_flags,
+    'x64': x64_flags,
+    'arm': arm_flags,
+    'ppc': ppc_flags
+}
+default_cflags = {
+    'x86': x86_cflags,
+    'x64': x64_cflags,
+    'arm': arm_cflags,
+    'ppc': ppc_cflags
+}
+default_cxxflags = {
+    'x86': x86_cxxflags,
+    'x64': x64_cxxflags,
+    'arm': arm_cxxflags,
+    'ppc': ppc_cxxflags
+}
+default_asflags = {
+    'x86': x86_asflags,
+    'x64': x64_asflags,
+    'arm': arm_asflags,
+    'ppc': ppc_asflags
+}
+default_linkflags = {
+    'x86': x86_linkflags,
+    'x64': x64_linkflags,
+    'arm': arm_linkflags,
+    'ppc': ppc_linkflags
+}
+default_imgdir = {
+    'x86': default_x86_imgdir,
+    'x64': default_x64_imgdir,
+    'arm': default_arm_imgdir,
+    'ppc': default_ppc_imgdir
+}
+default_defines = {
+    'x86': x86_defines,
+    'x64': x64_defines,
+    'arm': arm_defines,
+    'ppc': ppc_defines
+}

@@ -137,14 +137,12 @@ int Dm9601::recvTrampoline(void *p)
 {
     Dm9601 *pDm9601 = reinterpret_cast<Dm9601*>(p);
     pDm9601->receiveLoop();
-    return 0;
 }
 
 int Dm9601::trampoline(void *p)
 {
     Dm9601 *pDm9601 = reinterpret_cast<Dm9601*>(p);
     pDm9601->receiveThread();
-    return 0;
 }
 
 void Dm9601::receiveThread()

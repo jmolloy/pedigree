@@ -109,7 +109,7 @@ void checkFramebuffer()
 
         // Wipe out the framebuffer before we do much with it.
         int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, g_nWidth);
-        memset((void *) g_pEmu->getRawFramebuffer(), 0, g_nHeight * stride);
+        memset(g_pEmu->getRawFramebuffer(), 0, g_nHeight * stride);
 
         g_Surface = cairo_image_surface_create_for_data(
                 (uint8_t*) g_pEmu->getRawFramebuffer(),

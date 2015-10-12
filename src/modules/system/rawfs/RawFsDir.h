@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -39,9 +38,8 @@ public:
 
     virtual void fileAttributeChanged() {}
 
-    virtual uint64_t read(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer) {return 0;}
-    virtual uint64_t write(File *pFile, uint64_t location, uint64_t size, uintptr_t buffer) {return 0;}
-
+    virtual uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true) {return 0;}
+    virtual uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true) {return 0;}
 
     /** Adds an entry to this directory.
 	\note To be called by RawFS only. */

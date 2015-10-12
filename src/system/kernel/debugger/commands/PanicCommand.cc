@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -40,6 +39,5 @@ void PanicCommand::autocomplete(const HugeStaticString &input, HugeStaticString 
 bool PanicCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
 {
   panic( "uh oh!" );
-  return false; // Return control to the kernel.
 }
 

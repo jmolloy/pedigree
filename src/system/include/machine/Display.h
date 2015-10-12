@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -201,7 +200,7 @@ public:
             if (((*it)->width == nWidth) &&
                 ((*it)->height == nHeight))
             {
-                if(/*(Graphics::bitsPerPixel((*it)->pf2) == nBpp) ||*/ (((*it)->pf.nBpp) == nBpp))
+                if((*it)->pf.nBpp == nBpp)
                 {
                     pSm = *it;
                     break;

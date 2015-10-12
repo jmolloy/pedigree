@@ -35,9 +35,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-extern int tc();
-extern int ts();
-
 #ifdef NOGFX
 #define MAIN_PROGRAM "/applications/ttyterm"
 #else

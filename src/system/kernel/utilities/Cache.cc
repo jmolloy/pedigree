@@ -126,7 +126,7 @@ uint64_t CacheManager::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uin
 }
 
 Cache::Cache() :
-    m_Pages(), m_Lock(), m_Callback(0), m_Nanoseconds(0), m_bRegisteredHandler(false)
+    m_Pages(), m_Lock(), m_Callback(0), m_Nanoseconds(0)
 {
     if (!g_AllocatorInited)
     {
@@ -174,7 +174,7 @@ Cache::~Cache()
 
 uintptr_t Cache::lookup (uintptr_t key)
 {
-   while(!m_Lock.enter());
+   while(!m_Lock.enter()) Processor::pause();
 
     CachePage *pPage = m_Pages.lookup(key);
     if (!pPage)
@@ -319,7 +319,7 @@ void Cache::empty()
         it != m_Pages.end();
         ++it)
     {
-        CachePage *page = reinterpret_cast<CachePage*>(it.value());
+        CachePage *page = it.value();
         page->refcnt = 0;
 
         evict(it.key(), false, true, false);
@@ -444,7 +444,7 @@ size_t Cache::compact(size_t count)
         it != m_Pages.end();
         ++it)
     {
-        CachePage *page = reinterpret_cast<CachePage*>(it.value());
+        CachePage *page = it.value();
 
         // If page has been pinned, it is completely unsafe to remove.
         if(!((m_Callback && (page->refcnt > 1)) || ((!m_Callback) && (page->refcnt > 0))))
@@ -472,7 +472,7 @@ size_t Cache::compact(size_t count)
             it != m_Pages.end();
             ++it)
         {
-            CachePage *page = reinterpret_cast<CachePage*>(it.value());
+            CachePage *page = it.value();
 
             // Only if page has not been pinned - dirty flag is not enough information.
             if(!((m_Callback && (page->refcnt > 1)) || ((!m_Callback) && (page->refcnt > 0))))
@@ -519,7 +519,7 @@ size_t Cache::compact(size_t count)
         for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
             it != m_Pages.end();)
         {
-            CachePage *page = reinterpret_cast<CachePage*>(it.value());
+            CachePage *page = it.value();
 
             // Only if page has not been pinned - otherwise completely unsafe to remove.
             if(!((m_Callback && (page->refcnt > 1)) || ((!m_Callback) && (page->refcnt > 0))))
@@ -590,7 +590,7 @@ void Cache::timer(uint64_t delta, InterruptState &state)
         it != m_Pages.end();
         ++it)
     {
-        CachePage *page = reinterpret_cast<CachePage*>(it.value());
+        CachePage *page = it.value();
         if(va.isMapped(reinterpret_cast<void *>(page->location)))
         {
             physical_uintptr_t phys;

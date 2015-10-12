@@ -45,9 +45,9 @@ int doProcessKill(Process *p, int sig);
 
 /// \todo These are ok initially, but it'll all have to change at some point
 
-#define SIGNAL_HANDLER_EXIT(name, errcode) void name(int s) { posix_exit(errcode); }
+#define SIGNAL_HANDLER_EXIT(name, errcode) void name(int) NORETURN; void name(int) { posix_exit(errcode); }
 #define SIGNAL_HANDLER_EMPTY(name) void name(int s) {NOTICE("EMPTY");}
-#define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int s) { Processor::setInterrupts(true); posix_write(1, msg, strlen(msg), true); Scheduler::instance().yield(); posix_exit(errcode); }
+#define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int) NORETURN; void name(int) { Processor::setInterrupts(true); posix_write(1, msg, strlen(msg), true); Scheduler::instance().yield(); posix_exit(errcode); }
 #define SIGNAL_HANDLER_SUSPEND(name) void name(int s) { NOTICE("SUSPEND"); Process *pParent = Processor::information().getCurrentThread()->getParent()->getParent(); pParent->suspend(); }
 #define SIGNAL_HANDLER_RESUME(name) void name(int s) { NOTICE("RESUME"); Processor::information().getCurrentThread()->getParent()->resume(); }
 
@@ -195,8 +195,7 @@ int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact
             sigHandler->type = 0;
         }
 
-        size_t nLevel = pThread->getStateLevel();
-        sigHandler->pEvent = new SignalEvent(newHandler, static_cast<size_t>(sig)); //, nLevel);
+        sigHandler->pEvent = new SignalEvent(newHandler, static_cast<size_t>(sig));
         SG_NOTICE("Creating the event (" << reinterpret_cast<uintptr_t>(sigHandler->pEvent) << ").");
         pSubsystem->setSignalHandler(sig, sigHandler);
     }
@@ -254,6 +253,7 @@ int posix_raise(int sig, SyscallState &State)
     return 0;
 }
 
+int pedigree_sigret() NORETURN;
 int pedigree_sigret()
 {
     SG_NOTICE("pedigree_sigret");
@@ -272,8 +272,6 @@ int pedigree_sigret()
     Processor::information().getScheduler().eventHandlerReturned();
 
     FATAL("eventHandlerReturned() returned!");
-
-    return 0;
 }
 
 void pedigree_unwind_signal()
@@ -585,8 +583,8 @@ int posix_nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
         uint64_t elapsed = endTick - startTick;
         if(rmtp)
         {
-            rmtp->tv_nsec = static_cast<time_t>(static_cast<uint64_t>(elapsed * 1000) % 1000000000ULL);
-            rmtp->tv_sec = static_cast<time_t>(elapsed / 1000);
+            rmtp->tv_nsec = static_cast<time_t>((elapsed * 1000ULL) % 1000000000ULL);
+            rmtp->tv_sec = static_cast<time_t>(elapsed / 1000ULL);
         }
         
         /// \todo Handle "interrupted before end of timeout"
@@ -615,7 +613,7 @@ int posix_clock_gettime(clockid_t clock_id, struct timespec *tp)
     
     // We only care about the nanoseconds that may have passed in the past
     // second - everything else is handled by the UNIX timestamp.
-    tp->tv_nsec = static_cast<time_t>(static_cast<uint64_t>((Machine::instance().getTimer()->getTickCount() * 1000)) % 1000000000ULL);
+    tp->tv_nsec = static_cast<time_t>((Machine::instance().getTimer()->getTickCount() * 1000ULL) % 1000000000ULL);
     tp->tv_sec = static_cast<time_t>(Machine::instance().getTimer()->getUnixTimestamp());
     
     return 0;
@@ -728,8 +726,7 @@ void pedigree_init_sigret()
 
         uintptr_t newHandler = reinterpret_cast<uintptr_t>(default_sig_handlers[i]);
 
-        size_t nLevel = pThread->getStateLevel();
-        sigHandler->pEvent = new SignalEvent(newHandler, i); //, nLevel);
+        sigHandler->pEvent = new SignalEvent(newHandler, i);
 
         pSubsystem->setSignalHandler(i, sigHandler);
     }

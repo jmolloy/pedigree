@@ -104,8 +104,7 @@ Dns::Dns(const Dns& ent) :
   m_DnsCache(ent.m_DnsCache), m_DnsRequests(ent.m_DnsRequests), m_Endpoint(ent.m_Endpoint)
 {
   Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
-                               reinterpret_cast<Thread::ThreadStartFunc>(&trampoline),
-                               reinterpret_cast<void*>(this));
+                               &trampoline, reinterpret_cast<void*>(this));
   pThread->detach();
 }
 
@@ -119,8 +118,7 @@ void Dns::initialise()
     m_Endpoint = static_cast<ConnectionlessEndpoint *>(p);
     m_Endpoint->acceptAnyAddress(true);
     Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
-                                 reinterpret_cast<Thread::ThreadStartFunc>(&trampoline),
-                                 reinterpret_cast<void*>(this));
+                                 &trampoline, reinterpret_cast<void*>(this));
     pThread->detach();
 }
 
@@ -128,7 +126,6 @@ int Dns::trampoline(void* p)
 {
   Dns *pDns = reinterpret_cast<Dns*>(p);
   pDns->mainThread();
-  return 0;
 }
 
 void Dns::mainThread()

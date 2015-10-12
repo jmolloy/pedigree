@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -109,12 +108,12 @@ VbeDisplay::~VbeDisplay()
 
 void *VbeDisplay::getFramebuffer()
 {
-  return reinterpret_cast<void*> (m_pFramebuffer->virtualAddress());
+  return m_pFramebuffer->virtualAddress();
 }
 
-bool VbeDisplay::getPixelFormat(Display::PixelFormat *pPf)
+bool VbeDisplay::getPixelFormat(Display::PixelFormat &pPf)
 {
-  memcpy(pPf, &m_Mode.pf, sizeof(Display::PixelFormat));
+  pPf = m_Mode.pf;
   return true;
 }
 

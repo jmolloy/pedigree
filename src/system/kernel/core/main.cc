@@ -145,9 +145,6 @@ using namespace __pedigree_hosted;
 #include <stdio.h>
 #endif
 
-void apmm()
-{
-}
 /** Output device for boot-time information. */
 BootIO bootIO;
 
@@ -171,7 +168,8 @@ class SlamRecovery : public MemoryPressureHandler
 
 /** Kernel entry point for application processors (after processor/machine has been initialised
     on the particular processor */
-void apMain()
+static void apMain() NORETURN;
+static void apMain()
 {
   NOTICE("Processor #" << Processor::id() << " started.");
 
@@ -268,6 +266,7 @@ int loadModules(void *inf)
 }
 
 /** Kernel entry point. */
+extern "C" void _main(BootstrapStruct_t &bsInf) NORETURN;
 extern "C" void _main(BootstrapStruct_t &bsInf)
 {
   // Firstly call the constructors of all global objects.

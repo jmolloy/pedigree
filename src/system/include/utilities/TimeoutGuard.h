@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -58,7 +57,7 @@ public:
 
     /** Cancels the current operation.
         \note This is intended only to be called from a TimeoutGuardEvent. */
-    void cancel();
+    void cancel() NORETURN;
 
     /** Internal event class. */
     class TimeoutGuardEvent : public Event

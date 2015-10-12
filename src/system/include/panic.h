@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -21,6 +20,8 @@
 #ifndef KERNEL_PANIC_H
 #define KERNEL_PANIC_H
 
+#include <compiler.h>
+
 /** @addtogroup kernel
  * @{ */
 
@@ -35,7 +36,7 @@ extern "C" {
  *      resources, e.g. no I/O port & memory-region allocations and even no 'normal'
  *      memory allocations.
  *\param[in] msg the message to print to the screen */
-void panic( const char* msg );
+void panic( const char* msg ) NORETURN;
 
 
 #ifdef __cplusplus

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -624,7 +623,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
             }
 
             /// \todo We should queue this ACK and transmit it when the timer fires (200ms max wait)
-            size_t winChange = stateBlock->endpoint->depositPayload(stateBlock->seg_len, payload, stateBlock->seg_seq - stateBlock->irs - 1, (header->flags & Tcp::PSH) == Tcp::PSH);
+            size_t winChange = stateBlock->endpoint->depositTcpPayload(stateBlock->seg_len, payload, stateBlock->seg_seq - stateBlock->irs - 1, (header->flags & Tcp::PSH) == Tcp::PSH);
             stateBlock->rcv_nxt += winChange;
             if(winChange > stateBlock->rcv_wnd)
             {
@@ -650,7 +649,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
 
         // FIN means the remote host has nothing more to send, so push any remaining data to the application
         if(stateBlock->endpoint)
-          stateBlock->endpoint->depositPayload(0, 0, 0, true);
+          stateBlock->endpoint->depositTcpPayload(0, 0, 0, true);
 
         stateBlock->rcv_nxt = stateBlock->seg_seq + 1;
 

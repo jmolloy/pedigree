@@ -327,7 +327,7 @@ bool FatDirectory::removeEntry(File *pFile)
   LockGuard<Mutex> guard(m_Lock);
 
   // First byte = 0xE5 means the file's been deleted.
-  Dir *dir = reinterpret_cast<Dir *>(pFs->getDirectoryEntry(dirClus, dirOffset));
+  Dir *dir = pFs->getDirectoryEntry(dirClus, dirOffset);
   PointerGuard<Dir> dirGuard(dir);
   if(!dir)
     return false;
@@ -340,7 +340,7 @@ bool FatDirectory::removeEntry(File *pFile)
     size_t numLfnEntries = (filename.length() / 13) + 1;
 
     // Grab the first entry behind this one - check that it is in fact a LFN entry
-    Dir *dir_prev = reinterpret_cast<Dir *>(pFs->getDirectoryEntry(dirClus, dirOffset - sizeof(Dir)));
+    Dir *dir_prev = pFs->getDirectoryEntry(dirClus, dirOffset - sizeof(Dir));
     PointerGuard<Dir> prevGuard(dir_prev);
     if(!dir_prev)
       return false;
@@ -362,7 +362,7 @@ bool FatDirectory::removeEntry(File *pFile)
         }
 
         uint32_t newOffset = dirOffset - bytesBack;
-        Dir *lfn = reinterpret_cast<Dir *>(pFs->getDirectoryEntry(dirClus, newOffset));
+        Dir *lfn = pFs->getDirectoryEntry(dirClus, newOffset);
         PointerGuard<Dir> lfnGuard(lfn);
         if((!lfn) || ((lfn->DIR_Attr & ATTR_LONG_NAME_MASK) != ATTR_LONG_NAME))
           break;

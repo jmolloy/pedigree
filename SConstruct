@@ -112,6 +112,7 @@ opts.AddVariables(
     BoolVariable('arm_bigendian', 'Is this ARM target big-endian?', 0),
 
     BoolVariable('hosted', 'Is this build to run on another host OS?', 0),
+    BoolVariable('clang', 'If hosted, should we use clang if it is present (highly recommended)?', 1),
 
     BoolVariable('kernel_on_disk', 'Put the kernel & needed bits onto hard disk images?', 1),
     
@@ -434,6 +435,14 @@ if env['ON_PEDIGREE'] or env['COMPILER_TARGET']:
             'LINKFLAGS': default_linkflags[flags_arch],
         }
 
+        for k in mapping:
+            try:
+                # Force a recreation of the flags.
+                del env[k]
+            except KeyError:
+                # Doesn't exist.
+                pass
+
         env['PEDIGREE_IMAGES_DIR'] = default_imgdir[flags_arch]
         defines = default_defines[flags_arch] + extra_defines
 
@@ -476,7 +485,7 @@ if env['ARCH_TARGET'] == 'ARM':
 
 # Add optional flags.
 warning_flag = ['-Wno-error']
-if env['warnings']:
+if not env['warnings']:
     warning_flag = '-Werror'
 env.MergeFlags({'CCFLAGS': warning_flag})
 
@@ -607,8 +616,8 @@ if env['hosted']:
     env['CPPDEFINES'] += ['SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH']
 
     # Reset flags.
-    env['CCFLAGS'] = generic_flags + warning_flags + ['-U_FORTIFY_SOURCE',
-                                                      '-U__linux__']
+    env['CCFLAGS'] = (generic_flags + warning_flags + warning_flags_off +
+                      ['-U_FORTIFY_SOURCE', '-U__linux__'])
     env['CFLAGS'] = generic_cflags + warning_flags_c
     env['CXXFLAGS'] = generic_cxxflags + warning_flags_cxx
     env['LINKFLAGS'] = []
@@ -618,7 +627,7 @@ if env['hosted']:
         'CCFLAGS': ['-fno-omit-frame-pointer', '-Wno-deprecated-declarations']
     })
 
-    if env['warnings']:
+    if not env['warnings']:
         env.MergeFlags({'CCFLAGS': '-Werror'})
 
     # Not a PC.
@@ -641,13 +650,23 @@ if env['hosted']:
     env['ARCH_TARGET'] = 'HOSTED'
 
     # Do we have clang?
-    if env.Detect('clang') is not None:
+    if env['clang'] and env.Detect('clang') is not None:
         clang = env.Detect('clang')
         clangxx = env.Detect('clang++')
         if clang and clangxx:
             env['CC'] = clang
             env['CXX'] = clangxx
             env['LINK'] = clang
+
+            # Wipe out some warnings that clang can't handle.
+            for flag in ('-Wuseless-cast', '-Wsuggest-attribute=noreturn',
+                         '-Wtrampolines', '-Wlogical-op',
+                         '-Wno-packed-bitfield-compat'):
+                for flags in ('CCFLAGS', 'CFLAGS', 'CXXFLAGS'):
+                    if flag in env[flags]:
+                        env[flags].remove(flag)
+    else:
+        print('Note: not using clang for hosted build.')
 
     fixDebugFlags(env)
 

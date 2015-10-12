@@ -99,8 +99,8 @@ Device *searchNode(Device *pDev, uintptr_t fbAddr)
 
 extern "C" void vbeModeChangedCallback(char *pId, char *pModeId)
 {
-    size_t id = strtoul(pId, 0, 10);
-    size_t mode_id = strtoul(pModeId, 0, 10);
+    size_t id = pedigree_strtoul(pId, 0, 10);
+    size_t mode_id = pedigree_strtoul(pModeId, 0, 10);
 
     if (id >= g_nDisplays) return;
 

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -77,10 +76,10 @@ public:
   }
   
   /** Thread trampoline */
-  static int trampoline(void* p);
+  static int trampoline(void* p) NORETURN;
   
   /** Main daemon thread */
-  void mainThread();
+  void mainThread() NORETURN;
 
   /** Initialises the Endpoint and begins running the worker thread */
   void initialise();

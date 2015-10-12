@@ -452,6 +452,7 @@ typedef struct _pthread_rwlockattr_t
     {
         struct
         {
+            char _ign;
         } __internal;
 
         char __pad[_PTHREAD_TYPE_MINSIZE];

@@ -30,7 +30,6 @@ size_t strlen(const char *src)
 
 int strcpy(char *dest, const char *src)
 {
-  const char *orig_dest = dest;
   while (*src)
   {
     *dest = *src;
@@ -161,11 +160,7 @@ int isalpha(char c)
 }
 
 #define ULONG_MAX -1
-#ifdef HOSTED
-unsigned long _strtoul(const char *nptr, char **endptr, int base)
-#else
-unsigned long strtoul(const char *nptr, char **endptr, int base)
-#endif
+unsigned long pedigree_strtoul(const char *nptr, char const **endptr, int base)
 {
   register const char *s = nptr;
   register unsigned long acc;
@@ -216,7 +211,7 @@ unsigned long strtoul(const char *nptr, char **endptr, int base)
   } else if (neg)
     acc = -acc;
   if (endptr != 0)
-    *endptr = (char *) (any ? s - 1 : nptr);
+    *endptr = (const char *) (any ? s - 1 : nptr);
 
   return (acc);
 }
@@ -246,7 +241,7 @@ const char *strchr(const char *str, int target)
 #ifdef HOSTED
 unsigned long __wrap_strtoul(const char *nptr, char **endptr, int base)
 {
-  return _strtoul(nptr, endptr, base);
+  return pedigree_strtoul(nptr, (char const **) endptr, base);
 }
 
 const char *__wrap_strchr(const char *str, int target)

@@ -81,10 +81,6 @@
 #define POSIX_ALARM      51
 #define POSIX_SLEEP      52
 
-#define POSIX_DLOPEN     53
-#define POSIX_DLSYM      54
-#define POSIX_DLCLOSE    55
-
 #define POSIX_POLL       56
 
 #define POSIX_RENAME     57

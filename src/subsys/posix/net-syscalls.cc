@@ -358,7 +358,7 @@ ssize_t posix_sendto(void* callInfo)
 
     if(f->so_domain == AF_UNIX)
     {
-        struct sockaddr_un *un = (struct sockaddr_un *) address;
+        const struct sockaddr_un *un = (const struct sockaddr_un *) address;
         File *pFile = VFS::instance().find(String(un->sun_path));
         if(!pFile)
         {
@@ -563,7 +563,7 @@ int posix_bind(int sock, const struct sockaddr *address, size_t addrlen)
             }
 
             // Valid state. But no socket, so do the magic here.
-            struct sockaddr_un *un = (struct sockaddr_un *) address;
+            const struct sockaddr_un *un = (const struct sockaddr_un *) address;
             String pathname(un->sun_path);
 
             bool bResult = VFS::instance().createFile(pathname, 0777);
@@ -650,7 +650,7 @@ int posix_listen(int sock, int backlog)
     {
         if((ce->state() != Tcp::CLOSED) && (ce->state() != Tcp::UNKNOWN))
         {
-            ERROR("State was " << static_cast<int>(ce->state()) << ".");
+            ERROR("State was " << ce->state() << ".");
             SYSCALL_ERROR(InvalidArgument);
             return -1;
         }
@@ -792,7 +792,6 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
     if (userBlock < endBlock)
     {
         // Create room for all the pointers to aliases
-        uintptr_t aliasPointerBlock = userBlock;
         entry->h_aliases = reinterpret_cast<char**>(userBlock);
         userBlock += sizeof(char*) * (host.aliases.count() + 1);
 
@@ -926,8 +925,6 @@ int posix_getpeername(int socket, struct sockaddr *address, socklen_t *address_l
     Endpoint* p = s->getEndpoint();
     if (s->getProtocol() == NETMAN_TYPE_TCP)
     {
-        ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(p);
-
         /// todo this may not be accurate.
         struct sockaddr_in* sin = reinterpret_cast<struct sockaddr_in*>(address);
         sin->sin_port = HOST_TO_BIG16(p->getRemotePort());

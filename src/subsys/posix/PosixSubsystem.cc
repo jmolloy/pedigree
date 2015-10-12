@@ -163,7 +163,6 @@ PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
         ++it)
     {
         void *key = it.key();
-        Semaphore *orig = it.value();
 
         Semaphore *sem = new Semaphore(0);
         m_ThreadWaiters.insert(key, sem);
@@ -187,7 +186,7 @@ PosixSubsystem::~PosixSubsystem()
     {
         // Get the signal handler and remove it. Note that there shouldn't be null
         // SignalHandlers, at all.
-        SignalHandler *sig = reinterpret_cast<SignalHandler *>(it.value());
+        SignalHandler *sig = it.value();
         assert(sig);
 
         // SignalHandler's destructor will delete the Event itself
@@ -206,7 +205,7 @@ PosixSubsystem::~PosixSubsystem()
     // Remove any POSIX threads that might still be lying around
     for(Tree<size_t, PosixThread *>::Iterator it = m_Threads.begin(); it != m_Threads.end(); it++)
     {
-        PosixThread *thread = reinterpret_cast<PosixThread *>(it.value());
+        PosixThread *thread = it.value();
         assert(thread); // There shouldn't have ever been a null PosixThread in there
 
         // If the thread is still running, it should be killed
@@ -234,7 +233,7 @@ PosixSubsystem::~PosixSubsystem()
     // Clean up synchronisation objects
     for(Tree<size_t, PosixSyncObject *>::Iterator it = m_SyncObjects.begin(); it != m_SyncObjects.end(); it++)
     {
-        PosixSyncObject *p = reinterpret_cast<PosixSyncObject *>(it.value());
+        PosixSyncObject *p = it.value();
         assert(p);
 
         if(p->pObject)
@@ -476,7 +475,6 @@ bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)
 
     if(sig && sig->pEvent)
     {
-        size_t pid = pThread->getParent()->getId();
         // Send the kill event
         pThread->sendEvent(sig->pEvent);
 
@@ -596,7 +594,7 @@ void PosixSubsystem::setSignalHandler(size_t sig, SignalHandler* handler)
     if(handler)
     {
         SignalHandler* tmp;
-        tmp = reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig));
+        tmp = m_SignalHandlers.lookup(sig);
         if(tmp)
         {
             // Remove from the list

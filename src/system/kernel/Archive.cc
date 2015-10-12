@@ -26,7 +26,7 @@
 
 Archive::Archive(uint8_t *pPhys, size_t sSize) :
 #ifdef HOSTED
-  m_pBase(pPhys), m_nSize(sSize)
+  m_pBase(pPhys)
 #else
   m_Region("Archive")
 #endif

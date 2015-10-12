@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -156,7 +155,7 @@ void Trie<void*>::remove(uint8_t *pKey)
 {
     size_t len = strlen(reinterpret_cast<const char*>(pKey));
 
-    Node *pNode, *pChild, *pTmpChild;
+    Node *pNode, *pChild;
     size_t n = 0;
     pNode = m_pRoot;
 

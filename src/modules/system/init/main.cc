@@ -432,7 +432,7 @@ void init_stage2()
     }
 
     // can we get some space for the argv loc
-    uintptr_t argv_loc;
+    uintptr_t argv_loc = 0;
     if (pProcess->getAddressSpace()->getDynamicStart())
     {
         pProcess->getDynamicSpaceAllocator().allocate(PhysicalMemoryManager::instance().getPageSize(), argv_loc);
@@ -476,12 +476,12 @@ void init_stage2()
 #endif
 }
 
-#ifdef X86_COMMON
+#if defined(X86_COMMON)
 #define __MOD_DEPS "vfs", "posix", "partition", "linker", "network-stack", "users", "pedigree-c", "native"
-#define __MOD_DEPS_OPT "ext2", "fat", "TUI", "vbe"
-#elif PPC_COMMON
-#define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "TUI", "linker", "network-stack", "users", "pedigree-c", "native"
-#elif ARM_COMMON
+#define __MOD_DEPS_OPT "ext2", "fat", "vbe"
+#elif defined(PPC_COMMON)
+#define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "linker", "network-stack", "users", "pedigree-c", "native"
+#elif defined(ARM_COMMON)
 #define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "linker", "network-stack", "users", "pedigree-c", "native"
 #elif defined(HOSTED)
 #define __MOD_DEPS "vfs", "ext2", "fat", "partition", "network-stack", "users", "pedigree-c", "native", "posix"

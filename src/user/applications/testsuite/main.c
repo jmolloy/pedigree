@@ -25,6 +25,8 @@ extern void test_mprotect();
 
 static jmp_buf buf;
 
+void fail() __attribute__((noreturn));
+
 void fail()
 {
     longjmp(buf, 1);

@@ -272,6 +272,7 @@ int clientThread(void *p)
     return 0;
 }
 
+int mainThread(void *p) NORETURN;
 int mainThread(void *p)
 {
     ConnectionBasedEndpoint *pEndpoint = reinterpret_cast<ConnectionBasedEndpoint *>(p);
@@ -286,8 +287,6 @@ int mainThread(void *p)
         Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(), clientThread, pClient);
         pThread->detach();
     }
-
-    return 0;
 }
 
 static bool init()

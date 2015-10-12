@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -175,7 +174,7 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
     size_t nAddressRange = * reinterpret_cast<size_t*> (m_nData+nIndex);
     nIndex += sizeof(size_t);
     
-    uintptr_t nInstructionStart = static_cast<uintptr_t> (nIndex);
+    uintptr_t nInstructionStart = nIndex;
     size_t nInstructionLength = nLength - sizeof(uint32_t) - sizeof(uintptr_t) -
         sizeof(size_t);
 
@@ -210,7 +209,9 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
     uint8_t *pData = reinterpret_cast<uint8_t*> (m_nData);
     int32_t nCodeAlignmentFactor   = decodeUleb128(pData, nCie);
     int32_t nDataAlignmentFactor   = decodeSleb128(pData, nCie);
+#ifndef HOSTED
     uint32_t nReturnAddressRegister = decodeUleb128(pData, nCie);
+#endif
     
     DwarfCfiAutomaton automaton;
     automaton.initialise (startState, m_nData+nCie, nCieEnd-nCie, nCodeAlignmentFactor,

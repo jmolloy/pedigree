@@ -307,7 +307,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     /// \todo This could probably be cleaned up a little.
 
     // Try and read the shebang, if any
-    String theShebang, *oldPath = 0;
+    String theShebang;
     static char tmpBuff[128 + 1];
     file->read(0, 128, reinterpret_cast<uintptr_t>(tmpBuff));
     tmpBuff[128] = '\0';
@@ -834,9 +834,6 @@ int posix_exit(int code)
 #else
         ;
 #endif
-
-    // Makes the compiler happyface again
-    return 0;
 }
 
 int posix_getpid()
@@ -1072,24 +1069,6 @@ int pedigree_login(int uid, const char *password)
         return -1;
 }
 
-uintptr_t posix_dlopen(const char* file, int mode, void* p)
-{
-    FATAL("posix_dlopen called!");
-    return 0;
-}
-
-uintptr_t posix_dlsym(void* handle, const char* name)
-{
-    FATAL("posix_dlsym called!");
-    return 0;
-}
-
-int posix_dlclose(void* handle)
-{
-    FATAL("posix_dlclose called!");
-    return 0;
-}
-
 int posix_setsid()
 {
     SC_NOTICE("setsid");
@@ -1308,7 +1287,7 @@ int pedigree_reboot()
         // Grab the process and subsystem. Don't grab a POSIX subsystem object,
         // because we may be hitting native processes here.
         Process *proc = Scheduler::instance().getProcess(i);
-        Subsystem *subsys = reinterpret_cast<Subsystem*>(proc->getSubsystem());
+        Subsystem *subsys = proc->getSubsystem();
 
         // DO NOT COMMIT SUICIDE. That's called a hang with undefined state, chilldren.
         if(proc == Processor::information().getCurrentThread()->getParent())

@@ -53,7 +53,7 @@ int posix_pthread_mutex_trylock(pthread_mutex_t *mutex);
 int posix_pthread_mutex_unlock(pthread_mutex_t *mutex);
 
 int posix_pthread_enter(uintptr_t blk);
-void posix_pthread_exit(void *ret);
+void posix_pthread_exit(void *ret) NORETURN;
 
 void* posix_pthread_getspecific(pthread_key_t *key);
 int posix_pthread_setspecific(pthread_key_t *key, const void *buff);

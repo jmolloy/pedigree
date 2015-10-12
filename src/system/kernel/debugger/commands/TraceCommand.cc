@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -91,7 +90,7 @@ bool TraceCommand::execute(const HugeStaticString &input, HugeStaticString &outp
 
   uintptr_t nLocation;
   LargeStaticString text;
-  while (nInstruction < static_cast<size_t>(disassembly.getLineCount()))
+  while (nInstruction < disassembly.getLineCount())
   {
     nLocation = disassembler.getLocation();
     text.clear();

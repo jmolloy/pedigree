@@ -171,7 +171,7 @@ bool Terminal::initialise()
         strcpy(ut.ut_id, ttyid + strlen("tty"));
         strcpy(ut.ut_line, ttyid);
         strcpy(ut.ut_user, pw->pw_name);
-        gettimeofday((struct timeval *) &ut.ut_tv, NULL);
+        gettimeofday(&ut.ut_tv, NULL);
 
         setutxent();
         pututxline(&ut);

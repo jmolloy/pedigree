@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -60,8 +59,6 @@ void Ndp::receive(IpAddress from, IpAddress to, uint8_t icmpType, uint8_t icmpCo
         // Don't care about router solicit messages, they are not relevant.
         case NDP_RADVERT:
             {
-                RouterAdvertisement *pMessage = reinterpret_cast<RouterAdvertisement*>(payload);
-
                 /// \todo Use the "current hop limit" to change IPv6's default
                 ///       hop limit.
 

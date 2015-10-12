@@ -62,9 +62,6 @@ static uintptr_t extend(T p)
 
 bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 {
-    PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
-    size_t pageSz = PhysicalMemoryManager::getPageSize();
-
     // Do we even have section headers to peek at?
     if(pBootstrap.getSectionHeaderCount() == 0)
     {
@@ -79,6 +76,9 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
     }
 
 #if defined(X86_COMMON)
+    PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
+    size_t pageSz = PhysicalMemoryManager::getPageSize();
+
     m_AdditionalSectionHeaders = new MemoryRegion("Kernel ELF Section Headers");
 
     // Map in section headers.
@@ -201,7 +201,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 #ifdef DEBUGGER
     if (m_pSymbolTable && m_pStringTable)
     {
-        KernelElfSymbol_t *pSymbol = reinterpret_cast<KernelElfSymbol_t *>(m_pSymbolTable);
+        KernelElfSymbol_t *pSymbol = m_pSymbolTable;
 
         const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable);
 
@@ -542,7 +542,7 @@ void KernelElf::unloadModule(Vector<Module*>::Iterator it, bool silent, bool pro
             physical_uintptr_t phys = 0;
             size_t flags = 0;
             va.getMapping(unmapAddr, phys, flags);
-            va.unmap(reinterpret_cast<void*>(unmapAddr));
+            va.unmap(unmapAddr);
 
             // Free the physical page
             PhysicalMemoryManager::instance().freePage(phys);

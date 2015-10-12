@@ -43,8 +43,8 @@ static int onceFunctions[32] = {0};
 
 static void *_pedigree_create_waiter()
 {
-    return (void *) syscall0(POSIX_PEDIGREE_CREATE_WAITER);
-    return 0;
+    uintptr_t result = syscall0(POSIX_PEDIGREE_CREATE_WAITER);
+    return (void *) result;
 }
 
 static void _pedigree_destroy_waiter(void *waiter)
@@ -584,7 +584,8 @@ int pthread_condattr_setclock(pthread_condattr_t *attr, clockid_t clock_id)
 
 void* pthread_getspecific(pthread_key_t key)
 {
-    return (void*) syscall1(POSIX_PTHREAD_GETSPECIFIC, (long) &key);
+    uintptr_t result = syscall1(POSIX_PTHREAD_GETSPECIFIC, (long) &key);
+    return (void *) result;
 }
 
 int pthread_setspecific(pthread_key_t key, const void *data)
@@ -601,7 +602,8 @@ typedef void (*key_destructor)(void*);
 
 key_destructor pthread_key_destructor(pthread_key_t key)
 {
-    return (key_destructor) syscall1(POSIX_PTHREAD_KEY_DESTRUCTOR, (long) &key);
+    uintptr_t result = syscall1(POSIX_PTHREAD_KEY_DESTRUCTOR, (long) &key);
+    return (key_destructor) result;
 }
 
 int pthread_key_delete(pthread_key_t key)

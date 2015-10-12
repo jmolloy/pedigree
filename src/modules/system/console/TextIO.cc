@@ -1231,9 +1231,6 @@ void TextIO::doHorizontalTab()
 
 void TextIO::checkScroll()
 {
-    uint8_t attributeByte = (m_Back << 4) | (m_Fore & 0x0F);
-    uint16_t blank = ' ' | (attributeByte << 8);
-
     // Handle scrolling, which can take place due to linefeeds and
     // other such cursor movements.
     if(m_CursorY < m_ScrollStart)
@@ -1247,7 +1244,6 @@ void TextIO::checkScroll()
 
         // Bottom of the scrolling area
         size_t sourceEnd = m_ScrollEnd + 1 - numRows;
-        size_t destEnd = m_ScrollEnd + 1;
 
         // Move data.
         memmove(&m_pBackbuffer[destRow * BACKBUFFER_STRIDE],

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -47,11 +46,15 @@ public:
     virtual ~VbeDisplay();
 
     virtual void *getFramebuffer();
-    virtual bool getPixelFormat(Display::PixelFormat *pPf);
+    virtual bool getPixelFormat(Display::PixelFormat &pPf);
     virtual bool getCurrentScreenMode(Display::ScreenMode &sm);
     virtual bool getScreenModes(List<Display::ScreenMode*> &sms);
     virtual bool setScreenMode(Display::ScreenMode sm);
     virtual bool setScreenMode(size_t modeId);
+    virtual bool setScreenMode(size_t nWidth, size_t nHeight, size_t nBpp)
+    {
+        return Display::setScreenMode(nWidth, nHeight, nBpp);
+    }
 
     virtual rgb_t *newBuffer();
     virtual void setCurrentBuffer(rgb_t *pBuffer);

@@ -136,6 +136,14 @@ custom_libs = {
     'apptest': ['pedigree'],
 }
 
+# Applications to not enable -Werror for.
+no_werror_apps = [
+    'fire',  # C89.
+    'gears',  # opengl
+    'keymap',  # lex/yacc
+    'nyancat',  # not ours
+]
+
 # Default libraries for all applications
 base_libs = ['pthread']
 
@@ -147,11 +155,15 @@ base_include_dirs = [
 
 # Flags from CXXFLAGS and CFLAGS to *remove* for an app
 remove_flags = {
-    # fire is more or less pre-C99 code.
-    'fire' : ['-Werror'],
-    # TODO: fix nyancat's code to not be warning-heavy...
-    'nyancat': ['-Werror'],
-    'which': ['-Werror'],
+    'nyancat': ['-Wcast-qual'],
+    'which': ['-Wwrite-strings'],
+}
+
+# Extra flags to add to flags for an app.
+add_flags = {
+    # Both of these use getopt, which has a const-ness problem.
+    'nyancat': ['-Wno-cast-qual', '-Wno-write-strings', '-Wno-clobbered'],
+    'which': ['-Wno-cast-qual', '-Wno-write-strings'],
 }
 
 env_clone['CFLAGS'] = buildutils.userspace.fixFlags(env, env['CFLAGS'])
@@ -259,6 +271,11 @@ for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + lib
         app_env.MergeFlags({'CXXFLAGS': '-std=gnu++11'})
 
     buildutils.misc.removeFromAllFlags(app_env, set(remove_flags.get(app, [])))
+
+    if app in no_werror_apps:
+        buildutils.misc.removeFromAllFlags(app_env, '-Werror')
+
+    app_env.MergeFlags({'CCFLAGS': add_flags.get(app, [])})
 
     output = os.path.join(builddir, 'apps', app)
     files = [Glob(os.path.join(base, '*.c')), Glob(os.path.join(base, '*.cc'))]

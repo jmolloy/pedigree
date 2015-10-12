@@ -226,8 +226,6 @@ bool dhcpClient(Network *pCard)
     #define BUFFSZ 2048
     uint8_t* buff = new uint8_t[BUFFSZ];
 
-    bool bSuccess = true;
-
     // Can be used for anything
     DhcpPacket dhcp;
 

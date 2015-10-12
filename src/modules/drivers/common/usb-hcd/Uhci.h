@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -143,7 +142,7 @@ class Uhci : public UsbHub, public IrqHandler, public RequestQueue, public Timer
         /// IRQ handler
         virtual bool irq(irq_id_t number, InterruptState &state);
 
-        void doDequeue();
+        void doDequeue() NORETURN;
 
         /// Timer callback to handle port status changes
         void timer(uint64_t delta, InterruptState &state);

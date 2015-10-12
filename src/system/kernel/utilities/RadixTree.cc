@@ -180,7 +180,6 @@ void RadixTree<void*>::insert(String key, void *value)
 
 void *RadixTree<void*>::lookup(String key) const
 {
-    Node *pOldRoot = m_pRoot;
     if (!m_pRoot)
     {
         return 0;

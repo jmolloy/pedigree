@@ -83,7 +83,7 @@ void X64SyscallManager::syscall(SyscallState &syscallState)
 
 uintptr_t X64SyscallManager::syscall(Service_t service, uintptr_t function, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5)
 {
-    uint64_t rax = (static_cast<uint64_t>(service) << 16) | static_cast<uint64_t>(function);
+    uint64_t rax = (static_cast<uint64_t>(service) << 16) | function;
     uint64_t ret;
     asm volatile("mov %6, %%r8; \
                   syscall" : "=a" (ret)

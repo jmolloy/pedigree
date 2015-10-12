@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -56,13 +55,13 @@ class Dm9601 : public UsbDevice, public Network
 
     private:
 
-        static int recvTrampoline(void *p);
+        static int recvTrampoline(void *p) NORETURN;
 
-        static int trampoline(void *p);
+        static int trampoline(void *p) NORETURN;
 
-        void receiveThread();
+        void receiveThread() NORETURN;
 
-        void receiveLoop();
+        void receiveLoop() NORETURN;
 
         void doReceive();
 

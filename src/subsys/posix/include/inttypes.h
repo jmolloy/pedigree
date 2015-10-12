@@ -28,6 +28,34 @@
 #define __need_wchar_t
 #include <stddef.h>
 
+/** Begin snippet from newlib stdint.h. */
+
+#if defined(__GNUC__) && \
+  ( (__GNUC__ >= 4) || \
+    ( (__GNUC__ >= 3) && defined(__GNUC_MINOR__) && (__GNUC_MINOR__ > 2) ) )
+/* gcc > 3.2 implicitly defines the values we are interested */
+#define __STDINT_EXP(x) __##x##__
+#else
+#define __STDINT_EXP(x) x
+#include <limits.h>
+#endif
+
+/* Check if "long long" is 64bit wide */
+/* Modern GCCs provide __LONG_LONG_MAX__, SUSv3 wants LLONG_MAX */
+#if ( defined(__LONG_LONG_MAX__) && (__LONG_LONG_MAX__ > 0x7fffffff) ) \
+  || ( defined(LLONG_MAX) && (LLONG_MAX > 0x7fffffff) )
+#define __have_longlong64 1
+#endif
+
+/* Check if "long" is 64bit or 32bit wide */
+#if __STDINT_EXP(LONG_MAX) > 0x7fffffff
+#define __have_long64 1
+#elif __STDINT_EXP(LONG_MAX) == 0x7fffffff && !defined(__SPU__)
+#define __have_long32 1
+#endif
+
+/** End snippet from newlib stdint.h. */
+
 #define __STRINGIFY(a) #a
 
 /* 8-bit types */
@@ -123,7 +151,7 @@
 #define SCNxFAST16	__SCN16(x)
 
 /* 32-bit types */
-#if __have_long32
+#if defined(__have_long32) && __have_long32
 #define __PRI32(x) __STRINGIFY(l##x)
 #define __SCN32(x) __STRINGIFY(l##x)
 #else
@@ -198,7 +226,6 @@
 #define SCNu64		__SCN64(u)
 #define SCNx64		__SCN64(x)
 
-#if __int64_t_defined
 #define PRIdLEAST64	__PRI64(d)
 #define PRIiLEAST64	__PRI64(i)
 #define PRIoLEAST64	__PRI64(o)
@@ -225,7 +252,6 @@
 #define SCNoFAST64	__SCN64(o)
 #define SCNuFAST64	__SCN64(u)
 #define SCNxFAST64	__SCN64(x)
-#endif
 
 /* max-bit types */
 #if __have_longlong64

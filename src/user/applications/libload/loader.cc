@@ -72,7 +72,7 @@ typedef struct _object_meta {
     std::string path;
     entry_point_t entry;
 
-    void *mapped_file;
+    const void *mapped_file;
     size_t mapped_file_sz;
 
     bool relocated;
@@ -93,7 +93,7 @@ typedef struct _object_meta {
     ElfSectionHeader_t *sh_symtab;
     ElfSectionHeader_t *sh_strtab;
 
-    ElfSymbol_t *symtab;
+    const ElfSymbol_t *symtab;
     const char *strtab;
 
     ElfSectionHeader_t *sh_shstrtab;
@@ -124,9 +124,9 @@ typedef struct _object_meta {
 
     size_t plt_sz;
 
-    ElfHash_t *hash;
-    Elf_Word *hash_buckets;
-    Elf_Word *hash_chains;
+    const ElfHash_t *hash;
+    const Elf_Word *hash_buckets;
+    const Elf_Word *hash_chains;
 
     std::list<struct _object_meta*> preloads;
     std::list<struct _object_meta*> objects;
@@ -566,11 +566,11 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
         errno = ENOEXEC;
         return false;
     }
-    meta->mapped_file = (void *) pBuffer;
+    meta->mapped_file = pBuffer;
 
-    meta->phdrs = (ElfProgramHeader_t *) &pBuffer[header.phoff];
+    meta->phdrs = const_cast<ElfProgramHeader_t *>(reinterpret_cast<const ElfProgramHeader_t *>(&pBuffer[header.phoff]));
     meta->num_phdrs = header.phnum;
-    meta->shdrs = (ElfSectionHeader_t *) &pBuffer[header.shoff];
+    meta->shdrs = const_cast<ElfSectionHeader_t *>(reinterpret_cast<const ElfSectionHeader_t *>(&pBuffer[header.shoff]));
     meta->num_shdrs = header.shnum;
 
     if(header.type == ET_REL) {
@@ -589,7 +589,7 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
     }
 
     meta->sh_shstrtab = &meta->shdrs[header.shstrndx];
-    meta->shstrtab = (const char *) &pBuffer[meta->sh_shstrtab->offset];
+    meta->shstrtab = &pBuffer[meta->sh_shstrtab->offset];
 
     // Find the symbol and string tables (these are not the dynamic ones).
     meta->sh_symtab = 0;
@@ -607,11 +607,11 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
     meta->strtab = 0;
 
     if(meta->sh_symtab != 0) {
-        meta->symtab = (ElfSymbol_t *) &pBuffer[meta->sh_symtab->offset];
+        meta->symtab = reinterpret_cast<const ElfSymbol_t *>(&pBuffer[meta->sh_symtab->offset]);
     }
 
     if(meta->sh_strtab != 0) {
-        meta->strtab = (const char *) &pBuffer[meta->sh_strtab->offset];
+        meta->strtab = &pBuffer[meta->sh_strtab->offset];
     }
 
     // Load program headers.
@@ -632,7 +632,7 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
 
             void *p = pedigree_sys_request_mem(mapSize);
             if(!p) {
-                munmap((void *) pBuffer, meta->mapped_file_sz);
+                munmap(const_cast<char *>(pBuffer), meta->mapped_file_sz);
                 errno = ENOEXEC;
                 syslog(LOG_INFO, "libload.so: couldn't get memory for relocated object");
                 return false;
@@ -659,7 +659,7 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                     meta->ph_dynamic->vaddr += meta->load_base;
                 }
 
-                ElfDyn_t *dyn = (ElfDyn_t *) &pBuffer[meta->phdrs[i].offset];
+                const ElfDyn_t *dyn = (const ElfDyn_t *) &pBuffer[meta->phdrs[i].offset];
 
                 while(dyn->tag != DT_NULL) {
                     switch(dyn->tag) {
@@ -841,9 +841,9 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
         if(meta->shdrs[i].type == SHT_HASH) {
             uintptr_t vaddr = meta->shdrs[meta->shdrs[i].link].addr;
             if(((uintptr_t) meta->dyn_symtab) == vaddr) {
-                meta->hash = (ElfHash_t *) &pBuffer[meta->shdrs[i].offset];
-                meta->hash_buckets = (Elf_Word *) &pBuffer[meta->shdrs[i].offset + sizeof(ElfHash_t)];
-                meta->hash_chains = (Elf_Word *) &pBuffer[meta->shdrs[i].offset + sizeof(ElfHash_t) + (sizeof(Elf_Word) * meta->hash->nbucket)];
+                meta->hash = (const ElfHash_t *) &pBuffer[meta->shdrs[i].offset];
+                meta->hash_buckets = (const Elf_Word *) &pBuffer[meta->shdrs[i].offset + sizeof(ElfHash_t)];
+                meta->hash_chains = (const Elf_Word *) &pBuffer[meta->shdrs[i].offset + sizeof(ElfHash_t) + (sizeof(Elf_Word) * meta->hash->nbucket)];
             }
         }
     }
@@ -892,7 +892,7 @@ bool lookupSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, boo
             }
             if(bWeak) {
                 if(ST_BIND(sym.info) == STB_WEAK) {
-                    // sym.value = (uintptr_t) ~0UL;
+                    // sym.value = ~0UL;
                     break;
                 }
             }
@@ -1016,7 +1016,7 @@ std::string symbolName(const ElfSymbol_t &sym, object_meta_t *meta, bool bNoDyna
         return std::string("");
     }
 
-    ElfSymbol_t *symtab = meta->symtab;
+    const ElfSymbol_t *symtab = meta->symtab;
     const char *strtab = meta->strtab;
 
     if((!bNoDynamic) && meta->dyn_symtab) {
@@ -1122,12 +1122,12 @@ void doRelocation(object_meta_t *meta) {
 #define R_386_GOTPC    10
 
 uintptr_t doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
-    ElfSymbol_t *symtab = meta->symtab;
+    const ElfSymbol_t *symtab = meta->symtab;
     if(meta->dyn_symtab) {
         symtab = meta->dyn_symtab;
     }
 
-    ElfSymbol_t *sym = &symtab[R_SYM(rel.info)];
+    const ElfSymbol_t *sym = &symtab[R_SYM(rel.info)];
     ElfSectionHeader_t *sh = 0;
     if(sym->shndx) {
         sh = &meta->shdrs[sym->shndx];
@@ -1161,7 +1161,7 @@ uintptr_t doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
             // Attempt to find the symbol.
             if(!findSymbol(symbolname.c_str(), meta, lookupsym, policy)) {
                 printf("symbol lookup for '%s' (needed in '%s') failed.\n", symbolname.c_str(), meta->path.c_str());
-                lookupsym.value = (uintptr_t) ~0UL;
+                lookupsym.value = ~0UL;
             }
 
             S = lookupsym.value;
@@ -1169,7 +1169,7 @@ uintptr_t doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
         }
     }
 
-    if(S == (uintptr_t) ~0UL) {
+    if(S == ~0UL) {
         S = 0;
     }
 
@@ -1207,12 +1207,12 @@ uintptr_t doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
 }
 
 uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
-    ElfSymbol_t *symtab = meta->symtab;
+    const ElfSymbol_t *symtab = meta->symtab;
     if(meta->dyn_symtab) {
         symtab = meta->dyn_symtab;
     }
 
-    ElfSymbol_t *sym = &symtab[R_SYM(rel.info)];
+    const ElfSymbol_t *sym = &symtab[R_SYM(rel.info)];
     ElfSectionHeader_t *sh = 0;
     if(sym->shndx) {
         sh = &meta->shdrs[sym->shndx];
@@ -1246,7 +1246,7 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
             // Attempt to find the symbol.
             if(!findSymbol(symbolname.c_str(), meta, lookupsym, policy)) {
                 printf("symbol lookup for '%s' (needed in '%s') failed.\n", symbolname.c_str(), meta->path.c_str());
-                lookupsym.value = (uintptr_t) ~0UL;
+                lookupsym.value = ~0UL;
             }
 
             S = lookupsym.value;
@@ -1256,11 +1256,11 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
 
     // Valid S?
     if((S == 0) && (R_TYPE(rel.info) != R_X86_64_RELATIVE)) {
-        return (uintptr_t) ~0UL;
+        return ~0UL;
     }
 
     // Weak symbol.
-    if(S == (uintptr_t) ~0UL) {
+    if(S == ~0UL) {
         S = 0;
     }
 
@@ -1348,7 +1348,7 @@ extern "C" uintptr_t _libload_dofixup(uintptr_t id, uintptr_t symbol) {
     ElfSymbol_t *sym = &meta->dyn_symtab[R_SYM(rel.info)];
 
     uintptr_t result = doThisRelocation(rel, meta);
-    if(result == (uintptr_t) ~0UL) {
+    if(result == ~0UL) {
         fprintf(stderr, "symbol lookup failed (couldn't relocate)\n");
         abort();
     }

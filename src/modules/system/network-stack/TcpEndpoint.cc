@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -134,11 +133,11 @@ int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
     }
 };
 
-size_t TcpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, uint32_t sequenceNumber, bool push)
+size_t TcpEndpoint::depositTcpPayload(size_t nBytes, uintptr_t payload, uint32_t sequenceNumber, bool push)
 {
     if (nBytes > 0xFFFF)
     {
-        WARNING("Dud length passed to depositPayload!");
+        WARNING("Dud length passed to depositTcpPayload!");
         return 0;
     }
 

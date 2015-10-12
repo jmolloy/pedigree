@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -251,8 +250,7 @@ class DwarfState
 //           WARNING ("ValOffset.");
           // "The previous value of this register is the value CFA+N where CFA is the current
           //  CFA value and N is a signed offset."
-          return static_cast<processor_register_t>
-                   (getCfa(initialState) + static_cast<ssize_t> (m_R[nRegister]));
+          return getCfa(initialState) + static_cast<ssize_t> (m_R[nRegister]);
         }
         case Register:
         {

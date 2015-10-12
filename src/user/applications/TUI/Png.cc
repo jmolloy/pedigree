@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -76,7 +75,7 @@ Png::Png(const char *filename) :
 
                  reinterpret_cast<void*>(0));
 
-    m_pRowPointers = reinterpret_cast<uint8_t**>(png_get_rows(m_PngPtr, m_InfoPtr));
+    m_pRowPointers = png_get_rows(m_PngPtr, m_InfoPtr);
 
     // Grab the info header information.
     int bit_depth, color_type, interlace_type, compression_type, filter_method;

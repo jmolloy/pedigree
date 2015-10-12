@@ -627,7 +627,7 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
 
     if (m_pSymbolTable && m_pStringTable)
     {
-        ElfSymbol_t *pSymbol = reinterpret_cast<ElfSymbol_t *>(m_pSymbolTable);
+        ElfSymbol_t *pSymbol = m_pSymbolTable;
 
         const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable);
 
@@ -969,7 +969,7 @@ const char *Elf::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
     if (!m_pSymbolTable || !m_pStringTable)
         return 0; // Just return null if we haven't got a symbol table.
 
-    ElfSymbol_t *pSymbol = reinterpret_cast<ElfSymbol_t *>(m_pSymbolTable);
+    ElfSymbol_t *pSymbol = m_pSymbolTable;
 
     const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable);
 
