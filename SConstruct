@@ -112,6 +112,7 @@ opts.AddVariables(
     BoolVariable('arm_bigendian', 'Is this ARM target big-endian?', 0),
 
     BoolVariable('hosted', 'Is this build to run on another host OS?', 0),
+    BoolVariable('clang', 'If hosted, should we use clang if it is present (highly recommended)?', 1),
 
     BoolVariable('kernel_on_disk', 'Put the kernel & needed bits onto hard disk images?', 1),
     
@@ -649,7 +650,7 @@ if env['hosted']:
     env['ARCH_TARGET'] = 'HOSTED'
 
     # Do we have clang?
-    if env.Detect('clang') is not None:
+    if env['clang'] and env.Detect('clang') is not None:
         clang = env.Detect('clang')
         clangxx = env.Detect('clang++')
         if clang and clangxx:
@@ -657,8 +658,15 @@ if env['hosted']:
             env['CXX'] = clangxx
             env['LINK'] = clang
 
-        # Don't break the build on clang warnings.
-        env['CCFLAGS'].remove('-Werror')
+            # Wipe out some warnings that clang can't handle.
+            for flag in ('-Wuseless-cast', '-Wsuggest-attribute=noreturn',
+                         '-Wtrampolines', '-Wlogical-op',
+                         '-Wno-packed-bitfield-compat'):
+                for flags in ('CCFLAGS', 'CFLAGS', 'CXXFLAGS'):
+                    if flag in env[flags]:
+                        env[flags].remove(flag)
+    else:
+        print('Note: not using clang for hosted build.')
 
     fixDebugFlags(env)
 
