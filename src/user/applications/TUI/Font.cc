@@ -189,7 +189,7 @@ const char *Font::precache(uint32_t c)
         uint32_t utf32[] = {c, 0};
         char *utf32_c = (char *) utf32;
         char *out = new char[100];
-        char *out_c = (char *) out;
+        char *out_c = out;
         size_t utf32_len = 8;
         size_t out_len = 100;
         size_t res = iconv(m_Iconv, &utf32_c, &utf32_len, &out_c, &out_len);

@@ -73,7 +73,7 @@ DynamicLinker::~DynamicLinker()
          it != m_Objects.end();
          it++)
     {
-        SharedObject *pSo = reinterpret_cast<SharedObject*>(it.value());
+        SharedObject *pSo = it.value();
         delete pSo->elf;
         delete pSo;
     }
@@ -341,7 +341,7 @@ bool DynamicLinker::trap(uintptr_t address)
              it != m_Objects.end();
              it++)
         {
-            SharedObject *pSo = reinterpret_cast<SharedObject*>(it.value());
+            SharedObject *pSo = it.value();
 
             // Totally pedantic
 #ifdef ADDITIONAL_CHECKS

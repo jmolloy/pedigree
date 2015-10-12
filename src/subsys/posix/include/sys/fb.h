@@ -21,9 +21,7 @@
 #ifndef _SYS_FB_H
 #define _SYS_FB_H
 
-#include <newlib.h>
 #include <stdint.h>
-#include <unistd.h>
 
 /// Commands that can be performed against the framebuffer device.
 enum FbCommands

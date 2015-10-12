@@ -50,6 +50,7 @@ public:
     virtual void pinBlock(uint64_t location);
     virtual void unpinBlock(uint64_t location);
 
+    using File::sync;
     virtual void sync(size_t offset, bool async);
 
 protected:

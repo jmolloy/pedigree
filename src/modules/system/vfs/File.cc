@@ -184,7 +184,7 @@ physical_uintptr_t File::getPhysicalPage(size_t offset)
     // Quick and easy exit.
     if(offset > m_Size)
     {
-        return static_cast<physical_uintptr_t>(~0UL);
+        return ~0UL;
     }
 
     // Check if we have this page in the cache.
@@ -193,7 +193,7 @@ physical_uintptr_t File::getPhysicalPage(size_t offset)
     m_Lock.release();
     if (!vaddr)
     {
-        return static_cast<physical_uintptr_t>(~0UL);
+        return ~0UL;
     }
 
     // Look up the page now that we've confirmed it is in the cache.
@@ -210,7 +210,7 @@ physical_uintptr_t File::getPhysicalPage(size_t offset)
         return phys;
     }
 
-    return static_cast<physical_uintptr_t>(~0UL);
+    return ~0UL;
 }
 
 void File::returnPhysicalPage(size_t offset)

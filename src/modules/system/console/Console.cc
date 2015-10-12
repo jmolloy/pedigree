@@ -560,12 +560,6 @@ ConsoleManager &ConsoleManager::instance()
     return m_Instance;
 }
 
-bool ConsoleManager::registerConsole(String consoleName, RequestQueue *backEnd, uintptr_t param)
-{
-    FATAL("Console: old-style console creation used!");
-    return false;
-}
-
 File* ConsoleManager::getConsole(String consoleName)
 {
     LockGuard<Spinlock> guard(m_Lock);

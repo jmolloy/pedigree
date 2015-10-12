@@ -316,12 +316,12 @@ class PosixSubsystem : public Subsystem
         SignalHandler* getSignalHandler(size_t sig)
         {
             while(!m_SignalHandlersLock.enter());
-            SignalHandler *ret = reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig % 32));
+            SignalHandler *ret = m_SignalHandlers.lookup(sig % 32);
             m_SignalHandlersLock.leave();
             return ret;
         }
 
-        void exit(int code);
+        void exit(int code) NORETURN;
 
         /** Copies file descriptors from another subsystem */
         bool copyDescriptors(PosixSubsystem *pSubsystem);

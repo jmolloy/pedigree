@@ -51,8 +51,10 @@ int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
     return syscall3(PEDIGREE_GET_MOUNT, (long) mount_buf, (long) info_buf, n);
 }
 
-void *pedigree_sys_request_mem(size_t len) {
-    return (void *) syscall1(PEDIGREE_SYS_REQUEST_MEM, (long) len);
+void *pedigree_sys_request_mem(size_t len)
+{
+    uintptr_t result = syscall1(PEDIGREE_SYS_REQUEST_MEM, (long) len);
+    return (void *) result;
 }
 
 void pedigree_input_install_callback(void *p, uint32_t type, uintptr_t param)

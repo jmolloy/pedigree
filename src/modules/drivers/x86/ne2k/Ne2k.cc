@@ -115,8 +115,7 @@ Ne2k::Ne2k(Network* pDev) :
   // register the packet queue handler before we install the IRQ
 #ifdef THREADS
   Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
-                               reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
-                               reinterpret_cast<void*> (this));
+                               &trampoline, reinterpret_cast<void*>(this));
   pThread->detach();
 #endif
 
@@ -285,7 +284,6 @@ int Ne2k::trampoline(void *p)
 {
   Ne2k *pNe = reinterpret_cast<Ne2k*> (p);
   pNe->receiveThread();
-  return 0;
 }
 
 void Ne2k::receiveThread()

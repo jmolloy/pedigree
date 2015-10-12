@@ -71,7 +71,7 @@ uintptr_t NativeSyscallManager::syscall(SyscallState &state)
         case IPC_CREATE_STANDARD_MESSAGE:
             return createStandardMessage(reinterpret_cast<PedigreeIpc::IpcMessage*>(p1));
         case IPC_CREATE_SHARED_MESSAGE:
-            return createSharedMessage(reinterpret_cast<PedigreeIpc::IpcMessage*>(p1), static_cast<size_t>(p2), p3);
+            return createSharedMessage(reinterpret_cast<PedigreeIpc::IpcMessage*>(p1), p2, p3);
         case IPC_GET_SHARED_REGION:
             return reinterpret_cast<uintptr_t>(getIpcSharedRegion(reinterpret_cast<PedigreeIpc::IpcMessage*>(p1)));
         case IPC_DESTROY_MESSAGE:

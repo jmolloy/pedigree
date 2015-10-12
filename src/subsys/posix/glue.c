@@ -152,7 +152,8 @@ char* getcwd(char *buf, unsigned long size)
     // error condition.
     if(!buf)
         buf = (char*) malloc(size ? size : PATH_MAX);
-    return (char *)syscall2(POSIX_GETCWD, (long) buf, (long) size);
+    unsigned long result = syscall2(POSIX_GETCWD, (long) buf, (long) size);
+    return (char *) result;
 }
 
 int mkdir(const char *p, mode_t mode)
@@ -280,7 +281,8 @@ _READ_WRITE_RETURN_TYPE read(int file, void *ptr, size_t len)
 
 void *sbrk(ptrdiff_t incr)
 {
-    return (void*) syscall1(POSIX_SBRK, incr);
+    uintptr_t result = syscall1(POSIX_SBRK, incr);
+    return (void *) result;
 }
 
 int stat(const char *file, struct stat *st)
@@ -607,12 +609,12 @@ const char * const sys_siglist[] =
     "Terminate"
 };
 
-char *strsignal(int sig)
+const char *strsignal(int sig)
 {
     if (sig < 16)
-        return (char*)sys_siglist[sig];
+        return sys_siglist[sig];
     else
-        return (char*)"Unknown";
+        return "Unknown";
 }
 
 uid_t getuid(void)
@@ -923,7 +925,17 @@ int listen(int sock, int backlog)
     return (long)syscall2(POSIX_LISTEN, sock, backlog);
 }
 
-struct special_send_recv_data
+struct special_send_data
+{
+    int sock;
+    const void* buff;
+    size_t bufflen;
+    int flags;
+    const struct sockaddr* remote_addr;
+    const socklen_t* addrlen;
+} __attribute__((packed));
+
+struct special_recv_data
 {
     int sock;
     void* buff;
@@ -935,7 +947,7 @@ struct special_send_recv_data
 
 ssize_t recvfrom(int sock, void* buff, size_t bufflen, int flags, struct sockaddr* remote_addr, size_t *addrlen)
 {
-    struct special_send_recv_data* tmp = (struct special_send_recv_data*) malloc(sizeof(struct special_send_recv_data));
+    struct special_recv_data* tmp = (struct special_recv_data*) malloc(sizeof(struct special_recv_data));
     tmp->sock = sock;
     tmp->buff = buff;
     tmp->bufflen = bufflen;
@@ -964,12 +976,12 @@ ssize_t sendmsg(int sock, const struct msghdr* msg, int flags)
 
 ssize_t sendto(int sock, const void* buff, size_t bufflen, int flags, const struct sockaddr* remote_addr, socklen_t addrlen)
 {
-    struct special_send_recv_data* tmp = (struct special_send_recv_data*) malloc(sizeof(struct special_send_recv_data));
+    struct special_send_data* tmp = (struct special_send_data*) malloc(sizeof(struct special_send_data));
     tmp->sock = sock;
-    tmp->buff = (char *)buff;
+    tmp->buff = buff;
     tmp->bufflen = bufflen;
     tmp->flags = flags;
-    tmp->remote_addr = (struct sockaddr*)remote_addr;
+    tmp->remote_addr = remote_addr;
     tmp->addrlen = &addrlen;
 
     int ret = syscall1(POSIX_SENDTO, (long) tmp);
@@ -1014,7 +1026,7 @@ int inet_addr(const char *cp)
 
     // Reallocate the string so the memory can be modified
     char* tmp = (char*) malloc(strlen(cp) + 1);
-    strcpy(tmp, (char *)cp);
+    strcpy(tmp, cp);
 
     // Store the pointer so the memory can be freed
     char* tmp_ptr = tmp;
@@ -1276,7 +1288,7 @@ struct protoent* getprotobyname(const char *name)
 
     ent->p_name = (char*) malloc(strlen(name) + 1);
     ent->p_aliases = 0;
-    strcpy(ent->p_name, (char*)name);
+    strcpy(ent->p_name, name);
 
     if (!strcmp(name, "icmp"))
         ent->p_proto = IPPROTO_ICMP;
@@ -1374,7 +1386,7 @@ const char* inet_ntop(int af, const void* src, char* dst, unsigned long size)
     }
 
     /// \todo endianness is terrible here.
-    uint32_t addr = *((uint32_t *) src);
+    uint32_t addr = *((const uint32_t *) src);
     unsigned long n = snprintf(dst, size, "%u.%u.%u.%u", addr & 0xff, (addr & 0xff00) >> 8, (addr & 0xff0000) >> 16, (addr & 0xff000000) >> 24);
     if(n > size)
     {
@@ -1609,6 +1621,7 @@ int getgrnam_r(const char *name, struct group *grp, char *buffer, size_t bufsize
     return -1;
 }
 
+void err(int eval, const char * fmt, ...) _ATTRIBUTE((noreturn));
 void err(int eval, const char * fmt, ...)
 {
     printf("err: %d: (todo: print format string based on arguments): %s\n", errno, strerror(errno));
@@ -1844,7 +1857,8 @@ void *mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off)
     t.fildes = fildes;
     t.off = off;
 
-    return (void*) syscall1(POSIX_MMAP, (long) &t);
+    uintptr_t result = syscall1(POSIX_MMAP, (long) &t);
+    return (void *) result;
 }
 
 int msync(void *addr, size_t len, int flags)

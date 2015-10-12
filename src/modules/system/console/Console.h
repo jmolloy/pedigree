@@ -294,8 +294,6 @@ public:
     //
     // ConsoleManager interface.
     //
-    bool registerConsole(String consoleName, RequestQueue *backEnd, uintptr_t param);
-
     File* getConsole(String consoleName);
     ConsoleFile *getConsoleFile(RequestQueue *pBackend);
 

@@ -139,6 +139,9 @@ custom_libs = {
 # Applications to not enable -Werror for.
 no_werror_apps = [
     'fire',  # C89.
+    'gears',  # opengl
+    'keymap',  # lex/yacc
+    'nyancat',  # not ours
 ]
 
 # Default libraries for all applications

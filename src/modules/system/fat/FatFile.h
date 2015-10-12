@@ -64,6 +64,7 @@ public:
 
   void extend(size_t newSize);
 
+  using File::sync;
   virtual void sync(size_t offset, bool async);
 
   virtual void pinBlock(uint64_t location);

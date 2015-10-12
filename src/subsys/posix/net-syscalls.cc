@@ -358,7 +358,7 @@ ssize_t posix_sendto(void* callInfo)
 
     if(f->so_domain == AF_UNIX)
     {
-        struct sockaddr_un *un = (struct sockaddr_un *) address;
+        const struct sockaddr_un *un = (const struct sockaddr_un *) address;
         File *pFile = VFS::instance().find(String(un->sun_path));
         if(!pFile)
         {
@@ -563,7 +563,7 @@ int posix_bind(int sock, const struct sockaddr *address, size_t addrlen)
             }
 
             // Valid state. But no socket, so do the magic here.
-            struct sockaddr_un *un = (struct sockaddr_un *) address;
+            const struct sockaddr_un *un = (const struct sockaddr_un *) address;
             String pathname(un->sun_path);
 
             bool bResult = VFS::instance().createFile(pathname, 0777);
@@ -650,7 +650,7 @@ int posix_listen(int sock, int backlog)
     {
         if((ce->state() != Tcp::CLOSED) && (ce->state() != Tcp::UNKNOWN))
         {
-            ERROR("State was " << static_cast<int>(ce->state()) << ".");
+            ERROR("State was " << ce->state() << ".");
             SYSCALL_ERROR(InvalidArgument);
             return -1;
         }

@@ -125,13 +125,13 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_SOCKET:
             return posix_socket(static_cast<int>(p1), static_cast<int>(p2), static_cast<int>(p3));
         case POSIX_CONNECT:
-            return posix_connect(static_cast<int>(p1), reinterpret_cast<sockaddr*>(p2), static_cast<size_t>(p3));
+            return posix_connect(static_cast<int>(p1), reinterpret_cast<sockaddr*>(p2), p3);
         case POSIX_SEND:
-            return posix_send(static_cast<int>(p1), reinterpret_cast<void*>(p2), static_cast<size_t>(p3), static_cast<int>(p4));
+            return posix_send(static_cast<int>(p1), reinterpret_cast<void*>(p2), p3, static_cast<int>(p4));
         case POSIX_RECV:
-            return posix_recv(static_cast<int>(p1), reinterpret_cast<void*>(p2), static_cast<size_t>(p3), static_cast<int>(p4));
+            return posix_recv(static_cast<int>(p1), reinterpret_cast<void*>(p2), p3, static_cast<int>(p4));
         case POSIX_BIND:
-            return posix_bind(static_cast<int>(p1), reinterpret_cast<sockaddr*>(p2), static_cast<size_t>(p3));
+            return posix_bind(static_cast<int>(p1), reinterpret_cast<sockaddr*>(p2), p3);
         case POSIX_LISTEN:
             return posix_listen(static_cast<int>(p1), static_cast<int>(p2));
         case POSIX_ACCEPT:
@@ -155,7 +155,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_GETHOSTBYNAME:
             return posix_gethostbyname(reinterpret_cast<const char*>(p1), reinterpret_cast<void*>(p2), static_cast<int>(p3));
         case POSIX_GETHOSTBYADDR:
-            return posix_gethostbyaddr(reinterpret_cast<const void*>(p1), static_cast<unsigned long>(p2), static_cast<int>(p3), reinterpret_cast<void*>(p4));
+            return posix_gethostbyaddr(reinterpret_cast<const void*>(p1), p2, static_cast<int>(p3), reinterpret_cast<void*>(p4));
         case POSIX_FCNTL:
             return posix_fcntl(static_cast<int>(p1), static_cast<int>(p2), static_cast<int>(p3), reinterpret_cast<int*>(p4));
         case POSIX_PIPE:
@@ -184,18 +184,12 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             return posix_alarm(static_cast<uint32_t>(p1));
         case POSIX_SLEEP:
             return posix_sleep(static_cast<uint32_t>(p1));
-        case POSIX_DLOPEN:
-            return posix_dlopen(reinterpret_cast<const char*>(p1), static_cast<int>(p2), reinterpret_cast<void*>(p3));
-        case POSIX_DLSYM:
-            return posix_dlsym(reinterpret_cast<void*>(p1), reinterpret_cast<const char*>(p2));
-        case POSIX_DLCLOSE:
-            return posix_dlclose(reinterpret_cast<void*>(p1));
         case POSIX_POLL:
             return posix_poll(reinterpret_cast<pollfd*>(p1), static_cast<unsigned int>(p2), static_cast<int>(p3));
         case POSIX_RENAME:
             return posix_rename(reinterpret_cast<const char*>(p1), reinterpret_cast<const char*>(p2));
         case POSIX_GETCWD:
-            return reinterpret_cast<uintptr_t>(posix_getcwd(reinterpret_cast<char*>(p1), static_cast<size_t>(p2)));
+            return reinterpret_cast<uintptr_t>(posix_getcwd(reinterpret_cast<char*>(p1), p2));
         case POSIX_READLINK:
             return posix_readlink(reinterpret_cast<const char*>(p1), reinterpret_cast<char*>(p2), static_cast<unsigned int>(p3));
         case POSIX_LINK:
@@ -205,7 +199,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_MMAP:
             return reinterpret_cast<uintptr_t>(posix_mmap(reinterpret_cast<void*>(p1)));
         case POSIX_MUNMAP:
-            return posix_munmap(reinterpret_cast<void*>(p1), static_cast<size_t>(p2));
+            return posix_munmap(reinterpret_cast<void*>(p1), p2);
         case POSIX_SHUTDOWN:
             return posix_shutdown(static_cast<int>(p1), static_cast<int>(p2));
         case POSIX_ACCESS:
@@ -309,7 +303,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_NANOSLEEP:
             return posix_nanosleep(reinterpret_cast<struct timespec*>(p1), reinterpret_cast<struct timespec*>(p2));
         case POSIX_CLOCK_GETTIME:
-            return posix_clock_gettime(static_cast<clockid_t>(p1), reinterpret_cast<struct timespec*>(p2));
+            return posix_clock_gettime(p1, reinterpret_cast<struct timespec*>(p2));
         
         case POSIX_GETEUID:
             return posix_geteuid();
@@ -345,7 +339,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             return 0;
 
         case POSIX_MSYNC:
-            return posix_msync(reinterpret_cast<void *>(p1), static_cast<size_t>(p2), static_cast<int>(p3));
+            return posix_msync(reinterpret_cast<void *>(p1), p2, static_cast<int>(p3));
         case POSIX_GETPEERNAME:
             return posix_getpeername(static_cast<int>(p1), reinterpret_cast<struct sockaddr*>(p2), reinterpret_cast<socklen_t*>(p3));
         case POSIX_FSYNC:
@@ -361,13 +355,13 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             return posix_tcsetpgrp(static_cast<int>(p1), static_cast<pid_t>(p2));
 
         case POSIX_USLEEP:
-            return posix_usleep(static_cast<size_t>(p1));
+            return posix_usleep(p1);
 
         case POSIX_MPROTECT:
-            return posix_mprotect(reinterpret_cast<void *>(p1), static_cast<size_t>(p2), static_cast<int>(p3));
+            return posix_mprotect(reinterpret_cast<void *>(p1), p2, static_cast<int>(p3));
 
         case POSIX_REALPATH:
-            return posix_realpath(reinterpret_cast<const char *>(p1), reinterpret_cast<char *>(p2), static_cast<size_t>(p3));
+            return posix_realpath(reinterpret_cast<const char *>(p1), reinterpret_cast<char *>(p2), p3);
 
         case POSIX_PEDIGREE_CREATE_WAITER:
             return reinterpret_cast<uintptr_t>(posix_pedigree_create_waiter());

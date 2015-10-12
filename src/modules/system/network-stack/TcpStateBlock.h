@@ -309,8 +309,7 @@ class StateBlock : public TimerHandler
 
             // create the cleanup thread
             Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
-                                         reinterpret_cast<Thread::ThreadStartFunc> (&stateBlockFree),
-                                         reinterpret_cast<void*> (this));
+                                         &stateBlockFree, reinterpret_cast<void*>(this));
             pThread->detach();
           }
         }

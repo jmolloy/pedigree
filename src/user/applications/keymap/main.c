@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -140,11 +139,11 @@ int yywrap()
     return 1;
 }
 
+int yyerror(const char *str) __attribute__((noreturn));
 int yyerror(const char *str)
 {
   printf("Syntax error: %s\n", str);
   exit(1);
-  return 1;
 }
 
 void usage()

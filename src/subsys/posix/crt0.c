@@ -25,6 +25,7 @@
 extern int main(int, char**, char**);
 extern void _init_signals(void);
 
+void _start(char **argv, char **env)  _ATTRIBUTE((noreturn));
 void _start(char **argv, char **env)
 {
   _init_signals();

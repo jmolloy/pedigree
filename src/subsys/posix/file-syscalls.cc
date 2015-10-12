@@ -419,7 +419,9 @@ int posix_write(int fd, char *ptr, int len, bool nocheck)
     }
 
     if(ptr)
+    {
         F_NOTICE("write(" << fd << ", " << ptr << ", " << len << ")");
+    }
 
     // Lookup this process.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -805,9 +807,9 @@ int posix_stat(const char *name, struct stat *st)
     st->st_gid   = file->getGid();
     st->st_rdev  = 0;
     st->st_size  = static_cast<int>(file->getSize());
-    st->st_atime = static_cast<int>(file->getAccessedTime());
-    st->st_mtime = static_cast<int>(file->getModifiedTime());
-    st->st_ctime = static_cast<int>(file->getCreationTime());
+    st->st_atime = file->getAccessedTime();
+    st->st_mtime = file->getModifiedTime();
+    st->st_ctime = file->getCreationTime();
     st->st_blksize = static_cast<int>(file->getBlockSize());
     st->st_blocks = (st->st_size / st->st_blksize) + ((st->st_size % st->st_blksize) ? 1 : 0);
 
@@ -887,9 +889,9 @@ int posix_fstat(int fd, struct stat *st)
     st->st_gid   = pFd->file->getGid();
     st->st_rdev  = 0;
     st->st_size  = static_cast<int>(pFd->file->getSize());
-    st->st_atime = static_cast<int>(pFd->file->getAccessedTime());
-    st->st_mtime = static_cast<int>(pFd->file->getModifiedTime());
-    st->st_ctime = static_cast<int>(pFd->file->getCreationTime());
+    st->st_atime = pFd->file->getAccessedTime();
+    st->st_mtime = pFd->file->getModifiedTime();
+    st->st_ctime = pFd->file->getCreationTime();
     st->st_blksize = static_cast<int>(pFd->file->getBlockSize());
     st->st_blocks = (st->st_size / st->st_blksize) + ((st->st_size % st->st_blksize) ? 1 : 0);
 
@@ -965,9 +967,9 @@ int posix_lstat(char *name, struct stat *st)
     st->st_gid   = file->getGid();
     st->st_rdev  = 0;
     st->st_size  = static_cast<int>(file->getSize());
-    st->st_atime = static_cast<int>(file->getAccessedTime());
-    st->st_mtime = static_cast<int>(file->getModifiedTime());
-    st->st_ctime = static_cast<int>(file->getCreationTime());
+    st->st_atime = file->getAccessedTime();
+    st->st_mtime = file->getModifiedTime();
+    st->st_ctime = file->getCreationTime();
     st->st_blksize = static_cast<int>(file->getBlockSize());
     st->st_blocks = (st->st_size / st->st_blksize) + ((st->st_size % st->st_blksize) ? 1 : 0);
 
@@ -1346,7 +1348,7 @@ int posix_dup2(int fd1, int fd2)
     // According to the spec, CLOEXEC is cleared on DUP.
     f2->fdflags &= ~FD_CLOEXEC;
 
-    return static_cast<int>(fd2);
+    return fd2;
 }
 
 int posix_mkdir(const char* name, int mode)
