@@ -26,14 +26,14 @@ import SCons
 # Generic entry-level flags (that everyone should have)
 generic_flags = ['-fno-builtin', '-nostdlib', '-ffreestanding', '-O3']
 generic_cflags = ['-std=gnu99']
-generic_cxxflags = ['-std=gnu++98', '-fno-exceptions', '-fno-rtti',
+generic_cxxflags = ['-std=gnu++11', '-fno-exceptions', '-fno-rtti',
                     '-fno-asynchronous-unwind-tables']
 
 # Warning flags (that force us to write betterish code)
 # , '-pedantic'
 warning_flags = [
     '-Wall', '-Wextra', '-Wpointer-arith', '-Wcast-align',
-    '-Wwrite-strings', '-Wno-long-long', '-Wno-variadic-macros',
+    '-Wwrite-strings', '-Wno-long-long', '-Wvariadic-macros',
     '-Wno-unused-parameter', '-Wuninitialized', '-Wstrict-aliasing',
     '-Wsuggest-attribute=noreturn', '-Wtrampolines', '-Wfloat-equal',
     '-Wundef', '-Wcast-qual', '-Wlogical-op', '-Wdisabled-optimization']
@@ -46,6 +46,7 @@ warning_flags_cxx = ['-Wsign-promo', '-Woverloaded-virtual',
                      '-Wuseless-cast']
 
 # Turn off some warnings (because they kill the build)
+# TODO(miselin): we really shouldn't disable -Wconversion...
 warning_flags_off = [
     '-Wno-unused', '-Wno-unused-variable', '-Wno-conversion', '-Wno-format',
     '-Wno-packed-bitfield-compat', '-Wno-error=disabled-optimization']
