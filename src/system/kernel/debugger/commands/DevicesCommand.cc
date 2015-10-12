@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -274,7 +273,7 @@ const char *DevicesCommand::DeviceInfo::getLine2(size_t index, size_t &colOffset
       break;
     }
     case 1:
-      str += m_pDev->getType();
+      str += static_cast<unsigned int>(m_pDev->getType());
       break;
     case 2:
       str += m_pDev->getSpecificType();

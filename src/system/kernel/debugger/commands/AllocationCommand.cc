@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -182,7 +181,7 @@ const char *AllocationCommand::getLine1(size_t index, DebuggerIO::Colour &colour
   static NormalStaticString Line;
   Line.clear();
 
-  Allocation *pA = reinterpret_cast<Allocation*>(m_It.value());
+  Allocation *pA = m_It.value();
 
   bgColour = DebuggerIO::Black;
   if (index == 0)

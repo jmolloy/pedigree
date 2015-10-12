@@ -99,9 +99,6 @@ public:
     /** Returns the n'th thread in this process. */
     Thread *getThread(size_t n);
 
-    /** Creates a new process, with a single thread and a stack. */
-    static uintptr_t create(uint8_t *elf, size_t elfSize, const char *name);
-
     /** Returns the process ID. */
     size_t getId()
     {
@@ -138,7 +135,7 @@ public:
     }
 
     /** Kills the process. */
-    void kill();
+    void kill() NORETURN;
     /** Suspends the process. */
     void suspend();
     /** Resumes the process from suspend. */

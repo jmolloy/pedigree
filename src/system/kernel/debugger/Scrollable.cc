@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -111,8 +110,8 @@ void Scrollable::setScrollKeys(char up, char down)
 	
 void Scrollable::centreOn(size_t line)
 {
-  if( line > static_cast<size_t>(getLineCount()) )
-	line = static_cast<size_t>(getLineCount());
+  if( line > getLineCount() )
+	line = getLineCount();
   
   if( line < m_height )
   {

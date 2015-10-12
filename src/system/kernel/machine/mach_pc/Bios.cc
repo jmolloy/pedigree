@@ -91,10 +91,10 @@ extern "C" int abs (int i)
   return (i>0)?i:-i;
 }
 
-extern "C" int exit (int code)
+extern "C" int exit (int code) NORETURN;
+int exit (int)
 {
-  for(;;);
-  return code;
+  panic("bios: exit()");
 }
 
 extern "C" void sscanf()

@@ -396,7 +396,7 @@ bool MemoryInspector::tryGoto(LargeStaticString &str, uintptr_t &result, Interru
     return false;
   else
   {
-    result = static_cast<uintptr_t> (n);
+    result = n;
     return true;
   }
 }

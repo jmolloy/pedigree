@@ -16,6 +16,7 @@
 #ifndef _NEW_H
 #define _NEW_H
 
+#include <compiler.h>
 #include <processor/types.h>
 
 // Conventional new
@@ -27,7 +28,7 @@ void operator delete[] (void * p);
 // Placement new
 void* operator new(size_t, void* p) throw();
 void* operator new[](size_t, void* p) throw();
-void  operator delete  (void*, void*);
-void  operator delete[](void*, void*);
+void  operator delete  (void*, void*) NORETURN;
+void  operator delete[](void*, void*) NORETURN;
 
 #endif

@@ -163,7 +163,7 @@ int isalpha(char c)
 #ifdef HOSTED
 unsigned long _strtoul(const char *nptr, char **endptr, int base)
 #else
-unsigned long strtoul(const char *nptr, char **endptr, int base)
+unsigned long strtoul(const char *nptr, char const **endptr, int base)
 #endif
 {
   register const char *s = nptr;
@@ -215,7 +215,7 @@ unsigned long strtoul(const char *nptr, char **endptr, int base)
   } else if (neg)
     acc = -acc;
   if (endptr != 0)
-    *endptr = (char *) (any ? s - 1 : nptr);
+    *endptr = (const char *) (any ? s - 1 : nptr);
 
   return (acc);
 }

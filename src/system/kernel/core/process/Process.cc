@@ -239,12 +239,6 @@ void Process::resume()
     Processor::information().getScheduler().schedule(Thread::Ready);
 }
 
-uintptr_t Process::create(uint8_t *elf, size_t elfSize, const char *name)
-{
-    FATAL("This function isn't implemented correctly - registration with the dynamic linker is required!");
-    return 0;
-}
-
 void Process::addWaiter(Semaphore *pWaiter)
 {
     m_Waiters.pushBack(pWaiter);

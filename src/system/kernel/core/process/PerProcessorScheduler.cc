@@ -81,7 +81,6 @@ int PerProcessorScheduler::processorAddThread(void *instance)
         
         delete pData;
     }
-    return 0;
 }
 
 void PerProcessorScheduler::initialise(Thread *pThread)

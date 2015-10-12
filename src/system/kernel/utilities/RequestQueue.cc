@@ -54,9 +54,7 @@ void RequestQueue::initialise()
   Process *pProcess = Scheduler::instance().getKernelProcess();
 
   m_Stop = false;
-  m_pThread = new Thread(pProcess,
-                       reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
-                       reinterpret_cast<void*> (this));
+  m_pThread = new Thread(pProcess, &trampoline, reinterpret_cast<void*>(this));
   m_Halted = false;
 #else
   WARNING("RequestQueue: This build does not support threads");
@@ -214,9 +212,8 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
 
   // Add to RequestQueue.
   Process *pProcess = Scheduler::instance().getKernelProcess();
-  Thread *pThread = new Thread(pProcess,
-                               reinterpret_cast<Thread::ThreadStartFunc> (&doAsync),
-                               reinterpret_cast<void *>(pReq));
+  Thread *pThread = new Thread(pProcess, &doAsync,
+      reinterpret_cast<void *>(pReq));
   pThread->detach();
 #endif
 

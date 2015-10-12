@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -107,13 +106,13 @@ bool LocksCommand::execute(const HugeStaticString &input, HugeStaticString &outp
         Spinlock *pLock = reinterpret_cast<Spinlock*>(address);
         output += "Lock state:\n";
         output += "  m_bInterrupts: ";
-        output += pLock->m_bInterrupts;
+        output += static_cast<unsigned>(pLock->m_bInterrupts);
         output += "\n  m_Atom:";
         output += (pLock->m_Atom) ? "Unlocked" : "Locked";
         output += "\n  m_Ra: ";
         output.append(pLock->m_Ra, 16);
         output += "\n  m_bAvoidTracking: ";
-        output += pLock->m_bAvoidTracking;
+        output += static_cast<unsigned>(pLock->m_bAvoidTracking);
         output += "\n  m_Magic: ";
         output.append(pLock->m_Magic, 16);
         output += "\n";

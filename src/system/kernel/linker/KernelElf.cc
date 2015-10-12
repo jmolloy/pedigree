@@ -201,7 +201,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 #ifdef DEBUGGER
     if (m_pSymbolTable && m_pStringTable)
     {
-        KernelElfSymbol_t *pSymbol = reinterpret_cast<KernelElfSymbol_t *>(m_pSymbolTable);
+        KernelElfSymbol_t *pSymbol = m_pSymbolTable;
 
         const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable);
 
@@ -542,7 +542,7 @@ void KernelElf::unloadModule(Vector<Module*>::Iterator it, bool silent, bool pro
             physical_uintptr_t phys = 0;
             size_t flags = 0;
             va.getMapping(unmapAddr, phys, flags);
-            va.unmap(reinterpret_cast<void*>(unmapAddr));
+            va.unmap(unmapAddr);
 
             // Free the physical page
             PhysicalMemoryManager::instance().freePage(phys);

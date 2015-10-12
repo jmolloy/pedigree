@@ -68,8 +68,8 @@ void initialiseConstructors()
   // Constructor list is defined in the linker script.
   // The .ctors section is just an array of function pointers.
   // iterate through, calling each in turn.
-  uintptr_t *iterator = reinterpret_cast<uintptr_t*>(&start_ctors);
-  while (iterator < reinterpret_cast<uintptr_t*>(&end_ctors))
+  uintptr_t *iterator = &start_ctors;
+  while (iterator < &end_ctors)
   {
     void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
     fp();
@@ -79,8 +79,8 @@ void initialiseConstructors()
 
 void runKernelDestructors()
 {
-  uintptr_t *iterator = reinterpret_cast<uintptr_t*>(&start_dtors);
-  while (iterator < reinterpret_cast<uintptr_t*>(&end_dtors))
+  uintptr_t *iterator = &start_dtors;
+  while (iterator < &end_dtors)
   {
     void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
     fp();
@@ -206,7 +206,8 @@ extern "C" void ATEXIT(void (*f)(void *), void *p, void *d)
 }
 
 /// Called by G++ if a pure virtual function is called. Bad Thing, should never happen!
-extern "C" void __cxa_pure_virtual()
+extern "C" void __cxa_pure_virtual() NORETURN;
+void __cxa_pure_virtual()
 {
     FATAL_NOLOCK("Pure virtual function call made");
 }
@@ -457,12 +458,12 @@ void operator delete[] (void * p)
 void operator delete (void *p, void *q)
 {
   // TODO
-  panic("Operator delete -implement");
+  panic("Operator delete (placement) -implement");
 }
 void operator delete[] (void *p, void *q)
 {
   // TODO
-  panic("Operator delete[] -implement");
+  panic("Operator delete[] (placement) -implement");
 }
 
 #ifdef ARMV7_IGNORE

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -148,7 +147,7 @@ bool SlamCommand::execute(const HugeStaticString &input, HugeStaticString &outpu
         Machine::instance().getSerial(0)->write ("AllocDump {\n");
         for(m_It = m_Tree.begin(); m_It != m_Tree.end(); m_It++)
         {
-            SlamAllocation *pA = reinterpret_cast<SlamAllocation*>(m_It.value());
+            SlamAllocation *pA = m_It.value();
             StaticString<512> str;
             str.clear();
             str += "Alloc {\nBacktrace [";
@@ -197,7 +196,7 @@ const char *SlamCommand::getLine1(size_t index, DebuggerIO::Colour &colour, Debu
   static NormalStaticString Line;
   Line.clear();
 
-  SlamAllocation *pA = reinterpret_cast<SlamAllocation*>(m_It.value());
+  SlamAllocation *pA = m_It.value();
 
   bgColour = DebuggerIO::Black;
   if (index == 0)

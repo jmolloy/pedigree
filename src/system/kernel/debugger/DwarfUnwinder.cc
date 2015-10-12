@@ -174,7 +174,7 @@ bool DwarfUnwinder::unwind(const ProcessorState &inState, ProcessorState &outSta
     size_t nAddressRange = * reinterpret_cast<size_t*> (m_nData+nIndex);
     nIndex += sizeof(size_t);
     
-    uintptr_t nInstructionStart = static_cast<uintptr_t> (nIndex);
+    uintptr_t nInstructionStart = nIndex;
     size_t nInstructionLength = nLength - sizeof(uint32_t) - sizeof(uintptr_t) -
         sizeof(size_t);
 

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -120,10 +119,10 @@ class InputManager
         bool removeCallbackByThread(Thread *pThread);
 
         /// Thread trampoline
-        static int trampoline(void *ptr);
+        static int trampoline(void *ptr) NORETURN;
 
         /// Main worker thread
-        void mainThread();
+        void mainThread() NORETURN;
 
     private:
         /// Static instance

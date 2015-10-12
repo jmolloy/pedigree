@@ -115,7 +115,7 @@ uint64_t random_next();
 const char *strchr(const char *str, int target);
 const char *strrchr(const char *str, int target);
 
-unsigned long strtoul(const char *nptr, char **endptr, int base);
+unsigned long strtoul(const char *nptr, char const **endptr, int base);
 
 inline char toUpper(char c)
 {
@@ -177,7 +177,7 @@ inline char toLower(char c)
   {
     uint8_t sum = 0;
     for (size_t i = 0;i < sMemory;i++)
-      sum += reinterpret_cast<const uint8_t*>(pMemory)[i];
+      sum += pMemory[i];
     return (sum == 0);
   }
 
