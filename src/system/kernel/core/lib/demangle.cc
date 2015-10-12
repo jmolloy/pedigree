@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -566,7 +565,7 @@ static int parseNumber(LargeStaticString &src, LargeStaticString &dest, demangle
     nLength++;
   }
   str[nLength] = '\0';
-  lval = strtoul(str, 0, 10);
+  lval = pedigree_strtoul(str, 0, 10);
   if (bNegative) lval = -lval;
   
   src.stripFirst(nLength);
@@ -1242,7 +1241,7 @@ static int parseSeqId(LargeStaticString &src, LargeStaticString &dest, demangle_
     nLength++;
   }
   str[nLength] = '\0';
-  lval = strtoul(str, 0, 36);
+  lval = pedigree_strtoul(str, 0, 36);
   
   src.stripFirst(nLength);
   END_SUCCESS("SeqId");

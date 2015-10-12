@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -67,7 +66,7 @@ size_t Config::Result::getNum(size_t row, size_t n)
 {
     if (m_ppResult[(row+1) * m_Cols + n] == 0)
         return 0;
-    return strtoul(m_ppResult[(row+1) * m_Cols + n], 0, 10);
+    return pedigree_strtoul(m_ppResult[(row+1) * m_Cols + n], 0, 10);
 }
 
 bool Config::Result::getBool(size_t row, size_t n)
@@ -97,7 +96,7 @@ size_t Config::Result::getNum(size_t row, const char *str)
     if (n == ~0UL) return 0;
     if (m_ppResult[(row+1) * m_Cols + n] == 0)
         return 0;
-    return strtoul(m_ppResult[(row+1) * m_Cols + n], 0, 10);
+    return pedigree_strtoul(m_ppResult[(row+1) * m_Cols + n], 0, 10);
 }
 
 bool Config::Result::getBool(size_t row, const char *str)

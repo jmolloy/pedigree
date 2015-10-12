@@ -115,6 +115,12 @@ uint64_t random_next();
 const char *strchr(const char *str, int target);
 const char *strrchr(const char *str, int target);
 
+/**
+ * Custom API that differs from the standard strtoul and therefore conflicts.
+ *
+ * The main difference is the const-ness of the endptr parameter. The outer
+ * pointer is non-const (so it can be written to), the inner pointer is const.
+ */
 unsigned long pedigree_strtoul(const char *nptr, char const **endptr, int base);
 
 inline char toUpper(char c)

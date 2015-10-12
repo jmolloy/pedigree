@@ -45,7 +45,7 @@ extern "C" void log_(unsigned long a)
 
 extern "C" int atoi(const char *str)
 {
-    return strtoul(str, 0, 10);
+    return pedigree_strtoul(str, 0, 10);
 }
 
 #ifndef STATIC_DRIVERS // Defined in the kernel.
@@ -312,7 +312,7 @@ void xCallback0(sqlite3_context *context, int n, sqlite3_value **values)
     uintptr_t x;
     if (text[0] == '0')
     {
-        x = strtoul(reinterpret_cast<const char*>(text), 0, 16);
+        x = pedigree_strtoul(reinterpret_cast<const char*>(text), 0, 16);
     }
     else
     {
@@ -338,7 +338,7 @@ void xCallback1(sqlite3_context *context, int n, sqlite3_value **values)
     uintptr_t x;
     if (text[0] == '0')
     {
-        x = strtoul(text, 0, 16);
+        x = pedigree_strtoul(text, 0, 16);
     }
     else
     {
@@ -364,7 +364,7 @@ void xCallback2(sqlite3_context *context, int n, sqlite3_value **values)
     uintptr_t x;
     if (text[0] == '0')
     {
-        x = strtoul(text, 0, 16);
+        x = pedigree_strtoul(text, 0, 16);
     }
     else
     {

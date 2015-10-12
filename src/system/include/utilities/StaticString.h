@@ -182,7 +182,7 @@ public:
   int intValue(int nBase=0) const
   {
     const char *pEnd;
-    int ret = strtoul(m_pData, &pEnd, nBase);
+    int ret = pedigree_strtoul(m_pData, &pEnd, nBase);
     if (pEnd == m_pData)
       return -1; // Failed to find anything.
     else
@@ -192,7 +192,7 @@ public:
   uintptr_t uintptrValue(int nBase=0) const
   {
     const char *pEnd;
-    uintptr_t ret = strtoul(m_pData, &pEnd, nBase);
+    uintptr_t ret = pedigree_strtoul(m_pData, &pEnd, nBase);
     if (pEnd == m_pData)
       return ~0UL; // Failed to find anything.
     else
