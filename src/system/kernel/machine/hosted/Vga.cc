@@ -84,6 +84,12 @@ void HostedVga::pokeBuffer (uint8_t *pBuffer, size_t nBufLen)
 {
     if (!pBuffer)
         return;
+    if (!m_pBackbuffer)
+        return;
+
+    size_t thisLen = (m_nWidth * m_nWidth * 2);
+    if (nBufLen > thisLen)
+        nBufLen = thisLen;
 
     memcpy(m_pBackbuffer, pBuffer, nBufLen);
 
@@ -110,6 +116,12 @@ void HostedVga::pokeBuffer (uint8_t *pBuffer, size_t nBufLen)
 
 void HostedVga::peekBuffer (uint8_t *pBuffer, size_t nBufLen)
 {
+    if (!m_pBackbuffer)
+        return;
+
+    size_t thisLen = (m_nWidth * m_nWidth * 2);
+    if (nBufLen > thisLen)
+        nBufLen = thisLen;
     memcpy(pBuffer, m_pBackbuffer, nBufLen);
 }
 
@@ -127,9 +139,6 @@ bool HostedVga::initialise()
 {
     m_pBackbuffer = new uint16_t[m_nHeight * m_nWidth];
     m_nControls = 0;
-
-    // Erase the screen for our rendering.
-    printf("\033[2J");
 
     return true;
 }
