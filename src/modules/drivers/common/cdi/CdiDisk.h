@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -44,12 +43,11 @@ class CdiDisk : public Disk
 
         virtual void getName(String &str)
         {
-            // TODO Get the name from the CDI driver
-            if(!m_Device)
+            if((!m_Device) || (!m_Device->dev.name))
                 str = "cdi-disk";
             else
             {
-                str = String(m_Device->dev.name);
+                str = m_Device->dev.name;
             }
         }
 
