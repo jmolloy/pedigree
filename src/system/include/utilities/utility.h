@@ -152,16 +152,16 @@ inline char toLower(char c)
    *\brief Adjust a pointer
    *\return new pointer pointing to 'pointer + offset' (NOT pointer arithmetic!) */
   template<typename T>
-  inline T *adjust_pointer(T *pointer, size_t offset)
+  inline T *adjust_pointer(T *pointer, ssize_t offset)
   {
-    return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(pointer) + offset);
+    return reinterpret_cast<T*>(reinterpret_cast<intptr_t>(pointer) + offset);
   }
 
   /** Page-align the given pointer. */
   template<typename T>
   inline T *page_align(T *p)
   {
-    return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(p) & ~(PhysicalMemoryManager::getPageSize() -1 ));
+    return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(p) & ~(PhysicalMemoryManager::getPageSize() - 1));
   }
 
   template<typename T>
