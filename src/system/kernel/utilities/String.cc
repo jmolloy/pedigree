@@ -29,6 +29,7 @@ void String::assign(const String &x)
         memcpy(m_Static, x.m_Static, m_Length + 1);
         delete [] m_Data;
         m_Data = 0;
+        m_Size = StaticSize;
     }
     else
     {
@@ -55,6 +56,7 @@ void String::assign(const char *s)
         memcpy(m_Static, s, m_Length + 1);
         delete [] m_Data;
         m_Data = 0;
+        m_Size = StaticSize;
     }
     else
     {
