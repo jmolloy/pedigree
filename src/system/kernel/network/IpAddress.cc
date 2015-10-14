@@ -106,7 +106,7 @@ String IpAddress::toString()
                 }
             }
 
-            if(m_Ipv6[i] || m_Ipv6[i - 1])
+            if(m_Ipv6[i] || (i && m_Ipv6[i - 1]))
             {
                 size_t pad = 1;
                 if(m_Ipv6[i - 1]) pad = 2; // Keep internal zeroes (eg f0f).
