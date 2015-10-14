@@ -50,6 +50,7 @@ opts.AddVariables(
 
     BoolVariable('cripple_hdd','Disable writing to hard disks at runtime.',1),
     BoolVariable('debugger','Whether or not to enable the kernel debugger.',1),
+    BoolVariable('asserts','Whether or not to enable runtime assertions.',1),
     BoolVariable('debug_logging','Whether to enable debug-level logging, which can dump massive amounts of data to the kernel log. Probable performance hit too, use at your own risk.',1),
     BoolVariable('superdebug', 'Super debug is like the debug_logging option, except even MORE verbose. Expect hundreds of thousands of lines of output to the kernel log.', 0),
     
@@ -512,7 +513,7 @@ additionalDefines = ['ipv4_forwarding', 'serial_is_file', 'installer',
                      'multiple_consoles', 'multiprocessor', 'smp', 'apic',
                      'acpi', 'debug_logging', 'superdebug', 'nogfx', 'mach_pc',
                      'usb_verbose_debug', 'memory_tracing', 'travis', 'hosted',
-                     'memory_log_inline']
+                     'memory_log_inline', 'asserts']
 for i in additionalDefines:
     if i not in env:
         continue
