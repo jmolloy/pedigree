@@ -118,16 +118,16 @@ class String
 // Part of the implementation
 //
 String::String()
-    : m_Data(0), m_Length(0), m_Size(0), m_Static()
+    : m_Data(0), m_Length(0), m_Size(StaticSize), m_Static()
 {
 }
 String::String(const char *s)
-    : m_Data(0), m_Length(0), m_Size(0), m_Static()
+    : m_Data(0), m_Length(0), m_Size(StaticSize), m_Static()
 {
     assign(s);
 }
 String::String(const String &x)
-    : m_Data(0), m_Length(0), m_Size(0), m_Static()
+    : m_Data(0), m_Length(0), m_Size(StaticSize), m_Static()
 {
     assign(x);
 }
