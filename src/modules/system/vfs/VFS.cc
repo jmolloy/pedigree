@@ -53,7 +53,7 @@ bool VFS::mount(Disk *pDisk, String &alias)
         Filesystem *pFs = cb(pDisk);
         if (pFs)
         {
-            if (strlen(alias) == 0)
+            if (alias.length() == 0)
             {
                 alias = pFs->getVolumeLabel();
             }
