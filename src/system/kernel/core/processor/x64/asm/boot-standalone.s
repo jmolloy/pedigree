@@ -44,7 +44,8 @@ KERNEL_BASE        equ 0xFFFFFFFF7FF00000
 start:
   cli
 
-  ; TODO: check for long mode support (and do what, exactly, if not available?)
+  jmp check_longmode
+longmode_ok:
 
   ; Disable paging if it was otherwise configured.
   mov eax, cr0
@@ -99,6 +100,69 @@ start:
   ; Now in IA32e mode. Enter 64-bit with a temporary GDT.
   lgdt [CODE32GDTR - KERNEL_BASE]
   jmp 0x08:start64 - KERNEL_BASE
+
+check_longmode:
+  ; Check for CPUID support. If no CPUID, definitely no long mode.
+  pushfd
+  pop eax
+  mov ecx, eax  ; Preserve old flags for comparison.
+  xor eax, 1 << 21  ; Flip ID bit.
+  push eax
+  popfd
+
+  pushfd
+  pop eax
+  push ecx  ; Restore old flags.
+  popfd
+
+  ; Verify the bit flip worked.
+  xor eax, ecx
+  jz .no_longmode
+
+  ; Check for cpuid extended functions.
+  mov eax, 0x80000000
+  cpuid
+  cmp eax, 0x80000001
+  jb .no_longmode
+
+  ; Check for long mode itself.
+  mov eax, 0x80000001
+  cpuid
+  test edx, 1 << 29
+  jz .no_longmode
+
+  ; All good.
+  jmp longmode_ok
+
+.no_longmode:
+  ; Need to write to the screen. Clear it first.
+  mov ecx, 80 * 25
+  mov edi, 0xb8000
+  mov ax, 0
+  rep stosw
+
+  ; Write our string.
+  mov esi, CANNOTBOOT - KERNEL_BASE
+  mov edi, 0xb8000
+  mov ecx, CANNOTBOOT_END - CANNOTBOOT
+  .l:
+    mov al, [esi]
+
+    mov byte [edi], al
+    mov byte [edi + 1], 0x7  ; Gray on Black
+
+    dec ecx
+    jz .ld
+
+    add edi, 2
+    inc esi
+    jmp .l
+  .ld
+
+  .a:
+    cli
+    hlt
+  jmp .a
 
 [BITS 64]
 start64:
@@ -341,6 +405,10 @@ ___startup_init_fpu_sse:
     db 0
     db 0x92
     dw 0
+
+  CANNOTBOOT:
+    db "Sorry, this system lacks Long Mode (64-bit x86), which Pedigree requires.", 0
+  CANNOTBOOT_END:
 
 [SECTION .asm.bss nobits]
 align 4096
