@@ -44,8 +44,11 @@ KERNEL_BASE        equ 0xFFFFFFFF7FF00000
 start:
   cli
 
+  ; Avoid clobbering ebx via cpuid in check_longmode.
+  mov ebp, ebx
   jmp check_longmode
 longmode_ok:
+  mov ebx, ebp
 
   ; Disable paging if it was otherwise configured.
   mov eax, cr0
