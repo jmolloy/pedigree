@@ -62,8 +62,10 @@ class Timer
               That may require FP (*365.25 instead of 365) */
     virtual uint32_t getUnixTimestamp()
     {
+      size_t year = getYear();
+      assert(year > 1970);
       return
-        (getYear()-1970) * (60*60*24*365) +
+        (year - 1970) * (60*60*24*365) +
         getMonth() * (60*60*24*30) +
         getDayOfMonth() * (60*60*24) +
         getHour() * (60*60) +

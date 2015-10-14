@@ -221,7 +221,7 @@ void HostedTimer::synchronise()
     m_Hour = t->tm_hour;
     m_DayOfMonth = t->tm_mday;
     m_Month = t->tm_mon;
-    m_Year = t->tm_year;
+    m_Year = t->tm_year + 1900;  // Years since 1900.
     m_DayOfWeek = t->tm_wday;
 }
 
