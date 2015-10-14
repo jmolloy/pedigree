@@ -101,7 +101,7 @@ void ExtensibleBitmap::set(size_t n)
 
     if(n < sizeof(uintptr_t)*8)
     {
-        m_StaticMap |= (1 << n);
+        m_StaticMap |= (1UL << n);
         return;
     }
 
@@ -123,7 +123,7 @@ void ExtensibleBitmap::set(size_t n)
         m_DynamicMapSize = sz;
     }
 
-    m_pDynamicMap[n/8] |= (1 << (n%8));
+    m_pDynamicMap[n/8] |= (1UL << (n%8));
     if(n > m_nMaxBit)
         m_nMaxBit = n;
 }
@@ -162,7 +162,7 @@ void ExtensibleBitmap::clear(size_t n)
 
     if(n < sizeof(uintptr_t)*8)
     {
-        m_StaticMap &= ~(1 << n);
+        m_StaticMap &= ~(1UL << n);
         return;
     }
 
@@ -171,18 +171,18 @@ void ExtensibleBitmap::clear(size_t n)
     // If its outside the range of possible set bits, it must be clear already.
     if(n > m_nMaxBit)
         return;
-    m_pDynamicMap[n/8] &= ~(1 << (n%8));
+    m_pDynamicMap[n/8] &= ~(1UL << (n%8));
 }
 
 bool ExtensibleBitmap::test(size_t n)
 {
     if(n < sizeof(uintptr_t)*8)
-        return (m_StaticMap & (1 << n));
+        return (m_StaticMap & (1UL << n));
 
     n -= sizeof(uintptr_t)*8;
 
     // If its outside the range of possible set bits, it must be clear.
     if(n > m_nMaxBit || !m_pDynamicMap)
         return false;
-    return (m_pDynamicMap[n/8] & (1 << (n%8)));
+    return (m_pDynamicMap[n/8] & (1UL << (n%8)));
 }
