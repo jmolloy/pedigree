@@ -241,7 +241,11 @@ const char *strchr(const char *str, int target)
 #ifdef HOSTED
 unsigned long __wrap_strtoul(const char *nptr, char **endptr, int base)
 {
-  return pedigree_strtoul(nptr, (char const **) endptr, base);
+  const char *wrap;
+  unsigned long r = pedigree_strtoul(nptr, &wrap, base);
+  if (endptr)
+    *endptr = *wrap;
+  return r;
 }
 
 const char *__wrap_strchr(const char *str, int target)
