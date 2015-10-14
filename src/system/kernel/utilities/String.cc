@@ -38,6 +38,10 @@ void String::assign(const String &x)
         else
             m_Data[0] = '\0';
     }
+
+#ifdef ADDITIONAL_CHECKS
+    assert(*this == x);
+#endif
 }
 void String::assign(const char *s)
 {
@@ -60,6 +64,10 @@ void String::assign(const char *s)
         else
             m_Data[0] = '\0';
     }
+
+#ifdef ADDITIONAL_CHECKS
+    assert(*this == s);
+#endif
 }
 void String::reserve(size_t size)
 {
@@ -73,9 +81,10 @@ void String::reserve(size_t size)
     {
         char *tmp = m_Data;
         m_Data = new char [size];
-        if (tmp != 0 && m_Size != 0)
+        memset(m_Data, 0, size);
+        if (tmp != 0)
         {
-            memcpy(m_Data, tmp, m_Size);
+            memcpy(m_Data, tmp, m_Size > size ? size : m_Size);
             delete [] tmp;
         }
         m_Size = size;
