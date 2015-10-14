@@ -22,13 +22,13 @@
 // Conventional new
 void *operator new (size_t size) throw();
 void *operator new[] (size_t size) throw();
-void operator delete (void * p);
-void operator delete[] (void * p);
+void operator delete (void * p) throw();
+void operator delete[] (void * p) throw();
 
 // Placement new
 void* operator new(size_t, void* p) throw();
 void* operator new[](size_t, void* p) throw();
-void  operator delete  (void*, void*) NORETURN;
-void  operator delete[](void*, void*) NORETURN;
+void  operator delete  (void*, void*) throw() NORETURN;
+void  operator delete[](void*, void*) throw() NORETURN;
 
 #endif
