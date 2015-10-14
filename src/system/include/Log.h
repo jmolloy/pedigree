@@ -256,7 +256,8 @@ public:
   Log &operator<< (bool b);
   /** Adds an entry to the log
    *\param[in] p pointer value */
-  Log &operator<< (void *p)
+  template<class T>
+  Log &operator<< (T *p)
     {return (*this) << (reinterpret_cast<uintptr_t>(p));}
   /** Adds an entry to the log (integer type)
    *\param[in] n the number */
