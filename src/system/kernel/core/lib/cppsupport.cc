@@ -45,6 +45,13 @@ extern "C"
 /// mode.
 #define DEBUG_ALLOCATOR_CHECK_UNDERFLOWS
 
+// We don't use a custom allocator if asan is enabled.
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer) || __has_feature(memory_sanitizer)
+#define HAS_ADDRESS_SANITIZER 1
+#endif
+#endif
+
 // Required for G++ to link static init/destructors.
 #ifndef HOSTED
 void *__dso_handle;
@@ -270,6 +277,7 @@ extern "C" void *realloc(void *p, size_t sz)
     return tmp;
 }
 
+#ifndef HAS_ADDRESS_SANITIZER
 void *operator new (size_t size) throw()
 {
 #ifdef USE_DEBUG_ALLOCATOR
@@ -415,7 +423,7 @@ void *operator new[] (size_t size, void* memory) throw()
 {
   return memory;
 }
-void operator delete (void * p)
+void operator delete (void * p) throw()
 {
 #ifdef USE_DEBUG_ALLOCATOR
     if(p == 0) return;
@@ -435,7 +443,7 @@ void operator delete (void * p)
         SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
 #endif
 }
-void operator delete[] (void * p)
+void operator delete[] (void * p) throw()
 {
 #ifdef USE_DEBUG_ALLOCATOR
     if(p == 0) return;
@@ -455,16 +463,17 @@ void operator delete[] (void * p)
         SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
 #endif
 }
-void operator delete (void *p, void *q)
+void operator delete (void *p, void *q) throw()
 {
   // TODO
   panic("Operator delete (placement) -implement");
 }
-void operator delete[] (void *p, void *q)
+void operator delete[] (void *p, void *q) throw()
 {
   // TODO
   panic("Operator delete[] (placement) -implement");
 }
+#endif
 
 #ifdef ARMV7_IGNORE
 
