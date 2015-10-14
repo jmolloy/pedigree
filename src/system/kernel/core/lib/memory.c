@@ -48,8 +48,17 @@
 #define USE_SSE_MEMCPY      1
 #define USE_SSE_MEMSET      1
 
-#ifdef X86_COMMON
-inline void *memset_nonzero(void *buf, int c, size_t n)
+// Condense X86-ish systems into one define for this file.
+#if defined(X86_COMMON) || defined(HOSTED_X86_COMMON)
+#define IS_X86
+#endif
+
+#ifdef HOSTED_X64
+#define X64
+#endif
+
+#ifdef IS_X86
+static void *memset_nonzero(void *buf, int c, size_t n)
 {
     char *p = (char *)buf;
 
@@ -79,13 +88,15 @@ inline void *memset_nonzero(void *buf, int c, size_t n)
 #endif
         if((n % 4) == 0)
         {
-            uint32_t word = (c << 24) | (c << 16) | (c << 8) | c;
+            uint32_t c32 = c;
+            uint32_t word = (c32 << 24U) | (c32 << 16U) | (c32 << 8U) | c32;
             asm volatile("rep stosl" : "=c" (unused) : "D" (p), "c" (n / 4), "a" (word));
             n = 0;
         }
         else if((n % 2) == 0)
         {
-            uint16_t word = (c << 8) | c;
+            uint16_t c16 = c;
+            uint16_t word = (c16 << 8) | c16;
             asm volatile("rep stosw" : "=c" (unused) : "D" (p), "c" (n / 2), "a" (word));
             n = 0;
         }
@@ -172,7 +183,7 @@ void *memset(void *buf, int c, size_t n)
 void *memset(void *buf, int c, size_t len)
 {
   unsigned char *tmp = (unsigned char *)buf;
-  while(len--)
+  for(size_t i = 0; i < len; ++i)
   {
     *tmp++ = c;
   }
@@ -180,7 +191,7 @@ void *memset(void *buf, int c, size_t len)
 }
 #endif
 
-#ifdef X86_COMMON
+#ifdef IS_X86
 void *wmemset(void *buf, int c, size_t n)
 {
 #if USE_SSE && USE_SSE_MEMSET
@@ -211,7 +222,7 @@ void *wmemset(void *buf, int c, size_t len)
 }
 #endif
 
-#ifdef X86_COMMON
+#ifdef IS_X86
 void *dmemset(void *buf, unsigned int c, size_t n)
 {
 #if USE_SSE && USE_SSE_MEMSET
@@ -244,7 +255,7 @@ void *dmemset(void *buf, unsigned int c, size_t len)
 
 void *qmemset(void *buf, unsigned long long c, size_t len)
 {
-#ifdef X86_COMMON
+#ifdef IS_X86
 
 #if USE_SSE && USE_SSE_MEMSET
   // Use SSE if it would give us an advantage here.
@@ -265,7 +276,7 @@ void *qmemset(void *buf, unsigned long long c, size_t len)
 #endif
 }
 
-#ifdef X86_COMMON
+#ifdef IS_X86
 
 #define SSE2_SAVE_REGION_SIZE   (512)
 #define SSE2_SAVE_REGION_ALIGN  __attribute__((aligned(16)))
@@ -424,16 +435,21 @@ void *sse2_aligned_memcpy(void *restrict s1, const void *restrict s2, const size
 
 void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
 {
-    static int can_sse = 0;
-
     char *restrict p1 = (char *)s1;
     const char *restrict p2 = (const char *)s2;
 
     uintptr_t p1_u = (uintptr_t) p1;
     uintptr_t p2_u = (uintptr_t) p2;
 
+    size_t orig_n = n;
+
+    size_t unused;
+
     // Check for bad usage of memcpy
     if(UNLIKELY(!n)) return s1;
+
+#if USE_SSE
+    static int can_sse = 0;
 
     // Check to see if we can now toggle on SSE.
     if(UNLIKELY(!can_sse))
@@ -446,8 +462,6 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
             can_sse = 1;
         }
     }
-
-    size_t unused;
 
     // Should we do SSE? Note that SSE involves an FPU state save,
     // so it must be REALLY worth it.
@@ -532,6 +546,7 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
         return s1;
     }
     else
+#endif
     {
         // Not enough bytes for SSE to be worth the FPU save.
 
@@ -648,7 +663,7 @@ void *memcpy(void *dest, const void *src, size_t len)
 }
 #endif
 
-// #ifdef X86_COMMON
+// #ifdef IS_X86
 #if 0
 void *memmove(void *s1, const void *s2, size_t n)
 {
