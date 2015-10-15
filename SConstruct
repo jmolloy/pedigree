@@ -114,7 +114,7 @@ opts.AddVariables(
 
     BoolVariable('hosted', 'Is this build to run on another host OS?', 0),
     BoolVariable('clang', 'If hosted, should we use clang if it is present (highly recommended)?', 1),
-    BoolVariable('sanitizers', 'If hosted, enable sanitizers (eg AddressSanitizer) (highly recommended)?', 1),
+    BoolVariable('sanitizers', 'If hosted, enable sanitizers (eg AddressSanitizer) (highly recommended)?', 0),
     BoolVariable('valgrind', 'If hosted, build for Valgrind?', 0),
     BoolVariable('clang_profile', 'If hosted, use clang instrumentation to profile.', 0),
 
