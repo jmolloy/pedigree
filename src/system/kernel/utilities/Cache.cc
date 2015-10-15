@@ -140,7 +140,8 @@ Cache::Cache() :
 #elif defined(ARM_BEAGLE)
         m_Allocator.free(0xA0000000, 0x10000000);
 #elif defined(HOSTED)
-        m_Allocator.free(0xE0000000, 0x10000000);
+        // Some location in high-memory  (~32T mark).
+        m_Allocator.free(0x200000000000, 0x10000000);
 #elif defined(PPC_MAC)
         /// \todo real region addresses
         m_Allocator.free(0x1000, 0x1000);

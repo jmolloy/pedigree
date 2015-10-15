@@ -146,6 +146,8 @@ bool HostedVirtualAddressSpace::map(physical_uintptr_t physAddress,
   if(UNLIKELY(r == MAP_FAILED))
     return false;
 
+  assert(r == virtualAddress);
+
   // Extend list of known maps if we can't fit this one in.
   if(m_numKnownMaps == m_KnownMapsSize)
   {
@@ -420,7 +422,7 @@ void *HostedVirtualAddressSpace::doAllocateStack(size_t sSize) {
     pStack = m_pStackTop;
 
     // Always leave one page unmapped between each stack to catch overflow.
-    m_pStackTop = adjust_pointer(m_pStackTop, -(sSize + pageSz));
+    m_pStackTop = adjust_pointer(m_pStackTop, -static_cast<ssize_t>(sSize + pageSz));
   }
 
   m_Lock.release();

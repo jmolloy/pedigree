@@ -17,6 +17,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <compiler.h>
 #include <Log.h>
 #include <vfs/VFS.h>
 #include <vfs/Directory.h>
@@ -323,6 +324,14 @@ extern void system_reset();
 
 void init_stage2()
 {
+#if defined(HOSTED) && defined(HAS_ADDRESS_SANITIZER)
+    extern void system_reset();
+    NOTICE("Note: ASAN build, so triggering a restart now.");
+    g_InitProgramLoaded.release();
+    system_reset();
+    return;
+#endif
+
     // Load initial program.
     String fname = String("root»/applications/init");
     File* initProg = VFS::instance().find(fname);

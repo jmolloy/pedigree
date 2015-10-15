@@ -190,9 +190,13 @@ if not env['hosted']:  # Don't let the kernel link against Pedigree .so objects
 
 if env['hosted']:
     env_clone['LSCRIPT'] = env.File('#src/system/kernel/core/processor/hosted/kernel.ld')
-    env_clone['LINKFLAGS'] += ['-Wl,-T,$LSCRIPT', '-Wl,-wrap=malloc',
-                               '-Wl,-wrap=realloc', '-Wl,-wrap=free',
-                               '-Wl,-wrap=strchr']
+    if env['clang']:
+        wraps = ('strchr',)
+    else:
+        wraps = ('malloc', 'realloc', 'free', 'strchr')
+    for wrap in wraps:
+        env_clone['LINKFLAGS'] += ['-Wl,-wrap=%s' % wrap]
+    env_clone['LINKFLAGS'] += ['-Wl,-T,$LSCRIPT']
     env_clone['LIBS'] += ['rt', 'dl']
 
 final_output = objname

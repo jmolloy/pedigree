@@ -17,6 +17,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <compiler.h>
 #include <processor/types.h>
 #include <Spinlock.h>
 #include "cppsupport.h"
@@ -44,13 +45,6 @@ extern "C"
 /// If the debug allocator is enabled, this switches it into underflow detection
 /// mode.
 #define DEBUG_ALLOCATOR_CHECK_UNDERFLOWS
-
-// We don't use a custom allocator if asan is enabled.
-#if defined(__has_feature)
-#if __has_feature(address_sanitizer) || __has_feature(memory_sanitizer)
-#define HAS_ADDRESS_SANITIZER 1
-#endif
-#endif
 
 // Required for G++ to link static init/destructors.
 #ifndef HOSTED
@@ -220,6 +214,7 @@ void __cxa_pure_virtual()
 }
 
 /// Called by G++ if function local statics are initialised for the first time
+#ifndef HAS_THREAD_SANITIZER
 extern "C" int __cxa_guard_acquire()
 {
   return 1;
@@ -228,7 +223,9 @@ extern "C" void __cxa_guard_release()
 {
   // TODO
 }
+#endif
 
+#if !(defined(HAS_ADDRESS_SANITIZER) || defined(HAS_THREAD_SANITIZER))
 #ifdef HOSTED
 extern "C" void *_malloc(size_t sz)
 #else
@@ -247,7 +244,7 @@ extern "C" void free(void *p)
     if (p == 0)
         return;
     //SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
-    delete reinterpret_cast<uint8_t*>(p);
+    delete [] reinterpret_cast<uint8_t*>(p);
 }
 
 #ifdef HOSTED
@@ -277,7 +274,6 @@ extern "C" void *realloc(void *p, size_t sz)
     return tmp;
 }
 
-#ifndef HAS_ADDRESS_SANITIZER
 void *operator new (size_t size) throw()
 {
 #ifdef USE_DEBUG_ALLOCATOR
@@ -507,7 +503,7 @@ bool __sync_bool_compare_and_swap_4(void *ptr, void *oldval, void *newval)
 
 #endif
 
-#ifdef HOSTED
+#if defined(HOSTED) && (!(defined(HAS_ADDRESS_SANITIZER) || defined(HAS_THREAD_SANITIZER)))
 extern "C"
 {
 

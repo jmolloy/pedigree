@@ -285,9 +285,16 @@ KernelElf::~KernelElf()
 #elif defined(ARMV7)
 #define MOD_START 0x60000000
 #elif defined(HOSTED)
-#define MOD_START 0x10000000
+// Move well out of the way of anything that could be useful.
+// Give plenty of room so if we enable things like ASAN which significantly
+// blow out our code size, we're prepared.
+#define MOD_START 0x70000000  //0x500000000000
+#define MOD_LEN   0x10000000  //0x100000000000
 #endif
+
+#ifndef MOD_LEN
 #define MOD_LEN 0x400000
+#endif
 
 Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
 {
@@ -349,7 +356,7 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
     module->exit = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleExit"));
     module->depends = reinterpret_cast<const char **> (module->elf.lookupSymbol("g_pDepends"));
     module->depends_opt = reinterpret_cast<const char **> (module->elf.lookupSymbol("g_pOptionalDepends"));
-    DEBUG("KERNELELF: Preloaded module " << module->name << " at " << module->loadBase);
+    DEBUG("KERNELELF: Preloaded module " << module->name << " at " << module->loadBase << " to " << (module->loadBase + module->loadSize));
 
 #ifdef MEMORY_TRACING
     traceMetadata(NormalStaticString(module->name), reinterpret_cast<void*>(module->loadBase), reinterpret_cast<void*>(module->loadBase + module->loadSize));

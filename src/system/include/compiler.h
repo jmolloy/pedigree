@@ -56,6 +56,17 @@
 #define INITIALISATION_ONLY __attribute__((__section__(".init.text")))
 #define INITIALISATION_ONLY_DATA __attribute__((__section__(".init.data")))
 
+// We don't use a custom allocator if asan is enabled.
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer) || __has_feature(memory_sanitizer)
+#define HAS_ADDRESS_SANITIZER 1
+#endif
+
+#if __has_feature(thread_sanitizer)
+#define HAS_THREAD_SANITIZER 1
+#endif
+#endif
+
 /** @} */
 
 #endif

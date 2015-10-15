@@ -92,19 +92,19 @@ Elf::Elf() :
 
 Elf::~Elf()
 {
-    delete m_pSymbolTable;
-    delete m_pStringTable;
-    delete m_pShstrtab;
+    delete [] m_pSymbolTable;
+    delete [] m_pStringTable;
+    delete [] m_pShstrtab;
     // delete m_pGotTable;
-    delete m_pRelTable;
-    delete m_pRelaTable;
-    delete m_pPltRelTable;
-    delete m_pPltRelaTable;
-    delete m_pDebugTable;
-    delete m_pDynamicSymbolTable;
-    delete m_pDynamicStringTable;
-    delete m_pSectionHeaders;
-    delete m_pProgramHeaders;
+    delete [] m_pRelTable;
+    delete [] m_pRelaTable;
+    delete [] m_pPltRelTable;
+    delete [] m_pPltRelaTable;
+    delete [] m_pDebugTable;
+    delete [] m_pDynamicSymbolTable;
+    delete [] m_pDynamicStringTable;
+    delete [] m_pSectionHeaders;
+    delete [] m_pProgramHeaders;
 }
 
 Elf::Elf(const Elf &elf) :
@@ -500,6 +500,7 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
     }
     if (!KernelElf::instance().getModuleAllocator().allocate(loadSize, loadBase))
     {
+        ERROR("ELF: could not allocate space for this module [loadSize=" << loadSize << "]");
         return false;
     }
 

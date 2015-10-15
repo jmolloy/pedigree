@@ -85,6 +85,7 @@
 #ifndef MODULE_H
 #define MODULE_H
 
+#include <compiler.h>
 #include <utilities/utility.h>
 
 #ifndef __cplusplus
@@ -114,7 +115,7 @@ struct ModuleInfo
     ModuleEntry entry;
     ModuleExit exit;
     const char **dependencies;
-};
+} PACKED;
 
 #define MODULE_INFO2(name, entry, exit, ...) \
     static const char *__mod_deps[] = {__VA_ARGS__, 0}; \

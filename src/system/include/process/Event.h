@@ -30,8 +30,10 @@
     After this, the process will be terminated. */
 #define MAX_NESTED_EVENTS 16
 
-#if defined(X86) || defined(X64) || defined(PPC32) || defined(HOSTED)
+#if defined(X86) || defined(X64) || defined(PPC32)
   #define EVENT_BASE                0x80000000
+#elif defined(HOSTED)
+  #define EVENT_BASE                0x300000000000
 #elif defined(ARMV7)
   #define EVENT_BASE                0xF0000000
 #else

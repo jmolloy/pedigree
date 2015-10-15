@@ -46,12 +46,19 @@ void String::assign(const String &x)
 }
 void String::assign(const char *s)
 {
-    if(!s)
+    if (!s || !*s)
         m_Length = 0;
     else
         m_Length = strlen(s);
 
-    if (m_Length < StaticSize)
+    if (!m_Length)
+    {
+        memset(m_Static, 0, StaticSize);
+        delete [] m_Data;
+        m_Data = 0;
+        m_Size = StaticSize;
+    }
+    else if (m_Length < StaticSize)
     {
         memcpy(m_Static, s, m_Length + 1);
         delete [] m_Data;
@@ -74,8 +81,18 @@ void String::assign(const char *s)
 void String::reserve(size_t size)
 {
     // Don't reserve if we're a static string.
-    if (size < StaticSize)
+    if (size <= StaticSize)
+    {
+        if (m_Size > StaticSize)
+        {
+            m_Size = StaticSize;
+            memcpy(m_Static, m_Data, size);
+            delete [] m_Data;
+            m_Data = 0;
+        }
+
         return;
+    }
     if ((size == m_Size) && (m_Size == StaticSize))
         ++size; // Switching from static to dynamic.
 

@@ -48,18 +48,6 @@ extern "C" int atoi(const char *str)
     return pedigree_strtoul(str, 0, 10);
 }
 
-#ifndef STATIC_DRIVERS // Defined in the kernel.
-extern "C" int memcmp(const void *s1, const void *s2, size_t n)
-{
-    const unsigned char *c1 = reinterpret_cast<const unsigned char*>(s1);
-    const unsigned char *c2 = reinterpret_cast<const unsigned char*>(s2);
-    for (size_t i = 0; i < n; i++)
-        if (c1[i] != c2[i])
-            return (c1[i]>c2[i]) ? 1 : -1;
-    return 0;
-}
-#endif
-
 int xClose(sqlite3_file *file)
 {
     return 0;

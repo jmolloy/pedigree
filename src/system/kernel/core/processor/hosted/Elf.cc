@@ -21,6 +21,11 @@
 #include <Log.h>
 #include <linker/KernelElf.h>
 
+namespace __pedigree_hosted
+{
+#include <dlfcn.h>
+}
+
 #define R_X86_64_NONE       0
 #define R_X86_64_64         1
 #define R_X86_64_PC32       2
@@ -103,8 +108,16 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
 
         if (S == 0)
         {
-            WARNING("Relocation failed for symbol \"" << pStr << "\" (relocation=" << R_TYPE(rel.info) << ")");
-            WARNING("Relocation at " << address << " (offset=" << rel.offset << ")...");
+            void *pSym = __pedigree_hosted::dlsym(RTLD_DEFAULT, pStr);
+            if (!pSym)
+            {
+                WARNING("Relocation failed for symbol \"" << pStr << "\" (relocation=" << R_TYPE(rel.info) << ")");
+                WARNING("Relocation at " << address << " (offset=" << rel.offset << ")...");
+            }
+            else
+            {
+                S = reinterpret_cast<uint64_t>(pSym);
+            }
         }
         // This is a weak relocation, but it was undefined.
         else if(S == ~0UL)
@@ -132,7 +145,8 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
             result = S + A;
             break;
         case R_X86_64_PC32:
-            result = (result&0xFFFFFFFF00000000) | ((S + A - P) & 0xFFFFFFFF);
+            result = (result & 0xFFFFFFFF00000000ULL) |
+                (((S + A) - P) & 0xFFFFFFFFULL);
             break;
         case R_X86_64_COPY:
             result = * reinterpret_cast<uintptr_t*> (S);
@@ -146,7 +160,7 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
             break;
         case R_X86_64_32:
         case R_X86_64_32S:
-            result = (result&0xFFFFFFFF00000000) | ((S + A) & 0xFFFFFFFF);
+            result = (result&0xFFFFFFFF00000000ULL) | ((S + A) & 0xFFFFFFFFULL);
             break;
         default:
             ERROR ("Relocation not supported for symbol \"" << symbolName << "\": " << Dec << R_TYPE(rel.info));

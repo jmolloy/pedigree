@@ -622,6 +622,7 @@ if env['hosted']:
     env['CFLAGS'] = generic_cflags + warning_flags_c
     env['CXXFLAGS'] = generic_cxxflags + warning_flags_cxx
     env['LINKFLAGS'] = []
+    env['LIBPATH'] = []
 
     # Don't omit frame pointers for debugging.
     env.MergeFlags({
@@ -650,6 +651,13 @@ if env['hosted']:
     # Now ditch any ARCH_TARGET-related hooks - we don't need it anymore.
     env['ARCH_TARGET'] = 'HOSTED'
 
+    # Save the useful GCC we already have.
+    gcc = env['CC']
+
+    # Save path to libstdc++
+    libstdcxx_path = commands.getoutput('%s -print-file-name=libstdc++.so' % env['CC'])
+    env['LIBPATH'].append(os.path.dirname(libstdcxx_path))
+
     # Do we have clang?
     if env['clang'] and env.Detect('clang') is not None:
         clang = env.Detect('clang')
@@ -657,7 +665,7 @@ if env['hosted']:
         if clang and clangxx:
             env['CC'] = clang
             env['CXX'] = clangxx
-            env['LINK'] = clang
+            env['LINK'] = clangxx
 
             # Wipe out some warnings that clang can't handle.
             for flag in ('-Wuseless-cast', '-Wsuggest-attribute=noreturn',
@@ -666,10 +674,21 @@ if env['hosted']:
                 for flags in ('CCFLAGS', 'CFLAGS', 'CXXFLAGS'):
                     if flag in env[flags]:
                         env[flags].remove(flag)
+
     else:
+        env['clang'] = False
         print('Note: not using clang for hosted build.')
 
     fixDebugFlags(env)
+
+if env['clang']:
+    sanitizers = (
+        'integer',
+        'undefined',
+        'address',
+    )
+    sanitizers = '-fsanitize=%s' % ','.join(sanitizers)
+    env.MergeFlags({'CCFLAGS': [sanitizers], 'LINKFLAGS': [sanitizers]})
 
 # Override CXX if needed.
 if env['iwyu']:

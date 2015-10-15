@@ -201,9 +201,8 @@ extern uintptr_t end_module_ctors;
 int loadModules(void *inf)
 {
 #ifdef STATIC_DRIVERS
-
-    uint32_t *tags = reinterpret_cast<uint32_t*>(&start_modinfo);
-    uint32_t *lasttag = reinterpret_cast<uint32_t*>(&end_modinfo);
+    ModuleInfo *tags = reinterpret_cast<ModuleInfo*>(&start_modinfo);
+    ModuleInfo *lasttag = reinterpret_cast<ModuleInfo*>(&end_modinfo);
 
     // Call static constructors before we start. If we don't... there won't be
     // any properly initialised ModuleInfo structures :)
@@ -216,12 +215,11 @@ int loadModules(void *inf)
     }
 
     // Run through all the modules
-    while(tags != lasttag)
+    while(tags < lasttag)
     {
-        if(*tags == MODULE_TAG)
+        if(tags->tag == MODULE_TAG)
         {
-            ModuleInfo *modinfo = reinterpret_cast<ModuleInfo*>(tags);
-            KernelElf::instance().loadModule(modinfo);
+            KernelElf::instance().loadModule(tags);
         }
 
         tags++;
