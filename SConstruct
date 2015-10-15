@@ -114,6 +114,9 @@ opts.AddVariables(
 
     BoolVariable('hosted', 'Is this build to run on another host OS?', 0),
     BoolVariable('clang', 'If hosted, should we use clang if it is present (highly recommended)?', 1),
+    BoolVariable('sanitizers', 'If hosted, enable sanitizers (eg AddressSanitizer) (highly recommended)?', 1),
+    BoolVariable('valgrind', 'If hosted, build for Valgrind?', 0),
+    BoolVariable('clang_profile', 'If hosted, use clang instrumentation to profile.', 0),
 
     BoolVariable('kernel_on_disk', 'Put the kernel & needed bits onto hard disk images?', 1),
     
@@ -513,7 +516,7 @@ additionalDefines = ['ipv4_forwarding', 'serial_is_file', 'installer',
                      'multiple_consoles', 'multiprocessor', 'smp', 'apic',
                      'acpi', 'debug_logging', 'superdebug', 'nogfx', 'mach_pc',
                      'usb_verbose_debug', 'memory_tracing', 'travis', 'hosted',
-                     'memory_log_inline', 'asserts']
+                     'memory_log_inline', 'asserts', 'valgrind']
 for i in additionalDefines:
     if i not in env:
         continue
@@ -681,7 +684,7 @@ if env['hosted']:
 
     fixDebugFlags(env)
 
-if env['clang']:
+if env['clang'] and env['sanitizers']:
     sanitizers = (
         'integer',
         'undefined',
@@ -689,6 +692,11 @@ if env['clang']:
     )
     sanitizers = '-fsanitize=%s' % ','.join(sanitizers)
     env.MergeFlags({'CCFLAGS': [sanitizers], 'LINKFLAGS': [sanitizers]})
+
+if env['clang'] and env['clang_profile']:
+    env['CPPDEFINES'] += ['CLANG_PROFILE']
+    env.MergeFlags({'CCFLAGS': ['-fprofile-instr-generate'],
+                    'LINKFLAGS': ['-fprofile-instr-generate']})
 
 # Override CXX if needed.
 if env['iwyu']:
