@@ -43,15 +43,16 @@ int strcpy(char *dest, const char *src)
 int strncpy(char *dest, const char *src, int len)
 {
   const char *orig_dest = dest;
-  while ((*src) && len)
+  for (int i = 0; i < len; ++i)
   {
-    *dest = *src;
-    ++dest; ++src;
-    --len;
+    if (*src)
+      *dest++ = *src++;
+    else
+      break;
   }
   *dest = '\0';
 
-  return orig_dest - dest;
+  return dest - orig_dest;
 }
 
 int sprintf(char *buf, const char *fmt, ...)

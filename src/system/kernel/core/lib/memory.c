@@ -641,6 +641,10 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
         }
     }
 
+#ifdef ADDITIONAL_CHECKS
+    assert(memcmp(s1, s2, orig_n) == 0);
+#endif
+
     return s1;
 }
 
@@ -663,68 +667,6 @@ void *memcpy(void *dest, const void *src, size_t len)
 }
 #endif
 
-// #ifdef IS_X86
-#if 0
-void *memmove(void *s1, const void *s2, size_t n)
-{
-    char *p1 = (char *)s1;
-    const char *p2 = (const char *)s2;
-
-    // Don't use SSE for now.
-#if 0
-    asm volatile("  prefetchnta 0(%0);  \
-                    prefetchnta 32(%0); "
-                 ::"r"(s1));
-#endif
-    // check for bad usage of memmove
-    if(!n) return s1;
-
-    size_t offset;
-    if (s1 <= s2)
-    {
-        asm volatile("cld");
-        // calculate the distance to the nearest natural boundary
-        offset = (sizeof(size_t) - ((size_t)p1 % sizeof(size_t))) % sizeof(size_t);
-    }
-    else
-    {
-        // Work backwards.
-        p1 += n;
-        p2 += n;
-        // calculate the distance to the nearest natural boundary
-        offset = ((size_t)p1+n) % sizeof(size_t);
-        asm volatile("std");
-    }
-
-    size_t unused;
-    // see if it's even worth aligning
-    if(n <= sizeof(size_t))
-    {
-        asm volatile("rep movsb;":"=c"(unused):"D"(p1), "S"(p2), "c"(n));
-        return s1;
-    }
-
-    n -= offset;
-
-    // align p1 on a natural boundary
-    asm volatile("rep movsb;":"=D"(p1), "=S"(p2), "=c"(unused):"D"(p1), "S"(p2), "c"(offset));
-
-    // move in size_t size'd blocks
-#if defined(X64)
-    asm volatile("rep movsq;":"=D"(p1), "=S"(p2), "=c"(unused):"D"(p1), "S"(p2), "c"(n >> 3));
-#elif defined(X86)
-    asm volatile("rep movsl;":"=D"(p1), "=S"(p2), "=c"(unused):"D"(p1), "S"(p2), "c"(n >> 2));
-#endif
-
-    // clean up the remaining bytes
-    asm volatile("rep movsb;":"=c"(unused):"D"(p1), "S"(p2), "c"(n % sizeof(size_t)));
-
-    if (s1 > s2)
-        asm volatile("cld");
-
-    return s1;
-}
-#else
 void *memmove(void *s1, const void *s2, size_t n)
 {
   if (s1 <= s2)
@@ -737,19 +679,17 @@ void *memmove(void *s1, const void *s2, size_t n)
   }
   return s1;
 }
-#endif
 
 int memcmp(const void *p1, const void *p2, size_t len)
 {
     const char* a = (const char*) p1;
     const char* b = (const char*) p2;
     size_t i = 0;
+    int r = 0;
     for(; i < len; i++)
     {
-        if(a[i] < b[i])
-            return -1;
-        else if(a[i] > b[i])
-            return 1;
+        if ((r = a[i] - b[i]) != 0)
+          break;
     }
-    return 0;
+    return r;
 }
