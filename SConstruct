@@ -682,21 +682,23 @@ if env['hosted']:
         env['clang'] = False
         print('Note: not using clang for hosted build.')
 
+    if env['clang'] and env['sanitizers']:
+        sanitizers = (
+            'integer',
+            'undefined',
+            'address',
+        )
+        sanitizers = '-fsanitize=%s' % ','.join(sanitizers)
+        env.MergeFlags({'CCFLAGS': [sanitizers], 'LINKFLAGS': [sanitizers]})
+
+    if env['clang'] and env['clang_profile']:
+        env['CPPDEFINES'] += ['CLANG_PROFILE']
+        env.MergeFlags({'CCFLAGS': ['-fprofile-instr-generate'],
+                        'LINKFLAGS': ['-fprofile-instr-generate']})
+
     fixDebugFlags(env)
-
-if env['clang'] and env['sanitizers']:
-    sanitizers = (
-        'integer',
-        'undefined',
-        'address',
-    )
-    sanitizers = '-fsanitize=%s' % ','.join(sanitizers)
-    env.MergeFlags({'CCFLAGS': [sanitizers], 'LINKFLAGS': [sanitizers]})
-
-if env['clang'] and env['clang_profile']:
-    env['CPPDEFINES'] += ['CLANG_PROFILE']
-    env.MergeFlags({'CCFLAGS': ['-fprofile-instr-generate'],
-                    'LINKFLAGS': ['-fprofile-instr-generate']})
+else:
+    env['clang'] = False
 
 # Override CXX if needed.
 if env['iwyu']:
