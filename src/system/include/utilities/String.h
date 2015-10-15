@@ -148,7 +148,7 @@ String &String::operator = (const char *s)
 }
 String::operator const char *() const
 {
-    if (m_Length < StaticSize)
+    if (m_Size == StaticSize)
         return m_Static;
     else if (m_Data == 0)
         return "";
