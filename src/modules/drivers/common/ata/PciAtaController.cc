@@ -223,11 +223,11 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
         ERROR("Couldn't allocate slave control ports");
 
     // Kick off an SRST on each control port.
-    masterControl->write8(0x4, 2);
-    slaveControl->write8(0x4, 2);
+    masterControl->write8(0x6, 2);
+    slaveControl->write8(0x6, 2);
     Processor::pause(); // Hold SRST for 5 nanoseconds. /// \todo Better way of doing this?
-    masterControl->write8(0, 2);
-    slaveControl->write8(0, 2);
+    masterControl->write8(0x2, 2);
+    slaveControl->write8(0x2, 2);
     delay(2); // Wait 2 ms after clearing.
 
     // Wait for each to become active (BSY=0)
