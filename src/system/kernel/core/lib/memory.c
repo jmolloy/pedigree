@@ -27,6 +27,8 @@
 #pragma GCC optimize ("no-tree-loop-distribute-patterns")
 #endif
 
+#undef memcpy
+
 /**
     x86 note:
     Pedigree requires at least an SSE2-capable CPU in order to run. This allows
@@ -433,13 +435,25 @@ void *sse2_aligned_memcpy(void *restrict s1, const void *restrict s2, const size
     return s1;
 }
 
-void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
+static int overlaps(const void *restrict s1, const void *restrict s2, size_t n)
+{
+  uintptr_t a = (uintptr_t) s1;
+  uintptr_t a_end = (uintptr_t) s1 + n;
+  uintptr_t b = (uintptr_t) s2;
+  uintptr_t b_end = (uintptr_t) s2 + n;
+
+  return (a < b_end && b < a_end) ? 1 : 0;
+}
+
+static void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
 {
     char *restrict p1 = (char *)s1;
     const char *restrict p2 = (const char *)s2;
 
     uintptr_t p1_u = (uintptr_t) p1;
     uintptr_t p2_u = (uintptr_t) p2;
+
+    assert(!overlaps(s1, s2, n));
 
     size_t orig_n = n;
 
@@ -641,10 +655,6 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
         }
     }
 
-#ifdef ADDITIONAL_CHECKS
-    assert(memcmp(s1, s2, orig_n) == 0);
-#endif
-
     return s1;
 }
 
@@ -658,10 +668,10 @@ void *memcpy_gcc(void *restrict s1, const void *restrict s2, size_t n)
 }
 
 #else
-void *memcpy(void *dest, const void *src, size_t len)
+static void *memcpy(void *restrict dest, const void *restrict src, size_t len)
 {
-  const unsigned char *sp = (const unsigned char *)src;
-  unsigned char *dp = (unsigned char *)dest;
+  const unsigned char *restrict sp = (const unsigned char *restrict)src;
+  unsigned char *restrict dp = (unsigned char *restrict)dest;
   for (; len != 0; len--) *dp++ = *sp++;
   return dest;
 }
@@ -669,14 +679,22 @@ void *memcpy(void *dest, const void *src, size_t len)
 
 void *memmove(void *s1, const void *s2, size_t n)
 {
-  if (s1 <= s2)
+  if (UNLIKELY(!n)) return s1;
+
+  const size_t orig_n = n;
+  if (LIKELY(!overlaps(s1, s2, n)))
     memcpy(s1, s2, n);
   else
   {
-    const unsigned char *sp = (const unsigned char *) s2 + n;
-    unsigned char *dp = (unsigned char *) s1 + n;
+    const unsigned char *sp = (const unsigned char *) s2 + (n - 1);
+    unsigned char *dp = (unsigned char *) s1 + (n - 1);
     for (; n != 0; n--) *dp-- = *sp--;
   }
+
+#ifdef ADDITIONAL_CHECKS
+  assert(!memcmp(s1, s2, orig_n));
+#endif
+
   return s1;
 }
 
