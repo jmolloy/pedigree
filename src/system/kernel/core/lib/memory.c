@@ -435,16 +435,6 @@ void *sse2_aligned_memcpy(void *restrict s1, const void *restrict s2, const size
     return s1;
 }
 
-static int overlaps(const void *restrict s1, const void *restrict s2, size_t n)
-{
-  uintptr_t a = (uintptr_t) s1;
-  uintptr_t a_end = (uintptr_t) s1 + n;
-  uintptr_t b = (uintptr_t) s2;
-  uintptr_t b_end = (uintptr_t) s2 + n;
-
-  return (a < b_end && b < a_end) ? 1 : 0;
-}
-
 void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
 {
     char *restrict p1 = (char *)s1;
@@ -452,8 +442,6 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
 
     uintptr_t p1_u = (uintptr_t) p1;
     uintptr_t p2_u = (uintptr_t) p2;
-
-    assert(!overlaps(s1, s2, n));
 
     size_t orig_n = n;
 
@@ -677,22 +665,41 @@ void *memcpy(void *restrict dest, const void *restrict src, size_t len)
 }
 #endif
 
+static int overlaps(const void *restrict s1, const void *restrict s2, size_t n) CONST;
+static int overlaps(const void *restrict s1, const void *restrict s2, size_t n)
+{
+  uintptr_t a = (uintptr_t) s1;
+  uintptr_t a_end = (uintptr_t) s1 + n;
+  uintptr_t b = (uintptr_t) s2;
+  uintptr_t b_end = (uintptr_t) s2 + n;
+
+  return (a < b_end && b < a_end) ? 1 : 0;
+}
+
 void *memmove(void *s1, const void *s2, size_t n)
 {
   if (UNLIKELY(!n)) return s1;
 
   const size_t orig_n = n;
-  if (LIKELY(!overlaps(s1, s2, n)))
+  if (s1 < s2)
+  {
+    // Writing bytes from s2 into s1 can be done forwards, use memcpy.
     memcpy(s1, s2, n);
+  }
   else
   {
+    // Writing bytes from s2 into s1 cannot be done forwards, use memmove.
     const unsigned char *sp = (const unsigned char *) s2 + (n - 1);
     unsigned char *dp = (unsigned char *) s1 + (n - 1);
     for (; n != 0; n--) *dp-- = *sp--;
   }
 
 #ifdef ADDITIONAL_CHECKS
-  assert(!memcmp(s1, s2, orig_n));
+    // We can't memcmp if the regions overlap at all.
+    if (LIKELY(!overlaps(s1, s2, orig_n)))
+    {
+      assert(!memcmp(s1, s2, orig_n));
+    }
 #endif
 
   return s1;
