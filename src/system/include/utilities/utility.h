@@ -179,6 +179,15 @@ inline char toLower(char c)
     return reinterpret_cast<uintptr_t>(b) - reinterpret_cast<uintptr_t>(a);
   }
 
+  /** Return the difference between a and b, without a sign. */
+  template<typename T1, typename T2>
+  inline uintptr_t abs_difference(T1 a, T2 b)
+  {
+    intptr_t value = b - a;
+    if (value < 0) value *= -1;
+    return value;
+  }
+
   inline uint8_t checksum(const uint8_t *pMemory, size_t sMemory)
   {
     uint8_t sum = 0;
