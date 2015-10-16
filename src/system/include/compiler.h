@@ -67,6 +67,10 @@
 #endif
 #endif
 
+#if defined(HAS_ADDRESS_SANITIZER) || defined(HAS_THREAD_SANITIZER)
+#define HAS_SANITIZERS 1
+#endif
+
 /** @} */
 
 #endif
