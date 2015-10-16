@@ -49,11 +49,14 @@ _ZN21PerProcessorScheduler28deleteThreadThenRestoreStateEP6ThreadR20HostedSchedu
     ; Thread deletion coming. We will use a temporary stack for the frame.
     ; TODO: this will break if we have multiprocessing.
     mov rsp, safe_stack_top
+    sub rsp, 8  ; Align as needed for SSE et al.
 
     ; Ready to go.
     push rcx
     call _ZN21PerProcessorScheduler12deleteThreadEP6Thread
     pop rcx
+
+    sub rsp, 8  ; Align for SSE et al.
 
     ; Get out of here (no need to pass a lock).
     mov rdi, rcx
