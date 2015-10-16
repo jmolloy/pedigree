@@ -20,6 +20,7 @@
 #include <linker/Elf.h>
 #include <Log.h>
 #include <linker/KernelElf.h>
+#include <utilities/utility.h>
 
 namespace __pedigree_hosted
 {
@@ -108,12 +109,13 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
 
         if (S == 0)
         {
-#ifdef HAS_SANITIZERS
+#if defined(HAS_SANITIZERS) || defined(CLANG_PROFILE)
             void *pSym = __pedigree_hosted::dlsym(RTLD_DEFAULT, pStr);
             if (pSym)
             {
                 WARNING("Internal relocation failed for symbol \"" << pStr << "\" - using a dlsym lookup.");
                 S = reinterpret_cast<uint64_t>(pSym);
+                WARNING(" = " << S);
             }
             else
 #endif
@@ -148,6 +150,12 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
             result = S + A;
             break;
         case R_X86_64_PC32:
+            if (abs_difference(S + A, P) >= 0x80000000ULL)
+            {
+                ERROR("PC32 relocation with >2GB displacement - not possible.");
+                ERROR("Symbol is " << symbolName << " at " << S);
+                return false;
+            }
             result = (result & 0xFFFFFFFF00000000ULL) |
                 (((S + A) - P) & 0xFFFFFFFFULL);
             break;
