@@ -105,6 +105,9 @@ void Debugger::initialise()
 void Debugger::start(InterruptState &state, LargeStaticString &description)
 {
   Log::instance() << " << Flushing log content >>" << Flush;
+#if defined(VALGRIND) || defined(HAS_SANITIZERS)
+  Processor::halt();
+#endif
   static String graphicsService("graphics");
   
   // Drop out of whatever graphics mode we were in
