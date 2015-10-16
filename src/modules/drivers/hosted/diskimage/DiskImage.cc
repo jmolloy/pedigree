@@ -31,8 +31,8 @@ bool DiskImage::initialise()
         return false;
     }
 
-    uintptr_t baseAddress = *reinterpret_cast<uintptr_t*>(adjust_pointer(g_pBootstrapInfo->getModuleBase(), 32));
-    uintptr_t endAddress = *reinterpret_cast<uintptr_t*>(adjust_pointer(g_pBootstrapInfo->getModuleBase(), 40));
+    uintptr_t baseAddress = g_pBootstrapInfo->getModuleArray()[2].base;
+    uintptr_t endAddress = g_pBootstrapInfo->getModuleArray()[2].end;
 
     m_pBase = reinterpret_cast<void *>(baseAddress);
     m_nSize = endAddress - baseAddress;
