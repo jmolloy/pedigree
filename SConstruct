@@ -678,6 +678,10 @@ if env['hosted']:
                     if flag in env[flags]:
                         env[flags].remove(flag)
 
+            # This manages to differ between at least the clang on Travis and
+            # a more recent (built from SVN) clang. So, don't error on it.
+            env.MergeFlags({'CCFLAGS': [
+                '-Wno-error=implicit-exception-spec-mismatch']})
     else:
         env['clang'] = False
         print('Note: not using clang for hosted build.')
