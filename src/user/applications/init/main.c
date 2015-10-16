@@ -76,6 +76,8 @@ void start(const char *proc)
   endutxent();
 }
 
+extern void pedigree_reboot();
+
 int main(int argc, char **argv)
 {
   syslog(LOG_INFO, "init: starting...");
@@ -101,10 +103,16 @@ int main(int argc, char **argv)
   // All done with utmp.
   endutxent();
 
+#ifdef HOSTED
+  // Reboot the system instead of starting up.
+  syslog(LOG_INFO, "init: hosted build, triggering a reboot");
+  pedigree_reboot();
+#else
   // Fork out and run startup programs.
   start("/applications/preloadd");
   start("/applications/python");
   start(MAIN_PROGRAM);
+#endif
 
   // Done, enter PID reaping loop.
   syslog(LOG_INFO, "init: complete!");
