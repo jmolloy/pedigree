@@ -445,7 +445,7 @@ static int overlaps(const void *restrict s1, const void *restrict s2, size_t n)
   return (a < b_end && b < a_end) ? 1 : 0;
 }
 
-static void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
+void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
 {
     char *restrict p1 = (char *)s1;
     const char *restrict p2 = (const char *)s2;
@@ -668,7 +668,7 @@ void *memcpy_gcc(void *restrict s1, const void *restrict s2, size_t n)
 }
 
 #else
-static void *memcpy(void *restrict dest, const void *restrict src, size_t len)
+void *memcpy(void *restrict dest, const void *restrict src, size_t len)
 {
   const unsigned char *restrict sp = (const unsigned char *restrict)src;
   unsigned char *restrict dp = (unsigned char *restrict)dest;

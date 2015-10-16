@@ -100,11 +100,9 @@ void *memset(void *buf, int c, size_t len);
 void *wmemset(void *buf, int c, size_t len);
 void *dmemset(void *buf, unsigned int c, size_t len);
 void *qmemset(void *buf, unsigned long long c, size_t len);
+void *memcpy(void *s1, const void *s2, size_t n);
 void *memmove(void *s1, const void *s2, size_t n);
 int memcmp(const void *p1, const void *p2, size_t len);
-
-// memmove will fall back to memcpy if the regions do not overlap.
-#define memcpy memmove
 
 int strcmp(const char *p1, const char *p2);
 int strncmp(const char *p1, const char *p2, int n);
