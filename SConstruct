@@ -689,7 +689,9 @@ if env['hosted']:
             'address',
         )
         sanitizers = '-fsanitize=%s' % ','.join(sanitizers)
-        env.MergeFlags({'CCFLAGS': [sanitizers], 'LINKFLAGS': [sanitizers]})
+        asan_supp = env.File('#ASan.supp').path
+        sanitizers = [sanitizers, '-fsanitize-blacklist=%s' % asan_supp]
+        env.MergeFlags({'CCFLAGS': sanitizers, 'LINKFLAGS': sanitizers})
 
     if env['clang'] and env['clang_profile']:
         env['CPPDEFINES'] += ['CLANG_PROFILE']
