@@ -32,13 +32,6 @@
 
 extern "C" void _main(BootstrapStruct_t &bs);
 
-static uint32_t ptr_to_u32(void *p)
-{
-    uintptr_t ptr = reinterpret_cast<uintptr_t>(p);
-    assert((ptr >> 32ULL) == 0);
-    return static_cast<uint32_t>(ptr) & 0xFFFFFFFFUL;
-}
-
 extern "C"
 int main(int argc, char *argv[])
 {
@@ -53,7 +46,7 @@ int main(int argc, char *argv[])
     void *configdb_mapping = MAP_FAILED;
     void *kernel_mapping = MAP_FAILED;
     void *diskimage_mapping = MAP_FAILED;
-    uint32_t *module_region = (uint32_t *) MAP_FAILED;
+    uintptr_t *module_region = (uintptr_t *) MAP_FAILED;
     size_t initrd_length = 0;
     size_t configdb_length = 0;
     size_t kernel_length = 0;
@@ -101,12 +94,13 @@ int main(int argc, char *argv[])
         goto fail;
     }
     initrd_length = st.st_size;
-    initrd_mapping = mmap(0, initrd_length, PROT_READ, MAP_PRIVATE | MAP_32BIT, initrd, 0);
+    initrd_mapping = mmap(0, initrd_length, PROT_READ, MAP_PRIVATE, initrd, 0);
     if(initrd_mapping == MAP_FAILED)
     {
         fprintf(stderr, "Can't map initrd: %s\n", strerror(errno));
         goto fail;
     }
+    fprintf(stderr, "initrd is at %p\n", initrd_mapping);
 
     r = fstat(configdb, &st);
     if(r != 0)
@@ -115,12 +109,13 @@ int main(int argc, char *argv[])
         goto fail;
     }
     configdb_length = st.st_size;
-    configdb_mapping = mmap(0, configdb_length, PROT_READ, MAP_PRIVATE | MAP_32BIT, configdb, 0);
+    configdb_mapping = mmap(0, configdb_length, PROT_READ, MAP_PRIVATE, configdb, 0);
     if(configdb_mapping == MAP_FAILED)
     {
         fprintf(stderr, "Can't map config database: %s\n", strerror(errno));
         goto fail;
     }
+    fprintf(stderr, "configuration database is at %p\n", configdb_mapping);
 
     r = fstat(kernel, &st);
     if(r != 0)
@@ -129,31 +124,33 @@ int main(int argc, char *argv[])
         goto fail;
     }
     kernel_length = st.st_size;
-    kernel_mapping = mmap(0, kernel_length, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_32BIT, kernel, 0);
+    kernel_mapping = mmap(0, kernel_length, PROT_READ | PROT_WRITE, MAP_PRIVATE, kernel, 0);
     if(kernel_mapping == MAP_FAILED)
     {
         fprintf(stderr, "Can't map kernel: %s\n", strerror(errno));
         goto fail;
     }
+    fprintf(stderr, "kernel is at %p\n", kernel_mapping);
 
     // Make the module locations available to the kernel.
-    module_region = (uint32_t *) mmap(0, 0x1000, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_32BIT, -1, 0);
+    module_region = (uintptr_t *) mmap(0, 0x1000, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
     if(module_region == MAP_FAILED)
     {
         fprintf(stderr, "Can't map module information region: %s\n", strerror(errno));
         goto fail;
     }
+    fprintf(stderr, "module region is at %p\n", module_region);
     memset(module_region, 0, 0x1000);
 
     // initrd
-    module_region[0] = ptr_to_u32(initrd_mapping);
-    module_region[1] = ptr_to_u32(initrd_mapping) + initrd_length;
+    module_region[0] = reinterpret_cast<uintptr_t>(initrd_mapping);
+    module_region[1] = reinterpret_cast<uintptr_t>(initrd_mapping) + initrd_length;
 
     // config database
-    module_region[4] = ptr_to_u32(configdb_mapping);
-    module_region[5] = ptr_to_u32(configdb_mapping) + configdb_length;
+    module_region[4] = reinterpret_cast<uintptr_t>(configdb_mapping);
+    module_region[5] = reinterpret_cast<uintptr_t>(configdb_mapping) + configdb_length;
 
-    bs.mods_addr = ptr_to_u32(module_region);
+    bs.mods_addr = reinterpret_cast<uintptr_t>(module_region);
     bs.mods_count = 2;
 
     if (argc > 3)
@@ -180,12 +177,12 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Can't map disk image: %s\n", strerror(errno));
             goto fail;
         }
+        fprintf(stderr, "disk image is at %p\n", diskimage_mapping);
 
         // Add to the multiboot info.
         bs.mods_count++;
-        uint64_t *module_region64 = reinterpret_cast<uint64_t *>(module_region);
-        module_region64[4] = reinterpret_cast<uintptr_t>(diskimage_mapping);
-        module_region64[5] = reinterpret_cast<uintptr_t>(diskimage_mapping) + diskimage_length;
+        module_region[8] = reinterpret_cast<uintptr_t>(diskimage_mapping);
+        module_region[9] = reinterpret_cast<uintptr_t>(diskimage_mapping) + diskimage_length;
     }
 
     // Load ELF header to add ELF information.
@@ -193,7 +190,7 @@ int main(int argc, char *argv[])
     bs.shndx = ehdr->e_shstrndx;
     bs.num = ehdr->e_shnum;
     bs.size = ehdr->e_shentsize;
-    bs.addr = ptr_to_u32(kernel_mapping) + ehdr->e_shoff;
+    bs.addr = reinterpret_cast<uintptr_t>(kernel_mapping) + ehdr->e_shoff;
 
     // Fix up section headers with no addresses.
     shdrs = reinterpret_cast<Elf64_Shdr *>(bs.addr);

@@ -52,6 +52,9 @@ class BootstrapStruct_t
     friend int ::main(int argc, char *argv[]);
 #endif
 public:
+    BootstrapStruct_t();
+    ~BootstrapStruct_t() {};
+
     bool isInitrdLoaded() const;
     uint8_t *getInitrdAddress() const;
     size_t getInitrdSize() const;
@@ -76,6 +79,25 @@ public:
     size_t getModuleCount() const;
     void *getModuleBase() const;
 
+#ifdef HOSTED
+typedef uintptr_t bootstrap_uintptr_t;
+#else
+typedef uint32_t bootstrap_uintptr_t;
+#endif
+
+    typedef struct
+    {
+        bootstrap_uintptr_t base;
+        bootstrap_uintptr_t end;
+        const char *name;
+        bootstrap_uintptr_t rsvd;
+    } Module;
+
+    const Module *getModuleArray() const
+    {
+        return reinterpret_cast<const Module *>(getModuleBase());
+    }
+
 private:
     // If we are passed via grub, this information will be completely different to
     // via the bootstrapper.
@@ -89,12 +111,12 @@ private:
     uint32_t cmdline;
 
     uint32_t mods_count;
-    uint32_t mods_addr;
+    bootstrap_uintptr_t mods_addr;
 
     /* ELF information */
     uint32_t num;
     uint32_t size;
-    uint32_t addr;
+    bootstrap_uintptr_t addr;
     uint32_t shndx;
 
     uint32_t mmap_length;
