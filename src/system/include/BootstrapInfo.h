@@ -89,9 +89,9 @@ typedef uint32_t bootstrap_uintptr_t;
     {
         bootstrap_uintptr_t base;
         bootstrap_uintptr_t end;
-        const char *name;
-        bootstrap_uintptr_t rsvd;
-    } Module;
+        bootstrap_uintptr_t name_ptr;
+        bootstrap_uintptr_t pad;
+    } PACKED Module;
 
     const Module *getModuleArray() const
     {
