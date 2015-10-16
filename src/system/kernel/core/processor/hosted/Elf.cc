@@ -108,15 +108,18 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
 
         if (S == 0)
         {
+#ifdef HAS_SANITIZERS
             void *pSym = __pedigree_hosted::dlsym(RTLD_DEFAULT, pStr);
-            if (!pSym)
+            if (pSym)
+            {
+                WARNING("Internal relocation failed for symbol \"" << pStr << "\" - using a dlsym lookup.");
+                S = reinterpret_cast<uint64_t>(pSym);
+            }
+            else
+#endif
             {
                 WARNING("Relocation failed for symbol \"" << pStr << "\" (relocation=" << R_TYPE(rel.info) << ")");
                 WARNING("Relocation at " << address << " (offset=" << rel.offset << ")...");
-            }
-            else
-            {
-                S = reinterpret_cast<uint64_t>(pSym);
             }
         }
         // This is a weak relocation, but it was undefined.
