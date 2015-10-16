@@ -127,10 +127,12 @@ def buildImageE2fsprogs(target, source, env):
     shutil.copyfile(os.path.join(imagedir, '..', 'base', '.profile'),
                     os.path.join(imagedir, '.profile'))
 
+    # Build file for creating the disk image.
+    base_image = tempfile.NamedTemporaryFile(dir=os.environ.get('TMPDIR'))
+
     # Create image - 1GiB.
     sz = 1 << 30
-    with open(outFile, 'w') as f:
-        f.truncate(sz)
+    base_image.truncate(sz)
 
     # Generate ext2 filesystem.
     args = [
@@ -142,7 +144,7 @@ def buildImageE2fsprogs(target, source, env):
         '-F',
         '-L',
         'pedigree',
-        outFile,
+        base_image.name,
     ]
     subprocess.check_call(args)
 
@@ -185,7 +187,7 @@ def buildImageE2fsprogs(target, source, env):
             '-w',
             '-f',
             f.name,
-            outFile,
+            base_image.name,
         ]
 
         with tempfile.NamedTemporaryFile() as t:
@@ -237,7 +239,7 @@ def buildImageE2fsprogs(target, source, env):
     # Load the ext2 partition now that the partition table is written.
     subprocess.check_call([
         'dd',
-        'if=%s' % (outFile,),
+        'if=%s' % base_image.name,
         'of=%s' % (temp),
         'seek=%d' % (start_lba,),
         'obs=512',  # LBA = sector, sector = 512 bytes.
