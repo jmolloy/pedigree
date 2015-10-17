@@ -56,6 +56,11 @@ PhysicalMemoryManager &PhysicalMemoryManager::instance()
     return X86CommonPhysicalMemoryManager::instance();
 }
 
+size_t X86CommonPhysicalMemoryManager::freePageCount() const
+{
+    return m_PageStack.freePages();
+}
+
 physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
 {
     static bool bDidHitWatermark = false;

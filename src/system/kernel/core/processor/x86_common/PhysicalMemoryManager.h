@@ -73,6 +73,9 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
           {return m_AcpiRanges;}
     #endif
 
+    /** Specifies the number of pages that remain free on the system. */
+    virtual size_t freePageCount() const;
+
   protected:
     /** The constructor */
     X86CommonPhysicalMemoryManager() INITIALISATION_ONLY;

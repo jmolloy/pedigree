@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -134,6 +133,12 @@ class PhysicalMemoryManager
       /** Free the memory region list created with allocateMemoryRegionList.
        *\param[in,out] MemoryRegions container of the copy of the memory regions */
     void freeMemoryRegionList(Vector<MemoryRegionInfo*> &MemoryRegions);
+
+    /** Specifies the number of pages that remain free on the system. */
+    virtual size_t freePageCount() const
+    {
+        return ~0UL;
+    };
 
   protected:
     /** The constructor */
