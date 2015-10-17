@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -129,6 +128,16 @@ public:
   {
     *blockNumber = m_NumBlocks;
     *blockSize = m_BlockSize;
+  }
+
+  size_t getSize() const
+  {
+    return m_NumBlocks * getBlockSize();
+  }
+
+  size_t getBlockSize() const
+  {
+    return m_BlockSize;
   }
 
 private:

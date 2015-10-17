@@ -52,7 +52,7 @@ bool AtaDisk::initialise()
     // Grab our parent's IoPorts for command and control accesses.
     IoBase *commandRegs = m_CommandRegs;
     // Commented out - unused variable.
-    // IoBase *controlRegs = m_ControlRegs;
+    IoBase *controlRegs = m_ControlRegs;
 
     // Drive spin-up (go from standby to active, if necessary)
     setFeatures(0x07, 0, 0, 0, 0);
@@ -87,7 +87,7 @@ bool AtaDisk::initialise()
     AtaStatus status;
 
     // Disable IRQs, for the moment.
-    // controlRegs->write8(0x01, 6);
+    controlRegs->write8(0x02, 6);
 
     // Send IDENTIFY.
     commandRegs->read8(7);
@@ -334,7 +334,10 @@ uintptr_t AtaDisk::read(uint64_t location)
 
     // Are we reading outside the range of the disk?
     if (location >= getSize())
+    {
+        WARNING("AtaDisk: requested location " << location << " > disk size " << getSize());
         return 0;
+    }
 
     // Grab our parent.
     AtaController *pParent = static_cast<AtaController*> (m_pParent);
@@ -531,7 +534,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
 
         // Enable disk interrupts
 #ifndef PPC_COMMON
-        controlRegs->write8(0x08, 6);
+        controlRegs->write8(0, 6);
 #endif
 
         // Make sure the IrqReceived mutex is locked.
