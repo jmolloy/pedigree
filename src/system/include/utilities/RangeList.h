@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -36,15 +35,15 @@ class RangeList
   public:
     /** Default constructor does nothing */
     inline RangeList()
-      : m_List(), m_bReverse(false) {}
+      : m_List(), m_bReverse(false), m_bPreferUsed(false) {}
     /** Construct with reverse order, without an initial allocation. */
-    inline RangeList(bool reverse)
-      : m_List(), m_bReverse(reverse) {}
+    inline RangeList(bool reverse, bool preferUsed = false)
+      : m_List(), m_bReverse(reverse), m_bPreferUsed(preferUsed) {}
     /** Construct with a preexisting range
      *\param[in] Address beginning of the range
      *\param[in] Length length of the range */
-    RangeList(T Address, T Length, bool bReverse = false)
-      : m_List(), m_bReverse(bReverse)
+    RangeList(T Address, T Length, bool bReverse = false, bool preferUsed = false)
+      : m_List(), m_bReverse(bReverse), m_bPreferUsed(preferUsed)
     {
       Range *range = new Range(Address, Length);
       m_List.pushBack(range);
@@ -97,6 +96,9 @@ class RangeList
 
     /** Should we allocate in reverse order? */
     bool m_bReverse;
+
+    /** Should we prefer previously-used ranges where possible? */
+    bool m_bPreferUsed;
 
     RangeList &operator = (const RangeList & l);
 
@@ -154,8 +156,20 @@ void RangeList<T>::free(T address, T length)
       break;
     }
 
+  // Add the range back to our list, but in such a way that it is allocated
+  // last rather than first (if another allocation of the same length comes
+  // later).
   Range *range = new Range(address, length);
-  m_List.pushBack(range);
+
+  // Decide which side of the list to push to. If we prefer used ranges over
+  // fresh ranges, we want to invert the push decision.
+  bool front = m_bReverse;
+  if (m_bPreferUsed) front = !front;
+
+  if (front)
+    m_List.pushFront(range);
+  else
+    m_List.pushBack(range);
 }
 template<typename T>
 bool RangeList<T>::allocate(T length, T &address)
