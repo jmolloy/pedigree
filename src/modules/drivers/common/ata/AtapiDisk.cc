@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -117,7 +116,7 @@ bool AtapiDisk::initialise()
   uint8_t m3 = commandRegs->read8(4);
   uint8_t m4 = commandRegs->read8(5);
 #ifdef DEBUG
-  NOTICE("ATA 'magic registers': " << m1 << ", " << m2 << ", " << m3 << ", " << m4);
+  NOTICE("ATA signature: " << m1 << ", " << m2 << ", " << m3 << ", " << m4);
 #endif
   if(m1 == 0x01 && m2 == 0x01 && m3 == 0x14 && m4 == 0xeb)
   {
@@ -568,6 +567,14 @@ bool AtapiDisk::sendCommand(size_t nRespBytes, uintptr_t respBuff, size_t nPackB
     }
 
     return false;
+  }
+
+  // If we aren't expecting anything from the device, we can just poll for
+  // completion instead of waiting for an IRQ.
+  if (!nRespBytes)
+  {
+    status = ataWait(commandRegs);
+    return !status.reg.err;
   }
 
   // If DMA is set up, begin that now, before sending the SCSI command.
