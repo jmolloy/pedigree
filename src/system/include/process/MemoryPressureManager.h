@@ -80,6 +80,14 @@ class MemoryPressureManager
             return 16;
         }
 
+        static size_t getLowWatermark()
+        {
+            // Caches can begin voluntarily evicting cache pages at this mark.
+            // Should no action be taken, the system will take over forcefully
+            // at the high water mark.
+            return 32;
+        }
+
         /**
          * Attempt to alleviate memory pressure by requesting registered
          * handlers release pages that can be safely released.

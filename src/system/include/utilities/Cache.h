@@ -108,6 +108,28 @@ class CacheManager : public TimerHandler, public RequestQueue, public MemoryPres
 /** Provides an abstraction of a data cache. */
 class Cache
 {
+private:
+    struct CachePage
+    {
+        /// Key for this page.
+        uintptr_t key;
+
+        /// The location of this page in memory
+        uintptr_t location;
+
+        /// Reference count to handle release() being called with multiple
+        /// threads having access to the page.
+        size_t refcnt;
+
+        /// The time at which this page was allocated. This is used by
+        /// compact() to determine the best pages to evict.
+        uint32_t timeAllocated;
+
+        /// Linked list components for LRU.
+        CachePage *pNext;
+        CachePage *pPrev;
+    };
+
 public:
 
     /**
@@ -231,6 +253,28 @@ private:
      */
     void evict(uintptr_t key, bool bLock, bool bPhysicalLock, bool bRemove);
 
+    /**
+     * LRU evict do-er.
+     */
+    void lruEvict();
+
+    /**
+     * Link the given CachePage to the LRU list.
+     */
+    void linkPage(CachePage *pPage);
+
+    /**
+     * Promote the given CachePage within the LRU list.
+     *
+     * This marks the page as the most-recently-used page.
+     */
+    void promotePage(CachePage *pPage);
+
+    /**
+     * Unlink the given CachePage from the LRU list.
+     */
+    void unlinkPage(CachePage *pPage);
+
     struct callbackMeta
     {
         CallbackCause cause;
@@ -258,23 +302,14 @@ public:
             uint64_t p6, uint64_t p7, uint64_t p8);
 
 private:
-
-    struct CachePage
-    {
-        /// The location of this page in memory
-        uintptr_t location;
-
-        /// Reference count to handle release() being called with multiple
-        /// threads having access to the page.
-        size_t refcnt;
-
-        /// The time at which this page was allocated. This is used by
-        /// compact() to determine the best pages to evict.
-        uint32_t timeAllocated;
-    };
-
     /** Key-item pairs. */
     Tree<uintptr_t, CachePage*> m_Pages;
+
+    /**
+     * List of known CachePages, kept up-to-date with m_Pages but in LRU order.
+     */
+    CachePage *m_pLruHead;
+    CachePage *m_pLruTail;
 
     /** Static MemoryAllocator to allocate virtual address space for all caches. */
     static MemoryAllocator m_Allocator;

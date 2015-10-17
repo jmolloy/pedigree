@@ -25,7 +25,11 @@
 #include <machine/Timer.h>
 #include <machine/Machine.h>
 
-MemoryAllocator Cache::m_Allocator;
+// Don't allocate cache space in reverse, but DO re-use cache pages.
+// This gives us wins because we don't need to reallocate page tables for
+// evicted pages. Without reuse, we end up needing to clean up old page tables
+// eventually.
+MemoryAllocator Cache::m_Allocator(false, true);
 Spinlock Cache::m_AllocatorLock;
 static bool g_AllocatorInited = false;
 
@@ -126,7 +130,8 @@ uint64_t CacheManager::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uin
 }
 
 Cache::Cache() :
-    m_Pages(), m_Lock(), m_Callback(0), m_Nanoseconds(0)
+    m_Pages(), m_pLruHead(0), m_pLruTail(0), m_Lock(), m_Callback(0),
+    m_Nanoseconds(0)
 {
     if (!g_AllocatorInited)
     {
@@ -186,6 +191,7 @@ uintptr_t Cache::lookup (uintptr_t key)
 
     uintptr_t ptr = pPage->location;
     pPage->refcnt ++;
+    promotePage(pPage);
 
     m_Lock.leave();
     return ptr;
@@ -215,6 +221,9 @@ uintptr_t Cache::insert (uintptr_t key)
         return 0;
     }
 
+    // Do we have memory pressure - do we need to do an LRU eviction?
+    lruEvict();
+
     uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
     if (!Processor::information().getVirtualAddressSpace().map(phys, reinterpret_cast<void*>(location), VirtualAddressSpace::Write|VirtualAddressSpace::KernelMode))
     {
@@ -224,10 +233,12 @@ uintptr_t Cache::insert (uintptr_t key)
     Timer &timer = *Machine::instance().getTimer();
 
     pPage = new CachePage;
+    pPage->key = key;
     pPage->location = location;
     pPage->refcnt = 1;
     pPage->timeAllocated = timer.getUnixTimestamp();
     m_Pages.insert(key, pPage);
+    linkPage(pPage);
 
     m_Lock.release();
 
@@ -278,6 +289,9 @@ uintptr_t Cache::insert (uintptr_t key, size_t size)
             continue; // Don't overwrite existing buffers
         }
 
+        // Check for and evict pages if we're running low on memory.
+        lruEvict();
+
         uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
         if (!Processor::information().getVirtualAddressSpace().map(phys, reinterpret_cast<void*>(location), VirtualAddressSpace::Write|VirtualAddressSpace::KernelMode))
         {
@@ -287,6 +301,7 @@ uintptr_t Cache::insert (uintptr_t key, size_t size)
         Timer &timer = *Machine::instance().getTimer();
 
         pPage = new CachePage;
+        pPage->key = key + (page * 4096);
         pPage->location = location;
 
         // Enter into cache unpinned, but only if we can call an eviction callback.
@@ -294,6 +309,7 @@ uintptr_t Cache::insert (uintptr_t key, size_t size)
 
         pPage->timeAllocated = timer.getUnixTimestamp();
         m_Pages.insert(key + (page * 4096), pPage);
+        linkPage(pPage);
 
         location += 4096;
     }
@@ -376,7 +392,10 @@ void Cache::evict(uintptr_t key, bool bLock, bool bPhysicalLock, bool bRemove)
         m_Allocator.free(pPage->location, 4096);
 
         if(bRemove)
+        {
             m_Pages.remove(key);
+            unlinkPage(pPage);
+        }
 
         // Eviction callback.
         if(m_Callback)
@@ -554,6 +573,7 @@ void Cache::sync(uintptr_t key, bool async)
     }
 
     uintptr_t location = pPage->location;
+    promotePage(pPage);
 
     m_Lock.release();
 
@@ -607,6 +627,9 @@ void Cache::timer(uint64_t delta, InterruptState &state)
                 // Clear dirty flag - written back.
                 flags &= ~(VirtualAddressSpace::Dirty | VirtualAddressSpace::Accessed);
                 va.setFlags(reinterpret_cast<void *>(page->location), flags);
+
+                // Promote - page was recently used (touched, at least).
+                promotePage(page);
             }
         }
     }
@@ -645,3 +668,46 @@ uint64_t Cache::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p
     return 0;
 }
 
+void Cache::lruEvict()
+{
+    if (!(m_pLruHead && m_pLruTail))
+        return;
+
+    // Do we have memory pressure - do we need to do an LRU eviction?
+    if (PhysicalMemoryManager::instance().freePageCount() <
+        MemoryPressureManager::getLowWatermark())
+    {
+        // Yes, perform the LRU eviction.
+        CachePage *toEvict = m_pLruTail;
+        evict(toEvict->key, false, true, true);
+    }
+}
+
+void Cache::linkPage(CachePage *pPage)
+{
+    pPage->pPrev = 0;
+    pPage->pNext = m_pLruHead;
+    if (m_pLruHead)
+        m_pLruHead->pPrev = pPage;
+    m_pLruHead = pPage;
+    if (!m_pLruTail)
+        m_pLruTail = m_pLruHead;
+}
+
+void Cache::promotePage(CachePage *pPage)
+{
+    unlinkPage(pPage);
+    linkPage(pPage);
+}
+
+void Cache::unlinkPage(CachePage *pPage)
+{
+    if (pPage->pPrev)
+        pPage->pPrev->pNext = pPage->pNext;
+    if (pPage->pNext)
+        pPage->pNext->pPrev = pPage->pPrev;
+    if (pPage == m_pLruTail)
+        m_pLruTail = pPage->pPrev;
+    if (pPage == m_pLruHead)
+        m_pLruHead = pPage->pNext;
+}
