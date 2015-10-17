@@ -47,8 +47,6 @@ def buildDiskImages(env, config_database):
     if env['ARCH_TARGET'] != 'ARM':
         env.Depends(hddimg, 'apps')
 
-    if not 'STATIC_DRIVERS' in env['CPPDEFINES']:
-        env.Depends(hddimg, 'initrd')
     env.Depends(hddimg, config_database)
 
     if not env['nodiskimages'] and not env['noiso']:
@@ -106,6 +104,7 @@ def buildDiskImages(env, config_database):
             fileList += [kernel, config_database]
         else:
             fileList += [kernel, initrd, config_database]
+            env.Depends(hddimg, 'initrd')
 
     # Add directories in the images directory.
     for entry in os.listdir(imagedir):
