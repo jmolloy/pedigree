@@ -222,18 +222,44 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
     if(!slaveControl->allocate(0x374, 4))
         ERROR("Couldn't allocate slave control ports");
 
+    // Check for non-existent controllers.
+    AtaStatus masterStatus = ataWait(masterCommand);
+    AtaStatus slaveStatus = ataWait(slaveCommand);
+    if (masterStatus.__reg_contents == 0xff)
+    {
+        delete masterCommand;
+        delete masterControl;
+        masterCommand = 0;
+        masterControl = 0;
+    }
+    if (slaveStatus.__reg_contents == 0xff)
+    {
+        delete slaveCommand;
+        delete slaveControl;
+        slaveCommand = 0;
+        slaveControl = 0;
+    }
+
     // Kick off an SRST on each control port.
-    masterControl->write8(0x6, 2);
-    slaveControl->write8(0x6, 2);
-    Processor::pause(); // Hold SRST for 5 nanoseconds. /// \todo Better way of doing this?
-    masterControl->write8(0x2, 2);
-    slaveControl->write8(0x2, 2);
+    if (masterControl)
+    {
+        masterControl->write8(0x6, 2);
+        Processor::pause(); // Hold SRST for 5 nanoseconds. /// \todo Better way of doing this?
+        masterControl->write8(0x2, 2);
+    }
+    if (slaveControl)
+    {
+        slaveControl->write8(0x6, 2);
+        Processor::pause();
+        slaveControl->write8(0x2, 2);
+    }
+
     delay(2); // Wait 2 ms after clearing.
 
-    // Wait for each to become active (BSY=0)
-    /// \todo Check return status for errors!
-    ataWait(masterCommand);
-    ataWait(slaveCommand);
+    if (masterCommand)
+        ataWait(masterCommand);
+    if (slaveCommand)
+        ataWait(slaveCommand);
 
     // Install our IRQ handler
     if(getInterruptNumber() != 0xFF)
@@ -247,10 +273,17 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
         Machine::instance().getIrqManager()->registerIsaIrqHandler(secondaryIrq, static_cast<IrqHandler*> (this));
 
     // And finally, create disks
-    diskHelper(true, masterCommand, masterControl, primaryBusMaster, primaryIrq);
-    diskHelper(false, masterCommand, masterControl, primaryBusMaster, primaryIrq);
-    diskHelper(true, slaveCommand, slaveControl, secondaryBusMaster, secondaryIrq);
-    diskHelper(false, slaveCommand, slaveControl, secondaryBusMaster, secondaryIrq);
+    if (masterControl)
+    {
+        diskHelper(true, masterCommand, masterControl, primaryBusMaster, primaryIrq);
+        diskHelper(false, masterCommand, masterControl, primaryBusMaster, primaryIrq);
+    }
+
+    if (slaveControl)
+    {
+        diskHelper(true, slaveCommand, slaveControl, secondaryBusMaster, secondaryIrq);
+        diskHelper(false, slaveCommand, slaveControl, secondaryBusMaster, secondaryIrq);
+    }
 #else
     ERROR("PCI ATA: no good, this machine has no port I/O");
 #endif
