@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -31,7 +30,12 @@ template <class T>
 class PointerGuard
 {
   public:
-    PointerGuard(T *p = 0) : m_Pointer(p)
+    PointerGuard(T *p = 0) : m_Pointer(p), m_Wrapper(0)
+    {
+      // NOTICE("PointerGuard: Guarding pointer [" << reinterpret_cast<uintptr_t>(m_Pointer) << "]");
+    }
+
+    PointerGuard(T **p = 0) : m_Pointer(*p), m_Wrapper(p)
     {
       // NOTICE("PointerGuard: Guarding pointer [" << reinterpret_cast<uintptr_t>(m_Pointer) << "]");
     }
@@ -44,6 +48,11 @@ class PointerGuard
         delete m_Pointer;
         m_Pointer = 0;
       }
+
+      if(m_Wrapper)
+      {
+        *m_Wrapper = 0;
+      }
     }
 
     /** Neither of these should be used, as they defeat the purpose (and will cause a dual
@@ -54,16 +63,19 @@ class PointerGuard
     {
       ERROR("PointerGuard: copy constructor called");
       m_Pointer = 0;
+      m_Wrapper = 0;
     }
 
     PointerGuard<T>& operator = (PointerGuard<T>& p)
     {
       ERROR("PointerGuard: operator = called");
       m_Pointer = 0;
+      m_Wrapper = 0;
     }
 
   private:
     T *m_Pointer;
+    T **m_Wrapper;
 };
 
 #endif
