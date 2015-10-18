@@ -30,32 +30,25 @@
 #include <machine/IrqHandler.h>
 #include <Log.h>
 
-#define ATA_CMD_READ  0
-#define ATA_CMD_WRITE 1
+#include <scsi/ScsiController.h>
 
 /** Base class for an ATA controller. */
-class AtaController : public Controller, public RequestQueue, public IrqHandler
+class AtaController : public ScsiController, public IrqHandler
 {
 public:
     AtaController(Controller *pDev, int nController = 0) :
-        Controller(pDev), m_nController(nController)
+        ScsiController(pDev), m_nController(nController)
     {
         setSpecificType(String("ata-controller"));
 
         // Ensure we have no stupid children lying around.
         m_Children.clear();
-
-        // Initialise the RequestQueue
-        initialise();
     }
     virtual ~AtaController()
     {
     }
 
     virtual void getName(String &str) = 0;
-
-    virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
-                                  uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8) = 0;
 
     virtual bool compareRequests(const RequestQueue::Request &a, const RequestQueue::Request &b)
     {
@@ -78,6 +71,11 @@ private:
 
 protected:
     int m_nController;
+
+    virtual size_t getNumUnits()
+    {
+        return getNumChildren();
+    }
 };
 
 #endif

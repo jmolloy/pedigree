@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -31,7 +30,6 @@
 #include <machine/IrqHandler.h>
 #include "AtaController.h"
 #include "AtaDisk.h"
-#include "AtapiDisk.h"
 #include "BusMasterIde.h"
 
 #define ATA_CMD_READ  0
@@ -52,6 +50,8 @@ public:
         s.append(m_nController);
         str = String(static_cast<const char*>(s));
     }
+
+    virtual bool sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite);
 
     virtual uint64_t executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
                                   uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8);

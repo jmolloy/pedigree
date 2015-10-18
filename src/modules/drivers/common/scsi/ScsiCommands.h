@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -180,6 +179,45 @@ namespace ScsiCommands
                 uint16_t paramListLen;
                 uint8_t control;
             } PACKED command;
+    };
+
+    class ReadTocCommand : public ScsiCommand
+    {
+        public:
+            inline ReadTocCommand(uint16_t nativeBlockSize, uint8_t ctl = 0)
+            {
+                memset(&command, 0, sizeof(command));
+                command.opcode = 0x43;
+                command.len = HOST_TO_BIG16(nativeBlockSize);
+            }
+
+            virtual size_t serialise(uintptr_t &addr)
+            {
+                addr = reinterpret_cast<uintptr_t>(&command);
+                return sizeof(command);
+            }
+
+            struct
+            {
+                uint8_t opcode;
+                uint8_t flags;
+                uint8_t format;
+                uint8_t rsvd1;
+                uint8_t rsvd2;
+                uint8_t rsvd3;
+                uint8_t track;
+                uint16_t len;
+                uint8_t control;
+            } PACKED command;
+
+            struct TocEntry
+            {
+                uint8_t Rsvd1;
+                uint8_t Flags;
+                uint8_t TrackNum;
+                uint8_t Rsvd2;
+                uint32_t TrackStart;
+            } PACKED;
     };
 
     class ReadCapacity10 : public ScsiCommand

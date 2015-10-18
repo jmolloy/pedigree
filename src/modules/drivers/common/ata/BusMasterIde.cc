@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -175,12 +174,13 @@ bool BusMasterIde::begin(bool bWrite)
         uint8_t cmdReg = m_pBase->read8(Command);
         if(cmdReg & 0x1)
             FATAL("BusMaster IDE status and command registers don't make sense");
-        cmdReg = (cmdReg & 0xF6) | 0x1 | (!bWrite ? 8 : 0);
+        cmdReg = (cmdReg & 0xF6) | 0x1 | (bWrite ? 0 : 8);
         m_pBase->write8(cmdReg, BusMasterIde::Command);
     }
     else
     {
         // Oops, something went wrong - no more transfer.
+        WARNING("BusMaster IDE hit a bad status in begin(): " << statusReg);
         m_bActive = false;
         return false;
     }

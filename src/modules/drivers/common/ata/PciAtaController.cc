@@ -297,30 +297,38 @@ void PciAtaController::diskHelper(bool master, IoBase *cmd, IoBase *ctl, BusMast
 {
     AtaDisk *pDisk = new AtaDisk(this, master, cmd, ctl, dma);
     pDisk->setInterruptNumber(irq);
-    if(!pDisk->initialise())
-    {
-        delete pDisk;
-        AtapiDisk *pAtapiDisk = new AtapiDisk(this, master, cmd, ctl, dma);
-        addChild(pAtapiDisk);
 
-        pAtapiDisk->setInterruptNumber(irq);
-        if(!pAtapiDisk->initialise())
-        {
-            removeChild(pAtapiDisk);
-            delete pAtapiDisk;
-        }
+    // Allow the initialisation to use sendCommand.
+    size_t n = getNumChildren();
+    addChild(pDisk);
+
+    if(!pDisk->initialise(n))
+    {
+        removeChild(pDisk);
+        delete pDisk;
     }
-    else
-        addChild(pDisk);
+}
+
+bool PciAtaController::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite)
+{
+    Device *pChild = getChild(nUnit);
+    if (!pChild)
+    {
+        ERROR("PCI ATA: sendCommand called with a bad unit number.");
+        return false;
+    }
+
+    AtaDisk *pDisk = static_cast<AtaDisk *>(pChild);
+    return pDisk->sendCommand(nUnit, pCommand, nCommandSize, pRespBuffer, nRespBytes, bWrite);
 }
 
 uint64_t PciAtaController::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
                                           uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8)
 {
   AtaDisk *pDisk = reinterpret_cast<AtaDisk*> (p2);
-  if(p1 == ATA_CMD_READ)
+  if(p1 == SCSI_REQUEST_READ)
     return pDisk->doRead(p3);
-  else if(p1 == ATA_CMD_WRITE)
+  else if(p1 == SCSI_REQUEST_WRITE)
     return pDisk->doWrite(p3);
   else
     return 0;
@@ -342,5 +350,5 @@ bool PciAtaController::irq(irq_id_t number, InterruptState &state)
     }
     pDisk->irqReceived();
   }
-  return false; // Keep the IRQ disabled - level triggered.
+  return true;
 }

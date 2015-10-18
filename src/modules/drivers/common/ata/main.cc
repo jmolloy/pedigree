@@ -223,7 +223,7 @@ static void exit()
 
 }
 
-MODULE_INFO("ata", &entry, &exit,
+MODULE_INFO("ata", &entry, &exit, "scsi",
 #ifdef PPC_COMMON
     "ata-specific"
 #elif defined(X86_COMMON)
