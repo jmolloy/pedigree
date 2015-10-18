@@ -431,21 +431,22 @@ bool msdosProbeDisk(Disk *pDisk)
     uintptr_t buff;
     if ((buff=pDisk->read(0ULL)) == 0)
     {
-        WARNING("Disk read failure during partition table search.");
+        WARNING("Disk read failure during MS-DOS partition table search.");
         return false;
     }
 
     uint8_t *buffer = reinterpret_cast<uint8_t*>(buff);
 
+    String diskName;
+    pDisk->getName(diskName);
+
     // Check for the magic bytes.
     if (buffer[510] != MSDOS_IDENT_1 || buffer[511] != MSDOS_IDENT_2)
     {
-        NOTICE("MS-DOS partition not found.");
+        NOTICE("MS-DOS partition not found on disk " << diskName);
         return false;
     }
 
-    String diskName;
-    pDisk->getName(diskName);
     NOTICE("MS-DOS partition table found on disk " << diskName);
 
     MsdosPartitionInfo *pPartitions = reinterpret_cast<MsdosPartitionInfo*> (&buffer[MSDOS_PARTTAB_START]);
