@@ -1,72 +1,170 @@
-BUILD README
-=======================
+# The Pedigree Operating System
+
+[![Build Status](https://travis-ci.org/miselin/pedigree.svg?branch=develop)](https://travis-ci.org/miselin/pedigree)
+
+## Downloads
+
+* [Latest ISO](http://dl.pedigree-project.org/latest.iso)
+* [Nightly ISO](http://dl.pedigree-project.org/latest.iso)
+
+The latest disk image is the most recent successful build of Pedigree from our
+[Buildbot](http://build.pedigree-project.org). There are no guarantees of
+stability or even functionality of these builds.
+
+The nightly disk image is from nightly builds on our Buildbot, with the same
+disclaimer.
+
+## Build Dependencies
+
+You'll need at least the following to build Pedigree and its compilers:
+
+* SCons (>1.2.0)
+* `libmpfr`, `libgmp`, and `libmpc` headers (typically via `-dev` packages)
+* SQLite3
+* genisoimage and/or mkisofs
+* perl
+
+## Building Pedigree with Easy Build
 
 We highly recommend you first try one of our Easy Build scripts before you try
 and run SCons manually. There's a little bit of work involved in setting up a
-build of Pedigree for the first time - after that it's as easy as just running
-"scons" at the command line.
+build of Pedigree for the first time, which the Easy Build script handles for
+you. After that it's as easy as just running `scons` at the command line.
 
-Just run ./easy_build_x86.sh, ./easy_build_x64.sh, or ./easy_build_arm.sh to
-build Pedigree for the relevant architecture. Dependencies and a cross-compiler
-will be installed/created, allowing you to jump straight into testing Pedigree.
+Just run `./easy_build_[target].sh` to build Pedigree. Valid options for
+`target` include:
 
-To build Pedigree at any point after this, just run "scons".
+* x64
+* arm
+* hosted (for a version of the kernel that runs on Linux)
 
-To switch between architectures, just remove "options.cache" before you re-run
-an easy build script.
+Dependencies and a cross-compiler will be installed and/or created, allowing
+you to jump straight into testing Pedigree.
 
-Alternatively, you can build manually if you already have a cross-compiler:
+To build Pedigree at any point after this, just run `scons`. The build system
+remembers the configuration the Easy Build specified for you.
 
-Required: SCons 1.2.0
+### Different Targets
 
-Simply run:
+To switch between architectures, just remove `options.cache` and
+`.autogen.cache`, and then run an Easy Build script.
 
-scons CROSS=/path/to/compilers/bin/i686-pedigree-
+## Building Pedigree Manually
 
-You should give SCons the path to gcc in CROSS, ending in '-' so it can add
-'gcc', 'g++' or 'as' to the end of the stub and get a valid compiler. It'll
-work out from the compiler chosen what default options and what architecture
-to compile.
+Alternatively, you can build manually.
 
-Run "scons -h" to obtain a full set of arguments you can pass to configure
-the build.
+### Step 1: Cross-Compiler
 
-NOTE: This must be a full path. It cannot contain bash expansions such as
-environment variables or '~'.
+To build a cross-compiler, in the root of the Pedigree tree, run:
 
-IMAGES DIRECTORY
-=======================
+`$ ./scripts/checkBuildSystemNoInteractive.pl $TARGET-pedigree \
+    $PWD/pedigree-compiler`
 
-The images/local directory allows you to use Pup, Pedigree's package manager,
+If you are building on OSX, you should also pass `osx-compat` as the final
+parameter to the script.
+
+Valid targets include:
+
+* `x86_64`
+* `armv7`
+
+### Step 2: Pedigree Base
+
+Configure the Pedigree UPdater (pup) to start:
+
+`$ ./setup_pup.py amd64  # (or arm) && ./run_pup.sh sync`
+
+You'll need at least Pedigree's `libtool` to continue:
+
+`$ ./run_pup.sh install libtool`
+
+Now, build an initial `libc` and `libm`:
+
+`$ scons CROSS=$PWD/pedigree-compiler/bin/$TARGET-pedigree- build/libc.so \
+    build/libm.so`
+
+With this complete, the compiler build process can be completed:
+
+`$ ./scripts/checkBuildSystemNoInteractive.pl $TARGET-pedigree \
+    $PWD/pedigree-compiler libcpp`
+
+### Step 3: Required Packages
+
+Install necessary packages to build the full userspace:
+
+```
+$ ./run_pup.py install libpng
+$ ./run_pup.py install libfreetype
+$ ./run_pup.py install libiconv
+$ ./run_pup.py install zlib
+$ ./run_pup.py install bash
+$ ./run_pup.py install coreutils
+$ ./run_pup.py install fontconfig
+$ ./run_pup.py install pixman
+$ ./run_pup.py install cairo
+$ ./run_pup.py install expat
+$ ./run_pup.py install mesa
+$ ./run_pup.py install ncurses
+$ ./run_pup.py install gettext
+$ ./run_pup.py install pango
+$ ./run_pup.py install glib
+$ ./run_pup.py install harfbuzz
+$ ./run_pup.py install libffi
+$ ./run_pup.py install gcc
+```
+
+### Step 4: Final Build
+
+Finally, build the rest of the kernel and userspace:
+
+`$ scons`
+
+From now on, you can simply run `scons` to build Pedigree.
+
+## Running Pedigree
+
+Boot from `build/pedigree.iso`, with an attached disk for `build/hdd.img`, to
+run Pedigree.
+
+You can also specify `createvmdk=1` and/or `createvdi=1` to create VMDK or VDI
+disk images for your emulator. These options require `qemu-img`.
+
+## Images Directory
+
+The images/local directory allows you to use `pup`, Pedigree's package manager,
 to manage your hard disk image file set. If you ran the Easy Build script, pup
 is already configured and ready to go.
 
 Simply run:
-    ./run_pup.py sync
+
+`$ ./run_pup.sh sync`
+
 to synchronise your local pup repository with the server.
 
 Then you can run:
-    ./run_pup.py install <package>
+`$ ./run_pup.sh install <package>`
 to install a package.
 
-If you visit http://pup.pedigree-project.org you can see a list of all
-packages that are available and can be downloaded.
+Visit http://pup.pedigree-project.org to see a list of all packages that are
+available and can be downloaded.
 
-Remember to re-run SCons after installing a package to ensure your disk image
-has the new package on it. You may need to 'rm build/hdd.img' if SCons doesn't
+Remember to re-run `scons` after installing a package to ensure your disk image
+has the new package on it. You may need to `rm build/hdd.img` if SCons doesn't
 detect that the images directory has changed.
 
 You can also add arbitrary files to the images/local directory to use them at
-runtime. For example, you might create a directory under 'users' for yourself,
-and add a .bashrc and .vimrc.
+runtime. For example, you could create a directory under `users` for yourself,
+and add a `.bashrc` and `.vimrc`.
 
-USERS
-=======================
+## User Management
 
-A utility script 'scripts/manage_users.py' is provided to add or remove users
+A utility script, `scripts/manage_users.py`, is provided to add or remove users
 from the database for use at runtime.
 
-ISSUES
-=======================
+## Reporting Issues
 
 Report any issues on the project tracker at http://pedigree-project.org
+
+## Contact
+
+You can find us in #pedigree on Freenode IRC.
