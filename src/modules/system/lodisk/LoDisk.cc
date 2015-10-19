@@ -110,7 +110,7 @@ void FileDisk::write(uint64_t location)
     if(!m_pFile)
         return;
 
-    WARNING("FileDisk::write: Not implemented.");
+    /// \todo implement this
 }
 
 void FileDisk::align(uint64_t location)

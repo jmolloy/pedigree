@@ -71,13 +71,6 @@ bool Iso9660Filesystem::initialise(Disk *pDisk)
 {
   m_pDisk = pDisk;
 
-  // Only work on ATAPI disks
-  if(m_pDisk->getSubType() != Disk::ATAPI)
-  {
-    WARNING("Not trying to find an ISO9660 filesystem on a non-ATAPI device");
-    return false;
-  }
-
   /// \todo Obtain disk information (perhaps a new call in Disk?)
   m_BlockSize = 2048;
   m_BlockNumber = 0;
@@ -93,7 +86,7 @@ bool Iso9660Filesystem::initialise(Disk *pDisk)
     Iso9660VolumeDescriptor *vDesc = reinterpret_cast<Iso9660VolumeDescriptor*>(buff);
     if(strncmp(reinterpret_cast<const char*>(vDesc->Ident), "CD001", 5) != 0)
     {
-      NOTICE("IDENT not correct for a descriptor, can't be an ISO9660 disk!");
+      NOTICE("IDENT: " << reinterpret_cast<const char*>(vDesc->Ident));
       return false;
     }
 

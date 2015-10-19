@@ -1210,5 +1210,9 @@ size_t AtaDisk::getSize() const
 
 size_t AtaDisk::getBlockSize() const
 {
+    if (m_AtaDiskType)
+    {
+        return ScsiDisk::getBlockSize();
+    }
     return m_BlockSize;
 }

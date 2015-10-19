@@ -26,6 +26,12 @@
 #include "ScsiController.h"
 #include <utilities/PointerGuard.h>
 
+#ifdef SCSI_DEBUG
+#define SCSI_DEBUG_LOG DEBUG_LOG
+#else
+#define SCSI_DEBUG_LOG(...)
+#endif
+
 #define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
 ScsiDisk::ScsiDisk() :
@@ -67,7 +73,7 @@ bool ScsiDisk::initialise(ScsiController *pController, size_t nUnit)
         Sense *s = new Sense;
         PointerGuard<Sense> guard2(s);
         readSense(s);
-        DEBUG_LOG("ScsiDisk: Unit not yet ready, sense data: [sk=" << s->SenseKey << ", asc=" << s->Asc << ", ascq=" << s->AscQ << "]");
+        SCSI_DEBUG_LOG("ScsiDisk: Unit not yet ready, sense data: [sk=" << s->SenseKey << ", asc=" << s->Asc << ", ascq=" << s->AscQ << "]");
 
         if(s->SenseKey == 0x2)
         {
@@ -94,7 +100,7 @@ bool ScsiDisk::initialise(ScsiController *pController, size_t nUnit)
         if(!unitReady())
         {
             readSense(s);
-            DEBUG_LOG("ScsiDisk: Unit not yet ready, sense data: [sk=" << s->SenseKey << ", asc=" << s->Asc << ", ascq=" << s->AscQ << "]");
+            SCSI_DEBUG_LOG("ScsiDisk: Unit not yet ready, sense data: [sk=" << s->SenseKey << ", asc=" << s->Asc << ", ascq=" << s->AscQ << "]");
 
             delay(100);
 
@@ -109,7 +115,7 @@ bool ScsiDisk::initialise(ScsiController *pController, size_t nUnit)
 
     // Get the capacity of the device
     getCapacityInternal(&m_NumBlocks, &m_NativeBlockSize);
-    DEBUG_LOG("ScsiDisk: Capacity: " << Dec << m_NumBlocks << " blocks, each " << m_NativeBlockSize << " bytes - " << (m_NativeBlockSize * m_NumBlocks) << Hex << " bytes in total.");
+    SCSI_DEBUG_LOG("ScsiDisk: Capacity: " << Dec << m_NumBlocks << " blocks, each " << m_NativeBlockSize << " bytes - " << (m_NativeBlockSize * m_NumBlocks) << Hex << " bytes in total.");
 
     // Chat to the partition service and let it pick up that we're around now
     ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("partition"));
@@ -153,9 +159,9 @@ bool ScsiDisk::readSense(Sense *sense)
 
 #if 0
     // Dump the sense information
-    DEBUG_LOG("    Sense information:");
+    SCSI_DEBUG_LOG("    Sense information:");
     for(size_t i = 0; i < sizeof(Sense); i++)
-        DEBUG_LOG("        [" << Dec << i << Hex << "] " << response[i]);
+        SCSI_DEBUG_LOG("        [" << Dec << i << Hex << "] " << response[i]);
 #endif
 
     delete [] response;
@@ -354,14 +360,14 @@ uint64_t ScsiDisk::doRead(uint64_t location)
         WARNING("ScsiDisk::doRead(" << location << ") - buffer was already in cache");
         return 0;
     }
-    buffer = m_Cache.insert(location, m_BlockSize);
+    buffer = m_Cache.insert(location, getBlockSize());
     if(!buffer)
     {
         FATAL("ScsiDisk::doRead - no buffer");
     }
 
     size_t blockNum = location / m_NativeBlockSize;
-    size_t blockCount = m_BlockSize / m_NativeBlockSize;
+    size_t blockCount = getBlockSize() / m_NativeBlockSize;
 
     bool bOk;
     ScsiCommand *pCommand;
@@ -409,30 +415,30 @@ uint64_t ScsiDisk::doRead(uint64_t location)
 
         blockNum += trackStart;
     }
-    
+
     for(int i = 0; i < 3; i++)
     {
-        DEBUG_LOG("SCSI: trying read(10)");
+        SCSI_DEBUG_LOG("SCSI: trying read(10)");
         pCommand = new ScsiCommands::Read10(blockNum, blockCount);
-        bOk = sendCommand(pCommand, buffer, m_BlockSize);
+        bOk = sendCommand(pCommand, buffer, getBlockSize());
         delete pCommand;
         if(bOk)
             return 0;
     }
     for(int i = 0; i < 3; i++)
     {
-        DEBUG_LOG("SCSI: trying read(12)");
+        SCSI_DEBUG_LOG("SCSI: trying read(12)");
         pCommand = new ScsiCommands::Read12(blockNum, blockCount);
-        bOk = sendCommand(pCommand, buffer, m_BlockSize);
+        bOk = sendCommand(pCommand, buffer, getBlockSize());
         delete pCommand;
         if(bOk)
             return 0;
     }
     for(int i = 0; i < 3; i++)
     {
-        DEBUG_LOG("SCSI: trying read(16)");
+        SCSI_DEBUG_LOG("SCSI: trying read(16)");
         pCommand = new ScsiCommands::Read16(blockNum, blockCount);
-        bOk = sendCommand(pCommand, buffer, m_BlockSize);
+        bOk = sendCommand(pCommand, buffer, getBlockSize());
         delete pCommand;
         if(bOk)
             return 0;
@@ -473,7 +479,7 @@ uint64_t ScsiDisk::doWrite(uint64_t location)
 
     for(int i = 0; i < 3; i++)
     {
-        DEBUG_LOG("SCSI: trying write(10)");
+        SCSI_DEBUG_LOG("SCSI: trying write(10)");
         pCommand = new ScsiCommands::Write10((location / m_BlockSize), 4096 / m_BlockSize);
         bOk = sendCommand(pCommand, buffer, 4096, true);
         delete pCommand;
@@ -484,7 +490,7 @@ uint64_t ScsiDisk::doWrite(uint64_t location)
     {
         for(int i = 0; i < 3; i++)
         {
-            DEBUG_LOG("SCSI: trying write(12)");
+            SCSI_DEBUG_LOG("SCSI: trying write(12)");
             pCommand = new ScsiCommands::Write12((location / m_BlockSize), 4096 / m_BlockSize);
             bOk = sendCommand(pCommand, buffer, 4096, true);
             delete pCommand;
@@ -496,7 +502,7 @@ uint64_t ScsiDisk::doWrite(uint64_t location)
     {
         for(int i = 0; i < 3; i++)
         {
-            DEBUG_LOG("SCSI: trying write(16)");
+            SCSI_DEBUG_LOG("SCSI: trying write(16)");
             pCommand = new ScsiCommands::Write16((location / m_BlockSize), 4096 / m_BlockSize);
             bOk = sendCommand(pCommand, buffer, 4096, true);
             delete pCommand;
@@ -535,7 +541,7 @@ uint64_t ScsiDisk::doSync(uint64_t location)
     // Kick off a synchronise (this will be slow, but will ensure the data is on disk)
     for(int i = 0; i < 3; i++)
     {
-        DEBUG_LOG("SCSI: trying synchronise(10)");
+        SCSI_DEBUG_LOG("SCSI: trying synchronise(10)");
         pCommand = new ScsiCommands::Synchronise10((location / m_BlockSize), 4096 / m_BlockSize);
         bOk = sendCommand(pCommand, 0, 0);
         delete pCommand;
@@ -547,7 +553,7 @@ uint64_t ScsiDisk::doSync(uint64_t location)
     {
         for(int i = 0; i < 3; i++)
         {
-            DEBUG_LOG("SCSI: trying synchronise(16)");
+            SCSI_DEBUG_LOG("SCSI: trying synchronise(16)");
             pCommand = new ScsiCommands::Synchronise16((location / m_BlockSize), 4096 / m_BlockSize);
             bOk = sendCommand(pCommand, 0, 0);
             delete pCommand;
