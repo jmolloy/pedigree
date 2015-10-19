@@ -290,6 +290,9 @@ int main(int argc, char **argv)
         pututxline(&ut);
         endutxent();
 
+        // Enable autowrap before loading the login process.
+        write(slave, "\e[?7h", 5);
+
         syslog(LOG_INFO, "Starting up 'login' on pty %s", slavename);
         execl("/applications/login", "/applications/login", 0);
         syslog(LOG_ALERT, "Launching login failed (next line is the error in errno...)");
