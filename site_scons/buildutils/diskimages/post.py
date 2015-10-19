@@ -43,12 +43,3 @@ def postImageBuild(img, env, iso=False):
             target = additional_images['vmdk'].path
             env.Command(target, img,
                 '$QEMU_IMG convert -f raw -O vmdk $SOURCE $TARGET')
-
-    # Create hash files.
-    sha = '256'
-    md5sum = env.Detect('md5sum')
-    shasum = env.Detect('sha%ssum' % sha)
-    if md5sum:
-        env.Command('%s.md5' % img, img, '%s -b $SOURCE >$TARGET' % md5sum)
-    if shasum:
-        env.Command('%s.sha%s' % (img, sha), img, '%s $SOURCE >$TARGET' % shasum)
