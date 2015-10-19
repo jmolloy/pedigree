@@ -33,7 +33,8 @@ TextIO::TextIO(String str, size_t inode, Filesystem *pParentFS, File *pParent) :
     m_CurrentParam(0), m_Params(), m_Fore(TextIO::LightGrey), m_Back(TextIO::Black),
     m_pFramebuffer(0), m_pBackbuffer(0), m_pVga(0), m_TabStops(),
     m_OutBuffer(TEXTIO_RINGBUFFER_SIZE), m_G0('B'), m_G1('B'),
-    m_Nanoseconds(0), m_bUtf8(false), m_nCharacter(0), m_nUtf8Handled(0)
+    m_Nanoseconds(0), m_bUtf8(false), m_nCharacter(0), m_nUtf8Handled(0),
+    m_bActive(false)
 {
     m_pBackbuffer = new VgaCell[BACKBUFFER_STRIDE * BACKBUFFER_ROWS];
 
@@ -54,6 +55,7 @@ bool TextIO::initialise(bool bClear)
 {
     // Move into not-initialised mode, reset any held state.
     m_bInitialised = false;
+    m_bActive = false;
     m_bControlSeq = false;
     m_bBracket = false;
     m_bParams = false;
@@ -117,6 +119,8 @@ void TextIO::write(const char *s, size_t len)
         ERROR("TextIO: null string passed in.");
         return;
     }
+
+    m_bActive = true;
 
     const char *orig = s;
 
@@ -1416,6 +1420,10 @@ void TextIO::flip(bool timer, bool hideState)
 
     // Avoid flipping if we do not have a VGA instance.
     if(!m_pVga)
+        return;
+
+    // Avoid flipping if we aren't active.
+    if(!m_bActive)
         return;
 
     size_t numRows = m_pVga->getNumRows();
