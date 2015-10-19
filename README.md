@@ -5,7 +5,11 @@
 ## Downloads
 
 * [Latest ISO](http://dl.pedigree-project.org/latest.iso)
-* [Nightly ISO](http://dl.pedigree-project.org/latest.iso)
+    ([MD5](http://dl.pedigree-project.org/latest.iso.md5)
+    [SHA256](http://dl.pedigree-project.org/latest.iso.sha256))
+* [Nightly ISO](http://dl.pedigree-project.org/nightly.iso)
+    ([MD5](http://dl.pedigree-project.org/nightly.iso.md5)
+    [SHA256](http://dl.pedigree-project.org/nightly.iso.sha256))
 
 The latest disk image is the most recent successful build of Pedigree from our
 [Buildbot](http://build.pedigree-project.org). There are no guarantees of
