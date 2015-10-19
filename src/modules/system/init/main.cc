@@ -121,7 +121,16 @@ static bool findDisks(Device *pDev)
 
 /// This ensures that the init module entry function will not exit until the init
 /// program entry point thread is running.
-Mutex g_InitProgramLoaded(true);
+static Mutex g_InitProgramLoaded(true);
+
+static void error(const char *s)
+{
+    static HugeStaticString str;
+    str += s;
+    str += "\n";
+    bootIO.write(str, BootIO::Red, BootIO::Black);
+    str.clear();
+}
 
 static bool init()
 {
@@ -146,7 +155,7 @@ static bool init()
 
     if (VFS::instance().find(String("raw»/")) == 0)
     {
-        FATAL("No raw partition!");
+        error("raw» does not exist - cannot continue startup.");
         return false;
     }
 
@@ -173,7 +182,7 @@ static bool init()
     // Is there a root disk mounted?
     if(VFS::instance().find(String("root»/.pedigree-root")) == 0)
     {
-        FATAL("No root disk (missing .pedigree-root?)");
+        error("No root disk on this system (no root»/.pedigree-root found).");
         return false;
     }
 
@@ -337,11 +346,14 @@ void init_stage2()
     File* initProg = VFS::instance().find(fname);
     if (!initProg)
     {
-        FATAL("INIT: FileNotFound!!");
+        error("Loading init program FAILED (root»/applications/init not found).");
+        g_InitProgramLoaded.release();
         return;
     }
+
     NOTICE("INIT: File found");
     NOTICE("INIT: name: " << fname);
+
     // That will have forked - we don't want to fork, so clear out all the chaff
     // in the new address space that's not in the kernel address space so we
     // have a clean slate.
@@ -370,7 +382,8 @@ void init_stage2()
         initProg = VFS::instance().find(interpreter, pProcess->getCwd());
         if(!initProg)
         {
-            FATAL("Unable to find init program interpreter '" << interpreter << "'!");
+            error("Interpreter for init program could not be found.");
+            g_InitProgramLoaded.release();
             return;
         }
 
@@ -382,7 +395,9 @@ void init_stage2()
 
     if (pLinker && !pLinker->loadProgram(initProg))
     {
-        FATAL("Init program failed to load!");
+        error("The init program could not be loaded.");
+        g_InitProgramLoaded.release();
+        return;
     }
 
     // Initialise the sigret and pthreads shizzle.
@@ -411,7 +426,9 @@ void init_stage2()
         MemoryMappedObject *pMmFile = MemoryMapManager::instance().mapFile(initProg, loadAddr, initProg->getSize(), perms);
         if(!pMmFile)
         {
-            FATAL("Couldn't memory map dynamic linker for init program");
+            error("Memory for the dynamic linker could not be allocated.");
+            g_InitProgramLoaded.release();
+            return;
         }
 
         // Create the ELF.
