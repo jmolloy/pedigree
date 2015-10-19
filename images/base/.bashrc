@@ -14,6 +14,6 @@ alias ll='ls -alF'
 
 export PS1="\[\e[34;1m\][\t]\[\e[0m\] \w \[\e[34;1m\]$\[\e[0m\] "
 
-shopt -q login_shell && echo "Welcome to the Pedigree operating system.
+shopt -q login_shell && echo "Welcome to the Pedigree Operating System.
 
-Please don't feed the code monkeys - they bite."
+Run 'tour' for a quick run-through of Pedigree's unique features."

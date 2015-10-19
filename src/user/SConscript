@@ -97,6 +97,7 @@ cpp_apps = [
 cpp_11_apps = [
     'which',
     'winman',
+    'tour',
 ]
 
 # Applications which use libui (affects libraries & headers).
@@ -157,6 +158,7 @@ base_include_dirs = [
 remove_flags = {
     'nyancat': ['-Wcast-qual'],
     'which': ['-Wwrite-strings'],
+    'tour': ['-Wwrite-strings'],
 }
 
 # Extra flags to add to flags for an app.
@@ -164,6 +166,7 @@ add_flags = {
     # Both of these use getopt, which has a const-ness problem.
     'nyancat': ['-Wno-cast-qual', '-Wno-write-strings', '-Wno-clobbered'],
     'which': ['-Wno-cast-qual', '-Wno-write-strings'],
+    'tour': ['-Wno-write-strings'],
 }
 
 env_clone['CFLAGS'] = buildutils.userspace.fixFlags(env, env['CFLAGS'])
