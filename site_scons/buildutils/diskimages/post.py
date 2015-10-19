@@ -20,23 +20,35 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 import os
 
 
-def postImageBuild(img, env):
+def postImageBuild(img, env, iso=False):
     if env['QEMU_IMG'] is None:
         return
 
     builddir = env.Dir(env["PEDIGREE_BUILD_BASE"]).abspath
 
     additional_images = {}
-    if env['createvdi'] or env['createvmdk']:
-        additional_images = {
-            'vdi': env.File(os.path.join(builddir, 'hdd.vdi')),
-            'vmdk' : env.File(os.path.join(builddir, 'hdd.vmdk')),
-        }
+    if not iso:
+        if env['createvdi'] or env['createvmdk']:
+            additional_images = {
+                'vdi': env.File(os.path.join(builddir, 'hdd.vdi')),
+                'vmdk' : env.File(os.path.join(builddir, 'hdd.vmdk')),
+            }
 
-    if env['createvdi'] and 'vdi' in additional_images:
-        target = additional_images['vdi'].path
-        env.Command(target, img, '$QEMU_IMG convert -O vpc $SOURCE $TARGET')
+        if env['createvdi'] and 'vdi' in additional_images:
+            target = additional_images['vdi'].path
+            env.Command(target, img,
+                '$QEMU_IMG convert -O vpc $SOURCE $TARGET')
 
-    if env['createvmdk'] and 'vmdk' in additional_images:
-        target = additional_images['vmdk'].path
-        env.Command(target, img, '$QEMU_IMG convert -f raw -O vmdk $SOURCE $TARGET')
+        if env['createvmdk'] and 'vmdk' in additional_images:
+            target = additional_images['vmdk'].path
+            env.Command(target, img,
+                '$QEMU_IMG convert -f raw -O vmdk $SOURCE $TARGET')
+
+    # Create hash files.
+    sha = '256'
+    md5sum = env.Detect('md5sum')
+    shasum = env.Detect('sha%ssum' % sha)
+    if md5sum:
+        env.Command('%s.md5' % img, img, '%s -b $SOURCE >$TARGET' % md5sum)
+    if shasum:
+        env.Command('%s.sha%s' % (img, sha), img, '%s $SOURCE >$TARGET' % shasum)

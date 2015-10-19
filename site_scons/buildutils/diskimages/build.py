@@ -148,6 +148,7 @@ def buildDiskImages(env, config_database):
     if not env['noiso']:
         env.Command(cdimg, [config_database, initrd, kernel, hddimg],
             SCons.Action.Action(livecd.buildCdImage, None))
+        post.postImageBuild(cdimg, env, iso=True)
 
     if not env['distdir']:
         post.postImageBuild(hddimg, env)
