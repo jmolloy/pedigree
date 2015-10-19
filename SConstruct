@@ -78,6 +78,7 @@ opts.AddVariables(
     BoolVariable('createvmdk', 'Convert the created hard disk image to a VMDK file for VMware after it is created.', 0),
     BoolVariable('nodiskimages', 'Whether or not to avoid building disk images for distribution.', 0),
     BoolVariable('noiso', 'Whether or not to avoid building an ISO.', 0),
+    BoolVariable('livecd', 'Whether or not to build a Live CD (one with a disk image on it).', 1),
     
     BoolVariable('pup', 'If 1, you are managing your images/local directory with the Pedigree UPdater (pup) and want that instead of the images/<arch> directory.', 1),
     

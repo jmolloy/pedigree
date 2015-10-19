@@ -39,6 +39,10 @@ def buildCdImage(target, source, env):
     shutil.copy(pathToStage2, '%s.mkisofs' % pathToStage2)
     pathToStage2 += '.mkisofs'
 
+    pathToMenu = os.path.join(pathToGrub, 'menu.lst')
+    shutil.copy(pathToMenu, '%s.mkisofs' % pathToMenu)
+    pathToMenu += '.mkisofs'
+
     args = [
         env['MKISOFS'],
         '-D',
@@ -59,15 +63,20 @@ def buildCdImage(target, source, env):
         '-V',
         'PEDIGREE',
         'boot/grub/stage2_eltorito=%s' % (pathToStage2,),
-        'boot/grub/menu.lst=%s' % (os.path.join(pathToGrub, 'menu.lst'),),
+        'boot/grub/menu.lst=%s' % pathToMenu,
         'boot/kernel=%s' % (source[2].abspath,),
         'boot/initrd.tar=%s' % (source[1].abspath,),
-        #'/livedisk.img=%s' % (source[3].abspath,),
         '.pedigree-root=%s' % (source[0].abspath,),
-        #'config.db=%s' % (source[0].abspath,),
     ]
+
+    if env['livecd']:
+        args.extend([
+            'livedisk.img=%s' % (source[3].abspath,),
+        ])
+
     result = subprocess.call(args)
 
+    os.unlink(pathToMenu)
     os.unlink(pathToStage2)
 
     return result
