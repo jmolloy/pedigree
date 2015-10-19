@@ -348,7 +348,7 @@ bool DevFs::initialise(Disk *pDisk)
 
     // Create /dev/textui for the text-only UI device.
     TextIO *pTty = new TextIO(String("textui"), ++baseInode, this, m_pRoot);
-    if(pTty->initialise())
+    if(pTty->initialise(false))
     {
         m_pRoot->addEntry(pTty->getName(), pTty);
     }
