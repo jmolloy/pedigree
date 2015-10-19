@@ -44,9 +44,11 @@ rename "s/pedigree(\..*)*$/$RELEASE_NAME\$1/" $OUTPUTDIR/*
 
 pushd $OUTPUTDIR
 # Checksum all images.
-md5sum "$RELEASE_NAME"* >md5sums
-sha1sum "$RELEASE_NAME"* >sha1sums
-sha256sum "$RELEASE_NAME"* >sha256sums
+for f in "$RELEASE_NAME"*; do
+    md5sum "$f" >$f.md5
+    sha1sum "$f" >$f.sha1
+    sha256sum "$f" >$f.sha256
+done
 popd
 
 echo "Release files are now present at $OUTPUTDIR."
