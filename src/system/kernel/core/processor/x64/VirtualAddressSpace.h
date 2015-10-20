@@ -191,6 +191,15 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
      *        otherwise */
     bool getPageTableEntry(void *virtualAddress,
                            uint64_t *&pageTableEntry);
+    /**
+     * \brief Possibly cleans up tables for the given address.
+     *
+     * This is used when unmapping pages to opportunistically unmap paging
+     * structures that are no longer necessary.
+     * \param[in] virtualAddress the virtual address
+     * \param[out] pageTableEntry pointer to the page table entry
+     */
+    void maybeFreeTables(void *virtualAddress);
     /** Convert the processor independant flags to the processor's representation of the flags
      *\param[in] flags the processor independant flag representation
      *\param[in] bFinal whether this is for the actual page or just an intermediate PTE/PDE

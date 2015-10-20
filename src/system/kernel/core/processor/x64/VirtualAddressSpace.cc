@@ -153,7 +153,9 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
 
   // Is a page directory pointer table present?
   if (conditionalTableEntryAllocation(pml4Entry, flags) == false)
+  {
     return false;
+  }
 
   // If there wasn't a PDPT already present, and the address is in the kernel area
   // of memory, we need to propagate this change across all address spaces.
@@ -177,21 +179,27 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
 
   // Is a page directory present?
   if (conditionalTableEntryAllocation(pageDirectoryPointerEntry, flags) == false)
+  {
     return false;
+  }
 
   size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
   uint64_t *pageDirectoryEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryPointerEntry), pageDirectoryIndex);
 
   // Is a page table present?
   if (conditionalTableEntryAllocation(pageDirectoryEntry, flags) == false)
+  {
     return false;
+  }
 
   size_t pageTableIndex = PAGE_TABLE_INDEX(virtualAddress);
   uint64_t *pageTableEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry), pageTableIndex);
 
   // Is a page already present?
   if ((*pageTableEntry & PAGE_PRESENT) == PAGE_PRESENT)
+  {
     return false;
+  }
 
   // Map the page
   *pageTableEntry = physAddress | Flags;
@@ -256,6 +264,11 @@ void X64VirtualAddressSpace::unmap(void *virtualAddress)
 
   // Invalidate the TLB entry
   Processor::invalidate(virtualAddress);
+
+  // Possibly wipe out paging structures now that we've unmapped the page.
+  // This can clear all the way up to, but not including, the PML4 - can be
+  // extremely useful to conserve memory.
+  maybeFreeTables(virtualAddress);
 }
 
 VirtualAddressSpace *X64VirtualAddressSpace::clone()
@@ -537,6 +550,7 @@ bool X64VirtualAddressSpace::mapPageStructuresAbove4GB(physical_uintptr_t physAd
   }
   return false;
 }
+
 void *X64VirtualAddressSpace::allocateStack()
 {
     size_t sz = USERSPACE_VIRTUAL_STACK_SIZE;
@@ -544,12 +558,14 @@ void *X64VirtualAddressSpace::allocateStack()
       sz = KERNEL_STACK_SIZE;
     return doAllocateStack(sz);
 }
+
 void *X64VirtualAddressSpace::allocateStack(size_t stackSz)
 {
     if(stackSz == 0)
       return allocateStack();
     return doAllocateStack(stackSz);
 }
+
 void *X64VirtualAddressSpace::doAllocateStack(size_t sSize)
 {
   size_t flags = 0;
@@ -615,6 +631,7 @@ void *X64VirtualAddressSpace::doAllocateStack(size_t sSize)
 
   return pStack;
 }
+
 void X64VirtualAddressSpace::freeStack(void *pStack)
 {
   size_t pageSz = PhysicalMemoryManager::getPageSize();
@@ -646,11 +663,20 @@ X64VirtualAddressSpace::~X64VirtualAddressSpace()
 {
   PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
 
-  // TODO: Free other things, perhaps in VirtualAddressSpace
-  //       We can't do this in VirtualAddressSpace destructor though!
+  size_t freePages = physicalMemoryManager.freePageCount();
+
+  // Drop back to the kernel address space. This will blow away the child's
+  // mappings, but maintains shared pages as needed.
+  revertToKernelAddressSpace();
 
   // Free the PageMapLevel4
   physicalMemoryManager.freePage(m_PhysicalPML4);
+
+  size_t freePagesAfter = physicalMemoryManager.freePageCount();
+
+  NOTICE("X64VirtualAddressSpace cleaned up " << (freePagesAfter - freePages) << " pages!");
+
+  WARNING("X64VirtualAddressSpace::~X64VirtualAddressSpace doesn't clean up well.");
 }
 
 X64VirtualAddressSpace::X64VirtualAddressSpace()
@@ -717,6 +743,97 @@ bool X64VirtualAddressSpace::getPageTableEntry(void *virtualAddress,
 
   return true;
 }
+
+void X64VirtualAddressSpace::maybeFreeTables(void *virtualAddress)
+{
+  bool bCanFreePageTable = true;
+
+  uint64_t *pageDirectoryEntry = 0;
+
+  size_t pml4Index = PML4_INDEX(virtualAddress);
+  uint64_t *pml4Entry = TABLE_ENTRY(m_PhysicalPML4, pml4Index);
+
+  // Is a page directory pointer table present?
+  if ((*pml4Entry & PAGE_PRESENT) != PAGE_PRESENT)
+    return;
+
+  size_t pageDirectoryPointerIndex = PAGE_DIRECTORY_POINTER_INDEX(virtualAddress);
+  uint64_t *pageDirectoryPointerEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pml4Entry), pageDirectoryPointerIndex);
+
+  if ((*pageDirectoryPointerEntry & PAGE_PRESENT) == PAGE_PRESENT)
+  {
+    size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
+    pageDirectoryEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryPointerEntry), pageDirectoryIndex);
+
+    if ((*pageDirectoryEntry & PAGE_PRESENT) == PAGE_PRESENT)
+    {
+      if ((*pageDirectoryEntry & PAGE_2MB) == PAGE_2MB)
+      {
+        bCanFreePageTable = false;
+      }
+      else
+      {
+        for (size_t i = 0; i < 0x200; ++i)
+        {
+          uint64_t *entry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry), i);
+          if ((*entry & PAGE_PRESENT) == PAGE_PRESENT ||
+              (*entry & PAGE_SWAPPED) == PAGE_SWAPPED)
+          {
+            bCanFreePageTable = false;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (bCanFreePageTable)
+  {
+    PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry));
+    *pageDirectoryEntry = 0;
+  }
+  else
+    return;
+
+  // Now that we've cleaned up the page table, we can scan the parent tables.
+
+  bool bCanFreeDirectory = true;
+  for (size_t i = 0; i < 0x200; ++i)
+  {
+    uint64_t *entry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryPointerEntry), i);
+    if ((*entry & PAGE_PRESENT) == PAGE_PRESENT)
+    {
+      bCanFreeDirectory = false;
+      break;
+    }
+  }
+
+  if (bCanFreeDirectory)
+  {
+    PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryPointerEntry));
+    *pageDirectoryPointerEntry = 0;
+  }
+  else
+    return;
+
+  bool bCanFreeDirectoryPointerTable = true;
+  for (size_t i = 0; i < 0x200; ++i)
+  {
+    uint64_t *entry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pml4Entry), i);
+    if ((*entry & PAGE_PRESENT) == PAGE_PRESENT)
+    {
+      bCanFreeDirectoryPointerTable = false;
+      break;
+    }
+  }
+
+  if (bCanFreeDirectoryPointerTable)
+  {
+    PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pml4Entry));
+    *pml4Entry = 0;
+  }
+}
+
 uint64_t X64VirtualAddressSpace::toFlags(size_t flags, bool bFinal)
 {
   uint64_t Flags = 0;
@@ -753,6 +870,7 @@ uint64_t X64VirtualAddressSpace::toFlags(size_t flags, bool bFinal)
   }
   return Flags;
 }
+
 size_t X64VirtualAddressSpace::fromFlags(uint64_t Flags, bool bFinal)
 {
   size_t flags = 0;
