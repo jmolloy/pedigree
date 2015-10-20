@@ -1392,7 +1392,7 @@ int posix_isatty(int fd)
     if (!pFd)
     {
         // Error - no such file descriptor.
-        ERROR("isatty: no such file descriptor (" << Dec << fd << ")");
+        ERROR("isatty: no such file descriptor (" << Dec << fd << Hex << ")");
         return 0;
     }
 
