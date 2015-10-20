@@ -592,6 +592,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 #endif
 
     // If no linker, destroy the ELF we created just to get the entry location.
+    uintptr_t entryPoint = elf->getEntryPoint();
     if(!pLinker)
     {
         delete elf;
@@ -609,7 +610,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
     // Jump to the new process.
     Processor::setInterrupts(true);
-    Processor::jumpUser(0, elf->getEntryPoint(), newStack,
+    Processor::jumpUser(0, entryPoint, newStack,
         reinterpret_cast<uintptr_t>(argv), reinterpret_cast<uintptr_t>(env));
 
     // Never reaches this point.
