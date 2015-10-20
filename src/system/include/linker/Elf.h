@@ -216,6 +216,8 @@ class Elf
         * and RELA entries, so must be done specifically (via applySpecificRelocation). */
         bool load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolTable *pSymtab=0, uintptr_t nStart=0, uintptr_t nEnd=~0);
 
+        /** Extracts only the entry point from an ELF file at the given buffer. */
+        static bool extractEntryPoint(uint8_t *pBuffer, size_t length, uintptr_t &entry);
 
         /** Returns a list of required libraries before this object will load. */
         List<char*> &neededLibraries();

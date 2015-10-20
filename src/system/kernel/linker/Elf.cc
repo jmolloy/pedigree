@@ -476,6 +476,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     m_nEntry = pHeader->entry;
 
     // Success.
+    NOTICE("X");
     return true;
 }
 
@@ -956,6 +957,18 @@ bool Elf::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolTable 
     }
 
     // Success.
+    return true;
+}
+
+bool Elf::extractEntryPoint(uint8_t *pBuffer, size_t length, uintptr_t &entry)
+{
+    /// \todo check magic
+    if (length < sizeof(ElfHeader_t))
+        return false;
+
+    ElfHeader_t *pHeader = reinterpret_cast<ElfHeader_t *>(pBuffer);
+    entry = pHeader->entry;
+
     return true;
 }
 

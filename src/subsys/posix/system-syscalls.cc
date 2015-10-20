@@ -520,10 +520,13 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     argv = const_cast<const char**> (load_string_array(savedArgv, location, location));
     env  = const_cast<const char**> (load_string_array(savedEnv , location, location));
 
+    uintptr_t entryPoint = 0;
+
     Elf *elf = 0;
     if(pLinker)
     {
         elf = pProcess->getLinker()->getProgramElf();
+        entryPoint = elf->getEntryPoint();
     }
     else
     {
@@ -542,10 +545,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
             return -1;
         }
 
-        // Create the ELF.
-        /// \todo It'd be awesome if we could just pull out the entry address.
-        elf = new Elf();
-        elf->create(reinterpret_cast<uint8_t*>(loadAddr), file->getSize());
+        Elf::extractEntryPoint(reinterpret_cast<uint8_t*>(loadAddr), file->getSize(), entryPoint);
     }
 
     // JAMESM: I don't think the sigret code actually needs to be called from userspace. Here should do just fine, no?
@@ -590,13 +590,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     state.m_R7 = pState.m_R7;
     state.m_R8 = pState.m_R8;
 #endif
-
-    // If no linker, destroy the ELF we created just to get the entry location.
-    uintptr_t entryPoint = elf->getEntryPoint();
-    if(!pLinker)
-    {
-        delete elf;
-    }
 
     // Before we enter the new address space, wipe out the scheduler state.
     // This is a new scheduling entity.
