@@ -232,6 +232,12 @@ size_t SlamCache::recovery(size_t maxSlabs)
 
             if(N == 0)
             {
+                if (!reinsertTail)
+                {
+                    // No reinsert tail. Bail.
+                    break;
+                }
+
                 // Okay, we've emptied the partial lists.
                 // Let's link in our reinsert nodes.
                 Node *pHead = 0;
