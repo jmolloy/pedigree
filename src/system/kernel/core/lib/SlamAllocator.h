@@ -26,12 +26,16 @@
     \see http://www.pedigree-project.org/r/projects/pedigree/wiki/SlabDraft
 **/
 
+#ifdef BENCHMARK
+#include "compat.h"
+#else
 #include <processor/types.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <utilities/MemoryAllocator.h>
 #include <Log.h>
 
 #include <Spinlock.h>
+#endif
 
 /// Size of each slab in 4096-byte pages
 #define SLAB_SIZE                       1
@@ -47,7 +51,7 @@
 #define USING_MAGIC                     1
 
 /// Used only if USING_MAGIC. Type of the magic number.
-#define MAGIC_TYPE                      uint32_t
+#define MAGIC_TYPE                      uintptr_t
 
 /// Used only if USING_MAGIC. Magic value.
 #define MAGIC_VALUE                     0xb00b1e55ULL
@@ -57,6 +61,9 @@
 
 /// Outputs information during each function call
 #define DEBUGGING_SLAB_ALLOCATOR        0
+
+/// Temporary magic used during allocation.
+#define TEMP_MAGIC 0x67845753
 
 /// Adds magic numbers to the start of free blocks, to check for
 /// buffer overruns.
@@ -93,6 +100,7 @@ public:
         Node *next;
 #if USING_MAGIC
         Node *prev;
+        MAGIC_TYPE pad;
         MAGIC_TYPE magic;
 #endif
     };
@@ -259,10 +267,9 @@ private:
     bool m_bVigilant;
 #endif
 
-    MemoryAllocator m_SlabRegion;
-    size_t m_HeapPageCount;
-
     Spinlock m_SlabRegionLock;
+
+    size_t m_HeapPageCount;
 
     uint64_t *m_SlabRegionBitmap;
     size_t m_SlabRegionBitmapEntries;

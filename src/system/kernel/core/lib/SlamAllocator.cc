@@ -19,6 +19,9 @@
 
 #include "SlamAllocator.h"
 
+#ifdef BENCHMARK
+#include <assert.h>
+#else
 #include <utilities/assert.h>
 #include <utilities/MemoryTracing.h>
 #include <LockGuard.h>
@@ -31,10 +34,64 @@
 
 #include <Backtrace.h>
 #include <SlamCommand.h>
-
-#define TEMP_MAGIC 0x67845753
+#endif
 
 SlamAllocator SlamAllocator::m_Instance;
+
+inline uintptr_t getHeapBase()
+{
+#ifdef BENCHMARK
+    return 0x10000000ULL;
+#else
+    return VirtualAddressSpace::getKernelAddressSpace().getKernelHeapStart();
+#endif
+}
+
+inline uintptr_t getHeapEnd()
+{
+#ifdef BENCHMARK
+    return 0x50000000ULL;
+#else
+    return VirtualAddressSpace::getKernelAddressSpace().getKernelHeapEnd();
+#endif
+}
+
+inline size_t getPageSize()
+{
+#ifdef BENCHMARK
+    return 0x1000;
+#else
+    return PhysicalMemoryManager::getPageSize();
+#endif
+}
+
+inline void allocateAndMapAt(void *addr)
+{
+#ifdef BENCHMARK
+    mmap(addr, getPageSize(), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED | MAP_ANON, -1, 0);
+#else
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
+    physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+    va.map(phys, addr, VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+#endif
+}
+
+inline void unmap(void *addr)
+{
+#ifdef BENCHMARK
+    munmap(addr, getPageSize());
+#else
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
+    if (!va.isMapped(addr))
+        return;
+
+    physical_uintptr_t phys; size_t flags;
+    va.getMapping(addr, phys, flags);
+    va.unmap(addr);
+
+    PhysicalMemoryManager::instance().freePage(phys);
+#endif
+}
 
 SlamCache::SlamCache() :
     m_ObjectSize(0), m_SlabSize(0)
@@ -213,7 +270,7 @@ size_t SlamCache::recovery(size_t maxSlabs)
         return 0;
 
     size_t freedSlabs = 0;
-    if(m_ObjectSize < PhysicalMemoryManager::getPageSize())
+    if(m_ObjectSize < getPageSize())
     {
         Node *reinsertHead = 0;
         Node *reinsertTail = 0;
@@ -253,7 +310,7 @@ size_t SlamCache::recovery(size_t maxSlabs)
                 break;
             }
 
-            uintptr_t slab = reinterpret_cast<uintptr_t>(N) & ~(PhysicalMemoryManager::getPageSize() - 1);
+            uintptr_t slab = reinterpret_cast<uintptr_t>(N) & ~(getPageSize() - 1);
 
             // A possible node found! Any luck?
             bool bSlabNotFree = false;
@@ -528,9 +585,8 @@ SlamAllocator::SlamAllocator() :
 #if CRIPPLINGLY_VIGILANT
     , m_bVigilant(false)
 #endif
-    , m_SlabRegion(), m_HeapPageCount(0), m_SlabRegionLock(false)
+    , m_SlabRegionLock(false), m_HeapPageCount(0)
 {
-    m_SlabRegion.clear();
 }
 
 SlamAllocator::~SlamAllocator()
@@ -542,36 +598,34 @@ void SlamAllocator::initialise()
     LockGuard<Spinlock> guard(m_SlabRegionLock);
 
     // We need to allocate our bitmap for this purpose.
-    uintptr_t bitmapBase = VirtualAddressSpace::getKernelAddressSpace().getKernelHeapStart();
-    uintptr_t heapEnd = VirtualAddressSpace::getKernelAddressSpace().getKernelHeapEnd();
+    uintptr_t bitmapBase = getHeapBase();
+    uintptr_t heapEnd = getHeapEnd();
     size_t heapSize = heapEnd - bitmapBase;
-    size_t bitmapBytes = (heapSize / PhysicalMemoryManager::getPageSize()) / 8;
+    size_t bitmapBytes = (heapSize / getPageSize()) / 8;
 
     m_SlabRegionBitmap = reinterpret_cast<uint64_t *>(bitmapBase);
     m_SlabRegionBitmapEntries = bitmapBytes / sizeof(uint64_t);
 
     // Ensure the bitmap size is now page-aligned before we allocate it.
-    if(bitmapBytes & (PhysicalMemoryManager::getPageSize() - 1))
+    if(bitmapBytes & (getPageSize() - 1))
     {
-        bitmapBytes &= ~(PhysicalMemoryManager::getPageSize() - 1);
-        bitmapBytes += PhysicalMemoryManager::getPageSize();
+        bitmapBytes &= ~(getPageSize() - 1);
+        bitmapBytes += getPageSize();
     }
 
     m_Base = bitmapBase + bitmapBytes;
 
-    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
-
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
     VirtualAddressSpace &currva = Processor::information().getVirtualAddressSpace();
     if (Processor::m_Initialised == 2)
         Processor::switchAddressSpace(va);
 #endif
 
     // Allocate bitmap.
-    for(uintptr_t addr = bitmapBase; addr < m_Base; addr += PhysicalMemoryManager::getPageSize())
+    for(uintptr_t addr = bitmapBase; addr < m_Base; addr += getPageSize())
     {
-        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-        va.map(phys, reinterpret_cast<void *>(addr), VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+        allocateAndMapAt(reinterpret_cast<void *>(addr));
     }
 
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
@@ -595,7 +649,7 @@ void SlamAllocator::initialise()
 
 uintptr_t SlamAllocator::getSlab(size_t fullSize)
 {
-    ssize_t nPages = fullSize / PhysicalMemoryManager::getPageSize();
+    ssize_t nPages = fullSize / getPageSize();
     if(!nPages)
     {
         panic("Attempted to get a slab smaller than the native page size.");
@@ -768,11 +822,10 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
         FATAL("SlamAllocator::getSlab cannot find a place to allocate this slab (" << Dec << fullSize << Hex << " bytes)!");
     }
 
-    uintptr_t slab = m_Base + (((entry * 64) + bit) * PhysicalMemoryManager::getPageSize());
-
-    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
+    uintptr_t slab = m_Base + (((entry * 64) + bit) * getPageSize());
 
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
     VirtualAddressSpace &currva = Processor::information().getVirtualAddressSpace();
     if (Processor::m_Initialised == 2)
         Processor::switchAddressSpace(va);
@@ -790,9 +843,8 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
             bit = 0;
         }
 
-        void *p = reinterpret_cast<void *>(slab + (i * PhysicalMemoryManager::getPageSize()));
-        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-        va.map(phys, p, VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+        void *p = reinterpret_cast<void *>(slab + (i * getPageSize()));
+        allocateAndMapAt(p);
     }
 
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
@@ -800,14 +852,14 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
         Processor::switchAddressSpace(currva);
 #endif
 
-    m_HeapPageCount += fullSize / PhysicalMemoryManager::getPageSize();
+    m_HeapPageCount += fullSize / getPageSize();
 
     return slab;
 }
 
 void SlamAllocator::freeSlab(uintptr_t address, size_t length)
 {
-    size_t nPages = length / PhysicalMemoryManager::getPageSize();
+    size_t nPages = length / getPageSize();
     if(!nPages)
     {
         panic("Attempted to free a slab smaller than the native page size.");
@@ -817,25 +869,17 @@ void SlamAllocator::freeSlab(uintptr_t address, size_t length)
 
     // Perform unmapping first (so we can just modify 'address').
 
-    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
-
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
     VirtualAddressSpace &currva = Processor::information().getVirtualAddressSpace();
     if (Processor::m_Initialised == 2)
         Processor::switchAddressSpace(va);
 #endif
 
-    for(uintptr_t base = address; base < (address + length); base += PhysicalMemoryManager::getPageSize())
+    for(uintptr_t base = address; base < (address + length); base += getPageSize())
     {
         void *p = reinterpret_cast<void *>(base);
-        physical_uintptr_t phys; size_t flags;
-        if(va.isMapped(p))
-        {
-            va.getMapping(p, phys, flags);
-            va.unmap(p);
-
-            PhysicalMemoryManager::instance().freePage(phys);
-        }
+        unmap(p);
     }
 
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
@@ -845,7 +889,7 @@ void SlamAllocator::freeSlab(uintptr_t address, size_t length)
 
     // Adjust bitmap.
     address -= m_Base;
-    address /= PhysicalMemoryManager::getPageSize();
+    address /= getPageSize();
     size_t entry = address / 64;
     size_t bit = address % 64;
 
@@ -861,7 +905,7 @@ void SlamAllocator::freeSlab(uintptr_t address, size_t length)
         }
     }
 
-    m_HeapPageCount -= length / PhysicalMemoryManager::getPageSize();
+    m_HeapPageCount -= length / getPageSize();
 }
 
 size_t SlamAllocator::recovery(size_t maxSlabs)
@@ -876,7 +920,7 @@ size_t SlamAllocator::recovery(size_t maxSlabs)
             continue;
 
         size_t thisSlabs = m_Caches[i].recovery(maxSlabs);
-        nPages += (thisSlabs * m_Caches[i].slabSize()) / PhysicalMemoryManager::getPageSize();
+        nPages += (thisSlabs * m_Caches[i].slabSize()) / getPageSize();
         nSlabs += thisSlabs;
         if(nSlabs >= maxSlabs)
         {
@@ -1006,8 +1050,10 @@ void SlamAllocator::free(uintptr_t mem)
 #endif
 
     // Ensure this pointer is even on the heap...
+#ifndef BENCHMARK
     if(!Processor::information().getVirtualAddressSpace().memIsInHeap(reinterpret_cast<void*>(mem)))
         FATAL_NOLOCK("SlamAllocator::free - given pointer '" << mem << "' was completely invalid.");
+#endif
 
     // Grab the header
     AllocHeader *head = reinterpret_cast<AllocHeader *>(mem - sizeof(AllocHeader));
@@ -1050,8 +1096,10 @@ bool SlamAllocator::isPointerValid(uintptr_t mem)
     if (!mem) return true;
 
     // On the heap?
+#ifndef BENCHMARK
     if(!Processor::information().getVirtualAddressSpace().memIsInHeap(reinterpret_cast<void*>(mem)))
         return false;
+#endif
 
 #if CRIPPLINGLY_VIGILANT
     if (m_bVigilant)
