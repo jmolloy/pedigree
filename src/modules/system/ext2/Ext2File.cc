@@ -69,8 +69,13 @@ void Ext2File::extend(size_t newSize)
 
 uintptr_t Ext2File::readBlock(uint64_t location)
 {
+    // Optimistic lookup for already-read block.
+    uintptr_t buffer = m_FileBlockCache.lookup(location);
+    if (buffer)
+        return buffer;
+
     m_FileBlockCache.startAtomic();
-    uintptr_t buffer = m_FileBlockCache.insert(location);
+    buffer = m_FileBlockCache.insert(location);
     static_cast<Ext2Node*>(this)->doRead(location, getBlockSize(), buffer);
 
     // Clear any dirty flag that may have been applied to the buffer
