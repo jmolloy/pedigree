@@ -99,8 +99,6 @@ public:
     {
         Node *next;
 #if USING_MAGIC
-        Node *prev;
-        MAGIC_TYPE pad;
         MAGIC_TYPE magic;
 #endif
     };
@@ -197,7 +195,12 @@ class SlamAllocator
 
         static SlamAllocator &instance()
         {
+#ifdef BENCHMARK
+            static SlamAllocator instance;
+            return instance;
+#else
             return m_Instance;
+#endif
         }
 
         size_t heapPageCount() const
@@ -230,7 +233,9 @@ class SlamAllocator
         SlamAllocator(const SlamAllocator&);
         const SlamAllocator& operator = (const SlamAllocator&);
 
+#ifndef BENCHMARK
         static SlamAllocator m_Instance;
+#endif
 
         SlamCache m_Caches[32];
 public:

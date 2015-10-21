@@ -19,9 +19,7 @@
 
 #include "SlamAllocator.h"
 
-#ifdef BENCHMARK
-#include <assert.h>
-#else
+#ifndef BENCHMARK
 #include <utilities/assert.h>
 #include <utilities/MemoryTracing.h>
 #include <LockGuard.h>
@@ -36,7 +34,13 @@
 #include <SlamCommand.h>
 #endif
 
+#ifndef BENCHMARK
 SlamAllocator SlamAllocator::m_Instance;
+#endif
+
+#ifdef BENCHMARK
+#define TEST_MEMORY_AREA_SIZE 0x40000000
+#endif
 
 inline uintptr_t getHeapBase()
 {
@@ -50,7 +54,7 @@ inline uintptr_t getHeapBase()
 inline uintptr_t getHeapEnd()
 {
 #ifdef BENCHMARK
-    return 0x50000000ULL;
+    return getHeapBase() + TEST_MEMORY_AREA_SIZE;
 #else
     return VirtualAddressSpace::getKernelAddressSpace().getKernelHeapEnd();
 #endif
@@ -68,7 +72,13 @@ inline size_t getPageSize()
 inline void allocateAndMapAt(void *addr)
 {
 #ifdef BENCHMARK
-    mmap(addr, getPageSize(), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED | MAP_ANON, -1, 0);
+    void *r = mmap(addr, getPageSize(), PROT_READ | PROT_WRITE, MAP_PRIVATE |
+        MAP_FIXED | MAP_ANONYMOUS, -1, 0);
+    if (r == MAP_FAILED)
+    {
+        fprintf(stderr, "map failed: %s\n", strerror(errno));
+        exit(1);
+    }
 #else
     VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
     physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
@@ -135,55 +145,38 @@ uintptr_t SlamCache::allocate()
     size_t thisCpu = 0;
 #endif
 
-    if (m_PartialLists[thisCpu] != 0)
+    Node *N = 0, *pNext = 0;
+    do
     {
-        Node *N =0, *pNext =0;
-        do
-        {
-            N = const_cast<Node*>(m_PartialLists[thisCpu]);
+        pNext = 0;
 
-            if(N && (N->next == reinterpret_cast<Node*>(VIGILANT_MAGIC)))
-            {
-                ERROR_NOLOCK("SlamCache::allocate hit a free block that probably wasn't free");
-                m_PartialLists[thisCpu] = N = 0; // Free list is borked, start over with a new slab
-            }
-#if USING_MAGIC
-            if(N && ((N->magic != TEMP_MAGIC) && (N->magic != MAGIC_VALUE)))
-            {
-                ERROR_NOLOCK("SlamCache::allocate hit a free block that probably wasn't free");
-                m_PartialLists[thisCpu] = N = 0; // Free list is borked, start over with a new slab
-            }
-#endif
-
-            if (N == 0)
-            {
-                Node *pNode = initialiseSlab(getSlab());
-                uintptr_t slab = reinterpret_cast<uintptr_t>(pNode);
-#if CRIPPLINGLY_VIGILANT
-                if (SlamAllocator::instance().getVigilance())
-                    trackSlab(slab);
-#endif
-                return slab;
-            }
-
+        // Pop the front off of the queue, handle queue emptying while we
+        // are trying here.
+        N = const_cast<Node*>(m_PartialLists[thisCpu]);
+        if (LIKELY(N))
             pNext = N->next;
-        } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
-        
-#if USING_MAGIC
-        N->magic = TEMP_MAGIC;
-#endif
+    } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
 
-        return reinterpret_cast<uintptr_t>(N);
-    }
-    else
+    // Something else got there first if N == 0. Just allocate a new slab.
+    if (UNLIKELY(!N))
     {
-        uintptr_t slab = reinterpret_cast<uintptr_t>(initialiseSlab(getSlab()));
+        Node *pNode = initialiseSlab(getSlab());
+        uintptr_t slab = reinterpret_cast<uintptr_t>(pNode);
 #if CRIPPLINGLY_VIGILANT
         if (SlamAllocator::instance().getVigilance())
             trackSlab(slab);
 #endif
         return slab;
     }
+
+    // Check that the block was indeed free.
+    assert(N->next != reinterpret_cast<Node *>(VIGILANT_MAGIC));
+#if USING_MAGIC
+    assert(N->magic == TEMP_MAGIC || N->magic == MAGIC_VALUE);
+    N->magic = TEMP_MAGIC;
+#endif
+
+    return reinterpret_cast<uintptr_t>(N);
 }
 
 void SlamCache::free(uintptr_t object)
@@ -209,20 +202,15 @@ void SlamCache::free(uintptr_t object)
     // Possible double free?
     assert(N->magic != MAGIC_VALUE);
     N->magic = MAGIC_VALUE;
-    N->prev = 0;
 #endif
 
-    Node *pPartialPointer =0;
+    Node *pPartialPointer = 0;
     do
     {
+        // Push onto the front of the free list.
         pPartialPointer = const_cast<Node*>(m_PartialLists[thisCpu]);
         N->next = pPartialPointer;
     } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pPartialPointer, N));
-    
-#if USING_MAGIC
-    if (pPartialPointer)
-        pPartialPointer->prev = N;
-#endif
 }
 
 bool SlamCache::isPointerValid(uintptr_t object)
@@ -276,17 +264,17 @@ size_t SlamCache::recovery(size_t maxSlabs)
         Node *reinsertTail = 0;
         while(maxSlabs--)
         {
+            // Grab the head node of the free list.
             Node *N =0, *pNext =0;
             do
             {
+                pNext = 0;
                 N = const_cast<Node*>(m_PartialLists[thisCpu]);
-                if(N == 0)
-                {
-                    break;
-                }
-                pNext = N->next;
+                if(N)
+                    pNext = N->next;
             } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
 
+            // If no head node, we're done with this free list.
             if(N == 0)
             {
                 if (!reinsertTail)
@@ -300,12 +288,10 @@ size_t SlamCache::recovery(size_t maxSlabs)
                 Node *pHead = 0;
                 do
                 {
+                    // Link our tail to the current head, replace head.
                     pHead = const_cast<Node*>(m_PartialLists[thisCpu]);
                     reinsertTail->next = pHead;
                 } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pHead, reinsertHead));
-
-                if(pHead)
-                    pHead->prev = reinsertTail;
 
                 break;
             }
@@ -317,37 +303,34 @@ size_t SlamCache::recovery(size_t maxSlabs)
             for (size_t i = 0; i < (m_SlabSize / m_ObjectSize); ++i)
             {
                 Node *pNode = reinterpret_cast<Node*> (slab + (i * m_ObjectSize));
+                SlamAllocator::AllocHeader *pHeader = reinterpret_cast<SlamAllocator::AllocHeader *>(pNode);
+                if (pHeader->cache == this)
+                {
+                    // Oops, an active allocation was found.
+                    bSlabNotFree = true;
+                }
+#if USING_MAGIC
                 if(pNode->magic != MAGIC_VALUE)
                 {
                     // Not free.
                     bSlabNotFree = true;
                     break;
                 }
+#endif
             }
 
             if(bSlabNotFree)
             {
-                // Unlink N, if needed, as it's about to be linked into the
-                // reinsert list.
-                if(N->next)
-                {
-                    N->next->prev = N->prev;
-                }
-                if(N->prev)
-                {
-                    N->prev->next = N->next;
-                }
-
+                // Link the node into our reinsert lists, as the slab cannot
+                // be freed quite so easily.
                 if(!reinsertHead)
                 {
                     reinsertHead = reinsertTail = N;
-                    N->next = N->prev = 0;
+                    N->next = 0;
                 }
                 else
                 {
-                    N->prev = 0;
                     N->next = reinsertHead;
-                    reinsertHead->prev = N;
                     reinsertHead = N;
                 }
 
@@ -359,14 +342,6 @@ size_t SlamCache::recovery(size_t maxSlabs)
             {
                 Node *pNode = reinterpret_cast<Node*> (slab + (i * m_ObjectSize));
                 Node *pNodeNext = pNode->next;
-                if(pNode->next)
-                {
-                    pNode->next->prev = pNode->prev;
-                }
-                if(pNode->prev)
-                {
-                    pNode->prev->next = pNode->next;
-                }
 
                 // If this node became the partial list head, make sure it is
                 // no longer the head.
@@ -388,12 +363,10 @@ size_t SlamCache::recovery(size_t maxSlabs)
             Node *N =0, *pNext =0;
             do
             {
+                pNext = 0;
                 N = const_cast<Node*>(m_PartialLists[thisCpu]);
-                if(N == 0)
-                {
-                    break;
-                }
-                pNext = N->next;
+                if(N)
+                    pNext = N->next;
             } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
 
             if(N == 0)
@@ -402,13 +375,11 @@ size_t SlamCache::recovery(size_t maxSlabs)
                 break;
             }
 
+#if USING_MAGIC
             assert(N->magic == MAGIC_VALUE);
+#endif
 
             uintptr_t slab = reinterpret_cast<uintptr_t>(N);
-            if (N->next)
-                N->next->prev = N->prev;
-            if (N->prev)
-                N->prev->next = N->next;
 
             freeSlab(slab);
             ++freedSlabs;
@@ -426,18 +397,25 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
     size_t thisCpu = 0;
 #endif
 
-    // All object in slab are free, generate Node*'s for each (except the first) and
-    // link them together.
+    size_t nObjects = m_SlabSize / m_ObjectSize;
+
+    Node *N = reinterpret_cast<Node*> (slab);
+#if USING_MAGIC
+    N->magic = TEMP_MAGIC;
+#endif
+
+    // Early exit if there's no other free objects in this slab.
+    if (nObjects <= 1)
+        return N;
+
+    // All objects in slab are free, generate Node*'s for each (except the
+    // first) and link them together.
     Node *pFirst=0, *pLast=0;
-
-    size_t nObjects = m_SlabSize/m_ObjectSize;
-
     for (size_t i = 1; i < nObjects; i++)
     {
         Node *pNode = reinterpret_cast<Node*> (slab + (i * m_ObjectSize));
         pNode->next = ((i + 1) >= nObjects) ? 0 : reinterpret_cast<Node*> (slab + ((i + 1) * m_ObjectSize));
 #if USING_MAGIC
-        pNode->prev = (i == 1) ? 0 : reinterpret_cast<Node*> (slab + ((i - 1) * m_ObjectSize));
         pNode->magic = MAGIC_VALUE;
 #endif
 
@@ -447,11 +425,6 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
             pLast = pNode;
     }
 
-    Node *N = reinterpret_cast<Node*> (slab);
-#if USING_MAGIC
-    N->magic = TEMP_MAGIC;
-#endif
-
     // Link this slab in as the first in the partial list
     if (pFirst)
     {
@@ -459,14 +432,11 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
         Node *pPartialPointer =0;
         do
         {
+            // Link the final Node in this slab to the previous free list.
+            // Then, we simply link the head to the front of the free list.
             pPartialPointer = const_cast<Node*>(m_PartialLists[thisCpu]);
             pLast->next = pPartialPointer;
         } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pPartialPointer, pFirst));
-
-#if USING_MAGIC
-        if (pPartialPointer)
-            pPartialPointer->prev = pLast;
-#endif
     }
 
     return N;
@@ -937,7 +907,7 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
     NOTICE_NOLOCK("SlabAllocator::allocate(" << Dec << nBytes << Hex << ")");
 #endif
     
-    if (!m_bInitialised)
+    if (UNLIKELY(!m_bInitialised))
         initialise();
 
 #if CRIPPLINGLY_VIGILANT
@@ -956,20 +926,31 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
     // Add in room for the allocation footer
     nBytes += sizeof(AllocHeader) + sizeof(AllocFooter);
 
-    // Find nearest power of 2, if needed.
-    size_t powerOf2 = 1;
+    // Don't allow huge allocations.
+    /// \note Even 2G is a stretch on most systems. Use some other allocator
+    ///       to allocate such large buffers.
+    assert(nBytes < (1U << 31));
+
+    size_t orig = nBytes;
+
+    // Default to minimum object size if we must.
     size_t lg2 = 0;
-    while (powerOf2 < nBytes || powerOf2 < OBJECT_MINIMUM_SIZE)
+    if (LIKELY(nBytes < OBJECT_MINIMUM_SIZE))
     {
-        powerOf2 <<= 1;
-        lg2 ++;
+        nBytes = OBJECT_MINIMUM_SIZE;
+    }
+    else if ((nBytes & (nBytes - 1)) != 0)
+    {
+        // Not already a power of two, so we need to find the next highest.
+        // Easy - number of leading zeroes indicates the highest set bit. Then,
+        // we just need to turn that into a left shift. Ta-da, next
+        // power-of-two.
+        nBytes = 1U << (32 - __builtin_clz(nBytes));
     }
 
-    // Allocate >2GB and I'll kick your teeth in.
-    assert(lg2 < 31);
-
-    nBytes = powerOf2;
-    assert(nBytes >= OBJECT_MINIMUM_SIZE);
+    // nBytes is now guaranteed to be a power-of-two.
+    lg2 = __builtin_ffs(nBytes) - 1;
+    assert((1U << lg2) == nBytes);
 
     ret = m_Caches[lg2].allocate();
 
@@ -1030,7 +1011,13 @@ size_t SlamAllocator::allocSize(uintptr_t mem)
 
     // If the cache is null, then the pointer is corrupted.
     assert(head->cache != 0);
-    return head->cache->objectSize();
+    size_t result = head->cache->objectSize();
+
+    // Remove size of header/footer.
+    // This is important as we're returning the size of each object itself,
+    // but we return memory framed by headers and footers. So, the "true" size
+    // of memory pointed to by 'mem' is not the true object size.
+    return result - (sizeof(AllocHeader) + sizeof(AllocFooter));
 }
 
 void SlamAllocator::free(uintptr_t mem)
@@ -1040,7 +1027,7 @@ void SlamAllocator::free(uintptr_t mem)
 #endif
     
     // If we're not initialised, fix that
-    if(!m_bInitialised)
+    if(UNLIKELY(!m_bInitialised))
         initialise();
 
 #if CRIPPLINGLY_VIGILANT
@@ -1077,6 +1064,9 @@ void SlamAllocator::free(uintptr_t mem)
     // Free the memory
     head->cache->free(mem - sizeof(AllocHeader));
 
+    // No longer care about the allocation.
+    head->cache = 0;
+
 #ifdef MEMORY_TRACING
    traceAllocation(reinterpret_cast<void *>(mem), MemoryTracing::Free, 0);
 #endif
@@ -1089,7 +1079,7 @@ bool SlamAllocator::isPointerValid(uintptr_t mem)
 #endif
 
     // If we're not initialised, fix that
-    if(!m_bInitialised)
+    if(UNLIKELY(!m_bInitialised))
         initialise();
 
     // 0 is fine to free.
