@@ -13,7 +13,7 @@ matrix:
     - compiler: gcc
 script:
   - ./easy_build_$EASY_BUILD.sh nosudo $OS
-  # - ./scripts/runtest.py
+  - ./scripts/runtest.py
 install: true
 notifications:
   email: false
@@ -36,7 +36,7 @@ addons:
       - sqlite3
       - texinfo
       - scons
-      - genisoimage
+      - xorriso
       - e2fsprogs
       - qemu
       - nasm
