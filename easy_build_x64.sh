@@ -7,6 +7,7 @@ old=$(pwd)
 script_dir=$(cd -P -- "$(dirname -- "$0")" && pwd -P) && script_dir=$script_dir
 cd $old
 
+COMPILER_DIR=$script_dir/pedigree-compiler
 . $script_dir/build-etc/travis.sh
 
 set -e
@@ -19,6 +20,7 @@ echo
 compiler_build_options=""
 
 real_os=""
+nosudo=0
 if [ ! -e $script_dir/.easy_os ]; then
 
     echo "Checking for dependencies... Which operating system are you running on?"
@@ -28,6 +30,10 @@ if [ ! -e $script_dir/.easy_os ]; then
         read os
     else
         os=$1
+        if [ "$os" = "nosudo" ]; then
+            os=$2
+            nosudo=1
+        fi
     fi
 
     shopt -s nocasematch
@@ -38,11 +44,11 @@ if [ ! -e $script_dir/.easy_os ]; then
         debian)
             # TODO: Not sure if the package list is any different for debian vs ubuntu?
             echo "Installing packages with apt-get, please wait..."
-            sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage
+            [ $nosudo = 0 ] && sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage
             ;;
         ubuntu)
             echo "Installing packages with apt-get, please wait..."
-            sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage e2fsprogs
+            [ $nosudo = 0 ] && sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage e2fsprogs
             ;;
         opensuse)
             echo "Installing packages with zypper, please wait..."
@@ -122,7 +128,7 @@ case $real_os in
 esac
 
 # Install cross-compilers
-$script_dir/scripts/checkBuildSystemNoInteractive.pl x86_64-pedigree $script_dir/pedigree-compiler $compiler_build_options
+$script_dir/scripts/checkBuildSystemNoInteractive.pl x86_64-pedigree $COMPILER_DIR $compiler_build_options
 
 old=$(pwd)
 cd $script_dir
@@ -158,7 +164,7 @@ export LIBTOOL=$script_dir/../images/local/applications:$PATH
 # again to build it against the shared libstdc++. Once a working shared
 # libstdc++ exists, the static one built here is no longer relevant.
 # What a mess!
-$script_dir/scripts/checkBuildSystemNoInteractive.pl x86_64-pedigree $script_dir/pedigree-compiler $compiler_build_options "libcpp"
+$script_dir/scripts/checkBuildSystemNoInteractive.pl x86_64-pedigree $COMPILER_DIR $compiler_build_options "libcpp"
 
 set +e
 

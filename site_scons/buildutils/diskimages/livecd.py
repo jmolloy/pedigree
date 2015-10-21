@@ -43,8 +43,16 @@ def buildCdImage(target, source, env):
     shutil.copy(pathToMenu, '%s.mkisofs' % pathToMenu)
     pathToMenu += '.mkisofs'
 
+    env['MKISOFS'] = 'xorriso'
+
     args = [
         env['MKISOFS'],
+    ]
+
+    if env['MKISOFS'] == 'xorriso':
+      args.extend(['-as', 'mkisofs'])
+
+    args.extend([
         '-D',
         '-joliet',
         '-graft-points',
@@ -67,7 +75,7 @@ def buildCdImage(target, source, env):
         'boot/kernel=%s' % (source[2].abspath,),
         'boot/initrd.tar=%s' % (source[1].abspath,),
         '.pedigree-root=%s' % (source[0].abspath,),
-    ]
+    ])
 
     if env['livecd']:
         args.extend([
