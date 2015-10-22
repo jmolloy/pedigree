@@ -101,7 +101,7 @@ public:
 #if USING_MAGIC
         MAGIC_TYPE magic;
 #endif
-    };
+    } __attribute__((aligned(16)));
 
     /** Default constructor, does nothing. */
     SlamCache();
@@ -147,8 +147,10 @@ private:
     typedef Node *partialListType;
     partialListType m_PartialLists[255];
 #else
-    typedef volatile Node *partialListType;
+    typedef Node *partialListType;
     partialListType m_PartialLists[1];
+
+    Node *m_pHazard;
 #endif
 
     uintptr_t getSlab();
@@ -174,6 +176,8 @@ private:
      * per-CPU thing.
      */
     Spinlock m_RecoveryLock;
+
+    struct Node m_EmptyNode;
 };
 
 class SlamAllocator
