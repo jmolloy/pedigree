@@ -476,7 +476,6 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     m_nEntry = pHeader->entry;
 
     // Success.
-    NOTICE("X");
     return true;
 }
 

@@ -193,7 +193,6 @@ uintptr_t SlamCache::allocate()
     Node *N = 0, *pNext = 0;
     alignedNode currentHead = __atomic_load_n(&m_PartialLists[thisCpu],
                                                   __ATOMIC_ACQUIRE);
-    // First CAS will not succeed, but will load currentHead.
     while (true)
     {
         // Grab result.
@@ -258,7 +257,6 @@ void SlamCache::free(uintptr_t object)
     N->magic = MAGIC_VALUE;
 #endif
 
-    Node *pPartialPointer = 0;
     N->next = const_cast<Node *>(m_PartialLists[thisCpu]);
     while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], const_cast<alignedNode *>(&N->next), touch_tag(N), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED))
         spin_pause();
@@ -479,7 +477,7 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
         if (i == 1)
             pFirst = tagged(pNode);
         if ((i + 1) >= nObjects)
-            pLast = tagged(pNode);
+            pLast = pNode;
     }
 
     N->next = pFirst;
@@ -488,8 +486,6 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
     if (pFirst)
     {
         // We now need to do two atomic updates.
-        Node *pPartialPointer =0;
-        alignedNode currentHead = 0;
         pLast->next = const_cast<Node *>(m_PartialLists[thisCpu]);
         while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu],
              const_cast<alignedNode *>(&pLast->next),
