@@ -43,8 +43,6 @@ def buildCdImage(target, source, env):
     shutil.copy(pathToMenu, '%s.mkisofs' % pathToMenu)
     pathToMenu += '.mkisofs'
 
-    env['MKISOFS'] = 'xorriso'
-
     args = [
         env['MKISOFS'],
     ]
