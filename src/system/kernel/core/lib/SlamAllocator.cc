@@ -303,48 +303,40 @@ size_t SlamCache::recovery(size_t maxSlabs)
     size_t thisCpu = 0;
 #endif
 
-    /// \todo implement tagging here
-    WARNING("SlamCache::recovery needs to be rewritten due to tagged pointers!");
-    return 0;
+    LockGuard<Spinlock> guard(m_RecoveryLock);
 
-    if(!m_PartialLists[thisCpu])
+    if(untagged(m_PartialLists[thisCpu]) == &m_EmptyNode)
         return 0;
 
     size_t freedSlabs = 0;
     if(m_ObjectSize < getPageSize())
     {
-        Node *reinsertHead = 0;
-        Node *reinsertTail = 0;
+        Node *reinsertHead = tagged(&m_EmptyNode);
+        Node *reinsertTail = &m_EmptyNode;
         while(maxSlabs--)
         {
             // Grab the head node of the free list.
             Node *N =0, *pNext =0;
+            alignedNode currentHead = __atomic_load_n(&m_PartialLists[thisCpu], __ATOMIC_ACQUIRE);
             do
             {
-                pNext = 0;
-                N = const_cast<Node *>(m_PartialLists[thisCpu]);
-                if(N)
-                    pNext = N->next;
-            } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
+                N = untagged(const_cast<Node *>(currentHead));
+                pNext = N->next;
+            } while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &currentHead, touch_tag(pNext), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED));
 
             // If no head node, we're done with this free list.
-            if(N == 0)
+            if(N == &m_EmptyNode)
             {
-                if (!reinsertTail)
+                if (reinsertTail == &m_EmptyNode)
                 {
                     // No reinsert tail. Bail.
                     break;
                 }
 
-                // Okay, we've emptied the partial lists.
-                // Let's link in our reinsert nodes.
+                // Re-link the nodes we passed over.
                 Node *pHead = 0;
-                do
-                {
-                    // Link our tail to the current head, replace head.
-                    pHead = const_cast<Node *>(m_PartialLists[thisCpu]);
-                    reinsertTail->next = pHead;
-                } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pHead, reinsertHead));
+                reinsertTail->next = const_cast<Node *>(m_PartialLists[thisCpu]);
+                while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], const_cast<alignedNode *>(&reinsertTail->next), touch_tag(reinsertHead), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) spin_pause();
 
                 break;
             }
@@ -361,6 +353,7 @@ size_t SlamCache::recovery(size_t maxSlabs)
                 {
                     // Oops, an active allocation was found.
                     bSlabNotFree = true;
+                    break;
                 }
 #if USING_MAGIC
                 if(pNode->magic != MAGIC_VALUE)
@@ -376,15 +369,16 @@ size_t SlamCache::recovery(size_t maxSlabs)
             {
                 // Link the node into our reinsert lists, as the slab cannot
                 // be freed quite so easily.
-                if(!reinsertHead)
+                if(untagged(reinsertHead) == &m_EmptyNode)
                 {
-                    reinsertHead = reinsertTail = N;
-                    N->next = 0;
+                    reinsertHead = tagged(N);
+                    reinsertTail = N;
+                    N->next = tagged(&m_EmptyNode);
                 }
                 else
                 {
                     N->next = reinsertHead;
-                    reinsertHead = N;
+                    reinsertHead = tagged(N);
                 }
 
                 continue;
@@ -393,12 +387,17 @@ size_t SlamCache::recovery(size_t maxSlabs)
             // Slab free. Unlink all items and remove.
             for (size_t i = 0; i < (m_SlabSize / m_ObjectSize); ++i)
             {
-                Node *pNode = reinterpret_cast<Node*> (slab + (i * m_ObjectSize));
+                alignedNode pNode = reinterpret_cast<alignedNode> (slab + (i * m_ObjectSize));
                 Node *pNodeNext = pNode->next;
+
+                // Copy tags before the CAS.
+                alignedNode headSnapshot = m_PartialLists[thisCpu];
+                if (untagged(headSnapshot) == pNode)
+                    pNode = const_cast<Node *>(headSnapshot);
 
                 // If this node became the partial list head, make sure it is
                 // no longer the head.
-                __sync_val_compare_and_swap(&m_PartialLists[thisCpu], pNode, pNodeNext);
+                __atomic_compare_exchange_n(&m_PartialLists[thisCpu], &pNode, touch_tag(pNodeNext), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED);
             }
 
             // Kill off the slab!
@@ -410,19 +409,19 @@ size_t SlamCache::recovery(size_t maxSlabs)
     {
         while(maxSlabs--)
         {
-            if(!m_PartialLists[thisCpu])
+            if(untagged(m_PartialLists[thisCpu]) == &m_EmptyNode)
                 break;
 
+            // Pop the first free node off the free list.
             Node *N =0, *pNext =0;
+            alignedNode currentHead = __atomic_load_n(&m_PartialLists[thisCpu], __ATOMIC_ACQUIRE);
             do
             {
-                pNext = 0;
-                N = const_cast<Node *>(m_PartialLists[thisCpu]);
-                if(N)
-                    pNext = N->next;
-            } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
+                N = untagged(const_cast<Node *>(currentHead));
+                pNext = N->next;
+            } while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &currentHead, touch_tag(pNext), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED));
 
-            if(N == 0)
+            if(N == &m_EmptyNode)
             {
                 // Emptied the partial list!
                 break;
@@ -432,6 +431,7 @@ size_t SlamCache::recovery(size_t maxSlabs)
             assert(N->magic == MAGIC_VALUE);
 #endif
 
+            // Can just outright free - no need to do any further checks.
             uintptr_t slab = reinterpret_cast<uintptr_t>(N);
 
             freeSlab(slab);
