@@ -74,6 +74,15 @@ T *touch_tag(T *p)
 #define TEST_MEMORY_AREA_SIZE 0x40000000
 #endif
 
+inline void spin_pause()
+{
+#ifdef BENCHMARK
+    usleep(250);
+#else
+    Processor::pause();
+#endif
+}
+
 inline uintptr_t getHeapBase()
 {
 #ifdef BENCHMARK
@@ -169,6 +178,7 @@ void SlamCache::initialise(size_t objectSize)
     // Make the empty node loop always, so it can be easily linked into place.
     memset(&m_EmptyNode, 0xAB, sizeof(m_EmptyNode));
     m_EmptyNode.next = tagged(&m_EmptyNode);
+    m_EmptyNode.active = 0;
 
     assert( (m_SlabSize % m_ObjectSize) == 0 );
 }
@@ -182,45 +192,45 @@ uintptr_t SlamCache::allocate()
 #endif
 
     Node *N = 0, *pNext = 0;
-    partialListType currentHead = __atomic_load_n(&m_PartialLists[thisCpu], __ATOMIC_ACQUIRE);
-    do
+    partialListType currentHead = __atomic_load_n(&m_PartialLists[thisCpu],
+        __ATOMIC_ACQUIRE);
+    while (true)
     {
-        pNext = 0;
+        do
+        {
+            if (LIKELY(N))
+                spin_pause();
 
-        // Grab the next pointer after the head.
-        N = untagged(currentHead);
-        if (N == m_pHazard)
-            continue;
+            pNext = 0;
 
-        pNext = __atomic_load_n(&N->next, __ATOMIC_RELAXED);
-        if (UNLIKELY(pNext != untagged(m_PartialLists[thisCpu])->next))
-            continue;
+            // Grab the next pointer after the head.
+            N = untagged(currentHead);
+            pNext = N->next;
+        } while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &currentHead,
+            touch_tag(pNext), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED));
 
-        // A thread that gets a specific N currently continues on, using it and
-        // trashing it. This is OK when one thread is accessing the allocator,
-        // as there's no way for the same thread to be in here twice.
-        // Once we have two or more threads, it's possible that one of them will
-        // see N change underneath it, because it managed to read the head just
-        // before the other thread replaced it.
-
-        // So... what to do, what to do?
-
-        // FWIW, the ABA problem is actually solved now, because the use of
-        // tagged pointers has made it impossible. So we're just left with the
-        // segfault problem, which is particularly nasty.
-    } while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &currentHead,
-        touch_tag(pNext), false, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED));
-
-    // Something else got there first if N == 0. Just allocate a new slab.
-    if (UNLIKELY(N == &m_EmptyNode))
-    {
-        Node *pNode = initialiseSlab(getSlab());
-        uintptr_t slab = reinterpret_cast<uintptr_t>(pNode);
+        // Something else got there first if N == 0. Just allocate a new slab.
+        if (UNLIKELY(N == &m_EmptyNode))
+        {
+            Node *pNode = initialiseSlab(getSlab());
+            uintptr_t slab = reinterpret_cast<uintptr_t>(pNode);
 #if CRIPPLINGLY_VIGILANT
-        if (SlamAllocator::instance().getVigilance())
-            trackSlab(slab);
+            if (SlamAllocator::instance().getVigilance())
+                trackSlab(slab);
 #endif
-        return slab;
+            return slab;
+        }
+
+        int inactive = 0;
+        if (__atomic_compare_exchange_n(&N->active, &inactive, 1, false,
+                __ATOMIC_ACQUIRE, __ATOMIC_RELAXED))
+        {
+            // Perfect - we have the node and we marked it active without a
+            // problem. :-)
+            break;
+        }
+        else
+            spin_pause();
     }
 
     // Check that the block was indeed free.
@@ -260,8 +270,10 @@ void SlamCache::free(uintptr_t object)
 
     Node *pPartialPointer = 0;
     partialListType currentHead = 0;
+    N->active = 0;
     N->next = m_PartialLists[thisCpu];
-    while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &N->next, touch_tag(N), false, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED));
+    while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &N->next, touch_tag(N), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED))
+        spin_pause();
 }
 
 bool SlamCache::isPointerValid(uintptr_t object)
@@ -453,6 +465,8 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
     size_t nObjects = m_SlabSize / m_ObjectSize;
 
     Node *N = reinterpret_cast<Node*> (slab);
+    N->next = 0;
+    N->active = 1;
 #if USING_MAGIC
     N->magic = TEMP_MAGIC;
 #endif
@@ -469,6 +483,7 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
         Node *pNode = reinterpret_cast<Node*> (slab + (i * m_ObjectSize));
         pNode->next = ((i + 1) >= nObjects) ? 0 : reinterpret_cast<Node*> (slab + ((i + 1) * m_ObjectSize));
         pNode->next = tagged(pNode->next);
+        pNode->active = 0;
 #if USING_MAGIC
         pNode->magic = MAGIC_VALUE;
 #endif
@@ -479,6 +494,8 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
             pLast = tagged(pNode);
     }
 
+    N->next = pFirst;
+
     // Link this slab in as the first in the partial list
     if (pFirst)
     {
@@ -486,7 +503,8 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
         Node *pPartialPointer =0;
         partialListType currentHead = 0;
         pLast->next = m_PartialLists[thisCpu];
-        while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &pLast->next, touch_tag(pFirst), false, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED));
+        while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &pLast->next, touch_tag(pFirst), false, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED))
+            spin_pause();
     }
 
     return N;
@@ -669,7 +687,6 @@ void SlamAllocator::initialise()
 
 uintptr_t SlamAllocator::getSlab(size_t fullSize)
 {
-
     ssize_t nPages = fullSize / getPageSize();
     if(!nPages)
     {
@@ -954,7 +971,6 @@ size_t SlamAllocator::recovery(size_t maxSlabs)
 
 uintptr_t SlamAllocator::allocate(size_t nBytes)
 {
-  nBytes = nBytes < 0x1000 ? 0x1000 : nBytes;
 #if DEBUGGING_SLAB_ALLOCATOR
     NOTICE_NOLOCK("SlabAllocator::allocate(" << Dec << nBytes << Hex << ")");
 #endif

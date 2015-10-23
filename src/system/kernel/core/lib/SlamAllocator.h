@@ -98,6 +98,7 @@ public:
     struct Node
     {
         Node *next;
+        int active;
 #if USING_MAGIC
         MAGIC_TYPE magic;
 #endif
@@ -149,8 +150,6 @@ private:
 #else
     typedef Node *partialListType;
     partialListType m_PartialLists[1];
-
-    Node *m_pHazard;
 #endif
 
     uintptr_t getSlab();
@@ -247,6 +246,8 @@ public:
         /// freeing slightly less performance-intensive...
         struct AllocHeader
         {
+            // Already-present and embedded Node fields.
+            SlamCache::Node node;
 #if OVERRUN_CHECK
 #if BOCHS_MAGIC_WATCHPOINTS
             uint32_t catcher;
