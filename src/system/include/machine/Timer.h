@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -52,6 +51,9 @@ class Timer
     /** Get the current second
      *\return the current second */
     virtual uint8_t getSecond() = 0;
+    /** Get the current nanosecond
+     *\return the current nanosecond */
+    virtual uint64_t getNanosecond() = 0;
 
     /** Get the Tick count (time elapsed since system bootup)
      *\return the tick count in milliseconds */

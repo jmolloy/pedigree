@@ -54,6 +54,7 @@ class HostedTimer : public Timer, private IrqHandler
     virtual uint8_t getHour();
     virtual uint8_t getMinute();
     virtual uint8_t getSecond();
+    virtual uint64_t getNanosecond();
     virtual uint64_t getTickCount();
 
     /** Initialises the class

@@ -162,6 +162,11 @@ uint8_t HostedTimer::getSecond()
     return m_Second;
 }
 
+uint64_t HostedTimer::getNanosecond()
+{
+    return m_Nanosecond;
+}
+
 uint64_t HostedTimer::getTickCount()
 {
     struct timespec tv;

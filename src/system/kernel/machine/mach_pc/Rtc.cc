@@ -167,6 +167,10 @@ uint8_t Rtc::getSecond()
 {
   return m_Second;
 }
+uint64_t Rtc::getNanosecond()
+{
+  return m_Nanosecond;
+}
 uint64_t Rtc::getTickCount()
 {
   return m_TickCount / 1000ULL;
