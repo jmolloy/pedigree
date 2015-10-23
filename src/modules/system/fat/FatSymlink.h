@@ -37,7 +37,7 @@
 class FatSymlink : public Symlink
 {
 public:
-    FatSymlink(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+    FatSymlink(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTime, Time::Timestamp creationTime,
        uintptr_t inode, class Filesystem *pFs, size_t size, uint32_t dirClus = 0,
        uint32_t dirOffset = 0, File *pParent = 0);
     virtual ~FatSymlink() {}

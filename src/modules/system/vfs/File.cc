@@ -65,7 +65,7 @@ File::File() :
 {
 }
 
-File::File(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+File::File(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTime, Time::Timestamp creationTime,
            uintptr_t inode, Filesystem *pFs, size_t size, File *pParent) :
     m_Name(name), m_AccessedTime(accessedTime), m_ModifiedTime(modifiedTime),
     m_CreationTime(creationTime), m_Inode(inode), m_pFilesystem(pFs),
@@ -242,34 +242,34 @@ void File::sync()
     }
 }
 
-Time File::getCreationTime()
+Time::Timestamp File::getCreationTime()
 {
     return m_CreationTime;
 }
 
-void File::setCreationTime(Time t)
+void File::setCreationTime(Time::Timestamp t)
 {
     m_CreationTime = t;
     fileAttributeChanged();
 }
 
-Time File::getAccessedTime()
+Time::Timestamp File::getAccessedTime()
 {
     return m_AccessedTime;
 }
 
-void File::setAccessedTime(Time t)
+void File::setAccessedTime(Time::Timestamp t)
 {
     m_AccessedTime = t;
     fileAttributeChanged();
 }
 
-Time File::getModifiedTime()
+Time::Timestamp File::getModifiedTime()
 {
     return m_ModifiedTime;
 }
 
-void File::setModifiedTime(Time t)
+void File::setModifiedTime(Time::Timestamp t)
 {
     m_ModifiedTime = t;
     fileAttributeChanged();

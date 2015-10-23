@@ -25,14 +25,13 @@
 #include "ScsiCommands.h"
 #include "ScsiController.h"
 #include <utilities/PointerGuard.h>
+#include <time/Time.h>
 
 #ifdef SCSI_DEBUG
 #define SCSI_DEBUG_LOG DEBUG_LOG
 #else
 #define SCSI_DEBUG_LOG(...)
 #endif
-
-#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
 ScsiDisk::ScsiDisk() :
     Disk(), m_Cache(), m_Inquiry(0), m_nAlignPoints(0), m_NumBlocks(0), m_BlockSize(0x1000), m_DeviceType(NoDevice)
@@ -94,7 +93,7 @@ bool ScsiDisk::initialise(ScsiController *pController, size_t nUnit)
             }
         }
 
-        delay(100);
+        Time::delay(100 * Time::Multiplier::MILLISECOND);
 
         // Attempt to see if the unit is ready again
         if(!unitReady())
@@ -102,7 +101,7 @@ bool ScsiDisk::initialise(ScsiController *pController, size_t nUnit)
             readSense(s);
             SCSI_DEBUG_LOG("ScsiDisk: Unit not yet ready, sense data: [sk=" << s->SenseKey << ", asc=" << s->Asc << ", ascq=" << s->AscQ << "]");
 
-            delay(100);
+            Time::delay(100 * Time::Multiplier::MILLISECOND);
 
             if(!unitReady())
             {

@@ -21,6 +21,7 @@
 #include <Log.h>
 #include <machine/Machine.h>
 #include <processor/Processor.h>
+#include <time/Time.h>
 
 IsaAtaController::IsaAtaController(Controller *pDev, int nController) :
   AtaController(pDev, nController)
@@ -63,12 +64,10 @@ IsaAtaController::IsaAtaController(Controller *pDev, int nController) :
 
   // Perform a software reset.
   m_pControlRegs->write8(0x04, 6); // Assert SRST
-  Semaphore dammitWeNeedABloodySleepFunction(0); // We really do!
-  dammitWeNeedABloodySleepFunction.acquire(1, 0, 5000);
+  Time::delay(5 * Time::Multiplier::MILLISECOND);
 
   m_pControlRegs->write8(0, 6); // Negate SRST
-  Semaphore dammitWeNeedABloodySleepFunctionAndThisSemaphoreIsRedundantBecauseWeDontHaveOne(0); // We really do!
-  dammitWeNeedABloodySleepFunctionAndThisSemaphoreIsRedundantBecauseWeDontHaveOne.acquire(1, 0, 5000);
+  Time::delay(5 * Time::Multiplier::MILLISECOND);
 
   // Poll until BSY is clear. Until BSY is clear, no other bits in the
   // alternate status register are considered valid.

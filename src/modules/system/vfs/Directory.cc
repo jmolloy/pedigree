@@ -25,7 +25,7 @@ Directory::Directory() :
 {
 }
 
-Directory::Directory(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+Directory::Directory(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTime, Time::Timestamp creationTime,
                      uintptr_t inode, Filesystem *pFs, size_t size, File *pParent) :
     File(name,accessedTime,modifiedTime,creationTime,inode,pFs,size,pParent),
     m_Cache(pFs->isCaseSensitive()), m_bCachePopulated(false)

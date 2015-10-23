@@ -484,9 +484,9 @@ void FatDirectory::cacheDirectoryContents()
           filename = pFs->convertFilenameFrom(String(reinterpret_cast<const char*>(ent->DIR_Name)));
         }
 
-        Time writeTime = pFs->getUnixTimestamp(ent->DIR_WrtTime, ent->DIR_WrtDate);
-        Time accTime = pFs->getUnixTimestamp(0, ent->DIR_LstAccDate);
-        Time createTime = pFs->getUnixTimestamp(ent->DIR_CrtTime, ent->DIR_CrtDate);
+        Time::Timestamp writeTime = pFs->getUnixTimestamp(ent->DIR_WrtTime, ent->DIR_WrtDate);
+        Time::Timestamp accTime = pFs->getUnixTimestamp(0, ent->DIR_LstAccDate);
+        Time::Timestamp createTime = pFs->getUnixTimestamp(ent->DIR_CrtTime, ent->DIR_CrtDate);
 
         FatFileInfo info;
         info.accessedTime = accTime;

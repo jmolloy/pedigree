@@ -144,7 +144,7 @@ protected:
   }
 
   /** Gets a UNIX timestamp from a FAT date/time */
-  inline Time getUnixTimestamp(uint16_t time, uint16_t date)
+  inline Time::Timestamp getUnixTimestamp(uint16_t time, uint16_t date)
   {
     // struct version of the passed parameters
     Timestamp* sTime = reinterpret_cast<Timestamp*>(&time);
@@ -176,7 +176,7 @@ protected:
     static uint16_t cumulativeDays[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365};
     uint32_t cumulDays = cumulativeDays[month ? month - 1 : 0];
 
-    Time ret = 0;
+    Time::Timestamp ret = 0;
 
     // add the time
     ret += seconds;
@@ -194,7 +194,7 @@ protected:
   }
 
   /** Gets a FAT date from a UNIX timestamp */
-  inline uint16_t getFatDate(Time timestamp)
+  inline uint16_t getFatDate(Time::Timestamp timestamp)
   {
     /** \todo Write */
     return 0;

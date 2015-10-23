@@ -41,7 +41,7 @@ private:
 public:
   Iso9660Directory(String name, size_t inode,
               class Iso9660Filesystem *pFs, File *pParent, Iso9660DirRecord &dirRec,
-              Time accessedTime = 0, Time modifiedTime = 0, Time creationTime = 0) :
+              Time::Timestamp accessedTime = 0, Time::Timestamp modifiedTime = 0, Time::Timestamp creationTime = 0) :
     Directory(name, accessedTime, modifiedTime, creationTime, inode, pFs, 0, pParent),
     m_pFs(pFs), m_Dir(dirRec)
   {}
@@ -121,7 +121,7 @@ public:
         String fileName = m_pFs->parseName(*record);
 
         // Grab the UNIX timestamp
-        Time unixTime = m_pFs->timeToUnix(record->Time);
+        Time::Timestamp unixTime = m_pFs->timeToUnix(record->Time);
         if(record->FileFlags & (1 << 1))
         {
           Iso9660Directory *dir = new Iso9660Directory(fileName, 0, m_pFs, this, *record, unixTime, unixTime, unixTime);

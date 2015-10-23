@@ -21,8 +21,8 @@
 #include "FatFilesystem.h"
 #include "FatSymlink.h"
 
-FatSymlink::FatSymlink(String name, Time accessedTime, Time modifiedTime,
-        Time creationTime, uintptr_t inode, class Filesystem *pFs, size_t size,
+FatSymlink::FatSymlink(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTime,
+        Time::Timestamp creationTime, uintptr_t inode, class Filesystem *pFs, size_t size,
         uint32_t dirClus, uint32_t dirOffset, File *pParent) :
     Symlink(name, accessedTime, modifiedTime, creationTime, inode, pFs, size,
         pParent), m_DirClus(dirClus), m_DirOffset(dirOffset)

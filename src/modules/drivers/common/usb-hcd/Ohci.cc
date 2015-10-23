@@ -25,9 +25,8 @@
 #include <machine/Pci.h>
 #endif
 #include <LockGuard.h>
+#include <time/Time.h>
 #include "Ohci.h"
-
-#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
 #define INDEX_FROM_TD(ptr) (((reinterpret_cast<uintptr_t>((ptr)) & 0xFFF) / sizeof(TD)))
 #define PHYS_TD(idx)        (m_pTDListPhys + ((idx) * sizeof(TD)))
@@ -108,7 +107,7 @@ Ohci::Ohci(Device* pDev) : UsbHub(pDev), m_Mutex(false), m_ScheduleChangeLock(),
         uint32_t status = m_pBase->read32(OhciCommandStatus);
         m_pBase->write32(status | OhciCommandRequestOwnership, OhciCommandStatus);
         while((control = m_pBase->read32(OhciControl)) & OhciControlInterruptRoute)
-            delay(1);
+            Time::delay(1 * Time::Multiplier::MILLISECOND);
     }
     else
     {
@@ -125,7 +124,7 @@ Ohci::Ohci(Device* pDev) : UsbHub(pDev), m_Mutex(false), m_ScheduleChangeLock(),
     
     // Perform a reset via the UHCI Control register.
     m_pBase->write32(control & ~OhciControlStateFunctionalMask, OhciControl);
-    delay(200);
+    Time::delay(200 * Time::Multiplier::MILLISECOND);
     
     // Grab the FM Interval register (5.1.1.4, OHCI spec).
     uint32_t interval = m_pBase->read32(OhciFmInterval);
@@ -133,7 +132,7 @@ Ohci::Ohci(Device* pDev) : UsbHub(pDev), m_Mutex(false), m_ScheduleChangeLock(),
     // Perform a full hardware reset.
     m_pBase->write32(OhciCommandHcReset, OhciCommandStatus);
     while(m_pBase->read32(OhciCommandStatus) & OhciCommandHcReset)
-        delay(5);
+        Time::delay(5 * Time::Multiplier::MILLISECOND);
     
     // We now have 2 ms to complete all operations before we start the controller. 5.1.1.4, OHCI spec.
 
@@ -195,7 +194,7 @@ Ohci::Ohci(Device* pDev) : UsbHub(pDev), m_Mutex(false), m_ScheduleChangeLock(),
             m_pBase->write32(OhciRhPortStsPower, OhciRhPortStatus + (i * 4));
 
             // Wait as long as it needs
-            delay(powerWait);
+            Time::delay(powerWait * Time::Multiplier::MILLISECOND);
         }
         
         DEBUG_LOG("OHCI: Determining if there's a device on this port");
@@ -998,7 +997,7 @@ bool Ohci::portReset(uint8_t nPort, bool bErrorResponse)
     // Perform a reset of the port
     m_pBase->write32(OhciRhPortStsReset | OhciRhPortStsConnStsCh, OhciRhPortStatus + (nPort * 4));
     while(!(m_pBase->read32(OhciRhPortStatus + (nPort * 4)) & OhciRhPortStsResCh))
-        delay(5);
+        Time::delay(5 * Time::Multiplier::MILLISECOND);
     m_pBase->write32(OhciRhPortStsResCh, OhciRhPortStatus + (nPort * 4));
 
     // Enable the port if not already enabled

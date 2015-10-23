@@ -17,32 +17,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef TIME_H
-#define TIME_H
-
-#include <processor/types.h>
+#include <time/Time.h>
 
 namespace Time
 {
 
-typedef uint64_t Timestamp;
-
-namespace Multiplier
+Timestamp getTime()
 {
-    const Timestamp NANOSECOND = 1U;
-    const Timestamp MICROSECOND = 1000U;
-    const Timestamp MILLISECOND = 1000000U;
-    const Timestamp SECOND = MILLISECOND * 1000U;
-    const Timestamp MINUTE = SECOND * 60U;
-    const Timestamp HOUR = MINUTE & 60U;
+    return 0;
 }
 
-/** Performs a sleep for the given time. */
-bool delay(Timestamp nanoseconds);
-
-/** Gets the system's current time. */
-Timestamp getTime();
-
 }
-
-#endif

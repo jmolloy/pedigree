@@ -41,7 +41,7 @@ private:
   Iso9660File& operator =(const Iso9660File&);
 public:
   /** Constructor, should be called only by a Filesystem. */
-  Iso9660File(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+  Iso9660File(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTime, Time::Timestamp creationTime,
        uintptr_t inode, class Iso9660Filesystem *pFs, size_t size, Iso9660DirRecord &record, File *pParent = 0) :
     File(name,accessedTime,modifiedTime,creationTime,inode,pFs,size,pParent),
     m_pFs(pFs), m_Dir(record)

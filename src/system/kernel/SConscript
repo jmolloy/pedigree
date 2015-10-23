@@ -53,6 +53,7 @@ files = [
     Glob('config/*.cc'),
     Glob('network/*.cc'),
     Glob('graphics/*.cc'),
+    Glob('time/*.cc'),
 ]
 
 # Static drivers build all drivers directly into the kernel rather than building

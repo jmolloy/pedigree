@@ -22,6 +22,7 @@
 #include <processor/VirtualAddressSpace.h>
 #include <process/Semaphore.h>
 #include <Log.h>
+#include <time/Time.h>
 
 /// \todo super specific to a machine
 #include <Prcm.h>
@@ -29,8 +30,6 @@
 #include <Gpio.h>
 
 UsbUlpi UsbUlpi::m_Instance;
-
-#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
 bool usbWriteTwl4030(uint8_t addr, uint8_t data)
 {
@@ -67,7 +66,7 @@ void enablePhyAccess(bool which)
             clock |= 1; // Request DPLL clock
             usbWriteTwl4030(0xFE, clock);
             while(!(usbReadTwl4030(0xFF) & 1))
-                delay(10);
+                Time::delay(10 * Time::Multiplier::MILLISECOND);
         }
         else
         {
@@ -184,7 +183,7 @@ void UsbUlpi::initialise()
     // Perform a PHY reset
     Gpio::instance().enableoutput(147);
     Gpio::instance().clearpin(147);
-    delay(10); // Hold reset long enough
+    Time::delay(10 * Time::Multiplier::MILLISECOND);
 
     // Enable the TLL clocks
     Prcm::instance().SetFuncClockCORE(3, 2, true);
@@ -198,7 +197,8 @@ void UsbUlpi::initialise()
     uint32_t rev = tll_base[0];
     NOTICE("USB TLL: Revision " << Dec << ((rev >> 4) & 0xF) << "." << (rev & 0xF) << Hex << ".");
     tll_base[0x10 / 4] = 2;
-    while(!(tll_base[0x14 / 4])) delay(5);
+    while(!(tll_base[0x14 / 4]))
+        Time::delay(5 * Time::Multiplier::MILLISECOND);
 
     // Disable all IDLE modes
     tll_base[0x10 / 4] = (1 << 2) | (1 << 3) | (1 << 8);
@@ -209,7 +209,8 @@ void UsbUlpi::initialise()
 
     // Reset the entire USB module
     uhh_base[0x10 / 4] = 2;
-    while(!(uhh_base[0x14 / 4])) delay(5);
+    while(!(uhh_base[0x14 / 4]))
+        Time::delay(5 * Time::Multiplier::MILLISECOND);
 
     // Set up idle mode
     uint32_t cfg = (1 << 2) | (1 << 3) | (1 << 8) | (1 << 12); // No idle
@@ -220,6 +221,6 @@ void UsbUlpi::initialise()
     uhh_base[0x40 / 4] = cfg;
 
     // Restore the PHY
-    delay(10);
+    Time::delay(10 * Time::Multiplier::MILLISECOND);
     Gpio::instance().drivepin(147);
 }

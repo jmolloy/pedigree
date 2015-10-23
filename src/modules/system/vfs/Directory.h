@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -51,7 +50,7 @@ private:
 
 public:
     /** Constructor, should be called only by a Filesystem. */
-    Directory(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+    Directory(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTime, Time::Timestamp creationTime,
               uintptr_t inode, class Filesystem *pFs, size_t size, File *pParent);
     /** Destructor - doesn't do anything. */
     virtual ~Directory();

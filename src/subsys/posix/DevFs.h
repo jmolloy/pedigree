@@ -94,7 +94,7 @@ private:
 class DevFsDirectory : public Directory
 {
     public:
-        DevFsDirectory(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+        DevFsDirectory(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTime, Time::Timestamp creationTime,
             uintptr_t inode, class Filesystem *pFs, size_t size, File *pParent) :
             Directory(name, accessedTime, modifiedTime, creationTime, inode,
                 pFs, size, pParent)

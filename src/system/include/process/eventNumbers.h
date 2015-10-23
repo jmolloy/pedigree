@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -40,6 +39,8 @@ namespace EventNumbers
     const size_t PollEvent        = 39;
 
     const size_t TerminalEvent    = 40;
+
+    const size_t DelayTimer       = 40;
 
     const size_t UserStart        = 0xFFFF; ///< Start of user-defined events.
 }

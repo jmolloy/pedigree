@@ -289,7 +289,7 @@ String Iso9660Filesystem::parseJolietName(Iso9660DirRecord &name)
 File *Iso9660Filesystem::fileFromDirRecord(Iso9660DirRecord &dir, size_t inodeNum, File *parent, bool bDirectory)
 {
   String fileName = parseName(dir);
-  Time t = timeToUnix(dir.Time);
+  Time::Timestamp t = timeToUnix(dir.Time);
   if(bDirectory)
   {
     Iso9660Directory *ret = new Iso9660Directory(fileName, inodeNum, this, parent, dir, t, t, t);

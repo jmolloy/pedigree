@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -21,9 +20,8 @@
 #include <utilities/PointerGuard.h>
 #include <usb/UsbDevice.h>
 #include <usb/UsbHub.h>
+#include <time/Time.h>
 #include "UsbHubDevice.h"
-
-#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
 UsbHubDevice::UsbHubDevice(UsbDevice *dev) : UsbDevice(dev), UsbHub()
 {
@@ -63,7 +61,7 @@ void UsbHubDevice::initialiseDriver()
             setPortFeature(i, PortPower);
 
             // Delay while the power goes on
-            delay(50);
+            Time::delay(50 * Time::Multiplier::MILLISECOND);
 
             // Done.
             portStatus = getPortStatus(i);
@@ -112,7 +110,7 @@ bool UsbHubDevice::portReset(uint8_t nPort, bool bErrorResponse)
     setPortFeature(nPort, PortReset);
 
     // Delay while the reset completes
-    delay(50);
+    Time::delay(50 * Time::Multiplier::MILLISECOND);
     
     // Done with reset
     clearPortFeature(nPort, PortReset);

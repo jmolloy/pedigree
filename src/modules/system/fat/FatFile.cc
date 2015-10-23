@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -25,7 +24,7 @@
 #include <utilities/MemoryPool.h>
 #include <LockGuard.h>
 
-FatFile::FatFile(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+FatFile::FatFile(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTime, Time::Timestamp creationTime,
                  uintptr_t inode, class Filesystem *pFs, size_t size, uint32_t dirClus,
                  uint32_t dirOffset, File *pParent) :
     File(name,accessedTime,modifiedTime,creationTime,inode,pFs,size,pParent),

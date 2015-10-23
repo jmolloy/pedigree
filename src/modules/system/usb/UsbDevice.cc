@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -26,8 +25,7 @@
 #include <usb/UsbHub.h>
 #include <usb/UsbConstants.h>
 #include <usb/UsbDescriptors.h>
-
-#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
+#include <time/Time.h>
 
 UsbDevice::UsbDevice(UsbHub *pHub, uint8_t nPort, UsbSpeed speed) :
     m_nAddress(0), m_nPort(nPort), m_Speed(speed), m_UsbState(Connected),

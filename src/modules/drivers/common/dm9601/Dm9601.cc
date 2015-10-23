@@ -24,12 +24,11 @@
 #include <processor/Processor.h>
 #include <usb/UsbHub.h>
 #include <usb/UsbConstants.h>
+#include <time/Time.h>
 
 #include <LockGuard.h>
 
 #include <machine/Network.h>
-
-#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
 Dm9601::Dm9601(UsbDevice *pDev) :
             UsbDevice(pDev), ::Network(), m_pInEndpoint(0), m_pOutEndpoint(0),
@@ -79,7 +78,7 @@ void Dm9601::initialiseDriver()
 
     // Reset the chip
     writeRegister(NetworkControl, 1);
-    delay(100);
+    Time::delay(100 * Time::Multiplier::MILLISECOND);
 
     // Select internal MII
     writeRegister(NetworkControl, 0);
@@ -120,7 +119,7 @@ void Dm9601::initialiseDriver()
     while(!*p)
     {
         readRegister(NetworkStatus, reinterpret_cast<uintptr_t>(p), 1);
-        delay(100);
+        Time::delay(100 * Time::Multiplier::MILLISECOND);
     }
 
     Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(), trampoline, this);
@@ -178,7 +177,7 @@ bool Dm9601::send(size_t nBytes, uintptr_t buffer)
     readRegister(NetworkStatus, reinterpret_cast<uintptr_t>(p), 1);
     while(*p & (1 << 4))
     {
-        delay(100);
+        Time::delay(100 * Time::Multiplier::MILLISECOND);
         readRegister(NetworkStatus, reinterpret_cast<uintptr_t>(p), 1);
     }
 
@@ -327,7 +326,7 @@ uint16_t Dm9601::readEeprom(uint8_t offset)
     uint16_t *ret = new uint16_t;
     writeRegister(PhyAddress, offset);
     writeRegister(PhyControl, 0x4); // Read from EEPROM
-    delay(100);
+    Time::delay(100 * Time::Multiplier::MILLISECOND);
     writeRegister(PhyControl, 0); // Stop the transfer
     readRegister(PhyLowByte, reinterpret_cast<uintptr_t>(ret), 2);
 
@@ -345,7 +344,7 @@ void Dm9601::writeEeprom(uint8_t offset, uint16_t data)
     writeRegister(PhyAddress, offset);
     writeRegister(PhyLowByte, reinterpret_cast<uintptr_t>(input), 2);
     writeRegister(PhyControl, 0x12); // Write to EEPROM
-    delay(100);
+    Time::delay(100 * Time::Multiplier::MILLISECOND);
     writeRegister(PhyControl, 0);
 
     delete input;
@@ -357,7 +356,7 @@ uint16_t Dm9601::readMii(uint8_t offset)
     uint16_t *ret = new uint16_t;
     writeRegister(PhyAddress, offset | 0x40); // External MII starts at 0x40
     writeRegister(PhyControl, 0xc); // Read from PHY
-    delay(100);
+    Time::delay(100 * Time::Multiplier::MILLISECOND);
     writeRegister(PhyControl, 0); // Stop the transfer
     readRegister(PhyLowByte, reinterpret_cast<uintptr_t>(ret), 2);
 
@@ -375,9 +374,8 @@ void Dm9601::writeMii(uint8_t offset, uint16_t data)
     writeRegister(PhyAddress, offset | 0x40);
     writeRegister(PhyLowByte, reinterpret_cast<uintptr_t>(input), 2);
     writeRegister(PhyControl, 0xa); // Transfer to PHY
-    delay(100);
+    Time::delay(100 * Time::Multiplier::MILLISECOND);
     writeRegister(PhyControl, 0);
 
     delete input;
 }
-

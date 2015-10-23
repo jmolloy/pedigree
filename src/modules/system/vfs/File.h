@@ -57,7 +57,7 @@ private:
 
 public:
     /** Constructor, should be called only by a Filesystem. */
-    File(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+    File(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTime, Time::Timestamp creationTime,
          uintptr_t inode, class Filesystem *pFs, size_t size, File *pParent);
     /** Destructor - doesn't do anything. */
     virtual ~File();
@@ -102,19 +102,19 @@ public:
     }
 
     /** Returns the time the file was created. */
-    Time getCreationTime();
+    Time::Timestamp getCreationTime();
     /** Sets the time the file was created. */
-    void setCreationTime(Time t);
+    void setCreationTime(Time::Timestamp t);
 
     /** Returns the time the file was last accessed. */
-    Time getAccessedTime();
+    Time::Timestamp getAccessedTime();
     /** Sets the time the file was last accessed. */
-    void setAccessedTime(Time t);
+    void setAccessedTime(Time::Timestamp t);
 
     /** Returns the time the file was last modified. */
-    Time getModifiedTime();
+    Time::Timestamp getModifiedTime();
     /** Sets the time the file was last modified. */
-    void setModifiedTime(Time t);
+    void setModifiedTime(Time::Timestamp t);
 
     /** Returns the name of the file. */
     String getName();
@@ -323,9 +323,9 @@ protected:
     }
 
     String m_Name;
-    Time m_AccessedTime;
-    Time m_ModifiedTime;
-    Time m_CreationTime;
+    Time::Timestamp m_AccessedTime;
+    Time::Timestamp m_ModifiedTime;
+    Time::Timestamp m_CreationTime;
     uintptr_t m_Inode;
 
     class Filesystem *m_pFilesystem;

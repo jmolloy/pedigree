@@ -21,11 +21,10 @@
 #include <processor/Processor.h>
 #include <machine/Machine.h>
 #include <machine/Pci.h>
+#include <time/Time.h>
 #include <Log.h>
 
 #include "ata-common.h"
-
-#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
 PciAtaController::PciAtaController(Controller *pDev, int nController) :
     AtaController(pDev, nController), m_PciControllerType(UnknownController)
@@ -254,7 +253,7 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
         slaveControl->write8(0x2, 2);
     }
 
-    delay(2); // Wait 2 ms after clearing.
+    Time::delay(2 * Time::Multiplier::MILLISECOND); // Wait 2 ms after clearing.
 
     if (masterCommand)
         ataWait(masterCommand);
