@@ -390,14 +390,17 @@ size_t SlamCache::recovery(size_t maxSlabs)
                 alignedNode pNode = reinterpret_cast<alignedNode> (slab + (i * m_ObjectSize));
                 Node *pNodeNext = pNode->next;
 
-                // Copy tags before the CAS.
-                alignedNode headSnapshot = m_PartialLists[thisCpu];
-                if (untagged(headSnapshot) == pNode)
-                    pNode = const_cast<Node *>(headSnapshot);
+                alignedNode pCopyNode = pNode;
 
-                // If this node became the partial list head, make sure it is
-                // no longer the head.
-                __atomic_compare_exchange_n(&m_PartialLists[thisCpu], &pNode, touch_tag(pNodeNext), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED);
+                // Copy tags for comparison if needed.
+                alignedNode headSnapshot = m_PartialLists[thisCpu];
+
+                // This CPU's lists can't be touched right now (interrupts off),
+                // so this is safe to do.
+                if (untagged(headSnapshot) == pNode)
+                    m_PartialLists[thisCpu] = touch_tag(pNodeNext);
+                else if (untagged(untagged(headSnapshot)->next) == pNode)
+                    untagged(headSnapshot)->next = touch_tag(pNodeNext);
             }
 
             // Kill off the slab!
