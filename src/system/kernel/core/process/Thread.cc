@@ -207,8 +207,10 @@ void Thread::shutdown()
         if (!pQueue->isRequestValid(pReq))
         {
             // Resume queue and skip this request - it's dead.
-            /// \todo this may leak the request, if it was not async.
-            FATAL("Thread::shutdown: request in pending list was executed during halt.");
+            // Async items are run in their own thread, parented to the kernel.
+            // So, for this to happen, a non-async request succeeded, and may
+            // or may not have cleaned up.
+            /// \todo identify a way to make cleanup work here.
             pQueue->resume();
             ++it;
             continue;

@@ -55,9 +55,13 @@ bool MemoryPressureProcessKiller::compact()
         return false;
 
     NOTICE_NOLOCK("MemoryPressureProcessKiller will kill pid=" << Dec << pCandidateProcess->getId() << Hex);
-    NOTICE_NOLOCK("virt=" << mb(pCandidateProcess->getVirtualPageCount()) << "m phys=" << mb(pCandidateProcess->getPhysicalPageCount()) << "m shared=" << mb(pCandidateProcess->getSharedPageCount()) << "m");
+    NOTICE_NOLOCK("virt=" << Dec << mb(pCandidateProcess->getVirtualPageCount()) << "m phys=" << mb(pCandidateProcess->getPhysicalPageCount()) << "m shared=" << mb(pCandidateProcess->getSharedPageCount()) << "m" << Hex);
 
     Subsystem *pSubsystem = pCandidateProcess->getSubsystem();
     pSubsystem->threadException(pCandidateProcess->getThread(0), Subsystem::Quit);
+
+    // Give the process time to quit.
+    Scheduler::instance().yield();
+
     return true;
 }

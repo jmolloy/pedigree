@@ -92,11 +92,16 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
         {
             bHandlingPressure = true;
 
+            // Make sure the compact can trigger frees.
+            m_Lock.release();
+
             WARNING_NOLOCK("Memory pressure encountered, performing a compact...");
             if(!MemoryPressureManager::instance().compact())
                 ERROR_NOLOCK("Compact did not alleviate any memory pressure.");
             else
                 NOTICE_NOLOCK("Compact was successful.");
+
+            m_Lock.acquire();
 
             bDidHitWatermark = true;
             bHandlingPressure = false;
