@@ -318,6 +318,8 @@ size_t SlamCache::recovery(size_t maxSlabs)
 #endif
 
     /// \todo implement tagging here
+    WARNING("SlamCache::recovery needs to be rewritten due to tagged pointers!");
+    return 0;
 
     if(!m_PartialLists[thisCpu])
         return 0;
