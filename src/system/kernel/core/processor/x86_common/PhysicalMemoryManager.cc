@@ -51,6 +51,20 @@ uint32_t g_PageBitmap[16384] = {0};
 
 X86CommonPhysicalMemoryManager X86CommonPhysicalMemoryManager::m_Instance;
 
+static void trackPages(ssize_t v, ssize_t p, ssize_t s)
+{
+  // Track, if we can.
+  Thread *pThread = Processor::information().getCurrentThread();
+  if (pThread)
+  {
+    Process *pProcess = pThread->getParent();
+    if (pProcess)
+    {
+      pProcess->trackPages(v, p, s);
+    }
+  }
+}
+
 PhysicalMemoryManager &PhysicalMemoryManager::instance()
 {
     return X86CommonPhysicalMemoryManager::instance();
@@ -99,6 +113,8 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
     {
         panic("Out of memory.");
     }
+
+    trackPages(0, 1, 0);
 
 #ifdef USE_BITMAP
     physical_uintptr_t ptr_bitmap = ptr / 0x1000;
@@ -162,6 +178,8 @@ void X86CommonPhysicalMemoryManager::freePageUnlocked(physical_uintptr_t page)
 #endif
 
     m_PageStack.free(page);
+
+    trackPages(0, -1, 0);
 
     // g_AllocationCommand.freePage uses our lock.
     

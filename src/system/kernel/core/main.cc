@@ -114,6 +114,7 @@
 #include <process/Scheduler.h>
 #include <process/SchedulingAlgorithm.h>
 #include <process/MemoryPressureManager.h>
+#include <process/MemoryPressureKiller.h>
 
 #include <machine/Device.h>
 
@@ -380,6 +381,11 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   // Set up SLAM recovery memory pressure handler.
   SlamRecovery recovery;
   MemoryPressureManager::instance().registerHandler(MemoryPressureManager::HighestPriority, &recovery);
+
+  // Set up the process killer memory pressure handler.
+  MemoryPressureProcessKiller killer;
+  MemoryPressureManager::instance().registerHandler(MemoryPressureManager::MediumPriority, &killer);
+
 
   // Bring up the cache subsystem.
   CacheManager::instance().initialise();

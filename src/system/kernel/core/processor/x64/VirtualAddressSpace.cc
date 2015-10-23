@@ -69,6 +69,20 @@ X64VirtualAddressSpace X64VirtualAddressSpace::m_KernelSpace(KERNEL_VIRTUAL_HEAP
 
 VirtualAddressSpace *g_pCurrentlyCloning = 0;
 
+static void trackPages(ssize_t v, ssize_t p, ssize_t s)
+{
+  // Track, if we can.
+  Thread *pThread = Processor::information().getCurrentThread();
+  if (pThread)
+  {
+    Process *pProcess = pThread->getParent();
+    if (pProcess)
+    {
+      pProcess->trackPages(v, p, s);
+    }
+  }
+}
+
 VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
 {
   return X64VirtualAddressSpace::m_KernelSpace;
@@ -207,6 +221,8 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
   // Flush the TLB
   Processor::invalidate(virtualAddress);
 
+  trackPages(1, 0, 0);
+
   return true;
 }
 
@@ -265,6 +281,8 @@ void X64VirtualAddressSpace::unmap(void *virtualAddress)
   // Invalidate the TLB entry
   Processor::invalidate(virtualAddress);
 
+  trackPages(-1, 0, 0);
+
   // Possibly wipe out paging structures now that we've unmapped the page.
   // This can clear all the way up to, but not including, the PML4 - can be
   // extremely useful to conserve memory.
@@ -274,6 +292,8 @@ void X64VirtualAddressSpace::unmap(void *virtualAddress)
 VirtualAddressSpace *X64VirtualAddressSpace::clone()
 {
     LockGuard<Spinlock> guard(m_Lock);
+
+    /// \todo figure out how to handle page tracking here
 
     VirtualAddressSpace &thisAddressSpace = Processor::information().getVirtualAddressSpace();
 
@@ -453,6 +473,7 @@ void X64VirtualAddressSpace::revertToKernelAddressSpace()
                     }
 
                     // Free the page.
+                    trackPages(-1, 0, 0);
                     *ptEntry = 0;
                     Processor::invalidate(virtualAddress);
                 }

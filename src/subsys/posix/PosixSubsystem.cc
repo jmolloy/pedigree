@@ -551,8 +551,8 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType)
             break;
         case Quit:
             NOTICE_NOLOCK("    (Requesting quit)");
-            // Send SIGQUIT
-            sig = getSignalHandler(3);
+            // Send SIGTERM
+            sig = getSignalHandler(15);
             break;
         case Child:
             NOTICE_NOLOCK("    (Child status changed)");
