@@ -362,6 +362,10 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
 
         case POSIX_REALPATH:
             return posix_realpath(reinterpret_cast<const char *>(p1), reinterpret_cast<char *>(p2), p3);
+        case POSIX_TIMES:
+            return posix_times(reinterpret_cast<struct tms *>(p1));
+        case POSIX_GETRUSAGE:
+            return posix_getrusage(p1, reinterpret_cast<struct rusage *>(p2));
 
         case POSIX_PEDIGREE_CREATE_WAITER:
             return reinterpret_cast<uintptr_t>(posix_pedigree_create_waiter());

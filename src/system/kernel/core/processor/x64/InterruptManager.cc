@@ -27,6 +27,7 @@
 
 #ifdef THREADS
 #include <process/Process.h>
+#include <process/TimeTracker.h>
 #include <Subsystem.h>
 #endif
 
@@ -126,6 +127,7 @@ bool X64InterruptManager::registerInterruptHandler(size_t nInterruptNumber,
 
 void X64InterruptManager::interrupt(InterruptState &interruptState)
 {
+  TimeTracker tracker(0, !interruptState.kernelMode());
   size_t nIntNumber = interruptState.getInterruptNumber();
 
   #if defined(DEBUGGER)

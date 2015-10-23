@@ -20,6 +20,7 @@
 #include <compiler.h>
 #include <LockGuard.h>
 #include <processor/Processor.h>
+#include <process/TimeTracker.h>
 #include "SyscallManager.h"
 
 X64SyscallManager X64SyscallManager::m_Instance;
@@ -48,6 +49,8 @@ bool X64SyscallManager::registerSyscallHandler(Service_t Service, SyscallHandler
 void X64SyscallManager::syscall(SyscallState &syscallState)
 {
   SyscallHandler *pHandler;
+  TimeTracker tracker(0, true);
+
   size_t serviceNumber = syscallState.getSyscallService();
 
   if (UNLIKELY(serviceNumber >= serviceEnd))

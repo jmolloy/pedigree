@@ -851,8 +851,64 @@ int posix_gettimeofday(timeval *tv, struct timezone *tz)
     
     Timer *pTimer = Machine::instance().getTimer();
 
+    // UNIX timestamp + remaining time portion, in microseconds.
     tv->tv_sec = pTimer->getUnixTimestamp();
-    tv->tv_usec = pTimer->getTickCount();
+    tv->tv_usec = pTimer->getNanosecond() / 1000U;
+
+    return 0;
+}
+
+clock_t posix_times(struct tms *tm)
+{
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(tm), sizeof(struct tms), PosixSubsystem::SafeWrite))
+    {
+        SC_NOTICE("posix_times -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    SC_NOTICE("times");
+
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+
+    memset(tm, 0, sizeof(struct tms));
+    tm->tms_utime = pProcess->getUserTime();
+    tm->tms_stime = pProcess->getKernelTime();
+
+    NOTICE("times: u=" << pProcess->getUserTime() << ", s=" << pProcess->getKernelTime());
+
+    return Time::getTimeNanoseconds() - pProcess->getStartTime();
+}
+
+int posix_getrusage(int who, struct rusage *r)
+{
+    SC_NOTICE("getrusage who=" << who);
+
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(r), sizeof(struct rusage), PosixSubsystem::SafeWrite))
+    {
+        SC_NOTICE("posix_getrusage -> invalid address");
+        SYSCALL_ERROR(BadAddress);
+        return -1;
+    }
+
+    if (who != RUSAGE_SELF)
+    {
+        SC_NOTICE("posix_getrusage -> non-RUSAGE_SELF not supported");
+        SYSCALL_ERROR(InvalidArgument);
+        memset(r, 0, sizeof(struct rusage));
+        return -1;
+    }
+
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+
+    Time::Timestamp user = pProcess->getUserTime();
+    Time::Timestamp kernel = pProcess->getKernelTime();
+
+    memset(r, 0, sizeof(struct rusage));
+    r->ru_utime.tv_sec = user / Time::Multiplier::SECOND;
+    r->ru_utime.tv_usec = (user % Time::Multiplier::SECOND) / Time::Multiplier::MICROSECOND;
+    r->ru_stime.tv_sec = kernel / Time::Multiplier::SECOND;
+    r->ru_stime.tv_usec = (kernel % Time::Multiplier::SECOND) / Time::Multiplier::MICROSECOND;
 
     return 0;
 }

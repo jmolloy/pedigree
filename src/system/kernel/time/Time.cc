@@ -18,13 +18,24 @@
  */
 
 #include <time/Time.h>
+#include <machine/Machine.h>
+#include <machine/Timer.h>
 
 namespace Time
 {
 
 Timestamp getTime()
 {
-    return 0;
+    Timer *pTimer = Machine::instance().getTimer();
+    return pTimer->getUnixTimestamp();
+}
+
+Timestamp getTimeNanoseconds()
+{
+    Timer *pTimer = Machine::instance().getTimer();
+    Timestamp r = pTimer->getUnixTimestamp() * Multiplier::SECOND;
+    r += pTimer->getNanosecond();
+    return r;
 }
 
 }

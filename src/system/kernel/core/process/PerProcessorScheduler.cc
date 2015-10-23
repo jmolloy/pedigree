@@ -190,6 +190,10 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThre
 #endif
     }
 
+    // Update times.
+    pCurrentThread->getParent()->trackTime(false);
+    pNextThread->getParent()->recordTime(false);
+
     pNextThread->getLock().release();
 
 #ifdef SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH
@@ -340,6 +344,8 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
     }
     else if (userStack != 0)
     {
+        pThread->getParent()->trackTime(false);
+        pThread->getParent()->recordTime(true);
 #ifdef SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH
         Processor::saveAndJumpUser(bWasInterrupts, oldState, 0, EVENT_HANDLER_TRAMPOLINE, userStack, handlerAddress, addr);
 #else
@@ -442,6 +448,7 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
     pCurrentThread->getLock().unwind();
     if (bUsermode)
     {
+        pCurrentThread->getParent()->recordTime(true);
         Processor::jumpUser(&pCurrentThread->getLock().m_Atom.m_Atom,
                             reinterpret_cast<uintptr_t>(pStartFunction),
                             reinterpret_cast<uintptr_t>(pStack),
@@ -449,6 +456,7 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
     }
     else
     {
+        pCurrentThread->getParent()->recordTime(false);
         Processor::jumpKernel(&pCurrentThread->getLock().m_Atom.m_Atom,
                               reinterpret_cast<uintptr_t>(pStartFunction),
                               reinterpret_cast<uintptr_t>(pStack),
@@ -504,6 +512,9 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
 #else
     SyscallState &newState = reinterpret_cast<SyscallState &>(kStack);
 #endif
+
+    pCurrentThread->getParent()->trackTime(false);
+    pThread->getParent()->recordTime(false);
 
 #ifdef SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH
     pCurrentThread->getLock().unwind();

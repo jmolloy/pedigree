@@ -51,6 +51,7 @@ using namespace __pedigree_hosted;
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/resource.h>
 #include <sys/termios.h>
 #include <sys/signal.h>
 #include <sys/select.h>
@@ -60,6 +61,7 @@ using namespace __pedigree_hosted;
 
 #include <time.h>
 #include <sys/time.h>
+#include <sys/times.h>
 #include <sys/timeb.h>
 
 #include <stdlib.h>

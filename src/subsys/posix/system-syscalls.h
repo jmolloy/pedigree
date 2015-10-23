@@ -40,6 +40,8 @@ int posix_exit(int code) NORETURN;
 int posix_getpid();
 
 int posix_gettimeofday(timeval *tv, struct timezone *tz);
+clock_t posix_times(struct tms *tm);
+int posix_getrusage(int who, struct rusage *r);
 
 int posix_getpwent(passwd *pw, int n, char *str);
 int posix_getpwnam(passwd *pw, const char *name, char *str);

@@ -43,6 +43,9 @@ bool delay(Timestamp nanoseconds);
 /** Gets the system's current time. */
 Timestamp getTime();
 
+/** Gets the system's current time in nanoseconds. */
+Timestamp getTimeNanoseconds();
+
 }
 
 #endif

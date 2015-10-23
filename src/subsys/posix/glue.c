@@ -291,23 +291,14 @@ int stat(const char *file, struct stat *st)
 }
 
 #ifndef PPC_COMMON
-int times(void *buf)
+clock_t times(struct tms *buf)
 {
-    STUBBED("times");
-    errno = ENOSYS;
-    return -1;
+    return syscall1(POSIX_TIMES, (long) buf);
 }
 
 int utimes(const char *filename, const struct timeval times[2])
 {
     STUBBED("utimes");
-    return -1;
-}
-#else
-/* PPC has times() defined in terms of getrusage. */
-int getrusage(int target, void *buf)
-{
-    STUBBED("getrusage");
     return -1;
 }
 #endif
@@ -2018,8 +2009,7 @@ void endfsent(void)
 
 int getrusage(int who, struct rusage *r_usage)
 {
-    STUBBED("getrusage");
-    return -1;
+    return syscall2(POSIX_GETRUSAGE, who, (long) r_usage);
 }
 
 int sigaltstack(const struct stack_t *stack, struct stack_t *oldstack)

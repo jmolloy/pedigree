@@ -20,6 +20,7 @@
 #ifndef PROCESS_H
 #define PROCESS_H
 
+#include <compiler.h>
 #include <process/Thread.h>
 #include <processor/state.h>
 #include <utilities/Vector.h>
@@ -32,6 +33,7 @@
 #include <process/Mutex.h>
 #include <utilities/Tree.h>
 #include <utilities/MemoryAllocator.h>
+#include <time/Time.h>
 
 #include <Subsystem.h>
 
@@ -275,6 +277,83 @@ public:
         m_State = Terminating;
     }
 
+    void trackPages(ssize_t nVirtual, ssize_t nPhysical, ssize_t nShared)
+    {
+        m_Metadata.virtualPages += nVirtual;
+        m_Metadata.physicalPages += nPhysical;
+        m_Metadata.sharedPages += nShared;
+    }
+
+    /**
+     * Record the current time in the relevant field for this process.
+     *
+     * Use to set the point in time from which the next difference will be
+     * taken.
+     */
+    void recordTime(bool bUserspace)
+    {
+        Time::Timestamp now = Time::getTimeNanoseconds();
+        if (bUserspace)
+        {
+            m_LastUserspaceEntry = now;
+        }
+        else
+        {
+            m_LastKernelEntry = now;
+        }
+    }
+
+    /**
+     * Counts the time spent since the last recordTime(), and then updates the
+     * relevant time field to the current time.
+     *
+     * Use when scheduling.
+     */
+    void trackTime(bool bUserspace)
+    {
+        Time::Timestamp now = Time::getTimeNanoseconds();
+        if (bUserspace)
+        {
+            Time::Timestamp diff = now - m_LastUserspaceEntry;
+            m_LastUserspaceEntry = now;
+            m_Metadata.userTime += diff;
+        }
+        else
+        {
+            Time::Timestamp diff = now - m_LastKernelEntry;
+            m_LastKernelEntry = now;
+            m_Metadata.kernelTime += diff;
+        }
+    }
+
+    /** Gets timestamps. */
+    Time::Timestamp getUserTime() const
+    {
+        return m_Metadata.userTime;
+    }
+    Time::Timestamp getKernelTime() const
+    {
+        return m_Metadata.kernelTime;
+    }
+    Time::Timestamp getStartTime() const
+    {
+        return m_Metadata.startTime;
+    }
+
+    /** Get process usage. */
+    size_t getVirtualPageCount() const
+    {
+        return m_Metadata.virtualPages;
+    }
+    size_t getPhysicalPageCount() const
+    {
+        return m_Metadata.physicalPages;
+    }
+    size_t getSharedPageCount() const
+    {
+        return m_Metadata.sharedPages;
+    }
+
 private:
     Process(const Process &);
     Process &operator = (const Process &);
@@ -361,6 +440,37 @@ private:
 
     /** Releases all locks in m_Waiters once. */
     void notifyWaiters();
+
+    /** Stores metadata about this process. */
+    struct ProcessMetadata
+    {
+        ProcessMetadata() :
+            virtualPages(0), physicalPages(0), sharedPages(0), userTime(0),
+            kernelTime(0), startTime(0)
+        {}
+
+        /// Virtual address space consumed, including that which would trigger
+        /// a successful trap to page data in.
+        size_t virtualPages;
+        /// Physical address space consumed, barring that which is shared.
+        size_t physicalPages;
+        /// Shared pages consumed.
+        size_t sharedPages;
+
+        /// Time spent in userspace as this process.
+        Time::Timestamp userTime;
+        /// Time spent in the kernel as this process.
+        Time::Timestamp kernelTime;
+
+        /// Time at which process started.
+        Time::Timestamp startTime;
+    } ALIGN(4096) m_Metadata;
+
+    /** Last time we entered the kernel. */
+    Time::Timestamp m_LastKernelEntry;
+
+    /** Last time we entered userspace. */
+    Time::Timestamp m_LastUserspaceEntry;
 
 public:
     Semaphore m_DeadThreads;

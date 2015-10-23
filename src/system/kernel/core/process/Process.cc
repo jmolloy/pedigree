@@ -40,8 +40,11 @@ Process::Process() :
   m_ExitStatus(0), m_Cwd(0), m_Ctty(0), m_SpaceAllocator(false), m_DynamicSpaceAllocator(false),
   m_pUser(0), m_pGroup(0), m_pEffectiveUser(0), m_pEffectiveGroup(0), m_pDynamicLinker(0),
   m_pSubsystem(0), m_Waiters(), m_bUnreportedSuspend(false), m_bUnreportedResume(false),
-  m_State(Active), m_BeforeSuspendState(Thread::Ready), m_Lock(false), m_DeadThreads(0)
+  m_State(Active), m_BeforeSuspendState(Thread::Ready), m_Lock(false),
+  m_Metadata(), m_LastKernelEntry(0), m_LastUserspaceEntry(0), m_DeadThreads(0)
 {
+  m_Metadata.startTime = Time::getTimeNanoseconds();
+
   m_Id = Scheduler::instance().addProcess(this);
   getSpaceAllocator().free(
       getAddressSpace()->getUserStart(),
@@ -61,8 +64,11 @@ Process::Process(Process *pParent) :
   m_pUser(pParent->m_pUser), m_pGroup(pParent->m_pGroup), m_pEffectiveUser(pParent->m_pEffectiveUser),
   m_pEffectiveGroup(pParent->m_pEffectiveGroup), m_pDynamicLinker(pParent->m_pDynamicLinker),
   m_pSubsystem(0), m_Waiters(), m_bUnreportedSuspend(false), m_bUnreportedResume(false),
-  m_State(pParent->getState()), m_BeforeSuspendState(Thread::Ready), m_Lock(false), m_DeadThreads(0)
+  m_State(pParent->getState()), m_BeforeSuspendState(Thread::Ready), m_Lock(false),
+  m_Metadata(), m_LastKernelEntry(0), m_LastUserspaceEntry(0), m_DeadThreads(0)
 {
+   m_Metadata.startTime = Time::getTimeNanoseconds();
+
    m_pAddressSpace = pParent->m_pAddressSpace->clone();
 
   m_Id = Scheduler::instance().addProcess(this);
