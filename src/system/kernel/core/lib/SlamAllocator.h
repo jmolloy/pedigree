@@ -57,7 +57,11 @@
 #define MAGIC_VALUE                     0xb00b1e55ULL
 
 /// Minimum size of an object.
-#define OBJECT_MINIMUM_SIZE             (sizeof(SlamCache::Node))
+#define ABSOLUTE_MINIMUM_SIZE           64
+#define ALL_HEADERS_SIZE                (sizeof(SlamCache::Node) + \
+    sizeof(SlamAllocator::AllocHeader) + sizeof(SlamAllocator::AllocFooter))
+#define OBJECT_MINIMUM_SIZE             (ALL_HEADERS_SIZE < ABSOLUTE_MINIMUM_SIZE ? \
+    ABSOLUTE_MINIMUM_SIZE : ALL_HEADERS_SIZE)
 
 /// Outputs information during each function call
 #define DEBUGGING_SLAB_ALLOCATOR        0
@@ -98,7 +102,6 @@ public:
     struct Node
     {
         Node *next;
-        int active;
 #if USING_MAGIC
         MAGIC_TYPE magic;
 #endif
@@ -145,12 +148,12 @@ private:
 
 #ifdef MULTIPROCESSOR
     ///\todo MAX_CPUS
-    typedef Node *partialListType;
-    partialListType m_PartialLists[255];
+#define NUM_LISTS 255
 #else
-    typedef Node *partialListType;
-    partialListType m_PartialLists[1];
+#define NUM_LISTS 1
 #endif
+    typedef volatile Node *alignedNode;
+    alignedNode m_PartialLists[NUM_LISTS];
 
     uintptr_t getSlab();
     void freeSlab(uintptr_t slab);

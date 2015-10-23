@@ -178,7 +178,6 @@ void SlamCache::initialise(size_t objectSize)
     // Make the empty node loop always, so it can be easily linked into place.
     memset(&m_EmptyNode, 0xAB, sizeof(m_EmptyNode));
     m_EmptyNode.next = tagged(&m_EmptyNode);
-    m_EmptyNode.active = 0;
 
     assert( (m_SlabSize % m_ObjectSize) == 0 );
 }
@@ -192,45 +191,36 @@ uintptr_t SlamCache::allocate()
 #endif
 
     Node *N = 0, *pNext = 0;
-    partialListType currentHead = __atomic_load_n(&m_PartialLists[thisCpu],
-        __ATOMIC_ACQUIRE);
+    alignedNode currentHead = __atomic_load_n(&m_PartialLists[thisCpu],
+                                                  __ATOMIC_ACQUIRE);
+    // First CAS will not succeed, but will load currentHead.
     while (true)
     {
-        do
+        // Grab result.
+        N = untagged(const_cast<Node *>(currentHead));
+        pNext = N->next;
+
+        if(__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &currentHead,
+            touch_tag(pNext), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED))
         {
-            if (LIKELY(N))
-                spin_pause();
-
-            pNext = 0;
-
-            // Grab the next pointer after the head.
-            N = untagged(currentHead);
-            pNext = N->next;
-        } while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &currentHead,
-            touch_tag(pNext), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED));
-
-        // Something else got there first if N == 0. Just allocate a new slab.
-        if (UNLIKELY(N == &m_EmptyNode))
-        {
-            Node *pNode = initialiseSlab(getSlab());
-            uintptr_t slab = reinterpret_cast<uintptr_t>(pNode);
-#if CRIPPLINGLY_VIGILANT
-            if (SlamAllocator::instance().getVigilance())
-                trackSlab(slab);
-#endif
-            return slab;
-        }
-
-        int inactive = 0;
-        if (__atomic_compare_exchange_n(&N->active, &inactive, 1, false,
-                __ATOMIC_ACQUIRE, __ATOMIC_RELAXED))
-        {
-            // Perfect - we have the node and we marked it active without a
-            // problem. :-)
+            // Successful CAS, we have a node to use.
             break;
         }
-        else
-            spin_pause();
+
+        // Unsuccessful CAS, pause for a bit to back off.
+        spin_pause();
+    }
+
+    // Something else got there first if N == 0. Just allocate a new slab.
+    if (UNLIKELY(N == &m_EmptyNode))
+    {
+        Node *pNode = initialiseSlab(getSlab());
+        uintptr_t slab = reinterpret_cast<uintptr_t>(pNode);
+#if CRIPPLINGLY_VIGILANT
+        if (SlamAllocator::instance().getVigilance())
+            trackSlab(slab);
+#endif
+        return slab;
     }
 
     // Check that the block was indeed free.
@@ -269,10 +259,8 @@ void SlamCache::free(uintptr_t object)
 #endif
 
     Node *pPartialPointer = 0;
-    partialListType currentHead = 0;
-    N->active = 0;
-    N->next = m_PartialLists[thisCpu];
-    while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &N->next, touch_tag(N), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED))
+    N->next = const_cast<Node *>(m_PartialLists[thisCpu]);
+    while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], const_cast<alignedNode *>(&N->next), touch_tag(N), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED))
         spin_pause();
 }
 
@@ -336,7 +324,7 @@ size_t SlamCache::recovery(size_t maxSlabs)
             do
             {
                 pNext = 0;
-                N = m_PartialLists[thisCpu];
+                N = const_cast<Node *>(m_PartialLists[thisCpu]);
                 if(N)
                     pNext = N->next;
             } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
@@ -356,7 +344,7 @@ size_t SlamCache::recovery(size_t maxSlabs)
                 do
                 {
                     // Link our tail to the current head, replace head.
-                    pHead = m_PartialLists[thisCpu];
+                    pHead = const_cast<Node *>(m_PartialLists[thisCpu]);
                     reinsertTail->next = pHead;
                 } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pHead, reinsertHead));
 
@@ -431,7 +419,7 @@ size_t SlamCache::recovery(size_t maxSlabs)
             do
             {
                 pNext = 0;
-                N = m_PartialLists[thisCpu];
+                N = const_cast<Node *>(m_PartialLists[thisCpu]);
                 if(N)
                     pNext = N->next;
             } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
@@ -468,7 +456,6 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
 
     Node *N = reinterpret_cast<Node*> (slab);
     N->next = 0;
-    N->active = 1;
 #if USING_MAGIC
     N->magic = TEMP_MAGIC;
 #endif
@@ -485,7 +472,6 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
         Node *pNode = reinterpret_cast<Node*> (slab + (i * m_ObjectSize));
         pNode->next = ((i + 1) >= nObjects) ? 0 : reinterpret_cast<Node*> (slab + ((i + 1) * m_ObjectSize));
         pNode->next = tagged(pNode->next);
-        pNode->active = 0;
 #if USING_MAGIC
         pNode->magic = MAGIC_VALUE;
 #endif
@@ -503,10 +489,15 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
     {
         // We now need to do two atomic updates.
         Node *pPartialPointer =0;
-        partialListType currentHead = 0;
-        pLast->next = m_PartialLists[thisCpu];
-        while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &pLast->next, touch_tag(pFirst), false, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED))
+        alignedNode currentHead = 0;
+        pLast->next = const_cast<Node *>(m_PartialLists[thisCpu]);
+        while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu],
+             const_cast<alignedNode *>(&pLast->next),
+             touch_tag(pFirst), true,
+             __ATOMIC_ACQUIRE, __ATOMIC_RELAXED))
+        {
             spin_pause();
+        }
     }
 
     return N;
