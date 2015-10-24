@@ -226,11 +226,6 @@ int fstat(int file, struct stat *st)
     return (long)syscall2(POSIX_FSTAT, (long)file, (long)st);
 }
 
-int getpid(void)
-{
-    return (long)syscall0(POSIX_GETPID);
-}
-
 int _isatty(int file)
 {
     return (long) syscall1(POSIX_ISATTY, file);
@@ -570,13 +565,6 @@ int ioctl(int fd, int command, ...)
     va_end(ap);
 
     return (long)syscall3(POSIX_IOCTL, fd, command, (long)buf);
-}
-
-int gettimeofday(struct timeval *tv, void *tz)
-{
-    syscall2(POSIX_GETTIMEOFDAY, (long)tv, (long)tz);
-
-    return 0;
 }
 
 const char * const sys_siglist[] =
@@ -1562,26 +1550,6 @@ void sync(void)
     STUBBED("sync");
 }
 
-/// \todo This is pretty hacky, might want to run a syscall instead and have it populated
-///       in the kernel where we can change it as time goes on.
-int uname(struct utsname *n)
-{
-    if (!n)
-        return -1;
-    strcpy(n->sysname, "Pedigree");
-    strcpy(n->release, "Foster");
-    strcpy(n->version, "0.1");
-#if defined(X86)
-    strcpy(n->machine, "i686");
-#elif defined(X64)
-    strcpy(n->machine, "x86_64");
-#else
-    strcpy(n->machine, "<unknown>");
-#endif
-    gethostname(n->nodename, 128);
-    return 0;
-}
-
 int mknod(const char *path, mode_t mode, dev_t dev)
 {
     STUBBED("mknod");
@@ -2262,17 +2230,6 @@ int clock_getres(clockid_t clock_id, struct timespec *res)
     res->tv_sec = 0;
 
     return 0;
-}
-
-int clock_gettime(clockid_t clock_id, struct timespec *tp)
-{
-    if(!tp)
-    {
-        errno = EINVAL;
-        return -1;
-    }
-
-    return syscall2(POSIX_CLOCK_GETTIME, clock_id, (long) tp);
 }
 
 int setreuid(uid_t ruid, uid_t euid)

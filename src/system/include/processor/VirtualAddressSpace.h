@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -194,6 +193,9 @@ class VirtualAddressSpace
     virtual uintptr_t getDynamicStart() const { return 0; }
     /** Gets address of the end of the dynamic memory mapping area. */
     virtual uintptr_t getDynamicEnd() const { return 0; }
+
+    /** Gets address of the global info block location. */
+    virtual uintptr_t getGlobalInfoBlock() const { return 0; };
 
     /** Pointer to the beginning of the heap */
     void *m_Heap;

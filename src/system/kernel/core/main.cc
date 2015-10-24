@@ -115,6 +115,7 @@
 #include <process/SchedulingAlgorithm.h>
 #include <process/MemoryPressureManager.h>
 #include <process/MemoryPressureKiller.h>
+#include <process/InfoBlock.h>
 
 #include <machine/Device.h>
 
@@ -386,6 +387,8 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   MemoryPressureProcessKiller killer;
   MemoryPressureManager::instance().registerHandler(MemoryPressureManager::MediumPriority, &killer);
 
+  // Set up the global info block manager.
+  InfoBlockManager::instance().initialise();
 
   // Bring up the cache subsystem.
   CacheManager::instance().initialise();

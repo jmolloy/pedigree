@@ -74,6 +74,7 @@ glue_files = [
     'glue-dlmalloc.c',
     'glue-strcasecmp.c',
     'glue-utmpx.c',
+    'glue-infoblock.c',
     # 'glue-memset.c',
 ]
 

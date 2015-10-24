@@ -17,37 +17,56 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef VERSION_H
-#define VERSION_H
+#ifndef _INFO_BLOCK_H
+#define _INFO_BLOCK_H
 
-/**
- * Ascii string giving the date and time of this build.
- */
-extern const char *g_pBuildTime;
+#include <processor/types.h>
 
-/**
- * Ascii string giving the SVN revision it was built from.
- */
-extern const char *g_pBuildRevision;
+struct InfoBlock
+{
+    /// Current timestamp in nanoseconds since the UNIX epoch.
+    uint64_t now;
 
-/**
- * Ascii string giving the build flags used.
- */
-extern const char *g_pBuildFlags;
+    /// Current process' ID.
+    size_t pid;
 
-/**
- * Ascii string giving the user who built us.
- */
-extern const char *g_pBuildUser;
+    /// uname fields.
+    char sysname[64];
+    char release[64];
+    char version[64];
+    char machine[64];
+};
 
-/**
- * Ascii string giving the machine we were built on.
- */
-extern const char *g_pBuildMachine;
+#ifdef __cplusplus
 
-/**
- * Ascii string giving the target we were built for.
- */
-extern const char *g_pBuildTarget;
+#include <machine/TimerHandler.h>
+
+class InfoBlockManager : public TimerHandler
+{
+public:
+    InfoBlockManager();
+    virtual ~InfoBlockManager();
+
+    static InfoBlockManager &instance();
+
+    bool initialise();
+
+    virtual void timer(uint64_t delta, InterruptState &state);
+
+    void setPid(size_t value);
+
+private:
+    static InfoBlockManager m_Instance;
+
+    bool m_bInitialised;
+
+    struct InfoBlock *m_pInfoBlock;
+
+    uint64_t m_Ticks;
+};
+
+
+#endif
+
 
 #endif

@@ -44,6 +44,7 @@
 #define KERNEL_VIRTUAL_HEAP                     reinterpret_cast<void*>(0xFFFFFFFF00000000)
 #define KERNEL_VIRTUAL_HEAP_SIZE                0x40000000
 #define KERNEL_VIRTUAL_ADDRESS                  reinterpret_cast<void*>(0xFFFFFFFF7FF00000)
+#define KERNEL_VIRTUAL_INFO_BLOCK               reinterpret_cast<void*>(0xFFFFFFFF8FFF0000)
 #define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS     reinterpret_cast<void*>(0xFFFFFFFF90000000)
 #define KERNEL_VIRTUAL_MEMORYREGION_SIZE        0x40000000
 #define KERNEL_VIRTUAL_PAGESTACK_4GB            reinterpret_cast<void*>(0xFFFFFFFF7FC00000)
@@ -162,6 +163,12 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
     virtual uintptr_t getDynamicEnd() const
     {
         return reinterpret_cast<uintptr_t>(USERSPACE_DYNAMIC_END);
+    }
+
+    /** Gets address of the global info block location. */
+    virtual uintptr_t getGlobalInfoBlock() const
+    {
+        return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_INFO_BLOCK);
     }
 
   private:

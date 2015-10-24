@@ -377,6 +377,9 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_PEDIGREE_THREAD_TRIGGER:
             return posix_pedigree_thread_trigger(reinterpret_cast<void *>(p1));
 
+        case POSIX_PEDIGREE_GET_INFO_BLOCK:
+            return VirtualAddressSpace::getKernelAddressSpace().getGlobalInfoBlock();
+
         default: ERROR ("PosixSyscallManager: invalid syscall received: " << Dec << state.getSyscallNumber() << Hex); return 0;
     }
 
