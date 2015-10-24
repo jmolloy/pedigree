@@ -65,10 +65,9 @@ Process::Process(Process *pParent) :
   m_pEffectiveGroup(pParent->m_pEffectiveGroup), m_pDynamicLinker(pParent->m_pDynamicLinker),
   m_pSubsystem(0), m_Waiters(), m_bUnreportedSuspend(false), m_bUnreportedResume(false),
   m_State(pParent->getState()), m_BeforeSuspendState(Thread::Ready), m_Lock(false),
-  m_Metadata(), m_LastKernelEntry(0), m_LastUserspaceEntry(0), m_DeadThreads(0)
+  m_Metadata(pParent->m_Metadata), m_LastKernelEntry(0), m_LastUserspaceEntry(0),
+  m_DeadThreads(0)
 {
-   m_Metadata.startTime = Time::getTimeNanoseconds();
-
    m_pAddressSpace = pParent->m_pAddressSpace->clone();
 
   m_Id = Scheduler::instance().addProcess(this);
