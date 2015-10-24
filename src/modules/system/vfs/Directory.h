@@ -29,8 +29,6 @@
 /** A Directory node. */
 class Directory : public File
 {
-    friend class Filesystem;
-
 public:
 
     /** Eases the pain of casting, and performs a sanity check. */
@@ -65,9 +63,39 @@ public:
     /** Load the directory's contents into the cache. */
     virtual void cacheDirectoryContents();
 
-public:
+    /** Does this directory have cache? */
+    virtual bool isCachePopulated() const
+    {
+        return m_bCachePopulated;
+    }
+
+    /** Look up the given filename in the directory. */
+    File *lookup(String &s) const
+    {
+        return m_Cache.lookup(s);
+    }
+
+    /** Remove the given filename in the directory. */
+    void remove(String &s)
+    {
+        m_Cache.remove(s);
+    }
+
+private:
     /** Directory contents cache. */
     RadixTree<File*> m_Cache;
+
+protected:
+    /** Provides subclasses with direct access to the directory's listing. */
+    virtual RadixTree<File *> &getCache()
+    {
+        return m_Cache;
+    }
+
+    /**
+     * Whether the directory cache is populated with entries or still needs to
+     * be loaded. Directories are lazy-loaded using this.
+     */
     bool m_bCachePopulated;
 };
 

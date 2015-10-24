@@ -64,14 +64,14 @@ public:
       // Root directory, . and .. should redirect to this directory
       Iso9660Directory *dot = new Iso9660Directory(String("."), m_Inode, m_pFs, m_pParent, m_Dir, m_AccessedTime, m_ModifiedTime, m_CreationTime);
       Iso9660Directory *dotdot = new Iso9660Directory(String(".."), m_Inode, m_pFs, m_pParent, m_Dir, m_AccessedTime, m_ModifiedTime, m_CreationTime);
-      m_Cache.insert(String("."), dot);
-      m_Cache.insert(String(".."), dotdot);
+      getCache().insert(String("."), dot);
+      getCache().insert(String(".."), dotdot);
     }
     else
     {
       // Non-root, . and .. should point to the correct locations
       Iso9660Directory *dot = new Iso9660Directory(String("."), m_Inode, m_pFs, m_pParent, m_Dir, m_AccessedTime, m_ModifiedTime, m_CreationTime);
-      m_Cache.insert(String("."), dot);
+      getCache().insert(String("."), dot);
 
       Iso9660Directory *dotdot = new Iso9660Directory(String(".."),
                                                     pParentDir->getInode(),
@@ -82,7 +82,7 @@ public:
                                                     pParentDir->getModifiedTime(),
                                                     pParentDir->getCreationTime()
                                                     );
-      m_Cache.insert(String(".."), dotdot);
+      getCache().insert(String(".."), dotdot);
     }
 
     // How big is the directory?
@@ -125,12 +125,12 @@ public:
         if(record->FileFlags & (1 << 1))
         {
           Iso9660Directory *dir = new Iso9660Directory(fileName, 0, m_pFs, this, *record, unixTime, unixTime, unixTime);
-          m_Cache.insert(fileName, dir);
+          getCache().insert(fileName, dir);
         }
         else
         {
           Iso9660File *file = new Iso9660File(fileName, unixTime, unixTime, unixTime, 0, m_pFs, LITTLE_TO_HOST32(record->DataLen_LE), *record, this);
-          m_Cache.insert(fileName, file);
+          getCache().insert(fileName, file);
         }
       }
 

@@ -155,7 +155,7 @@ bool Filesystem::remove(String path, File *pStartNode)
 
     bool bRemoved = remove(pParent, pFile);
     if (bRemoved)
-        pDParent->m_Cache.remove(filename);
+        pDParent->remove(filename);
     return bRemoved;
 }
 
@@ -237,13 +237,13 @@ File *Filesystem::findNode(File *pNode, String path)
 
     // Cache lookup.
     File *pFile;
-    if (!pDir->m_bCachePopulated)
+    if (!pDir->isCachePopulated())
     {
         // Directory contents not cached - cache them now.
         pDir->cacheDirectoryContents();
     }
 
-    pFile = pDir->m_Cache.lookup(path);
+    pFile = pDir->lookup(path);
     if (pFile)
     {
         // Cache lookup succeeded, recurse and return.

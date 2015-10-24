@@ -189,7 +189,7 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
     memcpy(pDir->d_name, static_cast<const char *>(filename), filename.length());
 
     // We're all good - add the directory to our cache.
-    m_Cache.insert(filename, pFile);
+    getCache().insert(filename, pFile);
 
     // Trigger write back to disk.
     NOTICE("writing back " << m_pBlocks[i]);
@@ -370,7 +370,7 @@ void Ext2Directory::cacheDirectoryContents()
             }
 
             // Add to cache.
-            m_Cache.insert(sFilename, pFile);
+            getCache().insert(sFilename, pFile);
 
             // Next.
             pDir = pNextDir;

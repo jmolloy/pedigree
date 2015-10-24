@@ -279,7 +279,7 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
       // add a directory entry with a name that does not match the VFS name (FAT
       // symlinks).
       if(m_bCachePopulated)
-        m_Cache.insert(pFile->getName(), pFile);
+        getCache().insert(pFile->getName(), pFile);
 
 #ifdef SUPERDEBUG
       NOTICE("  -> FatFilesystem::addEntry(" << filename << ") is successful");
@@ -376,7 +376,7 @@ bool FatDirectory::removeEntry(File *pFile)
 
   pFs->writeDirectoryEntry(dir, dirClus, dirOffset);
   if(m_bCachePopulated)
-    m_Cache.remove(real_filename);
+    getCache().remove(real_filename);
   return true;
 }
 
@@ -394,7 +394,7 @@ void FatDirectory::cacheDirectoryContents()
       NOTICE("Adding root directory");
     FatFileInfo info;
     info.creationTime = info.modifiedTime = info.accessedTime = 0;
-    m_Cache.insert(String("."), new FatDirectory(String("."), m_Inode, pFs, 0, info));
+    getCache().insert(String("."), new FatDirectory(String("."), m_Inode, pFs, 0, info));
     if(!m_bCachePopulated)
       m_bCachePopulated = true;
   }
@@ -516,7 +516,7 @@ void FatDirectory::cacheDirectoryContents()
         }
 
         // NOTICE("Inserting '" << filename << "'.");
-        m_Cache.insert(filename, pF);
+        getCache().insert(filename, pF);
         if(!m_bCachePopulated)
           m_bCachePopulated = true;
       }

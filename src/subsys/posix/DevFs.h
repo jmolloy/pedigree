@@ -107,7 +107,7 @@ class DevFsDirectory : public Directory
 
         void addEntry(String name, File *pFile)
         {
-            m_Cache.insert(name, pFile);
+            getCache().insert(name, pFile);
             m_bCachePopulated = true;
         }
 };

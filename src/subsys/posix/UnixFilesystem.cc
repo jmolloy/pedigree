@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -121,7 +120,7 @@ UnixDirectory::~UnixDirectory()
 bool UnixDirectory::addEntry(String filename, File *pFile)
 {
     LockGuard<Mutex> guard(m_Lock);
-    m_Cache.insert(filename, pFile);
+    getCache().insert(filename, pFile);
     return true;
 }
 
@@ -130,7 +129,7 @@ bool UnixDirectory::removeEntry(File *pFile)
     String filename = pFile->getName();
 
     LockGuard<Mutex> guard(m_Lock);
-    m_Cache.remove(filename);
+    getCache().remove(filename);
     return true;
 }
 
