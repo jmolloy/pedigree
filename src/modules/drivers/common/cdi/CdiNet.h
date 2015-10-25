@@ -56,6 +56,11 @@ class CdiNet : public Network
         virtual bool setStationInfo(StationInfo info);
         virtual StationInfo getStationInfo();
 
+        const struct cdi_net_device *getCdiDevice() const
+        {
+            return m_Device;
+        }
+
     private:
         CdiNet(const CdiNet&);
         const CdiNet & operator = (const CdiNet&);

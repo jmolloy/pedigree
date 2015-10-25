@@ -111,6 +111,29 @@ void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* device)
     Device::root().addChild(pCdiNet);
 }
 
+static CdiNet *findNet(Device *pRoot, struct cdi_net_device *device)
+{
+    for (size_t i = 0; i < pRoot->getNumChildren(); ++i)
+    {
+        Device *pChild = pRoot->getChild(i);
+
+        if (pChild->getType() == Device::Network)
+        {
+            if (pChild->getSpecificType() == "CDI NIC")
+            {
+                CdiNet *pNet = static_cast<CdiNet *>(pChild);
+                if (pNet->getCdiDevice() == device)
+                    return pNet;
+            }
+        }
+
+        CdiNet *ret = findNet(pChild, device);
+        if (ret)
+            return ret;
+    }
+
+    return 0;
+}
 
 /**
  * Wird von Netzwerktreibern aufgerufen, wenn ein Netzwerkpaket
@@ -118,7 +141,9 @@ void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* device)
  */
 void cdi_net_receive(struct cdi_net_device* device, void* buffer, size_t size)
 {
-    /// \todo need to figure out how to find the relevant device!
-    ERROR("cdi_net_receive: dropping packet on the floor, big TODO here");
-    // NetworkStack::instance().receive(size, reinterpret_cast<uintptr_t>(buffer), reinterpret_cast<Network*>(device->dev.backdev), 0);
+    // Find the needed device.
+    CdiNet *pNet = findNet(&Device::root(), device);
+
+    // Submit the packet.
+    NetworkStack::instance().receive(size, reinterpret_cast<uintptr_t>(buffer), pNet, 0);
 }
