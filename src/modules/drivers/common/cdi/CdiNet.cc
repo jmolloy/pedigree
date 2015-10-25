@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -38,7 +37,7 @@ CdiNet::CdiNet(Network* pDev, struct cdi_net_device* device) :
 
     /// \todo Check endianness - *should* be fine, but we'll see...
     uint64_t mac = m_Device->mac;
-    m_StationInfo.mac.setMac(reinterpret_cast<uint8_t*>(&mac), false);
+    m_StationInfo.mac.setMac(reinterpret_cast<uint16_t*>(&mac), false);
 
     NetworkStack::instance().registerDevice(this);
 }

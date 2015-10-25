@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -62,10 +61,10 @@ void Input::loadKeymapFromFile(const char *path)
     fseek(pFile, 0, SEEK_SET);
 
     // Read the file
-    uint8_t *pBuffer = new uint8_t [nLength];
+    uint32_t *pBuffer = new uint32_t [(nLength / sizeof(uint32_t)) + 1];
     fread(pBuffer, 1, nLength, pFile);
     fclose(pFile);
 
-    if(pedigree_load_keymap((char*)pBuffer, nLength))
+    if(pedigree_load_keymap(pBuffer, nLength))
         fprintf(stderr, "Input::loadKeymapFromFile: Error loading keymap\n");
 }

@@ -417,7 +417,7 @@ Nic3C90x::Nic3C90x(Network* pDev) :
     }
 
     /** Get the hardware address */
-    m_StationInfo.mac.setMac(reinterpret_cast<uint8_t*>(eeprom), true);
+    m_StationInfo.mac.setMac(eeprom, true);
     NOTICE("3C90x MAC: " <<
            m_StationInfo.mac[0] << ":" <<
            m_StationInfo.mac[1] << ":" <<
