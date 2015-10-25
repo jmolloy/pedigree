@@ -40,6 +40,7 @@ addons:
       - e2fsprogs
       - qemu
       - nasm
+      - uboot-mkimage
 cache:
   directories:
   - $HOME/.ccache
