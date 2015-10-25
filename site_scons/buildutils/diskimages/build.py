@@ -133,10 +133,12 @@ def buildDiskImages(env, config_database):
         libm,
         libload,
         libpthread,
-        libpedigree,
         libpedigree_c,
         libui,
     ]
+
+    if env['ARCH_TARGET'] != 'ARM':
+        fileList.append(libpedigree)
 
     if env['ARCH_TARGET'] in ['X86', 'X64']:
         fileList += [os.path.join(builddir, 'libSDL.so')]
