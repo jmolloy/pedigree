@@ -842,7 +842,7 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster, bool bLock)
     {
         m_FatLock.acquire();
 
-        fatBlocks = new uint32_t[(m_Superblock.BPB_BytsPerSec * 2) / sizeof(uint32_t)];
+        fatBlocks = new uint32_t[((m_Superblock.BPB_BytsPerSec * 2) / sizeof(uint32_t)) + 1];
         if(!readSectorBlock(m_FatSector + (fatOffset / m_Superblock.BPB_BytsPerSec), m_Superblock.BPB_BytsPerSec * 2, reinterpret_cast<uintptr_t>(fatBlocks)))
         {
             ERROR("FAT: getClusterEntry: reading from the FAT failed");
@@ -852,7 +852,7 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster, bool bLock)
         }
 
         m_FatCache.insert(fatOffset / m_Superblock.BPB_BytsPerSec, reinterpret_cast<uintptr_t>(fatBlocks));
-        m_FatCache.insert((fatOffset / m_Superblock.BPB_BytsPerSec) + 1, reinterpret_cast<uintptr_t>(fatBlocks + m_Superblock.BPB_BytsPerSec));
+        m_FatCache.insert((fatOffset / m_Superblock.BPB_BytsPerSec) + 1, reinterpret_cast<uintptr_t>(adjust_pointer(fatBlocks, m_Superblock.BPB_BytsPerSec)));
         NOTICE("FAT Cache now has " << m_FatCache.count() << " sectors.");
 
         m_FatLock.release();
