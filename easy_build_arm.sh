@@ -191,7 +191,7 @@ echo "Beginning the Pedigree build."
 echo
 
 # Build Pedigree.
-scons CROSS="$script_dir/compilers/dir/bin/arm-pedigree-" $ARM_SCONS_OPTS $TRAVIS_OPTIONS $*
+scons CROSS="$script_dir/compilers/dir/bin/arm-pedigree-" $ARM_SCONS_OPTS $TRAVIS_OPTIONS
 
 cd "$old"
 
