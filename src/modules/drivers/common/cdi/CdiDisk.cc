@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -28,7 +27,7 @@
 
 // Prototypes in the extern "C" block to ensure that they are not mangled
 extern "C" {
-    void cdi_cpp_disk_register(void* void_pdev, struct cdi_storage_device* device);
+    void cdi_cpp_disk_register(struct cdi_storage_device* device);
 
     int cdi_storage_read(struct cdi_storage_device* device, uint64_t pos, size_t size, void* dest);
     int cdi_storage_write(struct cdi_storage_device* device, uint64_t pos, size_t size, void* src);
@@ -36,6 +35,12 @@ extern "C" {
 
 CdiDisk::CdiDisk(Disk* pDev, struct cdi_storage_device* device) :
     Disk(pDev), m_Device(device), m_Cache()
+{
+    setSpecificType(String("CDI Disk"));
+}
+
+CdiDisk::CdiDisk(struct cdi_storage_device *device) :
+    Disk(), m_Device(device), m_Cache()
 {
     setSpecificType(String("CDI Disk"));
 }
@@ -106,21 +111,15 @@ void CdiDisk::write(uint64_t location)
         return;
 }
 
-void cdi_cpp_disk_register(void* void_pdev, struct cdi_storage_device* device)
+void cdi_cpp_disk_register(struct cdi_storage_device* device)
 {
-    Disk* pDev = reinterpret_cast<Disk*>(void_pdev);
-
     // Create a new CdiDisk node.
-    /// \todo I'm assuming pDev is invalid at this stage. This isn't necessarily
-    ///       correct, but it's a quick fix that should work for now. It will need
-    ///       to be fixed later!
-    CdiDisk *pCdiDisk = new CdiDisk(pDev, device);
+    CdiDisk *pCdiDisk = new CdiDisk(0, device);
     if(!pCdiDisk->initialise())
     {
         delete pCdiDisk;
         return;
     }
-    device->dev.backdev = reinterpret_cast<void*>(pCdiDisk);
 
     // Insert into the tree, properly
     pCdiDisk->setParent(&Device::root());

@@ -37,6 +37,7 @@
 class CdiNet : public Network
 {
     public:
+        CdiNet(struct cdi_net_device* device);
         CdiNet(Network* pDev, struct cdi_net_device* device);
         ~CdiNet();
 

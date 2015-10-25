@@ -38,6 +38,7 @@
 class CdiDisk : public Disk
 {
     public:
+        CdiDisk(struct cdi_storage_device *device);
         CdiDisk(Disk* pDev, struct cdi_storage_device* device);
         virtual ~CdiDisk();
 

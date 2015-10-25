@@ -42,6 +42,18 @@ CdiNet::CdiNet(Network* pDev, struct cdi_net_device* device) :
     NetworkStack::instance().registerDevice(this);
 }
 
+CdiNet::CdiNet(struct cdi_net_device* device) :
+    Network(), m_Device(device)
+{
+    setSpecificType(String("CDI NIC"));
+
+    /// \todo Check endianness - *should* be fine, but we'll see...
+    uint64_t mac = m_Device->mac;
+    m_StationInfo.mac.setMac(reinterpret_cast<uint16_t*>(&mac), false);
+
+    NetworkStack::instance().registerDevice(this);
+}
+
 CdiNet::~CdiNet()
 {
 }
@@ -91,15 +103,12 @@ bool CdiNet::setStationInfo(StationInfo info)
 
 void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* device)
 {
-    Network* pDev = reinterpret_cast<Network*>(void_pdev);
-
     // Create a new CdiNet node
-    CdiNet *pCdiNet = new CdiNet(pDev, device);
+    CdiNet *pCdiNet = new CdiNet(device);
 
     // Replace pDev with pCdiNet
-    pCdiNet->setParent(pDev->getParent());
-    pDev->getParent()->replaceChild(pDev, pCdiNet);
-    device->dev.backdev = reinterpret_cast<void*>(pCdiNet);
+    pCdiNet->setParent(&Device::root());
+    Device::root().addChild(pCdiNet);
 }
 
 
@@ -109,5 +118,7 @@ void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* device)
  */
 void cdi_net_receive(struct cdi_net_device* device, void* buffer, size_t size)
 {
-    NetworkStack::instance().receive(size, reinterpret_cast<uintptr_t>(buffer), reinterpret_cast<Network*>(device->dev.backdev), 0);
+    /// \todo need to figure out how to find the relevant device!
+    ERROR("cdi_net_receive: dropping packet on the floor, big TODO here");
+    // NetworkStack::instance().receive(size, reinterpret_cast<uintptr_t>(buffer), reinterpret_cast<Network*>(device->dev.backdev), 0);
 }
