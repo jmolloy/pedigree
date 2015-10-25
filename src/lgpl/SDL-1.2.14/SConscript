@@ -110,7 +110,9 @@ env_clone['CPPDEFINES'] += ['PEDIGREE']
 env_clone['ASFLAGS'] += ['-I%s/' % env.Dir('#src/lgpl/SDL-1.2.14/src/hermes').path]
 
 # Remove -Werror as SDL is an external package.
-buildutils.misc.removeFromAllFlags(env_clone, '-Werror')
+# Also remove some noisy warnings that we won't fix because this is an external
+# package.
+buildutils.misc.removeFromAllFlags(env_clone, ['-Werror', '-Wundef'])
 
 if env['ARCH_TARGET'] in ('X86', 'X64', 'ARM'):
     env_clone.SharedLibrary(sobjname, files, LINKFLAGS='')
