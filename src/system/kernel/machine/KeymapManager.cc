@@ -43,8 +43,8 @@ KeymapManager::KeymapManager() :
     m_bRightCtrl(false), m_bRightShift(false), m_bRightAlt(false),
     m_bCapsLock(false), m_nCombinator(0)
 {
-    void *sparseBuffer = __builtin_assume_aligned(sparseBuff, sizeof(void *));
-    void *dataBuffer = __builtin_assume_aligned(dataBuff, sizeof(void *));
+    void *sparseBuffer = ASSUME_ALIGNMENT(sparseBuff, sizeof(void *));
+    void *dataBuffer = ASSUME_ALIGNMENT(dataBuff, sizeof(void *));
 
     m_pSparseTable = reinterpret_cast<SparseEntry *>(sparseBuffer);
     m_pDataTable = reinterpret_cast<KeymapEntry *>(dataBuffer);
@@ -56,8 +56,8 @@ KeymapManager::~KeymapManager()
 
 void KeymapManager::useKeymap(uint8_t *pSparseTable, uint8_t *pDataTable)
 {
-    void *sparseBuffer = __builtin_assume_aligned(pSparseTable, sizeof(void *));
-    void *dataBuffer = __builtin_assume_aligned(pDataTable, sizeof(void *));
+    void *sparseBuffer = ASSUME_ALIGNMENT(pSparseTable, sizeof(void *));
+    void *dataBuffer = ASSUME_ALIGNMENT(pDataTable, sizeof(void *));
 
     // Set the table pointers
     m_pSparseTable = reinterpret_cast<SparseEntry *>(sparseBuffer);

@@ -17,6 +17,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <compiler.h>
 #include "poll-syscalls.h"
 #include <utilities/assert.h>
 
@@ -80,7 +81,7 @@ void PollEvent::fire()
 
 size_t PollEvent::serialize(uint8_t *pBuffer)
 {
-    void *alignedBuffer = __builtin_assume_aligned(pBuffer, sizeof(size_t));
+    void *alignedBuffer = ASSUME_ALIGNMENT(pBuffer, sizeof(size_t));
     size_t *pBuf = reinterpret_cast<size_t*>(alignedBuffer);
     pBuf[0] = EventNumbers::PollEvent;
     pBuf[1] = reinterpret_cast<size_t>(m_pSemaphore);
@@ -93,7 +94,7 @@ size_t PollEvent::serialize(uint8_t *pBuffer)
 
 bool PollEvent::unserialize(uint8_t *pBuffer, PollEvent &event)
 {
-    void *alignedBuffer = __builtin_assume_aligned(pBuffer, sizeof(size_t));
+    void *alignedBuffer = ASSUME_ALIGNMENT(pBuffer, sizeof(size_t));
     size_t *pBuf = reinterpret_cast<size_t*>(alignedBuffer);
     if (pBuf[0] != EventNumbers::PollEvent)
         return false;

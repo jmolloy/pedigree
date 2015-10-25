@@ -17,6 +17,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <compiler.h>
 #include <machine/InputManager.h>
 #include <LockGuard.h>
 #include <Log.h>
@@ -40,7 +41,7 @@ class InputEvent : public Event
 
         virtual size_t serialize(uint8_t *pBuffer)
         {
-            void *alignedBuffer = __builtin_assume_aligned(pBuffer, sizeof(uintptr_t));
+            void *alignedBuffer = ASSUME_ALIGNMENT(pBuffer, sizeof(uintptr_t));
             uintptr_t *buf = reinterpret_cast<uintptr_t*>(alignedBuffer);
             buf[0] = EventNumbers::InputEvent;
             buf[1] = m_nParam;
@@ -50,7 +51,7 @@ class InputEvent : public Event
 
         static bool unserialize(uint8_t *pBuffer, InputEvent &event)
         {
-            void *alignedBuffer = __builtin_assume_aligned(pBuffer, sizeof(uintptr_t));
+            void *alignedBuffer = ASSUME_ALIGNMENT(pBuffer, sizeof(uintptr_t));
             uintptr_t *buf = reinterpret_cast<uintptr_t*>(alignedBuffer);
             if(*buf != EventNumbers::InputEvent)
                 return false;

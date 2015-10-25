@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -50,6 +49,19 @@
 #define LIKELY(exp) __builtin_expect(!!(exp), 1)
 /** The expression is very unlikely to be true */
 #define UNLIKELY(exp) __builtin_expect(!!(exp), 0)
+/** This code is not reachable. */
+#define UNREACHABLE __builtin_unreachable()
+
+// Builtin checks.
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+
+#if __has_builtin(__builtin_assume_aligned) || defined(__GNUC__)
+#define ASSUME_ALIGNMENT(b, sz) __builtin_assume_aligned((b), sz)
+#else
+#define ASSUME_ALIGNMENT(b, sz) ((reinterpret_cast<uintptr_t>(b) % (sz)) == 0) ? (b) : (UNREACHABLE, (b))
+#endif
 
 /** Pack initialisation functions into a special section that could be freed after
  *  the kernel initialisation is finished */

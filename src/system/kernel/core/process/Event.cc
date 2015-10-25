@@ -17,6 +17,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <compiler.h>
 #include <process/Event.h>
 
 #include <Log.h>
@@ -43,7 +44,7 @@ bool Event::unserialize(uint8_t *pBuffer, Event &event)
 
 size_t Event::getEventType(uint8_t *pBuffer)
 {
-    void *alignedBuffer = __builtin_assume_aligned(pBuffer, sizeof(size_t));
+    void *alignedBuffer = ASSUME_ALIGNMENT(pBuffer, sizeof(size_t));
     size_t *pBufferSize_t = reinterpret_cast<size_t*> (alignedBuffer);
     return pBufferSize_t[0];
 }
