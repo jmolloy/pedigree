@@ -22,5 +22,5 @@ import os
 Import(['env', 'userspace_env'])
 
 SConscript(os.path.join('kernel', 'SConscript'), exports=['env'])
-SConscript(os.path.join('user', 'SConscript'), exports=['env', 'userspace_env'])
-
+if env['ARCH_TARGET'] != 'ARM':
+    SConscript(os.path.join('user', 'SConscript'), exports=['env', 'userspace_env'])
