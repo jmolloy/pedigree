@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -214,12 +213,12 @@ bool Ipv6::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uin
     if(dest.isMulticast())
     {
         // Need individual octets of the IPv6 address.
-        uint8_t ipv6[16];
-        dest.getIp(ipv6);
+        uint16_t ipv6[8];
+        dest.getIp(reinterpret_cast<uint8_t *>(ipv6));
 
         // Put together a link layer address for the address.
         /// \todo Ethernet-specific
-        uint8_t tmp[6] = {0x33, 0x33, ipv6[12], ipv6[13], ipv6[14], ipv6[15]};
+        uint16_t tmp[3] = {0x3333, ipv6[6], ipv6[7]};
         destMac.setMac(tmp);
 
         macValid = true;

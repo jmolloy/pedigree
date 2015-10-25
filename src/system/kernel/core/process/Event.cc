@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -44,6 +43,7 @@ bool Event::unserialize(uint8_t *pBuffer, Event &event)
 
 size_t Event::getEventType(uint8_t *pBuffer)
 {
-    size_t *pBufferSize_t = reinterpret_cast<size_t*> (pBuffer);
+    void *alignedBuffer = __builtin_assume_aligned(pBuffer, sizeof(size_t));
+    size_t *pBufferSize_t = reinterpret_cast<size_t*> (alignedBuffer);
     return pBufferSize_t[0];
 }

@@ -29,6 +29,10 @@ SECTIONS
         *(.init_array);
         *(.ctors);
         end_ctors = .;
+        start_dtors = .;
+        *(.dtors)
+        *(.fini_array);
+        end_dtors = .;
     
         start_module_ctors = .;
         *(.module_ctors);

@@ -181,9 +181,9 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_SIGPROCMASK:
             return posix_sigprocmask(static_cast<int>(p1), reinterpret_cast<const uint32_t*>(p2), reinterpret_cast<uint32_t*>(p3));
         case POSIX_ALARM:
-            return posix_alarm(static_cast<uint32_t>(p1));
+            return posix_alarm(p1);
         case POSIX_SLEEP:
-            return posix_sleep(static_cast<uint32_t>(p1));
+            return posix_sleep(p1);
         case POSIX_POLL:
             return posix_poll(reinterpret_cast<pollfd*>(p1), static_cast<unsigned int>(p2), static_cast<int>(p3));
         case POSIX_RENAME:

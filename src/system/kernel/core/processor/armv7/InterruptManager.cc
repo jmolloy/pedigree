@@ -162,6 +162,7 @@ uintptr_t ARMV7InterruptManager::syscall(Service_t service,
 }
 
 // Handles data aborts, but with a stack frame.
+void kdata_abort(InterruptState &state) NORETURN;
 void kdata_abort(InterruptState &state)
 {
 #ifdef DEBUGGER
@@ -235,6 +236,7 @@ void kdata_abort(InterruptState &state)
   while( 1 );
 }
 
+void kprefetch_abort(InterruptState &state) NORETURN;
 void kprefetch_abort(InterruptState &state)
 {
 #ifdef DEBUGGER
@@ -280,7 +282,7 @@ void kswi_handler(InterruptState &state)
 ///       the register saving ourselves before jumping into the kernel.
 extern "C" void arm_swint_handler(InterruptState &state);
 extern "C" void arm_instundef_handler()__attribute__((naked));
-extern "C" void arm_fiq_handler() __attribute__((interrupt("FIQ")));
+extern "C" void arm_fiq_handler() __attribute__((interrupt("FIQ"))) NORETURN;
 extern "C" void arm_irq_handler(InterruptState &state);
 extern "C" void arm_reset_handler() __attribute__((naked));
 extern "C" void arm_prefetch_abort_handler(InterruptState &state) __attribute__((naked));

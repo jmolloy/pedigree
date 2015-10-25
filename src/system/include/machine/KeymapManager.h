@@ -117,8 +117,8 @@ class KeymapManager
         static KeymapManager m_Instance;
 
         /// The sparse and data tables for the current keymap
-        uint8_t *m_pSparseTable;
-        uint8_t *m_pDataTable;
+        SparseEntry *m_pSparseTable;
+        KeymapEntry *m_pDataTable;
 
         /// State of the modifiers, true if down, false if up
         bool m_bLeftCtrl;

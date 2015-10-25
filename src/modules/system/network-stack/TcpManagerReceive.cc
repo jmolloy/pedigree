@@ -92,7 +92,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
       }
       if(code == 2) // MSS
       {
-        tcp_mss = BIG_TO_HOST16(*reinterpret_cast<uint16_t *>(&opts[2]));
+        tcp_mss = BIG_TO_HOST16((opts[2] << 8) | opts[3]);
       }
 
       offset += len;

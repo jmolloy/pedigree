@@ -508,7 +508,8 @@ void init_stage2()
 #elif defined(PPC_COMMON)
 #define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "linker", "network-stack", "users", "pedigree-c", "native"
 #elif defined(ARM_COMMON)
-#define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "linker", "network-stack", "users", "pedigree-c", "native"
+#define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "linker", \
+    "network-stack", "users", "pedigree-c", "native"
 #elif defined(HOSTED)
 #define __MOD_DEPS "vfs", "ext2", "fat", "partition", "network-stack", "users", "pedigree-c", "native", "posix"
 #endif

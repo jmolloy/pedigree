@@ -568,7 +568,8 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
             const char* pStr = m_pShstrtab + m_pSectionHeaders[i].name;
             if (!strcmp(pStr, ".debug_frame"))
             {
-                m_pDebugTable = reinterpret_cast<uint8_t*> (m_pSectionHeaders[i].addr);
+                m_pDebugTable = reinterpret_cast<uint32_t*> (m_pSectionHeaders[i].addr);
+                uintptr_t *debugTablePointers = reinterpret_cast<uintptr_t *>(m_pSectionHeaders[i].addr);
                 m_nDebugTableSize = m_pSectionHeaders[i].size;
 
                 /*  Go through the debug table relocating debug frame information
@@ -577,7 +578,8 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
                 while (nIndex < m_nDebugTableSize)
                 {
                     // Get the length of this entry.
-                    uint32_t nLength = * reinterpret_cast<uint32_t*> (m_pDebugTable+nIndex);
+                    assert(!(nIndex % sizeof(uint32_t)));
+                    uint32_t nLength = m_pDebugTable[nIndex / sizeof(uint32_t)];
 
                     nIndex += sizeof(uint32_t);
 
@@ -590,7 +592,7 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
                     }
 
                     // Get the type of this entry (or CIE pointer if this is a FDE).
-                    uint32_t nCie = * reinterpret_cast<uint32_t*> (m_pDebugTable+nIndex);
+                    uint32_t nCie = m_pDebugTable[nIndex / sizeof(uint32_t)];
                     nIndex += sizeof(uint32_t);
 
                     // Is this a CIE?
@@ -602,7 +604,8 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
                     }
 
                     // This is a FDE. Get its initial location.
-                    uintptr_t *nInitialLocation = reinterpret_cast<uintptr_t*> (m_pDebugTable+nIndex);
+                    assert(!(nIndex % sizeof(uintptr_t)));
+                    uintptr_t *nInitialLocation = &debugTablePointers[nIndex / sizeof(uintptr_t)];
                     *nInitialLocation+= loadBase;
 
                     nIndex += nLength - sizeof(processor_register_t);

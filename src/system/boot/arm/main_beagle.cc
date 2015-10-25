@@ -762,7 +762,8 @@ struct SecondLevelDescriptor
     } descriptor;
 } PACKED;
 
-extern "C" void __start(uint32_t r0, uint32_t machineType, struct atag *tagList)
+extern "C" void __start(uint32_t r0, uint32_t machineType, struct atag *tagList) __attribute__((noreturn));
+void __start(uint32_t r0, uint32_t machineType, struct atag *tagList)
 {
     BeagleGpio gpio;
 

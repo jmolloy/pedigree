@@ -29,6 +29,9 @@
 #endif /* !__rtems__ */
 
 // clock_t indicates nanoseconds
+#ifdef _CLOCKS_PER_SEC_
+#undef _CLOCKS_PER_SEC_
+#endif
 #define _CLOCKS_PER_SEC_            1000000000U
 
 #define _POSIX_MONOTONIC_CLOCK      1

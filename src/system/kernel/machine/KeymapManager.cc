@@ -38,12 +38,16 @@
 KeymapManager KeymapManager::m_Instance;
 
 KeymapManager::KeymapManager() :
-    m_pSparseTable(reinterpret_cast<uint8_t*>(sparseBuff)),
-    m_pDataTable(reinterpret_cast<uint8_t*>(dataBuff)),
+    m_pSparseTable(0), m_pDataTable(0),
     m_bLeftCtrl(false), m_bLeftShift(false), m_bLeftAlt(false),
     m_bRightCtrl(false), m_bRightShift(false), m_bRightAlt(false),
     m_bCapsLock(false), m_nCombinator(0)
 {
+    void *sparseBuffer = __builtin_assume_aligned(sparseBuff, sizeof(void *));
+    void *dataBuffer = __builtin_assume_aligned(dataBuff, sizeof(void *));
+
+    m_pSparseTable = reinterpret_cast<SparseEntry *>(sparseBuffer);
+    m_pDataTable = reinterpret_cast<KeymapEntry *>(dataBuffer);
 }
 
 KeymapManager::~KeymapManager()
@@ -52,9 +56,12 @@ KeymapManager::~KeymapManager()
 
 void KeymapManager::useKeymap(uint8_t *pSparseTable, uint8_t *pDataTable)
 {
+    void *sparseBuffer = __builtin_assume_aligned(pSparseTable, sizeof(void *));
+    void *dataBuffer = __builtin_assume_aligned(pDataTable, sizeof(void *));
+
     // Set the table pointers
-    m_pSparseTable = pSparseTable;
-    m_pDataTable = pDataTable;
+    m_pSparseTable = reinterpret_cast<SparseEntry *>(sparseBuffer);
+    m_pDataTable = reinterpret_cast<KeymapEntry *>(dataBuffer);
 
     // Make the HID input manager update all its keys
     HidInputManager::instance().updateKeys();
@@ -200,7 +207,7 @@ KeymapManager::KeymapEntry *KeymapManager::getKeymapEntry(bool bCtrl, bool bShif
     // Now walk the sparse tree
     size_t bisect = (KEYMAP_MAX_INDEX + 1) / 2;
     size_t size = (KEYMAP_MAX_INDEX + 1) / 2;
-    SparseEntry *pSparse = reinterpret_cast<SparseEntry*>(&m_pSparseTable[0]);
+    SparseEntry *pSparse = m_pSparseTable;
     size_t nDataIndex = 0;
     while(true)
     {
@@ -216,7 +223,7 @@ KeymapManager::KeymapEntry *KeymapManager::getKeymapEntry(bool bCtrl, bool bShif
             }
             size /= 2;
             bisect = bisect - size;
-            pSparse = reinterpret_cast<SparseEntry*>(&m_pSparseTable[pSparse->left]);
+            pSparse = &m_pSparseTable[pSparse->left / sizeof(SparseEntry)];
         }
         else
         {
@@ -230,12 +237,12 @@ KeymapManager::KeymapEntry *KeymapManager::getKeymapEntry(bool bCtrl, bool bShif
             }
             size /= 2;
             bisect = bisect + size;
-            pSparse = reinterpret_cast<SparseEntry*>(&m_pSparseTable[pSparse->right]);
+            pSparse = &m_pSparseTable[pSparse->right / sizeof(SparseEntry)];
         }
     }
 
     // Return the found keymap entry
-    return reinterpret_cast<KeymapEntry*>(&m_pDataTable[nDataIndex]);
+    return &m_pDataTable[nDataIndex / sizeof(KeymapEntry)];
 }
 
 // These tables originated from qemu

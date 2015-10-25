@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -71,8 +70,8 @@ private:
 
   struct ethernetHeader
   {
-    uint8_t   destMac[6];
-    uint8_t   sourceMac[6];
+    uint16_t  destMac[3];
+    uint16_t  sourceMac[3];
     uint16_t  type;
   } __attribute__ ((packed));
 

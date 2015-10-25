@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -87,7 +86,7 @@ void DwarfCfiAutomaton::executeInstruction (uintptr_t &nLocation, uintptr_t &nPc
     int32_t nOffset = static_cast<int32_t>(DwarfUnwinder::decodeUleb128(pLocation, nLocationOffset));
     nLocation += nLocationOffset;
     m_CurrentState.m_RegisterStates[nRegister] = DwarfState::Offset;
-    m_CurrentState.m_R[nRegister] = static_cast<ssize_t>(nOffset * m_nDataAlignmentFactor);
+    m_CurrentState.m_R[nRegister] = nOffset * m_nDataAlignmentFactor;
 //     NOTICE("DW_CFA_offset (r" << Dec << nRegister << ", " << Hex << nOffset * m_nDataAlignmentFactor << ")");
   }
   else if ((pLocation[0] & 0xc0) == DW_CFA_restore)
@@ -203,7 +202,7 @@ void DwarfCfiAutomaton::executeInstruction (uintptr_t &nLocation, uintptr_t &nPc
       nLocation += nLocationOffset;
 
       m_CurrentState.m_RegisterStates[nRegister] = DwarfState::Offset;
-      m_CurrentState.m_R[nRegister] = static_cast<ssize_t>(nOffset * m_nDataAlignmentFactor);
+      m_CurrentState.m_R[nRegister] = nOffset * m_nDataAlignmentFactor;
 //      NOTICE("DW_CFA_offset_extended_sf (r" << Dec << nRegister << ", " << Hex << nOffset * m_nDataAlignmentFactor << ")");
       break;
     }

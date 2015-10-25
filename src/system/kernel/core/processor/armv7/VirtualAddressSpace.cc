@@ -645,9 +645,3 @@ void ArmV7KernelVirtualAddressSpace::unmap(void *virtualAddress)
 {
   doUnmap(virtualAddress);
 }
-void *ArmV7KernelVirtualAddressSpace::allocateStack()
-{
-  void *pStack = doAllocateStack(KERNEL_STACK_SIZE + 0x1000);
-
-  return pStack;
-}

@@ -40,7 +40,8 @@ class InputEvent : public Event
 
         virtual size_t serialize(uint8_t *pBuffer)
         {
-            uintptr_t *buf = reinterpret_cast<uintptr_t*>(pBuffer);
+            void *alignedBuffer = __builtin_assume_aligned(pBuffer, sizeof(uintptr_t));
+            uintptr_t *buf = reinterpret_cast<uintptr_t*>(alignedBuffer);
             buf[0] = EventNumbers::InputEvent;
             buf[1] = m_nParam;
             memcpy(&buf[2], &m_Notification, sizeof(InputManager::InputNotification));
@@ -49,7 +50,8 @@ class InputEvent : public Event
 
         static bool unserialize(uint8_t *pBuffer, InputEvent &event)
         {
-            uintptr_t *buf = reinterpret_cast<uintptr_t*>(pBuffer);
+            void *alignedBuffer = __builtin_assume_aligned(pBuffer, sizeof(uintptr_t));
+            uintptr_t *buf = reinterpret_cast<uintptr_t*>(alignedBuffer);
             if(*buf != EventNumbers::InputEvent)
                 return false;
 

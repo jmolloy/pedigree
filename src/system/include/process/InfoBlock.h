@@ -20,7 +20,11 @@
 #ifndef _INFO_BLOCK_H
 #define _INFO_BLOCK_H
 
+#ifdef __cplusplus
+
 #include <processor/types.h>
+
+#endif
 
 struct InfoBlock
 {

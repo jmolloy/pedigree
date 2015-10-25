@@ -344,7 +344,6 @@ class ArmV7KernelVirtualAddressSpace : public ArmV7VirtualAddressSpace
                             size_t &flags);
     virtual void setFlags(void *virtualAddress, size_t newFlags);
     virtual void unmap(void *virtualAddress);
-    virtual void *allocateStack();
 
     virtual bool initialiseKernelAddressSpace();
 

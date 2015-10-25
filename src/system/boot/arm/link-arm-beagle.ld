@@ -10,8 +10,8 @@ SECTIONS
     {
         . = ALIGN(4096);
         *(.init)
-    }    
-    
+    }
+
     .text :
     {
         . = ALIGN(4096);
@@ -25,6 +25,9 @@ SECTIONS
         start_ctors = .;
         *(.ctors*)
         end_ctors = .;
+        start_dtors = .;
+        *(.dtors)
+        end_dtors = .;
 
         data = .; _data = .; __data = .;
         *(.data*)

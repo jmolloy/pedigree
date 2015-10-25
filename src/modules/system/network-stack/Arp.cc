@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -50,7 +49,7 @@ bool Arp::getFromCache(IpAddress ip, bool resolve, MacAddress* ent, Network* pCa
 
   // do we have an entry for it yet?
   arpEntry* arpEnt;
-  if((arpEnt = m_ArpCache.lookup(static_cast<uintptr_t>(ip.getIp()))) != 0)
+  if((arpEnt = m_ArpCache.lookup(ip.getIp())) != 0)
   {
     *ent = arpEnt->mac;
     return true;

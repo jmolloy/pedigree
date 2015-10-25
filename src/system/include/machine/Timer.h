@@ -21,6 +21,7 @@
 #define KERNEL_MACHINE_TIMER_H
 
 #include <processor/types.h>
+#include <utilities/assert.h>
 #include <machine/TimerHandler.h>
 
 /** @addtogroup kernelmachine

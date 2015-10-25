@@ -36,13 +36,13 @@ FatSymlink::FatSymlink(String name, Time::Timestamp accessedTime, Time::Timestam
 
 uint64_t FatSymlink::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
-    FatFilesystem *pFs = reinterpret_cast<FatFilesystem*>(m_pFilesystem);
+    FatFilesystem *pFs = static_cast<FatFilesystem*>(m_pFilesystem);
     return pFs->read(this, location, size, buffer);
 }
 
 uint64_t FatSymlink::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
-    FatFilesystem *pFs = reinterpret_cast<FatFilesystem*>(m_pFilesystem);
+    FatFilesystem *pFs = static_cast<FatFilesystem*>(m_pFilesystem);
     uint64_t ret = pFs->write(this, location, size, buffer);
 
     // Reset the symlink target.

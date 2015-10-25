@@ -830,7 +830,7 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster, bool bLock)
     {
         Scheduler::instance().yield();
     }
-    uint8_t *fatBlocks = reinterpret_cast<uint8_t*>(m_FatCache.lookup(fatOffset / m_Superblock.BPB_BytsPerSec));
+    uint32_t *fatBlocks = reinterpret_cast<uint32_t*>(m_FatCache.lookup(fatOffset / m_Superblock.BPB_BytsPerSec));
     m_FatLock.leave();
 
     if(fatBlocks && (m_Type == FAT12))
@@ -842,7 +842,7 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster, bool bLock)
     {
         m_FatLock.acquire();
 
-        fatBlocks = new uint8_t[m_Superblock.BPB_BytsPerSec * 2];
+        fatBlocks = new uint32_t[(m_Superblock.BPB_BytsPerSec * 2) / sizeof(uint32_t)];
         if(!readSectorBlock(m_FatSector + (fatOffset / m_Superblock.BPB_BytsPerSec), m_Superblock.BPB_BytsPerSec * 2, reinterpret_cast<uintptr_t>(fatBlocks)))
         {
             ERROR("FAT: getClusterEntry: reading from the FAT failed");
@@ -860,7 +860,8 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster, bool bLock)
 
     // read from cache
     fatOffset %= m_Superblock.BPB_BytsPerSec;
-    uint32_t fatEntry = * reinterpret_cast<uint32_t*> (&fatBlocks[fatOffset]);
+    fatOffset /= sizeof(uint32_t);
+    uint32_t fatEntry = fatBlocks[fatOffset];
 
     /// \todo
     //delete [] fatBlocks;
@@ -927,7 +928,7 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value, bool b
 //    uint8_t *fatBlocks = new uint8_t[m_Superblock.BPB_BytsPerSec * 2];
 
 
-    uint8_t *fatBlocks = reinterpret_cast<uint8_t*>(m_FatCache.lookup(fatOffset / m_Superblock.BPB_BytsPerSec));
+    uint32_t *fatBlocks = reinterpret_cast<uint32_t*>(m_FatCache.lookup(fatOffset / m_Superblock.BPB_BytsPerSec));
     if(fatBlocks && (m_Type == FAT12))
     {
         FATAL("Ooer missus, work needed here");
@@ -942,6 +943,7 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value, bool b
 
     uint32_t oldOffset = fatOffset;
     fatOffset %= m_Superblock.BPB_BytsPerSec;
+    fatOffset /= sizeof(uint32_t);
 
     uint32_t origEnt = ent;
     uint32_t setEnt = value;
@@ -970,7 +972,7 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value, bool b
 
             setEnt = origEnt | value;
 
-            * reinterpret_cast<uint16_t*> (&fatBlocks[fatOffset]) = setEnt;
+            fatBlocks[fatOffset] = setEnt;
 
             break;
 
@@ -978,7 +980,7 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value, bool b
 
             setEnt = value;
 
-            * reinterpret_cast<uint16_t*> (&fatBlocks[fatOffset]) = setEnt;
+            fatBlocks[fatOffset] = setEnt;
 
             break;
 
@@ -988,7 +990,7 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value, bool b
             setEnt = origEnt & 0xF0000000;
             setEnt |= value;
 
-            * reinterpret_cast<uint32_t*> (&fatBlocks[fatOffset]) = setEnt;
+            fatBlocks[fatOffset] = setEnt;
 
             break;
     }

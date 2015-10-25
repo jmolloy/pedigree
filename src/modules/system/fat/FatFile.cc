@@ -45,7 +45,7 @@ FatFile::~FatFile()
 
 uintptr_t FatFile::readBlock(uint64_t location)
 {
-    FatFilesystem *pFs = reinterpret_cast<FatFilesystem*>(m_pFilesystem);
+    FatFilesystem *pFs = static_cast<FatFilesystem*>(m_pFilesystem);
 
     m_FileBlockCache.startAtomic();
     uintptr_t buffer = m_FileBlockCache.insert(location);
@@ -74,7 +74,7 @@ uintptr_t FatFile::readBlock(uint64_t location)
 
 void FatFile::writeBlock(uint64_t location, uintptr_t addr)
 {
-    FatFilesystem *pFs = reinterpret_cast<FatFilesystem*>(m_pFilesystem);
+    FatFilesystem *pFs = static_cast<FatFilesystem*>(m_pFilesystem);
 
     // Don't accidentally extend the file when writing the block.
     size_t sz = getBlockSize();
@@ -101,7 +101,7 @@ void FatFile::unpinBlock(uint64_t location)
 
 void FatFile::extend(size_t newSize)
 {
-    FatFilesystem *pFs = reinterpret_cast<FatFilesystem*>(m_pFilesystem);
+    FatFilesystem *pFs = static_cast<FatFilesystem*>(m_pFilesystem);
 
     if(m_Size < newSize)
     {

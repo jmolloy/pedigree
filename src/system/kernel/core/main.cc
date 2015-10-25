@@ -208,8 +208,8 @@ int loadModules(void *inf)
 
     // Call static constructors before we start. If we don't... there won't be
     // any properly initialised ModuleInfo structures :)
-    uintptr_t *iterator = reinterpret_cast<uintptr_t*>(&start_module_ctors);
-    while (iterator < reinterpret_cast<uintptr_t*>(&end_module_ctors))
+    uintptr_t *iterator = &start_module_ctors;
+    while (iterator < &end_module_ctors)
     {
         void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
         fp();

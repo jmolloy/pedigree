@@ -41,16 +41,17 @@ const char *ARMV7InterruptStateRegisterName[17] =
 };
 
 ARMV7InterruptState::ARMV7InterruptState() :
-    m_spsr(), m_r0(), m_r1(), m_r2(), m_r3(), m_r4(), m_r5(), m_r6(), m_r7(),
-    m_r8(), m_r9(), m_r10(), m_r11(), m_r12(), m_lr(), m_pc()
+    m_usersp(), m_userlr(), m_r0(), m_r1(), m_r2(), m_r3(), m_r4(), m_r5(),
+    m_r6(), m_r7(), m_r8(), m_r9(), m_r10(), m_r11(), m_r12(), m_lr(), m_pc(),
+    m_spsr()
 {
 }
 
 ARMV7InterruptState::ARMV7InterruptState(const ARMV7InterruptState &is) :
-    m_spsr(is.m_spsr), m_r0(is.m_r0), m_r1(is.m_r1), m_r2(is.m_r2),
-    m_r3(is.m_r3), m_r4(is.m_r4), m_r5(is.m_r5), m_r6(is.m_r6), m_r7(is.m_r7),
-    m_r8(is.m_r8), m_r9(is.m_r9), m_r10(is.m_r10), m_r11(is.m_r11),
-    m_r12(is.m_r12), m_lr(is.m_lr), m_pc(is.m_pc)
+    m_usersp(is.m_usersp), m_userlr(is.m_userlr), m_r0(is.m_r0), m_r1(is.m_r1),
+    m_r2(is.m_r2), m_r3(is.m_r3), m_r4(is.m_r4), m_r5(is.m_r5), m_r6(is.m_r6),
+    m_r7(is.m_r7), m_r8(is.m_r8), m_r9(is.m_r9), m_r10(is.m_r10), m_r11(is.m_r11),
+    m_r12(is.m_r12), m_lr(is.m_lr), m_pc(is.m_pc), m_spsr(is.m_spsr)
 {
 }
 

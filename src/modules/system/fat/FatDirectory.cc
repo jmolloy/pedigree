@@ -70,7 +70,7 @@ FatDirectory::~FatDirectory()
 
 void FatDirectory::setInode(uintptr_t inode)
 {
-  FatFilesystem *pFs = reinterpret_cast<FatFilesystem *>(m_pFilesystem);
+  FatFilesystem *pFs = static_cast<FatFilesystem *>(m_pFilesystem);
   m_Inode = inode;
   uintptr_t clus = m_Inode;
 
@@ -90,7 +90,7 @@ void FatDirectory::setInode(uintptr_t inode)
 
 bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
 {
-  FatFilesystem *pFs = reinterpret_cast<FatFilesystem *>(m_pFilesystem);
+  FatFilesystem *pFs = static_cast<FatFilesystem *>(m_pFilesystem);
 
 #ifdef SUPERDEBUG
   NOTICE("FatDirectory::addEntry(" << filename << ")");
@@ -382,7 +382,7 @@ bool FatDirectory::removeEntry(File *pFile)
 
 void FatDirectory::cacheDirectoryContents()
 {
-  FatFilesystem *pFs = reinterpret_cast<FatFilesystem *>(m_pFilesystem);
+  FatFilesystem *pFs = static_cast<FatFilesystem *>(m_pFilesystem);
 
   LockGuard<Mutex> guard(m_Lock);
 

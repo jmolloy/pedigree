@@ -259,14 +259,14 @@ void pedigree_input_remove_callback(void *p)
         Processor::information().getCurrentThread());
 }
 
-int pedigree_load_keymap(char *buf, size_t len)
+int pedigree_load_keymap(uint32_t *buf, size_t len)
 {
     // File format:  0    Sparse tree offset
     //               4    Data tree offset
     //               ...  Sparse tree & data tree.
 
-    uint32_t sparseTableOffset  = *reinterpret_cast<uint32_t*>(&buf[0]);
-    uint32_t dataTableOffset    = *reinterpret_cast<uint32_t*>(&buf[4]);
+    uint32_t sparseTableOffset  = buf[0];
+    uint32_t dataTableOffset    = buf[1];
     uint32_t sparseTableSize    = dataTableOffset - sparseTableOffset;
     uint32_t dataTableSize      = len - dataTableOffset;
 

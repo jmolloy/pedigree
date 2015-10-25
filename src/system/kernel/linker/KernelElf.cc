@@ -185,7 +185,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
         }
         else if (!strcmp(pStr, ".debug_frame"))
         {
-            m_pDebugTable = extend(reinterpret_cast<uint8_t*> (pSh->addr));
+            m_pDebugTable = extend(reinterpret_cast<uint32_t*> (pSh->addr));
             m_nDebugTableSize = pSh->size;
         }
     }
@@ -327,7 +327,10 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
     //  Load the module debug table (if any)
     if(module->elf.debugFrameTableLength())
     {
-        uint8_t*  pDebug = new uint8_t[m_nDebugTableSize + module->elf.debugFrameTableLength()];
+        size_t sz = m_nDebugTableSize + module->elf.debugFrameTableLength();
+        if (sz % sizeof(uint32_t))
+            sz += sizeof(uint32_t);
+        uint32_t*  pDebug = new uint32_t[sz / sizeof(uint32_t)];
         if(UNLIKELY(!pDebug))
         {
             ERROR ("Could not load module debug frame information.");

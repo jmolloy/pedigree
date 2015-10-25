@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -19,3 +18,97 @@
  */
 
 #include <network/MacAddress.h>
+
+MacAddress::MacAddress() :
+    m_Mac(), m_Valid(false)
+{
+    memset(m_Mac, 0, 6);
+}
+
+void MacAddress::setMac(uint8_t byte, size_t element)
+{
+  uint16_t word = byte;
+  if (element % 2)
+  {
+    word <<= 8;
+  }
+
+  element /= 2;
+
+  if(element < 3)
+  {
+    m_Mac[element] |= byte;
+    m_Valid = true; // it has at least a byte, which makes it partially valid
+  }
+}
+
+void MacAddress::setMac(uint8_t element)
+{
+  memset(m_Mac, element, 6);
+  m_Valid = true;
+}
+
+void MacAddress::setMac(const uint16_t* data, bool bSwap)
+{
+  if(bSwap)
+  {
+    size_t i;
+    for(i = 0; i < 3; i++)
+      m_Mac[i] = BIG_TO_HOST16(data[i]);
+  }
+  else
+    memcpy(m_Mac, data, 6);
+
+  m_Valid = true;
+};
+
+uint8_t MacAddress::getMac(size_t element) const
+{
+  size_t realElement = element / 2;
+  if (realElement >= 3)
+    return 0;
+
+  uint16_t word = m_Mac[realElement];
+  if (element % 2)
+    return word >> 8;
+  else
+    return word & 0xFF;
+};
+
+const uint16_t* MacAddress::getMac() const
+{
+  return m_Mac;
+};
+
+uint8_t MacAddress::operator [] (size_t offset) const
+{
+  if(m_Valid)
+    return getMac(offset);
+  else
+    return 0;
+};
+
+MacAddress& MacAddress::operator = (const MacAddress &a)
+{
+  if(a.valid())
+    setMac(a.getMac());
+  return *this;
+}
+
+MacAddress& MacAddress::operator = (const uint16_t* a)
+{
+  setMac(a);
+  return *this;
+}
+
+String MacAddress::toString()
+{
+    NormalStaticString str;
+    for(int i = 0; i < 6; i++)
+    {
+        str.append(getMac(i), 16, 2, '0');
+        if(i < 5)
+            str += ":";
+    }
+    return String(static_cast<const char*>(str));
+}

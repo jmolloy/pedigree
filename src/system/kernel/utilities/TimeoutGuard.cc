@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -18,6 +17,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <compiler.h>
 #include <utilities/TimeoutGuard.h>
 #ifdef THREADS
 #include <process/Thread.h>
@@ -112,7 +112,8 @@ TimeoutGuard::TimeoutGuardEvent::~TimeoutGuardEvent()
 
 size_t TimeoutGuard::TimeoutGuardEvent::serialize(uint8_t *pBuffer)
 {
-    size_t *pBufferSize_t = reinterpret_cast<size_t*> (pBuffer);
+    void *alignedBuffer = __builtin_assume_aligned(pBuffer, sizeof(size_t));
+    size_t *pBufferSize_t = reinterpret_cast<size_t*> (alignedBuffer);
     pBufferSize_t[0] = EventNumbers::TimeoutGuard;
     pBufferSize_t[1] = reinterpret_cast<size_t> (m_pTarget);
     return 2*sizeof(size_t);
@@ -120,7 +121,8 @@ size_t TimeoutGuard::TimeoutGuardEvent::serialize(uint8_t *pBuffer)
 
 bool TimeoutGuard::TimeoutGuardEvent::unserialize(uint8_t *pBuffer, TimeoutGuardEvent &event)
 {
-    size_t *pBufferSize_t = reinterpret_cast<size_t*> (pBuffer);
+    void *alignedBuffer = __builtin_assume_aligned(pBuffer, sizeof(size_t));
+    size_t *pBufferSize_t = reinterpret_cast<size_t*> (alignedBuffer);
     if (pBufferSize_t[0] != EventNumbers::TimeoutGuard)
         return false;
     event.m_pTarget = reinterpret_cast<TimeoutGuard*> (pBufferSize_t[1]);

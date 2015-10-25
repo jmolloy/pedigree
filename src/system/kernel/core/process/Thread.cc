@@ -86,7 +86,9 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
 
   // Add to the scheduler
   if(!bDontPickCore)
+  {
       ProcessorThreadAllocator::instance().addThread(this, pStartFunction, pParam, bUserMode, pStack);
+  }
   else
   {
       Scheduler::instance().addThread(this, Processor::information().getScheduler());
@@ -490,7 +492,11 @@ uintptr_t Thread::getTlsBase()
           NOTICE("Thread [" << Dec << m_pParent->getId() << ":" << m_Id << Hex << "]: allocated TLS area at " << reinterpret_cast<uintptr_t>(m_pTlsBase->virtualAddress()) << ".");
           
           uint32_t *tlsBase = reinterpret_cast<uint32_t*>(m_pTlsBase->virtualAddress());
+#ifdef BITS_64
           *tlsBase = static_cast<uint32_t>(m_Id);
+#else
+          *tlsBase = m_Id;
+#endif
         }
     }
     return reinterpret_cast<uintptr_t>(m_pTlsBase->virtualAddress());

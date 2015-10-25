@@ -32,9 +32,7 @@ bool appleProbeDisk(Disk *pDisk)
     return false;
   }
 
-  uint8_t *buffer = reinterpret_cast<uint8_t*>(buff);
-
-  ApplePartitionMap *pMap = reinterpret_cast<ApplePartitionMap*> (buffer);
+  ApplePartitionMap *pMap = reinterpret_cast<ApplePartitionMap*> (buff);
 
   String diskName;
   pDisk->getName(diskName);

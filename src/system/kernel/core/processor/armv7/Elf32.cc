@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -55,7 +54,7 @@ bool Elf::applyRelocation(ElfRel_t rel, ElfSectionHeader_t *pSh, SymbolTable *pS
   uint32_t S = 0;
   ElfSymbol_t *pSymbols = 0;
   if (!m_pDynamicSymbolTable)
-    pSymbols = reinterpret_cast<ElfSymbol_t*> (m_pSymbolTable);
+    pSymbols = m_pSymbolTable;
   else
     pSymbols = m_pDynamicSymbolTable;
 

@@ -67,10 +67,9 @@ void Dm9601::initialiseDriver()
         return;
     }
 
-    uint8_t *pMac = new uint8_t[6];
-    *reinterpret_cast<uint16_t*>(&pMac[0]) = readEeprom(0);
-    *reinterpret_cast<uint16_t*>(&pMac[2]) = readEeprom(1);
-    *reinterpret_cast<uint16_t*>(&pMac[4]) = readEeprom(2);
+    uint16_t *pMac = new uint16_t[3];
+    for (size_t i = 0; i < 3; ++i)
+        pMac[i] = readEeprom(i);
     m_StationInfo.mac.setMac(pMac, false);
 
     NOTICE("DM9601: MAC " << pMac[0] << ":" << pMac[1] << ":" << pMac[2] << ":" <<
@@ -197,9 +196,9 @@ bool Dm9601::send(size_t nBytes, uintptr_t buffer)
         txSize++;
 
     // Transmit endpoint
-    uint8_t *pBuffer = new uint8_t[txSize];
-    *reinterpret_cast<uint16_t*>(pBuffer) = HOST_TO_LITTLE16(static_cast<uint16_t>(nBytes));
-    memcpy(&pBuffer[2], reinterpret_cast<void*>(buffer), nBytes);
+    uint16_t *pBuffer = new uint16_t[(txSize / sizeof(uint16_t)) + 1];
+    *pBuffer = HOST_TO_LITTLE16(static_cast<uint16_t>(nBytes));
+    memcpy(&pBuffer[1], reinterpret_cast<void*>(buffer), nBytes);
 
     ssize_t ret = syncOut(m_pOutEndpoint, reinterpret_cast<uintptr_t>(pBuffer), txSize);
     delete [] pBuffer;
@@ -231,7 +230,7 @@ void Dm9601::doReceive()
 
     uint8_t *pBuffer = reinterpret_cast<uint8_t*>(buff);
     uint8_t rxstatus = pBuffer[0];
-    uint16_t len = LITTLE_TO_HOST16(*reinterpret_cast<uint16_t*>(&pBuffer[1])) - 4;
+    uint16_t len = LITTLE_TO_HOST16(*reinterpret_cast<uint16_t*>(buff + 1)) - 4;
 
     if(rxstatus & 0x3F)
     {

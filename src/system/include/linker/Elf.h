@@ -449,7 +449,7 @@ class Elf
         ElfRel_t             *m_pPltRelTable;
         ElfRela_t            *m_pPltRelaTable;
         bool                  m_bUsesRela; // If PltRelaTable is valid, else PltRelTable is.
-        uint8_t              *m_pDebugTable;
+        uint32_t             *m_pDebugTable;
         size_t                m_nDebugTableSize;
         ElfSymbol_t          *m_pDynamicSymbolTable;
         size_t                m_nDynamicSymbolTableSize;

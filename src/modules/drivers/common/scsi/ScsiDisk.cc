@@ -388,7 +388,8 @@ uint64_t ScsiDisk::doRead(uint64_t location)
 
         uint16_t i;
         bool bHaveTrack = false;
-        uint16_t bufLen = BIG_TO_HOST16(*reinterpret_cast<uint16_t*>(toc));
+        /// \todo endianness issue?
+        uint16_t bufLen = BIG_TO_HOST16((toc[0] << 8) | toc[1]);
         ScsiCommands::ReadTocCommand::TocEntry *Toc = reinterpret_cast<ScsiCommands::ReadTocCommand::TocEntry*>(toc + 4);
         for(i = 0; i < (bufLen / 8); i++)
         {
