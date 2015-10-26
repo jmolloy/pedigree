@@ -429,6 +429,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   }
 }
 
+void system_reset() NORETURN;
 void system_reset()
 {
     NOTICE("Resetting...");
@@ -436,4 +437,5 @@ void system_reset()
     NOTICE("All modules unloaded. Running destructors and terminating...");
     runKernelDestructors();
     Processor::reset();
+    while(1);
 }

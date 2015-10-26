@@ -240,12 +240,12 @@ const char *strchr(const char *str, int target)
 }
 
 #ifdef HOSTED
-unsigned long __wrap_strtoul(const char *nptr, char **endptr, int base)
+unsigned long __wrap_strtoul(const char *nptr, char const **endptr, int base)
 {
   const char *wrap;
   unsigned long r = pedigree_strtoul(nptr, &wrap, base);
   if (endptr)
-    *endptr = *wrap;
+    *endptr = wrap;
   return r;
 }
 

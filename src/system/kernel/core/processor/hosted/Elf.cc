@@ -76,7 +76,7 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
     uint64_t S = 0;
     ElfSymbol_t *pSymbols = 0;
     if (!m_pDynamicSymbolTable)
-        pSymbols = reinterpret_cast<ElfSymbol_t*> (m_pSymbolTable);
+        pSymbols = m_pSymbolTable;
     else
         pSymbols = m_pDynamicSymbolTable;
 

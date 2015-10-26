@@ -322,7 +322,7 @@ class Processor
     #if defined(HOSTED)
       /** Implementation of breakpoint(), reset(), haltUntilInterrupt() */
       static void _breakpoint();
-      static void _reset();
+      static void _reset() NORETURN;
       static void _haltUntilInterrupt();
 
       static bool m_bInterrupts;
