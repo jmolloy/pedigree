@@ -415,14 +415,14 @@ size_t SlamCache::recovery(size_t maxSlabs)
                 alignedNode pCopyNode = pNode;
 
                 // Copy tags for comparison if needed.
-                alignedNode headSnapshot = m_PartialLists[thisCpu];
+                alignedNode headSnapshot = untagged(m_PartialLists[thisCpu]);
 
                 // This CPU's lists can't be touched right now (interrupts off),
                 // so this is safe to do.
-                if (untagged(headSnapshot) == pNode)
+                if (headSnapshot == pNode)
                     m_PartialLists[thisCpu] = touch_tag(pNodeNext);
-                else if (untagged(untagged(headSnapshot)->next) == pNode)
-                    untagged(headSnapshot)->next = touch_tag(pNodeNext);
+                else if (untagged(headSnapshot->next) == pNode)
+                    headSnapshot->next = touch_tag(pNodeNext);
             }
 
             // Kill off the slab!
