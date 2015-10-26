@@ -246,4 +246,5 @@ def buildImageE2fsprogs(target, source, env):
     ])
 
     # Finish.
-    os.rename(temp, outFile)
+    # shutil.move handles cross-filesystem moves correctly (good).
+    shutil.move(temp, outFile)
