@@ -71,10 +71,10 @@
 
 /// Adds magic numbers to the start of free blocks, to check for
 /// buffer overruns.
-#ifndef USE_DEBUG_ALLOCATOR
-#define OVERRUN_CHECK                   1
-#else
+#ifdef USE_DEBUG_ALLOCATOR
 #define OVERRUN_CHECK                   0
+#else
+#define OVERRUN_CHECK                   1
 #endif
 
 /// Adds magic numbers to the start and end of allocated chunks, increasing

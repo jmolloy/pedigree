@@ -34,19 +34,27 @@
 #include <SlamCommand.h>
 #endif
 
+#ifdef MULTIPROCESSOR
+#define ATOMIC_MEMORY_ORDER __ATOMIC_RELEASE
+#define ATOMIC_CAS_WEAK     true
+#else
+#define ATOMIC_MEMORY_ORDER __ATOMIC_RELAXED
+#define ATOMIC_CAS_WEAK     true
+#endif
+
 #ifndef BENCHMARK
 SlamAllocator SlamAllocator::m_Instance;
 #endif
 
 template<typename T>
-T *untagged(T *p)
+inline T *untagged(T *p)
 {
     /// \todo this now requires 64-bit pointers everywhere.
     // All heap pointers begin with 32 bits of ones. So we shove a tag there.
     uintptr_t ptr = reinterpret_cast<uintptr_t>(p);
 #ifdef BENCHMARK
-    // Tags in the top 32-bits, we only operate in 32-bit address space.
-    ptr &= 0xFFFFFFFFULL;
+    // Top four bits available to us (addresses from 0 -> 0x00007FFFFFFFFFFF).
+    ptr &= ~0xFFFF000000000000ULL;
 #else
     ptr |= 0xFFFFFFFF00000000ULL;
 #endif
@@ -54,19 +62,27 @@ T *untagged(T *p)
 }
 
 template<typename T>
-T *tagged(T *p)
+inline T *tagged(T *p)
 {
     uintptr_t ptr = reinterpret_cast<uintptr_t>(p);
+#ifdef BENCHMARK
+    ptr &= 0xFFFFFFFFFFFFULL;
+#else
     ptr &= 0xFFFFFFFFULL;
+#endif
     return reinterpret_cast<T *>(ptr);
 }
 
 template<typename T>
-T *touch_tag(T *p)
+inline T *touch_tag(T *p)
 {
     // Add one to the tag.
     uintptr_t ptr = reinterpret_cast<uintptr_t>(p);
+#ifdef BENCHMARK
+    ptr += 0x1000000000000ULL;
+#else
     ptr += 0x100000000ULL;
+#endif
     return reinterpret_cast<T *>(ptr);
 }
 
@@ -191,8 +207,7 @@ uintptr_t SlamCache::allocate()
 #endif
 
     Node *N = 0, *pNext = 0;
-    alignedNode currentHead = __atomic_load_n(&m_PartialLists[thisCpu],
-                                                  __ATOMIC_ACQUIRE);
+    alignedNode currentHead = m_PartialLists[thisCpu];
     while (true)
     {
         // Grab result.
@@ -200,7 +215,7 @@ uintptr_t SlamCache::allocate()
         pNext = N->next;
 
         if(__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &currentHead,
-            touch_tag(pNext), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED))
+            touch_tag(pNext), ATOMIC_CAS_WEAK, ATOMIC_MEMORY_ORDER, __ATOMIC_RELAXED))
         {
             // Successful CAS, we have a node to use.
             break;
@@ -258,8 +273,12 @@ void SlamCache::free(uintptr_t object)
 #endif
 
     N->next = const_cast<Node *>(m_PartialLists[thisCpu]);
-    while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], const_cast<alignedNode *>(&N->next), touch_tag(N), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED))
+    while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu],
+        const_cast<alignedNode *>(&N->next), touch_tag(N), ATOMIC_CAS_WEAK,
+        ATOMIC_MEMORY_ORDER, __ATOMIC_RELAXED))
+    {
         spin_pause();
+    }
 }
 
 bool SlamCache::isPointerValid(uintptr_t object)
@@ -317,12 +336,12 @@ size_t SlamCache::recovery(size_t maxSlabs)
         {
             // Grab the head node of the free list.
             Node *N =0, *pNext =0;
-            alignedNode currentHead = __atomic_load_n(&m_PartialLists[thisCpu], __ATOMIC_ACQUIRE);
+            alignedNode currentHead = m_PartialLists[thisCpu];
             do
             {
                 N = untagged(const_cast<Node *>(currentHead));
                 pNext = N->next;
-            } while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &currentHead, touch_tag(pNext), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED));
+            } while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &currentHead, touch_tag(pNext), ATOMIC_CAS_WEAK, ATOMIC_MEMORY_ORDER, __ATOMIC_RELAXED));
 
             // If no head node, we're done with this free list.
             if(N == &m_EmptyNode)
@@ -336,7 +355,10 @@ size_t SlamCache::recovery(size_t maxSlabs)
                 // Re-link the nodes we passed over.
                 Node *pHead = 0;
                 reinsertTail->next = const_cast<Node *>(m_PartialLists[thisCpu]);
-                while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], const_cast<alignedNode *>(&reinsertTail->next), touch_tag(reinsertHead), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) spin_pause();
+                while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], const_cast<alignedNode *>(&reinsertTail->next), touch_tag(reinsertHead), ATOMIC_CAS_WEAK, ATOMIC_MEMORY_ORDER, __ATOMIC_RELAXED))
+                {
+                    spin_pause();
+                }
 
                 break;
             }
@@ -417,12 +439,12 @@ size_t SlamCache::recovery(size_t maxSlabs)
 
             // Pop the first free node off the free list.
             Node *N =0, *pNext =0;
-            alignedNode currentHead = __atomic_load_n(&m_PartialLists[thisCpu], __ATOMIC_ACQUIRE);
+            alignedNode currentHead = m_PartialLists[thisCpu];
             do
             {
                 N = untagged(const_cast<Node *>(currentHead));
                 pNext = N->next;
-            } while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &currentHead, touch_tag(pNext), true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED));
+            } while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &currentHead, touch_tag(pNext), ATOMIC_CAS_WEAK, ATOMIC_MEMORY_ORDER, __ATOMIC_RELAXED));
 
             if(N == &m_EmptyNode)
             {
@@ -467,36 +489,32 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
 
     // All objects in slab are free, generate Node*'s for each (except the
     // first) and link them together.
-    Node *pFirst=0, *pLast=0;
+    Node *pFirst = 0, *pLast = 0;
     for (size_t i = 1; i < nObjects; i++)
     {
         Node *pNode = reinterpret_cast<Node*> (slab + (i * m_ObjectSize));
-        pNode->next = ((i + 1) >= nObjects) ? 0 : reinterpret_cast<Node*> (slab + ((i + 1) * m_ObjectSize));
+        pNode->next = reinterpret_cast<Node*> (slab + ((i + 1) * m_ObjectSize));
         pNode->next = tagged(pNode->next);
 #if USING_MAGIC
         pNode->magic = MAGIC_VALUE;
 #endif
 
-        if (i == 1)
+        if (!pFirst)
             pFirst = tagged(pNode);
-        if ((i + 1) >= nObjects)
-            pLast = pNode;
+
+        pLast = pNode;
     }
 
     N->next = pFirst;
 
     // Link this slab in as the first in the partial list
-    if (pFirst)
+    pLast->next = const_cast<Node *>(m_PartialLists[thisCpu]);
+    while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu],
+         const_cast<alignedNode *>(&pLast->next),
+         touch_tag(pFirst), ATOMIC_CAS_WEAK,
+         ATOMIC_MEMORY_ORDER, __ATOMIC_RELAXED))
     {
-        // We now need to do two atomic updates.
-        pLast->next = const_cast<Node *>(m_PartialLists[thisCpu]);
-        while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu],
-             const_cast<alignedNode *>(&pLast->next),
-             touch_tag(pFirst), true,
-             __ATOMIC_ACQUIRE, __ATOMIC_RELAXED))
-        {
-            spin_pause();
-        }
+        spin_pause();
     }
 
     return N;
@@ -995,63 +1013,53 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
 
     // Default to minimum object size if we must.
     size_t lg2 = 0;
-    if (LIKELY(nBytes < OBJECT_MINIMUM_SIZE))
+    if (UNLIKELY(nBytes < OBJECT_MINIMUM_SIZE))
     {
         nBytes = OBJECT_MINIMUM_SIZE;
     }
-    else if ((nBytes & (nBytes - 1)) != 0)
-    {
-        // Not already a power of two, so we need to find the next highest.
-        // Easy - number of leading zeroes indicates the highest set bit. Then,
-        // we just need to turn that into a left shift. Ta-da, next
-        // power-of-two.
-        nBytes = 1U << (32 - __builtin_clz(nBytes));
-    }
 
-    // nBytes is now guaranteed to be a power-of-two.
-    lg2 = __builtin_ffs(nBytes) - 1;
-    assert((1U << lg2) == nBytes);
-
+    // log2 of nBytes, where nBytes is rounded up to the next power-of-two.
+    lg2 = 32 - __builtin_clz(nBytes);
+    nBytes = 1U << lg2;  // Round up nBytes now.
     ret = m_Caches[lg2].allocate();
 
     //   l.release();
-    if (ret)
-    {
-        // Shove some data on the front that we'll use later
-        AllocHeader *head = reinterpret_cast<AllocHeader *>(ret);
-        AllocFooter *foot = reinterpret_cast<AllocFooter *>(ret+nBytes-sizeof(AllocFooter));
-        ret += sizeof(AllocHeader);
-
-        // Set up the header
-        head->cache = &m_Caches[lg2];
-#if OVERRUN_CHECK
-        head->magic = VIGILANT_MAGIC;
-        foot->magic = VIGILANT_MAGIC;
-
-
-    #if BOCHS_MAGIC_WATCHPOINTS
-        /// \todo head->catcher should be used for underrun checking
-        // asm volatile("xchg %%cx,%%cx" :: "a" (&head->catcher));
-        asm volatile("xchg %%cx,%%cx" :: "a" (&foot->catcher));
-    #endif
-    #if VIGILANT_OVERRUN_CHECK
-        if (Processor::m_Initialised == 2)
-        {
-            Backtrace bt;
-            bt.performBpBacktrace(0, 0);
-            memcpy(&head->backtrace, bt.m_pReturnAddresses, NUM_SLAM_BT_FRAMES*sizeof(uintptr_t));
-            head->requested = nBytes;
-            g_SlamCommand.addAllocation(head->backtrace, head->requested);
-        }
-    #endif
-#endif
-    }
-
 #if DEBUGGING_SLAB_ALLOCATOR
-    if(!ret)
+    if(UNLIKELY(!ret))
+    {
         ERROR_NOLOCK("SlabAllocator::allocate: Allocation failed (" << Dec << nBytes << Hex << " bytes)");
+        return ret;
+    }
 #else
     assert(ret != 0);
+#endif
+
+    // Shove some data on the front that we'll use later
+    AllocHeader *head = reinterpret_cast<AllocHeader *>(ret);
+    AllocFooter *foot = reinterpret_cast<AllocFooter *>(ret+nBytes-sizeof(AllocFooter));
+    ret += sizeof(AllocHeader);
+
+    // Set up the header
+    head->cache = &m_Caches[lg2];
+#if OVERRUN_CHECK
+    head->magic = VIGILANT_MAGIC;
+    foot->magic = VIGILANT_MAGIC;
+
+#if BOCHS_MAGIC_WATCHPOINTS
+    /// \todo head->catcher should be used for underrun checking
+    // asm volatile("xchg %%cx,%%cx" :: "a" (&head->catcher));
+    asm volatile("xchg %%cx,%%cx" :: "a" (&foot->catcher));
+#endif
+#if VIGILANT_OVERRUN_CHECK
+    if (Processor::m_Initialised == 2)
+    {
+        Backtrace bt;
+        bt.performBpBacktrace(0, 0);
+        memcpy(&head->backtrace, bt.m_pReturnAddresses, NUM_SLAM_BT_FRAMES*sizeof(uintptr_t));
+        head->requested = nBytes;
+        g_SlamCommand.addAllocation(head->backtrace, head->requested);
+    }
+#endif
 #endif
 
 #ifdef MEMORY_TRACING
@@ -1089,6 +1097,8 @@ void SlamAllocator::free(uintptr_t mem)
     // If we're not initialised, fix that
     if(UNLIKELY(!m_bInitialised))
         initialise();
+    if(UNLIKELY(!mem))
+        return;
 
 #if CRIPPLINGLY_VIGILANT
     if (m_bVigilant)
