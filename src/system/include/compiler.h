@@ -57,7 +57,7 @@
 #define __has_builtin(x) 0
 #endif
 
-#if __has_builtin(__builtin_assume_aligned) || defined(__GNUC__)
+#if __has_builtin(__builtin_assume_aligned) || !defined(__clang__)
 #define ASSUME_ALIGNMENT(b, sz) __builtin_assume_aligned((b), sz)
 #else
 #define ASSUME_ALIGNMENT(b, sz) ((reinterpret_cast<uintptr_t>(b) % (sz)) == 0) ? (b) : (UNREACHABLE, (b))
