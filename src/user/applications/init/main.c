@@ -41,7 +41,7 @@
 #define MAIN_PROGRAM "/applications/ttyterm"
 #endif
 
-void start(const char *proc)
+pid_t start(const char *proc)
 {
   pid_t f = fork();
   if(f == -1)
@@ -74,6 +74,14 @@ void start(const char *proc)
   strcpy(init.ut_id, basename(basename_buf));
   pututxline(&init);
   endutxent();
+
+  return f;
+}
+
+void startAndWait(const char *proc)
+{
+  pid_t f = start(proc);
+  waitpid(f, 0, 0);
 }
 
 extern void pedigree_reboot();
