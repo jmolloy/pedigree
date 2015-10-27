@@ -160,7 +160,7 @@ check_longmode:
     add edi, 2
     inc esi
     jmp .l
-  .ld
+  .ld:
 
   .a:
     cli

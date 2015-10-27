@@ -243,7 +243,7 @@ const char *TraceCommand::Disassembly::getLine1(size_t index, DebuggerIO::Colour
   disassembler.setMode(64);
 #endif
   LargeStaticString text;
-  uintptr_t nLocation;
+  uintptr_t nLocation = 0;
   // If the stored line counter is the one before ours, we can just take that and advance by one.
   if (index > 0 && m_LastLine == index-1)
   {
@@ -301,7 +301,7 @@ const char *TraceCommand::Disassembly::getLine2(size_t index, size_t &colOffset,
   disassembler.setMode(64);
 #endif
 
-  uintptr_t nLocation;
+  uintptr_t nLocation = 0;
   LargeStaticString text;
   if (index == m_LastLine)
   {
