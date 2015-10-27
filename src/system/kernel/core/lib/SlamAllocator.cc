@@ -52,7 +52,7 @@ inline T *untagged(T *p)
     /// \todo this now requires 64-bit pointers everywhere.
     // All heap pointers begin with 32 bits of ones. So we shove a tag there.
     uintptr_t ptr = reinterpret_cast<uintptr_t>(p);
-#ifdef BENCHMARK
+#if defined(BENCHMARK) || defined(HOSTED)
     // Top four bits available to us (addresses from 0 -> 0x00007FFFFFFFFFFF).
     ptr &= ~0xFFFF000000000000ULL;
 #else
@@ -65,7 +65,7 @@ template<typename T>
 inline T *tagged(T *p)
 {
     uintptr_t ptr = reinterpret_cast<uintptr_t>(p);
-#ifdef BENCHMARK
+#if defined(BENCHMARK) || defined(HOSTED)
     ptr &= 0xFFFFFFFFFFFFULL;
 #else
     ptr &= 0xFFFFFFFFULL;
@@ -78,7 +78,7 @@ inline T *touch_tag(T *p)
 {
     // Add one to the tag.
     uintptr_t ptr = reinterpret_cast<uintptr_t>(p);
-#ifdef BENCHMARK
+#if defined(BENCHMARK) || defined(HOSTED)
     ptr += 0x1000000000000ULL;
 #else
     ptr += 0x100000000ULL;
@@ -93,7 +93,7 @@ inline T *touch_tag(T *p)
 inline void spin_pause()
 {
 #ifdef BENCHMARK
-    usleep(250);
+    asm("pause");
 #else
     Processor::pause();
 #endif
@@ -198,23 +198,18 @@ void SlamCache::initialise(size_t objectSize)
     assert( (m_SlabSize % m_ObjectSize) == 0 );
 }
 
-uintptr_t SlamCache::allocate()
-{
-#ifdef MULTIPROCESSOR
-    size_t thisCpu = Processor::id();
-#else
-    size_t thisCpu = 0;
-#endif
 
+SlamCache::Node *SlamCache::pop(SlamCache::alignedNode *head)
+{
     Node *N = 0, *pNext = 0;
-    alignedNode currentHead = m_PartialLists[thisCpu];
+    alignedNode currentHead = *head;
     while (true)
     {
         // Grab result.
         N = untagged(const_cast<Node *>(currentHead));
         pNext = N->next;
 
-        if(__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &currentHead,
+        if(__atomic_compare_exchange_n(head, &currentHead,
             touch_tag(pNext), ATOMIC_CAS_WEAK, ATOMIC_MEMORY_ORDER, __ATOMIC_RELAXED))
         {
             // Successful CAS, we have a node to use.
@@ -224,6 +219,31 @@ uintptr_t SlamCache::allocate()
         // Unsuccessful CAS, pause for a bit to back off.
         spin_pause();
     }
+
+    return N;
+}
+
+void SlamCache::push(SlamCache::alignedNode *head, SlamCache::Node *newTail, SlamCache::Node *newHead)
+{
+    if (!newHead)
+        newHead = newTail;
+
+    newTail->next = const_cast<Node *>(*head);
+    while(!__atomic_compare_exchange_n(head, const_cast<alignedNode *>(&newTail->next), touch_tag(newHead), ATOMIC_CAS_WEAK, ATOMIC_MEMORY_ORDER, __ATOMIC_RELAXED))
+    {
+        spin_pause();
+    }
+}
+
+uintptr_t SlamCache::allocate()
+{
+#ifdef MULTIPROCESSOR
+    size_t thisCpu = Processor::id();
+#else
+    size_t thisCpu = 0;
+#endif
+
+    Node *N = pop(&m_PartialLists[thisCpu]);
 
     // Something else got there first if N == 0. Just allocate a new slab.
     if (UNLIKELY(N == &m_EmptyNode))
@@ -272,13 +292,7 @@ void SlamCache::free(uintptr_t object)
     N->magic = MAGIC_VALUE;
 #endif
 
-    N->next = const_cast<Node *>(m_PartialLists[thisCpu]);
-    while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu],
-        const_cast<alignedNode *>(&N->next), touch_tag(N), ATOMIC_CAS_WEAK,
-        ATOMIC_MEMORY_ORDER, __ATOMIC_RELAXED))
-    {
-        spin_pause();
-    }
+    push(&m_PartialLists[thisCpu], N);
 }
 
 bool SlamCache::isPointerValid(uintptr_t object)
@@ -335,13 +349,7 @@ size_t SlamCache::recovery(size_t maxSlabs)
         while(maxSlabs--)
         {
             // Grab the head node of the free list.
-            Node *N =0, *pNext =0;
-            alignedNode currentHead = m_PartialLists[thisCpu];
-            do
-            {
-                N = untagged(const_cast<Node *>(currentHead));
-                pNext = N->next;
-            } while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &currentHead, touch_tag(pNext), ATOMIC_CAS_WEAK, ATOMIC_MEMORY_ORDER, __ATOMIC_RELAXED));
+            Node *N = pop(&m_PartialLists[thisCpu]);
 
             // If no head node, we're done with this free list.
             if(N == &m_EmptyNode)
@@ -353,12 +361,8 @@ size_t SlamCache::recovery(size_t maxSlabs)
                 }
 
                 // Re-link the nodes we passed over.
+                push(&m_PartialLists[thisCpu], reinsertTail, reinsertHead);
                 Node *pHead = 0;
-                reinsertTail->next = const_cast<Node *>(m_PartialLists[thisCpu]);
-                while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], const_cast<alignedNode *>(&reinsertTail->next), touch_tag(reinsertHead), ATOMIC_CAS_WEAK, ATOMIC_MEMORY_ORDER, __ATOMIC_RELAXED))
-                {
-                    spin_pause();
-                }
 
                 break;
             }
@@ -438,14 +442,7 @@ size_t SlamCache::recovery(size_t maxSlabs)
                 break;
 
             // Pop the first free node off the free list.
-            Node *N =0, *pNext =0;
-            alignedNode currentHead = m_PartialLists[thisCpu];
-            do
-            {
-                N = untagged(const_cast<Node *>(currentHead));
-                pNext = N->next;
-            } while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu], &currentHead, touch_tag(pNext), ATOMIC_CAS_WEAK, ATOMIC_MEMORY_ORDER, __ATOMIC_RELAXED));
-
+            Node *N = pop(&m_PartialLists[thisCpu]);
             if(N == &m_EmptyNode)
             {
                 // Emptied the partial list!
@@ -507,15 +504,7 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
 
     N->next = pFirst;
 
-    // Link this slab in as the first in the partial list
-    pLast->next = const_cast<Node *>(m_PartialLists[thisCpu]);
-    while(!__atomic_compare_exchange_n(&m_PartialLists[thisCpu],
-         const_cast<alignedNode *>(&pLast->next),
-         touch_tag(pFirst), ATOMIC_CAS_WEAK,
-         ATOMIC_MEMORY_ORDER, __ATOMIC_RELAXED))
-    {
-        spin_pause();
-    }
+    push(&m_PartialLists[thisCpu], pLast, pFirst);
 
     return N;
 }

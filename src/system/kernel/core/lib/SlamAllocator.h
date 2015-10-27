@@ -155,6 +155,10 @@ private:
     typedef volatile Node *alignedNode;
     alignedNode m_PartialLists[NUM_LISTS];
 
+    Node *pop(alignedNode *head);
+    /* newHead = 0 to use newTail. */
+    void push(alignedNode *head, Node *newTail, Node *newHead = 0);
+
     uintptr_t getSlab();
     void freeSlab(uintptr_t slab);
 
