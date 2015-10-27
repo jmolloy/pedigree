@@ -345,11 +345,8 @@ void Ext2Directory::cacheDirectoryContents()
             }
 
             // Grab filename from the entry.
-            char *filename = new char[namelen];
-            memcpy(filename, pDir->d_name, namelen - 1);
-            filename[namelen - 1] = '\0';
-            String sFilename(filename);
-            delete [] filename;
+            String sFilename;
+            sFilename.assign(pDir->d_name, pDir->d_namelen);
 
             uint32_t inode = LITTLE_TO_HOST32(pDir->d_inode);
 
