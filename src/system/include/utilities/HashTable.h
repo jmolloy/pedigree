@@ -51,6 +51,7 @@ class HashTable
          */
         HashTable(size_t numbuckets = 0) {
             m_Buckets = 0;
+            m_nBuckets = 0;
             m_MaxBucket = numbuckets;
         }
 
@@ -63,6 +64,7 @@ class HashTable
                 return;
             }
             m_MaxBucket = numbuckets;
+            m_nBuckets = 0;
         }
 
         virtual ~HashTable() {
@@ -86,6 +88,12 @@ class HashTable
 
             size_t hash = k.hash();
             if(hash > m_MaxBucket) {
+                return 0;
+            }
+
+            if (hash > m_nBuckets)
+            {
+                // Not present.
                 return 0;
             }
 
@@ -115,13 +123,8 @@ class HashTable
                 return;
             }
 
-            // Lazily create buckets if needed.
-            if(!m_Buckets) {
-                if(!m_MaxBucket) {
-                    return;
-                }
-                m_Buckets = new struct bucket*[m_MaxBucket];
-                memset(m_Buckets, 0, sizeof(struct bucket*) * m_MaxBucket);
+            if (!m_MaxBucket) {
+                return;
             }
 
             size_t hash = k.hash();
@@ -129,12 +132,24 @@ class HashTable
                 return;
             }
 
-            struct bucket *newb = new struct bucket;
+            // Lazily create buckets if needed.
+            if((hash + 1) > m_nBuckets) {
+                bucket **newBuckets = new bucket*[hash + 1];
+                if (m_Buckets) {
+                    memcpy(newBuckets, m_Buckets, m_nBuckets * sizeof(bucket *));
+                    delete [] m_Buckets;
+                }
+                memset(&newBuckets[m_nBuckets], 0, (hash + 1 - m_nBuckets) * sizeof(bucket *));
+                m_nBuckets = hash + 1;
+                m_Buckets = newBuckets;
+            }
+
+            bucket *newb = new bucket;
             newb->key = k;
             newb->value = v;
             newb->next = 0;
 
-            struct bucket *b = m_Buckets[hash];
+            bucket *b = m_Buckets[hash];
             if(!b) {
                 m_Buckets[hash] = newb;
             } else {
@@ -164,11 +179,15 @@ class HashTable
                 return;
             }
 
-            struct bucket *b = m_Buckets[hash];
+            if(hash > m_nBuckets) {
+                return;
+            }
+
+            bucket *b = m_Buckets[hash];
             if(b->key == k) {
                 m_Buckets[hash] = b->next;
             } else {
-                struct bucket *p = b;
+                bucket *p = b;
                 while(b && (b->key != k)) {
                     p = b;
                     b = b->next;
@@ -190,10 +209,11 @@ class HashTable
 
             // Where hash collisions occur, we chain another value
             // to the original bucket.
-            struct bucket *next;
+            bucket *next;
         };
 
-        struct bucket **m_Buckets;
+        bucket **m_Buckets;
+        size_t m_nBuckets;
         size_t m_MaxBucket;
 };
 
