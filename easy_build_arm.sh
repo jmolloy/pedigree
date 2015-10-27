@@ -7,6 +7,7 @@ old=$(pwd)
 script_dir=$(cd -P -- "$(dirname -- "$0")" && pwd -P) && script_dir=$script_dir
 cd $old
 
+COMPILER_DIR=$script_dir/pedigree-compiler
 . $script_dir/build-etc/travis.sh
 
 set -e
@@ -115,7 +116,7 @@ case $real_os in
 esac
 
 # Install cross-compilers
-"$script_dir/scripts/checkBuildSystemNoInteractive.pl" arm-pedigree "$script_dir/pedigree-compiler" $compiler_build_options
+"$script_dir/scripts/checkBuildSystemNoInteractive.pl" arm-pedigree $COMPILER_DIR $compiler_build_options
 
 old=$(pwd)
 cd "$script_dir"
@@ -151,7 +152,7 @@ export LIBTOOL=$script_dir/../images/local/applications:$PATH
 # again to build it against the shared libstdc++. Once a working shared
 # libstdc++ exists, the static one built here is no longer relevant.
 # What a mess!
-$script_dir/scripts/checkBuildSystemNoInteractive.pl arm-pedigree $script_dir/pedigree-compiler $compiler_build_options "libcpp"
+$script_dir/scripts/checkBuildSystemNoInteractive.pl arm-pedigree $COMPILER_DIR $compiler_build_options "libcpp"
 
 set +e
 
