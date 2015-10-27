@@ -298,6 +298,57 @@ void Thread::setStatus(Thread::Status s)
   }
 }
 
+SchedulerState &Thread::state()
+{
+    return *(m_StateLevels[m_nStateLevel].m_State);
+}
+
+SchedulerState &Thread::pushState()
+{
+    if ((m_nStateLevel + 1) >= MAX_NESTED_EVENTS)
+    {
+        ERROR("Thread: Max nested events!");
+        /// \todo Take some action here - possibly kill the thread?
+        return *(m_StateLevels[MAX_NESTED_EVENTS - 1].m_State);
+    }
+    m_nStateLevel++;
+    // NOTICE("New state level: " << m_nStateLevel << "...");
+    m_StateLevels[m_nStateLevel].m_InhibitMask = m_StateLevels[m_nStateLevel - 1].m_InhibitMask;
+    allocateStackAtLevel(m_nStateLevel);
+
+    setKernelStack();
+
+    return *(m_StateLevels[m_nStateLevel - 1].m_State);
+}
+
+void Thread::popState()
+{
+    if (m_nStateLevel == 0)
+    {
+        ERROR("Thread: Potential error: popStack() called with state level 0!");
+        ERROR("Thread: (ignore this if longjmp has been called)");
+        return;
+    }
+    m_nStateLevel --;
+
+    setKernelStack();
+}
+
+void *Thread::getStateUserStack()
+{
+    return m_StateLevels[m_nStateLevel].m_pUserStack;
+}
+
+void Thread::setStateUserStack(void *st)
+{
+    m_StateLevels[m_nStateLevel].m_pUserStack = st;
+}
+
+size_t Thread::getStateLevel() const
+{
+    return m_nStateLevel;
+}
+
 void Thread::threadExited()
 {
   Processor::information().getScheduler().killCurrentThread();
@@ -326,6 +377,16 @@ void Thread::setKernelStack()
         Processor::information().setKernelStack(reinterpret_cast<uintptr_t>(m_StateLevels[m_nStateLevel].m_pKernelStack));
 }
 
+void Thread::pokeState(size_t stateLevel, SchedulerState &state)
+{
+    if (stateLevel >= MAX_NESTED_EVENTS)
+    {
+        ERROR("Thread::pokeState(): stateLevel `" << stateLevel << "' is over the maximum.");
+        return;
+    }
+    *(m_StateLevels[stateLevel].m_State) = state;
+}
+
 void Thread::sendEvent(Event *pEvent)
 {
     LockGuard<Spinlock> guard(m_Lock);
@@ -349,9 +410,9 @@ void Thread::inhibitEvent(size_t eventNumber, bool bInhibit)
 {
     LockGuard<Spinlock> guard(m_Lock);
     if (bInhibit)
-        m_StateLevels[m_nStateLevel].m_InhibitMask.set(eventNumber);
+        m_StateLevels[m_nStateLevel].m_InhibitMask->set(eventNumber);
     else
-        m_StateLevels[m_nStateLevel].m_InhibitMask.clear(eventNumber);
+        m_StateLevels[m_nStateLevel].m_InhibitMask->clear(eventNumber);
 }
 
 void Thread::cullEvent(Event *pEvent)
@@ -403,7 +464,7 @@ Event *Thread::getNextEvent()
             continue;
         }
 
-        if (m_StateLevels[m_nStateLevel].m_InhibitMask.test(e->getNumber()) ||
+        if (m_StateLevels[m_nStateLevel].m_InhibitMask->test(e->getNumber()) ||
             (e->getSpecificNestingLevel() != ~0UL &&
              e->getSpecificNestingLevel() != m_nStateLevel))
             m_EventQueue.pushBack(e);
@@ -568,6 +629,37 @@ bool Thread::detach()
     m_bDetached = true;
     return true;
   }
+}
+
+Thread::StateLevel::StateLevel() :
+    m_State(), m_pKernelStack(0), m_pUserStack(0), m_pAuxillaryStack(0),
+    m_InhibitMask(), m_pBlockingThread(0)
+{
+    m_State = new SchedulerState;
+    m_InhibitMask = new ExtensibleBitmap;
+}
+
+Thread::StateLevel::~StateLevel()
+{
+    delete m_InhibitMask;
+    delete m_State;
+}
+
+Thread::StateLevel::StateLevel(const Thread::StateLevel &s) :
+    m_State(), m_pKernelStack(s.m_pKernelStack), m_pUserStack(s.m_pUserStack),
+    m_pAuxillaryStack(s.m_pAuxillaryStack), m_InhibitMask(),
+    m_pBlockingThread(s.m_pBlockingThread)
+{
+    *m_State = *(s.m_State);
+    *m_InhibitMask = *(s.m_InhibitMask);
+}
+
+Thread::StateLevel &Thread::StateLevel::operator = (const Thread::StateLevel &s)
+{
+    *m_State = *(s.m_State);
+    m_pKernelStack = s.m_pKernelStack;
+    *m_InhibitMask = *(s.m_InhibitMask);
+    return *this;
 }
 
 #endif // THREADS

@@ -123,61 +123,25 @@ public:
 
     /** Returns a reference to the Thread's saved context. This function is intended only
      * for use by the Scheduler. */
-    SchedulerState &state()
-    {return m_StateLevels[m_nStateLevel].m_State;}
+    SchedulerState &state();
 
     /** Increases the state nesting level by one - pushes a new state to the top of the state stack.
         This also pushes to the top of the inhibited events stack, copying the current inhibit mask.
         \todo This should also push errno and m_bInterrupted, so syscalls can be
               used safely in interrupt handlers.
         \return A reference to the previous state. */
-    SchedulerState &pushState()
-    {
-        if ((m_nStateLevel + 1) >= MAX_NESTED_EVENTS)
-        {
-            ERROR("Thread: Max nested events!");
-            /// \todo Take some action here - possibly kill the thread?
-            return m_StateLevels[MAX_NESTED_EVENTS - 1].m_State;
-        }
-        m_nStateLevel++;
-        // NOTICE("New state level: " << m_nStateLevel << "...");
-        m_StateLevels[m_nStateLevel].m_InhibitMask = m_StateLevels[m_nStateLevel - 1].m_InhibitMask;
-        allocateStackAtLevel(m_nStateLevel);
-
-        setKernelStack();
-
-        return m_StateLevels[m_nStateLevel - 1].m_State;
-    }
+    SchedulerState &pushState();
 
     /** Decreases the state nesting level by one, popping both the state stack and the inhibit mask
         stack.*/
-    void popState()
-    {
-        if (m_nStateLevel == 0)
-        {
-            ERROR("Thread: Potential error: popStack() called with state level 0!");
-            ERROR("Thread: (ignore this if longjmp has been called)");
-            return;
-        }
-        m_nStateLevel --;
+    void popState();
 
-        setKernelStack();
-    }
+    void *getStateUserStack();
 
-    void *getStateUserStack()
-    {
-        return m_StateLevels[m_nStateLevel].m_pUserStack;
-    }
-
-    void setStateUserStack(void *st)
-    {
-        m_StateLevels[m_nStateLevel].m_pUserStack = st;
-    }
-
+    void setStateUserStack(void *st);
 
     /** Returns the state nesting level. */
-    size_t getStateLevel()
-    {return m_nStateLevel;}    
+    size_t getStateLevel() const;
 
     /** Allocates a new stack for a specific nesting level, if required */
     void allocateStackAtLevel(size_t stateLevel);
@@ -189,57 +153,67 @@ public:
      *\param stateLevel The nesting level to edit.
      *\param state The state to copy.
      */
-    void pokeState(size_t stateLevel, SchedulerState &state)
-    {
-        if (stateLevel >= MAX_NESTED_EVENTS)
-        {
-            ERROR("Thread::pokeState(): stateLevel `" << stateLevel << "' is over the maximum.");
-            return;
-        }
-        m_StateLevels[stateLevel].m_State = state;
-    }
+    void pokeState(size_t stateLevel, SchedulerState &state);
 
     /** Retrieves a pointer to this Thread's parent process. */
     Process *getParent() const
-    {return m_pParent;}
+    {
+        return m_pParent;
+    }
 
     void setParent(Process *p)
-    {m_pParent = p;}
+    {
+        m_pParent = p;
+    }
 
     /** Retrieves our current status. */
     Status getStatus() const
-    {return m_Status;}
+    {
+        return m_Status;
+    }
 
     /** Sets our current status. */
     void setStatus(Status s);
 
     /** Retrieves the exit status of the Thread. */
     int getExitCode()
-    {return m_ExitCode;}
+    {
+        return m_ExitCode;
+    }
 
     /** Retrieves a pointer to the top of the Thread's kernel stack. */
     void *getKernelStack();
 
     /** Returns the Thread's ID. */
     size_t getId()
-    {return m_Id;}
+    {
+        return m_Id;
+    }
 
     /** Returns the last error that occurred (errno). */
     size_t getErrno()
-    {return m_Errno;}
+    {
+        return m_Errno;
+    }
 
     /** Sets the last error - errno. */
     void setErrno(size_t errno)
-    {m_Errno = errno;}
+    {
+        m_Errno = errno;
+    }
 
     /** Returns whether the thread was just interrupted deliberately (e.g.
         because of a timeout). */
     bool wasInterrupted()
-    {return m_bInterrupted;}
+    {
+        return m_bInterrupted;
+    }
 
     /** Sets whether the thread was just interrupted deliberately. */
     void setInterrupted(bool b)
-    {m_bInterrupted = b;}
+    {
+        m_bInterrupted = b;
+    }
 
     /** Enum used by the following function. */
     enum UnwindType
@@ -404,27 +378,14 @@ private:
     /** A level of thread state */
     struct StateLevel
     {
-        StateLevel() :
-            m_State(), m_pKernelStack(0), m_pUserStack(0), m_pAuxillaryStack(0), m_InhibitMask(), m_pBlockingThread(0)
-        {}
-        ~StateLevel()
-        {}
+        StateLevel();
+        ~StateLevel();
 
-        StateLevel(const StateLevel &s) :
-            m_State(s.m_State), m_pKernelStack(s.m_pKernelStack), m_pUserStack(s.m_pUserStack), m_pAuxillaryStack(s.m_pAuxillaryStack), m_InhibitMask(s.m_InhibitMask),
-            m_pBlockingThread(s.m_pBlockingThread)
-        {}
-
-        StateLevel &operator = (const StateLevel &s)
-        {
-            m_State = s.m_State;
-            m_pKernelStack = s.m_pKernelStack;
-            m_InhibitMask = s.m_InhibitMask;
-            return *this;
-        }
+        StateLevel(const StateLevel &s);
+        StateLevel &operator = (const StateLevel &s);
 
         /** The processor state for this level. */
-        SchedulerState m_State;
+        SchedulerState *m_State;
 
         /** Our kernel stack. */
         void *m_pKernelStack;
@@ -441,7 +402,7 @@ private:
             popped when one completes.
 
             \note A '1' here means the event is inhibited, '0' means it can be fired. */
-        ExtensibleBitmap m_InhibitMask;
+        ExtensibleBitmap *m_InhibitMask;
 
         Thread *m_pBlockingThread;
     } m_StateLevels[MAX_NESTED_EVENTS];
