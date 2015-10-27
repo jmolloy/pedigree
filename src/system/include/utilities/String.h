@@ -85,7 +85,7 @@ class String
         void sprintf(const char *format, ...);
 
         void assign(const String &x);
-        void assign(const char *s);
+        void assign(const char *s, size_t len = 0);
         void reserve(size_t size);
         void free();
 
@@ -225,7 +225,7 @@ bool String::operator == (const char *s)
     const char *buf = m_Data;
     if (m_Length < StaticSize)
         buf = m_Static;
-    if (buf == 0 && s == 0)
+    if (((buf == 0) || (m_Length == 0)) && s == 0)
         return true;
     else if (buf == 0 || s == 0)
         return false;

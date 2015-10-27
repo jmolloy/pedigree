@@ -44,10 +44,12 @@ void String::assign(const String &x)
     assert(*this == x);
 #endif
 }
-void String::assign(const char *s)
+void String::assign(const char *s, size_t len)
 {
     if (!s || !*s)
         m_Length = 0;
+    else if (len)
+        m_Length = len;
     else
         m_Length = strlen(s);
 
@@ -64,18 +66,23 @@ void String::assign(const char *s)
         delete [] m_Data;
         m_Data = 0;
         m_Size = StaticSize;
+        m_Static[m_Length] = '\0';
     }
     else
     {
         reserve(m_Length + 1);
         if (m_Length && s)
+        {
             memcpy(m_Data, s, m_Length + 1);
+            m_Data[m_Length] = '\0';
+        }
         else
             m_Data[0] = '\0';
     }
 
 #ifdef ADDITIONAL_CHECKS
-    assert(*this == s);
+    if (!len)
+        assert(*this == s);
 #endif
 }
 void String::reserve(size_t size)
