@@ -107,7 +107,7 @@ Vector<void*>::Iterator Vector<void*>::erase(Iterator iter)
 }
 void Vector<void*>::assign(const Vector &x)
 {
-  reserve(x.count(), false);
+  reserve(x.size(), false);
 
   memcpy(m_Data, x.m_Data, x.count() * sizeof(void*));
   m_Count = x.count();
@@ -116,6 +116,11 @@ void Vector<void*>::reserve(size_t size, bool copy)
 {
   if (size <= m_Size)
     return;
+  else if (size < (m_Size * 2))
+  {
+    // Grow exponentially.
+    size = m_Size * 2;
+  }
 
   void **tmp = m_Data;
   m_Data = new void*[size];
