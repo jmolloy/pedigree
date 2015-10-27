@@ -31,6 +31,9 @@ metadata = []
 
 TOO_LARGE_THRESHOLD = 0x1000
 
+PTRSIZE = 8
+PTRFORMAT = '<Q'
+
 MODULE_MAPPINGS = {
     'rawfs': 'build/modules/rawfs.o.debug',
     'iso9660': 'build/modules/iso9660.o.debug',
@@ -98,14 +101,14 @@ def process_field(f):
     fieldtype, = saferead(f, 1)
 
     if fieldtype in ['A', 'F']:
-        ptr, = struct.unpack('<L', saferead(f, 4)) # TODO: 64-bit
+        ptr, = struct.unpack(PTRFORMAT, saferead(f, PTRSIZE))
 
     if fieldtype == 'A':
-        size, = struct.unpack('<L', saferead(f, 4)) # TODO: 64-bit
+        size, = struct.unpack(PTRFORMAT, saferead(f, PTRSIZE))
 
         backtrace = []
         while True:
-            bt, = struct.unpack('<L', saferead(f, 4)) # TODO: 64-bit
+            bt, = struct.unpack(PTRFORMAT, saferead(f, PTRSIZE))
             if bt == 0:
                 break
 
@@ -134,8 +137,8 @@ def process_field(f):
     elif fieldtype == 'M':
         metaname, = struct.unpack('64s', saferead(f, 64))
         metaname = metaname.strip('\x00')
-        start, = struct.unpack('<L', saferead(f, 4)) # TODO: 64-bit
-        end, = struct.unpack('<L', saferead(f, 4)) # TODO: 64-bit
+        start, = struct.unpack(PTRFORMAT, saferead(f, 8))
+        end, = struct.unpack(PTRFORMAT, saferead(f, 8))
         metadata.append((metaname, start, end))
     else:
         print 'Invalid field type %r encountered at offset %d!' % (fieldtype, f.tell() - 5)
@@ -147,9 +150,9 @@ def addr2module(addr):
     for meta in metadata:
         name, low, high = meta
         if low <= addr < high:
-            return low, MODULE_MAPPINGS.get(name, 'build/modules/%s.ko' % (name,))
+            return low, MODULE_MAPPINGS.get(name, 'build/modules/%s.o.debug' % (name,))
 
-    return 0, MODULE_MAPPINGS.get('kernel', 'build/kernel/kernel')
+    return 0, MODULE_MAPPINGS.get('kernel', 'build/kernel/kernel.debug')
 
 def writebt(bt, prefix=''):
     for frame in bt:
@@ -157,7 +160,7 @@ def writebt(bt, prefix=''):
         low, mod = addr2module(frame)
         if os.path.exists(mod):
             # Pretty-print, demangle, print function names.
-            out = os.popen('addr2line -p -C -f -e %s 0x%x' % (mod, frame - low)).read()
+            out = os.popen('addr2line -p -C -f -i -e %s 0x%x' % (mod, frame - low)).read()
             print '%s%s' % (prefix, out),
         else:
             print '%s%x (unknown module "%s")' % (prefix, frame, mod,)
@@ -193,13 +196,13 @@ with open(sys.argv[1], 'rb') as f:
 
         oneandover = 'oneandover' in sys.argv
 
-        for size in sorted(counts.keys()):
+        for (size, (count, backtrace)) in sorted(counts.items(), key=lambda x: x[0]):
             count, backtrace = counts[size]
             percent = (count / float(total_allocs)) * 100.0
             if oneandover and (percent < 1.0):
                 continue
 
-            print "%12d:\t%d\t(%f%%)" % (size, count, percent)
+            print "%12d bytes:\t%d\t(%f%%)" % (size, count, percent)
             if not nobacktrace:
                 writebt(backtrace, '\t')
 
