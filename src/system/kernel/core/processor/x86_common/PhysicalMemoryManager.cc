@@ -418,7 +418,7 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
     }
 
     /// \todo do this in initialise64 too.
-    m_PageMetadata.initialise(PageHashable(top).hash());
+    m_PageMetadata.initialise(PageHashable(top).hash(), true);
 
     // Fill the range-lists (usable memory below 1/16MB & ACPI)
     MemoryMap = Info.getMemoryMap();

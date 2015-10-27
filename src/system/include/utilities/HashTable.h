@@ -59,12 +59,18 @@ class HashTable
          * Allows for late configuration of the hash table size, for
          * cases where the table size can be optimised.
          */
-        void initialise(size_t numbuckets) {
+        void initialise(size_t numbuckets, bool preallocate = false) {
             if(m_Buckets) {
                 return;
             }
             m_MaxBucket = numbuckets;
             m_nBuckets = 0;
+
+            if(preallocate) {
+                m_nBuckets = m_MaxBucket;
+                m_Buckets = new bucket*[m_nBuckets];
+                memset(m_Buckets, 0, sizeof(bucket*) * m_nBuckets);
+            }
         }
 
         virtual ~HashTable() {
@@ -97,7 +103,7 @@ class HashTable
                 return 0;
             }
 
-            struct bucket *b = m_Buckets[hash];
+            bucket *b = m_Buckets[hash];
             if(!b) {
                 return 0;
             }
