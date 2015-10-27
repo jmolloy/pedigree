@@ -60,7 +60,7 @@ private:
         };
 
         Node(bool bCaseSensitive) :
-            m_pKey(0),value(0),m_Children(),m_pParent(0),
+            m_Key(),value(0),m_Children(),m_pParent(0),
             m_bCaseSensitive(bCaseSensitive)
         {
         }
@@ -81,7 +81,7 @@ private:
         
         /** Locates a child of this node, given the key portion of key
             (lookahead on the first token) */
-        Node *findChild(const uint8_t *cpKey);
+        Node *findChild(const char *cpKey);
 
         /** Adds a new child. */
         void addChild(Node *pNode);
@@ -94,7 +94,7 @@ private:
 
         /** Compares cpKey and this node's key, returning the type of match
             found. */
-        MatchType matchKey(const uint8_t *cpKey);
+        MatchType matchKey(const char *cpKey);
 
         /** Returns the first found child of the node. */
         Node *getFirstChild();
@@ -102,17 +102,17 @@ private:
         /** Sets the node's key to the concatenation of \p cpKey and the
          *  current key.
          *\param cpKey Key to prepend to the current key. */
-        void prependKey(const uint8_t *cpKey);
+        void prependKey(const char *cpKey);
 
-        void setKey(const uint8_t *cpKey);
-        inline uint8_t *getKey() {return m_pKey;}
+        void setKey(const char *cpKey);
+        inline const char *getKey() {return m_Key;}
         inline void setValue(void *pV) {value = pV;}
         inline void *getValue() {return value;}
         inline void setParent(Node *pP) {m_pParent = pP;}
         inline Node *getParent() {return m_pParent;}
 
         /** Node key, zero terminated. */
-        uint8_t *m_pKey;
+        String m_Key;
         /** Node value.
             \note Parting from coding standard because Iterator requires the
                   member be called 'value'. */
@@ -178,7 +178,7 @@ public:
     {
         Node *iterNode = iter.__getNode();
         Node *next = iterNode->next();
-        remove(String(reinterpret_cast<const char*>(iterNode->getKey())));
+        remove(String(iterNode->getKey()));
         Iterator ret(next);
         return ret;
     }

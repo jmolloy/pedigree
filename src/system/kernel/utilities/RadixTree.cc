@@ -23,8 +23,6 @@
 // RadixTree<void*> implementation.
 //
 
-const uint8_t nullKey[] = {0};
-
 RadixTree<void*>::RadixTree() :
     m_nItems(0), m_pRoot(0), m_bCaseSensitive(true)
 {
@@ -72,12 +70,12 @@ void RadixTree<void*>::insert(String key, void *value)
         // The root node always exists and is a lambda transition node (zero-length
         // key). This removes the need for most special cases.
         m_pRoot = new Node(m_bCaseSensitive);
-        m_pRoot->setKey(nullKey);
+        m_pRoot->setKey(0);
     }
 
     Node *pNode = m_pRoot;
 
-    const uint8_t *cpKey = reinterpret_cast<const uint8_t*> (static_cast<const char*>(key));
+    const char *cpKey = static_cast<const char*>(key);
 
     while (true)
     {
@@ -101,32 +99,28 @@ void RadixTree<void*>::insert(String key, void *value)
                 // Find the common key prefix.
                 size_t i = 0;
                 if (m_bCaseSensitive)
-                    while (cpKey[i] == pNode->m_pKey[i])
+                    while (cpKey[i] == pNode->getKey()[i])
                         i++;
                 else
-                    while (toLower(cpKey[i]) == toLower(pNode->m_pKey[i]))
+                    while (toLower(cpKey[i]) == toLower(pNode->getKey()[i]))
                         i++;
 
                 Node *pInter = new Node(m_bCaseSensitive);
                 
                 // Intermediate node's key is the common prefix of both keys.
-                pInter->m_pKey = new uint8_t[i+1];
-                memcpy(pInter->m_pKey, cpKey, i);
-                pInter->m_pKey[i] = 0;
+                pInter->m_Key.assign(cpKey, i);
 
                 // Must do this before pNode's key is changed.
                 pNode->getParent()->replaceChild(pNode, pInter);
 
                 // pNode's new key is the uncommon postfix.
-                size_t len = 0;
-                while (pNode->m_pKey[len])
-                    len++;
-                
-                uint8_t *pTmpKey = new uint8_t[(len-i)+1];
-                memcpy(pTmpKey, &pNode->m_pKey[i], len-i);
-                pTmpKey[len-i] = 0;
-                delete [] pNode->m_pKey;
-                pNode->m_pKey = pTmpKey;
+                size_t len = pNode->m_Key.length();
+
+                // Note: this is guaranteed to not require an allocation,
+                // because it's smaller than the current string in m_Key. We'll
+                // not overwrite because we're copying from deeper in the
+                // string. The null write will suffice.
+                pNode->m_Key.assign(&pNode->getKey()[i], len - i);
 
                 // If the uncommon postfix of the key is non-zero length, we have
                 // to create another node, a child of pInter.
@@ -150,9 +144,7 @@ void RadixTree<void*>::insert(String key, void *value)
             }
             case Node::OverMatch:
             {
-                size_t i = 0;
-                if (pNode->m_pKey)
-                    while (pNode->m_pKey[i++]) cpKey++;
+                cpKey += pNode->m_Key.length();
 
                 Node *pChild = pNode->findChild(cpKey);
                 if (pChild)
@@ -187,7 +179,7 @@ void *RadixTree<void*>::lookup(String key) const
 
     Node *pNode = m_pRoot;
 
-    const uint8_t *cpKey = reinterpret_cast<const uint8_t*>(static_cast<const char*>(key));
+    const char *cpKey = static_cast<const char*>(key);
 
     while (true)
     {
@@ -200,8 +192,7 @@ void *RadixTree<void*>::lookup(String key) const
                 return 0;
             case Node::OverMatch:
             {
-                size_t i = 0;
-                while (pNode->m_pKey[i++]) cpKey++;
+                cpKey += pNode->m_Key.length();
 
                 Node *pChild = pNode->findChild(cpKey);
                 if (pChild)
@@ -224,12 +215,12 @@ void RadixTree<void*>::remove(String key)
         // The root node always exists and is a lambda transition node (zero-length
         // key). This removes the need for most special cases.
         m_pRoot = new Node(m_bCaseSensitive);
-        m_pRoot->setKey(nullKey);
+        m_pRoot->setKey(0);
     }
 
     Node *pNode = m_pRoot;
 
-    const uint8_t *cpKey = reinterpret_cast<const uint8_t*>(static_cast<const char*>(key));
+    const char *cpKey = static_cast<const char*>(key);
 
     // Our invariant is that the root node always exists. Therefore we must
     // special case here so it doesn't get deleted.
@@ -315,9 +306,7 @@ void RadixTree<void*>::remove(String key)
                 return;
             case Node::OverMatch:
             {
-                size_t i = 0;
-                if (pNode->m_pKey)
-                    while (pNode->m_pKey[i++]) cpKey++;
+                cpKey += pNode->m_Key.length();
 
                 Node *pChild = pNode->findChild(cpKey);
                 if (pChild)
@@ -340,7 +329,7 @@ RadixTree<void*>::Node *RadixTree<void*>::cloneNode(Node *pNode, Node *pParent)
         return 0;
 
     Node *n = new Node(m_bCaseSensitive);
-    n->setKey(pNode->m_pKey);
+    n->setKey(pNode->m_Key);
     n->setValue(pNode->value);
     n->setParent(pParent);
 
@@ -358,7 +347,7 @@ void RadixTree<void*>::clear()
 {
     delete m_pRoot;
     m_pRoot = new Node(m_bCaseSensitive);
-    m_pRoot->setKey(nullKey);
+    m_pRoot->setKey(0);
     m_nItems = 0;
 }
 
@@ -368,15 +357,13 @@ void RadixTree<void*>::clear()
 
 RadixTree<void*>::Node::~Node()
 {
-    delete [] m_pKey;
-
     for(size_t n = 0; n < m_Children.count(); ++n)
     {
         delete m_Children[n];
     }
 }
 
-RadixTree<void*>::Node *RadixTree<void*>::Node::findChild(const uint8_t *cpKey)
+RadixTree<void*>::Node *RadixTree<void*>::Node::findChild(const char *cpKey)
 {
     for(size_t n = 0; n < m_Children.count(); ++n)
     {
@@ -418,21 +405,21 @@ void RadixTree<void*>::Node::removeChild(Node *pChild)
     }
 }
 
-RadixTree<void*>::Node::MatchType RadixTree<void*>::Node::matchKey(const uint8_t *cpKey)
+RadixTree<void*>::Node::MatchType RadixTree<void*>::Node::matchKey(const char *cpKey)
 {
-    if (!m_pKey) return OverMatch;
+    if (!m_Key.length()) return OverMatch;
 
     size_t i = 0;
-    while (cpKey[i] && m_pKey[i])
+    while (cpKey[i] && getKey()[i])
     {
         bool bMatch = false;
         if (m_bCaseSensitive)
         {
-            bMatch = cpKey[i] == m_pKey[i];
+            bMatch = cpKey[i] == getKey()[i];
         }
         else
         {
-            bMatch = toLower(cpKey[i]) == toLower(m_pKey[i]);
+            bMatch = toLower(cpKey[i]) == toLower(getKey()[i]);
         }
 
         if (!bMatch)
@@ -441,7 +428,7 @@ RadixTree<void*>::Node::MatchType RadixTree<void*>::Node::matchKey(const uint8_t
     }
 
     // Why did the loop exit?
-    if (cpKey[i] == 0 && m_pKey[i] == 0)
+    if (cpKey[i] == 0 && getKey()[i] == 0)
         return ExactMatch;
     else if (cpKey[i] == 0)
         return PartialMatch;
@@ -449,22 +436,9 @@ RadixTree<void*>::Node::MatchType RadixTree<void*>::Node::matchKey(const uint8_t
         return OverMatch;
 }
 
-void RadixTree<void*>::Node::setKey(const uint8_t *cpKey)
+void RadixTree<void*>::Node::setKey(const char *cpKey)
 {
-    if (m_pKey)
-        delete [] m_pKey;
-
-    size_t len = 0;
-    while (cpKey[len]) len++;
-    
-    m_pKey = new uint8_t[len+1];
-    size_t i = 0;
-    while (cpKey[i])
-    {
-        m_pKey[i] = cpKey[i];
-        i++;
-    }
-    m_pKey[i] = 0;
+    m_Key.assign(cpKey);
 }
 
 RadixTree<void*>::Node *RadixTree<void*>::Node::getFirstChild()
@@ -475,23 +449,11 @@ RadixTree<void*>::Node *RadixTree<void*>::Node::getFirstChild()
     return 0;
 }
 
-void RadixTree<void*>::Node::prependKey(const uint8_t *cpKey)
+void RadixTree<void*>::Node::prependKey(const char *cpKey)
 {
-    size_t curKeyLen = 0;
-    while (m_pKey[curKeyLen])
-        curKeyLen ++;
-    
-    size_t cpKeyLen = 0;
-    while (cpKey[cpKeyLen])
-        cpKeyLen ++;
-
-    uint8_t *pKey = new uint8_t[curKeyLen + cpKeyLen + 1];
-    memcpy(pKey, cpKey, cpKeyLen);
-    memcpy(&pKey[cpKeyLen], m_pKey, curKeyLen+1); // +1 to copy the '\0' too.
-
-    if (m_pKey)
-        delete [] m_pKey;
-    m_pKey = pKey;
+    String temp = m_Key;
+    m_Key.assign(cpKey);
+    m_Key += temp;
 }
 
 RadixTree<void*>::Node *RadixTree<void*>::Node::doNext()
