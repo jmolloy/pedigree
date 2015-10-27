@@ -30,8 +30,11 @@ Ext2Node::Ext2Node(uintptr_t inode_num, Inode *pInode, Ext2Filesystem *pFs) :
     uint32_t blockCount = LITTLE_TO_HOST32(pInode->i_blocks);
     m_nBlocks = (blockCount * 512) / m_pExt2Fs->m_BlockSize;
 
-    m_pBlocks = new uint32_t[m_nBlocks];
-    memset(m_pBlocks, ~0, sizeof(uint32_t) * m_nBlocks);
+    if (m_nBlocks)
+    {
+        m_pBlocks = new uint32_t[m_nBlocks];
+        memset(m_pBlocks, ~0, sizeof(uint32_t) * m_nBlocks);
+    }
 
     for (size_t i = 0; i < 12 && i < m_nBlocks; i++)
         m_pBlocks[i] = LITTLE_TO_HOST32(m_pInode->i_block[i]);
