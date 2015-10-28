@@ -51,7 +51,9 @@ void CacheManager::initialise()
         t->registerHandler(this);
     }
 
-    MemoryPressureManager::instance().registerHandler(MemoryPressureManager::MediumPriority, this);
+    // Install our memory pressure handler at the highest priority as we are
+    // most likely to provide immediate gains.
+    MemoryPressureManager::instance().registerHandler(MemoryPressureManager::HighestPriority, this);
 
     // Call out to the base class initialise() so the RequestQueue goes live.
     RequestQueue::initialise();
@@ -84,6 +86,21 @@ bool CacheManager::compactAll(size_t count)
         ++it)
     {
         size_t evicted = (*it)->compact(count);
+        totalEvicted += evicted;
+        count -= evicted;
+    }
+
+    return totalEvicted != 0;
+}
+
+bool CacheManager::trimAll(size_t count)
+{
+    size_t totalEvicted = 0;
+    for(List<Cache*>::Iterator it = m_Caches.begin();
+        (it != m_Caches.end()) && count;
+        ++it)
+    {
+        size_t evicted = (*it)->trim(count);
         totalEvicted += evicted;
         count -= evicted;
     }
@@ -235,7 +252,8 @@ uintptr_t Cache::insert (uintptr_t key)
     pPage = new CachePage;
     pPage->key = key;
     pPage->location = location;
-    pPage->refcnt = 1;
+    // Enter into cache unpinned, but only if we can call an eviction callback.
+    pPage->refcnt = m_Callback ? 0 : 1;
     pPage->timeAllocated = timer.getUnixTimestamp();
     m_Pages.insert(key, pPage);
     linkPage(pPage);
@@ -322,9 +340,9 @@ uintptr_t Cache::insert (uintptr_t key, size_t size)
     return returnLocation;
 }
 
-void Cache::evict(uintptr_t key)
+bool Cache::evict(uintptr_t key)
 {
-    evict(key, true, true, true);
+    return evict(key, true, true, true);
 }
 
 void Cache::empty()
@@ -347,7 +365,7 @@ void Cache::empty()
     m_Lock.release();
 }
 
-void Cache::evict(uintptr_t key, bool bLock, bool bPhysicalLock, bool bRemove)
+bool Cache::evict(uintptr_t key, bool bLock, bool bPhysicalLock, bool bRemove)
 {
     if(bLock)
         while(!m_Lock.acquire());
@@ -355,10 +373,13 @@ void Cache::evict(uintptr_t key, bool bLock, bool bPhysicalLock, bool bRemove)
     CachePage *pPage = m_Pages.lookup(key);
     if (!pPage)
     {
+        NOTICE("Cache::evict didn't evict " << key << " as it didn't actually exist");
         if(bLock)
             m_Lock.release();
-        return;
+        return false;
     }
+
+    bool result = false;
 
     // Sanity check: don't evict pinned pages.
     // If we have a callback, we can evict refcount=1 pages as we can fire an
@@ -383,10 +404,7 @@ void Cache::evict(uintptr_t key, bool bLock, bool bPhysicalLock, bool bRemove)
             }
 
             va.unmap(loc);
-            if(bPhysicalLock)
-                PhysicalMemoryManager::instance().freePage(phys);
-            else
-                PhysicalMemoryManager::instance().freePageUnlocked(phys);
+            PhysicalMemoryManager::instance().freePage(phys);
         }
 
         m_Allocator.free(pPage->location, 4096);
@@ -402,13 +420,16 @@ void Cache::evict(uintptr_t key, bool bLock, bool bPhysicalLock, bool bRemove)
             m_Callback(Eviction, key, pPage->location, m_CallbackMeta);
 
         delete pPage;
+        result = true;
     }
 
     if(bLock)
         m_Lock.release();
+
+    return result;
 }
 
-void Cache::pin (uintptr_t key)
+bool Cache::pin (uintptr_t key)
 {
     while(!m_Lock.acquire());
 
@@ -416,12 +437,14 @@ void Cache::pin (uintptr_t key)
     if (!pPage)
     {
         m_Lock.release();
-        return;
+        return false;
     }
 
     pPage->refcnt ++;
+    promotePage(pPage);
 
     m_Lock.release();
+    return true;
 }
 
 void Cache::release (uintptr_t key)
@@ -454,40 +477,18 @@ size_t Cache::compact(size_t count)
 
     size_t nPages = 0;
 
-    Timer &timer = *Machine::instance().getTimer();
-    uint32_t now = timer.getUnixTimestamp();
-
-    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-
-    // Remove anything older than the given time threshold.
-    for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
-        it != m_Pages.end();
-        ++it)
+    // Attempt an LRU compact.
+    size_t n = 0;
+    while ((nPages < count) && ((n = lruEvict(true)) > 0))
     {
-        CachePage *page = it.value();
-
-        // If page has been pinned, it is completely unsafe to remove.
-        if(!((m_Callback && (page->refcnt > 1)) || ((!m_Callback) && (page->refcnt > 0))))
-        {
-            if((page->timeAllocated + CACHE_AGE_THRESHOLD) <= now)
-            {
-                evict(it.key(), false, false, false);
-                m_Pages.erase(it++);
-
-                if(++nPages >= count)
-                    break;
-            }
-            else
-                ++it;
-        }
-        else
-            ++it;
+        nPages += n;
     }
 
     // If we still need to find pages, let's find pages that have not
     // been accessed since the last compact/writeback.
     if(nPages < count)
     {
+        VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
         for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
             it != m_Pages.end();
             ++it)
@@ -555,6 +556,26 @@ size_t Cache::compact(size_t count)
         }
     }
 
+    return nPages;
+}
+
+size_t Cache::trim(size_t count)
+{
+    LockGuard<UnlikelyLock> guard(m_Lock);
+
+    if(!count)
+        return 0;
+
+    size_t nPages = 0;
+
+    // Attempt an LRU compact.
+    size_t n = 0;
+    while ((nPages < count) && ((n = lruEvict(true)) > 0))
+    {
+        nPages += n;
+    }
+
+    NOTICE("trim: trimmed " << nPages << " pages");
     return nPages;
 }
 
@@ -668,19 +689,27 @@ uint64_t Cache::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p
     return 0;
 }
 
-void Cache::lruEvict()
+size_t Cache::lruEvict(bool force)
 {
     if (!(m_pLruHead && m_pLruTail))
-        return;
+        return 0;
 
     // Do we have memory pressure - do we need to do an LRU eviction?
-    if (PhysicalMemoryManager::instance().freePageCount() <
-        MemoryPressureManager::getLowWatermark())
+    if (force || (PhysicalMemoryManager::instance().freePageCount() <
+        MemoryPressureManager::getLowWatermark()))
     {
         // Yes, perform the LRU eviction.
         CachePage *toEvict = m_pLruTail;
-        evict(toEvict->key, false, true, true);
+        if (evict(toEvict->key, false, true, true))
+            return 1;
+        else
+        {
+            // Bump the page's priority up as eviction failed for some reason.
+            promotePage(toEvict);
+        }
     }
+
+    return 0;
 }
 
 void Cache::linkPage(CachePage *pPage)

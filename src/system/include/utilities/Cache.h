@@ -79,6 +79,11 @@ class CacheManager : public TimerHandler, public RequestQueue, public MemoryPres
             return compactAll(5);
         }
 
+        /**
+         * Trim each cache we know about until 'count' pages have been evicted.
+         */
+        bool trimAll(size_t count = 1);
+
         virtual void timer(uint64_t delta, InterruptState &state);
 
     private:
@@ -182,7 +187,7 @@ public:
      * This will respect the refcount of the given key, so as to make pin()
      * exhibit more reliable behaviour.
      */
-    void evict (uintptr_t key);
+    bool evict (uintptr_t key);
 
     /**
      * Empties the cache.
@@ -203,8 +208,10 @@ public:
      * back to the backing store, if that is desirable.
      *
      * Pinned pages will not be freed during a compact().
+     *
+     * \return false if key didn't exist, true otherwise
      */
-    void pin(uintptr_t key);
+    bool pin(uintptr_t key);
 
     /** Attempts to "compact" the cache - (hopefully) reduces
      *  resource usage by throwing away items in a
@@ -216,7 +223,20 @@ public:
      * If a count is passed, the cache prefers to remove pages that have
      * not been accessed, rather than the least-recently-used page.
      */
-    size_t compact (size_t count = ~0UL);
+    size_t compact(size_t count = ~0UL);
+
+    /**
+     * Attempts to trim the cache.
+     *
+     * A trim is slightly different to a compact in that it is designed to be
+     * called in a non-emergency situation. This could be called, for example,
+     * after a process terminates, to clean up some old cached data while the
+     * system is already doing busywork. Or, it could be called when the system
+     * is idle to clean up a bit.
+     *
+     * This will take the lock, also, unlike compact().
+     */
+    size_t trim(size_t count = 1);
 
     /**
      * Synchronises the given cache key back to a backing store, if a
@@ -251,12 +271,15 @@ private:
     /**
      * evict doer
      */
-    void evict(uintptr_t key, bool bLock, bool bPhysicalLock, bool bRemove);
+    bool evict(uintptr_t key, bool bLock, bool bPhysicalLock, bool bRemove);
 
     /**
      * LRU evict do-er.
+     *
+     * \param force force an eviction to be attempted
+     * \return number of cache pages evicted
      */
-    void lruEvict();
+    size_t lruEvict(bool force = false);
 
     /**
      * Link the given CachePage to the LRU list.
@@ -331,6 +354,30 @@ private:
 
     /** Are we currently in a critical section? */
     Atomic<size_t> m_bInCritical;
+};
+
+/**
+ * RAII class for managing refcnt increases via lookup().
+ *
+ * Use this when you want to perform a lookup() but have many potential exits
+ * that would otherwise need an associated release().
+ */
+class CachePageGuard
+{
+public:
+    CachePageGuard(Cache &cache, uintptr_t location) :
+        m_Cache(cache), m_Location(location)
+    {
+    }
+
+    virtual ~CachePageGuard()
+    {
+        m_Cache.release(m_Location);
+    }
+
+private:
+    Cache &m_Cache;
+    uintptr_t m_Location;
 };
 
 #endif
