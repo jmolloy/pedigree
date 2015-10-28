@@ -50,8 +50,11 @@ Ext2Filesystem::Ext2Filesystem() :
 
 Ext2Filesystem::~Ext2Filesystem()
 {
-    if(m_pRoot)
-        delete m_pRoot;
+    delete [] m_pBlockBitmaps;
+    delete [] m_pInodeBitmaps;
+    delete [] m_pInodeTables;
+    delete [] m_pGroupDescriptors;
+    delete m_pRoot;
 }
 
 bool Ext2Filesystem::initialise(Disk *pDisk)
@@ -61,13 +64,20 @@ bool Ext2Filesystem::initialise(Disk *pDisk)
     pDisk->getName(devName);
 
     // Attempt to read the superblock.
+    // We need to pin the block, as we'll hold onto it.
     uintptr_t block = m_pDisk->read(1024ULL);
+    if (!block || block == ~0U)
+    {
+        return false;
+    }
+    m_pDisk->pin(1024ULL);
     m_pSuperblock = reinterpret_cast<Superblock*>(block);
 
     // Read correctly?
     if (LITTLE_TO_HOST16(m_pSuperblock->s_magic) != 0xEF53)
     {
         ERROR("Ext2: Superblock not found on device " << devName);
+        m_pDisk->unpin(1024ULL);
         return false;
     }
 
@@ -200,6 +210,8 @@ String Ext2Filesystem::getVolumeLabel()
 
 bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, String value, size_t type)
 {
+    NOTICE("CREATE: " << filename);
+
     // Quick sanity check;
     if (!parent->isDirectory())
     {
@@ -352,6 +364,8 @@ bool Ext2Filesystem::remove(File* parent, File* file)
         filename = pFile->getName();
     }
 
+    NOTICE("REMOVE: " << filename);
+
     Ext2Directory *pE2Parent = reinterpret_cast<Ext2Directory*>(parent);
     return pE2Parent->removeEntry(filename, pNode);
 }
@@ -368,6 +382,24 @@ void Ext2Filesystem::writeBlock(uint32_t block)
 {
     if (block != 0)
         m_pDisk->write(static_cast<uint64_t>(m_BlockSize) * static_cast<uint64_t>(block));
+}
+
+void Ext2Filesystem::pinBlock(uint64_t location)
+{
+    m_pDisk->pin(static_cast<uint64_t>(m_BlockSize) * location);
+}
+
+void Ext2Filesystem::unpinBlock(uint64_t location)
+{
+    m_pDisk->unpin(static_cast<uint64_t>(m_BlockSize) * location);
+}
+
+void Ext2Filesystem::sync(size_t offset, bool async)
+{
+    if (async)
+        m_pDisk->write(static_cast<uint64_t>(m_BlockSize) * offset);
+    else
+        m_pDisk->flush(static_cast<uint64_t>(m_BlockSize) * offset);
 }
 
 uint32_t Ext2Filesystem::findFreeBlock(uint32_t inode)

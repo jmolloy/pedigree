@@ -67,6 +67,11 @@ private:
     /** Writes a block of data to the disk. */
     void writeBlock(uint32_t block);
 
+    void pinBlock(uint64_t location);
+    void unpinBlock(uint64_t location);
+
+    void sync(size_t offset, bool async);
+
     uint32_t findFreeBlock(uint32_t inode);
     uint32_t findFreeInode();
 
