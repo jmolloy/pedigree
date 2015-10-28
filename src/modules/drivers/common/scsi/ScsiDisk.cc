@@ -217,13 +217,19 @@ bool ScsiDisk::sendCommand(ScsiCommand *pCommand, uintptr_t pRespBuffer, uint16_
 
 uintptr_t ScsiDisk::read(uint64_t location)
 {
-    if (!getBlockSize())
+    if (!(getBlockSize() && getNativeBlockSize()))
     {
         ERROR("ScsiDisk::read - block size is zero.");
         return 0;
     }
 
-    if((location + m_NativeBlockSize) > getSize())
+    if((location + getNativeBlockSize()) > getSize())
+    {
+        ERROR("ScsiDisk::read - location too high");
+        return 0;
+    }
+
+    if((location / getNativeBlockSize()) > getBlockCount())
     {
         ERROR("ScsiDisk::read - location too high");
         return 0;
@@ -256,15 +262,19 @@ uintptr_t ScsiDisk::read(uint64_t location)
 void ScsiDisk::write(uint64_t location)
 {
 #ifndef CRIPPLE_HDD
-    if (!(m_BlockSize && m_NumBlocks))
+    if (!(getBlockSize() && getNativeBlockSize()))
     {
-        ERROR("ScsiDisk::write - one or both of block size and block count are zero.");
+        ERROR("ScsiDisk::write - block size is zero.");
         return;
     }
 
-    if (location % m_BlockSize)
-        FATAL("Write with location % " << Dec << m_BlockSize << Hex << ".");
-    if((location / m_BlockSize) > m_NumBlocks)
+    if((location + getNativeBlockSize()) > getSize())
+    {
+        ERROR("ScsiDisk::write - location too high");
+        return;
+    }
+
+    if((location / getNativeBlockSize()) > getBlockCount())
     {
         ERROR("ScsiDisk::write - location too high");
         return;
@@ -294,15 +304,19 @@ void ScsiDisk::write(uint64_t location)
 void ScsiDisk::flush(uint64_t location)
 {
 #ifndef CRIPPLE_HDD
-    if (!(m_BlockSize && m_NumBlocks))
+    if (!(getBlockSize() && getNativeBlockSize()))
     {
-        ERROR("ScsiDisk::flush - one or both of block size and block count are zero.");
+        ERROR("ScsiDisk::flush - block size is zero.");
         return;
     }
 
-    if (location % m_BlockSize)
-        FATAL("Flush with location % " << Dec << m_BlockSize << Hex << ".");
-    if((location / m_BlockSize) > m_NumBlocks)
+    if((location + getNativeBlockSize()) > getSize())
+    {
+        ERROR("ScsiDisk::flush - location too high");
+        return;
+    }
+
+    if((location / getNativeBlockSize()) > getBlockCount())
     {
         ERROR("ScsiDisk::flush - location too high");
         return;
@@ -365,8 +379,8 @@ uint64_t ScsiDisk::doRead(uint64_t location)
         FATAL("ScsiDisk::doRead - no buffer");
     }
 
-    size_t blockNum = location / m_NativeBlockSize;
-    size_t blockCount = getBlockSize() / m_NativeBlockSize;
+    size_t blockNum = location / getNativeBlockSize();
+    size_t blockCount = getBlockSize() / getNativeBlockSize();
 
     bool bOk;
     ScsiCommand *pCommand;
@@ -375,10 +389,10 @@ uint64_t ScsiDisk::doRead(uint64_t location)
     if (m_DeviceType == CdDvdDevice)
     {
         /// \todo Cache this somewhere.
-        pCommand = new ScsiCommands::ReadTocCommand(m_NativeBlockSize);
-        uint8_t *toc = new uint8_t[m_NativeBlockSize];
+        pCommand = new ScsiCommands::ReadTocCommand(getNativeBlockSize());
+        uint8_t *toc = new uint8_t[getNativeBlockSize()];
         PointerGuard<uint8_t> tmpBuffGuard(toc);
-        bOk = sendCommand(pCommand, reinterpret_cast<uintptr_t>(toc), m_NativeBlockSize);
+        bOk = sendCommand(pCommand, reinterpret_cast<uintptr_t>(toc), getNativeBlockSize());
         delete pCommand;
         if (!bOk)
         {
@@ -474,13 +488,16 @@ uint64_t ScsiDisk::doWrite(uint64_t location)
         return 0;
     }
 
+    size_t block = location / getNativeBlockSize();
+    size_t count = 4096 / getNativeBlockSize();
+
     bool bOk;
     ScsiCommand *pCommand;
 
     for(int i = 0; i < 3; i++)
     {
         SCSI_DEBUG_LOG("SCSI: trying write(10)");
-        pCommand = new ScsiCommands::Write10((location / m_BlockSize), 4096 / m_BlockSize);
+        pCommand = new ScsiCommands::Write10(block, count);
         bOk = sendCommand(pCommand, buffer, 4096, true);
         delete pCommand;
         if(bOk)
@@ -491,7 +508,7 @@ uint64_t ScsiDisk::doWrite(uint64_t location)
         for(int i = 0; i < 3; i++)
         {
             SCSI_DEBUG_LOG("SCSI: trying write(12)");
-            pCommand = new ScsiCommands::Write12((location / m_BlockSize), 4096 / m_BlockSize);
+            pCommand = new ScsiCommands::Write12(block, count);
             bOk = sendCommand(pCommand, buffer, 4096, true);
             delete pCommand;
             if(bOk)
@@ -503,7 +520,7 @@ uint64_t ScsiDisk::doWrite(uint64_t location)
         for(int i = 0; i < 3; i++)
         {
             SCSI_DEBUG_LOG("SCSI: trying write(16)");
-            pCommand = new ScsiCommands::Write16((location / m_BlockSize), 4096 / m_BlockSize);
+            pCommand = new ScsiCommands::Write16(block, count);
             bOk = sendCommand(pCommand, buffer, 4096, true);
             delete pCommand;
             if(bOk)
@@ -535,6 +552,9 @@ uint64_t ScsiDisk::doSync(uint64_t location)
         return 0;
     }
 
+    size_t block = location / getNativeBlockSize();
+    size_t count = 4096 / getNativeBlockSize();
+
     bool bOk;
     ScsiCommand *pCommand;
 
@@ -542,7 +562,7 @@ uint64_t ScsiDisk::doSync(uint64_t location)
     for(int i = 0; i < 3; i++)
     {
         SCSI_DEBUG_LOG("SCSI: trying synchronise(10)");
-        pCommand = new ScsiCommands::Synchronise10((location / m_BlockSize), 4096 / m_BlockSize);
+        pCommand = new ScsiCommands::Synchronise10(block, count);
         bOk = sendCommand(pCommand, 0, 0);
         delete pCommand;
         if(bOk)
@@ -554,7 +574,7 @@ uint64_t ScsiDisk::doSync(uint64_t location)
         for(int i = 0; i < 3; i++)
         {
             SCSI_DEBUG_LOG("SCSI: trying synchronise(16)");
-            pCommand = new ScsiCommands::Synchronise16((location / m_BlockSize), 4096 / m_BlockSize);
+            pCommand = new ScsiCommands::Synchronise16(block, count);
             bOk = sendCommand(pCommand, 0, 0);
             delete pCommand;
             if(bOk)

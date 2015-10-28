@@ -93,6 +93,8 @@ public:
 
     virtual size_t getSize() const;
     virtual size_t getBlockSize() const;
+    virtual size_t getNativeBlockSize() const;
+    virtual size_t getBlockCount() const;
 
     // SCSI controller interface calls this to send a PACKET command.
     virtual bool sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite);

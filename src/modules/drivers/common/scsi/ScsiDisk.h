@@ -106,6 +106,11 @@ class ScsiDisk : public Disk
             return m_NumBlocks * m_NativeBlockSize;
         }
 
+        virtual size_t getBlockCount() const
+        {
+            return m_NumBlocks;
+        }
+
         virtual size_t getBlockSize() const
         {
             return m_BlockSize;

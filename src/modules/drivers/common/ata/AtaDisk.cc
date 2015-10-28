@@ -1210,9 +1210,52 @@ size_t AtaDisk::getSize() const
 
 size_t AtaDisk::getBlockSize() const
 {
-    if (m_AtaDiskType)
+    if (m_AtaDiskType != NotPacket)
     {
         return ScsiDisk::getBlockSize();
     }
     return m_BlockSize;
+}
+
+size_t AtaDisk::getNativeBlockSize() const
+{
+    if (m_AtaDiskType != NotPacket)
+    {
+        return ScsiDisk::getNativeBlockSize();
+    }
+
+    // Native blocks are just sectors.
+    size_t sector_size = 512;
+    if (m_pIdent.data.sector_size.logical_larger_than_512b)
+    {
+        // Calculate.
+        sector_size = m_pIdent.data.words_per_logical * sizeof(uint16_t);
+    }
+
+    return sector_size;
+}
+
+size_t AtaDisk::getBlockCount() const
+{
+    if (m_AtaDiskType != NotPacket)
+    {
+        return ScsiDisk::getBlockCount();
+    }
+
+    // Determine sector count.
+    size_t sector_count = 0;
+    if (m_SupportsLBA48)
+    {
+        // Try for the LBA48 sector count.
+        if (m_pIdent.data.max_user_lba48)
+            sector_count = m_pIdent.data.max_user_lba48;
+        else
+            sector_count = m_pIdent.data.sector_count;
+    }
+    else
+    {
+        sector_count = m_pIdent.data.sector_count;
+    }
+
+    return sector_count;
 }
