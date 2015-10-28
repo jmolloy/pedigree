@@ -288,6 +288,7 @@ void Ext2Directory::cacheDirectoryContents()
     for (i = 0; i < m_nBlocks; i++)
     {
         ensureBlockLoaded(i);
+        // Grab the block and pin it while we parse it.
         uintptr_t buffer = m_pExt2Fs->readBlock(m_pBlocks[i]);
         pDir = reinterpret_cast<Dir*>(buffer);
 
@@ -372,6 +373,9 @@ void Ext2Directory::cacheDirectoryContents()
             // Next.
             pDir = pNextDir;
         }
+
+        // Done with this block now; nothing remains that points to it.
+        m_pExt2Fs->unpinBlock(m_pBlocks[i]);
     }
 
     m_bCachePopulated = true;

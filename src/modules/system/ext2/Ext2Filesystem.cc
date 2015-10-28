@@ -762,7 +762,8 @@ void Ext2Filesystem::ensureInodeTableLoaded(size_t group)
     for (size_t i = 0; i < nBlocks; i++)
     {
         uint32_t blockNumber = LITTLE_TO_HOST32(m_pGroupDescriptors[group]->bg_inode_table) + i;
-        list.pushBack(readBlock(blockNumber));
+        uintptr_t buffer = readBlock(blockNumber);
+        list.pushBack(buffer);
     }
 }
 
