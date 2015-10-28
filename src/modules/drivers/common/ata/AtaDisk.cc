@@ -670,6 +670,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
     if(buffer)
     {
         WARNING("AtaDisk::doRead(" << oldLocation << ") - buffer was already in cache");
+        getCache().release(location);
         return 0;
     }
     buffer = getCache().insert(location, nBytes);
@@ -878,11 +879,13 @@ uint64_t AtaDisk::doWrite(uint64_t location)
     uintptr_t nBytes = getBlockSize();
     location &= ~(nBytes - 1);
     uintptr_t buffer = getCache().lookup(location);
-
     if(!buffer)
     {
         FATAL("AtaDisk::doWrite - no buffer (completely misused method)");
     }
+
+    // Make sure we don't leave the refcnt increased by writing.
+    CachePageGuard guard(getCache(), location);
 
 #ifdef SUPERDEBUG
     NOTICE("doWrite(" << location << ")");

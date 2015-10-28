@@ -71,6 +71,9 @@ public:
      * Read from \p location on disk and return a pointer to it. \p location
      * must be 512 byte aligned. The pointer returned is within a page of
      * cache that maps to 4096 bytes of disk area.
+     * \note If the Disk is backed by a Cache, the buffer returned should have
+     *       its refcount incremented by one by a successful run of read(). Use
+     *       unpin() to indicate you no longer care about the buffer.
      * \param location The offset from the start of the device, in bytes,
      *        to start the read, must be multiple of 512.
      * \return Pointer to writable area of memory containing the data. If the

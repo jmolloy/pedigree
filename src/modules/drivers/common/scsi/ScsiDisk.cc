@@ -33,9 +33,31 @@
 #define SCSI_DEBUG_LOG(...)
 #endif
 
+void ScsiDisk::cacheCallback(Cache::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta)
+{
+    ScsiDisk *pDisk = reinterpret_cast<ScsiDisk *>(meta);
+
+    switch(cause)
+    {
+        case Cache::WriteBack:
+            {
+                // Blocking write request.
+                pDisk->flush(loc);
+            }
+            break;
+        case Cache::Eviction:
+            // no-op for ScsiDisk
+            break;
+        default:
+            WARNING("File: unknown cache callback -- could indicate potential future I/O issues.");
+            break;
+    }
+}
+
 ScsiDisk::ScsiDisk() :
     Disk(), m_Cache(), m_Inquiry(0), m_nAlignPoints(0), m_NumBlocks(0), m_BlockSize(0x1000), m_DeviceType(NoDevice)
 {
+    m_Cache.setCallback(cacheCallback, this);
 }
 
 ScsiDisk::~ScsiDisk()
@@ -271,12 +293,14 @@ void ScsiDisk::write(uint64_t location)
     if((location + getNativeBlockSize()) > getSize())
     {
         ERROR("ScsiDisk::write - location too high");
+        ERROR(" -> " << location << " vs " << getSize());
         return;
     }
 
     if((location / getNativeBlockSize()) > getBlockCount())
     {
         ERROR("ScsiDisk::write - location too high");
+        ERROR(" -> block " << (location / getNativeBlockSize()) << " vs " << getBlockCount());
         return;
     }
 
@@ -298,6 +322,9 @@ void ScsiDisk::write(uint64_t location)
 
     ScsiController *pParent = static_cast<ScsiController*> (m_pParent);
     pParent->addAsyncRequest(0, SCSI_REQUEST_WRITE, reinterpret_cast<uint64_t> (this), location + offs);
+
+    // Undo lookup previously.
+    m_Cache.release(location + offs);
 #endif
 }
 
@@ -340,6 +367,9 @@ void ScsiDisk::flush(uint64_t location)
     ScsiController *pParent = static_cast<ScsiController*> (m_pParent);
     pParent->addRequest(0, SCSI_REQUEST_WRITE, reinterpret_cast<uint64_t> (this), location + offs);
     pParent->addRequest(0, SCSI_REQUEST_SYNC, reinterpret_cast<uint64_t> (this), location + offs);
+
+    // Undo lookup previously.
+    m_Cache.release(location + offs);
 #endif
 }
 
@@ -371,6 +401,7 @@ uint64_t ScsiDisk::doRead(uint64_t location)
     if(buffer)
     {
         WARNING("ScsiDisk::doRead(" << location << ") - buffer was already in cache");
+        m_Cache.release(location);
         return 0;
     }
     buffer = m_Cache.insert(location, getBlockSize());
@@ -487,6 +518,9 @@ uint64_t ScsiDisk::doWrite(uint64_t location)
         WARNING("ScsiDisk::doWrite(" << location << ") - buffer was not in cache");
         return 0;
     }
+
+    // Make sure we don't hold the refcnt once we exit this method.
+    CachePageGuard guard(m_Cache, location);
 
     size_t block = location / getNativeBlockSize();
     size_t count = 4096 / getNativeBlockSize();

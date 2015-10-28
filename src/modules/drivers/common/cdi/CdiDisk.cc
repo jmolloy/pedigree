@@ -106,6 +106,7 @@ void CdiDisk::write(uint64_t location)
     assert( (location % 512) == 0 );
     uintptr_t buff = m_Cache.lookup(location);
     assert(buff);
+    CachePageGuard guard(m_Cache, location);
 
     if (cdi_storage_write(m_Device, location, 512, reinterpret_cast<void*>(buff)) != 0)
         return;

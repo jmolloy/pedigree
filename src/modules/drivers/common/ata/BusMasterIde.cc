@@ -104,7 +104,8 @@ bool BusMasterIde::add(uintptr_t buffer, size_t nBytes)
             // entry covers a 4096-byte region of memory (it can cover up to
             // 65,536 bytes, but by using only 4096-byte regions it is possible
             // to avoid the contiguous physical RAM requirement).
-            if(va.isMapped(reinterpret_cast<void*>(buffer + currOffset)))
+            void *loc = reinterpret_cast<void*>(buffer + currOffset);
+            if(va.isMapped(loc))
             {
                 physical_uintptr_t physPage = 0; size_t flags = 0;
                 va.getMapping(reinterpret_cast<void*>(buffer + currOffset), physPage, flags);
@@ -139,7 +140,7 @@ bool BusMasterIde::add(uintptr_t buffer, size_t nBytes)
                 i++;
             }
             else
-                FATAL("BusMasterIde: Part of the incoming buffer was not mapped!");
+                FATAL("BusMasterIde: Part of the incoming buffer was not mapped (" << loc << ")!");
         }
 
         // If we added an entry, remove the EOT from any previous PRD that was
