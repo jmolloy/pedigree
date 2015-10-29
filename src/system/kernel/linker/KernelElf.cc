@@ -23,6 +23,7 @@
 #include <processor/VirtualAddressSpace.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <utilities/MemoryTracing.h>
+#include <utilities/MemoryCount.h>
 #include <Log.h>
 
 KernelElf KernelElf::m_Instance;
@@ -298,6 +299,8 @@ KernelElf::~KernelElf()
 
 Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
 {
+    MemoryCount guard(__PRETTY_FUNCTION__);
+
     // The module memory allocator requires dynamic memory - this isn't initialised until after our constructor
     // is called, so check here if we've loaded any modules yet. If not, we can initialise our memory allocator.
     if (m_Modules.count() == 0)
@@ -360,6 +363,7 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
     module->depends = reinterpret_cast<const char **> (module->elf.lookupSymbol("g_pDepends"));
     module->depends_opt = reinterpret_cast<const char **> (module->elf.lookupSymbol("g_pOptionalDepends"));
     DEBUG("KERNELELF: Preloaded module " << module->name << " at " << module->loadBase << " to " << (module->loadBase + module->loadSize));
+    DEBUG("KERNELELF: Module " << module->name << " consumes " << Dec << (module->loadSize / 1024) << Hex << "K of memory");
 
 #ifdef MEMORY_TRACING
     traceMetadata(NormalStaticString(module->name), reinterpret_cast<void*>(module->loadBase), reinterpret_cast<void*>(module->loadBase + module->loadSize));
