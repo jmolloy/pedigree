@@ -225,7 +225,7 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
         // Page-align the start address.
         start &= ~(getPageSize() - 1);
 
-        if ((pageConstraints & continuous) != continuous)
+        if (((pageConstraints & continuous) != continuous) || (pageConstraints & virtualOnly))
             panic("PhysicalMemoryManager::allocateRegion(): function misused");
 
         // Remove the memory from the range-lists (if desired/possible)
@@ -319,49 +319,51 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
             return false;
         }
 
-
         uint32_t start = 0;
-        VirtualAddressSpace &virtualAddressSpace = Processor::information().getVirtualAddressSpace();
-
-        if ((pageConstraints & addressConstraints) == below1MB ||
-            (pageConstraints & addressConstraints) == below16MB)
+        if (!(pageConstraints & virtualOnly))
         {
-            // Allocate a range
-            if ((pageConstraints & addressConstraints) == below1MB)
-            {
-                if (m_RangeBelow1MB.allocate(cPages * getPageSize(), start) == false)
-                    return false;
-            }
-            else if ((pageConstraints & addressConstraints) == below16MB)
-            {
-                if (m_RangeBelow16MB.allocate(cPages * getPageSize(), start) == false)
-                    return false;
-            }
+            VirtualAddressSpace &virtualAddressSpace = Processor::information().getVirtualAddressSpace();
 
-            // Map the physical memory into the allocated space
-            for (size_t i = 0;i < cPages;i++)
-                if (virtualAddressSpace.map(start + i * PhysicalMemoryManager::getPageSize(),
-                                            reinterpret_cast<void*>(vAddress + i * PhysicalMemoryManager::getPageSize()),
-                                            Flags)
-                    == false)
+            if ((pageConstraints & addressConstraints) == below1MB ||
+                (pageConstraints & addressConstraints) == below16MB)
+            {
+                // Allocate a range
+                if ((pageConstraints & addressConstraints) == below1MB)
                 {
-                    WARNING("AllocateRegion: VirtualAddressSpace::map failed.");
-                    return false;
+                    if (m_RangeBelow1MB.allocate(cPages * getPageSize(), start) == false)
+                        return false;
                 }
-        }
-        else
-        {
-            // Map the physical memory into the allocated space
-            for (size_t i = 0;i < cPages;i++)
-            {
-                physical_uintptr_t page = m_PageStack.allocate(pageConstraints & addressConstraints);
-                if (virtualAddressSpace.map(page,
-                                            reinterpret_cast<void*>(vAddress + i * PhysicalMemoryManager::getPageSize()),
-                                            Flags)
-                    == false)
+                else if ((pageConstraints & addressConstraints) == below16MB)
                 {
-                    WARNING("AllocateRegion: VirtualAddressSpace::map failed.");
-                    return false;
+                    if (m_RangeBelow16MB.allocate(cPages * getPageSize(), start) == false)
+                        return false;
+                }
+
+                // Map the physical memory into the allocated space
+                for (size_t i = 0;i < cPages;i++)
+                    if (virtualAddressSpace.map(start + i * PhysicalMemoryManager::getPageSize(),
+                                                reinterpret_cast<void*>(vAddress + i * PhysicalMemoryManager::getPageSize()),
+                                                Flags)
+                        == false)
+                    {
+                        WARNING("AllocateRegion: VirtualAddressSpace::map failed.");
+                        return false;
+                    }
+            }
+            else
+            {
+                // Map the physical memory into the allocated space
+                for (size_t i = 0;i < cPages;i++)
+                {
+                    physical_uintptr_t page = m_PageStack.allocate(pageConstraints & addressConstraints);
+                    if (virtualAddressSpace.map(page,
+                                                reinterpret_cast<void*>(vAddress + i * PhysicalMemoryManager::getPageSize()),
+                                                Flags)
+                        == false)
+                    {
+                        WARNING("AllocateRegion: VirtualAddressSpace::map failed.");
+                        return false;
+                    }
                 }
             }
         }
@@ -677,7 +679,9 @@ void X86CommonPhysicalMemoryManager::unmapRegion(MemoryRegion *pRegion)
                 void *vAddr = reinterpret_cast<void*> (start + i * PhysicalMemoryManager::getPageSize());
                 if (!virtualAddressSpace.isMapped(vAddr))
                 {
-                    FATAL("Algorithmic error in PhysicalMemoryManager::unmapRegion");
+                    // Can happen with virtualOnly mappings.
+                    /// \todo copy the pageConstraints to the Region object
+                    continue;
                 }
                 physical_uintptr_t pAddr;
                 size_t flags;

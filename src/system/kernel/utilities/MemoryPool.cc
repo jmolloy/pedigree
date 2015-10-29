@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -24,12 +23,78 @@
 #include <LockGuard.h>
 #include <Log.h>
 
+static void map(uintptr_t location)
+{
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
+#ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
+    VirtualAddressSpace &currva = Processor::information().getVirtualAddressSpace();
+    Processor::switchAddressSpace(va);
+#endif
+
+    void *page = page_align(reinterpret_cast<void *>(location));
+    if (!va.isMapped(page))
+    {
+        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+        va.map(phys, page, VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+    }
+
+#ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
+    Processor::switchAddressSpace(currva);
+#endif
+}
+
+static bool unmap(uintptr_t location)
+{
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
+#ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
+    VirtualAddressSpace &currva = Processor::information().getVirtualAddressSpace();
+    Processor::switchAddressSpace(va);
+#endif
+
+    void *page = page_align(reinterpret_cast<void *>(location));
+    bool result = false;
+    if ((result = va.isMapped(page)))
+    {
+        size_t flags = 0;
+        physical_uintptr_t phys = 0;
+        va.getMapping(page, phys, flags);
+
+        va.unmap(page);
+        PhysicalMemoryManager::instance().freePage(phys);
+    }
+
+#ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
+    Processor::switchAddressSpace(currva);
+#endif
+
+    return result;
+}
+
+MemoryPoolPressureHandler::MemoryPoolPressureHandler(MemoryPool *pool) :
+    m_Pool(pool)
+{
+}
+
+MemoryPoolPressureHandler::~MemoryPoolPressureHandler()
+{
+}
+
+const String MemoryPoolPressureHandler::getMemoryPressureDescription()
+{
+    return String("MemoryPool: freeing unused pages");
+}
+
+bool MemoryPoolPressureHandler::compact()
+{
+    return m_Pool->trim();
+}
+
 MemoryPool::MemoryPool() :
 #ifdef THREADS
     m_BlockSemaphore(0), m_BitmapLock(),
 #endif
     m_BufferSize(1024), m_Pool("memory-pool"), m_bInitialised(false),
-    m_AllocBitmap()
+    m_AllocBitmap(), m_PressureHandler(this)
 {
 }
 
@@ -37,7 +102,8 @@ MemoryPool::MemoryPool(const char *poolName) :
 #ifdef THREADS
     m_BlockSemaphore(0),
 #endif
-    m_BufferSize(1024), m_Pool(poolName), m_bInitialised(false), m_AllocBitmap()
+    m_BufferSize(1024), m_Pool(poolName), m_bInitialised(false), m_AllocBitmap(),
+    m_PressureHandler(this)
 {
 }
 
@@ -60,7 +126,7 @@ bool MemoryPool::initialise(size_t poolSize, size_t bufferSize)
         return false;
 
     // Find the next power of two for bufferSize, if it isn't already one
-    if(!(bufferSize & (bufferSize - 1)))
+    if((bufferSize & (bufferSize - 1)))
     {
         size_t powerOf2 = 1;
         size_t lg2 = 0;
@@ -74,10 +140,11 @@ bool MemoryPool::initialise(size_t poolSize, size_t bufferSize)
 
     m_BufferSize = bufferSize;
 
+    NOTICE("MemoryPool: allocating memory pool '" << m_Pool.name() << "', " << Dec << ((poolSize * 4096) / 1024) << Hex << "K. Buffer size is " << m_BufferSize << ".");
     m_bInitialised = PhysicalMemoryManager::instance().allocateRegion(
         m_Pool,
         poolSize,
-        0,
+        PhysicalMemoryManager::virtualOnly,
         VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode
     );
     if(!m_bInitialised)
@@ -87,6 +154,10 @@ bool MemoryPool::initialise(size_t poolSize, size_t bufferSize)
 #ifdef THREADS
     m_BlockSemaphore.release(nBuffers);
 #endif
+
+    // Register us as a memory pressure handler, with top priority. We should
+    // very easily be able to free pages in most cases.
+    MemoryPressureManager::instance().registerHandler(MemoryPressureManager::HighestPriority, &m_PressureHandler);
 
     return true;
 }
@@ -145,8 +216,11 @@ uintptr_t MemoryPool::allocateDoer()
         FATAL("MemoryPool::allocateDoer - no buffers available, shouldn't have been called.");
         return 0;
     }
-    
-    return poolBase + (n * 0x1000);
+
+    uintptr_t result = poolBase + (n * 0x1000);
+    map(result);
+
+    return result;
 }
 
 void MemoryPool::free(uintptr_t buffer)
@@ -165,3 +239,58 @@ void MemoryPool::free(uintptr_t buffer)
 #endif
 }
 
+bool MemoryPool::trim()
+{
+    size_t poolSize = m_Pool.size();
+    size_t nBuffers = poolSize / m_BufferSize;
+    uintptr_t poolBase = reinterpret_cast<uintptr_t>(m_Pool.virtualAddress());
+
+    // Easy trim if buffers are pages or larger (remember that buffer sizes are
+    // rounded up to the next power of two).
+    size_t nFreed = 0;
+    if (m_BufferSize >= PhysicalMemoryManager::getPageSize())
+    {
+        for (size_t n = 0; n < nBuffers; ++n)
+        {
+            if (!m_AllocBitmap.test(n))
+            {
+                uintptr_t page = poolBase + (n * 0x1000);
+                for (size_t off = 0; off < m_BufferSize; off += PhysicalMemoryManager::getPageSize())
+                {
+                    if (unmap(page + off))
+                        ++nFreed;
+                }
+            }
+        }
+    }
+    else
+    {
+        // Need to find N contiguous sets of bits.
+        // We also need to navigate in blocks of pages.
+        size_t N = PhysicalMemoryManager::getPageSize() / m_BufferSize;
+        for (size_t n = 0, m = 0; n < nBuffers; n += N, ++m)
+        {
+            if (m_AllocBitmap.test(n))
+                continue;
+
+            bool ok = true;
+            for (size_t y = 1; y < N; ++y)
+            {
+                if (m_AllocBitmap.test(n + y))
+                {
+                    ok = false;
+                    break;
+                }
+            }
+
+            if (!ok)
+                continue;
+
+            uintptr_t page = poolBase + (m * 0x1000);
+            if (unmap(page))
+                ++nFreed;
+        }
+    }
+
+    return nFreed > 0;
+}
