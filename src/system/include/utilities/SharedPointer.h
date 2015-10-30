@@ -17,8 +17,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef SHAREDPOINtER_H
-#define SHAREDPOINtER_H
+#ifndef SHAREDPOINTER_H
+#define SHAREDPOINTER_H
 
 #include <processor/types.h>
 
@@ -183,6 +183,8 @@ SharedPointer<T> &SharedPointer<T>::operator =(const SharedPointer<T> &p)
     {
         __atomic_add_fetch(&m_Control->refcount, 1, __ATOMIC_RELAXED);
     }
+
+    return *this;
 }
 
 template <class T>
