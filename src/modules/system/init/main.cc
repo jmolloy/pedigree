@@ -504,7 +504,7 @@ void init_stage2()
 
 #if defined(X86_COMMON)
 #define __MOD_DEPS "vfs", "posix", "partition", "linker", "network-stack", "users", "pedigree-c", "native"
-#define __MOD_DEPS_OPT "ext2", "fat", "vbe"
+#define __MOD_DEPS_OPT "ext2", "fat", "gfx-deps"
 #elif defined(PPC_COMMON)
 #define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "linker", "network-stack", "users", "pedigree-c", "native"
 #elif defined(ARM_COMMON)
