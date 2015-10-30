@@ -152,8 +152,8 @@ void CacheManager::trimThread()
         {
           // Start trimming. Trim more the closer to the high watermark we get.
           NOTICE_NOLOCK("trimThread: free page count nears high watermark, automatically trimming");
-          // linear with high count at highMark, low count at lowMark
-          size_t trimCount = highMark - (currFree - highMark);
+          // Increase as the amount of memory decreases beyond the low watermark.
+          size_t trimCount = (lowMark - currFree) + 1;
           trimAll(trimCount);
         }
         else
