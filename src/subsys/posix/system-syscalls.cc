@@ -455,6 +455,9 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
             pProcess->getAddressSpace()->getDynamicEnd() - pProcess->getAddressSpace()->getDynamicStart());
     }
 
+    // Reset tracking.
+    pProcess->resetCounts();
+
     if(pLinker)
     {
         // Set the new linker now before we loadProgram, else we could trap and
@@ -603,6 +606,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
     // Jump to the new process.
     Processor::setInterrupts(true);
+    pProcess->recordTime(true);
     Processor::jumpUser(0, entryPoint, newStack,
         reinterpret_cast<uintptr_t>(argv), reinterpret_cast<uintptr_t>(env));
 

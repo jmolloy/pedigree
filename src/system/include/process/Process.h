@@ -284,6 +284,14 @@ public:
         m_Metadata.sharedPages += nShared;
     }
 
+    void resetCounts()
+    {
+        m_Metadata.virtualPages = 0;
+        m_Metadata.physicalPages = 0;
+        m_Metadata.sharedPages = 0;
+        m_Metadata.startTime = Time::getTimeNanoseconds();
+    }
+
     /**
      * Record the current time in the relevant field for this process.
      *
