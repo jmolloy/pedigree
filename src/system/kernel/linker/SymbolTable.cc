@@ -29,7 +29,7 @@ SymbolTable::~SymbolTable()
 {
   if(!m_Tree.count())
     return;
-  for (RadixTree<SymbolList*>::Iterator it = m_Tree.begin();
+  for (SymbolTrie::Iterator it = m_Tree.begin();
         it != m_Tree.end();
         it++)
   {
@@ -37,12 +37,8 @@ SymbolTable::~SymbolTable()
     {
       if(!((*it)->count()))
         continue;
-      for (SymbolList::Iterator it2 = (*it)->begin();
-            it2 != (*it)->end();
-            it2++)
-      {
-        delete *it2;
-      }
+
+      // SharedPointers will be destructed as part of the list terminating.
       delete *it;
     }
   }
@@ -56,7 +52,7 @@ void SymbolTable::copyTable(Elf *pNewElf, const SymbolTable &newSymtab)
     // Iterate over the tree and copy the lists pointer-by-pointer
     if(!m_Tree.count())
         return;
-    for (RadixTree<SymbolList*>::Iterator it = newSymtab.m_Tree.begin();
+    for (SymbolTrie::Iterator it = newSymtab.m_Tree.begin();
         it != newSymtab.m_Tree.end();
         it++)
     {
@@ -66,14 +62,13 @@ void SymbolTable::copyTable(Elf *pNewElf, const SymbolTable &newSymtab)
                 continue;
 
             // We now have a list, but we're not going to iterate...
-            List<Symbol*> *newList = new List<Symbol*>;
-            for(List<Symbol*>::Iterator it2 = (*it)->begin();
+            SymbolList *newList = new SymbolList;
+            for(SymbolList::Iterator it2 = (*it)->begin();
                 it2 != (*it)->end();
                 it2++)
             {
-                Symbol *pSymbol = (*it2);
-                Symbol *pNewSymbol = new Symbol(pNewElf, pSymbol->getBinding(), pSymbol->getValue());
-                newList->pushBack(pNewSymbol);
+                SharedPointer<Symbol> &pSymbol = *it2;
+                newList->pushBack(pSymbol);
             }
 
             *it = newList;
@@ -82,6 +77,18 @@ void SymbolTable::copyTable(Elf *pNewElf, const SymbolTable &newSymtab)
 }
 
 void SymbolTable::insert(String name, Binding binding, Elf *pParent, uintptr_t value)
+{
+  doInsert(name, binding, pParent, value);
+}
+
+void SymbolTable::insertMultiple(SymbolTable *pOther, String name, Binding binding, Elf *pParent, uintptr_t value)
+{
+  SharedPointer<Symbol> ptr = doInsert(name, binding, pParent, value);
+  if (pOther)
+    pOther->insertShared(name, ptr);
+}
+
+SharedPointer<SymbolTable::Symbol> SymbolTable::doInsert(String name, Binding binding, Elf *pParent, uintptr_t value)
 {
   SymbolList *pList = m_Tree.lookup(name);
   if (!pList)
@@ -95,18 +102,48 @@ void SymbolTable::insert(String name, Binding binding, Elf *pParent, uintptr_t v
         it != pList->end();
         it++)
   {
-    Symbol *pSym = *it;
+    SharedPointer<Symbol> pSym = (*it);
     if (pSym->getBinding() == binding && pSym->getParent() == pParent)
+      // This item is already in the list. Don't add it again.
+      return pSym;
+  }
+
+  // Not already in list, so create a new SharedPointer for it.
+  SharedPointer<Symbol> newSymbol;
+  Symbol *pSymbol = new Symbol(pParent, binding, value);
+  newSymbol.reset(pSymbol);
+  pList->pushBack (newSymbol);
+
+  return newSymbol;
+}
+
+void SymbolTable::insertShared(String name, SharedPointer<SymbolTable::Symbol> symbol)
+{
+  SymbolList *pList = m_Tree.lookup(name);
+  if (!pList)
+  {
+    pList = new SymbolList();
+    m_Tree.insert (name, pList);
+  }
+
+  // We need to scan the list to check we're not adding a duplicate.
+  for (SymbolList::Iterator it = pList->begin();
+        it != pList->end();
+        it++)
+  {
+    SharedPointer<Symbol> pSym = (*it);
+    if (pSym->getBinding() == symbol->getBinding() && pSym->getParent() == symbol->getParent())
       // This item is already in the list. Don't add it again.
       return;
   }
 
-  pList->pushBack (new Symbol(pParent, binding, value));
+  // Just add the shared pointer instead of creating a new one.
+  pList->pushBack(symbol);
 }
 
 void SymbolTable::eraseByElf(Elf *pParent)
 {
-    for (RadixTree<SymbolList*>::Iterator tit = m_Tree.begin();
+    for (SymbolTrie::Iterator tit = m_Tree.begin();
             tit != m_Tree.end();
             tit++)
     {
@@ -123,7 +160,7 @@ void SymbolTable::eraseByElf(Elf *pParent)
             if(!*it)
                 continue;
 
-            Symbol *pSym = *it;
+            SharedPointer<Symbol> pSym = *it;
             if (pSym->getParent() == pParent)
             {
                 it = pList->erase(it);
@@ -151,7 +188,7 @@ uintptr_t SymbolTable::lookup(String name, Elf *pElf, Policy policy, Binding *pB
           it != pList->end();
           it++)
     {
-      Symbol *pSym = *it;
+      SharedPointer<Symbol> pSym = *it;
       if (pSym->getBinding() == Local && pSym->getParent() == pElf)
         return pSym->getValue();
     }
@@ -161,7 +198,7 @@ uintptr_t SymbolTable::lookup(String name, Elf *pElf, Policy policy, Binding *pB
           it != pList->end();
           it++)
     {
-      Symbol *pSym = *it;
+      SharedPointer<Symbol> pSym = *it;
       if (pSym->getBinding() == Global && pSym->getParent() == m_pOriginatingElf)
         return pSym->getValue();
     }
@@ -171,7 +208,7 @@ uintptr_t SymbolTable::lookup(String name, Elf *pElf, Policy policy, Binding *pB
           it != pList->end();
           it++)
     {
-      Symbol *pSym = *it;
+      SharedPointer<Symbol> pSym = *it;
       if (pSym->getBinding() == Global && pSym->getParent() == pElf)
         return pSym->getValue();
     }
@@ -182,7 +219,7 @@ uintptr_t SymbolTable::lookup(String name, Elf *pElf, Policy policy, Binding *pB
         it != pList->end();
         it++)
   {
-    Symbol *pSym = *it;
+    SharedPointer<Symbol> pSym = *it;
     if (pSym->getBinding() == Global &&
         (policy != NotOriginatingElf || pSym->getParent() != m_pOriginatingElf))
     {
@@ -195,7 +232,7 @@ uintptr_t SymbolTable::lookup(String name, Elf *pElf, Policy policy, Binding *pB
         it != pList->end();
         it++)
   {
-    Symbol *pSym = *it;
+    SharedPointer<Symbol> pSym = *it;
     if (pSym->getBinding() == Weak &&
         (policy != NotOriginatingElf || pSym->getParent() != m_pOriginatingElf))
     {

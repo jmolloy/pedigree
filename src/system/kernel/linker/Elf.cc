@@ -675,9 +675,7 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
             // If the shndx == UND (0x0), the symbol is in the table but undefined!
             if (*pStr != '\0' && pSymbol->shndx != 0)
             {
-                m_SymbolTable.insert(String(pStr), binding, this, pSymbol->value);
-                if (pSymbolTableCopy)
-                    pSymbolTableCopy->insert(String(pStr), binding, this, pSymbol->value);
+                m_SymbolTable.insertMultiple(pSymbolTableCopy, String(pStr), binding, this, pSymbol->value);
             }
             pSymbol++;
         }

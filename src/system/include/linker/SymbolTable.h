@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,6 +22,7 @@
 
 #include <utilities/RadixTree.h>
 #include <utilities/List.h>
+#include <utilities/SharedPointer.h>
 
 class Elf;
 
@@ -69,6 +69,9 @@ public:
   /** Insert a symbol into the table. */
   void insert(String name, Binding binding, Elf *pParent, uintptr_t value);
 
+  /** Insert a symbol into two SymbolTables, using the memory once. */
+  void insertMultiple(SymbolTable *pOther, String name, Binding binding, Elf *pParent, uintptr_t value);
+
   void eraseByElf(Elf *pParent);
 
   /** Looks up a symbol in the table, optionally outputting the
@@ -104,8 +107,14 @@ private:
     uintptr_t m_Value;
   };
 
-  typedef List<Symbol*> SymbolList;
-  RadixTree<SymbolList*> m_Tree;
+  /** Insert doer. */
+  SharedPointer<Symbol> doInsert(String name, Binding binding, Elf *pParent, uintptr_t value);
+  /** Insert the given shared symbol. */
+  void insertShared(String name, SharedPointer<Symbol> symbol);
+
+  typedef List<SharedPointer<Symbol> > SymbolList;
+  typedef RadixTree<SymbolList *> SymbolTrie;
+  SymbolTrie m_Tree;
   Elf *m_pOriginatingElf;
 };
 
