@@ -47,7 +47,7 @@
 class Cache;
 
 /** Provides a clean abstraction to a set of data caches. */
-class CacheManager : public TimerHandler, public RequestQueue, public MemoryPressureHandler
+class CacheManager : public TimerHandler, public RequestQueue
 {
     public:
         CacheManager();
@@ -58,26 +58,10 @@ class CacheManager : public TimerHandler, public RequestQueue, public MemoryPres
             return m_Instance;
         }
 
-        virtual const String getMemoryPressureDescription()
-        {
-          return String("Global cache compact.");
-        }
-
         void initialise();
 
         void registerCache(Cache *pCache);
         void unregisterCache(Cache *pCache);
-
-        /**
-         * Compact every cache we know about, until 'count' pages have been
-         * evicted. Default value for count says 'all pages in all caches'.
-         */
-        bool compactAll(size_t count = ~0UL);
-
-        virtual bool compact()
-        {
-            return compactAll(5);
-        }
 
         /**
          * Trim each cache we know about until 'count' pages have been evicted.
@@ -85,6 +69,8 @@ class CacheManager : public TimerHandler, public RequestQueue, public MemoryPres
         bool trimAll(size_t count = 1);
 
         virtual void timer(uint64_t delta, InterruptState &state);
+
+        void trimThread();
 
     private:
         /**
@@ -108,6 +94,10 @@ class CacheManager : public TimerHandler, public RequestQueue, public MemoryPres
         static CacheManager m_Instance;
 
         List<Cache*> m_Caches;
+
+        Thread *m_pTrimThread;
+
+        bool m_bActive;
 };
 
 /** Provides an abstraction of a data cache. */
@@ -212,18 +202,6 @@ public:
      * \return false if key didn't exist, true otherwise
      */
     bool pin(uintptr_t key);
-
-    /** Attempts to "compact" the cache - (hopefully) reduces
-     *  resource usage by throwing away items in a
-     *  least-recently-used fashion. This is called in an
-     *  emergency "physical memory getting full" situation by the
-     *  PMM.
-     *
-     * Pass a count to specify that only count pages should be cleared.
-     * If a count is passed, the cache prefers to remove pages that have
-     * not been accessed, rather than the least-recently-used page.
-     */
-    size_t compact(size_t count = ~0UL);
 
     /**
      * Attempts to trim the cache.

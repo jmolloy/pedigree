@@ -35,12 +35,20 @@ static bool g_AllocatorInited = false;
 
 CacheManager CacheManager::m_Instance;
 
-CacheManager::CacheManager() : m_Caches()
+static int trimTrampoline(void *p)
+{
+    CacheManager::instance().trimThread();
+    return 0;
+}
+
+CacheManager::CacheManager() : m_Caches(), m_pTrimThread(0), m_bActive(false)
 {
 }
 
 CacheManager::~CacheManager()
 {
+    m_bActive = false;
+    m_pTrimThread->join();
 }
 
 void CacheManager::initialise()
@@ -51,12 +59,13 @@ void CacheManager::initialise()
         t->registerHandler(this);
     }
 
-    // Install our memory pressure handler at the highest priority as we are
-    // most likely to provide immediate gains.
-    MemoryPressureManager::instance().registerHandler(MemoryPressureManager::HighestPriority, this);
-
     // Call out to the base class initialise() so the RequestQueue goes live.
     RequestQueue::initialise();
+
+    // Create our main trim thread.
+    Process *pParent = Processor::information().getCurrentThread()->getParent();
+    m_bActive = true;
+    m_pTrimThread = new Thread(pParent, trimTrampoline, 0);
 }
 
 void CacheManager::registerCache(Cache *pCache)
@@ -76,21 +85,6 @@ void CacheManager::unregisterCache(Cache *pCache)
             return;
         }
     }
-}
-
-bool CacheManager::compactAll(size_t count)
-{
-    size_t totalEvicted = 0;
-    for(List<Cache*>::Iterator it = m_Caches.begin();
-        (it != m_Caches.end()) && count;
-        ++it)
-    {
-        size_t evicted = (*it)->compact(count);
-        totalEvicted += evicted;
-        count -= evicted;
-    }
-
-    return totalEvicted != 0;
 }
 
 bool CacheManager::trimAll(size_t count)
@@ -146,6 +140,27 @@ uint64_t CacheManager::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uin
     return pCache->executeRequest(p1, p2, p3, p4, p5, p6, p7, p8);
 }
 
+void CacheManager::trimThread()
+{
+    while (m_bActive)
+    {
+        // Ask caches to trim if we're heading towards memory usage problems.
+        size_t currFree = PhysicalMemoryManager::instance().freePageCount();
+        size_t lowMark = MemoryPressureManager::getLowWatermark();
+        size_t highMark = MemoryPressureManager::getHighWatermark();
+        if (UNLIKELY(currFree <= lowMark))
+        {
+          // Start trimming. Trim more the closer to the high watermark we get.
+          NOTICE_NOLOCK("trimThread: free page count nears high watermark, automatically trimming");
+          // linear with high count at highMark, low count at lowMark
+          size_t trimCount = highMark - (currFree - highMark);
+          trimAll(trimCount);
+        }
+        else
+            Scheduler::instance().yield();
+    }
+}
+
 Cache::Cache() :
     m_Pages(), m_pLruHead(0), m_pLruTail(0), m_Lock(), m_Callback(0),
     m_Nanoseconds(0)
@@ -173,9 +188,8 @@ Cache::Cache() :
         g_AllocatorInited = true;
     }
 
-    // Allocate any necessary iterators before we hit a Cache::compact() call.
-    // The heap must not be used during compacting, as a heap allocation could
-    // have been the culprit of the compact.
+    // Allocate any necessary iterators now, so that they're available
+    // immediately and we consume their memory early.
     m_Pages.begin();
     m_Pages.end();
 
@@ -468,95 +482,6 @@ void Cache::release (uintptr_t key)
     }
 
     m_Lock.release();
-}
-
-size_t Cache::compact(size_t count)
-{
-    if(!count)
-        return 0;
-
-    size_t nPages = 0;
-
-    // Attempt an LRU compact.
-    size_t n = 0;
-    while ((nPages < count) && ((n = lruEvict(true)) > 0))
-    {
-        nPages += n;
-    }
-
-    // If we still need to find pages, let's find pages that have not
-    // been accessed since the last compact/writeback.
-    if(nPages < count)
-    {
-        VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-        for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
-            it != m_Pages.end();
-            ++it)
-        {
-            CachePage *page = it.value();
-
-            // Only if page has not been pinned - dirty flag is not enough information.
-            if(!((m_Callback && (page->refcnt > 1)) || ((!m_Callback) && (page->refcnt > 0))))
-            {
-                if(va.isMapped(reinterpret_cast<void *>(page->location)))
-                {
-                    physical_uintptr_t phys;
-                    size_t flags;
-                    va.getMapping(reinterpret_cast<void *>(page->location), phys, flags);
-
-                    // Not accessed? Awesome!
-                    if(!(flags & VirtualAddressSpace::Accessed))
-                    {
-                        // But watch out for dirty pages - they have not been written back yet.
-                        if(flags & VirtualAddressSpace::Dirty)
-                            continue;
-
-                        evict(it.key(), false, false, false);
-                        m_Pages.erase(it++);
-
-                        if(++nPages >= count)
-                            break;
-                    }
-                    else
-                    {
-                        // Clear the accessed flag, ready for the next compact that might come.
-                        flags &= ~(VirtualAddressSpace::Accessed);
-                        va.setFlags(reinterpret_cast<void *>(page->location), flags);
-
-                        // Increment iterator as we did not erase.
-                        ++it;
-                    }
-                }
-            }
-            else
-                ++it;
-        }
-    }
-
-    // If no pages were added to the free list, we need to just rip out pages.
-    if(nPages < count)
-    {
-        int i = 0;
-        for(Tree<uintptr_t, CachePage*>::Iterator it = m_Pages.begin();
-            it != m_Pages.end();)
-        {
-            CachePage *page = it.value();
-
-            // Only if page has not been pinned - otherwise completely unsafe to remove.
-            if(!((m_Callback && (page->refcnt > 1)) || ((!m_Callback) && (page->refcnt > 0))))
-            {
-                evict(it.key(), false, false, false);
-                m_Pages.erase(it++);
-            }
-            else
-                ++it;
-
-            if((i++ >= CACHE_NUM_THRESHOLD) || (++nPages >= count))
-                break;
-        }
-    }
-
-    return nPages;
 }
 
 size_t Cache::trim(size_t count)
