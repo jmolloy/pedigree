@@ -120,7 +120,7 @@ class Iterator
         return m_Node->value;
       else
       {
-        static T ret = 0;
+        static T ret = T();
         return ret;
       }
     }
