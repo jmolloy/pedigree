@@ -487,7 +487,7 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
     size_t nObjects = m_SlabSize / m_ObjectSize;
 
     Node *N = reinterpret_cast<Node*> (slab);
-    N->next = 0;
+    N->next = tagged(&m_EmptyNode);
 #if USING_MAGIC
     N->magic = TEMP_MAGIC;
 #endif
@@ -704,7 +704,7 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
         panic("Attempted to get a slab smaller than the native page size.");
     }
 
-    LockGuard<Spinlock> guard(m_SlabRegionLock);
+    m_SlabRegionLock.acquire();
 
     // Try to find space for this allocation.
     size_t entry = 0;
@@ -778,90 +778,30 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
     else
     {
         // Have to search within entries.
+        uint64_t search = (1 << nPages) - 1;
+        size_t maxBit = 64 - nPages;
         for(entry = 0; entry < m_SlabRegionBitmapEntries; ++entry)
         {
-            if(!m_SlabRegionBitmap[entry])
+            if(m_SlabRegionBitmap[entry] == 0ULL)
             {
                 bit = 0;
                 break;
             }
-            else if(__builtin_popcountll(~m_SlabRegionBitmap[entry]) >= nPages)
+            else if (m_SlabRegionBitmap[entry] != ~0ULL)
             {
-                // Need to find a sequence of bits.
-                // Try for the beginning or end of the entry, as these are builtins.
-                ssize_t trailing = __builtin_ctzll(m_SlabRegionBitmap[entry]);
-                if(trailing < nPages)
+                // Try and see if we fit somewhere.
+                for (bit = 0; bit < maxBit; ++bit)
                 {
-                    ssize_t leading = __builtin_clzll(m_SlabRegionBitmap[entry]);
-                    if(leading < nPages)
-                    {
-                        // No or not enough leading/trailing zeroes. Have to
-                        // fall back to a more linear search.
+                    if (m_SlabRegionBitmap[entry] & (search << bit))
+                        continue;
 
-                        ssize_t c = 0;
-                        size_t b = ~0UL;
-                        size_t len = 64;
-                        uint64_t v = m_SlabRegionBitmap[entry];
-
-                        // Try and reduce the number of bits we need to scan.
-                        if((v & 0xFFFFFFFFULL) == 0xFFFFFFFFULL)
-                        {
-                            len -= 32;
-                            v >>= 32;
-                        }
-                        if((v & 0xFFFFULL) == 0xFFFFULL)
-                        {
-                            len -= 16;
-                            v >>= 16;
-                        }
-                        if((v & 0xFFULL) == 0xFFULL)
-                        {
-                            len -= 8;
-                            v >>= 8;
-                        }
-                        if((v & 0xFULL) == 0xFULL)
-                        {
-                            len -= 4;
-                            v >>= 4;
-                        }
-
-                        while(len--)
-                        {
-                            if(v & 1)
-                            {
-                                c = 0;
-                                b = ~0;
-                            }
-                            else
-                            {
-                                // Bits count from zero.
-                                if(b == ~0UL)
-                                    b = 63 - len;
-
-                                if(++c >= nPages)
-                                    break;
-                            }
-
-                            v >>= 1;
-                        }
-
-                        if(LIKELY(b != ~0UL))
-                        {
-                            bit = b;
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        bit = 64 - leading;
-                        break;
-                    }
-                }
-                else
-                {
-                    bit = 0;
                     break;
                 }
+
+                if (bit < maxBit)
+                    break;
+
+                bit = ~0UL;
             }
         }
     }
@@ -881,7 +821,7 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
 #endif
 
     // Map and mark as used.
-    for(ssize_t i = 0; i < nPages; ++i)
+    for (ssize_t i = 0; i < nPages; ++i)
     {
         m_SlabRegionBitmap[entry] |= 1ULL << bit;
 
@@ -891,7 +831,15 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
             ++entry;
             bit = 0;
         }
+    }
 
+    // Now that we've marked the slab bits as used, we can map the pages.
+    m_SlabRegionLock.release();
+
+    // Map. This could break as we're allocating physical memory; though we are
+    // free of the lock so that helps.
+    for (ssize_t i = 0; i < nPages; ++i)
+    {
         void *p = reinterpret_cast<void *>(slab + (i * getPageSize()));
         allocateAndMapAt(p);
     }
