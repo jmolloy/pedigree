@@ -354,16 +354,6 @@ size_t SlamCache::recovery(size_t maxSlabs)
             // If no head node, we're done with this free list.
             if(N == &m_EmptyNode)
             {
-                if (reinsertTail == &m_EmptyNode)
-                {
-                    // No reinsert tail. Bail.
-                    break;
-                }
-
-                // Re-link the nodes we passed over.
-                push(&m_PartialLists[thisCpu], reinsertTail, reinsertHead);
-                Node *pHead = 0;
-
                 break;
             }
 
@@ -382,7 +372,7 @@ size_t SlamCache::recovery(size_t maxSlabs)
                     break;
                 }
 #if USING_MAGIC
-                if(pNode->magic != MAGIC_VALUE)
+                else if(pNode->magic != MAGIC_VALUE)
                 {
                     // Not free.
                     bSlabNotFree = true;
@@ -393,8 +383,8 @@ size_t SlamCache::recovery(size_t maxSlabs)
 
             if(bSlabNotFree)
             {
-                // Link the node into our reinsert lists, as the slab cannot
-                // be freed quite so easily.
+                // Link the node into our reinsert lists, as the slab contains
+                // in-use nodes.
                 if(untagged(reinsertHead) == &m_EmptyNode)
                 {
                     reinsertHead = tagged(N);
@@ -410,28 +400,50 @@ size_t SlamCache::recovery(size_t maxSlabs)
                 continue;
             }
 
-            // Slab free. Unlink all items and remove.
-            for (size_t i = 0; i < (m_SlabSize / m_ObjectSize); ++i)
+            // Unlink any of our items that exist in the free list.
+            // Yes, this is slow, but we've already stopped the world.
+            alignedNode head = untagged(m_PartialLists[thisCpu]);
+            alignedNode prev = head;
+            while (head != &m_EmptyNode)
             {
-                alignedNode pNode = reinterpret_cast<alignedNode> (slab + (i * m_ObjectSize));
-                Node *pNodeNext = pNode->next;
+                bool overlaps = ((head >= reinterpret_cast<void *>(slab)) || (head <= reinterpret_cast<void *>(slab + getPageSize())));
 
-                alignedNode pCopyNode = pNode;
+                if (overlaps)
+                {
+                    // Update previous node to point past us.
+                    prev->next = touch_tag(head->next);
 
-                // Copy tags for comparison if needed.
-                alignedNode headSnapshot = untagged(m_PartialLists[thisCpu]);
+                    // If we're pointing at the head of the list, we need to
+                    // update the head of the list too.
+                    if (prev == head)
+                    {
+                        prev = untagged(head->next);
+                        m_PartialLists[thisCpu] = touch_tag(head->next);
+                    }
+                    else
+                    {
+                        prev = head;
+                    }
+                }
+                else
+                {
+                    prev = head;
+                }
 
-                // This CPU's lists can't be touched right now (interrupts off),
-                // so this is safe to do.
-                if (headSnapshot == pNode)
-                    m_PartialLists[thisCpu] = touch_tag(pNodeNext);
-                else if (untagged(headSnapshot->next) == pNode)
-                    headSnapshot->next = touch_tag(pNodeNext);
+                head = untagged(head->next);
             }
 
             // Kill off the slab!
             freeSlab(slab);
             ++freedSlabs;
+        }
+
+        // Relink any nodes we decided we couldn't free. This must be done here
+        // as the loop may terminate before we get a chance to do this.
+        if (reinsertTail != &m_EmptyNode)
+        {
+            // Re-link the nodes we passed over.
+            push(&m_PartialLists[thisCpu], reinsertTail, reinsertHead);
         }
     }
     else
