@@ -61,6 +61,17 @@
 
 #define GET_CWD() (Processor::information().getCurrentThread()->getParent()->getCwd())
 
+/// Clears a string array.
+static void clear_string_array(Vector<String*> &rArray)
+{
+    for (Vector<String*>::Iterator it = rArray.begin();
+            it != rArray.end();
+            it++)
+    {
+        String *pStr = *it;
+        delete pStr;
+    }
+}
 /// Saves a char** array in the Vector of String*s given.
 static size_t save_string_array(const char **array, Vector<String*> &rArray)
 {
@@ -522,6 +533,10 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     uintptr_t location = argvAddress;
     argv = const_cast<const char**> (load_string_array(savedArgv, location, location));
     env  = const_cast<const char**> (load_string_array(savedEnv , location, location));
+
+    // Wipe out the argv and env now.
+    clear_string_array(savedArgv);
+    clear_string_array(savedEnv);
 
     uintptr_t entryPoint = 0;
 
