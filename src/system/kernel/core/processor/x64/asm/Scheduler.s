@@ -205,6 +205,12 @@ _ZN9Processor10jumpKernelEPVmmmmmmm:
 ; [rsi]    address
 ; [rdi]    Lock
 _ZN9Processor8jumpUserEPVmmmmmmm:
+    ;; Drop IRQs while we work here. They will be enabled in the sysret.
+    ;; We need to do this because we switch to the user stack, which possibly
+    ;; won't be mapped in another process's address space (which then #DF's
+    ;; the scheduler when it attempts to load a new thread).
+    cli
+
     ;; Load the lock pointer, address and stack to scratch registers.
     mov     r10, rdi
     mov     rax, rsi
