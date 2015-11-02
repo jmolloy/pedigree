@@ -778,7 +778,7 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
     else
     {
         // Have to search within entries.
-        uint64_t search = (1 << nPages) - 1;
+        uint64_t search = (1ULL << nPages) - 1;
         size_t maxBit = 64 - nPages;
         for(entry = 0; entry < m_SlabRegionBitmapEntries; ++entry)
         {
