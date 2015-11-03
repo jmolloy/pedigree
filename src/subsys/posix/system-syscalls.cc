@@ -71,6 +71,8 @@ static void clear_string_array(Vector<String*> &rArray)
         String *pStr = *it;
         delete pStr;
     }
+
+    rArray.clear();
 }
 /// Saves a char** array in the Vector of String*s given.
 static size_t save_string_array(const char **array, Vector<String*> &rArray)

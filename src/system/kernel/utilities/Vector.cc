@@ -96,6 +96,9 @@ void Vector<void*>::setAt(size_t idx, void *value)
 void Vector<void*>::clear()
 {
   m_Count = 0;
+  m_Size = 0;
+  delete [] m_Data;
+  m_Data = 0;
 }
 Vector<void*>::Iterator Vector<void*>::erase(Iterator iter)
 {
