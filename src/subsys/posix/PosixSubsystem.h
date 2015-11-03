@@ -531,6 +531,7 @@ class PosixSubsystem : public Subsystem
         }
 
     private:
+        virtual void threadRemoved(Thread *pThread);
 
         /** Signal handlers */
         Tree<size_t, SignalHandler*> m_SignalHandlers;

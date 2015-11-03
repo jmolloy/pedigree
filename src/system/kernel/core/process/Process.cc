@@ -151,6 +151,9 @@ void Process::removeThread(Thread *pThread)
       break;
     }
   }
+
+  if (m_pSubsystem)
+    m_pSubsystem->threadRemoved(pThread);
 }
 
 size_t Process::getNumThreads()

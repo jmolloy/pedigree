@@ -226,6 +226,7 @@ PosixSubsystem::~PosixSubsystem()
         }
 
         thread->m_ThreadData.clear();
+        delete thread;
     }
 
     m_Threads.clear();
@@ -476,6 +477,7 @@ bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)
     if(sig && sig->pEvent)
     {
         // Send the kill event
+        /// \todo we probably want to avoid allocating a new stack..
         pThread->sendEvent(sig->pEvent);
 
         // Allow the event to run
@@ -769,4 +771,21 @@ void PosixSubsystem::freeMultipleFds(bool bOnlyCloExec, size_t iFirst, size_t iL
     }
 
     m_FdLock.release();
+}
+
+void PosixSubsystem::threadRemoved(Thread *pThread)
+{
+    for(Tree<size_t, PosixThread *>::Iterator it = m_Threads.begin(); it != m_Threads.end(); it++)
+    {
+        PosixThread *thread = it.value();
+        if (thread->pThread != pThread)
+            continue;
+
+        // Can safely assert that this thread is no longer running.
+        // We do not however kill the thread object yet. It can be cleaned up
+        // when the PosixSubsystem quits (if this was the last thread). Or, it
+        // will be cleaned up by a join().
+        thread->isRunning.release();
+        break;
+    }
 }

@@ -38,6 +38,7 @@ class Process;
   */
 class Subsystem
 {
+    friend class Process;
     public:
 
         /** Defines the different types of subsystems */
@@ -124,6 +125,10 @@ class Subsystem
         }
 
     protected:
+        /** Notifies the subsystem that the given thread has been removed. */
+        virtual void threadRemoved(Thread *pThread)
+        {
+        }
 
         SubsystemType m_Type;
 
