@@ -80,7 +80,7 @@ bool TextIO::initialise(bool bClear)
             if(bClear)
             {
                 memset(m_pFramebuffer, 0, m_pVga->getNumRows() * m_pVga->getNumCols() * sizeof(uint16_t));
-                memset(m_pBackbuffer, 0, BACKBUFFER_STRIDE * BACKBUFFER_ROWS);
+                memset(m_pBackbuffer, 0, BACKBUFFER_STRIDE * BACKBUFFER_ROWS * sizeof(VgaCell));
             }
 
             m_bInitialised = true;
