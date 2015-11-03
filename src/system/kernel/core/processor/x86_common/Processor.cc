@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -28,19 +27,18 @@
 
 void Processor::initialisationDone()
 {
-    /*
-  #if defined(X86)
-    // Unmap the identity mapping of the first MBs
-    X86VirtualAddressSpace &KernelAddressSpace = static_cast<X86VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace());
-    *reinterpret_cast<uint32_t*>(KernelAddressSpace.m_PhysicalPageDirectory) = 0;
-    invalidate(0);
-  #else
-    // Unmap the identity mapping of the first MBs
-    X64VirtualAddressSpace &KernelAddressSpace = static_cast<X64VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace());
-    *reinterpret_cast<uint64_t*>(KernelAddressSpace.m_PhysicalPML4) = 0;
-    invalidate(0);
-  #endif
-  */
+  /// \todo there HAS to be a better way than this
+#if defined(X86)
+  // Unmap the identity mapping of the first MBs
+  X86VirtualAddressSpace &KernelAddressSpace = static_cast<X86VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace());
+  *reinterpret_cast<uint32_t*>(KernelAddressSpace.m_PhysicalPageDirectory) = 0;
+  invalidate(0);
+#else
+  // Unmap the identity mapping of the first MBs
+  X64VirtualAddressSpace &KernelAddressSpace = static_cast<X64VirtualAddressSpace&>(VirtualAddressSpace::getKernelAddressSpace());
+  *reinterpret_cast<uint64_t*>(KernelAddressSpace.m_PhysicalPML4) = 0;
+  invalidate(0);
+#endif
 
   X86CommonPhysicalMemoryManager::instance().initialisationDone();
 }
