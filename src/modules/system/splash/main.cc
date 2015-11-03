@@ -518,5 +518,8 @@ static void destroy()
 {
 }
 
-MODULE_INFO("splash", &init, &destroy, "gfx-deps", "config");
+MODULE_INFO("splash", &init, &destroy, "config");
+// If no graphics drivers loaded, we can handle that still. But we still need
+// to run after the gfx-deps metamodule.
+MODULE_OPTIONAL_DEPENDS("gfx-deps");
 
