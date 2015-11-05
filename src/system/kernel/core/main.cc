@@ -385,7 +385,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   // Set up the process killer memory pressure handler.
   MemoryPressureProcessKiller killer;
-  MemoryPressureManager::instance().registerHandler(MemoryPressureManager::MediumPriority, &killer);
+  MemoryPressureManager::instance().registerHandler(MemoryPressureManager::LowestPriority, &killer);
 
   // Set up the global info block manager.
   InfoBlockManager::instance().initialise();

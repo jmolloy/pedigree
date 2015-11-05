@@ -57,8 +57,10 @@ bool MemoryPressureProcessKiller::compact()
     NOTICE_NOLOCK("MemoryPressureProcessKiller will kill pid=" << Dec << pCandidateProcess->getId() << Hex);
     NOTICE_NOLOCK("virt=" << Dec << mb(pCandidateProcess->getVirtualPageCount()) << "m phys=" << mb(pCandidateProcess->getPhysicalPageCount()) << "m shared=" << mb(pCandidateProcess->getSharedPageCount()) << "m" << Hex);
 
+    // Hard kill the process (SIGKILL, in POSIX terms).
+    // We cannot afford to let the thread do anything else.
     Subsystem *pSubsystem = pCandidateProcess->getSubsystem();
-    pSubsystem->threadException(pCandidateProcess->getThread(0), Subsystem::Quit);
+    pSubsystem->kill(Subsystem::Unknown, pCandidateProcess->getThread(0));
 
     // Give the process time to quit.
     Scheduler::instance().yield();
