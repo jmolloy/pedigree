@@ -47,6 +47,13 @@ static void getInfoBlock()
         infoBlock = (struct InfoBlock *) loc;
         hasInfoBlock = 1;
     }
+    else
+    {
+        // Failed, but don't call this syscall again.
+        syslog(LOG_INFO, "infoblock: no info block available");
+        infoBlock = (struct InfoBlock *) ~0U;
+        hasInfoBlock = 0;
+    }
 }
 
 int gettimeofday(struct timeval *tv, void *tz)
