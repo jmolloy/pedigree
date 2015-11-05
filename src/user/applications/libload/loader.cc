@@ -36,7 +36,7 @@
 
 #define PACKED __attribute__((packed))
 
-#define DEBUG_LIBLOAD
+// #define DEBUG_LIBLOAD
 
 #define _NO_ELF_CLASS
 #include <Elf.h>
@@ -231,7 +231,9 @@ extern "C" int main(int argc, const char *argv[])
         return 0;
     }
 
+#ifdef DEBUG_LIBLOAD
     syslog(LOG_INFO, "libload.so starting...");
+#endif
 
     char *ld_libpath = getenv("LD_LIBRARY_PATH");
     char *ld_preload = getenv("LD_PRELOAD");
@@ -262,7 +264,9 @@ extern "C" int main(int argc, const char *argv[])
         }
     }
 
+#ifdef DEBUG_LIBLOAD
     syslog(LOG_INFO, "libload.so loading main object");
+#endif
 
     // Ungodly hack.
     if(!strcmp(argv[0], "sh") || !strcmp(argv[0], "/bin/sh"))
@@ -277,7 +281,9 @@ extern "C" int main(int argc, const char *argv[])
         }
     }
 
+#ifdef DEBUG_LIBLOAD
     syslog(LOG_INFO, "libload.so main object is %s", argv[0]);
+#endif
 
     // Load the main object passed on the command line.
     object_meta_t *meta = g_MainObject = new object_meta_t;
@@ -290,7 +296,9 @@ extern "C" int main(int argc, const char *argv[])
 
     g_LoadedObjects.insert(meta->filename);
 
+#ifdef DEBUG_LIBLOAD
     syslog(LOG_INFO, "libload.so loading preload, if one exists");
+#endif
 
     // Preload?
     if(ld_preload) {
@@ -305,7 +313,9 @@ extern "C" int main(int argc, const char *argv[])
         }
     }
 
+#ifdef DEBUG_LIBLOAD
     syslog(LOG_INFO, "libload.so loading dependencies");
+#endif
 
     // Any libraries to load?
     if(meta->needed.size()) {
@@ -317,7 +327,9 @@ extern "C" int main(int argc, const char *argv[])
         }
     }
 
+#ifdef DEBUG_LIBLOAD
     syslog(LOG_INFO, "libload.so relocating dependencies");
+#endif
 
     // Relocate preloads.
     for(std::list<struct _object_meta *>::iterator it = meta->preloads.begin();
@@ -333,7 +345,9 @@ extern "C" int main(int argc, const char *argv[])
         doRelocation(*it);
     }
 
+#ifdef DEBUG_LIBLOAD
     syslog(LOG_INFO, "libload.so relocating main object");
+#endif
 
     // Do initial relocation of the binary (non-GOT entries)
     doRelocation(meta);
@@ -346,7 +360,9 @@ extern "C" int main(int argc, const char *argv[])
         it != meta->objects.end();
         ++it) {
         if((*it)->init_func) {
+#ifdef DEBUG_LIBLOAD
             syslog(LOG_INFO, "libload.so running init_func for %s", (*it)->filename.c_str());
+#endif
             init_fini_func_t init = (init_fini_func_t) (*it)->init_func;
             init();
         }
@@ -355,7 +371,9 @@ extern "C" int main(int argc, const char *argv[])
     // Run init function, if one exists.
     if(meta->init_func) {
         init_fini_func_t init = (init_fini_func_t) meta->init_func;
-            syslog(LOG_INFO, "libload.so running init_func for %s", meta->filename.c_str());
+#ifdef DEBUG_LIBLOAD
+        syslog(LOG_INFO, "libload.so running init_func for %s", meta->filename.c_str());
+#endif
         init();
     }
 
@@ -377,7 +395,9 @@ extern "C" int main(int argc, const char *argv[])
 
     // argv[0] is passed to us by the kernel and holds the path to the binary
     // we need to load. argv[1:] is the original argv.
+#ifdef DEBUG_LIBLOAD
     syslog(LOG_INFO, "libload.so running entry point");
+#endif
     meta->entry(&argv[1], environ);
 
     return 0;
@@ -486,11 +506,12 @@ bool loadSharedObjectHelper(const char *filename, object_meta_t *parent, object_
     return bSuccess;
 }
 
-#include <syslog.h>
 bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
     meta->filename = filename;
     meta->path = findObject(meta->filename, envpath);
+#ifdef DEBUG_LIBLOAD
     syslog(LOG_INFO, "libload.so loading %s", filename);
+#endif
 
     // Okay, let's open up the file for reading...
     int fd = open(meta->path.c_str(), O_RDONLY);
@@ -780,8 +801,10 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                             }
                             meta->memory_regions.push_back(std::pair<void *, size_t>(p, totalLength));
                         }
+#ifdef DEBUG_LIBLOAD
                         else
                             syslog(LOG_INFO, "libload.so: not mapping filesz section at %p", vaddr_start);
+#endif
                     }
 
                     void *p = mmap((void *) phdr_base, mapsz, PROT_READ | PROT_WRITE, mapflags, map_fd, map_fd ? offset : 0);
@@ -1083,7 +1106,9 @@ void doRelocation(object_meta_t *meta) {
         // mprotect accordingly.
         size_t alignExtra = meta->phdrs[i].vaddr & (getpagesize() - 1);
         uintptr_t protectaddr = meta->phdrs[i].vaddr & ~(getpagesize() - 1);
+#ifdef DEBUG_LIBLOAD
         syslog(LOG_INFO, "map %s %p -> %p [%p] %s%s%s", meta->filename.c_str(), meta->phdrs[i].vaddr, meta->phdrs[i].vaddr + meta->phdrs[i].memsz, meta->phdrs[i].offset, flags & PROT_READ ? "r" : "-", flags & PROT_WRITE ? "w" : "-", flags & PROT_EXEC ? "x" : "-");
+#endif
         mprotect((void *) protectaddr, meta->phdrs[i].memsz + alignExtra, flags);
     }
 }
