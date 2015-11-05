@@ -53,11 +53,9 @@ char* posix_getcwd(char* buf, size_t maxlen);
 int posix_readlink(const char* path, char* buf, unsigned int bufsize);
 int posix_realpath(const char *path, char *buf, size_t bufsize);
 
-// Returns DIR->fd, takes &dir->ent.
-int posix_opendir(const char *dir, dirent *ent);
-int posix_readdir(int fd, dirent *ent);
-void posix_rewinddir(int fd, dirent *ent);
-int posix_closedir(int fd);
+int posix_opendir(const char *dir, DIR *ent);
+int posix_readdir(DIR *dir);
+int posix_closedir(DIR *dir);
 
 int posix_ioctl(int fd, int operation, void *buf);
 

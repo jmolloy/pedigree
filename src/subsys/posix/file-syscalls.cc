@@ -976,10 +976,10 @@ int posix_lstat(char *name, struct stat *st)
     return 0;
 }
 
-int posix_opendir(const char *dir, dirent *ent)
+int posix_opendir(const char *dir, DIR *ent)
 {
     if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(dir), PATH_MAX, PosixSubsystem::SafeRead) &&
-        PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(ent), sizeof(dirent), PosixSubsystem::SafeWrite)))
+        PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(ent), sizeof(DIR), PosixSubsystem::SafeWrite)))
     {
         F_NOTICE("opendir -> invalid address");
         SYSCALL_ERROR(InvalidArgument);
@@ -996,8 +996,6 @@ int posix_opendir(const char *dir, dirent *ent)
         ERROR("No subsystem for this process!");
         return -1;
     }
-
-    size_t fd = pSubsystem->getFd();
 
     String realPath;
     normalisePath(realPath, dir);
@@ -1022,51 +1020,37 @@ int posix_opendir(const char *dir, dirent *ent)
         return -1;
     }
 
+    size_t fd = pSubsystem->getFd();
     FileDescriptor *f = new FileDescriptor;
     f->file = file;
     f->offset = 0;
     f->fd = fd;
 
-    file = Directory::fromFile(file)->getChild(0);
-    if (file)
-    {
-        ent->d_ino = file->getInode();
+    // Fill out the DIR structure too.
+    Directory *pDirectory = Directory::fromFile(file);
+    memset(ent, 0, sizeof(*ent));
+    ent->fd = fd;
+    ent->count = pDirectory->getNumChildren();
 
-        // Some applications consider a null inode to mean "bad file" which is
-        // a horrible assumption for them to make. Because the presence of a file
-        // is indicated by more effective means (ie, successful return from
-        // readdir) this just appeases the applications which aren't portably
-        // written.
-        if(ent->d_ino == 0)
-            ent->d_ino = 0x7fff; // Signed, don't want this to turn negative
-
-        // Copy the filename across
-        strncpy(ent->d_name, static_cast<const char*>(file->getName()), MAXNAMLEN);
-    }
-    else
-    {
-        // No file here.
-        memset(ent, 0, sizeof(*ent));
-    }
-
+    // Register the fd, we're about to buffer the directory and be done here
     pSubsystem->addFileDescriptor(fd, f);
+
+    // Load the buffer now that we've set up for the buffer.
+    posix_readdir(ent);
 
     return static_cast<int>(fd);
 }
 
-int posix_readdir(int fd, dirent *ent)
+int posix_readdir(DIR *dir)
 {
-    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(ent), sizeof(dirent), PosixSubsystem::SafeWrite))
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(dir), sizeof(DIR), PosixSubsystem::SafeWrite))
     {
         F_NOTICE("readdir -> invalid address");
         SYSCALL_ERROR(InvalidArgument);
         return -1;
     }
 
-    F_NOTICE("readdir(" << fd << ")");
-
-    if (fd == -1)
-        return -1;
+    F_NOTICE("readdir(" << dir->fd << ")");
 
     // Lookup this process.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -1077,7 +1061,7 @@ int posix_readdir(int fd, dirent *ent)
         return -1;
     }
 
-    FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
+    FileDescriptor *pFd = pSubsystem->getFileDescriptor(dir->fd);
     if (!pFd || !pFd->file)
     {
         // Error - no such file descriptor.
@@ -1090,62 +1074,60 @@ int posix_readdir(int fd, dirent *ent)
         SYSCALL_ERROR(NotADirectory);
         return -1;
     }
-    File* file = Directory::fromFile(pFd->file)->getChild(pFd->offset);
-    if (!file)
+
+    if (dir->pos % 64)
     {
-        // Normal EOF condition.
-        SYSCALL_ERROR(NoError);
+        // Not on a multiple of 64 - possibly called directly rather than via
+        // libc (where the proper magic is done).
+        SYSCALL_ERROR(InvalidArgument);
         return -1;
     }
 
-    ent->d_ino = static_cast<short>(file->getInode());
-    String tmp = file->getName();
-    strcpy(ent->d_name, static_cast<const char*>(tmp));
-    ent->d_name[strlen(static_cast<const char*>(tmp))] = '\0';
-    if(file->isSymlink())
-        ent->d_type = DT_LNK;
-    else
-        ent->d_type = file->isDirectory() ? DT_DIR : DT_REG;
-    pFd->offset ++;
+    // Buffer another 64 entries.
+    Directory *pDirectory = Directory::fromFile(pFd->file);
+    for (size_t i = 0; i < 64; ++i)
+    {
+        File *pFile = pDirectory->getChild(dir->pos + i);
+        if (!pFile)
+            break;
+
+        dir->ent[i].d_ino = pFile->getInode();
+
+        // Some applications consider a null inode to mean "bad file" which is
+        // a horrible assumption for them to make. Because the presence of a file
+        // is indicated by more effective means (ie, successful return from
+        // readdir) this just appeases the applications which aren't portably
+        // written.
+        if(dir->ent[i].d_ino == 0)
+            dir->ent[i].d_ino = 0x7fff; // Signed, don't want this to turn negative
+
+        // Copy filename.
+        strncpy(dir->ent[i].d_name, static_cast<const char *>(pFile->getName()), MAXNAMLEN);
+        if(pFile->isSymlink())
+            dir->ent[i].d_type = DT_LNK;
+        else
+            dir->ent[i].d_type = pFile->isDirectory() ? DT_DIR : DT_REG;
+    }
 
     return 0;
 }
 
-void posix_rewinddir(int fd, dirent *ent)
+int posix_closedir(DIR *dir)
 {
-    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(ent), sizeof(dirent), PosixSubsystem::SafeWrite))
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(dir), sizeof(DIR), PosixSubsystem::SafeRead))
     {
-        F_NOTICE("rewinddir -> invalid address");
+        F_NOTICE("closedir -> invalid address");
         SYSCALL_ERROR(InvalidArgument);
-        return;
+        return -1;
     }
 
-    if (fd == -1)
+    if (dir->fd < 0)
     {
         SYSCALL_ERROR(BadFileDescriptor);
-        return;
-    }
-
-    F_NOTICE("rewinddir(" << fd << ")");
-
-    Process *pProcess = Processor::information().getCurrentThread()->getParent();
-    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
-    if (!pSubsystem)
-    {
-        ERROR("No subsystem for this process!");
-        return;
-    }
-    FileDescriptor *f = pSubsystem->getFileDescriptor(fd);
-    f->offset = 0;
-    posix_readdir(fd, ent);
-}
-
-int posix_closedir(int fd)
-{
-    if (fd == -1)
         return -1;
+    }
 
-    F_NOTICE("closedir(" << fd << ")");
+    F_NOTICE("closedir(" << dir->fd << ")");
 
     /// \todo Race here - fix.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -1156,7 +1138,7 @@ int posix_closedir(int fd)
         return -1;
     }
 
-    pSubsystem->freeFd(fd);
+    pSubsystem->freeFd(dir->fd);
 
     return 0;
 }

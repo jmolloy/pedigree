@@ -95,14 +95,13 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_EXIT:
             return posix_exit(p1);
         case POSIX_OPENDIR:
-            return posix_opendir(reinterpret_cast<const char*>(p1), reinterpret_cast<dirent*>(p2));
+            return posix_opendir(reinterpret_cast<const char*>(p1), reinterpret_cast<DIR*>(p2));
         case POSIX_READDIR:
-            return posix_readdir(p1, reinterpret_cast<dirent*>(p2));
+            return posix_readdir(reinterpret_cast<DIR*>(p1));
         case POSIX_REWINDDIR:
-            posix_rewinddir(p1, reinterpret_cast<dirent*>(p2));
             return 0;
         case POSIX_CLOSEDIR:
-            return posix_closedir(p1);
+            return posix_closedir(reinterpret_cast<DIR*>(p1));
         case POSIX_TCGETATTR:
             return posix_tcgetattr(p1, reinterpret_cast<struct termios*>(p2));
         case POSIX_TCSETATTR:

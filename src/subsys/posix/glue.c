@@ -374,7 +374,7 @@ int lstat(const char *file, struct stat *st)
 DIR *opendir(const char *dir)
 {
     DIR *p = (DIR*) malloc(sizeof(DIR));
-    p->fd = syscall2(POSIX_OPENDIR, (long)dir, (long)&p->ent);
+    syscall2(POSIX_OPENDIR, (long) dir, (long) p);
     if (p->fd < 0)
     {
         free(p);
@@ -386,34 +386,70 @@ DIR *opendir(const char *dir)
 struct dirent *readdir(DIR *dir)
 {
     if (!dir)
+    {
+        errno = EINVAL;
         return 0;
+    }
 
     int old_errno = errno;
 
-    if (syscall2(POSIX_READDIR, dir->fd, (long)&dir->ent) != -1)
-        return &dir->ent;
+    if (dir->fd < 0)
+    {
+        // Bad DIR object.
+        errno = EINVAL;
+        return 0;
+    }
+
+    if (dir->totalpos >= dir->count)
+    {
+        // End of directory. errno remains unchanged.
+        return 0;
+    }
+    else if (dir->pos >= 64)
+    {
+        // Buffer the next batch of entries.
+        syscall1(POSIX_READDIR, (long) dir);
+        dir->pos = 1;
+        dir->totalpos++;
+        return &dir->ent[0];
+    }
     else
     {
-        if(!errno)
-            errno = old_errno; // End of directory: errno unchanged.
-        return 0;
+        struct dirent *result = &dir->ent[dir->pos];
+        dir->pos++;
+        dir->totalpos++;
+        return result;
     }
 }
 
 void rewinddir(DIR *dir)
 {
     if (!dir)
+    {
         return;
+    }
 
-    syscall2(POSIX_REWINDDIR, dir->fd, (long)&dir->ent);
+    if (dir->totalpos < 64)
+    {
+        // Don't need to re-buffer.
+        dir->pos = dir->totalpos = 0;
+    }
+    else if (dir->totalpos != 0)
+    {
+        dir->pos = dir->totalpos = 0;
+        syscall1(POSIX_READDIR, (long) dir);
+    }
 }
 
 int closedir(DIR *dir)
 {
     if (!dir)
-        return 0;
+    {
+        errno = EINVAL;
+        return -1;
+    }
 
-    syscall1(POSIX_CLOSEDIR, dir->fd);
+    syscall1(POSIX_CLOSEDIR, (long) dir);
     free(dir);
     return 0;
 }

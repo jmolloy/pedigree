@@ -60,6 +60,12 @@ public:
     /** Returns the n'th child of this directory, or an invalid file. */
     File* getChild(size_t n);
 
+    /** Returns the number of children in this directory. */
+    size_t getNumChildren() const
+    {
+        return m_Cache.count();
+    }
+
     /** Load the directory's contents into the cache. */
     virtual void cacheDirectoryContents();
 
