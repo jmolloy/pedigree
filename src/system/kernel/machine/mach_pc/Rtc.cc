@@ -21,6 +21,7 @@
 #include <machine/Machine.h>
 #include <process/Event.h>
 #include <process/Thread.h>
+#include <process/Scheduler.h>
 #include "Rtc.h"
 
 #include <SlamAllocator.h>
@@ -331,6 +332,7 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
     ++m_Second;
     m_Nanosecond -= 1000000000ULL;
 
+#ifndef MEMORY_TRACING  // Memory tracing uses serial line 1.
 #ifdef MEMORY_LOGGING_ENABLED
     Serial *pSerial = Machine::instance().getSerial(1);
     NormalStaticString str;
@@ -343,8 +345,30 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
     str += "K\n";
 
     pSerial->write(str);
-#endif
 
+    // Memory snapshot of current processes.
+    for(size_t i = 0; i < Scheduler::instance().getNumProcesses(); ++i)
+    {
+        Process *pProcess = Scheduler::instance().getProcess(i);
+        LargeStaticString str;
+
+        ssize_t virtK = (pProcess->getVirtualPageCount() * 0x1000) / 1024;
+        ssize_t physK = (pProcess->getPhysicalPageCount() * 0x1000) / 1024;
+        ssize_t shrK = (pProcess->getSharedPageCount() * 0x1000) / 1024;
+
+        str.append("\tProcess ");
+        str.append(pProcess->description());
+        str.append(" V=");
+        str.append(virtK, 10);
+        str.append("K P=");
+        str.append(physK, 10);
+        str.append("K S=");
+        str.append(shrK, 10);
+        str.append("\n");
+        pSerial->write(str);
+    }
+#endif
+#endif
 
     if (UNLIKELY(m_Second == 60))
     {
