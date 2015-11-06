@@ -59,7 +59,9 @@ void Rtc::removeAlarm(Event *pEvent)
     {
         if ( (*it)->m_pEvent == pEvent )
         {
+            Alarm *pAlarm = *it;
             m_Alarms.erase(it);
+            delete pAlarm;
             return;
         }
     }
@@ -90,7 +92,9 @@ size_t Rtc::removeAlarm(class Event *pEvent, bool bRetZero)
                 }
             }
 
+            Alarm *pAlarm = *it;
             m_Alarms.erase(it);
+            delete pAlarm;
             return ret;
         }
     }
@@ -313,6 +317,7 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
               pA->m_pThread->sendEvent(pA->m_pEvent);
               m_Alarms.erase(it);
               bDispatched = true;
+              delete pA;
               break;
           }
       }
