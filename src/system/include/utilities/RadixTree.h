@@ -283,7 +283,10 @@ void RadixTree<T>::insert(String key, T value)
         {
             case Node::ExactMatch:
             {
+                /// \todo should only increment m_nItems if this is the first
+                ///       time the value has been set here.
                 pNode->setValue(value);
+                m_nItems++;
                 return;
             }
             case Node::NoMatch:
