@@ -140,6 +140,15 @@ void printString(const char *str)
     {
         static HugeStaticString s;
         s += str;
+
+        // Truncate the string if we need to.
+        /// \todo terminal width assumption
+        /// \todo could also go to next line and indent for visibility
+        if (s.length() >= 79)
+        {
+            s.truncate(75);
+            s += "...>\n";
+        }
         
         BootIO::Colour c = BootIO::LightGrey;
         if(str[1] == 'W')
