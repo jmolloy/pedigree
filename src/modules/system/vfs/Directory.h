@@ -61,10 +61,7 @@ public:
     File* getChild(size_t n);
 
     /** Returns the number of children in this directory. */
-    size_t getNumChildren() const
-    {
-        return m_Cache.count();
-    }
+    size_t getNumChildren();
 
     /** Load the directory's contents into the cache. */
     virtual void cacheDirectoryContents();

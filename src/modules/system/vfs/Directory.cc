@@ -61,6 +61,17 @@ File* Directory::getChild(size_t n)
     return 0;
 }
 
+size_t Directory::getNumChildren()
+{
+    if (!m_bCachePopulated)
+    {
+        cacheDirectoryContents();
+        m_bCachePopulated = true;
+    }
+
+    return m_Cache.count();
+}
+
 void Directory::cacheDirectoryContents()
 {
 }
