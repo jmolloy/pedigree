@@ -1075,7 +1075,7 @@ int posix_readdir(DIR *dir)
         return -1;
     }
 
-    if (dir->pos % 64)
+    if (dir->totalpos % 64)
     {
         // Not on a multiple of 64 - possibly called directly rather than via
         // libc (where the proper magic is done).
@@ -1087,7 +1087,7 @@ int posix_readdir(DIR *dir)
     Directory *pDirectory = Directory::fromFile(pFd->file);
     for (size_t i = 0; i < 64; ++i)
     {
-        File *pFile = pDirectory->getChild(dir->pos + i);
+        File *pFile = pDirectory->getChild(dir->totalpos + i);
         if (!pFile)
             break;
 
