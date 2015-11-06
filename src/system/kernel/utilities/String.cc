@@ -19,7 +19,6 @@
 
 #include <utilities/utility.h>
 #include <utilities/String.h>
-#include <Log.h>
 
 void String::assign(const String &x)
 {
