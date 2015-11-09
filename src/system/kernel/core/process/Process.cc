@@ -43,6 +43,7 @@ Process::Process() :
   m_State(Active), m_BeforeSuspendState(Thread::Ready), m_Lock(false),
   m_Metadata(), m_LastKernelEntry(0), m_LastUserspaceEntry(0), m_DeadThreads(0)
 {
+  resetCounts();
   m_Metadata.startTime = Time::getTimeNanoseconds();
 
   m_Id = Scheduler::instance().addProcess(this);
@@ -79,6 +80,9 @@ Process::Process(Process *pParent) :
 
 Process::~Process()
 {
+  // Guards things like removeThread.
+  m_State = Terminating;
+
   bool isSelf = Processor::information().getCurrentThread()->getParent() == this;
 
   for(Vector<Thread*>::Iterator it = m_Threads.begin();
@@ -87,10 +91,7 @@ Process::~Process()
   {
     Thread *pThread = (*it);
 
-    // When the thread gets cleaned up, make sure it does not attempt to remove
-    // the thread from this process (as we are about to do that anyway).
-    pThread->setParent(0);
-
+    // Clean up thread if not actually us.
     if (pThread != Processor::information().getCurrentThread())
     {
       // Child thread is not current thread - terminate the child properly.
@@ -140,6 +141,10 @@ size_t Process::addThread(Thread *pThread)
 
 void Process::removeThread(Thread *pThread)
 {
+  // Don't bother in these states: already done, or is about to be done.
+  if (m_State == Terminating || m_State == Terminated)
+    return;
+
   LockGuard<Spinlock> guard(m_Lock);
   for(Vector<Thread*>::Iterator it = m_Threads.begin();
       it != m_Threads.end();

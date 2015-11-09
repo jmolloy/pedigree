@@ -153,17 +153,7 @@ Thread::~Thread()
       shutdown();
   }
 
-  // Remove us from the scheduler.
-  Scheduler::instance().removeThread(this);
-
-  if (m_pParent)
-      m_pParent->removeThread(this);
-
-  // TODO delete any pointer data.
-
-  //if (m_pAllocatedStack)
-  //  VirtualAddressSpace::getKernelAddressSpace().freeStack(m_pAllocatedStack);
-
+  // Clean up allocated stacks at each level.
   for(size_t i = 0; i < MAX_NESTED_EVENTS; i++)
   {
     if(m_StateLevels[i].m_pKernelStack)
@@ -175,9 +165,37 @@ Thread::~Thread()
         // we may have switched address spaces to allow the thread to die.
         m_pParent->getAddressSpace()->freeStack(m_StateLevels[i].m_pUserStack);
   }
-  
-  if(m_pTlsBase)
-    delete m_pTlsBase;
+
+  // Clean up TLS base.
+  if(m_pTlsBase && m_pParent)
+  {
+    // Unmap the TLS base.
+    if (m_pParent->getAddressSpace()->isMapped(m_pTlsBase))
+    {
+        physical_uintptr_t phys = 0;
+        size_t flags = 0;
+        m_pParent->getAddressSpace()->getMapping(m_pTlsBase, phys, flags);
+        m_pParent->getAddressSpace()->unmap(m_pTlsBase);
+        PhysicalMemoryManager::instance().freePage(phys);
+    }
+
+    // Give the address space back to the process.
+    uintptr_t base = reinterpret_cast<uintptr_t>(m_pTlsBase);
+    if (m_pParent->getAddressSpace()->getDynamicStart())
+        m_pParent->getDynamicSpaceAllocator().free(base, THREAD_TLS_SIZE);
+    else
+        m_pParent->getSpaceAllocator().free(base, THREAD_TLS_SIZE);
+  }
+  else if(m_pTlsBase)
+  {
+    ERROR("Thread: no parent, but a TLS base exists.");
+  }
+
+  // Remove us from the scheduler.
+  Scheduler::instance().removeThread(this);
+
+  if (m_pParent)
+      m_pParent->removeThread(this);
 }
 
 void Thread::shutdown()
@@ -360,8 +378,6 @@ void Thread::allocateStackAtLevel(size_t stateLevel)
         stateLevel = MAX_NESTED_EVENTS - 1;
     if(m_StateLevels[stateLevel].m_pKernelStack == 0)
         m_StateLevels[stateLevel].m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
-//    if(m_StateLevels[stateLevel].m_pUserStack == 0)
-//        m_StateLevels[stateLevel].m_pUserStack = m_pParent->getAddressSpace()->allocateStack();
 }
 
 void *Thread::getKernelStack()
@@ -535,32 +551,37 @@ uintptr_t Thread::getTlsBase()
     // PerProcessorScheduler, the address space is set properly.
     if(!m_pTlsBase)
     {
-        // Allocate space for this thread's TLS region
-        m_pTlsBase = new MemoryRegion("thread-local-storage");
-        if(!PhysicalMemoryManager::instance().allocateRegion(
-                                        *m_pTlsBase,
-                                        THREAD_TLS_SIZE / 0x1000,
-                                        0,
-                                        VirtualAddressSpace::Write))
-        {
-          delete m_pTlsBase;
-          m_pTlsBase = 0;
-          
-          return 0;
-        }
+        // Get ourselves some space.
+        uintptr_t base = 0;
+        if (m_pParent->getAddressSpace()->getDynamicStart())
+            m_pParent->getDynamicSpaceAllocator().allocate(THREAD_TLS_SIZE, base);
         else
+            m_pParent->getSpaceAllocator().allocate(THREAD_TLS_SIZE, base);
+
+        if (!base)
         {
-          NOTICE("Thread [" << Dec << m_pParent->getId() << ":" << m_Id << Hex << "]: allocated TLS area at " << reinterpret_cast<uintptr_t>(m_pTlsBase->virtualAddress()) << ".");
-          
-          uint32_t *tlsBase = reinterpret_cast<uint32_t*>(m_pTlsBase->virtualAddress());
-#ifdef BITS_64
-          *tlsBase = static_cast<uint32_t>(m_Id);
-#else
-          *tlsBase = m_Id;
-#endif
+            // Failed to allocate space.
+            NOTICE("Thread [" << Dec << m_pParent->getId() << ":" << m_Id << Hex << "]: failed to allocate TLS area.");
+            return base;
         }
+
+        // Map.
+        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+        m_pParent->getAddressSpace()->map(phys, reinterpret_cast<void *>(base), VirtualAddressSpace::Write);
+
+        // Set up our thread ID to start with in the TLS region, now that it's
+        // actually mapped into the address space.
+        m_pTlsBase = reinterpret_cast<void *>(base);
+        uint32_t *tlsBase = reinterpret_cast<uint32_t *>(m_pTlsBase);
+#ifdef BITS_64
+        *tlsBase = static_cast<uint32_t>(m_Id);
+#else
+        *tlsBase = m_Id;
+#endif
+
+        NOTICE("Thread [" << Dec << m_pParent->getId() << ":" << m_Id << Hex << "]: allocated TLS area at " << m_pTlsBase << ".");
     }
-    return reinterpret_cast<uintptr_t>(m_pTlsBase->virtualAddress());
+    return reinterpret_cast<uintptr_t>(m_pTlsBase);
 }
 
 bool Thread::join()
