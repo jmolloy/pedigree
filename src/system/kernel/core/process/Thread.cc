@@ -584,6 +584,12 @@ uintptr_t Thread::getTlsBase()
     return reinterpret_cast<uintptr_t>(m_pTlsBase);
 }
 
+void Thread::resetTlsBase()
+{
+    m_pTlsBase = 0;
+    Processor::setTlsBase(getTlsBase());
+}
+
 bool Thread::join()
 {
   Thread *pThisThread = Processor::information().getCurrentThread();

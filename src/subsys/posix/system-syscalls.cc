@@ -471,6 +471,9 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     // Reset tracking.
     pProcess->resetCounts();
 
+    // Reset TLS base.
+    pThread->resetTlsBase();
+
     if(pLinker)
     {
         // Set the new linker now before we loadProgram, else we could trap and

@@ -43,7 +43,7 @@ class Processor;
 class Process;
 
 /** Thread TLS area size */
-#define THREAD_TLS_SIZE     0x100000
+#define THREAD_TLS_SIZE     0x1000
 
 /**
  * An abstraction of a thread of execution.
@@ -311,6 +311,13 @@ public:
     
     /** Gets the TLS base address for this thread. */
     uintptr_t getTlsBase();
+
+    /**
+     * Resets the TLS base address for this thread and re-maps it.
+     * Note: doesn't free the memory - only call after a call to something like
+     * revertToKernelAddressSpace!
+     */
+    void resetTlsBase();
     
     /** Gets this thread's CPU ID */
     inline
@@ -458,8 +465,8 @@ private:
     /** List of requests pending on this Thread */
     List<RequestQueue::Request*> m_PendingRequests;
     
-    /** Memory region for the TLS base of this thread (userspace-only) */
-    MemoryRegion *m_pTlsBase;
+    /** Memory mapping for the TLS base of this thread (userspace-only) */
+    void *m_pTlsBase;
     
 #ifdef MULTIPROCESSOR
     ProcessorId
