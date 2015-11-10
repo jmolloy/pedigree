@@ -28,18 +28,24 @@ def postImageBuild(img, env, iso=False):
 
     additional_images = {}
     if not iso:
-        if env['createvdi'] or env['createvmdk']:
+        if env['createvdi'] or env['createvmdk'] or env['createqcow']:
             additional_images = {
                 'vdi': env.File(os.path.join(builddir, 'hdd.vdi')),
                 'vmdk' : env.File(os.path.join(builddir, 'hdd.vmdk')),
+                'qcow' : env.File(os.path.join(builddir, 'hdd.qcow2')),
             }
 
         if env['createvdi'] and 'vdi' in additional_images:
-            target = additional_images['vdi'].path
+            target = additional_images['vdi'].abspath
             env.Command(target, img,
-                '$QEMU_IMG convert -O vpc $SOURCE $TARGET')
+                '$QEMU_IMG convert -O vdi $SOURCE $TARGET')
 
         if env['createvmdk'] and 'vmdk' in additional_images:
-            target = additional_images['vmdk'].path
+            target = additional_images['vmdk'].abspath
             env.Command(target, img,
                 '$QEMU_IMG convert -f raw -O vmdk $SOURCE $TARGET')
+
+        if env['createqcow'] and 'qcow' in additional_images:
+            target = additional_images['qcow'].abspath
+            env.Command(target, img,
+                '$QEMU_IMG convert -f raw -O qcow2 $SOURCE $TARGET')

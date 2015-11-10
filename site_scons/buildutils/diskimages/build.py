@@ -37,9 +37,9 @@ def buildDiskImages(env, config_database):
     hddimg = os.path.join(builddir, 'hdd.img')
     cdimg = os.path.join(builddir, 'pedigree.iso')
 
-    if (not env['ARCH_TARGET'] in ['X86', 'X64', 'PPC', 'ARM', 'HOSTED'] or
-            not (env['distdir'] or not env['nodiskimages'])):
-        print 'No hard disk image being built.'
+    if (env['ARCH_TARGET'] not in ['X86', 'X64', 'PPC', 'ARM', 'HOSTED'] or
+            not env['build_images']):
+        print 'No disk images being built.'
         return
 
     env.Depends(hddimg, 'libs')
@@ -49,7 +49,7 @@ def buildDiskImages(env, config_database):
 
     env.Depends(hddimg, config_database)
 
-    if not env['nodiskimages'] and not env['noiso']:
+    if env['iso']:
         env.Depends(cdimg, hddimg) # Inherent dependency on libs/apps
 
     fileList = []
@@ -147,7 +147,7 @@ def buildDiskImages(env, config_database):
     env.Command(hddimg, fileList, SCons.Action.Action(buildImage, None))
 
     # Build the live CD ISO
-    if not env['noiso']:
+    if env['iso']:
         env.Command(cdimg, [config_database, initrd, kernel, hddimg],
             SCons.Action.Action(livecd.buildCdImage, None))
         post.postImageBuild(cdimg, env, iso=True)

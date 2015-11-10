@@ -48,6 +48,18 @@ opts.AddVariables(
     ('LINKFLAGS', 'Sets the linker flags', ''),
     ('BUILDDIR', 'Directory to place build files in.','build'),
 
+    # Controls for the build itself. Will bomb out on bad combinations - will
+    # not try and fix them for the user. This is intentional. Note that a
+    # fully functional disk image build depends on everything here.
+    BoolVariable('build_kernel_only', 'Build the kernel ONLY (forces all other build_*s to 0).', 0),
+    BoolVariable('build_kernel', 'Build the kernel.', 1),
+    BoolVariable('build_configdb', 'Build the configuration database (requires `sqlite3`).', 1),
+    BoolVariable('build_modules', 'Build drivers, subsystems, and system modules (requires a useful `tar`).', 1),
+    BoolVariable('build_lgpl', 'Build LGPL libraries (e.g., libSDL).', 1),
+    BoolVariable('build_apps', 'Build in-tree applications (e.g., `ttyterm`).', 1),
+    BoolVariable('build_images', 'Build disk images (ISOs + HDD images) - requires all build_* variables.', 1),
+
+    # General-purpose configuration knobs.
     BoolVariable('cripple_hdd','Disable writing to hard disks at runtime.',1),
     BoolVariable('debugger','Whether or not to enable the kernel debugger.',1),
     BoolVariable('asserts','Whether or not to enable runtime assertions.',1),
@@ -76,9 +88,9 @@ opts.AddVariables(
     BoolVariable('forcemtools', 'Force use of mtools (and the FAT filesystem) even if losetup is available.', 0),
     BoolVariable('createvdi', 'Convert the created hard disk image to a VDI file for VirtualBox after it is created.', 0),
     BoolVariable('createvmdk', 'Convert the created hard disk image to a VMDK file for VMware after it is created.', 0),
-    BoolVariable('nodiskimages', 'Whether or not to avoid building disk images for distribution.', 0),
-    BoolVariable('noiso', 'Whether or not to avoid building an ISO.', 0),
-    BoolVariable('livecd', 'Whether or not to build a Live CD (one with a disk image on it).', 1),
+    BoolVariable('createqcow', 'Convert the created hard disk image to a QCOW2 file after it is created.', 0),
+    BoolVariable('iso', 'Building a bootable ISO.', 1),
+    BoolVariable('livecd', 'Whether or not the bootable ISO should be a Live CD (one with a disk image on it).', 1),
     
     BoolVariable('pup', 'If 1, you are managing your images/local directory with the Pedigree UPdater (pup) and want that instead of the images/<arch> directory.', 1),
     
@@ -227,6 +239,22 @@ env['CPPSUFFIXES'] = ['.c', '.C', '.cc', '.h', '.hpp', '.cpp', '.S']
 for k in autogen_opts.keys():
     env[k] = autogen_env.get(k)
 
+# Make sure there's a sensible configuration.
+if env['build_kernel_only']:
+    env['build_kernel'] = True
+    env['build_configdb'] = False
+    env['build_modules'] = False
+    env['build_lgpl'] = False
+    env['build_apps'] = False
+    env['build_images'] = False
+if env['build_images']:
+    if not all(env[x] for x in ('build_kernel', 'build_configdb',
+                                'build_modules', 'build_lgpl', 'build_apps',
+                                'build_images')):
+        raise SCons.Errors.UserError('build_images requires all build_* options set to 1.')
+if env['build_configdb'] and not env['build_modules']:
+    raise SCons.Errors.UserError('build_configdb requires build_modules=1.')
+
 # Look for things we care about for the build.
 env['QEMU_IMG'] = env.Detect('qemu-img')
 env['LOSETUP'] = env.Detect('losetup')
@@ -250,17 +278,20 @@ if sys.platform == 'darwin':
         env['TAR'] = env.Detect('gnutar')
 
 # Look for things we absolutely must have.
-required_tools = ['SQLITE', 'TAR']
+required_tools = []
+if env['build_configdb']:
+    # Need sqlite and tar if we're building a config database.
+    required_tools.extend(['SQLITE', 'TAR'])
 if not all([env[x] is not None for x in required_tools]):
     raise SCons.Errors.UserError('Could not find all needed tools (need: %r)' % required_tools)
 
 # Confirm whether we're making an ISO or not.
 if env['MKISOFS'] is None:
     print 'No program to generate ISOs, not generating an ISO.'
-    env['noiso'] = True
+    env['iso'] = False
 
 # Can we even build an image?
-if not any([env[x] is not None for x in ['LOSETUP', 'MKE2FS', 'MTOOLS_MMD']]):
+if env['build_images'] and not any([env[x] is not None for x in ['LOSETUP', 'MKE2FS', 'MTOOLS_MMD']]):
     msg = 'Cannot create a disk image by any means.'
     if env['distdir']:
         print msg
@@ -486,7 +517,7 @@ if env['AS'] is None:
 
 # No ISO images for ARM.
 if env['ARCH_TARGET'] == 'ARM':
-    env['noiso'] = True
+    env['iso'] = False
 
 # Add optional flags.
 warning_flag = ['-Wno-error']
@@ -618,7 +649,7 @@ if env['hosted']:
 
     # setjmp/longjmp context switching - we can't return from the function
     # calling setjmp without invoking undefined behaviour.
-    env['CPPDEFINES'] += ['SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH']
+    env['CPPDEFINES'] += ['SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH', 'MEMORY_TRACING']
 
     # Reset flags.
     env['CCFLAGS'] = (generic_flags + warning_flags + warning_flags_off +
@@ -642,7 +673,7 @@ if env['hosted']:
     # Don't build an ISO, but disk images are okay. Don't put kernel on the
     # disk, as we only want to rebuild it if the files change.
     env['kernel_on_disk'] = False
-    env['noiso'] = True
+    env['iso'] = False
 
     # Fix tar flags to not build compressed tarballs.
     env['TAR_NOCOMPRESS'] = True
@@ -719,7 +750,7 @@ if env['iwyu']:
     env['CXX'] = env['iwyu']
 
     # We don't want disk images when doing an IWYU run.
-    env['nodiskimages'] = True
+    env['build_images'] = False
 
 # Save the cache, all the options are configured
 if env['cache']:
