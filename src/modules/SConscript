@@ -307,7 +307,7 @@ def buildModule(env, path, outputBase, targetAlias):
             LINKFLAGS='-nostdlib -Wl,-r -Wl,-T,$LSCRIPT',
             LSCRIPT=File("#src/modules/link.ld"))
         module_env.Command(final_output, unstripped_temporary,
-            action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
+            action="%s -d --strip-unneeded -o $TARGET $SOURCE" % env['STRIP'])
     
     env.Alias(targetAlias, final_output)
 
