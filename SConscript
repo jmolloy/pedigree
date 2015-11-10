@@ -27,11 +27,6 @@ from buildutils.diskimages import build
 
 Import(['env', 'userspace_env'])
 
-if env['build_kernel']:
-  SConscript(os.path.join('src', 'system', 'kernel', 'SConscript'), exports=['env'])
-  if env['ARCH_TARGET'] in ['X86', 'X64']:
-    SConscript(os.path.join('src', 'system', 'boot', 'SConscript'), exports=['env'])
-
 if env['build_modules']:
   # POSIX subsystem.
   SConscript(os.path.join('src', 'subsys', 'posix', 'SConscript'),
@@ -45,6 +40,11 @@ if env['build_modules']:
                  exports=['env', 'userspace_env'])
   # Kernel drivers and modules.
   SConscript(os.path.join('src', 'modules', 'SConscript'), exports=['env'])
+
+if env['build_kernel']:
+  SConscript(os.path.join('src', 'system', 'kernel', 'SConscript'), exports=['env'])
+  if env['ARCH_TARGET'] in ['X86', 'X64']:
+    SConscript(os.path.join('src', 'system', 'boot', 'SConscript'), exports=['env'])
 
 # On X86, X64 and PPC we build applications and LGPL libraries
 if env['ARCH_TARGET'] in ['X86', 'X64', 'HOSTED']:  # 'PPC'
