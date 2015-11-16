@@ -260,6 +260,10 @@ bool Ext2Node::addBlock(uint32_t blockValue)
 
             void *buffer = reinterpret_cast<void *>(m_pExt2Fs->readBlock(newBlock));
             memset(buffer, 0, m_pExt2Fs->m_BlockSize);
+
+            // Taken on a new block - update block count (but don't track in
+            // m_pBlocks, as this is a metadata block).
+            m_nBlocks++;
         }
 
         // Now we can set the block.
@@ -294,6 +298,10 @@ bool Ext2Node::addBlock(uint32_t blockValue)
 
             void *buffer = reinterpret_cast<void *>(m_pExt2Fs->readBlock(newBlock));
             memset(buffer, 0, m_pExt2Fs->m_BlockSize);
+
+            // Taken on a new block - update block count (but don't track in
+            // m_pBlocks, as this is a metadata block).
+            m_nBlocks++;
         }
 
         // Now we can safely read the bi-indirect block.
@@ -316,6 +324,10 @@ bool Ext2Node::addBlock(uint32_t blockValue)
 
             void *buffer = reinterpret_cast<void *>(m_pExt2Fs->readBlock(newBlock));
             memset(buffer, 0, m_pExt2Fs->m_BlockSize);
+
+            // Taken on a new block - update block count (but don't track in
+            // m_pBlocks, as this is a metadata block).
+            m_nBlocks++;
         }
 
         // Cache this as it gets clobbered by the readBlock call (using the same buffer).
