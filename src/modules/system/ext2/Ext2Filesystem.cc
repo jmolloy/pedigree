@@ -312,6 +312,21 @@ bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, St
     writeInode(inode_num);
     writeInode(pE2Parent->getInodeNumber());
 
+    // Update directory count in the group descriptor.
+    if (type == EXT2_S_IFDIR)
+    {
+        uint32_t group = (inode_num - 1) / LITTLE_TO_HOST32(m_pSuperblock->s_inodes_per_group);
+        GroupDesc *pDesc = m_pGroupDescriptors[group];
+
+        pDesc->bg_used_dirs_count++;
+
+        // Update group descriptor on disk.
+        /// \todo save group descriptor block number elsewhere
+        uint32_t gdBlock = LITTLE_TO_HOST32(m_pSuperblock->s_first_data_block) + 1;
+        uint32_t groupBlock = (group * sizeof(GroupDesc)) / m_BlockSize;
+        writeBlock(gdBlock + groupBlock);
+    }
+
     return true;
 }
 
@@ -455,9 +470,15 @@ uint32_t Ext2Filesystem::findFreeBlock(uint32_t inode)
                     m_pSuperblock->s_free_blocks_count--;
                     m_pDisk->write(1024ULL);
 
-                    // Update on disk.
+                    // Update bitmap on disk.
                     uint32_t desc_block = LITTLE_TO_HOST32(m_pGroupDescriptors[group]->bg_block_bitmap) + idx;
                     writeBlock(desc_block);
+
+                    // Update group descriptor on disk.
+                    /// \todo save group descriptor block number elsewhere
+                    uint32_t gdBlock = LITTLE_TO_HOST32(m_pSuperblock->s_first_data_block) + 1;
+                    uint32_t groupBlock = (group * sizeof(GroupDesc)) / m_BlockSize;
+                    writeBlock(gdBlock + groupBlock);
 
                     // First block of this group...
                     uint32_t block = group * LITTLE_TO_HOST32(m_pSuperblock->s_blocks_per_group);
@@ -529,9 +550,15 @@ uint32_t Ext2Filesystem::findFreeInode()
                     m_pSuperblock->s_free_inodes_count--;
                     m_pDisk->write(1024ULL);
 
-                    // Update on disk.
+                    // Update bitmap on disk.
                     uint32_t desc_block = LITTLE_TO_HOST32(m_pGroupDescriptors[group]->bg_inode_bitmap) + idx;
                     writeBlock(desc_block);
+
+                    // Update group descriptor count on disk.
+                    /// \todo save group descriptor block number elsewhere
+                    uint32_t gdBlock = LITTLE_TO_HOST32(m_pSuperblock->s_first_data_block) + 1;
+                    uint32_t block = (group * sizeof(GroupDesc)) / m_BlockSize;
+                    writeBlock(gdBlock + block);
 
                     // First inode of this group...
                     uint32_t inode = group * LITTLE_TO_HOST32(m_pSuperblock->s_inodes_per_group);
@@ -585,9 +612,15 @@ void Ext2Filesystem::releaseBlock(uint32_t block)
     // Update superblock.
     m_pDisk->write(1024ULL);
 
-    // Update on disk.
+    // Update bitmap on disk.
     uint32_t desc_block = LITTLE_TO_HOST32(m_pGroupDescriptors[group]->bg_block_bitmap) + bitmapField;
     writeBlock(desc_block);
+
+    // Update group descriptor on disk.
+    /// \todo save group descriptor block number elsewhere
+    uint32_t gdBlock = LITTLE_TO_HOST32(m_pSuperblock->s_first_data_block) + 1;
+    uint32_t groupBlock = (group * sizeof(GroupDesc)) / m_BlockSize;
+    writeBlock(gdBlock + groupBlock);
 }
 
 bool Ext2Filesystem::releaseInode(uint32_t inode)
@@ -630,6 +663,12 @@ bool Ext2Filesystem::releaseInode(uint32_t inode)
         // Update on disk.
         uint32_t desc_block = LITTLE_TO_HOST32(m_pGroupDescriptors[group]->bg_inode_bitmap) + bitmapField;
         writeBlock(desc_block);
+
+        // Update group descriptor on disk.
+        /// \todo save group descriptor block number elsewhere
+        uint32_t gdBlock = LITTLE_TO_HOST32(m_pSuperblock->s_first_data_block) + 1;
+        uint32_t groupBlock = (group * sizeof(GroupDesc)) / m_BlockSize;
+        writeBlock(gdBlock + groupBlock);
     }
 
     writeInode(inode);
@@ -763,6 +802,8 @@ void Ext2Filesystem::ensureInodeTableLoaded(size_t group)
     {
         uint32_t blockNumber = LITTLE_TO_HOST32(m_pGroupDescriptors[group]->bg_inode_table) + i;
         uintptr_t buffer = readBlock(blockNumber);
+        // Avoid callbacks allowing the  wipeout of our inode.
+        pinBlock(blockNumber);
         list.pushBack(buffer);
     }
 }

@@ -57,6 +57,10 @@ Ext2Directory::~Ext2Directory()
 
 bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
 {
+    // Make sure we're already cached before we add an entry.
+    if (!m_bCachePopulated)
+        cacheDirectoryContents();
+
     // Calculate the size of our Dir* entry.
     size_t length = 4 + /* 32-bit inode number */
         2 + /* 16-bit record length */
