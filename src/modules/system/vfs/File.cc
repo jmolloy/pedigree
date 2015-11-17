@@ -114,6 +114,11 @@ uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
         if (!buff)
         {
             buff = readBlock(block*blockSize);
+            if (!buff)
+            {
+                ERROR("File::read - bad read (" << (block * blockSize) << " - block size is " << blockSize << ")");
+                return n;
+            }
             m_DataCache.insert(block*blockSize, buff);
         }
         m_Lock.release();
@@ -151,6 +156,11 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
         if (!buff)
         {
             buff = readBlock(block*blockSize);
+            if (!buff)
+            {
+                ERROR("File::write - bad read (" << (block * blockSize) << " - block size is " << blockSize << ")");
+                return n;
+            }
             m_DataCache.insert(block*blockSize, buff);
         }
         m_Lock.release();
