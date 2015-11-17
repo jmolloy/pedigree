@@ -82,7 +82,7 @@ inline File *traverseSymlink(File *file)
     return file;
 }
 
-static void normalisePath(String &nameToOpen, const char *name, bool *onDevFs = 0)
+void normalisePath(String &nameToOpen, const char *name, bool *onDevFs)
 {
     // Rebase /dev onto the devfs. /dev/tty is special.
     if (!strcmp(name, "/dev/tty"))
