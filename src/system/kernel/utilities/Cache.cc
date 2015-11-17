@@ -268,7 +268,7 @@ uintptr_t Cache::insert (uintptr_t key)
     pPage->location = location;
     // Enter into cache unpinned, but only if we can call an eviction callback.
     pPage->refcnt = m_Callback ? 0 : 1;
-    pPage->timeAllocated = timer.getUnixTimestamp();
+    pPage->checksum = 0;
     m_Pages.insert(key, pPage);
     linkPage(pPage);
 
@@ -339,7 +339,6 @@ uintptr_t Cache::insert (uintptr_t key, size_t size)
         // Enter into cache unpinned, but only if we can call an eviction callback.
         pPage->refcnt = m_Callback ? 0 : 1;
 
-        pPage->timeAllocated = timer.getUnixTimestamp();
         m_Pages.insert(key + (page * 4096), pPage);
         linkPage(pPage);
 
@@ -402,27 +401,20 @@ bool Cache::evict(uintptr_t key, bool bLock, bool bPhysicalLock, bool bRemove)
     // to permit the eviction.
     if((m_Callback && pPage->refcnt <= 1) || ((!m_Callback) && (!pPage->refcnt)))
     {
-        // Good to go.
         VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
         void *loc = reinterpret_cast<void *>(pPage->location);
-        if(va.isMapped(loc))
+
+        // Good to go. Trigger a writeback if we know this was a dirty page.
+        if (!verifyChecksum(pPage))
         {
-            physical_uintptr_t phys;
-            size_t flags;
-            va.getMapping(loc, phys, flags);
-
-            if(m_Callback && (flags & VirtualAddressSpace::Dirty))
-            {
-                // Dirty - request a write-back before we free the page.
-                m_Callback(WriteBack, key, pPage->location, m_CallbackMeta);
-            }
-
-            va.unmap(loc);
-            PhysicalMemoryManager::instance().freePage(phys);
+            m_Callback(WriteBack, key, pPage->location, m_CallbackMeta);
         }
 
-        m_Allocator.free(pPage->location, 4096);
+        physical_uintptr_t phys;
+        size_t flags;
+        va.getMapping(loc, phys, flags);
 
+        // Remove from our tracking.
         if(bRemove)
         {
             m_Pages.remove(key);
@@ -433,6 +425,12 @@ bool Cache::evict(uintptr_t key, bool bLock, bool bPhysicalLock, bool bRemove)
         if(m_Callback)
             m_Callback(Eviction, key, pPage->location, m_CallbackMeta);
 
+        // Clean up resources now that all callbacks and removals are complete.
+        va.unmap(loc);
+        PhysicalMemoryManager::instance().freePage(phys);
+
+        // Allow the space to be used again.
+        m_Allocator.free(pPage->location, 4096);
         delete pPage;
         result = true;
     }
@@ -477,8 +475,9 @@ void Cache::release (uintptr_t key)
 
     if (!pPage->refcnt)
     {
-        // Evict this page - refcnt dropped to zero.
-        evict(key, false, true, true);
+        // Trigger an eviction. The eviction will check refcnt, and won't do
+        // anything if the refcnt is raised again.
+        CacheManager::instance().addAsyncRequest(1, reinterpret_cast<uint64_t>(this), PleaseEvict, key);
     }
 
     m_Lock.release();
@@ -500,7 +499,6 @@ size_t Cache::trim(size_t count)
         nPages += n;
     }
 
-    NOTICE("trim: trimmed " << nPages << " pages");
     return nPages;
 }
 
@@ -558,26 +556,14 @@ void Cache::timer(uint64_t delta, InterruptState &state)
         ++it)
     {
         CachePage *page = it.value();
-        if(va.isMapped(reinterpret_cast<void *>(page->location)))
-        {
-            physical_uintptr_t phys;
-            size_t flags;
-            va.getMapping(reinterpret_cast<void *>(page->location), phys, flags);
+        if (verifyChecksum(page, true))
+            continue;
 
-            // If dirty, write back to the backing store.
-            if(flags & VirtualAddressSpace::Dirty)
-            {
-                // Queue the callback!
-                CacheManager::instance().addAsyncRequest(1, reinterpret_cast<uint64_t>(this), WriteBack, it.key(), page->location);
+        // Promote - page is dirty since we last saw it.
+        promotePage(page);
 
-                // Clear dirty flag - written back.
-                flags &= ~(VirtualAddressSpace::Dirty | VirtualAddressSpace::Accessed);
-                va.setFlags(reinterpret_cast<void *>(page->location), flags);
-
-                // Promote - page was recently used (touched, at least).
-                promotePage(page);
-            }
-        }
+        // Queue a writeback for this dirty page to its backing store.
+        CacheManager::instance().addAsyncRequest(1, reinterpret_cast<uint64_t>(this), WriteBack, it.key(), page->location);
     }
 
     m_Lock.leave();
@@ -596,6 +582,13 @@ uint64_t Cache::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p
 {
     if(!m_Callback)
         return 0;
+
+    // Eviction request?
+    if (static_cast<CallbackCause>(p2) == PleaseEvict)
+    {
+        evict(p3, false, true, true);
+        return 0;
+    }
 
     // Pin page while we do our writeback
     pin(p3);
@@ -664,4 +657,35 @@ void Cache::unlinkPage(CachePage *pPage)
         m_pLruTail = pPage->pPrev;
     if (pPage == m_pLruHead)
         m_pLruHead = pPage->pNext;
+}
+
+void Cache::calculateChecksum(CachePage *pPage)
+{
+    void *buffer = reinterpret_cast<void *>(pPage->location);
+    pPage->checksum = checksum(buffer, 4096);
+}
+
+bool Cache::verifyChecksum(CachePage *pPage, bool replace)
+{
+    void *buffer = reinterpret_cast<void *>(pPage->location);
+    uint16_t current = checksum(buffer, 4096);
+    bool result = (pPage->checksum == 0) || (pPage->checksum == current);
+    if (replace)
+        pPage->checksum = current;
+    return result;
+}
+
+uint16_t Cache::checksum(const void *data, size_t len)
+{
+    // Fletcher 16-bit checksum.
+    uint16_t sum1 = 0, sum2 = 0;
+    const uint8_t *p = reinterpret_cast<const uint8_t *>(data);
+
+    for (size_t i = 0; i < len; ++i)
+    {
+        sum1 = (sum1 + p[i]) % 255;
+        sum2 = (sum2 + sum1) % 255;
+    }
+
+    return (sum2 << 8) | sum1;
 }

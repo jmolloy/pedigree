@@ -116,9 +116,8 @@ private:
         /// threads having access to the page.
         size_t refcnt;
 
-        /// The time at which this page was allocated. This is used by
-        /// compact() to determine the best pages to evict.
-        uint32_t timeAllocated;
+        /// Checksum of the page's contents (for dirty detection).
+        uint16_t checksum;
 
         /// Linked list components for LRU.
         CachePage *pNext;
@@ -139,6 +138,7 @@ public:
     {
         WriteBack,
         Eviction,
+        PleaseEvict,
     };
 
     /**
@@ -275,6 +275,21 @@ private:
      * Unlink the given CachePage from the LRU list.
      */
     void unlinkPage(CachePage *pPage);
+
+    /**
+     * Calculate a checksum for the given CachePage.
+     */
+    void calculateChecksum(CachePage *pPage);
+
+    /**
+     * Verify the given CachePage's checksum.
+     */
+    bool verifyChecksum(CachePage *pPage, bool replace = false);
+
+    /**
+     * Checksum do-er.
+     */
+    uint16_t checksum(const void *data, size_t len);
 
     struct callbackMeta
     {
