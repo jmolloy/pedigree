@@ -21,6 +21,7 @@
 #include <LockGuard.h>
 #include <processor/Processor.h>
 #include <process/TimeTracker.h>
+#include <time/Stopwatch.h>
 #include "SyscallManager.h"
 
 X64SyscallManager X64SyscallManager::m_Instance;
@@ -50,6 +51,11 @@ void X64SyscallManager::syscall(SyscallState &syscallState)
 {
   SyscallHandler *pHandler;
   TimeTracker tracker(0, true);
+#ifdef TIME_SYSCALLS
+  Process *pProcess = Processor::information().getCurrentThread()->getParent();
+  Time::Stopwatch syscallTimer(true);
+  size_t syscallNumber = syscallState.getSyscallNumber();
+#endif
 
   size_t serviceNumber = syscallState.getSyscallService();
 
@@ -82,6 +88,12 @@ void X64SyscallManager::syscall(SyscallState &syscallState)
   {
     syscallState.m_RFlagsR11 |= 0x200;
   }
+
+#ifdef TIME_SYSCALLS
+  syscallTimer.stop();
+  Time::Timestamp value = syscallTimer.value();
+  NOTICE("SYSCALL pid=" << Dec << pProcess->getId() << " service=" << serviceNumber << " num=" << syscallNumber << " ns=" << value << Hex);
+#endif
 }
 
 uintptr_t X64SyscallManager::syscall(Service_t service, uintptr_t function, uintptr_t p1, uintptr_t p2, uintptr_t p3, uintptr_t p4, uintptr_t p5)
