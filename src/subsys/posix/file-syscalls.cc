@@ -124,6 +124,13 @@ void normalisePath(String &nameToOpen, const char *name, bool *onDevFs)
         nameToOpen = "runtime»";
         nameToOpen += (name + strlen("/var/run"));
     }
+    else if (!strncmp(name, "/@/", strlen("/@/")))
+    {
+        // Absolute UNIX paths for POSIX stupidity.
+        // /@/path/to/foo = /path/to/foo
+        // /@/root»/applications = root»/applications
+        nameToOpen = (name + strlen("/@/"));
+    }
     else
     {
         nameToOpen = name;
@@ -573,7 +580,8 @@ int posix_realpath(const char *path, char *buf, size_t bufsize)
         return -1;
     }
 
-    String actualPath = f->getFullPath();
+    String actualPath("/@/");
+    actualPath += f->getFullPath(true);
     if(actualPath.length() > (bufsize - 1))
     {
         SYSCALL_ERROR(NameTooLong);
@@ -718,12 +726,17 @@ char* posix_getcwd(char* buf, size_t maxlen)
     F_NOTICE("getcwd(" << maxlen << ")");
 
     File* curr = GET_CWD();
-    String str = curr->getFullPath(false);
+
+    // Absolute path syntax.
+    String str("/@/");
+    str += curr->getFullPath(true);
 
     size_t maxLength = str.length();
     if(maxLength > maxlen)
         maxLength = maxlen;
     strncpy(buf, static_cast<const char*>(str), maxlen);
+
+    F_NOTICE(" -> " << str);
 
     return buf;
 }
