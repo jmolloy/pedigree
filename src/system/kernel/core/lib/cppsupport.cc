@@ -90,10 +90,23 @@ void runKernelDestructors()
 }
 
 #ifdef MEMORY_TRACING
+static bool traceAllocations = false;
+void startTracingAllocations()
+{
+    traceAllocations = true;
+}
+
+void stopTracingAllocations()
+{
+    traceAllocations = false;
+}
+
 Spinlock traceLock;
 void traceAllocation(void *ptr, MemoryTracing::AllocationTrace type, size_t size)
 {
-    LockGuard<Spinlock> guard(traceLock);
+    // Don't trace if we're not allowed to.
+    if (!traceAllocations)
+        return;
 
     // Yes, this means we'll lose early init mallocs. Oh well...
     if(!Machine::instance().isInitialised())
@@ -102,6 +115,8 @@ void traceAllocation(void *ptr, MemoryTracing::AllocationTrace type, size_t size
     Serial *pSerial = Machine::instance().getSerial(1);
     if(!pSerial)
         return;
+
+    LockGuard<Spinlock> guard(traceLock);
 
     char buf[255];
 
@@ -116,7 +131,7 @@ void traceAllocation(void *ptr, MemoryTracing::AllocationTrace type, size_t size
     off += sizeof(void*);
 
     // Don't store size or backtrace for frees.
-    if(type == MemoryTracing::Allocation)
+    if(type == MemoryTracing::Allocation || type == MemoryTracing::PageAlloc)
     {
         // Size of allocation.
         memcpy(&buf[off], &size, sizeof(size_t));
