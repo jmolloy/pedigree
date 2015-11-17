@@ -302,7 +302,7 @@ if env['build_images'] and not any([env[x] is not None for x in ['LOSETUP', 'MKE
 if env.get('HOST_PLATFORM') is None:
     host = os.uname()
     env['ON_PEDIGREE'] = host[0] == 'Pedigree'
-    env['HOST_PLATFORM'] = host[4]
+    env['HOST_PLATFORM'] = host[4].lower()
 
 # Enforce pre-commit hook.
 if not os.path.exists('.git/hooks/pre-commit'):
@@ -331,7 +331,8 @@ if env['CROSS'] or env['ON_PEDIGREE']:
     if env['ON_PEDIGREE']:
         # TODO: parse 'gcc -v' to get COMPILER_TARGET
         env['COMPILER_TARGET'] = 'FIXME'
-        crossPath = crossTuple = ''
+        crossPath = '/applications'
+        crossTuple = ''
     else:
         cross = os.path.split(env['CROSS'])
         crossPath = cross[0]
@@ -409,7 +410,7 @@ if env['ON_PEDIGREE'] or env['COMPILER_TARGET']:
 
         env['PEDIGREE_IMAGES_DIR'] = default_imgdir['x86']
         env['ARCH_TARGET'] = 'X86'
-    elif re.match('amd64|x86[_-]64', host_arch) is not None:
+    elif re.match('amd64|x86[_-]64|x64', host_arch) is not None:
         flags_arch = 'x64'
 
         env['PEDIGREE_IMAGES_DIR'] = default_imgdir['x64']
