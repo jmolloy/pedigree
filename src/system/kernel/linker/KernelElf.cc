@@ -708,19 +708,22 @@ bool KernelElf::executeModule(Module *module)
 
     NOTICE("KERNELELF: Executing module " << module->name);
 
-    bool bSuccess = true;
+    bool bSuccess = false;
+    String moduleName(module->name);
     if (module->entry)
     {
-        if(!(bSuccess = module->entry()))
-        {
-            NOTICE("KERNELELF: Module " << module->name << " failed, unloading.");
-            m_FailedModules.pushBack(new String(module->name));
-            unloadModule(module->name, true, false);
-        }
+        bSuccess = module->entry();
+    }
+
+    if(!bSuccess)
+    {
+        NOTICE("KERNELELF: Module " << module->name << " failed, unloading.");
+        m_FailedModules.pushBack(new String(module->name));
+        unloadModule(module->name, true, false);
     }
 
     if(bSuccess)
-        NOTICE("KERNELELF: Module " << module->name << " finished executing");
+        NOTICE("KERNELELF: Module " << moduleName << " finished executing");
 
     return bSuccess;
 }
