@@ -245,15 +245,17 @@ uintptr_t ScsiDisk::read(uint64_t location)
         return 0;
     }
 
-    if((location + getNativeBlockSize()) > getSize())
+    size_t endLocation = location + getNativeBlockSize();
+    if(endLocation > getSize())
     {
-        ERROR("ScsiDisk::read - location too high");
+        ERROR("ScsiDisk::read - location too high (end location " << endLocation << " > " << getSize() << ")");
         return 0;
     }
 
-    if((location / getNativeBlockSize()) > getBlockCount())
+    size_t blockNum = location / getNativeBlockSize();
+    if(blockNum > getBlockCount())
     {
-        ERROR("ScsiDisk::read - location too high");
+        ERROR("ScsiDisk::read - location too high (block " << blockNum << " > " << getBlockCount() << ")");
         return 0;
     }
 
@@ -277,7 +279,6 @@ uintptr_t ScsiDisk::read(uint64_t location)
 
     ScsiController *pParent = static_cast<ScsiController*> (m_pParent);
     pParent->addRequest(0, SCSI_REQUEST_READ, reinterpret_cast<uint64_t> (this), loc);
-
     return m_Cache.lookup(location + offs) - offs;
 }
 
