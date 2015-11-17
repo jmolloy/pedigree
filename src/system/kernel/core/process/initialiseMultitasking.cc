@@ -33,6 +33,7 @@ void initialiseMultitasking()
 {
   // Create the kernel idle process.
   Process *pProcess = new Process();
+  pProcess->resetCounts();
   pProcess->description() += "Kernel Process";
 
 #ifdef MULTIPROCESSOR

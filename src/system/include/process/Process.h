@@ -349,15 +349,15 @@ public:
     }
 
     /** Get process usage. */
-    size_t getVirtualPageCount() const
+    ssize_t getVirtualPageCount() const
     {
         return m_Metadata.virtualPages;
     }
-    size_t getPhysicalPageCount() const
+    ssize_t getPhysicalPageCount() const
     {
         return m_Metadata.physicalPages;
     }
-    size_t getSharedPageCount() const
+    ssize_t getSharedPageCount() const
     {
         return m_Metadata.sharedPages;
     }
@@ -459,11 +459,11 @@ private:
 
         /// Virtual address space consumed, including that which would trigger
         /// a successful trap to page data in.
-        size_t virtualPages;
+        ssize_t virtualPages;
         /// Physical address space consumed, barring that which is shared.
-        size_t physicalPages;
+        ssize_t physicalPages;
         /// Shared pages consumed.
-        size_t sharedPages;
+        ssize_t sharedPages;
 
         /// Time spent in userspace as this process.
         Time::Timestamp userTime;
