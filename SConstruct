@@ -290,6 +290,16 @@ if env['MKISOFS'] is None:
     print 'No program to generate ISOs, not generating an ISO.'
     env['iso'] = False
 
+# Determine whether we're cross-compiling or not.
+if env.get('HOST_PLATFORM') is None:
+    host = os.uname()
+    env['ON_PEDIGREE'] = host[0] == 'Pedigree'
+    env['HOST_PLATFORM'] = host[4].lower()
+
+# If we're building on Pedigree, we enforce not building images for now.
+if env['ON_PEDIGREE']:
+    env['build_images'] = False
+
 # Can we even build an image?
 if env['build_images'] and not any([env[x] is not None for x in ['LOSETUP', 'MKE2FS', 'MTOOLS_MMD']]):
     msg = 'Cannot create a disk image by any means.'
@@ -297,12 +307,6 @@ if env['build_images'] and not any([env[x] is not None for x in ['LOSETUP', 'MKE
         print msg
     else:
         raise SCons.Errors.UserError(msg)
-
-# Determine whether we're cross-compiling or not.
-if env.get('HOST_PLATFORM') is None:
-    host = os.uname()
-    env['ON_PEDIGREE'] = host[0] == 'Pedigree'
-    env['HOST_PLATFORM'] = host[4].lower()
 
 # Enforce pre-commit hook.
 if not os.path.exists('.git/hooks/pre-commit'):
