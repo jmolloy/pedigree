@@ -490,6 +490,9 @@ void X64VirtualAddressSpace::revertToKernelAddressSpace()
         PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pml4Entry));
         *pml4Entry = 0;
     }
+
+    // Reset heap; it's been wiped out by this reversion.
+    m_HeapEnd = m_Heap;
 }
 
 bool X64VirtualAddressSpace::mapPageStructures(physical_uintptr_t physAddress,
