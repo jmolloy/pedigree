@@ -183,7 +183,7 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
     Thread *pThread = Processor::information().getCurrentThread();
     Process *pProcess = pThread->getParent();
     Subsystem *pSubsystem = pProcess->getSubsystem();
-    if(pSubsystem)
+    if(pSubsystem && !state.kernelMode())
         pSubsystem->threadException(pThread, Subsystem::PageFault);
     else
     {
