@@ -24,9 +24,10 @@
 
 Ext2Node::Ext2Node(uintptr_t inode_num, Inode *pInode, Ext2Filesystem *pFs) :
     m_pInode(pInode), m_InodeNumber(inode_num), m_pExt2Fs(pFs), m_pBlocks(0),
-    m_nBlocks(0), m_nSize(LITTLE_TO_HOST32(pInode->i_size))
+    m_nBlocks(0), m_nMetadataBlocks(0), m_nSize(LITTLE_TO_HOST32(pInode->i_size))
 {
     // i_blocks == # of 512-byte blocks. Convert to FS block count.
+    /// \todo this is incorrect as i_blocks also counts indirect blocks
     uint32_t blockCount = LITTLE_TO_HOST32(pInode->i_blocks);
     m_nBlocks = (blockCount * 512) / m_pExt2Fs->m_BlockSize;
 
@@ -88,7 +89,7 @@ void Ext2Node::trackBlock(uint32_t block)
     m_pBlocks[m_nBlocks++] = block;
 
     // Inode i_blocks field is actually the count of 512-byte blocks.
-    uint32_t i_blocks = (m_nBlocks * m_pExt2Fs->m_BlockSize) / 512;
+    uint32_t i_blocks = ((m_nBlocks + m_nMetadataBlocks) * m_pExt2Fs->m_BlockSize) / 512;
     m_pInode->i_blocks = HOST_TO_LITTLE32(i_blocks);
 
     // Write updated inode.
@@ -263,7 +264,7 @@ bool Ext2Node::addBlock(uint32_t blockValue)
 
             // Taken on a new block - update block count (but don't track in
             // m_pBlocks, as this is a metadata block).
-            m_nBlocks++;
+            m_nMetadataBlocks++;
         }
 
         // Now we can set the block.
@@ -301,7 +302,7 @@ bool Ext2Node::addBlock(uint32_t blockValue)
 
             // Taken on a new block - update block count (but don't track in
             // m_pBlocks, as this is a metadata block).
-            m_nBlocks++;
+            m_nMetadataBlocks++;
         }
 
         // Now we can safely read the bi-indirect block.
@@ -327,7 +328,7 @@ bool Ext2Node::addBlock(uint32_t blockValue)
 
             // Taken on a new block - update block count (but don't track in
             // m_pBlocks, as this is a metadata block).
-            m_nBlocks++;
+            m_nMetadataBlocks++;
         }
 
         // Cache this as it gets clobbered by the readBlock call (using the same buffer).

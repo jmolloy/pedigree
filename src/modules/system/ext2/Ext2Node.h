@@ -86,6 +86,7 @@ protected:
 
     uint32_t *m_pBlocks;
     uint32_t m_nBlocks;
+    uint32_t m_nMetadataBlocks;
 
     size_t m_nSize;
 };
