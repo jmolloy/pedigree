@@ -1004,6 +1004,7 @@ int posix_opendir(const char *dir, DIR *ent)
     if (!file)
     {
         // Error - not found.
+        F_NOTICE(" -> not found");
         SYSCALL_ERROR(DoesNotExist);
         return -1;
     }
@@ -1016,6 +1017,7 @@ int posix_opendir(const char *dir, DIR *ent)
     if (!file->isDirectory())
     {
         // Error - not a directory.
+        F_NOTICE(" -> not a directory");
         SYSCALL_ERROR(NotADirectory);
         return -1;
     }
@@ -1036,8 +1038,16 @@ int posix_opendir(const char *dir, DIR *ent)
     pSubsystem->addFileDescriptor(fd, f);
 
     // Load the buffer now that we've set up for the buffer.
-    posix_readdir(ent);
+    if (posix_readdir(ent) < 0)
+    {
+        // readdir does a SYSCALL_ERROR when it fails
+        F_NOTICE(" -> readdir failed...");
+        pSubsystem->freeFd(fd);
+        memset(ent, 0xFF, sizeof(*ent));
+        return -1;
+    }
 
+    F_NOTICE(" -> " << fd);
     return static_cast<int>(fd);
 }
 
@@ -1065,12 +1075,14 @@ int posix_readdir(DIR *dir)
     if (!pFd || !pFd->file)
     {
         // Error - no such file descriptor.
+        F_NOTICE(" -> bad file");
         SYSCALL_ERROR(BadFileDescriptor);
         return -1;
     }
 
     if(!pFd->file->isDirectory())
     {
+        F_NOTICE(" -> not a directory");
         SYSCALL_ERROR(NotADirectory);
         return -1;
     }
@@ -1079,6 +1091,7 @@ int posix_readdir(DIR *dir)
     {
         // Not on a multiple of 64 - possibly called directly rather than via
         // libc (where the proper magic is done).
+        F_NOTICE(" -> wrong position");
         SYSCALL_ERROR(InvalidArgument);
         return -1;
     }

@@ -374,8 +374,8 @@ int lstat(const char *file, struct stat *st)
 DIR *opendir(const char *dir)
 {
     DIR *p = (DIR*) malloc(sizeof(DIR));
-    syscall2(POSIX_OPENDIR, (long) dir, (long) p);
-    if (p->fd < 0)
+    int r = syscall2(POSIX_OPENDIR, (long) dir, (long) p);
+    if (r < 0 || p->fd < 0)
     {
         free(p);
         return 0;
@@ -408,7 +408,11 @@ struct dirent *readdir(DIR *dir)
     else if (dir->pos >= 64)
     {
         // Buffer the next batch of entries.
-        syscall1(POSIX_READDIR, (long) dir);
+        if (syscall1(POSIX_READDIR, (long) dir) < 0)
+        {
+            // Failed to buffer more entries!
+            return 0;
+        }
         dir->pos = 1;
         dir->totalpos++;
         return &dir->ent[0];
