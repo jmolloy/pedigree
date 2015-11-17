@@ -24,6 +24,7 @@ import struct
 unfreed = {}
 counts = {}
 toolarge = {}
+pages = {}
 total_allocs = 0
 total_frees = 0
 
@@ -33,6 +34,7 @@ TOO_LARGE_THRESHOLD = 0x1000
 
 PTRSIZE = 8
 PTRFORMAT = '<Q'
+ADD_PAGES = False
 
 MODULE_MAPPINGS = {
     'rawfs': 'build/modules/rawfs.o.debug',
@@ -100,10 +102,10 @@ def process_field(f):
 
     fieldtype, = saferead(f, 1)
 
-    if fieldtype in ['A', 'F']:
+    if fieldtype in ['A', 'F', 'P', 'X']:
         ptr, = struct.unpack(PTRFORMAT, saferead(f, PTRSIZE))
 
-    if fieldtype == 'A':
+    if fieldtype == 'A' or fieldtype == 'P':
         size, = struct.unpack(PTRFORMAT, saferead(f, PTRSIZE))
 
         backtrace = []
@@ -114,6 +116,10 @@ def process_field(f):
 
             backtrace.append(bt)
 
+        # Skip page allocs if we have to.
+        if fieldtype == 'P' and not ADD_PAGES:
+            return True
+
         if size not in counts:
             counts[size] = (1, backtrace)
         else:
@@ -123,17 +129,19 @@ def process_field(f):
         if size >= TOO_LARGE_THRESHOLD:
             toolarge[ptr] = (size, backtrace)
 
-        assert ptr not in unfreed
         unfreed[ptr] = (size, backtrace)
 
         total_allocs += 1
-    elif fieldtype == 'F':
+    elif fieldtype == 'F' or (ADD_PAGES and (fieldtype == 'X')):
         try:
             del unfreed[ptr]
         except KeyError:
             pass # Possibly allocated before we had tracing active.
 
         total_frees += 1
+    elif fieldtype == 'X' and not ADD_PAGES:
+        # Not invalid.
+        pass
     elif fieldtype == 'M':
         metaname, = struct.unpack('64s', saferead(f, 64))
         metaname = metaname.strip('\x00')
@@ -196,8 +204,9 @@ with open(sys.argv[1], 'rb') as f:
 
         oneandover = 'oneandover' in sys.argv
 
-        for (size, (count, backtrace)) in sorted(counts.items(), key=lambda x: x[0]):
-            count, backtrace = counts[size]
+        sorted_entries = list(sorted(counts.items(), key=lambda x: x[0]))
+
+        for (size, (count, backtrace)) in sorted_entries:
             percent = (count / float(total_allocs)) * 100.0
             if oneandover and (percent < 1.0):
                 continue
@@ -207,6 +216,21 @@ with open(sys.argv[1], 'rb') as f:
                 writebt(backtrace, '\t')
 
         print
+
+        # Top N by count.
+        sorted_entries = list(sorted(counts.items(), key=lambda x: x[1][0]))
+        print 'Top 10:'
+        for (size, entry) in sorted_entries[-10:]:
+            count = entry[0]
+            percent = (count / float(total_allocs)) * 100.0
+            print '%8d bytes seen for\t%2.4f%% of allocations' % (size, percent)
+
+        print 'Bottom 10:'
+        for (size, entry) in sorted_entries[:10]:
+            count = entry[0]
+            percent = (count / float(total_allocs)) * 100.0
+            print '%8d bytes seen for\t%2.4f%% of allocations' % (size, percent)
+
 
     if 'toobig' in sys.argv:
         print "Too Big Blocks"

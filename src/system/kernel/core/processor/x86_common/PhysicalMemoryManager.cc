@@ -26,6 +26,7 @@
 #include "PhysicalMemoryManager.h"
 #include <LockGuard.h>
 #include <utilities/Cache.h>
+#include <utilities/MemoryTracing.h>
 
 #if defined(X86)
 #include "../x86/VirtualAddressSpace.h"
@@ -119,6 +120,10 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
         panic("Out of memory.");
     }
 
+#ifdef MEMORY_TRACING
+    traceAllocation(reinterpret_cast<void *>(ptr), MemoryTracing::PageAlloc, 4096);
+#endif
+
     trackPages(0, 1, 0);
 
 #ifdef USE_BITMAP
@@ -183,6 +188,10 @@ void X86CommonPhysicalMemoryManager::freePageUnlocked(physical_uintptr_t page)
 #endif
 
     m_PageStack.free(page);
+
+#ifdef MEMORY_TRACING
+    traceAllocation(reinterpret_cast<void *>(page), MemoryTracing::PageFree, 4096);
+#endif
 
     trackPages(0, -1, 0);
 
