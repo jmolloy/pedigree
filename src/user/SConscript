@@ -223,6 +223,9 @@ for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + lib
 
     # Handle SDL dependencies.
     if app in sdl_apps:
+        # Don't build SDL apps if we don't have SDL.
+        if not env['build_lgpl']:
+            continue
         app_env['LIBS'] += ['SDL']
         app_env['CPPPATH'] += ['#src/lgpl/SDL-1.2.14/include',
                                '#images/local/include']
