@@ -280,12 +280,8 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         return -1;
     }
 
-    String toLoad(name);
-    if(!strcmp(name, "sh") || !strcmp(name, "/bin/sh"))
-    {
-        /// \todo read $SHELL from environment.
-        toLoad = "/applications/bash";
-    }
+    String toLoad;
+    normalisePath(toLoad, name);
 
     // Attempt to find the file, first!
     File *pActualFile = 0;
