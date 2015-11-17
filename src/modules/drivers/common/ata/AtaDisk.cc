@@ -31,10 +31,12 @@
 #include "AtaDisk.h"
 #include "ata-common.h"
 
+#define ATA_DEFAULT_BLOCK_SIZE 0x1000  // 0x10000
+
 // Note the IrqReceived mutex is deliberately started in the locked state.
 AtaDisk::AtaDisk(AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs, BusMasterIde *busMaster) :
     ScsiDisk(), m_IsMaster(isMaster), m_SupportsLBA28(true), m_SupportsLBA48(false),
-    m_BlockSize(65536), m_IrqReceived(0), m_AtaDiskType(NotPacket), m_PacketSize(0),
+    m_BlockSize(ATA_DEFAULT_BLOCK_SIZE), m_IrqReceived(0), m_AtaDiskType(NotPacket), m_PacketSize(0),
     m_Removable(false), m_CommandRegs(commandRegs), m_ControlRegs(controlRegs),
     m_BusMaster(busMaster), m_PrdTableLock(false), m_PrdTable(0), m_LastPrdTableOffset(0),
     m_PrdTablePhys(0), m_PrdTableMemRegion("ata-prdtable"), m_bDma(true)
@@ -669,6 +671,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
     uintptr_t buffer = getCache().lookup(location);
     if(buffer)
     {
+        // Someone else got here first.
         WARNING("AtaDisk::doRead(" << oldLocation << ") - buffer was already in cache");
         getCache().release(location);
         return 0;
