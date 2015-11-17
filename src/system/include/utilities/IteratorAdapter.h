@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -20,8 +19,6 @@
 
 #ifndef KERNEL_UTILITIES_ITERATORADAPTER_H
 #define KERNEL_UTILITIES_ITERATORADAPTER_H
-
-#include <processor/types.h>
 
 /** @addtogroup kernelutilities
  * @{ */
