@@ -199,6 +199,11 @@ bool Ext2Node::getBlockNumberIndirect(uint32_t inode_block, size_t nBlocks, size
         m_pBlocks[nBlocks++] = LITTLE_TO_HOST32(buffer[i]);
     }
 
+    // Adjust block count to acknowledge the fact that the indirect block is
+    // not actually a data block.
+    m_nBlocks--;
+    m_nMetadataBlocks++;
+
     return true;
 }
 
@@ -214,6 +219,11 @@ bool Ext2Node::getBlockNumberBiindirect(uint32_t inode_block, size_t nBlocks, si
     getBlockNumberIndirect(LITTLE_TO_HOST32(buffer[nIndirectBlock]),
                            nBlocks+nIndirectBlock*nPerBlock, nBlock);
 
+    // Adjust block count to acknowledge the fact that the bi-indirect block is
+    // not actually a data block.
+    m_nBlocks--;
+    m_nMetadataBlocks++;
+
     return true;
 }
 
@@ -228,6 +238,11 @@ bool Ext2Node::getBlockNumberTriindirect(uint32_t inode_block, size_t nBlocks, s
 
     getBlockNumberBiindirect(LITTLE_TO_HOST32(buffer[nBiBlock]),
                              nBlocks+nBiBlock*nPerBlock*nPerBlock, nBlock);
+
+    // Adjust block count to acknowledge the fact that the tri-indirect block is
+    // not actually a data block.
+    m_nBlocks--;
+    m_nMetadataBlocks++;
 
     return true;
 }
