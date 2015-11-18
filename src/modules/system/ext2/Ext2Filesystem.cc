@@ -588,6 +588,13 @@ void Ext2Filesystem::releaseBlock(uint32_t block)
     uint32_t group = block / blocksPerGroup;
     uint32_t index = block % blocksPerGroup;
 
+    if (!block)
+    {
+        // Error out, zero is used as a sentinel in a few places - and we almost
+        // certainly never actually mean to free block zero.
+        FATAL("Releasing block zero!");
+    }
+
     ensureFreeBlockBitmapLoaded(group);
 
     // Free block.
