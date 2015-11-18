@@ -102,7 +102,7 @@ void Ext2Node::wipe()
     for (size_t i = 0; i < m_nBlocks; i++)
     {
         ensureBlockLoaded(i);
-        NOTICE("wipe: releasing block");
+        NOTICE("wipe: releasing block #" << Dec << i << Hex << ": " << m_pBlocks[i]);
         m_pExt2Fs->releaseBlock(m_pBlocks[i]);
     }
 
@@ -158,7 +158,7 @@ bool Ext2Node::ensureBlockLoaded(size_t nBlock)
 {
     if (nBlock >= m_nBlocks)
     {
-        FATAL("EXT2: ensureBlockLoaded: Algorithmic error.");
+        FATAL("EXT2: ensureBlockLoaded: Algorithmic error [block " << nBlock << " > " << m_nBlocks << "].");
     }
     if (m_pBlocks[nBlock] == ~0U)
         getBlockNumber(nBlock);
