@@ -106,6 +106,9 @@ def main(argv):
         print 'Runtime test failure: Pedigree did not boot to the login prompt.'
         print 'Most recent serial lines:'
         print '\n'.join(serial[-15:])
+        print
+        print 'QEMU output:'
+        print qemu.stdout.read()
     else:
         print 'Runtime test success: Pedigree booted to the login prompt.'
 
