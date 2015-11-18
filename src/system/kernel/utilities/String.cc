@@ -61,7 +61,7 @@ void String::assign(const char *s, size_t len)
     }
     else if (m_Length < StaticSize)
     {
-        memcpy(m_Static, s, m_Length + 1);
+        memcpy(m_Static, s, m_Length);
         delete [] m_Data;
         m_Data = 0;
         m_Size = StaticSize;
@@ -72,7 +72,7 @@ void String::assign(const char *s, size_t len)
         reserve(m_Length + 1);
         if (m_Length && s)
         {
-            memcpy(m_Data, s, m_Length + 1);
+            memcpy(m_Data, s, m_Length);
             m_Data[m_Length] = '\0';
         }
         else
