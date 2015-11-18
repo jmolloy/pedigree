@@ -186,6 +186,9 @@
 #define POSIX_TIMES             127
 #define POSIX_GETRUSAGE         128
 
+#define POSIX_GETSOCKOPT        129
+#define POSIX_GETPPID           130
+
 #define POSIX_PTSNAME           200
 #define POSIX_TTYNAME           201
 #define POSIX_TCSETPGRP         202

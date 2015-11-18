@@ -935,8 +935,7 @@ int getsockname(int sock, struct sockaddr* addr, size_t *addrlen)
 
 int getsockopt(int sock, int level, int optname, void* optvalue, size_t *optlen)
 {
-    STUBBED("getsockopt");
-    return -1;
+    return syscall5(POSIX_GETSOCKOPT, sock, level, optname, (long) optvalue, (long) optlen);
 }
 
 int listen(int sock, int backlog)
@@ -1935,8 +1934,7 @@ pid_t getpgrp(void)
 
 pid_t getppid(void)
 {
-    STUBBED("getppid");
-    return 0;
+    return syscall0(POSIX_GETPPID);
 }
 
 int getrlimit(int resource, struct rlimit *rlp)

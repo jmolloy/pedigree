@@ -38,6 +38,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 int posix_waitpid(int pid, int *status, int options);
 int posix_exit(int code) NORETURN;
 int posix_getpid();
+int posix_getppid();
 
 int posix_gettimeofday(timeval *tv, struct timezone *tz);
 clock_t posix_times(struct tms *tm);

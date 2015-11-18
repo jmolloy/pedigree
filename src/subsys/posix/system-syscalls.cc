@@ -858,6 +858,16 @@ int posix_getpid()
     return pProcess->getId();
 }
 
+int posix_getppid()
+{
+    SC_NOTICE("getppid");
+
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    if (!pProcess->getParent())
+        return 0;
+    return pProcess->getParent()->getId();
+}
+
 int posix_gettimeofday(timeval *tv, struct timezone *tz)
 {
     if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(tv), sizeof(timeval), PosixSubsystem::SafeWrite))

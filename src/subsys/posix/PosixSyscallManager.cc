@@ -365,6 +365,10 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             return posix_times(reinterpret_cast<struct tms *>(p1));
         case POSIX_GETRUSAGE:
             return posix_getrusage(p1, reinterpret_cast<struct rusage *>(p2));
+        case POSIX_GETSOCKOPT:
+            return posix_getsockopt(p1, p2, p3, reinterpret_cast<void *>(p4), reinterpret_cast<size_t *>(p5));
+        case POSIX_GETPPID:
+            return posix_getppid();
 
         case POSIX_PEDIGREE_CREATE_WAITER:
             return reinterpret_cast<uintptr_t>(posix_pedigree_create_waiter());

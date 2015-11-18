@@ -940,3 +940,69 @@ int posix_getpeername(int socket, struct sockaddr *address, socklen_t *address_l
 
     return 0;
 }
+
+int posix_getsockopt(int sock, int level, int optname, void* optvalue, size_t *optlen)
+{
+    N_NOTICE("getsockopt");
+
+    // Check optlen first, then use it to check optvalue.
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(optlen), sizeof(size_t), PosixSubsystem::SafeWrite)))
+    {
+        N_NOTICE("getsockopt -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(optvalue), sizeof(*optlen), PosixSubsystem::SafeWrite)))
+    {
+        N_NOTICE("getsockopt -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    // Valid socket?
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if (!pSubsystem)
+    {
+        ERROR("No subsystem for one or both of the processes!");
+        return -1;
+    }
+
+    FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
+    if (!f || !f->file)
+    {
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
+
+    Socket *s = static_cast<Socket *>(f->file);
+
+    if (level != SOL_SOCKET)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    switch (optname)
+    {
+        case SO_ERROR:
+        {
+            Endpoint* p = s->getEndpoint();
+            N_NOTICE(" -> getting error [" << static_cast<int>(p->getError()) << "]");
+            *reinterpret_cast<Error::PosixError *>(optvalue) = p->getError();
+            *optlen = sizeof(Error::PosixError);
+            p->resetError();
+            break;
+        }
+
+        default:
+            N_NOTICE(" -> unknown optname " << optname);
+
+            // Combination of level/optname not supported otherwise.
+            SYSCALL_ERROR(ProtocolNotAvailable);
+            return -1;
+    }
+
+    return 0;
+}
+

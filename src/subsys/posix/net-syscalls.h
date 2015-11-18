@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -47,5 +46,7 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset);
 int posix_shutdown(int socket, int how);
 
 int posix_getpeername(int socket, struct sockaddr *address, socklen_t *address_len);
+
+int posix_getsockopt(int sock, int level, int optname, void* optvalue, size_t *optlen);
 
 #endif
