@@ -140,8 +140,13 @@ int ftruncate(int a, off_t b)
 
 int truncate(const char *path, off_t length)
 {
-    STUBBED("truncate");
-    return -1;
+    int fd = open(path, O_WRONLY);
+    if (fd < 0)
+        return fd;
+    int r = ftruncate(fd, length);
+    close(fd);
+
+    return r;
 }
 
 char* getcwd(char *buf, unsigned long size)
