@@ -198,7 +198,9 @@ except SCons.Errors.EnvironmentError:
                       tools=tools_to_find, TARFLAGS='-cz')
 Help(opts.GenerateHelpText(env))
 
-def memoized_scons_subst(cache, old_scons_subst, string, env, mode=SCons.Subst.SUBST_RAW, target=None, source=None, gvars={}, lvars={}, conv=None):
+def memoized_scons_subst(cache, old_scons_subst, string, env,
+                         mode=SCons.Subst.SUBST_RAW, target=None, source=None,
+                         gvars={}, lvars={}, conv=None):
     key_target = []
     key_source = []
     if target is not None:
@@ -206,7 +208,22 @@ def memoized_scons_subst(cache, old_scons_subst, string, env, mode=SCons.Subst.S
     if source is not None:
         key_source = source
 
-    key = (string, env, mode, tuple(lvars.get('TARGETS', key_target)), tuple(lvars.get('SOURCES', key_source)))
+    try:
+        for _ in source:
+            break
+    except TypeError:
+        source = [source]
+        key_source = source
+
+    try:
+        for _ in target:
+            break
+    except TypeError:
+        target = [target]
+        key_target = target
+
+    key = (string, env, mode, tuple(lvars.get('TARGETS', key_target)),
+           tuple(lvars.get('SOURCES', key_source)))
     m = cache.get(key)
     if m is not None:
         return m
@@ -320,6 +337,9 @@ env['PROGSUFFIX'] = ''
 # Reset file build suffixes (defaults are not always correct on each platform).
 env['OBJSUFFIX'] = '.obj'
 env['PROGSUFFIX'] = ''
+
+# Don't build shared libraries with versions + symlinks.
+# env['SHLIBNOVERSIONSYMLINKS'] = False
 
 # Determine build directories (these can be outside the source tree).
 env['BUILDDIR'] = env.Dir(env['BUILDDIR']).abspath  # Normalise path.
