@@ -756,6 +756,16 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
       removeConn(stateBlock->connId);
       m_TcpMutex.acquire();
     }
+    else if (oldState == Tcp::SYN_SENT)
+    {
+      // Not an expected close.
+      stateBlock->endpoint->reportError(Error::ConnectionRefused);
+    }
+    else
+    {
+      // Aborted, but active, connection.
+      stateBlock->endpoint->reportError(Error::ConnectionAborted);
+    }
 
   }
 }

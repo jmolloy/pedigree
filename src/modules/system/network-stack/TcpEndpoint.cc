@@ -261,7 +261,7 @@ bool TcpEndpoint::shutdown(ShutdownType what)
 void TcpEndpoint::stateChanged(Tcp::TcpState newState)
 {
     // If we've moved into a data transfer state, notify the socket.
-    if(newState == Tcp::ESTABLISHED)
+    if(newState == Tcp::ESTABLISHED || newState == Tcp::CLOSED)
     {
         for(List<Socket*>::Iterator it = m_Sockets.begin(); it != m_Sockets.end(); ++it)
         {
