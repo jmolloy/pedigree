@@ -72,6 +72,9 @@ def main(argv):
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind(('127.0.0.1', 4556))
 
+    # Disable default serial ports in the QEMU script.
+    os.environ['NO_SERIAL_PORTS'] = 'yes'
+
     # Kick off the QEMU instance in the background.
     qemu_cmd = [
         os.path.join(scriptdir, 'qemu'),
@@ -112,12 +115,6 @@ def main(argv):
     # Terminate QEMU now.
     qemu.terminate()
     qemu.wait()
-
-    # Print QEMU output if we failed.
-    if not success:
-        print
-        print 'QEMU output:'
-        print qemu.stdout.read()
 
     # Serial socket is done - QEMU is no more.
     sock.close()

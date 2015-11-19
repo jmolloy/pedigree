@@ -1,7 +1,13 @@
 #!/bin/bash
 
+SERIAL_PORTS="-serial file:build/serial.txt -serial file:build/memlog.txt"
+
+if [ ! -z "$NO_SERIAL_PORTS" ]; then
+    SERIAL_PORTS=""
+fi
+
 qemu-system-x86_64 \
     -drive file=./build/hdd.img,if=ide,media=disk,cache=none,aio=threads,index=0,format=raw \
     -drive file=./build/pedigree.iso,if=ide,media=cdrom,cache=none,aio=threads,index=2,format=raw \
-    -boot d -vga std -serial file:build/serial.txt -serial file:build/memlog.txt \
+    -boot d -vga std $SERIAL_PORTS \
     -rtc base=utc $*
