@@ -399,9 +399,8 @@ int posix_read(int fd, char *ptr, int len)
     uint64_t nRead = 0;
     if (ptr && len)
     {
-        /// \todo Sanitise input and check it's mapped etc so we don't segfault the kernel
         pThread->setInterrupted(false);
-        nRead = pFd->file->read(pFd->offset, len, len > 0x500000 ? 0 : reinterpret_cast<uintptr_t>(ptr), canBlock);
+        nRead = pFd->file->read(pFd->offset, len, reinterpret_cast<uintptr_t>(ptr), canBlock);
         if((!nRead) && (pThread->wasInterrupted()))
         {
             SYSCALL_ERROR(Interrupted);
@@ -801,6 +800,9 @@ int posix_stat(const char *name, struct stat *st)
         mode = S_IFREG;
     }
 
+    // Clear any cruft in the stat structure before we fill it.
+    memset(st, 0, sizeof(*st));
+
     uint32_t permissions = file->getPermissions();
     if (permissions & FILE_UR) mode |= S_IRUSR;
     if (permissions & FILE_UW) mode |= S_IWUSR;
@@ -879,6 +881,9 @@ int posix_fstat(int fd, struct stat *st)
         F_NOTICE("    -> S_IFREG");
         mode = S_IFREG;
     }
+
+    // Clear any cruft in the stat structure before we fill it.
+    memset(st, 0, sizeof(*st));
 
     uint32_t permissions = pFd->file->getPermissions();
     if (permissions & FILE_UR) mode |= S_IRUSR;
@@ -960,6 +965,9 @@ int posix_lstat(char *name, struct stat *st)
             mode = S_IFREG;
         }
     }
+
+    // Clear any cruft in the stat structure before we fill it.
+    memset(st, 0, sizeof(*st));
 
     uint32_t permissions = file->getPermissions();
     if (permissions & FILE_UR) mode |= S_IRUSR;
