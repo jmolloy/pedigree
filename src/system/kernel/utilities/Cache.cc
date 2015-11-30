@@ -338,6 +338,7 @@ uintptr_t Cache::insert (uintptr_t key, size_t size)
 
         // Enter into cache unpinned, but only if we can call an eviction callback.
         pPage->refcnt = m_Callback ? 0 : 1;
+        pPage->checksum = 0;
 
         m_Pages.insert(key + (page * 4096), pPage);
         linkPage(pPage);
