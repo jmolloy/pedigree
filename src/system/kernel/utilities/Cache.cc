@@ -354,6 +354,26 @@ uintptr_t Cache::insert (uintptr_t key, size_t size)
     return returnLocation;
 }
 
+bool Cache::exists(uintptr_t key, size_t length)
+{
+    while(!m_Lock.enter());
+
+    bool result = true;
+    for (size_t i = 0; i < length; i += 0x1000)
+    {
+        CachePage *pPage = m_Pages.lookup(key + (i * 0x1000));
+        if (!pPage)
+        {
+            result = false;
+            break;
+        }
+    }
+
+    m_Lock.leave();
+
+    return result;
+}
+
 bool Cache::evict(uintptr_t key)
 {
     return evict(key, true, true, true);
@@ -528,6 +548,19 @@ void Cache::sync(uintptr_t key, bool async)
         CacheManager::instance().addRequest(1, reinterpret_cast<uint64_t>(this), WriteBack, key, location);
 }
 
+void Cache::triggerChecksum(uintptr_t key)
+{
+    LockGuard<UnlikelyLock> guard(m_Lock);
+
+    CachePage *pPage = m_Pages.lookup(key);
+    if (!pPage)
+    {
+        return;
+    }
+
+    calculateChecksum(pPage);
+}
+
 void Cache::timer(uint64_t delta, InterruptState &state)
 {
     m_Nanoseconds += delta;
@@ -558,7 +591,21 @@ void Cache::timer(uint64_t delta, InterruptState &state)
     {
         CachePage *page = it.value();
         if (verifyChecksum(page, true))
+        {
+            // Checksum didn't change from the last check. If we saw it
+            // changing, perform an actual writeback now.
+            if (!page->checksumChanging)
+                continue;
+
+            page->checksumChanging = false;
+        }
+        else
+        {
+            // Saw the checksum change. Don't write back immediately - wait for
+            // any possible further changes to be seen.
+            page->checksumChanging = true;
             continue;
+        }
 
         // Promote - page is dirty since we last saw it.
         promotePage(page);

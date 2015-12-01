@@ -119,6 +119,9 @@ private:
         /// Checksum of the page's contents (for dirty detection).
         uint16_t checksum;
 
+        /// Marker to check that a page's contents are in flux.
+        bool checksumChanging;
+
         /// Linked list components for LRU.
         CachePage *pNext;
         CachePage *pPrev;
@@ -171,6 +174,9 @@ public:
      */
     uintptr_t insert (uintptr_t key, size_t size);
 
+    /** Checks if the entire range specified exists in the cache. */
+    bool exists(uintptr_t key, size_t length);
+
     /**
      * Evicts the given key from the cache, also freeing the memory it holds.
      *
@@ -221,6 +227,13 @@ public:
      * callback has been assigned to the Cache.
      */
     void sync(uintptr_t key, bool async);
+
+    /**
+     * Triggers the cache to calculate the checksum of the given location.
+     * This may be useful to avoid a spurious writeback when reading data into
+     * a cache page for the first time.
+     */
+    void triggerChecksum(uintptr_t key);
 
     /**
      * Enters a critical section with respect to this cache. That is, do not
