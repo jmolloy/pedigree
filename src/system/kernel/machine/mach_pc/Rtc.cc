@@ -183,6 +183,8 @@ uint64_t Rtc::getTickCount()
 
 bool Rtc::initialise()
 {
+  NOTICE("Rtc::initialise");
+
   // Allocate the I/O port range"CMOS"
   if (m_IoPort.allocate(0x70, 2) == false)
     return false;
@@ -241,30 +243,55 @@ bool Rtc::initialise()
 
   return true;
 }
-void Rtc::synchronise()
+void Rtc::synchronise(bool tohw)
 {
   enableRtcUpdates(false);
 
-  // Write the time and date back
-  if (m_bBCD == true)
+  if (tohw)
   {
-    write(0x00, BIN_TO_BCD8(m_Second));
-    write(0x02, BIN_TO_BCD8(m_Minute));
-    write(0x04, BIN_TO_BCD8(m_Hour));
-    write(0x07, BIN_TO_BCD8(m_DayOfMonth));
-    write(0x08, BIN_TO_BCD8(m_Month));
-    write(0x09, BIN_TO_BCD8(m_Year % 100));
-    write(0x32, BIN_TO_BCD8(m_Year / 100));
+    // Write the time and date back
+    if (m_bBCD == true)
+    {
+      write(0x00, BIN_TO_BCD8(m_Second));
+      write(0x02, BIN_TO_BCD8(m_Minute));
+      write(0x04, BIN_TO_BCD8(m_Hour));
+      write(0x07, BIN_TO_BCD8(m_DayOfMonth));
+      write(0x08, BIN_TO_BCD8(m_Month));
+      write(0x09, BIN_TO_BCD8(m_Year % 100));
+      write(0x32, BIN_TO_BCD8(m_Year / 100));
+    }
+    else
+    {
+      write(0x00, m_Second);
+      write(0x02, m_Minute);
+      write(0x04, m_Hour);
+      write(0x07, m_DayOfMonth);
+      write(0x08, m_Month);
+      write(0x09, m_Year % 100);
+      write(0x32, m_Year / 100);
+    }
   }
   else
   {
-    write(0x00, m_Second);
-    write(0x02, m_Minute);
-    write(0x04, m_Hour);
-    write(0x07, m_DayOfMonth);
-    write(0x08, m_Month);
-    write(0x09, m_Year % 100);
-    write(0x32, m_Year / 100);
+    // Read the time and date
+    if (m_bBCD == true)
+    {
+      m_Second = BCD_TO_BIN8(read(0x00));
+      m_Minute = BCD_TO_BIN8(read(0x02));
+      m_Hour = BCD_TO_BIN8(read(0x04));
+      m_DayOfMonth = BCD_TO_BIN8(read(0x07));
+      m_Month = BCD_TO_BIN8(read(0x08));
+      m_Year = BCD_TO_BIN8(read(0x32)) * 100 + BCD_TO_BIN8(read(0x09));
+    }
+    else
+    {
+      m_Second = read(0x00);
+      m_Minute = read(0x02);
+      m_Hour = read(0x04);
+      m_DayOfMonth = read(0x07);
+      m_Month = read(0x08);
+      m_Year = read(0x32) * 100 + read(0x09);
+    }
   }
 
   enableRtcUpdates(true);
@@ -275,7 +302,7 @@ void Rtc::uninitialise()
   uint8_t statusb = read(0x0B);
   write(0x0B, statusb & ~0x40);
 
-  synchronise();
+  synchronise(true);
 
   // Unregister the irq
   IrqManager &irqManager = *Machine::instance().getIrqManager();

@@ -94,6 +94,14 @@ class Timer
      *        or zero if bRetZero is true. */
     virtual size_t removeAlarm(class Event *pEvent, bool bRetZero) = 0;
 
+    /**
+     * \brief Synchronises the timer with the hardware.
+     * Useful for updating the fields returned by get*, especially if IRQs are
+     * not enabled.
+     * \param tohw If true, syncs back to the hardware, instead of from it.
+     */
+    virtual void synchronise(bool tohw=false) {};
+
   protected:
     /** The default constructor */
     inline Timer(){}
