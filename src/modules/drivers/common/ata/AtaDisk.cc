@@ -31,7 +31,7 @@
 #include "AtaDisk.h"
 #include "ata-common.h"
 
-#define ATA_DEFAULT_BLOCK_SIZE 0x1000  // 0x10000
+#define ATA_DEFAULT_BLOCK_SIZE 0x10000
 
 // Note the IrqReceived mutex is deliberately started in the locked state.
 AtaDisk::AtaDisk(AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs, BusMasterIde *busMaster) :
@@ -663,23 +663,45 @@ uint64_t AtaDisk::doRead(uint64_t location)
     if (m_AtaDiskType != NotPacket)
         return ScsiDisk::doRead(location);
 
-    // Handle the case where a read took place while we were waiting in the
-    // RequestQueue - don't double up the cache.
+    // Memory for the "already-read" buffers to point at for DMA scatter/gather
+    char *alreadyRead = 0;
+    PointerGuard<char> guard(alreadyRead);
+
+    // Create our set of buffers to read into.
     size_t nBytes = getBlockSize();
     uint64_t oldLocation = location;
-    location &= ~(nBytes - 1);
-    uintptr_t buffer = getCache().lookup(location);
-    if(buffer)
+    location &= ~(nBytes - 1);  // Align location to block size.
+
+    // Allocate list of buffers, allowing us to handle cache pages being widely
+    // distributed around the virtual address space.
+    size_t nBuffers = nBytes / 0x1000;  /// \todo getPageSize() here
+    Buffer *buffers = new Buffer[nBuffers];
+    PointerGuard<Buffer> guard2(buffers);
+
+    for (size_t i = 0; i < nBuffers; ++i)
     {
-        // Someone else got here first.
-        WARNING("AtaDisk::doRead(" << oldLocation << ") - buffer was already in cache");
-        getCache().release(location);
-        return 0;
-    }
-    buffer = getCache().insert(location, nBytes);
-    if(!buffer)
-    {
-        FATAL("AtaDisk::doRead - no buffer");
+        buffers[i].offset = i * 0x1000;
+
+        uintptr_t buffer = getCache().lookup(location + buffers[i].offset);
+        if (buffer)
+        {
+            getCache().release(location + buffers[i].offset);
+
+            // Already read - we can't safely use this buffer as it may be
+            // dirty, so we dodge it.
+            if (!alreadyRead)
+                alreadyRead = new char[0x1000];
+
+            buffer = reinterpret_cast<uintptr_t>(alreadyRead);
+        }
+        else
+        {
+            buffer = getCache().insert(location + buffers[i].offset);
+            if (!buffer)
+                FATAL("AtaDisk::doRead - couldn't get a buffer!");
+        }
+
+        buffers[i].buffer = buffer;
     }
 
     // Grab our parent.
@@ -692,7 +714,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
 #endif
 
     // Get the buffer in pointer form.
-    uint16_t *pTarget = reinterpret_cast<uint16_t*> (buffer);
+    uint16_t *pTarget = reinterpret_cast<uint16_t*> (0);
 
     // How many sectors do we need to read?
     /// \todo logical sector size here
@@ -726,7 +748,15 @@ uint64_t AtaDisk::doRead(uint64_t location)
         bool bDmaSetup = false;
         if(m_bDma)
         {
-            bDmaSetup = m_BusMaster->add(buffer, nSectorsToRead * 512);
+            for (size_t i = 0; i < nBuffers; ++i)
+            {
+                bDmaSetup = m_BusMaster->add(buffers[i].buffer, 0x1000);
+                if (!bDmaSetup)
+                {
+                    ERROR("DMA setup failed!");
+                    break;
+                }
+            }
         }
 
         if (m_SupportsLBA48)
@@ -847,6 +877,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
 
         if(!m_bDma && !bDmaSetup)
         {
+            size_t byteOffset = 0;
             for (int i = 0; i < nSectorsToRead; i++)
             {
                 // Wait until !BUSY
@@ -859,10 +890,33 @@ uint64_t AtaDisk::doRead(uint64_t location)
                     return 0;
                 }
 
+                // Figure out which buffer we care about here.
+                size_t nBuffer = byteOffset / 0x1000;
+                size_t offset = byteOffset % 0x1000;
+
                 // Read the sector.
+                uint16_t *target = reinterpret_cast<uint16_t *>(buffers[nBuffer].buffer + offset);
                 for (int j = 0; j < 256; j++)
-                    *pTarget++ = commandRegs->read16(0);
+                {
+                    *target++ = commandRegs->read16(0);
+                }
+
+                byteOffset += 512;
             }
+        }
+    }
+
+    // Checksum pages now that we've loaded them; helps avoid writebacks for
+    // these pages that we only just now read.
+    for (size_t i = 0; i < nBuffers; ++i)
+    {
+        if (buffers[i].buffer == reinterpret_cast<uintptr_t>(alreadyRead))
+        {
+            continue;
+        }
+        else
+        {
+            getCache().triggerChecksum(location + buffers[i].offset);
         }
     }
 
@@ -879,13 +933,23 @@ uint64_t AtaDisk::doWrite(uint64_t location)
     return 0;
 #endif
 
-    uintptr_t nBytes = getBlockSize();
-    location &= ~(nBytes - 1);
+    // Write only the affected page. This deviates from the behaviour of reads,
+    // which read a very large amount of data at once. Most writes (flush()
+    // aside) are done asynchronously, while reads are synchronous.
+    // This means we don't need to care about evicted pages within a disk block
+    // because we're writing only a specific page that we already know exists.
+    uintptr_t nBytes = 0x1000;
     uintptr_t buffer = getCache().lookup(location);
     if(!buffer)
     {
         FATAL("AtaDisk::doWrite - no buffer (completely misused method)");
     }
+
+    // Undo the pin done by ScsiDisk::write that verified this location exists
+    // in the first place. We have two active pins here: that from the above
+    // lookup(), and the one from ScsiDisk::write. This just ensures we're
+    // keeping the counts correct.
+    getCache().release(location);
 
     // Make sure we don't leave the refcnt increased by writing.
     CachePageGuard guard(getCache(), location);

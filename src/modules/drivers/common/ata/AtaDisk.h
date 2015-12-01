@@ -117,6 +117,16 @@ private:
         }
     }
 
+    /** Type for read/write buffer lists. */
+    struct Buffer
+    {
+        /// Virtual address of buffer to read into (page sized).
+        uintptr_t buffer;
+
+        /// Offset into the read.
+        size_t offset;
+    };
+
     /** Is this the master device on the bus? */
     bool m_IsMaster;
 
