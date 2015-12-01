@@ -321,11 +321,10 @@ void ScsiDisk::write(uint64_t location)
         return;
     }
 
+    // Implicit pin caused by lookup() must be released by the write request
+    // handler, to ensure the refcount is correct.
     ScsiController *pParent = static_cast<ScsiController*> (m_pParent);
     pParent->addAsyncRequest(0, SCSI_REQUEST_WRITE, reinterpret_cast<uint64_t> (this), location + offs);
-
-    // Undo lookup previously.
-    m_Cache.release(location + offs);
 #endif
 }
 
@@ -365,11 +364,14 @@ void ScsiDisk::flush(uint64_t location)
         return;
     }
 
+    // Make sure this page remains for both the write AND the sync.
+    m_Cache.pin(location + offs);
+
     ScsiController *pParent = static_cast<ScsiController*> (m_pParent);
     pParent->addRequest(0, SCSI_REQUEST_WRITE, reinterpret_cast<uint64_t> (this), location + offs);
     pParent->addRequest(0, SCSI_REQUEST_SYNC, reinterpret_cast<uint64_t> (this), location + offs);
 
-    // Undo lookup previously.
+    // Undo our pin for write+sync.
     m_Cache.release(location + offs);
 #endif
 }
