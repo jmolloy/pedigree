@@ -41,10 +41,10 @@ namespace Multiplier
 bool delay(Timestamp nanoseconds);
 
 /** Gets the system's current time. */
-Timestamp getTime();
+Timestamp getTime(bool sync=false);
 
 /** Gets the system's current time in nanoseconds. */
-Timestamp getTimeNanoseconds();
+Timestamp getTimeNanoseconds(bool sync=false);
 
 }
 

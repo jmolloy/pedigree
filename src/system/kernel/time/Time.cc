@@ -24,15 +24,19 @@
 namespace Time
 {
 
-Timestamp getTime()
+Timestamp getTime(bool sync)
 {
     Timer *pTimer = Machine::instance().getTimer();
+    if (sync)
+        pTimer->synchronise();
     return pTimer->getUnixTimestamp();
 }
 
-Timestamp getTimeNanoseconds()
+Timestamp getTimeNanoseconds(bool sync)
 {
     Timer *pTimer = Machine::instance().getTimer();
+    if (sync)
+        pTimer->synchronise();
     Timestamp r = pTimer->getUnixTimestamp() * Multiplier::SECOND;
     r += pTimer->getNanosecond();
     return r;

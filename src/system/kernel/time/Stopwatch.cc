@@ -39,13 +39,13 @@ Stopwatch::~Stopwatch()
 void Stopwatch::start()
 {
     m_bRunning = true;
-    m_StartValue = Time::getTimeNanoseconds();
+    m_StartValue = Time::getTimeNanoseconds(false);
 }
 
 void Stopwatch::stop()
 {
     m_bRunning = false;
-    Timestamp now = Time::getTimeNanoseconds();
+    Timestamp now = Time::getTimeNanoseconds(false);
     m_Value += now - m_StartValue;
 }
 
