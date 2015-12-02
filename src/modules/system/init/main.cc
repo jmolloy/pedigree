@@ -64,7 +64,7 @@ extern void pedigree_init_pthreads();
 
 extern BootIO bootIO;
 
-void init_stage2();
+int init_stage2(void *param);
 
 static bool bRootMounted = false;
 static bool probeDisk(Disk *pDisk)
@@ -118,10 +118,6 @@ static bool findDisks(Device *pDev)
     }
     return false;
 }
-
-/// This ensures that the init module entry function will not exit until the init
-/// program entry point thread is running.
-static Mutex g_InitProgramLoaded(true);
 
 static void error(const char *s)
 {
@@ -292,9 +288,6 @@ static bool init()
     str.clear();
 
 #ifdef THREADS
-    // At this point we're uninterruptible, as we're forking.
-    Spinlock lock;
-    lock.acquire();
 
     // Create a new process for the init process.
     Process *pProcess = new Process(Processor::information().getCurrentThread()->getParent());
@@ -312,15 +305,8 @@ static bool init()
     PosixSubsystem *pSubsystem = new PosixSubsystem;
     pProcess->setSubsystem(pSubsystem);
 
-    Thread *pThread = new Thread(pProcess, reinterpret_cast<Thread::ThreadStartFunc>(&init_stage2), 0x0 /* parameter */);
-    pThread->detach();
-
-    lock.release();
-
-    // Wait for the program to load
-    g_InitProgramLoaded.acquire();
-#else
-    #warning the init module is almost useless without threads.
+    Thread *pThread = new Thread(pProcess, init_stage2, 0);
+    pThread->join();
 #endif
 
     return true;
@@ -331,12 +317,11 @@ static void destroy()
 
 extern void system_reset();
 
-void init_stage2()
+int init_stage2(void *param)
 {
 #if defined(HOSTED) && defined(HAS_ADDRESS_SANITIZER)
     extern void system_reset();
     NOTICE("Note: ASAN build, so triggering a restart now.");
-    g_InitProgramLoaded.release();
     system_reset();
     return;
 #endif
@@ -347,8 +332,7 @@ void init_stage2()
     if (!initProg)
     {
         error("Loading init program FAILED (root»/applications/init not found).");
-        g_InitProgramLoaded.release();
-        return;
+        return 0;
     }
 
     NOTICE("INIT: File found");
@@ -383,8 +367,7 @@ void init_stage2()
         if(!initProg)
         {
             error("Interpreter for init program could not be found.");
-            g_InitProgramLoaded.release();
-            return;
+            return 0;
         }
 
         // Using the interpreter - don't worry about dynamic linking.
@@ -396,8 +379,7 @@ void init_stage2()
     if (pLinker && !pLinker->loadProgram(initProg))
     {
         error("The init program could not be loaded.");
-        g_InitProgramLoaded.release();
-        return;
+        return 0;
     }
 
     // Initialise the sigret and pthreads shizzle.
@@ -414,10 +396,13 @@ void init_stage2()
         size_t getNumber() {return ~0UL;}
     };
 
+    uintptr_t entryPoint = 0;
+
     Elf *elf = 0;
     if(pLinker)
     {
         elf = pLinker->getProgramElf();
+        entryPoint = elf->getEntryPoint();
     }
     else
     {
@@ -427,14 +412,10 @@ void init_stage2()
         if(!pMmFile)
         {
             error("Memory for the dynamic linker could not be allocated.");
-            g_InitProgramLoaded.release();
-            return;
+            return 0;
         }
 
-        // Create the ELF.
-        /// \todo It'd be awesome if we could just pull out the entry address.
-        elf = new Elf();
-        elf->create(reinterpret_cast<uint8_t*>(loadAddr), initProg->getSize());
+        Elf::extractEntryPoint(reinterpret_cast<uint8_t *>(loadAddr), initProg->getSize(), entryPoint);
     }
 
     if(pLinker)
@@ -478,28 +459,20 @@ void init_stage2()
 
     void *stack = Processor::information().getVirtualAddressSpace().allocateStack();
 
-#if 0
-    system_reset();
-#else
-
-    uintptr_t entryPoint = elf->getEntryPoint();
-    if(!pLinker)
-    {
-        // Free up resources used in the metadata-only ELF object.
-        delete elf;
-    }
+    Processor::setInterrupts(true);
+    pProcess->recordTime(true);
 
     // Alrighty - lets create a new thread for this program - -8 as PPC assumes
     // the previous stack frame is available...
+    NOTICE("spinning up main thread for init now");
     Thread *pThread = new Thread(
             pProcess,
             reinterpret_cast<Thread::ThreadStartFunc>(entryPoint),
-            argv /* parameter */,
-            stack /* Stack */);
+            argv,
+            stack);
     pThread->detach();
 
-    g_InitProgramLoaded.release();
-#endif
+    return 0;
 }
 
 #if defined(X86_COMMON)
