@@ -49,7 +49,7 @@ void ScsiDisk::cacheCallback(Cache::CallbackCause cause, uintptr_t loc, uintptr_
             // no-op for ScsiDisk
             break;
         default:
-            WARNING("File: unknown cache callback -- could indicate potential future I/O issues.");
+            WARNING("ScsiDisk: unknown cache callback -- could indicate potential future I/O issues.");
             break;
     }
 }
