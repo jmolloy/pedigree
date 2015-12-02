@@ -322,6 +322,24 @@ protected:
         m_DataCache.remove(location);
     }
 
+    /** Set permissions without raising fileAttributeChanged. */
+    void setPermissionsOnly(uint32_t perms)
+    {
+        m_Permissions = perms;
+    }
+
+    /** Set UID without raising fileAttributeChanged. */
+    void setUidOnly(size_t uid)
+    {
+        m_Uid = uid;
+    }
+
+    /** Set GID without raising fileAttributeChanged. */
+    void setGidOnly(size_t gid)
+    {
+        m_Gid = gid;
+    }
+
     String m_Name;
     Time::Timestamp m_AccessedTime;
     Time::Timestamp m_ModifiedTime;
