@@ -78,19 +78,24 @@ def main():
     # 'plot' command (with the various series names).
     plot = 'plot '
     for index, title in series_titles.items():
-        plot += '"%s" using 1:%d title "%s" with points pointtype 0, ' % (plot_data.name, index + 2, title.title())
+        if title == 'pages':
+            title = 'used pages (includes heap)'
+        elif title == 'free':
+            title = 'available pages'
+        plot += '"%s" using 1:%d title "%s" with lines, ' % (plot_data.name, index + 2, title.title())
 
     # Build gnuplot script.
     gnuplot_script = tempfile.NamedTemporaryFile()
     gnuplot_script.write('''#!/usr/bin/gnuplot
 reset
+set grid
 set autoscale
 set xtic auto
 set ytic auto
-set title "Pedigree Memory Usage"
+set title "Pedigree Memory Usage\\nhttp://pedigree-project.org"
 set xlabel "Seconds"
 set ylabel "Kilobytes"
-set terminal pngcairo size 1440,900 enhanced font 'Verdana, 10'
+set terminal pngcairo size 1440,900 enhanced font 'Verdana, 14'
 set output "memlog.png"
 %s
 ''' % plot)
