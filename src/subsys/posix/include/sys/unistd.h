@@ -56,9 +56,7 @@ int     _EXFUN(chmod, (const char *__path, mode_t __mode ));
 #if !defined(__INSIDE_CYGWIN__)
 int     _EXFUN(chown, (const char *__path, uid_t __owner, gid_t __group ));
 #endif
-#if defined(__CYGWIN__) || defined(__rtems__)
 int     _EXFUN(chroot, (const char *__path ));
-#endif
 int     _EXFUN(close, (int __fildes ));
 #if defined(__CYGWIN__)
 size_t	_EXFUN(confstr, (int __name, char *__buf, size_t __len));

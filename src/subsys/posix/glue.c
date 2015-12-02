@@ -295,13 +295,12 @@ clock_t times(struct tms *buf)
 {
     return syscall1(POSIX_TIMES, (long) buf);
 }
+#endif
 
 int utimes(const char *filename, const struct timeval times[2])
 {
-    STUBBED("utimes");
-    return -1;
+    return syscall2(POSIX_UTIMES, (long) filename, (long) times);
 }
-#endif
 
 int unlink(const char *name)
 {
@@ -732,11 +731,7 @@ int fchown(int fildes, uid_t owner, uid_t group)
 
 int utime(const char *path,const struct utimbuf *times)
 {
-    STUBBED("utime");
-    return 0;
-
-    errno = ENOENT;
-    return -1;
+    return syscall2(POSIX_UTIME, (long) path, (long) times);
 }
 
 int access(const char *path, int amode)
@@ -1760,8 +1755,7 @@ long timegm(struct tm *tm)
 
 int chroot(const char *path)
 {
-    STUBBED("chroot");
-    return -1;
+    return syscall1(POSIX_CHROOT, (long) path);
 }
 
 char *mkdtemp(char *template)

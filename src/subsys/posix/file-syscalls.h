@@ -89,6 +89,11 @@ int posix_fsync(int fd);
 int posix_fstatvfs(int fd, struct statvfs *buf);
 int posix_statvfs(const char *path, struct statvfs *buf);
 
+int posix_utime(const char *path, const struct utimbuf *times);
+int posix_utimes(const char *path, const struct timeval *times);
+
+int posix_chroot(const char *path);
+
 void normalisePath(String &nameToOpen, const char *name, bool *onDevFs = 0);
 
 #endif

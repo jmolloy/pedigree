@@ -188,6 +188,9 @@
 
 #define POSIX_GETSOCKOPT        129
 #define POSIX_GETPPID           130
+#define POSIX_UTIME             131
+#define POSIX_UTIMES            132
+#define POSIX_CHROOT            133
 
 #define POSIX_PTSNAME           200
 #define POSIX_TTYNAME           201

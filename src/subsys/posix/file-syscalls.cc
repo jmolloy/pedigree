@@ -2347,3 +2347,138 @@ int posix_statvfs(const char *path, struct statvfs *buf)
     
     return statvfs_doer(file->getFilesystem(), buf);
 }
+
+int posix_utime(const char *path, const struct utimbuf *times)
+{
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(path), PATH_MAX, PosixSubsystem::SafeRead) &&
+        ((!times) || PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(times), sizeof(struct utimbuf), PosixSubsystem::SafeRead))))
+    {
+        F_NOTICE("utimes -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    F_NOTICE("utimes(" << path << ")");
+
+    String realPath;
+    normalisePath(realPath, path);
+
+    File* file = VFS::instance().find(realPath, GET_CWD());
+    if (!file)
+    {
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+    }
+
+    // Symlink traversal
+    file = traverseSymlink(file);
+    if(!file)
+        return -1;
+
+    Time::Timestamp accessTime;
+    Time::Timestamp modifyTime;
+    if (times)
+    {
+        accessTime = times->actime * Time::Multiplier::SECOND;
+        modifyTime = times->modtime * Time::Multiplier::SECOND;
+    }
+    else
+    {
+        accessTime = modifyTime = Time::getTime();
+    }
+
+    file->setAccessedTime(accessTime);
+    file->setModifiedTime(modifyTime);
+
+    return 0;
+}
+
+int posix_utimes(const char *path, const struct timeval *times)
+{
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(path), PATH_MAX, PosixSubsystem::SafeRead) &&
+        ((!times) || PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(times), sizeof(struct timeval) * 2, PosixSubsystem::SafeRead))))
+    {
+        F_NOTICE("utimes -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    F_NOTICE("utimes(" << path << ")");
+
+    String realPath;
+    normalisePath(realPath, path);
+
+    File* file = VFS::instance().find(realPath, GET_CWD());
+    if (!file)
+    {
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+    }
+
+    // Symlink traversal
+    file = traverseSymlink(file);
+    if(!file)
+        return -1;
+
+    Time::Timestamp accessTime;
+    Time::Timestamp modifyTime;
+    if (times)
+    {
+        struct timeval access = times[0];
+        struct timeval modify = times[1];
+
+        accessTime = access.tv_sec * Time::Multiplier::SECOND;
+        accessTime += access.tv_usec * Time::Multiplier::MICROSECOND;
+
+        modifyTime = modify.tv_sec * Time::Multiplier::SECOND;
+        modifyTime += modify.tv_usec * Time::Multiplier::MICROSECOND;
+    }
+    else
+    {
+        accessTime = modifyTime = Time::getTimeNanoseconds();
+    }
+
+    file->setAccessedTime(accessTime);
+    file->setModifiedTime(modifyTime);
+
+    return 0;
+}
+
+int posix_chroot(const char *path)
+{
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(path), PATH_MAX, PosixSubsystem::SafeRead))
+    {
+        F_NOTICE("chroot -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    F_NOTICE("chroot(" << path << ")");
+
+    String realPath;
+    normalisePath(realPath, path);
+
+    File* file = VFS::instance().find(realPath, GET_CWD());
+    if (!file)
+    {
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+    }
+
+    // Symlink traversal
+    file = traverseSymlink(file);
+    if(!file)
+        return -1;
+
+    // chroot must be a directory.
+    if (!file->isDirectory())
+    {
+        SYSCALL_ERROR(NotADirectory);
+        return -1;
+    }
+
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    pProcess->setRootFile(file);
+
+    return 0;
+}
