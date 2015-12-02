@@ -41,7 +41,8 @@ Process::Process() :
   m_pUser(0), m_pGroup(0), m_pEffectiveUser(0), m_pEffectiveGroup(0), m_pDynamicLinker(0),
   m_pSubsystem(0), m_Waiters(), m_bUnreportedSuspend(false), m_bUnreportedResume(false),
   m_State(Active), m_BeforeSuspendState(Thread::Ready), m_Lock(false),
-  m_Metadata(), m_LastKernelEntry(0), m_LastUserspaceEntry(0), m_DeadThreads(0)
+  m_Metadata(), m_LastKernelEntry(0), m_LastUserspaceEntry(0), m_pRootFile(0),
+  m_DeadThreads(0)
 {
   resetCounts();
   m_Metadata.startTime = Time::getTimeNanoseconds();
@@ -67,7 +68,7 @@ Process::Process(Process *pParent) :
   m_pSubsystem(0), m_Waiters(), m_bUnreportedSuspend(false), m_bUnreportedResume(false),
   m_State(pParent->getState()), m_BeforeSuspendState(Thread::Ready), m_Lock(false),
   m_Metadata(pParent->m_Metadata), m_LastKernelEntry(0), m_LastUserspaceEntry(0),
-  m_DeadThreads(0)
+  m_pRootFile(pParent->m_pRootFile), m_DeadThreads(0)
 {
    m_pAddressSpace = pParent->m_pAddressSpace->clone();
 
