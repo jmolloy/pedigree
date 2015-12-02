@@ -31,7 +31,7 @@
 #include "AtaDisk.h"
 #include "ata-common.h"
 
-#define ATA_DEFAULT_BLOCK_SIZE 0x10000
+#define ATA_DEFAULT_BLOCK_SIZE 0x1000  // 0x10000
 
 // Note the IrqReceived mutex is deliberately started in the locked state.
 AtaDisk::AtaDisk(AtaController *pDev, bool isMaster, IoBase *commandRegs, IoBase *controlRegs, BusMasterIde *busMaster) :
