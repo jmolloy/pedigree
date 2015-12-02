@@ -117,9 +117,9 @@ int main(int argc, char **argv)
   pedigree_reboot();
 #else
   // Fork out and run startup programs.
+  start(MAIN_PROGRAM);
   start("/applications/preloadd");
   start("/applications/python");
-  start(MAIN_PROGRAM);
 #endif
 
   // Done, enter PID reaping loop.
