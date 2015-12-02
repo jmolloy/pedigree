@@ -6,8 +6,13 @@ if [ ! -z "$NO_SERIAL_PORTS" ]; then
     SERIAL_PORTS=""
 fi
 
+AIO="native"
+
+if [ ! "$(uname -s)" == "Linux" ]; then
+    AIO="threads"
+fi
+
 qemu-system-x86_64 \
-    -drive file=./build/hdd.img,if=ide,media=disk,cache=none,aio=threads,index=0,format=raw \
-    -drive file=./build/pedigree.iso,if=ide,media=cdrom,cache=none,aio=threads,index=2,format=raw \
-    -boot d -vga std $SERIAL_PORTS \
-    -rtc base=utc $*
+    -drive file=./build/hdd.img,if=ide,media=disk,cache=writeback,aio=$AIO,index=0,format=raw \
+    -drive file=./build/pedigree.iso,if=ide,media=cdrom,cache=writeback,aio=$AIO,index=2,format=raw \
+    -boot d -vga std $SERIAL_PORTS -rtc base=utc $*
