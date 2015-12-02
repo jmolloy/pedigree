@@ -379,4 +379,18 @@ class Processor
   }
 #endif
 
+/**
+ * EnsureInterrupts ensures interrupts are enabled or disabled in an RAII way.
+ * After the block completes, the interrupts enable state is restored.
+ */
+class EnsureInterrupts
+{
+public:
+    EnsureInterrupts(bool desired);
+    virtual ~EnsureInterrupts();
+
+private:
+    bool m_bPrevious;
+};
+
 #endif
