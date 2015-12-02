@@ -214,8 +214,11 @@ bool HostedTimer::initialise()
     return true;
 }
 
-void HostedTimer::synchronise()
+void HostedTimer::synchronise(bool tohw)
 {
+    if (tohw)
+        return;
+
     struct timespec tv;
     clock_gettime(CLOCK_REALTIME, &tv);
     struct tm *t = gmtime(&tv.tv_sec);

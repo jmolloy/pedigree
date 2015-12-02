@@ -60,9 +60,8 @@ class HostedTimer : public Timer, private IrqHandler
     /** Initialises the class
      *\return true, if successfull, false otherwise */
     bool initialise() INITIALISATION_ONLY;
-    /** Synchronise the time/date with the hardware
-     *\todo We might want to add this to the Timer interface */
-    void synchronise();
+    /** Synchronise the time/date with the hardware */
+    virtual void synchronise(bool tohw=false);
     /** Uninitialises the class */
     void uninitialise();
 
