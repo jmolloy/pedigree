@@ -21,125 +21,13 @@
 
 #include "newlib.h"
 
-#include <stdint.h>
-
-#include <compiler.h>
-
-// #define DEBUG_MEMSET
-
-#ifdef DEBUG_MEMSET
-#include <syslog.h>
-#endif
-
-#pragma GCC optimize ("no-tree-loop-distribute-patterns")
-
-/// \todo If we ever get an ARM newlib... we'll need some #ifdefs.
-
-#define NATURAL_MASK        (sizeof(size_t) - 1)
+#ifdef X86_COMMON
 
 void *memset(void *s, int c, size_t n)
 {
-    char *p1 = (char *) s;
-    size_t unused;
-
-#ifdef DEBUG_MEMSET
-    syslog(LOG_INFO, "memset(%p, %d, %d)", s, c, n);
-#endif
-
-    // Align to a natural boundary.
-    size_t align = sizeof(size_t) - (((uintptr_t) p1) & NATURAL_MASK);
-    if(UNLIKELY(align > n)) align = n;
-    switch(align)
-    {
-#ifdef X64
-            case 7:
-                *p1++ = c;
-            case 6:
-                *p1++ = c;
-            case 5:
-                *p1++ = c;
-            case 4:
-                *p1++ = c;
-#endif
-            case 3:
-                *p1++ = c;
-            case 2:
-                *p1++ = c;
-            case 1:
-                *p1++ = c;
-                n -= align;
-            default:
-                break;
-    }
-
-    if(UNLIKELY(!n))
-        return s;
-
-    // Load value. We would like to write a full size_t at a time if possible.
-    // We special-case zero (a simple XOR), but for non-zero input, we set
-    // the byte in all positions of a full size_t.
-    size_t val = c;
-
-#ifdef X64
-    size_t blocks = n >> 3;
-#else
-    size_t blocks = n >> 2;
-#endif
-
-#ifdef DEBUG_MEMSET
-    syslog(LOG_INFO, "  -> aligned %p, %d, %d", s, c, n);
-#endif
-
-    if(LIKELY(blocks))
-    {
-        if(val)
-        {
-#ifdef X64
-            val = (val * 0x0101010101010101ULL);
-            asm volatile("rep; stosq" : "=D" (p1), "=c" (unused) : "D" (p1), "c" (blocks), "a" (val) : "memory");
-#else
-            val = (val * 0x01010101UL);
-            asm volatile("rep; stosl" : "=D" (p1), "=c" (unused) : "D" (p1), "c" (blocks), "a" (val) : "memory");
-#endif
-        }
-        else
-        {
-#ifdef X64
-            asm volatile("xor %%rax,%%rax; rep; stosq" : "=D" (p1), "=c" (unused) : "D" (p1), "c" (blocks) : "memory", "rax");
-#else
-            asm volatile("xor %%eax,%%eax; cld; rep; stosl" : "=D" (p1), "=c" (unused) : "D" (p1), "c" (blocks) : "memory", "eax");
-#endif
-        }
-    }
-
-    // Tail.
-    size_t tail = n & NATURAL_MASK;
-#ifdef DEBUG_MEMSET
-    syslog(LOG_INFO, "  -> tail %p, %d, %d", p1, c, tail);
-#endif
-    switch(tail)
-    {
-#ifdef X64
-            case 7:
-                *p1++ = c;
-            case 6:
-                *p1++ = c;
-            case 5:
-                *p1++ = c;
-            case 4:
-                *p1++ = c;
-#endif
-            case 3:
-                *p1++ = c;
-            case 2:
-                *p1++ = c;
-            case 1:
-                *p1++ = c;
-                n -= align;
-            default:
-                break;
-    }
-
+    int a, b;
+    asm volatile("rep stosb" : "=&D" (a), "=&c" (b) : "0" (s), "a" (c), "1" (n) : "memory");
     return s;
 }
 
+#endif

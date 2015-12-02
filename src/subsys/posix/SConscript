@@ -75,7 +75,7 @@ glue_files = [
     'glue-strcasecmp.c',
     'glue-utmpx.c',
     'glue-infoblock.c',
-    # 'glue-memset.c',
+    'glue-memset.c',
 ]
 
 if userspace_env['ARCH_TARGET'] in ['X86', 'X64']:

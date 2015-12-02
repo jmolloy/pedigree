@@ -73,7 +73,7 @@ def doLibc(builddir, inputLibcA, glue_name, pedigree_c_name, ar, link, strip, li
         "mallstatsr",
         "ttyname",
         'strcasecmp',
-        # "memset",
+        "memset",
     ]
 
     # What target are we using?
