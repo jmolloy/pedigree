@@ -42,7 +42,7 @@ void *memset(void *buf, int c, size_t n)
     return buf;
 #else
     unsigned char *tmp = (unsigned char *)buf;
-    for(size_t i = 0; i < len; ++i)
+    for(size_t i = 0; i < n; ++i)
     {
       *tmp++ = c;
     }
@@ -58,7 +58,7 @@ void *wmemset(void *buf, int c, size_t n)
     return buf;
 #else
     unsigned short *tmp = (unsigned short *)buf;
-    while(len--)
+    while(n--)
     {
       *tmp++ = c;
     }
@@ -74,7 +74,7 @@ void *dmemset(void *buf, unsigned int c, size_t n)
     return buf;
 #else
     unsigned int *tmp = (unsigned int *)buf;
-    while(len--)
+    while(n--)
     {
       *tmp++ = c;
     }
@@ -103,9 +103,9 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
     asm volatile("rep movsb" : "=&c" (a), "=&D" (b), "=&S" (c): "1" (s1), "2" (s2), "0" (n) : "memory");
     return s1;
 #else
-    const unsigned char *restrict sp = (const unsigned char *restrict)src;
-    unsigned char *restrict dp = (unsigned char *restrict)dest;
-    for (; len != 0; len--) *dp++ = *sp++;
+    const unsigned char *restrict sp = (const unsigned char *restrict)s2;
+    unsigned char *restrict dp = (unsigned char *restrict)s1;
+    for (; n != 0; n--) *dp++ = *sp++;
     return dest;
 #endif
 }
