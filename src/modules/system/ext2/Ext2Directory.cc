@@ -46,9 +46,9 @@ Ext2Directory::Ext2Directory(String name, uintptr_t inode_num, Inode *inode,
     if (mode & EXT2_S_IWOTH) permissions |= FILE_OW;
     if (mode & EXT2_S_IXOTH) permissions |= FILE_OX;
 
-    setPermissions(permissions);
-    setUid(LITTLE_TO_HOST16(inode->i_uid));
-    setGid(LITTLE_TO_HOST16(inode->i_gid));
+    setPermissionsOnly(permissions);
+    setUidOnly(LITTLE_TO_HOST16(inode->i_uid));
+    setGidOnly(LITTLE_TO_HOST16(inode->i_gid));
 }
 
 Ext2Directory::~Ext2Directory()
@@ -316,6 +316,9 @@ void Ext2Directory::cacheDirectoryContents()
 
             size_t namelen = pDir->d_namelen + 1;
 
+            uint32_t inodeNum = LITTLE_TO_HOST32(pDir->d_inode);
+            Inode *inode = m_pExt2Fs->getInode(inodeNum);
+
             // Can we get the file type from the directory entry?
             size_t fileType = EXT2_UNKNOWN;
             if (m_pExt2Fs->checkRequiredFeature(2))
@@ -326,7 +329,6 @@ void Ext2Directory::cacheDirectoryContents()
             else
             {
                 // Inode holds file type.
-                Inode *inode = m_pExt2Fs->getInode(pDir->d_inode);
                 size_t inode_ftype = inode->i_mode & 0xF000;
                 switch (inode_ftype)
                 {
@@ -353,19 +355,17 @@ void Ext2Directory::cacheDirectoryContents()
             String sFilename;
             sFilename.assign(pDir->d_name, pDir->d_namelen);
 
-            uint32_t inode = LITTLE_TO_HOST32(pDir->d_inode);
-
             File *pFile = 0;
             switch (fileType)
             {
                 case EXT2_FILE:
-                    pFile = new Ext2File(sFilename, inode, m_pExt2Fs->getInode(inode), m_pExt2Fs, this);
+                    pFile = new Ext2File(sFilename, inodeNum, inode, m_pExt2Fs, this);
                     break;
                 case EXT2_DIRECTORY:
-                    pFile = new Ext2Directory(sFilename, inode, m_pExt2Fs->getInode(inode), m_pExt2Fs, this);
+                    pFile = new Ext2Directory(sFilename, inodeNum, inode, m_pExt2Fs, this);
                     break;
                 case EXT2_SYMLINK:
-                    pFile = new Ext2Symlink(sFilename, inode, m_pExt2Fs->getInode(inode), m_pExt2Fs, this);
+                    pFile = new Ext2Symlink(sFilename, inodeNum, inode, m_pExt2Fs, this);
                     break;
                 default:
                     ERROR("EXT2: Unrecognised file type for '" << sFilename << "': " << pDir->d_file_type);

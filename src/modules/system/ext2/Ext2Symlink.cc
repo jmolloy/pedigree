@@ -45,9 +45,9 @@ Ext2Symlink::Ext2Symlink(String name, uintptr_t inode_num, Inode *inode,
     if (mode & EXT2_S_IWOTH) permissions |= FILE_OW;
     if (mode & EXT2_S_IXOTH) permissions |= FILE_OX;
 
-    setPermissions(permissions);
-    setUid(LITTLE_TO_HOST16(inode->i_uid));
-    setGid(LITTLE_TO_HOST16(inode->i_gid));
+    setPermissionsOnly(permissions);
+    setUidOnly(LITTLE_TO_HOST16(inode->i_uid));
+    setGidOnly(LITTLE_TO_HOST16(inode->i_gid));
 }
 
 Ext2Symlink::~Ext2Symlink()
