@@ -38,16 +38,25 @@ Filesystem::Filesystem() :
 {
 }
 
+File *Filesystem::getTrueRoot()
+{
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    File *maybeRoot = pProcess->getRootFile();
+    if (maybeRoot)
+        return maybeRoot;
+    return getRoot();
+}
+
 File *Filesystem::find(String path, File *pStartNode)
 {
-    if (!pStartNode) pStartNode = getRoot();
+    if (!pStartNode) pStartNode = getTrueRoot();
     File *a = findNode(pStartNode, path);
     return a;
 }
 
 bool Filesystem::createFile(String path, uint32_t mask, File *pStartNode)
 {
-    if (!pStartNode) pStartNode = getRoot();
+    if (!pStartNode) pStartNode = getTrueRoot();
     File *pFile = findNode(pStartNode, path);
 
     if (pFile)
@@ -72,7 +81,7 @@ bool Filesystem::createFile(String path, uint32_t mask, File *pStartNode)
 
 bool Filesystem::createDirectory(String path, File *pStartNode)
 {
-    if (!pStartNode) pStartNode = getRoot();
+    if (!pStartNode) pStartNode = getTrueRoot();
     File *pFile = findNode(pStartNode, path);
 
     if (pFile)
@@ -99,7 +108,7 @@ bool Filesystem::createDirectory(String path, File *pStartNode)
 
 bool Filesystem::createSymlink(String path, String value, File *pStartNode)
 {
-    if (!pStartNode) pStartNode = getRoot();
+    if (!pStartNode) pStartNode = getTrueRoot();
     File *pFile = findNode(pStartNode, path);
 
     if (pFile)
@@ -126,7 +135,7 @@ bool Filesystem::createSymlink(String path, String value, File *pStartNode)
 
 bool Filesystem::remove(String path, File *pStartNode)
 {
-    if (!pStartNode) pStartNode = getRoot();
+    if (!pStartNode) pStartNode = getTrueRoot();
 
     File *pFile = findNode(pStartNode, path);
 
@@ -167,7 +176,7 @@ File *Filesystem::findNode(File *pNode, String path)
     // If the pathname has a leading slash, cd to root and remove it.
     if (path[0] == '/')
     {
-        pNode = getRoot();
+        pNode = getTrueRoot();
         path = String(&path[1]);
     }
 
@@ -219,11 +228,15 @@ File *Filesystem::findNode(File *pNode, String path)
         return 0;
     }
 
-    if (!strcmp(path, ".") || (!strcmp(path, "..") && pNode->m_pParent == 0))
+    bool dot = !strcmp(path, ".");
+    bool dotdot = !strcmp(path, "..");
+
+    // '.' section, or '..' with no parent, or '..' and we're at the root.
+    if (dot || (dotdot && pNode->m_pParent == 0) || (dotdot && pNode == getTrueRoot()))
     {
         return findNode(pNode, restOfPath);
     }
-    else if (!strcmp(path, ".."))
+    else if (dotdot)
     {
         return findNode(pNode->m_pParent, restOfPath);
     }

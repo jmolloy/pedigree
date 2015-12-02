@@ -362,6 +362,18 @@ public:
         return m_Metadata.sharedPages;
     }
 
+    /** Set this process' root. */
+    void setRootFile(File *pFile)
+    {
+        m_pRootFile = pFile;
+    }
+
+    /** Get this process' root. */
+    File *getRootFile() const
+    {
+        return m_pRootFile;
+    }
+
 private:
     Process(const Process &);
     Process &operator = (const Process &);
@@ -479,6 +491,9 @@ private:
 
     /** Last time we entered userspace. */
     Time::Timestamp m_LastUserspaceEntry;
+
+    /** Root directory for this process. NULL == system-wide default. */
+    File *m_pRootFile;
 
 public:
     Semaphore m_DeadThreads;
