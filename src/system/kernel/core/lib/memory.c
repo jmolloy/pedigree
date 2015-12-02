@@ -106,7 +106,7 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
     const unsigned char *restrict sp = (const unsigned char *restrict)s2;
     unsigned char *restrict dp = (unsigned char *restrict)s1;
     for (; n != 0; n--) *dp++ = *sp++;
-    return dest;
+    return s1;
 #endif
 }
 
