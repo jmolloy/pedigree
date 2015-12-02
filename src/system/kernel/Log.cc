@@ -25,6 +25,7 @@
 #include <utilities/utility.h>
 #include <processor/Processor.h>
 #include <LockGuard.h>
+#include <time/Time.h>
 
 extern BootstrapStruct_t *g_pBootstrapInfo;
 
@@ -58,6 +59,17 @@ class SerialLogger : public Log::LogCallback
 };
 
 static SerialLogger g_SerialCallback;
+
+static NormalStaticString getTimestamp()
+{
+    Time::Timestamp t = Time::getTime();
+
+    NormalStaticString r;
+    r += "[";
+    r.append(t);
+    r += "] ";
+    return r;
+}
 
 Log::Log () :
     m_Lock(),
@@ -153,6 +165,7 @@ void Log::installCallback(LogCallback *pCallback, bool bSkipBacklog)
                     str = "(XX) ";
                     break;
             }
+            str += getTimestamp();
             str += m_StaticLog[entry].str;
 #ifndef SERIAL_IS_FILE
             str += "\r\n"; // Handle carriage return
@@ -280,6 +293,7 @@ Log &Log::operator<< (Modifier type)
                     str = "(XX) ";
                     break;
             }
+            str += getTimestamp();
             str += m_Buffer.str;
 #ifndef SERIAL_IS_FILE
             str += "\r\n"; // Handle carriage return
