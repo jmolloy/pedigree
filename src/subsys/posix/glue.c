@@ -2315,14 +2315,12 @@ char *crypt(const char *key, const char *salt)
 
 int ffsl(long int i)
 {
-    STUBBED("ffsl");
-    return 0;
+    return __builtin_ffs(i);
 }
 
 int ffsll(long long int i)
 {
-    STUBBED("ffsll");
-    return 0;
+    return __builtin_ffsll(i);
 }
 
 void __pedigree_revoke_signal_context()
