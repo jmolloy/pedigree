@@ -283,12 +283,7 @@ static bool init()
     Log::instance().installCallback(logger);
 #endif
 
-    str += "Loading init program (root»/applications/init)\n";
-    bootIO.write(str, BootIO::White, BootIO::Black);
-    str.clear();
-
 #ifdef THREADS
-
     // Create a new process for the init process.
     Process *pProcess = new Process(Processor::information().getCurrentThread()->getParent());
     pProcess->setUser(UserManager::instance().getUser(0));

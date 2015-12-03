@@ -245,7 +245,30 @@ void progress(const char *text)
     if(g_LogMode)
         return;
 
-    if(!g_NoGraphics)
+    if(g_NoGraphics)
+    {
+        // Prepare to center the progress bar (22 characters wide).
+        HugeStaticString s;
+        s = " ";
+        for (size_t i = 0; i < (80 / 2) - 11; ++i)
+        {
+            bootIO.write(s, BootIO::Black, BootIO::Black);
+        }
+
+        // Render progress bar - style: [###---]
+        s = "[";
+        size_t pos = (20 * g_BootProgressCurrent) / g_BootProgressTotal;
+        for (size_t i = 0; i < 20; ++i)
+        {
+            if (i <= pos)
+                s += '#';
+            else
+                s += '-';
+        }
+        s += "]\r";
+        bootIO.write(s, BootIO::White, BootIO::Black);
+    }
+    else
     {
         size_t w = (g_ProgressW * g_BootProgressCurrent) / g_BootProgressTotal;
         if(g_Previous <= g_BootProgressCurrent)
@@ -337,7 +360,27 @@ static void getDesiredMode(size_t &width, size_t &height, size_t &bpp)
 static bool init()
 {
 #ifdef NOGFX
-    Log::instance().installCallback(&g_StreamLogger, true);
+    const String title("Pedigree is Loading...\n");
+
+    // Prepare to render by making some space between the current BootIO output
+    // and the progress bar we're about to add.
+    HugeStaticString s;
+    s = "\n";
+    for (size_t i = 0; i < 2; ++i)
+    {
+        bootIO.write(s, BootIO::Black, BootIO::Black);
+    }
+
+    // Prepare to center text.
+    s = " ";
+    for (size_t i = 0; i < (80 / 2) - (title.length() / 2); ++i)
+    {
+        bootIO.write(s, BootIO::Black, BootIO::Black);
+    }
+
+    // Render the system title.
+    s = title;
+    bootIO.write(s, BootIO::White, BootIO::Black);
 
     g_BootProgressUpdate = &progress;
 #else
