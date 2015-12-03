@@ -933,6 +933,12 @@ uint64_t AtaDisk::doWrite(uint64_t location)
     return 0;
 #endif
 
+    if (m_AtaDiskType != NotPacket)
+    {
+        /// \todo might still want to allow writes - assuming CDROM here...
+        return 0;
+    }
+
     // Write only the affected page. This deviates from the behaviour of reads,
     // which read a very large amount of data at once. Most writes (flush()
     // aside) are done asynchronously, while reads are synchronous.
