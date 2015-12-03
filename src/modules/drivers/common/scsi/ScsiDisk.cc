@@ -27,6 +27,8 @@
 #include <utilities/PointerGuard.h>
 #include <time/Time.h>
 
+#define READAHEAD_ENABLED 0
+
 #ifdef SCSI_DEBUG
 #define SCSI_DEBUG_LOG DEBUG_LOG
 #else
@@ -279,11 +281,13 @@ uintptr_t ScsiDisk::read(uint64_t location)
 
     ScsiController *pParent = static_cast<ScsiController*> (m_pParent);
     pParent->addRequest(0, SCSI_REQUEST_READ, reinterpret_cast<uint64_t> (this), loc);
+#if READAHEAD_ENABLED
     // Queue up a few readaheads, assuming sequential access.
     for (size_t i = 0; i < (0x20000 / getBlockSize()); ++i)
     {
         pParent->addAsyncRequest(0, SCSI_REQUEST_READ, reinterpret_cast<uint64_t> (this), loc + (getBlockSize() * i));
     }
+#endif
     return m_Cache.lookup(location + offs) - offs;
 }
 
