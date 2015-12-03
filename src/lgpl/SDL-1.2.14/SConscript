@@ -31,6 +31,10 @@ imagesdir = env["PEDIGREE_IMAGES_DIR"]
 objname = os.path.join(builddir, 'libSDL.a')
 sobjname = os.path.join(builddir, 'libSDL.so')
 
+EXTERNAL_INCLUDE_DIR = '#images/local/include'
+if env['ON_PEDIGREE']:
+    EXTERNAL_INCLUDE_DIR = '/include'
+
 files = [
     Glob(os.path.join('src', '*.c')),
     Glob(os.path.join('src', 'audio', '*.c')),
@@ -62,16 +66,17 @@ include = [
     '#src/subsys/posix/include',
     '#src/subsys/native/include',
     '#src/user/libraries/libui/include',
-    '#images/local/include',
-    '#images/local/include/pixman-1',
-    '#images/local/include/freetype2',
+    EXTERNAL_INCLUDE_DIR,
+    EXTERNAL_INCLUDE_DIR + '/pixman-1',
+    EXTERNAL_INCLUDE_DIR + '/freetype2',
 ]
 
-cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
-cppinclude = include + [
-    cpp_base,
-    os.path.join(cpp_base, env['COMPILER_TARGET']),
-]
+if not env['ON_PEDIGREE']:
+    cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
+    cppinclude = include + [
+        cpp_base,
+        os.path.join(cpp_base, env['COMPILER_TARGET']),
+    ]
 
 libraries = [
     'gcc',

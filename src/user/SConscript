@@ -44,6 +44,12 @@ elif env['ARCH_TARGET'] == 'PPC':
 elif env['ARCH_TARGET'] == 'ARM':
     suffix = '-arm'
 
+EXTERNAL_LIBRARY_DIR = '#images/local/libraries'
+EXTERNAL_INCLUDE_DIR = '#images/local/include'
+if env['ON_PEDIGREE']:
+    EXTERNAL_LIBRARY_DIR = '/libraries'
+    EXTERNAL_INCLUDE_DIR = '/include'
+
 # libloader (userspace dynamic linker).
 libload_sources = [
     'loader.cc',
@@ -115,13 +121,13 @@ pango_apps = [
 
 # Custom include paths for specific applications.
 custom_incpath = {
-    'TUI' : ['#images/local/include',
-             '#images/local/include/freetype2'],
+    'TUI' : [EXTERNAL_INCLUDE_DIR,
+             EXTERNAL_INCLUDE_DIR + '/freetype2'],
     'winman' : ['#src/user/libraries/libui/include',
                 '#src/user/libraries/libui/src',
-                '#images/local/include',
-                '#images/local/include/pixman-1',
-                '#images/local/include/freetype2']
+                EXTERNAL_INCLUDE_DIR,
+                EXTERNAL_INCLUDE_DIR + '/pixman-1',
+                EXTERNAL_INCLUDE_DIR + '/freetype2']
 }
 
 # Custom libraries for specific applications
@@ -180,17 +186,22 @@ env_clone['CPPPATH'] = base_include_dirs
 # -static stops GCC placing the path to the dynamic linker into the binary, and creates a non-relocateable executable.
 libload_env = env_clone.Clone()
 libload_env.MergeFlags('-static')
-cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
-cpp_arch_base = os.path.join(cpp_base, env['COMPILER_TARGET'])
-libload_env['CPPPATH'] += ['#src/system/include/linker', cpp_base,
-                           cpp_arch_base]
+
+libload_env['CPPPATH'] += ['#src/system/include/linker']
+if not env['ON_PEDIGREE']:
+    cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
+    cpp_arch_base = os.path.join(cpp_base, env['COMPILER_TARGET'])
+    libload_env['CPPPATH'] += [cpp_base, cpp_arch_base]
+
 libload_env['LIBPATH'] += [builddir, imagesdir + 'libraries']
 libload_env['LIBS'] = ['-lstdc++', '-lc', '-lpedigree', '-lpedigree-c', '-lgcc']
+
 libload = os.path.join(builddir, 'libload.so')
 if env['ARCH_TARGET'] == 'ARM':
     libload_linkscript = libload_env.File(os.path.join(appsbase, 'libload', 'libload-arm.ld'))
 else:
     libload_linkscript = libload_env.File(os.path.join(appsbase, 'libload', 'libload.ld'))
+
 in_files = [os.path.join(appsbase, 'libload', x) for x in libload_sources]
 libload_env.Program(libload, in_files,
     LINKFLAGS="-static -Wl,-Bstatic -Wl,--no-whole-archive -nodefaultlibs -T%s " % libload_linkscript)
@@ -227,8 +238,9 @@ for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + lib
         if not env['build_lgpl']:
             continue
         app_env['LIBS'] += ['SDL']
-        app_env['CPPPATH'] += ['#src/lgpl/SDL-1.2.14/include',
-                               '#images/local/include']
+        app_env['CPPPATH'] += ['#src/lgpl/SDL-1.2.14/include']
+        if not env['ON_PEDIGREE']:
+            app_env['CPPPATH'] += [EXTERNAL_INCLUDE_DIR]
 
     # Handle Mesa dependencies.
     if app in mesa_apps:
@@ -250,12 +262,13 @@ for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + lib
 
     if app in pango_apps:
         app_env['LIBPATH'] += [os.path.join(imagesdir, 'libraries')]
-        app_env['CPPPATH'] += [
-            '#images/local/libraries/glib-2.0/include',
-            '#images/local/include/glib-2.0',
-            '#images/local/include/pango-1.0',
-            '#images/local/include/cairo',
-        ]
+        if not env['ON_PEDIGREE']:
+            app_env['CPPPATH'] += [
+                EXTERNAL_LIBRARY_DIR + '/glib-2.0/include',
+                EXTERNAL_INCLUDE_DIR + '/glib-2.0',
+                EXTERNAL_INCLUDE_DIR + '/pango-1.0',
+                EXTERNAL_INCLUDE_DIR + '/cairo',
+            ]
 
         # pango pulls in a lot of dependencies.
         app_env['LIBS'] += ['cairo', 'pangocairo-1.0', 'pangoft2-1.0',
