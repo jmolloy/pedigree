@@ -305,10 +305,10 @@ if sys.platform == 'darwin':
         env['TAR'] = env.Detect('gnutar')
 
 # Look for things we absolutely must have.
-required_tools = []
+required_tools = ['TAR']
 if env['build_configdb']:
-    # Need sqlite and tar if we're building a config database.
-    required_tools.extend(['SQLITE', 'TAR'])
+    # Need sqlite if we're building a config database.
+    required_tools.append('SQLITE')
 if not all([env[x] is not None for x in required_tools]):
     raise SCons.Errors.UserError('Could not find all needed tools (need: %r)' % required_tools)
 
