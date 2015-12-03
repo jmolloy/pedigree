@@ -256,6 +256,16 @@ env['CPPSUFFIXES'] = ['.c', '.C', '.cc', '.h', '.hpp', '.cpp', '.S']
 for k in autogen_opts.keys():
     env[k] = autogen_env.get(k)
 
+# Determine whether we're cross-compiling or not.
+if env.get('HOST_PLATFORM') is None:
+    host = os.uname()
+    env['ON_PEDIGREE'] = host[0] == 'Pedigree'
+    env['HOST_PLATFORM'] = host[4].lower()
+
+# If we're building on Pedigree, we enforce not building images for now.
+if env['ON_PEDIGREE']:
+    env['build_images'] = False
+
 # Make sure there's a sensible configuration.
 if env['build_kernel_only']:
     env['build_kernel'] = True
@@ -306,16 +316,6 @@ if not all([env[x] is not None for x in required_tools]):
 if env['MKISOFS'] is None:
     print 'No program to generate ISOs, not generating an ISO.'
     env['iso'] = False
-
-# Determine whether we're cross-compiling or not.
-if env.get('HOST_PLATFORM') is None:
-    host = os.uname()
-    env['ON_PEDIGREE'] = host[0] == 'Pedigree'
-    env['HOST_PLATFORM'] = host[4].lower()
-
-# If we're building on Pedigree, we enforce not building images for now.
-if env['ON_PEDIGREE']:
-    env['build_images'] = False
 
 # Can we even build an image?
 if env['build_images'] and not any([env[x] is not None for x in ['LOSETUP', 'MKE2FS', 'MTOOLS_MMD']]):
