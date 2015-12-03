@@ -678,6 +678,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
     Buffer *buffers = new Buffer[nBuffers];
     PointerGuard<Buffer> guard2(buffers);
 
+    bool bAlreadyAllRead = true;
     for (size_t i = 0; i < nBuffers; ++i)
     {
         buffers[i].offset = i * 0x1000;
@@ -699,9 +700,17 @@ uint64_t AtaDisk::doRead(uint64_t location)
             buffer = getCache().insert(location + buffers[i].offset);
             if (!buffer)
                 FATAL("AtaDisk::doRead - couldn't get a buffer!");
+
+            bAlreadyAllRead = false;
         }
 
         buffers[i].buffer = buffer;
+    }
+
+    if (bAlreadyAllRead)
+    {
+        // All pages were already in cache.
+        return 0;
     }
 
     // Grab our parent.
