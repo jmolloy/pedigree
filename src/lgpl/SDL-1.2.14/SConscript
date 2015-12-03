@@ -71,9 +71,10 @@ include = [
     EXTERNAL_INCLUDE_DIR + '/freetype2',
 ]
 
+cppinclude = include
 if not env['ON_PEDIGREE']:
     cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
-    cppinclude = include + [
+    cppinclude += [
         cpp_base,
         os.path.join(cpp_base, env['COMPILER_TARGET']),
     ]

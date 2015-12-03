@@ -238,9 +238,8 @@ for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + lib
         if not env['build_lgpl']:
             continue
         app_env['LIBS'] += ['SDL']
-        app_env['CPPPATH'] += ['#src/lgpl/SDL-1.2.14/include']
-        if not env['ON_PEDIGREE']:
-            app_env['CPPPATH'] += [EXTERNAL_INCLUDE_DIR]
+        app_env['CPPPATH'] += ['#src/lgpl/SDL-1.2.14/include',
+                               EXTERNAL_INCLUDE_DIR]
 
     # Handle Mesa dependencies.
     if app in mesa_apps:
@@ -251,8 +250,9 @@ for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + lib
     # Handle C++-related dependencies.
     if app in set(cpp_apps + sdl_apps + mesa_apps + cpp_11_apps):
         app_env['LIBPATH'] += [os.path.join(imagesdir, 'libraries')]
-        app_env['CPPPATH'] += [cpp_base, '#src/subsys/native/include',
-                               cpp_arch_base]
+        app_env['CPPPATH'] += ['#src/subsys/native/include']
+        if not env['ON_PEDIGREE']:
+            app_env['CPPPATH'] += [cpp_base, cpp_arch_base]
         app_env['LINK'] = env['CXX']
 
     # Handle libui-related dependencies.
@@ -262,13 +262,12 @@ for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + lib
 
     if app in pango_apps:
         app_env['LIBPATH'] += [os.path.join(imagesdir, 'libraries')]
-        if not env['ON_PEDIGREE']:
-            app_env['CPPPATH'] += [
-                EXTERNAL_LIBRARY_DIR + '/glib-2.0/include',
-                EXTERNAL_INCLUDE_DIR + '/glib-2.0',
-                EXTERNAL_INCLUDE_DIR + '/pango-1.0',
-                EXTERNAL_INCLUDE_DIR + '/cairo',
-            ]
+        app_env['CPPPATH'] += [
+            EXTERNAL_LIBRARY_DIR + '/glib-2.0/include',
+            EXTERNAL_INCLUDE_DIR + '/glib-2.0',
+            EXTERNAL_INCLUDE_DIR + '/pango-1.0',
+            EXTERNAL_INCLUDE_DIR + '/cairo',
+        ]
 
         # pango pulls in a lot of dependencies.
         app_env['LIBS'] += ['cairo', 'pangocairo-1.0', 'pangoft2-1.0',

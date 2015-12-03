@@ -65,12 +65,14 @@ for library in libs:
     # Determine the subsystem and include directories for this library
     incpath = base_include_dirs[:]
     s = subsys[library]
-    if s == 'native' and not env['ON_PEDIGREE']:
-        cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
-        incpath += ['#/src/subsys/native/include',
-                    cpp_base,
-                    '%s/%s' % (cpp_base, env['COMPILER_TARGET']),
-                    ]
+    if s == 'native':
+        incpath += ['#/src/subsys/native/include']
+        if not env['ON_PEDIGREE']:
+            cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
+            incpath += [
+                cpp_base,
+                '%s/%s' % (cpp_base, env['COMPILER_TARGET']),
+            ]
     else:
         print "** Library with subsys '%s' is not buildable - fix src/user/libraries/SConscript!" % (s)
 
