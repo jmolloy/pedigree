@@ -30,6 +30,7 @@ import signal
 import socket
 import subprocess
 import sys
+import time
 
 
 class TimeoutError(Exception):
@@ -86,6 +87,8 @@ def main(argv):
         '-monitor',
         'stdio'
     ]
+
+    start = time.time()
     qemu = subprocess.Popen(qemu_cmd, stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             close_fds=True, cwd=os.path.join(scriptdir, '..'))
@@ -93,7 +96,7 @@ def main(argv):
     success = False
     serial = []
     try:
-        with Timeout(15):
+        with Timeout(30):
             last = ''
             while True:
                 serial_data = last + sock.recv(1024)
@@ -105,12 +108,14 @@ def main(argv):
                 if '-- Hello, Travis! --' in '\n'.join(serial_lines):
                     success = True
                     break
+        end = time.time()
     except TimeoutError:
         print 'Runtime test failure: Pedigree did not boot to the login prompt.'
         print 'Most recent serial lines:'
         print '\n'.join(serial[-15:])
     else:
-        print 'Runtime test success: Pedigree booted to the login prompt.'
+        print ('Runtime test success: Pedigree booted to the login '
+               'prompt (%ds).' % (int(end - start),))
 
     # Terminate QEMU now.
     qemu.terminate()
