@@ -58,7 +58,7 @@ pid_t waitpid (pid_t, int *, int);
 pid_t _wait (int *);
 
 #ifdef __cplusplus
-};
+}
 #endif
 
 #endif
