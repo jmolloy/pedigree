@@ -34,6 +34,12 @@
 #include <sys/ioctl.h>
 #include <utmpx.h>
 
+// Force immediate login if we're running a live CD.
+#ifdef LIVECD
+#define FORCE_LOGIN_USER "root"
+#define FORCE_LOGIN_PASS "root"
+#endif
+
 // PID of the process we're running
 int g_RunningPid = -1;
 

@@ -573,7 +573,7 @@ additionalDefines = ['ipv4_forwarding', 'serial_is_file', 'installer',
                      'multiple_consoles', 'multiprocessor', 'smp', 'apic',
                      'acpi', 'debug_logging', 'superdebug', 'nogfx', 'mach_pc',
                      'usb_verbose_debug', 'memory_tracing', 'travis', 'hosted',
-                     'memory_log_inline', 'asserts', 'valgrind']
+                     'memory_log_inline', 'asserts', 'valgrind', 'livecd']
 for i in additionalDefines:
     if i not in env:
         continue
