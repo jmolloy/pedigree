@@ -73,6 +73,11 @@ static int _pthread_is_valid(pthread_t p)
 
 static void _pthread_make_invalid(pthread_t p)
 {
+    // Already invalid if null
+    if (!p)
+        return;
+
+    // Otherwise, remove the kernel thread association.
     p->__internal.kthread = -1;
 }
 
@@ -342,7 +347,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
 int pthread_mutex_trylock(pthread_mutex_t *mutex)
 {
 #if PTHREAD_DEBUG
-    syslog(LOG_NOTICE, "pthread_mutex_trylock(%x)", mutex);
+    syslog(LOG_NOTICE, "pthread_mutex_trylock(%p)", mutex);
 #endif
 
     if(!mutex)

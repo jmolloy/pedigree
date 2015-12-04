@@ -48,10 +48,6 @@
 #define PTHREAD_EXPLICIT_SCHED
 #define PTHREAD_INHERIT_SCHED
 
-#define PTHREAD_MUTEX_INITIALIZER       {0, 0, 0, 0, 0}
-
-#define PTHREAD_ONCE_INIT               {{0}}
-
 #define PTHREAD_PROCESS_SHARED          1
 #define PTHREAD_PROCESS_PRIVATE         2
 
@@ -59,6 +55,11 @@
 #define PTHREAD_MUTEX_ERRORCHECK        1
 #define PTHREAD_MUTEX_RECURSIVE         2
 #define PTHREAD_MUTEX_DEFAULT           3
+
+#define PTHREAD_MUTEXATTR_INITIALIZER   {{{PTHREAD_MUTEX_NORMAL}}}
+#define PTHREAD_MUTEX_INITIALIZER       {{{1, 0, PTHREAD_MUTEXATTR_INITIALIZER, 0}}}
+
+#define PTHREAD_ONCE_INIT               {{0}}
 
 #ifdef __cplusplus
 extern "C" {
