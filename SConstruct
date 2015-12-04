@@ -265,6 +265,8 @@ if env.get('HOST_PLATFORM') is None:
 # If we're building on Pedigree, we enforce not building images for now.
 if env['ON_PEDIGREE']:
     env['build_images'] = False
+    env['build_apps'] = False
+    env['build_lgpl'] = False
 
 # Make sure there's a sensible configuration.
 if env['build_kernel_only']:
