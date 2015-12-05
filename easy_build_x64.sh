@@ -35,7 +35,7 @@ if [ ! -e $script_dir/.easy_os ]; then
             os=$2
             nosudo=1
         elif [ "$os" = "noconfirm" ]; then
-            os=$3
+            os=$2
             confirm="-y"
         fi
     fi
