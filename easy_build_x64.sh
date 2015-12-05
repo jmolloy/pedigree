@@ -26,6 +26,7 @@ if [ ! -e $script_dir/.easy_os ]; then
     echo "Checking for dependencies... Which operating system are you running on?"
     echo "Cygwin, Debian/Ubuntu, OpenSuSE, Fedora, OSX, Arch, or some other system?"
 
+    confirm=""
     if [ $# == 0 ]; then
         read os
     else
@@ -33,6 +34,9 @@ if [ ! -e $script_dir/.easy_os ]; then
         if [ "$os" = "nosudo" ]; then
             os=$2
             nosudo=1
+        elif [ "$os" = "noconfirm" ]; then
+            os=$3
+            confirm="-y"
         fi
     fi
 
@@ -44,11 +48,11 @@ if [ ! -e $script_dir/.easy_os ]; then
         debian)
             # TODO: Not sure if the package list is any different for debian vs ubuntu?
             echo "Installing packages with apt-get, please wait..."
-            [ $nosudo = 0 ] && sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage
+            [ $nosudo = 0 ] && sudo apt-get install $confirm libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage
             ;;
         ubuntu)
             echo "Installing packages with apt-get, please wait..."
-            [ $nosudo = 0 ] && sudo apt-get install libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage e2fsprogs
+            [ $nosudo = 0 ] && sudo apt-get install $confirm libmpfr-dev libmpc-dev libgmp3-dev sqlite3 texinfo scons genisoimage e2fsprogs
             ;;
         opensuse)
             echo "Installing packages with zypper, please wait..."
@@ -58,7 +62,7 @@ if [ ! -e $script_dir/.easy_os ]; then
             ;;
         fedora|redhat|centos|rhel)
             echo "Installing packages with YUM, please wait..."
-            sudo yum install mpfr-devel gmp-devel libmpc-devel sqlite texinfo scons genisoimage
+            sudo yum install $confirm mpfr-devel gmp-devel libmpc-devel sqlite texinfo scons genisoimage
             ;;
         osx|mac)
             echo "Installing packages with macports, please wait..."
