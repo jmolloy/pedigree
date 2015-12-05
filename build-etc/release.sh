@@ -32,8 +32,11 @@ mkdir -p $OUTPUTDIR
 cp "$BUILDPATH"/pedigree.iso $OUTPUTDIR/
 
 # Compress as needed.
+echo "Compressing (gzip)..."
 gzip --keep --rsyncable $OUTPUTDIR/pedigree.iso
+echo "Compressing (bzip2)..."
 bzip2 --keep $OUTPUTDIR/pedigree.iso
+echo "Compressing (xz)..."
 xz --keep $OUTPUTDIR/pedigree.iso
 
 # Now done with the original image.
@@ -41,6 +44,8 @@ rm -f $OUTPUTDIR/pedigree.iso
 
 # Final step: turn into release names.
 rename "s/pedigree(\..*)*$/$RELEASE_NAME\$1/" $OUTPUTDIR/*
+
+echo "Calculating checksums..."
 
 pushd $OUTPUTDIR
 # Checksum all images.
