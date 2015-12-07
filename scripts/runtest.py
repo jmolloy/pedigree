@@ -93,6 +93,10 @@ def main(argv):
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             close_fds=True, cwd=os.path.join(scriptdir, '..'))
 
+    # Skip over GRUB boot menu.
+    time.sleep(1)
+    qemu.stdin.write('sendkey ret\n')
+
     success = False
     serial = []
     try:
@@ -118,8 +122,7 @@ def main(argv):
                'prompt (%ds).' % (int(end - start),))
 
     # Terminate QEMU now.
-    qemu.terminate()
-    qemu.wait()
+    qemu.communicate('quit\n')
 
     # Serial socket is done - QEMU is no more.
     sock.close()
