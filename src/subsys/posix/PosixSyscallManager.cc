@@ -156,7 +156,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_GETHOSTBYADDR:
             return posix_gethostbyaddr(reinterpret_cast<const void*>(p1), p2, static_cast<int>(p3), reinterpret_cast<void*>(p4));
         case POSIX_FCNTL:
-            return posix_fcntl(static_cast<int>(p1), static_cast<int>(p2), static_cast<int>(p3), reinterpret_cast<int*>(p4));
+            return posix_fcntl(static_cast<int>(p1), static_cast<int>(p2), reinterpret_cast<void*>(p3));
         case POSIX_PIPE:
             return posix_pipe(reinterpret_cast<int*>(p1));
         case POSIX_MKDIR:

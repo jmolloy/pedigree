@@ -1417,17 +1417,10 @@ int posix_isatty(int fd)
     return result;
 }
 
-int posix_fcntl(int fd, int cmd, int num, int* args)
+int posix_fcntl(int fd, int cmd, void* arg)
 {
     /// \todo Same as ioctl, figure out how best to sanitise input addresses
-    if (num)
-        F_NOTICE("fcntl(" << fd << ", " << cmd << ", " << num << ", " << args[0] << ")");
-    /// \note Added braces. Compiler warned about ambiguity if F_NOTICE isn't enabled. It seems to be able
-    ///       to figure out what we meant to do, but making it explicit never hurt anyone.
-    else
-    {
-        F_NOTICE("fcntl(" << fd << ", " << cmd << ")");
-    }
+    F_NOTICE("fcntl(" << fd << ", " << cmd << ", " << arg << ")");
 
     // grab the file descriptor pointer for the passed descriptor
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -1449,22 +1442,18 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
     {
         case F_DUPFD:
 
-            if (num)
+            if (arg)
             {
-                // if there is an argument and it's valid, map fd to the passed descriptor
-                if (args[0] >= 0)
-                {
-                    size_t fd2 = static_cast<size_t>(args[0]);
+                size_t fd2 = reinterpret_cast<size_t>(arg);
 
-                    // Copy the descriptor (addFileDescriptor automatically frees the old one, if needed)
-                    FileDescriptor* f2 = new FileDescriptor(*f);
-                    pSubsystem->addFileDescriptor(fd2, f2);
+                // Copy the descriptor (addFileDescriptor automatically frees the old one, if needed)
+                FileDescriptor* f2 = new FileDescriptor(*f);
+                pSubsystem->addFileDescriptor(fd2, f2);
 
-                    // According to the spec, CLOEXEC is cleared on DUP.
-                    f2->fdflags &= ~FD_CLOEXEC;
+                // According to the spec, CLOEXEC is cleared on DUP.
+                f2->fdflags &= ~FD_CLOEXEC;
 
-                    return static_cast<int>(fd2);
-                }
+                return static_cast<int>(fd2);
             }
             else
             {
@@ -1485,22 +1474,25 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
         case F_GETFD:
             return f->fdflags;
         case F_SETFD:
-            f->fdflags = args[0];
+            f->fdflags = reinterpret_cast<size_t>(arg);
             return 0;
         case F_GETFL:
             F_NOTICE("  -> get flags " << f->flflags);
             return f->flflags;
         case F_SETFL:
-            F_NOTICE("  -> set flags " << args[0]);
-            f->flflags = args[0] & (O_APPEND | O_NONBLOCK);
+            F_NOTICE("  -> set flags " << arg);
+            f->flflags = reinterpret_cast<size_t>(arg) & (O_APPEND | O_NONBLOCK);
             F_NOTICE("  -> new flags " << f->flflags);
             return 0;
         case F_GETLK: // Get record-locking information
         case F_SETLK: // Set or clear a record lock (without blocking
         case F_SETLKW: // Set or clear a record lock (with blocking)
 
+            /// \todo this doesn't work for multiple locks with different start
+            /// and len values, which means it is insufficient for sqlite3.
+
             // Grab the lock information structure
-            struct flock *lock = reinterpret_cast<struct flock*>(args[0]);
+            struct flock *lock = reinterpret_cast<struct flock*>(arg);
             if(!lock)
             {
                 SYSCALL_ERROR(InvalidArgument);
@@ -1563,12 +1555,12 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
             // Trying to unlock?
             if(lock->l_type == F_UNLCK)
             {
-                // No locked file? Fail
-                if(!f->lockedFile)
-                    return -1;
+                // No locked file? The unlock still succeeds.
+                if(f->lockedFile)
+                {
+                    f->lockedFile->unlock();
+                }
 
-                // Only need to unlock the file - it'll be locked again when needed
-                f->lockedFile->unlock();
                 return 0;
             }
 

@@ -843,34 +843,10 @@ int fcntl(int fildes, int cmd, ...)
 {
     va_list ap;
     va_start(ap, cmd);
-
-    int num = 0;
-    int* args = 0;
-    switch (cmd)
-    {
-        // only one argument for each of these
-        case F_DUPFD:
-        case F_SETFD:
-        case F_SETFL:
-            args = (int*) malloc(sizeof(long));
-            args[0] = va_arg(ap, int);
-            num = 1;
-            break;
-        case F_GETLK:
-        case F_SETLK:
-        case F_SETLKW:
-            args = (int*) malloc(sizeof(struct flock*));
-            args[0] = (long) va_arg(ap, struct flock*);
-            num = 1;
-            break;
-    };
+    void *arg = va_arg(ap, void *);
     va_end(ap);
 
-    int ret = syscall4(POSIX_FCNTL, fildes, cmd, num, (long) args);
-
-    if (args)
-        free(args);
-    return ret;
+    return syscall3(POSIX_FCNTL, fildes, cmd, (long) arg);
 }
 
 int sigprocmask(int how, const sigset_t* set, sigset_t* oset)
