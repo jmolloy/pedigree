@@ -1491,6 +1491,9 @@ int posix_fcntl(int fd, int cmd, void* arg)
             /// \todo this doesn't work for multiple locks with different start
             /// and len values, which means it is insufficient for sqlite3.
 
+            /// \note advisory locking disabled for now
+            return 0;
+
             // Grab the lock information structure
             struct flock *lock = reinterpret_cast<struct flock*>(arg);
             if(!lock)
