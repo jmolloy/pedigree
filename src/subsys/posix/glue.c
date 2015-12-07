@@ -1476,8 +1476,8 @@ void _init_signals(void)
 
 int fdatasync(int fildes)
 {
-    STUBBED("fdatasync");
-    return -1;
+    /// \todo fdatasync isn't meant to flush metadata, while fsync is
+    return syscall1(POSIX_FSYNC, fildes);
 }
 
 struct dlHandle
