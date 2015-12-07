@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -19,3 +18,64 @@
  */
 
 #include "LockedFile.h"
+#include <Log.h>
+
+LockedFile::LockedFile(File *pFile) : m_File(pFile), m_bLocked(false), m_LockerPid(0), m_Lock(false)
+{};
+
+LockedFile::LockedFile(LockedFile &c) : m_File(0), m_bLocked(false), m_LockerPid(0), m_Lock(false)
+{
+    m_File = c.m_File;
+    m_bLocked = c.m_bLocked;
+    m_LockerPid = c.m_LockerPid;
+
+    if(m_bLocked)
+    {
+        m_Lock.acquire();
+    }
+}
+
+bool LockedFile::lock(bool bBlock)
+{
+    if(!bBlock)
+    {
+        if(!m_Lock.tryAcquire())
+        {
+            return false;
+        }
+    }
+    else
+        m_Lock.acquire();
+
+    // Obtained the lock
+    m_bLocked = true;
+    m_LockerPid = Processor::information().getCurrentThread()->getParent()->getId();
+    return true;
+}
+
+void LockedFile::unlock()
+{
+    if(m_bLocked)
+    {
+        m_bLocked = false;
+        m_Lock.release();
+    }
+}
+
+File *LockedFile::getFile()
+{
+    // If we're locked, and we aren't the locking process, we can't access the file
+    // Otherwise, the file is accessible
+    if(m_bLocked == true && Processor::information().getCurrentThread()->getParent()->getId() != m_LockerPid)
+        return 0;
+    else
+        return m_File;
+}
+
+size_t LockedFile::getLocker()
+{
+    if(m_bLocked)
+        return m_LockerPid;
+    else
+        return 0;
+}
