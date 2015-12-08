@@ -33,4 +33,14 @@ working directory to a different mount point can have unexpected results as the
 $PATH lookups will be done on the local mount point, rather than the location on
 which the files actually reside.
 
+\subsection posix_compat POSIX Path Compatibility
+
+For applications that depend upon the first character in a path being `/` to
+be recognised as an absolute path, the path prefix `/@/` can be added.
+
+For example, the two paths `root»/applications/bash` and
+`/@/root»/applications/bash` point to the same file, but the latter is clearly
+an absolute path whereas the former could be interpreted by some applications
+as a relative path.
+
 */

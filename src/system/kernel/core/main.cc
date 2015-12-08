@@ -84,12 +84,13 @@
  * - \ref event_system
  *
  * \section main_resources Resources
- * The main repository for Pedigree is at https://github.com/miselin/pedigree.
+ * - \ref pedigree_porting
+ * - The main repository for Pedigree is at https://github.com/miselin/pedigree.
  *
- * If you are interested in contributing, have found a bug, or have any other
+ * - If you are interested in contributing, have found a bug, or have any other
  * queries, please open a ticket on the tracker at http://pedigree.plan.io.
  *
- * You can also find us in \#pedigree on irc.freenode.net.
+ * - You can also find us in \#pedigree on irc.freenode.net.
  */
 
 #include "BootstrapInfo.h"
