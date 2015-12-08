@@ -20,7 +20,6 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 import os
 
 import buildutils.userspace
-import buildutils.fs
 
 Import(['userspace_env'])
 
@@ -33,7 +32,6 @@ builddir = env["PEDIGREE_BUILD_BASE"]
 kerneldir = env["PEDIGREE_BUILD_KERNEL"]
 moduledir = env["PEDIGREE_BUILD_MODULES"]
 subsysdir = env["PEDIGREE_BUILD_SUBSYS"]
-imagesdir = env["PEDIGREE_IMAGES_DIR"]
 
 # We output a single library, which applications link against to gain access to
 # the implementation of the native subsystem classes.
@@ -43,8 +41,6 @@ native_userlib_shobjname = os.path.join(builddir, 'libpedigree.so')
 env.Alias("libs", native_userlib_objname)
 env.Alias("libs", native_userlib_shobjname)
 env.Depends(native_userlib_shobjname, "crt")
-
-baseInclude = env.Dir("#src/subsys/native/include")
 
 # XXX: We have an unfortunate dependency on libc.
 libc_objname = os.path.join(builddir, 'libc.so')
@@ -88,8 +84,3 @@ env_clone['CXXFLAGS'] = buildutils.userspace.fixFlags(env, env_clone['CXXFLAGS']
 
 env_clone.Library(native_userlib_objname, files)
 env_clone.SharedLibrary(native_userlib_shobjname, files, LINKFLAGS='')
-
-# Install native subsystem headers to the local images directory.
-buildutils.fs.install_tree(
-    env.Dir(os.path.join(imagesdir, 'include', 'native')), baseInclude, env,
-    'headers')
