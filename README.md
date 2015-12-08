@@ -4,12 +4,11 @@
 
 ## Downloads
 
-* [Latest ISO](http://dl.pedigree-project.org/latest.iso)
-    ([MD5](http://dl.pedigree-project.org/latest.iso.md5)
-    [SHA256](http://dl.pedigree-project.org/latest.iso.sha256))
-* [Nightly ISO](http://dl.pedigree-project.org/nightly.iso)
-    ([MD5](http://dl.pedigree-project.org/nightly.iso.md5)
-    [SHA256](http://dl.pedigree-project.org/nightly.iso.sha256))
+* [Latest ISO](https://dl.pedigree-project.org/pedigree-latest.iso.gz)
+    [SHA256](https://dl.pedigree-project.org/pedigree-latest.iso.gz.sha256))
+* [Nightly ISO](https://dl.pedigree-project.org/pedigree-nightly.iso.gz)
+    [SHA256](https://dl.pedigree-project.org/pedigree-nightly.iso.gz.sha256))
+* [All Downloads](https://dl.pedigree-project.org)
 
 The latest disk image is the most recent successful build of Pedigree from our
 [Buildbot](http://build.pedigree-project.org). There are no guarantees of
@@ -27,6 +26,7 @@ You'll need at least the following to build Pedigree and its compilers:
 * SQLite3
 * genisoimage and/or mkisofs
 * perl
+* autoconf
 
 ## Building Pedigree with Easy Build
 
@@ -172,3 +172,14 @@ Report any issues on the project tracker at http://pedigree-project.org
 ## Contact
 
 You can find us in #pedigree on Freenode IRC.
+
+## Contributing
+
+We welcome contributions. The preferred mechanism for contributing is via pull
+requests. See the issue trackers at http://pedigree-project.org if you need
+ideas. Alternatively, come join us in our IRC channel on Freenode (see above).
+
+We highly recommend working through a successful build and playing with some of
+Pedigree's features in a VM before leaping into contributing. This will help
+with understanding much of what you see in the code, and also potentially give
+you some more ideas about areas to contribute to.
