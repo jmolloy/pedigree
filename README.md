@@ -5,9 +5,9 @@
 ## Downloads
 
 * [Latest ISO](https://dl.pedigree-project.org/pedigree-latest.iso.gz)
-    [SHA256](https://dl.pedigree-project.org/pedigree-latest.iso.gz.sha256))
+    [SHA256](https://dl.pedigree-project.org/pedigree-latest.iso.gz.sha256)
 * [Nightly ISO](https://dl.pedigree-project.org/pedigree-nightly.iso.gz)
-    [SHA256](https://dl.pedigree-project.org/pedigree-nightly.iso.gz.sha256))
+    [SHA256](https://dl.pedigree-project.org/pedigree-nightly.iso.gz.sha256)
 * [All Downloads](https://dl.pedigree-project.org)
 
 The latest disk image is the most recent successful build of Pedigree from our
