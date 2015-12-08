@@ -25,6 +25,8 @@
  * Joerg Pfahler and primarily implemented by James Molloy, Joerg Pfahler, and
  * Matthew Iselin.
  *
+ * Just a user looking for help? Head straight to \ref user_guide.
+ *
  * The objectives of Pedigree are to develop a solid yet portable operating
  * system from the ground up with an object oriented architecture where
  * possible. The goal is to support multiple different subsystems to allow many
@@ -68,20 +70,27 @@
  * by following the escalation path described in the \ref main_resources
  * section.
  *
+ * \section user_guide Pedigree User Guide
+ *
+ * - \ref pedigree_whatsdifferent
+ *
  * \section main_links Components
  * The following lists the various components across the operating system.
  *
  * - \ref module_main
  * - \ref mmap_main
  * - \ref module_nativeapi
+ * - \ref registry
+ * - \ref event_system
  *
  * \section main_resources Resources
- * The main repository for Pedigree is at https://github.com/miselin/pedigree.
+ * - \ref pedigree_porting
+ * - The main repository for Pedigree is at https://github.com/miselin/pedigree.
  *
- * If you are interested in contributing, have found a bug, or have any other
+ * - If you are interested in contributing, have found a bug, or have any other
  * queries, please open a ticket on the tracker at http://pedigree.plan.io.
  *
- * You can also find us in \#pedigree on irc.freenode.net.
+ * - You can also find us in \#pedigree on irc.freenode.net.
  */
 
 #include "BootstrapInfo.h"

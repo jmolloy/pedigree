@@ -1,0 +1,59 @@
+/*!
+  \page event_system Event System
+
+\section Introduction
+
+In order to support event-driven application frameworks and so as not
+to burden the kernel with POSIX primitives (such as signals), a fully
+generic event handling and dispatching system has been built into Pedigree.
+
+Events are sent asynchronously with no return value or indication that they
+have been received or handled. Event subclasses provide `serialize` and 
+`unserialize` functions that allow the passing of Events over address space
+boundaries (see below). Events may be nested - one event may be being handled 
+when another is fired. This can continue up to a hard limit, which is 
+implementation defined.
+
+\section API
+
+All events must subclass Event;
+
+    class Event
+    {
+    public:
+        Event(uintptr_t handlerAddress, bool isDeletable, size_t specificNestingLevel=~0UL);
+        virtual ~Event();
+
+        virtual bool isDeletable();
+        virtual size_t serialize(uint8_t *pBuffer) = 0;
+        static bool unserialize(uint8_t *pBuffer, Event &event);
+        static size_t getEventType(uint8_t *pBuffer);
+        uintptr_t getHandlerAddress();
+        size_t getSpecificNestingLevel();
+        virtual size_t getNumber();
+    };
+
+Note that the important functions that *require overriding* are `serialize`,
+`unserialize` and `getNumber`. For a full description of each function, see
+the doxygen documentation.
+
+Each `Event` object can have only one handler address. This cannot be changed
+at runtime; the value is not thread-reentrant. An `Event` can be deletable - if
+this is true, when the `Event` is fired it will be immediately deleted. This is
+useful for creating 'fire-and-forget' type events, so you don't have to worry
+about memory leaks.
+
+So, hypothetically, what if you had an Event that when fired, did a kind of
+`longjmp` (Probably using the `Processor::saveState` and
+`Processor::restoreState` functions) to some code in the original thread? This
+could be used as a hard timeout (in fact, this exact mechanism is implemented in
+`TimeoutGuard`). There is a problem here - Events can be nested, and you may be
+inadvertently longjmp'ing over another Event that is partially executed (and
+possibly preempted).
+
+It is for this reason that the `specificNestingLevel` constructor parameter is
+implemented. Using this (as opposed to the default value of `~0UL`) constrains
+the kernel to only run this Event when it is currently at that event nesting
+level.
+
+*/
