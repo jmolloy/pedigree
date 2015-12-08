@@ -21,8 +21,8 @@
 
 #include <syslog.h>
 
-#include <config/Config.h>
-#include <graphics/Graphics.h>
+#include <native/config/Config.h>
+#include <native/graphics/Graphics.h>
 
 #include <cairo/cairo.h>
 

@@ -19,7 +19,7 @@
 
 #include <Widget.h>
 
-#include <ipc/Ipc.h>
+#include <native/ipc/Ipc.h>
 
 /// \todo GTFO libc!
 #include <unistd.h>

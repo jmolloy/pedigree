@@ -24,7 +24,7 @@
 #include <stdint.h>
 #include "environment.h"
 
-#include <graphics/Graphics.h>
+#include <native/graphics/Graphics.h>
 
 #include <map>
 

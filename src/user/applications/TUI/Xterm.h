@@ -24,7 +24,7 @@
 
 #include <string>
 
-#include <graphics/Graphics.h>
+#include <native/graphics/Graphics.h>
 
 #define XTERM_MAX_PARAMS        16
 

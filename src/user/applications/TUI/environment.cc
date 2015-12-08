@@ -19,7 +19,7 @@
 
 #include "environment.h"
 
-#include <graphics/Graphics.h>
+#include <native/graphics/Graphics.h>
 
 #include <cairo/cairo.h>
 

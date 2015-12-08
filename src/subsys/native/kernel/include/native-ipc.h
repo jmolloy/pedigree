@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -21,8 +20,8 @@
 #define _NATIVE_IPC_API_H
 #define _NATIVE_IPC_API_H
 
-#include <types.h>
-#include <ipc/Ipc.h>
+#include <native/types.h>
+#include <native/ipc/Ipc.h>
 
 /**
  * This file defines the system calls for IPC for the Native subsystem's

@@ -62,7 +62,7 @@
 #include <GL/gl.h>
 #include <GL/osmesa.h>
 
-#include <graphics/Graphics.h>
+#include <native/graphics/Graphics.h>
 #include <Widget.h>
 
 class Gears;

@@ -25,7 +25,7 @@
 
 #include <syslog.h>
 
-#include <graphics/Graphics.h>
+#include <native/graphics/Graphics.h>
 
 extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
 

@@ -20,7 +20,7 @@
 #ifndef _PEDIGREE_OBJECT_H
 #define _PEDIGREE_OBJECT_H
 
-#include <types.h>
+#include <native/types.h>
 
 /** Object is merely the base class for all native subsystem objects. */
 class Object

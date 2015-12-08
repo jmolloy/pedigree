@@ -17,8 +17,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <types.h>
-#include <graphics/Graphics.h>
+#include <native/types.h>
+#include <native/graphics/Graphics.h>
 #include <Widget.h>
 
 #include <iostream>

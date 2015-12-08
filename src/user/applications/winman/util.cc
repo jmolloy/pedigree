@@ -26,7 +26,7 @@
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 
-#include <graphics/Graphics.h>
+#include <native/graphics/Graphics.h>
 
 #include "util.h"
 

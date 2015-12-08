@@ -19,7 +19,7 @@
 
 #if 1
 
-#include <demo.h>
+#include <native/demo.h>
 
 int main(int argc, char **argv)
 {

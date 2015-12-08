@@ -48,8 +48,8 @@
 
 #include "environment.h"
 
-#include <config/Config.h>
-#include <graphics/Graphics.h>
+#include <native/config/Config.h>
+#include <native/graphics/Graphics.h>
 
  // RGBA -> BGRA
 

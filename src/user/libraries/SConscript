@@ -31,6 +31,12 @@ appoutputdir    = env["PEDIGREE_BUILD_APPS"]
 imagesdir       = env["PEDIGREE_IMAGES_DIR"]
 builddir        = env["PEDIGREE_BUILD_BASE"]
 
+EXTERNAL_LIBRARY_DIR = '#images/local/libraries'
+EXTERNAL_INCLUDE_DIR = '#images/local/include'
+if env['ON_PEDIGREE']:
+    EXTERNAL_LIBRARY_DIR = '/libraries'
+    EXTERNAL_INCLUDE_DIR = '/include'
+
 # Libraries to compile
 libs = [
     'libui',
@@ -47,8 +53,7 @@ lib_deps = {
 
 # Default include paths
 base_include_dirs = [
-    '#src/subsys/posix/include',
-    '#src/subsys/posix/syscalls',
+    EXTERNAL_INCLUDE_DIR,
 ]
 
 env_clone['CFLAGS'] = buildutils.userspace.fixFlags(env, env['CFLAGS'])
@@ -66,7 +71,6 @@ for library in libs:
     incpath = base_include_dirs[:]
     s = subsys[library]
     if s == 'native':
-        incpath += ['#/src/subsys/native/include']
         if not env['ON_PEDIGREE']:
             cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
             incpath += [
@@ -100,3 +104,6 @@ for library in libs:
     # XXX: We have an unfortunate dependency on libc.
     libc_objname = os.path.join(builddir, 'libc.so')
     env.Depends(shoutput, libc_objname)
+
+    env.Depends(output, "headers")
+    env.Depends(shoutput, "headers")

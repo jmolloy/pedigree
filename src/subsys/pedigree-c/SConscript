@@ -49,7 +49,7 @@ include_dirs = [
     '#src/modules',
     '#src/system/include',
     '#src/modules/system',
-	'#src/subsys/posix/include',
+    '#images/local/include',
     '.'
 ]
 
@@ -85,4 +85,8 @@ libs_clone['CXXFLAGS'] = buildutils.userspace.fixFlags(userspace_env, libs_clone
 libs_clone.StaticLibrary(libpedigree_c_objname, libpedigree_c_files)
 libs_clone.SharedLibrary(libpedigree_c_shobjname, libpedigree_c_files, LINKFLAGS='')
 
+env.Depends(libpedigree_c_objname, "crt")
+env.Depends(libpedigree_c_objname, "headers")
+
 env.Depends(libpedigree_c_shobjname, "crt")
+env.Depends(libpedigree_c_shobjname, "headers")

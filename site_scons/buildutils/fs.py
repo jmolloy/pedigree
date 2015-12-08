@@ -41,3 +41,22 @@ def find_files(startdir, matcher, skip_paths):
             x.extend([os.path.join(root, f) for f in files if matcher(f)])
 
     return sorted(x)
+
+def install_tree(target_dir, source_dir, env, alias=None):
+    """Install files from the given source directory into the given target.
+
+    This will not copy the directory itself, only the files and directories
+    within the source directory."""
+
+
+    def deep_install(target_dir, source_dir, env):
+        target = target_dir.abspath
+        source = source_dir.abspath
+        for root, dirnames, filenames in os.walk(source):
+            relpath = os.path.relpath(root, source)
+            for filename in filenames:
+                env.Install(os.path.join(target, relpath), os.path.join(root, filename))
+
+    deep_install(target_dir, source_dir, env)
+    if alias:
+        env.Alias(alias, target_dir)

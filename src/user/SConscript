@@ -156,8 +156,7 @@ base_libs = ['pthread']
 
 # Default include paths
 base_include_dirs = [
-    '#src/subsys/posix/include',
-    '#src/subsys/posix/syscalls',
+    EXTERNAL_INCLUDE_DIR,
 ]
 
 # Flags from CXXFLAGS and CFLAGS to *remove* for an app
@@ -244,13 +243,12 @@ for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + lib
     # Handle Mesa dependencies.
     if app in mesa_apps:
         app_env['LIBS'] += ['OSMesa']
-        app_env['LIBPATH'] += ['%s/libraries' % imagesdir]
-        app_env['CPPPATH'] += ['%s/include' % imagesdir]
+        app_env['LIBPATH'] += [EXTERNAL_LIBRARY_DIR]
+        app_env['CPPPATH'] += [EXTERNAL_INCLUDE_DIR]
 
     # Handle C++-related dependencies.
     if app in set(cpp_apps + sdl_apps + mesa_apps + cpp_11_apps):
-        app_env['LIBPATH'] += [os.path.join(imagesdir, 'libraries')]
-        app_env['CPPPATH'] += ['#src/subsys/native/include']
+        app_env['LIBPATH'] += [EXTERNAL_LIBRARY_DIR]
         if not env['ON_PEDIGREE']:
             app_env['CPPPATH'] += [cpp_base, cpp_arch_base]
         app_env['LINK'] = env['CXX']
@@ -261,7 +259,7 @@ for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + lib
         app_env['LIBS'] += ['ui']
 
     if app in pango_apps:
-        app_env['LIBPATH'] += [os.path.join(imagesdir, 'libraries')]
+        app_env['LIBPATH'] += [EXTERNAL_LIBRARY_DIR]
         app_env['CPPPATH'] += [
             EXTERNAL_LIBRARY_DIR + '/glib-2.0/include',
             EXTERNAL_INCLUDE_DIR + '/glib-2.0',
@@ -307,5 +305,6 @@ for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + lib
 
     env.Depends(output, "crt0")
     env.Depends(output, "libs")
+    env.Depends(output, "headers")
 
 SConscript(os.path.join('libraries', 'SConscript'), exports=['env'])

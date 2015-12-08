@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -24,7 +23,7 @@
 #include "environment.h"
 #include "Font.h"
 
-#include <graphics/Graphics.h>
+#include <native/graphics/Graphics.h>
 
 #define TAB_SELECTABLE 0x1
 #define TAB_SELECTED   0x2

@@ -42,8 +42,8 @@
 #include "Png.h"
 #include "Header.h"
 
-#include <graphics/Graphics.h>
-#include <input/Input.h>
+#include <native/graphics/Graphics.h>
+#include <native/input/Input.h>
 
 #include <Widget.h>
 

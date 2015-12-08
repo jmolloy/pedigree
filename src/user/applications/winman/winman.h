@@ -27,9 +27,9 @@
 #include <vector>
 #include <string>
 
-#include <graphics/Graphics.h>
-#include <input/Input.h>
-#include <ipc/Ipc.h>
+#include <native/graphics/Graphics.h>
+#include <native/input/Input.h>
+#include <native/ipc/Ipc.h>
 
 #include <cairo/cairo.h>
 

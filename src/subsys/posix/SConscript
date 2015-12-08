@@ -22,6 +22,7 @@ import os
 import pipes
 
 import buildutils.userspace
+import buildutils.fs
 
 Import(['env', 'userspace_env'])
 
@@ -32,6 +33,7 @@ builddir = env["PEDIGREE_BUILD_BASE"]
 kerneldir = env["PEDIGREE_BUILD_KERNEL"]
 moduledir = env["PEDIGREE_BUILD_MODULES"]
 subsysdir = env["PEDIGREE_BUILD_SUBSYS"]
+imagesdir = env["PEDIGREE_IMAGES_DIR"]
 
 posix_objname = os.path.join(subsysdir, 'posix.o')
 
@@ -215,3 +217,7 @@ if not env['ON_PEDIGREE']:
     env.Alias("libs", [buildLibc, buildLibm])
 
     SConscript(os.path.join('newlib', 'SConscript'), exports=['userspace_env'])
+
+# Install updated headers to the local images directory.
+buildutils.fs.install_tree(
+    env.Dir(os.path.join(imagesdir, 'include')), baseInclude, env, 'headers')

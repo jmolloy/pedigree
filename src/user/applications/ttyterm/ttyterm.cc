@@ -37,7 +37,7 @@
 
 #include <sys/fb.h>
 
-#include <input/Input.h>
+#include <native/input/Input.h>
 
 // PID of the process we're running
 pid_t g_RunningPid = -1;

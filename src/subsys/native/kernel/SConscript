@@ -39,10 +39,10 @@ files = [
 # To include a new directory for includes, just add it to the list
 include_dirs = [
     './include',
-    '../include',
     '#/src/modules',
     '#/src/system/include',
     '#/src/modules/system',
+    '#images/local/include',
     '.'
 ]
 

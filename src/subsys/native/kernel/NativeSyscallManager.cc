@@ -22,11 +22,11 @@
 #include <process/Scheduler.h>
 #include <Log.h>
 
-#include <ipc/Ipc.h>
+#include <native/ipc/Ipc.h>
 #include <native-ipc.h>
 
 #include "NativeSyscallManager.h"
-#include <nativeSyscallNumbers.h>
+#include <native/nativeSyscallNumbers.h>
 
 NativeSyscallManager::NativeSyscallManager()
 {

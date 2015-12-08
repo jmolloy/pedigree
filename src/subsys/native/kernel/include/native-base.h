@@ -20,7 +20,7 @@
 #ifndef _NATIVE_API_BASE_H
 #define _NATIVE_API_BASE_H
 
-#include <native-protocol.h>
+#include <native/native-protocol.h>
 
 /// \todo Write a new configuration system API using the new native API scheme.
 

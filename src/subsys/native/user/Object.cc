@@ -17,7 +17,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <Object.h>
+#include <native/Object.h>
 #include <native-protocol.h>
 
 Object::Object()

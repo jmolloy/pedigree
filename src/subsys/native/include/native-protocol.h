@@ -20,7 +20,7 @@
 #ifndef _PEDIGREE_NATIVE_PROTOCOL_H
 #define _PEDIGREE_NATIVE_PROTOCOL_H
 
-#include <Object.h>
+#include <native/Object.h>
 
 // Values for the 'meta' field in ReturnState.
 #define META_ERROR_MASK         0xFFFF

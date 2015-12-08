@@ -63,8 +63,6 @@ if env['ARCH_TARGET'] in ['X86', 'X64']:
 # To include a new directory for includes, just add it to the list
 include = [
     './include',
-    '#src/subsys/posix/include',
-    '#src/subsys/native/include',
     '#src/user/libraries/libui/include',
     EXTERNAL_INCLUDE_DIR,
     EXTERNAL_INCLUDE_DIR + '/pixman-1',

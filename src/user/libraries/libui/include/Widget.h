@@ -26,11 +26,11 @@
 
 #include <util.h>
 #else
-#include <types.h>
-#include <ipc/Ipc.h>
+#include <native/types.h>
+#include <native/ipc/Ipc.h>
 #endif
 
-#include <graphics/Graphics.h>
+#include <native/graphics/Graphics.h>
 
 #include <string>
 #include <map>

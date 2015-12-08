@@ -30,7 +30,7 @@
 
 #include <syslog.h>
 
-#include <input/Input.h>
+#include <native/input/Input.h>
 #include <Widget.h>
 
 extern PEDIGREE_SDLWidget *g_Widget;

@@ -17,7 +17,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <input/Input.h>
+#include <native/input/Input.h>
 #include <pedigree-c/pedigree-syscalls.h>
 #include <stdio.h>
 
