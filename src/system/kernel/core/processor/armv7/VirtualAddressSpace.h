@@ -40,14 +40,15 @@
 #define USERSPACE_VIRTUAL_STACK_SIZE            0x100000
 #define KERNEL_SPACE_START                      reinterpret_cast<void*>(0x40000000)
 #define KERNEL_VIRTUAL_HEAP                     reinterpret_cast<void*>(0x40000000)
-#define KERNEL_VIRTUAL_HEAP_SIZE                0x40000000
+#define KERNEL_VIRTUAL_HEAP_SIZE                0x20000000
 #define KERNEL_VIRTUAL_MODULE_BASE              reinterpret_cast<void*>(0x60000000)
 #define KERNEL_VIRTUAL_MODULE_SIZE              0x400000
 #define KERNEL_VIRTUAL_ADDRESS                  reinterpret_cast<void*>(0x80008000)
-#define KERNEL_VIRTUAL_CACHE                    reinterpret_cast<void*>(0xA0008000)
+#define KERNEL_VIRTUAL_CACHE                    reinterpret_cast<void*>(0xA0000000)
 #define KERNEL_VIRTUAL_CACHE_SIZE               0x10000000
 #define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS     reinterpret_cast<void*>(0xB0000000)
-#define KERNEL_VIRTUAL_EVENT_BASE               reinterpret_cast<void*>(0xF0000000)
+#define KERNEL_VIRTUAL_EVENT_BASE               reinterpret_cast<void*>(0xE0000000)
+#define KERNEL_VIRTUAL_PAGESTACK_4GB            reinterpret_cast<void*>(0xF0000000)
 #define KERNEL_VIRTUAL_STACK                    reinterpret_cast<void*>(0xFEFFF000)
 #define KERNEL_TEMP0                            reinterpret_cast<void*>(0xFE000000)
 #define KERNEL_TEMP1                            reinterpret_cast<void*>(0xFE001000)
@@ -162,7 +163,7 @@ class ArmV7VirtualAddressSpace : public VirtualAddressSpace
     }
 
     /** Gets address of the start of the kernel's event handling block. */
-    virtual uintptr_t getKernelEventBlockStart()
+    virtual uintptr_t getKernelEventBlockStart() const
     {
         return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_EVENT_BASE);
     }

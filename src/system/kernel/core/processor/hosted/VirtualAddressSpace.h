@@ -159,7 +159,7 @@ class HostedVirtualAddressSpace : public VirtualAddressSpace
     }
 
     /** Gets address of the start of the kernel's event handling block. */
-    virtual uintptr_t getKernelEventBlockStart()
+    virtual uintptr_t getKernelEventBlockStart() const
     {
         return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_EVENT_BASE);
     }
