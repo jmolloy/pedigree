@@ -685,23 +685,23 @@ void pedigree_init_sigret()
         // Map trampoline page in and bring across the sigret code.
         Processor::information().getVirtualAddressSpace().map(
                 sigretPhys,
-                reinterpret_cast<void*> (EVENT_HANDLER_TRAMPOLINE),
+                reinterpret_cast<void*> (Event::getTrampoline()),
                 VirtualAddressSpace::Write | VirtualAddressSpace::Shared | VirtualAddressSpace::Execute);
 
-        memcpy(reinterpret_cast<void*>(EVENT_HANDLER_TRAMPOLINE), reinterpret_cast<void*>(sigret_stub), (reinterpret_cast<uintptr_t>(&sigret_stub_end) - reinterpret_cast<uintptr_t>(sigret_stub)));
+        memcpy(reinterpret_cast<void*>(Event::getTrampoline()), reinterpret_cast<void*>(sigret_stub), (reinterpret_cast<uintptr_t>(&sigret_stub_end) - reinterpret_cast<uintptr_t>(sigret_stub)));
 
         // Mark read-only now that we have mapped in the page.
         Processor::information().getVirtualAddressSpace().setFlags(
-                reinterpret_cast<void*> (EVENT_HANDLER_TRAMPOLINE),
+                reinterpret_cast<void*> (Event::getTrampoline()),
                 VirtualAddressSpace::Execute | VirtualAddressSpace::Shared);
     }
 
     // Map the signal return stub to the correct location
-    if(!Processor::information().getVirtualAddressSpace().isMapped(reinterpret_cast<void *>(EVENT_HANDLER_TRAMPOLINE)))
+    if(!Processor::information().getVirtualAddressSpace().isMapped(reinterpret_cast<void *>(Event::getTrampoline())))
     {
         Processor::information().getVirtualAddressSpace().map(
                 sigretPhys,
-                reinterpret_cast<void*> (EVENT_HANDLER_TRAMPOLINE),
+                reinterpret_cast<void*> (Event::getTrampoline()),
                 VirtualAddressSpace::Shared | VirtualAddressSpace::Execute);
     }
 

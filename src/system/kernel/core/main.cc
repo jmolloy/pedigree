@@ -256,9 +256,7 @@ int loadModules(void *inf)
     // The initialisation is done here, unmap/free the .init section and on x86/64 the identity
     // mapping of 0-4MB
     // NOTE: BootstrapStruct_t unusable after this point
-    #ifdef X86_COMMON
-        Processor::initialisationDone();
-    #endif
+    Processor::initialisationDone();
 
 #endif
 
@@ -291,10 +289,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   // Initialise the machine-specific interface
   Machine &machine = Machine::instance();
-
-#if defined(X86_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON)
   Machine::instance().initialiseDeviceTree();
-#endif
 
   machine.initialise();
 
@@ -320,9 +315,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
     panic("Initrd module not loaded!");
 #endif
 
-#ifndef ARM_COMMON
   KernelCoreSyscallManager::instance().initialise();
-#endif
 
   Processor::setInterrupts(true);
 
@@ -419,7 +412,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #endif
 
 #ifdef DEBUGGER_RUN_AT_START
-  //Processor::breakpoint();
+  Processor::breakpoint();
 #endif
 
 #ifdef THREADS

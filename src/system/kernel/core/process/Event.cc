@@ -19,6 +19,7 @@
 
 #include <compiler.h>
 #include <process/Event.h>
+#include <processor/VirtualAddressSpace.h>
 
 #include <Log.h>
 
@@ -29,6 +30,26 @@ Event::Event(uintptr_t handlerAddress, bool isDeletable, size_t specificNestingL
 
 Event::~Event()
 {
+}
+
+uintptr_t Event::getTrampoline()
+{
+    return VirtualAddressSpace::getKernelAddressSpace().getKernelEventBlockStart();
+}
+
+uintptr_t Event::getSecondaryTrampoline()
+{
+    return getTrampoline() + 0x100;
+}
+
+uintptr_t Event::getHandlerBuffer()
+{
+    return getTrampoline() + 0x1000;
+}
+
+uintptr_t Event::getLastHandlerBuffer()
+{
+    return getHandlerBuffer() + ((EVENT_TID_MAX * MAX_NESTED_EVENTS) * EVENT_LIMIT);
 }
 
 bool Event::isDeletable()

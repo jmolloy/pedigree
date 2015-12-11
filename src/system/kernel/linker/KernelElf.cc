@@ -277,26 +277,6 @@ KernelElf::~KernelElf()
 {
 }
 
-#ifdef PPC_COMMON
-#define MOD_START 0xe1000000
-#elif defined(X86)
-#define MOD_START 0xfa000000
-#elif defined(X64)
-#define MOD_START 0xFFFFFFFFF0000000
-#elif defined(ARMV7)
-#define MOD_START 0x60000000
-#elif defined(HOSTED)
-// Move well out of the way of anything that could be useful.
-// Give plenty of room so if we enable things like ASAN which significantly
-// blow out our code size, we're prepared.
-#define MOD_START 0x70000000  //0x500000000000
-#define MOD_LEN   0x10000000  //0x100000000000
-#endif
-
-#ifndef MOD_LEN
-#define MOD_LEN 0x400000
-#endif
-
 Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
 {
     MemoryCount guard(__PRETTY_FUNCTION__);
@@ -305,7 +285,9 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
     // is called, so check here if we've loaded any modules yet. If not, we can initialise our memory allocator.
     if (m_Modules.count() == 0)
     {
-        m_ModuleAllocator.free(MOD_START, MOD_LEN);
+        uintptr_t start = VirtualAddressSpace::getKernelAddressSpace().getKernelModulesStart();
+        uintptr_t end = VirtualAddressSpace::getKernelAddressSpace().getKernelModulesEnd();
+        m_ModuleAllocator.free(start, end - start);
     }
 
     Module *module = new Module;

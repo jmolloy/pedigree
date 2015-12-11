@@ -41,10 +41,15 @@
 #define USERSPACE_DYNAMIC_END                   reinterpret_cast<void*>(0x00000FFFFFFFFFFF)
 #define USERSPACE_VIRTUAL_LOWEST_STACK          reinterpret_cast<void*>(USERSPACE_DYNAMIC_END + USERSPACE_VIRTUAL_MAX_STACK_SIZE)
 #define USERSPACE_VIRTUAL_STACK                 reinterpret_cast<void*>(0x00007FFFFFFFF000)
+#define KERNEL_VIRTUAL_EVENT_BASE               reinterpret_cast<void*>(0x80000000)
+#define KERNEL_VIRTUAL_MODULE_BASE              reinterpret_cast<void*>(0xFFFFFFFFF0000000)
+#define KERNEL_VIRTUAL_MODULE_SIZE              0x400000
 #define KERNEL_VIRTUAL_HEAP                     reinterpret_cast<void*>(0xFFFFFFFF00000000)
 #define KERNEL_VIRTUAL_HEAP_SIZE                0x40000000
 #define KERNEL_VIRTUAL_ADDRESS                  reinterpret_cast<void*>(0xFFFFFFFF7FF00000)
 #define KERNEL_VIRTUAL_INFO_BLOCK               reinterpret_cast<void*>(0xFFFFFFFF8FFF0000)
+#define KERNEL_VIRTUAL_CACHE                    reinterpret_cast<void*>(0xFFFFFFFF40000000)
+#define KERNEL_VIRTUAL_CACHE_SIZE               0x3FC00000
 #define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS     reinterpret_cast<void*>(0xFFFFFFFF90000000)
 #define KERNEL_VIRTUAL_MEMORYREGION_SIZE        0x40000000
 #define KERNEL_VIRTUAL_PAGESTACK_4GB            reinterpret_cast<void*>(0xFFFFFFFF7FC00000)
@@ -169,6 +174,36 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
     virtual uintptr_t getGlobalInfoBlock() const
     {
         return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_INFO_BLOCK);
+    }
+
+    /** Gets address of the start of the kernel's cache region. */
+    virtual uintptr_t getKernelCacheStart() const
+    {
+        return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_CACHE);
+    }
+
+    /** Gets address of the end of the kernel's cache region. */
+    virtual uintptr_t getKernelCacheEnd() const
+    {
+        return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_CACHE) + KERNEL_VIRTUAL_CACHE_SIZE;
+    }
+
+    /** Gets address of the start of the kernel's event handling block. */
+    virtual uintptr_t getKernelEventBlockStart() const
+    {
+        return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_EVENT_BASE);
+    }
+
+    /** Gets address of the start of the kernel's module region. */
+    virtual uintptr_t getKernelModulesStart() const
+    {
+        return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_MODULE_BASE);
+    }
+
+    /** Gets address of the end of the kernel's module region. */
+    virtual uintptr_t getKernelModulesEnd() const
+    {
+        return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_MODULE_BASE) + KERNEL_VIRTUAL_MODULE_SIZE;
     }
 
   private:

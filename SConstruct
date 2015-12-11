@@ -676,7 +676,9 @@ if env['hosted']:
 
     # setjmp/longjmp context switching - we can't return from the function
     # calling setjmp without invoking undefined behaviour.
-    env['CPPDEFINES'] += ['SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH', 'MEMORY_TRACING']
+    # Also note: we emulate multiboot for the hosted "boot" protocol.
+    env['CPPDEFINES'] += ['SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH',
+                          'MEMORY_TRACING', 'MULTIBOOT']
 
     # Reset flags.
     env['CCFLAGS'] = (generic_flags + warning_flags + warning_flags_off +

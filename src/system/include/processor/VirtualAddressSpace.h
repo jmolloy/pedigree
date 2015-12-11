@@ -183,6 +183,21 @@ class VirtualAddressSpace
     /** Gets address of the end of the kernel's heap region. */
     virtual uintptr_t getKernelHeapEnd() const = 0;
 
+    /** Gets address of the start of the kernel's cache region. */
+    virtual uintptr_t getKernelCacheStart() const = 0;
+
+    /** Gets address of the end of the kernel's cache region. */
+    virtual uintptr_t getKernelCacheEnd() const = 0;
+
+    /** Gets address of the start of the kernel's event handling block. */
+    virtual uintptr_t getKernelEventBlockStart() const = 0;
+
+    /** Gets address of the start of the kernel's module region. */
+    virtual uintptr_t getKernelModulesStart() const = 0;
+
+    /** Gets address of the end of the kernel's module region. */
+    virtual uintptr_t getKernelModulesEnd() const = 0;
+
     /**
      * Gets address of the start of the dynamic memory mapping area.
      * This is an area in which memory mappings can be created for userspace

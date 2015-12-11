@@ -70,7 +70,7 @@ generic_defines = [
 # x86 defines - udis86 uses __UD_STANDALONE__
 general_x86_defines = [
     'X86_COMMON', 'LITTLE_ENDIAN', '__UD_STANDALONE__', 'THREADS',
-    'KERNEL_STANDALONE']
+    'KERNEL_STANDALONE', 'MULTIBOOT']
 
 #---------- x86, 32-bit ----------#
 
@@ -136,7 +136,8 @@ x64_defines = generic_defines + general_x86_defines + x64_defines
 
 # ARM defines
 # TODO: Fix this to support other ARM chips and boards
-general_arm_defines = ['ARM_COMMON', 'BITS_32', 'THREADS', 'STATIC_DRIVERS']
+general_arm_defines = ['ARM_COMMON', 'BITS_32', 'THREADS', 'STATIC_DRIVERS',
+                       'MULTIBOOT']
 
 # ARM CFLAGS and CXXFLAGS
 default_arm_flags = ['-fno-omit-frame-pointer', '-mabi=aapcs', '-mapcs-frame']

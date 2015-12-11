@@ -304,8 +304,8 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
     }
 
     // The address of the serialize buffer is determined by the thread ID and the nesting level.
-    uintptr_t addr = EVENT_HANDLER_BUFFER + (pThread->getId() * MAX_NESTED_EVENTS +
-                                             (pThread->getStateLevel()-1)) * PhysicalMemoryManager::getPageSize();
+    uintptr_t addr = Event::getHandlerBuffer() + (pThread->getId() * MAX_NESTED_EVENTS +
+                                                 (pThread->getStateLevel()-1)) * PhysicalMemoryManager::getPageSize();
 
     // Ensure the page is mapped.
     if (!va.isMapped(reinterpret_cast<void*>(addr)))
@@ -347,9 +347,9 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
         pThread->getParent()->trackTime(false);
         pThread->getParent()->recordTime(true);
 #ifdef SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH
-        Processor::saveAndJumpUser(bWasInterrupts, oldState, 0, EVENT_HANDLER_TRAMPOLINE, userStack, handlerAddress, addr);
+        Processor::saveAndJumpUser(bWasInterrupts, oldState, 0, Event::getTrampoline(), userStack, handlerAddress, addr);
 #else
-        Processor::jumpUser(0, EVENT_HANDLER_TRAMPOLINE, userStack, handlerAddress, addr);
+        Processor::jumpUser(0, Event::getTrampoline(), userStack, handlerAddress, addr);
         // Not reached.
 #endif
     }
