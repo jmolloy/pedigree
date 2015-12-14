@@ -625,7 +625,7 @@ env['PEDIGREE_USER'] = getpass.getuser()
 env['PEDIGREE_MACHINE'] = gethostname() # The name of the computer (not the type or OS)
 
 # Grab the git revision of the repo
-if env['GIT'] and env['genversion'] == '1':
+if env['GIT']:
     env['PEDIGREE_REVISION'] = commands.getoutput('%s rev-parse --verify HEAD --short' % env['GIT'])
 else:
     env['PEDIGREE_REVISION'] = "(unknown)"
@@ -654,7 +654,7 @@ def create_version_cc(target, source, env):
 
     # We need to have a Version.cc, but we can disable the (costly) rebuild of
     # it every single time a compile is done - handy for developers.
-    if env['genversion'] == '0' and os.path.exists(target[0].abspath):
+    if (not env['genversion']) and os.path.exists(target[0].abspath):
         return
 
     # Make the non-SCons target a bit special.
