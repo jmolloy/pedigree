@@ -54,6 +54,8 @@ files = [
     Glob('network/*.cc'),
     Glob('graphics/*.cc'),
     Glob('time/*.cc'),
+    # Always pull in libudis86, even if we don't build the rest of the debugger
+    Glob('debugger/libudis86/*.c'),
 ]
 
 # Static drivers build all drivers directly into the kernel rather than building
@@ -65,14 +67,14 @@ if 'STATIC_DRIVERS' in env['CPPDEFINES']:
 if env['debugger']:
     files += [
         Glob('debugger/*.cc'),
-        Glob('debugger/commands/*.cc')
+        Glob('debugger/commands/*.cc'),
     ]
 else:
     files += [
-        Glob('debugger/panic.cc'),
-        Glob('debugger/SerialIO.cc'),
-        Glob('debugger/LocalIO.cc'),
-        Glob('debugger/DebuggerIO.cc'),
+        'debugger/panic.cc',
+        'debugger/SerialIO.cc',
+        'debugger/LocalIO.cc',
+        'debugger/DebuggerIO.cc',
     ]
 
 include_dirs = [
@@ -88,99 +90,44 @@ include_dirs = [
     '.'
 ]
 
-#####################################
-# Machine-specific files.
-#####################################
-if env['mach_pc']:
-    files += [
-        Glob('machine/mach_pc/*.cc'),
-        'machine/mach_pc/x86emu/debug.c',
-        'machine/mach_pc/x86emu/decode.c',
-        'machine/mach_pc/x86emu/fpu.c',
-        'machine/mach_pc/x86emu/ops.c',
-        'machine/mach_pc/x86emu/ops2.c',
-        'machine/mach_pc/x86emu/prim_ops.c',
-        'machine/mach_pc/x86emu/sys.c',
-    ]
+# Pull in machine implementation.
+files += [
+    env.Dir('machine/$MACH_DIR').glob('*.cc'),
+    env.Dir('machine/$MACH_DIR').glob('*.c'),
+]
 
-    include_dirs += ['machine/mach_pc/x86_emu/x86emu']
-elif env['arm_versatile']:
-    files += [
-        Glob('machine/arm_versatile/*.cc'),
-    ]
+# Pull in headers for machine implementation.
+include_dirs += [
+    env.Dir('machine/$MACH_DIR'),
+    'machine/mach_pc/x86_emu/x86emu',
+]
 
-    include_dirs += ['machine/arm_versatile']
-elif env['arm_beagle']:
-    files += [
-        Glob('machine/arm_beagle/*.cc'),
-        Glob('machine/arm_beagle/*.c'),
-    ]
-elif env['hosted']:
-    files += [
-        Glob('machine/hosted/*.cc'),
-        Glob('machine/hosted/*.c'),
-    ]
+# Add x86 emulator (for real-mode BIOS calls).
+files += [
+    'machine/mach_pc/x86emu/debug.c',
+    'machine/mach_pc/x86emu/decode.c',
+    'machine/mach_pc/x86emu/fpu.c',
+    'machine/mach_pc/x86emu/ops.c',
+    'machine/mach_pc/x86emu/ops2.c',
+    'machine/mach_pc/x86emu/prim_ops.c',
+    'machine/mach_pc/x86emu/sys.c',
+]
 
-#####################################
-# Architecture-specific files
-#####################################
-if 'X86_COMMON' in env['CPPDEFINES']:
-    commonFiles = Glob('core/processor/x86_common/*.cc')
+# Pull in architecture implementation.
+files += [
+    env.Dir('core/processor/$ARCH_DIR').glob('*.cc'),
+    env.Dir('core/processor/$ARCH_DIR').glob('*.c'),
+    env.Dir('core/processor/$ARCH_DIR/asm').glob('*.s'),
+    env.Dir('core/processor/$ARCH_DIR/asm').glob('*.S'),
+]
 
-    if env['debugger']:
-        files += [Glob('debugger/libudis86/*.c')]
-        files += commonFiles
-    else:
-        files += [x for x in commonFiles
-                  if x.path not in [
-                      env.File('core/processor/x86_common/Disassembler.cc').path
-                  ]]
-
-    if env['ARCH_TARGET'] == 'X86':
-        files += [
-            Glob('core/processor/x86/*.cc'),
-            'core/processor/x86/asm/boot-standalone.s',
-            'core/processor/x86/asm/InterruptManager.s',
-            'core/processor/x86/asm/Processor.s',
-            'core/processor/x86/asm/Scheduler.s',
-        ]
-
-        if env['multiprocessor']:
-            files += ['core/processor/x86/asm/trampoline.s']
-    elif env['ARCH_TARGET'] == 'X64':
-        files += [
-            Glob('core/processor/x64/*.cc'),
-            'core/processor/x64/asm/boot-standalone.s',
-            'core/processor/x64/asm/InterruptManager.s',
-            'core/processor/x64/asm/SyscallManager.s',
-            'core/processor/x64/asm/Processor.s',
-            'core/processor/x64/asm/Scheduler.s',
-            'core/processor/x64/asm/gdt.s'
-        ]
-elif env['arm_9']:
+# Pull in a sub-architecture implementation if it exists.
+if env['SUBARCH_DIR']:
     files += [
-        Glob('core/processor/arm_926e/*.cc'),
-        Glob('core/processor/arm_926e/asm/*.S'),
-    ]
-elif env['armv7']:
-    files += [
-        Glob('core/processor/armv7/*.cc'),
-        Glob('core/processor/armv7/asm/*.S'),
-    ]
-elif env['hosted']:
-    files += [
-        'boot-hosted.cc',
-        Glob('core/processor/x86_common/Disassembler.cc'),
-        Glob('debugger/libudis86/*.c'),
-        Glob('core/processor/hosted/*.cc'),
-        Glob('core/processor/hosted/asm/*.s'),
-    ]
-
-# Generic ARM bits.
-if env['ARCH_TARGET'] == 'ARM':
-    files += [
-        'boot-arm.cc',
-        Glob('core/processor/arm_common/*.cc'),
+        env.Dir('core/processor/$SUBARCH_DIR').glob('*.cc'),
+        env.Dir('core/processor/$SUBARCH_DIR').glob('*.c'),
+        env.Dir('core/processor/$SUBARCH_DIR/asm').glob('*.s'),
+        env.Dir('core/processor/$SUBARCH_DIR/asm').glob('*.S'),
     ]
 
 # Set flags in the cloned environment for the build.
@@ -189,6 +136,7 @@ env_clone['LIBS'] = ['gcc']
 if not env['hosted']:  # Don't let the kernel link against Pedigree .so objects
     env_clone['LIBPATH'] = ['#', os.path.join(imagesdir, 'libraries')]
 
+# Fix up flags for hosted builds.
 if env['hosted']:
     env_clone['LSCRIPT'] = env.File('#src/system/kernel/core/processor/hosted/kernel.ld')
     if env['clang']:
@@ -208,14 +156,14 @@ if 'LSCRIPT' in env_clone:
     env_clone.Depends(objname, env_clone['LSCRIPT'])
 
 if env['ARCH_TARGET'] == 'X64':
-    # TODO(miselin): this is not brilliant.
-    env_clone.MergeFlags({'LINKFLAGS': ['-m64', '-mcmodel=kernel']})
+    # On x86_64, we objcopy a stripped binary into the final kernel binary, so
+    # we need to have an intermediate file that gets stripped.
     stripped_objname = '%s.stripped' % (objname,)
 
 env_clone.Program(objname, files)
 env_clone.Command(stripped_objname, objname,
-                  action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
+                  action="$STRIP -d -o $TARGET $SOURCE")
 
 if final_output != stripped_objname:
-    action = "%s -I elf64-x86-64 -O elf32-i386 $SOURCE $TARGET" % env['OBJCOPY']
+    action = "$OBJCOPY -I elf64-x86-64 -O elf32-i386 $SOURCE $TARGET"
     env_clone.Command(final_output, stripped_objname, action=action)

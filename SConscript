@@ -35,7 +35,7 @@ if env['build_modules']:
   SConscript(os.path.join('src', 'subsys', 'pedigree-c', 'SConscript'),
              exports=['env', 'userspace_env'])
   # Native subsystem.
-  if env['ARCH_TARGET'] in ['X86', 'X64', 'ARM', 'HOSTED']:
+  if 'NATIVE_SUBSYSTEM' in env['EXTRA_CONFIG']:
       SConscript(os.path.join('src', 'subsys', 'native', 'SConscript'),
                  exports=['env', 'userspace_env'])
   # Kernel drivers and modules.
@@ -43,17 +43,16 @@ if env['build_modules']:
 
 if env['build_kernel']:
   SConscript(os.path.join('src', 'system', 'kernel', 'SConscript'), exports=['env'])
-  if env['ARCH_TARGET'] in ['X86', 'X64']:
-    SConscript(os.path.join('src', 'system', 'boot', 'SConscript'), exports=['env'])
+  if env['BOOT_DIR']:
+    SConscript(os.path.join('src', 'system', 'boot', env['BOOT_DIR'], 'SConscript'), exports=['env'])
 
 # On X86, X64 and PPC we build applications and LGPL libraries
-if env['ARCH_TARGET'] in ['X86', 'X64', 'HOSTED']:  # 'PPC'
-  if env['build_apps']:
-    SConscript(os.path.join('src', 'user', 'SConscript'),
-               exports=['env', 'userspace_env'])
-  if env['build_lgpl']:
-    SConscript(os.path.join('src', 'lgpl', 'SConscript'),
-               exports=['env', 'userspace_env'])
+if env['build_apps']:
+  SConscript(os.path.join('src', 'user', 'SConscript'),
+             exports=['env', 'userspace_env'])
+if env['build_lgpl']:
+  SConscript(os.path.join('src', 'lgpl', 'SConscript'),
+             exports=['env', 'userspace_env'])
 
 # Build the configuration database (no dependencies)
 config_database = os.path.join(env["PEDIGREE_BUILD_BASE"], 'config.db')

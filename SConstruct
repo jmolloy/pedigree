@@ -143,7 +143,12 @@ autogen_opts.AddVariables(
     ('COMPILER_VERSION', 'Compiler version (eg, 4.5.1).', None),
     ('CPPDEFINES', 'Final set of preprocessor definitions.', None),
     ('ARCH_TARGET', 'Automatically generated architecture name.', None),
+    ('MACH_TARGET', 'Automatically generated machine name.', None),
     ('HOST_PLATFORM', 'Platform for the compile host.', None),
+    ('ARCH_DIR', 'Automatically determined directory for architecture files.', None),
+    ('SUBARCH_DIR', 'Automatically determined directory for subarchitecture files.', None),
+    ('MACH_DIR', 'Automatically determined directory for machine files.', None),
+    ('BOOT_DIR', 'Directory in which to find boot-protocol-related files.', None),
     BoolVariable('ON_PEDIGREE', 'Whether we are on Pedigree or not.', False),
     BoolVariable('reset_flags', 'Whether to reset *FLAGS variables or not. '
         'Avoid using where possible. Toggles to False after use.', True),
@@ -431,21 +436,25 @@ if env['ON_PEDIGREE'] or env['COMPILER_TARGET']:
         host_arch = env['COMPILER_TARGET']
 
     extra_defines = []
+    flags_machine = None
     if re.match('i[3456]86', host_arch) is not None:
         flags_arch = 'x86'
 
         env['PEDIGREE_IMAGES_DIR'] = default_imgdir['x86']
         env['ARCH_TARGET'] = 'X86'
+        flags_machine = 'pc'
     elif re.match('amd64|x86[_-]64|x64', host_arch) is not None:
         flags_arch = 'x64'
 
         env['PEDIGREE_IMAGES_DIR'] = default_imgdir['x64']
         env['ARCH_TARGET'] = 'X64'
+        flags_machine = 'pc'
     elif re.match('ppc|powerpc', host_arch) is not None:
         flags_arch = 'ppc'
 
         extra_defines += ['PPC']
         env['ARCH_TARGET'] = 'PPC'
+        flags_machine = 'mac'
     elif re.match('arm',host_arch) is not None:
         flags_arch = 'arm'
 
@@ -460,6 +469,8 @@ if env['ON_PEDIGREE'] or env['COMPILER_TARGET']:
         elif env['arm_beagle']:
             extra_defines += ['ARM_BEAGLE']
             mach = 'beagle'
+
+        flags_machine = mach
 
         ccflags = default_flags['arm']
         cflags = default_cflags['arm']
@@ -514,8 +525,20 @@ if env['ON_PEDIGREE'] or env['COMPILER_TARGET']:
     else:
         defines = generic_defines
 
+    env['EXTRA_CONFIG'] = default_extra_config.get(flags_arch, [])
+    env['ARCH_DIR'] = default_arch_dir.get(flags_arch)
+    env['SUBARCH_DIR'] = default_subarch_dir.get(flags_arch)
+    if flags_machine:
+        env['MACH_TARGET'] = flags_machine
+        env['MACH_DIR'] = default_machine_dir.get(flags_machine)
+    env['BOOT_DIR'] = target_boot_directory.get(flags_arch)
+
+    for key, override_value in environment_overrides.get(flags_arch, {}):
+        env[key] = override_value
+
 # Handle no valid target sensibly.
-if not env['ARCH_TARGET'] and not env['ON_PEDIGREE']:
+if (not all([env['ARCH_TARGET'], env['ARCH_DIR'], env['MACH_DIR']]) and
+        not env['ON_PEDIGREE']):
     raise SCons.Errors.UserError('Unsupported target - have you used '
         'scripts/checkBuildSystem.pl to build a cross-compiler?')
 
@@ -799,7 +822,10 @@ misc.generate(userspace_env)
 SConscript('SConscript', variant_dir=env['BUILDDIR'],
            exports=['env', 'userspace_env'], duplicate=0)
 
-print
-print "**** This build of Pedigree (at rev %s, for %s, by %s) started at %s ****" % (env['PEDIGREE_REVISION'], env['ARCH_TARGET'], env['PEDIGREE_USER'], datetime.today())
-print
+subarch_dump = env.get('SUBARCH_DIR', '')
+if subarch_dump:
+    subarch_dump = ' (+%s)' % subarch_dump
 
+print
+print "**** This Pedigree build (r%s, %s%s + %s, by %s) begins at %s ****" % (env['PEDIGREE_REVISION'], env['ARCH_DIR'], subarch_dump, env['MACH_TARGET'], env['PEDIGREE_USER'], datetime.today())
+print

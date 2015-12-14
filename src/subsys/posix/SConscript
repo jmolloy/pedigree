@@ -21,6 +21,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 import os
 import pipes
 
+import buildutils.misc
 import buildutils.userspace
 import buildutils.fs
 
@@ -80,20 +81,12 @@ glue_files = [
     'glue-memset.c',
 ]
 
-if userspace_env['ARCH_TARGET'] in ['X86', 'X64']:
-    glue_files.extend(['glue-memcpy.c',])
+if 'CUSTOM_MEMCPY' in userspace_env['EXTRA_CONFIG']:
+    glue_files.extend(['glue-memcpy.c'])
 
 crt0_files = ['crt0.c']
 
-suffix = '-noarch'
-if userspace_env['ARCH_TARGET'] == 'X86':
-    suffix = '-i686'
-elif userspace_env['ARCH_TARGET'] == 'X64':
-    suffix = '-amd64'
-elif userspace_env['ARCH_TARGET'] == 'PPC':
-    suffix = '-ppc'
-elif userspace_env['ARCH_TARGET'] == 'ARM':
-    suffix = '-arm'
+suffix = buildutils.misc.stubSuffix(userspace_env)
 
 posix_files += ["sigret" + suffix + ".s"]
 glue_files += ["setjmp" + suffix + ".s"]
@@ -167,15 +160,6 @@ env_clone_pthread.Library(libpthread_objname, pthread_files)
 env_clone_pthread.SharedLibrary(libpthread_shobjname, pthread_files, LINKFLAGS='')
 
 # Build libc/libm
-
-if userspace_env['ARCH_TARGET'] == 'X86':
-    libc_arch = 'i686'
-elif userspace_env['ARCH_TARGET'] == 'X64':
-    libc_arch = 'amd64'
-elif userspace_env['ARCH_TARGET'] == 'PPC':
-    libc_arch = 'ppc'
-elif userspace_env['ARCH_TARGET'] == 'ARM':
-    libc_arch = 'arm'
 
 buildDir = env_clone.Dir(builddir)
 

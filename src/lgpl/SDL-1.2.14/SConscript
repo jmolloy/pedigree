@@ -118,10 +118,7 @@ env_clone['ASFLAGS'] += ['-I%s/' % env.Dir('#src/lgpl/SDL-1.2.14/src/hermes').pa
 # package.
 buildutils.misc.removeFromAllFlags(env_clone, ['-Werror', '-Wundef'])
 
-if env['ARCH_TARGET'] in ('X86', 'X64', 'ARM'):
-    env_clone.SharedLibrary(sobjname, files, LINKFLAGS='')
-    env.Alias('libs', sobjname)
-
 obj = env_clone.Library(objname, files)
+shobj = env_clone.SharedLibrary(sobjname, files, LINKFLAGS='')
 env.Alias('libs', obj)
-
+env.Alias('libs', shobj)

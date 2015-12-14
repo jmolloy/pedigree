@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -19,21 +18,10 @@
  */
 
 #include "BootstrapInfo.h"
-
-extern "C" {
-void _main(BootstrapStruct_t&);
-
-extern void init_stacks();
-
-int start(BootstrapStruct_t *bs) __attribute__((naked));
+extern "C" void _main(BootstrapStruct_t*);
 
 extern "C" int start(BootstrapStruct_t *bs)
 {
-    init_stacks();
-
-    _main(*bs);
-
-    return 0x13371337;
-}
-
+  _main(bs);
+  return 0x13371337;
 }
