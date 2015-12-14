@@ -63,14 +63,15 @@ generic_defines = [
     'ADDITIONAL_CHECKS',
     # Increases the verbosity of messages from the Elf and KernelElf classes
     'VERBOSE_LINKER',
+    # Make udis86 standalone (no FILE* et al) - it's linked in for all targets
+    # now, instead of just x86.
+    '__UD_STANDALONE__',
 ]
 
 #------------------------- x86 (+x64) -------------------------#
 
-# x86 defines - udis86 uses __UD_STANDALONE__
 general_x86_defines = [
-    'X86_COMMON', 'LITTLE_ENDIAN', '__UD_STANDALONE__', 'THREADS',
-    'KERNEL_STANDALONE', 'MULTIBOOT']
+    'X86_COMMON', 'LITTLE_ENDIAN', 'THREADS', 'KERNEL_STANDALONE', 'MULTIBOOT']
 
 #---------- x86, 32-bit ----------#
 
@@ -246,6 +247,7 @@ default_arch_dir = {
     'x64': 'x86_common',
     'arm': 'arm_common',
     'ppc': 'ppc_common',
+    'hosted': 'hosted',
 }
 
 # Sub-architecture (e.g. x86_64 for x86) directory; provides more specific
@@ -254,6 +256,7 @@ default_arch_dir = {
 default_subarch_dir = {
     'x86': 'x86',
     'x64': 'x64',
+    'arm': 'armv7',
 }
 
 # Machine directories.
@@ -284,6 +287,6 @@ target_boot_directory = {
 # Environmental overrides forced by targets.
 # e.g. 'arm': {'build_lgpl': False}
 environment_overrides = {
-    'arm': {'build_lgpl': False, 'build_apps': False},
-    'ppc': {'build_lgpl': False, 'build_apps': False},
+    'arm': {'build_lgpl': False, 'build_apps': False, 'build_images': False},
+    'ppc': {'build_lgpl': False, 'build_apps': False, 'build_images': False},
 }

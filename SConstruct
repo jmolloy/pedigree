@@ -533,7 +533,7 @@ if env['ON_PEDIGREE'] or env['COMPILER_TARGET']:
         env['MACH_DIR'] = default_machine_dir.get(flags_machine)
     env['BOOT_DIR'] = target_boot_directory.get(flags_arch)
 
-    for key, override_value in environment_overrides.get(flags_arch, {}):
+    for key, override_value in environment_overrides.get(flags_arch, {}).items():
         env[key] = override_value
 
 # Handle no valid target sensibly.
@@ -737,6 +737,13 @@ if env['hosted']:
 
     # Now ditch any ARCH_TARGET-related hooks - we don't need it anymore.
     env['ARCH_TARGET'] = 'HOSTED'
+    env['MACH_TARGET'] = 'hosted'
+
+    env['EXTRA_CONFIG'] = default_extra_config.get('hosted', [])
+    env['ARCH_DIR'] = default_arch_dir.get('hosted')
+    env['SUBARCH_DIR'] = default_subarch_dir.get('hosted')
+    env['MACH_DIR'] = default_machine_dir.get('hosted')
+    env['BOOT_DIR'] = target_boot_directory.get('hosted')
 
     # Save the useful GCC we already have.
     gcc = env['CC']

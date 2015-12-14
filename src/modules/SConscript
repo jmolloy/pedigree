@@ -151,6 +151,9 @@ if env['installer']:
 else:
     module_subdirs += ['init']
 
+if env['hosted'] or env['ARCH_TARGET'] == 'ARM':
+    module_subdirs = [x for x in module_subdirs if x not in ['splash']]
+
 # No difference yet, load all modules
 initrd_modules = module_subdirs
 

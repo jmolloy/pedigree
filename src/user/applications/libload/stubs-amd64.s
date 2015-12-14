@@ -15,14 +15,10 @@
 ; ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 ; OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-
 [global _libload_resolve_symbol]
 [extern _libload_dofixup]
 
 _libload_resolve_symbol:
-    ; pop r15
-    ; pop r14
-
     ; Save caller-save registers.
     push rcx
     push rdx

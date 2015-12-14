@@ -456,15 +456,7 @@ void PosixSubsystem::exit(int code)
     pProcess->kill();
 
     // Should NEVER get here.
-    /// \note asm volatile
-    for (;;)
-#if defined(X86_COMMON)
-        asm volatile("xor %eax, %eax");
-#elif defined(ARM_COMMON)
-        asm volatile("mov r0, #0");
-#else
-        ;
-#endif
+    FATAL("PosixSubsystem::exit() running after Process::kill()!");
 }
 
 bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)

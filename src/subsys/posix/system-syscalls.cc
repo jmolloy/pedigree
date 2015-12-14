@@ -839,15 +839,7 @@ int posix_exit(int code)
     pSubsystem->exit(code);
 
     // Should NEVER get here.
-    /// \note asm volatile
-    for (;;)
-#if defined(X86_COMMON)
-        asm volatile("xor %eax, %eax");
-#elif defined(ARM_COMMON)
-        asm volatile("mov r0, #0");
-#else
-        ;
-#endif
+    FATAL("Subsystem::exit() returned in posix_exit");
 }
 
 int posix_getpid()

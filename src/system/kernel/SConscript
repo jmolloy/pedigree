@@ -99,19 +99,26 @@ files += [
 # Pull in headers for machine implementation.
 include_dirs += [
     env.Dir('machine/$MACH_DIR'),
-    'machine/mach_pc/x86_emu/x86emu',
 ]
 
 # Add x86 emulator (for real-mode BIOS calls).
-files += [
-    'machine/mach_pc/x86emu/debug.c',
-    'machine/mach_pc/x86emu/decode.c',
-    'machine/mach_pc/x86emu/fpu.c',
-    'machine/mach_pc/x86emu/ops.c',
-    'machine/mach_pc/x86emu/ops2.c',
-    'machine/mach_pc/x86emu/prim_ops.c',
-    'machine/mach_pc/x86emu/sys.c',
-]
+if env['ARCH_TARGET'] in ['X86', 'X64']:
+    files += [
+        'machine/mach_pc/x86emu/debug.c',
+        'machine/mach_pc/x86emu/decode.c',
+        'machine/mach_pc/x86emu/fpu.c',
+        'machine/mach_pc/x86emu/ops.c',
+        'machine/mach_pc/x86emu/ops2.c',
+        'machine/mach_pc/x86emu/prim_ops.c',
+        'machine/mach_pc/x86emu/sys.c',
+    ]
+
+    include_dirs += [
+        'machine/mach_pc/x86_emu/x86emu',
+    ]
+elif env['ARCH_TARGET'] in ['HOSTED']:
+    # HOSTED pulls in the X86 disassembler.
+    files += ['core/processor/x86_common/Disassembler.cc']
 
 # Pull in architecture implementation.
 files += [
