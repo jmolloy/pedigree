@@ -304,8 +304,8 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
     }
 
     // The address of the serialize buffer is determined by the thread ID and the nesting level.
-    uintptr_t addr = EVENT_HANDLER_BUFFER + (pThread->getId() * MAX_NESTED_EVENTS +
-                                             (pThread->getStateLevel()-1)) * PhysicalMemoryManager::getPageSize();
+    uintptr_t addr = Event::getHandlerBuffer() + (pThread->getId() * MAX_NESTED_EVENTS +
+                                                 (pThread->getStateLevel()-1)) * PhysicalMemoryManager::getPageSize();
 
     // Ensure the page is mapped.
     if (!va.isMapped(reinterpret_cast<void*>(addr)))
@@ -347,9 +347,9 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
         pThread->getParent()->trackTime(false);
         pThread->getParent()->recordTime(true);
 #ifdef SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH
-        Processor::saveAndJumpUser(bWasInterrupts, oldState, 0, EVENT_HANDLER_TRAMPOLINE, userStack, handlerAddress, addr);
+        Processor::saveAndJumpUser(bWasInterrupts, oldState, 0, Event::getTrampoline(), userStack, handlerAddress, addr);
 #else
-        Processor::jumpUser(0, EVENT_HANDLER_TRAMPOLINE, userStack, handlerAddress, addr);
+        Processor::jumpUser(0, Event::getTrampoline(), userStack, handlerAddress, addr);
         // Not reached.
 #endif
     }
@@ -506,12 +506,8 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
     kStack -= sizeof(SyscallState);
     memcpy(reinterpret_cast<void*>(kStack), reinterpret_cast<void*>(&state), sizeof(SyscallState));
 
-#if defined(X64) || defined(HOSTED_X64)
-    // x64 breaks if we try and create a reference from the kStack variable.
+    // Grab a reference to the stack in the form of a full SyscallState.
     SyscallState &newState = *reinterpret_cast<SyscallState *>(kStack);
-#else
-    SyscallState &newState = reinterpret_cast<SyscallState &>(kStack);
-#endif
 
     pCurrentThread->getParent()->trackTime(false);
     pThread->getParent()->recordTime(false);

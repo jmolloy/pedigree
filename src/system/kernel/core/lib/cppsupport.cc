@@ -361,11 +361,9 @@ void *operator new (size_t size) throw()
 
 #endif
 
-#elif defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON) || defined(HOSTED)
+#else
     void *ret = reinterpret_cast<void *>(SlamAllocator::instance().allocate(size));
     return ret;
-#else
-    return 0;
 #endif
 }
 void *operator new[] (size_t size) throw()
@@ -419,11 +417,9 @@ void *operator new[] (size_t size) throw()
     // All done, return the address
     return reinterpret_cast<void*>(dataPointer);
 
-#elif defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON) || defined(HOSTED)
+#else
     void *ret = reinterpret_cast<void *>(SlamAllocator::instance().allocate(size));
     return ret;
-#else
-    return 0;
 #endif
 }
 void *operator new (size_t size, void* memory) throw()
@@ -446,9 +442,7 @@ void operator delete (void * p) throw()
     SlamAllocator::instance().free(temp);
 
     return;
-#endif
-
-#if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON) || defined(HOSTED)
+#else
     if (p == 0) return;
     if(SlamAllocator::instance().isPointerValid(reinterpret_cast<uintptr_t>(p)))
         SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
@@ -466,9 +460,7 @@ void operator delete[] (void * p) throw()
     SlamAllocator::instance().free(temp);
 
     return;
-#endif
-
-#if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON) || defined(HOSTED)
+#else
     if (p == 0) return;
     if(SlamAllocator::instance().isPointerValid(reinterpret_cast<uintptr_t>(p)))
         SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));

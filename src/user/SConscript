@@ -34,15 +34,7 @@ appoutputdir = env["PEDIGREE_BUILD_APPS"]
 imagesdir = env["PEDIGREE_IMAGES_DIR"]
 builddir = env["PEDIGREE_BUILD_BASE"]
 
-suffix = '-noarch'
-if env['ARCH_TARGET'] == 'X86':
-    suffix = '-i686'
-elif env['ARCH_TARGET'] == 'X64':
-    suffix = '-amd64'
-elif env['ARCH_TARGET'] == 'PPC':
-    suffix = '-ppc'
-elif env['ARCH_TARGET'] == 'ARM':
-    suffix = '-arm'
+suffix = buildutils.misc.stubSuffix(userspace_env)
 
 EXTERNAL_LIBRARY_DIR = '#images/local/libraries'
 EXTERNAL_INCLUDE_DIR = '#images/local/include'
@@ -196,10 +188,7 @@ libload_env['LIBPATH'] += [builddir, imagesdir + 'libraries']
 libload_env['LIBS'] = ['-lstdc++', '-lc', '-lpedigree', '-lpedigree-c', '-lgcc']
 
 libload = os.path.join(builddir, 'libload.so')
-if env['ARCH_TARGET'] == 'ARM':
-    libload_linkscript = libload_env.File(os.path.join(appsbase, 'libload', 'libload-arm.ld'))
-else:
-    libload_linkscript = libload_env.File(os.path.join(appsbase, 'libload', 'libload.ld'))
+libload_linkscript = libload_env.File(os.path.join(appsbase, 'libload', 'libload%s.ld' % suffix))
 
 in_files = [os.path.join(appsbase, 'libload', x) for x in libload_sources]
 libload_env.Program(libload, in_files,

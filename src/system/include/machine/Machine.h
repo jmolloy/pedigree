@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -62,7 +61,14 @@ class Machine
     virtual void initialise2() {};
     inline bool isInitialised(){return m_bInitialised;}
 
-    virtual void initialiseDeviceTree() = 0;
+    /**
+     * Initialises the machine's base device tree, if one exists, to prefill
+     * the tree with those devices that are not otherwise able to be detected
+     * via some sort of bus support.
+     */
+    virtual void initialiseDeviceTree()
+    {
+    }
 
     /**
      * Returns the n'th Serial device.

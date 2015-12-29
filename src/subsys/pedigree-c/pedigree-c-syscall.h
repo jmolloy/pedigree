@@ -17,40 +17,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _PEDIGREE_SYSCALL_H
-#define _PEDIGREE_SYSCALL_H
+
+#ifndef _PEDIGREEC_SYSCALL_H
+#define _PEDIGREEC_SYSCALL_H
 
 // If you change this, ensure you change src/system/include/processor/Syscalls.h !
-#define PEDIGREE_C_SYSCALL_SERVICE 4
+#define SERVICE 4
+#define SERVICE_INIT int ign = 0
+#define SERVICE_ERROR ign
 
-#if defined(HOSTED) && !defined(SYSCALL_TARGET_FOUND)
-#include "pedigree-c-syscall-hosted.h"
-#define SYSCALL_TARGET_FOUND
-#endif
-
-#if defined(X86) && !defined(SYSCALL_TARGET_FOUND)
-#include "pedigree-c-syscall-i686.h"
-#define SYSCALL_TARGET_FOUND
-#endif
-
-#if defined(X64) && !defined(SYSCALL_TARGET_FOUND)
-#include "pedigree-c-syscall-amd64.h"
-#define SYSCALL_TARGET_FOUND
-#endif
-
-#if defined(PPC_COMMON) && !defined(SYSCALL_TARGET_FOUND)
-#include "pedigree-c-syscall-ppc.h"
-#define SYSCALL_TARGET_FOUND
-#endif
-
-#if defined(ARM_COMMON) && !defined(SYSCALL_TARGET_FOUND)
-#include "pedigree-c-syscall-arm.h"
-#define SYSCALL_TARGET_FOUND
-#endif
-
-#ifndef SYSCALL_TARGET_FOUND
-#error Syscall target not found!
-#endif
-
+#include <processor/syscall-stubs.h>
 
 #endif

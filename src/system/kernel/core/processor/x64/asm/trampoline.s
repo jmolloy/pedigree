@@ -18,8 +18,12 @@
 ;##############################################################################
 ;### Trampoline code ##########################################################
 ;##############################################################################
+
+; TODO: this needs to be fixed up to link properly into the kernel.
+%if 0
 [bits 16]
-[org 0x7000]
+[global mp_trampoline]
+mp_trampoline:
   ; Load the new GDT
   lgdt [GDTR]
 
@@ -136,3 +140,5 @@ GDT64:
   db 0      ; unused
   db 0x90
   dw 0      ; unused
+
+%endif

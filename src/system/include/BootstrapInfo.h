@@ -27,7 +27,7 @@
  * @{ */
 
 // Again, if we're passed via grub these multiboot #defines will be valid, otherwise they won't.
-#if defined(KERNEL_STANDALONE) || defined(MIPS_COMMON) || defined(ARM_COMMON) || defined(HOSTED)
+#if defined(MULTIBOOT)
 #define MULTIBOOT_FLAG_MEM     0x001
 #define MULTIBOOT_FLAG_DEVICE  0x002
 #define MULTIBOOT_FLAG_CMDLINE 0x004
@@ -41,7 +41,7 @@
 #define MULTIBOOT_FLAG_VBE     0x400
 #endif
 
-#ifndef PPC_COMMON
+#ifdef MULTIBOOT
 
 // Required to specify linkage of the 'main' symbol for the friend declaration.
 extern "C" int main(int argc, char *argv[]);

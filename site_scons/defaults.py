@@ -63,14 +63,15 @@ generic_defines = [
     'ADDITIONAL_CHECKS',
     # Increases the verbosity of messages from the Elf and KernelElf classes
     'VERBOSE_LINKER',
+    # Make udis86 standalone (no FILE* et al) - it's linked in for all targets
+    # now, instead of just x86.
+    '__UD_STANDALONE__',
 ]
 
 #------------------------- x86 (+x64) -------------------------#
 
-# x86 defines - udis86 uses __UD_STANDALONE__
 general_x86_defines = [
-    'X86_COMMON', 'LITTLE_ENDIAN', '__UD_STANDALONE__', 'THREADS',
-    'KERNEL_STANDALONE']
+    'X86_COMMON', 'LITTLE_ENDIAN', 'THREADS', 'KERNEL_STANDALONE', 'MULTIBOOT']
 
 #---------- x86, 32-bit ----------#
 
@@ -118,7 +119,8 @@ default_x64_cxxflags = []
 default_x64_asflags = ['-felf64']
 
 # x64 linker flags
-default_x64_linkflags = ['-Tsrc/system/kernel/core/processor/x64/kernel.ld']
+default_x64_linkflags = ['-Tsrc/system/kernel/core/processor/x64/kernel.ld',
+                         '-mcmodel=kernel', '-m64']
 
 # x64 images directory
 default_x64_imgdir = '#images/x64'
@@ -136,7 +138,8 @@ x64_defines = generic_defines + general_x86_defines + x64_defines
 
 # ARM defines
 # TODO: Fix this to support other ARM chips and boards
-general_arm_defines = ['ARM_COMMON', 'BITS_32', 'THREADS', 'STATIC_DRIVERS']
+general_arm_defines = ['ARM_COMMON', 'BITS_32', 'THREADS', 'STATIC_DRIVERS',
+                       'MULTIBOOT']
 
 # ARM CFLAGS and CXXFLAGS
 default_arm_flags = ['-fno-omit-frame-pointer', '-mabi=aapcs', '-mapcs-frame']
@@ -234,4 +237,56 @@ default_defines = {
     'x64': x64_defines,
     'arm': arm_defines,
     'ppc': ppc_defines
+}
+
+# Architecture directory, in which generic architectural implementations can
+# be found. Typically a 'common' architecture directory, where particular
+# architecture versions are referenced as sub-architectures (see below).
+default_arch_dir = {
+    'x86': 'x86_common',
+    'x64': 'x86_common',
+    'arm': 'arm_common',
+    'ppc': 'ppc_common',
+    'hosted': 'hosted',
+}
+
+# Sub-architecture (e.g. x86_64 for x86) directory; provides more specific
+# architecture implementations for particular intra-architectural differences.
+# e.g. ARM -> ARMv7, X86 -> X86_64.
+default_subarch_dir = {
+    'x86': 'x86',
+    'x64': 'x64',
+    'arm': 'armv7',
+}
+
+# Machine directories.
+default_machine_dir = {
+    'pc': 'mach_pc',
+    'mac': 'mac',
+    'hosted': 'hosted',
+    'beagle': 'arm_beagle',
+}
+
+# Extra configuration for each target.
+# CUSTOM_MEMCPY: custom userspace memcpy instead of newlib's default
+# NATIVE_SUBSYSTEM: build kernel side of the native subsystem
+# NATIVE_SUBSYSTEM_USER: also build user side of the native subsystem
+default_extra_config = {
+    'x64': ['CUSTOM_MEMCPY', 'NATIVE_SUBSYSTEM', 'NATIVE_SUBSYSTEM_USER'],
+    'hosted': ['CUSTOM_MEMCPY', 'NATIVE_SUBSYSTEM', 'NATIVE_SUBSYSTEM_USER'],
+    'arm': ['NATIVE_SUBSYSTEM'],
+}
+
+# Boot directory for the target.
+target_boot_directory = {
+    'arm': 'arm',
+    'ppc': 'ppc',
+    'mips': 'mips',
+}
+
+# Environmental overrides forced by targets.
+# e.g. 'arm': {'build_lgpl': False}
+environment_overrides = {
+    'arm': {'build_lgpl': False, 'build_apps': False, 'build_images': False},
+    'ppc': {'build_lgpl': False, 'build_apps': False, 'build_images': False},
 }

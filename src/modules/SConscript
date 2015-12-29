@@ -151,9 +151,7 @@ if env['installer']:
 else:
     module_subdirs += ['init']
 
-if env['ARCH_TARGET'] == 'ARM':
-    module_subdirs = [x for x in module_subdirs if x not in ['splash']]
-elif env['hosted']:
+if env['hosted'] or env['ARCH_TARGET'] == 'ARM':
     module_subdirs = [x for x in module_subdirs if x not in ['splash']]
 
 # No difference yet, load all modules
@@ -167,12 +165,12 @@ all_modules = drivers + modules
 
 # Custom CFLAGS for specific modules
 custom_cflags = {
-    'config' : ['-DSQLITE_OS_OTHER=1',
-                '-DSQLITE_THREADSAFE=0',
-                '-DSQLITE_TEMP_STORE=3',
-                '-DSQLITE_DISABLE_LFS=1',
-                '-DSQLITE_OMIT_LOCALTIME=1',
-                '-DSQLITE_OMIT_FLOATING_POINT=1']
+    'config': ['-DSQLITE_OS_OTHER=1',
+               '-DSQLITE_THREADSAFE=0',
+               '-DSQLITE_TEMP_STORE=3',
+               '-DSQLITE_DISABLE_LFS=1',
+               '-DSQLITE_OMIT_LOCALTIME=1',
+               '-DSQLITE_OMIT_FLOATING_POINT=1']
 }
 
 # Custom C/C++ flags for specific modules.
@@ -195,19 +193,7 @@ remove_flags = {
 
 # Try and follow this subdirectory scheme for platform code in modules to
 # simplify the custom_subdirs dictionary
-arch_subdir = ''
-if env['ARCH_TARGET'] == 'X86':
-    arch_subdir = 'i686'
-elif env['ARCH_TARGET'] == 'X64':
-    arch_subdir = 'amd64'
-elif env['ARCH_TARGET'] == 'ARM':
-    arch_subdir = 'arm'
-elif env['ARCH_TARGET'] == 'PPC':
-    arch_subdir = 'ppc'
-elif env['ARCH_TARGET'] == 'HOSTED':
-    arch_subdir = 'hosted'
-else:
-    arch_subdir = 'unknown'
+arch_subdir = buildutils.misc.stubSuffix(env, dash=False)
 
 def dma_fix(s):
     if s in ('X86', 'X64'):
@@ -363,7 +349,7 @@ initrdList += [os.path.join(builddir.abspath, 'modules', i + '.o') for i in init
 # Subsystems
 initrdList += [os.path.join(builddir.abspath, 'subsystems', 'posix.o')]
 initrdList += [os.path.join(builddir.abspath, 'subsystems', 'pedigree-c.o')]
-if env['ARCH_TARGET'] in ('X86', 'X64', 'ARM', 'HOSTED'):
+if 'NATIVE_SUBSYSTEM' in env['EXTRA_CONFIG']:
     initrdList += [os.path.join(builddir.abspath, 'subsystems', 'native.o')]
 
 env.Depends(initrdFile, "drivers")

@@ -76,7 +76,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 #endif
     }
 
-#if defined(X86_COMMON)
+#ifdef X86_COMMON
     PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
     size_t pageSz = PhysicalMemoryManager::getPageSize();
 
@@ -142,28 +142,27 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
     uintptr_t stringTableHeader = (pBootstrap.getSectionHeaders() +
         pBootstrap.getSectionHeaderStringTableIndex() *
         pBootstrap.getSectionHeaderEntrySize());
-#ifdef X86_COMMON
-    Elf32SectionHeader_t *stringTableShdr = reinterpret_cast<Elf32SectionHeader_t*>(stringTableHeader);
-#else
     KernelElfSectionHeader_t *stringTableShdr = reinterpret_cast<KernelElfSectionHeader_t*>(stringTableHeader);
-#endif
     const char *tmpStringTable = reinterpret_cast<const char*>(stringTableShdr->addr);
 
     // Search for the symbol/string table and adjust sections
     for (size_t i = 1; i < pBootstrap.getSectionHeaderCount(); i++)
     {
         uintptr_t shdr_addr = pBootstrap.getSectionHeaders() + i * pBootstrap.getSectionHeaderEntrySize();
+        KernelElfSectionHeader_t *pSh = 0;
 #ifdef X86_COMMON
-        Elf32SectionHeader_t *pSh = m_AdditionalSectionHeaders->convertPhysicalPointer<Elf32SectionHeader_t>(shdr_addr);
+        pSh = m_AdditionalSectionHeaders->convertPhysicalPointer<KernelElfSectionHeader_t>(shdr_addr);
 #else
-        KernelElfSectionHeader_t *pSh = reinterpret_cast<KernelElfSectionHeader_t*>(shdr_addr);
+        pSh = reinterpret_cast<KernelElfSectionHeader_t*>(shdr_addr);
 #endif
 
-#if defined(X86_COMMON)
+#ifdef X86_COMMON
         // Adjust the section
         if ((pSh->flags & SHF_ALLOC) != SHF_ALLOC)
         {
+            NOTICE("Converting shdr " << pSh->addr);
             pSh->addr = reinterpret_cast<uintptr_t>(m_AdditionalSectionContents.convertPhysicalPointer<void>(pSh->addr));
+            NOTICE(" to " << pSh->addr);
             pSh->offset = pSh->addr;
         }
 #endif
@@ -192,11 +191,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
     }
 
     // Initialise remaining member variables
-#if defined(X86_COMMON)
-    m_pSectionHeaders = m_AdditionalSectionHeaders->convertPhysicalPointer<Elf32SectionHeader_t>(pBootstrap.getSectionHeaders());
-#else
     m_pSectionHeaders = reinterpret_cast<KernelElfSectionHeader_t*>(pBootstrap.getSectionHeaders());
-#endif
     m_nSectionHeaders = pBootstrap.getSectionHeaderCount();
 
 #ifdef DEBUGGER
@@ -264,7 +259,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 }
 
 KernelElf::KernelElf() :
-#if defined(X86_COMMON)
+#ifdef X86_COMMON
     m_AdditionalSectionContents("Kernel ELF Section Data"),
     m_AdditionalSectionHeaders(0),
 #endif
@@ -277,26 +272,6 @@ KernelElf::~KernelElf()
 {
 }
 
-#ifdef PPC_COMMON
-#define MOD_START 0xe1000000
-#elif defined(X86)
-#define MOD_START 0xfa000000
-#elif defined(X64)
-#define MOD_START 0xFFFFFFFFF0000000
-#elif defined(ARMV7)
-#define MOD_START 0x60000000
-#elif defined(HOSTED)
-// Move well out of the way of anything that could be useful.
-// Give plenty of room so if we enable things like ASAN which significantly
-// blow out our code size, we're prepared.
-#define MOD_START 0x70000000  //0x500000000000
-#define MOD_LEN   0x10000000  //0x100000000000
-#endif
-
-#ifndef MOD_LEN
-#define MOD_LEN 0x400000
-#endif
-
 Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
 {
     MemoryCount guard(__PRETTY_FUNCTION__);
@@ -305,7 +280,9 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
     // is called, so check here if we've loaded any modules yet. If not, we can initialise our memory allocator.
     if (m_Modules.count() == 0)
     {
-        m_ModuleAllocator.free(MOD_START, MOD_LEN);
+        uintptr_t start = VirtualAddressSpace::getKernelAddressSpace().getKernelModulesStart();
+        uintptr_t end = VirtualAddressSpace::getKernelAddressSpace().getKernelModulesEnd();
+        m_ModuleAllocator.free(start, end - start);
     }
 
     Module *module = new Module;

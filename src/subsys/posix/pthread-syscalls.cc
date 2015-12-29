@@ -78,7 +78,7 @@ int pthread_kernel_enter(void *blk)
     // map to our destination, and some additional information that may come
     // in handy when we arrive.
     mutex->acquire();  // Block before jumping to userspace.
-    Processor::jumpUser(0, EVENT_HANDLER_TRAMPOLINE2, stack, reinterpret_cast<uintptr_t>(entry), reinterpret_cast<uintptr_t>(new_args), 0, 0);
+    Processor::jumpUser(0, Event::getSecondaryTrampoline(), stack, reinterpret_cast<uintptr_t>(entry), reinterpret_cast<uintptr_t>(new_args), 0, 0);
 
     // If we get here, we probably got catapaulted many miles back to the
     // Kernel Highlands. That's probably not a good thing. They won't really
@@ -364,11 +364,11 @@ void pedigree_init_pthreads()
     PT_NOTICE("init_pthreads");
     // Make sure we can write to the trampoline area.
     Processor::information().getVirtualAddressSpace().setFlags(
-            reinterpret_cast<void*> (EVENT_HANDLER_TRAMPOLINE),
+            reinterpret_cast<void*> (Event::getTrampoline()),
             VirtualAddressSpace::Write);
-    memcpy(reinterpret_cast<void*>(EVENT_HANDLER_TRAMPOLINE2), reinterpret_cast<void*>(pthread_stub), (reinterpret_cast<uintptr_t>(&pthread_stub_end) - reinterpret_cast<uintptr_t>(pthread_stub)));
+    memcpy(reinterpret_cast<void*>(Event::getSecondaryTrampoline()), reinterpret_cast<void*>(pthread_stub), (reinterpret_cast<uintptr_t>(&pthread_stub_end) - reinterpret_cast<uintptr_t>(pthread_stub)));
     Processor::information().getVirtualAddressSpace().setFlags(
-            reinterpret_cast<void*> (EVENT_HANDLER_TRAMPOLINE),
+            reinterpret_cast<void*> (Event::getTrampoline()),
             VirtualAddressSpace::Execute | VirtualAddressSpace::Shared);
 
     // Make sure the main thread is actually known.

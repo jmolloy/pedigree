@@ -114,3 +114,21 @@ def removeFromAllFlags(env, removal):
     env['CFLAGS'] = buildutils.misc.removeFlags(env['CFLAGS'], removal)
     env['CCFLAGS'] = buildutils.misc.removeFlags(env['CCFLAGS'], removal)
     env['CXXFLAGS'] = buildutils.misc.removeFlags(env['CXXFLAGS'], removal)
+
+
+def stubSuffix(env, dash=True):
+    suffix = 'noarch'
+    if env['ARCH_TARGET'] == 'X86':
+        suffix = 'i686'
+    elif env['ARCH_TARGET'] == 'X64':
+        suffix = 'amd64'
+    elif env['ARCH_TARGET'] == 'PPC':
+        suffix = 'ppc'
+    elif env['ARCH_TARGET'] == 'ARM':
+        suffix = 'arm'
+    elif env['ARCH_TARGET'] == 'HOSTED':
+        suffix = 'hosted'
+
+    if dash:
+        suffix = '-%s' % suffix
+    return suffix

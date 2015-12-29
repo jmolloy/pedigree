@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -18,8 +17,22 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#define SERVICE PEDIGREE_C_SYSCALL_SERVICE
-#define SERVICE_INIT int ign = 0
-#define SERVICE_ERROR ign
+#include "BootstrapInfo.h"
 
-#include <processor/x86/syscall-stubs.h>
+extern "C" {
+void _main(BootstrapStruct_t&);
+
+extern void init_stacks();
+
+int start(BootstrapStruct_t *bs) __attribute__((naked));
+
+extern "C" int start(BootstrapStruct_t *bs)
+{
+    init_stacks();
+
+    _main(*bs);
+
+    return 0x13371337;
+}
+
+}
