@@ -745,11 +745,6 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                 size_t base_addend = phdr_base & (pagesz - 1);
                 phdr_base &= ~(pagesz - 1);
 
-#if 0
-                size_t offset = meta->phdrs[i].offset & ~(pagesz - 1);
-                size_t offset_addend = meta->phdrs[i].offset & (pagesz - 1);
-                size_t mapsz = offset_addend + meta->phdrs[i].filesz;
-#else
                 size_t offset = 0;
                 if(meta->phdrs[i].offset)
                 {
@@ -757,7 +752,6 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                 }
 
                 size_t mapsz = base_addend + meta->phdrs[i].filesz;
-#endif
 
                 // Already mapped?
                 if((msync((void *) phdr_base, mapsz, MS_SYNC) != 0) && (errno == ENOMEM)) {
