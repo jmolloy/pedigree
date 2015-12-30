@@ -50,6 +50,8 @@ extern int posix_getpid();
 // Syscalls pertaining to files.
 //
 
+#define CHECK_FLAG(a, b) (((a) & (b)) == (b))
+
 #define GET_CWD() (Processor::information().getCurrentThread()->getParent()->getCwd())
 
 inline File *traverseSymlink(File *file)
@@ -182,14 +184,12 @@ int posix_open(const char *name, int flags, int mode)
     F_NOTICE("  -> actual flags " << flags);
     
     // One of these three must be specified.
-#if 1
-    if(!(flags & (O_RDONLY | O_WRONLY | O_RDWR)))
+    if(!(CHECK_FLAG(flags, O_RDONLY) || CHECK_FLAG(flags, O_RDWR) || CHECK_FLAG(flags, O_WRONLY)))
     {
         F_NOTICE("One of O_RDONLY, O_WRONLY, or O_RDWR must be passed.");
         SYSCALL_ERROR(InvalidArgument);
         return -1;
     }
-#endif
 
     // verify the filename - don't try to open a dud file
     if (name[0] == 0)
