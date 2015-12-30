@@ -417,37 +417,6 @@ void ARMV7InterruptManager::interrupt(InterruptState &interruptState)
 
     // Ack the interrupt
     mpuIntcRegisters[INTCPS_CONTROL] = 1; // Reset IRQ output and enable new IRQs
-
-#if 0 // Below is all exception/syscall stuff
-
-  // Call the syscall handler, if it is the syscall interrupt
-  if (intNumber == SYSCALL_INTERRUPT_NUMBER)
-  {
-    size_t serviceNumber = interruptState.getSyscallService();
-    if (LIKELY(serviceNumber < serviceEnd && m_Instance.m_SyscallHandler[serviceNumber] != 0))
-      m_Instance.m_SyscallHandler[serviceNumber]->syscall(interruptState);
-  }
-  // Call the normal interrupt handler, if any, otherwise
-  else if (m_Instance.m_Handler[intNumber] != 0)
-    m_Instance.m_Handler[intNumber]->interrupt(intNumber, interruptState);
-  else
-  {
-    /// \todo: Check for debugger initialisation.
-    static LargeStaticString e;
-    e.clear();
-    e.append ("Exception #");
-    e.append (intNumber, 10);
-    e.append (": \"");
-    e.append (g_ExceptionNames[intNumber]);
-    e.append ("\"");
-#ifdef DEBUGGER
-    Debugger::instance().start(interruptState, e);
-#else
-    panic(e);
-#endif
-  }
-
-#endif
 }
 
 ARMV7InterruptManager::ARMV7InterruptManager()

@@ -194,18 +194,6 @@ void X86CommonPhysicalMemoryManager::freePageUnlocked(physical_uintptr_t page)
 #endif
 
     trackPages(0, -1, 0);
-
-    // g_AllocationCommand.freePage uses our lock.
-    
-#if 0 // defined(TRACK_PAGE_ALLOCATIONS)             
-    if (Processor::m_Initialised == 2)
-    {
-        if (!g_AllocationCommand.isMallocing())
-        {
-            g_AllocationCommand.freePage(page);
-        }
-    }
-#endif
 }
 void X86CommonPhysicalMemoryManager::pin(physical_uintptr_t page) {
     LockGuard<Spinlock> guard(m_Lock);

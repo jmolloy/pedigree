@@ -162,18 +162,6 @@ void HostedPhysicalMemoryManager::freePageUnlocked(physical_uintptr_t page)
 #endif
 
     m_PageStack.free(page);
-
-    // g_AllocationCommand.freePage uses our lock.
-    
-#if 0 // defined(TRACK_PAGE_ALLOCATIONS)             
-    if (Processor::m_Initialised == 2)
-    {
-        if (!g_AllocationCommand.isMallocing())
-        {
-            g_AllocationCommand.freePage(page);
-        }
-    }
-#endif
 }
 
 void HostedPhysicalMemoryManager::pin(physical_uintptr_t page) {

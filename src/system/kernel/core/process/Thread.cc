@@ -527,16 +527,6 @@ void Thread::unexpectedExit()
     if(m_bRemovingRequests)
         return;
 
-#if 0
-    for(List<RequestQueue::Request *>::Iterator it = m_PendingRequests.begin();
-        it != m_PendingRequests.end();
-        it++)
-    {
-        (*it)->bReject = true;
-        (*it)->mutex.release();
-    }
-#endif
-
     NOTICE("Thread::unexpectedExit COMPLETE");
 }
 

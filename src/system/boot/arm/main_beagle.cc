@@ -792,7 +792,7 @@ void __start(uint32_t r0, uint32_t machineType, struct atag *tagList)
 
     writeStr(3, "\r\nPlease press the USER button on the board to continue.\r\n");
 
-    // while(!gpio.capturepin(7));
+    while(!gpio.capturepin(7));
 
     writeStr(3, "USER button pressed, continuing...\r\n\r\n");
 
@@ -825,75 +825,6 @@ void __start(uint32_t r0, uint32_t machineType, struct atag *tagList)
         else if((c == 13) || (c == 10))
             break;
     }
-
-#if 0 // Set to 1 to enable the MMU test instead of loading the kernel.
-    writeStr(3, "\r\n\r\nVirtual memory test starting...\r\n");
-
-    FirstLevelDescriptor *pdir = (FirstLevelDescriptor*) 0x80100000;
-    memset(pdir, 0, 0x4000);
-
-    uint32_t base1 = 0x80000000; // Currently running code
-    uint32_t base2 = 0x49000000; // UART3
-
-    // First section covers the current code, identity mapped.
-    uint32_t pdir_offset = base1 >> 20;
-    pdir[pdir_offset].descriptor.entry = base1;
-    pdir[pdir_offset].descriptor.section.type = 2;
-    pdir[pdir_offset].descriptor.section.b = 0;
-    pdir[pdir_offset].descriptor.section.c = 0;
-    pdir[pdir_offset].descriptor.section.xn = 0;
-    pdir[pdir_offset].descriptor.section.domain = 0;
-    pdir[pdir_offset].descriptor.section.imp = 0;
-    pdir[pdir_offset].descriptor.section.ap1 = 3;
-    pdir[pdir_offset].descriptor.section.ap2 = 0;
-    pdir[pdir_offset].descriptor.section.tex = 0;
-    pdir[pdir_offset].descriptor.section.s = 1;
-    pdir[pdir_offset].descriptor.section.nG = 0;
-    pdir[pdir_offset].descriptor.section.sectiontype = 0;
-    pdir[pdir_offset].descriptor.section.ns = 0;
-
-    // Second section covers the UART, identity mapped.
-    pdir_offset = base2 >> 20;
-    pdir[pdir_offset].descriptor.entry = base2;
-    pdir[pdir_offset].descriptor.section.type = 2;
-    pdir[pdir_offset].descriptor.section.b = 0;
-    pdir[pdir_offset].descriptor.section.c = 0;
-    pdir[pdir_offset].descriptor.section.xn = 0;
-    pdir[pdir_offset].descriptor.section.domain = 0;
-    pdir[pdir_offset].descriptor.section.imp = 0;
-    pdir[pdir_offset].descriptor.section.ap1 = 3;
-    pdir[pdir_offset].descriptor.section.ap2 = 0;
-    pdir[pdir_offset].descriptor.section.tex = 0;
-    pdir[pdir_offset].descriptor.section.s = 1;
-    pdir[pdir_offset].descriptor.section.nG = 0;
-    pdir[pdir_offset].descriptor.section.sectiontype = 0;
-    pdir[pdir_offset].descriptor.section.ns = 0;
-
-    writeStr(3, "Writing to TTBR0 and enabling access to domain 0...\r\n");
-
-    asm volatile("MCR p15,0,%0,c2,c0,0" : : "r" (0x80100000));
-    asm volatile("MCR p15,0,%0,c3,c0,0" : : "r" (0xFFFFFFFF)); // Manager access to all domains for now
-
-    // Enable the MMU
-    uint32_t sctlr = 0;
-    asm volatile("MRC p15,0,%0,c1,c0,0" : "=r" (sctlr));
-    if(!(sctlr & 1))
-        sctlr |= 1;
-    else
-        writeStr(3, "It seems the MMU is already enabled?\r\n");
-
-    writeStr(3, "Enabling the MMU...\r\n");
-    asm volatile("MCR p15,0,%0,c1,c0,0" : : "r" (sctlr));
-
-    // If you can see the string, the identity map is complete and working.
-    writeStr(3, "\r\n\r\nTest completed without errors.\r\n");
-
-    while(1)
-    {
-        asm volatile("wfi");
-    }
-
-#else
 
     writeStr(3, "\r\n\r\nPlease wait while the kernel is loaded...\r\n");
 
@@ -936,7 +867,6 @@ void __start(uint32_t r0, uint32_t machineType, struct atag *tagList)
     // Run the kernel, finally
     writeStr(3, "Now starting the Pedigree kernel (can take a while, please wait).\r\n\r\n");
     main(bs);
-#endif
     
     while (1)
     {
