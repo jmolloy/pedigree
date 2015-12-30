@@ -143,13 +143,9 @@ module_subdirs = [
     'config',
     'status_server',
     'gfx-deps',
-    'preload'
+    'preload',
+    'init',
 ]
-
-if env['installer']:
-    module_subdirs += ['installer']
-else:
-    module_subdirs += ['init']
 
 if env['hosted'] or env['ARCH_TARGET'] == 'ARM':
     module_subdirs = [x for x in module_subdirs if x not in ['splash']]
