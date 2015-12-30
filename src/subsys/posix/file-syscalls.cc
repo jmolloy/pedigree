@@ -181,9 +181,8 @@ int posix_open(const char *name, int flags, int mode)
     F_NOTICE("open(" << name << ", " << ((flags & O_RDWR) ? "O_RDWR" : "") << ((flags & O_RDONLY) ? "O_RDONLY" : "") << ((flags & O_WRONLY) ? "O_WRONLY" : "") << ")");
     F_NOTICE("  -> actual flags " << flags);
     
-    // One of these three must be specified
-    /// \bug Breaks /dev/tty open in crt0
-#if 0
+    // One of these three must be specified.
+#if 1
     if(!(flags & (O_RDONLY | O_WRONLY | O_RDWR)))
     {
         F_NOTICE("One of O_RDONLY, O_WRONLY, or O_RDWR must be passed.");

@@ -251,16 +251,6 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             return posix_pthread_kill(reinterpret_cast<pthread_t>(p1), static_cast<int>(p2));
         case POSIX_PTHREAD_SIGMASK:
             return posix_pthread_sigmask(static_cast<int>(p1), reinterpret_cast<const uint32_t*>(p2), reinterpret_cast<uint32_t*>(p3));
-        case POSIX_PTHREAD_MUTEX_INIT:
-            return posix_pthread_mutex_init(reinterpret_cast<pthread_mutex_t*>(p1), reinterpret_cast<const pthread_mutexattr_t*>(p2));
-        case POSIX_PTHREAD_MUTEX_DESTROY:
-            return posix_pthread_mutex_destroy(reinterpret_cast<pthread_mutex_t*>(p1));
-        case POSIX_PTHREAD_MUTEX_LOCK:
-            return posix_pthread_mutex_lock(reinterpret_cast<pthread_mutex_t*>(p1));
-        case POSIX_PTHREAD_MUTEX_TRYLOCK:
-            return posix_pthread_mutex_trylock(reinterpret_cast<pthread_mutex_t*>(p1));
-        case POSIX_PTHREAD_MUTEX_UNLOCK:
-            return posix_pthread_mutex_unlock(reinterpret_cast<pthread_mutex_t*>(p1));
         case POSIX_PTHREAD_KEY_CREATE:
             return posix_pthread_key_create(reinterpret_cast<pthread_key_t*>(p1), reinterpret_cast<key_destructor>(p2));
         case POSIX_PTHREAD_KEY_DELETE:
