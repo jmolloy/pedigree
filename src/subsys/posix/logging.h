@@ -43,10 +43,14 @@
 #endif
 
 #if POSIX_LOG_FACILITIES & 8
-#define POSIX_VERBOSE_SIGNAL_SYSCALLS
+#define POSIX_VERBOSE_NET_SYSCALLS
 #endif
 
 #if POSIX_LOG_FACILITIES & 16
+#define POSIX_VERBOSE_SIGNAL_SYSCALLS
+#endif
+
+#if POSIX_LOG_FACILITIES & 32
 #define POSIX_ULTRA_VERBOSE_SIGNAL_SYSCALLS
 #endif
 
@@ -68,6 +72,12 @@
 #define PT_NOTICE(x) POSIX_VERBOSE_LOG("thr", x)
 #else
 #define PT_NOTICE(x)
+#endif
+
+#ifdef POSIX_VERBOSE_NET_SYSCALLS
+#define N_NOTICE(x) POSIX_VERBOSE_LOG("net", x)
+#else
+#define N_NOTICE(x)
 #endif
 
 #ifdef POSIX_VERBOSE_SIGNAL_SYSCALLS

@@ -137,10 +137,12 @@ else:
         logging_mask |= 2
     if env_clone['posix_thr_verbose']:
         logging_mask |= 4
-    if env_clone['posix_sig_verbose']:
+    if env_clone['posix_net_verbose']:
         logging_mask |= 8
-    if env_clone['posix_sig_ultra_verbose']:
+    if env_clone['posix_sig_verbose']:
         logging_mask |= 16
+    if env_clone['posix_sig_ultra_verbose']:
+        logging_mask |= 32
 
 env_clone['CPPDEFINES'] += ['POSIX_LOG_FACILITIES=%d' % logging_mask]
 

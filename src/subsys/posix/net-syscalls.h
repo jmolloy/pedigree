@@ -21,12 +21,7 @@
 #define NET_SYSCALLS_H
 
 #include <vfs/File.h>
-
-#if 0
-#define N_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "]\t" << Hex << x)
-#else
-#define N_NOTICE(x)
-#endif
+#include "logging.h"
 
 int posix_socket(int domain, int type, int protocol);
 int posix_connect(int sock, struct sockaddr* address, size_t addrlen);
