@@ -180,13 +180,6 @@ bool ScsiDisk::readSense(Sense *sense)
     /// \todo get the amount of data received from the SCSI device
     memcpy(sense, response, sizeof(Sense));
 
-#if 0
-    // Dump the sense information
-    SCSI_DEBUG_LOG("    Sense information:");
-    for(size_t i = 0; i < sizeof(Sense); i++)
-        SCSI_DEBUG_LOG("        [" << Dec << i << Hex << "] " << response[i]);
-#endif
-
     delete [] response;
 
     return ((sense->ResponseCode & 0x70) == 0x70);

@@ -403,9 +403,6 @@ bool UsbDevice::controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t 
     if(nLength)
     {
         bool bToggle = true;
-#if 0
-        pParentHub->addTransferToTransaction(nTransaction, bToggle, nRequestType & UsbRequestDirection::In ? UsbPidIn : UsbPidOut, pBuffer, nLength);
-#else
         size_t nTransferLength = nLength;
         size_t nOffset = 0;
         while(nTransferLength)
@@ -418,7 +415,6 @@ bool UsbDevice::controlRequest(uint8_t nRequestType, uint8_t nRequest, uint16_t 
             nTransferLength -= sz;
             nOffset += sz;
         }
-#endif
     }
 
     // Handshake Transfer - IN when we send data to the device, OUT when we receive. Zero-length.

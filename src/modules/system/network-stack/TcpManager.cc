@@ -354,22 +354,6 @@ void TcpManager::returnEndpoint(Endpoint* e)
   // The connection may be still closing when this is called!
   // It is well-defined behaviour that the endpoint will be returned
   // and the connection released once it hits the CLOSED state.
-  return;
-
-#if 0
-  if(e)
-  {
-    // remove from the endpoint list
-    m_Endpoints.remove(e->getConnId());
-
-    // if we can (state == CLOSED) remove the connection itself
-    // if the state is TIME_WAIT this will be done by the TIME_WAIT timeout
-    removeConn(e->getConnId());
-
-    // clean up the memory
-    delete e;
-  }
-#endif
 }
 
 Endpoint* TcpManager::getEndpoint(uint16_t localPort, Network* pCard)

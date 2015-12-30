@@ -185,20 +185,6 @@ static bool init()
     // Fill out the device hash table
     DeviceHashTree::instance().fill(&Device::root());
 
-#if 0
-    // Testing froggey's Bochs patch for magic watchpoints... -Matt
-    volatile uint32_t abc = 0;
-    NOTICE("Address of abc = " << reinterpret_cast<uintptr_t>(&abc) << "...");
-    asm volatile("xchg %%cx,%%cx" :: "a" (&abc));
-    abc = 0xdeadbeef;
-    abc = 0xdeadbe;
-    abc = 0xdead;
-    abc = 0xde;
-    abc = 0xd;
-    abc = 0;
-    FATAL("Test complete: " << abc << ".");
-#endif
-
     // Initialise user/group configuration.
     UserManager::instance().initialise();
 
@@ -274,14 +260,6 @@ static bool init()
         RoutingTable::instance().Add(RoutingTable::Named, empty, empty, String("default"), NetworkStack::instance().getDevice(0));
     else
         RoutingTable::instance().Add(RoutingTable::Named, empty, empty, String("default"), pDefaultCard);
-
-#if 0
-    // Routes installed, start the UDP logger
-    UdpLogger *logger = new UdpLogger();
-    logger->initialise(IpAddress(Network::convertToIpv4(192, 168, 0, 1)));
-
-    Log::instance().installCallback(logger);
-#endif
 
 #ifdef THREADS
     // Create a new process for the init process.

@@ -1158,22 +1158,6 @@ uint64_t AtaDisk::doWrite(uint64_t location)
         }
     }
 
-    // Let's not do this. Unless it becomes really clear that it's needed.
-#if 0
-    // Flush the disk caches - write complete.
-    if (m_SupportsLBA48)
-    {
-        commandRegs->write8(0xEA, 7); // Cache Flush EXT
-    }
-    else
-    {
-        commandRegs->write8(0xE7, 7); // Cache Flush
-    }
-
-    // Ignore any errors that may take place, but wait for this to complete.
-    ataWait(commandRegs);
-#endif
-
 #ifdef SUPERDEBUG
     NOTICE("ATA: successfully wrote " << nBytes << " bytes to disk.");
 #endif

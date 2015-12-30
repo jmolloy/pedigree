@@ -121,7 +121,6 @@ void removeIsaAta(Device *pDev)
 
 static void searchNode(Device *pDev, bool bFallBackISA)
 {
-#if 0
     // Check to see if this is an AHCI controller.
     for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
     {
@@ -130,18 +129,17 @@ static void searchNode(Device *pDev, bool bFallBackISA)
         if(pChild->getPciClassCode() == 0x01 &&
             pChild->getPciSubclassCode() == 0x06)
         {
-            /// \todo Do more checks.
-            FATAL("Found a SATA controller of some sort.");
+            // No AHCI support yet, so just log and keep going.
+            WARNING("Found a SATA controller of some sort, hoping for ISA fallback.");
         }
+
         // Recurse.
         searchNode(pChild, false);
     }
-#endif
 
     // Try for a PIIX IDE controller first. We prefer the PIIX as it enables us
     // to use DMA (and is a little easier to use for device detection).
     static bool bPiixControllerFound = false;
-#if 1
     for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
     {
         Device *pChild = pDev->getChild(i);
@@ -171,7 +169,6 @@ static void searchNode(Device *pDev, bool bFallBackISA)
         // Recurse.
         searchNode(pChild, false);
     }
-#endif
 
     // No PIIX controller found, fall back to ISA
     /// \todo Could also fall back to ICH?
