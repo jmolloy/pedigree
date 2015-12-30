@@ -63,7 +63,7 @@
 #endif
 
 #ifdef POSIX_VERBOSE_FILE_SYSCALLS
-#define F_NOTICE(x) POSIX_VERBOSE_LOG("file", x)
+#define F_NOTICE(x) POSIX_VERBOSE_LOG("io", x)
 #else
 #define F_NOTICE(x)
 #endif
