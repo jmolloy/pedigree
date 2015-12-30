@@ -132,9 +132,6 @@ static void searchNode(Device *pDev, bool bFallBackISA)
             // No AHCI support yet, so just log and keep going.
             WARNING("Found a SATA controller of some sort, hoping for ISA fallback.");
         }
-
-        // Recurse.
-        searchNode(pChild, false);
     }
 
     // Try for a PIIX IDE controller first. We prefer the PIIX as it enables us
