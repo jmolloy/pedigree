@@ -126,6 +126,24 @@ if "STATIC_DRIVERS" in env['CPPDEFINES']:
 else:
     env_clone['LSCRIPT'] = File("#src/modules/link.ld")
 
+# Handle logging flags.
+logging_mask = 0
+if env_clone['posix_verbose']:
+    logging_mask = 0xFFFFFFFF
+else:
+    if env_clone['posix_file_verbose']:
+        logging_mask |= 1
+    if env_clone['posix_sys_verbose']:
+        logging_mask |= 2
+    if env_clone['posix_thr_verbose']:
+        logging_mask |= 4
+    if env_clone['posix_sig_verbose']:
+        logging_mask |= 8
+    if env_clone['posix_sig_ultra_verbose']:
+        logging_mask |= 16
+
+env_clone['CPPDEFINES'] += ['POSIX_LOG_FACILITIES=%d' % logging_mask]
+
 env_clone['AS'] = userspace_env_clone['AS']
 env_clone['ASFLAGS'] = userspace_env_clone['ASFLAGS']
 env_clone.Program(posix_objname, posix_files, LINKFLAGS='-nostdlib -Wl,-r -Wl,-T,$LSCRIPT')

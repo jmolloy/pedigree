@@ -25,12 +25,7 @@
 #include <processor/state.h>
 
 #include "newlib.h"
-
-#if 0
-#define SC_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "]\t" << Hex << x)
-#else
-#define SC_NOTICE(x)
-#endif
+#include "logging.h"
 
 long posix_sbrk(int delta);
 int posix_fork(SyscallState &state);

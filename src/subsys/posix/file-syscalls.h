@@ -27,12 +27,7 @@
 #include "DevFs.h"
 
 #include "newlib.h"
-
-#if 0
-#define F_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "]\t" << Hex << x)
-#else
-#define F_NOTICE(x)
-#endif
+#include "logging.h"
 
 #define MAXNAMLEN 255
 

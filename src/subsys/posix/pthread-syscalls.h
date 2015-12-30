@@ -29,12 +29,7 @@
 #include "PosixSubsystem.h"
 
 #include "newlib.h"
-
-#if 0
-#define PT_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "." << Processor::information().getCurrentThread()->getId() << "]\t" << Hex << x)
-#else
-#define PT_NOTICE(x)
-#endif
+#include "logging.h"
 
 typedef void (*pthreadfn)(void*);
 typedef void (*key_destructor)(void*);

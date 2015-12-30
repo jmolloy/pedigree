@@ -59,6 +59,14 @@ opts.AddVariables(
     BoolVariable('build_apps', 'Build in-tree applications (e.g., `ttyterm`).', 1),
     BoolVariable('build_images', 'Build disk images (ISOs + HDD images) - requires all build_* variables.', 1),
 
+    # Controls for logging facilities throughout the kernel.
+    BoolVariable('posix_verbose', 'Enable verbose logging for all POSIX syscalls.', 0),
+    BoolVariable('posix_file_verbose', 'Enable verbose logging for POSIX file syscalls.', 0),
+    BoolVariable('posix_sys_verbose', 'Enable verbose logging for POSIX system syscalls.', 0),
+    BoolVariable('posix_thr_verbose', 'Enable verbose logging for POSIX pthread syscalls.', 0),
+    BoolVariable('posix_sig_verbose', 'Enable verbose logging for POSIX signal syscalls.', 0),
+    BoolVariable('posix_sig_ultra_verbose', 'Enable even more verbose logging for POSIX signal syscalls.', 0),
+
     # General-purpose configuration knobs.
     BoolVariable('cripple_hdd','Disable writing to hard disks at runtime.',1),
     BoolVariable('debugger','Whether or not to enable the kernel debugger.',1),
