@@ -165,6 +165,7 @@ size_t TcpEndpoint::depositTcpPayload(size_t nBytes, uintptr_t payload, uint32_t
         uint8_t *buff = new uint8_t[sz];
         sz = m_ShadowDataStream.read(reinterpret_cast<uintptr_t>(buff), sz);
         size_t o = m_DataStream.write(reinterpret_cast<uintptr_t>(buff), sz);
+        delete [] buff;
 
         if(!o)
             DEBUG_LOG("TCP: wrote zero bytes to a data stream!");

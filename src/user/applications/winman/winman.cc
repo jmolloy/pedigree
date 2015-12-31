@@ -415,7 +415,6 @@ void checkForMessages()
                     bTerminate = true;
                 else
                 {
-                    /// \todo Create an input notification.
                     Input::InputNotification note;
                     memset(&note, 0, sizeof(note));
                     note.type = Input::Key;
@@ -439,7 +438,7 @@ void checkForMessages()
                     }
                     else if (event.key.keysym.sym == SDLK_UP)
                     {
-                        memcpy(&note.data.key.key, "up", 4);
+                        memcpy(&note.data.key.key, "up", 2);
                         bSpecial = true;
                     }
                     else if (event.key.keysym.sym == SDLK_DOWN)

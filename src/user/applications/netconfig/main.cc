@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -32,13 +31,11 @@ using namespace std;
 static uint32_t g_Options = 0;
 
 template <class T>
-const char* convert(T t)
+void convert(std::string &out, T t)
 {
 	stringstream ss;
-	string s;
 	ss << t;
-	ss >> s;
-	return s.c_str();
+	out = ss.str();
 }
 
 namespace Pedigree
@@ -156,14 +153,19 @@ namespace Pedigree
 		  if(m_Type == IPv4)
 		  {
 			string str;
+			string tmp;
 			str.clear();
-			str += convert<uint32_t>(m_Ipv4 & 0xff);
+			convert<uint32_t>(tmp, m_Ipv4 & 0xff);
+			str += tmp;
 			str += ".";
-			str += convert<uint32_t>((m_Ipv4 >> 8) & 0xff);
+			convert<uint32_t>(tmp, (m_Ipv4 >> 8) & 0xff);
+			str += tmp;
 			str += ".";
-			str += convert<uint32_t>((m_Ipv4 >> 16) & 0xff);
+			convert<uint32_t>(tmp, (m_Ipv4 >> 16) & 0xff);
+			str += tmp;
 			str += ".";
-			str += convert<uint32_t>((m_Ipv4 >> 24) & 0xff);
+			convert<uint32_t>(tmp, (m_Ipv4 >> 24) & 0xff);
+			str += tmp;
 			return str;
 		  }
 		  return "";

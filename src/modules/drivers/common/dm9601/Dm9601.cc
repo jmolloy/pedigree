@@ -155,9 +155,10 @@ void Dm9601::receiveThread()
 
         NetworkStack::instance().receive(pPacket->len, pPacket->buffer + pPacket->offset, this, 0);
 
+        uintptr_t buffer = pPacket->buffer;
         delete pPacket;
 
-        NetworkStack::instance().getMemPool().free(pPacket->buffer);
+        NetworkStack::instance().getMemPool().free(buffer);
     }
 }
 
