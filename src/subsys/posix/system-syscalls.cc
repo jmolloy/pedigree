@@ -980,7 +980,7 @@ int posix_getpwent(passwd *pw, int n, char *str)
     str = store_str_to(str, strend, pUser->getHome());
 
     pw->pw_shell = str;
-    str = store_str_to(str, strend, pUser->getShell());
+    store_str_to(str, strend, pUser->getShell());
 
     return 0;
 }
@@ -1022,7 +1022,7 @@ int posix_getpwnam(passwd *pw, const char *name, char *str)
     str = store_str_to(str, strend, pUser->getHome());
 
     pw->pw_shell = str;
-    str = store_str_to(str, strend, pUser->getShell());
+    store_str_to(str, strend, pUser->getShell());
 
     return 0;
 }

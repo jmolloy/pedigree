@@ -60,12 +60,13 @@ typedef struct _object_meta {
     _object_meta() :
         filename(), path(), entry(0), mapped_file(0), mapped_file_sz(0),
         relocated(false), load_base(0), running(false), debug(false),
-        memory_regions(), phdrs(0), shdrs(0), sh_symtab(0), sh_strtab(0),
-        symtab(0), strtab(0), sh_shstrtab(0), shstrtab(0), ph_dynamic(0),
-        needed(0), dyn_symtab(0), dyn_strtab(0), dyn_strtab_sz(0), rela(0),
-        rel(0), rela_sz(0), rel_sz(0), uses_rela(false), got(0), plt_rela(0),
-        plt_rel(0), init_func(0), fini_func(0), plt_sz(0), hash(0), hash_buckets(0),
-        hash_chains(0), preloads(), objects(), parent(0)
+        memory_regions(), phdrs(0), num_phdrs(0), shdrs(0), num_shdrs(0),
+        sh_symtab(0), sh_strtab(0), symtab(0), strtab(0), sh_shstrtab(0),
+        shstrtab(0), ph_dynamic(0), needed(0), dyn_symtab(0), dyn_strtab(0),
+        dyn_strtab_sz(0), rela(0), rel(0), rela_sz(0), rel_sz(0),
+        uses_rela(false), got(0), plt_rela(0), plt_rel(0), init_func(0),
+        fini_func(0), plt_sz(0), hash(0), hash_buckets(0), hash_chains(0),
+        preloads(), objects(), parent(0)
     {}
 
     std::string filename;

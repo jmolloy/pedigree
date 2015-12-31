@@ -137,6 +137,12 @@ void HostedVga::moveCursor (size_t nX, size_t nY)
 
 bool HostedVga::initialise()
 {
+    if (m_pBackbuffer)
+    {
+        // Already initialised.
+        return true;
+    }
+
     m_pBackbuffer = new uint16_t[m_nHeight * m_nWidth];
     m_nControls = 0;
 

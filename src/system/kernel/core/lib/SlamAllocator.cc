@@ -161,11 +161,11 @@ inline void unmap(void *addr)
 }
 
 SlamCache::SlamCache() :
-    m_ObjectSize(0), m_SlabSize(0)
+    m_PartialLists(), m_ObjectSize(0), m_SlabSize(0)
 #if CRIPPLINGLY_VIGILANT
     ,m_FirstSlab()
 #endif
-    , m_RecoveryLock(false)
+    , m_RecoveryLock(false), m_EmptyNode()
 {
 }
 
@@ -184,9 +184,11 @@ void SlamCache::initialise(size_t objectSize)
     else
         m_SlabSize = SLAB_MINIMUM_SIZE;
 
-    size_t maxCpu = 1;
 #ifdef MULTIPROCESSOR
-    maxCpu = 255;
+    /// \todo number of CPUs here
+    size_t maxCpu = 255;
+#else
+    size_t maxCpu = 1;
 #endif
     for (size_t i = 0; i < maxCpu; i++)
         m_PartialLists[i] = tagged(&m_EmptyNode);
@@ -634,7 +636,8 @@ SlamAllocator::SlamAllocator() :
 #if CRIPPLINGLY_VIGILANT
     , m_bVigilant(false)
 #endif
-    , m_SlabRegionLock(false), m_HeapPageCount(0)
+    , m_SlabRegionLock(false), m_HeapPageCount(0), m_SlabRegionBitmap(),
+    m_SlabRegionBitmapEntries(0), m_Base(0)
 {
 }
 

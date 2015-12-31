@@ -184,7 +184,8 @@ class PosixSubsystem : public Subsystem
         PosixSubsystem() :
             Subsystem(Posix), m_SignalHandlers(), m_SignalHandlersLock(),
             m_FdMap(), m_NextFd(0), m_FdLock(), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
-            m_AltSigStack(), m_SyncObjects(), m_Threads()
+            m_AltSigStack(), m_SyncObjects(), m_Threads(), m_ThreadWaiters(),
+            m_NextThreadWaiter(0)
         {}
 
         /** Copy constructor */
@@ -194,7 +195,8 @@ class PosixSubsystem : public Subsystem
         PosixSubsystem(SubsystemType type) :
             Subsystem(type), m_SignalHandlers(), m_SignalHandlersLock(),
             m_FdMap(), m_NextFd(0), m_FdLock(), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
-            m_AltSigStack(), m_SyncObjects(), m_Threads()
+            m_AltSigStack(), m_SyncObjects(), m_Threads(), m_ThreadWaiters(),
+            m_NextThreadWaiter(0)
         {}
 
         /** Default destructor */
@@ -280,6 +282,11 @@ class PosixSubsystem : public Subsystem
 
             SignalHandler &operator = (const SignalHandler &s)
             {
+                if (this == &s)
+                {
+                    return *this;
+                }
+
                 if(pEvent)
                 {
                     delete pEvent;

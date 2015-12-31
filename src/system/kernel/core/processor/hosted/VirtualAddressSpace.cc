@@ -82,8 +82,8 @@ void *HostedVirtualAddressSpace::getEndOfHeap() {
 }
 
 bool HostedVirtualAddressSpace::isAddressValid(void *virtualAddress) {
-  if (reinterpret_cast<uint64_t>(virtualAddress) < 0x0008000000000000 ||
-      reinterpret_cast<uint64_t>(virtualAddress) >= 0xFFF8000000000000)
+  if (reinterpret_cast<uint64_t>(virtualAddress) < 0x0008000000000000ULL ||
+      reinterpret_cast<uint64_t>(virtualAddress) >= 0xFFF8000000000000ULL)
     return true;
   return false;
 }

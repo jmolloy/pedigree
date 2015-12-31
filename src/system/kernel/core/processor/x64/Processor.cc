@@ -143,11 +143,11 @@ PAT7 UC
 
 void Processor::initialise2(const BootstrapStruct_t &Info)
 {
+#if defined(MULTIPROCESSOR)
+  size_t nProcessors = Multiprocessor::initialise1();
+#else
   size_t nProcessors = 1;
-
-  #if defined(MULTIPROCESSOR)
-    nProcessors = Multiprocessor::initialise1();
-  #endif
+#endif
 
   // Initialise the GDT
   X64GdtManager::instance().initialise(nProcessors);

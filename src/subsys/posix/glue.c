@@ -2160,8 +2160,9 @@ void siglongjmp(sigjmp_buf env, int val)
 char *basename(char *path)
 {
     static char bad[2] = {'.', 0};
-    if((!path) || (path && !*path))
+    if((path == NULL) || (path && !*path))
         return bad;
+
     char *p = strrchr(path, '/');
     if(!p)
         return path;
@@ -2370,7 +2371,7 @@ int posix_openpt(int oflag)
 
 int openpty(int *amaster, int *aslave, char *name, const struct termios *termp, const struct winsize *winp)
 {
-    if(!amaster)
+    if(amaster == NULL)
     {
         errno = EINVAL;
         return -1;
