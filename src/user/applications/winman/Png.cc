@@ -38,11 +38,13 @@ Png::Png(const char *filename) :
     if (fread(buf, 1, 4, stream) != 4)
     {
         syslog(LOG_ALERT, "PNG file failed to read ident");
+        fclose(stream);
         return;
     }
     if (png_sig_cmp(reinterpret_cast<png_byte*>(buf), 0, 4) != 0)
     {
         syslog(LOG_ALERT, "PNG file failed IDENT check");
+        fclose(stream);
         return;
     }
 
@@ -52,6 +54,7 @@ Png::Png(const char *filename) :
     if (m_PngPtr == 0)
     {
         syslog(LOG_ALERT, "PNG file failed to initialise");
+        fclose(stream);
         return;
     }
 
@@ -59,6 +62,8 @@ Png::Png(const char *filename) :
     if (m_InfoPtr == 0)
     {
         syslog(LOG_ALERT, "PNG info failed to initialise");
+        png_destroy_read_struct(&m_PngPtr, NULL, NULL);
+        fclose(stream);
         return;
     }
 
@@ -83,6 +88,7 @@ Png::Png(const char *filename) :
     m_nWidth = w;
     m_nHeight = h;
 
+    /// \todo clean up after these errors.
     if (bit_depth != 8)
     {
         syslog(LOG_ALERT, "PNG - invalid bit depth");
