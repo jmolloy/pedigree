@@ -360,7 +360,7 @@ public:
     }
 
     // Add the string
-    strncat(m_pData, str, N-length());
+    strncat(m_pData, str, N-length()-1);
     m_Length += length2;
 
     if (m_Length >= N)
