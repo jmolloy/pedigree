@@ -118,6 +118,7 @@ int posix_sem_init(sem_t *sem, int pshared, unsigned value)
         else
         {
             SYSCALL_ERROR(OutOfMemory);
+            delete p;
             return -1;
         }
 
