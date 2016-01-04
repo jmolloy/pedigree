@@ -37,7 +37,7 @@ void MacAddress::setMac(uint8_t byte, size_t element)
 
   if(element < 3)
   {
-    m_Mac[element] |= byte;
+    m_Mac[element] |= word;
     m_Valid = true; // it has at least a byte, which makes it partially valid
   }
 }
