@@ -196,6 +196,11 @@ buildInclude = env_clone.Dir(builddir + '/include-posix')
 
 env.Alias("crt0", "crt")
 
+# Install updated headers to the local images directory. Newlib depends on
+# them, rather than the provided-with-newlib headers.
+buildutils.fs.install_tree(
+    env.Dir(os.path.join(imagesdir, 'include')), baseInclude, env, 'headers')
+
 # TODO(miselin): we really should be able to build libc on Pedigree. Fix this.
 if not env['ON_PEDIGREE']:
     env_clone.Command([buildLibc], [glue_objname, baseLibc],
@@ -221,7 +226,3 @@ if not env['ON_PEDIGREE']:
     env.Alias("libs", [buildLibc, buildLibm])
 
     SConscript(os.path.join('newlib', 'SConscript'), exports=['userspace_env'])
-
-# Install updated headers to the local images directory.
-buildutils.fs.install_tree(
-    env.Dir(os.path.join(imagesdir, 'include')), baseInclude, env, 'headers')

@@ -55,8 +55,10 @@ def install_tree(target_dir, source_dir, env, alias=None):
         for root, dirnames, filenames in os.walk(source):
             relpath = os.path.relpath(root, source)
             for filename in filenames:
-                env.Install(os.path.join(target, relpath), os.path.join(root, filename))
+                target_path = os.path.join(target, relpath)
+                target_file = os.path.join(target_path, filename)
+                t = env.Install(os.path.join(target, relpath), os.path.join(root, filename))
+                if alias:
+                    env.Alias(alias, t)
 
     deep_install(target_dir, source_dir, env)
-    if alias:
-        env.Alias(alias, target_dir)

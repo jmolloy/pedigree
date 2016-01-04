@@ -6,7 +6,7 @@ export PATH="$SRCDIR/compilers/dir/bin:$PATH"
 # Fix include path so newlib's own headers don't override Pedigree's.
 CC_VERSION=`$XGCC -dumpversion`
 XGCC="$XGCC -nostdinc -nostdlib"
-XGCC="$XGCC -I$SRCDIR/compilers/dir/$COMPILER_TARGET/include"
+XGCC="$XGCC -I$SRCDIR/images/local/include"
 XGCC="$XGCC -I$SRCDIR/compilers/dir/lib/gcc/$COMPILER_TARGET/$CC_VERSION/include"
 XGCC="$XGCC -I$SRCDIR/compilers/dir/lib/gcc/$COMPILER_TARGET/$CC_VERSION/include-fixed"
 
