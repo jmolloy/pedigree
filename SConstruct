@@ -203,12 +203,18 @@ tools_to_find = [
 # That specifically breaks the build on OS X when using tar from macports (which
 # is needed at least on OS X 10.5 as the OS X tar does not have --transform).
 system_path = os.environ.get('PATH', '')
+environment = {
+    'PATH': system_path,
+    # Needed to pass in preloads for Bear to build compilation databases.
+    'LD_PRELOAD': os.environ.get('LD_PRELOAD', ''),
+    'DYLD_INSERT_LIBRARIES': os.environ.get('DYLD_INSERT_LIBRARIES', ''),
+}
 try:
-    env = Environment(options=opts, platform='posix', ENV={'PATH': system_path},
+    env = Environment(options=opts, platform='posix', ENV=environment,
                       tools=tools_to_find, TARFLAGS='-cz')
 except SCons.Errors.EnvironmentError:
     tools_to_find.remove('textfile')
-    env = Environment(options=opts, platform='posix', ENV={'PATH': system_path},
+    env = Environment(options=opts, platform='posix', ENV=environment,
                       tools=tools_to_find, TARFLAGS='-cz')
 Help(opts.GenerateHelpText(env))
 
@@ -406,9 +412,9 @@ if env['CROSS'] or env['ON_PEDIGREE']:
     env['XCOMPILER_PATH'] = crossPath
 
     prefix = ''
-    if env['DISTCC'] is not None:
+    if env['distcc'] and env['DISTCC'] is not None:
         prefix = '%s %s' % (env['DISTCC'], prefix)
-    if env['CCACHE'] is not None:
+    if env['ccache'] and env['CCACHE'] is not None:
         prefix = '%s %s' % (env['CCACHE'], prefix)
     prefix = prefix.strip()
 
