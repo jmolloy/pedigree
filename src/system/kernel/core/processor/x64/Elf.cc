@@ -138,6 +138,11 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
             result = (result&0xFFFFFFFF00000000) | ((S + A - P) & 0xFFFFFFFF);
             break;
         case R_X86_64_COPY:
+            if (!S)
+            {
+                ERROR("Cannot perform a R_X86_64_COPY relocation for a weak symbol.");
+                return false;
+            }
             result = * reinterpret_cast<uintptr_t*> (S);
             break;
         case R_X86_64_JUMP_SLOT:
