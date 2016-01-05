@@ -326,7 +326,6 @@ bool dhcpClient(Network *pCard)
                 currentState = OFFER_RECVD;
                 break;
             }
-            DhcpOption* opt = reinterpret_cast<DhcpOption*>(incoming->options + sizeof(cookie));
             DhcpOptionMagicCookie *thisCookie = reinterpret_cast<DhcpOptionMagicCookie*>(incoming->options);
             if(thisCookie->cookie != MAGIC_COOKIE)
             {
@@ -336,6 +335,7 @@ bool dhcpClient(Network *pCard)
 
             // Check the options for the magic cookie and DHCP OFFER
             byteOffset = 0;
+            DhcpOption* opt = 0;
             while((byteOffset + sizeof(cookie) + (sizeof(DhcpPacket) - MAX_OPTIONS_SIZE)) < sizeof(DhcpPacket))
             {
                 opt = reinterpret_cast<DhcpOption*>(incoming->options + byteOffset + sizeof(cookie));
@@ -444,7 +444,6 @@ bool dhcpClient(Network *pCard)
                 currentState = ACK_RECVD;
                 break;
             }
-            DhcpOption* opt = reinterpret_cast<DhcpOption*>(incoming->options + sizeof(cookie));
             DhcpOptionMagicCookie *thisCookie = reinterpret_cast<DhcpOptionMagicCookie*>(incoming->options);
             if(thisCookie->cookie != MAGIC_COOKIE)
             {
@@ -454,6 +453,7 @@ bool dhcpClient(Network *pCard)
 
             // check the options for the magic cookie and DHCP OFFER
             byteOffset = 0;
+            DhcpOption* opt = 0;
             while((byteOffset + sizeof(cookie) + (sizeof(DhcpPacket) - MAX_OPTIONS_SIZE)) < sizeof(DhcpPacket))
             {
                 opt = reinterpret_cast<DhcpOption*>(incoming->options + byteOffset + sizeof(cookie));
@@ -507,6 +507,10 @@ bool dhcpClient(Network *pCard)
         {
             WARNING("DHCP: Couldn't get a valid ack packet.");
             UdpManager::instance().returnEndpoint(e);
+            if (dnsServers)
+            {
+                delete [] dnsServers;
+            }
             delete [] buff;
             return false;
         }
@@ -555,6 +559,7 @@ bool dhcpClient(Network *pCard)
         return pCard->setStationInfo(host);
     }
 
+    delete [] buff;
     return false;
 }
 

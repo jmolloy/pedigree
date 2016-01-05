@@ -53,7 +53,7 @@ static void sigsegv(int s)
                 printf("PROT_NONE works, checking read...\n");
                 mprotect(p, 0x1000, PROT_READ);
                 i = -1;
-                char c = *p;
+                volatile char c = *p;
                 i = 0;
             }
             break;
@@ -63,7 +63,7 @@ static void sigsegv(int s)
                 printf("PROT_READ works, checking write...\n");
                 mprotect(p, 0x1000, PROT_WRITE);
                 i = -1;
-                *p = 'Y';
+                *((volatile char *) p) = 'Y';
                 i = 1;
                 mprotect(p, 0x1000, PROT_NONE);
             }
@@ -74,7 +74,7 @@ static void sigsegv(int s)
                 printf("PROT_WRITE works, checking exec...\n");
                 mprotect(p, 0x1000, PROT_WRITE);
                 i = -1;
-                *((unsigned char *) p) = 0xC3; // ret
+                *((volatile unsigned char *) p) = 0xC3; // ret
                 fn f = (fn) p;
                 mprotect(p, 0x1000, PROT_EXEC);
                 f();

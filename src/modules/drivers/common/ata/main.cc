@@ -111,6 +111,9 @@ void removeIsaAta(Device *pDev)
 
                 // This leaves i one item too far - easily fixed.
                 i--;
+
+                // Don't recurse on the device we just removed.
+                continue;
             }
         }
 
@@ -161,6 +164,10 @@ static void searchNode(Device *pDev, bool bFallBackISA)
 
                 probePiixController(pChild);
                 bPiixControllerFound = true;
+
+                // Don't recurse into the child as we probably removed it.
+                /// \todo need more status from probe function
+                continue;
             }
         }
         // Recurse.

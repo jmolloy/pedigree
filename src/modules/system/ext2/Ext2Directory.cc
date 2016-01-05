@@ -237,14 +237,6 @@ bool Ext2Directory::removeEntry(const String &filename, Ext2Node *pFile)
                         ///       a blank record must be created to point to
                         ///       either the next entry or the end of the block.
 
-                        /*
-                        if (pLastDir)
-                        {
-                            uint16_t new_reclen = old_reclen + LITTLE_TO_HOST16(pLastDir->d_reclen);
-                            pLastDir->d_reclen = HOST_TO_LITTLE16(new_reclen);
-                        }
-                        */
-
                         pDir->d_reclen = HOST_TO_LITTLE16(old_reclen);
 
                         m_pExt2Fs->writeBlock(m_pBlocks[i]);
@@ -259,7 +251,6 @@ bool Ext2Directory::removeEntry(const String &filename, Ext2Node *pFile)
                 break;
             }
 
-            pLastDir = pDir;
             pDir = reinterpret_cast<Dir*> (reinterpret_cast<uintptr_t>(pDir) + LITTLE_TO_HOST16(pDir->d_reclen));
         }
 
@@ -353,7 +344,7 @@ void Ext2Directory::cacheDirectoryContents()
 
             // Grab filename from the entry.
             String sFilename;
-            sFilename.assign(pDir->d_name, pDir->d_namelen);
+            sFilename.assign(pDir->d_name, namelen);
 
             File *pFile = 0;
             switch (fileType)

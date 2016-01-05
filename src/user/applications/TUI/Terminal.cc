@@ -37,8 +37,6 @@
 
 extern PedigreeGraphics::Framebuffer *g_pFramebuffer;
 
-extern rgb_t g_MainBackgroundColour;
-
 extern cairo_t *g_Cairo;
 
 Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, size_t offsetLeft, size_t offsetTop, rgb_t *pBackground) :
@@ -48,19 +46,15 @@ Terminal::Terminal(char *pName, size_t nWidth, size_t nHeight, size_t offsetLeft
     cairo_save(g_Cairo);
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
 
-    cairo_set_source_rgba(
-            g_Cairo,
-            g_MainBackgroundColour.r / 256.0,
-            g_MainBackgroundColour.g / 256.0,
-            g_MainBackgroundColour.b / 256.0,
-            0.8);
+    cairo_set_source_rgba(g_Cairo, 0, 0, 0, 0.8);
 
     cairo_rectangle(g_Cairo, m_OffsetLeft, m_OffsetTop, nWidth, nHeight);
     cairo_fill(g_Cairo);
 
     cairo_restore(g_Cairo);
 
-    strcpy(m_pName, pName);
+    strncpy(m_pName, pName, 256);
+    m_pName[255] = 0;
 
 #ifndef NEW_XTERM
     m_pXterm = new Xterm(0, nWidth, nHeight, m_OffsetLeft, m_OffsetTop, this);
@@ -94,7 +88,8 @@ bool Terminal::initialise()
     unlockpt(m_MasterPty);
 #endif
     char slavename[16] = {0};
-    strcpy(slavename, ptsname(m_MasterPty));
+    strncpy(slavename, ptsname(m_MasterPty), 16);
+    slavename[15] = 0;
 
     struct winsize ptySize;
     memset(&ptySize, 0, sizeof(ptySize));
@@ -168,9 +163,9 @@ bool Terminal::initialise()
         ut.ut_type = USER_PROCESS;
         ut.ut_pid = getpid();
         const char *ttyid = slavename + strlen("/dev/");
-        strcpy(ut.ut_id, ttyid + strlen("tty"));
-        strcpy(ut.ut_line, ttyid);
-        strcpy(ut.ut_user, pw->pw_name);
+        strncpy(ut.ut_id, ttyid + strlen("tty"), UT_LINESIZE);
+        strncpy(ut.ut_line, ttyid, UT_LINESIZE);
+        strncpy(ut.ut_user, pw->pw_name, UT_NAMESIZE);
         gettimeofday(&ut.ut_tv, NULL);
 
         setutxent();
@@ -316,7 +311,6 @@ void Terminal::write(const char *pStr, DirtyRectangle &rect)
         else
         {
             m_WriteBufferLen = 0;
-            nBytes = 1;
             continue;
         }
 

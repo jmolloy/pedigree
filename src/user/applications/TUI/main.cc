@@ -40,7 +40,6 @@
 
 #include "Font.h"
 #include "Png.h"
-#include "Header.h"
 
 #include <native/graphics/Graphics.h>
 #include <native/input/Input.h>

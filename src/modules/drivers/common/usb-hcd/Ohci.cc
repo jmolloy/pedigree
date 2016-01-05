@@ -244,6 +244,11 @@ void Ohci::removeED(ED *pED)
         pQueueHead = &m_pBulkQueueHead;
         pQueueTail = &m_pBulkQueueTail;
     }
+    else
+    {
+        ERROR("OHCI: ED #" << pED->pMetaData->id << " has an invalid type!");
+        return;
+    }
     
     bool bControl = pED->pMetaData->edType == ControlList;
     

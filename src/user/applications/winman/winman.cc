@@ -303,9 +303,6 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
         pHeader->messageSize = sizeof(LibUiProtocol::CreateMessageResponse);
         pHeader->isResponse = true;
 
-        LibUiProtocol::CreateMessageResponse *pCreateResp =
-            reinterpret_cast<LibUiProtocol::CreateMessageResponse*>(responseData + sizeof(LibUiProtocol::WindowManagerMessage));
-
         g_Windows->insert(std::make_pair(pWinMan->widgetHandle, pWindow));
 
         pWindow->sendMessage(responseData, totalSize);
@@ -327,9 +324,6 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
             pHeader->widgetHandle = pWinMan->widgetHandle;
             pHeader->messageSize = sizeof(LibUiProtocol::SyncMessageResponse);
             pHeader->isResponse = true;
-
-            LibUiProtocol::SyncMessageResponse *pSyncResp =
-                reinterpret_cast<LibUiProtocol::SyncMessageResponse*>(responseData + sizeof(LibUiProtocol::WindowManagerMessage));
 
             pWindow->sendMessage(responseData, totalSize);
 
@@ -569,7 +563,6 @@ void queueInputCallback(Input::InputNotification &note)
     static bool bResize = false;
 
     bool bHandled = false;
-    bool bWakeup = false;
     if(note.type & Input::Key)
     {
         uint64_t c = note.data.key.key;
@@ -701,7 +694,6 @@ void queueInputCallback(Input::InputNotification &note)
                 // the container in which the window with focus is in.
                 bResize = true;
                 bHandled = true;
-                bWakeup = true;
                 g_StatusField = "<resize mode>";
 
                 // Don't transmit resizes to the client(s) yet.
@@ -756,13 +748,12 @@ void queueInputCallback(Input::InputNotification &note)
 
                 g_pFocusWindow = newFocus;
                 g_pFocusWindow->focus();
-                bWakeup = true;
             }
         }
 
         if((!bHandled) && bResize && (g_pFocusWindow))
         {
-            bWakeup = true;
+            bool bWakeup = true;
             bHandled = true;
 
             Container *focusParent = g_pFocusWindow->getParent();
@@ -1084,7 +1075,7 @@ int main(int argc, char *argv[])
     struct sockaddr_un bind_addr;
     bind_addr.sun_family = AF_UNIX;
     memset(bind_addr.sun_path, 0, sizeof bind_addr.sun_path);
-    strcpy(bind_addr.sun_path, WINMAN_SOCKET_PATH);
+    strncpy(bind_addr.sun_path, WINMAN_SOCKET_PATH, UNIX_PATH_MAX);
     socklen_t socklen = sizeof(bind_addr);
     result = bind(g_iSocket, (struct sockaddr *) &bind_addr, socklen);
     if (result != 0)

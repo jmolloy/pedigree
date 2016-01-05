@@ -420,6 +420,10 @@ int init_stage2(void *param)
     if (!argv_loc)
     {
         pProcess->getSpaceAllocator().allocate(PhysicalMemoryManager::instance().getPageSize(), argv_loc);
+        if (!argv_loc)
+        {
+            FATAL("init could not find space in the address space for argv!");
+        }
     }
 
     physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();

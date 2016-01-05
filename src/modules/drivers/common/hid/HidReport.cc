@@ -96,8 +96,9 @@ void HidReport::parseDescriptor(uint8_t *pDescriptor, size_t nDescriptorLength)
         i += size;
 
         // Don't allow for Main items (Input, Output, Feature, etc.) outside a collection
-        if(!pCurrentCollection && item.type == MainItem && item.tag !=  CollectionItem)
-            continue;
+        if(!pCurrentCollection)
+            if (item.type == MainItem && item.tag != CollectionItem)
+                continue;
 
         // Check for type and tag to find which item do we have
         switch(MIX_TYPE_N_TAG(item.type, item.tag))

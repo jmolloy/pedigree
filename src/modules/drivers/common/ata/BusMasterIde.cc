@@ -87,7 +87,7 @@ bool BusMasterIde::add(uintptr_t buffer, size_t nBytes)
     size_t prdTableEntries = (m_PrdTableMemRegion.size() / sizeof(PhysicalRegionDescriptor));
 
     // Firstly check if we need to wait a bit... If an operation
-    uint8_t statusReg = m_pBase->read8(Status);
+    m_pBase->read8(Status);
     /// \todo Can't write if a read is in progress, and vice versa
 
     // Okay, we're good to go - check that the buffer is mapped in first

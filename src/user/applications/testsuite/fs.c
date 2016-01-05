@@ -29,7 +29,7 @@ extern void fail();
 
 static void status(const char *s)
 {
-    printf(s);
+    puts(s);
     fflush(stdout);
 }
 

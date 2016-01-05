@@ -35,14 +35,14 @@ _BEGIN_STD_C
 ///todo Proper code for sigjmp
 typedef jmp_buf sigjmp_buf;
 
-void	_EXFUN(longjmp,(jmp_buf __jmpb, int __retval));
+void	_EXFUN(longjmp,(jmp_buf __jmpb, int __retval)) _ATTRIBUTE((noreturn));
 int	    _EXFUN(setjmp,(jmp_buf __jmpb));
 
 int     _EXFUN(sigsetjmp, (sigjmp_buf env, int savemask));
 void    _EXFUN(siglongjmp, (sigjmp_buf env, int val)) _ATTRIBUTE((noreturn));
 
 // Legacy longjmp/setjmp that does not modify the signal mask.
-int     _EXFUN(_longjmp,(jmp_buf __jmpb, int __retval));
+int     _EXFUN(_longjmp,(jmp_buf __jmpb, int __retval)) _ATTRIBUTE((noreturn));
 int     _EXFUN(_setjmp,(jmp_buf __jmpb));
 
 _END_STD_C

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -210,7 +209,6 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
 
   // Store the addresses for the packet data
   uintptr_t packetAddress = packet + offset;
-  size_t packetSize = nBytes - offset;
   bool wasFragment = false;
 
   // Verify the checksum
@@ -355,7 +353,6 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
 
             // Fall through to the handling of a conventional packet
             packetAddress = reinterpret_cast<uintptr_t>(buff);
-            packetSize = fullLength;
             wasFragment = true;
         }
         else
@@ -411,7 +408,7 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
 
     if(wasFragment)
     {
-        delete reinterpret_cast<char*>(packetAddress);
+        delete [] reinterpret_cast<char*>(packetAddress);
     }
   }
   else

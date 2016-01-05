@@ -153,14 +153,6 @@ void AnonymousMemoryMap::setPermissions(MemoryMappedObject::Permissions perms)
     }
     else
     {
-        size_t newFlags = 0;
-
-        // Remap any existing mappings to use the new flags.
-        if(perms & MemoryMappedObject::Write)
-            newFlags |= VirtualAddressSpace::Write;
-        if(perms & MemoryMappedObject::Exec)
-            newFlags |= VirtualAddressSpace::Execute;
-
         // Adjust any existing mappings in this object.
         for(List<void *>::Iterator it = m_Mappings.begin();
             it != m_Mappings.end();

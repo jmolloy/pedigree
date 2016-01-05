@@ -657,8 +657,6 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
         {
           if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0))
             WARNING("TCP: Sending ACK to FIN failed.");
-          else
-            alreadyAck = true;
         }
 
         switch(stateBlock->currentState)
@@ -736,7 +734,10 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
 #if TCP_DEBUG
     NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " caused state change from " << Tcp::stateString(oldState) << " to " << Tcp::stateString(stateBlock->currentState) << ".");
 #endif
-    stateBlock->endpoint->stateChanged(stateBlock->currentState);
+    if (stateBlock->endpoint)
+    {
+      stateBlock->endpoint->stateChanged(stateBlock->currentState);
+    }
     stateBlock->waitState.release();
   }
 

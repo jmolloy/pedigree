@@ -306,6 +306,8 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
         {
             m_pOther->inject(destBuff, len);
         }
+
+        delete [] destBuff;
     }
     else
     {

@@ -100,48 +100,50 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
 
     // Read the BusMaster interface base address register and tell it where we
     // would like to talk to it (BAR4).
-    uint32_t busMasterIfaceAddr = PciBus::instance().readConfigSpace(pDev, 8);
-    busMasterIfaceAddr &= 0xFFFF000F;
-    busMasterIfaceAddr |= bar4->m_Address & 0xFFF0;
-    NOTICE("    - Bus master interface base register at " << bar4->m_Address);
-    PciBus::instance().writeConfigSpace(pDev, 8, busMasterIfaceAddr);
-
-    // Read the command register and then enable I/O space. We do this so that
-    // we can still access drives using PIO. We also enable the BusMaster
-    // function on the controller.
-    uint32_t commandReg = PciBus::instance().readConfigSpace(pDev, 1);
-    commandReg = (commandReg & ~(0x5)) | 0x5;
-    PciBus::instance().writeConfigSpace(pDev, 1, commandReg);
-
-    // Fiddle with the IDE timing registers
-    uint32_t ideTiming = PciBus::instance().readConfigSpace(pDev, 0x10);
-    // TIME0, TIME1, IE0, IE1, PPE0, PPE1, DTE0, DTE1, minimum recovery time,
-    // minimum IORDY sample point, IDE decode enable.
-    ideTiming = 0xB3FF;
-    // Apply to both channels.
-    ideTiming |= (ideTiming << 16);
-    PciBus::instance().writeConfigSpace(pDev, 0x10, ideTiming);
-
-    // Write the interrupt line into the PCI space if needed.
-    // This is only meaningful for < PIIX3...
-    if(m_PciControllerType == PIIX)
+    if (bar4)
     {
-        uint32_t miscFields = PciBus::instance().readConfigSpace(pDev, 0xF);
-        if((miscFields & 0xF) != getInterruptNumber())
+        uint32_t busMasterIfaceAddr = PciBus::instance().readConfigSpace(pDev, 8);
+        busMasterIfaceAddr &= 0xFFFF000F;
+        busMasterIfaceAddr |= bar4->m_Address & 0xFFF0;
+        NOTICE("    - Bus master interface base register at " << bar4->m_Address);
+        PciBus::instance().writeConfigSpace(pDev, 8, busMasterIfaceAddr);
+
+        // Read the command register and then enable I/O space. We do this so that
+        // we can still access drives using PIO. We also enable the BusMaster
+        // function on the controller.
+        uint32_t commandReg = PciBus::instance().readConfigSpace(pDev, 1);
+        commandReg = (commandReg & ~(0x5)) | 0x5;
+        PciBus::instance().writeConfigSpace(pDev, 1, commandReg);
+
+        // Fiddle with the IDE timing registers
+        // TIME0, TIME1, IE0, IE1, PPE0, PPE1, DTE0, DTE1, minimum recovery time,
+        // minimum IORDY sample point, IDE decode enable.
+        uint32_t ideTiming = 0xB3FF;
+        // Apply to both channels.
+        ideTiming |= (ideTiming << 16);
+        PciBus::instance().writeConfigSpace(pDev, 0x10, ideTiming);
+
+        // Write the interrupt line into the PCI space if needed.
+        // This is only meaningful for < PIIX3...
+        if(m_PciControllerType == PIIX)
         {
-            if(getInterruptNumber())
+            uint32_t miscFields = PciBus::instance().readConfigSpace(pDev, 0xF);
+            if((miscFields & 0xF) != getInterruptNumber())
             {
-                miscFields &= ~0xF;
-                miscFields |= getInterruptNumber() & 0xF;
+                if(getInterruptNumber())
+                {
+                    miscFields &= ~0xF;
+                    miscFields |= getInterruptNumber() & 0xF;
+                }
             }
+            PciBus::instance().writeConfigSpace(pDev, 0xF, miscFields);
         }
-        PciBus::instance().writeConfigSpace(pDev, 0xF, miscFields);
     }
 
     // The controller must be able to perform BusMaster IDE DMA transfers, or
     // else we have to fall back to PIO transfers.
     bool bDma = false;
-    if(pDev->getPciProgInterface() & 0x80)
+    if(bar4 && (pDev->getPciProgInterface() & 0x80))
     {
         NOTICE("    - This is a DMA capable controller");
         bDma = true;

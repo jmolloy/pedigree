@@ -125,16 +125,7 @@ class VbeFramebuffer : public Framebuffer
         virtual void hwRedraw(size_t x = ~0UL, size_t y = ~0UL,
                               size_t w = ~0UL, size_t h = ~0UL)
         {
-            if(x == ~0UL)
-                x = 0;
-            if(y == ~0UL)
-                y = 0;
-            if(w == ~0UL)
-                w = getWidth();
-            if(h == ~0UL)
-                h = getHeight();
-
-            /// \todo Subregions
+            /// \todo Subregions - this just refreshes the entire screen
             memcpy(m_pDisplay->getFramebuffer(), m_pBackbuffer, m_nBackbufferBytes);
         }
         
@@ -145,7 +136,12 @@ class VbeFramebuffer : public Framebuffer
         virtual void setFramebuffer(uintptr_t p)
         {
             Display::ScreenMode sm;
-            m_pDisplay->getCurrentScreenMode(sm); /// \todo handle error
+            memset(&sm, 0, sizeof(Display::ScreenMode));
+            if (!m_pDisplay->getCurrentScreenMode(sm))
+            {
+                ERROR("VBE: setting screen mode failed.");
+                return;
+            }
             m_nBackbufferBytes = sm.bytesPerLine * sm.height;
             if(m_nBackbufferBytes)
             {

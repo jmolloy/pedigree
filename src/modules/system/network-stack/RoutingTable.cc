@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -166,6 +165,13 @@ void RoutingTable::Add(Type type, IpAddress dest, IpAddress subnet, IpAddress su
 
 Network *RoutingTable::route(IpAddress *ip, Config::Result *pResult)
 {
+    if (!(ip && pResult))
+    {
+        // Need both parameters presented.
+        delete pResult;
+        return 0;
+    }
+
     // Grab the interface
     Network *pCard = static_cast<Network*>(DeviceHashTree::instance().getDevice(pResult->getNum(0, "iface")));
 

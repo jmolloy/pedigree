@@ -69,7 +69,7 @@ int main(int argc, char **argv)
     {
       syslog(LOG_INFO, "preloadd: preloading %s...", s);
       FILE *fp = fopen(s, "rb");
-      for(off_t off = 0; off < st.st_size; off += BLOCK_READ_SIZE);
+      for(off_t off = 0; off < st.st_size; off += BLOCK_READ_SIZE)
         fread(buf, BLOCK_READ_SIZE, 1, fp);
       fclose(fp);
       syslog(LOG_INFO, "preloadd: preloading %s complete!", s);

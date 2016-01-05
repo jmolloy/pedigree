@@ -180,15 +180,8 @@ bool FatFilesystem::initialise(Disk *pDisk)
         readSectorBlock(sec, 512, reinterpret_cast<uintptr_t>(&m_FsInfo));
     }
 
-    // determine the size of the FAT
-    fatSz = (m_Superblock.BPB_FATSz16) ? m_Superblock.BPB_FATSz16 : m_Superblock32.BPB_FATSz32;
-    fatSz *= m_Superblock.BPB_BytsPerSec;
-
-    // read the FAT into cache
+    // Save the start sector of the FAT now
     m_FatSector = m_Superblock.BPB_RsvdSecCnt;
-
-    //m_pFatCache = new uint8_t[fatSz];
-    //readSectorBlock(fatSector, fatSz, reinterpret_cast<uintptr_t>(m_pFatCache));
 
     // Setup the free cluster hint for non-FAT32 volumes
     m_FreeClusterHint = 2;
@@ -371,7 +364,6 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
 
         // Perform the copy.
         memcpy(&destBuffer[bytesRead], &tmpBuffer[currOffset], bytesToCopy);
-        currOffset += bytesToCopy;
         bytesRead += bytesToCopy;
 
         // Done?
@@ -657,7 +649,6 @@ void* FatFilesystem::readDirectoryPortion(uint32_t clus)
     uint32_t dirClus = clus;
     uint8_t* dirBuffer = 0;
 
-    bool secMethod = false;
     if (dirClus == 0)
     {
         if (m_Type != FAT32)
@@ -667,8 +658,6 @@ void* FatFilesystem::readDirectoryPortion(uint32_t clus)
 
             dirBuffer = new uint8_t[sz];
             readSectorBlock(sec, sz, reinterpret_cast<uintptr_t>(dirBuffer));
-
-            secMethod = true;
         }
         else
             return 0;
@@ -757,7 +746,11 @@ bool FatFilesystem::readCluster(uint32_t block, uintptr_t buffer)
 
 bool FatFilesystem::readSectorBlock(uint32_t sec, size_t size, uintptr_t buffer)
 {
-    assert(buffer);
+    if (!buffer)
+    {
+        return false;
+    }
+
     size_t off = 0;
     while (size)
     {
@@ -784,7 +777,11 @@ bool FatFilesystem::writeCluster(uint32_t block, uintptr_t buffer)
 
 bool FatFilesystem::writeSectorBlock(uint32_t sec, size_t size, uintptr_t buffer)
 {
-    assert(buffer);
+    if (!buffer)
+    {
+        return false;
+    }
+
     size_t off = 0;
     while (size)
     {
@@ -846,7 +843,7 @@ uint32_t FatFilesystem::getClusterEntry(uint32_t cluster, bool bLock)
         if(!readSectorBlock(m_FatSector + (fatOffset / m_Superblock.BPB_BytsPerSec), m_Superblock.BPB_BytsPerSec * 2, reinterpret_cast<uintptr_t>(fatBlocks)))
         {
             ERROR("FAT: getClusterEntry: reading from the FAT failed");
-            //delete [] fatBlocks;
+            delete [] fatBlocks;
             m_FatLock.release();
             return 0;
         }
@@ -952,12 +949,6 @@ uint32_t FatFilesystem::setClusterEntry(uint32_t cluster, uint32_t value, bool b
     switch (m_Type)
     {
         case FAT12:
-
-            if (cluster & 0x1)
-                setEnt >>= 4;
-            else
-                setEnt &= 0x0FFF;
-            setEnt &= 0xFFFF;
 
             if (cluster & 0x1)
             {

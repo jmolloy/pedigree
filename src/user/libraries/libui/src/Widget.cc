@@ -100,12 +100,12 @@ bool Widget::construct(const char *endpoint, const char *title, widgetCallback_t
     struct sockaddr_un meaddr;
     memset(&meaddr, 0, sizeof(meaddr));
     meaddr.sun_family = AF_UNIX;
-    sprintf(meaddr.sun_path, CLIENT_SOCKET_BASE, endpoint);
+    snprintf(meaddr.sun_path, UNIX_PATH_MAX, CLIENT_SOCKET_BASE, endpoint);
 
     struct sockaddr_un saddr;
     memset(&saddr, 0, sizeof(saddr));
     saddr.sun_family = AF_UNIX;
-    strcpy(saddr.sun_path, WINMAN_SOCKET_PATH);
+    strncpy(saddr.sun_path, WINMAN_SOCKET_PATH, UNIX_PATH_MAX);
 
     // Create socket for window manager communication.
     m_Socket = socket(AF_UNIX, SOCK_DGRAM, 0);
@@ -293,7 +293,6 @@ void Widget::destroy()
     char *messageData = new char[totalSize];
     memset(messageData, 0, totalSize);
     WindowManagerMessage *pWinMan = reinterpret_cast<WindowManagerMessage*>(messageData);
-    DestroyMessage *pMessage = reinterpret_cast<DestroyMessage*>(messageData + sizeof(WindowManagerMessage));
 
     // Fill the message.
     pWinMan->messageCode = Destroy;
@@ -302,7 +301,8 @@ void Widget::destroy()
     pWinMan->isResponse = false;
 
     // Transmit.
-    bool bRet = send(m_Socket, messageData, totalSize, 0) == totalSize;
+    /// \todo do we care if the send fails? We probably do??
+    send(m_Socket, messageData, totalSize, 0);
 
     // Clean up.
     delete [] messageData;

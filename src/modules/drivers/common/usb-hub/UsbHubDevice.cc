@@ -44,9 +44,9 @@ void UsbHubDevice::initialiseDriver()
     else
         return;
 
-    HubDescriptor *pDescriptor = new HubDescriptor(pDesc);
-    DEBUG_LOG("USB: HUB: Found a hub with " << Dec << pDescriptor->nPorts << Hex << " ports and hubCharacteristics = " << pDescriptor->hubCharacteristics);
-    m_nPorts = pDescriptor->nPorts;
+    HubDescriptor pDescriptor(pDesc);
+    DEBUG_LOG("USB: HUB: Found a hub with " << Dec << pDescriptor.nPorts << Hex << " ports and hubCharacteristics = " << pDescriptor.hubCharacteristics);
+    m_nPorts = pDescriptor.nPorts;
     for(size_t i = 0; i < m_nPorts; i++)
     {
         // Grab this port's status

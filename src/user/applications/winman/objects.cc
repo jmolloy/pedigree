@@ -174,7 +174,6 @@ void *Window::getFramebuffer() const
 
 void Window::sendMessage(const char *msg, size_t len)
 {
-    struct sockaddr_un *sun = (struct sockaddr_un *) m_Sa;
     sendto(m_Socket, msg, len, 0, m_Sa, m_SaLen);
 }
 
@@ -239,6 +238,7 @@ void Window::render(cairo_t *cr)
         size_t dirtyWidth = realDirty.getW();
         size_t dirtyHeight = realDirty.getH();
 
+        // Adjust if the dirty rectangle is outside of the window area.
         if(dirtyX < WINDOW_CLIENT_START_X)
         {
             dirtyX = WINDOW_CLIENT_START_X;
@@ -255,6 +255,9 @@ void Window::render(cairo_t *cr)
         {
             dirtyHeight = regionHeight;
         }
+
+        // Fix the dirty rectangle after adjustments.
+        realDirty.update(dirtyX, dirtyY, dirtyWidth, dirtyHeight);
 
         cairo_set_source_surface(cr, surface, me.getX() + WINDOW_CLIENT_START_X, me.getY() + WINDOW_CLIENT_START_Y);
 

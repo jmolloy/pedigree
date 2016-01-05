@@ -3036,7 +3036,6 @@ void Xterm::Window::invert(DirtyRectangle &rect)
 #endif
 
     // Invert the entire screen, if using default colours.
-    TermChar *pNew = m_pView;
     for (size_t y = 0; y < m_Height; y++)
     {
         for (size_t x = 0; x < m_Width; x++)

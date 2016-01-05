@@ -420,13 +420,8 @@ int Dns::hostToIp(String hostname, HostInfo& ret, Network* pCard)
             return -1;
         }
 
-        if(!req->success)
+        if(req->success)
         {
-            delete req;
-        }
-        else
-        {
-
             ret.addresses = req->addresses;
             ret.aliases = req->aliases;
             ret.hostname = req->hostname;
@@ -436,5 +431,6 @@ int Dns::hostToIp(String hostname, HostInfo& ret, Network* pCard)
         }
     }
 
+    delete req;
     return -1;
 }

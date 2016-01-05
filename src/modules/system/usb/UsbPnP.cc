@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -88,6 +87,9 @@ bool UsbPnP::probeDevice(Device *pDeviceBase)
 
 void UsbPnP::reprobeDevices(Device *pParent)
 {
+    if (!pParent)
+        return;
+
     for(size_t i = 0; i < pParent->getNumChildren(); i++)
     {
         Device *pDevice = pParent->getChild(i);

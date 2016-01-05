@@ -238,7 +238,7 @@ int main(int argc, char **argv)
         gettimeofday(&tv, NULL);
         ut.ut_tv = tv;
         ut.ut_type = USER_PROCESS;
-        strcpy(ut.ut_user, pw->pw_name);
+        strncpy(ut.ut_user, pw->pw_name, UT_NAMESIZE);
 
         setutxent();
         pututxline(&ut);

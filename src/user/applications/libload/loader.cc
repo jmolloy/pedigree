@@ -1034,12 +1034,7 @@ std::string symbolName(const ElfSymbol_t &sym, object_meta_t *meta, bool bNoDyna
         return std::string("");
     }
 
-    const ElfSymbol_t *symtab = meta->symtab;
     const char *strtab = meta->strtab;
-
-    if((!bNoDynamic) && meta->dyn_symtab) {
-        symtab = meta->dyn_symtab;
-    }
 
     if(ST_TYPE(sym.info) == 3) {
         strtab = meta->shstrtab;
@@ -1167,6 +1162,11 @@ uintptr_t doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
 
     // Patch in section header?
     if(symtab && ST_TYPE(sym->info) == 3) {
+        if (!sh)
+        {
+            printf("symbol lookup for '%s' needed a section header, which wasn't present.\n", symbolname.c_str());
+            return 0;
+        }
         S = sh->addr;
     } else if(R_TYPE(rel.info) != R_386_RELATIVE) {
         if(sym->name == 0) {
@@ -1252,6 +1252,11 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
 
     // Patch in section header?
     if(symtab && ST_TYPE(sym->info) == 3) {
+        if (!sh)
+        {
+            printf("symbol lookup for '%s' needed a section header, which wasn't present.\n", symbolname.c_str());
+            return 0;
+        }
         S = sh->addr;
     } else if(R_TYPE(rel.info) != R_X86_64_RELATIVE) {
         if(sym->name == 0) {
@@ -1364,8 +1369,6 @@ extern "C" uintptr_t _libload_dofixup(uintptr_t id, uintptr_t symbol) {
         fprintf(stderr, "symbol lookup failed (symbol not in hash table)\n");
         abort();
     }
-
-    ElfSymbol_t *sym = &meta->dyn_symtab[R_SYM(rel.info)];
 
     uintptr_t result = doThisRelocation(rel, meta);
     if(result == ~0UL) {

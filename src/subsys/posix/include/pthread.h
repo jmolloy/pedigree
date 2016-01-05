@@ -30,7 +30,9 @@
 #include <signal.h>
 #include <sched.h>
 
+#ifndef PTHREAD_STACK_MIN
 #define PTHREAD_STACK_MIN 0x1000
+#endif
 
 // Marks code as not implemented for those reading header files
 #define NOTIMPL

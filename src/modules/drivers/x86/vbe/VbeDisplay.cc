@@ -480,8 +480,6 @@ void VbeDisplay::fillRectangle(rgb_t *pBuffer, size_t x, size_t y, size_t width,
     uint8_t *pFb = reinterpret_cast<uint8_t*>(getFramebuffer());
     uint8_t *pFb2 = pBuf->pFbBackbuffer;
 
-    size_t bytesPerPixel = m_Mode.pf.nBpp/8;
-
     size_t compiledColour = 0;
     if (m_SpecialisedMode == Mode_16bpp_5r6g5b)
     {
@@ -500,6 +498,8 @@ void VbeDisplay::fillRectangle(rgb_t *pBuffer, size_t x, size_t y, size_t width,
         // Bit of a dirty hack. Oh well.
         packColour(colour, 0, reinterpret_cast<uintptr_t>(&compiledColour));
 
+    /// \todo This needs to properly handle the case where there's more than
+    ///       one byte per pixel? (or less, I guess)
     for (size_t i = y; i < y+height; i++)
     {
         for (size_t j = x; j < x+width; j++)

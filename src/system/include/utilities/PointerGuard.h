@@ -30,12 +30,12 @@ template <class T>
 class PointerGuard
 {
   public:
-    PointerGuard(T *p = 0) : m_Pointer(p), m_Wrapper(0)
+    PointerGuard(T *p = 0, bool bArray = false) : m_Pointer(p), m_Wrapper(0), m_Array(bArray)
     {
       // NOTICE("PointerGuard: Guarding pointer [" << reinterpret_cast<uintptr_t>(m_Pointer) << "]");
     }
 
-    PointerGuard(T **p = 0) : m_Pointer(*p), m_Wrapper(p)
+    PointerGuard(T **p = 0, bool bArray = false) : m_Pointer(*p), m_Wrapper(p), m_Array(bArray)
     {
       // NOTICE("PointerGuard: Guarding pointer [" << reinterpret_cast<uintptr_t>(m_Pointer) << "]");
     }
@@ -45,7 +45,10 @@ class PointerGuard
       // NOTICE("PointerGuard: Out-of-scope, deleting guarded pointer [" << reinterpret_cast<uintptr_t>(m_Pointer) << "]");
       if(m_Pointer)
       {
-        delete m_Pointer;
+        if (m_Array)
+          delete [] m_Pointer;
+        else
+          delete m_Pointer;
         m_Pointer = 0;
       }
 
@@ -76,6 +79,7 @@ class PointerGuard
   private:
     T *m_Pointer;
     T **m_Wrapper;
+    bool m_Array;
 };
 
 #endif

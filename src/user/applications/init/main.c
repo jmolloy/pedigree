@@ -60,7 +60,7 @@ pid_t start(const char *proc)
 
   // Avoid calling basename() on the given parameter, as basename is non-const.
   char basename_buf[PATH_MAX];
-  strcpy(basename_buf, proc);
+  strncpy(basename_buf, proc, PATH_MAX);
 
   // Add a utmp entry.
   setutxent();
@@ -71,7 +71,7 @@ pid_t start(const char *proc)
   init.ut_type = INIT_PROCESS;
   init.ut_pid = f;
   init.ut_tv = tv;
-  strcpy(init.ut_id, basename(basename_buf));
+  strncpy(init.ut_id, basename(basename_buf), UT_LINESIZE);
   pututxline(&init);
   endutxent();
 
@@ -154,7 +154,7 @@ int main(int argc, char **argv)
     dead.ut_type = DEAD_PROCESS;
     dead.ut_pid = changer;
     dead.ut_tv = tv;
-    strcpy(dead.ut_id, p->ut_id);
+    strncpy(dead.ut_id, p->ut_id, UT_LINESIZE);
     pututxline(&dead);
     endutxent();
   }

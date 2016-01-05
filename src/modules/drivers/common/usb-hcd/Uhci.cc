@@ -633,6 +633,11 @@ void Uhci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
 
     // Add a single transfer to the transaction
     addTransferToTransaction(nTransaction, false, UsbPidIn, pBuffer, nBytes);
+    if (!pQH->pMetaData->pLastTD)
+    {
+        ERROR("USB: UHCI: Couldn't add transfer to transaction!");
+        return;
+    }
 
     // Get the TD and set the error counter to "unlimited retries"
     TD *pTD = pQH->pMetaData->pLastTD;

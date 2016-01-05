@@ -830,6 +830,11 @@ void Ehci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
 
     // Add a single transfer to the transaction
     addTransferToTransaction(nTransaction, false, UsbPidIn, pBuffer, nBytes);
+    if (!pQH->pMetaData->pLastQTD)
+    {
+        ERROR("USB: EHCI: Couldn't add transfer to transaction!");
+        return;
+    }
 
     // Get the qTD and set the error counter to "unlimited retries"
     qTD *pqTD = pQH->pMetaData->pLastQTD;

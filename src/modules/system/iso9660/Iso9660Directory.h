@@ -137,8 +137,6 @@ public:
       // Last in the block, but are there still blocks to read?
       if(bLastHit && ((i + 1) == numBlocks))
         break;
-
-      offset = 0;
     }
 
     m_bCachePopulated = true;
