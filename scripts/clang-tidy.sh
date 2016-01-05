@@ -6,4 +6,7 @@
 # $ bear scons
 
 echo >tidy.log
-find src -regextype egrep -regex ".*\.(cc|c|cpp)$" -exec clang-tidy {} \; >>tidy.log
+if [ "x$SRCPATH" = "x" ]; then
+    SRCPATH=src
+fi
+find $SRCPATH -regextype egrep -regex ".*\.(cc|c|cpp)$" -print0 | xargs -0 clang-tidy '-header-filter=.*' >>tidy.log
