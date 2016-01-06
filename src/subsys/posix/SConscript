@@ -24,6 +24,7 @@ import pipes
 import buildutils.misc
 import buildutils.userspace
 import buildutils.fs
+import buildutils.libs
 
 Import(['env', 'userspace_env'])
 
@@ -203,25 +204,8 @@ buildutils.fs.install_tree(
 
 # TODO(miselin): we really should be able to build libc on Pedigree. Fix this.
 if not env['ON_PEDIGREE']:
-    env_clone.Command([buildLibc], [glue_objname, baseLibc],
-        " ".join(pipes.quote(s) for s in [
-            "@python", os.path.join(base.abspath, "scripts", "buildLibc.py"),
-            buildDir.abspath, baseLibc.abspath,
-            env_clone.File(glue_objname).abspath,
-            env_clone.File(libpedigree_c_objname).abspath,
-            userspace_env["AR"], userspace_env["LINK"], userspace_env["STRIP"]
-            ]
-        )
-    )
-
-    env_clone.Command([buildLibm], [baseLibm],
-        " ".join(pipes.quote(s) for s in [
-            '@python', os.path.join(base.abspath, 'scripts', 'buildLibm.py'),
-            buildDir.abspath, baseLibm.abspath, userspace_env["LINK"],
-            userspace_env['CC'],
-            ]
-        )
-    )
+    buildutils.libs.buildLibc(env_clone, baseLibc)
+    buildutils.libs.buildLibm(env_clone, baseLibm)
 
     env.Alias("libs", [buildLibc, buildLibm])
 
