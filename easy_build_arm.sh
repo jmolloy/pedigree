@@ -137,19 +137,20 @@ fi
 
 set -e
 
-# Run a quick build of libc and libm for the rest of the build system.
-scons CROSS=$script_dir/compilers/dir/bin/arm-pedigree- $ARM_SCONS_OPTS build/libc.so build/libm.so
-
-# Pull down libtool.
 echo
 echo "Configuring the Pedigree UPdater..."
 
 $script_dir/setup_pup.py arm
 $script_dir/run_pup.py sync
 
-$script_dir/run_pup.py install libtool
 # Needed for libc
 $script_dir/run_pup.py install ncurses
+
+# Run a quick build of libc and libm for the rest of the build system.
+scons CROSS=$script_dir/compilers/dir/bin/arm-pedigree- $ARM_SCONS_OPTS build/libc.so build/libm.so
+
+# Pull down libtool.
+$script_dir/run_pup.py install libtool
 
 # Enforce using our libtool.
 export LIBTOOL=$script_dir/../images/local/applications:$PATH

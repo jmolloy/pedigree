@@ -140,19 +140,20 @@ if [ -z "$changed" ]; then
     git pull --rebase > /dev/null 2>&1
 fi
 
-# Run a quick build of libc and libm for the rest of the build system.
-scons hosted=1 CROSS=$script_dir/compilers/dir/bin/x86_64-pedigree- build/libc.so build/libm.so
-
-# Pull down libtool.
 echo
 echo "Configuring the Pedigree UPdater..."
 
 $script_dir/setup_pup.py amd64
 $script_dir/run_pup.py sync
 
-$script_dir/run_pup.py install libtool
 # Needed for libc
 $script_dir/run_pup.py install ncurses
+
+# Run a quick build of libc and libm for the rest of the build system.
+scons hosted=1 CROSS=$script_dir/compilers/dir/bin/x86_64-pedigree- build/libc.so build/libm.so
+
+# Pull down libtool.
+$script_dir/run_pup.py install libtool
 
 # Enforce using our libtool.
 export LIBTOOL=$script_dir/../images/local/applications:$PATH
