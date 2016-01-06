@@ -54,7 +54,7 @@ def buildLibc(env, libc_in):
   if env["ON_PEDIGREE"]:
     return
   else:
-    if env["ARCH_TARGET"] in ["X64"]:
+    if env["ARCH_TARGET"] in ["X64", "HOSTED"]:
       objs_to_remove.extend(["memcpy",])
     elif env["ARCH_TARGET"] in ["ARM"]:
       objs_to_remove.extend(["access",])
@@ -90,7 +90,7 @@ def buildLibm(env, libm_in):
 
   libm_static_in = os.path.join(build_dir, "stock-libm.a")
   libm_static_out = os.path.join(build_dir, "libm.a")
-  libm_shared_out = os.path.join(build_dir, "libm.a")
+  libm_shared_out = os.path.join(build_dir, "libm.so")
 
   env.Command(libm_static_out, libm_static_in, "cp $SOURCE $TARGET")
   env.Command(libm_shared_out, libm_static_in,
