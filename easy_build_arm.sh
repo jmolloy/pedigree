@@ -148,6 +148,8 @@ $script_dir/setup_pup.py arm
 $script_dir/run_pup.py sync
 
 $script_dir/run_pup.py install libtool
+# Needed for libc
+$script_dir/run_pup.py install ncurses
 
 # Enforce using our libtool.
 export LIBTOOL=$script_dir/../images/local/applications:$PATH
@@ -185,7 +187,6 @@ $script_dir/run_pup.py install pixman
 $script_dir/run_pup.py install cairo
 $script_dir/run_pup.py install expat
 $script_dir/run_pup.py install mesa
-$script_dir/run_pup.py install ncurses
 $script_dir/run_pup.py install gettext
 
 # Install GCC to pull in shared libstdc++.
