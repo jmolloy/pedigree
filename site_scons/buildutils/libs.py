@@ -67,15 +67,14 @@ def buildLibc(env, libc_in, glue_in):
       "readdir", "closedir", "_isatty", "basename", "setjmp", "malloc",
       "mallocr", "calloc", "callocr", "freer", "realloc", "reallocr",
       "malign", "malignr", "mstats", "mtrim", "valloc", "msize",
-      "mallinfor", "malloptr", "mallstatsr", "ttyname", "strcasecmp",
-      "memset"]
+      "mallinfor", "malloptr", "mallstatsr", "ttyname", "strcasecmp",]
 
   # What target are we using?
   if env["ON_PEDIGREE"]:
     return
   else:
     if env["ARCH_TARGET"] in ["X64", "HOSTED"]:
-      objs_to_remove.extend(["memcpy",])
+      objs_to_remove.extend(["memcpy", "memset"])
     elif env["ARCH_TARGET"] in ["ARM"]:
       objs_to_remove.extend(["access",])
 
