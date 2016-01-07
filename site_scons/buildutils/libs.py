@@ -24,12 +24,32 @@ import tarfile
 import SCons
 
 
-def buildLibc(env, libc_in):
+def mergeArchives(target, source, env):
+  target = target[0]
+  removals = env['ARCHIVE_DELETIONS']
+
+  cmd = 'create %s\n' % target.abspath
+  for f in source:
+    cmd += 'addlib %s\n' % f.abspath
+  cmd += 'list\n'
+  for r in removals:
+    cmd += 'delete %s\n' % r
+  cmd += 'save\nend\n'
+
+  proc = subprocess.Popen([env['AR'], '-M'], stdin=subprocess.PIPE,
+    stdout=subprocess.PIPE)
+  proc.communicate(cmd)
+
+  return proc.returncode
+
+
+def buildLibc(env, libc_in, glue_in):
   build_dir = env["PEDIGREE_BUILD_BASE"]
   images_dir = env["PEDIGREE_IMAGES_DIR"]
   env["PEDIGREE_IMAGES_DIR"] = env.Dir(images_dir).path
 
   libc_static_out = env.File(os.path.join(build_dir, "libc.a"))
+  libc_static_tmp = env.File(os.path.join(build_dir, "libc_.a"))
   libg_static_out = env.File(os.path.join(build_dir, "libg.a"))
   libg_static_tmp = env.File(os.path.join(build_dir, "libg_.a"))
 
@@ -37,16 +57,16 @@ def buildLibc(env, libc_in):
   libg_shared_out = env.File(os.path.join(build_dir, "libg.so"))
 
   # Bring across libg.a so we don't modify the actual master copy
-  # TODO(miselin): this only works on *nix
-  libg_static = env.Command(libg_static_tmp, libc_in, "cp $SOURCE $TARGET")
+  libc_static = env.Command(
+      libc_static_tmp, libc_in, "$STRIP -g -o $TARGET $SOURCE")
 
   # Set of object files to remove from the library. These are generally things
   # that Pedigree provides.
   objs_to_remove = [
       "init", "getpwent", "signal", "fseek", "getcwd", "rewinddir", "opendir",
       "readdir", "closedir", "_isatty", "basename", "setjmp", "malloc",
-      "mallocr", "calloc", "callocr", "free", "freer", "realloc", "reallocr",
-      "malign", "malignr", "mallinfor", "mstats", "mtrim", "valloc", "msize",
+      "mallocr", "calloc", "callocr", "freer", "realloc", "reallocr",
+      "malign", "malignr", "mstats", "mtrim", "valloc", "msize",
       "mallinfor", "malloptr", "mallstatsr", "ttyname", "strcasecmp",
       "memset"]
 
@@ -62,27 +82,27 @@ def buildLibc(env, libc_in):
   deletions = ["lib_a-%s.o" % (x,) for x in objs_to_remove]
 
   # Remove the object files we manually override in our glue.
-  libg = (
-      env.Command(
-          libg_static_out, libg_static_tmp,
-          "mv $SOURCE $TARGET && $AR d $TARGET %s" %
-          (" ".join(deletions),)))
+  env['ARCHIVE_DELETIONS'] = deletions
+  libg = env.Command(
+          libg_static_out, [libc_in, glue_in],
+          mergeArchives)
+  libc = env.Command(
+          libc_static_out, [libc_static_tmp, glue_in],
+          mergeArchives)
 
   # Build the shared object.
   env.Command(
       libg_shared_out, libg_static_out,
       "$LINK -nostdlib -shared -g3 -ggdb -gdwarf-2 -Wl,-soname,libg.so -L. "
       "-L$PEDIGREE_BUILD_BASE -L$PEDIGREE_IMAGES_DIR/libraries -Wl,-Bstatic "
-      "-Wl,--whole-archive $SOURCE -lpedigree-glue -lpedigree-c "
+      "-Wl,--whole-archive $SOURCE -lpedigree-c "
       "-Wl,--no-whole-archive -Wl,-Bdynamic -lgcc -lncurses -o $TARGET")
   env.Command(
-      libc_shared_out, libg_static_out,
+      libc_shared_out, libc_static_out,
       "$LINK -nostdlib -shared -Wl,-soname,libc.so -L. -L$PEDIGREE_BUILD_BASE"
       "  -L$PEDIGREE_IMAGES_DIR/libraries -Wl,-Bstatic -Wl,--whole-archive "
-      "$SOURCE -lpedigree-glue -lpedigree-c -Wl,--no-whole-archive "
+      "$SOURCE -lpedigree-c -Wl,--no-whole-archive "
       "-Wl,-Bdynamic -lgcc -lncurses -o $TARGET")
-
-  # TODO(miselin): need to add glue to the libg.a we already have!
 
 
 def buildLibm(env, libm_in):

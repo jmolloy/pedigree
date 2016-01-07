@@ -204,7 +204,7 @@ buildutils.fs.install_tree(
 
 # TODO(miselin): we really should be able to build libc on Pedigree. Fix this.
 if not env['ON_PEDIGREE']:
-    buildutils.libs.buildLibc(env_clone, baseLibc)
+    buildutils.libs.buildLibc(env_clone, baseLibc, glue_objname)
     buildutils.libs.buildLibm(env_clone, baseLibm)
 
     env.Alias("libs", [buildLibc, buildLibm])
