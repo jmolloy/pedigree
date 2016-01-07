@@ -26,18 +26,18 @@ import SCons
 
 def mergeArchives(target, source, env):
   target = target[0]
-  removals = env['ARCHIVE_DELETIONS']
+  removals = env["ARCHIVE_DELETIONS"]
 
-  cmd = 'create %s\n' % target.abspath
+  cmd = "create %s\n" % target.abspath
   for f in source:
-    cmd += 'addlib %s\n' % f.abspath
-  cmd += 'list\n'
+    cmd += "addlib %s\n" % f.abspath
+  cmd += "list\n"
   for r in removals:
-    cmd += 'delete %s\n' % r
-  cmd += 'save\nend\n'
+    cmd += "delete %s\n" % r
+  cmd += "save\nend\n"
 
-  proc = subprocess.Popen([env['AR'], '-M'], stdin=subprocess.PIPE,
-    stdout=subprocess.PIPE)
+  proc = subprocess.Popen([env["AR"], "-M"], stdin=subprocess.PIPE,
+                          stdout=subprocess.PIPE)
   proc.communicate(cmd)
 
   return proc.returncode
@@ -81,13 +81,13 @@ def buildLibc(env, libc_in, glue_in):
   deletions = ["lib_a-%s.o" % (x,) for x in objs_to_remove]
 
   # Remove the object files we manually override in our glue.
-  env['ARCHIVE_DELETIONS'] = deletions
+  env["ARCHIVE_DELETIONS"] = deletions
   libg = env.Command(
-          libg_static_out, [libc_in, glue_in],
-          mergeArchives)
+      libg_static_out, [libc_in, glue_in],
+      mergeArchives)
   libc = env.Command(
-          libc_static_out, [libc_static_tmp, glue_in],
-          mergeArchives)
+      libc_static_out, [libc_static_tmp, glue_in],
+      mergeArchives)
 
   # Build the shared object.
   env.Command(
@@ -95,13 +95,13 @@ def buildLibc(env, libc_in, glue_in):
       "$LINK -nostdlib -shared -g3 -ggdb -gdwarf-2 -Wl,-soname,libg.so -L. "
       "-L$PEDIGREE_BUILD_BASE -L$PEDIGREE_IMAGES_DIR/libraries -Wl,-Bstatic "
       "-Wl,--whole-archive $SOURCE -lpedigree-c "
-      "-Wl,--no-whole-archive -Wl,-Bdynamic -lgcc -lncurses -o $TARGET")
+      "-Wl,--no-whole-archive -Wl,-Bdynamic -lgcc -o $TARGET")
   env.Command(
       libc_shared_out, libc_static_out,
       "$LINK -nostdlib -shared -Wl,-soname,libc.so -L. -L$PEDIGREE_BUILD_BASE"
       "  -L$PEDIGREE_IMAGES_DIR/libraries -Wl,-Bstatic -Wl,--whole-archive "
       "$SOURCE -lpedigree-c -Wl,--no-whole-archive "
-      "-Wl,-Bdynamic -lgcc -lncurses -o $TARGET")
+      "-Wl,-Bdynamic -lgcc -o $TARGET")
 
 
 def buildLibm(env, libm_in):
