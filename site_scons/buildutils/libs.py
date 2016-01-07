@@ -29,12 +29,12 @@ def buildLibc(env, libc_in):
   images_dir = env["PEDIGREE_IMAGES_DIR"]
   env["PEDIGREE_IMAGES_DIR"] = env.Dir(images_dir).path
 
-  libc_static_out = os.path.join(build_dir, "libc.a")
-  libg_static_out = os.path.join(build_dir, "libg.a")
-  libg_static_tmp = os.path.join(build_dir, "libg_.a")
+  libc_static_out = env.File(os.path.join(build_dir, "libc.a"))
+  libg_static_out = env.File(os.path.join(build_dir, "libg.a"))
+  libg_static_tmp = env.File(os.path.join(build_dir, "libg_.a"))
 
-  libc_shared_out = os.path.join(build_dir, "libc.so")
-  libg_shared_out = os.path.join(build_dir, "libg.so")
+  libc_shared_out = env.File(os.path.join(build_dir, "libc.so"))
+  libg_shared_out = env.File(os.path.join(build_dir, "libg.so"))
 
   # Bring across libg.a so we don't modify the actual master copy
   # TODO(miselin): this only works on *nix
@@ -88,11 +88,13 @@ def buildLibc(env, libc_in):
 def buildLibm(env, libm_in):
   build_dir = env["PEDIGREE_BUILD_BASE"]
 
-  libm_static_in = os.path.join(build_dir, "stock-libm.a")
-  libm_static_out = os.path.join(build_dir, "libm.a")
-  libm_shared_out = os.path.join(build_dir, "libm.so")
+  libm_static_in = env.File(os.path.join(build_dir, "stock-libm.a"))
+  libm_static_out = env.File(os.path.join(build_dir, "libm.a"))
+  libm_shared_out = env.File(os.path.join(build_dir, "libm.so"))
 
   env.Command(libm_static_out, libm_static_in, "cp $SOURCE $TARGET")
-  env.Command(libm_shared_out, libm_static_in,
-              "$LINK -nostdlib -shared -Wl,-sonamelibm.so -L. -o $TARGET "
-              "-Wl,--whole-archive $SOURCE -Wl,--no-whole-archive -lgcc")
+  env.Command(
+      libm_shared_out, libm_static_in,
+      "$LINK -nostdlib -shared -Wl,-soname,libm.so -L. -o $TARGET -Wl,-Bstatic"
+      "  -Wl,--whole-archive $SOURCE -Wl,--no-whole-archive -Wl,-Bdynamic "
+      "-lgcc")
