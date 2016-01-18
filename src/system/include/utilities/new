@@ -16,6 +16,9 @@
 #ifndef _NEW_H
 #define _NEW_H
 
+// If UTILITY_LINUX is set, we're working on Linux and so already have <new>.
+#ifndef UTILITY_LINUX
+
 #include <compiler.h>
 #include <processor/types.h>
 
@@ -30,5 +33,7 @@ void* operator new(size_t, void* p) throw();
 void* operator new[](size_t, void* p) throw();
 void  operator delete  (void*, void*) throw() NORETURN;
 void  operator delete[](void*, void*) throw() NORETURN;
+
+#endif  // UTILITY_LINUX
 
 #endif
