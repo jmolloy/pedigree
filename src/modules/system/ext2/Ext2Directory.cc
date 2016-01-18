@@ -305,7 +305,7 @@ void Ext2Directory::cacheDirectoryContents()
 
             }
 
-            size_t namelen = pDir->d_namelen + 1;
+            size_t namelen = pDir->d_namelen;
 
             uint32_t inodeNum = LITTLE_TO_HOST32(pDir->d_inode);
             Inode *inode = m_pExt2Fs->getInode(inodeNum);
