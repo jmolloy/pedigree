@@ -84,7 +84,7 @@ bool Ext2Filesystem::initialise(Disk *pDisk)
     // Attempt to read the superblock.
     // We need to pin the block, as we'll hold onto it.
     uintptr_t block = m_pDisk->read(1024ULL);
-    if (!block || block == ~0ULL)
+    if (!block || block == ~static_cast<uintptr_t>(0U))
     {
         return false;
     }

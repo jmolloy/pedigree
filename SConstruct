@@ -223,7 +223,14 @@ Help(opts.GenerateHelpText(env))
 
 # Load the host environment now - this is a boring, standard environment that
 # doesn't need many flags from the main build.
-host_env = Environment(platform='posix')
+host_environ = {}
+host_cxx = os.environ.get('CXX')
+host_cc = os.environ.get('CC')
+if host_cxx:
+    host_environ['CXX'] = host_cxx
+if host_cc:
+    host_environ['CC'] = host_cc
+host_env = Environment(platform='posix', **host_environ)
 
 # Copy useful environment items that are needed in site_scons/buildutils
 for copy_key in ('verbose', 'nocolour'):

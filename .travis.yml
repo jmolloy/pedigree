@@ -1,5 +1,6 @@
 sudo: false
 language: cpp
+compiler: clang
 matrix:
   include:
   - os: linux
@@ -10,7 +11,7 @@ matrix:
     env: OS=ubuntu EASY_BUILD=hosted
   exclude:
     - os: linux
-    - compiler: gcc
+    - compiler: clang
 script:
   - ./easy_build_$EASY_BUILD.sh nosudo $OS
   - ./scripts/runtest.py
@@ -41,6 +42,7 @@ addons:
       - qemu
       - nasm
       - uboot-mkimage
+      - clang
 cache:
   directories:
   - $HOME/.ccache
