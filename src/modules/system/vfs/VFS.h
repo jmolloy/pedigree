@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -76,7 +75,7 @@ public:
     {
         return m_Aliases;
     }
-    
+
     /** Obtains a list of all mounted filesystems */
     inline Tree<Filesystem *, List<String*>* > &getMounts()
     {

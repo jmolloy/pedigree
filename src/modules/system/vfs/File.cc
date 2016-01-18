@@ -202,6 +202,7 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
 
 physical_uintptr_t File::getPhysicalPage(size_t offset)
 {
+#ifndef VFS_NOMMU
     // Sanitise input.
     size_t blockSize = getBlockSize();
     offset &= ~(blockSize - 1);
@@ -238,12 +239,14 @@ physical_uintptr_t File::getPhysicalPage(size_t offset)
 
         return phys;
     }
+#endif
 
     return ~0UL;
 }
 
 void File::returnPhysicalPage(size_t offset)
 {
+#ifndef VFS_NOMMU
     // Sanitise input.
     size_t blockSize = getBlockSize();
     offset &= ~(blockSize - 1);
@@ -263,6 +266,7 @@ void File::returnPhysicalPage(size_t offset)
 #ifdef THREADS
     m_Lock.release();
 #endif
+#endif  // VFS_NOMMU
 }
 
 void File::sync()
