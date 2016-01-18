@@ -91,13 +91,10 @@ extern "C" {
 
 #endif
 
-int vsprintf(char *buf, const char *fmt, va_list arg);
-int sprintf(char *buf, const char *fmt, ...);
 size_t strlen(const char *buf);
 int strcpy(char *dest, const char *src);
 int strncpy(char *dest, const char *src, int len);
 void *memset(void *buf, int c, size_t len);
-void *wmemset(void *buf, int c, size_t len);
 void *dmemset(void *buf, unsigned int c, size_t len);
 void *qmemset(void *buf, unsigned long long c, size_t len);
 void *memcpy(void *s1, const void *s2, size_t n);
@@ -114,6 +111,17 @@ uint64_t random_next();
 
 const char *strchr(const char *str, int target);
 const char *strrchr(const char *str, int target);
+
+#ifdef UTILITY_LINUX
+#include <stdio.h>
+#else
+// When using parts of the kernel for tools to run on build systems, we can run
+// into conflicts with some of our functions. So, we only define them if we are
+// not building for build systems.
+void *wmemset(void *buf, int c, size_t len);
+int vsprintf(char *buf, const char *fmt, va_list arg);
+int sprintf(char *buf, const char *fmt, ...);
+#endif
 
 /**
  * Custom API that differs from the standard strtoul and therefore conflicts.
