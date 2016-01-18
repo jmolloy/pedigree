@@ -26,7 +26,9 @@
 #include <utilities/RadixTree.h>
 #include <process/Thread.h>
 #include <process/Event.h>
-#include <utilities/Cache.h>
+#include <utilities/CacheConstants.h>
+#include <utilities/Tree.h>
+#include <LockGuard.h>
 
 #include <processor/PhysicalMemoryManager.h>
 
@@ -286,7 +288,7 @@ protected:
      * as the callback on their Cache instance to get a write-back
      * notification.
      */
-    static void writeCallback(Cache::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta);
+    static void writeCallback(CacheConstants::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta);
 
     /**
      * Pins the given page.

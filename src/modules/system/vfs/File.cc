@@ -25,13 +25,13 @@
 #include <process/Scheduler.h>
 #include <Log.h>
 
-void File::writeCallback(Cache::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta)
+void File::writeCallback(CacheConstants::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta)
 {
     File *pFile = reinterpret_cast<File *>(meta);
 
     switch(cause)
     {
-        case Cache::WriteBack:
+        case CacheConstants::WriteBack:
             {
                 pFile->m_Lock.acquire();
 
@@ -45,7 +45,7 @@ void File::writeCallback(Cache::CallbackCause cause, uintptr_t loc, uintptr_t pa
                 pFile->m_Lock.release();
             }
             break;
-        case Cache::Eviction:
+        case CacheConstants::Eviction:
             // Remove this page from our data cache.
             // Side-effect: if the block size is larger than the page size, the
             // entire block will be removed. Is this something we care about?

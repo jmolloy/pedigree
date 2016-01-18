@@ -35,19 +35,19 @@
 #define SCSI_DEBUG_LOG(...)
 #endif
 
-void ScsiDisk::cacheCallback(Cache::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta)
+void ScsiDisk::cacheCallback(CacheConstants::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta)
 {
     ScsiDisk *pDisk = reinterpret_cast<ScsiDisk *>(meta);
 
     switch(cause)
     {
-        case Cache::WriteBack:
+        case CacheConstants::WriteBack:
             {
                 // Blocking write request.
                 pDisk->flush(loc);
             }
             break;
-        case Cache::Eviction:
+        case CacheConstants::Eviction:
             // no-op for ScsiDisk
             break;
         default:

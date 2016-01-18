@@ -149,7 +149,7 @@ class ScsiDisk : public Disk
 
         bool getCapacityInternal(size_t *blockNumber, size_t *blockSize);
 
-        static void cacheCallback(Cache::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta);
+        static void cacheCallback(CacheConstants::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta);
 
         class ScsiController* m_pController;
         size_t m_nUnit;
