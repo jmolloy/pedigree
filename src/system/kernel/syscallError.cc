@@ -17,14 +17,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef SYSCALL_ERROR_H
-#define SYSCALL_ERROR_H
+#include <syscallError.h>
+#include <process/Thread.h>
+#include <processor/Processor.h>
 
-#include <errors.h>
-
-// For setting a thread's error number when a problem occurs in a syscall.
-void syscallError(int e);
-
-#define SYSCALL_ERROR(x) syscallError(Error::x)
-
-#endif
+void syscallError(int errno)
+{
+    Processor::information().getCurrentThread()->setErrno(errno);
+}

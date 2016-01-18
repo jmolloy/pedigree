@@ -40,6 +40,7 @@ files = [
     'Subsystem.cc',
     'ServiceManager.cc',
     'Service.cc',
+    'syscallError.cc',
     Glob('utilities/*.cc'),
     Glob('utilities/sha1/*.cc'),
     Glob('utilities/md5/*.cc'),
