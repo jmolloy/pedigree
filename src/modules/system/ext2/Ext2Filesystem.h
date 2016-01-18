@@ -115,8 +115,10 @@ private:
     /** Number of group descriptors. */
     size_t m_nGroupDescriptors;
 
+#ifdef THREADS
     /** Write lock - we're finding some inodes and updating the superblock and block group structures. */
     Mutex m_WriteLock;
+#endif
 
     /** The root filesystem node. */
     File *m_pRoot;

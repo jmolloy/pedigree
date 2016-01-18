@@ -22,6 +22,7 @@
 #include "Symlink.h"
 #include "Filesystem.h"
 #include <processor/Processor.h>
+#include <processor/types.h>
 #include <process/Scheduler.h>
 #include <Log.h>
 
@@ -33,7 +34,9 @@ void File::writeCallback(CacheConstants::CallbackCause cause, uintptr_t loc, uin
     {
         case CacheConstants::WriteBack:
             {
-                pFile->m_Lock.acquire();
+#ifdef THREADS
+                LockGuard<Mutex>(pFile->m_Lock);
+#endif
 
                 // We are given one dirty page. Blocks can be smaller than a page.
                 size_t off = 0;
@@ -41,8 +44,6 @@ void File::writeCallback(CacheConstants::CallbackCause cause, uintptr_t loc, uin
                 {
                     pFile->writeBlock(loc + off, page + off);
                 }
-
-                pFile->m_Lock.release();
             }
             break;
         case CacheConstants::Eviction:
@@ -61,7 +62,10 @@ File::File() :
     m_Name(""), m_AccessedTime(0), m_ModifiedTime(0),
     m_CreationTime(0), m_Inode(0), m_pFilesystem(0), m_Size(0),
     m_pParent(0), m_nWriters(0), m_nReaders(0), m_Uid(0), m_Gid(0),
-    m_Permissions(0), m_DataCache(), m_Lock(), m_MonitorTargets()
+    m_Permissions(0), m_DataCache()
+#ifdef THREADS
+    , m_Lock(), m_MonitorTargets()
+#endif
 {
 }
 
@@ -70,7 +74,10 @@ File::File(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTi
     m_Name(name), m_AccessedTime(accessedTime), m_ModifiedTime(modifiedTime),
     m_CreationTime(creationTime), m_Inode(inode), m_pFilesystem(pFs),
     m_Size(size), m_pParent(pParent), m_nWriters(0), m_nReaders(0), m_Uid(0),
-    m_Gid(0), m_Permissions(0), m_DataCache(), m_Lock(), m_MonitorTargets()
+    m_Gid(0), m_Permissions(0), m_DataCache()
+#ifdef THREADS
+    , m_Lock(), m_MonitorTargets()
+#endif
 {
 }
 
@@ -109,7 +116,9 @@ uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
         if(sz > (m_Size - location))
             sz = m_Size - location;
 
+#ifdef THREADS
         m_Lock.acquire();
+#endif
         uintptr_t buff = m_DataCache.lookup(block*blockSize);
         if (!buff)
         {
@@ -121,7 +130,9 @@ uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
             }
             m_DataCache.insert(block*blockSize, buff);
         }
+#ifdef THREADS
         m_Lock.release();
+#endif
 
         if(buffer)
         {
@@ -151,7 +162,9 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
         uintptr_t offs  = location % blockSize;
         uintptr_t sz    = (size+offs > blockSize) ? blockSize-offs : size;
 
+#ifdef THREADS
         m_Lock.acquire();
+#endif
         uintptr_t buff = m_DataCache.lookup(block*blockSize);
         if (!buff)
         {
@@ -163,7 +176,9 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
             }
             m_DataCache.insert(block*blockSize, buff);
         }
+#ifdef THREADS
         m_Lock.release();
+#endif
 
         memcpy(reinterpret_cast<void*>(buff+offs),
                reinterpret_cast<void*>(buffer),
@@ -198,9 +213,13 @@ physical_uintptr_t File::getPhysicalPage(size_t offset)
     }
 
     // Check if we have this page in the cache.
+#ifdef THREADS
     m_Lock.acquire();
+#endif
     uintptr_t vaddr = m_DataCache.lookup(offset);
+#ifdef THREADS
     m_Lock.release();
+#endif
     if (!vaddr)
     {
         return ~0UL;
@@ -237,9 +256,13 @@ void File::returnPhysicalPage(size_t offset)
 
     // Release the page. Beware - this could cause a cache evict, which will
     // make the next read/write at this offset do real (slow) I/O.
+#ifdef THREADS
     m_Lock.acquire();
+#endif
     unpinBlock(offset);
+#ifdef THREADS
     m_Lock.release();
+#endif
 }
 
 void File::sync()
@@ -311,6 +334,7 @@ void File::truncate()
 
 void File::dataChanged()
 {
+#ifdef THREADS
     m_Lock.acquire();
 
     bool bAny = false;
@@ -334,8 +358,10 @@ void File::dataChanged()
     {
         Scheduler::instance().yield();
     }
+#endif
 }
 
+#ifdef THREADS
 void File::cullMonitorTargets(Thread *pThread)
 {
     LockGuard<Mutex> guard(m_Lock);
@@ -356,6 +382,7 @@ void File::cullMonitorTargets(Thread *pThread)
         }
     }
 }
+#endif
 
 void File::getFilesystemLabel(HugeStaticString &s)
 {

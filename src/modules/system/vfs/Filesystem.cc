@@ -40,10 +40,12 @@ Filesystem::Filesystem() :
 
 File *Filesystem::getTrueRoot()
 {
+#ifdef THREADS
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     File *maybeRoot = pProcess->getRootFile();
     if (maybeRoot)
         return maybeRoot;
+#endif
     return getRoot();
 }
 

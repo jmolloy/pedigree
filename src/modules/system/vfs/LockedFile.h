@@ -77,7 +77,9 @@ private:
     size_t m_LockerPid;
 
     /** Our lock */
+#ifdef THREADS
     Mutex m_Lock;
+#endif
 };
 
 #endif

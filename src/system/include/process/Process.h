@@ -20,6 +20,8 @@
 #ifndef PROCESS_H
 #define PROCESS_H
 
+#ifdef THREADS
+
 #include <compiler.h>
 #include <process/Thread.h>
 #include <processor/state.h>
@@ -498,5 +500,7 @@ private:
 public:
     Semaphore m_DeadThreads;
 };
+
+#endif
 
 #endif

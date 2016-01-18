@@ -20,7 +20,9 @@
 #ifndef KERNEL_LOG_H
 #define KERNEL_LOG_H
 
+#ifdef THREADS
 #include <Spinlock.h>
+#endif
 #include <processor/types.h>
 #include <utilities/String.h>
 #include <utilities/Vector.h>
@@ -176,7 +178,9 @@ public:
 
   /** The lock
    *\note this should only be acquired by the NOTICE, WARNING, ERROR and FATAL macros */
+#ifdef THREADS
   Spinlock m_Lock;
+#endif
 
   /** Retrieves the static Log instance.
    *\return instance of the log class */
