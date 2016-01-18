@@ -22,7 +22,6 @@
 #include "Ext2Filesystem.h"
 #include "Ext2Symlink.h"
 #include <Log.h>
-#include <Module.h>
 #include <machine/Machine.h>
 #include <machine/Timer.h>
 #include <process/Process.h>
@@ -35,11 +34,25 @@
 #include <utilities/utility.h>
 #include <vfs/VFS.h>
 
+#ifndef EXT2_STANDALONE
+#include <Module.h>
+#endif
+
 // The sparse block page. This is zeroed and made read-only. A handler is set and if
 // written, it traps.
 /// \todo Set CR0.WP bit else this will never happen.
 /// \todo Work out what to do when it traps.
 uint8_t g_pSparseBlock[4096] ALIGN(4096) __attribute__((__section__(".bss")));
+
+#ifdef EXT2_STANDALONE
+extern uint32_t getUnixTimestamp();
+#else
+static uint32_t getUnixTimestamp()
+{
+    Timer *pTimer = Machine::instance().getTimer();
+    return pTimer->getUnixTimestamp();
+}
+#endif
 
 
 Ext2Filesystem::Ext2Filesystem() :
@@ -71,7 +84,7 @@ bool Ext2Filesystem::initialise(Disk *pDisk)
     // Attempt to read the superblock.
     // We need to pin the block, as we'll hold onto it.
     uintptr_t block = m_pDisk->read(1024ULL);
-    if (!block || block == ~0U)
+    if (!block || block == ~0ULL)
     {
         return false;
     }
@@ -239,10 +252,15 @@ bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, St
         return false;
     }
 
-    Timer *pTimer = Machine::instance().getTimer();
-
+#ifdef EXT2_STANDALONE
+    size_t uid = 0;
+    size_t gid = 0;
+#else
     size_t uid = Processor::information().getCurrentThread()->getParent()->getUser()->getId();
     size_t gid = Processor::information().getCurrentThread()->getParent()->getGroup()->getId();
+#endif
+
+    uint32_t timestamp = getUnixTimestamp();
 
     // Populate the inode.
     /// \todo Endianness!
@@ -250,7 +268,7 @@ bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, St
     memset(reinterpret_cast<uint8_t*>(newInode), 0, m_InodeSize);
     newInode->i_mode = HOST_TO_LITTLE16(mask | type);
     newInode->i_uid = HOST_TO_LITTLE16(uid);
-    newInode->i_atime = newInode->i_ctime = newInode->i_mtime = HOST_TO_LITTLE32(pTimer->getUnixTimestamp());
+    newInode->i_atime = newInode->i_ctime = newInode->i_mtime = HOST_TO_LITTLE32(timestamp);
     newInode->i_gid = HOST_TO_LITTLE16(gid);
 
     // If we have a value to store, and it's small enough, use the block indices.
@@ -310,8 +328,8 @@ bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, St
     }
 
     // Edit the atime and mtime of the parent directory.
-    parent->setAccessedTime(pTimer->getUnixTimestamp());
-    parent->setModifiedTime(pTimer->getUnixTimestamp());
+    parent->setAccessedTime(timestamp);
+    parent->setModifiedTime(timestamp);
 
     // Write updated inodes.
     writeInode(inode_num);
@@ -650,8 +668,7 @@ bool Ext2Filesystem::releaseInode(uint32_t inode)
     if (bRemove)
     {
         // Set dtime on inode.
-        Timer *pTimer = Machine::instance().getTimer();
-        pInode->i_dtime = HOST_TO_LITTLE32(pTimer->getUnixTimestamp());
+        pInode->i_dtime = HOST_TO_LITTLE32(getUnixTimestamp());
 
         ensureFreeInodeBitmapLoaded(group);
 
@@ -847,6 +864,7 @@ bool Ext2Filesystem::decreaseInodeRefcount(uint32_t inode)
     return bRemove;
 }
 
+#ifndef EXT2_STANDALONE
 static bool initExt2()
 {
     VFS::instance().addProbeCallback(&Ext2Filesystem::probe);
@@ -858,3 +876,4 @@ static void destroyExt2()
 }
 
 MODULE_INFO("ext2", &initExt2, &destroyExt2, "vfs");
+#endif
