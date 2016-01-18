@@ -21,6 +21,7 @@
 #include <Module.h>
 #include <vfs/VFS.h>
 #include <vfs/Filesystem.h>
+#include <processor/Processor.h>
 #include <process/Semaphore.h>
 #include <process/Scheduler.h>
 #include <vfs/MemoryMappedFile.h>

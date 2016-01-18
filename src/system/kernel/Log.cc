@@ -254,6 +254,8 @@ template Log &Log::operator << (unsigned long long);
 
 Log &Log::operator<< (Modifier type)
 {
+    static bool handlingFatal = false;
+
     // Flush the buffer.
     if (type == Flush)
     {
@@ -308,6 +310,22 @@ Log &Log::operator<< (Modifier type)
                 if(*it)
                     (*it)->callback(static_cast<const char*>(str));
             }
+        }
+
+        // Panic if that was a fatal error.
+        if ((!handlingFatal) && m_Buffer.type == Fatal)
+        {
+            handlingFatal = true;
+
+            const char *panicstr = static_cast<const char*>(m_Buffer.str);
+            if (m_Lock.acquired())
+                m_Lock.release();
+
+            // Attempt to trap to debugger, panic if that fails.
+#ifdef DEBUGGER
+            Processor::breakpoint();
+#endif
+            panic(panicstr);
         }
     }
 

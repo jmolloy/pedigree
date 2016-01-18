@@ -18,6 +18,7 @@
  */
 
 #include "LockedFile.h"
+#include <processor/Processor.h>
 #include <Log.h>
 
 LockedFile::LockedFile(File *pFile) : m_File(pFile), m_bLocked(false), m_LockerPid(0), m_Lock(false)
