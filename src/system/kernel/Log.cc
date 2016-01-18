@@ -352,6 +352,7 @@ Log &Log::operator<< (SeverityLevel level)
     m_Buffer.str.clear();
     m_Buffer.type = level;
 
+#ifndef UTILITY_LINUX
     Machine &machine = Machine::instance();
     if (machine.isInitialised() == true &&
         machine.getTimer() != 0)
@@ -361,6 +362,7 @@ Log &Log::operator<< (SeverityLevel level)
     }
     else
         m_Buffer.timestamp = 0;
+#endif
 
     return *this;
 }
