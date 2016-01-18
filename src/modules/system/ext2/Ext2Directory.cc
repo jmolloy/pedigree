@@ -373,7 +373,7 @@ void Ext2Directory::cacheDirectoryContents()
         m_pExt2Fs->unpinBlock(m_pBlocks[i]);
     }
 
-    m_bCachePopulated = true;
+    markCachePopulated();
 }
 
 void Ext2Directory::fileAttributeChanged()
