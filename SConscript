@@ -25,7 +25,11 @@ import SCons
 from buildutils import fs, db
 from buildutils.diskimages import build
 
-Import(['env', 'userspace_env'])
+Import(['env', 'userspace_env', 'host_env'])
+
+# Build utilities that run on the host during the kernel build.
+SConscript(os.path.join('src', 'buildutil', 'SConscript'), exports=['host_env'],
+           variant_dir=host_env['BUILDDIR'], duplicate=0)
 
 if env['build_modules']:
   # POSIX subsystem.
