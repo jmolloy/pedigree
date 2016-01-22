@@ -32,6 +32,8 @@
 #include <processor/PhysicalMemoryManager.h>
 #include <process/MemoryPressureManager.h>
 
+#include <utilities/CacheConstants.h>
+
 /// The age at which a cache page is considered "old" and can be evicted
 /// This is expressed in seconds.
 #define CACHE_AGE_THRESHOLD 10
@@ -128,22 +130,6 @@ private:
     };
 
 public:
-
-    /**
-     * Callback Cause enumeration.
-     *
-     * Callbacks can be called for a number of reasons. Instead of having
-     * a callback for each reason, we just offer this enumeration. Callbacks
-     * can then do a switch on this in order to select which behaviour to
-     * invoke.
-     */
-    enum CallbackCause
-    {
-        WriteBack,
-        Eviction,
-        PleaseEvict,
-    };
-
     /**
      * Callback type: for functions called by the write-back timer handler.
      *
@@ -154,7 +140,7 @@ public:
      *
      * Then, the write-back thread will mark the page as not-dirty.
      */
-    typedef void (*writeback_t)(CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta);
+    typedef void (*writeback_t)(CacheConstants::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta);
 
     Cache();
     virtual ~Cache();
@@ -306,7 +292,7 @@ private:
 
     struct callbackMeta
     {
-        CallbackCause cause;
+        CacheConstants::CallbackCause cause;
         writeback_t callback;
         uintptr_t loc;
         uintptr_t page;

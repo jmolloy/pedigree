@@ -21,6 +21,7 @@
 #include <vfs/VFS.h>
 #include <Module.h>
 
+#include <processor/Processor.h>
 #include <process/Scheduler.h>
 
 // c_cc array indices, and their default character.

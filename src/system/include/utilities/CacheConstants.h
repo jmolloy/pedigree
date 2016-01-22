@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
+ * Copyright (c) 2008-2014, Pedigree Developers
+ *
+ * Please see the CONTRIB file in the root of the source tree for a full
+ * list of contributors.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,22 +16,30 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef _NEW_H
-#define _NEW_H
 
-#include <compiler.h>
-#include <processor/types.h>
+#ifndef CACHE_CONSTANTS_H
+#define CACHE_CONSTANTS_H
 
-// Conventional new
-void *operator new (size_t size) throw();
-void *operator new[] (size_t size) throw();
-void operator delete (void * p) throw();
-void operator delete[] (void * p) throw();
+// Provides constants for Cache without needing to include the entire Cache
+// class, which may not be necessary in all situations.
+namespace CacheConstants
+{
 
-// Placement new
-void* operator new(size_t, void* p) throw();
-void* operator new[](size_t, void* p) throw();
-void  operator delete  (void*, void*) throw() NORETURN;
-void  operator delete[](void*, void*) throw() NORETURN;
+/**
+ * Callback Cause enumeration.
+ *
+ * Callbacks can be called for a number of reasons. Instead of having
+ * a callback for each reason, we just offer this enumeration. Callbacks
+ * can then do a switch on this in order to select which behaviour to
+ * invoke.
+ */
+enum CallbackCause
+{
+    WriteBack,
+    Eviction,
+    PleaseEvict,
+};
 
-#endif
+}
+
+#endif  // CACHE_CONSTANTS_H

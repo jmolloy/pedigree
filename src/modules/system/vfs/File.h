@@ -26,7 +26,9 @@
 #include <utilities/RadixTree.h>
 #include <process/Thread.h>
 #include <process/Event.h>
-#include <utilities/Cache.h>
+#include <utilities/CacheConstants.h>
+#include <utilities/Tree.h>
+#include <LockGuard.h>
 
 #include <processor/PhysicalMemoryManager.h>
 
@@ -224,6 +226,7 @@ public:
     /** Causes the event pEvent to be dispatched to pThread when activity occurs
         on this File. Activity includes the file becoming available for reading,
         writing or erroring. */
+#ifdef THREADS
     void monitor(Thread *pThread, Event *pEvent)
     {
         m_Lock.acquire();
@@ -233,6 +236,7 @@ public:
 
     /** Walks the monitor-target queue, removing all for \p pThread .*/
     void cullMonitorTargets(Thread *pThread);
+#endif
 
     /** Does this File object support the given integer-based command? */
     virtual bool supports(const int command)
@@ -286,7 +290,7 @@ protected:
      * as the callback on their Cache instance to get a write-back
      * notification.
      */
-    static void writeCallback(Cache::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta);
+    static void writeCallback(CacheConstants::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta);
 
     /**
      * Pins the given page.
@@ -318,7 +322,9 @@ protected:
      */
     void evict(uint64_t location)
     {
+#ifdef THREADS
         LockGuard<Mutex> guard(m_Lock);
+#endif
         m_DataCache.remove(location);
     }
 
@@ -359,6 +365,7 @@ protected:
 
     Tree<uint64_t,size_t> m_DataCache;
 
+#ifdef THREADS
     Mutex m_Lock;
 
     struct MonitorTarget
@@ -371,6 +378,7 @@ protected:
     };
 
     List<MonitorTarget*> m_MonitorTargets;
+#endif
 };
 
 #endif

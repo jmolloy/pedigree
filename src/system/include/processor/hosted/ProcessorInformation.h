@@ -51,6 +51,7 @@ class HostedProcessorInformation
 
     inline uintptr_t getKernelStack() const;
     void setKernelStack(uintptr_t stack);
+#ifdef THREADS
     inline Thread *getCurrentThread() const
       {return m_pCurrentThread;}
     inline void setCurrentThread(Thread *pThread)
@@ -58,6 +59,7 @@ class HostedProcessorInformation
 
     inline PerProcessorScheduler &getScheduler()
       {return m_Scheduler;}
+#endif
 
   protected:
     /** Construct a HostedProcessorInformation object
@@ -65,7 +67,11 @@ class HostedProcessorInformation
     inline HostedProcessorInformation(ProcessorId processorId, uint8_t apicId = 0)
       : m_ProcessorId(processorId),
         m_VirtualAddressSpace(&VirtualAddressSpace::getKernelAddressSpace()),
-        m_pCurrentThread(0), m_Scheduler(), m_KernelStack(0) {}
+#ifdef THREADS
+        m_pCurrentThread(0),
+        m_Scheduler(),
+#endif
+        m_KernelStack(0) {}
     /** The destructor does nothing */
     inline virtual ~HostedProcessorInformation(){}
 
@@ -84,10 +90,12 @@ class HostedProcessorInformation
     ProcessorId m_ProcessorId;
     /** The current VirtualAddressSpace */
     VirtualAddressSpace *m_VirtualAddressSpace;
+#ifdef THREADS
     /** The current thread */
     Thread *m_pCurrentThread;
     /** The processor's scheduler. */
     PerProcessorScheduler m_Scheduler;
+#endif
     /** Kernel stack. */
     uintptr_t m_KernelStack;
 };

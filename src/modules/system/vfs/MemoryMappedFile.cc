@@ -19,6 +19,7 @@
 
 #include "MemoryMappedFile.h"
 
+#include <processor/Processor.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <process/MemoryPressureManager.h>
 #include <Spinlock.h>

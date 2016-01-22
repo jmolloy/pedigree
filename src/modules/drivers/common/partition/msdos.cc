@@ -21,15 +21,17 @@
 #include <processor/Processor.h>
 #include <Log.h>
 #include "Partition.h"
-#include <Spinlock.h>
 #include <LockGuard.h>
+
+#ifdef THREADS
+#include <Spinlock.h>
+Spinlock g_Lock;
+#endif
 
 // Partition number for a DOS extended partition (another partition table)
 const uint8_t g_ExtendedPartitionNumber = 5;
 // Partition number for an empty partition.
 const uint8_t g_EmptyPartitionNumber = 0;
-
-Spinlock g_Lock;
 
 const char *g_pPartitionTypes[256] = {
     "Empty",
@@ -295,7 +297,9 @@ static int gNextPartition = 0;
 
 void msdosRegPartition(MsdosPartitionInfo *pPartitions, int i, Disk *pDisk)
 {
+#ifdef THREADS
     LockGuard<Spinlock> guard(g_Lock);
+#endif
 
     // Look up the partition string.
     const char *pStr = g_pPartitionTypes[pPartitions[i].type];

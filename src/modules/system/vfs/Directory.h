@@ -73,10 +73,7 @@ public:
     }
 
     /** Look up the given filename in the directory. */
-    File *lookup(String &s) const
-    {
-        return m_Cache.lookup(s);
-    }
+    File *lookup(String &s) const;
 
     /** Remove the given filename in the directory. */
     void remove(String &s)
@@ -93,6 +90,12 @@ protected:
     virtual RadixTree<File *> &getCache()
     {
         return m_Cache;
+    }
+
+    /** Mark the directory cache as populated now. */
+    void markCachePopulated()
+    {
+        m_bCachePopulated = true;
     }
 
     /**

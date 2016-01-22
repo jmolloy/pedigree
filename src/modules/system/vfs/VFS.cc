@@ -19,8 +19,11 @@
 
 #include "VFS.h"
 #include <Log.h>
-#include <Module.h>
 #include <utilities/utility.h>
+
+#ifndef VFS_STANDALONE
+#include <Module.h>
+#endif
 
 /// \todo Figure out a way to clean up files after deletion. Directory::remove()
 ///       is not the right place to do this. There needs to be a way to add a
@@ -41,6 +44,25 @@ VFS::VFS() :
 
 VFS::~VFS()
 {
+    // Wipe out probe callbacks we know about.
+    for (auto it = m_ProbeCallbacks.begin(); it != m_ProbeCallbacks.end(); ++it)
+    {
+        delete *it;
+    }
+
+    // Unmount aliases.
+    for (auto it = m_Mounts.begin(); it != m_Mounts.end(); ++it)
+    {
+        auto fs = it.key();
+        auto aliases = it.value();
+        for (auto it2 = aliases->begin(); it2 != aliases->end(); ++it2)
+        {
+            delete *it2;
+        }
+
+        delete aliases;
+        delete fs;
+    }
 }
 
 bool VFS::mount(Disk *pDisk, String &alias)
@@ -375,6 +397,7 @@ bool VFS::remove(String path, File *pStartNode)
     }
 }
 
+#ifndef VFS_STANDALONE
 static bool initVFS()
 {
     return true;
@@ -385,3 +408,4 @@ static void destroyVFS()
 }
 
 MODULE_INFO("vfs", &initVFS, &destroyVFS);
+#endif

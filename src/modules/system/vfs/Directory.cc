@@ -75,3 +75,13 @@ size_t Directory::getNumChildren()
 void Directory::cacheDirectoryContents()
 {
 }
+
+File *Directory::lookup(String &s) const
+{
+    if (!m_bCachePopulated)
+    {
+        return 0;
+    }
+
+    return m_Cache.lookup(s);
+}

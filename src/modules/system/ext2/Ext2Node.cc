@@ -156,7 +156,7 @@ bool Ext2Node::ensureLargeEnough(size_t size)
 
 bool Ext2Node::ensureBlockLoaded(size_t nBlock)
 {
-    if (nBlock >= m_nBlocks)
+    if (nBlock > m_nBlocks)
     {
         FATAL("EXT2: ensureBlockLoaded: Algorithmic error [block " << nBlock << " > " << m_nBlocks << "].");
     }
@@ -351,6 +351,11 @@ bool Ext2Node::addBlock(uint32_t blockValue)
 
         // Grab the indirect block.
         pBlock = reinterpret_cast<uint32_t*>(m_pExt2Fs->readBlock(nIndirectBlockNum));
+        if (pBlock == reinterpret_cast<uint32_t *>(~0))
+        {
+            ERROR("Could not read block that we wanted to add.");
+            return false;
+        }
 
         // Set the correct entry.
         pBlock[indirectIdx] = HOST_TO_LITTLE32(blockValue);

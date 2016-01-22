@@ -1,8 +1,5 @@
 /*
- * Copyright (c) 2008-2014, Pedigree Developers
- *
- * Please see the CONTRIB file in the root of the source tree for a full
- * list of contributors.
+ * Copyright (c) 2008 James Molloy, Jörg Pfähler, Matthew Iselin
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,15 +13,27 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#ifndef _NEW_H
+#define _NEW_H
 
-#ifndef SYSCALL_ERROR_H
-#define SYSCALL_ERROR_H
+// If UTILITY_LINUX is set, we're working on Linux and so already have <new>.
+#ifndef UTILITY_LINUX
 
-#include <errors.h>
+#include <compiler.h>
+#include <processor/types.h>
 
-// For setting a thread's error number when a problem occurs in a syscall.
-void syscallError(int e);
+// Conventional new
+void *operator new (size_t size) throw();
+void *operator new[] (size_t size) throw();
+void operator delete (void * p) throw();
+void operator delete[] (void * p) throw();
 
-#define SYSCALL_ERROR(x) syscallError(Error::x)
+// Placement new
+void* operator new(size_t, void* p) throw();
+void* operator new[](size_t, void* p) throw();
+void  operator delete  (void*, void*) throw() NORETURN;
+void  operator delete[](void*, void*) throw() NORETURN;
+
+#endif  // UTILITY_LINUX
 
 #endif

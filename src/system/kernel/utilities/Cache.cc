@@ -412,7 +412,7 @@ bool Cache::evict(uintptr_t key, bool bLock, bool bPhysicalLock, bool bRemove)
         // Good to go. Trigger a writeback if we know this was a dirty page.
         if (!verifyChecksum(pPage))
         {
-            m_Callback(WriteBack, key, pPage->location, m_CallbackMeta);
+            m_Callback(CacheConstants::WriteBack, key, pPage->location, m_CallbackMeta);
         }
 
         physical_uintptr_t phys;
@@ -428,7 +428,7 @@ bool Cache::evict(uintptr_t key, bool bLock, bool bPhysicalLock, bool bRemove)
 
         // Eviction callback.
         if(m_Callback)
-            m_Callback(Eviction, key, pPage->location, m_CallbackMeta);
+            m_Callback(CacheConstants::Eviction, key, pPage->location, m_CallbackMeta);
 
         // Clean up resources now that all callbacks and removals are complete.
         va.unmap(loc);
@@ -482,7 +482,7 @@ void Cache::release (uintptr_t key)
     {
         // Trigger an eviction. The eviction will check refcnt, and won't do
         // anything if the refcnt is raised again.
-        CacheManager::instance().addAsyncRequest(1, reinterpret_cast<uint64_t>(this), PleaseEvict, key);
+        CacheManager::instance().addAsyncRequest(1, reinterpret_cast<uint64_t>(this), CacheConstants::PleaseEvict, key);
     }
 
     m_Lock.release();
@@ -527,9 +527,9 @@ void Cache::sync(uintptr_t key, bool async)
     m_Lock.release();
 
     if(async)
-        CacheManager::instance().addAsyncRequest(1, reinterpret_cast<uint64_t>(this), WriteBack, key, location);
+        CacheManager::instance().addAsyncRequest(1, reinterpret_cast<uint64_t>(this), CacheConstants::WriteBack, key, location);
     else
-        CacheManager::instance().addRequest(1, reinterpret_cast<uint64_t>(this), WriteBack, key, location);
+        CacheManager::instance().addRequest(1, reinterpret_cast<uint64_t>(this), CacheConstants::WriteBack, key, location);
 }
 
 void Cache::triggerChecksum(uintptr_t key)
@@ -595,7 +595,7 @@ void Cache::timer(uint64_t delta, InterruptState &state)
         promotePage(page);
 
         // Queue a writeback for this dirty page to its backing store.
-        CacheManager::instance().addAsyncRequest(1, reinterpret_cast<uint64_t>(this), WriteBack, it.key(), page->location);
+        CacheManager::instance().addAsyncRequest(1, reinterpret_cast<uint64_t>(this), CacheConstants::WriteBack, it.key(), page->location);
     }
 
     m_Lock.leave();
@@ -616,7 +616,7 @@ uint64_t Cache::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p
         return 0;
 
     // Eviction request?
-    if (static_cast<CallbackCause>(p2) == PleaseEvict)
+    if (static_cast<CacheConstants::CallbackCause>(p2) == CacheConstants::PleaseEvict)
     {
         evict(p3, false, true, true);
         return 0;
@@ -628,7 +628,7 @@ uint64_t Cache::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p
 #ifdef SUPERDEBUG
     NOTICE("Cache: writeback for off=" << p3 << " @" << p3 << "!");
 #endif
-    m_Callback(static_cast<CallbackCause>(p2), p3, p4, m_CallbackMeta);
+    m_Callback(static_cast<CacheConstants::CallbackCause>(p2), p3, p4, m_CallbackMeta);
 #ifdef SUPERDEBUG
     NOTICE_NOLOCK("Cache: writeback for off=" << p3 << " @" << p3 << " complete!");
 #endif

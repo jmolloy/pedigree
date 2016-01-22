@@ -25,7 +25,7 @@
 
 #include <Log.h>
 
-#include <new>
+#include <utilities/new>
 
 /** @addtogroup kernelutilities
  * @{ */

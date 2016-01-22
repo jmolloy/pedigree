@@ -17,14 +17,53 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef SYSCALL_ERROR_H
-#define SYSCALL_ERROR_H
+#ifndef DISKIMAGE_H
+#define DISKIMAGE_H
 
-#include <errors.h>
+#include <machine/Disk.h>
+#include <utilities/Tree.h>
 
-// For setting a thread's error number when a problem occurs in a syscall.
-void syscallError(int e);
+#include <stdio.h>
 
-#define SYSCALL_ERROR(x) syscallError(Error::x)
+/** Loads a disk image as a usable disk device. */
+class DiskImage : public Disk
+{
+public:
+    DiskImage(const char *path);
+    virtual ~DiskImage();
+
+    bool initialise();
+
+    virtual void getName(String &str)
+    {
+        str = "Hosted disk image";
+    }
+
+    virtual void dump(String &str)
+    {
+        str = "Hosted disk image";
+    }
+
+    virtual uintptr_t read(uint64_t location);
+    virtual void write(uint64_t location);
+
+    virtual size_t getSize() const;
+
+    virtual size_t getBlockSize() const
+    {
+        return 4096;
+    }
+
+    virtual void pin(uint64_t location);
+
+    virtual void unpin(uint64_t location);
+
+private:
+    const char *m_pFileName;
+    size_t m_nSize;
+    FILE *m_pFile;
+
+    void *m_pBuffer;
+};
 
 #endif

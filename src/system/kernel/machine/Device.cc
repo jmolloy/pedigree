@@ -209,6 +209,7 @@ Device::Address::Address(String n, uintptr_t a, size_t s, bool io, size_t pad) :
   m_Name(n), m_Address(a), m_Size(s), m_IsIoSpace(io), m_Io(0), m_Padding(pad),
   m_bMapped(false)
 {
+#ifndef DEVICE_IGNORE_ADDRESSES
 #ifndef KERNEL_PROCESSOR_NO_PORT_IO
     if (m_IsIoSpace)
     {
@@ -229,10 +230,12 @@ Device::Address::Address(String n, uintptr_t a, size_t s, bool io, size_t pad) :
 #ifndef KERNEL_PROCESSOR_NO_PORT_IO
     }
 #endif
+#endif  // DEVICE_IGNORE_ADDRESSES
 }
 
 void Device::Address::map(size_t forcedSize, bool bUser, bool bWriteCombine, bool bWriteThrough)
 {
+#ifndef DEVICE_IGNORE_ADDRESSES
     if(!m_Io)
         return;
 #ifndef KERNEL_PROCESSOR_NO_PORT_IO
@@ -270,10 +273,13 @@ void Device::Address::map(size_t forcedSize, bool bUser, bool bWriteCombine, boo
     NOTICE("Device::Address: mapped " << m_Address << " -> " << reinterpret_cast<uintptr_t>(static_cast<MemoryMappedIo*>(m_Io)->virtualAddress()));
 
     m_bMapped = true;
+#endif  // DEVICE_IGNORE_ADDRESSES
 }
 
 Device::Address::~Address()
 {
+#ifndef DEVICE_IGNORE_ADDRESSES
   if (m_Io)
     delete m_Io;
+#endif
 }

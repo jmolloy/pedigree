@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -28,6 +27,7 @@
 #include <process/Semaphore.h>
 #include <machine/Network.h>
 #include <config/Config.h>
+#include <process/Mutex.h>
 
 /**
  * The Pedigree routing table supports three different ways to route packets:

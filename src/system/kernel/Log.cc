@@ -72,7 +72,9 @@ static NormalStaticString getTimestamp()
 }
 
 Log::Log () :
+#ifdef THREADS
     m_Lock(),
+#endif
     m_StaticEntries(0),
     m_StaticEntryStart(0),
     m_StaticEntryEnd(0),
@@ -127,7 +129,9 @@ void Log::initialise2()
 void Log::installCallback(LogCallback *pCallback, bool bSkipBacklog)
 {
     {
+#ifdef THREADS
         LockGuard<Spinlock> guard(m_Lock);
+#endif
         m_OutputCallbacks.pushBack(pCallback);
     }
 
@@ -184,7 +188,9 @@ void Log::installCallback(LogCallback *pCallback, bool bSkipBacklog)
 }
 void Log::removeCallback(LogCallback *pCallback)
 {
+#ifdef THREADS
     LockGuard<Spinlock> guard(m_Lock);
+#endif
     for(List<LogCallback*>::Iterator it = m_OutputCallbacks.begin();
         it != m_OutputCallbacks.end();
         it++)
@@ -254,6 +260,8 @@ template Log &Log::operator << (unsigned long long);
 
 Log &Log::operator<< (Modifier type)
 {
+    static bool handlingFatal = false;
+
     // Flush the buffer.
     if (type == Flush)
     {
@@ -309,6 +317,24 @@ Log &Log::operator<< (Modifier type)
                     (*it)->callback(static_cast<const char*>(str));
             }
         }
+
+        // Panic if that was a fatal error.
+        if ((!handlingFatal) && m_Buffer.type == Fatal)
+        {
+            handlingFatal = true;
+
+            const char *panicstr = static_cast<const char*>(m_Buffer.str);
+#ifdef THREADS
+            if (m_Lock.acquired())
+                m_Lock.release();
+#endif
+
+            // Attempt to trap to debugger, panic if that fails.
+#ifdef DEBUGGER
+            Processor::breakpoint();
+#endif
+            panic(panicstr);
+        }
     }
 
     return *this;
@@ -326,6 +352,7 @@ Log &Log::operator<< (SeverityLevel level)
     m_Buffer.str.clear();
     m_Buffer.type = level;
 
+#ifndef UTILITY_LINUX
     Machine &machine = Machine::instance();
     if (machine.isInitialised() == true &&
         machine.getTimer() != 0)
@@ -335,6 +362,7 @@ Log &Log::operator<< (SeverityLevel level)
     }
     else
         m_Buffer.timestamp = 0;
+#endif
 
     return *this;
 }

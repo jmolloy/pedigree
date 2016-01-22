@@ -40,6 +40,9 @@ def buildImageE2fsprogs(target, source, env):
 
     outFile = target[0].abspath
 
+    # ext2img inserts files into our disk image.
+    ext2img = os.path.join(env['HOST_BUILDDIR'], 'ext2img', 'ext2img')
+
     # TODO(miselin): this image will not have GRUB on it.
 
     # Copy files into the local images directory, ready for creation.
@@ -127,79 +130,18 @@ def buildImageE2fsprogs(target, source, env):
     shutil.copyfile(os.path.join(imagedir, '..', 'base', '.profile'),
                     os.path.join(imagedir, '.profile'))
 
+    # Offset into the image for the partition proper to start.
+    partition_offset = 0 # 0x10000
+
     # Build file for creating the disk image.
-    base_image = tempfile.NamedTemporaryFile(dir=os.environ.get('TMPDIR'))
+    base_image = open(outFile, 'w')
 
     # Create image - 1GiB.
-    sz = 1 << 30
+    sz = (1 << 31) + partition_offset
     base_image.truncate(sz)
 
-    # Generate ext2 filesystem.
-    args = [
-        env['MKE2FS'],
-        '-q',
-        '-E', 'root_owner=0:0',  # Don't use UID/GID from host system.
-        '-O', '^dir_index',  # Don't (yet) use directory b-trees.
-        '-I', '128',  # Use 128-byte inodes, as grub-legacy can't use bigger.
-        '-F',
-        '-L',
-        'pedigree',
-        base_image.name,
-    ]
-    subprocess.check_call(args)
-
-    # Populate the image.
-    cmdlist = []
-    for (dirpath, dirs, files) in os.walk(imagedir):
-        target_dirpath = dirpath.replace(imagedir, '')
-        if not target_dirpath:
-            target_dirpath = '/'
-
-        for d in dirs:
-            cmdlist.append('mkdir %s' % (os.path.join(target_dirpath, d),))
-
-        # The 'write' command doesn't actually take a filespec. If we don't
-        # 'cd' to the correct directory first, debugfs writes a file with
-        # forward slashes in the name (which is not very useful!)
-        cmdlist.append("cd %s" % (target_dirpath,))
-
-        for f in files:
-            source = os.path.join(dirpath, f)
-            target = f
-            if os.path.islink(source):
-                link_target = os.readlink(source)
-                if link_target.startswith(dirpath):
-                    link_target = link_target.replace(dirpath, '').lstrip('/')
-
-                cmdlist.append('symlink %s %s' % (target, link_target))
-            elif os.path.isfile(source):
-                cmdlist.append('write %s %s' % (source, target))
-
-        # Reset working directory for mkdir.
-        cmdlist.append("cd /")
-
-    with tempfile.NamedTemporaryFile() as f:
-        f.write('\n'.join(cmdlist))
-        f.flush()
-
-        args = [
-            env['DEBUGFS'],
-            '-w',
-            '-f',
-            f.name,
-            base_image.name,
-        ]
-
-        with tempfile.NamedTemporaryFile() as t:
-            subprocess.check_call(args, stdout=t)
-
-    # Now, we want to add a partition table to the front of the image.
-    temp = '%s.part' % (outFile,)
-    partition_offset = 0x10000
-    with open(temp, 'w') as f:
-        # TODO(miselin): this whole process is kind of ugly.
-        f.truncate(sz + partition_offset)
-
+    # Add a partition table to the front of the image.
+    if 0:
         hpc = 16  # Heads per cylinder
         spt = 63  # Sectors per track
 
@@ -234,17 +176,58 @@ def buildImageE2fsprogs(target, source, env):
         partition += entry
         partition += '\x00' * 48
         partition += '\x55\xAA'
-        f.write(partition)
+        base_image.write(partition)
 
-    # Load the ext2 partition now that the partition table is written.
-    subprocess.check_call([
-        'dd',
-        'if=%s' % base_image.name,
-        'of=%s' % (temp),
-        'seek=%d' % (start_lba,),
-        'obs=512',  # LBA = sector, sector = 512 bytes.
-    ])
+    # Generate ext2 filesystem.
+    args = [
+        env['MKE2FS'],
+        '-q',
+        '-E', 'root_owner=0:0,offset=%d' % partition_offset,  # Don't use UID/GID from host system.
+        '-O', '^dir_index',  # Don't (yet) use directory b-trees.
+        '-I', '128',  # Use 128-byte inodes, as grub-legacy can't use bigger.
+        '-F',
+        '-L',
+        'pedigree',
+        outFile,
+    ]
+    subprocess.check_call(args)
 
-    # Finish.
-    # shutil.move handles cross-filesystem moves correctly (good).
-    shutil.move(temp, outFile)
+    # Populate the image.
+    cmdlist = []
+    for (dirpath, dirs, files) in os.walk(imagedir):
+        target_dirpath = dirpath.replace(imagedir, '')
+        if not target_dirpath:
+            target_dirpath = '/'
+
+        for d in dirs:
+            cmdlist.append('mkdir %s' % (os.path.join(target_dirpath, d),))
+
+        for f in sorted(files):
+            source = os.path.join(dirpath, f)
+            target = os.path.join(target_dirpath, f)
+            if os.path.islink(source):
+                link_target = os.readlink(source)
+                if link_target.startswith(dirpath):
+                    link_target = link_target.replace(dirpath, '').lstrip('/')
+
+                cmdlist.append('symlink %s %s' % (target, link_target))
+            elif os.path.isfile(source):
+                cmdlist.append('write %s %s' % (source, target))
+
+    base_image.close()
+
+    # Dump our files into the image using ext2img (built as part of the normal
+    # Pedigree build, to run on the build system - not on Pedigree).
+    with tempfile.NamedTemporaryFile() as f:
+        f.write('\n'.join(cmdlist))
+        f.flush()
+
+        args = [
+            ext2img,
+            '-c',
+            f.name,
+            '-f',
+            outFile,
+        ]
+
+        subprocess.check_call(args)

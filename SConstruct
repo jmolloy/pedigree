@@ -208,6 +208,9 @@ environment = {
     # Needed to pass in preloads for Bear to build compilation databases.
     'LD_PRELOAD': os.environ.get('LD_PRELOAD', ''),
     'DYLD_INSERT_LIBRARIES': os.environ.get('DYLD_INSERT_LIBRARIES', ''),
+    # Pull in extra ccache configuration.
+    'CCACHE_DIR': os.environ.get('CCACHE_DIR', ''),
+    'CCACHE_TEMPDIR': os.environ.get('CCACHE_DIR', ''),
 }
 try:
     env = Environment(options=opts, platform='posix', ENV=environment,
@@ -217,6 +220,21 @@ except SCons.Errors.EnvironmentError:
     env = Environment(options=opts, platform='posix', ENV=environment,
                       tools=tools_to_find, TARFLAGS='-cz')
 Help(opts.GenerateHelpText(env))
+
+# Load the host environment now - this is a boring, standard environment that
+# doesn't need many flags from the main build.
+host_environ = {}
+host_cxx = os.environ.get('CXX')
+host_cc = os.environ.get('CC')
+if host_cxx:
+    host_environ['CXX'] = host_cxx
+if host_cc:
+    host_environ['CC'] = host_cc
+host_env = Environment(platform='posix', **host_environ)
+
+# Copy useful environment items that are needed in site_scons/buildutils
+for copy_key in ('verbose', 'nocolour'):
+    host_env[copy_key] = env[copy_key]
 
 def memoized_scons_subst(cache, old_scons_subst, string, env,
                          mode=SCons.Subst.SUBST_RAW, target=None, source=None,
@@ -365,12 +383,16 @@ env['PROGSUFFIX'] = ''
 
 # Determine build directories (these can be outside the source tree).
 env['BUILDDIR'] = env.Dir(env['BUILDDIR']).abspath  # Normalise path.
+env['HOST_BUILDDIR'] = os.path.join(env['BUILDDIR'], 'host')
 env['PEDIGREE_BUILD_BASE'] = env['BUILDDIR']
 env['PEDIGREE_BUILD_MODULES'] = os.path.join(env['BUILDDIR'], 'modules')
 env['PEDIGREE_BUILD_KERNEL'] = os.path.join(env['BUILDDIR'], 'kernel')
 env['PEDIGREE_BUILD_DRIVERS'] = os.path.join(env['BUILDDIR'], 'drivers')
 env['PEDIGREE_BUILD_SUBSYS'] = os.path.join(env['BUILDDIR'], 'subsystems')
 env['PEDIGREE_BUILD_APPS'] = os.path.join(env['BUILDDIR'], 'apps')
+
+# Add host build output path.
+host_env['BUILDDIR'] = env['HOST_BUILDDIR']
 
 # Set up compilers and in particular the cross-compile environment.
 if env['CROSS'] or env['ON_PEDIGREE']:
@@ -836,13 +858,15 @@ if env['cache']:
 # Make build messages much prettier.
 misc.prettifyBuildMessages(env)
 misc.prettifyBuildMessages(userspace_env)
+misc.prettifyBuildMessages(host_env)
 
 # Generate custom builders and add to environment.
 misc.generate(env)
 misc.generate(userspace_env)
+misc.generate(host_env)
 
 SConscript('SConscript', variant_dir=env['BUILDDIR'],
-           exports=['env', 'userspace_env'], duplicate=0)
+           exports=['env', 'userspace_env', 'host_env'], duplicate=0)
 
 subarch_dump = env.get('SUBARCH_DIR', '')
 if subarch_dump:

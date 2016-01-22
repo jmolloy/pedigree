@@ -1,0 +1,102 @@
+'''
+Copyright (c) 2008-2014, Pedigree Developers
+
+Please see the CONTRIB file in the root of the source tree for a full
+list of contributors.
+
+Permission to use, copy, modify, and distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+'''
+
+
+import os
+
+Import(['env'])
+
+EXT2_DIR = env.Dir('#src/modules/system/ext2').abspath
+VFS_DIR = env.Dir('#src/modules/system/vfs').abspath
+PART_DIR = env.Dir('#src/modules/drivers/common/partition').abspath
+KERNEL_DIR = env.Dir('#src/system/kernel').abspath
+
+build_env = env.Clone()
+
+# Set up includes correctly.
+header_paths = [
+    env.Dir('#src/modules/system'),
+    env.Dir('#src/system/include'),
+]
+
+build_env.Append(CPPPATH=header_paths)
+
+# Create a fake build environment (TODO: detect host architecture)
+defines = [
+    'HOSTED', 'VFS_NOMMU', 'VFS_STANDALONE', 'EXT2_STANDALONE',
+    'UTILITY_LINUX', 'NO_LOGGING', 'DEVICE_IGNORE_ADDRESSES',
+    'LITTLE_ENDIAN',
+    # On Pedigree, memcpy automatically determines if it should fall back to
+    # memmove for backwards copies - not so on other systems. So, just
+    # make memcpy the same as memmove.
+    'memcpy=memmove',
+]
+
+build_env.Append(CPPDEFINES=defines)
+
+build_env.MergeFlags({'CXXFLAGS': ['-std=c++11', '-g3', '-ggdb', '-O2']})
+
+# VFS module sources that we care about.
+vfs_sources = [
+    'File.cc',
+    'Filesystem.cc',
+    'VFS.cc',
+    'Symlink.cc',
+    'Directory.cc',
+]
+
+# ext2 module sources that we care about.
+ext2_sources = [
+    'Ext2Directory.cc',
+    'Ext2Filesystem.cc',
+    'Ext2File.cc',
+    'Ext2Node.cc',
+    'Ext2Symlink.cc',
+]
+
+# partition module sources that we care about.
+partition_sources = [
+    'Partition.cc',
+    'apple.cc',
+    'msdos.cc',
+]
+
+# base kernel sources that we care about.
+kernel_sources = [
+    os.path.join('utilities', 'String.cc'),
+    os.path.join('utilities', 'List.cc'),
+    os.path.join('utilities', 'Vector.cc'),
+    os.path.join('utilities', 'Tree.cc'),
+    os.path.join('machine', 'Device.cc'),
+]
+
+# Build components from Pedigree to merge into a working VFS layer that uses
+# an ext2 filesystem.
+libvfs = build_env.Library('vfs',
+    [os.path.join(VFS_DIR, f) for f in vfs_sources])
+libext2 = build_env.Library('ext2',
+    [os.path.join(EXT2_DIR, f) for f in ext2_sources])
+libpart = build_env.Library('part',
+    [os.path.join(PART_DIR, f) for f in partition_sources])
+libkern = build_env.Library('kern',
+    [os.path.join(KERNEL_DIR, f) for f in kernel_sources])
+
+
+build_env.Program('ext2img', ['main.cc', 'DiskImage.cc'],
+    LIBS=[libext2, libvfs, libpart, libkern])
