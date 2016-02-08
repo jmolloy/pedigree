@@ -235,6 +235,8 @@ int handleImage(const char *image, std::vector<Command> &cmdlist, size_t part=0)
     std::cout << "\rProgress: 100.0%" << std::endl;
 
     std::cout << "Completed command list for image " << image << "." << std::endl;
+
+    return 0;
 }
 
 bool parseCommandFile(const char *cmdFile, std::vector<Command> &output)
