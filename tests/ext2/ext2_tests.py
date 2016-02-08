@@ -33,9 +33,9 @@ def generate_new_test(ext2img, script, should_pass):
         # Pre-test: create the image.
         with open('_t.img', 'w') as f:
             f.truncate(0x1000000)
-        subprocess.check_call(['/sbin/mke2fs', '-q', '-E', 'root_owner=0:0',
-            '-O', '^dir_index', '-I', '128', '-F', '-L', 'pedigree', '_t.img'],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess.check_call(['/sbin/mke2fs', '-q', '-O', '^dir_index', '-I',
+            '128', '-F', '-L', 'pedigree', '_t.img'], stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
 
     def call(self, wrapper=None):
         try:
@@ -47,8 +47,15 @@ def generate_new_test(ext2img, script, should_pass):
         if wrapper:
             args = wrapper + args
         result = subprocess.call(args)
+
         if should_pass:
             self.assertEqual(result, 0)
+
+            # Make sure an fsck passes too, now that we've checked the
+            # invocation itself passed.
+            args = ['/sbin/fsck.ext2', '-n', '-f', '_t.img']
+            fsck_result = subprocess.call(args)
+            self.assertEqual(fsck_result, 0)
         else:
             self.assertNotEqual(result, 0)
 

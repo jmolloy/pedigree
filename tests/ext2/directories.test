@@ -1,0 +1,7 @@
+# PASS: just create some directories
+
+mkdir /foo
+mkdir /bar
+mkdir /baz
+
+mkdir /foo/bar
