@@ -14,6 +14,7 @@ matrix:
     - compiler: clang
 script:
   - ./easy_build_$EASY_BUILD.sh nosudo $OS
+  - ./tests/testsuite.sh
   - ./scripts/runtest.py
 install: true
 notifications:
