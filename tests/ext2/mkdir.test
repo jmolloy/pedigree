@@ -1,0 +1,3 @@
+# PASS: we should be able to make a directory
+
+mkdir /foo

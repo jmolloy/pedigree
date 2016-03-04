@@ -34,8 +34,8 @@ def generate_new_test(ext2img, script, should_pass):
         with open('_t.img', 'w') as f:
             f.truncate(0x1000000)
         subprocess.check_call(['/sbin/mke2fs', '-q', '-O', '^dir_index', '-I',
-            '128', '-F', '-L', 'pedigree', '_t.img'], stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT)
+                               '128', '-F', '-L', 'pedigree', '_t.img'],
+                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
     def call(self, wrapper=None):
         try:
@@ -46,29 +46,44 @@ def generate_new_test(ext2img, script, should_pass):
         args = [ext2img, '-c', script, '-f', '_t.img']
         if wrapper:
             args = wrapper + args
-        result = subprocess.call(args)
+        result = subprocess.Popen(args, stdout=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT)
+
+        run_result = result.wait()
+        run_output, _ = result.communicate()
 
         if should_pass:
-            self.assertEqual(result, 0)
+            self.assertEqual(run_result, 0, 'exit status %d != 0\n'
+                             'output:\n\n%s\n' % (
+                                 run_result, run_output))
 
             # Make sure an fsck passes too, now that we've checked the
             # invocation itself passed.
             args = ['/sbin/fsck.ext2', '-n', '-f', '_t.img']
-            fsck_result = subprocess.call(args)
-            self.assertEqual(fsck_result, 0)
+            fsck = subprocess.Popen(args, stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT)
+            fsck_result = fsck.wait()
+            fsck_output, _ = fsck.communicate()
+            self.assertEqual(fsck_result, 0,
+                             msg='exit status %d != 0\nfsck output:\n\n%s\n'
+                                 'ext2img output:\n%s\n' % (fsck_result,
+                                                            fsck_output,
+                                                            run_output))
         else:
-            self.assertNotEqual(result, 0)
+            self.assertNotEqual(run_result, 0, 'exit status %d == 0\n'
+                                'ext2img output:\n%s\n' % (run_result,
+                                                           run_output))
 
     def test_doer(self):
         call(self)
 
     def test_memcheck_doer(self):
         call(self, wrapper=['/usr/bin/valgrind', '--tool=memcheck',
-            '--error-exitcode=1'])
+                            '--error-exitcode=1'])
 
     def test_sgcheck_doer(self):
         call(self, wrapper=['/usr/bin/valgrind', '--tool=exp-sgcheck',
-            '--error-exitcode=1'])
+                            '--error-exitcode=1'])
 
     testname = os.path.basename(script).replace('.test', '').replace('.', '_')
 
@@ -102,6 +117,10 @@ def find_pedigree_tests():
         with open(f) as f_:
             start = f_.read(64).splitlines()[0]
             should_pass = 'pass' in start.lower()
+
+            # Allow temporary disables for tests
+            if 'disable' in start.lower():
+                continue
 
         tests = generate_new_test(ext2img_bin, f, should_pass)
         for test in tests:

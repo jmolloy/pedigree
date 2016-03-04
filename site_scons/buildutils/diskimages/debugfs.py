@@ -141,7 +141,7 @@ def buildImageE2fsprogs(target, source, env):
     base_image.truncate(sz)
 
     # Add a partition table to the front of the image.
-    if 0:
+    if partition_offset:
         hpc = 16  # Heads per cylinder
         spt = 63  # Sectors per track
 
