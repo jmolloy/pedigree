@@ -27,12 +27,12 @@ class Ext2Tests(unittest.TestCase):
     pass
 
 
-def generate_new_test(ext2img, script, should_pass):
+def generate_new_test(ext2img, script, should_pass, sz=0x1000000, suffix=None):
     """Generate a test that runs ext2img to complete."""
     def _setup(self):
         # Pre-test: create the image.
         with open('_t.img', 'w') as f:
-            f.truncate(0x1000000)
+            f.truncate(sz)
         subprocess.check_call(['/sbin/mke2fs', '-q', '-O', '^dir_index', '-I',
                                '128', '-F', '-L', 'pedigree', '_t.img'],
                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -86,6 +86,8 @@ def generate_new_test(ext2img, script, should_pass):
                             '--error-exitcode=1'])
 
     testname = os.path.basename(script).replace('.test', '').replace('.', '_')
+    if suffix is not None:
+        testname += '.%s' % (suffix,)
 
     returns = (
         test_doer,
@@ -122,9 +124,11 @@ def find_pedigree_tests():
             if 'disable' in start.lower():
                 continue
 
-        tests = generate_new_test(ext2img_bin, f, should_pass)
-        for test in tests:
-            setattr(Ext2Tests, test.__name__, test)
+        for sz in (0x100000 * 16, 0x100000 * 256, 0x100000 * 512):
+            tests = generate_new_test(ext2img_bin, f, should_pass, sz=sz,
+                                      suffix='%dMB' % (sz / 0x100000,))
+            for test in tests:
+                setattr(Ext2Tests, test.__name__, test)
 
 
 find_pedigree_tests()
