@@ -224,6 +224,7 @@ def buildImageE2fsprogs(target, source, env):
 
         args = [
             ext2img,
+            '-q',
             '-c',
             f.name,
             '-f',
