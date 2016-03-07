@@ -55,6 +55,8 @@ public:
 
     using File::sync;
     virtual void sync(size_t offset, bool async);
+
+    virtual size_t getBlockSize() const;
 };
 
 #endif

@@ -418,8 +418,10 @@ uintptr_t Ext2Filesystem::readBlock(uint32_t block)
 
 void Ext2Filesystem::writeBlock(uint32_t block)
 {
-    if (block != 0)
-        m_pDisk->write(static_cast<uint64_t>(m_BlockSize) * static_cast<uint64_t>(block));
+    if (block == 0)
+        return;
+
+    m_pDisk->write(static_cast<uint64_t>(m_BlockSize) * static_cast<uint64_t>(block));
 }
 
 void Ext2Filesystem::pinBlock(uint64_t location)

@@ -109,3 +109,8 @@ void Ext2File::sync(size_t offset, bool async)
 {
     Ext2Node::sync(offset, async);
 }
+
+size_t Ext2File::getBlockSize() const
+{
+    return m_pExt2Fs->m_BlockSize;
+}

@@ -277,6 +277,9 @@ bool Ext2Node::addBlock(uint32_t blockValue)
             void *buffer = reinterpret_cast<void *>(m_pExt2Fs->readBlock(newBlock));
             memset(buffer, 0, m_pExt2Fs->m_BlockSize);
 
+            // Write back the zeroed block to prepare the indirect block.
+            m_pExt2Fs->writeBlock(newBlock);
+
             // Taken on a new block - update block count (but don't track in
             // m_pBlocks, as this is a metadata block).
             m_nMetadataBlocks++;
@@ -353,7 +356,7 @@ bool Ext2Node::addBlock(uint32_t blockValue)
         pBlock = reinterpret_cast<uint32_t*>(m_pExt2Fs->readBlock(nIndirectBlockNum));
         if (pBlock == reinterpret_cast<uint32_t *>(~0))
         {
-            ERROR("Could not read block that we wanted to add.");
+            ERROR("Could not read block (" << nIndirectBlockNum << ") that we wanted to add.");
             return false;
         }
 
@@ -376,7 +379,7 @@ bool Ext2Node::addBlock(uint32_t blockValue)
 void Ext2Node::fileAttributeChanged(size_t size, size_t atime, size_t mtime, size_t ctime)
 {
     // Reconstruct the inode from the cached fields.
-    uint32_t i_blocks = (m_nBlocks * m_pExt2Fs->m_BlockSize) / 512;
+    uint32_t i_blocks = ((m_nBlocks + m_nMetadataBlocks) * m_pExt2Fs->m_BlockSize) / 512;
     m_pInode->i_blocks = HOST_TO_LITTLE32(i_blocks);
     m_pInode->i_size = HOST_TO_LITTLE32(size); /// \todo 4GB files.
     m_pInode->i_atime = HOST_TO_LITTLE32(atime);
