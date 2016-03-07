@@ -34,6 +34,7 @@ env.Alias("kernel", objname)
 # Base set of kernel files, common to all architectures.
 files = [
     'Log.cc',
+    'SerialLog.cc',
     os.path.join(builddir, 'Version.cc'),
     'Archive.cc',
     'Spinlock.cc',

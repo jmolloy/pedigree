@@ -35,6 +35,7 @@
 #include <ext2/Ext2Filesystem.h>
 #include <machine/Disk.h>
 #include <utilities/String.h>
+#include <Log.h>
 
 #include "DiskImage.h"
 
@@ -50,6 +51,7 @@ enum CommandType
     CreateDirectory,
     CreateSymlink,
     WriteFile,
+    VerifyFile,
 };
 
 struct Command
@@ -62,6 +64,17 @@ struct Command
 
 extern bool msdosProbeDisk(Disk *pDisk);
 extern bool appleProbeDisk(Disk *pDisk);
+
+class StreamingStderrLogger : public Log::LogCallback
+{
+    public:
+        /// printString is used directly as well as in this callback object,
+        /// therefore we simply redirect to it.
+        void callback(const char *str)
+        {
+            fprintf(stderr, "%s", str);
+        }
+};
 
 void syscallError(int e)
 {
@@ -147,6 +160,68 @@ bool createDirectory(std::string dest)
     return true;
 }
 
+bool verifyFile(std::string source, std::string target)
+{
+    std::ifstream ifs(source, std::ios::binary);
+    if (ifs.bad() || ifs.fail())
+    {
+        std::cerr << "Could not open verify source file '" << source << "'." << std::endl;
+        return false;
+    }
+
+    File *pFile = VFS::instance().find(TO_FS_PATH(target));
+    if (!pFile)
+    {
+        std::cerr << "Couldn't open verify target file: '" << target << "'." << std::endl;
+        return false;
+    }
+
+    // Don't use the cache for this - read blocks directly via the FS driver.
+    pFile->enableDirect();
+
+    // Compare block by block.
+    size_t blockSize = pFile->getBlockSize() * blocksPerRead;
+    char *bufferA = new char[blockSize];
+    char *bufferB = new char[blockSize];
+
+    uint64_t offset = 0;
+    while (!ifs.eof())
+    {
+        ifs.read(bufferA, blockSize);
+        uint64_t readCount = ifs.gcount();
+        uint64_t count = 0;
+        if (readCount)
+        {
+            count = pFile->read(offset, blockSize, reinterpret_cast<uintptr_t>(bufferB));
+            if (!count || (count < readCount))
+            {
+                std::cerr << "Empty or short read from file '" << target << "'." << std::endl;
+                if (!ignoreErrors)
+                    return false;
+            }
+
+            if (memcmp(bufferA, bufferB, count) != 0)
+            {
+                std::cerr << "Files do not match at block starting at offset " << offset << "." << std::endl;
+                for (size_t i = 0; i < count; ++i)
+                {
+                    if (bufferA[i] == bufferB[i])
+                        continue;
+                    std::cerr << "First difference at offset " << offset + i << ": ";
+                    std::cerr << (int) bufferA[i] << " vs " << (int) bufferB[i] << std::endl;
+                    break;
+                }
+                if (!ignoreErrors)
+                    return false;
+            }
+
+            offset += readCount;
+        }
+    }
+
+    return true;
+}
+
 int handleImage(const char *image, std::vector<Command> &cmdlist, size_t part=0)
 {
     // Prepare to probe ext2 filesystems via the VFS.
@@ -216,6 +291,12 @@ int handleImage(const char *image, std::vector<Command> &cmdlist, size_t part=0)
                 break;
             case CreateDirectory:
                 if ((!createDirectory(it->params[0])) && !ignoreErrors)
+                {
+                    return 1;
+                }
+                break;
+            case VerifyFile:
+                if ((!verifyFile(it->params[0], it->params[1])) && !ignoreErrors)
                 {
                     return 1;
                 }
@@ -301,6 +382,11 @@ bool parseCommandFile(const char *cmdFile, std::vector<Command> &output)
             c.what = CreateDirectory;
             requiredParamCount = 1;
         }
+        else if (cmd == "verify")
+        {
+            c.what = VerifyFile;
+            requiredParamCount = 2;
+        }
         else
         {
             std::cerr << "Unknown command '" << cmd << "' at line " << lineno << ": '" << line << "'" << std::endl;
@@ -332,10 +418,11 @@ int main(int argc, char *argv[])
     const char *cmdFile = 0;
     const char *diskImage = 0;
     size_t partitionNumber = 0;
+    bool quiet = false;
 
     // Load options.
     int c;
-    while ((c = getopt(argc, argv, "if:c:p::b:")) != -1)
+    while ((c = getopt(argc, argv, "qif:c:p::b:")) != -1)
     {
         switch (c)
         {
@@ -349,6 +436,9 @@ int main(int argc, char *argv[])
                 break;
             case 'i':
                 ignoreErrors = true;
+                break;
+            case 'q':
+                quiet = true;
                 break;
             case 'p':
                 // partition number
@@ -385,6 +475,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Enable logging.
+    StreamingStderrLogger logger;
+    if (!quiet)
+    {
+        Log::instance().installCallback(&logger, true);
+    }
+
     // Parse!
     std::vector<Command> cmdlist;
     if (!parseCommandFile(cmdFile, cmdlist))
@@ -394,6 +491,10 @@ int main(int argc, char *argv[])
 
     // Complete tasks.
     int rc = handleImage(diskImage, cmdlist, partitionNumber);
+    if (!quiet)
+    {
+        Log::instance().removeCallback(&logger);
+    }
     std::cout << std::flush;
     return rc;
 }

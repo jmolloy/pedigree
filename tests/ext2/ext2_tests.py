@@ -26,9 +26,11 @@ import unittest
 class Ext2Tests(unittest.TestCase):
 
     def tearDown(self):
-        # Clean up the disk image now that we're done.
+        # Clean up the data files now that we're done.
         if os.path.exists('_t.img'):
             os.unlink('_t.img')
+        if os.path.exists('big.dat'):
+            os.unlink('big.dat')
 
 
 def generate_new_test(ext2img, script, should_pass, sz=0x1000000, suffix=None):
@@ -37,6 +39,12 @@ def generate_new_test(ext2img, script, should_pass, sz=0x1000000, suffix=None):
         # Pre-test: create the image.
         with open('_t.img', 'w') as f:
             f.truncate(sz)
+        # Pre-test: create a big data file for large write testing.
+        with open('big.dat', 'w') as f:
+            with open('/dev/urandom', 'r') as f_:
+                # Avoid tri-indirect addressing for now (not yet implemented).
+                if sz * 0.7 < 0x1000000:
+                    f.write('x' * int(sz * 0.7))
         subprocess.check_call(['/sbin/mke2fs', '-q', '-O', '^dir_index', '-I',
                                '128', '-F', '-L', 'pedigree', '_t.img'],
                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

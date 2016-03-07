@@ -11,3 +11,10 @@ symlink /foo/bar/link /foo/bar/baz/qux
 symlink /foo/link /foo/bar/baz/qux
 
 symlink /link /foo/bar/baz/qux
+
+# Write a relatively-large file to disk.
+write big.dat /dat
+
+# Make sure we don't fail to write a file correctly, especially with smaller
+# block sizes.
+verify big.dat /dat

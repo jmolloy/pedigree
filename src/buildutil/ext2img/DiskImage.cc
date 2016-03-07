@@ -97,6 +97,7 @@ uintptr_t DiskImage::read(uint64_t location)
 {
     if((location > m_nSize) || !m_pFile)
     {
+        fprintf(stderr, "DiskImage::read: read past EOF (%lu vs %lu)\n", location, m_nSize);
         return ~0;
     }
 

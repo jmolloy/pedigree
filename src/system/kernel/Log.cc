@@ -34,31 +34,7 @@ BootProgressUpdateFn g_BootProgressUpdate = 0;
 size_t g_BootProgressTotal = 0;
 size_t g_BootProgressCurrent = 0;
 
-class SerialLogger : public Log::LogCallback
-{
-    public:
-        void callback(const char* str)
-        {
-            for(size_t n = 0; n < Machine::instance().getNumSerial(); n++)
-            {
-#if defined(MEMORY_TRACING) || (defined(MEMORY_LOGGING_ENABLED) && !defined(MEMORY_LOG_INLINE))
-                if(n == 1) // Don't override memory log.
-                    continue;
-#endif
-
-                Machine::instance().getSerial(n)->write(str);
-#ifndef SERIAL_IS_FILE
-                // Handle carriage return if we're writing to a real terminal
-                // Technically this will create a \n\r, but it will do the same
-                // thing. This may also be redundant, but better to be safe than
-                // sorry imho.
-                Machine::instance().getSerial(n)->write('\r');
-#endif
-            }
-        }
-};
-
-static SerialLogger g_SerialCallback;
+extern void installSerialLogger();
 
 static NormalStaticString getTimestamp()
 {
@@ -122,8 +98,10 @@ void Log::initialise1()
 
 void Log::initialise2()
 {
+#ifndef DONT_LOG_TO_SERIAL
     if(m_EchoToSerial)
-        installCallback(&g_SerialCallback, false);
+        installSerialLogger();
+#endif
 }
 
 void Log::installCallback(LogCallback *pCallback, bool bSkipBacklog)

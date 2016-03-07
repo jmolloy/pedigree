@@ -40,8 +40,8 @@ build_env.Append(CPPPATH=header_paths)
 # Create a fake build environment (TODO: detect host architecture)
 defines = [
     'HOSTED', 'VFS_NOMMU', 'VFS_STANDALONE', 'EXT2_STANDALONE',
-    'UTILITY_LINUX', 'NO_LOGGING', 'DEVICE_IGNORE_ADDRESSES',
-    'LITTLE_ENDIAN',
+    'UTILITY_LINUX', 'DEVICE_IGNORE_ADDRESSES', 'LITTLE_ENDIAN',
+    'DONT_LOG_TO_SERIAL',
     # On Pedigree, memcpy automatically determines if it should fall back to
     # memmove for backwards copies - not so on other systems. So, just
     # make memcpy the same as memmove.
@@ -84,6 +84,7 @@ kernel_sources = [
     os.path.join('utilities', 'Vector.cc'),
     os.path.join('utilities', 'Tree.cc'),
     os.path.join('machine', 'Device.cc'),
+    'Log.cc',
 ]
 
 # Build components from Pedigree to merge into a working VFS layer that uses
@@ -98,5 +99,5 @@ libkern = build_env.Library('kern',
     [os.path.join(KERNEL_DIR, f) for f in kernel_sources])
 
 
-build_env.Program('ext2img', ['main.cc', 'DiskImage.cc'],
+build_env.Program('ext2img', ['main.cc', 'DiskImage.cc', 'shim.cc'],
     LIBS=[libext2, libvfs, libpart, libkern])

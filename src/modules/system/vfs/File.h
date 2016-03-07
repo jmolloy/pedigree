@@ -255,6 +255,18 @@ public:
     virtual size_t getBlockSize() const
     {return PhysicalMemoryManager::getPageSize();}
 
+    /** Enables direct mode (no File-level cache). */
+    void enableDirect()
+    {
+        m_bDirect = true;
+    }
+
+    /** Disables direct mode (use File-level cache). */
+    void disableDirect()
+    {
+        m_bDirect = false;
+    }
+
 protected:
 
     /** Internal function to retrieve an aligned 512byte section of the file. */
@@ -364,6 +376,8 @@ protected:
     uint32_t m_Permissions;
 
     Tree<uint64_t,size_t> m_DataCache;
+
+    bool m_bDirect;
 
 #ifdef THREADS
     Mutex m_Lock;

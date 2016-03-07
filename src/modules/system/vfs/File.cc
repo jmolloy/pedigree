@@ -62,7 +62,7 @@ File::File() :
     m_Name(""), m_AccessedTime(0), m_ModifiedTime(0),
     m_CreationTime(0), m_Inode(0), m_pFilesystem(0), m_Size(0),
     m_pParent(0), m_nWriters(0), m_nReaders(0), m_Uid(0), m_Gid(0),
-    m_Permissions(0), m_DataCache()
+    m_Permissions(0), m_DataCache(), m_bDirect(false)
 #ifdef THREADS
     , m_Lock(), m_MonitorTargets()
 #endif
@@ -74,7 +74,7 @@ File::File(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTi
     m_Name(name), m_AccessedTime(accessedTime), m_ModifiedTime(modifiedTime),
     m_CreationTime(creationTime), m_Inode(inode), m_pFilesystem(pFs),
     m_Size(size), m_pParent(pParent), m_nWriters(0), m_nReaders(0), m_Uid(0),
-    m_Gid(0), m_Permissions(0), m_DataCache()
+    m_Gid(0), m_Permissions(0), m_DataCache(), m_bDirect(false)
 #ifdef THREADS
     , m_Lock(), m_MonitorTargets()
 #endif
@@ -119,7 +119,11 @@ uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
 #ifdef THREADS
         m_Lock.acquire();
 #endif
-        uintptr_t buff = m_DataCache.lookup(block*blockSize);
+        uintptr_t buff = 0;
+        if (!m_bDirect)
+        {
+            buff = m_DataCache.lookup(block*blockSize);
+        }
         if (!buff)
         {
             buff = readBlock(block*blockSize);
@@ -128,7 +132,10 @@ uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
                 ERROR("File::read - bad read (" << (block * blockSize) << " - block size is " << blockSize << ")");
                 return n;
             }
-            m_DataCache.insert(block*blockSize, buff);
+            if (!m_bDirect)
+            {
+                m_DataCache.insert(block*blockSize, buff);
+            }
         }
 #ifdef THREADS
         m_Lock.release();
@@ -156,6 +163,7 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
     extend(location + size);
 
     size_t n = 0;
+#if 1
     while (size)
     {
         uintptr_t block = location / blockSize;
@@ -165,7 +173,11 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
 #ifdef THREADS
         m_Lock.acquire();
 #endif
-        uintptr_t buff = m_DataCache.lookup(block*blockSize);
+        uintptr_t buff = 0;
+        if (!m_bDirect)
+        {
+            buff = m_DataCache.lookup(block*blockSize);
+        }
         if (!buff)
         {
             buff = readBlock(block*blockSize);
@@ -174,7 +186,10 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
                 ERROR("File::write - bad read (" << (block * blockSize) << " - block size is " << blockSize << ")");
                 return n;
             }
-            m_DataCache.insert(block*blockSize, buff);
+            if (!m_bDirect)
+            {
+                m_DataCache.insert(block*blockSize, buff);
+            }
         }
 #ifdef THREADS
         m_Lock.release();
@@ -192,6 +207,9 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
         size -= sz;
         n += sz;
     }
+#else
+    n = size;
+#endif
     if (location >= m_Size)
     {
         m_Size = location;
@@ -202,6 +220,19 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
 
 physical_uintptr_t File::getPhysicalPage(size_t offset)
 {
+    if (m_bDirect)
+    {
+        WARNING("File in direct mode, cannot get backing page.");
+        return ~0UL;
+    }
+
+    if (getBlockSize() < PhysicalMemoryManager::getPageSize())
+    {
+        /// \todo(miselin): for files with <4K block size, this WILL break.
+        WARNING("File TODO: files with block size <4K won't work right");
+        return ~0UL;
+    }
+
 #ifndef VFS_NOMMU
     // Sanitise input.
     size_t blockSize = getBlockSize();
@@ -246,6 +277,11 @@ physical_uintptr_t File::getPhysicalPage(size_t offset)
 
 void File::returnPhysicalPage(size_t offset)
 {
+    if (m_bDirect)
+    {
+        return;
+    }
+
 #ifndef VFS_NOMMU
     // Sanitise input.
     size_t blockSize = getBlockSize();
