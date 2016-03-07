@@ -27,6 +27,8 @@
 
 extern BootstrapStruct_t *g_pBootstrapInfo;
 
+#define USE_FILE_IO  0
+
 DiskImage::DiskImage(const char *path) : Disk(), m_pFileName(path), m_nSize(0),
     m_pFile(0), m_pBuffer(0)
 {
@@ -36,8 +38,14 @@ DiskImage::~DiskImage()
 {
     if (m_pBuffer)
     {
+#if USE_FILE_IO
+        fflush(m_pFile);
+        delete [] (char *) m_pBuffer;
+#else
         msync(m_pBuffer, m_nSize, MS_SYNC);
         munmap(m_pBuffer, m_nSize);
+#endif
+        m_pBuffer = 0;
     }
 
     if (m_pFile)
@@ -68,6 +76,9 @@ bool DiskImage::initialise()
 
     m_nSize = st.st_size;
 
+#if USE_FILE_IO
+    m_pBuffer = (void *) new char[m_nSize];
+#else
     m_pBuffer = mmap(0, m_nSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if (m_pBuffer == MAP_FAILED)
     {
@@ -77,6 +88,7 @@ bool DiskImage::initialise()
     }
 
     posix_madvise(m_pBuffer, m_nSize, POSIX_MADV_SEQUENTIAL);
+#endif
 
     return true;
 }
@@ -88,7 +100,17 @@ uintptr_t DiskImage::read(uint64_t location)
         return ~0;
     }
 
+#if USE_FILE_IO
+    uint64_t off = location & 0xFFF;
+    location &= ~0xFFF;
+    fseek(m_pFile, location, SEEK_SET);
+    ssize_t x = fread(adjust_pointer(m_pBuffer, location), 4096, 1, m_pFile);
+    if (!x)
+        return ~0;
+    return reinterpret_cast<uintptr_t>(m_pBuffer) + location + off;
+#else
     return reinterpret_cast<uintptr_t>(m_pBuffer) + location;
+#endif
 }
 
 void DiskImage::write(uint64_t location)
@@ -98,7 +120,13 @@ void DiskImage::write(uint64_t location)
         return;
     }
 
+#if USE_FILE_IO
+    location &= ~0xFFF;
+    fseek(m_pFile, location, SEEK_SET);
+    fwrite(adjust_pointer(m_pBuffer, location), 4096, 1, m_pFile);
+#else
     msync(adjust_pointer(m_pBuffer, location), getBlockSize(), MS_ASYNC);
+#endif
 }
 
 size_t DiskImage::getSize() const
