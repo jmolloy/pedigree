@@ -24,7 +24,11 @@ import unittest
 
 
 class Ext2Tests(unittest.TestCase):
-    pass
+
+    def tearDown(self):
+        # Clean up the disk image now that we're done.
+        if os.path.exists('_t.img'):
+            os.unlink('_t.img')
 
 
 def generate_new_test(ext2img, script, should_pass, sz=0x1000000, suffix=None):
