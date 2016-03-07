@@ -103,8 +103,8 @@ def generate_new_test(ext2img, script, should_pass, sz=0x1000000, suffix=None):
 
     returns = (
         test_doer,
-        # test_memcheck_doer,
-        # test_sgcheck_doer,
+        test_memcheck_doer,
+        test_sgcheck_doer,
     )
 
     for r in returns:
