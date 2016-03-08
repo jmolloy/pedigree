@@ -54,5 +54,5 @@ build_env.Append(LIBPATH=[os.path.join(build_env['BUILDDIR'], 'external')])
 build_env.MergeFlags({'CXXFLAGS': ['-std=c++11', '-g3', '-ggdb', '-O0']})
 
 build_env.Program('testsuite', ['test-List.cc'],
-                  LIBS=['gtest', 'pthread', 'gcov'],
-                  CCFLAGS=['-fprofile-arcs', '-ftest-coverage'])
+                  LIBS=['gtest', 'pthread'],
+                  CCFLAGS=['--coverage'], LINKFLAGS=['--coverage'])
