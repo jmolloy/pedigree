@@ -27,6 +27,10 @@ from buildutils.diskimages import build
 
 Import(['env', 'userspace_env', 'host_env'])
 
+# Host utilities or libraries for host tools in git submodules.
+SConscript(os.path.join('external', 'SConscript'), exports=['host_env'],
+           variant_dir=os.path.join(host_env['BUILDDIR'], 'external'), duplicate=0)
+
 # Build utilities that run on the host during the kernel build.
 SConscript(os.path.join('src', 'buildutil', 'SConscript'), exports=['host_env'],
            variant_dir=host_env['BUILDDIR'], duplicate=0)

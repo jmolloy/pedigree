@@ -22,13 +22,12 @@ import os
 
 Import(['host_env'])
 
-env = host_env
-conf = Configure(env)
-
-subdirs = [
-    'ext2img',
-    'testsuite',
-]
-
-for subdir in subdirs:
-    SConscript(os.path.join(subdir, 'SConscript'), exports=['env'])
+# Build gtest.
+if host_env.Dir('#external/googletest').exists:
+    lib = host_env.Library('gtest', [
+        '#external/googletest/googletest/src/gtest-all.cc',
+        '#external/googletest/googletest/src/gtest_main.cc',
+    ], CPPPATH=[
+        '#external/googletest/googletest/include',
+        '#external/googletest/googletest',
+    ])

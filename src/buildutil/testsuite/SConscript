@@ -1,0 +1,58 @@
+'''
+Copyright (c) 2008-2014, Pedigree Developers
+
+Please see the CONTRIB file in the root of the source tree for a full
+list of contributors.
+
+Permission to use, copy, modify, and distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+'''
+
+
+import os
+
+Import(['env'])
+
+KERNEL_DIR = env.Dir('#src/system/kernel').abspath
+
+build_env = env.Clone()
+
+# Set up includes correctly.
+header_paths = [
+    env.Dir('#src/modules/system'),
+    env.Dir('#src/system/include'),
+    env.Dir('#external/googletest/googletest/include'),
+]
+
+build_env.Append(CPPPATH=header_paths)
+
+# Create a fake build environment (TODO: detect host architecture)
+defines = [
+    'HOSTED', 'VFS_NOMMU', 'VFS_STANDALONE', 'EXT2_STANDALONE',
+    'UTILITY_LINUX', 'DEVICE_IGNORE_ADDRESSES', 'LITTLE_ENDIAN',
+    'DONT_LOG_TO_SERIAL',
+    # On Pedigree, memcpy automatically determines if it should fall back to
+    # memmove for backwards copies - not so on other systems. So, just
+    # make memcpy the same as memmove.
+    # 'memcpy=memmove',
+]
+
+build_env.Append(CPPDEFINES=defines)
+
+# TODO(miselin): improve the path to external libraries
+build_env.Append(LIBPATH=[os.path.join(build_env['BUILDDIR'], 'external')])
+
+build_env.MergeFlags({'CXXFLAGS': ['-std=c++11', '-g3', '-ggdb', '-O0']})
+
+build_env.Program('testsuite', ['test-List.cc'],
+                  LIBS=['gtest', 'pthread', 'gcov'],
+                  CCFLAGS=['-fprofile-arcs', '-ftest-coverage'])
