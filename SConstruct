@@ -232,6 +232,14 @@ if host_cc:
     host_environ['CC'] = host_cc
 host_env = Environment(platform='posix', **host_environ)
 
+conf = Configure(host_env)
+profile_rt = conf.CheckLib('profile_rt')
+gcov = conf.CheckLib('gcov')
+host_env = conf.Finish()
+
+host_env['HAS_PROFILE_RT'] = profile_rt
+host_env['HAS_GCOV'] = gcov
+
 # Copy useful environment items that are needed in site_scons/buildutils
 for copy_key in ('verbose', 'nocolour'):
     host_env[copy_key] = env[copy_key]
