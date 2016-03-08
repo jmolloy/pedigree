@@ -222,6 +222,7 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
 
 void RequestQueue::halt()
 {
+#ifdef THREADS
   LockGuard<Mutex> guard(m_RequestQueueMutex);
 
   if(!m_Halted)
@@ -232,16 +233,19 @@ void RequestQueue::halt()
     m_pThread = 0;
     m_Halted = true;
   }
+#endif
 }
 
 void RequestQueue::resume()
 {
+#ifdef THREADS
   LockGuard<Mutex> guard(m_RequestQueueMutex);
 
   if(m_Halted)
   {
     initialise();
   }
+#endif
 }
 
 int RequestQueue::trampoline(void *p)
@@ -333,8 +337,10 @@ int RequestQueue::work()
 
 bool RequestQueue::isRequestValid(const Request *r)
 {
+#ifdef THREADS
   // Halted RequestQueue already has the RequestQueue mutex held.
   LockGuard<Mutex> guard(m_RequestQueueMutex);
+#endif
 
   for (size_t priority = 0; priority < REQUEST_QUEUE_NUM_PRIORITIES - 1; ++priority)
   {

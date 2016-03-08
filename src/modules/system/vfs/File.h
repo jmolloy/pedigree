@@ -26,6 +26,7 @@
 #include <utilities/RadixTree.h>
 #include <process/Thread.h>
 #include <process/Event.h>
+#include <utilities/Cache.h>
 #include <utilities/CacheConstants.h>
 #include <utilities/Tree.h>
 #include <LockGuard.h>
@@ -378,6 +379,18 @@ protected:
     Tree<uint64_t,size_t> m_DataCache;
 
     bool m_bDirect;
+
+    /**
+     * This cache is necessary to handle filesystems with block sizes that are
+     * smaller than the native page size. For these filesystems, to perform
+     * memory maps we read native page size blocks into this cache, and then
+     * return pages from it directly. This is expected to somewhat increase
+     * memory usage and reduce performance on non-natively-sized block sizes,
+     * but that's an acceptable compromise.
+     */
+#ifndef VFS_NOMMU
+    Cache m_FillCache;
+#endif
 
 #ifdef THREADS
     Mutex m_Lock;

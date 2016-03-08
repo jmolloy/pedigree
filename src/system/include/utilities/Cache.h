@@ -25,6 +25,7 @@
 #include <utilities/MemoryAllocator.h>
 #include <utilities/UnlikelyLock.h>
 #include <utilities/Tree.h>
+#include <utilities/RequestQueue.h>
 #include <Spinlock.h>
 
 #include <machine/TimerHandler.h>

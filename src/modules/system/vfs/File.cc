@@ -63,6 +63,9 @@ File::File() :
     m_CreationTime(0), m_Inode(0), m_pFilesystem(0), m_Size(0),
     m_pParent(0), m_nWriters(0), m_nReaders(0), m_Uid(0), m_Gid(0),
     m_Permissions(0), m_DataCache(), m_bDirect(false)
+#ifndef VFS_NOMMU
+    , m_FillCache()
+#endif
 #ifdef THREADS
     , m_Lock(), m_MonitorTargets()
 #endif
@@ -75,6 +78,9 @@ File::File(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTi
     m_CreationTime(creationTime), m_Inode(inode), m_pFilesystem(pFs),
     m_Size(size), m_pParent(pParent), m_nWriters(0), m_nReaders(0), m_Uid(0),
     m_Gid(0), m_Permissions(0), m_DataCache(), m_bDirect(false)
+#ifndef VFS_NOMMU
+    , m_FillCache()
+#endif
 #ifdef THREADS
     , m_Lock(), m_MonitorTargets()
 #endif
@@ -163,7 +169,6 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
     extend(location + size);
 
     size_t n = 0;
-#if 1
     while (size)
     {
         uintptr_t block = location / blockSize;
@@ -207,9 +212,6 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
         size -= sz;
         n += sz;
     }
-#else
-    n = size;
-#endif
     if (location >= m_Size)
     {
         m_Size = location;
@@ -226,16 +228,16 @@ physical_uintptr_t File::getPhysicalPage(size_t offset)
         return ~0UL;
     }
 
-    if (getBlockSize() < PhysicalMemoryManager::getPageSize())
-    {
-        /// \todo(miselin): for files with <4K block size, this WILL break.
-        WARNING("File TODO: files with block size <4K won't work right");
-        return ~0UL;
-    }
-
 #ifndef VFS_NOMMU
     // Sanitise input.
     size_t blockSize = getBlockSize();
+    size_t nativeBlockSize = PhysicalMemoryManager::getPageSize();
+    bool useFillCache = false;
+    if (blockSize < nativeBlockSize)
+    {
+        useFillCache = true;
+        blockSize = nativeBlockSize;
+    }
     offset &= ~(blockSize - 1);
 
     // Quick and easy exit.
@@ -248,7 +250,33 @@ physical_uintptr_t File::getPhysicalPage(size_t offset)
 #ifdef THREADS
     m_Lock.acquire();
 #endif
-    uintptr_t vaddr = m_DataCache.lookup(offset);
+    uintptr_t vaddr = 0;
+    if (LIKELY(!useFillCache))
+    {
+        // Not using fill cache, this is the easy and common case.
+        vaddr = m_DataCache.lookup(offset);
+    }
+    else
+    {
+        // Using the fill cache, because the filesystem has a block size
+        // smaller than our native page size.
+        vaddr = m_FillCache.lookup(offset);
+        if (!vaddr)
+        {
+            vaddr = m_FillCache.insert(offset, nativeBlockSize);
+#ifdef THREADS
+            m_Lock.release();
+#endif
+            if (read(offset, nativeBlockSize, vaddr, true) != nativeBlockSize)
+            {
+                ERROR("Reading into fill cache failed, cannot get backing page.");
+                return ~0UL;
+            }
+#ifdef THREADS
+    m_Lock.acquire();
+#endif
+        }
+    }
 #ifdef THREADS
     m_Lock.release();
 #endif
@@ -266,11 +294,18 @@ physical_uintptr_t File::getPhysicalPage(size_t offset)
         va.getMapping(reinterpret_cast<void *>(vaddr), phys, flags);
 
         // Pin this key in the cache down, so we don't lose it.
-        pinBlock(offset);
+        if (UNLIKELY(useFillCache))
+        {
+            m_FillCache.pin(offset);
+        }
+        else
+        {
+            pinBlock(offset);
+        }
 
         return phys;
     }
-#endif
+#endif  // VFS_NOMMU
 
     return ~0UL;
 }
@@ -285,6 +320,13 @@ void File::returnPhysicalPage(size_t offset)
 #ifndef VFS_NOMMU
     // Sanitise input.
     size_t blockSize = getBlockSize();
+    size_t nativeBlockSize = PhysicalMemoryManager::getPageSize();
+    bool useFillCache = false;
+    if (blockSize < nativeBlockSize)
+    {
+        useFillCache = true;
+        blockSize = nativeBlockSize;
+    }
     offset &= ~(blockSize - 1);
 
     // Quick and easy exit for bad input.
@@ -298,7 +340,14 @@ void File::returnPhysicalPage(size_t offset)
 #ifdef THREADS
     m_Lock.acquire();
 #endif
-    unpinBlock(offset);
+    if (UNLIKELY(useFillCache))
+    {
+        m_FillCache.release(offset);
+    }
+    else
+    {
+        unpinBlock(offset);
+    }
 #ifdef THREADS
     m_Lock.release();
 #endif
