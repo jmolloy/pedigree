@@ -21,6 +21,18 @@
 
 #include <gtest/gtest.h>
 
+struct Foo
+{
+    Foo() : x(-1)
+    {}
+
+    // Must use explicit here to avoid the implicit conversion.
+    explicit Foo(int x) : x(x)
+    {}
+
+    int x;
+};
+
 TEST(PedigreeList, Construction)
 {
     List<int> x;
@@ -190,3 +202,19 @@ TEST(PedigreeList, Assign)
     EXPECT_EQ(x.count(), 0);
 }
 
+TEST(PedigreeList, NonZeroableType)
+{
+    Foo a(2), b(4), c(6);
+
+    List<Foo> x;
+    x.pushBack(a);
+    x.pushBack(b);
+    x.pushBack(c);
+
+    EXPECT_EQ(x.popFront().x, 2);
+    EXPECT_EQ(x.popFront().x, 4);
+    EXPECT_EQ(x.popFront().x, 6);
+    EXPECT_EQ(x.popFront().x, -1);
+
+    EXPECT_EQ(x.count(), 0);
+}

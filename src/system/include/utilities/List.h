@@ -498,7 +498,7 @@ T List<T>::popBack()
 {
   // Handle an extremely unusual case
   if(!m_Last && !m_First)
-    return 0;
+    return T();
     
   node_t *node = m_Last;
   if(m_Last)
@@ -510,7 +510,7 @@ T List<T>::popBack()
   --m_Count;
 
   if(!node)
-    return 0;
+    return T();
 
   T value = node->value;
   delete node;
@@ -537,7 +537,7 @@ T List<T>::popFront()
 {
   // Handle an extremely unusual case
   if(!m_Last && !m_First)
-    return 0;
+    return T();
   
   node_t *node = m_First;
   if(m_First)
@@ -549,7 +549,7 @@ T List<T>::popFront()
   --m_Count;
 
   if(!node)
-    return 0;
+    return T();
 
   T value = node->value;
   delete node;
