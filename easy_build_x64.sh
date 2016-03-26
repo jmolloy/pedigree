@@ -66,7 +66,15 @@ if [ ! -e $script_dir/.easy_os ]; then
             ;;
         osx|mac)
             echo "Installing packages with macports, please wait..."
-            sudo port install mpfr libmpc gmp libiconv sqlite3 texinfo scons cdrtools wget mtools gnutar
+            if type port >/dev/null 2>&1; then
+                sudo port install mpfr libmpc gmp libiconv sqlite3 texinfo scons cdrtools wget mtools gnutar
+            elif type brew >/dev/null 2>&1; then
+                for pkg in "scons gnu-tar wget xorriso sqlite3 mtools"; do
+                    if [[ $(brew ls --versions $pkg) ]]; then
+                        brew install $pkg
+                    fi
+                done
+            fi
 
             real_os="osx"
             ;;
