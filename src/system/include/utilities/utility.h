@@ -109,8 +109,8 @@ char *strncat(char *dest, const char *src, int n);
 void random_seed(uint64_t seed);
 uint64_t random_next();
 
-const char *strchr(const char *str, int target);
-const char *strrchr(const char *str, int target);
+char *strchr(const char *str, int target);
+char *strrchr(const char *str, int target);
 
 #ifdef UTILITY_LINUX
 #include <stdio.h>

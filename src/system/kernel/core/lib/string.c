@@ -217,27 +217,34 @@ unsigned long pedigree_strtoul(const char *nptr, char const **endptr, int base)
   return (acc);
 }
 
-const char *strrchr(const char *str, int target)
+// The definitions of C's strchr/strrchr take a const input and return a
+// non-const pointer (into that string), which breaks with -Wcast-qual. So,
+// disable that so we can build these functions to spec.
+#pragma GCC diagnostic ignored "-Wcast-qual"
+
+char *strrchr(const char *str, int target)
 {
   int i;
   for (i = strlen(str); i >= 0; i--)
     if (str[i] == target)
-      return (const char*)&str[i];
-  return (const char*)0;
+      return (char *) &str[i];
+  return (char *)0;
 }
 
 #ifdef HOSTED
-const char *_strchr(const char *str, int target)
+char *_strchr(const char *str, int target)
 #else
-const char *strchr(const char *str, int target)
+char *strchr(const char *str, int target)
 #endif
 {
   size_t i;
   for (i = 0; i < strlen(str); i++)
     if (str[i] == target)
-      return (const char*)&str[i];
-  return (const char*)0;
+      return (char *) &str[i];
+  return (char *)0;
 }
+
+#pragma GCC diagnostic pop
 
 #ifdef HOSTED
 unsigned long __wrap_strtoul(const char *nptr, char const **endptr, int base)
