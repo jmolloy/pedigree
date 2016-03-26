@@ -220,6 +220,7 @@ unsigned long pedigree_strtoul(const char *nptr, char const **endptr, int base)
 // The definitions of C's strchr/strrchr take a const input and return a
 // non-const pointer (into that string), which breaks with -Wcast-qual. So,
 // disable that so we can build these functions to spec.
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
 
 char *strrchr(const char *str, int target)
