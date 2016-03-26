@@ -9,6 +9,10 @@ matrix:
     env: OS=ubuntu EASY_BUILD=arm
   - os: linux
     env: OS=ubuntu EASY_BUILD=hosted
+  - os: osx
+    env: OS=osx EASY_BUILD=x64
+  - os: osx
+    env: OS=osx EASY_BUILD=hosted
   exclude:
     - os: linux
     - compiler: clang
