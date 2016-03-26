@@ -22,6 +22,9 @@
 
 #include <processor/types.h>
 
+// Forward to the system's machine/types.h rather than replacing it altogether.
+#include_next <machine/types.h>
+
 /** @addtogroup kernelmachinehostedcommon
  * @{ */
 
