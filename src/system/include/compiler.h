@@ -65,8 +65,13 @@
 
 /** Pack initialisation functions into a special section that could be freed after
  *  the kernel initialisation is finished */
+#ifdef __MACH__  // Mach targets break with this.
+#define INITIALISATION_ONLY
+#define INITIALISATION_ONLY_DATA
+#else
 #define INITIALISATION_ONLY __attribute__((__section__(".init.text")))
 #define INITIALISATION_ONLY_DATA __attribute__((__section__(".init.data")))
+#endif
 
 // We don't use a custom allocator if asan is enabled.
 #if defined(__has_feature)
