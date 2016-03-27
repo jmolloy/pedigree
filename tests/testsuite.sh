@@ -7,6 +7,11 @@ GIT_ROOT=$(git rev-parse --show-toplevel)
 # Run the Python-based testsuites.
 /usr/bin/env python -m unittest discover -s $GIT_ROOT/tests -p "*_tests.py"
 
+if [ ! -x $GIT_ROOT/build/host/testsuite/testsuite ]; then
+    echo "C/C++ testsuite not present, not attempting to run it."
+    exit 0
+fi
+
 # Remove old coverage data.
 find $GIT_ROOT -type f -name '*.gcda' -delete
 
