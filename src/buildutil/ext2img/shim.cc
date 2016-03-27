@@ -17,6 +17,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#define PEDIGREE_EXTERNAL_SOURCE 1
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
