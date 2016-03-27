@@ -54,14 +54,13 @@ build_env.Append(LIBPATH=[os.path.join(build_env['BUILDDIR'], 'external')])
 build_env.MergeFlags({'CXXFLAGS': ['-std=c++11', '-g3', '-ggdb', '-O0']})
 
 clang = build_env['CC'].endswith('clang')
-CCFLAGS = ['--coverage']
-LINKFLAGS = ['--coverage']
 
-coverage = any([clang and env['HAS_PROFILE_RT'],
-                (not clang) and env['HAS_GCOV']])
-if not coverage:
-    CCFLAGS = []
-    LINKFLAGS = []
+if clang:
+    CCFLAGS = ['-fprofile-arcs', '-ftest-coverage']
+    LINKFLAGS = ['-fprofile-arcs', '-ftest-coverage']
+else:
+    CCFLAGS = ['--coverage']
+    LINKFLAGS = ['--coverage']
 
 build_env.Program('testsuite', ['test-List.cc'], LIBS=['gtest', 'pthread'],
                   CCFLAGS=CCFLAGS, LINKFLAGS=LINKFLAGS)
