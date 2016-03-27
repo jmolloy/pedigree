@@ -351,6 +351,17 @@ if sys.platform == 'darwin':
     # Don't override an overridden TAR variable.
     if env['TAR'] == 'tar':
         env['TAR'] = env.Detect('gnutar')
+        if not env['TAR']:
+            # Homebrew gnu-tar installs as gtar rather than gnutar.
+            env['TAR'] = env.Detect('gtar')
+            if not env['TAR']:
+                # If everything else fails, fall back to BSD tar.
+                # TODO(miselin): 'tar' might actually be GNU tar, if $PATH is
+                # set to put GNU tools first... we should verify before telling
+                # the user we're falling back to BSD tar.
+                print 'Falling back to BSD tar, please be aware that this is an unsupported configuration.'
+                print 'Please consider installing GNU tar.'
+                env['TAR'] = 'tar'
 
 # Look for things we absolutely must have.
 required_tools = ['TAR']
