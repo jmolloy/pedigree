@@ -51,6 +51,12 @@
 #define UNLIKELY(exp) __builtin_expect(!!(exp), 0)
 /** This code is not reachable. */
 #define UNREACHABLE __builtin_unreachable()
+/** This code should be placed in the given section. */
+#ifdef __MACH__  // Mach targets have special section specifications.
+#define SECTION(x)
+#else
+#define SECTION(x) __attribute__((__section__(x)))
+#endif
 
 // Builtin checks.
 #ifndef __has_builtin
@@ -65,13 +71,8 @@
 
 /** Pack initialisation functions into a special section that could be freed after
  *  the kernel initialisation is finished */
-#ifdef __MACH__  // Mach targets break with this.
-#define INITIALISATION_ONLY
-#define INITIALISATION_ONLY_DATA
-#else
-#define INITIALISATION_ONLY __attribute__((__section__(".init.text")))
-#define INITIALISATION_ONLY_DATA __attribute__((__section__(".init.data")))
-#endif
+#define INITIALISATION_ONLY SECTION(".init.text")
+#define INITIALISATION_ONLY_DATA SECTION(".init.data")
 
 // We don't use a custom allocator if asan is enabled.
 #if defined(__has_feature)

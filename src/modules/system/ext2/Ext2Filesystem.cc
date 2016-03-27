@@ -42,7 +42,7 @@
 // written, it traps.
 /// \todo Set CR0.WP bit else this will never happen.
 /// \todo Work out what to do when it traps.
-uint8_t g_pSparseBlock[4096] ALIGN(4096) __attribute__((__section__(".bss")));
+uint8_t g_pSparseBlock[4096] ALIGN(4096) SECTION(".bss");
 
 #ifdef EXT2_STANDALONE
 extern uint32_t getUnixTimestamp();

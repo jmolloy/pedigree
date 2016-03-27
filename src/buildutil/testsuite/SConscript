@@ -60,7 +60,6 @@ LINKFLAGS = ['--coverage']
 coverage = any([clang and env['HAS_PROFILE_RT'],
                 (not clang) and env['HAS_GCOV']])
 if not coverage:
-    print 'no coverage plox'
     CCFLAGS = []
     LINKFLAGS = []
 

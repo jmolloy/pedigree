@@ -92,8 +92,8 @@ extern "C" {
 #endif
 
 size_t strlen(const char *buf);
-int strcpy(char *dest, const char *src);
-int strncpy(char *dest, const char *src, int len);
+char *strcpy(char *dest, const char *src);
+char *strncpy(char *dest, const char *src, size_t len);
 void *memset(void *buf, int c, size_t len);
 void *dmemset(void *buf, unsigned int c, size_t len);
 void *qmemset(void *buf, unsigned long long c, size_t len);
@@ -102,9 +102,9 @@ void *memmove(void *s1, const void *s2, size_t n);
 int memcmp(const void *p1, const void *p2, size_t len);
 
 int strcmp(const char *p1, const char *p2);
-int strncmp(const char *p1, const char *p2, int n);
+int strncmp(const char *p1, const char *p2, size_t n);
 char *strcat(char *dest, const char *src);
-char *strncat(char *dest, const char *src, int n);
+char *strncat(char *dest, const char *src, size_t n);
 
 void random_seed(uint64_t seed);
 uint64_t random_next();

@@ -23,7 +23,9 @@
 #include <processor/types.h>
 
 // Forward to the system's machine/types.h rather than replacing it altogether.
-#ifdef __APPLE__
+// We only do this for targets which already pull in things like stdlib.h
+// (typically tools to run on the build system, not in Pedigree).
+#if defined(__APPLE__) && defined(PEDIGREE_EXTERNAL_SOURCE)
 #include_next <machine/types.h>
 #endif
 

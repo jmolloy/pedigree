@@ -17,9 +17,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <utilities/List.h>
+#define PEDIGREE_EXTERNAL_SOURCE 1
 
 #include <gtest/gtest.h>
+
+#include <utilities/List.h>
 
 struct Foo
 {

@@ -28,7 +28,7 @@ size_t strlen(const char *src)
   return src - orig;
 }
 
-int strcpy(char *dest, const char *src)
+char *strcpy(char *dest, const char *src)
 {
   while (*src)
   {
@@ -37,13 +37,13 @@ int strcpy(char *dest, const char *src)
   }
   *dest = '\0';
 
-  return dest - src;
+  return dest;
 }
 
-int strncpy(char *dest, const char *src, int len)
+char *strncpy(char *dest, const char *src, size_t len)
 {
   const char *orig_dest = dest;
-  for (int i = 0; i < len; ++i)
+  for (size_t i = 0; i < len; ++i)
   {
     if (*src)
       *dest++ = *src++;
@@ -52,7 +52,7 @@ int strncpy(char *dest, const char *src, int len)
   }
   *dest = '\0';
 
-  return dest - orig_dest;
+  return dest;
 }
 
 int sprintf(char *buf, const char *fmt, ...)
@@ -69,7 +69,7 @@ int sprintf(char *buf, const char *fmt, ...)
 
 int strcmp(const char *p1, const char *p2)
 {
-  int i = 0;
+  size_t i = 0;
   int failed = 0;
   while(p1[i] != '\0' && p2[i] != '\0')
   {
@@ -87,9 +87,9 @@ int strcmp(const char *p1, const char *p2)
   return failed;
 }
 
-int strncmp(const char *p1, const char *p2, int n)
+int strncmp(const char *p1, const char *p2, size_t n)
 {
-  int i = 0;
+  size_t i = 0;
   int failed = 0;
   while(p1[i] != '\0' && p2[i] != '\0' && n)
   {
@@ -110,8 +110,8 @@ int strncmp(const char *p1, const char *p2, int n)
 
 char *strcat(char *dest, const char *src)
 {
-  int di = strlen(dest);
-  int si = 0;
+  size_t di = strlen(dest);
+  size_t si = 0;
   while (src[si])
     dest[di++] = src[si++];
   
@@ -120,10 +120,10 @@ char *strcat(char *dest, const char *src)
   return dest;
 }
 
-char *strncat(char *dest, const char *src, int n)
+char *strncat(char *dest, const char *src, size_t n)
 {
-  int di = strlen(dest);
-  int si = 0;
+  size_t di = strlen(dest);
+  size_t si = 0;
   while (src[si] && n)
   {
     dest[di++] = src[si++];

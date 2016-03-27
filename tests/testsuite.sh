@@ -5,7 +5,7 @@ set -e
 GIT_ROOT=$(git rev-parse --show-toplevel)
 
 # Run the Python-based testsuites.
-python2 -m unittest discover -s $GIT_ROOT/tests -p "*_tests.py"
+python -m unittest discover -s $GIT_ROOT/tests -p "*_tests.py"
 
 # Remove old coverage data.
 find $GIT_ROOT -type f -name '*.gcda' -delete
