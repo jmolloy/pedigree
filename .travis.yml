@@ -20,6 +20,9 @@ script:
   - ./easy_build_$EASY_BUILD.sh nosudo $OS
   - ./tests/testsuite.sh
   - ./scripts/runtest.py
+before_install:
+  # - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install qemu; fi
 install: true
 notifications:
   email: false
