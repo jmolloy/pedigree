@@ -29,7 +29,7 @@ using namespace __pedigree_hosted;
 #include <signal.h>
 
 static int irqToSignal[2] = {0};
-static int signalToIrq[16] = {0};
+static int signalToIrq[NSIG] = {0};
 
 // TODO: Needs locking
 
