@@ -278,11 +278,6 @@ def buildModule(env, path, outputBase, targetAlias):
 
     final_output = output
     unstripped_temporary = output = '%s.debug' % (output,)
-    
-    if "STATIC_DRIVERS" in env['CPPDEFINES']:
-        module_env['LSCRIPT'] = File("#src/modules/link_static.ld")
-    else:
-        module_env['LSCRIPT'] = File("#src/modules/link.ld")
 
     buildutils.modules.buildModule(module_env, final_output,
                                    unstripped_temporary, files)

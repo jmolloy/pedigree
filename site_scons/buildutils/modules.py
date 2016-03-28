@@ -24,6 +24,11 @@ def buildModule(env, stripped_target, target, sources):
     for key in ('CC', 'CXX', 'LINK', 'CFLAGS', 'CCFLAGS', 'CXXFLAGS'):
         module_env[key] = module_env['TARGET_%s' % key]
 
+    if "STATIC_DRIVERS" in env['CPPDEFINES']:
+        module_env['LSCRIPT'] = module_env.File("#src/modules/link_static.ld")
+    else:
+        module_env['LSCRIPT'] = module_env.File("#src/modules/link.ld")
+
     module_env['LINKFLAGS'] = '-nostdlib -Wl,-r -Wl,-T,$LSCRIPT'
 
     intermediate = module_env.Program(target, sources)

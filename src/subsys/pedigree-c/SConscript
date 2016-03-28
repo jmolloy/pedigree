@@ -61,11 +61,6 @@ env_clone['LIBPATH'] = []
 final_output = pedigree_c_objname
 pedigree_c_objname = '%s.debug' % (pedigree_c_objname,)
 
-if "STATIC_DRIVERS" in env['CPPDEFINES']:
-    env_clone['LSCRIPT'] = File("#src/modules/link_static.ld")
-else:
-    env_clone['LSCRIPT'] = File("#src/modules/link.ld")
-
 buildutils.modules.buildModule(env_clone, final_output, pedigree_c_objname,
                                kernel_module_files)
 

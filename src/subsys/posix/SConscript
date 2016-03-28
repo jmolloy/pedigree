@@ -123,11 +123,6 @@ env_clone['LIBPATH'] = []
 final_output = posix_objname
 posix_objname = '%s.debug' % (posix_objname,)
 
-if "STATIC_DRIVERS" in env['CPPDEFINES']:
-    env_clone['LSCRIPT'] = File("#src/modules/link_static.ld")
-else:
-    env_clone['LSCRIPT'] = File("#src/modules/link.ld")
-
 # Handle logging flags.
 logging_mask = 0
 if env_clone['posix_verbose']:

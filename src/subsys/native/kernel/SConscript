@@ -58,11 +58,6 @@ env_clone['LIBS'] = ['gcc']
 final_output = native_userlib_objname
 native_userlib_objname = '%s.debug' % native_userlib_objname
 
-if "STATIC_DRIVERS" in env['CPPDEFINES']:
-    env_clone['LSCRIPT'] = File("#src/modules/link_static.ld")
-else:
-    env_clone['LSCRIPT'] = File("#src/modules/link.ld")
-
 buildutils.modules.buildModule(env_clone, final_output, native_userlib_objname,
                                files)
 
