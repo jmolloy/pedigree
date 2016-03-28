@@ -27,6 +27,8 @@ VFS_DIR = env.Dir('#src/modules/system/vfs').abspath
 PART_DIR = env.Dir('#src/modules/drivers/common/partition').abspath
 KERNEL_DIR = env.Dir('#src/system/kernel').abspath
 
+ext2img_bin = os.path.join(env['BUILDDIR'], 'ext2img')
+
 build_env = env.Clone()
 
 # Set up includes correctly.
@@ -99,5 +101,5 @@ libkern = build_env.Library('kern',
     [os.path.join(KERNEL_DIR, f) for f in kernel_sources])
 
 
-build_env.Program('ext2img', ['main.cc', 'DiskImage.cc', 'shim.cc'],
+build_env.Program(ext2img_bin, ['main.cc', 'DiskImage.cc', 'shim.cc'],
     LIBS=[libext2, libvfs, libpart, libkern])

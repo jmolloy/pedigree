@@ -24,6 +24,8 @@ Import(['env'])
 
 KERNEL_DIR = env.Dir('#src/system/kernel').abspath
 
+testsuite_bin = os.path.join(env['BUILDDIR'], 'testsuite')
+
 build_env = env.Clone()
 
 # Set up includes correctly.
@@ -62,5 +64,5 @@ else:
     CCFLAGS = ['--coverage']
     LINKFLAGS = ['--coverage']
 
-build_env.Program('testsuite', ['test-List.cc'], LIBS=['gtest', 'pthread'],
+build_env.Program(testsuite_bin, ['test-List.cc'], LIBS=['gtest', 'pthread'],
                   CCFLAGS=CCFLAGS, LINKFLAGS=LINKFLAGS)

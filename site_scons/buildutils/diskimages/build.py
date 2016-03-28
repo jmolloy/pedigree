@@ -43,7 +43,7 @@ def buildDiskImages(env, config_database):
         return
 
     # We depend on the ext2img host tool to inject files into ext2 images.
-    ext2img = os.path.join(env['HOST_BUILDDIR'], 'ext2img', 'ext2img')
+    ext2img = os.path.join(env['HOST_BUILDDIR'], 'ext2img')
     env.Depends(hddimg, ext2img)
 
     env.Depends(hddimg, 'libs')

@@ -41,7 +41,7 @@ def buildImageE2fsprogs(target, source, env):
     outFile = target[0].abspath
 
     # ext2img inserts files into our disk image.
-    ext2img = os.path.join(env['HOST_BUILDDIR'], 'ext2img', 'ext2img')
+    ext2img = os.path.join(env['HOST_BUILDDIR'], 'ext2img')
 
     # TODO(miselin): this image will not have GRUB on it.
 

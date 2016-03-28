@@ -32,8 +32,7 @@ SConscript(os.path.join('external', 'SConscript'), exports=['host_env'],
            variant_dir=os.path.join(host_env['BUILDDIR'], 'external'), duplicate=0)
 
 # Build utilities that run on the host during the kernel build.
-SConscript(os.path.join('src', 'buildutil', 'SConscript'), exports=['host_env'],
-           variant_dir=host_env['BUILDDIR'], duplicate=0)
+SConscript(os.path.join('src', 'buildutil', 'SConscript'), exports=['host_env'])
 
 if env['build_modules']:
   # POSIX subsystem.

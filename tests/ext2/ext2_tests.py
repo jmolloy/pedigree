@@ -115,7 +115,7 @@ def generate_new_test(ext2img, script, should_pass, sz=0x1000000, suffix=None):
 
 def find_pedigree_tests():
     # Should be run from the top level of the source tree.
-    ext2img_bin = 'build/host/ext2img/ext2img'
+    ext2img_bin = 'build/host/ext2img'
     testdir = 'tests/ext2'
 
     # Find tests to run.
