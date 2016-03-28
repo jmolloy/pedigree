@@ -22,10 +22,10 @@ import os
 
 Import(['env'])
 
-EXT2_DIR = env.Dir('#src/modules/system/ext2').abspath
-VFS_DIR = env.Dir('#src/modules/system/vfs').abspath
-PART_DIR = env.Dir('#src/modules/drivers/common/partition').abspath
-KERNEL_DIR = env.Dir('#src/system/kernel').abspath
+EXT2_DIR = env.Dir('../../modules/system/ext2')
+VFS_DIR = env.Dir('../../modules/system/vfs')
+PART_DIR = env.Dir('../../modules/drivers/common/partition')
+KERNEL_DIR = env.Dir('../../system/kernel')
 
 ext2img_bin = os.path.join(env['BUILDDIR'], 'ext2img')
 
@@ -92,13 +92,13 @@ kernel_sources = [
 # Build components from Pedigree to merge into a working VFS layer that uses
 # an ext2 filesystem.
 libvfs = build_env.Library('vfs',
-    [os.path.join(VFS_DIR, f) for f in vfs_sources])
+    [VFS_DIR.File(f) for f in vfs_sources])
 libext2 = build_env.Library('ext2',
-    [os.path.join(EXT2_DIR, f) for f in ext2_sources])
+    [EXT2_DIR.File(f) for f in ext2_sources])
 libpart = build_env.Library('part',
-    [os.path.join(PART_DIR, f) for f in partition_sources])
+    [PART_DIR.File(f) for f in partition_sources])
 libkern = build_env.Library('kern',
-    [os.path.join(KERNEL_DIR, f) for f in kernel_sources])
+    [KERNEL_DIR.File(f) for f in kernel_sources])
 
 
 build_env.Program(ext2img_bin, ['main.cc', 'DiskImage.cc', 'shim.cc'],
