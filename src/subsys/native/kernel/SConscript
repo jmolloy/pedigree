@@ -20,6 +20,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 import os
 
 import buildutils.fs
+import buildutils.modules
 
 Import(['env'])
 
@@ -62,10 +63,8 @@ if "STATIC_DRIVERS" in env['CPPDEFINES']:
 else:
     env_clone['LSCRIPT'] = File("#src/modules/link.ld")
 
-env_clone.Program(native_userlib_objname, files,
-                  LINKFLAGS='-nostdlib -Wl,-r -Wl,-T,$LSCRIPT')
-env_clone.Command(final_output, native_userlib_objname,
-                  action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
+buildutils.modules.buildModule(env_clone, final_output, native_userlib_objname,
+                               files)
 
 # Install native subsystem headers to the local images directory.
 buildutils.fs.install_tree(

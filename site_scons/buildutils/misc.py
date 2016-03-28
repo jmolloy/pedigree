@@ -111,9 +111,10 @@ def removeFlags(flags, removal):
 
 def removeFromAllFlags(env, removal):
     """Remove words from all compilation flags in the given Environment."""
-    env['CFLAGS'] = buildutils.misc.removeFlags(env['CFLAGS'], removal)
-    env['CCFLAGS'] = buildutils.misc.removeFlags(env['CCFLAGS'], removal)
-    env['CXXFLAGS'] = buildutils.misc.removeFlags(env['CXXFLAGS'], removal)
+    for key in ('CFLAGS', 'CCFLAGS', 'CXXFLAGS'):
+        env[key] = buildutils.misc.removeFlags(env[key], removal)
+        env['TARGET_%s' % key] = buildutils.misc.removeFlags(
+            env['TARGET_%s' % key], removal)
 
 
 def stubSuffix(env, dash=True):

@@ -20,6 +20,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 import os
 
 import buildutils.misc
+import buildutils.modules
 
 Import(['env'])
 
@@ -258,9 +259,9 @@ def buildModule(env, path, outputBase, targetAlias):
     module_env['CPPPATH'] += custom_incpath.get(module, [])
     module_env['LIBS'] += custom_libs.get(module, [])
     module_env.MergeFlags({
-        'CFLAGS': custom_cflags.get(module, []),
-        'CCFLAGS': custom_ccflags.get(module, []),
-        'CXXFLAGS': custom_cxxflags.get(module, []),
+        'TARGET_CFLAGS': custom_cflags.get(module, []),
+        'TARGET_CCFLAGS': custom_ccflags.get(module, []),
+        'TARGET_CXXFLAGS': custom_cxxflags.get(module, []),
     })
 
     buildutils.misc.removeFromAllFlags(module_env, set(remove_flags.get(module, [])))
@@ -279,18 +280,13 @@ def buildModule(env, path, outputBase, targetAlias):
     unstripped_temporary = output = '%s.debug' % (output,)
     
     if "STATIC_DRIVERS" in env['CPPDEFINES']:
-        # No need for a stripped module: they get linked into the kernel,
-        # which then gets stripped itself.
-        module_env.Program(final_output, files,
-            LINKFLAGS='-nostdlib -Wl,-r -Wl,-T,$LSCRIPT',
-            LSCRIPT=File("#src/modules/link_static.ld"))
+        module_env['LSCRIPT'] = File("#src/modules/link_static.ld")
     else:
-        module_env.Program(unstripped_temporary, files,
-            LINKFLAGS='-nostdlib -Wl,-r -Wl,-T,$LSCRIPT',
-            LSCRIPT=File("#src/modules/link.ld"))
-        module_env.Command(final_output, unstripped_temporary,
-            action="%s -d --strip-unneeded -o $TARGET $SOURCE" % env['STRIP'])
-    
+        module_env['LSCRIPT'] = File("#src/modules/link.ld")
+
+    buildutils.modules.buildModule(module_env, final_output,
+                                   unstripped_temporary, files)
+
     env.Alias(targetAlias, final_output)
 
 for module in modules:

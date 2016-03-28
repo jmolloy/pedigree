@@ -469,6 +469,15 @@ if env['CROSS'] or env['ON_PEDIGREE']:
     env['STRIP'] = tools['strip']
     env['OBJCOPY'] = tools['objcopy']
 
+    # Set up target-specific versions of the various tools. These are used
+    # where code should only ever be built for Pedigree; for almost every build
+    # type they should match the non-target-specific versions. For a hosted
+    # build, though, they will not match; e.g. OSX's ld should only be used for
+    # binaries, not for e.g. loadable modules.
+    for tool in ('CC', 'CXX', 'AS', 'AR', 'RANLIB', 'LINK', 'STRIP',
+                 'OBJCOPY'):
+        env['TARGET_%s' % tool] = env[tool]
+
     userspace_env = env
 elif not env['hosted']:
     raise SCons.Errors.UserError('No cross-compiler specified and not on '
@@ -735,6 +744,10 @@ def create_version_cc(target, source, env):
     f.close()
     
 env.Command(os.path.join(env['PEDIGREE_BUILD_BASE'], 'Version.cc'), None, Action(create_version_cc, None))
+
+# Preserve compilation flags for the target.
+for key in ('CFLAGS', 'CCFLAGS', 'CXXFLAGS', 'LINKFLAGS'):
+    env['TARGET_%s' % key] = env[key]
 
 if env['hosted']:
     userspace_env = env.Clone()

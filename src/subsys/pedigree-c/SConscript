@@ -20,6 +20,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 import os
 
 import buildutils.userspace
+import buildutils.modules
 
 Import(['env', 'userspace_env'])
 
@@ -61,17 +62,12 @@ final_output = pedigree_c_objname
 pedigree_c_objname = '%s.debug' % (pedigree_c_objname,)
 
 if "STATIC_DRIVERS" in env['CPPDEFINES']:
-    env_clone.Program(pedigree_c_objname, kernel_module_files,
-        LINKFLAGS='-nostdlib -Wl,-r -Wl,-T,$LSCRIPT',
-        LSCRIPT=File("#src/modules/link_static.ld"))
-    env_clone.Command(final_output, pedigree_c_objname,
-        action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
+    env_clone['LSCRIPT'] = File("#src/modules/link_static.ld")
 else:
-    env_clone.Program(pedigree_c_objname, kernel_module_files,
-        LINKFLAGS='-nostdlib -Wl,-r -Wl,-T,$LSCRIPT',
-        LSCRIPT=File("#src/modules/link.ld"))
-    env_clone.Command(final_output, pedigree_c_objname,
-        action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
+    env_clone['LSCRIPT'] = File("#src/modules/link.ld")
+
+buildutils.modules.buildModule(env_clone, final_output, pedigree_c_objname,
+                               kernel_module_files)
 
 libs_clone = userspace_env_clone.Clone()
 libs_clone.MergeFlags('-fPIC -DUSE_PIC_SYSCALLS')

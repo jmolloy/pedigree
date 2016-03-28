@@ -22,6 +22,7 @@ import os
 import pipes
 
 import buildutils.misc
+import buildutils.modules
 import buildutils.userspace
 import buildutils.fs
 import buildutils.libs
@@ -149,8 +150,7 @@ env_clone['CPPDEFINES'] += ['POSIX_LOG_FACILITIES=%d' % logging_mask]
 
 env_clone['AS'] = userspace_env_clone['AS']
 env_clone['ASFLAGS'] = userspace_env_clone['ASFLAGS']
-env_clone.Program(posix_objname, posix_files, LINKFLAGS='-nostdlib -Wl,-r -Wl,-T,$LSCRIPT')
-env_clone.Command(final_output, posix_objname, action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
+buildutils.modules.buildModule(env_clone, final_output, posix_objname, posix_files)
 
 posix_env = userspace_env_clone.Clone()
 posix_env['CPPPATH'] = include
