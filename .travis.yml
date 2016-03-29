@@ -47,7 +47,6 @@ addons:
       - qemu
       - nasm
       - uboot-mkimage
-      - clang
       - valgrind
 cache:
   directories:
