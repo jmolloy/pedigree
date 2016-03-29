@@ -223,7 +223,7 @@ Help(opts.GenerateHelpText(env))
 
 # Load the host environment now - this is a boring, standard environment that
 # doesn't need many flags from the main build.
-host_environ = {}
+host_environ = {'ENV': environment}
 host_cxx = os.environ.get('CXX')
 host_cc = os.environ.get('CC')
 if host_cxx:
