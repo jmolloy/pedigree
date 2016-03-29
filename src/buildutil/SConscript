@@ -25,6 +25,9 @@ Import(['host_env'])
 env = host_env
 conf = Configure(env)
 
+# Distinguish build system objects from those built for the target, always.
+env['OBJSUFFIX'] = '.build.o'
+
 subdirs = [
     'ext2img',
     'testsuite',
