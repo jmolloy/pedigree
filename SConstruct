@@ -197,13 +197,23 @@ tools_to_find = [
     'cc', 'c++', 'link',
 ]
 
+# Some things require either a value, or the key to be not present at all (in
+# particular, ccache). So, we fix that up here.
+def fix_system_environment(env):
+    sentinel = object()
+    for value_required_key in ('CCACHE_DIR', 'CCACHE_TEMPDIR'):
+        if not env.get(value_required_key, sentinel):
+            del env[value_required_key]
+
+    return env
+
 # Copy the host environment and install our options. If we use env.Platform()
 # after this point, the Platform() call will override ENV and we don't want that
 # or env['ENV']['PATH'] won't be the user's $PATH from the shell environment.
 # That specifically breaks the build on OS X when using tar from macports (which
 # is needed at least on OS X 10.5 as the OS X tar does not have --transform).
 system_path = os.environ.get('PATH', '')
-environment = {
+environment = fix_system_environment({
     'PATH': system_path,
     # Needed to pass in preloads for Bear to build compilation databases.
     'LD_PRELOAD': os.environ.get('LD_PRELOAD', ''),
@@ -211,7 +221,7 @@ environment = {
     # Pull in extra ccache configuration.
     'CCACHE_DIR': os.environ.get('CCACHE_DIR', ''),
     'CCACHE_TEMPDIR': os.environ.get('CCACHE_DIR', ''),
-}
+})
 try:
     env = Environment(options=opts, platform='posix', ENV=environment,
                       tools=tools_to_find, TARFLAGS='-cz')
