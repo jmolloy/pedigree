@@ -38,3 +38,4 @@ src/subsys/posix/include/c++
 src/system/kernel/TAGS
 src/system/kernel/Version.cc
 tmp
+coverage/
