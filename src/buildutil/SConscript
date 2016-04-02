@@ -25,6 +25,8 @@ Import(['host_env'])
 env = host_env
 conf = Configure(env)
 
+KERNEL_DIR = env.Dir('../system/kernel')
+
 # Distinguish build system objects from those built for the target, always.
 env['OBJSUFFIX'] = '.build.o'
 
@@ -32,6 +34,43 @@ subdirs = [
     'ext2img',
     'testsuite',
 ]
+
+# Build utility libraries.
+header_paths = [
+    env.Dir('#src/modules/system'),
+    env.Dir('#src/system/include'),
+]
+libutility_sources = [
+    os.path.join('utilities', 'String.cc'),
+    os.path.join('utilities', 'List.cc'),
+    os.path.join('utilities', 'Vector.cc'),
+    os.path.join('utilities', 'Tree.cc'),
+    'Log.cc',
+]
+defines = [
+    'HOSTED', 'UTILITY_LINUX', 'LITTLE_ENDIAN', 'DONT_LOG_TO_SERIAL',
+]
+
+utility_env = env.Clone()
+utility_env.Append(**{
+    'CPPPATH': header_paths,
+    'CPPDEFINES': defines,
+})
+utility_env.MergeFlags({
+    'CXXFLAGS': ['-std=c++11', '-g3', '-ggdb'],
+})
+
+env['LIBUTILITY'] = utility_env.Library('utility',
+    ['shim.cc'] + [KERNEL_DIR.File(f) for f in libutility_sources],
+    CCFLAGS=['-O2'])
+
+# Build a version of libutility that has the necessary coverage pieces, such
+# that we can get code coverage analysis where actual .cc files hold the code
+# being tested.
+utility_env['OBJSUFFIX'] = '.build.coverage.o'
+env['LIBUTILITY_COVERAGE'] = utility_env.Library('utility_coverage',
+    ['shim.cc'] + [KERNEL_DIR.File(f) for f in libutility_sources],
+    CCFLAGS=['--coverage', '-fprofile-arcs', '-ftest-coverage', '-O0'])
 
 for subdir in subdirs:
     SConscript(os.path.join(subdir, 'SConscript'), exports=['env'])

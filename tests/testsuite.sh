@@ -27,6 +27,6 @@ mkdir -p $GIT_ROOT/coverage
 
 # Coverage failing is not a problem; but make sure to filter only to src/ so
 # we don't pull in e.g. all of the gtest code.
-gcovr -d --object-directory=$GIT_ROOT/build/host -r $GIT_ROOT \
-    --gcov-filter="src/*" --html --html-details \
+gcovr -d --object-directory="$GIT_ROOT/build" -r "$GIT_ROOT" \
+    --gcov-filter="src/*" --html --html-details --exclude=".*test\-.*" \
     -o $GIT_ROOT/coverage/index.html || exit 0

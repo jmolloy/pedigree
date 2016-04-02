@@ -25,6 +25,8 @@
 
 #include <time/Time.h>
 
+void *g_pBootstrapInfo = 0;
+
 namespace Time
 {
 

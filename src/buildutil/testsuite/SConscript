@@ -22,7 +22,7 @@ import os
 
 Import(['env'])
 
-KERNEL_DIR = env.Dir('#src/system/kernel').abspath
+KERNEL_DIR = env.Dir('../../system/kernel')
 
 testsuite_bin = os.path.join(env['BUILDDIR'], 'testsuite')
 
@@ -55,14 +55,13 @@ build_env.Append(LIBPATH=[os.path.join(build_env['BUILDDIR'], 'external')])
 
 build_env.MergeFlags({'CXXFLAGS': ['-std=c++11', '-g3', '-ggdb', '-O0']})
 
-clang = build_env['CC'].endswith('clang')
+build_env.MergeFlags({
+    'CCFLAGS': ['--coverage', '-fprofile-arcs', '-ftest-coverage'],
+    'LINKFLAGS': ['--coverage', '-fprofile-arcs', '-ftest-coverage'],
+})
 
-if clang:
-    CCFLAGS = ['-fprofile-arcs', '-ftest-coverage']
-    LINKFLAGS = ['-fprofile-arcs', '-ftest-coverage']
-else:
-    CCFLAGS = ['--coverage']
-    LINKFLAGS = ['--coverage']
-
-build_env.Program(testsuite_bin, ['test-List.cc'], LIBS=['gtest', 'pthread'],
-                  CCFLAGS=CCFLAGS, LINKFLAGS=LINKFLAGS)
+build_env.Program(testsuite_bin,
+                  [
+                      'test-List.cc',
+                      'test-String.cc',
+                  ], LIBS=[env['LIBUTILITY_COVERAGE'], 'gtest', 'pthread'])

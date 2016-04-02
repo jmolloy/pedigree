@@ -43,7 +43,6 @@ build_env.Append(CPPPATH=header_paths)
 defines = [
     'HOSTED', 'VFS_NOMMU', 'VFS_STANDALONE', 'EXT2_STANDALONE',
     'UTILITY_LINUX', 'DEVICE_IGNORE_ADDRESSES', 'LITTLE_ENDIAN',
-    'DONT_LOG_TO_SERIAL',
     # On Pedigree, memcpy automatically determines if it should fall back to
     # memmove for backwards copies - not so on other systems. So, just
     # make memcpy the same as memmove.
@@ -81,12 +80,7 @@ partition_sources = [
 
 # base kernel sources that we care about.
 kernel_sources = [
-    os.path.join('utilities', 'String.cc'),
-    os.path.join('utilities', 'List.cc'),
-    os.path.join('utilities', 'Vector.cc'),
-    os.path.join('utilities', 'Tree.cc'),
     os.path.join('machine', 'Device.cc'),
-    'Log.cc',
 ]
 
 # Build components from Pedigree to merge into a working VFS layer that uses
@@ -101,5 +95,5 @@ libkern = build_env.Library('kern',
     [KERNEL_DIR.File(f) for f in kernel_sources])
 
 
-build_env.Program(ext2img_bin, ['main.cc', 'DiskImage.cc', 'shim.cc'],
-    LIBS=[libext2, libvfs, libpart, libkern])
+build_env.Program(ext2img_bin, ['main.cc', 'DiskImage.cc'],
+    LIBS=[libext2, libvfs, libpart, env['LIBUTILITY'], libkern])
