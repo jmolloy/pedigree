@@ -118,6 +118,7 @@ void String::reserve(size_t size)
 void String::free()
 {
     delete [] m_Data;
+    memset(m_Static, 0, StaticSize);
     m_Data = 0;
     m_Length = 0;
     m_Size = 0;

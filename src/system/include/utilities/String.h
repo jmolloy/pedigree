@@ -44,8 +44,8 @@ class String
         inline String &operator += (const String &x);
         inline String &operator += (const char *s);
 
-        inline bool operator == (const String &s);
-        inline bool operator == (const char *s);
+        inline bool operator == (const String &s) const;
+        inline bool operator == (const char *s) const;
 
         inline size_t length() const;
         inline size_t size() const;
@@ -203,7 +203,7 @@ String &String::operator += (const char *s)
     return *this;
 }
 
-bool String::operator == (const String &s)
+bool String::operator == (const String &s) const
 {
     if (m_Length != s.m_Length)
         return false;
@@ -220,7 +220,7 @@ bool String::operator == (const String &s)
         return !strcmp(m_Data, s.m_Data);
 }
 
-bool String::operator == (const char *s)
+bool String::operator == (const char *s) const
 {
     const char *buf = m_Data;
     if (m_Length < StaticSize)
@@ -228,7 +228,17 @@ bool String::operator == (const char *s)
     if (((buf == 0) || (m_Length == 0)) && s == 0)
         return true;
     else if (buf == 0 || s == 0)
-        return false;
+    {
+        if (buf == 0)
+        {
+            size_t otherLength = strlen(s);
+            return otherLength == 0;
+        }
+        else  // s == 0
+        {
+            return m_Length == 0;
+        }
+    }
     else
         return !strcmp(buf, s);
 }
