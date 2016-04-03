@@ -25,7 +25,7 @@ void String::assign(const String &x)
     m_Length = x.length();
     if (m_Length < StaticSize)
     {
-        memcpy(m_Static, x.m_Static, m_Length + 1);
+        memmove(m_Static, x.m_Static, m_Length + 1);
         delete [] m_Data;
         m_Data = 0;
         m_Size = StaticSize;
@@ -34,7 +34,7 @@ void String::assign(const String &x)
     {
         reserve(m_Length + 1);
         if (m_Length && x.m_Data)
-            memcpy(m_Data, x.m_Data, m_Length + 1);
+            memmove(m_Data, x.m_Data, m_Length + 1);
         else
             m_Data[0] = '\0';
     }
@@ -61,7 +61,7 @@ void String::assign(const char *s, size_t len)
     }
     else if (m_Length < StaticSize)
     {
-        memcpy(m_Static, s, m_Length);
+        memmove(m_Static, s, m_Length);
         delete [] m_Data;
         m_Data = 0;
         m_Size = StaticSize;
@@ -72,7 +72,7 @@ void String::assign(const char *s, size_t len)
         reserve(m_Length + 1);
         if (m_Length && s)
         {
-            memcpy(m_Data, s, m_Length);
+            memmove(m_Data, s, m_Length);
             m_Data[m_Length] = '\0';
         }
         else
@@ -92,7 +92,7 @@ void String::reserve(size_t size)
         if (m_Size > StaticSize)
         {
             m_Size = StaticSize;
-            memcpy(m_Static, m_Data, size);
+            memmove(m_Static, m_Data, size);
             delete [] m_Data;
             m_Data = 0;
         }
@@ -109,7 +109,7 @@ void String::reserve(size_t size)
         memset(m_Data, 0, size);
         if (tmp != 0)
         {
-            memcpy(m_Data, tmp, m_Size > size ? size : m_Size);
+            memmove(m_Data, tmp, m_Size > size ? size : m_Size);
             delete [] tmp;
         }
         m_Size = size;
@@ -137,7 +137,7 @@ String String::split(size_t offset)
     // than the static size.
     if((m_Length < StaticSize) && (buf == m_Data))
     {
-        memcpy(m_Static, buf, m_Length);
+        memmove(m_Static, buf, m_Length);
         buf = m_Static;
 
         delete [] m_Data;
@@ -181,7 +181,7 @@ void String::lstrip()
     // Did we suddenly drop below the static size?
     if ((buf == m_Data) && (m_Length < StaticSize))
     {
-        memcpy(m_Static, m_Data, m_Length + 1);
+        memmove(m_Static, m_Data, m_Length + 1);
         m_Size = StaticSize;
         delete [] m_Data;
         m_Data = 0;
@@ -214,7 +214,7 @@ void String::rstrip()
     // Did we suddenly drop below the static size?
     if ((buf == m_Data) && (m_Length < StaticSize))
     {
-        memcpy(m_Static, m_Data, m_Length + 1);
+        memmove(m_Static, m_Data, m_Length + 1);
         m_Size = StaticSize;
         delete [] m_Data;
         m_Data = 0;
@@ -267,7 +267,7 @@ void String::chomp()
     // Did we suddenly drop below the static size?
     if ((buf == m_Data) && (m_Length < StaticSize))
     {
-        memcpy(m_Static, m_Data, m_Length + 1);
+        memmove(m_Static, m_Data, m_Length + 1);
         m_Size = StaticSize;
         delete [] m_Data;
         m_Data = 0;
@@ -284,7 +284,7 @@ void String::sprintf(const char *fmt, ...)
 
     if (m_Length < StaticSize)
     {
-        memcpy(m_Static, m_Data, m_Length + 1);
+        memmove(m_Static, m_Data, m_Length + 1);
         m_Size = StaticSize;
         delete [] m_Data;
         m_Data = 0;
