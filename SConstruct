@@ -247,6 +247,12 @@ profile_rt = conf.CheckLib('profile_rt')
 gcov = conf.CheckLib('gcov')
 host_env = conf.Finish()
 
+# TODO(miselin): figure out how best to detect asan presence.
+host_env['COVERAGE_CCFLAGS'] = ['-fprofile-arcs', '-ftest-coverage', '-O1']
+host_env['COVERAGE_LINKFLAGS'] = ['-fprofile-arcs', '-ftest-coverage']
+if host_env.Detect('valgrind') is None:
+    host_env['COVERAGE_CCFLAGS'] += ['-fsanitize=address']
+    host_env['COVERAGE_LINKFLAGS'] += ['-fsanitize=address']
 host_env['HAS_PROFILE_RT'] = profile_rt
 host_env['HAS_GCOV'] = gcov
 

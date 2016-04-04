@@ -42,10 +42,6 @@ defines = [
     'HOSTED', 'VFS_NOMMU', 'VFS_STANDALONE', 'EXT2_STANDALONE',
     'UTILITY_LINUX', 'DEVICE_IGNORE_ADDRESSES', 'LITTLE_ENDIAN',
     'DONT_LOG_TO_SERIAL',
-    # On Pedigree, memcpy automatically determines if it should fall back to
-    # memmove for backwards copies - not so on other systems. So, just
-    # make memcpy the same as memmove.
-    # 'memcpy=memmove',
 ]
 
 build_env.Append(CPPDEFINES=defines)
@@ -56,8 +52,8 @@ build_env.Append(LIBPATH=[os.path.join(build_env['BUILDDIR'], 'external')])
 build_env.MergeFlags({'CXXFLAGS': ['-std=c++11', '-g3', '-ggdb', '-O0']})
 
 build_env.MergeFlags({
-    'CCFLAGS': ['--coverage', '-fprofile-arcs', '-ftest-coverage'],
-    'LINKFLAGS': ['--coverage', '-fprofile-arcs', '-ftest-coverage'],
+    'CCFLAGS': build_env['COVERAGE_CCFLAGS'],
+    'LINKFLAGS': build_env['COVERAGE_LINKFLAGS'],
 })
 
 build_env.Program(testsuite_bin,

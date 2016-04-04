@@ -21,6 +21,10 @@
 #include <utilities/utility.h>
 #include <processor/types.h>
 
+#ifdef sprintf
+#undef sprintf
+#endif
+
 size_t strlen(const char *src)
 {
   const char *orig = src;

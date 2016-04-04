@@ -45,6 +45,7 @@ libutility_sources = [
     os.path.join('utilities', 'List.cc'),
     os.path.join('utilities', 'Vector.cc'),
     os.path.join('utilities', 'Tree.cc'),
+    os.path.join('core', 'lib', 'string.c'),
     'Log.cc',
 ]
 defines = [
@@ -57,6 +58,7 @@ utility_env.Append(**{
     'CPPDEFINES': defines,
 })
 utility_env.MergeFlags({
+    'CFLAGS': ['-g3', '-ggdb'],
     'CXXFLAGS': ['-std=c++11', '-g3', '-ggdb'],
 })
 
@@ -70,7 +72,7 @@ env['LIBUTILITY'] = utility_env.Library('utility',
 utility_env['OBJSUFFIX'] = '.build.coverage.o'
 env['LIBUTILITY_COVERAGE'] = utility_env.Library('utility_coverage',
     ['shim.cc'] + [KERNEL_DIR.File(f) for f in libutility_sources],
-    CCFLAGS=['--coverage', '-fprofile-arcs', '-ftest-coverage', '-O0'])
+    CCFLAGS=utility_env['COVERAGE_CCFLAGS'])
 
 for subdir in subdirs:
     SConscript(os.path.join(subdir, 'SConscript'), exports=['env'])

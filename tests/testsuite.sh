@@ -18,7 +18,7 @@ find "$GIT_ROOT" -type f -name '*.gcda' -delete
 # Run under valgrind if we can.
 WRAPPER=
 if type valgrind >/dev/null 2>&1; then
-    WRAPPER="valgrind --tool=memcheck --error-exitcode=1"
+    WRAPPER="valgrind --tool=memcheck --leak-check=full --error-exitcode=1"
 fi
 
 # Run the C++ testsuites.
@@ -35,4 +35,4 @@ mkdir -p "$GIT_ROOT/coverage"
 # we don't pull in e.g. all of the gtest code.
 gcovr -d --object-directory="$GIT_ROOT/build" -r "$GIT_ROOT" \
     --gcov-filter="src/*" --html --html-details --exclude=".*test\-.*" \
-    -o "$GIT_ROOT/coverage/index.html" || exit 0
+    --exclude=".*buildutil/.*" -o "$GIT_ROOT/coverage/index.html" || exit 0
