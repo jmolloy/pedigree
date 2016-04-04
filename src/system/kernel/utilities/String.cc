@@ -49,8 +49,12 @@ void String::assign(const char *s, size_t len)
         m_Length = 0;
     else if (len)
     {
+        // Make sure we don't copy MORE bytes than we should from 's'; but
+        // also make sure we don't copy more bytes than requested.
         m_Length = len;
         copyLength = strlen(s);
+        if (copyLength > m_Length)
+            copyLength = m_Length;
     }
     else
     {
