@@ -87,7 +87,7 @@ def buildDiskImages(env, config_database):
         fileList.append(env['distdir'])
 
         buildImage = targetdir.buildImageTargetdir
-    elif not forcemtools and (env['MKE2FS'] is not None and env['DEBUGFS'] is not None):
+    elif not forcemtools and (env['MKE2FS'] is not None):
         buildImage = debugfs.buildImageE2fsprogs
     elif not forcemtools and (env['LOSETUP'] is not None):
         fileList += ["#images/hdd_ext2.tar.gz"]
