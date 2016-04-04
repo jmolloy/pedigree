@@ -43,6 +43,17 @@ TEST(PedigreeList, Construction)
     EXPECT_EQ(x.begin(), x.end());
 }
 
+TEST(PedigreeList, Assignment)
+{
+    List<int> x;
+    x.pushBack(1);
+
+    List<int> y(x);
+    EXPECT_EQ(x.size(), y.size());
+    EXPECT_EQ(x.count(), y.count());
+    EXPECT_EQ(x.popFront(), y.popFront());
+}
+
 TEST(PedigreeList, AddItems)
 {
     List<int> x;
@@ -165,6 +176,25 @@ TEST(PedigreeList, ErasingMiddle)
     EXPECT_EQ(x.count(), 0);
 }
 
+TEST(PedigreeList, ErasingEnd)
+{
+    List<int> x;
+    x.pushBack(2);
+    x.pushBack(4);
+    x.pushBack(6);
+    x.pushBack(8);
+
+    auto it = x.begin();
+    ++it; ++it; ++it;
+    it = x.erase(it);
+
+    EXPECT_EQ(x.popFront(), 2);
+    EXPECT_EQ(x.popFront(), 4);
+    EXPECT_EQ(x.popFront(), 6);
+
+    EXPECT_EQ(x.count(), 0);
+}
+
 TEST(PedigreeList, ErasingReverse)
 {
     List<int> x;
@@ -177,6 +207,8 @@ TEST(PedigreeList, ErasingReverse)
     auto it = x.rbegin();
     ++it;
     x.erase(it);
+
+    EXPECT_NE(it, x.rend());
 
     EXPECT_EQ(x.popFront(), 2);
     EXPECT_EQ(x.popFront(), 4);
@@ -220,3 +252,22 @@ TEST(PedigreeList, NonZeroableType)
 
     EXPECT_EQ(x.count(), 0);
 }
+
+TEST(PedigreeList, IterateReverse)
+{
+    List<int> x_;
+    x_.pushBack(1);
+    x_.pushBack(5);
+    x_.pushBack(10);
+
+    const List<int> &x = x_;
+
+    EXPECT_NE(x.rbegin(), x.rend());
+
+    auto it = x.rbegin();
+    EXPECT_EQ(*(it++), 10);
+    EXPECT_EQ(*(it++), 5);
+    EXPECT_EQ(*(it++), 1);
+    EXPECT_EQ(it, x.rend());
+}
+

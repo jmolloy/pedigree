@@ -143,13 +143,13 @@ class List
      *\return iterator pointing to the reverse end of the List + 1 */
     inline ReverseIterator rend()
     {
-      return ReverseIterator();
+      return ReverseIterator(0);
     }
     /** Get a constant iterator pointing to the reverse end of the List + 1
      *\return constant iterator pointing to the reverse end of the List + 1 */
     inline ConstReverseIterator rend() const
     {
-      return ConstReverseIterator();
+      return ConstReverseIterator(0);
     }
 
     /** Remove all elements from the List */
