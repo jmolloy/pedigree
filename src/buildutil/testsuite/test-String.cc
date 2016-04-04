@@ -52,6 +52,12 @@ TEST(PedigreeString, Construction)
     EXPECT_NE(s, s2);
 }
 
+TEST(PedigreeString, BigStringStaticCast)
+{
+    String s(bigstring());
+    EXPECT_STREQ(bigstring(), static_cast<const char *>(s));
+}
+
 TEST(PedigreeString, Length)
 {
     String s("hello");
@@ -74,6 +80,14 @@ TEST(PedigreeString, Chomp)
     String s("hello ");
     s.chomp();
     EXPECT_EQ(s, "hello");
+}
+
+TEST(PedigreeString, ChompDynamicToStatic)
+{
+    String s("hello                                                           ");
+    s.chomp();
+    EXPECT_EQ(s.length(), 63);
+    EXPECT_EQ(s.size(), 64);
 }
 
 TEST(PedigreeString, Strip)
@@ -104,11 +118,29 @@ TEST(PedigreeString, UnneededLstrip)
     EXPECT_EQ(s, "hello ");
 }
 
+TEST(PedigreeString, LstripSwitchesToStatic)
+{
+    String s("                                                            hello");
+    s.lstrip();
+    EXPECT_EQ(s, "hello");
+    EXPECT_EQ(s.size(), 64);
+    EXPECT_EQ(s.length(), 5);
+}
+
 TEST(PedigreeString, UnneededRstrip)
 {
     String s(" hello");
     s.rstrip();
     EXPECT_EQ(s, " hello");
+}
+
+TEST(PedigreeString, RstripSwitchesToStatic)
+{
+    String s("hello                                                            ");
+    s.rstrip();
+    EXPECT_EQ(s, "hello");
+    EXPECT_EQ(s.size(), 64);
+    EXPECT_EQ(s.length(), 5);
 }
 
 TEST(PedigreeString, Split)
@@ -170,6 +202,24 @@ TEST(PedigreeString, Equality)
     EXPECT_NE(String("a"), String(bigstring()));
     // big vs big still matches
     EXPECT_EQ(String(bigstring()), String(bigstring()));
+
+    // freed vs freed
+    String s1("a"), s2("b");
+    s1.free();
+    EXPECT_NE(s1, s2);
+    EXPECT_NE(s2, s1);
+    s2.free();
+    EXPECT_EQ(s1, s2);
+}
+
+TEST(PedigreeString, EqualityRawCharBuffer)
+{
+    String a("hello");
+    EXPECT_EQ(a, "hello");
+    EXPECT_NE(a, nullptr);
+    a.free();
+    EXPECT_EQ(a, nullptr);
+    EXPECT_NE(a, "hello");
 }
 
 TEST(PedigreeString, AssignBig)
@@ -234,6 +284,13 @@ TEST(PedigreeString, ReserveWithContent)
     EXPECT_EQ(s, "hello");
 }
 
+TEST(PedigreeString, ReserveWithHugeContent)
+{
+    String s(bigstring());
+    s.reserve(1024);
+    EXPECT_EQ(s.size(), 1024);
+}
+
 TEST(PedigreeString, SplitHuge)
 {
     String s(bigstring());
@@ -266,6 +323,13 @@ TEST(PedigreeString, FreeComparison)
     EXPECT_NE(s1, s2);
     s2.free();
     EXPECT_EQ(s1, s2);
+}
+
+TEST(PedigreeString, FreeCharCast)
+{
+    String s("hello");
+    s.free();
+    EXPECT_STREQ("", static_cast<const char *>(s));
 }
 
 TEST(PedigreeString, FreeThenUse)
@@ -315,4 +379,18 @@ TEST(PedigreeString, StartsWithIsEquality)
     String s("hello");
     EXPECT_TRUE(s.startswith("hello"));
     EXPECT_TRUE(s.startswith(String("hello")));
+}
+
+TEST(PedigreeString, StartsWithTooLong)
+{
+    String s("he");
+    EXPECT_FALSE(s.startswith("hello"));
+    EXPECT_FALSE(s.startswith(String("hello")));
+}
+
+TEST(PedigreeString, EndsWithTooLong)
+{
+    String s("he");
+    EXPECT_FALSE(s.endswith("hello"));
+    EXPECT_FALSE(s.endswith(String("hello")));
 }

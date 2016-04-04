@@ -207,17 +207,11 @@ bool String::operator == (const String &s) const
 {
     if (m_Length != s.m_Length)
         return false;
-    else if ((m_Length < StaticSize && s.m_Length >= StaticSize) ||
-            (m_Length >= StaticSize && s.m_Length < StaticSize))
-        return false;
     else if(m_Length < StaticSize)
         return !strcmp(m_Static, s.m_Static);
-    if (m_Data == 0 && s.m_Data == 0)
-        return true;
-    else if (m_Data == 0 || s.m_Data == 0)
-        return false;
-    else
-        return !strcmp(m_Data, s.m_Data);
+
+    // Neither of these can be null because of the above conditions.
+    return !strcmp(m_Data, s.m_Data);
 }
 
 bool String::operator == (const char *s) const
@@ -225,20 +219,12 @@ bool String::operator == (const char *s) const
     const char *buf = m_Data;
     if (m_Length < StaticSize)
         buf = m_Static;
-    if (((buf == 0) || (m_Length == 0)) && s == 0)
+
+    if ((!m_Length) && s == 0)
         return true;
-    else if (buf == 0 || s == 0)
-    {
-        if (buf == 0)
-        {
-            size_t otherLength = strlen(s);
-            return otherLength == 0;
-        }
-        else  // s == 0
-        {
-            return m_Length == 0;
-        }
-    }
+    else if (s == 0)
+        // m_Length > 0 but other buffer is null.
+        return false;
     else
         return !strcmp(buf, s);
 }

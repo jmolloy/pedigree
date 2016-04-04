@@ -32,11 +32,10 @@ void String::assign(const String &x)
     }
     else
     {
+        // Length is bigger than a static buffer, no need to check for empty
+        // buffer.
         reserve(m_Length + 1);
-        if (m_Length && x.m_Data)
-            memmove(m_Data, x.m_Data, m_Length + 1);
-        else
-            m_Data[0] = '\0';
+        memmove(m_Data, x.m_Data, m_Length + 1);
     }
 
 #ifdef ADDITIONAL_CHECKS
@@ -70,13 +69,8 @@ void String::assign(const char *s, size_t len)
     else
     {
         reserve(m_Length + 1);
-        if (m_Length && s)
-        {
-            memmove(m_Data, s, m_Length);
-            m_Data[m_Length] = '\0';
-        }
-        else
-            m_Data[0] = '\0';
+        memmove(m_Data, s, m_Length);
+        m_Data[m_Length] = '\0';
     }
 
 #ifdef ADDITIONAL_CHECKS
@@ -99,15 +93,12 @@ void String::reserve(size_t size)
 
         return;
     }
-    if ((size == m_Size) && (m_Size == StaticSize))
-        ++size; // Switching from static to dynamic.
-
-    if (size > m_Size)
+    else if (size > m_Size)
     {
         char *tmp = m_Data;
         m_Data = new char [size];
         memset(m_Data, 0, size);
-        if (tmp != 0)
+        if (tmp)
         {
             memmove(m_Data, tmp, m_Size > size ? size : m_Size);
             delete [] tmp;
@@ -161,10 +152,6 @@ void String::lstrip()
     char *buf = m_Data;
     if (m_Length < StaticSize)
         buf = m_Static;
-
-    // Sanity check...
-    if(!buf)
-        return;
     
     if(!iswhitespace(buf[0]))
         return;
@@ -193,10 +180,6 @@ void String::rstrip()
     char *buf = m_Data;
     if (m_Length < StaticSize)
         buf = m_Static;
-
-    // Sanity check...
-    if(!buf)
-        return;
 
     if(!iswhitespace(buf[m_Length - 1]))
         return;
