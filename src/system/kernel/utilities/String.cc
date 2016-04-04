@@ -44,12 +44,19 @@ void String::assign(const String &x)
 }
 void String::assign(const char *s, size_t len)
 {
+    size_t copyLength = 0;
     if (!s || !*s)
         m_Length = 0;
     else if (len)
+    {
         m_Length = len;
+        copyLength = strlen(s);
+    }
     else
+    {
         m_Length = strlen(s);
+        copyLength = m_Length;
+    }
 
     if (!m_Length)
     {
@@ -60,17 +67,17 @@ void String::assign(const char *s, size_t len)
     }
     else if (m_Length < StaticSize)
     {
-        memmove(m_Static, s, m_Length);
+        memmove(m_Static, s, copyLength);
         delete [] m_Data;
         m_Data = 0;
         m_Size = StaticSize;
-        m_Static[m_Length] = '\0';
+        m_Static[copyLength] = '\0';
     }
     else
     {
         reserve(m_Length + 1);
-        memmove(m_Data, s, m_Length);
-        m_Data[m_Length] = '\0';
+        memmove(m_Data, s, copyLength);
+        m_Data[copyLength] = '\0';
     }
 
 #ifdef ADDITIONAL_CHECKS
