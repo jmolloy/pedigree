@@ -156,22 +156,53 @@ TEST(PedigreeString, EmptyTokenise)
     String s("  a  ");
     List<String *> result = s.tokenise(' ');
     EXPECT_EQ(result.count(), 1);
-    EXPECT_EQ(*(result.popFront()), "a");
+    String *p = result.popFront();
+    EXPECT_EQ(*p, "a");
+    delete p;
 }
 
 TEST(PedigreeString, Tokenise)
 {
     String s("hello world, this is a testcase that exercises tokenise");
     List<String *> result = s.tokenise(' ');
-    EXPECT_EQ(*(result.popFront()), "hello");
-    EXPECT_EQ(*(result.popFront()), "world,");
-    EXPECT_EQ(*(result.popFront()), "this");
-    EXPECT_EQ(*(result.popFront()), "is");
-    EXPECT_EQ(*(result.popFront()), "a");
-    EXPECT_EQ(*(result.popFront()), "testcase");
-    EXPECT_EQ(*(result.popFront()), "that");
-    EXPECT_EQ(*(result.popFront()), "exercises");
-    EXPECT_EQ(*(result.popFront()), "tokenise");
+    String *p = 0;
+
+    /// \todo String::tokenise should probably use SharedPointer objects.
+    p = result.popFront();
+    EXPECT_EQ(*p, "hello");
+    delete p;
+
+    p = result.popFront();
+    EXPECT_EQ(*p, "world,");
+    delete p;
+
+    p = result.popFront();
+    EXPECT_EQ(*p, "this");
+    delete p;
+
+    p = result.popFront();
+    EXPECT_EQ(*p, "is");
+    delete p;
+
+    p = result.popFront();
+    EXPECT_EQ(*p, "a");
+    delete p;
+
+    p = result.popFront();
+    EXPECT_EQ(*p, "testcase");
+    delete p;
+
+    p = result.popFront();
+    EXPECT_EQ(*p, "that");
+    delete p;
+
+    p = result.popFront();
+    EXPECT_EQ(*p, "exercises");
+    delete p;
+
+    p = result.popFront();
+    EXPECT_EQ(*p, "tokenise");
+    delete p;
 }
 
 TEST(PedigreeString, NextCharacter)
