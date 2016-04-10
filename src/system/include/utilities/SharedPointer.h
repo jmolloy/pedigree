@@ -71,7 +71,7 @@ public:
     T *operator ->() const;
 
     /**
-     * Dereference the internal pointer (null if no object is held).
+     * Dereference the internal pointer (dangerous if no object held).
      */
     T &operator *() const;
 
