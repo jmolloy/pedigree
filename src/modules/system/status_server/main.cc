@@ -62,7 +62,7 @@ int clientThread(void *p)
 
     bool bHeadRequest = false;
 
-    List<String*> firstLine = inputData.tokenise(' ');
+    List<SharedPointer<String>> firstLine = inputData.tokenise(' ');
     String operation = *firstLine.popFront();
     if(!(operation == String("GET")))
     {
