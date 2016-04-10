@@ -19,6 +19,11 @@ find "$GIT_ROOT" -type f -name '*.gcda' -delete
 WRAPPER=
 if type valgrind >/dev/null 2>&1; then
     WRAPPER="valgrind --tool=memcheck --leak-check=full --error-exitcode=1"
+elif type iprofiler >/dev/null 2>&1; then
+    # Pass OSX_LEAK_CHECK=1 to run iprofiler (which needs admin rights).
+    if [ "x$OSX_LEAK_CHECK" != "x" ]; then
+        WRAPPER="iprofiler -leaks -d $HOME/tmp"
+    fi
 fi
 
 # Run the C++ testsuites.
