@@ -26,6 +26,7 @@
 #include <processor/types.h>
 #include <utilities/List.h>
 #include <utilities/utility.h>
+#include <utilities/SharedPointer.h>
 
 /** String class for ASCII strings
  *\todo provide documentation */
@@ -70,7 +71,7 @@ class String
          *  the back portion (including the character at 'offset' will be returned in a new string. */
         String split(size_t offset);
 
-        List<String*> tokenise(char token);
+        List<SharedPointer<String>> tokenise(char token);
 
         /** Converts a UTF-32 character to its UTF-8 representation.
          *\param[in] utf32 Input UTF-32 character.
@@ -110,6 +111,9 @@ class String
         char m_Static[StaticSize];
         /** Is the given character whitespace? (for *strip()) */
         bool iswhitespace(const char c) const;
+
+        /** tokenise() pointer type. */
+        typedef SharedPointer<String> tokenise_t;
 };
 
 /** @} */

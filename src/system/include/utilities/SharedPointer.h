@@ -36,6 +36,11 @@ public:
     SharedPointer();
 
     /**
+     * Instantiate, owning the given memory region.
+     */
+    SharedPointer(T *ptr);
+
+    /**
      * Destruction, which automatically frees the pointer if no owners remain.
      */
     virtual ~SharedPointer();
@@ -64,6 +69,11 @@ public:
      * Dereference the internal pointer (null if no object is held).
      */
     T *operator ->() const;
+
+    /**
+     * Dereference the internal pointer (null if no object is held).
+     */
+    T &operator *() const;
 
     /**
      * Release any currently held object, and then reference that held by the
@@ -125,6 +135,12 @@ SharedPointer<T>::SharedPointer() : m_Control(0)
 }
 
 template <class T>
+SharedPointer<T>::SharedPointer(T *ptr) : m_Control(0)
+{
+    reset(ptr);
+}
+
+template <class T>
 SharedPointer<T>::~SharedPointer()
 {
     release();
@@ -171,6 +187,12 @@ template <class T>
 T *SharedPointer<T>::operator ->() const
 {
     return get();
+}
+
+template <class T>
+T &SharedPointer<T>::operator *() const
+{
+    return *(get());
 }
 
 template <class T>

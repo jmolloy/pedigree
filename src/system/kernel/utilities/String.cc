@@ -215,10 +215,10 @@ void String::rstrip()
     }
 }
 
-List<String*> String::tokenise(char token)
+List<SharedPointer<String>> String::tokenise(char token)
 {
     String copy = *this;
-    List<String*> list;
+    List<tokenise_t> list;
 
     size_t idx = 0;
     while (idx < copy.m_Length)
@@ -227,15 +227,13 @@ List<String*> String::tokenise(char token)
         {
             String tmp = copy.split(idx+1);
 
-            String *pStr = new String(copy);
+            tokenise_t pStr = tokenise_t(new String(copy));
             copy = tmp;
 
             // pStr will include token, so remove the last character from it.
             pStr->chomp();
 
-            if (pStr->length() == 0)
-                delete pStr;
-            else
+            if (pStr->length() > 0)
                 list.pushBack(pStr);
             idx = 0;
         }
@@ -244,7 +242,7 @@ List<String*> String::tokenise(char token)
     }
 
     if (copy.length() > 0)
-        list.pushBack(new String(copy));
+        list.pushBack(tokenise_t(new String(copy)));
 
     return list;
 }
