@@ -200,7 +200,12 @@ template<class T>
 void Vector<T>::pushFront(T value)
 {
   reserve(m_Count + 1, true);
-  memmove(&m_Data[1], &m_Data[0], m_Count * sizeof(T));
+  // Move all items along. This can't use memmove/memcpy as it needs to
+  // destruct each object. The compiler may optimise to a mem* operation.
+  for (size_t i = m_Count; i > 0; --i)
+  {
+    m_Data[i] = m_Data[i - 1];
+  }
 
   m_Data[0] = value;
   m_Count++;
@@ -211,7 +216,12 @@ T Vector<T>::popFront()
 {
   T ret = m_Data[0];
   m_Count--;
-  memmove(&m_Data[0], &m_Data[1], m_Count * sizeof(T));
+  // Move all items along. This can't use memmove/memcpy as it needs to
+  // destruct each object. The compiler may optimise to a mem* operation.
+  for (size_t i = 0; i < m_Count; ++i)
+  {
+    m_Data[i] = m_Data[i + 1];
+  }
   return ret;
 }
 
@@ -234,9 +244,11 @@ void Vector<T>::clear()
 template<class T>
 typename Vector<T>::Iterator Vector<T>::erase(Iterator iter)
 {
-  memmove(iter,
-          iter+1,
-          reinterpret_cast<uintptr_t>(m_Data) + (m_Count-1)*sizeof(T) - reinterpret_cast<uintptr_t>(iter));
+  size_t which = iter - begin();
+  for (size_t i = which; i < m_Count; ++i)
+  {
+    m_Data[i] = m_Data[i + 1];
+  }
   m_Count--;
   return iter;
 }
@@ -246,7 +258,10 @@ void Vector<T>::assign(const Vector &x)
 {
   reserve(x.size(), false);
 
-  memcpy(m_Data, x.m_Data, x.count() * sizeof(T));
+  for (size_t i = 0; i < x.count(); ++i)
+  {
+    m_Data[i] = x.m_Data[i];
+  }
   m_Count = x.count();
 }
 
@@ -266,7 +281,12 @@ void Vector<T>::reserve(size_t size, bool copy)
   if (tmp != 0)
   {
     if (copy == true)
-      memcpy(m_Data, tmp, m_Size * sizeof(T));
+    {
+      for (size_t i = 0; i < m_Size; ++i)
+      {
+        m_Data[i] = tmp[i];
+      }
+    }
     delete []tmp;
   }
   m_Size = size;
