@@ -61,27 +61,14 @@
 
 #define GET_CWD() (Processor::information().getCurrentThread()->getParent()->getCwd())
 
-/// Clears a string array.
-static void clear_string_array(Vector<String*> &rArray)
-{
-    for (Vector<String*>::Iterator it = rArray.begin();
-            it != rArray.end();
-            it++)
-    {
-        String *pStr = *it;
-        delete pStr;
-    }
-
-    rArray.clear();
-}
 /// Saves a char** array in the Vector of String*s given.
-static size_t save_string_array(const char **array, Vector<String*> &rArray)
+static size_t save_string_array(const char **array, Vector<SharedPointer<String>> &rArray)
 {
     size_t result = 0;
     while (*array)
     {
         String *pStr = new String(*array);
-        rArray.pushBack(pStr);
+        rArray.pushBack(SharedPointer<String>(pStr));
         array++;
 
         result += pStr->length() + 1;
@@ -89,19 +76,18 @@ static size_t save_string_array(const char **array, Vector<String*> &rArray)
 
     return result;
 }
+
 /// Creates a char** array, properly null-terminated, from the Vector of String*s given, at the location "arrayLoc",
 /// returning the end of the char** array created in arrayEndLoc and the start as the function return value.
-static char **load_string_array(Vector<String*> &rArray, uintptr_t arrayLoc, uintptr_t &arrayEndLoc)
+static char **load_string_array(Vector<SharedPointer<String>> &rArray, uintptr_t arrayLoc, uintptr_t &arrayEndLoc)
 {
     char **pMasterArray = reinterpret_cast<char**> (arrayLoc);
 
     char *pPtr = reinterpret_cast<char*> (arrayLoc + sizeof(char*) * (rArray.count()+1) );
     int i = 0;
-    for (Vector<String*>::Iterator it = rArray.begin();
-            it != rArray.end();
-            it++)
+    for (auto it = rArray.begin(); it != rArray.end(); it++)
     {
-        String *pStr = *it;
+        SharedPointer<String> pStr = *it;
 
         strcpy(pPtr, *pStr);
         pPtr[pStr->length()] = '\0'; // Ensure NULL-termination.
@@ -110,8 +96,6 @@ static char **load_string_array(Vector<String*> &rArray, uintptr_t arrayLoc, uin
 
         pPtr += pStr->length()+1;
         i++;
-
-        delete pStr;
     }
 
     pMasterArray[i] = 0; // Null terminate.
@@ -312,7 +296,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
     // The argv and environment for the new process
     /// \todo move this to using SharedPointer
-    Vector<String *> savedArgv, savedEnv;
+    Vector<SharedPointer<String>> savedArgv, savedEnv;
 
     /// \todo This could probably be cleaned up a little.
 
@@ -364,7 +348,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         for (auto it = additionalArgv.begin(); it != additionalArgv.end();
              it++)
         {
-            savedArgv.pushBack(new String(**it));
+            savedArgv.pushBack(*it);
         }
 
         // Replace the old argv[0] with the script name, this is what Linux does
@@ -434,10 +418,9 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     // actually load, we can set up the Process object
     pProcess->description() = String(name);
 
-    /// \todo Write pActualFile->getFullPath() into argv[0]
     // Make sure the dynamic linker loads the correct program.
-    String actualPath = pActualFile->getFullPath();
-    savedArgv.pushFront(&actualPath);
+    String *actualPath = new String(pActualFile->getFullPath());
+    savedArgv.pushFront(SharedPointer<String>(actualPath));
 
     // Save the argv and env lists so they aren't destroyed when we overwrite the address space.
     size_t argv_len = save_string_array(argv, savedArgv);
@@ -533,11 +516,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     // Load the saved argv and env into this address space now.
     uintptr_t location = argvAddress;
     argv = const_cast<const char**> (load_string_array(savedArgv, location, location));
-    env  = const_cast<const char**> (load_string_array(savedEnv , location, location));
-
-    // Wipe out the argv and env now.
-    clear_string_array(savedArgv);
-    clear_string_array(savedEnv);
+    env  = const_cast<const char**> (load_string_array(savedEnv, location, location));
 
     uintptr_t entryPoint = 0;
 
