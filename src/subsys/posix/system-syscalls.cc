@@ -311,7 +311,8 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     }
 
     // The argv and environment for the new process
-    Vector<String*> savedArgv, savedEnv;
+    /// \todo move this to using SharedPointer
+    Vector<String *> savedArgv, savedEnv;
 
     /// \todo This could probably be cleaned up a little.
 
@@ -321,7 +322,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     file->read(0, 128, reinterpret_cast<uintptr_t>(tmpBuff));
     tmpBuff[128] = '\0';
 
-    List<String*> additionalArgv;
+    List<SharedPointer<String>> additionalArgv;
 
     if (!strncmp(tmpBuff, "#!", 2))
     {
@@ -356,26 +357,25 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
             return -1;
         }
 
-        String *newFname = *additionalArgv.begin();
+        String newFname = **additionalArgv.begin();
 
         // Prepend the tokenized shebang line argv
         // argv will look like: interpreter-path additional-shebang-options script-name old-argv
-        for (List<String*>::Iterator it = additionalArgv.begin();
-             it != additionalArgv.end();
+        for (auto it = additionalArgv.begin(); it != additionalArgv.end();
              it++)
         {
-            savedArgv.pushBack(*it);
+            savedArgv.pushBack(new String(**it));
         }
 
         // Replace the old argv[0] with the script name, this is what Linux does
         // ### is it safe to write to argv?
         argv[0] = name;
 
-        name = static_cast<const char*>(*newFname);
+        name = static_cast<const char*>(newFname);
 
         // And reload the file, now that we're loading a new application
-        NOTICE("New name: " << *newFname << "...");
-        file = VFS::instance().find(*newFname, Processor::information().getCurrentThread()->getParent()->getCwd());
+        NOTICE("New name: " << newFname << "...");
+        file = VFS::instance().find(newFname, Processor::information().getCurrentThread()->getParent()->getCwd());
         if (!file)
         {
             // Error - not found.
