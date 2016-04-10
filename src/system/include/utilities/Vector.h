@@ -163,6 +163,9 @@ Vector<T> &Vector<T>::operator = (const Vector &x)
 template<class T>
 T &Vector<T>::operator [](size_t index) const
 {
+  static T outofbounds = T();
+  if (index > m_Count)
+    return outofbounds;
   return m_Data[index];
 }
 

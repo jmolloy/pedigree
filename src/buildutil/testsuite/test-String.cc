@@ -229,6 +229,13 @@ TEST(PedigreeString, AssignBig)
     EXPECT_EQ(s, bigstring());
 }
 
+TEST(PedigreeString, AssignNotQuiteAll)
+{
+    String s;
+    s.assign("foobar", 3);
+    EXPECT_EQ(s, "foo");
+}
+
 TEST(PedigreeString, AssignNothing)
 {
     String s;

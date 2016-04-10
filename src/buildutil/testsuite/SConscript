@@ -62,4 +62,5 @@ build_env.Program(testsuite_bin,
                       'test-String.cc',
                       'test-StaticString.cc',
                       'test-SharedPointer.cc',
+                      'test-Vector.cc',
                   ], LIBS=[env['LIBUTILITY_COVERAGE'], 'gtest', 'pthread'])
