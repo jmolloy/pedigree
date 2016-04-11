@@ -155,3 +155,18 @@ TEST(PedigreeVector, Erase)
     EXPECT_EQ(x[1], 3);
     EXPECT_EQ(x.count(), 2);
 }
+
+TEST(PedigreeVector, EraseAtEnd)
+{
+    Vector<int> x;
+    x.pushBack(1);
+    x.pushBack(2);
+
+    auto it = x.begin();
+    ++it;
+
+    EXPECT_EQ(*it, 2);
+    EXPECT_NE(it, x.end());
+    it = x.erase(it);
+    EXPECT_EQ(it, x.end());
+}

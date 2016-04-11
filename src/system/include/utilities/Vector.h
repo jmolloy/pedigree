@@ -245,7 +245,7 @@ template<class T>
 typename Vector<T>::Iterator Vector<T>::erase(Iterator iter)
 {
   size_t which = iter - begin();
-  for (size_t i = which; i < m_Count; ++i)
+  for (size_t i = which; i < (m_Count - 1); ++i)
   {
     m_Data[i] = m_Data[i + 1];
   }
