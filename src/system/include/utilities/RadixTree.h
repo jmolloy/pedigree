@@ -180,6 +180,8 @@ public:
      *\return iterator pointing to the beginning of the List */
     inline Iterator begin()
     {
+        if (!m_pRoot)
+            return Iterator(0);
         Iterator it(m_pRoot->next());
         return it;
     }
@@ -187,6 +189,8 @@ public:
      *\return constant iterator pointing to the beginning of the List */
     inline ConstIterator begin() const
     {
+        if (!m_pRoot)
+            return ConstIterator(0);
         ConstIterator it(m_pRoot->next());
         return it;
     }
