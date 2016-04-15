@@ -99,8 +99,8 @@ Device *searchNode(Device *pDev, uintptr_t fbAddr)
 
 extern "C" void vbeModeChangedCallback(char *pId, char *pModeId)
 {
-    size_t id = pedigree_strtoul(pId, 0, 10);
-    size_t mode_id = pedigree_strtoul(pModeId, 0, 10);
+    size_t id = StringToUnsignedLong(pId, 0, 10);
+    size_t mode_id = StringToUnsignedLong(pModeId, 0, 10);
 
     if (id >= g_nDisplays) return;
 
@@ -126,7 +126,7 @@ class VbeFramebuffer : public Framebuffer
                               size_t w = ~0UL, size_t h = ~0UL)
         {
             /// \todo Subregions - this just refreshes the entire screen
-            memcpy(m_pDisplay->getFramebuffer(), m_pBackbuffer, m_nBackbufferBytes);
+            MemoryCopy(m_pDisplay->getFramebuffer(), m_pBackbuffer, m_nBackbufferBytes);
         }
         
         virtual ~VbeFramebuffer()
@@ -136,7 +136,7 @@ class VbeFramebuffer : public Framebuffer
         virtual void setFramebuffer(uintptr_t p)
         {
             Display::ScreenMode sm;
-            memset(&sm, 0, sizeof(Display::ScreenMode));
+            ByteSet(&sm, 0, sizeof(Display::ScreenMode));
             if (!m_pDisplay->getCurrentScreenMode(sm))
             {
                 ERROR("VBE: setting screen mode failed.");
@@ -194,7 +194,7 @@ bool entry()
   // Allocate some space for the information structure and prepare for a BIOS call.
   vbeControllerInfo *info = reinterpret_cast<vbeControllerInfo*> (Bios::instance().malloc(/*sizeof(vbeControllerInfo)*/256));
   vbeModeInfo *mode = reinterpret_cast<vbeModeInfo*> (Bios::instance().malloc(/*sizeof(vbeModeInfo)*/256));
-  strncpy (info->signature, "VBE2", 4);
+  StringCopyN(info->signature, "VBE2", 4);
   Bios::instance().setAx (0x4F00);
   Bios::instance().setEs (0x0000);
   Bios::instance().setDi (static_cast<uint16_t>(reinterpret_cast<uintptr_t>(info)&0xFFFF));
@@ -202,7 +202,7 @@ bool entry()
   Bios::instance().executeInterrupt (0x10);
 
   // Check the signature.
-  if (Bios::instance().getAx() != 0x004F || strncmp(info->signature, "VESA", 4) != 0)
+  if (Bios::instance().getAx() != 0x004F || StringCompareN(info->signature, "VESA", 4) != 0)
   {
     ERROR("VBE: VESA not supported!");
     Bios::instance().free(reinterpret_cast<uintptr_t>(info));
@@ -314,7 +314,7 @@ bool entry()
   bool bDelayedInsert = false;
   size_t mode_id = 0;
   String str;
-  str.sprintf("SELECT * FROM displays WHERE pointer=%d", reinterpret_cast<uintptr_t>(pDisplay));
+  str.Format("SELECT * FROM displays WHERE pointer=%d", reinterpret_cast<uintptr_t>(pDisplay));
   Config::Result *pResult = Config::instance().query(str);
   if(!pResult)
   {
@@ -324,7 +324,7 @@ bool entry()
   {
       mode_id = pResult->getNum(0, "mode_id");
       delete pResult;
-      str.sprintf("UPDATE displays SET id=%d WHERE pointer=%d", g_nDisplays, reinterpret_cast<uintptr_t>(pDisplay));
+      str.Format("UPDATE displays SET id=%d WHERE pointer=%d", g_nDisplays, reinterpret_cast<uintptr_t>(pDisplay));
       pResult = Config::instance().query(str);
       if (!pResult->succeeded())
           FATAL("Display update failed: " << pResult->errorMessage());

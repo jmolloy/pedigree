@@ -75,7 +75,7 @@ Device *DeviceHashTree::getDevice(String hash)
         return 0;
     else
     {
-        uint32_t inthash = pedigree_strtoul(static_cast<const char*>(hash), 0, 16);
+        uint32_t inthash = StringToUnsignedLong(static_cast<const char*>(hash), 0, 16);
         return m_DeviceTree.lookup(inthash);
     }
 }

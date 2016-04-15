@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -161,16 +160,16 @@ void MIPS32InterruptManager::initialiseProcessor()
   pCode[3] = 0x00000000;
   
   // Now poke that exception handling stub into memory.
-  memcpy(reinterpret_cast<void*>(KSEG1(0x80)),
+  MemoryCopy(reinterpret_cast<void*>(KSEG1(0x80)),
          reinterpret_cast<void*>(pCode),
          32*4);
-  memcpy(reinterpret_cast<void*>(KSEG1(0x100)),
+  MemoryCopy(reinterpret_cast<void*>(KSEG1(0x100)),
          reinterpret_cast<void*>(pCode),
          32*4);
-  memcpy(reinterpret_cast<void*>(KSEG1(0x180)),
+  MemoryCopy(reinterpret_cast<void*>(KSEG1(0x180)),
          reinterpret_cast<void*>(pCode),
          32*4);
-  memcpy(reinterpret_cast<void*>(KSEG1(0x200)),
+  MemoryCopy(reinterpret_cast<void*>(KSEG1(0x200)),
          reinterpret_cast<void*>(pCode),
          32*4);
 
@@ -185,7 +184,7 @@ void MIPS32InterruptManager::initialiseProcessor()
   // nop (delay slot)
   pCode[3] = 0x00000000;
 
-  memcpy(reinterpret_cast<void*>(KSEG1(0x0)),
+  MemoryCopy(reinterpret_cast<void*>(KSEG1(0x0)),
          reinterpret_cast<void*>(pCode),
          32*4);
 

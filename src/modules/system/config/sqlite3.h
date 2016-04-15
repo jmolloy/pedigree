@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -157,8 +156,8 @@ extern "C" {
 **
 ** <blockquote><pre>
 ** assert( sqlite3_libversion_number()==SQLITE_VERSION_NUMBER );
-** assert( strcmp(sqlite3_sourceid(),SQLITE_SOURCE_ID)==0 );
-** assert( strcmp(sqlite3_libversion,SQLITE_VERSION)==0 );
+** assert( StringCompare(sqlite3_sourceid(),SQLITE_SOURCE_ID)==0 );
+** assert( StringCompare(sqlite3_libversion,SQLITE_VERSION)==0 );
 ** </pre></blockquote>
 **
 ** The sqlite3_libversion() function returns the same information as is

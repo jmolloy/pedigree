@@ -64,19 +64,19 @@ Ohci::Ohci(Device* pDev) : UsbHub(pDev), m_Mutex(false), m_ScheduleChangeLock(),
     m_pTDListPhys           = physicalBase + 0x4000;
 
     // Clear out the HCCA block.
-    memset(m_pHcca, 0, 0x800);
+    ByteSet(m_pHcca, 0, 0x800);
 
     // Get an ED for the periodic list
     m_PeriodicEDBitmap.set(0);
     ED *pPeriodicED = m_pPeriodicEDList;
-    memset(pPeriodicED, 0, sizeof(ED));
+    ByteSet(pPeriodicED, 0, sizeof(ED));
     pPeriodicED->bSkip = true;
     pPeriodicED->pMetaData = new ED::MetaData;
     pPeriodicED->pMetaData->id = 0x2000;
     pPeriodicED->pMetaData->pPrev = pPeriodicED->pMetaData->pNext = pPeriodicED;
 
     // Set all HCCA interrupt ED entries to our periodic ED
-    dmemset(m_pHcca->pInterruptEDList, m_pPeriodicEDListPhys, 3);
+    DoubleWordSet(m_pHcca->pInterruptEDList, m_pPeriodicEDListPhys, 3);
 
     // Every periodic ED will be added after this one
     m_pPeriodicQueueTail = pPeriodicED;
@@ -291,7 +291,7 @@ void Ohci::removeED(ED *pED)
             it++)
         {
             size_t idx = (*it)->id;
-            memset((*it), 0, sizeof(TD));
+            ByteSet((*it), 0, sizeof(TD));
             m_TDBitmap.clear(idx);
         }
     }
@@ -305,7 +305,7 @@ void Ohci::removeED(ED *pED)
             it++)
         {
             size_t idx = (*it)->id;
-            memset((*it), 0, sizeof(TD));
+            ByteSet((*it), 0, sizeof(TD));
             m_TDBitmap.clear(idx);
         }
     }
@@ -420,7 +420,7 @@ void Ohci::interrupt(size_t number, InterruptState &state)
                 
                 // Destroy the ED and free it's memory space.
                 delete pED->pMetaData;
-                memset(pED, 0, sizeof(ED));
+                ByteSet(pED, 0, sizeof(ED));
                 
                 switch(type)
                 {
@@ -605,7 +605,7 @@ void Ohci::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid
 
     // Grab the TD pointer we're going to set up now
     TD *pTD = &m_pTDList[nIndex];
-    memset(pTD, 0, sizeof(TD));
+    ByteSet(pTD, 0, sizeof(TD));
     pTD->id = nIndex;
 
     // Buffer rounding - allow packets smaller than the buffer we specify
@@ -733,7 +733,7 @@ uintptr_t Ohci::createTransaction(UsbEndpoint endpointInfo)
         }
     }
 
-    memset(pED, 0, sizeof(ED));
+    ByteSet(pED, 0, sizeof(ED));
 
     // Device address, endpoint and speed
     pED->nAddress = endpointInfo.nAddress;
@@ -944,7 +944,7 @@ void Ohci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
         nIndex += 0x2000;
     }
 
-    memset(pED, 0, sizeof(ED));
+    ByteSet(pED, 0, sizeof(ED));
 
     // Device address, endpoint and speed
     pED->nAddress = endpointInfo.nAddress;

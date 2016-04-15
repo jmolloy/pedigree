@@ -108,7 +108,7 @@ int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
             nBytes = streamSize;
 
         // Copy
-        memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(front), nBytes);
+        MemoryCopy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(front), nBytes);
 
         // Remove from the buffer, we've read
         if(!bPeek)

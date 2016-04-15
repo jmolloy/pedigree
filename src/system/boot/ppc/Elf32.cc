@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -22,7 +21,7 @@
 #include "prom.h"
 //include <utilities/utility.h>
 extern void writeStr(const char *str);
-int strncpy(char *dest, const char *src, int len)
+int StringCopyN(char *dest, const char *src, int len)
 {
   while (*src && len)
   {
@@ -32,7 +31,7 @@ int strncpy(char *dest, const char *src, int len)
   *dest = '\0';
   return 0;
 }
-int memset(void *buf, int c, size_t len)
+int ByteSet(void *buf, int c, size_t len)
 {
   unsigned char *tmp = reinterpret_cast<unsigned char *> (buf);
   while(len--)
@@ -42,14 +41,14 @@ int memset(void *buf, int c, size_t len)
   return 0;
 }
 
-void memcpy(void *dest, const void *src, size_t len)
+void MemoryCopy(void *dest, const void *src, size_t len)
 {
   const unsigned char *sp = reinterpret_cast<const unsigned char *> (src);
   unsigned char *dp = reinterpret_cast<unsigned char *>(dest);
   for (; len != 0; len--) *dp++ = *sp++;
 }
 
-int strcmp(const char *p1, const char *p2)
+int StringCompare(const char *p1, const char *p2)
 {
   int i = 0;
   int failed = 0;
@@ -79,7 +78,7 @@ Elf32::Elf32(const char *name) :
   m_pSectionHeaders(0),
   m_pBuffer(0)
 {
-  strncpy(m_pId, name, 127);
+  StringCopyN(m_pId, name, 127);
 }
 
 Elf32::~Elf32()
@@ -114,11 +113,11 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
   for (int i = 0; i < m_pHeader->shnum; i++)
   {
     const char *pStr = pStrtab + m_pSectionHeaders[i].name;
-    if (!strcmp(pStr, ".symtab"))
+    if (!StringCompare(pStr, ".symtab"))
     {
       m_pSymbolTable = &m_pSectionHeaders[i];
     }
-    if (!strcmp(pStr, ".strtab"))
+    if (!StringCompare(pStr, ".strtab"))
       m_pStringTable = &m_pSectionHeaders[i];
   }
   
@@ -154,7 +153,7 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
 //       m_pSymbolTable = pSh;
 //       m_pSymbolTable->offset = m_pSymbolTable->addr;
 //     }
-//     else if (!strcmp(pStr, ".strtab"))
+//     else if (!StringCompare(pStr, ".strtab"))
 //     {
 //       m_pStringTable = pSh;
 //       m_pStringTable->offset = m_pStringTable->addr;
@@ -176,7 +175,7 @@ bool Elf32::writeSections()
         prom_map(physAddress, m_pSectionHeaders[i].addr, m_pSectionHeaders[i].size+0x1000);
         physAddress += m_pSectionHeaders[i].size+0x1000;
         // Copy section data from the file.
-        memcpy(reinterpret_cast<uint8_t*> (m_pSectionHeaders[i].addr),
+        MemoryCopy(reinterpret_cast<uint8_t*> (m_pSectionHeaders[i].addr),
                         &m_pBuffer[m_pSectionHeaders[i].offset],
                         m_pSectionHeaders[i].size);
       }
@@ -184,7 +183,7 @@ bool Elf32::writeSections()
       {
         prom_map(physAddress, m_pSectionHeaders[i].addr, m_pSectionHeaders[i].size+0x1000);
         physAddress += m_pSectionHeaders[i].size+0x1000;
-        memset(reinterpret_cast<uint8_t*>(m_pSectionHeaders[i].addr),
+        ByteSet(reinterpret_cast<uint8_t*>(m_pSectionHeaders[i].addr),
                         0,
                         m_pSectionHeaders[i].size);
       }

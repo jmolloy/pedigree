@@ -65,7 +65,7 @@ void HostedProcessorInformation::setKernelStack(uintptr_t stack)
         sigaltstack(0, &s);
         if (s.ss_sp != new_sp)
         {
-            memset(&s, 0, sizeof(s));
+            ByteSet(&s, 0, sizeof(s));
             s.ss_sp = new_sp;
             s.ss_size = KERNEL_STACK_SIZE;
             int r = sigaltstack(&s, 0);

@@ -47,7 +47,7 @@ int doProcessKill(Process *p, int sig);
 
 #define SIGNAL_HANDLER_EXIT(name, errcode) void name(int) NORETURN; void name(int) { posix_exit(errcode); }
 #define SIGNAL_HANDLER_EMPTY(name) void name(int s) {NOTICE("EMPTY");}
-#define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int) NORETURN; void name(int) { Processor::setInterrupts(true); posix_write(1, msg, strlen(msg), true); Scheduler::instance().yield(); posix_exit(errcode); }
+#define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int) NORETURN; void name(int) { Processor::setInterrupts(true); posix_write(1, msg, StringLength(msg), true); Scheduler::instance().yield(); posix_exit(errcode); }
 #define SIGNAL_HANDLER_SUSPEND(name) void name(int s) { NOTICE("SUSPEND"); Process *pParent = Processor::information().getCurrentThread()->getParent()->getParent(); pParent->suspend(); }
 #define SIGNAL_HANDLER_RESUME(name) void name(int s) { NOTICE("RESUME"); Processor::information().getCurrentThread()->getParent()->resume(); }
 
@@ -159,7 +159,7 @@ int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact
                 oact->sa_handler = reinterpret_cast<void (*)(int)>(1);
         }
         else
-            memset(oact, 0, sizeof(struct sigaction));
+            ByteSet(oact, 0, sizeof(struct sigaction));
     }
 
     // and if needed, fill in the new signal handler
@@ -688,7 +688,7 @@ void pedigree_init_sigret()
                 reinterpret_cast<void*> (Event::getTrampoline()),
                 VirtualAddressSpace::Write | VirtualAddressSpace::Shared | VirtualAddressSpace::Execute);
 
-        memcpy(reinterpret_cast<void*>(Event::getTrampoline()), reinterpret_cast<void*>(sigret_stub), (reinterpret_cast<uintptr_t>(&sigret_stub_end) - reinterpret_cast<uintptr_t>(sigret_stub)));
+        MemoryCopy(reinterpret_cast<void*>(Event::getTrampoline()), reinterpret_cast<void*>(sigret_stub), (reinterpret_cast<uintptr_t>(&sigret_stub_end) - reinterpret_cast<uintptr_t>(sigret_stub)));
 
         // Mark read-only now that we have mapped in the page.
         Processor::information().getVirtualAddressSpace().setFlags(

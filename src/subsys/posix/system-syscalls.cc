@@ -89,7 +89,7 @@ static char **load_string_array(Vector<SharedPointer<String>> &rArray, uintptr_t
     {
         SharedPointer<String> pStr = *it;
 
-        strcpy(pPtr, *pStr);
+        StringCopy(pPtr, *pStr);
         pPtr[pStr->length()] = '\0'; // Ensure NULL-termination.
 
         pMasterArray[i] = pPtr;
@@ -308,7 +308,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
     List<SharedPointer<String>> additionalArgv;
 
-    if (!strncmp(tmpBuff, "#!", 2))
+    if (!StringCompareN(tmpBuff, "#!", 2))
     {
         // We have a shebang, so grab the command.
 
@@ -592,7 +592,7 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     // Before we enter the new address space, wipe out the scheduler state.
     // This is a new scheduling entity.
     SchedulerState s;
-    memset(&s, 0, sizeof(s));
+    ByteSet(&s, 0, sizeof(s));
     pThread->state() = s;
 
     // Allow signals again now that everything's loaded
@@ -872,7 +872,7 @@ clock_t posix_times(struct tms *tm)
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
 
-    memset(tm, 0, sizeof(struct tms));
+    ByteSet(tm, 0, sizeof(struct tms));
     tm->tms_utime = pProcess->getUserTime();
     tm->tms_stime = pProcess->getKernelTime();
 
@@ -896,7 +896,7 @@ int posix_getrusage(int who, struct rusage *r)
     {
         SC_NOTICE("posix_getrusage -> non-RUSAGE_SELF not supported");
         SYSCALL_ERROR(InvalidArgument);
-        memset(r, 0, sizeof(struct rusage));
+        ByteSet(r, 0, sizeof(struct rusage));
         return -1;
     }
 
@@ -905,7 +905,7 @@ int posix_getrusage(int who, struct rusage *r)
     Time::Timestamp user = pProcess->getUserTime();
     Time::Timestamp kernel = pProcess->getKernelTime();
 
-    memset(r, 0, sizeof(struct rusage));
+    ByteSet(r, 0, sizeof(struct rusage));
     r->ru_utime.tv_sec = user / Time::Multiplier::SECOND;
     r->ru_utime.tv_usec = (user % Time::Multiplier::SECOND) / Time::Multiplier::MICROSECOND;
     r->ru_stime.tv_sec = kernel / Time::Multiplier::SECOND;

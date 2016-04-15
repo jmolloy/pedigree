@@ -220,7 +220,7 @@ String Ext2Filesystem::getVolumeLabel()
     else
     {
         char buffer[17];
-        strncpy(buffer, m_pSuperblock->s_volume_name, 16);
+        StringCopyN(buffer, m_pSuperblock->s_volume_name, 16);
         buffer[16] = '\0';
         return String(buffer);
     }
@@ -238,7 +238,7 @@ bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, St
     }
 
     // The filename cannot be the special entries "." or "..".
-    if (filename.length() == 0 || !strcmp(filename, ".") || !strcmp(filename, ".."))
+    if (filename.length() == 0 || !StringCompare(filename, ".") || !StringCompare(filename, ".."))
     {
         SYSCALL_ERROR(InvalidArgument);
         return false;
@@ -265,7 +265,7 @@ bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, St
     // Populate the inode.
     /// \todo Endianness!
     Inode *newInode = getInode(inode_num);
-    memset(reinterpret_cast<uint8_t*>(newInode), 0, m_InodeSize);
+    ByteSet(reinterpret_cast<uint8_t*>(newInode), 0, m_InodeSize);
     newInode->i_mode = HOST_TO_LITTLE16(mask | type);
     newInode->i_uid = HOST_TO_LITTLE16(uid);
     newInode->i_atime = newInode->i_ctime = newInode->i_mtime = HOST_TO_LITTLE32(timestamp);
@@ -274,7 +274,7 @@ bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, St
     // If we have a value to store, and it's small enough, use the block indices.
     if (value.length() && value.length() < 4*15)
     {
-        memcpy(reinterpret_cast<void*>(newInode->i_block), value, value.length());
+        MemoryCopy(reinterpret_cast<void*>(newInode->i_block), value, value.length());
         newInode->i_size = HOST_TO_LITTLE32(value.length());
     }
     // Else case comes later, after pFile is created.

@@ -242,7 +242,7 @@ bool ArmV7VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
             ptbl[ptbl_offset2].descriptor.smallpage.nG = 1;
 
             // Mapped, so clear the page now
-            memset(reinterpret_cast<void*>(mapaddr), 0, 1024);
+            ByteSet(reinterpret_cast<void*>(mapaddr), 0, 1024);
         }
     }
 
@@ -467,7 +467,7 @@ bool ArmV7KernelVirtualAddressSpace::initialiseKernelAddressSpace()
     // Map in the 4 MB we'll use for page tables - this region is pinned in
     // PhysicalMemoryManager
     FirstLevelDescriptor *pdir = reinterpret_cast<FirstLevelDescriptor*>(m_PhysicalPageDirectory);
-    memset(pdir, 0, 0x4000);
+    ByteSet(pdir, 0, 0x4000);
 
     uint32_t pdir_offset = 0, ptbl_offset = 0;
     uintptr_t vaddr = 0, paddr = 0;
@@ -475,7 +475,7 @@ bool ArmV7KernelVirtualAddressSpace::initialiseKernelAddressSpace()
     // Page table for mapping in the page directory. This table will cover the
     // last MB of the address space.
     physical_uintptr_t ptbl_paddr = 0x8FB00000 + (0x400000 - 0x400);
-    memset(reinterpret_cast<void*>(0x8FB00000), 0, 0x400000);
+    ByteSet(reinterpret_cast<void*>(0x8FB00000), 0, 0x400000);
     
     // Map in the page directory
     SecondLevelDescriptor *ptbl = reinterpret_cast<SecondLevelDescriptor*>(ptbl_paddr);

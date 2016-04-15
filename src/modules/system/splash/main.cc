@@ -133,7 +133,7 @@ void printString(const char *str)
 {
     if(!g_NoGraphics)
     {
-        for(size_t i = 0; i < strlen(str); i++)
+        for(size_t i = 0; i < StringLength(str); i++)
             printChar(str[i]);
     }
     else
@@ -166,7 +166,7 @@ void printString(const char *str)
 void printStringAt(const char *str, size_t x, size_t y)
 {
     /// \todo Handle overflows
-    for(size_t i = 0; i < strlen(str); i++)
+    for(size_t i = 0; i < StringLength(str); i++)
     {
         printChar(str[i], x, y);
         x += FONT_WIDTH;
@@ -176,7 +176,7 @@ void printStringAt(const char *str, size_t x, size_t y)
 void centerStringAt(const char *str, size_t midX, size_t midY)
 {
     /// \todo Handle overflows
-    size_t width = strlen(str) * FONT_WIDTH;
+    size_t width = StringLength(str) * FONT_WIDTH;
     size_t height = FONT_HEIGHT;
 
     size_t x = midX - (width / 2);
@@ -278,7 +278,7 @@ void progress(const char *text)
         g_Previous = g_BootProgressCurrent;
 
         char buf[80];
-        sprintf(buf, "%d%%", ((g_BootProgressCurrent * 100) / g_BootProgressTotal));
+        StringFormat(buf, "%d%%", ((g_BootProgressCurrent * 100) / g_BootProgressTotal));
         centerStringAt(buf, g_ProgressX + (g_ProgressW / 2), g_ProgressY - FONT_HEIGHT);
 
         g_pFramebuffer->redraw(g_ProgressX, g_ProgressY - (FONT_HEIGHT * 2), g_ProgressW, g_ProgressH + (FONT_HEIGHT * 2), true);
@@ -491,7 +491,7 @@ static bool init()
 
     // Create the font buffer
     g_pBuffer = new uint8_t[(FONT_WIDTH * FONT_HEIGHT * 3) * 256]; // 24-bit
-    memset(g_pBuffer, 0, (FONT_WIDTH * FONT_HEIGHT * 3) * 256);
+    ByteSet(g_pBuffer, 0, (FONT_WIDTH * FONT_HEIGHT * 3) * 256);
     size_t offset = 0;
 
     // For each character

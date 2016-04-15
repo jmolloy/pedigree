@@ -42,7 +42,7 @@ bool HostedSchedulerTimer::registerHandler(TimerHandler *handler)
 bool HostedSchedulerTimer::initialise()
 {
     struct sigevent sv;
-    memset(&sv, 0, sizeof(sv));
+    ByteSet(&sv, 0, sizeof(sv));
     sv.sigev_notify = SIGEV_SIGNAL;
     sv.sigev_signo = SIGUSR2;
     sv.sigev_value.sival_ptr = this;
@@ -54,7 +54,7 @@ bool HostedSchedulerTimer::initialise()
     }
 
     struct itimerspec interval;
-    memset(&interval, 0, sizeof(interval));
+    ByteSet(&interval, 0, sizeof(interval));
     interval.it_interval.tv_nsec = ONE_SECOND / HZ;
     interval.it_value.tv_nsec = ONE_SECOND / HZ;
     r = timer_settime(m_Timer, 0, &interval, 0);

@@ -41,7 +41,7 @@ bool GraphicsService::serve(ServiceFeatures::Type type, void *pData, size_t data
         // Return the current provider if there is one
         /// \todo Sanity check
         if(m_pCurrentProvider)
-            memcpy(pData, m_pCurrentProvider, sizeof(GraphicsProvider));
+            MemoryCopy(pData, m_pCurrentProvider, sizeof(GraphicsProvider));
         else
             return false;
         

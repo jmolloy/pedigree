@@ -97,7 +97,7 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
       }
 
       // Perform the actual copy.
-      memcpy(reinterpret_cast<uint8_t*>(page),
+      MemoryCopy(reinterpret_cast<uint8_t*>(page),
              reinterpret_cast<uint8_t*>(tempAddr),
              pageSz);
 

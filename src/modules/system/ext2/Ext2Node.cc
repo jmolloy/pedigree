@@ -34,7 +34,7 @@ Ext2Node::Ext2Node(uintptr_t inode_num, Inode *pInode, Ext2Filesystem *pFs) :
     if (m_nBlocks)
     {
         m_pBlocks = new uint32_t[m_nBlocks];
-        memset(m_pBlocks, ~0, sizeof(uint32_t) * m_nBlocks);
+        ByteSet(m_pBlocks, ~0, sizeof(uint32_t) * m_nBlocks);
     }
 
     for (size_t i = 0; i < 12 && i < m_nBlocks; i++)
@@ -81,7 +81,7 @@ void Ext2Node::trackBlock(uint32_t block)
 {
     /// \todo consider a Vector here instead of doing this by hand
     uint32_t *pTmp = new uint32_t[m_nBlocks + 1];
-    memcpy(pTmp, m_pBlocks, m_nBlocks * sizeof(uint32_t));
+    MemoryCopy(pTmp, m_pBlocks, m_nBlocks * sizeof(uint32_t));
 
     delete [] m_pBlocks;
     m_pBlocks = pTmp;
@@ -111,7 +111,7 @@ void Ext2Node::wipe()
 
     m_pInode->i_size = 0;
     m_pInode->i_blocks = 0;
-    memset(m_pInode->i_block, 0, sizeof(uint32_t) * 15);
+    ByteSet(m_pInode->i_block, 0, sizeof(uint32_t) * 15);
 
     // Write updated inode.
     m_pExt2Fs->writeInode(getInodeNumber());
@@ -149,7 +149,7 @@ bool Ext2Node::ensureLargeEnough(size_t size)
         }
         // Load the block and zero it.
         uint8_t *pBuffer = reinterpret_cast<uint8_t*>(m_pExt2Fs->readBlock(block));
-        memset(pBuffer, 0, m_pExt2Fs->m_BlockSize);
+        ByteSet(pBuffer, 0, m_pExt2Fs->m_BlockSize);
     }
     return true;
 }
@@ -275,7 +275,7 @@ bool Ext2Node::addBlock(uint32_t blockValue)
             }
 
             void *buffer = reinterpret_cast<void *>(m_pExt2Fs->readBlock(newBlock));
-            memset(buffer, 0, m_pExt2Fs->m_BlockSize);
+            ByteSet(buffer, 0, m_pExt2Fs->m_BlockSize);
 
             // Write back the zeroed block to prepare the indirect block.
             m_pExt2Fs->writeBlock(newBlock);
@@ -316,7 +316,7 @@ bool Ext2Node::addBlock(uint32_t blockValue)
             }
 
             void *buffer = reinterpret_cast<void *>(m_pExt2Fs->readBlock(newBlock));
-            memset(buffer, 0, m_pExt2Fs->m_BlockSize);
+            ByteSet(buffer, 0, m_pExt2Fs->m_BlockSize);
 
             // Taken on a new block - update block count (but don't track in
             // m_pBlocks, as this is a metadata block).
@@ -342,7 +342,7 @@ bool Ext2Node::addBlock(uint32_t blockValue)
             m_pExt2Fs->writeBlock(bufferBlock);
 
             void *buffer = reinterpret_cast<void *>(m_pExt2Fs->readBlock(newBlock));
-            memset(buffer, 0, m_pExt2Fs->m_BlockSize);
+            ByteSet(buffer, 0, m_pExt2Fs->m_BlockSize);
 
             // Taken on a new block - update block count (but don't track in
             // m_pBlocks, as this is a metadata block).

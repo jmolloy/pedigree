@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -85,8 +84,8 @@ void Rtl8139::reset()
     m_TxCurr = 0;
 
     // clear buffers
-    memset(m_pRxBuffVirt, 0, RTL_BUFF_SIZE);
-    memset(m_pTxBuffVirt, 0, RTL_BUFF_SIZE);
+    ByteSet(m_pRxBuffVirt, 0, RTL_BUFF_SIZE);
+    ByteSet(m_pTxBuffVirt, 0, RTL_BUFF_SIZE);
 
     // reset command and wait for complete
     m_pBase->write8(RTL_CMD_RES, RTL_CMD);
@@ -145,7 +144,7 @@ bool Rtl8139::send(size_t nBytes, uintptr_t buffer)
     }
 
     // copy to the buffer and pad the packet
-    memcpy(m_pTxBuffVirt, reinterpret_cast<void *>(buffer), nBytes);
+    MemoryCopy(m_pTxBuffVirt, reinterpret_cast<void *>(buffer), nBytes);
     for(int i = nBytes;i < RTL_BUFF_SIZE;i++)
         m_pTxBuffVirt[i] = 0;
 
@@ -185,8 +184,8 @@ void Rtl8139::recv()
     {
         // copy first the part of the packet until the end of the buffer and then the rest of it, at the beginning of the buffer
         uint32_t left = RTL_BUFF_SIZE - (m_RxCurr + 4);
-        memcpy(packBuff, reinterpret_cast<void *>(rxPacket + 4), left);
-        memcpy(&packBuff[left], m_pRxBuffVirt, length - 4 - left);
+        MemoryCopy(packBuff, reinterpret_cast<void *>(rxPacket + 4), left);
+        MemoryCopy(&packBuff[left], m_pRxBuffVirt, length - 4 - left);
 
         // adjust current offset
         m_RxCurr = (length - left + 3) & ~3;
@@ -194,7 +193,7 @@ void Rtl8139::recv()
     else
     {
         // copy the packet
-        memcpy(packBuff, reinterpret_cast<void *>(rxPacket + 4), length-4);
+        MemoryCopy(packBuff, reinterpret_cast<void *>(rxPacket + 4), length-4);
 
         // adjust current offset
         m_RxCurr = (m_RxCurr + length + 4 + 3) & ~3;

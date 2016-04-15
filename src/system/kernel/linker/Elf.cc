@@ -31,7 +31,7 @@ template <typename T>
 static T *copy(T *buff, size_t numBytes)
 {
     T *ret = new T[numBytes / sizeof(T)];
-    memcpy(ret, buff, numBytes);
+    MemoryCopy(ret, buff, numBytes);
     return ret;
 }
 
@@ -48,8 +48,8 @@ T *Elf::elfCopy(uint8_t *pBuffer, Elf::ElfProgramHeader_t *pProgramHeaders, size
         {
             uintptr_t loc = reinterpret_cast<uintptr_t>(pCurrent) - ph.vaddr;
             pCurrent = new T[size/sizeof(T)];
-            memcpy (reinterpret_cast<uint8_t*>(pCurrent), &pBuffer[loc],
-                    size);
+            MemoryCopy(reinterpret_cast<uint8_t*>(pCurrent), &pBuffer[loc],
+                       size);
             return pCurrent;
         }
     }
@@ -222,7 +222,7 @@ bool Elf::createNeededOnly(uint8_t *pBuffer, size_t length)
     {
         m_nProgramHeaders = pHeader->phnum;
         m_pProgramHeaders = new ElfProgramHeader_t[pHeader->phnum];
-        memcpy(reinterpret_cast<uint8_t*>(m_pProgramHeaders), &pBuffer[pHeader->phoff], sizeof(ElfProgramHeader_t)*pHeader->phnum);
+        MemoryCopy(reinterpret_cast<uint8_t*>(m_pProgramHeaders), &pBuffer[pHeader->phoff], sizeof(ElfProgramHeader_t)*pHeader->phnum);
 
         size_t nDynamicStringTableSize = 0;
 
@@ -310,7 +310,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     // Load in the section headers.
     m_nSectionHeaders = pHeader->shnum;
     m_pSectionHeaders = new ElfSectionHeader_t[pHeader->shnum];
-    memcpy (reinterpret_cast<uint8_t*>(m_pSectionHeaders), &pBuffer[pHeader->shoff], pHeader->shnum*sizeof(ElfSectionHeader_t));
+    MemoryCopy(reinterpret_cast<uint8_t*>(m_pSectionHeaders), &pBuffer[pHeader->shoff], pHeader->shnum*sizeof(ElfSectionHeader_t));
 
     // Find the section header string table.
     ElfSectionHeader_t *pShstrtab = &m_pSectionHeaders[pHeader->shstrndx];
@@ -318,16 +318,16 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     // Load the section header string table.
     m_nShstrtabSize = pShstrtab->size;
     m_pShstrtab = new char[m_nShstrtabSize];
-    memcpy (reinterpret_cast<uint8_t*>(m_pShstrtab), &pBuffer[pShstrtab->offset], m_nShstrtabSize);
+    MemoryCopy(reinterpret_cast<uint8_t*>(m_pShstrtab), &pBuffer[pShstrtab->offset], m_nShstrtabSize);
 
     ElfSectionHeader_t *pSymbolTable=0, *pStringTable=0;
     // Go through each section header, trying to find .symtab.
     for (int i = 0; i < pHeader->shnum; i++)
     {
         const char *pStr = m_pShstrtab + m_pSectionHeaders[i].name;
-        if (!strcmp(pStr, ".symtab"))
+        if (!StringCompare(pStr, ".symtab"))
             pSymbolTable = &m_pSectionHeaders[i];
-        if (!strcmp(pStr, ".strtab"))
+        if (!StringCompare(pStr, ".strtab"))
             pStringTable = &m_pSectionHeaders[i];
     }
 
@@ -339,7 +339,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     {
         m_nSymbolTableSize = pSymbolTable->size;
         m_pSymbolTable = new ElfSymbol_t[m_nSymbolTableSize/sizeof(ElfSymbol_t)];
-        memcpy (reinterpret_cast<uint8_t*>(m_pSymbolTable), &pBuffer[pSymbolTable->offset], pSymbolTable->size);
+        MemoryCopy(reinterpret_cast<uint8_t*>(m_pSymbolTable), &pBuffer[pSymbolTable->offset], pSymbolTable->size);
     }
 
     if (pStringTable == 0)
@@ -350,7 +350,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     {
         m_nStringTableSize = pStringTable->size;
         m_pStringTable = new char[m_nStringTableSize];
-        memcpy (reinterpret_cast<uint8_t*>(m_pStringTable), &pBuffer[pStringTable->offset], m_nStringTableSize);
+        MemoryCopy(reinterpret_cast<uint8_t*>(m_pStringTable), &pBuffer[pStringTable->offset], m_nStringTableSize);
     }
 
     // Attempt to load in some program headers, if they exist.
@@ -358,7 +358,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     {
         m_nProgramHeaders = pHeader->phnum;
         m_pProgramHeaders = new ElfProgramHeader_t[pHeader->phnum];
-        memcpy(reinterpret_cast<uint8_t*>(m_pProgramHeaders), &pBuffer[pHeader->phoff], sizeof(ElfProgramHeader_t)*pHeader->phnum);
+        MemoryCopy(reinterpret_cast<uint8_t*>(m_pProgramHeaders), &pBuffer[pHeader->phoff], sizeof(ElfProgramHeader_t)*pHeader->phnum);
 
         //size_t nDynamicStringTableSize = 0;
 
@@ -547,13 +547,13 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
             if (m_pSectionHeaders[i].type != SHT_NOBITS)
             {
                 // Copy section data from the file.
-                memcpy (reinterpret_cast<uint8_t*> (m_pSectionHeaders[i].addr),
+                MemoryCopy(reinterpret_cast<uint8_t*> (m_pSectionHeaders[i].addr),
                         &pBuffer[m_pSectionHeaders[i].offset],
                         m_pSectionHeaders[i].size);
             }
             else
             {
-                memset (reinterpret_cast<uint8_t*> (m_pSectionHeaders[i].addr),
+                ByteSet(reinterpret_cast<uint8_t*> (m_pSectionHeaders[i].addr),
                         0,
                         m_pSectionHeaders[i].size);
             }
@@ -566,7 +566,7 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
         {
             //  Load information from non-allocated sections here
             const char* pStr = m_pShstrtab + m_pSectionHeaders[i].name;
-            if (!strcmp(pStr, ".debug_frame"))
+            if (!StringCompare(pStr, ".debug_frame"))
             {
                 m_pDebugTable = reinterpret_cast<uint32_t*> (m_pSectionHeaders[i].addr);
                 uintptr_t *debugTablePointers = reinterpret_cast<uintptr_t *>(m_pSectionHeaders[i].addr);
@@ -885,11 +885,11 @@ bool Elf::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolTable 
                 : (loadAddr+m_pProgramHeaders[i].memsz-sectionStart);
 
             // Copy segment data from the file.
-            memcpy (reinterpret_cast<uint8_t*> (sectionStart),
+            MemoryCopy(reinterpret_cast<uint8_t*> (sectionStart),
                     &pBuffer[offset],
                     filesz);
 
-            memset (reinterpret_cast<uint8_t*> (sectionStart+filesz),
+            ByteSet(reinterpret_cast<uint8_t*> (sectionStart+filesz),
                     0,
                     memsz-filesz);
 
@@ -1055,7 +1055,7 @@ bool Elf::relocate(uint8_t *pBuffer, uintptr_t length)
 
         // Grab the shstrtab
         const char *pStr = reinterpret_cast<const char*> (m_pShstrtab) + pLink->name;
-        if (!strcmp(pStr, ".modinfo"))
+        if (!StringCompare(pStr, ".modinfo"))
             continue;
 
         // Is it a relocation section?
@@ -1101,7 +1101,7 @@ bool Elf::relocateModinfo(uint8_t *pBuffer, uintptr_t length)
 
         // Grab the shstrtab
         const char *pStr = reinterpret_cast<const char*> (m_pShstrtab) + pLink->name;
-        if (strcmp(pStr, ".modinfo"))
+        if (StringCompare(pStr, ".modinfo"))
             continue;
 
         // Is it a relocation section?

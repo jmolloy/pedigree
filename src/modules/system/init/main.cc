@@ -430,9 +430,9 @@ int init_stage2(void *param)
     Processor::information().getVirtualAddressSpace().map(phys, reinterpret_cast<void*> (argv_loc), VirtualAddressSpace::Write);
 
     uintptr_t *argv = reinterpret_cast<uintptr_t*>(argv_loc);
-    memset(argv, 0, PhysicalMemoryManager::instance().getPageSize());
+    ByteSet(argv, 0, PhysicalMemoryManager::instance().getPageSize());
     argv[0] = reinterpret_cast<uintptr_t>(&argv[2]);
-    memcpy(&argv[2], static_cast<const char *>(fname), fname.length());
+    MemoryCopy(&argv[2], static_cast<const char *>(fname), fname.length());
 
     void *stack = Processor::information().getVirtualAddressSpace().allocateStack();
 

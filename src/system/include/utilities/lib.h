@@ -26,45 +26,32 @@
 extern "C" {
 #endif
 
-size_t strlen(const char *buf);
-char *strcpy(char *dest, const char *src);
-char *strncpy(char *dest, const char *src, size_t len);
-void *memset(void *buf, int c, size_t len);
-void *dmemset(void *buf, unsigned int c, size_t len);
-void *qmemset(void *buf, unsigned long long c, size_t len);
-void *memcpy(void *s1, const void *s2, size_t n);
-void *memmove(void *s1, const void *s2, size_t n);
-int memcmp(const void *p1, const void *p2, size_t len);
+// String functions.
+size_t StringLength(const char *buf);
+char *StringCopy(char *dest, const char *src);
+char *StringCopyN(char *dest, const char *src, size_t len);
+int StringCompare(const char *p1, const char *p2);
+int StringCompareN(const char *p1, const char *p2, size_t n);
+char *StringConcat(char *dest, const char *src);
+char *StringConcatN(char *dest, const char *src, size_t n);
+const char *StringFind(const char *str, int target);
+const char *StringReverseFind(const char *str, int target);
+int VStringFormat(char *buf, const char *fmt, va_list arg);
+int StringFormat(char *buf, const char *fmt, ...);
+unsigned long StringToUnsignedLong(const char *nptr, char const **endptr, int base);
 
-int strcmp(const char *p1, const char *p2);
-int strncmp(const char *p1, const char *p2, size_t n);
-char *strcat(char *dest, const char *src);
-char *strncat(char *dest, const char *src, size_t n);
+// Memory functions.
+void *ByteSet(void *buf, int c, size_t len);
+void *WordSet(void *buf, int c, size_t len);
+void *DoubleWordSet(void *buf, unsigned int c, size_t len);
+void *QuadWordSet(void *buf, unsigned long long c, size_t len);
+void *ForwardMemoryCopy(void *s1, const void *s2, size_t n);
+void *MemoryCopy(void *s1, const void *s2, size_t n);
+int MemoryCompare(const void *p1, const void *p2, size_t len);
 
+// Built-in PRNG.
 void random_seed(uint64_t seed);
 uint64_t random_next();
-
-char *strchr(const char *str, int target);
-char *strrchr(const char *str, int target);
-
-#ifdef UTILITY_LINUX
-#include <stdio.h>
-#else
-// When using parts of the kernel for tools to run on build systems, we can run
-// into conflicts with some of our functions. So, we only define them if we are
-// not building for build systems.
-void *wmemset(void *buf, int c, size_t len);
-int vsprintf(char *buf, const char *fmt, va_list arg);
-int sprintf(char *buf, const char *fmt, ...);
-#endif
-
-/**
- * Custom API that differs from the standard strtoul and therefore conflicts.
- *
- * The main difference is the const-ness of the endptr parameter. The outer
- * pointer is non-const (so it can be written to), the inner pointer is const.
- */
-unsigned long pedigree_strtoul(const char *nptr, char const **endptr, int base);
 
 inline char toUpper(char c)
 {

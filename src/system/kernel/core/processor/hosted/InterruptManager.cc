@@ -225,7 +225,7 @@ void HostedInterruptManager::initialiseProcessor()
     for (int i = 1; i < MAX_SIGNAL; ++i)
     {
         struct sigaction act;
-        memset(&act, 0, sizeof(act));
+        ByteSet(&act, 0, sizeof(act));
         act.sa_sigaction = handler;
         sigemptyset(&act.sa_mask);
         act.sa_flags = SA_SIGINFO | SA_ONSTACK | SA_NODEFER;

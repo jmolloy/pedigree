@@ -449,8 +449,8 @@ bool AtaDisk::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize
 
     uint16_t *tmpPacket = new uint16_t[m_PacketSize / 2];
     PointerGuard<uint16_t> tmpGuard(tmpPacket, true);
-    memcpy(tmpPacket, reinterpret_cast<void*>(pCommand), nCommandSize);
-    memset(tmpPacket + (nCommandSize / 2), 0, m_PacketSize - nCommandSize);
+    MemoryCopy(tmpPacket, reinterpret_cast<void*>(pCommand), nCommandSize);
+    ByteSet(tmpPacket + (nCommandSize / 2), 0, m_PacketSize - nCommandSize);
 
     // Wait for the device to finish any outstanding operations
     ataWait(commandRegs);

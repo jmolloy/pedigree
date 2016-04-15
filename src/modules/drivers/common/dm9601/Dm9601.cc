@@ -186,7 +186,7 @@ bool Dm9601::send(size_t nBytes, uintptr_t buffer)
     if(nBytes < 64)
     {
         padBytes = nBytes % 64;
-        memset(reinterpret_cast<void*>(buffer + nBytes), 0, padBytes);
+        ByteSet(reinterpret_cast<void*>(buffer + nBytes), 0, padBytes);
 
         nBytes = 64;
     }
@@ -199,7 +199,7 @@ bool Dm9601::send(size_t nBytes, uintptr_t buffer)
     // Transmit endpoint
     uint16_t *pBuffer = new uint16_t[(txSize / sizeof(uint16_t)) + 1];
     *pBuffer = HOST_TO_LITTLE16(static_cast<uint16_t>(nBytes));
-    memcpy(&pBuffer[1], reinterpret_cast<void*>(buffer), nBytes);
+    MemoryCopy(&pBuffer[1], reinterpret_cast<void*>(buffer), nBytes);
 
     ssize_t ret = syncOut(m_pOutEndpoint, reinterpret_cast<uintptr_t>(pBuffer), txSize);
     delete [] pBuffer;

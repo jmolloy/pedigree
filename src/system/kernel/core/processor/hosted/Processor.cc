@@ -87,7 +87,7 @@ bool Processor::saveState(SchedulerState &state)
   if(sigsetjmp(_state, 0) == 1)
     return true;
 
-  memcpy(state.state, _state, sizeof(_state));
+  MemoryCopy(state.state, _state, sizeof(_state));
   return false;
 }
 
@@ -96,7 +96,7 @@ void Processor::restoreState(SchedulerState &state, volatile uintptr_t *pLock)
   sigjmp_buf _state;
   if(pLock)
       *pLock = 1;
-  memcpy(_state, state.state, sizeof(_state));
+  MemoryCopy(_state, state.state, sizeof(_state));
   siglongjmp(_state, 1);
   // Does not return.
 }
@@ -117,7 +117,7 @@ void Processor::switchState(bool bInterrupts, SchedulerState &a, SchedulerState 
     return;
   }
 
-  memcpy(a.state, _state, sizeof(_state));
+  MemoryCopy(a.state, _state, sizeof(_state));
   restoreState(b, pLock);
 }
 
@@ -130,7 +130,7 @@ void Processor::switchState(bool bInterrupts, SchedulerState &a, SyscallState &b
     return;
   }
 
-  memcpy(a.state, _state, sizeof(_state));
+  MemoryCopy(a.state, _state, sizeof(_state));
   Processor::restoreState(b, pLock);
 }
 
@@ -145,7 +145,7 @@ void Processor::saveAndJumpKernel(bool bInterrupts, SchedulerState &s, volatile 
     return;
   }
 
-  memcpy(s.state, _state, sizeof(_state));
+  MemoryCopy(s.state, _state, sizeof(_state));
   Processor::jumpKernel(pLock, address, stack, p1, p2, p3, p4);
 }
 

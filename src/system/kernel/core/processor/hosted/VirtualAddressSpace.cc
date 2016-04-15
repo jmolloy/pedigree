@@ -306,7 +306,7 @@ VirtualAddressSpace *HostedVirtualAddressSpace::clone() {
 
     // Copy over the known maps so the new address space can find them.
     pNew->m_pKnownMaps = (mapping_t *) __libc_malloc(m_KnownMapsSize * sizeof(mapping_t));
-    memcpy(pNew->m_pKnownMaps, m_pKnownMaps, m_KnownMapsSize * sizeof(mapping_t));
+    MemoryCopy(pNew->m_pKnownMaps, m_pKnownMaps, m_KnownMapsSize * sizeof(mapping_t));
     pNew->m_KnownMapsSize = m_KnownMapsSize;
     pNew->m_numKnownMaps = m_numKnownMaps;
     pNew->m_nLastUnmap = m_nLastUnmap;

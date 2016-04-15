@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -52,7 +51,7 @@ class IpAddress
     IpAddress(uint8_t *ipv6) :
         m_Type(IPv6), m_Ipv4(0), m_Ipv6(), m_bSet(true), m_Ipv6Prefix(128)
     {
-        memcpy(m_Ipv6, ipv6, 16);
+        MemoryCopy(m_Ipv6, ipv6, 16);
     };
 
     /** IP setters - only one type is valid at any one point in time */
@@ -60,7 +59,7 @@ class IpAddress
     void setIp(uint32_t ipv4)
     {
         m_Ipv4 = ipv4;
-        memset(m_Ipv6, 0, 16);
+        ByteSet(m_Ipv6, 0, 16);
         m_bSet = true;
         m_Type = IPv4;
     }
@@ -68,7 +67,7 @@ class IpAddress
     void setIp(uint8_t *ipv6)
     {
         m_Ipv4 = 0;
-        memcpy(m_Ipv6, ipv6, 16);
+        MemoryCopy(m_Ipv6, ipv6, 16);
         m_bSet = true;
         m_Type = IPv6;
     }
@@ -83,7 +82,7 @@ class IpAddress
     inline void getIp(uint8_t *ipv6)
     {
         if(ipv6)
-            memcpy(ipv6, m_Ipv6, 16);
+            MemoryCopy(ipv6, m_Ipv6, 16);
     }
 
     /** Type getter */
@@ -138,7 +137,7 @@ class IpAddress
             return (a.getIp() == getIp());
         else
         {
-            return !memcmp(m_Ipv6, a.m_Ipv6, 16);
+            return !MemoryCompare(m_Ipv6, a.m_Ipv6, 16);
         }
     }
 
@@ -148,7 +147,7 @@ class IpAddress
             return (a.getIp() != getIp());
         else
         {
-            return !memcmp(m_Ipv6, a.m_Ipv6, 16);
+            return !MemoryCompare(m_Ipv6, a.m_Ipv6, 16);
         }
     }
 

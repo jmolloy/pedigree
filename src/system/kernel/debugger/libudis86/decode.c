@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -848,9 +847,9 @@ static int clear_insn(register struct ud* u)
   u->mnemonic = UD_Inone;
   u->mapen = NULL;
 
-  memset( &u->operand[ 0 ], 0, sizeof( struct ud_operand ) );
-  memset( &u->operand[ 1 ], 0, sizeof( struct ud_operand ) );
-  memset( &u->operand[ 2 ], 0, sizeof( struct ud_operand ) );
+  ByteSet( &u->operand[ 0 ], 0, sizeof( struct ud_operand ) );
+  ByteSet( &u->operand[ 1 ], 0, sizeof( struct ud_operand ) );
+  ByteSet( &u->operand[ 2 ], 0, sizeof( struct ud_operand ) );
  
   return 0;
 }
@@ -1019,7 +1018,7 @@ static int gen_hex( struct ud *u )
   src_hex = ( char* ) u->insn_hexcode;
   /* for each byte used to decode instruction */
   for ( i = 0; i < u->inp_ctr; ++i, ++src_ptr) {
-	sprintf( src_hex, "%02x", *src_ptr & 0xFF );
+	StringFormat( src_hex, "%02x", *src_ptr & 0xFF );
 	src_hex += 2;
   }
   return 0;

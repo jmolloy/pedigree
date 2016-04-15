@@ -111,7 +111,7 @@ int RawEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, Endpoint::R
     if(nBytes >= ptr->size)
       nBytes = ptr->size;
 
-    memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(ptr->ptr), nBytes);
+    MemoryCopy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(ptr->ptr), nBytes);
 
     *remoteHost = ptr->remoteHost;
 
@@ -136,7 +136,7 @@ size_t RawEndpoint::depositPacket(size_t nBytes, uintptr_t payload, Endpoint::Re
   if(!nBytes || !payload)
     return 0;
   uint8_t* data = new uint8_t[nBytes];
-  memcpy(data, reinterpret_cast<void*>(payload), nBytes);
+  MemoryCopy(data, reinterpret_cast<void*>(payload), nBytes);
 
   DataBlock* newBlock = new DataBlock;
   newBlock->ptr = reinterpret_cast<uintptr_t>(data);

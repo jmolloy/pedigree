@@ -81,9 +81,9 @@ Uhci::Uhci(Device* pDev) :
     QH *pDummyQH = &m_pQHList[0];
 
     // Set all frame list entries to the dummy QH
-    dmemset(m_pFrameList, m_pQHListPhys | 2, 0x400);
+    DoubleWordSet(m_pFrameList, m_pQHListPhys | 2, 0x400);
 
-    memset(pDummyQH, 0, sizeof(QH));
+    ByteSet(pDummyQH, 0, sizeof(QH));
 
     pDummyQH->pNext = m_pQHListPhys >> 4;
     pDummyQH->bNextQH = 1;
@@ -197,7 +197,7 @@ void Uhci::doDequeue()
                 it++)
             {
                 size_t idx = (*it)->id;
-                memset(*it, 0, sizeof(TD));
+                ByteSet(*it, 0, sizeof(TD));
                 
                 m_TDBitmap.clear(idx);
             }
@@ -212,7 +212,7 @@ void Uhci::doDequeue()
                 it++)
             {
                 size_t idx = (*it)->id;
-                memset(*it, 0, sizeof(TD));
+                ByteSet(*it, 0, sizeof(TD));
                 
                 m_TDBitmap.clear(idx);
             }
@@ -223,7 +223,7 @@ void Uhci::doDequeue()
 
         // Completely invalidate the QH
         delete pQH->pMetaData;
-        memset(pQH, 0, sizeof(QH));
+        ByteSet(pQH, 0, sizeof(QH));
         
         m_QHBitmap.clear(id);
 
@@ -454,7 +454,7 @@ void Uhci::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid
 
     // Grab the TD
     TD *pTD = &m_pTDList[nIndex];
-    memset(pTD, 0, sizeof(TD));
+    ByteSet(pTD, 0, sizeof(TD));
     pTD->bNextInvalid = 1; // Assume next is invalid, will be zeroed if another TD is linked
     pTD->id = nIndex;
 
@@ -538,7 +538,7 @@ uintptr_t Uhci::createTransaction(UsbEndpoint endpointInfo)
 
     // Grab the QH
     QH *pQH = &m_pQHList[nIndex];
-    memset(pQH, 0, sizeof(QH));
+    ByteSet(pQH, 0, sizeof(QH));
 
     // Only need to configure metadata, everything else is set during linkage and TD creation
     pQH->pMetaData = new QH::MetaData;

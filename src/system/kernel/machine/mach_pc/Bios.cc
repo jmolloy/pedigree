@@ -109,7 +109,7 @@ extern "C" void printk(const char *fmt, ...)
   int i;
 
   va_start(args, fmt);
-  i = vsprintf(buf,fmt,args);
+  i = VStringFormat(buf,fmt,args);
   va_end(args);
 
   buf[i] = '\0';
@@ -136,10 +136,10 @@ Bios::Bios () : mallocLoc(0x8000)
   iof.outw = &outw;
   iof.outl = &outl;
 
-  memset(&M, 0, sizeof(M));
+  ByteSet(&M, 0, sizeof(M));
   M.x86.debug = 0;
   M.x86.mode = 0;
-  memset(reinterpret_cast<void*> (0x7C00), 0xF4, 0x100);
+  ByteSet(reinterpret_cast<void*> (0x7C00), 0xF4, 0x100);
 
   X86EMU_setupMemFuncs(&mf);
   X86EMU_setupPioFuncs(&iof);

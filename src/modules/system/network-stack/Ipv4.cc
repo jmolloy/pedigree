@@ -57,7 +57,7 @@ size_t Ipv4::injectHeader(uintptr_t packet, IpAddress dest, IpAddress from, uint
 
     // Set up the IPv4 header
     ipHeader *pHeader = reinterpret_cast<ipHeader*>(packet);
-    memset(pHeader, 0, sizeof(ipHeader));
+    ByteSet(pHeader, 0, sizeof(ipHeader));
 
     // Configure destination and source addresses
     pHeader->ipDest = dest.getIp();
@@ -112,7 +112,7 @@ uint16_t Ipv4::ipChecksum(IpAddress &from, IpAddress &to, uint8_t proto, uintptr
   pHeader->zero = 0;
 
   // Throw in the packet data
-  memcpy(reinterpret_cast<void*>(tmpPackAddr + sizeof(PsuedoHeader)),
+  MemoryCopy(reinterpret_cast<void*>(tmpPackAddr + sizeof(PsuedoHeader)),
          reinterpret_cast<void*>(data),
          length);
 
@@ -149,11 +149,11 @@ bool Ipv4::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uin
     from = me.ipv4;
 
   // Move the payload past the IP header we will now inject
-  memmove(reinterpret_cast<void*>(packet + sizeof(ipHeader)), reinterpret_cast<void*>(packet), nBytes);
+  MemoryCopy(reinterpret_cast<void*>(packet + sizeof(ipHeader)), reinterpret_cast<void*>(packet), nBytes);
 
   // Grab a pointer for the ip header
   ipHeader* header = reinterpret_cast<ipHeader*>(packet);
-  memset(header, 0, sizeof(ipHeader));
+  ByteSet(header, 0, sizeof(ipHeader));
 
   // Compose the IPv4 packet header
   header->id = Ipv4::instance().getNextId();
@@ -294,7 +294,7 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
 
             size_t headerLen = header->header_len * 4;
             char *buff = new char[headerLen];
-            memcpy(buff, header, headerLen);
+            MemoryCopy(buff, header, headerLen);
             p->originalIpHeader = buff;
             p->originalIpHeaderLen = headerLen;
         }
@@ -303,7 +303,7 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
         if(dataLength)
         {
             char *buff = new char[dataLength];
-            memcpy(buff, reinterpret_cast<void*>(packet + dataOffset), dataLength);
+            MemoryCopy(buff, reinterpret_cast<void*>(packet + dataOffset), dataLength);
 
             fragment *f = new fragment;
             f->data = buff;
@@ -332,7 +332,7 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
                     char *data = f->data;
                     if(data && fragment_offset < fullLength)
                     {
-                        memcpy(buff + (copyOffset + fragment_offset), data, f->length);
+                        MemoryCopy(buff + (copyOffset + fragment_offset), data, f->length);
                         delete data;
                     }
                     delete f;
@@ -341,7 +341,7 @@ void Ipv4::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t off
 
             // Dump the header into the packet now
             /// \todo Verify the buffer and length
-            memcpy(buff, p->originalIpHeader, p->originalIpHeaderLen);
+            MemoryCopy(buff, p->originalIpHeader, p->originalIpHeaderLen);
 
             // Adjust the IP header a bit
             ipHeader *iphdr = reinterpret_cast<ipHeader*>(buff);

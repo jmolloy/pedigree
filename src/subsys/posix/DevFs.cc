@@ -94,7 +94,7 @@ uint64_t NullFile::write(uint64_t location, uint64_t size, uintptr_t buffer, boo
 
 uint64_t ZeroFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
-    memset(reinterpret_cast<void *>(buffer), 0, size);
+    ByteSet(reinterpret_cast<void *>(buffer), 0, size);
     return size;
 }
 
@@ -257,7 +257,7 @@ int FramebufferFile::command(const int command, void *buffer)
                 pedigree_fb_mode *arg = reinterpret_cast<pedigree_fb_mode *>(buffer);
                 if(m_bTextMode)
                 {
-                    memset(arg, 0, sizeof(*arg));
+                    ByteSet(arg, 0, sizeof(*arg));
                 }
                 else
                 {

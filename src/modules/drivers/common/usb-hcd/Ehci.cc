@@ -76,7 +76,7 @@ bool Ehci::initialiseController()
     m_pFrameListPhys        = physicalBase + 0x2000;
     m_pqTDListPhys          = physicalBase + 0x3000;
 
-    dmemset(m_pFrameList, 1, 0x400);
+    DoubleWordSet(m_pFrameList, 1, 0x400);
 
 #ifdef X86_COMMON
     uint32_t nPciCmdSts = PciBus::instance().readConfigSpace(this, 1);
@@ -229,8 +229,8 @@ bool Ehci::initialiseController()
     m_QHBitmap.set(0); m_qTDBitmap.set(0);
     QH *pDummyQH = &m_pQHList[0];
     qTD *pDummyTD = &m_pqTDList[0];
-    memset(pDummyQH, 0, sizeof(QH));
-    memset(pDummyTD, 0, sizeof(qTD));
+    ByteSet(pDummyQH, 0, sizeof(QH));
+    ByteSet(pDummyTD, 0, sizeof(qTD));
 
     // Configure the dummy TD
     pDummyTD->bNextInvalid = pDummyTD->bAltNextInvalid = 1;
@@ -244,13 +244,13 @@ bool Ehci::initialiseController()
     pDummyQH->hrcl = 1;
 
     pDummyQH->pMetaData = new QH::MetaData;
-    memset(pDummyQH->pMetaData, 0, sizeof(QH::MetaData));
+    ByteSet(pDummyQH->pMetaData, 0, sizeof(QH::MetaData));
     pDummyQH->pMetaData->pFirstQTD = 0;
     pDummyQH->pMetaData->pLastQTD = pDummyTD;
     pDummyQH->pMetaData->pNext = pDummyQH;
     pDummyQH->pMetaData->pPrev = pDummyQH;
 
-    memcpy(&pDummyQH->overlay, pDummyTD, sizeof(qTD));
+    MemoryCopy(&pDummyQH->overlay, pDummyTD, sizeof(qTD));
 
     m_pCurrentQueueHead = m_pCurrentQueueTail = pDummyQH;
 
@@ -370,7 +370,7 @@ void Ehci::doDequeue()
             if(!shouldBreak)
                 nQTDIndex = ((pqTD->pNext << 5) & 0xFFF) / sizeof(qTD);
 
-            memset(pqTD, 0, sizeof(qTD));
+            ByteSet(pqTD, 0, sizeof(qTD));
 
             if(shouldBreak)
                 break;
@@ -378,7 +378,7 @@ void Ehci::doDequeue()
 
         // Completely invalidate the QH
         delete pQH->pMetaData;
-        memset(pQH, 0, sizeof(QH));
+        ByteSet(pQH, 0, sizeof(QH));
 
 #ifdef USB_VERBOSE_DEBUG
         DEBUG_LOG("Dequeue for QH #" << Dec << i << Hex << ".");
@@ -551,7 +551,7 @@ void Ehci::interrupt(size_t number, InterruptState &state)
                         //pqTD->pPage2 = (m_pTransferPagesPhys + 0x2000)>>12;
                         //pqTD->pPage3 = (m_pTransferPagesPhys + 0x3000)>>12;
                         //pqTD->pPage4 = (m_pTransferPagesPhys + 0x4000)>>12;
-                        memcpy(&pQH->overlay, pqTD, sizeof(qTD));
+                        MemoryCopy(&pQH->overlay, pqTD, sizeof(qTD));
                     }
                 }
 
@@ -604,7 +604,7 @@ void Ehci::addTransferToTransaction(uintptr_t nTransaction, bool bToggle, UsbPid
 
     // Grab the qTD pointer we're going to set up now
     qTD *pqTD = &m_pqTDList[nIndex];
-    memset(pqTD, 0, sizeof(qTD));
+    ByteSet(pqTD, 0, sizeof(qTD));
 
     // There's nothing after us for now
     pqTD->bNextInvalid = 1;
@@ -673,7 +673,7 @@ void Ehci::addTransferToTransaction(uintptr_t nTransaction, bool bToggle, UsbPid
     {
         pQH->pMetaData->pFirstQTD = pqTD;
         pQH->pQTD = PHYS_QTD(nIndex) >> 5;
-        memcpy(&pQH->overlay, pqTD, sizeof(qTD));
+        MemoryCopy(&pQH->overlay, pqTD, sizeof(qTD));
     }
     pQH->pMetaData->pLastQTD = pqTD;
 }
@@ -694,7 +694,7 @@ uintptr_t Ehci::createTransaction(UsbEndpoint endpointInfo)
     }
 
     QH *pQH = &m_pQHList[nIndex];
-    memset(pQH, 0, sizeof(QH));
+    ByteSet(pQH, 0, sizeof(QH));
 
     // The pointer to the next QH gets set in doAsync
     pQH->nNextType = 1;

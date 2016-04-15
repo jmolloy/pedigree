@@ -230,8 +230,8 @@ File *Filesystem::findNode(File *pNode, String path)
         return 0;
     }
 
-    bool dot = !strcmp(path, ".");
-    bool dotdot = !strcmp(path, "..");
+    bool dot = !StringCompare(path, ".");
+    bool dotdot = !StringCompare(path, "..");
 
     // '.' section, or '..' with no parent, or '..' and we're at the root.
     if (dot || (dotdot && pNode->m_pParent == 0) || (dotdot && pNode == getTrueRoot()))

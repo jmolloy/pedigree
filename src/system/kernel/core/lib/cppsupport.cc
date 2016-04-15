@@ -118,18 +118,18 @@ void traceAllocation(void *ptr, MemoryTracing::AllocationTrace type, size_t size
     size_t off = 0;
 
     // Allocation type.
-    memcpy(&buf[off], &type, 1);
+    MemoryCopy(&buf[off], &type, 1);
     ++off;
 
     // Resulting pointer.
-    memcpy(&buf[off], &ptr, sizeof(void*));
+    MemoryCopy(&buf[off], &ptr, sizeof(void*));
     off += sizeof(void*);
 
     // Don't store size or backtrace for frees.
     if(type == MemoryTracing::Allocation || type == MemoryTracing::PageAlloc)
     {
         // Size of allocation.
-        memcpy(&buf[off], &size, sizeof(size_t));
+        MemoryCopy(&buf[off], &size, sizeof(size_t));
         off += sizeof(size_t);
 
         // Backtrace.
@@ -138,7 +138,7 @@ void traceAllocation(void *ptr, MemoryTracing::AllocationTrace type, size_t size
 #define DO_BACKTRACE(v, level, buffer, offset) { \
                 if(!__builtin_frame_address(level)) break; \
                 v = __builtin_return_address(level); \
-                memcpy(&buffer[offset], &v, sizeof(void*)); \
+                MemoryCopy(&buffer[offset], &v, sizeof(void*)); \
                 offset += sizeof(void*); \
             }
 
@@ -154,7 +154,7 @@ void traceAllocation(void *ptr, MemoryTracing::AllocationTrace type, size_t size
 
         // Ensure the trace always ends in a zero frame (ie, end of trace)
         uintptr_t endoftrace = 0;
-        memcpy(&buf[off], &endoftrace, sizeof(uintptr_t));
+        MemoryCopy(&buf[off], &endoftrace, sizeof(uintptr_t));
         off += sizeof(uintptr_t);
     }
 
@@ -183,19 +183,19 @@ void traceMetadata(NormalStaticString str, void *p1, void *p2)
         return;
 
     char buf[128];
-    memset(buf, 0, 128);
+    ByteSet(buf, 0, 128);
 
     size_t off = 0;
 
     const MemoryTracing::AllocationTrace type = MemoryTracing::Metadata;
 
-    memcpy(&buf[off], &type, 1);
+    MemoryCopy(&buf[off], &type, 1);
     ++off;
-    memcpy(&buf[off], static_cast<const char *>(str), str.length());
+    MemoryCopy(&buf[off], static_cast<const char *>(str), str.length());
     off += 64; // Statically sized segment.
-    memcpy(&buf[off], &p1, sizeof(void*));
+    MemoryCopy(&buf[off], &p1, sizeof(void*));
     off += sizeof(void*);
-    memcpy(&buf[off], &p2, sizeof(void*));
+    MemoryCopy(&buf[off], &p2, sizeof(void*));
     off += sizeof(void*);
 
     for(size_t i = 0; i < off; ++i)
@@ -278,7 +278,7 @@ extern "C" void *realloc(void *p, size_t sz)
     
     /// \note If sz > p's original size, this may fail.
     void *tmp = malloc(sz);
-    memcpy(tmp, p, copySz);
+    MemoryCopy(tmp, p, copySz);
     free(p);
 
     return tmp;

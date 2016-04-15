@@ -109,8 +109,8 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
   size_t fnLength = filename.length();
 
   // Dot and DotDot entries?
-  if(!strncmp(static_cast<const char*>(filename), ".", filename.length()) ||
-     !strncmp(static_cast<const char*>(filename), "..", filename.length()))
+  if(!StringCompareN(static_cast<const char*>(filename), ".", filename.length()) ||
+     !StringCompareN(static_cast<const char*>(filename), "..", filename.length()))
   {
     // Only one entry required for the dot/dotdot entries, all else get
     // a free long filename entry.
@@ -189,7 +189,7 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
         {
           // grab a pointer to the data
           DirLongFilename* lfn = reinterpret_cast<DirLongFilename*>(&buffer[currOffset]);
-          memset(lfn, 0, sizeof(DirLongFilename));
+          ByteSet(lfn, 0, sizeof(DirLongFilename));
 
           if(i == 0)
             lfn->LDIR_Ord = 0x40 | (numRequired - 1);
@@ -240,11 +240,11 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
 
       // get a Dir struct for it so we can manipulate the data
       Dir* ent = reinterpret_cast<Dir*>(&buffer[offset]);
-      memset(ent, 0, sizeof(Dir));
+      ByteSet(ent, 0, sizeof(Dir));
       ent->DIR_Attr = type ? ATTR_DIRECTORY : 0;
 
       String shortFilename = pFs->convertFilenameTo(filename);
-      memcpy(ent->DIR_Name, static_cast<const char*>(shortFilename), 11);
+      MemoryCopy(ent->DIR_Name, static_cast<const char*>(shortFilename), 11);
       ent->DIR_FstClusLO = pFile->getInode() & 0xFFFF;
       ent->DIR_FstClusHI = (pFile->getInode() >> 16) & 0xFFFF;
       /// \todo Fill in other fields (eg, timestamps)

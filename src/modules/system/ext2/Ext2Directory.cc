@@ -152,7 +152,7 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
         ensureBlockLoaded(i);
         uintptr_t buffer = m_pExt2Fs->readBlock(m_pBlocks[i]);
 
-        memset(reinterpret_cast<void *>(buffer), 0, m_pExt2Fs->m_BlockSize);
+        ByteSet(reinterpret_cast<void *>(buffer), 0, m_pExt2Fs->m_BlockSize);
         pDir = reinterpret_cast<Dir *>(buffer);
         pDir->d_reclen = m_pExt2Fs->m_BlockSize;
 
@@ -190,7 +190,7 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
     }
 
     pDir->d_namelen = filename.length();
-    memcpy(pDir->d_name, static_cast<const char *>(filename), filename.length());
+    MemoryCopy(pDir->d_name, static_cast<const char *>(filename), filename.length());
 
     // We're all good - add the directory to our cache.
     getCache().insert(filename, pFile);
@@ -225,11 +225,11 @@ bool Ext2Directory::removeEntry(const String &filename, Ext2Node *pFile)
             {
                 if (pDir->d_namelen == filename.length())
                 {
-                    if (!strncmp(pDir->d_name, static_cast<const char *>(filename), pDir->d_namelen))
+                    if (!StringCompareN(pDir->d_name, static_cast<const char *>(filename), pDir->d_namelen))
                     {
                         // Wipe out the directory entry.
                         uint16_t old_reclen = LITTLE_TO_HOST16(pDir->d_reclen);
-                        memset(pDir, 0, old_reclen);
+                        ByteSet(pDir, 0, old_reclen);
 
                         /// \todo Okay, this is not quite enough. The previous
                         ///       entry needs to be updated to skip past this

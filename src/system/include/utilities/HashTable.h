@@ -69,7 +69,7 @@ class HashTable
             if(preallocate) {
                 m_nBuckets = m_MaxBucket;
                 m_Buckets = new bucket*[m_nBuckets];
-                memset(m_Buckets, 0, sizeof(bucket*) * m_nBuckets);
+                ByteSet(m_Buckets, 0, sizeof(bucket*) * m_nBuckets);
             }
         }
 
@@ -142,10 +142,10 @@ class HashTable
             if((hash + 1) > m_nBuckets) {
                 bucket **newBuckets = new bucket*[hash + 1];
                 if (m_Buckets) {
-                    memcpy(newBuckets, m_Buckets, m_nBuckets * sizeof(bucket *));
+                    MemoryCopy(newBuckets, m_Buckets, m_nBuckets * sizeof(bucket *));
                     delete [] m_Buckets;
                 }
-                memset(&newBuckets[m_nBuckets], 0, (hash + 1 - m_nBuckets) * sizeof(bucket *));
+                ByteSet(&newBuckets[m_nBuckets], 0, (hash + 1 - m_nBuckets) * sizeof(bucket *));
                 m_nBuckets = hash + 1;
                 m_Buckets = newBuckets;
             }

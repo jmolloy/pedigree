@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -82,7 +81,7 @@ void OpenPic::searchNode(Device *pDev)
       // Look for the parent's BAR0.
       for (unsigned int j = 0; j < pDev->addresses().count(); j++)
       {
-        if (!strcmp(pDev->addresses()[j]->m_Name, "bar0"))
+        if (!StringCompare(pDev->addresses()[j]->m_Name, "bar0"))
         {
           uintptr_t regAddr = static_cast<uintptr_t>(reg[0]) + pDev->addresses()[j]->m_Address;
           size_t regSize = static_cast<size_t>(reg[1]);

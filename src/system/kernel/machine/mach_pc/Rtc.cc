@@ -190,7 +190,7 @@ bool Rtc::initialise()
     return false;
 
   // initialise handlers
-  memset(m_Handlers, 0, sizeof(TimerHandler*) * MAX_TIMER_HANDLERS);
+  ByteSet(m_Handlers, 0, sizeof(TimerHandler*) * MAX_TIMER_HANDLERS);
 
   // Register the irq
   IrqManager &irqManager = *Machine::instance().getIrqManager();

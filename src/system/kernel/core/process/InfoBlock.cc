@@ -60,12 +60,12 @@ bool InfoBlockManager::initialise()
     va.map(page, m_pInfoBlock, VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
 
     // Set up basic defaults.
-    memset(m_pInfoBlock, 0, sizeof(InfoBlock));
-    strcpy(m_pInfoBlock->sysname, "Pedigree");
-    strcpy(m_pInfoBlock->release, "Foster");
-    strcpy(m_pInfoBlock->version, g_pBuildRevision);
+    ByteSet(m_pInfoBlock, 0, sizeof(InfoBlock));
+    StringCopy(m_pInfoBlock->sysname, "Pedigree");
+    StringCopy(m_pInfoBlock->release, "Foster");
+    StringCopy(m_pInfoBlock->version, g_pBuildRevision);
     /// \todo this isn't quite x86_64 or i686 or similar...
-    strcpy(m_pInfoBlock->machine, g_pBuildTarget);
+    StringCopy(m_pInfoBlock->machine, g_pBuildTarget);
 
     // Register ourselves with the main timer.
     m_bInitialised = true;

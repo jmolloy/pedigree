@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -59,7 +58,7 @@ size_t TcpBuffer::write(uintptr_t buffer, size_t nBytes)
     if((m_Writer + nBytes) < m_BufferSize)
     {
         // Yes, so just copy directly into the buffer
-        memcpy(reinterpret_cast<void*>(m_Buffer+m_Writer),
+        MemoryCopy(reinterpret_cast<void*>(m_Buffer+m_Writer),
                reinterpret_cast<void*>(buffer),
                nBytes);
         m_Writer += nBytes;
@@ -81,11 +80,11 @@ size_t TcpBuffer::write(uintptr_t buffer, size_t nBytes)
 
         // Copy the normal bytes
         if(numNormalBytes)
-            memcpy(reinterpret_cast<void*>(m_Buffer+m_Writer),
+            MemoryCopy(reinterpret_cast<void*>(m_Buffer+m_Writer),
                    reinterpret_cast<void*>(buffer),
                    numNormalBytes);
         if(numOverlapBytes)
-            memcpy(reinterpret_cast<void*>(m_Buffer),
+            MemoryCopy(reinterpret_cast<void*>(m_Buffer),
                    reinterpret_cast<void*>(buffer),
                    numOverlapBytes);
 
@@ -133,7 +132,7 @@ size_t TcpBuffer::read(uintptr_t buffer, size_t nBytes, bool bDoNotMove)
             return 0; // No data?
 
         // Yes, so just copy directly into the buffer
-        memcpy(reinterpret_cast<void*>(buffer),
+        MemoryCopy(reinterpret_cast<void*>(buffer),
                reinterpret_cast<void*>(m_Buffer+m_Reader),
                nBytes);
         if(!bDoNotMove)
@@ -158,11 +157,11 @@ size_t TcpBuffer::read(uintptr_t buffer, size_t nBytes, bool bDoNotMove)
 
         // Copy the normal bytes
         if(numNormalBytes)
-            memcpy(reinterpret_cast<void*>(buffer),
+            MemoryCopy(reinterpret_cast<void*>(buffer),
                    reinterpret_cast<void*>(m_Buffer+m_Reader),
                    numNormalBytes);
         if(numOverlapBytes)
-            memcpy(reinterpret_cast<void*>(buffer + numNormalBytes),
+            MemoryCopy(reinterpret_cast<void*>(buffer + numNormalBytes),
                    reinterpret_cast<void*>(m_Buffer),
                    numOverlapBytes);
 

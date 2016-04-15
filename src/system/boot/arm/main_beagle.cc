@@ -842,7 +842,7 @@ void __start(uint32_t r0, uint32_t machineType, struct atag *tagList)
 
     struct BootstrapStruct_t *bs = reinterpret_cast<struct BootstrapStruct_t *>(0x80008000);
     writeStr(3, "Creating bootstrap information structure... ");
-    memset(bs, 0, sizeof(*bs));
+    ByteSet(bs, 0, sizeof(*bs));
     bs->shndx = elf.m_pHeader->shstrndx;
     bs->num = elf.m_pHeader->shnum;
     bs->size = elf.m_pHeader->shentsize;

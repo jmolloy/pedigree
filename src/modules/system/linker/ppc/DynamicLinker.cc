@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -52,7 +51,7 @@ void DynamicLinker::initPlt(Elf *pElf, uintptr_t value)
 
   // Memcpy over the pre-plt functions into the user address space.
   // plt_resolve is an ASM function, defined in ./asm-ppc.s
-  memcpy(reinterpret_cast<uint8_t*> (prePlt), reinterpret_cast<uint8_t*> (&::plt_resolve), 72); // 72 bytes exactly. See ELF spec.
+  MemoryCopy(reinterpret_cast<uint8_t*> (prePlt), reinterpret_cast<uint8_t*> (&::plt_resolve), 72); // 72 bytes exactly. See ELF spec.
 
   // There are 4 words in the stub we just copied that need relocation:
   // addis 4, 0, 0   # 4 -- These will be filled in by the pltInit function

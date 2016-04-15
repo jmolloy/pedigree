@@ -34,7 +34,7 @@ void Trie<void*>::insert(uint8_t *pKey, void *pValue)
     while (!m_Lock.enter())
         ;
 
-    size_t len = strlen(reinterpret_cast<const char*>(pKey));
+    size_t len = StringLength(reinterpret_cast<const char*>(pKey));
 
     Node *pNode, *pChild, *pTmpChild;
     size_t n = 0;
@@ -113,7 +113,7 @@ void *Trie<void*>::lookup(uint8_t *pKey)
     while (!m_Lock.enter())
         ;
 
-    size_t len = strlen(reinterpret_cast<const char*>(pKey));
+    size_t len = StringLength(reinterpret_cast<const char*>(pKey));
 
     Node *pNode, *pChild;
     size_t n = 0;
@@ -153,7 +153,7 @@ void *Trie<void*>::lookup(uint8_t *pKey)
 
 void Trie<void*>::remove(uint8_t *pKey)
 {
-    size_t len = strlen(reinterpret_cast<const char*>(pKey));
+    size_t len = StringLength(reinterpret_cast<const char*>(pKey));
 
     Node *pNode, *pChild;
     size_t n = 0;

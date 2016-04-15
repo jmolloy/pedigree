@@ -46,6 +46,8 @@ libutility_sources = [
     os.path.join('utilities', 'Vector.cc'),
     os.path.join('utilities', 'Tree.cc'),
     os.path.join('core', 'lib', 'string.c'),
+    os.path.join('core', 'lib', 'memory.c'),
+    os.path.join('core', 'lib', 'vsprintf.c'),
     'Log.cc',
 ]
 defines = [

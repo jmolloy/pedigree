@@ -53,7 +53,7 @@ bool DumpCommand::execute(const HugeStaticString &input, HugeStaticString &outpu
       output += '\n';
     else
     {
-      size_t addLength = strlen(state.getRegisterName(i + 1)) + 4 + state.getRegisterSize(i + 1) * 2;
+      size_t addLength = StringLength(state.getRegisterName(i + 1)) + 4 + state.getRegisterSize(i + 1) * 2;
       if ((addLength + (output.length() - curLength)) > 80)
       {
         output += '\n';

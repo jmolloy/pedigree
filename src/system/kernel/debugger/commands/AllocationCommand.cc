@@ -241,7 +241,7 @@ void AllocationCommand::allocatePage(physical_uintptr_t page)
 
     Allocation *pA = new Allocation;
     pA->page = page;
-    memcpy(&pA->ra, bt.m_pReturnAddresses, NUM_BT_FRAMES*sizeof(uintptr_t));
+    MemoryCopy(&pA->ra, bt.m_pReturnAddresses, NUM_BT_FRAMES*sizeof(uintptr_t));
 
 #ifdef THREADS
     Process *pP = Processor::information().getCurrentThread()->getParent();

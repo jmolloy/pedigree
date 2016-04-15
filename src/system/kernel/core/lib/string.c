@@ -18,21 +18,20 @@
  */
 
 #include <stdarg.h>
+#include <stddef.h>
 #include <utilities/utility.h>
 #include <processor/types.h>
 
-#ifdef sprintf
-#undef sprintf
-#endif
+#define ULONG_MAX -1
 
-size_t strlen(const char *src)
+size_t StringLength(const char *src)
 {
   const char *orig = src;
   while (*src) ++src;
   return src - orig;
 }
 
-char *strcpy(char *dest, const char *src)
+char *StringCopy(char *dest, const char *src)
 {
   while (*src)
   {
@@ -44,7 +43,7 @@ char *strcpy(char *dest, const char *src)
   return dest;
 }
 
-char *strncpy(char *dest, const char *src, size_t len)
+char *StringCopyN(char *dest, const char *src, size_t len)
 {
   const char *orig_dest = dest;
   for (size_t i = 0; i < len; ++i)
@@ -59,19 +58,19 @@ char *strncpy(char *dest, const char *src, size_t len)
   return dest;
 }
 
-int sprintf(char *buf, const char *fmt, ...)
+int StringFormat(char *buf, const char *fmt, ...)
 {
   va_list args;
   int i;
 
   va_start(args, fmt);
-  i = vsprintf(buf, fmt, args);
+  i = VStringFormat(buf, fmt, args);
   va_end(args);
 
   return i;
 }
 
-int strcmp(const char *p1, const char *p2)
+int StringCompare(const char *p1, const char *p2)
 {
   size_t i = 0;
   int failed = 0;
@@ -91,7 +90,7 @@ int strcmp(const char *p1, const char *p2)
   return failed;
 }
 
-int strncmp(const char *p1, const char *p2, size_t n)
+int StringCompareN(const char *p1, const char *p2, size_t n)
 {
   size_t i = 0;
   int failed = 0;
@@ -112,9 +111,9 @@ int strncmp(const char *p1, const char *p2, size_t n)
   return failed;
 }
 
-char *strcat(char *dest, const char *src)
+char *StringConcat(char *dest, const char *src)
 {
-  size_t di = strlen(dest);
+  size_t di = StringLength(dest);
   size_t si = 0;
   while (src[si])
     dest[di++] = src[si++];
@@ -124,9 +123,9 @@ char *strcat(char *dest, const char *src)
   return dest;
 }
 
-char *strncat(char *dest, const char *src, size_t n)
+char *StringConcatN(char *dest, const char *src, size_t n)
 {
-  size_t di = strlen(dest);
+  size_t di = StringLength(dest);
   size_t si = 0;
   while (src[si] && n)
   {
@@ -139,33 +138,32 @@ char *strncat(char *dest, const char *src, size_t n)
   return dest;
 }
 
-int isspace(char c)
+int isspace(int c)
 {
   return (c == ' ' || c == '\n' || c == '\r' || c == '\t');
 }
 
-int isupper(char c)
+int isupper(int c)
 {
   return (c >= 'A' && c <= 'Z');
 }
 
-int islower(char c)
+int islower(int c)
 {
   return (c >= 'a' && c <= 'z');
 }
 
-int isdigit(char c)
+int isdigit(int c)
 {
   return (c >= '0' && c <= '9');
 }
 
-int isalpha(char c)
+int isalpha(int c)
 {
   return isupper(c) || islower(c) || isdigit(c);
 }
 
-#define ULONG_MAX -1
-unsigned long pedigree_strtoul(const char *nptr, char const **endptr, int base)
+unsigned long StringToUnsignedLong(const char *nptr, char const **endptr, int base)
 {
   register const char *s = nptr;
   register unsigned long acc;
@@ -221,48 +219,79 @@ unsigned long pedigree_strtoul(const char *nptr, char const **endptr, int base)
   return (acc);
 }
 
-// The definitions of C's strchr/strrchr take a const input and return a
-// non-const pointer (into that string), which breaks with -Wcast-qual. So,
-// disable that so we can build these functions to spec.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-qual"
-
-char *strrchr(const char *str, int target)
-{
-  int i;
-  for (i = strlen(str); i >= 0; i--)
-    if (str[i] == target)
-      return (char *) &str[i];
-  return (char *)0;
-}
-
-#ifdef HOSTED
-char *_strchr(const char *str, int target)
-#else
-char *strchr(const char *str, int target)
-#endif
+const char *StringFind(const char *str, int target)
 {
   size_t i;
-  for (i = 0; i < strlen(str); i++)
+  for (i = 0; i < StringLength(str); i++)
     if (str[i] == target)
-      return (char *) &str[i];
-  return (char *)0;
+      return &str[i];
+  return NULL;
 }
 
-#pragma GCC diagnostic pop
-
-#ifdef HOSTED
-unsigned long __wrap_strtoul(const char *nptr, char const **endptr, int base)
+const char *StringReverseFind(const char *str, int target)
 {
-  const char *wrap;
-  unsigned long r = pedigree_strtoul(nptr, &wrap, base);
-  if (endptr)
-    *endptr = wrap;
-  return r;
+  int i;
+  for (i = StringLength(str); i >= 0; i--)
+    if (str[i] == target)
+      return &str[i];
+  return NULL;
 }
 
-const char *__wrap_strchr(const char *str, int target)
+// Provide forwarding functions to handle GCC optimising things.
+size_t strlen(const char *s)
 {
-  return _strchr(str, target);
+  return StringLength(s);
 }
-#endif
+
+char *strcpy(char *dest, const char *src)
+{
+  return StringCopy(dest, src);
+}
+
+char *strncpy(char *dest, const char *src, size_t len)
+{
+  return StringCopyN(dest, src, len);
+}
+
+int strcmp(const char *p1, const char *p2)
+{
+  return StringCompare(p1, p2);
+}
+
+int strncmp(const char *p1, const char *p2, size_t n)
+{
+  return StringCompareN(p1, p2, n);
+}
+
+char *strcat(char *dest, const char *src)
+{
+  return StringConcat(dest, src);
+}
+
+char *strncat(char *dest, const char *src, size_t n)
+{
+  return StringConcatN(dest, src, n);
+}
+
+const char *strchr(const char *str, int target)
+{
+  return StringFind(str, target);
+}
+
+const char *strrchr(const char *str, int target)
+{
+  return StringReverseFind(str, target);
+}
+
+int vsprintf(char *buf, const char *fmt, va_list arg)
+{
+  return VStringFormat(buf, fmt, arg);
+}
+
+unsigned long strtoul(const char *nptr, char const **endptr, int base)
+{
+  return StringToUnsignedLong(nptr, endptr, base);
+}
+
+
+

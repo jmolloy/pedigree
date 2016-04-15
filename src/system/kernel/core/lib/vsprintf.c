@@ -24,7 +24,6 @@
 
 #include <stdarg.h>
 #include <utilities/utility.h>
-//include <string.h>
 
 /* we use this so that we can do without the ctype library */
 #define is_digit(c)	((c) >= '0' && (c) <= '9')
@@ -46,7 +45,8 @@ static int skip_atoi(const char **s)
 #define SPECIAL	32		/* 0x */
 #define SMALL	64		/* use 'abcdef' instead of 'ABCDEF' */
 
-#if defined(X86_COMMON) || defined(HOSTED_X86_COMMON)
+/// \note this will break testsuite/hosted builds on non-x86 hosts.
+#if defined(X86_COMMON) || defined(HOSTED_X86_COMMON) || defined(UTILITY_LINUX)
 #define do_div(n,base) ({ \
 int __res; \
 __asm__("divl %4":"=a" (n),"=d" (__res):"0" (n),"1" (0),"r" (base)); \
@@ -109,7 +109,7 @@ static char * number(char * str, int num, int base, int size, int precision
 	return str;
 }
 
-int vsprintf(char *buf, const char *fmt, va_list args)
+int VStringFormat(char *buf, const char *fmt, va_list args)
 {
 	int len;
 	int i;
@@ -188,7 +188,7 @@ int vsprintf(char *buf, const char *fmt, va_list args)
 
 		case 's':
 			s = va_arg(args, char *);
-			len = strlen(s);
+			len = StringLength(s);
 			if (precision < 0)
 				precision = len;
 			else if (len > precision)

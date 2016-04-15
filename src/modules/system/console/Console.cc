@@ -62,7 +62,7 @@ ConsoleFile::ConsoleFile(String consoleName, Filesystem *pFs) :
     m_Flags(DEFAULT_FLAGS), m_Rows(25), m_Cols(80),
     m_RingBuffer(PTY_BUFFER_SIZE), m_Name(consoleName), m_pEvent(0)
 {
-    memcpy(m_ControlChars, defaultControl, MAX_CONTROL_CHAR);
+    MemoryCopy(m_ControlChars, defaultControl, MAX_CONTROL_CHAR);
 }
 
 int ConsoleFile::select(bool bWriting, int timeout)
@@ -192,7 +192,7 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
                             // And now move the buffer over the space we just consumed
                             uint64_t nConsumedBytes = m_LineBufferSize - realSize;
                             if(nConsumedBytes) // If zero, the buffer was consumed completely
-                                memcpy(m_LineBuffer, &m_LineBuffer[realSize], nConsumedBytes);
+                                MemoryCopy(m_LineBuffer, &m_LineBuffer[realSize], nConsumedBytes);
 
                             // Reduce the buffer size now
                             m_LineBufferSize -= realSize;
@@ -293,7 +293,7 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
                 // And now move the buffer over the space we just consumed
                 uint64_t nConsumedBytes = m_LineBufferSize - numBytesToRemove;
                 if(nConsumedBytes) // If zero, the buffer was consumed completely
-                    memcpy(m_LineBuffer, &m_LineBuffer[numBytesToRemove], nConsumedBytes);
+                    MemoryCopy(m_LineBuffer, &m_LineBuffer[numBytesToRemove], nConsumedBytes);
 
                 // Reduce the buffer size now
                 m_LineBufferSize -= numBytesToRemove;
@@ -367,7 +367,7 @@ size_t ConsoleMasterFile::outputLineDiscipline(char *buf, size_t len, size_t max
 
                 realSize++;
                 char *newBuff = new char[realSize];
-                memcpy(newBuff, tmpBuff, i);
+                MemoryCopy(newBuff, tmpBuff, i);
                 delete [] tmpBuff;
                 tmpBuff = newBuff;
 
@@ -391,7 +391,7 @@ size_t ConsoleMasterFile::outputLineDiscipline(char *buf, size_t len, size_t max
             }
         }
 
-        memcpy(buf, tmpBuff, realSize);
+        MemoryCopy(buf, tmpBuff, realSize);
         delete [] tmpBuff;
         len = realSize;
     }
@@ -504,7 +504,7 @@ size_t ConsoleSlaveFile::processInput(char *buf, size_t len)
             pC[i] = '\n';
         else if (pC[i] == '\r' && (m_Flags & ConsoleManager::IIgnoreCR))
         {
-            memmove(buf+i, buf+i+1, len-i-1);
+            MemoryCopy(buf+i, buf+i+1, len-i-1);
             i--; // Need to process this byte again, its contents have changed.
             realLen--;
         }
@@ -657,7 +657,7 @@ void ConsoleManager::setControlChars(File *file, void *p)
     if(!file || !p)
         return;
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
-    memcpy(pFile->m_ControlChars, p, MAX_CONTROL_CHAR);
+    MemoryCopy(pFile->m_ControlChars, p, MAX_CONTROL_CHAR);
 }
 
 void ConsoleManager::getControlChars(File *file, void *p)
@@ -665,7 +665,7 @@ void ConsoleManager::getControlChars(File *file, void *p)
     if(!file || !p)
         return;
     ConsoleFile *pFile = reinterpret_cast<ConsoleFile*>(file);
-    memcpy(p, pFile->m_ControlChars, MAX_CONTROL_CHAR);
+    MemoryCopy(p, pFile->m_ControlChars, MAX_CONTROL_CHAR);
 }
 
 int ConsoleManager::getWindowSize(File *file, unsigned short *rows, unsigned short *cols)

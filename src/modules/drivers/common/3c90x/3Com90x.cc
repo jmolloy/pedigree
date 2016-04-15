@@ -268,7 +268,7 @@ bool Nic3C90x::send(size_t nBytes, uintptr_t buffer)
             destPtr += buffer & 0xFFF;
         }
         else
-            memcpy(m_pTxBuffVirt, reinterpret_cast<void *>(buffer), nBytes);
+            MemoryCopy(m_pTxBuffVirt, reinterpret_cast<void *>(buffer), nBytes);
 
         /** Setup the DPD (download descriptor) **/
         m_TransmitDPD->DnNextPtr = 0;

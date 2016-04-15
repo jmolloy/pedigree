@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -128,7 +127,7 @@ static void searchNode(Device *pDev)
   for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
   {
     Device *pChild = pDev->getChild(i);
-    if (!strcmp(pChild->getSpecificType(), "pci"))
+    if (!StringCompare(pChild->getSpecificType(), "pci"))
     {
       // We've found a pci device. Calculate addresses for it and all
       // its children.

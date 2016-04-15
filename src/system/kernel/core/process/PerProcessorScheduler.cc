@@ -504,7 +504,7 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
     // Copy the SyscallState into this thread's kernel stack.
     uintptr_t kStack = reinterpret_cast<uintptr_t>(pThread->getKernelStack());
     kStack -= sizeof(SyscallState);
-    memcpy(reinterpret_cast<void*>(kStack), reinterpret_cast<void*>(&state), sizeof(SyscallState));
+    MemoryCopy(reinterpret_cast<void*>(kStack), reinterpret_cast<void*>(&state), sizeof(SyscallState));
 
     // Grab a reference to the stack in the form of a full SyscallState.
     SyscallState &newState = *reinterpret_cast<SyscallState *>(kStack);

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -106,7 +105,7 @@ void HashedPageTable::initialise(Translations &translations, uint32_t ramMax)
   m_pHtab = reinterpret_cast<PTEG*> (HTAB_VIRTUAL);
 
   // Initialise by setting everything to zero.
-  memset(reinterpret_cast<uint8_t*> (m_pHtab), 0, m_Size);
+  ByteSet(reinterpret_cast<uint8_t*> (m_pHtab), 0, m_Size);
        
   // For each translation, add mappings.
   for (unsigned int i = 0; i < translations.getNumTranslations(); i++)

@@ -121,7 +121,7 @@ void Smp::initialise()
       Bus *pBus = reinterpret_cast<Bus*>(pType);
 
       char name[7];
-      strncpy(name, pBus->name, 6);
+      StringCopyN(name, pBus->name, 6);
       name[6] = '\0';
 
       NOTICE("  Bus #" << Dec << pBus->busId << " \"" << name << "\"");

@@ -71,7 +71,7 @@ static Config::Result *g_Results[MAX_RESULTS];
 
 void pedigree_config_init()
 {
-    memset(g_Results, 0, sizeof(Config::Result*)*MAX_RESULTS);
+    ByteSet(g_Results, 0, sizeof(Config::Result*)*MAX_RESULTS);
 }
 
 void pedigree_config_getcolname(size_t resultIdx, size_t n, char *buf, size_t bufsz)
@@ -79,7 +79,7 @@ void pedigree_config_getcolname(size_t resultIdx, size_t n, char *buf, size_t bu
     if (resultIdx >= MAX_RESULTS || g_Results[resultIdx] == 0)
         return;
     String str = g_Results[resultIdx]->getColumnName(n);
-    strncpy(buf, static_cast<const char*>(str), bufsz);
+    StringCopyN(buf, static_cast<const char*>(str), bufsz);
 }
 
 void pedigree_config_getstr(size_t resultIdx, size_t row, size_t n, char *buf, size_t bufsz)
@@ -87,7 +87,7 @@ void pedigree_config_getstr(size_t resultIdx, size_t row, size_t n, char *buf, s
     if (resultIdx >= MAX_RESULTS || g_Results[resultIdx] == 0)
         return;
     String str = g_Results[resultIdx]->getStr(row, n);
-    strncpy(buf, static_cast<const char*>(str), bufsz);
+    StringCopyN(buf, static_cast<const char*>(str), bufsz);
 }
 
 void pedigree_config_getstr(size_t resultIdx, size_t row, const char *col, char *buf, size_t bufsz)
@@ -95,7 +95,7 @@ void pedigree_config_getstr(size_t resultIdx, size_t row, const char *col, char 
     if (resultIdx >= MAX_RESULTS || g_Results[resultIdx] == 0)
         return;
     String str = g_Results[resultIdx]->getStr(row, col);
-    strncpy(buf, static_cast<const char*>(str), bufsz);
+    StringCopyN(buf, static_cast<const char*>(str), bufsz);
 }
 
 int pedigree_config_getnum(size_t resultIdx, size_t row, size_t n)
@@ -137,8 +137,8 @@ int pedigree_config_query(const char *query)
             // Check for user performing the query: only root has config access
             if(Processor::information().getCurrentThread()->getParent()->getUser()->getId())
             {
-                char *pError = new char [strlen(pConfigPermissionError) + 1];
-                strcpy(pError, pConfigPermissionError);
+                char *pError = new char [StringLength(pConfigPermissionError) + 1];
+                StringCopy(pError, pConfigPermissionError);
                 g_Results[i] = new Config::Result(0, 0, 0, pError, -1);
             }
             else
@@ -184,7 +184,7 @@ void pedigree_config_get_error_message(size_t resultIdx, char *buf, int buflen)
 {
     if (resultIdx >= MAX_RESULTS || g_Results[resultIdx] == 0)
         return;
-    strncpy(buf, g_Results[resultIdx]->errorMessage(), buflen);
+    StringCopyN(buf, g_Results[resultIdx]->errorMessage(), buflen);
 }
 
 // Module handling functions
@@ -235,7 +235,7 @@ int pedigree_module_get_depending(char *name, char *buf, size_t bufsz)
 {
     char *dep = KernelElf::instance().getDependingModule(name);
     if(dep)
-        strncpy(buf, dep, bufsz);
+        StringCopyN(buf, dep, bufsz);
     else
         return 0;
     return 1;
@@ -271,10 +271,10 @@ int pedigree_load_keymap(uint32_t *buf, size_t len)
     uint32_t dataTableSize      = len - dataTableOffset;
 
     uint8_t *sparseTable = new uint8_t[sparseTableSize];
-    memcpy(sparseTable, &buf[sparseTableOffset], sparseTableSize);
+    MemoryCopy(sparseTable, &buf[sparseTableOffset], sparseTableSize);
 
     uint8_t *dataTable = new uint8_t[dataTableSize];
-    memcpy(dataTable, &buf[dataTableOffset], dataTableSize);
+    MemoryCopy(dataTable, &buf[dataTableOffset], dataTableSize);
 
     KeymapManager::instance().useKeymap(sparseTable, dataTable);
 
@@ -306,7 +306,7 @@ int pedigree_gfx_get_provider(void *p)
     else
         return -1;
 
-    memcpy(p, &gfxProvider, sizeof(gfxProvider));
+    MemoryCopy(p, &gfxProvider, sizeof(gfxProvider));
 
     return 0;
 }
@@ -322,7 +322,7 @@ int pedigree_gfx_get_curr_mode(void *p, void *sm)
     Display::ScreenMode mode;
     pProvider->pDisplay->getCurrentScreenMode(mode);
 
-    memcpy(sm, &mode, sizeof(mode));
+    MemoryCopy(sm, &mode, sizeof(mode));
 
     return 0;
 }

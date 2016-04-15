@@ -198,7 +198,7 @@ struct DhcpOptionEnd
 
 size_t addOption(void* opt, size_t sz, size_t offset, void* dest)
 {
-  memcpy(reinterpret_cast<char*>(dest) + offset, opt, sz);
+  MemoryCopy(reinterpret_cast<char*>(dest) + offset, opt, sz);
   return offset + sz;
 }
 
@@ -251,12 +251,12 @@ bool dhcpClient(Network *pCard)
         currentState = DISCOVER_SENT;
 
         // Zero out and fill the initial packet
-        memset(&dhcp, 0, sizeof(DhcpPacket));
+        ByteSet(&dhcp, 0, sizeof(DhcpPacket));
         dhcp.opcode = OP_BOOTREQUEST;
         dhcp.htype = 1; // Ethernet
         dhcp.hlen = 6; // 6 bytes in a MAC address
         dhcp.xid = HOST_TO_BIG32(12345);
-        memcpy(dhcp.chaddr, info.mac, 6);
+        MemoryCopy(dhcp.chaddr, info.mac, 6);
 
         DhcpOptionMagicCookie cookie;
         DhcpOptionMsgType msgTypeOpt;
@@ -275,13 +275,13 @@ bool dhcpClient(Network *pCard)
         paramRequest.len = sizeof paramsWanted;
 
         byteOffset = addOption(&paramRequest, sizeof(paramRequest), byteOffset, dhcp.options);
-        memcpy(dhcp.options + byteOffset, &paramsWanted, sizeof paramsWanted);
+        MemoryCopy(dhcp.options + byteOffset, &paramsWanted, sizeof paramsWanted);
         byteOffset += sizeof paramsWanted;
 
         byteOffset = addOption(&endOpt, sizeof(endOpt), byteOffset, dhcp.options);
 
         // Throw into the send buffer and send it out
-        // memcpy(buff, &dhcp, sizeof(dhcp));
+        // MemoryCopy(buff, &dhcp, sizeof(dhcp));
         bool success = e->send((sizeof(dhcp) - sizeof(MAX_OPTIONS_SIZE)) + byteOffset, reinterpret_cast<uintptr_t>(&dhcp), remoteHost, true, pCard) >= 0;
         if(!success)
         {
@@ -391,13 +391,13 @@ bool dhcpClient(Network *pCard)
         byteOffset = addOption(&dhcpServer, sizeof(dhcpServer), byteOffset, dhcp.options);
 
         byteOffset = addOption(&paramRequest, sizeof(paramRequest), byteOffset, dhcp.options);
-        memcpy(dhcp.options + byteOffset, &paramsWanted, sizeof paramsWanted);
+        MemoryCopy(dhcp.options + byteOffset, &paramsWanted, sizeof paramsWanted);
         byteOffset += sizeof paramsWanted;
 
         byteOffset = addOption(&endOpt, sizeof(endOpt), byteOffset, dhcp.options);
 
         // Throw into the send buffer and send it out
-        memcpy(buff, &dhcp, sizeof(dhcp));
+        MemoryCopy(buff, &dhcp, sizeof(dhcp));
         remoteHost.ip = Network::convertToIpv4(dhcpServer.a1, dhcpServer.a2, dhcpServer.a3, dhcpServer.a4);
         success = e->send((sizeof(dhcp) - MAX_OPTIONS_SIZE) + byteOffset, reinterpret_cast<uintptr_t>(buff), remoteHost, false, pCard) >= 0;
         if(!success)

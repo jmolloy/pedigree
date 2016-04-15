@@ -65,7 +65,7 @@ uint64_t Ext2Symlink::read(uint64_t location, uint64_t size, uintptr_t buffer, b
 
     if (getSize() && Ext2Node::getInode()->i_blocks == 0)
     {
-        memcpy(reinterpret_cast<void *>(buffer), adjust_pointer(m_pInode->i_block, location), size);
+        MemoryCopy(reinterpret_cast<void *>(buffer), adjust_pointer(m_pInode->i_block, location), size);
         return size;
     }
 
@@ -77,7 +77,7 @@ uint64_t Ext2Symlink::read(uint64_t location, uint64_t size, uintptr_t buffer, b
 
     uintptr_t block = Ext2Node::readBlock(location);
     size_t offset = location % m_pExt2Fs->m_BlockSize;
-    memcpy(reinterpret_cast<void *>(buffer), reinterpret_cast<void *>(block + offset), size);
+    MemoryCopy(reinterpret_cast<void *>(buffer), reinterpret_cast<void *>(block + offset), size);
     m_Size = m_nSize;
     return size;
 }
@@ -95,7 +95,7 @@ uint64_t Ext2Symlink::write(uint64_t location, uint64_t size, uintptr_t buffer, 
 
     uintptr_t block = Ext2Node::readBlock(location);
     size_t offset = location % m_pExt2Fs->m_BlockSize;
-    memcpy(adjust_pointer(reinterpret_cast<void *>(block), offset), reinterpret_cast<void *>(buffer), size);
+    MemoryCopy(adjust_pointer(reinterpret_cast<void *>(block), offset), reinterpret_cast<void *>(buffer), size);
     Ext2Node::writeBlock(location);
     return size;
 }

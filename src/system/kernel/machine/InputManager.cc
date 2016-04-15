@@ -45,7 +45,7 @@ class InputEvent : public Event
             uintptr_t *buf = reinterpret_cast<uintptr_t*>(alignedBuffer);
             buf[0] = EventNumbers::InputEvent;
             buf[1] = m_nParam;
-            memcpy(&buf[2], &m_Notification, sizeof(InputManager::InputNotification));
+            MemoryCopy(&buf[2], &m_Notification, sizeof(InputManager::InputNotification));
             return sizeof(InputManager::InputNotification) + (sizeof(uintptr_t) * 2);
         }
 
@@ -56,7 +56,7 @@ class InputEvent : public Event
             if(*buf != EventNumbers::InputEvent)
                 return false;
 
-            memcpy(&event.m_Notification, &buf[2], sizeof(InputManager::InputNotification));
+            MemoryCopy(&event.m_Notification, &buf[2], sizeof(InputManager::InputNotification));
             return true;
         }
 

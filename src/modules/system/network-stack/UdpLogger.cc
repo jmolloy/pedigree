@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -59,6 +58,6 @@ void UdpLogger::callback(const char *str)
     if(!m_pEndpoint)
         return;
     
-    m_pEndpoint->send(strlen(str), reinterpret_cast<uintptr_t>(str), m_LoggingServer, false);
+    m_pEndpoint->send(StringLength(str), reinterpret_cast<uintptr_t>(str), m_LoggingServer, false);
 }
 

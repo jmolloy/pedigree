@@ -32,7 +32,7 @@ Elf32::Elf32(const char *name) :
   m_pSectionHeaders(0),
   m_pBuffer(0)
 {
-  strncpy(m_pId, name, 127);
+  StringCopyN(m_pId, name, 127);
 }
 
 Elf32::~Elf32()
@@ -67,11 +67,11 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
   for (int i = 0; i < m_pHeader->shnum; i++)
   {
     const char *pStr = pStrtab + m_pSectionHeaders[i].name;
-    if (!strcmp(pStr, ".symtab"))
+    if (!StringCompare(pStr, ".symtab"))
     {
       m_pSymbolTable = &m_pSectionHeaders[i];
     }
-    if (!strcmp(pStr, ".strtab"))
+    if (!StringCompare(pStr, ".strtab"))
       m_pStringTable = &m_pSectionHeaders[i];
   }
   
@@ -107,7 +107,7 @@ bool Elf32::load(uint8_t *pBuffer, unsigned int nBufferLength)
 //       m_pSymbolTable = pSh;
 //       m_pSymbolTable->offset = m_pSymbolTable->addr;
 //     }
-//     else if (!strcmp(pStr, ".strtab"))
+//     else if (!StringCompare(pStr, ".strtab"))
 //     {
 //       m_pStringTable = pSh;
 //       m_pStringTable->offset = m_pStringTable->addr;
@@ -126,13 +126,13 @@ bool Elf32::writeSections()
       if (m_pSectionHeaders[i].type != SHT_NOBITS)
       {
         // Copy section data from the file.
-        memcpy((uint8_t*)m_pSectionHeaders[i].addr,
+        MemoryCopy((uint8_t*)m_pSectionHeaders[i].addr,
                         &m_pBuffer[m_pSectionHeaders[i].offset],
                         m_pSectionHeaders[i].size);
       }
       else
       {
-        memset((uint8_t*)m_pSectionHeaders[i].addr,
+        ByteSet((uint8_t*)m_pSectionHeaders[i].addr,
                         0,
                         m_pSectionHeaders[i].size);
       }

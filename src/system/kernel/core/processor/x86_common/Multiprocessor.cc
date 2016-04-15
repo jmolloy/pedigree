@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -85,16 +84,16 @@ size_t Multiprocessor::initialise1()
   ///       truncated to fit" error from ld.
   extern void *trampoline16, *trampoline32, *trampolinegdt, *trampolinegdtr;
   extern void *trampoline16_end, *trampoline32_end, *trampolinegdt_end, *trampolinegdtr_end;
-  memcpy(reinterpret_cast<void*>(0x7000),
+  MemoryCopy(reinterpret_cast<void*>(0x7000),
          &trampoline16,
          reinterpret_cast<uintptr_t>(&trampoline16_end) - reinterpret_cast<uintptr_t>(&trampoline16));
-  memcpy(reinterpret_cast<void*>(0x7100),
+  MemoryCopy(reinterpret_cast<void*>(0x7100),
          &trampoline32,
          reinterpret_cast<uintptr_t>(&trampoline32_end) - reinterpret_cast<uintptr_t>(&trampoline32));
-  memcpy(reinterpret_cast<void*>(0x7200),
+  MemoryCopy(reinterpret_cast<void*>(0x7200),
          &trampolinegdtr,
          reinterpret_cast<uintptr_t>(&trampolinegdtr_end) - reinterpret_cast<uintptr_t>(&trampolinegdtr));
-  memcpy(reinterpret_cast<void*>(0x7210),
+  MemoryCopy(reinterpret_cast<void*>(0x7210),
          &trampolinegdt,
          reinterpret_cast<uintptr_t>(&trampolinegdt_end) - reinterpret_cast<uintptr_t>(&trampolinegdt));
 

@@ -50,7 +50,7 @@ void RoutingTable::Add(Type type, IpAddress dest, IpAddress subIp, String meta, 
 
         // Add the route to the database directly
         String str;
-        str.sprintf("INSERT INTO routes (ipaddr, subip, name, type, iface) VALUES (%u, %u, '%s', %u, %u)", BIG_TO_HOST32(dest.getIp()), BIG_TO_HOST32(subIp.getIp()), static_cast<const char*>(meta), static_cast<int>(type), hash);
+        str.Format("INSERT INTO routes (ipaddr, subip, name, type, iface) VALUES (%u, %u, '%s', %u, %u)", BIG_TO_HOST32(dest.getIp()), BIG_TO_HOST32(subIp.getIp()), static_cast<const char*>(meta), static_cast<int>(type), hash);
         pResult = Config::instance().query(str);
         if(!pResult->succeeded())
         {
@@ -68,7 +68,7 @@ void RoutingTable::Add(Type type, IpAddress dest, IpAddress subIp, String meta, 
 
         // Add the route to the database
         String str;
-        str.sprintf("INSERT INTO routesv6 (ipaddr, subip1, subip2, subip3, subip4, name, type, iface, metric) VALUES ('%s', %u, %u, %u, %u, '%s', %u, %u, %u)",
+        str.Format("INSERT INTO routesv6 (ipaddr, subip1, subip2, subip3, subip4, name, type, iface, metric) VALUES ('%s', %u, %u, %u, %u, '%s', %u, %u, %u)",
                     static_cast<const char *>(dest.prefixString(128)),
                     subipTemp[0],
                     subipTemp[1],
@@ -113,7 +113,7 @@ void RoutingTable::Add(Type type, IpAddress dest, IpAddress subnet, IpAddress su
         // Add to the database
         String str;
         size_t hash = DeviceHashTree::instance().getHash(card);
-        str.sprintf("INSERT INTO routes (ipstart, ipend, subip, name, type, iface) VALUES (%u, %u, %u, '%s', %u, %u)",
+        str.Format("INSERT INTO routes (ipstart, ipend, subip, name, type, iface) VALUES (%u, %u, %u, '%s', %u, %u)",
                     BIG_TO_HOST32(bottomOfRange.getIp()),
                     BIG_TO_HOST32(topOfRange.getIp()),
                     BIG_TO_HOST32(subIp.getIp()),
@@ -140,7 +140,7 @@ void RoutingTable::Add(Type type, IpAddress dest, IpAddress subnet, IpAddress su
         // Add to the database
         String str;
         size_t hash = DeviceHashTree::instance().getHash(card);
-        str.sprintf("INSERT INTO routesv6 (prefix, subip1, subip2, subip3, subip4, prefixNum, name, type, iface, metric) VALUES ('%s', %u, %u, %u, %u, %u, '%s', %u, %u, %u)",
+        str.Format("INSERT INTO routesv6 (prefix, subip1, subip2, subip3, subip4, prefixNum, name, type, iface, metric) VALUES ('%s', %u, %u, %u, %u, %u, '%s', %u, %u, %u)",
                     static_cast<const char*>(dest.prefixString()),
                     subipTemp[0],
                     subipTemp[1],
@@ -204,7 +204,7 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
     {
         // Can we directly match a route (/128)?
         String str;
-        str.sprintf("SELECT * FROM routesv6 WHERE ipaddr='%s'", static_cast<const char *>(ip->prefixString(128))); // prefixString doesn't add /xx on the end.
+        str.Format("SELECT * FROM routesv6 WHERE ipaddr='%s'", static_cast<const char *>(ip->prefixString(128))); // prefixString doesn't add /xx on the end.
         Config::Result *pResult = Config::instance().query(str);
         if(!pResult->succeeded())
             ERROR("Routing table query failed: " << pResult->errorMessage());
@@ -216,7 +216,7 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
 
         // Try a prefix lookup. This involves finding all the potential prefix numbers and then
         // using those to find a usable prefix.
-        str.sprintf("SELECT id, prefixNum FROM routesv6 WHERE type = %u ORDER BY metric ASC", static_cast<int>(DestPrefix));
+        str.Format("SELECT id, prefixNum FROM routesv6 WHERE type = %u ORDER BY metric ASC", static_cast<int>(DestPrefix));
         pResult = Config::instance().query(str);
         if(!pResult->succeeded())
             ERROR("Routing table query failed: " << pResult->errorMessage());
@@ -227,7 +227,7 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
             {
                 // Check this prefix.
                 size_t prefixNum = pResult->getNum(i, "prefixNum");
-                str.sprintf("SELECT * FROM routesv6 WHERE prefix = '%s' AND type = %u ORDER BY metric ASC", static_cast<const char *>(ip->prefixString(prefixNum)), static_cast<int>(DestPrefix));
+                str.Format("SELECT * FROM routesv6 WHERE prefix = '%s' AND type = %u ORDER BY metric ASC", static_cast<const char *>(ip->prefixString(prefixNum)), static_cast<int>(DestPrefix));
                 Config::Result *pTempResult = Config::instance().query(str);
                 if(!pTempResult->succeeded())
                     continue;
@@ -243,7 +243,7 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
         delete pResult;
 
         // Still nothing, try a complement prefix search
-        str.sprintf("SELECT * FROM routesv6 WHERE (NOT prefix='%s') AND type=%u ORDER BY metric ASC", static_cast<const char *>(ip->prefixString()), static_cast<int>(DestPrefixComplement));
+        str.Format("SELECT * FROM routesv6 WHERE (NOT prefix='%s') AND type=%u ORDER BY metric ASC", static_cast<const char *>(ip->prefixString()), static_cast<int>(DestPrefixComplement));
         pResult = Config::instance().query(str);
         if(!pResult->succeeded())
             ERROR("Routing table query failed: " << pResult->errorMessage());
@@ -263,7 +263,7 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
     {
         // Build a query to search for a direct match
         String str;
-        str.sprintf("SELECT * FROM routes WHERE ipaddr=%u", BIG_TO_HOST32(ip->getIp()));
+        str.Format("SELECT * FROM routes WHERE ipaddr=%u", BIG_TO_HOST32(ip->getIp()));
         Config::Result *pResult = Config::instance().query(str);
         if(!pResult->succeeded())
             ERROR("Routing table query failed: " << pResult->errorMessage());
@@ -274,7 +274,7 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
         delete pResult;
 
         // No rows! Try a subnet lookup first, without a complement.
-        str.sprintf("SELECT * FROM routes WHERE ((ipstart <= %u) AND (ipend >= %u)) AND (type == %u)", BIG_TO_HOST32(ip->getIp()), BIG_TO_HOST32(ip->getIp()), static_cast<int>(DestSubnet));
+        str.Format("SELECT * FROM routes WHERE ((ipstart <= %u) AND (ipend >= %u)) AND (type == %u)", BIG_TO_HOST32(ip->getIp()), BIG_TO_HOST32(ip->getIp()), static_cast<int>(DestSubnet));
         pResult = Config::instance().query(str);
         if(!pResult->succeeded())
             ERROR("Routing table query failed: " << pResult->errorMessage());
@@ -285,7 +285,7 @@ Network *RoutingTable::DetermineRoute(IpAddress *ip, bool bGiveDefault)
         delete pResult;
 
         // Still nothing, try a complement subnet search
-        str.sprintf("SELECT * FROM routes WHERE (NOT ((ipstart <= %u) AND (ipend >= %u))) AND (type == %u)", BIG_TO_HOST32(ip->getIp()), BIG_TO_HOST32(ip->getIp()), static_cast<int>(DestSubnetComplement));
+        str.Format("SELECT * FROM routes WHERE (NOT ((ipstart <= %u) AND (ipend >= %u))) AND (type == %u)", BIG_TO_HOST32(ip->getIp()), BIG_TO_HOST32(ip->getIp()), static_cast<int>(DestSubnetComplement));
         pResult = Config::instance().query(str);
         if(!pResult->succeeded())
             ERROR("Routing table query failed: " << pResult->errorMessage());
@@ -312,7 +312,7 @@ Network *RoutingTable::DefaultRoute()
     bool bLocked = m_TableLock.tryAcquire();
 
     String str;
-    str.sprintf("SELECT * FROM routes WHERE name='default'");
+    str.Format("SELECT * FROM routes WHERE name='default'");
     Config::Result *pResult = Config::instance().query(str);
     if(!pResult->succeeded())
         ERROR("Routing table query failed: " << pResult->errorMessage());
@@ -337,7 +337,7 @@ Network *RoutingTable::DefaultRouteV6()
     bool bLocked = m_TableLock.tryAcquire();
 
     String str;
-    str.sprintf("SELECT * FROM routesv6 WHERE name='default'");
+    str.Format("SELECT * FROM routesv6 WHERE name='default'");
     Config::Result *pResult = Config::instance().query(str);
     if(!pResult->succeeded())
         ERROR("Routing table query failed: " << pResult->errorMessage());

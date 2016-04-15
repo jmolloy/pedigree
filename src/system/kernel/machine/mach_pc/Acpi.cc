@@ -104,7 +104,7 @@ void Acpi::initialise()
     SystemDescriptionTableHeader *pSystemDescTable = m_AcpiMemoryRegion.convertPhysicalPointer<SystemDescriptionTableHeader>(*pTable);
 
     char Signature[5];
-    strncpy(Signature, reinterpret_cast<char*>(&pSystemDescTable->signature), 4);
+    StringCopyN(Signature, reinterpret_cast<char*>(&pSystemDescTable->signature), 4);
     Signature[4] = '\0';
 
     NOTICE("  " << Signature << " at " << Hex << *pTable);

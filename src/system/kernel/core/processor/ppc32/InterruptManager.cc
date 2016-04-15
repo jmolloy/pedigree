@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -157,21 +156,21 @@ void PPC32InterruptManager::initialiseProcessor()
                     reinterpret_cast<OFParam>(0x0),
                     reinterpret_cast<OFParam>(0x0));
   // Copy the interrupt handlers into lower memory.
-  memcpy(reinterpret_cast<void*> (0x0100), &isr_reset, 0x100);
-  memcpy(reinterpret_cast<void*> (0x0200), &isr_machine_check, 0x100);
-  memcpy(reinterpret_cast<void*> (0x0300), &isr_dsi, 0x100);
-  memcpy(reinterpret_cast<void*> (0x0400), &isr_isi, 0x100);
-  memcpy(reinterpret_cast<void*> (0x0500), &isr_interrupt, 0x100);
-  memcpy(reinterpret_cast<void*> (0x0600), &isr_alignment, 0x100);
-  memcpy(reinterpret_cast<void*> (0x0700), &isr_program, 0x100);
-  memcpy(reinterpret_cast<void*> (0x0800), &isr_fpu, 0x100);
-  memcpy(reinterpret_cast<void*> (0x0900), &isr_decrementer, 0x100);
-  memcpy(reinterpret_cast<void*> (0x0C00), &isr_sc, 0x100);
-  memcpy(reinterpret_cast<void*> (0x0D00), &isr_trace, 0x100);
-  memcpy(reinterpret_cast<void*> (0x0F00), &isr_perf_mon, 0x100);
-  memcpy(reinterpret_cast<void*> (0x1300), &isr_instr_breakpoint, 0x100);
-  memcpy(reinterpret_cast<void*> (0x1400), &isr_system_management, 0x100);
-  memcpy(reinterpret_cast<void*> (0x1700), &isr_thermal_management, 0x100);
+  MemoryCopy(reinterpret_cast<void*> (0x0100), &isr_reset, 0x100);
+  MemoryCopy(reinterpret_cast<void*> (0x0200), &isr_machine_check, 0x100);
+  MemoryCopy(reinterpret_cast<void*> (0x0300), &isr_dsi, 0x100);
+  MemoryCopy(reinterpret_cast<void*> (0x0400), &isr_isi, 0x100);
+  MemoryCopy(reinterpret_cast<void*> (0x0500), &isr_interrupt, 0x100);
+  MemoryCopy(reinterpret_cast<void*> (0x0600), &isr_alignment, 0x100);
+  MemoryCopy(reinterpret_cast<void*> (0x0700), &isr_program, 0x100);
+  MemoryCopy(reinterpret_cast<void*> (0x0800), &isr_fpu, 0x100);
+  MemoryCopy(reinterpret_cast<void*> (0x0900), &isr_decrementer, 0x100);
+  MemoryCopy(reinterpret_cast<void*> (0x0C00), &isr_sc, 0x100);
+  MemoryCopy(reinterpret_cast<void*> (0x0D00), &isr_trace, 0x100);
+  MemoryCopy(reinterpret_cast<void*> (0x0F00), &isr_perf_mon, 0x100);
+  MemoryCopy(reinterpret_cast<void*> (0x1300), &isr_instr_breakpoint, 0x100);
+  MemoryCopy(reinterpret_cast<void*> (0x1400), &isr_system_management, 0x100);
+  MemoryCopy(reinterpret_cast<void*> (0x1700), &isr_thermal_management, 0x100);
 
   for (uintptr_t i = 0x0; i < 0x1800; i += 4)
     Processor::flushDCache(i);

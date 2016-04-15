@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -54,7 +53,7 @@ void Icmp::send(IpAddress dest, uint8_t type, uint8_t code, uint16_t id, uint16_
   header->seq = HOST_TO_BIG16(seq);
 
   if(nBytes)
-    memcpy(reinterpret_cast<void*>(packet + sizeof(icmpHeader)), reinterpret_cast<void*>(payload), nBytes);
+    MemoryCopy(reinterpret_cast<void*>(packet + sizeof(icmpHeader)), reinterpret_cast<void*>(payload), nBytes);
 
   header->checksum = 0;
   header->checksum = Network::calculateChecksum(packet, nBytes + sizeof(icmpHeader));

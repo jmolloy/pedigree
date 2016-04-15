@@ -34,7 +34,7 @@ static bool g_bReady = false;
 LocksCommand::LocksCommand()
     : DebuggerCommand(), m_bAcquiring(false)
 {
-    memset(m_pDescriptors, 0, sizeof(LockDescriptor)*MAX_DESCRIPTORS);
+    ByteSet(m_pDescriptors, 0, sizeof(LockDescriptor)*MAX_DESCRIPTORS);
 }
 
 LocksCommand::~LocksCommand()
@@ -150,7 +150,7 @@ void LocksCommand::lockAcquired(Spinlock *pLock)
     {
         pD->used = true;
         pD->pLock = pLock;
-        memcpy(&pD->ra, bt.m_pReturnAddresses, NUM_BT_FRAMES*sizeof(uintptr_t));
+        MemoryCopy(&pD->ra, bt.m_pReturnAddresses, NUM_BT_FRAMES*sizeof(uintptr_t));
         pD->n = bt.m_nStackFrames;
     }
     m_bAcquiring = false;

@@ -22,7 +22,7 @@
 MacAddress::MacAddress() :
     m_Mac(), m_Valid(false)
 {
-    memset(m_Mac, 0, 6);
+    ByteSet(m_Mac, 0, 6);
 }
 
 void MacAddress::setMac(uint8_t byte, size_t element)
@@ -44,7 +44,7 @@ void MacAddress::setMac(uint8_t byte, size_t element)
 
 void MacAddress::setMac(uint8_t element)
 {
-  memset(m_Mac, element, 6);
+  ByteSet(m_Mac, element, 6);
   m_Valid = true;
 }
 
@@ -57,7 +57,7 @@ void MacAddress::setMac(const uint16_t* data, bool bSwap)
       m_Mac[i] = BIG_TO_HOST16(data[i]);
   }
   else
-    memcpy(m_Mac, data, 6);
+    MemoryCopy(m_Mac, data, 6);
 
   m_Valid = true;
 };

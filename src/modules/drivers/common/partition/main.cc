@@ -66,7 +66,7 @@ void searchNode(Device *pDev)
       {
         String name;
         pDev->getChild(i)->getName(name);
-        if (!strcmp(name, "msdos-partition") || !strcmp(name, "apple-partition"))
+        if (!StringCompare(name, "msdos-partition") || !StringCompare(name, "apple-partition"))
         {
           hasPartitions = true;
           break;

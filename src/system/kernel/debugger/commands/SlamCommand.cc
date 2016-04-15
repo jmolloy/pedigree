@@ -279,7 +279,7 @@ void SlamCommand::addAllocation(uintptr_t *backtrace, size_t requested)
     if (!pOther)
     {
         SlamAllocation *pAlloc = new SlamAllocation;
-        memcpy(&pAlloc->bt, backtrace, NUM_SLAM_BT_FRAMES*sizeof(uintptr_t));
+        MemoryCopy(&pAlloc->bt, backtrace, NUM_SLAM_BT_FRAMES*sizeof(uintptr_t));
         pAlloc->n = 1;
         pAlloc->size = requested;
         m_Tree.insert(accum, pAlloc);

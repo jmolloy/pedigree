@@ -49,7 +49,7 @@ print mnm_h "enum ud_mnemonic_code \n{ \n";
 
 while($mnm = <STDIN>) {
 	chop($mnm);
-        my $mnm_padded = sprintf("%-8s", $mnm);
+        my $mnm_padded = StringFormat("%-8s", $mnm);
 	print mnm_c "  \"$mnm_padded\",\n";
 	print mnm_h "  UD_I$mnm,\n";
 }

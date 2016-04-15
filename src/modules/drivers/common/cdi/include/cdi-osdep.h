@@ -12,6 +12,7 @@
 #define _CDI_OSDEP_H_
 
 #include <Module.h>
+#include <utilities/utility.h>
 
 struct cdi_driver;
 
@@ -110,5 +111,9 @@ typedef struct {
 struct FILE
 {
 };
+
+// Forward cdi drivers to the correct utility functions.
+#define memcpy MemoryCopy
+#define memset ByteSet
 
 #endif

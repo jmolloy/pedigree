@@ -781,11 +781,11 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
     uintptr_t userBlock = reinterpret_cast<uintptr_t>(hostinfo) + sizeof(struct hostent);
     uintptr_t endBlock = (userBlock + offset) - sizeof(struct hostent);
 
-    memset(hostinfo, 0, offset);
+    ByteSet(hostinfo, 0, offset);
 
     // Copy the hostname
     entry->h_name = reinterpret_cast<char*>(userBlock);
-    strncpy(entry->h_name, static_cast<const char*>(host.hostname), host.hostname.length());
+    StringCopyN(entry->h_name, static_cast<const char*>(host.hostname), host.hostname.length());
     userBlock += host.hostname.length() + 1;
 
     // Make sure we don't overflow the buffer
@@ -805,7 +805,7 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
                 continue;
 
             entry->h_aliases[nAlias] = reinterpret_cast<char*>(userBlock);
-            strncpy(entry->h_aliases[nAlias], static_cast<const char*>(*(*it)), (*it)->length());
+            StringCopyN(entry->h_aliases[nAlias], static_cast<const char*>(*(*it)), (*it)->length());
             userBlock += (*it)->length() + 1;
 
             delete *it;
@@ -834,7 +834,7 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
             // Copy the IP across
             uint32_t ip = (*it)->getIp();
             char* ipBlock = reinterpret_cast<char*>(userBlock);
-            memcpy(ipBlock, &ip, 4);
+            MemoryCopy(ipBlock, &ip, 4);
 
             // Add this to the array
             addrList[nIp++] = ipBlock;

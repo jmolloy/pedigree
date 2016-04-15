@@ -351,7 +351,7 @@ int cdi_mem_copy(struct cdi_mem_area* dest, struct cdi_mem_area* src)
     if(dest && src && dest->size == src->size)
     {
         if(dest->vaddr != src->vaddr)
-            memcpy(dest->vaddr, src->vaddr, src->size);
+            MemoryCopy(dest->vaddr, src->vaddr, src->size);
         return 0;
     }
     else

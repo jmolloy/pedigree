@@ -100,13 +100,13 @@ void Arp::send(IpAddress req, Network* pCard)
 
   NOTICE("arp who-has " << req.toString() << " tell " << cardInfo.ipv4.toString());
 
-  memcpy(request->hwSrc, cardInfo.mac, 6);
-  memset(request->hwDest, 0xff, 6); // broadcast
+  MemoryCopy(request->hwSrc, cardInfo.mac, 6);
+  ByteSet(request->hwDest, 0xff, 6); // broadcast
 
   MacAddress destMac;
   destMac = request->hwDest;
 
-  memset(request->hwDest, 0, 6);
+  ByteSet(request->hwDest, 0, 6);
 
   Ethernet::send(sizeof(arpHeader), packet, pCard, destMac, ETH_ARP);
 
@@ -193,12 +193,12 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
           // allocate the reply
           uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
           arpHeader* reply = reinterpret_cast<arpHeader*>(packet);
-          memcpy(reply, header, sizeof(arpHeader));
+          MemoryCopy(reply, header, sizeof(arpHeader));
           reply->opcode = HOST_TO_BIG16(ARP_OP_REPLY);
           reply->ipSrc = cardInfo.ipv4.getIp();
           reply->ipDest = header->ipSrc;
-          memcpy(reply->hwSrc, cardInfo.mac, 6);
-          memcpy(reply->hwDest, header->hwSrc, 6);
+          MemoryCopy(reply->hwSrc, cardInfo.mac, 6);
+          MemoryCopy(reply->hwDest, header->hwSrc, 6);
 
           // send it out
           Ethernet::send(sizeof(arpHeader), packet, pCard, sourceMac, ETH_ARP);

@@ -89,7 +89,7 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
     Device::Address *bar4 = 0;
     for(size_t i = 0; i < addresses().count(); i++)
     {
-        if(!strcmp(static_cast<const char *>(addresses()[i]->m_Name), "bar4"))
+        if(!StringCompare(static_cast<const char *>(addresses()[i]->m_Name), "bar4"))
             bar4 = addresses()[i];
     }
 

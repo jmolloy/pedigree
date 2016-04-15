@@ -714,12 +714,12 @@ X64VirtualAddressSpace::X64VirtualAddressSpace()
   m_PhysicalPML4 = physicalMemoryManager.allocatePage();
 
   // Initialise the page directory
-  memset(reinterpret_cast<void*>(physicalAddress(m_PhysicalPML4)),
+  ByteSet(reinterpret_cast<void*>(physicalAddress(m_PhysicalPML4)),
          0,
          0x800);
 
   // Copy the kernel PageMapLevel4
-  memcpy(reinterpret_cast<void*>(physicalAddress(m_PhysicalPML4) + 0x800),
+  MemoryCopy(reinterpret_cast<void*>(physicalAddress(m_PhysicalPML4) + 0x800),
          reinterpret_cast<void*>(physicalAddress(m_KernelSpace.m_PhysicalPML4) + 0x800),
          0x800);
 }
@@ -948,7 +948,7 @@ bool X64VirtualAddressSpace::conditionalTableEntryAllocation(uint64_t *tableEntr
     *tableEntry = page | flags;
 
     // Zero the page directory pointer table
-    memset(physicalAddress(reinterpret_cast<void*>(page)),
+    ByteSet(physicalAddress(reinterpret_cast<void*>(page)),
            0,
            PhysicalMemoryManager::getPageSize());
   }
@@ -975,7 +975,7 @@ bool X64VirtualAddressSpace::conditionalTableEntryMapping(uint64_t *tableEntry,
     *tableEntry = physAddress | ((flags & ~(PAGE_GLOBAL | PAGE_NX | PAGE_SWAPPED | PAGE_COPY_ON_WRITE)) | PAGE_WRITE | PAGE_USER);
 
     // Zero the page directory pointer table
-    memset(physicalAddress(reinterpret_cast<void*>(physAddress)),
+    ByteSet(physicalAddress(reinterpret_cast<void*>(physAddress)),
            0,
            PhysicalMemoryManager::getPageSize());
 

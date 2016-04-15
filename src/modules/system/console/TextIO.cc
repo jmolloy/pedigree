@@ -67,8 +67,8 @@ bool TextIO::initialise(bool bClear)
     m_LeftMargin = m_RightMargin = 0;
     m_SavedCursorX = m_SavedCursorY = 0;
     m_CurrentModes = 0;
-    memset(m_Params, 0, sizeof(size_t) * MAX_TEXTIO_PARAMS);
-    memset(m_TabStops, 0, BACKBUFFER_STRIDE);
+    ByteSet(m_Params, 0, sizeof(size_t) * MAX_TEXTIO_PARAMS);
+    ByteSet(m_TabStops, 0, BACKBUFFER_STRIDE);
 
     m_pVga = Machine::instance().getVga(0);
     if(m_pVga)
@@ -79,8 +79,8 @@ bool TextIO::initialise(bool bClear)
         {
             if(bClear)
             {
-                memset(m_pFramebuffer, 0, m_pVga->getNumRows() * m_pVga->getNumCols() * sizeof(uint16_t));
-                memset(m_pBackbuffer, 0, BACKBUFFER_STRIDE * BACKBUFFER_ROWS * sizeof(VgaCell));
+                ByteSet(m_pFramebuffer, 0, m_pVga->getNumRows() * m_pVga->getNumCols() * sizeof(uint16_t));
+                ByteSet(m_pBackbuffer, 0, BACKBUFFER_STRIDE * BACKBUFFER_ROWS * sizeof(VgaCell));
             }
 
             m_bInitialised = true;
@@ -407,7 +407,7 @@ void TextIO::write(const char *s, size_t len)
                         // We mosly support the 'Advanced Video Option'.
                         // (apart from underline/blink)
                         const char *attribs = "\e[?1;2c";
-                        m_OutBuffer.write(const_cast<char *>(attribs), strlen(attribs));
+                        m_OutBuffer.write(const_cast<char *>(attribs), StringLength(attribs));
                     }
                     m_bControlSeq = false;
                     break;
@@ -417,7 +417,7 @@ void TextIO::write(const char *s, size_t len)
                     {
                         if(m_Params[0] == 3)
                         {
-                            memset(m_TabStops, 0, BACKBUFFER_STRIDE);
+                            ByteSet(m_TabStops, 0, BACKBUFFER_STRIDE);
                         }
                     }
                     else
@@ -670,7 +670,7 @@ void TextIO::write(const char *s, size_t len)
                             {
                                 // Report ready with no malfunctions detected.
                                 const char *status = "\e[0n";
-                                m_OutBuffer.write(const_cast<char *>(status), strlen(status));
+                                m_OutBuffer.write(const_cast<char *>(status), StringLength(status));
                             }
                             break;
                         case 6:
@@ -793,7 +793,7 @@ void TextIO::write(const char *s, size_t len)
                             termparms = "\e[3;1;1;120;120;1;0x";
                         else
                             termparms = "\e[2;1;1;120;120;1;0x";
-                        m_OutBuffer.write(const_cast<char *>(termparms), strlen(termparms));
+                        m_OutBuffer.write(const_cast<char *>(termparms), StringLength(termparms));
                     }
                     m_bControlSeq = false;
                     break;
@@ -916,7 +916,7 @@ void TextIO::write(const char *s, size_t len)
                             identifier = "\e[?1;2c";
                         else
                             identifier = "\e/Z";
-                        m_OutBuffer.write(const_cast<char *>(identifier), strlen(identifier));
+                        m_OutBuffer.write(const_cast<char *>(identifier), StringLength(identifier));
                     }
                     m_bControlSeq = false;
                     break;
@@ -1025,7 +1025,7 @@ void TextIO::write(const char *s, size_t len)
                 m_bParenthesis = false;
                 m_bQuestionMark = true;
                 m_CurrentParam = 0;
-                memset(m_Params, 0, sizeof(size_t) * MAX_TEXTIO_PARAMS);
+                ByteSet(m_Params, 0, sizeof(size_t) * MAX_TEXTIO_PARAMS);
             }
             else
             {
@@ -1035,7 +1035,7 @@ void TextIO::write(const char *s, size_t len)
                         {
                             // Reply with our answerback.
                             const char *answerback = "\e[1;2c";
-                            m_OutBuffer.write(const_cast<char *>(answerback), strlen(answerback));
+                            m_OutBuffer.write(const_cast<char *>(answerback), StringLength(answerback));
                         }
                         break;
                     case 0x08:
@@ -1250,7 +1250,7 @@ void TextIO::checkScroll()
         size_t sourceEnd = m_ScrollEnd + 1 - numRows;
 
         // Move data.
-        memmove(&m_pBackbuffer[destRow * BACKBUFFER_STRIDE],
+        MemoryCopy(&m_pBackbuffer[destRow * BACKBUFFER_STRIDE],
                 &m_pBackbuffer[sourceRow * BACKBUFFER_STRIDE],
                 (sourceEnd - sourceRow) * BACKBUFFER_STRIDE * sizeof(VgaCell));
 
@@ -1288,7 +1288,7 @@ void TextIO::checkScroll()
         // How much blanking do we need to do?
         size_t blankLength = ((m_ScrollEnd + 1) * BACKBUFFER_STRIDE) - blankFrom;
 
-        memmove(&m_pBackbuffer[startOffset],
+        MemoryCopy(&m_pBackbuffer[startOffset],
                 &m_pBackbuffer[fromOffset],
                 movedRows * sizeof(VgaCell));
         for(size_t i = 0; i < blankLength; ++i)

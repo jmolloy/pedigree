@@ -60,7 +60,7 @@ static int getCommandMatchingPrefix(char *prefix, DebuggerCommand **pCommands, s
 {
   for (size_t i = start; i < nCmds; i++)
   {
-    if (!strncmp(pCommands[i]->getString(), prefix, strlen(prefix)))
+    if (!StringCompareN(pCommands[i]->getString(), prefix, StringLength(prefix)))
       return i;
   }
   return -1;
@@ -70,10 +70,10 @@ static int getCommandMatchingPrefix(char *prefix, DebuggerCommand **pCommands, s
 /// so that on return, it contains the parameters to that command (everything after the first space).
 static bool matchesCommand(char *pStr, DebuggerCommand *pCommand)
 {
-  if (!strncmp(pCommand->getString(), pStr, strlen(pCommand->getString())))
+  if (!StringCompareN(pCommand->getString(), pStr, StringLength(pCommand->getString())))
   {
-    size_t n = strlen(pCommand->getString());
-    memcpy(pStr, pStr+n+1, strlen(pStr)-n);
+    size_t n = StringLength(pCommand->getString());
+    MemoryCopy(pStr, pStr+n+1, StringLength(pStr)-n);
     return true;
   }
   else
@@ -112,7 +112,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   
   // Drop out of whatever graphics mode we were in
   GraphicsService::GraphicsProvider provider;
-  memset(&provider, 0, sizeof(provider));
+  ByteSet(&provider, 0, sizeof(provider));
   provider.bTextModes = true;
   
   ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(graphicsService);

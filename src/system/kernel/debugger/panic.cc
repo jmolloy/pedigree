@@ -120,7 +120,7 @@ void panic( const char* msg )
 
   // Drop out of whatever graphics mode we were in
   GraphicsService::GraphicsProvider provider;
-  memset(&provider, 0, sizeof(provider));
+  ByteSet(&provider, 0, sizeof(provider));
   provider.bTextModes = true;
   
   ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(graphicsService);

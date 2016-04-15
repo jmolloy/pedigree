@@ -178,10 +178,10 @@ bool HostedTimer::initialise()
 {
     synchronise();
 
-    memset(m_Handlers, 0, sizeof(TimerHandler*) * MAX_TIMER_HANDLERS);
+    ByteSet(m_Handlers, 0, sizeof(TimerHandler*) * MAX_TIMER_HANDLERS);
 
     struct sigevent sv;
-    memset(&sv, 0, sizeof(sv));
+    ByteSet(&sv, 0, sizeof(sv));
     sv.sigev_notify = SIGEV_SIGNAL;
     sv.sigev_signo = SIGUSR1;
     sv.sigev_value.sival_ptr = this;
@@ -193,7 +193,7 @@ bool HostedTimer::initialise()
     }
 
     struct itimerspec interval;
-    memset(&interval, 0, sizeof(interval));
+    ByteSet(&interval, 0, sizeof(interval));
     interval.it_interval.tv_nsec = INTERVAL;
     interval.it_value.tv_nsec = INTERVAL;
     r = timer_settime(m_Timer, 0, &interval, 0);

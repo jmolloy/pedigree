@@ -60,11 +60,11 @@ class PosixTerminalEvent : public Event
         {
             size_t eventNumber = EventNumbers::TerminalEvent;
             size_t offset = 0;
-            memcpy(pBuffer + offset, &eventNumber, sizeof(eventNumber));
+            MemoryCopy(pBuffer + offset, &eventNumber, sizeof(eventNumber));
             offset += sizeof(eventNumber);
-            memcpy(pBuffer + offset, &pGroup, sizeof(pGroup));
+            MemoryCopy(pBuffer + offset, &pGroup, sizeof(pGroup));
             offset += sizeof(pGroup);
-            memcpy(pBuffer + offset, &pConsole, sizeof(pConsole));
+            MemoryCopy(pBuffer + offset, &pConsole, sizeof(pConsole));
             offset += sizeof(pConsole);
             return offset;
         }
@@ -75,9 +75,9 @@ class PosixTerminalEvent : public Event
             if(Event::getEventType(pBuffer) != EventNumbers::TerminalEvent)
                 return false;
             size_t offset = sizeof(size_t);
-            memcpy(&t.pGroup, pBuffer + offset, sizeof(t.pGroup));
+            MemoryCopy(&t.pGroup, pBuffer + offset, sizeof(t.pGroup));
             offset += sizeof(t.pGroup);
-            memcpy(&t.pConsole, pBuffer + offset, sizeof(t.pConsole));
+            MemoryCopy(&t.pConsole, pBuffer + offset, sizeof(t.pConsole));
             return true;
         }
 
@@ -375,7 +375,7 @@ int console_ptsname(int fd, char *buf)
     return -1;
   }
 
-  sprintf(buf, "/dev/%s", static_cast<const char *>(slave->getName()));
+  StringFormat(buf, "/dev/%s", static_cast<const char *>(slave->getName()));
   return 0;
 }
 
@@ -413,7 +413,7 @@ int console_ttyname(int fd, char *buf)
   }
 
   File *tty = pFd->file;
-  sprintf(buf, "/dev/%s", static_cast<const char *>(tty->getName()));
+  StringFormat(buf, "/dev/%s", static_cast<const char *>(tty->getName()));
   return 0;
 }
 

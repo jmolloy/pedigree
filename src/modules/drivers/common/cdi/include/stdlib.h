@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -30,8 +29,8 @@ extern "C" {
 extern void* malloc(size_t size);
 extern void free(void* ptr);
 
-extern void *memset(void *s, int c, size_t n);
-void *memcpy(void *s1, const void *s2, size_t n);
+extern void *ByteSet(void *s, int c, size_t n);
+void *MemoryCopy(void *s1, const void *s2, size_t n);
 
 #ifdef __cplusplus
 }; // extern "C"

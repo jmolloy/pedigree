@@ -140,7 +140,7 @@ void X86GdtManager::setTssDescriptor(size_t index, uint32_t base)
 }
 void X86GdtManager::initialiseTss(X86TaskStateSegment *pTss)
 {
-  memset( reinterpret_cast<void*> (pTss), 0, sizeof(X86TaskStateSegment) );
+  ByteSet( reinterpret_cast<void*> (pTss), 0, sizeof(X86TaskStateSegment) );
   pTss->ss0 = 0x10;
 }
 
@@ -157,7 +157,7 @@ void X86GdtManager::initialiseDoubleFaultTss(X86TaskStateSegment *pTss)
     extern uintptr_t interrupt_handler_array[];
     extern void start();
 
-    memset( reinterpret_cast<void*> (pTss), 0, sizeof(X86TaskStateSegment) );
+    ByteSet( reinterpret_cast<void*> (pTss), 0, sizeof(X86TaskStateSegment) );
 
     // Stack - set to the statically allocated stack (mapped later)
     pTss->ss0 = pTss->ss = 0x10;

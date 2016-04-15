@@ -91,7 +91,7 @@ void HostedVga::pokeBuffer (uint8_t *pBuffer, size_t nBufLen)
     if (nBufLen > thisLen)
         nBufLen = thisLen;
 
-    memcpy(m_pBackbuffer, pBuffer, nBufLen);
+    MemoryCopy(m_pBackbuffer, pBuffer, nBufLen);
 
     size_t savedCursorX = m_CursorX;
     size_t savedCursorY = m_CursorY;
@@ -122,7 +122,7 @@ void HostedVga::peekBuffer (uint8_t *pBuffer, size_t nBufLen)
     size_t thisLen = (m_nWidth * m_nWidth * 2);
     if (nBufLen > thisLen)
         nBufLen = thisLen;
-    memcpy(pBuffer, m_pBackbuffer, nBufLen);
+    MemoryCopy(pBuffer, m_pBackbuffer, nBufLen);
 }
 
 void HostedVga::moveCursor (size_t nX, size_t nY)

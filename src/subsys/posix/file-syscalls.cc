@@ -87,7 +87,7 @@ inline File *traverseSymlink(File *file)
 void normalisePath(String &nameToOpen, const char *name, bool *onDevFs)
 {
     // Rebase /dev onto the devfs. /dev/tty is special.
-    if (!strcmp(name, "/dev/tty"))
+    if (!StringCompare(name, "/dev/tty"))
     {
         // Get controlling console, unless we have none.
         Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -99,39 +99,39 @@ void normalisePath(String &nameToOpen, const char *name, bool *onDevFs)
 
         nameToOpen = name;
     }
-    else if (!strncmp(name, "/dev", strlen("/dev")))
+    else if (!StringCompareN(name, "/dev", StringLength("/dev")))
     {
         nameToOpen = "dev»";
-        nameToOpen += (name + strlen("/dev"));
+        nameToOpen += (name + StringLength("/dev"));
         if (onDevFs)
             *onDevFs = true;
     }
-    else if (!strncmp(name, "/bin", strlen("/bin")))
+    else if (!StringCompareN(name, "/bin", StringLength("/bin")))
     {
         nameToOpen = "/applications";
-        nameToOpen += (name + strlen("/bin"));
+        nameToOpen += (name + StringLength("/bin"));
     }
-    else if (!strncmp(name, "/etc", strlen("/etc")))
+    else if (!StringCompareN(name, "/etc", StringLength("/etc")))
     {
         nameToOpen = "/config";
-        nameToOpen += (name + strlen("/etc"));
+        nameToOpen += (name + StringLength("/etc"));
     }
-    else if (!strncmp(name, "/tmp", strlen("/tmp")))
+    else if (!StringCompareN(name, "/tmp", StringLength("/tmp")))
     {
         nameToOpen = "scratch»";
-        nameToOpen += (name + strlen("/tmp"));
+        nameToOpen += (name + StringLength("/tmp"));
     }
-    else if (!strncmp(name, "/var/run", strlen("/var/run")))
+    else if (!StringCompareN(name, "/var/run", StringLength("/var/run")))
     {
         nameToOpen = "runtime»";
-        nameToOpen += (name + strlen("/var/run"));
+        nameToOpen += (name + StringLength("/var/run"));
     }
-    else if (!strncmp(name, "/@/", strlen("/@/")))
+    else if (!StringCompareN(name, "/@/", StringLength("/@/")))
     {
         // Absolute UNIX paths for POSIX stupidity.
         // /@/path/to/foo = /path/to/foo
         // /@/root»/applications = root»/applications
-        nameToOpen = (name + strlen("/@/"));
+        nameToOpen = (name + StringLength("/@/"));
     }
     else
     {
@@ -588,7 +588,7 @@ int posix_realpath(const char *path, char *buf, size_t bufsize)
 
     // File is good, copy it now.
     F_NOTICE("  -> returning " << actualPath);
-    strncpy(buf, static_cast<const char *>(actualPath), bufsize);
+    StringCopyN(buf, static_cast<const char *>(actualPath), bufsize);
 
     return 0;
 }
@@ -732,7 +732,7 @@ char* posix_getcwd(char* buf, size_t maxlen)
     size_t maxLength = str.length();
     if(maxLength > maxlen)
         maxLength = maxlen;
-    strncpy(buf, static_cast<const char*>(str), maxlen);
+    StringCopyN(buf, static_cast<const char*>(str), maxlen);
 
     F_NOTICE(" -> " << str);
 
@@ -786,7 +786,7 @@ int posix_stat(const char *name, struct stat *st)
     }
 
     int mode = 0;
-    if (ConsoleManager::instance().isConsole(file) || !strcmp(name, "/dev/null"))
+    if (ConsoleManager::instance().isConsole(file) || !StringCompare(name, "/dev/null"))
     {
         mode = S_IFCHR;
     }
@@ -800,7 +800,7 @@ int posix_stat(const char *name, struct stat *st)
     }
 
     // Clear any cruft in the stat structure before we fill it.
-    memset(st, 0, sizeof(*st));
+    ByteSet(st, 0, sizeof(*st));
 
     uint32_t permissions = file->getPermissions();
     if (permissions & FILE_UR) mode |= S_IRUSR;
@@ -882,7 +882,7 @@ int posix_fstat(int fd, struct stat *st)
     }
 
     // Clear any cruft in the stat structure before we fill it.
-    memset(st, 0, sizeof(*st));
+    ByteSet(st, 0, sizeof(*st));
 
     uint32_t permissions = pFd->file->getPermissions();
     if (permissions & FILE_UR) mode |= S_IRUSR;
@@ -966,7 +966,7 @@ int posix_lstat(char *name, struct stat *st)
     }
 
     // Clear any cruft in the stat structure before we fill it.
-    memset(st, 0, sizeof(*st));
+    ByteSet(st, 0, sizeof(*st));
 
     uint32_t permissions = file->getPermissions();
     if (permissions & FILE_UR) mode |= S_IRUSR;
@@ -1050,7 +1050,7 @@ int posix_opendir(const char *dir, DIR *ent)
 
     // Fill out the DIR structure too.
     Directory *pDirectory = Directory::fromFile(file);
-    memset(ent, 0, sizeof(*ent));
+    ByteSet(ent, 0, sizeof(*ent));
     ent->fd = fd;
     ent->count = pDirectory->getNumChildren();
 
@@ -1063,7 +1063,7 @@ int posix_opendir(const char *dir, DIR *ent)
         // readdir does a SYSCALL_ERROR when it fails
         F_NOTICE(" -> readdir failed...");
         pSubsystem->freeFd(fd);
-        memset(ent, 0xFF, sizeof(*ent));
+        ByteSet(ent, 0xFF, sizeof(*ent));
         return -1;
     }
 
@@ -1135,7 +1135,7 @@ int posix_readdir(DIR *dir)
             dir->ent[i].d_ino = 0x7fff; // Signed, don't want this to turn negative
 
         // Copy filename.
-        strncpy(dir->ent[i].d_name, static_cast<const char *>(pFile->getName()), MAXNAMLEN);
+        StringCopyN(dir->ent[i].d_name, static_cast<const char *>(pFile->getName()), MAXNAMLEN);
         if(pFile->isSymlink())
             dir->ent[i].d_type = DT_LNK;
         else
@@ -1900,7 +1900,7 @@ int posix_ftruncate(int a, off_t b)
         NOTICE("Extending by " << numExtraBytes << " bytes");
         uint8_t *nullBuffer = new uint8_t[numExtraBytes];
         NOTICE("Got the buffer");
-        memset(nullBuffer, 0, numExtraBytes);
+        ByteSet(nullBuffer, 0, numExtraBytes);
         NOTICE("Zeroed the buffer");
         pFile->write(currSize, numExtraBytes, reinterpret_cast<uintptr_t>(nullBuffer));
         NOTICE("Deleting the buffer");
@@ -1983,8 +1983,8 @@ int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
                 else
                     info = "no disk";
                 
-                strcpy(mount_buf, static_cast<const char *>(mount));
-                strcpy(info_buf, static_cast<const char *>(info));
+                StringCopy(mount_buf, static_cast<const char *>(mount));
+                StringCopy(info_buf, static_cast<const char *>(info));
                 
                 return 0;
             }
@@ -2266,15 +2266,15 @@ int statvfs_doer(Filesystem *pFs, struct statvfs *buf)
     buf->f_namemax = VFS_MNAMELEN;
     
     // FS type
-    strcpy(buf->f_fstypename, "ext2");
+    StringCopy(buf->f_fstypename, "ext2");
     
     // "From" point
     /// \todo Disk device hash + path (on raw filesystem maybe?)
-    strcpy(buf->f_mntfromname, "from");
+    StringCopy(buf->f_mntfromname, "from");
     
     // "To" point
     /// \todo What to put here?
-    strcpy(buf->f_mntfromname, "to");
+    StringCopy(buf->f_mntfromname, "to");
     
     return 0;
 }

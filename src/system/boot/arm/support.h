@@ -30,10 +30,10 @@ typedef unsigned int size_t;
 extern "C"
 {
 
-int strncpy(char *dest, const char *src, int len);
-int memset(void *buf, int c, size_t len);
-void memcpy(void *dest, const void *src, size_t len);
-int strcmp(const char *p1, const char *p2);
+int StringCopyN(char *dest, const char *src, int len);
+int ByteSet(void *buf, int c, size_t len);
+void MemoryCopy(void *dest, const void *src, size_t len);
+int StringCompare(const char *p1, const char *p2);
 
 }
 

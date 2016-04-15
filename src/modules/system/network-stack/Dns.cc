@@ -132,7 +132,7 @@ void Dns::mainThread()
 {
   uint8_t* buff = new uint8_t[1024];
   uintptr_t buffLoc = reinterpret_cast<uintptr_t>(buff);
-  memset(buff, 0, 1024);
+  ByteSet(buff, 0, 1024);
 
   IpAddress addr(Network::convertToIpv4(0, 0, 0, 0));
   ConnectionlessEndpoint* e = m_Endpoint;
@@ -340,7 +340,7 @@ int Dns::hostToIp(String hostname, HostInfo& ret, Network* pCard)
     /// \todo Rewrite DNS cache mechanism
     /*for(List<DnsEntry*>::Iterator it = m_DnsCache.begin(); it!= m_DnsCache.end(); it++)
     {
-        if(!strcmp(static_cast<const char*>((*it)->hostname), static_cast<const char*>(hostname)))
+        if(!StringCompare(static_cast<const char*>((*it)->hostname), static_cast<const char*>(hostname)))
         {
             nIps = (*it)->numIps;
             return (*it)->ip;
@@ -357,7 +357,7 @@ int Dns::hostToIp(String hostname, HostInfo& ret, Network* pCard)
 
     uint8_t* buff = new uint8_t[1024];
     uintptr_t buffLoc = reinterpret_cast<uintptr_t>(buff);
-    memset(buff, 0, 1024);
+    ByteSet(buff, 0, 1024);
 
     // Setup the DNS message header
     DnsHeader* head = reinterpret_cast<DnsHeader*>(buffLoc);
@@ -368,7 +368,7 @@ int Dns::hostToIp(String hostname, HostInfo& ret, Network* pCard)
     // Build the modified hostname
     size_t len = hostname.length() + 1;
     char* host = new char[len];
-    memset(host, 0, len);
+    ByteSet(host, 0, len);
 
     size_t top = hostname.length();
     size_t prevSize = 0;
@@ -387,7 +387,7 @@ int Dns::hostToIp(String hostname, HostInfo& ret, Network* pCard)
     }
     host[0] = prevSize;
 
-    memcpy(reinterpret_cast<char*>(buffLoc + sizeof(DnsHeader)), host, len);
+    MemoryCopy(reinterpret_cast<char*>(buffLoc + sizeof(DnsHeader)), host, len);
 
     delete [] host;
 

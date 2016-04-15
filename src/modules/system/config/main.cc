@@ -45,7 +45,7 @@ extern "C" void log_(unsigned long a)
 
 extern "C" int atoi(const char *str)
 {
-    return pedigree_strtoul(str, 0, 10);
+    return StringToUnsignedLong(str, 0, 10);
 }
 
 int xClose(sqlite3_file *file)
@@ -60,17 +60,17 @@ int xRead(sqlite3_file *file, void *ptr, int iAmt, sqlite3_int64 iOfst)
     {
         if(static_cast<size_t>(iAmt) > g_FileSz)
             iAmt = g_FileSz;
-        memset(ptr, 0, iAmt);
+        ByteSet(ptr, 0, iAmt);
         iAmt = g_FileSz - iOfst;
         ret = SQLITE_IOERR_SHORT_READ;
     }
-    memcpy(ptr, &g_pFile[iOfst], iAmt);
+    MemoryCopy(ptr, &g_pFile[iOfst], iAmt);
     return ret;
 }
 
 int xReadFail(sqlite3_file *file, void *ptr, int iAmt, sqlite3_int64 iOfst)
 {
-    memset(ptr, 0, iAmt);
+    ByteSet(ptr, 0, iAmt);
     return SQLITE_IOERR_SHORT_READ;
 }
 
@@ -84,8 +84,8 @@ int xWrite(sqlite3_file *file, const void *ptr, int iAmt, sqlite3_int64 iOfst)
 
         // Allocate it, zero, and copy
         uint8_t *tmp = new uint8_t[nNewSize];
-        memset(tmp, 0, nNewSize - 1);
-        memcpy(tmp, g_pFile, g_FileSz);
+        ByteSet(tmp, 0, nNewSize - 1);
+        MemoryCopy(tmp, g_pFile, g_FileSz);
         
         delete [] g_pFile;
         
@@ -93,7 +93,7 @@ int xWrite(sqlite3_file *file, const void *ptr, int iAmt, sqlite3_int64 iOfst)
         g_FileSz = nNewSize - 1;
     }
 
-    memcpy(&g_pFile[iOfst], ptr, iAmt);
+    MemoryCopy(&g_pFile[iOfst], ptr, iAmt);
     return 0;
 }
 
@@ -186,7 +186,7 @@ static struct sqlite3_io_methods theio_fail =
 
 int xOpen(sqlite3_vfs *vfs, const char *zName, sqlite3_file *file, int flags, int *pOutFlags)
 {
-    if (strcmp(zName, "root»/.pedigree-root"))
+    if (StringCompare(zName, "root»/.pedigree-root"))
     {
         // Assume journal file, return failure functions.
         file->pMethods = &theio_fail;
@@ -214,7 +214,7 @@ int xAccess(sqlite3_vfs *vfs, const char *zName, int flags, int *pResOut)
 
 int xFullPathname(sqlite3_vfs *vfs, const char *zName, int nOut, char *zOut)
 {
-    strncpy(zOut, zName, nOut);
+    StringCopyN(zOut, zName, nOut);
     return 0;
 }
 
@@ -300,7 +300,7 @@ void xCallback0(sqlite3_context *context, int n, sqlite3_value **values)
     uintptr_t x;
     if (text[0] == '0')
     {
-        x = pedigree_strtoul(reinterpret_cast<const char*>(text), 0, 16);
+        x = StringToUnsignedLong(reinterpret_cast<const char*>(text), 0, 16);
     }
     else
     {
@@ -326,7 +326,7 @@ void xCallback1(sqlite3_context *context, int n, sqlite3_value **values)
     uintptr_t x;
     if (text[0] == '0')
     {
-        x = pedigree_strtoul(text, 0, 16);
+        x = StringToUnsignedLong(text, 0, 16);
     }
     else
     {
@@ -352,7 +352,7 @@ void xCallback2(sqlite3_context *context, int n, sqlite3_value **values)
     uintptr_t x;
     if (text[0] == '0')
     {
-        x = pedigree_strtoul(text, 0, 16);
+        x = StringToUnsignedLong(text, 0, 16);
     }
     else
     {
@@ -389,7 +389,7 @@ static bool init()
 
 #ifdef HOSTED
     g_pFile = new uint8_t[sSize];
-    memcpy(g_pFile, pPhys, sSize);
+    MemoryCopy(g_pFile, pPhys, sSize);
     g_FileSz = sSize;
 #else
     MemoryRegion region("Config");
@@ -405,7 +405,7 @@ static bool init()
     }
 
     g_pFile = new uint8_t[sSize];
-    memcpy(g_pFile, region.virtualAddress(), sSize);
+    MemoryCopy(g_pFile, region.virtualAddress(), sSize);
     g_FileSz = sSize;
 #endif // HOSTED
 #else

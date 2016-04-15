@@ -102,7 +102,7 @@ void NetworkStack::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint
     pCard->droppedPacket();
     return;
   }
-  memcpy(safePacket, reinterpret_cast<void*>(packet), nBytes);
+  MemoryCopy(safePacket, reinterpret_cast<void*>(packet), nBytes);
   Packet *p = new Packet;
   p->buffer = reinterpret_cast<uintptr_t>(safePacket);
   p->packetLength = nBytes;

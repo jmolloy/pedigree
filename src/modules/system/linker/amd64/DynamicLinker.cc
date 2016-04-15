@@ -83,7 +83,7 @@ void DynamicLinker::initPlt(Elf *pElf, uintptr_t value)
 
     // Memcpy over the resolve function into the user address space.
     // resolveSymbol is an ASM function, defined in ./asm-amd64.s
-    memcpy(reinterpret_cast<uint8_t*> (resolveLocation), reinterpret_cast<uint8_t*> (&::resolveSymbol), 0x1000); /// \todo Page size here.
+    MemoryCopy(reinterpret_cast<uint8_t*> (resolveLocation), reinterpret_cast<uint8_t*> (&::resolveSymbol), 0x1000); /// \todo Page size here.
 
     *got = resolveLocation;
   }

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -119,7 +118,7 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
 
   // Add the UDP header to the packet.
   udpHeader* header = reinterpret_cast<udpHeader*>(packet);
-  memset(header, 0, sizeof(udpHeader));
+  ByteSet(header, 0, sizeof(udpHeader));
   header->src_port = HOST_TO_BIG16(srcPort);
   header->dest_port = HOST_TO_BIG16(destPort);
   header->len = HOST_TO_BIG16(sizeof(udpHeader) + nBytes);
@@ -127,7 +126,7 @@ bool Udp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, size_t nByte
 
   // Copy in the payload
   if(nBytes)
-    memcpy(reinterpret_cast<void*>(packet + sizeof(udpHeader)), reinterpret_cast<void*>(payload), nBytes);
+    MemoryCopy(reinterpret_cast<void*>(packet + sizeof(udpHeader)), reinterpret_cast<void*>(payload), nBytes);
 
   // Calculate the checksum
   header->checksum = pIp->ipChecksum(src, dest, IP_UDP, reinterpret_cast<uintptr_t>(header), sizeof(udpHeader) + nBytes);

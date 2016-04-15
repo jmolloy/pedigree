@@ -56,7 +56,7 @@ uintptr_t DiskImage::read(uint64_t location)
     }
 
     buffer = m_Cache.insert(location, getBlockSize());
-    memcpy(reinterpret_cast<void*>(buffer), adjust_pointer(m_pBase, location), getBlockSize());
+    MemoryCopy(reinterpret_cast<void*>(buffer), adjust_pointer(m_pBase, location), getBlockSize());
 
     return buffer + offset;
 }

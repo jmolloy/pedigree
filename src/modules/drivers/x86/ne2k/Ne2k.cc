@@ -226,7 +226,7 @@ void Ne2k::recv()
     // packet buffer
     uint8_t* tmp = reinterpret_cast<uint8_t*>(NetworkStack::instance().getMemPool().allocate());
     uint16_t* packBuffer = reinterpret_cast<uint16_t*>(tmp);
-    memset(tmp, 0, length);
+    ByteSet(tmp, 0, length);
 
     // check status, new read for the rest of the packet
     while(!(m_pBase->read8(NE_ISR) & 0x40));

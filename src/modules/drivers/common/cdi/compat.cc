@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -29,7 +28,7 @@ int printf(const char* fmt, ...)
     static char print_temp[1024];
     va_list argptr;
     va_start(argptr, fmt);
-    int ret = vsprintf(print_temp, fmt, argptr);
+    int ret = VStringFormat(print_temp, fmt, argptr);
     if(print_temp[ret - 1] == '\n')
         print_temp[--ret] = 0;
     NOTICE(print_temp);
@@ -41,16 +40,16 @@ int snprintf(char *s, size_t n, const char *fmt, ...)
 {
     va_list argptr;
     va_start(argptr, fmt);
-    int ret = vsprintf(s, fmt, argptr);
+    int ret = VStringFormat(s, fmt, argptr);
     va_end(argptr);
     return ret;
 }
 
-int sprintf(char *s, const char *fmt, ...)
+int StringFormat(char *s, const char *fmt, ...)
 {
     va_list argptr;
     va_start(argptr, fmt);
-    int ret = vsprintf(s, fmt, argptr);
+    int ret = VStringFormat(s, fmt, argptr);
     va_end(argptr);
     return ret;
 }
@@ -58,5 +57,5 @@ int sprintf(char *s, const char *fmt, ...)
 int puts(const char *s)
 {
     NOTICE(s);
-    return strlen(s);
+    return StringLength(s);
 }

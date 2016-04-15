@@ -64,7 +64,7 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
 
       // Save current page content
       static uint8_t buffer[0x1000]; // PhysicalMemoryManager::instance().getPageSize()];
-      memcpy(buffer, reinterpret_cast<uint8_t*>(page), PhysicalMemoryManager::instance().getPageSize());
+      MemoryCopy(buffer, reinterpret_cast<uint8_t*>(page), PhysicalMemoryManager::instance().getPageSize());
 
       // Now that we've saved the page content, we can make a new physical page and map it.
       physical_uintptr_t p = PhysicalMemoryManager::instance().allocatePage();
@@ -86,7 +86,7 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
       }
 
       // Restore the contents of the page to the new mapping.
-      memcpy(reinterpret_cast<uint8_t*>(page), buffer, PhysicalMemoryManager::instance().getPageSize());
+      MemoryCopy(reinterpret_cast<uint8_t*>(page), buffer, PhysicalMemoryManager::instance().getPageSize());
 
       // Clean up old reference to memory (may free the page, if we were the
       // last one to reference the CoW page)

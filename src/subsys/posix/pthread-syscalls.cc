@@ -366,7 +366,7 @@ void pedigree_init_pthreads()
     Processor::information().getVirtualAddressSpace().setFlags(
             reinterpret_cast<void*> (Event::getTrampoline()),
             VirtualAddressSpace::Write);
-    memcpy(reinterpret_cast<void*>(Event::getSecondaryTrampoline()), reinterpret_cast<void*>(pthread_stub), (reinterpret_cast<uintptr_t>(&pthread_stub_end) - reinterpret_cast<uintptr_t>(pthread_stub)));
+    MemoryCopy(reinterpret_cast<void*>(Event::getSecondaryTrampoline()), reinterpret_cast<void*>(pthread_stub), (reinterpret_cast<uintptr_t>(&pthread_stub_end) - reinterpret_cast<uintptr_t>(pthread_stub)));
     Processor::information().getVirtualAddressSpace().setFlags(
             reinterpret_cast<void*> (Event::getTrampoline()),
             VirtualAddressSpace::Execute | VirtualAddressSpace::Shared);

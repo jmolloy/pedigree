@@ -268,7 +268,7 @@ uint64_t NetManager::read(File *pFile, uint64_t location, uint64_t size, uintptr
         ///       However, to do that we need to tell recv not to remove from the queue
         ///       and instead peek at the message (in other words, we need flags)
         Endpoint::RemoteEndpoint remoteHost;
-        memset(&remoteHost, 0, sizeof(Endpoint::RemoteEndpoint));
+        ByteSet(&remoteHost, 0, sizeof(Endpoint::RemoteEndpoint));
         ret = ce->recv(buffer, size, bCanBlock, &remoteHost);
     }
     else

@@ -175,15 +175,15 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
             m_pSymbolTable = extend(reinterpret_cast<KernelElfSymbol_t*> (pSh->addr));
             m_nSymbolTableSize = pSh->size;
         }
-        else if (!strcmp(pStr, ".strtab"))
+        else if (!StringCompare(pStr, ".strtab"))
         {
             m_pStringTable = extend(reinterpret_cast<char*> (pSh->addr));
         }
-        else if (!strcmp(pStr, ".shstrtab"))
+        else if (!StringCompare(pStr, ".shstrtab"))
         {
             m_pShstrtab = extend(reinterpret_cast<char*> (pSh->addr));
         }
-        else if (!strcmp(pStr, ".debug_frame"))
+        else if (!StringCompare(pStr, ".debug_frame"))
         {
             m_pDebugTable = extend(reinterpret_cast<uint32_t*> (pSh->addr));
             m_nDebugTableSize = pSh->size;
@@ -243,7 +243,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
 #ifdef HOSTED
                 // If name starts with __wrap_, rewrite it in flight as it's
                 // a wrapped symbol on hosted systems.
-                if(!strncmp(pStr, "__wrap_", 7))
+                if(!StringCompareN(pStr, "__wrap_", 7))
                 {
                     pStr += 7;
                 }
@@ -317,8 +317,8 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
         }
         else
         {
-            memcpy(pDebug, m_pDebugTable, m_nDebugTableSize);
-            memcpy( pDebug + m_nDebugTableSize,
+            MemoryCopy(pDebug, m_pDebugTable, m_nDebugTableSize);
+            MemoryCopy( pDebug + m_nDebugTableSize,
                     reinterpret_cast<const void*>(module->elf.debugFrameTable()),
                     module->elf.debugFrameTableLength());
             m_nDebugTableSize+= module->elf.debugFrameTableLength();
@@ -463,7 +463,7 @@ void KernelElf::unloadModule(const char *name, bool silent, bool progress)
         it != m_LoadedModules.end();
         it++)
     {
-        if(!strcmp((*it)->name, name))
+        if(!StringCompare((*it)->name, name))
         {
             unloadModule(it, silent, progress);
             return;
@@ -567,7 +567,7 @@ bool KernelElf::moduleIsLoaded(char *name)
         it++)
     {
         Module *module = *it;
-        if(!strcmp(module->name, name))
+        if(!StringCompare(module->name, name))
             return true;
     }
     return false;
@@ -584,7 +584,7 @@ char *KernelElf::getDependingModule(char *name)
         int i = 0;
         while(module->depends[i])
         {
-            if(!strcmp(module->depends[i], name))
+            if(!StringCompare(module->depends[i], name))
                 return const_cast<char*>(module->name);
             i++;
         }
@@ -604,7 +604,7 @@ bool KernelElf::moduleDependenciesSatisfied(Module *module)
             bool found = false;
             for (size_t j = 0; j < m_LoadedModules.count(); ++j)
             {
-                if (!strcmp(m_LoadedModules[j]->name, module->depends_opt[i]))
+                if (!StringCompare(m_LoadedModules[j]->name, module->depends_opt[i]))
                 {
                     found = true;
                     break;
@@ -615,7 +615,7 @@ bool KernelElf::moduleDependenciesSatisfied(Module *module)
             {
                 for (size_t j = 0; j < m_FailedModules.count(); ++j)
                 {
-                    if (!strcmp(static_cast<const char *>(*m_FailedModules[j]), module->depends_opt[i]))
+                    if (!StringCompare(static_cast<const char *>(*m_FailedModules[j]), module->depends_opt[i]))
                     {
                         found = true;
                         break;
@@ -642,7 +642,7 @@ bool KernelElf::moduleDependenciesSatisfied(Module *module)
         bool found = false;
         for (size_t j = 0; j < m_LoadedModules.count(); j++)
         {
-            if (!strcmp(m_LoadedModules[j]->name, module->depends[i]))
+            if (!StringCompare(m_LoadedModules[j]->name, module->depends[i]))
             {
                 found = true;
                 break;

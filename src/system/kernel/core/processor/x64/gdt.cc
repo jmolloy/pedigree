@@ -122,7 +122,7 @@ void X64GdtManager::setTssDescriptor(size_t index, uint64_t base)
 }
 void X64GdtManager::initialiseTss(X64TaskStateSegment *pTss)
 {
-  memset( reinterpret_cast<void*> (pTss), 0, sizeof(X64TaskStateSegment) );
+  ByteSet( reinterpret_cast<void*> (pTss), 0, sizeof(X64TaskStateSegment) );
 
   pTss->ist[1] = reinterpret_cast<uint64_t>(g_SafeStack) + 8192;
 }

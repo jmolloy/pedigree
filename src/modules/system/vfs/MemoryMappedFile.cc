@@ -46,7 +46,7 @@ AnonymousMemoryMap::AnonymousMemoryMap(uintptr_t address, size_t length, MemoryM
 
         VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
         va.map(m_Zero, reinterpret_cast<void *>(address), VirtualAddressSpace::Write);
-        memset(reinterpret_cast<void *>(address), 0, PhysicalMemoryManager::getPageSize());
+        ByteSet(reinterpret_cast<void *>(address), 0, PhysicalMemoryManager::getPageSize());
         va.unmap(reinterpret_cast<void *>(address));
     }
 }
@@ -285,7 +285,7 @@ bool AnonymousMemoryMap::trap(uintptr_t address, bool bWrite)
         physical_uintptr_t newPage = PhysicalMemoryManager::instance().allocatePage();
         if(!va.map(newPage, reinterpret_cast<void *>(address), VirtualAddressSpace::Write | extraFlags))
             ERROR("map() failed in AnonymousMemoryMap::trap() - write");
-        memset(reinterpret_cast<void *>(address), 0, PhysicalMemoryManager::getPageSize());
+        ByteSet(reinterpret_cast<void *>(address), 0, PhysicalMemoryManager::getPageSize());
     }
 
     return true;
@@ -711,7 +711,7 @@ bool MemoryMappedFile::trap(uintptr_t address, bool bWrite)
         if(nRead < pageSz)
         {
             // Couldn't quite read in a page - zero out what's left.
-            memset(reinterpret_cast<void *>(address + nRead), 0, pageSz - nRead - 1);
+            ByteSet(reinterpret_cast<void *>(address + nRead), 0, pageSz - nRead - 1);
         }
 
         m_Mappings.insert(address, newPhys);

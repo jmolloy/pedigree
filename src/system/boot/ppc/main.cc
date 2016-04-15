@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -24,7 +23,7 @@
 #include "autogen_initrd.h"
 #include "Vga.h"
 
-extern int memset(void *buf, int c, size_t len);
+extern int ByteSet(void *buf, int c, size_t len);
 struct BootstrapStruct_t
 {
   int (*prom)(struct anon*);
@@ -99,7 +98,7 @@ extern "C" void _start(unsigned long r3, unsigned long r4, unsigned long r5)
   
   struct BootstrapStruct_t bs;
 
-  memset(&bs, 0, sizeof(bs));
+  ByteSet(&bs, 0, sizeof(bs));
   bs.shndx = elf.m_pHeader->shstrndx;
   bs.num = elf.m_pHeader->shnum;
   bs.size = elf.m_pHeader->shentsize;

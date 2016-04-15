@@ -115,7 +115,7 @@ void *VirtualAddressSpace::expandHeap(ssize_t incr, size_t flags)
           else
           {
               // Empty the page.
-              memset(m_HeapEnd, 0, PhysicalMemoryManager::getPageSize());
+              ByteSet(m_HeapEnd, 0, PhysicalMemoryManager::getPageSize());
           }
 
           // Go to the next address

@@ -139,17 +139,17 @@ void X86Vga::pokeBuffer (uint8_t *pBuffer, size_t nBufLen)
   if (!pBuffer)
     return;
   if (m_Framebuffer == true)
-    memcpy(m_Framebuffer.virtualAddress(), pBuffer, nBufLen);
+    MemoryCopy(m_Framebuffer.virtualAddress(), pBuffer, nBufLen);
   else
-    memcpy(m_pFramebuffer, pBuffer, nBufLen);
+    MemoryCopy(m_pFramebuffer, pBuffer, nBufLen);
 }
 
 void X86Vga::peekBuffer (uint8_t *pBuffer, size_t nBufLen)
 {
   if (m_Framebuffer == true)
-    memcpy(pBuffer, m_Framebuffer.virtualAddress(), nBufLen);
+    MemoryCopy(pBuffer, m_Framebuffer.virtualAddress(), nBufLen);
   else
-    memcpy(pBuffer, m_pFramebuffer, nBufLen);
+    MemoryCopy(pBuffer, m_pFramebuffer, nBufLen);
 }
 
 void X86Vga::moveCursor (size_t nX, size_t nY)

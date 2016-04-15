@@ -73,7 +73,7 @@ bool FatFilesystem::initialise(Disk *pDisk)
     // Attempt to read the superblock.
     uint8_t *buffer = reinterpret_cast<uint8_t*>(m_pDisk->read(0));
 
-    memcpy(reinterpret_cast<void*> (&m_Superblock), reinterpret_cast<void*> (buffer), sizeof(Superblock));
+    MemoryCopy(reinterpret_cast<void*> (&m_Superblock), reinterpret_cast<void*> (buffer), sizeof(Superblock));
 
     /** Validate the BPB and check for FAT FS */
     String devName;
@@ -108,8 +108,8 @@ bool FatFilesystem::initialise(Disk *pDisk)
     /** Start loading actual FS info */
 
     // load the 12/16/32 additional info structures (only one is actually VALID, but both are loaded nonetheless)
-    memcpy(reinterpret_cast<void*> (&m_Superblock16), reinterpret_cast<void*> (buffer + 36), sizeof(Superblock16));
-    memcpy(reinterpret_cast<void*> (&m_Superblock32), reinterpret_cast<void*> (buffer + 36), sizeof(Superblock32));
+    MemoryCopy(reinterpret_cast<void*> (&m_Superblock16), reinterpret_cast<void*> (buffer + 36), sizeof(Superblock16));
+    MemoryCopy(reinterpret_cast<void*> (&m_Superblock32), reinterpret_cast<void*> (buffer + 36), sizeof(Superblock32));
 
     // number of root directory sectors
     if (!m_Superblock.BPB_BytsPerSec) // we sanity check the value, because we divide by this later
@@ -363,7 +363,7 @@ uint64_t FatFilesystem::read(File *pFile, uint64_t location, uint64_t size, uint
         }
 
         // Perform the copy.
-        memcpy(&destBuffer[bytesRead], &tmpBuffer[currOffset], bytesToCopy);
+        MemoryCopy(&destBuffer[bytesRead], &tmpBuffer[currOffset], bytesToCopy);
         bytesRead += bytesToCopy;
 
         // Done?
@@ -564,7 +564,7 @@ uint64_t FatFilesystem::write(File *pFile, uint64_t location, uint64_t size, uin
             len = finalSize - bytesWritten;
 
         // The first write may be in the middle of a cluster, hence currOffset's use.
-        memcpy(&tmpBuffer[currOffset], &srcBuffer[bytesWritten], len);
+        MemoryCopy(&tmpBuffer[currOffset], &srcBuffer[bytesWritten], len);
         bytesWritten += len;
 
         // Write updated cluster to disk.
@@ -703,7 +703,7 @@ Dir* FatFilesystem::getDirectoryEntry(uint32_t clus, uint32_t offset)
 
     Dir* ent = reinterpret_cast<Dir*>(&dirBuffer[offset]);
     Dir* ret = new Dir;
-    memcpy(ret, ent, sizeof(Dir));
+    MemoryCopy(ret, ent, sizeof(Dir));
 
     delete [] dirBuffer;
 
@@ -722,7 +722,7 @@ void FatFilesystem::writeDirectoryEntry(Dir* dir, uint32_t clus, uint32_t offset
         return;
 
     Dir* ent = reinterpret_cast<Dir*>(&dirBuffer[offset]);
-    memcpy(ent, dir, sizeof(Dir));
+    MemoryCopy(ent, dir, sizeof(Dir));
 
     writeDirectoryPortion(clus, dirBuffer);
 
@@ -759,7 +759,7 @@ bool FatFilesystem::readSectorBlock(uint32_t sec, size_t size, uintptr_t buffer)
             (static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec) * static_cast<uint64_t>(sec)) + off);
         if(!buff)
             return false;
-        memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(buff),
+        MemoryCopy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(buff),
                sz);
         buffer += sz;
         size -= sz;
@@ -787,7 +787,7 @@ bool FatFilesystem::writeSectorBlock(uint32_t sec, size_t size, uintptr_t buffer
     {
         size_t sz = (size > 4096) ? 4096 : size;
         uintptr_t buff = m_pDisk->read(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(sec)+off);
-        memcpy(reinterpret_cast<void*>(buff), reinterpret_cast<void*>(buffer),
+        MemoryCopy(reinterpret_cast<void*>(buff), reinterpret_cast<void*>(buffer),
                sz);
         m_pDisk->write(static_cast<uint64_t>(m_Superblock.BPB_BytsPerSec)*static_cast<uint64_t>(sec)+off);
         buffer += sz;
@@ -1019,7 +1019,7 @@ String FatFilesystem::convertFilenameTo(String fn)
 {
     // Special dot & dotdot handling. Because periods are eaten by the algorithm, we need to
     // ensure that the dot and dotdot entries are returned with only padding.
-    if (!strcmp(static_cast<const char*>(fn), ".") || !strcmp(static_cast<const char*>(fn), ".."))
+    if (!StringCompare(static_cast<const char*>(fn), ".") || !StringCompare(static_cast<const char*>(fn), ".."))
     {
         NormalStaticString ret;
         ret = fn;
@@ -1289,7 +1289,7 @@ File *FatFilesystem::createFile(File *parentDir, String filename, uint32_t mask,
         pFile = new FatDirectory(filename, dirClus, this, parentDir, info);
 
         char *buffer = new char[m_BlockSize];
-        memset(buffer, 0, m_BlockSize);
+        ByteSet(buffer, 0, m_BlockSize);
 
         // Clean out the clusters for the directory before creating ./.. entries.
         uint32_t clus = dirClus;

@@ -43,10 +43,6 @@ build_env.Append(CPPPATH=header_paths)
 defines = [
     'HOSTED', 'VFS_NOMMU', 'VFS_STANDALONE', 'EXT2_STANDALONE',
     'UTILITY_LINUX', 'DEVICE_IGNORE_ADDRESSES', 'LITTLE_ENDIAN',
-    # On Pedigree, memcpy automatically determines if it should fall back to
-    # memmove for backwards copies - not so on other systems. So, just
-    # make memcpy the same as memmove.
-    'memcpy=memmove',
 ]
 
 build_env.Append(CPPDEFINES=defines)

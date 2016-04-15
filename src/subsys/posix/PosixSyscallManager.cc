@@ -274,7 +274,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             // it MUST trap before we get the log spinlock, else other things will
             // want to write to it and deadlock.
             static char buf[128];
-            strncpy(buf, reinterpret_cast<char*>(p1), 128);
+            StringCopyN(buf, reinterpret_cast<char*>(p1), 128);
             WARNING("Using stubbed function '" << buf << "'");
             return 0;
 

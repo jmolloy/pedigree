@@ -77,7 +77,7 @@ int Symlink::followLink(char *pBuffer, size_t bufLen)
     if (m_sTarget.length() < bufLen)
         bufLen = m_sTarget.length();
 
-    strncpy(pBuffer, static_cast<const char *>(m_sTarget), bufLen);
+    StringCopyN(pBuffer, static_cast<const char *>(m_sTarget), bufLen);
 
     if (bufLen < m_sTarget.length())
         pBuffer[bufLen] = '\0';

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -231,7 +230,7 @@ void PpcCommonPhysicalMemoryManager::PageStack::free(physical_uintptr_t physical
     physical_uintptr_t *oldStack = m_Stack;
     m_Stack = new physical_uintptr_t[m_StackMax];
     // Copy over the old stack
-    memcpy(reinterpret_cast<uint8_t*> (m_Stack),
+    MemoryCopy(reinterpret_cast<uint8_t*> (m_Stack),
            reinterpret_cast<uint8_t*> (oldStack), m_StackSize);
     // Free the old stack ... note that this will probably recurse into a call
     // to 'free'!

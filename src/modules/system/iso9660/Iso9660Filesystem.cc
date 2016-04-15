@@ -84,7 +84,7 @@ bool Iso9660Filesystem::initialise(Disk *pDisk)
 
     // Get the descriptor for this entry
     Iso9660VolumeDescriptor *vDesc = reinterpret_cast<Iso9660VolumeDescriptor*>(buff);
-    if(strncmp(reinterpret_cast<const char*>(vDesc->Ident), "CD001", 5) != 0)
+    if(StringCompareN(reinterpret_cast<const char*>(vDesc->Ident), "CD001", 5) != 0)
     {
       NOTICE("IDENT: " << reinterpret_cast<const char*>(vDesc->Ident));
       return false;
@@ -93,12 +93,12 @@ bool Iso9660Filesystem::initialise(Disk *pDisk)
     // Is this a primary descriptor?
     if(vDesc->Type == PRIM_VOL_DESC)
     {
-      memcpy(&m_PrimaryVolDesc, reinterpret_cast<uint8_t*>(buff), sizeof(Iso9660VolumeDescriptorPrimary));
+      MemoryCopy(&m_PrimaryVolDesc, reinterpret_cast<uint8_t*>(buff), sizeof(Iso9660VolumeDescriptorPrimary));
       bFound = true;
     }
     else if(vDesc->Type == SUPP_VOL_DESC)
     {
-      memcpy(&m_SuppVolDesc, reinterpret_cast<uint8_t*>(buff), sizeof(Iso9660VolumeDescriptorPrimary));
+      MemoryCopy(&m_SuppVolDesc, reinterpret_cast<uint8_t*>(buff), sizeof(Iso9660VolumeDescriptorPrimary));
       bFound = true;
 
       // Figure out the Joliet level
@@ -134,7 +134,7 @@ bool Iso9660Filesystem::initialise(Disk *pDisk)
 
   // Grab the volume label, properly trimmed
   char *volLabel = new char[32];
-  memcpy(volLabel, m_PrimaryVolDesc.VolIdent, 32);
+  MemoryCopy(volLabel, m_PrimaryVolDesc.VolIdent, 32);
   if(m_JolietLevel)
   {
     String volLabelString = WideToMultiByteStr(reinterpret_cast<uint8_t*>(volLabel), 32, 32);

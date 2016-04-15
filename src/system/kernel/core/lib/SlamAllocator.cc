@@ -194,7 +194,7 @@ void SlamCache::initialise(size_t objectSize)
         m_PartialLists[i] = tagged(&m_EmptyNode);
 
     // Make the empty node loop always, so it can be easily linked into place.
-    memset(&m_EmptyNode, 0xAB, sizeof(m_EmptyNode));
+    ByteSet(&m_EmptyNode, 0xAB, sizeof(m_EmptyNode));
     m_EmptyNode.next = tagged(&m_EmptyNode);
 
     assert( (m_SlabSize % m_ObjectSize) == 0 );
@@ -686,7 +686,7 @@ void SlamAllocator::initialise()
 #endif
 
     // Good to go - wipe the bitmap and we are now configured.
-    memset(m_SlabRegionBitmap, 0, bitmapBytes);
+    ByteSet(m_SlabRegionBitmap, 0, bitmapBytes);
 
     NOTICE("Kernel heap range prepared from " << Hex << m_Base << " to " << heapEnd << ", size: " << (heapEnd - m_Base));
     DEBUG_LOG("  -> kernel heap bitmap is " << Dec << (bitmapBytes / 1024) << Hex << "K");
@@ -1007,7 +1007,7 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
     {
         Backtrace bt;
         bt.performBpBacktrace(0, 0);
-        memcpy(&head->backtrace, bt.m_pReturnAddresses, NUM_SLAM_BT_FRAMES*sizeof(uintptr_t));
+        MemoryCopy(&head->backtrace, bt.m_pReturnAddresses, NUM_SLAM_BT_FRAMES*sizeof(uintptr_t));
         head->requested = nBytes;
         g_SlamCommand.addAllocation(head->backtrace, head->requested);
     }

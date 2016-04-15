@@ -149,7 +149,7 @@ uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
 
         if(buffer)
         {
-            memcpy(reinterpret_cast<void*>(buffer),
+            MemoryCopy(reinterpret_cast<void*>(buffer),
                    reinterpret_cast<void*>(buff+offs),
                    sz);
             buffer += sz;
@@ -200,7 +200,7 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
         m_Lock.release();
 #endif
 
-        memcpy(reinterpret_cast<void*>(buff+offs),
+        MemoryCopy(reinterpret_cast<void*>(buff+offs),
                reinterpret_cast<void*>(buffer),
                sz);
 

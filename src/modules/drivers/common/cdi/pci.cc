@@ -28,7 +28,7 @@ static void add_child_devices(cdi_list_t list, Device *pDev)
         // Add device to list
         // Let's hope the available information is enough
         struct cdi_pci_device* dev = (struct cdi_pci_device*) malloc(sizeof(*dev));
-        memset(dev, 0, sizeof(*dev));
+        ByteSet(dev, 0, sizeof(*dev));
 
         dev->vendor_id = pChild->getPciVendorId();
         dev->device_id = pChild->getPciDeviceId();
@@ -44,7 +44,7 @@ static void add_child_devices(cdi_list_t list, Device *pDev)
             Device::Address* bar = addresses[j];
 
             struct cdi_pci_resource* res = (struct cdi_pci_resource*) malloc(sizeof(*res));
-            memset(res, 0, sizeof(*res));
+            ByteSet(res, 0, sizeof(*res));
 
             res->type = bar->m_IsIoSpace ? CDI_PCI_IOPORTS : CDI_PCI_MEMORY;
             res->start = bar->m_Address;

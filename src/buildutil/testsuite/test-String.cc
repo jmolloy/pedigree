@@ -310,7 +310,7 @@ TEST(PedigreeString, SplitHuge)
 TEST(PedigreeString, Sprintf)
 {
     String s;
-    s.sprintf("Hello, %s! %d %d\n", "world", 42, 84);
+    s.Format("Hello, %s! %d %d\n", "world", 42, 84);
     EXPECT_EQ(s, "Hello, world! 42 84\n");
 }
 

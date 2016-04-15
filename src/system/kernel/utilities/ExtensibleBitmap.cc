@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -35,7 +34,7 @@ ExtensibleBitmap::ExtensibleBitmap(const ExtensibleBitmap &other) :
     m_nLastSetBit(other.m_nLastSetBit), m_nLastClearBit(other.m_nLastClearBit)
 {
     m_pDynamicMap = new uint8_t[m_DynamicMapSize];
-    memcpy(m_pDynamicMap, other.m_pDynamicMap, m_DynamicMapSize);
+    MemoryCopy(m_pDynamicMap, other.m_pDynamicMap, m_DynamicMapSize);
 }
 
 ExtensibleBitmap &ExtensibleBitmap::operator = (const ExtensibleBitmap &other)
@@ -45,7 +44,7 @@ ExtensibleBitmap &ExtensibleBitmap::operator = (const ExtensibleBitmap &other)
     if(m_DynamicMapSize < other.m_DynamicMapSize)
     {
         uint8_t *pMap = new uint8_t[other.m_DynamicMapSize];
-        memset(pMap, 0, other.m_DynamicMapSize);
+        ByteSet(pMap, 0, other.m_DynamicMapSize);
         if(m_DynamicMapSize)
             delete [] m_pDynamicMap;
         m_pDynamicMap = pMap;
@@ -53,7 +52,7 @@ ExtensibleBitmap &ExtensibleBitmap::operator = (const ExtensibleBitmap &other)
     }
 
     if(other.m_DynamicMapSize)
-        memcpy(m_pDynamicMap, other.m_pDynamicMap, other.m_DynamicMapSize);
+        MemoryCopy(m_pDynamicMap, other.m_pDynamicMap, other.m_DynamicMapSize);
     m_nMaxBit = other.m_nMaxBit;
     m_nFirstSetBit = other.m_nFirstSetBit;
     m_nFirstClearBit = other.m_nFirstClearBit;
@@ -113,10 +112,10 @@ void ExtensibleBitmap::set(size_t n)
         // Add another 8 bytes as a performance hint.
         size_t sz = n/8 + 8;
         uint8_t *pMap = new uint8_t[sz];
-        memset(pMap, 0, sz);
+        ByteSet(pMap, 0, sz);
         if(m_DynamicMapSize)
         {
-            memcpy(pMap, m_pDynamicMap, m_DynamicMapSize);
+            MemoryCopy(pMap, m_pDynamicMap, m_DynamicMapSize);
             delete [] m_pDynamicMap;
         }
         m_pDynamicMap = pMap;

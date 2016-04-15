@@ -25,7 +25,7 @@
 extern "C"
 {
 
-int strncpy(char *dest, const char *src, int len)
+int StringCopyN(char *dest, const char *src, int len)
 {
   int i = 0;
   while (*src && len)
@@ -38,7 +38,7 @@ int strncpy(char *dest, const char *src, int len)
   return i;
 }
 
-int memset(void *buf, int c, size_t len)
+int ByteSet(void *buf, int c, size_t len)
 {
   size_t count = len;
   char *tmp = (char *) buf;
@@ -49,14 +49,14 @@ int memset(void *buf, int c, size_t len)
   return count;
 }
 
-void memcpy(void *dest, const void *src, size_t len)
+void MemoryCopy(void *dest, const void *src, size_t len)
 {
   const unsigned char *sp = (const unsigned char *)src;
   unsigned char *dp = (unsigned char *)dest;
   for (; len != 0; len--) *dp++ = *sp++;
 }
 
-int strcmp(const char *p1, const char *p2)
+int StringCompare(const char *p1, const char *p2)
 {
   int i = 0;
   int failed = 0;

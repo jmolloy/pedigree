@@ -34,6 +34,20 @@
 #define X64
 #endif
 
+int memcmp(const void *p1, const void *p2, size_t len)
+{
+    const char* a = (const char*) p1;
+    const char* b = (const char*) p2;
+    size_t i = 0;
+    int r = 0;
+    for(; i < len; i++)
+    {
+        if ((r = a[i] - b[i]) != 0)
+          break;
+    }
+    return r;
+}
+
 void *memset(void *buf, int c, size_t n)
 {
 #ifdef IS_X86
@@ -50,7 +64,7 @@ void *memset(void *buf, int c, size_t n)
 #endif
 }
 
-void *wmemset(void *buf, int c, size_t n)
+void *WordSet(void *buf, int c, size_t n)
 {
 #ifdef IS_X86
     int a, b;
@@ -66,7 +80,7 @@ void *wmemset(void *buf, int c, size_t n)
 #endif
 }
 
-void *dmemset(void *buf, unsigned int c, size_t n)
+void *DoubleWordSet(void *buf, unsigned int c, size_t n)
 {
 #ifdef IS_X86
     int a, b;
@@ -82,7 +96,7 @@ void *dmemset(void *buf, unsigned int c, size_t n)
 #endif
 }
 
-void *qmemset(void *buf, unsigned long long c, size_t n)
+void *QuadWordSet(void *buf, unsigned long long c, size_t n)
 {
 #ifdef X64
     int a, b;
@@ -150,16 +164,25 @@ void *memmove(void *s1, const void *s2, size_t n)
   return s1;
 }
 
-int memcmp(const void *p1, const void *p2, size_t len)
+// We still need memcpy etc as linked symbols for GCC optimisations, but we
+// don't have to have their prototypes widely available. So, we implement our
+// main functions in terms of the base calls.
+void *ForwardMemoryCopy(void *a, const void *b, size_t c)
 {
-    const char* a = (const char*) p1;
-    const char* b = (const char*) p2;
-    size_t i = 0;
-    int r = 0;
-    for(; i < len; i++)
-    {
-        if ((r = a[i] - b[i]) != 0)
-          break;
-    }
-    return r;
+  return memcpy(a, b, c);
+}
+
+void *MemoryCopy(void *a, const void *b, size_t c)
+{
+  return memmove(a, b, c);
+}
+
+void *ByteSet(void *a, int b, size_t c)
+{
+  return memset(a, b, c);
+}
+
+int MemoryCompare(const void *a, const void *b, size_t c)
+{
+  return memcmp(a, b, c);
 }

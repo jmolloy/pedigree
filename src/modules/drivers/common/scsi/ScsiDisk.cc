@@ -163,7 +163,7 @@ bool ScsiDisk::initialise(ScsiController *pController, size_t nUnit)
 
 bool ScsiDisk::readSense(Sense *sense)
 {
-    memset(sense, 0xFF, sizeof(Sense));
+    ByteSet(sense, 0xFF, sizeof(Sense));
 
     // Maximum size of sense data is 252 bytes
     ScsiCommand *pCommand = new ScsiCommands::ReadSense(0, sizeof(Sense));
@@ -178,7 +178,7 @@ bool ScsiDisk::readSense(Sense *sense)
     }
 
     /// \todo get the amount of data received from the SCSI device
-    memcpy(sense, response, sizeof(Sense));
+    MemoryCopy(sense, response, sizeof(Sense));
 
     delete [] response;
 
@@ -207,7 +207,7 @@ bool ScsiDisk::getCapacityInternal(size_t *blockNumber, size_t *blockSize)
     
     Capacity *capacity = new Capacity;
     PointerGuard<Capacity> guard(capacity);
-    memset(capacity, 0, sizeof(Capacity));
+    ByteSet(capacity, 0, sizeof(Capacity));
 
     ScsiCommand *pCommand = new ScsiCommands::ReadCapacity10();
     bool success = sendCommand(pCommand, reinterpret_cast<uintptr_t>(capacity), sizeof(Capacity), false);
