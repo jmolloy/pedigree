@@ -132,6 +132,32 @@ static void BM_QuadWordSet(benchmark::State &state)
     delete [] buf;
 }
 
+static void BM_MemoryCompare(benchmark::State &state)
+{
+    // Two buffers with the same contents, which is the worst case for memcmp
+    // performance (because every single byte will be visited).
+    char *buf1 = new char[state.range_x()];
+    char *buf2 = new char[state.range_x()];
+    memset(buf1, 'a', state.range_x());
+    memset(buf2, 'a', state.range_x());
+
+    while (state.KeepRunning())
+    {
+        benchmark::DoNotOptimize(MemoryCompare(buf1, buf2, state.range_x()));
+
+        // Poke the buffers to break the compiler's optimisations
+        // (MemoryCompare is a pure function, so without an edit we literally
+        // end up actually calling MemoryCompare once).
+        ++(*buf1);
+        ++(*buf2);
+    }
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
+
+    delete [] buf1;
+    delete [] buf2;
+}
+
 // Test very large copies and sets for the base interfaces.
 BENCHMARK(BM_MemoryCopy)->Range(8, 8<<24);
 BENCHMARK(BM_ByteSet)->Range(8, 8<<24);
@@ -142,3 +168,4 @@ BENCHMARK(BM_ByteSetZero)->Range(8, 8<<16);
 BENCHMARK(BM_WordSet)->Range(8, 8<<16);
 BENCHMARK(BM_DoubleWordSet)->Range(8, 8<<16);
 BENCHMARK(BM_QuadWordSet)->Range(8, 8<<16);
+BENCHMARK(BM_MemoryCompare)->Range(8, 8<<16);
