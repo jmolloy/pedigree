@@ -83,4 +83,6 @@ if build_env['HAVE_BENCHMARK']:
                           'bench-stringlib.cc',
                           'bench-List.cc',
                           'bench-Vector.cc',
+                          'bench-Tree.cc',
+                          'bench-RadixTree.cc',
                       ], LIBS=[env['LIBUTILITY'], 'benchmark', 'pthread'])
