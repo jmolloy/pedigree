@@ -160,10 +160,10 @@ static void BM_Memory_MemoryCompare(benchmark::State &state)
 
 // Test very large copies and sets for the base interfaces.
 BENCHMARK(BM_Memory_MemoryCopy)->Range(8, 8<<24);
+BENCHMARK(BM_Memory_ForwardMemoryCopy)->Range(8, 8<<24);
 BENCHMARK(BM_Memory_ByteSet)->Range(8, 8<<24);
 
 // Smaller ranges for somewhat lesser benchmarks.
-BENCHMARK(BM_Memory_ForwardMemoryCopy)->Range(8, 8<<16);
 BENCHMARK(BM_Memory_ByteSetZero)->Range(8, 8<<16);
 BENCHMARK(BM_Memory_WordSet)->Range(8, 8<<16);
 BENCHMARK(BM_Memory_DoubleWordSet)->Range(8, 8<<16);

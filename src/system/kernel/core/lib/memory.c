@@ -26,7 +26,8 @@
 #undef memcpy
 
 // Condense X86-ish systems into one define for this file.
-#if defined(X86_COMMON) || defined(HOSTED_X86_COMMON)
+/// \note this will break testsuite/hosted builds on non-x86 hosts.
+#if defined(X86_COMMON) || defined(HOSTED_X86_COMMON) || defined(UTILITY_LINUX)
 #define IS_X86
 #endif
 
