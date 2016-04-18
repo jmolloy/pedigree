@@ -59,6 +59,7 @@ coverage_env.MergeFlags({
     'LINKFLAGS': build_env['COVERAGE_LINKFLAGS'],
 })
 
+# TODO(miselin): Tree, UniquePointer, HashTable, RangeList, ExtensibleBitmap
 coverage_env.Program(testsuite_bin,
                      [
                          'test-List.cc',
@@ -87,4 +88,7 @@ if build_env['HAVE_BENCHMARK']:
                           'bench-RadixTree.cc',
                           'bench-ExtensibleBitmap.cc',
                           'bench-HashTable.cc',
+                          'bench-String.cc',
+                          'bench-StaticString.cc',
+                          'bench-RangeList.cc',
                       ], LIBS=[env['LIBUTILITY'], 'benchmark', 'pthread'])
