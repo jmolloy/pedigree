@@ -25,7 +25,7 @@
 
 #include <utilities/utility.h>
 
-static void BM_MemoryCopy(benchmark::State &state)
+static void BM_Memory_MemoryCopy(benchmark::State &state)
 {
     char *src = new char[state.range_x()];
     char *dest = new char[state.range_x()];
@@ -42,7 +42,7 @@ static void BM_MemoryCopy(benchmark::State &state)
     delete [] src;
 }
 
-static void BM_ForwardMemoryCopy(benchmark::State &state)
+static void BM_Memory_ForwardMemoryCopy(benchmark::State &state)
 {
     char *src = new char[state.range_x()];
     char *dest = new char[state.range_x()];
@@ -59,7 +59,7 @@ static void BM_ForwardMemoryCopy(benchmark::State &state)
     delete [] src;
 }
 
-static void BM_ByteSet(benchmark::State &state)
+static void BM_Memory_ByteSet(benchmark::State &state)
 {
     char *buf = new char[state.range_x()];
 
@@ -73,7 +73,7 @@ static void BM_ByteSet(benchmark::State &state)
     delete [] buf;
 }
 
-static void BM_ByteSetZero(benchmark::State &state)
+static void BM_Memory_ByteSetZero(benchmark::State &state)
 {
     char *buf = new char[state.range_x()];
 
@@ -87,7 +87,7 @@ static void BM_ByteSetZero(benchmark::State &state)
     delete [] buf;
 }
 
-static void BM_WordSet(benchmark::State &state)
+static void BM_Memory_WordSet(benchmark::State &state)
 {
     const int factor = 2;
     char *buf = new char[state.range_x()];
@@ -102,7 +102,7 @@ static void BM_WordSet(benchmark::State &state)
     delete [] buf;
 }
 
-static void BM_DoubleWordSet(benchmark::State &state)
+static void BM_Memory_DoubleWordSet(benchmark::State &state)
 {
     const int factor = 4;
     char *buf = new char[state.range_x()];
@@ -117,7 +117,7 @@ static void BM_DoubleWordSet(benchmark::State &state)
     delete [] buf;
 }
 
-static void BM_QuadWordSet(benchmark::State &state)
+static void BM_Memory_QuadWordSet(benchmark::State &state)
 {
     const int factor = 8;
     char *buf = new char[state.range_x()];
@@ -132,7 +132,7 @@ static void BM_QuadWordSet(benchmark::State &state)
     delete [] buf;
 }
 
-static void BM_MemoryCompare(benchmark::State &state)
+static void BM_Memory_MemoryCompare(benchmark::State &state)
 {
     // Two buffers with the same contents, which is the worst case for memcmp
     // performance (because every single byte will be visited).
@@ -159,13 +159,13 @@ static void BM_MemoryCompare(benchmark::State &state)
 }
 
 // Test very large copies and sets for the base interfaces.
-BENCHMARK(BM_MemoryCopy)->Range(8, 8<<24);
-BENCHMARK(BM_ByteSet)->Range(8, 8<<24);
+BENCHMARK(BM_Memory_MemoryCopy)->Range(8, 8<<24);
+BENCHMARK(BM_Memory_ByteSet)->Range(8, 8<<24);
 
 // Smaller ranges for somewhat lesser benchmarks.
-BENCHMARK(BM_ForwardMemoryCopy)->Range(8, 8<<16);
-BENCHMARK(BM_ByteSetZero)->Range(8, 8<<16);
-BENCHMARK(BM_WordSet)->Range(8, 8<<16);
-BENCHMARK(BM_DoubleWordSet)->Range(8, 8<<16);
-BENCHMARK(BM_QuadWordSet)->Range(8, 8<<16);
-BENCHMARK(BM_MemoryCompare)->Range(8, 8<<16);
+BENCHMARK(BM_Memory_ForwardMemoryCopy)->Range(8, 8<<16);
+BENCHMARK(BM_Memory_ByteSetZero)->Range(8, 8<<16);
+BENCHMARK(BM_Memory_WordSet)->Range(8, 8<<16);
+BENCHMARK(BM_Memory_DoubleWordSet)->Range(8, 8<<16);
+BENCHMARK(BM_Memory_QuadWordSet)->Range(8, 8<<16);
+BENCHMARK(BM_Memory_MemoryCompare)->Range(8, 8<<16);
