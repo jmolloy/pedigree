@@ -67,6 +67,10 @@
 #define __has_builtin(x) 0
 #endif
 
+#ifndef __has_feature
+#define __has_feature(x) 0
+#endif
+
 #if __has_builtin(__builtin_assume_aligned) || !defined(__clang__)
 #define ASSUME_ALIGNMENT(b, sz) __builtin_assume_aligned((b), sz)
 #else
@@ -79,14 +83,12 @@
 #define INITIALISATION_ONLY_DATA SECTION(".init.data")
 
 // We don't use a custom allocator if asan is enabled.
-#if defined(__has_feature)
 #if __has_feature(address_sanitizer) || __has_feature(memory_sanitizer)
 #define HAS_ADDRESS_SANITIZER 1
 #endif
 
 #if __has_feature(thread_sanitizer)
 #define HAS_THREAD_SANITIZER 1
-#endif
 #endif
 
 #if defined(HAS_ADDRESS_SANITIZER) || defined(HAS_THREAD_SANITIZER)

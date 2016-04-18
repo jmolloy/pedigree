@@ -74,6 +74,9 @@ inline char toLower(char c)
 
 #ifdef __cplusplus
 }
+
+// Export C++ support library header.
+#include <utilities/cpp.h>
 #endif
 
 #endif  // KERNEL_UTILITIES_LIB_H
