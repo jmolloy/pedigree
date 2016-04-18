@@ -65,6 +65,48 @@ static void BM_VectorPushFront(benchmark::State &state)
     state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
 }
 
+static void BM_VectorReservedPushFront(benchmark::State &state)
+{
+    Vector<int64_t> vector;
+    const int64_t value = 1;
+    vector.reserve(state.range_x(), false);
+
+    while (state.KeepRunning())
+    {
+        state.PauseTiming();
+        vector.clear();
+        state.ResumeTiming();
+
+        for (size_t i = 0; i < state.range_x(); ++i)
+        {
+            vector.pushFront(value);
+        }
+    }
+
+    state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
+}
+
+static void BM_VectorReservedPushBack(benchmark::State &state)
+{
+    Vector<int64_t> vector;
+    const int64_t value = 1;
+    vector.reserve(state.range_x(), false);
+
+    while (state.KeepRunning())
+    {
+        state.PauseTiming();
+        vector.clear();
+        state.ResumeTiming();
+
+        for (size_t i = 0; i < state.range_x(); ++i)
+        {
+            vector.pushBack(value);
+        }
+    }
+
+    state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
+}
+
 static void BM_VectorPopFront(benchmark::State &state)
 {
     Vector<int64_t> vector;
@@ -117,5 +159,7 @@ static void BM_VectorPopBack(benchmark::State &state)
 // don't have quite as large a range as, say, List<T>'s tests.
 BENCHMARK(BM_VectorPushFront)->Range(8, 8<<8);
 BENCHMARK(BM_VectorPushBack)->Range(8, 8<<8);
+BENCHMARK(BM_VectorReservedPushFront)->Range(8, 8<<8);
+BENCHMARK(BM_VectorReservedPushBack)->Range(8, 8<<8);
 BENCHMARK(BM_VectorPopFront)->Range(8, 8<<8);
 BENCHMARK(BM_VectorPopBack)->Range(8, 8<<8);
