@@ -27,11 +27,15 @@
 
 static void BM_VectorPushBack(benchmark::State &state)
 {
+    Vector<int64_t> vector;
     const int64_t value = 1;
 
     while (state.KeepRunning())
     {
-        Vector<int64_t> vector;
+        state.PauseTiming();
+        vector.clear();
+        state.ResumeTiming();
+
         for (size_t i = 0; i < state.range_x(); ++i)
         {
             vector.pushBack(value);
@@ -43,11 +47,15 @@ static void BM_VectorPushBack(benchmark::State &state)
 
 static void BM_VectorPushFront(benchmark::State &state)
 {
+    Vector<int64_t> vector;
     const int64_t value = 1;
 
     while (state.KeepRunning())
     {
-        Vector<int64_t> vector;
+        state.PauseTiming();
+        vector.clear();
+        state.ResumeTiming();
+
         for (size_t i = 0; i < state.range_x(); ++i)
         {
             vector.pushFront(value);
@@ -59,12 +67,13 @@ static void BM_VectorPushFront(benchmark::State &state)
 
 static void BM_VectorPopFront(benchmark::State &state)
 {
+    Vector<int64_t> vector;
     const int64_t value = 1;
 
     while (state.KeepRunning())
     {
         state.PauseTiming();
-        Vector<int64_t> vector;
+        vector.clear();
         for (size_t i = 0; i < state.range_x(); ++i)
         {
             vector.pushBack(value);
@@ -82,12 +91,13 @@ static void BM_VectorPopFront(benchmark::State &state)
 
 static void BM_VectorPopBack(benchmark::State &state)
 {
+    Vector<int64_t> vector;
     const int64_t value = 1;
 
     while (state.KeepRunning())
     {
         state.PauseTiming();
-        Vector<int64_t> vector;
+        vector.clear();
         for (size_t i = 0; i < state.range_x(); ++i)
         {
             vector.pushBack(value);

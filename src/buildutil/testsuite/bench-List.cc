@@ -27,11 +27,15 @@
 
 static void BM_ListPushBack(benchmark::State &state)
 {
+    List<int64_t> list;
     const int64_t value = 1;
 
     while (state.KeepRunning())
     {
-        List<int64_t> list;
+        state.PauseTiming();
+        list.clear();
+        state.ResumeTiming();
+
         for (size_t i = 0; i < state.range_x(); ++i)
         {
             list.pushBack(value);
@@ -43,11 +47,15 @@ static void BM_ListPushBack(benchmark::State &state)
 
 static void BM_ListPushFront(benchmark::State &state)
 {
+    List<int64_t> list;
     const int64_t value = 1;
 
     while (state.KeepRunning())
     {
-        List<int64_t> list;
+        state.PauseTiming();
+        list.clear();
+        state.ResumeTiming();
+
         for (size_t i = 0; i < state.range_x(); ++i)
         {
             list.pushFront(value);
@@ -59,12 +67,13 @@ static void BM_ListPushFront(benchmark::State &state)
 
 static void BM_ListPopFront(benchmark::State &state)
 {
+    List<int64_t> list;
     const int64_t value = 1;
 
     while (state.KeepRunning())
     {
         state.PauseTiming();
-        List<int64_t> list;
+        list.clear();
         for (size_t i = 0; i < state.range_x(); ++i)
         {
             list.pushFront(value);
@@ -82,12 +91,13 @@ static void BM_ListPopFront(benchmark::State &state)
 
 static void BM_ListPopBack(benchmark::State &state)
 {
+    List<int64_t> list;
     const int64_t value = 1;
 
     while (state.KeepRunning())
     {
         state.PauseTiming();
-        List<int64_t> list;
+        list.clear();
         for (size_t i = 0; i < state.range_x(); ++i)
         {
             list.pushFront(value);
