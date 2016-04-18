@@ -27,6 +27,7 @@
 #include <utilities/List.h>
 #include <utilities/utility.h>
 #include <utilities/SharedPointer.h>
+#include <compiler.h>
 
 /** String class for ASCII strings
  *\todo provide documentation */
@@ -83,7 +84,7 @@ class String
             return 1;
         }
 
-        void Format(const char *format, ...);
+        void Format(const char *format, ...) FORMAT(printf, 2, 3);
 
         void assign(const String &x);
         void assign(const char *s, size_t len = 0);

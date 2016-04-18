@@ -51,6 +51,10 @@
 #define UNLIKELY(exp) __builtin_expect(!!(exp), 0)
 /** This code is not reachable. */
 #define UNREACHABLE __builtin_unreachable()
+/** This function handles a format string. */
+#define FORMAT(type, idx, first) __attribute__((format(type, idx, first)))
+/** True if the expression is constant at compile time, false otherwise. */
+#define IS_CONSTANT(x) __builtin_constant_p(x)
 /** This code should be placed in the given section. */
 #ifdef __MACH__  // Mach targets have special section specifications.
 #define SECTION(x)

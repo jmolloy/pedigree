@@ -21,23 +21,24 @@
 #define KERNEL_UTILITIES_LIB_H
 
 #include <stdarg.h>
+#include <compiler.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 // String functions.
-size_t StringLength(const char *buf);
+size_t StringLength(const char *buf) PURE;
 char *StringCopy(char *dest, const char *src);
 char *StringCopyN(char *dest, const char *src, size_t len);
-int StringCompare(const char *p1, const char *p2);
-int StringCompareN(const char *p1, const char *p2, size_t n);
+int StringCompare(const char *p1, const char *p2) PURE;
+int StringCompareN(const char *p1, const char *p2, size_t n) PURE;
 char *StringConcat(char *dest, const char *src);
 char *StringConcatN(char *dest, const char *src, size_t n);
-const char *StringFind(const char *str, int target);
-const char *StringReverseFind(const char *str, int target);
+const char *StringFind(const char *str, int target) PURE;
+const char *StringReverseFind(const char *str, int target) PURE;
 int VStringFormat(char *buf, const char *fmt, va_list arg);
-int StringFormat(char *buf, const char *fmt, ...);
+int StringFormat(char *buf, const char *fmt, ...) FORMAT(printf, 2, 3);
 unsigned long StringToUnsignedLong(const char *nptr, char const **endptr, int base);
 
 // Memory functions.
@@ -47,12 +48,13 @@ void *DoubleWordSet(void *buf, unsigned int c, size_t len);
 void *QuadWordSet(void *buf, unsigned long long c, size_t len);
 void *ForwardMemoryCopy(void *s1, const void *s2, size_t n);
 void *MemoryCopy(void *s1, const void *s2, size_t n);
-int MemoryCompare(const void *p1, const void *p2, size_t len);
+int MemoryCompare(const void *p1, const void *p2, size_t len) PURE;
 
 // Built-in PRNG.
 void random_seed(uint64_t seed);
 uint64_t random_next();
 
+inline char toUpper(char c) PURE;
 inline char toUpper(char c)
 {
     if (c < 'a' || c > 'z')
@@ -61,6 +63,7 @@ inline char toUpper(char c)
     return c;
 }
 
+inline char toLower(char c) PURE;
 inline char toLower(char c)
 {
     if (c < 'A' || c > 'Z')
