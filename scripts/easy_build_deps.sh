@@ -13,6 +13,10 @@ echo
 
 compiler_build_options=""
 
+if [ -d "$script_dir/build/host/ext2img" ]; then
+    rm -rf "$script_dir/build/host/ext2img"
+fi
+
 real_os=""
 nosudo=0
 if [ ! -e $script_dir/.easy_os ]; then
