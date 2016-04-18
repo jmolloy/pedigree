@@ -41,4 +41,82 @@ static void BM_StringLength(benchmark::State &state)
     delete [] buf;
 }
 
+static void BM_StringCopy(benchmark::State &state)
+{
+    char *buf = new char[state.range_x()];
+    memset(buf, 'a', state.range_x());
+    buf[state.range_x() - 1] = '\0';
+    char *dest = new char[state.range_x()];
+
+    while (state.KeepRunning())
+    {
+        StringCopy(dest, buf);
+    }
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
+
+    delete [] dest;
+    delete [] buf;
+}
+
+static void BM_StringCopyN(benchmark::State &state)
+{
+    char *buf = new char[state.range_x()];
+    memset(buf, 'a', state.range_x());
+    buf[state.range_x() - 1] = '\0';
+    char *dest = new char[state.range_x()];
+
+    while (state.KeepRunning())
+    {
+        StringCopyN(dest, buf, state.range_x());
+    }
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
+
+    delete [] dest;
+    delete [] buf;
+}
+
+static void BM_StringCompare(benchmark::State &state)
+{
+    char *buf1 = new char[state.range_x()];
+    memset(buf1, 'a', state.range_x());
+    buf1[state.range_x() - 1] = '\0';
+    char *buf2 = new char[state.range_x()];
+
+    while (state.KeepRunning())
+    {
+        benchmark::DoNotOptimize(StringCompare(buf1, buf2));
+        ++(*buf1);
+        ++(*buf2);
+    }
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
+
+    delete [] buf2;
+    delete [] buf1;
+}
+
+static void BM_StringCompareN(benchmark::State &state)
+{
+    char *buf1 = new char[state.range_x()];
+    memset(buf1, 'a', state.range_x());
+    buf1[state.range_x() - 1] = '\0';
+    char *buf2 = new char[state.range_x()];
+
+    while (state.KeepRunning())
+    {
+        benchmark::DoNotOptimize(StringCopyN(buf1, buf2, state.range_x()));
+        ++(*buf1);
+        ++(*buf2);
+    }
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
+
+    delete [] buf2;
+    delete [] buf1;
+}
+
 BENCHMARK(BM_StringLength)->Range(8, 8<<16);
+BENCHMARK(BM_StringCopy)->Range(8, 8<<16);
+BENCHMARK(BM_StringCopyN)->Range(8, 8<<16);
