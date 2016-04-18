@@ -85,4 +85,6 @@ if build_env['HAVE_BENCHMARK']:
                           'bench-Vector.cc',
                           'bench-Tree.cc',
                           'bench-RadixTree.cc',
+                          'bench-ExtensibleBitmap.cc',
+                          'bench-HashTable.cc',
                       ], LIBS=[env['LIBUTILITY'], 'benchmark', 'pthread'])
