@@ -29,15 +29,10 @@ fi
 # Run the C++ testsuites.
 $WRAPPER "$GIT_ROOT/build/host/testsuite"
 
-if [ "x$TRAVIS" != "x" ]; then
-    echo "On Travis, not running coverage."
-    exit 0
-fi
-
 mkdir -p "$GIT_ROOT/coverage"
 
 # Coverage failing is not a problem; but make sure to filter only to src/ so
 # we don't pull in e.g. all of the gtest code.
-gcovr -d --object-directory="$GIT_ROOT/build" -r "$GIT_ROOT" \
+gcovr -k --object-directory="$GIT_ROOT/build" -r "$GIT_ROOT" \
     --gcov-filter="src/*" --html --html-details --exclude=".*test\-.*" \
     --exclude=".*buildutil/.*" -o "$GIT_ROOT/coverage/index.html" || exit 0

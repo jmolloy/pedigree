@@ -25,7 +25,9 @@ import SCons
 from buildutils import fs, db
 from buildutils.diskimages import build
 
-Import(['env', 'userspace_env', 'host_env'])
+Import(['env', 'host_env'])
+if not env['build_tests_only']:
+  Import(['userspace_env'])
 
 # Host utilities or libraries for host tools in git submodules.
 SConscript(os.path.join('external', 'SConscript'), exports=['host_env'],

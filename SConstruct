@@ -51,6 +51,7 @@ opts.AddVariables(
     # Controls for the build itself. Will bomb out on bad combinations - will
     # not try and fix them for the user. This is intentional. Note that a
     # fully functional disk image build depends on everything here.
+    BoolVariable('build_tests_only', 'Build unit tests ONLY (NOTHING else will be built).', 0),
     BoolVariable('build_kernel_only', 'Build the kernel ONLY (forces all other build_*s to 0).', 0),
     BoolVariable('build_kernel', 'Build the kernel.', 1),
     BoolVariable('build_configdb', 'Build the configuration database (requires `sqlite3`).', 1),
@@ -331,6 +332,16 @@ if env['ON_PEDIGREE']:
     env['build_lgpl'] = False
 
 # Make sure there's a sensible configuration.
+if env['build_tests_only']:
+    env['build_kernel_only'] = False
+    env['build_kernel'] = False
+    env['build_configdb'] = False
+    env['build_modules'] = False
+    env['build_lgpl'] = False
+    env['build_apps'] = False
+    env['build_images'] = False
+    env['ARCH_TARGET'] = 'TESTS'
+
 if env['build_kernel_only']:
     env['build_kernel'] = True
     env['build_configdb'] = False
@@ -430,7 +441,7 @@ env['PEDIGREE_BUILD_APPS'] = os.path.join(env['BUILDDIR'], 'apps')
 host_env['BUILDDIR'] = env['HOST_BUILDDIR']
 
 # Set up compilers and in particular the cross-compile environment.
-if env['CROSS'] or env['ON_PEDIGREE']:
+if (not env['build_tests_only']) and (env['CROSS'] or env['ON_PEDIGREE']):
     if env['ON_PEDIGREE']:
         # TODO: parse 'gcc -v' to get COMPILER_TARGET
         env['COMPILER_TARGET'] = 'FIXME'
@@ -495,7 +506,7 @@ if env['CROSS'] or env['ON_PEDIGREE']:
         env['TARGET_%s' % tool] = env[tool]
 
     userspace_env = env
-elif not env['hosted']:
+elif not (env['hosted'] or env['build_tests_only']):
     raise SCons.Errors.UserError('No cross-compiler specified and not on '
         'Pedigree, and not building a hosted system. Check flags and try '
         'again.')
@@ -510,7 +521,7 @@ if env['hosted']:
 
     # We fix tools later in SConstruct.
 
-if env['ON_PEDIGREE'] or env['COMPILER_TARGET']:
+if (not env['build_tests_only']) and (env['ON_PEDIGREE'] or env['COMPILER_TARGET']):
     if env['ON_PEDIGREE'] or env['hosted']:
         host_arch = env['HOST_PLATFORM']
     else:
@@ -616,10 +627,12 @@ if env['ON_PEDIGREE'] or env['COMPILER_TARGET']:
 
     for key, override_value in environment_overrides.get(flags_arch, {}).items():
         env[key] = override_value
+else:
+    defines = []
 
 # Handle no valid target sensibly.
 if (not all([env['ARCH_TARGET'], env['ARCH_DIR'], env['MACH_DIR']]) and
-        not env['ON_PEDIGREE']):
+        not env['ON_PEDIGREE']) and (not env['build_tests_only']):
     raise SCons.Errors.UserError('Unsupported target - have you used '
         'scripts/checkBuildSystem.pl to build a cross-compiler?')
 
@@ -653,7 +666,7 @@ if env['ARCH_TARGET'] == 'ARM':
 # Add optional flags.
 warning_flag = ['-Wno-error']
 if not env['warnings']:
-    warning_flag = '-Werror'
+    warning_flag = ['-Werror']
 env.MergeFlags({'CCFLAGS': warning_flag})
 
 if env['memory_log']:
@@ -897,24 +910,28 @@ if env['iwyu']:
     env['build_images'] = False
 
 # Save the cache, all the options are configured
-if env['cache']:
+if (not env['build_tests_only']) and env['cache']:
     opts.Save('options.cache', env)
     for k in autogen_opts.keys():
         autogen_env[k] = env[k]
     autogen_opts.Save('.autogen.cache', autogen_env)
 
 # Make build messages much prettier.
+exports = ['env', 'host_env']
 misc.prettifyBuildMessages(env)
-misc.prettifyBuildMessages(userspace_env)
+if not env['build_tests_only']:
+    misc.prettifyBuildMessages(userspace_env)
+    exports.append('userspace_env')
 misc.prettifyBuildMessages(host_env)
 
 # Generate custom builders and add to environment.
 misc.generate(env)
-misc.generate(userspace_env)
+if not env['build_tests_only']:
+    misc.generate(userspace_env)
 misc.generate(host_env)
 
 SConscript('SConscript', variant_dir=env['BUILDDIR'],
-           exports=['env', 'userspace_env', 'host_env'], duplicate=0)
+           exports=exports, duplicate=0)
 
 subarch_dump = env.get('SUBARCH_DIR', '')
 if subarch_dump:
