@@ -34,6 +34,19 @@
 #define X64
 #endif
 
+int memcmp(const void *p1, const void *p2, size_t len) PURE;
+void *memset(void *buf, int c, size_t n);
+void *WordSet(void *buf, int c, size_t n);
+void *DoubleWordSet(void *buf, unsigned int c, size_t n);
+void *QuadWordSet(void *buf, unsigned long long c, size_t n);
+
+void *memcpy(void *restrict s1, const void *restrict s2, size_t n);
+void *memmove(void *s1, const void *s2, size_t n);
+
+// asan provides a memcpy/memset/etc that we care about more than our custom
+// ones, in general.
+#ifndef HAS_ADDRESS_SANITIZER
+
 int memcmp(const void *p1, const void *p2, size_t len)
 {
     const char* a = (const char*) p1;
@@ -163,6 +176,8 @@ void *memmove(void *s1, const void *s2, size_t n)
 
   return s1;
 }
+
+#endif  // HAS_ADDRESS_SANITIZER
 
 // We still need memcpy etc as linked symbols for GCC optimisations, but we
 // don't have to have their prototypes widely available. So, we implement our
