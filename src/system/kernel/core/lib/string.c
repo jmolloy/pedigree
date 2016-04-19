@@ -221,20 +221,36 @@ unsigned long StringToUnsignedLong(const char *nptr, char const **endptr, int ba
 
 const char *StringFind(const char *str, int target)
 {
-  size_t i;
-  for (i = 0; i < StringLength(str); i++)
-    if (str[i] == target)
-      return &str[i];
+  while (*str)
+  {
+    if (*str == target)
+    {
+      return str;
+    }
+
+    ++str;
+  }
+
   return NULL;
 }
 
 const char *StringReverseFind(const char *str, int target)
 {
-  int i;
-  for (i = StringLength(str); i >= 0; i--)
-    if (str[i] == target)
-      return &str[i];
-  return NULL;
+  // StringLength must traverse the entire string once to find the length,
+  // so rather than finding the length and then traversing in reverse, we just
+  // traverse the string once. This gives a small performance boost.
+  const char *found = NULL;
+  while (*str)
+  {
+    if (*str == target)
+    {
+      found = str;
+    }
+
+    ++str;
+  }
+
+  return found;
 }
 
 // Provide forwarding functions to handle GCC optimising things.
@@ -292,6 +308,3 @@ unsigned long strtoul(const char *nptr, char const **endptr, int base)
 {
   return StringToUnsignedLong(nptr, endptr, base);
 }
-
-
-
