@@ -25,12 +25,6 @@
 
 #undef memcpy
 
-// Condense X86-ish systems into one define for this file.
-/// \note this will break testsuite/hosted builds on non-x86 hosts.
-#if defined(X86_COMMON) || defined(HOSTED_X86_COMMON) || defined(UTILITY_LINUX)
-#define IS_X86
-#endif
-
 #ifdef HOSTED_X64
 #define X64
 #endif
@@ -64,7 +58,7 @@ int memcmp(const void *p1, const void *p2, size_t len)
 
 void *memset(void *buf, int c, size_t n)
 {
-#ifdef IS_X86
+#ifdef TARGET_IS_X86
     int a, b;
     asm volatile("rep stosb" : "=&D" (a), "=&c" (b) : "0" (buf), "a" (c), "1" (n) : "memory");
     return buf;
@@ -80,7 +74,7 @@ void *memset(void *buf, int c, size_t n)
 
 void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
 {
-#ifdef IS_X86
+#ifdef TARGET_IS_X86
     int a, b, c;
     asm volatile("rep movsb" : "=&c" (a), "=&D" (b), "=&S" (c): "1" (s1), "2" (s2), "0" (n) : "memory");
     return s1;
@@ -92,7 +86,7 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
 #endif
 }
 
-#ifdef IS_X86
+#ifdef TARGET_IS_X86
 static inline void *memmove_x86(void *s1, const void *s2, size_t n)
 {
     // Perform rep movsb in reverse.
@@ -128,7 +122,7 @@ void *memmove(void *s1, const void *s2, size_t n)
   }
   else
   {
-#ifdef IS_X86
+#ifdef TARGET_IS_X86
     memmove_x86(s1, s2, n);
 #else
     // Writing bytes from s2 into s1 cannot be done forwards, use memmove.
@@ -153,7 +147,7 @@ void *memmove(void *s1, const void *s2, size_t n)
 
 void *WordSet(void *buf, int c, size_t n)
 {
-#ifdef IS_X86
+#ifdef TARGET_IS_X86
     int a, b;
     asm volatile("rep stosw" : "=&D" (a), "=&c" (b) : "0" (buf), "a" (c), "1" (n) : "memory");
     return buf;
@@ -169,7 +163,7 @@ void *WordSet(void *buf, int c, size_t n)
 
 void *DoubleWordSet(void *buf, unsigned int c, size_t n)
 {
-#ifdef IS_X86
+#ifdef TARGET_IS_X86
     int a, b;
     asm volatile("rep stosl" : "=&D" (a), "=&c" (b) : "0" (buf), "a" (c), "1" (n) : "memory");
     return buf;

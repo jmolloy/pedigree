@@ -23,6 +23,12 @@
 #include <stdarg.h>
 #include <compiler.h>
 
+// Condense X86-ish systems into one define for utilities.
+/// \note this will break testsuite/hosted builds on non-x86 hosts.
+#if defined(X86_COMMON) || defined(HOSTED_X86_COMMON) || defined(UTILITY_LINUX)
+#define TARGET_IS_X86
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
