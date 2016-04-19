@@ -65,3 +65,37 @@ TEST(PedigreeMemoryLibrary, ReversedMemoryCopy)
 
     EXPECT_STREQ(buf, expected);
 }
+
+TEST(PedigreeMemoryLibrary, MemoryCompareSame)
+{
+    char buf1[32];
+    char buf2[32];
+
+    memset(buf1, 'a', 32);
+    memset(buf2, 'a', 32);
+
+    EXPECT_EQ(MemoryCompare(buf1, buf2, 32), 0);
+}
+
+TEST(PedigreeMemoryLibrary, MemoryCompareDiffers)
+{
+    char buf1[32];
+    char buf2[32];
+
+    memset(buf1, 'a', 32);
+    memset(buf2, 'b', 32);
+
+    EXPECT_NE(MemoryCompare(buf1, buf2, 32), 0);
+}
+
+TEST(PedigreeMemoryLibrary, MemoryCompareHalfDiffers)
+{
+    char buf1[32];
+    char buf2[32];
+
+    memset(buf1, 'a', 32);
+    memset(buf2, 'a', 16);
+    memset(buf2 + 16, 'b', 16);
+
+    EXPECT_NE(MemoryCompare(buf1, buf2, 32), 0);
+}
