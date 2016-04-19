@@ -32,17 +32,10 @@ static void BM_ListPushBack(benchmark::State &state)
 
     while (state.KeepRunning())
     {
-        state.PauseTiming();
-        list.clear();
-        state.ResumeTiming();
-
-        for (size_t i = 0; i < state.range_x(); ++i)
-        {
-            list.pushBack(value);
-        }
+        list.pushBack(value);
     }
 
-    state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
+    state.SetItemsProcessed(int64_t(state.iterations()));
 }
 
 static void BM_ListPushFront(benchmark::State &state)
@@ -52,17 +45,10 @@ static void BM_ListPushFront(benchmark::State &state)
 
     while (state.KeepRunning())
     {
-        state.PauseTiming();
-        list.clear();
-        state.ResumeTiming();
-
-        for (size_t i = 0; i < state.range_x(); ++i)
-        {
-            list.pushFront(value);
-        }
+        list.pushFront(value);
     }
 
-    state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
+    state.SetItemsProcessed(int64_t(state.iterations()));
 }
 
 static void BM_ListPopFront(benchmark::State &state)
@@ -113,7 +99,7 @@ static void BM_ListPopBack(benchmark::State &state)
     state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
 }
 
-BENCHMARK(BM_ListPushFront)->Range(8, 8<<16);
-BENCHMARK(BM_ListPushBack)->Range(8, 8<<16);
+BENCHMARK(BM_ListPushFront);
+BENCHMARK(BM_ListPushBack);
 BENCHMARK(BM_ListPopFront)->Range(8, 8<<16);
 BENCHMARK(BM_ListPopBack)->Range(8, 8<<16);
