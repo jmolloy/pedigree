@@ -117,6 +117,38 @@ static void BM_StringCompareN(benchmark::State &state)
     delete [] buf1;
 }
 
+static void BM_StringFind(benchmark::State &state)
+{
+    char *buf = new char[state.range_x()];
+    memset(buf, 'a', state.range_x());
+    buf[state.range_x() - 1] = '\0';
+
+    while (state.KeepRunning())
+    {
+        // Navigates the entire string, finds nothing.
+        benchmark::DoNotOptimize(StringFind(buf, 'b'));
+    }
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
+}
+
+static void BM_StringReverseFind(benchmark::State &state)
+{
+    char *buf = new char[state.range_x()];
+    memset(buf, 'a', state.range_x());
+    buf[state.range_x() - 1] = '\0';
+
+    while (state.KeepRunning())
+    {
+        // Navigates the entire string, finds nothing.
+        benchmark::DoNotOptimize(StringReverseFind(buf, 'b'));
+    }
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
+}
+
 BENCHMARK(BM_StringLength)->Range(8, 8<<16);
 BENCHMARK(BM_StringCopy)->Range(8, 8<<16);
 BENCHMARK(BM_StringCopyN)->Range(8, 8<<16);
+BENCHMARK(BM_StringFind)->Range(8, 8<<16);
+BENCHMARK(BM_StringReverseFind)->Range(8, 8<<16);
