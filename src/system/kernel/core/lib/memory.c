@@ -92,6 +92,19 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
 #endif
 }
 
+#ifdef IS_X86
+static inline void *memmove_x86(void *s1, const void *s2, size_t n)
+{
+    // Perform rep movsb in reverse.
+    const unsigned char *sp = (const unsigned char *) s2 + (n - 1);
+    unsigned char *dp = (unsigned char *) s1 + (n - 1);
+
+    int a, b, c;
+    asm volatile("std; rep movsb; cld" : "=&c" (a), "=&D" (b), "=&S" (c): "1" (dp), "2" (sp), "0" (n) : "memory");
+    return s1;
+}
+#endif
+
 static int overlaps(const void *restrict s1, const void *restrict s2, size_t n) PURE;
 static int overlaps(const void *restrict s1, const void *restrict s2, size_t n)
 {
@@ -115,10 +128,14 @@ void *memmove(void *s1, const void *s2, size_t n)
   }
   else
   {
+#ifdef IS_X86
+    memmove_x86(s1, s2, n);
+#else
     // Writing bytes from s2 into s1 cannot be done forwards, use memmove.
     const unsigned char *sp = (const unsigned char *) s2 + (n - 1);
     unsigned char *dp = (unsigned char *) s1 + (n - 1);
     for (; n != 0; n--) *dp-- = *sp--;
+#endif
   }
 
 #ifdef ADDITIONAL_CHECKS
