@@ -42,6 +42,21 @@ static void BM_Memory_MemoryCopy(benchmark::State &state)
     delete [] src;
 }
 
+static void BM_Memory_OverlappedMemoryCopy(benchmark::State &state)
+{
+    char *buf = new char[state.range_x()];
+    memset(buf, 'a', state.range_x());
+
+    while (state.KeepRunning())
+    {
+        MemoryCopy(buf + 1, buf, state.range_x() - 1);
+    }
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
+
+    delete [] buf;
+}
+
 static void BM_Memory_ForwardMemoryCopy(benchmark::State &state)
 {
     char *src = new char[state.range_x()];
@@ -160,6 +175,7 @@ static void BM_Memory_MemoryCompare(benchmark::State &state)
 
 // Test very large copies and sets for the base interfaces.
 BENCHMARK(BM_Memory_MemoryCopy)->Range(8, 8<<24);
+BENCHMARK(BM_Memory_OverlappedMemoryCopy)->Range(8, 8<<24);
 BENCHMARK(BM_Memory_ForwardMemoryCopy)->Range(8, 8<<24);
 BENCHMARK(BM_Memory_ByteSet)->Range(8, 8<<24);
 
