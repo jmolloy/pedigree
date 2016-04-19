@@ -115,6 +115,24 @@ static void BM_CxxStringStrip(benchmark::State &state)
     state.SetItemsProcessed(int64_t(state.iterations()));
 }
 
+static void BM_CxxStringSplit(benchmark::State &state)
+{
+    char *buf = new char[state.range_x()];
+    memset(buf, 'a', state.range_x());
+    buf[state.range_x()] = 0;
+
+    while (state.KeepRunning())
+    {
+        state.PauseTiming();
+        String s(buf);
+        state.ResumeTiming();
+
+        benchmark::DoNotOptimize(s.split(state.range_x() / 2));
+    }
+
+    state.SetItemsProcessed(int64_t(state.iterations()));
+}
+
 static void BM_CxxStringTokenize(benchmark::State &state)
 {
     char buf[4096];
@@ -150,4 +168,5 @@ BENCHMARK(BM_CxxStringFormat);
 BENCHMARK(BM_CxxStringStartswith);
 BENCHMARK(BM_CxxStringEndswith);
 BENCHMARK(BM_CxxStringStrip);
+BENCHMARK(BM_CxxStringSplit)->Range(8, 8<<8);
 BENCHMARK(BM_CxxStringTokenize);

@@ -20,6 +20,7 @@
 #define PEDIGREE_EXTERNAL_SOURCE 1
 
 #include <stdlib.h>
+#include <limits.h>
 #include <time.h>
 
 #include <benchmark/benchmark.h>
@@ -45,20 +46,28 @@ static void BM_TreeInsert(benchmark::State &state)
 {
     Tree<int64_t, int64_t> tree;
     const int64_t value = 1;
+    int64_t i = 0;
 
     while (state.KeepRunning())
     {
-        state.PauseTiming();
-        tree.clear();
-        state.ResumeTiming();
-
-        for (size_t i = 0; i < state.range_x(); ++i)
-        {
-            tree.insert(i, value);
-        }
+        tree.insert(i++, value);
     }
 
-    state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
+    state.SetItemsProcessed(int64_t(state.iterations()));
+}
+
+static void BM_TreeInsertReverse(benchmark::State &state)
+{
+    Tree<int64_t, int64_t> tree;
+    const int64_t value = 1;
+    int64_t i = INT_MAX;
+
+    while (state.KeepRunning())
+    {
+        tree.insert(i--, value);
+    }
+
+    state.SetItemsProcessed(int64_t(state.iterations()));
 }
 
 static void BM_TreeRandomlyInsert(benchmark::State &state)
@@ -68,20 +77,30 @@ static void BM_TreeRandomlyInsert(benchmark::State &state)
 
     while (state.KeepRunning())
     {
-        state.PauseTiming();
-        tree.clear();
-        state.ResumeTiming();
-
-        for (size_t i = 0; i < state.range_x(); ++i)
-        {
-            tree.insert(RandomNumber(), value);
-        }
+        tree.insert(RandomNumber(), value);
     }
 
-    state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
+    state.SetItemsProcessed(int64_t(state.iterations()));
 }
 
-static void BM_TreeLookup(benchmark::State &state)
+static void BM_TreeLookupSingle(benchmark::State &state)
+{
+    Tree<int64_t, int64_t> tree;
+
+    for (size_t i = 0; i < state.range_x(); ++i)
+    {
+        tree.insert(i, RandomNumber());
+    }
+
+    while (state.KeepRunning())
+    {
+        benchmark::DoNotOptimize(tree.lookup(0));
+    }
+
+    state.SetItemsProcessed(int64_t(state.iterations()));
+}
+
+static void BM_TreeLookupRandom(benchmark::State &state)
 {
     Tree<int64_t, int64_t> tree;
 
@@ -92,15 +111,32 @@ static void BM_TreeLookup(benchmark::State &state)
 
     while (state.KeepRunning())
     {
-        for (size_t i = 0; i < state.range_y(); ++i)
-        {
-            benchmark::DoNotOptimize(tree.lookup(RandomNumber()));
-        }
+        benchmark::DoNotOptimize(tree.lookup(RandomNumber()));
     }
 
-    state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range_y()));
+    state.SetItemsProcessed(int64_t(state.iterations()));
 }
 
-BENCHMARK(BM_TreeInsert)->Range(8, 8<<16);
-BENCHMARK(BM_TreeRandomlyInsert)->Range(8, 8<<16);
-BENCHMARK(BM_TreeLookup)->RangePair(8, 8<<16, 8, 8<<16);
+static void BM_TreeLookupDoesNotExist(benchmark::State &state)
+{
+    Tree<int64_t, int64_t> tree;
+
+    for (size_t i = 0; i < state.range_x(); ++i)
+    {
+        tree.insert(i, RandomNumber());
+    }
+
+    while (state.KeepRunning())
+    {
+        benchmark::DoNotOptimize(tree.lookup(-1));
+    }
+
+    state.SetItemsProcessed(int64_t(state.iterations()));
+}
+
+BENCHMARK(BM_TreeInsert);
+BENCHMARK(BM_TreeInsertReverse);
+BENCHMARK(BM_TreeRandomlyInsert);
+BENCHMARK(BM_TreeLookupSingle)->Range(8, 8<<16);
+BENCHMARK(BM_TreeLookupRandom)->Range(8, 8<<16);
+BENCHMARK(BM_TreeLookupDoesNotExist)->Range(8, 8<<16);
