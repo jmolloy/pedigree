@@ -37,6 +37,7 @@ class String
         /** The default constructor does nothing */
         String();
         explicit String(const char *s);
+        String(const char *s, size_t length);
         String(const String &x);
         ~String();
 
@@ -100,6 +101,8 @@ class String
         bool startswith(const char *s) const;
 
     private:
+        /** Internal doer for reserve() */
+        void reserve(size_t size, bool zero);
         /** Size of static string storage (over this threshold, the heap is used) */
         static const size_t StaticSize = 64;
         /** Pointer to the zero-terminated ASCII string */

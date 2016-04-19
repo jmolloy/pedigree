@@ -174,7 +174,7 @@ void String::assign(const String &x)
     {
         // Length is bigger than a static buffer, no need to check for empty
         // buffer.
-        reserve(m_Length + 1);
+        reserve(m_Length + 1, false);
         MemoryCopy(m_Data, x.m_Data, m_Length + 1);
     }
 
@@ -215,7 +215,7 @@ void String::assign(const char *s, size_t len)
     }
     else
     {
-        reserve(m_Length + 1);
+        reserve(m_Length + 1, false);
         MemoryCopy(m_Data, s, copyLength);
         m_Data[copyLength] = '\0';
     }
@@ -225,7 +225,13 @@ void String::assign(const char *s, size_t len)
         assert(*this == s);
 #endif
 }
+
 void String::reserve(size_t size)
+{
+    reserve(size, true);
+}
+
+void String::reserve(size_t size, bool zero)
 {
     // Don't reserve if we're a static string.
     if (size <= StaticSize)
@@ -244,11 +250,14 @@ void String::reserve(size_t size)
     {
         char *tmp = m_Data;
         m_Data = new char [size];
-        ByteSet(m_Data, 0, size);
         if (tmp)
         {
             MemoryCopy(m_Data, tmp, m_Size > size ? size : m_Size);
             delete [] tmp;
+        }
+        else if (zero)
+        {
+            ByteSet(m_Data, 0, size);
         }
         m_Size = size;
     }
