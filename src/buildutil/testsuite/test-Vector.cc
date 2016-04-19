@@ -22,6 +22,7 @@
 #include <gtest/gtest.h>
 
 #include <utilities/Vector.h>
+#include <utilities/SharedPointer.h>
 
 TEST(PedigreeVector, Construction)
 {
@@ -246,4 +247,23 @@ TEST(PedigreeVector, ReuseAndThenSome)
     }
 
     EXPECT_EQ(x[0], 65);
+}
+
+TEST(PedigreeVector, NonTrivialObjects)
+{
+    Vector<SharedPointer<int>> x;
+
+    x.pushBack(SharedPointer<int>::allocate());
+    x.pushBack(SharedPointer<int>::allocate());
+    x.pushBack(SharedPointer<int>::allocate());
+    x.pushBack(SharedPointer<int>::allocate());
+    x.pushBack(SharedPointer<int>::allocate());
+    x.pushBack(SharedPointer<int>::allocate());
+
+    EXPECT_NE(x[0].get(), (int *) 0);
+    EXPECT_NE(x[1].get(), (int *) 0);
+    EXPECT_NE(x[2].get(), (int *) 0);
+    EXPECT_NE(x[3].get(), (int *) 0);
+    EXPECT_NE(x[4].get(), (int *) 0);
+    EXPECT_NE(x[5].get(), (int *) 0);
 }

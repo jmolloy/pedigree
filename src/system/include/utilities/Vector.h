@@ -89,25 +89,25 @@ class Vector
      *\return iterator pointing to the beginning of the Vector */
     inline Iterator begin()
     {
-      return m_Data;
+      return m_Data + m_Start;
     }
     /** Get a constant iterator pointing to the beginning of the Vector
      *\return constant iterator pointing to the beginning of the Vector */
     inline ConstIterator begin() const
     {
-      return m_Data;
+      return m_Data + m_Start;
     }
     /** Get an iterator pointing to the last element + 1
      *\return iterator pointing to the last element + 1 */
     inline Iterator end()
     {
-      return m_Data + m_Count;
+      return m_Data + m_Start + m_Count;
     }
     /** Get a constant iterator pointing to the last element + 1
      *\return constant iterator pointing to the last element + 1 */
     inline ConstIterator end() const
     {
-      return m_Data + m_Count;
+      return m_Data + m_Start + m_Count;
     }
     /** Copy the content of a Vector into this Vector
      *\param[in] x the reference Vector */
@@ -127,6 +127,11 @@ class Vector
     size_t m_Size;
     /** The number of elements in the Vector */
     size_t m_Count;
+    /**
+     * The current start index in the array.
+     * This is used to reduce the need to keep copying the array contents.
+     */
+    size_t m_Start;
     /** Pointer to the Elements */
     T *m_Data;
     /** Factor to multiply by in reserve(). */
@@ -135,20 +140,20 @@ class Vector
 
 template<class T>
 Vector<T>::Vector()
- : m_Size(0), m_Count(0), m_Data(0)
+ : m_Size(0), m_Count(0), m_Start(0), m_Data(0)
 {
 }
 
 template<class T>
 Vector<T>::Vector(size_t size)
- : m_Size(0), m_Count(0), m_Data(0)
+ : m_Size(0), m_Count(0), m_Start(0), m_Data(0)
 {
   reserve(size, false);
 }
 
 template<class T>
 Vector<T>::Vector(const Vector &x)
- : m_Size(0), m_Count(0), m_Data(0)
+ : m_Size(0), m_Count(0), m_Start(0), m_Data(0)
 {
   assign(x);
 }
@@ -173,7 +178,7 @@ T &Vector<T>::operator [](size_t index) const
   static T outofbounds = T();
   if (index > m_Count)
     return outofbounds;
-  return m_Data[index];
+  return m_Data[m_Start + index];
 }
 
 template<class T>
@@ -193,14 +198,22 @@ void Vector<T>::pushBack(T value)
 {
   reserve(m_Count + 1, true);
 
-  m_Data[m_Count++] = value;
+  // If we've hit the end of the reserved space we can use, we need to move
+  // the existing entries (rather than this happening in each reserve).
+  if ((m_Start + m_Count + 1) > m_Size)
+  {
+    pedigree_std::copy(m_Data, m_Data + m_Start, m_Count);
+    m_Start = 0;
+  }
+
+  m_Data[m_Start + m_Count++] = value;
 }
 
 template<class T>
 T Vector<T>::popBack()
 {
   m_Count--;
-  return m_Data[m_Count];
+  return m_Data[m_Start + m_Count];
 }
 
 template<class T>
@@ -210,9 +223,17 @@ void Vector<T>::pushFront(T value)
 
   reserve(m_Count + 1, false, false);
 
-  // We have a bigger buffer, copy items from the old buffer now.
-  m_Data[0] = value;
-  pedigree_std::copy(&m_Data[1], oldData, m_Count);
+  if (m_Start)
+  {
+    m_Start--;
+    m_Data[m_Start] = value;
+  }
+  else
+  {
+    // We have a bigger buffer, copy items from the old buffer now.
+    m_Data[0] = value;
+    pedigree_std::copy(&m_Data[1], oldData, m_Count);
+  }
 
   m_Count++;
 
@@ -228,7 +249,7 @@ T Vector<T>::popFront()
 {
   T ret = m_Data[0];
   m_Count--;
-  pedigree_std::copy(m_Data, &m_Data[1], m_Count);
+  m_Start++;
   return ret;
 }
 
@@ -236,7 +257,7 @@ template<class T>
 void Vector<T>::setAt(size_t idx, T value)
 {
   if(idx < m_Count)
-    m_Data[idx] = value;
+    m_Data[m_Start + idx] = value;
 }
 
 template<class T>
@@ -252,7 +273,6 @@ template<class T>
 typename Vector<T>::Iterator Vector<T>::erase(Iterator iter)
 {
   size_t which = iter - begin();
-  // maybe which + 1 too
   pedigree_std::copy(&m_Data[which], &m_Data[which + 1], m_Count - which - 1);
   m_Count--;
   return iter;
@@ -264,6 +284,7 @@ void Vector<T>::assign(const Vector &x)
   reserve(x.size(), false);
   pedigree_std::copy(m_Data, x.m_Data, x.m_Count);
   m_Count = x.count();
+  m_Start = x.m_Start;
 }
 
 template<class T>
@@ -289,7 +310,8 @@ void Vector<T>::reserve(size_t size, bool copy, bool free)
   {
     if (copy == true)
     {
-      pedigree_std::copy(m_Data, tmp, m_Size);
+      pedigree_std::copy(m_Data, tmp + m_Start, m_Size - m_Start);
+      m_Start = 0;
     }
     if (free)
     {
