@@ -78,6 +78,62 @@ void *memset(void *buf, int c, size_t n)
 #endif
 }
 
+void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
+{
+#ifdef IS_X86
+    int a, b, c;
+    asm volatile("rep movsb" : "=&c" (a), "=&D" (b), "=&S" (c): "1" (s1), "2" (s2), "0" (n) : "memory");
+    return s1;
+#else
+    const unsigned char *restrict sp = (const unsigned char *restrict)s2;
+    unsigned char *restrict dp = (unsigned char *restrict)s1;
+    for (; n != 0; n--) *dp++ = *sp++;
+    return s1;
+#endif
+}
+
+static int overlaps(const void *restrict s1, const void *restrict s2, size_t n) PURE;
+static int overlaps(const void *restrict s1, const void *restrict s2, size_t n)
+{
+  uintptr_t a = (uintptr_t) s1;
+  uintptr_t a_end = (uintptr_t) s1 + n;
+  uintptr_t b = (uintptr_t) s2;
+  uintptr_t b_end = (uintptr_t) s2 + n;
+
+  return (a <= b_end) && (b <= a_end) ? 1 : 0;
+}
+
+void *memmove(void *s1, const void *s2, size_t n)
+{
+  if (UNLIKELY(!n)) return s1;
+
+  const size_t orig_n = n;
+  if (LIKELY((s1 < s2) || !overlaps(s1, s2, n)))
+  {
+    // No overlap, or there's overlap but we can copy forwards.
+    memcpy(s1, s2, n);
+  }
+  else
+  {
+    // Writing bytes from s2 into s1 cannot be done forwards, use memmove.
+    const unsigned char *sp = (const unsigned char *) s2 + (n - 1);
+    unsigned char *dp = (unsigned char *) s1 + (n - 1);
+    for (; n != 0; n--) *dp-- = *sp--;
+  }
+
+#ifdef ADDITIONAL_CHECKS
+    // We can't memcmp if the regions overlap at all.
+    if (LIKELY(!overlaps(s1, s2, orig_n)))
+    {
+      assert(!memcmp(s1, s2, orig_n));
+    }
+#endif
+
+  return s1;
+}
+
+#endif  // HAS_ADDRESS_SANITIZER
+
 void *WordSet(void *buf, int c, size_t n)
 {
 #ifdef IS_X86
@@ -123,62 +179,6 @@ void *QuadWordSet(void *buf, unsigned long long c, size_t n)
     return buf;
 #endif
 }
-
-void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
-{
-#ifdef IS_X86
-    int a, b, c;
-    asm volatile("rep movsb" : "=&c" (a), "=&D" (b), "=&S" (c): "1" (s1), "2" (s2), "0" (n) : "memory");
-    return s1;
-#else
-    const unsigned char *restrict sp = (const unsigned char *restrict)s2;
-    unsigned char *restrict dp = (unsigned char *restrict)s1;
-    for (; n != 0; n--) *dp++ = *sp++;
-    return s1;
-#endif
-}
-
-static int overlaps(const void *restrict s1, const void *restrict s2, size_t n) CONST;
-static int overlaps(const void *restrict s1, const void *restrict s2, size_t n)
-{
-  uintptr_t a = (uintptr_t) s1;
-  uintptr_t a_end = (uintptr_t) s1 + n;
-  uintptr_t b = (uintptr_t) s2;
-  uintptr_t b_end = (uintptr_t) s2 + n;
-
-  return (a < b_end && b < a_end) ? 1 : 0;
-}
-
-void *memmove(void *s1, const void *s2, size_t n)
-{
-  if (UNLIKELY(!n)) return s1;
-
-  const size_t orig_n = n;
-  if (s1 < s2)
-  {
-    // Writing bytes from s2 into s1 can be done forwards, use memcpy.
-    memcpy(s1, s2, n);
-  }
-  else
-  {
-    // Writing bytes from s2 into s1 cannot be done forwards, use memmove.
-    const unsigned char *sp = (const unsigned char *) s2 + (n - 1);
-    unsigned char *dp = (unsigned char *) s1 + (n - 1);
-    for (; n != 0; n--) *dp-- = *sp--;
-  }
-
-#ifdef ADDITIONAL_CHECKS
-    // We can't memcmp if the regions overlap at all.
-    if (LIKELY(!overlaps(s1, s2, orig_n)))
-    {
-      assert(!memcmp(s1, s2, orig_n));
-    }
-#endif
-
-  return s1;
-}
-
-#endif  // HAS_ADDRESS_SANITIZER
 
 // We still need memcpy etc as linked symbols for GCC optimisations, but we
 // don't have to have their prototypes widely available. So, we implement our
