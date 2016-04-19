@@ -11,7 +11,7 @@ set +e
 
 # Update pup if needed.
 curl -o "$PUP_TMP" https://pup.pedigree-project.org/pup.whl
-if cmp "$PUP_TMP" "$PUP"; then
+if cmp --silent "$PUP_TMP" "$PUP"; then
     rm -f "$PUP_TMP"
 else
     mv "$PUP_TMP" "$PUP"
