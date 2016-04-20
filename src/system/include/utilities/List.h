@@ -25,6 +25,7 @@
 #include <utilities/IteratorAdapter.h>
 #include <utilities/Iterator.h>
 #include <utilities/assert.h>
+#include <utilities/ObjectPool.h>
 
 /** @addtogroup kernelutilities
  * @{ */
@@ -170,6 +171,9 @@ class List
     node_t *m_Last;
 
     uint32_t m_Magic;
+
+    /** Pool of node objects (to reduce impact of lots of node allocs/deallocs). */
+    ObjectPool<node_t> m_NodePool;
 };
 
 //
@@ -178,13 +182,13 @@ class List
 
 template <typename T>
 List<T>::List()
-    : m_Count(0), m_First(0), m_Last(0), m_Magic(0x1BADB002)
+    : m_Count(0), m_First(0), m_Last(0), m_Magic(0x1BADB002), m_NodePool()
 {
 }
 
 template <typename T>
 List<T>::List(const List &x)
-    : m_Count(0), m_First(0), m_Last(0), m_Magic(0x1BADB002)
+    : m_Count(0), m_First(0), m_Last(0), m_Magic(0x1BADB002), m_NodePool()
 {
   assign(x);
 }
@@ -215,7 +219,7 @@ size_t List<T>::count() const
 template <typename T>
 void List<T>::pushBack(T value)
 {
-  node_t *newNode = new node_t;
+  node_t *newNode = m_NodePool.allocate();
   newNode->m_Next = 0;
   newNode->m_Previous = m_Last;
   newNode->value = value;
@@ -248,13 +252,13 @@ T List<T>::popBack()
     return T();
 
   T value = node->value;
-  delete node;
+  m_NodePool.deallocate(node);
   return value;
 }
 template <typename T>
 void List<T>::pushFront(T value)
 {
-  node_t *newNode = new node_t;
+  node_t *newNode = m_NodePool.allocate();
   newNode->m_Next = m_First;
   newNode->m_Previous = 0;
   newNode->value = value;
@@ -287,7 +291,7 @@ T List<T>::popFront()
     return T();
 
   T value = node->value;
-  delete node;
+  m_NodePool.deallocate(node);
   return value;
 }
 template <typename T>
