@@ -146,6 +146,9 @@ module_subdirs = [
     'gfx-deps',
     'preload',
     'init',
+    'confignics',
+    'filesystems',
+    'mountroot',
 ]
 
 if env['hosted'] or env['ARCH_TARGET'] == 'ARM':
@@ -218,6 +221,7 @@ custom_incpath = {
                        '#/src/modules/drivers/cdi/include'],
     'status_server' : ['#/src/system/kernel'],
     'init'          : ['#/src/system/kernel', '#/src'],
+    'mountroot'     : ['#/src/system/kernel'],
     'splash'        : ['#/src/system/kernel'], # For nogfx
     'linker'        : ['#/src/modules/system/linker'],
     'usb-glue'      : ['#/src/system/kernel/machine/arm_beagle'] # TODO: handle other machine types

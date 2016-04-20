@@ -19,99 +19,15 @@
 
 #include <compiler.h>
 #include <Log.h>
-#include <vfs/VFS.h>
-#include <vfs/Directory.h>
-#include <subsys/posix/PosixSubsystem.h> // In src
-#include <machine/Device.h>
-#include <machine/Disk.h>
 #include <Module.h>
-#include <processor/Processor.h>
-#include <linker/Elf.h>
-#include <process/Thread.h>
-#include <process/Process.h>
-#include <process/Scheduler.h>
-#include <processor/PhysicalMemoryManager.h>
-#include <processor/VirtualAddressSpace.h>
-#include <machine/Machine.h>
+#include <vfs/VFS.h>
+#include <subsys/posix/PosixSubsystem.h>
+#include <core/BootIO.h>
 #include <linker/DynamicLinker.h>
-#include <panic.h>
-#include <utilities/assert.h>
-
-#include <core/BootIO.h> // In src/system/kernel
-
-#include <network-stack/NetworkStack.h>
-#include <network-stack/RoutingTable.h>
-#include <network-stack/UdpLogger.h>
-
 #include <users/UserManager.h>
-
-#include <utilities/TimeoutGuard.h>
-
-#include <config/ConfigurationManager.h>
-#include <config/MemoryBackend.h>
-
-#include <machine/DeviceHashTree.h>
-#include <lodisk/LoDisk.h>
-
-#include <machine/InputManager.h>
-
-#include <ServiceManager.h>
 
 extern void pedigree_init_sigret();
 extern void pedigree_init_pthreads();
-
-static bool bRootMounted = false;
-static bool probeDisk(Disk *pDisk)
-{
-    String alias; // Null - gets assigned by the filesystem.
-    if (VFS::instance().mount(pDisk, alias))
-    {
-        // For mount message
-        bool didMountAsRoot = false;
-
-        // Search for the root specifier, if we haven't already mounted root
-        if (!bRootMounted)
-        {
-            NormalStaticString s;
-            s += alias;
-            s += "»/.pedigree-root";
-
-            File* f = VFS::instance().find(String(static_cast<const char*>(s)));
-            if (f && !bRootMounted)
-            {
-                NOTICE("Mounted " << alias << " successfully as root.");
-                VFS::instance().addAlias(alias, String("root"));
-                bRootMounted = didMountAsRoot = true;
-            }
-        }
-
-        if(!didMountAsRoot)
-        {
-            NOTICE("Mounted " << alias << ".");
-        }
-        return false;
-    }
-    return false;
-}
-
-static bool findDisks(Device *pDev)
-{
-    for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
-    {
-        Device *pChild = pDev->getChild(i);
-        if (pChild->getNumChildren() == 0 && /* Only check leaf nodes. */
-                pChild->getType() == Device::Disk)
-        {
-            if ( probeDisk(static_cast<Disk*> (pChild)) ) return true;
-        }
-        else
-        {
-            // Recurse.
-            if (findDisks(pChild)) return true;
-        }
-    }
-    return false;
-}
 
 static void error(const char *s)
 {
@@ -121,87 +37,6 @@ static void error(const char *s)
     str += "\n";
     bootIO.write(str, BootIO::Red, BootIO::Black);
     str.clear();
-}
-
-static int configureInterfaces(void *p)
-{
-    // Fill out the device hash table (needed in RoutingTable)
-    DeviceHashTree::instance().fill(&Device::root());
-
-    // Build routing tables - try to find a default configuration that can
-    // connect to the outside world
-    IpAddress empty;
-    Network *pDefaultCard = 0;
-    for (size_t i = 0; i < NetworkStack::instance().getNumDevices(); i++)
-    {
-        /// \todo Perhaps try and ping a remote host?
-        Network* card = NetworkStack::instance().getDevice(i);
-
-        StationInfo info = card->getStationInfo();
-
-        // IPv6 stateless autoconfiguration and DHCP/DHCPv6 must not happen on
-        // the loopback device, which has a fixed address.
-        if(info.ipv4.getIp() != Network::convertToIpv4(127, 0, 0, 1))
-        {
-            // Auto-configure IPv6 on this card.
-            ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("ipv6"));
-            Service         *pService  = ServiceManager::instance().getService(String("ipv6"));
-            if(pFeatures->provides(ServiceFeatures::touch))
-                if(pService)
-                    pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(card), sizeof(*card));
-
-            // Ask for a DHCP lease on this card
-            /// \todo Static configuration
-            pFeatures = ServiceManager::instance().enumerateOperations(String("dhcp"));
-            pService  = ServiceManager::instance().getService(String("dhcp"));
-            if(pFeatures->provides(ServiceFeatures::touch))
-                if(pService)
-                    pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(card), sizeof(*card));
-        }
-
-        StationInfo newInfo = card->getStationInfo();
-
-        // List IPv6 addresses
-        for(size_t i = 0; i < info.nIpv6Addresses; i++)
-            NOTICE("Interface " << i << " has IPv6 address " << info.ipv6[i].toString() << " (" << Dec << i << Hex << " out of " << info.nIpv6Addresses << ")");
-
-        // If the device has a gateway, set it as the default and continue
-        if (newInfo.gateway != empty)
-        {
-            if(!pDefaultCard)
-                pDefaultCard = card;
-
-            // Additionally route the complement of its subnet to the gateway
-            RoutingTable::instance().Add(RoutingTable::DestSubnetComplement,
-                                         newInfo.ipv4,
-                                         newInfo.subnetMask,
-                                         newInfo.gateway,
-                                         String(""),
-                                         card);
-        }
-
-        // And the actual subnet that the card is on needs to route to... the card.
-        RoutingTable::instance().Add(RoutingTable::DestSubnet,
-                newInfo.ipv4,
-                newInfo.subnetMask,
-                empty,
-                String(""),
-                card);
-
-        // If this isn't already the loopback device, redirect our own IP to 127.0.0.1
-        if(newInfo.ipv4.getIp() != Network::convertToIpv4(127, 0, 0, 1))
-            RoutingTable::instance().Add(RoutingTable::DestIpSub, newInfo.ipv4, Network::convertToIpv4(127, 0, 0, 1), String(""), NetworkStack::instance().getLoopback());
-        else
-            RoutingTable::instance().Add(RoutingTable::DestIp, newInfo.ipv4, empty, String(""), card);
-    }
-
-    // Otherwise, just assume the default is interface zero
-    if (!pDefaultCard)
-        RoutingTable::instance().Add(RoutingTable::Named, empty, empty, String("default"), NetworkStack::instance().getDevice(0));
-    else
-        RoutingTable::instance().Add(RoutingTable::Named, empty, empty, String("default"), pDefaultCard);
-
-    return 0;
 }
 
 int init_stage2(void *param)
@@ -368,45 +203,6 @@ int init_stage2(void *param)
 
 static bool init()
 {
-    // Mount all available filesystems.
-    findDisks(&Device::root());
-
-    if (VFS::instance().find(String("raw»/")) == 0)
-    {
-        error("raw» does not exist - cannot continue startup.");
-        return false;
-    }
-
-    // Are we running a live CD?
-    /// \todo Use the configuration manager to determine if we're running a live CD or
-    ///       not, to avoid the potential for conflicts here.
-    if(VFS::instance().find(String("root»/livedisk.img")))
-    {
-        FileDisk *pRamDisk = new FileDisk(String("root»/livedisk.img"), FileDisk::RamOnly);
-        if(pRamDisk && pRamDisk->initialise())
-        {
-            pRamDisk->setParent(&Device::root());
-            Device::root().addChild(pRamDisk);
-
-            // Mount it in the VFS
-            VFS::instance().removeAlias(String("root"));
-            bRootMounted = false;
-            findDisks(pRamDisk);
-        }
-        else
-            delete pRamDisk;
-    }
-
-    // Is there a root disk mounted?
-    if(VFS::instance().find(String("root»/.pedigree-root")) == 0)
-    {
-        error("No root disk on this system (no root»/.pedigree-root found).");
-        return false;
-    }
-
-    // Initialise user/group configuration.
-    UserManager::instance().initialise();
-
 #ifdef THREADS
     // Create a new process for the init process.
     Process *pProcess = new Process(Processor::information().getCurrentThread()->getParent());
@@ -424,15 +220,8 @@ static bool init()
     PosixSubsystem *pSubsystem = new PosixSubsystem;
     pProcess->setSubsystem(pSubsystem);
 
-    // Spin up network interfaces, but don't wait.
-    Thread *pInterfaceThread = new Thread(pProcess, configureInterfaces, 0);
-    pInterfaceThread->detach();
-
     Thread *pThread = new Thread(pProcess, init_stage2, 0);
     pThread->detach();
-#else
-    // No threads, though we should still be able to configure interfaces.
-    configureInterfaces(0);
 #endif
 
     return true;
@@ -443,15 +232,11 @@ static void destroy()
 }
 
 #if defined(X86_COMMON)
-#define __MOD_DEPS "vfs", "posix", "partition", "linker", "network-stack", "users", "pedigree-c", "native"
-#define __MOD_DEPS_OPT "ext2", "fat", "gfx-deps"
-#elif defined(PPC_COMMON)
-#define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "linker", "network-stack", "users", "pedigree-c", "native"
-#elif defined(ARM_COMMON)
-#define __MOD_DEPS "vfs", "ext2", "fat", "posix", "partition", "linker", \
-    "network-stack", "users", "pedigree-c", "native"
-#elif defined(HOSTED)
-#define __MOD_DEPS "vfs", "ext2", "fat", "partition", "network-stack", "users", "pedigree-c", "native", "posix"
+#define __MOD_DEPS "vfs", "posix", "linker", "users"
+#define __MOD_DEPS_OPT "gfx-deps", "mountroot"
+#else
+#define __MOD_DEPS "vfs", "posix", "linker", "users"
+#define __MOD_DEPS_OPT "mountroot"
 #endif
 MODULE_INFO("init", &init, &destroy, __MOD_DEPS);
 #ifdef __MOD_DEPS_OPT

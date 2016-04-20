@@ -177,6 +177,9 @@ void UserManager::initialise()
 
 static bool init()
 {
+  // Initialise user/group configuration.
+  UserManager::instance().initialise();
+
   return true;
 }
 
@@ -184,4 +187,4 @@ static void destroy()
 {
 }
 
-MODULE_INFO("users", &init, &destroy);
+MODULE_INFO("users", &init, &destroy, "config");

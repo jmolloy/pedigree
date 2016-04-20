@@ -161,4 +161,5 @@ static void exit()
 {
 }
 
-MODULE_INFO("network-stack", &entry, &exit, "vfs");
+// NetManager exposes a Filesystem, and so needs the vfs module.
+MODULE_INFO("network-stack", &entry, &exit, "config", "vfs");
