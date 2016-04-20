@@ -29,7 +29,7 @@
 static int configureInterfaces(void *p)
 {
     // Fill out the device hash table (needed in RoutingTable)
-    DeviceHashTree::instance().fill(&Device::root());
+    DeviceHashTree::instance().fill();
 
     // Build routing tables - try to find a default configuration that can
     // connect to the outside world

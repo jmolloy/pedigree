@@ -33,17 +33,17 @@ DeviceHashTree::~DeviceHashTree()
 {
 }
 
+static Device *testDevice(Device *p)
+{
+    if(p->getType() != Device::Root)
+        DeviceHashTree::instance().add(p);
+
+    return p;
+}
+
 void DeviceHashTree::fill(Device *root)
 {
-    for(unsigned int i = 0; i < root->getNumChildren(); i++)
-    {
-        Device *pChild = root->getChild(i);
-        if(pChild->getType() != Device::Root)
-            add(pChild);
-
-        if(pChild->getNumChildren())
-            fill(pChild);
-    }
+    Device::foreach(testDevice, root);
 
     m_bInitialised = true;
 }
