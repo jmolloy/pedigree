@@ -134,8 +134,11 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
     }
 
     // Map in all non-alloc sections.
+    uintptr_t alignedStart = start & ~(pageSz - 1);
+    uintptr_t alignedEnd = (end & ~(pageSz - 1)) + pageSz;
+    size_t additionalContentsPages = (alignedEnd - alignedStart) / pageSz;
     if (physicalMemoryManager.allocateRegion(m_AdditionalSectionContents,
-                                             (end - start + pageSz - 1) / pageSz,
+                                             additionalContentsPages,
                                              PhysicalMemoryManager::continuous,
                                              VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write,
                                              start) == false)
@@ -167,7 +170,7 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
         // Adjust the section
         if ((pSh->flags & SHF_ALLOC) != SHF_ALLOC)
         {
-            NOTICE("Converting shdr " << pSh->addr);
+            NOTICE("Converting shdr " << pSh->addr << " -> " << pSh->addr + pSh->size);
             pSh->addr = reinterpret_cast<uintptr_t>(m_AdditionalSectionContents.convertPhysicalPointer<void>(pSh->addr));
             NOTICE(" to " << pSh->addr);
             pSh->offset = pSh->addr;
