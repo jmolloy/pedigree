@@ -76,6 +76,17 @@ class HashTable
 
         virtual ~HashTable() {
             if(m_Buckets) {
+                for (size_t i = 0; i < m_nBuckets; ++i)
+                {
+                    bucket *b = m_Buckets[i];
+                    while (b)
+                    {
+                        bucket *d = b;
+                        b = b->next;
+                        delete d;
+                    }
+                }
+
                 delete [] m_Buckets;
             }
         }
@@ -98,7 +109,7 @@ class HashTable
                 return 0;
             }
 
-            if (hash > m_nBuckets)
+            if (hash >= m_nBuckets)
             {
                 // Not present.
                 return 0;
@@ -202,7 +213,6 @@ class HashTable
 
                 if(b) {
                     p->next = b->next;
-                    delete b;
                 }
             }
 
