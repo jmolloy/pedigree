@@ -32,6 +32,13 @@ static int nController = 0;
 
 static bool bFound = false;
 
+// Try for a PIIX IDE controller first. We prefer the PIIX as it enables us
+// to use DMA (and is a little easier to use for device detection).
+static bool bPiixControllerFound = false;
+static bool bFallBackISA = false;
+
+static bool allowProbing = false;
+
 void probeIsaDevice(Controller *pDev)
 {
   // Create a new AtaController device node.
@@ -84,137 +91,114 @@ void probePiixController(Device *pDev)
 }
 
 /// Removes the ISA ATA controllers added early in boot
-void removeIsaAta(Device *pDev)
+Device *removeIsaAta(Device *dev)
 {
-    for(unsigned int i = 0; i < pDev->getNumChildren(); i++)
+    if(dev->getType() == Device::Controller)
     {
-        Device *dev = pDev->getChild(i);
-        String name;
-        dev->getName(name);
-        if(dev->getType() == Device::Controller)
+        // Get its addresses, and search for "command" and "control".
+        bool foundCommand = false;
+        bool foundControl = false;
+        for (unsigned int j = 0; j < dev->addresses().count(); j++)
         {
-            // Get its addresses, and search for "command" and "control".
-            bool foundCommand = false;
-            bool foundControl = false;
-            for (unsigned int j = 0; j < dev->addresses().count(); j++)
-            {
-                /// \todo Problem with String::operator== - fix.
-                if (dev->addresses()[j]->m_Name == "command")
-                    foundCommand = true;
-                if (dev->addresses()[j]->m_Name == "control")
-                    foundControl = true;
-            }
-            if (foundCommand && foundControl)
-            {
-                pDev->removeChild(i);
-                delete dev;
-
-                // This leaves i one item too far - easily fixed.
-                i--;
-
-                // Don't recurse on the device we just removed.
-                continue;
-            }
+            /// \todo Problem with String::operator== - fix.
+            if (dev->addresses()[j]->m_Name == "command")
+                foundCommand = true;
+            if (dev->addresses()[j]->m_Name == "control")
+                foundControl = true;
         }
 
-        // Recurse and keep probing
-        removeIsaAta(dev);
+        if (foundCommand && foundControl)
+        {
+            // Destroy and remove this device.
+            return 0;
+        }
     }
+
+    return dev;
 }
 
-static void searchNode(Device *pDev, bool bFallBackISA)
+static Device *probeDisk(Device *pDev)
 {
     // Check to see if this is an AHCI controller.
-    for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
+    // Class 1 = Mass Storage. Subclass 6 = SATA.
+    if((!allowProbing) && (pDev->getPciClassCode() == 0x01 &&
+        pDev->getPciSubclassCode() == 0x06))
     {
-        Device *pChild = pDev->getChild(i);
-        // Class 1 = Mass Storage. Subclass 6 = SATA.
-        if(pChild->getPciClassCode() == 0x01 &&
-            pChild->getPciSubclassCode() == 0x06)
-        {
-            // No AHCI support yet, so just log and keep going.
-            WARNING("Found a SATA controller of some sort, hoping for ISA fallback.");
-        }
+        // No AHCI support yet, so just log and keep going.
+        WARNING("Found a SATA controller of some sort, hoping for ISA fallback.");
     }
 
-    // Try for a PIIX IDE controller first. We prefer the PIIX as it enables us
-    // to use DMA (and is a little easier to use for device detection).
-    static bool bPiixControllerFound = false;
-    for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
+    // Look for a PIIX controller
+    if(pDev->getPciVendorId() == 0x8086)
     {
-        Device *pChild = pDev->getChild(i);
-        // Look for a PIIX controller
-        if(pChild->getPciVendorId() == 0x8086)
+        // Okay, the vendor is right, but is it the right device?
+        /// \todo ICH controller
+        if(((pDev->getPciDeviceId() == 0x1230) ||    // PIIX
+            (pDev->getPciDeviceId() == 0x7010) ||    // PIIX3
+            (pDev->getPciDeviceId() == 0x7111)) &&   // PIIX4
+            (pDev->getPciFunctionNumber() == 1))     // IDE Controller
         {
-            // Okay, the vendor is right, but is it the right device?
-            /// \todo ICH controller
-            if(((pChild->getPciDeviceId() == 0x1230) ||    // PIIX
-                (pChild->getPciDeviceId() == 0x7010) ||    // PIIX3
-                (pChild->getPciDeviceId() == 0x7111)) &&   // PIIX4
-                (pChild->getPciFunctionNumber() == 1))     // IDE Controller
+            if (allowProbing)
             {
-                // Right, we found a PIIX controller. Let's remove the ATA
-                // controllers that are created early in the boot (ISA) now
-                // so that when we probe the controller we don't run into used
-                // ports.
-                if(!bPiixControllerFound)
-                {
-                    removeIsaAta(&Device::root());
-                }
-
-                probePiixController(pChild);
-                bPiixControllerFound = true;
-
-                // Don't recurse into the child as we probably removed it.
-                /// \todo need more status from probe function
-                continue;
+              probePiixController(pDev);
             }
+            bPiixControllerFound = true;
         }
-        // Recurse.
-        searchNode(pChild, false);
     }
 
     // No PIIX controller found, fall back to ISA
     /// \todo Could also fall back to ICH?
     if(!bPiixControllerFound && bFallBackISA)
     {
-        for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
+        // Is this a controller?
+        if (pDev->getType() == Device::Controller)
         {
-            Device *pChild = pDev->getChild(i);
-            // Is this a controller?
-            if (pChild->getType() == Device::Controller)
+            // Check it's not an ATA controller already.
+            // Get its addresses, and search for "command" and "control".
+            bool foundCommand = false;
+            bool foundControl = false;
+            for (unsigned int j = 0; j < pDev->addresses().count(); j++)
             {
-                // Check it's not an ATA controller already.
-                String name;
-                pChild->getName(name);
-
-                // Get its addresses, and search for "command" and "control".
-                bool foundCommand = false;
-                bool foundControl = false;
-                for (unsigned int j = 0; j < pChild->addresses().count(); j++)
-                {
-                    /// \todo Problem with String::operator== - fix.
-                    if (pChild->addresses()[j]->m_Name == "command")
-                        foundCommand = true;
-                    if (pChild->addresses()[j]->m_Name == "control")
-                        foundControl = true;
-                }
-                if (foundCommand && foundControl)
-                    probeIsaDevice(static_cast<Controller*> (pChild));
+                /// \todo Problem with String::operator== - fix.
+                if (pDev->addresses()[j]->m_Name == "command")
+                    foundCommand = true;
+                if (pDev->addresses()[j]->m_Name == "control")
+                    foundControl = true;
             }
-
-            // Recurse.
-            searchNode(pChild, true);
+            if (allowProbing && foundCommand && foundControl)
+                probeIsaDevice(static_cast<Controller*> (pDev));
         }
     }
+
+    return pDev;
 }
 
 static bool entry()
 {
+  /// \todo this iterates the device tree up to FOUR times.
+  /// Needs some more thinking about how to do this better.
+
   // Walk the device tree looking for controllers that have 
   // "control" and "command" addresses.
-  Device *pDev = &Device::root();
-  searchNode(pDev, true);
+  Device::foreach(probeDisk);
+
+  // Done initial probe to find out what exists, action the findings now.
+  allowProbing = true;
+  if (bPiixControllerFound)
+  {
+    // Right, we found a PIIX controller. Let's remove the ATA
+    // controllers that are created early in the boot (ISA) now
+    // so that when we probe the controller we don't run into used
+    // ports.
+    Device::foreach(removeIsaAta);
+    Device::foreach(probeDisk);
+  }
+  if (!bFound)
+  {
+    // Try again, allowing ISA devices this time.
+    bFallBackISA = true;
+    Device::foreach(probeDisk);
+  }
 
   return bFound;
 }
