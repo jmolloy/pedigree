@@ -27,60 +27,54 @@ static cdi_list_t devices = NULL;
 
 static void cdi_destroy(void);
 
-void iterateDeviceTree(Device *root)
+static Device *handleDevice(Device *p)
 {
-    for(size_t i = 0; i < root->getNumChildren(); i++)
-    {
-        Device *p = root->getChild(i);
+    struct cdi_pci_device *dev = new struct cdi_pci_device;
+    dev->bus_data.bus_type = CDI_PCI;
 
-        struct cdi_pci_device *dev = new struct cdi_pci_device;
-        dev->bus_data.bus_type = CDI_PCI;
-
-        // Enable bus mastering and standard I/O as needed.
+    // Enable bus mastering and standard I/O as needed.
 #ifdef X86_COMMON
     uint32_t nPciCmdSts = PciBus::instance().readConfigSpace(p, 1);
     PciBus::instance().writeConfigSpace(p, 1, nPciCmdSts | 0x7);
 #endif
 
-        dev->bus = p->getPciBusPosition();
-        dev->dev = p->getPciDevicePosition();
-        dev->function = p->getPciFunctionNumber();
+    dev->bus = p->getPciBusPosition();
+    dev->dev = p->getPciDevicePosition();
+    dev->function = p->getPciFunctionNumber();
 
-        dev->vendor_id = p->getPciVendorId();
-        dev->device_id = p->getPciDeviceId();
+    dev->vendor_id = p->getPciVendorId();
+    dev->device_id = p->getPciDeviceId();
 
-        dev->class_id = p->getPciClassCode();
-        dev->subclass_id = p->getPciSubclassCode();
-        dev->interface_id = p->getPciProgInterface();
+    dev->class_id = p->getPciClassCode();
+    dev->subclass_id = p->getPciSubclassCode();
+    dev->interface_id = p->getPciProgInterface();
 
-        dev->rev_id = 0; /// \todo Implement into Device
+    dev->rev_id = 0; /// \todo Implement into Device
+    
+    dev->irq = p->getInterruptNumber();
+
+    dev->resources = cdi_list_create();
+    for(size_t j = 0; j < p->addresses().count(); j++)
+    {
+        Device::Address *addr = p->addresses()[j];
+        struct cdi_pci_resource *res = new struct cdi_pci_resource;
+        if(addr->m_IsIoSpace)
+            res->type = CDI_PCI_IOPORTS;
+        else
+            res->type = CDI_PCI_MEMORY;
+        res->start = addr->m_Address;
+        res->length = addr->m_Size;
+        res->index = j;
+        res->address = reinterpret_cast<void*>(res->start);
         
-        dev->irq = p->getInterruptNumber();
-
-        dev->resources = cdi_list_create();
-        for(size_t j = 0; j < p->addresses().count(); j++)
-        {
-            Device::Address *addr = p->addresses()[j];
-            struct cdi_pci_resource *res = new struct cdi_pci_resource;
-            if(addr->m_IsIoSpace)
-                res->type = CDI_PCI_IOPORTS;
-            else
-                res->type = CDI_PCI_MEMORY;
-            res->start = addr->m_Address;
-            res->length = addr->m_Size;
-            res->index = j;
-            res->address = reinterpret_cast<void*>(res->start);
-            
-            cdi_list_push(dev->resources, res);
-        }
-
-        dev->meta.backdev = reinterpret_cast<void *>(p);
-
-        cdi_list_push(devices, dev);
-
-        if(p->getNumChildren())
-            iterateDeviceTree(p);
+        cdi_list_push(dev->resources, res);
     }
+
+    dev->meta.backdev = reinterpret_cast<void *>(p);
+
+    cdi_list_push(devices, dev);
+
+    return p;
 }
 
 /**
@@ -95,8 +89,7 @@ void cdi_init(void)
 
     // Iterate the device tree and add cdi_bus_data structs to the device list
     // for each found device.
-    Device *root = &Device::root();
-    iterateDeviceTree(root);
+    Device::foreach(handleDevice);
 }
 
 bool cdi_module_init()
@@ -222,8 +215,7 @@ int cdi_provide_device(struct cdi_bus_data *device)
                 }
                 
                 // Link into the tree
-                pDevice->setParent(&Device::root());
-                Device::root().addChild(pDevice);
+                Device::addToRoot(pDevice);
                 
                 return 0;
             }

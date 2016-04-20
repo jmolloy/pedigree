@@ -107,8 +107,7 @@ void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* device)
     CdiNet *pCdiNet = new CdiNet(device);
 
     // Replace pDev with pCdiNet
-    pCdiNet->setParent(&Device::root());
-    Device::root().addChild(pCdiNet);
+    Device::addToRoot(pCdiNet);
 }
 
 static CdiNet *findNet(Device *pRoot, struct cdi_net_device *device)
