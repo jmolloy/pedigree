@@ -24,7 +24,7 @@
 
 #define ULONG_MAX -1
 
-size_t StringLength(const char *src)
+size_t _StringLength(const char *src)
 {
   const char *orig = src;
   while (*src) ++src;

@@ -25,6 +25,8 @@
 
 #include <utilities/utility.h>
 
+#define CONSTANT_MESSAGE "hello, world! this is a constant string."
+
 static void BM_StringLength(benchmark::State &state)
 {
     char *buf = new char[state.range_x()];
@@ -39,6 +41,19 @@ static void BM_StringLength(benchmark::State &state)
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
 
     delete [] buf;
+}
+
+static void BM_StringLengthConstant(benchmark::State &state)
+{
+    while (state.KeepRunning())
+    {
+        // constexpr here ensures, via compiler check, that we're actually
+        // properly testing the compile-time constant version of StringLength
+        constexpr size_t result = StringLength(CONSTANT_MESSAGE);
+        benchmark::DoNotOptimize(result);
+    }
+
+    state.SetBytesProcessed(int64_t(state.iterations()) * strlen(CONSTANT_MESSAGE));
 }
 
 static void BM_StringCopy(benchmark::State &state)
@@ -148,6 +163,7 @@ static void BM_StringReverseFind(benchmark::State &state)
 }
 
 BENCHMARK(BM_StringLength)->Range(8, 8<<16);
+BENCHMARK(BM_StringLengthConstant);
 BENCHMARK(BM_StringCopy)->Range(8, 8<<16);
 BENCHMARK(BM_StringCopyN)->Range(8, 8<<16);
 BENCHMARK(BM_StringFind)->Range(8, 8<<16);
