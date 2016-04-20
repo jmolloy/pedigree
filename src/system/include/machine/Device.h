@@ -24,6 +24,9 @@
 #include <utilities/Vector.h>
 #include <processor/types.h>
 #include <processor/IoBase.h>
+#ifdef THREADS
+#include <process/Mutex.h>
+#endif
 #include <Log.h>
 #ifdef OPENFIRMWARE
 #include <machine/openfirmware/OpenFirmware.h>
@@ -93,10 +96,36 @@ public:
   virtual ~Device();
 
   /** Retrieves the root device */
-  static Device &root()
+  static Device &root() DEPRECATED
   {
     return m_Root;
   }
+
+  /**
+   * Traverses the full device tree, calling the given callback for each item.
+   *
+   * This will take a lock if threading is enabled, such that any operations
+   * taking place on the device tree will block until iteration completes.
+   *
+   * To facilitate environments that may need to replace objects, the callback
+   * returns a Device pointer. If this pointer is null, the referenced Device
+   * is removed from the tree. If this pointer is different to the original,
+   * the original is replaced by the new pointer in the tree. Otherwise, if
+   * the pointer does not differ, no action is taken.
+   *
+   * This characteristic allows for a full traversal to be performed, editing
+   * the tree along the way, safely and without conflicting with other attempts
+   * to edit the tree.
+   *
+   * You, in almost every case, want this function if the Device you're editing
+   * is already linked into the Device tree.
+   *
+   * \todo add filters to avoid the need to filter in callbacks
+   */
+  static void foreach(Device *(*callback)(Device *), Device *root = 0);
+
+  /** Adds the given object to the root of the device tree, atomically. */
+  static void addToRoot(Device *device);
 
   /** Returns the device's parent */
   inline Device *getParent() const
@@ -252,6 +281,9 @@ public:
   }
 #endif
 private:
+  /** Actual do-er for foreach (does not take lock). */
+  static void foreachInternal(Device *(callback)(Device *), Device *root);
+
   /** Copy constructor.
       \note NOT implemented. */
   Device(const Device&);
@@ -296,6 +328,10 @@ protected:
   uint32_t m_PciDevicePos;
   /** PCI Function number */
   uint32_t m_PciFunctionNum;
+#ifdef THREADS
+  /** Lock to manage access to the device tree. */
+  static Mutex m_TreeLock;
+#endif
 };
 
 #endif

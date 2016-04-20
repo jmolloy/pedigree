@@ -23,6 +23,15 @@
 #include <processor/PhysicalMemoryManager.h>
 #include <Log.h>
 
+#ifdef THREADS
+#include <LockGuard.h>
+#define RAII_LOCK() LockGuard<Mutex> guard(m_TreeLock)
+
+Mutex Device::m_TreeLock;
+#else
+#define RAII_LOCK()
+#endif
+
 /** Singleton Device instantiation. */
 Device Device::m_Root;
 
@@ -72,6 +81,54 @@ Device::~Device()
   for (unsigned int i = 0; i < m_Children.count(); i++)
   {
     delete m_Children[i];
+  }
+}
+
+void Device::foreach(Device *(*callback)(Device *), Device *root)
+{
+  RAII_LOCK();
+
+  if (!root)
+  {
+    root = &Device::root();
+  }
+
+  foreachInternal(callback, root);
+}
+
+void Device::addToRoot(Device *device)
+{
+  RAII_LOCK();
+
+  device->setParent(&Device::root());
+  Device::root().addChild(device);
+}
+
+void Device::foreachInternal(Device *(*callback)(Device *), Device *root)
+{
+  for (size_t i = 0; i < root->getNumChildren();)
+  {
+    // Provide the callback for this child.
+    Device *child = root->getChild(i);
+    Device *result = callback(child);
+    if (!result)
+    {
+      // Remove & skip traversal.
+      root->removeChild(i);
+      continue;
+    }
+    else if (result != child)
+    {
+      // Replace, but we can still traverse the child.
+      root->replaceChild(child, result);
+      delete child;
+      child = result;
+    }
+
+    // Traverse this child's tree.
+    foreachInternal(callback, child);
+
+    ++i;
   }
 }
 

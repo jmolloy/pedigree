@@ -49,7 +49,8 @@ warning_flags_cxx = ['-Wsign-promo', '-Woverloaded-virtual',
 # TODO(miselin): we really shouldn't disable -Wconversion...
 warning_flags_off = [
     '-Wno-unused', '-Wno-unused-variable', '-Wno-conversion', '-Wno-format',
-    '-Wno-packed-bitfield-compat', '-Wno-error=disabled-optimization']
+    '-Wno-packed-bitfield-compat', '-Wno-error=disabled-optimization',
+    '-Wno-error=deprecated-declarations']
 
 # Generic assembler flags
 generic_asflags = []
