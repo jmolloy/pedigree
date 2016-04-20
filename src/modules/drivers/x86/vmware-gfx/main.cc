@@ -518,7 +518,7 @@ void callback(Device *pDevice)
 bool entry()
 {
     // Don't care about non-SVGA2 devices, just use VBE for them.
-    Device::root().searchByVendorIdAndDeviceId(PCI_VENDOR_ID_VMWARE, PCI_DEVICE_ID_VMWARE_SVGA2, callback);
+    Device::searchByVendorIdAndDeviceId(PCI_VENDOR_ID_VMWARE, PCI_DEVICE_ID_VMWARE_SVGA2, callback);
 
     return bFound;
 }

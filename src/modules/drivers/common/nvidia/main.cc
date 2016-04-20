@@ -77,7 +77,7 @@ void probeDevice(Device *pDev)
 
 bool entry()
 {
-    Device::root().searchByVendorId(0x10DE, probeDevice);
+    Device::searchByVendorId(0x10DE, probeDevice);
 
     return bFound;
 }

@@ -258,15 +258,11 @@ public:
   void replaceChild(Device *src, Device *dest);
 
   /** Search functions */
-  void searchByVendorId(uint16_t vendorId, void (*callback)(Device*));
-
-  void searchByVendorIdAndDeviceId(uint16_t vendorId, uint16_t deviceId, void (*callback)(Device*));
-
-  void searchByClass(uint16_t classCode, void (*callback)(Device*));
-
-  void searchByClassAndSubclass(uint16_t classCode, uint16_t subclassCode, void (*callback)(Device*));
-
-  void searchByClassSubclassAndProgInterface(uint16_t classCode, uint16_t subclassCode, uint8_t progInterface, void (*callback)(Device*));
+  static void searchByVendorId(uint16_t vendorId, void (*callback)(Device*), Device *root = 0);
+  static void searchByVendorIdAndDeviceId(uint16_t vendorId, uint16_t deviceId, void (*callback)(Device*), Device *root = 0);
+  static void searchByClass(uint16_t classCode, void (*callback)(Device*), Device *root = 0);
+  static void searchByClassAndSubclass(uint16_t classCode, uint16_t subclassCode, void (*callback)(Device*), Device *root = 0);
+  static void searchByClassSubclassAndProgInterface(uint16_t classCode, uint16_t subclassCode, uint8_t progInterface, void (*callback)(Device*), Device *root = 0);
 
 #ifdef OPENFIRMWARE
   /** Gets the device's OpenFirmware handle. */
@@ -283,6 +279,12 @@ public:
 private:
   /** Actual do-er for foreach (does not take lock). */
   static void foreachInternal(Device *(callback)(Device *), Device *root);
+  /** Do-ers for search functions. */
+  static void searchByVendorIdInternal(uint16_t vendorId, void (*callback)(Device*), Device *root);
+  static void searchByVendorIdAndDeviceIdInternal(uint16_t vendorId, uint16_t deviceId, void (*callback)(Device*), Device *root);
+  static void searchByClassInternal(uint16_t classCode, void (*callback)(Device*), Device *root);
+  static void searchByClassAndSubclassInternal(uint16_t classCode, uint16_t subclassCode, void (*callback)(Device*), Device *root);
+  static void searchByClassSubclassAndProgInterfaceInternal(uint16_t classCode, uint16_t subclassCode, uint8_t progInterface, void (*callback)(Device*), Device *root);
 
   /** Copy constructor.
       \note NOT implemented. */

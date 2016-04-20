@@ -43,7 +43,7 @@ void probeDevice(Device *pDev)
 
 bool entry()
 {
-    Device::root().searchByVendorIdAndDeviceId(NE2K_VENDOR_ID, NE2K_DEVICE_ID, probeDevice);
+    Device::searchByVendorIdAndDeviceId(NE2K_VENDOR_ID, NE2K_DEVICE_ID, probeDevice);
 
     return bFound;
 }

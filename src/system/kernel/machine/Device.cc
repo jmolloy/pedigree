@@ -208,58 +208,123 @@ void Device::replaceChild(Device *src, Device *dest)
 
 /** Search functions */
 
-void Device::searchByVendorId(uint16_t vendorId, void (*callback)(Device*))
+void Device::searchByVendorId(uint16_t vendorId, void (*callback)(Device*), Device *root)
 {
-    for (unsigned int i = 0; i < m_Children.count(); i++)
+    RAII_LOCK();
+
+    if (!root)
     {
-        Device *pChild = m_Children[i];
+        root = &Device::root();
+    }
+
+    searchByVendorIdInternal(vendorId, callback, root);
+}
+
+void Device::searchByVendorIdAndDeviceId(uint16_t vendorId, uint16_t deviceId, void (*callback)(Device*), Device *root)
+{
+    RAII_LOCK();
+
+    if (!root)
+    {
+        root = &Device::root();
+    }
+
+    searchByVendorIdAndDeviceIdInternal(vendorId, deviceId, callback, root);
+}
+
+void Device::searchByClass(uint16_t classCode, void (*callback)(Device*), Device *root)
+{
+    RAII_LOCK();
+
+    if (!root)
+    {
+        root = &Device::root();
+    }
+
+    searchByClassInternalInternal(classCode, callback, root);
+}
+
+void Device::searchByClassAndSubclass(uint16_t classCode, uint16_t subclassCode, void (*callback)(Device*), Device *root)
+{
+    RAII_LOCK();
+
+    if (!root)
+    {
+        root = &Device::root();
+    }
+
+    searchByClassAndSubclassInternal(classCode, subclassCode, callback, root);
+}
+
+void Device::searchByClassSubclassAndProgInterface(uint16_t classCode, uint16_t subclassCode, uint8_t progInterface, void (*callback)(Device*), Device *root)
+{
+    RAII_LOCK();
+
+    if (!root)
+    {
+        root = &Device::root();
+    }
+
+    searchByClassSubclassAndProgInterfaceInternal(classCode, subclassCode, progInterface, callback, root);
+}
+
+void Device::searchByVendorIdInternal(uint16_t vendorId, void (*callback)(Device*), Device *root)
+{
+    for (unsigned int i = 0; i < root->getNumChildren(); i++)
+    {
+        Device *pChild = root->getChild(i);
         if(pChild->getPciVendorId() == vendorId)
             callback(pChild);
-        pChild->searchByVendorId(vendorId, callback);
+
+        searchByVendorIdInternal(vendorId, callback, pChild);
     }
 }
 
-void Device::searchByVendorIdAndDeviceId(uint16_t vendorId, uint16_t deviceId, void (*callback)(Device*))
+void Device::searchByVendorIdAndDeviceIdInternal(uint16_t vendorId, uint16_t deviceId, void (*callback)(Device*), Device *root)
 {
-    for (unsigned int i = 0; i < m_Children.count(); i++)
+    for (unsigned int i = 0; i < root->getNumChildren(); i++)
     {
-        Device *pChild = m_Children[i];
+        Device *pChild = root->getChild(i);
         if((pChild->getPciVendorId() == vendorId) && (pChild->getPciDeviceId() == deviceId))
             callback(pChild);
-        pChild->searchByVendorIdAndDeviceId(vendorId, deviceId, callback);
+
+        searchByVendorIdAndDeviceIdInternal(vendorId, deviceId, callback, pChild);
     }
 }
 
-void Device::searchByClass(uint16_t classCode, void (*callback)(Device*))
+void Device::searchByClassInternal(uint16_t classCode, void (*callback)(Device*), Device *root)
 {
-    for (unsigned int i = 0; i < m_Children.count(); i++)
+    for (unsigned int i = 0; i < root->getNumChildren(); i++)
     {
-        Device *pChild = m_Children[i];
+        Device *pChild = root->getChild(i);
         if(pChild->getPciClassCode() == classCode)
             callback(pChild);
-        pChild->searchByClass(classCode, callback);
+
+        searchByClassInternal(classCode, callback, pChild);
     }
 }
 
-void Device::searchByClassAndSubclass(uint16_t classCode, uint16_t subclassCode, void (*callback)(Device*))
+void Device::searchByClassAndSubclassInternal(uint16_t classCode, uint16_t subclassCode, void (*callback)(Device*), Device *root)
 {
-    for (unsigned int i = 0; i < m_Children.count(); i++)
+    for (unsigned int i = 0; i < root->getNumChildren(); i++)
     {
-        Device *pChild = m_Children[i];
+        Device *pChild = root->getChild(i);
         if((pChild->getPciClassCode() == classCode) && (pChild->getPciSubclassCode() == subclassCode))
             callback(pChild);
-        pChild->searchByClassAndSubclass(classCode, subclassCode, callback);
+
+        searchByClassAndSubclassInternal(classCode, subclassCode, callback, pChild);
     }
 }
 
-void Device::searchByClassSubclassAndProgInterface(uint16_t classCode, uint16_t subclassCode, uint8_t progInterface, void (*callback)(Device*))
+void Device::searchByClassSubclassAndProgInterfaceInternal(uint16_t classCode, uint16_t subclassCode, uint8_t progInterface, void (*callback)(Device*), Device *root)
 {
-    for (unsigned int i = 0; i < m_Children.count(); i++)
+    for (unsigned int i = 0; i < root->getNumChildren(); i++)
     {
-        Device *pChild = m_Children[i];
+        Device *pChild = root->getChild(i);
         if((pChild->getPciClassCode() == classCode) && (pChild->getPciSubclassCode() == subclassCode) && (pChild->getPciProgInterface() == progInterface))
             callback(pChild);
-        pChild->searchByClassSubclassAndProgInterface(classCode, subclassCode, progInterface, callback);
+
+        searchByClassSubclassAndProgInterfaceInternal(classCode, subclassCode, progInterface, callback, pChild);
     }
 }
 
