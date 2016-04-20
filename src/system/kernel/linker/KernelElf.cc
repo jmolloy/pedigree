@@ -29,6 +29,9 @@
 
 KernelElf KernelElf::m_Instance;
 
+// Define to dump each module's dependencies in the serial log.
+// #undef DUMP_DEPENDENCIES
+
 // Define to 1 to load modules using threads.
 #define THREADED_MODULE_LOADING 0
 
@@ -349,6 +352,22 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
     DEBUG("KERNELELF: Preloaded module " << module->name << " at " << module->loadBase << " to " << (module->loadBase + module->loadSize));
     DEBUG("KERNELELF: Module " << module->name << " consumes " << Dec << (module->loadSize / 1024) << Hex << "K of memory");
 
+#ifdef DUMP_DEPENDENCIES
+    size_t i = 0;
+    while(module->depends_opt && module->depends_opt[i])
+    {
+        DEBUG("KERNELELF: Module " << module->name << " optdepends on " << module->depends_opt[i]);
+        ++i;
+    }
+
+    i = 0;
+    while(module->depends && module->depends[i])
+    {
+        DEBUG("KERNELELF: Module " << module->name << " depends on " << module->depends[i]);
+        ++i;
+    }
+#endif
+
 #ifdef MEMORY_TRACING
     traceMetadata(NormalStaticString(module->name), reinterpret_cast<void*>(module->loadBase), reinterpret_cast<void*>(module->loadBase + module->loadSize));
 #endif
@@ -661,11 +680,14 @@ int executeModuleThread(void *mod)
 
         if (startCtors && endCtors)
         {
+            NOTICE("running ctors in " << module->name);
             uintptr_t *iterator = reinterpret_cast<uintptr_t*>(startCtors);
             while (iterator < reinterpret_cast<uintptr_t*>(endCtors))
             {
                 void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
+                NOTICE("ctor: " << fp);
                 fp();
+                NOTICE("ctor done");
                 iterator++;
             }
         }
