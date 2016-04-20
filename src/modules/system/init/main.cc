@@ -43,8 +43,6 @@
 #include <network-stack/RoutingTable.h>
 #include <network-stack/UdpLogger.h>
 
-#include <ramfs/RamFs.h>
-
 #include <users/UserManager.h>
 
 #include <utilities/TimeoutGuard.h>
@@ -61,10 +59,6 @@
 
 extern void pedigree_init_sigret();
 extern void pedigree_init_pthreads();
-
-extern BootIO bootIO;
-
-int init_stage2(void *param);
 
 static bool bRootMounted = false;
 static bool probeDisk(Disk *pDisk)
@@ -121,6 +115,7 @@ static bool findDisks(Device *pDev)
 
 static void error(const char *s)
 {
+    extern BootIO bootIO;
     static HugeStaticString str;
     str += s;
     str += "\n";
@@ -128,65 +123,10 @@ static void error(const char *s)
     str.clear();
 }
 
-static bool init()
+static int configureInterfaces(void *p)
 {
-    static HugeStaticString str;
-
-    // Mount all available filesystems.
-    findDisks(&Device::root());
-
-    // Mount scratch filesystem (ie, pure ram filesystem, for POSIX /tmp etc)
-    RamFs *pRamFs = new RamFs;
-    pRamFs->initialise(0);
-    VFS::instance().addAlias(pRamFs, String("scratch"));
-
-    // Mount runtime filesystem.
-    // The runtime filesystem assigns a Process ownership to each file, only
-    // that process can modify/remove it. If the Process terminates without
-    // removing the file, the file is not removed.
-    RamFs *pRuntimeFs = new RamFs;
-    pRuntimeFs->initialise(0);
-    pRuntimeFs->setProcessOwnership(true);
-    VFS::instance().addAlias(pRuntimeFs, String("runtime"));
-
-    if (VFS::instance().find(String("raw»/")) == 0)
-    {
-        error("raw» does not exist - cannot continue startup.");
-        return false;
-    }
-
-    // Are we running a live CD?
-    /// \todo Use the configuration manager to determine if we're running a live CD or
-    ///       not, to avoid the potential for conflicts here.
-    if(VFS::instance().find(String("root»/livedisk.img")))
-    {
-        FileDisk *pRamDisk = new FileDisk(String("root»/livedisk.img"), FileDisk::RamOnly);
-        if(pRamDisk && pRamDisk->initialise())
-        {
-            pRamDisk->setParent(&Device::root());
-            Device::root().addChild(pRamDisk);
-
-            // Mount it in the VFS
-            VFS::instance().removeAlias(String("root"));
-            bRootMounted = false;
-            findDisks(pRamDisk);
-        }
-        else
-            delete pRamDisk;
-    }
-
-    // Is there a root disk mounted?
-    if(VFS::instance().find(String("root»/.pedigree-root")) == 0)
-    {
-        error("No root disk on this system (no root»/.pedigree-root found).");
-        return false;
-    }
-
-    // Fill out the device hash table
+    // Fill out the device hash table (needed in RoutingTable)
     DeviceHashTree::instance().fill(&Device::root());
-
-    // Initialise user/group configuration.
-    UserManager::instance().initialise();
 
     // Build routing tables - try to find a default configuration that can
     // connect to the outside world
@@ -261,34 +201,8 @@ static bool init()
     else
         RoutingTable::instance().Add(RoutingTable::Named, empty, empty, String("default"), pDefaultCard);
 
-#ifdef THREADS
-    // Create a new process for the init process.
-    Process *pProcess = new Process(Processor::information().getCurrentThread()->getParent());
-    pProcess->setUser(UserManager::instance().getUser(0));
-    pProcess->setGroup(UserManager::instance().getUser(0)->getDefaultGroup());
-    pProcess->setEffectiveUser(pProcess->getUser());
-    pProcess->setEffectiveGroup(pProcess->getGroup());
-
-    pProcess->description().clear();
-    pProcess->description().append("init");
-
-    pProcess->setCwd(VFS::instance().find(String("root»/")));
-    pProcess->setCtty(0);
-
-    PosixSubsystem *pSubsystem = new PosixSubsystem;
-    pProcess->setSubsystem(pSubsystem);
-
-    Thread *pThread = new Thread(pProcess, init_stage2, 0);
-    pThread->join();
-#endif
-
-    return true;
+    return 0;
 }
-static void destroy()
-{
-}
-
-extern void system_reset();
 
 int init_stage2(void *param)
 {
@@ -450,6 +364,82 @@ int init_stage2(void *param)
     pThread->detach();
 
     return 0;
+}
+
+static bool init()
+{
+    // Mount all available filesystems.
+    findDisks(&Device::root());
+
+    if (VFS::instance().find(String("raw»/")) == 0)
+    {
+        error("raw» does not exist - cannot continue startup.");
+        return false;
+    }
+
+    // Are we running a live CD?
+    /// \todo Use the configuration manager to determine if we're running a live CD or
+    ///       not, to avoid the potential for conflicts here.
+    if(VFS::instance().find(String("root»/livedisk.img")))
+    {
+        FileDisk *pRamDisk = new FileDisk(String("root»/livedisk.img"), FileDisk::RamOnly);
+        if(pRamDisk && pRamDisk->initialise())
+        {
+            pRamDisk->setParent(&Device::root());
+            Device::root().addChild(pRamDisk);
+
+            // Mount it in the VFS
+            VFS::instance().removeAlias(String("root"));
+            bRootMounted = false;
+            findDisks(pRamDisk);
+        }
+        else
+            delete pRamDisk;
+    }
+
+    // Is there a root disk mounted?
+    if(VFS::instance().find(String("root»/.pedigree-root")) == 0)
+    {
+        error("No root disk on this system (no root»/.pedigree-root found).");
+        return false;
+    }
+
+    // Initialise user/group configuration.
+    UserManager::instance().initialise();
+
+#ifdef THREADS
+    // Create a new process for the init process.
+    Process *pProcess = new Process(Processor::information().getCurrentThread()->getParent());
+    pProcess->setUser(UserManager::instance().getUser(0));
+    pProcess->setGroup(UserManager::instance().getUser(0)->getDefaultGroup());
+    pProcess->setEffectiveUser(pProcess->getUser());
+    pProcess->setEffectiveGroup(pProcess->getGroup());
+
+    pProcess->description().clear();
+    pProcess->description().append("init");
+
+    pProcess->setCwd(VFS::instance().find(String("root»/")));
+    pProcess->setCtty(0);
+
+    PosixSubsystem *pSubsystem = new PosixSubsystem;
+    pProcess->setSubsystem(pSubsystem);
+
+    // Spin up network interfaces, but don't wait.
+    Thread *pInterfaceThread = new Thread(pProcess, configureInterfaces, 0);
+    pInterfaceThread->detach();
+
+    Thread *pThread = new Thread(pProcess, init_stage2, 0);
+    pThread->detach();
+#else
+    // No threads, though we should still be able to configure interfaces.
+    configureInterfaces(0);
+#endif
+
+    return true;
+}
+
+static void destroy()
+{
 }
 
 #if defined(X86_COMMON)

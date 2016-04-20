@@ -25,6 +25,8 @@
 #include <Module.h>
 #endif
 
+#include <ramfs/RamFs.h>
+
 /// \todo Figure out a way to clean up files after deletion. Directory::remove()
 ///       is not the right place to do this. There needs to be a way to add a
 ///       File to some sort of queue that cleans it up once it hits refcount
@@ -400,6 +402,20 @@ bool VFS::remove(String path, File *pStartNode)
 #ifndef VFS_STANDALONE
 static bool initVFS()
 {
+    // Mount scratch filesystem (ie, pure ram filesystem, for POSIX /tmp etc)
+    RamFs *pRamFs = new RamFs;
+    pRamFs->initialise(0);
+    VFS::instance().addAlias(pRamFs, String("scratch"));
+
+    // Mount runtime filesystem.
+    // The runtime filesystem assigns a Process ownership to each file, only
+    // that process can modify/remove it. If the Process terminates without
+    // removing the file, the file is not removed.
+    RamFs *pRuntimeFs = new RamFs;
+    pRuntimeFs->initialise(0);
+    pRuntimeFs->setProcessOwnership(true);
+    VFS::instance().addAlias(pRuntimeFs, String("runtime"));
+
     return true;
 }
 
@@ -407,5 +423,5 @@ static void destroyVFS()
 {
 }
 
-MODULE_INFO("vfs", &initVFS, &destroyVFS);
+MODULE_INFO("vfs", &initVFS, &destroyVFS, "ramfs");
 #endif

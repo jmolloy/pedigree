@@ -118,6 +118,12 @@ public:
         unmounted. */
     void addMountCallback(MountCallback callback);
 
+    /** Separator between mount point and filesystem path. */
+    static constexpr const char *mountSeparator()
+    {
+        return "»";
+    }
+
 private:
     /** The static instance object. */
     static VFS m_Instance;
