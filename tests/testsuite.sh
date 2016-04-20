@@ -29,6 +29,15 @@ fi
 # Run the C++ testsuites.
 $WRAPPER "$GIT_ROOT/build/host/testsuite"
 
+# Run the benchmarks (useful for discovering performance regressions).
+# TODO(miselin): figure out a way to tracking that the benchmark changed
+# to a relatively large extent.
+if [ -x "$GIT_ROOT/build/host/benchmarker" ]; then
+    # NOTE: we don't run this under Valgrind - that doesn't make sense in this
+    # case (as we'd be not testing true performance).
+    "$GIT_ROOT/build/host/benchmarker"
+fi
+
 mkdir -p "$GIT_ROOT/coverage"
 
 # Coverage failing is not a problem; but make sure to filter only to src/ so

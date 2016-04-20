@@ -27,6 +27,7 @@
 #include <utilities/List.h>
 #include <utilities/utility.h>
 #include <utilities/SharedPointer.h>
+#include <compiler.h>
 
 /** String class for ASCII strings
  *\todo provide documentation */
@@ -36,6 +37,7 @@ class String
         /** The default constructor does nothing */
         String();
         explicit String(const char *s);
+        String(const char *s, size_t length);
         String(const String &x);
         ~String();
 
@@ -83,7 +85,7 @@ class String
             return 1;
         }
 
-        void Format(const char *format, ...);
+        void Format(const char *format, ...) FORMAT(printf, 2, 3);
 
         void assign(const String &x);
         void assign(const char *s, size_t len = 0);
@@ -99,6 +101,8 @@ class String
         bool startswith(const char *s) const;
 
     private:
+        /** Internal doer for reserve() */
+        void reserve(size_t size, bool zero);
         /** Size of static string storage (over this threshold, the heap is used) */
         static const size_t StaticSize = 64;
         /** Pointer to the zero-terminated ASCII string */

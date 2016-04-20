@@ -89,25 +89,25 @@ class Vector
      *\return iterator pointing to the beginning of the Vector */
     inline Iterator begin()
     {
-      return m_Data;
+      return m_Data + m_Start;
     }
     /** Get a constant iterator pointing to the beginning of the Vector
      *\return constant iterator pointing to the beginning of the Vector */
     inline ConstIterator begin() const
     {
-      return m_Data;
+      return m_Data + m_Start;
     }
     /** Get an iterator pointing to the last element + 1
      *\return iterator pointing to the last element + 1 */
     inline Iterator end()
     {
-      return m_Data + m_Count;
+      return m_Data + m_Start + m_Count;
     }
     /** Get a constant iterator pointing to the last element + 1
      *\return constant iterator pointing to the last element + 1 */
     inline ConstIterator end() const
     {
-      return m_Data + m_Count;
+      return m_Data + m_Start + m_Count;
     }
     /** Copy the content of a Vector into this Vector
      *\param[in] x the reference Vector */
@@ -118,30 +118,42 @@ class Vector
     void reserve(size_t size, bool copy);
 
   private:
+    /** Internal reserve() function.
+     *\param[in] size the number of elements to reserve space for
+     *\param[in] copy Should we copy the old contents over?
+     *\param[in] free should we free the old buffer? */
+    void reserve(size_t size, bool copy, bool free);
     /** The number of elements we have reserved space for */
     size_t m_Size;
     /** The number of elements in the Vector */
     size_t m_Count;
+    /**
+     * The current start index in the array.
+     * This is used to reduce the need to keep copying the array contents.
+     */
+    size_t m_Start;
     /** Pointer to the Elements */
     T *m_Data;
+    /** Factor to multiply by in reserve(). */
+    static const int m_ReserveFactor = 2;
 };
 
 template<class T>
 Vector<T>::Vector()
- : m_Size(0), m_Count(0), m_Data(0)
+ : m_Size(0), m_Count(0), m_Start(0), m_Data(0)
 {
 }
 
 template<class T>
 Vector<T>::Vector(size_t size)
- : m_Size(0), m_Count(0), m_Data(0)
+ : m_Size(0), m_Count(0), m_Start(0), m_Data(0)
 {
   reserve(size, false);
 }
 
 template<class T>
 Vector<T>::Vector(const Vector &x)
- : m_Size(0), m_Count(0), m_Data(0)
+ : m_Size(0), m_Count(0), m_Start(0), m_Data(0)
 {
   assign(x);
 }
@@ -166,7 +178,7 @@ T &Vector<T>::operator [](size_t index) const
   static T outofbounds = T();
   if (index > m_Count)
     return outofbounds;
-  return m_Data[index];
+  return m_Data[m_Start + index];
 }
 
 template<class T>
@@ -186,29 +198,50 @@ void Vector<T>::pushBack(T value)
 {
   reserve(m_Count + 1, true);
 
-  m_Data[m_Count++] = value;
+  // If we've hit the end of the reserved space we can use, we need to move
+  // the existing entries (rather than this happening in each reserve).
+  if ((m_Start + m_Count + 1) > m_Size)
+  {
+    pedigree_std::copy(m_Data, m_Data + m_Start, m_Count);
+    m_Start = 0;
+  }
+
+  m_Data[m_Start + m_Count++] = value;
 }
 
 template<class T>
 T Vector<T>::popBack()
 {
   m_Count--;
-  return m_Data[m_Count];
+  return m_Data[m_Start + m_Count];
 }
 
 template<class T>
 void Vector<T>::pushFront(T value)
 {
-  reserve(m_Count + 1, true);
-  // Move all items along. This can't use memmove/memcpy as it needs to
-  // destruct each object. The compiler may optimise to a mem* operation.
-  for (size_t i = m_Count; i > 0; --i)
+  const T *oldData = m_Data;
+
+  reserve(m_Count + 1, false, false);
+
+  if (m_Start)
   {
-    m_Data[i] = m_Data[i - 1];
+    m_Start--;
+    m_Data[m_Start] = value;
+  }
+  else
+  {
+    // We have a bigger buffer, copy items from the old buffer now.
+    m_Data[0] = value;
+    pedigree_std::copy(&m_Data[1], oldData, m_Count);
   }
 
-  m_Data[0] = value;
   m_Count++;
+
+  // All finished with the previous buffer now.
+  if (m_Data != oldData)
+  {
+    delete [] oldData;
+  }
 }
 
 template<class T>
@@ -216,12 +249,7 @@ T Vector<T>::popFront()
 {
   T ret = m_Data[0];
   m_Count--;
-  // Move all items along. This can't use memmove/memcpy as it needs to
-  // destruct each object. The compiler may optimise to a mem* operation.
-  for (size_t i = 0; i < m_Count; ++i)
-  {
-    m_Data[i] = m_Data[i + 1];
-  }
+  m_Start++;
   return ret;
 }
 
@@ -229,7 +257,7 @@ template<class T>
 void Vector<T>::setAt(size_t idx, T value)
 {
   if(idx < m_Count)
-    m_Data[idx] = value;
+    m_Data[m_Start + idx] = value;
 }
 
 template<class T>
@@ -245,10 +273,7 @@ template<class T>
 typename Vector<T>::Iterator Vector<T>::erase(Iterator iter)
 {
   size_t which = iter - begin();
-  for (size_t i = which; i < (m_Count - 1); ++i)
-  {
-    m_Data[i] = m_Data[i + 1];
-  }
+  pedigree_std::copy(&m_Data[which], &m_Data[which + 1], m_Count - which - 1);
   m_Count--;
   return iter;
 }
@@ -257,23 +282,26 @@ template<class T>
 void Vector<T>::assign(const Vector &x)
 {
   reserve(x.size(), false);
-
-  for (size_t i = 0; i < x.count(); ++i)
-  {
-    m_Data[i] = x.m_Data[i];
-  }
+  pedigree_std::copy(m_Data, x.m_Data, x.m_Count);
   m_Count = x.count();
+  m_Start = x.m_Start;
 }
 
 template<class T>
 void Vector<T>::reserve(size_t size, bool copy)
 {
+  reserve(size, copy, true);
+}
+
+template<class T>
+void Vector<T>::reserve(size_t size, bool copy, bool free)
+{
   if (size <= m_Size)
     return;
-  else if (size < (m_Size * 2))
+  else if (size < (m_Size * m_ReserveFactor))
   {
     // Grow exponentially.
-    size = m_Size * 2;
+    size = m_Size * m_ReserveFactor;
   }
 
   T *tmp = m_Data;
@@ -282,12 +310,13 @@ void Vector<T>::reserve(size_t size, bool copy)
   {
     if (copy == true)
     {
-      for (size_t i = 0; i < m_Size; ++i)
-      {
-        m_Data[i] = tmp[i];
-      }
+      pedigree_std::copy(m_Data, tmp + m_Start, m_Size - m_Start);
+      m_Start = 0;
     }
-    delete []tmp;
+    if (free)
+    {
+      delete []tmp;
+    }
   }
   m_Size = size;
 }

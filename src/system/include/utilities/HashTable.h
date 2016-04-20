@@ -21,6 +21,7 @@
 #define KERNEL_UTILITIES_HASHTABLE_H
 
 #include <processor/types.h>
+#include <utilities/lib.h>
 
 /** @addtogroup kernelutilities
  * @{ */

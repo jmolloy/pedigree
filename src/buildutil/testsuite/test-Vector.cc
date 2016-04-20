@@ -22,6 +22,7 @@
 #include <gtest/gtest.h>
 
 #include <utilities/Vector.h>
+#include <utilities/SharedPointer.h>
 
 TEST(PedigreeVector, Construction)
 {
@@ -169,4 +170,100 @@ TEST(PedigreeVector, EraseAtEnd)
     EXPECT_NE(it, x.end());
     it = x.erase(it);
     EXPECT_EQ(it, x.end());
+}
+
+TEST(PedigreeVector, ReducedCopies)
+{
+    Vector<int> x;
+    for (size_t i = 0; i < 128; ++i)
+    {
+        x.pushBack(1);
+    }
+
+    auto it = x.begin();
+
+    for (size_t i = 0; i < 64; ++i)
+    {
+        // Increments the start index.
+        x.popFront();
+    }
+
+    auto it2 = x.begin();
+
+    for (size_t i = 0; i < 64; ++i)
+    {
+        x.pushFront(1);
+    }
+
+    auto it3 = x.begin();
+
+    EXPECT_EQ(it + 64, it2);
+    EXPECT_EQ(it, it3);
+}
+
+TEST(PedigreeVector, OffsetPush)
+{
+    Vector<int> x;
+    for (size_t i = 0; i < 128; ++i)
+    {
+        x.pushBack(i + 1);
+    }
+
+    // Remove the first 64 items, moving m_Start forward.
+    for (size_t i = 0; i < 64; ++i)
+    {
+        // Increments the start index.
+        x.popFront();
+    }
+
+    // Now push to the end of the vector.
+    for (size_t i = 0; i < 64; ++i)
+    {
+        x.pushBack(128 + i);
+    }
+
+    EXPECT_EQ(x[0], 65);
+}
+
+TEST(PedigreeVector, ReuseAndThenSome)
+{
+    Vector<int> x;
+    for (size_t i = 0; i < 128; ++i)
+    {
+        x.pushBack(i + 1);
+    }
+
+    // Remove the first 64 items, moving m_Start forward.
+    for (size_t i = 0; i < 64; ++i)
+    {
+        // Increments the start index.
+        x.popFront();
+    }
+
+    // Now push well past the safe zone we popped.
+    for (size_t i = 0; i < 128; ++i)
+    {
+        x.pushBack(128 + i);
+    }
+
+    EXPECT_EQ(x[0], 65);
+}
+
+TEST(PedigreeVector, NonTrivialObjects)
+{
+    Vector<SharedPointer<int>> x;
+
+    x.pushBack(SharedPointer<int>::allocate());
+    x.pushBack(SharedPointer<int>::allocate());
+    x.pushBack(SharedPointer<int>::allocate());
+    x.pushBack(SharedPointer<int>::allocate());
+    x.pushBack(SharedPointer<int>::allocate());
+    x.pushBack(SharedPointer<int>::allocate());
+
+    EXPECT_NE(x[0].get(), (int *) 0);
+    EXPECT_NE(x[1].get(), (int *) 0);
+    EXPECT_NE(x[2].get(), (int *) 0);
+    EXPECT_NE(x[3].get(), (int *) 0);
+    EXPECT_NE(x[4].get(), (int *) 0);
+    EXPECT_NE(x[5].get(), (int *) 0);
 }

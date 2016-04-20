@@ -25,6 +25,7 @@ Import(['env'])
 KERNEL_DIR = env.Dir('../../system/kernel')
 
 testsuite_bin = os.path.join(env['BUILDDIR'], 'testsuite')
+benchmark_bin = os.path.join(env['BUILDDIR'], 'benchmarker')
 
 build_env = env.Clone()
 
@@ -49,20 +50,47 @@ build_env.Append(CPPDEFINES=defines)
 # TODO(miselin): improve the path to external libraries
 build_env.Append(LIBPATH=[os.path.join(build_env['BUILDDIR'], 'external')])
 
-build_env.MergeFlags({'CXXFLAGS': ['-std=c++11', '-g3', '-ggdb', '-O0']})
+coverage_env = build_env.Clone()
 
-build_env.MergeFlags({
+coverage_env.MergeFlags({'CXXFLAGS': ['-std=c++11', '-g3', '-ggdb', '-O0']})
+
+coverage_env.MergeFlags({
     'CCFLAGS': build_env['COVERAGE_CCFLAGS'],
     'LINKFLAGS': build_env['COVERAGE_LINKFLAGS'],
 })
 
-build_env.Program(testsuite_bin,
-                  [
-                      'test-List.cc',
-                      'test-String.cc',
-                      'test-StaticString.cc',
-                      'test-SharedPointer.cc',
-                      'test-Vector.cc',
-                      'test-stringlib.cc',
-                      'test-RadixTree.cc',
-                  ], LIBS=[env['LIBUTILITY_COVERAGE'], 'gtest', 'pthread'])
+# TODO(miselin): Tree, UniquePointer, HashTable, RangeList, ExtensibleBitmap
+coverage_env.Program(testsuite_bin,
+                     [
+                         'test-List.cc',
+                         'test-String.cc',
+                         'test-StaticString.cc',
+                         'test-SharedPointer.cc',
+                         'test-Vector.cc',
+                         'test-stringlib.cc',
+                         'test-memory.cc',
+                         'test-RadixTree.cc',
+                         'test-ObjectPool.cc',
+                     ], LIBS=[env['LIBUTILITY_COVERAGE'], 'gtest', 'pthread'])
+
+if build_env['HAVE_BENCHMARK']:
+    build_env.MergeFlags({
+        'CXXFLAGS': ['-std=c++11'],
+        'CCFLAGS': ['-g3', '-ggdb', '-O3'],
+    })
+
+    build_env.Program(benchmark_bin,
+                      [
+                          'bench-main.cc',
+                          'bench-memory.cc',
+                          'bench-stringlib.cc',
+                          'bench-List.cc',
+                          'bench-Vector.cc',
+                          'bench-Tree.cc',
+                          'bench-RadixTree.cc',
+                          'bench-ExtensibleBitmap.cc',
+                          'bench-HashTable.cc',
+                          'bench-String.cc',
+                          'bench-StaticString.cc',
+                          'bench-RangeList.cc',
+                      ], LIBS=[env['LIBUTILITY'], 'benchmark', 'pthread'])

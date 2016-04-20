@@ -25,73 +25,33 @@
  *\date   Sun May 17 10:00:00 2009
  *\brief  An in-RAM filesystem. */
 
+class Disk;
+
 #include <vfs/VFS.h>
 #include <vfs/Directory.h>
 #include <processor/types.h>
-#include <machine/Disk.h>
 
 #include <utilities/Cache.h>
 
 class RamFile : public File
 {
     public:
-        RamFile(String name, uintptr_t inode, Filesystem *pParentFS, File *pParent) :
-            File(name, 0, 0, 0, inode, pParentFS, 0, pParent), m_FileBlocks(),
-            m_nOwnerPid(0)
-        {
-            // Full permissions.
-            setPermissions(0777);
+        RamFile(String name, uintptr_t inode, Filesystem *pParentFS, File *pParent);
 
-            m_nOwnerPid = Processor::information().getCurrentThread()->getParent()->getId();
-        }
+        virtual ~RamFile();
 
-        virtual ~RamFile()
-        {
-            truncate();
-        }
+        virtual void truncate();
 
-        virtual void truncate()
-        {
-            if(canWrite())
-            {
-                // Empty the cache.
-                m_FileBlocks.empty();
-                setSize(0);
-            }
-        }
-
-        virtual uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true)
-        {
-            if(canWrite())
-                return File::write(location, size, buffer, bCanBlock);
-            return 0;
-        }
+        virtual uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true);
 
         bool canWrite();
 
     protected:
-        virtual uintptr_t readBlock(uint64_t location)
-        {
-            uintptr_t buffer = m_FileBlocks.lookup(location);
-            if(!buffer)
-            {
-                // Super trivial. But we are a ram filesystem... can't compact.
-                buffer = m_FileBlocks.insert(location);
-                pinBlock(location);
-            }
-            return buffer;
-        }
+        virtual uintptr_t readBlock(uint64_t location);
 
-        virtual void pinBlock(uint64_t location)
-        {
-            m_FileBlocks.pin(location);
-        }
+        virtual void pinBlock(uint64_t location);
 
-        virtual void unpinBlock(uint64_t location)
-        {
-            m_FileBlocks.release(location);
-        }
-
+        virtual void unpinBlock(uint64_t location);
 
     private:
         Cache m_FileBlocks;

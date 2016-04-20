@@ -23,7 +23,11 @@
 
 #include <utilities/utility.h>
 
-/// \todo this may unintentionally test the host's libc instead of Pedigree.
+TEST(PedigreeStringLibrary, StringLength)
+{
+    EXPECT_EQ(StringLength("hello"), 5);
+    EXPECT_EQ(StringLength(""), 0);
+}
 
 TEST(PedigreeStringLibrary, BasicStrcpy)
 {

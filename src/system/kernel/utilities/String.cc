@@ -31,6 +31,12 @@ String::String(const char *s)
     assign(s);
 }
 
+String::String(const char *s, size_t length)
+    : m_Data(0), m_Length(0), m_Size(StaticSize), m_Static()
+{
+    assign(s, length);
+}
+
 String::String(const String &x)
     : m_Data(0), m_Length(0), m_Size(StaticSize), m_Static()
 {
@@ -168,7 +174,7 @@ void String::assign(const String &x)
     {
         // Length is bigger than a static buffer, no need to check for empty
         // buffer.
-        reserve(m_Length + 1);
+        reserve(m_Length + 1, false);
         MemoryCopy(m_Data, x.m_Data, m_Length + 1);
     }
 
@@ -209,7 +215,7 @@ void String::assign(const char *s, size_t len)
     }
     else
     {
-        reserve(m_Length + 1);
+        reserve(m_Length + 1, false);
         MemoryCopy(m_Data, s, copyLength);
         m_Data[copyLength] = '\0';
     }
@@ -219,7 +225,13 @@ void String::assign(const char *s, size_t len)
         assert(*this == s);
 #endif
 }
+
 void String::reserve(size_t size)
+{
+    reserve(size, true);
+}
+
+void String::reserve(size_t size, bool zero)
 {
     // Don't reserve if we're a static string.
     if (size <= StaticSize)
@@ -238,11 +250,14 @@ void String::reserve(size_t size)
     {
         char *tmp = m_Data;
         m_Data = new char [size];
-        ByteSet(m_Data, 0, size);
         if (tmp)
         {
             MemoryCopy(m_Data, tmp, m_Size > size ? size : m_Size);
             delete [] tmp;
+        }
+        else if (zero)
+        {
+            ByteSet(m_Data, 0, size);
         }
         m_Size = size;
     }
@@ -347,32 +362,38 @@ void String::rstrip()
 
 List<SharedPointer<String>> String::tokenise(char token)
 {
-    String copy = *this;
     List<tokenise_t> list;
+    const char *orig_buffer = static_cast<const char *>(*this);
+    const char *buffer = orig_buffer;
 
-    size_t idx = 0;
-    while (idx < copy.m_Length)
+    const char *pos = nullptr;
+    while (*buffer)
     {
-        if (copy[idx] == token)
+        pos = StringFind(buffer, token);
+        if (!pos)
         {
-            String tmp = copy.split(idx+1);
-
-            tokenise_t pStr = tokenise_t(new String(copy));
-            copy = tmp;
-
-            // pStr will include token, so remove the last character from it.
-            pStr->chomp();
-
-            if (pStr->length() > 0)
-                list.pushBack(pStr);
-            idx = 0;
+            break;
         }
-        else
-            idx = copy.nextCharacter(idx);
+
+        if (pos == buffer)
+        {
+            ++buffer;
+            continue;
+        }
+
+        tokenise_t pStr = tokenise_t(new String(buffer, pos - buffer));
+        if (pStr->length())
+            list.pushBack(pStr);
+
+        buffer = pos + 1;
     }
 
-    if (copy.length() > 0)
-        list.pushBack(tokenise_t(new String(copy)));
+    if (!pos)
+    {
+        tokenise_t pStr = tokenise_t(new String(buffer, m_Length - (buffer - orig_buffer)));
+        if (pStr->length())
+            list.pushBack(pStr);
+    }
 
     return list;
 }

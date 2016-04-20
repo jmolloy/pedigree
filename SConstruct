@@ -243,9 +243,17 @@ if host_cc:
     host_environ['CC'] = host_cc
 host_env = Environment(platform='posix', **host_environ)
 
+# Build a basic set of variables for the configure checks below.
+host_env.MergeFlags({
+    'CPPPATH': ['/include', '/usr/include', '/usr/local/include'],
+    'LIBPATH': ['/lib', '/usr/lib', '/usr/local/lib'],
+    })
+
 conf = Configure(host_env)
 profile_rt = conf.CheckLib('profile_rt')
 gcov = conf.CheckLib('gcov')
+conf.env['HAVE_BENCHMARK'] = conf.CheckLibWithHeader('benchmark',
+    'benchmark/benchmark.h', 'cxx')
 host_env = conf.Finish()
 
 # TODO(miselin): figure out how best to detect asan presence.

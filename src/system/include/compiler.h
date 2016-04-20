@@ -51,6 +51,10 @@
 #define UNLIKELY(exp) __builtin_expect(!!(exp), 0)
 /** This code is not reachable. */
 #define UNREACHABLE __builtin_unreachable()
+/** This function handles a format string. */
+#define FORMAT(type, idx, first) __attribute__((format(type, idx, first)))
+/** True if the expression is constant at compile time, false otherwise. */
+#define IS_CONSTANT(x) __builtin_constant_p(x)
 /** This code should be placed in the given section. */
 #ifdef __MACH__  // Mach targets have special section specifications.
 #define SECTION(x)
@@ -61,6 +65,10 @@
 // Builtin checks.
 #ifndef __has_builtin
 #define __has_builtin(x) 0
+#endif
+
+#ifndef __has_feature
+#define __has_feature(x) 0
 #endif
 
 #if __has_builtin(__builtin_assume_aligned) || !defined(__clang__)
@@ -75,14 +83,12 @@
 #define INITIALISATION_ONLY_DATA SECTION(".init.data")
 
 // We don't use a custom allocator if asan is enabled.
-#if defined(__has_feature)
 #if __has_feature(address_sanitizer) || __has_feature(memory_sanitizer)
 #define HAS_ADDRESS_SANITIZER 1
 #endif
 
 #if __has_feature(thread_sanitizer)
 #define HAS_THREAD_SANITIZER 1
-#endif
 #endif
 
 #if defined(HAS_ADDRESS_SANITIZER) || defined(HAS_THREAD_SANITIZER)

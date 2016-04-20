@@ -45,6 +45,8 @@ libutility_sources = [
     os.path.join('utilities', 'List.cc'),
     os.path.join('utilities', 'Vector.cc'),
     os.path.join('utilities', 'Tree.cc'),
+    os.path.join('utilities', 'ExtensibleBitmap.cc'),
+    os.path.join('utilities', 'ObjectPool.cc'),
     os.path.join('core', 'lib', 'string.c'),
     os.path.join('core', 'lib', 'memory.c'),
     os.path.join('core', 'lib', 'vsprintf.c'),
@@ -62,7 +64,7 @@ utility_env.Append(**{
 utility_env.MergeFlags({
     'CFLAGS': ['-g3', '-ggdb'],
     'CXXFLAGS': ['-std=c++11', '-g3', '-ggdb'],
-    'CFLAGS': ['-std=c99', '-g3', '-ggdb'],
+    'CFLAGS': ['-std=gnu99', '-g3', '-ggdb'],
 })
 
 env['LIBUTILITY'] = utility_env.Library('utility',
