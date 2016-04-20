@@ -253,6 +253,9 @@ int loadModules(void *inf)
             WARNING("A loaded module disabled interrupts.");
     }
 
+    // Wait for all modules to finish loading before we continue.
+    KernelElf::instance().waitForModulesToLoad();
+
     // The initialisation is done here, unmap/free the .init section and on x86/64 the identity
     // mapping of 0-4MB
     // NOTE: BootstrapStruct_t unusable after this point

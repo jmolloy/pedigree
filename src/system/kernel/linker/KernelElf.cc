@@ -24,9 +24,13 @@
 #include <processor/PhysicalMemoryManager.h>
 #include <utilities/MemoryTracing.h>
 #include <utilities/MemoryCount.h>
+#include <LockGuard.h>
 #include <Log.h>
 
 KernelElf KernelElf::m_Instance;
+
+// Define to 1 to load modules using threads.
+#define THREADED_MODULE_LOADING 0
 
 /**
  * Extend the given pointer by adding its canonical prefix again.
@@ -265,6 +269,9 @@ KernelElf::KernelElf() :
 #endif
     m_Modules(), m_LoadedModules(), m_FailedModules(), m_PendingModules(), m_ModuleAllocator(),
     m_pSectionHeaders(0), m_pSymbolTable(0)
+#ifdef THREADS
+    , m_ModuleProgress(0), m_ModuleAdjustmentLock(false)
+#endif
 {
 }
 
@@ -360,34 +367,12 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
         g_BootProgressCurrent ++;
         if (g_BootProgressUpdate && !silent)
             g_BootProgressUpdate("moduleexec");
-
-        // Now check if we've allowed any currently pending modules to load.
-        bool somethingLoaded = true;
-        while (somethingLoaded)
-        {
-            somethingLoaded = false;
-            for (Vector<Module*>::Iterator it = m_PendingModules.begin();
-                it != m_PendingModules.end();
-                it++)
-            {
-                if (moduleDependenciesSatisfied(*it))
-                {
-                    if(!executeModule(*it))
-                        module = 0;
-
-                    g_BootProgressCurrent ++;
-                    if (g_BootProgressUpdate && !silent)
-                        g_BootProgressUpdate("moduleexec");
-
-                    m_PendingModules.erase(it);
-                    somethingLoaded = true;
-                    break;
-                }
-            }
-        }
     }
     else
     {
+#ifdef THREADS
+        LockGuard<Spinlock> guard(m_ModuleAdjustmentLock);
+#endif
         m_PendingModules.pushBack(module);
     }
 
@@ -459,6 +444,9 @@ Module *KernelElf::loadModule(struct ModuleInfo *info, bool silent)
 
 void KernelElf::unloadModule(const char *name, bool silent, bool progress)
 {
+#ifdef THREADS
+    LockGuard<Spinlock> guard(m_ModuleAdjustmentLock);
+#endif
     for (Vector<Module*>::Iterator it = m_LoadedModules.begin();
         it != m_LoadedModules.end();
         it++)
@@ -655,9 +643,9 @@ bool KernelElf::moduleDependenciesSatisfied(Module *module)
     return true;
 }
 
-bool KernelElf::executeModule(Module *module)
+int executeModuleThread(void *mod)
 {
-    m_LoadedModules.pushBack(module);
+    Module *module = reinterpret_cast<Module *>(mod);
 
     if(module->buffer)
     {
@@ -683,6 +671,8 @@ bool KernelElf::executeModule(Module *module)
         }
     }
 
+    KernelElf::instance().markAsRelocated(module);
+
     NOTICE("KERNELELF: Executing module " << module->name);
 
     bool bSuccess = false;
@@ -692,17 +682,99 @@ bool KernelElf::executeModule(Module *module)
         bSuccess = module->entry();
     }
 
-    if(!bSuccess)
+    KernelElf::instance().updateModuleStatus(module, bSuccess);
+
+    return 0;
+}
+
+void KernelElf::markAsRelocated(Module *module)
+{
+#ifdef THREADS
+    LockGuard<Spinlock> guard(m_ModuleAdjustmentLock);
+#endif
+    m_LoadedModules.pushBack(module);
+}
+
+bool KernelElf::executeModule(Module *module)
+{
+#if defined(THREADS) && THREADED_MODULE_LOADING
+    Process *me = Processor::information().getCurrentThread()->getParent();
+    Thread *pThread = new Thread(me, executeModuleThread, module);
+    pThread->detach();
+#else
+    executeModuleThread(module);
+#endif
+
+    return true;
+}
+
+void KernelElf::updateModuleStatus(Module *module, bool status)
+{
+    String moduleName(module->name);
+    if (status)
     {
-        NOTICE("KERNELELF: Module " << module->name << " failed, unloading.");
-        m_FailedModules.pushBack(new String(module->name));
-        unloadModule(module->name, true, false);
+        NOTICE("KERNELELF: Module " << moduleName << " finished executing");
+    }
+    else
+    {
+        NOTICE("KERNELELF: Module " << moduleName << " failed, unloading.");
+        m_FailedModules.pushBack(new String(moduleName));
+        unloadModule(moduleName, true, false);
     }
 
-    if(bSuccess)
-        NOTICE("KERNELELF: Module " << moduleName << " finished executing");
+    // Now check if we've allowed any currently pending modules to load.
+    bool somethingLoaded = true;
+    while (somethingLoaded)
+    {
+        somethingLoaded = false;
+#ifdef THREADS
+        m_ModuleAdjustmentLock.acquire();
+#endif
+        for (Vector<Module*>::Iterator it = m_PendingModules.begin();
+            it != m_PendingModules.end();
+            it++)
+        {
+            if (moduleDependenciesSatisfied(*it))
+            {
+                Module *nextModule = *it;
+                m_PendingModules.erase(it);
 
-    return bSuccess;
+#ifdef THREADS
+                m_ModuleAdjustmentLock.release();
+#endif
+                executeModule(nextModule);
+#ifdef THREADS
+                m_ModuleAdjustmentLock.acquire();
+#endif
+
+                g_BootProgressCurrent ++;
+                /// \todo carry silent parameter through
+                if (g_BootProgressUpdate)
+                    g_BootProgressUpdate("moduleexec");
+
+                somethingLoaded = true;
+                break;
+            }
+        }
+
+#ifdef THREADS
+        m_ModuleAdjustmentLock.release();
+#endif
+    }
+
+#ifdef THREADS
+    m_ModuleProgress.release();
+#endif
+}
+
+void KernelElf::waitForModulesToLoad()
+{
+#ifdef THREADS
+    for (size_t i = 0; i < m_Modules.count(); ++i)
+    {
+        m_ModuleProgress.acquire();
+    }
+#endif
 }
 
 uintptr_t KernelElf::globalLookupSymbol(const char *pName)

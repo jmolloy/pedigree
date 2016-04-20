@@ -27,6 +27,11 @@
 #include <utilities/Vector.h>
 #include <utilities/MemoryAllocator.h>
 
+#ifdef THREADS
+#include <process/Semaphore.h>
+#include <Spinlock.h>
+#endif
+
 #ifdef STATIC_DRIVERS
 #include <Module.h>
 #endif
@@ -100,6 +105,15 @@ class KernelElf : public Elf
         /** Do we have pending modules still? */
         bool hasPendingModules() const;
 
+        /** Updates the status of the given module. */
+        void updateModuleStatus(Module *module, bool status);
+
+        /** Waits for all modules to complete (whether successfully or not). */
+        void waitForModulesToLoad();
+
+        /** Marks the given module as relocated. */
+        void markAsRelocated(Module *module);
+
     private:
         /** Default constructor does nothing */
         KernelElf() INITIALISATION_ONLY;
@@ -148,6 +162,12 @@ class KernelElf : public Elf
 
         typedef ElfSectionHeader_t KernelElfSectionHeader_t;
         typedef ElfSymbol_t KernelElfSymbol_t;
+#endif
+
+        /** Tracks the module loading process. */
+#ifdef THREADS
+        Semaphore m_ModuleProgress;
+        Spinlock m_ModuleAdjustmentLock;
 #endif
 };
 
