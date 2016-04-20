@@ -241,7 +241,7 @@ void Device::searchByClass(uint16_t classCode, void (*callback)(Device*), Device
         root = &Device::root();
     }
 
-    searchByClassInternalInternal(classCode, callback, root);
+    searchByClassInternal(classCode, callback, root);
 }
 
 void Device::searchByClassAndSubclass(uint16_t classCode, uint16_t subclassCode, void (*callback)(Device*), Device *root)
