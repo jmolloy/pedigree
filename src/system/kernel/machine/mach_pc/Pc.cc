@@ -181,8 +181,7 @@ void Pc::initialiseDeviceTree()
   pIsa->addChild(pWatchdog);
   pWatchdog->setParent(pIsa);
 
-  Device::root().addChild(pIsa);
-  pIsa->setParent(&Device::root());
+  Device::addToRoot(pIsa);
 
   // Initialise the PCI interface
   PciBus::instance().initialise();

@@ -123,6 +123,5 @@ void cdi_cpp_disk_register(struct cdi_storage_device* device)
     }
 
     // Insert into the tree, properly
-    pCdiDisk->setParent(&Device::root());
-    Device::root().addChild(pCdiDisk);
+    Device::addToRoot(pCdiDisk);
 }

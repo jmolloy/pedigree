@@ -195,8 +195,7 @@ static bool entry()
     // If the bus was actually populated...
     if (pBus->getNumChildren() > 0)
     {
-      Device::root().addChild(pBus);
-      pBus->setParent(&Device::root());
+      Device::addToRoot(pBus);
     }
     else
     {

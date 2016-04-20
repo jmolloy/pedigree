@@ -32,8 +32,7 @@ bool entry()
         return true;
     }
 
-    Device::root().addChild(pDiskImage);
-    pDiskImage->setParent(&Device::root());
+    Device::addToRoot(pDiskImage);
     return true;
 }
 

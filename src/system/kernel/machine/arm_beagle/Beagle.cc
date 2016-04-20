@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -135,8 +134,7 @@ void ArmBeagle::initialiseDeviceTree()
     pCtl->setParent(pL4);
 #endif
 
-    Device::root().addChild(pL4);
-    pL4->setParent(&Device::root());
+    Device::addToRoot(pL4);
 }
 
 void ArmBeagle::initialise()
