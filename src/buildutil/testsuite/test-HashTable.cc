@@ -275,3 +275,24 @@ TEST(PedigreeHashTable, RemoveChained)
     delete value2;
     delete value3;
 }
+
+TEST(PedigreeHashTable, RemoveFirstInChain)
+{
+    HashTable<CollidingHashableInteger, int> hashtable(10);
+
+    int *value1 = new int;
+    int *value2 = new int;
+
+    CollidingHashableInteger key1(0), key2(1);
+
+    hashtable.insert(key1, value1);
+    hashtable.insert(key2, value2);
+
+    hashtable.remove(key1);
+
+    EXPECT_EQ(hashtable.lookup(key1), (int *) 0);
+    EXPECT_EQ(hashtable.lookup(key2), value2);
+
+    delete value1;
+    delete value2;
+}
