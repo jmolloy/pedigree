@@ -115,6 +115,7 @@ void Device::foreachInternal(Device *(*callback)(Device *), Device *root)
     {
       // Remove & skip traversal.
       root->removeChild(i);
+      delete child;
       continue;
     }
     else if (result != child)
