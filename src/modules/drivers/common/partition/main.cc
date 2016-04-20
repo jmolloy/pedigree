@@ -49,36 +49,29 @@ bool probeDevice(Disk *pDev)
   return false;
 }
 
-void searchNode(Device *pDev)
+Device *checkNode(Device *pDev)
 {
-  for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
+  bool hasPartitions = false;
+  if (pDev->getType() == Device::Disk)
   {
-    Device *pChild = pDev->getChild(i);
-    // Is this a disk?
-    String mname;
-    pChild->getName(mname);
-
-    bool hasPartitions = false;
-    if (pChild->getType() == Device::Disk)
+    // Check that none of its children are Partitions
+    // (in which case we've probed this before!)
+    for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
     {
-      // Check that none of its children are Partitions (in which case we've probed this before!)
-      for (unsigned int i = 0; i < pChild->getNumChildren(); i++)
+      String name;
+      pDev->getChild(i)->getName(name);
+      if (!StringCompare(name, "msdos-partition") || !StringCompare(name, "apple-partition"))
       {
-        String name;
-        pDev->getChild(i)->getName(name);
-        if (!StringCompare(name, "msdos-partition") || !StringCompare(name, "apple-partition"))
-        {
-          hasPartitions = true;
-          break;
-        }
+        hasPartitions = true;
+        break;
       }
-      if (!hasPartitions)
-        hasPartitions = probeDevice(static_cast<Disk*> (pChild));
     }
-    // Recurse, if we didn't find any partitions.
+
     if (!hasPartitions)
-      searchNode(pChild);
+      hasPartitions = probeDevice(static_cast<Disk*> (pDev));
   }
+
+  return pDev;
 }
 
 bool PartitionService::serve(ServiceFeatures::Type type, void *pData, size_t dataLen)
@@ -107,8 +100,7 @@ static bool entry()
     ServiceManager::instance().addService(String("partition"), pService, pFeatures);
 
     // Walk the device tree looking for disks that don't have "partition" children.
-    Device *pDev = &Device::root();
-    searchNode(pDev);
+    Device::foreach(checkNode);
 
     // Never fail, even if no partitions found. The partition service is still
     // critical to the system.
