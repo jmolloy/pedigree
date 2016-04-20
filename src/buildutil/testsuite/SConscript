@@ -70,6 +70,7 @@ coverage_env.Program(testsuite_bin,
                          'test-stringlib.cc',
                          'test-memory.cc',
                          'test-RadixTree.cc',
+                         'test-ObjectPool.cc',
                      ], LIBS=[env['LIBUTILITY_COVERAGE'], 'gtest', 'pthread'])
 
 if build_env['HAVE_BENCHMARK']:
