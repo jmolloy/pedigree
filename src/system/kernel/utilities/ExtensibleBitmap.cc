@@ -23,7 +23,7 @@
 
 ExtensibleBitmap::ExtensibleBitmap() :
     m_StaticMap(0), m_pDynamicMap(0), m_DynamicMapSize(0), m_nMaxBit(0),
-    m_nFirstSetBit(0), m_nFirstClearBit(0), m_nLastSetBit(0), m_nLastClearBit(0)
+    m_nFirstSetBit(~0U), m_nFirstClearBit(0), m_nLastSetBit(~0U), m_nLastClearBit(0)
 {
 }
 
@@ -71,10 +71,10 @@ ExtensibleBitmap::~ExtensibleBitmap()
 void ExtensibleBitmap::set(size_t n)
 {
     // Check if the bit we'll set becomes the first set bit
-    if(n < m_nFirstSetBit)
+    if((n < m_nFirstSetBit) || (m_nFirstSetBit == ~0U))
         m_nFirstSetBit = n;
     // Check if the bit we'll set becomes the last set bit
-    if(n > m_nLastSetBit)
+    if((n > m_nLastSetBit) || (m_nLastSetBit == ~0U))
         m_nLastSetBit = n;
     // Check if the bit we'll set replaces the first clear bit
     if(n == m_nFirstClearBit)
@@ -143,6 +143,11 @@ void ExtensibleBitmap::clear(size_t n)
                 break;
             }
         }
+
+        if (n == m_nFirstSetBit)
+        {
+            m_nFirstSetBit = ~0U;
+        }
     }
     // Check if the bit we'll clear replaces the last set bit
     if(n == m_nLastSetBit)
@@ -156,6 +161,11 @@ void ExtensibleBitmap::clear(size_t n)
                 m_nLastSetBit = i;
                 break;
             }
+        }
+
+        if (n == m_nLastSetBit)
+        {
+            m_nLastSetBit = ~0U;
         }
     }
 
