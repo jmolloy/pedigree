@@ -57,7 +57,38 @@ class HashedInteger
         int64_t n_;
 };
 
-static void BM_HashTableInsertNoChains(benchmark::State &state)
+class CollidingHashedInteger
+{
+    public:
+        CollidingHashedInteger() : modulus_(0xFFFFFFFFU), n_(-1)
+        {
+        }
+
+        CollidingHashedInteger(int modulus, int n) : modulus_(modulus), n_(n)
+        {
+        }
+
+        int hash() const
+        {
+            return n_ % modulus_;
+        }
+
+        bool operator == (CollidingHashedInteger &other) const
+        {
+            return n_ == other.n_;
+        }
+
+        bool operator != (CollidingHashedInteger &other) const
+        {
+            return n_ != other.n_;
+        }
+
+    private:
+        int64_t n_;
+        int64_t modulus_;
+};
+
+static void BM_HashTableInsertPreallocate(benchmark::State &state)
 {
     int64_t value = 1;
 
@@ -78,38 +109,14 @@ static void BM_HashTableInsertNoChains(benchmark::State &state)
     state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
 }
 
-static void BM_HashTableLookupNoChains(benchmark::State &state)
-{
-    HashTable<HashedInteger, int64_t> table;
-    table.initialise(state.range_x(), true);
-    int64_t value = 1;
-    for (size_t i = 0; i < state.range_x(); ++i)
-    {
-        HashedInteger key(i);
-        table.insert(key, &value);
-    }
-
-    while (state.KeepRunning())
-    {
-        for (size_t i = 0; i < state.range_y(); ++i)
-        {
-            HashedInteger key(i);
-            benchmark::DoNotOptimize(table.lookup(key));
-        }
-    }
-
-    state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range_y()));
-}
-
-static void BM_HashTableInsertWithChains(benchmark::State &state)
+static void BM_HashTableInsertNoChains(benchmark::State &state)
 {
     int64_t value = 1;
 
     while (state.KeepRunning())
     {
         state.PauseTiming();
-        HashTable<HashedInteger, int64_t> table;
-        table.initialise(state.range_x() / 8, true);
+        HashTable<HashedInteger, int64_t> table(state.range_x());
         state.ResumeTiming();
 
         for (size_t i = 0; i < state.range_x(); ++i)
@@ -122,10 +129,9 @@ static void BM_HashTableInsertWithChains(benchmark::State &state)
     state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
 }
 
-static void BM_HashTableLookupWithChains(benchmark::State &state)
+static void BM_HashTableLookupNoChains(benchmark::State &state)
 {
-    HashTable<HashedInteger, int64_t> table;
-    table.initialise(state.range_x() / 8, true);
+    HashTable<HashedInteger, int64_t> table(state.range_x());
     int64_t value = 1;
     for (size_t i = 0; i < state.range_x(); ++i)
     {
@@ -135,20 +141,60 @@ static void BM_HashTableLookupWithChains(benchmark::State &state)
 
     while (state.KeepRunning())
     {
-        for (size_t i = 0; i < state.range_y(); ++i)
+        for (size_t i = 0; i < state.range_x(); ++i)
         {
             HashedInteger key(i);
             benchmark::DoNotOptimize(table.lookup(key));
         }
     }
 
-    state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range_y()));
+    state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
 }
 
-/// \todo these benchmarks break HashTable - it needs to be fixed...
-/*
-BENCHMARK(BM_HashTableInsertNoChains)->Range(8, 512);
-BENCHMARK(BM_HashTableLookupNoChains)->RangePair(8, 512, 1, 512);
-BENCHMARK(BM_HashTableInsertWithChains)->Range(8, 8<<8);
-BENCHMARK(BM_HashTableLookupWithChains)->RangePair(8, 8<<8, 8, 8<<8);
-*/
+static void BM_HashTableInsertWithChains(benchmark::State &state)
+{
+    int64_t value = 1;
+
+    while (state.KeepRunning())
+    {
+        state.PauseTiming();
+        HashTable<CollidingHashedInteger, int64_t> table(state.range_x());
+        state.ResumeTiming();
+
+        for (size_t i = 0; i < state.range_x(); ++i)
+        {
+            CollidingHashedInteger key(state.range_x() / 2, i);
+            table.insert(key, &value);
+        }
+    }
+
+    state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
+}
+
+static void BM_HashTableLookupWithChains(benchmark::State &state)
+{
+    HashTable<CollidingHashedInteger, int64_t> table(state.range_x());
+    int64_t value = 1;
+    for (size_t i = 0; i < state.range_x(); ++i)
+    {
+        CollidingHashedInteger key(state.range_x() / 2, i);
+        table.insert(key, &value);
+    }
+
+    while (state.KeepRunning())
+    {
+        for (size_t i = 0; i < state.range_x(); ++i)
+        {
+            CollidingHashedInteger key(state.range_x() / 2, i);
+            benchmark::DoNotOptimize(table.lookup(key));
+        }
+    }
+
+    state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
+}
+
+BENCHMARK(BM_HashTableInsertPreallocate)->Range(8, 16384);
+BENCHMARK(BM_HashTableInsertNoChains)->Range(8, 16384);
+BENCHMARK(BM_HashTableLookupNoChains)->Range(8, 16384);
+BENCHMARK(BM_HashTableInsertWithChains)->Range(8, 16384);
+BENCHMARK(BM_HashTableLookupWithChains)->Range(8, 16384);
