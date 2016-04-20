@@ -680,14 +680,11 @@ int executeModuleThread(void *mod)
 
         if (startCtors && endCtors)
         {
-            NOTICE("running ctors in " << module->name);
             uintptr_t *iterator = reinterpret_cast<uintptr_t*>(startCtors);
             while (iterator < reinterpret_cast<uintptr_t*>(endCtors))
             {
                 void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
-                NOTICE("ctor: " << fp);
                 fp();
-                NOTICE("ctor done");
                 iterator++;
             }
         }
