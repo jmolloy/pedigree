@@ -36,8 +36,14 @@ static void error(const char *s)
     str.clear();
 }
 
-static bool probeDisk(Disk *pDisk)
+static Device *probeDisk(Device *diskDevice)
 {
+    if (diskDevice->getType() != Device::Disk)
+    {
+        return diskDevice;
+    }
+
+    Disk *pDisk = static_cast<Disk *>(diskDevice);
     String alias; // Null - gets assigned by the filesystem.
     if (VFS::instance().mount(pDisk, alias))
     {
@@ -64,34 +70,15 @@ static bool probeDisk(Disk *pDisk)
         {
             NOTICE("Mounted " << alias << ".");
         }
-        return false;
     }
-    return false;
-}
 
-static bool findDisks(Device *pDev)
-{
-    for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
-    {
-        Device *pChild = pDev->getChild(i);
-        if (pChild->getNumChildren() == 0 && /* Only check leaf nodes. */
-                pChild->getType() == Device::Disk)
-        {
-            if ( probeDisk(static_cast<Disk*> (pChild)) ) return true;
-        }
-        else
-        {
-            // Recurse.
-            if (findDisks(pChild)) return true;
-        }
-    }
-    return false;
+    return diskDevice;
 }
 
 static bool init()
 {
     // Mount all available filesystems.
-    findDisks(&Device::root());
+    Device::foreach(probeDisk);
 
     if (VFS::instance().find(String("raw»/")) == 0)
     {
@@ -107,13 +94,12 @@ static bool init()
         FileDisk *pRamDisk = new FileDisk(String("root»/livedisk.img"), FileDisk::RamOnly);
         if(pRamDisk && pRamDisk->initialise())
         {
-            pRamDisk->setParent(&Device::root());
-            Device::root().addChild(pRamDisk);
+            Device::addToRoot(pRamDisk);
 
             // Mount it in the VFS
             VFS::instance().removeAlias(String("root"));
             bRootMounted = false;
-            findDisks(pRamDisk);
+            Device::foreach(probeDisk, pRamDisk);
         }
         else
             delete pRamDisk;
