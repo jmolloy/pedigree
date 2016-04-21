@@ -19,64 +19,6 @@
 
 #define PEDIGREE_EXTERNAL_SOURCE 1
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <time.h>
-#include <sys/mman.h>
+#include <gtest/gtest.h>
 
-#include <time/Time.h>
-
-void *g_pBootstrapInfo = 0;
-
-namespace Time
-{
-
-Timestamp getTime(bool sync)
-{
-    return time(NULL);
-}
-
-}  // Time
-
-extern "C"
-void panic(const char *s)
-{
-    fprintf(stderr, "PANIC: %s\n", s);
-    abort();
-}
-
-namespace SlamSupport
-{
-uintptr_t getHeapBase()
-{
-    return 0x10000000ULL;
-}
-
-uintptr_t getHeapEnd()
-{
-    return 0x50000000ULL;
-}
-
-void getPageAt(void *addr)
-{
-    void *r = mmap(addr, 0x1000, PROT_READ | PROT_WRITE, MAP_PRIVATE |
-        MAP_FIXED | MAP_ANONYMOUS, -1, 0);
-    if (r == MAP_FAILED)
-    {
-        fprintf(stderr, "map failed: %s\n", strerror(errno));
-        abort();
-    }
-}
-
-void unmapPage(void *page)
-{
-    munmap(page, 0x1000);
-}
-
-void unmapAll()
-{
-    munmap((void *) getHeapBase(), getHeapEnd() - getHeapBase());
-}
-}  // namespace SlamSupport
+#include <utilities/Tree.h>

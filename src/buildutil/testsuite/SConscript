@@ -34,6 +34,7 @@ header_paths = [
     env.Dir('#src/modules/system'),
     env.Dir('#src/system/include'),
     env.Dir('#external/googletest/googletest/include'),
+    env.Dir('#src/system/kernel/core'),
 ]
 
 build_env.Append(CPPPATH=header_paths)
@@ -42,7 +43,7 @@ build_env.Append(CPPPATH=header_paths)
 defines = [
     'HOSTED', 'VFS_NOMMU', 'VFS_STANDALONE', 'EXT2_STANDALONE',
     'UTILITY_LINUX', 'DEVICE_IGNORE_ADDRESSES', 'LITTLE_ENDIAN',
-    'DONT_LOG_TO_SERIAL',
+    'DONT_LOG_TO_SERIAL', 'BENCHMARK',
 ]
 
 build_env.Append(CPPDEFINES=defines)
@@ -60,18 +61,8 @@ coverage_env.MergeFlags({
 })
 
 # TODO(miselin): Tree, UniquePointer, HashTable, RangeList, ExtensibleBitmap
-coverage_env.Program(testsuite_bin,
-                     [
-                         'test-List.cc',
-                         'test-String.cc',
-                         'test-StaticString.cc',
-                         'test-SharedPointer.cc',
-                         'test-Vector.cc',
-                         'test-stringlib.cc',
-                         'test-memory.cc',
-                         'test-RadixTree.cc',
-                         'test-ObjectPool.cc',
-                     ], LIBS=['utility_coverage', 'gtest', 'pthread'])
+coverage_env.Program(testsuite_bin, Glob('test-*.cc'),
+                     LIBS=['utility_coverage', 'gtest', 'pthread'])
 
 if build_env['HAVE_BENCHMARK']:
     build_env.MergeFlags({
@@ -80,18 +71,5 @@ if build_env['HAVE_BENCHMARK']:
         'CPPDEFINES': ['_POSIX_C_SOURCE=200112L'],
     })
 
-    build_env.Program(benchmark_bin,
-                      [
-                          'bench-main.cc',
-                          'bench-memory.cc',
-                          'bench-stringlib.cc',
-                          'bench-List.cc',
-                          'bench-Vector.cc',
-                          'bench-Tree.cc',
-                          'bench-RadixTree.cc',
-                          'bench-ExtensibleBitmap.cc',
-                          'bench-HashTable.cc',
-                          'bench-String.cc',
-                          'bench-StaticString.cc',
-                          'bench-RangeList.cc',
-                      ], LIBS=['utility', 'benchmark', 'pthread'])
+    build_env.Program(benchmark_bin, Glob('bench-*.cc'),
+                      LIBS=['utility', 'benchmark', 'pthread'])

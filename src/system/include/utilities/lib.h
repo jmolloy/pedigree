@@ -80,6 +80,12 @@ inline char toLower(char c)
     return c;
 }
 
+inline int max(size_t a, size_t b) PURE;
+inline int max(size_t a, size_t b)
+{
+    return a > b ? a : b;
+}
+
 #ifdef __cplusplus
 }
 

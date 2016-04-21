@@ -26,15 +26,24 @@
     \see http://www.pedigree-project.org/r/projects/pedigree/wiki/SlabDraft
 **/
 
-#ifdef BENCHMARK
-#include "compat.h"
-#else
 #include <processor/types.h>
-#include <processor/PhysicalMemoryManager.h>
-#include <utilities/MemoryAllocator.h>
 #include <Log.h>
 
+#ifndef BENCHMARK
+#include <processor/PhysicalMemoryManager.h>
+#include <utilities/MemoryAllocator.h>
+
 #include <Spinlock.h>
+#else  // BENCHMARK
+
+namespace SlamSupport
+{
+uintptr_t getHeapBase();
+uintptr_t getHeapEnd();
+void getPageAt(void *addr);
+void unmapPage(void *page);
+void unmapAll();
+}  // namespace SlamSupport
 #endif
 
 /// Size of each slab in 4096-byte pages
@@ -175,6 +184,7 @@ private:
     uintptr_t m_FirstSlab;
 #endif
 
+#ifdef THREADS
     /**
      * Recovery cannot be done trivially.
      * Spinlock disables interrupts as part of its operation, so we can
@@ -182,6 +192,7 @@ private:
      * per-CPU thing.
      */
     Spinlock m_RecoveryLock;
+#endif
 
     struct Node m_EmptyNode;
 };
@@ -284,7 +295,9 @@ private:
     bool m_bVigilant;
 #endif
 
+#ifdef THREADS
     Spinlock m_SlabRegionLock;
+#endif
 
     size_t m_HeapPageCount;
 
