@@ -25,8 +25,8 @@ Import(['host_env'])
 # Build gtest.
 if host_env.Dir('#external/googletest').exists:
     lib = host_env.Library('gtest', [
-        '#external/googletest/googletest/src/gtest-all.cc',
-        '#external/googletest/googletest/src/gtest_main.cc',
+        'googletest/googletest/src/gtest-all.cc',
+        'googletest/googletest/src/gtest_main.cc',
     ], CPPPATH=[
         '#external/googletest/googletest/include',
         '#external/googletest/googletest',
