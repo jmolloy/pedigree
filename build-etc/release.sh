@@ -36,8 +36,6 @@ echo "Compressing (gzip)..."
 gzip --keep --rsyncable $OUTPUTDIR/pedigree.iso
 echo "Compressing (bzip2)..."
 bzip2 --keep $OUTPUTDIR/pedigree.iso
-echo "Compressing (xz)..."
-xz --keep $OUTPUTDIR/pedigree.iso
 
 # Now done with the original image.
 rm -f $OUTPUTDIR/pedigree.iso
@@ -50,8 +48,6 @@ echo "Calculating checksums..."
 pushd $OUTPUTDIR
 # Checksum all images.
 for f in "$RELEASE_NAME"*; do
-    md5sum "$f" >$f.md5
-    sha1sum "$f" >$f.sha1
     sha256sum "$f" >$f.sha256
 done
 popd
