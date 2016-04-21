@@ -178,7 +178,7 @@ void ExtensibleBitmap::clear(size_t n)
     n -= sizeof(uintptr_t)*8;
 
     // If its outside the range of possible set bits, it must be clear already.
-    if(n > m_nMaxBit)
+    if(n > m_nMaxBit || !m_pDynamicMap)
         return;
     m_pDynamicMap[n/8] &= ~(1UL << (n%8));
 }
