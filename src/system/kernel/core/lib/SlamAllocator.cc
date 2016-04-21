@@ -86,10 +86,6 @@ inline T *touch_tag(T *p)
     return reinterpret_cast<T *>(ptr);
 }
 
-#ifdef BENCHMARK
-#define TEST_MEMORY_AREA_SIZE 0x40000000
-#endif
-
 inline void spin_pause()
 {
 #ifdef BENCHMARK
@@ -102,7 +98,7 @@ inline void spin_pause()
 inline uintptr_t getHeapBase()
 {
 #ifdef BENCHMARK
-    return 0x10000000ULL;
+    return SlamSupport::getHeapBase();
 #else
     return VirtualAddressSpace::getKernelAddressSpace().getKernelHeapStart();
 #endif
@@ -111,7 +107,7 @@ inline uintptr_t getHeapBase()
 inline uintptr_t getHeapEnd()
 {
 #ifdef BENCHMARK
-    return getHeapBase() + TEST_MEMORY_AREA_SIZE;
+    return SlamSupport::getHeapEnd();
 #else
     return VirtualAddressSpace::getKernelAddressSpace().getKernelHeapEnd();
 #endif
@@ -129,13 +125,7 @@ inline size_t getPageSize()
 inline void allocateAndMapAt(void *addr)
 {
 #ifdef BENCHMARK
-    void *r = mmap(addr, getPageSize(), PROT_READ | PROT_WRITE, MAP_PRIVATE |
-        MAP_FIXED | MAP_ANONYMOUS, -1, 0);
-    if (r == MAP_FAILED)
-    {
-        fprintf(stderr, "map failed: %s\n", strerror(errno));
-        exit(1);
-    }
+    SlamSupport::getPageAt(addr);
 #else
     VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
     physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
@@ -146,7 +136,8 @@ inline void allocateAndMapAt(void *addr)
 inline void unmap(void *addr)
 {
 #ifdef BENCHMARK
-    munmap(addr, getPageSize());
+    SlamSupport::unmapPage(addr);
+    // munmap(addr, getPageSize());
 #else
     VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
     if (!va.isMapped(addr))
@@ -165,7 +156,10 @@ SlamCache::SlamCache() :
 #if CRIPPLINGLY_VIGILANT
     ,m_FirstSlab()
 #endif
-    , m_RecoveryLock(false), m_EmptyNode()
+#ifdef THREADS
+    , m_RecoveryLock(false)
+#endif
+    , m_EmptyNode()
 {
 }
 
@@ -338,7 +332,9 @@ size_t SlamCache::recovery(size_t maxSlabs)
     size_t thisCpu = 0;
 #endif
 
+#ifdef THREADS
     LockGuard<Spinlock> guard(m_RecoveryLock);
+#endif
 
     if(untagged(m_PartialLists[thisCpu]) == &m_EmptyNode)
         return 0;
@@ -636,7 +632,10 @@ SlamAllocator::SlamAllocator() :
 #if CRIPPLINGLY_VIGILANT
     , m_bVigilant(false)
 #endif
-    , m_SlabRegionLock(false), m_HeapPageCount(0), m_SlabRegionBitmap(),
+#ifdef THREADS
+    , m_SlabRegionLock(false)
+#endif
+    , m_HeapPageCount(0), m_SlabRegionBitmap(),
     m_SlabRegionBitmapEntries(0), m_Base(0)
 {
 }
@@ -647,7 +646,14 @@ SlamAllocator::~SlamAllocator()
 
 void SlamAllocator::initialise()
 {
+#ifdef THREADS
     LockGuard<Spinlock> guard(m_SlabRegionLock);
+#endif
+
+    if (m_bInitialised)
+    {
+        return;
+    }
 
     // We need to allocate our bitmap for this purpose.
     uintptr_t bitmapBase = getHeapBase();
@@ -707,7 +713,9 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
         panic("Attempted to get a slab smaller than the native page size.");
     }
 
+#ifdef THREADS
     m_SlabRegionLock.acquire();
+#endif
 
     // Try to find space for this allocation.
     size_t entry = 0;
@@ -811,7 +819,7 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
 
     if(bit == ~0UL)
     {
-        FATAL("SlamAllocator::getSlab cannot find a place to allocate this slab (" << Dec << fullSize << Hex << " bytes)!");
+        FATAL("SlamAllocator::getSlab cannot find a place to allocate this slab (" << Dec << fullSize << Hex << " bytes) - allocator is consuming " << m_HeapPageCount << " pages!");
     }
 
     uintptr_t slab = m_Base + (((entry * 64) + bit) * getPageSize());
@@ -836,8 +844,10 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
         }
     }
 
+#ifdef THREADS
     // Now that we've marked the slab bits as used, we can map the pages.
     m_SlabRegionLock.release();
+#endif
 
     // Map. This could break as we're allocating physical memory; though we are
     // free of the lock so that helps.
@@ -865,7 +875,9 @@ void SlamAllocator::freeSlab(uintptr_t address, size_t length)
         panic("Attempted to free a slab smaller than the native page size.");
     }
 
+#ifdef THREADS
     LockGuard<Spinlock> guard(m_SlabRegionLock);
+#endif
 
     // Perform unmapping first (so we can just modify 'address').
 

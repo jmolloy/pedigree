@@ -39,6 +39,7 @@ subdirs = [
 header_paths = [
     env.Dir('#src/modules/system'),
     env.Dir('#src/system/include'),
+    env.Dir('#src/system/kernel/core'),
 ]
 libutility_sources = [
     os.path.join('utilities', 'String.cc'),
@@ -50,10 +51,12 @@ libutility_sources = [
     os.path.join('core', 'lib', 'string.c'),
     os.path.join('core', 'lib', 'memory.c'),
     os.path.join('core', 'lib', 'vsprintf.c'),
+    os.path.join('core', 'lib', 'SlamAllocator.cc'),
     'Log.cc',
 ]
 defines = [
     'HOSTED', 'UTILITY_LINUX', 'LITTLE_ENDIAN', 'DONT_LOG_TO_SERIAL',
+    'BENCHMARK',
 ]
 
 utility_env = env.Clone()

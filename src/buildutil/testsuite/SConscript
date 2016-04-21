@@ -34,6 +34,7 @@ header_paths = [
     env.Dir('#src/modules/system'),
     env.Dir('#src/system/include'),
     env.Dir('#external/googletest/googletest/include'),
+    env.Dir('#src/system/kernel/core'),
 ]
 
 build_env.Append(CPPPATH=header_paths)
@@ -42,7 +43,7 @@ build_env.Append(CPPPATH=header_paths)
 defines = [
     'HOSTED', 'VFS_NOMMU', 'VFS_STANDALONE', 'EXT2_STANDALONE',
     'UTILITY_LINUX', 'DEVICE_IGNORE_ADDRESSES', 'LITTLE_ENDIAN',
-    'DONT_LOG_TO_SERIAL',
+    'DONT_LOG_TO_SERIAL', 'BENCHMARK',
 ]
 
 build_env.Append(CPPDEFINES=defines)
