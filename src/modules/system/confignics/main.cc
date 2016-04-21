@@ -124,4 +124,4 @@ static void destroy()
 {
 }
 
-MODULE_INFO("confignics", &init, &destroy, "dhcpclient", "network-stack");
+MODULE_INFO("confignics", &init, &destroy, "dhcpclient", "network-stack", "nics");

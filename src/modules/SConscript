@@ -149,6 +149,7 @@ module_subdirs = [
     'confignics',
     'filesystems',
     'mountroot',
+    'nics',
 ]
 
 if env['hosted'] or env['ARCH_TARGET'] == 'ARM':
