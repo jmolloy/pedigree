@@ -90,5 +90,5 @@ build_env.Library('part', [PART_DIR.File(f) for f in partition_sources])
 build_env.Library('kern', [KERNEL_DIR.File(f) for f in kernel_sources])
 
 
-build_env.Program(ext2img_bin, ['main.cc', 'DiskImage.cc'],
+build_env.Program(ext2img_bin, ['main.cc', 'DiskImage.cc', 'stubs.cc'],
     LIBS=['ext2', 'vfs', 'part', 'utility', 'kern'])
