@@ -26,7 +26,7 @@
 #include <Service.h>
 #include <ServiceManager.h>
 
-static int configureInterfaces(void *p)
+static int configureInterfaces()
 {
     // Fill out the device hash table (needed in RoutingTable)
     DeviceHashTree::instance().fill();
@@ -109,19 +109,13 @@ static int configureInterfaces(void *p)
 
 static bool init()
 {
-#ifdef THREADS
-    // Spin up network interfaces, but don't wait.
-    Process *me = Processor::information().getCurrentThread()->getParent();
-    Thread *pInterfaceThread = new Thread(me, configureInterfaces, 0);
-    pInterfaceThread->detach();
-#else
-    configureInterfaces(0);
-#endif
-    return true;
+    configureInterfaces();
+    return false;
 }
 
 static void destroy()
 {
 }
 
-MODULE_INFO("confignics", &init, &destroy, "dhcpclient", "network-stack", "nics");
+MODULE_INFO("confignics", &init, &destroy, "dhcpclient", "network-stack", "config");
+MODULE_OPTIONAL_DEPENDS("nics");

@@ -307,4 +307,5 @@ static void destroy()
 {
 }
 
-MODULE_INFO("Status Server", &init, &destroy, "confignics", "config");
+MODULE_INFO("Status Server", &init, &destroy, "config");
+MODULE_OPTIONAL_DEPENDS("confignics");
