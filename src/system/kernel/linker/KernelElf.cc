@@ -33,7 +33,7 @@ KernelElf KernelElf::m_Instance;
 // #undef DUMP_DEPENDENCIES
 
 // Define to 1 to load modules using threads.
-#define THREADED_MODULE_LOADING 0
+#define THREADED_MODULE_LOADING 1
 
 /**
  * Extend the given pointer by adding its canonical prefix again.
