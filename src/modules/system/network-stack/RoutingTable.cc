@@ -165,11 +165,18 @@ void RoutingTable::Add(Type type, IpAddress dest, IpAddress subnet, IpAddress su
 
 Network *RoutingTable::route(IpAddress *ip, Config::Result *pResult)
 {
-    if (!(ip && pResult))
+    if (!(ip || pResult))
     {
-        // Need both parameters presented.
+        // Need either parameter presented.
         delete pResult;
         return 0;
+    }
+
+    bool allocatedIp = false;
+    if (!ip)
+    {
+        ip = new IpAddress();
+        allocatedIp = true;
     }
 
     // Grab the interface
@@ -188,6 +195,11 @@ Network *RoutingTable::route(IpAddress *ip, Config::Result *pResult)
         subIp[3] = pResult->getNum(0, "subip4");
 
         ip->setIp(reinterpret_cast<uint8_t*>(subIp));
+    }
+
+    if (allocatedIp == true)
+    {
+        delete ip;
     }
 
     // Return the interface to use
