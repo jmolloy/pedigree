@@ -693,8 +693,6 @@ int executeModuleThread(void *mod)
         }
     }
 
-    KernelElf::instance().markAsRelocated(module);
-
     NOTICE("KERNELELF: Executing module " << module->name);
 
     bool bSuccess = false;
@@ -707,14 +705,6 @@ int executeModuleThread(void *mod)
     KernelElf::instance().updateModuleStatus(module, bSuccess);
 
     return 0;
-}
-
-void KernelElf::markAsRelocated(Module *module)
-{
-#ifdef THREADS
-    LockGuard<Spinlock> guard(m_ModuleAdjustmentLock);
-#endif
-    m_LoadedModules.pushBack(module);
 }
 
 bool KernelElf::executeModule(Module *module)
@@ -732,6 +722,15 @@ bool KernelElf::executeModule(Module *module)
 
 void KernelElf::updateModuleStatus(Module *module, bool status)
 {
+    {
+#ifdef THREADS
+        LockGuard<Spinlock> guard(m_ModuleAdjustmentLock);
+#endif
+        // Module has completed (successfully or not) - now it's OK for
+        // dependent modules to be run.
+        m_LoadedModules.pushBack(module);
+    }
+
     String moduleName(module->name);
     if (status)
     {

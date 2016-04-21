@@ -111,9 +111,6 @@ class KernelElf : public Elf
         /** Waits for all modules to complete (whether successfully or not). */
         void waitForModulesToLoad();
 
-        /** Marks the given module as relocated. */
-        void markAsRelocated(Module *module);
-
     private:
         /** Default constructor does nothing */
         KernelElf() INITIALISATION_ONLY;
