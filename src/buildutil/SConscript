@@ -38,6 +38,11 @@ subdirs = [
 if env['instrumentation']:
     subdirs.append('instrument')
 
+# Make sure we can find libraries in the build directory.
+env.MergeFlags({
+    'LIBPATH': [env['BUILDDIR']],
+})
+
 # Build utility libraries.
 header_paths = [
     env.Dir('#src/modules/system'),
@@ -70,14 +75,14 @@ utility_env.MergeFlags({
     'CFLAGS': ['-std=gnu99'],
 })
 
-env['LIBUTILITY'] = utility_env.Library('utility',
+utility_env.Library(os.path.join(env['BUILDDIR'], 'utility'),
     ['shim.cc'] + [KERNEL_DIR.File(f) for f in libutility_sources])
 
 # Build a version of libutility that has the necessary coverage pieces, such
 # that we can get code coverage analysis where actual .cc files hold the code
 # being tested.
 utility_env['OBJSUFFIX'] = '.build.coverage.o'
-env['LIBUTILITY_COVERAGE'] = utility_env.Library('utility_coverage',
+utility_env.Library(os.path.join(env['BUILDDIR'], 'utility_coverage'),
     ['shim.cc'] + [KERNEL_DIR.File(f) for f in libutility_sources],
     CCFLAGS=utility_env['COVERAGE_CCFLAGS'])
 

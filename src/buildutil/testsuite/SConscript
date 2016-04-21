@@ -71,7 +71,7 @@ coverage_env.Program(testsuite_bin,
                          'test-memory.cc',
                          'test-RadixTree.cc',
                          'test-ObjectPool.cc',
-                     ], LIBS=[env['LIBUTILITY_COVERAGE'], 'gtest', 'pthread'])
+                     ], LIBS=['utility_coverage', 'gtest', 'pthread'])
 
 if build_env['HAVE_BENCHMARK']:
     build_env.MergeFlags({
@@ -94,4 +94,4 @@ if build_env['HAVE_BENCHMARK']:
                           'bench-String.cc',
                           'bench-StaticString.cc',
                           'bench-RangeList.cc',
-                      ], LIBS=[env['LIBUTILITY'], 'benchmark', 'pthread'])
+                      ], LIBS=['utility', 'benchmark', 'pthread'])

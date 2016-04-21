@@ -47,7 +47,10 @@ defines = [
 
 build_env.Append(CPPDEFINES=defines)
 
-build_env.MergeFlags({'CXXFLAGS': ['-std=c++11', '-g3', '-ggdb', '-O2']})
+build_env.MergeFlags({
+    'CXXFLAGS': ['-std=c++11', '-g3', '-ggdb', '-O2'],
+    'LIBPATH': ['.'],
+})
 
 # VFS module sources that we care about.
 vfs_sources = [
@@ -81,15 +84,11 @@ kernel_sources = [
 
 # Build components from Pedigree to merge into a working VFS layer that uses
 # an ext2 filesystem.
-libvfs = build_env.Library('vfs',
-    [VFS_DIR.File(f) for f in vfs_sources])
-libext2 = build_env.Library('ext2',
-    [EXT2_DIR.File(f) for f in ext2_sources])
-libpart = build_env.Library('part',
-    [PART_DIR.File(f) for f in partition_sources])
-libkern = build_env.Library('kern',
-    [KERNEL_DIR.File(f) for f in kernel_sources])
+build_env.Library('vfs', [VFS_DIR.File(f) for f in vfs_sources])
+build_env.Library('ext2', [EXT2_DIR.File(f) for f in ext2_sources])
+build_env.Library('part', [PART_DIR.File(f) for f in partition_sources])
+build_env.Library('kern', [KERNEL_DIR.File(f) for f in kernel_sources])
 
 
 build_env.Program(ext2img_bin, ['main.cc', 'DiskImage.cc'],
-    LIBS=[libext2, libvfs, libpart, env['LIBUTILITY'], libkern])
+    LIBS=['ext2', 'vfs', 'part', 'utility', 'kern'])
