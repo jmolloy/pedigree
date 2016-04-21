@@ -29,6 +29,7 @@
 #include <network-stack/ConnectionBasedEndpoint.h>
 #include <vfs/VFS.h>
 #include <vfs/Filesystem.h>
+#include <core/lib/SlamAllocator.h>
 
 #define LISTEN_PORT     1234
 
@@ -255,6 +256,55 @@ int clientThread(void *p)
             }
 
             response += "</table>";
+
+            response += "<h3>Memory Usage (KiB)</h3>";
+            response += "<table border='1'><tr><th>Heap</th><th>Used</th><th>Free</th></tr>";
+            {
+                extern size_t g_FreePages;
+                extern size_t g_AllocedPages;
+
+                NormalStaticString str;
+                str += "<tr><td>";
+                str += SlamAllocator::instance().heapPageCount() * 4;
+                str += "</td><td>";
+                str += (g_AllocedPages * 4096) / 1024;
+                str += "</td><td>";
+                str += (g_FreePages * 4096) / 1024;
+                str += "</td></tr>";
+                response += str;
+            }
+            response += "</table>";
+
+            response += "<h3>Processes</h3>";
+            response += "<table border='1'><tr><th>PID</th><th>Description</th><th>Virtual Memory (KiB)</th><th>Physical Memory (KiB)</th><th>Shared Memory (KiB)</th>";
+            for(size_t i = 0; i < Scheduler::instance().getNumProcesses(); ++i)
+            {
+                response += "<tr>";
+                Process *pProcess = Scheduler::instance().getProcess(i);
+                HugeStaticString str;
+
+                ssize_t virtK = (pProcess->getVirtualPageCount() * 0x1000) / 1024;
+                ssize_t physK = (pProcess->getPhysicalPageCount() * 0x1000) / 1024;
+                ssize_t shrK = (pProcess->getSharedPageCount() * 0x1000) / 1024;
+
+                /// \todo add timing
+                str.append("<td>");
+                str.append(pProcess->getId());
+                str.append("</td><td>");
+                str.append(pProcess->description());
+                str.append("</td><td>");
+                str.append(virtK, 10);
+                str.append("</td><td>");
+                str.append(physK, 10);
+                str.append("</td><td>");
+                str.append(shrK, 10);
+                str.append("</td>");
+
+                response += str;
+                response += "</tr>";
+            }
+            response += "</table>";
+
             response += "</body></html>";
         }
     }
