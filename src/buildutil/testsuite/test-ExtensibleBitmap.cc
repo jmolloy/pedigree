@@ -143,3 +143,18 @@ TEST(PedigreeExtensibleBitmap, ClearDynamic)
     EXPECT_TRUE(bitmap.test(256));
     EXPECT_FALSE(bitmap.test(128));
 }
+
+TEST(PedigreeExtensibleBitmap, ClearEdge)
+{
+    ExtensibleBitmap bitmap;
+
+    /// \todo rewrite this to use sizeof(uintptr_t)
+
+    bitmap.set(0x44);
+    bitmap.clear(0x44);
+
+    bitmap.clear(0x40);
+
+    EXPECT_FALSE(bitmap.test(0x44));
+    EXPECT_FALSE(bitmap.test(0x40));
+}
