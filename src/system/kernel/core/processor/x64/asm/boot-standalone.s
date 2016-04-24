@@ -390,7 +390,7 @@ ___startup_init_fpu_sse:
   pop rbp
   ret
 
-[SECTION .data]
+[SECTION .init.data]
   CODE32GDTR:
     dw 23
     dq GDT - KERNEL_BASE
@@ -466,7 +466,8 @@ pagetable1:
 ; Page table for the kernel stack
 pagetable2:
   resb 4096
-        
+
+[SECTION .asm.preserve.bss nobits]
 ; The kernel stack
 stack:
   resb 0x10000

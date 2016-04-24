@@ -140,6 +140,7 @@ opts.AddVariables(
     BoolVariable('sanitizers', 'If hosted, enable sanitizers (eg AddressSanitizer) (highly recommended)?', 0),
     BoolVariable('valgrind', 'If hosted, build for Valgrind?', 0),
     BoolVariable('clang_profile', 'If hosted, use clang instrumentation to profile.', 0),
+    BoolVariable('instrumentation', 'Build with function instrumentation (SLOW).', 0),
 
     BoolVariable('kernel_on_disk', 'Put the kernel & needed bits onto hard disk images?', 1),
     
@@ -266,7 +267,7 @@ host_env['HAS_PROFILE_RT'] = profile_rt
 host_env['HAS_GCOV'] = gcov
 
 # Copy useful environment items that are needed in site_scons/buildutils
-for copy_key in ('verbose', 'nocolour'):
+for copy_key in ('verbose', 'nocolour', 'instrumentation'):
     host_env[copy_key] = env[copy_key]
 
 def memoized_scons_subst(cache, old_scons_subst, string, env,
@@ -677,7 +678,8 @@ if not env['warnings']:
     warning_flag = ['-Werror']
 env.MergeFlags({'CCFLAGS': warning_flag})
 
-if env['memory_log']:
+# Instrumentation conflicts with memory logging.
+if env['memory_log'] and not env['instrumentation']:
     defines.append('MEMORY_LOGGING_ENABLED')
 
 def fixDebugFlags(environment):

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -55,7 +54,7 @@ void BootIO::write(HugeStaticString &str, Colour foreColour, Colour backColour)
   {
     for(size_t i = 0; i < Machine::instance().getNumSerial(); i++)
     {
-#if defined(MEMORY_TRACING) || (defined(MEMORY_LOGGING_ENABLED) && !defined(MEMORY_LOG_INLINE))
+#if defined(MEMORY_TRACING) || (defined(MEMORY_LOGGING_ENABLED) && !defined(MEMORY_LOG_INLINE)) || defined(INSTRUMENTATION)
         if(i == 1) // Don't override memory log.
           continue;
 #endif

@@ -31,6 +31,13 @@ objname = os.path.join(kerneldir, 'kernel')
 
 env.Alias("kernel", objname)
 
+# Instrument the kernel.
+if env['instrumentation']:
+    env_clone.MergeFlags({
+        'CCFLAGS': ['-finstrument-functions'],
+        'CPPDEFINES': ['INSTRUMENTATION'],
+    })
+
 # Base set of kernel files, common to all architectures.
 files = [
     'Log.cc',

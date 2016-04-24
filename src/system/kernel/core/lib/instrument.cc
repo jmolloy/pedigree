@@ -19,47 +19,67 @@
 
 #include <machine/Machine.h>
 #include <utilities/StaticString.h>
+#include "instrument.h"
 
-extern "C" void __cyg_profile_func_enter (void *func_address, void *call_site)
-  __attribute__((no_instrument_function));
-extern "C" void __cyg_profile_func_exit (void *func_address, void *call_site)
-  __attribute__((no_instrument_function));
+#define USE_LITE_RECORD     1
 
-#if defined(X86_COMMON) || defined(HOSTED)
-#define OUT(c) asm volatile ("outb %%al, %%dx" :: "d"(0x2f8), "a"(c))
-#endif
-
-extern "C" void __cyg_profile_func_enter (void *func_address, void *call_site)
+extern "C"
 {
-#ifdef OUT
-    uint32_t _func_address = reinterpret_cast<uintptr_t>(func_address)&0xFFFFFFFF;
-    uint32_t _call_site = reinterpret_cast<uintptr_t>(call_site)&0xFFFFFFFF;
+void __cyg_profile_func_enter (void *func_address, void *call_site)
+  __attribute__((no_instrument_function)) __attribute__((hot));
 
-//    register int eflags;
-//    asm volatile ("pushf; pop %0; cli" : "=r" (eflags));
-    OUT('E');
-    OUT('0' + ((_func_address>>(32-4))&0xF));
-    OUT('0' + ((_func_address>>(32-8))&0xF));
-    OUT('0' + ((_func_address>>(32-12))&0xF));
-    OUT('0' + ((_func_address>>(32-16))&0xF));
-    OUT('0' + ((_func_address>>(32-20))&0xF));
-    OUT('0' + ((_func_address>>(32-24))&0xF));
-    OUT('0' + ((_func_address>>(32-28))&0xF));
-    OUT('0' + ((_func_address>>(32-32))&0xF));
-    OUT(' ');
-    OUT('0' + ((_call_site>>(32-4))&0xF));
-    OUT('0' + ((_call_site>>(32-8))&0xF));
-    OUT('0' + ((_call_site>>(32-12))&0xF));
-    OUT('0' + ((_call_site>>(32-16))&0xF));
-    OUT('0' + ((_call_site>>(32-20))&0xF));
-    OUT('0' + ((_call_site>>(32-24))&0xF));
-    OUT('0' + ((_call_site>>(32-28))&0xF));
-    OUT('0' + ((_call_site>>(32-32))&0xF));
-    OUT('\n');
-//    asm volatile("push %0; popf" ::"r" (eflags));
+#define COM1 0x3F8
+#define COM2 0x2F8
+#define COM3 0x3E8
+#define COM4 0x2E8
+
+static volatile int g_WrittenFirst = 0;
+
+void __cyg_profile_func_enter (void *func_address, void *call_site)
+{
+    // NOTE: you cannot call anything in this function, as doing so would
+    // re-enter. That means hand-crafted serial writes are necessary.
+#ifdef X64
+    if (UNLIKELY(g_WrittenFirst == 0))
+    {
+        if (__sync_bool_compare_and_swap(&g_WrittenFirst, 0, 1))
+        {
+            uint8_t flag = 0;
+#if USE_LITE_RECORD
+            flag |= INSTRUMENT_GLOBAL_LITE;
+#endif
+            asm volatile("outb %%al, %%dx" :: "d" (COM2), "a" (flag));
+        }
+    }
+
+#if USE_LITE_RECORD
+    LiteInstrumentationRecord record;
+#else
+    InstrumentationRecord record;
+    record.data.flags = INSTRUMENT_RECORD_ENTRY;
+    record.data.caller = reinterpret_cast<uintptr_t>(call_site);
+    record.data.magic = INSTRUMENT_MAGIC;
+#endif
+    record.data.function = reinterpret_cast<uintptr_t>(func_address);
+
+    // Semi-unrolled, all-in-one assembly serial-port write.
+    uintptr_t x = 0;
+    size_t y = 0;
+    asm volatile("pushf; cli;" \
+        ".1:\n" \
+        "movq (%0), %%rax;" \
+        "outb %%al, %%dx;" \
+        "shr $8, %%rax;" \
+        "outb %%al, %%dx;" \
+        "shr $8, %%rax;" \
+        "outb %%al, %%dx;" \
+        "shr $8, %%rax;" \
+        "outb %%al, %%dx;" \
+        "add $4, %0;" \
+        "sub $4, %1;" \
+        "jnz .1; popf" : "=&r" (x), "=&r" (y) : "d" (COM2), "0" (record.buffer),
+            "1" (sizeof record.buffer) : "rax", "memory");
 #endif
 }
 
-extern "C" void __cyg_profile_func_exit (void *func_address, void *call_site)
-{
-}
+}  // extern "C"

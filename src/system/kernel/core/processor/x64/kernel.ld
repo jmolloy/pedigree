@@ -12,6 +12,7 @@ SECTIONS
     *(.init.multiboot)
     *(.init.text);
     *(.init.data);
+    *(.asm.bss);
     trampoline = .;
     *(.trampoline.text);
     trampoline_end = .;
@@ -50,12 +51,11 @@ SECTIONS
     end_modinfo = .;
   }
 
-
   .bss : AT(ADDR(.bss) - 0xFFFFFFFF7FF00000)
   {
     . = ALIGN(4096);
     bss = .; _bss = .; __bss = .;
-    *(.asm.bss)
+    *(.asm.preserve.bss)
     *(.bss*)
     . = ALIGN(4096);
   }

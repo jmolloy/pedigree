@@ -27,7 +27,7 @@ class SerialLogger : public Log::LogCallback
         {
             for(size_t n = 0; n < Machine::instance().getNumSerial(); n++)
             {
-#if defined(MEMORY_TRACING) || (defined(MEMORY_LOGGING_ENABLED) && !defined(MEMORY_LOG_INLINE))
+#if defined(MEMORY_TRACING) || (defined(MEMORY_LOGGING_ENABLED) && !defined(MEMORY_LOG_INLINE)) || defined(INSTRUMENTATION)
                 if(n == 1) // Don't override memory log.
                     continue;
 #endif
