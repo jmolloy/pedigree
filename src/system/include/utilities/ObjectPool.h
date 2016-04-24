@@ -56,7 +56,8 @@ class ObjectPool
             }
         }
 
-        T *allocate()
+        template <typename... Args>
+        T *allocate(Args... args)
         {
 #ifdef THREADS
             LockGuard<Spinlock> guard(m_Spinlock);
@@ -70,7 +71,7 @@ class ObjectPool
             }
             else
             {
-                return new T;
+                return new T(args...);
             }
         }
 

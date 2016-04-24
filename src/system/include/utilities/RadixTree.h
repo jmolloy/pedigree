@@ -56,7 +56,7 @@ private:
 
         Node(bool bCaseSensitive) :
             m_Key(),value(T()),m_Children(),m_pParent(0),
-            m_bCaseSensitive(bCaseSensitive)
+            m_bCaseSensitive(bCaseSensitive), m_pParentTree(0)
         {
         }
 
@@ -76,7 +76,7 @@ private:
         
         /** Locates a child of this node, given the key portion of key
             (lookahead on the first token) */
-        Node *findChild(const char *cpKey);
+        Node *findChild(const char *cpKey) const;
 
         /** Adds a new child. */
         void addChild(Node *pNode);
@@ -89,10 +89,10 @@ private:
 
         /** Compares cpKey and this node's key, returning the type of match
             found. */
-        MatchType matchKey(const char *cpKey);
+        MatchType matchKey(const char *cpKey) const;
 
         /** Returns the first found child of the node. */
-        Node *getFirstChild();
+        Node *getFirstChild() const;
 
         /** Sets the node's key to the concatenation of \p cpKey and the
          *  current key.
@@ -100,11 +100,11 @@ private:
         void prependKey(const char *cpKey);
 
         void setKey(const char *cpKey);
-        inline const char *getKey() {return m_Key;}
-        inline void setValue(T pV) {value = pV;}
-        inline T getValue() {return value;}
+        inline const char *getKey() const {return m_Key;}
+        inline void setValue(const T &pV) {value = pV;}
+        inline const T &getValue() const {return value;}
         inline void setParent(Node *pP) {m_pParent = pP;}
-        inline Node *getParent() {return m_pParent;}
+        inline Node *getParent() const {return m_pParent;}
 
         /** Node key, zero terminated. */
         String m_Key;
@@ -119,15 +119,18 @@ private:
         /** Controls case-sensitive matching. */
         bool m_bCaseSensitive;
 
+        /** Link back to the node's RadixTree instance. */
+        RadixTree *m_pParentTree;
+
     private:
         Node(const Node&);
         Node &operator =(const Node&);
         
         /** Returns the next Node to look at during an in-order iteration. */
-        Node *doNext();
+        Node *doNext() const;
 
         /** Returns the node's next sibling, by looking at its parent's children. */
-        Node *getNextSibling();
+        Node *getNextSibling() const;
     };
 
 public:
@@ -156,12 +159,12 @@ public:
     /** Add an element to the Tree.
      *\param[in] key the key
      *\param[in] value the element */
-    void insert(String key, T value);
+    void insert(const String &key, const T &value);
     /** Attempts to find an element with the given key.
      *\return the element found, or NULL if not found. */
-    T lookup(String key) const;
+    T lookup(const String &key) const;
     /** Attempts to remove an element with the given key. */
-    void remove(String key);
+    void remove(const String &key);
 
     /** Clear the tree. */
     void clear();
@@ -210,6 +213,21 @@ public:
 private:
     /** Internal function to create a copy of a subtree. */
     Node *cloneNode(Node *node, Node *parent);
+    /** Obtain a new Node with the same case-sensitive flag. */
+    Node *getNewNode()
+    {
+        Node *p = m_NodePool.allocate(m_bCaseSensitive);
+        p->m_pParentTree = this;
+        return p;
+    }
+    /** Return a Node so it can be allocated again. */
+    void returnNode(Node *p)
+    {
+        if (p)
+        {
+            m_NodePool.deallocate(p);
+        }
+    }
 
     /** Number of items in the tree. */
     size_t m_nItems;
@@ -217,17 +235,19 @@ private:
     Node *m_pRoot;
     /** Whether matches are case-sensitive or not. */
     bool m_bCaseSensitive;
+    /** Pool of node objects (to reduce impact of lots of node allocs/deallocs). */
+    ObjectPool<Node> m_NodePool;
 };
 
 template<class T>
 RadixTree<T>::RadixTree() :
-    m_nItems(0), m_pRoot(0), m_bCaseSensitive(true)
+    m_nItems(0), m_pRoot(0), m_bCaseSensitive(true), m_NodePool()
 {
 }
 
 template<class T>
 RadixTree<T>::RadixTree(bool bCaseSensitive) :
-    m_nItems(0), m_pRoot(0), m_bCaseSensitive(bCaseSensitive)
+    m_nItems(0), m_pRoot(0), m_bCaseSensitive(bCaseSensitive), m_NodePool()
 {
 }
 
@@ -235,15 +255,15 @@ template<class T>
 RadixTree<T>::~RadixTree()
 {
     clear();
-    delete m_pRoot;
+    returnNode(m_pRoot);
 }
 
 template<class T>
 RadixTree<T>::RadixTree(const RadixTree &x) :
-    m_nItems(0), m_pRoot(0), m_bCaseSensitive(x.m_bCaseSensitive)
+    m_nItems(0), m_pRoot(0), m_bCaseSensitive(x.m_bCaseSensitive), m_NodePool()
 {
     clear();
-    delete m_pRoot;
+    returnNode(m_pRoot);
     m_pRoot = cloneNode (x.m_pRoot, 0);
     m_nItems = x.m_nItems;
 }
@@ -252,7 +272,7 @@ template<class T>
 RadixTree<T> &RadixTree<T>::operator =(const RadixTree &x)
 {
     clear();
-    delete m_pRoot;
+    returnNode(m_pRoot);
     m_pRoot = cloneNode (x.m_pRoot, 0);
     m_nItems = x.m_nItems;
     m_bCaseSensitive = x.m_bCaseSensitive;
@@ -266,13 +286,13 @@ size_t RadixTree<T>::count() const
 }
 
 template<class T>
-void RadixTree<T>::insert(String key, T value)
+void RadixTree<T>::insert(const String &key, const T &value)
 {
     if (!m_pRoot)
     {
         // The root node always exists and is a lambda transition node (zero-length
         // key). This removes the need for most special cases.
-        m_pRoot = new Node(m_bCaseSensitive);
+        m_pRoot = getNewNode();
         m_pRoot->setKey(0);
     }
 
@@ -311,7 +331,7 @@ void RadixTree<T>::insert(String key, T value)
                     while (toLower(cpKey[i]) == toLower(pNode->getKey()[i]))
                         i++;
 
-                Node *pInter = new Node(m_bCaseSensitive);
+                Node *pInter = getNewNode();
                 
                 // Intermediate node's key is the common prefix of both keys.
                 pInter->m_Key.assign(cpKey, i);
@@ -332,7 +352,7 @@ void RadixTree<T>::insert(String key, T value)
                 // to create another node, a child of pInter.
                 if (cpKey[i] != 0)
                 {
-                    Node *pChild = new Node(m_bCaseSensitive);
+                    Node *pChild = getNewNode();
                     pChild->setKey(&cpKey[i]);
                     pChild->setValue(value);
                     pChild->setParent(pInter);
@@ -362,7 +382,7 @@ void RadixTree<T>::insert(String key, T value)
                 else
                 {
                     // No child - create a new one.
-                    pChild = new Node(m_bCaseSensitive);
+                    pChild = getNewNode();
                     pChild->setKey(cpKey);
                     pChild->setValue(value);
                     pChild->setParent(pNode);
@@ -377,7 +397,7 @@ void RadixTree<T>::insert(String key, T value)
 }
 
 template<class T>
-T RadixTree<T>::lookup(String key) const
+T RadixTree<T>::lookup(const String &key) const
 {
     if (!m_pRoot)
     {
@@ -416,13 +436,13 @@ T RadixTree<T>::lookup(String key) const
 }
 
 template<class T>
-void RadixTree<T>::remove(String key)
+void RadixTree<T>::remove(const String &key)
 {
     if (!m_pRoot)
     {
         // The root node always exists and is a lambda transition node (zero-length
         // key). This removes the need for most special cases.
-        m_pRoot = new Node(m_bCaseSensitive);
+        m_pRoot = getNewNode();
         m_pRoot->setKey(0);
     }
 
@@ -462,7 +482,7 @@ void RadixTree<T>::remove(String key)
                     // Leaf node, can just delete.
                     pParent = pNode->getParent();
                     pParent->removeChild(pNode);
-                    delete pNode;
+                    returnNode(pNode);
 
                     pNode = pParent;
                     // Optimise up the tree.
@@ -480,7 +500,7 @@ void RadixTree<T>::remove(String key)
                             // Leaf node, can just delete.
                             pParent = pNode->getParent();
                             pParent->removeChild(pNode);
-                            delete pNode;
+                            returnNode(pNode);
 
                             pNode = pParent;
                             continue;
@@ -504,7 +524,7 @@ void RadixTree<T>::remove(String key)
                     pParent->removeChild(pNode);
                     pParent->addChild(pChild);
 
-                    delete pNode;
+                    returnNode(pNode);
                 }
                 return;
             }
@@ -537,7 +557,7 @@ typename RadixTree<T>::Node *RadixTree<T>::cloneNode(Node *pNode, Node *pParent)
     if (!pNode)
         return 0;
 
-    Node *n = new Node(m_bCaseSensitive);
+    Node *n = getNewNode();
     n->setKey(pNode->m_Key);
     n->setValue(pNode->value);
     n->setParent(pParent);
@@ -555,8 +575,8 @@ typename RadixTree<T>::Node *RadixTree<T>::cloneNode(Node *pNode, Node *pParent)
 template<class T>
 void RadixTree<T>::clear()
 {
-    delete m_pRoot;
-    m_pRoot = new Node(m_bCaseSensitive);
+    returnNode(m_pRoot);
+    m_pRoot = getNewNode();
     m_pRoot->setKey(0);
     m_nItems = 0;
 }
@@ -570,17 +590,19 @@ RadixTree<T>::Node::~Node()
 {
     for(size_t n = 0; n < m_Children.count(); ++n)
     {
-        delete m_Children[n];
+        m_pParentTree->returnNode(m_Children[n]);
     }
 }
 
 template<class T>
-typename RadixTree<T>::Node *RadixTree<T>::Node::findChild(const char *cpKey)
+typename RadixTree<T>::Node *RadixTree<T>::Node::findChild(const char *cpKey) const
 {
-    for(size_t n = 0; n < m_Children.count(); ++n)
+    for (auto it : m_Children)
     {
-        if(m_Children[n]->matchKey(cpKey) != NoMatch)
-            return m_Children[n];
+        if (it->matchKey(cpKey) != NoMatch)
+        {
+            return it;
+        }
     }
     return 0;
 }
@@ -621,21 +643,23 @@ void RadixTree<T>::Node::removeChild(Node *pChild)
 }
 
 template<class T>
-typename RadixTree<T>::Node::MatchType RadixTree<T>::Node::matchKey(const char *cpKey)
+typename RadixTree<T>::Node::MatchType RadixTree<T>::Node::matchKey(const char *cpKey) const
 {
     if (!m_Key.length()) return OverMatch;
 
+    const char *myKey = getKey();
+
     size_t i = 0;
-    while (cpKey[i] && getKey()[i])
+    while (cpKey[i] && myKey[i])
     {
         bool bMatch = false;
         if (m_bCaseSensitive)
         {
-            bMatch = cpKey[i] == getKey()[i];
+            bMatch = cpKey[i] == myKey[i];
         }
         else
         {
-            bMatch = toLower(cpKey[i]) == toLower(getKey()[i]);
+            bMatch = toLower(cpKey[i]) == toLower(myKey[i]);
         }
 
         if (!bMatch)
@@ -659,7 +683,7 @@ void RadixTree<T>::Node::setKey(const char *cpKey)
 }
 
 template<class T>
-typename RadixTree<T>::Node *RadixTree<T>::Node::getFirstChild()
+typename RadixTree<T>::Node *RadixTree<T>::Node::getFirstChild() const
 {
     if(m_Children.count())
         return m_Children[0];
@@ -676,12 +700,13 @@ void RadixTree<T>::Node::prependKey(const char *cpKey)
 }
 
 template<class T>
-typename RadixTree<T>::Node *RadixTree<T>::Node::doNext()
+typename RadixTree<T>::Node *RadixTree<T>::Node::doNext() const
 {
-    Node *pNode = this;
+    // pNode needs to be settable, but not what it points to!
+    Node const *pNode = this;
     while ( (pNode == this) || (pNode && (!pNode->value)) )
     {
-        Node *tmp;
+        Node const *tmp;
         if (pNode->m_Children.count())
             pNode = pNode->getFirstChild();
         else
@@ -697,11 +722,11 @@ typename RadixTree<T>::Node *RadixTree<T>::Node::doNext()
             if (tmp->m_pParent == 0) return 0;
         }
     }
-    return pNode;
+    return const_cast<Node *>(pNode);
 }
 
 template<class T>
-typename RadixTree<T>::Node *RadixTree<T>::Node::getNextSibling()
+typename RadixTree<T>::Node *RadixTree<T>::Node::getNextSibling() const
 {
     if (!m_pParent) return 0;
 

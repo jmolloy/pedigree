@@ -43,15 +43,30 @@ class String
 
         String &operator = (const String &x);
         String &operator = (const char *s);
-        operator const char *() const;
+        operator const char *() const
+        {
+            if (m_Size == StaticSize)
+                return m_Static;
+            else if (m_Data == 0)
+                return "";
+            else
+                return m_Data;
+        }
         String &operator += (const String &x);
         String &operator += (const char *s);
 
         bool operator == (const String &s) const;
         bool operator == (const char *s) const;
 
-        size_t length() const;
-        size_t size() const;
+        size_t length() const
+        {
+            return m_Length;
+        }
+
+        size_t size() const
+        {
+            return m_Size;
+        }
 
         /** Given a character index, return the index of the next character, interpreting
             the string as UTF-8 encoded. */

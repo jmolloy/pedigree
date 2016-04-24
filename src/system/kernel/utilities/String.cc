@@ -60,16 +60,6 @@ String &String::operator = (const char *s)
     return *this;
 }
 
-String::operator const char *() const
-{
-    if (m_Size == StaticSize)
-        return m_Static;
-    else if (m_Data == 0)
-        return "";
-    else
-        return m_Data;
-}
-
 String &String::operator += (const String &x)
 {
     size_t newLength = x.length() + m_Length;
@@ -123,10 +113,10 @@ bool String::operator == (const String &s) const
     if (m_Length != s.m_Length)
         return false;
     else if(m_Length < StaticSize)
-        return !StringCompare(m_Static, s.m_Static);
+        return !StringCompareN(m_Static, s.m_Static, m_Length);
 
     // Neither of these can be null because of the above conditions.
-    return !StringCompare(m_Data, s.m_Data);
+    return !StringCompareN(m_Data, s.m_Data, m_Length);
 }
 
 bool String::operator == (const char *s) const
@@ -141,17 +131,7 @@ bool String::operator == (const char *s) const
         // m_Length > 0 but other buffer is null.
         return false;
     else
-        return !StringCompare(buf, s);
-}
-
-size_t String::length() const
-{
-    return m_Length;
-}
-
-size_t String::size() const
-{
-    return m_Size;
+        return !StringCompareN(buf, s, m_Length);
 }
 
 size_t String::nextCharacter(size_t c)

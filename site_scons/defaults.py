@@ -50,7 +50,7 @@ warning_flags_cxx = ['-Wsign-promo', '-Woverloaded-virtual',
 warning_flags_off = [
     '-Wno-unused', '-Wno-unused-variable', '-Wno-conversion', '-Wno-format',
     '-Wno-packed-bitfield-compat', '-Wno-error=disabled-optimization',
-    '-Wno-error=deprecated-declarations']
+    '-Wno-error=deprecated-declarations', '-Wno-abi']
 
 # Generic assembler flags
 generic_asflags = []
