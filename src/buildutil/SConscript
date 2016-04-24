@@ -35,6 +35,9 @@ subdirs = [
     'testsuite',
 ]
 
+if env['instrumentation']:
+    subdirs.append('instrument')
+
 # Build utility libraries.
 header_paths = [
     env.Dir('#src/modules/system'),
