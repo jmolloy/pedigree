@@ -28,7 +28,7 @@
 
 #define RANDOM_MAX 0x1000000
 
-static const int RandomNumber()
+static const int RandomNumber(const int maximum = RANDOM_MAX)
 {
     static bool seeded = false;
     if (!seeded)
@@ -38,35 +38,46 @@ static const int RandomNumber()
     }
 
     // Artificially limit the random number range so we get collisions.
-    return rand() % RANDOM_MAX;
+    return rand() % maximum;
 }
 
 static void BM_RadixTreeInsert(benchmark::State &state)
 {
     RadixTree<int64_t> tree;
     const int64_t value = 1;
+    int64_t key_n = 0;
 
+    String key;
     while (state.KeepRunning())
     {
         state.PauseTiming();
-        tree.clear();
+        key.Format("%d", key_n++);
         state.ResumeTiming();
-
-        for (int i = 0; i < state.range_x(); ++i)
-        {
-            state.PauseTiming();
-            String key;
-            key.Format("%d", i);
-            state.ResumeTiming();
-            tree.insert(key, value);
-        }
+        tree.insert(key, value);
     }
 
-    state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range_x()));
+    state.SetItemsProcessed(int64_t(state.iterations()));
 }
 
-static void BM_RadixTreeLookup(benchmark::State &state)
+static void BM_RadixTreeInsertSame(benchmark::State &state)
 {
+    RadixTree<int64_t> tree;
+    const int64_t value = 1;
+
+    String key("key");
+
+    while (state.KeepRunning())
+    {
+        tree.insert(key, value);
+    }
+
+    state.SetItemsProcessed(int64_t(state.iterations()));
+}
+
+static void BM_RadixTreeLookupHit(benchmark::State &state)
+{
+    // NOTE: all of these will hit in the RadixTree.
+
     RadixTree<int64_t> tree;
     const int64_t value = 1;
 
@@ -78,20 +89,48 @@ static void BM_RadixTreeLookup(benchmark::State &state)
         tree.insert(key, value);
     }
 
+    String key;
     while (state.KeepRunning())
     {
-        for (size_t i = 0; i < state.range_y(); ++i)
-        {
-            state.PauseTiming();
-            String key;
-            key.Format("%d", RandomNumber());
-            state.ResumeTiming();
-            benchmark::DoNotOptimize(tree.lookup(key));
-        }
+        state.PauseTiming();
+        key.Format("%d", RandomNumber(state.range_x()));
+        state.ResumeTiming();
+        benchmark::DoNotOptimize(tree.lookup(key));
     }
 
-    state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(state.range_y()));
+    state.SetItemsProcessed(int64_t(state.iterations()));
 }
 
-BENCHMARK(BM_RadixTreeInsert)->Range(8, 8<<16);
-BENCHMARK(BM_RadixTreeLookup)->RangePair(8, 8<<10, 1, 1024);
+static void BM_RadixTreeLookupMiss(benchmark::State &state)
+{
+    // NOTE: all of these will NOT hit in the RadixTree.
+
+    RadixTree<int64_t> tree;
+    const int64_t value = 1;
+
+    // Fill the RadixTree for the lookup iterations.
+    for (size_t i = 0; i < state.range_x(); ++i)
+    {
+        String key;
+        key.Format("%d", RandomNumber());
+        tree.insert(key, value);
+    }
+
+    String key;
+    while (state.KeepRunning())
+    {
+        state.PauseTiming();
+        // We adjust the key so we'll never get a hit, but every miss is not
+        // optimal (e.g. end of string).
+        key.Format("%d_", RandomNumber(state.range_x()));
+        state.ResumeTiming();
+        benchmark::DoNotOptimize(tree.lookup(key));
+    }
+
+    state.SetItemsProcessed(int64_t(state.iterations()));
+}
+
+BENCHMARK(BM_RadixTreeInsert);
+BENCHMARK(BM_RadixTreeInsertSame);
+BENCHMARK(BM_RadixTreeLookupHit)->Range(8, 2048);
+BENCHMARK(BM_RadixTreeLookupMiss)->Range(8, 2048);
