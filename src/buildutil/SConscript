@@ -65,14 +65,13 @@ utility_env.Append(**{
     'CPPDEFINES': defines,
 })
 utility_env.MergeFlags({
-    'CFLAGS': ['-g3', '-ggdb'],
-    'CXXFLAGS': ['-std=c++11', '-g3', '-ggdb'],
-    'CFLAGS': ['-std=gnu99', '-g3', '-ggdb'],
+    'CCFLAGS': ['-g3', '-ggdb', '-O3', '-march=native', '-mtune=native'],
+    'CXXFLAGS': ['-std=c++11'],
+    'CFLAGS': ['-std=gnu99'],
 })
 
 env['LIBUTILITY'] = utility_env.Library('utility',
-    ['shim.cc'] + [KERNEL_DIR.File(f) for f in libutility_sources],
-    CCFLAGS=['-O2'])
+    ['shim.cc'] + [KERNEL_DIR.File(f) for f in libutility_sources])
 
 # Build a version of libutility that has the necessary coverage pieces, such
 # that we can get code coverage analysis where actual .cc files hold the code

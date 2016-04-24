@@ -77,6 +77,7 @@ if build_env['HAVE_BENCHMARK']:
     build_env.MergeFlags({
         'CXXFLAGS': ['-std=c++11'],
         'CCFLAGS': ['-g3', '-ggdb', '-O3'],
+        'CPPDEFINES': ['_POSIX_C_SOURCE=200112L'],
     })
 
     build_env.Program(benchmark_bin,

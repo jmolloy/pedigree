@@ -23,64 +23,34 @@
 /** @addtogroup kernelprocessorhosted
  * @{ */
 
-/** Define an 8bit signed integer type */
-typedef signed char HOSTEDint8_t;
-/** Define an 8bit unsigned integer type */
-typedef unsigned char HOSTEDuint8_t;
-/** Define an 16bit signed integer type */
-typedef signed short HOSTEDint16_t;
-/** Define an 16bit unsigned integer type */
-typedef unsigned short HOSTEDuint16_t;
-/** Define a 32bit signed integer type */
-typedef signed int HOSTEDint32_t;
-/** Define a 32bit unsigned integer type */
-typedef unsigned int HOSTEDuint32_t;
-/** Define a 64bit signed integer type */
-#ifdef INT64_MAX
-typedef int64_t HOSTEDint64_t;
-#else
-typedef signed long HOSTEDint64_t;
-#endif
-/** Define a 64bit unsigned integer type */
-#ifdef UINT64_MAX
-typedef uint64_t HOSTEDuint64_t;
-#else
-typedef unsigned long HOSTEDuint64_t;
-#endif
+#include <stdint.h>
+#include <stddef.h>
 
-/** Define a signed integer type for pointer arithmetic */
-#ifdef INTPTR_MAX
-typedef intptr_t HOSTEDintptr_t;
-#else
-typedef HOSTEDint64_t HOSTEDintptr_t;
-#endif
-/** Define an unsigned integer type for pointer arithmetic */
-#ifdef UINTPTR_MAX
-typedef uintptr_t HOSTEDuintptr_t;
-#else
-typedef HOSTEDuint64_t HOSTEDuintptr_t;
-#endif
+#define HOSTED_TYPE(x) typedef x HOSTED##x;
 
-/** Define a unsigned integer type for physical pointer arithmetic */
-typedef HOSTEDuint64_t HOSTEDphysical_uintptr_t;
+/** Basic integral types. */
+HOSTED_TYPE(int8_t);
+HOSTED_TYPE(uint8_t);
+HOSTED_TYPE(int16_t);
+HOSTED_TYPE(uint16_t);
+HOSTED_TYPE(int32_t);
+HOSTED_TYPE(uint32_t);
+HOSTED_TYPE(int64_t);
+HOSTED_TYPE(uint64_t);
 
-/** Define an unsigned integer type for the processor registers */
-typedef HOSTEDuint64_t HOSTEDprocessor_register_t;
+/** Integral pointer types. */
+HOSTED_TYPE(intptr_t);
+HOSTED_TYPE(uintptr_t);
 
-/** Define ssize_t */
-#ifdef SIZE_MAX
-typedef ssize_t HOSTEDssize_t;
-#else
-typedef HOSTEDint64_t HOSTEDssize_t;
-#endif
-/** Define size_t */
-#ifdef SIZE_MAX
-typedef size_t HOSTEDsize_t;
-#else
-typedef HOSTEDuint64_t HOSTEDsize_t;
-#endif
+/** Pedigree-specific types. */
+typedef HOSTEDuintptr_t HOSTEDphysical_uintptr_t;
+typedef HOSTEDuintptr_t HOSTEDprocessor_register_t;
 
-/** Define an I/O port type */
+/** Size types. */
+typedef unsigned long HOSTEDsize_t;
+typedef long HOSTEDssize_t;
+
+/** Port I/O. */
 typedef HOSTEDuint16_t HOSTEDio_port_t;
 
 /** Define the size of one physical page */
