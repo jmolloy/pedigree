@@ -45,7 +45,7 @@ def generate_new_test(ext2img, script, should_pass, sz=0x1000000, suffix=None):
                 # Avoid tri-indirect addressing for now (not yet implemented).
                 if sz * 0.7 < 0x1000000:
                     f.write('x' * int(sz * 0.7))
-        subprocess.check_call(['/sbin/mke2fs', '-q', '-O', '^dir_index', '-I',
+        subprocess.check_call(['mke2fs', '-q', '-O', '^dir_index', '-I',
                                '128', '-F', '-L', 'pedigree', '_t.img'],
                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
@@ -71,7 +71,7 @@ def generate_new_test(ext2img, script, should_pass, sz=0x1000000, suffix=None):
 
             # Make sure an fsck passes too, now that we've checked the
             # invocation itself passed.
-            args = ['/sbin/fsck.ext2', '-n', '-f', '_t.img']
+            args = ['fsck.ext2', '-n', '-f', '_t.img']
             fsck = subprocess.Popen(args, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT)
             fsck_result = fsck.wait()
@@ -90,11 +90,11 @@ def generate_new_test(ext2img, script, should_pass, sz=0x1000000, suffix=None):
         call(self)
 
     def test_memcheck_doer(self):
-        call(self, wrapper=['/usr/bin/valgrind', '--tool=memcheck',
+        call(self, wrapper=['valgrind', '--tool=memcheck',
                             '--error-exitcode=1'])
 
     def test_sgcheck_doer(self):
-        call(self, wrapper=['/usr/bin/valgrind', '--tool=exp-sgcheck',
+        call(self, wrapper=['valgrind', '--tool=exp-sgcheck',
                             '--error-exitcode=1'])
 
     testname = os.path.basename(script).replace('.test', '').replace('.', '_')
