@@ -382,6 +382,7 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
     NOTICE("memory-map:");
 
     physical_uintptr_t top = 0;
+    size_t pageSize = getPageSize();
 
     // Fill the page-stack (usable memory above 16MB)
     // NOTE: We must do the page-stack first, because the range-lists already need the
@@ -391,13 +392,15 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
         panic("no memory map provided by the bootloader");
     while (MemoryMap)
     {
-        NOTICE(" " << Hex << Info.getMemoryMapEntryAddress(MemoryMap) << " - " << (Info.getMemoryMapEntryAddress(MemoryMap) + Info.getMemoryMapEntryLength(MemoryMap)) << ", type: " << Info.getMemoryMapEntryType(MemoryMap));
+        uint64_t addr = Info.getMemoryMapEntryAddress(MemoryMap);
+        uint64_t length = Info.getMemoryMapEntryLength(MemoryMap);
+        uint32_t type = Info.getMemoryMapEntryType(MemoryMap);
 
-        if (Info.getMemoryMapEntryType(MemoryMap) == 1)
+        NOTICE(" " << Hex << addr << " - " << (addr + length) << ", type: " << type);
+
+        if (type == 1)
         {
-            for (uint64_t i = Info.getMemoryMapEntryAddress(MemoryMap);
-                 i < (Info.getMemoryMapEntryAddress(MemoryMap) + Info.getMemoryMapEntryLength(MemoryMap));
-                 i += getPageSize())
+            for (uint64_t i = addr; i < (addr + length); i += pageSize)
             {
                 // Worry about regions > 4 GB once we've got regions under 4 GB completely done.
                 // We can't do anything over 4 GB because the PageStack class uses
@@ -408,7 +411,7 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
                 {
                     m_PageStack.free(i);
                     if (i >= top)
-                        top = i + 0x1000;
+                        top = i + pageSize;
                 }
             }
         }
@@ -423,29 +426,33 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
     MemoryMap = Info.getMemoryMap();
     while (MemoryMap)
     {
-        if (Info.getMemoryMapEntryType(MemoryMap) == 1)
+        uint64_t addr = Info.getMemoryMapEntryAddress(MemoryMap);
+        uint64_t length = Info.getMemoryMapEntryLength(MemoryMap);
+        uint32_t type = Info.getMemoryMapEntryType(MemoryMap);
+
+        if (type == 1)
         {
-            if (Info.getMemoryMapEntryAddress(MemoryMap) < 0x100000)
+            if (addr < 0x100000)
             {
                 // NOTE: Assumes that the entry/entries starting below 1MB don't cross the
                 //       1MB barrier
-                if ((Info.getMemoryMapEntryAddress(MemoryMap) + Info.getMemoryMapEntryLength(MemoryMap)) >= 0x100000)
+                if ((addr + length) >= 0x100000)
                     panic("PhysicalMemoryManager: strange memory-map");
 
-                m_RangeBelow1MB.free(Info.getMemoryMapEntryAddress(MemoryMap), Info.getMemoryMapEntryLength(MemoryMap));
+                m_RangeBelow1MB.free(addr, length);
             }
-            else if (Info.getMemoryMapEntryAddress(MemoryMap) < 0x1000000)
+            else if (addr < 0x1000000)
             {
-                uint64_t upperBound = Info.getMemoryMapEntryAddress(MemoryMap) + Info.getMemoryMapEntryLength(MemoryMap);
+                uint64_t upperBound = addr + length;
                 if (upperBound >= 0x1000000) upperBound = 0x1000000;
 
-                m_RangeBelow16MB.free(Info.getMemoryMapEntryAddress(MemoryMap), upperBound - Info.getMemoryMapEntryAddress(MemoryMap));
+                m_RangeBelow16MB.free(addr, upperBound - addr);
             }
         }
 #if defined(ACPI)                                               
-        else if (Info.getMemoryMapEntryType(MemoryMap) == 3 || Info.getMemoryMapEntryType(MemoryMap) == 4)
+        else if (type == 3 || type == 4)
         {
-            m_AcpiRanges.free(Info.getMemoryMapEntryAddress(MemoryMap), Info.getMemoryMapEntryLength(MemoryMap));
+            m_AcpiRanges.free(addr, length);
         }
 #endif
 
@@ -482,17 +489,21 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
     MemoryMap = Info.getMemoryMap();
     while (MemoryMap)
     {
+        uint64_t addr = Info.getMemoryMapEntryAddress(MemoryMap);
+        uint64_t length = Info.getMemoryMapEntryLength(MemoryMap);
+        uint32_t type = Info.getMemoryMapEntryType(MemoryMap);
+
         // Only map if the variable fits into a uintptr_t - no overflow!
-        if((Info.getMemoryMapEntryAddress(MemoryMap)) > ((uintptr_t) -1))
+        if(addr > ((uintptr_t) -1))
         {
-            WARNING("Memory region " << Info.getMemoryMapEntryAddress(MemoryMap) << " not used.");
+            WARNING("Memory region " << addr << " not used.");
         }
-        else if(Info.getMemoryMapEntryAddress(MemoryMap) >= 0x100000000ULL)
+        else if(addr >= 0x100000000ULL)
         {
             // Skip >= 4 GB for now, done in initialise64
             break;
         }
-        else if (m_PhysicalRanges.allocateSpecific(Info.getMemoryMapEntryAddress(MemoryMap), Info.getMemoryMapEntryLength(MemoryMap)) == false)
+        else if (m_PhysicalRanges.allocateSpecific(addr, length) == false)
             panic("PhysicalMemoryManager: Failed to create the list of ranges of free physical space");
 
         MemoryMap = Info.nextMemoryMapEntry(MemoryMap);
