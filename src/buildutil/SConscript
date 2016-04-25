@@ -65,7 +65,7 @@ utility_env.Append(**{
     'CPPDEFINES': defines,
 })
 utility_env.MergeFlags({
-    'CCFLAGS': ['-g3', '-ggdb', '-O3', '-march=native', '-mtune=native'],
+    'CCFLAGS': ['-g3', '-ggdb', '-O3'],
     'CXXFLAGS': ['-std=c++11'],
     'CFLAGS': ['-std=gnu99'],
 })
