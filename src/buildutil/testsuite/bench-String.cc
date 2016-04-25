@@ -45,6 +45,7 @@ static void BM_CxxStringCopyToStatic(benchmark::State &state)
     }
 
     state.SetItemsProcessed(int64_t(state.iterations()));
+    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(strlen(assign)));
 }
 
 static void BM_CxxStringCopyToDynamic(benchmark::State &state)
@@ -59,6 +60,22 @@ static void BM_CxxStringCopyToDynamic(benchmark::State &state)
     }
 
     state.SetItemsProcessed(int64_t(state.iterations()));
+    state.SetBytesProcessed(int64_t(state.iterations()) * 128);
+}
+
+static void BM_CxxStringCopyLength(benchmark::State &state)
+{
+    char assign[128];
+    memset(assign, 'a', 128);
+    assign[127] = 0;
+
+    while (state.KeepRunning())
+    {
+        String s(assign, 128);
+    }
+
+    state.SetItemsProcessed(int64_t(state.iterations()));
+    state.SetBytesProcessed(int64_t(state.iterations()) * 128);
 }
 
 static void BM_CxxStringFormat(benchmark::State &state)
@@ -164,6 +181,7 @@ static void BM_CxxStringTokenize(benchmark::State &state)
 BENCHMARK(BM_CxxStringCreation);
 BENCHMARK(BM_CxxStringCopyToStatic);
 BENCHMARK(BM_CxxStringCopyToDynamic);
+BENCHMARK(BM_CxxStringCopyLength);
 BENCHMARK(BM_CxxStringFormat);
 BENCHMARK(BM_CxxStringStartswith);
 BENCHMARK(BM_CxxStringEndswith);
