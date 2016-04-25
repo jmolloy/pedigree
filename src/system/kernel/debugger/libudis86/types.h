@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -40,7 +39,9 @@
 #endif
 
 #include <processor/types.h>
+#ifndef NULL
 #define NULL 0
+#endif
 
 #include "mnemonics.h"
 
