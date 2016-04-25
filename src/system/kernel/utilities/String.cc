@@ -130,6 +130,9 @@ bool String::operator == (const char *s) const
     else if (s == 0)
         // m_Length > 0 but other buffer is null.
         return false;
+    else if ((!m_Length) && *s)
+        // Quick check when we're zero-length.
+        return false;
     else
         return !StringCompareN(buf, s, m_Length);
 }
@@ -187,7 +190,7 @@ void String::assign(const char *s, size_t len)
     }
     else if (m_Length < StaticSize)
     {
-        MemoryCopy(m_Static, s, copyLength);
+        StringCopyN(m_Static, s, copyLength);
         delete [] m_Data;
         m_Data = 0;
         m_Size = StaticSize;
@@ -196,7 +199,7 @@ void String::assign(const char *s, size_t len)
     else
     {
         reserve(m_Length + 1, false);
-        MemoryCopy(m_Data, s, copyLength);
+        StringCopyN(m_Data, s, copyLength);
         m_Data[copyLength] = '\0';
     }
 

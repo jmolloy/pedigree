@@ -47,7 +47,7 @@ TEST(PedigreeMemoryLibrary, OverlappingMemoryCopy)
     strcpy(buf, "ABCDEFGHIJKLMNO");
     strcpy(expected, "BCDEFGHIJKLMNO");
 
-    MemoryCopy(buf, buf + 1, 16);
+    MemoryCopy(buf, buf + 1, 15);
 
     EXPECT_STREQ(buf, expected);
 }
