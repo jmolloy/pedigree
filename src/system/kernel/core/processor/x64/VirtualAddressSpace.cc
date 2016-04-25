@@ -732,7 +732,7 @@ X64VirtualAddressSpace::X64VirtualAddressSpace(void *Heap, physical_uintptr_t Ph
 }
 
 bool X64VirtualAddressSpace::getPageTableEntry(void *virtualAddress,
-                                               uint64_t *&pageTableEntry)
+                                               uint64_t *&pageTableEntry) const
 {
   size_t pml4Index = PML4_INDEX(virtualAddress);
   uint64_t *pml4Entry = TABLE_ENTRY(m_PhysicalPML4, pml4Index);
@@ -858,7 +858,7 @@ void X64VirtualAddressSpace::maybeFreeTables(void *virtualAddress)
   }
 }
 
-uint64_t X64VirtualAddressSpace::toFlags(size_t flags, bool bFinal)
+uint64_t X64VirtualAddressSpace::toFlags(size_t flags, bool bFinal) const
 {
   uint64_t Flags = 0;
   if ((flags & KernelMode) == KernelMode)
@@ -895,7 +895,7 @@ uint64_t X64VirtualAddressSpace::toFlags(size_t flags, bool bFinal)
   return Flags;
 }
 
-size_t X64VirtualAddressSpace::fromFlags(uint64_t Flags, bool bFinal)
+size_t X64VirtualAddressSpace::fromFlags(uint64_t Flags, bool bFinal) const
 {
   size_t flags = 0;
   if ((Flags & PAGE_USER) != PAGE_USER)

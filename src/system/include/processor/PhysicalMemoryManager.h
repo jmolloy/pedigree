@@ -70,7 +70,7 @@ class PhysicalMemoryManager
 
     /** Get the size of one page
      *\return size of one page in bytes */
-    inline static size_t getPageSize()
+    inline static size_t getPageSize() PURE
       {return PAGE_SIZE;}
     /** Allocate a 'normal' page. Normal means that the page does not need to fullfill any
      *  constraints. These kinds of pages can be used to map normal memory into a virtual

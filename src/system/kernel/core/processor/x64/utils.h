@@ -21,9 +21,15 @@
 #define KERNEL_PROCESSOR_X64_UTILS_H
 
 #include <processor/types.h>
+#include <compiler.h>
 
 /** @addtogroup kernelprocessorx64
  * @{ */
+
+inline uintptr_t physicalAddress(physical_uintptr_t address) PURE;
+
+template<typename T>
+inline T *physicalAddress(T *pAddress) PURE;
 
 /** Get the virtual address from the physical address. This is possible on x64
  *  because the whole physical memory is mapped into the virtual address space

@@ -47,6 +47,15 @@ SlamAllocator SlamAllocator::m_Instance;
 #endif
 
 template<typename T>
+inline T *untagged(T *p) PURE;
+
+template<typename T>
+inline T *tagged(T *p) PURE;
+
+template<typename T>
+inline T *touch_tag(T *p) PURE;
+
+template<typename T>
 inline T *untagged(T *p)
 {
     /// \todo this now requires 64-bit pointers everywhere.

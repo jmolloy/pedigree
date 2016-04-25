@@ -232,7 +232,7 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
      *\return true, if the page table is present and the page mapped or marked swapped out, false
      *        otherwise */
     bool getPageTableEntry(void *virtualAddress,
-                           uint64_t *&pageTableEntry);
+                           uint64_t *&pageTableEntry) const;
     /**
      * \brief Possibly cleans up tables for the given address.
      *
@@ -246,12 +246,12 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
      *\param[in] flags the processor independant flag representation
      *\param[in] bFinal whether this is for the actual page or just an intermediate PTE/PDE
      *\return the proessor specific flag representation */
-    uint64_t toFlags(size_t flags, bool bFinal = false);
+    uint64_t toFlags(size_t flags, bool bFinal = false) const PURE;
     /** Convert processor's representation of the flags to the processor independant representation
      *\param[in] Flags the processor specific flag representation
      *\param[in] bFinal whether this is for the actual page or just an intermediate PTE/PDE
      *\return the proessor independant flag representation */
-    size_t fromFlags(uint64_t Flags, bool bFinal = false);
+    size_t fromFlags(uint64_t Flags, bool bFinal = false) const PURE;
     /** Allocate and map the table entry if none is present
      *\param[in] tableEntry pointer to the current table entry
      *\param[in] flags flags that are used for the mapping
