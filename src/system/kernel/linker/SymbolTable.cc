@@ -21,59 +21,21 @@
 #include <linker/Elf.h>
 
 SymbolTable::SymbolTable(Elf *pElf) :
-  m_Tree(), m_pOriginatingElf(pElf)
+  m_LocalSymbols(), m_GlobalSymbols(), m_WeakSymbols(), m_pOriginatingElf(pElf)
 {
 }
 
 SymbolTable::~SymbolTable()
 {
-  if(!m_Tree.count())
-    return;
-  for (SymbolTrie::Iterator it = m_Tree.begin();
-        it != m_Tree.end();
-        it++)
-  {
-    if (*it)
-    {
-      if(!((*it)->count()))
-        continue;
-
-      // SharedPointers will be destructed as part of the list terminating.
-      delete *it;
-    }
-  }
 }
 
 void SymbolTable::copyTable(Elf *pNewElf, const SymbolTable &newSymtab)
 {
-    // Copy the initial tree (which will copy mere pointers to the lists)
-    m_Tree = newSymtab.m_Tree;
-
-    // Iterate over the tree and copy the lists pointer-by-pointer
-    if(!m_Tree.count())
-        return;
-    for (SymbolTrie::Iterator it = newSymtab.m_Tree.begin();
-        it != newSymtab.m_Tree.end();
-        it++)
-    {
-        if (*it)
-        {
-            if(!((*it)->count()))
-                continue;
-
-            // We now have a list, but we're not going to iterate...
-            SymbolList *newList = new SymbolList;
-            for(SymbolList::Iterator it2 = (*it)->begin();
-                it2 != (*it)->end();
-                it2++)
-            {
-                SharedPointer<Symbol> &pSymbol = *it2;
-                newList->pushBack(pSymbol);
-            }
-
-            *it = newList;
-        }
-    }
+    // Safe to do this, all members are SharedPointers and will be copy
+    // constructed by these operations.
+    m_LocalSymbols = newSymtab.m_LocalSymbols;
+    m_GlobalSymbols = newSymtab.m_GlobalSymbols;
+    m_WeakSymbols = newSymtab.m_WeakSymbols;
 }
 
 void SymbolTable::insert(String name, Binding binding, Elf *pParent, uintptr_t value)
@@ -90,157 +52,101 @@ void SymbolTable::insertMultiple(SymbolTable *pOther, String name, Binding bindi
 
 SharedPointer<SymbolTable::Symbol> SymbolTable::doInsert(String name, Binding binding, Elf *pParent, uintptr_t value)
 {
-  SymbolList *pList = m_Tree.lookup(name);
-  if (!pList)
-  {
-    pList = new SymbolList();
-    m_Tree.insert (name, pList);
-  }
+    Symbol *pSymbol = new Symbol(pParent, binding, value);
+    SharedPointer<Symbol> newSymbol(pSymbol);
 
-  // We need to scan the list to check we're not adding a duplicate.
-  for (SymbolList::Iterator it = pList->begin();
-        it != pList->end();
-        it++)
-  {
-    SharedPointer<Symbol> pSym = (*it);
-    if (pSym->getBinding() == binding && pSym->getParent() == pParent)
-      // This item is already in the list. Don't add it again.
-      return pSym;
-  }
-
-  // Not already in list, so create a new SharedPointer for it.
-  SharedPointer<Symbol> newSymbol;
-  Symbol *pSymbol = new Symbol(pParent, binding, value);
-  newSymbol.reset(pSymbol);
-  pList->pushBack (newSymbol);
-
-  return newSymbol;
+    insertShared(name, newSymbol);
+    return newSymbol;
 }
 
 void SymbolTable::insertShared(String name, SharedPointer<SymbolTable::Symbol> symbol)
 {
-  SymbolList *pList = m_Tree.lookup(name);
-  if (!pList)
-  {
-    pList = new SymbolList();
-    m_Tree.insert (name, pList);
-  }
+    SharedPointer<symbolTree_t> tree = getOrInsertTree(symbol->getParent());
+    tree->insert(name, symbol);
 
-  // We need to scan the list to check we're not adding a duplicate.
-  for (SymbolList::Iterator it = pList->begin();
-        it != pList->end();
-        it++)
-  {
-    SharedPointer<Symbol> pSym = (*it);
-    if (pSym->getBinding() == symbol->getBinding() && pSym->getParent() == symbol->getParent())
-      // This item is already in the list. Don't add it again.
-      return;
-  }
-
-  // Just add the shared pointer instead of creating a new one.
-  pList->pushBack(symbol);
+    // Insert global/weak as well - if the lookup fails in the ELF's table,
+    // it'll fall back to these.
+    if (symbol->getBinding() == Global)
+    {
+      m_GlobalSymbols.insert(name, symbol);
+    }
+    else if (symbol->getBinding() == Weak)
+    {
+      m_WeakSymbols.insert(name, symbol);
+    }
+    return;
 }
 
 void SymbolTable::eraseByElf(Elf *pParent)
 {
-    for (SymbolTrie::Iterator tit = m_Tree.begin();
-            tit != m_Tree.end();
-            tit++)
+    // Will wipe out recursively by destroying the SharedPointers within.
+    m_LocalSymbols.remove(pParent);
+
+    /// \todo wipe out global/weak symbols.
+
+    for (auto it = m_GlobalSymbols.begin(); it != m_GlobalSymbols.end();)
     {
-        // Verify that there's actually a valid list
-        if(!*tit)
-            continue;
-
-        SymbolList *pList = *tit;
-        for (SymbolList::Iterator it = pList->begin();
-            it != pList->end();
-            it++)
+        if (it->getParent() == pParent)
         {
-            // Verify the symbol pointer
-            if(!*it)
-                continue;
+            it = m_GlobalSymbols.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
 
-            SharedPointer<Symbol> pSym = *it;
-            if (pSym->getParent() == pParent)
-            {
-                it = pList->erase(it);
-
-                /// \todo Epic quick hack, rewrite
-                if(it == pList->end())
-                    break;
-            }
+    for (auto it = m_WeakSymbols.begin(); it != m_WeakSymbols.end();)
+    {
+        if (it->getParent() == pParent)
+        {
+            it = m_WeakSymbols.erase(it);
+        }
+        else
+        {
+            ++it;
         }
     }
 }
 
 uintptr_t SymbolTable::lookup(String name, Elf *pElf, Policy policy, Binding *pBinding)
 {
-  SymbolList *pList = m_Tree.lookup(name);
-  if (!pList)
+  // Local.
+  SharedPointer<Symbol> sym;
+  SharedPointer<symbolTree_t> symbolTree = m_LocalSymbols.lookup(pElf);
+  if (symbolTree)
   {
-    return 0;
-  }
-
-  // If we're on a local-first policy, check for local symbols of pElf.
-  if (policy == LocalFirst)
-  {
-    for (SymbolList::Iterator it = pList->begin();
-          it != pList->end();
-          it++)
+    sym = symbolTree->lookup(name);
+    if (sym)
     {
-      SharedPointer<Symbol> pSym = *it;
-      if (pSym->getBinding() == Local && pSym->getParent() == pElf)
-        return pSym->getValue();
-    }
-
-    // Scan for global variables.
-    for (SymbolList::Iterator it = pList->begin();
-          it != pList->end();
-          it++)
-    {
-      SharedPointer<Symbol> pSym = *it;
-      if (pSym->getBinding() == Global && pSym->getParent() == m_pOriginatingElf)
-        return pSym->getValue();
-    }
-
-    // Scan for global variables.
-    for (SymbolList::Iterator it = pList->begin();
-          it != pList->end();
-          it++)
-    {
-      SharedPointer<Symbol> pSym = *it;
-      if (pSym->getBinding() == Global && pSym->getParent() == pElf)
-        return pSym->getValue();
+      return sym->getValue();
     }
   }
 
-  // Scan for global variables.
-  for (SymbolList::Iterator it = pList->begin();
-        it != pList->end();
-        it++)
+  // Global.
+  sym = m_GlobalSymbols.lookup(name);
+  if (sym)
   {
-    SharedPointer<Symbol> pSym = *it;
-    if (pSym->getBinding() == Global &&
-        (policy != NotOriginatingElf || pSym->getParent() != m_pOriginatingElf))
-    {
-      return pSym->getValue();
-    }
+    return sym->getValue();
   }
 
-  // Lastly, scan for weak variables.
-  for (SymbolList::Iterator it = pList->begin();
-        it != pList->end();
-        it++)
+  // Weak.
+  sym = m_WeakSymbols.lookup(name);
+  if (sym)
   {
-    SharedPointer<Symbol> pSym = *it;
-    if (pSym->getBinding() == Weak &&
-        (policy != NotOriginatingElf || pSym->getParent() != m_pOriginatingElf))
-    {
-      return pSym->getValue();
-    }
+    return sym->getValue();
   }
 
-  // Nothing found.
   return 0;
 }
 
+SharedPointer<SymbolTable::symbolTree_t> SymbolTable::getOrInsertTree(Elf *p)
+{
+    SharedPointer<symbolTree_t> tree = m_LocalSymbols.lookup(p);
+    if (tree)
+        return tree;
+
+    tree = SharedPointer<symbolTree_t>::allocate();
+    m_LocalSymbols.insert(p, tree);
+    return tree;
+}
