@@ -26,7 +26,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define HOSTED_TYPE(x) typedef x HOSTED##x;
+#define HOSTED_TYPE(x) typedef x HOSTED##x
 
 /** Basic integral types. */
 HOSTED_TYPE(int8_t);
