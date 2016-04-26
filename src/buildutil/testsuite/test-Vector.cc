@@ -78,6 +78,42 @@ TEST(PedigreeVector, IndexingTooFar)
     EXPECT_EQ(x[5], 0);
 }
 
+TEST(PedigreeVector, Swapping)
+{
+    Vector<int> x;
+    x.pushBack(1);
+    x.pushBack(2);
+    x.pushBack(3);
+    x.swap(x.begin() + 1, x.begin());
+    EXPECT_EQ(x[0], 2);
+    EXPECT_EQ(x[1], 1);
+    EXPECT_EQ(x[2], 3);
+}
+
+TEST(PedigreeVector, SwappingBeyondEnd)
+{
+    Vector<int> x;
+    x.pushBack(1);
+    x.pushBack(2);
+    x.pushBack(3);
+    x.swap(x.end(), x.begin());
+    EXPECT_EQ(x[0], 1);
+    EXPECT_EQ(x[1], 2);
+    EXPECT_EQ(x[2], 3);
+}
+
+TEST(PedigreeVector, SwappingSame)
+{
+    Vector<int> x;
+    x.pushBack(1);
+    x.pushBack(2);
+    x.pushBack(3);
+    x.swap(x.begin(), x.begin());
+    EXPECT_EQ(x[0], 1);
+    EXPECT_EQ(x[1], 2);
+    EXPECT_EQ(x[2], 3);
+}
+
 TEST(PedigreeVector, Insertion)
 {
     Vector<int> x;

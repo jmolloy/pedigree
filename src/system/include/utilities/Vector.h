@@ -79,6 +79,8 @@ class Vector
     T popFront();
     /** Set an element at the given index, if it exists. */
     void setAt(size_t idx, T value);
+    /** Swap the two elements. */
+    void swap(Iterator a, Iterator b);
 
     /** Clear the Vector */
     void clear();
@@ -319,6 +321,22 @@ void Vector<T>::reserve(size_t size, bool copy, bool free)
     }
   }
   m_Size = size;
+}
+
+template <class T>
+void Vector<T>::swap(Iterator a, Iterator b)
+{
+  if (a == b)
+    return;
+  else if (a < begin() || a >= end())
+    return;
+  else if (b < begin() || b >= end())
+    return;
+
+  // Perform the swap.
+  T tmp = *a;
+  *a = *b;
+  *b = tmp;
 }
 
 /** @} */
