@@ -100,6 +100,8 @@ private:
         void prependKey(const char *cpKey);
 
         void setKey(const char *cpKey);
+        /** If you know the length of cpKey, this can be a small boost. */
+        void setKey(const char *cpKey, size_t lengthHint);
         inline const char *getKey() const {return m_Key;}
         inline void setValue(const T &pV) {value = pV;}
         inline const T &getValue() const {return value;}
@@ -117,7 +119,7 @@ private:
         /** Parent node. */
         Node *m_pParent;
         /** Controls case-sensitive matching. */
-        bool m_bCaseSensitive;
+        const bool m_bCaseSensitive;
 
         /** Link back to the node's RadixTree instance. */
         RadixTree *m_pParentTree;
@@ -234,7 +236,7 @@ private:
     /** The tree's root. */
     Node *m_pRoot;
     /** Whether matches are case-sensitive or not. */
-    bool m_bCaseSensitive;
+    const bool m_bCaseSensitive;
     /** Pool of node objects (to reduce impact of lots of node allocs/deallocs). */
     ObjectPool<Node> m_NodePool;
 };
@@ -275,7 +277,7 @@ RadixTree<T> &RadixTree<T>::operator =(const RadixTree &x)
     returnNode(m_pRoot);
     m_pRoot = cloneNode (x.m_pRoot, 0);
     m_nItems = x.m_nItems;
-    m_bCaseSensitive = x.m_bCaseSensitive;
+    /// \todo check for incompatible case-sensitivity?
     return *this;
 }
 
@@ -299,6 +301,8 @@ void RadixTree<T>::insert(const String &key, const T &value)
     Node *pNode = m_pRoot;
 
     const char *cpKey = static_cast<const char*>(key);
+    const char *cpKeyOrig = cpKey;
+    size_t cpKeyLength = key.length();
 
     while (true)
     {
@@ -353,13 +357,15 @@ void RadixTree<T>::insert(const String &key, const T &value)
                 if (cpKey[i] != 0)
                 {
                     Node *pChild = getNewNode();
-                    pChild->setKey(&cpKey[i]);
+                    pChild->setKey(&cpKey[i], (cpKeyLength - i - (cpKey - cpKeyOrig)));
                     pChild->setValue(value);
                     pChild->setParent(pInter);
                     pInter->addChild(pChild);
                 }
                 else
+                {
                     pInter->setValue(value);
+                }
 
                 pInter->setParent(pNode->getParent());
                 pInter->addChild(pNode);
@@ -383,7 +389,7 @@ void RadixTree<T>::insert(const String &key, const T &value)
                 {
                     // No child - create a new one.
                     pChild = getNewNode();
-                    pChild->setKey(cpKey);
+                    pChild->setKey(cpKey, cpKeyLength - (cpKey - cpKeyOrig));
                     pChild->setValue(value);
                     pChild->setParent(pNode);
                     pNode->addChild(pChild);
@@ -588,9 +594,9 @@ void RadixTree<T>::clear()
 template<class T>
 RadixTree<T>::Node::~Node()
 {
-    for(size_t n = 0; n < m_Children.count(); ++n)
+    for (auto it : m_Children)
     {
-        m_pParentTree->returnNode(m_Children[n]);
+        m_pParentTree->returnNode(it);
     }
 }
 
@@ -617,11 +623,12 @@ void RadixTree<T>::Node::addChild(Node *pNode)
 template<class T>
 void RadixTree<T>::Node::replaceChild(Node *pNodeOld, Node *pNodeNew)
 {
-    for(size_t n = 0; n < m_Children.count(); ++n)
+    for (auto it = m_Children.begin(); it != m_Children.end(); ++it)
     {
-        if(m_Children[n] == pNodeOld)
+        if (*it == pNodeOld)
         {
-            m_Children.setAt(n, pNodeNew);
+            *it = pNodeNew;
+            break;
         }
     }
 }
@@ -668,7 +675,7 @@ typename RadixTree<T>::Node::MatchType RadixTree<T>::Node::matchKey(const char *
     }
 
     // Why did the loop exit?
-    if (cpKey[i] == 0 && getKey()[i] == 0)
+    if (cpKey[i] == 0 && myKey[i] == 0)
         return ExactMatch;
     else if (cpKey[i] == 0)
         return PartialMatch;
@@ -682,13 +689,16 @@ void RadixTree<T>::Node::setKey(const char *cpKey)
     m_Key.assign(cpKey);
 }
 
+template <class T>
+void RadixTree<T>::Node::setKey(const char *cpKey, size_t lengthHint)
+{
+    m_Key.assign(cpKey, lengthHint);
+}
+
 template<class T>
 typename RadixTree<T>::Node *RadixTree<T>::Node::getFirstChild() const
 {
-    if(m_Children.count())
-        return m_Children[0];
-
-    return 0;
+    return *(m_Children.begin());
 }
 
 template<class T>

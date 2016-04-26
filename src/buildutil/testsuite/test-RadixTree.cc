@@ -125,6 +125,21 @@ TEST(PedigreeRadixTree, RemovalBigRoot)
     EXPECT_EQ(x.count(), 4);
 }
 
+TEST(PedigreeRadixTree, Prefixes)
+{
+    RadixTree<int> x;
+    x.insert(String("toast"), 1);
+    x.insert(String("toasted"), 2);
+    x.insert(String("toaster"), 3);
+    x.insert(String("toasting"), 4);
+    x.insert(String("toastier"), 5);
+    EXPECT_EQ(x.lookup(String("toast")), 1);
+    EXPECT_EQ(x.lookup(String("toasted")), 2);
+    EXPECT_EQ(x.lookup(String("toaster")), 3);
+    EXPECT_EQ(x.lookup(String("toasting")), 4);
+    EXPECT_EQ(x.lookup(String("toastier")), 5);
+}
+
 TEST(PedigreeRadixTree, SplitKeys)
 {
     RadixTree<int> x;
@@ -209,4 +224,20 @@ TEST(PedigreeRadixTree, Erase)
     it = x.erase(it);
     EXPECT_EQ(*it++, 4);
     EXPECT_EQ(x.count(), 3);
+}
+
+TEST(PedigreeRadixTree, SplitThis)
+{
+    RadixTree<int> x;
+    x.insert(String("x86_64-pedigree-gcc"), 1);
+    x.insert(String("x86_64-pedigree-g++"), 1);
+    x.insert(String("x86_64-pedigree-gcc-4.8.2"), 1);
+    x.insert(String("x86_64-pedigree-ld"), 1);
+    x.insert(String("x86_64-pedigree-objdump"), 1);
+
+    EXPECT_EQ(x.lookup(String("x86_64-pedigree-gcc")), 1);
+    EXPECT_EQ(x.lookup(String("x86_64-pedigree-g++")), 1);
+    EXPECT_EQ(x.lookup(String("x86_64-pedigree-gcc-4.8.2")), 1);
+    EXPECT_EQ(x.lookup(String("x86_64-pedigree-ld")), 1);
+    EXPECT_EQ(x.lookup(String("x86_64-pedigree-objdump")), 1);
 }
