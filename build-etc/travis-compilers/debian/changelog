@@ -1,3 +1,9 @@
+travis-compilers (1.0.9-1ubuntu1~trusty) trusty; urgency=medium
+
+  * Move compilers to the travis home instead of inside a Pedigree checkout.
+
+ -- Matthew Iselin <matthew@theiselins.net>  Wed, 20 Aug 2014 17:13:06 +1000
+
 travis-compilers (1.0.8-1ubuntu1~trusty) trusty; urgency=medium
 
   * Trusty build with updated version numbering.

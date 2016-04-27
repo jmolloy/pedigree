@@ -10,7 +10,7 @@ fi
 PEDIGREE=`realpath "$1"`
 
 TARGET_DIR="$PEDIGREE/build-etc/travis-compilers"
-TARGET_TAR="$PEDIGREE/build-etc/travis-compilers_1.0.8.orig.tar.bz2"
+TARGET_TAR="$PEDIGREE/build-etc/travis-compilers_1.0.9.orig.tar.bz2"
 
 [ -e "$TARGET_TAR" ] && echo "Source tarball already exists, not creating." && exit 0
 
