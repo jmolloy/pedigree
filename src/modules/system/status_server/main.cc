@@ -257,6 +257,7 @@ int clientThread(void *p)
 
             response += "</table>";
 
+#ifdef X86_COMMON
             response += "<h3>Memory Usage (KiB)</h3>";
             response += "<table border='1'><tr><th>Heap</th><th>Used</th><th>Free</th></tr>";
             {
@@ -274,6 +275,7 @@ int clientThread(void *p)
                 response += str;
             }
             response += "</table>";
+#endif
 
             response += "<h3>Processes</h3>";
             response += "<table border='1'><tr><th>PID</th><th>Description</th><th>Virtual Memory (KiB)</th><th>Physical Memory (KiB)</th><th>Shared Memory (KiB)</th>";
