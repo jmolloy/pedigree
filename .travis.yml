@@ -53,6 +53,7 @@ addons:
       - nasm
       - uboot-mkimage
       - valgrind
+      - python-requests
 cache:
   directories:
   - $HOME/.ccache
