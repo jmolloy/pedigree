@@ -39,3 +39,4 @@ src/system/kernel/TAGS
 src/system/kernel/Version.cc
 tmp
 coverage/
+.pup-version

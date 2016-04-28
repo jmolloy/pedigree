@@ -10,11 +10,13 @@ PUP="$DIR/scripts/pup.whl"
 set +e
 
 # Update pup if needed.
-curl -o "$PUP_TMP" https://pup.pedigree-project.org/pup.whl
-if cmp --silent "$PUP_TMP" "$PUP"; then
-    rm -f "$PUP_TMP"
+curl -o ".pup-version-new" https://pup.pedigree-project.org/pup-version
+if cmp --silent ".pup-version-new" ".pup-version"; then
+    rm -rf ".pup-version-new"
 else
-    mv "$PUP_TMP" "$PUP"
+    mv ".pup-version-new" ".pup-version"
+    curl -o "$PUP_TMP" https://pup.pedigree-project.org/pup.whl && \
+        mv "$PUP_TMP" "$PUP"
 fi
 
 set -e
