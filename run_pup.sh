@@ -12,11 +12,10 @@ set +e
 # Update pup if needed.
 curl -o ".pup-version-new" https://pup.pedigree-project.org/pup-version
 if cmp --silent ".pup-version-new" ".pup-version"; then
-    rm -rf ".pup-version-new"
+    rm -f ".pup-version-new"
 else
-    mv ".pup-version-new" ".pup-version"
     curl -o "$PUP_TMP" https://pup.pedigree-project.org/pup.whl && \
-        mv "$PUP_TMP" "$PUP"
+        mv "$PUP_TMP" "$PUP" && mv ".pup-version-new" ".pup-version"
 fi
 
 set -e
