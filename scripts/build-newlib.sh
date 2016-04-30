@@ -17,13 +17,18 @@ cd mybuild
 
 date >newlib.log 2>&1
 
+die()
+{
+    cat newlib.log >&2; exit 1;
+}
+
 CC="$XGCC $XCFLAGS" LD="$XLD" \
 ../newlib/configure --host=$COMPILER_TARGET --target=$COMPILER_TARGET \
                     --enable-newlib-multithread --enable-newlib-mb \
                     --disable-newlib-supplied-syscalls --with-pic \
-                    >>newlib.log 2>&1
+                    >>newlib.log 2>&1 || die
 
-make >>newlib.log 2>&1
+make >>newlib.log 2>&1 || die
 
 cp libg.a "$DROPDIR/stock-libg.a"
 cp libm.a "$DROPDIR/stock-libm.a"
