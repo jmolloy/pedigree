@@ -56,7 +56,7 @@ if env['build_kernel']:
     SConscript(os.path.join('src', 'system', 'boot', env['BOOT_DIR'], 'SConscript'), exports=['env'])
 
 # On X86, X64 and PPC we build applications and LGPL libraries
-if env['build_apps']:
+if env['build_apps'] or env['build_libs']:
   SConscript(os.path.join('src', 'user', 'SConscript'),
              exports=['env', 'userspace_env'])
 if env['build_lgpl']:

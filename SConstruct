@@ -58,6 +58,7 @@ opts.AddVariables(
     BoolVariable('build_modules', 'Build drivers, subsystems, and system modules (requires a useful `tar`).', 1),
     BoolVariable('build_lgpl', 'Build LGPL libraries (e.g., libSDL).', 1),
     BoolVariable('build_apps', 'Build in-tree applications (e.g., `ttyterm`).', 1),
+    BoolVariable('build_libs', 'Build in-tree libraries (e.g., `libui`).', 1),
     BoolVariable('build_images', 'Build disk images (ISOs + HDD images) - requires all build_* variables.', 1),
 
     # Controls for logging facilities throughout the kernel.
@@ -339,6 +340,7 @@ if env['ON_PEDIGREE']:
     env['build_images'] = False
     env['build_apps'] = False
     env['build_lgpl'] = False
+    env['build_libs'] = False
 
 # Make sure there's a sensible configuration.
 if env['build_tests_only']:
@@ -348,6 +350,7 @@ if env['build_tests_only']:
     env['build_modules'] = False
     env['build_lgpl'] = False
     env['build_apps'] = False
+    env['build_libs'] = False
     env['build_images'] = False
     env['ARCH_TARGET'] = 'TESTS'
 
@@ -357,11 +360,12 @@ if env['build_kernel_only']:
     env['build_modules'] = False
     env['build_lgpl'] = False
     env['build_apps'] = False
+    env['build_libs'] = False
     env['build_images'] = False
 if env['build_images']:
     if not all(env[x] for x in ('build_kernel', 'build_configdb',
                                 'build_modules', 'build_lgpl', 'build_apps',
-                                'build_images')):
+                                'build_libs', 'build_images')):
         raise SCons.Errors.UserError('build_images requires all build_* options set to 1.')
 if env['build_configdb'] and not env['build_modules']:
     raise SCons.Errors.UserError('build_configdb requires build_modules=1.')
