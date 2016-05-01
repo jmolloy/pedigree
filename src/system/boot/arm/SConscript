@@ -51,7 +51,7 @@ env_clone['CPPPATH'] = [env.File('autogen.h').get_dir()]
 env_clone.Program(objname, files, LINKFLAGS='-nostdlib -T$LSCRIPT',
                   LSCRIPT=File('#src/system/boot/arm/link-arm-beagle.ld'))
 
-if env['arm_beagle']:
+if env['arm_beagle'] and env['build_images']:
     if env['MKIMAGE'] is None:
         raise SCons.Errors.UserError('mkimage is not available')
 
