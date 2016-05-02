@@ -22,6 +22,8 @@
 
 // Just export stdint and stddef.
 
+#define _POSIX_C_SOURCE 200112L
+
 #include <stdint.h>
 #include <stddef.h>
 #include <sys/types.h>

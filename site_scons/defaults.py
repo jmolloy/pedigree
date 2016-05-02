@@ -275,7 +275,7 @@ default_machine_dir = {
 default_extra_config = {
     'x64': ['CUSTOM_MEMCPY', 'NATIVE_SUBSYSTEM', 'NATIVE_SUBSYSTEM_USER'],
     'hosted': ['CUSTOM_MEMCPY', 'NATIVE_SUBSYSTEM', 'NATIVE_SUBSYSTEM_USER'],
-    'arm': ['NATIVE_SUBSYSTEM'],
+    'arm': ['NATIVE_SUBSYSTEM', 'NATIVE_SUBSYSTEM_USER'],
 }
 
 # Boot directory for the target.

@@ -57,9 +57,8 @@ files = [
 include_dirs = [
     '../include',
     '#src/subsys',
-    '#/src/system/include',
-    '#/src/modules/system',
     '#images/local/include',
+    '#/src/system/include',
     '.',
 ]
 
