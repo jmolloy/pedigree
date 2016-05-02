@@ -24,9 +24,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-// Provide ssize_t, which is a POSIX thing, not a C thing.
-typedef intptr_t ssize_t;
+#include <sys/types.h>
 
 /// \todo hardcoded
 #define PAGE_SIZE 4096
