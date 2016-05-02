@@ -30,7 +30,7 @@ notifications:
   email: false
   irc:
     channels:
-    - chat.freenode.net#pedigree
+    - chat.freenode.net#pedigree-commits
     template:
     - ! '%{repository}/%{branch} (%{commit} - %{author}): %{message}'
     - ! 'Build details: %{build_url}'
