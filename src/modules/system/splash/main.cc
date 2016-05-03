@@ -568,6 +568,16 @@ static bool init()
 
 static void destroy()
 {
+    Log::instance().removeCallback(&g_StreamLogger);
+
+#ifdef DEBUGGER
+    if(!g_NoGraphics)
+    {
+        InputManager::instance().removeCallback(keyCallback);
+    }
+#endif
+
+    g_BootProgressUpdate = 0;
 }
 
 MODULE_INFO("splash", &init, &destroy, "config");
