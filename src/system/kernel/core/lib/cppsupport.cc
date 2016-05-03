@@ -75,7 +75,7 @@ void runKernelDestructors()
 }
 
 #ifdef MEMORY_TRACING
-static bool traceAllocations = false;
+static bool traceAllocations = true;
 void startTracingAllocations()
 {
     traceAllocations = true;
@@ -86,72 +86,39 @@ void stopTracingAllocations()
     traceAllocations = false;
 }
 
-Spinlock traceLock;
+static volatile int g_TraceLock = 0;
+
 void traceAllocation(void *ptr, MemoryTracing::AllocationTrace type, size_t size)
 {
     // Don't trace if we're not allowed to.
     if (!traceAllocations)
         return;
 
-    // Yes, this means we'll lose early init mallocs. Oh well...
-    if(!Machine::instance().isInitialised())
-        return;
+    MemoryTracing::AllocationTraceEntry entry;
+    entry.data.type = type;
+    entry.data.sz = size & 0xFFFFFFFFU;
+    entry.data.ptr = reinterpret_cast<uintptr_t>(ptr) & 0xFFFFFFFFU;
 
-    Serial *pSerial = Machine::instance().getSerial(1);
-    if(!pSerial)
-        return;
-
-    LockGuard<Spinlock> guard(traceLock);
-
-    char buf[255];
-
-    size_t off = 0;
-
-    // Allocation type.
-    MemoryCopy(&buf[off], &type, 1);
-    ++off;
-
-    // Resulting pointer.
-    MemoryCopy(&buf[off], &ptr, sizeof(void*));
-    off += sizeof(void*);
-
-    // Don't store size or backtrace for frees.
-    if(type == MemoryTracing::Allocation || type == MemoryTracing::PageAlloc)
+    for (size_t i = 0; i < MemoryTracing::num_backtrace_entries; ++i)
     {
-        // Size of allocation.
-        MemoryCopy(&buf[off], &size, sizeof(size_t));
-        off += sizeof(size_t);
-
-        // Backtrace.
-        do
+        if(!__builtin_frame_address(i))
         {
-#define DO_BACKTRACE(v, level, buffer, offset) { \
-                if(!__builtin_frame_address(level)) break; \
-                v = __builtin_return_address(level); \
-                MemoryCopy(&buffer[offset], &v, sizeof(void*)); \
-                offset += sizeof(void*); \
-            }
+            entry.data.bt[i] = 0;
+            break;
+        }
 
-            void *p;
-
-            DO_BACKTRACE(p, 1, buf, off);
-            DO_BACKTRACE(p, 2, buf, off);
-            DO_BACKTRACE(p, 3, buf, off);
-            DO_BACKTRACE(p, 4, buf, off);
-            DO_BACKTRACE(p, 5, buf, off);
-            DO_BACKTRACE(p, 6, buf, off);
-        } while(0);
-
-        // Ensure the trace always ends in a zero frame (ie, end of trace)
-        uintptr_t endoftrace = 0;
-        MemoryCopy(&buf[off], &endoftrace, sizeof(uintptr_t));
-        off += sizeof(uintptr_t);
+        void *v = __builtin_return_address(i);
+        entry.data.bt[i] = reinterpret_cast<uintptr_t>(v) & 0xFFFFFFFFU;
     }
 
-    for(size_t i = 0; i < off; ++i)
+    asm volatile("pushf; cli" ::: "memory");
+
+    for(size_t i = 0; i < sizeof entry.buf; ++i)
     {
-        pSerial->write(buf[i]);
+        asm volatile("outb %%al, %%dx" :: "Nd" (0x2F8), "a" (entry.buf[i]));
     }
+
+    asm volatile("popf" ::: "memory");
 }
 
 /**
@@ -162,6 +129,8 @@ void traceAllocation(void *ptr, MemoryTracing::AllocationTrace type, size_t size
  */
 void traceMetadata(NormalStaticString str, void *p1, void *p2)
 {
+    // this can be provided by scripts/addr2line.py these days
+#if 0
     LockGuard<Spinlock> guard(traceLock);
 
     // Yes, this means we'll lose early init mallocs. Oh well...
@@ -192,6 +161,7 @@ void traceMetadata(NormalStaticString str, void *p1, void *p2)
     {
         pSerial->write(buf[i]);
     }
+#endif
 }
 #endif
 

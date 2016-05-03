@@ -38,6 +38,9 @@ subdirs = [
 if env['instrumentation']:
     subdirs.append('instrument')
 
+if env['memory_tracing']:
+    subdirs.append('memorytracer')
+
 # Make sure we can find libraries in the build directory.
 env.MergeFlags({
     'LIBPATH': [env['BUILDDIR']],

@@ -32,6 +32,21 @@ namespace MemoryTracing
         PageAlloc = 'P',
         PageFree = 'X',
     };
+
+    const int num_backtrace_entries = 5;
+
+    union AllocationTraceEntry
+    {
+        struct
+        {
+            AllocationTrace type;
+            uint32_t sz;
+            uint32_t ptr;
+            uint32_t bt[num_backtrace_entries];
+        } data;
+
+        char buf[sizeof(data)];
+    };
 }
 
 /**

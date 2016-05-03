@@ -274,7 +274,7 @@ host_env['HAS_PROFILE_RT'] = profile_rt
 host_env['HAS_GCOV'] = gcov
 
 # Copy useful environment items that are needed in site_scons/buildutils
-for copy_key in ('verbose', 'nocolour', 'instrumentation'):
+for copy_key in ('verbose', 'nocolour', 'instrumentation', 'memory_tracing'):
     host_env[copy_key] = env[copy_key]
 
 def memoized_scons_subst(cache, old_scons_subst, string, env,
@@ -716,7 +716,7 @@ additionalDefines = ['ipv4_forwarding', 'serial_is_file', 'installer',
                      'debugger', 'cripple_hdd', 'enable_ctrlc',
                      'multiple_consoles', 'multiprocessor', 'smp', 'apic',
                      'acpi', 'debug_logging', 'superdebug', 'nogfx', 'mach_pc',
-                     'usb_verbose_debug', 'memory_tracing', 'travis', 'hosted',
+                     'usb_verbose_debug', 'travis', 'hosted',
                      'memory_log_inline', 'asserts', 'valgrind', 'livecd']
 for i in additionalDefines:
     if i not in env:
