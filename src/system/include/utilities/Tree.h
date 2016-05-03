@@ -148,11 +148,7 @@ class Tree
     /** The destructor, deallocates memory */
     ~Tree()
     {
-        if(count())
-        {
-            ERROR("Tree: probable leak, Tree destructor called with items in tree.");
-            clear();
-        }
+        clear();
         delete m_Begin;
     }
 
