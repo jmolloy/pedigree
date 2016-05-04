@@ -25,7 +25,7 @@
 extern int main(int, char**, char**);
 extern void _init_signals(void);
 
-void _start(char **argv, char **env)  _ATTRIBUTE((noreturn));
+void _start(char **argv, char **env)  _ATTRIBUTE((noreturn)) __attribute__((section(".text.crt0")));
 void _start(char **argv, char **env)
 {
   _init_signals();
