@@ -178,6 +178,14 @@ int processRecords(FILE *fp, int max_records)
         std::cout << std::endl;
     }
 
+    size_t totalUnfreed = 0;
+    for (auto it = vec.begin(); it != vec.end(); ++it)
+    {
+        totalUnfreed += it->second->data.sz;
+    }
+
+    std::cout << "A total of " << totalUnfreed << " bytes remained unfreed." << std::endl;
+
     return true;
 }
 
