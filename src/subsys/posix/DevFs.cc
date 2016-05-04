@@ -342,16 +342,16 @@ bool DevFs::initialise(Disk *pDisk)
     }
 
     // Create /dev/textui for the text-only UI device.
-    TextIO *pTty = new TextIO(String("textui"), ++baseInode, this, m_pRoot);
-    if(pTty->initialise(false))
+    m_pTty = new TextIO(String("textui"), ++baseInode, this, m_pRoot);
+    if(m_pTty->initialise(false))
     {
-        m_pRoot->addEntry(pTty->getName(), pTty);
+        m_pRoot->addEntry(m_pTty->getName(), m_pTty);
     }
     else
     {
         WARNING("POSIX: no /dev/tty - TextIO failed to initialise.");
         --baseInode;
-        delete pTty;
+        delete m_pTty;
     }
 
     return true;

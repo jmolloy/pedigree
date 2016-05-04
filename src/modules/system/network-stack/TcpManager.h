@@ -67,7 +67,14 @@ public:
     }
   }
   virtual ~TcpManager()
-  {}
+  {
+    Timer *t = Machine::instance().getTimer();
+    if(t)
+    {
+      NOTICE("TcpManager destructor, removing handler");
+      t->unregisterHandler(this);
+    }
+  }
 
   /** For access to the manager without declaring an instance of it */
   static TcpManager& instance()

@@ -20,6 +20,8 @@
 #ifndef DEVFS_H
 #define DEVFS_H
 
+#include <Log.h>
+
 #include <vfs/Filesystem.h>
 #include <vfs/Directory.h>
 #include <vfs/File.h>
@@ -116,12 +118,13 @@ class DevFsDirectory : public Directory
 class DevFs : public Filesystem
 {
 public:
-  DevFs() : m_pRoot(0)
+  DevFs() : m_pRoot(0), m_pTty(0)
   {
   }
 
   virtual ~DevFs()
   {
+    delete m_pTty;
     delete m_pRoot;
   }
 
@@ -158,6 +161,8 @@ private:
 
   DevFsDirectory *m_pRoot;
   static DevFs m_Instance;
+
+  TextIO *m_pTty;
 };
 
 #endif

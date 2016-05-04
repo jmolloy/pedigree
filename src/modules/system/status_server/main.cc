@@ -33,6 +33,8 @@
 
 #define LISTEN_PORT     1234
 
+static ConnectionBasedEndpoint *pEndpoint = 0;
+
 static int clientThread(void *p)
 {
     if(!p)
@@ -342,7 +344,7 @@ int mainThread(void *p)
 
 static bool init()
 {
-    ConnectionBasedEndpoint *pEndpoint = static_cast<ConnectionBasedEndpoint*>(TcpManager::instance().getEndpoint(LISTEN_PORT, RoutingTable::instance().DefaultRoute()));
+    pEndpoint = static_cast<ConnectionBasedEndpoint*>(TcpManager::instance().getEndpoint(LISTEN_PORT, RoutingTable::instance().DefaultRoute()));
     if(!pEndpoint)
     {
         WARNING("Status server can't start, couldn't get a TCP endpoint.");
@@ -356,6 +358,10 @@ static bool init()
 
 static void destroy()
 {
+    if (pEndpoint)
+    {
+        TcpManager::instance().returnEndpoint(pEndpoint);
+    }
 }
 
 MODULE_INFO("Status Server", &init, &destroy, "config");

@@ -436,6 +436,8 @@ bool init()
 
 static void destroy()
 {
+    /// \todo properly shut down sqlite!
+    delete [] g_pFile;
 }
 
 MODULE_INFO("config", &init, &destroy);

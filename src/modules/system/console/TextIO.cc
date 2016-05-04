@@ -47,6 +47,12 @@ TextIO::TextIO(String str, size_t inode, Filesystem *pParentFS, File *pParent) :
 
 TextIO::~TextIO()
 {
+    Timer *t = Machine::instance().getTimer();
+    if(t)
+    {
+        t->unregisterHandler(this);
+    }
+
     delete [] m_pBackbuffer;
     m_pBackbuffer = 0;
 }
