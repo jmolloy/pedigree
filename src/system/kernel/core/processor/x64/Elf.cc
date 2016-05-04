@@ -104,6 +104,12 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
             policy = SymbolTable::NotOriginatingElf;
         S = pSymtab->lookup(String(pStr), this, policy);
 
+        if (S == 0 && ST_BIND(pSymbols[R_SYM(rel.info)].info) == 2)
+        {
+            // Weak relocation that couldn't be found, which is OK.
+            S = ~0UL;
+        }
+
         if (S == 0)
         {
             WARNING("Relocation failed for symbol \"" << pStr << "\" (relocation=" << R_TYPE(rel.info) << ")");

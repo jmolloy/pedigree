@@ -115,7 +115,7 @@ class KernelElf : public Elf
         /** Default constructor does nothing */
         KernelElf() INITIALISATION_ONLY;
         /** Destructor does nothing */
-        ~KernelElf();
+        virtual ~KernelElf();
         /** Copy-constructor
         *\note NOT implemented (singleton class) */
         KernelElf(const KernelElf &);

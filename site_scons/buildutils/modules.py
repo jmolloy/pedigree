@@ -17,6 +17,8 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 '''
 
+import os
+
 
 def buildModule(env, stripped_target, target, sources):
     module_env = env.Clone()
@@ -38,14 +40,24 @@ def buildModule(env, stripped_target, target, sources):
     extra_linkflags = module_env.get('MODULE_LINKFLAGS', [])
 
     module_env.MergeFlags({
-        'LINKFLAGS': ['-nostdlib', '-Wl,-r', '-Wl,-T,$LSCRIPT'] +
+        'LINKFLAGS': ['-nodefaultlibs', '-r', '-Wl,-T,$LSCRIPT'] +
             extra_linkflags,
+    })
+
+    libmodule_dir = os.path.join(module_env['BUILDDIR'], 'src', 'modules')
+    libmodule_path = os.path.join(libmodule_dir, 'libmodule.a')
+
+    module_env.MergeFlags({
+        'LIBS': ['module', 'gcc'],
+        'LIBPATH': [libmodule_dir],
     })
 
     if env['clang_cross'] and env['clang_analyse']:
         return module_env.Program(stripped_target, sources)
 
     intermediate = module_env.Program(target, sources)
+    module_env.Depends(target, module_env['LSCRIPT'])
+    module_env.Depends(target, libmodule_path)
     return module_env.Command(stripped_target, intermediate,
                               action='$STRIP -d --strip-unneeded -o $TARGET '
                                      '$SOURCE')

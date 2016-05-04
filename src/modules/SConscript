@@ -302,6 +302,10 @@ libsqlite3 = libsqlite3_env.StaticLibrary('config_sqlite3',
 
 custom_libs['config'] = ['config_sqlite3']
 
+# libmodule provides generic support that should be built into every module.
+libmodule_env = env_clone.Clone()
+libmodule = libmodule_env.StaticLibrary('module', ['Module.cc'])
+
 def buildModule(env, path, outputBase, targetAlias):
     module_env = env.Clone()
 

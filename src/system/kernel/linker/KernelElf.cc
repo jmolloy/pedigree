@@ -508,6 +508,17 @@ void KernelElf::unloadModule(Vector<Module*>::Iterator it, bool silent, bool pro
         uintptr_t *iterator = reinterpret_cast<uintptr_t*>(startDtors);
         while (iterator < reinterpret_cast<uintptr_t*>(endDtors))
         {
+            if (static_cast<intptr_t>(*iterator) == -1)
+            {
+                ++iterator;
+                continue;
+            }
+            else if ((*iterator) == 0)
+            {
+                // End of table.
+                break;
+            }
+
             void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
             fp();
             iterator++;
@@ -686,6 +697,17 @@ static int executeModuleThread(void *mod)
             uintptr_t *iterator = reinterpret_cast<uintptr_t*>(startCtors);
             while (iterator < reinterpret_cast<uintptr_t*>(endCtors))
             {
+                if (static_cast<intptr_t>(*iterator) == -1)
+                {
+                    ++iterator;
+                    continue;
+                }
+                else if ((*iterator) == 0)
+                {
+                    // End of table.
+                    break;
+                }
+
                 void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
                 fp();
                 iterator++;

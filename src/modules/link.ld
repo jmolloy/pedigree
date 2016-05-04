@@ -3,10 +3,16 @@
 
 SECTIONS
 {
+  /DISCARD/ : {
+    *(.text.crt0*);
+  }
+
   . = ALIGN(4096);
   .text :
   {
     *(.text*)
+    *(.init*)
+    *(.fini*)
   }
   
   . = ALIGN(4096);
