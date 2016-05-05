@@ -50,8 +50,12 @@ void Acpi::initialise()
 
   // XSDT present?
   if (m_pRsdtPointer->revision >= 2)
+  {
     if (m_pRsdtPointer->xsdtAddress != 0)
+    {
       NOTICE(" XSDT at " << Hex << m_pRsdtPointer->xsdtAddress);
+    }
+  }
 
   NOTICE(" RSDT at " << Hex << m_pRsdtPointer->rsdtAddress);
 
@@ -125,7 +129,9 @@ void Acpi::initialise()
       m_pApic = pSystemDescTable;
     #endif
     else
+    {
       NOTICE("   unknown table");
+    }
   }
 
   // Do we have a Fixed ACPI Description Table?
@@ -170,23 +176,37 @@ void Acpi::parseFixedACPIDescriptionTable()
   NOTICE("  enable " << Hex << m_pFacp->acpiEnableCommand);
   NOTICE("  disable " << Hex << m_pFacp->acpiDisableCommand);
   if (m_pFacp->s4BiosCommand != 0)
+  {
     NOTICE("  S4 BIOS " << Hex << m_pFacp->s4BiosCommand);
+  }
   NOTICE(" Power-Management");
   NOTICE("  Event 1A at " << Hex << m_pFacp->pm1aEventBlock << " - " << (m_pFacp->pm1aEventBlock + m_pFacp->pm1EventLength));
   if (m_pFacp->pm1bEventBlock != 0)
+  {
     NOTICE("  Event 1B at " << Hex << m_pFacp->pm1bEventBlock << " - " << (m_pFacp->pm1bEventBlock + m_pFacp->pm1EventLength));
+  }
   NOTICE("  Control 1A at " << Hex << m_pFacp->pm1aControlBlock << " - " << (m_pFacp->pm1aControlBlock + m_pFacp->pm1ControlLength));
   if (m_pFacp->pm1bControlBlock != 0)
+  {
     NOTICE("  Control 1B at " << Hex << m_pFacp->pm1bControlBlock << " - " << (m_pFacp->pm1bControlBlock + m_pFacp->pm1ControlLength));
+  }
   if (m_pFacp->pm2ControlBlock != 0)
+  {
     NOTICE("  Control 2 at " << Hex << m_pFacp->pm2ControlBlock << " - " << (m_pFacp->pm2ControlBlock + m_pFacp->pm2ControlLength));
+  }
   NOTICE("  Timer at " << Hex << m_pFacp->pmTimerBlock << " - " << (m_pFacp->pmTimerBlock + m_pFacp->pmTimerLength));
   if (m_pFacp->gpe0Block != 0)
+  {
     NOTICE("  General Purpose Event 0 at " << Hex << m_pFacp->gpe0Block << " - " << (m_pFacp->gpe0Block + m_pFacp->gpe0BlockLength));
+  }
   if (m_pFacp->gpe1Block != 0)
+  {
     NOTICE("  General Purpose Event 1 at " << Hex << m_pFacp->gpe1Block << " - " << (m_pFacp->gpe1Block + m_pFacp->gpe1BlockLength));
+  }
   if (m_pFacp->gpe1Base != 0)
+  {
     NOTICE("  General Purpose Event Base: " << Hex << m_pFacp->gpe1Base);
+  }
   // TODO: Unimportant imho
   NOTICE(" Flags " << Hex << m_pFacp->flags);
 }
@@ -282,7 +302,7 @@ void Acpi::parseFixedACPIDescriptionTable()
       }
   
       // Go to the next entry;
-      uint8_t *sTable = reinterpret_cast<uint8_t*>(adjust_pointer(pType, 1));
+      uint8_t *sTable = adjust_pointer(pType, 1);
       pType = adjust_pointer(pType, *sTable);
     }
 
