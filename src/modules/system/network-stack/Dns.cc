@@ -24,6 +24,7 @@
 
 #include "UdpManager.h"
 #include <processor/Processor.h>
+#include <utilities/PointerGuard.h>
 
 Dns Dns::dnsInstance;
 uint16_t Dns::m_NextId = 0;
@@ -138,9 +139,9 @@ int Dns::trampoline(void* p)
 
 void Dns::mainThread()
 {
-  NOTICE("dns main thread");
   uint8_t* buff = new uint8_t[1024];
   uintptr_t buffLoc = reinterpret_cast<uintptr_t>(buff);
+  PointerGuard<uint8_t> guard(buff);
   ByteSet(buff, 0, 1024);
 
   IpAddress addr(Network::convertToIpv4(0, 0, 0, 0));
