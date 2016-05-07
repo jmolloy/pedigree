@@ -33,22 +33,27 @@ static PosixSyscallManager g_PosixSyscallManager;
 
 static UnixFilesystem *g_pUnixFilesystem = 0;
 
+DevFs *g_pDevFs;
+
 static bool init()
 {
   g_PosixSyscallManager.initialise();
 
-  DevFs::instance().initialise(0);
+  g_pDevFs = new DevFs();
+  g_pDevFs->initialise(0);
 
   g_pUnixFilesystem = new UnixFilesystem();
 
   VFS::instance().addAlias(g_pUnixFilesystem, g_pUnixFilesystem->getVolumeLabel());
-  VFS::instance().addAlias(&DevFs::instance(), DevFs::instance().getVolumeLabel());
+  VFS::instance().addAlias(g_pDevFs, g_pDevFs->getVolumeLabel());
 
   return true;
 }
 
 static void destroy()
 {
+    VFS::instance().removeAllAliases(g_pDevFs);
+    VFS::instance().removeAllAliases(g_pUnixFilesystem);
 }
 
 #ifdef ARM_COMMON

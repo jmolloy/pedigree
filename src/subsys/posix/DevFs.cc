@@ -33,8 +33,6 @@
 
 #include <sys/fb.h>
 
-DevFs DevFs::m_Instance;
-
 uint64_t RandomFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
     /// \todo Endianness issues?
@@ -288,6 +286,12 @@ int FramebufferFile::command(const int command, void *buffer)
             return -1;
     }
 }
+
+DevFs::~DevFs()
+{
+    delete m_pTty;
+    delete m_pRoot;
+};
 
 bool DevFs::initialise(Disk *pDisk)
 {

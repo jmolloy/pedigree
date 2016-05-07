@@ -122,16 +122,7 @@ public:
   {
   }
 
-  virtual ~DevFs()
-  {
-    delete m_pTty;
-    delete m_pRoot;
-  }
-
-  static DevFs &instance()
-  {
-    return m_Instance;
-  }
+  virtual ~DevFs();
 
   virtual bool initialise(Disk *pDisk);
 
@@ -160,7 +151,6 @@ private:
   DevFs &operator = (const DevFs &);
 
   DevFsDirectory *m_pRoot;
-  static DevFs m_Instance;
 
   TextIO *m_pTty;
 };
