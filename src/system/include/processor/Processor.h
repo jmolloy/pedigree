@@ -90,6 +90,9 @@ class Processor
     /** End of the kernel core initialisation reached, the initialisation functions
      *  and data may now get unmapped/freed. */
     static void initialisationDone();
+    /** Prepare the processor for reset by deinitialising things initialised in
+     *  initialise2/initialise1. */
+    static void deinitialise();
     /** Is the processor-specific interface initialised?
      *\return 0, if nothing has been initialised, 1, if initialise1() has been executed
      *        successfully, 2, if initialise2() has been executed successfully */

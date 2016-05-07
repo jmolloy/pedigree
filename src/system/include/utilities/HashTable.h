@@ -73,6 +73,23 @@ class HashTable
             }
         }
 
+        /**
+         * Clear the HashTable and free all held memory.
+         */
+        void clear()
+        {
+            if (!m_Buckets)
+            {
+                return;
+            }
+
+            delete [] m_Buckets;
+            m_Buckets = 0;
+
+            m_MaxBucket = 0;
+            m_nBuckets = 0;
+        }
+
         virtual ~HashTable() {
             if(m_Buckets) {
                 for (size_t i = 0; i < m_nBuckets; ++i)

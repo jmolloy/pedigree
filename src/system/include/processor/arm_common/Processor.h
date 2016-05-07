@@ -50,4 +50,8 @@ void Processor::pause()
     asm volatile("yield");
 }
 
+void Processor::deinitialise()
+{
+}
+
 #endif

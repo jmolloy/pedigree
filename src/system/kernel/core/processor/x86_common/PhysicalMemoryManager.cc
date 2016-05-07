@@ -380,6 +380,12 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
     }
 }
 
+void X86CommonPhysicalMemoryManager::shutdown()
+{
+    NOTICE("Shutting down X86CommonPhysicalMemoryManager");
+    m_PageMetadata.clear();
+}
+
 void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
 {
     NOTICE("memory-map:");
