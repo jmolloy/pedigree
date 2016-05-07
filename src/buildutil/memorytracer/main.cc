@@ -40,6 +40,16 @@ using namespace MemoryTracing;
 typedef std::unordered_map<uint32_t, std::shared_ptr<AllocationTraceEntry>> dataset_t;
 typedef std::pair<uint32_t, std::shared_ptr<AllocationTraceEntry>> dataset_pair_t;
 
+struct CallerCountEntry
+{
+    CallerCountEntry() : count(0), size(0), entry()
+    {}
+
+    size_t count;
+    size_t size;
+    std::shared_ptr<AllocationTraceEntry> entry;
+};
+
 /// \todo if uintptr_t == uint32_t, this will not work.
 uintptr_t extendPointer(uint32_t pointer)
 {
@@ -113,7 +123,7 @@ bool processRecord(AllocationTraceEntry &record, dataset_t &dataset)
     return true;
 }
 
-int processRecords(FILE *fp, int max_records)
+int processRecords(FILE *fp, int max_records, bool reverse, bool common_callsites)
 {
     // Dataset of pointers -> metadata.
     dataset_t dataset;
@@ -152,30 +162,101 @@ int processRecords(FILE *fp, int max_records)
     std::vector<dataset_pair_t> vec(dataset.begin(), dataset.end());
     std::cout << "There are " << dataset.size() << " unfreed allocations." << std::endl;
 
-    // Sort by call count (std::unordered_map is not sortable).
-    std::sort(vec.begin(), vec.end(), [] (const dataset_pair_t &left, const dataset_pair_t &right) -> bool {
-        return left.second->data.sz > right.second->data.sz;
-    });
-
     std::cout << std::endl;
 
-    // Print the top functions.
-    int i = 0;
-    for (auto it = vec.begin(); it != vec.end() && i < max_records; ++it, ++i)
+    // What about the top N callers?
+    if (common_callsites)
     {
-        std::cout << it->second->data.sz << " bytes left unfreed." << std::endl;
-        for (size_t i = 0; i < num_backtrace_entries; ++i)
+        std::unordered_map<uint32_t, std::shared_ptr<CallerCountEntry>> entries;
+        for (auto it : vec)
         {
-            if (!it->second->data.bt[i])
+            uint32_t which = it.second->data.bt[1];
+            if (entries.find(which) == entries.end())
             {
-                break;
+                entries[which] = std::make_shared<CallerCountEntry>();
+                entries[which]->count = 1;
+                entries[which]->size = it.second->data.sz;
+                entries[which]->entry = it.second;
             }
-
-            uintptr_t caller = extendPointer(it->second->data.bt[i]);
-            std::cout << "    " << symbolToName(caller) << std::endl;
+            else
+            {
+                ++(entries[which]->count);
+                entries[which]->size += it.second->data.sz;
+            }
         }
 
-        std::cout << std::endl;
+        std::vector<std::pair<uint32_t, std::shared_ptr<CallerCountEntry>>>
+            entries_vec(entries.begin(), entries.end());
+        if (reverse)
+        {
+            std::sort(entries_vec.begin(), entries_vec.end(), [] (
+                    const std::pair<uint32_t, std::shared_ptr<CallerCountEntry>> &left,
+                    const std::pair<uint32_t, std::shared_ptr<CallerCountEntry>> &right) -> bool {
+                return left.second->count < right.second->count;
+            });
+        }
+        else
+        {
+            std::sort(entries_vec.begin(), entries_vec.end(), [] (
+                    const std::pair<uint32_t, std::shared_ptr<CallerCountEntry>> &left,
+                    const std::pair<uint32_t, std::shared_ptr<CallerCountEntry>> &right) -> bool {
+                return left.second->count > right.second->count;
+            });
+        }
+
+        int i = 0;
+        for (auto it = entries_vec.begin(); it != entries_vec.end() && i < max_records; ++it, ++i)
+        {
+            std::cout << " With " << it->second->count << " entries, a total of " << it->second->size << " bytes:" << std::endl;
+
+            for (size_t i = 0; i < num_backtrace_entries; ++i)
+            {
+                if (!it->second->entry->data.bt[i])
+                {
+                    break;
+                }
+
+                uintptr_t caller = extendPointer(it->second->entry->data.bt[i]);
+                std::cout << "    " << symbolToName(caller) << std::endl;
+            }
+
+            std::cout << std::endl;
+        }
+    }
+    else
+    {
+        // Sort by call count (std::unordered_map is not sortable).
+        if (reverse)
+        {
+            std::sort(vec.begin(), vec.end(), [] (const dataset_pair_t &left, const dataset_pair_t &right) -> bool {
+                return left.second->data.sz < right.second->data.sz;
+            });
+        }
+        else
+        {
+            std::sort(vec.begin(), vec.end(), [] (const dataset_pair_t &left, const dataset_pair_t &right) -> bool {
+                return left.second->data.sz > right.second->data.sz;
+            });
+        }
+
+        // Print the top functions.
+        int i = 0;
+        for (auto it = vec.begin(); it != vec.end() && i < max_records; ++it, ++i)
+        {
+            std::cout << it->second->data.sz << " bytes left unfreed @" << std::hex << extendPointer(it->first) << std::dec << "." << std::endl;
+            for (size_t i = 0; i < num_backtrace_entries; ++i)
+            {
+                if (!it->second->data.bt[i])
+                {
+                    break;
+                }
+
+                uintptr_t caller = extendPointer(it->second->data.bt[i]);
+                std::cout << "    " << symbolToName(caller) << std::endl;
+            }
+
+            std::cout << std::endl;
+        }
     }
 
     size_t totalUnfreed = 0;
@@ -189,7 +270,7 @@ int processRecords(FILE *fp, int max_records)
     return true;
 }
 
-int handleFile(const char *filename, int max_records)
+int handleFile(const char *filename, int max_records, bool reverse, bool common_callsites)
 {
     FILE *fp = fopen(filename, "rb");
     if (!fp)
@@ -198,7 +279,7 @@ int handleFile(const char *filename, int max_records)
         return 1;
     }
 
-    int rc = processRecords(fp, max_records);
+    int rc = processRecords(fp, max_records, reverse, common_callsites);
 
     fclose(fp);
     return rc;
@@ -214,6 +295,8 @@ void usage()
     std::cerr << "  --help,          Print this help and exit successfully." << std::endl;
     std::cerr << "  --input-file, -i Path to the input data file to parse." << std::endl;
     std::cerr << "  --max-rows, -m   Maximum rows to output (default is 10)." << std::endl;
+    std::cerr << "  --callers, -c    Show most common callers with unfreed allocations, rather than the unfreed allocations themselves." << std::endl;
+    std::cerr << "  --reverse, -r    Show results in reverse (smallest first, or lower count first)." << std::endl;
     std::cerr << std::endl;
 
 }
@@ -226,12 +309,16 @@ void version()
 int main(int argc, char *argv[])
 {
     const char *input_file = 0;
+    bool reverse = false;
+    bool callers = false;
     int maximum = 10;
     const struct option long_options[] =
     {
         {"input-file", required_argument, 0, 'i'},
         {"max-rows", optional_argument, 0, 'm'},
         {"version", no_argument, 0, 'v'},
+        {"callers", no_argument, 0, 'c'},
+        {"reverse", no_argument, 0, 'r'},
         {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0},
     };
@@ -239,7 +326,7 @@ int main(int argc, char *argv[])
     opterr = 1;
     while (1)
     {
-        int c = getopt_long(argc, argv, "i:m:vVh", long_options, NULL);
+        int c = getopt_long(argc, argv, "i:m:vVhcr", long_options, NULL);
         if (c < 0)
         {
             break;
@@ -268,6 +355,14 @@ int main(int argc, char *argv[])
                 }
                 break;
 
+            case 'r':
+                reverse = true;
+                break;
+
+            case 'c':
+                callers = true;
+                break;
+
             case 'v':
             case 'V':
                 version();
@@ -294,5 +389,5 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    return handleFile(input_file, maximum);
+    return handleFile(input_file, maximum, reverse, callers);
 }
