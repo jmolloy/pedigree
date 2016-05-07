@@ -62,6 +62,9 @@ class Module
 class KernelElf : public Elf
 {
     public:
+        /** Destructor does nothing */
+        virtual ~KernelElf();
+
         /** Get the class instance
         *\return reference to the class instance */
         inline static KernelElf &instance()
@@ -114,8 +117,6 @@ class KernelElf : public Elf
     private:
         /** Default constructor does nothing */
         KernelElf() INITIALISATION_ONLY;
-        /** Destructor does nothing */
-        virtual ~KernelElf();
         /** Copy-constructor
         *\note NOT implemented (singleton class) */
         KernelElf(const KernelElf &);
