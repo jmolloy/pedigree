@@ -149,6 +149,7 @@ opts.AddVariables(
     BoolVariable('clang_max_pedantry', 'Use -Weverything with clang, with some specific warnings blacklisted (e.g. -Wdocumentation).', 0),
 
     BoolVariable('kernel_on_disk', 'Put the kernel & needed bits onto hard disk images?', 1),
+    BoolVariable('modules_on_disk', 'Put kernel module files onto hard disk images?', 1),
     
     ('uimage_target', 'Where to copy the generated uImage.bin file to.', '~'),
 )

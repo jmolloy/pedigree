@@ -123,13 +123,14 @@ def buildDiskImages(env, config_database):
         print "'scons' will need to be run again to fully build the disk image."
 
     # Add modules, and drivers, that we build as part of the build process.
-    if os.path.exists(modules):
-        for module in os.listdir(modules):
-            fileList += [os.path.join(modules, module)]
+    if env['modules_on_disk']:
+        if os.path.exists(modules):
+            for module in os.listdir(modules):
+                fileList += [os.path.join(modules, module)]
 
-    if os.path.exists(drivers):
-        for driver in os.listdir(drivers):
-            fileList += [os.path.join(drivers, driver)]
+        if os.path.exists(drivers):
+            for driver in os.listdir(drivers):
+                fileList += [os.path.join(drivers, driver)]
 
     # Add libraries
     fileList += [
