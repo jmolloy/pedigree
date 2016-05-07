@@ -572,12 +572,19 @@ void KernelElf::unloadModules()
     if (g_BootProgressUpdate)
         g_BootProgressUpdate("unload");
 
-    for (Vector<Module*>::Iterator it = m_LoadedModules.end()-1;
-        it != m_LoadedModules.begin();
+    if (!m_LoadedModules.count())
+    {
+        m_Modules.clear();
+        return;
+    }
+
+    for (Vector<Module*>::Iterator it = m_LoadedModules.end() - 1;
+        it != m_LoadedModules.begin() - 1;
         it--)
         unloadModule(it);
 
     m_LoadedModules.clear();
+    m_FailedModules.clear();
     m_Modules.clear();
 }
 
