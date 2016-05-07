@@ -76,10 +76,10 @@ public:
   }
   
   /** Thread trampoline */
-  static int trampoline(void* p) NORETURN;
+  static int trampoline(void* p);
   
   /** Main daemon thread */
-  void mainThread() NORETURN;
+  void mainThread();
 
   /** Initialises the Endpoint and begins running the worker thread */
   void initialise();
@@ -92,6 +92,11 @@ public:
   {
     NOTICE("Dns::operator = called!");
     return *this;
+  }
+
+  bool isActive() const
+  {
+    return m_bActive;
   }
 
 private:
@@ -185,6 +190,12 @@ private:
   
   /// DNS communication endpoint
   ConnectionlessEndpoint* m_Endpoint;
+
+  /// Whether or not this instance is active (for thread termination).
+  bool m_bActive;
+
+  /// DNS response receiver thread.
+  class Thread *m_pThread;
 };
 
 #endif

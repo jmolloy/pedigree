@@ -96,20 +96,26 @@ static String qnameLabelHelper(char *buff, size_t *len, uintptr_t buffLoc)
 }
 
 Dns::Dns() :
-  m_DnsCache(), m_DnsRequests(), m_Endpoint(0)
+  m_DnsCache(), m_DnsRequests(), m_Endpoint(0), m_bActive(false), m_pThread(0)
 {
 }
 
 Dns::Dns(const Dns& ent) :
-  m_DnsCache(ent.m_DnsCache), m_DnsRequests(ent.m_DnsRequests), m_Endpoint(ent.m_Endpoint)
+  m_DnsCache(ent.m_DnsCache), m_DnsRequests(ent.m_DnsRequests), m_Endpoint(ent.m_Endpoint),
+  m_bActive(false), m_pThread(0)
 {
-  Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
-                               &trampoline, reinterpret_cast<void*>(this));
-  pThread->detach();
+  m_bActive = true;
+  m_pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
+                         &trampoline, reinterpret_cast<void*>(this));
 }
 
 Dns::~Dns()
 {
+  m_bActive = false;
+  if (m_pThread)
+  {
+    m_pThread->join();
+  }
 }
 
 void Dns::initialise()
@@ -117,19 +123,22 @@ void Dns::initialise()
     Endpoint *p = UdpManager::instance().getEndpoint(IpAddress(), 0, 53);
     m_Endpoint = static_cast<ConnectionlessEndpoint *>(p);
     m_Endpoint->acceptAnyAddress(true);
-    Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
-                                 &trampoline, reinterpret_cast<void*>(this));
-    pThread->detach();
+
+    m_bActive = true;
+    m_pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
+                           &trampoline, reinterpret_cast<void*>(this));
 }
 
 int Dns::trampoline(void* p)
 {
   Dns *pDns = reinterpret_cast<Dns*>(p);
   pDns->mainThread();
+  return 0;
 }
 
 void Dns::mainThread()
 {
+  NOTICE("dns main thread");
   uint8_t* buff = new uint8_t[1024];
   uintptr_t buffLoc = reinterpret_cast<uintptr_t>(buff);
   ByteSet(buff, 0, 1024);
@@ -139,9 +148,9 @@ void Dns::mainThread()
 
   Endpoint::RemoteEndpoint remoteHost;
 
-  while(true)
+  while(isActive())
   {
-    if(e->dataReady(true))
+    if(e->dataReady(true, 5))
     {
       // Read the packet (Safe to block because we've already run dataReady)
       int n = e->recv(buffLoc, 1024, true, &remoteHost);
