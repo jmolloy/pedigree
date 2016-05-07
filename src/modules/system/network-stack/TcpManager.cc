@@ -354,6 +354,15 @@ void TcpManager::returnEndpoint(Endpoint* e)
   // The connection may be still closing when this is called!
   // It is well-defined behaviour that the endpoint will be returned
   // and the connection released once it hits the CLOSED state.
+
+  TcpEndpoint *endpoint = static_cast<TcpEndpoint *>(e);
+
+  // Is this a LISTEN socket?
+  if (endpoint->m_Listening)
+  {
+    // Safe to destroy.
+    delete endpoint;
+  }
 }
 
 Endpoint* TcpManager::getEndpoint(uint16_t localPort, Network* pCard)

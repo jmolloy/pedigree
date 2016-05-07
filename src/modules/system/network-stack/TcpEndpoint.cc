@@ -54,6 +54,7 @@ void TcpEndpoint::listen()
     /// \todo Interface-specific connections
     m_IncomingConnections.clear();
     m_ConnId = TcpManager::instance().Listen(this, getLocalPort());
+    m_Listening = true;
 }
 
 bool TcpEndpoint::connect(Endpoint::RemoteEndpoint remoteHost, bool bBlock)
