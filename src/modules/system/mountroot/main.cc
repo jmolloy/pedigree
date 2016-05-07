@@ -113,11 +113,30 @@ static bool init()
     }
 
     // All done, nothing more to do here.
-    return false;
+    return true;
 }
 
 static void destroy()
 {
+    NOTICE("Unmounting all filesystems...");
+
+    Tree<Filesystem *, List<String *> *> &mounts = VFS::instance().getMounts();
+    List<Filesystem *> deletionQueue;
+
+    for (auto it = mounts.begin(); it != mounts.end(); ++it)
+    {
+        deletionQueue.pushBack(it.key());
+    }
+
+    while (deletionQueue.count())
+    {
+        Filesystem *pFs = deletionQueue.popFront();
+        NOTICE("Unmounting " << pFs->getVolumeLabel() << " [" << pFs << "]...");
+        VFS::instance().removeAllAliases(pFs);
+        NOTICE("unmount done");
+    }
+
+    NOTICE("Unmounting all filesystems has completed.");
 }
 
 MODULE_INFO("mountroot", &init, &destroy, "vfs", "partition");
