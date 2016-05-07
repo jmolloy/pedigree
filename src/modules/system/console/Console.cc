@@ -556,6 +556,10 @@ ConsoleManager::ConsoleManager() :
 
 ConsoleManager::~ConsoleManager()
 {
+    for (auto it : m_Consoles)
+    {
+        delete it;
+    }
 }
 
 ConsoleManager &ConsoleManager::instance()
