@@ -436,6 +436,10 @@ bool init()
 
 static void destroy()
 {
+    // Shut down sqlite, cleaning up the opened file along the way.
+    sqlite3_close(g_pSqlite);
+    sqlite3_shutdown();
+
     /// \todo properly shut down sqlite!
     delete [] g_pFile;
 }
