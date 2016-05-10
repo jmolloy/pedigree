@@ -115,9 +115,6 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
             WARNING("Relocation failed for symbol \"" << pStr << "\" (relocation=" << R_TYPE(rel.info) << ")");
             WARNING("Relocation at " << address << " (offset=" << rel.offset << ")...");
         }
-        // This is a weak relocation, but it was undefined.
-        else if(S == ~0UL)
-            WARNING("Weak relocation == 0 [undefined] for \""<< pStr << "\".");
         
         symbolName = pStr;
     }
@@ -125,7 +122,7 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
     if (S == 0 && (R_TYPE(rel.info) != R_X86_64_RELATIVE))
         return false;
     if (S == ~0UL)
-        S = 0; // undefined
+        S = 0; // weak relocation, undefined
 
     // Base address
     uint64_t B = loadBase;
