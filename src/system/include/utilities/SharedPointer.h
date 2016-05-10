@@ -99,7 +99,8 @@ public:
     /**
      * Creates a SharedPointer with a default allocation.
      */
-    static SharedPointer<T> allocate();
+    template<class... Args>
+    static SharedPointer<T> allocate(Args...);
 
     /// \note No operator is provided for comparison with raw pointer types:
     ///       if that comparison were to ever succeed, it would indicate that
@@ -231,10 +232,11 @@ size_t SharedPointer<T>::refcount() const
 }
 
 template <class T>
-SharedPointer<T> SharedPointer<T>::allocate()
+template <class... Args>
+SharedPointer<T> SharedPointer<T>::allocate(Args... args)
 {
     SharedPointer<T> result;
-    result.reset(new T);
+    result.reset(new T(args...));
     return result;
 }
 
