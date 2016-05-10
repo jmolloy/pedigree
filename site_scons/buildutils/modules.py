@@ -36,6 +36,9 @@ def buildModule(env, stripped_target, target, sources):
         'LINKFLAGS': ['-nostdlib', '-Wl,-r', '-Wl,-T,$LSCRIPT'],
     })
 
+    if env['clang'] and env['clang_analyse']:
+        return module_env.Program(stripped_target, sources)
+
     intermediate = module_env.Program(target, sources)
     return module_env.Command(stripped_target, intermediate,
                               action='$STRIP -d --strip-unneeded -o $TARGET '

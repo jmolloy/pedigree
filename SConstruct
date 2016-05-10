@@ -143,6 +143,9 @@ opts.AddVariables(
     BoolVariable('clang_profile', 'If hosted, use clang instrumentation to profile.', 0),
     BoolVariable('instrumentation', 'Build with function instrumentation (SLOW).', 0),
 
+    # analyses and clang
+    BoolVariable('clang_analyse', 'If using clang, pass --analyze (only for kernel+modules).', 0),
+
     BoolVariable('kernel_on_disk', 'Put the kernel & needed bits onto hard disk images?', 1),
     
     ('uimage_target', 'Where to copy the generated uImage.bin file to.', '~'),
@@ -907,7 +910,6 @@ if env['hosted']:
 
     fixDebugFlags(env)
 
-# TODO(miselin): make this far less hacky!
 if env['clang']:
     userspace_env = env.Clone()
 
@@ -928,24 +930,45 @@ if env['clang']:
 
     # TODO(miselin): correct triple (e.g. ARM)
     triple = ['-target', 'x86_64-none-elf']
+    cross_gcc = ['-ccc-gcc-name', orig_link]
 
-    env['CLANG_BASE_LINKFLAGS'] = triple + ['-ccc-gcc-name', orig_link]
+    # Generic flags we care about for compilation and linking.
+    generic_flags = ['-Qunused-arguments']
+    generic_ccflags = ['-Wno-unused-parameter']
 
-    env.MergeFlags({
-        'CCFLAGS': triple,
-        'TARGET_CCFLAGS': triple,
-        'LINKFLAGS': env['CLANG_BASE_LINKFLAGS'],
-        'TARGET_LINKFLAGS': env['CLANG_BASE_LINKFLAGS'],
-    }, unique=0)
-
-    env.MergeFlags({
-        'CCFLAGS': ['-Wno-unused-parameter'],
-    })
+    env['CLANG_BASE_LINKFLAGS'] = triple + cross_gcc + generic_flags
 
     # Punch out some warning flags that clang doesn't know.
     misc.removeFromAllFlags(env, [
         '-Wuseless-cast', '-Wno-packed-bitfield-compat', '-Wlogical-op',
         '-Wtrampolines', '-Wsuggest-attribute=noreturn'])
+
+    # Setting unique=0 appends and does not reorder the given arguments, which
+    # is crucial as these are "-arg value" style parameters.
+    env.MergeFlags({
+        'CCFLAGS': triple + generic_flags + generic_ccflags,
+        'TARGET_CCFLAGS': triple + generic_flags + generic_ccflags,
+        'LINKFLAGS': env['CLANG_BASE_LINKFLAGS'],
+        'TARGET_LINKFLAGS': env['CLANG_BASE_LINKFLAGS'],
+    }, unique=0)
+
+    # Do we need to do analysis?
+    if env['clang_analyse']:
+        env.MergeFlags({
+            'CCFLAGS': ['--analyze'],
+            'TARGET_CCFLAGS': ['--analyze'],
+            'LINKFLAGS': ['--analyze'],
+        })
+
+        env['CLANG_BASE_LINKFLAGS'] += ['--analyze']
+
+        # None of the following use clang, so if we're doing analysis there's
+        # no point introducing them to the build.
+        env['build_configdb'] = False
+        env['build_lgpl'] = False
+        env['build_apps'] = False
+        env['build_libs'] = False
+        env['build_images'] = False
 
 # Override CXX if needed.
 if env['iwyu']:
