@@ -728,6 +728,14 @@ bool Elf::finaliseModule(uint8_t *pBuffer, size_t length)
                 }
                 else
                 {
+                    // Get the current flags so e.g. a READONLY section overlapping
+                    // a WRITE section will get the WRITE permission (which is not
+                    // "ideal", but the ELF file itself should not be laid out
+                    // like that if the READONLY permission is a requirement).
+                    physical_uintptr_t phys = 0;;
+                    size_t currentFlags = 0;
+                    Processor::information().getVirtualAddressSpace().getMapping(virt, phys, currentFlags);
+                    flags |= currentFlags;
                     Processor::information().getVirtualAddressSpace().setFlags(virt, flags);
                 }
             }
