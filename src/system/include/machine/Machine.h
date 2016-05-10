@@ -51,6 +51,8 @@ class Keyboard;
  */
 class Machine
 {
+  friend void system_reset();
+
   public:
     static Machine &instance();
 
@@ -59,6 +61,10 @@ class Machine
      */
     virtual void initialise() =0;
     virtual void initialise2() {}
+    virtual void deinitialise()
+    {
+        m_bInitialised = false;
+    };
     inline bool isInitialised(){return m_bInitialised;}
 
     /**
