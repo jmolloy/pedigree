@@ -38,6 +38,7 @@ RequestQueue::RequestQueue() :
 
 RequestQueue::~RequestQueue()
 {
+  destroy();
 }
 
 void RequestQueue::initialise()
