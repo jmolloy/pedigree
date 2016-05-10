@@ -39,24 +39,17 @@ static bool bFallBackISA = false;
 
 static bool allowProbing = false;
 
-static void probeIsaDevice(Controller *pDev)
+static Device *probeIsaDevice(Controller *pDev)
 {
   // Create a new AtaController device node.
   IsaAtaController *pController = new IsaAtaController(pDev, nController++);
 
-  // Replace pDev with pController.
-  pController->setParent(pDev->getParent());
-  pDev->getParent()->replaceChild(pDev, pController);
-  
-  
-  // And delete pDev for good measure.
-  //  - Deletion not needed now that AtaController(pDev) destroys pDev. See Device::Device(Device *)
-  //delete pDev;
-
   bFound = true;
+
+  return pController;
 }
 
-static void probePiixController(Device *pDev)
+static Device *probePiixController(Device *pDev)
 {
   static uint8_t interrupt = 14;
 
@@ -74,20 +67,15 @@ static void probePiixController(Device *pDev)
           ERROR("PCI IDE: Controller found with no IRQ and IRQs 14 and 15 are already allocated");
           delete pDevController;
 
-          return;
+          return pDev;
       }
   }
+
   PciAtaController *pController = new PciAtaController(pDevController, nController++);
 
-  // Replace pDev with pController.
-  pController->setParent(pDev->getParent());
-  pDev->getParent()->replaceChild(pDev, pController);
-
-  // And now we must delete pDev because of the unique way we do this - it's
-  // actually totally useless at this stage, and it's been replaced.
-  delete pDev;
-
   bFound = true;
+
+  return pController;
 }
 
 /// Removes the ISA ATA controllers added early in boot
@@ -140,7 +128,7 @@ static Device *probeDisk(Device *pDev)
         {
             if (allowProbing)
             {
-              probePiixController(pDev);
+              return probePiixController(pDev);
             }
             bPiixControllerFound = true;
         }
@@ -166,7 +154,7 @@ static Device *probeDisk(Device *pDev)
                     foundControl = true;
             }
             if (allowProbing && foundCommand && foundControl)
-                probeIsaDevice(static_cast<Controller*> (pDev));
+                return probeIsaDevice(static_cast<Controller*> (pDev));
         }
     }
 
