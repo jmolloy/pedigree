@@ -25,6 +25,9 @@ class SerialLogger : public Log::LogCallback
     public:
         void callback(const char* str)
         {
+            if (!Machine::instance().isInitialised())
+                return;
+
             for(size_t n = 0; n < Machine::instance().getNumSerial(); n++)
             {
 #if defined(MEMORY_TRACING) || (defined(MEMORY_LOGGING_ENABLED) && !defined(MEMORY_LOG_INLINE)) || defined(INSTRUMENTATION)
