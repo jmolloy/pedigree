@@ -88,6 +88,9 @@ class InputManager
         /// Begins the worker thread
         void initialise();
 
+        /// Shuts down the worker thread, clears queues, and removes callbacks.
+        void shutdown();
+
         /// Singleton design
         static InputManager& instance()
         {
@@ -119,10 +122,16 @@ class InputManager
         bool removeCallbackByThread(Thread *pThread);
 
         /// Thread trampoline
-        static int trampoline(void *ptr) NORETURN;
+        static int trampoline(void *ptr);
 
         /// Main worker thread
-        void mainThread() NORETURN;
+        void mainThread();
+
+        /// Returns whether the instance is creating notifications.
+        bool isActive() const
+        {
+            return m_bActive;
+        }
 
     private:
         /// Static instance
@@ -173,6 +182,9 @@ class InputManager
         /// Thread object for our worker thread
         Thread *m_pThread;
 #endif
+
+        /// Are we active?
+        bool m_bActive;
 };
 
 #endif

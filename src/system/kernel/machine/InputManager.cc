@@ -110,17 +110,18 @@ InputManager::InputManager() :
 #ifdef THREADS
     , m_InputQueueSize(0), m_pThread(0)
 #endif
+    , m_bActive(false)
 {
 }
 
 InputManager::~InputManager()
 {
-    /// \todo Provide a way for this thread to be terminated.
-    // m_pThread->join();
 }
 
 void InputManager::initialise()
 {
+    m_bActive = true;
+
     // Start the worker thread.
 #ifdef THREADS
     m_pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
@@ -128,6 +129,20 @@ void InputManager::initialise()
 #else
     WARNING("InputManager: No thread support, no worker thread will be active");
 #endif
+}
+
+void InputManager::shutdown()
+{
+    m_bActive = false;
+
+#ifdef THREADS
+    m_InputQueueSize.release();
+    m_pThread->join();
+#endif
+
+    // Clean up lists, in case anything came in while we were canceling.
+    m_Callbacks.clear();
+    m_InputQueue.clear();
 }
 
 void InputManager::keyPressed(uint64_t key)
@@ -305,12 +320,13 @@ int InputManager::trampoline(void *ptr)
 {
     InputManager *p = reinterpret_cast<InputManager *>(ptr);
     p->mainThread();
+    return 0;
 }
 
 void InputManager::mainThread()
 {
 #ifdef THREADS
-    while(true)
+    while(isActive())
     {
         m_InputQueueSize.acquire();
         if(!m_InputQueue.count())
