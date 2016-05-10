@@ -383,6 +383,7 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
 void X86CommonPhysicalMemoryManager::shutdown()
 {
     NOTICE("Shutting down X86CommonPhysicalMemoryManager");
+    PhysicalMemoryManager::m_MemoryRegions.clear();
     m_PageMetadata.clear();
 }
 
