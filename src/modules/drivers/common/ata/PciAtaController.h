@@ -40,7 +40,7 @@ class PciAtaController : public AtaController
 {
 public:
     PciAtaController(Controller *pDev, int nController = 0);
-    ~PciAtaController();
+    virtual ~PciAtaController();
 
     virtual void getName(String &str)
     {
