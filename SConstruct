@@ -137,7 +137,7 @@ opts.AddVariables(
     BoolVariable('arm_bigendian', 'Is this ARM target big-endian?', 0),
 
     BoolVariable('hosted', 'Is this build to run on another host OS?', 0),
-    BoolVariable('clang', 'If hosted, should we use clang if it is present (highly recommended)?', 1),
+    BoolVariable('clang', 'If hosted, should we use clang if it is present (highly recommended)? If not hosted, should we use clang and cross-compile?', 1),
     BoolVariable('sanitizers', 'If hosted, enable sanitizers (eg AddressSanitizer) (highly recommended)?', 0),
     BoolVariable('valgrind', 'If hosted, build for Valgrind?', 0),
     BoolVariable('clang_profile', 'If hosted, use clang instrumentation to profile.', 0),
@@ -906,8 +906,46 @@ if env['hosted']:
                         'LINKFLAGS': ['-fprofile-instr-generate']})
 
     fixDebugFlags(env)
-else:
-    env['clang'] = False
+
+# TODO(miselin): make this far less hacky!
+if env['clang']:
+    userspace_env = env.Clone()
+
+    cross_dir = os.path.dirname(env['CROSS'])
+    if cross_dir:
+        env.PrependENVPath('PATH', cross_dir)
+
+    orig_link = os.path.basename(env['CC'])
+
+    # Override the main kernel environment, but not the userspace one.
+    env['CC'] = 'clang'
+    env['CXX'] = 'clang++'
+    env['LINK'] = 'clang'
+
+    env['TARGET_CC'] = 'clang'
+    env['TARGET_CXX'] = 'clang++'
+    env['TARGET_LINK'] = 'clang'
+
+    # TODO(miselin): correct triple (e.g. ARM)
+    triple = ['-target', 'x86_64-none-elf']
+
+    env['CLANG_BASE_LINKFLAGS'] = triple + ['-ccc-gcc-name', orig_link]
+
+    env.MergeFlags({
+        'CCFLAGS': triple,
+        'TARGET_CCFLAGS': triple,
+        'LINKFLAGS': env['CLANG_BASE_LINKFLAGS'],
+        'TARGET_LINKFLAGS': env['CLANG_BASE_LINKFLAGS'],
+    }, unique=0)
+
+    env.MergeFlags({
+        'CCFLAGS': ['-Wno-unused-parameter'],
+    })
+
+    # Punch out some warning flags that clang doesn't know.
+    misc.removeFromAllFlags(env, [
+        '-Wuseless-cast', '-Wno-packed-bitfield-compat', '-Wlogical-op',
+        '-Wtrampolines', '-Wsuggest-attribute=noreturn'])
 
 # Override CXX if needed.
 if env['iwyu']:

@@ -37,6 +37,7 @@ static volatile int g_WrittenFirst = 0;
 
 void __cyg_profile_func_enter (void *func_address, void *call_site)
 {
+#ifdef INSTRUMENTATION
     // NOTE: you cannot call anything in this function, as doing so would
     // re-enter. That means hand-crafted serial writes are necessary.
 #ifdef X64
@@ -79,6 +80,7 @@ void __cyg_profile_func_enter (void *func_address, void *call_site)
         "sub $4, %1;" \
         "jnz .1; popf" : "=&r" (x), "=&r" (y) : "d" (COM2), "0" (record.buffer),
             "1" (sizeof record.buffer) : "rax", "memory");
+#endif
 #endif
 }
 
