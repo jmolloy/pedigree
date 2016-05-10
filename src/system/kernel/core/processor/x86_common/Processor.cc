@@ -29,11 +29,6 @@
 #include <machine/mach_pc/Pc.h>
 #endif
 
-void Processor::deinitialise()
-{
-  X86CommonPhysicalMemoryManager::instance().shutdown();
-}
-
 void Processor::initialisationDone()
 {
   /// \todo there HAS to be a better way than this

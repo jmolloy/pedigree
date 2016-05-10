@@ -81,6 +81,18 @@ void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
   }
 }
 
+void Processor::deinitialise()
+{
+  shutdownMultitasking();
+
+  // Shut down remaining singleton objects.
+  IoPortManager::instance().~IoPortManager();
+  X86CommonPhysicalMemoryManager::instance().shutdown();
+  PageFaultHandler::instance().~PageFaultHandler();
+  X64SyscallManager::instance().~X64SyscallManager();
+  X64InterruptManager::instance().~X64InterruptManager();
+}
+
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
   // Initialise this processor's interrupt handling
