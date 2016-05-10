@@ -910,7 +910,7 @@ if env['hosted']:
 
     fixDebugFlags(env)
 
-if env['clang']:
+if env['clang'] and not env['hosted']:
     userspace_env = env.Clone()
 
     cross_dir = os.path.dirname(env['CROSS'])

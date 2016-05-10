@@ -171,14 +171,18 @@ objname = '%s.debug' % objname
 if 'LSCRIPT' in env_clone:
     env_clone.Depends(objname, env_clone['LSCRIPT'])
 
-if env['ARCH_TARGET'] == 'X64':
+if env['clang'] and env['clang_analyse']:
+    stripped_objname = objname
+    final_output = stripped_objname
+elif env['ARCH_TARGET'] == 'X64':
     # On x86_64, we objcopy a stripped binary into the final kernel binary, so
     # we need to have an intermediate file that gets stripped.
     stripped_objname = '%s.stripped' % (objname,)
 
 env_clone.Program(objname, files)
-env_clone.Command(stripped_objname, objname,
-                  action="$STRIP -d -o $TARGET $SOURCE")
+if objname != stripped_objname:
+    env_clone.Command(stripped_objname, objname,
+                      action="$STRIP -d -o $TARGET $SOURCE")
 
 if final_output != stripped_objname:
     action = "$OBJCOPY -I elf64-x86-64 -O elf32-i386 $SOURCE $TARGET"
