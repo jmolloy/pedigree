@@ -294,7 +294,7 @@ void usage()
     std::cerr << "  --version, -[vV] Print version and exit successfully." << std::endl;
     std::cerr << "  --help,          Print this help and exit successfully." << std::endl;
     std::cerr << "  --input-file, -i Path to the input data file to parse." << std::endl;
-    std::cerr << "  --max-rows, -m   Maximum rows to output (default is 10)." << std::endl;
+    std::cerr << "  --max-rows, -m   Maximum rows to output (default is 10, pass no value to show all rows)." << std::endl;
     std::cerr << "  --callers, -c    Show most common callers with unfreed allocations, rather than the unfreed allocations themselves." << std::endl;
     std::cerr << "  --reverse, -r    Show results in reverse (smallest first, or lower count first)." << std::endl;
     std::cerr << std::endl;
@@ -326,7 +326,7 @@ int main(int argc, char *argv[])
     opterr = 1;
     while (1)
     {
-        int c = getopt_long(argc, argv, "i:m:vVhcr", long_options, NULL);
+        int c = getopt_long(argc, argv, "i:m::vVhcr", long_options, NULL);
         if (c < 0)
         {
             break;
@@ -340,17 +340,24 @@ int main(int argc, char *argv[])
 
             case 'm':
                 {
-                    // Perform conversion and handle errors.
-                    char *end = 0;
-                    int possible_max = strtol(optarg, &end, 10);
-                    if (end != optarg)
+                    if (!optarg)
                     {
-                        maximum = possible_max;
+                        maximum = INT_MAX;
                     }
                     else
                     {
-                        std::cerr << "Could not convert maximum row '" << optarg << "' to a number." << std::endl;
-                        return 1;
+                        // Perform conversion and handle errors.
+                        char *end = 0;
+                        int possible_max = strtol(optarg, &end, 10);
+                        if (end != optarg)
+                        {
+                            maximum = possible_max;
+                        }
+                        else
+                        {
+                            std::cerr << "Could not convert maximum row '" << optarg << "' to a number." << std::endl;
+                            return 1;
+                        }
                     }
                 }
                 break;
