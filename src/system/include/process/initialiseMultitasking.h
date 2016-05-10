@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,6 +22,9 @@
 
 /// Starts up the threading subsystem.
 void initialiseMultitasking();
+
+/// Shuts down the threading subsystem.
+void shutdownMultitasking();
 
 #ifdef MULTIPROCESSOR
   /// Starts up the threading subsystem on a subsequently booted application

@@ -52,6 +52,12 @@ void initialiseMultitasking()
   Processor::information().getScheduler().initialise(pThread);
 }
 
+void shutdownMultitasking()
+{
+  /// \todo figure out how to shut down the scheduler then clean up the other
+  /// housekeeping structures (including Process, Thread objects).
+}
+
 #ifdef MULTIPROCESSOR
   void initialiseMultitaskingPerProcessor()
   {
