@@ -99,26 +99,29 @@ void traceAllocation(void *ptr, MemoryTracing::AllocationTrace type, size_t size
     entry.data.sz = size & 0xFFFFFFFFU;
     entry.data.ptr = reinterpret_cast<uintptr_t>(ptr) & 0xFFFFFFFFU;
 
-    for (size_t i = 0; i < MemoryTracing::num_backtrace_entries; ++i)
-    {
-        if(!__builtin_frame_address(i))
-        {
-            entry.data.bt[i] = 0;
-            break;
-        }
+#define BT_FRAME(N) do { \
+    if (!__builtin_frame_address(N)) \
+    { \
+        entry.data.bt[N] = 0; \
+        break; \
+    } \
+    entry.data.bt[N] = reinterpret_cast<uintptr_t>(__builtin_return_address(N)) & 0xFFFFFFFFU; \
+} while(0)
 
-        void *v = __builtin_return_address(i);
-        entry.data.bt[i] = reinterpret_cast<uintptr_t>(v) & 0xFFFFFFFFU;
-    }
+    BT_FRAME(0);
+    BT_FRAME(1);
+    BT_FRAME(2);
+    BT_FRAME(3);
+    BT_FRAME(4);
 
-    asm volatile("pushf; cli" ::: "memory");
+    __asm__ __volatile__("pushfq; cli" ::: "memory");
 
     for(size_t i = 0; i < sizeof entry.buf; ++i)
     {
-        asm volatile("outb %%al, %%dx" :: "Nd" (0x2F8), "a" (entry.buf[i]));
+        __asm__ __volatile__("outb %%al, %%dx" :: "Nd" (0x2F8), "a" (entry.buf[i]));
     }
 
-    asm volatile("popf" ::: "memory");
+    __asm__ __volatile__("popf" ::: "memory");
 }
 
 /**
