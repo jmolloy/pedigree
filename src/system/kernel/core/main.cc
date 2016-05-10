@@ -439,11 +439,30 @@ void system_reset() NORETURN;
 void system_reset()
 {
     NOTICE("Resetting...");
+
+#ifdef MULTIPROCESSOR
+  Machine::instance().stopAllOtherProcessors();
+#endif
+
+    // No need for user input anymore.
+    InputManager::instance().shutdown();
+
+    // Clean up all loaded modules (unmounts filesystems and the like).
     KernelElf::instance().unloadModules();
+
     NOTICE("All modules unloaded. Running destructors and terminating...");
     runKernelDestructors();
+
+    // Clean up the kernel's ELF references (e.g. symbol table).
     KernelElf::instance().~KernelElf();
+
+    // Bring down the machine abstraction.
+    Machine::instance().deinitialise();
+
+    // Shut down the various pieces created by Processor
     Processor::deinitialise();
+
+    // Reset.
     Processor::reset();
     while(1);
 }
