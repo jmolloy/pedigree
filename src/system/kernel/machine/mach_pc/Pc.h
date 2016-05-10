@@ -41,6 +41,7 @@ class Pc : public Machine
     inline static Pc &instance(){return m_Instance;}
 
     virtual void initialise() INITIALISATION_ONLY;
+    virtual void deinitialise();
 
     #if defined(MULTIPROCESSOR)
       void initialiseProcessor() INITIALISATION_ONLY;

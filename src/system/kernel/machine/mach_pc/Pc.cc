@@ -133,6 +133,12 @@ void Pc::initialise()
 
   m_bInitialised = true;
 }
+
+void Pc::deinitialise()
+{
+  m_bInitialised = false;
+}
+
 #if defined(MULTIPROCESSOR)
   void Pc::initialiseProcessor()
   {
