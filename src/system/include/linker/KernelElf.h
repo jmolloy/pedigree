@@ -26,6 +26,7 @@
 #include <BootstrapInfo.h>
 #include <utilities/Vector.h>
 #include <utilities/MemoryAllocator.h>
+#include <utilities/SharedPointer.h>
 
 #ifdef THREADS
 #include <process/Semaphore.h>
@@ -61,10 +62,8 @@ class Module
 
 class KernelElf : public Elf
 {
+    friend void system_reset();
     public:
-        /** Destructor does nothing */
-        virtual ~KernelElf();
-
         /** Get the class instance
         *\return reference to the class instance */
         inline static KernelElf &instance()
@@ -120,6 +119,8 @@ class KernelElf : public Elf
         /** Copy-constructor
         *\note NOT implemented (singleton class) */
         KernelElf(const KernelElf &);
+        /** Destructor does nothing */
+        virtual ~KernelElf();
         /** Assignment operator
         *\note NOT implemented (singleton class) */
         KernelElf &operator = (const KernelElf &);
@@ -140,7 +141,7 @@ class KernelElf : public Elf
         /** List of successfully loaded modules. */
         Vector<Module*> m_LoadedModules;
         /** List of unsuccessfully loaded modules. */
-        Vector<String*> m_FailedModules;
+        Vector<SharedPointer<String>> m_FailedModules;
         /** List of pending modules - modules whose dependencies have not yet been
             satisfied. */
         Vector<Module*> m_PendingModules;

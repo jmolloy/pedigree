@@ -283,6 +283,9 @@ KernelElf::KernelElf() :
 
 KernelElf::~KernelElf()
 {
+#ifdef X86_COMMON
+    delete m_AdditionalSectionHeaders;
+#endif
 }
 
 Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
@@ -572,16 +575,15 @@ void KernelElf::unloadModules()
     if (g_BootProgressUpdate)
         g_BootProgressUpdate("unload");
 
-    if (!m_LoadedModules.count())
+    if (m_LoadedModules.count())
     {
-        m_Modules.clear();
-        return;
+        for (Vector<Module*>::Iterator it = m_LoadedModules.end() - 1;
+            it != m_LoadedModules.begin() - 1;
+            --it)
+        {
+            unloadModule(it);
+        }
     }
-
-    for (Vector<Module*>::Iterator it = m_LoadedModules.end() - 1;
-        it != m_LoadedModules.begin() - 1;
-        it--)
-        unloadModule(it);
 
     m_LoadedModules.clear();
     m_FailedModules.clear();
@@ -768,7 +770,7 @@ void KernelElf::updateModuleStatus(Module *module, bool status)
     else
     {
         NOTICE("KERNELELF: Module " << moduleName << " failed, unloading.");
-        m_FailedModules.pushBack(new String(moduleName));
+        m_FailedModules.pushBack(SharedPointer<String>::allocate(moduleName));
         unloadModule(moduleName, true, false);
     }
 
