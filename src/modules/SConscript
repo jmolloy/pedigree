@@ -176,7 +176,8 @@ custom_cflags = {
                '-DSQLITE_TEMP_STORE=3',
                '-DSQLITE_DISABLE_LFS=1',
                '-DSQLITE_OMIT_LOCALTIME=1',
-               '-DSQLITE_OMIT_FLOATING_POINT=1']
+               '-DSQLITE_OMIT_FLOATING_POINT=1',
+               '-w']
 }
 
 # Custom C/C++ flags for specific modules.

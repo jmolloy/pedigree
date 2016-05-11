@@ -146,6 +146,7 @@ opts.AddVariables(
 
     # analyses and clang
     BoolVariable('clang_analyse', 'If using clang, pass --analyze (only for kernel+modules).', 0),
+    BoolVariable('clang_max_pedantry', 'Use -Weverything with clang, with some specific warnings blacklisted (e.g. -Wdocumentation).', 0),
 
     BoolVariable('kernel_on_disk', 'Put the kernel & needed bits onto hard disk images?', 1),
     
@@ -750,7 +751,8 @@ else:
 # Set the flags
 env['PEDIGREE_FLAGS'] = ' '.join(env['CPPDEFINES'])
 
-version_out = ['const char *g_pBuildTime = "$buildtime";',
+version_out = ['#include <Version.h>',
+               'const char *g_pBuildTime = "$buildtime";',
                'const char *g_pBuildRevision = "$rev";',
                'const char *g_pBuildFlags = "$flags";',
                'const char *g_pBuildUser = "$user";',
@@ -788,13 +790,14 @@ def create_version_cc(target, source, env):
         for keyname, value in sub_dict.iteritems():
             s = s.replace(keyname, value)
         return s
-    
+
     version_out = map(replacer, version_out)
-    
+
     f = open(target[0].path, 'w')
     f.write('\n'.join(version_out))
+    f.write('\n')
     f.close()
-    
+
 env.Command(os.path.join(env['PEDIGREE_BUILD_BASE'], 'Version.cc'), None, Action(create_version_cc, None))
 
 # Preserve compilation flags for the target.
@@ -948,6 +951,11 @@ if env['clang_cross'] and not env['hosted']:
     # Generic flags we care about for compilation and linking.
     generic_flags = ['-Qunused-arguments']
     generic_ccflags = ['-Wno-unused-parameter']
+    if env['clang_max_pedantry']:
+        generic_ccflags += ['-Weverything', '-Wno-documentation',
+                            '-Wno-reserved-id-macro', '-Wno-c++98-compat',
+                            '-Wno-c++98-compat-pedantic', '-Wno-packed',
+                            '-Wno-padded']
 
     env['CLANG_BASE_LINKFLAGS'] = triple + cross_gcc + generic_flags
 
