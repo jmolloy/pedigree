@@ -676,9 +676,14 @@ if env['ARCH_TARGET'] in ('X86', 'X64'):
 if env['AS'] is None:
     raise SCons.Errors.UserError('No assembler was found - make sure nasm/as are installed.')
 
-# No ISO images for ARM.
+# Adjust build options for ARM, which is not quite there yet in terms of
+# having a fully functional userspace.
 if env['ARCH_TARGET'] == 'ARM':
     env['iso'] = False
+    env['build_images'] = False
+    env['build_lgpl'] = False
+    env['build_libs'] = False
+    env['build_apps'] = False
 
 # Add optional flags.
 warning_flag = ['-Wno-error']
@@ -932,7 +937,12 @@ if env['clang_cross'] and not env['hosted']:
     env['TARGET_LINK'] = 'clang'
 
     # TODO(miselin): correct triple (e.g. ARM)
-    triple = ['-target', 'x86_64-none-elf']
+    triple = ['-target']
+    if env['ARCH_TARGET'] == 'X64':
+        triple.append('x86_64-none-elf')
+    elif env['ARCH_TARGET'] == 'ARM':
+        # Assume armv7
+        triple.append('arm-none-eabi')
     cross_gcc = ['-ccc-gcc-name', orig_link]
 
     # Generic flags we care about for compilation and linking.
@@ -944,7 +954,7 @@ if env['clang_cross'] and not env['hosted']:
     # Punch out some warning flags that clang doesn't know.
     misc.removeFromAllFlags(env, [
         '-Wuseless-cast', '-Wno-packed-bitfield-compat', '-Wlogical-op',
-        '-Wtrampolines', '-Wsuggest-attribute=noreturn'])
+        '-Wtrampolines', '-Wsuggest-attribute=noreturn', '-mapcs-frame'])
 
     # Setting unique=0 appends and does not reorder the given arguments, which
     # is crucial as these are "-arg value" style parameters.
