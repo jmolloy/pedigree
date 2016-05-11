@@ -23,6 +23,9 @@ def buildModule(env, stripped_target, target, sources):
 
     if env['clang_cross']:
         module_env['LINKFLAGS'] = env['CLANG_BASE_LINKFLAGS']
+    else:
+        # Wipe out the kernel's link flags so we can substitute our own.
+        module_env['LINKFLAGS'] = []
 
     for key in ('CC', 'CXX', 'LINK', 'CFLAGS', 'CCFLAGS', 'CXXFLAGS'):
         module_env[key] = module_env['TARGET_%s' % key]
