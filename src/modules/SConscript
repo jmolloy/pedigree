@@ -155,7 +155,7 @@ module_subdirs = [
 if env['hosted'] or env['ARCH_TARGET'] == 'ARM':
     module_subdirs = [x for x in module_subdirs if x not in ['splash']]
 
-if env['clang'] and env['clang_analyse']:
+if env['clang_cross'] and env['clang_analyse']:
     # sqlite is not our code, and it takes a very long time for clang to
     # analyse. So just remove it.
     module_subdirs.remove('config')
