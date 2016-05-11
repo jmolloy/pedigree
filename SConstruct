@@ -137,7 +137,8 @@ opts.AddVariables(
     BoolVariable('arm_bigendian', 'Is this ARM target big-endian?', 0),
 
     BoolVariable('hosted', 'Is this build to run on another host OS?', 0),
-    BoolVariable('clang', 'If hosted, should we use clang if it is present (highly recommended)? If not hosted, should we use clang and cross-compile?', 1),
+    BoolVariable('clang', 'If hosted, should we use clang if it is present (highly recommended)?', 1),
+    BoolVariable('clang_cross', 'If not hosted, should we use clang and cross-compile (kernel and modules only)?', 0),
     BoolVariable('sanitizers', 'If hosted, enable sanitizers (eg AddressSanitizer) (highly recommended)?', 0),
     BoolVariable('valgrind', 'If hosted, build for Valgrind?', 0),
     BoolVariable('clang_profile', 'If hosted, use clang instrumentation to profile.', 0),
@@ -910,7 +911,7 @@ if env['hosted']:
 
     fixDebugFlags(env)
 
-if env['clang'] and not env['hosted']:
+if env['clang_cross'] and not env['hosted']:
     userspace_env = env.Clone()
 
     cross_dir = os.path.dirname(env['CROSS'])

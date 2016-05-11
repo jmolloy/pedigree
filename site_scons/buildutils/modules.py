@@ -21,7 +21,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 def buildModule(env, stripped_target, target, sources):
     module_env = env.Clone()
 
-    if env['clang']:
+    if env['clang_cross']:
         module_env['LINKFLAGS'] = env['CLANG_BASE_LINKFLAGS']
 
     for key in ('CC', 'CXX', 'LINK', 'CFLAGS', 'CCFLAGS', 'CXXFLAGS'):
@@ -36,7 +36,7 @@ def buildModule(env, stripped_target, target, sources):
         'LINKFLAGS': ['-nostdlib', '-Wl,-r', '-Wl,-T,$LSCRIPT'],
     })
 
-    if env['clang'] and env['clang_analyse']:
+    if env['clang_cross'] and env['clang_analyse']:
         return module_env.Program(stripped_target, sources)
 
     intermediate = module_env.Program(target, sources)

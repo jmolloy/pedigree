@@ -171,7 +171,7 @@ objname = '%s.debug' % objname
 if 'LSCRIPT' in env_clone:
     env_clone.Depends(objname, env_clone['LSCRIPT'])
 
-if env['clang'] and env['clang_analyse']:
+if env['clang_cross'] and env['clang_analyse']:
     stripped_objname = objname
     final_output = stripped_objname
 elif env['ARCH_TARGET'] == 'X64':
