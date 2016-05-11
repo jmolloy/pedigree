@@ -60,10 +60,11 @@ env.Alias("subsys", glue_objname)
 env.Alias("pthreads", libpthread_objname)
 env.Alias("pthreads", libpthread_shobjname)
 
-env.Depends(libc_objname, "crt")
-env.Depends(libc_objname, glue_objname)
-env.Depends(libc_objname, libpedigree_c_objname)
-env.Depends(libpedigree_c_shobjname, libc_objname)
+if env['build_libs']:
+    env.Depends(libc_objname, "crt")
+    env.Depends(libc_objname, glue_objname)
+    env.Depends(libc_objname, libpedigree_c_objname)
+    env.Depends(libpedigree_c_shobjname, libc_objname)
 
 # To include new files just add to the list, or Glob("*.cpp")
 posix_files = [
@@ -171,9 +172,11 @@ pic_clone.Program(crti_objname, crti_files, LINKFLAGS='-nostdlib -Wl,-r')
 pic_clone.Program(crtn_objname, crtn_files, LINKFLAGS='-nostdlib -Wl,-r')
 
 # libpthread
-env_clone_pthread = pic_clone.Clone()
-env_clone_pthread.Library(libpthread_objname, pthread_files)
-env_clone_pthread.SharedLibrary(libpthread_shobjname, pthread_files, LINKFLAGS='')
+if env['build_libs']:
+    env_clone_pthread = pic_clone.Clone()
+    env_clone_pthread.Library(libpthread_objname, pthread_files)
+    env_clone_pthread.SharedLibrary(libpthread_shobjname, pthread_files,
+                                    LINKFLAGS='')
 
 # Build libc/libm
 

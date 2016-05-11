@@ -22,5 +22,5 @@ import os
 Import(['env', 'userspace_env'])
 
 SConscript(os.path.join('kernel', 'SConscript'), exports=['env'])
-if 'NATIVE_SUBSYSTEM_USER' in env['EXTRA_CONFIG']:
+if env['build_libs'] and 'NATIVE_SUBSYSTEM_USER' in env['EXTRA_CONFIG']:
     SConscript(os.path.join('user', 'SConscript'), exports=['env', 'userspace_env'])

@@ -37,8 +37,6 @@ libpedigree_c_objname = os.path.join(builddir, 'libpedigree-c.a')
 libpedigree_c_shobjname = os.path.join(builddir, 'libpedigree-c.so')
 
 env.Alias("subsys", pedigree_c_objname)
-env.Alias("subsys", libpedigree_c_objname)
-env.Alias("subsys", libpedigree_c_shobjname)
 
 kernel_module_files = Glob("*.cc")
 
@@ -73,11 +71,15 @@ libs_clone['CFLAGS'] = buildutils.userspace.fixFlags(userspace_env, libs_clone['
 libs_clone['CCFLAGS'] = buildutils.userspace.fixFlags(userspace_env, libs_clone['CCFLAGS'])
 libs_clone['CXXFLAGS'] = buildutils.userspace.fixFlags(userspace_env, libs_clone['CXXFLAGS'])
 
-libs_clone.StaticLibrary(libpedigree_c_objname, libpedigree_c_files)
-libs_clone.SharedLibrary(libpedigree_c_shobjname, libpedigree_c_files, LINKFLAGS='')
+if env['build_libs']:
+    env.Alias("subsys", libpedigree_c_objname)
+    env.Alias("subsys", libpedigree_c_shobjname)
 
-env.Depends(libpedigree_c_objname, "crt")
-env.Depends(libpedigree_c_objname, "headers")
+    libs_clone.StaticLibrary(libpedigree_c_objname, libpedigree_c_files)
+    libs_clone.SharedLibrary(libpedigree_c_shobjname, libpedigree_c_files, LINKFLAGS='')
 
-env.Depends(libpedigree_c_shobjname, "crt")
-env.Depends(libpedigree_c_shobjname, "headers")
+    env.Depends(libpedigree_c_objname, "crt")
+    env.Depends(libpedigree_c_objname, "headers")
+
+    env.Depends(libpedigree_c_shobjname, "crt")
+    env.Depends(libpedigree_c_shobjname, "headers")
