@@ -910,6 +910,8 @@ if env['hosted']:
                         'LINKFLAGS': ['-fprofile-instr-generate']})
 
     fixDebugFlags(env)
+else:
+    env['clang'] = 0
 
 if env['clang_cross'] and not env['hosted']:
     userspace_env = env.Clone()
