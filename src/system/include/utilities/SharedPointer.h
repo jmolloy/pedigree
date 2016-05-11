@@ -249,6 +249,8 @@ void SharedPointer<T>::release()
     {
         /// \todo allow specifying a custom function to handle deletion
         delete m_Control->ptr;
+        m_Control->ptr = 0;
+
         delete m_Control;
     }
 

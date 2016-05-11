@@ -93,7 +93,7 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
         ElfSectionHeader_t *pSh = &m_pSectionHeaders[shndx];
         S = pSh->addr;
     }
-    else if (R_TYPE(rel.info) != R_X86_64_RELATIVE) // Relative doesn't need a symbol!
+    else if (pSymbols && R_TYPE(rel.info) != R_X86_64_RELATIVE) // Relative doesn't need a symbol!
     {
         const char *pStr = pStringTable + pSymbols[R_SYM(rel.info)].name;
 

@@ -145,20 +145,20 @@ class HashTable
         /**
          * Insert the given value with the given key.
          */
-        void insert(K &k, V *v) {
+        bool insert(K &k, V *v) {
             // If this exact key already exists, we have more than
             // just a hash collision, and we must fail.
             if(lookup(k) != 0) {
-                return;
+                return false;
             }
 
             if (!m_MaxBucket) {
-                return;
+                return false;
             }
 
             size_t hash = k.hash();
             if(hash > m_MaxBucket) {
-                return;
+                return false;
             }
 
             // Lazily create buckets if needed.
@@ -199,6 +199,8 @@ class HashTable
                 m_Buckets[hash].value = v;
                 m_Buckets[hash].next = 0;
             }
+
+            return true;
         }
 
         /**

@@ -205,7 +205,11 @@ void X86CommonPhysicalMemoryManager::pin(physical_uintptr_t page) {
     else {
         p = new struct page;
         p->refcount = 1;
-        m_PageMetadata.insert(key, p);
+        if (!m_PageMetadata.insert(key, p))
+        {
+            ERROR("PhysicalMemoryManager couldn't pin page " << page);
+            delete p;
+        }
     }
 }
 bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
@@ -491,7 +495,6 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
     {
         uint64_t addr = Info.getMemoryMapEntryAddress(MemoryMap);
         uint64_t length = Info.getMemoryMapEntryLength(MemoryMap);
-        uint32_t type = Info.getMemoryMapEntryType(MemoryMap);
 
         // Only map if the variable fits into a uintptr_t - no overflow!
         if(addr > ((uintptr_t) -1))

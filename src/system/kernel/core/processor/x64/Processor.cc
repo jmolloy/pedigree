@@ -182,7 +182,6 @@ void Processor::identify(HugeStaticString &str)
 void Processor::setTlsBase(uintptr_t newBase)
 {
     // Set FS.base MSR.
-    uint16_t newseg = newBase ? Processor::information().getTlsSelector() | 3 : 0x23;
     asm volatile("wrmsr" :: "a" (newBase), "d" (newBase >> 32ULL), "c" (0xC0000100));
 }
 

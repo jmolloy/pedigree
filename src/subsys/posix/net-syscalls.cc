@@ -754,7 +754,6 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
                     if(lookup != -1)
                     {
                         bFound = true;
-                        pCard = pTmp;
                         break;
                     }
                 }

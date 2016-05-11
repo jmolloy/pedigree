@@ -68,7 +68,7 @@ Device *checkNode(Device *pDev)
     }
 
     if (!hasPartitions)
-      hasPartitions = probeDevice(static_cast<Disk*> (pDev));
+      probeDevice(static_cast<Disk*> (pDev));
   }
 
   return pDev;

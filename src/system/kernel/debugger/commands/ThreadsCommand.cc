@@ -190,6 +190,12 @@ const char *ThreadsCommand::getLine1(size_t index, DebuggerIO::Colour &colour, D
       break;
   }
 
+  if (!tehProcess)
+  {
+    // No processes, or the index does not match.
+    return Line;
+  }
+
   // If this is just a process line.
   colour = DebuggerIO::Yellow;
   if (index == m_SelectedLine)

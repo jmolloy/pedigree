@@ -811,12 +811,12 @@ void X64VirtualAddressSpace::maybeFreeTables(void *virtualAddress)
     }
   }
 
-  if (bCanFreePageTable)
+  if (bCanFreePageTable && pageDirectoryEntry)
   {
     PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry));
     *pageDirectoryEntry = 0;
   }
-  else
+  else if (!bCanFreePageTable)
     return;
 
   // Now that we've cleaned up the page table, we can scan the parent tables.

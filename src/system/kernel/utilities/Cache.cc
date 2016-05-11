@@ -114,9 +114,9 @@ void CacheManager::timer(uint64_t delta, InterruptState &state)
 
 uint64_t CacheManager::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
                                       uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8) {
-    if(!p1)
-        return 0;
     Cache *pCache = reinterpret_cast<Cache *>(p1);
+    if(!pCache)
+        return 0;
 
     // Valid registered cache?
     bool bCacheFound = false;
@@ -147,7 +147,6 @@ void CacheManager::trimThread()
         // Ask caches to trim if we're heading towards memory usage problems.
         size_t currFree = PhysicalMemoryManager::instance().freePageCount();
         size_t lowMark = MemoryPressureManager::getLowWatermark();
-        size_t highMark = MemoryPressureManager::getHighWatermark();
         if (UNLIKELY(currFree <= lowMark))
         {
           // Start trimming. Trim more the closer to the high watermark we get.

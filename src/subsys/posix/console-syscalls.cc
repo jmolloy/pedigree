@@ -50,7 +50,7 @@ class PosixTerminalEvent : public Event
         virtual ~PosixTerminalEvent()
         {
             // Remove us from the console if needed.
-            if(pConsole->getEvent() == this)
+            if(pConsole && (pConsole->getEvent() == this))
             {
                 pConsole->setEvent(0);
             }

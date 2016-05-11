@@ -164,7 +164,7 @@ void DevicesCommand::DeviceTree::probeDev(Device *pDev)
 
 const char *DevicesCommand::DeviceTree::getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
 {
-  NormalStaticString str;
+  static NormalStaticString str;
 
   // Grab the device to describe.
   Device *pDev = m_LinearTree[index];

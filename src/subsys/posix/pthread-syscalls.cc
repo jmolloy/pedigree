@@ -502,7 +502,12 @@ int posix_pthread_key_create(pthread_key_t *okey, key_destructor destructor)
     PosixSubsystem::PosixThreadKey *data = new PosixSubsystem::PosixThreadKey;
     data->destructor = destructor;
     data->buffer = 0;
-    pThread->addThreadData(key, data);
+    if (!pThread->addThreadData(key, data))
+    {
+        PT_NOTICE("Failed to create new pthread_key");
+        delete data;
+        return -1;
+    }
 
     // Success!
     okey->__internal.key = key;

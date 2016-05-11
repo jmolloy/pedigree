@@ -732,7 +732,7 @@ char* posix_getcwd(char* buf, size_t maxlen)
     size_t maxLength = str.length();
     if(maxLength > maxlen)
         maxLength = maxlen;
-    StringCopyN(buf, static_cast<const char*>(str), maxlen);
+    StringCopyN(buf, static_cast<const char*>(str), maxLength);
 
     F_NOTICE(" -> " << str);
 
@@ -1282,7 +1282,15 @@ int posix_chdir(const char *path)
 
     File *target = 0;
     if (dir->isSymlink())
+    {
         target = traverseSymlink(dir);
+        if (!target)
+        {
+            F_NOTICE("Symlink traverasal failed.");
+            SYSCALL_ERROR(DoesNotExist);
+            return -1;
+        }
+    }
 
     if (dir && (dir->isDirectory() || (dir->isSymlink() && target->isDirectory())))
     {
@@ -1644,7 +1652,6 @@ void *posix_mmap(void *p)
             }
         }
     }
-    addr = reinterpret_cast<void *>(sanityAddress);
 
     // Verify the passed length
     if(!len || (sanityAddress & (pageSz-1)))

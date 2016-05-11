@@ -667,15 +667,15 @@ Thread::StateLevel::StateLevel(const Thread::StateLevel &s) :
     m_pAuxillaryStack(s.m_pAuxillaryStack), m_InhibitMask(),
     m_pBlockingThread(s.m_pBlockingThread)
 {
-    *m_State = *(s.m_State);
-    *m_InhibitMask = *(s.m_InhibitMask);
+    m_State = new SchedulerState(*(s.m_State));
+    m_InhibitMask = new ExtensibleBitmap(*(s.m_InhibitMask));
 }
 
 Thread::StateLevel &Thread::StateLevel::operator = (const Thread::StateLevel &s)
 {
-    *m_State = *(s.m_State);
+    m_State = new SchedulerState(*(s.m_State));
+    m_InhibitMask = new ExtensibleBitmap(*(s.m_InhibitMask));
     m_pKernelStack = s.m_pKernelStack;
-    *m_InhibitMask = *(s.m_InhibitMask);
     return *this;
 }
 
