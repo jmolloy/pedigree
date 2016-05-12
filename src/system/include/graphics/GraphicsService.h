@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -30,8 +29,12 @@
 class GraphicsService : public Service
 {
     public:
-        GraphicsService() : m_Providers(), m_pCurrentProvider(0) {};
-        virtual ~GraphicsService() {};
+        GraphicsService() : m_Providers(), m_pCurrentProvider(0)
+        {
+        }
+        virtual ~GraphicsService()
+        {
+        }
         
         struct GraphicsProvider
         {

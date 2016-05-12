@@ -314,7 +314,6 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
         if (!p)
         {
             panic("checkEventState: Out of memory!");
-            return;
         }
         va.map(p, reinterpret_cast<void*>(addr), VirtualAddressSpace::Write);
     }
@@ -556,7 +555,6 @@ void PerProcessorScheduler::killCurrentThread()
     {
         // Nothing to switch to, we're in a VERY bad situation.
         panic("Attempting to kill only thread on this processor!");
-        return;
     }
     else if (pNextThread == 0)
     {

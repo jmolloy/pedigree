@@ -137,17 +137,13 @@ class PhysicalMemoryManager
     void freeMemoryRegionList(Vector<MemoryRegionInfo*> &MemoryRegions);
 
     /** Specifies the number of pages that remain free on the system. */
-    virtual size_t freePageCount() const
-    {
-        return ~0UL;
-    };
+    virtual size_t freePageCount() const;
 
   protected:
     /** The constructor */
-    inline PhysicalMemoryManager()
-      : m_MemoryRegions(){}
+    PhysicalMemoryManager();
     /** The destructor */
-    inline virtual ~PhysicalMemoryManager(){}
+    virtual ~PhysicalMemoryManager();
 
     /** List of memory-regions */
     Vector<MemoryRegion*> m_MemoryRegions;

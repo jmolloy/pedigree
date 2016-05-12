@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -20,7 +19,7 @@
 
 #include <network/IpAddress.h>
 
-bool IpAddress::isLinkLocal()
+bool IpAddress::isLinkLocal() const
 {
     if(m_Type == IPv4)
         return (m_Ipv4 & 0xFFFF) == 0xA9FE; // 169.254/16
@@ -28,7 +27,7 @@ bool IpAddress::isLinkLocal()
         return (m_Ipv6[0] == 0xFE) && (m_Ipv6[1] == 0x80);
 }
 
-String IpAddress::prefixString(size_t override)
+String IpAddress::prefixString(size_t override) const
 {
     if(m_Type == IPv4)
     {
@@ -54,7 +53,7 @@ String IpAddress::prefixString(size_t override)
     }
 }
 
-String IpAddress::toString()
+String IpAddress::toString() const
 {
     if(m_Type == IPv4)
     {
@@ -120,10 +119,9 @@ String IpAddress::toString()
 
         return String(static_cast<const char*>(str));
     }
-    return String("");
 }
 
-bool IpAddress::isMulticast()
+bool IpAddress::isMulticast() const
 {
     if(m_Type == IPv4)
     {

@@ -177,10 +177,10 @@ class SlamRecovery : public MemoryPressureHandler
     }
 };
 
+#ifdef MULTIPROCESSOR
 /** Kernel entry point for application processors (after processor/machine has been initialised
     on the particular processor */
-static void apMain() NORETURN;
-static void apMain()
+void apMain()
 {
   NOTICE("Processor #" << Processor::id() << " started.");
 
@@ -199,6 +199,7 @@ static void apMain()
 #endif
   }
 }
+#endif
 
 #ifdef STATIC_DRIVERS
 extern uintptr_t start_modinfo;
@@ -209,7 +210,7 @@ extern uintptr_t end_module_ctors;
 #endif
 
 /** Loads all kernel modules */
-int loadModules(void *inf)
+static int loadModules(void *inf)
 {
 #ifdef STATIC_DRIVERS
     ModuleInfo *tags = reinterpret_cast<ModuleInfo*>(&start_modinfo);

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -24,8 +23,8 @@
 #include "gdt.h"
 #include "SyscallManager.h"
 #include "InterruptManager.h"
-#include "../x86_common/Multiprocessor.h"
-#include "../../../machine/x86_common/Pc.h"
+#include <processor/x86_common/Multiprocessor.h>
+#include <machine/mach_pc/Pc.h>
 
 void Multiprocessor::applicationProcessorStartup()
 {
@@ -57,7 +56,6 @@ void Multiprocessor::applicationProcessorStartup()
   Processor::invalidate(reinterpret_cast<void*>(0x200000));
 
   // Call the per-processor code in main.cc
-  extern void apMain();
   apMain();
 }
 

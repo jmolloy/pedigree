@@ -75,13 +75,6 @@ public:
     }
   }
 
-  /**
-   * Destructor.
-   */
-  inline virtual ~StaticString()
-  {
-  }
-
   operator const char*() const
   {
     return m_pData;

@@ -77,14 +77,14 @@ bool LocksCommand::execute(const HugeStaticString &input, HugeStaticString &outp
         output.append(reinterpret_cast<uintptr_t>(pD->pLock), 16);
         output += ":\n";
 
-        for (size_t i = 0; i < pD->n; i++)
+        for (size_t j = 0; j < pD->n; j++)
         {
             uintptr_t symStart = 0;
-            const char *pSym = KernelElf::instance().globalLookupSymbol(pD->ra[i], &symStart);
+            const char *pSym = KernelElf::instance().globalLookupSymbol(pD->ra[j], &symStart);
             if (pSym == 0)
             {
                 output += " - ";
-                output.append(pD->ra[i], 16);
+                output.append(pD->ra[j], 16);
             }
             else
             {
@@ -125,7 +125,7 @@ void LocksCommand::setReady()
 {
     g_bReady = true;
 }
-bool g_bMallocLockAcquired = false;
+
 void LocksCommand::lockAcquired(Spinlock *pLock)
 {
     if (!g_bReady || m_bAcquiring)

@@ -314,12 +314,12 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
 
         // Scan the found string for a newline. If we don't get a newline, the shebang was over 128 bytes and we error out.
         bool found = false;
-        for (size_t i = 0; i < 128; i++)
+        for (size_t j = 0; j < 128; j++)
         {
-            if (tmpBuff[i] == '\n')
+            if (tmpBuff[j] == '\n')
             {
                 found = true;
-                tmpBuff[i] = '\0';
+                tmpBuff[j] = '\0';
                 break;
             }
         }
@@ -604,9 +604,6 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     pProcess->recordTime(true);
     Processor::jumpUser(0, entryPoint, newStack,
         reinterpret_cast<uintptr_t>(argv), reinterpret_cast<uintptr_t>(env));
-
-    // Never reaches this point.
-    return 0;
 }
 
 /**
@@ -804,8 +801,6 @@ int posix_waitpid(int pid, int *status, int options)
         // Make sure they are scheduled into that state by yielding.
         Scheduler::instance().yield();
     }
-
-    return -1;
 }
 
 int posix_exit(int code)
@@ -914,7 +909,7 @@ int posix_getrusage(int who, struct rusage *r)
     return 0;
 }
 
-char *store_str_to(char *str, char *strend, String s)
+static char *store_str_to(char *str, char *strend, String s)
 {
     int i = 0;
     while (s[i] && str != strend)

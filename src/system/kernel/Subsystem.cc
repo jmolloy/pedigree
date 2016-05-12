@@ -22,17 +22,6 @@
 #include <process/Thread.h>
 #include <processor/Processor.h>
 
-bool Subsystem::kill(KillReason killReason, Thread *pThread)
-{
-    FATAL("Subsystem::kill - not overridden");
-}
-
-void Subsystem::exit(int code)
-{
-    FATAL("Subsystem::exit - not overridden");
-}
-
-
 void Subsystem::threadException(Thread *pThread, ExceptionType eType)
 {
     ERROR("Subsystem::threadException - not overridden");

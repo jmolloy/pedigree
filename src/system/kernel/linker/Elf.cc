@@ -241,6 +241,7 @@ bool Elf::createNeededOnly(uint8_t *pBuffer, size_t length)
                     {
                         case DT_NEEDED:
                             m_NeededLibraries.pushBack(reinterpret_cast<char*> (pDyn->un.ptr));
+                            break;
                         case DT_STRTAB:
                             m_pDynamicStringTable = reinterpret_cast<char*> (pDyn->un.ptr);
                             break;
@@ -377,6 +378,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
                     {
                         case DT_NEEDED:
                             m_NeededLibraries.pushBack(reinterpret_cast<char*> (pDyn->un.ptr));
+                            break;
                         case DT_SYMTAB:
                             m_pDynamicSymbolTable = reinterpret_cast<ElfSymbol_t*> (pDyn->un.ptr);
                             break;
@@ -631,7 +633,7 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
 
     if (m_pSymbolTable && m_pStringTable)
     {
-        ElfSymbol_t *pSymbol = m_pSymbolTable;
+        pSymbol = m_pSymbolTable;
 
         const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable);
 

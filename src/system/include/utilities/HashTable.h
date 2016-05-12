@@ -183,7 +183,6 @@ class HashTable
                 newb->set = true;
                 newb->next = 0;
 
-                bucket *last = &m_Buckets[hash];
                 bucket *bucket = &m_Buckets[hash];
                 while (bucket->next)
                 {

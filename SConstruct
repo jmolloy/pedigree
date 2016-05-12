@@ -114,10 +114,10 @@ opts.AddVariables(
     BoolVariable('memory_log_inline', 'If 1, memory logging will be output alongside conventional serial output.', 0),
     BoolVariable('memory_tracing', 'If 1, trace memory allocations and frees (for statistics and for leak detection) on the second serial line. EXCEPTIONALLY SLOW.', 0),
     
-    BoolVariable('multiprocessor', 'If 1, multiprocessor support is compiled in to the kernel.', 0),
+    BoolVariable('multiprocessor', 'If 1, multiprocessor support is compiled in to the kernel.', 1),
     BoolVariable('apic', 'If 1, APIC support will be built in (not to be confused with ACPI).', 0),
     BoolVariable('acpi', 'If 1, ACPI support will be built in (not to be confused with APIC).', 0),
-    BoolVariable('smp', 'If 1, SMP support will be built in.', 0),
+    BoolVariable('smp', 'If 1, SMP support will be built in.', 1),
     
     BoolVariable('nogfx', 'If 1, the standard 80x25 text mode will be used. Will not load userspace if set to 1.', 0),
 
@@ -726,11 +726,7 @@ for i in additionalDefines:
 
 # TODO(miselin): figure out how to do dependent flags
 if(env['multiprocessor'] or env['smp']):
-    pass
-    # defines = misc.safeAppend(defines, ['MULTIPROCESSOR'])
-    # defines = misc.safeAppend(defines, ['APIC'])
-    # defines = misc.safeAppend(defines, ['ACPI'])
-    # defines = misc.safeAppend(defines, ['SMP'])
+    defines += ['MULTIPROCESSOR', 'APIC', 'ACPI', 'SMP']
 
 # Set the environment flags
 env['CPPDEFINES'] = list(set(defines))
@@ -953,9 +949,14 @@ if env['clang_cross'] and not env['hosted']:
     generic_ccflags = ['-Wno-unused-parameter']
     if env['clang_max_pedantry']:
         generic_ccflags += ['-Weverything', '-Wno-documentation',
+                            '-Wno-documentation-unknown-command',
                             '-Wno-reserved-id-macro', '-Wno-c++98-compat',
                             '-Wno-c++98-compat-pedantic', '-Wno-packed',
-                            '-Wno-padded']
+                            '-Wno-padded', '-Wno-error=newline-eof',
+                            '-Wno-weak-vtables', '-Wno-exit-time-destructors',
+                            '-Wno-global-constructors', '-Wno-unused-macros',
+                            # '-Wno-variadic-macros',
+                            ]
 
     env['CLANG_BASE_LINKFLAGS'] = triple + cross_gcc + generic_flags
 

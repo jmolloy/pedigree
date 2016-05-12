@@ -138,6 +138,12 @@ struct ModuleInfo
                                             MODULE_EXIT(exit); \
                                             MODULE_DEPENDS2(__VA_ARGS__);
 
+extern const char *g_pModuleName;
+extern ModuleEntry g_pModuleEntry;
+extern ModuleExit g_pModuleExit;
+extern const char *g_pDepends[];
+extern const char *g_pOptionalDepends[];
+
 #endif
 
 #define MODULE_INFO(...) MODULE_INFO2(__VA_ARGS__, 0)

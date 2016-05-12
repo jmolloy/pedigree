@@ -65,8 +65,6 @@ private:
     bool m_bInitialised;
 
     struct InfoBlock *m_pInfoBlock;
-
-    uint64_t m_Ticks;
 };
 
 

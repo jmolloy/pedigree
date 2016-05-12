@@ -146,6 +146,8 @@ extern size_t g_BootProgressCurrent;
 extern size_t g_BootProgressTotal;
 extern BootProgressUpdateFn g_BootProgressUpdate;
 
+extern void installSerialLogger();
+
 /** Implements a kernel log that can be used to debug problems.
  *\brief the kernel's log
  *\note You should use the NOTICE, WARNING, ERROR and FATAL macros to write something
@@ -160,10 +162,7 @@ public:
   {
     public:
       virtual void callback(const char *) = 0;
-
-      virtual ~LogCallback() // Virtual destructor for inheritance
-      {
-      }
+      virtual ~LogCallback();
   };
 
   /** Severity level of the log entry */

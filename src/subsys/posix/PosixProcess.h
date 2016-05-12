@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -92,7 +91,7 @@ class PosixProcess : public Process
 
         PosixProcess() :
             Process(), m_pSession(0), m_pProcessGroup(0), m_GroupMembership(NoGroup)
-        {};
+        {}
 
         /** Copy constructor. */
         PosixProcess(Process *pParent) :
@@ -108,10 +107,11 @@ class PosixProcess : public Process
                     setGroupMembership(Member);
                 }
             }
-        };
+        }
 
         virtual ~PosixProcess()
-        {};
+        {
+        }
 
         void setProcessGroup(ProcessGroup *newGroup, bool bRemoveFromGroup = true)
         {

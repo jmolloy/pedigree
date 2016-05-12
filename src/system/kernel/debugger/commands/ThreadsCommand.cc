@@ -260,7 +260,6 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
       case Thread::Zombie:  Line += "Z"; break;
       case Thread::AwaitingJoin:Line += "J"; break;
       case Thread::Suspended:Line += "s"; break;
-      default: Line += "?"; break;
     }
 
     Line += "[";
@@ -305,7 +304,6 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
       case Thread::Zombie:  Line += "Z"; break;
       case Thread::AwaitingJoin:Line += "J"; break;
       case Thread::Suspended:Line += "s"; break;
-      default: Line += "?"; break;
     }
     Line += "[";
     Line += tehThread->getId();

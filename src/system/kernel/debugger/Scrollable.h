@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -32,7 +31,7 @@ class Scrollable
   public:
     inline Scrollable()
       : m_x(0), m_y(0), m_width(0), m_height(0), m_line(0),
-        m_ScrollUp('j'), m_ScrollDown('k') {};
+        m_ScrollUp('j'), m_ScrollDown('k') {}
 
     void move(size_t x, size_t y);
     void resize(size_t width, size_t height);

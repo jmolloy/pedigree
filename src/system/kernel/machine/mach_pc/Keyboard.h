@@ -66,13 +66,6 @@ class X86Keyboard : public Keyboard, private IrqHandler
         /// The IO port through which to access the keyboard
         IoBase *m_pBase;
 
-        /// Circular input buffer
-        uint64_t m_Buffer[BUFLEN];
-        int m_BufStart, m_BufEnd;
-
-        /// Semaphore for how many items are in the buffer
-        Semaphore m_BufLength;
-
         /// IRQ id
         irq_id_t m_IrqId;
     

@@ -47,8 +47,7 @@ public:
         \note As can be surmised, handlerAddress is NOT reentrant. If you use this Event in multiple
               threads concurrently, you CANNOT change the handler address. */
     Event(uintptr_t handlerAddress, bool isDeletable, size_t specificNestingLevel=~0UL);
-
-    virtual ~Event();
+    virtual ~Event() = default;
 
     /** Retrieves the main trampoline memory address. */
     static uintptr_t getTrampoline();

@@ -28,10 +28,7 @@
 #include <machine/Machine.h>
 #include <Log.h>
 
-#include <utilities/Tree.h>
 #include <utilities/MemoryTracing.h>
-
-Tree<void*, void*> g_FreedPointers;
 
 #include "SlamAllocator.h"
 
@@ -284,42 +281,42 @@ extern "C" void *realloc(void *p, size_t sz)
     return tmp;
 }
 
-void *operator new (size_t size) throw()
+void *operator new (size_t size) noexcept
 {
     void *ret = reinterpret_cast<void *>(SlamAllocator::instance().allocate(size));
     return ret;
 }
-void *operator new[] (size_t size) throw()
+void *operator new[] (size_t size) noexcept
 {
     void *ret = reinterpret_cast<void *>(SlamAllocator::instance().allocate(size));
     return ret;
 }
-void *operator new (size_t size, void* memory) throw()
+void *operator new (size_t size, void* memory) noexcept
 {
   return memory;
 }
-void *operator new[] (size_t size, void* memory) throw()
+void *operator new[] (size_t size, void* memory) noexcept
 {
   return memory;
 }
-void operator delete (void * p) throw()
+void operator delete (void * p) noexcept
 {
     if (p == 0) return;
     if(SlamAllocator::instance().isPointerValid(reinterpret_cast<uintptr_t>(p)))
         SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
 }
-void operator delete[] (void * p) throw()
+void operator delete[] (void * p) noexcept
 {
     if (p == 0) return;
     if(SlamAllocator::instance().isPointerValid(reinterpret_cast<uintptr_t>(p)))
         SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
 }
-void operator delete (void *p, void *q) throw()
+void operator delete (void *p, void *q) noexcept
 {
   // TODO
   panic("Operator delete (placement) -implement");
 }
-void operator delete[] (void *p, void *q) throw()
+void operator delete[] (void *p, void *q) noexcept
 {
   // TODO
   panic("Operator delete[] (placement) -implement");

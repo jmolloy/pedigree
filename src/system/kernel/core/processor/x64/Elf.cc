@@ -90,8 +90,8 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
     {
         // Section type - the name will be the name of the section header it refers to.
         int shndx = pSymbols[R_SYM(rel.info)].shndx;
-        ElfSectionHeader_t *pSh = &m_pSectionHeaders[shndx];
-        S = pSh->addr;
+        ElfSectionHeader_t *pReferencedSh = &m_pSectionHeaders[shndx];
+        S = pReferencedSh->addr;
     }
     else if (pSymbols && R_TYPE(rel.info) != R_X86_64_RELATIVE) // Relative doesn't need a symbol!
     {

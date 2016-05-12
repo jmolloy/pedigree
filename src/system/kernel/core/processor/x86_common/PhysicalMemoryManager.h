@@ -30,6 +30,9 @@
 /** @addtogroup kernelprocessorx86common
  * @{ */
 
+extern size_t g_AllocedPages;
+extern size_t g_FreePages;
+
 /** The common x86 implementation of the PhysicalMemoryManager
  *\brief Implementation of the PhysicalMemoryManager for common x86 */
 class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager

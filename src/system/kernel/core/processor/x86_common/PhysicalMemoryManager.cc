@@ -320,7 +320,7 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
             return false;
         }
 
-        uint32_t start = 0;
+        uint32_t allocatedStart = 0;
         if (!(pageConstraints & virtualOnly))
         {
             VirtualAddressSpace &virtualAddressSpace = Processor::information().getVirtualAddressSpace();
@@ -331,18 +331,18 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
                 // Allocate a range
                 if ((pageConstraints & addressConstraints) == below1MB)
                 {
-                    if (m_RangeBelow1MB.allocate(cPages * getPageSize(), start) == false)
+                    if (m_RangeBelow1MB.allocate(cPages * getPageSize(), allocatedStart) == false)
                         return false;
                 }
                 else if ((pageConstraints & addressConstraints) == below16MB)
                 {
-                    if (m_RangeBelow16MB.allocate(cPages * getPageSize(), start) == false)
+                    if (m_RangeBelow16MB.allocate(cPages * getPageSize(), allocatedStart) == false)
                         return false;
                 }
 
                 // Map the physical memory into the allocated space
                 for (size_t i = 0;i < cPages;i++)
-                    if (virtualAddressSpace.map(start + i * PhysicalMemoryManager::getPageSize(),
+                    if (virtualAddressSpace.map(allocatedStart + i * PhysicalMemoryManager::getPageSize(),
                                                 reinterpret_cast<void*>(vAddress + i * PhysicalMemoryManager::getPageSize()),
                                                 Flags)
                         == false)
@@ -371,14 +371,13 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
 
         // Set the memory-region's members
         Region.m_VirtualAddress = reinterpret_cast<void*>(vAddress);
-        Region.m_PhysicalAddress = start;
+        Region.m_PhysicalAddress = allocatedStart;
         Region.m_Size = cPages * PhysicalMemoryManager::getPageSize();
 
         // Add to the list of memory-regions
         PhysicalMemoryManager::m_MemoryRegions.pushBack(&Region);
         return true;
     }
-    return false;
 }
 
 void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
@@ -497,7 +496,7 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
         uint64_t length = Info.getMemoryMapEntryLength(MemoryMap);
 
         // Only map if the variable fits into a uintptr_t - no overflow!
-        if(addr > ((uintptr_t) -1))
+        if(addr > ~0ULL)
         {
             WARNING("Memory region " << addr << " not used.");
         }
@@ -582,7 +581,7 @@ void X86CommonPhysicalMemoryManager::initialise64(const BootstrapStruct_t &Info)
     while (MemoryMap)
     {
         // Only map if the variable fits into a uintptr_t - no overflow!
-        if((Info.getMemoryMapEntryAddress(MemoryMap)) > ((uintptr_t) -1))
+        if((Info.getMemoryMapEntryAddress(MemoryMap)) > ~0ULL)
         {
             WARNING("Memory region " << Info.getMemoryMapEntryAddress(MemoryMap) << " not used.");
         }

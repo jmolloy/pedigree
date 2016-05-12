@@ -22,19 +22,19 @@
 #include <Log.h>
 #include <utilities/Vector.h>
 #include "Multiprocessor.h"
-#include "../../../machine/x86_common/Pc.h"
+#include <machine/mach_pc/Pc.h>
 
 #if defined(X86)
-  #include "../x86/VirtualAddressSpace.h"
+  #include <processsor/x86/VirtualAddressSpace.h>
 #elif defined(X64)
-  #include "../x64/VirtualAddressSpace.h"
+  #include <processor/x64/VirtualAddressSpace.h>
 #endif
 
 #if defined(ACPI)
-  #include "../../../machine/x86_common/Acpi.h"
+  #include <machine/mach_pc/Acpi.h>
 #endif
 #if defined(SMP)
-  #include "../../../machine/x86_common/Smp.h"
+  #include <machine/mach_pc/Smp.h>
 #endif
 
 #if !defined(APIC)
@@ -52,7 +52,7 @@ size_t Multiprocessor::initialise1()
   // Did we find a processor list?
   bool bMPInfoFound = false;
   // List of information about each usable processor
-  const Vector<ProcessorInformation*> *Processors;
+  const Vector<ProcessorInformation*> *Processors = 0;
 
   #if defined(ACPI)
     // Search through the ACPI tables
@@ -70,7 +70,7 @@ size_t Multiprocessor::initialise1()
   #endif
 
   // No processor list found
-  if (bMPInfoFound == false)
+  if (bMPInfoFound == false || !Processors)
   {
     NOTICE("Multiprocessor: couldn't find any information about multiple processors");
     return 1;

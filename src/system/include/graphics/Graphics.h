@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -70,8 +69,6 @@ namespace Graphics
             case Bits8_Idx:
             case Bits8_Rgb332:
                 return 8;
-            default:
-                return 4;
         }
     }
     
@@ -180,6 +177,9 @@ namespace Graphics
             case Bits32_Rgb:
                 dest = (amtRed << 16) | (amtGreen << 8) | amtBlue;
                 return true;
+            case Bits32_Bgr:
+                dest = (amtRed << 8) | (amtGreen << 16) | amtBlue;
+                return true;
             case Bits24_Rgb:
                 dest = (amtRed << 16) | (amtGreen << 8) | amtBlue;
                 return true;
@@ -221,8 +221,6 @@ namespace Graphics
                 
                 dest = (amtRed << 5) | (amtGreen << 2) | amtBlue;
                 return true;
-            default:
-                break;
         }
         
         return false;

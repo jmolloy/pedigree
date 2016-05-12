@@ -41,6 +41,8 @@
 #define MULTIBOOT_FLAG_VBE     0x400
 #endif
 
+extern class BootstrapStruct_t *g_pBootstrapInfo;
+
 #ifdef MULTIBOOT
 
 // Required to specify linkage of the 'main' symbol for the friend declaration.
@@ -53,7 +55,6 @@ class BootstrapStruct_t
 #endif
 public:
     BootstrapStruct_t();
-    ~BootstrapStruct_t() {};
 
     bool isInitrdLoaded() const;
     uint8_t *getInitrdAddress() const;

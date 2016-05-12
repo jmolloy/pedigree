@@ -31,7 +31,6 @@ class MacAddress
 {
   public:
     MacAddress();
-    virtual ~MacAddress() {};
 
     bool valid() const
     {
@@ -63,7 +62,6 @@ class MacAddress
     String toString();
 
   private:
-
     uint16_t  m_Mac[3];
     bool      m_Valid;
 };

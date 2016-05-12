@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,6 +22,8 @@
 
 #include <utilities/StaticString.h>
 #include <machine/Serial.h>
+
+extern class BootIO bootIO;
 
 /**
  * A class which provides *extremely* simple output to both the Vga class and Serial classes,

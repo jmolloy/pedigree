@@ -29,6 +29,8 @@
 #include <LockGuard.h>
 #include <Log.h>
 
+static void guardEventFired(uint8_t *pBuffer) NORETURN;
+
 TimeoutGuard::TimeoutGuard(size_t timeoutSecs) :
     m_pEvent(0), m_bTimedOut(false),
 #ifdef THREADS
@@ -93,7 +95,6 @@ static void guardEventFired(uint8_t *pBuffer)
     if (!TimeoutGuard::TimeoutGuardEvent::unserialize(pBuffer, e))
     {
         FATAL("guardEventFired: Event is not a TimeoutGuardEvent!");
-        return;
     }
     e.m_pTarget->cancel();
     NOTICE("Cancel finished");

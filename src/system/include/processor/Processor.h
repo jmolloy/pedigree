@@ -52,6 +52,15 @@ namespace DebugFlags
 #define DEBUG_SINGLE_STEP  0x4000 /// The exception was caused by single-step execution mode (TF enabled in EFLAGS).
 #define DEBUG_TASK_SWITCH  0x8000 /// The exception was caused by a hardware task switch.
 
+#ifdef MULTIPROCESSOR
+/**
+ * apMain is to be called as the main kernel entry point for a newly-started
+ * processor (once it has entered long mode and been initialised properly), and
+ * becomes the idle thread's code for the processor.
+ */
+extern void apMain() NORETURN;
+#endif
+
 /** Interface to the processor's capabilities
  *\note static in member function declarations denotes that these functions return/process
  *      data on the processor that is executing this code. */
@@ -59,6 +68,7 @@ class Processor
 {
   friend class Multiprocessor;
   friend class X86GdtManager;
+  friend class X64GdtManager;
 #ifdef THREADS
   friend class Scheduler;
 #endif

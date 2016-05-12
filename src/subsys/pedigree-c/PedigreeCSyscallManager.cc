@@ -166,7 +166,6 @@ uintptr_t PedigreeCSyscallManager::syscall(SyscallState &state)
             return 0;
         case PEDIGREE_EVENT_RETURN:
             pedigree_event_return();
-            return 0;
         case PEDIGREE_SYS_REQUEST_MEM:
             return reinterpret_cast<uintptr_t>(pedigree_sys_request_mem(p1));
         case PEDIGREE_HALTFS:

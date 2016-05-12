@@ -308,6 +308,11 @@ env_clone['CPPPATH'] += ['#/src/modules/drivers/common/cdi/include',
 for cdi_driver in cdi_drivers:
     cdi_env = env_clone.Clone()
 
+    # Hide warnings for CDI drivers, as it's not our code.
+    ccflags = custom_ccflags.get(cdi_driver, [])
+    ccflags.append('-w')
+    custom_ccflags[cdi_driver] = ccflags
+
     # Patch up the path and add any include directory to the path
     cdi_driver = os.path.join('drivers', 'cdi', cdi_driver)
     incdir = env.Dir(os.path.join('#src', 'modules', cdi_driver, 'include'))

@@ -53,7 +53,6 @@
 
 Debugger Debugger::m_Instance;
 
-TraceCommand g_Trace;
 /// Helper function. Returns the index of a command in pCommands that matches prefix. Starts searching
 /// through pCommands at index start. Returns -1 if none found.
 static int getCommandMatchingPrefix(char *prefix, DebuggerCommand **pCommands, size_t nCmds, size_t start)
@@ -196,6 +195,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   static LookupCommand lookup;
   static HelpCommand help;
   static MappingCommand mapping;
+  static TraceCommand trace;
 
 #if defined(THREADS)
   static ThreadsCommand threads;
@@ -217,7 +217,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
                                   &dump,
                                   &step,
                                   &memory,
-                                  &g_Trace,
+                                  &trace,
                                   &panic,
                                   &cpuInfo,
                                   &devices,
@@ -233,7 +233,7 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
                                   &mapping};
 
   // Are we going to jump directly into the tracer? In which case bypass device detection.
-  int n = g_Trace.execTrace();
+  int n = trace.execTrace();
   if (n == -1)
   {
     // Write a "Press any key..." message to each device, then poll each device.
@@ -292,13 +292,13 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
     HugeStaticString command;
     HugeStaticString output;
     // Should we jump directly in to the tracer?
-    if (g_Trace.execTrace() != -1)
+    if (trace.execTrace() != -1)
     {
-      bKeepGoing = g_Trace.execute(command, output, state, pIo);
+      bKeepGoing = trace.execute(command, output, state, pIo);
       continue;
     }
     else
-      g_Trace.setInterface(nChosenInterface);
+      trace.setInterface(nChosenInterface);
     // Clear the top and bottom status lines.
     pIo->drawHorizontalLine(' ', 0, 0, pIo->getWidth()-1, DebuggerIO::White, DebuggerIO::Green);
     pIo->drawHorizontalLine(' ', pIo->getHeight()-1, 0, pIo->getWidth()-1, DebuggerIO::White, DebuggerIO::Green);

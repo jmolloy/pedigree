@@ -67,8 +67,6 @@ X64VirtualAddressSpace X64VirtualAddressSpace::m_KernelSpace(KERNEL_VIRTUAL_HEAP
                                                              reinterpret_cast<uintptr_t>(&pml4) - reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_ADDRESS),
                                                              KERNEL_VIRTUAL_STACK);
 
-VirtualAddressSpace *g_pCurrentlyCloning = 0;
-
 static void trackPages(ssize_t v, ssize_t p, ssize_t s)
 {
   // Track, if we can.
@@ -183,8 +181,8 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
           Process *p = Scheduler::instance().getProcess(i);
 
           X64VirtualAddressSpace *x64VAS = reinterpret_cast<X64VirtualAddressSpace*> (p->getAddressSpace());
-          uint64_t *pml4Entry = TABLE_ENTRY(x64VAS->m_PhysicalPML4, pml4Index);
-          *pml4Entry = thisPml4Entry;
+          uint64_t *otherPml4Entry = TABLE_ENTRY(x64VAS->m_PhysicalPML4, pml4Index);
+          *otherPml4Entry = thisPml4Entry;
       }
   }
 
@@ -236,7 +234,6 @@ void X64VirtualAddressSpace::getMapping(void *virtualAddress,
   if (getPageTableEntry(virtualAddress, pageTableEntry) == false)
   {
     panic("VirtualAddressSpace::getMapping(): function misused");
-    return;
   }
 
   // Extract the physical address and the flags
@@ -253,7 +250,6 @@ void X64VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
   if (getPageTableEntry(virtualAddress, pageTableEntry) == false)
   {
     panic("VirtualAddressSpace::setFlags(): function misused");
-    return;
   }
 
   // Set the flags
@@ -272,7 +268,6 @@ void X64VirtualAddressSpace::unmap(void *virtualAddress)
   if (getPageTableEntry(virtualAddress, pageTableEntry) == false)
   {
     panic("VirtualAddressSpace::unmap(): function misused");
-    return;
   }
 
   // Unmap the page
@@ -294,8 +289,6 @@ VirtualAddressSpace *X64VirtualAddressSpace::clone()
     LockGuard<Spinlock> guard(m_Lock);
 
     /// \todo figure out how to handle page tracking here
-
-    VirtualAddressSpace &thisAddressSpace = Processor::information().getVirtualAddressSpace();
 
     // Create a new virtual address space
     VirtualAddressSpace *pClone = VirtualAddressSpace::create();

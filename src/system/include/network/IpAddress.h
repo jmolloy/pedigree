@@ -41,18 +41,33 @@ class IpAddress
     /** Constructors */
     IpAddress() :
         m_Type(IPv4), m_Ipv4(0), m_Ipv6(), m_bSet(false), m_Ipv6Prefix(128)
-    {};
+    {}
     IpAddress(IpType type) :
         m_Type(type), m_Ipv4(0), m_Ipv6(), m_bSet(false), m_Ipv6Prefix(128)
-    {};
+    {}
     IpAddress(uint32_t ipv4) :
         m_Type(IPv4), m_Ipv4(ipv4), m_Ipv6(), m_bSet(true), m_Ipv6Prefix(128)
-    {};
+    {}
     IpAddress(uint8_t *ipv6) :
         m_Type(IPv6), m_Ipv4(0), m_Ipv6(), m_bSet(true), m_Ipv6Prefix(128)
     {
         MemoryCopy(m_Ipv6, ipv6, 16);
-    };
+    }
+    IpAddress(const IpAddress &other) : IpAddress()
+    {
+        if(other.getType() == IPv6)
+        {
+            other.getIp(m_Ipv6);
+            m_Ipv4 = 0;
+            m_Type = IPv6;
+            m_Ipv6Prefix = other.getIpv6Prefix();
+            m_bSet = true;
+        }
+        else
+        {
+            setIp(other.getIp());
+        }
+    }
 
     /** IP setters - only one type is valid at any one point in time */
 
@@ -74,12 +89,12 @@ class IpAddress
 
     /** IP getters */
 
-    inline uint32_t getIp()
+    inline uint32_t getIp() const
     {
         return m_Ipv4;
     }
 
-    inline void getIp(uint8_t *ipv6)
+    inline void getIp(uint8_t *ipv6) const
     {
         if(ipv6)
             MemoryCopy(ipv6, m_Ipv6, 16);
@@ -87,14 +102,14 @@ class IpAddress
 
     /** Type getter */
 
-    IpType getType()
+    IpType getType() const
     {
         return m_Type;
     }
 
     /** Operators */
 
-    IpAddress operator + (IpAddress a)
+    IpAddress operator + (const IpAddress &a) const
     {
         if(a.getType() != m_Type || m_Type == IPv6 || a.getType() == IPv6)
             return IpAddress();
@@ -105,7 +120,7 @@ class IpAddress
         }
     }
 
-    IpAddress operator & (IpAddress a)
+    IpAddress operator & (const IpAddress &a) const
     {
         if(a.getType() != m_Type || m_Type == IPv6 || a.getType() == IPv6)
             return IpAddress();
@@ -116,7 +131,7 @@ class IpAddress
         }
     }
 
-    IpAddress& operator = (IpAddress a)
+    IpAddress& operator = (const IpAddress &a)
     {
         if(a.getType() == IPv6)
         {
@@ -131,7 +146,7 @@ class IpAddress
         return *this;
     }
 
-    bool operator == (IpAddress a)
+    bool operator == (const IpAddress &a) const
     {
         if(a.getType() == IPv4)
             return (a.getIp() == getIp());
@@ -141,7 +156,7 @@ class IpAddress
         }
     }
 
-    bool operator != (IpAddress a)
+    bool operator != (const IpAddress &a) const
     {
         if(a.getType() == IPv4)
             return (a.getIp() != getIp());
@@ -151,7 +166,7 @@ class IpAddress
         }
     }
 
-    bool operator == (uint32_t a)
+    bool operator == (uint32_t a) const
     {
         if(getType() == IPv4)
             return (a == getIp());
@@ -159,7 +174,7 @@ class IpAddress
             return false;
     }
 
-    bool operator != (uint32_t a)
+    bool operator != (uint32_t a) const
     {
         if(getType() != IPv4)
             return (a != getIp());
@@ -167,22 +182,22 @@ class IpAddress
             return false;
     }
 
-    String toString();
+    String toString() const;
 
     /// Prefix string. Not zero-compressed. For routing.
-    String prefixString(size_t override = 256);
+    String prefixString(size_t override = 256) const;
 
     /// Whether the IP address is considered "link-local" or not.
-    bool isLinkLocal();
+    bool isLinkLocal() const;
 
     /// Whether the IP address is a valid multicast address.
-    bool isMulticast();
+    bool isMulticast() const;
 
     /// Whether the IP address is a valid unicast address.
-    inline bool isUnicast() { return !isMulticast(); }
+    inline bool isUnicast() const { return !isMulticast(); }
 
     /// Obtains the IPv6 prefix for this address.
-    inline size_t getIpv6Prefix()
+    inline size_t getIpv6Prefix() const
     {
         return m_Ipv6Prefix;
     }

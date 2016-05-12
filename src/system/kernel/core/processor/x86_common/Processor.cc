@@ -25,6 +25,10 @@
   #include "../../core/processor/x64/VirtualAddressSpace.h"
 #endif
 
+#ifdef MULTIPROCESSOR
+#include <machine/mach_pc/Pc.h>
+#endif
+
 void Processor::initialisationDone()
 {
   /// \todo there HAS to be a better way than this
@@ -209,8 +213,6 @@ void Processor::cpuid(uint32_t inEax,
 }
 
 #if defined(MULTIPROCESSOR)
-
-  #include "../../../machine/x86_common/Pc.h"
   ProcessorId Processor::id()
   {
     if(m_Initialised < 2)
@@ -239,5 +241,4 @@ void Processor::cpuid(uint32_t inEax,
 
     return m_SafeBspProcessorInformation;
   }
-
 #endif

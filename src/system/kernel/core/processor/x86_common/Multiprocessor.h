@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -64,7 +63,7 @@ class Multiprocessor
     static void initialise2() INITIALISATION_ONLY;
 
   private:
-    static void applicationProcessorStartup();
+    static void applicationProcessorStartup() NORETURN;
 
     static Spinlock m_ProcessorLock1 INITIALISATION_ONLY_DATA;
     static Spinlock m_ProcessorLock2 INITIALISATION_ONLY_DATA;

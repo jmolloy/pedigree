@@ -27,7 +27,7 @@
 InfoBlockManager InfoBlockManager::m_Instance;
 
 InfoBlockManager::InfoBlockManager() :
-    TimerHandler(), m_bInitialised(false), m_pInfoBlock(0), m_Ticks(0)
+    TimerHandler(), m_bInitialised(false), m_pInfoBlock(0)
 {
 }
 

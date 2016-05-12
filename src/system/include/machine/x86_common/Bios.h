@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -33,7 +32,7 @@ public:
 
   /** Executes a BIOS interrupt.
       \param i The interrupt number to execute. */
-  void executeInterrupt (int i);
+  void executeInterrupt (int interrupt);
 
   /** Returns n bytes of sub-64K space. */
   uintptr_t malloc (int n);

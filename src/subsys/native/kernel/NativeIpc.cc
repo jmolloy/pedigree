@@ -24,13 +24,15 @@
 #include <utilities/Pair.h>
 #include <utilities/String.h>
 
+#include <native-ipc.h>
+
 typedef Pair<uint64_t, PedigreeIpc::IpcMessage *> PerProcessUserPointerPair;
 
 /// Lookup between userspace message pointers and the kernel-side heap pointer
 /// that actually contains the relevant information for IPC.
-Tree<Pair<uint64_t, PedigreeIpc::IpcMessage *>, Ipc::IpcMessage *> __msg_lookup;
+static Tree<Pair<uint64_t, PedigreeIpc::IpcMessage *>, Ipc::IpcMessage *> __msg_lookup;
 
-inline uint64_t getPid()
+static inline uint64_t getPid()
 {
     return Processor::information().getCurrentThread()->getParent()->getId();
 }

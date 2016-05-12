@@ -70,20 +70,20 @@ class Iterator
 
     /** The default constructor constructs an invalid/unusable iterator */
     Iterator()
-      : m_Node(){}
+      : m_Node(), m_Default() {}
     /** The copy-constructor
      *\param[in] Iterator the reference object */
     Iterator(const Iterator &x)
-      : m_Node(x.m_Node){}
+      : m_Node(x.m_Node), m_Default(x.m_Default) {}
     /** The constructor
      *\param[in] Iterator the reference object */
     template<typename T2>
     Iterator(const Iterator<originalT, Struct, FunctionPrev, FunctionNext, T2> &x)
-      : m_Node(x.m_Node){}
+      : m_Node(x.m_Node), m_Default(x.m_Default) {}
     /** Constructor from a pointer to an instance of the data structure
      *\param[in] Node pointer to an instance of the data structure */
     Iterator(Struct *Node)
-      : m_Node(Node){}
+      : m_Node(Node), m_Default() {}
     /** The destructor does nothing */
     ~Iterator(){}
 
@@ -92,6 +92,7 @@ class Iterator
     Iterator &operator = (const Iterator &x)
     {
       m_Node = x.m_Node;
+      m_Default = x.m_Default;
       return *this;
     }
     /** Preincrement operator */
@@ -120,8 +121,7 @@ class Iterator
         return m_Node->value;
       else
       {
-        static T ret = T();
-        return ret;
+        return m_Default;
       }
     }
     /** Dereference operator yields the element value */
@@ -145,6 +145,8 @@ class Iterator
   protected:
     /** Pointer to the instance of the data structure or 0 */
     Struct *m_Node;
+    /** Default value. */
+    T m_Default;
 };
 
 /** General iterator for structures that provide functions for the next and previous structure

@@ -982,8 +982,6 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
     ///       to allocate such large buffers.
     assert(nBytes < (1U << 31));
 
-    size_t orig = nBytes;
-
     // Default to minimum object size if we must.
     size_t lg2 = 0;
     if (UNLIKELY(nBytes < OBJECT_MINIMUM_SIZE))

@@ -44,7 +44,7 @@ static size_t newlineCount(const char *pString)
 }
 
 // TODO: We might want a separate parameter for a stacktrace/register dump
-void _panic( const char* msg, DebuggerIO* pScreen )
+static void _panic( const char* msg, DebuggerIO* pScreen )
 {
   static HugeStaticString panic_output;
   panic_output.clear();

@@ -331,8 +331,9 @@ int RequestQueue::work()
     pReq->bCompleted = true;
     pReq->mutex.release();
   }
-#endif
+#else
   return 0;
+#endif
 }
 
 bool RequestQueue::isRequestValid(const Request *r)

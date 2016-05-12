@@ -55,33 +55,33 @@ void wrl (u32 addr, u32 val)
 }
 
 
-u8 inb (X86EMU_pioAddr addr)
+static u8 inb (X86EMU_pioAddr addr)
 {
   uint8_t ret;
   asm volatile("inb %1, %0" : "=a" (ret) : "dN" (addr));
   return ret;
 }
-u16 inw (X86EMU_pioAddr addr)
+static u16 inw (X86EMU_pioAddr addr)
 {
   uint16_t ret;
   asm volatile("inw %1, %0" : "=a" (ret) : "dN" (addr));
   return ret;
 }
-u32 inl (X86EMU_pioAddr addr)
+static u32 inl (X86EMU_pioAddr addr)
 {
   uint32_t ret;
   asm volatile("inl %1, %0" : "=a" (ret) : "dN" (addr));
   return ret;
 }
-void outb (X86EMU_pioAddr addr, u8 val)
+static void outb (X86EMU_pioAddr addr, u8 val)
 {
   asm volatile ("outb %1, %0" : : "dN" (addr), "a" (val));
 }
-void outw (X86EMU_pioAddr addr, u16 val)
+static void outw (X86EMU_pioAddr addr, u16 val)
 {
   asm volatile ("outw %1, %0" : : "dN" (addr), "a" (val));
 }
-void outl (X86EMU_pioAddr addr, u32 val)
+static void outl (X86EMU_pioAddr addr, u32 val)
 {
   asm volatile ("outl %1, %0" : : "dN" (addr), "a" (val));
 }
@@ -160,7 +160,7 @@ uintptr_t Bios::malloc (int n)
   return loc;
 }
 
-void Bios::executeInterrupt (int i)
+void Bios::executeInterrupt (int interrupt)
 {
     bool bInterrupts = Processor::getInterrupts();
     Processor::setInterrupts(false);
@@ -189,7 +189,7 @@ void Bios::executeInterrupt (int i)
         }
     }
 
-    X86EMU_prepareForInt(i);
+    X86EMU_prepareForInt(interrupt);
     X86EMU_exec();
 
     // Switch back to the old address space.

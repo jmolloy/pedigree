@@ -58,7 +58,7 @@ class Machine
      * Initialises the machine.
      */
     virtual void initialise() =0;
-    virtual void initialise2() {};
+    virtual void initialise2() {}
     inline bool isInitialised(){return m_bInitialised;}
 
     /**
@@ -121,7 +121,7 @@ class Machine
   protected:
     inline Machine()
       : m_bInitialised(false){}
-    inline virtual ~Machine(){}
+    virtual ~Machine();
 
     bool m_bInitialised;
 

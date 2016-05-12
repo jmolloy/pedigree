@@ -40,7 +40,7 @@ Rtc::periodicIrqInfo_t Rtc::periodicIrqInfo[6] =
   {8192, 0x03, { 122070ULL,  122070ULL}},
 };
 
-uint8_t daysPerMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+static uint8_t daysPerMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 Rtc Rtc::m_Instance;
 
@@ -367,37 +367,37 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
 #ifndef MEMORY_TRACING  // Memory tracing uses serial line 1.
 #ifdef MEMORY_LOGGING_ENABLED
     Serial *pSerial = Machine::instance().getSerial(1);
-    NormalStaticString str;
-    str += "Heap: ";
-    str += SlamAllocator::instance().heapPageCount() * 4;
-    str += "K\tPages: ";
-    str += (g_AllocedPages * 4096) / 1024;
-    str += "K\t Free: ";
-    str += (g_FreePages * 4096) / 1024;
-    str += "K\n";
+    NormalStaticString memoryLogStr;
+    memoryLogStr += "Heap: ";
+    memoryLogStr += SlamAllocator::instance().heapPageCount() * 4;
+    memoryLogStr += "K\tPages: ";
+    memoryLogStr += (g_AllocedPages * 4096) / 1024;
+    memoryLogStr += "K\t Free: ";
+    memoryLogStr += (g_FreePages * 4096) / 1024;
+    memoryLogStr += "K\n";
 
-    pSerial->write(str);
+    pSerial->write(memoryLogStr);
 
     // Memory snapshot of current processes.
     for(size_t i = 0; i < Scheduler::instance().getNumProcesses(); ++i)
     {
         Process *pProcess = Scheduler::instance().getProcess(i);
-        LargeStaticString str;
+        LargeStaticString processListStr;
 
         ssize_t virtK = (pProcess->getVirtualPageCount() * 0x1000) / 1024;
         ssize_t physK = (pProcess->getPhysicalPageCount() * 0x1000) / 1024;
         ssize_t shrK = (pProcess->getSharedPageCount() * 0x1000) / 1024;
 
-        str.append("\tProcess ");
-        str.append(pProcess->description());
-        str.append(" V=");
-        str.append(virtK, 10);
-        str.append("K P=");
-        str.append(physK, 10);
-        str.append("K S=");
-        str.append(shrK, 10);
-        str.append("\n");
-        pSerial->write(str);
+        processListStr.append("\tProcess ");
+        processListStr.append(pProcess->description());
+        processListStr.append(" V=");
+        processListStr.append(virtK, 10);
+        processListStr.append("K P=");
+        processListStr.append(physK, 10);
+        processListStr.append("K S=");
+        processListStr.append(shrK, 10);
+        processListStr.append("\n");
+        pSerial->write(processListStr);
     }
 #endif
 #endif

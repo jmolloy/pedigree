@@ -110,6 +110,7 @@ typedef struct {
  */
 struct FILE
 {
+    char empty;
 };
 
 // Forward cdi drivers to the correct utility functions.

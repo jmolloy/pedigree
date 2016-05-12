@@ -60,6 +60,7 @@ libutility_sources = [
     os.path.join('core', 'lib', 'memory.c'),
     os.path.join('core', 'lib', 'vsprintf.c'),
     os.path.join('core', 'lib', 'SlamAllocator.cc'),
+    os.path.join('core', 'processor', 'PhysicalMemoryManager.cc'),
     'Log.cc',
 ]
 defines = [

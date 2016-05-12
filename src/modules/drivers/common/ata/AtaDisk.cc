@@ -669,7 +669,6 @@ uint64_t AtaDisk::doRead(uint64_t location)
 
     // Create our set of buffers to read into.
     size_t nBytes = getBlockSize();
-    uint64_t oldLocation = location;
     location &= ~(nBytes - 1);  // Align location to block size.
 
     // Allocate list of buffers, allowing us to handle cache pages being widely
@@ -718,9 +717,6 @@ uint64_t AtaDisk::doRead(uint64_t location)
 #ifndef PPC_COMMON
     IoBase *controlRegs = m_ControlRegs;
 #endif
-
-    // Get the buffer in pointer form.
-    uint16_t *pTarget = reinterpret_cast<uint16_t*> (0);
 
     // How many sectors do we need to read?
     /// \todo logical sector size here
@@ -785,7 +781,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
         if (m_IrqReceived)
             WARNING("ATAPI: IRQ lock already existed");
         m_IrqReceived = new Mutex(true);
-        PointerGuard<Mutex> guard(&m_IrqReceived);
+        PointerGuard<Mutex> irqReceivedGuard(&m_IrqReceived);
 
         /// \bug Hello! I am a race condition! You find me in poorly written code, like the two lines below. Enjoy!
 
@@ -1034,7 +1030,7 @@ uint64_t AtaDisk::doWrite(uint64_t location)
         if (m_IrqReceived)
             WARNING("ATAPI: IRQ lock already existed");
         m_IrqReceived = new Mutex(true);
-        PointerGuard<Mutex> guard(&m_IrqReceived);
+        PointerGuard<Mutex> irqReceivedGuard(&m_IrqReceived);
 
         /// \bug Hello! I am a race condition! You find me in poorly written code, like the two lines below. Enjoy!
 

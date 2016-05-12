@@ -59,9 +59,6 @@ bool Pic::control(uint8_t irq, ControlCode code, size_t argument)
             else
                 m_MitigationThreshold[irq] = DEFAULT_IRQ_MITIGATE_THRESHOLD;
             return true;
-        
-        default:
-            break;
     }
     
     return false;

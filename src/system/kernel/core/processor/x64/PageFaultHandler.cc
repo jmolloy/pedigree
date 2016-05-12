@@ -188,9 +188,6 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
     else
     {
         pProcess->kill();
-
-        //  kill member function also calls yield(), so shouldn't get here.
-        for(;;) ;
     }
   }
 }

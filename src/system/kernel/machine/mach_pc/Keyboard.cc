@@ -39,7 +39,7 @@
 
 X86Keyboard::X86Keyboard(uint32_t portBase) :
     m_bDebugState(false), m_Escape(KeymapManager::EscapeNone), m_pBase(0),
-    m_BufStart(0), m_BufEnd(0), m_BufLength(0), m_IrqId(0), m_LedState(0)
+    m_IrqId(0), m_LedState(0)
 {
 }
 
@@ -47,7 +47,7 @@ X86Keyboard::~X86Keyboard()
 {
 }
 
-IoBase *findPs2(Device *base)
+static IoBase *findPs2(Device *base)
 {
     for (unsigned int i = 0; i < base->getNumChildren(); i++)
     {
@@ -223,11 +223,6 @@ void X86Keyboard::setDebugState(bool enableDebugState)
         // Disable the PS/2 mouse
         m_pBase->write8(0xD4, 4);
         m_pBase->write8(0xF5, 4);
-
-        // Zero the buffer
-        while(m_BufLength.tryAcquire(1));
-        m_BufStart = 0;
-        m_BufEnd = 0;
     }
     else
     {

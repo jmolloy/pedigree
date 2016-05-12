@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -20,7 +19,7 @@
 
 #include <processor/state.h>
 
-const char *X64InterruptStateRegisterName[18] =
+static const char *X64InterruptStateRegisterName[18] =
 {
   "rax",
   "rbx",
@@ -42,7 +41,7 @@ const char *X64InterruptStateRegisterName[18] =
   "rflags"
 };
 
-const char *X64SyscallStateRegisterName[16] =
+static const char *X64SyscallStateRegisterName[16] =
 {
   "rax",
   "rbx",

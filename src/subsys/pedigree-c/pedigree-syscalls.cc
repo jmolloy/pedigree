@@ -37,6 +37,8 @@
 #define PEDIGREEC_WITHIN_KERNEL
 #include "pedigree-syscalls.h"
 
+static const char *pConfigPermissionError = "insufficient permissions: only root allowed";
+
 struct blitargs
 {
     Graphics::Buffer *pBuffer;
@@ -125,8 +127,6 @@ int pedigree_config_getbool(size_t resultIdx, size_t row, const char *col)
         return 0;
     return static_cast<int>(g_Results[resultIdx]->getNum(row, col));
 }
-
-const char *pConfigPermissionError = "insufficient permissions: only root allowed";
 
 int pedigree_config_query(const char *query)
 {

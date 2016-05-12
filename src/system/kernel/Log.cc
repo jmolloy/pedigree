@@ -34,8 +34,6 @@ BootProgressUpdateFn g_BootProgressUpdate = 0;
 size_t g_BootProgressTotal = 0;
 size_t g_BootProgressCurrent = 0;
 
-extern void installSerialLogger();
-
 static NormalStaticString getTimestamp()
 {
     Time::Timestamp t = Time::getTime();
@@ -140,9 +138,6 @@ void Log::installCallback(LogCallback *pCallback, bool bSkipBacklog)
                     break;
                 case Fatal:
                     str = "(FF) ";
-                    break;
-                default:
-                    str = "(XX) ";
                     break;
             }
             str += getTimestamp();
@@ -273,9 +268,6 @@ Log &Log::operator<< (Modifier type)
                 case Fatal:
                     str = "(FF) ";
                     break;
-                default:
-                    str = "(XX) ";
-                    break;
             }
             str += getTimestamp();
             str += m_Buffer.str;
@@ -341,4 +333,8 @@ Log &Log::operator<< (SeverityLevel level)
 #endif
 
     return *this;
+}
+
+Log::LogCallback::~LogCallback()
+{
 }

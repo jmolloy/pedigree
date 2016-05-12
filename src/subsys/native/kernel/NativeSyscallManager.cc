@@ -93,7 +93,6 @@ uintptr_t NativeSyscallManager::syscall(SyscallState &state)
             break;
         case IPC_GET_ENDPOINT:
             return reinterpret_cast<uintptr_t>(getEndpoint(reinterpret_cast<const char *>(p1)));
-            break;
 
         /** New IPC system. **/
         case NATIVE_REGISTER_OBJECT:
@@ -111,7 +110,6 @@ uintptr_t NativeSyscallManager::syscall(SyscallState &state)
 
                 return false;
             }
-            break;
         case NATIVE_UNREGISTER_OBJECT:
             NOTICE("NativeSyscallManager: unregister object");
             {
@@ -131,19 +129,19 @@ uintptr_t NativeSyscallManager::syscall(SyscallState &state)
                 uint64_t subid = p2;
                 void *params = reinterpret_cast<void *>(p3);
                 size_t params_size = p4;
-                ReturnState *state = reinterpret_cast<ReturnState *>(p5);
+                ReturnState *adjustedState = reinterpret_cast<ReturnState *>(p5);
 
                 /// \todo check that pointer parameters are mapped.
 
                 NativeBase *kptr = m_NativeObjects.lookup(ptr);
                 if (kptr)
                 {
-                    *state = kptr->syscall(subid, params, params_size);
+                    *adjustedState = kptr->syscall(subid, params, params_size);
                 }
                 else
                 {
-                    state->success = false;
-                    state->meta = META_ERROR_BADOBJECT;
+                    adjustedState->success = false;
+                    adjustedState->meta = META_ERROR_BADOBJECT;
                 }
             }
             break;

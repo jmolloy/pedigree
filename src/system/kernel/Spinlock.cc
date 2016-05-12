@@ -50,7 +50,7 @@ bool Spinlock::acquire()
 
   if (m_Magic != 0xdeadbaba)
   {
-      FATAL_NOLOCK("Wrong magic in acquire [" << m_Magic << "] [this=" << ((uintptr_t) this) << "]");
+      FATAL_NOLOCK("Wrong magic in acquire [" << m_Magic << "] [this=" << reinterpret_cast<uintptr_t>(this) << "]");
   }
 
   while (m_Atom.compareAndSwap(true, false) == false)

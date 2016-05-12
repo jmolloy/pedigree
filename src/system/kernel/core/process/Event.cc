@@ -28,10 +28,6 @@ Event::Event(uintptr_t handlerAddress, bool isDeletable, size_t specificNestingL
 {
 }
 
-Event::~Event()
-{
-}
-
 uintptr_t Event::getTrampoline()
 {
     return VirtualAddressSpace::getKernelAddressSpace().getKernelEventBlockStart();

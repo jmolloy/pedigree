@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -22,6 +21,20 @@
 #include <processor/MemoryRegion.h>
 #include <Log.h>
 
+PhysicalMemoryManager::PhysicalMemoryManager() : m_MemoryRegions()
+{
+}
+
+PhysicalMemoryManager::~PhysicalMemoryManager()
+{
+}
+
+size_t PhysicalMemoryManager::freePageCount() const
+{
+    return ~0UL;
+}
+
+#ifndef UTILITY_LINUX
 void PhysicalMemoryManager::allocateMemoryRegionList(Vector<MemoryRegionInfo*> &MemoryRegions)
 {
   for (size_t i = 0;i < m_MemoryRegions.count();i++)
@@ -41,3 +54,4 @@ void PhysicalMemoryManager::freeMemoryRegionList(Vector<MemoryRegionInfo*> &Memo
     delete pMemoryRegionInfo;
   }
 }
+#endif

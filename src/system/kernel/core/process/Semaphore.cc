@@ -32,7 +32,7 @@
 
 #include <utilities/assert.h>
 
-void interruptSemaphore(uint8_t *pBuffer)
+static void interruptSemaphore(uint8_t *pBuffer)
 {
     Processor::information().getCurrentThread()->setInterrupted(true);
 }

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -20,6 +19,17 @@
 
 #include "ScsiController.h"
 #include "ScsiDisk.h"
+
+ScsiController::ScsiController(Controller *pDev) : Controller(pDev)
+{
+    initialise();
+}
+
+ScsiController::ScsiController()
+{
+    // Start the RequestQueue
+    initialise();
+}
 
 void ScsiController::searchDisks()
 {

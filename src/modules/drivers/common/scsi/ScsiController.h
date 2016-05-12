@@ -32,17 +32,9 @@
 class ScsiController: public Controller, public RequestQueue
 {
     public:
+        ScsiController(Controller *pDev);
+        ScsiController();
 
-        ScsiController(Controller *pDev) : Controller(pDev)
-        {
-            initialise();
-        };
-
-        ScsiController()
-        {
-            // Start the RequestQueue
-            initialise();
-        }
         virtual ~ScsiController(){}
 
         virtual bool sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite) =0;

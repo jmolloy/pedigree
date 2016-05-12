@@ -59,7 +59,7 @@ void Pc::initialise()
   #if defined(APIC)
 
     // Physical address of the local APIC
-    uint64_t localApicAddress;
+    uint64_t localApicAddress = 0;
 
     // Get the Local APIC address & I/O APIC list from either the ACPI or the SMP tables
     bool bLocalApicValid = false;
@@ -74,7 +74,7 @@ void Pc::initialise()
 
     // Initialise the local APIC, if we have gotten valid data from
     // the ACPI/SMP structures
-    if (bLocalApicValid == true &&
+    if (bLocalApicValid == true && localApicAddress &&
         m_LocalApic.initialise(localApicAddress))
     {
       NOTICE("Local APIC initialised");

@@ -53,9 +53,11 @@ for driver in cdi_drivers:
     if os.path.isdir(custom_include)
         env_clone['CPPPATH'] += [custom_include]
 
+    # Disable warnings in CDI.
     # TOOD: do a warning fixup in CDI
-    env_clone['CFLAGS'] = env_clone['CFLAGS'].replace('-Werror', '')
-    env_clone['CXXFLAGS'] = env_clone['CXXFLAGS'].replace('-Werror', '')
+    env_clone.MergeFlags({
+        'CCFLAGS': ['-w'],
+    }, unique=0)
 
     env_clone.Program(objname, driverFiles,
         LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',

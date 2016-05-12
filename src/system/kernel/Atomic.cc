@@ -17,17 +17,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <Atomic.h>
+#include <processor/types.h>
 
-#include <process/MemoryPressureManager.h>
-
-/** Handles killing processes if memory pressure is encountered. */
-class MemoryPressureProcessKiller : public MemoryPressureHandler
+// vtable anchor for Atomic<bool>
+Atomic<bool, true>::~Atomic()
 {
-  public:
-    virtual const String getMemoryPressureDescription()
-    {
-      return String("Process killer, killing high-memory processes.");
-    }
+}
 
-    virtual bool compact();
-};

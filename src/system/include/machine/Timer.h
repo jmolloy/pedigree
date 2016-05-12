@@ -100,7 +100,7 @@ class Timer
      * not enabled.
      * \param tohw If true, syncs back to the hardware, instead of from it.
      */
-    virtual void synchronise(bool tohw=false) {};
+    virtual void synchronise(bool tohw=false) {}
 
   protected:
     /** The default constructor */

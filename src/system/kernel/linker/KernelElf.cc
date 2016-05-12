@@ -393,7 +393,7 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
     else
     {
 #ifdef THREADS
-        LockGuard<Spinlock> guard(m_ModuleAdjustmentLock);
+        LockGuard<Spinlock> locked(m_ModuleAdjustmentLock);
 #endif
         m_PendingModules.pushBack(module);
     }
@@ -665,7 +665,7 @@ bool KernelElf::moduleDependenciesSatisfied(Module *module)
     return true;
 }
 
-int executeModuleThread(void *mod)
+static int executeModuleThread(void *mod)
 {
     Module *module = reinterpret_cast<Module *>(mod);
 

@@ -56,14 +56,14 @@ class Tree
     {
       public:
         IteratorNode() : value(0), pNode(0), pPreviousNode(0)
-        {};
+        {}
         IteratorNode(Node* node, Node* prev, size_t n) : value(node), pNode(node), pPreviousNode(prev)
         {
           // skip the root node, get to the lowest node in the tree
           if (n > 1)
             traverseNext();
           value = pNode;
-        };
+        }
 
         IteratorNode *next()
         {

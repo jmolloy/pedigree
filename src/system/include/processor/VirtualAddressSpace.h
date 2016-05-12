@@ -210,7 +210,7 @@ class VirtualAddressSpace
     virtual uintptr_t getDynamicEnd() const { return 0; }
 
     /** Gets address of the global info block location. */
-    virtual uintptr_t getGlobalInfoBlock() const { return 0; };
+    virtual uintptr_t getGlobalInfoBlock() const { return 0; }
 
     /** Pointer to the beginning of the heap */
     void *m_Heap;

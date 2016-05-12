@@ -70,8 +70,8 @@ void *VirtualAddressSpace::expandHeap(ssize_t incr, size_t flags)
         {
             // Unmap the virtual address
             physical_uintptr_t phys = 0;
-            size_t flags = 0;
-            getMapping(unmapAddr, phys, flags);
+            size_t mappingFlags = 0;
+            getMapping(unmapAddr, phys, mappingFlags);
             unmap(unmapAddr);
 
             // Free the physical page

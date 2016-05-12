@@ -245,8 +245,6 @@ uintptr_t Cache::insert (uintptr_t key)
         FATAL("Map failed in Cache::insert())");
     }
 
-    Timer &timer = *Machine::instance().getTimer();
-
     pPage = new CachePage;
     pPage->key = key;
     pPage->location = location;
@@ -312,8 +310,6 @@ uintptr_t Cache::insert (uintptr_t key, size_t size)
         {
             FATAL("Map failed in Cache::insert())");
         }
-
-        Timer &timer = *Machine::instance().getTimer();
 
         pPage = new CachePage;
         pPage->key = key + (page * 4096);
@@ -556,8 +552,6 @@ void Cache::timer(uint64_t delta, InterruptState &state)
         m_Nanoseconds = 0;
         return;
     }
-
-    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
 
     if(!m_Lock.enter())
     {

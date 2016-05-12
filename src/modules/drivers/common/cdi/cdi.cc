@@ -92,7 +92,7 @@ void cdi_init(void)
     Device::foreach(handleDevice);
 }
 
-bool cdi_module_init()
+static bool cdi_module_init()
 {
     cdi_init();
     return true;
@@ -219,7 +219,6 @@ int cdi_provide_device(struct cdi_bus_data *device)
                 
                 return 0;
             }
-            break;
         
         default:
             WARNING("CDI: Unimplemented device type for cdi_provide_device(): " << static_cast<int>(device->bus_type));

@@ -31,7 +31,7 @@
 #include <Subsystem.h>
 #endif
 
-const char* g_ExceptionNames[] =
+static const char* g_ExceptionNames[] =
 {
   "Divide Error",
   "Debug",

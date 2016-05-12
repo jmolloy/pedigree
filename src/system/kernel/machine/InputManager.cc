@@ -35,9 +35,10 @@ class InputEvent : public Event
                     Event(handlerAddress, true, 0), m_Notification(), m_nParam(param)
         {
             m_Notification = *pNote;
-        };
+        }
         virtual ~InputEvent()
-        {};
+        {
+        }
 
         virtual size_t serialize(uint8_t *pBuffer)
         {

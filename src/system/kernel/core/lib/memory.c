@@ -60,7 +60,7 @@ void *memset(void *buf, int c, size_t n)
 {
 #ifdef TARGET_IS_X86
     int a, b;
-    asm volatile("rep stosb" : "=&D" (a), "=&c" (b) : "0" (buf), "a" (c), "1" (n) : "memory");
+    __asm__ __volatile__("rep stosb" : "=&D" (a), "=&c" (b) : "0" (buf), "a" (c), "1" (n) : "memory");
     return buf;
 #else
     unsigned char *tmp = (unsigned char *)buf;
@@ -76,7 +76,7 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
 {
 #ifdef TARGET_IS_X86
     int a, b, c;
-    asm volatile("rep movsb" : "=&c" (a), "=&D" (b), "=&S" (c): "1" (s1), "2" (s2), "0" (n) : "memory");
+    __asm__ __volatile__("rep movsb" : "=&c" (a), "=&D" (b), "=&S" (c): "1" (s1), "2" (s2), "0" (n) : "memory");
     return s1;
 #else
     const unsigned char *restrict sp = (const unsigned char *restrict)s2;
@@ -94,7 +94,7 @@ static inline void *memmove_x86(void *s1, const void *s2, size_t n)
     unsigned char *dp = (unsigned char *) s1 + (n - 1);
 
     int a, b, c;
-    asm volatile("std; rep movsb; cld" : "=&c" (a), "=&D" (b), "=&S" (c): "1" (dp), "2" (sp), "0" (n) : "memory");
+    __asm__ __volatile__("std; rep movsb; cld" : "=&c" (a), "=&D" (b), "=&S" (c): "1" (dp), "2" (sp), "0" (n) : "memory");
     return s1;
 }
 #endif
@@ -149,7 +149,7 @@ void *WordSet(void *buf, int c, size_t n)
 {
 #ifdef TARGET_IS_X86
     int a, b;
-    asm volatile("rep stosw" : "=&D" (a), "=&c" (b) : "0" (buf), "a" (c), "1" (n) : "memory");
+    __asm__ __volatile__("rep stosw" : "=&D" (a), "=&c" (b) : "0" (buf), "a" (c), "1" (n) : "memory");
     return buf;
 #else
     unsigned short *tmp = (unsigned short *)buf;
@@ -165,7 +165,7 @@ void *DoubleWordSet(void *buf, unsigned int c, size_t n)
 {
 #ifdef TARGET_IS_X86
     int a, b;
-    asm volatile("rep stosl" : "=&D" (a), "=&c" (b) : "0" (buf), "a" (c), "1" (n) : "memory");
+    __asm__ __volatile__("rep stosl" : "=&D" (a), "=&c" (b) : "0" (buf), "a" (c), "1" (n) : "memory");
     return buf;
 #else
     unsigned int *tmp = (unsigned int *)buf;
@@ -181,7 +181,7 @@ void *QuadWordSet(void *buf, unsigned long long c, size_t n)
 {
 #ifdef X64
     int a, b;
-    asm volatile("rep stosq" : "=&D" (a), "=&c" (b) : "0" (buf), "a" (c), "1" (n) : "memory");
+    __asm__ __volatile__("rep stosq" : "=&D" (a), "=&c" (b) : "0" (buf), "a" (c), "1" (n) : "memory");
     return buf;
 #else
     unsigned long long *p = (unsigned long long*) buf;

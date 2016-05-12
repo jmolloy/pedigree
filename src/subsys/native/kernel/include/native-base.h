@@ -93,8 +93,12 @@
 class NativeBase
 {
     public:
-        NativeBase() {};
-        virtual ~NativeBase() {};
+        NativeBase()
+        {
+        }
+        virtual ~NativeBase()
+        {
+        }
 
         /**
          * System call entry.

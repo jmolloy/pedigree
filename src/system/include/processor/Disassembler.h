@@ -35,7 +35,7 @@ public:
   /**
    * Destructor does nothing.
    */
-  virtual ~DisassemblerBase() {};
+  virtual ~DisassemblerBase() {}
   
   /**
    * Sets the location of the next instruction to be disassembled.
@@ -62,7 +62,7 @@ public:
   virtual void disassemble(LargeStaticString &text) =0;
   
 protected:
-  DisassemblerBase() {};
+  DisassemblerBase() {}
 };
 
 /** @} */

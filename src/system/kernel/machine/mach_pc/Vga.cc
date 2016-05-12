@@ -173,11 +173,12 @@ bool X86Vga::initialise()
 
   // Allocate the Video RAM
   PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
-  return physicalMemoryManager.allocateRegion(m_Framebuffer,
-                                              2,
-                                              PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory,
-                                              VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write | VirtualAddressSpace::WriteThrough,
-                                              reinterpret_cast<uintptr_t>(m_pFramebuffer));
-
+  bool result = physicalMemoryManager.allocateRegion(m_Framebuffer,
+                                                     2,
+                                                     PhysicalMemoryManager::continuous | PhysicalMemoryManager::nonRamMemory,
+                                                     VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write | VirtualAddressSpace::WriteThrough,
+                                                     reinterpret_cast<uintptr_t>(m_pFramebuffer));
   m_nControls = getControls();
+
+  return result;
 }

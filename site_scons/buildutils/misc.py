@@ -41,7 +41,7 @@ def safeAppend(a, b):
     a = str(a).split()
     b = str(b).split()
     for item in b:
-        if not item in a:
+        if item not in a:
             a.append(item)
     return ' '.join(a)
 

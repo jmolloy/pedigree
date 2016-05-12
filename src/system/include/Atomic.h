@@ -54,7 +54,7 @@ class Atomic<T, true>
       return *this;
     }
     /** The destructor does nothing */
-    inline virtual ~Atomic(){}
+    virtual ~Atomic(){}
 
     /** Addition
      *\param[in] x value to add
@@ -166,7 +166,7 @@ class Atomic<bool, true> : public Atomic<size_t>
       return *this;
     }
     /** The destructor does nothing */
-    inline ~Atomic(){}
+    virtual ~Atomic();
 
     /** Bitwise or
      *\param[in] x the operand

@@ -64,5 +64,9 @@ int posix_getpgrp();
 
 int posix_syslog(const char *msg, int prio);
 
+int pedigree_login(int uid, const char *password);
+
+int pedigree_reboot();
+
 #endif
 

@@ -39,7 +39,7 @@ static bool bFallBackISA = false;
 
 static bool allowProbing = false;
 
-void probeIsaDevice(Controller *pDev)
+static void probeIsaDevice(Controller *pDev)
 {
   // Create a new AtaController device node.
   IsaAtaController *pController = new IsaAtaController(pDev, nController++);
@@ -56,7 +56,7 @@ void probeIsaDevice(Controller *pDev)
   bFound = true;
 }
 
-void probePiixController(Device *pDev)
+static void probePiixController(Device *pDev)
 {
   static uint8_t interrupt = 14;
 
@@ -91,7 +91,7 @@ void probePiixController(Device *pDev)
 }
 
 /// Removes the ISA ATA controllers added early in boot
-Device *removeIsaAta(Device *dev)
+static Device *removeIsaAta(Device *dev)
 {
     if(dev->getType() == Device::Controller)
     {
@@ -205,16 +205,10 @@ static bool entry()
 
 static void exit()
 {
-
 }
 
-MODULE_INFO("ata", &entry, &exit, "scsi",
 #ifdef PPC_COMMON
-    "ata-specific"
+MODULE_INFO("ata", &entry, &exit, "scsi", "ata-specific", 0);
 #elif defined(X86_COMMON)
-    "pci"
-#else
-    0
+MODULE_INFO("ata", &entry, &exit, "scsi", "pci", 0);
 #endif
-    );
-

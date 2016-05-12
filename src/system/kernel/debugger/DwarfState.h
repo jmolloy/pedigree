@@ -212,11 +212,14 @@ class DwarfState
         case ValExpression:
         {
           WARNING ("DwarfState::getCfa: Expression type not implemented.");
+          break;
         }
         default:
           ERROR ("CfaState invalid!");
           return 0;
       }
+
+      return 0;
     }
     
     processor_register_t getRegister(unsigned int nRegister, const DwarfState &initialState)
@@ -270,9 +273,6 @@ class DwarfState
         }
         case Architectural:
 //           WARNING ("Request for 'architectural' register: r" << Dec << nRegister);
-          return 0;
-        default:
-//           ERROR ("DwarfState::getRegister(" << Dec << nRegister << "): Register state invalid.");
           return 0;
       }
       return 0;
