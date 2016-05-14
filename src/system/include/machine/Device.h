@@ -20,12 +20,14 @@
 #ifndef MACHINE_DEVICE_H
 #define MACHINE_DEVICE_H
 
+#include <compiler.h>
 #include <utilities/String.h>
 #include <utilities/Vector.h>
 #include <processor/types.h>
 #include <processor/IoBase.h>
 #ifdef THREADS
 #include <process/Mutex.h>
+#include <LockGuard.h>
 #endif
 #include <Log.h>
 #ifdef OPENFIRMWARE
@@ -39,6 +41,8 @@
 class Device
 {
 public:
+  typedef Device *(*Callback)(Device *);
+
   /** Every device has a type. This can be used to downcast to a more specific class
    * during runtime without RTTI. */
   enum Type
@@ -122,7 +126,9 @@ public:
    *
    * \todo add filters to avoid the need to filter in callbacks
    */
-  static void foreach(Device *(*callback)(Device *), Device *root = 0);
+  static void foreach(Callback callback, Device *root = 0);
+  template <class F, class... Args>
+  static void foreach(pedigree_std::Callable<F> &callback, Device *root, Args... args);
 
   /** Adds the given object to the root of the device tree, atomically. */
   static void addToRoot(Device *device);
@@ -278,7 +284,9 @@ public:
 #endif
 private:
   /** Actual do-er for foreach (does not take lock). */
-  static void foreachInternal(Device *(callback)(Device *), Device *root);
+  static void foreachInternal(Callback callback, Device *root);
+  template <class F, class... Args>
+  static void foreachInternal(pedigree_std::Callable<F> &callback, Device *root, Args... args);
   /** Do-ers for search functions. */
   static void searchByVendorIdInternal(uint16_t vendorId, void (*callback)(Device*), Device *root);
   static void searchByVendorIdAndDeviceIdInternal(uint16_t vendorId, uint16_t deviceId, void (*callback)(Device*), Device *root);
@@ -335,5 +343,50 @@ protected:
   static Mutex m_TreeLock;
 #endif
 };
+
+template <class F, class... Args>
+void Device::foreach(pedigree_std::Callable<F> &callback, Device *root, Args... args)
+{
+#ifdef THREADS
+  LockGuard<Mutex> guard(m_TreeLock);
+#endif
+
+  if (!root)
+  {
+    root = &Device::root();
+  }
+
+  foreachInternal(callback, root);
+}
+
+template <class F, class... Args>
+void Device::foreachInternal(pedigree_std::Callable<F> &callback, Device *root, Args... args)
+{
+  for (size_t i = 0; i < root->getNumChildren();)
+  {
+    // Provide the callback for this child.
+    Device *child = root->getChild(i);
+    Device *result = callback(child, args...);
+    if (!result)
+    {
+      // Remove & skip traversal.
+      root->removeChild(i);
+      delete child;
+      continue;
+    }
+    else if (result != child)
+    {
+      // Replace, but we can still traverse the child.
+      root->replaceChild(child, result);
+      delete child;
+      child = result;
+    }
+
+    // Traverse this child's tree.
+    foreachInternal(callback, child);
+
+    ++i;
+  }
+}
 
 #endif

@@ -84,16 +84,11 @@ Device::~Device()
   }
 }
 
-void Device::foreach(Device *(*callback)(Device *), Device *root)
+void Device::foreach(Device::Callback callback, Device *root)
 {
-  RAII_LOCK();
-
-  if (!root)
-  {
-    root = &Device::root();
-  }
-
-  foreachInternal(callback, root);
+  // Forward to the Callable<> version.
+  pedigree_std::Callable<decltype(callback)> cb(callback);
+  foreach(cb, root);
 }
 
 void Device::addToRoot(Device *device)
@@ -102,35 +97,6 @@ void Device::addToRoot(Device *device)
 
   device->setParent(&Device::root());
   Device::root().addChild(device);
-}
-
-void Device::foreachInternal(Device *(*callback)(Device *), Device *root)
-{
-  for (size_t i = 0; i < root->getNumChildren();)
-  {
-    // Provide the callback for this child.
-    Device *child = root->getChild(i);
-    Device *result = callback(child);
-    if (!result)
-    {
-      // Remove & skip traversal.
-      root->removeChild(i);
-      delete child;
-      continue;
-    }
-    else if (result != child)
-    {
-      // Replace, but we can still traverse the child.
-      root->replaceChild(child, result);
-      delete child;
-      child = result;
-    }
-
-    // Traverse this child's tree.
-    foreachInternal(callback, child);
-
-    ++i;
-  }
 }
 
 void Device::removeIoMappings()
