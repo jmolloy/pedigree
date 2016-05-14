@@ -27,6 +27,29 @@
 
 namespace pedigree_std
 {
+template <typename T1, typename T2>
+struct is
+{
+    static const bool value = false;
+};
+
+template <typename T1, typename T2>
+struct is_not
+{
+    static const bool value = true;
+};
+
+template <typename T>
+struct is<T, T>
+{
+    static const bool value = true;
+};
+
+template <typename T>
+struct is_not<T, T>
+{
+    static const bool value = false;
+};
 
 template<typename T>
 struct is_integral
@@ -145,6 +168,71 @@ copy(T *dest, const T *src, size_t count)
     }
     return dest;
 }
+
+/** Obtain information about a function. */
+template<class T>
+struct function_traits : public function_traits<decltype(&T::operator())>
+{
+};
+
+template <class C, class R, class... Args>
+struct function_traits<R (C::*) (Args...) const>
+{
+    typedef R return_type;
+    typedef C class_type;
+};
+
+template <class R, class... Args>
+struct function_traits<R (*)(Args...)>
+{
+    typedef R return_type;
+};
+
+template <class R, class... Args>
+struct function_traits<R(Args...)>
+{
+    typedef R return_type;
+};
+
+/** Wraps a callable (e.g. lambda) such that it can be called later. */
+template <class F>
+class Callable
+{
+    public:
+        Callable(const F &x) : func(x)
+        {
+        }
+
+        template <class... Args>
+        typename function_traits<F>::return_type
+        operator () (Args... args)
+        {
+            return func(args...);
+        }
+
+    private:
+        const F &func;
+};
+
+/** Creates a callable. */
+template <class T>
+Callable<T> make_callable(T &f)
+{
+    return Callable<T>(f);
+}
+
+/** Remove pointer type from the given type. */
+template <class T>
+struct remove_pointer
+{
+    typedef T type;
+};
+
+template <class T>
+struct remove_pointer<T *>
+{
+    typedef T type;
+};
 
 }  // namespace pedigree_std
 
