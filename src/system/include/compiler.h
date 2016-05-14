@@ -95,6 +95,20 @@
 #define HAS_SANITIZERS 1
 #endif
 
+#ifdef __cplusplus
+#define NOT_COPY_CONSTRUCTIBLE(Type) \
+    Type(const Type &) = delete
+#define NOT_ASSIGNABLE(Type) \
+    Type &operator = (const Type &) = delete
+#define NOT_COPYABLE_OR_ASSIGNABLE(Type) \
+    NOT_COPY_CONSTRUCTIBLE(Type); \
+    NOT_ASSIGNABLE(Type)
+
+#define WITHOUT_IMPLICIT_CONSTRUCTORS(Type) \
+    Type() = delete; \
+    NOT_COPYABLE_OR_ASSIGNABLE(Type)
+#endif
+
 /** @} */
 
 #endif
