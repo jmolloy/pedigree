@@ -97,7 +97,7 @@ void rescanTree()
     pD->removeRecursive();
 
     // Find the disk topology in an intermediate form.
-    searchNode(&Device::root(), pD);
+    // searchNode(&Device::root(), pD);
 }
 
 static bool init()

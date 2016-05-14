@@ -114,7 +114,7 @@ void UsbPnP::registerCallback(uint16_t nVendorId, uint16_t nProductId, callback_
 
     m_Callbacks.pushBack(item);
 
-    reprobeDevices(&Device::root());
+    // reprobeDevices(&Device::root());
 }
 
 void UsbPnP::registerCallback(uint8_t nClass, uint8_t nSubclass, uint8_t nProtocol, callback_t callback)
@@ -129,5 +129,5 @@ void UsbPnP::registerCallback(uint8_t nClass, uint8_t nSubclass, uint8_t nProtoc
 
     m_Callbacks.pushBack(item);
 
-    reprobeDevices(&Device::root());
+    // reprobeDevices(&Device::root());
 }

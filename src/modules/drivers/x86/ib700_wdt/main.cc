@@ -103,21 +103,17 @@ class Ib700Watchdog : public Device, public TimerHandler
         IoBase *m_pBase;
 };
 
-void probeDevice(Device *base)
+static bool entry()
 {
-    for (unsigned int i = 0; i < base->getNumChildren(); i++)
-    {
-        Device *pChild = base->getChild(i);
-
-        // Check that this device actually has IO regions
-        if(pChild->addresses().count() > 0)
+    auto f = [] (Device *p) {
+        if(p->addresses().count() > 0)
         {
-            if(pChild->addresses()[0]->m_Name == "ib700-base")
+            if(p->addresses()[0]->m_Name == "ib700-base")
             {
-                Ib700Watchdog *pNewChild = new Ib700Watchdog(pChild);
-                if(pNewChild->initialise())
+                Ib700Watchdog *pNewChild = new Ib700Watchdog(p);
+                if (pNewChild->initialise())
                 {
-                    base->replaceChild(pChild, pNewChild);
+                    return static_cast<Device *>(pNewChild);
                 }
                 else
                 {
@@ -127,14 +123,11 @@ void probeDevice(Device *base)
             }
         }
 
-        probeDevice(pChild);
-    }
-}
+        return p;
+    };
 
-static bool entry()
-{
-    probeDevice(&Device::root());
-    return true;
+    auto c = pedigree_std::make_callable(f);
+    Device::foreach(c, 0);
 }
 
 static void exit()

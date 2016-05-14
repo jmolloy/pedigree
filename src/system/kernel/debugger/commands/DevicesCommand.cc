@@ -145,12 +145,15 @@ DevicesCommand::DeviceTree::DeviceTree() :
   m_Line(0), m_LinearTree()
 {
   // Create the (flattened) device tree, so we can look up the index of any particular device.
+  auto pusher = [this] (Device *p) {
+    m_LinearTree.pushBack(p);
+    return p;
+  };
+
+  auto callback = pedigree_std::make_callable(pusher);
 
   // Get the first device.
-  Device *device = &Device::root();
-  
-  // Start the depth-first search.
-  probeDev(device);
+  Device::foreach(callback, 0);
 }
 
 void DevicesCommand::DeviceTree::probeDev(Device *pDev)

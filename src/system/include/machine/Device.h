@@ -99,12 +99,6 @@ public:
   Device(Device *p);
   virtual ~Device();
 
-  /** Retrieves the root device */
-  static Device &root() DEPRECATED
-  {
-    return m_Root;
-  }
-
   /**
    * Traverses the full device tree, calling the given callback for each item.
    *
@@ -125,6 +119,7 @@ public:
    * is already linked into the Device tree.
    *
    * \todo add filters to avoid the need to filter in callbacks
+   * \todo add a way to end iteration early
    */
   static void foreach(Callback callback, Device *root = 0);
   template <class F, class... Args>
@@ -294,17 +289,21 @@ private:
   static void searchByClassAndSubclassInternal(uint16_t classCode, uint16_t subclassCode, void (*callback)(Device*), Device *root);
   static void searchByClassSubclassAndProgInterfaceInternal(uint16_t classCode, uint16_t subclassCode, uint8_t progInterface, void (*callback)(Device*), Device *root);
 
-  /** Copy constructor.
-      \note NOT implemented. */
-  Device(const Device&);
-  /** Assignment operator.
-      \note NOT implemented. */
-  void operator=(const Device &);
-
   /** Destroys all IoBases in this class. Called from the constructor Device(Device*). */
   void removeIoMappings();
 
 protected:
+  NOT_COPYABLE_OR_ASSIGNABLE(Device);
+
+  /**
+   * Retrieves the root device.
+   * Still needs to be public for RawFs...
+   */
+  static Device &root()
+  {
+    return m_Root;
+  }
+
   /** The address of this device, in its parent's address space. */
   Vector<Address*> m_Addresses;
   /** The children of this device. */
@@ -356,7 +355,7 @@ void Device::foreach(pedigree_std::Callable<F> &callback, Device *root, Args... 
     root = &Device::root();
   }
 
-  foreachInternal(callback, root);
+  foreachInternal(callback, root, args...);
 }
 
 template <class F, class... Args>

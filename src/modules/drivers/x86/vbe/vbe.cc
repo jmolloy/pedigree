@@ -73,30 +73,6 @@ struct vbeModeInfo {
   short sz_offscreen; // In KB.
 } __attribute__((packed));
 
-Device *searchNode(Device *pDev, uintptr_t fbAddr)
-{
-  for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
-  {
-    Device *pChild = pDev->getChild(i);
-    String name;
-    pChild->getName(name);
-    // Get its addresses, and search for fbAddr.
-    for (unsigned int j = 0; j < pChild->addresses().count(); j++)
-    {
-      if (pChild->getPciClassCode() == 0x03 &&
-          pChild->addresses()[j]->m_Address <= fbAddr && (pChild->addresses()[j]->m_Address+pChild->addresses()[j]->m_Size) > fbAddr)
-      {
-        return pChild;
-      }
-    }
-
-    // Recurse.
-    Device *pRet = searchNode(pChild, fbAddr);
-    if (pRet) return pRet;
-  }
-  return 0;
-}
-
 extern "C" void vbeModeChangedCallback(char *pId, char *pModeId)
 {
     size_t id = StringToUnsignedLong(pId, 0, 10);
@@ -298,7 +274,25 @@ bool entry()
   NOTICE("VBE: End of compatible display modes.");
 
   // Now that we have a framebuffer address, we can (hopefully) find the device in the device tree that owns that address.
-  Device *pDevice = searchNode(&Device::root(), fbAddr);
+  Device *pDevice = 0;
+  auto searchNode = [&pDevice, fbAddr] (Device *pDev) {
+    if (pDevice)
+      return pDev;
+
+    // Get its addresses, and search for fbAddr.
+    for (unsigned int j = 0; j < pDev->addresses().count(); j++)
+    {
+        if (pDev->getPciClassCode() == 0x03 &&
+            pDev->addresses()[j]->m_Address <= fbAddr && (pDev->addresses()[j]->m_Address+pDev->addresses()[j]->m_Size) > fbAddr)
+        {
+            pDevice = pDev;
+        }
+    }
+
+    return pDev;
+  };
+  auto f = pedigree_std::make_callable(searchNode);
+  Device::foreach(f, 0);
   if (!pDevice)
   {
     ERROR("VBE: Device mapped to framebuffer address '" << Hex << fbAddr << "' not found.");

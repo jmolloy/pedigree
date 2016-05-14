@@ -47,31 +47,27 @@ X86Keyboard::~X86Keyboard()
 {
 }
 
-static IoBase *findPs2(Device *base)
-{
-    for (unsigned int i = 0; i < base->getNumChildren(); i++)
-    {
-        Device *pChild = base->getChild(i);
-
-        // Check that this device actually has IO regions
-        if(pChild->addresses().count() > 0)
-            if(pChild->addresses()[0]->m_Name == "ps2-base")
-                return pChild->addresses()[0]->m_Io;
-
-        // If the device is a PS/2 base, we won't get here. So recurse.
-        if(pChild->getNumChildren())
-        {
-            IoBase *p = findPs2(pChild);
-            if(p)
-                return p;
-        }
-    }
-    return 0;
-}
-
 void X86Keyboard::initialise()
 {
-    m_pBase = findPs2(&Device::root());
+    auto f = [this] (Device *p) {
+        if (m_pBase)
+        {
+            return p;
+        }
+
+        if(p->addresses().count() > 0)
+        {
+            if(p->addresses()[0]->m_Name == "ps2-base")
+            {
+                m_pBase = p->addresses()[0]->m_Io;
+            }
+        }
+
+        return p;
+    };
+    auto c = pedigree_std::make_callable(f);
+    Device::foreach(c, 0);
+
     if(!m_pBase)
     {
         // Handle the impossible case properly

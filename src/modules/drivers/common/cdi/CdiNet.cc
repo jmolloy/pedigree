@@ -140,9 +140,23 @@ static CdiNet *findNet(Device *pRoot, struct cdi_net_device *device)
  */
 void cdi_net_receive(struct cdi_net_device* device, void* buffer, size_t size)
 {
-    // Find the needed device.
-    CdiNet *pNet = findNet(&Device::root(), device);
+    auto f = [&] (Device *p) {
+        if (p->getType() == Device::Network)
+        {
+            if (p->getSpecificType() == "CDI NIC")
+            {
+                CdiNet *pNet = static_cast<CdiNet *>(p);
+                if (pNet->getCdiDevice() == device)
+                {
+                    // Submit the packet.
+                    NetworkStack::instance().receive(size, reinterpret_cast<uintptr_t>(buffer), pNet, 0);
+                }
+            }
+        }
+        return p;
+    };
 
-    // Submit the packet.
-    NetworkStack::instance().receive(size, reinterpret_cast<uintptr_t>(buffer), pNet, 0);
+    auto c = pedigree_std::make_callable(f);
+
+    Device::foreach(c, 0);
 }
