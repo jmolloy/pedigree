@@ -25,6 +25,15 @@ MacAddress::MacAddress() :
     ByteSet(m_Mac, 0, 6);
 }
 
+MacAddress::MacAddress(const MacAddress &other) : MacAddress()
+{
+  m_Valid = other.valid();
+  if (other.valid())
+  {
+    setMac(other.getMac());
+  }
+}
+
 void MacAddress::setMac(uint8_t byte, size_t element)
 {
   uint16_t word = byte;

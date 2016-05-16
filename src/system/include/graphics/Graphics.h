@@ -70,6 +70,8 @@ namespace Graphics
             case Bits8_Rgb332:
                 return 8;
         }
+
+        return 0;
     }
     
     inline size_t bytesPerPixel(PixelFormat format)

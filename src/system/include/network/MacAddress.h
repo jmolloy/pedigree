@@ -31,6 +31,7 @@ class MacAddress
 {
   public:
     MacAddress();
+    MacAddress(const MacAddress &other);
 
     bool valid() const
     {
