@@ -23,6 +23,7 @@ Import(['env'])
 
 # Take a copy of the SCons environment as we tweak flags.
 env_clone = env.Clone()
+env_clone['LIBS'] = []
 
 kerneldir = env["PEDIGREE_BUILD_KERNEL"]
 imagesdir = env["PEDIGREE_IMAGES_DIR"]
@@ -64,8 +65,6 @@ files = [
     Glob('network/*.cc'),
     Glob('graphics/*.cc'),
     Glob('time/*.cc'),
-    # Always pull in libudis86, even if we don't build the rest of the debugger
-    Glob('debugger/libudis86/*.c'),
 ]
 
 # Static drivers build all drivers directly into the kernel rather than building
@@ -113,7 +112,7 @@ include_dirs += [
 
 # Add x86 emulator (for real-mode BIOS calls).
 if env['ARCH_TARGET'] in ['X86', 'X64']:
-    files += [
+    x86emu_files = [
         'machine/mach_pc/x86emu/debug.c',
         'machine/mach_pc/x86emu/decode.c',
         'machine/mach_pc/x86emu/fpu.c',
@@ -126,6 +125,15 @@ if env['ARCH_TARGET'] in ['X86', 'X64']:
     include_dirs += [
         'machine/mach_pc/x86_emu/x86emu',
     ]
+
+    # Quiet down x86emu's warnings, it's not our code.
+    x86emu_env = env_clone.Clone()
+    x86emu_env.MergeFlags({
+        'CCFLAGS': ['-w'],
+    }, unique=0)
+    libx86emu = x86emu_env.StaticLibrary('x86emu', x86emu_files)
+
+    env_clone['LIBS'] += [libx86emu]
 elif env['ARCH_TARGET'] in ['HOSTED']:
     # HOSTED pulls in the X86 disassembler.
     files += ['core/processor/x86_common/Disassembler.cc']
@@ -149,9 +157,18 @@ if env['SUBARCH_DIR']:
 
 # Set flags in the cloned environment for the build.
 env_clone['CPPPATH'] = include_dirs
-env_clone['LIBS'] = ['gcc']
+env_clone['LIBS'] += ['gcc']
 if not env['hosted']:  # Don't let the kernel link against Pedigree .so objects
     env_clone['LIBPATH'] = ['#', os.path.join(imagesdir, 'libraries')]
+
+# Always pull in libudis86, even if we don't build the rest of the debugger
+# Also disable warnings, as it's not our code.
+libudis86_env = env_clone.Clone()
+libudis86_env.MergeFlags({
+    'CCFLAGS': ['-w'],
+}, unique=0)
+libudis86 = libudis86_env.StaticLibrary('udis86', Glob('debugger/libudis86/*.c'))
+env_clone['LIBS'] += [libudis86]
 
 # Fix up flags for hosted builds.
 if env['hosted']:
