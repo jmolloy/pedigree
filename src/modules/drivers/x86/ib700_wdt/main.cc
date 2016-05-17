@@ -128,6 +128,8 @@ static bool entry()
 
     auto c = pedigree_std::make_callable(f);
     Device::foreach(c, 0);
+
+    return true;
 }
 
 static void exit()
