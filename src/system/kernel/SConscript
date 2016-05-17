@@ -52,8 +52,6 @@ files = [
     'Service.cc',
     'syscallError.cc',
     Glob('utilities/*.cc'),
-    Glob('utilities/sha1/*.cc'),
-    Glob('utilities/md5/*.cc'),
     Glob('machine/*.cc'),
     Glob('linker/*.cc'),
     Glob('core/*.cc'),
@@ -163,12 +161,18 @@ if not env['hosted']:  # Don't let the kernel link against Pedigree .so objects
 
 # Always pull in libudis86, even if we don't build the rest of the debugger
 # Also disable warnings, as it's not our code.
-libudis86_env = env_clone.Clone()
-libudis86_env.MergeFlags({
+ext_libs_env = env_clone.Clone()
+ext_libs_env.MergeFlags({
     'CCFLAGS': ['-w'],
 }, unique=0)
-libudis86 = libudis86_env.StaticLibrary('udis86', Glob('debugger/libudis86/*.c'))
+libudis86 = ext_libs_env.StaticLibrary('udis86', Glob('debugger/libudis86/*.c'))
 env_clone['LIBS'] += [libudis86]
+
+libhash = ext_libs_env.StaticLibrary('hash', [
+    Glob('utilities/sha1/*.cc'),
+    Glob('utilities/md5/*.cc'),
+])
+env_clone['LIBS'] += [libhash]
 
 # Fix up flags for hosted builds.
 if env['hosted']:
