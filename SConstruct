@@ -223,6 +223,7 @@ def fix_system_environment(env):
 system_path = os.environ.get('PATH', '')
 environment = fix_system_environment({
     'PATH': system_path,
+    'HOME': os.environ.get('HOME', '/'),
     # Needed to pass in preloads for Bear to build compilation databases.
     'LD_PRELOAD': os.environ.get('LD_PRELOAD', ''),
     'DYLD_INSERT_LIBRARIES': os.environ.get('DYLD_INSERT_LIBRARIES', ''),
@@ -802,6 +803,12 @@ for key in ('CFLAGS', 'CCFLAGS', 'CXXFLAGS', 'LINKFLAGS'):
 
 if env['hosted']:
     userspace_env = env.Clone()
+
+    # Remove multiprocessor-related flags (not sensible for hosted targets).
+    env['CPPDEFINES'] = misc.removeFlags(
+        env['CPPDEFINES'],
+        ['MULTIPROCESSOR', 'APIC', 'ACPI', 'SMP']
+    )
 
     # Fix tools to use host.
     SCons.Tool.gcc.compilers = SCons.Tool.gcc.preserved_compilers
