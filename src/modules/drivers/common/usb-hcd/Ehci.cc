@@ -786,7 +786,7 @@ void Ehci::doAsync(uintptr_t nTransaction, void (*pCallback)(uintptr_t, ssize_t)
         {
             // Atomic operation - modifying both the housekeeping and the
             // hardware linked lists
-            LockGuard<Spinlock> guard(m_QueueListChangeLock);
+            LockGuard<Spinlock> queueGuard(m_QueueListChangeLock);
 
             // Update the tail pointer
             m_pCurrentQueueTail = pQH;

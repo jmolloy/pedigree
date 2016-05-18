@@ -962,7 +962,11 @@ if env['clang_cross'] and not env['hosted']:
                             '-Wno-padded', '-Wno-error=newline-eof',
                             '-Wno-weak-vtables', '-Wno-exit-time-destructors',
                             '-Wno-global-constructors', '-Wno-unused-macros',
-                            # '-Wno-variadic-macros',
+                            '-Wno-format', '-Wno-variadic-macros',
+                            '-Wno-gnu-anonymous-struct', '-Wno-gnu-include-next',
+                            '-Wno-unused-private-field', '-Wno-switch-enum',
+                            '-Wno-unused-variable', '-Wno-unused-function',
+                            '-Wno-unreachable-code', '-Wno-nested-anon-types',
                             ]
 
     env['CLANG_BASE_LINKFLAGS'] = triple + cross_gcc + generic_flags

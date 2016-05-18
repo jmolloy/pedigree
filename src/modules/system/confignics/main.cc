@@ -65,8 +65,8 @@ static int configureInterfaces()
         StationInfo newInfo = card->getStationInfo();
 
         // List IPv6 addresses
-        for(size_t i = 0; i < info.nIpv6Addresses; i++)
-            NOTICE("Interface " << i << " has IPv6 address " << info.ipv6[i].toString() << " (" << Dec << i << Hex << " out of " << info.nIpv6Addresses << ")");
+        for(size_t j = 0; j < info.nIpv6Addresses; j++)
+            NOTICE("Interface " << j << " has IPv6 address " << info.ipv6[j].toString() << " (" << Dec << j << Hex << " out of " << info.nIpv6Addresses << ")");
 
         // If the device has a gateway, set it as the default and continue
         if (newInfo.gateway != empty)

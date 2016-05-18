@@ -33,7 +33,9 @@ void __cyg_profile_func_enter (void *func_address, void *call_site)
 #define COM3 0x3E8
 #define COM4 0x2E8
 
+#ifdef INSTRUMENTATION
 static volatile int g_WrittenFirst = 0;
+#endif
 
 void __cyg_profile_func_enter (void *func_address, void *call_site)
 {

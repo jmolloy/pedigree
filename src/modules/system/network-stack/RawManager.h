@@ -53,21 +53,21 @@ class RawEndpoint : public ConnectionlessEndpoint
     RawEndpoint() :
       ConnectionlessEndpoint(), m_DataQueue(), m_DataQueueSize(0),
       m_Type(RAW_WIRE)
-    {};
+    {}
 
     /** These shouldn't be used - totally pointless */
     RawEndpoint(uint16_t local, uint16_t remote) :
       ConnectionlessEndpoint(local, remote), m_DataQueue(),
           m_DataQueueSize(0), m_Type(RAW_WIRE)
-    {};
+    {}
     RawEndpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
       ConnectionlessEndpoint(remoteIp, local, remote), m_DataQueue(),
       m_DataQueueSize(0), m_Type(RAW_WIRE)
-    {};
+    {}
     RawEndpoint(Type type) :
       ConnectionlessEndpoint(0, 0), m_DataQueue(), m_DataQueueSize(0),
       m_Type(type)
-    {};
+    {}
     virtual ~RawEndpoint();
 
     /** Injects the given buffer into the network stack */
@@ -100,7 +100,7 @@ class RawEndpoint : public ConnectionlessEndpoint
     {
       DataBlock() :
         size(0), ptr(0), remoteHost()
-      {};
+      {}
 
       size_t size;
       uintptr_t ptr;
@@ -125,9 +125,9 @@ class RawManager : public ProtocolManager
 public:
   RawManager() :
     m_Endpoints()
-  {};
+  {}
   virtual ~RawManager()
-  {};
+  {}
 
   /** For access to the manager without declaring an instance of it */
   static RawManager& instance()

@@ -35,7 +35,7 @@
 
 // helper functions
 
-bool isPowerOf2(uint32_t n)
+static bool isPowerOf2(uint32_t n)
 {
     uint8_t log;
 

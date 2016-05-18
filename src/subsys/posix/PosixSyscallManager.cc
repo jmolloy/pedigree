@@ -93,7 +93,7 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
         case POSIX_WAITPID:
             return posix_waitpid(p1, reinterpret_cast<int*> (p2), p3);
         case POSIX_EXIT:
-            return posix_exit(p1);
+            posix_exit(p1);
         case POSIX_OPENDIR:
             return posix_opendir(reinterpret_cast<const char*>(p1), reinterpret_cast<DIR*>(p2));
         case POSIX_READDIR:
@@ -237,7 +237,6 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
 
         case POSIX_PTHREAD_RETURN:
             posix_pthread_exit(reinterpret_cast<void*>(p1));
-            return 0;
         case POSIX_PTHREAD_ENTER:
             return posix_pthread_enter(p1);
 

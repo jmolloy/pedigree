@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -27,7 +26,6 @@ class SignalEvent : public Event
 {
 public:
     SignalEvent(uintptr_t handlerAddress, size_t signalNum, size_t specificNestingLevel=~0UL);
-    virtual ~SignalEvent();
 
     virtual size_t serialize(uint8_t *pBuffer);
     static bool unserialize(uint8_t *pBuffer, Event &event);

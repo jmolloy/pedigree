@@ -28,7 +28,7 @@
 Dns Dns::dnsInstance;
 uint16_t Dns::m_NextId = 0;
 
-String qnameLabelHelper(char *buff, size_t *len, uintptr_t buffLoc)
+static String qnameLabelHelper(char *buff, size_t *len, uintptr_t buffLoc)
 {
     String ret;
     size_t retLen = 0;

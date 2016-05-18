@@ -40,7 +40,6 @@ static int threadStub(void *p)
 {
     Uhci *pUhci = reinterpret_cast<Uhci*>(p);
     pUhci->doDequeue();
-    return 0;
 }
 
 Uhci::Uhci(Device* pDev) :

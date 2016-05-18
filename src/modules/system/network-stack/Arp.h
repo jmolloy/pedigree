@@ -93,7 +93,7 @@ private:
   {
     arpEntry() :
       valid(false), ip(), mac()
-    {};
+    {}
 
     bool valid;
     IpAddress ip;
@@ -106,7 +106,7 @@ private:
     public:
       ArpRequest() :
         destIp(), mac(), waitSem(0), success(false)
-      {};
+      {}
 
       IpAddress destIp;
       MacAddress mac;

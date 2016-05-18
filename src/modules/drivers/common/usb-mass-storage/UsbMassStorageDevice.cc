@@ -151,7 +151,7 @@ bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t
 
             // Attempt to read the CSW now that the stall condition is cleared
             Csw *pCsw = new Csw;
-            PointerGuard<Csw> guard(pCsw);
+            PointerGuard<Csw> cswGuard(pCsw);
             nResult = syncIn(m_pInEndpoint, reinterpret_cast<uintptr_t>(pCsw), 13);
 
             // Stalled?

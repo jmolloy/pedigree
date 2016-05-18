@@ -158,8 +158,6 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
 
       return;
 
-      break;
-
     /* Incoming segment while the state is LISTEN */
     case Tcp::LISTEN:
 

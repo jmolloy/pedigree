@@ -80,7 +80,7 @@ struct DhcpOptionMagicCookie
 {
   DhcpOptionMagicCookie() :
     cookie(MAGIC_COOKIE)
-  {};
+  {}
 
   uint32_t cookie;
 } __attribute__((packed));
@@ -91,7 +91,7 @@ struct DhcpOptionSubnetMask
 {
   DhcpOptionSubnetMask() :
     code(DHCP_SUBNETMASK), len(4), a1(0), a2(0), a3(0), a4(0)
-  {};
+  {}
 
   uint8_t code;
   uint8_t len;
@@ -107,7 +107,7 @@ struct DhcpOptionDefaultGateway
 {
   DhcpOptionDefaultGateway() :
     code(DHCP_DEFGATEWAY), len(4), a1(0), a2(0), a3(0), a4(0)
-  {};
+  {}
 
   uint8_t code;
   uint8_t len;
@@ -122,7 +122,7 @@ struct DhcpOptionDnsServers
 {
   DhcpOptionDnsServers() :
     code(DHCP_DNSSERVERS), len(4)
-  {};
+  {}
 
   uint8_t code;
   uint8_t len; // following this header are len/4 IP addresses
@@ -134,7 +134,7 @@ struct DhcpOptionAddrReq
 {
   DhcpOptionAddrReq() :
     code(DHCP_ADDRREQ), len(4), a1(0), a2(0), a3(0), a4(0)
-  {};
+  {}
 
   uint8_t code;
   uint8_t len;
@@ -150,7 +150,7 @@ struct DhcpOptionMsgType
 {
   DhcpOptionMsgType() :
     code(DHCP_MSGTYPE), len(1), opt(DISCOVER)
-  {};
+  {}
 
   uint8_t   code; // = 0x53
   uint8_t   len; // = 1
@@ -163,7 +163,7 @@ struct DhcpOptionServerIdent
 {
   DhcpOptionServerIdent() :
     code(DHCP_SERVERIDENT), len(4), a1(0), a2(0), a3(0), a4(0)
-  {};
+  {}
 
   uint8_t code;
   uint8_t len;
@@ -179,7 +179,7 @@ struct DhcpOptionParamRequest
 {
   DhcpOptionParamRequest() :
     code(DHCP_PARAMREQUEST), len(0)
-  {};
+  {}
 
   uint8_t code;
   uint8_t len; // Following this are len bytes, each a valid DHCP option code.
@@ -191,18 +191,18 @@ struct DhcpOptionEnd
 {
   DhcpOptionEnd() :
     code(DHCP_MSGEND)
-  {};
+  {}
 
   uint8_t   code;
 } __attribute__((packed));
 
-size_t addOption(void* opt, size_t sz, size_t offset, void* dest)
+static size_t addOption(void* opt, size_t sz, size_t offset, void* dest)
 {
   MemoryCopy(reinterpret_cast<char*>(dest) + offset, opt, sz);
   return offset + sz;
 }
 
-DhcpOption* getNextOption(DhcpOption* opt, size_t* currOffset)
+static DhcpOption* getNextOption(DhcpOption* opt, size_t* currOffset)
 {
   DhcpOption* ret = reinterpret_cast<DhcpOption*>(reinterpret_cast<uintptr_t>(opt) + (*currOffset)); // skip code and len as well
   (*currOffset) += (opt->len + 2);
@@ -212,7 +212,7 @@ DhcpOption* getNextOption(DhcpOption* opt, size_t* currOffset)
 static Service *pService = 0;
 static ServiceFeatures *pFeatures = 0;
 
-bool dhcpClient(Network *pCard)
+static bool dhcpClient(Network *pCard)
 {
     StationInfo info = pCard->getStationInfo();
 
@@ -550,8 +550,8 @@ bool dhcpClient(Network *pCard)
         // Then we take the IP we've been given, AND against the subnet to get the
         // bottom of the IP range, and then add the number of hosts to find the
         // broadcast address.
-        uint32_t broadcast = (ipv4 & subnet) + numHosts;
-        host.broadcast.setIp(broadcast);
+        uint32_t subnetBroadcast = (ipv4 & subnet) + numHosts;
+        host.broadcast.setIp(subnetBroadcast);
 
         UdpManager::instance().returnEndpoint(e);
         delete [] buff;

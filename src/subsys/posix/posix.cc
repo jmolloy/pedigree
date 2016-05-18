@@ -29,9 +29,9 @@
 #include "UnixFilesystem.h"
 #include "DevFs.h"
 
-PosixSyscallManager g_PosixSyscallManager;
+static PosixSyscallManager g_PosixSyscallManager;
 
-UnixFilesystem *g_pUnixFilesystem;
+static UnixFilesystem *g_pUnixFilesystem = 0;
 
 static bool init()
 {

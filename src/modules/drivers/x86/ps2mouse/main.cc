@@ -23,7 +23,7 @@
 // Global static object for the PS/2 mouse we'll be working with
 static Ps2Mouse *g_Ps2Mouse = 0;
 
-bool entry()
+static bool entry()
 {
     auto f = [] (Device *p) {
         if (g_Ps2Mouse)
@@ -64,7 +64,7 @@ bool entry()
     return false;
 }
 
-void unload()
+static void unload()
 {
     if(g_Ps2Mouse)
         delete g_Ps2Mouse;

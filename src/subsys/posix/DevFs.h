@@ -118,12 +118,12 @@ class DevFs : public Filesystem
 public:
   DevFs() : m_pRoot(0)
   {
-  };
+  }
 
   virtual ~DevFs()
   {
     delete m_pRoot;
-  };
+  }
 
   static DevFs &instance()
   {

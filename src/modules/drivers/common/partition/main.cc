@@ -35,7 +35,7 @@
 static Service *pService = 0;
 static ServiceFeatures *pFeatures = 0;
 
-bool probeDevice(Disk *pDev)
+static bool probeDevice(Disk *pDev)
 {
   // Does the disk have an MS-DOS partition table?
   if (msdosProbeDisk(pDev))
@@ -49,7 +49,7 @@ bool probeDevice(Disk *pDev)
   return false;
 }
 
-Device *checkNode(Device *pDev)
+static Device *checkNode(Device *pDev)
 {
   bool hasPartitions = false;
   if (pDev->getType() == Device::Disk)

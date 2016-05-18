@@ -530,7 +530,7 @@ uint64_t ScsiDisk::doWrite(uint64_t location)
     size_t block = location / getNativeBlockSize();
     size_t count = 4096 / getNativeBlockSize();
 
-    bool bOk;
+    bool bOk = false;
     ScsiCommand *pCommand;
 
     for(int i = 0; i < 3; i++)
@@ -594,7 +594,7 @@ uint64_t ScsiDisk::doSync(uint64_t location)
     size_t block = location / getNativeBlockSize();
     size_t count = 4096 / getNativeBlockSize();
 
-    bool bOk;
+    bool bOk = false;
     ScsiCommand *pCommand;
 
     // Kick off a synchronise (this will be slow, but will ensure the data is on disk)

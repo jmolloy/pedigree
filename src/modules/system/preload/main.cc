@@ -26,7 +26,7 @@
 #include <process/Scheduler.h>
 #include <vfs/MemoryMappedFile.h>
 
-const char *g_FilesToPreload[] = {
+static const char *g_FilesToPreload[] = {
     "root»/applications/init",
     "root»/applications/ttyterm",
     "root»/applications/winman",
@@ -43,11 +43,11 @@ const char *g_FilesToPreload[] = {
     0
 };
 
-Semaphore g_Preloads(0);
+static Semaphore g_Preloads(0);
 
-int preloadThread(void *p)
+static int preloadThread(void *p)
 {
-    const char *s = (const char *) p;
+    const char *s = reinterpret_cast<const char *>(p);
 
     NOTICE("PRELOAD: " << s);
 

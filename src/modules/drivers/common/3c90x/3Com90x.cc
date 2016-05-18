@@ -278,7 +278,7 @@ bool Nic3C90x::send(size_t nBytes, uintptr_t buffer)
         // m_TransmitDPD->HdrAddr = m_pTxBuffPhys;
         // m_TransmitDPD->HdrLength = Ethernet::instance().ethHeaderSize();
         m_TransmitDPD->DataAddr = static_cast<uint32_t>(destPtr); //m_pTxBuffPhys; // + m_TransmitDPD->HdrLength;
-        m_TransmitDPD->DataLength = (nBytes /* - m_TransmitDPD->HdrLength */) + (1 << 31U);
+        m_TransmitDPD->DataLength = (nBytes /* - m_TransmitDPD->HdrLength */) + (1U << 31U);
 
         /** Send the packet **/
         m_pBase->write32(m_pDPD, regDnListPtr_l);
@@ -354,7 +354,7 @@ Nic3C90x::Nic3C90x(Network* pDev) :
             m_ReceiveUPD[iUpd].UpNextPtr = m_pUPD + ((iUpd + 1) * sizeof(RXD));
         m_ReceiveUPD[iUpd].UpPktStatus = 0;
         m_ReceiveUPD[iUpd].DataAddr = m_pRxBuffPhys + (iUpd * 1536);
-        m_ReceiveUPD[iUpd].DataLength = 1536 + (1 << 31U);
+        m_ReceiveUPD[iUpd].DataLength = 1536 + (1U << 31U);
     }
 
     // grab the IO ports

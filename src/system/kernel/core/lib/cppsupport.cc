@@ -32,13 +32,6 @@
 
 #include "SlamAllocator.h"
 
-extern "C"
-{
-    void *malloc(size_t);
-    void *realloc(void *, size_t);
-    void free(void *);
-}
-
 /// If the debug allocator is enabled, this switches it into underflow detection
 /// mode.
 #define DEBUG_ALLOCATOR_CHECK_UNDERFLOWS

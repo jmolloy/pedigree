@@ -41,20 +41,49 @@ extern "C"
     extern char sigret_stub_end;
 }
 
-int doProcessKill(Process *p, int sig);
+static int doProcessKill(Process *p, int sig);
+static int doThreadKill(Thread *p, int sig);
 
 /// \todo These are ok initially, but it'll all have to change at some point
 
-#define SIGNAL_HANDLER_EXIT(name, errcode) void name(int) NORETURN; void name(int) { posix_exit(errcode); }
-#define SIGNAL_HANDLER_EMPTY(name) void name(int s) {NOTICE("EMPTY");}
-#define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int) NORETURN; void name(int) { Processor::setInterrupts(true); posix_write(1, msg, StringLength(msg), true); Scheduler::instance().yield(); posix_exit(errcode); }
-#define SIGNAL_HANDLER_SUSPEND(name) void name(int s) { NOTICE("SUSPEND"); Process *pParent = Processor::information().getCurrentThread()->getParent()->getParent(); pParent->suspend(); }
-#define SIGNAL_HANDLER_RESUME(name) void name(int s) { NOTICE("RESUME"); Processor::information().getCurrentThread()->getParent()->resume(); }
+#define SIGNAL_HANDLER_EXIT(name, errcode) \
+    static void name(int) NORETURN; \
+    static void name(int) \
+    { \
+        posix_exit(errcode); \
+    }
+#define SIGNAL_HANDLER_EMPTY(name) \
+    static void name(int s) \
+    { \
+        NOTICE("EMPTY"); \
+    }
+#define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) \
+    static void name(int) NORETURN; \
+    static void name(int) \
+    { \
+        Processor::setInterrupts(true); \
+        posix_write(1, msg, StringLength(msg), true); \
+        Scheduler::instance().yield(); \
+        posix_exit(errcode); \
+    }
+#define SIGNAL_HANDLER_SUSPEND(name) \
+    static void name(int s) \
+    { \
+        NOTICE("SUSPEND"); \
+        Process *pParent = Processor::information().getCurrentThread()->getParent()->getParent(); \
+        pParent->suspend(); \
+    }
+#define SIGNAL_HANDLER_RESUME(name) \
+    static void name(int s) \
+    { \
+        NOTICE("RESUME"); \
+        Processor::information().getCurrentThread()->getParent()->resume(); \
+    }
 
-char SSIGILL[] = "Illegal instruction.\n";
-char SSIGSEGV[] = "Segmentation fault.\n";
-char SSIGBUS[] = "Bus error.\n";
-char SSIGABRT[] = "Abort.\n";
+static char SSIGILL[] = "Illegal instruction.\n";
+static char SSIGSEGV[] = "Segmentation fault.\n";
+static char SSIGBUS[] = "Bus error.\n";
+static char SSIGABRT[] = "Abort.\n";
 
 SIGNAL_HANDLER_EXITMSG  (sigabrt, SIGABRT, SSIGABRT)
 SIGNAL_HANDLER_EXIT     (sigalrm, SIGALRM)
@@ -80,7 +109,7 @@ SIGNAL_HANDLER_EMPTY    (sigurg) // high bandwdith data available at a sockeet
 
 SIGNAL_HANDLER_EMPTY    (sigign);
 
-_sig_func_ptr default_sig_handlers[32] =
+static _sig_func_ptr default_sig_handlers[32] =
 {
     sigign, // null signal = 0
     sighup, // SIGHUP = 1
@@ -283,7 +312,7 @@ void pedigree_unwind_signal()
     pThread->popState();
 }
 
-int doThreadKill(Thread *p, int sig)
+static int doThreadKill(Thread *p, int sig)
 {
     // Are we allowed to do this?
     if(p->getStatus() == Thread::Suspended)
@@ -324,7 +353,7 @@ int doThreadKill(Thread *p, int sig)
     return 0;
 }
 
-int doProcessKill(Process *p, int sig)
+static int doProcessKill(Process *p, int sig)
 {
     return doThreadKill(p->getThread(0), sig);
 }

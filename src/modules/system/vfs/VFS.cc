@@ -89,11 +89,11 @@ bool VFS::mount(Disk *pDisk, String &alias)
             
             m_Mounts.lookup(pFs)->pushBack(new String(alias));
 
-            for (List<MountCallback*>::Iterator it = m_MountCallbacks.begin();
-                 it != m_MountCallbacks.end();
-                 it++)
+            for (List<MountCallback*>::Iterator it2 = m_MountCallbacks.begin();
+                 it2 != m_MountCallbacks.end();
+                 it2++)
             {
-                MountCallback mc = *(*it);
+                MountCallback mc = *(*it2);
                 mc();
             }
 
@@ -150,8 +150,6 @@ String VFS::getUniqueAlias(String alias)
             return s;
         index--;
     }
-
-    return String();
 }
 
 

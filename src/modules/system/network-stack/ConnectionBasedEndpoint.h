@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -35,14 +34,14 @@ private:
 public:
     ConnectionBasedEndpoint() :
             Endpoint()
-    {};
+    {}
     ConnectionBasedEndpoint(uint16_t local, uint16_t remote) :
             Endpoint(local, remote)
-    {};
+    {}
     ConnectionBasedEndpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
             Endpoint(remoteIp, local, remote)
-    {};
-    virtual ~ConnectionBasedEndpoint() {};
+    {}
+    virtual ~ConnectionBasedEndpoint() {}
 
     EndpointType getType()
     {

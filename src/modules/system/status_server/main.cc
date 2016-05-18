@@ -33,7 +33,7 @@
 
 #define LISTEN_PORT     1234
 
-int clientThread(void *p)
+static int clientThread(void *p)
 {
     if(!p)
         return 0;
@@ -133,8 +133,7 @@ int clientThread(void *p)
 
             response += "<h3>Network Interfaces</h3>";
             response += "<table border='1'><tr><th>Interface #</th><th>IP Address</th><th>Subnet Mask</th><th>Gateway</th><th>DNS Servers</th><th>Driver Name</th><th>MAC address</th><th>Statistics</th></tr>";
-            size_t i;
-            for (i = 0; i < NetworkStack::instance().getNumDevices(); i++)
+            for (size_t i = 0; i < NetworkStack::instance().getNumDevices(); i++)
             {
                 Network* card = NetworkStack::instance().getDevice(i);
                 StationInfo info = card->getStationInfo();
@@ -221,12 +220,12 @@ int clientThread(void *p)
 
             VFSMountTree &mounts = VFS::instance().getMounts();
 
-            for(VFSMountTree::Iterator i = mounts.begin();
-                i != mounts.end();
-                i++)
+            for(VFSMountTree::Iterator it = mounts.begin();
+                it != mounts.end();
+                it++)
             {
-                Filesystem *pFs = i.key();
-                StringList *pList = i.value();
+                Filesystem *pFs = it.key();
+                StringList *pList = it.value();
                 Disk *pDisk = pFs->getDisk();
 
                 for(StringList::Iterator j = pList->begin();

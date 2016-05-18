@@ -39,7 +39,7 @@ enum HcdConstants {
 
 static bool bFound = false;
 
-void probeXhci(Device *pDev)
+static void probeXhci(Device *pDev)
 {
     WARNING("USB: xHCI found, not implemented yet!");
     /*
@@ -52,7 +52,7 @@ void probeXhci(Device *pDev)
     */
 }
 
-void probeEhci(Device *pDev)
+static void probeEhci(Device *pDev)
 {
     NOTICE("USB: EHCI found");
 
@@ -72,7 +72,7 @@ void probeEhci(Device *pDev)
     bFound = true;
 }
 
-void probeOhci(Device *pDev)
+static void probeOhci(Device *pDev)
 {
     NOTICE("USB: OHCI found");
 
@@ -87,7 +87,7 @@ void probeOhci(Device *pDev)
 }
 
 #ifdef X86_COMMON
-void probeUhci(Device *pDev)
+static void probeUhci(Device *pDev)
 {
     NOTICE("USB: UHCI found");
 

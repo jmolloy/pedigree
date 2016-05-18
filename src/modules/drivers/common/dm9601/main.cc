@@ -33,7 +33,7 @@ static struct
 
 #define NUM_DEVICES (sizeof(g_Devices) / sizeof(g_Devices[0]))
 
-UsbDevice *dm9601Connected(UsbDevice *pDevice)
+static UsbDevice *dm9601Connected(UsbDevice *pDevice)
 {
     return new Dm9601(pDevice);
 }

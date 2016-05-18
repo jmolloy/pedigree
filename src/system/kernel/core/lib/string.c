@@ -22,6 +22,24 @@
 #include <utilities/utility.h>
 #include <processor/types.h>
 
+int isspace(int c);
+int isupper(int c);
+int islower(int c);
+int isdigit(int c);
+int isalpha(int c);
+
+size_t strlen(const char *s);
+char *strcpy(char *dest, const char *src);
+char *strncpy(char *dest, const char *src, size_t len);
+int strcmp(const char *p1, const char *p2);
+int strncmp(const char *p1, const char *p2, size_t n);
+char *strcat(char *dest, const char *src);
+char *strncat(char *dest, const char *src, size_t n);
+const char *strchr(const char *str, int target);
+const char *strrchr(const char *str, int target);
+int vsprintf(char *buf, const char *fmt, va_list arg);
+unsigned long strtoul(const char *nptr, char const **endptr, int base);
+
 #define ULONG_MAX -1
 
 size_t _StringLength(const char *src)
@@ -45,7 +63,7 @@ char *StringCopy(char *dest, const char *src)
 
 char *StringCopyN(char *dest, const char *src, size_t len)
 {
-  const char *orig_dest = dest;
+  char *orig_dest = dest;
   for (size_t i = 0; i < len; ++i)
   {
     if (*src)
@@ -55,7 +73,7 @@ char *StringCopyN(char *dest, const char *src, size_t len)
   }
   *dest = '\0';
 
-  return dest;
+  return orig_dest;
 }
 
 int StringFormat(char *buf, const char *fmt, ...)

@@ -65,9 +65,9 @@ public:
     {
       t->registerHandler(this);
     }
-  };
+  }
   virtual ~TcpManager()
-  {};
+  {}
 
   /** For access to the manager without declaring an instance of it */
   static TcpManager& instance()

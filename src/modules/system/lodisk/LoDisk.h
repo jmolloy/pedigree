@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -57,13 +56,7 @@ class FileDisk : public Disk
             Standard
         };
 
-        FileDisk() :
-            m_pFile(0), m_Mode(Standard), m_Cache(),
-            m_MemRegion("FileDisk-Failed"), m_ReqMutex(false)
-        {
-            FATAL("I require a constructor with arguments!");
-        }
-
+        FileDisk() = delete;
         FileDisk(String file, AccessType mode = Standard);
         virtual ~FileDisk();
 

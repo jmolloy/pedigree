@@ -126,7 +126,7 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
 
   // find the first free element
   bool spaceFound = false;
-  size_t offset;
+  size_t offset = 0;
   size_t consecutiveFree = 0;
   while(true)
   {
@@ -291,7 +291,6 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
 #ifdef SUPERDEBUG
   NOTICE("  -> FatFilesystem::addEntry(" << filename << ") is not successful");
 #endif
-  return false;
 }
 
 bool FatDirectory::removeEntry(File *pFile)

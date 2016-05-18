@@ -33,7 +33,7 @@
 
 #define MAX_BUS 4
 
-IoPort configSpace("PCI config space");
+static IoPort configSpace("PCI config space");
 
 union ConfigAddress {
   struct
@@ -76,7 +76,7 @@ struct ConfigSpace
   uint8_t  max_latency;
 } __attribute__((packed));
 
-void readConfigSpace (Device *pDev, ConfigSpace *pCs)
+static void readConfigSpace (Device *pDev, ConfigSpace *pCs)
 {
   uint32_t *pCs32 = reinterpret_cast<uint32_t*> (pCs);
   for (unsigned int i = 0; i < sizeof(ConfigSpace)/4; i++)
@@ -85,7 +85,7 @@ void readConfigSpace (Device *pDev, ConfigSpace *pCs)
   }
 }
 
-const char *getVendor (uint16_t vendor)
+static const char *getVendor (uint16_t vendor)
 {
   for (unsigned int i = 0; i < PCI_VENTABLE_LEN; i++)
   {
@@ -95,7 +95,7 @@ const char *getVendor (uint16_t vendor)
   return "";
 }
 
-const char *getDevice (uint16_t vendor, uint16_t device)
+static const char *getDevice (uint16_t vendor, uint16_t device)
 {
   for (unsigned int i = 0; i < PCI_DEVTABLE_LEN; i++)
   {
@@ -161,8 +161,6 @@ static bool entry()
           if (cs.bar[l] == 0) continue;
 
           // Write the BAR with FFFFFFFF to discover the size of mapping that the device requires.
-          ConfigAddress ca2;
-
           uint8_t offset = (0x10 + l*4) >> 2;
           PciBus::instance().writeConfigSpace(pDevice, offset, 0xFFFFFFFF);
           uint32_t mask = PciBus::instance().readConfigSpace(pDevice, offset);

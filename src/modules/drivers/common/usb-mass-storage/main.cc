@@ -22,7 +22,7 @@
 
 #include "UsbMassStorageDevice.h"
 
-UsbDevice *massStorageConnected(UsbDevice *pDevice)
+static UsbDevice *massStorageConnected(UsbDevice *pDevice)
 {
     return new UsbMassStorageDevice(pDevice);
 }

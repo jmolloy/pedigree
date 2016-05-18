@@ -110,30 +110,6 @@ void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* device)
     Device::addToRoot(pCdiNet);
 }
 
-static CdiNet *findNet(Device *pRoot, struct cdi_net_device *device)
-{
-    for (size_t i = 0; i < pRoot->getNumChildren(); ++i)
-    {
-        Device *pChild = pRoot->getChild(i);
-
-        if (pChild->getType() == Device::Network)
-        {
-            if (pChild->getSpecificType() == "CDI NIC")
-            {
-                CdiNet *pNet = static_cast<CdiNet *>(pChild);
-                if (pNet->getCdiDevice() == device)
-                    return pNet;
-            }
-        }
-
-        CdiNet *ret = findNet(pChild, device);
-        if (ret)
-            return ret;
-    }
-
-    return 0;
-}
-
 /**
  * Wird von Netzwerktreibern aufgerufen, wenn ein Netzwerkpaket
  * empfangen wurde.

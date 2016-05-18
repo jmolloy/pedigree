@@ -60,7 +60,7 @@ int MemoryCompare(const void *p1, const void *p2, size_t len) PURE;
 
 // Built-in PRNG.
 void random_seed(uint64_t seed);
-uint64_t random_next();
+uint64_t random_next(void);
 
 inline char toUpper(char c) PURE;
 inline char toUpper(char c)
@@ -85,6 +85,11 @@ inline int max(size_t a, size_t b)
 {
     return a > b ? a : b;
 }
+
+// Memory allocation for C code
+void *malloc(size_t);
+void *realloc(void *, size_t);
+void free(void *);
 
 #ifdef __cplusplus
 }

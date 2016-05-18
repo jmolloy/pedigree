@@ -179,23 +179,23 @@ void TextIO::write(const char *s, size_t len)
         {
             m_bUtf8 = true;
 
-            uint8_t byte = *reinterpret_cast<const uint8_t*>(s);
-            if((byte & 0xF8) == 0xF0)
+            uint8_t thisByte = *reinterpret_cast<const uint8_t*>(s);
+            if((thisByte & 0xF8) == 0xF0)
             {
                 // 4-byte sequence.
-                m_nCharacter = (byte & 0x7) << 18;
+                m_nCharacter = (thisByte & 0x7) << 18;
                 m_nUtf8Handled = 18;
             }
-            else if((byte & 0xF0) == 0xE0)
+            else if((thisByte & 0xF0) == 0xE0)
             {
                 // 3-byte sequence.
-                m_nCharacter = (byte & 0xF) << 12;
+                m_nCharacter = (thisByte & 0xF) << 12;
                 m_nUtf8Handled = 12;
             }
-            else if((byte & 0xE0) == 0xC0)
+            else if((thisByte & 0xE0) == 0xC0)
             {
                 // 2-byte sequence.
-                m_nCharacter = (byte & 0x1F) << 6;
+                m_nCharacter = (thisByte & 0x1F) << 6;
                 m_nUtf8Handled = 6;
             }
             else
@@ -406,7 +406,7 @@ void TextIO::write(const char *s, size_t len)
                     {
                         // We mosly support the 'Advanced Video Option'.
                         // (apart from underline/blink)
-                        const char *attribs = "\e[?1;2c";
+                        const char *attribs = "\033[?1;2c";
                         m_OutBuffer.write(const_cast<char *>(attribs), StringLength(attribs));
                     }
                     m_bControlSeq = false;
@@ -669,7 +669,7 @@ void TextIO::write(const char *s, size_t len)
                         case 5:
                             {
                                 // Report ready with no malfunctions detected.
-                                const char *status = "\e[0n";
+                                const char *status = "\033[0n";
                                 m_OutBuffer.write(const_cast<char *>(status), StringLength(status));
                             }
                             break;
@@ -677,7 +677,7 @@ void TextIO::write(const char *s, size_t len)
                             {
                                 // Report cursor position.
                                 // CPR - \e[ Y ; X R
-                                NormalStaticString response("\e[");
+                                NormalStaticString response("\033[");
 
                                 ssize_t reportX = m_CursorX + 1;
                                 ssize_t reportY = m_CursorY + 1;
@@ -790,9 +790,9 @@ void TextIO::write(const char *s, size_t len)
                         // * No STP option, so no flags
                         const char *termparms = 0;
                         if(m_Params[0])
-                            termparms = "\e[3;1;1;120;120;1;0x";
+                            termparms = "\033[3;1;1;120;120;1;0x";
                         else
-                            termparms = "\e[2;1;1;120;120;1;0x";
+                            termparms = "\033[2;1;1;120;120;1;0x";
                         m_OutBuffer.write(const_cast<char *>(termparms), StringLength(termparms));
                     }
                     m_bControlSeq = false;
@@ -913,9 +913,9 @@ void TextIO::write(const char *s, size_t len)
                     {
                         const char *identifier = 0;
                         if(m_CurrentModes & AnsiVt52)
-                            identifier = "\e[?1;2c";
+                            identifier = "\033[?1;2c";
                         else
-                            identifier = "\e/Z";
+                            identifier = "\033/Z";
                         m_OutBuffer.write(const_cast<char *>(identifier), StringLength(identifier));
                     }
                     m_bControlSeq = false;
@@ -1017,7 +1017,7 @@ void TextIO::write(const char *s, size_t len)
         }
         else
         {
-            if(m_nCharacter == '\e')
+            if(m_nCharacter == '\033')
             {
                 m_bControlSeq = true;
                 m_bBracket = false;
@@ -1034,7 +1034,7 @@ void TextIO::write(const char *s, size_t len)
                     case 0x05:
                         {
                             // Reply with our answerback.
-                            const char *answerback = "\e[1;2c";
+                            const char *answerback = "\033[1;2c";
                             m_OutBuffer.write(const_cast<char *>(answerback), StringLength(answerback));
                         }
                         break;

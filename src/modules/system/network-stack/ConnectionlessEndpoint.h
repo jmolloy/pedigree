@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -35,14 +34,14 @@ private:
 public:
     ConnectionlessEndpoint() :
             Endpoint()
-    {};
+    {}
     ConnectionlessEndpoint(uint16_t local, uint16_t remote) :
             Endpoint(local, remote)
-    {};
+    {}
     ConnectionlessEndpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
             Endpoint(remoteIp, local, remote)
-    {};
-    virtual ~ConnectionlessEndpoint() {};
+    {}
+    virtual ~ConnectionlessEndpoint() {}
 
     EndpointType getType()
     {
@@ -60,7 +59,7 @@ public:
     virtual int send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network *pCard = 0)
     {
         return -1;
-    };
+    }
 
     /**
      * Receives from the network into the given buffer.
@@ -73,7 +72,7 @@ public:
     virtual int recv(uintptr_t buffer, size_t maxSize, bool bBlock, RemoteEndpoint* remoteHost, int nTimeout = 30)
     {
         return -1;
-    };
+    }
 
     /**
      * Whether or not to accept incoming communications from any address on
@@ -83,14 +82,14 @@ public:
     virtual inline bool acceptAnyAddress()
     {
         return false;
-    };
+    }
 
     /**
      * This allows the acceptAnyAddress behaviour to be turned on and off.
      */
     virtual inline void acceptAnyAddress(bool accept)
     {
-    };
+    }
 };
 
 #endif

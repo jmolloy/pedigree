@@ -72,16 +72,16 @@ public:
     Endpoint() :
             m_Sockets(), m_LocalPort(0), m_RemotePort(0), m_LocalIp(), m_RemoteIp(),
             m_Manager(0), m_Error(Error::NoError), m_bConnection(false)
-    {};
+    {}
     Endpoint(uint16_t local, uint16_t remote) :
             m_Sockets(), m_LocalPort(local), m_RemotePort(remote), m_LocalIp(), m_RemoteIp(),
             m_Manager(0), m_Error(Error::NoError), m_bConnection(false)
-    {};
+    {}
     Endpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
             m_Sockets(), m_LocalPort(local), m_RemotePort(remote), m_LocalIp(), m_RemoteIp(remoteIp),
             m_Manager(0), m_Error(Error::NoError), m_bConnection(false)
-    {};
-    virtual ~Endpoint() {};
+    {}
+    virtual ~Endpoint() {}
 
     /** Endpoint type (implemented by the concrete child classes) */
     virtual EndpointType getType() = 0;
@@ -129,7 +129,7 @@ public:
     {
         RemoteEndpoint() :
                 ip(), remotePort(0)
-        {};
+        {}
 
         /// IpAddress will handle IPv6 and IPv4
         IpAddress ip;
@@ -142,7 +142,7 @@ public:
     virtual bool dataReady(bool block = false, uint32_t timeout = 30)
     {
         return false;
-    };
+    }
 
     /** <Protocol>Manager functionality */
     virtual size_t depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoint remoteHost)
@@ -159,7 +159,7 @@ public:
      */
     virtual void setCard(Network* pCard)
     {
-    };
+    }
 
     /** Protocol management */
     ProtocolManager *getManager()

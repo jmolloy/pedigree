@@ -249,8 +249,8 @@ void ConsoleMasterFile::inputLineDiscipline(char *buf, size_t len)
                         {
                             // Forcefully clear out bytes so we can write what
                             // we need to to the ring buffer.
-                            char buf[3];
-                            m_RingBuffer.read(buf, 3);
+                            char tmp[3];
+                            m_RingBuffer.read(tmp, 3);
                         }
 
                         // Write it to the master nicely (eg, ^C, ^D)

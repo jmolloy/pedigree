@@ -71,7 +71,7 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
     bool bFound = false;
 
     uint32_t i;
-    Dir *pDir;
+    Dir *pDir = 0;
     for (i = 0; i < m_nBlocks; i++)
     {
         ensureBlockLoaded(i);
@@ -127,7 +127,7 @@ bool Ext2Directory::addEntry(String filename, File *pFile, size_t type)
         if (bFound) break;
     }
 
-    if (!bFound)
+    if (!bFound || !pDir)
     {
         // Need to make a new block.
         NOTICE("blocks: " << m_nBlocks);

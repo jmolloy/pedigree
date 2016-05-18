@@ -191,8 +191,8 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
       if((cardInfo.ipv4 == header->ipDest))
       {
           // allocate the reply
-          uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
-          arpHeader* reply = reinterpret_cast<arpHeader*>(packet);
+          uintptr_t replyPacket = NetworkStack::instance().getMemPool().allocate();
+          arpHeader* reply = reinterpret_cast<arpHeader*>(replyPacket);
           MemoryCopy(reply, header, sizeof(arpHeader));
           reply->opcode = HOST_TO_BIG16(ARP_OP_REPLY);
           reply->ipSrc = cardInfo.ipv4.getIp();
@@ -201,10 +201,10 @@ void Arp::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint32_t offs
           MemoryCopy(reply->hwDest, header->hwSrc, 6);
 
           // send it out
-          Ethernet::send(sizeof(arpHeader), packet, pCard, sourceMac, ETH_ARP);
+          Ethernet::send(sizeof(arpHeader), replyPacket, pCard, sourceMac, ETH_ARP);
 
           // and now that it's sent, destroy the reply
-          NetworkStack::instance().getMemPool().free(packet);
+          NetworkStack::instance().getMemPool().free(replyPacket);
       }
     }
     // reply

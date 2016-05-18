@@ -28,6 +28,10 @@ Event::Event(uintptr_t handlerAddress, bool isDeletable, size_t specificNestingL
 {
 }
 
+Event::~Event()
+{
+}
+
 uintptr_t Event::getTrampoline()
 {
     return VirtualAddressSpace::getKernelAddressSpace().getKernelEventBlockStart();
@@ -64,4 +68,19 @@ size_t Event::getEventType(uint8_t *pBuffer)
     void *alignedBuffer = ASSUME_ALIGNMENT(pBuffer, sizeof(size_t));
     size_t *pBufferSize_t = reinterpret_cast<size_t*> (alignedBuffer);
     return pBufferSize_t[0];
+}
+
+Event::Event(const Event &other) :
+    m_HandlerAddress(other.m_HandlerAddress),
+    m_bIsDeletable(other.m_bIsDeletable),
+    m_NestingLevel(other.m_NestingLevel)
+{
+}
+
+Event &Event::operator = (const Event &other)
+{
+    m_HandlerAddress = other.m_HandlerAddress;
+    m_bIsDeletable = other.m_bIsDeletable;
+    m_NestingLevel = other.m_NestingLevel;
+    return *this;
 }

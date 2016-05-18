@@ -234,6 +234,26 @@ struct remove_pointer<T *>
     typedef T type;
 };
 
+/** Remove references from the given type. */
+template <class T>
+struct remove_reference
+{
+    typedef T type;
+};
+
+template <class T>
+struct remove_reference<T &>
+{
+    typedef T type;
+};
+
+/** Move an object (doesn't trigger copy-construction). */
+template <class T>
+typename remove_reference<T>::type &&move(T &&a)
+{
+    return a;
+}
+
 }  // namespace pedigree_std
 
 using pedigree_std::is_integral;

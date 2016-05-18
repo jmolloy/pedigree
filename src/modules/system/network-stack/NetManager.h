@@ -63,7 +63,7 @@ class Socket : public File
     Socket(const Socket &file) : File(), m_Endpoint(0), m_Protocol(0)
     {
       ERROR("Socket copy constructor called");
-    };
+    }
     Socket& operator =(const Socket &file)
     {
       ERROR("Socket copy constructor called");
@@ -76,9 +76,9 @@ class Socket : public File
   public:
     Socket(int proto, Endpoint *p, Filesystem *pFs) :
       File(String("socket"), 0, 0, 0, 0, pFs, 0, 0), m_Endpoint(p), m_Protocol(proto)
-    {};
+    {}
     virtual ~Socket()
-    {};
+    {}
 
     inline Endpoint *getEndpoint()
     {
@@ -114,16 +114,16 @@ public:
   NetManager() : m_Endpoints()
   {
     m_Endpoints.clear();
-  };
+  }
 
   virtual ~NetManager()
   {
-  };
+  }
 
   static NetManager &instance()
   {
     return m_Instance;
-  };
+  }
 
   //
   // NetManager interface.

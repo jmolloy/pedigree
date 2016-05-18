@@ -106,7 +106,7 @@ class PosixTerminalEvent : public Event
         ConsoleFile *pConsole;
 };
 
-void terminalEventHandler(uintptr_t serializeBuffer)
+static void terminalEventHandler(uintptr_t serializeBuffer)
 {
     PosixTerminalEvent evt;
     if(!PosixTerminalEvent::unserialize(reinterpret_cast<uint8_t *>(serializeBuffer), evt))

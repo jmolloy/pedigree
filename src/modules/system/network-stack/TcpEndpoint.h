@@ -53,7 +53,7 @@ class TcpEndpoint : public ConnectionBasedEndpoint
       m_DataStream(), m_ShadowDataStream()
     {
       m_bConnection = true;
-    };
+    }
     TcpEndpoint(uint16_t local, uint16_t remote) :
       ConnectionBasedEndpoint(local, remote), m_Card(0), m_ConnId(0),
       m_RemoteHost(), nBytesRemoved(0), m_Listening(false), m_IncomingConnections(),
@@ -61,7 +61,7 @@ class TcpEndpoint : public ConnectionBasedEndpoint
       m_DataStream(), m_ShadowDataStream()
     {
       m_bConnection = true;
-    };
+    }
     TcpEndpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
       ConnectionBasedEndpoint(remoteIp, local, remote), m_Card(0),
       m_ConnId(0), m_RemoteHost(), nBytesRemoved(0), m_Listening(false),
@@ -69,7 +69,7 @@ class TcpEndpoint : public ConnectionBasedEndpoint
       m_IncomingConnectionLock(), m_DataStream(), m_ShadowDataStream()
     {
       m_bConnection = true;
-    };
+    }
     TcpEndpoint(size_t connId, IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
       ConnectionBasedEndpoint(remoteIp, local, remote), m_Card(0),
       m_ConnId(connId), m_RemoteHost(), nBytesRemoved(0), m_Listening(false),
@@ -77,8 +77,8 @@ class TcpEndpoint : public ConnectionBasedEndpoint
       m_IncomingConnectionLock(), m_DataStream(), m_ShadowDataStream()
     {
       m_bConnection = true;
-    };
-    virtual ~TcpEndpoint() {};
+    }
+    virtual ~TcpEndpoint() {}
 
     /** Application interface */
     virtual int state();

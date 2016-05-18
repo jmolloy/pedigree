@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -35,9 +34,9 @@ class ProtocolManager
 {
     public:
         ProtocolManager()
-        {};
+        {}
         virtual ~ProtocolManager()
-        {};
+        {}
         
         /**
          * The default implementation is quite simple. Individual managers may

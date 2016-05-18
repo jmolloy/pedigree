@@ -30,10 +30,10 @@
 #include <graphics/Graphics.h>
 
 /// \todo Put this in the config manager.
-Display::ScreenMode g_ScreenMode;
-Display *g_pDisplay = 0;
-uintptr_t g_Framebuffer;
-size_t g_FbSize;
+static Display::ScreenMode g_ScreenMode;
+static Display *g_pDisplay = 0;
+static uintptr_t g_Framebuffer;
+static size_t g_FbSize;
 
 VbeDisplay::VbeDisplay() : m_VbeVersion(), m_ModeList(), m_Mode(), m_pFramebuffer(), m_Buffers(), m_SpecialisedMode(Mode_Generic), m_Allocator()
 {

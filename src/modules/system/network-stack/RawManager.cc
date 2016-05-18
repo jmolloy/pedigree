@@ -81,7 +81,6 @@ int RawEndpoint::send(size_t nBytes, uintptr_t buffer, Endpoint::RemoteEndpoint 
     default:
       pCard->send(nBytes, buffer);
       return static_cast<int>(nBytes);
-      break;
   };
   return -1;
 };

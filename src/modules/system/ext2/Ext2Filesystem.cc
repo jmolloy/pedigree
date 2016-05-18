@@ -42,7 +42,7 @@
 // written, it traps.
 /// \todo Set CR0.WP bit else this will never happen.
 /// \todo Work out what to do when it traps.
-uint8_t g_pSparseBlock[4096] ALIGN(4096) SECTION(".bss");
+static uint8_t g_pSparseBlock[4096] ALIGN(4096) SECTION(".bss");
 
 #ifdef EXT2_STANDALONE
 extern uint32_t getUnixTimestamp();
@@ -170,8 +170,8 @@ bool Ext2Filesystem::initialise(Disk *pDisk)
         uintptr_t idx = (i * sizeof(GroupDesc)) / m_BlockSize;
         uintptr_t off = (i * sizeof(GroupDesc)) % m_BlockSize;
 
-        uintptr_t block = readBlock(gdBlock+idx);
-        m_pGroupDescriptors[i] = reinterpret_cast<GroupDesc*>(block+off);
+        uintptr_t groupBlock = readBlock(gdBlock+idx);
+        m_pGroupDescriptors[i] = reinterpret_cast<GroupDesc*>(groupBlock+off);
     }
 
     // Create our bitmap arrays and tables.
@@ -506,15 +506,15 @@ uint32_t Ext2Filesystem::findFreeBlock(uint32_t inode)
                     writeBlock(gdBlock + groupBlock);
 
                     // First block of this group...
-                    uint32_t block = group * LITTLE_TO_HOST32(m_pSuperblock->s_blocks_per_group);
+                    uint32_t result = group * LITTLE_TO_HOST32(m_pSuperblock->s_blocks_per_group);
                     // Add the data block offset for this filesystem.
-                    block += LITTLE_TO_HOST32(m_pSuperblock->s_first_data_block);
+                    result += LITTLE_TO_HOST32(m_pSuperblock->s_first_data_block);
                     // Blocks skipped so far (i == offset in bytes)...
-                    block += i * 8;
+                    result += i * 8;
                     // Blocks skipped so far (j == bits ie blocks)...
-                    block += j;
+                    result += j;
                     // Return block.
-                    return block;
+                    return result;
                 }
             }
 
@@ -584,8 +584,8 @@ uint32_t Ext2Filesystem::findFreeInode()
                     // Update group descriptor count on disk.
                     /// \todo save group descriptor block number elsewhere
                     uint32_t gdBlock = LITTLE_TO_HOST32(m_pSuperblock->s_first_data_block) + 1;
-                    uint32_t block = (group * sizeof(GroupDesc)) / m_BlockSize;
-                    writeBlock(gdBlock + block);
+                    uint32_t result = (group * sizeof(GroupDesc)) / m_BlockSize;
+                    writeBlock(gdBlock + result);
 
                     // First inode of this group...
                     uint32_t inode = group * LITTLE_TO_HOST32(m_pSuperblock->s_inodes_per_group);

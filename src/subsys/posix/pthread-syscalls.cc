@@ -50,7 +50,7 @@ struct pthreadInfoBlock
  *         this function does return, kindly ignore the resulting fatal error
  *         and look for the flying pigs.
  */
-int pthread_kernel_enter(void *blk)
+static int pthread_kernel_enter(void *blk)
 {
     PT_NOTICE("pthread_kernel_enter");
 

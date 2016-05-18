@@ -232,11 +232,7 @@ class PosixSubsystem : public Subsystem
         {
             /// Default constructor
             AlternateSignalStack() : base(0), size(0), inUse(false), enabled(false)
-            {};
-
-            /// Default destructor
-            virtual ~AlternateSignalStack()
-            {};
+            {}
 
             /// The location of this stack
             uintptr_t base;
@@ -381,8 +377,8 @@ class PosixSubsystem : public Subsystem
         class PosixSyncObject
         {
             public:
-                PosixSyncObject() : pObject(0), isMutex(false) {};
-                virtual ~PosixSyncObject() {};
+                PosixSyncObject() : pObject(0), isMutex(false) {}
+                virtual ~PosixSyncObject() {}
 
                 void *pObject;
                 bool isMutex;
@@ -439,8 +435,8 @@ class PosixSubsystem : public Subsystem
                 PosixThread() : pThread(0), isRunning(true), returnValue(0), canReclaim(false),
                                 isDetached(false), m_ThreadData(), m_ThreadKeys(), lastDataKey(0),
                                 nextDataKey(0)
-                {};
-                virtual ~PosixThread() {};
+                {}
+                virtual ~PosixThread() {}
 
                 Thread *pThread;
                 Mutex isRunning;

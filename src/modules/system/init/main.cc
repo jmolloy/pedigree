@@ -39,7 +39,7 @@ static void error(const char *s)
     str.clear();
 }
 
-int init_stage2(void *param)
+static int init_stage2(void *param)
 {
 #if defined(HOSTED) && defined(HAS_ADDRESS_SANITIZER)
     extern void system_reset();

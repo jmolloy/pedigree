@@ -33,10 +33,12 @@
 
 #include <machine/x86_common/Bios.h>
 
+extern "C" void vbeModeChangedCallback(char *pId, char *pModeId);
+
 #define REALMODE_PTR(x) ((x[1] << 4) + x[0])
 
-VbeDisplay *g_pDisplays[4];
-size_t g_nDisplays = 0;
+static VbeDisplay *g_pDisplays[4];
+static size_t g_nDisplays = 0;
 
 struct vbeControllerInfo {
    char signature[4];             // == "VESA"
@@ -158,7 +160,7 @@ class VbeFramebuffer : public Framebuffer
         MemoryRegion *m_pFramebufferRegion;
 };
 
-bool entry()
+static bool entry()
 {
 #ifdef NOGFX
   NOTICE("Not starting VBE module, NOGFX is defined.");
@@ -368,7 +370,7 @@ bool entry()
   return true;
 }
 
-void exit()
+static void exit()
 {
 }
 

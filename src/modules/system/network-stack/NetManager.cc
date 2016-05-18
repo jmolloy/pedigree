@@ -312,7 +312,5 @@ uint64_t NetManager::write(File *pFile, uint64_t location, uint64_t size, uintpt
         ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(p);
         return ce->send(size, buffer);
     }
-
-    return 0;
 }
 

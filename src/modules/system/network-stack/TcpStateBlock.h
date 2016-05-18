@@ -73,13 +73,13 @@ class StateBlock : public TimerHandler
       Timer* t = Machine::instance().getTimer();
       if(t)
         t->registerHandler(this);
-    };
+    }
     ~StateBlock()
     {
       Timer* t = Machine::instance().getTimer();
       if(t)
         t->unregisterHandler(this);
-    };
+    }
 
     Tcp::TcpState currentState;
 

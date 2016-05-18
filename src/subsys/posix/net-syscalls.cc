@@ -141,7 +141,7 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
             }
 
             // Valid state. But no socket, so do the magic here.
-            struct sockaddr_un *un = (struct sockaddr_un *) address;
+            struct sockaddr_un *un = reinterpret_cast<struct sockaddr_un *>(address);
             String pathname(un->sun_path);
 
             /// \todo Handle things that aren't actually UNIX sockets...
@@ -358,7 +358,7 @@ ssize_t posix_sendto(void* callInfo)
 
     if(f->so_domain == AF_UNIX)
     {
-        const struct sockaddr_un *un = (const struct sockaddr_un *) address;
+        const struct sockaddr_un *un = reinterpret_cast<const struct sockaddr_un *>(address);
         File *pFile = VFS::instance().find(String(un->sun_path));
         if(!pFile)
         {
@@ -483,7 +483,7 @@ ssize_t posix_recvfrom(void* callInfo)
     if(f->so_domain == AF_UNIX)
     {
         File *pFile = f->so_local;
-        struct sockaddr_un *un = (struct sockaddr_un *) address;
+        struct sockaddr_un *un = reinterpret_cast<struct sockaddr_un *>(address);
         un->sun_family = AF_UNIX;
 
         ssize_t r = pFile->read(reinterpret_cast<uintptr_t>(un->sun_path), bufflen, reinterpret_cast<uintptr_t>(buff), (f->flflags & O_NONBLOCK) == 0);
@@ -563,7 +563,7 @@ int posix_bind(int sock, const struct sockaddr *address, size_t addrlen)
             }
 
             // Valid state. But no socket, so do the magic here.
-            const struct sockaddr_un *un = (const struct sockaddr_un *) address;
+            const struct sockaddr_un *un = reinterpret_cast<const struct sockaddr_un *>(address);
             String pathname(un->sun_path);
 
             bool bResult = VFS::instance().createFile(pathname, 0777);

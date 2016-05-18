@@ -29,6 +29,9 @@ extern BootIO bootIO;
 
 Bios Bios::m_Instance;
 
+extern "C" int abs (int i);
+extern "C" void sscanf(void);
+
 u8 rdb (u32 addr)
 {
   return * reinterpret_cast<u8*> (addr);

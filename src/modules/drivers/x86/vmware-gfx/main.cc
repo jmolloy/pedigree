@@ -436,8 +436,8 @@ class VmwareGraphics : public Display
                     /// \todo Caps to determine whether to fall back to software
                     if(1)
                         m_pDisplay->copy(srcx, srcy, destx, desty, w, h);
-                    else
-                        swCopy(srcx, srcy, destx, desty, w, h);
+                    // else
+                    //    swCopy(srcx, srcy, destx, desty, w, h);
                 }
             
             private:
@@ -508,14 +508,14 @@ class VmwareGraphics : public Display
 
 static bool bFound = false;
 
-void callback(Device *pDevice)
+static void callback(Device *pDevice)
 {
     /// \todo track these so they can be cleaned up properly
     new VmwareGraphics(pDevice);
     bFound = true;
 }
 
-bool entry()
+static bool entry()
 {
     // Don't care about non-SVGA2 devices, just use VBE for them.
     Device::searchByVendorIdAndDeviceId(PCI_VENDOR_ID_VMWARE, PCI_DEVICE_ID_VMWARE_SVGA2, callback);
@@ -523,7 +523,7 @@ bool entry()
     return bFound;
 }
 
-void exit()
+static void exit()
 {
 }
 

@@ -251,7 +251,6 @@ int FramebufferFile::command(const int command, void *buffer)
 
                 return bSet ? 0 : -1;
             }
-            break;
         case PEDIGREE_FB_GETMODE:
             {
                 pedigree_fb_mode *arg = reinterpret_cast<pedigree_fb_mode *>(buffer);
@@ -270,7 +269,6 @@ int FramebufferFile::command(const int command, void *buffer)
 
                 return 0;
             }
-            break;
         case PEDIGREE_FB_REDRAW:
             {
                 pedigree_fb_rect *arg = reinterpret_cast<pedigree_fb_rect *>(buffer);
@@ -286,12 +284,9 @@ int FramebufferFile::command(const int command, void *buffer)
 
                 return 0;
             }
-            break;
         default:
             return -1;
     }
-
-    return -1;
 }
 
 bool DevFs::initialise(Disk *pDisk)

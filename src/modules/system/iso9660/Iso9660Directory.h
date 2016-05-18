@@ -45,7 +45,7 @@ public:
     Directory(name, accessedTime, modifiedTime, creationTime, inode, pFs, 0, pParent),
     m_pFs(pFs), m_Dir(dirRec)
   {}
-  virtual ~Iso9660Directory() {};
+  virtual ~Iso9660Directory() {}
 
   virtual void cacheDirectoryContents()
   {
@@ -153,7 +153,7 @@ public:
   }
 
   void fileAttributeChanged()
-  {};
+  {}
 
   inline Iso9660DirRecord &getDirRecord()
   {

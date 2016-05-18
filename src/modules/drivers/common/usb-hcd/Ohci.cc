@@ -156,7 +156,7 @@ Ohci::Ohci(Device* pDev) : UsbHub(pDev), m_Mutex(false), m_ScheduleChangeLock(),
     // Controller is now running. Yay!
     
     // Restore the Frame Interval register (reset by a HC reset)
-    m_pBase->write32(interval | (1 << 31), OhciFmInterval);
+    m_pBase->write32(interval | (1U << 31U), OhciFmInterval);
     
     DEBUG_LOG("USB: OHCI: maximum packet size is " << ((interval >> 16) & 0xEFFF));
     

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -36,12 +35,15 @@
 
 #include "IpCommon.h"
 
+extern class Ipv6Service *g_pIpv6Service;
+extern class ServiceFeatures *g_pIpv6Features;
+
 /** Ipv6Service: provides an interface to IPv6 throughout the system. */
 class Ipv6Service : public Service
 {
     public:
-        Ipv6Service() {};
-        virtual ~Ipv6Service() {};
+        Ipv6Service() {}
+        virtual ~Ipv6Service() {}
 
         /**
          * serve: Interface through which clients interact with the Service

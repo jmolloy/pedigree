@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -38,12 +37,12 @@ class TcpBuffer
       m_Buffer(0), m_BufferSize(0), m_DataSize(0), m_Reader(0), m_Writer(0), m_Lock(false)
     {
       setSize(32768);
-    };
+    }
     virtual ~TcpBuffer()
     {
       LockGuard<Mutex> guard(m_Lock);
       setSize(0);
-    };
+    }
 
     /** Writes data to the buffer */
     size_t write(uintptr_t buffer, size_t nBytes);
@@ -97,7 +96,7 @@ struct StateBlockHandle
 {
   StateBlockHandle() :
     localPort(0), remotePort(0), remoteHost(), listen(false)
-  {};
+  {}
 
   uint16_t localPort;
   uint16_t remotePort;
@@ -147,7 +146,7 @@ class Tree<StateBlockHandle,void*>
     {
       Node() :
         key(), element(0), leftChild(0), rightChild(0), parent(0), height(0)
-      {};
+      {}
 
       StateBlockHandle key;
       void *element;
@@ -163,9 +162,9 @@ class Tree<StateBlockHandle,void*>
     {
       public:
         IteratorNode() : value(0), pNode(0), pPreviousNode(0)
-        {};
+        {}
         IteratorNode(Node* node, Node* prev) : value(node), pNode(node), pPreviousNode(prev)
-        {};
+        {}
 
         IteratorNode *next()
         {
@@ -311,7 +310,7 @@ class Tree<StateBlockHandle,V*>
 
     /** The default constructor, does nothing */
     inline Tree()
-      : m_VoidTree(){};
+      : m_VoidTree(){}
     /** The copy-constructor
      *\param[in] x the reference object */
     inline Tree(const Tree &x)

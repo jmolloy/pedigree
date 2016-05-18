@@ -1475,7 +1475,6 @@ int posix_fcntl(int fd, int cmd, void* arg)
 
                 return static_cast<int>(fd2);
             }
-            return 0;
             break;
 
         case F_GETFD:
@@ -1915,9 +1914,6 @@ int posix_ftruncate(int a, off_t b)
         NOTICE("Complete");
         return 0;
     }
-
-    // Can't get here
-	return -1;
 }
 
 int posix_fsync(int fd)
@@ -2251,7 +2247,7 @@ int posix_fchdir(int fd)
     return 0;
 }
 
-int statvfs_doer(Filesystem *pFs, struct statvfs *buf)
+static int statvfs_doer(Filesystem *pFs, struct statvfs *buf)
 {
     if(!pFs)
     {

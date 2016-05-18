@@ -35,7 +35,7 @@
 #include "image.h"
 #include "font.h"
 
-Framebuffer *g_pFramebuffer = 0;
+static Framebuffer *g_pFramebuffer = 0;
 
 extern BootIO bootIO;
 
@@ -68,9 +68,9 @@ static bool g_NoGraphics = true;
 static bool g_NoGraphics = false;
 #endif
 
-Mutex g_PrintLock(false);
+static Mutex g_PrintLock(false);
 
-void printChar(char c, size_t x, size_t y)
+static void printChar(char c, size_t x, size_t y)
 {
     if(!g_pFramebuffer)
         return;
@@ -78,7 +78,7 @@ void printChar(char c, size_t x, size_t y)
     g_pFramebuffer->blit(g_pFont, 0, c * FONT_HEIGHT, x, y, FONT_WIDTH, FONT_HEIGHT);
 }
 
-void printChar(char c)
+static void printChar(char c)
 {
     if(!g_pFramebuffer)
         return;
@@ -129,7 +129,7 @@ void printChar(char c)
     }
 }
 
-void printString(const char *str)
+static void printString(const char *str)
 {
     if(!g_NoGraphics)
     {
@@ -163,7 +163,7 @@ void printString(const char *str)
     }
 }
 
-void printStringAt(const char *str, size_t x, size_t y)
+static void printStringAt(const char *str, size_t x, size_t y)
 {
     /// \todo Handle overflows
     for(size_t i = 0; i < StringLength(str); i++)
@@ -173,14 +173,14 @@ void printStringAt(const char *str, size_t x, size_t y)
     }
 }
 
-void centerStringAt(const char *str, size_t midX, size_t midY)
+static void centerStringAt(const char *str, size_t midX, size_t midY)
 {
     /// \todo Handle overflows
-    size_t width = StringLength(str) * FONT_WIDTH;
-    size_t height = FONT_HEIGHT;
+    size_t stringWidth = StringLength(str) * FONT_WIDTH;
+    size_t stringHeight = FONT_HEIGHT;
 
-    size_t x = midX - (width / 2);
-    size_t y = midY - (height / 2);
+    size_t x = midX - (stringWidth / 2);
+    size_t y = midY - (stringHeight / 2);
     printStringAt(str, x, y);
 }
 
@@ -199,13 +199,13 @@ class StreamingScreenLogger : public Log::LogCallback
 
 static StreamingScreenLogger g_StreamLogger;
 
-void keyCallback(InputManager::InputNotification &note)
+static void keyCallback(InputManager::InputNotification &note)
 {
     if(note.type != InputManager::Key)
         return;
 
     uint64_t key = note.data.key.key;
-    if(key == '\e' && !g_LogMode)
+    if(key == '\033' && !g_LogMode)
     {
         // Because we edit the dimensions of the screen, we can't let a print
         // continue while we run here.
@@ -221,7 +221,7 @@ void keyCallback(InputManager::InputNotification &note)
     }
 }
 
-void progress(const char *text)
+static void progress(const char *text)
 {
     // Calculate percentage.
     if(g_BootProgressTotal == 0)
@@ -333,7 +333,7 @@ static void getColor(const char *colorName, uint32_t &color)
     delete pResult;
 }
 
-static void getDesiredMode(size_t &width, size_t &height, size_t &bpp)
+static void getDesiredMode(size_t &modeWidth, size_t &modeHeight, size_t &modeBpp)
 {
     // Query the database
     Config::Result *pResult = Config::instance().query("select width,height,bpp from 'desired_display_mode';");
@@ -349,9 +349,9 @@ static void getDesiredMode(size_t &width, size_t &height, size_t &bpp)
     }
 
     // Get the mode details from the query result
-    width = pResult->getNum(0, "width");
-    height = pResult->getNum(0, "height");
-    bpp = pResult->getNum(0, "bpp");
+    modeWidth = pResult->getNum(0, "width");
+    modeHeight = pResult->getNum(0, "height");
+    modeBpp = pResult->getNum(0, "bpp");
 
     // Dispose of the query result
     delete pResult;
