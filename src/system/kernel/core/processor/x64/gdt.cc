@@ -61,9 +61,6 @@ void X64GdtManager::initialise(size_t processorCount)
     ProcessorInformation *processorInfo = *it;
     processorInfo->setTss(Tss);
     processorInfo->setTssSelector((i + 7) << 3);
-    
-    // TLS segment
-    setSegmentDescriptor(i + 8, 0, 0xFFFFF, 0xF2, 0xC);
     processorInfo->setTlsSelector((i + 8) << 3);
   }
 #else
