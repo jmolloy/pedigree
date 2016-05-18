@@ -20,7 +20,7 @@
 #include <Module.h>
 #include <Log.h>
 #include <processor/Processor.h>
-#include "sqlite3.h"
+#include "sqlite3/sqlite3.h"
 #include <utilities/utility.h>
 #include <BootstrapInfo.h>
 #include <panic.h>
@@ -35,8 +35,18 @@
 
 extern BootstrapStruct_t *g_pBootstrapInfo;
 
-uint8_t *g_pFile = 0;
-size_t g_FileSz = 0;
+extern "C" bool init(void);
+
+sqlite3 *g_pSqlite = 0;
+
+static uint8_t *g_pFile = 0;
+static size_t g_FileSz = 0;
+
+extern "C"
+{
+    void log_(unsigned long a);
+    int atoi(const char *str);
+}
 
 extern "C" void log_(unsigned long a)
 {
@@ -48,12 +58,12 @@ extern "C" int atoi(const char *str)
     return StringToUnsignedLong(str, 0, 10);
 }
 
-int xClose(sqlite3_file *file)
+static int xClose(sqlite3_file *file)
 {
     return 0;
 }
 
-int xRead(sqlite3_file *file, void *ptr, int iAmt, sqlite3_int64 iOfst)
+static int xRead(sqlite3_file *file, void *ptr, int iAmt, sqlite3_int64 iOfst)
 {
     int ret = 0;
     if ((static_cast<size_t>(iOfst + iAmt)) >= g_FileSz)
@@ -68,13 +78,13 @@ int xRead(sqlite3_file *file, void *ptr, int iAmt, sqlite3_int64 iOfst)
     return ret;
 }
 
-int xReadFail(sqlite3_file *file, void *ptr, int iAmt, sqlite3_int64 iOfst)
+static int xReadFail(sqlite3_file *file, void *ptr, int iAmt, sqlite3_int64 iOfst)
 {
     ByteSet(ptr, 0, iAmt);
     return SQLITE_IOERR_SHORT_READ;
 }
 
-int xWrite(sqlite3_file *file, const void *ptr, int iAmt, sqlite3_int64 iOfst)
+static int xWrite(sqlite3_file *file, const void *ptr, int iAmt, sqlite3_int64 iOfst)
 {
     // Write past the end of the file?
     if(static_cast<size_t>(iOfst + iAmt) >= g_FileSz)
@@ -97,54 +107,54 @@ int xWrite(sqlite3_file *file, const void *ptr, int iAmt, sqlite3_int64 iOfst)
     return 0;
 }
 
-int xWriteFail(sqlite3_file *file, const void *ptr, int iAmt, sqlite3_int64 iOfst)
+static int xWriteFail(sqlite3_file *file, const void *ptr, int iAmt, sqlite3_int64 iOfst)
 {
     return 0;
 }
 
-int xTruncate(sqlite3_file *file, sqlite3_int64 size)
+static int xTruncate(sqlite3_file *file, sqlite3_int64 size)
 {
     return 0;
 }
 
-int xSync(sqlite3_file *file, int flags)
+static int xSync(sqlite3_file *file, int flags)
 {
     return 0;
 }
 
-int xFileSize(sqlite3_file *file, sqlite3_int64 *pSize)
+static int xFileSize(sqlite3_file *file, sqlite3_int64 *pSize)
 {
     *pSize = g_FileSz;
     return 0;
 }
 
-int xLock(sqlite3_file *file, int a)
+static int xLock(sqlite3_file *file, int a)
 {
     return 0;
 }
 
-int xUnlock(sqlite3_file *file, int a)
+static int xUnlock(sqlite3_file *file, int a)
 {
     return 0;
 }
 
-int xCheckReservedLock(sqlite3_file *file, int *pResOut)
+static int xCheckReservedLock(sqlite3_file *file, int *pResOut)
 {
     *pResOut = 0;
     return 0;
 }
 
-int xFileControl(sqlite3_file *file, int op, void *pArg)
+static int xFileControl(sqlite3_file *file, int op, void *pArg)
 {
     return 0;
 }
 
-int xSectorSize(sqlite3_file *file)
+static int xSectorSize(sqlite3_file *file)
 {
     return 1;
 }
 
-int xDeviceCharacteristics(sqlite3_file *file)
+static int xDeviceCharacteristics(sqlite3_file *file)
 {
     return 0;
 }
@@ -184,7 +194,7 @@ static struct sqlite3_io_methods theio_fail =
 };
 
 
-int xOpen(sqlite3_vfs *vfs, const char *zName, sqlite3_file *file, int flags, int *pOutFlags)
+static int xOpen(sqlite3_vfs *vfs, const char *zName, sqlite3_file *file, int flags, int *pOutFlags)
 {
     if (StringCompare(zName, "root»/.pedigree-root"))
     {
@@ -202,61 +212,59 @@ int xOpen(sqlite3_vfs *vfs, const char *zName, sqlite3_file *file, int flags, in
     return 0;
 }
 
-int xDelete(sqlite3_vfs *vfs, const char *zName, int syncDir)
+static int xDelete(sqlite3_vfs *vfs, const char *zName, int syncDir)
 {
     return 0;
 }
 
-int xAccess(sqlite3_vfs *vfs, const char *zName, int flags, int *pResOut)
+static int xAccess(sqlite3_vfs *vfs, const char *zName, int flags, int *pResOut)
 {
     return 0;
 }
 
-int xFullPathname(sqlite3_vfs *vfs, const char *zName, int nOut, char *zOut)
+static int xFullPathname(sqlite3_vfs *vfs, const char *zName, int nOut, char *zOut)
 {
     StringCopyN(zOut, zName, nOut);
     return 0;
 }
 
-void *xDlOpen(sqlite3_vfs *vfs, const char *zFilename)
+static void *xDlOpen(sqlite3_vfs *vfs, const char *zFilename)
 {
     return 0;
 }
 
-void xDlError(sqlite3_vfs *vfs, int nByte, char *zErrMsg)
+static void xDlError(sqlite3_vfs *vfs, int nByte, char *zErrMsg)
 {
 }
 
-void (*xDlSym(sqlite3_vfs *vfs, void *p, const char *zSymbol))(void)
-{
-    return 0;
-}
-
-void xDlClose(sqlite3_vfs *vfs, void *v)
-{
-}
-
-int xRandomness(sqlite3_vfs *vfs, int nByte, char *zOut)
+static void (*xDlSym(sqlite3_vfs *vfs, void *p, const char *zSymbol))(void)
 {
     return 0;
 }
 
-int xSleep(sqlite3_vfs *vfs, int microseconds)
+static void xDlClose(sqlite3_vfs *vfs, void *v)
+{
+}
+
+static int xRandomness(sqlite3_vfs *vfs, int nByte, char *zOut)
 {
     return 0;
 }
 
-int xCurrentTime(sqlite3_vfs *vfs, double *)
+static int xSleep(sqlite3_vfs *vfs, int microseconds)
 {
     return 0;
 }
 
-int xGetLastError(sqlite3_vfs *vfs, int i, char *c)
+static int xCurrentTime(sqlite3_vfs *vfs, double *)
 {
     return 0;
 }
 
-
+static int xGetLastError(sqlite3_vfs *vfs, int i, char *c)
+{
+    return 0;
+}
 
 static struct sqlite3_vfs thevfs =
 {
@@ -291,7 +299,7 @@ int sqlite3_os_end()
     return 0;
 }
 
-void xCallback0(sqlite3_context *context, int n, sqlite3_value **values)
+static void xCallback0(sqlite3_context *context, int n, sqlite3_value **values)
 {
     const unsigned char *text = sqlite3_value_text(values[0]);
 
@@ -317,7 +325,7 @@ void xCallback0(sqlite3_context *context, int n, sqlite3_value **values)
     sqlite3_result_int(context, 0);
 }
 
-void xCallback1(sqlite3_context *context, int n, sqlite3_value **values)
+static void xCallback1(sqlite3_context *context, int n, sqlite3_value **values)
 {
     const char *text = reinterpret_cast<const char*> (sqlite3_value_text(values[0]));
 
@@ -343,7 +351,7 @@ void xCallback1(sqlite3_context *context, int n, sqlite3_value **values)
     sqlite3_result_int(context, 0);
 }
 
-void xCallback2(sqlite3_context *context, int n, sqlite3_value **values)
+static void xCallback2(sqlite3_context *context, int n, sqlite3_value **values)
 {
     const char *text = reinterpret_cast<const char*> (sqlite3_value_text(values[0]));
 
@@ -369,13 +377,12 @@ void xCallback2(sqlite3_context *context, int n, sqlite3_value **values)
     sqlite3_result_int(context, 0);
 }
 
-sqlite3 *g_pSqlite = 0;
-
 #ifdef STATIC_DRIVERS
 #include "config_database.h"
 #endif
 
-static bool init()
+// Entry point for --gc-sections.
+bool init()
 {
 #ifndef STATIC_DRIVERS
     if (!g_pBootstrapInfo->isDatabaseLoaded())

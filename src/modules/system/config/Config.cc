@@ -23,9 +23,7 @@
 #include <process/Mutex.h>
 #include <LockGuard.h>
 
-extern sqlite3 *g_pSqlite;
-    
-Mutex g_sqlLock(false);
+static Mutex g_sqlLock(false);
 
 Config Config::m_Instance;
 

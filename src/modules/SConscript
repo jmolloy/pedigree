@@ -169,15 +169,42 @@ modules = [os.path.join('system', i) for i in module_subdirs]
 
 all_modules = drivers + modules
 
+# Disable a bunch of sqlite3 features to reduce code size (we don't care about
+# a lot of this stuff!)
+config_omits = [
+    'ALTER_TABLE', 'AUTHORIZATION', 'AUTOINIT',
+    'AUTOVACUUM', 'BUILTIN_TEST', 'COMPILEOPTION_DIAGS', 'COMPLETE',
+    'DECLTYPE', 'DEPRECATED', 'EXPLAIN', 'FLAG_PRAGMAS', 'FLOATING_POINT',
+    'INCRBLOB', 'INTEGRITY_CHECK', 'LOAD_EXTENSION', 'LOCALTIME',
+    'LOOKASIDE', 'MEMORYDB', 'PROGRESS_CALLBACK',
+    'SCHEMA_PRAGMAS', 'SCHEMA_VERSION_PRAGMAS', 'TCL_VARIABLE',
+    'TEMPDB', 'TRACE', 'UTF16', 'WAL',
+]
+config_keeps = [
+    'ANALYZE', 'ATTACH', 'AUTOINCREMENT', 'AUTOMATIC_INDEX', 'AUTORESET',
+    'BETWEEN_OPTIMIZATION', 'BLOB_LITERAL', 'BTREECOUNT',  'CAST', 'CHECK',
+    'COMPOUND_SELECT', 'CTE', 'DATETIME_FUNCS', 'FOREIGN_KEY', 'GET_TABLE',
+    'LIKE_OPTIMIZATION', 'OR_OPTIMIZATION', 'PAGER_PRAGMAS', 'PRAGMA',
+    'QUICKBALANCE', 'REINDEX', 'SHARED_CACHE', 'SUBQUERY', 'TRIGGER',
+    'TRUNCATE_OPTIMIZATION', 'VACUUM', 'VIEW', 'VIRTUALTABLE', 'WSD',
+    'XFER_OPT',
+]
+
+config_extra_flags = []
+for entry in set(config_omits + config_keeps):
+    if entry in config_omits:
+        config_extra_flags.append('-DSQLITE_OMIT_%s=1' % entry)
+    elif entry in config_keeps:
+        config_extra_flags.append('-USQLITE_OMIT_%s' % entry)
+
 # Custom CFLAGS for specific modules
 custom_cflags = {
-    'config': ['-DSQLITE_OS_OTHER=1',
+    'config': ['-DSQLITE_SYSTEM_MALLOC=1',
+               '-DSQLITE_OS_OTHER=1',
                '-DSQLITE_THREADSAFE=0',
                '-DSQLITE_TEMP_STORE=3',
                '-DSQLITE_DISABLE_LFS=1',
-               '-DSQLITE_OMIT_LOCALTIME=1',
-               '-DSQLITE_OMIT_FLOATING_POINT=1',
-               '-w']
+               '-w', '-Os'] + config_extra_flags
 }
 
 # Custom C/C++ flags for specific modules.
@@ -188,10 +215,14 @@ custom_ccflags = {
 custom_cxxflags = {
 }
 
+# Custom LINKFLAGS for specific modules.
+custom_linkflags = {
+}
+
 # Flags from CXXFLAGS and CFLAGS to *remove* for a module
 remove_flags = {
     # We always remove -Werror from the config module as sqlite is noisy.
-    'config' : ['-ffreestanding', '-fno-builtin', '-Werror'],
+    'config' : ['-ffreestanding', '-fno-builtin', '-Werror', '-O3'],
     # CDI drivers
     'e1000': ['-Werror'],
     'pcnet': ['-Werror'],
@@ -241,6 +272,7 @@ custom_libs = {
 # Default library paths
 default_libpath = [
     imagesdir + '/libraries',
+    '.',
 ]
 
 # Default include paths
@@ -256,6 +288,20 @@ env_clone['LIBS'] = []
 env_clone['LIBPATH'] = default_libpath
 env_clone['CPPPATH'] = default_incpath
 
+# Build sqlite3 as a library rather than an entire object to be linked in.
+# NOTE: prefixed name as libsqlite3 comes from the sqlite3 package.
+libsqlite3_env = env_clone.Clone()
+libsqlite3_env.MergeFlags({
+    'CCFLAGS': custom_ccflags.get('config', []),
+    'CFLAGS': custom_cflags.get('config', []),
+})
+buildutils.misc.removeFromAllFlags(libsqlite3_env,
+    set(remove_flags.get('config', [])))
+libsqlite3 = libsqlite3_env.StaticLibrary('config_sqlite3',
+    Glob('#src/modules/system/config/sqlite3/*.c'))
+
+custom_libs['config'] = ['config_sqlite3']
+
 def buildModule(env, path, outputBase, targetAlias):
     module_env = env.Clone()
 
@@ -269,6 +315,7 @@ def buildModule(env, path, outputBase, targetAlias):
 
     module_env['CPPPATH'] += custom_incpath.get(module, [])
     module_env['LIBS'] += custom_libs.get(module, [])
+    module_env['MODULE_LINKFLAGS'] = custom_linkflags.get(module, [])
     module_env.MergeFlags({
         'TARGET_CFLAGS': custom_cflags.get(module, []),
         'TARGET_CCFLAGS': custom_ccflags.get(module, []),

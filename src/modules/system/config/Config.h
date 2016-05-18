@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,7 +22,9 @@
 
 #include <processor/types.h>
 #include <utilities/String.h>
-#include "sqlite3.h"
+#include "sqlite3/sqlite3.h"
+
+extern sqlite3 *g_pSqlite;
 
 /** The configuration system for Pedigree.
  *

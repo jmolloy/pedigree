@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -6299,12 +6298,6 @@ SQLITE_API int sqlite3_strnicmp(const char *, const char *, int);
 #ifdef SQLITE_OMIT_FLOATING_POINT
 # undef double
 #endif
-
-// Meh, kill warnings in the compile - Matt, Pedigree
-#include <processor/types.h>
-extern void *malloc(size_t);
-extern void free(void *);
-extern void *realloc(void *, size_t);
 
 #if 0
 }  /* End of the 'extern "C"' block */

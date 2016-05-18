@@ -35,8 +35,11 @@ def buildModule(env, stripped_target, target, sources):
     else:
         module_env['LSCRIPT'] = module_env.File("#src/modules/link.ld")
 
+    extra_linkflags = module_env.get('MODULE_LINKFLAGS', [])
+
     module_env.MergeFlags({
-        'LINKFLAGS': ['-nostdlib', '-Wl,-r', '-Wl,-T,$LSCRIPT'],
+        'LINKFLAGS': ['-nostdlib', '-Wl,-r', '-Wl,-T,$LSCRIPT'] +
+            extra_linkflags,
     })
 
     if env['clang_cross'] and env['clang_analyse']:
