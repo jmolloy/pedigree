@@ -29,7 +29,7 @@
 
 #include <panic.h>
 
-bool Spinlock::acquire()
+bool Spinlock::acquire(bool recurse)
 {
   Thread *pThread = Processor::information().getCurrentThread();
 
@@ -56,7 +56,7 @@ bool Spinlock::acquire()
   while (m_Atom.compareAndSwap(true, false) == false)
   {
     // Couldn't take the lock - can we re-enter the critical section?
-    if (m_bOwned && (m_pOwner == pThread))
+    if (m_bOwned && (m_pOwner == pThread) && recurse)
     {
       // Yes.
       ++m_Level;
@@ -87,7 +87,7 @@ bool Spinlock::acquire()
       g_LocksCommand.lockAcquired(this);
 #endif
 
-  if (!m_bOwned)
+  if (recurse && !m_bOwned)
   {
     m_pOwner = static_cast<void *>(pThread);
     m_bOwned = true;

@@ -32,7 +32,7 @@ class Spinlock
         m_bAvoidTracking(bAvoidTracking), m_Magic(0xdeadbaba),
         m_pOwner(0), m_bOwned(false), m_Level(0) {}
 
-    bool acquire();
+    bool acquire(bool recurse=true);
 
     /** Exit the critical section, without restoring interrupts. */
     void exit();
