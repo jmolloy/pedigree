@@ -66,7 +66,7 @@ class Timer
     virtual uint32_t getUnixTimestamp()
     {
       size_t year = getYear();
-      assert(year > 1970);
+      assert(year >= 1970);
       return
         (year - 1970) * (60*60*24*365) +
         getMonth() * (60*60*24*30) +

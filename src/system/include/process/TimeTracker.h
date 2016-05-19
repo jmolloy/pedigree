@@ -34,7 +34,12 @@ public:
     {
         if (m_pProcess == 0)
         {
-            m_pProcess = Processor::information().getCurrentThread()->getParent();
+            // We can get called early, so ensure we don't make any
+            // assumptions about what's present.
+            Thread *pThread = Processor::information().getCurrentThread();
+            if (!pThread)
+                return;
+            m_pProcess = pThread->getParent();
             if (!m_pProcess)
                 return;
         }
