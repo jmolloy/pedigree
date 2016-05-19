@@ -706,7 +706,7 @@ int posix_rename(const char* source, const char* dst)
     src->read(0, src->getSize(), reinterpret_cast<uintptr_t>(buf));
     dest->truncate();
     dest->write(0, src->getSize(), reinterpret_cast<uintptr_t>(buf));
-    VFS::instance().remove(String(source), GET_CWD());
+    VFS::instance().remove(realSource, GET_CWD());
     delete [] buf;
 
     return 0;
