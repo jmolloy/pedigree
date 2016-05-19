@@ -108,7 +108,9 @@ include = [
     '#/src/system/include',
     '#/src/modules/system',
     '#/src/subsys/pedigree-c',
-    '.'
+    '.',
+    # Last attempt for missing files is in the disk image's /include
+    os.path.join(imagesdir, 'include'),
 ]
 
 # To add a library path add to the list below
