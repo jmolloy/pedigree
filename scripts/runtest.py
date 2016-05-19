@@ -100,7 +100,7 @@ def main(argv):
     success = False
     serial = []
     try:
-        with Timeout(60):
+        with Timeout(600):
             last = ''
             while True:
                 serial_data = last + sock.recv(1024)
