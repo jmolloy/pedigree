@@ -58,6 +58,10 @@ void Processor::initialise2(const BootstrapStruct_t &Info)
   m_Initialised = 2;
 }
 
+void Processor::deinitialise()
+{
+}
+
 void Processor::identify(HugeStaticString &str)
 {
   str.clear();
