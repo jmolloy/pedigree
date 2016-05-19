@@ -273,6 +273,14 @@ File *Filesystem::findNode(File *pNode, String path)
 
 File *Filesystem::findParent(String path, File *pStartNode, String &filename)
 {
+    // If the final character of the string is '/', this log falls apart. So,
+    // check for that and chomp it. But, we also need to not do that for e.g.
+    // path == '/'.
+    if (path.length() > 1 && path.endswith("/"))
+    {
+        path.chomp();
+    }
+
     // Work forwards to the end of the path string, attempting to find the last '/'.
     ssize_t lastSlash = -1;
     for (size_t i = 0; i < path.length(); i = path.nextCharacter(i))
