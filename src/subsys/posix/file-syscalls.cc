@@ -425,7 +425,7 @@ int posix_write(int fd, char *ptr, int len, bool nocheck)
 
     if(ptr)
     {
-        F_NOTICE("write(" << fd << ", " << ptr << ", " << len << ")");
+        F_NOTICE("write(" << fd << ", " << String(ptr, len) << ", " << len << ")");
     }
 
     // Lookup this process.
