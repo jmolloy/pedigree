@@ -303,7 +303,9 @@ ssize_t posix_send(int sock, const void* buff, size_t bufflen, int flags)
             Endpoint::RemoteEndpoint remoteHost;
             remoteHost.remotePort = p->getRemotePort();
             remoteHost.ip = remoteIp;
-            ce->send(bufflen, reinterpret_cast<uintptr_t>(buff), remoteHost, false);
+            int num = ce->send(bufflen, reinterpret_cast<uintptr_t>(buff), remoteHost, false);
+
+            success = num >= 0;
         }
     }
 
@@ -768,15 +770,7 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
     }
 
     // Grab the passed hostent
-    struct hostent
-    {
-        char* h_name;
-        char** h_aliases;
-        int h_addrtype;
-        int h_length;
-        char** h_addr_list;
-        char* h_addr;
-    } *entry = reinterpret_cast<struct hostent*>(hostinfo);
+    struct hostent *entry = reinterpret_cast<struct hostent*>(hostinfo);
     uintptr_t userBlock = reinterpret_cast<uintptr_t>(hostinfo) + sizeof(struct hostent);
     uintptr_t endBlock = (userBlock + offset) - sizeof(struct hostent);
 
