@@ -49,7 +49,6 @@ struct DhcpPacket
   uint8_t   chaddr[16];
   uint8_t   sname[64];
   uint8_t   file[128];
-  char      options[MAX_OPTIONS_SIZE];
 } __attribute__((packed));
 
 #define OP_BOOTREQUEST    1
@@ -227,7 +226,7 @@ static bool dhcpClient(Network *pCard)
     uint8_t* buff = new uint8_t[BUFFSZ];
 
     // Can be used for anything
-    DhcpPacket dhcp;
+    DhcpPacket *dhcp;
 
     enum DhcpState
     {
@@ -251,12 +250,16 @@ static bool dhcpClient(Network *pCard)
         currentState = DISCOVER_SENT;
 
         // Zero out and fill the initial packet
-        ByteSet(&dhcp, 0, sizeof(DhcpPacket));
-        dhcp.opcode = OP_BOOTREQUEST;
-        dhcp.htype = 1; // Ethernet
-        dhcp.hlen = 6; // 6 bytes in a MAC address
-        dhcp.xid = HOST_TO_BIG32(12345);
-        MemoryCopy(dhcp.chaddr, info.mac, 6);
+        ByteSet(buff, 0, BUFFSZ);
+        dhcp = reinterpret_cast<DhcpPacket *>(buff);
+        dhcp->opcode = OP_BOOTREQUEST;
+        dhcp->htype = 1; // Ethernet
+        dhcp->hlen = 6; // 6 bytes in a MAC address
+        /// \todo use this to track requests and responses
+        dhcp->xid = HOST_TO_BIG32(12345);
+        MemoryCopy(dhcp->chaddr, info.mac, 6);
+
+        void *optionsStart = adjust_pointer(buff, sizeof(*dhcp));
 
         DhcpOptionMagicCookie cookie;
         DhcpOptionMsgType msgTypeOpt;
@@ -266,23 +269,23 @@ static bool dhcpClient(Network *pCard)
         msgTypeOpt.opt = DISCOVER;
 
         size_t byteOffset = 0;
-        byteOffset = addOption(&cookie, sizeof(cookie), byteOffset, dhcp.options);
-        byteOffset = addOption(&msgTypeOpt, sizeof(msgTypeOpt), byteOffset, dhcp.options);
+        byteOffset = addOption(&cookie, sizeof(cookie), byteOffset, optionsStart);
+        byteOffset = addOption(&msgTypeOpt, sizeof(msgTypeOpt), byteOffset, optionsStart);
 
         // Want a subnet mask, router, and DNS server(s)
         const uint8_t paramsWanted[] = {1, 3, 6};
 
         paramRequest.len = sizeof paramsWanted;
 
-        byteOffset = addOption(&paramRequest, sizeof(paramRequest), byteOffset, dhcp.options);
-        MemoryCopy(dhcp.options + byteOffset, &paramsWanted, sizeof paramsWanted);
+        byteOffset = addOption(&paramRequest, sizeof(paramRequest), byteOffset, optionsStart);
+        MemoryCopy(adjust_pointer(optionsStart, byteOffset), &paramsWanted, sizeof paramsWanted);
         byteOffset += sizeof paramsWanted;
 
-        byteOffset = addOption(&endOpt, sizeof(endOpt), byteOffset, dhcp.options);
+        byteOffset = addOption(&endOpt, sizeof(endOpt), byteOffset, optionsStart);
 
         // Throw into the send buffer and send it out
         // MemoryCopy(buff, &dhcp, sizeof(dhcp));
-        bool success = e->send((sizeof(dhcp) - sizeof(MAX_OPTIONS_SIZE)) + byteOffset, reinterpret_cast<uintptr_t>(&dhcp), remoteHost, true, pCard) >= 0;
+        bool success = e->send(sizeof(*dhcp) + byteOffset, reinterpret_cast<uintptr_t>(dhcp), remoteHost, true, pCard) >= 0;
         if(!success)
         {
             WARNING("DHCP: Couldn't send DHCP DISCOVER packet on an interface!");
@@ -313,9 +316,11 @@ static bool dhcpClient(Network *pCard)
 
             myIpWillBe = incoming->yiaddr;
 
+            void *incomingOptions = adjust_pointer(incoming, sizeof(*incoming));
+
             // NOTICE("yiaddr = " << incoming->yiaddr << ", siaddr = " << incoming->siaddr << ".");
 
-            size_t dhcpSizeWithoutOptions = n - MAX_OPTIONS_SIZE;
+            size_t dhcpSizeWithoutOptions = n - sizeof(DhcpPacket);
             if(dhcpSizeWithoutOptions == 0)
             {
                 // No magic cookie, so extensions aren't available
@@ -326,7 +331,7 @@ static bool dhcpClient(Network *pCard)
                 currentState = OFFER_RECVD;
                 break;
             }
-            DhcpOptionMagicCookie *thisCookie = reinterpret_cast<DhcpOptionMagicCookie*>(incoming->options);
+            DhcpOptionMagicCookie *thisCookie = reinterpret_cast<DhcpOptionMagicCookie*>(incomingOptions);
             if(thisCookie->cookie != MAGIC_COOKIE)
             {
                 NOTICE("DHCP: Magic cookie incorrect!");
@@ -336,9 +341,9 @@ static bool dhcpClient(Network *pCard)
             // Check the options for the magic cookie and DHCP OFFER
             byteOffset = 0;
             DhcpOption* opt = 0;
-            while((byteOffset + sizeof(cookie) + (sizeof(DhcpPacket) - MAX_OPTIONS_SIZE)) < sizeof(DhcpPacket))
+            while(static_cast<int>(byteOffset + sizeof(cookie) + sizeof(DhcpPacket)) < n)
             {
-                opt = reinterpret_cast<DhcpOption*>(incoming->options + byteOffset + sizeof(cookie));
+                opt = reinterpret_cast<DhcpOption*>(adjust_pointer(incomingOptions, byteOffset + sizeof(cookie)));
                 if(opt->code == DHCP_MSGEND)
                     break;
                 else if(opt->code == DHCP_MSGTYPE)
@@ -370,6 +375,14 @@ static bool dhcpClient(Network *pCard)
         }
 
         // We want to accept this offer by requesting it from the DHCP server
+        ByteSet(buff, 0, BUFFSZ);
+        dhcp = reinterpret_cast<DhcpPacket *>(buff);
+        dhcp->opcode = OP_BOOTREQUEST;
+        dhcp->htype = 1; // Ethernet
+        dhcp->hlen = 6; // 6 bytes in a MAC address
+        /// \todo use this to track requests and responses
+        dhcp->xid = HOST_TO_BIG32(12345);
+        MemoryCopy(dhcp->chaddr, info.mac, 6);
 
         currentState = REQUEST_SENT;
 
@@ -385,21 +398,20 @@ static bool dhcpClient(Network *pCard)
         msgTypeOpt.opt = REQUEST;
 
         byteOffset = 0;
-        byteOffset = addOption(&cookie, sizeof(cookie), byteOffset, dhcp.options);
-        byteOffset = addOption(&msgTypeOpt, sizeof(msgTypeOpt), byteOffset, dhcp.options);
-        byteOffset = addOption(&addrReq, sizeof(addrReq), byteOffset, dhcp.options);
-        byteOffset = addOption(&dhcpServer, sizeof(dhcpServer), byteOffset, dhcp.options);
+        byteOffset = addOption(&cookie, sizeof(cookie), byteOffset, optionsStart);
+        byteOffset = addOption(&msgTypeOpt, sizeof(msgTypeOpt), byteOffset, optionsStart);
+        byteOffset = addOption(&addrReq, sizeof(addrReq), byteOffset, optionsStart);
+        byteOffset = addOption(&dhcpServer, sizeof(dhcpServer), byteOffset, optionsStart);
 
-        byteOffset = addOption(&paramRequest, sizeof(paramRequest), byteOffset, dhcp.options);
-        MemoryCopy(dhcp.options + byteOffset, &paramsWanted, sizeof paramsWanted);
+        byteOffset = addOption(&paramRequest, sizeof(paramRequest), byteOffset, optionsStart);
+        MemoryCopy(adjust_pointer(optionsStart, byteOffset), &paramsWanted, sizeof paramsWanted);
         byteOffset += sizeof paramsWanted;
 
-        byteOffset = addOption(&endOpt, sizeof(endOpt), byteOffset, dhcp.options);
+        byteOffset = addOption(&endOpt, sizeof(endOpt), byteOffset, optionsStart);
 
         // Throw into the send buffer and send it out
-        MemoryCopy(buff, &dhcp, sizeof(dhcp));
         remoteHost.ip = Network::convertToIpv4(dhcpServer.a1, dhcpServer.a2, dhcpServer.a3, dhcpServer.a4);
-        success = e->send((sizeof(dhcp) - MAX_OPTIONS_SIZE) + byteOffset, reinterpret_cast<uintptr_t>(buff), remoteHost, false, pCard) >= 0;
+        success = e->send(sizeof(*dhcp) + byteOffset, reinterpret_cast<uintptr_t>(dhcp), remoteHost, false, pCard) >= 0;
         if(!success)
         {
             WARNING("DHCP: Couldn't send DHCP REQUEST packet on an interface!");
@@ -437,14 +449,16 @@ static bool dhcpClient(Network *pCard)
 
             myIpWillBe = incoming->yiaddr;
 
-            size_t dhcpSizeWithoutOptions = n - MAX_OPTIONS_SIZE;
+            void *incomingOptions = adjust_pointer(incoming, sizeof(*incoming));
+
+            size_t dhcpSizeWithoutOptions = n - sizeof(DhcpPacket);
             if(dhcpSizeWithoutOptions == 0)
             {
                 // no magic cookie, so extensions aren't available
                 currentState = ACK_RECVD;
                 break;
             }
-            DhcpOptionMagicCookie *thisCookie = reinterpret_cast<DhcpOptionMagicCookie*>(incoming->options);
+            DhcpOptionMagicCookie *thisCookie = reinterpret_cast<DhcpOptionMagicCookie*>(incomingOptions);
             if(thisCookie->cookie != MAGIC_COOKIE)
             {
                 NOTICE("DHCP: Magic cookie incorrect!");
@@ -454,9 +468,9 @@ static bool dhcpClient(Network *pCard)
             // check the options for the magic cookie and DHCP OFFER
             byteOffset = 0;
             DhcpOption* opt = 0;
-            while((byteOffset + sizeof(cookie) + (sizeof(DhcpPacket) - MAX_OPTIONS_SIZE)) < sizeof(DhcpPacket))
+            while(static_cast<int>(byteOffset + sizeof(cookie) + sizeof(DhcpPacket)) < n)
             {
-                opt = reinterpret_cast<DhcpOption*>(incoming->options + byteOffset + sizeof(cookie));
+                opt = reinterpret_cast<DhcpOption*>(adjust_pointer(incomingOptions, byteOffset + sizeof(cookie)));
 
                 if(opt->code == DHCP_MSGEND)
                     break;
