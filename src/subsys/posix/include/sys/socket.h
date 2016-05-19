@@ -112,17 +112,17 @@ struct linger
 #define MSG_TRUNC     32
 #define MSG_WAITALL   64
 
-#define PF_INET   0
-#define PF_INET6  1
-#define PF_UNIX   2
-#define PF_SOCKET 3
-#define PF_MAX    3
+#define PF_INET   1
+#define PF_INET6  2
+#define PF_UNIX   3
+#define PF_SOCKET 4
+#define PF_MAX    5
 #define PF_UNSPEC (PF_MAX+1)
 
 #define AF_INET   (PF_INET)
 #define AF_INET6  (PF_INET6)
 #define AF_UNIX   (PF_UNIX)
-#define AF_UNSPEC (PF_MAX+1)
+#define AF_UNSPEC (PF_UNSPEC)
 
 #define  SHUT_RD 0 /** Disables receiving */
 #define  SHUT_WR 1 /** Disables sending */
