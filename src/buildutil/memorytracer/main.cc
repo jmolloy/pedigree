@@ -20,10 +20,11 @@
 #define PEDIGREE_EXTERNAL_SOURCE 1
 
 #include <getopt.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include <algorithm>
+#include <climits>
+#include <cstdlib>
+#include <cstring>
 #include <iomanip>
 #include <iostream>
 #include <memory>
