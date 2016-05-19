@@ -75,6 +75,11 @@ int PerProcessorScheduler::processorAddThread(void *instance)
         pInstance->m_NewThreadDataLock.release();
         
         newThreadData *pData = reinterpret_cast<newThreadData*>(p);
+
+        if (pInstance != &Processor::information().getScheduler())
+        {
+            FATAL("instance " << instance << " does not match current scheduler in processorAddThread!");
+        }
         
         pData->pThread->setCpuId(Processor::id());
         pInstance->addThread(pData->pThread, pData->pStartFunction, pData->pParam, pData->bUsermode, pData->pStack);
@@ -112,6 +117,10 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThre
     Processor::setInterrupts(false);
 
     Thread *pCurrentThread = Processor::information().getCurrentThread();
+    if (!pCurrentThread)
+    {
+        FATAL("Missing a current thread in PerProcessorScheduler::schedule!");
+    }
 
     // Grab the current thread's lock.
     pCurrentThread->getLock().acquire();
@@ -384,7 +393,7 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
         
         return;
     }
-    
+
     pThread->setCpuId(Processor::id());
 
     bool bWasInterrupts = Processor::getInterrupts();

@@ -178,13 +178,16 @@ void LocalApic::interrupt(size_t nInterruptNumber, InterruptState &state)
 {
   if (nInterruptNumber == TIMER_VECTOR)
   {
+    // Ack early, timer() may not return for quite some time (if it schedules).
+    ack();
+
+    TimerHandler *handler = m_Handlers.lookup(Processor::id());
     // TODO: Delta is wrong.
-    if (LIKELY(m_Handler != 0))
+    if (LIKELY(handler != 0))
     {
       // NOTICE("Timer " << Processor::id());
-      m_Handler->timer (0, state);
+      handler->timer (0, state);
     }
-    ack();
   }
 
   // The halt IPI is used in the debugger to stop all other cores.

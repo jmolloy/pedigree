@@ -143,7 +143,7 @@ size_t Multiprocessor::initialise1()
       ///       send the Startup IPI twice on some hardware.
 
       // Acquire the lock
-      m_ProcessorLock1.acquire();
+      m_ProcessorLock1.acquire(false);
       
       localApic.interProcessorInterrupt((*Processors)[i]->apicId,
                                         0x07,
@@ -160,7 +160,7 @@ size_t Multiprocessor::initialise1()
                                         false);
 
       // Wait until the processor is started and has unlocked the lock
-      m_ProcessorLock1.acquire();
+      m_ProcessorLock1.acquire(false);
       m_ProcessorLock1.release();
     }
     else

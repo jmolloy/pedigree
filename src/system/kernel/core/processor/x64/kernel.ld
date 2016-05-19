@@ -85,6 +85,11 @@ SECTIONS
     trampolinegdt = .;
     *(.trampoline.data.gdt)
     trampolinegdt_end = .;
+
+    . = ALIGN(4);
+
+    *(.trampoline.data.gdtr64)
+    *(.trampoline.data.gdt64)
   }
 
   /DISCARD/ : { *(.comment) *(.eh_frame) }

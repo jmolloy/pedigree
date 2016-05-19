@@ -24,6 +24,7 @@
 #include "SyscallManager.h"
 #include "InterruptManager.h"
 #include <processor/x86_common/Multiprocessor.h>
+#include <process/initialiseMultitasking.h>
 #include <machine/mach_pc/Pc.h>
 
 void Multiprocessor::applicationProcessorStartup()
@@ -39,7 +40,7 @@ void Multiprocessor::applicationProcessorStartup()
   m_ProcessorLock1.release();
 
   // Wait until the GDT is initialised and the first 4MB identity mapping removed
-  m_ProcessorLock2.acquire();
+  m_ProcessorLock2.acquire(false);
   m_ProcessorLock2.release();
 
   // Load the GDT
@@ -54,6 +55,9 @@ void Multiprocessor::applicationProcessorStartup()
   // We need to synchronize the -init section invalidation
   Processor::invalidate(0);
   Processor::invalidate(reinterpret_cast<void*>(0x200000));
+
+  // Start up the kernel process and idle thread for this processor.
+  initialiseMultitaskingPerProcessor();
 
   // Call the per-processor code in main.cc
   apMain();
