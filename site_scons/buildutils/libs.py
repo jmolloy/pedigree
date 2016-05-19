@@ -60,6 +60,13 @@ def buildLibc(env, libc_in, glue_in):
   libc_static = env.Command(
       libc_static_tmp, libc_in, "$STRIP -g -o $TARGET $SOURCE")
 
+  # Do we have libbind.a present?
+  extra_libs = []
+  libbind = env.File(os.path.join(images_dir, 'libraries', 'libbind.a'))
+  if libbind.exists:
+    # Yes, so add it as a library to merge into libc.
+    extra_libs = [libbind]
+
   # Set of object files to remove from the library. These are generally things
   # that Pedigree provides.
   objs_to_remove = [
@@ -83,10 +90,10 @@ def buildLibc(env, libc_in, glue_in):
   # Remove the object files we manually override in our glue.
   env["ARCHIVE_DELETIONS"] = deletions
   libg = env.Command(
-      libg_static_out, [libc_in, glue_in],
+      libg_static_out, [libc_in, glue_in] + extra_libs,
       mergeArchives)
   libc = env.Command(
-      libc_static_out, [libc_static_tmp, glue_in],
+      libc_static_out, [libc_static_tmp, glue_in] + extra_libs,
       mergeArchives)
 
   # Build the shared object.
