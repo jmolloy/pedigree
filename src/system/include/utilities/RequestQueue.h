@@ -131,18 +131,18 @@ protected:
     /** True if the worker thread should cleanup and stop. */
     volatile bool m_Stop;
 
+#ifdef THREADS
     /** Mutex to be held when the request queue is being changed. */
     Mutex m_RequestQueueMutex;
 
-#ifdef THREADS
     /** The semaphore giving the number of items in the queue. */
     Semaphore m_RequestQueueSize;
     
     Thread *m_pThread;
-#endif
 
     bool m_Halted;
     Mutex m_HaltAcknowledged;
+#endif
 };
 
 #endif

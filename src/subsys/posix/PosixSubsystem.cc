@@ -136,7 +136,8 @@ FileDescriptor::~FileDescriptor()
 PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
     Subsystem(s), m_SignalHandlers(), m_SignalHandlersLock(), m_FdMap(), m_NextFd(s.m_NextFd),
     m_FdLock(), m_FdBitmap(), m_LastFd(0), m_FreeCount(s.m_FreeCount),
-    m_AltSigStack(), m_SyncObjects(), m_Threads()
+    m_AltSigStack(), m_SyncObjects(), m_Threads(), m_ThreadWaiters(),
+    m_NextThreadWaiter(1)
 {
     while(!m_SignalHandlersLock.acquire());
     while(!s.m_SignalHandlersLock.enter());
@@ -155,6 +156,19 @@ PosixSubsystem::PosixSubsystem(PosixSubsystem &s) :
 
     s.m_SignalHandlersLock.leave();
     m_SignalHandlersLock.release();
+
+    // Copy across waiter state.
+    for(Tree<void *, Semaphore *>::Iterator it = s.m_ThreadWaiters.begin();
+        it != s.m_ThreadWaiters.end();
+        ++it)
+    {
+        void *key = it.key();
+
+        Semaphore *sem = new Semaphore(0);
+        m_ThreadWaiters.insert(key, sem);
+    }
+
+    m_NextThreadWaiter = s.m_NextThreadWaiter;
 }
 
 PosixSubsystem::~PosixSubsystem()
@@ -172,7 +186,7 @@ PosixSubsystem::~PosixSubsystem()
     {
         // Get the signal handler and remove it. Note that there shouldn't be null
         // SignalHandlers, at all.
-        SignalHandler *sig = reinterpret_cast<SignalHandler *>(it.value());
+        SignalHandler *sig = it.value();
         assert(sig);
 
         // SignalHandler's destructor will delete the Event itself
@@ -191,7 +205,7 @@ PosixSubsystem::~PosixSubsystem()
     // Remove any POSIX threads that might still be lying around
     for(Tree<size_t, PosixThread *>::Iterator it = m_Threads.begin(); it != m_Threads.end(); it++)
     {
-        PosixThread *thread = reinterpret_cast<PosixThread *>(it.value());
+        PosixThread *thread = it.value();
         assert(thread); // There shouldn't have ever been a null PosixThread in there
 
         // If the thread is still running, it should be killed
@@ -212,6 +226,7 @@ PosixSubsystem::~PosixSubsystem()
         }
 
         thread->m_ThreadData.clear();
+        delete thread;
     }
 
     m_Threads.clear();
@@ -219,7 +234,7 @@ PosixSubsystem::~PosixSubsystem()
     // Clean up synchronisation objects
     for(Tree<size_t, PosixSyncObject *>::Iterator it = m_SyncObjects.begin(); it != m_SyncObjects.end(); it++)
     {
-        PosixSyncObject *p = reinterpret_cast<PosixSyncObject *>(it.value());
+        PosixSyncObject *p = it.value();
         assert(p);
 
         if(p->pObject)
@@ -232,6 +247,18 @@ PosixSubsystem::~PosixSubsystem()
     }
 
     m_SyncObjects.clear();
+
+    for(Tree<void *, Semaphore *>::Iterator it = m_ThreadWaiters.begin();
+        it != m_ThreadWaiters.end();
+        ++it)
+    {
+        // Wake up everything waiting and then destroy the waiter object.
+        Semaphore *sem = it.value();
+        sem->release(-sem->getValue());
+        delete sem;
+    }
+
+    m_ThreadWaiters.clear();
 
     // Spinlock as a quick way of disabling interrupts.
     Spinlock spinlock;
@@ -429,15 +456,7 @@ void PosixSubsystem::exit(int code)
     pProcess->kill();
 
     // Should NEVER get here.
-    /// \note asm volatile
-    for (;;)
-#if defined(X86_COMMON)
-        asm volatile("xor %eax, %eax");
-#elif defined(ARM_COMMON)
-        asm volatile("mov r0, #0");
-#else
-        ;
-#endif
+    FATAL("PosixSubsystem::exit() running after Process::kill()!");
 }
 
 bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)
@@ -449,8 +468,8 @@ bool PosixSubsystem::kill(KillReason killReason, Thread *pThread)
 
     if(sig && sig->pEvent)
     {
-        size_t pid = pThread->getParent()->getId();
         // Send the kill event
+        /// \todo we probably want to avoid allocating a new stack..
         pThread->sendEvent(sig->pEvent);
 
         // Allow the event to run
@@ -526,8 +545,8 @@ void PosixSubsystem::threadException(Thread *pThread, ExceptionType eType)
             break;
         case Quit:
             NOTICE_NOLOCK("    (Requesting quit)");
-            // Send SIGQUIT
-            sig = getSignalHandler(3);
+            // Send SIGTERM
+            sig = getSignalHandler(15);
             break;
         case Child:
             NOTICE_NOLOCK("    (Child status changed)");
@@ -569,7 +588,7 @@ void PosixSubsystem::setSignalHandler(size_t sig, SignalHandler* handler)
     if(handler)
     {
         SignalHandler* tmp;
-        tmp = reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig));
+        tmp = m_SignalHandlers.lookup(sig);
         if(tmp)
         {
             // Remove from the list
@@ -744,4 +763,21 @@ void PosixSubsystem::freeMultipleFds(bool bOnlyCloExec, size_t iFirst, size_t iL
     }
 
     m_FdLock.release();
+}
+
+void PosixSubsystem::threadRemoved(Thread *pThread)
+{
+    for(Tree<size_t, PosixThread *>::Iterator it = m_Threads.begin(); it != m_Threads.end(); it++)
+    {
+        PosixThread *thread = it.value();
+        if (thread->pThread != pThread)
+            continue;
+
+        // Can safely assert that this thread is no longer running.
+        // We do not however kill the thread object yet. It can be cleaned up
+        // when the PosixSubsystem quits (if this was the last thread). Or, it
+        // will be cleaned up by a join().
+        thread->isRunning.release();
+        break;
+    }
 }

@@ -21,7 +21,9 @@ import os
 
 import buildutils.userspace
 
-Import(['env'])
+Import(['userspace_env'])
+
+env = userspace_env
 
 env_clone = env.Clone()
 
@@ -52,17 +54,20 @@ files = [
     Glob("ipc/*.cc")
 ]
 
-cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
 include_dirs = [
     '../include',
-    '#/src/subsys',
+    '#src/subsys',
+    '#images/local/include',
     '#/src/system/include',
-    '#/src/modules/system',
-    '#/src/subsys/posix/include',
-    cpp_base,
-    '%s/%s' % (cpp_base, env['COMPILER_TARGET']),
-    '.'
+    '.',
 ]
+
+if not env['ON_PEDIGREE']:
+    cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
+    include_dirs.extend([
+        cpp_base,
+        '%s/%s' % (cpp_base, env['COMPILER_TARGET']),
+    ])
 
 env_clone['CPPPATH'] = include_dirs
 env_clone['LIBS'] = ['gcc']
@@ -78,4 +83,3 @@ env_clone['CXXFLAGS'] = buildutils.userspace.fixFlags(env, env_clone['CXXFLAGS']
 
 env_clone.Library(native_userlib_objname, files)
 env_clone.SharedLibrary(native_userlib_shobjname, files, LINKFLAGS='')
-

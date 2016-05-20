@@ -71,13 +71,6 @@ bool Iso9660Filesystem::initialise(Disk *pDisk)
 {
   m_pDisk = pDisk;
 
-  // Only work on ATAPI disks
-  if(m_pDisk->getSubType() != Disk::ATAPI)
-  {
-    WARNING("Not trying to find an ISO9660 filesystem on a non-ATAPI device");
-    return false;
-  }
-
   /// \todo Obtain disk information (perhaps a new call in Disk?)
   m_BlockSize = 2048;
   m_BlockNumber = 0;
@@ -91,21 +84,21 @@ bool Iso9660Filesystem::initialise(Disk *pDisk)
 
     // Get the descriptor for this entry
     Iso9660VolumeDescriptor *vDesc = reinterpret_cast<Iso9660VolumeDescriptor*>(buff);
-    if(strncmp(reinterpret_cast<const char*>(vDesc->Ident), "CD001", 5) != 0)
+    if(StringCompareN(reinterpret_cast<const char*>(vDesc->Ident), "CD001", 5) != 0)
     {
-      NOTICE("IDENT not correct for a descriptor, can't be an ISO9660 disk!");
+      NOTICE("IDENT: " << reinterpret_cast<const char*>(vDesc->Ident));
       return false;
     }
 
     // Is this a primary descriptor?
     if(vDesc->Type == PRIM_VOL_DESC)
     {
-      memcpy(&m_PrimaryVolDesc, reinterpret_cast<uint8_t*>(buff), sizeof(Iso9660VolumeDescriptorPrimary));
+      MemoryCopy(&m_PrimaryVolDesc, reinterpret_cast<uint8_t*>(buff), sizeof(Iso9660VolumeDescriptorPrimary));
       bFound = true;
     }
     else if(vDesc->Type == SUPP_VOL_DESC)
     {
-      memcpy(&m_SuppVolDesc, reinterpret_cast<uint8_t*>(buff), sizeof(Iso9660VolumeDescriptorPrimary));
+      MemoryCopy(&m_SuppVolDesc, reinterpret_cast<uint8_t*>(buff), sizeof(Iso9660VolumeDescriptorPrimary));
       bFound = true;
 
       // Figure out the Joliet level
@@ -141,7 +134,7 @@ bool Iso9660Filesystem::initialise(Disk *pDisk)
 
   // Grab the volume label, properly trimmed
   char *volLabel = new char[32];
-  memcpy(volLabel, m_PrimaryVolDesc.VolIdent, 32);
+  MemoryCopy(volLabel, m_PrimaryVolDesc.VolIdent, 32);
   if(m_JolietLevel)
   {
     String volLabelString = WideToMultiByteStr(reinterpret_cast<uint8_t*>(volLabel), 32, 32);
@@ -213,8 +206,6 @@ uintptr_t Iso9660Filesystem::readBlock(File *pFile, uint64_t location)
   // Sanity check.
   if (pFile->isDirectory())
     return 0;
-
-  size_t size = 2048;
 
   Iso9660File *file = reinterpret_cast<Iso9660File*>(pFile);
   Iso9660DirRecord rec = file->getDirRecord();
@@ -298,7 +289,7 @@ String Iso9660Filesystem::parseJolietName(Iso9660DirRecord &name)
 File *Iso9660Filesystem::fileFromDirRecord(Iso9660DirRecord &dir, size_t inodeNum, File *parent, bool bDirectory)
 {
   String fileName = parseName(dir);
-  Time t = timeToUnix(dir.Time);
+  Time::Timestamp t = timeToUnix(dir.Time);
   if(bDirectory)
   {
     Iso9660Directory *ret = new Iso9660Directory(fileName, inodeNum, this, parent, dir, t, t, t);

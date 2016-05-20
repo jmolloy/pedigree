@@ -22,7 +22,7 @@
 
 #include "UsbHubDevice.h"
 
-UsbDevice *hubConnected(UsbDevice *pDevice)
+static UsbDevice *hubConnected(UsbDevice *pDevice)
 {
     return new UsbHubDevice(pDevice);
 }

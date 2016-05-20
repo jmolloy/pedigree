@@ -24,9 +24,8 @@
 #include <processor/Processor.h>
 #include <usb/Usb.h>
 #include <Log.h>
+#include <time/Time.h>
 #include "Uhci.h"
-
-#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
 #define INDEX_FROM_TD_VIRT(ptr) (((reinterpret_cast<uintptr_t>((ptr)) - reinterpret_cast<uintptr_t>(m_pTDList)) / sizeof(TD)))
 #define INDEX_FROM_TD_PHYS(ptr) ((((ptr) - m_pTDListPhys) / sizeof(TD)))
@@ -41,7 +40,6 @@ static int threadStub(void *p)
 {
     Uhci *pUhci = reinterpret_cast<Uhci*>(p);
     pUhci->doDequeue();
-    return 0;
 }
 
 Uhci::Uhci(Device* pDev) :
@@ -82,9 +80,9 @@ Uhci::Uhci(Device* pDev) :
     QH *pDummyQH = &m_pQHList[0];
 
     // Set all frame list entries to the dummy QH
-    dmemset(m_pFrameList, m_pQHListPhys | 2, 0x400);
+    DoubleWordSet(m_pFrameList, m_pQHListPhys | 2, 0x400);
 
-    memset(pDummyQH, 0, sizeof(QH));
+    ByteSet(pDummyQH, 0, sizeof(QH));
 
     pDummyQH->pNext = m_pQHListPhys >> 4;
     pDummyQH->bNextQH = 1;
@@ -118,12 +116,14 @@ Uhci::Uhci(Device* pDev) :
     // Stop a running controller (BIOS may have started it up). Unset the configured
     // flag, as we are no longer configured properly.
     m_pBase->write16(m_pBase->read16(UHCI_CMD) & ~0x41, UHCI_CMD);
-    while(!(m_pBase->read16(UHCI_STS) & UHCI_STS_HALT)) delay(10);
+    while(!(m_pBase->read16(UHCI_STS) & UHCI_STS_HALT))
+        Time::delay(10 * Time::Multiplier::MILLISECOND);
     m_pBase->write16(m_pBase->read16(UHCI_STS), UHCI_STS);
 
     // Reset the host controller
     m_pBase->write16(m_pBase->read16(UHCI_CMD) | UHCI_CMD_HCRES, UHCI_CMD);
-    while(m_pBase->read16(UHCI_CMD) & UHCI_CMD_HCRES) delay(5);
+    while(m_pBase->read16(UHCI_CMD) & UHCI_CMD_HCRES)
+        Time::delay(5 * Time::Multiplier::MILLISECOND);
 
     // Write frame list pointer
     m_pBase->write32(m_pFrameListPhys, UHCI_FRLP);
@@ -137,16 +137,17 @@ Uhci::Uhci(Device* pDev) :
     // Start the controller: 64-byte reclamation and CF set, as well as run bit.
     // Also, force a global resume of all ports out of any form of suspend state
     m_pBase->write16(0xC1 | 0x10, UHCI_CMD);
-    delay(10);
+    Time::delay(10 * Time::Multiplier::MILLISECOND);
     m_pBase->write16(0xC1, UHCI_CMD);
-    while(m_pBase->read16(UHCI_STS) & UHCI_STS_HALT) delay(10);
+    while(m_pBase->read16(UHCI_STS) & UHCI_STS_HALT)
+        Time::delay(10 * Time::Multiplier::MILLISECOND);
 
 #ifdef USB_VERBOSE_DEBUG
     DEBUG_LOG("USB: UHCI: Reset complete");
 #endif
 
     // Give time for ports to resume and stabilise.
-    delay(100);
+    Time::delay(100 * Time::Multiplier::MILLISECOND);
 
     for(size_t i = 0; i < 8; i++)
     {
@@ -195,7 +196,7 @@ void Uhci::doDequeue()
                 it++)
             {
                 size_t idx = (*it)->id;
-                memset(*it, 0, sizeof(TD));
+                ByteSet(*it, 0, sizeof(TD));
                 
                 m_TDBitmap.clear(idx);
             }
@@ -210,7 +211,7 @@ void Uhci::doDequeue()
                 it++)
             {
                 size_t idx = (*it)->id;
-                memset(*it, 0, sizeof(TD));
+                ByteSet(*it, 0, sizeof(TD));
                 
                 m_TDBitmap.clear(idx);
             }
@@ -221,7 +222,7 @@ void Uhci::doDequeue()
 
         // Completely invalidate the QH
         delete pQH->pMetaData;
-        memset(pQH, 0, sizeof(QH));
+        ByteSet(pQH, 0, sizeof(QH));
         
         m_QHBitmap.clear(id);
 
@@ -452,7 +453,7 @@ void Uhci::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid
 
     // Grab the TD
     TD *pTD = &m_pTDList[nIndex];
-    memset(pTD, 0, sizeof(TD));
+    ByteSet(pTD, 0, sizeof(TD));
     pTD->bNextInvalid = 1; // Assume next is invalid, will be zeroed if another TD is linked
     pTD->id = nIndex;
 
@@ -536,7 +537,7 @@ uintptr_t Uhci::createTransaction(UsbEndpoint endpointInfo)
 
     // Grab the QH
     QH *pQH = &m_pQHList[nIndex];
-    memset(pQH, 0, sizeof(QH));
+    ByteSet(pQH, 0, sizeof(QH));
 
     // Only need to configure metadata, everything else is set during linkage and TD creation
     pQH->pMetaData = new QH::MetaData;
@@ -631,6 +632,11 @@ void Uhci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
 
     // Add a single transfer to the transaction
     addTransferToTransaction(nTransaction, false, UsbPidIn, pBuffer, nBytes);
+    if (!pQH->pMetaData->pLastTD)
+    {
+        ERROR("USB: UHCI: Couldn't add transfer to transaction!");
+        return;
+    }
 
     // Get the TD and set the error counter to "unlimited retries"
     TD *pTD = pQH->pMetaData->pLastTD;
@@ -650,17 +656,18 @@ bool Uhci::portReset(uint8_t nPort, bool bErrorResponse)
     {
         // Before port reset, disable the port
         m_pBase->write16(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) & ~UHCI_PORTSC_ENABLE, UHCI_PORTSC + (nPort * 2));
-        while(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) & UHCI_PORTSC_ENABLE) delay(10);
+        while(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) & UHCI_PORTSC_ENABLE)
+            Time::delay(10 * Time::Multiplier::MILLISECOND);
     }
 
     // Perform a reset of the port
     m_pBase->write16(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) | UHCI_PORTSC_PRES, UHCI_PORTSC + (nPort * 2));
-    delay(50);
+    Time::delay(50 * Time::Multiplier::MILLISECOND);
     m_pBase->write16(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) & ~UHCI_PORTSC_PRES, UHCI_PORTSC + (nPort * 2));
 
     // Enable the port
     m_pBase->write16(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) | UHCI_PORTSC_ENABLE, UHCI_PORTSC + (nPort * 2));
-    delay(bErrorResponse ? 500 : 100);
+    Time::delay((bErrorResponse ? 500 : 100) * Time::Multiplier::MILLISECOND);
     
     // Check that the device is completely enabled
     if(!(m_pBase->read16(UHCI_PORTSC + (nPort * 2)) & UHCI_PORTSC_ENABLE))
@@ -747,13 +754,15 @@ void Uhci::timer(uint64_t delta, InterruptState &state)
 void Uhci::stop()
 {
     m_pBase->write16(m_pBase->read16(UHCI_CMD) & ~1, UHCI_CMD);
-    while(!(m_pBase->read16(UHCI_STS) & UHCI_STS_HALT)) delay(10);
+    while(!(m_pBase->read16(UHCI_STS) & UHCI_STS_HALT))
+        Time::delay(10 * Time::Multiplier::MILLISECOND);
 }
 
 void Uhci::start()
 {
     m_pBase->write16(m_pBase->read16(UHCI_CMD) | 1, UHCI_CMD);
-    while(m_pBase->read16(UHCI_STS) & UHCI_STS_HALT) delay(10);
+    while(m_pBase->read16(UHCI_STS) & UHCI_STS_HALT)
+        Time::delay(10 * Time::Multiplier::MILLISECOND);
 }
 
 #endif

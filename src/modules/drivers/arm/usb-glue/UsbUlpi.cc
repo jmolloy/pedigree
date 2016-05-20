@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,6 +22,7 @@
 #include <processor/VirtualAddressSpace.h>
 #include <process/Semaphore.h>
 #include <Log.h>
+#include <time/Time.h>
 
 /// \todo super specific to a machine
 #include <Prcm.h>
@@ -30,8 +30,6 @@
 #include <Gpio.h>
 
 UsbUlpi UsbUlpi::m_Instance;
-
-#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
 bool usbWriteTwl4030(uint8_t addr, uint8_t data)
 {
@@ -68,7 +66,7 @@ void enablePhyAccess(bool which)
             clock |= 1; // Request DPLL clock
             usbWriteTwl4030(0xFE, clock);
             while(!(usbReadTwl4030(0xFF) & 1))
-                delay(10);
+                Time::delay(10 * Time::Multiplier::MILLISECOND);
         }
         else
         {
@@ -157,7 +155,8 @@ void UsbUlpi::initialise()
     usbClearBits(InterfaceControl, 1 << 2); // Disable carkit mode
 
     // Set the controller as active
-    usbClearBits(OtgControl, 2); // Disable the D+ pull-down resistor
+    /// \todo OtgControl is invalid on Linaro's beaglexm qemu emulation.
+    // usbClearBits(OtgControl, 2); // Disable the D+ pull-down resistor
     usbSetBits(0xAC, 1 << 5); // Enable OTG - 0xAC = POWER_CTRL
     usbSetBits(FunctionControl, 4); // FS termination enabled
     usbClearBits(FunctionControl, 0x1B); // Enable the HS transceiver
@@ -167,7 +166,7 @@ void UsbUlpi::initialise()
     Prcm::instance().SelectClockPLL(4, (12 << 0) | (120 << 8));
     Prcm::instance().SelectClockPLL(5, 1);
     Prcm::instance().SetClockPLL(2, (7 << 4) | 7);
-    Prcm::instance().WaitPllIdleStatus(2, 0, false); // Waiting for the bit to go to one
+    Prcm::instance().WaitPllIdleStatus(2, 0, true); // Waiting for the bit to go to one
 
     // Configure the L3 and L4 clocks
     Prcm::instance().SelectClockCORE(0, Prcm::L3_CLK_DIV2);
@@ -184,7 +183,7 @@ void UsbUlpi::initialise()
     // Perform a PHY reset
     Gpio::instance().enableoutput(147);
     Gpio::instance().clearpin(147);
-    delay(10); // Hold reset long enough
+    Time::delay(10 * Time::Multiplier::MILLISECOND);
 
     // Enable the TLL clocks
     Prcm::instance().SetFuncClockCORE(3, 2, true);
@@ -198,17 +197,20 @@ void UsbUlpi::initialise()
     uint32_t rev = tll_base[0];
     NOTICE("USB TLL: Revision " << Dec << ((rev >> 4) & 0xF) << "." << (rev & 0xF) << Hex << ".");
     tll_base[0x10 / 4] = 2;
-    while(!(tll_base[0x14 / 4])) delay(5);
+    while(!(tll_base[0x14 / 4]))
+        Time::delay(5 * Time::Multiplier::MILLISECOND);
 
     // Disable all IDLE modes
     tll_base[0x10 / 4] = (1 << 2) | (1 << 3) | (1 << 8);
 
     volatile uint32_t *uhh_base = reinterpret_cast<volatile uint32_t*>(m_MemRegionUHH.virtualAddress());
-    NOTICE("USB UHH: Revision " << Dec << ((uhh_base[0] >> 4) & 0xF) << "." << (uhh_base[0] & 0xF) << Hex << ".");
+    uint32_t uhh_version = uhh_base[0];
+    NOTICE("USB UHH: Revision " << Dec << ((uhh_version >> 4) & 0xF) << "." << (uhh_version & 0xF) << Hex << ".");
 
     // Reset the entire USB module
     uhh_base[0x10 / 4] = 2;
-    while(!(uhh_base[0x14 / 4])) delay(5);
+    while(!(uhh_base[0x14 / 4]))
+        Time::delay(5 * Time::Multiplier::MILLISECOND);
 
     // Set up idle mode
     uint32_t cfg = (1 << 2) | (1 << 3) | (1 << 8) | (1 << 12); // No idle
@@ -219,6 +221,6 @@ void UsbUlpi::initialise()
     uhh_base[0x40 / 4] = cfg;
 
     // Restore the PHY
-    delay(10);
+    Time::delay(10 * Time::Multiplier::MILLISECOND);
     Gpio::instance().drivepin(147);
 }

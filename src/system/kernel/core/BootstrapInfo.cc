@@ -33,6 +33,11 @@ struct MemoryMapEntry_t
     uint32_t type;
 } PACKED;
 
+BootstrapStruct_t::BootstrapStruct_t()
+{
+    flags = 0;
+}
+
 bool BootstrapStruct_t::isInitrdLoaded() const
 {
     if (flags & MULTIBOOT_FLAG_MODS)
@@ -44,7 +49,7 @@ bool BootstrapStruct_t::isInitrdLoaded() const
 uint8_t *BootstrapStruct_t::getInitrdAddress() const
 {
     if (flags & MULTIBOOT_FLAG_MODS)
-        return reinterpret_cast<uint8_t*>(*reinterpret_cast<uint32_t*>(mods_addr));
+        return reinterpret_cast<uint8_t *>(getModuleArray()[0].base);
     else
         return 0;
 }
@@ -52,8 +57,7 @@ uint8_t *BootstrapStruct_t::getInitrdAddress() const
 size_t BootstrapStruct_t::getInitrdSize() const
 {
     if (flags & MULTIBOOT_FLAG_MODS)
-        return *reinterpret_cast<uint32_t*>(mods_addr + 4) -
-               *reinterpret_cast<uint32_t*>(mods_addr);
+        return getModuleArray()[0].end - getModuleArray()[0].base;
     else
         return 0;
 }
@@ -69,7 +73,7 @@ bool BootstrapStruct_t::isDatabaseLoaded() const
 uint8_t *BootstrapStruct_t::getDatabaseAddress() const
 {
     if (flags & MULTIBOOT_FLAG_MODS)
-        return reinterpret_cast<uint8_t*>(*reinterpret_cast<uint32_t*>(mods_addr+16));
+        return reinterpret_cast<uint8_t *>(getModuleArray()[1].base);
     else
         return 0;
 }
@@ -77,8 +81,7 @@ uint8_t *BootstrapStruct_t::getDatabaseAddress() const
 size_t BootstrapStruct_t::getDatabaseSize() const
 {
     if (flags & MULTIBOOT_FLAG_MODS)
-        return *reinterpret_cast<uint32_t*>(mods_addr + 20) -
-               *reinterpret_cast<uint32_t*>(mods_addr + 16);
+        return getModuleArray()[1].end - getModuleArray()[1].base;
     else
         return 0;
 }
@@ -171,6 +174,22 @@ void *BootstrapStruct_t::nextMemoryMapEntry(void *opaque) const
         return 0;
     else
         return new_opaque;
+}
+
+size_t BootstrapStruct_t::getModuleCount() const
+{
+    if (flags & MULTIBOOT_FLAG_MODS)
+        return mods_count;
+    else
+        return 0;
+}
+
+void *BootstrapStruct_t::getModuleBase() const
+{
+    if (flags & MULTIBOOT_FLAG_MODS)
+        return reinterpret_cast<void *>(mods_addr);
+    else
+        return 0;
 }
 
 #endif

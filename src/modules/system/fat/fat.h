@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -154,9 +153,9 @@ struct Date
 /** Common FAT file information */
 struct FatFileInfo
 {
-  Time accessedTime;
-  Time modifiedTime;
-  Time creationTime;
+  Time::Timestamp accessedTime;
+  Time::Timestamp modifiedTime;
+  Time::Timestamp creationTime;
 };
 
 #endif

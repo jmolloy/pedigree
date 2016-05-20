@@ -91,7 +91,7 @@ User *UserManager::getUser(String name)
        it != m_Users.end();
        it++)
   {
-    User *pU = reinterpret_cast<User*> (it.value());
+    User *pU = it.value();
     if ( pU->getUsername() == name )
       return pU;
   }
@@ -109,7 +109,7 @@ Group *UserManager::getGroup(String name)
        it != m_Groups.end();
        it++)
   {
-    Group *pG = reinterpret_cast<Group*> (it.value());
+    Group *pG = it.value();
     if ( pG->getName() == name )
       return pG;
   }
@@ -177,6 +177,9 @@ void UserManager::initialise()
 
 static bool init()
 {
+  // Initialise user/group configuration.
+  UserManager::instance().initialise();
+
   return true;
 }
 
@@ -184,4 +187,4 @@ static void destroy()
 {
 }
 
-MODULE_INFO("users", &init, &destroy);
+MODULE_INFO("users", &init, &destroy, "config");

@@ -169,8 +169,9 @@ const char *MemoryInspector::getLine2(size_t index, size_t &colOffset, DebuggerI
     return str;
 #if !defined(MIPS_COMMON) && !defined(ARM_COMMON)
   }
-#endif
+#else
   return 0;
+#endif
 }
 
 size_t MemoryInspector::getLineCount()
@@ -396,7 +397,7 @@ bool MemoryInspector::tryGoto(LargeStaticString &str, uintptr_t &result, Interru
     return false;
   else
   {
-    result = static_cast<uintptr_t> (n);
+    result = n;
     return true;
   }
 }

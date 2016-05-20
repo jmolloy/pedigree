@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -47,17 +46,19 @@ class PhysicalMemoryManager
     /** If this flag is set we try to remove the range from the PhysicalMemoryManager, but
         if that fails, we still map the physical memory region */
     static const size_t force        = 1 << 2;
+    /** Only allocate virtual address space for the region. */
+    static const size_t virtualOnly  = 1 << 3;
 
     // x86/x64 specific flags
     #if defined(X86_COMMON)
       /** The allocated pages should be below the 1MB mark */
-      static const size_t below1MB   = 1 << 3;
+      static const size_t below1MB   = 1 << 4;
       /** The allocated pages should be below the 16MB mark */
-      static const size_t below16MB  = 2 << 3;
+      static const size_t below16MB  = 2 << 4;
       /** The allocated pages should be below the 4GB mark */
-      static const size_t below4GB   = 3 << 3;
+      static const size_t below4GB   = 3 << 4;
       /** The allocated pages should be below the 64GB mark */
-      static const size_t below64GB  = 4 << 3;
+      static const size_t below64GB  = 4 << 4;
 
       /** All address size constraints */
       static const size_t addressConstraints = below1MB | below16MB | below4GB | below64GB;
@@ -69,7 +70,7 @@ class PhysicalMemoryManager
 
     /** Get the size of one page
      *\return size of one page in bytes */
-    inline static size_t getPageSize()
+    inline static size_t getPageSize() PURE
       {return PAGE_SIZE;}
     /** Allocate a 'normal' page. Normal means that the page does not need to fullfill any
      *  constraints. These kinds of pages can be used to map normal memory into a virtual
@@ -135,12 +136,14 @@ class PhysicalMemoryManager
        *\param[in,out] MemoryRegions container of the copy of the memory regions */
     void freeMemoryRegionList(Vector<MemoryRegionInfo*> &MemoryRegions);
 
+    /** Specifies the number of pages that remain free on the system. */
+    virtual size_t freePageCount() const;
+
   protected:
     /** The constructor */
-    inline PhysicalMemoryManager()
-      : m_MemoryRegions(){}
+    PhysicalMemoryManager();
     /** The destructor */
-    inline virtual ~PhysicalMemoryManager(){}
+    virtual ~PhysicalMemoryManager();
 
     /** List of memory-regions */
     Vector<MemoryRegion*> m_MemoryRegions;

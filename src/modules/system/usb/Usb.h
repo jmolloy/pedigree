@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -82,18 +81,6 @@ struct UsbEndpoint
     size_t nMaxPacketSize;
     uint8_t nHubAddress;
     uint8_t nHubPort;
-
-    UsbEndpoint &operator = (UsbEndpoint &e)
-    {
-        nAddress = e.nAddress;
-        nEndpoint = e.nEndpoint;
-        speed = e.speed;
-        nMaxPacketSize = e.nMaxPacketSize;
-        nHubAddress = e.nHubAddress;
-        nHubPort = e.nHubPort;
-
-        return *const_cast<UsbEndpoint*>(this);
-    }
 };
 
 #endif

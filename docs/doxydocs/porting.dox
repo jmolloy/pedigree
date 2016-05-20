@@ -1,0 +1,79 @@
+/*!
+  \page pedigree_porting Porting Pedigree to New Platforms
+
+Pedigree can already run on multiple architectures and hardware platforms, and
+the work towards making this possible makes porting relatively simple.
+
+Note: the assumption throughout this page is that you are porting to a new
+architecture and hardware platform at the same time. If you are porting to a
+target that can use an existing processor or hardware target, you can skip
+those steps.
+
+\section Cross-Compiler
+
+This is possibly the most complex part of the porting process. You will need to
+apply the Pedigree patches to a GCC compiler (ideally in something like a git
+repository), and then make the needed changes to support the [arch]-pedigree
+target you wish to add.
+
+Then, you can update the patches with the now-larger diff and build a full
+toolchain.
+
+\section porting_kernel src/system/kernel
+
+See existing implementations in `src/system/kernel/core/processor` and
+`src/system/kernel/machine` for further guidance.
+
+- Implement the non-inline Processor methods for the processor target
+- Implement `VirtualAddressSpace` with the needed MMU management for your
+target
+- Implement assembly stubs as needed for your Processor class
+- Implement the Machine interface for the hardware target
+- In `src/system/kernel/utilities/Cache.cc`, add an entry to `Cache::Cache()`
+to specify Cache virtual address ranges
+- src/system/kernel/core/main.cc may need to be updated, depending on your
+machine and processor target (search the \#ifdefs already in the file)
+
+\section porting_include src/system/include
+
+See existing implementations in `src/system/include/processor` and
+`src/system/include/machine` for further guidance.
+
+- Implement the inline `Processor` methods for the processor target
+- In src/system/include/process/Event.h, set `EVENT_BASE` for your processor
+target to an area of the virtual address space that can be used for event
+handler trampolines (needs 8K of memory)
+- Add a `VirtualAddressSpace` with a valid memory layout for your target
+
+\section porting_network_stack src/modules/system/network-stack
+
+- Update src/modules/system/network-stack/NetworkStack.cc to size network
+memory pools sensibly for the typical target
+
+\section porting_subsys src/subsys
+
+- Each subsystem needs to have its relevant syscall headers updated.
+
+\section porting_build_system Build System
+
+- Update `site_scons/defaults.py` to add a section for your architecture target
+- Update `src/system/kernel/SConscript` to add the necessary source files for
+your machine target
+- Potentially update `SConscript` in the root directory to add your target to
+the various `if` checks that enable builds in parts of the tree
+- More SConscript files may need to be updated depending on how many features
+you intend to enable for your target. In particular, SConscript files under
+`src/subsys` may need to be edited to enable syscalls for new targets
+- Create an `easy_build_[arch].sh` script and enable it via `.travis.yml` to
+enable continuous integration via Travis-CI (https://travis-ci.org); this will
+allow your new target to be built at every push and reveal breakage early
+- If your target can be trivially tested in QEMU, update `scripts/runtest.py`
+as well so the continuous integration build will also perform a runtime test
+
+\section porting_improvements Improvements
+
+The amount of changes needed to make a port is currently rather large and
+messy, and we want to reduce this to make porting significantly easier.
+See https://www.pedigree-project.org/issues/7 to track our progress on this.
+
+*/

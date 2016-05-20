@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -53,22 +52,22 @@ class RawEndpoint : public ConnectionlessEndpoint
     /** Constructors and destructors */
     RawEndpoint() :
       ConnectionlessEndpoint(), m_DataQueue(), m_DataQueueSize(0),
-      m_bAcceptAll(false), m_Type(RAW_WIRE)
-    {};
+      m_Type(RAW_WIRE)
+    {}
 
     /** These shouldn't be used - totally pointless */
     RawEndpoint(uint16_t local, uint16_t remote) :
       ConnectionlessEndpoint(local, remote), m_DataQueue(),
-          m_DataQueueSize(0), m_bAcceptAll(false), m_Type(RAW_WIRE)
-    {};
+          m_DataQueueSize(0), m_Type(RAW_WIRE)
+    {}
     RawEndpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
       ConnectionlessEndpoint(remoteIp, local, remote), m_DataQueue(),
-      m_DataQueueSize(0), m_bAcceptAll(false), m_Type(RAW_WIRE)
-    {};
+      m_DataQueueSize(0), m_Type(RAW_WIRE)
+    {}
     RawEndpoint(Type type) :
       ConnectionlessEndpoint(0, 0), m_DataQueue(), m_DataQueueSize(0),
-      m_bAcceptAll(false), m_Type(type)
-    {};
+      m_Type(type)
+    {}
     virtual ~RawEndpoint();
 
     /** Injects the given buffer into the network stack */
@@ -101,7 +100,7 @@ class RawEndpoint : public ConnectionlessEndpoint
     {
       DataBlock() :
         size(0), ptr(0), remoteHost()
-      {};
+      {}
 
       size_t size;
       uintptr_t ptr;
@@ -113,9 +112,6 @@ class RawEndpoint : public ConnectionlessEndpoint
 
     /** Data queue size */
     Semaphore m_DataQueueSize;
-
-    /** Accept any address? */
-    bool m_bAcceptAll;
 
     /** Our type */
     Type m_Type;
@@ -129,9 +125,9 @@ class RawManager : public ProtocolManager
 public:
   RawManager() :
     m_Endpoints()
-  {};
+  {}
   virtual ~RawManager()
-  {};
+  {}
 
   /** For access to the manager without declaring an instance of it */
   static RawManager& instance()

@@ -24,7 +24,7 @@
 #include <Module.h>
 #include <processor/Processor.h>
 
-RawFs *g_pRawFs;
+static RawFs *g_pRawFs = 0;
 
 RawFs::RawFs() : m_pRoot(0)
 {
@@ -42,7 +42,7 @@ File *RawFs::getRoot()
     return m_pRoot;
 }
 
-bool hasDiskChildren(Device *pDev)
+static bool hasDiskChildren(Device *pDev)
 {
     for (size_t i = 0; i < pDev->getNumChildren(); i++)
     {
@@ -55,7 +55,7 @@ bool hasDiskChildren(Device *pDev)
     return false;
 }
 
-void searchNode(Device *pDev, RawFsDir *pDir)
+static void searchNode(Device *pDev, RawFsDir *pDir)
 {
     for (size_t i = 0; i < pDev->getNumChildren(); i++)
     {
@@ -91,13 +91,14 @@ void searchNode(Device *pDev, RawFsDir *pDir)
     }
 }
 
-void rescanTree()
+static void rescanTree()
 {
     RawFsDir *pD = static_cast<RawFsDir*>(g_pRawFs->getRoot());
     pD->removeRecursive();
 
     // Find the disk topology in an intermediate form.
-    searchNode(&Device::root(), pD);
+    /// \todo implement in terms of Device::foreach()
+    // searchNode(&Device::root(), pD);
 }
 
 static bool init()

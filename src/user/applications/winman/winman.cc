@@ -43,11 +43,13 @@
 #include <set>
 #include <queue>
 
-#include <graphics/Graphics.h>
-#include <input/Input.h>
+#include <native/graphics/Graphics.h>
+#include <native/input/Input.h>
 
 #include <cairo/cairo.h>
 #include <cairo/cairo-ft.h>
+
+#include <pango/pangocairo.h>
 
 #include <protocol.h>
 
@@ -301,9 +303,6 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
         pHeader->messageSize = sizeof(LibUiProtocol::CreateMessageResponse);
         pHeader->isResponse = true;
 
-        LibUiProtocol::CreateMessageResponse *pCreateResp =
-            reinterpret_cast<LibUiProtocol::CreateMessageResponse*>(responseData + sizeof(LibUiProtocol::WindowManagerMessage));
-
         g_Windows->insert(std::make_pair(pWinMan->widgetHandle, pWindow));
 
         pWindow->sendMessage(responseData, totalSize);
@@ -325,9 +324,6 @@ void handleMessage(char *messageData, struct sockaddr *src, socklen_t slen)
             pHeader->widgetHandle = pWinMan->widgetHandle;
             pHeader->messageSize = sizeof(LibUiProtocol::SyncMessageResponse);
             pHeader->isResponse = true;
-
-            LibUiProtocol::SyncMessageResponse *pSyncResp =
-                reinterpret_cast<LibUiProtocol::SyncMessageResponse*>(responseData + sizeof(LibUiProtocol::WindowManagerMessage));
 
             pWindow->sendMessage(responseData, totalSize);
 
@@ -413,7 +409,6 @@ void checkForMessages()
                     bTerminate = true;
                 else
                 {
-                    /// \todo Create an input notification.
                     Input::InputNotification note;
                     memset(&note, 0, sizeof(note));
                     note.type = Input::Key;
@@ -437,7 +432,7 @@ void checkForMessages()
                     }
                     else if (event.key.keysym.sym == SDLK_UP)
                     {
-                        memcpy(&note.data.key.key, "up", 4);
+                        memcpy(&note.data.key.key, "up", 2);
                         bSpecial = true;
                     }
                     else if (event.key.keysym.sym == SDLK_DOWN)
@@ -568,7 +563,6 @@ void queueInputCallback(Input::InputNotification &note)
     static bool bResize = false;
 
     bool bHandled = false;
-    bool bWakeup = false;
     if(note.type & Input::Key)
     {
         uint64_t c = note.data.key.key;
@@ -700,7 +694,6 @@ void queueInputCallback(Input::InputNotification &note)
                 // the container in which the window with focus is in.
                 bResize = true;
                 bHandled = true;
-                bWakeup = true;
                 g_StatusField = "<resize mode>";
 
                 // Don't transmit resizes to the client(s) yet.
@@ -755,13 +748,12 @@ void queueInputCallback(Input::InputNotification &note)
 
                 g_pFocusWindow = newFocus;
                 g_pFocusWindow->focus();
-                bWakeup = true;
             }
         }
 
         if((!bHandled) && bResize && (g_pFocusWindow))
         {
-            bWakeup = true;
+            bool bWakeup = true;
             bHandled = true;
 
             Container *focusParent = g_pFocusWindow->getParent();
@@ -962,27 +954,36 @@ void infoPanel(cairo_t *cr)
     cairo_rectangle(cr, 0, g_nHeight - 24, g_nWidth, 24);
     cairo_fill(cr);
 
+    PangoLayout *layout = pango_cairo_create_layout(cr);
+    PangoFontDescription *desc = pango_font_description_from_string(WINMAN_PANGO_FONT);
+
+    pango_layout_set_markup(layout, "The Pedigree Operating System", -1);
+
+    pango_layout_set_font_description(layout, desc);
+    pango_font_description_free(desc);
+
     cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
-
-    cairo_set_font_size(cr, 13);
-    cairo_font_extents_t extents;
-    cairo_font_extents(cr, &extents);
-
-    cairo_move_to(cr, 3, (g_nHeight - 24) + 3 + extents.height);
     cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
-    cairo_show_text(cr, "The Pedigree Operating System");
+    cairo_move_to(cr, 3, (g_nHeight - 24) + 3);
+    pango_cairo_show_layout(cr, layout);
 
     if(g_StatusField.length())
     {
+        gchar *safe_markup = g_markup_escape_text(g_StatusField.c_str(), -1);
+        pango_layout_set_markup(layout, safe_markup, -1);
+        int width = 0, height = 0;
+        pango_layout_get_size(layout, &width, &height);
+
         cairo_move_to(
                 cr,
-                g_nWidth - 3 - (extents.max_x_advance * g_StatusField.length()),
-                (g_nHeight - 24) + 3 + extents.height);
-        cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
-        cairo_show_text(cr, g_StatusField.c_str());
+                g_nWidth - 3 - width,
+                (g_nHeight - 24) + 3);
+        pango_cairo_show_layout(cr, layout);
         g_StatusField.clear();
+        g_free(safe_markup);
     }
 
+    g_object_unref(layout);
     cairo_restore(cr);
 }
 
@@ -1074,7 +1075,7 @@ int main(int argc, char *argv[])
     struct sockaddr_un bind_addr;
     bind_addr.sun_family = AF_UNIX;
     memset(bind_addr.sun_path, 0, sizeof bind_addr.sun_path);
-    strcpy(bind_addr.sun_path, WINMAN_SOCKET_PATH);
+    strncpy(bind_addr.sun_path, WINMAN_SOCKET_PATH, UNIX_PATH_MAX);
     socklen_t socklen = sizeof(bind_addr);
     result = bind(g_iSocket, (struct sockaddr *) &bind_addr, socklen);
     if (result != 0)

@@ -25,21 +25,19 @@
 #include <processor/state.h>
 
 #include "newlib.h"
-
-#if 0
-#define SC_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "]\t" << Hex << x)
-#else
-#define SC_NOTICE(x)
-#endif
+#include "logging.h"
 
 long posix_sbrk(int delta);
 int posix_fork(SyscallState &state);
 int posix_execve(const char *name, const char **argv, const char **env, SyscallState &state);
 int posix_waitpid(int pid, int *status, int options);
-int posix_exit(int code);
+int posix_exit(int code) NORETURN;
 int posix_getpid();
+int posix_getppid();
 
 int posix_gettimeofday(timeval *tv, struct timezone *tz);
+clock_t posix_times(struct tms *tm);
+int posix_getrusage(int who, struct rusage *r);
 
 int posix_getpwent(passwd *pw, int n, char *str);
 int posix_getpwnam(passwd *pw, const char *name, char *str);
@@ -60,15 +58,15 @@ int posix_clock_gettime(clockid_t clock_id, struct timespec *tp);
 
 int pedigree_sigret();
 
-uintptr_t posix_dlopen(const char* file, int mode, void* p);
-uintptr_t posix_dlsym(void* handle, const char* name);
-int       posix_dlclose(void* handle);
-
 int posix_setsid();
 int posix_setpgid(int pid, int pgid);
 int posix_getpgrp();
 
 int posix_syslog(const char *msg, int prio);
+
+int pedigree_login(int uid, const char *password);
+
+int pedigree_reboot();
 
 #endif
 

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -50,11 +49,65 @@
 #define LIKELY(exp) __builtin_expect(!!(exp), 1)
 /** The expression is very unlikely to be true */
 #define UNLIKELY(exp) __builtin_expect(!!(exp), 0)
+/** This code is not reachable. */
+#define UNREACHABLE __builtin_unreachable()
+/** This function handles a format string. */
+#define FORMAT(type, idx, first) __attribute__((format(type, idx, first)))
+/** True if the expression is constant at compile time, false otherwise. */
+#define IS_CONSTANT(x) __builtin_constant_p(x)
+/** This code should be placed in the given section. */
+#ifdef __MACH__  // Mach targets have special section specifications.
+#define SECTION(x)
+#else
+#define SECTION(x) __attribute__((__section__(x)))
+#endif
+
+// Builtin checks.
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+
+#ifndef __has_feature
+#define __has_feature(x) 0
+#endif
+
+#if __has_builtin(__builtin_assume_aligned) || !defined(__clang__)
+#define ASSUME_ALIGNMENT(b, sz) __builtin_assume_aligned((b), sz)
+#else
+#define ASSUME_ALIGNMENT(b, sz) ((reinterpret_cast<uintptr_t>(b) % (sz)) == 0) ? (b) : (UNREACHABLE, (b))
+#endif
 
 /** Pack initialisation functions into a special section that could be freed after
  *  the kernel initialisation is finished */
-#define INITIALISATION_ONLY __attribute__((__section__(".init.text")))
-#define INITIALISATION_ONLY_DATA __attribute__((__section__(".init.data")))
+#define INITIALISATION_ONLY SECTION(".init.text")
+#define INITIALISATION_ONLY_DATA SECTION(".init.data")
+
+// We don't use a custom allocator if asan is enabled.
+#if __has_feature(address_sanitizer) || __has_feature(memory_sanitizer)
+#define HAS_ADDRESS_SANITIZER 1
+#endif
+
+#if __has_feature(thread_sanitizer)
+#define HAS_THREAD_SANITIZER 1
+#endif
+
+#if defined(HAS_ADDRESS_SANITIZER) || defined(HAS_THREAD_SANITIZER)
+#define HAS_SANITIZERS 1
+#endif
+
+#ifdef __cplusplus
+#define NOT_COPY_CONSTRUCTIBLE(Type) \
+    Type(const Type &) = delete
+#define NOT_ASSIGNABLE(Type) \
+    Type &operator = (const Type &) = delete
+#define NOT_COPYABLE_OR_ASSIGNABLE(Type) \
+    NOT_COPY_CONSTRUCTIBLE(Type); \
+    NOT_ASSIGNABLE(Type)
+
+#define WITHOUT_IMPLICIT_CONSTRUCTORS(Type) \
+    Type() = delete; \
+    NOT_COPYABLE_OR_ASSIGNABLE(Type)
+#endif
 
 /** @} */
 

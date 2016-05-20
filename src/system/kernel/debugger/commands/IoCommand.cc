@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -94,7 +93,7 @@ bool IoCommand::execute(const HugeStaticString &input, HugeStaticString &output,
       if ((*i)->physicalAddress != 0)
       {
         output += '\n';
-        output.append(' ', strlen((*i)->pName) + 3, ' ');
+        output.append(' ', StringLength((*i)->pName) + 3, ' ');
         output += "physical 0x";
         output.append((*i)->physicalAddress,
                       16,

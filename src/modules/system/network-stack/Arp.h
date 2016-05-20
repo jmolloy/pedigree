@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -81,9 +80,9 @@ private:
     uint8_t   hwSize;
     uint8_t   protocolSize;
     uint16_t  opcode;
-    uint8_t   hwSrc[6];
+    uint16_t  hwSrc[3];
     uint32_t  ipSrc;
-    uint8_t   hwDest[6];
+    uint16_t  hwDest[3];
     uint32_t  ipDest;
   } __attribute__ ((packed));
 
@@ -94,7 +93,7 @@ private:
   {
     arpEntry() :
       valid(false), ip(), mac()
-    {};
+    {}
 
     bool valid;
     IpAddress ip;
@@ -107,7 +106,7 @@ private:
     public:
       ArpRequest() :
         destIp(), mac(), waitSem(0), success(false)
-      {};
+      {}
 
       IpAddress destIp;
       MacAddress mac;

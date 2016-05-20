@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -109,14 +108,24 @@ class ARMV7InterruptState
     ~ARMV7InterruptState() {}
     
     /** ARMV7 interrupt frame **/
-    uint32_t m_spsr;
+    uint32_t m_usersp;
+    uint32_t m_userlr;
     uint32_t m_r0;
     uint32_t m_r1;
     uint32_t m_r2;
     uint32_t m_r3;
+    uint32_t m_r4;
+    uint32_t m_r5;
+    uint32_t m_r6;
+    uint32_t m_r7;
+    uint32_t m_r8;
+    uint32_t m_r9;
+    uint32_t m_r10;
+    uint32_t m_r11;
     uint32_t m_r12;
     uint32_t m_lr;
     uint32_t m_pc;
+    uint32_t m_spsr;
 } PACKED;
 
 typedef ARMV7InterruptState ARMV7SyscallState;
@@ -133,9 +142,9 @@ public:
     uint32_t r9;
     uint32_t r10;
     uint32_t r11;
+    uint32_t r12;
+    uint32_t sp;
     uint32_t lr;
-    uint32_t usersp;
-    uint32_t userlr;
 } __attribute__((aligned(8)));
 
 /** @} */
@@ -146,10 +155,11 @@ public:
 
 uintptr_t ARMV7InterruptState::getStackPointer() const
 {
-    return reinterpret_cast<uintptr_t>(this); /// \todo Is this right?
+    return m_usersp;
 }
 void ARMV7InterruptState::setStackPointer(uintptr_t stackPointer)
 {
+    m_usersp = stackPointer;
 }
 uintptr_t ARMV7InterruptState::getInstructionPointer() const
 {
@@ -157,15 +167,15 @@ uintptr_t ARMV7InterruptState::getInstructionPointer() const
 }
 void ARMV7InterruptState::setInstructionPointer(uintptr_t instructionPointer)
 {
+    m_pc = instructionPointer;
 }
 uintptr_t ARMV7InterruptState::getBasePointer() const
 {
-  //return m_Fp; // assume frame pointer = base pointer
-    return 0;
+    return m_r11;
 }
 void ARMV7InterruptState::setBasePointer(uintptr_t basePointer)
 {
-  // m_Fp = basePointer; // TODO: some form of casting? Not sure which to use...
+    m_r11 = basePointer;
 }
 size_t ARMV7InterruptState::getRegisterSize(size_t index) const
 {

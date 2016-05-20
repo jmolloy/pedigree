@@ -190,6 +190,12 @@ const char *ThreadsCommand::getLine1(size_t index, DebuggerIO::Colour &colour, D
       break;
   }
 
+  if (!tehProcess)
+  {
+    // No processes, or the index does not match.
+    return Line;
+  }
+
   // If this is just a process line.
   colour = DebuggerIO::Yellow;
   if (index == m_SelectedLine)
@@ -254,7 +260,6 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
       case Thread::Zombie:  Line += "Z"; break;
       case Thread::AwaitingJoin:Line += "J"; break;
       case Thread::Suspended:Line += "s"; break;
-      default: Line += "?"; break;
     }
 
     Line += "[";
@@ -299,7 +304,6 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
       case Thread::Zombie:  Line += "Z"; break;
       case Thread::AwaitingJoin:Line += "J"; break;
       case Thread::Suspended:Line += "s"; break;
-      default: Line += "?"; break;
     }
     Line += "[";
     Line += tehThread->getId();

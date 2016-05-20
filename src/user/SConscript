@@ -23,7 +23,9 @@ import os
 import buildutils.userspace
 import buildutils.misc
 
-Import(['env'])
+Import(['userspace_env'])
+
+env = userspace_env
 
 env_clone = env.Clone()
 
@@ -32,15 +34,13 @@ appoutputdir = env["PEDIGREE_BUILD_APPS"]
 imagesdir = env["PEDIGREE_IMAGES_DIR"]
 builddir = env["PEDIGREE_BUILD_BASE"]
 
-suffix = '-noarch'
-if env['ARCH_TARGET'] == 'X86':
-    suffix = '-i686'
-elif env['ARCH_TARGET'] == 'X64':
-    suffix = '-amd64'
-elif env['ARCH_TARGET'] == 'PPC':
-    suffix = '-ppc'
-elif env['ARCH_TARGET'] == 'ARM':
-    suffix = '-arm'
+suffix = buildutils.misc.stubSuffix(userspace_env)
+
+EXTERNAL_LIBRARY_DIR = '#images/local/libraries'
+EXTERNAL_INCLUDE_DIR = '#images/local/include'
+if env['ON_PEDIGREE']:
+    EXTERNAL_LIBRARY_DIR = '/libraries'
+    EXTERNAL_INCLUDE_DIR = '/include'
 
 # libloader (userspace dynamic linker).
 libload_sources = [
@@ -95,6 +95,7 @@ cpp_apps = [
 cpp_11_apps = [
     'which',
     'winman',
+    'tour',
 ]
 
 # Applications which use libui (affects libraries & headers).
@@ -104,15 +105,21 @@ libui_apps = [
     'uitest',
 ]
 
+# Applications which need pango for text rendering.
+pango_apps = [
+    'winman',
+    'TUI',
+]
+
 # Custom include paths for specific applications.
 custom_incpath = {
-    'TUI' : ['#images/local/include',
-             '#images/local/include/freetype2'],
+    'TUI' : [EXTERNAL_INCLUDE_DIR,
+             EXTERNAL_INCLUDE_DIR + '/freetype2'],
     'winman' : ['#src/user/libraries/libui/include',
                 '#src/user/libraries/libui/src',
-                '#images/local/include',
-                '#images/local/include/pixman-1',
-                '#images/local/include/freetype2']
+                EXTERNAL_INCLUDE_DIR,
+                EXTERNAL_INCLUDE_DIR + '/pixman-1',
+                EXTERNAL_INCLUDE_DIR + '/freetype2']
 }
 
 # Custom libraries for specific applications
@@ -128,22 +135,35 @@ custom_libs = {
     'apptest': ['pedigree'],
 }
 
+# Applications to not enable -Werror for.
+no_werror_apps = [
+    'fire',  # C89.
+    'gears',  # opengl
+    'keymap',  # lex/yacc
+    'nyancat',  # not ours
+]
+
 # Default libraries for all applications
 base_libs = ['pthread']
 
 # Default include paths
 base_include_dirs = [
-    '#src/subsys/posix/include',
-    '#src/subsys/posix/syscalls',
+    EXTERNAL_INCLUDE_DIR,
 ]
 
 # Flags from CXXFLAGS and CFLAGS to *remove* for an app
 remove_flags = {
-    # fire is more or less pre-C99 code.
-    'fire' : ['-Werror'],
-    # TODO: fix nyancat's code to not be warning-heavy...
-    'nyancat': ['-Werror'],
-    'which': ['-Werror'],
+    'nyancat': ['-Wcast-qual'],
+    'which': ['-Wwrite-strings'],
+    'tour': ['-Wwrite-strings'],
+}
+
+# Extra flags to add to flags for an app.
+add_flags = {
+    # Both of these use getopt, which has a const-ness problem.
+    'nyancat': ['-Wno-cast-qual', '-Wno-write-strings', '-Wno-clobbered'],
+    'which': ['-Wno-cast-qual', '-Wno-write-strings'],
+    'tour': ['-Wno-write-strings'],
 }
 
 env_clone['CFLAGS'] = buildutils.userspace.fixFlags(env, env['CFLAGS'])
@@ -154,29 +174,47 @@ env_clone['LIBS'] = base_libs
 env_clone['LIBPATH'] = [builddir, os.path.join(builddir, 'libs')]
 env_clone['CPPPATH'] = base_include_dirs
 
+if not env['ON_PEDIGREE']:
+    cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
+    cpp_arch_base = os.path.join(cpp_base, env['COMPILER_TARGET'])
+
 # -static stops GCC placing the path to the dynamic linker into the binary, and creates a non-relocateable executable.
-libload_env = env_clone.Clone()
-libload_env.MergeFlags('-static')
-cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
-libload_env['CPPPATH'] += ['#src/system/include/linker', cpp_base,
-                           os.path.join(cpp_base, env['COMPILER_TARGET'])]
-libload_env['LIBPATH'] += [builddir, imagesdir + 'libraries']
-libload_env['LIBS'] = ['-lstdc++', '-lc', '-lpedigree', '-lpedigree-c', '-lgcc']
-libload = os.path.join(builddir, 'libload.so')
-if env['ARCH_TARGET'] == 'ARM':
-    libload_linkscript = libload_env.File(os.path.join(appsbase, 'libload', 'libload-arm.ld'))
-else:
-    libload_linkscript = libload_env.File(os.path.join(appsbase, 'libload', 'libload.ld'))
-in_files = [os.path.join(appsbase, 'libload', x) for x in libload_sources]
-libload_env.Program(libload, in_files,
-    LINKFLAGS="-static -Wl,-Bstatic -Wl,--no-whole-archive -nodefaultlibs -T%s " % libload_linkscript)
-libload_env.Depends(libload, "crt0")
+if env['build_libs']:
+    libload_env = env_clone.Clone()
+    libload_env.MergeFlags('-static')
 
-env.Alias('libs', libload)
+    libload_env['CPPPATH'] += ['#src/system/include/linker']
+    if not env['ON_PEDIGREE']:
+        libload_env['CPPPATH'] += [cpp_base, cpp_arch_base]
 
-for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + libui_apps):
+    libload_env['LIBPATH'] += [builddir, imagesdir + 'libraries']
+    libload_env['LIBS'] = ['-lstdc++', '-lc', 'pedigree-c', '-lgcc']
+
+    libload = os.path.join(builddir, 'libload.so')
+    libload_linkscript = libload_env.File(os.path.join(appsbase, 'libload', 'libload%s.ld' % suffix))
+
+    in_files = [os.path.join(appsbase, 'libload', x) for x in libload_sources]
+    libload_env.Program(libload, in_files,
+        LINKFLAGS="-static -Wl,-Bstatic -Wl,--no-whole-archive -nodefaultlibs -T%s " % libload_linkscript)
+    libload_env.Depends(libload, "crt0")
+
+    env.Alias('libs', libload)
+
+apps = []
+
+if env['build_apps']:
+    apps += posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps
+
+if env['build_apps'] and env['build_libs']:
+    apps += libui_apps
+
+for app in set(apps):
     app_env = env_clone.Clone()
-    app_env['LINKFLAGS'] = ''
+    if env['hosted']:
+        app_env['LSCRIPT'] = app_env.File(os.path.join('#src/system/kernel/core/processor/hosted/app.ld'))
+        app_env['LINKFLAGS'] = '-T$LSCRIPT'
+    else:
+        app_env['LINKFLAGS'] = ''
 
     base = os.path.join(appsbase, app)
 
@@ -195,26 +233,44 @@ for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + lib
 
     # Handle SDL dependencies.
     if app in sdl_apps:
+        # Don't build SDL apps if we don't have SDL.
+        if not env['build_lgpl']:
+            continue
         app_env['LIBS'] += ['SDL']
         app_env['CPPPATH'] += ['#src/lgpl/SDL-1.2.14/include',
-                               '#images/local/include']
+                               EXTERNAL_INCLUDE_DIR]
 
     # Handle Mesa dependencies.
     if app in mesa_apps:
         app_env['LIBS'] += ['OSMesa']
-        app_env['LIBPATH'] += ['%s/libraries' % imagesdir]
-        app_env['CPPPATH'] += ['%s/include' % imagesdir]
+        app_env['LIBPATH'] += [EXTERNAL_LIBRARY_DIR]
+        app_env['CPPPATH'] += [EXTERNAL_INCLUDE_DIR]
 
     # Handle C++-related dependencies.
     if app in set(cpp_apps + sdl_apps + mesa_apps + cpp_11_apps):
-        app_env['LIBPATH'] += [os.path.join(imagesdir, 'libraries')]
-        app_env['CPPPATH'] += ['#src/subsys/native/include']
+        app_env['LIBPATH'] += [EXTERNAL_LIBRARY_DIR]
+        if not env['ON_PEDIGREE']:
+            app_env['CPPPATH'] += [cpp_base, cpp_arch_base]
         app_env['LINK'] = env['CXX']
 
     # Handle libui-related dependencies.
     if app in libui_apps:
         app_env['CPPPATH'] += ['#src/user/libraries/libui/include']
         app_env['LIBS'] += ['ui']
+
+    if app in pango_apps:
+        app_env['LIBPATH'] += [EXTERNAL_LIBRARY_DIR]
+        app_env['CPPPATH'] += [
+            EXTERNAL_LIBRARY_DIR + '/glib-2.0/include',
+            EXTERNAL_INCLUDE_DIR + '/glib-2.0',
+            EXTERNAL_INCLUDE_DIR + '/pango-1.0',
+            EXTERNAL_INCLUDE_DIR + '/cairo',
+        ]
+
+        # pango pulls in a lot of dependencies.
+        app_env['LIBS'] += ['cairo', 'pangocairo-1.0', 'pangoft2-1.0',
+            'pango-1.0', 'harfbuzz', 'fontconfig', 'gobject-2.0', 'glib-2.0',
+            'ffi']
 
     app_env['LINKFLAGS'] += ' -Wl,-rpath-link -Wl,%s ' % (
         app_env.Dir(builddir).abspath,)
@@ -232,6 +288,11 @@ for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + lib
 
     buildutils.misc.removeFromAllFlags(app_env, set(remove_flags.get(app, [])))
 
+    if app in no_werror_apps:
+        buildutils.misc.removeFromAllFlags(app_env, '-Werror')
+
+    app_env.MergeFlags({'CCFLAGS': add_flags.get(app, [])})
+
     output = os.path.join(builddir, 'apps', app)
     files = [Glob(os.path.join(base, '*.c')), Glob(os.path.join(base, '*.cc'))]
 
@@ -239,7 +300,12 @@ for app in set(posixc_apps + mesa_apps + sdl_apps + cpp_apps + cpp_11_apps + lib
 
     env.Alias("apps", output)
 
+    if 'LSCRIPT' in app_env:
+        env.Depends(output, app_env['LSCRIPT'])
+
     env.Depends(output, "crt0")
     env.Depends(output, "libs")
+    env.Depends(output, "headers")
 
-SConscript(os.path.join('libraries', 'SConscript'), exports=['env'])
+if env['build_libs']:
+    SConscript(os.path.join('libraries', 'SConscript'), exports=['env'])

@@ -54,7 +54,7 @@ private:
     Pipe& operator =(const Pipe&);
 public:
     /** Constructor, should be called only by a Filesystem. */
-    Pipe(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+    Pipe(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTime, Time::Timestamp creationTime,
          uintptr_t inode, class Filesystem *pFs, size_t size, File *pParent, bool bIsAnonymous = false);
     /** Destructor - doesn't do anything. */
     virtual ~Pipe();

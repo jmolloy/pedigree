@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -21,6 +20,7 @@
 // C++ entry point
 
 #include "Elf32.h"
+#include "support.h"
 
 // autogen.h contains the full kernel binary in a char array
 #include "autogen.h"
@@ -29,7 +29,6 @@ extern "C" {
 volatile unsigned char *uart1 = (volatile unsigned char*) 0x4806A000;
 volatile unsigned char *uart2 = (volatile unsigned char*) 0x4806C000;
 volatile unsigned char *uart3 = (volatile unsigned char*) 0x49020000;
-extern int memset(void *buf, int c, size_t len);
 };
 
 // http://www.simtec.co.uk/products/SWLINUX/files/booting_article.html
@@ -129,6 +128,18 @@ struct atag {
         struct atag_cmdline      cmdline;
     } u;
 };
+
+#define MULTIBOOT_FLAG_MEM     0x001
+#define MULTIBOOT_FLAG_DEVICE  0x002
+#define MULTIBOOT_FLAG_CMDLINE 0x004
+#define MULTIBOOT_FLAG_MODS    0x008
+#define MULTIBOOT_FLAG_AOUT    0x010
+#define MULTIBOOT_FLAG_ELF     0x020
+#define MULTIBOOT_FLAG_MMAP    0x040
+#define MULTIBOOT_FLAG_CONFIG  0x080
+#define MULTIBOOT_FLAG_LOADER  0x100
+#define MULTIBOOT_FLAG_APM     0x200
+#define MULTIBOOT_FLAG_VBE     0x400
 
 /// Bootstrap structure passed to the kernel entry point.
 struct BootstrapStruct_t
@@ -470,7 +481,9 @@ extern "C" void writeHex(int uart, unsigned int n)
 class BeagleGpio
 {
     public:
-        BeagleGpio()
+        BeagleGpio() :
+            m_gpio1(0), m_gpio2(0), m_gpio3(0), m_gpio4(0), m_gpio5(0),
+            m_gpio6(0)
         {}
         ~BeagleGpio()
         {}
@@ -751,10 +764,11 @@ struct SecondLevelDescriptor
     } descriptor;
 } PACKED;
 
-extern "C" void __start(uint32_t r0, uint32_t machineType, struct atag *tagList)
+extern "C" void __start(uint32_t r0, uint32_t machineType, struct atag *tagList) __attribute__((noreturn));
+void __start(uint32_t r0, uint32_t machineType, struct atag *tagList)
 {
     BeagleGpio gpio;
-    
+
     bool b = uart_softreset(3);
     if(!b)
         while(1);
@@ -814,75 +828,6 @@ extern "C" void __start(uint32_t r0, uint32_t machineType, struct atag *tagList)
             break;
     }
 
-#if 0 // Set to 1 to enable the MMU test instead of loading the kernel.
-    writeStr(3, "\r\n\r\nVirtual memory test starting...\r\n");
-
-    FirstLevelDescriptor *pdir = (FirstLevelDescriptor*) 0x80100000;
-    memset(pdir, 0, 0x4000);
-
-    uint32_t base1 = 0x80000000; // Currently running code
-    uint32_t base2 = 0x49000000; // UART3
-
-    // First section covers the current code, identity mapped.
-    uint32_t pdir_offset = base1 >> 20;
-    pdir[pdir_offset].descriptor.entry = base1;
-    pdir[pdir_offset].descriptor.section.type = 2;
-    pdir[pdir_offset].descriptor.section.b = 0;
-    pdir[pdir_offset].descriptor.section.c = 0;
-    pdir[pdir_offset].descriptor.section.xn = 0;
-    pdir[pdir_offset].descriptor.section.domain = 0;
-    pdir[pdir_offset].descriptor.section.imp = 0;
-    pdir[pdir_offset].descriptor.section.ap1 = 3;
-    pdir[pdir_offset].descriptor.section.ap2 = 0;
-    pdir[pdir_offset].descriptor.section.tex = 0;
-    pdir[pdir_offset].descriptor.section.s = 1;
-    pdir[pdir_offset].descriptor.section.nG = 0;
-    pdir[pdir_offset].descriptor.section.sectiontype = 0;
-    pdir[pdir_offset].descriptor.section.ns = 0;
-
-    // Second section covers the UART, identity mapped.
-    pdir_offset = base2 >> 20;
-    pdir[pdir_offset].descriptor.entry = base2;
-    pdir[pdir_offset].descriptor.section.type = 2;
-    pdir[pdir_offset].descriptor.section.b = 0;
-    pdir[pdir_offset].descriptor.section.c = 0;
-    pdir[pdir_offset].descriptor.section.xn = 0;
-    pdir[pdir_offset].descriptor.section.domain = 0;
-    pdir[pdir_offset].descriptor.section.imp = 0;
-    pdir[pdir_offset].descriptor.section.ap1 = 3;
-    pdir[pdir_offset].descriptor.section.ap2 = 0;
-    pdir[pdir_offset].descriptor.section.tex = 0;
-    pdir[pdir_offset].descriptor.section.s = 1;
-    pdir[pdir_offset].descriptor.section.nG = 0;
-    pdir[pdir_offset].descriptor.section.sectiontype = 0;
-    pdir[pdir_offset].descriptor.section.ns = 0;
-
-    writeStr(3, "Writing to TTBR0 and enabling access to domain 0...\r\n");
-
-    asm volatile("MCR p15,0,%0,c2,c0,0" : : "r" (0x80100000));
-    asm volatile("MCR p15,0,%0,c3,c0,0" : : "r" (0xFFFFFFFF)); // Manager access to all domains for now
-
-    // Enable the MMU
-    uint32_t sctlr = 0;
-    asm volatile("MRC p15,0,%0,c1,c0,0" : "=r" (sctlr));
-    if(!(sctlr & 1))
-        sctlr |= 1;
-    else
-        writeStr(3, "It seems the MMU is already enabled?\r\n");
-
-    writeStr(3, "Enabling the MMU...\r\n");
-    asm volatile("MCR p15,0,%0,c1,c0,0" : : "r" (sctlr));
-
-    // If you can see the string, the identity map is complete and working.
-    writeStr(3, "\r\n\r\nTest completed without errors.\r\n");
-
-    while(1)
-    {
-        asm volatile("wfi");
-    }
-
-#else
-
     writeStr(3, "\r\n\r\nPlease wait while the kernel is loaded...\r\n");
 
     Elf32 elf("kernel");
@@ -897,15 +842,17 @@ extern "C" void __start(uint32_t r0, uint32_t machineType, struct atag *tagList)
 
     struct BootstrapStruct_t *bs = reinterpret_cast<struct BootstrapStruct_t *>(0x80008000);
     writeStr(3, "Creating bootstrap information structure... ");
-    memset(bs, 0, sizeof(bs));
+    ByteSet(bs, 0, sizeof(*bs));
     bs->shndx = elf.m_pHeader->shstrndx;
     bs->num = elf.m_pHeader->shnum;
     bs->size = elf.m_pHeader->shentsize;
     bs->addr = (unsigned int)elf.m_pSectionHeaders;
+    bs->flags |= MULTIBOOT_FLAG_ELF;
 
     // Repurpose these variables a little....
     bs->mods_addr = reinterpret_cast<uint32_t>(elf.m_pBuffer);
     bs->mods_count = (sizeof file) + 0x1000;
+    bs->flags |= MULTIBOOT_FLAG_MODS;
 
     // For every section header, set .addr = .offset + m_pBuffer.
     for (int i = 0; i < elf.m_pHeader->shnum; i++)
@@ -922,7 +869,6 @@ extern "C" void __start(uint32_t r0, uint32_t machineType, struct atag *tagList)
     // Run the kernel, finally
     writeStr(3, "Now starting the Pedigree kernel (can take a while, please wait).\r\n\r\n");
     main(bs);
-#endif
     
     while (1)
     {

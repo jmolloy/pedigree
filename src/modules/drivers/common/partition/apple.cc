@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -26,16 +25,14 @@
 bool appleProbeDisk(Disk *pDisk)
 {
   // Read the second sector (512 bytes) of the disk into a buffer.
-  uint8_t buff;
+  uintptr_t buff;
   if ((buff=pDisk->read(512ULL)) == 0)
   {
-    WARNING("Disk read failure during partition table search.");
+    WARNING("Disk read failure during Apple partition table search.");
     return false;
   }
 
-  uint8_t *buffer = reinterpret_cast<uint8_t*>(buff);
-
-  ApplePartitionMap *pMap = reinterpret_cast<ApplePartitionMap*> (buffer);
+  ApplePartitionMap *pMap = reinterpret_cast<ApplePartitionMap*> (buff);
 
   String diskName;
   pDisk->getName(diskName);

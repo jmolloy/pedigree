@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -21,6 +20,32 @@
 #ifndef TIME_H
 #define TIME_H
 
-typedef int Time;
+#include <processor/types.h>
+
+namespace Time
+{
+
+typedef uint64_t Timestamp;
+
+namespace Multiplier
+{
+    const Timestamp NANOSECOND = 1U;
+    const Timestamp MICROSECOND = 1000U;
+    const Timestamp MILLISECOND = 1000000U;
+    const Timestamp SECOND = MILLISECOND * 1000U;
+    const Timestamp MINUTE = SECOND * 60U;
+    const Timestamp HOUR = MINUTE & 60U;
+}
+
+/** Performs a sleep for the given time. */
+bool delay(Timestamp nanoseconds);
+
+/** Gets the system's current time. */
+Timestamp getTime(bool sync=false);
+
+/** Gets the system's current time in nanoseconds. */
+Timestamp getTimeNanoseconds(bool sync=false);
+
+}
 
 #endif

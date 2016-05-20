@@ -20,6 +20,9 @@
 #ifndef PROCESS_H
 #define PROCESS_H
 
+#ifdef THREADS
+
+#include <compiler.h>
 #include <process/Thread.h>
 #include <processor/state.h>
 #include <utilities/Vector.h>
@@ -32,6 +35,7 @@
 #include <process/Mutex.h>
 #include <utilities/Tree.h>
 #include <utilities/MemoryAllocator.h>
+#include <time/Time.h>
 
 #include <Subsystem.h>
 
@@ -99,9 +103,6 @@ public:
     /** Returns the n'th thread in this process. */
     Thread *getThread(size_t n);
 
-    /** Creates a new process, with a single thread and a stack. */
-    static uintptr_t create(uint8_t *elf, size_t elfSize, const char *name);
-
     /** Returns the process ID. */
     size_t getId()
     {
@@ -138,7 +139,7 @@ public:
     }
 
     /** Kills the process. */
-    void kill();
+    void kill() NORETURN;
     /** Suspends the process. */
     void suspend();
     /** Resumes the process from suspend. */
@@ -278,6 +279,103 @@ public:
         m_State = Terminating;
     }
 
+    void trackPages(ssize_t nVirtual, ssize_t nPhysical, ssize_t nShared)
+    {
+        m_Metadata.virtualPages += nVirtual;
+        m_Metadata.physicalPages += nPhysical;
+        m_Metadata.sharedPages += nShared;
+    }
+
+    void resetCounts()
+    {
+        m_Metadata.virtualPages = 0;
+        m_Metadata.physicalPages = 0;
+        m_Metadata.sharedPages = 0;
+        m_Metadata.startTime = Time::getTimeNanoseconds();
+    }
+
+    /**
+     * Record the current time in the relevant field for this process.
+     *
+     * Use to set the point in time from which the next difference will be
+     * taken.
+     */
+    void recordTime(bool bUserspace)
+    {
+        Time::Timestamp now = Time::getTimeNanoseconds();
+        if (bUserspace)
+        {
+            m_LastUserspaceEntry = now;
+        }
+        else
+        {
+            m_LastKernelEntry = now;
+        }
+    }
+
+    /**
+     * Counts the time spent since the last recordTime(), and then updates the
+     * relevant time field to the current time.
+     *
+     * Use when scheduling.
+     */
+    void trackTime(bool bUserspace)
+    {
+        Time::Timestamp now = Time::getTimeNanoseconds();
+        if (bUserspace)
+        {
+            Time::Timestamp diff = now - m_LastUserspaceEntry;
+            m_LastUserspaceEntry = now;
+            m_Metadata.userTime += diff;
+        }
+        else
+        {
+            Time::Timestamp diff = now - m_LastKernelEntry;
+            m_LastKernelEntry = now;
+            m_Metadata.kernelTime += diff;
+        }
+    }
+
+    /** Gets timestamps. */
+    Time::Timestamp getUserTime() const
+    {
+        return m_Metadata.userTime;
+    }
+    Time::Timestamp getKernelTime() const
+    {
+        return m_Metadata.kernelTime;
+    }
+    Time::Timestamp getStartTime() const
+    {
+        return m_Metadata.startTime;
+    }
+
+    /** Get process usage. */
+    ssize_t getVirtualPageCount() const
+    {
+        return m_Metadata.virtualPages;
+    }
+    ssize_t getPhysicalPageCount() const
+    {
+        return m_Metadata.physicalPages;
+    }
+    ssize_t getSharedPageCount() const
+    {
+        return m_Metadata.sharedPages;
+    }
+
+    /** Set this process' root. */
+    void setRootFile(File *pFile)
+    {
+        m_pRootFile = pFile;
+    }
+
+    /** Get this process' root. */
+    File *getRootFile() const
+    {
+        return m_pRootFile;
+    }
+
 private:
     Process(const Process &);
     Process &operator = (const Process &);
@@ -365,8 +463,44 @@ private:
     /** Releases all locks in m_Waiters once. */
     void notifyWaiters();
 
+    /** Stores metadata about this process. */
+    struct ProcessMetadata
+    {
+        ProcessMetadata() :
+            virtualPages(0), physicalPages(0), sharedPages(0), userTime(0),
+            kernelTime(0), startTime(0)
+        {}
+
+        /// Virtual address space consumed, including that which would trigger
+        /// a successful trap to page data in.
+        ssize_t virtualPages;
+        /// Physical address space consumed, barring that which is shared.
+        ssize_t physicalPages;
+        /// Shared pages consumed.
+        ssize_t sharedPages;
+
+        /// Time spent in userspace as this process.
+        Time::Timestamp userTime;
+        /// Time spent in the kernel as this process.
+        Time::Timestamp kernelTime;
+
+        /// Time at which process started.
+        Time::Timestamp startTime;
+    } ALIGN(4096) m_Metadata;
+
+    /** Last time we entered the kernel. */
+    Time::Timestamp m_LastKernelEntry;
+
+    /** Last time we entered userspace. */
+    Time::Timestamp m_LastUserspaceEntry;
+
+    /** Root directory for this process. NULL == system-wide default. */
+    File *m_pRootFile;
+
 public:
     Semaphore m_DeadThreads;
 };
+
+#endif
 
 #endif

@@ -31,6 +31,7 @@
 /** The interrupt manager on x64 processors */
 class X64InterruptManager : public ::InterruptManager
 {
+  friend class Processor;
   public:
     /** Get the X64InterruptManager class instance
      *\return instance of the X64InterruptManager class */

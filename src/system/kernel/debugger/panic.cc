@@ -44,7 +44,7 @@ static size_t newlineCount(const char *pString)
 }
 
 // TODO: We might want a separate parameter for a stacktrace/register dump
-void _panic( const char* msg, DebuggerIO* pScreen )
+static void _panic( const char* msg, DebuggerIO* pScreen )
 {
   static HugeStaticString panic_output;
   panic_output.clear();
@@ -120,7 +120,7 @@ void panic( const char* msg )
 
   // Drop out of whatever graphics mode we were in
   GraphicsService::GraphicsProvider provider;
-  memset(&provider, 0, sizeof(provider));
+  ByteSet(&provider, 0, sizeof(provider));
   provider.bTextModes = true;
   
   ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(graphicsService);

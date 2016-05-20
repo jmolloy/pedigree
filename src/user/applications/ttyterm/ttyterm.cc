@@ -37,7 +37,7 @@
 
 #include <sys/fb.h>
 
-#include <input/Input.h>
+#include <native/input/Input.h>
 
 // PID of the process we're running
 pid_t g_RunningPid = -1;
@@ -213,13 +213,19 @@ int main(int argc, char **argv)
 
     // Ensure we are in fact in text mode.
     int fb = open("/dev/fb", O_RDWR);
-    if(fb != 0)
+    if(fb >= 0)
     {
         /// \todo error handling?
         syslog(LOG_INFO, "ttyterm: forcing text mode");
         pedigree_fb_modeset mode = {0, 0, 0};
-        int fd = ioctl(fb, PEDIGREE_FB_SETMODE, &mode);
+        int rc = ioctl(fb, PEDIGREE_FB_SETMODE, &mode);
         close(fb);
+
+        if (rc < 0)
+        {
+            syslog(LOG_INFO, "ttyterm: couldn't force text mode, exiting");
+            return 1;
+        }
     }
 
     // Get a PTY and the main TTY.
@@ -245,7 +251,8 @@ int main(int argc, char **argv)
     ioctl(g_MasterPty, TIOCSWINSZ, &ptySize);
 
     char slavename[16] = {0};
-    strcpy(slavename, ptsname(g_MasterPty));
+    strncpy(slavename, ptsname(g_MasterPty), 16);
+    slavename[15] = 0;
 
     // Clear the screen.
     write(tty, "\e[2J", 5);
@@ -285,10 +292,13 @@ int main(int argc, char **argv)
         ut.ut_type = LOGIN_PROCESS;
         ut.ut_pid = getpid();
         ut.ut_tv = tv;
-        strcpy(ut.ut_id, "/");
-        strcpy(ut.ut_line, "console"); // ttyterm is the console
+        strncpy(ut.ut_id, "/", UT_LINESIZE);
+        strncpy(ut.ut_line, "console", UT_LINESIZE); // ttyterm is the console
         pututxline(&ut);
         endutxent();
+
+        // Enable autowrap before loading the login process.
+        write(slave, "\e[?7h", 5);
 
         syslog(LOG_INFO, "Starting up 'login' on pty %s", slavename);
         execl("/applications/login", "/applications/login", 0);

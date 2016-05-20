@@ -18,10 +18,18 @@
 ;##############################################################################
 ;### Trampoline code ##########################################################
 ;##############################################################################
+
 [bits 16]
-[org 0x7000]
+[section .trampoline.text16]
+[global mp_trampoline]
+mp_trampoline:
+  cli
+  xor ax, ax
+  mov ds, ax
+
   ; Load the new GDT
-  lgdt [GDTR]
+  mov si, 0x7200
+  lgdt [ds:si]
 
   ; Set Cr0.PE
   mov eax, cr0
@@ -29,9 +37,10 @@
   mov cr0, eax
 
   ; Jump into protected-mode
-  jmp 0x08:pmode
+  jmp 0x08:0x7100
 
 [bits 32]
+[section .trampoline.text32]
 pmode:
   mov ax, 0x10
   mov ds, ax
@@ -50,17 +59,18 @@ pmode:
   mov cr3, eax
 
   ; Test for EFER.NXE
+  mov esi, 0x101
   mov eax, 0x80000001
   cpuid
   and edx, 0x100000
   jz pmode1
-  mov [efer], dword 0x901
+  mov esi, 0x901
 
 pmode1:
   ; Set EFER.LME & EFER.NXE & EFER.SCE
   mov ecx, 0xC0000080
   rdmsr
-  or eax, [efer]
+  or eax, esi
   wrmsr
 
   ; Enable Paging
@@ -68,8 +78,8 @@ pmode1:
   or eax, 0x80000000
   mov cr0, eax
 
-  lgdt [GDTR64]
-  jmp 0x08:longmode
+  lgdt [GDTR64 - 0xFFFFFFFF7FF00000]
+  jmp 0x08:longmode - 0xFFFFFFFF7FF00000
 
 [bits 64]
 longmode:
@@ -79,14 +89,11 @@ longmode:
   ; Jump to the kernel's Multiprocessor::applicationProcessorStartup() function
   mov rax, [0x7FE8]
   jmp rax
-;##########################################################################
-;##### EFER                                                           #####
-;##########################################################################
-efer:
-  dd 0x101
+
 ;##########################################################################
 ;##### Global descriptor table                                        #####
 ;##########################################################################
+[section .trampoline.data.gdt]
 GDT:
   dd 0x00000000
   dd 0x00000000
@@ -107,18 +114,21 @@ GDT:
 ;##########################################################################
 ;##### Global descriptor table register                               #####
 ;##########################################################################
+[section .trampoline.data.gdtr]
 GDTR:
   dw 0x18
-  dd GDT
+  dd GDT - 0xFFFFFFFF7FF00000
 ;##########################################################################
 ;#### Global descriptor table register                                 ####
 ;##########################################################################
+[section .trampoline.data.gdtr64]
 GDTR64:
   dw 0x18
-  dq GDT64
+  dq GDT64 - 0xFFFFFFFF7FF00000
 ;##########################################################################
 ;#### Global descriptor table 64 bit                                   ####
 ;##########################################################################
+[section .trampoline.data.gdt64]
 GDT64:
   dq 0
   ;##################################################################

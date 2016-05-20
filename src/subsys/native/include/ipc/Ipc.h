@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -21,7 +20,7 @@
 #ifndef _NATIVE_IPC_H
 #define _NATIVE_IPC_H
 
-#include <types.h>
+#include <native/types.h>
 
 namespace PedigreeIpc
 {

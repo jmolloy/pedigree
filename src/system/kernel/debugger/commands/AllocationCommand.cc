@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -182,7 +181,7 @@ const char *AllocationCommand::getLine1(size_t index, DebuggerIO::Colour &colour
   static NormalStaticString Line;
   Line.clear();
 
-  Allocation *pA = reinterpret_cast<Allocation*>(m_It.value());
+  Allocation *pA = m_It.value();
 
   bgColour = DebuggerIO::Black;
   if (index == 0)
@@ -242,7 +241,7 @@ void AllocationCommand::allocatePage(physical_uintptr_t page)
 
     Allocation *pA = new Allocation;
     pA->page = page;
-    memcpy(&pA->ra, bt.m_pReturnAddresses, NUM_BT_FRAMES*sizeof(uintptr_t));
+    MemoryCopy(&pA->ra, bt.m_pReturnAddresses, NUM_BT_FRAMES*sizeof(uintptr_t));
 
 #ifdef THREADS
     Process *pP = Processor::information().getCurrentThread()->getParent();

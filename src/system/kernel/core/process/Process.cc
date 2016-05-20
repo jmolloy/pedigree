@@ -40,8 +40,13 @@ Process::Process() :
   m_ExitStatus(0), m_Cwd(0), m_Ctty(0), m_SpaceAllocator(false), m_DynamicSpaceAllocator(false),
   m_pUser(0), m_pGroup(0), m_pEffectiveUser(0), m_pEffectiveGroup(0), m_pDynamicLinker(0),
   m_pSubsystem(0), m_Waiters(), m_bUnreportedSuspend(false), m_bUnreportedResume(false),
-  m_State(Active), m_BeforeSuspendState(Thread::Ready), m_Lock(false), m_DeadThreads(0)
+  m_State(Active), m_BeforeSuspendState(Thread::Ready), m_Lock(false),
+  m_Metadata(), m_LastKernelEntry(0), m_LastUserspaceEntry(0), m_pRootFile(0),
+  m_DeadThreads(0)
 {
+  resetCounts();
+  m_Metadata.startTime = Time::getTimeNanoseconds();
+
   m_Id = Scheduler::instance().addProcess(this);
   getSpaceAllocator().free(
       getAddressSpace()->getUserStart(),
@@ -61,7 +66,9 @@ Process::Process(Process *pParent) :
   m_pUser(pParent->m_pUser), m_pGroup(pParent->m_pGroup), m_pEffectiveUser(pParent->m_pEffectiveUser),
   m_pEffectiveGroup(pParent->m_pEffectiveGroup), m_pDynamicLinker(pParent->m_pDynamicLinker),
   m_pSubsystem(0), m_Waiters(), m_bUnreportedSuspend(false), m_bUnreportedResume(false),
-  m_State(pParent->getState()), m_BeforeSuspendState(Thread::Ready), m_Lock(false), m_DeadThreads(0)
+  m_State(pParent->getState()), m_BeforeSuspendState(Thread::Ready), m_Lock(false),
+  m_Metadata(pParent->m_Metadata), m_LastKernelEntry(0), m_LastUserspaceEntry(0),
+  m_pRootFile(pParent->m_pRootFile), m_DeadThreads(0)
 {
    m_pAddressSpace = pParent->m_pAddressSpace->clone();
 
@@ -74,6 +81,9 @@ Process::Process(Process *pParent) :
 
 Process::~Process()
 {
+  // Guards things like removeThread.
+  m_State = Terminating;
+
   bool isSelf = Processor::information().getCurrentThread()->getParent() == this;
 
   for(Vector<Thread*>::Iterator it = m_Threads.begin();
@@ -82,10 +92,7 @@ Process::~Process()
   {
     Thread *pThread = (*it);
 
-    // When the thread gets cleaned up, make sure it does not attempt to remove
-    // the thread from this process (as we are about to do that anyway).
-    pThread->setParent(0);
-
+    // Clean up thread if not actually us.
     if (pThread != Processor::information().getCurrentThread())
     {
       // Child thread is not current thread - terminate the child properly.
@@ -135,6 +142,10 @@ size_t Process::addThread(Thread *pThread)
 
 void Process::removeThread(Thread *pThread)
 {
+  // Don't bother in these states: already done, or is about to be done.
+  if (m_State == Terminating || m_State == Terminated)
+    return;
+
   LockGuard<Spinlock> guard(m_Lock);
   for(Vector<Thread*>::Iterator it = m_Threads.begin();
       it != m_Threads.end();
@@ -146,6 +157,9 @@ void Process::removeThread(Thread *pThread)
       break;
     }
   }
+
+  if (m_pSubsystem)
+    m_pSubsystem->threadRemoved(pThread);
 }
 
 size_t Process::getNumThreads()
@@ -237,12 +251,6 @@ void Process::resume()
     m_State = Active;
     notifyWaiters();
     Processor::information().getScheduler().schedule(Thread::Ready);
-}
-
-uintptr_t Process::create(uint8_t *elf, size_t elfSize, const char *name)
-{
-    FATAL("This function isn't implemented correctly - registration with the dynamic linker is required!");
-    return 0;
 }
 
 void Process::addWaiter(Semaphore *pWaiter)

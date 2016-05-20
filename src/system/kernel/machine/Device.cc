@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,6 +22,15 @@
 #include <processor/MemoryMappedIo.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <Log.h>
+
+#ifdef THREADS
+#include <LockGuard.h>
+#define RAII_LOCK() LockGuard<Mutex> guard(m_TreeLock)
+
+Mutex Device::m_TreeLock;
+#else
+#define RAII_LOCK()
+#endif
 
 /** Singleton Device instantiation. */
 Device Device::m_Root;
@@ -74,6 +82,21 @@ Device::~Device()
   {
     delete m_Children[i];
   }
+}
+
+void Device::foreach(Device::Callback callback, Device *root)
+{
+  // Forward to the Callable<> version.
+  pedigree_std::Callable<decltype(callback)> cb(callback);
+  foreach(cb, root);
+}
+
+void Device::addToRoot(Device *device)
+{
+  RAII_LOCK();
+
+  device->setParent(&Device::root());
+  Device::root().addChild(device);
 }
 
 void Device::removeIoMappings()
@@ -151,58 +174,123 @@ void Device::replaceChild(Device *src, Device *dest)
 
 /** Search functions */
 
-void Device::searchByVendorId(uint16_t vendorId, void (*callback)(Device*))
+void Device::searchByVendorId(uint16_t vendorId, void (*callback)(Device*), Device *root)
 {
-    for (unsigned int i = 0; i < m_Children.count(); i++)
+    RAII_LOCK();
+
+    if (!root)
     {
-        Device *pChild = m_Children[i];
+        root = &Device::root();
+    }
+
+    searchByVendorIdInternal(vendorId, callback, root);
+}
+
+void Device::searchByVendorIdAndDeviceId(uint16_t vendorId, uint16_t deviceId, void (*callback)(Device*), Device *root)
+{
+    RAII_LOCK();
+
+    if (!root)
+    {
+        root = &Device::root();
+    }
+
+    searchByVendorIdAndDeviceIdInternal(vendorId, deviceId, callback, root);
+}
+
+void Device::searchByClass(uint16_t classCode, void (*callback)(Device*), Device *root)
+{
+    RAII_LOCK();
+
+    if (!root)
+    {
+        root = &Device::root();
+    }
+
+    searchByClassInternal(classCode, callback, root);
+}
+
+void Device::searchByClassAndSubclass(uint16_t classCode, uint16_t subclassCode, void (*callback)(Device*), Device *root)
+{
+    RAII_LOCK();
+
+    if (!root)
+    {
+        root = &Device::root();
+    }
+
+    searchByClassAndSubclassInternal(classCode, subclassCode, callback, root);
+}
+
+void Device::searchByClassSubclassAndProgInterface(uint16_t classCode, uint16_t subclassCode, uint8_t progInterface, void (*callback)(Device*), Device *root)
+{
+    RAII_LOCK();
+
+    if (!root)
+    {
+        root = &Device::root();
+    }
+
+    searchByClassSubclassAndProgInterfaceInternal(classCode, subclassCode, progInterface, callback, root);
+}
+
+void Device::searchByVendorIdInternal(uint16_t vendorId, void (*callback)(Device*), Device *root)
+{
+    for (unsigned int i = 0; i < root->getNumChildren(); i++)
+    {
+        Device *pChild = root->getChild(i);
         if(pChild->getPciVendorId() == vendorId)
             callback(pChild);
-        pChild->searchByVendorId(vendorId, callback);
+
+        searchByVendorIdInternal(vendorId, callback, pChild);
     }
 }
 
-void Device::searchByVendorIdAndDeviceId(uint16_t vendorId, uint16_t deviceId, void (*callback)(Device*))
+void Device::searchByVendorIdAndDeviceIdInternal(uint16_t vendorId, uint16_t deviceId, void (*callback)(Device*), Device *root)
 {
-    for (unsigned int i = 0; i < m_Children.count(); i++)
+    for (unsigned int i = 0; i < root->getNumChildren(); i++)
     {
-        Device *pChild = m_Children[i];
+        Device *pChild = root->getChild(i);
         if((pChild->getPciVendorId() == vendorId) && (pChild->getPciDeviceId() == deviceId))
             callback(pChild);
-        pChild->searchByVendorIdAndDeviceId(vendorId, deviceId, callback);
+
+        searchByVendorIdAndDeviceIdInternal(vendorId, deviceId, callback, pChild);
     }
 }
 
-void Device::searchByClass(uint16_t classCode, void (*callback)(Device*))
+void Device::searchByClassInternal(uint16_t classCode, void (*callback)(Device*), Device *root)
 {
-    for (unsigned int i = 0; i < m_Children.count(); i++)
+    for (unsigned int i = 0; i < root->getNumChildren(); i++)
     {
-        Device *pChild = m_Children[i];
+        Device *pChild = root->getChild(i);
         if(pChild->getPciClassCode() == classCode)
             callback(pChild);
-        pChild->searchByClass(classCode, callback);
+
+        searchByClassInternal(classCode, callback, pChild);
     }
 }
 
-void Device::searchByClassAndSubclass(uint16_t classCode, uint16_t subclassCode, void (*callback)(Device*))
+void Device::searchByClassAndSubclassInternal(uint16_t classCode, uint16_t subclassCode, void (*callback)(Device*), Device *root)
 {
-    for (unsigned int i = 0; i < m_Children.count(); i++)
+    for (unsigned int i = 0; i < root->getNumChildren(); i++)
     {
-        Device *pChild = m_Children[i];
+        Device *pChild = root->getChild(i);
         if((pChild->getPciClassCode() == classCode) && (pChild->getPciSubclassCode() == subclassCode))
             callback(pChild);
-        pChild->searchByClassAndSubclass(classCode, subclassCode, callback);
+
+        searchByClassAndSubclassInternal(classCode, subclassCode, callback, pChild);
     }
 }
 
-void Device::searchByClassSubclassAndProgInterface(uint16_t classCode, uint16_t subclassCode, uint8_t progInterface, void (*callback)(Device*))
+void Device::searchByClassSubclassAndProgInterfaceInternal(uint16_t classCode, uint16_t subclassCode, uint8_t progInterface, void (*callback)(Device*), Device *root)
 {
-    for (unsigned int i = 0; i < m_Children.count(); i++)
+    for (unsigned int i = 0; i < root->getNumChildren(); i++)
     {
-        Device *pChild = m_Children[i];
+        Device *pChild = root->getChild(i);
         if((pChild->getPciClassCode() == classCode) && (pChild->getPciSubclassCode() == subclassCode) && (pChild->getPciProgInterface() == progInterface))
             callback(pChild);
-        pChild->searchByClassSubclassAndProgInterface(classCode, subclassCode, progInterface, callback);
+
+        searchByClassSubclassAndProgInterfaceInternal(classCode, subclassCode, progInterface, callback, pChild);
     }
 }
 
@@ -210,6 +298,7 @@ Device::Address::Address(String n, uintptr_t a, size_t s, bool io, size_t pad) :
   m_Name(n), m_Address(a), m_Size(s), m_IsIoSpace(io), m_Io(0), m_Padding(pad),
   m_bMapped(false)
 {
+#ifndef DEVICE_IGNORE_ADDRESSES
 #ifndef KERNEL_PROCESSOR_NO_PORT_IO
     if (m_IsIoSpace)
     {
@@ -230,16 +319,20 @@ Device::Address::Address(String n, uintptr_t a, size_t s, bool io, size_t pad) :
 #ifndef KERNEL_PROCESSOR_NO_PORT_IO
     }
 #endif
+#endif  // DEVICE_IGNORE_ADDRESSES
 }
 
 void Device::Address::map(size_t forcedSize, bool bUser, bool bWriteCombine, bool bWriteThrough)
 {
+#ifndef DEVICE_IGNORE_ADDRESSES
     if(!m_Io)
         return;
 #ifndef KERNEL_PROCESSOR_NO_PORT_IO
     if(m_IsIoSpace)
         return;
 #endif
+    if(m_bMapped)
+      return;
     
     size_t pageSize = PhysicalMemoryManager::getPageSize();
     size_t s = forcedSize ? forcedSize : m_Size;
@@ -265,10 +358,17 @@ void Device::Address::map(size_t forcedSize, bool bUser, bool bWriteCombine, boo
     {
         ERROR("Device::Address - map for " << m_Address << " failed!");
     }
+
+    NOTICE("Device::Address: mapped " << m_Address << " -> " << reinterpret_cast<uintptr_t>(static_cast<MemoryMappedIo*>(m_Io)->virtualAddress()));
+
+    m_bMapped = true;
+#endif  // DEVICE_IGNORE_ADDRESSES
 }
 
 Device::Address::~Address()
 {
+#ifndef DEVICE_IGNORE_ADDRESSES
   if (m_Io)
     delete m_Io;
+#endif
 }

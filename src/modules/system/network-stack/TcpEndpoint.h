@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -54,7 +53,7 @@ class TcpEndpoint : public ConnectionBasedEndpoint
       m_DataStream(), m_ShadowDataStream()
     {
       m_bConnection = true;
-    };
+    }
     TcpEndpoint(uint16_t local, uint16_t remote) :
       ConnectionBasedEndpoint(local, remote), m_Card(0), m_ConnId(0),
       m_RemoteHost(), nBytesRemoved(0), m_Listening(false), m_IncomingConnections(),
@@ -62,7 +61,7 @@ class TcpEndpoint : public ConnectionBasedEndpoint
       m_DataStream(), m_ShadowDataStream()
     {
       m_bConnection = true;
-    };
+    }
     TcpEndpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
       ConnectionBasedEndpoint(remoteIp, local, remote), m_Card(0),
       m_ConnId(0), m_RemoteHost(), nBytesRemoved(0), m_Listening(false),
@@ -70,7 +69,7 @@ class TcpEndpoint : public ConnectionBasedEndpoint
       m_IncomingConnectionLock(), m_DataStream(), m_ShadowDataStream()
     {
       m_bConnection = true;
-    };
+    }
     TcpEndpoint(size_t connId, IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
       ConnectionBasedEndpoint(remoteIp, local, remote), m_Card(0),
       m_ConnId(connId), m_RemoteHost(), nBytesRemoved(0), m_Listening(false),
@@ -78,8 +77,8 @@ class TcpEndpoint : public ConnectionBasedEndpoint
       m_IncomingConnectionLock(), m_DataStream(), m_ShadowDataStream()
     {
       m_bConnection = true;
-    };
-    virtual ~TcpEndpoint() {};
+    }
+    virtual ~TcpEndpoint() {}
 
     /** Application interface */
     virtual int state();
@@ -104,7 +103,7 @@ class TcpEndpoint : public ConnectionBasedEndpoint
     }
 
     /** TcpManager functionality - called to deposit data into our local buffer */
-    virtual size_t depositPayload(size_t nBytes, uintptr_t payload, uint32_t sequenceNumber, bool push);
+    virtual size_t depositTcpPayload(size_t nBytes, uintptr_t payload, uint32_t sequenceNumber, bool push);
 
     /** Setters */
     void setCard(Network* pCard)

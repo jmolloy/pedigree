@@ -21,8 +21,8 @@
 #include "FatFilesystem.h"
 #include "FatSymlink.h"
 
-FatSymlink::FatSymlink(String name, Time accessedTime, Time modifiedTime,
-        Time creationTime, uintptr_t inode, class Filesystem *pFs, size_t size,
+FatSymlink::FatSymlink(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTime,
+        Time::Timestamp creationTime, uintptr_t inode, class Filesystem *pFs, size_t size,
         uint32_t dirClus, uint32_t dirOffset, File *pParent) :
     Symlink(name, accessedTime, modifiedTime, creationTime, inode, pFs, size,
         pParent), m_DirClus(dirClus), m_DirOffset(dirOffset)
@@ -36,13 +36,13 @@ FatSymlink::FatSymlink(String name, Time accessedTime, Time modifiedTime,
 
 uint64_t FatSymlink::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
-    FatFilesystem *pFs = reinterpret_cast<FatFilesystem*>(m_pFilesystem);
+    FatFilesystem *pFs = static_cast<FatFilesystem*>(m_pFilesystem);
     return pFs->read(this, location, size, buffer);
 }
 
 uint64_t FatSymlink::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
-    FatFilesystem *pFs = reinterpret_cast<FatFilesystem*>(m_pFilesystem);
+    FatFilesystem *pFs = static_cast<FatFilesystem*>(m_pFilesystem);
     uint64_t ret = pFs->write(this, location, size, buffer);
 
     // Reset the symlink target.

@@ -141,7 +141,7 @@ int posix_connect(int sock, struct sockaddr* address, size_t addrlen)
             }
 
             // Valid state. But no socket, so do the magic here.
-            struct sockaddr_un *un = (struct sockaddr_un *) address;
+            struct sockaddr_un *un = reinterpret_cast<struct sockaddr_un *>(address);
             String pathname(un->sun_path);
 
             /// \todo Handle things that aren't actually UNIX sockets...
@@ -358,7 +358,7 @@ ssize_t posix_sendto(void* callInfo)
 
     if(f->so_domain == AF_UNIX)
     {
-        struct sockaddr_un *un = (struct sockaddr_un *) address;
+        const struct sockaddr_un *un = reinterpret_cast<const struct sockaddr_un *>(address);
         File *pFile = VFS::instance().find(String(un->sun_path));
         if(!pFile)
         {
@@ -483,7 +483,7 @@ ssize_t posix_recvfrom(void* callInfo)
     if(f->so_domain == AF_UNIX)
     {
         File *pFile = f->so_local;
-        struct sockaddr_un *un = (struct sockaddr_un *) address;
+        struct sockaddr_un *un = reinterpret_cast<struct sockaddr_un *>(address);
         un->sun_family = AF_UNIX;
 
         ssize_t r = pFile->read(reinterpret_cast<uintptr_t>(un->sun_path), bufflen, reinterpret_cast<uintptr_t>(buff), (f->flflags & O_NONBLOCK) == 0);
@@ -563,7 +563,7 @@ int posix_bind(int sock, const struct sockaddr *address, size_t addrlen)
             }
 
             // Valid state. But no socket, so do the magic here.
-            struct sockaddr_un *un = (struct sockaddr_un *) address;
+            const struct sockaddr_un *un = reinterpret_cast<const struct sockaddr_un *>(address);
             String pathname(un->sun_path);
 
             bool bResult = VFS::instance().createFile(pathname, 0777);
@@ -650,7 +650,7 @@ int posix_listen(int sock, int backlog)
     {
         if((ce->state() != Tcp::CLOSED) && (ce->state() != Tcp::UNKNOWN))
         {
-            ERROR("State was " << static_cast<int>(ce->state()) << ".");
+            ERROR("State was " << ce->state() << ".");
             SYSCALL_ERROR(InvalidArgument);
             return -1;
         }
@@ -754,7 +754,6 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
                     if(lookup != -1)
                     {
                         bFound = true;
-                        pCard = pTmp;
                         break;
                     }
                 }
@@ -781,18 +780,17 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
     uintptr_t userBlock = reinterpret_cast<uintptr_t>(hostinfo) + sizeof(struct hostent);
     uintptr_t endBlock = (userBlock + offset) - sizeof(struct hostent);
 
-    memset(hostinfo, 0, offset);
+    ByteSet(hostinfo, 0, offset);
 
     // Copy the hostname
     entry->h_name = reinterpret_cast<char*>(userBlock);
-    strncpy(entry->h_name, static_cast<const char*>(host.hostname), host.hostname.length());
+    StringCopyN(entry->h_name, static_cast<const char*>(host.hostname), host.hostname.length());
     userBlock += host.hostname.length() + 1;
 
     // Make sure we don't overflow the buffer
     if (userBlock < endBlock)
     {
         // Create room for all the pointers to aliases
-        uintptr_t aliasPointerBlock = userBlock;
         entry->h_aliases = reinterpret_cast<char**>(userBlock);
         userBlock += sizeof(char*) * (host.aliases.count() + 1);
 
@@ -806,7 +804,7 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
                 continue;
 
             entry->h_aliases[nAlias] = reinterpret_cast<char*>(userBlock);
-            strncpy(entry->h_aliases[nAlias], static_cast<const char*>(*(*it)), (*it)->length());
+            StringCopyN(entry->h_aliases[nAlias], static_cast<const char*>(*(*it)), (*it)->length());
             userBlock += (*it)->length() + 1;
 
             delete *it;
@@ -835,7 +833,7 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset)
             // Copy the IP across
             uint32_t ip = (*it)->getIp();
             char* ipBlock = reinterpret_cast<char*>(userBlock);
-            memcpy(ipBlock, &ip, 4);
+            MemoryCopy(ipBlock, &ip, 4);
 
             // Add this to the array
             addrList[nIp++] = ipBlock;
@@ -926,8 +924,6 @@ int posix_getpeername(int socket, struct sockaddr *address, socklen_t *address_l
     Endpoint* p = s->getEndpoint();
     if (s->getProtocol() == NETMAN_TYPE_TCP)
     {
-        ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(p);
-
         /// todo this may not be accurate.
         struct sockaddr_in* sin = reinterpret_cast<struct sockaddr_in*>(address);
         sin->sin_port = HOST_TO_BIG16(p->getRemotePort());
@@ -943,3 +939,69 @@ int posix_getpeername(int socket, struct sockaddr *address, socklen_t *address_l
 
     return 0;
 }
+
+int posix_getsockopt(int sock, int level, int optname, void* optvalue, size_t *optlen)
+{
+    N_NOTICE("getsockopt");
+
+    // Check optlen first, then use it to check optvalue.
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(optlen), sizeof(size_t), PosixSubsystem::SafeWrite)))
+    {
+        N_NOTICE("getsockopt -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(optvalue), sizeof(*optlen), PosixSubsystem::SafeWrite)))
+    {
+        N_NOTICE("getsockopt -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    // Valid socket?
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if (!pSubsystem)
+    {
+        ERROR("No subsystem for one or both of the processes!");
+        return -1;
+    }
+
+    FileDescriptor *f = pSubsystem->getFileDescriptor(sock);
+    if (!f || !f->file)
+    {
+        SYSCALL_ERROR(BadFileDescriptor);
+        return -1;
+    }
+
+    Socket *s = static_cast<Socket *>(f->file);
+
+    if (level != SOL_SOCKET)
+    {
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    switch (optname)
+    {
+        case SO_ERROR:
+        {
+            Endpoint* p = s->getEndpoint();
+            N_NOTICE(" -> getting error [" << static_cast<int>(p->getError()) << "]");
+            *reinterpret_cast<Error::PosixError *>(optvalue) = p->getError();
+            *optlen = sizeof(Error::PosixError);
+            p->resetError();
+            break;
+        }
+
+        default:
+            N_NOTICE(" -> unknown optname " << optname);
+
+            // Combination of level/optname not supported otherwise.
+            SYSCALL_ERROR(ProtocolNotAvailable);
+            return -1;
+    }
+
+    return 0;
+}
+

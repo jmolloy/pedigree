@@ -33,7 +33,7 @@ NetworkStack::NetworkStack() :
 {
   initialise();
 
-#if defined(X86_COMMON)
+#if defined(X86_COMMON) || defined(HOSTED)
   // Lots of RAM to burn! Try 16 MB, then 8 MB, then 4 MB, then give up
   if(!m_MemPool.initialise(4096, 1600))
       if(!m_MemPool.initialise(2048, 1600))
@@ -102,7 +102,7 @@ void NetworkStack::receive(size_t nBytes, uintptr_t packet, Network* pCard, uint
     pCard->droppedPacket();
     return;
   }
-  memcpy(safePacket, reinterpret_cast<void*>(packet), nBytes);
+  MemoryCopy(safePacket, reinterpret_cast<void*>(packet), nBytes);
   Packet *p = new Packet;
   p->buffer = reinterpret_cast<uintptr_t>(safePacket);
   p->packetLength = nBytes;
@@ -161,4 +161,5 @@ static void exit()
 {
 }
 
-MODULE_INFO("network-stack", &entry, &exit, "vfs");
+// NetManager exposes a Filesystem, and so needs the vfs module.
+MODULE_INFO("network-stack", &entry, &exit, "config", "vfs");

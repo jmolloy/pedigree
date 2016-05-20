@@ -24,7 +24,7 @@
 #include <process/Scheduler.h>
 #include "PedigreeCSyscallManager.h"
 
-PedigreeCSyscallManager g_PedigreeCSyscallManager;
+static PedigreeCSyscallManager g_PedigreeCSyscallManager;
 
 static bool init()
 {

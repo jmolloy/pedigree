@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -26,11 +25,41 @@
 #include "ScsiCommands.h"
 #include "ScsiController.h"
 #include <utilities/PointerGuard.h>
+#include <time/Time.h>
 
-#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
+#define READAHEAD_ENABLED 0
 
-ScsiDisk::ScsiDisk() : Disk(), m_Cache(), m_nAlignPoints(0), m_NumBlocks(0), m_BlockSize(0)
+#ifdef SCSI_DEBUG
+#define SCSI_DEBUG_LOG DEBUG_LOG
+#else
+#define SCSI_DEBUG_LOG(...)
+#endif
+
+void ScsiDisk::cacheCallback(CacheConstants::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta)
 {
+    ScsiDisk *pDisk = reinterpret_cast<ScsiDisk *>(meta);
+
+    switch(cause)
+    {
+        case CacheConstants::WriteBack:
+            {
+                // Blocking write request.
+                pDisk->flush(loc);
+            }
+            break;
+        case CacheConstants::Eviction:
+            // no-op for ScsiDisk
+            break;
+        default:
+            WARNING("ScsiDisk: unknown cache callback -- could indicate potential future I/O issues.");
+            break;
+    }
+}
+
+ScsiDisk::ScsiDisk() :
+    Disk(), m_Cache(), m_Inquiry(0), m_nAlignPoints(0), m_NumBlocks(0), m_BlockSize(0x1000), m_DeviceType(NoDevice)
+{
+    m_Cache.setCallback(cacheCallback, this);
 }
 
 ScsiDisk::~ScsiDisk()
@@ -43,13 +72,12 @@ bool ScsiDisk::initialise(ScsiController *pController, size_t nUnit)
     m_pParent = pController;
     m_nUnit = nUnit;
 
-    Inquiry *data = new Inquiry;
-    PointerGuard<Inquiry> guard(data);
+    m_Inquiry = new Inquiry;
 
     // Inquire as to the device's state
     /// \todo Use this data to change how read() and write() work
     ScsiCommand *pCommand = new ScsiCommands::Inquiry(sizeof(Inquiry), false);
-    bool success = sendCommand(pCommand, reinterpret_cast<uintptr_t>(data), sizeof(Inquiry));
+    bool success = sendCommand(pCommand, reinterpret_cast<uintptr_t>(m_Inquiry), sizeof(Inquiry));
     if(!success)
     {
         ERROR("ScsiDisk: INQUIRY failed!");
@@ -58,6 +86,9 @@ bool ScsiDisk::initialise(ScsiController *pController, size_t nUnit)
     }
     delete pCommand;
 
+    // Get the peripheral type out of the data.
+    m_DeviceType = static_cast<ScsiPeripheralType>(m_Inquiry->Peripheral & 0x1F);
+
     // Ensure the unit is ready before we attempt to do anything more
     if(!unitReady())
     {
@@ -65,7 +96,7 @@ bool ScsiDisk::initialise(ScsiController *pController, size_t nUnit)
         Sense *s = new Sense;
         PointerGuard<Sense> guard2(s);
         readSense(s);
-        DEBUG_LOG("ScsiDisk: Unit not yet ready, sense data: [sk=" << s->SenseKey << ", asc=" << s->Asc << ", ascq=" << s->AscQ << "]");
+        SCSI_DEBUG_LOG("ScsiDisk: Unit not yet ready, sense data: [sk=" << s->SenseKey << ", asc=" << s->Asc << ", ascq=" << s->AscQ << "]");
 
         if(s->SenseKey == 0x2)
         {
@@ -86,15 +117,15 @@ bool ScsiDisk::initialise(ScsiController *pController, size_t nUnit)
             }
         }
 
-        delay(100);
+        Time::delay(100 * Time::Multiplier::MILLISECOND);
 
         // Attempt to see if the unit is ready again
         if(!unitReady())
         {
             readSense(s);
-            DEBUG_LOG("ScsiDisk: Unit not yet ready, sense data: [sk=" << s->SenseKey << ", asc=" << s->Asc << ", ascq=" << s->AscQ << "]");
+            SCSI_DEBUG_LOG("ScsiDisk: Unit not yet ready, sense data: [sk=" << s->SenseKey << ", asc=" << s->Asc << ", ascq=" << s->AscQ << "]");
 
-            delay(100);
+            Time::delay(100 * Time::Multiplier::MILLISECOND);
 
             if(!unitReady())
             {
@@ -106,16 +137,15 @@ bool ScsiDisk::initialise(ScsiController *pController, size_t nUnit)
     }
 
     // Get the capacity of the device
-    getCapacityInternal(&m_NumBlocks, &m_BlockSize);
-    DEBUG_LOG("ScsiDisk: Capacity: " << Dec << m_NumBlocks << " blocks, each " << m_BlockSize << " bytes - " << (m_BlockSize * m_NumBlocks) << Hex << " bytes in total.");
+    getCapacityInternal(&m_NumBlocks, &m_NativeBlockSize);
+    SCSI_DEBUG_LOG("ScsiDisk: Capacity: " << Dec << m_NumBlocks << " blocks, each " << m_NativeBlockSize << " bytes - " << (m_NativeBlockSize * m_NumBlocks) << Hex << " bytes in total.");
 
     // Chat to the partition service and let it pick up that we're around now
     ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("partition"));
     Service         *pService  = ServiceManager::instance().getService(String("partition"));
-    NOTICE("Asking if the partition provider supports touch");
-    if(pFeatures->provides(ServiceFeatures::touch))
+    if(pFeatures && pFeatures->provides(ServiceFeatures::touch))
     {
-        NOTICE("It does, attempting to inform the partitioner of our presence...");
+        NOTICE("Attempting to inform the partitioner of our presence...");
         if(pService)
         {
             if(pService->serve(ServiceFeatures::touch, static_cast<Disk*>(this), sizeof(static_cast<Disk*>(this))))
@@ -133,7 +163,7 @@ bool ScsiDisk::initialise(ScsiController *pController, size_t nUnit)
 
 bool ScsiDisk::readSense(Sense *sense)
 {
-    memset(sense, 0xFF, sizeof(Sense));
+    ByteSet(sense, 0xFF, sizeof(Sense));
 
     // Maximum size of sense data is 252 bytes
     ScsiCommand *pCommand = new ScsiCommands::ReadSense(0, sizeof(Sense));
@@ -148,14 +178,7 @@ bool ScsiDisk::readSense(Sense *sense)
     }
 
     /// \todo get the amount of data received from the SCSI device
-    memcpy(sense, response, sizeof(Sense));
-
-#if 0
-    // Dump the sense information
-    DEBUG_LOG("    Sense information:");
-    for(size_t i = 0; i < sizeof(Sense); i++)
-        DEBUG_LOG("        [" << Dec << i << Hex << "] " << response[i]);
-#endif
+    MemoryCopy(sense, response, sizeof(Sense));
 
     delete [] response;
 
@@ -167,6 +190,8 @@ bool ScsiDisk::unitReady()
     ScsiCommand *pCommand = new ScsiCommands::UnitReady();
     bool success = sendCommand(pCommand, 0, 0);
     delete pCommand;
+
+    /// \todo this can fail with UNIT_ATTN or NOT_READY if the device is removable.
     return success;
 }
 
@@ -182,7 +207,7 @@ bool ScsiDisk::getCapacityInternal(size_t *blockNumber, size_t *blockSize)
     
     Capacity *capacity = new Capacity;
     PointerGuard<Capacity> guard(capacity);
-    memset(capacity, 0, sizeof(Capacity));
+    ByteSet(capacity, 0, sizeof(Capacity));
 
     ScsiCommand *pCommand = new ScsiCommands::ReadCapacity10();
     bool success = sendCommand(pCommand, reinterpret_cast<uintptr_t>(capacity), sizeof(Capacity), false);
@@ -209,11 +234,23 @@ bool ScsiDisk::sendCommand(ScsiCommand *pCommand, uintptr_t pRespBuffer, uint16_
 
 uintptr_t ScsiDisk::read(uint64_t location)
 {
-    if (location % m_BlockSize)
-        FATAL("Read with location % " << Dec << m_BlockSize << Hex << ".");
-    if((location / m_BlockSize) > m_NumBlocks)
+    if (!(getBlockSize() && getNativeBlockSize()))
     {
-        ERROR("ScsiDisk::read - location too high");
+        ERROR("ScsiDisk::read - block size is zero.");
+        return 0;
+    }
+
+    size_t endLocation = location + getNativeBlockSize();
+    if(endLocation > getSize())
+    {
+        ERROR("ScsiDisk::read - location too high (end location " << endLocation << " > " << getSize() << ")");
+        return 0;
+    }
+
+    size_t blockNum = location / getNativeBlockSize();
+    if(blockNum > getBlockCount())
+    {
+        ERROR("ScsiDisk::read - location too high (block " << blockNum << " > " << getBlockCount() << ")");
         return 0;
     }
 
@@ -232,20 +269,41 @@ uintptr_t ScsiDisk::read(uint64_t location)
         return buffer - offs;
     }
 
-    ScsiController *pParent = static_cast<ScsiController*> (m_pParent);
-    pParent->addRequest(0, SCSI_REQUEST_READ, reinterpret_cast<uint64_t> (this), location + offs);
+    // Grab an aligned location to read.
+    size_t loc = (location + offs) & ~(getBlockSize() - 1);
 
+    ScsiController *pParent = static_cast<ScsiController*> (m_pParent);
+    pParent->addRequest(0, SCSI_REQUEST_READ, reinterpret_cast<uint64_t> (this), loc);
+#if READAHEAD_ENABLED
+    // Queue up a few readaheads, assuming sequential access.
+    for (size_t i = 0; i < (0x20000 / getBlockSize()); ++i)
+    {
+        pParent->addAsyncRequest(0, SCSI_REQUEST_READ, reinterpret_cast<uint64_t> (this), loc + (getBlockSize() * i));
+    }
+#endif
     return m_Cache.lookup(location + offs) - offs;
 }
 
 void ScsiDisk::write(uint64_t location)
 {
 #ifndef CRIPPLE_HDD
-    if (location % m_BlockSize)
-        FATAL("Write with location % " << Dec << m_BlockSize << Hex << ".");
-    if((location / m_BlockSize) > m_NumBlocks)
+    if (!(getBlockSize() && getNativeBlockSize()))
+    {
+        ERROR("ScsiDisk::write - block size is zero.");
+        return;
+    }
+
+    if((location + getNativeBlockSize()) > getSize())
     {
         ERROR("ScsiDisk::write - location too high");
+        ERROR(" -> " << location << " vs " << getSize());
+        return;
+    }
+
+    if((location / getNativeBlockSize()) > getBlockCount())
+    {
+        ERROR("ScsiDisk::write - location too high");
+        ERROR(" -> block " << (location / getNativeBlockSize()) << " vs " << getBlockCount());
         return;
     }
 
@@ -265,6 +323,8 @@ void ScsiDisk::write(uint64_t location)
         return;
     }
 
+    // Implicit pin caused by lookup() must be released by the write request
+    // handler, to ensure the refcount is correct.
     ScsiController *pParent = static_cast<ScsiController*> (m_pParent);
     pParent->addAsyncRequest(0, SCSI_REQUEST_WRITE, reinterpret_cast<uint64_t> (this), location + offs);
 #endif
@@ -273,9 +333,19 @@ void ScsiDisk::write(uint64_t location)
 void ScsiDisk::flush(uint64_t location)
 {
 #ifndef CRIPPLE_HDD
-    if (location % m_BlockSize)
-        FATAL("Flush with location % " << Dec << m_BlockSize << Hex << ".");
-    if((location / m_BlockSize) > m_NumBlocks)
+    if (!(getBlockSize() && getNativeBlockSize()))
+    {
+        ERROR("ScsiDisk::flush - block size is zero.");
+        return;
+    }
+
+    if((location + getNativeBlockSize()) > getSize())
+    {
+        ERROR("ScsiDisk::flush - location too high");
+        return;
+    }
+
+    if((location / getNativeBlockSize()) > getBlockCount())
     {
         ERROR("ScsiDisk::flush - location too high");
         return;
@@ -296,9 +366,15 @@ void ScsiDisk::flush(uint64_t location)
         return;
     }
 
+    // Make sure this page remains for both the write AND the sync.
+    m_Cache.pin(location + offs);
+
     ScsiController *pParent = static_cast<ScsiController*> (m_pParent);
     pParent->addRequest(0, SCSI_REQUEST_WRITE, reinterpret_cast<uint64_t> (this), location + offs);
     pParent->addRequest(0, SCSI_REQUEST_SYNC, reinterpret_cast<uint64_t> (this), location + offs);
+
+    // Undo our pin for write+sync.
+    m_Cache.release(location + offs);
 #endif
 }
 
@@ -330,43 +406,89 @@ uint64_t ScsiDisk::doRead(uint64_t location)
     if(buffer)
     {
         WARNING("ScsiDisk::doRead(" << location << ") - buffer was already in cache");
+        m_Cache.release(location);
         return 0;
     }
-    buffer = m_Cache.insert(location, 4096);
+    buffer = m_Cache.insert(location, getBlockSize());
     if(!buffer)
     {
         FATAL("ScsiDisk::doRead - no buffer");
     }
 
-    // Grab our parent.
-    ScsiController *pParent = static_cast<ScsiController*> (m_pParent);
+    size_t blockNum = location / getNativeBlockSize();
+    size_t blockCount = getBlockSize() / getNativeBlockSize();
 
     bool bOk;
     ScsiCommand *pCommand;
-    
+
+    // TOC?
+    if (m_DeviceType == CdDvdDevice)
+    {
+        /// \todo Cache this somewhere.
+        pCommand = new ScsiCommands::ReadTocCommand(getNativeBlockSize());
+        uint8_t *toc = new uint8_t[getNativeBlockSize()];
+        PointerGuard<uint8_t> tmpBuffGuard(toc, true);
+        bOk = sendCommand(pCommand, reinterpret_cast<uintptr_t>(toc), getNativeBlockSize());
+        delete pCommand;
+        if (!bOk)
+        {
+            WARNING("ScsiDisk::doRead - could not find data track (READ TOC failed)");
+            return 0;
+        }
+
+        uint16_t i;
+        bool bHaveTrack = false;
+        /// \todo endianness issue?
+        uint16_t bufLen = BIG_TO_HOST16((toc[0] << 8) | toc[1]);
+        ScsiCommands::ReadTocCommand::TocEntry *Toc = reinterpret_cast<ScsiCommands::ReadTocCommand::TocEntry*>(toc + 4);
+        for(i = 0; i < (bufLen / 8); i++)
+        {
+            if(Toc[i].Flags == 0x14)
+            {
+                bHaveTrack = true;
+                break;
+            }
+        }
+
+        if(!bHaveTrack)
+        {
+            WARNING("ScsiDisk::doRead - could not find data track (no data track)");
+            return 0;
+        }
+
+        uint32_t trackStart = BIG_TO_HOST32(Toc[i].TrackStart);
+        if((blockNum + trackStart) < blockNum)
+        {
+            WARNING("ScsiDisk::doRead - TOC overflow");
+            return 0;
+        }
+
+        blockNum += trackStart;
+    }
+
     for(int i = 0; i < 3; i++)
     {
-        DEBUG_LOG("SCSI: trying read(10)");
-        pCommand = new ScsiCommands::Read10((location / m_BlockSize), 4096 / m_BlockSize);
-        bOk = sendCommand(pCommand, buffer, 4096);
+        SCSI_DEBUG_LOG("SCSI: trying read(10)");
+        pCommand = new ScsiCommands::Read10(blockNum, blockCount);
+        bOk = sendCommand(pCommand, buffer, getBlockSize());
         delete pCommand;
         if(bOk)
             return 0;
     }
     for(int i = 0; i < 3; i++)
     {
-        DEBUG_LOG("SCSI: trying read(12)");
-        pCommand = new ScsiCommands::Read12((location / m_BlockSize), 4096 / m_BlockSize);
-        bOk = sendCommand(pCommand, buffer, 4096);
+        SCSI_DEBUG_LOG("SCSI: trying read(12)");
+        pCommand = new ScsiCommands::Read12(blockNum, blockCount);
+        bOk = sendCommand(pCommand, buffer, getBlockSize());
         delete pCommand;
         if(bOk)
             return 0;
     }
     for(int i = 0; i < 3; i++)
     {
-        DEBUG_LOG("SCSI: trying read(16)");
-        pCommand = new ScsiCommands::Read16((location / m_BlockSize), 4096 / m_BlockSize);
-        bOk = sendCommand(pCommand, buffer, 4096);
+        SCSI_DEBUG_LOG("SCSI: trying read(16)");
+        pCommand = new ScsiCommands::Read16(blockNum, blockCount);
+        bOk = sendCommand(pCommand, buffer, getBlockSize());
         delete pCommand;
         if(bOk)
             return 0;
@@ -402,16 +524,19 @@ uint64_t ScsiDisk::doWrite(uint64_t location)
         return 0;
     }
 
-    // Grab our parent.
-    ScsiController *pParent = static_cast<ScsiController*> (m_pParent);
+    // Make sure we don't hold the refcnt once we exit this method.
+    CachePageGuard guard(m_Cache, location);
 
-    bool bOk;
+    size_t block = location / getNativeBlockSize();
+    size_t count = 4096 / getNativeBlockSize();
+
+    bool bOk = false;
     ScsiCommand *pCommand;
 
     for(int i = 0; i < 3; i++)
     {
-        DEBUG_LOG("SCSI: trying write(10)");
-        pCommand = new ScsiCommands::Write10((location / m_BlockSize), 4096 / m_BlockSize);
+        SCSI_DEBUG_LOG("SCSI: trying write(10)");
+        pCommand = new ScsiCommands::Write10(block, count);
         bOk = sendCommand(pCommand, buffer, 4096, true);
         delete pCommand;
         if(bOk)
@@ -421,8 +546,8 @@ uint64_t ScsiDisk::doWrite(uint64_t location)
     {
         for(int i = 0; i < 3; i++)
         {
-            DEBUG_LOG("SCSI: trying write(12)");
-            pCommand = new ScsiCommands::Write12((location / m_BlockSize), 4096 / m_BlockSize);
+            SCSI_DEBUG_LOG("SCSI: trying write(12)");
+            pCommand = new ScsiCommands::Write12(block, count);
             bOk = sendCommand(pCommand, buffer, 4096, true);
             delete pCommand;
             if(bOk)
@@ -433,8 +558,8 @@ uint64_t ScsiDisk::doWrite(uint64_t location)
     {
         for(int i = 0; i < 3; i++)
         {
-            DEBUG_LOG("SCSI: trying write(16)");
-            pCommand = new ScsiCommands::Write16((location / m_BlockSize), 4096 / m_BlockSize);
+            SCSI_DEBUG_LOG("SCSI: trying write(16)");
+            pCommand = new ScsiCommands::Write16(block, count);
             bOk = sendCommand(pCommand, buffer, 4096, true);
             delete pCommand;
             if(bOk)
@@ -466,17 +591,17 @@ uint64_t ScsiDisk::doSync(uint64_t location)
         return 0;
     }
 
-    // Grab our parent.
-    ScsiController *pParent = static_cast<ScsiController*> (m_pParent);
+    size_t block = location / getNativeBlockSize();
+    size_t count = 4096 / getNativeBlockSize();
 
-    bool bOk;
+    bool bOk = false;
     ScsiCommand *pCommand;
 
     // Kick off a synchronise (this will be slow, but will ensure the data is on disk)
     for(int i = 0; i < 3; i++)
     {
-        DEBUG_LOG("SCSI: trying synchronise(10)");
-        pCommand = new ScsiCommands::Synchronise10((location / m_BlockSize), 4096 / m_BlockSize);
+        SCSI_DEBUG_LOG("SCSI: trying synchronise(10)");
+        pCommand = new ScsiCommands::Synchronise10(block, count);
         bOk = sendCommand(pCommand, 0, 0);
         delete pCommand;
         if(bOk)
@@ -487,8 +612,8 @@ uint64_t ScsiDisk::doSync(uint64_t location)
     {
         for(int i = 0; i < 3; i++)
         {
-            DEBUG_LOG("SCSI: trying synchronise(16)");
-            pCommand = new ScsiCommands::Synchronise16((location / m_BlockSize), 4096 / m_BlockSize);
+            SCSI_DEBUG_LOG("SCSI: trying synchronise(16)");
+            pCommand = new ScsiCommands::Synchronise16(block, count);
             bOk = sendCommand(pCommand, 0, 0);
             delete pCommand;
             if(bOk)
@@ -497,4 +622,14 @@ uint64_t ScsiDisk::doSync(uint64_t location)
     }
 
     return 0;
+}
+
+void ScsiDisk::pin(uint64_t location)
+{
+    m_Cache.pin(location);
+}
+
+void ScsiDisk::unpin(uint64_t location)
+{
+    m_Cache.release(location);
 }

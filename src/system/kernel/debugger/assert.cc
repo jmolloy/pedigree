@@ -52,5 +52,4 @@ void _assert(bool b, const char *file, int line, const char *func)
 
     // Best reason for a return is that the debugger isn't active. Either way, it's an error condition, panic.
     panic("assertion failed");
-    Processor::halt();
 }

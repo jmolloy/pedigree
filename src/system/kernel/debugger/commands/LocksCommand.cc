@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -35,7 +34,7 @@ static bool g_bReady = false;
 LocksCommand::LocksCommand()
     : DebuggerCommand(), m_bAcquiring(false)
 {
-    memset(m_pDescriptors, 0, sizeof(LockDescriptor)*MAX_DESCRIPTORS);
+    ByteSet(m_pDescriptors, 0, sizeof(LockDescriptor)*MAX_DESCRIPTORS);
 }
 
 LocksCommand::~LocksCommand()
@@ -78,14 +77,14 @@ bool LocksCommand::execute(const HugeStaticString &input, HugeStaticString &outp
         output.append(reinterpret_cast<uintptr_t>(pD->pLock), 16);
         output += ":\n";
 
-        for (size_t i = 0; i < pD->n; i++)
+        for (size_t j = 0; j < pD->n; j++)
         {
             uintptr_t symStart = 0;
-            const char *pSym = KernelElf::instance().globalLookupSymbol(pD->ra[i], &symStart);
+            const char *pSym = KernelElf::instance().globalLookupSymbol(pD->ra[j], &symStart);
             if (pSym == 0)
             {
                 output += " - ";
-                output.append(pD->ra[i], 16);
+                output.append(pD->ra[j], 16);
             }
             else
             {
@@ -107,13 +106,13 @@ bool LocksCommand::execute(const HugeStaticString &input, HugeStaticString &outp
         Spinlock *pLock = reinterpret_cast<Spinlock*>(address);
         output += "Lock state:\n";
         output += "  m_bInterrupts: ";
-        output += pLock->m_bInterrupts;
+        output += static_cast<unsigned>(pLock->m_bInterrupts);
         output += "\n  m_Atom:";
         output += (pLock->m_Atom) ? "Unlocked" : "Locked";
         output += "\n  m_Ra: ";
         output.append(pLock->m_Ra, 16);
         output += "\n  m_bAvoidTracking: ";
-        output += pLock->m_bAvoidTracking;
+        output += static_cast<unsigned>(pLock->m_bAvoidTracking);
         output += "\n  m_Magic: ";
         output.append(pLock->m_Magic, 16);
         output += "\n";
@@ -126,7 +125,7 @@ void LocksCommand::setReady()
 {
     g_bReady = true;
 }
-bool g_bMallocLockAcquired = false;
+
 void LocksCommand::lockAcquired(Spinlock *pLock)
 {
     if (!g_bReady || m_bAcquiring)
@@ -151,7 +150,7 @@ void LocksCommand::lockAcquired(Spinlock *pLock)
     {
         pD->used = true;
         pD->pLock = pLock;
-        memcpy(&pD->ra, bt.m_pReturnAddresses, NUM_BT_FRAMES*sizeof(uintptr_t));
+        MemoryCopy(&pD->ra, bt.m_pReturnAddresses, NUM_BT_FRAMES*sizeof(uintptr_t));
         pD->n = bt.m_nStackFrames;
     }
     m_bAcquiring = false;

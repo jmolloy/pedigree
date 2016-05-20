@@ -56,8 +56,8 @@ int cdi_dma_open(struct cdi_dma_handle* handle, uint8_t channel, uint8_t mode, s
 
     // Add the region to the handle
     handle->meta.region = reinterpret_cast<void*>(region);
-    handle->buffer = reinterpret_cast<void*>(region->virtualAddress());
-    memset(handle->buffer, 0, handle->length);
+    handle->buffer = region->virtualAddress();
+    ByteSet(handle->buffer, 0, handle->length);
 
     // Do the deed
     if(IsaDma::instance().initTransfer(handle->channel, handle->mode, handle->length, region->physicalAddress()))
@@ -81,7 +81,7 @@ int cdi_dma_read(struct cdi_dma_handle* handle)
 {
 #ifdef X86_COMMON
     // Copy the memory across
-    memcpy(handle->meta.realbuffer, handle->buffer, handle->length);
+    MemoryCopy(handle->meta.realbuffer, handle->buffer, handle->length);
     return 0;
 #else
     return -1;
@@ -97,7 +97,7 @@ int cdi_dma_write(struct cdi_dma_handle* handle)
 {
 #ifdef X86_COMMON
     // Copy the memory across
-    memcpy(handle->buffer, handle->meta.realbuffer, handle->length);
+    MemoryCopy(handle->buffer, handle->meta.realbuffer, handle->length);
     return 0;
 #else
     return -1;

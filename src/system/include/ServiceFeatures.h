@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -46,8 +45,8 @@ class ServiceFeatures
             probe   = 4
         };
 
-        ServiceFeatures() : m_OpEnum(0) {};
-        virtual ~ServiceFeatures() {};
+        ServiceFeatures() : m_OpEnum(0) {}
+        virtual ~ServiceFeatures() {}
 
         /** Does the operation provide a specific service? */
         virtual bool provides(Type service)

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -197,6 +196,10 @@ class PPC32InterruptState
     uint32_t m_R30;
     /** General purpose register 31 */
     uint32_t m_R31;
+} PACKED;
+
+class PPC32SchedulerState
+{
 } PACKED;
 
 /** @} */

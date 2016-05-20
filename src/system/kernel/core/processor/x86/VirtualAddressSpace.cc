@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -187,7 +186,7 @@ bool X86VirtualAddressSpace::mapPageStructures(physical_uintptr_t physicalAddres
     *pageDirectoryEntry = physicalAddress | toFlags(flags);
 
     // Zero the page table
-    memset(PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, 0),
+    ByteSet(PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, 0),
            0,
            PhysicalMemoryManager::getPageSize());
 
@@ -251,17 +250,17 @@ X86VirtualAddressSpace::X86VirtualAddressSpace()
                           VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
 
   // Initialise the page directory
-  memset(KERNEL_VIRTUAL_TEMP1,
+  ByteSet(KERNEL_VIRTUAL_TEMP1,
          0,
          0xC00);
 
   // Initialise the page table
-  memset(KERNEL_VIRTUAL_TEMP2,
+  ByteSet(KERNEL_VIRTUAL_TEMP2,
          0,
          0x1000);
 
   // Copy the kernel address space to the new address space
-  memcpy(adjust_pointer(KERNEL_VIRTUAL_TEMP1, 0xC00),
+  MemoryCopy(adjust_pointer(KERNEL_VIRTUAL_TEMP1, 0xC00),
          adjust_pointer(X86KernelVirtualAddressSpace::m_Instance.m_VirtualPageDirectory, 0xC00),
          0x3F8);
 
@@ -349,7 +348,7 @@ bool X86VirtualAddressSpace::doMap(physical_uintptr_t physicalAddress,
     *pageDirectoryEntry = page | PAGE_USER | ((PdeFlags & ~(PAGE_GLOBAL | PAGE_SWAPPED | PAGE_COPY_ON_WRITE)) | PAGE_WRITE);
 
     // Zero the page table
-    memset(PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, 0),
+    ByteSet(PAGE_TABLE_ENTRY(m_VirtualPageTables, pageDirectoryIndex, 0),
            0,
            PhysicalMemoryManager::getPageSize());
 
@@ -777,7 +776,7 @@ bool X86VirtualAddressSpace::mapCrossSpace(uintptr_t &v, physical_uintptr_t phys
         map(pDir[pageDirectoryIndex], KERNEL_VIRTUAL_TEMP3, VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
 
         // Zero.
-        memset(KERNEL_VIRTUAL_TEMP3, 0, PhysicalMemoryManager::getPageSize());
+        ByteSet(KERNEL_VIRTUAL_TEMP3, 0, PhysicalMemoryManager::getPageSize());
     }
     else if ( (Flags & PAGE_USER) && ((*pageDirectoryEntry & PAGE_USER) != PAGE_USER))
     {

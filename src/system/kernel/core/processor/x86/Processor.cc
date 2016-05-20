@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -169,9 +168,9 @@ void Processor::identify(HugeStaticString &str)
   uint32_t eax, ebx, ecx, edx;
   char ident[13];
   cpuid(0, 0, eax, ebx, ecx, edx);
-  memcpy(ident, &ebx, 4);
-  memcpy(&ident[4], &edx, 4);
-  memcpy(&ident[8], &ecx, 4);
+  MemoryCopy(ident, &ebx, 4);
+  MemoryCopy(&ident[4], &edx, 4);
+  MemoryCopy(&ident[8], &ecx, 4);
   ident[12] = 0;
   str = ident;
 }

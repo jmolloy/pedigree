@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -60,8 +59,6 @@ void Ndp::receive(IpAddress from, IpAddress to, uint8_t icmpType, uint8_t icmpCo
         // Don't care about router solicit messages, they are not relevant.
         case NDP_RADVERT:
             {
-                RouterAdvertisement *pMessage = reinterpret_cast<RouterAdvertisement*>(payload);
-
                 /// \todo Use the "current hop limit" to change IPv6's default
                 ///       hop limit.
 
@@ -88,7 +85,7 @@ void Ndp::receive(IpAddress from, IpAddress to, uint8_t icmpType, uint8_t icmpCo
                                 uint8_t ip[6];
                                 me.ipv6[i].getIp(ip);
 
-                                if(!memcmp(ip, pPrefix->prefix, pPrefix->prefixLength / 8))
+                                if(!MemoryCompare(ip, pPrefix->prefix, pPrefix->prefixLength / 8))
                                 {
                                     // Already got it.
                                     bAlreadyAssociated = true;
@@ -105,10 +102,10 @@ void Ndp::receive(IpAddress from, IpAddress to, uint8_t icmpType, uint8_t icmpCo
 
                                 // Throw it into the base of the new IPv6 address we are creating here.
                                 uint8_t newIpv6[16] = {0};
-                                memcpy(newIpv6 + 8, eui, 8);
+                                MemoryCopy(newIpv6 + 8, eui, 8);
 
                                 // Add the prefix now.
-                                memcpy(newIpv6, pPrefix->prefix, pPrefix->prefixLength / 8);
+                                MemoryCopy(newIpv6, pPrefix->prefix, pPrefix->prefixLength / 8);
 
                                 IpAddress *pNewAddress = 0;
 
@@ -220,7 +217,7 @@ void Ndp::receive(IpAddress from, IpAddress to, uint8_t icmpType, uint8_t icmpCo
                 LinkLayerAddressOption *pAddrOption = reinterpret_cast<LinkLayerAddressOption*>(packet + sizeof(NeighbourAdvertisement));
                 pAddrOption->type = 2;
                 pAddrOption->length = sizeof(LinkLayerAddressOption) / 8;
-                memcpy(pAddrOption->address, me.mac.getMac(), 6);
+                MemoryCopy(pAddrOption->address, me.mac.getMac(), 6);
 
                 // Send the response.
                 Icmpv6::instance().send(from, *pMatch, NDP_ADVERT, 0, packet, sizeof(NeighbourAdvertisement) + sizeof(LinkLayerAddressOption), pCard);
@@ -257,7 +254,7 @@ bool Ndp::routerSolicit(Network *pCard)
 
     uintptr_t packet = NetworkStack::instance().getMemPool().allocate();
     RouterSolicitation *solicit = reinterpret_cast<RouterSolicitation*>(packet);
-    memset(solicit, 0, sizeof(RouterSolicitation));
+    ByteSet(solicit, 0, sizeof(RouterSolicitation));
 
     // Broadcast to all routers.
     /// \todo Implement some way of creating "special" IPv6 addresses... neatly.
@@ -312,7 +309,7 @@ bool Ndp::neighbourSolicit(IpAddress addr, MacAddress *pMac, Network *pCard)
     LinkLayerAddressOption *pAddrOption = reinterpret_cast<LinkLayerAddressOption*>(packet + sizeof(NeighbourSolicitation));
     pAddrOption->type = 1;
     pAddrOption->length = sizeof(LinkLayerAddressOption) / 8;
-    memcpy(pAddrOption->address, me.mac.getMac(), 6);
+    MemoryCopy(pAddrOption->address, me.mac.getMac(), 6);
 
     // Broadcast over the local network segment.
     /// \todo Implement some way of creating "special" IPv6 addresses... neatly.

@@ -67,7 +67,19 @@ X64VirtualAddressSpace X64VirtualAddressSpace::m_KernelSpace(KERNEL_VIRTUAL_HEAP
                                                              reinterpret_cast<uintptr_t>(&pml4) - reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_ADDRESS),
                                                              KERNEL_VIRTUAL_STACK);
 
-VirtualAddressSpace *g_pCurrentlyCloning = 0;
+static void trackPages(ssize_t v, ssize_t p, ssize_t s)
+{
+  // Track, if we can.
+  Thread *pThread = Processor::information().getCurrentThread();
+  if (pThread)
+  {
+    Process *pProcess = pThread->getParent();
+    if (pProcess)
+    {
+      pProcess->trackPages(v, p, s);
+    }
+  }
+}
 
 VirtualAddressSpace &VirtualAddressSpace::getKernelAddressSpace()
 {
@@ -96,8 +108,8 @@ void *X64VirtualAddressSpace::getEndOfHeap()
 
 bool X64VirtualAddressSpace::isAddressValid(void *virtualAddress)
 {
-  if (reinterpret_cast<uint64_t>(virtualAddress) < 0x0008000000000000 ||
-      reinterpret_cast<uint64_t>(virtualAddress) >= 0xFFF8000000000000)
+  if (reinterpret_cast<uint64_t>(virtualAddress) < 0x0008000000000000ULL ||
+      reinterpret_cast<uint64_t>(virtualAddress) >= 0xFFF8000000000000ULL)
     return true;
   return false;
 }
@@ -153,7 +165,9 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
 
   // Is a page directory pointer table present?
   if (conditionalTableEntryAllocation(pml4Entry, flags) == false)
+  {
     return false;
+  }
 
   // If there wasn't a PDPT already present, and the address is in the kernel area
   // of memory, we need to propagate this change across all address spaces.
@@ -167,8 +181,8 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
           Process *p = Scheduler::instance().getProcess(i);
 
           X64VirtualAddressSpace *x64VAS = reinterpret_cast<X64VirtualAddressSpace*> (p->getAddressSpace());
-          uint64_t *pml4Entry = TABLE_ENTRY(x64VAS->m_PhysicalPML4, pml4Index);
-          *pml4Entry = thisPml4Entry;
+          uint64_t *otherPml4Entry = TABLE_ENTRY(x64VAS->m_PhysicalPML4, pml4Index);
+          *otherPml4Entry = thisPml4Entry;
       }
   }
 
@@ -177,27 +191,35 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
 
   // Is a page directory present?
   if (conditionalTableEntryAllocation(pageDirectoryPointerEntry, flags) == false)
+  {
     return false;
+  }
 
   size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
   uint64_t *pageDirectoryEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryPointerEntry), pageDirectoryIndex);
 
   // Is a page table present?
   if (conditionalTableEntryAllocation(pageDirectoryEntry, flags) == false)
+  {
     return false;
+  }
 
   size_t pageTableIndex = PAGE_TABLE_INDEX(virtualAddress);
   uint64_t *pageTableEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry), pageTableIndex);
 
   // Is a page already present?
   if ((*pageTableEntry & PAGE_PRESENT) == PAGE_PRESENT)
+  {
     return false;
+  }
 
   // Map the page
   *pageTableEntry = physAddress | Flags;
 
   // Flush the TLB
   Processor::invalidate(virtualAddress);
+
+  trackPages(1, 0, 0);
 
   return true;
 }
@@ -212,7 +234,6 @@ void X64VirtualAddressSpace::getMapping(void *virtualAddress,
   if (getPageTableEntry(virtualAddress, pageTableEntry) == false)
   {
     panic("VirtualAddressSpace::getMapping(): function misused");
-    return;
   }
 
   // Extract the physical address and the flags
@@ -229,7 +250,6 @@ void X64VirtualAddressSpace::setFlags(void *virtualAddress, size_t newFlags)
   if (getPageTableEntry(virtualAddress, pageTableEntry) == false)
   {
     panic("VirtualAddressSpace::setFlags(): function misused");
-    return;
   }
 
   // Set the flags
@@ -248,7 +268,6 @@ void X64VirtualAddressSpace::unmap(void *virtualAddress)
   if (getPageTableEntry(virtualAddress, pageTableEntry) == false)
   {
     panic("VirtualAddressSpace::unmap(): function misused");
-    return;
   }
 
   // Unmap the page
@@ -256,13 +275,20 @@ void X64VirtualAddressSpace::unmap(void *virtualAddress)
 
   // Invalidate the TLB entry
   Processor::invalidate(virtualAddress);
+
+  trackPages(-1, 0, 0);
+
+  // Possibly wipe out paging structures now that we've unmapped the page.
+  // This can clear all the way up to, but not including, the PML4 - can be
+  // extremely useful to conserve memory.
+  maybeFreeTables(virtualAddress);
 }
 
 VirtualAddressSpace *X64VirtualAddressSpace::clone()
 {
     LockGuard<Spinlock> guard(m_Lock);
 
-    VirtualAddressSpace &thisAddressSpace = Processor::information().getVirtualAddressSpace();
+    /// \todo figure out how to handle page tracking here
 
     // Create a new virtual address space
     VirtualAddressSpace *pClone = VirtualAddressSpace::create();
@@ -440,6 +466,7 @@ void X64VirtualAddressSpace::revertToKernelAddressSpace()
                     }
 
                     // Free the page.
+                    trackPages(-1, 0, 0);
                     *ptEntry = 0;
                     Processor::invalidate(virtualAddress);
                 }
@@ -456,6 +483,9 @@ void X64VirtualAddressSpace::revertToKernelAddressSpace()
         PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pml4Entry));
         *pml4Entry = 0;
     }
+
+    // Reset heap; it's been wiped out by this reversion.
+    m_HeapEnd = m_Heap;
 }
 
 bool X64VirtualAddressSpace::mapPageStructures(physical_uintptr_t physAddress,
@@ -537,6 +567,7 @@ bool X64VirtualAddressSpace::mapPageStructuresAbove4GB(physical_uintptr_t physAd
   }
   return false;
 }
+
 void *X64VirtualAddressSpace::allocateStack()
 {
     size_t sz = USERSPACE_VIRTUAL_STACK_SIZE;
@@ -544,12 +575,14 @@ void *X64VirtualAddressSpace::allocateStack()
       sz = KERNEL_STACK_SIZE;
     return doAllocateStack(sz);
 }
+
 void *X64VirtualAddressSpace::allocateStack(size_t stackSz)
 {
     if(stackSz == 0)
       return allocateStack();
     return doAllocateStack(stackSz);
 }
+
 void *X64VirtualAddressSpace::doAllocateStack(size_t sSize)
 {
   size_t flags = 0;
@@ -615,6 +648,7 @@ void *X64VirtualAddressSpace::doAllocateStack(size_t sSize)
 
   return pStack;
 }
+
 void X64VirtualAddressSpace::freeStack(void *pStack)
 {
   size_t pageSz = PhysicalMemoryManager::getPageSize();
@@ -646,11 +680,20 @@ X64VirtualAddressSpace::~X64VirtualAddressSpace()
 {
   PhysicalMemoryManager &physicalMemoryManager = PhysicalMemoryManager::instance();
 
-  // TODO: Free other things, perhaps in VirtualAddressSpace
-  //       We can't do this in VirtualAddressSpace destructor though!
+  size_t freePages = physicalMemoryManager.freePageCount();
+
+  // Drop back to the kernel address space. This will blow away the child's
+  // mappings, but maintains shared pages as needed.
+  revertToKernelAddressSpace();
 
   // Free the PageMapLevel4
   physicalMemoryManager.freePage(m_PhysicalPML4);
+
+  size_t freePagesAfter = physicalMemoryManager.freePageCount();
+
+  NOTICE("X64VirtualAddressSpace cleaned up " << (freePagesAfter - freePages) << " pages!");
+
+  WARNING("X64VirtualAddressSpace::~X64VirtualAddressSpace doesn't clean up well.");
 }
 
 X64VirtualAddressSpace::X64VirtualAddressSpace()
@@ -664,12 +707,12 @@ X64VirtualAddressSpace::X64VirtualAddressSpace()
   m_PhysicalPML4 = physicalMemoryManager.allocatePage();
 
   // Initialise the page directory
-  memset(reinterpret_cast<void*>(physicalAddress(m_PhysicalPML4)),
+  ByteSet(reinterpret_cast<void*>(physicalAddress(m_PhysicalPML4)),
          0,
          0x800);
 
   // Copy the kernel PageMapLevel4
-  memcpy(reinterpret_cast<void*>(physicalAddress(m_PhysicalPML4) + 0x800),
+  MemoryCopy(reinterpret_cast<void*>(physicalAddress(m_PhysicalPML4) + 0x800),
          reinterpret_cast<void*>(physicalAddress(m_KernelSpace.m_PhysicalPML4) + 0x800),
          0x800);
 }
@@ -682,7 +725,7 @@ X64VirtualAddressSpace::X64VirtualAddressSpace(void *Heap, physical_uintptr_t Ph
 }
 
 bool X64VirtualAddressSpace::getPageTableEntry(void *virtualAddress,
-                                               uint64_t *&pageTableEntry)
+                                               uint64_t *&pageTableEntry) const
 {
   size_t pml4Index = PML4_INDEX(virtualAddress);
   uint64_t *pml4Entry = TABLE_ENTRY(m_PhysicalPML4, pml4Index);
@@ -717,7 +760,98 @@ bool X64VirtualAddressSpace::getPageTableEntry(void *virtualAddress,
 
   return true;
 }
-uint64_t X64VirtualAddressSpace::toFlags(size_t flags, bool bFinal)
+
+void X64VirtualAddressSpace::maybeFreeTables(void *virtualAddress)
+{
+  bool bCanFreePageTable = true;
+
+  uint64_t *pageDirectoryEntry = 0;
+
+  size_t pml4Index = PML4_INDEX(virtualAddress);
+  uint64_t *pml4Entry = TABLE_ENTRY(m_PhysicalPML4, pml4Index);
+
+  // Is a page directory pointer table present?
+  if ((*pml4Entry & PAGE_PRESENT) != PAGE_PRESENT)
+    return;
+
+  size_t pageDirectoryPointerIndex = PAGE_DIRECTORY_POINTER_INDEX(virtualAddress);
+  uint64_t *pageDirectoryPointerEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pml4Entry), pageDirectoryPointerIndex);
+
+  if ((*pageDirectoryPointerEntry & PAGE_PRESENT) == PAGE_PRESENT)
+  {
+    size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
+    pageDirectoryEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryPointerEntry), pageDirectoryIndex);
+
+    if ((*pageDirectoryEntry & PAGE_PRESENT) == PAGE_PRESENT)
+    {
+      if ((*pageDirectoryEntry & PAGE_2MB) == PAGE_2MB)
+      {
+        bCanFreePageTable = false;
+      }
+      else
+      {
+        for (size_t i = 0; i < 0x200; ++i)
+        {
+          uint64_t *entry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry), i);
+          if ((*entry & PAGE_PRESENT) == PAGE_PRESENT ||
+              (*entry & PAGE_SWAPPED) == PAGE_SWAPPED)
+          {
+            bCanFreePageTable = false;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (bCanFreePageTable && pageDirectoryEntry)
+  {
+    PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry));
+    *pageDirectoryEntry = 0;
+  }
+  else if (!bCanFreePageTable)
+    return;
+
+  // Now that we've cleaned up the page table, we can scan the parent tables.
+
+  bool bCanFreeDirectory = true;
+  for (size_t i = 0; i < 0x200; ++i)
+  {
+    uint64_t *entry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryPointerEntry), i);
+    if ((*entry & PAGE_PRESENT) == PAGE_PRESENT)
+    {
+      bCanFreeDirectory = false;
+      break;
+    }
+  }
+
+  if (bCanFreeDirectory)
+  {
+    PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryPointerEntry));
+    *pageDirectoryPointerEntry = 0;
+  }
+  else
+    return;
+
+  bool bCanFreeDirectoryPointerTable = true;
+  for (size_t i = 0; i < 0x200; ++i)
+  {
+    uint64_t *entry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pml4Entry), i);
+    if ((*entry & PAGE_PRESENT) == PAGE_PRESENT)
+    {
+      bCanFreeDirectoryPointerTable = false;
+      break;
+    }
+  }
+
+  if (bCanFreeDirectoryPointerTable)
+  {
+    PhysicalMemoryManager::instance().freePage(PAGE_GET_PHYSICAL_ADDRESS(pml4Entry));
+    *pml4Entry = 0;
+  }
+}
+
+uint64_t X64VirtualAddressSpace::toFlags(size_t flags, bool bFinal) const
 {
   uint64_t Flags = 0;
   if ((flags & KernelMode) == KernelMode)
@@ -753,7 +887,8 @@ uint64_t X64VirtualAddressSpace::toFlags(size_t flags, bool bFinal)
   }
   return Flags;
 }
-size_t X64VirtualAddressSpace::fromFlags(uint64_t Flags, bool bFinal)
+
+size_t X64VirtualAddressSpace::fromFlags(uint64_t Flags, bool bFinal) const
 {
   size_t flags = 0;
   if ((Flags & PAGE_USER) != PAGE_USER)
@@ -806,7 +941,7 @@ bool X64VirtualAddressSpace::conditionalTableEntryAllocation(uint64_t *tableEntr
     *tableEntry = page | flags;
 
     // Zero the page directory pointer table
-    memset(physicalAddress(reinterpret_cast<void*>(page)),
+    ByteSet(physicalAddress(reinterpret_cast<void*>(page)),
            0,
            PhysicalMemoryManager::getPageSize());
   }
@@ -833,7 +968,7 @@ bool X64VirtualAddressSpace::conditionalTableEntryMapping(uint64_t *tableEntry,
     *tableEntry = physAddress | ((flags & ~(PAGE_GLOBAL | PAGE_NX | PAGE_SWAPPED | PAGE_COPY_ON_WRITE)) | PAGE_WRITE | PAGE_USER);
 
     // Zero the page directory pointer table
-    memset(physicalAddress(reinterpret_cast<void*>(physAddress)),
+    ByteSet(physicalAddress(reinterpret_cast<void*>(physAddress)),
            0,
            PhysicalMemoryManager::getPageSize());
 

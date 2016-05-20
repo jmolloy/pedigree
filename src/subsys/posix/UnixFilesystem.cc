@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -63,12 +62,12 @@ uint64_t UnixSocket::read(uint64_t location, uint64_t size, uintptr_t buffer, bo
     struct buf *b = m_RingBuffer.read();
     if(size > b->len)
         size = b->len;
-    memcpy(reinterpret_cast<void *>(buffer), b->pBuffer, size);
+    MemoryCopy(reinterpret_cast<void *>(buffer), b->pBuffer, size);
     if(b->remotePath)
     {
         if(location)
         {
-            strncpy(reinterpret_cast<char *>(location), b->remotePath, 255);
+            StringCopyN(reinterpret_cast<char *>(location), b->remotePath, 255);
         }
 
         delete [] b->remotePath;
@@ -93,13 +92,13 @@ uint64_t UnixSocket::write(uint64_t location, uint64_t size, uintptr_t buffer, b
 
     struct buf *b = new struct buf;
     b->pBuffer = new char[size];
-    memcpy(b->pBuffer, reinterpret_cast<void*>(buffer), size);
+    MemoryCopy(b->pBuffer, reinterpret_cast<void*>(buffer), size);
     b->len = size;
     b->remotePath = 0;
     if(location)
     {
         b->remotePath = new char[255];
-        strncpy(b->remotePath, reinterpret_cast<char *>(location), 255);
+        StringCopyN(b->remotePath, reinterpret_cast<char *>(location), 255);
     }
     m_RingBuffer.write(b);
 
@@ -121,7 +120,7 @@ UnixDirectory::~UnixDirectory()
 bool UnixDirectory::addEntry(String filename, File *pFile)
 {
     LockGuard<Mutex> guard(m_Lock);
-    m_Cache.insert(filename, pFile);
+    getCache().insert(filename, pFile);
     return true;
 }
 
@@ -130,7 +129,7 @@ bool UnixDirectory::removeEntry(File *pFile)
     String filename = pFile->getName();
 
     LockGuard<Mutex> guard(m_Lock);
-    m_Cache.remove(filename);
+    getCache().remove(filename);
     return true;
 }
 

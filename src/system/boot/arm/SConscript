@@ -24,7 +24,6 @@ import SCons
 Import(['env'])
 
 builddir = env['BUILDDIR']
-srcdir = Dir('#').abspath
 kerneldir = env['PEDIGREE_BUILD_KERNEL']
 objname = os.path.join(builddir, 'bootloader')
 uimage = os.path.join(builddir, 'uImage.bin')
@@ -39,7 +38,8 @@ env_clone = env.Clone()
 
 files = [
     'Elf32.cc',
-    'arm_support.s'
+    'arm_support.s',
+    'support.cc',
 ]
 
 if env['arm_beagle']:
@@ -47,11 +47,11 @@ if env['arm_beagle']:
 
 env_clone.FileAsHeader('autogen.h', kernel)
 
-env_clone['CPPPATH'] += [env.File('autogen.h').get_dir()]
+env_clone['CPPPATH'] = [env.File('autogen.h').get_dir()]
 env_clone.Program(objname, files, LINKFLAGS='-nostdlib -T$LSCRIPT',
                   LSCRIPT=File('#src/system/boot/arm/link-arm-beagle.ld'))
 
-if env['arm_beagle']:
+if env['arm_beagle'] and env['build_images']:
     if env['MKIMAGE'] is None:
         raise SCons.Errors.UserError('mkimage is not available')
 

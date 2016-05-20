@@ -20,9 +20,11 @@
 #ifndef KERNEL_PROCESSOR_ARM_COMMON_PROCESSOR_H
 #define KERNEL_PROCESSOR_ARM_COMMON_PROCESSOR_H
 
+#include <panic.h>
+
 void Processor::halt()
 {
-  for( ;; );
+  while(1);
 }
 
 void Processor::breakpoint()
@@ -46,6 +48,10 @@ void Processor::haltUntilInterrupt()
 void Processor::pause()
 {
     asm volatile("yield");
+}
+
+void Processor::deinitialise()
+{
 }
 
 #endif

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -76,7 +75,7 @@ public:
     {
         return m_Aliases;
     }
-    
+
     /** Obtains a list of all mounted filesystems */
     inline Tree<Filesystem *, List<String*>* > &getMounts()
     {
@@ -118,6 +117,12 @@ public:
     /** Adds a mount callback - the function is called when a disk is mounted or
         unmounted. */
     void addMountCallback(MountCallback callback);
+
+    /** Separator between mount point and filesystem path. */
+    static constexpr const char *mountSeparator()
+    {
+        return "»";
+    }
 
 private:
     /** The static instance object. */

@@ -20,7 +20,7 @@
 #include <Module.h>
 #include <Log.h>
 #include <processor/Processor.h>
-#include "sqlite3.h"
+#include "sqlite3/sqlite3.h"
 #include <utilities/utility.h>
 #include <BootstrapInfo.h>
 #include <panic.h>
@@ -35,8 +35,18 @@
 
 extern BootstrapStruct_t *g_pBootstrapInfo;
 
-uint8_t *g_pFile = 0;
-size_t g_FileSz = 0;
+extern "C" bool init(void);
+
+sqlite3 *g_pSqlite = 0;
+
+static uint8_t *g_pFile = 0;
+static size_t g_FileSz = 0;
+
+extern "C"
+{
+    void log_(unsigned long a);
+    int atoi(const char *str);
+}
 
 extern "C" void log_(unsigned long a)
 {
@@ -45,59 +55,47 @@ extern "C" void log_(unsigned long a)
 
 extern "C" int atoi(const char *str)
 {
-    return strtoul(str, 0, 10);
+    return StringToUnsignedLong(str, 0, 10);
 }
 
-#ifndef STATIC_DRIVERS // Defined in the kernel.
-extern "C" int memcmp(const void *s1, const void *s2, size_t n)
-{
-    const unsigned char *c1 = reinterpret_cast<const unsigned char*>(s1);
-    const unsigned char *c2 = reinterpret_cast<const unsigned char*>(s2);
-    for (size_t i = 0; i < n; i++)
-        if (c1[i] != c2[i])
-            return (c1[i]>c2[i]) ? 1 : -1;
-    return 0;
-}
-#endif
-
-int xClose(sqlite3_file *file)
+static int xClose(sqlite3_file *file)
 {
     return 0;
 }
 
-int xRead(sqlite3_file *file, void *ptr, int iAmt, sqlite3_int64 iOfst)
+static int xRead(sqlite3_file *file, void *ptr, int iAmt, sqlite3_int64 iOfst)
 {
     int ret = 0;
-    if ((iOfst + static_cast<unsigned int>(iAmt)) >= g_FileSz)
+    if ((static_cast<size_t>(iOfst + iAmt)) >= g_FileSz)
     {
-        if(static_cast<unsigned int>(iAmt) > g_FileSz)
+        if(static_cast<size_t>(iAmt) > g_FileSz)
             iAmt = g_FileSz;
-        memset(ptr, 0, iAmt);
+        ByteSet(ptr, 0, iAmt);
         iAmt = g_FileSz - iOfst;
         ret = SQLITE_IOERR_SHORT_READ;
     }
-    memcpy(ptr, &g_pFile[iOfst], iAmt);
+    MemoryCopy(ptr, &g_pFile[iOfst], iAmt);
     return ret;
 }
 
-int xReadFail(sqlite3_file *file, void *ptr, int iAmt, sqlite3_int64 iOfst)
+static int xReadFail(sqlite3_file *file, void *ptr, int iAmt, sqlite3_int64 iOfst)
 {
-    memset(ptr, 0, iAmt);
+    ByteSet(ptr, 0, iAmt);
     return SQLITE_IOERR_SHORT_READ;
 }
 
-int xWrite(sqlite3_file *file, const void *ptr, int iAmt, sqlite3_int64 iOfst)
+static int xWrite(sqlite3_file *file, const void *ptr, int iAmt, sqlite3_int64 iOfst)
 {
     // Write past the end of the file?
-    if((iOfst + static_cast<unsigned int>(iAmt)) >= g_FileSz)
+    if(static_cast<size_t>(iOfst + iAmt) >= g_FileSz)
     {
         // How many extra bytes do we need?
         size_t nNewSize = iOfst + iAmt + 1; // We know the read crosses the EOF, so this is correct
 
         // Allocate it, zero, and copy
         uint8_t *tmp = new uint8_t[nNewSize];
-        memset(tmp, 0, nNewSize - 1);
-        memcpy(tmp, g_pFile, g_FileSz);
+        ByteSet(tmp, 0, nNewSize - 1);
+        MemoryCopy(tmp, g_pFile, g_FileSz);
         
         delete [] g_pFile;
         
@@ -105,58 +103,58 @@ int xWrite(sqlite3_file *file, const void *ptr, int iAmt, sqlite3_int64 iOfst)
         g_FileSz = nNewSize - 1;
     }
 
-    memcpy(&g_pFile[iOfst], ptr, iAmt);
+    MemoryCopy(&g_pFile[iOfst], ptr, iAmt);
     return 0;
 }
 
-int xWriteFail(sqlite3_file *file, const void *ptr, int iAmt, sqlite3_int64 iOfst)
+static int xWriteFail(sqlite3_file *file, const void *ptr, int iAmt, sqlite3_int64 iOfst)
 {
     return 0;
 }
 
-int xTruncate(sqlite3_file *file, sqlite3_int64 size)
+static int xTruncate(sqlite3_file *file, sqlite3_int64 size)
 {
     return 0;
 }
 
-int xSync(sqlite3_file *file, int flags)
+static int xSync(sqlite3_file *file, int flags)
 {
     return 0;
 }
 
-int xFileSize(sqlite3_file *file, sqlite3_int64 *pSize)
+static int xFileSize(sqlite3_file *file, sqlite3_int64 *pSize)
 {
     *pSize = g_FileSz;
     return 0;
 }
 
-int xLock(sqlite3_file *file, int a)
+static int xLock(sqlite3_file *file, int a)
 {
     return 0;
 }
 
-int xUnlock(sqlite3_file *file, int a)
+static int xUnlock(sqlite3_file *file, int a)
 {
     return 0;
 }
 
-int xCheckReservedLock(sqlite3_file *file, int *pResOut)
+static int xCheckReservedLock(sqlite3_file *file, int *pResOut)
 {
     *pResOut = 0;
     return 0;
 }
 
-int xFileControl(sqlite3_file *file, int op, void *pArg)
+static int xFileControl(sqlite3_file *file, int op, void *pArg)
 {
     return 0;
 }
 
-int xSectorSize(sqlite3_file *file)
+static int xSectorSize(sqlite3_file *file)
 {
     return 1;
 }
 
-int xDeviceCharacteristics(sqlite3_file *file)
+static int xDeviceCharacteristics(sqlite3_file *file)
 {
     return 0;
 }
@@ -196,9 +194,9 @@ static struct sqlite3_io_methods theio_fail =
 };
 
 
-int xOpen(sqlite3_vfs *vfs, const char *zName, sqlite3_file *file, int flags, int *pOutFlags)
+static int xOpen(sqlite3_vfs *vfs, const char *zName, sqlite3_file *file, int flags, int *pOutFlags)
 {
-    if (strcmp(zName, "root»/.pedigree-root"))
+    if (StringCompare(zName, "root»/.pedigree-root"))
     {
         // Assume journal file, return failure functions.
         file->pMethods = &theio_fail;
@@ -214,61 +212,59 @@ int xOpen(sqlite3_vfs *vfs, const char *zName, sqlite3_file *file, int flags, in
     return 0;
 }
 
-int xDelete(sqlite3_vfs *vfs, const char *zName, int syncDir)
+static int xDelete(sqlite3_vfs *vfs, const char *zName, int syncDir)
 {
     return 0;
 }
 
-int xAccess(sqlite3_vfs *vfs, const char *zName, int flags, int *pResOut)
+static int xAccess(sqlite3_vfs *vfs, const char *zName, int flags, int *pResOut)
 {
     return 0;
 }
 
-int xFullPathname(sqlite3_vfs *vfs, const char *zName, int nOut, char *zOut)
+static int xFullPathname(sqlite3_vfs *vfs, const char *zName, int nOut, char *zOut)
 {
-    strncpy(zOut, zName, nOut);
+    StringCopyN(zOut, zName, nOut);
     return 0;
 }
 
-void *xDlOpen(sqlite3_vfs *vfs, const char *zFilename)
-{
-    return 0;
-}
-
-void xDlError(sqlite3_vfs *vfs, int nByte, char *zErrMsg)
-{
-}
-
-void (*xDlSym(sqlite3_vfs *vfs, void *p, const char *zSymbol))(void)
+static void *xDlOpen(sqlite3_vfs *vfs, const char *zFilename)
 {
     return 0;
 }
 
-void xDlClose(sqlite3_vfs *vfs, void *v)
+static void xDlError(sqlite3_vfs *vfs, int nByte, char *zErrMsg)
 {
 }
 
-int xRandomness(sqlite3_vfs *vfs, int nByte, char *zOut)
-{
-    return 0;
-}
-
-int xSleep(sqlite3_vfs *vfs, int microseconds)
+static void (*xDlSym(sqlite3_vfs *vfs, void *p, const char *zSymbol))(void)
 {
     return 0;
 }
 
-int xCurrentTime(sqlite3_vfs *vfs, double *)
+static void xDlClose(sqlite3_vfs *vfs, void *v)
+{
+}
+
+static int xRandomness(sqlite3_vfs *vfs, int nByte, char *zOut)
 {
     return 0;
 }
 
-int xGetLastError(sqlite3_vfs *vfs, int i, char *c)
+static int xSleep(sqlite3_vfs *vfs, int microseconds)
 {
     return 0;
 }
 
+static int xCurrentTime(sqlite3_vfs *vfs, double *)
+{
+    return 0;
+}
 
+static int xGetLastError(sqlite3_vfs *vfs, int i, char *c)
+{
+    return 0;
+}
 
 static struct sqlite3_vfs thevfs =
 {
@@ -303,7 +299,7 @@ int sqlite3_os_end()
     return 0;
 }
 
-void xCallback0(sqlite3_context *context, int n, sqlite3_value **values)
+static void xCallback0(sqlite3_context *context, int n, sqlite3_value **values)
 {
     const unsigned char *text = sqlite3_value_text(values[0]);
 
@@ -312,7 +308,7 @@ void xCallback0(sqlite3_context *context, int n, sqlite3_value **values)
     uintptr_t x;
     if (text[0] == '0')
     {
-        x = strtoul(reinterpret_cast<const char*>(text), 0, 16);
+        x = StringToUnsignedLong(reinterpret_cast<const char*>(text), 0, 16);
     }
     else
     {
@@ -329,7 +325,7 @@ void xCallback0(sqlite3_context *context, int n, sqlite3_value **values)
     sqlite3_result_int(context, 0);
 }
 
-void xCallback1(sqlite3_context *context, int n, sqlite3_value **values)
+static void xCallback1(sqlite3_context *context, int n, sqlite3_value **values)
 {
     const char *text = reinterpret_cast<const char*> (sqlite3_value_text(values[0]));
 
@@ -338,7 +334,7 @@ void xCallback1(sqlite3_context *context, int n, sqlite3_value **values)
     uintptr_t x;
     if (text[0] == '0')
     {
-        x = strtoul(text, 0, 16);
+        x = StringToUnsignedLong(text, 0, 16);
     }
     else
     {
@@ -355,7 +351,7 @@ void xCallback1(sqlite3_context *context, int n, sqlite3_value **values)
     sqlite3_result_int(context, 0);
 }
 
-void xCallback2(sqlite3_context *context, int n, sqlite3_value **values)
+static void xCallback2(sqlite3_context *context, int n, sqlite3_value **values)
 {
     const char *text = reinterpret_cast<const char*> (sqlite3_value_text(values[0]));
 
@@ -364,7 +360,7 @@ void xCallback2(sqlite3_context *context, int n, sqlite3_value **values)
     uintptr_t x;
     if (text[0] == '0')
     {
-        x = strtoul(text, 0, 16);
+        x = StringToUnsignedLong(text, 0, 16);
     }
     else
     {
@@ -381,13 +377,12 @@ void xCallback2(sqlite3_context *context, int n, sqlite3_value **values)
     sqlite3_result_int(context, 0);
 }
 
-sqlite3 *g_pSqlite = 0;
-
 #ifdef STATIC_DRIVERS
 #include "config_database.h"
 #endif
 
-static bool init()
+// Entry point for --gc-sections.
+bool init()
 {
 #ifndef STATIC_DRIVERS
     if (!g_pBootstrapInfo->isDatabaseLoaded())
@@ -399,6 +394,11 @@ static bool init()
     if ((reinterpret_cast<physical_uintptr_t>(pPhys) & (PhysicalMemoryManager::getPageSize() - 1)) != 0)
         panic("Config: Alignment issues");
 
+#ifdef HOSTED
+    g_pFile = new uint8_t[sSize];
+    MemoryCopy(g_pFile, pPhys, sSize);
+    g_FileSz = sSize;
+#else
     MemoryRegion region("Config");
 
     if (PhysicalMemoryManager::instance().allocateRegion(region,
@@ -412,17 +412,16 @@ static bool init()
     }
 
     g_pFile = new uint8_t[sSize];
-    memcpy(g_pFile, region.virtualAddress(), sSize);
+    MemoryCopy(g_pFile, region.virtualAddress(), sSize);
     g_FileSz = sSize;
-    NOTICE("region.va: " << (uintptr_t)region.virtualAddress());
+#endif // HOSTED
 #else
     g_pFile = file;
     g_FileSz = sizeof file;
 #endif
+
     sqlite3_initialize();
-    NOTICE("Initialize fin");
     int ret = sqlite3_open("root»/.pedigree-root", &g_pSqlite);
-    NOTICE("Open fin");
     if (ret)
     {
         FATAL("sqlite3 error: " << sqlite3_errmsg(g_pSqlite));
@@ -437,6 +436,12 @@ static bool init()
 
 static void destroy()
 {
+    // Shut down sqlite, cleaning up the opened file along the way.
+    sqlite3_close(g_pSqlite);
+    sqlite3_shutdown();
+
+    /// \todo properly shut down sqlite!
+    delete [] g_pFile;
 }
 
 MODULE_INFO("config", &init, &destroy);

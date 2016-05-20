@@ -47,9 +47,9 @@ public:
    * deallocated afterwards.
    */
   explicit StaticString(const char *pSrc)
-    : m_Length(strlen(pSrc))
+    : m_Length(StringLength(pSrc))
   {
-    strncpy(m_pData, pSrc, N);
+    StringCopyN(m_pData, pSrc, N);
 
     if (m_Length >= N)
     {
@@ -66,20 +66,13 @@ public:
   explicit StaticString(const StaticString<N2> &src)
     : m_Length(src.length())
   {
-    strncpy(m_pData, src, N);
+    StringCopyN(m_pData, src, N);
 
     if (m_Length >= N)
     {
       m_Length = N - 1;
       m_pData[N-1] = '\0';
     }
-  }
-
-  /**
-   * Destructor.
-   */
-  inline virtual ~StaticString()
-  {
   }
 
   operator const char*() const
@@ -109,8 +102,8 @@ public:
 
   StaticString &operator = (const char *str)
   {
-    m_Length = strlen(str);
-    strncpy(m_pData, str, N);
+    m_Length = StringLength(str);
+    StringCopyN(m_pData, str, N);
     if (m_Length >= N)
     {
       m_pData[N - 1] = '\0';
@@ -121,13 +114,13 @@ public:
 
   bool operator==(const char* pStr) const
   {
-    return (strcmp(m_pData, pStr) == 0);
+    return (StringCompare(m_pData, pStr) == 0);
   }
 
   template<unsigned int N2>
   bool operator==(const StaticString<N2> &other) const
   {
-    return (strcmp(m_pData, other) == 0);
+    return (StringCompare(m_pData, other) == 0);
   }
 
   int last(const char search) const
@@ -154,13 +147,13 @@ public:
 
   bool contains(const char *other) const
   {
-    if (strlen(other) >= length())
-      return (strcmp(m_pData, other) == 0);
+    if (StringLength(other) >= length())
+      return (StringCompare(m_pData, other) == 0);
 
     size_t mylen = length();
-    size_t itslen = strlen(other);
+    size_t itslen = StringLength(other);
     for (size_t i = 0; i < mylen-itslen+1; i++)
-      if (strncmp(&m_pData[i], other, strlen(other)) == 0)
+      if (StringCompareN(&m_pData[i], other, StringLength(other)) == 0)
         return true;
     return false;
   }
@@ -169,12 +162,12 @@ public:
   bool contains(const StaticString<N2> &other) const
   {
     if (other.length() >= length())
-      return (strcmp(m_pData, other) == 0);
+      return (StringCompare(m_pData, other) == 0);
 
     size_t mylen = length();
     size_t itslen = other.length();
     for (size_t i = 0; i < mylen-itslen+1; i++)
-      if (strncmp(&m_pData[i], other.m_pData, strlen(other.m_pData)) == 0)
+      if (StringCompareN(&m_pData[i], other.m_pData, StringLength(other.m_pData)) == 0)
         return true;
     return false;
   }
@@ -182,7 +175,7 @@ public:
   int intValue(int nBase=0) const
   {
     const char *pEnd;
-    int ret = strtoul(m_pData, const_cast<char **> (&pEnd), nBase);
+    int ret = StringToUnsignedLong(m_pData, &pEnd, nBase);
     if (pEnd == m_pData)
       return -1; // Failed to find anything.
     else
@@ -192,7 +185,7 @@ public:
   uintptr_t uintptrValue(int nBase=0) const
   {
     const char *pEnd;
-    uintptr_t ret = strtoul(m_pData, const_cast<char **> (&pEnd), nBase);
+    uintptr_t ret = StringToUnsignedLong(m_pData, &pEnd, nBase);
     if (pEnd == m_pData)
       return ~0UL; // Failed to find anything.
     else
@@ -210,7 +203,7 @@ public:
   StaticString left(int n) const
   {
     StaticString<N> str;
-    strncpy(str.m_pData, m_pData, n);
+    StringCopyN(str.m_pData, m_pData, n);
     str.m_pData[n] = '\0';
     return str;
   }
@@ -218,7 +211,7 @@ public:
   StaticString right(int n) const
   {
     StaticString<N> str;
-    strncpy(str.m_pData, &m_pData[length()-n], n);
+    StringCopyN(str.m_pData, &m_pData[length()-n], n);
     str.m_pData[n] = '\0';
     return str;
   }
@@ -345,7 +338,7 @@ public:
 
   void append(const char *str, size_t nLen=0, char c=' ')
   {
-    size_t length2 = strlen(str);
+    size_t length2 = StringLength(str);
 
     // Pad, if needed
     if (nLen > length2)
@@ -360,7 +353,7 @@ public:
     }
 
     // Add the string
-    strncat(m_pData, str, N-length());
+    StringConcatN(m_pData, str, N-length()-1);
     m_Length += length2;
 
     if (m_Length >= N)
@@ -386,7 +379,7 @@ public:
     }
 
     // Add the string
-    strncat(m_pData, str, N-length());
+    StringConcatN(m_pData, str, N-length());
     m_Length += str.length();
 
     if (m_Length >= N)

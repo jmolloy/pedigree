@@ -33,7 +33,7 @@
 
 #define MAX_BUS 4
 
-IoPort configSpace("PCI config space");
+static IoPort configSpace("PCI config space");
 
 union ConfigAddress {
   struct
@@ -76,7 +76,7 @@ struct ConfigSpace
   uint8_t  max_latency;
 } __attribute__((packed));
 
-void readConfigSpace (Device *pDev, ConfigSpace *pCs)
+static void readConfigSpace (Device *pDev, ConfigSpace *pCs)
 {
   uint32_t *pCs32 = reinterpret_cast<uint32_t*> (pCs);
   for (unsigned int i = 0; i < sizeof(ConfigSpace)/4; i++)
@@ -85,7 +85,7 @@ void readConfigSpace (Device *pDev, ConfigSpace *pCs)
   }
 }
 
-const char *getVendor (uint16_t vendor)
+static const char *getVendor (uint16_t vendor)
 {
   for (unsigned int i = 0; i < PCI_VENTABLE_LEN; i++)
   {
@@ -95,7 +95,7 @@ const char *getVendor (uint16_t vendor)
   return "";
 }
 
-const char *getDevice (uint16_t vendor, uint16_t device)
+static const char *getDevice (uint16_t vendor, uint16_t device)
 {
   for (unsigned int i = 0; i < PCI_DEVTABLE_LEN; i++)
   {
@@ -111,7 +111,7 @@ static bool entry()
   {
     // Firstly add the ISA bus.
     char *str = new char[256];
-    sprintf(str, "PCI #%d", iBus);
+    StringFormat(str, "PCI #%d", iBus);
     Bus *pBus = new Bus(str);
     pBus->setSpecificType(String("pci"));
 
@@ -146,7 +146,7 @@ static bool entry()
         NOTICE("PCI: " << Dec << iBus << ":" << iDevice << ":" << iFunc << "\t Vendor:" << Hex << cs.vendor << " Device:" << cs.device);
 
         char c[256];
-        sprintf(c, "%s - %s", getDevice(cs.vendor, cs.device), getVendor(cs.vendor));
+        StringFormat(c, "%s - %s", getDevice(cs.vendor, cs.device), getVendor(cs.vendor));
         pDevice->setSpecificType(String(c));
         pDevice->setPciIdentifiers(cs.class_code, cs.subclass, cs.vendor, cs.device, cs.progif);
 
@@ -161,8 +161,6 @@ static bool entry()
           if (cs.bar[l] == 0) continue;
 
           // Write the BAR with FFFFFFFF to discover the size of mapping that the device requires.
-          ConfigAddress ca2;
-
           uint8_t offset = (0x10 + l*4) >> 2;
           PciBus::instance().writeConfigSpace(pDevice, offset, 0xFFFFFFFF);
           uint32_t mask = PciBus::instance().readConfigSpace(pDevice, offset);
@@ -177,7 +175,7 @@ static bool entry()
               // IO space is only 64K in size.
               size &= 0xFFFF;
 
-          sprintf(c, "bar%d", l);
+          StringFormat(c, "bar%d", l);
           uintptr_t s = (cs.bar[l]&0xFFFFFFF0);
 
           NOTICE("PCI:     BAR" << Dec << l << Hex << ": " << s << ".." << (s + size) << " (" << io << ")");
@@ -195,8 +193,7 @@ static bool entry()
     // If the bus was actually populated...
     if (pBus->getNumChildren() > 0)
     {
-      Device::root().addChild(pBus);
-      pBus->setParent(&Device::root());
+      Device::addToRoot(pBus);
     }
     else
     {

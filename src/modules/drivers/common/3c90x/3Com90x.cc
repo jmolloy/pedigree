@@ -268,7 +268,7 @@ bool Nic3C90x::send(size_t nBytes, uintptr_t buffer)
             destPtr += buffer & 0xFFF;
         }
         else
-            memcpy(m_pTxBuffVirt, reinterpret_cast<void *>(buffer), nBytes);
+            MemoryCopy(m_pTxBuffVirt, reinterpret_cast<void *>(buffer), nBytes);
 
         /** Setup the DPD (download descriptor) **/
         m_TransmitDPD->DnNextPtr = 0;
@@ -278,7 +278,7 @@ bool Nic3C90x::send(size_t nBytes, uintptr_t buffer)
         // m_TransmitDPD->HdrAddr = m_pTxBuffPhys;
         // m_TransmitDPD->HdrLength = Ethernet::instance().ethHeaderSize();
         m_TransmitDPD->DataAddr = static_cast<uint32_t>(destPtr); //m_pTxBuffPhys; // + m_TransmitDPD->HdrLength;
-        m_TransmitDPD->DataLength = (nBytes /* - m_TransmitDPD->HdrLength */) + (1 << 31);
+        m_TransmitDPD->DataLength = (nBytes /* - m_TransmitDPD->HdrLength */) + (1U << 31U);
 
         /** Send the packet **/
         m_pBase->write32(m_pDPD, regDnListPtr_l);
@@ -354,7 +354,7 @@ Nic3C90x::Nic3C90x(Network* pDev) :
             m_ReceiveUPD[iUpd].UpNextPtr = m_pUPD + ((iUpd + 1) * sizeof(RXD));
         m_ReceiveUPD[iUpd].UpPktStatus = 0;
         m_ReceiveUPD[iUpd].DataAddr = m_pRxBuffPhys + (iUpd * 1536);
-        m_ReceiveUPD[iUpd].DataLength = 1536 + (1 << 31);
+        m_ReceiveUPD[iUpd].DataLength = 1536 + (1U << 31U);
     }
 
     // grab the IO ports
@@ -417,7 +417,7 @@ Nic3C90x::Nic3C90x(Network* pDev) :
     }
 
     /** Get the hardware address */
-    m_StationInfo.mac.setMac(reinterpret_cast<uint8_t*>(eeprom), true);
+    m_StationInfo.mac.setMac(eeprom, true);
     NOTICE("3C90x MAC: " <<
            m_StationInfo.mac[0] << ":" <<
            m_StationInfo.mac[1] << ":" <<
@@ -567,8 +567,7 @@ Nic3C90x::Nic3C90x(Network* pDev) :
     // register the packet queue handler
 #ifdef THREADS
     Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
-                                 reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
-                                 reinterpret_cast<void*> (this));
+                                 &trampoline, reinterpret_cast<void*>(this));
     pThread->detach();
 #endif
 

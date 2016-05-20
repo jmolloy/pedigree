@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2010 Matthew Iselin
+ * Copyright (c) 2008-2014, Pedigree Developers
+ *
+ * Please see the CONTRIB file in the root of the source tree for a full
+ * list of contributors.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -63,7 +66,7 @@ typedef	struct _types_fd_set {
 #  define	FD_SET(n, p)	((p)->fds_bits[(n)/NFDBITS] |= (1L << ((n) % NFDBITS)))
 #  define	FD_CLR(n, p)	((p)->fds_bits[(n)/NFDBITS] &= ~(1L << ((n) % NFDBITS)))
 #  define	FD_ISSET(n, p)	((p)->fds_bits[(n)/NFDBITS] & (1L << ((n) % NFDBITS)))
-#  define	FD_ZERO(p)	(__extension__ (void)({ \
+#  define	FD_ZERO(p)	(__extension__ ({ \
      size_t __i; \
      char *__tmp = (char *)p; \
      for (__i = 0; __i < sizeof (*(p)); ++__i) \
@@ -78,7 +81,7 @@ extern "C" {
 int _EXFUN(select, (int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, struct timeval *timeout));
 
 #ifdef __cplusplus
-}; // extern "C"
+} // extern "C"
 #endif
 
 #endif

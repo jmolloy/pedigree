@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -57,10 +56,8 @@ void DynamicLinker::initPlt(Elf *pElf, uintptr_t value)
     /// \todo Change this to use the size of the elf!
     for (uintptr_t i = 0x40000000; i < 0x50000000; i += 0x1000) /// \todo Page size here.
     {
-      bool failed = false;
       if (Processor::information().getVirtualAddressSpace().isMapped(reinterpret_cast<void*>(i)))
       {
-        failed = true;
         continue;
       }
 
@@ -86,7 +83,7 @@ void DynamicLinker::initPlt(Elf *pElf, uintptr_t value)
 
     // Memcpy over the resolve function into the user address space.
     // resolveSymbol is an ASM function, defined in ./asm-amd64.s
-    memcpy(reinterpret_cast<uint8_t*> (resolveLocation), reinterpret_cast<uint8_t*> (&::resolveSymbol), 0x1000); /// \todo Page size here.
+    MemoryCopy(reinterpret_cast<uint8_t*> (resolveLocation), reinterpret_cast<uint8_t*> (&::resolveSymbol), 0x1000); /// \todo Page size here.
 
     *got = resolveLocation;
   }

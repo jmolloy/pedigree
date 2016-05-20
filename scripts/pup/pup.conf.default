@@ -1,7 +1,9 @@
 [paths]
-installroot=$installRoot
-localdb=$localDb
+installroot=/
+localdb=/support/pup/db
+
+[settings]
+arch=amd64
 
 [remotes]
-server0=http://pup.pedigree-project.org
-
+server=http://pup.pedigree-project.org

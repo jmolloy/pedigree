@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -40,7 +39,8 @@ void probeDevice(Device *pDev)
 
 void entry()
 {
-    Device::root().searchByVendorIdAndDeviceId(RTL8139_VENDOR_ID, RTL8139_DEVICE_ID, probeDevice);
+    /// \todo replace with foreach (which can do the replacement for us)
+    Device::searchByVendorIdAndDeviceId(RTL8139_VENDOR_ID, RTL8139_DEVICE_ID, probeDevice);
 }
 
 void exit()

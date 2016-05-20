@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -49,27 +48,27 @@ class UdpEndpoint : public ConnectionlessEndpoint
     UdpEndpoint() :
       ConnectionlessEndpoint(), m_DataQueue(), m_DataQueueSize(0),
       m_bAcceptAll(false), m_bCanSend(true), m_bCanRecv(true)
-    {};
+    {}
     UdpEndpoint(uint16_t local, uint16_t remote) :
       ConnectionlessEndpoint(local, remote), m_DataQueue(),
       m_DataQueueSize(0), m_bAcceptAll(false), m_bCanSend(true),
       m_bCanRecv(true)
-    {};
+    {}
     UdpEndpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
       ConnectionlessEndpoint(remoteIp, local, remote), m_DataQueue(),
       m_DataQueueSize(0), m_bAcceptAll(false), m_bCanSend(true),
       m_bCanRecv(true)
-    {};
+    {}
 
-    virtual ~UdpEndpoint() {};
+    virtual ~UdpEndpoint() {}
 
     /** Application interface */
     virtual int state() {return 0xff;} // 0xff signifies UDP
     virtual int send(size_t nBytes, uintptr_t buffer, RemoteEndpoint remoteHost, bool broadcast, Network *pCard = 0);
     virtual int recv(uintptr_t buffer, size_t maxSize, bool bBlock, RemoteEndpoint* remoteHost, int nTimeout = 30);
     virtual bool dataReady(bool block = false, uint32_t tmout = 30);
-    virtual inline bool acceptAnyAddress() { return m_bAcceptAll; };
-    virtual inline void acceptAnyAddress(bool accept) { m_bAcceptAll = accept; };
+    virtual inline bool acceptAnyAddress() { return m_bAcceptAll; }
+    virtual inline void acceptAnyAddress(bool accept) { m_bAcceptAll = accept; }
 
     /** UdpManager functionality - called to deposit data into our local buffer */
     virtual size_t depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoint remoteHost);
@@ -94,7 +93,7 @@ class UdpEndpoint : public ConnectionlessEndpoint
     {
       DataBlock() :
         magic(0xdeadbeef), size(0), offset(0), ptr(0), remoteHost()
-      {};
+      {}
 
       uint32_t magic; // 0xdeadbeef
 
@@ -134,9 +133,9 @@ public:
   {
     // Never allocate port 0.
     m_PortsAvailable.set(0);
-  };
+  }
   virtual ~UdpManager()
-  {};
+  {}
 
   /** For access to the manager without declaring an instance of it */
   static UdpManager& instance()

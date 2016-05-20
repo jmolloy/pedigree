@@ -20,9 +20,9 @@
 #ifndef _PEDIGREE_DEMO_H
 #define _PEDIGREE_DEMO_H
 
-#include <types.h>
+#include <native/types.h>
 
-#include <Object.h>
+#include <native/Object.h>
 
 /** Object is merely the base class for all native subsystem objects. */
 class Demo : public Object

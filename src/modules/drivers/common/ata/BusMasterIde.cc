@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -88,7 +87,7 @@ bool BusMasterIde::add(uintptr_t buffer, size_t nBytes)
     size_t prdTableEntries = (m_PrdTableMemRegion.size() / sizeof(PhysicalRegionDescriptor));
 
     // Firstly check if we need to wait a bit... If an operation
-    uint8_t statusReg = m_pBase->read8(Status);
+    m_pBase->read8(Status);
     /// \todo Can't write if a read is in progress, and vice versa
 
     // Okay, we're good to go - check that the buffer is mapped in first
@@ -105,7 +104,8 @@ bool BusMasterIde::add(uintptr_t buffer, size_t nBytes)
             // entry covers a 4096-byte region of memory (it can cover up to
             // 65,536 bytes, but by using only 4096-byte regions it is possible
             // to avoid the contiguous physical RAM requirement).
-            if(va.isMapped(reinterpret_cast<void*>(buffer + currOffset)))
+            void *loc = reinterpret_cast<void*>(buffer + currOffset);
+            if(va.isMapped(loc))
             {
                 physical_uintptr_t physPage = 0; size_t flags = 0;
                 va.getMapping(reinterpret_cast<void*>(buffer + currOffset), physPage, flags);
@@ -140,7 +140,7 @@ bool BusMasterIde::add(uintptr_t buffer, size_t nBytes)
                 i++;
             }
             else
-                FATAL("BusMasterIde: Part of the incoming buffer was not mapped!");
+                FATAL("BusMasterIde: Part of the incoming buffer was not mapped (" << loc << ")!");
         }
 
         // If we added an entry, remove the EOT from any previous PRD that was
@@ -175,12 +175,13 @@ bool BusMasterIde::begin(bool bWrite)
         uint8_t cmdReg = m_pBase->read8(Command);
         if(cmdReg & 0x1)
             FATAL("BusMaster IDE status and command registers don't make sense");
-        cmdReg = (cmdReg & 0xF6) | 0x1 | (!bWrite ? 8 : 0);
+        cmdReg = (cmdReg & 0xF6) | 0x1 | (bWrite ? 0 : 8);
         m_pBase->write8(cmdReg, BusMasterIde::Command);
     }
     else
     {
         // Oops, something went wrong - no more transfer.
+        WARNING("BusMaster IDE hit a bad status in begin(): " << statusReg);
         m_bActive = false;
         return false;
     }

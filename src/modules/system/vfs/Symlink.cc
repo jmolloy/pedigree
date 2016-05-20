@@ -25,7 +25,7 @@ Symlink::Symlink() :
 {
 }
 
-Symlink::Symlink(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+Symlink::Symlink(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTime, Time::Timestamp creationTime,
                  uintptr_t inode, Filesystem *pFs, size_t size, File *pParent) :
     File(name,accessedTime,modifiedTime,creationTime,inode,pFs,size,pParent),
     m_pCachedSymlink(0), m_sTarget()
@@ -77,7 +77,7 @@ int Symlink::followLink(char *pBuffer, size_t bufLen)
     if (m_sTarget.length() < bufLen)
         bufLen = m_sTarget.length();
 
-    strncpy(pBuffer, static_cast<const char *>(m_sTarget), bufLen);
+    StringCopyN(pBuffer, static_cast<const char *>(m_sTarget), bufLen);
 
     if (bufLen < m_sTarget.length())
         pBuffer[bufLen] = '\0';

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -52,11 +51,11 @@ MIPS32VirtualAddressSpace::MIPS32VirtualAddressSpace() :
   // If we haven't yet NULL'd KSEG2, do it now.
   if (!g_Kseg2Initialised)
   {
-    memset(m_pKseg2Directory, 0, 512*sizeof(uintptr_t));
+    ByteSet(m_pKseg2Directory, 0, 512*sizeof(uintptr_t));
     g_Kseg2Initialised = true;
   }
   // NULL Kuseg.
-  memset(m_pKusegDirectory, 0, 1024*sizeof(uintptr_t));
+  ByteSet(m_pKusegDirectory, 0, 1024*sizeof(uintptr_t));
 }
 
 MIPS32VirtualAddressSpace::~MIPS32VirtualAddressSpace()
@@ -308,7 +307,7 @@ uintptr_t MIPS32VirtualAddressSpace::generateNullChunk()
   // If the page is under 512MB, we can access it through KSEG0.
   if (frame < 0x20000000)
   {
-    memset(reinterpret_cast<void*> (KSEG0(frame)), 0, PAGE_SIZE);
+    ByteSet(reinterpret_cast<void*> (KSEG0(frame)), 0, PAGE_SIZE);
     return static_cast<uintptr_t> (frame);
   }
   else

@@ -31,9 +31,12 @@ imagesdir = env["PEDIGREE_IMAGES_DIR"]
 objname = os.path.join(builddir, 'libSDL.a')
 sobjname = os.path.join(builddir, 'libSDL.so')
 
+EXTERNAL_INCLUDE_DIR = '#images/local/include'
+if env['ON_PEDIGREE']:
+    EXTERNAL_INCLUDE_DIR = '/include'
+
 files = [
     Glob(os.path.join('src', '*.c')),
-    Glob(os.path.join('src', 'hermes', '*.asm')),
     Glob(os.path.join('src', 'audio', '*.c')),
     Glob(os.path.join('src', 'cdrom', '*.c')),
     Glob(os.path.join('src', 'cpuinfo', '*.c')),
@@ -54,22 +57,25 @@ files = [
     Glob(os.path.join('src', 'loadso/dlopen', '*.c')),
 ]
 
+if env['ARCH_TARGET'] in ['X86', 'X64']:
+    files.append(Glob(os.path.join('src', 'hermes', '*.asm')))
+
 # To include a new directory for includes, just add it to the list
 include = [
     './include',
-    '#src/subsys/posix/include',
-    '#src/subsys/native/include',
     '#src/user/libraries/libui/include',
-    '#images/local/include',
-    '#images/local/include/pixman-1',
-    '#images/local/include/freetype2',
+    EXTERNAL_INCLUDE_DIR,
+    EXTERNAL_INCLUDE_DIR + '/pixman-1',
+    EXTERNAL_INCLUDE_DIR + '/freetype2',
 ]
 
-cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
-cppinclude = include + [
-    cpp_base,
-    os.path.join(cpp_base, env['COMPILER_TARGET']),
-]
+cppinclude = include
+if not env['ON_PEDIGREE']:
+    cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
+    cppinclude += [
+        cpp_base,
+        os.path.join(cpp_base, env['COMPILER_TARGET']),
+    ]
 
 libraries = [
     'gcc',
@@ -108,14 +114,11 @@ env_clone['CPPDEFINES'] += ['PEDIGREE']
 env_clone['ASFLAGS'] += ['-I%s/' % env.Dir('#src/lgpl/SDL-1.2.14/src/hermes').path]
 
 # Remove -Werror as SDL is an external package.
-try:
-    env_clone['CFLAGS'].remove('-Werror')
-except ValueError:
-    pass  # Not found.
-
-if env['ARCH_TARGET'] in ('X86', 'X64'):
-    env_clone.SharedLibrary(sobjname, files, LINKFLAGS='')
-    env.Alias('libs', sobjname)
+# Also remove some noisy warnings that we won't fix because this is an external
+# package.
+buildutils.misc.removeFromAllFlags(env_clone, ['-Werror', '-Wundef'])
 
 obj = env_clone.Library(objname, files)
+shobj = env_clone.SharedLibrary(sobjname, files, LINKFLAGS='')
 env.Alias('libs', obj)
+env.Alias('libs', shobj)

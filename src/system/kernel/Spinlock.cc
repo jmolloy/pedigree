@@ -29,7 +29,7 @@
 
 #include <panic.h>
 
-bool Spinlock::acquire()
+bool Spinlock::acquire(bool recurse)
 {
   Thread *pThread = Processor::information().getCurrentThread();
 
@@ -50,13 +50,13 @@ bool Spinlock::acquire()
 
   if (m_Magic != 0xdeadbaba)
   {
-      FATAL_NOLOCK("Wrong magic in acquire [" << m_Magic << "] [this=" << ((uintptr_t) this) << "]");
+      FATAL_NOLOCK("Wrong magic in acquire [" << m_Magic << "] [this=" << reinterpret_cast<uintptr_t>(this) << "]");
   }
 
   while (m_Atom.compareAndSwap(true, false) == false)
   {
     // Couldn't take the lock - can we re-enter the critical section?
-    if (m_pOwner == pThread)
+    if (m_bOwned && (m_pOwner == pThread) && recurse)
     {
       // Yes.
       ++m_Level;
@@ -87,9 +87,10 @@ bool Spinlock::acquire()
       g_LocksCommand.lockAcquired(this);
 #endif
 
-  if (!m_pOwner)
+  if (recurse && !m_bOwned)
   {
     m_pOwner = static_cast<void *>(pThread);
+    m_bOwned = true;
     m_Level = 1;
   }
 
@@ -122,6 +123,7 @@ void Spinlock::exit()
   }
 
   m_pOwner = 0;
+  m_bOwned = false;
 
   if (m_Atom.compareAndSwap(false, true) == false)
   {
@@ -161,5 +163,6 @@ void Spinlock::unwind()
 {
   // We're about to be forcefully unlocked, so we must unwind entirely.
   m_Level = 0;
+  m_bOwned = false;
   m_pOwner = 0;
 }

@@ -25,12 +25,15 @@
 #include <utilities/MemoryAllocator.h>
 #include <utilities/UnlikelyLock.h>
 #include <utilities/Tree.h>
+#include <utilities/RequestQueue.h>
 #include <Spinlock.h>
 
 #include <machine/TimerHandler.h>
 
 #include <processor/PhysicalMemoryManager.h>
 #include <process/MemoryPressureManager.h>
+
+#include <utilities/CacheConstants.h>
 
 /// The age at which a cache page is considered "old" and can be evicted
 /// This is expressed in seconds.
@@ -47,7 +50,7 @@
 class Cache;
 
 /** Provides a clean abstraction to a set of data caches. */
-class CacheManager : public TimerHandler, public RequestQueue, public MemoryPressureHandler
+class CacheManager : public TimerHandler, public RequestQueue
 {
     public:
         CacheManager();
@@ -58,28 +61,19 @@ class CacheManager : public TimerHandler, public RequestQueue, public MemoryPres
             return m_Instance;
         }
 
-        virtual const String getMemoryPressureDescription()
-        {
-          return String("Global cache compact.");
-        }
-
         void initialise();
 
         void registerCache(Cache *pCache);
         void unregisterCache(Cache *pCache);
 
         /**
-         * Compact every cache we know about, until 'count' pages have been
-         * evicted. Default value for count says 'all pages in all caches'.
+         * Trim each cache we know about until 'count' pages have been evicted.
          */
-        bool compactAll(size_t count = ~0UL);
-
-        virtual bool compact()
-        {
-            return compactAll(5);
-        }
+        bool trimAll(size_t count = 1);
 
         virtual void timer(uint64_t delta, InterruptState &state);
+
+        void trimThread();
 
     private:
         /**
@@ -103,27 +97,40 @@ class CacheManager : public TimerHandler, public RequestQueue, public MemoryPres
         static CacheManager m_Instance;
 
         List<Cache*> m_Caches;
+
+        Thread *m_pTrimThread;
+
+        bool m_bActive;
 };
 
 /** Provides an abstraction of a data cache. */
 class Cache
 {
-public:
-
-    /**
-     * Callback Cause enumeration.
-     *
-     * Callbacks can be called for a number of reasons. Instead of having
-     * a callback for each reason, we just offer this enumeration. Callbacks
-     * can then do a switch on this in order to select which behaviour to
-     * invoke.
-     */
-    enum CallbackCause
+private:
+    struct CachePage
     {
-        WriteBack,
-        Eviction,
+        /// Key for this page.
+        uintptr_t key;
+
+        /// The location of this page in memory
+        uintptr_t location;
+
+        /// Reference count to handle release() being called with multiple
+        /// threads having access to the page.
+        size_t refcnt;
+
+        /// Checksum of the page's contents (for dirty detection).
+        uint16_t checksum;
+
+        /// Marker to check that a page's contents are in flux.
+        bool checksumChanging;
+
+        /// Linked list components for LRU.
+        CachePage *pNext;
+        CachePage *pPrev;
     };
 
+public:
     /**
      * Callback type: for functions called by the write-back timer handler.
      *
@@ -134,7 +141,7 @@ public:
      *
      * Then, the write-back thread will mark the page as not-dirty.
      */
-    typedef void (*writeback_t)(CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta);
+    typedef void (*writeback_t)(CacheConstants::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta);
 
     Cache();
     virtual ~Cache();
@@ -154,13 +161,16 @@ public:
      */
     uintptr_t insert (uintptr_t key, size_t size);
 
+    /** Checks if the entire range specified exists in the cache. */
+    bool exists(uintptr_t key, size_t length);
+
     /**
      * Evicts the given key from the cache, also freeing the memory it holds.
      *
      * This will respect the refcount of the given key, so as to make pin()
      * exhibit more reliable behaviour.
      */
-    void evict (uintptr_t key);
+    bool evict (uintptr_t key);
 
     /**
      * Empties the cache.
@@ -181,26 +191,36 @@ public:
      * back to the backing store, if that is desirable.
      *
      * Pinned pages will not be freed during a compact().
-     */
-    void pin(uintptr_t key);
-
-    /** Attempts to "compact" the cache - (hopefully) reduces
-     *  resource usage by throwing away items in a
-     *  least-recently-used fashion. This is called in an
-     *  emergency "physical memory getting full" situation by the
-     *  PMM.
      *
-     * Pass a count to specify that only count pages should be cleared.
-     * If a count is passed, the cache prefers to remove pages that have
-     * not been accessed, rather than the least-recently-used page.
+     * \return false if key didn't exist, true otherwise
      */
-    size_t compact (size_t count = ~0UL);
+    bool pin(uintptr_t key);
+
+    /**
+     * Attempts to trim the cache.
+     *
+     * A trim is slightly different to a compact in that it is designed to be
+     * called in a non-emergency situation. This could be called, for example,
+     * after a process terminates, to clean up some old cached data while the
+     * system is already doing busywork. Or, it could be called when the system
+     * is idle to clean up a bit.
+     *
+     * This will take the lock, also, unlike compact().
+     */
+    size_t trim(size_t count = 1);
 
     /**
      * Synchronises the given cache key back to a backing store, if a
      * callback has been assigned to the Cache.
      */
     void sync(uintptr_t key, bool async);
+
+    /**
+     * Triggers the cache to calculate the checksum of the given location.
+     * This may be useful to avoid a spurious writeback when reading data into
+     * a cache page for the first time.
+     */
+    void triggerChecksum(uintptr_t key);
 
     /**
      * Enters a critical section with respect to this cache. That is, do not
@@ -229,11 +249,51 @@ private:
     /**
      * evict doer
      */
-    void evict(uintptr_t key, bool bLock, bool bPhysicalLock, bool bRemove);
+    bool evict(uintptr_t key, bool bLock, bool bPhysicalLock, bool bRemove);
+
+    /**
+     * LRU evict do-er.
+     *
+     * \param force force an eviction to be attempted
+     * \return number of cache pages evicted
+     */
+    size_t lruEvict(bool force = false);
+
+    /**
+     * Link the given CachePage to the LRU list.
+     */
+    void linkPage(CachePage *pPage);
+
+    /**
+     * Promote the given CachePage within the LRU list.
+     *
+     * This marks the page as the most-recently-used page.
+     */
+    void promotePage(CachePage *pPage);
+
+    /**
+     * Unlink the given CachePage from the LRU list.
+     */
+    void unlinkPage(CachePage *pPage);
+
+    /**
+     * Calculate a checksum for the given CachePage.
+     */
+    void calculateChecksum(CachePage *pPage);
+
+    /**
+     * Verify the given CachePage's checksum.
+     */
+    bool verifyChecksum(CachePage *pPage, bool replace = false);
+
+    /**
+     * Checksum do-er.
+     */
+    uint16_t checksum(const void *data, size_t len);
 
     struct callbackMeta
     {
-        CallbackCause cause;
+        CacheConstants::CallbackCause cause;
         writeback_t callback;
         uintptr_t loc;
         uintptr_t page;
@@ -258,23 +318,14 @@ public:
             uint64_t p6, uint64_t p7, uint64_t p8);
 
 private:
-
-    struct CachePage
-    {
-        /// The location of this page in memory
-        uintptr_t location;
-
-        /// Reference count to handle release() being called with multiple
-        /// threads having access to the page.
-        size_t refcnt;
-
-        /// The time at which this page was allocated. This is used by
-        /// compact() to determine the best pages to evict.
-        uint32_t timeAllocated;
-    };
-
     /** Key-item pairs. */
     Tree<uintptr_t, CachePage*> m_Pages;
+
+    /**
+     * List of known CachePages, kept up-to-date with m_Pages but in LRU order.
+     */
+    CachePage *m_pLruHead;
+    CachePage *m_pLruTail;
 
     /** Static MemoryAllocator to allocate virtual address space for all caches. */
     static MemoryAllocator m_Allocator;
@@ -294,11 +345,32 @@ private:
     /** Metadata to pass to a callback. */
     void *m_CallbackMeta;
 
-    /** Have we registered ourselves as a timer handler yet? */
-    bool m_bRegisteredHandler;
-
     /** Are we currently in a critical section? */
     Atomic<size_t> m_bInCritical;
+};
+
+/**
+ * RAII class for managing refcnt increases via lookup().
+ *
+ * Use this when you want to perform a lookup() but have many potential exits
+ * that would otherwise need an associated release().
+ */
+class CachePageGuard
+{
+public:
+    CachePageGuard(Cache &cache, uintptr_t location) :
+        m_Cache(cache), m_Location(location)
+    {
+    }
+
+    virtual ~CachePageGuard()
+    {
+        m_Cache.release(m_Location);
+    }
+
+private:
+    Cache &m_Cache;
+    uintptr_t m_Location;
 };
 
 #endif

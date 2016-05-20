@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -28,8 +27,8 @@
 class DhcpService : public Service
 {
     public:
-        DhcpService() {};
-        virtual ~DhcpService() {};
+        DhcpService() {}
+        virtual ~DhcpService() {}
 
         /** serve: Interface through which clients interact with the Service */
         bool serve(ServiceFeatures::Type type, void *pData, size_t dataLen);

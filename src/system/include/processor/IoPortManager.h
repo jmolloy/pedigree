@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -37,6 +36,7 @@
    *\brief Manages hardware I/O port (de)allocations */
   class IoPortManager
   {
+    friend class Processor;
     public:
       /** Get the instance of the I/O manager */
       inline static IoPortManager &instance(){return m_Instance;}

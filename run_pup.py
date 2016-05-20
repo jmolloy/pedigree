@@ -1,16 +1,36 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
+'''
+Copyright (c) 2008-2014, Pedigree Developers
 
-# Runs pup with the correct configuration file for this checkout of Pedigree.
+Please see the CONTRIB file in the root of the source tree for a full
+list of contributors.
 
-import os, sys
+Permission to use, copy, modify, and distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+'''
+
+from __future__ import print_function
+
+import os
+import sys
+
+# Obsoleted by run_pup.sh, provided for legacy.
+print('**** You should use run_pup.sh now. ****', file=sys.stderr)
 
 scriptdir = os.path.dirname(os.path.realpath(__file__))
 
-pup = "%s/scripts/pup/pup" % (scriptdir,)
-pupConfig = "%s/scripts/pup/pup.conf" % (scriptdir,)
+sh = "%s/run_pup.sh" % (scriptdir,)
 
 # Run pup.
 args = " ".join(sys.argv[1:])
-args += " %s" % (pupConfig,)
-os.system("%s %s" % (pup, args))
+os.system("%s %s" % (sh, args))
 

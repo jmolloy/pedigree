@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -42,6 +41,8 @@ class Ehci : public UsbHub,
     public:
         Ehci(Device* pDev);
         virtual ~Ehci();
+
+        bool initialiseController();
 
         struct qTD
         {

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,6 +22,8 @@
 
 #include <utilities/RadixTree.h>
 #include <utilities/List.h>
+#include <utilities/Tree.h>
+#include <utilities/SharedPointer.h>
 
 class Elf;
 
@@ -69,6 +70,9 @@ public:
   /** Insert a symbol into the table. */
   void insert(String name, Binding binding, Elf *pParent, uintptr_t value);
 
+  /** Insert a symbol into two SymbolTables, using the memory once. */
+  void insertMultiple(SymbolTable *pOther, String name, Binding binding, Elf *pParent, uintptr_t value);
+
   void eraseByElf(Elf *pParent);
 
   /** Looks up a symbol in the table, optionally outputting the
@@ -95,17 +99,30 @@ private:
   public:
     Symbol() : m_pParent(0), m_Binding(Global), m_Value(0) {}
     Symbol(Elf *pP, Binding b, uintptr_t v) : m_pParent(pP), m_Binding(b), m_Value(v) {}
-    Elf *getParent() {return m_pParent;}
-    Binding getBinding() {return m_Binding;}
-    uintptr_t getValue() {return m_Value;}
+
+    Elf *getParent() const {return m_pParent;}
+    Binding getBinding() const {return m_Binding;}
+    uintptr_t getValue() const {return m_Value;}
   private:
     Elf *m_pParent;
     Binding m_Binding;
     uintptr_t m_Value;
   };
 
-  typedef List<Symbol*> SymbolList;
-  RadixTree<SymbolList*> m_Tree;
+  /** Insert doer. */
+  SharedPointer<Symbol> doInsert(String name, Binding binding, Elf *pParent, uintptr_t value);
+  /** Insert the given shared symbol. */
+  void insertShared(String name, SharedPointer<Symbol> symbol);
+
+  typedef RadixTree<SharedPointer<Symbol>> symbolTree_t;
+
+  /** Get or insert a Symbol tree. */
+  SharedPointer<symbolTree_t> getOrInsertTree(Elf *);
+
+  Tree<Elf *, SharedPointer<symbolTree_t>> m_LocalSymbols;
+  RadixTree<SharedPointer<Symbol>> m_GlobalSymbols;
+  RadixTree<SharedPointer<Symbol>> m_WeakSymbols;
+
   Elf *m_pOriginatingElf;
 };
 

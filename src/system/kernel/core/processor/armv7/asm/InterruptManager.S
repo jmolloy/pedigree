@@ -39,13 +39,13 @@ __arm_vector_table:
         ldr pc,=arm_instundef_handler
 # 0x08 - SUPERVISOR CALL
     __armvec_swint:
-        ldr pc,=arm_swint_handler
+        ldr pc,=arm_asm_swint_handler
 # 0x0C - PREFETCH ABORT
     __armvec_prefetchabort:
-        ldr pc,=arm_prefetch_abort_handler
+        ldr pc,=arm_asm_prefetch_abort_handler
 # 0x10 - DATA ABORT
     __armvec_dataabort:
-        ldr pc,=arm_data_abort_handler
+        ldr pc,=arm_asm_data_abort
 # 0x14 - NOT USED
         ldr pc,=arm_addrexcept_handler
 # 0x18 - IRQ (interrupt)
@@ -58,35 +58,65 @@ __end_arm_vector_table:
 
 .section .text
 
+##
+
+# Align stack to 8 bytes, preserving old stack in given register.
+.macro stack_align reg
+    mov \reg, sp
+    tst sp, #4
+    subeq sp, #4
+    push {\reg}
+.endm
+
+# Undo stack_align
+.macro stack_unwind reg
+    pop {\reg}
+    mov sp, \reg
+.endm
+
+# Generic exception/interrupt handling.
+.macro __arm_interrupt entrypoint lr_sub
+    # SPSR and R14 can be saved in one operation, so we preserve current SPSR
+    # and the return address before switching to SVC mode.
+    sub lr, #\lr_sub
+    srsdb #0x13!
+
+    # Disable IRQs and switch to SVC mode.
+    cpsid i, #0x13
+
+    # Save registers we care about.
+    push {r0-r12, lr}
+
+    # Save user stack, lr
+    sub sp, #8
+    stmia sp, {r13, r14}^
+
+    # Align stack, present InterruptState in r0
+    stack_align r0
+    bl \entrypoint
+    stack_unwind r0
+
+    # Restore user stack, lr
+    ldmia sp, {r13, r14}^
+    add sp, #8
+
+    # Restore saved registers.
+    pop {r0-r12, r14}
+
+    # Inverse of srsdb above - return to caller.
+    rfeia sp!
+.endm
+
+##
+
+arm_asm_data_abort:
+    __ARM_INTERRUPT arm_data_abort_handler 8
+
 arm_asm_irq_handler:
+    __ARM_INTERRUPT arm_irq_handler 4
 
-    # Save r4-r6
-    stmia r13, {r4 - r6}
-    mov r4, r13
-    sub r5, lr, #4
-    mrs r6, spsr
-    
-    msr cpsr_c, #(3<<6 | 0x13)
-    
-    # Save return address
-    stmfd sp!, {r5}
-    
-    # C call trashed registers, and the supervisor LR
-    stmfd sp!, {r0-r3, r12, lr}
-    
-    # Save SPSR
-    stmfd sp!, {r6}
-    
-    # Restore R4-R6
-    ldmia r4, {r4 - r6}
+arm_asm_prefetch_abort_handler:
+    __ARM_INTERRUPT arm_prefetch_abort_handler 4
 
-    # Call into the kernel - give it an interrupt frame
-    mov r0, sp
-    bl arm_irq_handler
-    
-    # Restore SPSR
-    ldmfd sp!, {r0}
-    msr spsr_cxsf, r0
-    
-    # Restore to where we were before the interrupt
-    ldmfd   sp!, { r0-r3, r12, lr, pc }^
+arm_asm_swint_handler:
+    __ARM_INTERRUPT arm_swint_handler 0

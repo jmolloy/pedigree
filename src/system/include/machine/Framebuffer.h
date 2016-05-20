@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -85,7 +84,7 @@ class Framebuffer
         {
             delete [] m_Palette;
             m_Palette = new uint32_t[nEntries];
-            memcpy(m_Palette, palette, nEntries * sizeof(uint32_t));
+            MemoryCopy(m_Palette, palette, nEntries * sizeof(uint32_t));
 
             NOTICE("Framebuffer: new palette set with " << Dec << nEntries << Hex << " entries");
         }

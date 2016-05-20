@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -93,7 +92,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
       }
       if(code == 2) // MSS
       {
-        tcp_mss = BIG_TO_HOST16(*reinterpret_cast<uint16_t *>(&opts[2]));
+        tcp_mss = BIG_TO_HOST16((opts[2] << 8) | opts[3]);
       }
 
       offset += len;
@@ -158,8 +157,6 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
           delete stateBlock;
 
       return;
-
-      break;
 
     /* Incoming segment while the state is LISTEN */
     case Tcp::LISTEN:
@@ -624,7 +621,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
             }
 
             /// \todo We should queue this ACK and transmit it when the timer fires (200ms max wait)
-            size_t winChange = stateBlock->endpoint->depositPayload(stateBlock->seg_len, payload, stateBlock->seg_seq - stateBlock->irs - 1, (header->flags & Tcp::PSH) == Tcp::PSH);
+            size_t winChange = stateBlock->endpoint->depositTcpPayload(stateBlock->seg_len, payload, stateBlock->seg_seq - stateBlock->irs - 1, (header->flags & Tcp::PSH) == Tcp::PSH);
             stateBlock->rcv_nxt += winChange;
             if(winChange > stateBlock->rcv_wnd)
             {
@@ -650,7 +647,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
 
         // FIN means the remote host has nothing more to send, so push any remaining data to the application
         if(stateBlock->endpoint)
-          stateBlock->endpoint->depositPayload(0, 0, 0, true);
+          stateBlock->endpoint->depositTcpPayload(0, 0, 0, true);
 
         stateBlock->rcv_nxt = stateBlock->seg_seq + 1;
 
@@ -658,8 +655,6 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
         {
           if(!Tcp::send(from, handle.localPort, handle.remotePort, stateBlock->snd_nxt, stateBlock->rcv_nxt, Tcp::ACK, stateBlock->snd_wnd, 0, 0))
             WARNING("TCP: Sending ACK to FIN failed.");
-          else
-            alreadyAck = true;
         }
 
         switch(stateBlock->currentState)
@@ -737,7 +732,10 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
 #if TCP_DEBUG
     NOTICE("TCP Packet arriving on port " << Dec << handle.localPort << Hex << " caused state change from " << Tcp::stateString(oldState) << " to " << Tcp::stateString(stateBlock->currentState) << ".");
 #endif
-    stateBlock->endpoint->stateChanged(stateBlock->currentState);
+    if (stateBlock->endpoint)
+    {
+      stateBlock->endpoint->stateChanged(stateBlock->currentState);
+    }
     stateBlock->waitState.release();
   }
 
@@ -756,6 +754,16 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
       m_TcpMutex.release();
       removeConn(stateBlock->connId);
       m_TcpMutex.acquire();
+    }
+    else if (oldState == Tcp::SYN_SENT)
+    {
+      // Not an expected close.
+      stateBlock->endpoint->reportError(Error::ConnectionRefused);
+    }
+    else
+    {
+      // Aborted, but active, connection.
+      stateBlock->endpoint->reportError(Error::ConnectionAborted);
     }
 
   }

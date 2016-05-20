@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -36,7 +35,7 @@ public:
   /**
    * Destructor does nothing.
    */
-  virtual ~DisassemblerBase() {};
+  virtual ~DisassemblerBase() {}
   
   /**
    * Sets the location of the next instruction to be disassembled.
@@ -63,7 +62,7 @@ public:
   virtual void disassemble(LargeStaticString &text) =0;
   
 protected:
-  DisassemblerBase() {};
+  DisassemblerBase() {}
 };
 
 /** @} */
@@ -82,6 +81,10 @@ protected:
 #endif
 #ifdef ARMV7
 #include <core/processor/arm_common/Disassembler.h>
+#endif
+#ifdef HOSTED
+/// \todo x86-specific
+#include <core/processor/x86_common/Disassembler.h>
 #endif
 
 #endif

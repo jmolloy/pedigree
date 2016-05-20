@@ -20,10 +20,12 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 import os
 
 import buildutils.userspace
+import buildutils.modules
 
-Import(['env'])
+Import(['env', 'userspace_env'])
 
 env_clone = env.Clone()
+userspace_env_clone = userspace_env.Clone()
 
 builddir = env["PEDIGREE_BUILD_BASE"]
 kerneldir = env["PEDIGREE_BUILD_KERNEL"]
@@ -35,8 +37,6 @@ libpedigree_c_objname = os.path.join(builddir, 'libpedigree-c.a')
 libpedigree_c_shobjname = os.path.join(builddir, 'libpedigree-c.so')
 
 env.Alias("subsys", pedigree_c_objname)
-env.Alias("subsys", libpedigree_c_objname)
-env.Alias("subsys", libpedigree_c_shobjname)
 
 kernel_module_files = Glob("*.cc")
 
@@ -48,38 +48,38 @@ include_dirs = [
     '#src/modules',
     '#src/system/include',
     '#src/modules/system',
-	'#src/subsys/posix/include',
+    '#images/local/include',
     '.'
 ]
 
 env_clone['CPPPATH'] = include_dirs
 env_clone['LIBS'] = []
-env_clone['LIBPATH'] = [builddir]
+env_clone['LIBPATH'] = []
 
 final_output = pedigree_c_objname
 pedigree_c_objname = '%s.debug' % (pedigree_c_objname,)
 
-if "STATIC_DRIVERS" in env['CPPDEFINES']:
-    env_clone.Program(pedigree_c_objname, kernel_module_files,
-        LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT',
-        LSCRIPT=File("#src/modules/link_static.ld"))
-    env_clone.Command(final_output, pedigree_c_objname,
-        action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
-else:
-    env_clone.Program(pedigree_c_objname, kernel_module_files,
-        LINKFLAGS='-nostdlib -r -T $LSCRIPT',
-        LSCRIPT=File("#src/modules/link.ld"))
-    env_clone.Command(final_output, pedigree_c_objname,
-        action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
+buildutils.modules.buildModule(env_clone, final_output, pedigree_c_objname,
+                               kernel_module_files)
 
-libs_clone = env_clone.Clone()
+libs_clone = userspace_env_clone.Clone()
 libs_clone.MergeFlags('-fPIC -DUSE_PIC_SYSCALLS')
+libs_clone['CPPPATH'] = include_dirs
+libs_clone['LIBPATH'] = [builddir]
 
-libs_clone['CFLAGS'] = buildutils.userspace.fixFlags(env, libs_clone['CFLAGS'])
-libs_clone['CCFLAGS'] = buildutils.userspace.fixFlags(env, libs_clone['CCFLAGS'])
-libs_clone['CXXFLAGS'] = buildutils.userspace.fixFlags(env, libs_clone['CXXFLAGS'])
+libs_clone['CFLAGS'] = buildutils.userspace.fixFlags(userspace_env, libs_clone['CFLAGS'])
+libs_clone['CCFLAGS'] = buildutils.userspace.fixFlags(userspace_env, libs_clone['CCFLAGS'])
+libs_clone['CXXFLAGS'] = buildutils.userspace.fixFlags(userspace_env, libs_clone['CXXFLAGS'])
 
-libs_clone.StaticLibrary(libpedigree_c_objname, libpedigree_c_files)
-libs_clone.SharedLibrary(libpedigree_c_shobjname, libpedigree_c_files, LINKFLAGS='')
+if env['build_libs']:
+    env.Alias("subsys", libpedigree_c_objname)
+    env.Alias("subsys", libpedigree_c_shobjname)
 
-env.Depends(libpedigree_c_shobjname, "crt")
+    libs_clone.StaticLibrary(libpedigree_c_objname, libpedigree_c_files)
+    libs_clone.SharedLibrary(libpedigree_c_shobjname, libpedigree_c_files, LINKFLAGS='')
+
+    env.Depends(libpedigree_c_objname, "crt")
+    env.Depends(libpedigree_c_objname, "headers")
+
+    env.Depends(libpedigree_c_shobjname, "crt")
+    env.Depends(libpedigree_c_shobjname, "headers")

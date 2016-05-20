@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -70,7 +69,11 @@ private:
   File *getNext(File *pFile);
   File *get(size_t n);
 
+#ifdef HOSTED
+  uint8_t *m_pBase;
+#else
   MemoryRegion m_Region;
+#endif
 };
 
 #endif

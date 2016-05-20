@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -30,8 +29,6 @@
 /** A Directory node. */
 class Directory : public File
 {
-    friend class Filesystem;
-
 public:
 
     /** Eases the pain of casting, and performs a sanity check. */
@@ -51,7 +48,7 @@ private:
 
 public:
     /** Constructor, should be called only by a Filesystem. */
-    Directory(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+    Directory(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTime, Time::Timestamp creationTime,
               uintptr_t inode, class Filesystem *pFs, size_t size, File *pParent);
     /** Destructor - doesn't do anything. */
     virtual ~Directory();
@@ -63,12 +60,48 @@ public:
     /** Returns the n'th child of this directory, or an invalid file. */
     File* getChild(size_t n);
 
+    /** Returns the number of children in this directory. */
+    size_t getNumChildren();
+
     /** Load the directory's contents into the cache. */
     virtual void cacheDirectoryContents();
 
-public:
+    /** Does this directory have cache? */
+    virtual bool isCachePopulated() const
+    {
+        return m_bCachePopulated;
+    }
+
+    /** Look up the given filename in the directory. */
+    File *lookup(String &s) const;
+
+    /** Remove the given filename in the directory. */
+    void remove(String &s)
+    {
+        m_Cache.remove(s);
+    }
+
+private:
     /** Directory contents cache. */
     RadixTree<File*> m_Cache;
+
+protected:
+    /** Provides subclasses with direct access to the directory's listing. */
+    virtual RadixTree<File *> &getCache()
+    {
+        return m_Cache;
+    }
+
+    /** Mark the directory cache as populated now. */
+    void markCachePopulated()
+    {
+        m_bCachePopulated = true;
+    }
+
+    /**
+     * Whether the directory cache is populated with entries or still needs to
+     * be loaded. Directories are lazy-loaded using this.
+     */
     bool m_bCachePopulated;
 };
 

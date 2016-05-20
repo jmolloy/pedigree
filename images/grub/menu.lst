@@ -1,10 +1,16 @@
 ###############################################################################
 ##### Pedigree                                                            #####
 ###############################################################################
-timeout 0
+timeout 10
 
 title  Pedigree
 root   (cd)
+kernel /boot/kernel
+module /boot/initrd.tar
+module /.pedigree-root
+
+title  Pedigree (HDD)
+root   (hd0,0)
 kernel /boot/kernel
 module /boot/initrd.tar
 module /.pedigree-root

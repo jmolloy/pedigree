@@ -31,7 +31,7 @@
     do \
     { \
         char *sTabs = new char[(tabs * 4) + 1]; \
-        memset(sTabs, ' ', tabs * 4); \
+        ByteSet(sTabs, ' ', tabs * 4); \
         sTabs[tabs * 4] = '\0'; \
         DEBUG_LOG(sTabs << text); \
         delete [] sTabs; \
@@ -96,8 +96,9 @@ void HidReport::parseDescriptor(uint8_t *pDescriptor, size_t nDescriptorLength)
         i += size;
 
         // Don't allow for Main items (Input, Output, Feature, etc.) outside a collection
-        if(!pCurrentCollection && item.type == MainItem && item.tag !=  CollectionItem)
-            continue;
+        if(!pCurrentCollection)
+            if (item.type == MainItem && item.tag != CollectionItem)
+                continue;
 
         // Check for type and tag to find which item do we have
         switch(MIX_TYPE_N_TAG(item.type, item.tag))
@@ -276,7 +277,7 @@ void HidReport::feedInput(uint8_t *pBuffer, uint8_t *pOldBuffer, size_t nBufferS
     m_pRootCollection->feedInput(pBuffer, pOldBuffer, nBufferSize, nBitOffset);
 
     // Move the input to the old buffer, now that it's been parsed
-    memcpy(pOldBuffer, pBuffer, nBufferSize);
+    MemoryCopy(pOldBuffer, pBuffer, nBufferSize);
 }
 
 void HidReport::Collection::feedInput(uint8_t *pBuffer, uint8_t *pOldBuffer, size_t nBufferSize, size_t &nBitOffset)

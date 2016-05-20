@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -162,18 +161,137 @@ uintptr_t ARMV7InterruptManager::syscall(Service_t service,
     return 0;
 }
 
-extern "C" void arm_swint_handler() __attribute__((interrupt("SWI")));
+// Handles data aborts, but with a stack frame.
+void kdata_abort(InterruptState &state) NORETURN;
+void kdata_abort(InterruptState &state)
+{
+#ifdef DEBUGGER
+  // Grab the aborted address.
+  uintptr_t dfar = 0;
+  uintptr_t dfsr = 0;
+  asm volatile("MRC p15,0,%0,c6,c0,0" : "=r" (dfar));
+  asm volatile("MRC p15,0,%0,c5,c0,0" : "=r" (dfsr));
+
+  // Status.
+  bool bWrite = !!(dfsr & (1 << 11));
+  uint32_t status = (dfsr & (1 << 10) ? 1 << 4 : 0) | (dfsr & 0xF);
+
+  static LargeStaticString sError;
+  sError.clear();
+  sError.append("Data Abort: ");
+  if(bWrite)
+    sError.append("W ");
+  else
+    sError.append("R ");
+  sError.append("0x");
+  sError.append(dfar, 16, 8, '0');
+  sError.append(" @ 0x");
+  sError.append(state.getInstructionPointer(), 16, 8, '0');
+  sError.append("\n");
+
+  switch (status)
+  {
+    case 0b00001:
+      sError.append("Alignment fault");
+      break;
+    case 0b00101:
+    case 0b00111:
+      sError.append("Translation fault");
+      break;
+    case 0b00011:
+    case 0b00110:
+      sError.append("Access flag fault");
+      break;
+    case 0b01001:
+    case 0b01011:
+      {
+        uint32_t domain = (dfsr >> 4) & 0xF;
+        sError.append("Domain fault for domain 0x");
+        sError.append(domain, 16, 8, '0');
+        break;
+      }
+    case 0b01101:
+    case 0b01111:
+      sError.append("Permission fault");
+      break;
+    case 0b00010:
+      sError.append("Debug event");
+      break;
+    case 0b01000:
+      sError.append("Sync external abort");
+      break;
+    case 0b10110:
+      sError.append("Async external abort");
+      break;
+    default:
+      sError.append("Unknown fault");
+  }
+
+  ERROR_NOLOCK(static_cast<const char *>(sError));
+  Debugger::instance().start(state, sError);
+#else
+  panic("data abort");
+#endif
+
+  while( 1 );
+}
+
+void kprefetch_abort(InterruptState &state) NORETURN;
+void kprefetch_abort(InterruptState &state)
+{
+#ifdef DEBUGGER
+  static LargeStaticString sError;
+  sError.clear();
+  sError.append("Prefetch Abort at 0x");
+  sError.append(state.getInstructionPointer(), 16, 8, '0');
+  Debugger::instance().start(state, sError);
+#endif
+
+  while( 1 );
+}
+
+void kswi_handler(InterruptState &state)
+{
+  // Grab SWI number.
+  const uint32_t *at = reinterpret_cast<const uint32_t *>(state.getInstructionPointer() - 4);
+  uint32_t swi = (*at) & 0xFFFFFFUL;
+
+  NOTICE("swi #" << Hex << swi);
+  if(swi == 0xdeee)
+  {
+    // Dump state.
+    for(size_t i = 0; i < state.getRegisterCount(); ++i)
+    {
+      NOTICE(state.getRegisterName(i) << "=" << Hex << state.getRegister(i));
+    }
+  }
+#ifdef DEBUGGER
+  else if(swi == 0xdeb16)
+  {
+    static LargeStaticString sError;
+    sError.clear();
+    sError.append("Debugger Trap at 0x");
+    sError.append(state.getInstructionPointer(), 16, 8, '0');
+    Debugger::instance().start(state, sError);
+    return;
+  }
+#endif
+}
+
+/// \note We don't use the interrupt attribute for everything as we do a lot of
+///       the register saving ourselves before jumping into the kernel.
+extern "C" void arm_swint_handler(InterruptState &state);
 extern "C" void arm_instundef_handler()__attribute__((naked));
-extern "C" void arm_fiq_handler() __attribute__((interrupt("FIQ")));
+extern "C" void arm_fiq_handler() __attribute__((interrupt("FIQ"))) NORETURN;
 extern "C" void arm_irq_handler(InterruptState &state);
 extern "C" void arm_reset_handler() __attribute__((naked));
-extern "C" void arm_prefetch_abort_handler() __attribute__((naked));
-extern "C" void arm_data_abort_handler() __attribute__((naked));
+extern "C" void arm_prefetch_abort_handler(InterruptState &state) __attribute__((naked));
+extern "C" void arm_data_abort_handler(InterruptState &state) __attribute__((naked));
 extern "C" void arm_addrexcept_handler() __attribute__((naked));
 
-extern "C" void arm_swint_handler()
+extern "C" void arm_swint_handler(InterruptState &state)
 {
-  NOTICE_NOLOCK("swi");
+  kswi_handler(state);
 }
 
 extern "C" void arm_instundef_handler()
@@ -190,7 +308,6 @@ extern "C" void arm_fiq_handler()
 
 extern "C" void arm_irq_handler(InterruptState &state)
 {
-  // InterruptState state; /// \todo Do something useful with this
   ARMV7InterruptManager::interrupt(state);
 }
 
@@ -200,31 +317,15 @@ extern "C" void arm_reset_handler()
   while( 1 );
 }
 
-extern "C" void arm_prefetch_abort_handler()
+extern "C" void arm_prefetch_abort_handler(InterruptState &state)
 {
-  NOTICE_NOLOCK("prefetch abort");
+  kprefetch_abort(state);
   while( 1 );
 }
 
-extern "C" void arm_data_abort_handler()
+extern "C" void arm_data_abort_handler(InterruptState &state)
 {
-  NOTICE_NOLOCK("data abort");
-
-  uintptr_t dfar = 0;
-  asm volatile("MRC p15,0,%0,c6,c0,0" : "=r" (dfar));
-
-  NOTICE_NOLOCK("Address: " << dfar);
-
-  uint32_t dfsr = 0;
-  asm volatile("MRC p15,0,%0,c5,c0,0" : "=r" (dfsr));
-
-  NOTICE_NOLOCK("Status: " << dfsr);
-
-  uintptr_t linkreg = 0;
-  asm volatile("mov %0, lr" : "=r" (linkreg));
-  NOTICE_NOLOCK("Link register: " << linkreg);
-
-  while( 1 );
+  kdata_abort(state);
 }
 
 extern "C" void arm_addrexcept_handler()
@@ -316,37 +417,6 @@ void ARMV7InterruptManager::interrupt(InterruptState &interruptState)
 
     // Ack the interrupt
     mpuIntcRegisters[INTCPS_CONTROL] = 1; // Reset IRQ output and enable new IRQs
-
-#if 0 // Below is all exception/syscall stuff
-
-  // Call the syscall handler, if it is the syscall interrupt
-  if (intNumber == SYSCALL_INTERRUPT_NUMBER)
-  {
-    size_t serviceNumber = interruptState.getSyscallService();
-    if (LIKELY(serviceNumber < serviceEnd && m_Instance.m_SyscallHandler[serviceNumber] != 0))
-      m_Instance.m_SyscallHandler[serviceNumber]->syscall(interruptState);
-  }
-  // Call the normal interrupt handler, if any, otherwise
-  else if (m_Instance.m_Handler[intNumber] != 0)
-    m_Instance.m_Handler[intNumber]->interrupt(intNumber, interruptState);
-  else
-  {
-    /// \todo: Check for debugger initialisation.
-    static LargeStaticString e;
-    e.clear();
-    e.append ("Exception #");
-    e.append (intNumber, 10);
-    e.append (": \"");
-    e.append (g_ExceptionNames[intNumber]);
-    e.append ("\"");
-#ifdef DEBUGGER
-    Debugger::instance().start(interruptState, e);
-#else
-    panic(e);
-#endif
-  }
-
-#endif
 }
 
 ARMV7InterruptManager::ARMV7InterruptManager()

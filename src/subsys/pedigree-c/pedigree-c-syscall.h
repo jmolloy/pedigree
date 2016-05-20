@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -18,35 +17,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _PEDIGREE_SYSCALL_H
-#define _PEDIGREE_SYSCALL_H
+
+#ifndef _PEDIGREEC_SYSCALL_H
+#define _PEDIGREEC_SYSCALL_H
 
 // If you change this, ensure you change src/system/include/processor/Syscalls.h !
-#define PEDIGREE_C_SYSCALL_SERVICE 4
+#define SERVICE 4
+#define SERVICE_INIT int ign = 0
+#define SERVICE_ERROR ign
 
-#ifdef X86
-#include "pedigree-c-syscall-i686.h"
-#define SYSCALL_TARGET_FOUND
-#endif
-
-#ifdef X64
-#include "pedigree-c-syscall-amd64.h"
-#define SYSCALL_TARGET_FOUND
-#endif
-
-#ifdef PPC_COMMON
-#include "pedigree-c-syscall-ppc.h"
-#define SYSCALL_TARGET_FOUND
-#endif
-
-#ifdef ARM_COMMON
-#include "pedigree-c-syscall-arm.h"
-#define SYSCALL_TARGET_FOUND
-#endif
-
-#ifndef SYSCALL_TARGET_FOUND
-#error Syscall target not found!
-#endif
-
+#include <processor/syscall-stubs.h>
 
 #endif

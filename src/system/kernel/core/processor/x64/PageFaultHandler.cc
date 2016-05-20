@@ -97,7 +97,7 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
       }
 
       // Perform the actual copy.
-      memcpy(reinterpret_cast<uint8_t*>(page),
+      MemoryCopy(reinterpret_cast<uint8_t*>(page),
              reinterpret_cast<uint8_t*>(tempAddr),
              pageSz);
 
@@ -183,14 +183,11 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
     Thread *pThread = Processor::information().getCurrentThread();
     Process *pProcess = pThread->getParent();
     Subsystem *pSubsystem = pProcess->getSubsystem();
-    if(pSubsystem)
+    if(pSubsystem && !state.kernelMode())
         pSubsystem->threadException(pThread, Subsystem::PageFault);
     else
     {
         pProcess->kill();
-
-        //  kill member function also calls yield(), so shouldn't get here.
-        for(;;) ;
     }
   }
 }

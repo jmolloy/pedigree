@@ -22,18 +22,21 @@
 #include "Symlink.h"
 #include "Filesystem.h"
 #include <processor/Processor.h>
+#include <processor/types.h>
 #include <process/Scheduler.h>
 #include <Log.h>
 
-void File::writeCallback(Cache::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta)
+void File::writeCallback(CacheConstants::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta)
 {
     File *pFile = reinterpret_cast<File *>(meta);
 
     switch(cause)
     {
-        case Cache::WriteBack:
+        case CacheConstants::WriteBack:
             {
-                pFile->m_Lock.acquire();
+#ifdef THREADS
+                LockGuard<Mutex>(pFile->m_Lock);
+#endif
 
                 // We are given one dirty page. Blocks can be smaller than a page.
                 size_t off = 0;
@@ -41,11 +44,9 @@ void File::writeCallback(Cache::CallbackCause cause, uintptr_t loc, uintptr_t pa
                 {
                     pFile->writeBlock(loc + off, page + off);
                 }
-
-                pFile->m_Lock.release();
             }
             break;
-        case Cache::Eviction:
+        case CacheConstants::Eviction:
             // Remove this page from our data cache.
             // Side-effect: if the block size is larger than the page size, the
             // entire block will be removed. Is this something we care about?
@@ -61,16 +62,28 @@ File::File() :
     m_Name(""), m_AccessedTime(0), m_ModifiedTime(0),
     m_CreationTime(0), m_Inode(0), m_pFilesystem(0), m_Size(0),
     m_pParent(0), m_nWriters(0), m_nReaders(0), m_Uid(0), m_Gid(0),
-    m_Permissions(0), m_DataCache(), m_Lock(), m_MonitorTargets()
+    m_Permissions(0), m_DataCache(), m_bDirect(false)
+#ifndef VFS_NOMMU
+    , m_FillCache()
+#endif
+#ifdef THREADS
+    , m_Lock(), m_MonitorTargets()
+#endif
 {
 }
 
-File::File(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+File::File(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTime, Time::Timestamp creationTime,
            uintptr_t inode, Filesystem *pFs, size_t size, File *pParent) :
     m_Name(name), m_AccessedTime(accessedTime), m_ModifiedTime(modifiedTime),
     m_CreationTime(creationTime), m_Inode(inode), m_pFilesystem(pFs),
     m_Size(size), m_pParent(pParent), m_nWriters(0), m_nReaders(0), m_Uid(0),
-    m_Gid(0), m_Permissions(0), m_DataCache(), m_Lock(), m_MonitorTargets()
+    m_Gid(0), m_Permissions(0), m_DataCache(), m_bDirect(false)
+#ifndef VFS_NOMMU
+    , m_FillCache()
+#endif
+#ifdef THREADS
+    , m_Lock(), m_MonitorTargets()
+#endif
 {
 }
 
@@ -109,18 +122,34 @@ uint64_t File::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCa
         if(sz > (m_Size - location))
             sz = m_Size - location;
 
+#ifdef THREADS
         m_Lock.acquire();
-        uintptr_t buff = m_DataCache.lookup(block*blockSize);
+#endif
+        uintptr_t buff = 0;
+        if (!m_bDirect)
+        {
+            buff = m_DataCache.lookup(block*blockSize);
+        }
         if (!buff)
         {
             buff = readBlock(block*blockSize);
-            m_DataCache.insert(block*blockSize, buff);
+            if (!buff)
+            {
+                ERROR("File::read - bad read (" << (block * blockSize) << " - block size is " << blockSize << ")");
+                return n;
+            }
+            if (!m_bDirect)
+            {
+                m_DataCache.insert(block*blockSize, buff);
+            }
         }
+#ifdef THREADS
         m_Lock.release();
+#endif
 
         if(buffer)
         {
-            memcpy(reinterpret_cast<void*>(buffer),
+            MemoryCopy(reinterpret_cast<void*>(buffer),
                    reinterpret_cast<void*>(buff+offs),
                    sz);
             buffer += sz;
@@ -146,16 +175,32 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
         uintptr_t offs  = location % blockSize;
         uintptr_t sz    = (size+offs > blockSize) ? blockSize-offs : size;
 
+#ifdef THREADS
         m_Lock.acquire();
-        uintptr_t buff = m_DataCache.lookup(block*blockSize);
+#endif
+        uintptr_t buff = 0;
+        if (!m_bDirect)
+        {
+            buff = m_DataCache.lookup(block*blockSize);
+        }
         if (!buff)
         {
             buff = readBlock(block*blockSize);
-            m_DataCache.insert(block*blockSize, buff);
+            if (!buff)
+            {
+                ERROR("File::write - bad read (" << (block * blockSize) << " - block size is " << blockSize << ")");
+                return n;
+            }
+            if (!m_bDirect)
+            {
+                m_DataCache.insert(block*blockSize, buff);
+            }
         }
+#ifdef THREADS
         m_Lock.release();
+#endif
 
-        memcpy(reinterpret_cast<void*>(buff+offs),
+        MemoryCopy(reinterpret_cast<void*>(buff+offs),
                reinterpret_cast<void*>(buffer),
                sz);
 
@@ -177,23 +222,67 @@ uint64_t File::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bC
 
 physical_uintptr_t File::getPhysicalPage(size_t offset)
 {
+    if (m_bDirect)
+    {
+        WARNING("File in direct mode, cannot get backing page.");
+        return ~0UL;
+    }
+
+#ifndef VFS_NOMMU
     // Sanitise input.
     size_t blockSize = getBlockSize();
+    size_t nativeBlockSize = PhysicalMemoryManager::getPageSize();
+    bool useFillCache = false;
+    if (blockSize < nativeBlockSize)
+    {
+        useFillCache = true;
+        blockSize = nativeBlockSize;
+    }
     offset &= ~(blockSize - 1);
 
     // Quick and easy exit.
     if(offset > m_Size)
     {
-        return static_cast<physical_uintptr_t>(~0UL);
+        return ~0UL;
     }
 
     // Check if we have this page in the cache.
+#ifdef THREADS
     m_Lock.acquire();
-    uintptr_t vaddr = m_DataCache.lookup(offset);
+#endif
+    uintptr_t vaddr = 0;
+    if (LIKELY(!useFillCache))
+    {
+        // Not using fill cache, this is the easy and common case.
+        vaddr = m_DataCache.lookup(offset);
+    }
+    else
+    {
+        // Using the fill cache, because the filesystem has a block size
+        // smaller than our native page size.
+        vaddr = m_FillCache.lookup(offset);
+        if (!vaddr)
+        {
+            vaddr = m_FillCache.insert(offset, nativeBlockSize);
+#ifdef THREADS
+            m_Lock.release();
+#endif
+            if (read(offset, nativeBlockSize, vaddr, true) != nativeBlockSize)
+            {
+                ERROR("Reading into fill cache failed, cannot get backing page.");
+                return ~0UL;
+            }
+#ifdef THREADS
+    m_Lock.acquire();
+#endif
+        }
+    }
+#ifdef THREADS
     m_Lock.release();
+#endif
     if (!vaddr)
     {
-        return static_cast<physical_uintptr_t>(~0UL);
+        return ~0UL;
     }
 
     // Look up the page now that we've confirmed it is in the cache.
@@ -205,18 +294,39 @@ physical_uintptr_t File::getPhysicalPage(size_t offset)
         va.getMapping(reinterpret_cast<void *>(vaddr), phys, flags);
 
         // Pin this key in the cache down, so we don't lose it.
-        pinBlock(offset);
+        if (UNLIKELY(useFillCache))
+        {
+            m_FillCache.pin(offset);
+        }
+        else
+        {
+            pinBlock(offset);
+        }
 
         return phys;
     }
+#endif  // VFS_NOMMU
 
-    return static_cast<physical_uintptr_t>(~0UL);
+    return ~0UL;
 }
 
 void File::returnPhysicalPage(size_t offset)
 {
+    if (m_bDirect)
+    {
+        return;
+    }
+
+#ifndef VFS_NOMMU
     // Sanitise input.
     size_t blockSize = getBlockSize();
+    size_t nativeBlockSize = PhysicalMemoryManager::getPageSize();
+    bool useFillCache = false;
+    if (blockSize < nativeBlockSize)
+    {
+        useFillCache = true;
+        blockSize = nativeBlockSize;
+    }
     offset &= ~(blockSize - 1);
 
     // Quick and easy exit for bad input.
@@ -227,9 +337,21 @@ void File::returnPhysicalPage(size_t offset)
 
     // Release the page. Beware - this could cause a cache evict, which will
     // make the next read/write at this offset do real (slow) I/O.
+#ifdef THREADS
     m_Lock.acquire();
-    unpinBlock(offset);
+#endif
+    if (UNLIKELY(useFillCache))
+    {
+        m_FillCache.release(offset);
+    }
+    else
+    {
+        unpinBlock(offset);
+    }
+#ifdef THREADS
     m_Lock.release();
+#endif
+#endif  // VFS_NOMMU
 }
 
 void File::sync()
@@ -242,34 +364,34 @@ void File::sync()
     }
 }
 
-Time File::getCreationTime()
+Time::Timestamp File::getCreationTime()
 {
     return m_CreationTime;
 }
 
-void File::setCreationTime(Time t)
+void File::setCreationTime(Time::Timestamp t)
 {
     m_CreationTime = t;
     fileAttributeChanged();
 }
 
-Time File::getAccessedTime()
+Time::Timestamp File::getAccessedTime()
 {
     return m_AccessedTime;
 }
 
-void File::setAccessedTime(Time t)
+void File::setAccessedTime(Time::Timestamp t)
 {
     m_AccessedTime = t;
     fileAttributeChanged();
 }
 
-Time File::getModifiedTime()
+Time::Timestamp File::getModifiedTime()
 {
     return m_ModifiedTime;
 }
 
-void File::setModifiedTime(Time t)
+void File::setModifiedTime(Time::Timestamp t)
 {
     m_ModifiedTime = t;
     fileAttributeChanged();
@@ -301,6 +423,7 @@ void File::truncate()
 
 void File::dataChanged()
 {
+#ifdef THREADS
     m_Lock.acquire();
 
     bool bAny = false;
@@ -324,8 +447,10 @@ void File::dataChanged()
     {
         Scheduler::instance().yield();
     }
+#endif
 }
 
+#ifdef THREADS
 void File::cullMonitorTargets(Thread *pThread)
 {
     LockGuard<Mutex> guard(m_Lock);
@@ -346,6 +471,7 @@ void File::cullMonitorTargets(Thread *pThread)
         }
     }
 }
+#endif
 
 void File::getFilesystemLabel(HugeStaticString &s)
 {

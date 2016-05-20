@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -48,7 +47,7 @@ Framebuffer *Graphics::createFramebuffer(Framebuffer *pParent,
         pMem = new uint8_t[bytesPerLine * h];
     else
         pMem = reinterpret_cast<uint8_t*>(pFbOverride);
-    NOTICE("pMem: " << ((uintptr_t) pMem) << " ov=" << (pFbOverride ? "yes" : "no"));
+    NOTICE("pMem: " << reinterpret_cast<uintptr_t>(pMem) << " ov=" << (pFbOverride ? "yes" : "no"));
 
     // Create the framebuffer
     Framebuffer *pRet = new Framebuffer();

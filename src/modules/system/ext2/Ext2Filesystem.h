@@ -67,6 +67,11 @@ private:
     /** Writes a block of data to the disk. */
     void writeBlock(uint32_t block);
 
+    void pinBlock(uint64_t location);
+    void unpinBlock(uint64_t location);
+
+    void sync(size_t offset, bool async);
+
     uint32_t findFreeBlock(uint32_t inode);
     uint32_t findFreeInode();
 
@@ -110,8 +115,10 @@ private:
     /** Number of group descriptors. */
     size_t m_nGroupDescriptors;
 
+#ifdef THREADS
     /** Write lock - we're finding some inodes and updating the superblock and block group structures. */
     Mutex m_WriteLock;
+#endif
 
     /** The root filesystem node. */
     File *m_pRoot;

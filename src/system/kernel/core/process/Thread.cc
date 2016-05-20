@@ -56,17 +56,26 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
 
   // If we've been given a user stack pointer, we are a user mode thread.
   bool bUserMode = true;
+  void *requestedStack = pStack;
   if (pStack == 0)
   {
     bUserMode = false;
     pStack = m_StateLevels[0].m_pAuxillaryStack = m_StateLevels[0].m_pKernelStack;
     m_StateLevels[0].m_pKernelStack = 0; // No kernel stack if kernel mode thread - causes bug on PPC
   }
-  else if(semiUser)
+
+  if(semiUser)
   {
       // Still have a kernel stack for when we jump to user mode, but start the
       // thread in kernel mode first.
       bUserMode = false;
+
+      // If no stack was given and we allocated, extract that allocated stack
+      // back out again so we have a kernel stack proper.
+      if (!requestedStack)
+      {
+        m_StateLevels[0].m_pKernelStack = m_StateLevels[0].m_pAuxillaryStack;
+      }
   }
 
   m_Id = m_pParent->addThread(this);
@@ -77,7 +86,9 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
 
   // Add to the scheduler
   if(!bDontPickCore)
+  {
       ProcessorThreadAllocator::instance().addThread(this, pStartFunction, pParam, bUserMode, pStack);
+  }
   else
   {
       Scheduler::instance().addThread(this, Processor::information().getScheduler());
@@ -142,17 +153,7 @@ Thread::~Thread()
       shutdown();
   }
 
-  // Remove us from the scheduler.
-  Scheduler::instance().removeThread(this);
-
-  if (m_pParent)
-      m_pParent->removeThread(this);
-
-  // TODO delete any pointer data.
-
-  //if (m_pAllocatedStack)
-  //  VirtualAddressSpace::getKernelAddressSpace().freeStack(m_pAllocatedStack);
-
+  // Clean up allocated stacks at each level.
   for(size_t i = 0; i < MAX_NESTED_EVENTS; i++)
   {
     if(m_StateLevels[i].m_pKernelStack)
@@ -164,9 +165,37 @@ Thread::~Thread()
         // we may have switched address spaces to allow the thread to die.
         m_pParent->getAddressSpace()->freeStack(m_StateLevels[i].m_pUserStack);
   }
-  
-  if(m_pTlsBase)
-    delete m_pTlsBase;
+
+  // Clean up TLS base.
+  if(m_pTlsBase && m_pParent)
+  {
+    // Unmap the TLS base.
+    if (m_pParent->getAddressSpace()->isMapped(m_pTlsBase))
+    {
+        physical_uintptr_t phys = 0;
+        size_t flags = 0;
+        m_pParent->getAddressSpace()->getMapping(m_pTlsBase, phys, flags);
+        m_pParent->getAddressSpace()->unmap(m_pTlsBase);
+        PhysicalMemoryManager::instance().freePage(phys);
+    }
+
+    // Give the address space back to the process.
+    uintptr_t base = reinterpret_cast<uintptr_t>(m_pTlsBase);
+    if (m_pParent->getAddressSpace()->getDynamicStart())
+        m_pParent->getDynamicSpaceAllocator().free(base, THREAD_TLS_SIZE);
+    else
+        m_pParent->getSpaceAllocator().free(base, THREAD_TLS_SIZE);
+  }
+  else if(m_pTlsBase)
+  {
+    ERROR("Thread: no parent, but a TLS base exists.");
+  }
+
+  // Remove us from the scheduler.
+  Scheduler::instance().removeThread(this);
+
+  if (m_pParent)
+      m_pParent->removeThread(this);
 }
 
 void Thread::shutdown()
@@ -198,8 +227,10 @@ void Thread::shutdown()
         if (!pQueue->isRequestValid(pReq))
         {
             // Resume queue and skip this request - it's dead.
-            /// \todo this may leak the request, if it was not async.
-            FATAL("Thread::shutdown: request in pending list was executed during halt.");
+            // Async items are run in their own thread, parented to the kernel.
+            // So, for this to happen, a non-async request succeeded, and may
+            // or may not have cleaned up.
+            /// \todo identify a way to make cleanup work here.
             pQueue->resume();
             ++it;
             continue;
@@ -285,6 +316,57 @@ void Thread::setStatus(Thread::Status s)
   }
 }
 
+SchedulerState &Thread::state()
+{
+    return *(m_StateLevels[m_nStateLevel].m_State);
+}
+
+SchedulerState &Thread::pushState()
+{
+    if ((m_nStateLevel + 1) >= MAX_NESTED_EVENTS)
+    {
+        ERROR("Thread: Max nested events!");
+        /// \todo Take some action here - possibly kill the thread?
+        return *(m_StateLevels[MAX_NESTED_EVENTS - 1].m_State);
+    }
+    m_nStateLevel++;
+    // NOTICE("New state level: " << m_nStateLevel << "...");
+    m_StateLevels[m_nStateLevel].m_InhibitMask = m_StateLevels[m_nStateLevel - 1].m_InhibitMask;
+    allocateStackAtLevel(m_nStateLevel);
+
+    setKernelStack();
+
+    return *(m_StateLevels[m_nStateLevel - 1].m_State);
+}
+
+void Thread::popState()
+{
+    if (m_nStateLevel == 0)
+    {
+        ERROR("Thread: Potential error: popStack() called with state level 0!");
+        ERROR("Thread: (ignore this if longjmp has been called)");
+        return;
+    }
+    m_nStateLevel --;
+
+    setKernelStack();
+}
+
+void *Thread::getStateUserStack()
+{
+    return m_StateLevels[m_nStateLevel].m_pUserStack;
+}
+
+void Thread::setStateUserStack(void *st)
+{
+    m_StateLevels[m_nStateLevel].m_pUserStack = st;
+}
+
+size_t Thread::getStateLevel() const
+{
+    return m_nStateLevel;
+}
+
 void Thread::threadExited()
 {
   Processor::information().getScheduler().killCurrentThread();
@@ -296,8 +378,6 @@ void Thread::allocateStackAtLevel(size_t stateLevel)
         stateLevel = MAX_NESTED_EVENTS - 1;
     if(m_StateLevels[stateLevel].m_pKernelStack == 0)
         m_StateLevels[stateLevel].m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
-//    if(m_StateLevels[stateLevel].m_pUserStack == 0)
-//        m_StateLevels[stateLevel].m_pUserStack = m_pParent->getAddressSpace()->allocateStack();
 }
 
 void *Thread::getKernelStack()
@@ -311,6 +391,16 @@ void Thread::setKernelStack()
 {
     if(m_StateLevels[m_nStateLevel].m_pKernelStack)
         Processor::information().setKernelStack(reinterpret_cast<uintptr_t>(m_StateLevels[m_nStateLevel].m_pKernelStack));
+}
+
+void Thread::pokeState(size_t stateLevel, SchedulerState &state)
+{
+    if (stateLevel >= MAX_NESTED_EVENTS)
+    {
+        ERROR("Thread::pokeState(): stateLevel `" << stateLevel << "' is over the maximum.");
+        return;
+    }
+    *(m_StateLevels[stateLevel].m_State) = state;
 }
 
 void Thread::sendEvent(Event *pEvent)
@@ -336,9 +426,9 @@ void Thread::inhibitEvent(size_t eventNumber, bool bInhibit)
 {
     LockGuard<Spinlock> guard(m_Lock);
     if (bInhibit)
-        m_StateLevels[m_nStateLevel].m_InhibitMask.set(eventNumber);
+        m_StateLevels[m_nStateLevel].m_InhibitMask->set(eventNumber);
     else
-        m_StateLevels[m_nStateLevel].m_InhibitMask.clear(eventNumber);
+        m_StateLevels[m_nStateLevel].m_InhibitMask->clear(eventNumber);
 }
 
 void Thread::cullEvent(Event *pEvent)
@@ -390,7 +480,7 @@ Event *Thread::getNextEvent()
             continue;
         }
 
-        if (m_StateLevels[m_nStateLevel].m_InhibitMask.test(e->getNumber()) ||
+        if (m_StateLevels[m_nStateLevel].m_InhibitMask->test(e->getNumber()) ||
             (e->getSpecificNestingLevel() != ~0UL &&
              e->getSpecificNestingLevel() != m_nStateLevel))
             m_EventQueue.pushBack(e);
@@ -437,16 +527,6 @@ void Thread::unexpectedExit()
     if(m_bRemovingRequests)
         return;
 
-#if 0
-    for(List<RequestQueue::Request *>::Iterator it = m_PendingRequests.begin();
-        it != m_PendingRequests.end();
-        it++)
-    {
-        (*it)->bReject = true;
-        (*it)->mutex.release();
-    }
-#endif
-
     NOTICE("Thread::unexpectedExit COMPLETE");
 }
 
@@ -461,28 +541,43 @@ uintptr_t Thread::getTlsBase()
     // PerProcessorScheduler, the address space is set properly.
     if(!m_pTlsBase)
     {
-        // Allocate space for this thread's TLS region
-        m_pTlsBase = new MemoryRegion("thread-local-storage");
-        if(!PhysicalMemoryManager::instance().allocateRegion(
-                                        *m_pTlsBase,
-                                        THREAD_TLS_SIZE / 0x1000,
-                                        0,
-                                        VirtualAddressSpace::Write))
-        {
-          delete m_pTlsBase;
-          m_pTlsBase = 0;
-          
-          return 0;
-        }
+        // Get ourselves some space.
+        uintptr_t base = 0;
+        if (m_pParent->getAddressSpace()->getDynamicStart())
+            m_pParent->getDynamicSpaceAllocator().allocate(THREAD_TLS_SIZE, base);
         else
+            m_pParent->getSpaceAllocator().allocate(THREAD_TLS_SIZE, base);
+
+        if (!base)
         {
-          NOTICE("Thread [" << Dec << m_Id << Hex << "]: allocated TLS area at " << reinterpret_cast<uintptr_t>(m_pTlsBase->virtualAddress()) << ".");
-          
-          uint32_t *tlsBase = reinterpret_cast<uint32_t*>(m_pTlsBase->virtualAddress());
-          *tlsBase = static_cast<uint32_t>(m_Id);
+            // Failed to allocate space.
+            NOTICE("Thread [" << Dec << m_pParent->getId() << ":" << m_Id << Hex << "]: failed to allocate TLS area.");
+            return base;
         }
+
+        // Map.
+        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+        m_pParent->getAddressSpace()->map(phys, reinterpret_cast<void *>(base), VirtualAddressSpace::Write);
+
+        // Set up our thread ID to start with in the TLS region, now that it's
+        // actually mapped into the address space.
+        m_pTlsBase = reinterpret_cast<void *>(base);
+        uint32_t *tlsBase = reinterpret_cast<uint32_t *>(m_pTlsBase);
+#ifdef BITS_64
+        *tlsBase = static_cast<uint32_t>(m_Id);
+#else
+        *tlsBase = m_Id;
+#endif
+
+        NOTICE("Thread [" << Dec << m_pParent->getId() << ":" << m_Id << Hex << "]: allocated TLS area at " << m_pTlsBase << ".");
     }
-    return reinterpret_cast<uintptr_t>(m_pTlsBase->virtualAddress());
+    return reinterpret_cast<uintptr_t>(m_pTlsBase);
+}
+
+void Thread::resetTlsBase()
+{
+    m_pTlsBase = 0;
+    Processor::setTlsBase(getTlsBase());
 }
 
 bool Thread::join()
@@ -551,6 +646,37 @@ bool Thread::detach()
     m_bDetached = true;
     return true;
   }
+}
+
+Thread::StateLevel::StateLevel() :
+    m_State(), m_pKernelStack(0), m_pUserStack(0), m_pAuxillaryStack(0),
+    m_InhibitMask(), m_pBlockingThread(0)
+{
+    m_State = new SchedulerState;
+    m_InhibitMask = new ExtensibleBitmap;
+}
+
+Thread::StateLevel::~StateLevel()
+{
+    delete m_InhibitMask;
+    delete m_State;
+}
+
+Thread::StateLevel::StateLevel(const Thread::StateLevel &s) :
+    m_State(), m_pKernelStack(s.m_pKernelStack), m_pUserStack(s.m_pUserStack),
+    m_pAuxillaryStack(s.m_pAuxillaryStack), m_InhibitMask(),
+    m_pBlockingThread(s.m_pBlockingThread)
+{
+    m_State = new SchedulerState(*(s.m_State));
+    m_InhibitMask = new ExtensibleBitmap(*(s.m_InhibitMask));
+}
+
+Thread::StateLevel &Thread::StateLevel::operator = (const Thread::StateLevel &s)
+{
+    m_State = new SchedulerState(*(s.m_State));
+    m_InhibitMask = new ExtensibleBitmap(*(s.m_InhibitMask));
+    m_pKernelStack = s.m_pKernelStack;
+    return *this;
 }
 
 #endif // THREADS

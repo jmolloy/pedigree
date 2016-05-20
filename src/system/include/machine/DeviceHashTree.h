@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -54,7 +53,7 @@ class DeviceHashTree
          * Fills the hash tree, starting at the given Device and recursively
          * traversing each device with children.
          */
-        void fill(Device *root);
+        void fill(Device *root = 0);
 
         /**
          * Adds a device, if it doesn't already exist

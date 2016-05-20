@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -62,7 +61,7 @@ public:
 
     /** Assumes this thread has just returned from executing a event handler,
         and lets it resume normal execution. */
-    void eventHandlerReturned();
+    void eventHandlerReturned() NORETURN;
 
     /** Adds a new thread.
         \param pThread The thread to add.
@@ -123,7 +122,7 @@ private:
     
     List<void*> m_NewThreadData;
     
-    static int processorAddThread(void *instance);
+    static int processorAddThread(void *instance) NORETURN;
 
     Thread *m_pIdleThread;
 

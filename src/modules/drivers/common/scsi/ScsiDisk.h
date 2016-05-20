@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -29,7 +28,21 @@
 class ScsiDisk : public Disk
 {
     private:
-
+        enum ScsiPeripheralType
+        {
+            BlockDevice         = 0x00,
+            SequentialDevice    = 0x01,
+            PrinterDevice       = 0x02,
+            ProcessorDevice     = 0x03,
+            WriteOnceDevice     = 0x04,
+            CdDvdDevice         = 0x05,
+            OpticalMemoryDevice = 0x07,
+            MediumChangerDevice = 0x08,
+            ArrayDevice         = 0x0C,
+            EnclosureDevice     = 0x0D,
+            NoDevice            = 0x1F,
+        };
+    public:
         struct Sense
         {
             uint8_t ResponseCode;
@@ -68,7 +81,6 @@ class ScsiDisk : public Disk
             uint32_t BlockSize;
         } PACKED;
 
-    public:
         ScsiDisk();
         virtual ~ScsiDisk();
 
@@ -89,6 +101,44 @@ class ScsiDisk : public Disk
         virtual uint64_t doWrite(uint64_t location);
         virtual uint64_t doSync(uint64_t location);
 
+        virtual size_t getSize() const
+        {
+            return m_NumBlocks * m_NativeBlockSize;
+        }
+
+        virtual size_t getBlockCount() const
+        {
+            return m_NumBlocks;
+        }
+
+        virtual size_t getBlockSize() const
+        {
+            return m_BlockSize;
+        }
+
+        /**
+         * Retrieves the native block size - that is, the logical block size.
+         * This differs from the main block size, which is for caching.
+         */
+        virtual size_t getNativeBlockSize() const
+        {
+            return m_NativeBlockSize;
+        }
+
+        virtual void pin(uint64_t location);
+        virtual void unpin(uint64_t location);
+
+    protected:
+        Cache &getCache()
+        {
+            return m_Cache;
+        }
+
+        Inquiry *getInquiry() const
+        {
+            return m_Inquiry;
+        }
+
     private:
 
         bool unitReady();
@@ -99,19 +149,25 @@ class ScsiDisk : public Disk
 
         bool getCapacityInternal(size_t *blockNumber, size_t *blockSize);
 
+        static void cacheCallback(CacheConstants::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta);
+
         class ScsiController* m_pController;
         size_t m_nUnit;
 
         Cache m_Cache;
+        Inquiry *m_Inquiry;
 
         uint64_t m_AlignPoints[8];
         size_t m_nAlignPoints;
 
         size_t m_NumBlocks;
         size_t m_BlockSize;
+        size_t m_NativeBlockSize;
+
+        ScsiPeripheralType m_DeviceType;
 
         /** Default block size for a device */
-        inline size_t defaultBlockSize()
+        virtual size_t defaultBlockSize()
         {
             return m_BlockSize;
         }

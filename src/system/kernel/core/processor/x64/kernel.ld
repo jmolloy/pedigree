@@ -12,6 +12,7 @@ SECTIONS
     *(.init.multiboot)
     *(.init.text);
     *(.init.data);
+    *(.asm.bss);
     trampoline = .;
     *(.trampoline.text);
     trampoline_end = .;
@@ -32,6 +33,9 @@ SECTIONS
     start_ctors = .;
     *(.ctors)
     end_ctors = .;
+    start_dtors = .;
+    *(.dtors)
+    end_dtors = .;
     
     start_module_ctors = .;
     *(.module_ctors)
@@ -47,12 +51,11 @@ SECTIONS
     end_modinfo = .;
   }
 
-
   .bss : AT(ADDR(.bss) - 0xFFFFFFFF7FF00000)
   {
     . = ALIGN(4096);
     bss = .; _bss = .; __bss = .;
-    *(.asm.bss)
+    *(.asm.preserve.bss)
     *(.bss*)
     . = ALIGN(4096);
   }
@@ -82,6 +85,11 @@ SECTIONS
     trampolinegdt = .;
     *(.trampoline.data.gdt)
     trampolinegdt_end = .;
+
+    . = ALIGN(4);
+
+    *(.trampoline.data.gdtr64)
+    *(.trampoline.data.gdt64)
   }
 
   /DISCARD/ : { *(.comment) *(.eh_frame) }

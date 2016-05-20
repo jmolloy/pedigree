@@ -18,7 +18,7 @@
  */
 
 #include <stdio.h>
-#include <ipc/Ipc.h>
+#include <native/ipc/Ipc.h>
 
 #include <unistd.h>
 #include <syslog.h>

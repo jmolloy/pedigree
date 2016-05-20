@@ -1,0 +1,124 @@
+/*!
+  \page registry Registry
+
+\section Introduction
+
+In order to keep configuration as simple as possible, a "Registry" has been
+built into Pedigree. While having the same name as the Windows concept,
+internally it is totally unique.
+
+Configuration is managed by a central manager, which provides a consistent
+interface that can be used without requiring knowledge of the configuration
+method. Backends can be plugged in quickly by sub-classing the Backend class,
+and ensuring the Backend is added to the configuration manager before it is
+used.
+
+\section API
+
+All configuration Backend classes must subclass ConfigurationBackend.
+
+\subsection ConfigurationManager
+
+    class ConfigurationManager
+    {
+    public:
+        ConfigurationManager &instance();
+    
+        size_t write(String configStore, String Table, String KeyName, String KeyValue, String ValueName, uintptr_t buffer, size_t nBytes);
+        size_t read(String configStore, String Table, String KeyName, String KeyValue, String ValueName, uintptr_t buffer, size_t maxBytes);
+    
+        bool installBackend(ConfigurationBackend *pBackend, String configStore = "");
+        void removeBackend(String configStore);
+    
+        bool backendExists(String configStore);
+    };
+
+This class interface is designed to hide the internal configuration methods from
+the programmer. The most important concept to grasp is that of the `configStore`
+parameters. Each Backend, when installed, specifies a `configStore` which is
+used from then on to uniquely identify the Backend. Should `configStore` not
+be passed to installBackend, the name of the store will be obtained from the
+ConfigurationBackend::getConfigStore() method.
+
+\subsection ConfigurationBackend
+
+    class ConfigurationBackend
+    {
+    public:
+        ConfigurationBackend(String configStore);
+        virtual ~ConfiguratonBackend();
+    
+        virtual size_t write(String Table, String KeyName, String KeyValue, String ValueName, uintptr_t buffer, size_t nBytes);
+        virtual size_t read(String Table, String KeyName, String KeyValue, String ValueName, uintptr_t buffer, size_t maxBytes) = 0;
+    
+        virtual String getConfigStore();
+    
+        virtual String getTypeName();
+    };
+
+The interface for a ConfigurationBackend is relatively simple, as it is merely
+a layer of abstraction between the ConfigurationManager and different methods of
+storing configuration data. It is *not* compulsory to override `write`, as the
+store may be read-only. It is however compulsory to override `read`. It is not
+compulsory, but highly recommended for ease of implementation, to override the
+ConfigurationBackend::getConfigStore() method.
+
+The destructor for ConfigurationBackend automatically removes the Backend from
+the ConfigurationManager. The constructor will not add the Backend
+automatically.
+
+\section example Example Implementation
+
+To make the concept easier to understand, the following code shows an example of
+the use of this design. Note that this is more like psuedocode, and it will not
+compile on Pedigree (due to casting and lack of String constructor calls,
+mainly).
+
+@code
+    // SqlConfigBackend: a ConfigurationBackend for an SQL database
+    class SqlConfigBackend : public ConfigurationBackend
+    {
+    public:
+        SqlConfigBackend();
+        
+        // Constructor - defines the database file (uses the name of the database file for configStore)
+        SqlConfigBackend(String fileName);
+        virtual ~SqlConfigBackend();
+            
+        // Runs a query of the form "SELECT valueName FROM Table WHERE keyName=keyValue;"
+        size_t read(String Table, String KeyName, String KeyValue, String ValueName, uintptr_t buffer, size_t maxBytes);
+        
+        // Updates the database (will execute an SQL SELECT, then an UPDATE or INSERT query)
+        size_t write(String Table, String KeyName, String KeyValue, String ValueName, uintptr_t buffer, size_t nBytes);
+        
+        // Returns "SqlBackend"
+        String getTypeName();
+    };
+
+    void NetworkStack::initialise()
+    {
+        ...
+    
+        SqlConfigBackend *sqlConfig = new SqlConfigBackend("root:/config/net-data");
+        if(sqlConfig)
+            ConfigurationManager::instance().installBackend(sqlConfig); // configStore = "net-data"
+    
+        ...
+    }
+
+    int NetworkCard::setStationInfo()
+    {
+        ...
+    
+        String Ipv4; // set above
+    
+        uint8_t *ipAddr = new uint8_t[Ipv4.length() + 1];
+        strcpy(ipAddr, static_cast<const char*>(Ipv4));
+    
+        ConfigurationManager::instance().write("net-data", "interfaces", "interface", "interface0", "ipv4", ipAddr, Ipv4.length());
+    
+        ...
+    }
+@endcode
+
+*/

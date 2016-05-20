@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -56,7 +55,7 @@ PPC32VirtualAddressSpace::PPC32VirtualAddressSpace() :
     m_Vsid = VsidManager::instance().obtainVsid();
   }
 
-  memset(reinterpret_cast<uint8_t*>(m_pPageDirectory), 0, sizeof(m_pPageDirectory));
+  ByteSet(reinterpret_cast<uint8_t*>(m_pPageDirectory), 0, sizeof(m_pPageDirectory));
 }
 
 PPC32VirtualAddressSpace::~PPC32VirtualAddressSpace()
@@ -92,7 +91,7 @@ bool PPC32VirtualAddressSpace::initialise(Translations &translations)
     panic("Kernel page table mapping failed");
 
   // Now make sure they're all invalid.
-  memset(reinterpret_cast<uint8_t*> (KERNEL_INITIAL_PAGE_TABLES),
+  ByteSet(reinterpret_cast<uint8_t*> (KERNEL_INITIAL_PAGE_TABLES),
          0,
          0x100000);
   // Map them.
@@ -131,7 +130,7 @@ void PPC32VirtualAddressSpace::initialRoster(Translations &translations)
       {
         pTable = new ShadowPageTable;
 
-        memset(reinterpret_cast<uint8_t*> (pTable), 0, sizeof(ShadowPageTable));
+        ByteSet(reinterpret_cast<uint8_t*> (pTable), 0, sizeof(ShadowPageTable));
         m_pPageDirectory[PAGE_DIRECTORY_INDEX(virtualAddress)] = pTable;
       }
       // Grab the page table entry.
@@ -189,7 +188,7 @@ bool PPC32VirtualAddressSpace::map(physical_uintptr_t physicalAddress,
   {
     // New page table.
     pTable = new ShadowPageTable;
-    memset(reinterpret_cast<uint8_t*> (pTable), 0, sizeof(ShadowPageTable));
+    ByteSet(reinterpret_cast<uint8_t*> (pTable), 0, sizeof(ShadowPageTable));
     m_pPageDirectory[PAGE_DIRECTORY_INDEX(virtualAddress)] = pTable;
   }
 
@@ -313,7 +312,7 @@ VirtualAddressSpace *PPC32VirtualAddressSpace::clone()
             VirtualAddressSpace::Write | VirtualAddressSpace::KernelMode);
 
         // Copy across.
-        memcpy(KERNEL_VIRTUAL_TEMP1, virtualAddress, 0x1000);
+        MemoryCopy(KERNEL_VIRTUAL_TEMP1, virtualAddress, 0x1000);
 
         // Unmap.
         unmap(KERNEL_VIRTUAL_TEMP1);

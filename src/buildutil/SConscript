@@ -1,0 +1,97 @@
+'''
+Copyright (c) 2008-2014, Pedigree Developers
+
+Please see the CONTRIB file in the root of the source tree for a full
+list of contributors.
+
+Permission to use, copy, modify, and distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+'''
+
+
+import os
+
+Import(['host_env'])
+
+env = host_env
+conf = Configure(env)
+
+KERNEL_DIR = env.Dir('../system/kernel')
+
+# Distinguish build system objects from those built for the target, always.
+env['OBJSUFFIX'] = '.build.o'
+
+subdirs = [
+    'ext2img',
+    'testsuite',
+]
+
+if env['instrumentation']:
+    subdirs.append('instrument')
+
+if env['memory_tracing']:
+    subdirs.append('memorytracer')
+
+# Make sure we can find libraries in the build directory.
+env.MergeFlags({
+    'LIBPATH': [env['BUILDDIR']],
+})
+
+# Build utility libraries.
+header_paths = [
+    env.Dir('#src/modules/system'),
+    env.Dir('#src/system/include'),
+    env.Dir('#src/system/kernel/core'),
+]
+libutility_sources = [
+    os.path.join('utilities', 'String.cc'),
+    os.path.join('utilities', 'List.cc'),
+    os.path.join('utilities', 'Vector.cc'),
+    os.path.join('utilities', 'Tree.cc'),
+    os.path.join('utilities', 'ExtensibleBitmap.cc'),
+    os.path.join('utilities', 'ObjectPool.cc'),
+    os.path.join('core', 'lib', 'string.c'),
+    os.path.join('core', 'lib', 'memory.c'),
+    os.path.join('core', 'lib', 'vsprintf.c'),
+    os.path.join('core', 'lib', 'SlamAllocator.cc'),
+    os.path.join('core', 'processor', 'PhysicalMemoryManager.cc'),
+    'Log.cc',
+]
+defines = [
+    'HOSTED', 'UTILITY_LINUX', 'LITTLE_ENDIAN', 'DONT_LOG_TO_SERIAL',
+    'BENCHMARK',
+]
+
+utility_env = env.Clone()
+utility_env.Append(**{
+    'CPPPATH': header_paths,
+    'CPPDEFINES': defines,
+})
+utility_env.MergeFlags({
+    'CCFLAGS': ['-g3', '-ggdb', '-O3'],
+    'CXXFLAGS': ['-std=c++11'],
+    'CFLAGS': ['-std=gnu99'],
+})
+
+utility_env.Library(os.path.join(env['BUILDDIR'], 'utility'),
+    ['shim.cc'] + [KERNEL_DIR.File(f) for f in libutility_sources])
+
+# Build a version of libutility that has the necessary coverage pieces, such
+# that we can get code coverage analysis where actual .cc files hold the code
+# being tested.
+utility_env['OBJSUFFIX'] = '.build.coverage.o'
+utility_env.Library(os.path.join(env['BUILDDIR'], 'utility_coverage'),
+    ['shim.cc'] + [KERNEL_DIR.File(f) for f in libutility_sources],
+    CCFLAGS=utility_env['COVERAGE_CCFLAGS'])
+
+for subdir in subdirs:
+    SConscript(os.path.join(subdir, 'SConscript'), exports=['env'])

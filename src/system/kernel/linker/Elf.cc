@@ -28,17 +28,17 @@
 
 /** Helper function: copies data into a new buffer given a certain number of bytes */
 template <typename T>
-T *copy(T *buff, size_t numBytes)
+static T *copy(T *buff, size_t numBytes)
 {
     T *ret = new T[numBytes / sizeof(T)];
-    memcpy(ret, buff, numBytes);
+    MemoryCopy(ret, buff, numBytes);
     return ret;
 }
 
 /** Helper function: iterates through all program headers given to find where pCurrent resides, then copies that data into a new
     buffer and returns it.*/
 template<typename T>
-T *elfCopy(uint8_t *pBuffer, Elf::ElfProgramHeader_t *pProgramHeaders, size_t nProgramHeaders, T *pCurrent, size_t size)
+T *Elf::elfCopy(uint8_t *pBuffer, Elf::ElfProgramHeader_t *pProgramHeaders, size_t nProgramHeaders, T *pCurrent, size_t size)
 {
     for (size_t i = 0; i < nProgramHeaders; i++)
     {
@@ -48,8 +48,8 @@ T *elfCopy(uint8_t *pBuffer, Elf::ElfProgramHeader_t *pProgramHeaders, size_t nP
         {
             uintptr_t loc = reinterpret_cast<uintptr_t>(pCurrent) - ph.vaddr;
             pCurrent = new T[size/sizeof(T)];
-            memcpy (reinterpret_cast<uint8_t*>(pCurrent), &pBuffer[loc],
-                    size);
+            MemoryCopy(reinterpret_cast<uint8_t*>(pCurrent), &pBuffer[loc],
+                       size);
             return pCurrent;
         }
     }
@@ -92,19 +92,19 @@ Elf::Elf() :
 
 Elf::~Elf()
 {
-    delete m_pSymbolTable;
-    delete m_pStringTable;
-    delete m_pShstrtab;
+    delete [] m_pSymbolTable;
+    delete [] m_pStringTable;
+    delete [] m_pShstrtab;
     // delete m_pGotTable;
-    delete m_pRelTable;
-    delete m_pRelaTable;
-    delete m_pPltRelTable;
-    delete m_pPltRelaTable;
-    delete m_pDebugTable;
-    delete m_pDynamicSymbolTable;
-    delete m_pDynamicStringTable;
-    delete m_pSectionHeaders;
-    delete m_pProgramHeaders;
+    delete [] m_pRelTable;
+    delete [] m_pRelaTable;
+    delete [] m_pPltRelTable;
+    delete [] m_pPltRelaTable;
+    delete [] m_pDebugTable;
+    delete [] m_pDynamicSymbolTable;
+    delete [] m_pDynamicStringTable;
+    delete [] m_pSectionHeaders;
+    delete [] m_pProgramHeaders;
 }
 
 Elf::Elf(const Elf &elf) :
@@ -222,7 +222,7 @@ bool Elf::createNeededOnly(uint8_t *pBuffer, size_t length)
     {
         m_nProgramHeaders = pHeader->phnum;
         m_pProgramHeaders = new ElfProgramHeader_t[pHeader->phnum];
-        memcpy(reinterpret_cast<uint8_t*>(m_pProgramHeaders), &pBuffer[pHeader->phoff], sizeof(ElfProgramHeader_t)*pHeader->phnum);
+        MemoryCopy(reinterpret_cast<uint8_t*>(m_pProgramHeaders), &pBuffer[pHeader->phoff], sizeof(ElfProgramHeader_t)*pHeader->phnum);
 
         size_t nDynamicStringTableSize = 0;
 
@@ -241,6 +241,7 @@ bool Elf::createNeededOnly(uint8_t *pBuffer, size_t length)
                     {
                         case DT_NEEDED:
                             m_NeededLibraries.pushBack(reinterpret_cast<char*> (pDyn->un.ptr));
+                            break;
                         case DT_STRTAB:
                             m_pDynamicStringTable = reinterpret_cast<char*> (pDyn->un.ptr);
                             break;
@@ -310,7 +311,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     // Load in the section headers.
     m_nSectionHeaders = pHeader->shnum;
     m_pSectionHeaders = new ElfSectionHeader_t[pHeader->shnum];
-    memcpy (reinterpret_cast<uint8_t*>(m_pSectionHeaders), &pBuffer[pHeader->shoff], pHeader->shnum*sizeof(ElfSectionHeader_t));
+    MemoryCopy(reinterpret_cast<uint8_t*>(m_pSectionHeaders), &pBuffer[pHeader->shoff], pHeader->shnum*sizeof(ElfSectionHeader_t));
 
     // Find the section header string table.
     ElfSectionHeader_t *pShstrtab = &m_pSectionHeaders[pHeader->shstrndx];
@@ -318,16 +319,16 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     // Load the section header string table.
     m_nShstrtabSize = pShstrtab->size;
     m_pShstrtab = new char[m_nShstrtabSize];
-    memcpy (reinterpret_cast<uint8_t*>(m_pShstrtab), &pBuffer[pShstrtab->offset], m_nShstrtabSize);
+    MemoryCopy(reinterpret_cast<uint8_t*>(m_pShstrtab), &pBuffer[pShstrtab->offset], m_nShstrtabSize);
 
     ElfSectionHeader_t *pSymbolTable=0, *pStringTable=0;
     // Go through each section header, trying to find .symtab.
     for (int i = 0; i < pHeader->shnum; i++)
     {
         const char *pStr = m_pShstrtab + m_pSectionHeaders[i].name;
-        if (!strcmp(pStr, ".symtab"))
+        if (!StringCompare(pStr, ".symtab"))
             pSymbolTable = &m_pSectionHeaders[i];
-        if (!strcmp(pStr, ".strtab"))
+        if (!StringCompare(pStr, ".strtab"))
             pStringTable = &m_pSectionHeaders[i];
     }
 
@@ -339,7 +340,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     {
         m_nSymbolTableSize = pSymbolTable->size;
         m_pSymbolTable = new ElfSymbol_t[m_nSymbolTableSize/sizeof(ElfSymbol_t)];
-        memcpy (reinterpret_cast<uint8_t*>(m_pSymbolTable), &pBuffer[pSymbolTable->offset], pSymbolTable->size);
+        MemoryCopy(reinterpret_cast<uint8_t*>(m_pSymbolTable), &pBuffer[pSymbolTable->offset], pSymbolTable->size);
     }
 
     if (pStringTable == 0)
@@ -350,7 +351,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     {
         m_nStringTableSize = pStringTable->size;
         m_pStringTable = new char[m_nStringTableSize];
-        memcpy (reinterpret_cast<uint8_t*>(m_pStringTable), &pBuffer[pStringTable->offset], m_nStringTableSize);
+        MemoryCopy(reinterpret_cast<uint8_t*>(m_pStringTable), &pBuffer[pStringTable->offset], m_nStringTableSize);
     }
 
     // Attempt to load in some program headers, if they exist.
@@ -358,7 +359,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
     {
         m_nProgramHeaders = pHeader->phnum;
         m_pProgramHeaders = new ElfProgramHeader_t[pHeader->phnum];
-        memcpy(reinterpret_cast<uint8_t*>(m_pProgramHeaders), &pBuffer[pHeader->phoff], sizeof(ElfProgramHeader_t)*pHeader->phnum);
+        MemoryCopy(reinterpret_cast<uint8_t*>(m_pProgramHeaders), &pBuffer[pHeader->phoff], sizeof(ElfProgramHeader_t)*pHeader->phnum);
 
         //size_t nDynamicStringTableSize = 0;
 
@@ -377,6 +378,7 @@ bool Elf::create(uint8_t *pBuffer, size_t length)
                     {
                         case DT_NEEDED:
                             m_NeededLibraries.pushBack(reinterpret_cast<char*> (pDyn->un.ptr));
+                            break;
                         case DT_SYMTAB:
                             m_pDynamicSymbolTable = reinterpret_cast<ElfSymbol_t*> (pDyn->un.ptr);
                             break;
@@ -500,6 +502,7 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
     }
     if (!KernelElf::instance().getModuleAllocator().allocate(loadSize, loadBase))
     {
+        ERROR("ELF: could not allocate space for this module [loadSize=" << loadSize << "]");
         return false;
     }
 
@@ -546,13 +549,13 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
             if (m_pSectionHeaders[i].type != SHT_NOBITS)
             {
                 // Copy section data from the file.
-                memcpy (reinterpret_cast<uint8_t*> (m_pSectionHeaders[i].addr),
+                MemoryCopy(reinterpret_cast<uint8_t*> (m_pSectionHeaders[i].addr),
                         &pBuffer[m_pSectionHeaders[i].offset],
                         m_pSectionHeaders[i].size);
             }
             else
             {
-                memset (reinterpret_cast<uint8_t*> (m_pSectionHeaders[i].addr),
+                ByteSet(reinterpret_cast<uint8_t*> (m_pSectionHeaders[i].addr),
                         0,
                         m_pSectionHeaders[i].size);
             }
@@ -565,9 +568,10 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
         {
             //  Load information from non-allocated sections here
             const char* pStr = m_pShstrtab + m_pSectionHeaders[i].name;
-            if (!strcmp(pStr, ".debug_frame"))
+            if (!StringCompare(pStr, ".debug_frame"))
             {
-                m_pDebugTable = reinterpret_cast<uint8_t*> (m_pSectionHeaders[i].addr);
+                m_pDebugTable = reinterpret_cast<uint32_t*> (m_pSectionHeaders[i].addr);
+                uintptr_t *debugTablePointers = reinterpret_cast<uintptr_t *>(m_pSectionHeaders[i].addr);
                 m_nDebugTableSize = m_pSectionHeaders[i].size;
 
                 /*  Go through the debug table relocating debug frame information
@@ -576,7 +580,8 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
                 while (nIndex < m_nDebugTableSize)
                 {
                     // Get the length of this entry.
-                    uint32_t nLength = * reinterpret_cast<uint32_t*> (m_pDebugTable+nIndex);
+                    assert(!(nIndex % sizeof(uint32_t)));
+                    uint32_t nLength = m_pDebugTable[nIndex / sizeof(uint32_t)];
 
                     nIndex += sizeof(uint32_t);
 
@@ -589,7 +594,7 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
                     }
 
                     // Get the type of this entry (or CIE pointer if this is a FDE).
-                    uint32_t nCie = * reinterpret_cast<uint32_t*> (m_pDebugTable+nIndex);
+                    uint32_t nCie = m_pDebugTable[nIndex / sizeof(uint32_t)];
                     nIndex += sizeof(uint32_t);
 
                     // Is this a CIE?
@@ -601,7 +606,8 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
                     }
 
                     // This is a FDE. Get its initial location.
-                    uintptr_t *nInitialLocation = reinterpret_cast<uintptr_t*> (m_pDebugTable+nIndex);
+                    assert(!(nIndex % sizeof(uintptr_t)));
+                    uintptr_t *nInitialLocation = &debugTablePointers[nIndex / sizeof(uintptr_t)];
                     *nInitialLocation+= loadBase;
 
                     nIndex += nLength - sizeof(processor_register_t);
@@ -627,7 +633,7 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
 
     if (m_pSymbolTable && m_pStringTable)
     {
-        ElfSymbol_t *pSymbol = reinterpret_cast<ElfSymbol_t *>(m_pSymbolTable);
+        pSymbol = m_pSymbolTable;
 
         const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable);
 
@@ -671,9 +677,7 @@ bool Elf::loadModule(uint8_t *pBuffer, size_t length, uintptr_t &loadBase, size_
             // If the shndx == UND (0x0), the symbol is in the table but undefined!
             if (*pStr != '\0' && pSymbol->shndx != 0)
             {
-                m_SymbolTable.insert(String(pStr), binding, this, pSymbol->value);
-                if (pSymbolTableCopy)
-                    pSymbolTableCopy->insert(String(pStr), binding, this, pSymbol->value);
+                m_SymbolTable.insertMultiple(pSymbolTableCopy, String(pStr), binding, this, pSymbol->value);
             }
             pSymbol++;
         }
@@ -726,6 +730,14 @@ bool Elf::finaliseModule(uint8_t *pBuffer, size_t length)
                 }
                 else
                 {
+                    // Get the current flags so e.g. a READONLY section overlapping
+                    // a WRITE section will get the WRITE permission (which is not
+                    // "ideal", but the ELF file itself should not be laid out
+                    // like that if the READONLY permission is a requirement).
+                    physical_uintptr_t phys = 0;;
+                    size_t currentFlags = 0;
+                    Processor::information().getVirtualAddressSpace().getMapping(virt, phys, currentFlags);
+                    flags |= currentFlags;
                     Processor::information().getVirtualAddressSpace().setFlags(virt, flags);
                 }
             }
@@ -883,11 +895,11 @@ bool Elf::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolTable 
                 : (loadAddr+m_pProgramHeaders[i].memsz-sectionStart);
 
             // Copy segment data from the file.
-            memcpy (reinterpret_cast<uint8_t*> (sectionStart),
+            MemoryCopy(reinterpret_cast<uint8_t*> (sectionStart),
                     &pBuffer[offset],
                     filesz);
 
-            memset (reinterpret_cast<uint8_t*> (sectionStart+filesz),
+            ByteSet(reinterpret_cast<uint8_t*> (sectionStart+filesz),
                     0,
                     memsz-filesz);
 
@@ -958,6 +970,18 @@ bool Elf::load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolTable 
     return true;
 }
 
+bool Elf::extractEntryPoint(uint8_t *pBuffer, size_t length, uintptr_t &entry)
+{
+    /// \todo check magic
+    if (length < sizeof(ElfHeader_t))
+        return false;
+
+    ElfHeader_t *pHeader = reinterpret_cast<ElfHeader_t *>(pBuffer);
+    entry = pHeader->entry;
+
+    return true;
+}
+
 uintptr_t Elf::getLastAddress()
 {
     // TODO
@@ -969,7 +993,7 @@ const char *Elf::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
     if (!m_pSymbolTable || !m_pStringTable)
         return 0; // Just return null if we haven't got a symbol table.
 
-    ElfSymbol_t *pSymbol = reinterpret_cast<ElfSymbol_t *>(m_pSymbolTable);
+    ElfSymbol_t *pSymbol = m_pSymbolTable;
 
     const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable);
 
@@ -1041,7 +1065,7 @@ bool Elf::relocate(uint8_t *pBuffer, uintptr_t length)
 
         // Grab the shstrtab
         const char *pStr = reinterpret_cast<const char*> (m_pShstrtab) + pLink->name;
-        if (!strcmp(pStr, ".modinfo"))
+        if (!StringCompare(pStr, ".modinfo"))
             continue;
 
         // Is it a relocation section?
@@ -1087,7 +1111,7 @@ bool Elf::relocateModinfo(uint8_t *pBuffer, uintptr_t length)
 
         // Grab the shstrtab
         const char *pStr = reinterpret_cast<const char*> (m_pShstrtab) + pLink->name;
-        if (strcmp(pStr, ".modinfo"))
+        if (StringCompare(pStr, ".modinfo"))
             continue;
 
         // Is it a relocation section?

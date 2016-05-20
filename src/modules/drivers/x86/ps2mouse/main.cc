@@ -23,56 +23,48 @@
 // Global static object for the PS/2 mouse we'll be working with
 static Ps2Mouse *g_Ps2Mouse = 0;
 
-Device *findPs2Mouse(Device *base)
+static bool entry()
 {
-    for (unsigned int i = 0; i < base->getNumChildren(); i++)
-    {
-        Device *pChild = base->getChild(i);
-
-        // Check that this device actually has IO regions
-        if(pChild->addresses().count() > 0)
-            if(pChild->addresses()[0]->m_Name == "ps2-base")
-                return pChild;
-        
-        // If the device is a PS/2 base, we won't get here. So recurse.
-        if(pChild->getNumChildren())
+    auto f = [] (Device *p) {
+        if (g_Ps2Mouse)
         {
-            Device *p = findPs2Mouse(pChild);
-            if(p)
-                return p;
+            return p;
         }
+
+        if(p->addresses().count() > 0)
+        {
+            if(p->addresses()[0]->m_Name == "ps2-base")
+            {
+                Ps2Mouse *pNewChild = new Ps2Mouse(p);
+                if (pNewChild->initialise(p->addresses()[0]->m_Io))
+                {
+                    g_Ps2Mouse = pNewChild;
+                }
+                else
+                {
+                    ERROR("IB700 initialisation failed!");
+                    delete pNewChild;
+                }
+            }
+        }
+
+        return p;
+    };
+
+    auto c = pedigree_std::make_callable(f);
+    Device::foreach(c, 0);
+
+    // Cannot replace the child, as we need to have it present for keyboards.
+    if (g_Ps2Mouse)
+    {
+        Device::addToRoot(g_Ps2Mouse);
+        return true;
     }
-    return 0;
+
+    return false;
 }
 
-bool entry()
-{
-    Device *root = &Device::root();
-    Device *pDevice = findPs2Mouse(root);
-    if(pDevice)
-    {
-        g_Ps2Mouse = new Ps2Mouse(pDevice);
-
-        if(g_Ps2Mouse->initialise(pDevice->addresses()[0]->m_Io))
-        {
-            g_Ps2Mouse->setParent(root);
-            root->addChild(g_Ps2Mouse);
-        }
-        else
-        {
-            delete g_Ps2Mouse;
-            g_Ps2Mouse = 0;
-
-            return false;
-        }
-    }
-    else
-        return false;
-
-    return true;
-}
-
-void unload()
+static void unload()
 {
     if(g_Ps2Mouse)
         delete g_Ps2Mouse;

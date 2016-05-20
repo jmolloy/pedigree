@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -91,13 +90,13 @@ bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t
 {
     Cbw *pCbw = new Cbw;
     PointerGuard<Cbw> guard(pCbw);
-    memset(pCbw, 0, sizeof(Cbw));
+    ByteSet(pCbw, 0, sizeof(Cbw));
     pCbw->nSig = CbwSig;
     pCbw->nDataBytes = HOST_TO_LITTLE32(nRespBytes);
     pCbw->nFlags = bWrite ? 0 : 0x80;
     pCbw->nLUN = nUnit;
     pCbw->nCommandSize = nCommandSize;
-    memcpy(pCbw->pCommand, reinterpret_cast<void*>(pCommand), nCommandSize);
+    MemoryCopy(pCbw->pCommand, reinterpret_cast<void*>(pCommand), nCommandSize);
 
     ssize_t nResult = syncOut(m_pOutEndpoint, reinterpret_cast<uintptr_t>(pCbw), 31);
 
@@ -152,7 +151,7 @@ bool UsbMassStorageDevice::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t
 
             // Attempt to read the CSW now that the stall condition is cleared
             Csw *pCsw = new Csw;
-            PointerGuard<Csw> guard(pCsw);
+            PointerGuard<Csw> cswGuard(pCsw);
             nResult = syncIn(m_pInEndpoint, reinterpret_cast<uintptr_t>(pCsw), 13);
 
             // Stalled?

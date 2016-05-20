@@ -16,6 +16,7 @@
 ; OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 [bits 64]
+[section .text]
 
 [GLOBAL sigret_stub]
 [GLOBAL sigret_stub_end]
@@ -59,7 +60,6 @@ sigret_stub_end:
 
 [GLOBAL pthread_stub]
 [GLOBAL pthread_stub_end]
-[EXTERN pthread_exit]
 
 ; void pthread_stub(size_t p1, size_t p2, size_t p3, size_t p4);
 pthread_stub:

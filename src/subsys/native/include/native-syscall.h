@@ -17,35 +17,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _PEDIGREE_SYSCALL_H
-#define _PEDIGREE_SYSCALL_H
+#ifndef _NATIVE_SYSCALL_H
+#define _NATIVE_SYSCALL_H
 
 // If you change this, ensure you change src/system/include/processor/Syscalls.h !
-#define NATIVE_SYSCALL_SERVICE 3
+#define SERVICE 3
+#define SERVICE_INIT int ign = 0
+#define SERVICE_ERROR ign
 
-#ifdef X86
-#include "native-syscall-i686.h"
-#define SYSCALL_TARGET_FOUND
-#endif
-
-#ifdef X64
-#include "native-syscall-amd64.h"
-#define SYSCALL_TARGET_FOUND
-#endif
-
-#ifdef PPC_COMMON
-#include "native-syscall-ppc.h"
-#define SYSCALL_TARGET_FOUND
-#endif
-
-#ifdef ARM_COMMON
-#include "native-syscall-arm.h"
-#define SYSCALL_TARGET_FOUND
-#endif
-
-#ifndef SYSCALL_TARGET_FOUND
-#error Syscall target not found!
-#endif
-
+#include <processor/syscall-stubs.h>
 
 #endif

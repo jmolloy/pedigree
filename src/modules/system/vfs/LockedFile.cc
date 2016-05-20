@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -19,3 +18,81 @@
  */
 
 #include "LockedFile.h"
+#include <processor/Processor.h>
+#include <Log.h>
+
+LockedFile::LockedFile(File *pFile) : m_File(pFile), m_bLocked(false), m_LockerPid(0)
+#ifdef THREADS
+    , m_Lock(false)
+#endif
+{};
+
+LockedFile::LockedFile(LockedFile &c) : m_File(0), m_bLocked(false), m_LockerPid(0)
+#ifdef THREADS
+    , m_Lock(false)
+#endif
+{
+    m_File = c.m_File;
+    m_bLocked = c.m_bLocked;
+    m_LockerPid = c.m_LockerPid;
+
+#ifdef THREADS
+    if(m_bLocked)
+    {
+        m_Lock.acquire();
+    }
+#endif
+}
+
+bool LockedFile::lock(bool bBlock)
+{
+#ifdef THREADS
+    if(!bBlock)
+    {
+        if(!m_Lock.tryAcquire())
+        {
+            return false;
+        }
+    }
+    else
+        m_Lock.acquire();
+
+    // Obtained the lock
+    m_bLocked = true;
+    m_LockerPid = Processor::information().getCurrentThread()->getParent()->getId();
+#endif
+    return true;
+}
+
+void LockedFile::unlock()
+{
+#ifdef THREADS
+    if(m_bLocked)
+    {
+        m_bLocked = false;
+        m_Lock.release();
+    }
+#endif
+}
+
+File *LockedFile::getFile()
+{
+#ifdef THREADS
+    // If we're locked, and we aren't the locking process, we can't access the file
+    // Otherwise, the file is accessible
+    if(m_bLocked == true && Processor::information().getCurrentThread()->getParent()->getId() != m_LockerPid)
+        return 0;
+    else
+#endif
+        return m_File;
+}
+
+size_t LockedFile::getLocker()
+{
+#ifdef THREADS
+    if(m_bLocked)
+        return m_LockerPid;
+    else
+#endif
+        return 0;
+}

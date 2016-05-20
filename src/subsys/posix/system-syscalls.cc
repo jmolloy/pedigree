@@ -62,13 +62,13 @@
 #define GET_CWD() (Processor::information().getCurrentThread()->getParent()->getCwd())
 
 /// Saves a char** array in the Vector of String*s given.
-static size_t save_string_array(const char **array, Vector<String*> &rArray)
+static size_t save_string_array(const char **array, Vector<SharedPointer<String>> &rArray)
 {
     size_t result = 0;
     while (*array)
     {
         String *pStr = new String(*array);
-        rArray.pushBack(pStr);
+        rArray.pushBack(SharedPointer<String>(pStr));
         array++;
 
         result += pStr->length() + 1;
@@ -76,29 +76,26 @@ static size_t save_string_array(const char **array, Vector<String*> &rArray)
 
     return result;
 }
+
 /// Creates a char** array, properly null-terminated, from the Vector of String*s given, at the location "arrayLoc",
 /// returning the end of the char** array created in arrayEndLoc and the start as the function return value.
-static char **load_string_array(Vector<String*> &rArray, uintptr_t arrayLoc, uintptr_t &arrayEndLoc)
+static char **load_string_array(Vector<SharedPointer<String>> &rArray, uintptr_t arrayLoc, uintptr_t &arrayEndLoc)
 {
     char **pMasterArray = reinterpret_cast<char**> (arrayLoc);
 
     char *pPtr = reinterpret_cast<char*> (arrayLoc + sizeof(char*) * (rArray.count()+1) );
     int i = 0;
-    for (Vector<String*>::Iterator it = rArray.begin();
-            it != rArray.end();
-            it++)
+    for (auto it = rArray.begin(); it != rArray.end(); it++)
     {
-        String *pStr = *it;
+        SharedPointer<String> pStr = *it;
 
-        strcpy(pPtr, *pStr);
+        StringCopy(pPtr, *pStr);
         pPtr[pStr->length()] = '\0'; // Ensure NULL-termination.
 
         pMasterArray[i] = pPtr;
 
         pPtr += pStr->length()+1;
         i++;
-
-        delete pStr;
     }
 
     pMasterArray[i] = 0; // Null terminate.
@@ -207,6 +204,11 @@ int posix_fork(SyscallState &state)
     Thread *pThread = new Thread(pProcess, state);
     pThread->detach();
 
+    // Fix up the main thread in the child.
+    pedigree_copy_posix_thread(
+        Processor::information().getCurrentThread(), pParentSubsystem,
+        pThread, pSubsystem);
+
     // Kick off the new thread immediately.
     Scheduler::instance().yield();
 
@@ -262,12 +264,8 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         return -1;
     }
 
-    String toLoad(name);
-    if(!strcmp(name, "sh") || !strcmp(name, "/bin/sh"))
-    {
-        /// \todo read $SHELL from environment.
-        toLoad = "/applications/bash";
-    }
+    String toLoad;
+    normalisePath(toLoad, name);
 
     // Attempt to find the file, first!
     File *pActualFile = 0;
@@ -297,30 +295,31 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     }
 
     // The argv and environment for the new process
-    Vector<String*> savedArgv, savedEnv;
+    /// \todo move this to using SharedPointer
+    Vector<SharedPointer<String>> savedArgv, savedEnv;
 
     /// \todo This could probably be cleaned up a little.
 
     // Try and read the shebang, if any
-    String theShebang, *oldPath = 0;
+    String theShebang;
     static char tmpBuff[128 + 1];
     file->read(0, 128, reinterpret_cast<uintptr_t>(tmpBuff));
     tmpBuff[128] = '\0';
 
-    List<String*> additionalArgv;
+    List<SharedPointer<String>> additionalArgv;
 
-    if (!strncmp(tmpBuff, "#!", 2))
+    if (!StringCompareN(tmpBuff, "#!", 2))
     {
         // We have a shebang, so grab the command.
 
         // Scan the found string for a newline. If we don't get a newline, the shebang was over 128 bytes and we error out.
         bool found = false;
-        for (size_t i = 0; i < 128; i++)
+        for (size_t j = 0; j < 128; j++)
         {
-            if (tmpBuff[i] == '\n')
+            if (tmpBuff[j] == '\n')
             {
                 found = true;
-                tmpBuff[i] = '\0';
+                tmpBuff[j] = '\0';
                 break;
             }
         }
@@ -342,12 +341,11 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
             return -1;
         }
 
-        String *newFname = *additionalArgv.begin();
+        String newFname = **additionalArgv.begin();
 
         // Prepend the tokenized shebang line argv
         // argv will look like: interpreter-path additional-shebang-options script-name old-argv
-        for (List<String*>::Iterator it = additionalArgv.begin();
-             it != additionalArgv.end();
+        for (auto it = additionalArgv.begin(); it != additionalArgv.end();
              it++)
         {
             savedArgv.pushBack(*it);
@@ -357,11 +355,11 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         // ### is it safe to write to argv?
         argv[0] = name;
 
-        name = static_cast<const char*>(*newFname);
+        name = static_cast<const char*>(newFname);
 
         // And reload the file, now that we're loading a new application
-        NOTICE("New name: " << *newFname << "...");
-        file = VFS::instance().find(*newFname, Processor::information().getCurrentThread()->getParent()->getCwd());
+        NOTICE("New name: " << newFname << "...");
+        file = VFS::instance().find(newFname, Processor::information().getCurrentThread()->getParent()->getCwd());
         if (!file)
         {
             // Error - not found.
@@ -420,10 +418,9 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     // actually load, we can set up the Process object
     pProcess->description() = String(name);
 
-    /// \todo Write pActualFile->getFullPath() into argv[0]
     // Make sure the dynamic linker loads the correct program.
-    String actualPath = pActualFile->getFullPath();
-    savedArgv.pushFront(&actualPath);
+    String *actualPath = new String(pActualFile->getFullPath());
+    savedArgv.pushFront(SharedPointer<String>(actualPath));
 
     // Save the argv and env lists so they aren't destroyed when we overwrite the address space.
     size_t argv_len = save_string_array(argv, savedArgv);
@@ -449,6 +446,12 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
             pProcess->getAddressSpace()->getDynamicStart(),
             pProcess->getAddressSpace()->getDynamicEnd() - pProcess->getAddressSpace()->getDynamicStart());
     }
+
+    // Reset tracking.
+    pProcess->resetCounts();
+
+    // Reset TLS base.
+    pThread->resetTlsBase();
 
     if(pLinker)
     {
@@ -513,12 +516,15 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     // Load the saved argv and env into this address space now.
     uintptr_t location = argvAddress;
     argv = const_cast<const char**> (load_string_array(savedArgv, location, location));
-    env  = const_cast<const char**> (load_string_array(savedEnv , location, location));
+    env  = const_cast<const char**> (load_string_array(savedEnv, location, location));
+
+    uintptr_t entryPoint = 0;
 
     Elf *elf = 0;
     if(pLinker)
     {
         elf = pProcess->getLinker()->getProgramElf();
+        entryPoint = elf->getEntryPoint();
     }
     else
     {
@@ -537,37 +543,8 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
             return -1;
         }
 
-        // Create the ELF.
-        /// \todo It'd be awesome if we could just pull out the entry address.
-        elf = new Elf();
-        elf->create(reinterpret_cast<uint8_t*>(loadAddr), file->getSize());
+        Elf::extractEntryPoint(reinterpret_cast<uint8_t*>(loadAddr), file->getSize(), entryPoint);
     }
-
-    // Wipe out old state, prepare for the new process.
-    memset(&state, 0, sizeof(state));
-
-    // Prepare new state for the process.
-    ProcessorState pState = state;
-    pState.setStackPointer(newStack);
-    pState.setInstructionPointer(elf->getEntryPoint());
-
-    // Generate a stack frame in pState. Unfortunately, this will not create
-    // one in the SyscallState we were passed. Register parameters have to be
-    // copied manually (see below for X64).
-    StackFrame::construct(pState, 0, 2, argv, env);
-
-    // Load up the SyscallState with the newly constructed stack frame.
-    state.setStackPointer(pState.getStackPointer());
-    state.setInstructionPointer(elf->getEntryPoint());
-
-    /// \todo The below is abysmal and needs to be generic because
-    ///       it will need to be done for every architecture that
-    ///       takes function parameters in registers!
-#ifdef X64
-    // x86_64 passes parameters in registers.
-    state.m_Rdi = pState.rdi;
-    state.m_Rsi = pState.rsi;
-#endif
 
     // JAMESM: I don't think the sigret code actually needs to be called from userspace. Here should do just fine, no?
 
@@ -612,23 +589,21 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
     state.m_R8 = pState.m_R8;
 #endif
 
-    // If no linker, destroy the ELF we created just to get the entry location.
-    if(!pLinker)
-    {
-        delete elf;
-    }
-
     // Before we enter the new address space, wipe out the scheduler state.
     // This is a new scheduling entity.
     SchedulerState s;
-    memset(&s, 0, sizeof(s));
+    ByteSet(&s, 0, sizeof(s));
     pThread->state() = s;
 
     // Allow signals again now that everything's loaded
     for(int sig = 0; sig < 32; sig++)
         Processor::information().getCurrentThread()->inhibitEvent(sig, false);
 
-    return 0;
+    // Jump to the new process.
+    Processor::setInterrupts(true);
+    pProcess->recordTime(true);
+    Processor::jumpUser(0, entryPoint, newStack,
+        reinterpret_cast<uintptr_t>(argv), reinterpret_cast<uintptr_t>(env));
 }
 
 /**
@@ -826,8 +801,6 @@ int posix_waitpid(int pid, int *status, int options)
         // Make sure they are scheduled into that state by yielding.
         Scheduler::instance().yield();
     }
-
-    return -1;
 }
 
 int posix_exit(int code)
@@ -840,18 +813,7 @@ int posix_exit(int code)
     pSubsystem->exit(code);
 
     // Should NEVER get here.
-    /// \note asm volatile
-    for (;;)
-#if defined(X86_COMMON)
-        asm volatile("xor %eax, %eax");
-#elif defined(ARM_COMMON)
-        asm volatile("mov r0, #0");
-#else
-        ;
-#endif
-
-    // Makes the compiler happyface again
-    return 0;
+    FATAL("Subsystem::exit() returned in posix_exit");
 }
 
 int posix_getpid()
@@ -860,6 +822,16 @@ int posix_getpid()
     
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     return pProcess->getId();
+}
+
+int posix_getppid()
+{
+    SC_NOTICE("getppid");
+
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    if (!pProcess->getParent())
+        return 0;
+    return pProcess->getParent()->getId();
 }
 
 int posix_gettimeofday(timeval *tv, struct timezone *tz)
@@ -875,13 +847,69 @@ int posix_gettimeofday(timeval *tv, struct timezone *tz)
     
     Timer *pTimer = Machine::instance().getTimer();
 
+    // UNIX timestamp + remaining time portion, in microseconds.
     tv->tv_sec = pTimer->getUnixTimestamp();
-    tv->tv_usec = pTimer->getTickCount();
+    tv->tv_usec = pTimer->getNanosecond() / 1000U;
 
     return 0;
 }
 
-char *store_str_to(char *str, char *strend, String s)
+clock_t posix_times(struct tms *tm)
+{
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(tm), sizeof(struct tms), PosixSubsystem::SafeWrite))
+    {
+        SC_NOTICE("posix_times -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    SC_NOTICE("times");
+
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+
+    ByteSet(tm, 0, sizeof(struct tms));
+    tm->tms_utime = pProcess->getUserTime();
+    tm->tms_stime = pProcess->getKernelTime();
+
+    NOTICE("times: u=" << pProcess->getUserTime() << ", s=" << pProcess->getKernelTime());
+
+    return Time::getTimeNanoseconds() - pProcess->getStartTime();
+}
+
+int posix_getrusage(int who, struct rusage *r)
+{
+    SC_NOTICE("getrusage who=" << who);
+
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(r), sizeof(struct rusage), PosixSubsystem::SafeWrite))
+    {
+        SC_NOTICE("posix_getrusage -> invalid address");
+        SYSCALL_ERROR(BadAddress);
+        return -1;
+    }
+
+    if (who != RUSAGE_SELF)
+    {
+        SC_NOTICE("posix_getrusage -> non-RUSAGE_SELF not supported");
+        SYSCALL_ERROR(InvalidArgument);
+        ByteSet(r, 0, sizeof(struct rusage));
+        return -1;
+    }
+
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+
+    Time::Timestamp user = pProcess->getUserTime();
+    Time::Timestamp kernel = pProcess->getKernelTime();
+
+    ByteSet(r, 0, sizeof(struct rusage));
+    r->ru_utime.tv_sec = user / Time::Multiplier::SECOND;
+    r->ru_utime.tv_usec = (user % Time::Multiplier::SECOND) / Time::Multiplier::MICROSECOND;
+    r->ru_stime.tv_sec = kernel / Time::Multiplier::SECOND;
+    r->ru_stime.tv_usec = (kernel % Time::Multiplier::SECOND) / Time::Multiplier::MICROSECOND;
+
+    return 0;
+}
+
+static char *store_str_to(char *str, char *strend, String s)
 {
     int i = 0;
     while (s[i] && str != strend)
@@ -926,7 +954,7 @@ int posix_getpwent(passwd *pw, int n, char *str)
     str = store_str_to(str, strend, pUser->getHome());
 
     pw->pw_shell = str;
-    str = store_str_to(str, strend, pUser->getShell());
+    store_str_to(str, strend, pUser->getShell());
 
     return 0;
 }
@@ -968,7 +996,7 @@ int posix_getpwnam(passwd *pw, const char *name, char *str)
     str = store_str_to(str, strend, pUser->getHome());
 
     pw->pw_shell = str;
-    str = store_str_to(str, strend, pUser->getShell());
+    store_str_to(str, strend, pUser->getShell());
 
     return 0;
 }
@@ -1085,24 +1113,6 @@ int pedigree_login(int uid, const char *password)
         return 0;
     else
         return -1;
-}
-
-uintptr_t posix_dlopen(const char* file, int mode, void* p)
-{
-    FATAL("posix_dlopen called!");
-    return 0;
-}
-
-uintptr_t posix_dlsym(void* handle, const char* name)
-{
-    FATAL("posix_dlsym called!");
-    return 0;
-}
-
-int posix_dlclose(void* handle)
-{
-    FATAL("posix_dlclose called!");
-    return 0;
 }
 
 int posix_setsid()
@@ -1323,7 +1333,7 @@ int pedigree_reboot()
         // Grab the process and subsystem. Don't grab a POSIX subsystem object,
         // because we may be hitting native processes here.
         Process *proc = Scheduler::instance().getProcess(i);
-        Subsystem *subsys = reinterpret_cast<Subsystem*>(proc->getSubsystem());
+        Subsystem *subsys = proc->getSubsystem();
 
         // DO NOT COMMIT SUICIDE. That's called a hang with undefined state, chilldren.
         if(proc == Processor::information().getCurrentThread()->getParent())

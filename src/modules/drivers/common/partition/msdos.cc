@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -22,16 +21,19 @@
 #include <processor/Processor.h>
 #include <Log.h>
 #include "Partition.h"
+#include <LockGuard.h>
+
+#ifdef THREADS
 #include <Spinlock.h>
+static Spinlock g_Lock;
+#endif
 
 // Partition number for a DOS extended partition (another partition table)
 const uint8_t g_ExtendedPartitionNumber = 5;
 // Partition number for an empty partition.
 const uint8_t g_EmptyPartitionNumber = 0;
 
-Spinlock g_Lock;
-
-const char *g_pPartitionTypes[256] = {
+static const char *g_pPartitionTypes[256] = {
     "Empty",
     "FAT12",
     "XENIX root",
@@ -293,9 +295,11 @@ const char *g_pPartitionTypes[256] = {
 /// Holds the next partition number to mount
 static int gNextPartition = 0;
 
-void msdosRegPartition(MsdosPartitionInfo *pPartitions, int i, Disk *pDisk)
+static void msdosRegPartition(MsdosPartitionInfo *pPartitions, int i, Disk *pDisk)
 {
+#ifdef THREADS
     LockGuard<Spinlock> guard(g_Lock);
+#endif
 
     // Look up the partition string.
     const char *pStr = g_pPartitionTypes[pPartitions[i].type];
@@ -313,7 +317,7 @@ void msdosRegPartition(MsdosPartitionInfo *pPartitions, int i, Disk *pDisk)
     pDisk->addChild(static_cast<Device*> (pObj));
 }
 
-bool msdosReadExtTable(MsdosPartitionInfo *pPartitions, Disk *pDisk, int n, uint64_t partitionBase, uint64_t currentBase)
+static bool msdosReadExtTable(MsdosPartitionInfo *pPartitions, Disk *pDisk, int n, uint64_t partitionBase, uint64_t currentBase)
 {
     for (int i = 0; i < MSDOS_EXT_PARTTAB_NUM; i++)
     {
@@ -409,8 +413,8 @@ bool msdosReadTable(MsdosPartitionInfo *pPartitions, Disk *pDisk)
             }
 
             // Call the extended partition reader, give it the base of this partition entry for its calculations.
-            MsdosPartitionInfo *pPartitions = reinterpret_cast<MsdosPartitionInfo*> (&buffer[MSDOS_PARTTAB_START]);
-            if(!msdosReadExtTable(pPartitions, pDisk, MSDOS_PARTTAB_NUM, startLba, startLba))
+            MsdosPartitionInfo *pReadPartitions = reinterpret_cast<MsdosPartitionInfo*> (&buffer[MSDOS_PARTTAB_START]);
+            if(!msdosReadExtTable(pReadPartitions, pDisk, MSDOS_PARTTAB_NUM, startLba, startLba))
                 WARNING("Reading the extended partition table failed");
         }
         else if (pPartitions[i].type == g_EmptyPartitionNumber)
@@ -431,21 +435,22 @@ bool msdosProbeDisk(Disk *pDisk)
     uintptr_t buff;
     if ((buff=pDisk->read(0ULL)) == 0)
     {
-        WARNING("Disk read failure during partition table search.");
+        WARNING("Disk read failure during MS-DOS partition table search.");
         return false;
     }
 
     uint8_t *buffer = reinterpret_cast<uint8_t*>(buff);
 
+    String diskName;
+    pDisk->getName(diskName);
+
     // Check for the magic bytes.
     if (buffer[510] != MSDOS_IDENT_1 || buffer[511] != MSDOS_IDENT_2)
     {
-        NOTICE("MS-DOS partition not found.");
+        NOTICE("MS-DOS partition not found on disk " << diskName);
         return false;
     }
 
-    String diskName;
-    pDisk->getName(diskName);
     NOTICE("MS-DOS partition table found on disk " << diskName);
 
     MsdosPartitionInfo *pPartitions = reinterpret_cast<MsdosPartitionInfo*> (&buffer[MSDOS_PARTTAB_START]);

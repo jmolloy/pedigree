@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -64,9 +63,9 @@ private:
 
   void recv();
 
-  static int trampoline(void* p);
+  static int trampoline(void* p) NORETURN;
 
-  void receiveThread();
+  void receiveThread() NORETURN;
 
   struct packet
   {

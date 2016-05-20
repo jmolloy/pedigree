@@ -24,11 +24,12 @@
 
 #include "UdpManager.h"
 #include <processor/Processor.h>
+#include <utilities/PointerGuard.h>
 
 Dns Dns::dnsInstance;
 uint16_t Dns::m_NextId = 0;
 
-String qnameLabelHelper(char *buff, size_t *len, uintptr_t buffLoc)
+static String qnameLabelHelper(char *buff, size_t *len, uintptr_t buffLoc)
 {
     String ret;
     size_t retLen = 0;
@@ -96,21 +97,26 @@ String qnameLabelHelper(char *buff, size_t *len, uintptr_t buffLoc)
 }
 
 Dns::Dns() :
-  m_DnsCache(), m_DnsRequests(), m_Endpoint(0)
+  m_DnsCache(), m_DnsRequests(), m_Endpoint(0), m_bActive(false), m_pThread(0)
 {
 }
 
 Dns::Dns(const Dns& ent) :
-  m_DnsCache(ent.m_DnsCache), m_DnsRequests(ent.m_DnsRequests), m_Endpoint(ent.m_Endpoint)
+  m_DnsCache(ent.m_DnsCache), m_DnsRequests(ent.m_DnsRequests), m_Endpoint(ent.m_Endpoint),
+  m_bActive(false), m_pThread(0)
 {
-  Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
-                               reinterpret_cast<Thread::ThreadStartFunc>(&trampoline),
-                               reinterpret_cast<void*>(this));
-  pThread->detach();
+  m_bActive = true;
+  m_pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
+                         &trampoline, reinterpret_cast<void*>(this));
 }
 
 Dns::~Dns()
 {
+  m_bActive = false;
+  if (m_pThread)
+  {
+    m_pThread->join();
+  }
 }
 
 void Dns::initialise()
@@ -118,10 +124,10 @@ void Dns::initialise()
     Endpoint *p = UdpManager::instance().getEndpoint(IpAddress(), 0, 53);
     m_Endpoint = static_cast<ConnectionlessEndpoint *>(p);
     m_Endpoint->acceptAnyAddress(true);
-    Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
-                                 reinterpret_cast<Thread::ThreadStartFunc>(&trampoline),
-                                 reinterpret_cast<void*>(this));
-    pThread->detach();
+
+    m_bActive = true;
+    m_pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
+                           &trampoline, reinterpret_cast<void*>(this));
 }
 
 int Dns::trampoline(void* p)
@@ -135,16 +141,17 @@ void Dns::mainThread()
 {
   uint8_t* buff = new uint8_t[1024];
   uintptr_t buffLoc = reinterpret_cast<uintptr_t>(buff);
-  memset(buff, 0, 1024);
+  PointerGuard<uint8_t> guard(buff);
+  ByteSet(buff, 0, 1024);
 
   IpAddress addr(Network::convertToIpv4(0, 0, 0, 0));
   ConnectionlessEndpoint* e = m_Endpoint;
 
   Endpoint::RemoteEndpoint remoteHost;
 
-  while(true)
+  while(isActive())
   {
-    if(e->dataReady(true))
+    if(e->dataReady(true, 5))
     {
       // Read the packet (Safe to block because we've already run dataReady)
       int n = e->recv(buffLoc, 1024, true, &remoteHost);
@@ -343,7 +350,7 @@ int Dns::hostToIp(String hostname, HostInfo& ret, Network* pCard)
     /// \todo Rewrite DNS cache mechanism
     /*for(List<DnsEntry*>::Iterator it = m_DnsCache.begin(); it!= m_DnsCache.end(); it++)
     {
-        if(!strcmp(static_cast<const char*>((*it)->hostname), static_cast<const char*>(hostname)))
+        if(!StringCompare(static_cast<const char*>((*it)->hostname), static_cast<const char*>(hostname)))
         {
             nIps = (*it)->numIps;
             return (*it)->ip;
@@ -360,7 +367,7 @@ int Dns::hostToIp(String hostname, HostInfo& ret, Network* pCard)
 
     uint8_t* buff = new uint8_t[1024];
     uintptr_t buffLoc = reinterpret_cast<uintptr_t>(buff);
-    memset(buff, 0, 1024);
+    ByteSet(buff, 0, 1024);
 
     // Setup the DNS message header
     DnsHeader* head = reinterpret_cast<DnsHeader*>(buffLoc);
@@ -371,7 +378,7 @@ int Dns::hostToIp(String hostname, HostInfo& ret, Network* pCard)
     // Build the modified hostname
     size_t len = hostname.length() + 1;
     char* host = new char[len];
-    memset(host, 0, len);
+    ByteSet(host, 0, len);
 
     size_t top = hostname.length();
     size_t prevSize = 0;
@@ -390,7 +397,7 @@ int Dns::hostToIp(String hostname, HostInfo& ret, Network* pCard)
     }
     host[0] = prevSize;
 
-    memcpy(reinterpret_cast<char*>(buffLoc + sizeof(DnsHeader)), host, len);
+    MemoryCopy(reinterpret_cast<char*>(buffLoc + sizeof(DnsHeader)), host, len);
 
     delete [] host;
 
@@ -423,13 +430,8 @@ int Dns::hostToIp(String hostname, HostInfo& ret, Network* pCard)
             return -1;
         }
 
-        if(!req->success)
+        if(req->success)
         {
-            delete req;
-        }
-        else
-        {
-
             ret.addresses = req->addresses;
             ret.aliases = req->aliases;
             ret.hostname = req->hostname;
@@ -439,5 +441,6 @@ int Dns::hostToIp(String hostname, HostInfo& ret, Network* pCard)
         }
     }
 
+    delete req;
     return -1;
 }

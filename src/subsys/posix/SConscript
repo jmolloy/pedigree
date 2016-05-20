@@ -21,16 +21,22 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 import os
 import pipes
 
+import buildutils.misc
+import buildutils.modules
 import buildutils.userspace
+import buildutils.fs
+import buildutils.libs
 
-Import(['env'])
+Import(['env', 'userspace_env'])
 
 env_clone = env.Clone()
+userspace_env_clone = userspace_env.Clone()
 
 builddir = env["PEDIGREE_BUILD_BASE"]
 kerneldir = env["PEDIGREE_BUILD_KERNEL"]
 moduledir = env["PEDIGREE_BUILD_MODULES"]
 subsysdir = env["PEDIGREE_BUILD_SUBSYS"]
+imagesdir = env["PEDIGREE_IMAGES_DIR"]
 
 posix_objname = os.path.join(subsysdir, 'posix.o')
 
@@ -54,10 +60,11 @@ env.Alias("subsys", glue_objname)
 env.Alias("pthreads", libpthread_objname)
 env.Alias("pthreads", libpthread_shobjname)
 
-env.Depends(libc_objname, "crt")
-env.Depends(libc_objname, glue_objname)
-env.Depends(libc_objname, libpedigree_c_objname)
-env.Depends(libpedigree_c_shobjname, libc_objname)
+if env['build_libs']:
+    env.Depends(libc_objname, "crt")
+    env.Depends(libc_objname, glue_objname)
+    env.Depends(libc_objname, libpedigree_c_objname)
+    env.Depends(libpedigree_c_shobjname, libc_objname)
 
 # To include new files just add to the list, or Glob("*.cpp")
 posix_files = [
@@ -73,23 +80,16 @@ glue_files = [
     'glue-dlmalloc.c',
     'glue-strcasecmp.c',
     'glue-utmpx.c',
-    # 'glue-memset.c',
+    'glue-infoblock.c',
+    'glue-memset.c',
 ]
 
-if env['ARCH_TARGET'] in ['X86', 'X64']:
-    glue_files.extend(['glue-memcpy.c',])
+if 'CUSTOM_MEMCPY' in userspace_env['EXTRA_CONFIG']:
+    glue_files.extend(['glue-memcpy.c'])
 
 crt0_files = ['crt0.c']
 
-suffix = '-noarch'
-if env['ARCH_TARGET'] == 'X86':
-    suffix = '-i686'
-elif env['ARCH_TARGET'] == 'X64':
-    suffix = '-amd64'
-elif env['ARCH_TARGET'] == 'PPC':
-    suffix = '-ppc'
-elif env['ARCH_TARGET'] == 'ARM':
-    suffix = '-arm'
+suffix = buildutils.misc.stubSuffix(userspace_env)
 
 posix_files += ["sigret" + suffix + ".s"]
 glue_files += ["setjmp" + suffix + ".s"]
@@ -119,23 +119,41 @@ libpaths = [
 ####################################
 env_clone['CPPPATH'] = include
 env_clone['LIBS'] = []
-env_clone['LIBPATH'] = libpaths
+env_clone['LIBPATH'] = []
 
 final_output = posix_objname
 posix_objname = '%s.debug' % (posix_objname,)
 
-if "STATIC_DRIVERS" in env['CPPDEFINES']:
-    env_clone['LSCRIPT'] = File("#src/modules/link_static.ld")
+# Handle logging flags.
+logging_mask = 0
+if env_clone['posix_verbose']:
+    logging_mask = 0xFFFFFFFF
 else:
-    env_clone['LSCRIPT'] = File("#src/modules/link.ld")
+    if env_clone['posix_file_verbose']:
+        logging_mask |= 1
+    if env_clone['posix_sys_verbose']:
+        logging_mask |= 2
+    if env_clone['posix_thr_verbose']:
+        logging_mask |= 4
+    if env_clone['posix_net_verbose']:
+        logging_mask |= 8
+    if env_clone['posix_sig_verbose']:
+        logging_mask |= 16
+    if env_clone['posix_sig_ultra_verbose']:
+        logging_mask |= 32
 
-env_clone.Program(posix_objname,posix_files,LINKFLAGS='-nostdlib -Wl,-r -T $LSCRIPT')
-env_clone.Command(final_output, posix_objname, action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
+env_clone['CPPDEFINES'] += ['POSIX_LOG_FACILITIES=%d' % logging_mask]
 
-posix_env = env_clone.Clone()
-posix_env['CFLAGS'] = buildutils.userspace.fixFlags(env, posix_env['CFLAGS'])
-posix_env['CCFLAGS'] = buildutils.userspace.fixFlags(env, posix_env['CCFLAGS'])
-posix_env['CXXFLAGS'] = buildutils.userspace.fixFlags(env, posix_env['CXXFLAGS'])
+env_clone['AS'] = userspace_env_clone['AS']
+env_clone['ASFLAGS'] = userspace_env_clone['ASFLAGS']
+buildutils.modules.buildModule(env_clone, final_output, posix_objname, posix_files)
+
+posix_env = userspace_env_clone.Clone()
+posix_env['CPPPATH'] = include
+posix_env['LIBPATH'] = libpaths
+posix_env['CFLAGS'] = buildutils.userspace.fixFlags(userspace_env_clone, posix_env['CFLAGS'])
+posix_env['CCFLAGS'] = buildutils.userspace.fixFlags(userspace_env_clone, posix_env['CCFLAGS'])
+posix_env['CXXFLAGS'] = buildutils.userspace.fixFlags(userspace_env_clone, posix_env['CXXFLAGS'])
 
 pic_clone = posix_env.Clone()
 pic_clone.MergeFlags('-fPIC -DUSE_PIC_SYSCALLS')
@@ -145,29 +163,22 @@ pic_clone.MergeFlags('-fPIC -DUSE_PIC_SYSCALLS')
 pic_clone.Library(glue_objname, glue_files)
 
 # No libraries needed for CRT0
-pic_clone.Program(crt0_objname, crt0_files, LINKFLAGS='-nostdlib -r')
+pic_clone.Program(crt0_objname, crt0_files, LINKFLAGS='-nostdlib -Wl,-r')
 
 # CRTI
-pic_clone.Program(crti_objname, crti_files, LINKFLAGS='-nostdlib -r')
+pic_clone.Program(crti_objname, crti_files, LINKFLAGS='-nostdlib -Wl,-r')
 
 # CRTN
-pic_clone.Program(crtn_objname, crtn_files, LINKFLAGS='-nostdlib -r')
+pic_clone.Program(crtn_objname, crtn_files, LINKFLAGS='-nostdlib -Wl,-r')
 
 # libpthread
-env_clone_pthread = pic_clone.Clone()
-env_clone_pthread.Library(libpthread_objname, pthread_files)
-env_clone_pthread.SharedLibrary(libpthread_shobjname, pthread_files)
+if env['build_libs']:
+    env_clone_pthread = pic_clone.Clone()
+    env_clone_pthread.Library(libpthread_objname, pthread_files)
+    env_clone_pthread.SharedLibrary(libpthread_shobjname, pthread_files,
+                                    LINKFLAGS='')
 
 # Build libc/libm
-
-if env['ARCH_TARGET'] == 'X86':
-    libc_arch = 'i686'
-elif env['ARCH_TARGET'] == 'X64':
-    libc_arch = 'amd64'
-elif env['ARCH_TARGET'] == 'PPC':
-    libc_arch = 'ppc'
-elif env['ARCH_TARGET'] == 'ARM':
-    libc_arch = 'arm'
 
 buildDir = env_clone.Dir(builddir)
 
@@ -182,27 +193,18 @@ buildLibcA = env_clone.File(builddir + '/libc.a')
 buildLibmA = env_clone.File(builddir + '/libm.a')
 buildInclude = env_clone.Dir(builddir + '/include-posix')
 
-env.Alias("libs", [buildLibc, buildLibm])
 env.Alias("crt0", "crt")
 
-env_clone.Command([buildLibc], [glue_objname, baseLibc],
-    " ".join(pipes.quote(s) for s in [
-        "@python", os.path.join(base.abspath, "scripts", "buildLibc.py"),
-        buildDir.abspath, baseLibc.abspath,
-        env_clone.File(glue_objname).abspath,
-        env_clone.File(libpedigree_c_objname).abspath, env["AR"],
-        env["LINK"], env["STRIP"]
-        ]
-    )
-)
+# Install updated headers to the local images directory. Newlib depends on
+# them, rather than the provided-with-newlib headers.
+buildutils.fs.install_tree(
+    env.Dir(os.path.join(imagesdir, 'include')), baseInclude, env, 'headers')
 
-env_clone.Command([buildLibm], [baseLibm],
-    " ".join(pipes.quote(s) for s in [
-        '@python', os.path.join(base.abspath, 'scripts', 'buildLibm.py'),
-        buildDir.abspath, baseLibm.abspath, env["LINK"], env['CC'],
-        ]
-    )
-)
+# TODO(miselin): we really should be able to build libc on Pedigree. Fix this.
+if env['build_libs'] and not env['ON_PEDIGREE']:
+    buildutils.libs.buildLibc(userspace_env_clone, baseLibc, glue_objname)
+    buildutils.libs.buildLibm(userspace_env_clone, baseLibm)
 
-SConscript(os.path.join('newlib', 'SConscript'), exports=['env'])
+    env.Alias("libs", [buildLibc, buildLibm])
 
+    SConscript(os.path.join('newlib', 'SConscript'), exports=['userspace_env'])

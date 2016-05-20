@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,6 +22,7 @@
 
 #include <processor/Processor.h>
 #include <processor/types.h>
+#include <utilities/Tree.h>
 
 /**
  * Global manager for keymaps
@@ -117,8 +117,8 @@ class KeymapManager
         static KeymapManager m_Instance;
 
         /// The sparse and data tables for the current keymap
-        uint8_t *m_pSparseTable;
-        uint8_t *m_pDataTable;
+        SparseEntry *m_pSparseTable;
+        KeymapEntry *m_pDataTable;
 
         /// State of the modifiers, true if down, false if up
         bool m_bLeftCtrl;

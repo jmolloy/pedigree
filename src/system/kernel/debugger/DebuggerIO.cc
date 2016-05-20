@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -54,9 +53,9 @@ bool DebuggerIO::readCli(HugeStaticString &str, DebuggerCommand *pAutoComplete)
     if (ch == 0x08)
     {
       // Try and erase one letter of the command string.
-      if (strlen(m_pCommand))
+      if (StringLength(m_pCommand))
       {
-        m_pCommand[strlen(m_pCommand)-1] = '\0';
+        m_pCommand[StringLength(m_pCommand)-1] = '\0';
       
         writeCli(ch, DebuggerIO::White, DebuggerIO::Black);
       }
@@ -71,25 +70,25 @@ bool DebuggerIO::readCli(HugeStaticString &str, DebuggerCommand *pAutoComplete)
         // HACK:: Here we hack like complete bitches. Just find the last space in the string,
         // and memcpy the full autocomplete string in.
         ssize_t i;
-        for (i = strlen(m_pCommand); i >= 0; i--)
+        for (i = StringLength(m_pCommand); i >= 0; i--)
           if (m_pCommand[i] == ' ')
             break;
         
         // We also haxxor the cursor, by writing loads of backspaces, then rewriting the whole string.
-        size_t nBackspaces = strlen(m_pCommand)-i;
+        size_t nBackspaces = StringLength(m_pCommand)-i;
         for (size_t j = 0; j < nBackspaces-1; j++)
           putChar('\x08' /* backspace */, DebuggerIO::White, DebuggerIO::Black);
         
         writeCli(pACString, DebuggerIO::White, DebuggerIO::Black);
         
         // Memcpy the full autocomplete string in.
-        memcpy(&m_pCommand[i+1], pACString, strlen(pACString)+1);
+        MemoryCopy(&m_pCommand[i+1], pACString, StringLength(pACString)+1);
       }
     }
     else
     {
       // Normal, printing character.
-      size_t len = strlen(m_pCommand);
+      size_t len = StringLength(m_pCommand);
       if (len < COMMAND_MAX-1)
       {
         // Add it to the command string, and null terminate.

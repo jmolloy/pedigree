@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,6 +22,7 @@
 #include "NetManager.h"
 #include <Log.h>
 #include <syscallError.h>
+#include <processor/Processor.h>
 
 #include "Ipv4.h"
 
@@ -81,7 +81,6 @@ int RawEndpoint::send(size_t nBytes, uintptr_t buffer, Endpoint::RemoteEndpoint 
     default:
       pCard->send(nBytes, buffer);
       return static_cast<int>(nBytes);
-      break;
   };
   return -1;
 };
@@ -111,7 +110,7 @@ int RawEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, Endpoint::R
     if(nBytes >= ptr->size)
       nBytes = ptr->size;
 
-    memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(ptr->ptr), nBytes);
+    MemoryCopy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(ptr->ptr), nBytes);
 
     *remoteHost = ptr->remoteHost;
 
@@ -136,7 +135,7 @@ size_t RawEndpoint::depositPacket(size_t nBytes, uintptr_t payload, Endpoint::Re
   if(!nBytes || !payload)
     return 0;
   uint8_t* data = new uint8_t[nBytes];
-  memcpy(data, reinterpret_cast<void*>(payload), nBytes);
+  MemoryCopy(data, reinterpret_cast<void*>(payload), nBytes);
 
   DataBlock* newBlock = new DataBlock;
   newBlock->ptr = reinterpret_cast<uintptr_t>(data);

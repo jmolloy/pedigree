@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -21,6 +20,7 @@
 #ifndef MACHINE_ARM_VERSATILE_SERIAL_H
 #define MACHINE_ARM_VERSATILE_SERIAL_H
 
+#include <compiler.h>
 #include <machine/Serial.h>
 
 /**

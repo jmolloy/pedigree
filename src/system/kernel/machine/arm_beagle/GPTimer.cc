@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -106,10 +105,17 @@ void GPTimer::initialise(size_t timer, uintptr_t base)
            (hardwareRevision & 0xF) << Hex);
 
     // Section 16.2.4.2.1 in the OMAP35xx manual, page 2573
-    registers[TPIR] = 232000;
-    registers[TNIR] = -768000;
-    registers[TLDR] = 0xFFFFFFE0;
-    registers[TTGR] = 1; // Trigger after one interval
+    // GPTIMER1, GPTIMER2, GPTIMER10 can all do this 1-ms poll.
+    if(timer <= 2 || timer == 11)
+    {
+        registers[TPIR] = 232000;
+        registers[TNIR] = -768000;
+        registers[TLDR] = 0xFFFFFFE0;
+        registers[TTGR] = 1; // Trigger after one interval
+    }
+
+    // Default load values.
+    registers[TCRR] = 0xFFFFFFE0;
 
     // Clear existing interrupts
     registers[TISR] = 7;
@@ -117,8 +123,9 @@ void GPTimer::initialise(size_t timer, uintptr_t base)
     // Set the IRQ number for future reference
     m_Irq = 37 + timer;
 
-    // Enable the overflow interrupt
+    // Enable the overflow and capture interrupts
     registers[TIER] = 2;
+    registers[TWER] = 2;
 
     // Enable the timer in the right mode
     registers[TCLR] = 3; // Autoreload and timer started
@@ -241,24 +248,14 @@ void GPTimer::interrupt(size_t nInterruptnumber, InterruptState &state)
     }
 
     // Check for alarms.
-    while (true)
+    for (List<Alarm*>::Iterator it = m_Alarms.begin(); it != m_Alarms.end(); it++)
     {
-        bool bDispatched = false;
-        for (List<Alarm*>::Iterator it = m_Alarms.begin();
-        it != m_Alarms.end();
-        it++)
+        Alarm *pA = *it;
+        if ( pA->m_Time <= m_TickCount )
         {
-            Alarm *pA = *it;
-            if ( pA->m_Time <= m_TickCount )
-            {
-                pA->m_pThread->sendEvent(pA->m_pEvent);
-                m_Alarms.erase(it);
-                bDispatched = true;
-                break;
-            }
+            pA->m_pThread->sendEvent(pA->m_pEvent);
+            it = m_Alarms.erase(it);
         }
-        if (!bDispatched)
-            break;
     }
 
     // Ack the interrupt source

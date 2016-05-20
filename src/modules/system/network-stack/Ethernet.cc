@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -104,8 +103,8 @@ size_t Ethernet::injectHeader(uintptr_t packet, MacAddress destMac, MacAddress s
     ethernetHeader *pHeader = reinterpret_cast<ethernetHeader*>(packet);
 
     // Copy in the two MAC addresses
-    memcpy(pHeader->destMac, destMac.getMac(), 6);
-    memcpy(pHeader->sourceMac, sourceMac.getMac(), 6);
+    MemoryCopy(pHeader->destMac, destMac.getMac(), 6);
+    MemoryCopy(pHeader->sourceMac, sourceMac.getMac(), 6);
 
     // Set the packet type
     pHeader->type = HOST_TO_BIG16(type);
@@ -130,15 +129,15 @@ void Ethernet::send(size_t nBytes, uintptr_t packet, Network* pCard, MacAddress 
     return; // NIC isn't active
 
   // Move the payload for the ethernet header to go in
-  memmove(reinterpret_cast<void*>(packet + sizeof(ethernetHeader)), reinterpret_cast<void*>(packet), nBytes);
+  MemoryCopy(reinterpret_cast<void*>(packet + sizeof(ethernetHeader)), reinterpret_cast<void*>(packet), nBytes);
 
   // get the ethernet header pointer
   ethernetHeader* ethHeader = reinterpret_cast<ethernetHeader*>(packet);
 
   // copy in the data
   StationInfo me = pCard->getStationInfo();
-  memcpy(ethHeader->destMac, dest.getMac(), 6);
-  memcpy(ethHeader->sourceMac, me.mac, 6);
+  MemoryCopy(ethHeader->destMac, dest.getMac(), 6);
+  MemoryCopy(ethHeader->sourceMac, me.mac, 6);
   ethHeader->type = HOST_TO_BIG16(type);
 
   // send it over the network

@@ -19,47 +19,39 @@ extern "C" {
 #include "cdi/lists.h"
 #include "cdi/pci.h"
 
-static void add_child_devices(cdi_list_t list, Device *pDev)
+static void add_child_device(cdi_list_t list, Device *pDev)
 {
-    for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
-    {
-        Device *pChild = pDev->getChild(i);
+    // Add device to list
+    // Let's hope the available information is enough
+    struct cdi_pci_device* dev = (struct cdi_pci_device*) malloc(sizeof(*dev));
+    ByteSet(dev, 0, sizeof(*dev));
 
-        // Add device to list
-        // Let's hope the available information is enough
-        struct cdi_pci_device* dev = (struct cdi_pci_device*) malloc(sizeof(*dev));
-        memset(dev, 0, sizeof(*dev));
+    dev->vendor_id = pDev->getPciVendorId();
+    dev->device_id = pDev->getPciDeviceId();
+    dev->class_id = pDev->getPciClassCode();
+    dev->subclass_id = pDev->getPciSubclassCode();
+    dev->irq = pDev->getInterruptNumber();
+    dev->meta.backdev = reinterpret_cast<void*>(pDev);
 
-        dev->vendor_id = pChild->getPciVendorId();
-        dev->device_id = pChild->getPciDeviceId();
-        dev->class_id = pChild->getPciClassCode();
-        dev->subclass_id = pChild->getPciSubclassCode();
-        dev->irq = pChild->getInterruptNumber();
-        dev->meta.backdev = reinterpret_cast<void*>(pChild);
+    // Add BARs
+    Vector<Device::Address*> addresses = pDev->addresses();
+    dev->resources = cdi_list_create();
+    for (unsigned int j = 0; j < addresses.size(); j++) {
+        Device::Address* bar = addresses[j];
 
-        // Add BARs
-        Vector<Device::Address*> addresses = pChild->addresses();
-        dev->resources = cdi_list_create();
-        for (unsigned int j = 0; j < addresses.size(); j++) {
-            Device::Address* bar = addresses[j];
+        struct cdi_pci_resource* res = (struct cdi_pci_resource*) malloc(sizeof(*res));
+        ByteSet(res, 0, sizeof(*res));
 
-            struct cdi_pci_resource* res = (struct cdi_pci_resource*) malloc(sizeof(*res));
-            memset(res, 0, sizeof(*res));
+        res->type = bar->m_IsIoSpace ? CDI_PCI_IOPORTS : CDI_PCI_MEMORY;
+        res->start = bar->m_Address;
+        res->length = bar->m_Size;
+        res->index = j;
+        res->address = 0;
 
-            res->type = bar->m_IsIoSpace ? CDI_PCI_IOPORTS : CDI_PCI_MEMORY;
-            res->start = bar->m_Address;
-            res->length = bar->m_Size;
-            res->index = j;
-            res->address = 0;
-
-            cdi_list_push(dev->resources, res);
-        }
-
-        cdi_list_push(list, dev);
-
-        // Recurse.
-        add_child_devices(list, pChild);
+        cdi_list_push(dev->resources, res);
     }
+
+    cdi_list_push(list, dev);
 }
 
 /**
@@ -68,8 +60,13 @@ static void add_child_devices(cdi_list_t list, Device *pDev)
  */
 void cdi_pci_get_all_devices(cdi_list_t list)
 {
-    Device *pDev = &Device::root();
-    add_child_devices(list, pDev);
+    auto f = [list] (Device *p) {
+        add_child_device(list, p);
+        return p;
+    };
+
+    auto c = pedigree_std::make_callable(f);
+    Device::foreach(c, 0);
 }
 
 /**

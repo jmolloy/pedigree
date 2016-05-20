@@ -19,64 +19,228 @@
 
 #include <utilities/utility.h>
 #include <utilities/String.h>
-#include <Log.h>
+
+String::String()
+    : m_Data(0), m_Length(0), m_Size(StaticSize), m_Static()
+{
+}
+
+String::String(const char *s)
+    : m_Data(0), m_Length(0), m_Size(StaticSize), m_Static()
+{
+    assign(s);
+}
+
+String::String(const char *s, size_t length)
+    : m_Data(0), m_Length(0), m_Size(StaticSize), m_Static()
+{
+    assign(s, length);
+}
+
+String::String(const String &x)
+    : m_Data(0), m_Length(0), m_Size(StaticSize), m_Static()
+{
+    assign(x);
+}
+
+String::~String()
+{
+    free();
+}
+
+String &String::operator = (const String &x)
+{
+    assign(x);
+    return *this;
+}
+
+String &String::operator = (const char *s)
+{
+    assign(s);
+    return *this;
+}
+
+String &String::operator += (const String &x)
+{
+    size_t newLength = x.length() + m_Length;
+
+    char *dst = m_Static;
+
+    // Do we need to transfer static into dynamic for this?
+    if (newLength >= StaticSize)
+    {
+        reserve(newLength + 1);
+        if (m_Length < StaticSize)
+            MemoryCopy(m_Data, m_Static, m_Length);
+        dst = m_Data;
+    }
+
+    const char *src = x.m_Static;
+    if (x.length() > StaticSize)
+        src = x.m_Data;
+
+    // Copy!
+    MemoryCopy(&dst[m_Length], src, x.length() + 1);
+    m_Length += x.length();
+    return *this;
+}
+
+String &String::operator += (const char *s)
+{
+    size_t slen = StringLength(s);
+    size_t newLength = slen + m_Length;
+    if (newLength < StaticSize)
+    {
+        // By the nature of the two lengths combined being below the static
+        // size, we can be assured that we can use the static buffer in
+        // both strings.
+        MemoryCopy(&m_Static[m_Length], s, slen + 1);
+    }
+    else
+    {
+        reserve(slen + m_Length + 1);
+        if (m_Length < StaticSize)
+            MemoryCopy(m_Data, m_Static, m_Length);
+        MemoryCopy(&m_Data[m_Length], s, slen + 1);
+    }
+
+    m_Length += slen;
+    return *this;
+}
+
+bool String::operator == (const String &s) const
+{
+    if (m_Length != s.m_Length)
+        return false;
+    else if(m_Length < StaticSize)
+        return !StringCompareN(m_Static, s.m_Static, m_Length);
+
+    // Neither of these can be null because of the above conditions.
+    return !StringCompareN(m_Data, s.m_Data, m_Length);
+}
+
+bool String::operator == (const char *s) const
+{
+    const char *buf = m_Data;
+    if (m_Length < StaticSize)
+        buf = m_Static;
+
+    if ((!m_Length) && s == 0)
+        return true;
+    else if (s == 0)
+        // m_Length > 0 but other buffer is null.
+        return false;
+    else if ((!m_Length) && *s)
+        // Quick check when we're zero-length.
+        return false;
+    else
+        return !StringCompareN(buf, s, m_Length);
+}
+
+size_t String::nextCharacter(size_t c)
+{
+    // TODO handle multibyte chars.
+    return c+1;
+}
 
 void String::assign(const String &x)
 {
     m_Length = x.length();
     if (m_Length < StaticSize)
     {
-        memcpy(m_Static, x.m_Static, m_Length + 1);
+        MemoryCopy(m_Static, x.m_Static, m_Length + 1);
         delete [] m_Data;
         m_Data = 0;
+        m_Size = StaticSize;
     }
     else
     {
-        reserve(m_Length + 1);
-        if (m_Length && x.m_Data)
-            memcpy(m_Data, x.m_Data, m_Length + 1);
-        else
-            m_Data[0] = '\0';
+        // Length is bigger than a static buffer, no need to check for empty
+        // buffer.
+        reserve(m_Length + 1, false);
+        MemoryCopy(m_Data, x.m_Data, m_Length + 1);
     }
-}
-void String::assign(const char *s)
-{
-    if(!s)
-        m_Length = 0;
-    else
-        m_Length = strlen(s);
 
-    if (m_Length < StaticSize)
+#ifdef ADDITIONAL_CHECKS
+    assert(*this == x);
+#endif
+}
+void String::assign(const char *s, size_t len)
+{
+    size_t copyLength = 0;
+    if (!s || !*s)
+        m_Length = 0;
+    else if (len)
     {
-        memcpy(m_Static, s, m_Length + 1);
-        delete [] m_Data;
-        m_Data = 0;
+        m_Length = len;
+        copyLength = len;
     }
     else
     {
-        reserve(m_Length + 1);
-        if (m_Length && s)
-            memcpy(m_Data, s, m_Length + 1);
-        else
-            m_Data[0] = '\0';
+        m_Length = StringLength(s);
+        copyLength = m_Length;
     }
+
+    if (!m_Length)
+    {
+        ByteSet(m_Static, 0, StaticSize);
+        delete [] m_Data;
+        m_Data = 0;
+        m_Size = StaticSize;
+    }
+    else if (m_Length < StaticSize)
+    {
+        StringCopyN(m_Static, s, copyLength);
+        delete [] m_Data;
+        m_Data = 0;
+        m_Size = StaticSize;
+        m_Static[copyLength] = '\0';
+    }
+    else
+    {
+        reserve(m_Length + 1, false);
+        StringCopyN(m_Data, s, copyLength);
+        m_Data[copyLength] = '\0';
+    }
+
+#ifdef ADDITIONAL_CHECKS
+    if (!len)
+        assert(*this == s);
+#endif
 }
+
 void String::reserve(size_t size)
 {
-    // Don't reserve if we're a static string.
-    if (size < StaticSize)
-        return;
-    if ((size == m_Size) && (m_Size == StaticSize))
-        ++size; // Switching from static to dynamic.
+    reserve(size, true);
+}
 
-    if (size > m_Size)
+void String::reserve(size_t size, bool zero)
+{
+    // Don't reserve if we're a static string.
+    if (size <= StaticSize)
+    {
+        if (m_Size > StaticSize)
+        {
+            m_Size = StaticSize;
+            MemoryCopy(m_Static, m_Data, size);
+            delete [] m_Data;
+            m_Data = 0;
+        }
+
+        return;
+    }
+    else if (size > m_Size)
     {
         char *tmp = m_Data;
         m_Data = new char [size];
-        if (tmp != 0 && m_Size != 0)
+        if (tmp)
         {
-            memcpy(m_Data, tmp, m_Size);
+            MemoryCopy(m_Data, tmp, m_Size > size ? size : m_Size);
             delete [] tmp;
+        }
+        else if (zero)
+        {
+            ByteSet(m_Data, 0, size);
         }
         m_Size = size;
     }
@@ -84,6 +248,7 @@ void String::reserve(size_t size)
 void String::free()
 {
     delete [] m_Data;
+    ByteSet(m_Static, 0, StaticSize);
     m_Data = 0;
     m_Length = 0;
     m_Size = 0;
@@ -102,7 +267,7 @@ String String::split(size_t offset)
     // than the static size.
     if((m_Length < StaticSize) && (buf == m_Data))
     {
-        memcpy(m_Static, buf, m_Length);
+        MemoryCopy(m_Static, buf, m_Length);
         buf = m_Static;
 
         delete [] m_Data;
@@ -126,10 +291,6 @@ void String::lstrip()
     char *buf = m_Data;
     if (m_Length < StaticSize)
         buf = m_Static;
-
-    // Sanity check...
-    if(!buf)
-        return;
     
     if(!iswhitespace(buf[0]))
         return;
@@ -140,13 +301,13 @@ void String::lstrip()
 
     // Move the data to cover up the whitespace and avoid reallocating m_Data
     m_Length -= n;
-    memmove(buf, (buf + n), m_Length);
+    MemoryCopy(buf, (buf + n), m_Length);
     buf[m_Length] = 0;
 
     // Did we suddenly drop below the static size?
     if ((buf == m_Data) && (m_Length < StaticSize))
     {
-        memcpy(m_Static, m_Data, m_Length + 1);
+        MemoryCopy(m_Static, m_Data, m_Length + 1);
         m_Size = StaticSize;
         delete [] m_Data;
         m_Data = 0;
@@ -158,10 +319,6 @@ void String::rstrip()
     char *buf = m_Data;
     if (m_Length < StaticSize)
         buf = m_Static;
-
-    // Sanity check...
-    if(!buf)
-        return;
 
     if(!iswhitespace(buf[m_Length - 1]))
         return;
@@ -179,43 +336,47 @@ void String::rstrip()
     // Did we suddenly drop below the static size?
     if ((buf == m_Data) && (m_Length < StaticSize))
     {
-        memcpy(m_Static, m_Data, m_Length + 1);
+        MemoryCopy(m_Static, m_Data, m_Length + 1);
         m_Size = StaticSize;
         delete [] m_Data;
         m_Data = 0;
     }
 }
 
-List<String*> String::tokenise(char token)
+List<SharedPointer<String>> String::tokenise(char token)
 {
-    String copy = *this;
-    List<String*> list;
+    List<tokenise_t> list;
+    const char *orig_buffer = static_cast<const char *>(*this);
+    const char *buffer = orig_buffer;
 
-    size_t idx = 0;
-    while (idx < copy.m_Length)
+    const char *pos = nullptr;
+    while (*buffer)
     {
-        if (copy[idx] == token)
+        pos = StringFind(buffer, token);
+        if (!pos)
         {
-            String tmp = copy.split(idx+1);
-
-            String *pStr = new String(copy);
-            copy = tmp;
-
-            // pStr will include token, so remove the last character from it.
-            pStr->chomp();
-
-            if (pStr->length() == 0)
-                delete pStr;
-            else
-                list.pushBack(pStr);
-            idx = 0;
+            break;
         }
-        else
-            idx = copy.nextCharacter(idx);
+
+        if (pos == buffer)
+        {
+            ++buffer;
+            continue;
+        }
+
+        tokenise_t pStr = tokenise_t(new String(buffer, pos - buffer));
+        if (pStr->length())
+            list.pushBack(pStr);
+
+        buffer = pos + 1;
     }
 
-    if (copy.length() > 0)
-        list.pushBack(new String(copy));
+    if (!pos)
+    {
+        tokenise_t pStr = tokenise_t(new String(buffer, m_Length - (buffer - orig_buffer)));
+        if (pStr->length())
+            list.pushBack(pStr);
+    }
 
     return list;
 }
@@ -232,24 +393,24 @@ void String::chomp()
     // Did we suddenly drop below the static size?
     if ((buf == m_Data) && (m_Length < StaticSize))
     {
-        memcpy(m_Static, m_Data, m_Length + 1);
+        MemoryCopy(m_Static, m_Data, m_Length + 1);
         m_Size = StaticSize;
         delete [] m_Data;
         m_Data = 0;
     }
 }
 
-void String::sprintf(const char *fmt, ...)
+void String::Format(const char *fmt, ...)
 {
     reserve(256);
     va_list vl;
     va_start(vl, fmt);
-    m_Length = vsprintf(m_Data, fmt, vl);
+    m_Length = VStringFormat(m_Data, fmt, vl);
     va_end(vl);
 
     if (m_Length < StaticSize)
     {
-        memcpy(m_Static, m_Data, m_Length + 1);
+        MemoryCopy(m_Static, m_Data, m_Length + 1);
         m_Size = StaticSize;
         delete [] m_Data;
         m_Data = 0;
@@ -276,7 +437,7 @@ bool String::endswith(const String &s) const
         otherbuf = s.m_Static;
 
     // Do the check.
-    return !memcmp(mybuf, otherbuf, s.length());
+    return !MemoryCompare(mybuf, otherbuf, s.length());
 }
 
 bool String::endswith(const char *s) const
@@ -303,7 +464,7 @@ bool String::startswith(const String &s) const
         otherbuf = s.m_Static;
 
     // Do the check.
-    return !memcmp(mybuf, otherbuf, s.length());
+    return !MemoryCompare(mybuf, otherbuf, s.length());
 }
 
 bool String::startswith(const char *s) const

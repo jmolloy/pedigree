@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -51,7 +50,7 @@ typedef struct _PCI_VENTABLE
 	const char *	VenFull ;
 }  PCI_VENTABLE, *PPCI_VENTABLE ;
 
-PCI_VENTABLE	PciVenTable [] =
+static PCI_VENTABLE	PciVenTable [] =
 {
 	{ 0x0033, "", "Paradyne Corp." } ,
 	{ 0x003D, "well", "master" } ,
@@ -1565,7 +1564,7 @@ typedef struct _PCI_DEVTABLE
 	const char *	ChipDesc ;
 }  PCI_DEVTABLE, *PPCI_DEVTABLE ;
 
-PCI_DEVTABLE	PciDevTable [] =
+static PCI_DEVTABLE	PciDevTable [] =
 {
 	{ 0x165C, 0x0002, "FT232BL", "FT232BL" } ,
 	{ 0x16AE, 0x1141, "SafeXcel-1141", "???" } ,
@@ -6920,7 +6919,7 @@ typedef struct _PCI_CLASSCODETABLE
 	const char *		ProgDesc ;
 }  PCI_CLASSCODETABLE, *PPCI_CLASSCODETABLE ;
 
-PCI_CLASSCODETABLE PciClassCodeTable [] =
+static PCI_CLASSCODETABLE PciClassCodeTable [] =
 {
 	{ 0x00, 0x00, 0x00, "Pre-2.0 PCI Specification Device", "Non-VGA","" } ,
 	{ 0x00, 0x01, 0x00, "Pre-2.0 PCI Specification Device", "VGA Compatible", "" } ,
@@ -7009,7 +7008,7 @@ PCI_CLASSCODETABLE PciClassCodeTable [] =
 // Use this value for loop control during searching:
 #define	PCI_CLASSCODETABLE_LEN	(sizeof(PciClassCodeTable)/sizeof(PCI_CLASSCODETABLE))
 
-const char *	PciCommandFlags [] =
+static const char *	PciCommandFlags [] =
 {
 	"I/O Access",
 	"Memory Access",
@@ -7033,7 +7032,7 @@ const char *	PciCommandFlags [] =
 #define	PCI_COMMANDFLAGS_LEN	(sizeof(PciCommandFlags)/sizeof(char *))
 
 
-const char *	PciStatusFlags [] =
+static const char *	PciStatusFlags [] =
 {
 	"Reserved 0",
 	"Reserved 1",
@@ -7057,7 +7056,7 @@ const char *	PciStatusFlags [] =
 #define	PCI_STATUSFLAGS_LEN	(sizeof(PciStatusFlags)/sizeof(char *))
 
 
-const char *	PciDevSelFlags [] =
+static const char *	PciDevSelFlags [] =
 {
 	"Fast Devsel Speed",     // TypeC
 	"Medium Devsel Speed",   // TypeB

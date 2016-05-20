@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -26,7 +25,7 @@
 
 #include <Log.h>
 
-#include <new>
+#include <utilities/new>
 
 /** @addtogroup kernelutilities
  * @{ */
@@ -57,14 +56,14 @@ class Tree
     {
       public:
         IteratorNode() : value(0), pNode(0), pPreviousNode(0)
-        {};
+        {}
         IteratorNode(Node* node, Node* prev, size_t n) : value(node), pNode(node), pPreviousNode(prev)
         {
           // skip the root node, get to the lowest node in the tree
           if (n > 1)
             traverseNext();
           value = pNode;
-        };
+        }
 
         IteratorNode *next()
         {
@@ -149,11 +148,7 @@ class Tree
     /** The destructor, deallocates memory */
     ~Tree()
     {
-        if(count())
-        {
-            ERROR("Tree: probable leak, Tree destructor called with items in tree.");
-            clear();
-        }
+        clear();
         delete m_Begin;
     }
 
@@ -515,304 +510,6 @@ class Tree
 
     IteratorNode* m_Begin;
 };
-
-#if 0
-
-/** Tree template specialisation for key pointers and element pointers. Just forwards to the
- * void* template specialisation of Tree.
- *\brief A vector / dynamic array for pointer types */
-template<class K, class V>
-class Tree<K*,V*>
-{
-  public:
-    /** Random-access iterator for the Vector */
-    typedef Tree<void*,void*>::Iterator      Iterator;
-    /** Contant random-access iterator for the Vector */
-    typedef Tree<void*,void*>::ConstIterator ConstIterator;
-
-    /** The default constructor, does nothing */
-    inline Tree()
-      : m_VoidTree(){};
-    /** The copy-constructor
-     *\param[in] x the reference object */
-    inline Tree(const Tree &x)
-      : m_VoidTree(x.m_VoidTree){}
-    /** The destructor, deallocates memory */
-    inline ~Tree()
-    {}
-
-    /** The assignment operator
-     *\param[in] x the object that should be copied */
-    inline Tree &operator = (const Tree &x)
-      {m_VoidTree = x.m_VoidTree;return *this;}
-
-    /** Get the number of elements in the Tree
-     *\return the number of elements in the Tree */
-    inline size_t count() const
-      {return m_VoidTree.count();}
-    /** Add an element to the Tree
-     *\param[in] value the element */
-    inline void insert(K *key, V *value)
-      {m_VoidTree.insert(reinterpret_cast<void*>(key),reinterpret_cast<void*>(value));}
-    /** Attempts to find an element with the given key.
-     *\return the removed element */
-    inline V *lookup(K *key)
-      {return reinterpret_cast<V*>(m_VoidTree.lookup(reinterpret_cast<void*>(key)));}
-    /** Attempts to find an element with the given key, then remove it. */
-    inline void remove(K *key)
-      {return m_VoidTree.remove(reinterpret_cast<void*>(key));}
-
-    /** Clear the Tree */
-    inline void clear()
-      {m_VoidTree.clear();}
-    /** Erase one Element */
-    Iterator erase(Iterator iter)
-      {return reinterpret_cast<Iterator>(m_VoidTree.erase(reinterpret_cast<typename Tree<void*,void*>::Iterator>(iter)));}
-
-    /** Get an iterator pointing to the beginning of the Vector
-     *\return iterator pointing to the beginning of the Vector */
-    inline Iterator begin()
-    {
-      return static_cast<Iterator>(m_VoidTree.begin());
-    }
-    /** Get a constant iterator pointing to the beginning of the Vector
-     *\return constant iterator pointing to the beginning of the Vector */
-    inline ConstIterator begin() const
-    {
-      return static_cast<ConstIterator>(m_VoidTree.begin());
-    }
-    /** Get an iterator pointing to the last element + 1
-     *\return iterator pointing to the last element + 1 */
-    inline Iterator end()
-    {
-      return static_cast<Iterator>(m_VoidTree.end());
-    }
-    /** Get a constant iterator pointing to the last element + 1
-     *\return constant iterator pointing to the last element + 1 */
-    inline ConstIterator end() const
-    {
-      return static_cast<ConstIterator>(m_VoidTree.end());
-    }
-
-  private:
-    /** The actual container */
-    Tree<void*,void*> m_VoidTree;
-};
-
-/** Tree template specialisation for integer keys and element pointers. Just forwards to the
- * void* template specialisation of Tree. */
-template<class V>
-class Tree<size_t,V*>
-{
-  public:
-    /** Random access iterator for the Tree. */
-    /*class Iterator : public Tree<void*,void*>::Iterator
-    {
-      public:
-        size_t key()
-        {
-          if(pNode)
-            return reinterpret_cast<size_t>(pNode->key);
-          else
-            return 0;
-        }
-    };*/
-
-    /// \todo Custom key/value implementations
-    typedef Tree<void*,void*>::Iterator      Iterator;
-    /** Contant random-access iterator for the Vector */
-    typedef Tree<void*,void*>::ConstIterator ConstIterator;
-
-    /** The default constructor, does nothing */
-    inline Tree()
-      : m_VoidTree(){};
-    /** The copy-constructor
-     *\param[in] x the reference object */
-    inline Tree(const Tree &x)
-      : m_VoidTree(x.m_VoidTree){}
-    /** The destructor, deallocates memory */
-    inline ~Tree()
-    {}
-
-    /** The assignment operator
-     *\param[in] x the object that should be copied */
-    inline Tree &operator = (const Tree &x)
-      {m_VoidTree = x.m_VoidTree;return *this;}
-
-    /** Get the number of elements in the Tree
-     *\return the number of elements in the Tree */
-    inline size_t count() const
-      {return m_VoidTree.count();}
-    /** Add an element to the Tree
-     *\param[in] value the element */
-    inline void insert(size_t key, V *value)
-      {m_VoidTree.insert(reinterpret_cast<void*>(key),reinterpret_cast<void*>(value));}
-    /** Attempts to find an element with the given key.
-     *\return the removed element */
-    inline V *lookup(size_t key)
-      {return reinterpret_cast<V*>(m_VoidTree.lookup(reinterpret_cast<void*>(key)));}
-    /** Attempts to find an element with the given key, then remove it. */
-    inline void remove(size_t key)
-      {return m_VoidTree.remove(reinterpret_cast<void*>(key));}
-
-    /** Clear the Tree */
-    inline void clear()
-      {m_VoidTree.clear();}
-    /** Erase one Element */
-    Iterator erase(Iterator iter)
-      //{return *reinterpret_cast<Iterator*>(&(m_VoidTree.erase(*reinterpret_cast<Tree<void*,void*>::Iterator*>(&iter))));}
-      {return reinterpret_cast<Iterator>(m_VoidTree.erase(reinterpret_cast<typename Tree<void*,void*>::Iterator>(iter)));}
-
-    /** Get an iterator pointing to the beginning of the Vector
-     *\return iterator pointing to the beginning of the Vector */
-    inline Iterator begin()
-    {
-      //return *reinterpret_cast<Iterator*>(&(m_VoidTree.begin()));
-      return static_cast<Iterator>(m_VoidTree.begin());
-      //return m_VoidTree.begin();
-    }
-    /** Get a constant iterator pointing to the beginning of the Vector
-     *\return constant iterator pointing to the beginning of the Vector */
-    inline ConstIterator begin() const
-    {
-      return reinterpret_cast<ConstIterator>(m_VoidTree.begin());
-    }
-    /** Get an iterator pointing to the last element + 1
-     *\return iterator pointing to the last element + 1 */
-    inline Iterator end()
-    {
-      //return *reinterpret_cast<Iterator*>(&(m_VoidTree.end()));
-      return static_cast<Iterator>(m_VoidTree.end());
-      //return m_VoidTree.end();
-    }
-    /** Get a constant iterator pointing to the last element + 1
-     *\return constant iterator pointing to the last element + 1 */
-    inline ConstIterator end() const
-    {
-      return reinterpret_cast<ConstIterator>(m_VoidTree.end());
-    }
-
-  private:
-    /** The actual container */
-    Tree<void*,void*> m_VoidTree;
-};
-
-/** Tree template specialisation for integer keys and integer elements. Just forwards to the
- * void* template specialisation of Tree. */
-template<>
-class Tree<size_t,size_t>
-{
-  public:
-    /** Random access iterator for the Tree. */
-    /*class Iterator : public Tree<void*,void*>::Iterator
-    {
-      public:
-        size_t key()
-        {
-          if(pNode)
-            return reinterpret_cast<size_t>(pNode->key);
-          else
-            return 0;
-        }
-
-        size_t value()
-        {
-          if(pNode)
-            return reinterpret_cast<size_t>(pNode->element);
-          else
-            return 0;
-        }
-
-        size_t operator * ()
-        {
-          if(pNode)
-            return reinterpret_cast<size_t>(pNode->element);
-          else
-            return 0;
-        }
-    };*/
-
-    /// \todo Custom key/value implementations
-    typedef Tree<void*,void*>::Iterator      Iterator;
-    /** Contant random-access iterator for the Vector */
-    typedef Tree<void*,void*>::ConstIterator ConstIterator;
-
-    /** The default constructor, does nothing */
-    inline Tree()
-      : m_VoidTree(){};
-    /** The copy-constructor
-     *\param[in] x the reference object */
-    inline Tree(const Tree &x)
-      : m_VoidTree(x.m_VoidTree){}
-    /** The destructor, deallocates memory */
-    inline ~Tree()
-    {}
-
-    /** The assignment operator
-     *\param[in] x the object that should be copied */
-    inline Tree &operator = (const Tree &x)
-      {m_VoidTree = x.m_VoidTree;return *this;}
-
-    /** Get the number of elements in the Tree
-     *\return the number of elements in the Tree */
-    inline size_t count() const
-      {return m_VoidTree.count();}
-    /** Add an element to the Tree
-     *\param[in] value the element */
-    inline void insert(size_t key, size_t value)
-      {m_VoidTree.insert(reinterpret_cast<void*>(key),reinterpret_cast<void*>(value));}
-    /** Attempts to find an element with the given key.
-     *\return the removed element */
-    inline size_t lookup(size_t key)
-      {return reinterpret_cast<size_t>(m_VoidTree.lookup(reinterpret_cast<void*>(key)));}
-    /** Attempts to find an element with the given key, then remove it. */
-    inline void remove(size_t key)
-      {return m_VoidTree.remove(reinterpret_cast<void*>(key));}
-
-    /** Clear the Tree */
-    inline void clear()
-      {m_VoidTree.clear();}
-    /** Erase one Element */
-    Iterator erase(Iterator iter)
-      {return m_VoidTree.erase(iter);}
-      //{return *reinterpret_cast<Iterator*>(&(m_VoidTree.erase(*reinterpret_cast<Tree<void*,void*>::Iterator*>(&iter))));}
-      //{return reinterpret_cast<Iterator>(m_VoidTree.erase(reinterpret_cast< Tree<void*,void*>::Iterator>(iter)));}
-
-    /** Get an iterator pointing to the beginning of the Vector
-     *\return iterator pointing to the beginning of the Vector */
-    inline Iterator begin()
-    {
-      //return *reinterpret_cast<Iterator*>(&(m_VoidTree.begin()));
-      //return reinterpret_cast<Iterator>(m_VoidTree.begin());
-      return m_VoidTree.begin();
-    }
-    /** Get a constant iterator pointing to the beginning of the Vector
-     *\return constant iterator pointing to the beginning of the Vector */
-    inline ConstIterator begin() const
-    {
-      return reinterpret_cast<ConstIterator>(m_VoidTree.begin());
-    }
-    /** Get an iterator pointing to the last element + 1
-     *\return iterator pointing to the last element + 1 */
-    inline Iterator end()
-    {
-      //return *reinterpret_cast<Iterator*>(&(m_VoidTree.end()));
-      //return reinterpret_cast<Iterator>(m_VoidTree.end());
-      return m_VoidTree.end();
-    }
-    /** Get a constant iterator pointing to the last element + 1
-     *\return constant iterator pointing to the last element + 1 */
-    inline ConstIterator end() const
-    {
-      return reinterpret_cast<ConstIterator>(m_VoidTree.end());
-    }
-
-  private:
-    /** The actual container */
-    Tree<void*,void*> m_VoidTree;
-};
-
-#endif
 
 /** @} */
 

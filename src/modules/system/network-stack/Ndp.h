@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -97,7 +96,7 @@ class Ndp
         {
             uint8_t type;
             uint8_t length;
-            uint8_t address[6];
+            uint16_t address[3];
         } __attribute__((packed));
 
         struct PrefixInformationOption

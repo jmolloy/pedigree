@@ -45,7 +45,7 @@ class LocalApic : public SchedulerTimer,
   public:
     /** The default constructor */
     inline LocalApic()
-      : m_IoSpace("Local APIC"), m_Handler(0) {}
+      : m_IoSpace("Local APIC"), m_Handlers() {}
     /** The destructor */
     inline virtual ~LocalApic(){}
 
@@ -99,7 +99,11 @@ class LocalApic : public SchedulerTimer,
     // SchedulerTimer interface
     //
     virtual bool registerHandler(TimerHandler *handler)
-      {m_Handler = handler; return false;}
+    {
+        // insert() won't insert if the key is already present.
+        m_Handlers.insert(Processor::id(), handler);
+        return false;
+    }
 
     void ack();
 
@@ -125,8 +129,8 @@ class LocalApic : public SchedulerTimer,
     /** The local APIC memory-mapped I/O space */
     MemoryMappedIo m_IoSpace;
 
-    /** The scheduler. */
-    TimerHandler *m_Handler;
+    /** Timer handlers, tracked per processor. */
+    Tree<ProcessorId, TimerHandler *> m_Handlers;
 };
 
 /** @} */

@@ -65,7 +65,7 @@ Graphics::Buffer *Framebuffer::swCreateBuffer(const void *srcData, Graphics::Pix
         // be, say, 24-bit RGB, and the display driver also 24-bit RGB, but
         // the display's framebuffer reserves 32 bits for pixels (even though
         // the actual depth is 24 bits).
-        memcpy(pAddress, srcData, fullBufferSize);
+        MemoryCopy(pAddress, srcData, fullBufferSize);
     }
     else
     {
@@ -188,7 +188,7 @@ void Framebuffer::swBlit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
         void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
         void *src = adjust_pointer(pSrc, sourceBufferOffset);
 
-        memcpy(dest, src, bytesPerLine * height);
+        MemoryCopy(dest, src, bytesPerLine * height);
     }
     else
     {
@@ -201,7 +201,7 @@ void Framebuffer::swBlit(Graphics::Buffer *pBuffer, size_t srcx, size_t srcy,
             void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffset);
             void *src = adjust_pointer(pSrc, sourceBufferOffset);
 
-            memcpy(dest, src, width * destBytesPerPixel);
+            MemoryCopy(dest, src, width * destBytesPerPixel);
         }
     }
 }
@@ -250,10 +250,10 @@ void Framebuffer::swRect(size_t x, size_t y, size_t width, size_t height, uint32
             if((copySize % 8) == 0) // QWORD boundary
             {
                 uint64_t val = (static_cast<uint64_t>(transformColour) << 32) | transformColour;
-                qmemset(dest, val, copySize / 8);
+                QuadWordSet(dest, val, copySize / 8);
             }
             else
-                dmemset(dest, transformColour, copySize / 4);
+                DoubleWordSet(dest, transformColour, copySize / 4);
         }
         else if(bytesPerPixel == 3)
         {
@@ -270,18 +270,18 @@ void Framebuffer::swRect(size_t x, size_t y, size_t width, size_t height, uint32
             if((copySize % 8) == 0) // QWORD boundary
             {
                 uint64_t val = (static_cast<uint64_t>(transformColour) << 48) | (static_cast<uint64_t>(transformColour) << 32) | (transformColour << 16) | transformColour;
-                qmemset(dest, val, copySize / 8);
+                QuadWordSet(dest, val, copySize / 8);
             }
             else if((copySize % 4) == 0) // DWORD boundary
             {
                 uint32_t val = (transformColour << 16) | transformColour;
-                dmemset(dest, val, copySize / 4);
+                DoubleWordSet(dest, val, copySize / 4);
             }
             else
-                wmemset(dest, transformColour, copySize / 2);
+                WordSet(dest, transformColour, copySize / 2);
         }
         else
-            memset(dest, transformColour, (bytesPerLine * height));
+            ByteSet(dest, transformColour, (bytesPerLine * height));
     }
     else
     {
@@ -298,10 +298,10 @@ void Framebuffer::swRect(size_t x, size_t y, size_t width, size_t height, uint32
                 if((copySize % 8) == 0) // QWORD boundary
                 {
                     uint64_t val = (static_cast<uint64_t>(transformColour) << 32) | transformColour;
-                    qmemset(dest, val, copySize / 8);
+                    QuadWordSet(dest, val, copySize / 8);
                 }
                 else
-                    dmemset(dest, transformColour, copySize / 4);
+                    DoubleWordSet(dest, transformColour, copySize / 4);
             }
             else if(bytesPerPixel == 3)
             {
@@ -318,18 +318,18 @@ void Framebuffer::swRect(size_t x, size_t y, size_t width, size_t height, uint32
                 if((copySize % 8) == 0) // QWORD boundary
                 {
                     uint64_t val = (static_cast<uint64_t>(transformColour) << 48) | (static_cast<uint64_t>(transformColour) << 32) | (transformColour << 16) | transformColour;
-                    qmemset(dest, val, copySize / 8);
+                    QuadWordSet(dest, val, copySize / 8);
                 }
                 else if((copySize % 4) == 0) // DWORD boundary
                 {
                     uint32_t val = (transformColour << 16) | transformColour;
-                    dmemset(dest, val, copySize / 4);
+                    DoubleWordSet(dest, val, copySize / 4);
                 }
                 else
-                    wmemset(dest, transformColour, copySize / 2);
+                    WordSet(dest, transformColour, copySize / 2);
             }
             else
-                memset(dest, transformColour, (width * bytesPerPixel));
+                ByteSet(dest, transformColour, (width * bytesPerPixel));
         }
     }
 }
@@ -364,7 +364,7 @@ void Framebuffer::swCopy(size_t srcx, size_t srcy, size_t destx, size_t desty, s
 
     size_t bytesPerLine = m_nBytesPerLine;
     size_t bytesPerPixel = m_nBytesPerPixel;
-    size_t sourceBytesPerLine = w * bytesPerPixel;
+    /// \todo consider source bytes per line?
 
     // Easy memcpy?
     if(UNLIKELY(((!srcx) && (!destx)) && (w == m_nWidth)))
@@ -375,7 +375,7 @@ void Framebuffer::swCopy(size_t srcx, size_t srcy, size_t destx, size_t desty, s
         void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffsetDest);
         void *src = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffsetSrc);
 
-        memmove(dest, src, h * bytesPerLine);
+        MemoryCopy(dest, src, h * bytesPerLine);
     }
     else
     {
@@ -388,7 +388,7 @@ void Framebuffer::swCopy(size_t srcx, size_t srcy, size_t destx, size_t desty, s
             void *dest = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffsetDest);
             void *src = reinterpret_cast<void*>(m_FramebufferBase + frameBufferOffsetSrc);
 
-            memmove(dest, src, w * bytesPerPixel);
+            MemoryCopy(dest, src, w * bytesPerPixel);
         }
     }
 }

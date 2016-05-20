@@ -21,7 +21,7 @@
  * External prototype for this function so that we don't pollute the CDI header
  */
 extern "C" {
-void cdi_cpp_disk_register(void* void_pdev, struct cdi_storage_device* device);
+void cdi_cpp_disk_register(struct cdi_storage_device* device);
 
 int cdi_storage_read(struct cdi_storage_device* device, uint64_t pos, size_t size, void* dest);
 int cdi_storage_write(struct cdi_storage_device* device, uint64_t pos, size_t size, void* src);
@@ -58,7 +58,7 @@ void cdi_storage_driver_register(struct cdi_storage_driver* driver)
  */
 void cdi_storage_device_init(struct cdi_storage_device* device)
 {
-    cdi_cpp_disk_register(device->dev.backdev, device);
+    cdi_cpp_disk_register(device);
 }
 
 /**
@@ -94,7 +94,7 @@ int cdi_storage_read(struct cdi_storage_device* device, uint64_t pos, size_t siz
         }
         
         // Bereich aus dem Zwischenspeicher kopieren
-        memcpy(dest, buffer + (pos % block_size), size);
+        MemoryCopy(dest, buffer + (pos % block_size), size);
     }
     return 0;
 }
@@ -129,7 +129,7 @@ int cdi_storage_write(struct cdi_storage_device* device, uint64_t pos,
         if (driver->read_blocks(device, block_write_start, 1, buffer) != 0) {
             return -1;
         }
-        memcpy(buffer + offset, source, tmp_size);
+        MemoryCopy(buffer + offset, source, tmp_size);
 
         // Buffer abspeichern
         if (driver->write_blocks(device, block_write_start, 1, buffer) != 0) {
@@ -162,7 +162,7 @@ int cdi_storage_write(struct cdi_storage_device* device, uint64_t pos,
         if (driver->read_blocks(device, block_write_start, 1, buffer) != 0) {
             return -1;
         }
-        memcpy(buffer, source, size);
+        MemoryCopy(buffer, source, size);
 
         // Buffer abspeichern
         if (driver->write_blocks(device, block_write_start, 1, buffer) != 0) {

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -74,7 +73,7 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
     uint64_t S = 0;
     ElfSymbol_t *pSymbols = 0;
     if (!m_pDynamicSymbolTable)
-        pSymbols = reinterpret_cast<ElfSymbol_t*> (m_pSymbolTable);
+        pSymbols = m_pSymbolTable;
     else
         pSymbols = m_pDynamicSymbolTable;
 
@@ -91,10 +90,10 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
     {
         // Section type - the name will be the name of the section header it refers to.
         int shndx = pSymbols[R_SYM(rel.info)].shndx;
-        ElfSectionHeader_t *pSh = &m_pSectionHeaders[shndx];
-        S = pSh->addr;
+        ElfSectionHeader_t *pReferencedSh = &m_pSectionHeaders[shndx];
+        S = pReferencedSh->addr;
     }
-    else if (R_TYPE(rel.info) != R_X86_64_RELATIVE) // Relative doesn't need a symbol!
+    else if (pSymbols && R_TYPE(rel.info) != R_X86_64_RELATIVE) // Relative doesn't need a symbol!
     {
         const char *pStr = pStringTable + pSymbols[R_SYM(rel.info)].name;
 
@@ -105,14 +104,17 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
             policy = SymbolTable::NotOriginatingElf;
         S = pSymtab->lookup(String(pStr), this, policy);
 
+        if (S == 0 && ST_BIND(pSymbols[R_SYM(rel.info)].info) == 2)
+        {
+            // Weak relocation that couldn't be found, which is OK.
+            S = ~0UL;
+        }
+
         if (S == 0)
         {
             WARNING("Relocation failed for symbol \"" << pStr << "\" (relocation=" << R_TYPE(rel.info) << ")");
             WARNING("Relocation at " << address << " (offset=" << rel.offset << ")...");
         }
-        // This is a weak relocation, but it was undefined.
-        else if(S == ~0UL)
-            WARNING("Weak relocation == 0 [undefined] for \""<< pStr << "\".");
         
         symbolName = pStr;
     }
@@ -120,7 +122,7 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
     if (S == 0 && (R_TYPE(rel.info) != R_X86_64_RELATIVE))
         return false;
     if (S == ~0UL)
-        S = 0; // undefined
+        S = 0; // weak relocation, undefined
 
     // Base address
     uint64_t B = loadBase;
@@ -139,6 +141,11 @@ bool Elf::applyRelocation(ElfRela_t rel, ElfSectionHeader_t *pSh, SymbolTable *p
             result = (result&0xFFFFFFFF00000000) | ((S + A - P) & 0xFFFFFFFF);
             break;
         case R_X86_64_COPY:
+            if (!S)
+            {
+                ERROR("Cannot perform a R_X86_64_COPY relocation for a weak symbol.");
+                return false;
+            }
             result = * reinterpret_cast<uintptr_t*> (S);
             break;
         case R_X86_64_JUMP_SLOT:

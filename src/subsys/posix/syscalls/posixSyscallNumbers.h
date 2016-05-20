@@ -81,10 +81,6 @@
 #define POSIX_ALARM      51
 #define POSIX_SLEEP      52
 
-#define POSIX_DLOPEN     53
-#define POSIX_DLSYM      54
-#define POSIX_DLCLOSE    55
-
 #define POSIX_POLL       56
 
 #define POSIX_RENAME     57
@@ -187,11 +183,27 @@
 
 #define POSIX_REALPATH          126
 
+#define POSIX_TIMES             127
+#define POSIX_GETRUSAGE         128
+
+#define POSIX_GETSOCKOPT        129
+#define POSIX_GETPPID           130
+#define POSIX_UTIME             131
+#define POSIX_UTIMES            132
+#define POSIX_CHROOT            133
+
 #define POSIX_PTSNAME           200
 #define POSIX_TTYNAME           201
 #define POSIX_TCSETPGRP         202
 #define POSIX_TCGETPGRP         203
 
 #define POSIX_USLEEP            204
+
+#define POSIX_PEDIGREE_CREATE_WAITER    205
+#define POSIX_PEDIGREE_DESTROY_WAITER   206
+#define POSIX_PEDIGREE_THREAD_WAIT_FOR  207
+#define POSIX_PEDIGREE_THREAD_TRIGGER   209
+
+#define POSIX_PEDIGREE_GET_INFO_BLOCK   210
 
 #endif

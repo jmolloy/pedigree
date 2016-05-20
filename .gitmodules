@@ -1,3 +1,6 @@
 [submodule "src/modules/drivers/cdi"]
 	path = src/modules/drivers/cdi
 	url = git://git.tyndur.org/cdi.git
+[submodule "external/googletest"]
+	path = external/googletest
+	url = https://github.com/google/googletest

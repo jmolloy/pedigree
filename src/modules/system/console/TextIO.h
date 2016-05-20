@@ -224,6 +224,12 @@ private:
 
     /** Number of Utf8 bits handled so far in this sequence. */
     size_t m_nUtf8Handled;
+
+    /**
+     * Are we currently active?
+     * We only become active once data is first written.
+     */
+    bool m_bActive;
 };
 
 #endif

@@ -21,6 +21,7 @@
 #define KERNEL_UTILITIES_HASHTABLE_H
 
 #include <processor/types.h>
+#include <utilities/lib.h>
 
 /** @addtogroup kernelutilities
  * @{ */
@@ -51,6 +52,7 @@ class HashTable
          */
         HashTable(size_t numbuckets = 0) {
             m_Buckets = 0;
+            m_nBuckets = 0;
             m_MaxBucket = numbuckets;
         }
 
@@ -58,15 +60,49 @@ class HashTable
          * Allows for late configuration of the hash table size, for
          * cases where the table size can be optimised.
          */
-        void initialise(size_t numbuckets) {
+        void initialise(size_t numbuckets, bool preallocate = false) {
             if(m_Buckets) {
                 return;
             }
             m_MaxBucket = numbuckets;
+            m_nBuckets = 0;
+
+            if(preallocate) {
+                m_nBuckets = m_MaxBucket;
+                m_Buckets = new bucket[m_nBuckets];
+            }
+        }
+
+        /**
+         * Clear the HashTable and free all held memory.
+         */
+        void clear()
+        {
+            if (!m_Buckets)
+            {
+                return;
+            }
+
+            delete [] m_Buckets;
+            m_Buckets = 0;
+
+            m_MaxBucket = 0;
+            m_nBuckets = 0;
         }
 
         virtual ~HashTable() {
             if(m_Buckets) {
+                for (size_t i = 0; i < m_nBuckets; ++i)
+                {
+                    bucket *b = m_Buckets[i].next;
+                    while (b)
+                    {
+                        bucket *d = b;
+                        b = b->next;
+                        delete d;
+                    }
+                }
+
                 delete [] m_Buckets;
             }
         }
@@ -89,17 +125,35 @@ class HashTable
                 return 0;
             }
 
-            struct bucket *b = m_Buckets[hash];
-            if(!b) {
+            if (hash >= m_nBuckets)
+            {
+                // Not present.
                 return 0;
             }
 
-            while(b && (b->key != k)) {
-                b = b->next;
+            bucket *b = &m_Buckets[hash];
+            if(!b->set) {
+                return 0;
             }
 
-            if(!b) {
-                return 0;
+            if (b->key != k)
+            {
+                // Search the chain.
+                bucket *chain = b->next;
+                while (chain)
+                {
+                    if (chain->key == k)
+                    {
+                        b = chain;
+                        break;
+                    }
+
+                    chain = chain->next;
+                }
+
+                if(!chain) {
+                    return 0;
+                }
             }
 
             return b->value;
@@ -108,43 +162,61 @@ class HashTable
         /**
          * Insert the given value with the given key.
          */
-        void insert(K &k, V *v) {
+        bool insert(K &k, V *v) {
             // If this exact key already exists, we have more than
             // just a hash collision, and we must fail.
             if(lookup(k) != 0) {
-                return;
+                return false;
             }
 
-            // Lazily create buckets if needed.
-            if(!m_Buckets) {
-                if(!m_MaxBucket) {
-                    return;
-                }
-                m_Buckets = new struct bucket*[m_MaxBucket];
-                memset(m_Buckets, 0, sizeof(struct bucket*) * m_MaxBucket);
+            if (!m_MaxBucket) {
+                return false;
             }
 
             size_t hash = k.hash();
             if(hash > m_MaxBucket) {
-                return;
+                return false;
             }
 
-            struct bucket *newb = new struct bucket;
-            newb->key = k;
-            newb->value = v;
-            newb->next = 0;
+            // Lazily create buckets if needed.
+            if((hash + 1) > m_nBuckets) {
+                size_t nextStep = max(max(m_nBuckets * 2, hash + 1), m_MaxBucket);
+                bucket *newBuckets = new bucket[nextStep];
+                if (m_Buckets) {
+                    pedigree_std::copy(newBuckets, m_Buckets, m_nBuckets);
+                    delete [] m_Buckets;
+                }
+                m_nBuckets = nextStep;
+                m_Buckets = newBuckets;
+            }
 
-            struct bucket *b = m_Buckets[hash];
-            if(!b) {
-                m_Buckets[hash] = newb;
-            } else {
-                // Add to existing chain.
-                while(b->next) {
-                    b = b->next;
+            // Do we need to chain?
+            if (m_Buckets[hash].set)
+            {
+                // Yes.
+                bucket *newb = new bucket;
+                newb->key = k;
+                newb->value = v;
+                newb->set = true;
+                newb->next = 0;
+
+                bucket *bucket = &m_Buckets[hash];
+                while (bucket->next)
+                {
+                    bucket = bucket->next;
                 }
 
-                b->next = newb;
+                bucket->next = newb;
             }
+            else
+            {
+                m_Buckets[hash].set = true;
+                m_Buckets[hash].key = k;
+                m_Buckets[hash].value = v;
+                m_Buckets[hash].next = 0;
+            }
+
+            return true;
         }
 
         /**
@@ -164,36 +236,60 @@ class HashTable
                 return;
             }
 
-            struct bucket *b = m_Buckets[hash];
-            if(b->key == k) {
-                m_Buckets[hash] = b->next;
-            } else {
-                struct bucket *p = b;
-                while(b && (b->key != k)) {
-                    p = b;
-                    b = b->next;
-                }
-
-                if(b) {
-                    p->next = b->next;
-                    delete b;
-                }
+            if(hash > m_nBuckets) {
+                return;
             }
 
-            delete b;
+            bucket *b = &m_Buckets[hash];
+            if(b->key == k) {
+                if (b->next)
+                {
+                    // Carry the next entry into this position.
+                    bucket *next = b->next;
+                    m_Buckets[hash] = *next;
+                    delete next;
+                }
+                else
+                {
+                    // This entry is available, no chain present.
+                    m_Buckets[hash].set = false;
+                }
+            } else {
+                // There's a chain, so we need to find the correct key in it.
+                bucket *p = b;
+                bucket *l = p;
+                while (p)
+                {
+                    if (p->key == k)
+                    {
+                        l->next = p->next;
+                        delete p;
+                        break;
+                    }
+
+                    p = p->next;
+                }
+            }
         }
 
     private:
         struct bucket {
+            bucket() : key(), value(0), next(0), set(false)
+            {
+            }
+
             K key;
             V *value;
 
             // Where hash collisions occur, we chain another value
             // to the original bucket.
-            struct bucket *next;
+            bucket *next;
+
+            bool set;
         };
 
-        struct bucket **m_Buckets;
+        bucket *m_Buckets;
+        size_t m_nBuckets;
         size_t m_MaxBucket;
 };
 

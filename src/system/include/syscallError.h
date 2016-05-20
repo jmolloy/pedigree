@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -21,11 +20,11 @@
 #ifndef SYSCALL_ERROR_H
 #define SYSCALL_ERROR_H
 
-#include <process/Thread.h>
-#include <processor/Processor.h>
 #include <errors.h>
 
 // For setting a thread's error number when a problem occurs in a syscall.
-#define SYSCALL_ERROR(x) Processor::information().getCurrentThread()->setErrno(Error::x)
+void syscallError(int e);
+
+#define SYSCALL_ERROR(x) syscallError(Error::x)
 
 #endif

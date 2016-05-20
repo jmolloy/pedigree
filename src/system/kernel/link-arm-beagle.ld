@@ -29,6 +29,10 @@ SECTIONS
         *(.init_array);
         *(.ctors);
         end_ctors = .;
+        start_dtors = .;
+        *(.dtors)
+        *(.fini_array);
+        end_dtors = .;
     
         start_module_ctors = .;
         *(.module_ctors);
@@ -55,6 +59,7 @@ SECTIONS
     {
         . = ALIGN(4096);
         bss = .; _bss = .; __bss = .;
+        *(.stacks*);
         *(.asm.bss);
         *(.bss*);
         *(.sbss);
@@ -66,7 +71,9 @@ SECTIONS
         *(.ivt);
     }
 
-  /DISCARD/ : { *(.comment) *(.eh_frame) *(.debug_abbrev) *(.debug_info) *(.debug_line) *(.debug_loc) *(.debug_pubnames) *(.debug_aranges) *(.debug_str) *(.debug_macinfo) *(.debug_ranges) *(.stab) *(.stabstr) }
+    /* We do a strip to create a real kernel binary, so don't wipe out debug
+     * data from the kernel binary here. */
+    /DISCARD/ : { *(.comment) *(.eh_frame) }
 
     . = ALIGN(4096);
     end = .; _end = .; __end = .;

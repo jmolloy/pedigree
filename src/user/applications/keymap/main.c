@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -86,7 +85,13 @@ int sparse_add()
             fprintf(stderr, "Too many sparse nodes.\n");
             exit(1);
         }
-        sparse_buff = realloc(sparse_buff, sparse_buffsz+sz+32);
+        char *new_sparse_buff = realloc(sparse_buff, sparse_buffsz+sz+32);
+        if (!new_sparse_buff)
+        {
+            fprintf(stderr, "Couldn't allocate buffer for new sparse buffer: %s.\n", strerror(errno));
+            exit(1);
+        }
+        sparse_buff = new_sparse_buff;
         sparse_buffsz += sz+32;
     }
     sparse_pos += sz;
@@ -105,7 +110,13 @@ int data_add(table_entry_t *start, table_entry_t *end)
             fprintf(stderr, "Too much data.\n");
             exit(1);
         }
-        data_buff = realloc(data_buff, data_buffsz+sz+32);
+        char *new_data_buff = realloc(data_buff, data_buffsz+sz+32);
+        if (!new_data_buff)
+        {
+            fprintf(stderr, "Couldn't allocate buffer for new data buffer: %s.\n", strerror(errno));
+            exit(1);
+        }
+        data_buff = new_data_buff;
         data_buffsz += sz+32;
     }
 
@@ -140,11 +151,11 @@ int yywrap()
     return 1;
 }
 
+int yyerror(const char *str) __attribute__((noreturn));
 int yyerror(const char *str)
 {
   printf("Syntax error: %s\n", str);
   exit(1);
-  return 1;
 }
 
 void usage()
@@ -322,7 +333,7 @@ static char sparseBuff[%d] =\n\"", header_guard, header_guard, sparse_buffsz+1);
 
     fclose(stream);
 
-    //free(header_guard);
+    free(header_guard);
 
     printf("Compiled keymap header file written to `%s'.\n", fname);
 }

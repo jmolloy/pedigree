@@ -29,6 +29,7 @@
 #define XTERM_BRIGHTFG  0x8
 #define XTERM_BRIGHTBG  0x10
 #define XTERM_BORDER    0x20
+#define XTERM_ITALIC    0x40
 
 #define C_BLACK   0
 #define C_RED     1
@@ -47,8 +48,8 @@
 
 #include "environment.h"
 
-#include <config/Config.h>
-#include <graphics/Graphics.h>
+#include <native/config/Config.h>
+#include <native/graphics/Graphics.h>
 
  // RGBA -> BGRA
 
@@ -903,6 +904,28 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                                 }
                                 break;
                             }
+                            case 3:
+                            {
+                                // Italic
+                                uint8_t flags = m_pWindows[m_ActiveBuffer]->getFlags();
+                                if(!(flags & XTERM_ITALIC))
+                                {
+                                    flags |= XTERM_ITALIC;
+                                    m_pWindows[m_ActiveBuffer]->setFlags(flags);
+                                }
+                                break;
+                            }
+                            case 4:
+                            {
+                                // Underline
+                                uint8_t flags = m_pWindows[m_ActiveBuffer]->getFlags();
+                                if(!(flags & XTERM_UNDERLINE))
+                                {
+                                    flags |= XTERM_UNDERLINE;
+                                    m_pWindows[m_ActiveBuffer]->setFlags(flags);
+                                }
+                                break;
+                            }
                             case 7:
                             {
                                 // Inverse
@@ -911,6 +934,34 @@ void Xterm::write(uint32_t utf32, DirtyRectangle &rect)
                                     flags &= ~XTERM_INVERSE;
                                 else
                                     flags |= XTERM_INVERSE;
+                                m_pWindows[m_ActiveBuffer]->setFlags(flags);
+                                break;
+                            }
+                            case 22:
+                            {
+                                uint8_t flags = m_pWindows[m_ActiveBuffer]->getFlags();
+                                flags &= ~XTERM_ITALIC;
+                                m_pWindows[m_ActiveBuffer]->setFlags(flags);
+                                break;
+                            }
+                            case 23:
+                            {
+                                uint8_t flags = m_pWindows[m_ActiveBuffer]->getFlags();
+                                flags &= ~XTERM_ITALIC;
+                                m_pWindows[m_ActiveBuffer]->setFlags(flags);
+                                break;
+                            }
+                            case 24:
+                            {
+                                uint8_t flags = m_pWindows[m_ActiveBuffer]->getFlags();
+                                flags &= ~XTERM_UNDERLINE;
+                                m_pWindows[m_ActiveBuffer]->setFlags(flags);
+                                break;
+                            }
+                            case 27:
+                            {
+                                uint8_t flags = m_pWindows[m_ActiveBuffer]->getFlags();
+                                flags &= ~XTERM_INVERSE;
                                 m_pWindows[m_ActiveBuffer]->setFlags(flags);
                                 break;
                             }
@@ -1778,24 +1829,16 @@ void Xterm::Window::render(DirtyRectangle &rect, size_t flags, size_t x, size_t 
 
     TermChar c = m_pView[y * m_Stride + x];
 
-    // If both flags and c.flags have inverse, invert the inverse by
-    // unsetting it in both sets of flags.
-    if ((flags & XTERM_INVERSE) && (c.flags & XTERM_INVERSE))
-    {
-        c.flags &= ~XTERM_INVERSE;
-        flags &= ~XTERM_INVERSE;
-    }
-
-    flags = c.flags | flags;
+    c.flags |= flags;
 
     uint32_t fg = g_Colours[c.fore];
-    if (flags & XTERM_BRIGHTFG)
+    if (c.flags & XTERM_BRIGHTFG)
         fg = g_BrightColours[c.fore];
     uint32_t bg = g_Colours[c.back];
-    if (flags & XTERM_BRIGHTBG)
+    if (c.flags & XTERM_BRIGHTBG)
         bg = g_BrightColours[c.back];
 
-    if (flags & XTERM_INVERSE)
+    if (c.flags & XTERM_INVERSE)
     {
         uint32_t tmp = fg;
         fg = bg;
@@ -1814,9 +1857,7 @@ void Xterm::Window::render(DirtyRectangle &rect, size_t flags, size_t x, size_t 
     }
 
     uint32_t utf32 = c.utf32;
-    // char str[64];
-    // sprintf(str, "Render(%d,%d,%d,%d)", m_OffsetLeft, m_OffsetTop, x, y);
-    // log(str);
+
     // Ensure the painted area is marked dirty.
     rect.point((x * g_NormalFont->getWidth()) + m_OffsetLeft,
                (y * g_NormalFont->getHeight()) + m_OffsetTop);
@@ -1824,19 +1865,16 @@ void Xterm::Window::render(DirtyRectangle &rect, size_t flags, size_t x, size_t 
                ((y + 1) * g_NormalFont->getHeight()) + m_OffsetTop);
 
     Font *pFont = g_NormalFont;
-    if(flags & XTERM_BOLD)
-    {
-        pFont = g_BoldFont;
-    }
+    bool bBold = (c.flags & XTERM_BOLD) == XTERM_BOLD;
+    bool bItalic = (c.flags & XTERM_ITALIC) == XTERM_ITALIC;
+    bool bUnderline = (c.flags & XTERM_UNDERLINE) == XTERM_UNDERLINE;
 
-    // Now, render without a back. This allows tails and such to be rendered and
-    // they will just cross over to the next line.
     pFont->render(m_pFramebuffer, utf32,
                   (x * pFont->getWidth()) + m_OffsetLeft,
                   (y * pFont->getHeight()) + m_OffsetTop,
-                  fg, bg);
+                  fg, bg, true, bBold, bItalic, bUnderline);
 
-    if(flags & XTERM_BORDER)
+    if(c.flags & XTERM_BORDER)
     {
         // Border around the cell.
         cairo_save(g_Cairo);
@@ -2998,7 +3036,6 @@ void Xterm::Window::invert(DirtyRectangle &rect)
 #endif
 
     // Invert the entire screen, if using default colours.
-    TermChar *pNew = m_pView;
     for (size_t y = 0; y < m_Height; y++)
     {
         for (size_t x = 0; x < m_Width; x++)

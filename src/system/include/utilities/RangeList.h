@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -22,7 +21,6 @@
 #define KERNEL_UTILITIES_RANGELIST_H
 
 #include <utilities/List.h>
-#include <Log.h>
 
 /** @addtogroup kernelutilities
  * @{ */
@@ -36,15 +34,15 @@ class RangeList
   public:
     /** Default constructor does nothing */
     inline RangeList()
-      : m_List(), m_bReverse(false) {}
+      : m_List(), m_bReverse(false), m_bPreferUsed(false) {}
     /** Construct with reverse order, without an initial allocation. */
-    inline RangeList(bool reverse)
-      : m_List(), m_bReverse(reverse) {}
+    inline RangeList(bool reverse, bool preferUsed = false)
+      : m_List(), m_bReverse(reverse), m_bPreferUsed(preferUsed) {}
     /** Construct with a preexisting range
      *\param[in] Address beginning of the range
      *\param[in] Length length of the range */
-    RangeList(T Address, T Length, bool bReverse = false)
-      : m_List(), m_bReverse(bReverse)
+    RangeList(T Address, T Length, bool bReverse = false, bool preferUsed = false)
+      : m_List(), m_bReverse(bReverse), m_bPreferUsed(preferUsed)
     {
       Range *range = new Range(Address, Length);
       m_List.pushBack(range);
@@ -90,6 +88,9 @@ class RangeList
     /** Get a range at a specific index */
     Range getRange(size_t index) const;
 
+    /** Sweep the RangeList and re-merge items. */
+    void sweep();
+
   private:
 
     /** List of ranges */
@@ -97,6 +98,9 @@ class RangeList
 
     /** Should we allocate in reverse order? */
     bool m_bReverse;
+
+    /** Should we prefer previously-used ranges where possible? */
+    bool m_bPreferUsed;
 
     RangeList &operator = (const RangeList & l);
 
@@ -108,20 +112,15 @@ class RangeList
 
 /** @} */
 
-//
-// The implementation
-//
 /** Copy constructor - performs deep copy. */
 template<typename T>
 RangeList<T>::RangeList(const RangeList<T>& other)
   : m_List()
 {
-    m_bReverse = other.m_bReverse;
     m_List.clear();
-    Iterator it(other.m_List.begin());
-    for (;
-        it != other.m_List.end();
-        it++)
+    m_bReverse = other.m_bReverse;
+
+    for (Iterator it = other.m_List.begin(); it != other.m_List.end(); ++it)
     {
         Range *pRange = new Range((*it)->address, (*it)->length);
         m_List.pushBack(pRange);
@@ -133,128 +132,217 @@ void RangeList<T>::free(T address, T length)
 {
   Iterator cur(m_List.begin());
   ConstIterator end(m_List.end());
-  for (;cur != end;++cur)
+
+  // Try and find a place to merge immediately.
+  bool needsNew = true;
+  for (; cur != end; ++cur)
+  {
+    // Region ends at our freed address.
     if (((*cur)->address + (*cur)->length) == address)
     {
-      address = (*cur)->address;
-      length += (*cur)->length;
-      delete *cur;
-      m_List.erase(cur);
+      // Update - all done.
+      (*cur)->length += length;
+      needsNew = false;
       break;
     }
-
-  cur = m_List.begin();
-  end = m_List.end();
-  for (;cur != end;++cur)
-    if ((*cur)->address == (address + length))
+    // Region starts after our address.
+    else if ((*cur)->address == (address + length))
     {
-      length += (*cur)->length;
-      delete *cur;
-      m_List.erase(cur);
+      // Expand.
+      (*cur)->address -= length;
+      (*cur)->length += length;
+      needsNew = false;
       break;
     }
+  }
 
+  // Clean up any merges that we may have just created.
+  sweep();
+
+  if (!needsNew)
+    return;
+
+  // Couldn't find a merge, so we need to add a new region.
+
+  // Add the range back to our list, but in such a way that it is allocated
+  // last rather than first (if another allocation of the same length comes
+  // later).
   Range *range = new Range(address, length);
-  m_List.pushBack(range);
+
+  // Decide which side of the list to push to. If we prefer used ranges over
+  // fresh ranges, we want to invert the push decision.
+  bool front = m_bReverse;
+  if (m_bPreferUsed) front = !front;
+
+  if (front)
+    m_List.pushFront(range);
+  else
+    m_List.pushBack(range);
 }
+
 template<typename T>
 bool RangeList<T>::allocate(T length, T &address)
 {
-  if(m_bReverse)
-  {
-    ReverseIterator cur(m_List.rbegin());
-    ConstReverseIterator end(m_List.rend());
-    for (;cur != end;++cur)
-      if ((*cur)->length >= length)
-      {
-        T offset = (*cur)->length - length;
-        address = (*cur)->address + offset;
-        (*cur)->length -= length;
-        if ((*cur)->length == 0)
+    bool bSuccess = false;
+
+    // Try and find enough space. This logic differs slightly if we are working
+    // in reverse, as the direction changes.
+    if (m_bReverse)
+    {
+        for (ReverseIterator it = m_List.rbegin(); it != m_List.rend(); ++it)
         {
-          delete *cur;
-          m_List.erase(cur);
+            if ((*it)->length >= length)
+            {
+                // Big enough. Cut into the END of this range.
+                T offset = (*it)->length - length;
+                address = (*it)->address + offset;
+                (*it)->length -= length;
+
+                // Remove if the entry no longer exists.
+                if (!(*it)->length)
+                {
+                    delete (*it);
+                    m_List.erase(it);
+                }
+
+                bSuccess = true;
+                break;
+            }
         }
-        return true;
-      }
-  }
-  else
-  {
-    Iterator cur(m_List.begin());
-    ConstIterator end(m_List.end());
-    for (;cur != end;++cur)
-      if ((*cur)->length >= length)
-      {
-        address = (*cur)->address;
-        (*cur)->address += length;
-        (*cur)->length -= length;
-        if ((*cur)->length == 0)
+    }
+    else
+    {
+        for (Iterator it = m_List.begin(); it != m_List.end(); ++it)
         {
-          delete *cur;
-          m_List.erase(cur);
+            if ((*it)->length >= length)
+            {
+                // Big enough. Cut into the START of this range.
+                address = (*it)->address;
+                (*it)->address += length;
+                (*it)->length -= length;
+
+                // Remove if the entry no longer exists.
+                if (!(*it)->length)
+                {
+                    delete (*it);
+                    m_List.erase(it);
+                }
+
+                bSuccess = true;
+                break;
+            }
         }
-        return true;
-      }
-  }
-  return false;
+    }
+
+    // Now that we've possibly removed items or rearranged them, re-sweep.
+    sweep();
+    return bSuccess;
 }
+
 template<typename T>
 bool RangeList<T>::allocateSpecific(T address, T length)
 {
-  Iterator cur(m_List.begin());
-  ConstIterator end(m_List.end());
-  for (;cur != end;++cur)
-    if ((*cur)->address == address &&
-        (*cur)->length == length)
+    bool bSuccess = false;
+    for (Iterator cur = m_List.begin(); cur != m_List.end(); ++cur)
     {
-      delete *cur;
-      m_List.erase(cur);
-      return true;
+        // Precise match.
+        if ((*cur)->address == address && (*cur)->length == length)
+        {
+            delete *cur;
+            m_List.erase(cur);
+            bSuccess = true;
+            break;
+        }
+
+        // Match at end.
+        else if ((*cur)->address < address && ((*cur)->address + (*cur)->length) == (address + length))
+        {
+            (*cur)->length -= length;
+            bSuccess = true;
+            break;
+        }
+
+        // Match at start.
+        else if ((*cur)->address == address && (*cur)->length > length)
+        {
+            (*cur)->address += length;
+            (*cur)->length -= length;
+            bSuccess = true;
+            break;
+        }
+
+        // Match within.
+        else if ((*cur)->address < address && ((*cur)->address + (*cur)->length) > (address + length))
+        {
+            // Need to split the range.
+            Range *newRange = new Range(address + length, (*cur)->address + (*cur)->length - address - length);
+            m_List.pushBack(newRange);
+            (*cur)->length = address - (*cur)->address;
+            bSuccess = true;
+        }
+
     }
-    else if ((*cur)->address == address &&
-             (*cur)->length > length)
-    {
-      (*cur)->address += length;
-      (*cur)->length -= length;
-      return true;
-    }
-    else if ((*cur)->address < address &&
-             ((*cur)->address + (*cur)->length) == (address + length))
-    {
-      (*cur)->length -= length;
-      return true;
-    }
-    else if ((*cur)->address < address &&
-             ((*cur)->address + (*cur)->length) > (address + length))
-    {
-      Range *newRange = new Range(address + length, (*cur)->address + (*cur)->length - address - length);
-      m_List.pushBack(newRange);
-      (*cur)->length = address - (*cur)->address;
-      return true;
-    }
-  return false;
+
+    sweep();
+    return bSuccess;
 }
+
 template<typename T>
 typename RangeList<T>::Range RangeList<T>::getRange(size_t index) const
 {
-  if (index >= m_List.size())return Range(0, 0);
+  if (index >= m_List.size()) return Range(0, 0);
 
   ConstIterator cur(m_List.begin());
-  for (size_t i = 0;i < index;++i)++cur;
+  for (size_t i = 0; i < index; ++i) ++cur;
   return Range(**cur);
 }
+
 template<typename T>
 RangeList<T>::~RangeList()
 {
     clear();
 }
+
 template<typename T>
 void RangeList<T>::clear()
 {
-    ConstIterator cur(m_List.begin());
-    ConstIterator end(m_List.end());
-    for (;cur != end;++cur)
-        delete *cur;
+    for (ConstIterator it = m_List.begin(); it != m_List.end(); ++it)
+        delete *it;
     m_List.clear();
 }
+
+template<typename T>
+void RangeList<T>::sweep()
+{
+  // Try and clean up, merging as needed.
+  for (Iterator cur = m_List.begin(); cur != m_List.end(); ++cur)
+  {
+    // Can we merge? (note: preincrement modifies the iterator)
+    Iterator next = cur;
+    ++next;
+    if (next == m_List.end())
+      break;
+
+    uintptr_t cur_address = (*cur)->address;
+    uintptr_t next_address = (*next)->address;
+    size_t cur_len = (*cur)->length;
+    size_t next_len = (*next)->length;
+
+    if ((cur_address + cur_len) == next_address)
+    {
+      // Merge.
+      (*cur)->length += next_len;
+      delete *next;
+      m_List.erase(next);
+    }
+    else if ((next_address + next_len) == cur_address)
+    {
+      (*cur)->address -= next_len;
+      (*cur)->length += next_len;
+      delete *next;
+      m_List.erase(next);
+    }
+  }
+}
+
 #endif

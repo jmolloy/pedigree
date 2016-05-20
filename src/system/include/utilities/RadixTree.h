@@ -25,7 +25,6 @@
 #include <utilities/Iterator.h>
 #include <utilities/IteratorAdapter.h>
 #include <Log.h>
-#include <processor/Processor.h>
 
 /**\file  RadixTree.h
  *\author James Molloy <jamesm@osdev.org>
@@ -38,12 +37,8 @@
 /** Dictionary class, aka Map for string keys. This is
  *  implemented as a Radix Tree - also known as a Patricia Trie.
  * \brief A key/value dictionary for string keys. */
-template<class E>
-class RadixTree;
-
-/** Tree specialisation for void* */
-template<>
-class RadixTree<void*>
+template<class T>
+class RadixTree
 {
 private:
     /** Tree node. */
@@ -60,8 +55,8 @@ private:
         };
 
         Node(bool bCaseSensitive) :
-            m_pKey(0),value(0),m_Children(),m_pParent(0),
-            m_bCaseSensitive(bCaseSensitive)
+            m_Key(),value(T()),m_Children(),m_pParent(0),
+            m_bCaseSensitive(bCaseSensitive), m_pParentTree(0)
         {
         }
 
@@ -81,7 +76,7 @@ private:
         
         /** Locates a child of this node, given the key portion of key
             (lookahead on the first token) */
-        Node *findChild(const uint8_t *cpKey);
+        Node *findChild(const char *cpKey) const;
 
         /** Adds a new child. */
         void addChild(Node *pNode);
@@ -94,59 +89,63 @@ private:
 
         /** Compares cpKey and this node's key, returning the type of match
             found. */
-        MatchType matchKey(const uint8_t *cpKey);
+        MatchType matchKey(const char *cpKey) const;
 
         /** Returns the first found child of the node. */
-        Node *getFirstChild();
+        Node *getFirstChild() const;
 
         /** Sets the node's key to the concatenation of \p cpKey and the
          *  current key.
          *\param cpKey Key to prepend to the current key. */
-        void prependKey(const uint8_t *cpKey);
+        void prependKey(const char *cpKey);
 
-        void setKey(const uint8_t *cpKey);
-        inline uint8_t *getKey() {return m_pKey;}
-        inline void setValue(void *pV) {value = pV;}
-        inline void *getValue() {return value;}
+        void setKey(const char *cpKey);
+        /** If you know the length of cpKey, this can be a small boost. */
+        void setKey(const char *cpKey, size_t lengthHint);
+        inline const char *getKey() const {return m_Key;}
+        inline void setValue(const T &pV) {value = pV;}
+        inline const T &getValue() const {return value;}
         inline void setParent(Node *pP) {m_pParent = pP;}
-        inline Node *getParent() {return m_pParent;}
+        inline Node *getParent() const {return m_pParent;}
 
         /** Node key, zero terminated. */
-        uint8_t *m_pKey;
+        String m_Key;
         /** Node value.
             \note Parting from coding standard because Iterator requires the
                   member be called 'value'. */
-        void *value;
+        T value;
         /** Array of 16 pointers to 16 nodes (256 total). */
         childlist_t m_Children;
         /** Parent node. */
         Node *m_pParent;
         /** Controls case-sensitive matching. */
-        bool m_bCaseSensitive;
+        const bool m_bCaseSensitive;
+
+        /** Link back to the node's RadixTree instance. */
+        RadixTree *m_pParentTree;
 
     private:
         Node(const Node&);
         Node &operator =(const Node&);
         
         /** Returns the next Node to look at during an in-order iteration. */
-        Node *doNext();
+        Node *doNext() const;
 
         /** Returns the node's next sibling, by looking at its parent's children. */
-        Node *getNextSibling();
+        Node *getNextSibling() const;
     };
 
 public:
-
     /** Type of the bidirectional iterator */
-    typedef ::Iterator<void*, Node>       Iterator;
+    typedef ::Iterator<T, Node>       Iterator;
     /** Type of the constant bidirectional iterator */
-    typedef Iterator::Const               ConstIterator;
+    typedef typename Iterator::Const  ConstIterator;
 
     /** The default constructor, does nothing */
     RadixTree();
     /** The copy-constructor
      *\param[in] x the reference object to copy */
-    RadixTree(const RadixTree<void*> &x);
+    RadixTree(const RadixTree<T> &x);
     /** Constructor that offers case sensitivity adjustment. */
     RadixTree(bool bCaseSensitive);
     /** The destructor, deallocates memory */
@@ -162,23 +161,22 @@ public:
     /** Add an element to the Tree.
      *\param[in] key the key
      *\param[in] value the element */
-    void insert(String key, void *value);
+    void insert(const String &key, const T &value);
     /** Attempts to find an element with the given key.
      *\return the element found, or NULL if not found. */
-    void *lookup(String key) const;
+    T lookup(const String &key) const;
     /** Attempts to remove an element with the given key. */
-    void remove(String key);
+    void remove(const String &key);
 
     /** Clear the tree. */
     void clear();
-
 
     /** Erase one Element */
     Iterator erase(Iterator iter)
     {
         Node *iterNode = iter.__getNode();
         Node *next = iterNode->next();
-        remove(String(reinterpret_cast<const char*>(iterNode->getKey())));
+        remove(String(iterNode->getKey()));
         Iterator ret(next);
         return ret;
     }
@@ -187,6 +185,8 @@ public:
      *\return iterator pointing to the beginning of the List */
     inline Iterator begin()
     {
+        if (!m_pRoot)
+            return Iterator(0);
         Iterator it(m_pRoot->next());
         return it;
     }
@@ -194,6 +194,8 @@ public:
      *\return constant iterator pointing to the beginning of the List */
     inline ConstIterator begin() const
     {
+        if (!m_pRoot)
+            return ConstIterator(0);
         ConstIterator it(m_pRoot->next());
         return it;
     }
@@ -213,109 +215,548 @@ public:
 private:
     /** Internal function to create a copy of a subtree. */
     Node *cloneNode(Node *node, Node *parent);
+    /** Obtain a new Node with the same case-sensitive flag. */
+    Node *getNewNode()
+    {
+        Node *p = m_NodePool.allocate(m_bCaseSensitive);
+        p->m_pParentTree = this;
+        return p;
+    }
+    /** Return a Node so it can be allocated again. */
+    void returnNode(Node *p)
+    {
+        if (p)
+        {
+            m_NodePool.deallocate(p);
+        }
+    }
 
     /** Number of items in the tree. */
     size_t m_nItems;
     /** The tree's root. */
     Node *m_pRoot;
     /** Whether matches are case-sensitive or not. */
-    bool m_bCaseSensitive;
+    const bool m_bCaseSensitive;
+    /** Pool of node objects (to reduce impact of lots of node allocs/deallocs). */
+    ObjectPool<Node> m_NodePool;
 };
 
-/** RadixTree template specialisation for pointers. Just forwards to the
- * void* template specialisation of RadixTree.
- *\brief RadixTree template specialisation for pointers */
 template<class T>
-class RadixTree<T*>
+RadixTree<T>::RadixTree() :
+    m_nItems(0), m_pRoot(0), m_bCaseSensitive(true), m_NodePool()
 {
-public:
-    /** Iterator */
-    typedef IteratorAdapter<T*, RadixTree<void*>::Iterator>                    Iterator;
-    /** ConstIterator */
-    typedef IteratorAdapter<T* const, RadixTree<void*>::ConstIterator>         ConstIterator;
+}
 
-    /** Default constructor, does nothing */
-    inline RadixTree()
-        : m_VoidRadixTree(){}
-    /** Copy-constructor
-     *\param[in] x reference object */
-    inline RadixTree(const RadixTree &x)
-        : m_VoidRadixTree(x.m_VoidRadixTree){}
-    /** Constructor with case-sensitivity. */
-    inline RadixTree(bool bCaseSensitive)
-        : m_VoidRadixTree(bCaseSensitive){}
-    /** Destructor, deallocates memory */
-    inline ~RadixTree()
-    {}
+template<class T>
+RadixTree<T>::RadixTree(bool bCaseSensitive) :
+    m_nItems(0), m_pRoot(0), m_bCaseSensitive(bCaseSensitive), m_NodePool()
+{
+}
 
-    /** Assignment operator
-     *\param[in] x the object that should be copied */
-    inline RadixTree &operator = (const RadixTree &x)
-    {
-        m_VoidRadixTree = x.m_VoidRadixTree;
-        return *this;
-    }
+template<class T>
+RadixTree<T>::~RadixTree()
+{
+    clear();
+    returnNode(m_pRoot);
+}
 
-    /** Get the number of elements in the RadixTree */
-    inline size_t count() const
-    {
-        return m_VoidRadixTree.count();
-    }
+template<class T>
+RadixTree<T>::RadixTree(const RadixTree &x) :
+    m_nItems(0), m_pRoot(0), m_bCaseSensitive(x.m_bCaseSensitive), m_NodePool()
+{
+    clear();
+    returnNode(m_pRoot);
+    m_pRoot = cloneNode (x.m_pRoot, 0);
+    m_nItems = x.m_nItems;
+}
 
-    inline void insert(String key, T *value)
-    {
-        m_VoidRadixTree.insert(key, reinterpret_cast<void*>(const_cast<typename nonconst_type<T>::type*>(value)));
-    }
-    inline T *lookup(String key) const
-    {
-        return reinterpret_cast<T*>(m_VoidRadixTree.lookup(key));
-    }
-    inline void remove(String key)
-    {
-        m_VoidRadixTree.remove(key);
-    }
-    Iterator erase(Iterator iter)
-    {
-        return m_VoidRadixTree.erase(iter.__getIterator());
-    }
+template<class T>
+RadixTree<T> &RadixTree<T>::operator =(const RadixTree &x)
+{
+    clear();
+    returnNode(m_pRoot);
+    m_pRoot = cloneNode (x.m_pRoot, 0);
+    m_nItems = x.m_nItems;
+    /// \todo check for incompatible case-sensitivity?
+    return *this;
+}
 
-    /** Get an iterator pointing to the beginning of the RadixTree
-     *\return iterator pointing to the beginning of the RadixTree */
-    inline Iterator begin()
+template<class T>
+size_t RadixTree<T>::count() const
+{
+    return m_nItems;
+}
+
+template<class T>
+void RadixTree<T>::insert(const String &key, const T &value)
+{
+    if (!m_pRoot)
     {
-        return Iterator(m_VoidRadixTree.begin());
-    }
-    /** Get a constant iterator pointing to the beginning of the RadixTree
-     *\return constant iterator pointing to the beginning of the RadixTree */
-    inline ConstIterator begin() const
-    {
-        return ConstIterator(m_VoidRadixTree.begin());
-    }
-    /** Get an iterator pointing to the end of the RadixTree + 1
-     *\return iterator pointing to the end of the RadixTree + 1 */
-    inline Iterator end()
-    {
-        return Iterator(m_VoidRadixTree.end());
-    }
-    /** Get a constant iterator pointing to the end of the RadixTree + 1
-     *\return constant iterator pointing to the end of the RadixTree + 1 */
-    inline ConstIterator end() const
-    {
-        return ConstIterator(m_VoidRadixTree.end());
+        // The root node always exists and is a lambda transition node (zero-length
+        // key). This removes the need for most special cases.
+        m_pRoot = getNewNode();
+        m_pRoot->setKey(0);
     }
 
-    /** Remove all elements from the RadixTree */
-    inline void clear()
+    Node *pNode = m_pRoot;
+
+    const char *cpKey = static_cast<const char*>(key);
+    const char *cpKeyOrig = cpKey;
+    size_t cpKeyLength = key.length();
+
+    while (true)
     {
-        m_VoidRadixTree.clear();
+        switch (pNode->matchKey(cpKey))
+        {
+            case Node::ExactMatch:
+            {
+                /// \todo should only increment m_nItems if this is the first
+                ///       time the value has been set here.
+                pNode->setValue(value);
+                m_nItems++;
+                return;
+            }
+            case Node::NoMatch:
+            {
+                FATAL("RadixTree: algorithmic error!");
+                break;
+            }
+            case Node::PartialMatch:
+            {
+                // We need to create an intermediate node that contains the 
+                // partial match, then adjust the key of this node.
+
+                // Find the common key prefix.
+                size_t i = 0;
+                if (m_bCaseSensitive)
+                    while (cpKey[i] == pNode->getKey()[i])
+                        i++;
+                else
+                    while (toLower(cpKey[i]) == toLower(pNode->getKey()[i]))
+                        i++;
+
+                Node *pInter = getNewNode();
+                
+                // Intermediate node's key is the common prefix of both keys.
+                pInter->m_Key.assign(cpKey, i);
+
+                // Must do this before pNode's key is changed.
+                pNode->getParent()->replaceChild(pNode, pInter);
+
+                // pNode's new key is the uncommon postfix.
+                size_t len = pNode->m_Key.length();
+
+                // Note: this is guaranteed to not require an allocation,
+                // because it's smaller than the current string in m_Key. We'll
+                // not overwrite because we're copying from deeper in the
+                // string. The null write will suffice.
+                pNode->m_Key.assign(&pNode->getKey()[i], len - i);
+
+                // If the uncommon postfix of the key is non-zero length, we have
+                // to create another node, a child of pInter.
+                if (cpKey[i] != 0)
+                {
+                    Node *pChild = getNewNode();
+                    pChild->setKey(&cpKey[i], (cpKeyLength - i - (cpKey - cpKeyOrig)));
+                    pChild->setValue(value);
+                    pChild->setParent(pInter);
+                    pInter->addChild(pChild);
+                }
+                else
+                {
+                    pInter->setValue(value);
+                }
+
+                pInter->setParent(pNode->getParent());
+                pInter->addChild(pNode);
+                pNode->setParent(pInter);
+
+                m_nItems ++;
+                return;
+            }
+            case Node::OverMatch:
+            {
+                cpKey += pNode->m_Key.length();
+
+                Node *pChild = pNode->findChild(cpKey);
+                if (pChild)
+                {
+                    pNode = pChild;
+                    // Iterative case.
+                    break;
+                }
+                else
+                {
+                    // No child - create a new one.
+                    pChild = getNewNode();
+                    pChild->setKey(cpKey, cpKeyLength - (cpKey - cpKeyOrig));
+                    pChild->setValue(value);
+                    pChild->setParent(pNode);
+                    pNode->addChild(pChild);
+
+                    m_nItems ++;
+                    return;
+                }
+            }
+        }
+    }
+}
+
+template<class T>
+T RadixTree<T>::lookup(const String &key) const
+{
+    if (!m_pRoot)
+    {
+        return T();
     }
 
-private:
-    /** The actual container */
-    RadixTree<void*> m_VoidRadixTree;
-};
+    Node *pNode = m_pRoot;
+
+    const char *cpKey = static_cast<const char*>(key);
+
+    while (true)
+    {
+        switch (pNode->matchKey(cpKey))
+        {
+            case Node::ExactMatch:
+                return pNode->getValue();
+            case Node::NoMatch:
+            case Node::PartialMatch:
+                return T();
+            case Node::OverMatch:
+            {
+                cpKey += pNode->m_Key.length();
+
+                Node *pChild = pNode->findChild(cpKey);
+                if (pChild)
+                {
+                    pNode = pChild;
+                    // Iterative case.
+                    break;
+                }
+                else
+                    return T();
+            }
+        }
+    }
+}
+
+template<class T>
+void RadixTree<T>::remove(const String &key)
+{
+    if (!m_pRoot)
+    {
+        // The root node always exists and is a lambda transition node (zero-length
+        // key). This removes the need for most special cases.
+        m_pRoot = getNewNode();
+        m_pRoot->setKey(0);
+    }
+
+    Node *pNode = m_pRoot;
+
+    const char *cpKey = static_cast<const char*>(key);
+
+    // Our invariant is that the root node always exists. Therefore we must
+    // special case here so it doesn't get deleted.
+    if (*cpKey == 0)
+    {
+        m_pRoot->setValue(0);
+        return;
+    }
+
+    while (true)
+    {
+        switch (pNode->matchKey(cpKey))
+        {
+            case Node::ExactMatch:
+            {
+                // Delete this node. If we set the value to zero, it is effectively removed from the map.
+                // There are only certain cases in which we can delete the node completely, however.
+                pNode->setValue(0);
+                m_nItems --;
+
+                // We have the invariant that the tree is always optimised. This means that when we delete a node
+                // we only have to optimise the local branch. There are two situations that need covering:
+                //   (a) No children. This means it's a leaf node and can be deleted. We then need to consider its parent,
+                //       which, if its value is zero and now has zero or one children can be optimised itself.
+                //   (b) One child. This is a linear progression and the child node's key can be changed to be concatenation of
+                //       pNode's and its. This doesn't affect anything farther up the tree and so no recursion is needed.
+
+                Node *pParent = 0;
+                if (pNode->m_Children.count() == 0)
+                {
+                    // Leaf node, can just delete.
+                    pParent = pNode->getParent();
+                    pParent->removeChild(pNode);
+                    returnNode(pNode);
+
+                    pNode = pParent;
+                    // Optimise up the tree.
+                    while (true)
+                    {
+                        if (pNode == m_pRoot) return;
+
+                        if (pNode->m_Children.count() == 1 && pNode->getValue() == 0)
+                            // Break out of this loop and get caught in the next
+                            // if(pNode->m_nChildren == 1)
+                            break;
+
+                        if (pNode->m_Children.count() == 0 && pNode->getValue() == 0)
+                        {
+                            // Leaf node, can just delete.
+                            pParent = pNode->getParent();
+                            pParent->removeChild(pNode);
+                            returnNode(pNode);
+
+                            pNode = pParent;
+                            continue;
+                        }
+                        return;
+                    }
+                }
+
+                if (pNode->m_Children.count() == 1)
+                {
+                    // Change the child's key to be the concatenation of ours and 
+                    // its.
+                    Node *pChild = pNode->getFirstChild();
+                    pParent = pNode->getParent();
+
+                    // Must call this before delete, so pChild doesn't get deleted.
+                    pNode->removeChild(pChild);
+
+                    pChild->prependKey(pNode->getKey());
+                    pChild->setParent(pParent);
+                    pParent->removeChild(pNode);
+                    pParent->addChild(pChild);
+
+                    returnNode(pNode);
+                }
+                return;
+            }
+            case Node::NoMatch:
+            case Node::PartialMatch:
+                // Can't happen unless the key didn't actually exist.
+                return;
+            case Node::OverMatch:
+            {
+                cpKey += pNode->m_Key.length();
+
+                Node *pChild = pNode->findChild(cpKey);
+                if (pChild)
+                {
+                    pNode = pChild;
+                    // Iterative case.
+                    break;
+                }
+                else
+                    return;
+            }
+        }
+    }
+}
+
+template<class T>
+typename RadixTree<T>::Node *RadixTree<T>::cloneNode(Node *pNode, Node *pParent)
+{
+    // Deal with the easy case first.
+    if (!pNode)
+        return 0;
+
+    Node *n = getNewNode();
+    n->setKey(pNode->m_Key);
+    n->setValue(pNode->value);
+    n->setParent(pParent);
+
+    for(typename RadixTree<T>::Node::childlist_t::Iterator it = pNode->m_Children.begin();
+        it != pNode->m_Children.end();
+        ++it)
+    {
+        n->addChild(cloneNode((*it), pParent));
+    }
+
+    return n;
+}
+
+template<class T>
+void RadixTree<T>::clear()
+{
+    returnNode(m_pRoot);
+    m_pRoot = getNewNode();
+    m_pRoot->setKey(0);
+    m_nItems = 0;
+}
+
+//
+// RadixTree::Node implementation.
+//
+
+template<class T>
+RadixTree<T>::Node::~Node()
+{
+    for (auto it : m_Children)
+    {
+        m_pParentTree->returnNode(it);
+    }
+}
+
+template<class T>
+typename RadixTree<T>::Node *RadixTree<T>::Node::findChild(const char *cpKey) const
+{
+    for (auto it : m_Children)
+    {
+        if (it->matchKey(cpKey) != NoMatch)
+        {
+            return it;
+        }
+    }
+    return 0;
+}
+
+template<class T>
+void RadixTree<T>::Node::addChild(Node *pNode)
+{
+    if(pNode)
+        m_Children.pushBack(pNode);
+}
+
+template<class T>
+void RadixTree<T>::Node::replaceChild(Node *pNodeOld, Node *pNodeNew)
+{
+    for (auto it = m_Children.begin(); it != m_Children.end(); ++it)
+    {
+        if (*it == pNodeOld)
+        {
+            *it = pNodeNew;
+            break;
+        }
+    }
+}
+
+template<class T>
+void RadixTree<T>::Node::removeChild(Node *pChild)
+{
+    for(typename RadixTree<T>::Node::childlist_t::Iterator it = m_Children.begin();
+        it != m_Children.end();
+        )
+    {
+        if((*it) == pChild)
+        {
+            it = m_Children.erase(it);
+        }
+        else
+            ++it;
+    }
+}
+
+template<class T>
+typename RadixTree<T>::Node::MatchType RadixTree<T>::Node::matchKey(const char *cpKey) const
+{
+    if (!m_Key.length()) return OverMatch;
+
+    const char *myKey = getKey();
+
+    size_t i = 0;
+    while (cpKey[i] && myKey[i])
+    {
+        bool bMatch = false;
+        if (m_bCaseSensitive)
+        {
+            bMatch = cpKey[i] == myKey[i];
+        }
+        else
+        {
+            bMatch = toLower(cpKey[i]) == toLower(myKey[i]);
+        }
+
+        if (!bMatch)
+            return (i==0) ? NoMatch : PartialMatch;
+        i++;
+    }
+
+    // Why did the loop exit?
+    if (cpKey[i] == 0 && myKey[i] == 0)
+        return ExactMatch;
+    else if (cpKey[i] == 0)
+        return PartialMatch;
+    else
+        return OverMatch;
+}
+
+template<class T>
+void RadixTree<T>::Node::setKey(const char *cpKey)
+{
+    m_Key.assign(cpKey);
+}
+
+template <class T>
+void RadixTree<T>::Node::setKey(const char *cpKey, size_t lengthHint)
+{
+    m_Key.assign(cpKey, lengthHint);
+}
+
+template<class T>
+typename RadixTree<T>::Node *RadixTree<T>::Node::getFirstChild() const
+{
+    return *(m_Children.begin());
+}
+
+template<class T>
+void RadixTree<T>::Node::prependKey(const char *cpKey)
+{
+    String temp = m_Key;
+    m_Key.assign(cpKey);
+    m_Key += temp;
+}
+
+template<class T>
+typename RadixTree<T>::Node *RadixTree<T>::Node::doNext() const
+{
+    // pNode needs to be settable, but not what it points to!
+    Node const *pNode = this;
+    while ( (pNode == this) || (pNode && (!pNode->value)) )
+    {
+        Node const *tmp;
+        if (pNode->m_Children.count())
+            pNode = pNode->getFirstChild();
+        else
+        {
+            tmp = pNode;
+            pNode = 0;
+            while (tmp && tmp->m_pParent != 0 /* Root node */)
+            {
+                if ( (pNode=tmp->getNextSibling()) != 0)
+                    break;
+                tmp = tmp->m_pParent;
+            }
+            if (tmp->m_pParent == 0) return 0;
+        }
+    }
+    return const_cast<Node *>(pNode);
+}
+
+template<class T>
+typename RadixTree<T>::Node *RadixTree<T>::Node::getNextSibling() const
+{
+    if (!m_pParent) return 0;
+
+    bool b = false;
+    for(typename RadixTree<T>::Node::childlist_t::Iterator it = m_pParent->m_Children.begin();
+        it != m_pParent->m_Children.end();
+        ++it)
+    {
+        if(b)
+            return (*it);
+        if((*it) == this)
+            b = true;
+    }
+
+    return 0;
+}
+
+// Explicitly instantiate RadixTree<void*> early.
+template class RadixTree<void*>;
 
 /** @} */
 
 #endif
-

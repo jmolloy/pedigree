@@ -27,7 +27,7 @@
  * @{ */
 
 // Again, if we're passed via grub these multiboot #defines will be valid, otherwise they won't.
-#if defined(KERNEL_STANDALONE) || defined(MIPS_COMMON) || defined(ARM_COMMON)
+#if defined(MULTIBOOT)
 #define MULTIBOOT_FLAG_MEM     0x001
 #define MULTIBOOT_FLAG_DEVICE  0x002
 #define MULTIBOOT_FLAG_CMDLINE 0x004
@@ -41,11 +41,21 @@
 #define MULTIBOOT_FLAG_VBE     0x400
 #endif
 
-#ifndef PPC_COMMON
+extern class BootstrapStruct_t *g_pBootstrapInfo;
+
+#ifdef MULTIBOOT
+
+// Required to specify linkage of the 'main' symbol for the friend declaration.
+extern "C" int main(int argc, char *argv[]);
 
 class BootstrapStruct_t
 {
+#ifdef HOSTED
+    friend int ::main(int argc, char *argv[]);
+#endif
 public:
+    BootstrapStruct_t();
+
     bool isInitrdLoaded() const;
     uint8_t *getInitrdAddress() const;
     size_t getInitrdSize() const;
@@ -67,6 +77,28 @@ public:
     uint32_t getMemoryMapEntryType(void *opaque) const;
     void *nextMemoryMapEntry(void *opaque) const;
 
+    size_t getModuleCount() const;
+    void *getModuleBase() const;
+
+#ifdef HOSTED
+typedef uintptr_t bootstrap_uintptr_t;
+#else
+typedef uint32_t bootstrap_uintptr_t;
+#endif
+
+    typedef struct
+    {
+        bootstrap_uintptr_t base;
+        bootstrap_uintptr_t end;
+        bootstrap_uintptr_t name_ptr;
+        bootstrap_uintptr_t pad;
+    } PACKED Module;
+
+    const Module *getModuleArray() const
+    {
+        return reinterpret_cast<const Module *>(getModuleBase());
+    }
+
 private:
     // If we are passed via grub, this information will be completely different to
     // via the bootstrapper.
@@ -80,12 +112,12 @@ private:
     uint32_t cmdline;
 
     uint32_t mods_count;
-    uint32_t mods_addr;
+    bootstrap_uintptr_t mods_addr;
 
     /* ELF information */
     uint32_t num;
     uint32_t size;
-    uint32_t addr;
+    bootstrap_uintptr_t addr;
     uint32_t shndx;
 
     uint32_t mmap_length;
@@ -133,6 +165,12 @@ struct BootstrapStruct_t
     inline size_t getInitrdSize() const
     {
         return initrd_end - initrd_start;
+    }
+
+    char *getCommandLine() const
+    {
+        static char buf[1] = {0};
+        return buf;
     }
 };
 

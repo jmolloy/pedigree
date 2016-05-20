@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -19,7 +18,7 @@
  */
 
 #include <stdio.h>
-#include <ipc/Ipc.h>
+#include <native/ipc/Ipc.h>
 
 #include <syslog.h>
 

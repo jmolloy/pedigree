@@ -70,7 +70,7 @@ FatDirectory::~FatDirectory()
 
 void FatDirectory::setInode(uintptr_t inode)
 {
-  FatFilesystem *pFs = reinterpret_cast<FatFilesystem *>(m_pFilesystem);
+  FatFilesystem *pFs = static_cast<FatFilesystem *>(m_pFilesystem);
   m_Inode = inode;
   uintptr_t clus = m_Inode;
 
@@ -90,7 +90,7 @@ void FatDirectory::setInode(uintptr_t inode)
 
 bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
 {
-  FatFilesystem *pFs = reinterpret_cast<FatFilesystem *>(m_pFilesystem);
+  FatFilesystem *pFs = static_cast<FatFilesystem *>(m_pFilesystem);
 
 #ifdef SUPERDEBUG
   NOTICE("FatDirectory::addEntry(" << filename << ")");
@@ -109,8 +109,8 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
   size_t fnLength = filename.length();
 
   // Dot and DotDot entries?
-  if(!strncmp(static_cast<const char*>(filename), ".", filename.length()) ||
-     !strncmp(static_cast<const char*>(filename), "..", filename.length()))
+  if(!StringCompareN(static_cast<const char*>(filename), ".", filename.length()) ||
+     !StringCompareN(static_cast<const char*>(filename), "..", filename.length()))
   {
     // Only one entry required for the dot/dotdot entries, all else get
     // a free long filename entry.
@@ -126,7 +126,7 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
 
   // find the first free element
   bool spaceFound = false;
-  size_t offset;
+  size_t offset = 0;
   size_t consecutiveFree = 0;
   while(true)
   {
@@ -189,7 +189,7 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
         {
           // grab a pointer to the data
           DirLongFilename* lfn = reinterpret_cast<DirLongFilename*>(&buffer[currOffset]);
-          memset(lfn, 0, sizeof(DirLongFilename));
+          ByteSet(lfn, 0, sizeof(DirLongFilename));
 
           if(i == 0)
             lfn->LDIR_Ord = 0x40 | (numRequired - 1);
@@ -240,11 +240,11 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
 
       // get a Dir struct for it so we can manipulate the data
       Dir* ent = reinterpret_cast<Dir*>(&buffer[offset]);
-      memset(ent, 0, sizeof(Dir));
+      ByteSet(ent, 0, sizeof(Dir));
       ent->DIR_Attr = type ? ATTR_DIRECTORY : 0;
 
       String shortFilename = pFs->convertFilenameTo(filename);
-      memcpy(ent->DIR_Name, static_cast<const char*>(shortFilename), 11);
+      MemoryCopy(ent->DIR_Name, static_cast<const char*>(shortFilename), 11);
       ent->DIR_FstClusLO = pFile->getInode() & 0xFFFF;
       ent->DIR_FstClusHI = (pFile->getInode() >> 16) & 0xFFFF;
       /// \todo Fill in other fields (eg, timestamps)
@@ -279,7 +279,7 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
       // add a directory entry with a name that does not match the VFS name (FAT
       // symlinks).
       if(m_bCachePopulated)
-        m_Cache.insert(pFile->getName(), pFile);
+        getCache().insert(pFile->getName(), pFile);
 
 #ifdef SUPERDEBUG
       NOTICE("  -> FatFilesystem::addEntry(" << filename << ") is successful");
@@ -291,7 +291,6 @@ bool FatDirectory::addEntry(String filename, File *pFile, size_t type)
 #ifdef SUPERDEBUG
   NOTICE("  -> FatFilesystem::addEntry(" << filename << ") is not successful");
 #endif
-  return false;
 }
 
 bool FatDirectory::removeEntry(File *pFile)
@@ -327,7 +326,7 @@ bool FatDirectory::removeEntry(File *pFile)
   LockGuard<Mutex> guard(m_Lock);
 
   // First byte = 0xE5 means the file's been deleted.
-  Dir *dir = reinterpret_cast<Dir *>(pFs->getDirectoryEntry(dirClus, dirOffset));
+  Dir *dir = pFs->getDirectoryEntry(dirClus, dirOffset);
   PointerGuard<Dir> dirGuard(dir);
   if(!dir)
     return false;
@@ -340,7 +339,7 @@ bool FatDirectory::removeEntry(File *pFile)
     size_t numLfnEntries = (filename.length() / 13) + 1;
 
     // Grab the first entry behind this one - check that it is in fact a LFN entry
-    Dir *dir_prev = reinterpret_cast<Dir *>(pFs->getDirectoryEntry(dirClus, dirOffset - sizeof(Dir)));
+    Dir *dir_prev = pFs->getDirectoryEntry(dirClus, dirOffset - sizeof(Dir));
     PointerGuard<Dir> prevGuard(dir_prev);
     if(!dir_prev)
       return false;
@@ -362,7 +361,7 @@ bool FatDirectory::removeEntry(File *pFile)
         }
 
         uint32_t newOffset = dirOffset - bytesBack;
-        Dir *lfn = reinterpret_cast<Dir *>(pFs->getDirectoryEntry(dirClus, newOffset));
+        Dir *lfn = pFs->getDirectoryEntry(dirClus, newOffset);
         PointerGuard<Dir> lfnGuard(lfn);
         if((!lfn) || ((lfn->DIR_Attr & ATTR_LONG_NAME_MASK) != ATTR_LONG_NAME))
           break;
@@ -376,13 +375,13 @@ bool FatDirectory::removeEntry(File *pFile)
 
   pFs->writeDirectoryEntry(dir, dirClus, dirOffset);
   if(m_bCachePopulated)
-    m_Cache.remove(real_filename);
+    getCache().remove(real_filename);
   return true;
 }
 
 void FatDirectory::cacheDirectoryContents()
 {
-  FatFilesystem *pFs = reinterpret_cast<FatFilesystem *>(m_pFilesystem);
+  FatFilesystem *pFs = static_cast<FatFilesystem *>(m_pFilesystem);
 
   LockGuard<Mutex> guard(m_Lock);
 
@@ -394,7 +393,7 @@ void FatDirectory::cacheDirectoryContents()
       NOTICE("Adding root directory");
     FatFileInfo info;
     info.creationTime = info.modifiedTime = info.accessedTime = 0;
-    m_Cache.insert(String("."), new FatDirectory(String("."), m_Inode, pFs, 0, info));
+    getCache().insert(String("."), new FatDirectory(String("."), m_Inode, pFs, 0, info));
     if(!m_bCachePopulated)
       m_bCachePopulated = true;
   }
@@ -484,9 +483,9 @@ void FatDirectory::cacheDirectoryContents()
           filename = pFs->convertFilenameFrom(String(reinterpret_cast<const char*>(ent->DIR_Name)));
         }
 
-        Time writeTime = pFs->getUnixTimestamp(ent->DIR_WrtTime, ent->DIR_WrtDate);
-        Time accTime = pFs->getUnixTimestamp(0, ent->DIR_LstAccDate);
-        Time createTime = pFs->getUnixTimestamp(ent->DIR_CrtTime, ent->DIR_CrtDate);
+        Time::Timestamp writeTime = pFs->getUnixTimestamp(ent->DIR_WrtTime, ent->DIR_WrtDate);
+        Time::Timestamp accTime = pFs->getUnixTimestamp(0, ent->DIR_LstAccDate);
+        Time::Timestamp createTime = pFs->getUnixTimestamp(ent->DIR_CrtTime, ent->DIR_CrtDate);
 
         FatFileInfo info;
         info.accessedTime = accTime;
@@ -516,7 +515,7 @@ void FatDirectory::cacheDirectoryContents()
         }
 
         // NOTICE("Inserting '" << filename << "'.");
-        m_Cache.insert(filename, pF);
+        getCache().insert(filename, pF);
         if(!m_bCachePopulated)
           m_bCachePopulated = true;
       }

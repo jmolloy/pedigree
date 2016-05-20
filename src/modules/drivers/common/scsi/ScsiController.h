@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -33,13 +32,10 @@
 class ScsiController: public Controller, public RequestQueue
 {
     public:
+        ScsiController(Controller *pDev);
+        ScsiController();
 
-        inline ScsiController()
-        {
-            // Start the RequestQueue
-            initialise();
-        }
-        inline virtual ~ScsiController(){}
+        virtual ~ScsiController(){}
 
         virtual bool sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite) =0;
 

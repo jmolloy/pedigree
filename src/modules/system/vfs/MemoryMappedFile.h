@@ -353,9 +353,6 @@ class MemoryMappedFile : public MemoryMappedObject
         /** Offset within the file that this mapping begins at. */
         size_t m_Offset;
 
-        /** Shared files share the same physical page even on write. */
-        bool m_bShared;
-
         /** List of existing mappings. */
         Tree<uintptr_t, physical_uintptr_t> m_Mappings;
 };

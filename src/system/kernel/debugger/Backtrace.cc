@@ -48,9 +48,11 @@ void Backtrace::performBacktrace(InterruptState &state)
 #endif
   // Can we perform a "normal", base-pointer-linked-list backtrace?
   // Don't lock on the log - we may have hit a backtrace because the Log lock deadlocked
-#if defined(X86_COMMON)
   WARNING_NOLOCK("Dwarf backtracing not available.");
+#if defined(X86_COMMON) || defined(HOSTED)
   performBpBacktrace(state.getBasePointer(), state.getInstructionPointer());
+#elif defined(ARM_COMMON)
+  performArmBacktrace(state.getBasePointer(), state.getInstructionPointer());
 #else
   ERROR_NOLOCK("Backtrace: No backtracing method available!");
 #endif
@@ -102,19 +104,79 @@ void Backtrace::performBpBacktrace(uintptr_t base, uintptr_t instruction)
             Processor::information().getVirtualAddressSpace().isMapped(reinterpret_cast<void*>(base+sizeof(uintptr_t))))
         {
             uintptr_t nextAddress = *reinterpret_cast<uintptr_t *>(base);
-            if (nextAddress == 0) break;
-            m_pReturnAddresses[i] = *reinterpret_cast<uintptr_t *>(base+sizeof(uintptr_t));
+
+            m_pReturnAddresses[i] = *reinterpret_cast<uintptr_t *>(base + sizeof(uintptr_t));
             m_pBasePointers[i] = nextAddress;
+
             base = nextAddress;
+
             m_pStates[i].setBasePointer(m_pBasePointers[i]);
             m_pStates[i].setInstructionPointer(m_pReturnAddresses[i]);
+
             i++;
+
+            if (nextAddress == 0) break;
         }
-        else break;
+        else
+        {
+          NOTICE("not mapped: " << base);
+          break;
+        }
     }
   
     m_nStackFrames = i;
 }
+
+#ifdef ARM_COMMON
+void Backtrace::performArmBacktrace(uintptr_t base, uintptr_t instruction)
+{
+    if (base == 0)
+        base = Processor::getBasePointer();
+    if (instruction == 0)
+        instruction = Processor::getInstructionPointer();
+
+    size_t i = 1;
+    m_pBasePointers[0] = base;
+    m_pReturnAddresses[0] = instruction;
+
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+
+    while (i < MAX_STACK_FRAMES)
+    {
+        uintptr_t *nextFramePointer = reinterpret_cast<uintptr_t *>(base - (3 * sizeof(uintptr_t)));
+        uintptr_t *returnAddressPointer = reinterpret_cast<uintptr_t *>(base - sizeof(uintptr_t));
+
+        // Sanity check: would we fault by reading this address?
+        if (va.isMapped(nextFramePointer) && (i && va.isMapped(returnAddressPointer)))
+        {
+            // EABI frame pointer layout:
+            // FP[-1] = lr (return address)
+            // FP[-3] = previous frame (fp)
+
+            uintptr_t nextFrame = *nextFramePointer;
+            m_pReturnAddresses[i] = *returnAddressPointer;
+            m_pBasePointers[i] = nextFrame;
+            base = nextFrame;
+
+            m_pStates[i].setBasePointer(m_pBasePointers[i]);
+            m_pStates[i].setInstructionPointer(m_pReturnAddresses[i]);
+
+            i++;
+
+            if (nextFrame == 0)
+            {
+                break;
+            }
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    m_nStackFrames = i;
+}
+#endif
 
 void Backtrace::prettyPrint(HugeStaticString &buf, size_t nFrames, size_t nFromFrame)
 {

@@ -259,17 +259,18 @@ void* list_get_element_at(list_t* list, int index)
  */
 list_t* list_insert(list_t* list, int index, void* value)
 {
-    struct list_node* new_node = new list_node;
-    new_node->value = value;
-
     if (!list) {
         return NULL;
     }
+
+    struct list_node* new_node = new list_node;
+    new_node->value = value;
 
     if (index) {
         struct list_node* prev_node = list_get_node_at(list, index - 1);
 
         if (!prev_node) {
+            delete new_node;
             return NULL;
         }
 

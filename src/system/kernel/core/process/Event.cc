@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -18,7 +17,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <compiler.h>
 #include <process/Event.h>
+#include <processor/VirtualAddressSpace.h>
 
 #include <Log.h>
 
@@ -29,6 +30,26 @@ Event::Event(uintptr_t handlerAddress, bool isDeletable, size_t specificNestingL
 
 Event::~Event()
 {
+}
+
+uintptr_t Event::getTrampoline()
+{
+    return VirtualAddressSpace::getKernelAddressSpace().getKernelEventBlockStart();
+}
+
+uintptr_t Event::getSecondaryTrampoline()
+{
+    return getTrampoline() + 0x100;
+}
+
+uintptr_t Event::getHandlerBuffer()
+{
+    return getTrampoline() + 0x1000;
+}
+
+uintptr_t Event::getLastHandlerBuffer()
+{
+    return getHandlerBuffer() + ((EVENT_TID_MAX * MAX_NESTED_EVENTS) * EVENT_LIMIT);
 }
 
 bool Event::isDeletable()
@@ -44,6 +65,22 @@ bool Event::unserialize(uint8_t *pBuffer, Event &event)
 
 size_t Event::getEventType(uint8_t *pBuffer)
 {
-    size_t *pBufferSize_t = reinterpret_cast<size_t*> (pBuffer);
+    void *alignedBuffer = ASSUME_ALIGNMENT(pBuffer, sizeof(size_t));
+    size_t *pBufferSize_t = reinterpret_cast<size_t*> (alignedBuffer);
     return pBufferSize_t[0];
+}
+
+Event::Event(const Event &other) :
+    m_HandlerAddress(other.m_HandlerAddress),
+    m_bIsDeletable(other.m_bIsDeletable),
+    m_NestingLevel(other.m_NestingLevel)
+{
+}
+
+Event &Event::operator = (const Event &other)
+{
+    m_HandlerAddress = other.m_HandlerAddress;
+    m_bIsDeletable = other.m_bIsDeletable;
+    m_NestingLevel = other.m_NestingLevel;
+    return *this;
 }

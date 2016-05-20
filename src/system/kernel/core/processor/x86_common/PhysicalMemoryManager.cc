@@ -26,6 +26,7 @@
 #include "PhysicalMemoryManager.h"
 #include <LockGuard.h>
 #include <utilities/Cache.h>
+#include <utilities/MemoryTracing.h>
 
 #if defined(X86)
 #include "../x86/VirtualAddressSpace.h"
@@ -51,9 +52,28 @@ uint32_t g_PageBitmap[16384] = {0};
 
 X86CommonPhysicalMemoryManager X86CommonPhysicalMemoryManager::m_Instance;
 
+static void trackPages(ssize_t v, ssize_t p, ssize_t s)
+{
+  // Track, if we can.
+  Thread *pThread = Processor::information().getCurrentThread();
+  if (pThread)
+  {
+    Process *pProcess = pThread->getParent();
+    if (pProcess)
+    {
+      pProcess->trackPages(v, p, s);
+    }
+  }
+}
+
 PhysicalMemoryManager &PhysicalMemoryManager::instance()
 {
     return X86CommonPhysicalMemoryManager::instance();
+}
+
+size_t X86CommonPhysicalMemoryManager::freePageCount() const
+{
+    return m_PageStack.freePages();
 }
 
 physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
@@ -73,11 +93,16 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
         {
             bHandlingPressure = true;
 
+            // Make sure the compact can trigger frees.
+            m_Lock.release();
+
             WARNING_NOLOCK("Memory pressure encountered, performing a compact...");
             if(!MemoryPressureManager::instance().compact())
                 ERROR_NOLOCK("Compact did not alleviate any memory pressure.");
             else
                 NOTICE_NOLOCK("Compact was successful.");
+
+            m_Lock.acquire();
 
             bDidHitWatermark = true;
             bHandlingPressure = false;
@@ -94,6 +119,12 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
     {
         panic("Out of memory.");
     }
+
+#ifdef MEMORY_TRACING
+    traceAllocation(reinterpret_cast<void *>(ptr), MemoryTracing::PageAlloc, 4096);
+#endif
+
+    trackPages(0, 1, 0);
 
 #ifdef USE_BITMAP
     physical_uintptr_t ptr_bitmap = ptr / 0x1000;
@@ -158,17 +189,11 @@ void X86CommonPhysicalMemoryManager::freePageUnlocked(physical_uintptr_t page)
 
     m_PageStack.free(page);
 
-    // g_AllocationCommand.freePage uses our lock.
-    
-#if 0 // defined(TRACK_PAGE_ALLOCATIONS)             
-    if (Processor::m_Initialised == 2)
-    {
-        if (!g_AllocationCommand.isMallocing())
-        {
-            g_AllocationCommand.freePage(page);
-        }
-    }
+#ifdef MEMORY_TRACING
+    traceAllocation(reinterpret_cast<void *>(page), MemoryTracing::PageFree, 4096);
 #endif
+
+    trackPages(0, -1, 0);
 }
 void X86CommonPhysicalMemoryManager::pin(physical_uintptr_t page) {
     LockGuard<Spinlock> guard(m_Lock);
@@ -180,7 +205,11 @@ void X86CommonPhysicalMemoryManager::pin(physical_uintptr_t page) {
     else {
         p = new struct page;
         p->refcount = 1;
-        m_PageMetadata.insert(key, p);
+        if (!m_PageMetadata.insert(key, p))
+        {
+            ERROR("PhysicalMemoryManager couldn't pin page " << page);
+            delete p;
+        }
     }
 }
 bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
@@ -197,7 +226,7 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
         // Page-align the start address.
         start &= ~(getPageSize() - 1);
 
-        if ((pageConstraints & continuous) != continuous)
+        if (((pageConstraints & continuous) != continuous) || (pageConstraints & virtualOnly))
             panic("PhysicalMemoryManager::allocateRegion(): function misused");
 
         // Remove the memory from the range-lists (if desired/possible)
@@ -291,63 +320,71 @@ bool X86CommonPhysicalMemoryManager::allocateRegion(MemoryRegion &Region,
             return false;
         }
 
-
-        uint32_t start = 0;
-        VirtualAddressSpace &virtualAddressSpace = Processor::information().getVirtualAddressSpace();
-
-        if ((pageConstraints & addressConstraints) == below1MB ||
-            (pageConstraints & addressConstraints) == below16MB)
+        uint32_t allocatedStart = 0;
+        if (!(pageConstraints & virtualOnly))
         {
-            // Allocate a range
-            if ((pageConstraints & addressConstraints) == below1MB)
-            {
-                if (m_RangeBelow1MB.allocate(cPages * getPageSize(), start) == false)
-                    return false;
-            }
-            else if ((pageConstraints & addressConstraints) == below16MB)
-            {
-                if (m_RangeBelow16MB.allocate(cPages * getPageSize(), start) == false)
-                    return false;
-            }
+            VirtualAddressSpace &virtualAddressSpace = Processor::information().getVirtualAddressSpace();
 
-            // Map the physical memory into the allocated space
-            for (size_t i = 0;i < cPages;i++)
-                if (virtualAddressSpace.map(start + i * PhysicalMemoryManager::getPageSize(),
-                                            reinterpret_cast<void*>(vAddress + i * PhysicalMemoryManager::getPageSize()),
-                                            Flags)
-                    == false)
+            if ((pageConstraints & addressConstraints) == below1MB ||
+                (pageConstraints & addressConstraints) == below16MB)
+            {
+                // Allocate a range
+                if ((pageConstraints & addressConstraints) == below1MB)
                 {
-                    WARNING("AllocateRegion: VirtualAddressSpace::map failed.");
-                    return false;
+                    if (m_RangeBelow1MB.allocate(cPages * getPageSize(), allocatedStart) == false)
+                        return false;
                 }
-        }
-        else
-        {
-            // Map the physical memory into the allocated space
-            for (size_t i = 0;i < cPages;i++)
-            {
-                physical_uintptr_t page = m_PageStack.allocate(pageConstraints & addressConstraints);
-                if (virtualAddressSpace.map(page,
-                                            reinterpret_cast<void*>(vAddress + i * PhysicalMemoryManager::getPageSize()),
-                                            Flags)
-                    == false)
+                else if ((pageConstraints & addressConstraints) == below16MB)
                 {
-                    WARNING("AllocateRegion: VirtualAddressSpace::map failed.");
-                    return false;
+                    if (m_RangeBelow16MB.allocate(cPages * getPageSize(), allocatedStart) == false)
+                        return false;
+                }
+
+                // Map the physical memory into the allocated space
+                for (size_t i = 0;i < cPages;i++)
+                    if (virtualAddressSpace.map(allocatedStart + i * PhysicalMemoryManager::getPageSize(),
+                                                reinterpret_cast<void*>(vAddress + i * PhysicalMemoryManager::getPageSize()),
+                                                Flags)
+                        == false)
+                    {
+                        WARNING("AllocateRegion: VirtualAddressSpace::map failed.");
+                        return false;
+                    }
+            }
+            else
+            {
+                // Map the physical memory into the allocated space
+                for (size_t i = 0;i < cPages;i++)
+                {
+                    physical_uintptr_t page = m_PageStack.allocate(pageConstraints & addressConstraints);
+                    if (virtualAddressSpace.map(page,
+                                                reinterpret_cast<void*>(vAddress + i * PhysicalMemoryManager::getPageSize()),
+                                                Flags)
+                        == false)
+                    {
+                        WARNING("AllocateRegion: VirtualAddressSpace::map failed.");
+                        return false;
+                    }
                 }
             }
         }
 
         // Set the memory-region's members
         Region.m_VirtualAddress = reinterpret_cast<void*>(vAddress);
-        Region.m_PhysicalAddress = start;
+        Region.m_PhysicalAddress = allocatedStart;
         Region.m_Size = cPages * PhysicalMemoryManager::getPageSize();
 
         // Add to the list of memory-regions
         PhysicalMemoryManager::m_MemoryRegions.pushBack(&Region);
         return true;
     }
-    return false;
+}
+
+void X86CommonPhysicalMemoryManager::shutdown()
+{
+    NOTICE("Shutting down X86CommonPhysicalMemoryManager");
+    PhysicalMemoryManager::m_MemoryRegions.clear();
+    m_PageMetadata.clear();
 }
 
 void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
@@ -355,6 +392,7 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
     NOTICE("memory-map:");
 
     physical_uintptr_t top = 0;
+    size_t pageSize = getPageSize();
 
     // Fill the page-stack (usable memory above 16MB)
     // NOTE: We must do the page-stack first, because the range-lists already need the
@@ -364,13 +402,15 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
         panic("no memory map provided by the bootloader");
     while (MemoryMap)
     {
-        NOTICE(" " << Hex << Info.getMemoryMapEntryAddress(MemoryMap) << " - " << (Info.getMemoryMapEntryAddress(MemoryMap) + Info.getMemoryMapEntryLength(MemoryMap)) << ", type: " << Info.getMemoryMapEntryType(MemoryMap));
+        uint64_t addr = Info.getMemoryMapEntryAddress(MemoryMap);
+        uint64_t length = Info.getMemoryMapEntryLength(MemoryMap);
+        uint32_t type = Info.getMemoryMapEntryType(MemoryMap);
 
-        if (Info.getMemoryMapEntryType(MemoryMap) == 1)
+        NOTICE(" " << Hex << addr << " - " << (addr + length) << ", type: " << type);
+
+        if (type == 1)
         {
-            for (uint64_t i = Info.getMemoryMapEntryAddress(MemoryMap);
-                 i < (Info.getMemoryMapEntryAddress(MemoryMap) + Info.getMemoryMapEntryLength(MemoryMap));
-                 i += getPageSize())
+            for (uint64_t i = addr; i < (addr + length); i += pageSize)
             {
                 // Worry about regions > 4 GB once we've got regions under 4 GB completely done.
                 // We can't do anything over 4 GB because the PageStack class uses
@@ -381,7 +421,7 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
                 {
                     m_PageStack.free(i);
                     if (i >= top)
-                        top = i + 0x1000;
+                        top = i + pageSize;
                 }
             }
         }
@@ -390,35 +430,39 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
     }
 
     /// \todo do this in initialise64 too.
-    m_PageMetadata.initialise(PageHashable(top).hash());
+    m_PageMetadata.initialise(PageHashable(top).hash(), true);
 
     // Fill the range-lists (usable memory below 1/16MB & ACPI)
     MemoryMap = Info.getMemoryMap();
     while (MemoryMap)
     {
-        if (Info.getMemoryMapEntryType(MemoryMap) == 1)
+        uint64_t addr = Info.getMemoryMapEntryAddress(MemoryMap);
+        uint64_t length = Info.getMemoryMapEntryLength(MemoryMap);
+        uint32_t type = Info.getMemoryMapEntryType(MemoryMap);
+
+        if (type == 1)
         {
-            if (Info.getMemoryMapEntryAddress(MemoryMap) < 0x100000)
+            if (addr < 0x100000)
             {
                 // NOTE: Assumes that the entry/entries starting below 1MB don't cross the
                 //       1MB barrier
-                if ((Info.getMemoryMapEntryAddress(MemoryMap) + Info.getMemoryMapEntryLength(MemoryMap)) >= 0x100000)
+                if ((addr + length) >= 0x100000)
                     panic("PhysicalMemoryManager: strange memory-map");
 
-                m_RangeBelow1MB.free(Info.getMemoryMapEntryAddress(MemoryMap), Info.getMemoryMapEntryLength(MemoryMap));
+                m_RangeBelow1MB.free(addr, length);
             }
-            else if (Info.getMemoryMapEntryAddress(MemoryMap) < 0x1000000)
+            else if (addr < 0x1000000)
             {
-                uint64_t upperBound = Info.getMemoryMapEntryAddress(MemoryMap) + Info.getMemoryMapEntryLength(MemoryMap);
+                uint64_t upperBound = addr + length;
                 if (upperBound >= 0x1000000) upperBound = 0x1000000;
 
-                m_RangeBelow16MB.free(Info.getMemoryMapEntryAddress(MemoryMap), upperBound - Info.getMemoryMapEntryAddress(MemoryMap));
+                m_RangeBelow16MB.free(addr, upperBound - addr);
             }
         }
 #if defined(ACPI)                                               
-        else if (Info.getMemoryMapEntryType(MemoryMap) == 3 || Info.getMemoryMapEntryType(MemoryMap) == 4)
+        else if (type == 3 || type == 4)
         {
-            m_AcpiRanges.free(Info.getMemoryMapEntryAddress(MemoryMap), Info.getMemoryMapEntryLength(MemoryMap));
+            m_AcpiRanges.free(addr, length);
         }
 #endif
 
@@ -455,17 +499,20 @@ void X86CommonPhysicalMemoryManager::initialise(const BootstrapStruct_t &Info)
     MemoryMap = Info.getMemoryMap();
     while (MemoryMap)
     {
+        uint64_t addr = Info.getMemoryMapEntryAddress(MemoryMap);
+        uint64_t length = Info.getMemoryMapEntryLength(MemoryMap);
+
         // Only map if the variable fits into a uintptr_t - no overflow!
-        if((Info.getMemoryMapEntryAddress(MemoryMap)) > ((uintptr_t) -1))
+        if(addr > ~0ULL)
         {
-            WARNING("Memory region " << Info.getMemoryMapEntryAddress(MemoryMap) << " not used.");
+            WARNING("Memory region " << addr << " not used.");
         }
-        else if(Info.getMemoryMapEntryAddress(MemoryMap) >= 0x100000000ULL)
+        else if(addr >= 0x100000000ULL)
         {
             // Skip >= 4 GB for now, done in initialise64
             break;
         }
-        else if (m_PhysicalRanges.allocateSpecific(Info.getMemoryMapEntryAddress(MemoryMap), Info.getMemoryMapEntryLength(MemoryMap)) == false)
+        else if (m_PhysicalRanges.allocateSpecific(addr, length) == false)
             panic("PhysicalMemoryManager: Failed to create the list of ranges of free physical space");
 
         MemoryMap = Info.nextMemoryMapEntry(MemoryMap);
@@ -541,7 +588,7 @@ void X86CommonPhysicalMemoryManager::initialise64(const BootstrapStruct_t &Info)
     while (MemoryMap)
     {
         // Only map if the variable fits into a uintptr_t - no overflow!
-        if((Info.getMemoryMapEntryAddress(MemoryMap)) > ((uintptr_t) -1))
+        if((Info.getMemoryMapEntryAddress(MemoryMap)) > ~0ULL)
         {
             WARNING("Memory region " << Info.getMemoryMapEntryAddress(MemoryMap) << " not used.");
         }
@@ -649,7 +696,9 @@ void X86CommonPhysicalMemoryManager::unmapRegion(MemoryRegion *pRegion)
                 void *vAddr = reinterpret_cast<void*> (start + i * PhysicalMemoryManager::getPageSize());
                 if (!virtualAddressSpace.isMapped(vAddr))
                 {
-                    FATAL("Algorithmic error in PhysicalMemoryManager::unmapRegion");
+                    // Can happen with virtualOnly mappings.
+                    /// \todo copy the pageConstraints to the Region object
+                    continue;
                 }
                 physical_uintptr_t pAddr;
                 size_t flags;

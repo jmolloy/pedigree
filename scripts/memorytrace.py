@@ -24,12 +24,17 @@ import struct
 unfreed = {}
 counts = {}
 toolarge = {}
+pages = {}
 total_allocs = 0
 total_frees = 0
 
 metadata = []
 
 TOO_LARGE_THRESHOLD = 0x1000
+
+PTRSIZE = 8
+PTRFORMAT = '<Q'
+ADD_PAGES = False
 
 MODULE_MAPPINGS = {
     'rawfs': 'build/modules/rawfs.o.debug',
@@ -97,19 +102,23 @@ def process_field(f):
 
     fieldtype, = saferead(f, 1)
 
-    if fieldtype in ['A', 'F']:
-        ptr, = struct.unpack('<L', saferead(f, 4)) # TODO: 64-bit
+    if fieldtype in ['A', 'F', 'P', 'X']:
+        ptr, = struct.unpack(PTRFORMAT, saferead(f, PTRSIZE))
 
-    if fieldtype == 'A':
-        size, = struct.unpack('<L', saferead(f, 4)) # TODO: 64-bit
+    if fieldtype == 'A' or fieldtype == 'P':
+        size, = struct.unpack(PTRFORMAT, saferead(f, PTRSIZE))
 
         backtrace = []
         while True:
-            bt, = struct.unpack('<L', saferead(f, 4)) # TODO: 64-bit
+            bt, = struct.unpack(PTRFORMAT, saferead(f, PTRSIZE))
             if bt == 0:
                 break
 
             backtrace.append(bt)
+
+        # Skip page allocs if we have to.
+        if fieldtype == 'P' and not ADD_PAGES:
+            return True
 
         if size not in counts:
             counts[size] = (1, backtrace)
@@ -120,22 +129,24 @@ def process_field(f):
         if size >= TOO_LARGE_THRESHOLD:
             toolarge[ptr] = (size, backtrace)
 
-        assert ptr not in unfreed
         unfreed[ptr] = (size, backtrace)
 
         total_allocs += 1
-    elif fieldtype == 'F':
+    elif fieldtype == 'F' or (ADD_PAGES and (fieldtype == 'X')):
         try:
             del unfreed[ptr]
         except KeyError:
             pass # Possibly allocated before we had tracing active.
 
         total_frees += 1
+    elif fieldtype == 'X' and not ADD_PAGES:
+        # Not invalid.
+        pass
     elif fieldtype == 'M':
         metaname, = struct.unpack('64s', saferead(f, 64))
         metaname = metaname.strip('\x00')
-        start, = struct.unpack('<L', saferead(f, 4)) # TODO: 64-bit
-        end, = struct.unpack('<L', saferead(f, 4)) # TODO: 64-bit
+        start, = struct.unpack(PTRFORMAT, saferead(f, 8))
+        end, = struct.unpack(PTRFORMAT, saferead(f, 8))
         metadata.append((metaname, start, end))
     else:
         print 'Invalid field type %r encountered at offset %d!' % (fieldtype, f.tell() - 5)
@@ -147,9 +158,9 @@ def addr2module(addr):
     for meta in metadata:
         name, low, high = meta
         if low <= addr < high:
-            return low, MODULE_MAPPINGS.get(name, 'build/modules/%s.ko' % (name,))
+            return low, MODULE_MAPPINGS.get(name, 'build/modules/%s.o.debug' % (name,))
 
-    return 0, MODULE_MAPPINGS.get('kernel', 'build/kernel/kernel')
+    return 0, MODULE_MAPPINGS.get('kernel', 'build/kernel/kernel.debug')
 
 def writebt(bt, prefix=''):
     for frame in bt:
@@ -157,7 +168,7 @@ def writebt(bt, prefix=''):
         low, mod = addr2module(frame)
         if os.path.exists(mod):
             # Pretty-print, demangle, print function names.
-            out = os.popen('addr2line -p -C -f -e %s 0x%x' % (mod, frame - low)).read()
+            out = os.popen('addr2line -p -C -f -i -e %s 0x%x' % (mod, frame - low)).read()
             print '%s%s' % (prefix, out),
         else:
             print '%s%x (unknown module "%s")' % (prefix, frame, mod,)
@@ -193,17 +204,33 @@ with open(sys.argv[1], 'rb') as f:
 
         oneandover = 'oneandover' in sys.argv
 
-        for size in sorted(counts.keys()):
-            count, backtrace = counts[size]
+        sorted_entries = list(sorted(counts.items(), key=lambda x: x[0]))
+
+        for (size, (count, backtrace)) in sorted_entries:
             percent = (count / float(total_allocs)) * 100.0
             if oneandover and (percent < 1.0):
                 continue
 
-            print "%12d:\t%d\t(%f%%)" % (size, count, percent)
+            print "%12d bytes:\t%d\t(%f%%)" % (size, count, percent)
             if not nobacktrace:
                 writebt(backtrace, '\t')
 
         print
+
+        # Top N by count.
+        sorted_entries = list(sorted(counts.items(), key=lambda x: x[1][0]))
+        print 'Top 10:'
+        for (size, entry) in sorted_entries[-10:]:
+            count = entry[0]
+            percent = (count / float(total_allocs)) * 100.0
+            print '%8d bytes seen for\t%2.4f%% of allocations' % (size, percent)
+
+        print 'Bottom 10:'
+        for (size, entry) in sorted_entries[:10]:
+            count = entry[0]
+            percent = (count / float(total_allocs)) * 100.0
+            print '%8d bytes seen for\t%2.4f%% of allocations' % (size, percent)
+
 
     if 'toobig' in sys.argv:
         print "Too Big Blocks"

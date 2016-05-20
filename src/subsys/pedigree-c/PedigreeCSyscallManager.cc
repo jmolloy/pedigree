@@ -69,9 +69,9 @@ uintptr_t PedigreeCSyscallManager::syscall(SyscallState &state)
         case PEDIGREE_LOGIN:
             return pedigree_login(static_cast<int>(p1), reinterpret_cast<const char *>(p2));
         case PEDIGREE_LOAD_KEYMAP:
-            return pedigree_load_keymap(reinterpret_cast<char*>(p1), static_cast<size_t>(p2));
+            return pedigree_load_keymap(reinterpret_cast<uint32_t*>(p1), p2);
         case PEDIGREE_GET_MOUNT:
-            return pedigree_get_mount(reinterpret_cast<char*>(p1), reinterpret_cast<char*>(p2), static_cast<size_t>(p3));
+            return pedigree_get_mount(reinterpret_cast<char*>(p1), reinterpret_cast<char*>(p2), p3);
         case PEDIGREE_REBOOT:
             pedigree_reboot();
             return 0;
@@ -156,19 +156,18 @@ uintptr_t PedigreeCSyscallManager::syscall(SyscallState &state)
             pedigree_gfx_fbinfo(reinterpret_cast<void*>(p1), reinterpret_cast<size_t*>(p2), reinterpret_cast<size_t*>(p3), reinterpret_cast<uint32_t*>(p4), reinterpret_cast<size_t*>(p5));
             return 0;
         case PEDIGREE_GFX_SETPALETTE:
-            pedigree_gfx_setpalette(reinterpret_cast<void*>(p1), reinterpret_cast<uint32_t*>(p2), static_cast<size_t>(p3));
+            pedigree_gfx_setpalette(reinterpret_cast<void*>(p1), reinterpret_cast<uint32_t*>(p2), p3);
             return 0;
         case PEDIGREE_INPUT_INSTALL_CALLBACK:
-            pedigree_input_install_callback(reinterpret_cast<void*>(p1), static_cast<uint32_t>(p2), static_cast<uintptr_t>(p3));
+            pedigree_input_install_callback(reinterpret_cast<void*>(p1), p2, p3);
             return 0;
         case PEDIGREE_INPUT_REMOVE_CALLBACK:
             pedigree_input_remove_callback(reinterpret_cast<void*>(p1));
             return 0;
         case PEDIGREE_EVENT_RETURN:
             pedigree_event_return();
-            return 0;
         case PEDIGREE_SYS_REQUEST_MEM:
-            return reinterpret_cast<uintptr_t>(pedigree_sys_request_mem(static_cast<size_t>(p1)));
+            return reinterpret_cast<uintptr_t>(pedigree_sys_request_mem(p1));
         case PEDIGREE_HALTFS:
             pedigree_haltfs();
             return 0;

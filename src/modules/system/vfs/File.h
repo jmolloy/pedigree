@@ -27,6 +27,9 @@
 #include <process/Thread.h>
 #include <process/Event.h>
 #include <utilities/Cache.h>
+#include <utilities/CacheConstants.h>
+#include <utilities/Tree.h>
+#include <LockGuard.h>
 
 #include <processor/PhysicalMemoryManager.h>
 
@@ -57,7 +60,7 @@ private:
 
 public:
     /** Constructor, should be called only by a Filesystem. */
-    File(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+    File(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTime, Time::Timestamp creationTime,
          uintptr_t inode, class Filesystem *pFs, size_t size, File *pParent);
     /** Destructor - doesn't do anything. */
     virtual ~File();
@@ -102,19 +105,19 @@ public:
     }
 
     /** Returns the time the file was created. */
-    Time getCreationTime();
+    Time::Timestamp getCreationTime();
     /** Sets the time the file was created. */
-    void setCreationTime(Time t);
+    void setCreationTime(Time::Timestamp t);
 
     /** Returns the time the file was last accessed. */
-    Time getAccessedTime();
+    Time::Timestamp getAccessedTime();
     /** Sets the time the file was last accessed. */
-    void setAccessedTime(Time t);
+    void setAccessedTime(Time::Timestamp t);
 
     /** Returns the time the file was last modified. */
-    Time getModifiedTime();
+    Time::Timestamp getModifiedTime();
     /** Sets the time the file was last modified. */
-    void setModifiedTime(Time t);
+    void setModifiedTime(Time::Timestamp t);
 
     /** Returns the name of the file. */
     String getName();
@@ -143,7 +146,7 @@ public:
     }
 
     /** Returns true if the File is actually a pipe. */
-    virtual bool isPipe()
+    virtual bool isPipe() const
     {
         return false;
     }
@@ -224,6 +227,7 @@ public:
     /** Causes the event pEvent to be dispatched to pThread when activity occurs
         on this File. Activity includes the file becoming available for reading,
         writing or erroring. */
+#ifdef THREADS
     void monitor(Thread *pThread, Event *pEvent)
     {
         m_Lock.acquire();
@@ -233,6 +237,7 @@ public:
 
     /** Walks the monitor-target queue, removing all for \p pThread .*/
     void cullMonitorTargets(Thread *pThread);
+#endif
 
     /** Does this File object support the given integer-based command? */
     virtual bool supports(const int command)
@@ -250,6 +255,18 @@ public:
         \note This must be constant throughout the life of the file. */
     virtual size_t getBlockSize() const
     {return PhysicalMemoryManager::getPageSize();}
+
+    /** Enables direct mode (no File-level cache). */
+    void enableDirect()
+    {
+        m_bDirect = true;
+    }
+
+    /** Disables direct mode (use File-level cache). */
+    void disableDirect()
+    {
+        m_bDirect = false;
+    }
 
 protected:
 
@@ -286,7 +303,7 @@ protected:
      * as the callback on their Cache instance to get a write-back
      * notification.
      */
-    static void writeCallback(Cache::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta);
+    static void writeCallback(CacheConstants::CallbackCause cause, uintptr_t loc, uintptr_t page, void *meta);
 
     /**
      * Pins the given page.
@@ -318,14 +335,34 @@ protected:
      */
     void evict(uint64_t location)
     {
+#ifdef THREADS
         LockGuard<Mutex> guard(m_Lock);
+#endif
         m_DataCache.remove(location);
     }
 
+    /** Set permissions without raising fileAttributeChanged. */
+    void setPermissionsOnly(uint32_t perms)
+    {
+        m_Permissions = perms;
+    }
+
+    /** Set UID without raising fileAttributeChanged. */
+    void setUidOnly(size_t uid)
+    {
+        m_Uid = uid;
+    }
+
+    /** Set GID without raising fileAttributeChanged. */
+    void setGidOnly(size_t gid)
+    {
+        m_Gid = gid;
+    }
+
     String m_Name;
-    Time m_AccessedTime;
-    Time m_ModifiedTime;
-    Time m_CreationTime;
+    Time::Timestamp m_AccessedTime;
+    Time::Timestamp m_ModifiedTime;
+    Time::Timestamp m_CreationTime;
     uintptr_t m_Inode;
 
     class Filesystem *m_pFilesystem;
@@ -341,6 +378,21 @@ protected:
 
     Tree<uint64_t,size_t> m_DataCache;
 
+    bool m_bDirect;
+
+    /**
+     * This cache is necessary to handle filesystems with block sizes that are
+     * smaller than the native page size. For these filesystems, to perform
+     * memory maps we read native page size blocks into this cache, and then
+     * return pages from it directly. This is expected to somewhat increase
+     * memory usage and reduce performance on non-natively-sized block sizes,
+     * but that's an acceptable compromise.
+     */
+#ifndef VFS_NOMMU
+    Cache m_FillCache;
+#endif
+
+#ifdef THREADS
     Mutex m_Lock;
 
     struct MonitorTarget
@@ -353,6 +405,7 @@ protected:
     };
 
     List<MonitorTarget*> m_MonitorTargets;
+#endif
 };
 
 #endif

@@ -41,20 +41,49 @@ extern "C"
     extern char sigret_stub_end;
 }
 
-int doProcessKill(Process *p, int sig);
+static int doProcessKill(Process *p, int sig);
+static int doThreadKill(Thread *p, int sig);
 
 /// \todo These are ok initially, but it'll all have to change at some point
 
-#define SIGNAL_HANDLER_EXIT(name, errcode) void name(int s) { posix_exit(errcode); }
-#define SIGNAL_HANDLER_EMPTY(name) void name(int s) {NOTICE("EMPTY");}
-#define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) void name(int s) { Processor::setInterrupts(true); posix_write(1, msg, strlen(msg), true); Scheduler::instance().yield(); posix_exit(errcode); }
-#define SIGNAL_HANDLER_SUSPEND(name) void name(int s) { NOTICE("SUSPEND"); Process *pParent = Processor::information().getCurrentThread()->getParent()->getParent(); Processor::information().getCurrentThread()->getParent()->suspend(); }
-#define SIGNAL_HANDLER_RESUME(name) void name(int s) { NOTICE("RESUME"); Processor::information().getCurrentThread()->getParent()->resume(); Process *pParent = Processor::information().getCurrentThread()->getParent()->getParent(); }
+#define SIGNAL_HANDLER_EXIT(name, errcode) \
+    static void name(int) NORETURN; \
+    static void name(int) \
+    { \
+        posix_exit(errcode); \
+    }
+#define SIGNAL_HANDLER_EMPTY(name) \
+    static void name(int s) \
+    { \
+        NOTICE("EMPTY"); \
+    }
+#define SIGNAL_HANDLER_EXITMSG(name, errcode, msg) \
+    static void name(int) NORETURN; \
+    static void name(int) \
+    { \
+        Processor::setInterrupts(true); \
+        posix_write(1, msg, StringLength(msg), true); \
+        Scheduler::instance().yield(); \
+        posix_exit(errcode); \
+    }
+#define SIGNAL_HANDLER_SUSPEND(name) \
+    static void name(int s) \
+    { \
+        NOTICE("SUSPEND"); \
+        Process *pParent = Processor::information().getCurrentThread()->getParent()->getParent(); \
+        pParent->suspend(); \
+    }
+#define SIGNAL_HANDLER_RESUME(name) \
+    static void name(int s) \
+    { \
+        NOTICE("RESUME"); \
+        Processor::information().getCurrentThread()->getParent()->resume(); \
+    }
 
-char SSIGILL[] = "Illegal instruction.\n";
-char SSIGSEGV[] = "Segmentation fault.\n";
-char SSIGBUS[] = "Bus error.\n";
-char SSIGABRT[] = "Abort.\n";
+static char SSIGILL[] = "Illegal instruction.\n";
+static char SSIGSEGV[] = "Segmentation fault.\n";
+static char SSIGBUS[] = "Bus error.\n";
+static char SSIGABRT[] = "Abort.\n";
 
 SIGNAL_HANDLER_EXITMSG  (sigabrt, SIGABRT, SSIGABRT)
 SIGNAL_HANDLER_EXIT     (sigalrm, SIGALRM)
@@ -80,7 +109,7 @@ SIGNAL_HANDLER_EMPTY    (sigurg) // high bandwdith data available at a sockeet
 
 SIGNAL_HANDLER_EMPTY    (sigign);
 
-_sig_func_ptr default_sig_handlers[32] =
+static _sig_func_ptr default_sig_handlers[32] =
 {
     sigign, // null signal = 0
     sighup, // SIGHUP = 1
@@ -159,7 +188,7 @@ int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact
                 oact->sa_handler = reinterpret_cast<void (*)(int)>(1);
         }
         else
-            memset(oact, 0, sizeof(struct sigaction));
+            ByteSet(oact, 0, sizeof(struct sigaction));
     }
 
     // and if needed, fill in the new signal handler
@@ -195,8 +224,7 @@ int posix_sigaction(int sig, const struct sigaction *act, struct sigaction *oact
             sigHandler->type = 0;
         }
 
-        size_t nLevel = pThread->getStateLevel();
-        sigHandler->pEvent = new SignalEvent(newHandler, static_cast<size_t>(sig)); //, nLevel);
+        sigHandler->pEvent = new SignalEvent(newHandler, static_cast<size_t>(sig));
         SG_NOTICE("Creating the event (" << reinterpret_cast<uintptr_t>(sigHandler->pEvent) << ").");
         pSubsystem->setSignalHandler(sig, sigHandler);
     }
@@ -254,6 +282,7 @@ int posix_raise(int sig, SyscallState &State)
     return 0;
 }
 
+int pedigree_sigret() NORETURN;
 int pedigree_sigret()
 {
     SG_NOTICE("pedigree_sigret");
@@ -272,8 +301,6 @@ int pedigree_sigret()
     Processor::information().getScheduler().eventHandlerReturned();
 
     FATAL("eventHandlerReturned() returned!");
-
-    return 0;
 }
 
 void pedigree_unwind_signal()
@@ -285,7 +312,7 @@ void pedigree_unwind_signal()
     pThread->popState();
 }
 
-int doThreadKill(Thread *p, int sig)
+static int doThreadKill(Thread *p, int sig)
 {
     // Are we allowed to do this?
     if(p->getStatus() == Thread::Suspended)
@@ -326,7 +353,7 @@ int doThreadKill(Thread *p, int sig)
     return 0;
 }
 
-int doProcessKill(Process *p, int sig)
+static int doProcessKill(Process *p, int sig)
 {
     return doThreadKill(p->getThread(0), sig);
 }
@@ -446,7 +473,7 @@ int posix_pthread_kill(pthread_t thread, int sig)
     }
 
     // Grab the target thread, send the signal
-    PosixSubsystem::PosixThread *pTarget = pSubsystem->getThread(thread);
+    PosixSubsystem::PosixThread *pTarget = pSubsystem->getThread(thread->__internal.kthread);
     if(pTarget && pTarget->pThread)
     {
         return doThreadKill(pTarget->pThread, sig);
@@ -585,8 +612,8 @@ int posix_nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
         uint64_t elapsed = endTick - startTick;
         if(rmtp)
         {
-            rmtp->tv_nsec = static_cast<time_t>(static_cast<uint64_t>(elapsed * 1000) % 1000000000ULL);
-            rmtp->tv_sec = static_cast<time_t>(elapsed / 1000);
+            rmtp->tv_nsec = static_cast<time_t>((elapsed * 1000ULL) % 1000000000ULL);
+            rmtp->tv_sec = static_cast<time_t>(elapsed / 1000ULL);
         }
         
         /// \todo Handle "interrupted before end of timeout"
@@ -615,7 +642,7 @@ int posix_clock_gettime(clockid_t clock_id, struct timespec *tp)
     
     // We only care about the nanoseconds that may have passed in the past
     // second - everything else is handled by the UNIX timestamp.
-    tp->tv_nsec = static_cast<time_t>(static_cast<uint64_t>((Machine::instance().getTimer()->getTickCount() * 1000)) % 1000000000ULL);
+    tp->tv_nsec = static_cast<time_t>((Machine::instance().getTimer()->getTickCount() * 1000ULL) % 1000000000ULL);
     tp->tv_sec = static_cast<time_t>(Machine::instance().getTimer()->getUnixTimestamp());
     
     return 0;
@@ -687,23 +714,23 @@ void pedigree_init_sigret()
         // Map trampoline page in and bring across the sigret code.
         Processor::information().getVirtualAddressSpace().map(
                 sigretPhys,
-                reinterpret_cast<void*> (EVENT_HANDLER_TRAMPOLINE),
+                reinterpret_cast<void*> (Event::getTrampoline()),
                 VirtualAddressSpace::Write | VirtualAddressSpace::Shared | VirtualAddressSpace::Execute);
 
-        memcpy(reinterpret_cast<void*>(EVENT_HANDLER_TRAMPOLINE), reinterpret_cast<void*>(sigret_stub), (reinterpret_cast<uintptr_t>(&sigret_stub_end) - reinterpret_cast<uintptr_t>(sigret_stub)));
+        MemoryCopy(reinterpret_cast<void*>(Event::getTrampoline()), reinterpret_cast<void*>(sigret_stub), (reinterpret_cast<uintptr_t>(&sigret_stub_end) - reinterpret_cast<uintptr_t>(sigret_stub)));
 
         // Mark read-only now that we have mapped in the page.
         Processor::information().getVirtualAddressSpace().setFlags(
-                reinterpret_cast<void*> (EVENT_HANDLER_TRAMPOLINE),
+                reinterpret_cast<void*> (Event::getTrampoline()),
                 VirtualAddressSpace::Execute | VirtualAddressSpace::Shared);
     }
 
     // Map the signal return stub to the correct location
-    if(!Processor::information().getVirtualAddressSpace().isMapped(reinterpret_cast<void *>(EVENT_HANDLER_TRAMPOLINE)))
+    if(!Processor::information().getVirtualAddressSpace().isMapped(reinterpret_cast<void *>(Event::getTrampoline())))
     {
         Processor::information().getVirtualAddressSpace().map(
                 sigretPhys,
-                reinterpret_cast<void*> (EVENT_HANDLER_TRAMPOLINE),
+                reinterpret_cast<void*> (Event::getTrampoline()),
                 VirtualAddressSpace::Shared | VirtualAddressSpace::Execute);
     }
 
@@ -728,8 +755,7 @@ void pedigree_init_sigret()
 
         uintptr_t newHandler = reinterpret_cast<uintptr_t>(default_sig_handlers[i]);
 
-        size_t nLevel = pThread->getStateLevel();
-        sigHandler->pEvent = new SignalEvent(newHandler, i); //, nLevel);
+        sigHandler->pEvent = new SignalEvent(newHandler, i);
 
         pSubsystem->setSignalHandler(i, sigHandler);
     }

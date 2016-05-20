@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -37,73 +36,29 @@ class LockedFile
 public:
 
     /** Standard wrapper constructor */
-    LockedFile(File *pFile) : m_File(pFile), m_bLocked(false), m_LockerPid(0), m_Lock(false)
-    {};
+    LockedFile(File *pFile);
 
     /** Copy constructor */
-    LockedFile(LockedFile &c) : m_File(0), m_bLocked(false), m_LockerPid(0), m_Lock(false)
-    {
-        m_File = c.m_File;
-        m_bLocked = c.m_bLocked;
-        m_LockerPid = c.m_LockerPid;
-
-        if(m_bLocked)
-            m_Lock.acquire();
-    }
+    LockedFile(LockedFile &c);
 
     /** Operator = */
     /// \todo Write me!
     LockedFile & operator = (const LockedFile& c);
 
     /** Attempts to obtain the lock (exclusively) */
-    bool lock(bool bBlock = false)
-    {
-        if(!bBlock)
-        {
-            if(!m_Lock.tryAcquire())
-                return false;
-        }
-        else
-            m_Lock.acquire();
-
-        // Obtained the lock
-        m_bLocked = true;
-        m_LockerPid = Processor::information().getCurrentThread()->getParent()->getId();
-        return true;
-    }
+    bool lock(bool bBlock = false);
 
     /** Releases the lock */
-    void unlock()
-    {
-        if(m_bLocked)
-        {
-            m_bLocked = false;
-            m_Lock.release();
-        }
-    }
+    void unlock();
 
     /** To enforce mandatory locking, use this function to obtain a File to
      * work with. If the file is locked and you don't own the lock, you'll
      * get a NULL File. Otherwise you'll get the wrapped File ready for I/O.
      */
-    File *getFile()
-    {
-        // If we're locked, and we aren't the locking process, we can't access the file
-        // Otherwise, the file is accessible
-        if(m_bLocked == true && Processor::information().getCurrentThread()->getParent()->getId() != m_LockerPid)
-            return 0;
-        else
-            return m_File;
-    }
+    File *getFile();
 
     /** Who's locking the file? */
-    size_t getLocker()
-    {
-        if(m_bLocked)
-            return m_LockerPid;
-        else
-            return 0;
-    }
+    size_t getLocker();
 
 private:
 
@@ -122,7 +77,9 @@ private:
     size_t m_LockerPid;
 
     /** Our lock */
+#ifdef THREADS
     Mutex m_Lock;
+#endif
 };
 
 #endif

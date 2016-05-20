@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -42,7 +41,7 @@ bool GraphicsService::serve(ServiceFeatures::Type type, void *pData, size_t data
         // Return the current provider if there is one
         /// \todo Sanity check
         if(m_pCurrentProvider)
-            memcpy(pData, m_pCurrentProvider, sizeof(GraphicsProvider));
+            MemoryCopy(pData, m_pCurrentProvider, sizeof(GraphicsProvider));
         else
             return false;
         
@@ -73,7 +72,7 @@ GraphicsService::GraphicsProvider *GraphicsService::determineBestProvider()
             points += (0x10000ULL * 0x10000ULL) * 32ULL; // 16384x16384x32, hard to beat if no hardware accel
         
         // Maximums points (highest resolution in bits)
-        points += static_cast<uint64_t>(pProvider->maxWidth) * static_cast<uint64_t>(pProvider->maxHeight) * static_cast<uint64_t>(pProvider->maxDepth);
+        points += pProvider->maxWidth * pProvider->maxHeight * pProvider->maxDepth;
         
         // Is this the new best?
         bool bNewBest = false;

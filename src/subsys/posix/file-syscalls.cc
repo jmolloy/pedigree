@@ -50,6 +50,8 @@ extern int posix_getpid();
 // Syscalls pertaining to files.
 //
 
+#define CHECK_FLAG(a, b) (((a) & (b)) == (b))
+
 #define GET_CWD() (Processor::information().getCurrentThread()->getParent()->getCwd())
 
 inline File *traverseSymlink(File *file)
@@ -82,58 +84,59 @@ inline File *traverseSymlink(File *file)
     return file;
 }
 
-inline String normalisePath(const char *name, bool *onDevFs = 0)
+void normalisePath(String &nameToOpen, const char *name, bool *onDevFs)
 {
     // Rebase /dev onto the devfs. /dev/tty is special.
-    String nameToOpen;
-    if (!strcmp(name, "/dev/tty"))
+    if (!StringCompare(name, "/dev/tty"))
     {
         // Get controlling console, unless we have none.
         Process *pProcess = Processor::information().getCurrentThread()->getParent();
         if (!pProcess->getCtty())
         {
-            nameToOpen = name;
             if (onDevFs)
                 *onDevFs = true;
         }
-        else
-        {
-            nameToOpen = name;
-        }
+
+        nameToOpen = name;
     }
-    else if (!strncmp(name, "/dev", strlen("/dev")))
+    else if (!StringCompareN(name, "/dev", StringLength("/dev")))
     {
         nameToOpen = "dev»";
-        nameToOpen += (name + strlen("/dev"));
+        nameToOpen += (name + StringLength("/dev"));
         if (onDevFs)
             *onDevFs = true;
     }
-    else if (!strncmp(name, "/bin", strlen("/bin")))
+    else if (!StringCompareN(name, "/bin", StringLength("/bin")))
     {
         nameToOpen = "/applications";
-        nameToOpen += (name + strlen("/bin"));
+        nameToOpen += (name + StringLength("/bin"));
     }
-    else if (!strncmp(name, "/etc", strlen("/etc")))
+    else if (!StringCompareN(name, "/etc", StringLength("/etc")))
     {
         nameToOpen = "/config";
-        nameToOpen += (name + strlen("/etc"));
+        nameToOpen += (name + StringLength("/etc"));
     }
-    else if (!strncmp(name, "/tmp", strlen("/tmp")))
+    else if (!StringCompareN(name, "/tmp", StringLength("/tmp")))
     {
         nameToOpen = "scratch»";
-        nameToOpen += (name + strlen("/tmp"));
+        nameToOpen += (name + StringLength("/tmp"));
     }
-    else if (!strncmp(name, "/var/run", strlen("/var/run")))
+    else if (!StringCompareN(name, "/var/run", StringLength("/var/run")))
     {
         nameToOpen = "runtime»";
-        nameToOpen += (name + strlen("/var/run"));
+        nameToOpen += (name + StringLength("/var/run"));
+    }
+    else if (!StringCompareN(name, "/@/", StringLength("/@/")))
+    {
+        // Absolute UNIX paths for POSIX stupidity.
+        // /@/path/to/foo = /path/to/foo
+        // /@/root»/applications = root»/applications
+        nameToOpen = (name + StringLength("/@/"));
     }
     else
     {
         nameToOpen = name;
     }
-
-    return nameToOpen;
 }
 
 int posix_close(int fd)
@@ -180,16 +183,13 @@ int posix_open(const char *name, int flags, int mode)
     F_NOTICE("open(" << name << ", " << ((flags & O_RDWR) ? "O_RDWR" : "") << ((flags & O_RDONLY) ? "O_RDONLY" : "") << ((flags & O_WRONLY) ? "O_WRONLY" : "") << ")");
     F_NOTICE("  -> actual flags " << flags);
     
-    // One of these three must be specified
-    /// \bug Breaks /dev/tty open in crt0
-#if 0
-    if(!(flags & (O_RDONLY | O_WRONLY | O_RDWR)))
+    // One of these three must be specified.
+    if(!(CHECK_FLAG(flags, O_RDONLY) || CHECK_FLAG(flags, O_RDWR) || CHECK_FLAG(flags, O_WRONLY)))
     {
         F_NOTICE("One of O_RDONLY, O_WRONLY, or O_RDWR must be passed.");
         SYSCALL_ERROR(InvalidArgument);
         return -1;
     }
-#endif
 
     // verify the filename - don't try to open a dud file
     if (name[0] == 0)
@@ -213,7 +213,8 @@ int posix_open(const char *name, int flags, int mode)
     File* file = 0;
 
     bool onDevFs = false;
-    String nameToOpen = normalisePath(name, &onDevFs);
+    String nameToOpen;
+    normalisePath(nameToOpen, name, &onDevFs);
     if (nameToOpen == "/dev/tty")
     {
         file = pProcess->getCtty();
@@ -397,9 +398,8 @@ int posix_read(int fd, char *ptr, int len)
     uint64_t nRead = 0;
     if (ptr && len)
     {
-        /// \todo Sanitise input and check it's mapped etc so we don't segfault the kernel
         pThread->setInterrupted(false);
-        nRead = pFd->file->read(pFd->offset, len, len > 0x500000 ? 0 : reinterpret_cast<uintptr_t>(ptr), canBlock);
+        nRead = pFd->file->read(pFd->offset, len, reinterpret_cast<uintptr_t>(ptr), canBlock);
         if((!nRead) && (pThread->wasInterrupted()))
         {
             SYSCALL_ERROR(Interrupted);
@@ -424,7 +424,9 @@ int posix_write(int fd, char *ptr, int len, bool nocheck)
     }
 
     if(ptr)
+    {
         F_NOTICE("write(" << fd << ", " << ptr << ", " << len << ")");
+    }
 
     // Lookup this process.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -514,7 +516,8 @@ int posix_readlink(const char* path, char* buf, unsigned int bufsize)
 
     F_NOTICE("readlink(" << path << ", " << reinterpret_cast<uintptr_t>(buf) << ", " << bufsize << ")");
 
-    String realPath = normalisePath(path);
+    String realPath;
+    normalisePath(realPath, path);
 
     File* f = VFS::instance().find(realPath, GET_CWD());
     if (!f)
@@ -552,7 +555,8 @@ int posix_realpath(const char *path, char *buf, size_t bufsize)
         return -1;
     }
 
-    String realPath = normalisePath(path);
+    String realPath;
+    normalisePath(realPath, path);
     F_NOTICE("  -> traversing " << realPath);
     File* f = VFS::instance().find(realPath, GET_CWD());
     if (!f)
@@ -574,7 +578,8 @@ int posix_realpath(const char *path, char *buf, size_t bufsize)
         return -1;
     }
 
-    String actualPath = f->getFullPath();
+    String actualPath("/@/");
+    actualPath += f->getFullPath(true);
     if(actualPath.length() > (bufsize - 1))
     {
         SYSCALL_ERROR(NameTooLong);
@@ -583,7 +588,7 @@ int posix_realpath(const char *path, char *buf, size_t bufsize)
 
     // File is good, copy it now.
     F_NOTICE("  -> returning " << actualPath);
-    strncpy(buf, static_cast<const char *>(actualPath), bufsize);
+    StringCopyN(buf, static_cast<const char *>(actualPath), bufsize);
 
     return 0;
 }
@@ -601,7 +606,8 @@ int posix_unlink(char *name)
 
     /// \todo Check permissions, perhaps!?
 
-    String realPath = normalisePath(name);
+    String realPath;
+    normalisePath(realPath, name);
 
     if (VFS::instance().remove(realPath, GET_CWD()))
         return 0;
@@ -641,8 +647,10 @@ int posix_rename(const char* source, const char* dst)
 
     F_NOTICE("rename(" << source << ", " << dst << ")");
 
-    String realSource = normalisePath(source);
-    String realDestination = normalisePath(dst);
+    String realSource;
+    String realDestination;
+    normalisePath(realSource, source);
+    normalisePath(realDestination, dst);
 
     File* src = VFS::instance().find(realSource, GET_CWD());
     File* dest = VFS::instance().find(realDestination, GET_CWD());
@@ -716,12 +724,17 @@ char* posix_getcwd(char* buf, size_t maxlen)
     F_NOTICE("getcwd(" << maxlen << ")");
 
     File* curr = GET_CWD();
-    String str = curr->getFullPath(false);
+
+    // Absolute path syntax.
+    String str("/@/");
+    str += curr->getFullPath(true);
 
     size_t maxLength = str.length();
     if(maxLength > maxlen)
         maxLength = maxlen;
-    strncpy(buf, static_cast<const char*>(str), maxlen);
+    StringCopyN(buf, static_cast<const char*>(str), maxLength);
+
+    F_NOTICE(" -> " << str);
 
     return buf;
 }
@@ -753,7 +766,8 @@ int posix_stat(const char *name, struct stat *st)
         return -1;
     }
 
-    String realPath = normalisePath(name);
+    String realPath;
+    normalisePath(realPath, name);
 
     File* file = VFS::instance().find(realPath, GET_CWD());
     if (!file)
@@ -772,7 +786,7 @@ int posix_stat(const char *name, struct stat *st)
     }
 
     int mode = 0;
-    if (ConsoleManager::instance().isConsole(file) || !strcmp(name, "/dev/null"))
+    if (ConsoleManager::instance().isConsole(file) || !StringCompare(name, "/dev/null"))
     {
         mode = S_IFCHR;
     }
@@ -784,6 +798,9 @@ int posix_stat(const char *name, struct stat *st)
     {
         mode = S_IFREG;
     }
+
+    // Clear any cruft in the stat structure before we fill it.
+    ByteSet(st, 0, sizeof(*st));
 
     uint32_t permissions = file->getPermissions();
     if (permissions & FILE_UR) mode |= S_IRUSR;
@@ -804,9 +821,9 @@ int posix_stat(const char *name, struct stat *st)
     st->st_gid   = file->getGid();
     st->st_rdev  = 0;
     st->st_size  = static_cast<int>(file->getSize());
-    st->st_atime = static_cast<int>(file->getAccessedTime());
-    st->st_mtime = static_cast<int>(file->getModifiedTime());
-    st->st_ctime = static_cast<int>(file->getCreationTime());
+    st->st_atime = file->getAccessedTime();
+    st->st_mtime = file->getModifiedTime();
+    st->st_ctime = file->getCreationTime();
     st->st_blksize = static_cast<int>(file->getBlockSize());
     st->st_blocks = (st->st_size / st->st_blksize) + ((st->st_size % st->st_blksize) ? 1 : 0);
 
@@ -864,6 +881,9 @@ int posix_fstat(int fd, struct stat *st)
         mode = S_IFREG;
     }
 
+    // Clear any cruft in the stat structure before we fill it.
+    ByteSet(st, 0, sizeof(*st));
+
     uint32_t permissions = pFd->file->getPermissions();
     if (permissions & FILE_UR) mode |= S_IRUSR;
     if (permissions & FILE_UW) mode |= S_IWUSR;
@@ -886,9 +906,9 @@ int posix_fstat(int fd, struct stat *st)
     st->st_gid   = pFd->file->getGid();
     st->st_rdev  = 0;
     st->st_size  = static_cast<int>(pFd->file->getSize());
-    st->st_atime = static_cast<int>(pFd->file->getAccessedTime());
-    st->st_mtime = static_cast<int>(pFd->file->getModifiedTime());
-    st->st_ctime = static_cast<int>(pFd->file->getCreationTime());
+    st->st_atime = pFd->file->getAccessedTime();
+    st->st_mtime = pFd->file->getModifiedTime();
+    st->st_ctime = pFd->file->getCreationTime();
     st->st_blksize = static_cast<int>(pFd->file->getBlockSize());
     st->st_blocks = (st->st_size / st->st_blksize) + ((st->st_size % st->st_blksize) ? 1 : 0);
 
@@ -913,7 +933,8 @@ int posix_lstat(char *name, struct stat *st)
         return -1;
     }
 
-    String realPath = normalisePath(name);
+    String realPath;
+    normalisePath(realPath, name);
 
     File *file = VFS::instance().find(realPath, GET_CWD());
 
@@ -944,6 +965,9 @@ int posix_lstat(char *name, struct stat *st)
         }
     }
 
+    // Clear any cruft in the stat structure before we fill it.
+    ByteSet(st, 0, sizeof(*st));
+
     uint32_t permissions = file->getPermissions();
     if (permissions & FILE_UR) mode |= S_IRUSR;
     if (permissions & FILE_UW) mode |= S_IWUSR;
@@ -963,19 +987,19 @@ int posix_lstat(char *name, struct stat *st)
     st->st_gid   = file->getGid();
     st->st_rdev  = 0;
     st->st_size  = static_cast<int>(file->getSize());
-    st->st_atime = static_cast<int>(file->getAccessedTime());
-    st->st_mtime = static_cast<int>(file->getModifiedTime());
-    st->st_ctime = static_cast<int>(file->getCreationTime());
+    st->st_atime = file->getAccessedTime();
+    st->st_mtime = file->getModifiedTime();
+    st->st_ctime = file->getCreationTime();
     st->st_blksize = static_cast<int>(file->getBlockSize());
     st->st_blocks = (st->st_size / st->st_blksize) + ((st->st_size % st->st_blksize) ? 1 : 0);
 
     return 0;
 }
 
-int posix_opendir(const char *dir, dirent *ent)
+int posix_opendir(const char *dir, DIR *ent)
 {
     if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(dir), PATH_MAX, PosixSubsystem::SafeRead) &&
-        PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(ent), sizeof(dirent), PosixSubsystem::SafeWrite)))
+        PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(ent), sizeof(DIR), PosixSubsystem::SafeWrite)))
     {
         F_NOTICE("opendir -> invalid address");
         SYSCALL_ERROR(InvalidArgument);
@@ -993,14 +1017,14 @@ int posix_opendir(const char *dir, dirent *ent)
         return -1;
     }
 
-    size_t fd = pSubsystem->getFd();
-
-    String realPath = normalisePath(dir);
+    String realPath;
+    normalisePath(realPath, dir);
 
     File* file = VFS::instance().find(realPath, GET_CWD());
     if (!file)
     {
         // Error - not found.
+        F_NOTICE(" -> not found");
         SYSCALL_ERROR(DoesNotExist);
         return -1;
     }
@@ -1013,55 +1037,50 @@ int posix_opendir(const char *dir, dirent *ent)
     if (!file->isDirectory())
     {
         // Error - not a directory.
+        F_NOTICE(" -> not a directory");
         SYSCALL_ERROR(NotADirectory);
         return -1;
     }
 
+    size_t fd = pSubsystem->getFd();
     FileDescriptor *f = new FileDescriptor;
     f->file = file;
     f->offset = 0;
     f->fd = fd;
 
-    file = Directory::fromFile(file)->getChild(0);
-    if (file)
-    {
-        ent->d_ino = file->getInode();
+    // Fill out the DIR structure too.
+    Directory *pDirectory = Directory::fromFile(file);
+    ByteSet(ent, 0, sizeof(*ent));
+    ent->fd = fd;
+    ent->count = pDirectory->getNumChildren();
 
-        // Some applications consider a null inode to mean "bad file" which is
-        // a horrible assumption for them to make. Because the presence of a file
-        // is indicated by more effective means (ie, successful return from
-        // readdir) this just appeases the applications which aren't portably
-        // written.
-        if(ent->d_ino == 0)
-            ent->d_ino = 0x7fff; // Signed, don't want this to turn negative
-
-        // Copy the filename across
-        strncpy(ent->d_name, static_cast<const char*>(file->getName()), MAXNAMLEN);
-    }
-    else
-    {
-        // No file here.
-        memset(ent, 0, sizeof(*ent));
-    }
-
+    // Register the fd, we're about to buffer the directory and be done here
     pSubsystem->addFileDescriptor(fd, f);
 
+    // Load the buffer now that we've set up for the buffer.
+    if (posix_readdir(ent) < 0)
+    {
+        // readdir does a SYSCALL_ERROR when it fails
+        F_NOTICE(" -> readdir failed...");
+        pSubsystem->freeFd(fd);
+        ByteSet(ent, 0xFF, sizeof(*ent));
+        return -1;
+    }
+
+    F_NOTICE(" -> " << fd);
     return static_cast<int>(fd);
 }
 
-int posix_readdir(int fd, dirent *ent)
+int posix_readdir(DIR *dir)
 {
-    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(ent), sizeof(dirent), PosixSubsystem::SafeWrite))
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(dir), sizeof(DIR), PosixSubsystem::SafeWrite))
     {
         F_NOTICE("readdir -> invalid address");
         SYSCALL_ERROR(InvalidArgument);
         return -1;
     }
 
-    F_NOTICE("readdir(" << fd << ")");
-
-    if (fd == -1)
-        return -1;
+    F_NOTICE("readdir(" << dir->fd << ")");
 
     // Lookup this process.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -1072,75 +1091,76 @@ int posix_readdir(int fd, dirent *ent)
         return -1;
     }
 
-    FileDescriptor *pFd = pSubsystem->getFileDescriptor(fd);
+    FileDescriptor *pFd = pSubsystem->getFileDescriptor(dir->fd);
     if (!pFd || !pFd->file)
     {
         // Error - no such file descriptor.
+        F_NOTICE(" -> bad file");
         SYSCALL_ERROR(BadFileDescriptor);
         return -1;
     }
 
     if(!pFd->file->isDirectory())
     {
+        F_NOTICE(" -> not a directory");
         SYSCALL_ERROR(NotADirectory);
         return -1;
     }
-    File* file = Directory::fromFile(pFd->file)->getChild(pFd->offset);
-    if (!file)
+
+    if (dir->totalpos % 64)
     {
-        // Normal EOF condition.
-        SYSCALL_ERROR(NoError);
+        // Not on a multiple of 64 - possibly called directly rather than via
+        // libc (where the proper magic is done).
+        F_NOTICE(" -> wrong position");
+        SYSCALL_ERROR(InvalidArgument);
         return -1;
     }
 
-    ent->d_ino = static_cast<short>(file->getInode());
-    String tmp = file->getName();
-    strcpy(ent->d_name, static_cast<const char*>(tmp));
-    ent->d_name[strlen(static_cast<const char*>(tmp))] = '\0';
-    if(file->isSymlink())
-        ent->d_type = DT_LNK;
-    else
-        ent->d_type = file->isDirectory() ? DT_DIR : DT_REG;
-    pFd->offset ++;
+    // Buffer another 64 entries.
+    Directory *pDirectory = Directory::fromFile(pFd->file);
+    for (size_t i = 0; i < 64; ++i)
+    {
+        File *pFile = pDirectory->getChild(dir->totalpos + i);
+        if (!pFile)
+            break;
+
+        dir->ent[i].d_ino = pFile->getInode();
+
+        // Some applications consider a null inode to mean "bad file" which is
+        // a horrible assumption for them to make. Because the presence of a file
+        // is indicated by more effective means (ie, successful return from
+        // readdir) this just appeases the applications which aren't portably
+        // written.
+        if(dir->ent[i].d_ino == 0)
+            dir->ent[i].d_ino = 0x7fff; // Signed, don't want this to turn negative
+
+        // Copy filename.
+        StringCopyN(dir->ent[i].d_name, static_cast<const char *>(pFile->getName()), MAXNAMLEN);
+        if(pFile->isSymlink())
+            dir->ent[i].d_type = DT_LNK;
+        else
+            dir->ent[i].d_type = pFile->isDirectory() ? DT_DIR : DT_REG;
+    }
 
     return 0;
 }
 
-void posix_rewinddir(int fd, dirent *ent)
+int posix_closedir(DIR *dir)
 {
-    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(ent), sizeof(dirent), PosixSubsystem::SafeWrite))
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(dir), sizeof(DIR), PosixSubsystem::SafeRead))
     {
-        F_NOTICE("rewinddir -> invalid address");
+        F_NOTICE("closedir -> invalid address");
         SYSCALL_ERROR(InvalidArgument);
-        return;
+        return -1;
     }
 
-    if (fd == -1)
+    if (dir->fd < 0)
     {
         SYSCALL_ERROR(BadFileDescriptor);
-        return;
-    }
-
-    F_NOTICE("rewinddir(" << fd << ")");
-
-    Process *pProcess = Processor::information().getCurrentThread()->getParent();
-    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
-    if (!pSubsystem)
-    {
-        ERROR("No subsystem for this process!");
-        return;
-    }
-    FileDescriptor *f = pSubsystem->getFileDescriptor(fd);
-    f->offset = 0;
-    posix_readdir(fd, ent);
-}
-
-int posix_closedir(int fd)
-{
-    if (fd == -1)
         return -1;
+    }
 
-    F_NOTICE("closedir(" << fd << ")");
+    F_NOTICE("closedir(" << dir->fd << ")");
 
     /// \todo Race here - fix.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -1151,7 +1171,7 @@ int posix_closedir(int fd)
         return -1;
     }
 
-    pSubsystem->freeFd(fd);
+    pSubsystem->freeFd(dir->fd);
 
     return 0;
 }
@@ -1249,12 +1269,29 @@ int posix_chdir(const char *path)
 
     F_NOTICE("chdir(" << path << ")");
 
-    String realPath = normalisePath(path);
+    String realPath;
+    normalisePath(realPath, path);
 
     File *dir = VFS::instance().find(realPath, GET_CWD());
+    if (!dir)
+    {
+        F_NOTICE("Does not exist.");
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+    }
+
     File *target = 0;
     if (dir->isSymlink())
+    {
         target = traverseSymlink(dir);
+        if (!target)
+        {
+            F_NOTICE("Symlink traverasal failed.");
+            SYSCALL_ERROR(DoesNotExist);
+            return -1;
+        }
+    }
+
     if (dir && (dir->isDirectory() || (dir->isSymlink() && target->isDirectory())))
     {
         Processor::information().getCurrentThread()->getParent()->setCwd(dir);
@@ -1342,7 +1379,7 @@ int posix_dup2(int fd1, int fd2)
     // According to the spec, CLOEXEC is cleared on DUP.
     f2->fdflags &= ~FD_CLOEXEC;
 
-    return static_cast<int>(fd2);
+    return fd2;
 }
 
 int posix_mkdir(const char* name, int mode)
@@ -1356,7 +1393,8 @@ int posix_mkdir(const char* name, int mode)
 
     F_NOTICE("mkdir(" << name << ")");
 
-    String realPath = normalisePath(name);
+    String realPath;
+    normalisePath(realPath, name);
 
     bool worked = VFS::instance().createDirectory(realPath, GET_CWD());
     return worked ? 0 : -1;
@@ -1377,7 +1415,7 @@ int posix_isatty(int fd)
     if (!pFd)
     {
         // Error - no such file descriptor.
-        ERROR("isatty: no such file descriptor (" << Dec << fd << ")");
+        ERROR("isatty: no such file descriptor (" << Dec << fd << Hex << ")");
         return 0;
     }
 
@@ -1386,17 +1424,10 @@ int posix_isatty(int fd)
     return result;
 }
 
-int posix_fcntl(int fd, int cmd, int num, int* args)
+int posix_fcntl(int fd, int cmd, void* arg)
 {
     /// \todo Same as ioctl, figure out how best to sanitise input addresses
-    if (num)
-        F_NOTICE("fcntl(" << fd << ", " << cmd << ", " << num << ", " << args[0] << ")");
-    /// \note Added braces. Compiler warned about ambiguity if F_NOTICE isn't enabled. It seems to be able
-    ///       to figure out what we meant to do, but making it explicit never hurt anyone.
-    else
-    {
-        F_NOTICE("fcntl(" << fd << ", " << cmd << ")");
-    }
+    F_NOTICE("fcntl(" << fd << ", " << cmd << ", " << arg << ")");
 
     // grab the file descriptor pointer for the passed descriptor
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
@@ -1418,22 +1449,18 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
     {
         case F_DUPFD:
 
-            if (num)
+            if (arg)
             {
-                // if there is an argument and it's valid, map fd to the passed descriptor
-                if (args[0] >= 0)
-                {
-                    size_t fd2 = static_cast<size_t>(args[0]);
+                size_t fd2 = reinterpret_cast<size_t>(arg);
 
-                    // Copy the descriptor (addFileDescriptor automatically frees the old one, if needed)
-                    FileDescriptor* f2 = new FileDescriptor(*f);
-                    pSubsystem->addFileDescriptor(fd2, f2);
+                // Copy the descriptor (addFileDescriptor automatically frees the old one, if needed)
+                FileDescriptor* f2 = new FileDescriptor(*f);
+                pSubsystem->addFileDescriptor(fd2, f2);
 
-                    // According to the spec, CLOEXEC is cleared on DUP.
-                    f2->fdflags &= ~FD_CLOEXEC;
+                // According to the spec, CLOEXEC is cleared on DUP.
+                f2->fdflags &= ~FD_CLOEXEC;
 
-                    return static_cast<int>(fd2);
-                }
+                return static_cast<int>(fd2);
             }
             else
             {
@@ -1448,28 +1475,33 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
 
                 return static_cast<int>(fd2);
             }
-            return 0;
             break;
 
         case F_GETFD:
             return f->fdflags;
         case F_SETFD:
-            f->fdflags = args[0];
+            f->fdflags = reinterpret_cast<size_t>(arg);
             return 0;
         case F_GETFL:
             F_NOTICE("  -> get flags " << f->flflags);
             return f->flflags;
         case F_SETFL:
-            F_NOTICE("  -> set flags " << args[0]);
-            f->flflags = args[0] & (O_APPEND | O_NONBLOCK);
+            F_NOTICE("  -> set flags " << arg);
+            f->flflags = reinterpret_cast<size_t>(arg) & (O_APPEND | O_NONBLOCK);
             F_NOTICE("  -> new flags " << f->flflags);
             return 0;
         case F_GETLK: // Get record-locking information
         case F_SETLK: // Set or clear a record lock (without blocking
         case F_SETLKW: // Set or clear a record lock (with blocking)
 
+            /// \todo this doesn't work for multiple locks with different start
+            /// and len values, which means it is insufficient for sqlite3.
+
+            /// \note advisory locking disabled for now
+            return 0;
+
             // Grab the lock information structure
-            struct flock *lock = reinterpret_cast<struct flock*>(args[0]);
+            struct flock *lock = reinterpret_cast<struct flock*>(arg);
             if(!lock)
             {
                 SYSCALL_ERROR(InvalidArgument);
@@ -1532,12 +1564,12 @@ int posix_fcntl(int fd, int cmd, int num, int* args)
             // Trying to unlock?
             if(lock->l_type == F_UNLCK)
             {
-                // No locked file? Fail
-                if(!f->lockedFile)
-                    return -1;
+                // No locked file? The unlock still succeeds.
+                if(f->lockedFile)
+                {
+                    f->lockedFile->unlock();
+                }
 
-                // Only need to unlock the file - it'll be locked again when needed
-                f->lockedFile->unlock();
                 return 0;
             }
 
@@ -1619,7 +1651,6 @@ void *posix_mmap(void *p)
             }
         }
     }
-    addr = reinterpret_cast<void *>(sanityAddress);
 
     // Verify the passed length
     if(!len || (sanityAddress & (pageSz-1)))
@@ -1815,7 +1846,8 @@ int posix_access(const char *name, int amode)
         return -1;
     }
 
-    String realPath = normalisePath(name);
+    String realPath;
+    normalisePath(realPath, name);
 
     // Grab the file
     File *file = VFS::instance().find(realPath, GET_CWD());
@@ -1874,7 +1906,7 @@ int posix_ftruncate(int a, off_t b)
         NOTICE("Extending by " << numExtraBytes << " bytes");
         uint8_t *nullBuffer = new uint8_t[numExtraBytes];
         NOTICE("Got the buffer");
-        memset(nullBuffer, 0, numExtraBytes);
+        ByteSet(nullBuffer, 0, numExtraBytes);
         NOTICE("Zeroed the buffer");
         pFile->write(currSize, numExtraBytes, reinterpret_cast<uintptr_t>(nullBuffer));
         NOTICE("Deleting the buffer");
@@ -1882,9 +1914,6 @@ int posix_ftruncate(int a, off_t b)
         NOTICE("Complete");
         return 0;
     }
-
-    // Can't get here
-	return -1;
 }
 
 int posix_fsync(int fd)
@@ -1957,8 +1986,8 @@ int pedigree_get_mount(char* mount_buf, char* info_buf, size_t n)
                 else
                     info = "no disk";
                 
-                strcpy(mount_buf, static_cast<const char *>(mount));
-                strcpy(info_buf, static_cast<const char *>(info));
+                StringCopy(mount_buf, static_cast<const char *>(mount));
+                StringCopy(info_buf, static_cast<const char *>(info));
                 
                 return 0;
             }
@@ -1988,7 +2017,8 @@ int posix_chmod(const char *path, mode_t mode)
     }
 
     bool onDevFs = false;
-    String realPath = normalisePath(path, &onDevFs);
+    String realPath;
+    normalisePath(realPath, path, &onDevFs);
 
     if(onDevFs)
     {
@@ -2049,7 +2079,8 @@ int posix_chown(const char *path, uid_t owner, gid_t group)
         return 0;
 
     bool onDevFs = false;
-    String realPath = normalisePath(path, &onDevFs);
+    String realPath;
+    normalisePath(realPath, path, &onDevFs);
 
     if(onDevFs)
     {
@@ -2216,7 +2247,7 @@ int posix_fchdir(int fd)
     return 0;
 }
 
-int statvfs_doer(Filesystem *pFs, struct statvfs *buf)
+static int statvfs_doer(Filesystem *pFs, struct statvfs *buf)
 {
     if(!pFs)
     {
@@ -2238,15 +2269,15 @@ int statvfs_doer(Filesystem *pFs, struct statvfs *buf)
     buf->f_namemax = VFS_MNAMELEN;
     
     // FS type
-    strcpy(buf->f_fstypename, "ext2");
+    StringCopy(buf->f_fstypename, "ext2");
     
     // "From" point
     /// \todo Disk device hash + path (on raw filesystem maybe?)
-    strcpy(buf->f_mntfromname, "from");
+    StringCopy(buf->f_mntfromname, "from");
     
     // "To" point
     /// \todo What to put here?
-    strcpy(buf->f_mntfromname, "to");
+    StringCopy(buf->f_mntfromname, "to");
     
     return 0;
 }
@@ -2296,7 +2327,8 @@ int posix_statvfs(const char *path, struct statvfs *buf)
 
     F_NOTICE("statvfs(" << path << ")");
 
-    String realPath = normalisePath(path);
+    String realPath;
+    normalisePath(realPath, path);
 
     File* file = VFS::instance().find(realPath, GET_CWD());
     if (!file)
@@ -2311,4 +2343,139 @@ int posix_statvfs(const char *path, struct statvfs *buf)
         return -1;
     
     return statvfs_doer(file->getFilesystem(), buf);
+}
+
+int posix_utime(const char *path, const struct utimbuf *times)
+{
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(path), PATH_MAX, PosixSubsystem::SafeRead) &&
+        ((!times) || PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(times), sizeof(struct utimbuf), PosixSubsystem::SafeRead))))
+    {
+        F_NOTICE("utimes -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    F_NOTICE("utimes(" << path << ")");
+
+    String realPath;
+    normalisePath(realPath, path);
+
+    File* file = VFS::instance().find(realPath, GET_CWD());
+    if (!file)
+    {
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+    }
+
+    // Symlink traversal
+    file = traverseSymlink(file);
+    if(!file)
+        return -1;
+
+    Time::Timestamp accessTime;
+    Time::Timestamp modifyTime;
+    if (times)
+    {
+        accessTime = times->actime * Time::Multiplier::SECOND;
+        modifyTime = times->modtime * Time::Multiplier::SECOND;
+    }
+    else
+    {
+        accessTime = modifyTime = Time::getTime();
+    }
+
+    file->setAccessedTime(accessTime);
+    file->setModifiedTime(modifyTime);
+
+    return 0;
+}
+
+int posix_utimes(const char *path, const struct timeval *times)
+{
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(path), PATH_MAX, PosixSubsystem::SafeRead) &&
+        ((!times) || PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(times), sizeof(struct timeval) * 2, PosixSubsystem::SafeRead))))
+    {
+        F_NOTICE("utimes -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    F_NOTICE("utimes(" << path << ")");
+
+    String realPath;
+    normalisePath(realPath, path);
+
+    File* file = VFS::instance().find(realPath, GET_CWD());
+    if (!file)
+    {
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+    }
+
+    // Symlink traversal
+    file = traverseSymlink(file);
+    if(!file)
+        return -1;
+
+    Time::Timestamp accessTime;
+    Time::Timestamp modifyTime;
+    if (times)
+    {
+        struct timeval access = times[0];
+        struct timeval modify = times[1];
+
+        accessTime = access.tv_sec * Time::Multiplier::SECOND;
+        accessTime += access.tv_usec * Time::Multiplier::MICROSECOND;
+
+        modifyTime = modify.tv_sec * Time::Multiplier::SECOND;
+        modifyTime += modify.tv_usec * Time::Multiplier::MICROSECOND;
+    }
+    else
+    {
+        accessTime = modifyTime = Time::getTimeNanoseconds();
+    }
+
+    file->setAccessedTime(accessTime);
+    file->setModifiedTime(modifyTime);
+
+    return 0;
+}
+
+int posix_chroot(const char *path)
+{
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(path), PATH_MAX, PosixSubsystem::SafeRead))
+    {
+        F_NOTICE("chroot -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    F_NOTICE("chroot(" << path << ")");
+
+    String realPath;
+    normalisePath(realPath, path);
+
+    File* file = VFS::instance().find(realPath, GET_CWD());
+    if (!file)
+    {
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+    }
+
+    // Symlink traversal
+    file = traverseSymlink(file);
+    if(!file)
+        return -1;
+
+    // chroot must be a directory.
+    if (!file->isDirectory())
+    {
+        SYSCALL_ERROR(NotADirectory);
+        return -1;
+    }
+
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    pProcess->setRootFile(file);
+
+    return 0;
 }

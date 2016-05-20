@@ -1,3 +1,18 @@
 #!/bin/bash
 
-qemu-system-x86_64 -hda ./build/hdd.img -vga std $*
+SERIAL_PORTS="-serial file:build/serial.txt -serial file:build/memlog.txt"
+
+if [ ! -z "$NO_SERIAL_PORTS" ]; then
+    SERIAL_PORTS=""
+fi
+
+AIO="native"
+
+if [ ! "$(uname -s)" == "Linux" ]; then
+    AIO="threads"
+fi
+
+qemu-system-x86_64 \
+    -drive file=./build/hdd.img,if=ide,media=disk,cache=writeback,aio=$AIO,index=0,format=raw \
+    -drive file=./build/pedigree.iso,if=ide,media=cdrom,cache=writeback,aio=$AIO,index=2,format=raw \
+    -boot d -vga std $SERIAL_PORTS -rtc base=utc $*

@@ -19,6 +19,7 @@
 
 #include "MemoryMappedFile.h"
 
+#include <processor/Processor.h>
 #include <processor/PhysicalMemoryManager.h>
 #include <process/MemoryPressureManager.h>
 #include <Spinlock.h>
@@ -45,7 +46,7 @@ AnonymousMemoryMap::AnonymousMemoryMap(uintptr_t address, size_t length, MemoryM
 
         VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
         va.map(m_Zero, reinterpret_cast<void *>(address), VirtualAddressSpace::Write);
-        memset(reinterpret_cast<void *>(address), 0, PhysicalMemoryManager::getPageSize());
+        ByteSet(reinterpret_cast<void *>(address), 0, PhysicalMemoryManager::getPageSize());
         va.unmap(reinterpret_cast<void *>(address));
     }
 }
@@ -153,14 +154,6 @@ void AnonymousMemoryMap::setPermissions(MemoryMappedObject::Permissions perms)
     }
     else
     {
-        size_t newFlags = 0;
-
-        // Remap any existing mappings to use the new flags.
-        if(perms & MemoryMappedObject::Write)
-            newFlags |= VirtualAddressSpace::Write;
-        if(perms & MemoryMappedObject::Exec)
-            newFlags |= VirtualAddressSpace::Execute;
-
         // Adjust any existing mappings in this object.
         for(List<void *>::Iterator it = m_Mappings.begin();
             it != m_Mappings.end();
@@ -292,7 +285,7 @@ bool AnonymousMemoryMap::trap(uintptr_t address, bool bWrite)
         physical_uintptr_t newPage = PhysicalMemoryManager::instance().allocatePage();
         if(!va.map(newPage, reinterpret_cast<void *>(address), VirtualAddressSpace::Write | extraFlags))
             ERROR("map() failed in AnonymousMemoryMap::trap() - write");
-        memset(reinterpret_cast<void *>(address), 0, PhysicalMemoryManager::getPageSize());
+        ByteSet(reinterpret_cast<void *>(address), 0, PhysicalMemoryManager::getPageSize());
     }
 
     return true;
@@ -315,7 +308,7 @@ MemoryMappedObject *MemoryMappedFile::clone()
     {
         // Bump reference count on backing file page if needed.
         size_t fileOffset = (it.key() - m_Address) + m_Offset;
-        if(it.value() == static_cast<physical_uintptr_t>(~0UL))
+        if(it.value() == ~0UL)
             m_pBacking->getPhysicalPage(fileOffset);
     }
 
@@ -400,7 +393,7 @@ bool MemoryMappedFile::remove(size_t length)
             va.unmap(v);
 
             physical_uintptr_t p = m_Mappings.lookup(virt);
-            if(p == static_cast<physical_uintptr_t>(~0UL))
+            if(p == ~0UL)
             {
                 size_t fileOffset = (virt - oldStart) + oldOffset;
                 m_pBacking->returnPhysicalPage(fileOffset);
@@ -483,12 +476,12 @@ static physical_uintptr_t getBackingPage(File *pBacking, size_t fileOffset)
     size_t pageSz = PhysicalMemoryManager::getPageSize();
 
     physical_uintptr_t phys = pBacking->getPhysicalPage(fileOffset);
-    if(phys == static_cast<physical_uintptr_t>(~0UL))
+    if(phys == ~0UL)
     {
         // No page found, trigger a read to fix that!
         pBacking->read(fileOffset, pageSz, 0);
         phys = pBacking->getPhysicalPage(fileOffset);
-        if(phys == static_cast<physical_uintptr_t>(~0UL))
+        if(phys == ~0UL)
             ERROR("*** Could not manage to get a physical page for a MemoryMappedFile (" << pBacking->getName() << ")!");
     }
 
@@ -498,7 +491,6 @@ static physical_uintptr_t getBackingPage(File *pBacking, size_t fileOffset)
 void MemoryMappedFile::sync(uintptr_t at, bool async)
 {
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-    size_t pageSz = PhysicalMemoryManager::getPageSize();
 
     if(at < m_Address || at >= (m_Address + m_Length))
     {
@@ -521,7 +513,7 @@ void MemoryMappedFile::sync(uintptr_t at, bool async)
         size_t fileOffset = (at - m_Address) + m_Offset;
 
         physical_uintptr_t p = m_Mappings.lookup(at);
-        if(p == static_cast<physical_uintptr_t>(~0UL))
+        if(p == ~0UL)
         {
             m_pBacking->sync(fileOffset, async);
         }
@@ -531,7 +523,6 @@ void MemoryMappedFile::sync(uintptr_t at, bool async)
 void MemoryMappedFile::invalidate(uintptr_t at)
 {
     VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-    size_t pageSz = PhysicalMemoryManager::getPageSize();
 
     // If we're not actually CoW, don't bother checking.
     if(!m_bCopyOnWrite)
@@ -554,7 +545,7 @@ void MemoryMappedFile::invalidate(uintptr_t at)
 
     // Check for already-invalidated.
     physical_uintptr_t p = m_Mappings.lookup(at);
-    if(p == static_cast<physical_uintptr_t>(~0UL))
+    if(p == ~0UL)
         return;
     else
     {
@@ -569,7 +560,7 @@ void MemoryMappedFile::invalidate(uintptr_t at)
 
             // Get new...
             physical_uintptr_t newBacking = getBackingPage(m_pBacking, fileOffset);
-            if(newBacking == static_cast<physical_uintptr_t>(~0UL))
+            if(newBacking == ~0UL)
             {
                 ERROR("MemoryMappedFile::invalidate() couldn't bring in new backing page!");
                 return; // Fail.
@@ -577,7 +568,7 @@ void MemoryMappedFile::invalidate(uintptr_t at)
 
             // Bring in the new backing page.
             va.map(newBacking, v, VirtualAddressSpace::Shared | extraFlags);
-            m_Mappings.insert(at, static_cast<physical_uintptr_t>(~0UL));
+            m_Mappings.insert(at, ~0UL);
         }
     }
 }
@@ -607,7 +598,7 @@ void MemoryMappedFile::unmap()
         va.unmap(v);
 
         physical_uintptr_t p = it.value();
-        if(p == static_cast<physical_uintptr_t>(~0UL))
+        if(p == ~0UL)
         {
             size_t fileOffset = (it.key() - m_Address) + m_Offset;
             m_pBacking->returnPhysicalPage(fileOffset);
@@ -643,9 +634,24 @@ bool MemoryMappedFile::trap(uintptr_t address, bool bWrite)
 
     // Skip out on a few things if we can.
     if(bWrite && !(m_Permissions & Write))
+    {
+#ifdef DEBUG_MMOBJECTS
+        DEBUG_LOG(" -> ignoring, was a write and this is not a writable mapping.");
+#endif
         return false;
+    }
     else if((!bWrite) && !(m_Permissions & Read))
+    {
+#ifdef DEBUG_MMOBJECTS
+        DEBUG_LOG(" -> ignoring, was a read and this is not a readable mapping.");
+#endif
         return false;
+    }
+
+#ifdef DEBUG_MMOBJECTS
+    DEBUG_LOG(" -> mapping offset is " << mappingOffset << ", file offset: " << fileOffset);
+    DEBUG_LOG(" -> will eof: " << bWillEof << ", should copy: " << bShouldCopy);
+#endif
 
     // Add execute flag.
     size_t extraFlags = 0;
@@ -655,8 +661,11 @@ bool MemoryMappedFile::trap(uintptr_t address, bool bWrite)
     if(!bShouldCopy)
     {
         physical_uintptr_t phys = getBackingPage(m_pBacking, fileOffset);
-        if(phys == static_cast<physical_uintptr_t>(~0UL))
+        if(phys == ~0UL)
+        {
+            ERROR("MemoryMappedFile::trap couldn't get a backing page");
             return false; // Fail.
+        }
 
         size_t flags = VirtualAddressSpace::Shared;
         if(!m_bCopyOnWrite)
@@ -664,7 +673,12 @@ bool MemoryMappedFile::trap(uintptr_t address, bool bWrite)
             flags |= VirtualAddressSpace::Write;
         }
 
-        va.map(phys, reinterpret_cast<void *>(address), flags | extraFlags);
+        bool r = va.map(phys, reinterpret_cast<void *>(address), flags | extraFlags);
+        if(!r)
+        {
+            ERROR("map() failed in MemoryMappedFile::trap (no-copy)");
+            return false;
+        }
 
         m_Mappings.insert(address, ~0);
     }
@@ -682,7 +696,12 @@ bool MemoryMappedFile::trap(uintptr_t address, bool bWrite)
 
         // Okay, map in the new page, and copy across the backing file data.
         physical_uintptr_t newPhys = PhysicalMemoryManager::instance().allocatePage();
-        va.map(newPhys, reinterpret_cast<void *>(address), VirtualAddressSpace::Write | extraFlags);
+        bool r = va.map(newPhys, reinterpret_cast<void *>(address), VirtualAddressSpace::Write | extraFlags);
+        if(!r)
+        {
+            ERROR("map() failed in MemoryMappedFile::trap (copy)");
+            return false;
+        }
 
         size_t nBytes = m_Length - mappingOffset;
         if(nBytes > pageSz)
@@ -692,7 +711,7 @@ bool MemoryMappedFile::trap(uintptr_t address, bool bWrite)
         if(nRead < pageSz)
         {
             // Couldn't quite read in a page - zero out what's left.
-            memset(reinterpret_cast<void *>(address + nRead), 0, pageSz - nRead - 1);
+            ByteSet(reinterpret_cast<void *>(address + nRead), 0, pageSz - nRead - 1);
         }
 
         m_Mappings.insert(address, newPhys);
@@ -719,7 +738,7 @@ bool MemoryMappedFile::compact()
         for(uintptr_t addr = base; addr < end; addr += pageSz)
         {
             physical_uintptr_t p = m_Mappings.lookup(addr);
-            if(p != static_cast<physical_uintptr_t>(~0UL))
+            if(p != ~0UL)
                 continue;
 
             size_t flags = 0;
@@ -753,7 +772,7 @@ bool MemoryMappedFile::compact()
         for(uintptr_t addr = base; addr < end; addr += pageSz)
         {
             physical_uintptr_t p = m_Mappings.lookup(addr);
-            if(p != static_cast<physical_uintptr_t>(~0UL))
+            if(p != ~0UL)
                 continue;
 
             size_t flags = 0;

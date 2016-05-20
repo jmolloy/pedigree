@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -25,10 +24,9 @@
 #include <processor/Processor.h>
 #include <process/Semaphore.h>
 #include <Log.h>
+#include <time/Time.h>
 
 I2C I2C::m_Instance[3];
-
-#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
 void I2C::initialise(uintptr_t baseAddr)
 {
@@ -121,7 +119,7 @@ bool I2C::transmit(uint8_t addr, uintptr_t buffer, size_t len)
     bool success = true;
     while(1)
     {
-        delay(1);
+        Time::delay(1 * Time::Multiplier::MILLISECOND);
         uint16_t status = base[I2C_STAT];
         if(status & 0x1)
         {
@@ -148,7 +146,7 @@ bool I2C::transmit(uint8_t addr, uintptr_t buffer, size_t len)
             *reinterpret_cast<volatile uint8_t*>(&base[I2C_DATA]) = *buf++;
         }
 
-        delay(50);
+        Time::delay(50 * Time::Multiplier::MILLISECOND);
         base[I2C_STAT] = status;
     }
 
@@ -174,7 +172,7 @@ bool I2C::receive(uint8_t addr, uintptr_t buffer, size_t maxlen)
     bool success = true;
     while(1)
     {
-        delay(1);
+        Time::delay(1 * Time::Multiplier::MILLISECOND);
         uint16_t status = base[I2C_STAT];
         if(status & 0x1)
         {
@@ -201,7 +199,7 @@ bool I2C::receive(uint8_t addr, uintptr_t buffer, size_t maxlen)
             *buf++ = *reinterpret_cast<volatile uint8_t*>(&base[I2C_DATA]);
         }
 
-        delay(50);
+        Time::delay(50 * Time::Multiplier::MILLISECOND);
         base[I2C_STAT] = status;
     }
 
@@ -221,7 +219,7 @@ void I2C::waitForBus()
     while((status = base[I2C_STAT]) & 0x1000)
     {
         base[I2C_STAT] = status;
-        delay(50);
+        Time::delay(50 * Time::Multiplier::MILLISECOND);
     }
     base[I2C_STAT] = 0xFFFF;
 }

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -38,7 +37,19 @@ CdiNet::CdiNet(Network* pDev, struct cdi_net_device* device) :
 
     /// \todo Check endianness - *should* be fine, but we'll see...
     uint64_t mac = m_Device->mac;
-    m_StationInfo.mac.setMac(reinterpret_cast<uint8_t*>(&mac), false);
+    m_StationInfo.mac.setMac(reinterpret_cast<uint16_t*>(&mac), false);
+
+    NetworkStack::instance().registerDevice(this);
+}
+
+CdiNet::CdiNet(struct cdi_net_device* device) :
+    Network(), m_Device(device)
+{
+    setSpecificType(String("CDI NIC"));
+
+    /// \todo Check endianness - *should* be fine, but we'll see...
+    uint64_t mac = m_Device->mac;
+    m_StationInfo.mac.setMac(reinterpret_cast<uint16_t*>(&mac), false);
 
     NetworkStack::instance().registerDevice(this);
 }
@@ -92,17 +103,12 @@ bool CdiNet::setStationInfo(StationInfo info)
 
 void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* device)
 {
-    Network* pDev = reinterpret_cast<Network*>(void_pdev);
-
     // Create a new CdiNet node
-    CdiNet *pCdiNet = new CdiNet(pDev, device);
+    CdiNet *pCdiNet = new CdiNet(device);
 
     // Replace pDev with pCdiNet
-    pCdiNet->setParent(pDev->getParent());
-    pDev->getParent()->replaceChild(pDev, pCdiNet);
-    device->dev.backdev = reinterpret_cast<void*>(pCdiNet);
+    Device::addToRoot(pCdiNet);
 }
-
 
 /**
  * Wird von Netzwerktreibern aufgerufen, wenn ein Netzwerkpaket
@@ -110,5 +116,23 @@ void cdi_cpp_net_register(void* void_pdev, struct cdi_net_device* device)
  */
 void cdi_net_receive(struct cdi_net_device* device, void* buffer, size_t size)
 {
-    NetworkStack::instance().receive(size, reinterpret_cast<uintptr_t>(buffer), reinterpret_cast<Network*>(device->dev.backdev), 0);
+    auto f = [&] (Device *p) {
+        if (p->getType() == Device::Network)
+        {
+            if (p->getSpecificType() == "CDI NIC")
+            {
+                CdiNet *pNet = static_cast<CdiNet *>(p);
+                if (pNet->getCdiDevice() == device)
+                {
+                    // Submit the packet.
+                    NetworkStack::instance().receive(size, reinterpret_cast<uintptr_t>(buffer), pNet, 0);
+                }
+            }
+        }
+        return p;
+    };
+
+    auto c = pedigree_std::make_callable(f);
+
+    Device::foreach(c, 0);
 }

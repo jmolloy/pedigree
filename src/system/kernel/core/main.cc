@@ -25,6 +25,8 @@
  * Joerg Pfahler and primarily implemented by James Molloy, Joerg Pfahler, and
  * Matthew Iselin.
  *
+ * Just a user looking for help? Head straight to \ref user_guide.
+ *
  * The objectives of Pedigree are to develop a solid yet portable operating
  * system from the ground up with an object oriented architecture where
  * possible. The goal is to support multiple different subsystems to allow many
@@ -68,20 +70,27 @@
  * by following the escalation path described in the \ref main_resources
  * section.
  *
+ * \section user_guide Pedigree User Guide
+ *
+ * - \ref pedigree_whatsdifferent
+ *
  * \section main_links Components
  * The following lists the various components across the operating system.
  *
  * - \ref module_main
  * - \ref mmap_main
  * - \ref module_nativeapi
+ * - \ref registry
+ * - \ref event_system
  *
  * \section main_resources Resources
- * The main repository for Pedigree is at https://github.com/miselin/pedigree.
+ * - \ref pedigree_porting
+ * - The main repository for Pedigree is at https://github.com/miselin/pedigree.
  *
- * If you are interested in contributing, have found a bug, or have any other
+ * - If you are interested in contributing, have found a bug, or have any other
  * queries, please open a ticket on the tracker at http://pedigree.plan.io.
  *
- * You can also find us in \#pedigree on irc.freenode.net.
+ * - You can also find us in \#pedigree on irc.freenode.net.
  */
 
 #include "BootstrapInfo.h"
@@ -114,6 +123,8 @@
 #include <process/Scheduler.h>
 #include <process/SchedulingAlgorithm.h>
 #include <process/MemoryPressureManager.h>
+#include <process/MemoryPressureKiller.h>
+#include <process/InfoBlock.h>
 
 #include <machine/Device.h>
 
@@ -139,9 +150,12 @@
 
 #include <SlamAllocator.h>
 
-void apmm()
-{
-}
+#ifdef HOSTED
+namespace __pedigree_hosted {}; // In case it's not defined.
+using namespace __pedigree_hosted;
+#include <stdio.h>
+#endif
+
 /** Output device for boot-time information. */
 BootIO bootIO;
 
@@ -163,6 +177,7 @@ class SlamRecovery : public MemoryPressureHandler
     }
 };
 
+#ifdef MULTIPROCESSOR
 /** Kernel entry point for application processors (after processor/machine has been initialised
     on the particular processor */
 void apMain()
@@ -184,6 +199,7 @@ void apMain()
 #endif
   }
 }
+#endif
 
 #ifdef STATIC_DRIVERS
 extern uintptr_t start_modinfo;
@@ -194,17 +210,16 @@ extern uintptr_t end_module_ctors;
 #endif
 
 /** Loads all kernel modules */
-int loadModules(void *inf)
+static int loadModules(void *inf)
 {
 #ifdef STATIC_DRIVERS
-
-    uint32_t *tags = reinterpret_cast<uint32_t*>(&start_modinfo);
-    uint32_t *lasttag = reinterpret_cast<uint32_t*>(&end_modinfo);
+    ModuleInfo *tags = reinterpret_cast<ModuleInfo*>(&start_modinfo);
+    ModuleInfo *lasttag = reinterpret_cast<ModuleInfo*>(&end_modinfo);
 
     // Call static constructors before we start. If we don't... there won't be
     // any properly initialised ModuleInfo structures :)
-    uintptr_t *iterator = reinterpret_cast<uintptr_t*>(&start_module_ctors);
-    while (iterator < reinterpret_cast<uintptr_t*>(&end_module_ctors))
+    uintptr_t *iterator = &start_module_ctors;
+    while (iterator < &end_module_ctors)
     {
         void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
         fp();
@@ -212,19 +227,15 @@ int loadModules(void *inf)
     }
 
     // Run through all the modules
-    while(tags != lasttag)
+    while(tags < lasttag)
     {
-        if(*tags == MODULE_TAG)
+        if(tags->tag == MODULE_TAG)
         {
-            ModuleInfo *modinfo = reinterpret_cast<ModuleInfo*>(tags);
-            KernelElf::instance().loadModule(modinfo);
+            KernelElf::instance().loadModule(tags);
         }
 
         tags++;
     }
-
-    return 0;
-
 #else
     BootstrapStruct_t bsInf = *static_cast<BootstrapStruct_t*>(inf);
 
@@ -233,7 +244,7 @@ int loadModules(void *inf)
     Archive initrd(bsInf.getInitrdAddress(), bsInf.getInitrdSize());
     
     size_t nFiles = initrd.getNumFiles();
-    g_BootProgressTotal = nFiles*2; // Each file has to be preloaded and executed.
+    g_BootProgressTotal = nFiles * 2; // Each file has to be preloaded and executed.
     for (size_t i = 0; i < nFiles; i++)
     {
         Processor::setInterrupts(true);
@@ -243,18 +254,30 @@ int loadModules(void *inf)
             WARNING("A loaded module disabled interrupts.");
     }
 
+    // Wait for all modules to finish loading before we continue.
+    KernelElf::instance().waitForModulesToLoad();
+
     // The initialisation is done here, unmap/free the .init section and on x86/64 the identity
     // mapping of 0-4MB
     // NOTE: BootstrapStruct_t unusable after this point
-    #ifdef X86_COMMON
-        Processor::initialisationDone();
-    #endif
+    Processor::initialisationDone();
+
+#endif
+
+    if(KernelElf::instance().hasPendingModules())
+    {
+      FATAL("At least one module's dependencies were never met.");
+    }
+
+#ifdef HOSTED
+    fprintf(stderr, "Pedigree has started: all modules have been loaded.\n");
+#endif
 
     return 0;
-#endif
 }
 
 /** Kernel entry point. */
+extern "C" void _main(BootstrapStruct_t &bsInf) NORETURN;
 extern "C" void _main(BootstrapStruct_t &bsInf)
 {
   // Firstly call the constructors of all global objects.
@@ -270,10 +293,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   // Initialise the machine-specific interface
   Machine &machine = Machine::instance();
-
-#if defined(X86_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON)
   Machine::instance().initialiseDeviceTree();
-#endif
 
   machine.initialise();
 
@@ -299,9 +319,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
     panic("Initrd module not loaded!");
 #endif
 
-#ifndef ARM_COMMON
   KernelCoreSyscallManager::instance().initialise();
-#endif
 
   Processor::setInterrupts(true);
 
@@ -371,6 +389,13 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   SlamRecovery recovery;
   MemoryPressureManager::instance().registerHandler(MemoryPressureManager::HighestPriority, &recovery);
 
+  // Set up the process killer memory pressure handler.
+  MemoryPressureProcessKiller killer;
+  MemoryPressureManager::instance().registerHandler(MemoryPressureManager::LowestPriority, &killer);
+
+  // Set up the global info block manager.
+  InfoBlockManager::instance().initialise();
+
   // Bring up the cache subsystem.
   CacheManager::instance().initialise();
 
@@ -391,7 +416,7 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 #endif
 
 #ifdef DEBUGGER_RUN_AT_START
-  //Processor::breakpoint();
+  Processor::breakpoint();
 #endif
 
 #ifdef THREADS
@@ -410,9 +435,34 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   }
 }
 
+void system_reset() NORETURN;
 void system_reset()
 {
     NOTICE("Resetting...");
+
+#ifdef MULTIPROCESSOR
+  Machine::instance().stopAllOtherProcessors();
+#endif
+
+    // No need for user input anymore.
+    InputManager::instance().shutdown();
+
+    // Clean up all loaded modules (unmounts filesystems and the like).
     KernelElf::instance().unloadModules();
+
+    NOTICE("All modules unloaded. Running destructors and terminating...");
+    runKernelDestructors();
+
+    // Clean up the kernel's ELF references (e.g. symbol table).
+    KernelElf::instance().~KernelElf();
+
+    // Bring down the machine abstraction.
+    Machine::instance().deinitialise();
+
+    // Shut down the various pieces created by Processor
+    Processor::deinitialise();
+
+    // Reset.
     Processor::reset();
+    while(1);
 }

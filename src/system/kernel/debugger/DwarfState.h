@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -162,9 +161,9 @@ class DwarfState
       m_CfaExpression(0),
       m_ReturnAddress(0)
     {
-      memset (static_cast<void *> (m_RegisterStates), 0,
+      ByteSet(static_cast<void *> (m_RegisterStates), 0,
               sizeof(RegisterState) * DWARF_MAX_REGISTERS);
-      memset (static_cast<void *> (m_R), 0, sizeof(uintptr_t) * DWARF_MAX_REGISTERS);
+      ByteSet(static_cast<void *> (m_R), 0, sizeof(uintptr_t) * DWARF_MAX_REGISTERS);
     }
     ~DwarfState() {}
 
@@ -178,12 +177,12 @@ class DwarfState
       m_CfaExpression(other.m_CfaExpression),
       m_ReturnAddress(other.m_ReturnAddress)
     {
-      memcpy (static_cast<void *> (m_RegisterStates),
-              static_cast<const void *> (other.m_RegisterStates),
-              sizeof(RegisterState) * DWARF_MAX_REGISTERS);
-      memcpy (static_cast<void *> (m_R),
-              static_cast<const void *> (other.m_R),
-              sizeof(uintptr_t) * DWARF_MAX_REGISTERS);
+      MemoryCopy(static_cast<void *> (m_RegisterStates),
+                 static_cast<const void *> (other.m_RegisterStates),
+                 sizeof(RegisterState) * DWARF_MAX_REGISTERS);
+      MemoryCopy(static_cast<void *> (m_R),
+                 static_cast<const void *> (other.m_R),
+                 sizeof(uintptr_t) * DWARF_MAX_REGISTERS);
     }
 
     DwarfState &operator=(const DwarfState &other)
@@ -193,12 +192,12 @@ class DwarfState
       m_CfaOffset = other.m_CfaOffset;
       m_CfaExpression = other.m_CfaExpression;
       m_ReturnAddress = other.m_ReturnAddress;
-      memcpy (static_cast<void *> (m_RegisterStates),
-              static_cast<const void *> (other.m_RegisterStates),
-              sizeof(RegisterState) * DWARF_MAX_REGISTERS);
-      memcpy (static_cast<void *> (m_R),
-              static_cast<const void *> (other.m_R),
-              sizeof(uintptr_t) * DWARF_MAX_REGISTERS);
+      MemoryCopy(static_cast<void *> (m_RegisterStates),
+                 static_cast<const void *> (other.m_RegisterStates),
+                 sizeof(RegisterState) * DWARF_MAX_REGISTERS);
+      MemoryCopy(static_cast<void *> (m_R),
+                 static_cast<const void *> (other.m_R),
+                 sizeof(uintptr_t) * DWARF_MAX_REGISTERS);
       return *this;
     }
      
@@ -213,11 +212,14 @@ class DwarfState
         case ValExpression:
         {
           WARNING ("DwarfState::getCfa: Expression type not implemented.");
+          break;
         }
         default:
           ERROR ("CfaState invalid!");
           return 0;
       }
+
+      return 0;
     }
     
     processor_register_t getRegister(unsigned int nRegister, const DwarfState &initialState)
@@ -251,8 +253,7 @@ class DwarfState
 //           WARNING ("ValOffset.");
           // "The previous value of this register is the value CFA+N where CFA is the current
           //  CFA value and N is a signed offset."
-          return static_cast<processor_register_t>
-                   (getCfa(initialState) + static_cast<ssize_t> (m_R[nRegister]));
+          return getCfa(initialState) + static_cast<ssize_t> (m_R[nRegister]);
         }
         case Register:
         {
@@ -272,9 +273,6 @@ class DwarfState
         }
         case Architectural:
 //           WARNING ("Request for 'architectural' register: r" << Dec << nRegister);
-          return 0;
-        default:
-//           ERROR ("DwarfState::getRegister(" << Dec << nRegister << "): Register state invalid.");
           return 0;
       }
       return 0;

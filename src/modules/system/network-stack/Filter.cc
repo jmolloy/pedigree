@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -82,7 +81,7 @@ size_t NetworkFilter::installCallback(size_t level, bool (*callback)(uintptr_t, 
             if(!list)
             {
                 ERROR("Ran out of memory creating list for level " << Dec << level << Hex << " callbacks!");
-                return (size_t) -1;
+                return static_cast<size_t>(-1);
             }
             
             list->pushBack(reinterpret_cast<void*>(callback));
@@ -94,7 +93,7 @@ size_t NetworkFilter::installCallback(size_t level, bool (*callback)(uintptr_t, 
     }
     
     // Invalid input
-    return (size_t) -1;
+    return static_cast<size_t>(-1);
 }
 
 void NetworkFilter::removeCallback(size_t level, size_t id)

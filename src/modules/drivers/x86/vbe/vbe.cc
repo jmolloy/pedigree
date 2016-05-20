@@ -33,10 +33,12 @@
 
 #include <machine/x86_common/Bios.h>
 
+extern "C" void vbeModeChangedCallback(char *pId, char *pModeId);
+
 #define REALMODE_PTR(x) ((x[1] << 4) + x[0])
 
-VbeDisplay *g_pDisplays[4];
-size_t g_nDisplays = 0;
+static VbeDisplay *g_pDisplays[4];
+static size_t g_nDisplays = 0;
 
 struct vbeControllerInfo {
    char signature[4];             // == "VESA"
@@ -73,34 +75,10 @@ struct vbeModeInfo {
   short sz_offscreen; // In KB.
 } __attribute__((packed));
 
-Device *searchNode(Device *pDev, uintptr_t fbAddr)
-{
-  for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
-  {
-    Device *pChild = pDev->getChild(i);
-    String name;
-    pChild->getName(name);
-    // Get its addresses, and search for fbAddr.
-    for (unsigned int j = 0; j < pChild->addresses().count(); j++)
-    {
-      if (pChild->getPciClassCode() == 0x03 &&
-          pChild->addresses()[j]->m_Address <= fbAddr && (pChild->addresses()[j]->m_Address+pChild->addresses()[j]->m_Size) > fbAddr)
-      {
-        return pChild;
-      }
-    }
-
-    // Recurse.
-    Device *pRet = searchNode(pChild, fbAddr);
-    if (pRet) return pRet;
-  }
-  return 0;
-}
-
 extern "C" void vbeModeChangedCallback(char *pId, char *pModeId)
 {
-    size_t id = strtoul(pId, 0, 10);
-    size_t mode_id = strtoul(pModeId, 0, 10);
+    size_t id = StringToUnsignedLong(pId, 0, 10);
+    size_t mode_id = StringToUnsignedLong(pModeId, 0, 10);
 
     if (id >= g_nDisplays) return;
 
@@ -125,17 +103,8 @@ class VbeFramebuffer : public Framebuffer
         virtual void hwRedraw(size_t x = ~0UL, size_t y = ~0UL,
                               size_t w = ~0UL, size_t h = ~0UL)
         {
-            if(x == ~0UL)
-                x = 0;
-            if(y == ~0UL)
-                y = 0;
-            if(w == ~0UL)
-                w = getWidth();
-            if(h == ~0UL)
-                h = getHeight();
-
-            /// \todo Subregions
-            memcpy(m_pDisplay->getFramebuffer(), m_pBackbuffer, m_nBackbufferBytes);
+            /// \todo Subregions - this just refreshes the entire screen
+            MemoryCopy(m_pDisplay->getFramebuffer(), m_pBackbuffer, m_nBackbufferBytes);
         }
         
         virtual ~VbeFramebuffer()
@@ -145,7 +114,12 @@ class VbeFramebuffer : public Framebuffer
         virtual void setFramebuffer(uintptr_t p)
         {
             Display::ScreenMode sm;
-            m_pDisplay->getCurrentScreenMode(sm); /// \todo handle error
+            ByteSet(&sm, 0, sizeof(Display::ScreenMode));
+            if (!m_pDisplay->getCurrentScreenMode(sm))
+            {
+                ERROR("VBE: setting screen mode failed.");
+                return;
+            }
             m_nBackbufferBytes = sm.bytesPerLine * sm.height;
             if(m_nBackbufferBytes)
             {
@@ -186,7 +160,7 @@ class VbeFramebuffer : public Framebuffer
         MemoryRegion *m_pFramebufferRegion;
 };
 
-bool entry()
+static bool entry()
 {
 #ifdef NOGFX
   NOTICE("Not starting VBE module, NOGFX is defined.");
@@ -198,7 +172,7 @@ bool entry()
   // Allocate some space for the information structure and prepare for a BIOS call.
   vbeControllerInfo *info = reinterpret_cast<vbeControllerInfo*> (Bios::instance().malloc(/*sizeof(vbeControllerInfo)*/256));
   vbeModeInfo *mode = reinterpret_cast<vbeModeInfo*> (Bios::instance().malloc(/*sizeof(vbeModeInfo)*/256));
-  strncpy (info->signature, "VBE2", 4);
+  StringCopyN(info->signature, "VBE2", 4);
   Bios::instance().setAx (0x4F00);
   Bios::instance().setEs (0x0000);
   Bios::instance().setDi (static_cast<uint16_t>(reinterpret_cast<uintptr_t>(info)&0xFFFF));
@@ -206,7 +180,7 @@ bool entry()
   Bios::instance().executeInterrupt (0x10);
 
   // Check the signature.
-  if (Bios::instance().getAx() != 0x004F || strncmp(info->signature, "VESA", 4) != 0)
+  if (Bios::instance().getAx() != 0x004F || StringCompareN(info->signature, "VESA", 4) != 0)
   {
     ERROR("VBE: VESA not supported!");
     Bios::instance().free(reinterpret_cast<uintptr_t>(info));
@@ -302,7 +276,25 @@ bool entry()
   NOTICE("VBE: End of compatible display modes.");
 
   // Now that we have a framebuffer address, we can (hopefully) find the device in the device tree that owns that address.
-  Device *pDevice = searchNode(&Device::root(), fbAddr);
+  Device *pDevice = 0;
+  auto searchNode = [&pDevice, fbAddr] (Device *pDev) {
+    if (pDevice)
+      return pDev;
+
+    // Get its addresses, and search for fbAddr.
+    for (unsigned int j = 0; j < pDev->addresses().count(); j++)
+    {
+        if (pDev->getPciClassCode() == 0x03 &&
+            pDev->addresses()[j]->m_Address <= fbAddr && (pDev->addresses()[j]->m_Address+pDev->addresses()[j]->m_Size) > fbAddr)
+        {
+            pDevice = pDev;
+        }
+    }
+
+    return pDev;
+  };
+  auto f = pedigree_std::make_callable(searchNode);
+  Device::foreach(f, 0);
   if (!pDevice)
   {
     ERROR("VBE: Device mapped to framebuffer address '" << Hex << fbAddr << "' not found.");
@@ -318,7 +310,7 @@ bool entry()
   bool bDelayedInsert = false;
   size_t mode_id = 0;
   String str;
-  str.sprintf("SELECT * FROM displays WHERE pointer=%d", reinterpret_cast<uintptr_t>(pDisplay));
+  str.Format("SELECT * FROM displays WHERE pointer=%d", reinterpret_cast<uintptr_t>(pDisplay));
   Config::Result *pResult = Config::instance().query(str);
   if(!pResult)
   {
@@ -328,7 +320,7 @@ bool entry()
   {
       mode_id = pResult->getNum(0, "mode_id");
       delete pResult;
-      str.sprintf("UPDATE displays SET id=%d WHERE pointer=%d", g_nDisplays, reinterpret_cast<uintptr_t>(pDisplay));
+      str.Format("UPDATE displays SET id=%d WHERE pointer=%d", g_nDisplays, reinterpret_cast<uintptr_t>(pDisplay));
       pResult = Config::instance().query(str);
       if (!pResult->succeeded())
           FATAL("Display update failed: " << pResult->errorMessage());
@@ -378,7 +370,7 @@ bool entry()
   return true;
 }
 
-void exit()
+static void exit()
 {
 }
 

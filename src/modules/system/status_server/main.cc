@@ -29,10 +29,13 @@
 #include <network-stack/ConnectionBasedEndpoint.h>
 #include <vfs/VFS.h>
 #include <vfs/Filesystem.h>
+#include <core/lib/SlamAllocator.h>
 
 #define LISTEN_PORT     1234
 
-int clientThread(void *p)
+static ConnectionBasedEndpoint *pEndpoint = 0;
+
+static int clientThread(void *p)
 {
     if(!p)
         return 0;
@@ -62,7 +65,7 @@ int clientThread(void *p)
 
     bool bHeadRequest = false;
 
-    List<String*> firstLine = inputData.tokenise(' ');
+    List<SharedPointer<String>> firstLine = inputData.tokenise(' ');
     String operation = *firstLine.popFront();
     if(!(operation == String("GET")))
     {
@@ -132,8 +135,7 @@ int clientThread(void *p)
 
             response += "<h3>Network Interfaces</h3>";
             response += "<table border='1'><tr><th>Interface #</th><th>IP Address</th><th>Subnet Mask</th><th>Gateway</th><th>DNS Servers</th><th>Driver Name</th><th>MAC address</th><th>Statistics</th></tr>";
-            size_t i;
-            for (i = 0; i < NetworkStack::instance().getNumDevices(); i++)
+            for (size_t i = 0; i < NetworkStack::instance().getNumDevices(); i++)
             {
                 Network* card = NetworkStack::instance().getDevice(i);
                 StationInfo info = card->getStationInfo();
@@ -220,12 +222,12 @@ int clientThread(void *p)
 
             VFSMountTree &mounts = VFS::instance().getMounts();
 
-            for(VFSMountTree::Iterator i = mounts.begin();
-                i != mounts.end();
-                i++)
+            for(VFSMountTree::Iterator it = mounts.begin();
+                it != mounts.end();
+                it++)
             {
-                Filesystem *pFs = i.key();
-                StringList *pList = i.value();
+                Filesystem *pFs = it.key();
+                StringList *pList = it.value();
                 Disk *pDisk = pFs->getDisk();
 
                 for(StringList::Iterator j = pList->begin();
@@ -255,6 +257,57 @@ int clientThread(void *p)
             }
 
             response += "</table>";
+
+#ifdef X86_COMMON
+            response += "<h3>Memory Usage (KiB)</h3>";
+            response += "<table border='1'><tr><th>Heap</th><th>Used</th><th>Free</th></tr>";
+            {
+                extern size_t g_FreePages;
+                extern size_t g_AllocedPages;
+
+                NormalStaticString str;
+                str += "<tr><td>";
+                str += SlamAllocator::instance().heapPageCount() * 4;
+                str += "</td><td>";
+                str += (g_AllocedPages * 4096) / 1024;
+                str += "</td><td>";
+                str += (g_FreePages * 4096) / 1024;
+                str += "</td></tr>";
+                response += str;
+            }
+            response += "</table>";
+#endif
+
+            response += "<h3>Processes</h3>";
+            response += "<table border='1'><tr><th>PID</th><th>Description</th><th>Virtual Memory (KiB)</th><th>Physical Memory (KiB)</th><th>Shared Memory (KiB)</th>";
+            for(size_t i = 0; i < Scheduler::instance().getNumProcesses(); ++i)
+            {
+                response += "<tr>";
+                Process *pProcess = Scheduler::instance().getProcess(i);
+                HugeStaticString str;
+
+                ssize_t virtK = (pProcess->getVirtualPageCount() * 0x1000) / 1024;
+                ssize_t physK = (pProcess->getPhysicalPageCount() * 0x1000) / 1024;
+                ssize_t shrK = (pProcess->getSharedPageCount() * 0x1000) / 1024;
+
+                /// \todo add timing
+                str.append("<td>");
+                str.append(pProcess->getId());
+                str.append("</td><td>");
+                str.append(pProcess->description());
+                str.append("</td><td>");
+                str.append(virtK, 10);
+                str.append("</td><td>");
+                str.append(physK, 10);
+                str.append("</td><td>");
+                str.append(shrK, 10);
+                str.append("</td>");
+
+                response += str;
+                response += "</tr>";
+            }
+            response += "</table>";
+
             response += "</body></html>";
         }
     }
@@ -272,9 +325,10 @@ int clientThread(void *p)
     return 0;
 }
 
+int mainThread(void *p) NORETURN;
 int mainThread(void *p)
 {
-    ConnectionBasedEndpoint *pEndpoint = static_cast<ConnectionBasedEndpoint*>(TcpManager::instance().getEndpoint(LISTEN_PORT, RoutingTable::instance().DefaultRoute()));
+    ConnectionBasedEndpoint *pEndpoint = reinterpret_cast<ConnectionBasedEndpoint *>(p);
 
     pEndpoint->listen();
 
@@ -286,19 +340,29 @@ int mainThread(void *p)
         Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(), clientThread, pClient);
         pThread->detach();
     }
-
-    return 0;
 }
 
 static bool init()
 {
-    Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(), mainThread, 0);
+    pEndpoint = static_cast<ConnectionBasedEndpoint*>(TcpManager::instance().getEndpoint(LISTEN_PORT, RoutingTable::instance().DefaultRoute()));
+    if(!pEndpoint)
+    {
+        WARNING("Status server can't start, couldn't get a TCP endpoint.");
+        return false;
+    }
+
+    Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(), mainThread, pEndpoint);
     pThread->detach();
     return true;
 }
 
 static void destroy()
 {
+    if (pEndpoint)
+    {
+        TcpManager::instance().returnEndpoint(pEndpoint);
+    }
 }
 
-MODULE_INFO("Status Server", &init, &destroy, "network-stack", "init", "vfs");
+MODULE_INFO("Status Server", &init, &destroy, "config");
+MODULE_OPTIONAL_DEPENDS("confignics");

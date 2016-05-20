@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -27,5 +26,11 @@
  * Calls the constructors of global objects
  */
 void initialiseConstructors() INITIALISATION_ONLY;
+
+/**
+ * Calls the destructors of global objects
+ * After this call, do not use Log or indeed anything that needs an instance.
+ */
+void runKernelDestructors();
 
 #endif

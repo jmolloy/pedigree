@@ -27,9 +27,9 @@
 #include <vector>
 #include <string>
 
-#include <graphics/Graphics.h>
-#include <input/Input.h>
-#include <ipc/Ipc.h>
+#include <native/graphics/Graphics.h>
+#include <native/input/Input.h>
+#include <native/ipc/Ipc.h>
 
 #include <cairo/cairo.h>
 
@@ -55,6 +55,8 @@ class SharedBuffer;
 // client area for rendering decorations etc...
 #define WINDOW_CLIENT_LOST_W (WINDOW_CLIENT_START_X + WINDOW_CLIENT_END_X + 1)
 #define WINDOW_CLIENT_LOST_H (WINDOW_CLIENT_START_Y + WINDOW_CLIENT_END_Y + 1)
+
+#define WINMAN_PANGO_FONT "DejaVu Sans Mono 12"
 
 /**
  * DirtyRectangle: receives a number of points, uses these to determine the full

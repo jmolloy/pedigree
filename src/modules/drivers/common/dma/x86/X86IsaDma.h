@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -127,9 +126,9 @@ class X86IsaDma : public IsaDma
         {
             if(!m_Io.allocate(0, 0x100))
                 ERROR("X86IsaDma: Couldn't allocate port range");
-        };
+        }
         virtual ~X86IsaDma()
-        {};
+        {}
 
         static X86IsaDma &instance()
         {

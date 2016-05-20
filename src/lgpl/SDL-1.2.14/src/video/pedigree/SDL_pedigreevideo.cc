@@ -31,7 +31,7 @@
 #include "SDL_pedigreeevents_c.h"
 #include "SDL_pedigreemouse_c.h"
 
-#include <graphics/Graphics.h>
+#include <native/graphics/Graphics.h>
 
 #include <Widget.h>
 

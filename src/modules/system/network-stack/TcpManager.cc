@@ -354,28 +354,23 @@ void TcpManager::returnEndpoint(Endpoint* e)
   // The connection may be still closing when this is called!
   // It is well-defined behaviour that the endpoint will be returned
   // and the connection released once it hits the CLOSED state.
-  return;
 
-#if 0
-  if(e)
+  TcpEndpoint *endpoint = static_cast<TcpEndpoint *>(e);
+
+  // Is this a LISTEN socket?
+  if (endpoint->m_Listening)
   {
-    // remove from the endpoint list
-    m_Endpoints.remove(e->getConnId());
-
-    // if we can (state == CLOSED) remove the connection itself
-    // if the state is TIME_WAIT this will be done by the TIME_WAIT timeout
-    removeConn(e->getConnId());
-
-    // clean up the memory
-    delete e;
+    // Safe to destroy.
+    delete endpoint;
   }
-#endif
 }
 
 Endpoint* TcpManager::getEndpoint(uint16_t localPort, Network* pCard)
 {
     if(!pCard)
         pCard = RoutingTable::instance().DefaultRoute();
+    if(!pCard)
+        return 0;
 
     Endpoint* e;
 

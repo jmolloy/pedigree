@@ -39,7 +39,7 @@ enum HcdConstants {
 
 static bool bFound = false;
 
-void probeXhci(Device *pDev)
+static void probeXhci(Device *pDev)
 {
     WARNING("USB: xHCI found, not implemented yet!");
     /*
@@ -52,12 +52,18 @@ void probeXhci(Device *pDev)
     */
 }
 
-void probeEhci(Device *pDev)
+static void probeEhci(Device *pDev)
 {
     NOTICE("USB: EHCI found");
 
     // Create a new Ehci node
     Ehci *pEhci = new Ehci(pDev);
+    bool success = pEhci->initialiseController();
+    if(!success)
+    {
+        NOTICE("USB: EHCI failed to initialise");
+        return;
+    }
 
     // Replace pDev with pEhci, then delete pDev
     pDev->getParent()->replaceChild(pDev, pEhci);
@@ -66,7 +72,7 @@ void probeEhci(Device *pDev)
     bFound = true;
 }
 
-void probeOhci(Device *pDev)
+static void probeOhci(Device *pDev)
 {
     NOTICE("USB: OHCI found");
 
@@ -81,7 +87,7 @@ void probeOhci(Device *pDev)
 }
 
 #ifdef X86_COMMON
-void probeUhci(Device *pDev)
+static void probeUhci(Device *pDev)
 {
     NOTICE("USB: UHCI found");
 
@@ -100,11 +106,11 @@ static bool entry()
 {
     // Interrupts may get disabled on the way here, so make sure they are enabled
     Processor::setInterrupts(true);
-    Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_XHCI, probeXhci);
-    Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_EHCI, probeEhci);
-    Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_OHCI, probeOhci);
+    Device::searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_XHCI, probeXhci);
+    Device::searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_EHCI, probeEhci);
+    Device::searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_OHCI, probeOhci);
 #ifdef X86_COMMON
-    Device::root().searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_UHCI, probeUhci);
+    Device::searchByClassSubclassAndProgInterface(HCI_CLASS, HCI_SUBCLASS, HCI_PROGIF_UHCI, probeUhci);
 #endif
 
     return bFound;

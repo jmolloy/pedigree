@@ -29,7 +29,7 @@
 # include "Vt100.h"
 #endif
 
-#include <graphics/Graphics.h>
+#include <native/graphics/Graphics.h>
 
 /** A Terminal is a wrapper around an Xterm class - it provides UTF-8 <->
     UTF-32 conversion and input queueing. */

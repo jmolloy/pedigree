@@ -26,6 +26,8 @@
 #include <processor/types.h>
 #include <utilities/List.h>
 #include <utilities/utility.h>
+#include <utilities/SharedPointer.h>
+#include <compiler.h>
 
 /** String class for ASCII strings
  *\todo provide documentation */
@@ -33,26 +35,42 @@ class String
 {
     public:
         /** The default constructor does nothing */
-        inline String();
-        inline explicit String(const char *s);
-        inline String(const String &x);
-        inline ~String();
+        String();
+        explicit String(const char *s);
+        String(const char *s, size_t length);
+        String(const String &x);
+        ~String();
 
-        inline String &operator = (const String &x);
-        inline String &operator = (const char *s);
-        inline operator const char *() const;
-        inline String &operator += (const String &x);
-        inline String &operator += (const char *s);
+        String &operator = (const String &x);
+        String &operator = (const char *s);
+        operator const char *() const
+        {
+            if (m_Size == StaticSize)
+                return m_Static;
+            else if (m_Data == 0)
+                return "";
+            else
+                return m_Data;
+        }
+        String &operator += (const String &x);
+        String &operator += (const char *s);
 
-        inline bool operator == (const String &s);
-        inline bool operator == (const char *s);
+        bool operator == (const String &s) const;
+        bool operator == (const char *s) const;
 
-        inline size_t length() const;
-        inline size_t size() const;
+        size_t length() const
+        {
+            return m_Length;
+        }
+
+        size_t size() const
+        {
+            return m_Size;
+        }
 
         /** Given a character index, return the index of the next character, interpreting
             the string as UTF-8 encoded. */
-        inline size_t nextCharacter(size_t c);
+        size_t nextCharacter(size_t c);
 
         /** Removes the last character from the string. */
         void chomp();
@@ -70,7 +88,7 @@ class String
          *  the back portion (including the character at 'offset' will be returned in a new string. */
         String split(size_t offset);
 
-        List<String*> tokenise(char token);
+        List<SharedPointer<String>> tokenise(char token);
 
         /** Converts a UTF-32 character to its UTF-8 representation.
          *\param[in] utf32 Input UTF-32 character.
@@ -82,10 +100,10 @@ class String
             return 1;
         }
 
-        void sprintf(const char *format, ...);
+        void Format(const char *format, ...) FORMAT(printf, 2, 3);
 
         void assign(const String &x);
-        void assign(const char *s);
+        void assign(const char *s, size_t len = 0);
         void reserve(size_t size);
         void free();
 
@@ -98,6 +116,8 @@ class String
         bool startswith(const char *s) const;
 
     private:
+        /** Internal doer for reserve() */
+        void reserve(size_t size, bool zero);
         /** Size of static string storage (over this threshold, the heap is used) */
         static const size_t StaticSize = 64;
         /** Pointer to the zero-terminated ASCII string */
@@ -110,142 +130,11 @@ class String
         char m_Static[StaticSize];
         /** Is the given character whitespace? (for *strip()) */
         bool iswhitespace(const char c) const;
+
+        /** tokenise() pointer type. */
+        typedef SharedPointer<String> tokenise_t;
 };
 
 /** @} */
-
-//
-// Part of the implementation
-//
-String::String()
-    : m_Data(0), m_Length(0), m_Size(0), m_Static()
-{
-}
-String::String(const char *s)
-    : m_Data(0), m_Length(0), m_Size(0), m_Static()
-{
-    assign(s);
-}
-String::String(const String &x)
-    : m_Data(0), m_Length(0), m_Size(0), m_Static()
-{
-    assign(x);
-}
-String::~String()
-{
-    free();
-}
-
-String &String::operator = (const String &x)
-{
-    assign(x);
-    return *this;
-}
-String &String::operator = (const char *s)
-{
-    assign(s);
-    return *this;
-}
-String::operator const char *() const
-{
-    if (m_Length < StaticSize)
-        return m_Static;
-    else if (m_Data == 0)
-        return "";
-    else
-        return m_Data;
-}
-
-String &String::operator += (const String &x)
-{
-    size_t newLength = x.length() + m_Length;
-
-    char *dst = m_Static;
-
-    // Do we need to transfer static into dynamic for this?
-    if (newLength >= StaticSize)
-    {
-        reserve(newLength + 1);
-        if (m_Length < StaticSize)
-            memcpy(m_Data, m_Static, m_Length);
-        dst = m_Data;
-    }
-
-    const char *src = x.m_Static;
-    if (x.length() > StaticSize)
-        src = x.m_Data;
-
-    // Copy!
-    memcpy(&dst[m_Length], src, x.length() + 1);
-    m_Length += x.length();
-    return *this;
-}
-String &String::operator += (const char *s)
-{
-    size_t slen = strlen(s);
-    size_t newLength = slen + m_Length;
-    if (newLength < StaticSize)
-    {
-        // By the nature of the two lengths combined being below the static
-        // size, we can be assured that we can use the static buffer in
-        // both strings.
-        memcpy(&m_Static[m_Length], s, slen + 1);
-    }
-    else
-    {
-        reserve(slen + m_Length + 1);
-        if (m_Length < StaticSize)
-            memcpy(m_Data, m_Static, m_Length);
-        memcpy(&m_Data[m_Length], s, slen + 1);
-    }
-
-    m_Length += slen;
-    return *this;
-}
-
-bool String::operator == (const String &s)
-{
-    if (m_Length != s.m_Length)
-        return false;
-    else if ((m_Length < StaticSize && s.m_Length >= StaticSize) ||
-            (m_Length >= StaticSize && s.m_Length < StaticSize))
-        return false;
-    else if(m_Length < StaticSize)
-        return !strcmp(m_Static, s.m_Static);
-    if (m_Data == 0 && s.m_Data == 0)
-        return true;
-    else if (m_Data == 0 || s.m_Data == 0)
-        return false;
-    else
-        return !strcmp(m_Data, s.m_Data);
-}
-
-bool String::operator == (const char *s)
-{
-    const char *buf = m_Data;
-    if (m_Length < StaticSize)
-        buf = m_Static;
-    if (buf == 0 && s == 0)
-        return true;
-    else if (buf == 0 || s == 0)
-        return false;
-    else
-        return !strcmp(buf, s);
-}
-
-size_t String::length() const
-{
-    return m_Length;
-}
-size_t String::size() const
-{
-    return m_Size;
-}
-
-size_t String::nextCharacter(size_t c)
-{
-    // TODO handle multibyte chars.
-    return c+1;
-}
 
 #endif

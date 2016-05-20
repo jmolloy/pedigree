@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -99,7 +98,7 @@ DECLARE_LVAL(Identifier);
 static void addSubstitution(LargeStaticString str, demangle_t &data)
 {
   for (size_t i = 0; i < data.nSubstitutions; i++)
-    if (!strcmp(data.substitutions[i], str))
+    if (!StringCompare(data.substitutions[i], str))
       return;
   
   // HACK:: Bit of a hack here - we prepend "::" to every identifier. It looks a bit ugly.
@@ -566,7 +565,7 @@ static int parseNumber(LargeStaticString &src, LargeStaticString &dest, demangle
     nLength++;
   }
   str[nLength] = '\0';
-  lval = strtoul(str, 0, 10);
+  lval = StringToUnsignedLong(str, 0, 10);
   if (bNegative) lval = -lval;
   
   src.stripFirst(nLength);
@@ -1242,7 +1241,7 @@ static int parseSeqId(LargeStaticString &src, LargeStaticString &dest, demangle_
     nLength++;
   }
   str[nLength] = '\0';
-  lval = strtoul(str, 0, 36);
+  lval = StringToUnsignedLong(str, 0, 36);
   
   src.stripFirst(nLength);
   END_SUCCESS("SeqId");

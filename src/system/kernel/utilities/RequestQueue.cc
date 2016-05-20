@@ -38,6 +38,7 @@ RequestQueue::RequestQueue() :
 
 RequestQueue::~RequestQueue()
 {
+  destroy();
 }
 
 void RequestQueue::initialise()
@@ -54,9 +55,7 @@ void RequestQueue::initialise()
   Process *pProcess = Scheduler::instance().getKernelProcess();
 
   m_Stop = false;
-  m_pThread = new Thread(pProcess,
-                       reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
-                       reinterpret_cast<void*> (this));
+  m_pThread = new Thread(pProcess, &trampoline, reinterpret_cast<void*>(this));
   m_Halted = false;
 #else
   WARNING("RequestQueue: This build does not support threads");
@@ -77,8 +76,6 @@ uint64_t RequestQueue::addRequest(size_t priority, uint64_t p1, uint64_t p2, uin
                                   uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8)
 {
 #ifdef THREADS
-  Thread *pCurrent = Processor::information().getCurrentThread();
-
   // Create a new request object.
   Request *pReq = new Request();
   pReq->p1 = p1; pReq->p2 = p2; pReq->p3 = p3; pReq->p4 = p4; pReq->p5 = p5; pReq->p6 = p6; pReq->p7 = p7; pReq->p8 = p8;
@@ -216,9 +213,8 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
 
   // Add to RequestQueue.
   Process *pProcess = Scheduler::instance().getKernelProcess();
-  Thread *pThread = new Thread(pProcess,
-                               reinterpret_cast<Thread::ThreadStartFunc> (&doAsync),
-                               reinterpret_cast<void *>(pReq));
+  Thread *pThread = new Thread(pProcess, &doAsync,
+      reinterpret_cast<void *>(pReq));
   pThread->detach();
 #endif
 
@@ -227,6 +223,7 @@ uint64_t RequestQueue::addAsyncRequest(size_t priority, uint64_t p1, uint64_t p2
 
 void RequestQueue::halt()
 {
+#ifdef THREADS
   LockGuard<Mutex> guard(m_RequestQueueMutex);
 
   if(!m_Halted)
@@ -237,16 +234,19 @@ void RequestQueue::halt()
     m_pThread = 0;
     m_Halted = true;
   }
+#endif
 }
 
 void RequestQueue::resume()
 {
+#ifdef THREADS
   LockGuard<Mutex> guard(m_RequestQueueMutex);
 
   if(m_Halted)
   {
     initialise();
   }
+#endif
 }
 
 int RequestQueue::trampoline(void *p)
@@ -332,14 +332,17 @@ int RequestQueue::work()
     pReq->bCompleted = true;
     pReq->mutex.release();
   }
-#endif
+#else
   return 0;
+#endif
 }
 
 bool RequestQueue::isRequestValid(const Request *r)
 {
+#ifdef THREADS
   // Halted RequestQueue already has the RequestQueue mutex held.
   LockGuard<Mutex> guard(m_RequestQueueMutex);
+#endif
 
   for (size_t priority = 0; priority < REQUEST_QUEUE_NUM_PRIORITIES - 1; ++priority)
   {

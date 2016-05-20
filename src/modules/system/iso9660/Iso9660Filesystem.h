@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -76,9 +75,9 @@ protected:
     else return false;
   }
 
-  Time timeToUnix(Iso9660DirTimestamp &time)
+  Time::Timestamp timeToUnix(Iso9660DirTimestamp &time)
   {
-    Time ret = 0;
+    Time::Timestamp ret = 0;
 
     ret += time.Second;
     ret += time.Minute * 60;

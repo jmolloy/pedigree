@@ -23,7 +23,7 @@
 #ifndef TARGET_LINUX
 #include <sys/fb.h>
 
-#include <ipc/Ipc.h>
+#include <native/ipc/Ipc.h>
 #else
 #include <SDL/SDL.h>
 #endif

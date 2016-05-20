@@ -22,6 +22,11 @@ a copy of the GCC Runtime Library Exception along with this program;
 see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 <http://www.gnu.org/licenses/>.  */
 
+#ifdef HOSTED
+// Pull in system stddef.h rather than ours.
+#include_next <stddef.h>
+#else
+
 /*
  * ISO C Standard:  7.17  Common definitions  <stddef.h>
  */
@@ -414,3 +419,5 @@ typedef __WINT_TYPE__ wint_t;
 
 #endif /* !_STDDEF_H && !_STDDEF_H_ && !_ANSI_STDDEF_H && !__STDDEF_H__
 	  || __need_XXX was not defined before */
+
+#endif  // HOSTED

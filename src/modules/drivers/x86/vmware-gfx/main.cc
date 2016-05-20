@@ -158,9 +158,15 @@ class VmwareGraphics : public Display
             // Register with the graphics service
             ServiceFeatures *pFeatures = ServiceManager::instance().enumerateOperations(String("graphics"));
             Service         *pService  = ServiceManager::instance().getService(String("graphics"));
+            bool bSuccess = false;
             if(pFeatures && pFeatures->provides(ServiceFeatures::touch))
                 if(pService)
-                    pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(pProvider), sizeof(*pProvider));
+                    bSuccess = pService->serve(ServiceFeatures::touch, reinterpret_cast<void*>(pProvider), sizeof(*pProvider));
+
+            if (!bSuccess)
+            {
+                delete pProvider;
+            }
         }
         
         virtual ~VmwareGraphics()
@@ -260,6 +266,11 @@ class VmwareGraphics : public Display
             }
             return true;
         }
+
+        virtual bool setScreenMode(size_t modeId)
+        {
+            return Display::setScreenMode(modeId);
+        }
         
         virtual bool setScreenMode(size_t nWidth, size_t nHeight, size_t nBpp)
         {
@@ -295,7 +306,6 @@ class VmwareGraphics : public Display
             size_t height = readRegister(SVGA_REG_HEIGHT);
             size_t depth = readRegister(SVGA_REG_DEPTH);
             uintptr_t fbBase = readRegister(SVGA_REG_FB_START);
-            size_t fbSize = readRegister(SVGA_REG_VRAM_SIZE);
             
             size_t redMask = readRegister(SVGA_REG_RED_MASK);
             size_t greenMask = readRegister(SVGA_REG_GREEN_MASK);
@@ -421,13 +431,13 @@ class VmwareGraphics : public Display
                 
                 virtual inline void copy(size_t srcx, size_t srcy,
                                          size_t destx, size_t desty,
-                                         size_t w, size_t h)
+                                         size_t w, size_t h, bool bLowestCall = true)
                 {
                     /// \todo Caps to determine whether to fall back to software
                     if(1)
                         m_pDisplay->copy(srcx, srcy, destx, desty, w, h);
-                    else
-                        swCopy(srcx, srcy, destx, desty, w, h);
+                    // else
+                    //    swCopy(srcx, srcy, destx, desty, w, h);
                 }
             
             private:
@@ -498,22 +508,22 @@ class VmwareGraphics : public Display
 
 static bool bFound = false;
 
-void callback(Device *pDevice)
+static void callback(Device *pDevice)
 {
-    VmwareGraphics *pGraphics = new VmwareGraphics(pDevice);
-
+    /// \todo track these so they can be cleaned up properly
+    new VmwareGraphics(pDevice);
     bFound = true;
 }
 
-bool entry()
+static bool entry()
 {
     // Don't care about non-SVGA2 devices, just use VBE for them.
-    Device::root().searchByVendorIdAndDeviceId(PCI_VENDOR_ID_VMWARE, PCI_DEVICE_ID_VMWARE_SVGA2, callback);
+    Device::searchByVendorIdAndDeviceId(PCI_VENDOR_ID_VMWARE, PCI_DEVICE_ID_VMWARE_SVGA2, callback);
 
     return bFound;
 }
 
-void exit()
+static void exit()
 {
 }
 

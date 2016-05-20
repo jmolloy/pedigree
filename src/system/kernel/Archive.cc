@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -26,9 +25,13 @@
 #include <Log.h>
 
 Archive::Archive(uint8_t *pPhys, size_t sSize) :
+#ifdef HOSTED
+  m_pBase(pPhys)
+#else
   m_Region("Archive")
+#endif
 {
-
+#ifndef HOSTED
   if ((reinterpret_cast<physical_uintptr_t>(pPhys) & (PhysicalMemoryManager::getPageSize() - 1)) != 0)
     panic("Archive: Alignment issues");
 
@@ -41,11 +44,14 @@ Archive::Archive(uint8_t *pPhys, size_t sSize) :
   {
     ERROR("Archive: allocateRegion failed.");
   }
+#endif
 }
 
 Archive::~Archive()
 {
+#ifndef HOSTED
   m_Region.free();
+#endif
 }
 
 size_t Archive::getNumFiles()
@@ -79,7 +85,11 @@ uintptr_t *Archive::getFile(size_t n)
 
 Archive::File *Archive::getFirst()
 {
+#ifdef HOSTED
+  return reinterpret_cast<File*> (m_pBase);
+#else
   return reinterpret_cast<File*> (m_Region.virtualAddress());
+#endif
 }
 
 Archive::File *Archive::getNext(File *pFile)

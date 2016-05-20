@@ -1,24 +1,36 @@
+sudo: false
 language: cpp
+compiler: clang
 matrix:
   include:
   - os: linux
     env: OS=ubuntu EASY_BUILD=x64
-  exclude:
+  #- os: linux
+  #  env: OS=ubuntu EASY_BUILD=arm
   - os: linux
-  - compiler: gcc
-before_script:
-- sudo add-apt-repository ppa:miselin/pedigree-compilers -y
-- sudo apt-get update -q
-- sudo apt-get install qemu travis-compilers
+    env: OS=ubuntu EASY_BUILD=hosted
+  - os: linux
+    env: OS=ubuntu EASY_BUILD=tests
+  # - os: osx
+  #   env: OS=osx EASY_BUILD=x64
+  exclude:
+    - os: linux
+    - compiler: clang
 script:
-- ./easy_build_$EASY_BUILD.sh $OS
-- ./scripts/runtest.py
+  - ./easy_build_$EASY_BUILD.sh nosudo $OS
+  - if [[ "$EASY_BUILD" == "tests" ]]; then ./tests/testsuite.sh; fi
+  - if [[ "$EASY_BUILD" != "tests" ]]; then ./scripts/runtest.py; fi
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install qemu; fi
+  - if [[ "$EASY_BUILD" == "tests" ]]; then pip install --user codecov gcovr; fi
+after_success:
+  - if [[ "$EASY_BUILD" == "tests" ]]; then codecov; fi
 install: true
 notifications:
   email: false
   irc:
     channels:
-    - chat.freenode.net#pedigree
+    - chat.freenode.net#pedigree-commits
     template:
     - ! '%{repository}/%{branch} (%{commit} - %{author}): %{message}'
     - ! 'Build details: %{build_url}'
@@ -26,3 +38,23 @@ notifications:
     on_failure: always
   slack:
     secure: T9GJHictl8hUOgGh5RRVmRMExqlWJByssoSYdgnFuHA8ugLXyvHyYaVjLPVcFE9yv7w+sQgki0ZIzCyUH/Hg6/UPwRaH8W4Cm57vQwhE+TUvfy6eRRvYT118X/9X3xkYwhNUks+uydP6oI9YTnvr1XrzB6L4htA7Ma/YKBDhLhg=
+addons:
+  apt:
+    packages:
+      - libmpfr-dev
+      - libmpc-dev
+      - libgmp3-dev
+      - sqlite3
+      - texinfo
+      - scons
+      - xorriso
+      - e2fsprogs
+      - qemu
+      - nasm
+      - uboot-mkimage
+      - valgrind
+      - python-requests
+cache:
+  directories:
+  - $HOME/.ccache
+  - $HOME/pedigree-compiler

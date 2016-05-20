@@ -35,11 +35,17 @@ const char *g_FilesToPreload[] = {
     "/applications/make",
     "/applications/gcc",
     "/applications/ld",
+    "/applications/as",
+    "/applications/cpp",
     "/support/gcc/libexec/gcc/x86_64-pedigree/4.8.2/cc1",
     "/support/gcc/libexec/gcc/x86_64-pedigree/4.8.2/cc1plus",
     "/support/gcc/libexec/gcc/x86_64-pedigree/4.8.2/collect2",
     "/libraries/libc.so",
     "/libraries/libm.so",
+    "/libraries/libpthread.so",
+    "/libraries/libpedigree-c.so",
+    "/libraries/libpedigree.so",
+    "/libraries/libui.so",
     "/libraries/libgmp.so",
     "/libraries/libmpfr.so",
     "/libraries/libmpc.so",
@@ -63,7 +69,7 @@ int main(int argc, char **argv)
     {
       syslog(LOG_INFO, "preloadd: preloading %s...", s);
       FILE *fp = fopen(s, "rb");
-      for(off_t off = 0; off < st.st_size; off += BLOCK_READ_SIZE);
+      for(off_t off = 0; off < st.st_size; off += BLOCK_READ_SIZE)
         fread(buf, BLOCK_READ_SIZE, 1, fp);
       fclose(fp);
       syslog(LOG_INFO, "preloadd: preloading %s complete!", s);

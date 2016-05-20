@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,7 +22,7 @@
 #include "autogen.h"
 
 #define LOAD_ADDR 0x80200000
-extern int memset(void *buf, int c, size_t len);
+extern int ByteSet(void *buf, int c, size_t len);
 struct BootstrapStruct_t
 {
   // If we are passed via grub, this information will be completely different to
@@ -99,7 +98,7 @@ extern "C" int __start(char argc, char **argv, char **env, unsigned int ramsize)
   
   struct BootstrapStruct_t bs;
   
-  memset(&bs, 0, sizeof(bs));
+  ByteSet(&bs, 0, sizeof(bs));
   bs.shndx = elf.m_pHeader->shstrndx;
   bs.num = elf.m_pHeader->shnum;
   bs.size = elf.m_pHeader->shentsize;

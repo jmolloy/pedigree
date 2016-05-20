@@ -25,7 +25,7 @@ Directory::Directory() :
 {
 }
 
-Directory::Directory(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+Directory::Directory(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTime, Time::Timestamp creationTime,
                      uintptr_t inode, Filesystem *pFs, size_t size, File *pParent) :
     File(name,accessedTime,modifiedTime,creationTime,inode,pFs,size,pParent),
     m_Cache(pFs->isCaseSensitive()), m_bCachePopulated(false)
@@ -61,6 +61,27 @@ File* Directory::getChild(size_t n)
     return 0;
 }
 
+size_t Directory::getNumChildren()
+{
+    if (!m_bCachePopulated)
+    {
+        cacheDirectoryContents();
+        m_bCachePopulated = true;
+    }
+
+    return m_Cache.count();
+}
+
 void Directory::cacheDirectoryContents()
 {
+}
+
+File *Directory::lookup(String &s) const
+{
+    if (!m_bCachePopulated)
+    {
+        return 0;
+    }
+
+    return m_Cache.lookup(s);
 }

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -40,7 +39,7 @@ namespace ScsiCommands
         public:
             inline Inquiry(uint16_t len = 0, bool enableVitalData = false, uint8_t pageCode = 0, uint8_t ctl = 0)
             {
-                memset(&command, 0, sizeof(command));
+                ByteSet(&command, 0, sizeof(command));
                 command.opcode = 0x12;
                 command.epvd = enableVitalData;
                 if(enableVitalData)
@@ -70,7 +69,7 @@ namespace ScsiCommands
         public:
             inline UnitReady(uint8_t ctl = 0)
             {
-                memset(&command, 0, sizeof(command));
+                ByteSet(&command, 0, sizeof(command));
                 command.opcode = 0;
                 command.control = ctl;
             }
@@ -94,7 +93,7 @@ namespace ScsiCommands
         public:
             inline ReadSense(uint8_t desc, uint8_t len, uint8_t ctl = 0)
             {
-                memset(&command, 0, sizeof(command));
+                ByteSet(&command, 0, sizeof(command));
                 command.opcode = 0x03;
                 command.desc = desc;
                 command.len = len;
@@ -122,7 +121,7 @@ namespace ScsiCommands
         public:
             inline StartStop(bool imm, uint8_t newpower, bool eject_load, bool start, uint8_t ctl = 0)
             {
-                memset(&command, 0, sizeof(command));
+                ByteSet(&command, 0, sizeof(command));
                 command.opcode = 0x1b;
                 command.imm = imm ? 1 : 0;
                 command.setup = (start ? 1 : 0) | ((eject_load ? 1 : 0) << 1) | (newpower << 4);
@@ -150,7 +149,7 @@ namespace ScsiCommands
         public:
             inline SendDiagnostic(bool selfTest, uint8_t selfTestCode = 0, uintptr_t params = 0, size_t paramLen = 0, bool deviceOffline = false, bool unitOffline = false, uint8_t ctl = 0)
             {
-                memset(&command, 0, sizeof(command));
+                ByteSet(&command, 0, sizeof(command));
                 command.opcode = 0x1d;
                 command.unitOffline = unitOffline;
                 command.devOffline = deviceOffline;
@@ -182,12 +181,51 @@ namespace ScsiCommands
             } PACKED command;
     };
 
+    class ReadTocCommand : public ScsiCommand
+    {
+        public:
+            inline ReadTocCommand(uint16_t nativeBlockSize, uint8_t ctl = 0)
+            {
+                ByteSet(&command, 0, sizeof(command));
+                command.opcode = 0x43;
+                command.len = HOST_TO_BIG16(nativeBlockSize);
+            }
+
+            virtual size_t serialise(uintptr_t &addr)
+            {
+                addr = reinterpret_cast<uintptr_t>(&command);
+                return sizeof(command);
+            }
+
+            struct
+            {
+                uint8_t opcode;
+                uint8_t flags;
+                uint8_t format;
+                uint8_t rsvd1;
+                uint8_t rsvd2;
+                uint8_t rsvd3;
+                uint8_t track;
+                uint16_t len;
+                uint8_t control;
+            } PACKED command;
+
+            struct TocEntry
+            {
+                uint8_t Rsvd1;
+                uint8_t Flags;
+                uint8_t TrackNum;
+                uint8_t Rsvd2;
+                uint32_t TrackStart;
+            } PACKED;
+    };
+
     class ReadCapacity10 : public ScsiCommand
     {
         public:
             inline ReadCapacity10(uint8_t ctl = 0)
             {
-                memset(&command, 0, sizeof(command));
+                ByteSet(&command, 0, sizeof(command));
                 command.opcode = 0x25;
                 command.control = ctl;
             }
@@ -214,7 +252,7 @@ namespace ScsiCommands
         public:
             inline Read10(uint32_t nLba, uint32_t nSectors)
             {
-                memset(&command, 0, sizeof(command));
+                ByteSet(&command, 0, sizeof(command));
                 command.nOpCode = 0x28;
                 command.nLba = HOST_TO_BIG32(nLba);
                 command.nSectors = HOST_TO_BIG16(nSectors);
@@ -246,7 +284,7 @@ namespace ScsiCommands
         public:
             inline Read12(uint32_t nLba, uint32_t nSectors)
             {
-                memset(&command, 0, sizeof(command));
+                ByteSet(&command, 0, sizeof(command));
                 command.nOpCode = 0xa8;
                 command.nLba = HOST_TO_BIG32(nLba);
                 command.nSectors = HOST_TO_BIG32(nSectors);
@@ -278,7 +316,7 @@ namespace ScsiCommands
         public:
             inline Read16(uint32_t nLba, uint32_t nSectors)
             {
-                memset(&command, 0, sizeof(command));
+                ByteSet(&command, 0, sizeof(command));
                 command.nOpCode = 0x88;
                 command.nLba = HOST_TO_BIG64(nLba);
                 command.nSectors = HOST_TO_BIG32(nSectors);
@@ -310,7 +348,7 @@ namespace ScsiCommands
         public:
             inline Write10(uint32_t nLba, uint32_t nSectors)
             {
-                memset(&command, 0, sizeof(command));
+                ByteSet(&command, 0, sizeof(command));
                 command.nOpCode = 0x2A;
                 command.nLba = HOST_TO_BIG32(nLba);
                 command.nSectors = HOST_TO_BIG16(nSectors);
@@ -343,7 +381,7 @@ namespace ScsiCommands
         public:
             inline Write12(uint32_t nLba, uint32_t nSectors)
             {
-                memset(&command, 0, sizeof(command));
+                ByteSet(&command, 0, sizeof(command));
                 command.nOpCode = 0xAA;
                 command.nLba = HOST_TO_BIG32(nLba);
                 command.nSectors = HOST_TO_BIG32(nSectors);
@@ -376,7 +414,7 @@ namespace ScsiCommands
         public:
             inline Write16(uint32_t nLba, uint32_t nSectors)
             {
-                memset(&command, 0, sizeof(command));
+                ByteSet(&command, 0, sizeof(command));
                 command.nOpCode = 0x8A;
                 command.nLba = HOST_TO_BIG64(nLba);
                 command.nSectors = HOST_TO_BIG32(nSectors);
@@ -409,7 +447,7 @@ namespace ScsiCommands
         public:
             inline Synchronise10(uint32_t nLba, uint32_t nSectors)
             {
-                memset(&command, 0, sizeof(command));
+                ByteSet(&command, 0, sizeof(command));
                 command.nOpCode = 0x35;
                 command.nLba = HOST_TO_BIG32(nLba);
                 command.nBlocks = HOST_TO_BIG16(nSectors);
@@ -441,7 +479,7 @@ namespace ScsiCommands
         public:
             inline Synchronise16(uint32_t nLba, uint32_t nSectors)
             {
-                memset(&command, 0, sizeof(command));
+                ByteSet(&command, 0, sizeof(command));
                 command.nOpCode = 0x91;
                 command.nLba = HOST_TO_BIG64(nLba);
                 command.nBlocks = HOST_TO_BIG32(nSectors);

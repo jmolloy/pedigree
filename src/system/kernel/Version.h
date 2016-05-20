@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -45,5 +44,10 @@ extern const char *g_pBuildUser;
  * Ascii string giving the machine we were built on.
  */
 extern const char *g_pBuildMachine;
+
+/**
+ * Ascii string giving the target we were built for.
+ */
+extern const char *g_pBuildTarget;
 
 #endif

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -30,6 +29,7 @@
 #else
   #include <processor/x64/tss.h>
 #endif
+#include <process/InfoBlock.h>
 
 /** @addtogroup kernelprocessorx86common
  * @{ */
@@ -88,7 +88,10 @@ class X86CommonProcessorInformation
     inline Thread *getCurrentThread() const
       {return m_pCurrentThread;}
     inline void setCurrentThread(Thread *pThread)
-      {m_pCurrentThread = pThread;}
+    {
+      m_pCurrentThread = pThread;
+      InfoBlockManager::instance().setPid(pThread->getParent()->getId());
+    }
 
     inline PerProcessorScheduler &getScheduler()
       {return m_Scheduler;}

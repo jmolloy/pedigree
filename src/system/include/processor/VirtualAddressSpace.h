@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -184,6 +183,21 @@ class VirtualAddressSpace
     /** Gets address of the end of the kernel's heap region. */
     virtual uintptr_t getKernelHeapEnd() const = 0;
 
+    /** Gets address of the start of the kernel's cache region. */
+    virtual uintptr_t getKernelCacheStart() const = 0;
+
+    /** Gets address of the end of the kernel's cache region. */
+    virtual uintptr_t getKernelCacheEnd() const = 0;
+
+    /** Gets address of the start of the kernel's event handling block. */
+    virtual uintptr_t getKernelEventBlockStart() const = 0;
+
+    /** Gets address of the start of the kernel's module region. */
+    virtual uintptr_t getKernelModulesStart() const = 0;
+
+    /** Gets address of the end of the kernel's module region. */
+    virtual uintptr_t getKernelModulesEnd() const = 0;
+
     /**
      * Gets address of the start of the dynamic memory mapping area.
      * This is an area in which memory mappings can be created for userspace
@@ -194,6 +208,9 @@ class VirtualAddressSpace
     virtual uintptr_t getDynamicStart() const { return 0; }
     /** Gets address of the end of the dynamic memory mapping area. */
     virtual uintptr_t getDynamicEnd() const { return 0; }
+
+    /** Gets address of the global info block location. */
+    virtual uintptr_t getGlobalInfoBlock() const { return 0; }
 
     /** Pointer to the beginning of the heap */
     void *m_Heap;

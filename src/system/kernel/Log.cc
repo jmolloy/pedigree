@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -26,6 +25,7 @@
 #include <utilities/utility.h>
 #include <processor/Processor.h>
 #include <LockGuard.h>
+#include <time/Time.h>
 
 extern BootstrapStruct_t *g_pBootstrapInfo;
 
@@ -34,49 +34,37 @@ BootProgressUpdateFn g_BootProgressUpdate = 0;
 size_t g_BootProgressTotal = 0;
 size_t g_BootProgressCurrent = 0;
 
-class SerialLogger : public Log::LogCallback
+static NormalStaticString getTimestamp()
 {
-    public:
-        void callback(const char* str)
-        {
-            for(size_t n = 0; n < Machine::instance().getNumSerial(); n++)
-            {
-#if defined(MEMORY_TRACING) || (defined(MEMORY_LOGGING_ENABLED) && !defined(MEMORY_LOG_INLINE))
-                if(n == 1) // Don't override memory log.
-                    continue;
-#endif
+    Time::Timestamp t = Time::getTime();
 
-                Machine::instance().getSerial(n)->write(str);
-#ifndef SERIAL_IS_FILE
-                // Handle carriage return if we're writing to a real terminal
-                // Technically this will create a \n\r, but it will do the same
-                // thing. This may also be redundant, but better to be safe than
-                // sorry imho.
-                Machine::instance().getSerial(n)->write('\r');
-#endif
-            }
-        }
-};
-
-static SerialLogger g_SerialCallback;
+    NormalStaticString r;
+    r += "[";
+    r.append(t);
+    r += "] ";
+    return r;
+}
 
 Log::Log () :
+#ifdef THREADS
     m_Lock(),
+#endif
     m_StaticEntries(0),
     m_StaticEntryStart(0),
     m_StaticEntryEnd(0),
     m_Buffer(),
     m_NumberType(Dec),
-    #ifdef DONT_LOG_TO_SERIAL
+#ifdef DONT_LOG_TO_SERIAL
     m_EchoToSerial(false)
-    #else
+#else
     m_EchoToSerial(true)
-    #endif
+#endif
 {
 }
 
 Log::~Log ()
 {
+    *this << Notice << "-- Log Terminating --" << Flush;
 }
 
 void Log::initialise1()
@@ -85,12 +73,10 @@ void Log::initialise1()
     char *cmdline = g_pBootstrapInfo->getCommandLine();
     if(cmdline)
     {
-        List<String*> cmds = String(cmdline).tokenise(' ');
-        for (List<String*>::Iterator it = cmds.begin();
-            it != cmds.end();
-            it++)
+        List<SharedPointer<String>> cmds = String(cmdline).tokenise(' ');
+        for (auto it = cmds.begin(); it != cmds.end(); it++)
         {
-            String *cmd = *it;
+            auto cmd = *it;
             if(*cmd == String("--disable-log-to-serial"))
             {
                 m_EchoToSerial = false;
@@ -108,14 +94,18 @@ void Log::initialise1()
 
 void Log::initialise2()
 {
+#ifndef DONT_LOG_TO_SERIAL
     if(m_EchoToSerial)
-        installCallback(&g_SerialCallback, false);
+        installSerialLogger();
+#endif
 }
 
 void Log::installCallback(LogCallback *pCallback, bool bSkipBacklog)
 {
     {
+#ifdef THREADS
         LockGuard<Spinlock> guard(m_Lock);
+#endif
         m_OutputCallbacks.pushBack(pCallback);
     }
 
@@ -149,10 +139,8 @@ void Log::installCallback(LogCallback *pCallback, bool bSkipBacklog)
                 case Fatal:
                     str = "(FF) ";
                     break;
-                default:
-                    str = "(XX) ";
-                    break;
             }
+            str += getTimestamp();
             str += m_StaticLog[entry].str;
 #ifndef SERIAL_IS_FILE
             str += "\r\n"; // Handle carriage return
@@ -171,7 +159,9 @@ void Log::installCallback(LogCallback *pCallback, bool bSkipBacklog)
 }
 void Log::removeCallback(LogCallback *pCallback)
 {
+#ifdef THREADS
     LockGuard<Spinlock> guard(m_Lock);
+#endif
     for(List<LogCallback*>::Iterator it = m_OutputCallbacks.begin();
         it != m_OutputCallbacks.end();
         it++)
@@ -241,6 +231,8 @@ template Log &Log::operator << (unsigned long long);
 
 Log &Log::operator<< (Modifier type)
 {
+    static bool handlingFatal = false;
+
     // Flush the buffer.
     if (type == Flush)
     {
@@ -276,10 +268,8 @@ Log &Log::operator<< (Modifier type)
                 case Fatal:
                     str = "(FF) ";
                     break;
-                default:
-                    str = "(XX) ";
-                    break;
             }
+            str += getTimestamp();
             str += m_Buffer.str;
 #ifndef SERIAL_IS_FILE
             str += "\r\n"; // Handle carriage return
@@ -294,6 +284,24 @@ Log &Log::operator<< (Modifier type)
                 if(*it)
                     (*it)->callback(static_cast<const char*>(str));
             }
+        }
+
+        // Panic if that was a fatal error.
+        if ((!handlingFatal) && m_Buffer.type == Fatal)
+        {
+            handlingFatal = true;
+
+            const char *panicstr = static_cast<const char*>(m_Buffer.str);
+#ifdef THREADS
+            if (m_Lock.acquired())
+                m_Lock.release();
+#endif
+
+            // Attempt to trap to debugger, panic if that fails.
+#ifdef DEBUGGER
+            Processor::breakpoint();
+#endif
+            panic(panicstr);
         }
     }
 
@@ -312,6 +320,7 @@ Log &Log::operator<< (SeverityLevel level)
     m_Buffer.str.clear();
     m_Buffer.type = level;
 
+#ifndef UTILITY_LINUX
     Machine &machine = Machine::instance();
     if (machine.isInitialised() == true &&
         machine.getTimer() != 0)
@@ -321,6 +330,11 @@ Log &Log::operator<< (SeverityLevel level)
     }
     else
         m_Buffer.timestamp = 0;
+#endif
 
     return *this;
+}
+
+Log::LogCallback::~LogCallback()
+{
 }

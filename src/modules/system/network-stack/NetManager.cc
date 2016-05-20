@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -74,6 +73,76 @@ void Socket::decreaseRefCount(bool bIsWriter)
         }
         ZombieQueue::instance().addObject(new ZombieSocket(this));
     }
+}
+
+int Socket::select(bool bWriting, int timeout)
+{
+    // NOTICE("Socket::select(" << bWriting << ", " << Dec << timeout << Hex << ")");
+
+    // Are we working with a connectionless endpoint?
+    if(m_Endpoint->getType() == Endpoint::Connectionless)
+    {
+        ConnectionlessEndpoint *ce = static_cast<ConnectionlessEndpoint *>(m_Endpoint);
+        if(bWriting)
+        {
+            return 1;
+        }
+        else
+        {
+            bool ret = ce->dataReady(timeout > 0, timeout);
+            return ret ? 1 : 0;
+        }
+    }
+    else if(m_Endpoint->getType() == Endpoint::ConnectionBased)
+    {
+        ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(m_Endpoint);
+        int state = ce->state();
+        if(m_Protocol == NETMAN_TYPE_TCP)
+        {
+            if(bWriting)
+            {
+                /// \todo Need a proper function in Endpoint!
+                do
+                {
+                    // Handle data states, but also notify a result if the
+                    // socket has been closed; this could happen during a RST
+                    // from a remote when we send our SYN.
+                    if((state >= Tcp::ESTABLISHED && state < Tcp::CLOSE_WAIT) ||
+                        (state == Tcp::CLOSED))
+                        return 1;
+
+                    Scheduler::instance().yield();
+                    state = ce->state();
+                }
+                while(timeout != 0);
+            }
+            else
+            {
+                // Check for any data from the outset. This saves a block
+                // and also serves to keep data being received even when
+                // the connection is in a non-transfer state.
+                if(ce->dataReady(false))
+                    return 1;
+
+                // ESTABLISHED = data transfer
+                if(state == Tcp::ESTABLISHED)
+                    return ce->dataReady(timeout > 0, timeout) ? 1 : 0;
+                // Not established = let the application get EOF
+                else if(state > Tcp::ESTABLISHED)
+                    return 1;
+                // Before ESTABLISHED, handle listen
+                else if(state == Tcp::LISTEN)
+                    return ce->dataReady(timeout > 0, timeout);
+                // Before ESTABLISHED and not LISTEN, never data ready.
+                else
+                    return 0;
+            }
+        }
+        else
+            return 0;
+    }
+
+    return 0;
 }
 
 File* NetManager::newEndpoint(int type, int protocol)
@@ -199,7 +268,7 @@ uint64_t NetManager::read(File *pFile, uint64_t location, uint64_t size, uintptr
         ///       However, to do that we need to tell recv not to remove from the queue
         ///       and instead peek at the message (in other words, we need flags)
         Endpoint::RemoteEndpoint remoteHost;
-        memset(&remoteHost, 0, sizeof(Endpoint::RemoteEndpoint));
+        ByteSet(&remoteHost, 0, sizeof(Endpoint::RemoteEndpoint));
         ret = ce->recv(buffer, size, bCanBlock, &remoteHost);
     }
     else
@@ -223,7 +292,6 @@ uint64_t NetManager::write(File *pFile, uint64_t location, uint64_t size, uintpt
     {
         ConnectionlessEndpoint *ce = static_cast<ConnectionlessEndpoint *>(p);
 
-        Network *pCard = 0;
         Endpoint::RemoteEndpoint remoteHost;
         IpAddress remoteIp = p->getRemoteIp();
         if(sock->getProtocol() == NETMAN_TYPE_UDP)
@@ -244,7 +312,5 @@ uint64_t NetManager::write(File *pFile, uint64_t location, uint64_t size, uintpt
         ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(p);
         return ce->send(size, buffer);
     }
-
-    return 0;
 }
 

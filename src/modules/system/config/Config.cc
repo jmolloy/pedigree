@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -24,9 +23,7 @@
 #include <process/Mutex.h>
 #include <LockGuard.h>
 
-extern sqlite3 *g_pSqlite;
-    
-Mutex g_sqlLock(false);
+static Mutex g_sqlLock(false);
 
 Config Config::m_Instance;
 
@@ -67,7 +64,7 @@ size_t Config::Result::getNum(size_t row, size_t n)
 {
     if (m_ppResult[(row+1) * m_Cols + n] == 0)
         return 0;
-    return strtoul(m_ppResult[(row+1) * m_Cols + n], 0, 10);
+    return StringToUnsignedLong(m_ppResult[(row+1) * m_Cols + n], 0, 10);
 }
 
 bool Config::Result::getBool(size_t row, size_t n)
@@ -75,7 +72,7 @@ bool Config::Result::getBool(size_t row, size_t n)
     const char *s = m_ppResult[(row+1) * m_Cols + n];
     if (s == 0)
         return false;
-    if (!strcmp(s, "true") || !strcmp(s, "True") || !strcmp(s, "1"))
+    if (!StringCompare(s, "true") || !StringCompare(s, "True") || !StringCompare(s, "1"))
         return true;
     else
         return false;
@@ -97,7 +94,7 @@ size_t Config::Result::getNum(size_t row, const char *str)
     if (n == ~0UL) return 0;
     if (m_ppResult[(row+1) * m_Cols + n] == 0)
         return 0;
-    return strtoul(m_ppResult[(row+1) * m_Cols + n], 0, 10);
+    return StringToUnsignedLong(m_ppResult[(row+1) * m_Cols + n], 0, 10);
 }
 
 bool Config::Result::getBool(size_t row, const char *str)
@@ -107,7 +104,7 @@ bool Config::Result::getBool(size_t row, const char *str)
     const char *s = m_ppResult[(row+1) * m_Cols + n];
     if (s == 0)
         return false;
-    if (!strcmp(s, "true") || !strcmp(s, "True") || !strcmp(s, "1"))
+    if (!StringCompare(s, "true") || !StringCompare(s, "True") || !StringCompare(s, "1"))
         return true;
     else
         return false;
@@ -117,7 +114,7 @@ size_t Config::Result::lookupCol(const char *str)
 {
     for (size_t i = 0; i < m_Cols; i++)
     {
-        if (!strcmp(str, m_ppResult[i]))
+        if (!StringCompare(str, m_ppResult[i]))
             return i;
     }
     return ~0UL;

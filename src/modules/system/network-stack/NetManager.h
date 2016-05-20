@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -64,7 +63,7 @@ class Socket : public File
     Socket(const Socket &file) : File(), m_Endpoint(0), m_Protocol(0)
     {
       ERROR("Socket copy constructor called");
-    };
+    }
     Socket& operator =(const Socket &file)
     {
       ERROR("Socket copy constructor called");
@@ -77,9 +76,9 @@ class Socket : public File
   public:
     Socket(int proto, Endpoint *p, Filesystem *pFs) :
       File(String("socket"), 0, 0, 0, 0, pFs, 0, 0), m_Endpoint(p), m_Protocol(proto)
-    {};
+    {}
     virtual ~Socket()
-    {};
+    {}
 
     inline Endpoint *getEndpoint()
     {
@@ -92,71 +91,7 @@ class Socket : public File
     }
 
     /** Similar to POSIX's select() function */
-    virtual int select(bool bWriting = false, int timeout = 0)
-    {
-        // NOTICE("Socket::select(" << bWriting << ", " << Dec << timeout << Hex << ")");
-
-        // Are we working with a connectionless endpoint?
-        if(m_Endpoint->getType() == Endpoint::Connectionless)
-        {
-            ConnectionlessEndpoint *ce = static_cast<ConnectionlessEndpoint *>(m_Endpoint);
-            if(bWriting)
-            {
-                return 1;
-            }
-            else
-            {
-                bool ret = ce->dataReady(timeout > 0, timeout);
-                return ret ? 1 : 0;
-            }
-        }
-        else if(m_Endpoint->getType() == Endpoint::ConnectionBased)
-        {
-            ConnectionBasedEndpoint *ce = static_cast<ConnectionBasedEndpoint *>(m_Endpoint);
-            int state = ce->state();
-            if(m_Protocol == NETMAN_TYPE_TCP)
-            {
-                if(bWriting)
-                {
-                    /// \todo Need a proper function in Endpoint!
-                    do
-                    {
-                        if(state >= Tcp::ESTABLISHED && state < Tcp::CLOSE_WAIT)
-                            return 1;
-
-                        Scheduler::instance().yield();
-                        state = ce->state();
-                    }
-                    while(timeout != 0);
-                }
-                else
-                {
-                    // Check for any data from the outset. This saves a block
-                    // and also serves to keep data being received even when
-                    // the connection is in a non-transfer state.
-                    if(ce->dataReady(false))
-                        return 1;
-
-                    // ESTABLISHED = data transfer
-                    if(state == Tcp::ESTABLISHED)
-                        return ce->dataReady(timeout > 0, timeout) ? 1 : 0;
-                    // Not established = let the application get EOF
-                    else if(state > Tcp::ESTABLISHED)
-                        return 1;
-                    // Before ESTABLISHED, handle listen
-                    else if(state == Tcp::LISTEN)
-                        return ce->dataReady(timeout > 0, timeout);
-                    // Before ESTABLISHED and not LISTEN, never data ready.
-                    else
-                        return 0;
-                }
-            }
-            else
-                return 0;
-        }
-
-        return 0;
-    }
+    virtual int select(bool bWriting = false, int timeout = 0);
 
     virtual void decreaseRefCount(bool bIsWriter);
 
@@ -179,16 +114,16 @@ public:
   NetManager() : m_Endpoints()
   {
     m_Endpoints.clear();
-  };
+  }
 
   virtual ~NetManager()
   {
-  };
+  }
 
   static NetManager &instance()
   {
     return m_Instance;
-  };
+  }
 
   //
   // NetManager interface.

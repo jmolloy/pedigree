@@ -1,0 +1,20 @@
+# PASS: creates a directory tree and some files in it
+
+mkdir foo
+mkdir foo/bar
+mkdir foo/bar/baz
+
+write /etc/lsb-release /foo/bar/baz/qux
+
+symlink /foo/bar/link /foo/bar/baz/qux
+
+symlink /foo/link /foo/bar/baz/qux
+
+symlink /link /foo/bar/baz/qux
+
+# Write a relatively-large file to disk.
+write big.dat /dat
+
+# Make sure we don't fail to write a file correctly, especially with smaller
+# block sizes.
+verify big.dat /dat

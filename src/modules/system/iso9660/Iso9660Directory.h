@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -42,11 +41,11 @@ private:
 public:
   Iso9660Directory(String name, size_t inode,
               class Iso9660Filesystem *pFs, File *pParent, Iso9660DirRecord &dirRec,
-              Time accessedTime = 0, Time modifiedTime = 0, Time creationTime = 0) :
+              Time::Timestamp accessedTime = 0, Time::Timestamp modifiedTime = 0, Time::Timestamp creationTime = 0) :
     Directory(name, accessedTime, modifiedTime, creationTime, inode, pFs, 0, pParent),
-    m_Dir(dirRec), m_pFs(pFs)
+    m_pFs(pFs), m_Dir(dirRec)
   {}
-  virtual ~Iso9660Directory() {};
+  virtual ~Iso9660Directory() {}
 
   virtual void cacheDirectoryContents()
   {
@@ -65,14 +64,14 @@ public:
       // Root directory, . and .. should redirect to this directory
       Iso9660Directory *dot = new Iso9660Directory(String("."), m_Inode, m_pFs, m_pParent, m_Dir, m_AccessedTime, m_ModifiedTime, m_CreationTime);
       Iso9660Directory *dotdot = new Iso9660Directory(String(".."), m_Inode, m_pFs, m_pParent, m_Dir, m_AccessedTime, m_ModifiedTime, m_CreationTime);
-      m_Cache.insert(String("."), dot);
-      m_Cache.insert(String(".."), dotdot);
+      getCache().insert(String("."), dot);
+      getCache().insert(String(".."), dotdot);
     }
     else
     {
       // Non-root, . and .. should point to the correct locations
       Iso9660Directory *dot = new Iso9660Directory(String("."), m_Inode, m_pFs, m_pParent, m_Dir, m_AccessedTime, m_ModifiedTime, m_CreationTime);
-      m_Cache.insert(String("."), dot);
+      getCache().insert(String("."), dot);
 
       Iso9660Directory *dotdot = new Iso9660Directory(String(".."),
                                                     pParentDir->getInode(),
@@ -83,7 +82,7 @@ public:
                                                     pParentDir->getModifiedTime(),
                                                     pParentDir->getCreationTime()
                                                     );
-      m_Cache.insert(String(".."), dotdot);
+      getCache().insert(String(".."), dotdot);
     }
 
     // How big is the directory?
@@ -122,24 +121,22 @@ public:
         String fileName = m_pFs->parseName(*record);
 
         // Grab the UNIX timestamp
-        Time unixTime = m_pFs->timeToUnix(record->Time);
+        Time::Timestamp unixTime = m_pFs->timeToUnix(record->Time);
         if(record->FileFlags & (1 << 1))
         {
           Iso9660Directory *dir = new Iso9660Directory(fileName, 0, m_pFs, this, *record, unixTime, unixTime, unixTime);
-          m_Cache.insert(fileName, dir);
+          getCache().insert(fileName, dir);
         }
         else
         {
           Iso9660File *file = new Iso9660File(fileName, unixTime, unixTime, unixTime, 0, m_pFs, LITTLE_TO_HOST32(record->DataLen_LE), *record, this);
-          m_Cache.insert(fileName, file);
+          getCache().insert(fileName, file);
         }
       }
 
       // Last in the block, but are there still blocks to read?
       if(bLastHit && ((i + 1) == numBlocks))
         break;
-
-      offset = 0;
     }
 
     m_bCachePopulated = true;
@@ -156,7 +153,7 @@ public:
   }
 
   void fileAttributeChanged()
-  {};
+  {}
 
   inline Iso9660DirRecord &getDirRecord()
   {
@@ -164,11 +161,11 @@ public:
   }
 
 private:
-  // Our internal directory information (info about *this* directory, not the child)
-  Iso9660DirRecord m_Dir;
-
   // Filesystem object
   Iso9660Filesystem *m_pFs;
+
+  // Our internal directory information (info about *this* directory, not the child)
+  Iso9660DirRecord m_Dir;
 };
 
 #endif

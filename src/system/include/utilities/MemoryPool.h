@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -28,6 +27,28 @@
 #include <processor/MemoryRegion.h>
 #include <utilities/ExtensibleBitmap.h>
 #include <processor/PhysicalMemoryManager.h>
+#include <process/MemoryPressureManager.h>
+
+class MemoryPool;
+
+/**
+ * MemoryPoolPressureHandler - handles removing unused pages from a MemoryPool
+ * when memory pressure is seen on the system. Because MemoryPools tend to be
+ * full of bursty allocations, it's fairly typical to get a couple pages free.
+ */
+class MemoryPoolPressureHandler : public MemoryPressureHandler
+{
+public:
+    MemoryPoolPressureHandler(MemoryPool *pool);
+    virtual ~MemoryPoolPressureHandler();
+
+    virtual const String getMemoryPressureDescription();
+
+    virtual bool compact();
+
+private:
+    MemoryPool *m_Pool;
+};
 
 /** MemoryPool - a class which encapsulates a pool of memory with constant
   * sized buffers that can be allocated around the kernel. Intended to be
@@ -64,6 +85,9 @@ class MemoryPool
         /// Frees an allocated buffer, allowing it to be used elsewhere
         void free(uintptr_t buffer);
 
+        /// Trims the pool, freeing pages that are not otherwise in use.
+        bool trim();
+
     private:
 #ifdef THREADS
         /// This Semaphore tracks the number of buffers allocated, and allows
@@ -86,6 +110,9 @@ class MemoryPool
 
         /// Allocation bitmap
         ExtensibleBitmap m_AllocBitmap;
+
+        /// Memory pressure handler for this pool.
+        MemoryPoolPressureHandler m_PressureHandler;
 
         /// Allocation doer
         uintptr_t allocateDoer();

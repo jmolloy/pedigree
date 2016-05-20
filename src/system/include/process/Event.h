@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -31,19 +30,6 @@
     After this, the process will be terminated. */
 #define MAX_NESTED_EVENTS 16
 
-#if defined(X86) || defined(X64) || defined(PPC32)
-  #define EVENT_BASE                0x80000000
-#elif defined(ARMV7)
-  #define EVENT_BASE                0xF0000000
-#else
-  #define EVENT_BASE                0
-#endif
-
-#define EVENT_HANDLER_TRAMPOLINE  (EVENT_BASE+0)
-#define EVENT_HANDLER_TRAMPOLINE2 (EVENT_BASE+0x100) /// \todo Temporary fix so I can test my pthreads stuff...
-#define EVENT_HANDLER_BUFFER      (EVENT_BASE+0x1000)
-#define EVENT_HANDLER_END         (EVENT_HANDLER_BUFFER + (EVENT_TID_MAX*MAX_NESTED_EVENTS)*EVENT_LIMIT)
-
 /** The abstract base class for an asynchronous event. An event can hold any amount of information
     up to a hard maximum size of EVENT_LIMIT (usually 4096 bytes). An event is serialized using 
     the virtual serialize() function and sent to a recipient thread in either user or kernel mode,
@@ -61,8 +47,19 @@ public:
         \note As can be surmised, handlerAddress is NOT reentrant. If you use this Event in multiple
               threads concurrently, you CANNOT change the handler address. */
     Event(uintptr_t handlerAddress, bool isDeletable, size_t specificNestingLevel=~0UL);
-
     virtual ~Event();
+
+    /** Retrieves the main trampoline memory address. */
+    static uintptr_t getTrampoline();
+
+    /** Retrieves the secondary trampoline memory address. */
+    static uintptr_t getSecondaryTrampoline();
+
+    /** Retrieves the event handler buffer memory address. */
+    static uintptr_t getHandlerBuffer();
+
+    /** Retrieves the last handler buffer memory address. */
+    static uintptr_t getLastHandlerBuffer();
 
     /** Returns true if the event is on the heap and can be deleted when handled. This is for creating
         fire-and-forget messages and not worrying about memory leaks. */
@@ -99,6 +96,9 @@ public:
 
     /** Returns the event number / ID. */
     virtual size_t getNumber() = 0;
+
+    Event(const Event &other);
+    Event & operator = (const Event &other);
 
 protected:
     /** Handler address. */

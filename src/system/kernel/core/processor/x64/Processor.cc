@@ -81,6 +81,18 @@ void Processor::switchAddressSpace(VirtualAddressSpace &AddressSpace)
   }
 }
 
+void Processor::deinitialise()
+{
+  shutdownMultitasking();
+
+  // Shut down remaining singleton objects.
+  IoPortManager::instance().~IoPortManager();
+  X86CommonPhysicalMemoryManager::instance().shutdown();
+  PageFaultHandler::instance().~PageFaultHandler();
+  X64SyscallManager::instance().~X64SyscallManager();
+  X64InterruptManager::instance().~X64InterruptManager();
+}
+
 void Processor::initialise1(const BootstrapStruct_t &Info)
 {
   // Initialise this processor's interrupt handling
@@ -143,11 +155,11 @@ PAT7 UC
 
 void Processor::initialise2(const BootstrapStruct_t &Info)
 {
+#if defined(MULTIPROCESSOR)
+  size_t nProcessors = Multiprocessor::initialise1();
+#else
   size_t nProcessors = 1;
-
-  #if defined(MULTIPROCESSOR)
-    nProcessors = Multiprocessor::initialise1();
-  #endif
+#endif
 
   // Initialise the GDT
   X64GdtManager::instance().initialise(nProcessors);
@@ -172,9 +184,9 @@ void Processor::identify(HugeStaticString &str)
   uint32_t eax, ebx, ecx, edx;
   char ident[13];
   cpuid(0, 0, eax, ebx, ecx, edx);
-  memcpy(ident, &ebx, 4);
-  memcpy(&ident[4], &edx, 4);
-  memcpy(&ident[8], &ecx, 4);
+  MemoryCopy(ident, &ebx, 4);
+  MemoryCopy(&ident[4], &edx, 4);
+  MemoryCopy(&ident[8], &ecx, 4);
   ident[12] = 0;
   str = ident;
 }
@@ -182,7 +194,6 @@ void Processor::identify(HugeStaticString &str)
 void Processor::setTlsBase(uintptr_t newBase)
 {
     // Set FS.base MSR.
-    uint16_t newseg = newBase ? Processor::information().getTlsSelector() | 3 : 0x23;
     asm volatile("wrmsr" :: "a" (newBase), "d" (newBase >> 32ULL), "c" (0xC0000100));
 }
 

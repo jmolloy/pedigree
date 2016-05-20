@@ -22,7 +22,7 @@
 
 #include "FtdiSerialDevice.h"
 
-UsbDevice *ftdiConnected(UsbDevice *pDevice)
+static UsbDevice *ftdiConnected(UsbDevice *pDevice)
 {
     return new FtdiSerialDevice(pDevice);
 }
@@ -33,7 +33,7 @@ static bool entry()
     return true;
 }
 
-void exit()
+static void exit()
 {
 }
 

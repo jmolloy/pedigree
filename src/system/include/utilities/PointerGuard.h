@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -31,7 +30,12 @@ template <class T>
 class PointerGuard
 {
   public:
-    PointerGuard(T *p = 0) : m_Pointer(p)
+    PointerGuard(T *p = 0, bool bArray = false) : m_Pointer(p), m_Wrapper(0), m_Array(bArray)
+    {
+      // NOTICE("PointerGuard: Guarding pointer [" << reinterpret_cast<uintptr_t>(m_Pointer) << "]");
+    }
+
+    PointerGuard(T **p = 0, bool bArray = false) : m_Pointer(*p), m_Wrapper(p), m_Array(bArray)
     {
       // NOTICE("PointerGuard: Guarding pointer [" << reinterpret_cast<uintptr_t>(m_Pointer) << "]");
     }
@@ -41,8 +45,16 @@ class PointerGuard
       // NOTICE("PointerGuard: Out-of-scope, deleting guarded pointer [" << reinterpret_cast<uintptr_t>(m_Pointer) << "]");
       if(m_Pointer)
       {
-        delete m_Pointer;
+        if (m_Array)
+          delete [] m_Pointer;
+        else
+          delete m_Pointer;
         m_Pointer = 0;
+      }
+
+      if(m_Wrapper)
+      {
+        *m_Wrapper = 0;
       }
     }
 
@@ -54,16 +66,20 @@ class PointerGuard
     {
       ERROR("PointerGuard: copy constructor called");
       m_Pointer = 0;
+      m_Wrapper = 0;
     }
 
     PointerGuard<T>& operator = (PointerGuard<T>& p)
     {
       ERROR("PointerGuard: operator = called");
       m_Pointer = 0;
+      m_Wrapper = 0;
     }
 
   private:
     T *m_Pointer;
+    T **m_Wrapper;
+    bool m_Array;
 };
 
 #endif

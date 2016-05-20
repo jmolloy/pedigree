@@ -1,0 +1,46 @@
+/*!
+  \page pedigree_whatsdifferent What's Different in Pedigree?
+
+Pedigree differs from traditional UNIX systems in a few important ways. This
+page describes these and also clarifies why.
+
+\section Filesystem
+
+In Pedigree, the filesystem is referenced using a custom model where mount
+points are disambiguated and then paths within those mounts are specified.
+
+This looks like the following:
+- `/path/to/file` (this loads a file on the same mount as the current working
+directory)
+- `mount»/path/to/file` (this loads a file from the `mount` mount point)
+
+There are some well-defined mount points that exist by default:
+- `root»` is the root filesystem, the default filesystem on which users begin
+and from which configuration is read for the \ref registry.
+- `dev»` provides device access, like /dev.
+- `raw»` provides access to raw disk devices and partitions.
+- `scratch»` is an in-RAM filesystem, much like /tmp.
+- `runtime»` is an in-RAM filesystem for runfiles (ala /run), where files can
+only be modified by the owning Process.
+- `unix»` provides a location for named UNIX sockets to reside.
+
+To enter the `»` seperator character, use `ALT-SHIFT-.`.
+
+\subsection path_caveat $PATH Caveat
+
+Be aware that if $PATH does not use fully-qualified paths, switching the current
+working directory to a different mount point can have unexpected results as the
+$PATH lookups will be done on the local mount point, rather than the location on
+which the files actually reside.
+
+\subsection posix_compat POSIX Path Compatibility
+
+For applications that depend upon the first character in a path being `/` to
+be recognised as an absolute path, the path prefix `/@/` can be added.
+
+For example, the two paths `root»/applications/bash` and
+`/@/root»/applications/bash` point to the same file, but the latter is clearly
+an absolute path whereas the former could be interpreted by some applications
+as a relative path.
+
+*/

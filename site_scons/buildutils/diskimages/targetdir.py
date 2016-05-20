@@ -43,9 +43,15 @@ def buildImageTargetdir(target, source, env):
     os.system("cp -u " + imagedir + "/../grub/menu-hdd.lst %s/boot/grub/menu.lst" % (targetDir,))
 
     # Copy the kernel, initrd, and configuration database
-    for i in source[0:3]:
-        os.system("cp -u " + i.abspath + " %s/boot/" % (targetDir,))
-    source = source[3:]
+    if env['kernel_on_disk']:
+        nth = 3
+        if 'STATIC_DRIVERS' in env['CPPDEFINES']:
+            nth = 2
+        for i in source[0:nth]:
+            os.system("cp -u " + i.abspath + " %s/boot/" % (targetDir,))
+    else:
+        nth = 0
+    source = source[nth:]
 
     # Create needed directories for missing layout
     os.system("mkdir -p %s/system/modules" % (targetDir,))

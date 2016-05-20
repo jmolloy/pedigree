@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -52,6 +51,8 @@ class Keyboard;
  */
 class Machine
 {
+  friend void system_reset();
+
   public:
     static Machine &instance();
 
@@ -59,10 +60,21 @@ class Machine
      * Initialises the machine.
      */
     virtual void initialise() =0;
-    virtual void initialise2() {};
+    virtual void initialise2() {}
+    virtual void deinitialise()
+    {
+        m_bInitialised = false;
+    };
     inline bool isInitialised(){return m_bInitialised;}
 
-    virtual void initialiseDeviceTree() = 0;
+    /**
+     * Initialises the machine's base device tree, if one exists, to prefill
+     * the tree with those devices that are not otherwise able to be detected
+     * via some sort of bus support.
+     */
+    virtual void initialiseDeviceTree()
+    {
+    }
 
     /**
      * Returns the n'th Serial device.
@@ -115,7 +127,7 @@ class Machine
   protected:
     inline Machine()
       : m_bInitialised(false){}
-    inline virtual ~Machine(){}
+    virtual ~Machine();
 
     bool m_bInitialised;
 

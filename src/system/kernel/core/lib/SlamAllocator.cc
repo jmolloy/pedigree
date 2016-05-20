@@ -19,6 +19,7 @@
 
 #include "SlamAllocator.h"
 
+#ifndef BENCHMARK
 #include <utilities/assert.h>
 #include <utilities/MemoryTracing.h>
 #include <LockGuard.h>
@@ -31,17 +32,143 @@
 
 #include <Backtrace.h>
 #include <SlamCommand.h>
+#endif
 
-#define TEMP_MAGIC 0x67845753
+#ifdef MULTIPROCESSOR
+#define ATOMIC_MEMORY_ORDER __ATOMIC_RELEASE
+#define ATOMIC_CAS_WEAK     true
+#else
+#define ATOMIC_MEMORY_ORDER __ATOMIC_RELAXED
+#define ATOMIC_CAS_WEAK     true
+#endif
 
+#ifndef BENCHMARK
 SlamAllocator SlamAllocator::m_Instance;
+#endif
+
+template<typename T>
+inline T *untagged(T *p) PURE;
+
+template<typename T>
+inline T *tagged(T *p) PURE;
+
+template<typename T>
+inline T *touch_tag(T *p) PURE;
+
+template<typename T>
+inline T *untagged(T *p)
+{
+    /// \todo this now requires 64-bit pointers everywhere.
+    // All heap pointers begin with 32 bits of ones. So we shove a tag there.
+    uintptr_t ptr = reinterpret_cast<uintptr_t>(p);
+#if defined(BENCHMARK) || defined(HOSTED)
+    // Top four bits available to us (addresses from 0 -> 0x00007FFFFFFFFFFF).
+    ptr &= ~0xFFFF000000000000ULL;
+#else
+    ptr |= 0xFFFFFFFF00000000ULL;
+#endif
+    return reinterpret_cast<T *>(ptr);
+}
+
+template<typename T>
+inline T *tagged(T *p)
+{
+    uintptr_t ptr = reinterpret_cast<uintptr_t>(p);
+#if defined(BENCHMARK) || defined(HOSTED)
+    ptr &= 0xFFFFFFFFFFFFULL;
+#else
+    ptr &= 0xFFFFFFFFULL;
+#endif
+    return reinterpret_cast<T *>(ptr);
+}
+
+template<typename T>
+inline T *touch_tag(T *p)
+{
+    // Add one to the tag.
+    uintptr_t ptr = reinterpret_cast<uintptr_t>(p);
+#if defined(BENCHMARK) || defined(HOSTED)
+    ptr += 0x1000000000000ULL;
+#else
+    ptr += 0x100000000ULL;
+#endif
+    return reinterpret_cast<T *>(ptr);
+}
+
+inline void spin_pause()
+{
+#ifdef BENCHMARK
+    asm("pause");
+#else
+    Processor::pause();
+#endif
+}
+
+inline uintptr_t getHeapBase()
+{
+#ifdef BENCHMARK
+    return SlamSupport::getHeapBase();
+#else
+    return VirtualAddressSpace::getKernelAddressSpace().getKernelHeapStart();
+#endif
+}
+
+inline uintptr_t getHeapEnd()
+{
+#ifdef BENCHMARK
+    return SlamSupport::getHeapEnd();
+#else
+    return VirtualAddressSpace::getKernelAddressSpace().getKernelHeapEnd();
+#endif
+}
+
+inline size_t getPageSize()
+{
+#ifdef BENCHMARK
+    return 0x1000;
+#else
+    return PhysicalMemoryManager::getPageSize();
+#endif
+}
+
+inline void allocateAndMapAt(void *addr)
+{
+#ifdef BENCHMARK
+    SlamSupport::getPageAt(addr);
+#else
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
+    physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
+    va.map(phys, addr, VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+#endif
+}
+
+inline void unmap(void *addr)
+{
+#ifdef BENCHMARK
+    SlamSupport::unmapPage(addr);
+    // munmap(addr, getPageSize());
+#else
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
+    if (!va.isMapped(addr))
+        return;
+
+    physical_uintptr_t phys; size_t flags;
+    va.getMapping(addr, phys, flags);
+    va.unmap(addr);
+
+    PhysicalMemoryManager::instance().freePage(phys);
+#endif
+}
 
 SlamCache::SlamCache() :
-    m_ObjectSize(0), m_SlabSize(0)
+    m_PartialLists(), m_ObjectSize(0), m_SlabSize(0)
 #if CRIPPLINGLY_VIGILANT
     ,m_FirstSlab()
 #endif
+#ifdef THREADS
     , m_RecoveryLock(false)
+#endif
+    , m_EmptyNode()
 {
 }
 
@@ -60,14 +187,57 @@ void SlamCache::initialise(size_t objectSize)
     else
         m_SlabSize = SLAB_MINIMUM_SIZE;
 
-    size_t maxCpu = 1;
 #ifdef MULTIPROCESSOR
-    maxCpu = 255;
+    /// \todo number of CPUs here
+    size_t maxCpu = 255;
+#else
+    size_t maxCpu = 1;
 #endif
     for (size_t i = 0; i < maxCpu; i++)
-        m_PartialLists[i] = 0;
+        m_PartialLists[i] = tagged(&m_EmptyNode);
+
+    // Make the empty node loop always, so it can be easily linked into place.
+    ByteSet(&m_EmptyNode, 0xAB, sizeof(m_EmptyNode));
+    m_EmptyNode.next = tagged(&m_EmptyNode);
 
     assert( (m_SlabSize % m_ObjectSize) == 0 );
+}
+
+
+SlamCache::Node *SlamCache::pop(SlamCache::alignedNode *head)
+{
+    Node *N = 0, *pNext = 0;
+    alignedNode currentHead = *head;
+    while (true)
+    {
+        // Grab result.
+        N = untagged(const_cast<Node *>(currentHead));
+        pNext = N->next;
+
+        if(__atomic_compare_exchange_n(head, &currentHead,
+            touch_tag(pNext), ATOMIC_CAS_WEAK, ATOMIC_MEMORY_ORDER, __ATOMIC_RELAXED))
+        {
+            // Successful CAS, we have a node to use.
+            break;
+        }
+
+        // Unsuccessful CAS, pause for a bit to back off.
+        spin_pause();
+    }
+
+    return N;
+}
+
+void SlamCache::push(SlamCache::alignedNode *head, SlamCache::Node *newTail, SlamCache::Node *newHead)
+{
+    if (!newHead)
+        newHead = newTail;
+
+    newTail->next = const_cast<Node *>(*head);
+    while(!__atomic_compare_exchange_n(head, const_cast<alignedNode *>(&newTail->next), touch_tag(newHead), ATOMIC_CAS_WEAK, ATOMIC_MEMORY_ORDER, __ATOMIC_RELAXED))
+    {
+        spin_pause();
+    }
 }
 
 uintptr_t SlamCache::allocate()
@@ -78,55 +248,28 @@ uintptr_t SlamCache::allocate()
     size_t thisCpu = 0;
 #endif
 
-    if (m_PartialLists[thisCpu] != 0)
+    Node *N = pop(&m_PartialLists[thisCpu]);
+
+    // Something else got there first if N == 0. Just allocate a new slab.
+    if (UNLIKELY(N == &m_EmptyNode))
     {
-        Node *N =0, *pNext =0;
-        do
-        {
-            N = const_cast<Node*>(m_PartialLists[thisCpu]);
-
-            if(N && (N->next == reinterpret_cast<Node*>(VIGILANT_MAGIC)))
-            {
-                ERROR_NOLOCK("SlamCache::allocate hit a free block that probably wasn't free");
-                m_PartialLists[thisCpu] = N = 0; // Free list is borked, start over with a new slab
-            }
-#if USING_MAGIC
-            if(N && ((N->magic != TEMP_MAGIC) && (N->magic != MAGIC_VALUE)))
-            {
-                ERROR_NOLOCK("SlamCache::allocate hit a free block that probably wasn't free");
-                m_PartialLists[thisCpu] = N = 0; // Free list is borked, start over with a new slab
-            }
-#endif
-
-            if (N == 0)
-            {
-                Node *pNode = initialiseSlab(getSlab());
-                uintptr_t slab = reinterpret_cast<uintptr_t>(pNode);
-#if CRIPPLINGLY_VIGILANT
-                if (SlamAllocator::instance().getVigilance())
-                    trackSlab(slab);
-#endif
-                return slab;
-            }
-
-            pNext = N->next;
-        } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
-        
-#if USING_MAGIC
-        N->magic = TEMP_MAGIC;
-#endif
-
-        return reinterpret_cast<uintptr_t>(N);
-    }
-    else
-    {
-        uintptr_t slab = reinterpret_cast<uintptr_t>(initialiseSlab(getSlab()));
+        Node *pNode = initialiseSlab(getSlab());
+        uintptr_t slab = reinterpret_cast<uintptr_t>(pNode);
 #if CRIPPLINGLY_VIGILANT
         if (SlamAllocator::instance().getVigilance())
             trackSlab(slab);
 #endif
         return slab;
     }
+
+    // Check that the block was indeed free.
+    assert(N->next != reinterpret_cast<Node *>(VIGILANT_MAGIC));
+#if USING_MAGIC
+    assert(N->magic == TEMP_MAGIC || N->magic == MAGIC_VALUE);
+    N->magic = TEMP_MAGIC;
+#endif
+
+    return reinterpret_cast<uintptr_t>(N);
 }
 
 void SlamCache::free(uintptr_t object)
@@ -152,20 +295,9 @@ void SlamCache::free(uintptr_t object)
     // Possible double free?
     assert(N->magic != MAGIC_VALUE);
     N->magic = MAGIC_VALUE;
-    N->prev = 0;
 #endif
 
-    Node *pPartialPointer =0;
-    do
-    {
-        pPartialPointer = const_cast<Node*>(m_PartialLists[thisCpu]);
-        N->next = pPartialPointer;
-    } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pPartialPointer, N));
-    
-#if USING_MAGIC
-    if (pPartialPointer)
-        pPartialPointer->prev = N;
-#endif
+    push(&m_PartialLists[thisCpu], N);
 }
 
 bool SlamCache::isPointerValid(uintptr_t object)
@@ -203,153 +335,145 @@ void SlamCache::freeSlab(uintptr_t slab)
 
 size_t SlamCache::recovery(size_t maxSlabs)
 {
-    size_t origMaxSlabs = maxSlabs;
-
 #ifdef MULTIPROCESSOR
     size_t thisCpu = Processor::id();
 #else
     size_t thisCpu = 0;
 #endif
 
-    if(!m_PartialLists[thisCpu])
+#ifdef THREADS
+    LockGuard<Spinlock> guard(m_RecoveryLock);
+#endif
+
+    if(untagged(m_PartialLists[thisCpu]) == &m_EmptyNode)
         return 0;
 
-    Node *N = 0;
-
     size_t freedSlabs = 0;
-    if(m_ObjectSize < PhysicalMemoryManager::getPageSize())
+    if(m_ObjectSize < getPageSize())
     {
-        Node *reinsertHead = 0;
-        Node *reinsertTail = 0;
+        Node *reinsertHead = tagged(&m_EmptyNode);
+        Node *reinsertTail = &m_EmptyNode;
         while(maxSlabs--)
         {
-            Node *N =0, *pNext =0;
-            do
+            // Grab the head node of the free list.
+            Node *N = pop(&m_PartialLists[thisCpu]);
+
+            // If no head node, we're done with this free list.
+            if(N == &m_EmptyNode)
             {
-                N = const_cast<Node*>(m_PartialLists[thisCpu]);
-                if(N == 0)
-                {
-                    break;
-                }
-                pNext = N->next;
-            } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
-
-            if(N == 0)
-            {
-                // Okay, we've emptied the partial lists.
-                // Let's link in our reinsert nodes.
-                Node *pHead = 0;
-                do
-                {
-                    pHead = const_cast<Node*>(m_PartialLists[thisCpu]);
-                    reinsertTail->next = pHead;
-                } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pHead, reinsertHead));
-
-                if(pHead)
-                    pHead->prev = reinsertTail;
-
                 break;
             }
 
-            uintptr_t slab = reinterpret_cast<uintptr_t>(N) & ~(PhysicalMemoryManager::getPageSize() - 1);
+            uintptr_t slab = reinterpret_cast<uintptr_t>(N) & ~(getPageSize() - 1);
 
             // A possible node found! Any luck?
             bool bSlabNotFree = false;
             for (size_t i = 0; i < (m_SlabSize / m_ObjectSize); ++i)
             {
                 Node *pNode = reinterpret_cast<Node*> (slab + (i * m_ObjectSize));
-                if(pNode->magic != MAGIC_VALUE)
+                SlamAllocator::AllocHeader *pHeader = reinterpret_cast<SlamAllocator::AllocHeader *>(pNode);
+                if (pHeader->cache == this)
+                {
+                    // Oops, an active allocation was found.
+                    bSlabNotFree = true;
+                    break;
+                }
+#if USING_MAGIC
+                else if(pNode->magic != MAGIC_VALUE)
                 {
                     // Not free.
                     bSlabNotFree = true;
                     break;
                 }
+#endif
             }
 
             if(bSlabNotFree)
             {
-                // Unlink N, if needed, as it's about to be linked into the
-                // reinsert list.
-                if(N->next)
+                // Link the node into our reinsert lists, as the slab contains
+                // in-use nodes.
+                if(untagged(reinsertHead) == &m_EmptyNode)
                 {
-                    N->next->prev = N->prev;
-                }
-                if(N->prev)
-                {
-                    N->prev->next = N->next;
-                }
-
-                if(!reinsertHead)
-                {
-                    reinsertHead = reinsertTail = N;
-                    N->next = N->prev = 0;
+                    reinsertHead = tagged(N);
+                    reinsertTail = N;
+                    N->next = tagged(&m_EmptyNode);
                 }
                 else
                 {
-                    N->prev = 0;
                     N->next = reinsertHead;
-                    reinsertHead->prev = N;
-                    reinsertHead = N;
+                    reinsertHead = tagged(N);
                 }
 
                 continue;
             }
 
-            // Slab free. Unlink all items and remove.
-            for (size_t i = 0; i < (m_SlabSize / m_ObjectSize); ++i)
+            // Unlink any of our items that exist in the free list.
+            // Yes, this is slow, but we've already stopped the world.
+            alignedNode head = untagged(m_PartialLists[thisCpu]);
+            alignedNode prev = head;
+            while (head != &m_EmptyNode)
             {
-                Node *pNode = reinterpret_cast<Node*> (slab + (i * m_ObjectSize));
-                Node *pNodeNext = pNode->next;
-                if(pNode->next)
+                bool overlaps = ((head >= reinterpret_cast<void *>(slab)) || (head <= reinterpret_cast<void *>(slab + getPageSize())));
+
+                if (overlaps)
                 {
-                    pNode->next->prev = pNode->prev;
+                    // Update previous node to point past us.
+                    prev->next = touch_tag(head->next);
+
+                    // If we're pointing at the head of the list, we need to
+                    // update the head of the list too.
+                    if (prev == head)
+                    {
+                        prev = untagged(head->next);
+                        m_PartialLists[thisCpu] = touch_tag(head->next);
+                    }
+                    else
+                    {
+                        prev = head;
+                    }
                 }
-                if(pNode->prev)
+                else
                 {
-                    pNode->prev->next = pNode->next;
+                    prev = head;
                 }
 
-                // If this node became the partial list head, make sure it is
-                // no longer the head.
-                __sync_val_compare_and_swap(&m_PartialLists[thisCpu], pNode, pNodeNext);
+                head = untagged(head->next);
             }
 
             // Kill off the slab!
             freeSlab(slab);
             ++freedSlabs;
         }
+
+        // Relink any nodes we decided we couldn't free. This must be done here
+        // as the loop may terminate before we get a chance to do this.
+        if (reinsertTail != &m_EmptyNode)
+        {
+            // Re-link the nodes we passed over.
+            push(&m_PartialLists[thisCpu], reinsertTail, reinsertHead);
+        }
     }
     else
     {
         while(maxSlabs--)
         {
-            if(!m_PartialLists[thisCpu])
+            if(untagged(m_PartialLists[thisCpu]) == &m_EmptyNode)
                 break;
 
-            Node *N =0, *pNext =0;
-            do
-            {
-                N = const_cast<Node*>(m_PartialLists[thisCpu]);
-                if(N == 0)
-                {
-                    break;
-                }
-                pNext = N->next;
-            } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], N, pNext));
-
-            if(N == 0)
+            // Pop the first free node off the free list.
+            Node *N = pop(&m_PartialLists[thisCpu]);
+            if(N == &m_EmptyNode)
             {
                 // Emptied the partial list!
                 break;
             }
 
+#if USING_MAGIC
             assert(N->magic == MAGIC_VALUE);
+#endif
 
+            // Can just outright free - no need to do any further checks.
             uintptr_t slab = reinterpret_cast<uintptr_t>(N);
-            if (N->next)
-                N->next->prev = N->prev;
-            if (N->prev)
-                N->prev->next = N->next;
 
             freeSlab(slab);
             ++freedSlabs;
@@ -367,48 +491,39 @@ SlamCache::Node *SlamCache::initialiseSlab(uintptr_t slab)
     size_t thisCpu = 0;
 #endif
 
-    // All object in slab are free, generate Node*'s for each (except the first) and
-    // link them together.
-    Node *pFirst=0, *pLast=0;
-
-    size_t nObjects = m_SlabSize/m_ObjectSize;
-
-    for (size_t i = 1; i < nObjects; i++)
-    {
-        Node *pNode = reinterpret_cast<Node*> (slab + (i * m_ObjectSize));
-        pNode->next = ((i + 1) >= nObjects) ? 0 : reinterpret_cast<Node*> (slab + ((i + 1) * m_ObjectSize));
-#if USING_MAGIC
-        pNode->prev = (i == 1) ? 0 : reinterpret_cast<Node*> (slab + ((i - 1) * m_ObjectSize));
-        pNode->magic = MAGIC_VALUE;
-#endif
-
-        if (i == 1)
-            pFirst = pNode;
-        if ((i + 1) >= nObjects)
-            pLast = pNode;
-    }
+    size_t nObjects = m_SlabSize / m_ObjectSize;
 
     Node *N = reinterpret_cast<Node*> (slab);
+    N->next = tagged(&m_EmptyNode);
 #if USING_MAGIC
     N->magic = TEMP_MAGIC;
 #endif
 
-    // Link this slab in as the first in the partial list
-    if (pFirst)
-    {
-        // We now need to do two atomic updates.
-        Node *pPartialPointer =0;
-        do
-        {
-            pPartialPointer = const_cast<Node*>(m_PartialLists[thisCpu]);
-            pLast->next = pPartialPointer;
-        } while(!__sync_bool_compare_and_swap(&m_PartialLists[thisCpu], pPartialPointer, pFirst));
+    // Early exit if there's no other free objects in this slab.
+    if (nObjects <= 1)
+        return N;
 
+    // All objects in slab are free, generate Node*'s for each (except the
+    // first) and link them together.
+    Node *pFirst = 0, *pLast = 0;
+    for (size_t i = 1; i < nObjects; i++)
+    {
+        Node *pNode = reinterpret_cast<Node*> (slab + (i * m_ObjectSize));
+        pNode->next = reinterpret_cast<Node*> (slab + ((i + 1) * m_ObjectSize));
+        pNode->next = tagged(pNode->next);
 #if USING_MAGIC
-        if (pPartialPointer)
-            pPartialPointer->prev = pLast;
+        pNode->magic = MAGIC_VALUE;
 #endif
+
+        if (!pFirst)
+            pFirst = tagged(pNode);
+
+        pLast = pNode;
     }
+
+    N->next = pFirst;
+
+    push(&m_PartialLists[thisCpu], pLast, pFirst);
 
     return N;
 }
@@ -526,9 +641,12 @@ SlamAllocator::SlamAllocator() :
 #if CRIPPLINGLY_VIGILANT
     , m_bVigilant(false)
 #endif
-    , m_SlabRegion(), m_HeapPageCount(0), m_SlabRegionLock(false)
+#ifdef THREADS
+    , m_SlabRegionLock(false)
+#endif
+    , m_HeapPageCount(0), m_SlabRegionBitmap(),
+    m_SlabRegionBitmapEntries(0), m_Base(0)
 {
-    m_SlabRegion.clear();
 }
 
 SlamAllocator::~SlamAllocator()
@@ -537,39 +655,44 @@ SlamAllocator::~SlamAllocator()
 
 void SlamAllocator::initialise()
 {
+#ifdef THREADS
     LockGuard<Spinlock> guard(m_SlabRegionLock);
+#endif
+
+    if (m_bInitialised)
+    {
+        return;
+    }
 
     // We need to allocate our bitmap for this purpose.
-    uintptr_t bitmapBase = VirtualAddressSpace::getKernelAddressSpace().getKernelHeapStart();
-    uintptr_t heapEnd = VirtualAddressSpace::getKernelAddressSpace().getKernelHeapEnd();
+    uintptr_t bitmapBase = getHeapBase();
+    uintptr_t heapEnd = getHeapEnd();
     size_t heapSize = heapEnd - bitmapBase;
-    size_t bitmapBytes = (heapSize / PhysicalMemoryManager::getPageSize()) / 8;
+    size_t bitmapBytes = (heapSize / getPageSize()) / 8;
 
     m_SlabRegionBitmap = reinterpret_cast<uint64_t *>(bitmapBase);
     m_SlabRegionBitmapEntries = bitmapBytes / sizeof(uint64_t);
 
     // Ensure the bitmap size is now page-aligned before we allocate it.
-    if(bitmapBytes & (PhysicalMemoryManager::getPageSize() - 1))
+    if(bitmapBytes & (getPageSize() - 1))
     {
-        bitmapBytes &= ~(PhysicalMemoryManager::getPageSize() - 1);
-        bitmapBytes += PhysicalMemoryManager::getPageSize();
+        bitmapBytes &= ~(getPageSize() - 1);
+        bitmapBytes += getPageSize();
     }
 
     m_Base = bitmapBase + bitmapBytes;
 
-    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
-
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
     VirtualAddressSpace &currva = Processor::information().getVirtualAddressSpace();
     if (Processor::m_Initialised == 2)
         Processor::switchAddressSpace(va);
 #endif
 
     // Allocate bitmap.
-    for(uintptr_t addr = bitmapBase; addr < m_Base; addr += PhysicalMemoryManager::getPageSize())
+    for(uintptr_t addr = bitmapBase; addr < m_Base; addr += getPageSize())
     {
-        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-        va.map(phys, reinterpret_cast<void *>(addr), VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+        allocateAndMapAt(reinterpret_cast<void *>(addr));
     }
 
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
@@ -578,9 +701,9 @@ void SlamAllocator::initialise()
 #endif
 
     // Good to go - wipe the bitmap and we are now configured.
-    memset(m_SlabRegionBitmap, 0, bitmapBytes);
+    ByteSet(m_SlabRegionBitmap, 0, bitmapBytes);
 
-    NOTICE("Kernel heap range prepared from " << m_Base << " to " << heapEnd << ", size: " << (heapEnd - m_Base));
+    NOTICE("Kernel heap range prepared from " << Hex << m_Base << " to " << heapEnd << ", size: " << (heapEnd - m_Base));
     DEBUG_LOG("  -> kernel heap bitmap is " << Dec << (bitmapBytes / 1024) << Hex << "K");
 
     for (size_t i =0; i < 32; i++)
@@ -593,13 +716,15 @@ void SlamAllocator::initialise()
 
 uintptr_t SlamAllocator::getSlab(size_t fullSize)
 {
-    size_t nPages = fullSize / PhysicalMemoryManager::getPageSize();
+    ssize_t nPages = fullSize / getPageSize();
     if(!nPages)
     {
         panic("Attempted to get a slab smaller than the native page size.");
     }
 
-    LockGuard<Spinlock> guard(m_SlabRegionLock);
+#ifdef THREADS
+    m_SlabRegionLock.acquire();
+#endif
 
     // Try to find space for this allocation.
     size_t entry = 0;
@@ -673,111 +798,50 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
     else
     {
         // Have to search within entries.
+        uint64_t search = (1ULL << nPages) - 1;
+        size_t maxBit = 64 - nPages;
         for(entry = 0; entry < m_SlabRegionBitmapEntries; ++entry)
         {
-            if(!m_SlabRegionBitmap[entry])
+            if(m_SlabRegionBitmap[entry] == 0ULL)
             {
                 bit = 0;
                 break;
             }
-            else if(__builtin_popcountll(~m_SlabRegionBitmap[entry]) >= nPages)
+            else if (m_SlabRegionBitmap[entry] != ~0ULL)
             {
-                // Need to find a sequence of bits.
-                // Try for the beginning or end of the entry, as these are builtins.
-                size_t trailing = __builtin_ctzll(m_SlabRegionBitmap[entry]);
-                if(trailing < nPages)
+                // Try and see if we fit somewhere.
+                for (bit = 0; bit < maxBit; ++bit)
                 {
-                    size_t leading = __builtin_clzll(m_SlabRegionBitmap[entry]);
-                    if(leading < nPages)
-                    {
-                        // No or not enough leading/trailing zeroes. Have to
-                        // fall back to a more linear search.
+                    if (m_SlabRegionBitmap[entry] & (search << bit))
+                        continue;
 
-                        size_t c = 0;
-                        size_t b = ~0UL;
-                        size_t len = 64;
-                        uint64_t v = m_SlabRegionBitmap[entry];
-
-                        // Try and reduce the number of bits we need to scan.
-                        if((v & 0xFFFFFFFFULL) == 0xFFFFFFFFULL)
-                        {
-                            len -= 32;
-                            v >>= 32;
-                        }
-                        if((v & 0xFFFFULL) == 0xFFFFULL)
-                        {
-                            len -= 16;
-                            v >>= 16;
-                        }
-                        if((v & 0xFFULL) == 0xFFULL)
-                        {
-                            len -= 8;
-                            v >>= 8;
-                        }
-                        if((v & 0xFULL) == 0xFULL)
-                        {
-                            len -= 4;
-                            v >>= 4;
-                        }
-
-                        while(len--)
-                        {
-                            if(v & 1)
-                            {
-                                c = 0;
-                                b = ~0;
-                            }
-                            else
-                            {
-                                // Bits count from zero.
-                                if(b == ~0UL)
-                                    b = 63 - len;
-
-                                if(++c >= nPages)
-                                    break;
-                            }
-
-                            v >>= 1;
-                        }
-
-                        if(LIKELY(b != ~0UL))
-                        {
-                            bit = b;
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        bit = 64 - leading;
-                        break;
-                    }
-                }
-                else
-                {
-                    bit = 0;
                     break;
                 }
+
+                if (bit < maxBit)
+                    break;
+
+                bit = ~0UL;
             }
         }
     }
 
     if(bit == ~0UL)
     {
-        FATAL("SlamAllocator::getSlab cannot find a place to allocate this slab (" << Dec << fullSize << Hex << " bytes)!");
+        FATAL("SlamAllocator::getSlab cannot find a place to allocate this slab (" << Dec << fullSize << Hex << " bytes) - allocator is consuming " << m_HeapPageCount << " pages!");
     }
 
-    uintptr_t slab = m_Base + (((entry * 64) + bit) * PhysicalMemoryManager::getPageSize());
-
-    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
+    uintptr_t slab = m_Base + (((entry * 64) + bit) * getPageSize());
 
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
     VirtualAddressSpace &currva = Processor::information().getVirtualAddressSpace();
     if (Processor::m_Initialised == 2)
         Processor::switchAddressSpace(va);
 #endif
 
     // Map and mark as used.
-    for(size_t i = 0; i < nPages; ++i)
+    for (ssize_t i = 0; i < nPages; ++i)
     {
         m_SlabRegionBitmap[entry] |= 1ULL << bit;
 
@@ -787,10 +851,19 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
             ++entry;
             bit = 0;
         }
+    }
 
-        void *p = reinterpret_cast<void *>(slab + (i * PhysicalMemoryManager::getPageSize()));
-        physical_uintptr_t phys = PhysicalMemoryManager::instance().allocatePage();
-        va.map(phys, p, VirtualAddressSpace::KernelMode | VirtualAddressSpace::Write);
+#ifdef THREADS
+    // Now that we've marked the slab bits as used, we can map the pages.
+    m_SlabRegionLock.release();
+#endif
+
+    // Map. This could break as we're allocating physical memory; though we are
+    // free of the lock so that helps.
+    for (ssize_t i = 0; i < nPages; ++i)
+    {
+        void *p = reinterpret_cast<void *>(slab + (i * getPageSize()));
+        allocateAndMapAt(p);
     }
 
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
@@ -798,42 +871,36 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
         Processor::switchAddressSpace(currva);
 #endif
 
-    m_HeapPageCount += fullSize / PhysicalMemoryManager::getPageSize();
+    m_HeapPageCount += fullSize / getPageSize();
 
     return slab;
 }
 
 void SlamAllocator::freeSlab(uintptr_t address, size_t length)
 {
-    size_t nPages = length / PhysicalMemoryManager::getPageSize();
+    size_t nPages = length / getPageSize();
     if(!nPages)
     {
         panic("Attempted to free a slab smaller than the native page size.");
     }
 
+#ifdef THREADS
     LockGuard<Spinlock> guard(m_SlabRegionLock);
+#endif
 
     // Perform unmapping first (so we can just modify 'address').
 
-    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
-
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
     VirtualAddressSpace &currva = Processor::information().getVirtualAddressSpace();
     if (Processor::m_Initialised == 2)
         Processor::switchAddressSpace(va);
 #endif
 
-    for(uintptr_t base = address; base < (address + length); base += PhysicalMemoryManager::getPageSize())
+    for(uintptr_t base = address; base < (address + length); base += getPageSize())
     {
         void *p = reinterpret_cast<void *>(base);
-        physical_uintptr_t phys; size_t flags;
-        if(va.isMapped(p))
-        {
-            va.getMapping(p, phys, flags);
-            va.unmap(p);
-
-            PhysicalMemoryManager::instance().freePage(phys);
-        }
+        unmap(p);
     }
 
 #ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
@@ -843,7 +910,7 @@ void SlamAllocator::freeSlab(uintptr_t address, size_t length)
 
     // Adjust bitmap.
     address -= m_Base;
-    address /= PhysicalMemoryManager::getPageSize();
+    address /= getPageSize();
     size_t entry = address / 64;
     size_t bit = address % 64;
 
@@ -859,7 +926,7 @@ void SlamAllocator::freeSlab(uintptr_t address, size_t length)
         }
     }
 
-    m_HeapPageCount -= length / PhysicalMemoryManager::getPageSize();
+    m_HeapPageCount -= length / getPageSize();
 }
 
 size_t SlamAllocator::recovery(size_t maxSlabs)
@@ -874,7 +941,7 @@ size_t SlamAllocator::recovery(size_t maxSlabs)
             continue;
 
         size_t thisSlabs = m_Caches[i].recovery(maxSlabs);
-        nPages += (thisSlabs * m_Caches[i].slabSize()) / PhysicalMemoryManager::getPageSize();
+        nPages += (thisSlabs * m_Caches[i].slabSize()) / getPageSize();
         nSlabs += thisSlabs;
         if(nSlabs >= maxSlabs)
         {
@@ -890,8 +957,8 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
 #if DEBUGGING_SLAB_ALLOCATOR
     NOTICE_NOLOCK("SlabAllocator::allocate(" << Dec << nBytes << Hex << ")");
 #endif
-    
-    if (!m_bInitialised)
+
+    if (UNLIKELY(!m_bInitialised))
         initialise();
 
 #if CRIPPLINGLY_VIGILANT
@@ -910,61 +977,60 @@ uintptr_t SlamAllocator::allocate(size_t nBytes)
     // Add in room for the allocation footer
     nBytes += sizeof(AllocHeader) + sizeof(AllocFooter);
 
-    // Find nearest power of 2, if needed.
-    size_t powerOf2 = 1;
+    // Don't allow huge allocations.
+    /// \note Even 2G is a stretch on most systems. Use some other allocator
+    ///       to allocate such large buffers.
+    assert(nBytes < (1U << 31));
+
+    // Default to minimum object size if we must.
     size_t lg2 = 0;
-    while (powerOf2 < nBytes || powerOf2 < OBJECT_MINIMUM_SIZE)
+    if (UNLIKELY(nBytes < OBJECT_MINIMUM_SIZE))
     {
-        powerOf2 <<= 1;
-        lg2 ++;
+        nBytes = OBJECT_MINIMUM_SIZE;
     }
 
-    // Allocate >2GB and I'll kick your teeth in.
-    assert(lg2 < 31);
-
-    nBytes = powerOf2;
-    assert(nBytes >= OBJECT_MINIMUM_SIZE);
-
+    // log2 of nBytes, where nBytes is rounded up to the next power-of-two.
+    lg2 = 32 - __builtin_clz(nBytes);
+    nBytes = 1U << lg2;  // Round up nBytes now.
     ret = m_Caches[lg2].allocate();
 
     //   l.release();
-    if (ret)
-    {
-        // Shove some data on the front that we'll use later
-        AllocHeader *head = reinterpret_cast<AllocHeader *>(ret);
-        AllocFooter *foot = reinterpret_cast<AllocFooter *>(ret+nBytes-sizeof(AllocFooter));
-        ret += sizeof(AllocHeader);
-
-        // Set up the header
-        head->cache = &m_Caches[lg2];
-#if OVERRUN_CHECK
-        head->magic = VIGILANT_MAGIC;
-        foot->magic = VIGILANT_MAGIC;
-
-
-    #if BOCHS_MAGIC_WATCHPOINTS
-        /// \todo head->catcher should be used for underrun checking
-        // asm volatile("xchg %%cx,%%cx" :: "a" (&head->catcher));
-        asm volatile("xchg %%cx,%%cx" :: "a" (&foot->catcher));
-    #endif
-    #if VIGILANT_OVERRUN_CHECK
-        if (Processor::m_Initialised == 2)
-        {
-            Backtrace bt;
-            bt.performBpBacktrace(0, 0);
-            memcpy(&head->backtrace, bt.m_pReturnAddresses, NUM_SLAM_BT_FRAMES*sizeof(uintptr_t));
-            head->requested = nBytes;
-            g_SlamCommand.addAllocation(head->backtrace, head->requested);
-        }
-    #endif
-#endif
-    }
-
 #if DEBUGGING_SLAB_ALLOCATOR
-    if(!ret)
+    if(UNLIKELY(!ret))
+    {
         ERROR_NOLOCK("SlabAllocator::allocate: Allocation failed (" << Dec << nBytes << Hex << " bytes)");
+        return ret;
+    }
 #else
     assert(ret != 0);
+#endif
+
+    // Shove some data on the front that we'll use later
+    AllocHeader *head = reinterpret_cast<AllocHeader *>(ret);
+    AllocFooter *foot = reinterpret_cast<AllocFooter *>(ret+nBytes-sizeof(AllocFooter));
+    ret += sizeof(AllocHeader);
+
+    // Set up the header
+    head->cache = &m_Caches[lg2];
+#if OVERRUN_CHECK
+    head->magic = VIGILANT_MAGIC;
+    foot->magic = VIGILANT_MAGIC;
+
+#if BOCHS_MAGIC_WATCHPOINTS
+    /// \todo head->catcher should be used for underrun checking
+    // asm volatile("xchg %%cx,%%cx" :: "a" (&head->catcher));
+    asm volatile("xchg %%cx,%%cx" :: "a" (&foot->catcher));
+#endif
+#if VIGILANT_OVERRUN_CHECK
+    if (Processor::m_Initialised == 2)
+    {
+        Backtrace bt;
+        bt.performBpBacktrace(0, 0);
+        MemoryCopy(&head->backtrace, bt.m_pReturnAddresses, NUM_SLAM_BT_FRAMES*sizeof(uintptr_t));
+        head->requested = nBytes;
+        g_SlamCommand.addAllocation(head->backtrace, head->requested);
+    }
+#endif
 #endif
 
 #ifdef MEMORY_TRACING
@@ -984,7 +1050,13 @@ size_t SlamAllocator::allocSize(uintptr_t mem)
 
     // If the cache is null, then the pointer is corrupted.
     assert(head->cache != 0);
-    return head->cache->objectSize();
+    size_t result = head->cache->objectSize();
+
+    // Remove size of header/footer.
+    // This is important as we're returning the size of each object itself,
+    // but we return memory framed by headers and footers. So, the "true" size
+    // of memory pointed to by 'mem' is not the true object size.
+    return result - (sizeof(AllocHeader) + sizeof(AllocFooter));
 }
 
 void SlamAllocator::free(uintptr_t mem)
@@ -994,8 +1066,10 @@ void SlamAllocator::free(uintptr_t mem)
 #endif
     
     // If we're not initialised, fix that
-    if(!m_bInitialised)
+    if(UNLIKELY(!m_bInitialised))
         initialise();
+    if(UNLIKELY(!mem))
+        return;
 
 #if CRIPPLINGLY_VIGILANT
     if (m_bVigilant)
@@ -1004,8 +1078,10 @@ void SlamAllocator::free(uintptr_t mem)
 #endif
 
     // Ensure this pointer is even on the heap...
+#ifndef BENCHMARK
     if(!Processor::information().getVirtualAddressSpace().memIsInHeap(reinterpret_cast<void*>(mem)))
         FATAL_NOLOCK("SlamAllocator::free - given pointer '" << mem << "' was completely invalid.");
+#endif
 
     // Grab the header
     AllocHeader *head = reinterpret_cast<AllocHeader *>(mem - sizeof(AllocHeader));
@@ -1027,7 +1103,9 @@ void SlamAllocator::free(uintptr_t mem)
 #endif
 
     // Free the memory
-    head->cache->free(mem - sizeof(AllocHeader));
+    SlamCache *pCache = head->cache;
+    head->cache = 0;  // Wipe out the cache - freed page.
+    pCache->free(mem - sizeof(AllocHeader));
 
 #ifdef MEMORY_TRACING
    traceAllocation(reinterpret_cast<void *>(mem), MemoryTracing::Free, 0);
@@ -1041,15 +1119,17 @@ bool SlamAllocator::isPointerValid(uintptr_t mem)
 #endif
 
     // If we're not initialised, fix that
-    if(!m_bInitialised)
+    if(UNLIKELY(!m_bInitialised))
         initialise();
 
     // 0 is fine to free.
     if (!mem) return true;
 
     // On the heap?
+#ifndef BENCHMARK
     if(!Processor::information().getVirtualAddressSpace().memIsInHeap(reinterpret_cast<void*>(mem)))
         return false;
+#endif
 
 #if CRIPPLINGLY_VIGILANT
     if (m_bVigilant)

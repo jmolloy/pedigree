@@ -20,7 +20,9 @@
 #ifndef KERNEL_LOG_H
 #define KERNEL_LOG_H
 
+#ifdef THREADS
 #include <Spinlock.h>
+#endif
 #include <processor/types.h>
 #include <utilities/String.h>
 #include <utilities/Vector.h>
@@ -32,6 +34,14 @@
 
 #define SHOW_FILE_IN_LOGS 0
 
+#ifdef THREADS
+#define LOG_LOCK_ACQUIRE Log::instance().m_Lock.acquire()
+#define LOG_LOCK_RELEASE Log::instance().m_Lock.release()
+#else
+#define LOG_LOCK_ACQUIRE do { } while(0)
+#define LOG_LOCK_RELEASE do { } while(0)
+#endif
+
 #if SHOW_FILE_IN_LOGS
 #define FILE_LOG(level) \
   do \
@@ -42,118 +52,62 @@
 #define FILE_LOG(level)
 #endif
 
-/** Add a debug item to the log */
-#ifdef DEBUG_LOGGING
-#define DEBUG_LOG(text) \
+#define LOG_AT_LEVEL(level, text, lock) \
   do \
   { \
-    Log::instance().m_Lock.acquire(); \
-    FILE_LOG(Log::Debug); \
-    Log::instance() << Log::Debug << text << Flush; \
-    Log::instance().m_Lock.release(); \
+    if (lock) \
+      LOG_LOCK_ACQUIRE; \
+    FILE_LOG(level); \
+    Log::instance() << level << text << Flush; \
+    if (lock) \
+      LOG_LOCK_RELEASE; \
   } \
   while (0)
 
-#define DEBUG_LOG_NOLOCK(text) \
-  do \
-  { \
-    FILE_LOG(Log::Debug); \
-    Log::instance() << Log::Debug << text << Flush; \
-  } \
-  while (0)
+#ifndef NO_LOGGING
+
+/** Add a debug item to the log */
+#ifdef DEBUG_LOGGING
+#define DEBUG_LOG(text) LOG_AT_LEVEL(Log::Debug, text, 1)
+#define DEBUG_LOG_NOLOCK(text) LOG_AT_LEVEL(Log::Debug, text, 0)
 #else
 #define DEBUG_LOG(text)
 #define DEBUG_LOG_NOLOCK(text)
 #endif
 
 /** Add a notice to the log */
-#define NOTICE(text) \
-  do \
-  { \
-    Log::instance().m_Lock.acquire(); \
-    FILE_LOG(Log::Notice); \
-    Log::instance() << Log::Notice << text << Flush; \
-    Log::instance().m_Lock.release(); \
-  } \
-  while (0)
-
-/// \note You use this in the wrong way, you die.
-#define NOTICE_NOLOCK(text) \
-  do \
-  { \
-    FILE_LOG(Log::Notice); \
-    Log::instance() << Log::Notice << text << Flush; \
-  } \
-  while (0)
+#define NOTICE(text) LOG_AT_LEVEL(Log::Notice, text, 1)
+#define NOTICE_NOLOCK(text) LOG_AT_LEVEL(Log::Notice, text, 0)
 
 /** Add a warning message to the log */
-#define WARNING(text) \
-  do \
-  { \
-    Log::instance().m_Lock.acquire(); \
-    FILE_LOG(Log::Warning); \
-    Log::instance() << Log::Warning << text << Flush; \
-    Log::instance().m_Lock.release(); \
-  } \
-  while (0)
-
-/// \note You use this in the wrong way, you die.
-#define WARNING_NOLOCK(text) \
-  do \
-  { \
-    FILE_LOG(Log::Warning); \
-    Log::instance() << Log::Warning << text << Flush; \
-  } \
-  while (0)
+#define WARNING(text) LOG_AT_LEVEL(Log::Warning, text, 1)
+#define WARNING_NOLOCK(text) LOG_AT_LEVEL(Log::Warning, text, 0)
 
 /** Add a error message to the log */
-#define ERROR(text) \
-  do \
-  { \
-    Log::instance().m_Lock.acquire(); \
-    FILE_LOG(Log::Error); \
-    Log::instance() << Log::Error << text << Flush; \
-    Log::instance().m_Lock.release(); \
-  } \
-  while (0)
-
-/// \note You use this in the wrong way, you die.
-#define ERROR_NOLOCK(text) \
-  do \
-  { \
-    FILE_LOG(Log::Error); \
-    Log::instance() << Log::Error << text << Flush; \
-  } \
-  while (0)
-
+#define ERROR(text) LOG_AT_LEVEL(Log::Error, text, 1)
+#define ERROR_NOLOCK(text) LOG_AT_LEVEL(Log::Error, text, 0)
 
 /** Add a fatal message to the log
- *  The panic is just in case the debugger isn't active, or the user returns
- *  from the debugger.
+ *  Breaks into debugger and panics if the debugger isn't around, or the user
+ *  exits it.
  */
-#define FATAL(text) \
-  do \
-  { \
-    Log::instance().m_Lock.acquire(); \
-    FILE_LOG(Log::Fatal); \
-    Log::instance() << Log::Fatal << text << Flush; \
-    const char *panicstr = static_cast<const char*>(Log::instance().getLatestEntry().str); \
-    Log::instance().m_Lock.release(); \
-    Processor::breakpoint(); \
-    panic(panicstr); \
-  } \
-  while (0)
+#define FATAL(text) do { LOG_AT_LEVEL(Log::Fatal, text, 1); while(1); } while(0)
+#define FATAL_NOLOCK(text) do { LOG_AT_LEVEL(Log::Fatal, text, 0); while(1); } while(0)
 
-/// \note You use this in the wrong way, you die.
-#define FATAL_NOLOCK(text) \
-  do \
-  { \
-    FILE_LOG(Log::Fatal); \
-    Log::instance() << Log::Fatal << text << Flush; \
-    Processor::breakpoint(); \
-    panic(static_cast<const char*>(Log::instance().getLatestEntry().str)); \
-  } \
-  while (0)
+#else  // NO_LOGGING
+
+#define DEBUG_LOG(text)
+#define DEBUG_LOG_NOLOCK(text)
+#define NOTICE(text)
+#define NOTICE_NOLOCK(text)
+#define WARNING(text)
+#define WARNING_NOLOCK(text)
+#define ERROR(text)
+#define ERROR_NOLOCK(text)
+#define FATAL(text)
+#define FATAL_NOLOCK(text)
+
+#endif
 
 /** The maximum length of an individual static log entry. */
 #define LOG_LENGTH  128
@@ -192,6 +146,8 @@ extern size_t g_BootProgressCurrent;
 extern size_t g_BootProgressTotal;
 extern BootProgressUpdateFn g_BootProgressUpdate;
 
+extern void installSerialLogger();
+
 /** Implements a kernel log that can be used to debug problems.
  *\brief the kernel's log
  *\note You should use the NOTICE, WARNING, ERROR and FATAL macros to write something
@@ -206,10 +162,7 @@ public:
   {
     public:
       virtual void callback(const char *) = 0;
-
-      virtual ~LogCallback() // Virtual destructor for inheritance
-      {
-      }
+      virtual ~LogCallback();
   };
 
   /** Severity level of the log entry */
@@ -224,7 +177,9 @@ public:
 
   /** The lock
    *\note this should only be acquired by the NOTICE, WARNING, ERROR and FATAL macros */
+#ifdef THREADS
   Spinlock m_Lock;
+#endif
 
   /** Retrieves the static Log instance.
    *\return instance of the log class */
@@ -254,6 +209,11 @@ public:
   /** Adds an entry to the log
    *\param[in] b boolean value */
   Log &operator<< (bool b);
+  /** Adds an entry to the log
+   *\param[in] p pointer value */
+  template<class T>
+  Log &operator<< (T *p)
+    {return (*this) << (reinterpret_cast<uintptr_t>(p));}
   /** Adds an entry to the log (integer type)
    *\param[in] n the number */
   template<class T>

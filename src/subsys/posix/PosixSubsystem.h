@@ -184,7 +184,8 @@ class PosixSubsystem : public Subsystem
         PosixSubsystem() :
             Subsystem(Posix), m_SignalHandlers(), m_SignalHandlersLock(),
             m_FdMap(), m_NextFd(0), m_FdLock(), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
-            m_AltSigStack(), m_SyncObjects(), m_Threads()
+            m_AltSigStack(), m_SyncObjects(), m_Threads(), m_ThreadWaiters(),
+            m_NextThreadWaiter(0)
         {}
 
         /** Copy constructor */
@@ -194,7 +195,8 @@ class PosixSubsystem : public Subsystem
         PosixSubsystem(SubsystemType type) :
             Subsystem(type), m_SignalHandlers(), m_SignalHandlersLock(),
             m_FdMap(), m_NextFd(0), m_FdLock(), m_FdBitmap(), m_LastFd(0), m_FreeCount(1),
-            m_AltSigStack(), m_SyncObjects(), m_Threads()
+            m_AltSigStack(), m_SyncObjects(), m_Threads(), m_ThreadWaiters(),
+            m_NextThreadWaiter(0)
         {}
 
         /** Default destructor */
@@ -230,11 +232,7 @@ class PosixSubsystem : public Subsystem
         {
             /// Default constructor
             AlternateSignalStack() : base(0), size(0), inUse(false), enabled(false)
-            {};
-
-            /// Default destructor
-            virtual ~AlternateSignalStack()
-            {};
+            {}
 
             /// The location of this stack
             uintptr_t base;
@@ -280,6 +278,11 @@ class PosixSubsystem : public Subsystem
 
             SignalHandler &operator = (const SignalHandler &s)
             {
+                if (this == &s)
+                {
+                    return *this;
+                }
+
                 if(pEvent)
                 {
                     delete pEvent;
@@ -316,12 +319,12 @@ class PosixSubsystem : public Subsystem
         SignalHandler* getSignalHandler(size_t sig)
         {
             while(!m_SignalHandlersLock.enter());
-            SignalHandler *ret = reinterpret_cast<SignalHandler*>(m_SignalHandlers.lookup(sig % 32));
+            SignalHandler *ret = m_SignalHandlers.lookup(sig % 32);
             m_SignalHandlersLock.leave();
             return ret;
         }
 
-        void exit(int code);
+        void exit(int code) NORETURN;
 
         /** Copies file descriptors from another subsystem */
         bool copyDescriptors(PosixSubsystem *pSubsystem);
@@ -374,8 +377,8 @@ class PosixSubsystem : public Subsystem
         class PosixSyncObject
         {
             public:
-                PosixSyncObject() : pObject(0), isMutex(false) {};
-                virtual ~PosixSyncObject() {};
+                PosixSyncObject() : pObject(0), isMutex(false) {}
+                virtual ~PosixSyncObject() {}
 
                 void *pObject;
                 bool isMutex;
@@ -432,8 +435,8 @@ class PosixSubsystem : public Subsystem
                 PosixThread() : pThread(0), isRunning(true), returnValue(0), canReclaim(false),
                                 isDetached(false), m_ThreadData(), m_ThreadKeys(), lastDataKey(0),
                                 nextDataKey(0)
-                {};
-                virtual ~PosixThread() {};
+                {}
+                virtual ~PosixThread() {}
 
                 Thread *pThread;
                 Mutex isRunning;
@@ -455,7 +458,7 @@ class PosixSubsystem : public Subsystem
                 }
 
                 /**
-                 * Removes thread-specific data given a key (does *not* call the
+                 * Removes thread-specific data given a key (does *not* call
                  * the destructor, or delete the storage.)
                  */
                 void removeThreadData(size_t key)
@@ -507,7 +510,31 @@ class PosixSubsystem : public Subsystem
             m_Threads.remove(n); /// \todo It might be safe to delete the pointer... We'll see.
         }
 
+        /** Gets a thread waiter object given a descriptor */
+        Semaphore *getThreadWaiter(void *n)
+        {
+            return m_ThreadWaiters.lookup(n);
+        }
+
+        /** Inserts a thread waiter object, returns a descriptor */
+        void *insertThreadWaiter(Semaphore *waiter)
+        {
+            void *descriptor = reinterpret_cast<void *>(m_NextThreadWaiter++);
+            Semaphore *t = m_ThreadWaiters.lookup(descriptor);
+            if(t)
+                m_ThreadWaiters.remove(descriptor);
+            m_ThreadWaiters.insert(descriptor, waiter);
+            return descriptor;
+        }
+
+        /** Removes a thread waiter object given a descriptor */
+        void removeThreadWaiter(void *n)
+        {
+            m_ThreadWaiters.remove(n);
+        }
+
     private:
+        virtual void threadRemoved(Thread *pThread);
 
         /** Signal handlers */
         Tree<size_t, SignalHandler*> m_SignalHandlers;
@@ -549,9 +576,14 @@ class PosixSubsystem : public Subsystem
          */
         Tree<size_t, PosixSyncObject*> m_SyncObjects;
         /**
-         * Links some file descriptors to Threads.
+         * Links some thread handles to Threads.
          */
         Tree<size_t, PosixThread*> m_Threads;
+        /**
+         * Links waiter objects to Semaphores.
+         */
+        Tree<void *, Semaphore *> m_ThreadWaiters;
+        size_t m_NextThreadWaiter;
 };
 
 #endif

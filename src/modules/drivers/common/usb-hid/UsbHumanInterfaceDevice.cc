@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -91,8 +90,8 @@ void UsbHumanInterfaceDevice::initialiseDriver()
     // Allocate the input report buffers and zero them
     m_pInReportBuffer = new uint8_t[m_pInEndpoint->nMaxPacketSize];
     m_pOldInReportBuffer = new uint8_t[m_pInEndpoint->nMaxPacketSize];
-    memset(m_pInReportBuffer, 0, m_pInEndpoint->nMaxPacketSize);
-    memset(m_pOldInReportBuffer, 0, m_pInEndpoint->nMaxPacketSize);
+    ByteSet(m_pInReportBuffer, 0, m_pInEndpoint->nMaxPacketSize);
+    ByteSet(m_pOldInReportBuffer, 0, m_pInEndpoint->nMaxPacketSize);
 
     // Add the input handler
     addInterruptInHandler(m_pInEndpoint, reinterpret_cast<uintptr_t>(m_pInReportBuffer), m_pInEndpoint->nMaxPacketSize, callback, reinterpret_cast<uintptr_t>(this));

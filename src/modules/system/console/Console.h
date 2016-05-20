@@ -107,7 +107,7 @@ class ConsoleFile : public File
         /// Grabs the current array of control characters.
         void getControlCharacters(char *out)
         {
-            memcpy(out, m_ControlChars, MAX_CONTROL_CHAR);
+            MemoryCopy(out, m_ControlChars, MAX_CONTROL_CHAR);
         }
 
         virtual size_t getBlockSize() const
@@ -294,8 +294,6 @@ public:
     //
     // ConsoleManager interface.
     //
-    bool registerConsole(String consoleName, RequestQueue *backEnd, uintptr_t param);
-
     File* getConsole(String consoleName);
     ConsoleFile *getConsoleFile(RequestQueue *pBackend);
 

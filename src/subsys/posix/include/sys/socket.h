@@ -1,3 +1,22 @@
+/*
+ * Copyright (c) 2008-2014, Pedigree Developers
+ *
+ * Please see the CONTRIB file in the root of the source tree for a full
+ * list of contributors.
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
 #ifndef	_SYS_SOCKET_H
 #define	_SYS_SOCKET_H
 
@@ -44,6 +63,12 @@ struct cmsghdr
   int           cmsg_type;
 };
 
+/// \todo implement these
+#define CMSG_SPACE(a)      0
+#define CMSG_DATA(a)       0
+#define CMSG_FIRSTHDR(a)   0
+#define CMSG_NXTHDR(a, b)  0
+
 struct linger
 {
   int l_onoff;
@@ -87,17 +112,17 @@ struct linger
 #define MSG_TRUNC     32
 #define MSG_WAITALL   64
 
-#define PF_INET   0
-#define PF_INET6  1
-#define PF_UNIX   2
-#define PF_SOCKET 3
-#define PF_MAX    3
+#define PF_INET   1
+#define PF_INET6  2
+#define PF_UNIX   3
+#define PF_SOCKET 4
+#define PF_MAX    5
 #define PF_UNSPEC (PF_MAX+1)
 
 #define AF_INET   (PF_INET)
 #define AF_INET6  (PF_INET6)
 #define AF_UNIX   (PF_UNIX)
-#define AF_UNSPEC (PF_MAX+1)
+#define AF_UNSPEC (PF_UNSPEC)
 
 #define  SHUT_RD 0 /** Disables receiving */
 #define  SHUT_WR 1 /** Disables sending */

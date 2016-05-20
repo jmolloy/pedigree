@@ -31,6 +31,12 @@ appoutputdir    = env["PEDIGREE_BUILD_APPS"]
 imagesdir       = env["PEDIGREE_IMAGES_DIR"]
 builddir        = env["PEDIGREE_BUILD_BASE"]
 
+EXTERNAL_LIBRARY_DIR = '#images/local/libraries'
+EXTERNAL_INCLUDE_DIR = '#images/local/include'
+if env['ON_PEDIGREE']:
+    EXTERNAL_LIBRARY_DIR = '/libraries'
+    EXTERNAL_INCLUDE_DIR = '/include'
+
 # Libraries to compile
 libs = [
     'libui',
@@ -45,26 +51,32 @@ lib_deps = {
     'libui': ['pedigree'],
 }
 
+# Default include paths
+base_include_dirs = [
+    EXTERNAL_INCLUDE_DIR,
+]
+
 env_clone['CFLAGS'] = buildutils.userspace.fixFlags(env, env['CFLAGS'])
 env_clone['CCFLAGS'] = buildutils.userspace.fixFlags(env, env['CCFLAGS'])
 env_clone['CXXFLAGS'] = buildutils.userspace.fixFlags(env, env['CXXFLAGS'])
 env_clone['CPPDEFINES'] += ['PEDIGREE', '__PEDIGREE__']
 env_clone['LIBS'] = []
 env_clone['LIBPATH'] = [builddir]
-env_clone['CPPPATH'] = []
+env_clone['CPPPATH'] = base_include_dirs
 
 for library in libs:
     library_env = env_clone.Clone()
     
     # Determine the subsystem and include directories for this library
-    incpath = []
+    incpath = base_include_dirs[:]
     s = subsys[library]
     if s == 'native':
-        cpp_base = '#/images/local/support/gcc/include/c++/%s' % (env['CCVERSION'],)
-        incpath += ['#/src/subsys/native/include',
-                    cpp_base,
-                    '%s/%s' % (cpp_base, env['COMPILER_TARGET']),
-                    ]
+        if not env['ON_PEDIGREE']:
+            cpp_base = '#images/local/support/gcc/include/c++/%s' % env['CCVERSION']
+            incpath += [
+                cpp_base,
+                '%s/%s' % (cpp_base, env['COMPILER_TARGET']),
+            ]
     else:
         print "** Library with subsys '%s' is not buildable - fix src/user/libraries/SConscript!" % (s)
 
@@ -75,7 +87,7 @@ for library in libs:
     if(os.path.exists(custom_include_dir)):
         incpath.append(custom_include_dir)
 
-    library_env['CPPPATH'] = incpath
+    library_env['CPPPATH'] += incpath
     library_env['LIBS'] = lib_deps.get(library, [])
 
     output = os.path.join(builddir, 'libs', '%s.a' % library)
@@ -92,3 +104,6 @@ for library in libs:
     # XXX: We have an unfortunate dependency on libc.
     libc_objname = os.path.join(builddir, 'libc.so')
     env.Depends(shoutput, libc_objname)
+
+    env.Depends(output, "headers")
+    env.Depends(shoutput, "headers")

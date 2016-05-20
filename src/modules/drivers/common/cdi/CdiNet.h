@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -38,17 +37,17 @@
 class CdiNet : public Network
 {
     public:
+        CdiNet(struct cdi_net_device* device);
         CdiNet(Network* pDev, struct cdi_net_device* device);
         ~CdiNet();
 
         virtual void getName(String &str)
         {
-            // TODO Get the name from the CDI driver
-            if(!m_Device)
+            if((!m_Device) || (!m_Device->dev.name))
                 str = "cdi-net";
             else
             {
-                str = String(m_Device->dev.name);
+                str = m_Device->dev.name;
             }
         }
 
@@ -56,6 +55,11 @@ class CdiNet : public Network
 
         virtual bool setStationInfo(StationInfo info);
         virtual StationInfo getStationInfo();
+
+        const struct cdi_net_device *getCdiDevice() const
+        {
+            return m_Device;
+        }
 
     private:
         CdiNet(const CdiNet&);

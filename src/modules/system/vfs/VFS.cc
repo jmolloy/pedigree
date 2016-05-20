@@ -19,8 +19,13 @@
 
 #include "VFS.h"
 #include <Log.h>
-#include <Module.h>
 #include <utilities/utility.h>
+
+#ifndef VFS_STANDALONE
+#include <Module.h>
+#endif
+
+#include <ramfs/RamFs.h>
 
 /// \todo Figure out a way to clean up files after deletion. Directory::remove()
 ///       is not the right place to do this. There needs to be a way to add a
@@ -41,6 +46,25 @@ VFS::VFS() :
 
 VFS::~VFS()
 {
+    // Wipe out probe callbacks we know about.
+    for (auto it = m_ProbeCallbacks.begin(); it != m_ProbeCallbacks.end(); ++it)
+    {
+        delete *it;
+    }
+
+    // Unmount aliases.
+    for (auto it = m_Mounts.begin(); it != m_Mounts.end(); ++it)
+    {
+        auto fs = it.key();
+        auto aliases = it.value();
+        for (auto it2 = aliases->begin(); it2 != aliases->end(); ++it2)
+        {
+            delete *it2;
+        }
+
+        delete aliases;
+        delete fs;
+    }
 }
 
 bool VFS::mount(Disk *pDisk, String &alias)
@@ -53,7 +77,7 @@ bool VFS::mount(Disk *pDisk, String &alias)
         Filesystem *pFs = cb(pDisk);
         if (pFs)
         {
-            if (strlen(alias) == 0)
+            if (alias.length() == 0)
             {
                 alias = pFs->getVolumeLabel();
             }
@@ -65,11 +89,11 @@ bool VFS::mount(Disk *pDisk, String &alias)
             
             m_Mounts.lookup(pFs)->pushBack(new String(alias));
 
-            for (List<MountCallback*>::Iterator it = m_MountCallbacks.begin();
-                 it != m_MountCallbacks.end();
-                 it++)
+            for (List<MountCallback*>::Iterator it2 = m_MountCallbacks.begin();
+                 it2 != m_MountCallbacks.end();
+                 it2++)
             {
-                MountCallback mc = *(*it);
+                MountCallback mc = *(*it2);
                 mc();
             }
 
@@ -126,8 +150,6 @@ String VFS::getUniqueAlias(String alias)
             return s;
         index--;
     }
-
-    return String();
 }
 
 
@@ -375,8 +397,23 @@ bool VFS::remove(String path, File *pStartNode)
     }
 }
 
+#ifndef VFS_STANDALONE
 static bool initVFS()
 {
+    // Mount scratch filesystem (ie, pure ram filesystem, for POSIX /tmp etc)
+    RamFs *pRamFs = new RamFs;
+    pRamFs->initialise(0);
+    VFS::instance().addAlias(pRamFs, String("scratch"));
+
+    // Mount runtime filesystem.
+    // The runtime filesystem assigns a Process ownership to each file, only
+    // that process can modify/remove it. If the Process terminates without
+    // removing the file, the file is not removed.
+    RamFs *pRuntimeFs = new RamFs;
+    pRuntimeFs->initialise(0);
+    pRuntimeFs->setProcessOwnership(true);
+    VFS::instance().addAlias(pRuntimeFs, String("runtime"));
+
     return true;
 }
 
@@ -384,4 +421,5 @@ static void destroyVFS()
 {
 }
 
-MODULE_INFO("vfs", &initVFS, &destroyVFS);
+MODULE_INFO("vfs", &initVFS, &destroyVFS, "ramfs");
+#endif

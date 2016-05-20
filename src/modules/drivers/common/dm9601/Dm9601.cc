@@ -24,12 +24,11 @@
 #include <processor/Processor.h>
 #include <usb/UsbHub.h>
 #include <usb/UsbConstants.h>
+#include <time/Time.h>
 
 #include <LockGuard.h>
 
 #include <machine/Network.h>
-
-#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
 Dm9601::Dm9601(UsbDevice *pDev) :
             UsbDevice(pDev), ::Network(), m_pInEndpoint(0), m_pOutEndpoint(0),
@@ -68,10 +67,9 @@ void Dm9601::initialiseDriver()
         return;
     }
 
-    uint8_t *pMac = new uint8_t[6];
-    *reinterpret_cast<uint16_t*>(&pMac[0]) = readEeprom(0);
-    *reinterpret_cast<uint16_t*>(&pMac[2]) = readEeprom(1);
-    *reinterpret_cast<uint16_t*>(&pMac[4]) = readEeprom(2);
+    uint16_t *pMac = new uint16_t[3];
+    for (size_t i = 0; i < 3; ++i)
+        pMac[i] = readEeprom(i);
     m_StationInfo.mac.setMac(pMac, false);
 
     NOTICE("DM9601: MAC " << pMac[0] << ":" << pMac[1] << ":" << pMac[2] << ":" <<
@@ -79,7 +77,7 @@ void Dm9601::initialiseDriver()
 
     // Reset the chip
     writeRegister(NetworkControl, 1);
-    delay(100);
+    Time::delay(100 * Time::Multiplier::MILLISECOND);
 
     // Select internal MII
     writeRegister(NetworkControl, 0);
@@ -120,7 +118,7 @@ void Dm9601::initialiseDriver()
     while(!*p)
     {
         readRegister(NetworkStatus, reinterpret_cast<uintptr_t>(p), 1);
-        delay(100);
+        Time::delay(100 * Time::Multiplier::MILLISECOND);
     }
 
     Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(), trampoline, this);
@@ -137,14 +135,12 @@ int Dm9601::recvTrampoline(void *p)
 {
     Dm9601 *pDm9601 = reinterpret_cast<Dm9601*>(p);
     pDm9601->receiveLoop();
-    return 0;
 }
 
 int Dm9601::trampoline(void *p)
 {
     Dm9601 *pDm9601 = reinterpret_cast<Dm9601*>(p);
     pDm9601->receiveThread();
-    return 0;
 }
 
 void Dm9601::receiveThread()
@@ -159,9 +155,10 @@ void Dm9601::receiveThread()
 
         NetworkStack::instance().receive(pPacket->len, pPacket->buffer + pPacket->offset, this, 0);
 
+        uintptr_t buffer = pPacket->buffer;
         delete pPacket;
 
-        NetworkStack::instance().getMemPool().free(pPacket->buffer);
+        NetworkStack::instance().getMemPool().free(buffer);
     }
 }
 
@@ -180,7 +177,7 @@ bool Dm9601::send(size_t nBytes, uintptr_t buffer)
     readRegister(NetworkStatus, reinterpret_cast<uintptr_t>(p), 1);
     while(*p & (1 << 4))
     {
-        delay(100);
+        Time::delay(100 * Time::Multiplier::MILLISECOND);
         readRegister(NetworkStatus, reinterpret_cast<uintptr_t>(p), 1);
     }
 
@@ -189,7 +186,7 @@ bool Dm9601::send(size_t nBytes, uintptr_t buffer)
     if(nBytes < 64)
     {
         padBytes = nBytes % 64;
-        memset(reinterpret_cast<void*>(buffer + nBytes), 0, padBytes);
+        ByteSet(reinterpret_cast<void*>(buffer + nBytes), 0, padBytes);
 
         nBytes = 64;
     }
@@ -200,9 +197,9 @@ bool Dm9601::send(size_t nBytes, uintptr_t buffer)
         txSize++;
 
     // Transmit endpoint
-    uint8_t *pBuffer = new uint8_t[txSize];
-    *reinterpret_cast<uint16_t*>(pBuffer) = HOST_TO_LITTLE16(static_cast<uint16_t>(nBytes));
-    memcpy(&pBuffer[2], reinterpret_cast<void*>(buffer), nBytes);
+    uint16_t *pBuffer = new uint16_t[(txSize / sizeof(uint16_t)) + 1];
+    *pBuffer = HOST_TO_LITTLE16(static_cast<uint16_t>(nBytes));
+    MemoryCopy(&pBuffer[1], reinterpret_cast<void*>(buffer), nBytes);
 
     ssize_t ret = syncOut(m_pOutEndpoint, reinterpret_cast<uintptr_t>(pBuffer), txSize);
     delete [] pBuffer;
@@ -234,7 +231,7 @@ void Dm9601::doReceive()
 
     uint8_t *pBuffer = reinterpret_cast<uint8_t*>(buff);
     uint8_t rxstatus = pBuffer[0];
-    uint16_t len = LITTLE_TO_HOST16(*reinterpret_cast<uint16_t*>(&pBuffer[1])) - 4;
+    uint16_t len = LITTLE_TO_HOST16(*reinterpret_cast<uint16_t*>(buff + 1)) - 4;
 
     if(rxstatus & 0x3F)
     {
@@ -329,7 +326,7 @@ uint16_t Dm9601::readEeprom(uint8_t offset)
     uint16_t *ret = new uint16_t;
     writeRegister(PhyAddress, offset);
     writeRegister(PhyControl, 0x4); // Read from EEPROM
-    delay(100);
+    Time::delay(100 * Time::Multiplier::MILLISECOND);
     writeRegister(PhyControl, 0); // Stop the transfer
     readRegister(PhyLowByte, reinterpret_cast<uintptr_t>(ret), 2);
 
@@ -347,7 +344,7 @@ void Dm9601::writeEeprom(uint8_t offset, uint16_t data)
     writeRegister(PhyAddress, offset);
     writeRegister(PhyLowByte, reinterpret_cast<uintptr_t>(input), 2);
     writeRegister(PhyControl, 0x12); // Write to EEPROM
-    delay(100);
+    Time::delay(100 * Time::Multiplier::MILLISECOND);
     writeRegister(PhyControl, 0);
 
     delete input;
@@ -359,7 +356,7 @@ uint16_t Dm9601::readMii(uint8_t offset)
     uint16_t *ret = new uint16_t;
     writeRegister(PhyAddress, offset | 0x40); // External MII starts at 0x40
     writeRegister(PhyControl, 0xc); // Read from PHY
-    delay(100);
+    Time::delay(100 * Time::Multiplier::MILLISECOND);
     writeRegister(PhyControl, 0); // Stop the transfer
     readRegister(PhyLowByte, reinterpret_cast<uintptr_t>(ret), 2);
 
@@ -377,9 +374,8 @@ void Dm9601::writeMii(uint8_t offset, uint16_t data)
     writeRegister(PhyAddress, offset | 0x40);
     writeRegister(PhyLowByte, reinterpret_cast<uintptr_t>(input), 2);
     writeRegister(PhyControl, 0xa); // Transfer to PHY
-    delay(100);
+    Time::delay(100 * Time::Multiplier::MILLISECOND);
     writeRegister(PhyControl, 0);
 
     delete input;
 }
-

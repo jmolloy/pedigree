@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -25,6 +24,8 @@
 #include <utilities/Vector.h>
 #include <processor/types.h>
 #include <machine/Network.h>
+#include <errors.h>
+
 class Socket;
 
 // Forward declaration, because Endpoint is used by ProtocolManager
@@ -70,17 +71,17 @@ public:
     /** Constructors and destructors */
     Endpoint() :
             m_Sockets(), m_LocalPort(0), m_RemotePort(0), m_LocalIp(), m_RemoteIp(),
-            m_Manager(0), m_bConnection(false)
-    {};
+            m_Manager(0), m_Error(Error::NoError), m_bConnection(false)
+    {}
     Endpoint(uint16_t local, uint16_t remote) :
             m_Sockets(), m_LocalPort(local), m_RemotePort(remote), m_LocalIp(), m_RemoteIp(),
-            m_Manager(0), m_bConnection(false)
-    {};
+            m_Manager(0), m_Error(Error::NoError), m_bConnection(false)
+    {}
     Endpoint(IpAddress remoteIp, uint16_t local = 0, uint16_t remote = 0) :
             m_Sockets(), m_LocalPort(local), m_RemotePort(remote), m_LocalIp(), m_RemoteIp(remoteIp),
-            m_Manager(0), m_bConnection(false)
-    {};
-    virtual ~Endpoint() {};
+            m_Manager(0), m_Error(Error::NoError), m_bConnection(false)
+    {}
+    virtual ~Endpoint() {}
 
     /** Endpoint type (implemented by the concrete child classes) */
     virtual EndpointType getType() = 0;
@@ -128,7 +129,7 @@ public:
     {
         RemoteEndpoint() :
                 ip(), remotePort(0)
-        {};
+        {}
 
         /// IpAddress will handle IPv6 and IPv4
         IpAddress ip;
@@ -141,7 +142,7 @@ public:
     virtual bool dataReady(bool block = false, uint32_t timeout = 30)
     {
         return false;
-    };
+    }
 
     /** <Protocol>Manager functionality */
     virtual size_t depositPayload(size_t nBytes, uintptr_t payload, RemoteEndpoint remoteHost)
@@ -158,7 +159,7 @@ public:
      */
     virtual void setCard(Network* pCard)
     {
-    };
+    }
 
     /** Protocol management */
     ProtocolManager *getManager()
@@ -196,6 +197,24 @@ public:
         }
     }
 
+    /** Retrieves the most recent error for the endpoint, if any. */
+    Error::PosixError getError() const
+    {
+        return m_Error;
+    }
+
+    /** Resets the error status of the endpoint. */
+    void resetError()
+    {
+        m_Error = Error::NoError;
+    }
+
+    /** Report an error. */
+    void reportError(Error::PosixError e)
+    {
+        m_Error = e;
+    }
+
 protected:
 
     /** List of sockets linked to this Endpoint */
@@ -217,6 +236,9 @@ private:
 
     /** Protocol manager */
     ProtocolManager *m_Manager;
+
+    /** Error status of the endpoint. */
+    Error::PosixError m_Error;
 
 protected:
 

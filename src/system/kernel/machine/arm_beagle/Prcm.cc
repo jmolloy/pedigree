@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -295,9 +294,13 @@ void Prcm::WaitPllIdleStatus(size_t n, size_t clock, bool waitForOn)
     // When the bit transitions to one, the clock is locked
     /// \todo delays or something
     if(waitForOn)
+    {
         while(!(*clksel & bit));
+    }
     else
+    {
         while(*clksel & bit);
+    }
 }
 
 void Prcm::SelectClockPLL(size_t n, size_t value)

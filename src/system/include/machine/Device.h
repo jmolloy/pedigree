@@ -20,10 +20,15 @@
 #ifndef MACHINE_DEVICE_H
 #define MACHINE_DEVICE_H
 
+#include <compiler.h>
 #include <utilities/String.h>
 #include <utilities/Vector.h>
 #include <processor/types.h>
 #include <processor/IoBase.h>
+#ifdef THREADS
+#include <process/Mutex.h>
+#include <LockGuard.h>
+#endif
 #include <Log.h>
 #ifdef OPENFIRMWARE
 #include <machine/openfirmware/OpenFirmware.h>
@@ -36,6 +41,8 @@
 class Device
 {
 public:
+  typedef Device *(*Callback)(Device *);
+
   /** Every device has a type. This can be used to downcast to a more specific class
    * during runtime without RTTI. */
   enum Type
@@ -92,11 +99,34 @@ public:
   Device(Device *p);
   virtual ~Device();
 
-  /** Retrieves the root device */
-  static Device &root()
-  {
-    return m_Root;
-  }
+  /**
+   * Traverses the full device tree, calling the given callback for each item.
+   *
+   * This will take a lock if threading is enabled, such that any operations
+   * taking place on the device tree will block until iteration completes.
+   *
+   * To facilitate environments that may need to replace objects, the callback
+   * returns a Device pointer. If this pointer is null, the referenced Device
+   * is removed from the tree. If this pointer is different to the original,
+   * the original is replaced by the new pointer in the tree. Otherwise, if
+   * the pointer does not differ, no action is taken.
+   *
+   * This characteristic allows for a full traversal to be performed, editing
+   * the tree along the way, safely and without conflicting with other attempts
+   * to edit the tree.
+   *
+   * You, in almost every case, want this function if the Device you're editing
+   * is already linked into the Device tree.
+   *
+   * \todo add filters to avoid the need to filter in callbacks
+   * \todo add a way to end iteration early
+   */
+  static void foreach(Callback callback, Device *root = 0);
+  template <class F, class... Args>
+  static void foreach(pedigree_std::Callable<F> &callback, Device *root, Args... args);
+
+  /** Adds the given object to the root of the device tree, atomically. */
+  static void addToRoot(Device *device);
 
   /** Returns the device's parent */
   inline Device *getParent() const
@@ -229,15 +259,11 @@ public:
   void replaceChild(Device *src, Device *dest);
 
   /** Search functions */
-  void searchByVendorId(uint16_t vendorId, void (*callback)(Device*));
-
-  void searchByVendorIdAndDeviceId(uint16_t vendorId, uint16_t deviceId, void (*callback)(Device*));
-
-  void searchByClass(uint16_t classCode, void (*callback)(Device*));
-
-  void searchByClassAndSubclass(uint16_t classCode, uint16_t subclassCode, void (*callback)(Device*));
-
-  void searchByClassSubclassAndProgInterface(uint16_t classCode, uint16_t subclassCode, uint8_t progInterface, void (*callback)(Device*));
+  static void searchByVendorId(uint16_t vendorId, void (*callback)(Device*), Device *root = 0);
+  static void searchByVendorIdAndDeviceId(uint16_t vendorId, uint16_t deviceId, void (*callback)(Device*), Device *root = 0);
+  static void searchByClass(uint16_t classCode, void (*callback)(Device*), Device *root = 0);
+  static void searchByClassAndSubclass(uint16_t classCode, uint16_t subclassCode, void (*callback)(Device*), Device *root = 0);
+  static void searchByClassSubclassAndProgInterface(uint16_t classCode, uint16_t subclassCode, uint8_t progInterface, void (*callback)(Device*), Device *root = 0);
 
 #ifdef OPENFIRMWARE
   /** Gets the device's OpenFirmware handle. */
@@ -252,17 +278,32 @@ public:
   }
 #endif
 private:
-  /** Copy constructor.
-      \note NOT implemented. */
-  Device(const Device&);
-  /** Assignment operator.
-      \note NOT implemented. */
-  void operator=(const Device &);
+  /** Actual do-er for foreach (does not take lock). */
+  static void foreachInternal(Callback callback, Device *root);
+  template <class F, class... Args>
+  static void foreachInternal(pedigree_std::Callable<F> &callback, Device *root, Args... args);
+  /** Do-ers for search functions. */
+  static void searchByVendorIdInternal(uint16_t vendorId, void (*callback)(Device*), Device *root);
+  static void searchByVendorIdAndDeviceIdInternal(uint16_t vendorId, uint16_t deviceId, void (*callback)(Device*), Device *root);
+  static void searchByClassInternal(uint16_t classCode, void (*callback)(Device*), Device *root);
+  static void searchByClassAndSubclassInternal(uint16_t classCode, uint16_t subclassCode, void (*callback)(Device*), Device *root);
+  static void searchByClassSubclassAndProgInterfaceInternal(uint16_t classCode, uint16_t subclassCode, uint8_t progInterface, void (*callback)(Device*), Device *root);
 
   /** Destroys all IoBases in this class. Called from the constructor Device(Device*). */
   void removeIoMappings();
 
 protected:
+  NOT_COPYABLE_OR_ASSIGNABLE(Device);
+
+  /**
+   * Retrieves the root device.
+   * Still needs to be public for RawFs...
+   */
+  static Device &root()
+  {
+    return m_Root;
+  }
+
   /** The address of this device, in its parent's address space. */
   Vector<Address*> m_Addresses;
   /** The children of this device. */
@@ -296,6 +337,55 @@ protected:
   uint32_t m_PciDevicePos;
   /** PCI Function number */
   uint32_t m_PciFunctionNum;
+#ifdef THREADS
+  /** Lock to manage access to the device tree. */
+  static Mutex m_TreeLock;
+#endif
 };
+
+template <class F, class... Args>
+void Device::foreach(pedigree_std::Callable<F> &callback, Device *root, Args... args)
+{
+#ifdef THREADS
+  LockGuard<Mutex> guard(m_TreeLock);
+#endif
+
+  if (!root)
+  {
+    root = &Device::root();
+  }
+
+  foreachInternal(callback, root, args...);
+}
+
+template <class F, class... Args>
+void Device::foreachInternal(pedigree_std::Callable<F> &callback, Device *root, Args... args)
+{
+  for (size_t i = 0; i < root->getNumChildren();)
+  {
+    // Provide the callback for this child.
+    Device *child = root->getChild(i);
+    Device *result = callback(child, args...);
+    if (!result)
+    {
+      // Remove & skip traversal.
+      root->removeChild(i);
+      delete child;
+      continue;
+    }
+    else if (result != child)
+    {
+      // Replace, but we can still traverse the child.
+      root->replaceChild(child, result);
+      delete child;
+      child = result;
+    }
+
+    // Traverse this child's tree.
+    foreachInternal(callback, child);
+
+    ++i;
+  }
+}
 
 #endif

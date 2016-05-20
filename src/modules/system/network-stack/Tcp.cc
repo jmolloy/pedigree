@@ -119,13 +119,13 @@ bool Tcp::send(IpAddress dest, uint16_t srcPort, uint16_t destPort, uint32_t seq
   {
     // 1460 byte MSS
     unsigned char mss[4] = {0x02, 0x04, 0x05, 0xb4};
-    memcpy(reinterpret_cast<void*>(tcpPacket + payloadOffset), mss, sizeof mss);
+    MemoryCopy(reinterpret_cast<void*>(tcpPacket + payloadOffset), mss, sizeof mss);
     payloadOffset += 4;
   }
 
   // Inject the payload
   if(payload && nBytes)
-    memcpy(reinterpret_cast<void*>(tcpPacket + payloadOffset), reinterpret_cast<void*>(payload), nBytes);
+    MemoryCopy(reinterpret_cast<void*>(tcpPacket + payloadOffset), reinterpret_cast<void*>(payload), nBytes);
 
   header->checksum = 0;
   header->checksum = pIp->ipChecksum(src, dest, IP_TCP, tcpPacket, nBytes + payloadOffset);

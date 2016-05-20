@@ -216,6 +216,8 @@ class Elf
         * and RELA entries, so must be done specifically (via applySpecificRelocation). */
         bool load(uint8_t *pBuffer, size_t length, uintptr_t loadBase, SymbolTable *pSymtab=0, uintptr_t nStart=0, uintptr_t nEnd=~0);
 
+        /** Extracts only the entry point from an ELF file at the given buffer. */
+        static bool extractEntryPoint(uint8_t *pBuffer, size_t length, uintptr_t &entry);
 
         /** Returns a list of required libraries before this object will load. */
         List<char*> &neededLibraries();
@@ -404,6 +406,8 @@ class Elf
 
 #ifndef _NO_ELF_CLASS
     private:
+        template<typename T>
+        static T *elfCopy(uint8_t *, ElfProgramHeader_t *, size_t, T *, size_t);
 
         bool relocate(uint8_t *pBuffer, uintptr_t length);
         bool relocateModinfo(uint8_t *pBuffer, uintptr_t length);
@@ -445,7 +449,7 @@ class Elf
         ElfRel_t             *m_pPltRelTable;
         ElfRela_t            *m_pPltRelaTable;
         bool                  m_bUsesRela; // If PltRelaTable is valid, else PltRelTable is.
-        uint8_t              *m_pDebugTable;
+        uint32_t             *m_pDebugTable;
         size_t                m_nDebugTableSize;
         ElfSymbol_t          *m_pDynamicSymbolTable;
         size_t                m_nDynamicSymbolTableSize;

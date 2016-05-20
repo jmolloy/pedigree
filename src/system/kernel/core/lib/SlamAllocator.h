@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -28,11 +27,24 @@
 **/
 
 #include <processor/types.h>
-#include <processor/PhysicalMemoryManager.h>
-#include <utilities/MemoryAllocator.h>
 #include <Log.h>
 
+#ifndef BENCHMARK
+#include <processor/PhysicalMemoryManager.h>
+#include <utilities/MemoryAllocator.h>
+
 #include <Spinlock.h>
+#else  // BENCHMARK
+
+namespace SlamSupport
+{
+uintptr_t getHeapBase();
+uintptr_t getHeapEnd();
+void getPageAt(void *addr);
+void unmapPage(void *page);
+void unmapAll();
+}  // namespace SlamSupport
+#endif
 
 /// Size of each slab in 4096-byte pages
 #define SLAB_SIZE                       1
@@ -48,23 +60,30 @@
 #define USING_MAGIC                     1
 
 /// Used only if USING_MAGIC. Type of the magic number.
-#define MAGIC_TYPE                      uint32_t
+#define MAGIC_TYPE                      uintptr_t
 
 /// Used only if USING_MAGIC. Magic value.
 #define MAGIC_VALUE                     0xb00b1e55ULL
 
 /// Minimum size of an object.
-#define OBJECT_MINIMUM_SIZE             (sizeof(SlamCache::Node))
+#define ABSOLUTE_MINIMUM_SIZE           64
+#define ALL_HEADERS_SIZE                (sizeof(SlamCache::Node) + \
+    sizeof(SlamAllocator::AllocHeader) + sizeof(SlamAllocator::AllocFooter))
+#define OBJECT_MINIMUM_SIZE             (ALL_HEADERS_SIZE < ABSOLUTE_MINIMUM_SIZE ? \
+    ABSOLUTE_MINIMUM_SIZE : ALL_HEADERS_SIZE)
 
 /// Outputs information during each function call
 #define DEBUGGING_SLAB_ALLOCATOR        0
 
+/// Temporary magic used during allocation.
+#define TEMP_MAGIC 0x67845753
+
 /// Adds magic numbers to the start of free blocks, to check for
 /// buffer overruns.
-#ifndef USE_DEBUG_ALLOCATOR
-#define OVERRUN_CHECK                   1
-#else
+#ifdef USE_DEBUG_ALLOCATOR
 #define OVERRUN_CHECK                   0
+#else
+#define OVERRUN_CHECK                   1
 #endif
 
 /// Adds magic numbers to the start and end of allocated chunks, increasing
@@ -93,10 +112,9 @@ public:
     {
         Node *next;
 #if USING_MAGIC
-        Node *prev;
         MAGIC_TYPE magic;
 #endif
-    };
+    } __attribute__((aligned(16)));
 
     /** Default constructor, does nothing. */
     SlamCache();
@@ -139,12 +157,16 @@ private:
 
 #ifdef MULTIPROCESSOR
     ///\todo MAX_CPUS
-    typedef Node *partialListType;
-    partialListType m_PartialLists[255];
+#define NUM_LISTS 255
 #else
-    typedef volatile Node *partialListType;
-    partialListType m_PartialLists[1];
+#define NUM_LISTS 1
 #endif
+    typedef volatile Node *alignedNode;
+    alignedNode m_PartialLists[NUM_LISTS];
+
+    Node *pop(alignedNode *head);
+    /* newHead = 0 to use newTail. */
+    void push(alignedNode *head, Node *newTail, Node *newHead = 0);
 
     uintptr_t getSlab();
     void freeSlab(uintptr_t slab);
@@ -162,6 +184,7 @@ private:
     uintptr_t m_FirstSlab;
 #endif
 
+#ifdef THREADS
     /**
      * Recovery cannot be done trivially.
      * Spinlock disables interrupts as part of its operation, so we can
@@ -169,6 +192,9 @@ private:
      * per-CPU thing.
      */
     Spinlock m_RecoveryLock;
+#endif
+
+    struct Node m_EmptyNode;
 };
 
 class SlamAllocator
@@ -190,7 +216,12 @@ class SlamAllocator
 
         static SlamAllocator &instance()
         {
+#ifdef BENCHMARK
+            static SlamAllocator instance;
+            return instance;
+#else
             return m_Instance;
+#endif
         }
 
         size_t heapPageCount() const
@@ -223,7 +254,9 @@ class SlamAllocator
         SlamAllocator(const SlamAllocator&);
         const SlamAllocator& operator = (const SlamAllocator&);
 
+#ifndef BENCHMARK
         static SlamAllocator m_Instance;
+#endif
 
         SlamCache m_Caches[32];
 public:
@@ -231,6 +264,8 @@ public:
         /// freeing slightly less performance-intensive...
         struct AllocHeader
         {
+            // Already-present and embedded Node fields.
+            SlamCache::Node node;
 #if OVERRUN_CHECK
 #if BOCHS_MAGIC_WATCHPOINTS
             uint32_t catcher;
@@ -260,10 +295,11 @@ private:
     bool m_bVigilant;
 #endif
 
-    MemoryAllocator m_SlabRegion;
-    size_t m_HeapPageCount;
-
+#ifdef THREADS
     Spinlock m_SlabRegionLock;
+#endif
+
+    size_t m_HeapPageCount;
 
     uint64_t *m_SlabRegionBitmap;
     size_t m_SlabRegionBitmapEntries;

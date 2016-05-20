@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -76,6 +75,9 @@ private:
    */
 public:
   void performBpBacktrace(uintptr_t base, uintptr_t instruction);
+#ifdef ARM_COMMON
+  void performArmBacktrace(uintptr_t base, uintptr_t instruction);
+#endif
 private:
   /**
    * The return addresses.

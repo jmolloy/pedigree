@@ -20,7 +20,7 @@
 #include <iostream>
 #include <string>
 
-#include <config/Config.h>
+#include <native/config/Config.h>
 
 void usage()
 {

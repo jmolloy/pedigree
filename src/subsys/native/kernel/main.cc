@@ -20,7 +20,7 @@
 #include <Module.h>
 #include "NativeSyscallManager.h"
 
-NativeSyscallManager g_NativeSyscallManager;
+static NativeSyscallManager g_NativeSyscallManager;
 
 static bool init()
 {

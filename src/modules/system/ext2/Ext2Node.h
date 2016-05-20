@@ -51,16 +51,20 @@ public:
     /** Updates inode metadata. */
     void updateMetadata(uint16_t uid, uint16_t gid, uint32_t perms);
 
-    uint64_t doRead(uint64_t location, uint64_t size, uintptr_t buffer);
-    uint64_t doWrite(uint64_t location, uint64_t size, uintptr_t buffer);
-
     /** Wipes the node of data - frees all blocks. */
     void wipe();
+
+    void extend(size_t newSize);
 
     uintptr_t readBlock(uint64_t location);
     void writeBlock(uint64_t location);
 
     void trackBlock(uint32_t block);
+
+    void pinBlock(uint64_t location);
+    void unpinBlock(uint64_t location);
+
+    void sync(size_t offset, bool async);
 
 protected:
     /** Ensures the inode is at least 'size' big. */
@@ -82,6 +86,7 @@ protected:
 
     uint32_t *m_pBlocks;
     uint32_t m_nBlocks;
+    uint32_t m_nMetadataBlocks;
 
     size_t m_nSize;
 };

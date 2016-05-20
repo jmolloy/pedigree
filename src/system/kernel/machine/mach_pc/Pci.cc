@@ -76,7 +76,7 @@ void PciBus::initialise()
 uint32_t PciBus::readConfigSpace(Device *pDev, uint8_t offset)
 {
     ConfigAddress addr;
-    memset(&addr, 0, sizeof(addr));
+    ByteSet(&addr, 0, sizeof(addr));
     addr.offset = offset;
     addr.function = pDev->getPciFunctionNumber();
     addr.device = pDev->getPciDevicePosition();
@@ -90,7 +90,7 @@ uint32_t PciBus::readConfigSpace(Device *pDev, uint8_t offset)
 uint32_t PciBus::readConfigSpace(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset)
 {
     ConfigAddress addr;
-    memset(&addr, 0, sizeof(addr));
+    ByteSet(&addr, 0, sizeof(addr));
     addr.offset = offset;
     addr.function = function;
     addr.device = device;
@@ -104,7 +104,7 @@ uint32_t PciBus::readConfigSpace(uint8_t bus, uint8_t device, uint8_t function, 
 void PciBus::writeConfigSpace(Device *pDev, uint8_t offset, uint32_t data)
 {
     ConfigAddress addr;
-    memset(&addr, 0, sizeof(addr));
+    ByteSet(&addr, 0, sizeof(addr));
     addr.offset = offset;
     addr.function = pDev->getPciFunctionNumber();
     addr.device = pDev->getPciDevicePosition();
@@ -118,7 +118,7 @@ void PciBus::writeConfigSpace(Device *pDev, uint8_t offset, uint32_t data)
 void PciBus::writeConfigSpace(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset, uint32_t data)
 {
     ConfigAddress addr;
-    memset(&addr, 0, sizeof(addr));
+    ByteSet(&addr, 0, sizeof(addr));
     addr.offset = offset;
     addr.function = function;
     addr.device = device;

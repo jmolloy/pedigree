@@ -21,14 +21,18 @@
 
 .section .init
 start:
+    # Disable IRQs and FIQs.
+    mrs r0, cpsr
+    orr r1, r0, #0xC0
+    msr cpsr_c, r1
 
     # Read the CPSR, mask out the lower 6 bits, and enter FIQ mode
     mrs r0, cpsr
     bic r0, r0, #0x3F
     orr r1, r0, #0x11
     msr cpsr_c, r1
-    
-    ldr sp, =stack_fiq+0x1000
+
+    ldr sp, =stack_fiq + 0x1000
     
     # Read the CPSR, mask out the lower 6 bits, and enter IRQ mode
     mrs r0, cpsr
@@ -36,7 +40,7 @@ start:
     orr r1, r0, #0x12
     msr cpsr_c, r1
     
-    ldr sp, =stack_irq+0x1000
+    ldr sp, =stack_irq + 0x1000
     
     # Concept from lk (geist) - a location to dump stuff during IRQ handling
     ldr r13, =irq_save
@@ -47,12 +51,12 @@ start:
     orr r1, r0, #0x13
     msr cpsr_c, r1
     
-    ldr sp, =stack_svc+0x10000
-    
-    b __start
+    ldr sp, =stack_svc + 0x10000
 
-.section .bss
-.comm stack_svc, 0x10000
-.comm stack_irq, 0x1000
-.comm stack_fiq, 0x1000
-.comm irq_save, 0x10
+    bl __start
+
+.section .stacks @nobits
+.lcomm stack_svc, 0x10000
+.lcomm stack_irq, 0x1000
+.lcomm stack_fiq, 0x1000
+.lcomm irq_save, 0x10

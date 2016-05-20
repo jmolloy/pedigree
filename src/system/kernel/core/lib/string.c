@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -19,59 +18,79 @@
  */
 
 #include <stdarg.h>
+#include <stddef.h>
 #include <utilities/utility.h>
 #include <processor/types.h>
 
-size_t strlen(const char *src)
+int isspace(int c);
+int isupper(int c);
+int islower(int c);
+int isdigit(int c);
+int isalpha(int c);
+
+size_t strlen(const char *s);
+char *strcpy(char *dest, const char *src);
+char *strncpy(char *dest, const char *src, size_t len);
+int strcmp(const char *p1, const char *p2);
+int strncmp(const char *p1, const char *p2, size_t n);
+char *strcat(char *dest, const char *src);
+char *strncat(char *dest, const char *src, size_t n);
+const char *strchr(const char *str, int target);
+const char *strrchr(const char *str, int target);
+int vsprintf(char *buf, const char *fmt, va_list arg);
+unsigned long strtoul(const char *nptr, char const **endptr, int base);
+
+#define ULONG_MAX -1
+
+size_t _StringLength(const char *src)
 {
-  size_t i = 0;
-  while (*src++)
-    i++;
-  return i;
+  const char *orig = src;
+  while (*src) ++src;
+  return src - orig;
 }
 
-int strcpy(char *dest, const char *src)
+char *StringCopy(char *dest, const char *src)
 {
-  int n = 0;
   while (*src)
   {
-    *dest++ = *src++;
-    n++;
+    *dest = *src;
+    ++dest; ++src;
   }
   *dest = '\0';
 
-  return n;
+  return dest;
 }
 
-int strncpy(char *dest, const char *src, int len)
+char *StringCopyN(char *dest, const char *src, size_t len)
 {
-  int n = 0;
-  while (*src && len)
+  char *orig_dest = dest;
+  for (size_t i = 0; i < len; ++i)
   {
-    *dest++ = *src++;
-    len--;
-    n++;
+    if (*src)
+      *dest++ = *src++;
+    else
+      break;
   }
   *dest = '\0';
 
-  return n;
+  return orig_dest;
 }
 
-int sprintf(char *buf, const char *fmt, ...)
+int StringFormat(char *buf, const char *fmt, ...)
 {
   va_list args;
   int i;
 
   va_start(args, fmt);
-  i = vsprintf(buf, fmt, args);
+  i = VStringFormat(buf, fmt, args);
   va_end(args);
 
   return i;
 }
 
-int strcmp(const char *p1, const char *p2)
+int StringCompare(const char *p1, const char *p2)
 {
-  int i = 0;
+  size_t i = 0;
   int failed = 0;
   while(p1[i] != '\0' && p2[i] != '\0')
   {
@@ -89,9 +108,9 @@ int strcmp(const char *p1, const char *p2)
   return failed;
 }
 
-int strncmp(const char *p1, const char *p2, int n)
+int StringCompareN(const char *p1, const char *p2, size_t n)
 {
-  int i = 0;
+  size_t i = 0;
   int failed = 0;
   while(p1[i] != '\0' && p2[i] != '\0' && n)
   {
@@ -110,10 +129,10 @@ int strncmp(const char *p1, const char *p2, int n)
   return failed;
 }
 
-char *strcat(char *dest, const char *src)
+char *StringConcat(char *dest, const char *src)
 {
-  int di = strlen(dest);
-  int si = 0;
+  size_t di = StringLength(dest);
+  size_t si = 0;
   while (src[si])
     dest[di++] = src[si++];
   
@@ -122,10 +141,10 @@ char *strcat(char *dest, const char *src)
   return dest;
 }
 
-char *strncat(char *dest, const char *src, int n)
+char *StringConcatN(char *dest, const char *src, size_t n)
 {
-  int di = strlen(dest);
-  int si = 0;
+  size_t di = StringLength(dest);
+  size_t si = 0;
   while (src[si] && n)
   {
     dest[di++] = src[si++];
@@ -137,33 +156,32 @@ char *strncat(char *dest, const char *src, int n)
   return dest;
 }
 
-int isspace(char c)
+int isspace(int c)
 {
   return (c == ' ' || c == '\n' || c == '\r' || c == '\t');
 }
 
-int isupper(char c)
+int isupper(int c)
 {
   return (c >= 'A' && c <= 'Z');
 }
 
-int islower(char c)
+int islower(int c)
 {
   return (c >= 'a' && c <= 'z');
 }
 
-int isdigit(char c)
+int isdigit(int c)
 {
   return (c >= '0' && c <= '9');
 }
 
-int isalpha(char c)
+int isalpha(int c)
 {
   return isupper(c) || islower(c) || isdigit(c);
 }
 
-#define ULONG_MAX -1
-unsigned long strtoul(const char *nptr, char **endptr, int base)
+unsigned long StringToUnsignedLong(const char *nptr, char const **endptr, int base)
 {
   register const char *s = nptr;
   register unsigned long acc;
@@ -214,25 +232,97 @@ unsigned long strtoul(const char *nptr, char **endptr, int base)
   } else if (neg)
     acc = -acc;
   if (endptr != 0)
-    *endptr = (char *) (any ? s - 1 : nptr);
+    *endptr = (const char *) (any ? s - 1 : nptr);
 
   return (acc);
 }
 
-const char *strrchr(const char *str, int target)
+const char *StringFind(const char *str, int target)
 {
-  int i;
-  for (i = strlen(str); i >= 0; i--)
-    if (str[i] == target)
-      return (const char*)&str[i];
-  return (const char*)0;
+  while (*str)
+  {
+    if (*str == target)
+    {
+      return str;
+    }
+
+    ++str;
+  }
+
+  return NULL;
+}
+
+const char *StringReverseFind(const char *str, int target)
+{
+  // StringLength must traverse the entire string once to find the length,
+  // so rather than finding the length and then traversing in reverse, we just
+  // traverse the string once. This gives a small performance boost.
+  const char *found = NULL;
+  while (*str)
+  {
+    if (*str == target)
+    {
+      found = str;
+    }
+
+    ++str;
+  }
+
+  return found;
+}
+
+// Provide forwarding functions to handle GCC optimising things.
+size_t strlen(const char *s)
+{
+  return StringLength(s);
+}
+
+char *strcpy(char *dest, const char *src)
+{
+  return StringCopy(dest, src);
+}
+
+char *strncpy(char *dest, const char *src, size_t len)
+{
+  return StringCopyN(dest, src, len);
+}
+
+int strcmp(const char *p1, const char *p2)
+{
+  return StringCompare(p1, p2);
+}
+
+int strncmp(const char *p1, const char *p2, size_t n)
+{
+  return StringCompareN(p1, p2, n);
+}
+
+char *strcat(char *dest, const char *src)
+{
+  return StringConcat(dest, src);
+}
+
+char *strncat(char *dest, const char *src, size_t n)
+{
+  return StringConcatN(dest, src, n);
 }
 
 const char *strchr(const char *str, int target)
 {
-  size_t i;
-  for (i = 0; i < strlen(str); i++)
-    if (str[i] == target)
-      return (const char*)&str[i];
-  return (const char*)0;
+  return StringFind(str, target);
+}
+
+const char *strrchr(const char *str, int target)
+{
+  return StringReverseFind(str, target);
+}
+
+int vsprintf(char *buf, const char *fmt, va_list arg)
+{
+  return VStringFormat(buf, fmt, arg);
+}
+
+unsigned long strtoul(const char *nptr, char const **endptr, int base)
+{
+  return StringToUnsignedLong(nptr, endptr, base);
 }

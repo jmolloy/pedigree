@@ -1,3 +1,22 @@
+/*
+ * Copyright (c) 2008-2014, Pedigree Developers
+ *
+ * Please see the CONTRIB file in the root of the source tree for a full
+ * list of contributors.
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
 #ifndef _SYS_UNISTD_H
 #define _SYS_UNISTD_H
 
@@ -10,6 +29,7 @@ extern "C" {
 #include <sys/_types.h>
 #define __need_size_t
 #define __need_ptrdiff_t
+#define __need_NULL
 #include <stddef.h>
 
 #define _POSIX_VERSION      200112L
@@ -36,9 +56,7 @@ int     _EXFUN(chmod, (const char *__path, mode_t __mode ));
 #if !defined(__INSIDE_CYGWIN__)
 int     _EXFUN(chown, (const char *__path, uid_t __owner, gid_t __group ));
 #endif
-#if defined(__CYGWIN__) || defined(__rtems__)
 int     _EXFUN(chroot, (const char *__path ));
-#endif
 int     _EXFUN(close, (int __fildes ));
 #if defined(__CYGWIN__)
 size_t	_EXFUN(confstr, (int __name, char *__buf, size_t __len));
@@ -256,6 +274,8 @@ int     _EXFUN(symlink, (const char *__name1, const char *__name2));
 
 int _EXFUN(setresuid, (uid_t ruid, uid_t euid, uid_t suid));
 int _EXFUN(setresgid, (gid_t rgid, gid_t egid, gid_t sgid));
+
+int _EXFUN(issetugid, (void));
 
 #define	F_OK	0
 #define	R_OK	4

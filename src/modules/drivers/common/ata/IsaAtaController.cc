@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -22,6 +21,7 @@
 #include <Log.h>
 #include <machine/Machine.h>
 #include <processor/Processor.h>
+#include <time/Time.h>
 
 IsaAtaController::IsaAtaController(Controller *pDev, int nController) :
   AtaController(pDev, nController)
@@ -64,12 +64,10 @@ IsaAtaController::IsaAtaController(Controller *pDev, int nController) :
 
   // Perform a software reset.
   m_pControlRegs->write8(0x04, 6); // Assert SRST
-  Semaphore dammitWeNeedABloodySleepFunction(0); // We really do!
-  dammitWeNeedABloodySleepFunction.acquire(1, 0, 5000);
+  Time::delay(5 * Time::Multiplier::MILLISECOND);
 
   m_pControlRegs->write8(0, 6); // Negate SRST
-  Semaphore dammitWeNeedABloodySleepFunctionAndThisSemaphoreIsRedundantBecauseWeDontHaveOne(0); // We really do!
-  dammitWeNeedABloodySleepFunctionAndThisSemaphoreIsRedundantBecauseWeDontHaveOne.acquire(1, 0, 5000);
+  Time::delay(5 * Time::Multiplier::MILLISECOND);
 
   // Poll until BSY is clear. Until BSY is clear, no other bits in the
   // alternate status register are considered valid.
@@ -96,43 +94,27 @@ IsaAtaController::IsaAtaController(Controller *pDev, int nController) :
   pMaster->setInterruptNumber(getInterruptNumber());
   pSlave->setInterruptNumber(getInterruptNumber());
 
+  size_t masterN = getNumChildren();
+  addChild(pMaster);
+  size_t slaveN = getNumChildren();
+  addChild(pSlave);
+
   // Try and initialise the disks.
-  bool masterInitialised = pMaster->initialise();
-  bool slaveInitialised = pSlave->initialise();
+  bool masterInitialised = pMaster->initialise(masterN);
+  bool slaveInitialised = pSlave->initialise(slaveN);
 
   Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*> (this));
 
-  // Initialise potential ATAPI disks (add as children before initialising so they get IRQs)
-  if (masterInitialised)
-    addChild(pMaster);
-  else
+  if (!masterInitialised)
   {
+    removeChild(pMaster);
     delete pMaster;
-    AtapiDisk *pMasterAtapi = new AtapiDisk(this, true, m_pCommandRegs, m_pControlRegs);
-    addChild(pMasterAtapi);
-
-    pMasterAtapi->setInterruptNumber(getInterruptNumber());
-    if(!pMasterAtapi->initialise())
-    {
-      removeChild(pMasterAtapi);
-      delete pMasterAtapi;
-    }
   }
 
-  if (slaveInitialised)
-    addChild(pSlave);
-  else
+  if (!slaveInitialised)
   {
+    removeChild(pSlave);
     delete pSlave;
-    AtapiDisk *pSlaveAtapi = new AtapiDisk(this, false, m_pCommandRegs, m_pControlRegs);
-    addChild(pSlaveAtapi);
-
-    pSlaveAtapi->setInterruptNumber(getInterruptNumber());
-    if(!pSlaveAtapi->initialise())
-    {
-      removeChild(pSlaveAtapi);
-      delete pSlaveAtapi;
-    }
   }
 }
 
@@ -140,13 +122,26 @@ IsaAtaController::~IsaAtaController()
 {
 }
 
+bool IsaAtaController::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize, uintptr_t pRespBuffer, uint16_t nRespBytes, bool bWrite)
+{
+    Device *pChild = getChild(nUnit);
+    if (!pChild)
+    {
+        ERROR("ISA ATA: sendCommand called with a bad unit number.");
+        return false;
+    }
+
+    AtaDisk *pDisk = static_cast<AtaDisk *>(pChild);
+    return pDisk->sendCommand(nUnit, pCommand, nCommandSize, pRespBuffer, nRespBytes, bWrite);
+}
+
 uint64_t IsaAtaController::executeRequest(uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4,
                                        uint64_t p5, uint64_t p6, uint64_t p7, uint64_t p8)
 {
   AtaDisk *pDisk = reinterpret_cast<AtaDisk*> (p2);
-  if(p1 == ATA_CMD_READ)
+  if(p1 == SCSI_REQUEST_READ)
     return pDisk->doRead(p3);
-  else if(p1 == ATA_CMD_WRITE)
+  else if(p1 == SCSI_REQUEST_WRITE)
     return pDisk->doWrite(p3);
   else
     return 0;
@@ -157,13 +152,8 @@ bool IsaAtaController::irq(irq_id_t number, InterruptState &state)
   for (unsigned int i = 0; i < getNumChildren(); i++)
   {
     AtaDisk *pDisk = static_cast<AtaDisk*> (getChild(i));
-    if(pDisk->isAtapi())
-    {
-        AtapiDisk *pAtapiDisk = static_cast<AtapiDisk*>(pDisk);
-        pAtapiDisk->irqReceived();
-    }
-    else
-        pDisk->irqReceived();
+    pDisk->irqReceived();
   }
-  return false; // Keep the IRQ disabled - level triggered.
+
+  return true;
 }

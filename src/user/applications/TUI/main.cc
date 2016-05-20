@@ -40,10 +40,9 @@
 
 #include "Font.h"
 #include "Png.h"
-#include "Header.h"
 
-#include <graphics/Graphics.h>
-#include <input/Input.h>
+#include <native/graphics/Graphics.h>
+#include <native/input/Input.h>
 
 #include <Widget.h>
 
@@ -57,15 +56,10 @@
 #define CONSOLE_REFRESH 10
 #define CONSOLE_FLUSH   11
 
-#ifdef TARGET_LINUX
-#define NORMAL_FONT_PATH    "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
-#define BOLD_FONT_PATH      "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
-#else
-#define NORMAL_FONT_PATH    "/system/fonts/DejaVuSansMono.ttf"
-#define BOLD_FONT_PATH      "/system/fonts/DejaVuSansMono-Bold.ttf"
-#endif
-
 #define FONT_SIZE           14
+
+#define NORMAL_FONT_PATH    "DejaVu Sans Mono 10"
+#define BOLD_FONT_PATH      "DejaVu Sans Mono 10"
 
 /** End code from InputManager */
 
@@ -104,7 +98,7 @@ void checkFramebuffer()
 
         // Wipe out the framebuffer before we do much with it.
         int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, g_nWidth);
-        memset((void *) g_pEmu->getRawFramebuffer(), 0, g_nHeight * stride);
+        memset(g_pEmu->getRawFramebuffer(), 0, g_nHeight * stride);
 
         g_Surface = cairo_image_surface_create_for_data(
                 (uint8_t*) g_pEmu->getRawFramebuffer(),
@@ -269,9 +263,8 @@ int tui_do(PedigreeGraphics::Framebuffer *pFramebuffer)
     cairo_set_line_width(g_Cairo, 1.0);
 
     cairo_set_operator(g_Cairo, CAIRO_OPERATOR_SOURCE);
-    cairo_set_source_rgba(g_Cairo, 0, 0, 0, 0.8);
-    cairo_rectangle(g_Cairo, 0, 0, g_nWidth, g_nHeight);
-    cairo_fill(g_Cairo);
+    cairo_set_source_rgba(g_Cairo, 0, 0, 0, 1.0);
+    cairo_paint(g_Cairo);
 
     g_NormalFont = new Font(FONT_SIZE, NORMAL_FONT_PATH,
                             true, g_nWidth);

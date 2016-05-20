@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -57,7 +56,6 @@ void Multiprocessor::applicationProcessorStartup()
   initialiseMultitaskingPerProcessor();
 
   // Call the per-processor code in main.cc
-  extern void apMain();
   apMain();
 }
 

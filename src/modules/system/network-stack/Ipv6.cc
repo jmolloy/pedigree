@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -46,8 +45,8 @@ ServiceFeatures *g_pIpv6Features = 0;
 
 void Ipv6::getIpv6Eui64(MacAddress mac, uint8_t *eui)
 {
-    memcpy(eui, mac.getMac(), 3);
-    memcpy(eui + 5, mac.getMac() + 3, 3);
+    MemoryCopy(eui, mac.getMac(), 3);
+    MemoryCopy(eui + 5, mac.getMac() + 3, 3);
     eui[3] = 0xFF; // Middle two bytes are 'FFFE'
     eui[4] = 0xFE;
 
@@ -78,7 +77,7 @@ bool Ipv6Service::serve(ServiceFeatures::Type type, void *pData, size_t dataLen)
             uint8_t ipv6[16] = {0};
             ipv6[0] = 0xFE;
             ipv6[1] = 0x80;
-            memcpy(ipv6 + 8, eui, 8);
+            MemoryCopy(ipv6 + 8, eui, 8);
 
             IpAddress *pNewAddress = 0;
 
@@ -152,7 +151,7 @@ uint16_t Ipv6::ipChecksum(IpAddress &from, IpAddress &to, uint8_t proto, uintptr
   pHeader->zero1 = pHeader->zero2 = 0;
 
   // Throw in the packet data
-  memcpy(reinterpret_cast<void*>(tmpPackAddr + sizeof(PsuedoHeader)),
+  MemoryCopy(reinterpret_cast<void*>(tmpPackAddr + sizeof(PsuedoHeader)),
          reinterpret_cast<void*>(data),
          length);
 
@@ -195,11 +194,11 @@ bool Ipv6::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uin
     /// \todo Assumption: given "from" address is accurate.
 
     // Load the payload.
-    memmove(reinterpret_cast<void*>(packet + sizeof(ip6Header)), reinterpret_cast<void*>(packet), nBytes);
+    MemoryCopy(reinterpret_cast<void*>(packet + sizeof(ip6Header)), reinterpret_cast<void*>(packet), nBytes);
 
     // Fill in the IPv6 header.
     ip6Header *pHeader = reinterpret_cast<ip6Header*>(packet);
-    memset(pHeader, 0, sizeof(ip6Header));
+    ByteSet(pHeader, 0, sizeof(ip6Header));
 
     pHeader->verClassFlow = 6 << 4;
     pHeader->payloadLength = HOST_TO_BIG16(nBytes);
@@ -214,12 +213,12 @@ bool Ipv6::send(IpAddress dest, IpAddress from, uint8_t type, size_t nBytes, uin
     if(dest.isMulticast())
     {
         // Need individual octets of the IPv6 address.
-        uint8_t ipv6[16];
-        dest.getIp(ipv6);
+        uint16_t ipv6[8];
+        dest.getIp(reinterpret_cast<uint8_t *>(ipv6));
 
         // Put together a link layer address for the address.
         /// \todo Ethernet-specific
-        uint8_t tmp[6] = {0x33, 0x33, ipv6[12], ipv6[13], ipv6[14], ipv6[15]};
+        uint16_t tmp[3] = {0x3333, ipv6[6], ipv6[7]};
         destMac.setMac(tmp);
 
         macValid = true;

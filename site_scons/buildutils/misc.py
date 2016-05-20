@@ -41,7 +41,7 @@ def safeAppend(a, b):
     a = str(a).split()
     b = str(b).split()
     for item in b:
-        if not item in a:
+        if item not in a:
             a.append(item)
     return ' '.join(a)
 
@@ -95,6 +95,11 @@ def removeFlags(flags, removal):
     Returns:
         Updated flags.
     """
+    if isinstance(flags, str):
+        flags = flags.split(' ')
+    if isinstance(removal, str):
+        removal = removal.split(' ')
+
     for flag in removal:
         try:
             flags.remove(flag)
@@ -106,6 +111,26 @@ def removeFlags(flags, removal):
 
 def removeFromAllFlags(env, removal):
     """Remove words from all compilation flags in the given Environment."""
-    env['CFLAGS'] = buildutils.misc.removeFlags(env['CFLAGS'], removal)
-    env['CCFLAGS'] = buildutils.misc.removeFlags(env['CCFLAGS'], removal)
-    env['CXXFLAGS'] = buildutils.misc.removeFlags(env['CXXFLAGS'], removal)
+    for key in ('CFLAGS', 'CCFLAGS', 'CXXFLAGS'):
+        env[key] = buildutils.misc.removeFlags(env[key], removal)
+        if ('TARGET_%s' % key) in env:
+            env['TARGET_%s' % key] = buildutils.misc.removeFlags(
+                env['TARGET_%s' % key], removal)
+
+
+def stubSuffix(env, dash=True):
+    suffix = 'noarch'
+    if env['ARCH_TARGET'] == 'X86':
+        suffix = 'i686'
+    elif env['ARCH_TARGET'] == 'X64':
+        suffix = 'amd64'
+    elif env['ARCH_TARGET'] == 'PPC':
+        suffix = 'ppc'
+    elif env['ARCH_TARGET'] == 'ARM':
+        suffix = 'arm'
+    elif env['ARCH_TARGET'] == 'HOSTED':
+        suffix = 'hosted'
+
+    if dash:
+        suffix = '-%s' % suffix
+    return suffix

@@ -36,39 +36,6 @@ Pic Pic::m_Instance;
 
 void Pic::tick()
 {
-#if 0
-    Spinlock lock;
-    lock.acquire();
-
-    for(size_t irq = 0; irq < 16; irq++)
-    {
-        // Grab the count and reset it
-        size_t nCount = m_IrqCount[irq];
-        m_IrqCount[irq] = 0;
-
-        // If no IRQs happened over this time period, don't do any processing
-        if(LIKELY(!nCount))
-            continue;
-
-        // If it's above the threshold, maks the IRQ until the next tick
-        if(UNLIKELY(nCount >= m_MitigationThreshold[irq]))
-        {
-            WARNING_NOLOCK("Mitigating IRQ" << Dec << irq << Hex << " [" << nCount << " IRQs in the last millisecond].");
-            m_MitigatedIrqs[irq] = true;
-            enable(irq, false);
-        }
-        else if(UNLIKELY(m_MitigatedIrqs[irq]))
-        {
-            WARNING_NOLOCK("IRQ" << Dec << irq << Hex << " was mitigated, re-enabling.");
-            
-            // This IRQ has been mitigated, re-enable it
-            m_MitigatedIrqs[irq] = false;
-            enable(irq, true);
-        }
-    }
-
-    lock.release();
-#endif
 }
 
 bool Pic::control(uint8_t irq, ControlCode code, size_t argument)
@@ -92,9 +59,6 @@ bool Pic::control(uint8_t irq, ControlCode code, size_t argument)
             else
                 m_MitigationThreshold[irq] = DEFAULT_IRQ_MITIGATE_THRESHOLD;
             return true;
-        
-        default:
-            break;
     }
     
     return false;
@@ -212,29 +176,29 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
   size_t irq = (interruptNumber - BASE_INTERRUPT_VECTOR);
   m_IrqCount[irq]++;
 
-  // Is Spurios IRQ7?
-//   if (irq == 7)
-  //  {
-  //    m_MasterPort.write8(0x03, 0);
-  //   if (UNLIKELY((m_MasterPort.read8(0) & 0x80) == 0))
-  //   {
-  //     NOTICE("PIC: spurious IRQ7");
-  //     eoi(irq);
-  //    return;
-  //  }
-  //}
-  /// \todo Logic faulty here, reporting spurious interrupts for disk accesses!
-  // Is spurious IRQ15?
-//   else if (irq == 15)
-//   {
-//     m_SlavePort.write8(0x03, 0);
-//     if (UNLIKELY((m_SlavePort.read8(0) & 0x80) == 0))
-//     {
-//       NOTICE("PIC: spurious IRQ15");
-//       eoi(irq);
-//       return;
-//     }
-//   }
+  // Spurious IRQ?
+  if (irq == 7)
+  {
+    // Read ISR - check for IRQ7 status.
+    m_MasterPort.write8(0x0B, 0);
+    if (UNLIKELY((m_MasterPort.read8(0) & 0x80) == 0))
+    {
+      NOTICE("PIC: spurious IRQ7");
+      return;
+    }
+  }
+  else if (irq == 15)
+  {
+    // Read ISR - check for IRQ15 status (the 7th line on the slave).
+    m_SlavePort.write8(0x0B, 0);
+    if (UNLIKELY((m_SlavePort.read8(0) & 0x80) == 0))
+    {
+      NOTICE("PIC: spurious IRQ15");
+      // EOI the master (no slave IRQ to ACK).
+      eoi(0);
+      return;
+    }
+  }
 
   // Call the irq handler, if any
   if (LIKELY(m_Handler[irq].count() != 0))
@@ -265,16 +229,6 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
   else
   {
     NOTICE("PIC: unhandled irq #" << irq << " occurred");
-
-    #if 0
-    #ifdef DEBUGGER
-      LargeStaticString str;
-      str += "Unhandled IRQ: #";
-      str += irq;
-      str += " occurred.";
-      Debugger::instance().start(state, str);
-    #endif
-      #endif
   }
 }
 

@@ -116,6 +116,9 @@ protected:
     Disk *m_pDisk;
 private:
 
+    /** Get the true root of the filesystem, considering potential jails. */
+    File *getTrueRoot();
+
     /** Internal function to find a node - Returns 0 on failure or the node.
         \param pNode The node to start parsing 'path' from.
         \param path  The path from pNode to the destination node. */

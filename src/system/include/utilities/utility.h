@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -21,15 +20,22 @@
 #ifndef KERNEL_UTILITY_H
 #define KERNEL_UTILITY_H
 
-#include <stdarg.h>
 #include <processor/types.h>
+
+// Export memcpy et al
+#include <utilities/lib.h>
+
+#ifdef __cplusplus
+#include <processor/PhysicalMemoryManager.h>  // getPageSize()
+#endif
+
+#ifdef HOSTED
+// Override headers we are replacing.
+#define _STRING_H 1
+#endif
 
 /** @addtogroup kernelutilities
  * @{ */
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 // Endianness shizzle.
 #define BS8(x) (x)
@@ -83,52 +89,6 @@ extern "C" {
 
 #endif
 
-int vsprintf(char *buf, const char *fmt, va_list arg);
-int sprintf(char *buf, const char *fmt, ...);
-size_t strlen(const char *buf);
-int strcpy(char *dest, const char *src);
-int strncpy(char *dest, const char *src, int len);
-void *memset(void *buf, int c, size_t len);
-void *wmemset(void *buf, int c, size_t len);
-void *dmemset(void *buf, unsigned int c, size_t len);
-void *qmemset(void *buf, unsigned long long c, size_t len);
-void *memcpy(void *dest, const void *src, size_t len);
-void *memmove(void *s1, const void *s2, size_t n);
-int memcmp(const void *p1, const void *p2, size_t len);
-
-int strcmp(const char *p1, const char *p2);
-int strncmp(const char *p1, const char *p2, int n);
-char *strcat(char *dest, const char *src);
-char *strncat(char *dest, const char *src, int n);
-
-void random_seed(uint64_t seed);
-uint64_t random_next();
-
-const char *strchr(const char *str, int target);
-const char *strrchr(const char *str, int target);
-
-unsigned long strtoul(const char *nptr, char **endptr, int base);
-
-inline char toUpper(char c)
-{
-    if (c < 'a' || c > 'z')
-        return c; // special chars
-    c += ('A' - 'a');
-    return c;
-}
-
-inline char toLower(char c)
-{
-    if (c < 'A' || c > 'Z')
-        return c; // special chars
-    c -= ('A' - 'a');
-    return c;
-}
-
-#ifdef __cplusplus
-}
-#endif
-
 #define MAX_FUNCTION_NAME 128
 #define MAX_PARAMS 32
 #define MAX_PARAM_LENGTH 64
@@ -138,9 +98,16 @@ inline char toLower(char c)
    *\brief Adjust a pointer
    *\return new pointer pointing to 'pointer + offset' (NOT pointer arithmetic!) */
   template<typename T>
-  inline T *adjust_pointer(T *pointer, size_t offset)
+  inline T *adjust_pointer(T *pointer, ssize_t offset)
   {
-    return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(pointer) + offset);
+    return reinterpret_cast<T*>(reinterpret_cast<intptr_t>(pointer) + offset);
+  }
+
+  /** Page-align the given pointer. */
+  template<typename T>
+  inline T *page_align(T *p)
+  {
+    return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(p) & ~(PhysicalMemoryManager::getPageSize() - 1));
   }
 
   template<typename T>
@@ -151,42 +118,29 @@ inline char toLower(char c)
       b = t;
   }
 
+  /** Return b - a. */
+  template<typename T1, typename T2>
+  inline intptr_t pointer_diff(T1 *a, T2 *b)
+  {
+    return reinterpret_cast<uintptr_t>(b) - reinterpret_cast<uintptr_t>(a);
+  }
+
+  /** Return the difference between a and b, without a sign. */
+  template<typename T1, typename T2>
+  inline uintptr_t abs_difference(T1 a, T2 b)
+  {
+    intptr_t value = b - a;
+    if (value < 0) value *= -1;
+    return value;
+  }
+
   inline uint8_t checksum(const uint8_t *pMemory, size_t sMemory)
   {
     uint8_t sum = 0;
     for (size_t i = 0;i < sMemory;i++)
-      sum += reinterpret_cast<const uint8_t*>(pMemory)[i];
+      sum += pMemory[i];
     return (sum == 0);
   }
-
-  template<typename T>
-  struct is_integral
-  {
-    static const bool value = false;
-  };
-  template<>struct is_integral<bool>{static const bool value = true;};
-  template<>struct is_integral<char>{static const bool value = true;};
-  template<>struct is_integral<unsigned char>{static const bool value = true;};
-  template<>struct is_integral<signed char>{static const bool value = true;};
-  template<>struct is_integral<short>{static const bool value = true;};
-  template<>struct is_integral<unsigned short>{static const bool value = true;};
-  template<>struct is_integral<int>{static const bool value = true;};
-  template<>struct is_integral<unsigned int>{static const bool value = true;};
-  template<>struct is_integral<long>{static const bool value = true;};
-  template<>struct is_integral<unsigned long>{static const bool value = true;};
-  template<>struct is_integral<long long>{static const bool value = true;};
-  template<>struct is_integral<unsigned long long>{static const bool value = true;};
-
-  template<typename T>
-  struct is_pointer
-  {
-    static const bool value = false;
-  };
-  template<typename T>
-  struct is_pointer<T*>
-  {
-    static const bool value = true;
-  };
 #endif
 
 /** @} */

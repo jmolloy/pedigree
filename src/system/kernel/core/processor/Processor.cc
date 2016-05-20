@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -30,3 +29,13 @@ size_t Processor::m_Initialised = 0;
 
 size_t Processor::m_nProcessors = 1;
 
+EnsureInterrupts::EnsureInterrupts(bool desired)
+{
+    m_bPrevious = Processor::getInterrupts();
+    Processor::setInterrupts(desired);
+}
+
+EnsureInterrupts::~EnsureInterrupts()
+{
+    Processor::setInterrupts(m_bPrevious);
+}

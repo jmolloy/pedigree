@@ -757,7 +757,8 @@ WARN_LOGFILE           =
 INPUT                  = src/modules \
                          src/system \
                          src/user \
-                         src/subsys
+                         src/subsys \
+                         docs/doxydocs
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
@@ -798,6 +799,7 @@ EXCLUDE                += src/modules/system/config/sqlite3.h
 EXCLUDE                += src/modules/system/config/sqlite3ext.h
 # Exclude CDI's mainpage docs.
 EXCLUDE                += src/modules/drivers/cdi/doc/doc.h
+EXCLUDE                += docs/doxydocs/README
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded

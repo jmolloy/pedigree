@@ -41,9 +41,15 @@
 #define USERSPACE_DYNAMIC_END                   reinterpret_cast<void*>(0x00000FFFFFFFFFFF)
 #define USERSPACE_VIRTUAL_LOWEST_STACK          reinterpret_cast<void*>(USERSPACE_DYNAMIC_END + USERSPACE_VIRTUAL_MAX_STACK_SIZE)
 #define USERSPACE_VIRTUAL_STACK                 reinterpret_cast<void*>(0x00007FFFFFFFF000)
+#define KERNEL_VIRTUAL_EVENT_BASE               reinterpret_cast<void*>(0x80000000)
+#define KERNEL_VIRTUAL_MODULE_BASE              reinterpret_cast<void*>(0xFFFFFFFFF0000000)
+#define KERNEL_VIRTUAL_MODULE_SIZE              0x400000
 #define KERNEL_VIRTUAL_HEAP                     reinterpret_cast<void*>(0xFFFFFFFF00000000)
 #define KERNEL_VIRTUAL_HEAP_SIZE                0x40000000
 #define KERNEL_VIRTUAL_ADDRESS                  reinterpret_cast<void*>(0xFFFFFFFF7FF00000)
+#define KERNEL_VIRTUAL_INFO_BLOCK               reinterpret_cast<void*>(0xFFFFFFFF8FFF0000)
+#define KERNEL_VIRTUAL_CACHE                    reinterpret_cast<void*>(0xFFFFFFFF40000000)
+#define KERNEL_VIRTUAL_CACHE_SIZE               0x3FC00000
 #define KERNEL_VIRTUAL_MEMORYREGION_ADDRESS     reinterpret_cast<void*>(0xFFFFFFFF90000000)
 #define KERNEL_VIRTUAL_MEMORYREGION_SIZE        0x40000000
 #define KERNEL_VIRTUAL_PAGESTACK_4GB            reinterpret_cast<void*>(0xFFFFFFFF7FC00000)
@@ -164,6 +170,42 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
         return reinterpret_cast<uintptr_t>(USERSPACE_DYNAMIC_END);
     }
 
+    /** Gets address of the global info block location. */
+    virtual uintptr_t getGlobalInfoBlock() const
+    {
+        return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_INFO_BLOCK);
+    }
+
+    /** Gets address of the start of the kernel's cache region. */
+    virtual uintptr_t getKernelCacheStart() const
+    {
+        return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_CACHE);
+    }
+
+    /** Gets address of the end of the kernel's cache region. */
+    virtual uintptr_t getKernelCacheEnd() const
+    {
+        return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_CACHE) + KERNEL_VIRTUAL_CACHE_SIZE;
+    }
+
+    /** Gets address of the start of the kernel's event handling block. */
+    virtual uintptr_t getKernelEventBlockStart() const
+    {
+        return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_EVENT_BASE);
+    }
+
+    /** Gets address of the start of the kernel's module region. */
+    virtual uintptr_t getKernelModulesStart() const
+    {
+        return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_MODULE_BASE);
+    }
+
+    /** Gets address of the end of the kernel's module region. */
+    virtual uintptr_t getKernelModulesEnd() const
+    {
+        return reinterpret_cast<uintptr_t>(KERNEL_VIRTUAL_MODULE_BASE) + KERNEL_VIRTUAL_MODULE_SIZE;
+    }
+
   private:
     /** The default constructor */
     X64VirtualAddressSpace();
@@ -190,17 +232,26 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
      *\return true, if the page table is present and the page mapped or marked swapped out, false
      *        otherwise */
     bool getPageTableEntry(void *virtualAddress,
-                           uint64_t *&pageTableEntry);
+                           uint64_t *&pageTableEntry) const;
+    /**
+     * \brief Possibly cleans up tables for the given address.
+     *
+     * This is used when unmapping pages to opportunistically unmap paging
+     * structures that are no longer necessary.
+     * \param[in] virtualAddress the virtual address
+     * \param[out] pageTableEntry pointer to the page table entry
+     */
+    void maybeFreeTables(void *virtualAddress);
     /** Convert the processor independant flags to the processor's representation of the flags
      *\param[in] flags the processor independant flag representation
      *\param[in] bFinal whether this is for the actual page or just an intermediate PTE/PDE
      *\return the proessor specific flag representation */
-    uint64_t toFlags(size_t flags, bool bFinal = false);
+    uint64_t toFlags(size_t flags, bool bFinal = false) const PURE;
     /** Convert processor's representation of the flags to the processor independant representation
      *\param[in] Flags the processor specific flag representation
      *\param[in] bFinal whether this is for the actual page or just an intermediate PTE/PDE
      *\return the proessor independant flag representation */
-    size_t fromFlags(uint64_t Flags, bool bFinal = false);
+    size_t fromFlags(uint64_t Flags, bool bFinal = false) const PURE;
     /** Allocate and map the table entry if none is present
      *\param[in] tableEntry pointer to the current table entry
      *\param[in] flags flags that are used for the mapping

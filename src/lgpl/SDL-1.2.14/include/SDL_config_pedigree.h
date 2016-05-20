@@ -290,8 +290,13 @@
 #define SDL_VIDEO_DISABLE_SCREENSAVER 1
 
 /* Enable assembly routines */
+#ifdef X86_COMMON
 #define SDL_ASSEMBLY_ROUTINES 1
 #define SDL_HERMES_BLITTERS 1
+#else
+#undef SDL_ASSEMBLY_ROUTINES
+#undef SDL_HERMES_BLITTERS
+#endif
 #undef SDL_ALTIVEC_BLITTERS
 
 #define SDL_HAS_64BIT_TYPE 1

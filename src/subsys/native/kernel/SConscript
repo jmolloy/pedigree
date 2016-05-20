@@ -19,6 +19,9 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 import os
 
+import buildutils.fs
+import buildutils.modules
+
 Import(['env'])
 
 env_clone = env.Clone()
@@ -27,8 +30,11 @@ builddir = env["PEDIGREE_BUILD_BASE"]
 kerneldir = env["PEDIGREE_BUILD_KERNEL"]
 moduledir = env["PEDIGREE_BUILD_MODULES"]
 subsysdir = env["PEDIGREE_BUILD_SUBSYS"]
+imagesdir = env["PEDIGREE_IMAGES_DIR"]
 
 native_userlib_objname = os.path.join(subsysdir, 'native.o')
+
+baseInclude = env.Dir("#src/subsys/native/include")
 
 env.Alias("subsys", native_userlib_objname)
 
@@ -39,10 +45,10 @@ files = [
 # To include a new directory for includes, just add it to the list
 include_dirs = [
     './include',
-    '../include',
     '#/src/modules',
     '#/src/system/include',
     '#/src/modules/system',
+    '#images/local/include',
     '.'
 ]
 
@@ -52,9 +58,9 @@ env_clone['LIBS'] = ['gcc']
 final_output = native_userlib_objname
 native_userlib_objname = '%s.debug' % native_userlib_objname
 
-env_clone.Program(native_userlib_objname, files,
-                  LINKFLAGS='-nostdlib -r -T $LSCRIPT',
-                  LSCRIPT=File("#src/modules/link.ld"))
-env_clone.Command(final_output, native_userlib_objname,
-                  action="%s -d -o $TARGET $SOURCE" % env['STRIP'])
+buildutils.modules.buildModule(env_clone, final_output, native_userlib_objname,
+                               files)
 
+# Install native subsystem headers to the local images directory.
+buildutils.fs.install_tree(
+    env.Dir(os.path.join(imagesdir, 'include', 'native')), baseInclude, env)

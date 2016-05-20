@@ -38,6 +38,6 @@ def HeaderFromFileGenerator(target, source, env):
 def generate(env):
     action = SCons.Action.Action(HeaderFromFileGenerator, env.get('TARCOMSTR'))
     builder = env.Builder(action=action, target_factory=env.File,
-        source_factory=env.Value, single_source=1)
+        source_factory=env.File, single_source=1)
 
     env.Append(BUILDERS={'FileAsHeader': builder})

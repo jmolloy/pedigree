@@ -24,7 +24,7 @@
 #include <stdint.h>
 #include "environment.h"
 
-#include <graphics/Graphics.h>
+#include <native/graphics/Graphics.h>
 
 #include <map>
 
@@ -34,6 +34,8 @@
 #include <cairo/cairo.h>
 #include <cairo/cairo-ft.h>
 
+#include <pango/pangocairo.h>
+
 #include <iconv.h>
 
 class Font
@@ -42,9 +44,12 @@ public:
     Font(size_t requestedSize, const char *pFilename, bool bCache, size_t nWidth);
     virtual ~Font();
 
-    virtual size_t render(PedigreeGraphics::Framebuffer *pFb, uint32_t c, size_t x, size_t y, uint32_t f, uint32_t b, bool bBack = true);
+    virtual size_t render(PedigreeGraphics::Framebuffer *pFb, uint32_t c,
+        size_t x, size_t y, uint32_t f, uint32_t b, bool bBack = true,
+        bool bBold = false, bool bItalic = false, bool bUnderline = false);
 
-    virtual size_t render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b, bool bBack = true);
+    virtual size_t render(const char *s, size_t x, size_t y, uint32_t f, uint32_t b,
+        bool bBack = true, bool bBold = false, bool bItalic = false, bool bUnderline = false);
 
     size_t getWidth()
     {return m_CellWidth;}
@@ -104,6 +109,8 @@ private:
     iconv_t m_Iconv;
 
     std::map<uint32_t, char *> m_ConversionCache;
+
+    PangoFontDescription *m_FontDesc;
 };
 
 #endif

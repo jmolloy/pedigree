@@ -27,10 +27,11 @@
 
 #ifdef THREADS
 #include <process/Process.h>
+#include <process/TimeTracker.h>
 #include <Subsystem.h>
 #endif
 
-const char* g_ExceptionNames[] =
+static const char* g_ExceptionNames[] =
 {
   "Divide Error",
   "Debug",
@@ -126,6 +127,7 @@ bool X64InterruptManager::registerInterruptHandler(size_t nInterruptNumber,
 
 void X64InterruptManager::interrupt(InterruptState &interruptState)
 {
+  TimeTracker tracker(0, !interruptState.kernelMode());
   size_t nIntNumber = interruptState.getInterruptNumber();
 
   #if defined(DEBUGGER)
@@ -165,7 +167,7 @@ void X64InterruptManager::interrupt(InterruptState &interruptState)
   Thread *pThread = Processor::information().getCurrentThread();
   Process *pProcess = pThread->getParent();
   Subsystem *pSubsystem = pProcess->getSubsystem();
-  if(pSubsystem)
+  if(pSubsystem && !interruptState.kernelMode())
   {
       if(UNLIKELY(nIntNumber == 0))
       {

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -31,100 +30,40 @@
 class MacAddress
 {
   public:
-    MacAddress() :
-      m_Mac(), m_Valid(false)
-    {};
-    virtual ~MacAddress() {};
+    MacAddress();
+    MacAddress(const MacAddress &other);
 
-    bool valid()
+    bool valid() const
     {
       return m_Valid;
     }
 
-    void setMac(uint8_t byte, size_t element)
-    {
-      if(element < 6)
-      {
-        m_Mac[element] = byte;
-        m_Valid = true; // it has at least a byte, which makes it partially valid
-      }
-    };
+    void setMac(uint8_t byte, size_t element);
 
     /** Useful for setting a broadcast MAC */
-    void setMac(uint8_t element)
-    {
-      memset(m_Mac, element, 6);
-      m_Valid = true;
-    }
+    void setMac(uint8_t element);
 
-    void setMac(uint8_t* data, bool bSwap = false)
-    {
-      if(bSwap)
-      {
-        uint16_t *p = reinterpret_cast<uint16_t*>(data);
-        uint16_t *me = reinterpret_cast<uint16_t*>(m_Mac);
-        size_t i;
-        for(i = 0; i < 3; i++)
-          me[i] = BIG_TO_HOST16(p[i]);
-      }
-      else
-        memcpy(m_Mac, data, 6);
-      m_Valid = true;
-    };
+    void setMac(const uint16_t* data, bool bSwap = false);
 
-    uint8_t getMac(size_t element)
-    {
-      if(element < 6)
-        return m_Mac[element];
-      return 0;
-    };
+    uint8_t getMac(size_t element) const;
 
-    uint8_t* getMac()
-    {
-      return m_Mac;
-    };
+    const uint16_t* getMac() const;
 
-    uint8_t operator [] (size_t offset)
-    {
-      if(m_Valid)
-        return getMac(offset);
-      else
-        return 0;
-    };
+    uint8_t operator [] (size_t offset) const;
 
-    MacAddress& operator = (MacAddress a)
-    {
-      if(a.valid())
-        setMac(a.getMac());
-      return *this;
-    }
+    MacAddress& operator = (const MacAddress &a);
 
-    MacAddress& operator = (uint8_t* a)
-    {
-      setMac(a);
-      return *this;
-    }
+    MacAddress& operator = (const uint16_t* a);
 
-    operator uint8_t* ()
+    operator const uint16_t* () const
     {
       return getMac();
     }
 
-    String toString()
-    {
-        NormalStaticString str;
-        for(int i = 0; i < 6; i++)
-        {
-            str.append(m_Mac[i], 16, 2, '0');
-            if(i < 5)
-                str += ":";
-        }
-        return String(static_cast<const char*>(str));
-    }
+    String toString();
 
   private:
-
-    uint8_t   m_Mac[6];
+    uint16_t  m_Mac[3];
     bool      m_Valid;
 };
 

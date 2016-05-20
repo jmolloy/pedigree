@@ -20,29 +20,65 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # vim: set filetype=python:
 
 import os
+import SCons
 
 from buildutils import fs, db
 from buildutils.diskimages import build
 
-Import(['env'])
+Import(['env', 'host_env'])
+if not env['build_tests_only']:
+  Import(['userspace_env'])
 
-SConscript(os.path.join('src', 'subsys', 'posix', 'SConscript'), exports=['env'])
-SConscript(os.path.join('src', 'subsys', 'pedigree-c', 'SConscript'), exports=['env'])
+# Host utilities or libraries for host tools in git submodules.
+SConscript(os.path.join('external', 'SConscript'), exports=['host_env'],
+           variant_dir=os.path.join(host_env['BUILDDIR'], 'external'), duplicate=0)
 
-if env['ARCH_TARGET'] in ['X86', 'X64', 'ARM']:
-    SConscript(os.path.join('src', 'subsys', 'native', 'SConscript'), exports=['env'])
+# Build utilities that run on the host during the kernel build.
+SConscript(os.path.join('src', 'buildutil', 'SConscript'), exports=['host_env'])
 
-SConscript(os.path.join('src', 'modules', 'SConscript'), exports=['env'])
-SConscript(os.path.join('src', 'system', 'kernel', 'SConscript'), exports=['env'])
+if env['build_modules']:
+  # POSIX subsystem.
+  SConscript(os.path.join('src', 'subsys', 'posix', 'SConscript'),
+             exports=['env', 'userspace_env'])
+  # Pedigree-C subsystem.
+  SConscript(os.path.join('src', 'subsys', 'pedigree-c', 'SConscript'),
+             exports=['env', 'userspace_env'])
+  # Native subsystem.
+  if 'NATIVE_SUBSYSTEM' in env['EXTRA_CONFIG']:
+      SConscript(os.path.join('src', 'subsys', 'native', 'SConscript'),
+                 exports=['env', 'userspace_env'])
+  # Kernel drivers and modules.
+  SConscript(os.path.join('src', 'modules', 'SConscript'), exports=['env'])
+
+if env['build_kernel']:
+  SConscript(os.path.join('src', 'system', 'kernel', 'SConscript'), exports=['env'])
+  if env['BOOT_DIR']:
+    SConscript(os.path.join('src', 'system', 'boot', env['BOOT_DIR'], 'SConscript'), exports=['env'])
 
 # On X86, X64 and PPC we build applications and LGPL libraries
-if env['ARCH_TARGET'] in ['X86', 'X64', 'PPC']:
-    SConscript(os.path.join('src', 'user', 'SConscript'), exports=['env'])
-    SConscript(os.path.join('src', 'lgpl', 'SConscript'), exports=['env'])
+if env['build_apps'] or env['build_libs']:
+  SConscript(os.path.join('src', 'user', 'SConscript'),
+             exports=['env', 'userspace_env'])
+if env['build_lgpl']:
+  SConscript(os.path.join('src', 'lgpl', 'SConscript'),
+             exports=['env', 'userspace_env'])
 
-if not env['ARCH_TARGET'] in ['X86', 'X64']:
-    SConscript(os.path.join('src', 'system', 'boot', 'SConscript'), exports=['env'])
+# Build the configuration database (no dependencies)
+config_database = os.path.join(env["PEDIGREE_BUILD_BASE"], 'config.db')
+if env['build_configdb']:
+  configSchemas = fs.find_files(env.Dir('#src').abspath, lambda x: x == 'schema', [])
+  env.Sqlite(config_database, configSchemas)
 
+  if 'STATIC_DRIVERS' in env['CPPDEFINES']:
+      # Generate config database header file for static inclusion.
+      config_header = env.File('#src/modules/system/config/config_database.h')
+      env.FileAsHeader(config_header, config_database)
+
+# Build disk images.
+if env['build_images']:
+  build.buildDiskImages(env, config_database)
+
+# Pyflakes - linting python files in the tree.
 rootdir = env.Dir("#").abspath
 imagesroot = env.Dir("#images").abspath
 
@@ -51,16 +87,3 @@ if env['pyflakes'] or env['sconspyflakes']:
     pyfiles = fs.find_files(rootdir, lambda x: x.endswith('.py'), [imagesroot])
     pyflakes = env.Pyflakes('pyflakes-result', pyfiles)
     env.AlwaysBuild(pyflakes)
-
-# Build the configuration database (no dependencies)
-config_database = os.path.join(env["PEDIGREE_BUILD_BASE"], 'config.db')
-
-configSchemas = fs.find_files(env.Dir('#src').abspath, lambda x: x == 'schema', [])
-env.Sqlite(config_database, configSchemas)
-
-if 'STATIC_DRIVERS' in env['CPPDEFINES']:
-    # Generate config database header file for static inclusion.
-    config_header = env.File('#src/modules/system/config/config_database.h')
-    env.FileToHeader(config_header, config_database)
-
-build.buildDiskImages(env, config_database)

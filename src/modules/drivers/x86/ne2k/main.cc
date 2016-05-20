@@ -27,7 +27,7 @@
 
 static bool bFound = false;
 
-void probeDevice(Device *pDev)
+static void probeDevice(Device *pDev)
 {
     NOTICE("NE2K found");
 
@@ -41,14 +41,14 @@ void probeDevice(Device *pDev)
     bFound = true;
 }
 
-bool entry()
+static bool entry()
 {
-    Device::root().searchByVendorIdAndDeviceId(NE2K_VENDOR_ID, NE2K_DEVICE_ID, probeDevice);
+    Device::searchByVendorIdAndDeviceId(NE2K_VENDOR_ID, NE2K_DEVICE_ID, probeDevice);
 
     return bFound;
 }
 
-void exit()
+static void exit()
 {
 
 }

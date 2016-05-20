@@ -24,9 +24,9 @@
 #ifdef X86_COMMON
 #include <machine/Pci.h>
 #endif
+#include <LockGuard.h>
+#include <time/Time.h>
 #include "Ohci.h"
-
-#define delay(n) do{Semaphore semWAIT(0);semWAIT.acquire(1, 0, n*1000);}while(0)
 
 #define INDEX_FROM_TD(ptr) (((reinterpret_cast<uintptr_t>((ptr)) & 0xFFF) / sizeof(TD)))
 #define PHYS_TD(idx)        (m_pTDListPhys + ((idx) * sizeof(TD)))
@@ -64,19 +64,19 @@ Ohci::Ohci(Device* pDev) : UsbHub(pDev), m_Mutex(false), m_ScheduleChangeLock(),
     m_pTDListPhys           = physicalBase + 0x4000;
 
     // Clear out the HCCA block.
-    memset(m_pHcca, 0, 0x800);
+    ByteSet(m_pHcca, 0, 0x800);
 
     // Get an ED for the periodic list
     m_PeriodicEDBitmap.set(0);
     ED *pPeriodicED = m_pPeriodicEDList;
-    memset(pPeriodicED, 0, sizeof(ED));
+    ByteSet(pPeriodicED, 0, sizeof(ED));
     pPeriodicED->bSkip = true;
     pPeriodicED->pMetaData = new ED::MetaData;
     pPeriodicED->pMetaData->id = 0x2000;
     pPeriodicED->pMetaData->pPrev = pPeriodicED->pMetaData->pNext = pPeriodicED;
 
     // Set all HCCA interrupt ED entries to our periodic ED
-    dmemset(m_pHcca->pInterruptEDList, m_pPeriodicEDListPhys, 3);
+    DoubleWordSet(m_pHcca->pInterruptEDList, m_pPeriodicEDListPhys, 3);
 
     // Every periodic ED will be added after this one
     m_pPeriodicQueueTail = pPeriodicED;
@@ -107,7 +107,7 @@ Ohci::Ohci(Device* pDev) : UsbHub(pDev), m_Mutex(false), m_ScheduleChangeLock(),
         uint32_t status = m_pBase->read32(OhciCommandStatus);
         m_pBase->write32(status | OhciCommandRequestOwnership, OhciCommandStatus);
         while((control = m_pBase->read32(OhciControl)) & OhciControlInterruptRoute)
-            delay(1);
+            Time::delay(1 * Time::Multiplier::MILLISECOND);
     }
     else
     {
@@ -124,7 +124,7 @@ Ohci::Ohci(Device* pDev) : UsbHub(pDev), m_Mutex(false), m_ScheduleChangeLock(),
     
     // Perform a reset via the UHCI Control register.
     m_pBase->write32(control & ~OhciControlStateFunctionalMask, OhciControl);
-    delay(200);
+    Time::delay(200 * Time::Multiplier::MILLISECOND);
     
     // Grab the FM Interval register (5.1.1.4, OHCI spec).
     uint32_t interval = m_pBase->read32(OhciFmInterval);
@@ -132,7 +132,7 @@ Ohci::Ohci(Device* pDev) : UsbHub(pDev), m_Mutex(false), m_ScheduleChangeLock(),
     // Perform a full hardware reset.
     m_pBase->write32(OhciCommandHcReset, OhciCommandStatus);
     while(m_pBase->read32(OhciCommandStatus) & OhciCommandHcReset)
-        delay(5);
+        Time::delay(5 * Time::Multiplier::MILLISECOND);
     
     // We now have 2 ms to complete all operations before we start the controller. 5.1.1.4, OHCI spec.
 
@@ -156,7 +156,7 @@ Ohci::Ohci(Device* pDev) : UsbHub(pDev), m_Mutex(false), m_ScheduleChangeLock(),
     // Controller is now running. Yay!
     
     // Restore the Frame Interval register (reset by a HC reset)
-    m_pBase->write32(interval | (1 << 31), OhciFmInterval);
+    m_pBase->write32(interval | (1U << 31U), OhciFmInterval);
     
     DEBUG_LOG("USB: OHCI: maximum packet size is " << ((interval >> 16) & 0xEFFF));
     
@@ -194,7 +194,7 @@ Ohci::Ohci(Device* pDev) : UsbHub(pDev), m_Mutex(false), m_ScheduleChangeLock(),
             m_pBase->write32(OhciRhPortStsPower, OhciRhPortStatus + (i * 4));
 
             // Wait as long as it needs
-            delay(powerWait);
+            Time::delay(powerWait * Time::Multiplier::MILLISECOND);
         }
         
         DEBUG_LOG("OHCI: Determining if there's a device on this port");
@@ -244,6 +244,11 @@ void Ohci::removeED(ED *pED)
         pQueueHead = &m_pBulkQueueHead;
         pQueueTail = &m_pBulkQueueTail;
     }
+    else
+    {
+        ERROR("OHCI: ED #" << pED->pMetaData->id << " has an invalid type!");
+        return;
+    }
     
     bool bControl = pED->pMetaData->edType == ControlList;
     
@@ -286,7 +291,7 @@ void Ohci::removeED(ED *pED)
             it++)
         {
             size_t idx = (*it)->id;
-            memset((*it), 0, sizeof(TD));
+            ByteSet((*it), 0, sizeof(TD));
             m_TDBitmap.clear(idx);
         }
     }
@@ -300,7 +305,7 @@ void Ohci::removeED(ED *pED)
             it++)
         {
             size_t idx = (*it)->id;
-            memset((*it), 0, sizeof(TD));
+            ByteSet((*it), 0, sizeof(TD));
             m_TDBitmap.clear(idx);
         }
     }
@@ -415,7 +420,7 @@ void Ohci::interrupt(size_t number, InterruptState &state)
                 
                 // Destroy the ED and free it's memory space.
                 delete pED->pMetaData;
-                memset(pED, 0, sizeof(ED));
+                ByteSet(pED, 0, sizeof(ED));
                 
                 switch(type)
                 {
@@ -600,7 +605,7 @@ void Ohci::addTransferToTransaction(uintptr_t pTransaction, bool bToggle, UsbPid
 
     // Grab the TD pointer we're going to set up now
     TD *pTD = &m_pTDList[nIndex];
-    memset(pTD, 0, sizeof(TD));
+    ByteSet(pTD, 0, sizeof(TD));
     pTD->id = nIndex;
 
     // Buffer rounding - allow packets smaller than the buffer we specify
@@ -728,7 +733,7 @@ uintptr_t Ohci::createTransaction(UsbEndpoint endpointInfo)
         }
     }
 
-    memset(pED, 0, sizeof(ED));
+    ByteSet(pED, 0, sizeof(ED));
 
     // Device address, endpoint and speed
     pED->nAddress = endpointInfo.nAddress;
@@ -939,7 +944,7 @@ void Ohci::addInterruptInHandler(UsbEndpoint endpointInfo, uintptr_t pBuffer, ui
         nIndex += 0x2000;
     }
 
-    memset(pED, 0, sizeof(ED));
+    ByteSet(pED, 0, sizeof(ED));
 
     // Device address, endpoint and speed
     pED->nAddress = endpointInfo.nAddress;
@@ -997,7 +1002,7 @@ bool Ohci::portReset(uint8_t nPort, bool bErrorResponse)
     // Perform a reset of the port
     m_pBase->write32(OhciRhPortStsReset | OhciRhPortStsConnStsCh, OhciRhPortStatus + (nPort * 4));
     while(!(m_pBase->read32(OhciRhPortStatus + (nPort * 4)) & OhciRhPortStsResCh))
-        delay(5);
+        Time::delay(5 * Time::Multiplier::MILLISECOND);
     m_pBase->write32(OhciRhPortStsResCh, OhciRhPortStatus + (nPort * 4));
 
     // Enable the port if not already enabled

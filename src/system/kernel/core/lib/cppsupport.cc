@@ -17,6 +17,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <compiler.h>
 #include <processor/types.h>
 #include <Spinlock.h>
 #include "cppsupport.h"
@@ -27,10 +28,7 @@
 #include <machine/Machine.h>
 #include <Log.h>
 
-#include <utilities/Tree.h>
 #include <utilities/MemoryTracing.h>
-
-Tree<void*, void*> g_FreedPointers;
 
 #include "SlamAllocator.h"
 
@@ -39,16 +37,15 @@ Tree<void*, void*> g_FreedPointers;
 #define DEBUG_ALLOCATOR_CHECK_UNDERFLOWS
 
 // Required for G++ to link static init/destructors.
+#ifndef HOSTED
 void *__dso_handle;
+#endif
 
 // Defined in the linker.
 extern uintptr_t start_ctors;
 extern uintptr_t end_ctors;
-
-#ifdef USE_DEBUG_ALLOCATOR
-Spinlock allocLock;
-uintptr_t heapBase = 0x60000000; // 0xC0000000;
-#endif
+extern uintptr_t start_dtors;
+extern uintptr_t end_dtors;
 
 /// Calls the constructors for all global objects.
 /// Call this before using any global objects.
@@ -57,8 +54,19 @@ void initialiseConstructors()
   // Constructor list is defined in the linker script.
   // The .ctors section is just an array of function pointers.
   // iterate through, calling each in turn.
-  uintptr_t *iterator = reinterpret_cast<uintptr_t*>(&start_ctors);
-  while (iterator < reinterpret_cast<uintptr_t*>(&end_ctors))
+  uintptr_t *iterator = &start_ctors;
+  while (iterator < &end_ctors)
+  {
+    void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
+    fp();
+    iterator++;
+  }
+}
+
+void runKernelDestructors()
+{
+  uintptr_t *iterator = &start_dtors;
+  while (iterator < &end_dtors)
   {
     void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
     fp();
@@ -67,68 +75,53 @@ void initialiseConstructors()
 }
 
 #ifdef MEMORY_TRACING
-Spinlock traceLock;
+static bool traceAllocations = true;
+void startTracingAllocations()
+{
+    traceAllocations = true;
+}
+
+void stopTracingAllocations()
+{
+    traceAllocations = false;
+}
+
+static volatile int g_TraceLock = 0;
+
 void traceAllocation(void *ptr, MemoryTracing::AllocationTrace type, size_t size)
 {
-    LockGuard<Spinlock> guard(traceLock);
-
-    // Yes, this means we'll lose early init mallocs. Oh well...
-    if(!Machine::instance().isInitialised())
+    // Don't trace if we're not allowed to.
+    if (!traceAllocations)
         return;
 
-    Serial *pSerial = Machine::instance().getSerial(1);
-    if(!pSerial)
-        return;
+    MemoryTracing::AllocationTraceEntry entry;
+    entry.data.type = type;
+    entry.data.sz = size & 0xFFFFFFFFU;
+    entry.data.ptr = reinterpret_cast<uintptr_t>(ptr) & 0xFFFFFFFFU;
 
-    char buf[255];
+#define BT_FRAME(N) do { \
+    if (!__builtin_frame_address(N)) \
+    { \
+        entry.data.bt[N] = 0; \
+        break; \
+    } \
+    entry.data.bt[N] = reinterpret_cast<uintptr_t>(__builtin_return_address(N)) & 0xFFFFFFFFU; \
+} while(0)
 
-    size_t off = 0;
+    BT_FRAME(0);
+    BT_FRAME(1);
+    BT_FRAME(2);
+    BT_FRAME(3);
+    BT_FRAME(4);
 
-    // Allocation type.
-    memcpy(&buf[off], &type, 1);
-    ++off;
+    __asm__ __volatile__("pushfq; cli" ::: "memory");
 
-    // Resulting pointer.
-    memcpy(&buf[off], &ptr, sizeof(void*));
-    off += sizeof(void*);
-
-    // Don't store size or backtrace for frees.
-    if(type == MemoryTracing::Allocation)
+    for(size_t i = 0; i < sizeof entry.buf; ++i)
     {
-        // Size of allocation.
-        memcpy(&buf[off], &size, sizeof(size_t));
-        off += sizeof(size_t);
-
-        // Backtrace.
-        do
-        {
-#define DO_BACKTRACE(v, level, buffer, offset) { \
-                if(!__builtin_frame_address(level)) break; \
-                v = __builtin_return_address(level); \
-                memcpy(&buffer[offset], &v, sizeof(void*)); \
-                offset += sizeof(void*); \
-            }
-
-            void *p;
-
-            DO_BACKTRACE(p, 1, buf, off);
-            DO_BACKTRACE(p, 2, buf, off);
-            DO_BACKTRACE(p, 3, buf, off);
-            DO_BACKTRACE(p, 4, buf, off);
-            DO_BACKTRACE(p, 5, buf, off);
-            DO_BACKTRACE(p, 6, buf, off);
-        } while(0);
-
-        // Ensure the trace always ends in a zero frame (ie, end of trace)
-        uintptr_t endoftrace = 0;
-        memcpy(&buf[off], &endoftrace, sizeof(uintptr_t));
-        off += sizeof(uintptr_t);
+        __asm__ __volatile__("outb %%al, %%dx" :: "Nd" (0x2F8), "a" (entry.buf[i]));
     }
 
-    for(size_t i = 0; i < off; ++i)
-    {
-        pSerial->write(buf[i]);
-    }
+    __asm__ __volatile__("popf" ::: "memory");
 }
 
 /**
@@ -139,6 +132,8 @@ void traceAllocation(void *ptr, MemoryTracing::AllocationTrace type, size_t size
  */
 void traceMetadata(NormalStaticString str, void *p1, void *p2)
 {
+    // this can be provided by scripts/addr2line.py these days
+#if 0
     LockGuard<Spinlock> guard(traceLock);
 
     // Yes, this means we'll lose early init mallocs. Oh well...
@@ -150,25 +145,26 @@ void traceMetadata(NormalStaticString str, void *p1, void *p2)
         return;
 
     char buf[128];
-    memset(buf, 0, 128);
+    ByteSet(buf, 0, 128);
 
     size_t off = 0;
 
     const MemoryTracing::AllocationTrace type = MemoryTracing::Metadata;
 
-    memcpy(&buf[off], &type, 1);
+    MemoryCopy(&buf[off], &type, 1);
     ++off;
-    memcpy(&buf[off], static_cast<const char *>(str), str.length());
+    MemoryCopy(&buf[off], static_cast<const char *>(str), str.length());
     off += 64; // Statically sized segment.
-    memcpy(&buf[off], &p1, sizeof(void*));
+    MemoryCopy(&buf[off], &p1, sizeof(void*));
     off += sizeof(void*);
-    memcpy(&buf[off], &p2, sizeof(void*));
+    MemoryCopy(&buf[off], &p2, sizeof(void*));
     off += sizeof(void*);
 
     for(size_t i = 0; i < off; ++i)
     {
         pSerial->write(buf[i]);
     }
+#endif
 }
 #endif
 
@@ -184,12 +180,14 @@ extern "C" void ATEXIT(void (*f)(void *), void *p, void *d)
 }
 
 /// Called by G++ if a pure virtual function is called. Bad Thing, should never happen!
-extern "C" void __cxa_pure_virtual()
+extern "C" void __cxa_pure_virtual() NORETURN;
+void __cxa_pure_virtual()
 {
     FATAL_NOLOCK("Pure virtual function call made");
 }
 
 /// Called by G++ if function local statics are initialised for the first time
+#ifndef HAS_THREAD_SANITIZER
 extern "C" int __cxa_guard_acquire()
 {
   return 1;
@@ -198,21 +196,35 @@ extern "C" void __cxa_guard_release()
 {
   // TODO
 }
+#endif
 
+#if !(defined(HAS_ADDRESS_SANITIZER) || defined(HAS_THREAD_SANITIZER))
+#ifdef HOSTED
+extern "C" void *_malloc(size_t sz)
+#else
 extern "C" void *malloc(size_t sz)
+#endif
 {
     return reinterpret_cast<void *>(new uint8_t[sz]); //SlamAllocator::instance().allocate(sz));
 }
 
+#ifdef HOSTED
+extern "C" void _free(void *p)
+#else
 extern "C" void free(void *p)
+#endif
 {
     if (p == 0)
         return;
     //SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
-    delete reinterpret_cast<uint8_t*>(p);
+    delete [] reinterpret_cast<uint8_t*>(p);
 }
 
+#ifdef HOSTED
+extern "C" void *_realloc(void *p, size_t sz)
+#else
 extern "C" void *realloc(void *p, size_t sz)
+#endif
 {
     if (p == 0)
         return malloc(sz);
@@ -229,237 +241,72 @@ extern "C" void *realloc(void *p, size_t sz)
     
     /// \note If sz > p's original size, this may fail.
     void *tmp = malloc(sz);
-    memcpy(tmp, p, copySz);
+    MemoryCopy(tmp, p, copySz);
     free(p);
 
     return tmp;
 }
 
-void *operator new (size_t size) throw()
+void *operator new (size_t size) noexcept
 {
-#ifdef USE_DEBUG_ALLOCATOR
-    
-    /// \todo underflow flag
-
-    // Grab the size of the SlamAllocator header and footer
-    size_t slamHeader = SlamAllocator::instance().headerSize();
-    size_t slamFooter = SlamAllocator::instance().footerSize();
-
-    // Find the number of pages we need for this allocation. Make sure that
-    // we get a full page for our allocation if we need it.
-    size_t nPages = ((size + slamHeader + slamFooter) / 0x1000) + 2;
-    size_t blockSize = nPages * 0x1000;
-
-    // Allocate the space
-    uintptr_t ret = SlamAllocator::instance().allocate(blockSize);
-
-    //NOTICE_NOLOCK("ret = " << ret << " [" << (ret + blockSize) << "]");
-
-    // Calculate the offset at which we will return a data pointer
-    uintptr_t unmapAddress = (ret & ~0xFFF) + (blockSize - 0x1000);
-    //NOTICE_NOLOCK("unmap address is " << unmapAddress);
-    uintptr_t dataPointer = unmapAddress - (size + slamFooter);
-    //NOTICE_NOLOCK("Data pointer at " << dataPointer << ", size = " << size << " [" << blockSize << "]");
-
-    // Okay, now the header and footer are at completely incorrect locations.
-    // Let's resolve that now.
-    void *header = reinterpret_cast<void*>(ret - slamHeader);
-    void *targetLoc = reinterpret_cast<void*>(dataPointer - slamHeader);
-
-    //NOTICE_NOLOCK("old header at " << reinterpret_cast<uintptr_t>(header));
-    //NOTICE_NOLOCK("copied to " << reinterpret_cast<uintptr_t>(targetLoc));
-
-    memcpy(targetLoc, header, slamHeader);
-    void *footer = reinterpret_cast<void*>(ret + blockSize);
-    targetLoc = reinterpret_cast<void*>(unmapAddress - slamFooter);
-
-    //NOTICE_NOLOCK("old footer at " << reinterpret_cast<uintptr_t>(footer));
-    //NOTICE_NOLOCK("copied to " << reinterpret_cast<uintptr_t>(targetLoc));
-
-    memcpy(targetLoc, footer, slamFooter);
-
-    //FATAL_NOLOCK("k");
-
-
-    /// \todo unmap a page for overflow checks
-
-    // All done, return the address
-    return reinterpret_cast<void*>(dataPointer);
-    
-#if 0
-    
-    // Make the last page non-writable (but allow it to be read)
-    /// \todo Flag for this behaviour - perhaps want to look for read overflows too?
-    physical_uintptr_t phys = 0; size_t flags = 0;
-    void *remapStart = reinterpret_cast<void*>(remapPoint);
-    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-    /*
-    if(va.isMapped(remapStart)) // Pedantically check for mapping
-    {
-        va.getMapping(remapStart, phys, flags);
-        va.unmap(remapStart);
-        va.map(phys, remapStart, VirtualAddressSpace::KernelMode);
-    }
-    */
-
-    // NOTICE_NOLOCK("sz=" << size << ", alloc=" << ret << ", ptr=" << dataPointer << ", remap=" << remapPoint);
-    return reinterpret_cast<void*>(dataPointer);
-
-#endif
-
-#elif defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON)
     void *ret = reinterpret_cast<void *>(SlamAllocator::instance().allocate(size));
     return ret;
-#else
-    return 0;
-#endif
 }
-void *operator new[] (size_t size) throw()
+void *operator new[] (size_t size) noexcept
 {
-#ifdef USE_DEBUG_ALLOCATOR
-    
-    /// \todo underflow flag
-
-    // Grab the size of the SlamAllocator header and footer
-    size_t slamHeader = SlamAllocator::instance().headerSize();
-    size_t slamFooter = SlamAllocator::instance().footerSize();
-
-    // Find the number of pages we need for this allocation. Make sure that
-    // we get a full page for our allocation if we need it.
-    size_t nPages = ((size + slamHeader + slamFooter) / 0x1000) + 2;
-    size_t blockSize = nPages * 0x1000;
-
-    // Allocate the space
-    uintptr_t ret = SlamAllocator::instance().allocate(blockSize);
-
-    //NOTICE_NOLOCK("ret = " << ret << " [" << (ret + blockSize) << "]");
-
-    // Calculate the offset at which we will return a data pointer
-    uintptr_t unmapAddress = (ret & ~0xFFF) + (blockSize - 0x1000);
-    //NOTICE_NOLOCK("unmap address is " << unmapAddress);
-    uintptr_t dataPointer = unmapAddress - (size + slamFooter);
-    //NOTICE_NOLOCK("Data pointer at " << dataPointer << ", size = " << size << " [" << blockSize << "]");
-
-    // Okay, now the header and footer are at completely incorrect locations.
-    // Let's resolve that now.
-    void *header = reinterpret_cast<void*>(ret - slamHeader);
-    void *targetLoc = reinterpret_cast<void*>(dataPointer - slamHeader);
-
-    //NOTICE_NOLOCK("old header at " << reinterpret_cast<uintptr_t>(header));
-    //NOTICE_NOLOCK("copied to " << reinterpret_cast<uintptr_t>(targetLoc));
-
-    memcpy(targetLoc, header, slamHeader);
-    void *footer = reinterpret_cast<void*>(ret + blockSize);
-    targetLoc = reinterpret_cast<void*>(unmapAddress - slamFooter);
-
-    //NOTICE_NOLOCK("old footer at " << reinterpret_cast<uintptr_t>(footer));
-    //NOTICE_NOLOCK("copied to " << reinterpret_cast<uintptr_t>(targetLoc));
-
-    memcpy(targetLoc, footer, slamFooter);
-
-    //FATAL_NOLOCK("k");
-
-
-    /// \todo unmap a page for overflow checks
-
-    // All done, return the address
-    return reinterpret_cast<void*>(dataPointer);
-
-#elif defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON)
     void *ret = reinterpret_cast<void *>(SlamAllocator::instance().allocate(size));
     return ret;
-#else
-    return 0;
-#endif
 }
-void *operator new (size_t size, void* memory) throw()
+void *operator new (size_t size, void* memory) noexcept
 {
   return memory;
 }
-void *operator new[] (size_t size, void* memory) throw()
+void *operator new[] (size_t size, void* memory) noexcept
 {
   return memory;
 }
-void operator delete (void * p)
+void operator delete (void * p) noexcept
 {
-#ifdef USE_DEBUG_ALLOCATOR
-    if(p == 0) return;
-
-    // The pointer will be offset into the first page, so make sure that it's
-    // properly aligned against a page boundary so we can free it. Maybe.
-    uintptr_t temp = reinterpret_cast<uintptr_t>(p);
-    temp = (temp & ~0xFFF) + 0x8; /// \bug Hard-coded size of SlamAllocator header
-    SlamAllocator::instance().free(temp);
-
-    return;
-#endif
-
-#if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON)
     if (p == 0) return;
     if(SlamAllocator::instance().isPointerValid(reinterpret_cast<uintptr_t>(p)))
         SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
-#endif
 }
-void operator delete[] (void * p)
+void operator delete[] (void * p) noexcept
 {
-#ifdef USE_DEBUG_ALLOCATOR
-    if(p == 0) return;
-
-    // The pointer will be offset into the first page, so make sure that it's
-    // properly aligned against a page boundary so we can free it. Maybe.
-    uintptr_t temp = reinterpret_cast<uintptr_t>(p);
-    temp = (temp & ~0xFFF) + 0x8; /// \bug Hard-coded size of SlamAllocator header
-    SlamAllocator::instance().free(temp);
-
-    return;
-#endif
-
-#if defined(X86_COMMON) || defined(MIPS_COMMON) || defined(PPC_COMMON) || defined(ARM_COMMON)
     if (p == 0) return;
     if(SlamAllocator::instance().isPointerValid(reinterpret_cast<uintptr_t>(p)))
         SlamAllocator::instance().free(reinterpret_cast<uintptr_t>(p));
+}
+void operator delete (void *p, void *q) noexcept
+{
+  // TODO
+  panic("Operator delete (placement) -implement");
+}
+void operator delete[] (void *p, void *q) noexcept
+{
+  // TODO
+  panic("Operator delete[] (placement) -implement");
+}
 #endif
-}
-void operator delete (void *p, void *q)
-{
-  // TODO
-  panic("Operator delete -implement");
-}
-void operator delete[] (void *p, void *q)
-{
-  // TODO
-  panic("Operator delete[] -implement");
-}
 
-#ifdef ARMV7_IGNORE
-
+#if defined(HOSTED) && (!(defined(HAS_ADDRESS_SANITIZER) || defined(HAS_THREAD_SANITIZER)))
 extern "C"
 {
 
-/** Atomic compare and swap operation... or as close as we can get to it. */
-bool __sync_bool_compare_and_swap_4(void *ptr, void *oldval, void *newval)
+void *__wrap_malloc(size_t sz)
 {
-    unsigned int notequal = 0, notexclusive = 0;
-    
-    asm volatile("dmb"); // Memory barrier
-    
-    do
-    {
-        asm volatile("ldrex     %0, [%2]\r\n"     // Load current value at &ptr
-                     "subs      %0, %0, %3\r\n"   // Subtract by oldval...
-                     "mov       %1, %0\r\n"       // ... so notequal will be zero if equal
-                     "strexeq   %0, %4, [%2]"     // Write back the result
-                     : "=&r" (notexclusive), "=&r" (notequal)
-                     : "r" (&ptr), "Ir" (oldval), "r" (newval)
-                     : "cc");
-    } while(notexclusive && !notequal);
-    
-    asm volatile("dmb"); // Memory barrier
-    
-    return !notequal;
+  return _malloc(sz);
+}
+
+void *__wrap_realloc(void *p, size_t sz)
+{
+  return _realloc(p, sz);
+}
+
+void __wrap_free(void *p)
+{
+  return _free(p);
 }
 
 }
-
 #endif
-

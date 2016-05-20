@@ -1,0 +1,75 @@
+'''
+Copyright (c) 2008-2014, Pedigree Developers
+
+Please see the CONTRIB file in the root of the source tree for a full
+list of contributors.
+
+Permission to use, copy, modify, and distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+'''
+
+
+import os
+
+Import(['env'])
+
+KERNEL_DIR = env.Dir('../../system/kernel')
+
+testsuite_bin = os.path.join(env['BUILDDIR'], 'testsuite')
+benchmark_bin = os.path.join(env['BUILDDIR'], 'benchmarker')
+
+build_env = env.Clone()
+
+# Set up includes correctly.
+header_paths = [
+    env.Dir('#src/modules/system'),
+    env.Dir('#src/system/include'),
+    env.Dir('#external/googletest/googletest/include'),
+    env.Dir('#src/system/kernel/core'),
+]
+
+build_env.Append(CPPPATH=header_paths)
+
+# Create a fake build environment (TODO: detect host architecture)
+defines = [
+    'HOSTED', 'VFS_NOMMU', 'VFS_STANDALONE', 'EXT2_STANDALONE',
+    'UTILITY_LINUX', 'DEVICE_IGNORE_ADDRESSES', 'LITTLE_ENDIAN',
+    'DONT_LOG_TO_SERIAL', 'BENCHMARK',
+]
+
+build_env.Append(CPPDEFINES=defines)
+
+# TODO(miselin): improve the path to external libraries
+build_env.Append(LIBPATH=[os.path.join(build_env['BUILDDIR'], 'external')])
+
+coverage_env = build_env.Clone()
+
+coverage_env.MergeFlags({'CXXFLAGS': ['-std=c++11', '-g3', '-ggdb', '-O0']})
+
+coverage_env.MergeFlags({
+    'CCFLAGS': build_env['COVERAGE_CCFLAGS'],
+    'LINKFLAGS': build_env['COVERAGE_LINKFLAGS'],
+})
+
+# TODO(miselin): Tree, UniquePointer, HashTable, RangeList, ExtensibleBitmap
+coverage_env.Program(testsuite_bin, Glob('test-*.cc'),
+                     LIBS=['utility_coverage', 'gtest', 'pthread'])
+
+if build_env['HAVE_BENCHMARK']:
+    build_env.MergeFlags({
+        'CXXFLAGS': ['-std=c++11'],
+        'CCFLAGS': ['-g3', '-ggdb', '-O3'],
+        'CPPDEFINES': ['_POSIX_C_SOURCE=200112L'],
+    })
+
+    build_env.Program(benchmark_bin, Glob('bench-*.cc'),
+                      LIBS=['utility', 'benchmark', 'pthread'])

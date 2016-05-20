@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -21,7 +20,7 @@
 #ifndef _INPUT_H
 #define _INPUT_H
 
-#include <types.h>
+#include <native/types.h>
 
 namespace Input
 {

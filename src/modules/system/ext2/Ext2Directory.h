@@ -40,9 +40,9 @@ public:
     /** Destructor */
     virtual ~Ext2Directory();
 
-    uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer)
+    uint64_t read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true)
     {return 0;}
-    uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer)
+    uint64_t write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock = true)
     {return 0;}
 
     void truncate()

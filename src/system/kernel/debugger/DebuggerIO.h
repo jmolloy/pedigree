@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -75,6 +74,7 @@ public:
    */
   DebuggerIO() :
     m_bReady(true),
+    m_pCommand(),
     m_bRefreshesEnabled(true)
   {}
   virtual ~DebuggerIO(){}

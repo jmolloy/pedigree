@@ -18,7 +18,7 @@
  */
 
 #ifndef _UTMPX_H
-#define _UTMPX_h
+#define _UTMPX_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,4 +36,4 @@ extern struct utmpx *pututxline(const struct utmpx *);
 }
 #endif
 
-#endif
+#endif  // _UTMPX_H

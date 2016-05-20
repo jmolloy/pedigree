@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -25,7 +24,7 @@
 #include <utilities/MemoryPool.h>
 #include <LockGuard.h>
 
-FatFile::FatFile(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+FatFile::FatFile(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTime, Time::Timestamp creationTime,
                  uintptr_t inode, class Filesystem *pFs, size_t size, uint32_t dirClus,
                  uint32_t dirOffset, File *pParent) :
     File(name,accessedTime,modifiedTime,creationTime,inode,pFs,size,pParent),
@@ -46,7 +45,7 @@ FatFile::~FatFile()
 
 uintptr_t FatFile::readBlock(uint64_t location)
 {
-    FatFilesystem *pFs = reinterpret_cast<FatFilesystem*>(m_pFilesystem);
+    FatFilesystem *pFs = static_cast<FatFilesystem*>(m_pFilesystem);
 
     m_FileBlockCache.startAtomic();
     uintptr_t buffer = m_FileBlockCache.insert(location);
@@ -75,7 +74,7 @@ uintptr_t FatFile::readBlock(uint64_t location)
 
 void FatFile::writeBlock(uint64_t location, uintptr_t addr)
 {
-    FatFilesystem *pFs = reinterpret_cast<FatFilesystem*>(m_pFilesystem);
+    FatFilesystem *pFs = static_cast<FatFilesystem*>(m_pFilesystem);
 
     // Don't accidentally extend the file when writing the block.
     size_t sz = getBlockSize();
@@ -102,7 +101,7 @@ void FatFile::unpinBlock(uint64_t location)
 
 void FatFile::extend(size_t newSize)
 {
-    FatFilesystem *pFs = reinterpret_cast<FatFilesystem*>(m_pFilesystem);
+    FatFilesystem *pFs = static_cast<FatFilesystem*>(m_pFilesystem);
 
     if(m_Size < newSize)
     {

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -34,11 +33,11 @@ class Pair
         Pair() :
             m_First(), m_Second()
         {}
-        Pair(T1 &f, T2 &s) :
-            m_First(f), m_Second(s)
-        {}
-        virtual ~Pair()
-        {}
+        Pair(const T1 &a, const T2 &b)
+        {
+            m_First = a;
+            m_Second = b;
+        }
 
         T1 first() const
         {

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,7 +22,7 @@
 #include "autogen.h"
 
 #define LOAD_ADDR 0x00100000
-extern int memset(void *buf, int c, size_t len);
+extern int ByteSet(void *buf, int c, size_t len);
 struct BootstrapStruct_t
 {
   // If we are passed via grub, this information will be completely different to
@@ -198,12 +197,12 @@ uint32_t arm_get_cpsr()
   return ret;
 }
 
-void memcpy(void *dest, const void *src, size_t len);
+void MemoryCopy(void *dest, const void *src, size_t len);
 
 extern "C" void __start()
 {
   // 8 entries in the table, plus the literal table holding offsets of C handlers
-  memcpy( (void*) 0, (void*) __arm_vector_table, (4 * 8) + (4 * 6) );
+  MemoryCopy( (void*) 0, (void*) __arm_vector_table, (4 * 8) + (4 * 6) );
   
   // TODO: remove this when happy with relevant code
   writeStr( "about to do software interrupt\r\n" );
@@ -219,7 +218,7 @@ extern "C" void __start()
 
   struct BootstrapStruct_t bs;
 
-  memset(&bs, 0, sizeof(bs));
+  ByteSet(&bs, 0, sizeof(bs));
   bs.shndx = elf.m_pHeader->shstrndx;
   bs.num = elf.m_pHeader->shnum;
   bs.size = elf.m_pHeader->shentsize;

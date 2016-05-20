@@ -35,8 +35,10 @@ int h_errno; // required by networking code
 #include <string.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <semaphore.h>
 #include <malloc.h>
+#include <mntent.h>
 
 #include <sys/resource.h>
 #include <sys/mount.h>
@@ -114,6 +116,9 @@ const char *safepathchars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNO
 // For getopt(3).
 int optreset = 0;
 
+const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
+const struct in6_addr in6addr_loopback = IN6ADDR_LOOPBACK_INIT;
+
 // Defines an fork handler
 struct forkHandler
 {
@@ -135,8 +140,13 @@ int ftruncate(int a, off_t b)
 
 int truncate(const char *path, off_t length)
 {
-    STUBBED("truncate");
-    return -1;
+    int fd = open(path, O_WRONLY);
+    if (fd < 0)
+        return fd;
+    int r = ftruncate(fd, length);
+    close(fd);
+
+    return r;
 }
 
 char* getcwd(char *buf, unsigned long size)
@@ -147,7 +157,8 @@ char* getcwd(char *buf, unsigned long size)
     // error condition.
     if(!buf)
         buf = (char*) malloc(size ? size : PATH_MAX);
-    return (char *)syscall2(POSIX_GETCWD, (long) buf, (long) size);
+    unsigned long result = syscall2(POSIX_GETCWD, (long) buf, (long) size);
+    return (char *) result;
 }
 
 int mkdir(const char *p, mode_t mode)
@@ -220,11 +231,6 @@ int fstat(int file, struct stat *st)
     return (long)syscall2(POSIX_FSTAT, (long)file, (long)st);
 }
 
-int getpid(void)
-{
-    return (long)syscall0(POSIX_GETPID);
-}
-
 int _isatty(int file)
 {
     return (long) syscall1(POSIX_ISATTY, file);
@@ -275,7 +281,8 @@ _READ_WRITE_RETURN_TYPE read(int file, void *ptr, size_t len)
 
 void *sbrk(ptrdiff_t incr)
 {
-    return (void*) syscall1(POSIX_SBRK, incr);
+    uintptr_t result = syscall1(POSIX_SBRK, incr);
+    return (void *) result;
 }
 
 int stat(const char *file, struct stat *st)
@@ -284,26 +291,16 @@ int stat(const char *file, struct stat *st)
 }
 
 #ifndef PPC_COMMON
-int times(void *buf)
+clock_t times(struct tms *buf)
 {
-    STUBBED("times");
-    errno = ENOSYS;
-    return -1;
+    return syscall1(POSIX_TIMES, (long) buf);
 }
+#endif
 
 int utimes(const char *filename, const struct timeval times[2])
 {
-    STUBBED("utimes");
-    return -1;
+    return syscall2(POSIX_UTIMES, (long) filename, (long) times);
 }
-#else
-/* PPC has times() defined in terms of getrusage. */
-int getrusage(int target, void *buf)
-{
-    STUBBED("getrusage");
-    return -1;
-}
-#endif
 
 int unlink(const char *name)
 {
@@ -381,8 +378,8 @@ int lstat(const char *file, struct stat *st)
 DIR *opendir(const char *dir)
 {
     DIR *p = (DIR*) malloc(sizeof(DIR));
-    p->fd = syscall2(POSIX_OPENDIR, (long)dir, (long)&p->ent);
-    if (p->fd < 0)
+    int r = syscall2(POSIX_OPENDIR, (long) dir, (long) p);
+    if (r < 0 || p->fd < 0)
     {
         free(p);
         return 0;
@@ -393,34 +390,74 @@ DIR *opendir(const char *dir)
 struct dirent *readdir(DIR *dir)
 {
     if (!dir)
+    {
+        errno = EINVAL;
         return 0;
+    }
 
     int old_errno = errno;
 
-    if (syscall2(POSIX_READDIR, dir->fd, (long)&dir->ent) != -1)
-        return &dir->ent;
+    if (dir->fd < 0)
+    {
+        // Bad DIR object.
+        errno = EINVAL;
+        return 0;
+    }
+
+    if (dir->totalpos >= dir->count)
+    {
+        // End of directory. errno remains unchanged.
+        return 0;
+    }
+    else if (dir->pos >= 64)
+    {
+        // Buffer the next batch of entries.
+        if (syscall1(POSIX_READDIR, (long) dir) < 0)
+        {
+            // Failed to buffer more entries!
+            return 0;
+        }
+        dir->pos = 1;
+        dir->totalpos++;
+        return &dir->ent[0];
+    }
     else
     {
-        if(!errno)
-            errno = old_errno; // End of directory: errno unchanged.
-        return 0;
+        struct dirent *result = &dir->ent[dir->pos];
+        dir->pos++;
+        dir->totalpos++;
+        return result;
     }
 }
 
 void rewinddir(DIR *dir)
 {
     if (!dir)
+    {
         return;
+    }
 
-    syscall2(POSIX_REWINDDIR, dir->fd, (long)&dir->ent);
+    if (dir->totalpos < 64)
+    {
+        // Don't need to re-buffer.
+        dir->pos = dir->totalpos = 0;
+    }
+    else if (dir->totalpos != 0)
+    {
+        dir->pos = dir->totalpos = 0;
+        syscall1(POSIX_READDIR, (long) dir);
+    }
 }
 
 int closedir(DIR *dir)
 {
     if (!dir)
-        return 0;
+    {
+        errno = EINVAL;
+        return -1;
+    }
 
-    syscall1(POSIX_CLOSEDIR, dir->fd);
+    syscall1(POSIX_CLOSEDIR, (long) dir);
     free(dir);
     return 0;
 }
@@ -574,13 +611,6 @@ int ioctl(int fd, int command, ...)
     return (long)syscall3(POSIX_IOCTL, fd, command, (long)buf);
 }
 
-int gettimeofday(struct timeval *tv, void *tz)
-{
-    syscall2(POSIX_GETTIMEOFDAY, (long)tv, (long)tz);
-
-    return 0;
-}
-
 const char * const sys_siglist[] =
 {
     0,
@@ -602,12 +632,12 @@ const char * const sys_siglist[] =
     "Terminate"
 };
 
-char *strsignal(int sig)
+const char *strsignal(int sig)
 {
     if (sig < 16)
-        return (char*)sys_siglist[sig];
+        return sys_siglist[sig];
     else
-        return (char*)"Unknown";
+        return "Unknown";
 }
 
 uid_t getuid(void)
@@ -701,11 +731,7 @@ int fchown(int fildes, uid_t owner, uid_t group)
 
 int utime(const char *path,const struct utimbuf *times)
 {
-    STUBBED("utime");
-    return 0;
-
-    errno = ENOENT;
-    return -1;
+    return syscall2(POSIX_UTIME, (long) path, (long) times);
 }
 
 int access(const char *path, int amode)
@@ -817,34 +843,10 @@ int fcntl(int fildes, int cmd, ...)
 {
     va_list ap;
     va_start(ap, cmd);
-
-    int num = 0;
-    int* args = 0;
-    switch (cmd)
-    {
-        // only one argument for each of these
-        case F_DUPFD:
-        case F_SETFD:
-        case F_SETFL:
-            args = (int*) malloc(sizeof(long));
-            args[0] = va_arg(ap, int);
-            num = 1;
-            break;
-        case F_GETLK:
-        case F_SETLK:
-        case F_SETLKW:
-            args = (int*) malloc(sizeof(struct flock*));
-            args[0] = (long) va_arg(ap, struct flock*);
-            num = 1;
-            break;
-    };
+    void *arg = va_arg(ap, void *);
     va_end(ap);
 
-    int ret = syscall4(POSIX_FCNTL, fildes, cmd, num, (long) args);
-
-    if (args)
-        free(args);
-    return ret;
+    return syscall3(POSIX_FCNTL, fildes, cmd, (long) arg);
 }
 
 int sigprocmask(int how, const sigset_t* set, sigset_t* oset)
@@ -909,8 +911,7 @@ int getsockname(int sock, struct sockaddr* addr, size_t *addrlen)
 
 int getsockopt(int sock, int level, int optname, void* optvalue, size_t *optlen)
 {
-    STUBBED("getsockopt");
-    return -1;
+    return syscall5(POSIX_GETSOCKOPT, sock, level, optname, (long) optvalue, (long) optlen);
 }
 
 int listen(int sock, int backlog)
@@ -918,7 +919,17 @@ int listen(int sock, int backlog)
     return (long)syscall2(POSIX_LISTEN, sock, backlog);
 }
 
-struct special_send_recv_data
+struct special_send_data
+{
+    int sock;
+    const void* buff;
+    size_t bufflen;
+    int flags;
+    const struct sockaddr* remote_addr;
+    const socklen_t* addrlen;
+} __attribute__((packed));
+
+struct special_recv_data
 {
     int sock;
     void* buff;
@@ -930,7 +941,7 @@ struct special_send_recv_data
 
 ssize_t recvfrom(int sock, void* buff, size_t bufflen, int flags, struct sockaddr* remote_addr, size_t *addrlen)
 {
-    struct special_send_recv_data* tmp = (struct special_send_recv_data*) malloc(sizeof(struct special_send_recv_data));
+    struct special_recv_data* tmp = (struct special_recv_data*) malloc(sizeof(struct special_recv_data));
     tmp->sock = sock;
     tmp->buff = buff;
     tmp->bufflen = bufflen;
@@ -959,12 +970,12 @@ ssize_t sendmsg(int sock, const struct msghdr* msg, int flags)
 
 ssize_t sendto(int sock, const void* buff, size_t bufflen, int flags, const struct sockaddr* remote_addr, socklen_t addrlen)
 {
-    struct special_send_recv_data* tmp = (struct special_send_recv_data*) malloc(sizeof(struct special_send_recv_data));
+    struct special_send_data* tmp = (struct special_send_data*) malloc(sizeof(struct special_send_data));
     tmp->sock = sock;
-    tmp->buff = (char *)buff;
+    tmp->buff = buff;
     tmp->bufflen = bufflen;
     tmp->flags = flags;
-    tmp->remote_addr = (struct sockaddr*)remote_addr;
+    tmp->remote_addr = remote_addr;
     tmp->addrlen = &addrlen;
 
     int ret = syscall1(POSIX_SENDTO, (long) tmp);
@@ -1009,7 +1020,7 @@ int inet_addr(const char *cp)
 
     // Reallocate the string so the memory can be modified
     char* tmp = (char*) malloc(strlen(cp) + 1);
-    strcpy(tmp, (char *)cp);
+    strcpy(tmp, cp);
 
     // Store the pointer so the memory can be freed
     char* tmp_ptr = tmp;
@@ -1271,7 +1282,7 @@ struct protoent* getprotobyname(const char *name)
 
     ent->p_name = (char*) malloc(strlen(name) + 1);
     ent->p_aliases = 0;
-    strcpy(ent->p_name, (char*)name);
+    strcpy(ent->p_name, name);
 
     if (!strcmp(name, "icmp"))
         ent->p_proto = IPPROTO_ICMP;
@@ -1369,7 +1380,7 @@ const char* inet_ntop(int af, const void* src, char* dst, unsigned long size)
     }
 
     /// \todo endianness is terrible here.
-    uint32_t addr = *((uint32_t *) src);
+    uint32_t addr = *((const uint32_t *) src);
     unsigned long n = snprintf(dst, size, "%u.%u.%u.%u", addr & 0xff, (addr & 0xff00) >> 8, (addr & 0xff0000) >> 16, (addr & 0xff000000) >> 24);
     if(n > size)
     {
@@ -1465,8 +1476,8 @@ void _init_signals(void)
 
 int fdatasync(int fildes)
 {
-    STUBBED("fdatasync");
-    return -1;
+    /// \todo fdatasync isn't meant to flush metadata, while fsync is
+    return syscall1(POSIX_FSYNC, fildes);
 }
 
 struct dlHandle
@@ -1531,12 +1542,6 @@ void herror(const char *s)
     printf("%s: %s\n", s, buff);
 }
 
-int makedev(void)
-{
-    STUBBED("makedev");
-    return -1;
-}
-
 unsigned int htonl(unsigned int n)
 {
     return HOST_TO_BIG32(n);
@@ -1558,26 +1563,6 @@ unsigned short ntohs(unsigned short n)
 void sync(void)
 {
     STUBBED("sync");
-}
-
-/// \todo This is pretty hacky, might want to run a syscall instead and have it populated
-///       in the kernel where we can change it as time goes on.
-int uname(struct utsname *n)
-{
-    if (!n)
-        return -1;
-    strcpy(n->sysname, "Pedigree");
-    strcpy(n->release, "Foster");
-    strcpy(n->version, "0.1");
-#if defined(X86)
-    strcpy(n->machine, "i686");
-#elif defined(X64)
-    strcpy(n->machine, "x86_64");
-#else
-    strcpy(n->machine, "<unknown>");
-#endif
-    gethostname(n->nodename, 128);
-    return 0;
 }
 
 int mknod(const char *path, mode_t mode, dev_t dev)
@@ -1610,6 +1595,7 @@ int getgrnam_r(const char *name, struct group *grp, char *buffer, size_t bufsize
     return -1;
 }
 
+void err(int eval, const char * fmt, ...) _ATTRIBUTE((noreturn));
 void err(int eval, const char * fmt, ...)
 {
     printf("err: %d: (todo: print format string based on arguments): %s\n", errno, strerror(errno));
@@ -1745,8 +1731,7 @@ long timegm(struct tm *tm)
 
 int chroot(const char *path)
 {
-    STUBBED("chroot");
-    return -1;
+    return syscall1(POSIX_CHROOT, (long) path);
 }
 
 char *mkdtemp(char *template)
@@ -1845,7 +1830,8 @@ void *mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off)
     t.fildes = fildes;
     t.off = off;
 
-    return (void*) syscall1(POSIX_MMAP, (long) &t);
+    uintptr_t result = syscall1(POSIX_MMAP, (long) &t);
+    return (void *) result;
 }
 
 int msync(void *addr, size_t len, int flags)
@@ -1923,8 +1909,7 @@ pid_t getpgrp(void)
 
 pid_t getppid(void)
 {
-    STUBBED("getppid");
-    return 0;
+    return syscall0(POSIX_GETPPID);
 }
 
 int getrlimit(int resource, struct rlimit *rlp)
@@ -1943,6 +1928,24 @@ int setrlimit(int resource, const struct rlimit *rlp)
 int getmntinfo(struct statvfs **mntbufp, int flags)
 {
     STUBBED("getmntinfo");
+    return -1;
+}
+
+FILE *setmntent(const char *filename, const char *type)
+{
+    STUBBED("setmntent");
+    return 0;
+}
+
+struct mntent *getmntent(FILE *fp)
+{
+    STUBBED("getmntent");
+    return 0;
+}
+
+int endmntent(FILE *fp)
+{
+    STUBBED("endmntent");
     return -1;
 }
 
@@ -1987,8 +1990,7 @@ void endfsent(void)
 
 int getrusage(int who, struct rusage *r_usage)
 {
-    STUBBED("getrusage");
-    return -1;
+    return syscall2(POSIX_GETRUSAGE, who, (long) r_usage);
 }
 
 int sigaltstack(const struct stack_t *stack, struct stack_t *oldstack)
@@ -2158,8 +2160,9 @@ void siglongjmp(sigjmp_buf env, int val)
 char *basename(char *path)
 {
     static char bad[2] = {'.', 0};
-    if((!path) || (path && !*path))
+    if((path == NULL) || (path && !*path))
         return bad;
+
     char *p = strrchr(path, '/');
     if(!p)
         return path;
@@ -2243,17 +2246,6 @@ int clock_getres(clockid_t clock_id, struct timespec *res)
     return 0;
 }
 
-int clock_gettime(clockid_t clock_id, struct timespec *tp)
-{
-    if(!tp)
-    {
-        errno = EINVAL;
-        return -1;
-    }
-
-    return syscall2(POSIX_CLOCK_GETTIME, clock_id, (long) tp);
-}
-
 int setreuid(uid_t ruid, uid_t euid)
 {
     STUBBED("setreuid");
@@ -2300,14 +2292,12 @@ char *crypt(const char *key, const char *salt)
 
 int ffsl(long int i)
 {
-    STUBBED("ffsl");
-    return 0;
+    return __builtin_ffs(i);
 }
 
 int ffsll(long long int i)
 {
-    STUBBED("ffsll");
-    return 0;
+    return __builtin_ffsll(i);
 }
 
 void __pedigree_revoke_signal_context()
@@ -2381,7 +2371,7 @@ int posix_openpt(int oflag)
 
 int openpty(int *amaster, int *aslave, char *name, const struct termios *termp, const struct winsize *winp)
 {
-    if(!amaster)
+    if(amaster == NULL)
     {
         errno = EINVAL;
         return -1;

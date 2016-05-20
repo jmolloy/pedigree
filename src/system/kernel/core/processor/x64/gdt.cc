@@ -61,9 +61,6 @@ void X64GdtManager::initialise(size_t processorCount)
     ProcessorInformation *processorInfo = *it;
     processorInfo->setTss(Tss);
     processorInfo->setTssSelector((i + 7) << 3);
-    
-    // TLS segment
-    setSegmentDescriptor(i + 8, 0, 0xFFFFF, 0xF2, 0xC);
     processorInfo->setTlsSelector((i + 8) << 3);
   }
 #else
@@ -122,7 +119,7 @@ void X64GdtManager::setTssDescriptor(size_t index, uint64_t base)
 }
 void X64GdtManager::initialiseTss(X64TaskStateSegment *pTss)
 {
-  memset( reinterpret_cast<void*> (pTss), 0, sizeof(X64TaskStateSegment) );
+  ByteSet( reinterpret_cast<void*> (pTss), 0, sizeof(X64TaskStateSegment) );
 
   pTss->ist[1] = reinterpret_cast<uint64_t>(g_SafeStack) + 8192;
 }

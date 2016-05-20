@@ -33,6 +33,8 @@ struct pthreadInfoBlock
 {
     void *entry;
     void *arg;
+    void *stack;
+    Mutex *mutex;
 } __attribute__((packed));
 
 /**
@@ -48,7 +50,7 @@ struct pthreadInfoBlock
  *         this function does return, kindly ignore the resulting fatal error
  *         and look for the flying pigs.
  */
-int pthread_kernel_enter(void *blk)
+static int pthread_kernel_enter(void *blk)
 {
     PT_NOTICE("pthread_kernel_enter");
 
@@ -56,6 +58,8 @@ int pthread_kernel_enter(void *blk)
     pthreadInfoBlock *args = reinterpret_cast<pthreadInfoBlock*>(blk);
     void *entry = args->entry;
     void *new_args = args->arg;
+    void *new_stack = args->stack;
+    Mutex *mutex = args->mutex;
 
     // It's grabbed now, so we don't need any more room on the bag rack.
     delete args;
@@ -65,7 +69,7 @@ int pthread_kernel_enter(void *blk)
     // Just keep using our current stack, don't bother to save any state. We'll
     // never return, so there's no need to be sentimental (and no need to worry
     // about return addresses etc)
-    uintptr_t stack = Processor::getStackPointer();
+    uintptr_t stack = reinterpret_cast<uintptr_t>(new_stack) - sizeof(uintptr_t);
     if(!stack) // Because sanity costs little.
         return -1;
 
@@ -73,7 +77,8 @@ int pthread_kernel_enter(void *blk)
     // depths of the Userland River. We'll take with us our current stack, a
     // map to our destination, and some additional information that may come
     // in handy when we arrive.
-    Processor::jumpUser(0, EVENT_HANDLER_TRAMPOLINE2, stack, reinterpret_cast<uintptr_t>(entry), reinterpret_cast<uintptr_t>(new_args), 0, 0);
+    mutex->acquire();  // Block before jumping to userspace.
+    Processor::jumpUser(0, Event::getSecondaryTrampoline(), stack, reinterpret_cast<uintptr_t>(entry), reinterpret_cast<uintptr_t>(new_args), 0, 0);
 
     // If we get here, we probably got catapaulted many miles back to the
     // Kernel Highlands. That's probably not a good thing. They won't really
@@ -91,12 +96,14 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
 {
     PT_NOTICE("pthread_create");
 
+    pthread_t result = *thread;
+
     // Build some defaults for the attributes, if needed
     size_t stackSize = 0;
     if(attr)
     {
-        if(attr->stackSize >= PTHREAD_STACK_MIN)
-            stackSize = attr->stackSize;
+        if(attr->__internal.stackSize >= PTHREAD_STACK_MIN)
+            stackSize = attr->__internal.stackSize;
     }
 
     // Grab the subsystem
@@ -109,7 +116,7 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
     }
 
     // Allocate a stack for this thread
-    void *stack = Processor::information().getVirtualAddressSpace().allocateStack(stackSize);
+    void *stack = pProcess->getAddressSpace()->allocateStack(stackSize);
     if(!stack)
     {
         ERROR("posix_pthread_create: couldn't get a stack!");
@@ -118,12 +125,15 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
     }
 
     // Build the information structure to pass to the pthread entry function
+    Mutex *pStartMutex = new Mutex(true);
     pthreadInfoBlock *dat = new pthreadInfoBlock;
     dat->entry = reinterpret_cast<void*>(start_addr);
     dat->arg = arg;
+    dat->stack = stack;
+    dat->mutex = pStartMutex;
 
     // Create the thread
-    Thread *pThread = new Thread(pProcess, pthread_kernel_enter, reinterpret_cast<void*>(dat), stack, true);
+    Thread *pThread = new Thread(pProcess, pthread_kernel_enter, reinterpret_cast<void*>(dat), 0, true);
 
     // Create our information structure, shove in the initial elements
     PosixSubsystem::PosixThread *p = new PosixSubsystem::PosixThread;
@@ -133,12 +143,16 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
     // Take information from the attributes
     if(attr)
     {
-        p->isDetached = (attr->detachState == PTHREAD_CREATE_DETACHED);
+        p->isDetached = (attr->__internal.detachState == PTHREAD_CREATE_DETACHED);
     }
 
     // Insert the thread
     pSubsystem->insertThread(pThread->getId(), p);
-    *thread = static_cast<pthread_t>(pThread->getId());
+    result->__internal.kthread = pThread->getId();
+
+    // We've now registered the thread properly, we can let it actually jump to
+    // userspace and start running now.
+    pStartMutex->release();
 
     // All done!
     return 0;
@@ -165,7 +179,7 @@ int posix_pthread_join(pthread_t thread, void **value_ptr)
     }
 
     // Grab the thread information structure and verify it
-    PosixSubsystem::PosixThread *p = pSubsystem->getThread(thread);
+    PosixSubsystem::PosixThread *p = pSubsystem->getThread(thread->__internal.kthread);
     if(!p)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -185,7 +199,7 @@ int posix_pthread_join(pthread_t thread, void **value_ptr)
         *value_ptr = p->returnValue;
 
     // Clean up - we're never going to use this again
-    pSubsystem->removeThread(thread);
+    pSubsystem->removeThread(thread->__internal.kthread);
     delete p;
 
     // Success!
@@ -214,7 +228,7 @@ int posix_pthread_detach(pthread_t thread)
     }
 
     // Grab the thread information structure and verify it
-    PosixSubsystem::PosixThread *p = pSubsystem->getThread(thread);
+    PosixSubsystem::PosixThread *p = pSubsystem->getThread(thread->__internal.kthread);
     if(!p)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -232,7 +246,7 @@ int posix_pthread_detach(pthread_t thread)
     if(p->isRunning.tryAcquire())
     {
         // Clean up - we're never going to use this again
-        pSubsystem->removeThread(thread);
+        pSubsystem->removeThread(thread->__internal.kthread);
         delete p;
     }
     else
@@ -243,11 +257,11 @@ int posix_pthread_detach(pthread_t thread)
 }
 
 /**
- * posix_pthread_self: Returns the thread ID for the current thread.
+ * kernel_pthread_self: Returns the thread ID for the current thread.
  */
-pthread_t posix_pthread_self()
+static size_t kernel_pthread_self()
 {
-    PT_NOTICE("pthread_self");
+    PT_NOTICE("kernel_pthread_self");
     Thread *pThread = Processor::information().getCurrentThread();
     PT_NOTICE("    -> " << Dec << pThread->getId() << Hex);
     return pThread->getId();
@@ -305,6 +319,40 @@ void posix_pthread_exit(void *ret)
 }
 
 /**
+ * Forcefully registers the given thread with the given PosixSubsystem.
+ */
+void pedigree_copy_posix_thread(Thread *origThread, PosixSubsystem *origSubsystem, Thread *newThread, PosixSubsystem *newSubsystem)
+{
+    PosixSubsystem::PosixThread *pOldPosixThread = origSubsystem->getThread(origThread->getId());
+    if (!pOldPosixThread)
+    {
+        // Nothing to see here.
+        return;
+    }
+
+    PosixSubsystem::PosixThread *pNewPosixThread = new PosixSubsystem::PosixThread;
+    pNewPosixThread->pThread = newThread;
+    pNewPosixThread->returnValue = 0;
+
+    // Copy thread-specific data across.
+    for (Tree<size_t, PosixSubsystem::PosixThreadKey *>::Iterator it = pOldPosixThread->m_ThreadData.begin();
+        it != pOldPosixThread->m_ThreadData.end();
+        ++it)
+    {
+        size_t key = it.key();
+        PosixSubsystem::PosixThreadKey *data = it.value();
+
+        pNewPosixThread->addThreadData(key, data);
+        pNewPosixThread->m_ThreadKeys.set(key);
+    }
+
+    pNewPosixThread->lastDataKey = pOldPosixThread->lastDataKey;
+    pNewPosixThread->nextDataKey = pOldPosixThread->nextDataKey;
+
+    newSubsystem->insertThread(newThread->getId(), pNewPosixThread);
+}
+
+/**
  * pedigree_init_pthreads
  *
  * This function copies the user mode thread wrapper from the kernel to a known
@@ -316,15 +364,30 @@ void pedigree_init_pthreads()
     PT_NOTICE("init_pthreads");
     // Make sure we can write to the trampoline area.
     Processor::information().getVirtualAddressSpace().setFlags(
-            reinterpret_cast<void*> (EVENT_HANDLER_TRAMPOLINE),
+            reinterpret_cast<void*> (Event::getTrampoline()),
             VirtualAddressSpace::Write);
-    memcpy(reinterpret_cast<void*>(EVENT_HANDLER_TRAMPOLINE2), reinterpret_cast<void*>(pthread_stub), (reinterpret_cast<uintptr_t>(&pthread_stub_end) - reinterpret_cast<uintptr_t>(pthread_stub)));
+    MemoryCopy(reinterpret_cast<void*>(Event::getSecondaryTrampoline()), reinterpret_cast<void*>(pthread_stub), (reinterpret_cast<uintptr_t>(&pthread_stub_end) - reinterpret_cast<uintptr_t>(pthread_stub)));
     Processor::information().getVirtualAddressSpace().setFlags(
-            reinterpret_cast<void*> (EVENT_HANDLER_TRAMPOLINE),
+            reinterpret_cast<void*> (Event::getTrampoline()),
             VirtualAddressSpace::Execute | VirtualAddressSpace::Shared);
+
+    // Make sure the main thread is actually known.
+    Thread *pThread = Processor::information().getCurrentThread();
+    Process *pProcess = pThread->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return;
+    }
+
+    PosixSubsystem::PosixThread *pPosixThread = new PosixSubsystem::PosixThread;
+    pPosixThread->pThread = pThread;
+    pPosixThread->returnValue = 0;
+    pSubsystem->insertThread(pThread->getId(), pPosixThread);
 }
 
-void* posix_pthread_getspecific(pthread_key_t key)
+void* posix_pthread_getspecific(pthread_key_t *key)
 {
     PT_NOTICE("pthread_getspecific");
     
@@ -338,7 +401,7 @@ void* posix_pthread_getspecific(pthread_key_t key)
     }
 
     // Grab the current thread id
-    pthread_t threadId = posix_pthread_self();
+    size_t threadId = kernel_pthread_self();
     PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(threadId);
     if(!pThread)
     {
@@ -347,7 +410,7 @@ void* posix_pthread_getspecific(pthread_key_t key)
     }
 
     // Grab the data
-    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(key);
+    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(key->__internal.key);
     if(!data)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -358,7 +421,7 @@ void* posix_pthread_getspecific(pthread_key_t key)
     return data->buffer;
 }
 
-int posix_pthread_setspecific(pthread_key_t key, const void *buff)
+int posix_pthread_setspecific(pthread_key_t *key, const void *buff)
 {
     PT_NOTICE("pthread_setspecific");
     
@@ -372,7 +435,7 @@ int posix_pthread_setspecific(pthread_key_t key, const void *buff)
     }
 
     // Grab the current thread id
-    pthread_t threadId = posix_pthread_self();
+    size_t threadId = kernel_pthread_self();
     PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(threadId);
     if(!pThread)
     {
@@ -381,7 +444,7 @@ int posix_pthread_setspecific(pthread_key_t key, const void *buff)
     }
 
     // Grab the data
-    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(key);
+    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(key->__internal.key);
     if(!data)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -408,7 +471,7 @@ int posix_pthread_key_create(pthread_key_t *okey, key_destructor destructor)
     }
 
     // Grab the current thread id
-    pthread_t threadId = posix_pthread_self();
+    size_t threadId = kernel_pthread_self();
     PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(threadId);
     if(!pThread)
     {
@@ -430,6 +493,7 @@ int posix_pthread_key_create(pthread_key_t *okey, key_destructor destructor)
     }
     if(key == ~0UL)
     {
+        key = pThread->nextDataKey;
         pThread->m_ThreadKeys.set(pThread->nextDataKey);
         pThread->nextDataKey++;
     }
@@ -438,14 +502,19 @@ int posix_pthread_key_create(pthread_key_t *okey, key_destructor destructor)
     PosixSubsystem::PosixThreadKey *data = new PosixSubsystem::PosixThreadKey;
     data->destructor = destructor;
     data->buffer = 0;
-    pThread->addThreadData(key, data);
+    if (!pThread->addThreadData(key, data))
+    {
+        PT_NOTICE("Failed to create new pthread_key");
+        delete data;
+        return -1;
+    }
 
     // Success!
-    *okey = key;
+    okey->__internal.key = key;
     return 0;
 }
 
-key_destructor posix_pthread_key_destructor(pthread_key_t key)
+key_destructor posix_pthread_key_destructor(pthread_key_t *key)
 {
     PT_NOTICE("pthread_key_destructor");
     
@@ -459,7 +528,7 @@ key_destructor posix_pthread_key_destructor(pthread_key_t key)
     }
 
     // Grab the current thread id
-    pthread_t threadId = posix_pthread_self();
+    size_t threadId = kernel_pthread_self();
     PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(threadId);
     if(!pThread)
     {
@@ -468,7 +537,7 @@ key_destructor posix_pthread_key_destructor(pthread_key_t key)
     }
 
     // Grab the data
-    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(key);
+    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(key->__internal.key);
     if(!data)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -478,7 +547,7 @@ key_destructor posix_pthread_key_destructor(pthread_key_t key)
     return data->destructor;
 }
 
-int posix_pthread_key_delete(pthread_key_t key)
+int posix_pthread_key_delete(pthread_key_t *key)
 {
     PT_NOTICE("pthread_key_delete");
     
@@ -492,7 +561,7 @@ int posix_pthread_key_delete(pthread_key_t key)
     }
 
     // Grab the current thread id
-    pthread_t threadId = posix_pthread_self();
+    size_t threadId = kernel_pthread_self();
     PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(threadId);
     if(!pThread)
     {
@@ -501,7 +570,8 @@ int posix_pthread_key_delete(pthread_key_t key)
     }
 
     // Grab the data
-    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(key);
+    size_t ikey = key->__internal.key;
+    PosixSubsystem::PosixThreadKey *data = pThread->getThreadData(ikey);
     if(!data)
     {
         SYSCALL_ERROR(InvalidArgument);
@@ -509,11 +579,11 @@ int posix_pthread_key_delete(pthread_key_t key)
     }
 
     // Remove the key from the thread
-    pThread->removeThreadData(key);
+    pThread->removeThreadData(ikey);
 
     // It's now safe to let other calls use this key
-    pThread->lastDataKey = key;
-    pThread->m_ThreadKeys.clear(key);
+    pThread->lastDataKey = ikey;
+    pThread->m_ThreadKeys.clear(ikey);
 
     // Destroy it
     delete data;
@@ -521,9 +591,32 @@ int posix_pthread_key_delete(pthread_key_t key)
     return 0;
 }
 
-int posix_pedigree_thrwakeup(pthread_t thr)
+void *posix_pedigree_create_waiter()
 {
-    // Grab the subsystem
+    PT_NOTICE("posix_pedigree_create_waiter");
+
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
+    {
+        ERROR("No subsystem for this process!");
+        return 0;
+    }
+
+    Semaphore *sem = new Semaphore(0);
+    void *descriptor = pSubsystem->insertThreadWaiter(sem);
+    if (!descriptor)
+    {
+        delete sem;
+    }
+
+    return descriptor;
+}
+
+int posix_pedigree_thread_wait_for(void *waiter)
+{
+    PT_NOTICE("posix_pedigree_thread_wait_for");
+
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
     if(!pSubsystem)
@@ -532,43 +625,66 @@ int posix_pedigree_thrwakeup(pthread_t thr)
         return -1;
     }
 
-    // Grab the thread
-    PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(thr);
-    if(!pThread)
+    Semaphore *sem = pSubsystem->getThreadWaiter(waiter);
+    if (!sem)
     {
-        ERROR("Not a valid POSIX thread?");
         return -1;
     }
-    
-    // Wake it up
-    pThread->pThread->getLock().acquire();
-    pThread->pThread->setStatus(Thread::Ready);
-    pThread->pThread->getLock().release();
-    
+
+    // Deadlock detection - don't wait if nothing can wake this waiter.
+    /// \todo Check for more than just one thread - there's probably other
+    ///       detections we can do here.
+    if (pProcess->getNumThreads() <= 1)
+    {
+        SYSCALL_ERROR(Deadlock);
+        return -1;
+    }
+
+    while(!sem->acquire(1));
+
     return 0;
 }
 
-int posix_pedigree_thrsleep(pthread_t thr)
+int posix_pedigree_thread_trigger(void *waiter)
 {
-    // Grab the subsystem
+    PT_NOTICE("posix_pedigree_thread_trigger");
+
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
     if(!pSubsystem)
     {
         ERROR("No subsystem for this process!");
-        return -1;
+        return 0;
     }
 
-    // Grab the thread
-    PosixSubsystem::PosixThread *pThread = pSubsystem->getThread(thr);
-    if(!pThread)
+    Semaphore *sem = pSubsystem->getThreadWaiter(waiter);
+    if (!sem)
+        return 0;
+    if (sem->getValue())
+        return 0;  // Nothing to wake up.
+
+    // Wake up a waiter.
+    sem->release();
+    return 1;
+}
+
+void posix_pedigree_destroy_waiter(void *waiter)
+{
+    PT_NOTICE("posix_pedigree_destroy_waiter");
+
+    Process *pProcess = Processor::information().getCurrentThread()->getParent();
+    PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
+    if(!pSubsystem)
     {
-        ERROR("Not a valid POSIX thread?");
-        return -1;
+        ERROR("No subsystem for this process!");
+        return;
     }
-    
-    // Put it to sleep
-    Processor::information().getScheduler().sleep();
-    
-    return 0;
+
+    Semaphore *sem = pSubsystem->getThreadWaiter(waiter);
+    if (!sem)
+    {
+        return;
+    }
+    pSubsystem->removeThreadWaiter(waiter);
+    delete sem;
 }

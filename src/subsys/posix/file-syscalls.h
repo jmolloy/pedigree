@@ -27,12 +27,7 @@
 #include "DevFs.h"
 
 #include "newlib.h"
-
-#if 0
-#define F_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "]\t" << Hex << x)
-#else
-#define F_NOTICE(x)
-#endif
+#include "logging.h"
 
 #define MAXNAMLEN 255
 
@@ -53,11 +48,9 @@ char* posix_getcwd(char* buf, size_t maxlen);
 int posix_readlink(const char* path, char* buf, unsigned int bufsize);
 int posix_realpath(const char *path, char *buf, size_t bufsize);
 
-// Returns DIR->fd, takes &dir->ent.
-int posix_opendir(const char *dir, dirent *ent);
-int posix_readdir(int fd, dirent *ent);
-void posix_rewinddir(int fd, dirent *ent);
-int posix_closedir(int fd);
+int posix_opendir(const char *dir, DIR *ent);
+int posix_readdir(DIR *dir);
+int posix_closedir(DIR *dir);
 
 int posix_ioctl(int fd, int operation, void *buf);
 
@@ -71,7 +64,7 @@ int posix_fchdir(int fd);
 int posix_dup(int fd);
 int posix_dup2(int fd1, int fd2);
 
-int posix_fcntl(int fd, int cmd, int num, int* args);
+int posix_fcntl(int fd, int cmd, void* arg);
 
 int posix_mkdir(const char* name, int mode);
 
@@ -90,5 +83,12 @@ int posix_fsync(int fd);
 
 int posix_fstatvfs(int fd, struct statvfs *buf);
 int posix_statvfs(const char *path, struct statvfs *buf);
+
+int posix_utime(const char *path, const struct utimbuf *times);
+int posix_utimes(const char *path, const struct timeval *times);
+
+int posix_chroot(const char *path);
+
+void normalisePath(String &nameToOpen, const char *name, bool *onDevFs = 0);
 
 #endif

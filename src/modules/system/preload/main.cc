@@ -21,32 +21,33 @@
 #include <Module.h>
 #include <vfs/VFS.h>
 #include <vfs/Filesystem.h>
+#include <processor/Processor.h>
 #include <process/Semaphore.h>
 #include <process/Scheduler.h>
 #include <vfs/MemoryMappedFile.h>
 
-const char *g_FilesToPreload[] = {
+static const char *g_FilesToPreload[] = {
+    "root»/applications/init",
+    "root»/applications/ttyterm",
     "root»/applications/winman",
     "root»/applications/tui",
     "root»/applications/TUI",
     "root»/applications/login",
+    "root»/libraries/libload.so",
     "root»/libraries/libc.so",
     "root»/libraries/libm.so",
-    "root»/libraries/libcairo.so",
-    "root»/libraries/libpixman-1.so",
-    "root»/libraries/libz.so.1",
-    "root»/libraries/libfontconfig.so",
-    "root»/libraries/libfreetype.so",
-    "root»/libraries/libexpat.so",
-    "root»/libraries/libpng15.so",
+    "root»/libraries/libstdc++.so",
+    "root»/libraries/libpedigree.so",
+    "root»/libraries/libpedigree-c.so",
+    "root»/libraries/libpthread.so",
     0
 };
 
-Semaphore g_Preloads(0);
+static Semaphore g_Preloads(0);
 
-int preloadThread(void *p)
+static int preloadThread(void *p)
 {
-    const char *s = (const char *) p;
+    const char *s = reinterpret_cast<const char *>(p);
 
     NOTICE("PRELOAD: " << s);
 
@@ -70,6 +71,8 @@ int preloadThread(void *p)
 
 static bool init()
 {
+    /// \todo figure out why this causes numerous problems with ext2
+    return false;
     size_t n = 0;
     const char *s = g_FilesToPreload[n++];
     do
@@ -91,4 +94,5 @@ static void destroy()
 {
 }
 
-MODULE_INFO("File Cache Preload", &init, &destroy, "vfs", "init");
+MODULE_INFO("File Cache Preload", &init, &destroy, "vfs");
+MODULE_OPTIONAL_DEPENDS("filesystems", "mountroot");

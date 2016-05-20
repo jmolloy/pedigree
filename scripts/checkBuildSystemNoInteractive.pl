@@ -50,7 +50,7 @@ my @download = ( {'url' => "ftp://ftp.gnu.org/gnu/gcc/gcc-$gcc_version/gcc-$gcc_
 
 my @command = ( {'cwd' => "gcc-$gcc_version",
                  'name' => "fixing autoconf version dependency",
-                 'cmd' => "autoconf -V | grep autoconf | tr ' ' '\n' | tail -1 | xargs printf '-i \"s/2.64/\%s/g\" ./config/override.m4' | xargs sed",
+                 'cmd' => "autoconf -V | grep autoconf | tr ' ' '\n' | tail -1 | xargs printf -- '-i.bak \"s/2.64/\%s/g\" ./config/override.m4' | xargs sed",
                  'arch' => 'all'},
                 {'cwd' => "gcc-$gcc_version",
                  'name' => "libstdc++ crossconfig",

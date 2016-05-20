@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -31,10 +30,10 @@
 #include <graphics/Graphics.h>
 
 /// \todo Put this in the config manager.
-Display::ScreenMode g_ScreenMode;
-Display *g_pDisplay = 0;
-uintptr_t g_Framebuffer;
-size_t g_FbSize;
+static Display::ScreenMode g_ScreenMode;
+static Display *g_pDisplay = 0;
+static uintptr_t g_Framebuffer;
+static size_t g_FbSize;
 
 VbeDisplay::VbeDisplay() : m_VbeVersion(), m_ModeList(), m_Mode(), m_pFramebuffer(), m_Buffers(), m_SpecialisedMode(Mode_Generic), m_Allocator()
 {
@@ -46,7 +45,7 @@ VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*>
     m_Buffers(), m_SpecialisedMode(Mode_Generic), m_Allocator()
 {
     String str;
-    str.sprintf("DELETE FROM 'display_modes' where display_id = %d", displayNum);
+    str.Format("DELETE FROM 'display_modes' where display_id = %d", displayNum);
     Config::Result *pR = Config::instance().query(str);
     if(!pR)
     {
@@ -66,7 +65,7 @@ VbeDisplay::VbeDisplay(Device *p, VbeVersion version, List<Display::ScreenMode*>
        it != m_ModeList.end();
        it++)
   {
-      str.sprintf("INSERT INTO 'display_modes' VALUES (NULL, %d,%d,%d,%d,%d,%d)", (*it)->id, displayNum, (*it)->width, (*it)->height, (*it)->pf.nBpp, (*it)->refresh);
+      str.Format("INSERT INTO 'display_modes' VALUES (NULL, %d,%d,%d,%d,%d,%d)", (*it)->id, displayNum, (*it)->width, (*it)->height, (*it)->pf.nBpp, (*it)->refresh);
       pR = Config::instance().query(str);
 
       if (!pR->succeeded())
@@ -109,12 +108,12 @@ VbeDisplay::~VbeDisplay()
 
 void *VbeDisplay::getFramebuffer()
 {
-  return reinterpret_cast<void*> (m_pFramebuffer->virtualAddress());
+  return m_pFramebuffer->virtualAddress();
 }
 
-bool VbeDisplay::getPixelFormat(Display::PixelFormat *pPf)
+bool VbeDisplay::getPixelFormat(Display::PixelFormat &pPf)
 {
-  memcpy(pPf, &m_Mode.pf, sizeof(Display::PixelFormat));
+  pPf = m_Mode.pf;
   return true;
 }
 
@@ -297,7 +296,7 @@ void VbeDisplay::setCurrentBuffer(rgb_t *pBuffer)
         return;
     }
 
-    memcpy(getFramebuffer(), pBuf->pFbBackbuffer, m_Mode.width*m_Mode.height * (m_Mode.pf.nBpp/8));
+    MemoryCopy(getFramebuffer(), pBuf->pFbBackbuffer, m_Mode.width*m_Mode.height * (m_Mode.pf.nBpp/8));
 }
 
 void VbeDisplay::updateBuffer(rgb_t *pBuffer, size_t x1, size_t y1, size_t x2,
@@ -375,7 +374,7 @@ void VbeDisplay::updateBuffer(rgb_t *pBuffer, size_t x1, size_t y1, size_t x2,
             packColour(pBuffer[i], i, reinterpret_cast<uintptr_t>(pBuf->pFbBackbuffer));
         }
 
-        memcpy(reinterpret_cast<uint8_t*>(getFramebuffer())+y*m_Mode.pf.nPitch + x1*bytesPerPixel,
+        MemoryCopy(reinterpret_cast<uint8_t*>(getFramebuffer())+y*m_Mode.pf.nPitch + x1*bytesPerPixel,
                pBuf->pFbBackbuffer + y*m_Mode.pf.nPitch + x1*bytesPerPixel,
                (x2-x1)*bytesPerPixel);
     }
@@ -411,7 +410,7 @@ void VbeDisplay::bitBlit(rgb_t *pBuffer, size_t fromX, size_t fromY, size_t toX,
 
     uint8_t *pFb = pBuf->pFbBackbuffer;
 
-    // Just like memmove(), if the dest < src, copy forwards, else copy backwards.
+    // Just like MemoryCopy(), if the dest < src, copy forwards, else copy backwards.
     size_t min = 0;
     size_t max = height;
     ssize_t increment = 1;
@@ -439,13 +438,13 @@ void VbeDisplay::bitBlit(rgb_t *pBuffer, size_t fromX, size_t fromY, size_t toX,
             extent_e = to+sz - extent_s;
         }
 
-        memmove(&pBuffer[to],
+        MemoryCopy(&pBuffer[to],
                 &pBuffer[from],
                 sz*sizeof(rgb_t));
-        memmove(&pFb[to * bytesPerPixel],
+        MemoryCopy(&pFb[to * bytesPerPixel],
                 &pFb[from * bytesPerPixel],
                 sz*bytesPerPixel);
-        memcpy(reinterpret_cast<uint8_t*>(getFramebuffer())+ extent_s*bytesPerPixel,
+        MemoryCopy(reinterpret_cast<uint8_t*>(getFramebuffer())+ extent_s*bytesPerPixel,
                pBuf->pFbBackbuffer + extent_s*bytesPerPixel,
                extent_e*bytesPerPixel);
     }
@@ -456,13 +455,13 @@ void VbeDisplay::bitBlit(rgb_t *pBuffer, size_t fromX, size_t fromY, size_t toX,
         {
             size_t to = (y+toY)*m_Mode.width + toX;
             size_t from = (y+fromY)*m_Mode.width + fromX;
-            memmove(&pBuffer[to],
+            MemoryCopy(&pBuffer[to],
                     &pBuffer[from],
                     width*sizeof(rgb_t));
-            memmove(&pFb[to * bytesPerPixel],
+            MemoryCopy(&pFb[to * bytesPerPixel],
                     &pFb[from * bytesPerPixel],
                     width*bytesPerPixel);
-            memcpy(reinterpret_cast<uint8_t*>(getFramebuffer())+ to*bytesPerPixel,
+            MemoryCopy(reinterpret_cast<uint8_t*>(getFramebuffer())+ to*bytesPerPixel,
                    pBuf->pFbBackbuffer + to*bytesPerPixel,
                    width*bytesPerPixel);
         }
@@ -481,8 +480,6 @@ void VbeDisplay::fillRectangle(rgb_t *pBuffer, size_t x, size_t y, size_t width,
     uint8_t *pFb = reinterpret_cast<uint8_t*>(getFramebuffer());
     uint8_t *pFb2 = pBuf->pFbBackbuffer;
 
-    size_t bytesPerPixel = m_Mode.pf.nBpp/8;
-
     size_t compiledColour = 0;
     if (m_SpecialisedMode == Mode_16bpp_5r6g5b)
     {
@@ -491,9 +488,9 @@ void VbeDisplay::fillRectangle(rgb_t *pBuffer, size_t x, size_t y, size_t width,
             ((colour.b >> 3) << 0);
         for (size_t i = y; i < y+height; i++)
         {
-            dmemset(&pBuffer[i*m_Mode.width+x], *reinterpret_cast<uint32_t*>(&colour), width);
-            wmemset(&pFb[(i*m_Mode.width+x)*2], static_cast<uint16_t>(compiledColour), width);
-            wmemset(&pFb2[(i*m_Mode.width+x)*2], static_cast<uint16_t>(compiledColour), width);
+            DoubleWordSet(&pBuffer[i*m_Mode.width+x], *reinterpret_cast<uint32_t*>(&colour), width);
+            WordSet(&pFb[(i*m_Mode.width+x)*2], static_cast<uint16_t>(compiledColour), width);
+            WordSet(&pFb2[(i*m_Mode.width+x)*2], static_cast<uint16_t>(compiledColour), width);
         }
         return;
     }
@@ -501,6 +498,8 @@ void VbeDisplay::fillRectangle(rgb_t *pBuffer, size_t x, size_t y, size_t width,
         // Bit of a dirty hack. Oh well.
         packColour(colour, 0, reinterpret_cast<uintptr_t>(&compiledColour));
 
+    /// \todo This needs to properly handle the case where there's more than
+    ///       one byte per pixel? (or less, I guess)
     for (size_t i = y; i < y+height; i++)
     {
         for (size_t j = x; j < x+width; j++)

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -25,11 +24,12 @@
 
 extern BootIO bootIO;
 
-void entry()
+bool entry()
 {
  HugeStaticString str;
  str += "Module is teh loadzor!";
  bootIO.write(str, BootIO::Blue, BootIO::White);
+ return false;
 }
 
 void ex()

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -21,14 +20,20 @@
 #ifndef KERNEL_ASSERT_H
 #define KERNEL_ASSERT_H
 
+#include <compiler.h>
+
 /** @addtogroup kernel
  * @{ */
 
 /** If the passed argument resolves to a Boolean false value, execution will be halted
  *  and a message displayed.
  */
-#ifdef DEBUGGER
-#define assert(x) _assert(x, __FILE__, __LINE__, __PRETTY_FUNCTION__)
+#if defined(DEBUGGER) || defined(ASSERTS)
+#define assert(x) do { \
+        bool y = (x); \
+        if(UNLIKELY(!y)) \
+            _assert(y, __FILE__, __LINE__, __PRETTY_FUNCTION__); \
+    } while(0)
 
 #ifndef USE_DEBUG_ALLOCATOR
 #define assert_heap_ptr_valid(x) _assert(_assert_ptr_valid(reinterpret_cast<uintptr_t>(x)), __FILE__, __LINE__, __PRETTY_FUNCTION__)
@@ -36,9 +41,9 @@
 #define assert_heap_ptr_valid
 #endif
 
-#else
-#define assert
-#define assert_heap_ptr_valid
+#elif !defined(assert)
+#define assert(x)
+#define assert_heap_ptr_valid(x)
 #endif
 
 #ifndef __cplusplus

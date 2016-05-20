@@ -26,7 +26,7 @@
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 
-#include <graphics/Graphics.h>
+#include <native/graphics/Graphics.h>
 
 #include "util.h"
 
@@ -110,7 +110,7 @@ int Framebuffer::enterMode(size_t desiredW, size_t desiredH, size_t desiredBpp)
         /// \note Mode set logic will try and find a mode in a lower colour depth
         ///       if the desired one cannot be set.
         syslog(LOG_INFO, "winman: can't set the desired mode");
-        fprintf(stderr, "winman: could not set desired mode (%dx%d) in any colour depth.\n", mode.width, mode.height);
+        fprintf(stderr, "winman: could not set desired mode (%ux%u) in any colour depth.\n", mode.width, mode.height);
         return EXIT_FAILURE;
     }
 

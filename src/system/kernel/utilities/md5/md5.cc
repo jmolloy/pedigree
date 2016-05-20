@@ -276,7 +276,7 @@ void MD5::Decode (unsigned long int *output, unsigned char *input, unsigned int 
  */  
 void MD5::MD5_memcpy (POINTER output, POINTER input, unsigned int len)
 {
-	memcpy(output, input, len);
+	MemoryCopy(output, input, len);
 }
 
 /**
@@ -289,7 +289,7 @@ void MD5::MD5_memcpy (POINTER output, POINTER input, unsigned int len)
  */  
 void MD5::MD5_memset (POINTER output,int value,unsigned int len)
 {
-	memset(output, value, len);
+	ByteSet(output, value, len);
 }
 
 //----------------------------------------------------------------------	

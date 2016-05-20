@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -55,6 +54,7 @@ void TcpEndpoint::listen()
     /// \todo Interface-specific connections
     m_IncomingConnections.clear();
     m_ConnId = TcpManager::instance().Listen(this, getLocalPort());
+    m_Listening = true;
 }
 
 bool TcpEndpoint::connect(Endpoint::RemoteEndpoint remoteHost, bool bBlock)
@@ -109,7 +109,7 @@ int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
             nBytes = streamSize;
 
         // Copy
-        memcpy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(front), nBytes);
+        MemoryCopy(reinterpret_cast<void*>(buffer), reinterpret_cast<void*>(front), nBytes);
 
         // Remove from the buffer, we've read
         if(!bPeek)
@@ -134,11 +134,11 @@ int TcpEndpoint::recv(uintptr_t buffer, size_t maxSize, bool bBlock, bool bPeek)
     }
 };
 
-size_t TcpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, uint32_t sequenceNumber, bool push)
+size_t TcpEndpoint::depositTcpPayload(size_t nBytes, uintptr_t payload, uint32_t sequenceNumber, bool push)
 {
     if (nBytes > 0xFFFF)
     {
-        WARNING("Dud length passed to depositPayload!");
+        WARNING("Dud length passed to depositTcpPayload!");
         return 0;
     }
 
@@ -166,6 +166,7 @@ size_t TcpEndpoint::depositPayload(size_t nBytes, uintptr_t payload, uint32_t se
         uint8_t *buff = new uint8_t[sz];
         sz = m_ShadowDataStream.read(reinterpret_cast<uintptr_t>(buff), sz);
         size_t o = m_DataStream.write(reinterpret_cast<uintptr_t>(buff), sz);
+        delete [] buff;
 
         if(!o)
             DEBUG_LOG("TCP: wrote zero bytes to a data stream!");
@@ -262,7 +263,7 @@ bool TcpEndpoint::shutdown(ShutdownType what)
 void TcpEndpoint::stateChanged(Tcp::TcpState newState)
 {
     // If we've moved into a data transfer state, notify the socket.
-    if(newState == Tcp::ESTABLISHED)
+    if(newState == Tcp::ESTABLISHED || newState == Tcp::CLOSED)
     {
         for(List<Socket*>::Iterator it = m_Sockets.begin(); it != m_Sockets.end(); ++it)
         {

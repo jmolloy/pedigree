@@ -51,7 +51,4 @@ typedef struct
 
 typedef _LOCK_RECURSIVE_T _flock_t;
 
-/* Iconv descriptor type */
-typedef void *_iconv_t;
-
 #endif	/* _SYS__TYPES_H */

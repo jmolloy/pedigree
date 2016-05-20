@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -29,7 +28,7 @@ extern "C" {
 
 int printf(const char* fmt, ...);
 int snprintf(char *s, size_t n, const char *format, ...);
-int sprintf(char *s, const char *format, ...);
+int StringFormat(char *s, const char *format, ...);
 
 int puts(const char *s);
 

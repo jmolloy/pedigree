@@ -18,9 +18,43 @@
  */
 
 #include <Log.h>
+#include <process/Process.h>
+#include <processor/Processor.h>
 #include <vfs/VFS.h>
 #include <Module.h>
 #include "RamFs.h"
+
+RamFile::RamFile(String name, uintptr_t inode, Filesystem *pParentFS, File *pParent) :
+    File(name, 0, 0, 0, inode, pParentFS, 0, pParent), m_FileBlocks(),
+    m_nOwnerPid(0)
+{
+    // Full permissions.
+    setPermissions(0777);
+
+    m_nOwnerPid = Processor::information().getCurrentThread()->getParent()->getId();
+}
+
+RamFile::~RamFile()
+{
+    truncate();
+}
+
+void RamFile::truncate()
+{
+    if(canWrite())
+    {
+        // Empty the cache.
+        m_FileBlocks.empty();
+        setSize(0);
+    }
+}
+
+uint64_t RamFile::write(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
+{
+    if(canWrite())
+        return File::write(location, size, buffer, bCanBlock);
+    return 0;
+}
 
 bool RamFile::canWrite()
 {
@@ -32,6 +66,28 @@ bool RamFile::canWrite()
 
     size_t pid = Processor::information().getCurrentThread()->getParent()->getId();
     return pid == m_nOwnerPid;
+}
+
+uintptr_t RamFile::readBlock(uint64_t location)
+{
+    uintptr_t buffer = m_FileBlocks.lookup(location);
+    if(!buffer)
+    {
+        // Super trivial. But we are a ram filesystem... can't compact.
+        buffer = m_FileBlocks.insert(location);
+        pinBlock(location);
+    }
+    return buffer;
+}
+
+void RamFile::pinBlock(uint64_t location)
+{
+    m_FileBlocks.pin(location);
+}
+
+void RamFile::unpinBlock(uint64_t location)
+{
+    m_FileBlocks.release(location);
 }
 
 RamDir::RamDir(String name, size_t inode, class Filesystem *pFs, File *pParent) :
@@ -46,7 +102,7 @@ RamDir::~RamDir()
 
 bool RamDir::addEntry(String filename, File *pFile)
 {
-    m_Cache.insert(filename, pFile);
+    getCache().insert(filename, pFile);
     m_bCachePopulated = true;
     return true;
 }
@@ -58,7 +114,7 @@ bool RamDir::removeEntry(File *pFile)
         return false;
 
     // Remove from cache.
-    m_Cache.remove(pFile->getName());
+    getCache().remove(pFile->getName());
     return true;
 }
 
@@ -123,4 +179,4 @@ static void destroy()
 {
 }
 
-MODULE_INFO("ramfs", &entry, &destroy, "vfs");
+MODULE_INFO("ramfs", &entry, &destroy);

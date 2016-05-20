@@ -35,7 +35,7 @@
 static Service *pService = 0;
 static ServiceFeatures *pFeatures = 0;
 
-bool probeDevice(Disk *pDev)
+static bool probeDevice(Disk *pDev)
 {
   // Does the disk have an MS-DOS partition table?
   if (msdosProbeDisk(pDev))
@@ -49,36 +49,29 @@ bool probeDevice(Disk *pDev)
   return false;
 }
 
-void searchNode(Device *pDev)
+static Device *checkNode(Device *pDev)
 {
-  for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
+  bool hasPartitions = false;
+  if (pDev->getType() == Device::Disk)
   {
-    Device *pChild = pDev->getChild(i);
-    // Is this a disk?
-    String mname;
-    pChild->getName(mname);
-
-    bool hasPartitions = false;
-    if (pChild->getType() == Device::Disk)
+    // Check that none of its children are Partitions
+    // (in which case we've probed this before!)
+    for (unsigned int i = 0; i < pDev->getNumChildren(); i++)
     {
-      // Check that none of its children are Partitions (in which case we've probed this before!)
-      for (unsigned int i = 0; i < pChild->getNumChildren(); i++)
+      String name;
+      pDev->getChild(i)->getName(name);
+      if (!StringCompare(name, "msdos-partition") || !StringCompare(name, "apple-partition"))
       {
-        String name;
-        pDev->getChild(i)->getName(name);
-        if (!strcmp(name, "msdos-partition") || !strcmp(name, "apple-partition"))
-        {
-          hasPartitions = true;
-          break;
-        }
+        hasPartitions = true;
+        break;
       }
-      if (!hasPartitions)
-        hasPartitions = probeDevice(static_cast<Disk*> (pChild));
     }
-    // Recurse, if we didn't find any partitions.
+
     if (!hasPartitions)
-      searchNode(pChild);
+      probeDevice(static_cast<Disk*> (pDev));
   }
+
+  return pDev;
 }
 
 bool PartitionService::serve(ServiceFeatures::Type type, void *pData, size_t dataLen)
@@ -107,8 +100,7 @@ static bool entry()
     ServiceManager::instance().addService(String("partition"), pService, pFeatures);
 
     // Walk the device tree looking for disks that don't have "partition" children.
-    Device *pDev = &Device::root();
-    searchNode(pDev);
+    Device::foreach(checkNode);
 
     // Never fail, even if no partitions found. The partition service is still
     // critical to the system.
@@ -122,8 +114,10 @@ static void exit()
     delete pFeatures;
 }
 
-#ifndef ARM_COMMON // No ATA controller
-MODULE_INFO("partition", &entry, &exit, "ata");
-#else
+#if defined(ARM_COMMON) // No ATA controller
 MODULE_INFO("partition", &entry, &exit);
+#elif defined(HOSTED)
+MODULE_INFO("partition", &entry, &exit, "diskimage");
+#else
+MODULE_INFO("partition", &entry, &exit, "ata");
 #endif

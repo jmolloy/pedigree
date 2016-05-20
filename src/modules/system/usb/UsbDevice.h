@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -53,7 +52,7 @@ class UsbDevice
             inline UnknownDescriptor(uint8_t *pBuffer, uint8_t type, size_t length) : nType(type), nLength(length)
             {
                 pDescriptor = new uint8_t[nLength];
-                memcpy(pDescriptor, pBuffer, nLength);
+                MemoryCopy(pDescriptor, pBuffer, nLength);
             }
 
             void *pDescriptor;

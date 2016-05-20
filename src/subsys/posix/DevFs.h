@@ -20,6 +20,8 @@
 #ifndef DEVFS_H
 #define DEVFS_H
 
+#include <Log.h>
+
 #include <vfs/Filesystem.h>
 #include <vfs/Directory.h>
 #include <vfs/File.h>
@@ -94,7 +96,7 @@ private:
 class DevFsDirectory : public Directory
 {
     public:
-        DevFsDirectory(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+        DevFsDirectory(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTime, Time::Timestamp creationTime,
             uintptr_t inode, class Filesystem *pFs, size_t size, File *pParent) :
             Directory(name, accessedTime, modifiedTime, creationTime, inode,
                 pFs, size, pParent)
@@ -107,7 +109,7 @@ class DevFsDirectory : public Directory
 
         void addEntry(String name, File *pFile)
         {
-            m_Cache.insert(name, pFile);
+            getCache().insert(name, pFile);
             m_bCachePopulated = true;
         }
 };
@@ -116,19 +118,11 @@ class DevFsDirectory : public Directory
 class DevFs : public Filesystem
 {
 public:
-  DevFs() : m_pRoot(0)
+  DevFs() : m_pRoot(0), m_pTty(0)
   {
-  };
-
-  virtual ~DevFs()
-  {
-    delete m_pRoot;
-  };
-
-  static DevFs &instance()
-  {
-    return m_Instance;
   }
+
+  virtual ~DevFs();
 
   virtual bool initialise(Disk *pDisk);
 
@@ -157,7 +151,8 @@ private:
   DevFs &operator = (const DevFs &);
 
   DevFsDirectory *m_pRoot;
-  static DevFs m_Instance;
+
+  TextIO *m_pTty;
 };
 
 #endif

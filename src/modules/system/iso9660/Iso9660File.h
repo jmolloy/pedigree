@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -42,10 +41,10 @@ private:
   Iso9660File& operator =(const Iso9660File&);
 public:
   /** Constructor, should be called only by a Filesystem. */
-  Iso9660File(String name, Time accessedTime, Time modifiedTime, Time creationTime,
+  Iso9660File(String name, Time::Timestamp accessedTime, Time::Timestamp modifiedTime, Time::Timestamp creationTime,
        uintptr_t inode, class Iso9660Filesystem *pFs, size_t size, Iso9660DirRecord &record, File *pParent = 0) :
     File(name,accessedTime,modifiedTime,creationTime,inode,pFs,size,pParent),
-    m_Dir(record), m_pFs(pFs)
+    m_pFs(pFs), m_Dir(record)
   {}
   virtual ~Iso9660File() {}
 
@@ -57,15 +56,17 @@ public:
 protected:
     virtual uintptr_t readBlock(uint64_t location);
 
-    size_t getBlockSize()
-    {return 2048;}
+    virtual size_t getBlockSize() const
+    {
+      return 2048;
+    }
 
 private:
-  // Our internal directory information (info about *this* directory, not the child)
-  Iso9660DirRecord m_Dir;
-
   // Filesystem object
   Iso9660Filesystem *m_pFs;
+
+  // Our internal directory information (info about *this* directory, not the child)
+  Iso9660DirRecord m_Dir;
 };
 
 #endif

@@ -38,6 +38,7 @@ class Process;
   */
 class Subsystem
 {
+    friend class Process;
     public:
 
         /** Defines the different types of subsystems */
@@ -97,13 +98,13 @@ class Subsystem
         {}
 
         /** Need to exit this process. */
-        virtual void exit(int code);
+        virtual void exit(int code) = 0;
 
         /**
          * A thread (or process, depending on implementation) needs to be killed!
          * This *must* block until the thread/process ceases to exist.
          */
-        virtual bool kill(KillReason killReason, Thread *pThread = 0);
+        virtual bool kill(KillReason killReason, Thread *pThread = 0) = 0;
 
         /** A thread has thrown an exception! */
         virtual void threadException(Thread *pThread, ExceptionType eType);
@@ -124,6 +125,10 @@ class Subsystem
         }
 
     protected:
+        /** Notifies the subsystem that the given thread has been removed. */
+        virtual void threadRemoved(Thread *pThread)
+        {
+        }
 
         SubsystemType m_Type;
 

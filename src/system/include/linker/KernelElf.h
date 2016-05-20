@@ -26,6 +26,12 @@
 #include <BootstrapInfo.h>
 #include <utilities/Vector.h>
 #include <utilities/MemoryAllocator.h>
+#include <utilities/SharedPointer.h>
+
+#ifdef THREADS
+#include <process/Semaphore.h>
+#include <Spinlock.h>
+#endif
 
 #ifdef STATIC_DRIVERS
 #include <Module.h>
@@ -37,7 +43,8 @@
 class Module
 {
     public:
-        Module() : elf(), name(0), entry(0), exit(0), depends(0), buffer(0), buflen(0) {}
+        Module() : elf(), name(0), entry(0), exit(0), depends(0),
+            depends_opt(0), buffer(0), buflen(0) {}
         Elf elf;
         const char *name;
         bool (*entry)();
@@ -55,6 +62,7 @@ class Module
 
 class KernelElf : public Elf
 {
+    friend void system_reset();
     public:
         /** Get the class instance
         *\return reference to the class instance */
@@ -96,14 +104,23 @@ class KernelElf : public Elf
         /** Returns the address space allocator for modules. */
         MemoryAllocator &getModuleAllocator() {return m_ModuleAllocator;}
 
+        /** Do we have pending modules still? */
+        bool hasPendingModules() const;
+
+        /** Updates the status of the given module. */
+        void updateModuleStatus(Module *module, bool status);
+
+        /** Waits for all modules to complete (whether successfully or not). */
+        void waitForModulesToLoad();
+
     private:
         /** Default constructor does nothing */
         KernelElf() INITIALISATION_ONLY;
-        /** Destructor does nothing */
-        ~KernelElf();
         /** Copy-constructor
         *\note NOT implemented (singleton class) */
         KernelElf(const KernelElf &);
+        /** Destructor does nothing */
+        virtual ~KernelElf();
         /** Assignment operator
         *\note NOT implemented (singleton class) */
         KernelElf &operator = (const KernelElf &);
@@ -124,7 +141,7 @@ class KernelElf : public Elf
         /** List of successfully loaded modules. */
         Vector<Module*> m_LoadedModules;
         /** List of unsuccessfully loaded modules. */
-        Vector<String*> m_FailedModules;
+        Vector<SharedPointer<String>> m_FailedModules;
         /** List of pending modules - modules whose dependencies have not yet been
             satisfied. */
         Vector<Module*> m_PendingModules;
@@ -132,8 +149,25 @@ class KernelElf : public Elf
         MemoryAllocator m_ModuleAllocator;
 
         /** Override Elf base class members. */
+#if defined(X86_COMMON)
         Elf32SectionHeader_t   *m_pSectionHeaders;
         Elf32Symbol_t          *m_pSymbolTable;
+
+        typedef Elf32SectionHeader_t KernelElfSectionHeader_t;
+        typedef Elf32Symbol_t KernelElfSymbol_t;
+#else
+        ElfSectionHeader_t   *m_pSectionHeaders;
+        ElfSymbol_t          *m_pSymbolTable;
+
+        typedef ElfSectionHeader_t KernelElfSectionHeader_t;
+        typedef ElfSymbol_t KernelElfSymbol_t;
+#endif
+
+        /** Tracks the module loading process. */
+#ifdef THREADS
+        Semaphore m_ModuleProgress;
+        Spinlock m_ModuleAdjustmentLock;
+#endif
 };
 
 /** @} */

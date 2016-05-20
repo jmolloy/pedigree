@@ -25,6 +25,7 @@
 #include <utilities/IteratorAdapter.h>
 #include <utilities/Iterator.h>
 #include <utilities/assert.h>
+#include <utilities/ObjectPool.h>
 
 /** @addtogroup kernelutilities
  * @{ */
@@ -35,6 +36,9 @@
 template<typename T>
 struct _ListNode_t
 {
+  static_assert(sizeof(T) <= 16,
+                "List<T> should not be used with large objects");
+
   /** Get the next data structure in the list
    *\return pointer to the next data structure in the list */
   _ListNode_t *next()
@@ -143,13 +147,13 @@ class List
      *\return iterator pointing to the reverse end of the List + 1 */
     inline ReverseIterator rend()
     {
-      return ReverseIterator();
+      return ReverseIterator(0);
     }
     /** Get a constant iterator pointing to the reverse end of the List + 1
      *\return constant iterator pointing to the reverse end of the List + 1 */
     inline ConstReverseIterator rend() const
     {
-      return ConstReverseIterator();
+      return ConstReverseIterator(0);
     }
 
     /** Remove all elements from the List */
@@ -167,274 +171,9 @@ class List
     node_t *m_Last;
 
     uint32_t m_Magic;
-};
 
-/** List template specialisation for void*
- *\brief List template specialisation for void* */
-template<>
-class List<void*>
-{
-  /** The data structure of the list's nodes */
-  typedef _ListNode_t<void*> node_t;
-  public:
-    /** Type of the bidirectional iterator */
-    typedef ::Iterator<void*, node_t>     Iterator;
-    /** Type of the constant bidirectional iterator */
-    typedef Iterator::Const               ConstIterator;
-    /** Type of the reverse iterator */
-    typedef Iterator::Reverse             ReverseIterator;
-    /** Type of the constant reverse iterator */
-    typedef Iterator::ConstReverse        ConstReverseIterator;
-
-    /** Default constructor, does nothing */
-    List();
-    /** Copy-constructor
-     *\param[in] x reference object */
-    List(const List &x);
-    /** Destructor, deallocates memory */
-    ~List();
-
-    /** Assignment operator
-     *\param[in] x the object that should be copied */
-    List &operator = (const List &x);
-
-    /** Get the number of elements we reserved space for
-     *\return number of elements we reserved space for */
-    size_t size() const;
-    /** Get the number of elements in the List */
-    size_t count() const;
-    /** Add a value to the end of the List
-     *\param[in] value the value that should be added */
-    void pushBack(void *value);
-    /** Remove the last element from the List
-     *\return the previously last element */
-    void *popBack();
-    /** Add a value to the front of the List
-     *\param[in] value the value that should be added */
-    void pushFront(void *value);
-    /** Remove the first element in the List
-     *\return the previously first element */
-    void *popFront();
-    /** Erase an element
-     *\param[in] iterator the iterator that points to the element */
-    Iterator erase(Iterator &Iter);
-    /** Erase an element with a reverse iterator
-     *\param[in] reverse iterator the iterator that points to the element */
-    ReverseIterator erase(ReverseIterator &Iter);
-
-    /** Get an iterator pointing to the beginning of the List
-     *\return iterator pointing to the beginning of the List */
-    inline Iterator begin()
-    {
-      return Iterator(m_First);
-    }
-    /** Get a constant iterator pointing to the beginning of the List
-     *\return constant iterator pointing to the beginning of the List */
-    inline ConstIterator begin() const
-    {
-      return ConstIterator(m_First);
-    }
-    /** Get an iterator pointing to the end of the List + 1
-     *\return iterator pointing to the end of the List + 1 */
-    inline Iterator end()
-    {
-      return Iterator(0);
-    }
-    /** Get a constant iterator pointing to the end of the List + 1
-     *\return constant iterator pointing to the end of the List + 1 */
-    inline ConstIterator end() const
-    {
-      return ConstIterator(0);
-    }
-    /** Get an iterator pointing to the reverse beginning of the List
-     *\return iterator pointing to the reverse beginning of the List */
-    inline ReverseIterator rbegin()
-    {
-      return ReverseIterator(m_Last);
-    }
-    /** Get a constant iterator pointing to the reverse beginning of the List
-     *\return constant iterator pointing to the reverse beginning of the List */
-    inline ConstReverseIterator rbegin() const
-    {
-      return ConstReverseIterator(m_Last);
-    }
-    /** Get an iterator pointing to the reverse end of the List + 1
-     *\return iterator pointing to the reverse end of the List + 1 */
-    inline ReverseIterator rend()
-    {
-      return ReverseIterator();
-    }
-    /** Get a constant iterator pointing to the reverse end of the List + 1
-     *\return constant iterator pointing to the reverse end of the List + 1 */
-    inline ConstReverseIterator rend() const
-    {
-      return ConstReverseIterator();
-    }
-
-    /** Remove all elements from the List */
-    void clear();
-    /** Copy the content of a List into this List
-     *\param[in] x the reference List */
-    void assign(const List &x);
-
-  private:
-    /** The number of Nodes/Elements in the List */
-    size_t m_Count;
-    /** Pointer to the first Node in the List */
-    node_t *m_First;
-    /** Pointer to the last Node in the List */
-    node_t *m_Last;
-
-    uint32_t m_Magic;
-};
-
-/** List template specialisation for pointers. Just forwards to the
- * void* template specialisation of List.
- *\brief List template specialisation for pointers */
-template<class T>
-class List<T*>
-{
-  public:
-    /** Iterator */
-    typedef IteratorAdapter<T*, List<void*>::Iterator>                    Iterator;
-    /** ConstIterator */
-    typedef IteratorAdapter<T* const, List<void*>::ConstIterator>         ConstIterator;
-    /** ReverseIterator */
-    typedef IteratorAdapter<T*, List<void*>::ReverseIterator>             ReverseIterator;
-    /** ConstReverseIterator */
-    typedef IteratorAdapter<T* const, List<void*>::ConstReverseIterator>  ConstReverseIterator;
-
-    /** Default constructor, does nothing */
-    inline List()
-      : m_VoidList(){}
-    /** Copy-constructor
-     *\param[in] x reference object */
-    inline List(const List &x)
-      : m_VoidList(x.m_VoidList){}
-    /** Destructor, deallocates memory */
-    inline ~List()
-      {}
-
-    /** Assignment operator
-     *\param[in] x the object that should be copied */
-    inline List &operator = (const List &x)
-    {
-      m_VoidList = x.m_VoidList;
-      return *this;
-    }
-
-    /** Get the number of elements we reserved space for
-     *\return number of elements we reserved space for */
-    inline size_t size() const
-    {
-      return m_VoidList.size();
-    }
-    /** Get the number of elements in the List */
-    inline size_t count() const
-    {
-      return m_VoidList.count();
-    }
-    /** Add a value to the end of the List
-     *\param[in] value the value that should be added */
-    inline void pushBack(T *value)
-    {
-      m_VoidList.pushBack(reinterpret_cast<void*>(const_cast<typename nonconst_type<T>::type*>(value)));
-    }
-    /** Remove the last element from the List
-     *\return the previously last element */
-    inline T *popBack()
-    {
-      return reinterpret_cast<T*>(m_VoidList.popBack());
-    }
-    /** Add a value to the front of the List
-     *\param[in] value the value that should be added */
-    inline void pushFront(T *value)
-    {
-      m_VoidList.pushFront(reinterpret_cast<void*>(value));
-    }
-    /** Remove the first element in the List
-     *\return the previously first element */
-    inline T *popFront()
-    {
-      return reinterpret_cast<T*>(m_VoidList.popFront());
-    }
-    /** Erase an element
-     *\param[in] iterator the iterator that points to the element */
-    inline Iterator erase(Iterator &Iter)
-    {
-      return Iterator(m_VoidList.erase(Iter.__getIterator()));
-    }
-    /** Erase an element with a reverse iterator
-     *\param[in] reverse iterator the iterator that points to the element */
-    inline ReverseIterator erase(ReverseIterator &Iter)
-    {
-      return ReverseIterator(m_VoidList.erase(Iter.__getIterator()));
-    }
-
-    /** Get an iterator pointing to the beginning of the List
-     *\return iterator pointing to the beginning of the List */
-    inline Iterator begin()
-    {
-      return Iterator(m_VoidList.begin());
-    }
-    /** Get a constant iterator pointing to the beginning of the List
-     *\return constant iterator pointing to the beginning of the List */
-    inline ConstIterator begin() const
-    {
-      return ConstIterator(m_VoidList.begin());
-    }
-    /** Get an iterator pointing to the end of the List + 1
-     *\return iterator pointing to the end of the List + 1 */
-    inline Iterator end()
-    {
-      return Iterator(m_VoidList.end());
-    }
-    /** Get a constant iterator pointing to the end of the List + 1
-     *\return constant iterator pointing to the end of the List + 1 */
-    inline ConstIterator end() const
-    {
-      return ConstIterator(m_VoidList.end());
-    }
-    /** Get an iterator pointing to the reverse beginning of the List
-     *\return iterator pointing to the reverse beginning of the List */
-    inline ReverseIterator rbegin()
-    {
-      return ReverseIterator(m_VoidList.rbegin());
-    }
-    /** Get a constant iterator pointing to the reverse beginning of the List
-     *\return constant iterator pointing to the reverse beginning of the List */
-    inline ConstReverseIterator rbegin() const
-    {
-      return ConstReverseIterator(m_VoidList.rbegin());
-    }
-    /** Get an iterator pointing to the reverse end of the List + 1
-     *\return iterator pointing to the reverse end of the List + 1 */
-    inline ReverseIterator rend()
-    {
-      return ReverseIterator(m_VoidList.rend());
-    }
-    /** Get a constant iterator pointing to the reverse end of the List + 1
-     *\return constant iterator pointing to the reverse end of the List + 1 */
-    inline ConstReverseIterator rend() const
-    {
-      return ConstReverseIterator(m_VoidList.rend());
-    }
-
-    /** Remove all elements from the List */
-    inline void clear()
-    {
-      m_VoidList.clear();
-    }
-    /** Copy the content of a List into this List
-     *\param[in] x the reference List */
-    inline void assign(const List &x)
-    {
-      m_VoidList.assign(x.m_VoidList);
-    }
-
-  private:
-    /** The actual container */
-    List<void*> m_VoidList;
+    /** Pool of node objects (to reduce impact of lots of node allocs/deallocs). */
+    ObjectPool<node_t> m_NodePool;
 };
 
 //
@@ -443,13 +182,13 @@ class List<T*>
 
 template <typename T>
 List<T>::List()
-    : m_Count(0), m_First(0), m_Last(0), m_Magic(0x1BADB002)
+    : m_Count(0), m_First(0), m_Last(0), m_Magic(0x1BADB002), m_NodePool()
 {
 }
 
 template <typename T>
 List<T>::List(const List &x)
-    : m_Count(0), m_First(0), m_Last(0), m_Magic(0x1BADB002)
+    : m_Count(0), m_First(0), m_Last(0), m_Magic(0x1BADB002), m_NodePool()
 {
   assign(x);
 }
@@ -480,7 +219,7 @@ size_t List<T>::count() const
 template <typename T>
 void List<T>::pushBack(T value)
 {
-  node_t *newNode = new node_t;
+  node_t *newNode = m_NodePool.allocate();
   newNode->m_Next = 0;
   newNode->m_Previous = m_Last;
   newNode->value = value;
@@ -498,7 +237,7 @@ T List<T>::popBack()
 {
   // Handle an extremely unusual case
   if(!m_Last && !m_First)
-    return 0;
+    return T();
     
   node_t *node = m_Last;
   if(m_Last)
@@ -510,16 +249,16 @@ T List<T>::popBack()
   --m_Count;
 
   if(!node)
-    return 0;
+    return T();
 
   T value = node->value;
-  delete node;
+  m_NodePool.deallocate(node);
   return value;
 }
 template <typename T>
 void List<T>::pushFront(T value)
 {
-  node_t *newNode = new node_t;
+  node_t *newNode = m_NodePool.allocate();
   newNode->m_Next = m_First;
   newNode->m_Previous = 0;
   newNode->value = value;
@@ -537,7 +276,7 @@ T List<T>::popFront()
 {
   // Handle an extremely unusual case
   if(!m_Last && !m_First)
-    return 0;
+    return T();
   
   node_t *node = m_First;
   if(m_First)
@@ -549,10 +288,10 @@ T List<T>::popFront()
   --m_Count;
 
   if(!node)
-    return 0;
+    return T();
 
   T value = node->value;
-  delete node;
+  m_NodePool.deallocate(node);
   return value;
 }
 template <typename T>

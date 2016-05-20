@@ -20,6 +20,7 @@
 #include "Ext2Symlink.h"
 #include "Ext2Filesystem.h"
 #include <syscallError.h>
+#include <utilities/utility.h>
 
 Ext2Symlink::Ext2Symlink(String name, uintptr_t inode_num, Inode *inode,
                          Ext2Filesystem *pFs, File *pParent) :
@@ -44,9 +45,9 @@ Ext2Symlink::Ext2Symlink(String name, uintptr_t inode_num, Inode *inode,
     if (mode & EXT2_S_IWOTH) permissions |= FILE_OW;
     if (mode & EXT2_S_IXOTH) permissions |= FILE_OX;
 
-    setPermissions(permissions);
-    setUid(LITTLE_TO_HOST16(inode->i_uid));
-    setGid(LITTLE_TO_HOST16(inode->i_gid));
+    setPermissionsOnly(permissions);
+    setUidOnly(LITTLE_TO_HOST16(inode->i_uid));
+    setGidOnly(LITTLE_TO_HOST16(inode->i_gid));
 }
 
 Ext2Symlink::~Ext2Symlink()
@@ -55,14 +56,48 @@ Ext2Symlink::~Ext2Symlink()
 
 uint64_t Ext2Symlink::read(uint64_t location, uint64_t size, uintptr_t buffer, bool canBlock)
 {
-    return static_cast<Ext2Node*>(this)->doRead(location, size, buffer);
+    if (location >= getSize())
+        return 0;
+    if ((location + size) >= getSize())
+        size = getSize() - location;
+    if (!size)
+        return 0;
+
+    if (getSize() && Ext2Node::getInode()->i_blocks == 0)
+    {
+        MemoryCopy(reinterpret_cast<void *>(buffer), adjust_pointer(m_pInode->i_block, location), size);
+        return size;
+    }
+
+    if (getSize() > m_pExt2Fs->m_BlockSize)
+    {
+        WARNING("Ext2: rather large symlink found, not handled yet");
+        return 0;
+    }
+
+    uintptr_t block = Ext2Node::readBlock(location);
+    size_t offset = location % m_pExt2Fs->m_BlockSize;
+    MemoryCopy(reinterpret_cast<void *>(buffer), reinterpret_cast<void *>(block + offset), size);
     m_Size = m_nSize;
+    return size;
 }
 
 uint64_t Ext2Symlink::write(uint64_t location, uint64_t size, uintptr_t buffer, bool canBlock)
 {
-    return static_cast<Ext2Node*>(this)->doWrite(location, size, buffer);
+    Ext2Node::extend(size);
     m_Size = m_nSize;
+
+    if (getSize() > m_pExt2Fs->m_BlockSize)
+    {
+        WARNING("Ext2: rather large symlink found, not handled yet");
+        return 0;
+    }
+
+    uintptr_t block = Ext2Node::readBlock(location);
+    size_t offset = location % m_pExt2Fs->m_BlockSize;
+    MemoryCopy(adjust_pointer(reinterpret_cast<void *>(block), offset), reinterpret_cast<void *>(buffer), size);
+    Ext2Node::writeBlock(location);
+    return size;
 }
 
 void Ext2Symlink::truncate()

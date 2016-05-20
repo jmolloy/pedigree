@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -34,9 +33,9 @@ using namespace Ipc;
 #define MEMPOOL_BUFF_SIZE       4096
 #define MEMPOOL_BASE_SIZE       1024 /// \todo Tune.
 
-MemoryPool __ipc_mempool("IPC Message Pool");
+static MemoryPool __ipc_mempool("IPC Message Pool");
 
-RadixTree<IpcEndpoint*> __endpoints;
+static RadixTree<IpcEndpoint*> __endpoints;
 
 IpcEndpoint *Ipc::getEndpoint(String &name)
 {

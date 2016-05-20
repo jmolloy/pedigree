@@ -30,6 +30,7 @@ import signal
 import socket
 import subprocess
 import sys
+import time
 
 
 class TimeoutError(Exception):
@@ -72,6 +73,9 @@ def main(argv):
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind(('127.0.0.1', 4556))
 
+    # Disable default serial ports in the QEMU script.
+    os.environ['NO_SERIAL_PORTS'] = 'yes'
+
     # Kick off the QEMU instance in the background.
     qemu_cmd = [
         os.path.join(scriptdir, 'qemu'),
@@ -83,14 +87,20 @@ def main(argv):
         '-monitor',
         'stdio'
     ]
+
+    start = time.time()
     qemu = subprocess.Popen(qemu_cmd, stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             close_fds=True, cwd=os.path.join(scriptdir, '..'))
 
+    # Skip over GRUB boot menu.
+    time.sleep(1)
+    qemu.stdin.write('sendkey ret\n')
+
     success = False
     serial = []
     try:
-        with Timeout(15):
+        with Timeout(600):
             last = ''
             while True:
                 serial_data = last + sock.recv(1024)
@@ -102,16 +112,17 @@ def main(argv):
                 if '-- Hello, Travis! --' in '\n'.join(serial_lines):
                     success = True
                     break
+        end = time.time()
     except TimeoutError:
         print 'Runtime test failure: Pedigree did not boot to the login prompt.'
         print 'Most recent serial lines:'
         print '\n'.join(serial[-15:])
     else:
-        print 'Runtime test success: Pedigree booted to the login prompt.'
+        print ('Runtime test success: Pedigree booted to the login '
+               'prompt (%ds).' % (int(end - start),))
 
     # Terminate QEMU now.
-    qemu.terminate()
-    qemu.wait()
+    qemu.communicate('quit\n')
 
     # Serial socket is done - QEMU is no more.
     sock.close()

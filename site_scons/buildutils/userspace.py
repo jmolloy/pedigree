@@ -43,6 +43,8 @@ def fixFlags(env, flags):
         removals.update(X64_REMOVAL_FLAGS)
     if env['ARCH_TARGET'] == 'PPC':
         additions.add('-U__svr4__')
+    if env['ARCH_TARGET'] == 'ARM':
+        additions.add('-Wno-error=cast-align')
 
     flags = misc.removeFlags(flags, removals)
     for addition in additions:

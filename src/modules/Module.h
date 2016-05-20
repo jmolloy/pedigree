@@ -85,6 +85,7 @@
 #ifndef MODULE_H
 #define MODULE_H
 
+#include <compiler.h>
 #include <utilities/utility.h>
 
 #ifndef __cplusplus
@@ -114,26 +115,34 @@ struct ModuleInfo
     ModuleEntry entry;
     ModuleExit exit;
     const char **dependencies;
-};
+} PACKED;
 
 #define MODULE_INFO2(name, entry, exit, ...) \
-    static const char *__mod_deps[] = {__VA_ARGS__}; \
-    static ModuleInfo __module __attribute__((section(".modinfo"))) (name, entry, exit, __mod_deps);
+    static const char *__mod_deps[] = {__VA_ARGS__, 0}; \
+    static ModuleInfo __module SECTION(".modinfo") (name, entry, exit, __mod_deps);
+
+#define MODULE_OPTIONAL_DEPENDS(...)
 
 #else
 
-#define MODULE_NAME(x) const char *g_pModuleName __attribute__((section(".modinfo"))) = x
-#define MODULE_ENTRY(x) ModuleEntry g_pModuleEntry __attribute__((section(".modinfo"))) = x
-#define MODULE_EXIT(x) ModuleExit g_pModuleExit __attribute__((section(".modinfo"))) = x
-#define MODULE_DEPENDS(...) const char *g_pDepends[] __attribute__((section(".modinfo"))) = {__VA_ARGS__, 0}
-#define MODULE_DEPENDS2(...) const char *g_pDepends[] __attribute__((section(".modinfo"))) = {__VA_ARGS__}
+#define MODULE_NAME(x) const char *g_pModuleName SECTION(".modinfo") = x
+#define MODULE_ENTRY(x) ModuleEntry g_pModuleEntry SECTION(".modinfo") = x
+#define MODULE_EXIT(x) ModuleExit g_pModuleExit SECTION(".modinfo") = x
+#define MODULE_DEPENDS(...) const char *g_pDepends[] SECTION(".modinfo") = {__VA_ARGS__, 0}
+#define MODULE_DEPENDS2(...) const char *g_pDepends[] SECTION(".modinfo") = {__VA_ARGS__}
 
-#define MODULE_OPTIONAL_DEPENDS(...) const char *g_pOptionalDepends[] __attribute__((section(".modinfo"))) = {__VA_ARGS__, 0}
+#define MODULE_OPTIONAL_DEPENDS(...) const char *g_pOptionalDepends[] SECTION(".modinfo") = {__VA_ARGS__, 0}
 
 #define MODULE_INFO2(name, entry, exit, ...) MODULE_NAME(name); \
                                             MODULE_ENTRY(entry); \
                                             MODULE_EXIT(exit); \
                                             MODULE_DEPENDS2(__VA_ARGS__);
+
+extern const char *g_pModuleName;
+extern ModuleEntry g_pModuleEntry;
+extern ModuleExit g_pModuleExit;
+extern const char *g_pDepends[];
+extern const char *g_pOptionalDepends[];
 
 #endif
 

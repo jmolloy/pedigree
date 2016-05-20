@@ -29,6 +29,9 @@ extern BootIO bootIO;
 
 Bios Bios::m_Instance;
 
+extern "C" int abs (int i);
+extern "C" void sscanf(void);
+
 u8 rdb (u32 addr)
 {
   return * reinterpret_cast<u8*> (addr);
@@ -55,33 +58,33 @@ void wrl (u32 addr, u32 val)
 }
 
 
-u8 inb (X86EMU_pioAddr addr)
+static u8 inb (X86EMU_pioAddr addr)
 {
   uint8_t ret;
   asm volatile("inb %1, %0" : "=a" (ret) : "dN" (addr));
   return ret;
 }
-u16 inw (X86EMU_pioAddr addr)
+static u16 inw (X86EMU_pioAddr addr)
 {
   uint16_t ret;
   asm volatile("inw %1, %0" : "=a" (ret) : "dN" (addr));
   return ret;
 }
-u32 inl (X86EMU_pioAddr addr)
+static u32 inl (X86EMU_pioAddr addr)
 {
   uint32_t ret;
   asm volatile("inl %1, %0" : "=a" (ret) : "dN" (addr));
   return ret;
 }
-void outb (X86EMU_pioAddr addr, u8 val)
+static void outb (X86EMU_pioAddr addr, u8 val)
 {
   asm volatile ("outb %1, %0" : : "dN" (addr), "a" (val));
 }
-void outw (X86EMU_pioAddr addr, u16 val)
+static void outw (X86EMU_pioAddr addr, u16 val)
 {
   asm volatile ("outw %1, %0" : : "dN" (addr), "a" (val));
 }
-void outl (X86EMU_pioAddr addr, u32 val)
+static void outl (X86EMU_pioAddr addr, u32 val)
 {
   asm volatile ("outl %1, %0" : : "dN" (addr), "a" (val));
 }
@@ -91,10 +94,10 @@ extern "C" int abs (int i)
   return (i>0)?i:-i;
 }
 
-extern "C" int exit (int code)
+extern "C" int exit (int code) NORETURN;
+int exit (int)
 {
-  for(;;);
-  return code;
+  panic("bios: exit()");
 }
 
 extern "C" void sscanf()
@@ -109,7 +112,7 @@ extern "C" void printk(const char *fmt, ...)
   int i;
 
   va_start(args, fmt);
-  i = vsprintf(buf,fmt,args);
+  i = VStringFormat(buf,fmt,args);
   va_end(args);
 
   buf[i] = '\0';
@@ -136,10 +139,10 @@ Bios::Bios () : mallocLoc(0x8000)
   iof.outw = &outw;
   iof.outl = &outl;
 
-  memset(&M, 0, sizeof(M));
+  ByteSet(&M, 0, sizeof(M));
   M.x86.debug = 0;
   M.x86.mode = 0;
-  memset(reinterpret_cast<void*> (0x7C00), 0xF4, 0x100);
+  ByteSet(reinterpret_cast<void*> (0x7C00), 0xF4, 0x100);
 
   X86EMU_setupMemFuncs(&mf);
   X86EMU_setupPioFuncs(&iof);
@@ -160,7 +163,7 @@ uintptr_t Bios::malloc (int n)
   return loc;
 }
 
-void Bios::executeInterrupt (int i)
+void Bios::executeInterrupt (int interrupt)
 {
     bool bInterrupts = Processor::getInterrupts();
     Processor::setInterrupts(false);
@@ -189,7 +192,7 @@ void Bios::executeInterrupt (int i)
         }
     }
 
-    X86EMU_prepareForInt(i);
+    X86EMU_prepareForInt(interrupt);
     X86EMU_exec();
 
     // Switch back to the old address space.

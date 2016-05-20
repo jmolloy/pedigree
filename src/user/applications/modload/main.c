@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -51,7 +50,12 @@ int load_module(char *name)
     // Create the elf structure
     Elf_t *elf = elf_create(buffer, len);
     if(!elf)
+    {
+        free(buffer);
+        free(file);
         return -1;
+    }
+
     // Grab the name and dependencies symbols
     ElfSymbol_t *name_sym = elf_get_symbol(elf, "g_pModuleName"), *deps_sym = elf_get_symbol(elf, "g_pDepends");
     if(!name_sym)
@@ -64,12 +68,14 @@ int load_module(char *name)
         printf("g_pDepends symbols not found!\n");
         return -1;
     }
+
     char *modname = (char*)elf_relptr(elf, name_sym, *SYM_PTR(elf, name_sym));
     if(pedigree_module_is_loaded(modname))
     {
         printf("Module %s is already loaded!\n", modname);
         return -1;
     }
+
     printf("Module %s being loaded...\n", modname);
     uint32_t *deps = SYM_PTR(elf, deps_sym);
     for(size_t i = 0; deps[i]; i++)
@@ -82,6 +88,7 @@ int load_module(char *name)
         printf("Dependency %s of %s couldn't been loaded!\n", depname, modname);
         return -1;
     }
+
     // Finally load the module
     pedigree_module_load(file);
     if(pedigree_module_is_loaded(modname))

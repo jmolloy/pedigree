@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -31,6 +30,7 @@
 /** The syscall manager on x64 processors */
 class X64SyscallManager : public ::SyscallManager
 {
+  friend class Processor;
   public:
     /** Get the X64SyscallManager class instance
      *\return instance of the X64SyscallManager class */

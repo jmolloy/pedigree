@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -146,12 +145,15 @@ DevicesCommand::DeviceTree::DeviceTree() :
   m_Line(0), m_LinearTree()
 {
   // Create the (flattened) device tree, so we can look up the index of any particular device.
+  auto pusher = [this] (Device *p) {
+    m_LinearTree.pushBack(p);
+    return p;
+  };
+
+  auto callback = pedigree_std::make_callable(pusher);
 
   // Get the first device.
-  Device *device = &Device::root();
-  
-  // Start the depth-first search.
-  probeDev(device);
+  Device::foreach(callback, 0);
 }
 
 void DevicesCommand::DeviceTree::probeDev(Device *pDev)
@@ -165,7 +167,7 @@ void DevicesCommand::DeviceTree::probeDev(Device *pDev)
 
 const char *DevicesCommand::DeviceTree::getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
 {
-  NormalStaticString str;
+  static NormalStaticString str;
 
   // Grab the device to describe.
   Device *pDev = m_LinearTree[index];
@@ -274,7 +276,7 @@ const char *DevicesCommand::DeviceInfo::getLine2(size_t index, size_t &colOffset
       break;
     }
     case 1:
-      str += m_pDev->getType();
+      str += static_cast<unsigned int>(m_pDev->getType());
       break;
     case 2:
       str += m_pDev->getSpecificType();

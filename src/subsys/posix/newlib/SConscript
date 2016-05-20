@@ -22,7 +22,9 @@ import subprocess
 
 import buildutils.userspace
 
-Import(['env'])
+Import(['userspace_env'])
+
+env = userspace_env
 
 builddir = env["PEDIGREE_BUILD_BASE"]
 
@@ -71,3 +73,6 @@ output_libs = env.Command(
     [NEWLIB_OUTPUT_LIBC, NEWLIB_OUTPUT_LIBM],
     [NEWLIB_BUILDER, NEWLIB_BASENAME],
     Action(buildNewlib, env.get('CCCOMSTR')))
+
+# Need POSIX headers to be installed before we can build Newlib.
+env.Depends(output_libs, 'headers')

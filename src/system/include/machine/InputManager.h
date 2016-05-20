@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -89,6 +88,9 @@ class InputManager
         /// Begins the worker thread
         void initialise();
 
+        /// Shuts down the worker thread, clears queues, and removes callbacks.
+        void shutdown();
+
         /// Singleton design
         static InputManager& instance()
         {
@@ -124,6 +126,12 @@ class InputManager
 
         /// Main worker thread
         void mainThread();
+
+        /// Returns whether the instance is creating notifications.
+        bool isActive() const
+        {
+            return m_bActive;
+        }
 
     private:
         /// Static instance
@@ -174,6 +182,9 @@ class InputManager
         /// Thread object for our worker thread
         Thread *m_pThread;
 #endif
+
+        /// Are we active?
+        bool m_bActive;
 };
 
 #endif

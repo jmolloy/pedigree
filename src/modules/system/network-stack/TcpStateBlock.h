@@ -73,13 +73,13 @@ class StateBlock : public TimerHandler
       Timer* t = Machine::instance().getTimer();
       if(t)
         t->registerHandler(this);
-    };
+    }
     ~StateBlock()
     {
       Timer* t = Machine::instance().getTimer();
       if(t)
         t->unregisterHandler(this);
-    };
+    }
 
     Tcp::TcpState currentState;
 
@@ -180,7 +180,7 @@ class StateBlock : public TimerHandler
             if(seg->nBytes && seg->payload)
             {
               uint8_t* newPayload = new uint8_t[splitSeg->seg_len];
-              memcpy(newPayload, reinterpret_cast<void*>(seg->payload), seg->nBytes);
+              MemoryCopy(newPayload, reinterpret_cast<void*>(seg->payload), seg->nBytes);
 
               splitSeg->payload = reinterpret_cast<uintptr_t>(newPayload);
             }
@@ -244,7 +244,7 @@ class StateBlock : public TimerHandler
         if(nBytes && payload)
         {
           uint8_t* newPayload = new uint8_t[segmentSize];
-          memcpy(newPayload, reinterpret_cast<void*>(payload + offset), segmentSize);
+          MemoryCopy(newPayload, reinterpret_cast<void*>(payload + offset), segmentSize);
 
           seg->payload = reinterpret_cast<uintptr_t>(newPayload);
         }
@@ -309,8 +309,7 @@ class StateBlock : public TimerHandler
 
             // create the cleanup thread
             Thread *pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
-                                         reinterpret_cast<Thread::ThreadStartFunc> (&stateBlockFree),
-                                         reinterpret_cast<void*> (this));
+                                         &stateBlockFree, reinterpret_cast<void*>(this));
             pThread->detach();
           }
         }

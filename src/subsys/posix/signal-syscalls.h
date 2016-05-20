@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -29,18 +28,7 @@
 #include <process/SignalEvent.h>
 
 #include "newlib.h"
-
-#if 0
-#define SG_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "]\t" << Hex << x)
-#else
-#define SG_NOTICE(x)
-#endif
-
-#if 0
-#define SG_VERBOSE_NOTICE(x) SG_NOTICE(x)
-#else
-#define SG_VERBOSE_NOTICE(x)
-#endif
+#include "logging.h"
 
 typedef void (*_sig_func_ptr)(int);
 

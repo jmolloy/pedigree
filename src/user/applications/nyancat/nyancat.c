@@ -49,6 +49,9 @@
  * WITH THE SOFTWARE.
  */
 
+#define _XOPEN_SOURCE 500
+#define _DARWIN_C_SOURCE 1
+#define __BSD_VISIBLE 1
 #include <ctype.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -89,13 +92,13 @@
  * Specifically, this should be either control sequences
  * or raw characters (ie, for vt220 mode)
  */
-char * colors[256] = {NULL};
+const char * colors[256] = {NULL};
 
 /*
  * For most modes, we output spaces, but for some
  * we will use block characters (or even nothing)
  */
-char * output = "  ";
+const char * output = "  ";
 
 /*
  * Are we currently in telnet mode?
@@ -111,7 +114,7 @@ int show_counter = 1;
  * Number of frames to show before quitting
  * or 0 to repeat forever (default)
  */
-int frame_count = 0;
+unsigned int frame_count = 0;
 
 /*
  * Clear the screen between frames (as opposed to reseting
@@ -149,10 +152,22 @@ int digits(int val) {
  * These values crop the animation, as we have a full 64x64 stored,
  * but we only want to display 40x24 (double width).
  */
-int min_row = 20;
-int max_row = 43;
-int min_col = 10;
-int max_col = 50;
+int min_row = -1;
+int max_row = -1;
+int min_col = -1;
+int max_col = -1;
+
+/*
+ * Actual width/height of terminal.
+ */
+int terminal_width = 80;
+int terminal_height = 24;
+
+/*
+ * Flags to keep track of whether width/height were automatically set.
+ */
+char using_automatic_width = 0;
+char using_automatic_height = 0;
 
 /*
  * Print escape sequences to return cursor to visible mode
@@ -172,6 +187,7 @@ void finish() {
  * (^C) so that we can restore the cursor and clear the terminal.
  */
 void SIGINT_handler(int sig){
+	(void)sig;
 	finish();
 }
 
@@ -180,6 +196,7 @@ void SIGINT_handler(int sig){
  * handling if we didn't receive a terminal
  */
 void SIGALRM_handler(int sig) {
+	(void)sig;
 	alarm(0);
 	longjmp(environment, 1);
 	/* Unreachable */
@@ -190,7 +207,28 @@ void SIGALRM_handler(int sig) {
  * in telnet mode and the client disconnects
  */
 void SIGPIPE_handler(int sig) {
+	(void)sig;
 	finish();
+}
+
+void SIGWINCH_handler(int sig) {
+	(void)sig;
+	struct winsize w;
+	ioctl(0, TIOCGWINSZ, &w);
+	terminal_width = w.ws_col;
+	terminal_height = w.ws_row;
+
+	if (using_automatic_width) {
+		min_col = (FRAME_WIDTH - terminal_width/2) / 2;
+		max_col = (FRAME_WIDTH + terminal_width/2) / 2;
+	}
+
+	if (using_automatic_height) {
+		min_row = (FRAME_HEIGHT - (terminal_height-1)) / 2;
+		max_row = (FRAME_HEIGHT + (terminal_height-1)) / 2;
+	}
+
+	signal(SIGWINCH, SIGWINCH_handler);
 }
 
 /*
@@ -310,21 +348,23 @@ int main(int argc, char ** argv) {
 
 	/* The default terminal is ANSI */
 	char term[1024] = {'a','n','s','i', 0};
-	int terminal_width = 80;
-	int k, ttype;
-	uint32_t option = 0, done = 0, sb_mode = 0, do_echo = 0;
+	unsigned int k;
+	int ttype;
+	uint32_t option = 0, done = 0, sb_mode = 0;
 	/* Various pieces for the telnet communication */
 	char  sb[1024] = {0};
-	short sb_len   = 0;
+	unsigned short sb_len   = 0;
 
 	/* Whether or not to show the MOTD intro */
 	char show_intro = 0;
+	char skip_intro = 0;
 
 	/* Long option names */
 	static struct option long_opts[] = {
 		{"help",       no_argument,       0, 'h'},
 		{"telnet",     no_argument,       0, 't'},
 		{"intro",      no_argument,       0, 'i'},
+		{"skip-intro", no_argument,       0, 'I'},
 		{"no-counter", no_argument,       0, 'n'},
 		{"no-title",   no_argument,       0, 's'},
 		{"no-clear",   no_argument,       0, 'e'},
@@ -340,7 +380,7 @@ int main(int argc, char ** argv) {
 
 	/* Process arguments */
 	int index, c;
-	while ((c = getopt_long(argc, argv, "eshitnf:r:R:c:C:W:H:", long_opts, &index)) != -1) {
+	while ((c = getopt_long(argc, argv, "eshiItnf:r:R:c:C:W:H:", long_opts, &index)) != -1) {
 		if (!c) {
 			if (long_opts[index].flag == 0) {
 				c = long_opts[index].val;
@@ -355,6 +395,9 @@ int main(int argc, char ** argv) {
 				break;
 			case 'i': /* Show introduction */
 				show_intro = 1;
+				break;
+			case 'I':
+				skip_intro = 1;
 				break;
 			case 't': /* Expect telnet bits */
 				telnet = 1;
@@ -397,8 +440,8 @@ int main(int argc, char ** argv) {
 	if (telnet) {
 		/* Telnet mode */
 
-		/* Intro is implied by telnet mode, so override whatever was asked for. */
-		show_intro = 1;
+		/* show_intro is implied unless skip_intro was set */
+		show_intro = (skip_intro == 0) ? 1 : 0;
 
 		/* Set the default options */
 		set_options();
@@ -448,7 +491,8 @@ int main(int argc, char ** argv) {
 								/* This was a response to the NAWS command, meaning
 								 * that this should be a window size */
 								alarm(2);
-								terminal_width = sb[2];
+								terminal_width = (sb[1] << 8) | sb[2];
+								terminal_height = (sb[3] << 8) | sb[4];
 								done++;
 							}
 							break;
@@ -482,11 +526,6 @@ int main(int argc, char ** argv) {
 								telnet_options[opt] = DONT;
 							}
 							send_command(telnet_options[opt], opt);
-							if (opt == ECHO) {
-								/* We don't really need this, as we don't accept input, but,
-								 * in case we do in the future, set our echo mode */
-								do_echo = (i == DO);
-							}
 							fflush(stdout);
 							break;
 						case SB:
@@ -531,16 +570,12 @@ int main(int argc, char ** argv) {
 		struct winsize w;
 		ioctl(0, TIOCGWINSZ, &w);
 		terminal_width = w.ws_col;
+		terminal_height = w.ws_row;
 	}
 
 	/* Convert the entire terminal string to lower case */
 	for (k = 0; k < strlen(term); ++k) {
 		term[k] = tolower(term[k]);
-	}
-
-	/* We don't want terminals wider than 80 columns */
-	if(terminal_width > 80) {
-		terminal_width = 80;
 	}
 
 	/* Do our terminal detection */
@@ -569,11 +604,18 @@ int main(int argc, char ** argv) {
 	}
 
 	int always_escape = 0; /* Used for text mode */
+
 	/* Accept ^C -> restore cursor */
 	signal(SIGINT, SIGINT_handler);
 
 	/* Handle loss of stdout */
 	signal(SIGPIPE, SIGPIPE_handler);
+
+	/* Handle window changes */
+	if (!telnet) {
+		signal(SIGWINCH, SIGWINCH_handler);
+	}
+
 	switch (ttype) {
 		case 1:
 			colors[',']  = "\033[48;5;17m";  /* Blue background */
@@ -696,6 +738,18 @@ int main(int argc, char ** argv) {
 			break;
 	}
 
+	if (min_col == max_col) {
+		min_col = (FRAME_WIDTH - terminal_width/2) / 2;
+		max_col = (FRAME_WIDTH + terminal_width/2) / 2;
+		using_automatic_width = 1;
+	}
+
+	if (min_row == max_row) {
+		min_row = (FRAME_HEIGHT - (terminal_height-1)) / 2;
+		max_row = (FRAME_HEIGHT + (terminal_height-1)) / 2;
+		using_automatic_height = 1;
+	}
+
 	/* Attempt to set terminal title */
 	if (set_title) {
 		printf("\033kNyanyanyanyanyanyanya...\033\134");
@@ -712,7 +766,7 @@ int main(int argc, char ** argv) {
 
 	if (show_intro) {
 		/* Display the MOTD */
-		int countdown_clock = 5;
+		unsigned int countdown_clock = 5;
 		for (k = 0; k < countdown_clock; ++k) {
 			newline(3);
 			printf("                             \033[1mNyancat Telnet Server\033[0m");
@@ -760,7 +814,7 @@ int main(int argc, char ** argv) {
 	size_t i = 0;       /* Current frame # */
 	unsigned int f = 0; /* Total frames passed */
 	char last = 0;      /* Last color index rendered */
-	size_t y, x;        /* x/y coordinates of what we're drawing */
+	int y, x;        /* x/y coordinates of what we're drawing */
 	while (playing) {
 		/* Reset cursor */
 		if (clear_screen) {
@@ -771,14 +825,38 @@ int main(int argc, char ** argv) {
 		/* Render the frame */
 		for (y = min_row; y < max_row; ++y) {
 			for (x = min_col; x < max_col; ++x) {
+				char color;
+				if (y > 23 && y < 43 && x < 0) {
+					/*
+					 * Generate the rainbow tail.
+					 *
+					 * This is done with a pretty simplistic square wave.
+					 */
+					int mod_x = ((-x+2) % 16) / 8;
+					if ((i / 2) % 2) {
+						mod_x = 1 - mod_x;
+					}
+					/*
+					 * Our rainbow, with some padding.
+					 */
+					const char *rainbow = ",,>>&&&+++###==;;;,,";
+					color = rainbow[mod_x + y-23];
+					if (color == 0) color = ',';
+				} else if (x < 0 || y < 0 || y >= FRAME_HEIGHT || x >= FRAME_WIDTH) {
+					/* Fill all other areas with background */
+					color = ',';
+				} else {
+					/* Otherwise, get the color from the animation frame. */
+					color = frames[i][y][x];
+				}
 				if (always_escape) {
 					/* Text mode (or "Always Send Color Escapes") */
-					printf("%s", colors[frames[i][y][x]]);
+					printf("%s", colors[(int)color]);
 				} else {
-					if (frames[i][y][x] != last && colors[frames[i][y][x]]) {
+					if (color != last && colors[(int)color]) {
 						/* Normal Mode, send escape (because the color changed) */
-						last = frames[i][y][x];
-						printf("%s%s", colors[frames[i][y][x]], output);
+						last = color;
+						printf("%s%s", colors[(int)color], output);
 					} else {
 						/* Same color, just send the output characters */
 						printf("%s", output);
@@ -794,13 +872,12 @@ int main(int argc, char ** argv) {
 			double diff = difftime(current, start);
 			/* Now count the length of the time difference so we can center */
 			int nLen = digits((int)diff);
-			int anim_width = terminal_width == 80 ? (max_col - min_col) * 2 : (max_col - min_col);
 			/*
 			 * 29 = the length of the rest of the string;
 			 * XXX: Replace this was actually checking the written bytes from a
 			 * call to sprintf or something
 			 */
-			int width = (anim_width - 29 - nLen) / 2;
+			int width = (terminal_width - 29 - nLen) / 2;
 			/* Spit out some spaces so that we're actually centered */
 			while (width > 0) {
 				printf(" ");

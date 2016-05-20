@@ -17,6 +17,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <compiler.h>
 #include "select-syscalls.h"
 #include <utilities/assert.h>
 
@@ -80,7 +81,8 @@ void SelectEvent::fire()
 
 size_t SelectEvent::serialize(uint8_t *pBuffer)
 {
-    size_t *pBuf = reinterpret_cast<size_t*>(pBuffer);
+    void *alignedBuffer = ASSUME_ALIGNMENT(pBuffer, sizeof(size_t));
+    size_t *pBuf = reinterpret_cast<size_t*>(alignedBuffer);
     pBuf[0] = EventNumbers::SelectEvent;
     pBuf[1] = reinterpret_cast<size_t>(m_pSemaphore);
     pBuf[2] = reinterpret_cast<size_t>(m_pFdSet);
@@ -92,7 +94,8 @@ size_t SelectEvent::serialize(uint8_t *pBuffer)
 
 bool SelectEvent::unserialize(uint8_t *pBuffer, SelectEvent &event)
 {
-    size_t *pBuf = reinterpret_cast<size_t*>(pBuffer);
+    void *alignedBuffer = ASSUME_ALIGNMENT(pBuffer, sizeof(size_t));
+    size_t *pBuf = reinterpret_cast<size_t*>(alignedBuffer);
     if (pBuf[0] != EventNumbers::SelectEvent)
         return false;
 

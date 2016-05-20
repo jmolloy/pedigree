@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -22,12 +21,7 @@
 #define NET_SYSCALLS_H
 
 #include <vfs/File.h>
-
-#if 0
-#define N_NOTICE(x) NOTICE("[" << Dec << Processor::information().getCurrentThread()->getParent()->getId() << "]\t" << Hex << x)
-#else
-#define N_NOTICE(x)
-#endif
+#include "logging.h"
 
 int posix_socket(int domain, int type, int protocol);
 int posix_connect(int sock, struct sockaddr* address, size_t addrlen);
@@ -47,5 +41,7 @@ int posix_gethostbyname(const char* name, void* hostinfo, int offset);
 int posix_shutdown(int socket, int how);
 
 int posix_getpeername(int socket, struct sockaddr *address, socklen_t *address_len);
+
+int posix_getsockopt(int sock, int level, int optname, void* optvalue, size_t *optlen);
 
 #endif

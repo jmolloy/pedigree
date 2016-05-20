@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -101,10 +100,10 @@ namespace Ipc
                 m_Name(name), m_Queue(), m_QueueSize(0), m_QueueLock(false)
             {
                 NOTICE("Creating endpoint with name " << name);
-                NOTICE("Endpoint is at " << ((uintptr_t) this));
+                NOTICE("Endpoint is at " << reinterpret_cast<uintptr_t>(this));
             }
 
-            ~IpcEndpoint()
+            ~IpcEndpoint() NORETURN
             {
                 FATAL("IpcEndpoint " << m_Name << " is being destroyed.");
             }

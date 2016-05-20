@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -22,6 +21,7 @@
 #define KERNEL_MACHINE_TIMER_H
 
 #include <processor/types.h>
+#include <utilities/assert.h>
 #include <machine/TimerHandler.h>
 
 /** @addtogroup kernelmachine
@@ -52,6 +52,9 @@ class Timer
     /** Get the current second
      *\return the current second */
     virtual uint8_t getSecond() = 0;
+    /** Get the current nanosecond
+     *\return the current nanosecond */
+    virtual uint64_t getNanosecond() = 0;
 
     /** Get the Tick count (time elapsed since system bootup)
      *\return the tick count in milliseconds */
@@ -62,8 +65,10 @@ class Timer
               That may require FP (*365.25 instead of 365) */
     virtual uint32_t getUnixTimestamp()
     {
+      size_t year = getYear();
+      assert(year >= 1970);
       return
-        (getYear()-1970) * (60*60*24*365) +
+        (year - 1970) * (60*60*24*365) +
         getMonth() * (60*60*24*30) +
         getDayOfMonth() * (60*60*24) +
         getHour() * (60*60) +
@@ -88,6 +93,14 @@ class Timer
      *\return The number of seconds before the event would have fired,
      *        or zero if bRetZero is true. */
     virtual size_t removeAlarm(class Event *pEvent, bool bRetZero) = 0;
+
+    /**
+     * \brief Synchronises the timer with the hardware.
+     * Useful for updating the fields returned by get*, especially if IRQs are
+     * not enabled.
+     * \param tohw If true, syncs back to the hardware, instead of from it.
+     */
+    virtual void synchronise(bool tohw=false) {}
 
   protected:
     /** The default constructor */

@@ -36,7 +36,7 @@
 
 #define PACKED __attribute__((packed))
 
-#define DEBUG_LIBLOAD
+// #define DEBUG_LIBLOAD
 
 #define _NO_ELF_CLASS
 #include <Elf.h>
@@ -60,19 +60,20 @@ typedef struct _object_meta {
     _object_meta() :
         filename(), path(), entry(0), mapped_file(0), mapped_file_sz(0),
         relocated(false), load_base(0), running(false), debug(false),
-        memory_regions(), phdrs(0), shdrs(0), sh_symtab(0), sh_strtab(0),
-        symtab(0), strtab(0), sh_shstrtab(0), shstrtab(0), ph_dynamic(0),
-        needed(0), dyn_symtab(0), dyn_strtab(0), dyn_strtab_sz(0), rela(0),
-        rel(0), rela_sz(0), rel_sz(0), uses_rela(false), got(0), plt_rela(0),
-        plt_rel(0), init_func(0), fini_func(0), plt_sz(0), hash(0), hash_buckets(0),
-        hash_chains(0), preloads(), objects(), parent(0)
+        memory_regions(), phdrs(0), num_phdrs(0), shdrs(0), num_shdrs(0),
+        sh_symtab(0), sh_strtab(0), symtab(0), strtab(0), sh_shstrtab(0),
+        shstrtab(0), ph_dynamic(0), needed(0), dyn_symtab(0), dyn_strtab(0),
+        dyn_strtab_sz(0), rela(0), rel(0), rela_sz(0), rel_sz(0),
+        uses_rela(false), got(0), plt_rela(0), plt_rel(0), init_func(0),
+        fini_func(0), plt_sz(0), hash(0), hash_buckets(0), hash_chains(0),
+        preloads(), objects(), parent(0)
     {}
 
     std::string filename;
     std::string path;
     entry_point_t entry;
 
-    void *mapped_file;
+    const void *mapped_file;
     size_t mapped_file_sz;
 
     bool relocated;
@@ -93,7 +94,7 @@ typedef struct _object_meta {
     ElfSectionHeader_t *sh_symtab;
     ElfSectionHeader_t *sh_strtab;
 
-    ElfSymbol_t *symtab;
+    const ElfSymbol_t *symtab;
     const char *strtab;
 
     ElfSectionHeader_t *sh_shstrtab;
@@ -124,9 +125,9 @@ typedef struct _object_meta {
 
     size_t plt_sz;
 
-    ElfHash_t *hash;
-    Elf_Word *hash_buckets;
-    Elf_Word *hash_chains;
+    const ElfHash_t *hash;
+    const Elf_Word *hash_buckets;
+    const Elf_Word *hash_chains;
 
     std::list<struct _object_meta*> preloads;
     std::list<struct _object_meta*> objects;
@@ -231,7 +232,9 @@ extern "C" int main(int argc, const char *argv[])
         return 0;
     }
 
+#ifdef DEBUG_LIBLOAD
     syslog(LOG_INFO, "libload.so starting...");
+#endif
 
     char *ld_libpath = getenv("LD_LIBRARY_PATH");
     char *ld_preload = getenv("LD_PRELOAD");
@@ -262,7 +265,9 @@ extern "C" int main(int argc, const char *argv[])
         }
     }
 
+#ifdef DEBUG_LIBLOAD
     syslog(LOG_INFO, "libload.so loading main object");
+#endif
 
     // Ungodly hack.
     if(!strcmp(argv[0], "sh") || !strcmp(argv[0], "/bin/sh"))
@@ -277,7 +282,9 @@ extern "C" int main(int argc, const char *argv[])
         }
     }
 
+#ifdef DEBUG_LIBLOAD
     syslog(LOG_INFO, "libload.so main object is %s", argv[0]);
+#endif
 
     // Load the main object passed on the command line.
     object_meta_t *meta = g_MainObject = new object_meta_t;
@@ -290,7 +297,9 @@ extern "C" int main(int argc, const char *argv[])
 
     g_LoadedObjects.insert(meta->filename);
 
+#ifdef DEBUG_LIBLOAD
     syslog(LOG_INFO, "libload.so loading preload, if one exists");
+#endif
 
     // Preload?
     if(ld_preload) {
@@ -305,7 +314,9 @@ extern "C" int main(int argc, const char *argv[])
         }
     }
 
+#ifdef DEBUG_LIBLOAD
     syslog(LOG_INFO, "libload.so loading dependencies");
+#endif
 
     // Any libraries to load?
     if(meta->needed.size()) {
@@ -317,7 +328,9 @@ extern "C" int main(int argc, const char *argv[])
         }
     }
 
+#ifdef DEBUG_LIBLOAD
     syslog(LOG_INFO, "libload.so relocating dependencies");
+#endif
 
     // Relocate preloads.
     for(std::list<struct _object_meta *>::iterator it = meta->preloads.begin();
@@ -333,12 +346,12 @@ extern "C" int main(int argc, const char *argv[])
         doRelocation(*it);
     }
 
+#ifdef DEBUG_LIBLOAD
     syslog(LOG_INFO, "libload.so relocating main object");
+#endif
 
     // Do initial relocation of the binary (non-GOT entries)
     doRelocation(meta);
-
-    syslog(LOG_INFO, "libload.so running entry point");
 
     // All done - run the program!
     meta->running = true;
@@ -348,6 +361,9 @@ extern "C" int main(int argc, const char *argv[])
         it != meta->objects.end();
         ++it) {
         if((*it)->init_func) {
+#ifdef DEBUG_LIBLOAD
+            syslog(LOG_INFO, "libload.so running init_func for %s", (*it)->filename.c_str());
+#endif
             init_fini_func_t init = (init_fini_func_t) (*it)->init_func;
             init();
         }
@@ -356,6 +372,9 @@ extern "C" int main(int argc, const char *argv[])
     // Run init function, if one exists.
     if(meta->init_func) {
         init_fini_func_t init = (init_fini_func_t) meta->init_func;
+#ifdef DEBUG_LIBLOAD
+        syslog(LOG_INFO, "libload.so running init_func for %s", meta->filename.c_str());
+#endif
         init();
     }
 
@@ -377,6 +396,9 @@ extern "C" int main(int argc, const char *argv[])
 
     // argv[0] is passed to us by the kernel and holds the path to the binary
     // we need to load. argv[1:] is the original argv.
+#ifdef DEBUG_LIBLOAD
+    syslog(LOG_INFO, "libload.so running entry point");
+#endif
     meta->entry(&argv[1], environ);
 
     return 0;
@@ -485,11 +507,12 @@ bool loadSharedObjectHelper(const char *filename, object_meta_t *parent, object_
     return bSuccess;
 }
 
-#include <syslog.h>
 bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
     meta->filename = filename;
     meta->path = findObject(meta->filename, envpath);
+#ifdef DEBUG_LIBLOAD
     syslog(LOG_INFO, "libload.so loading %s", filename);
+#endif
 
     // Okay, let's open up the file for reading...
     int fd = open(meta->path.c_str(), O_RDONLY);
@@ -565,11 +588,11 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
         errno = ENOEXEC;
         return false;
     }
-    meta->mapped_file = (void *) pBuffer;
+    meta->mapped_file = pBuffer;
 
-    meta->phdrs = (ElfProgramHeader_t *) &pBuffer[header.phoff];
+    meta->phdrs = const_cast<ElfProgramHeader_t *>(reinterpret_cast<const ElfProgramHeader_t *>(&pBuffer[header.phoff]));
     meta->num_phdrs = header.phnum;
-    meta->shdrs = (ElfSectionHeader_t *) &pBuffer[header.shoff];
+    meta->shdrs = const_cast<ElfSectionHeader_t *>(reinterpret_cast<const ElfSectionHeader_t *>(&pBuffer[header.shoff]));
     meta->num_shdrs = header.shnum;
 
     if(header.type == ET_REL) {
@@ -588,7 +611,7 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
     }
 
     meta->sh_shstrtab = &meta->shdrs[header.shstrndx];
-    meta->shstrtab = (const char *) &pBuffer[meta->sh_shstrtab->offset];
+    meta->shstrtab = &pBuffer[meta->sh_shstrtab->offset];
 
     // Find the symbol and string tables (these are not the dynamic ones).
     meta->sh_symtab = 0;
@@ -606,11 +629,11 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
     meta->strtab = 0;
 
     if(meta->sh_symtab != 0) {
-        meta->symtab = (ElfSymbol_t *) &pBuffer[meta->sh_symtab->offset];
+        meta->symtab = reinterpret_cast<const ElfSymbol_t *>(&pBuffer[meta->sh_symtab->offset]);
     }
 
     if(meta->sh_strtab != 0) {
-        meta->strtab = (const char *) &pBuffer[meta->sh_strtab->offset];
+        meta->strtab = &pBuffer[meta->sh_strtab->offset];
     }
 
     // Load program headers.
@@ -631,7 +654,7 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
 
             void *p = pedigree_sys_request_mem(mapSize);
             if(!p) {
-                munmap((void *) pBuffer, meta->mapped_file_sz);
+                munmap(const_cast<char *>(pBuffer), meta->mapped_file_sz);
                 errno = ENOEXEC;
                 syslog(LOG_INFO, "libload.so: couldn't get memory for relocated object");
                 return false;
@@ -658,7 +681,7 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                     meta->ph_dynamic->vaddr += meta->load_base;
                 }
 
-                ElfDyn_t *dyn = (ElfDyn_t *) &pBuffer[meta->phdrs[i].offset];
+                const ElfDyn_t *dyn = (const ElfDyn_t *) &pBuffer[meta->phdrs[i].offset];
 
                 while(dyn->tag != DT_NULL) {
                     switch(dyn->tag) {
@@ -723,11 +746,6 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                 size_t base_addend = phdr_base & (pagesz - 1);
                 phdr_base &= ~(pagesz - 1);
 
-#if 0
-                size_t offset = meta->phdrs[i].offset & ~(pagesz - 1);
-                size_t offset_addend = meta->phdrs[i].offset & (pagesz - 1);
-                size_t mapsz = offset_addend + meta->phdrs[i].filesz;
-#else
                 size_t offset = 0;
                 if(meta->phdrs[i].offset)
                 {
@@ -735,7 +753,6 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                 }
 
                 size_t mapsz = base_addend + meta->phdrs[i].filesz;
-#endif
 
                 // Already mapped?
                 if((msync((void *) phdr_base, mapsz, MS_SYNC) != 0) && (errno == ENOMEM)) {
@@ -779,8 +796,10 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
                             }
                             meta->memory_regions.push_back(std::pair<void *, size_t>(p, totalLength));
                         }
+#ifdef DEBUG_LIBLOAD
                         else
                             syslog(LOG_INFO, "libload.so: not mapping filesz section at %p", vaddr_start);
+#endif
                     }
 
                     void *p = mmap((void *) phdr_base, mapsz, PROT_READ | PROT_WRITE, mapflags, map_fd, map_fd ? offset : 0);
@@ -840,9 +859,9 @@ bool loadObject(const char *filename, object_meta_t *meta, bool envpath) {
         if(meta->shdrs[i].type == SHT_HASH) {
             uintptr_t vaddr = meta->shdrs[meta->shdrs[i].link].addr;
             if(((uintptr_t) meta->dyn_symtab) == vaddr) {
-                meta->hash = (ElfHash_t *) &pBuffer[meta->shdrs[i].offset];
-                meta->hash_buckets = (Elf_Word *) &pBuffer[meta->shdrs[i].offset + sizeof(ElfHash_t)];
-                meta->hash_chains = (Elf_Word *) &pBuffer[meta->shdrs[i].offset + sizeof(ElfHash_t) + (sizeof(Elf_Word) * meta->hash->nbucket)];
+                meta->hash = (const ElfHash_t *) &pBuffer[meta->shdrs[i].offset];
+                meta->hash_buckets = (const Elf_Word *) &pBuffer[meta->shdrs[i].offset + sizeof(ElfHash_t)];
+                meta->hash_chains = (const Elf_Word *) &pBuffer[meta->shdrs[i].offset + sizeof(ElfHash_t) + (sizeof(Elf_Word) * meta->hash->nbucket)];
             }
         }
     }
@@ -891,7 +910,7 @@ bool lookupSymbol(const char *symbol, object_meta_t *meta, ElfSymbol_t &sym, boo
             }
             if(bWeak) {
                 if(ST_BIND(sym.info) == STB_WEAK) {
-                    // sym.value = (uintptr_t) ~0UL;
+                    // sym.value = ~0UL;
                     break;
                 }
             }
@@ -1015,12 +1034,7 @@ std::string symbolName(const ElfSymbol_t &sym, object_meta_t *meta, bool bNoDyna
         return std::string("");
     }
 
-    ElfSymbol_t *symtab = meta->symtab;
     const char *strtab = meta->strtab;
-
-    if((!bNoDynamic) && meta->dyn_symtab) {
-        symtab = meta->dyn_symtab;
-    }
 
     if(ST_TYPE(sym.info) == 3) {
         strtab = meta->shstrtab;
@@ -1082,7 +1096,9 @@ void doRelocation(object_meta_t *meta) {
         // mprotect accordingly.
         size_t alignExtra = meta->phdrs[i].vaddr & (getpagesize() - 1);
         uintptr_t protectaddr = meta->phdrs[i].vaddr & ~(getpagesize() - 1);
+#ifdef DEBUG_LIBLOAD
         syslog(LOG_INFO, "map %s %p -> %p [%p] %s%s%s", meta->filename.c_str(), meta->phdrs[i].vaddr, meta->phdrs[i].vaddr + meta->phdrs[i].memsz, meta->phdrs[i].offset, flags & PROT_READ ? "r" : "-", flags & PROT_WRITE ? "w" : "-", flags & PROT_EXEC ? "x" : "-");
+#endif
         mprotect((void *) protectaddr, meta->phdrs[i].memsz + alignExtra, flags);
     }
 }
@@ -1121,12 +1137,12 @@ void doRelocation(object_meta_t *meta) {
 #define R_386_GOTPC    10
 
 uintptr_t doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
-    ElfSymbol_t *symtab = meta->symtab;
+    const ElfSymbol_t *symtab = meta->symtab;
     if(meta->dyn_symtab) {
         symtab = meta->dyn_symtab;
     }
 
-    ElfSymbol_t *sym = &symtab[R_SYM(rel.info)];
+    const ElfSymbol_t *sym = &symtab[R_SYM(rel.info)];
     ElfSectionHeader_t *sh = 0;
     if(sym->shndx) {
         sh = &meta->shdrs[sym->shndx];
@@ -1146,6 +1162,11 @@ uintptr_t doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
 
     // Patch in section header?
     if(symtab && ST_TYPE(sym->info) == 3) {
+        if (!sh)
+        {
+            printf("symbol lookup for '%s' needed a section header, which wasn't present.\n", symbolname.c_str());
+            return 0;
+        }
         S = sh->addr;
     } else if(R_TYPE(rel.info) != R_386_RELATIVE) {
         if(sym->name == 0) {
@@ -1160,7 +1181,7 @@ uintptr_t doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
             // Attempt to find the symbol.
             if(!findSymbol(symbolname.c_str(), meta, lookupsym, policy)) {
                 printf("symbol lookup for '%s' (needed in '%s') failed.\n", symbolname.c_str(), meta->path.c_str());
-                lookupsym.value = (uintptr_t) ~0UL;
+                lookupsym.value = ~0UL;
             }
 
             S = lookupsym.value;
@@ -1168,7 +1189,7 @@ uintptr_t doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
         }
     }
 
-    if(S == (uintptr_t) ~0UL) {
+    if(S == ~0UL) {
         S = 0;
     }
 
@@ -1206,12 +1227,12 @@ uintptr_t doThisRelocation(ElfRel_t rel, object_meta_t *meta) {
 }
 
 uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
-    ElfSymbol_t *symtab = meta->symtab;
+    const ElfSymbol_t *symtab = meta->symtab;
     if(meta->dyn_symtab) {
         symtab = meta->dyn_symtab;
     }
 
-    ElfSymbol_t *sym = &symtab[R_SYM(rel.info)];
+    const ElfSymbol_t *sym = &symtab[R_SYM(rel.info)];
     ElfSectionHeader_t *sh = 0;
     if(sym->shndx) {
         sh = &meta->shdrs[sym->shndx];
@@ -1231,6 +1252,11 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
 
     // Patch in section header?
     if(symtab && ST_TYPE(sym->info) == 3) {
+        if (!sh)
+        {
+            printf("symbol lookup for '%s' needed a section header, which wasn't present.\n", symbolname.c_str());
+            return 0;
+        }
         S = sh->addr;
     } else if(R_TYPE(rel.info) != R_X86_64_RELATIVE) {
         if(sym->name == 0) {
@@ -1245,7 +1271,7 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
             // Attempt to find the symbol.
             if(!findSymbol(symbolname.c_str(), meta, lookupsym, policy)) {
                 printf("symbol lookup for '%s' (needed in '%s') failed.\n", symbolname.c_str(), meta->path.c_str());
-                lookupsym.value = (uintptr_t) ~0UL;
+                lookupsym.value = ~0UL;
             }
 
             S = lookupsym.value;
@@ -1255,11 +1281,11 @@ uintptr_t doThisRelocation(ElfRela_t rel, object_meta_t *meta) {
 
     // Valid S?
     if((S == 0) && (R_TYPE(rel.info) != R_X86_64_RELATIVE)) {
-        return (uintptr_t) ~0UL;
+        return ~0UL;
     }
 
     // Weak symbol.
-    if(S == (uintptr_t) ~0UL) {
+    if(S == ~0UL) {
         S = 0;
     }
 
@@ -1344,10 +1370,8 @@ extern "C" uintptr_t _libload_dofixup(uintptr_t id, uintptr_t symbol) {
         abort();
     }
 
-    ElfSymbol_t *sym = &meta->dyn_symtab[R_SYM(rel.info)];
-
     uintptr_t result = doThisRelocation(rel, meta);
-    if(result == (uintptr_t) ~0UL) {
+    if(result == ~0UL) {
         fprintf(stderr, "symbol lookup failed (couldn't relocate)\n");
         abort();
     }

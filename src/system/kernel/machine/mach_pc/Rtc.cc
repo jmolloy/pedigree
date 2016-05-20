@@ -21,6 +21,7 @@
 #include <machine/Machine.h>
 #include <process/Event.h>
 #include <process/Thread.h>
+#include <process/Scheduler.h>
 #include "Rtc.h"
 
 #include <SlamAllocator.h>
@@ -39,7 +40,7 @@ Rtc::periodicIrqInfo_t Rtc::periodicIrqInfo[6] =
   {8192, 0x03, { 122070ULL,  122070ULL}},
 };
 
-uint8_t daysPerMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+static uint8_t daysPerMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 Rtc Rtc::m_Instance;
 
@@ -58,7 +59,9 @@ void Rtc::removeAlarm(Event *pEvent)
     {
         if ( (*it)->m_pEvent == pEvent )
         {
+            Alarm *pAlarm = *it;
             m_Alarms.erase(it);
+            delete pAlarm;
             return;
         }
     }
@@ -89,7 +92,9 @@ size_t Rtc::removeAlarm(class Event *pEvent, bool bRetZero)
                 }
             }
 
+            Alarm *pAlarm = *it;
             m_Alarms.erase(it);
+            delete pAlarm;
             return ret;
         }
     }
@@ -167,6 +172,10 @@ uint8_t Rtc::getSecond()
 {
   return m_Second;
 }
+uint64_t Rtc::getNanosecond()
+{
+  return m_Nanosecond;
+}
 uint64_t Rtc::getTickCount()
 {
   return m_TickCount / 1000ULL;
@@ -174,12 +183,14 @@ uint64_t Rtc::getTickCount()
 
 bool Rtc::initialise()
 {
+  NOTICE("Rtc::initialise");
+
   // Allocate the I/O port range"CMOS"
   if (m_IoPort.allocate(0x70, 2) == false)
     return false;
 
   // initialise handlers
-  memset(m_Handlers, 0, sizeof(TimerHandler*) * MAX_TIMER_HANDLERS);
+  ByteSet(m_Handlers, 0, sizeof(TimerHandler*) * MAX_TIMER_HANDLERS);
 
   // Register the irq
   IrqManager &irqManager = *Machine::instance().getIrqManager();
@@ -232,30 +243,55 @@ bool Rtc::initialise()
 
   return true;
 }
-void Rtc::synchronise()
+void Rtc::synchronise(bool tohw)
 {
   enableRtcUpdates(false);
 
-  // Write the time and date back
-  if (m_bBCD == true)
+  if (tohw)
   {
-    write(0x00, BIN_TO_BCD8(m_Second));
-    write(0x02, BIN_TO_BCD8(m_Minute));
-    write(0x04, BIN_TO_BCD8(m_Hour));
-    write(0x07, BIN_TO_BCD8(m_DayOfMonth));
-    write(0x08, BIN_TO_BCD8(m_Month));
-    write(0x09, BIN_TO_BCD8(m_Year % 100));
-    write(0x32, BIN_TO_BCD8(m_Year / 100));
+    // Write the time and date back
+    if (m_bBCD == true)
+    {
+      write(0x00, BIN_TO_BCD8(m_Second));
+      write(0x02, BIN_TO_BCD8(m_Minute));
+      write(0x04, BIN_TO_BCD8(m_Hour));
+      write(0x07, BIN_TO_BCD8(m_DayOfMonth));
+      write(0x08, BIN_TO_BCD8(m_Month));
+      write(0x09, BIN_TO_BCD8(m_Year % 100));
+      write(0x32, BIN_TO_BCD8(m_Year / 100));
+    }
+    else
+    {
+      write(0x00, m_Second);
+      write(0x02, m_Minute);
+      write(0x04, m_Hour);
+      write(0x07, m_DayOfMonth);
+      write(0x08, m_Month);
+      write(0x09, m_Year % 100);
+      write(0x32, m_Year / 100);
+    }
   }
   else
   {
-    write(0x00, m_Second);
-    write(0x02, m_Minute);
-    write(0x04, m_Hour);
-    write(0x07, m_DayOfMonth);
-    write(0x08, m_Month);
-    write(0x09, m_Year % 100);
-    write(0x32, m_Year / 100);
+    // Read the time and date
+    if (m_bBCD == true)
+    {
+      m_Second = BCD_TO_BIN8(read(0x00));
+      m_Minute = BCD_TO_BIN8(read(0x02));
+      m_Hour = BCD_TO_BIN8(read(0x04));
+      m_DayOfMonth = BCD_TO_BIN8(read(0x07));
+      m_Month = BCD_TO_BIN8(read(0x08));
+      m_Year = BCD_TO_BIN8(read(0x32)) * 100 + BCD_TO_BIN8(read(0x09));
+    }
+    else
+    {
+      m_Second = read(0x00);
+      m_Minute = read(0x02);
+      m_Hour = read(0x04);
+      m_DayOfMonth = read(0x07);
+      m_Month = read(0x08);
+      m_Year = read(0x32) * 100 + read(0x09);
+    }
   }
 
   enableRtcUpdates(true);
@@ -266,7 +302,7 @@ void Rtc::uninitialise()
   uint8_t statusb = read(0x0B);
   write(0x0B, statusb & ~0x40);
 
-  synchronise();
+  synchronise(true);
 
   // Unregister the irq
   IrqManager &irqManager = *Machine::instance().getIrqManager();
@@ -277,7 +313,7 @@ void Rtc::uninitialise()
 }
 
 Rtc::Rtc()
-  : m_IoPort("CMOS"), m_IrqId(0), m_PeriodicIrqInfoIndex(0), m_bBCD(true), m_Year(0), m_Month(0),
+  : m_IoPort("CMOS"), m_IrqId(0), m_PeriodicIrqInfoIndex(0), m_bBCD(true), m_Year(1970), m_Month(0),
     m_DayOfMonth(0), m_Hour(0), m_Minute(0), m_Second(0), m_Nanosecond(0), m_TickCount(0), m_Alarms()
 {
 }
@@ -308,6 +344,7 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
               pA->m_pThread->sendEvent(pA->m_pEvent);
               m_Alarms.erase(it);
               bDispatched = true;
+              delete pA;
               break;
           }
       }
@@ -327,20 +364,43 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
     ++m_Second;
     m_Nanosecond -= 1000000000ULL;
 
+#ifndef MEMORY_TRACING  // Memory tracing uses serial line 1.
 #ifdef MEMORY_LOGGING_ENABLED
     Serial *pSerial = Machine::instance().getSerial(1);
-    NormalStaticString str;
-    str += "Heap: ";
-    str += SlamAllocator::instance().heapPageCount() * 4;
-    str += "K\tPages: ";
-    str += (g_AllocedPages * 4096) / 1024;
-    str += "K\t Free: ";
-    str += (g_FreePages * 4096) / 1024;
-    str += "K\n";
+    NormalStaticString memoryLogStr;
+    memoryLogStr += "Heap: ";
+    memoryLogStr += SlamAllocator::instance().heapPageCount() * 4;
+    memoryLogStr += "K\tPages: ";
+    memoryLogStr += (g_AllocedPages * 4096) / 1024;
+    memoryLogStr += "K\t Free: ";
+    memoryLogStr += (g_FreePages * 4096) / 1024;
+    memoryLogStr += "K\n";
 
-    pSerial->write(str);
+    pSerial->write(memoryLogStr);
+
+    // Memory snapshot of current processes.
+    for(size_t i = 0; i < Scheduler::instance().getNumProcesses(); ++i)
+    {
+        Process *pProcess = Scheduler::instance().getProcess(i);
+        LargeStaticString processListStr;
+
+        ssize_t virtK = (pProcess->getVirtualPageCount() * 0x1000) / 1024;
+        ssize_t physK = (pProcess->getPhysicalPageCount() * 0x1000) / 1024;
+        ssize_t shrK = (pProcess->getSharedPageCount() * 0x1000) / 1024;
+
+        processListStr.append("\tProcess ");
+        processListStr.append(pProcess->description());
+        processListStr.append(" V=");
+        processListStr.append(virtK, 10);
+        processListStr.append("K P=");
+        processListStr.append(physK, 10);
+        processListStr.append("K S=");
+        processListStr.append(shrK, 10);
+        processListStr.append("\n");
+        pSerial->write(processListStr);
+    }
 #endif
-
+#endif
 
     if (UNLIKELY(m_Second == 60))
     {

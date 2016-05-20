@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -42,7 +41,7 @@
 extern void 
 ud_init(struct ud* u)
 {
-  memset((void*)u, 0, sizeof(struct ud));
+  ByteSet((void*)u, 0, sizeof(struct ud));
   ud_set_mode(u, 16);
   u->mnemonic = UD_Iinvalid;
   ud_set_pc(u, 0);

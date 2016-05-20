@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -110,7 +109,7 @@ void Icmpv6::send(IpAddress dest, IpAddress from, uint8_t type, uint8_t code, ui
     header->code = code;
 
     if(nBytes)
-        memcpy(reinterpret_cast<void*>(packet + sizeof(icmpv6Header)), reinterpret_cast<void*>(payload), nBytes);
+        MemoryCopy(reinterpret_cast<void*>(packet + sizeof(icmpv6Header)), reinterpret_cast<void*>(payload), nBytes);
 
     header->checksum = 0;
     header->checksum = Ipv6::instance().ipChecksum(from, dest, IP_ICMPV6, packet, sizeof(icmpv6Header) + nBytes);

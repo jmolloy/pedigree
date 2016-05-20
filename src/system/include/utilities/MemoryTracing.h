@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -30,6 +29,23 @@ namespace MemoryTracing
         Allocation = 'A',
         Free = 'F',
         Metadata = 'M',
+        PageAlloc = 'P',
+        PageFree = 'X',
+    };
+
+    const int num_backtrace_entries = 5;
+
+    union AllocationTraceEntry
+    {
+        struct
+        {
+            AllocationTrace type;
+            uint32_t sz;
+            uint32_t ptr;
+            uint32_t bt[num_backtrace_entries];
+        } data;
+
+        char buf[sizeof(data)];
     };
 }
 

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -95,6 +94,11 @@ public:
     return *this;
   }
 
+  bool isActive() const
+  {
+    return m_bActive;
+  }
+
 private:
 
   static Dns dnsInstance;
@@ -130,9 +134,9 @@ private:
   {
     public:
       DnsEntry() : ip(0), numIps(0), hostname()
-      {};
+      {}
       DnsEntry(const DnsEntry& ent) : ip(ent.ip), numIps(ent.numIps), hostname(ent.hostname)
-      {};
+      {}
       
       /// Multiple IP addresses are possible
       IpAddress* ip;
@@ -140,14 +144,6 @@ private:
       
       /// Hostname
       String hostname;
-      
-      DnsEntry& operator = (const DnsEntry& ent)
-      {
-        ip = ent.ip;
-        numIps = ent.numIps;
-        hostname = ent.hostname;
-        return *this;
-      }
   };
   
   /// a DNS request we've sent
@@ -157,11 +153,11 @@ private:
       DnsRequest() :
         hostname(), aliases(), addresses(), id(0), waitSem(0),
         success(false), callerLeft(false)
-      {};
+      {}
       DnsRequest(const DnsRequest& ent) :
         hostname(ent.hostname), aliases(ent.aliases), addresses(ent.addresses), id(ent.id),
         waitSem(0), success(ent.success), callerLeft(ent.callerLeft)
-      {};
+      {}
       
       /// Hostname for this host, based on our request (probably a CNAME)
       String hostname;
@@ -184,19 +180,6 @@ private:
       // Whether or not the caller left. If true, the request handler needs to
       // free the request rather than waking up the calling thread.
       bool callerLeft;
-      
-      DnsRequest& operator = (const DnsRequest& ent)
-      {
-        hostname = ent.hostname;
-        aliases = ent.aliases;
-        addresses = ent.addresses;
-        id = ent.id;
-        success = ent.success;
-        callerLeft = ent.callerLeft;
-        return *this;
-      }
-      
-    private:
   };
   
   /// DNS cache (not a Tree because we can't look up an IpAddress object)
@@ -207,6 +190,12 @@ private:
   
   /// DNS communication endpoint
   ConnectionlessEndpoint* m_Endpoint;
+
+  /// Whether or not this instance is active (for thread termination).
+  bool m_bActive;
+
+  /// DNS response receiver thread.
+  class Thread *m_pThread;
 };
 
 #endif

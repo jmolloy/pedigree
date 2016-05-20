@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -55,14 +54,19 @@ void BootIO::write(HugeStaticString &str, Colour foreColour, Colour backColour)
   {
     for(size_t i = 0; i < Machine::instance().getNumSerial(); i++)
     {
-#if defined(MEMORY_TRACING) || (defined(MEMORY_LOGGING_ENABLED) && !defined(MEMORY_LOG_INLINE))
+#if defined(MEMORY_TRACING) || (defined(MEMORY_LOGGING_ENABLED) && !defined(MEMORY_LOG_INLINE)) || defined(INSTRUMENTATION)
         if(i == 1) // Don't override memory log.
           continue;
 #endif
-        //startColour(Machine::instance().getSerial(i), foreColour, backColour);
+
+#ifndef SERIAL_IS_FILE
+        startColour(Machine::instance().getSerial(i), foreColour, backColour);
+#endif
         for(size_t j = 0; j < str.length(); j++)
           Machine::instance().getSerial(i)->write(str[j]);
-        //endColour(Machine::instance().getSerial(i));
+#ifndef SERIAL_IS_FILE
+        endColour(Machine::instance().getSerial(i));
+#endif
     }
   }
 
@@ -171,7 +175,7 @@ void BootIO::startColour(Serial *pSerial, Colour foreColour, Colour backColour)
     case LightMagenta: pSerial->write("1;35"); break;
     case LightCyan:    pSerial->write("1;36"); break;
     case White:        pSerial->write("1;37"); break;
-    default:                       pSerial->write('1');
+    default:           pSerial->write('1');
   }
   pSerial->write(";");
   switch(backColour)
@@ -184,7 +188,7 @@ void BootIO::startColour(Serial *pSerial, Colour foreColour, Colour backColour)
     case Magenta:      pSerial->write("45"); break;
     case Cyan:         pSerial->write("46"); break;
     case White:        pSerial->write("47"); break;
-    default:                       pSerial->write('1');
+    default:           pSerial->write('1');
   }
   pSerial->write('m');
 }

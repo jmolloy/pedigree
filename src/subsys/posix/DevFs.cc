@@ -33,8 +33,6 @@
 
 #include <sys/fb.h>
 
-DevFs DevFs::m_Instance;
-
 uint64_t RandomFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
     /// \todo Endianness issues?
@@ -94,7 +92,7 @@ uint64_t NullFile::write(uint64_t location, uint64_t size, uintptr_t buffer, boo
 
 uint64_t ZeroFile::read(uint64_t location, uint64_t size, uintptr_t buffer, bool bCanBlock)
 {
-    memset(reinterpret_cast<void *>(buffer), 0, size);
+    ByteSet(reinterpret_cast<void *>(buffer), 0, size);
     return size;
 }
 
@@ -251,13 +249,12 @@ int FramebufferFile::command(const int command, void *buffer)
 
                 return bSet ? 0 : -1;
             }
-            break;
         case PEDIGREE_FB_GETMODE:
             {
                 pedigree_fb_mode *arg = reinterpret_cast<pedigree_fb_mode *>(buffer);
                 if(m_bTextMode)
                 {
-                    memset(arg, 0, sizeof(*arg));
+                    ByteSet(arg, 0, sizeof(*arg));
                 }
                 else
                 {
@@ -270,7 +267,6 @@ int FramebufferFile::command(const int command, void *buffer)
 
                 return 0;
             }
-            break;
         case PEDIGREE_FB_REDRAW:
             {
                 pedigree_fb_rect *arg = reinterpret_cast<pedigree_fb_rect *>(buffer);
@@ -286,13 +282,16 @@ int FramebufferFile::command(const int command, void *buffer)
 
                 return 0;
             }
-            break;
         default:
             return -1;
     }
-
-    return -1;
 }
+
+DevFs::~DevFs()
+{
+    delete m_pTty;
+    delete m_pRoot;
+};
 
 bool DevFs::initialise(Disk *pDisk)
 {
@@ -347,16 +346,16 @@ bool DevFs::initialise(Disk *pDisk)
     }
 
     // Create /dev/textui for the text-only UI device.
-    TextIO *pTty = new TextIO(String("textui"), ++baseInode, this, m_pRoot);
-    if(pTty->initialise())
+    m_pTty = new TextIO(String("textui"), ++baseInode, this, m_pRoot);
+    if(m_pTty->initialise(false))
     {
-        m_pRoot->addEntry(pTty->getName(), pTty);
+        m_pRoot->addEntry(m_pTty->getName(), m_pTty);
     }
     else
     {
         WARNING("POSIX: no /dev/tty - TextIO failed to initialise.");
         --baseInode;
-        delete pTty;
+        delete m_pTty;
     }
 
     return true;

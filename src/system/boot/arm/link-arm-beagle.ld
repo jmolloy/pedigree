@@ -8,20 +8,26 @@ SECTIONS
 
     .init :
     {
+        . = ALIGN(4096);
         *(.init)
-    }    
-    
+    }
+
     .text :
     {
+        . = ALIGN(4096);
         code = .; _code = .; __code = .;
         *(.text*)
     }
 
     .data :
     {
+        . = ALIGN(4096);
         start_ctors = .;
         *(.ctors*)
         end_ctors = .;
+        start_dtors = .;
+        *(.dtors)
+        end_dtors = .;
 
         data = .; _data = .; __data = .;
         *(.data*)
@@ -34,9 +40,12 @@ SECTIONS
 
     .bss :
     {
+        . = ALIGN(4096);
         bss = .; _bss = .; __bss = .;
         *(.bss*)
         *(.sbss*)
+        . = ALIGN(4096);
+        *(.stacks*)
     }
 
     end = .; _end = .; __end = .;

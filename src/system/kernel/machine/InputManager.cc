@@ -17,6 +17,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <compiler.h>
 #include <machine/InputManager.h>
 #include <LockGuard.h>
 #include <Log.h>
@@ -34,26 +35,29 @@ class InputEvent : public Event
                     Event(handlerAddress, true, 0), m_Notification(), m_nParam(param)
         {
             m_Notification = *pNote;
-        };
+        }
         virtual ~InputEvent()
-        {};
+        {
+        }
 
         virtual size_t serialize(uint8_t *pBuffer)
         {
-            uintptr_t *buf = reinterpret_cast<uintptr_t*>(pBuffer);
+            void *alignedBuffer = ASSUME_ALIGNMENT(pBuffer, sizeof(uintptr_t));
+            uintptr_t *buf = reinterpret_cast<uintptr_t*>(alignedBuffer);
             buf[0] = EventNumbers::InputEvent;
             buf[1] = m_nParam;
-            memcpy(&buf[2], &m_Notification, sizeof(InputManager::InputNotification));
+            MemoryCopy(&buf[2], &m_Notification, sizeof(InputManager::InputNotification));
             return sizeof(InputManager::InputNotification) + (sizeof(uintptr_t) * 2);
         }
 
         static bool unserialize(uint8_t *pBuffer, InputEvent &event)
         {
-            uintptr_t *buf = reinterpret_cast<uintptr_t*>(pBuffer);
+            void *alignedBuffer = ASSUME_ALIGNMENT(pBuffer, sizeof(uintptr_t));
+            uintptr_t *buf = reinterpret_cast<uintptr_t*>(alignedBuffer);
             if(*buf != EventNumbers::InputEvent)
                 return false;
 
-            memcpy(&event.m_Notification, &buf[2], sizeof(InputManager::InputNotification));
+            MemoryCopy(&event.m_Notification, &buf[2], sizeof(InputManager::InputNotification));
             return true;
         }
 
@@ -106,25 +110,39 @@ InputManager::InputManager() :
 #ifdef THREADS
     , m_InputQueueSize(0), m_pThread(0)
 #endif
+    , m_bActive(false)
 {
 }
 
 InputManager::~InputManager()
 {
-    /// \todo Provide a way for this thread to be terminated.
-    // m_pThread->join();
 }
 
 void InputManager::initialise()
 {
+    m_bActive = true;
+
     // Start the worker thread.
 #ifdef THREADS
     m_pThread = new Thread(Processor::information().getCurrentThread()->getParent(),
-                           reinterpret_cast<Thread::ThreadStartFunc> (&trampoline),
-                           reinterpret_cast<void*> (this));
+                           &trampoline, reinterpret_cast<void*>(this));
 #else
     WARNING("InputManager: No thread support, no worker thread will be active");
 #endif
+}
+
+void InputManager::shutdown()
+{
+    m_bActive = false;
+
+#ifdef THREADS
+    m_InputQueueSize.release();
+    m_pThread->join();
+#endif
+
+    // Clean up lists, in case anything came in while we were canceling.
+    m_Callbacks.clear();
+    m_InputQueue.clear();
 }
 
 void InputManager::keyPressed(uint64_t key)
@@ -308,7 +326,7 @@ int InputManager::trampoline(void *ptr)
 void InputManager::mainThread()
 {
 #ifdef THREADS
-    while(true)
+    while(isActive())
     {
         m_InputQueueSize.acquire();
         if(!m_InputQueue.count())

@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -152,7 +151,7 @@ void PPCVga::pokeBuffer (uint8_t *pBuffer, size_t nBufLen)
 
 void PPCVga::peekBuffer (uint8_t *pBuffer, size_t nBufLen)
 {
-  memcpy(pBuffer, m_pTextBuffer, nBufLen);
+  MemoryCopy(pBuffer, m_pTextBuffer, nBufLen);
 }
 
 void PPCVga::putChar(char c, int x, int y, unsigned int f, unsigned int b)

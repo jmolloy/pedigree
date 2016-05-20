@@ -74,7 +74,7 @@ static void probeDevice(Device *pDev)
 static bool entry()
 {
     for(unsigned int i = 0; i < NUM_POTENTIAL_NICS; i++)
-        Device::root().searchByVendorIdAndDeviceId(potential_nics[i].vendor, potential_nics[i].device, probeDevice);
+        Device::searchByVendorIdAndDeviceId(potential_nics[i].vendor, potential_nics[i].device, probeDevice);
 
     return bFound;
 }

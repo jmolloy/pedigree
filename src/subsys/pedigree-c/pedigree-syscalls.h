@@ -20,6 +20,8 @@
 #ifndef PEDIGREE_SYSCALLS_H
 #define PEDIGREE_SYSCALLS_H
 
+#include <compiler.h>
+
 #ifndef PEDIGREE_SYSCALLS_LIBC
 
 #ifdef PEDIGREEC_WITHIN_KERNEL
@@ -90,9 +92,9 @@ extern "C" {
 
 void pedigree_input_install_callback(void *p, uint32_t type, uintptr_t param);
 void pedigree_input_remove_callback(void *p);
-int pedigree_load_keymap(char *buffer, size_t len);
+int pedigree_load_keymap(uint32_t *buffer, size_t len);
 
-void pedigree_event_return();
+void pedigree_event_return() NORETURN;
 
 int pedigree_gfx_get_provider(void *p);
 int pedigree_gfx_get_curr_mode(void *p, void *sm);

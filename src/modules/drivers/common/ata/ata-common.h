@@ -48,9 +48,11 @@ typedef union
     struct {
         // Word 0: General Configuration
         struct {
-            uint8_t              : 7;
+            uint8_t packet_sz    : 2;  // Only valid for PACKET devices.
+            uint8_t              : 5;
             uint8_t is_removable : 1;
-            uint8_t              : 7;
+            uint8_t packet_cmdset: 6;
+            uint8_t              : 1;
             uint8_t not_ata      : 1;
         } PACKED general_config;
 

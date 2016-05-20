@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -23,19 +22,19 @@
 #include <Log.h>
 #include <utilities/Vector.h>
 #include "Multiprocessor.h"
-#include "../../../machine/x86_common/Pc.h"
+#include <machine/mach_pc/Pc.h>
 
 #if defined(X86)
-  #include "../x86/VirtualAddressSpace.h"
+  #include <processsor/x86/VirtualAddressSpace.h>
 #elif defined(X64)
-  #include "../x64/VirtualAddressSpace.h"
+  #include <processor/x64/VirtualAddressSpace.h>
 #endif
 
 #if defined(ACPI)
-  #include "../../../machine/x86_common/Acpi.h"
+  #include <machine/mach_pc/Acpi.h>
 #endif
 #if defined(SMP)
-  #include "../../../machine/x86_common/Smp.h"
+  #include <machine/mach_pc/Smp.h>
 #endif
 
 #if !defined(APIC)
@@ -53,7 +52,7 @@ size_t Multiprocessor::initialise1()
   // Did we find a processor list?
   bool bMPInfoFound = false;
   // List of information about each usable processor
-  const Vector<ProcessorInformation*> *Processors;
+  const Vector<ProcessorInformation*> *Processors = 0;
 
   #if defined(ACPI)
     // Search through the ACPI tables
@@ -71,7 +70,7 @@ size_t Multiprocessor::initialise1()
   #endif
 
   // No processor list found
-  if (bMPInfoFound == false)
+  if (bMPInfoFound == false || !Processors)
   {
     NOTICE("Multiprocessor: couldn't find any information about multiple processors");
     return 1;
@@ -85,16 +84,16 @@ size_t Multiprocessor::initialise1()
   ///       truncated to fit" error from ld.
   extern void *trampoline16, *trampoline32, *trampolinegdt, *trampolinegdtr;
   extern void *trampoline16_end, *trampoline32_end, *trampolinegdt_end, *trampolinegdtr_end;
-  memcpy(reinterpret_cast<void*>(0x7000),
+  MemoryCopy(reinterpret_cast<void*>(0x7000),
          &trampoline16,
          reinterpret_cast<uintptr_t>(&trampoline16_end) - reinterpret_cast<uintptr_t>(&trampoline16));
-  memcpy(reinterpret_cast<void*>(0x7100),
+  MemoryCopy(reinterpret_cast<void*>(0x7100),
          &trampoline32,
          reinterpret_cast<uintptr_t>(&trampoline32_end) - reinterpret_cast<uintptr_t>(&trampoline32));
-  memcpy(reinterpret_cast<void*>(0x7200),
+  MemoryCopy(reinterpret_cast<void*>(0x7200),
          &trampolinegdtr,
          reinterpret_cast<uintptr_t>(&trampolinegdtr_end) - reinterpret_cast<uintptr_t>(&trampolinegdtr));
-  memcpy(reinterpret_cast<void*>(0x7210),
+  MemoryCopy(reinterpret_cast<void*>(0x7210),
          &trampolinegdt,
          reinterpret_cast<uintptr_t>(&trampolinegdt_end) - reinterpret_cast<uintptr_t>(&trampolinegdt));
 
@@ -144,7 +143,7 @@ size_t Multiprocessor::initialise1()
       ///       send the Startup IPI twice on some hardware.
 
       // Acquire the lock
-      m_ProcessorLock1.acquire();
+      m_ProcessorLock1.acquire(false);
       
       localApic.interProcessorInterrupt((*Processors)[i]->apicId,
                                         0x07,
@@ -161,7 +160,7 @@ size_t Multiprocessor::initialise1()
                                         false);
 
       // Wait until the processor is started and has unlocked the lock
-      m_ProcessorLock1.acquire();
+      m_ProcessorLock1.acquire(false);
       m_ProcessorLock1.release();
     }
     else

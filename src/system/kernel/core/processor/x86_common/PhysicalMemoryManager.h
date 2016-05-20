@@ -30,6 +30,9 @@
 /** @addtogroup kernelprocessorx86common
  * @{ */
 
+extern size_t g_AllocedPages;
+extern size_t g_FreePages;
+
 /** The common x86 implementation of the PhysicalMemoryManager
  *\brief Implementation of the PhysicalMemoryManager for common x86 */
 class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
@@ -68,10 +71,16 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
     /** Unmap & free the .init section */
     void initialisationDone();
 
+    /** Clean up tracking structures. */
+    void shutdown();
+
     #if defined(ACPI)
       inline const RangeList<uint64_t> &getAcpiRanges() const
           {return m_AcpiRanges;}
     #endif
+
+    /** Specifies the number of pages that remain free on the system. */
+    virtual size_t freePageCount() const;
 
   protected:
     /** The constructor */

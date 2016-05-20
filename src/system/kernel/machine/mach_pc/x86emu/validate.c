@@ -582,37 +582,37 @@ char * print_flags(char *buf,ulong flags)
 
     buf[0] = 0;
     if (flags & F_CF) {
-        strcat(buf,separator);
-        strcat(buf,"CF");
+        StringConcat(buf,separator);
+        StringConcat(buf,"CF");
         separator = ",";
         }
     if (flags & F_PF) {
-        strcat(buf,separator);
-        strcat(buf,"PF");
+        StringConcat(buf,separator);
+        StringConcat(buf,"PF");
         separator = ",";
         }
     if (flags & F_AF) {
-        strcat(buf,separator);
-        strcat(buf,"AF");
+        StringConcat(buf,separator);
+        StringConcat(buf,"AF");
         separator = ",";
         }
     if (flags & F_ZF) {
-        strcat(buf,separator);
-        strcat(buf,"ZF");
+        StringConcat(buf,separator);
+        StringConcat(buf,"ZF");
         separator = ",";
         }
     if (flags & F_SF) {
-        strcat(buf,separator);
-        strcat(buf,"SF");
+        StringConcat(buf,separator);
+        StringConcat(buf,"SF");
         separator = ",";
         }
     if (flags & F_OF) {
-        strcat(buf,separator);
-        strcat(buf,"OF");
+        StringConcat(buf,separator);
+        StringConcat(buf,"OF");
         separator = ",";
         }
     if (separator[0] == 0)
-        strcpy(buf,"None");
+        StringCopy(buf,"None");
     return buf;
 }
 
@@ -623,7 +623,7 @@ int main(int argc)
 
     if (argc > 1)
         trace = true;
-    memset(&M, 0, sizeof(M));
+    ByteSet(&M, 0, sizeof(M));
     def_flags = get_flags_asm() & ~ALL_FLAGS;
 
     VAL_WORD_UNARY(aaa_word);
