@@ -47,6 +47,7 @@ $script_dir/run_pup.py sync
 
 # Needed for libc
 $script_dir/run_pup.py install ncurses
+$script_dir/run_pup.py install libbind
 
 # Run a quick build of libc and libm for the rest of the build system.
 scons hosted=1 CROSS=$script_dir/compilers/dir/bin/x86_64-pedigree- build/libc.so build/libm.so

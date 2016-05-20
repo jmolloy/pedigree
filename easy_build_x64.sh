@@ -52,6 +52,7 @@ $script_dir/run_pup.py sync
 
 # Needed for libc
 $script_dir/run_pup.py install ncurses
+$script_dir/run_pup.py install libbind
 
 # Run a quick build of libc and libm for the rest of the build system.
 scons CROSS=$script_dir/compilers/dir/bin/x86_64-pedigree- build/libc.so build/libm.so
@@ -101,7 +102,6 @@ $script_dir/run_pup.py install pango
 $script_dir/run_pup.py install glib
 $script_dir/run_pup.py install harfbuzz
 $script_dir/run_pup.py install libffi
-$script_dir/run_pup.py install libbind
 
 # Install GCC to pull in shared libstdc++.
 $script_dir/run_pup.py install gcc
