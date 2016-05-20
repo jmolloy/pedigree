@@ -52,22 +52,14 @@ void BootIO::write(HugeStaticString &str, Colour foreColour, Colour backColour)
     putCharVga(str[i], foreColour, backColour);
   if(Log::instance().echoToSerial())
   {
-    for(size_t i = 0; i < Machine::instance().getNumSerial(); i++)
-    {
-#if defined(MEMORY_TRACING) || (defined(MEMORY_LOGGING_ENABLED) && !defined(MEMORY_LOG_INLINE)) || defined(INSTRUMENTATION)
-        if(i == 1) // Don't override memory log.
-          continue;
-#endif
-
 #ifndef SERIAL_IS_FILE
-        startColour(Machine::instance().getSerial(i), foreColour, backColour);
+    startColour(Machine::instance().getSerial(0), foreColour, backColour);
 #endif
-        for(size_t j = 0; j < str.length(); j++)
-          Machine::instance().getSerial(i)->write(str[j]);
+    for(size_t j = 0; j < str.length(); j++)
+      Machine::instance().getSerial(0)->write(str[j]);
 #ifndef SERIAL_IS_FILE
-        endColour(Machine::instance().getSerial(i));
+    endColour(Machine::instance().getSerial(0));
 #endif
-    }
   }
 
 #ifdef PPC_COMMON

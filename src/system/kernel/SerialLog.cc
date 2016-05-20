@@ -28,22 +28,14 @@ class SerialLogger : public Log::LogCallback
             if (!Machine::instance().isInitialised())
                 return;
 
-            for(size_t n = 0; n < Machine::instance().getNumSerial(); n++)
-            {
-#if defined(MEMORY_TRACING) || (defined(MEMORY_LOGGING_ENABLED) && !defined(MEMORY_LOG_INLINE)) || defined(INSTRUMENTATION)
-                if(n == 1) // Don't override memory log.
-                    continue;
-#endif
-
-                Machine::instance().getSerial(n)->write(str);
+            Machine::instance().getSerial(0)->write(str);
 #ifndef SERIAL_IS_FILE
-                // Handle carriage return if we're writing to a real terminal
-                // Technically this will create a \n\r, but it will do the same
-                // thing. This may also be redundant, but better to be safe than
-                // sorry imho.
-                Machine::instance().getSerial(n)->write('\r');
+            // Handle carriage return if we're writing to a real terminal
+            // Technically this will create a \n\r, but it will do the same
+            // thing. This may also be redundant, but better to be safe than
+            // sorry imho.
+            Machine::instance().getSerial(0)->write('\r');
 #endif
-            }
         }
 };
 

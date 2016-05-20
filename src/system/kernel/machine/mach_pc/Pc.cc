@@ -112,6 +112,8 @@ void Pc::initialise()
   // Initialise serial ports.
   m_pSerial[0].setBase(0x3F8);
   m_pSerial[1].setBase(0x2F8);
+  m_pSerial[2].setBase(0x3E8);
+  m_pSerial[3].setBase(0x2E8);
 
   // Initialse the Real-time Clock / CMOS
   Rtc &rtc = Rtc::instance();
@@ -200,7 +202,7 @@ Serial *Pc::getSerial(size_t n)
 
 size_t Pc::getNumSerial()
 {
-  return 2;
+  return 4;
 }
 
 Vga *Pc::getVga(size_t n)

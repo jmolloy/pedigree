@@ -83,7 +83,7 @@ class Pc : public Machine
     */
     virtual ~Pc();
 
-    X86Serial m_pSerial[2];
+    X86Serial m_pSerial[4];
     X86Vga m_Vga;
     Keyboard *m_Keyboard;
 
