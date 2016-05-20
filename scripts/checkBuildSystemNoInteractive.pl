@@ -275,7 +275,7 @@ print "Complete; linking crt*.o...\n";
 `ln -s $prefix/build/kernel/crt0.o ./compilers/dir/lib/gcc/$target/$gcc_version/crt0.o`;
 `ln -s $prefix/build/kernel/crti.o ./compilers/dir/lib/gcc/$target/$gcc_version/crti.o`;
 `ln -s $prefix/build/kernel/crtn.o ./compilers/dir/lib/gcc/$target/$gcc_version/crtn.o`;
-`ln -s $prefix/src/subsys/posix/include ./compilers/dir/$target/include`;
+`ln -s $prefix/src/subsys/posix/include ./compilers/dir/$target/`;
 print "Done.\n";
 
 `rm -rf ./compilers/dir/build_tmp`;
