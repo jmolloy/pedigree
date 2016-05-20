@@ -60,9 +60,6 @@
 #define POSIX_UNLINK     36
 #define POSIX_SYMLINK    1000
 
-#define POSIX_GETHOSTBYNAME   37
-#define POSIX_GETHOSTBYADDR   38
-
 #define POSIX_FCNTL      39
 #define POSIX_PIPE       40
 

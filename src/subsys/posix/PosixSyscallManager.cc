@@ -151,10 +151,6 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             return posix_unlink(reinterpret_cast<char*>(p1));
         case POSIX_SYMLINK:
             return posix_symlink(reinterpret_cast<char*>(p1), reinterpret_cast<char*>(p2));
-        case POSIX_GETHOSTBYNAME:
-            return posix_gethostbyname(reinterpret_cast<const char*>(p1), reinterpret_cast<void*>(p2), static_cast<int>(p3));
-        case POSIX_GETHOSTBYADDR:
-            return posix_gethostbyaddr(reinterpret_cast<const void*>(p1), p2, static_cast<int>(p3), reinterpret_cast<void*>(p4));
         case POSIX_FCNTL:
             return posix_fcntl(static_cast<int>(p1), static_cast<int>(p2), reinterpret_cast<void*>(p3));
         case POSIX_PIPE:
