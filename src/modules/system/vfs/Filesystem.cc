@@ -191,6 +191,28 @@ bool Filesystem::remove(String path, File *pStartNode)
         return false;
     }
 
+    if (pFile->isDirectory())
+    {
+        Directory *removalDir = Directory::fromFile(pFile);
+        if (removalDir->getNumChildren())
+        {
+            // Are the entries only ., ..?
+            for (auto it : removalDir->getCache())
+            {
+                if (it->getName() != "." && it->getName() != "..")
+                {
+                    SYSCALL_ERROR(NotEmpty);
+                    return false;
+                }
+            }
+
+            for (auto it : removalDir->getCache())
+            {
+                remove(removalDir, it);
+            }
+        }
+    }
+
     bool bRemoved = remove(pParent, pFile);
     if (bRemoved)
         pDParent->remove(filename);

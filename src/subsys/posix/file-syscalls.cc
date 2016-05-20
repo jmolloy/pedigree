@@ -452,7 +452,6 @@ int posix_write(int fd, char *ptr, int len, bool nocheck)
     uint64_t nWritten = 0;
     if (ptr && len)
     {
-        /// \todo Sanitise input and check it's mapped etc so we don't segfault the kernel
         nWritten = pFd->file->write(pFd->offset, len, reinterpret_cast<uintptr_t>(ptr));
         pFd->offset += nWritten;
     }
@@ -1207,7 +1206,6 @@ int posix_closedir(DIR *dir)
 
     F_NOTICE("closedir(" << dir->fd << ")");
 
-    /// \todo Race here - fix.
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
     if (!pSubsystem)
@@ -1442,6 +1440,25 @@ int posix_mkdir(const char* name, int mode)
     normalisePath(realPath, name);
 
     bool worked = VFS::instance().createDirectory(realPath, GET_CWD());
+    return worked ? 0 : -1;
+}
+
+int posix_rmdir(const char *path)
+{
+    if(!PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(path), PATH_MAX, PosixSubsystem::SafeRead))
+    {
+        F_NOTICE("rmdir -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    F_NOTICE("rmdir(" << path << ")");
+
+    String realPath;
+    normalisePath(realPath, path);
+
+    // remove() holds the main logic for this.
+    bool worked = VFS::instance().remove(realPath, GET_CWD());
     return worked ? 0 : -1;
 }
 

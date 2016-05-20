@@ -67,6 +67,7 @@ int posix_dup2(int fd1, int fd2);
 int posix_fcntl(int fd, int cmd, void* arg);
 
 int posix_mkdir(const char* name, int mode);
+int posix_rmdir(const char *path);
 
 int posix_isatty(int fd);
 

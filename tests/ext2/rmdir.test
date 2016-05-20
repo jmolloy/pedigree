@@ -1,0 +1,10 @@
+# PASS: net result is zero directories
+
+mkdir /foo
+mkdir /bar
+mkdir /baz
+
+# Remove all - only . and .. will be in these directories.
+rm /foo
+rm /bar
+rm /baz
