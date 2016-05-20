@@ -159,6 +159,10 @@ size_t TcpBuffer::read(uintptr_t buffer, size_t nBytes, bool bDoNotMove)
                 // Yes - still bytes to be read.
                 m_Segments.pushFront(pSegment);
             }
+            else
+            {
+                delete pSegment;
+            }
         }
 
         return totalRead;
