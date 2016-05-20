@@ -62,7 +62,7 @@ coverage_env.MergeFlags({
 
 # Build some of the network stack as a library for testing.
 libnetwork_stack = coverage_env.StaticLibrary('network-stack', [
-    '#src/modules/system/network-stack/TcpMisc.cc',
+    '../../modules/system/network-stack/TcpMisc.cc',
 ])
 
 coverage_env.Program(testsuite_bin, Glob('test-*.cc'),
