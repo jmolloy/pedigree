@@ -146,7 +146,8 @@ TEST(PedigreeTcpBuffer, FillAndRead)
     TcpBuffer buffer;
 
     char buf[32768], out[32768];
-    memset(buf, 0xAB, 16);
+    memset(buf, 0xAB, 32768);
+    memset(out, 0, 32768);
 
     size_t r = buffer.write(reinterpret_cast<uintptr_t>(buf), 32768);
     EXPECT_EQ(r, 32768);
