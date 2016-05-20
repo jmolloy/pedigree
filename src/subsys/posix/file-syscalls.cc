@@ -826,6 +826,11 @@ int posix_stat(const char *name, struct stat *st)
     {
         mode = S_IFDIR;
     }
+    else if (file->isSymlink() || file->isPipe())
+    {
+        F_NOTICE("    -> S_IFLNK");
+        mode = S_IFLNK;
+    }
     else
     {
         mode = S_IFREG;
@@ -907,6 +912,11 @@ int posix_fstat(int fd, struct stat *st)
         F_NOTICE("    -> S_IFDIR");
         mode = S_IFDIR;
     }
+    else if (pFd->file->isSymlink() || pFd->file->isPipe())
+    {
+        F_NOTICE("    -> S_IFLNK");
+        mode = S_IFLNK;
+    }
     else
     {
         F_NOTICE("    -> S_IFREG");
@@ -977,7 +987,7 @@ int posix_lstat(char *name, struct stat *st)
         SYSCALL_ERROR(DoesNotExist);
         return -1;
     }
-    if (file->isSymlink())
+    if (file->isSymlink() || file->isPipe())
     {
         mode = S_IFLNK;
     }
