@@ -152,6 +152,9 @@ module_subdirs = [
     'nics',
 ]
 
+if env['pcap']:
+    module_subdirs.append('pcap')
+
 if env['hosted'] or env['ARCH_TARGET'] == 'ARM':
     module_subdirs = [x for x in module_subdirs if x not in ['splash']]
 
