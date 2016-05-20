@@ -76,7 +76,6 @@ using namespace __pedigree_hosted;
 #define SYS_SOCK_CONSTANTS_ONLY
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h>
 
 #include <poll.h>
 
