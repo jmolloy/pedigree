@@ -24,8 +24,6 @@
 #include <Log.h>
 #include <processor/Processor.h>
 
-#include "Dns.h"
-
 NetworkStack NetworkStack::stack;
 
 NetworkStack::NetworkStack() :
@@ -145,9 +143,6 @@ extern ServiceFeatures *g_pIpv6Features;
 
 static bool entry()
 {
-    // Initialise the DNS implementation
-    Dns::instance().initialise();
-
     // Install the IPv6 Service
     g_pIpv6Service = new Ipv6Service;
     g_pIpv6Features = new ServiceFeatures;
