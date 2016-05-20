@@ -140,6 +140,14 @@ void Ethernet::send(size_t nBytes, uintptr_t packet, Network* pCard, MacAddress 
   MemoryCopy(ethHeader->sourceMac, me.mac, 6);
   ethHeader->type = HOST_TO_BIG16(type);
 
+  // Check for filtering
+  /// \todo need to indicate in/out direction in NetworkFilter
+  if(!NetworkFilter::instance().filter(1, packet, nBytes + sizeof(ethernetHeader)))
+  {
+    pCard->droppedPacket();
+    return; // Drop the packet.
+  }
+
   // send it over the network
   pCard->send(nBytes + sizeof(ethernetHeader), packet);
 
