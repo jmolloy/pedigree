@@ -112,7 +112,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
   NOTICE("TCP Packet arrived while stateBlock in " << Tcp::stateString(stateBlock->currentState) << " [remote port = " << Dec << stateBlock->remoteHost.remotePort << Hex << "] [connId = " << stateBlock->connId << "].");
 
   // dump some pretty information
-  NOTICE(" + SEQ=" << Dec << stateBlock->seg_seq << " ACK=" << stateBlock->seg_ack << " LEN=" << stateBlock->seg_len << " WND=" << stateBlock->seg_wnd << Hex);
+  NOTICE(" + SEQ=" << Dec << stateBlock->seg_seq << " [+" << (stateBlock->seg_seq - stateBlock->irs) << "] ACK=" << stateBlock->seg_ack << " [+" << (stateBlock->seg_ack - stateBlock->iss) << "] LEN=" << stateBlock->seg_len << " WND=" << stateBlock->seg_wnd << Hex);
   NOTICE(" + FLAGS: " <<
                 (header->flags & Tcp::FIN ? "FIN " : "") <<
                 (header->flags & Tcp::SYN ? "SYN " : "") <<
@@ -611,7 +611,7 @@ void TcpManager::receive(IpAddress from, uint16_t sourcePort, uint16_t destPort,
         }
         else if(stateBlock->seg_len)
         {
-          NOTICE(" + Payload: " << String(reinterpret_cast<const char*>(payload)));
+          NOTICE(" + Payload: " << String(reinterpret_cast<const char*>(payload), 16) << "...");
           if(stateBlock->endpoint)
           {
             // Limit the amount of data to the window we have available.
