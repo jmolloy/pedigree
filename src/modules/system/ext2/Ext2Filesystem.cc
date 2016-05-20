@@ -676,6 +676,11 @@ uint32_t Ext2Filesystem::findFreeInode()
 void Ext2Filesystem::releaseBlock(uint32_t block)
 {
     NOTICE("release block: " << Dec << block << Hex);
+
+    // In some ext2 filesystems, this is zero so we don't need to do this. But
+    // for those that do, not doing this messes up the bit offsets below.
+    block -= LITTLE_TO_HOST32(m_pSuperblock->s_first_data_block);
+
     uint32_t blocksPerGroup = LITTLE_TO_HOST32(m_pSuperblock->s_blocks_per_group);
     uint32_t group = block / blocksPerGroup;
     uint32_t index = block % blocksPerGroup;
@@ -699,7 +704,7 @@ void Ext2Filesystem::releaseBlock(uint32_t block)
     Vector<size_t> &list = m_pBlockBitmaps[group];
     uintptr_t diskBlock = list[bitmapField];
     uint8_t *ptr = reinterpret_cast<uint8_t*> (diskBlock + bitmapOffset);
-    size_t bit = (index % 8) - 1;
+    uint8_t bit = (index % 8);
     if ((*ptr & (1 << bit)) == 0)
         ERROR("bit already freed for block " << Dec << block << Hex);
     *ptr &= ~(1 << bit);
