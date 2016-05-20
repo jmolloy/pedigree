@@ -150,6 +150,8 @@ opts.AddVariables(
 
     BoolVariable('kernel_on_disk', 'Put the kernel & needed bits onto hard disk images?', 1),
     BoolVariable('modules_on_disk', 'Put kernel module files onto hard disk images?', 1),
+
+    BoolVariable('pcap', 'Build the PCAP module, which writes all network traffic to a serial port?', 0),
     
     ('uimage_target', 'Where to copy the generated uImage.bin file to.', '~'),
 )
