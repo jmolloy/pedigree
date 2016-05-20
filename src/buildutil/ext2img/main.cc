@@ -186,7 +186,7 @@ bool createDirectory(std::string dest)
 
 bool removeFile(std::string target)
 {
-    bool result = VFS::instance().createDirectory(TO_FS_PATH(target));
+    bool result = VFS::instance().remove(TO_FS_PATH(target));
     if (!result)
     {
         std::cerr << "Could not remove file '" << target << "'." << std::endl;
