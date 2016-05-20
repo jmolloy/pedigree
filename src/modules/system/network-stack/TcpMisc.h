@@ -22,11 +22,15 @@
 
 #include <utilities/Tree.h>
 #include <utilities/Iterator.h>
-#include <process/Mutex.h>
-#include <LockGuard.h>
+#include <utilities/List.h>
 #include "Endpoint.h"
 
 #include <Log.h>
+
+#ifdef THREADS
+#include <LockGuard.h>
+#include <process/Mutex.h>
+#endif
 
 /** A TCP "Buffer" (also known as a stream) */
 class TcpBuffer
@@ -34,7 +38,10 @@ class TcpBuffer
   public:
 
     TcpBuffer() :
-      m_Buffer(0), m_BufferSize(0), m_DataSize(0), m_Reader(0), m_Writer(0), m_Lock(false)
+      m_BufferSize(0), m_DataSize(0)
+#ifdef THREADS
+      , m_Lock(false)
+#endif
     {
       setSize(32768);
     }
@@ -49,45 +56,59 @@ class TcpBuffer
     size_t read(uintptr_t buffer, size_t nBytes, bool bDoNotMove = false);
 
     /** Gets the number of bytes of data in the buffer */
-    inline size_t getDataSize()
+    inline size_t getDataSize() const
     {
         return m_DataSize;
     }
     /** Gets the size of the buffer */
-    inline size_t getSize()
+    inline size_t getSize() const
     {
-      // Locked so the size given is a valid representation
-        LockGuard<Mutex> guard(m_Lock);
         return m_BufferSize;
     }
     /** Sets the size of the buffer (ie, resize) */
     void setSize(size_t newBufferSize);
 
     /** Retrieves the number of bytes remaining in the buffer */
-    inline size_t getRemainingSize()
+    inline size_t getRemainingSize() const
     {
         return m_BufferSize - m_DataSize;
     }
 
   private:
-
-    /** The actual buffer itself */
-    uintptr_t m_Buffer;
-
     /** Current buffer size */
     size_t m_BufferSize;
 
     /** Data size */
     size_t m_DataSize;
 
-    /** Reader offset */
-    size_t m_Reader;
+    static const size_t m_SegmentBufferSize = 65536;
 
-    /** Writer offset */
-    size_t m_Writer;
+    struct Segment
+    {
+      Segment() : buffer(), reader(0), size(0)
+      {
+      }
 
+      /// Buffer in which the segment is stored.
+      uint8_t buffer[m_SegmentBufferSize];
+      /// Read offset so far.
+      size_t reader;
+      /// Number of bytes in this segment so far.
+      size_t size;
+    };
+
+    List<Segment *> m_Segments;
+
+    /** Create a new segment containing the given data. */
+    void newSegment(uintptr_t buffer, size_t size);
+
+    /** Read data from the given segment. */
+    size_t readSegment(Segment *pSegment, uintptr_t target, size_t size, bool bUpdate = true);
+
+#ifdef THREADS
     /** Buffer lock */
     Mutex m_Lock;
+#endif
 };
 
 /** Connection state block handle */
