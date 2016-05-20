@@ -362,6 +362,41 @@ bool VFS::createSymlink(String path, String value, File *pStartNode)
     }
 }
 
+bool VFS::createLink(String path, File *target, File *pStartNode)
+{
+    // Search for a colon.
+    bool bColon = false;
+    size_t i;
+    for (i = 0; i < path.length(); i++)
+    {
+        // Look for the UTF-8 '»'; 0xC2 0xBB.
+        if (path[i] == '\xc2' && path[i+1] == '\xbb')
+        {
+            bColon = true;
+            break;
+        }
+    }
+
+    if (!bColon)
+    {
+        // Pass directly through to the filesystem, if one specified.
+        if (!pStartNode) return false;
+        else return pStartNode->getFilesystem()->createLink(path, target, pStartNode);
+    }
+    else
+    {
+        String newPath = path.split(i+2);
+        path.chomp();
+        path.chomp();
+
+        // Attempt to find a filesystem alias.
+        Filesystem *pFs = lookupFilesystem(path);
+        if (!pFs)
+            return false;
+        return pFs->createLink(newPath, target, 0);
+    }
+}
+
 bool VFS::remove(String path, File *pStartNode)
 {
     // Search for a colon.

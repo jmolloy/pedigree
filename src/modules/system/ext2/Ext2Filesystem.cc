@@ -226,7 +226,7 @@ String Ext2Filesystem::getVolumeLabel()
     }
 }
 
-bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, String value, size_t type)
+bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, String value, size_t type, uint32_t inodeOverride)
 {
     NOTICE("CREATE: " << filename);
 
@@ -245,11 +245,15 @@ bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, St
     }
 
     // Find a free inode.
-    uint32_t inode_num = findFreeInode();
-    if (inode_num == 0)
+    uint32_t inode_num = inodeOverride;
+    if (!inode_num)
     {
-        SYSCALL_ERROR(NoSpaceLeftOnDevice);
-        return false;
+        inode_num = findFreeInode();
+        if (inode_num == 0)
+        {
+            SYSCALL_ERROR(NoSpaceLeftOnDevice);
+            return false;
+        }
     }
 
 #ifdef EXT2_STANDALONE
@@ -265,11 +269,19 @@ bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, St
     // Populate the inode.
     /// \todo Endianness!
     Inode *newInode = getInode(inode_num);
-    ByteSet(reinterpret_cast<uint8_t*>(newInode), 0, m_InodeSize);
-    newInode->i_mode = HOST_TO_LITTLE16(mask | type);
-    newInode->i_uid = HOST_TO_LITTLE16(uid);
-    newInode->i_atime = newInode->i_ctime = newInode->i_mtime = HOST_TO_LITTLE32(timestamp);
-    newInode->i_gid = HOST_TO_LITTLE16(gid);
+    if (!inodeOverride)
+    {
+        ByteSet(reinterpret_cast<uint8_t*>(newInode), 0, m_InodeSize);
+        newInode->i_mode = HOST_TO_LITTLE16(mask | type);
+        newInode->i_uid = HOST_TO_LITTLE16(uid);
+        newInode->i_atime = newInode->i_ctime = newInode->i_mtime = HOST_TO_LITTLE32(timestamp);
+        newInode->i_gid = HOST_TO_LITTLE16(gid);
+    }
+    else
+    {
+        uint32_t current_count = LITTLE_TO_HOST32(newInode->i_links_count);
+        newInode->i_links_count = HOST_TO_LITTLE32(current_count + 1);
+    }
 
     // If we have a value to store, and it's small enough, use the block indices.
     if (value.length() && value.length() < 4*15)
@@ -293,15 +305,20 @@ bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, St
             Ext2Directory *pE2Dir = new Ext2Directory(filename, inode_num, newInode, this, parent);
             pFile = pE2Dir;
 
-            Inode *parentInode = getInode(pE2Parent->getInodeNumber());
+            // If we already have an inode, assume we already have dot/dotdot
+            // entries and so don't need to make them.
+            if (!inodeOverride)
+            {
+                Inode *parentInode = getInode(pE2Parent->getInodeNumber());
 
-            // Create dot and dotdot entries.
-            Ext2Directory *pDot = new Ext2Directory(String("."), inode_num, newInode, this, pE2Dir);
-            Ext2Directory *pDotDot = new Ext2Directory(String(".."), pE2Parent->getInodeNumber(), parentInode, this, pE2Dir);
+                // Create dot and dotdot entries.
+                Ext2Directory *pDot = new Ext2Directory(String("."), inode_num, newInode, this, pE2Dir);
+                Ext2Directory *pDotDot = new Ext2Directory(String(".."), pE2Parent->getInodeNumber(), parentInode, this, pE2Dir);
 
-            // Add created dot/dotdot entries to the new directory.
-            pE2Dir->addEntry(String("."), pDot, EXT2_S_IFDIR);
-            pE2Dir->addEntry(String(".."), pDotDot, EXT2_S_IFDIR);
+                // Add created dot/dotdot entries to the new directory.
+                pE2Dir->addEntry(String("."), pDot, EXT2_S_IFDIR);
+                pE2Dir->addEntry(String(".."), pDotDot, EXT2_S_IFDIR);
+            }
             break;
         }
         case EXT2_S_IFLNK:
@@ -370,6 +387,40 @@ bool Ext2Filesystem::createDirectory(File* parent, String filename)
 bool Ext2Filesystem::createSymlink(File* parent, String filename, String value)
 {
     return createNode(parent, filename, 0777, value, EXT2_S_IFLNK);
+}
+
+bool Ext2Filesystem::createLink(File* parent, String filename, File *target)
+{
+    Ext2Directory *pE2Parent = reinterpret_cast<Ext2Directory*>(parent);
+
+    Ext2Node *pNode = 0;
+    if (target->isDirectory())
+    {
+        Ext2Directory *pDirectory = static_cast<Ext2Directory *>(target);
+        pNode = pDirectory;
+    }
+    else if (target->isSymlink())
+    {
+        Ext2Symlink *pSymlink = static_cast<Ext2Symlink *>(target);
+        pNode = pSymlink;
+    }
+    else
+    {
+        Ext2File *pFile = static_cast<Ext2File *>(target);
+        pNode = pFile;
+    }
+
+    if (!pNode)
+    {
+        return false;
+    }
+
+    // Extract permissions and entry type.
+    Inode *inode = pNode->getInode();
+    uint32_t mask = LITTLE_TO_HOST16(inode->i_mode) & 0x0FFF;
+    size_t type = LITTLE_TO_HOST16(inode->i_mode) & 0xF000;
+
+    return createNode(parent, filename, mask, String(""), type, pNode->getInodeNumber());
 }
 
 bool Ext2Filesystem::remove(File* parent, File* file)

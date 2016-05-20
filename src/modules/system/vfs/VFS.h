@@ -108,6 +108,9 @@ public:
     /** Attempts to create a symlink. */
     bool createSymlink(String path, String value, File *pStartNode=0);
 
+    /** Attempts to create a hard link. */
+    bool createLink(String path, File *target, File *pStartNode=0);
+
     /** Attempts to remove a file/directory/symlink. WILL FAIL IF DIRECTORY NOT EMPTY */
     bool remove(String path, File *pStartNode=0);
 

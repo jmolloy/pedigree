@@ -135,6 +135,33 @@ bool Filesystem::createSymlink(String path, String value, File *pStartNode)
     return true;
 }
 
+bool Filesystem::createLink(String path, File *target, File *pStartNode)
+{
+    if (!pStartNode) pStartNode = getTrueRoot();
+    File *pFile = findNode(pStartNode, path);
+
+    if (pFile)
+    {
+        SYSCALL_ERROR(FileExists);
+        return false;
+    }
+
+    String filename;
+    File *pParent = findParent(path, pStartNode, filename);
+
+    // Check the parent existed.
+    if (!pParent)
+    {
+        SYSCALL_ERROR(DoesNotExist);
+        return false;
+    }
+
+    // Now make the symlink.
+    createLink(pParent, filename, target);
+
+    return true;
+}
+
 bool Filesystem::remove(String path, File *pStartNode)
 {
     if (!pStartNode) pStartNode = getTrueRoot();
@@ -300,4 +327,11 @@ File *Filesystem::findParent(String path, File *pStartNode, String &filename)
         path.chomp();
         return findNode(pStartNode, path);
     }
+}
+
+bool Filesystem::createLink(File* parent, String filename, File *target)
+{
+    // Default stubbed implementation, works for filesystems that can't handle
+    // hard links.
+    return false;
 }
