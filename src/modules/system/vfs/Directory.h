@@ -29,6 +29,8 @@
 /** A Directory node. */
 class Directory : public File
 {
+    friend class Filesystem;
+
 public:
 
     /** Eases the pain of casting, and performs a sanity check. */

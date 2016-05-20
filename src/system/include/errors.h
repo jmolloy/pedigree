@@ -54,6 +54,7 @@ namespace Error
     ReadOnlyFilesystem   =30,
     BrokenPipe           =32,
     Deadlock             =45,
+    NotEmpty             =90,
     NameTooLong          =91,
     LoopExists           =92,
     OperationNotSupported=95,

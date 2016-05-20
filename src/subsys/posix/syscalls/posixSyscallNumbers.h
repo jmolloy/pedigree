@@ -189,6 +189,8 @@
 #define POSIX_UTIMES            132
 #define POSIX_CHROOT            133
 
+#define POSIX_RMDIR             134
+
 #define POSIX_PTSNAME           200
 #define POSIX_TTYNAME           201
 #define POSIX_TCSETPGRP         202

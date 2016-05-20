@@ -856,8 +856,7 @@ int sigprocmask(int how, const sigset_t* set, sigset_t* oset)
 
 int rmdir(const char *path)
 {
-    STUBBED("rmdir");
-    return -1;
+    return syscall1(POSIX_RMDIR, (long) path);
 }
 
 int socket(int domain, int type, int protocol)

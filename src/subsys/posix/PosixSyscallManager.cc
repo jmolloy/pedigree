@@ -157,6 +157,8 @@ uintptr_t PosixSyscallManager::syscall(SyscallState &state)
             return posix_pipe(reinterpret_cast<int*>(p1));
         case POSIX_MKDIR:
             return posix_mkdir(reinterpret_cast<const char*>(p1), static_cast<int>(p2));
+        case POSIX_RMDIR:
+            return posix_rmdir(reinterpret_cast<const char *>(p1));
         case POSIX_GETPWENT:
             return posix_getpwent(reinterpret_cast<passwd*>(p1), static_cast<int>(p2), reinterpret_cast<char *>(p3));
         case POSIX_GETPWNAM:

@@ -1,0 +1,6 @@
+# FAIL: can't delete a directory that isn't empty
+
+mkdir /foo/bar
+
+# Not empty.
+rm /foo

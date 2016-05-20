@@ -277,11 +277,6 @@ bool Ext2Filesystem::createNode(File* parent, String filename, uint32_t mask, St
         newInode->i_atime = newInode->i_ctime = newInode->i_mtime = HOST_TO_LITTLE32(timestamp);
         newInode->i_gid = HOST_TO_LITTLE16(gid);
     }
-    else
-    {
-        uint32_t current_count = LITTLE_TO_HOST32(newInode->i_links_count);
-        newInode->i_links_count = HOST_TO_LITTLE32(current_count + 1);
-    }
 
     // If we have a value to store, and it's small enough, use the block indices.
     if (value.length() && value.length() < 4*15)
@@ -456,7 +451,26 @@ bool Ext2Filesystem::remove(File* parent, File* file)
     NOTICE("REMOVE: " << filename);
 
     Ext2Directory *pE2Parent = reinterpret_cast<Ext2Directory*>(parent);
-    return pE2Parent->removeEntry(filename, pNode);
+    bool result = pE2Parent->removeEntry(filename, pNode);
+
+    // Update the group descriptor directory count to reflect the deletion.
+    if (result && file->isDirectory() && (filename != "." && filename != ".."))
+    {
+        uint32_t inode_num = pNode->getInodeNumber();
+
+        uint32_t group = (inode_num - 1) / LITTLE_TO_HOST32(m_pSuperblock->s_inodes_per_group);
+        GroupDesc *pDesc = m_pGroupDescriptors[group];
+
+        pDesc->bg_used_dirs_count--;
+
+        // Update group descriptor on disk.
+        /// \todo save group descriptor block number elsewhere
+        uint32_t gdBlock = LITTLE_TO_HOST32(m_pSuperblock->s_first_data_block) + 1;
+        uint32_t groupBlock = (group * sizeof(GroupDesc)) / m_BlockSize;
+        writeBlock(gdBlock + groupBlock);
+    }
+
+    return result;
 }
 
 uintptr_t Ext2Filesystem::readBlock(uint32_t block)
@@ -685,7 +699,7 @@ void Ext2Filesystem::releaseBlock(uint32_t block)
     Vector<size_t> &list = m_pBlockBitmaps[group];
     uintptr_t diskBlock = list[bitmapField];
     uint8_t *ptr = reinterpret_cast<uint8_t*> (diskBlock + bitmapOffset);
-    size_t bit = index % 8;
+    size_t bit = (index % 8) - 1;
     if ((*ptr & (1 << bit)) == 0)
         ERROR("bit already freed for block " << Dec << block << Hex);
     *ptr &= ~(1 << bit);
