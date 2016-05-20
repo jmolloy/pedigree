@@ -53,10 +53,11 @@ protected:
     virtual bool createFile(File* parent, String filename, uint32_t mask);
     virtual bool createDirectory(File* parent, String filename);
     virtual bool createSymlink(File* parent, String filename, String value);
+    virtual bool createLink(File* parent, String filename, File *target);
     virtual bool remove(File* parent, File* file);
 
 private:
-    virtual bool createNode(File* parent, String filename, uint32_t mask, String value, size_t type);
+    virtual bool createNode(File* parent, String filename, uint32_t mask, String value, size_t type, uint32_t inodeOverride = 0);
 
     /** Inaccessible copy constructor and operator= */
     Ext2Filesystem(const Ext2Filesystem&);

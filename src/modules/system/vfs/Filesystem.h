@@ -78,6 +78,9 @@ public:
     /** Creates a symlink on the filesystem, with the given value. */
     bool createSymlink(String path, String value, File *pStartNode=0);
 
+    /** Creates a hard link on the filesystem to the given target. */
+    bool createLink(String path, File *target, File *pStartNode=0);
+
     /** Removes a file, directory or symlink.
         \note Will fail if it is a directory and is not empty. The failure mode
         is unspecified. */
@@ -108,6 +111,8 @@ protected:
     virtual bool createDirectory(File* parent, String filename) =0;
     /** createSymlink calls this after it has parsed the string path. */
     virtual bool createSymlink(File* parent, String filename, String value) =0;
+    /** createLink calls this after it has parsed the string path. */
+    virtual bool createLink(File* parent, String filename, File *target);
     /** remove() calls this after it has parsed the string path. */
     virtual bool remove(File* parent, File* file) =0;
     /** is this entire filesystem read-only?  */

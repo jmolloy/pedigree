@@ -53,7 +53,9 @@ enum CommandType
     InvalidCommand,
     CreateDirectory,
     CreateSymlink,
+    CreateHardlink,
     WriteFile,
+    RemoveFile,
     VerifyFile,
 };
 
@@ -151,12 +153,43 @@ bool createSymlink(std::string name, std::string target)
     return true;
 }
 
+bool createHardlink(std::string name, std::string target)
+{
+    File *pTarget = VFS::instance().find(TO_FS_PATH(target));
+    if (!pTarget)
+    {
+        std::cerr << "Couldn't open hard link target file: '" << target << "'." << std::endl;
+        return false;
+    }
+
+    bool result = VFS::instance().createLink(TO_FS_PATH(name), pTarget);
+    if (!result)
+    {
+        std::cerr << "Could not create hard link '" << name << "' -> '" << target << "'." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
 bool createDirectory(std::string dest)
 {
     bool result = VFS::instance().createDirectory(TO_FS_PATH(dest));
     if (!result)
     {
         std::cerr << "Could not create directory '" << dest << "'." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+bool removeFile(std::string target)
+{
+    bool result = VFS::instance().createDirectory(TO_FS_PATH(target));
+    if (!result)
+    {
+        std::cerr << "Could not remove file '" << target << "'." << std::endl;
         return false;
     }
 
@@ -292,8 +325,20 @@ int handleImage(const char *image, std::vector<Command> &cmdlist, size_t part=0)
                     return 1;
                 }
                 break;
+            case CreateHardlink:
+                if ((!createHardlink(it->params[0], it->params[1])) && !ignoreErrors)
+                {
+                    return 1;
+                }
+                break;
             case CreateDirectory:
                 if ((!createDirectory(it->params[0])) && !ignoreErrors)
+                {
+                    return 1;
+                }
+                break;
+            case RemoveFile:
+                if ((!removeFile(it->params[0])) && !ignoreErrors)
                 {
                     return 1;
                 }
@@ -380,9 +425,19 @@ bool parseCommandFile(const char *cmdFile, std::vector<Command> &output)
             c.what = CreateSymlink;
             requiredParamCount = 2;
         }
+        else if (cmd == "hardlink")
+        {
+            c.what = CreateHardlink;
+            requiredParamCount = 2;
+        }
         else if (cmd == "mkdir")
         {
             c.what = CreateDirectory;
+            requiredParamCount = 1;
+        }
+        else if (cmd == "rm")
+        {
+            c.what = RemoveFile;
             requiredParamCount = 1;
         }
         else if (cmd == "verify")

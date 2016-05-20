@@ -1,0 +1,12 @@
+
+# Write a relatively-large file to disk.
+write big.dat /dat
+
+# Hard link it in position.
+hardlink /foo /dat
+
+# Delete the original file.
+rm /dat
+
+# Verify we didn't lose the file now.
+verify big.dat /foo

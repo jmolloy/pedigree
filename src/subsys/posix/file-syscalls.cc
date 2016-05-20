@@ -495,12 +495,44 @@ off_t posix_lseek(int file, off_t ptr, int dir)
     return static_cast<int>(pFd->offset);
 }
 
-int posix_link(char *old, char *_new)
+int posix_link(char *target, char *link)
 {
-    /// \note To make nethack work, you either have to implement this, or return 0 and pretend
-    ///       it worked (ie, make the files in the tree - which I've already done -- Matt)
-    NOTICE("posix_link(" << old << ", " << _new << ")");
-    SYSCALL_ERROR(Unimplemented);
+    if(!(PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(target), PATH_MAX, PosixSubsystem::SafeRead) &&
+        PosixSubsystem::checkAddress(reinterpret_cast<uintptr_t>(link), PATH_MAX, PosixSubsystem::SafeRead)))
+    {
+        F_NOTICE("link -> invalid address");
+        SYSCALL_ERROR(InvalidArgument);
+        return -1;
+    }
+
+    F_NOTICE("link(" << target << ", " << link << ")");
+
+    // Try and find the target.
+    String realTarget;
+    String realLink;
+    normalisePath(realTarget, target);
+    normalisePath(realLink, link);
+
+    File *pTarget = VFS::instance().find(realTarget, GET_CWD());
+    pTarget = traverseSymlink(pTarget);
+    if (!pTarget)
+    {
+        F_NOTICE(" -> target '" << realTarget << "' did not exist.");
+        SYSCALL_ERROR(DoesNotExist);
+        return -1;
+    }
+
+    /// \todo check same filesystem
+
+    bool result = VFS::instance().createLink(realLink, pTarget, GET_CWD());
+
+    if (!result)
+    {
+        F_NOTICE(" -> failed to create link");
+        return -1;
+    }
+
+    F_NOTICE(" -> ok");
     return 0;
 }
 
