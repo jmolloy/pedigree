@@ -31,6 +31,9 @@ $script_dir/scripts/checkBuildSystemNoInteractive.pl x86_64-pedigree $COMPILER_D
 old=$(pwd)
 cd $script_dir
 
+# Fix up POSIX headers which sometimes get a recursive symlink.
+rm -f src/subsys/posix/include/include || true
+
 set +e
 
 # Update the local working copy only if it is clean.
