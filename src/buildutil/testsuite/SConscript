@@ -43,7 +43,7 @@ build_env.Append(CPPPATH=header_paths)
 defines = [
     'HOSTED', 'VFS_NOMMU', 'VFS_STANDALONE', 'EXT2_STANDALONE',
     'UTILITY_LINUX', 'DEVICE_IGNORE_ADDRESSES', 'LITTLE_ENDIAN',
-    'DONT_LOG_TO_SERIAL', 'BENCHMARK',
+    'DONT_LOG_TO_SERIAL', 'BENCHMARK', 'TESTSUITE'
 ]
 
 build_env.Append(CPPDEFINES=defines)
@@ -60,9 +60,14 @@ coverage_env.MergeFlags({
     'LINKFLAGS': build_env['COVERAGE_LINKFLAGS'],
 })
 
-# TODO(miselin): Tree, UniquePointer, HashTable, RangeList, ExtensibleBitmap
+# Build some of the network stack as a library for testing.
+libnetwork_stack = coverage_env.StaticLibrary('network-stack', [
+    '#src/modules/system/network-stack/TcpMisc.cc',
+])
+
 coverage_env.Program(testsuite_bin, Glob('test-*.cc'),
-                     LIBS=['utility_coverage', 'gtest', 'pthread'])
+                     LIBS=[libnetwork_stack, 'utility_coverage', 'gtest',
+                           'pthread'])
 
 if build_env['HAVE_BENCHMARK']:
     build_env.MergeFlags({

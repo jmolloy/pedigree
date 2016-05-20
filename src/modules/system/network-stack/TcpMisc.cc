@@ -17,177 +17,166 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#ifndef TESTSUITE
 #include "TcpManager.h"
-#include "TcpMisc.h"
 #include "TcpStateBlock.h"
-#include <LockGuard.h>
+#endif
+
+#include "TcpMisc.h"
 #include <Log.h>
 
+#ifdef THREADS
+#include <LockGuard.h>
+#endif
+
+#ifndef TESTSUITE
 int stateBlockFree(void* p)
 {
   StateBlock* stateBlock = reinterpret_cast<StateBlock*>(p);
   TcpManager::instance().removeConn(stateBlock->connId);
   return 0;
 }
+#endif
+
+void TcpBuffer::newSegment(uintptr_t buffer, size_t size)
+{
+    // Just add the segment.
+    Segment *pSegment = new Segment;
+    MemoryCopy(pSegment->buffer, reinterpret_cast<void *>(buffer), size);
+    pSegment->size = size;
+
+    m_Segments.pushBack(pSegment);
+    m_DataSize += size;
+}
 
 size_t TcpBuffer::write(uintptr_t buffer, size_t nBytes)
 {
+#ifdef THREADS
     LockGuard<Mutex> guard(m_Lock);
+#endif
 
-    // Validation
-    if(!m_Buffer || !m_BufferSize)
-        return 0;
-
-    // Is the buffer full?
-    if(m_DataSize >= m_BufferSize)
-        return 0;
-
-    // If adding this data will cause an overflow, limit the write
-    if((nBytes + m_DataSize) > m_BufferSize)
-        nBytes = m_BufferSize - m_DataSize;
-
-    // If there's still too many bytes, restrict further
-    if(nBytes > m_BufferSize)
-        nBytes = m_BufferSize;
-
-    // If however there's no more room, we can't write
-    if(!nBytes)
-        return 0;
-
-    // Can we just write the whole thing?
-    if((m_Writer + nBytes) < m_BufferSize)
+    // Don't exceed the buffer size, taking into account the current data size.
+    if (nBytes > getRemainingSize())
     {
-        // Yes, so just copy directly into the buffer
-        MemoryCopy(reinterpret_cast<void*>(m_Buffer+m_Writer),
-               reinterpret_cast<void*>(buffer),
-               nBytes);
-        m_Writer += nBytes;
-        m_DataSize += nBytes;
+        nBytes = getRemainingSize();
+    }
+
+    // Don't exceed more than one segment's worth of data in one write();
+    // this ensures we can always just push a new segment if we need to.
+    if (nBytes > m_SegmentBufferSize)
+    {
+        nBytes = m_SegmentBufferSize;
+    }
+
+    // Do we need a new segment? Alternatively, if we're pushing a full-size
+    // segment, don't bother splitting it across existing segments - just add
+    // a new one.
+    if ((m_Segments.begin() == m_Segments.end()) ||
+        (nBytes == m_SegmentBufferSize))
+    {
+        newSegment(buffer, nBytes);
         return nBytes;
     }
-    else
+
+    Segment *pSegment = m_Segments.popBack();
+    if (pSegment->size == m_SegmentBufferSize)
     {
-        // This write will overlap the buffer
-        size_t numNormalBytes = m_BufferSize - m_Writer;
-        size_t numOverlapBytes = (m_Writer + nBytes) % m_BufferSize;
-
-        // Does the write overlap the reader position?
-        if(numOverlapBytes >= m_Reader && m_Reader != 0)
-            numOverlapBytes = m_Reader - 1;
-        // Has the reader position progressed, at all?
-        else if(m_Reader == 0 && m_DataSize == 0)
-            numOverlapBytes = 0;
-
-        // Copy the normal bytes
-        if(numNormalBytes)
-            MemoryCopy(reinterpret_cast<void*>(m_Buffer+m_Writer),
-                   reinterpret_cast<void*>(buffer),
-                   numNormalBytes);
-        if(numOverlapBytes)
-            MemoryCopy(reinterpret_cast<void*>(m_Buffer),
-                   reinterpret_cast<void*>(buffer),
-                   numOverlapBytes);
-
-        // Update the writer position, if needed
-        if(numOverlapBytes)
-            m_Writer = numOverlapBytes;
-
-        // Return the number of bytes written
-        m_DataSize += numNormalBytes + numOverlapBytes;
-        return numNormalBytes + numOverlapBytes;
+        // Full segment, need to make a new one and push it.
+        m_Segments.pushBack(pSegment);
+        newSegment(buffer, nBytes);
+        return nBytes;
     }
+
+    // We have room in this buffer.
+    uint8_t *start = adjust_pointer(pSegment->buffer, pSegment->size);
+    size_t copyableSize = m_SegmentBufferSize - pSegment->size;
+    if (copyableSize > nBytes)
+        copyableSize = nBytes;
+    MemoryCopy(start, reinterpret_cast<void *>(buffer), copyableSize);
+    pSegment->size += copyableSize;
+    m_DataSize += copyableSize;
+
+    // Adjusted, push again.
+    m_Segments.pushBack(pSegment);
+
+    // Do we need a new segment after this one for any leftover?
+    if (copyableSize < nBytes)
+    {
+        newSegment(buffer + copyableSize, nBytes - copyableSize);
+    }
+
+    return nBytes;
+}
+
+size_t TcpBuffer::readSegment(Segment *pSegment, uintptr_t target, size_t size, bool bUpdate)
+{
+    // Count of bytes present that have not yet been read.
+    size_t availableBytes = pSegment->size - pSegment->reader;
+
+    // Count of bytes to actually read from this segment.
+    size_t bytesToRead = size;
+    if (bytesToRead > availableBytes)
+        bytesToRead = availableBytes;
+
+    MemoryCopy(reinterpret_cast<void *>(target),
+               adjust_pointer(pSegment->buffer, pSegment->reader), bytesToRead);
+
+    if (bUpdate)
+    {
+        pSegment->reader += bytesToRead;
+        m_DataSize -= bytesToRead;
+    }
+
+    return bytesToRead;
 }
 
 size_t TcpBuffer::read(uintptr_t buffer, size_t nBytes, bool bDoNotMove)
 {
-    LockGuard<Mutex> guard(m_Lock);
-
-    // Verify that we will actually be able to read this data
-    if(!m_Buffer || !m_BufferSize)
-        return 0;
-
-    // Do not read past the end of the allocated buffer
-    if(nBytes > m_BufferSize)
-        nBytes = m_BufferSize;
-
-    // And do not read more than the data that is already in the buffer
-    if(nBytes > m_DataSize)
-        nBytes = m_DataSize;
-
-    // If either of these checks cause nBytes to be zero, just return
-    if(!nBytes)
-        return 0;
-
-    // Can we just read the whole thing?
-    if((m_Reader + nBytes) < m_BufferSize)
+    // Different logic for move vs non-move.
+    if (bDoNotMove)
     {
-        // Limit the number of bytes to the writer position
-        if(m_Writer == 0 && m_Reader == 0)
-            return 0; // No data to read
-        else if(m_Writer == m_Reader && m_DataSize == 0) // If there's data, the writer has wrapped around
-            return 0; // Reader == Writer, no data
-        else if(nBytes > m_DataSize)
-            nBytes = m_DataSize;
-        if(!nBytes)
-            return 0; // No data?
-
-        // Yes, so just copy directly into the buffer
-        MemoryCopy(reinterpret_cast<void*>(buffer),
-               reinterpret_cast<void*>(m_Buffer+m_Reader),
-               nBytes);
-        if(!bDoNotMove)
+        size_t totalRead = 0;
+        for (auto it : m_Segments)
         {
-            m_Reader += nBytes;
-            m_DataSize -= nBytes;
+            totalRead += readSegment(it, buffer + totalRead,
+                                     nBytes - totalRead, false);
         }
-        return nBytes;
+
+        return totalRead;
     }
     else
     {
-        // This read will wrap around to the beginning
-        size_t numNormalBytes = m_BufferSize - m_Reader;
-        size_t numOverlapBytes = (m_Reader + nBytes) % m_BufferSize;
+        size_t totalRead = 0;
+        while (m_Segments.count() && totalRead < nBytes)
+        {
+            Segment *pSegment = m_Segments.popFront();
+            totalRead += readSegment(pSegment, buffer + totalRead,
+                                     nBytes - totalRead, true);
 
-        // Does the read overlap the write position?
-        if(numOverlapBytes >= m_Writer && m_Writer != 0)
-            numOverlapBytes = m_Writer - 1;
-        // If the writer's sitting at position 0, don't overlap
-        else if(m_Writer == 0)
-            numOverlapBytes = 0;
+            // Did we not completely read this segment?
+            if (pSegment->reader < pSegment->size)
+            {
+                // Yes - still bytes to be read.
+                m_Segments.pushFront(pSegment);
+            }
+        }
 
-        // Copy the normal bytes
-        if(numNormalBytes)
-            MemoryCopy(reinterpret_cast<void*>(buffer),
-                   reinterpret_cast<void*>(m_Buffer+m_Reader),
-                   numNormalBytes);
-        if(numOverlapBytes)
-            MemoryCopy(reinterpret_cast<void*>(buffer + numNormalBytes),
-                   reinterpret_cast<void*>(m_Buffer),
-                   numOverlapBytes);
-
-        // Update the writer position, if needed
-        if(numOverlapBytes)
-            m_Reader = numOverlapBytes;
-
-        // Return the number of bytes written
-        if((numNormalBytes + numOverlapBytes) > m_DataSize)
-            m_DataSize = 0;
-        else
-            m_DataSize -= numNormalBytes + numOverlapBytes;
-        return numNormalBytes + numOverlapBytes;
+        return totalRead;
     }
 }
 
 void TcpBuffer::setSize(size_t newBufferSize)
 {
+#ifdef THREADS
     LockGuard<Mutex> guard(m_Lock);
+#endif
 
-    if(m_Buffer)
-        delete [] reinterpret_cast<uint8_t*>(m_Buffer);
+    m_BufferSize = newBufferSize;
 
-    if(newBufferSize)
+    // Clear out all existing segments to resize.
+    for (auto it : m_Segments)
     {
-        m_BufferSize = newBufferSize;
-        m_Buffer = reinterpret_cast<uintptr_t>(new uint8_t[newBufferSize + 1]);
+        delete it;
     }
+    m_Segments.clear();
 }
