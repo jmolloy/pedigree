@@ -126,12 +126,15 @@ void normalisePath(String &nameToOpen, const char *name, bool *onDevFs)
         nameToOpen = "runtime»";
         nameToOpen += (name + StringLength("/var/run"));
     }
-    else if (!StringCompareN(name, "/@/", StringLength("/@/")))
+    else if (!StringCompareN(name, "/@", StringLength("/@")))
     {
         // Absolute UNIX paths for POSIX stupidity.
         // /@/path/to/foo = /path/to/foo
         // /@/root»/applications = root»/applications
-        nameToOpen = (name + StringLength("/@/"));
+        const char *newName = name + StringLength("/@");
+        if (*newName == '/')
+            ++newName;
+        nameToOpen = newName;
     }
     else
     {
@@ -1893,8 +1896,10 @@ int posix_access(const char *name, int amode)
 
     // Grab the file
     File *file = VFS::instance().find(realPath, GET_CWD());
+    file = traverseSymlink(file);
     if (!file)
     {
+        F_NOTICE("  -> '" << realPath << "' does not exist");
         SYSCALL_ERROR(DoesNotExist);
         return -1;
     }
