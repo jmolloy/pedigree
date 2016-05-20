@@ -1,3 +1,5 @@
+# PASS: create file, make a hardlink pointing to it, delete the original.
+# The hardlink should be able to verify as being the same as the original.
 
 # Write a relatively-large file to disk.
 write big.dat /dat
