@@ -261,4 +261,7 @@
 #endif
 #endif
 
+/* Not glibc. */
+#define __GLIBC__ 0
+
 #endif /* __SYS_CONFIG_H__ */

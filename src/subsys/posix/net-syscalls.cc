@@ -39,6 +39,7 @@
 #include "net-syscalls.h"
 
 #include <sys/un.h>
+#include <netdb.h>
 
 #include "newlib.h"
 
