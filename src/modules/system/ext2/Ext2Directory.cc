@@ -264,7 +264,6 @@ bool Ext2Directory::removeEntry(const String &filename, Ext2Node *pFile)
         if (m_pExt2Fs->releaseInode(fileInode))
         {
             // Remove all blocks for the file, inode has hit zero refcount.
-            NOTICE("inode release hit zero refcount");
             pFile->wipe();
         }
         return true;
