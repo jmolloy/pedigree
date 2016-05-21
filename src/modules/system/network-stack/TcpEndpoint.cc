@@ -38,7 +38,8 @@ Endpoint* TcpEndpoint::accept()
     }
 
     // acquire() will return true when there is at least one connection waiting
-    m_IncomingConnectionCount.acquire();
+    while (!m_IncomingConnectionCount.acquire())
+        Scheduler::instance().yield();
 
     Endpoint* e = 0;
     {
