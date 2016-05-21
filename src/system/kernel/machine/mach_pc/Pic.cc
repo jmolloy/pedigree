@@ -141,6 +141,8 @@ bool Pic::initialise()
   m_SlavePort.write8(0x02, 1);
   m_MasterPort.write8(0x01, 1);
   m_SlavePort.write8(0x01, 1);
+  m_MasterPort.write8(0x00, 1);
+  m_SlavePort.write8(0x00, 1);
 
   // Register the interrupts
   InterruptManager &IntManager = InterruptManager::instance();
@@ -162,7 +164,7 @@ bool Pic::initialise()
 }
 
 Pic::Pic()
-  : m_SlavePort("PIC #2"), m_MasterPort("PIC #1"), m_Lock(false)
+  : m_SlavePort("PIC #2"), m_MasterPort("PIC #1"), m_InterruptMask(0), m_Lock(false)
 {
   for (size_t i = 0;i < 16;i++)
   {
@@ -171,31 +173,40 @@ Pic::Pic()
   }
 }
 
+bool Pic::spurious(size_t irq)
+{
+  if (irq > 7)
+  {
+    // Get ISR for slave.
+    uint8_t mask = 1 << (irq - 8);
+    m_SlavePort.write8(0x0B, 0);
+    uint8_t isr = m_SlavePort.read8(0);
+    m_SlavePort.write8(0x0A, 0);
+    return (isr & mask) == 0;
+  }
+  else
+  {
+    // Get ISR for master.
+    uint8_t mask = 1 << irq;
+    m_MasterPort.write8(0x0B, 0);
+    uint8_t isr = m_MasterPort.read8(0);
+    m_SlavePort.write8(0x0A, 0);
+    return (isr & mask) == 0;
+  }
+}
+
 void Pic::interrupt(size_t interruptNumber, InterruptState &state)
 {
   size_t irq = (interruptNumber - BASE_INTERRUPT_VECTOR);
   m_IrqCount[irq]++;
 
-  // Spurious IRQ?
-  if (irq == 7)
+  // If disable() has been called for this IRQ, we need to do spurious IRQ
+  // detection.
+  if (m_InterruptMask & (1 << irq))
   {
-    // Read ISR - check for IRQ7 status.
-    m_MasterPort.write8(0x0B, 0);
-    if (UNLIKELY((m_MasterPort.read8(0) & 0x80) == 0))
+    if (spurious(irq))
     {
-      NOTICE("PIC: spurious IRQ7");
-      return;
-    }
-  }
-  else if (irq == 15)
-  {
-    // Read ISR - check for IRQ15 status (the 7th line on the slave).
-    m_SlavePort.write8(0x0B, 0);
-    if (UNLIKELY((m_SlavePort.read8(0) & 0x80) == 0))
-    {
-      NOTICE("PIC: spurious IRQ15");
-      // EOI the master (no slave IRQ to ACK).
-      eoi(0);
+      ERROR("PIC: spurious IRQ" << Dec << irq << Hex);
       return;
     }
   }
@@ -234,12 +245,30 @@ void Pic::interrupt(size_t interruptNumber, InterruptState &state)
 
 void Pic::eoi(uint8_t irq)
 {
-  m_MasterPort.write8(0x20, 0);
   if (irq > 7)
-    m_SlavePort.write8(0x20, 0);
+  {
+    m_SlavePort.write8(0x60 + (irq - 8), 0);
+
+    // ACK the cascade IRQ (IRQ2).
+    m_MasterPort.write8(0x62, 0);
+  }
+  else
+  {
+    m_MasterPort.write8(0x60 + irq, 0);
+  }
 }
+
 void Pic::enable(uint8_t irq, bool enable)
 {
+  if (enable)
+  {
+    m_InterruptMask &= ~(1 << irq);
+  }
+  else
+  {
+    m_InterruptMask |= 1 << irq;
+  }
+
   if (irq <= 7)
   {
     uint8_t mask = m_MasterPort.read8(1);
@@ -261,11 +290,13 @@ void Pic::enableAll(bool enable)
 {
   if (enable == false)
   {
+    m_InterruptMask = 0xFB;
     m_MasterPort.write8(0xFB, 1);
     m_SlavePort.write8(0xFB, 1);
   }
   else
   {
+    m_InterruptMask = 0;
     m_MasterPort.write8(0x00, 1);
     m_SlavePort.write8(0x00, 1);
   }
