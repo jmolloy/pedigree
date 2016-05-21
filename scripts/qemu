@@ -6,7 +6,7 @@ if [ ! -z "$NO_SERIAL_PORTS" ]; then
     SERIAL_PORTS=""
 fi
 
-AIO="native"
+AIO="native,cache.direct=on"
 
 if [ ! "$(uname -s)" == "Linux" ]; then
     AIO="threads"
