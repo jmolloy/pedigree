@@ -24,7 +24,8 @@
 #include <Log.h>
 
 Event::Event(uintptr_t handlerAddress, bool isDeletable, size_t specificNestingLevel) :
-    m_HandlerAddress(handlerAddress), m_bIsDeletable(isDeletable), m_NestingLevel(specificNestingLevel)
+    m_HandlerAddress(handlerAddress), m_bIsDeletable(isDeletable),
+    m_NestingLevel(specificNestingLevel), m_Magic(EVENT_MAGIC)
 {
 }
 
@@ -71,9 +72,7 @@ size_t Event::getEventType(uint8_t *pBuffer)
 }
 
 Event::Event(const Event &other) :
-    m_HandlerAddress(other.m_HandlerAddress),
-    m_bIsDeletable(other.m_bIsDeletable),
-    m_NestingLevel(other.m_NestingLevel)
+    Event(other.m_HandlerAddress, other.m_bIsDeletable, other.m_NestingLevel)
 {
 }
 
