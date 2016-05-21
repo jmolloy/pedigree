@@ -1102,9 +1102,17 @@ void SlamAllocator::free(uintptr_t mem)
     #endif
 #endif
 
-    // Free the memory
     SlamCache *pCache = head->cache;
     head->cache = 0;  // Wipe out the cache - freed page.
+
+    // Scribble the freed buffer (both to avoid leaking information, and also
+    // to ensure anything using a freed object will absolutely fail).
+#ifdef SCRIBBLE_FREED_BLOCKS
+    size_t size = pCache->objectSize() - sizeof(AllocHeader) - sizeof(AllocFooter);
+    ByteSet(reinterpret_cast<void *>(mem), 0xAB, size);
+#endif
+
+    // Free now.
     pCache->free(mem - sizeof(AllocHeader));
 
 #ifdef MEMORY_TRACING
