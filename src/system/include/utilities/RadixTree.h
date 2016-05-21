@@ -62,6 +62,9 @@ private:
 
         ~Node ();
 
+        // Clears all known children and returns them to the parent ObjectPool
+        void returnAllChildren();
+
         /** Get the next data structure in the list
          *\return pointer to the next data structure in the list */
         Node *next()
@@ -594,10 +597,21 @@ void RadixTree<T>::clear()
 template<class T>
 RadixTree<T>::Node::~Node()
 {
+    returnAllChildren();
+}
+
+template<class T>
+void RadixTree<T>::Node::returnAllChildren()
+{
+    // Returns depth-first, which ensures we're not returning any children
+    // while the ObjectPool lock is held.
     for (auto it : m_Children)
     {
+        it->returnAllChildren();
         m_pParentTree->returnNode(it);
     }
+
+    m_Children.clear();
 }
 
 template<class T>

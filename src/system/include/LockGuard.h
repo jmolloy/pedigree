@@ -20,6 +20,8 @@
 #ifndef KERNEL_LOCKGUARD_H
 #define KERNEL_LOCKGUARD_H
 
+#include <compiler.h>
+
 /** @addtogroup kernel
  * @{ */
 
@@ -40,9 +42,33 @@ class LockGuard
     }
 
   private:
-    LockGuard();
-    LockGuard(const LockGuard &);
-    LockGuard &operator = (const LockGuard &);
+    LockGuard() = delete;
+    NOT_COPYABLE_OR_ASSIGNABLE(LockGuard);
+
+    T &m_Lock;
+    bool m_bCondition;
+};
+
+template<class T>
+class RecursingLockGuard
+{
+  public:
+    inline RecursingLockGuard(T &Lock, bool Condition = true)
+      : m_Lock(Lock), m_bCondition(Condition)
+    {
+      // T::allow_recursion must exist to be able to use RecursingLockGuard.
+      if (m_bCondition)
+        m_Lock.acquire(T::allow_recursion);
+    }
+    inline virtual ~RecursingLockGuard()
+    {
+      if (m_bCondition)
+        m_Lock.release();
+    }
+
+  private:
+    RecursingLockGuard() = delete;
+    NOT_COPYABLE_OR_ASSIGNABLE(RecursingLockGuard);
 
     T &m_Lock;
     bool m_bCondition;

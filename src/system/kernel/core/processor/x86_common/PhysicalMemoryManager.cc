@@ -81,7 +81,9 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
     static bool bDidHitWatermark = false;
     static bool bHandlingPressure = false;
 
-    m_Lock.acquire();
+    // Recursion allowed, to permit e.g. calls from the manager to the heap to
+    // succeed without needing to release/re-acquire the lock.
+    m_Lock.acquire(true);
 
     physical_uintptr_t ptr;
 
@@ -102,7 +104,7 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
             else
                 NOTICE_NOLOCK("Compact was successful.");
 
-            m_Lock.acquire();
+            m_Lock.acquire(true);
 
             bDidHitWatermark = true;
             bHandlingPressure = false;
@@ -149,7 +151,7 @@ physical_uintptr_t X86CommonPhysicalMemoryManager::allocatePage()
 }
 void X86CommonPhysicalMemoryManager::freePage(physical_uintptr_t page)
 {
-    LockGuard<Spinlock> guard(m_Lock);
+    RecursingLockGuard<Spinlock> guard(m_Lock);
 
     freePageUnlocked(page);
 }
@@ -196,7 +198,7 @@ void X86CommonPhysicalMemoryManager::freePageUnlocked(physical_uintptr_t page)
     trackPages(0, -1, 0);
 }
 void X86CommonPhysicalMemoryManager::pin(physical_uintptr_t page) {
-    LockGuard<Spinlock> guard(m_Lock);
+    RecursingLockGuard<Spinlock> guard(m_Lock);
 
     PageHashable key(page);
     struct page *p = m_PageMetadata.lookup(key);

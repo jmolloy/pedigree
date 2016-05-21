@@ -32,7 +32,7 @@ class Spinlock
         m_bAvoidTracking(bAvoidTracking), m_Magic(0xdeadbaba),
         m_pOwner(0), m_bOwned(false), m_Level(0) {}
 
-    bool acquire(bool recurse=true);
+    bool acquire(bool recurse=false);
 
     /** Exit the critical section, without restoring interrupts. */
     void exit();
@@ -49,6 +49,8 @@ class Spinlock
     {
         return m_bInterrupts;
     }
+
+    static const bool allow_recursion = true;
 
   private:
     /** Unwind the spinlock because a thread is releasing it. */
