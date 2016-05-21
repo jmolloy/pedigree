@@ -102,6 +102,11 @@ void unmapAll();
 /// overrun occurs (EIP and all) rather than guessing.
 #define BOCHS_MAGIC_WATCHPOINTS         0
 
+/// Scribble in freed memory; can be useful for finding bugs which are caused
+/// by reuse of freed objects (that would otherwise look like valid objects).
+/// It can also avoid leaking information in heap objects.
+#define SCRIBBLE_FREED_BLOCKS           1
+
 /** A cache allocates objects of a constant size. */
 class SlamCache
 {
