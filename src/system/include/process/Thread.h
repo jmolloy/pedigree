@@ -121,6 +121,9 @@ public:
      */
     void shutdown();
 
+    /* Forces the thread to run on the bootstrap processor. */
+    void forceToStartupProcessor();
+
     /** Returns a reference to the Thread's saved context. This function is intended only
      * for use by the Scheduler. */
     SchedulerState &state();

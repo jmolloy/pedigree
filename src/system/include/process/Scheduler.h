@@ -84,6 +84,11 @@ public:
         return m_pKernelProcess;
     }
 
+    PerProcessorScheduler *getBootstrapProcessorScheduler() const
+    {
+        return m_pBspScheduler;
+    }
+
 private:
     /** Default constructor
      *  \note Private - singleton class. */
@@ -115,6 +120,15 @@ private:
 
     /** Pointer to the kernel process. */
     Process *m_pKernelProcess;
+
+    /**
+     * Pointer to the BSP's scheduler.
+     *
+     * This may be necessary for threads that need to depend on e.g. interrupts
+     * that are only coming to the BSP, and having them run on a different CPU
+     * means they cannot control things like IRQs being enabled (not good).
+     */
+    PerProcessorScheduler *m_pBspScheduler;
 };
 
 #endif

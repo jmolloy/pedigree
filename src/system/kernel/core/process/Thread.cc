@@ -298,6 +298,14 @@ void Thread::shutdown()
   m_ConcurrencyLock.release();
 }
 
+void Thread::forceToStartupProcessor()
+{
+    Scheduler::instance().removeThread(this);
+    m_pScheduler = Scheduler::instance().getBootstrapProcessorScheduler();
+    Scheduler::instance().addThread(this, *m_pScheduler);
+    Scheduler::instance().yield();
+}
+
 void Thread::setStatus(Thread::Status s)
 {
   m_Status = s;
