@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -45,6 +44,9 @@ Ps2Mouse::~Ps2Mouse()
 bool Ps2Mouse::initialise(IoBase *pBase)
 {
     m_pBase = pBase;
+
+    // We wait for IRQs, so we need to be running on the BSP.
+    Processor::information().getCurrentThread()->forceToStartupProcessor();
 
     // Enable the auxillary PS/2 device
     enableAuxDevice();

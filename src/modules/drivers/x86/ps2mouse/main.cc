@@ -42,7 +42,7 @@ static bool entry()
                 }
                 else
                 {
-                    ERROR("IB700 initialisation failed!");
+                    ERROR("PS/2 Mouse initialisation failed!");
                     delete pNewChild;
                 }
             }
