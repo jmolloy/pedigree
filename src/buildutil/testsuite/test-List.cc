@@ -271,3 +271,42 @@ TEST(PedigreeList, IterateReverse)
     EXPECT_EQ(it, x.rend());
 }
 
+TEST(PedigreeList, PointerPopFront)
+{
+    List<void *> x;
+
+    void *p = reinterpret_cast<void *>(5);
+
+    x.pushBack(reinterpret_cast<void *>(5));
+
+    EXPECT_EQ(x.popFront(), p);
+    EXPECT_EQ(x.popFront(), reinterpret_cast<void *>(0));
+}
+
+TEST(PedigreeList, PointerPopBack)
+{
+    List<void *> x;
+
+    void *p = reinterpret_cast<void *>(5);
+
+    x.pushBack(reinterpret_cast<void *>(5));
+
+    EXPECT_EQ(x.popBack(), p);
+    EXPECT_EQ(x.popBack(), reinterpret_cast<void *>(0));
+}
+
+TEST(PedigreeList, PointerRotatePop)
+{
+    List<void *> x;
+
+    void *p = reinterpret_cast<void *>(5);
+
+    x.pushBack(reinterpret_cast<void *>(5));
+    void *p_ = x.popFront();
+    x.pushBack(p);
+    p_ = x.popFront();
+
+    EXPECT_EQ(x.count(), 0);
+    EXPECT_EQ(x.popFront(), reinterpret_cast<void *>(0));
+    EXPECT_EQ(p, p_);
+}
