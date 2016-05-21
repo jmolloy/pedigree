@@ -39,7 +39,8 @@
 Scheduler Scheduler::m_Instance;
 
 Scheduler::Scheduler() :
-    m_Processes(), m_NextPid(0), m_PTMap(), m_TPMap(), m_pKernelProcess(0)
+    m_Processes(), m_NextPid(0), m_PTMap(), m_TPMap(), m_pKernelProcess(0),
+    m_pBspScheduler(0)
 {
 }
 
@@ -67,6 +68,8 @@ bool Scheduler::initialise(Process *pKernelProcess)
 #else
   procList.pushBack(&Processor::information().getScheduler());
 #endif
+
+  m_pBspScheduler = &Processor::information().getScheduler();
   
   pRoundRobin->initialise(procList);
 
