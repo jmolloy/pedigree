@@ -77,6 +77,9 @@ class Pic : public IrqManager,
     void enable(uint8_t irq, bool enable);
     void enableAll(bool enable);
 
+    /** Handle a potentially-spurious IRQ. */
+    bool spurious(size_t irq);
+
     /** The slave PIC I/O Port range */
     IoPort m_SlavePort;
     /** The master PIC I/O Port range */
@@ -92,6 +95,8 @@ class Pic : public IrqManager,
     bool        m_MitigatedIrqs[16];
     /** Mitigation thresholds */
     size_t      m_MitigationThreshold[16];
+    /** Interrupt enable mask. */
+    uint8_t     m_InterruptMask;
     
     /** Main lock for all modifications */
     Spinlock    m_Lock;
