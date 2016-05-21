@@ -306,6 +306,9 @@ const char *ThreadsCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO
       case Thread::Suspended:Line += "s"; break;
     }
     Line += "[";
+    Line += "CPU";
+    Line += tehThread->getCpuId();
+    Line += ":";
     Line += tehThread->getId();
     Line += "] - CURRENT";
 
