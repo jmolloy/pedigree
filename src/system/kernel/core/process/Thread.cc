@@ -413,9 +413,11 @@ void Thread::pokeState(size_t stateLevel, SchedulerState &state)
 
 void Thread::sendEvent(Event *pEvent)
 {
-    LockGuard<Spinlock> guard(m_Lock);
 
+    // Only need the lock to adjust the queue of events.
+    m_Lock.acquire();
     m_EventQueue.pushBack(pEvent);
+    m_Lock.release();
     // NOTICE("Sending event: " << pEvent->getNumber() << ".");
     if (m_Status == Sleeping)
     {
@@ -443,6 +445,7 @@ void Thread::cullEvent(Event *pEvent)
 {
     LockGuard<Spinlock> guard(m_Lock);
 
+    bool bDelete = false;
     for (List<Event*>::Iterator it = m_EventQueue.begin();
          it != m_EventQueue.end();
          it++)
@@ -450,9 +453,17 @@ void Thread::cullEvent(Event *pEvent)
         if (*it == pEvent)
         {
             if ((*it)->isDeletable())
-                delete (*it);
+            {
+                bDelete = true;
+            }
             it = m_EventQueue.erase(it);
         }
+    }
+
+    // Delete last to avoid double frees.
+    if (bDelete)
+    {
+      delete pEvent;
     }
 }
 
@@ -466,9 +477,10 @@ void Thread::cullEvent(size_t eventNumber)
     {
         if ((*it)->getNumber() == eventNumber)
         {
-            if ((*it)->isDeletable())
-                delete (*it);
+            Event *pEvent = *it;
             it = m_EventQueue.erase(it);
+            if (pEvent->isDeletable())
+                delete pEvent;
         }
         else
             ++it;
@@ -501,6 +513,8 @@ Event *Thread::getNextEvent()
 
 bool Thread::hasEvents()
 {
+    LockGuard<Spinlock> guard(m_Lock);
+
     return m_EventQueue.count() != 0;
 }
 
