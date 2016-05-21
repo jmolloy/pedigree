@@ -65,13 +65,16 @@ bool delay(Timestamp nanoseconds)
     uint64_t usecs = nanoseconds / Multiplier::MICROSECOND;
     if (!usecs)
         ++usecs;  /// \todo perhaps change addAlarm to take ns.
+
+    pThread->setInterrupted(false);
     Machine::instance().getTimer()->addAlarm(pEvent, 0, usecs);
 
     /// \todo possible race condition for very short alarm times
     while (true)
     {
-        pThread->setInterrupted(false);
-        Processor::information().getScheduler().sleep(0);
+        if (!pThread->wasInterrupted())
+            Processor::information().getScheduler().sleep(0);
+
         if (pThread->wasInterrupted())
         {
             Machine::instance().getTimer()->removeAlarm(pEvent);
@@ -84,6 +87,8 @@ bool delay(Timestamp nanoseconds)
             delete pEvent;
             return false;
         }
+
+        pThread->setInterrupted(false);
     }
 
     return true;
