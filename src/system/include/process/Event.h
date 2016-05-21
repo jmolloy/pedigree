@@ -30,6 +30,8 @@
     After this, the process will be terminated. */
 #define MAX_NESTED_EVENTS 16
 
+#define EVENT_MAGIC       0x8899AABBCCDDEEFFULL
+
 /** The abstract base class for an asynchronous event. An event can hold any amount of information
     up to a hard maximum size of EVENT_LIMIT (usually 4096 bytes). An event is serialized using 
     the virtual serialize() function and sent to a recipient thread in either user or kernel mode,
@@ -109,6 +111,9 @@ protected:
 
     /** Specific nesting level, or ~0UL. */
     size_t m_NestingLevel;
+
+    /** Magic number for verification. */
+    size_t m_Magic;
 };
 
 #endif
