@@ -139,7 +139,9 @@ void PageFaultHandler::interrupt(size_t interruptNumber, InterruptState &state)
   //  Extract error code information
   static LargeStaticString sCode;
   sCode.clear();
-  sCode.append("Details: PID=");
+  sCode.append("Details: CPU=");
+  sCode.append(Processor::id());
+  sCode.append(" PID=");
   sCode.append(Processor::information().getCurrentThread()->getParent()->getId());
   sCode.append(" ");
 
