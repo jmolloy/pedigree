@@ -29,6 +29,10 @@
 
 void Multiprocessor::applicationProcessorStartup()
 {
+  // Enable Write-Protect on the AP early so we don't have any problems with
+  // the rest of the kernel.
+  asm volatile("mov %%cr0, %%rax; or $0x10000, %%rax; mov %%rax, %%cr0" ::: "rax");
+
   // Initialise this processor's interrupt handling
   X64InterruptManager::initialiseProcessor();
 
