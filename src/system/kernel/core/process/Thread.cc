@@ -39,7 +39,7 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
                void *pStack, bool semiUser, bool bDontPickCore) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_ConcurrencyLock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
-    m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler()), m_Priority(DEFAULT_PRIORITY),
+    m_UnwindState(Continue), m_pScheduler(0), m_Priority(DEFAULT_PRIORITY),
     m_PendingRequests(), m_pTlsBase(0), m_bRemovingRequests(false), m_pWaiter(0), m_bDetached(false)
 {
   if (pParent == 0)
@@ -120,7 +120,7 @@ Thread::Thread(Process *pParent) :
 Thread::Thread(Process *pParent, SyscallState &state) :
     m_nStateLevel(0), m_pParent(pParent), m_Status(Ready), m_ExitCode(0), /* m_pKernelStack(0), */ m_pAllocatedStack(0), m_Id(0),
     m_Errno(0), m_bInterrupted(false), m_Lock(), m_ConcurrencyLock(), m_EventQueue(), m_DebugState(None), m_DebugStateAddress(0),
-    m_UnwindState(Continue), m_pScheduler(&Processor::information().getScheduler()), m_Priority(DEFAULT_PRIORITY),
+    m_UnwindState(Continue), m_pScheduler(0), m_Priority(DEFAULT_PRIORITY),
     m_PendingRequests(), m_pTlsBase(0), m_bRemovingRequests(false), m_pWaiter(0), m_bDetached(false)
 {
   if (pParent == 0)
@@ -138,8 +138,9 @@ Thread::Thread(Process *pParent, SyscallState &state) :
   m_Id = m_pParent->addThread(this);
 
   // Now we are ready to go into the scheduler.
-  Scheduler::instance().addThread(this, Processor::information().getScheduler());
-  Processor::information().getScheduler().addThread(this, state);
+  m_pScheduler = &Processor::information().getScheduler();
+  Scheduler::instance().addThread(this, *m_pScheduler);
+  m_pScheduler->addThread(this, state);
 }
 
 Thread::~Thread()
@@ -303,6 +304,18 @@ void Thread::shutdown()
 
 void Thread::forceToStartupProcessor()
 {
+    if (Processor::information().getCurrentThread() != this)
+    {
+      ERROR("Thread::forceToStartupProcessor must be run as the desired thread.");
+      return;
+    }
+
+    /// \todo is this the right way to figure out which is the BSP?
+    if (!Processor::id())
+    {
+      return;
+    }
+
     Scheduler::instance().removeThread(this);
     m_pScheduler = Scheduler::instance().getBootstrapProcessorScheduler();
     Scheduler::instance().addThread(this, *m_pScheduler);

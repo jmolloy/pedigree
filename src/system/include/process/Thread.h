@@ -58,6 +58,7 @@ class Process;
  */
 class Thread
 {
+    friend class PerProcessorScheduler;
 public:
     /** The state that a thread can possibly have. */
     enum Status
@@ -380,6 +381,13 @@ public:
      *       is public. It should NOT be called by anyone else!
      */
     static void threadExited();
+
+protected:
+    /** Sets the scheduler for the Thread. */
+    void setScheduler(class PerProcessorScheduler *pScheduler)
+    {
+        m_pScheduler = pScheduler;
+    }
 private:
     /** Copy-constructor */
     Thread(const Thread &);
