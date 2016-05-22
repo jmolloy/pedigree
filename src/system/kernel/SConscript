@@ -190,6 +190,10 @@ if env['memory_tracing']:
     env_clone.MergeFlags({
         'CPPDEFINES': ['MEMORY_TRACING'],
     })
+if env['bochs']:
+    env_clone.MergeFlags({
+        'CPPDEFINES': ['BOCHS'],
+    })
 
 final_output = objname
 stripped_objname = final_output

@@ -22,8 +22,12 @@
 #include <Log.h>
 #include "Pit.h"
 
-/** Hundred hertz frequency. */
+/** One hundred hertz frequency. */
+#ifdef BOCHS
+#define PIT_FREQUENCY 10
+#else
 #define PIT_FREQUENCY 100
+#endif
 
 Pit Pit::m_Instance;
 
