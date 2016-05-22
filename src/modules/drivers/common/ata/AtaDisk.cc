@@ -736,10 +736,19 @@ uint64_t AtaDisk::doRead(uint64_t location)
             setupLBA28(location, nSectorsToRead);
         }
 
-        // Disable disk interrupts so we can poll.
+        // Enable IRQs so we can avoid spinning if possible.
 #ifndef PPC_COMMON
-        controlRegs->write8(2, 2);
+        controlRegs->write8(0, 2);
 #endif
+
+        if (m_IrqReceived)
+            WARNING("ATA: IRQ mutex already existed");
+        m_IrqReceived = new Mutex(true);
+        PointerGuard<Mutex> guardReceivedMutex(&m_IrqReceived);
+
+        bool oldInterrupts = Processor::getInterrupts();
+        if(!oldInterrupts)
+            Processor::setInterrupts(true);
 
         if(m_bDma && bDmaSetup)
         {
@@ -774,6 +783,12 @@ uint64_t AtaDisk::doRead(uint64_t location)
         // Acquire the 'outstanding IRQ' mutex, or use other means if no IRQ.
         while(true)
         {
+            if (getInterruptNumber() != 0xFF)
+            {
+                // 10 second timeout.
+                m_IrqReceived->acquire(1, 10);
+            }
+
             // Ensure we are not busy before continuing handling.
             status = ataWait(commandRegs, controlRegs);
             if(status.reg.err)
@@ -949,10 +964,19 @@ uint64_t AtaDisk::doWrite(uint64_t location)
             setupLBA28(location, nSectorsToWrite);
         }
 
-        // Disable disk interrupts so we can poll.
+        // Enable IRQs so we can avoid spinning if possible.
 #ifndef PPC_COMMON
-        controlRegs->write8(2, 6);
+        controlRegs->write8(0, 6);
 #endif
+
+        if (m_IrqReceived)
+            WARNING("ATA: IRQ mutex already existed");
+        m_IrqReceived = new Mutex(true);
+        PointerGuard<Mutex> guardReceivedMutex(&m_IrqReceived);
+
+        bool oldInterrupts = Processor::getInterrupts();
+        if(!oldInterrupts)
+            Processor::setInterrupts(true);
 
         if(m_bDma && bDmaSetup)
         {
@@ -987,6 +1011,12 @@ uint64_t AtaDisk::doWrite(uint64_t location)
         // Wait for completion.
         while(true)
         {
+            if (getInterruptNumber() != 0xFF)
+            {
+                // 10 second timeout.
+                m_IrqReceived->acquire(1, 10);
+            }
+
             // Ensure we are not busy before continuing handling.
             status = ataWait(commandRegs, controlRegs);
             if(status.reg.err)
