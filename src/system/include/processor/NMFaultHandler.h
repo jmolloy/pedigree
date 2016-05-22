@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -37,6 +36,9 @@ public:
     /** Register the NMFaultHandler with the InterruptManager.
      * \return true if sucessful, false otherwise.  */
     bool initialise();
+
+    /** Initialise the current processor's floating point state. */
+    bool initialiseProcessor();
 
     //
     // InterruptHandler interface.

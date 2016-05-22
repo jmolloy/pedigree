@@ -64,6 +64,17 @@ static inline void _SetFPUControlWord(uint16_t cw)
 
 bool NMFaultHandler::initialise()
 {
+    // Register the handler
+    if (!initialiseProcessor())
+    {
+        return false;
+    }
+    InterruptManager::instance().registerInterruptHandler(NM_FAULT_EXCEPTION, this);
+    return false;
+}
+
+bool NMFaultHandler::initialiseProcessor()
+{
     // Check for FPU and XSAVE
     uint32_t eax, ebx, ecx, edx, mxcsr = 0;
     uint64_t cr0, cr4;
@@ -114,14 +125,12 @@ bool NMFaultHandler::initialise()
     }
     else
         asm volatile("mov %0, %%cr4;"::"r"(cr4));
-    
-    // Register the handler
-    InterruptManager::instance().registerInterruptHandler(NM_FAULT_EXCEPTION, this);
-        
+
     // set the bit that causes a DeviceNotAvailable upon SSE, MMX, or FPU instruction execution
     cr0 |= CR0_TS;
     asm volatile ("mov %0, %%cr0" :: "r" (cr0));
-    return false;
+
+    return true;
 }
 
 // old/current owner

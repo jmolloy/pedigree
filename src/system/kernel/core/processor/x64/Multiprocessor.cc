@@ -23,6 +23,7 @@
 #include "gdt.h"
 #include "SyscallManager.h"
 #include "InterruptManager.h"
+#include <processor/NMFaultHandler.h>
 #include <processor/x86_common/Multiprocessor.h>
 #include <process/initialiseMultitasking.h>
 #include <machine/mach_pc/Pc.h>
@@ -49,6 +50,9 @@ void Multiprocessor::applicationProcessorStartup()
 
   // Load the GDT
   X64GdtManager::initialiseProcessor();
+
+  // Configure floating point.
+  NMFaultHandler::instance().initialiseProcessor();
 
   // Invalidate the first 4MB identity mapping
   Processor::invalidate(0);
