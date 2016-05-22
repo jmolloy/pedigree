@@ -21,6 +21,8 @@
 #include <processor/Processor.h>
 #include <process/Thread.h>
 
+#define TRACK_LOCKS
+
 #ifdef TRACK_LOCKS
 #include <LocksCommand.h>
 #endif
@@ -29,9 +31,28 @@
 
 #include <panic.h>
 
+#include <machine/Machine.h>
+#include <utilities/StaticString.h>
+
+#define COM1 0x3F8
+#define COM2 0x2F8
+
+#define CPU_LOG(s)  do { \
+  uint16_t x = COM1; \
+  if (Processor::id()) \
+    x = COM2; \
+  const char *s_ = s; \
+  for (size_t i = 0; i < str.length(); ++i) \
+    __asm__ __volatile__("outb %1, %0" :: "Nd" (x), "a" (s_[i])); \
+} while(0)
+
+static Atomic<size_t> x(0);
+
 bool Spinlock::acquire(bool recurse, bool safe)
 {
   Thread *pThread = Processor::information().getCurrentThread();
+
+  /// \todo add a bitmap of CPUs that allows us to figure out if we've managed to get all CPUs
 
   // Save the current irq status.
 
@@ -53,8 +74,37 @@ bool Spinlock::acquire(bool recurse, bool safe)
       FATAL_NOLOCK("Wrong magic in acquire [" << m_Magic << "] [this=" << reinterpret_cast<uintptr_t>(this) << "]");
   }
 
+#ifdef TRACK_LOCKS
+//  if (!m_bAvoidTracking)
+      g_LocksCommand.lockAttempted(this);
+#endif
+
+  bool bPrintedSpin = false;
+
+  HugeStaticString str;
+  str << "Spinlock: acquire [";
+  str.append(reinterpret_cast<uintptr_t>(this), 16);
+  str << ", ";
+  str.append(reinterpret_cast<uintptr_t>(pThread), 16);
+  str << ", " << Processor::id() << "]";
+  str << " -> ";
+  str.append(reinterpret_cast<uintptr_t>(__builtin_return_address(0)), 16);
+  str << " ";
+  str.append(x += 1);
+  str << "\n";
+  CPU_LOG(str);
   while (m_Atom.compareAndSwap(true, false) == false)
   {
+    if (!bPrintedSpin)
+    {
+      str.clear();
+      str << "  -> A spin ";
+      str << Processor::id();
+      str << "\n";
+      CPU_LOG(str);
+
+      bPrintedSpin = true;
+    }
     // Couldn't take the lock - can we re-enter the critical section?
     if (m_bOwned && (m_pOwner == pThread) && recurse)
     {
@@ -62,6 +112,14 @@ bool Spinlock::acquire(bool recurse, bool safe)
       ++m_Level;
       break;
     }
+
+#ifdef TRACK_LOCKS
+//  if (!m_bAvoidTracking)
+      if (!g_LocksCommand.checkState(this))
+      {
+        FATAL_NOLOCK("Spinlock: LocksCommand disallows this acquire.");
+      }
+#endif
 
 #ifdef MULTIPROCESSOR
     if (Processor::getCount() > 1)
@@ -92,6 +150,7 @@ bool Spinlock::acquire(bool recurse, bool safe)
 
     uintptr_t myra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
     ERROR_NOLOCK("Spinlock has deadlocked in acquire");
+    ERROR_NOLOCK("T: " << pThread << " / " << m_pOwner);
     ERROR_NOLOCK("Spinlock has deadlocked, level is " << m_Level);
     ERROR_NOLOCK("Spinlock has deadlocked, my return address is " << myra << ", return address of other locker is " << m_Ra);
     FATAL_NOLOCK("Spinlock has deadlocked, spinlock is " << reinterpret_cast<uintptr_t>(this) << ", atom is " << atom << ".");
@@ -115,6 +174,7 @@ bool Spinlock::acquire(bool recurse, bool safe)
 
   m_bInterrupts = bInterrupts;
   m_OwnedProcessor = Processor::id();
+    m_pOwner = static_cast<void *>(pThread);
 
   return true;
 
@@ -122,6 +182,8 @@ bool Spinlock::acquire(bool recurse, bool safe)
 
 void Spinlock::exit()
 {
+  Thread *pThread = Processor::information().getCurrentThread();
+
   bool bWasInterrupts = Processor::getInterrupts();
   if (bWasInterrupts == true)
   {
@@ -146,6 +208,14 @@ void Spinlock::exit()
   m_bOwned = false;
   m_OwnedProcessor = ~0;
 
+  HugeStaticString str;
+  str << "Spinlock: release [";
+  str.append(reinterpret_cast<uintptr_t>(this), 16);
+  str << ", ";
+  str.append(reinterpret_cast<uintptr_t>(pThread), 16);
+  str << ", " << Processor::id() << "]";
+  str << "\n";
+  CPU_LOG(str);
   if (m_Atom.compareAndSwap(false, true) == false)
   {
     /// \note When we hit this breakpoint, we're not able to backtrace as backtracing

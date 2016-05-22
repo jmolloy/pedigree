@@ -129,6 +129,9 @@ private:
      * means they cannot control things like IRQs being enabled (not good).
      */
     PerProcessorScheduler *m_pBspScheduler;
+
+    /** Main scheduler lock for modifying internal structures. */
+    Spinlock m_SchedulerLock;
 };
 
 #endif
