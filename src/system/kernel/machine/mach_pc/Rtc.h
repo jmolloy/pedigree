@@ -54,10 +54,13 @@ class Rtc : public Timer,
     virtual uint8_t getSecond();
     virtual uint64_t getNanosecond();
     virtual uint64_t getTickCount();
+    virtual uint64_t getTickCountNano();
 
     /** Initialises the class
-     *\return true, if successfull, false otherwise */
-    bool initialise() INITIALISATION_ONLY;
+     *\return true, if successful, false otherwise */
+    bool initialise1() INITIALISATION_ONLY;
+    /** Initialises the RTC's IRQ. */
+    bool initialise2() INITIALISATION_ONLY;
     /** Synchronise the time/date with the hardware */
     virtual void synchronise(bool tohw=false);
     /** Uninitialises the class */

@@ -46,6 +46,12 @@ Timestamp getTime(bool sync=false);
 /** Gets the system's current time in nanoseconds. */
 Timestamp getTimeNanoseconds(bool sync=false);
 
+/**
+ * Gets a tick count in nanoseconds.
+ * Subsequent calls will always see this number grow.
+ */
+Timestamp getTicks();
+
 }
 
 #endif

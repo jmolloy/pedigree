@@ -201,23 +201,24 @@ uint64_t Rtc::getTickCount()
 {
   return m_TickCount / 1000ULL;
 }
-
-bool Rtc::initialise()
+uint64_t Rtc::getTickCountNano()
 {
-  NOTICE("Rtc::initialise");
+  return m_TickCount;
+}
+
+bool Rtc::initialise1()
+{
+  NOTICE("Rtc::initialise1");
 
   // Allocate the I/O port range"CMOS"
   if (m_IoPort.allocate(0x70, 2) == false)
     return false;
 
+  // No IRQ yet.
+  m_IrqId = 0;
+
   // initialise handlers
   ByteSet(m_Handlers, 0, sizeof(TimerHandler*) * MAX_TIMER_HANDLERS);
-
-  // Register the irq
-  IrqManager &irqManager = *Machine::instance().getIrqManager();
-  m_IrqId = irqManager.registerIsaIrqHandler(8, this);
-  if (m_IrqId == 0)
-    return false;
 
   // Are the RTC values in the CMOS encoded in BCD (or binary)?
   m_bBCD = (read(0x0B) & 0x04) != 0x04;
@@ -256,6 +257,19 @@ bool Rtc::initialise()
   uint8_t tmp = read(0x0A);
   write(0x0A, (tmp & 0xF0) | rateBits);
 
+  return true;
+}
+
+bool Rtc::initialise2()
+{
+  NOTICE("Rtc::initialise2");
+
+  // Register the irq
+  IrqManager &irqManager = *Machine::instance().getIrqManager();
+  m_IrqId = irqManager.registerIsaIrqHandler(8, this);
+  if (m_IrqId == 0)
+    return false;
+
   // Activate the IRQ
   uint8_t statusb = read(0x0B);
   write(0x0B, statusb | 0x40);
@@ -264,6 +278,7 @@ bool Rtc::initialise()
 
   return true;
 }
+
 void Rtc::synchronise(bool tohw)
 {
   enableRtcUpdates(false);

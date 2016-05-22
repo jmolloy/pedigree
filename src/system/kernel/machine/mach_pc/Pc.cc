@@ -43,6 +43,11 @@ void Pc::initialise()
   if (m_Vga.initialise() == false)
     panic("Pc: Vga initialisation failed");
 
+  // Initialise the Real-time Clock / CMOS (without IRQs).
+  Rtc &rtc = Rtc::instance();
+  if (rtc.initialise1() == false)
+    panic("Pc: Rtc initialisation phase 1 failed");
+
   // Initialise ACPI
   #if defined(ACPI)
     Acpi &acpi = Acpi::instance();
@@ -115,10 +120,9 @@ void Pc::initialise()
   m_pSerial[2].setBase(0x3E8);
   m_pSerial[3].setBase(0x2E8);
 
-  // Initialse the Real-time Clock / CMOS
-  Rtc &rtc = Rtc::instance();
-  if (rtc.initialise() == false)
-    panic("Pc: Rtc initialisation failed");
+  // Initialse the Real-time Clock / CMOS IRQs.
+  if (rtc.initialise2() == false)
+    panic("Pc: Rtc initialisation phase 2 failed");
 
   // Initialise the PIT
   Pit &pit = Pit::instance();
