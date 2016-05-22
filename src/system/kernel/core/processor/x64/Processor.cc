@@ -21,6 +21,7 @@
 #include <processor/IoPortManager.h>
 #include <processor/PageFaultHandler.h>
 #include <process/initialiseMultitasking.h>
+#include <processor/NMFaultHandler.h>
 #include "gdt.h"
 #include "SyscallManager.h"
 #include "InterruptManager.h"
@@ -114,6 +115,10 @@ void Processor::initialise1(const BootstrapStruct_t &Info)
   // Initialise the I/O Manager
   IoPortManager &ioPortManager = IoPortManager::instance();
   ioPortManager.initialise(0, 0x10000);
+
+  // Initialise floating point.
+  NMFaultHandler::instance().initialise();
+  NMFaultHandler::instance().initialiseProcessor();
 
   /// todo move to a better place
   // Write PAT MSR.
