@@ -38,9 +38,13 @@
 
 Scheduler Scheduler::m_Instance;
 
+// Scheduler can be used at times where it is not yet safe to do the useful
+// "safer" Spinlock deadlock detection.
+#define SCHEDULER_SAFE_SPINLOCKS    true
+
 Scheduler::Scheduler() :
     m_Processes(), m_NextPid(0), m_PTMap(), m_TPMap(), m_pKernelProcess(0),
-    m_pBspScheduler(0)
+    m_pBspScheduler(0), m_SchedulerLock(false)
 {
 }
 
@@ -78,33 +82,43 @@ bool Scheduler::initialise(Process *pKernelProcess)
 
 void Scheduler::addThread(Thread *pThread, PerProcessorScheduler &PPSched)
 {
+    m_SchedulerLock.acquire(false, SCHEDULER_SAFE_SPINLOCKS);
     m_TPMap.insert(pThread, &PPSched);
+    m_SchedulerLock.release();
 }
 
 void Scheduler::removeThread(Thread *pThread)
 {
+    m_SchedulerLock.acquire(false, SCHEDULER_SAFE_SPINLOCKS);
     PerProcessorScheduler *pPpSched = m_TPMap.lookup(pThread);
     if (pPpSched)
     {
         pPpSched->removeThread(pThread);
         m_TPMap.remove(pThread);
     }
+    m_SchedulerLock.release();
 }
 
 bool Scheduler::threadInSchedule(Thread *pThread)
 {
+    m_SchedulerLock.acquire(false, SCHEDULER_SAFE_SPINLOCKS);
     PerProcessorScheduler *pPpSched = m_TPMap.lookup(pThread);
+    m_SchedulerLock.release();
     return pPpSched != 0;
 }
 
 size_t Scheduler::addProcess(Process *pProcess)
 {
+  m_SchedulerLock.acquire(false, SCHEDULER_SAFE_SPINLOCKS);
   m_Processes.pushBack(pProcess);
-  return (m_NextPid += 1);
+  size_t result = m_NextPid += 1;
+  m_SchedulerLock.release();
+  return result;
 }
 
 void Scheduler::removeProcess(Process *pProcess)
 {
+  m_SchedulerLock.acquire(false, SCHEDULER_SAFE_SPINLOCKS);
   for(List<Process*>::Iterator it = m_Processes.begin();
       it != m_Processes.end();
       it++)
@@ -115,6 +129,7 @@ void Scheduler::removeProcess(Process *pProcess)
       break;
     }
   }
+  m_SchedulerLock.release();
 }
 
 void Scheduler::yield()
@@ -124,33 +139,47 @@ void Scheduler::yield()
 
 size_t Scheduler::getNumProcesses()
 {
-  return m_Processes.count();
+  m_SchedulerLock.acquire(false, SCHEDULER_SAFE_SPINLOCKS);
+  size_t result = m_Processes.count();
+  m_SchedulerLock.release();
+  return result;
 }
 
 Process *Scheduler::getProcess(size_t n)
 {
+  m_SchedulerLock.acquire(false, SCHEDULER_SAFE_SPINLOCKS);
   if (n >= m_Processes.count())
   {
     WARNING("Scheduler::getProcess(" << Dec << n << ") parameter outside range.");
+    m_SchedulerLock.release();
     return 0;
   }
+
   size_t i = 0;
+  Process *pResult = 0;
   for(List<Process*>::Iterator it = m_Processes.begin();
       it != m_Processes.end();
       it++)
   {
     if (i == n)
-      return *it;
+    {
+      pResult = *it;
+      break;
+    }
     i++;
   }
 
-  return 0;
+  m_SchedulerLock.release();
+  return pResult;
 }
 
 void Scheduler::threadStatusChanged(Thread *pThread)
 {
+    m_SchedulerLock.acquire(false, SCHEDULER_SAFE_SPINLOCKS);
     PerProcessorScheduler *pSched = m_TPMap.lookup(pThread);
     assert(pSched);
+    m_SchedulerLock.release();
+
     pSched->threadStatusChanged(pThread);
 }
 
