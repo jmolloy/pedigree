@@ -786,7 +786,10 @@ uint64_t AtaDisk::doRead(uint64_t location)
             if (getInterruptNumber() != 0xFF)
             {
                 // 10 second timeout.
-                m_IrqReceived->acquire(1, 10);
+                if (!m_IrqReceived->acquire(1, 10))
+                {
+                    WARNING("ATA: failed to get IRQ");
+                }
             }
 
             // Ensure we are not busy before continuing handling.
@@ -1014,7 +1017,10 @@ uint64_t AtaDisk::doWrite(uint64_t location)
             if (getInterruptNumber() != 0xFF)
             {
                 // 10 second timeout.
-                m_IrqReceived->acquire(1, 10);
+                if (!m_IrqReceived->acquire(1, 10))
+                {
+                    WARNING("ATA: failed to get IRQ");
+                }
             }
 
             // Ensure we are not busy before continuing handling.
