@@ -501,8 +501,15 @@ inline void ataLoadSwapped(char *out, char *in, size_t N)
 }
 
 /// Performs a proper wait for the drive to become ready as per the ATA spec
-inline AtaStatus ataWait(IoBase *pBase)
+inline AtaStatus ataWait(IoBase *pBase, IoBase *pControl)
 {
+    // Wait 400ns before reading the status register.
+    if (pControl)
+    {
+        for (size_t i = 0; i < 4; ++i)
+            pControl->read8(2);  // Alternate status register.
+    }
+
     // Grab the status register first (of course)
     AtaStatus ret;
     uint8_t status = pBase->read8(7);
@@ -547,6 +554,24 @@ inline AtaStatus ataWait(IoBase *pBase)
     // caller to read the status and verify further bits (eg, ERR)
     ret.__reg_contents = status;
     return ret;
+}
+
+/// Logs the given AtaStatus object.
+inline void logAtaStatus(AtaStatus &status)
+{
+    NormalStaticString s;
+    s.clear();
+    s.append("ATA: v=");
+    s.append(status.__reg_contents);
+    s.append(" err=");
+    s.append(status.reg.err);
+    s.append(" drq=");
+    s.append(status.reg.drq);
+    s.append(" drdy=");
+    s.append(status.reg.drdy);
+    s.append(" bsy=");
+    s.append(status.reg.bsy);
+    NOTICE(static_cast<const char *>(s));
 }
 
 #endif

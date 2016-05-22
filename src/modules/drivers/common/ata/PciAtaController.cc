@@ -224,8 +224,8 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
         ERROR("Couldn't allocate slave control ports");
 
     // Check for non-existent controllers.
-    AtaStatus masterStatus = ataWait(masterCommand);
-    AtaStatus slaveStatus = ataWait(slaveCommand);
+    AtaStatus masterStatus = ataWait(masterCommand, masterControl);
+    AtaStatus slaveStatus = ataWait(slaveCommand, slaveControl);
     if (masterStatus.__reg_contents == 0xff)
     {
         delete masterCommand;
@@ -258,13 +258,15 @@ PciAtaController::PciAtaController(Controller *pDev, int nController) :
     Time::delay(2 * Time::Multiplier::MILLISECOND); // Wait 2 ms after clearing.
 
     if (masterCommand)
-        ataWait(masterCommand);
+        ataWait(masterCommand, masterControl);
     if (slaveCommand)
-        ataWait(slaveCommand);
+        ataWait(slaveCommand, slaveControl);
 
     // Install our IRQ handler
     if(getInterruptNumber() != 0xFF)
+    {
         Machine::instance().getIrqManager()->registerIsaIrqHandler(getInterruptNumber(), static_cast<IrqHandler*> (this));
+    }
 
     /// \todo Detect PCI IRQ, don't use ISA IRQs in native mode (etc...)
     size_t primaryIrq = 14, secondaryIrq = 15;
