@@ -42,7 +42,7 @@ void Multiprocessor::applicationProcessorStartup()
   m_ProcessorLock1.release();
 
   // Wait until the GDT is initialised and the first 4MB identity mapping removed
-  m_ProcessorLock2.acquire(false);
+  m_ProcessorLock2.acquire(false, false);
   m_ProcessorLock2.release();
 
   // Initialise this processor's syscall handling

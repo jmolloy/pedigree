@@ -160,7 +160,7 @@ size_t Multiprocessor::initialise1()
                                         false);
 
       // Wait until the processor is started and has unlocked the lock
-      m_ProcessorLock1.acquire(false);
+      m_ProcessorLock1.acquire(false, false);
       m_ProcessorLock1.release();
     }
     else

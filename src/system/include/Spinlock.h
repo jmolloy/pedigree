@@ -30,9 +30,16 @@ class Spinlock
     inline Spinlock(bool bLocked = false, bool bAvoidTracking = false)
         : m_bInterrupts(), m_Atom(!bLocked), m_Ra(0),
         m_bAvoidTracking(bAvoidTracking), m_Magic(0xdeadbaba),
-        m_pOwner(0), m_bOwned(false), m_Level(0) {}
+        m_pOwner(0), m_bOwned(false), m_Level(0), m_OwnedProcessor(~0) {}
 
-    bool acquire(bool recurse=false);
+    /**
+     * Enter the critical section.
+     *
+     * The 'safe' param disables certain deadlock checks that might fail in
+     * some circumstances (especially during multiprocessor startup). It really
+     * shouldn't be used for the majority of cases.
+     */
+    bool acquire(bool recurse=false, bool safe=true);
 
     /** Exit the critical section, without restoring interrupts. */
     void exit();
@@ -66,6 +73,8 @@ class Spinlock
     void *m_pOwner;
     bool m_bOwned;
     size_t m_Level;
+
+    size_t m_OwnedProcessor;
 };
 
 #endif

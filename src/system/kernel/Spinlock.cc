@@ -29,7 +29,7 @@
 
 #include <panic.h>
 
-bool Spinlock::acquire(bool recurse)
+bool Spinlock::acquire(bool recurse, bool safe)
 {
   Thread *pThread = Processor::information().getCurrentThread();
 
@@ -66,8 +66,21 @@ bool Spinlock::acquire(bool recurse)
 #ifdef MULTIPROCESSOR
     if (Processor::getCount() > 1)
     {
-      // OK, another CPU could still release the lock.
-      continue;
+      if (safe)
+      {
+        // If the other locker is in fact this CPU, we're trying to re-enter
+        // and that won't work at all.
+        if (Processor::id() != m_OwnedProcessor)
+        {
+          // OK, the other CPU could still release the lock.
+          continue;
+        }
+      }
+      else
+      {
+        // Unsafe mode, so we don't detect obvious re-entry.
+        continue;
+      }
     }
 #endif
 
@@ -101,6 +114,7 @@ bool Spinlock::acquire(bool recurse)
   }
 
   m_bInterrupts = bInterrupts;
+  m_OwnedProcessor = Processor::id();
 
   return true;
 
@@ -130,6 +144,7 @@ void Spinlock::exit()
 
   m_pOwner = 0;
   m_bOwned = false;
+  m_OwnedProcessor = ~0;
 
   if (m_Atom.compareAndSwap(false, true) == false)
   {
@@ -171,4 +186,6 @@ void Spinlock::unwind()
   m_Level = 0;
   m_bOwned = false;
   m_pOwner = 0;
+  m_OwnedProcessor = ~0;
+  m_Ra = 0;
 }
