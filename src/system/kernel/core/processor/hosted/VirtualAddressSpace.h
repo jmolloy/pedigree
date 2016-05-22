@@ -85,9 +85,9 @@ class HostedVirtualAddressSpace : public VirtualAddressSpace
                             size_t &flags);
     virtual void setFlags(void *virtualAddress, size_t newFlags);
     virtual void unmap(void *virtualAddress);
-    virtual void *allocateStack();
-    virtual void *allocateStack(size_t stackSz);
-    virtual void freeStack(void *pStack);
+    virtual Stack *allocateStack();
+    virtual Stack *allocateStack(size_t stackSz);
+    virtual void freeStack(Stack *pStack);
 
     virtual bool memIsInHeap(void *pMem);
     virtual void *getEndOfHeap();
@@ -208,7 +208,7 @@ class HostedVirtualAddressSpace : public VirtualAddressSpace
     size_t fromFlags(uint64_t Flags, bool bFinal = false);
     
     /** Allocates a stack with a given size. */
-    void *doAllocateStack(size_t sSize);
+    Stack *doAllocateStack(size_t sSize);
 
     typedef struct
     {
@@ -221,7 +221,7 @@ class HostedVirtualAddressSpace : public VirtualAddressSpace
     /** Current top of the stacks */
     void *m_pStackTop;
     /** List of free stacks */
-    Vector<void*> m_freeStacks;
+    Vector<Stack *> m_freeStacks;
     /** Is this the kernel space? */
     bool m_bKernelSpace;
     /** Lock to guard against multiprocessor reentrancy. */
