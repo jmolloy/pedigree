@@ -269,7 +269,10 @@ int RequestQueue::work()
     }
 
     // Sleep on the queue length semaphore - wake when there's something to do.
-    m_RequestQueueSize.acquire();
+    if (!m_RequestQueueSize.acquire())
+    {
+      continue;
+    }
 
     // Check why we were woken - is m_Stop set? If so, quit.
     if (m_Stop)
