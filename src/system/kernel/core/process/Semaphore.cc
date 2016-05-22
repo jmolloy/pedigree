@@ -182,13 +182,12 @@ bool Semaphore::tryAcquire(size_t n)
 
 void Semaphore::release(size_t n)
 {
-    assert(magic == 0xdeadbaba);
+  assert(magic == 0xdeadbaba);
   m_Counter += n;
 
+  m_BeingModified.acquire();
   if(m_Queue.count())
   {
-    m_BeingModified.acquire();
-
     // Because we can't wake a suspended thread, and we pop each thread from the queue,
     // we need to push them back on the queue later.
     List<Thread *> stillPendingThreads;
@@ -248,6 +247,10 @@ void Semaphore::release(size_t n)
             pThread->getLock().release();
         }
     }
+  }
+  else
+  {
+    m_BeingModified.release();
   }
 
   #ifdef STRICT_LOCK_ORDERING
