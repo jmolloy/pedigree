@@ -115,6 +115,9 @@ Thread::Thread(Process *pParent) :
   // Initialise our kernel stack.
   // NO! No kernel stack for kernel-mode threads. On PPC, causes bug!
   //m_pKernelStack = VirtualAddressSpace::getKernelAddressSpace().allocateStack();
+
+  // Still add the idle thread to the Scheduler for things like threadInSchedule
+  Scheduler::instance().addThread(this, *m_pScheduler);
 }
 
 Thread::Thread(Process *pParent, SyscallState &state) :
