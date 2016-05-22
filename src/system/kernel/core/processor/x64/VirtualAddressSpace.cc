@@ -387,11 +387,12 @@ VirtualAddressSpace *X64VirtualAddressSpace::clone()
     if(m_pStackTop < KERNEL_SPACE_START)
     {
         pX64Clone->m_pStackTop = m_pStackTop;
-        for(Vector<void*>::Iterator it = m_freeStacks.begin();
+        for(Vector<Stack *>::Iterator it = m_freeStacks.begin();
             it != m_freeStacks.end();
             ++it)
         {
-            pX64Clone->m_freeStacks.pushBack(*it);
+            Stack *pNewStack = new Stack(**it);
+            pX64Clone->m_freeStacks.pushBack(pNewStack);
         }
     }
 
@@ -568,7 +569,7 @@ bool X64VirtualAddressSpace::mapPageStructuresAbove4GB(physical_uintptr_t physAd
   return false;
 }
 
-void *X64VirtualAddressSpace::allocateStack()
+VirtualAddressSpace::Stack *X64VirtualAddressSpace::allocateStack()
 {
     size_t sz = USERSPACE_VIRTUAL_STACK_SIZE;
     if(this == &m_KernelSpace)
@@ -576,14 +577,14 @@ void *X64VirtualAddressSpace::allocateStack()
     return doAllocateStack(sz);
 }
 
-void *X64VirtualAddressSpace::allocateStack(size_t stackSz)
+VirtualAddressSpace::Stack *X64VirtualAddressSpace::allocateStack(size_t stackSz)
 {
     if(stackSz == 0)
       return allocateStack();
     return doAllocateStack(stackSz);
 }
 
-void *X64VirtualAddressSpace::doAllocateStack(size_t sSize)
+VirtualAddressSpace::Stack *X64VirtualAddressSpace::doAllocateStack(size_t sSize)
 {
   size_t flags = 0;
   bool bMapAll = false;
@@ -594,27 +595,35 @@ void *X64VirtualAddressSpace::doAllocateStack(size_t sSize)
     bMapAll = true;
   }
 
-  m_Lock.acquire();
-
-  size_t pageSz = PhysicalMemoryManager::getPageSize();
+  const size_t pageSz = PhysicalMemoryManager::getPageSize();
 
   // Grab a new stack pointer. Use the list of freed stacks if we can, otherwise
   // adjust the internal stack pointer. Using the list of freed stacks helps
   // avoid having the virtual address creep downwards.
   void *pStack = 0;
+  m_StacksLock.acquire();
   if (m_freeStacks.count() != 0)
   {
-    pStack = m_freeStacks.popBack();
+    Stack *poppedStack = m_freeStacks.popBack();
+    if (poppedStack->getSize() >= sSize)
+    {
+      pStack = poppedStack->getTop();
+    }
+    delete poppedStack;
   }
-  else
+  m_StacksLock.release();
+
+  if (!pStack)
   {
+    // Need the main address space lock now so we can adjust the next stack
+    // pointer without interference.
+    m_Lock.acquire();
     pStack = m_pStackTop;
 
     // Always leave one page unmapped between each stack to catch overflow.
     m_pStackTop = adjust_pointer(m_pStackTop, -(sSize + pageSz));
+    m_Lock.release();
   }
-
-  m_Lock.release();
 
   // Map the top of the stack in proper.
   uintptr_t firstPage = reinterpret_cast<uintptr_t>(pStack) - pageSz;
@@ -646,21 +655,24 @@ void *X64VirtualAddressSpace::doAllocateStack(size_t sSize)
       WARNING("CoW map() failed in doAllocateStack");
   }
 
-  return pStack;
+  Stack *stackInfo = new Stack(pStack, sSize);
+  return stackInfo;
 }
 
-void X64VirtualAddressSpace::freeStack(void *pStack)
+void X64VirtualAddressSpace::freeStack(Stack *pStack)
 {
-  size_t pageSz = PhysicalMemoryManager::getPageSize();
+  const size_t pageSz = PhysicalMemoryManager::getPageSize();
 
   // Clean up the stack
-  uintptr_t stackTop = reinterpret_cast<uintptr_t>(pStack);
-  while(true)
+  uintptr_t stackTop = reinterpret_cast<uintptr_t>(pStack->getTop());
+  for (size_t i = 0; i < pStack->getSize(); i += pageSz)
   {
     stackTop -= pageSz;
     void *v = reinterpret_cast<void *>(stackTop);
     if(!isMapped(v))
-      break; // Hit end of stack.
+    {
+      continue;
+    }
 
     size_t flags = 0;
     physical_uintptr_t phys = 0;
@@ -670,10 +682,11 @@ void X64VirtualAddressSpace::freeStack(void *pStack)
     PhysicalMemoryManager::instance().freePage(phys);
   }
 
-  // Add the stack to the list
-  m_Lock.acquire();
+  // Add the stack to the list; using the stacks lock, not the main address
+  // space lock, as pushing could require mapping pages via the heap.
+  m_StacksLock.acquire();
   m_freeStacks.pushBack(pStack);
-  m_Lock.release();
+  m_StacksLock.release();
 }
 
 X64VirtualAddressSpace::~X64VirtualAddressSpace()
@@ -699,7 +712,7 @@ X64VirtualAddressSpace::~X64VirtualAddressSpace()
 X64VirtualAddressSpace::X64VirtualAddressSpace()
   : VirtualAddressSpace(USERSPACE_VIRTUAL_HEAP), m_PhysicalPML4(0),
     m_pStackTop(USERSPACE_VIRTUAL_STACK), m_freeStacks(), m_bKernelSpace(false),
-    m_Lock(false, true)
+    m_Lock(false, true), m_StacksLock(false)
 {
 
   // Allocate a new PageMapLevel4
@@ -720,7 +733,7 @@ X64VirtualAddressSpace::X64VirtualAddressSpace()
 X64VirtualAddressSpace::X64VirtualAddressSpace(void *Heap, physical_uintptr_t PhysicalPML4, void *VirtualStack)
   : VirtualAddressSpace(Heap), m_PhysicalPML4(PhysicalPML4),
     m_pStackTop(VirtualStack), m_freeStacks(), m_bKernelSpace(true),
-    m_Lock(false, true)
+    m_Lock(false, true), m_StacksLock(false)
 {
 }
 

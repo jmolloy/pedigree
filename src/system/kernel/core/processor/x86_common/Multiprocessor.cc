@@ -132,10 +132,10 @@ size_t Multiprocessor::initialise1()
       Processor::m_ProcessorInformation.pushBack(pProcessorInfo);
     
       // Allocate kernel stack
-      void *pStack = kernelSpace.allocateStack();
+      VirtualAddressSpace::Stack *pStack = kernelSpace.allocateStack();
 
       // Set trampoline stack
-      *trampolineStack = reinterpret_cast<uintptr_t>(pStack);
+      *trampolineStack = reinterpret_cast<uintptr_t>(pStack->getTop());
         
       NOTICE(" Booting processor #" << Dec << (*Processors)[i]->processorId << ", stack at 0x" << Hex << reinterpret_cast<uintptr_t>(pStack));
 

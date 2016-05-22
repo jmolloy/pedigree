@@ -116,7 +116,7 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
     }
 
     // Allocate a stack for this thread
-    void *stack = pProcess->getAddressSpace()->allocateStack(stackSize);
+    VirtualAddressSpace::Stack *stack = pProcess->getAddressSpace()->allocateStack(stackSize);
     if(!stack)
     {
         ERROR("posix_pthread_create: couldn't get a stack!");
@@ -125,11 +125,12 @@ int posix_pthread_create(pthread_t *thread, const pthread_attr_t *attr, pthreadf
     }
 
     // Build the information structure to pass to the pthread entry function
+    /// \todo save the Stack object so we can free it later
     Mutex *pStartMutex = new Mutex(true);
     pthreadInfoBlock *dat = new pthreadInfoBlock;
     dat->entry = reinterpret_cast<void*>(start_addr);
     dat->arg = arg;
-    dat->stack = stack;
+    dat->stack = stack->getTop();
     dat->mutex = pStartMutex;
 
     // Create the thread

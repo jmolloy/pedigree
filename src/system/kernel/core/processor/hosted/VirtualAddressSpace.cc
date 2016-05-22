@@ -343,7 +343,8 @@ VirtualAddressSpace *HostedVirtualAddressSpace::clone() {
           it != m_freeStacks.end();
           ++it)
       {
-          pNew->m_freeStacks.pushBack(*it);
+          Stack *pNewStack = new Stack(**it);
+          pNew->m_freeStacks.pushBack(pNewStack);
       }
   }
 
@@ -384,18 +385,18 @@ void HostedVirtualAddressSpace::revertToKernelAddressSpace() {
   }
 }
 
-void *HostedVirtualAddressSpace::allocateStack() {
+VirtualAddressSpace::Stack *HostedVirtualAddressSpace::allocateStack() {
   size_t sz = USERSPACE_VIRTUAL_STACK_SIZE;
   if (this == &getKernelAddressSpace()) sz = KERNEL_STACK_SIZE;
   return doAllocateStack(sz);
 }
 
-void *HostedVirtualAddressSpace::allocateStack(size_t stackSz) {
+VirtualAddressSpace::Stack *HostedVirtualAddressSpace::allocateStack(size_t stackSz) {
   if (stackSz == 0) return allocateStack();
   return doAllocateStack(stackSz);
 }
 
-void *HostedVirtualAddressSpace::doAllocateStack(size_t sSize) {
+VirtualAddressSpace::Stack *HostedVirtualAddressSpace::doAllocateStack(size_t sSize) {
   size_t flags = 0;
   bool bMapAll = true;
   if(this == &m_KernelSpace)
@@ -415,7 +416,12 @@ void *HostedVirtualAddressSpace::doAllocateStack(size_t sSize) {
   void *pStack = 0;
   if (m_freeStacks.count() != 0)
   {
-    pStack = m_freeStacks.popBack();
+    Stack *poppedStack = m_freeStacks.popBack();
+    if (poppedStack->getSize() >= sSize)
+    {
+      pStack = poppedStack->getTop();
+    }
+    delete poppedStack;
   }
   else
   {
@@ -457,15 +463,16 @@ void *HostedVirtualAddressSpace::doAllocateStack(size_t sSize) {
       WARNING("CoW map() failed in doAllocateStack");
   }
 
-  return pStack;
+  Stack *stackInfo = new Stack(pStack, sSize);
+  return stackInfo;
 }
 
-void HostedVirtualAddressSpace::freeStack(void *pStack) {
+void HostedVirtualAddressSpace::freeStack(Stack *pStack) {
   size_t pageSz = PhysicalMemoryManager::getPageSize();
 
   // Clean up the stack
   uintptr_t stackTop = reinterpret_cast<uintptr_t>(pStack);
-  while (true) {
+  for (size_t i = 0; i < pStack->getSize(); i += pageSz) {
     stackTop -= pageSz;
     void *v = reinterpret_cast<void *>(stackTop);
     if (!isMapped(v)) break;  // Hit end of stack.

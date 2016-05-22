@@ -278,26 +278,27 @@ void PerProcessorScheduler::checkEventState(uintptr_t userStack)
         va.getMapping(reinterpret_cast<void*>(userStack - pageSz), page, flags);
       if(userStack == 0 || (flags & VirtualAddressSpace::KernelMode))
       {
-          userStack = reinterpret_cast<uintptr_t>(pThread->getStateUserStack());
-          if (!userStack)
+          VirtualAddressSpace::Stack *stateStack = pThread->getStateUserStack();
+          if (!stateStack)
           {
-              // Oops, forgot to add in the actual setting of the userstack. -Matt
-              userStack = reinterpret_cast<uintptr_t>(va.allocateStack());
-              pThread->setStateUserStack(reinterpret_cast<void*>(userStack));
+              stateStack = va.allocateStack();
+              pThread->setStateUserStack(stateStack);
           }
           else
           {
               // Verify that the stack is mapped
-              if(!va.isMapped(reinterpret_cast<void*>(userStack - pageSz)))
+              if(!va.isMapped(adjust_pointer(stateStack->getTop(), -pageSz)))
               {
                   /// \todo This is a quickfix for a bigger problem. I imagine
                   ///       it has something to do with calling execve directly
                   ///       without fork, meaning the memory is cleaned up but
                   ///       the state level stack information is *not*.
-                  userStack = reinterpret_cast<uintptr_t>(va.allocateStack());
-                  pThread->setStateUserStack(reinterpret_cast<void*>(userStack));
+                  stateStack = va.allocateStack();
+                  pThread->setStateUserStack(stateStack);
               }
           }
+
+          userStack = reinterpret_cast<uintptr_t>(stateStack->getTop());
       }
       else
       {
@@ -413,7 +414,8 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
         pCurrentThread->setStatus(Thread::Ready);
     pThread->setStatus(Thread::Running);
     Processor::information().setCurrentThread(pThread);
-    Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
+    void *kernelStack = pThread->getKernelStack();
+    Processor::information().setKernelStack(reinterpret_cast<uintptr_t>(kernelStack));
     Processor::switchAddressSpace( *pThread->getParent()->getAddressSpace() );
     Processor::setTlsBase(pThread->getTlsBase());
 
@@ -495,7 +497,8 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
         pCurrentThread->setStatus(Thread::Ready);
     pThread->setStatus(Thread::Running);
     Processor::information().setCurrentThread(pThread);
-    Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pThread->getKernelStack()) );
+    void *kernelStack = pThread->getKernelStack();
+    Processor::information().setKernelStack(reinterpret_cast<uintptr_t>(kernelStack));
     Processor::switchAddressSpace( *pThread->getParent()->getAddressSpace() );
     Processor::setTlsBase(pThread->getTlsBase());
 
@@ -576,7 +579,8 @@ void PerProcessorScheduler::killCurrentThread()
 
     pNextThread->setStatus(Thread::Running);
     Processor::information().setCurrentThread(pNextThread);
-    Processor::information().setKernelStack( reinterpret_cast<uintptr_t> (pNextThread->getKernelStack()) );
+    void *kernelStack = pNextThread->getKernelStack();
+    Processor::information().setKernelStack(reinterpret_cast<uintptr_t>(kernelStack));
     Processor::switchAddressSpace( *pNextThread->getParent()->getAddressSpace() );
     Processor::setTlsBase(pNextThread->getTlsBase());
 

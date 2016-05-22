@@ -33,6 +33,7 @@
 #include <utilities/ExtensibleBitmap.h>
 
 #include <processor/MemoryRegion.h>
+#include <processor/VirtualAddressSpace.h>
 
 // Hacky but I'd rather not c&p the typedef
 #define _PROCESSOR_INFORMATION_ONLY_WANT_PROCESSORID
@@ -139,9 +140,9 @@ public:
         stack.*/
     void popState();
 
-    void *getStateUserStack();
+    VirtualAddressSpace::Stack *getStateUserStack();
 
-    void setStateUserStack(void *st);
+    void setStateUserStack(VirtualAddressSpace::Stack *st);
 
     /** Returns the state nesting level. */
     size_t getStateLevel() const;
@@ -398,15 +399,15 @@ private:
         SchedulerState *m_State;
 
         /** Our kernel stack. */
-        void *m_pKernelStack;
+        VirtualAddressSpace::Stack *m_pKernelStack;
 
-        void *m_pUserStack;
+        VirtualAddressSpace::Stack *m_pUserStack;
 
         /** Auxillary stack, to be freed in case the kernel stack is null.
          *  This allows kernel mode threads to have stacks freed, as they
          *  are left hanging otherwise.
          */
-        void *m_pAuxillaryStack;
+        VirtualAddressSpace::Stack *m_pAuxillaryStack;
 
         /** Stack of inhibited Event masks, gets pushed with a new value when an Event handler is run, and
             popped when one completes.

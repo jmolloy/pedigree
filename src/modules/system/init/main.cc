@@ -183,7 +183,7 @@ static int init_stage2(void *param)
     argv[0] = reinterpret_cast<uintptr_t>(&argv[2]);
     MemoryCopy(&argv[2], static_cast<const char *>(fname), fname.length());
 
-    void *stack = Processor::information().getVirtualAddressSpace().allocateStack();
+    VirtualAddressSpace::Stack *stack = Processor::information().getVirtualAddressSpace().allocateStack();
 
     Processor::setInterrupts(true);
     pProcess->recordTime(true);
@@ -195,7 +195,7 @@ static int init_stage2(void *param)
             pProcess,
             reinterpret_cast<Thread::ThreadStartFunc>(entryPoint),
             argv,
-            stack);
+            stack->getTop());
     pThread->detach();
 
     return 0;

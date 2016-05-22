@@ -482,7 +482,8 @@ int posix_execve(const char *name, const char **argv, const char **env, SyscallS
         pThread->popState();
 
     // Create a new stack.
-    uintptr_t newStack = reinterpret_cast<uintptr_t>(Processor::information().getVirtualAddressSpace().allocateStack());
+    VirtualAddressSpace::Stack *pStack = Processor::information().getVirtualAddressSpace().allocateStack();
+    uintptr_t newStack = reinterpret_cast<uintptr_t>(pStack->getTop());
     /// \todo Free previous stack, or actually use it??
 
     // Allocate space for argv and the new environment.
