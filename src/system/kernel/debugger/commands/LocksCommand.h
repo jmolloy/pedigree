@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -29,6 +28,12 @@
 
 #define NUM_BT_FRAMES 6
 #define MAX_DESCRIPTORS 50
+
+#ifdef MULTIPROCESSOR
+#define LOCKS_COMMAND_NUM_CPU 255
+#else
+#define LOCKS_COMMAND_NUM_CPU 1
+#endif
 
 /**
  * Traces lock allocations.
@@ -66,8 +71,17 @@ public:
 
     void setReady();
 
+    void lockAttempted(Spinlock *pLock);
     void lockAcquired(Spinlock *pLock);
     void lockReleased(Spinlock *pLock);
+
+    /**
+     * Notifies the command that we'd like to lock the given lock, allowing
+     * the LocksCommand instance to detect common concurrency issues like
+     * dependency inversion. This should be called after an acquire() fails,
+     * as it may have undesirable overhead for the "perfect" case.
+     */
+    bool checkState(Spinlock *pLock);
   
 private:
     struct LockDescriptor
@@ -76,10 +90,14 @@ private:
         uintptr_t ra[NUM_BT_FRAMES];
         size_t n;
         bool used;
+        bool attempt;
+        size_t index;
     };
-    LockDescriptor m_pDescriptors[MAX_DESCRIPTORS];
 
-    bool m_bAcquiring;
+    LockDescriptor m_pDescriptors[LOCKS_COMMAND_NUM_CPU][MAX_DESCRIPTORS];
+
+    Atomic<bool> m_bAcquiring[LOCKS_COMMAND_NUM_CPU];
+    Atomic<size_t> m_LockIndex;
 };
 
 extern LocksCommand g_LocksCommand;
