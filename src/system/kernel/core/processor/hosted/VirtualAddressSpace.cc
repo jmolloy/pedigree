@@ -339,7 +339,7 @@ VirtualAddressSpace *HostedVirtualAddressSpace::clone() {
   if(m_pStackTop < KERNEL_SPACE_START)
   {
       pNew->m_pStackTop = m_pStackTop;
-      for(Vector<void*>::Iterator it = m_freeStacks.begin();
+      for(Vector<Stack *>::Iterator it = m_freeStacks.begin();
           it != m_freeStacks.end();
           ++it)
       {
