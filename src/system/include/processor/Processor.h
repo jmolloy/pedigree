@@ -320,6 +320,12 @@ class Processor
     #else
       static ProcessorInformation &information();
     #endif
+    /** Get the number of CPUs currently available */
+    #if !defined(MULTIPROCESSOR)
+      static inline size_t getCount();
+    #else
+      static size_t getCount();
+    #endif
 
     #ifdef PPC_COMMON
       inline static void setSegmentRegisters(uint32_t segmentBase, bool supervisorKey, bool
@@ -389,6 +395,10 @@ class Processor
   ProcessorInformation &Processor::information()
   {
     return m_ProcessorInformation;
+  }
+  size_t Processor::getCount()
+  {
+    return 1;
   }
 #endif
 
