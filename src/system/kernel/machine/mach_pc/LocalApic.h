@@ -45,7 +45,7 @@ class LocalApic : public SchedulerTimer,
   public:
     /** The default constructor */
     inline LocalApic()
-      : m_IoSpace("Local APIC"), m_Handlers() {}
+      : m_IoSpace("Local APIC"), m_Handlers(), m_BusFrequency(0) {}
     /** The destructor */
     inline virtual ~LocalApic(){}
 
@@ -131,6 +131,9 @@ class LocalApic : public SchedulerTimer,
 
     /** Timer handlers, tracked per processor. */
     Tree<ProcessorId, TimerHandler *> m_Handlers;
+
+    /** System bus frequency, for setting up the initial timer counter. */
+    size_t m_BusFrequency;
 };
 
 /** @} */

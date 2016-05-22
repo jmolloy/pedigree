@@ -58,6 +58,9 @@
     For 10ms delay, divide that by 100... */
 #define INITIAL_COUNT_VALUE (78125*40)
 
+/** 100 hz, as per the PIT which would do scheduling on non-MP builds. */
+#define INITIAL_HZ 100
+
 bool LocalApic::initialise(uint64_t physicalAddress)
 {
   // Detect local APIC presence
@@ -115,14 +118,37 @@ bool LocalApic::initialiseProcessor()
   tmp = m_IoSpace.read32(LAPIC_REG_LVT_ERROR);
   m_IoSpace.write32((tmp & 0xFFFEEF00) | ERROR_VECTOR, LAPIC_REG_LVT_ERROR);
 
+  if (!m_BusFrequency)
+  {
+    // Divide by 16
+    m_IoSpace.write32(0x3, LAPIC_REG_DIVIDE_CONFIG);
+
+    // Set the maximum count so we can calculate the frequency without this
+    // rolling over.
+    m_IoSpace.write32(0xFFFFFFFF, LAPIC_REG_INITIAL_COUNT);
+
+    // This should be approximately 10000 useconds (10 ms).
+    for (size_t i = 0; i < 10000; ++i)
+    {
+      uint8_t a = 0;
+      __asm__ __volatile__("outb %0, %1" :: "a" (a), "Nd" (0x80));
+    }
+    uint32_t out = m_IoSpace.read32(LAPIC_REG_CURRENT_COUNT);
+
+    uint32_t ticks = 0xFFFFFFFFU - out;
+
+    // We want the bus frequency to be in Hz (ticks/second).
+    m_BusFrequency = ticks * 100U;
+  }
+
   // Set the LVT timer register.
   m_IoSpace.write32(LAPIC_TIMER_PERIODIC | TIMER_VECTOR, LAPIC_REG_LVT_TIMER);
 
   // Initialise the intial-count register
-  m_IoSpace.write32(INITIAL_COUNT_VALUE, LAPIC_REG_INITIAL_COUNT);
+  m_IoSpace.write32(m_BusFrequency / INITIAL_HZ, LAPIC_REG_INITIAL_COUNT);
 
-  // Initialise the divisor register. (Divide by 128)
-  m_IoSpace.write32(0xA, LAPIC_REG_DIVIDE_CONFIG);
+  // Initialise the divisor register. (Divide by 16)
+  m_IoSpace.write32(0x3, LAPIC_REG_DIVIDE_CONFIG);
 
   // TODO
 
