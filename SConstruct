@@ -90,6 +90,7 @@ opts.AddVariables(
     BoolVariable('pyflakes', 'Set to one to run pyflakes over Python scripts in the tree', 0),
     BoolVariable('sconspyflakes', 'Set to one to run pyflakes over SConstruct/SConscripts in the tree', 0),
     BoolVariable('travis', 'Set to one/true to indicate that this is a build on Travis-CI.', 0),
+    BoolVariable('bochs', 'Set to one/true to change some defaults to improve performance under Bochs.', 0),
     ('iwyu', 'If set, use the given as a the C++ compiler for include-what-you-use. Use -i with scons if you use IWYU.', ''),
     
     BoolVariable('cache', 'Cache SCons options across builds (highly recommended).', 1),

@@ -144,7 +144,7 @@ class Rtc : public Timer,
     };
 
     /** Information about the RTC's periodic irq */
-    static periodicIrqInfo_t periodicIrqInfo[6];
+    static periodicIrqInfo_t periodicIrqInfo[12];
 
     /** The Rtc class instance */
     static Rtc m_Instance;

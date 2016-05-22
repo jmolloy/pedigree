@@ -24,14 +24,29 @@
 #include <process/Scheduler.h>
 #include "Rtc.h"
 
+#include <time/Time.h>
+
 #include <SlamAllocator.h>
 
+// RTC frequency to set at startup - tradeoff between precision of timers
+// against constant RTC noise.
+/// \todo HPET, many timers could be described as just one-shots
+#ifdef BOCHS
+#define INITIAL_RTC_HZ 64
+#else
 #define INITIAL_RTC_HZ 512
+#endif
 #define BCD_TO_BIN8(x) (((((x) & 0xF0) >> 4) * 10) + ((x) & 0x0F))
 #define BIN_TO_BCD8(x) ((((x) / 10) * 16) + ((x) % 10))
 
-Rtc::periodicIrqInfo_t Rtc::periodicIrqInfo[6] =
+Rtc::periodicIrqInfo_t Rtc::periodicIrqInfo[12] =
 {
+  {  4,  0x0e, {250000000ULL, 250000000ULL}},
+  {  8,  0x0d, {125000000ULL, 125000000ULL}},
+  {  16, 0x0c, {62500000ULL, 62500000ULL}},
+  {  32, 0x0b, {31250000ULL, 31250000ULL}},
+  {  64, 0x0a, {15625000ULL, 15625000ULL}},
+  { 128, 0x09, {7812500ULL, 7812500ULL}},
   { 256, 0x08, {3906250ULL, 3906250ULL}},
   { 512, 0x07, {1953125ULL, 1953125ULL}},
   {1024, 0x06, { 976562ULL,  976563ULL}},
@@ -46,7 +61,12 @@ Rtc Rtc::m_Instance;
 
 void Rtc::addAlarm(Event *pEvent, size_t alarmSecs, size_t alarmUsecs)
 {
-    Alarm *pAlarm = new Alarm(pEvent, alarmSecs*1000000+alarmUsecs+getTickCount(),
+    // Figure out when to trigger the alarm.
+    uint64_t target = m_TickCount;
+    uint64_t delta = alarmSecs * Time::Multiplier::SECOND;
+    delta += alarmUsecs * Time::Multiplier::MICROSECOND;
+    target += delta;
+    Alarm *pAlarm = new Alarm(pEvent, target,
                               Processor::information().getCurrentThread());
     m_Alarms.pushBack(pAlarm);
 }
@@ -87,6 +107,7 @@ size_t Rtc::removeAlarm(class Event *pEvent, bool bRetZero)
                     ret = 0;
                 else
                 {
+                    /// \todo clarify units
                     size_t diff = alarmEndTime - currTime;
                     ret = (diff / 1000) + 1;
                 }
@@ -223,7 +244,7 @@ bool Rtc::initialise()
 
   // Find the initial rtc rate
   uint8_t rateBits = 0x06;
-  for (size_t i = 0;i < 6;i++)
+  for (size_t i = 0;i < 12;i++)
     if (periodicIrqInfo[i].Hz == INITIAL_RTC_HZ)
     {
       m_PeriodicIrqInfoIndex = i;
@@ -317,15 +338,23 @@ Rtc::Rtc()
     m_DayOfMonth(0), m_Hour(0), m_Minute(0), m_Second(0), m_Nanosecond(0), m_TickCount(0), m_Alarms()
 {
 }
+
 extern size_t g_FreePages;
 extern size_t g_AllocedPages;
+
 bool Rtc::irq(irq_id_t number, InterruptState &state)
 {
   static size_t index = 0;
   // Update the Tick Count
   uint64_t delta = periodicIrqInfo[m_PeriodicIrqInfoIndex].ns[index];
   index = (index == 0) ? 1 : 0;
+  uint64_t prevTickCount = m_TickCount;
   m_TickCount += delta;
+  if (m_TickCount < prevTickCount)
+  {
+    WARNING("RTC: rolled over.");
+    /// \todo figure out how best to handle this
+  }
 
   // Calculate the new time/date
   m_Nanosecond += delta;
@@ -339,7 +368,7 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
            it++)
       {
           Alarm *pA = *it;
-          if ( pA->m_Time <= getTickCount() )
+          if ( pA->m_Time <= m_TickCount )
           {
               pA->m_pThread->sendEvent(pA->m_pEvent);
               m_Alarms.erase(it);
@@ -352,17 +381,17 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
           break;
   }
 
-  if (UNLIKELY(m_Nanosecond >= 1000000ULL))
+  if (UNLIKELY(m_Nanosecond >= Time::Multiplier::MILLISECOND))
   {
     // Every millisecond, unblock any interrupts which were halted and halt any
     // which need to be halted.
     Machine::instance().getIrqManager()->tick();
   }
 
-  if (UNLIKELY(m_Nanosecond >= 1000000000ULL))
+  if (UNLIKELY(m_Nanosecond >= Time::Multiplier::SECOND))
   {
     ++m_Second;
-    m_Nanosecond -= 1000000000ULL;
+    m_Nanosecond -= Time::Multiplier::SECOND;
 
 #ifndef MEMORY_TRACING  // Memory tracing uses serial line 1.
 #ifdef MEMORY_LOGGING_ENABLED
