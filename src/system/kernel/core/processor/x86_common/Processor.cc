@@ -241,4 +241,8 @@ void Processor::cpuid(uint32_t inEax,
 
     return m_SafeBspProcessorInformation;
   }
+  size_t Processor::getCount()
+  {
+    return m_ProcessorInformation.count();
+  }
 #endif
