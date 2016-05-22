@@ -63,7 +63,14 @@ bool Spinlock::acquire(bool recurse)
       break;
     }
 
-#ifndef MULTIPROCESSOR
+#ifdef MULTIPROCESSOR
+    if (Processor::getCount() > 1)
+    {
+      // OK, another CPU could still release the lock.
+      continue;
+    }
+#endif
+
     /// \note When we hit this breakpoint, we're not able to backtrace as backtracing
     ///       depends on the log spinlock, which may have deadlocked. So we actually
     ///       force the spinlock to release here, then hit the breakpoint.
@@ -78,7 +85,6 @@ bool Spinlock::acquire(bool recurse)
 
     // Panic in case there's a return from the debugger (or the debugger isn't available)
     panic("Spinlock has deadlocked");
-#endif
   }
   m_Ra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
 
