@@ -304,15 +304,16 @@ void Thread::shutdown()
 
 void Thread::forceToStartupProcessor()
 {
-    if (Processor::information().getCurrentThread() != this)
+    if (m_pScheduler == Scheduler::instance().getBootstrapProcessorScheduler())
     {
-      ERROR("Thread::forceToStartupProcessor must be run as the desired thread.");
+      // No need to move - we already think we're associated with the right
+      // CPU, and that's all we'll do below anyway.
       return;
     }
 
-    /// \todo is this the right way to figure out which is the BSP?
-    if (!Processor::id())
+    if (Processor::information().getCurrentThread() != this)
     {
+      ERROR("Thread::forceToStartupProcessor must be run as the desired thread.");
       return;
     }
 
