@@ -59,6 +59,12 @@ class Timer
     /** Get the Tick count (time elapsed since system bootup)
      *\return the tick count in milliseconds */
     virtual uint64_t getTickCount() = 0;
+    /** Get the Tick count (time elapsed since system bootup) in nanosconds.
+     *\return the tick count in nanoseconds */
+    virtual uint64_t getTickCountNano()
+    {
+        return getTickCount() * 1000U;
+    }
 
     /** Get the time in UNIX timestamp form (seconds since Jan 1st, 1970).
         \note This function does not currently take account of leap years -
