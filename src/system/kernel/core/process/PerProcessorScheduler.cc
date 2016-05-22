@@ -396,6 +396,7 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
     }
 
     pThread->setCpuId(Processor::id());
+    pThread->setScheduler(this);
 
     bool bWasInterrupts = Processor::getInterrupts();
     Processor::setInterrupts(false);
