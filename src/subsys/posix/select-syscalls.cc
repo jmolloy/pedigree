@@ -117,6 +117,21 @@ void selectEventHandler(uint8_t *pBuffer)
     e.fire();
 }
 
+static const char *timeoutTypeName(TimeoutType type)
+{
+    switch(type)
+    {
+        case InfiniteTimeout:
+            return "infinite";
+        case ReturnImmediately:
+            return "immediate";
+        case SpecificTimeout:
+            return "timeout";
+        default:
+            return "unknown";
+    }
+}
+
 int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, timeval *timeout)
 {
     bool bValidAddresses = true;
@@ -153,7 +168,7 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
         timeoutUSecs = timeout->tv_usec % 1000000;
     }
 
-    F_NOTICE("select(" << Dec << nfds << ", ?, ?, ?, {" << static_cast<uintptr_t>(timeoutType) << ", " << timeoutSecs << "})" << Hex);
+    F_NOTICE("select(" << Dec << nfds << ", ?, ?, ?, {" << timeoutTypeName(timeoutType) << ", " << timeoutSecs << "})" << Hex);
 
     Process *pProcess = Processor::information().getCurrentThread()->getParent();
     PosixSubsystem *pSubsystem = reinterpret_cast<PosixSubsystem*>(pProcess->getSubsystem());
