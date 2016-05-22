@@ -75,13 +75,13 @@ bool AtaDisk::initialise(size_t nUnit)
     commandRegs->write8(devSelect, 6);
 
     // Wait for it to be selected
-    ataWait(commandRegs);
+    ataWait(commandRegs, controlRegs);
 
     // DEVICE RESET
     commandRegs->write8(8, 7);
 
     // Wait for the drive to reset before requesting a device change
-    ataWait(commandRegs);
+    ataWait(commandRegs, controlRegs);
 
     //
     // Start IDENTIFY command.
@@ -97,7 +97,7 @@ bool AtaDisk::initialise(size_t nUnit)
     commandRegs->write8(0xEC, 7);
 
     // Read status register.
-    status = ataWait(commandRegs);
+    status = ataWait(commandRegs, controlRegs);
 
     // Check that the device actually exists
     if (status.__reg_contents == 0)
@@ -117,7 +117,7 @@ bool AtaDisk::initialise(size_t nUnit)
         // Run IDENTIFY PACKET DEVICE instead
         commandRegs->write8(devSelect, 6);
         commandRegs->write8(0xA1, 7);
-        status = ataWait(commandRegs);
+        status = ataWait(commandRegs, controlRegs);
     }
     else
     {
@@ -368,7 +368,7 @@ bool AtaDisk::initialise(size_t nUnit)
 
         commandRegs->write8(devSelect, 6);
         commandRegs->write8(0xDA, 7); // GET MEDIA STATUS
-        status = ataWait(commandRegs);
+        status = ataWait(commandRegs, controlRegs);
         if(status.reg.err)
         {
             // We have information in the error register
@@ -436,12 +436,6 @@ bool AtaDisk::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize
         return false;
     }
 
-    // Ensure interrupts are actually enabled now.
-    /// \todo Find the module that's being naughty and disabling interrupts
-    bool oldInterrupts = Processor::getInterrupts();
-    if(!oldInterrupts)
-        Processor::setInterrupts(true);
-
     AtaStatus status;
 
     IoBase *commandRegs = m_CommandRegs;
@@ -452,13 +446,16 @@ bool AtaDisk::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize
     MemoryCopy(tmpPacket, reinterpret_cast<void*>(pCommand), nCommandSize);
     ByteSet(tmpPacket + (nCommandSize / 2), 0, m_PacketSize - nCommandSize);
 
+    // Set nIEN as we poll in sendCommand().
+    controlRegs->write8(2, 2);
+
     // Wait for the device to finish any outstanding operations
-    ataWait(commandRegs);
+    ataWait(commandRegs, controlRegs);
 
     // Select the device to transmit to
     uint8_t devSelect = m_IsMaster ? 0xA0 : 0xB0;
     commandRegs->write8(devSelect, 6);
-    ataWait(commandRegs);
+    ataWait(commandRegs, controlRegs);
 
     // Verify that it's the correct device
     if((commandRegs->read8(6) & devSelect) != devSelect)
@@ -476,37 +473,20 @@ bool AtaDisk::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize
     // PACKET command
     if((m_pIdent.__raw[62] & (1 << 15)) && bDmaSetup)  // Device requires DMADIR for Packet DMA commands
         commandRegs->write8((bWrite ? 1 : 5), 1); // Transfer to host, DMA
-    if(bDmaSetup)
+    else if(bDmaSetup)
         commandRegs->write8(1, 1); // No overlap, DMA
     else
         commandRegs->write8(0, 1); // No overlap, no DMA
     commandRegs->write8(0, 2); // Tag = 0
     commandRegs->write8(0, 3); // N/A for PACKET command
-    if(bDmaSetup)
-    {
-        commandRegs->write8(0, 4); // Byte count limit = 0 for DMA
-        commandRegs->write8(0, 5);
-    }
-    else
-    {
-        commandRegs->write8(nRespBytes & 0xFF, 4); // Byte count limit
-        commandRegs->write8(((nRespBytes >> 8) & 0xFF), 5);
-    }
-
-    // Permit IRQs now.
-    controlRegs->write8(0, 2);
-
-    // Prepare for IRQ handling.
-    if (m_IrqReceived)
-      WARNING("ATAPI: IRQ lock already existed");
-    m_IrqReceived = new Mutex(true);
-    PointerGuard<Mutex> guard(&m_IrqReceived);
+    commandRegs->write8(nRespBytes & 0xFF, 4); // Byte count limit
+    commandRegs->write8(((nRespBytes >> 8) & 0xFF), 5);
 
     // Transmit the PACKET command, wait for the device to be ready for the command.
     commandRegs->write8(0xA0, 7);
 
     // Wait for sensible status before writing command packet.
-    status = ataWait(commandRegs);
+    status = ataWait(commandRegs, controlRegs);
 
     // Error?
     if(status.reg.err)
@@ -515,11 +495,21 @@ bool AtaDisk::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize
         return false;
     }
 
+    // If DMA is set up, begin that now, before sending the SCSI command.
+    if(m_bDma && nRespBytes && bDmaSetup)
+    {
+        bDmaSetup = m_BusMaster->begin(bWrite);
+    }
+
     // Transmit the command (padded as needed)
     for(size_t i = 0; i < (m_PacketSize / 2); i++)
     {
         commandRegs->write16(tmpPacket[i], 0);
     }
+
+    // 400ns wait before reading status register.
+    for (size_t i = 0; i < 4; ++i)
+        controlRegs->read8(2);
 
     // Check for errors...
     // Note: not using ataWait as we don't want to block here.
@@ -544,60 +534,32 @@ bool AtaDisk::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize
     // completion instead of waiting for an IRQ.
     if (!nRespBytes)
     {
-        status = ataWait(commandRegs);
+        status = ataWait(commandRegs, controlRegs);
         return !status.reg.err;
-    }
-
-    // If DMA is set up, begin that now, before sending the SCSI command.
-    if(m_bDma && nRespBytes && bDmaSetup)
-    {
-        bDmaSetup = m_BusMaster->begin(bWrite);
     }
 
     while(true)
     {
-        if(getInterruptNumber() != 0xFF)
+        // Ensure we are not busy before continuing handling.
+        status = ataWait(commandRegs, controlRegs);
+        if(status.reg.err)
         {
-            if(!m_IrqReceived->acquire(1, 10))
-            {
-                // Fail! Assume nothing read so far.
-                WARNING("ATAPI: Timed out while waiting for IRQ");
-                return false;
-            }
-        }
-        else
-        {
-            // No IRQ line.
+            /// \todo What's the best way to handle this?
             if(m_bDma && bDmaSetup)
             {
-                while(!(m_BusMaster->hasCompleted() || m_BusMaster->hasInterrupt()))
-                {
-                    Processor::haltUntilInterrupt();
-                }
-            }
-            else
-            {
-                /// \todo Write non-DMA case (if needed?)
-                ERROR("TODO: non-DMA polling check!");
-            }
-        }
-
-        if(m_bDma && bDmaSetup)
-        {
-            // Ensure we are not busy before continuing handling.
-            status = ataWait(commandRegs);
-            if(status.reg.err)
-            {
-                /// \todo What's the best way to handle this?
                 m_BusMaster->commandComplete();
                 WARNING("ATAPI: read failed during DMA data transfer");
-                return false;
             }
+            return false;
+        }
 
+        // Poll for completion.
+        if(m_bDma && bDmaSetup)
+        {
             if(m_BusMaster->hasInterrupt() || m_BusMaster->hasCompleted())
             {
-                // commandComplete effectively resets the device state, so we need
-                // to get the error register first.
+                // commandComplete effectively resets the device state, so we
+                // need to get the error register first.
                 bool bError = m_BusMaster->hasError();
                 m_BusMaster->commandComplete();
                 if(bError)
@@ -607,14 +569,16 @@ bool AtaDisk::sendCommand(size_t nUnit, uintptr_t pCommand, uint8_t nCommandSize
             }
         }
         else
+        {
             break;
+        }
     }
 
-    status = ataWait(commandRegs);
-
+    status = ataWait(commandRegs, controlRegs);
     if(status.reg.err)
     {
-        WARNING("ATAPI sendCommand failed after sending command packet [status=" << status.__reg_contents << "]");
+        WARNING("ATAPI sendCommand failed after sending command packet");
+        logAtaStatus(status);
         return false;
     }
 
@@ -724,7 +688,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
 
     // Wait for BSY and DRQ to be zero before selecting the device
     AtaStatus status;
-    ataWait(commandRegs);
+    ataWait(commandRegs, controlRegs);
 
     // Select the device to transmit to
     uint8_t devSelect;
@@ -735,7 +699,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
     commandRegs->write8(devSelect, 6);
 
     // Wait for it to be selected
-    ataWait(commandRegs);
+    ataWait(commandRegs, controlRegs);
 
     while (nSectors > 0)
     {
@@ -772,26 +736,16 @@ uint64_t AtaDisk::doRead(uint64_t location)
             setupLBA28(location, nSectorsToRead);
         }
 
-        // Enable disk interrupts
+        // Disable disk interrupts so we can poll.
 #ifndef PPC_COMMON
-        controlRegs->write8(0, 2);
+        controlRegs->write8(2, 2);
 #endif
-
-        // Prepare for IRQ handling.
-        if (m_IrqReceived)
-            WARNING("ATAPI: IRQ lock already existed");
-        m_IrqReceived = new Mutex(true);
-        PointerGuard<Mutex> irqReceivedGuard(&m_IrqReceived);
-
-        /// \bug Hello! I am a race condition! You find me in poorly written code, like the two lines below. Enjoy!
-
-        // Enable IRQs.
-        uintptr_t intNumber = getInterruptNumber();
-        if(intNumber != 0xFF)
-            Machine::instance().getIrqManager()->enable(intNumber, true);
 
         if(m_bDma && bDmaSetup)
         {
+            // Prepare DMA before we send the command.
+            bDmaSetup = m_BusMaster->begin(false);
+
             if (!m_SupportsLBA48)
             {
                 // Send command "read DMA"
@@ -802,9 +756,6 @@ uint64_t AtaDisk::doRead(uint64_t location)
                 // Send command "read DMA EXT"
                 commandRegs->write8(0x25, 7);
             }
-
-            // Start the DMA command
-            bDmaSetup = m_BusMaster->begin(false);
         }
         else
         {
@@ -823,44 +774,21 @@ uint64_t AtaDisk::doRead(uint64_t location)
         // Acquire the 'outstanding IRQ' mutex, or use other means if no IRQ.
         while(true)
         {
-            if(intNumber != 0xFF)
+            // Ensure we are not busy before continuing handling.
+            status = ataWait(commandRegs, controlRegs);
+            if(status.reg.err)
             {
-                m_IrqReceived->acquire(1, 10);
-            }
-            else
-            {
-                // No IRQ line.
+                /// \todo What's the best way to handle this?
                 if(m_bDma && bDmaSetup)
                 {
-                    while(!(m_BusMaster->hasCompleted() || m_BusMaster->hasInterrupt()))
-                    {
-                        Processor::haltUntilInterrupt();
-                    }
-                }
-                else
-                {
-                    /// \todo Write non-DMA case (if needed?)
-                }
-            }
-
-            if(Processor::information().getCurrentThread()->wasInterrupted())
-            {
-                // Interrupted! Fail! Assume nothing read so far.
-                WARNING("ATA: Timed out while waiting for IRQ");
-                return 0;
-            }
-            else if(m_bDma && bDmaSetup)
-            {
-                // Ensure we are not busy before continuing handling.
-                status = ataWait(commandRegs);
-                if(status.reg.err)
-                {
-                    /// \todo What's the best way to handle this?
                     m_BusMaster->commandComplete();
                     WARNING("ATA: read failed during DMA data transfer");
-                    return 0;
                 }
+                return false;
+            }
 
+            if(m_bDma && bDmaSetup)
+            {
                 if(m_BusMaster->hasInterrupt() || m_BusMaster->hasCompleted())
                 {
                     // commandComplete effectively resets the device state, so we need
@@ -883,7 +811,7 @@ uint64_t AtaDisk::doRead(uint64_t location)
             for (int i = 0; i < nSectorsToRead; i++)
             {
                 // Wait until !BUSY
-                status = ataWait(commandRegs);
+                status = ataWait(commandRegs, controlRegs);
                 if(status.reg.err)
                 {
                     // Ka-boom! Something went wrong :(
@@ -979,7 +907,7 @@ uint64_t AtaDisk::doWrite(uint64_t location)
 
     // Wait for BSY and DRQ to be zero before selecting the device
     AtaStatus status;
-    ataWait(commandRegs);
+    ataWait(commandRegs, controlRegs);
 
     // Select the device to transmit to
     uint8_t devSelect;
@@ -990,7 +918,7 @@ uint64_t AtaDisk::doWrite(uint64_t location)
     commandRegs->write8(devSelect, 6);
 
     // Wait for it to be selected
-    ataWait(commandRegs);
+    ataWait(commandRegs, controlRegs);
 
     uint16_t *tmp = reinterpret_cast<uint16_t*>(buffer);
 
@@ -1021,26 +949,16 @@ uint64_t AtaDisk::doWrite(uint64_t location)
             setupLBA28(location, nSectorsToWrite);
         }
 
-        // Enable disk interrupts
+        // Disable disk interrupts so we can poll.
 #ifndef PPC_COMMON
-        controlRegs->write8(0, 6);
+        controlRegs->write8(2, 6);
 #endif
-
-        // Prepare for IRQ handling.
-        if (m_IrqReceived)
-            WARNING("ATAPI: IRQ lock already existed");
-        m_IrqReceived = new Mutex(true);
-        PointerGuard<Mutex> irqReceivedGuard(&m_IrqReceived);
-
-        /// \bug Hello! I am a race condition! You find me in poorly written code, like the two lines below. Enjoy!
-
-        // Enable IRQs.
-        uintptr_t intNumber = getInterruptNumber();
-        if(intNumber != 0xFF)
-            Machine::instance().getIrqManager()->enable(intNumber, true);
 
         if(m_bDma && bDmaSetup)
         {
+            // Start DMA before we send the command.
+            bDmaSetup = m_BusMaster->begin(true);
+
             if (!m_SupportsLBA48)
             {
                 // Send command "write DMA"
@@ -1051,9 +969,6 @@ uint64_t AtaDisk::doWrite(uint64_t location)
                 // Send command "read write EXT"
                 commandRegs->write8(0x35, 7);
             }
-
-            // Start the DMA command
-            bDmaSetup = m_BusMaster->begin(true);
         }
         else
         {
@@ -1069,47 +984,24 @@ uint64_t AtaDisk::doWrite(uint64_t location)
             }
         }
 
-        // Acquire the 'outstanding IRQ' mutex.
+        // Wait for completion.
         while(true)
         {
-            if(intNumber != 0xFF)
+            // Ensure we are not busy before continuing handling.
+            status = ataWait(commandRegs, controlRegs);
+            if(status.reg.err)
             {
-                m_IrqReceived->acquire(1, 10);
-            }
-            else
-            {
-                // No IRQ line.
+                /// \todo What's the best way to handle this?
                 if(m_bDma && bDmaSetup)
                 {
-                    while(!(m_BusMaster->hasCompleted() || m_BusMaster->hasInterrupt()))
-                    {
-                        Processor::haltUntilInterrupt();
-                    }
-                }
-                else
-                {
-                    /// \todo Write non-DMA case...
-                }
-            }
-
-            if(Processor::information().getCurrentThread()->wasInterrupted())
-            {
-                // Interrupted! Fail! Assume nothing written so far.
-                WARNING("ATA: Timed out while waiting for IRQ");
-                return 0;
-            }
-            else if(m_bDma && bDmaSetup)
-            {
-                // Ensure we are not busy before we continue handling...
-                status = ataWait(commandRegs);
-                if(status.reg.err)
-                {
-                    /// \todo What's the best way to handle this?
                     m_BusMaster->commandComplete();
-                    WARNING("ATA: write failed during DMA data transfer");
-                    return 0;
+                    WARNING("ATA: read failed during DMA data transfer");
                 }
+                return false;
+            }
 
+            if(m_bDma && bDmaSetup)
+            {
                 if(m_BusMaster->hasInterrupt() || m_BusMaster->hasCompleted())
                 {
                     // commandComplete effectively resets the device state, so we need
@@ -1131,7 +1023,7 @@ uint64_t AtaDisk::doWrite(uint64_t location)
             for (int i = 0; i < nSectorsToWrite; i++)
             {
                 // Wait until !BUSY
-                status = ataWait(commandRegs);
+                status = ataWait(commandRegs, controlRegs);
                 if(status.reg.err)
                 {
                     // Ka-boom! Something went wrong :(
