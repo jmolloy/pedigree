@@ -88,9 +88,9 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
                             size_t &flags);
     virtual void setFlags(void *virtualAddress, size_t newFlags);
     virtual void unmap(void *virtualAddress);
-    virtual void *allocateStack();
-    virtual void *allocateStack(size_t stackSz);
-    virtual void freeStack(void *pStack);
+    virtual Stack *allocateStack();
+    virtual Stack *allocateStack(size_t stackSz);
+    virtual void freeStack(Stack *pStack);
 
     virtual bool memIsInHeap(void *pMem);
     virtual void *getEndOfHeap();
@@ -267,18 +267,20 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
                                       uint64_t flags);
     
     /** Allocates a stack with a given size. */
-    void *doAllocateStack(size_t sSize);
+    Stack *doAllocateStack(size_t sSize);
 
     /** Physical address of the Page Map Level 4 */
     physical_uintptr_t m_PhysicalPML4;
     /** Current top of the stacks */
     void *m_pStackTop;
     /** List of free stacks */
-    Vector<void*> m_freeStacks;
+    Vector<Stack *> m_freeStacks;
     /** Is this the kernel space? */
     bool m_bKernelSpace;
     /** Lock to guard against multiprocessor reentrancy. */
     Spinlock m_Lock;
+    /** Lock to guard against multiprocessor reentrancy for stack reuse. */
+    Spinlock m_StacksLock;
 
 
     /** The kernel virtual address space */

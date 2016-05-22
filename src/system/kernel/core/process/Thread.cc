@@ -60,8 +60,11 @@ Thread::Thread(Process *pParent, ThreadStartFunc pStartFunction, void *pParam,
   if (pStack == 0)
   {
     bUserMode = false;
-    pStack = m_StateLevels[0].m_pAuxillaryStack = m_StateLevels[0].m_pKernelStack;
+    VirtualAddressSpace::Stack *kernelStack = m_StateLevels[0].m_pAuxillaryStack = m_StateLevels[0].m_pKernelStack;
     m_StateLevels[0].m_pKernelStack = 0; // No kernel stack if kernel mode thread - causes bug on PPC
+
+    if (kernelStack)
+      pStack = kernelStack->getTop();
   }
 
   if(semiUser)
@@ -360,12 +363,12 @@ void Thread::popState()
     setKernelStack();
 }
 
-void *Thread::getStateUserStack()
+VirtualAddressSpace::Stack *Thread::getStateUserStack()
 {
     return m_StateLevels[m_nStateLevel].m_pUserStack;
 }
 
-void Thread::setStateUserStack(void *st)
+void Thread::setStateUserStack(VirtualAddressSpace::Stack *st)
 {
     m_StateLevels[m_nStateLevel].m_pUserStack = st;
 }
@@ -392,13 +395,23 @@ void *Thread::getKernelStack()
 {
     if(m_nStateLevel >= MAX_NESTED_EVENTS)
         FATAL("m_nStateLevel > MAX_NESTED_EVENTS: " << m_nStateLevel << "...");
-    return m_StateLevels[m_nStateLevel].m_pKernelStack;
+    if (m_StateLevels[m_nStateLevel].m_pKernelStack != 0)
+    {
+      return m_StateLevels[m_nStateLevel].m_pKernelStack->getTop();
+    }
+    else
+    {
+      return 0;
+    }
 }
 
 void Thread::setKernelStack()
 {
     if(m_StateLevels[m_nStateLevel].m_pKernelStack)
-        Processor::information().setKernelStack(reinterpret_cast<uintptr_t>(m_StateLevels[m_nStateLevel].m_pKernelStack));
+    {
+        uintptr_t stack = reinterpret_cast<uintptr_t>(m_StateLevels[m_nStateLevel].m_pKernelStack->getTop());
+        Processor::information().setKernelStack(stack);
+    }
 }
 
 void Thread::pokeState(size_t stateLevel, SchedulerState &state)
@@ -675,6 +688,7 @@ Thread::StateLevel::StateLevel() :
     m_InhibitMask(), m_pBlockingThread(0)
 {
     m_State = new SchedulerState;
+    ByteSet(m_State, 0, sizeof(SchedulerState));
     m_InhibitMask = new ExtensibleBitmap;
 }
 

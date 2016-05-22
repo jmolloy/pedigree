@@ -38,6 +38,8 @@ class VirtualAddressSpace
     /** Debugger can access our private members for statistics reporting. */
     friend class Debugger;
 
+    class Stack;
+
     /** The page is only accessible from kernel-mode. If this flag is not set the
      *  page is also accessible from user-mode. */
     static const size_t KernelMode    = 0x01;
@@ -125,15 +127,15 @@ class VirtualAddressSpace
     virtual void unmap(void *virtualAddress) = 0;
 
     /** Allocates a single stack for a thread. Will use the default kernel thread size. */
-    virtual void *allocateStack() = 0;
+    virtual Stack *allocateStack() = 0;
     /** Allocates a single stack of the given size for a thread. */
-    virtual void *allocateStack(size_t stackSz)
+    virtual Stack *allocateStack(size_t stackSz)
     {
         // Default implementation just ignores the stack size.
         return allocateStack();
     }
     /** Frees a stack allocated with allocateStack. */
-    virtual void freeStack(void *pStack) = 0;
+    virtual void freeStack(Stack *pStack) = 0;
 
     /** Create a new VirtualAddressSpace. Only the kernel is mapped into that virtual address
      *  space
@@ -216,6 +218,34 @@ class VirtualAddressSpace
     void *m_Heap;
     /** Pointer to the current heap end */
     void *m_HeapEnd;
+
+    /** Abstracts a stack. */
+    class Stack
+    {
+        public:
+            Stack(void *top, size_t size) : m_Top(top), m_Size(size)
+            {
+            }
+
+            void *getTop() const
+            {
+                return m_Top;
+            }
+
+            size_t getSize() const
+            {
+                return m_Size;
+            }
+
+            operator void * () const
+            {
+                return m_Top;
+            }
+
+        private:
+            void *m_Top;
+            size_t m_Size;
+    };
 
   protected:
     /** The constructor does nothing */
