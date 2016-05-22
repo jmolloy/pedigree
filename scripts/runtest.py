@@ -100,7 +100,7 @@ def main(argv):
     success = False
     serial = []
     try:
-        with Timeout(600):
+        with Timeout(300):
             last = ''
             while True:
                 serial_data = last + sock.recv(1024)
@@ -122,7 +122,15 @@ def main(argv):
                'prompt (%ds).' % (int(end - start),))
 
     # Terminate QEMU now.
-    qemu.communicate('quit\n')
+    stdout, stderr = qemu.communicate('quit\n')
+
+    # Print more help if we didn't succeed.
+    if not success:
+        print 'QEMU stdout:'
+        print stdout
+        print '--'
+        print 'QEMU stderr:'
+        print stderr
 
     # Serial socket is done - QEMU is no more.
     sock.close()
