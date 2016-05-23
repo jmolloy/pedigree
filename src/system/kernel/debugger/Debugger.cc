@@ -103,6 +103,10 @@ void Debugger::initialise()
 /// \todo OZMFGBARBIE, this needs major cleanup. Look at the state of it!! :O
 void Debugger::start(InterruptState &state, LargeStaticString &description)
 {
+#ifdef MULTIPROCESSOR
+  Machine::instance().stopAllOtherProcessors();
+#endif
+
   Log::instance() << " << Flushing log content >>" << Flush;
 #if defined(VALGRIND) || defined(HAS_SANITIZERS)
   Processor::halt();
@@ -126,9 +130,6 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
 
   // We take a copy of the interrupt state here so that we can replace it with another thread's interrupt state should we
   // decide to switch threads.
-#ifdef MULTIPROCESSOR
-  Machine::instance().stopAllOtherProcessors();
-#endif
   // The current thread, in case we decide to switch.
 #if defined(THREADS)
   Thread *pThread = Processor::information().getCurrentThread();
