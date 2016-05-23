@@ -33,13 +33,20 @@ extern Spinlock g_MallocLock;
 // This is global because we need to rely on it before the constructor is called.
 static bool g_bReady = false;
 
+#define ERROR_OR_FATAL(x) do { \
+    if (m_bFatal) \
+        FATAL_NOLOCK(x); \
+    else \
+        ERROR_NOLOCK(x); \
+} while(0)
+
 LocksCommand::LocksCommand()
-    : DebuggerCommand(), m_bAcquiring(), m_LockIndex(0)
+    : DebuggerCommand(), m_pDescriptors(), m_bAcquiring(), m_LockIndex(0), m_bFatal(true)
 {
-    ByteSet(m_pDescriptors, 0, sizeof(LockDescriptor) * MAX_DESCRIPTORS * LOCKS_COMMAND_NUM_CPU);
     for (size_t i = 0; i < LOCKS_COMMAND_NUM_CPU; ++i)
     {
         m_bAcquiring[i] = false;
+        m_NextPosition[i] = 0;
     }
 }
 
@@ -135,90 +142,93 @@ void LocksCommand::setReady()
     g_bReady = true;
 }
 
+void LocksCommand::setFatal()
+{
+    m_bFatal = true;
+}
+
+void LocksCommand::clearFatal()
+{
+    m_bFatal = false;
+}
+
 bool LocksCommand::lockAttempted(Spinlock *pLock, size_t nCpu)
 {
-    if (!g_bReady || m_bAcquiring[Processor::id()])
+    if (!g_bReady)
         return true;
-    if (nCpu == ~0)
+    if (nCpu == ~0U)
         nCpu = Processor::id();
 
-    m_bAcquiring[Processor::id()] = true;
-
-    // Get a backtrace.
-    //Backtrace bt;
-    //bt.performBpBacktrace(0, 0);
-
-    LockDescriptor *pD = 0;
-    for (int i = 0; i < MAX_DESCRIPTORS; i++)
+    size_t pos = (m_NextPosition[nCpu] += 1) - 1;
+    if (pos > MAX_DESCRIPTORS)
     {
-        if (m_pDescriptors[Processor::id()][i].used)
-        {
-            pD = &m_pDescriptors[Processor::id()][i];
-            break;
-        }
-    }
-    if (pD)
-    {
-        pD->used = true;
-        pD->pLock = pLock;
-        //MemoryCopy(&pD->ra, bt.m_pReturnAddresses, NUM_BT_FRAMES * sizeof(uintptr_t));
-        //pD->n = bt.m_nStackFrames;
-        pD->index = m_LockIndex += 1;
-        pD->attempt = true;
+        ERROR_OR_FATAL("Spinlock " << pLock << " ran out of room for locks [" << pos << "].");
+        return false;
     }
 
-    m_bAcquiring[Processor::id()] = false;
+    LockDescriptor *pD = &m_pDescriptors[nCpu][pos];
+
+    if (pD->state != Inactive)
+    {
+        ERROR_OR_FATAL("LocksCommand tracking state is corrupt.");
+        return false;
+    }
+
+    pD->pLock = pLock;
+    pD->state = Attempted;
 
     return true;
 }
 
 bool LocksCommand::lockAcquired(Spinlock *pLock, size_t nCpu)
 {
-    if (!g_bReady || m_bAcquiring[Processor::id()])
+    if (!g_bReady)
         return true;
-    if (nCpu == ~0)
+    if (nCpu == ~0U)
         nCpu = Processor::id();
 
-    m_bAcquiring[Processor::id()] = true;
-
-    LockDescriptor *pD = 0;
-    for (int i = 0; i < MAX_DESCRIPTORS; i++)
+    size_t back = m_NextPosition[nCpu] - 1;
+    if (back > MAX_DESCRIPTORS)
     {
-        if (m_pDescriptors[Processor::id()][i].pLock == pLock)
-        {
-            pD = &m_pDescriptors[Processor::id()][i];
-            break;
-        }
-    }
-    if (pD)
-    {
-        // We got the lock, this is no longer an attempt.
-        pD->attempt = false;
+        ERROR_OR_FATAL("Spinlock " << pLock << " acquired unexpectedly (no tracked locks).");
+        return false;
     }
 
-    m_bAcquiring[Processor::id()] = false;
+    LockDescriptor *pD = &m_pDescriptors[nCpu][back];
+
+    if (pD->state != Attempted || pD->pLock != pLock)
+    {
+        ERROR_OR_FATAL("Spinlock " << pLock << " acquired unexpectedly.");
+        return false;
+    }
+
+    pD->state = Acquired;
 
     return true;
 }
 
 bool LocksCommand::lockReleased(Spinlock *pLock, size_t nCpu)
 {
-    if (!g_bReady || m_bAcquiring[Processor::id()])
+    if (!g_bReady)
         return true;
-    if (nCpu == ~0)
+    if (nCpu == ~0U)
         nCpu = Processor::id();
 
     size_t back = m_NextPosition[nCpu] - 1;
-    LockDescriptor *pD = 0;
-    if (back < MAX_DESCRIPTORS)
+    if (back > MAX_DESCRIPTORS)
     {
-        pD = &m_pDescriptors[nCpu][back];
+        ERROR_OR_FATAL("Spinlock " << pLock << " released unexpectedly (no tracked locks).");
+        return false;
     }
 
-    if (pD == 0 || pD->state != Acquired || pD->pLock != pLock)
+    LockDescriptor *pD = &m_pDescriptors[nCpu][back];
+
+    if (pD->state != Acquired || pD->pLock != pLock)
     {
-        if (m_pDescriptors[Processor::id()][i].used &&
-            m_pDescriptors[Processor::id()][i].pLock == pLock)
+        // Maybe we need to unwind another CPU.
+        /// \todo not SMP-safe...
+        bool ok = false;
+        for (size_t i = 0; i < LOCKS_COMMAND_NUM_CPU; ++i)
         {
             if (i == nCpu)
                 continue;
@@ -239,12 +249,15 @@ bool LocksCommand::lockReleased(Spinlock *pLock, size_t nCpu)
 
         if (!ok)
         {
-            ERROR_OR_FATAL("Spinlock " << pLock << " released out-of-order [expected lock " << (pD ? pD->pLock : 0) << (pD ? "" : " (no lock)") << ", state " << (pD ? stateName(pD->state) : "(no state)") << "].");
+            ERROR_OR_FATAL("Spinlock " << pLock << " released out-of-order [expected lock " << pD->pLock << ", state " << stateName(pD->state) << "].");
             return false;
         }
     }
 
-    m_bAcquiring[Processor::id()] = false;
+    pD->pLock = 0;
+    pD->state = Inactive;
+
+    m_NextPosition[nCpu] -= 1;
 
     return true;
 }
@@ -253,12 +266,8 @@ bool LocksCommand::checkState(Spinlock *pLock, size_t nCpu)
 {
     if (!g_bReady)
         return true;
-    if (nCpu == ~0)
+    if (nCpu == ~0U)
         nCpu = Processor::id();
-
-    // Core 0: A, B
-    // Core 1: B, attempt A
-    // ^ Detect this.
 
     bool bResult = true;
 
@@ -269,67 +278,58 @@ bool LocksCommand::checkState(Spinlock *pLock, size_t nCpu)
             Processor::pause();
     }
 
-    // ORDERING
-    // Example: Core 0: A.acquire, B.acquire; Core 1: B.acquire, A.acquire
-    // We consider this a failed check, as neither lock can ever be released.
-    //
-    // checkState() would get called twice: on core 0, after B.acquire fails,
-    // and on core 1, after A.acquire fails.
-    //
-    // We'll have tracked an attempt for both A and B on their respective CPUs,
-    // and a successful lock on the opposite CPU.
-    //
-    // Core 0:
-    // lockAttempted(A)
-    // lockAcquired(A)
-    //
-    // Core 1:
-    // lockAttempted(B)
-    // lockAcquired(B)
-    //
-    // Core 0:
-    // lockAttempted(B)
-    // checkState(B)
-    //
-    // Core 1:
-    // lockAttempted(A)
-    // checkState(A)
-    //
-    // (fail, all cores are in "attempted" state)
-    //
-    // It'd be nice to print more information, but as a first approximation we
-    // can certainly know that, if each core is in an "attempted" state, and
-    // have been checked once (as only a failed attempt calls checkState), the
-    // system is deadlocked.
-    //
-    // Note: it should also be possible to find inversion and show the locks
-    // involved; this would require a different data structure I think (queue
-    // instead of the current model that just finds a place to fit a lock).
-
-    /*
+    // Check state of our lock against all other CPUs.
     for (size_t i = 0; i < LOCKS_COMMAND_NUM_CPU; ++i)
     {
-        // Check all locks on this CPU.
-        for (size_t j = 0; j < MAX_DESCRIPTORS; ++j)
+        if (i == nCpu)
+            continue;
+
+        bool foundLock = false;
+        LockDescriptor *pD = 0;
+        for (size_t j = 0; j < m_NextPosition[i]; ++j)
         {
-            LockDescriptor *pD = &m_pDescriptors[i][j];
-            if (pD->used)
+            pD = &m_pDescriptors[i][j];
+            if (pD->state == Inactive)
+            {
+                pD = 0;
+                break;
+            }
+
+            if (pD->pLock == pLock && pD->state == Acquired)
+            {
+                foundLock = true;
+            }
+        }
+
+        // If the most recent lock they tried is ours, we're OK.
+        if (!foundLock || !pD || pD->pLock == pLock)
+        {
+            continue;
+        }
+
+        if (pD->state != Attempted)
+        {
+            continue;
+        }
+
+        // Okay, we have an attempted lock, which we could hold.
+        for (size_t j = 0; j < m_NextPosition[nCpu]; ++j)
+        {
+            LockDescriptor *pMyD = &m_pDescriptors[nCpu][j];
+            if (pMyD->state == Inactive)
+            {
+                break;
+            }
+
+            if (pMyD->pLock == pD->pLock && pMyD->state == Acquired)
             {
                 // We hold their attempted lock. We're waiting on them.
                 // Deadlock.
                 ERROR_OR_FATAL("Detected lock dependency inversion (deadlock) between " << pLock << " and " << pD->pLock << "!");
-                bResult = false;
-                break;
+                return false;
             }
         }
-
-        // No need to keep going, we hit an error.
-        if (!bResult)
-            break;
     }
-    */
-
-    // Want to detect incorrect ordering
 
     // Done with critical section.
     for (size_t i = 0; i < LOCKS_COMMAND_NUM_CPU; ++i)

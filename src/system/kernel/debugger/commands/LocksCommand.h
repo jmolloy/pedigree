@@ -44,6 +44,7 @@
  */
 class LocksCommand : public DebuggerCommand
 {
+    friend class Spinlock;
 public:
     /**
      * Default constructor - zeroes stuff.
@@ -75,9 +76,15 @@ public:
 
     void setReady();
 
-    bool lockAttempted(Spinlock *pLock, size_t nCpu=~0);
-    bool lockAcquired(Spinlock *pLock, size_t nCpu=~0);
-    bool lockReleased(Spinlock *pLock, size_t nCpu=~0);
+    /**
+     * LocksCommand defaults to logging errors and returning failure.
+     * Call this to change it to logging fatal errors itself.
+     */
+    void setFatal();
+
+    bool lockAttempted(Spinlock *pLock, size_t nCpu=~0U);
+    bool lockAcquired(Spinlock *pLock, size_t nCpu=~0U);
+    bool lockReleased(Spinlock *pLock, size_t nCpu=~0U);
 
     /**
      * Notifies the command that we'd like to lock the given lock, allowing
@@ -85,23 +92,60 @@ public:
      * dependency inversion. This should be called after an acquire() fails,
      * as it may have undesirable overhead for the "perfect" case.
      */
-    bool checkState(Spinlock *pLock, size_t nCpu=~0);
-  
+    bool checkState(Spinlock *pLock, size_t nCpu=~0U);
+
+protected:
+    void clearFatal();
+
 private:
+    enum State
+    {
+        /// The lock is about to be attempted.
+        Attempted,
+        /// The lock is acquired.
+        Acquired,
+        /// The lock failed to be acquired, and has been checked once.
+        Checked,
+        /// This entry is no longer active.
+        Inactive,
+    };
+
+    const char *stateName(State s)
+    {
+        switch(s)
+        {
+            case Attempted:
+                return "attempted";
+            case Acquired:
+                return "acquired";
+            case Checked:
+                return "checked";
+            case Inactive:
+                return "inactive";
+            default:
+                return "unknown";
+        }
+    }
+
     struct LockDescriptor
     {
+        LockDescriptor() : pLock(0), ra(), n(0), state(Inactive)
+        {
+        }
+
         Spinlock *pLock;
         uintptr_t ra[NUM_BT_FRAMES];
         size_t n;
-        bool used;
-        bool attempt;
-        size_t index;
+        State state;
     };
 
     LockDescriptor m_pDescriptors[LOCKS_COMMAND_NUM_CPU][MAX_DESCRIPTORS];
 
     Atomic<bool> m_bAcquiring[LOCKS_COMMAND_NUM_CPU];
+    Atomic<size_t> m_NextPosition[LOCKS_COMMAND_NUM_CPU];
     Atomic<size_t> m_LockIndex;
+
+    bool m_bFatal;
 };
 
 extern LocksCommand g_LocksCommand;
