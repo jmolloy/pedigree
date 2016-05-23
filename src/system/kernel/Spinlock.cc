@@ -50,8 +50,6 @@ bool Spinlock::acquire(bool recurse, bool safe)
 {
   Thread *pThread = Processor::information().getCurrentThread();
 
-  /// \todo add a bitmap of CPUs that allows us to figure out if we've managed to get all CPUs
-
   // Save the current irq status.
 
   // This save to local variable prevents a heinous race condition where the thread is
@@ -118,6 +116,8 @@ bool Spinlock::acquire(bool recurse, bool safe)
       ++m_Level;
       break;
     }
+
+    Processor::pause();
 
 #ifdef TRACK_LOCKS
     if (!m_bAvoidTracking)
