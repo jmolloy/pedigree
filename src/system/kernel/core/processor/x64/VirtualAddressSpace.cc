@@ -153,7 +153,7 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
                                  void *virtualAddress,
                                  size_t flags)
 {
-  LockGuard<Spinlock> guard(m_Lock);
+  m_Lock.acquire();
   
   size_t Flags = toFlags(flags, true);
   size_t pml4Index = PML4_INDEX(virtualAddress);
@@ -166,8 +166,50 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
   // Is a page directory pointer table present?
   if (conditionalTableEntryAllocation(pml4Entry, flags) == false)
   {
+    m_Lock.release();
     return false;
   }
+
+  size_t pageDirectoryPointerIndex = PAGE_DIRECTORY_POINTER_INDEX(virtualAddress);
+  uint64_t *pageDirectoryPointerEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pml4Entry), pageDirectoryPointerIndex);
+
+  // Is a page directory present?
+  if (conditionalTableEntryAllocation(pageDirectoryPointerEntry, flags) == false)
+  {
+    m_Lock.release();
+    return false;
+  }
+
+  size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
+  uint64_t *pageDirectoryEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryPointerEntry), pageDirectoryIndex);
+
+  // Is a page table present?
+  if (conditionalTableEntryAllocation(pageDirectoryEntry, flags) == false)
+  {
+    m_Lock.release();
+    return false;
+  }
+
+  size_t pageTableIndex = PAGE_TABLE_INDEX(virtualAddress);
+  uint64_t *pageTableEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry), pageTableIndex);
+
+  // Is a page already present?
+  if ((*pageTableEntry & PAGE_PRESENT) == PAGE_PRESENT)
+  {
+    m_Lock.release();
+    return false;
+  }
+
+  // Map the page
+  *pageTableEntry = physAddress | Flags;
+
+  // Flush the TLB
+  Processor::invalidate(virtualAddress);
+
+  trackPages(1, 0, 0);
+
+  // We don't need the lock to propagate the PDPT.
+  m_Lock.release();
 
   // If there wasn't a PDPT already present, and the address is in the kernel area
   // of memory, we need to propagate this change across all address spaces.
@@ -185,41 +227,6 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
           *otherPml4Entry = thisPml4Entry;
       }
   }
-
-  size_t pageDirectoryPointerIndex = PAGE_DIRECTORY_POINTER_INDEX(virtualAddress);
-  uint64_t *pageDirectoryPointerEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pml4Entry), pageDirectoryPointerIndex);
-
-  // Is a page directory present?
-  if (conditionalTableEntryAllocation(pageDirectoryPointerEntry, flags) == false)
-  {
-    return false;
-  }
-
-  size_t pageDirectoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
-  uint64_t *pageDirectoryEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryPointerEntry), pageDirectoryIndex);
-
-  // Is a page table present?
-  if (conditionalTableEntryAllocation(pageDirectoryEntry, flags) == false)
-  {
-    return false;
-  }
-
-  size_t pageTableIndex = PAGE_TABLE_INDEX(virtualAddress);
-  uint64_t *pageTableEntry = TABLE_ENTRY(PAGE_GET_PHYSICAL_ADDRESS(pageDirectoryEntry), pageTableIndex);
-
-  // Is a page already present?
-  if ((*pageTableEntry & PAGE_PRESENT) == PAGE_PRESENT)
-  {
-    return false;
-  }
-
-  // Map the page
-  *pageTableEntry = physAddress | Flags;
-
-  // Flush the TLB
-  Processor::invalidate(virtualAddress);
-
-  trackPages(1, 0, 0);
 
   return true;
 }
