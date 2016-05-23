@@ -56,7 +56,7 @@ struct _ListNode_t
   T value;
 };
 
-template<class T>
+template<class T, size_t nodePoolSize = 16>
 class List
 {
   /** The data structure of the list's nodes */
@@ -173,51 +173,51 @@ class List
     uint32_t m_Magic;
 
     /** Pool of node objects (to reduce impact of lots of node allocs/deallocs). */
-    ObjectPool<node_t> m_NodePool;
+    ObjectPool<node_t, nodePoolSize> m_NodePool;
 };
 
 //
 // List<T> implementation
 //
 
-template <typename T>
-List<T>::List()
+template <typename T, size_t nodePoolSize>
+List<T, nodePoolSize>::List()
     : m_Count(0), m_First(0), m_Last(0), m_Magic(0x1BADB002), m_NodePool()
 {
 }
 
-template <typename T>
-List<T>::List(const List &x)
+template <typename T, size_t nodePoolSize>
+List<T, nodePoolSize>::List(const List &x)
     : m_Count(0), m_First(0), m_Last(0), m_Magic(0x1BADB002), m_NodePool()
 {
   assign(x);
 }
-template <typename T>
-List<T>::~List()
+template <typename T, size_t nodePoolSize>
+List<T, nodePoolSize>::~List()
 {
     assert (m_Magic == 0x1BADB002);
     clear();
 }
 
-template <typename T>
-List<T> &List<T>::operator = (const List &x)
+template <typename T, size_t nodePoolSize>
+List<T, nodePoolSize> &List<T, nodePoolSize>::operator = (const List &x)
 {
   assign(x);
   return *this;
 }
 
-template <typename T>
-size_t List<T>::size() const
+template <typename T, size_t nodePoolSize>
+size_t List<T, nodePoolSize>::size() const
 {
   return m_Count;
 }
-template <typename T>
-size_t List<T>::count() const
+template <typename T, size_t nodePoolSize>
+size_t List<T, nodePoolSize>::count() const
 {
   return m_Count;
 }
-template <typename T>
-void List<T>::pushBack(T value)
+template <typename T, size_t nodePoolSize>
+void List<T, nodePoolSize>::pushBack(T value)
 {
   node_t *newNode = m_NodePool.allocate();
   newNode->m_Next = 0;
@@ -232,8 +232,8 @@ void List<T>::pushBack(T value)
   m_Last = newNode;
   ++m_Count;
 }
-template <typename T>
-T List<T>::popBack()
+template <typename T, size_t nodePoolSize>
+T List<T, nodePoolSize>::popBack()
 {
   // Handle an extremely unusual case
   if(!m_Last && !m_First)
@@ -255,8 +255,8 @@ T List<T>::popBack()
   m_NodePool.deallocate(node);
   return value;
 }
-template <typename T>
-void List<T>::pushFront(T value)
+template <typename T, size_t nodePoolSize>
+void List<T, nodePoolSize>::pushFront(T value)
 {
   node_t *newNode = m_NodePool.allocate();
   newNode->m_Next = m_First;
@@ -271,8 +271,8 @@ void List<T>::pushFront(T value)
   m_First = newNode;
   ++m_Count;
 }
-template <typename T>
-T List<T>::popFront()
+template <typename T, size_t nodePoolSize>
+T List<T, nodePoolSize>::popFront()
 {
   // Handle an extremely unusual case
   if(!m_Last && !m_First)
@@ -294,8 +294,8 @@ T List<T>::popFront()
   m_NodePool.deallocate(node);
   return value;
 }
-template <typename T>
-typename List<T>::Iterator List<T>::erase(Iterator &Iter)
+template <typename T, size_t nodePoolSize>
+typename List<T, nodePoolSize>::Iterator List<T, nodePoolSize>::erase(Iterator &Iter)
 {
   node_t *Node = Iter.__getNode();
   if (Node->m_Previous == 0)
@@ -315,8 +315,8 @@ typename List<T>::Iterator List<T>::erase(Iterator &Iter)
   return tmp;
 }
 
-template <typename T>
-typename List<T>::ReverseIterator List<T>::erase(ReverseIterator &Iter)
+template <typename T, size_t nodePoolSize>
+typename List<T, nodePoolSize>::ReverseIterator List<T, nodePoolSize>::erase(ReverseIterator &Iter)
 {
   node_t *Node = Iter.__getNode();
   if (Node->m_Next == 0)
@@ -336,8 +336,8 @@ typename List<T>::ReverseIterator List<T>::erase(ReverseIterator &Iter)
   return tmp;
 }
 
-template <typename T>
-void List<T>::clear()
+template <typename T, size_t nodePoolSize>
+void List<T, nodePoolSize>::clear()
 {
   node_t *cur = m_First;
   for (size_t i = 0;i < m_Count;i++)
@@ -351,8 +351,8 @@ void List<T>::clear()
   m_First = 0;
   m_Last = 0;
 }
-template <typename T>
-void List<T>::assign(const List &x)
+template <typename T, size_t nodePoolSize>
+void List<T, nodePoolSize>::assign(const List &x)
 {
   if (m_Count != 0)clear();
 

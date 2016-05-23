@@ -59,6 +59,11 @@ class ObjectPool
         template <typename... Args>
         T *allocate(Args... args)
         {
+            if (!poolSize)
+            {
+                return new T(args...);
+            }
+
 #ifdef THREADS
             LockGuard<Spinlock> guard(m_Spinlock);
 #endif
@@ -77,6 +82,12 @@ class ObjectPool
 
         void deallocate(T *object)
         {
+            if (!poolSize)
+            {
+                delete object;
+                return;
+            }
+
 #ifdef THREADS
             LockGuard<Spinlock> guard(m_Spinlock);
 #endif
