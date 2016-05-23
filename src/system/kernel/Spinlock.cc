@@ -21,8 +21,6 @@
 #include <processor/Processor.h>
 #include <process/Thread.h>
 
-#define TRACK_LOCKS
-
 #ifdef TRACK_LOCKS
 #include <LocksCommand.h>
 #endif
@@ -75,8 +73,16 @@ bool Spinlock::acquire(bool recurse, bool safe)
   }
 
 #ifdef TRACK_LOCKS
-//  if (!m_bAvoidTracking)
-      g_LocksCommand.lockAttempted(this);
+  if (!m_bAvoidTracking)
+  {
+    g_LocksCommand.clearFatal();
+    if (!g_LocksCommand.lockAttempted(this))
+    {
+      uintptr_t myra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+      FATAL_NOLOCK("Spinlock: LocksCommand disallows this acquire [return=" << myra << "].");
+    }
+    g_LocksCommand.setFatal();
+  }
 #endif
 
   bool bPrintedSpin = false;
@@ -114,11 +120,16 @@ bool Spinlock::acquire(bool recurse, bool safe)
     }
 
 #ifdef TRACK_LOCKS
-//  if (!m_bAvoidTracking)
+    if (!m_bAvoidTracking)
+    {
+      g_LocksCommand.clearFatal();
       if (!g_LocksCommand.checkState(this))
       {
-        FATAL_NOLOCK("Spinlock: LocksCommand disallows this acquire.");
+        uintptr_t myra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+        FATAL_NOLOCK("Spinlock: LocksCommand failed a state check [return=" << myra << "].");
       }
+      g_LocksCommand.setFatal();
+    }
 #endif
 
 #ifdef MULTIPROCESSOR
@@ -161,8 +172,16 @@ bool Spinlock::acquire(bool recurse, bool safe)
   m_Ra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
 
 #ifdef TRACK_LOCKS
-//  if (!m_bAvoidTracking)
-      g_LocksCommand.lockAcquired(this);
+  if (!m_bAvoidTracking)
+  {
+    g_LocksCommand.clearFatal();
+    if (!g_LocksCommand.lockAcquired(this))
+    {
+      uintptr_t myra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+      FATAL_NOLOCK("Spinlock: LocksCommand disallows this acquire [return=" << myra << "].");
+    }
+    g_LocksCommand.setFatal();
+  }
 #endif
 
   if (recurse && !m_bOwned)
@@ -232,8 +251,16 @@ void Spinlock::exit()
   }
 
 #ifdef TRACK_LOCKS
-//  if (!m_bAvoidTracking)
-    g_LocksCommand.lockReleased(this);
+  if (!m_bAvoidTracking)
+  {
+    g_LocksCommand.clearFatal();
+    if (!g_LocksCommand.lockReleased(this))
+    {
+      uintptr_t myra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+      FATAL_NOLOCK("Spinlock: LocksCommand disallows this release [return=" << myra << "].");
+    }
+    g_LocksCommand.setFatal();
+  }
 #endif
 }
 

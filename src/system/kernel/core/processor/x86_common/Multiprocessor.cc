@@ -44,8 +44,10 @@
   #error Neither ACPI nor SMP defined
 #endif
 
-Spinlock Multiprocessor::m_ProcessorLock1;
-Spinlock Multiprocessor::m_ProcessorLock2(true);
+// Don't track these locks - they are never going to be "correct" (they are for
+// synchronisation, not for protecting a specific resource).
+Spinlock Multiprocessor::m_ProcessorLock1(false, true);
+Spinlock Multiprocessor::m_ProcessorLock2(true, true);
 
 size_t Multiprocessor::initialise1()
 {
@@ -137,7 +139,7 @@ size_t Multiprocessor::initialise1()
       // Set trampoline stack
       *trampolineStack = reinterpret_cast<uintptr_t>(pStack->getTop());
         
-      NOTICE(" Booting processor #" << Dec << (*Processors)[i]->processorId << ", stack at 0x" << Hex << reinterpret_cast<uintptr_t>(pStack));
+      NOTICE(" Booting processor #" << Dec << (*Processors)[i]->processorId << ", stack at 0x" << Hex << reinterpret_cast<uintptr_t>(pStack->getTop()));
 
       /// \todo 10 ms delay between INIT IPI and Startup IPI, and we may need to
       ///       send the Startup IPI twice on some hardware.
