@@ -29,10 +29,14 @@
 #define NUM_BT_FRAMES 6
 #define MAX_DESCRIPTORS 50
 
+#ifdef TESTSUITE
+#define LOCKS_COMMAND_NUM_CPU 4
+#else
 #ifdef MULTIPROCESSOR
 #define LOCKS_COMMAND_NUM_CPU 255
 #else
 #define LOCKS_COMMAND_NUM_CPU 1
+#endif
 #endif
 
 /**
@@ -71,9 +75,9 @@ public:
 
     void setReady();
 
-    void lockAttempted(Spinlock *pLock);
-    void lockAcquired(Spinlock *pLock);
-    void lockReleased(Spinlock *pLock);
+    bool lockAttempted(Spinlock *pLock, size_t nCpu=~0);
+    bool lockAcquired(Spinlock *pLock, size_t nCpu=~0);
+    bool lockReleased(Spinlock *pLock, size_t nCpu=~0);
 
     /**
      * Notifies the command that we'd like to lock the given lock, allowing
@@ -81,7 +85,7 @@ public:
      * dependency inversion. This should be called after an acquire() fails,
      * as it may have undesirable overhead for the "perfect" case.
      */
-    bool checkState(Spinlock *pLock);
+    bool checkState(Spinlock *pLock, size_t nCpu=~0);
   
 private:
     struct LockDescriptor

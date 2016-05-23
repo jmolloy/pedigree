@@ -20,13 +20,15 @@
 #include "LocksCommand.h"
 #include <utilities/utility.h>
 #include <processor/Processor.h>
-#include <linker/KernelElf.h>
+// #include <linker/KernelElf.h>
 #include <utilities/demangle.h>
 #include <processor/Processor.h>
-#include <Backtrace.h>
+// #include <Backtrace.h>
 
 LocksCommand g_LocksCommand;
+#ifndef TESTSUITE
 extern Spinlock g_MallocLock;
+#endif
 
 // This is global because we need to rely on it before the constructor is called.
 static bool g_bReady = false;
@@ -133,10 +135,12 @@ void LocksCommand::setReady()
     g_bReady = true;
 }
 
-void LocksCommand::lockAttempted(Spinlock *pLock)
+bool LocksCommand::lockAttempted(Spinlock *pLock, size_t nCpu)
 {
     if (!g_bReady || m_bAcquiring[Processor::id()])
-        return;
+        return true;
+    if (nCpu == ~0)
+        nCpu = Processor::id();
 
     m_bAcquiring[Processor::id()] = true;
 
@@ -164,12 +168,16 @@ void LocksCommand::lockAttempted(Spinlock *pLock)
     }
 
     m_bAcquiring[Processor::id()] = false;
+
+    return true;
 }
 
-void LocksCommand::lockAcquired(Spinlock *pLock)
+bool LocksCommand::lockAcquired(Spinlock *pLock, size_t nCpu)
 {
     if (!g_bReady || m_bAcquiring[Processor::id()])
-        return;
+        return true;
+    if (nCpu == ~0)
+        nCpu = Processor::id();
 
     m_bAcquiring[Processor::id()] = true;
 
@@ -189,29 +197,65 @@ void LocksCommand::lockAcquired(Spinlock *pLock)
     }
 
     m_bAcquiring[Processor::id()] = false;
+
+    return true;
 }
 
-void LocksCommand::lockReleased(Spinlock *pLock)
+bool LocksCommand::lockReleased(Spinlock *pLock, size_t nCpu)
 {
     if (!g_bReady || m_bAcquiring[Processor::id()])
-        return;
+        return true;
+    if (nCpu == ~0)
+        nCpu = Processor::id();
 
-    m_bAcquiring[Processor::id()] = true;
+    size_t back = m_NextPosition[nCpu] - 1;
+    LockDescriptor *pD = 0;
+    if (back < MAX_DESCRIPTORS)
+    {
+        pD = &m_pDescriptors[nCpu][back];
+    }
 
-    for (int i = 0; i < MAX_DESCRIPTORS; i++)
+    if (pD == 0 || pD->state != Acquired || pD->pLock != pLock)
     {
         if (m_pDescriptors[Processor::id()][i].used &&
             m_pDescriptors[Processor::id()][i].pLock == pLock)
         {
-            m_pDescriptors[Processor::id()][i].used = false;
+            if (i == nCpu)
+                continue;
+
+            back = m_NextPosition[i] - 1;
+            if (back < MAX_DESCRIPTORS)
+            {
+                LockDescriptor *pCheckD = &m_pDescriptors[i][back];
+                if (pCheckD->state == Acquired && pCheckD->pLock == pLock)
+                {
+                    nCpu = i;
+                    ok = true;
+                    pD = pCheckD;
+                    break;
+                }
+            }
+        }
+
+        if (!ok)
+        {
+            ERROR_OR_FATAL("Spinlock " << pLock << " released out-of-order [expected lock " << (pD ? pD->pLock : 0) << (pD ? "" : " (no lock)") << ", state " << (pD ? stateName(pD->state) : "(no state)") << "].");
+            return false;
         }
     }
 
     m_bAcquiring[Processor::id()] = false;
+
+    return true;
 }
 
-bool LocksCommand::checkState(Spinlock *pLock)
+bool LocksCommand::checkState(Spinlock *pLock, size_t nCpu)
 {
+    if (!g_bReady)
+        return true;
+    if (nCpu == ~0)
+        nCpu = Processor::id();
+
     // Core 0: A, B
     // Core 1: B, attempt A
     // ^ Detect this.
@@ -262,6 +306,7 @@ bool LocksCommand::checkState(Spinlock *pLock)
     // involved; this would require a different data structure I think (queue
     // instead of the current model that just finds a place to fit a lock).
 
+    /*
     for (size_t i = 0; i < LOCKS_COMMAND_NUM_CPU; ++i)
     {
         // Check all locks on this CPU.
@@ -270,13 +315,19 @@ bool LocksCommand::checkState(Spinlock *pLock)
             LockDescriptor *pD = &m_pDescriptors[i][j];
             if (pD->used)
             {
-                if (pD->lock == pLock)
-                {
-                    //
-                }
+                // We hold their attempted lock. We're waiting on them.
+                // Deadlock.
+                ERROR_OR_FATAL("Detected lock dependency inversion (deadlock) between " << pLock << " and " << pD->pLock << "!");
+                bResult = false;
+                break;
             }
         }
+
+        // No need to keep going, we hit an error.
+        if (!bResult)
+            break;
     }
+    */
 
     // Want to detect incorrect ordering
 

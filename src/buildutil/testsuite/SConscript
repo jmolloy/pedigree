@@ -35,6 +35,8 @@ header_paths = [
     env.Dir('#src/system/include'),
     env.Dir('#external/googletest/googletest/include'),
     env.Dir('#src/system/kernel/core'),
+    env.Dir('#src/system/kernel'),
+    env.Dir('#src/system/kernel/debugger'),
 ]
 
 build_env.Append(CPPPATH=header_paths)
@@ -64,10 +66,13 @@ coverage_env.MergeFlags({
 libnetwork_stack = coverage_env.StaticLibrary('network-stack', [
     '../../modules/system/network-stack/TcpMisc.cc',
 ])
+libdebugger = coverage_env.StaticLibrary('debugger', [
+    '../../system/kernel/debugger/commands/LocksCommand.cc',
+])
 
 coverage_env.Program(testsuite_bin, Glob('test-*.cc'),
-                     LIBS=[libnetwork_stack, 'utility_coverage', 'gtest',
-                           'pthread'])
+                     LIBS=[libnetwork_stack, libdebugger, 'utility_coverage',
+                           'gtest', 'pthread'])
 
 if build_env['HAVE_BENCHMARK']:
     build_env.MergeFlags({
