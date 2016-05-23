@@ -125,6 +125,36 @@ TEST_F(PedigreeLocksCommand, Inversion)
     EXPECT_TRUE(TestLocksCommand.lockAttempted(LOCK_A, CPU_2));
     ASSERT_DEATH(TestLocksCommand.checkState(LOCK_A, CPU_2),
                  "PANIC: Detected lock dependency inversion \\(deadlock\\) between 1 and 2!");
+
+    // checkState on the other CPU should now break too.
+    ASSERT_DEATH(TestLocksCommand.checkState(LOCK_B, CPU_1),
+                 "PANIC: Detected lock dependency inversion \\(deadlock\\) between 2 and 1!");
+}
+
+TEST_F(PedigreeLocksCommand, Inversion2)
+{
+    // acquire(A) - CPU 2
+    EXPECT_TRUE(TestLocksCommand.lockAttempted(LOCK_A, CPU_2));
+    EXPECT_TRUE(TestLocksCommand.lockAcquired(LOCK_A, CPU_2));
+
+    // acquire(B) - CPU 1
+    EXPECT_TRUE(TestLocksCommand.lockAttempted(LOCK_B, CPU_1));
+    EXPECT_TRUE(TestLocksCommand.lockAcquired(LOCK_B, CPU_1));
+
+    // acquire(A) - CPU 1
+    EXPECT_TRUE(TestLocksCommand.lockAttempted(LOCK_A, CPU_1));
+    EXPECT_TRUE(TestLocksCommand.checkState(LOCK_A, CPU_1));
+
+    // acquire(B) - CPU 2 - fails, due to inversion
+    // Because CPU 1 holds A, and CPU 2 holds B, we're in deadlock; neither CPU
+    // is able to continue.
+    EXPECT_TRUE(TestLocksCommand.lockAttempted(LOCK_B, CPU_2));
+    ASSERT_DEATH(TestLocksCommand.checkState(LOCK_B, CPU_2),
+                 "PANIC: Detected lock dependency inversion \\(deadlock\\) between 2 and 1!");
+
+    // checkState on the other CPU should now break too.
+    ASSERT_DEATH(TestLocksCommand.checkState(LOCK_A, CPU_1),
+                 "PANIC: Detected lock dependency inversion \\(deadlock\\) between 1 and 2!");
 }
 
 TEST_F(PedigreeLocksCommand, AlmostInversion)
