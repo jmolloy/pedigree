@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -73,9 +72,6 @@ Thread *RoundRobin::getNext(Thread *pCurrentThread)
 
             if (pThread)
             {
-                // Sanity check
-                if(pThread != pCurrentThread)
-                    pThread->getLock().acquire();
                 return pThread;
             }
         }

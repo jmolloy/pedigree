@@ -114,6 +114,7 @@ opts.AddVariables(
     BoolVariable('memory_log', 'If 1, memory logging on the second serial line is enabled.', 1),
     BoolVariable('memory_log_inline', 'If 1, memory logging will be output alongside conventional serial output.', 0),
     BoolVariable('memory_tracing', 'If 1, trace memory allocations and frees (for statistics and for leak detection) on the second serial line. EXCEPTIONALLY SLOW.', 0),
+    BoolVariable('track_locks', 'If 1, track spinlocks and ensure they are released in the order they are acquired. Also does some basic deadlock detection.', 0),
     
     BoolVariable('multiprocessor', 'If 1, multiprocessor support is compiled in to the kernel.', 1),
     BoolVariable('apic', 'If 1, APIC support will be built in (not to be confused with ACPI).', 0),
