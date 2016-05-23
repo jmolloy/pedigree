@@ -40,7 +40,12 @@ Scheduler Scheduler::m_Instance;
 
 // Scheduler can be used at times where it is not yet safe to do the useful
 // "safer" Spinlock deadlock detection.
-#define SCHEDULER_SAFE_SPINLOCKS    true
+#define SCHEDULER_HAS_SAFE_SPINLOCKS    true
+
+// Do we allow recursing in the Scheduler lock? Note that the lock surrounds
+// memory operations (editing a List<T>), so if e.g. VirtualAddressSpace depends
+// on Scheduler, you need to recurse.
+#define SCHEDULER_HAS_RECURSIVE_SPINLOCKS true
 
 Scheduler::Scheduler() :
     m_Processes(), m_NextPid(0), m_PTMap(), m_TPMap(), m_pKernelProcess(0),
@@ -82,14 +87,14 @@ bool Scheduler::initialise(Process *pKernelProcess)
 
 void Scheduler::addThread(Thread *pThread, PerProcessorScheduler &PPSched)
 {
-    m_SchedulerLock.acquire(false, SCHEDULER_SAFE_SPINLOCKS);
+    m_SchedulerLock.acquire(SCHEDULER_HAS_RECURSIVE_SPINLOCKS, SCHEDULER_HAS_SAFE_SPINLOCKS);
     m_TPMap.insert(pThread, &PPSched);
     m_SchedulerLock.release();
 }
 
 void Scheduler::removeThread(Thread *pThread)
 {
-    m_SchedulerLock.acquire(false, SCHEDULER_SAFE_SPINLOCKS);
+    m_SchedulerLock.acquire(SCHEDULER_HAS_RECURSIVE_SPINLOCKS, SCHEDULER_HAS_SAFE_SPINLOCKS);
     PerProcessorScheduler *pPpSched = m_TPMap.lookup(pThread);
     if (pPpSched)
     {
@@ -101,7 +106,7 @@ void Scheduler::removeThread(Thread *pThread)
 
 bool Scheduler::threadInSchedule(Thread *pThread)
 {
-    m_SchedulerLock.acquire(false, SCHEDULER_SAFE_SPINLOCKS);
+    m_SchedulerLock.acquire(SCHEDULER_HAS_RECURSIVE_SPINLOCKS, SCHEDULER_HAS_SAFE_SPINLOCKS);
     PerProcessorScheduler *pPpSched = m_TPMap.lookup(pThread);
     m_SchedulerLock.release();
     return pPpSched != 0;
@@ -109,7 +114,7 @@ bool Scheduler::threadInSchedule(Thread *pThread)
 
 size_t Scheduler::addProcess(Process *pProcess)
 {
-  m_SchedulerLock.acquire(false, SCHEDULER_SAFE_SPINLOCKS);
+  m_SchedulerLock.acquire(SCHEDULER_HAS_RECURSIVE_SPINLOCKS, SCHEDULER_HAS_SAFE_SPINLOCKS);
   m_Processes.pushBack(pProcess);
   size_t result = m_NextPid += 1;
   m_SchedulerLock.release();
@@ -118,7 +123,7 @@ size_t Scheduler::addProcess(Process *pProcess)
 
 void Scheduler::removeProcess(Process *pProcess)
 {
-  m_SchedulerLock.acquire(false, SCHEDULER_SAFE_SPINLOCKS);
+  m_SchedulerLock.acquire(SCHEDULER_HAS_RECURSIVE_SPINLOCKS, SCHEDULER_HAS_SAFE_SPINLOCKS);
   for(List<Process*>::Iterator it = m_Processes.begin();
       it != m_Processes.end();
       it++)
@@ -139,7 +144,7 @@ void Scheduler::yield()
 
 size_t Scheduler::getNumProcesses()
 {
-  m_SchedulerLock.acquire(false, SCHEDULER_SAFE_SPINLOCKS);
+  m_SchedulerLock.acquire(SCHEDULER_HAS_RECURSIVE_SPINLOCKS, SCHEDULER_HAS_SAFE_SPINLOCKS);
   size_t result = m_Processes.count();
   m_SchedulerLock.release();
   return result;
@@ -147,7 +152,7 @@ size_t Scheduler::getNumProcesses()
 
 Process *Scheduler::getProcess(size_t n)
 {
-  m_SchedulerLock.acquire(false, SCHEDULER_SAFE_SPINLOCKS);
+  m_SchedulerLock.acquire(SCHEDULER_HAS_RECURSIVE_SPINLOCKS, SCHEDULER_HAS_SAFE_SPINLOCKS);
   if (n >= m_Processes.count())
   {
     WARNING("Scheduler::getProcess(" << Dec << n << ") parameter outside range.");
@@ -175,7 +180,7 @@ Process *Scheduler::getProcess(size_t n)
 
 void Scheduler::threadStatusChanged(Thread *pThread)
 {
-    m_SchedulerLock.acquire(false, SCHEDULER_SAFE_SPINLOCKS);
+    m_SchedulerLock.acquire(SCHEDULER_HAS_RECURSIVE_SPINLOCKS, SCHEDULER_HAS_SAFE_SPINLOCKS);
     PerProcessorScheduler *pSched = m_TPMap.lookup(pThread);
     assert(pSched);
     m_SchedulerLock.release();
