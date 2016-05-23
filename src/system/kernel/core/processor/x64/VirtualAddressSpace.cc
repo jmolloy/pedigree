@@ -712,7 +712,7 @@ X64VirtualAddressSpace::~X64VirtualAddressSpace()
 X64VirtualAddressSpace::X64VirtualAddressSpace()
   : VirtualAddressSpace(USERSPACE_VIRTUAL_HEAP), m_PhysicalPML4(0),
     m_pStackTop(USERSPACE_VIRTUAL_STACK), m_freeStacks(), m_bKernelSpace(false),
-    m_Lock(false, true), m_StacksLock(false)
+    m_Lock(false, false), m_StacksLock(false)
 {
 
   // Allocate a new PageMapLevel4
@@ -733,7 +733,7 @@ X64VirtualAddressSpace::X64VirtualAddressSpace()
 X64VirtualAddressSpace::X64VirtualAddressSpace(void *Heap, physical_uintptr_t PhysicalPML4, void *VirtualStack)
   : VirtualAddressSpace(Heap), m_PhysicalPML4(PhysicalPML4),
     m_pStackTop(VirtualStack), m_freeStacks(), m_bKernelSpace(true),
-    m_Lock(false, true), m_StacksLock(false)
+    m_Lock(false, false), m_StacksLock(false)
 {
 }
 
