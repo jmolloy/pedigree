@@ -67,6 +67,7 @@ libnetwork_stack = coverage_env.StaticLibrary('network-stack', [
     '../../modules/system/network-stack/TcpMisc.cc',
 ])
 libdebugger = coverage_env.StaticLibrary('debugger', [
+    '../../system/kernel/debugger/Scrollable.cc',
     '../../system/kernel/debugger/commands/LocksCommand.cc',
 ])
 

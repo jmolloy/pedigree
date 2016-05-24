@@ -74,7 +74,7 @@ bool Spinlock::acquire(bool recurse, bool safe)
   if (!m_bAvoidTracking)
   {
     g_LocksCommand.clearFatal();
-    if (!g_LocksCommand.lockAttempted(this))
+    if (!g_LocksCommand.lockAttempted(this, bInterrupts))
     {
       uintptr_t myra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
       FATAL_NOLOCK("Spinlock: LocksCommand disallows this acquire [return=" << myra << "].");
@@ -175,7 +175,7 @@ bool Spinlock::acquire(bool recurse, bool safe)
   if (!m_bAvoidTracking)
   {
     g_LocksCommand.clearFatal();
-    if (!g_LocksCommand.lockAcquired(this))
+    if (!g_LocksCommand.lockAcquired(this, bInterrupts))
     {
       uintptr_t myra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
       FATAL_NOLOCK("Spinlock: LocksCommand disallows this acquire [return=" << myra << "].");
