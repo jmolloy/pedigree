@@ -44,6 +44,8 @@
     __asm__ __volatile__("outb %1, %0" :: "Nd" (x), "a" (s_[i])); \
 } while(0)
 
+#define ENABLE_CPU_LOG 0
+
 static Atomic<size_t> x(0);
 
 bool Spinlock::acquire(bool recurse, bool safe)
@@ -83,6 +85,7 @@ bool Spinlock::acquire(bool recurse, bool safe)
   }
 #endif
 
+#if ENABLE_CPU_LOG
   bool bPrintedSpin = false;
 
   HugeStaticString str;
@@ -97,8 +100,11 @@ bool Spinlock::acquire(bool recurse, bool safe)
   str.append(x += 1);
   str << "\n";
   CPU_LOG(str);
+#endif
+
   while (m_Atom.compareAndSwap(true, false) == false)
   {
+#if ENABLE_CPU_LOG
     if (!bPrintedSpin)
     {
       str.clear();
@@ -109,6 +115,8 @@ bool Spinlock::acquire(bool recurse, bool safe)
 
       bPrintedSpin = true;
     }
+#endif
+
     // Couldn't take the lock - can we re-enter the critical section?
     if (m_bOwned && (m_pOwner == pThread) && recurse)
     {
@@ -227,6 +235,7 @@ void Spinlock::exit()
   m_bOwned = false;
   m_OwnedProcessor = ~0;
 
+#if ENABLE_CPU_LOG
   HugeStaticString str;
   str << "Spinlock: release [";
   str.append(reinterpret_cast<uintptr_t>(this), 16);
@@ -235,6 +244,8 @@ void Spinlock::exit()
   str << ", " << Processor::id() << "]";
   str << "\n";
   CPU_LOG(str);
+#endif
+
   if (m_Atom.compareAndSwap(false, true) == false)
   {
     /// \note When we hit this breakpoint, we're not able to backtrace as backtracing
