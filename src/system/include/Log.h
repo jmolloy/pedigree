@@ -43,22 +43,24 @@
 #endif
 
 #if SHOW_FILE_IN_LOGS
-#define FILE_LOG(level) \
+#define FILE_LOG(entry, level) \
   do \
   { \
-    Log::instance() << level << __FILE__ << ":" << Dec << __LINE__ << Hex << " " << __FUNCTION__ << " -- "; \
+    entry << level << __FILE__ << ":" << Dec << __LINE__ << Hex << " " << __FUNCTION__ << " -- "; \
   } while(0)
 #else
-#define FILE_LOG(level)
+#define FILE_LOG(entry, level)
 #endif
 
 #define LOG_AT_LEVEL(level, text, lock) \
   do \
   { \
+    Log::LogEntry entry; \
+    FILE_LOG(entry, level); \
+    entry << level << text; \
     if (lock) \
       LOG_LOCK_ACQUIRE; \
-    FILE_LOG(level); \
-    Log::instance() << level << text << Flush; \
+    Log::instance() << entry << Flush; \
     if (lock) \
       LOG_LOCK_RELEASE; \
   } \
@@ -156,6 +158,7 @@ extern void installSerialLogger();
 class Log
 {
 public:
+  struct LogEntry;
 
   /** Output callback function type. Inherit and implement callback to use. */
   class LogCallback
@@ -198,31 +201,9 @@ public:
   /** Removes an output callback */
   void removeCallback(LogCallback *pCallback);
 
-  /** Adds an entry to the log.
-   *\param[in] str the null-terminated ASCII string that should be added */
-  Log &operator<< (const char *str);
-  Log &operator<< (String str);
-  /** Adds an entry to the log
-   *\param[in] str the null-terminated ASCII string that should be added */
-  inline Log &operator<< (char *str)
-    {return (*this) << (reinterpret_cast<const char*>(str));}
-  /** Adds an entry to the log
-   *\param[in] b boolean value */
-  Log &operator<< (bool b);
-  /** Adds an entry to the log
-   *\param[in] p pointer value */
-  template<class T>
-  Log &operator<< (T *p)
-    {return (*this) << (reinterpret_cast<uintptr_t>(p));}
-  /** Adds an entry to the log (integer type)
-   *\param[in] n the number */
-  template<class T>
-  Log &operator << (T n);
+  /** Adds an entry to the log. */
+  Log &operator << (const LogEntry &entry);
 
-  /** Starts an entry in the log. */
-  Log &operator<< (SeverityLevel level);
-  /** Changes the number type between hex and decimal. */
-  Log &operator<< (NumberType type);
   /** Modifier */
   Log &operator<< (Modifier type);
 
@@ -240,8 +221,11 @@ public:
   struct LogEntry
   {
     /** Constructor does nothing */
-    inline LogEntry()
-     : timestamp(), type(), str(){}
+    inline LogEntry() :
+      timestamp(), type(), str(), numberType(Dec)
+    {
+
+    }
 
     /** The time (since boot) that this log entry was added, in ticks. */
     unsigned int timestamp;
@@ -249,6 +233,34 @@ public:
     SeverityLevel type;
     /** The actual entry text. */
     StaticString<LOG_LENGTH> str;
+    /** The number type mode that we are in. */
+    NumberType numberType;
+
+    /** Adds an entry to the log.
+     *\param[in] str the null-terminated ASCII string that should be added */
+    LogEntry &operator<< (const char *);
+    LogEntry &operator<< (const String &);
+    /** Adds an entry to the log
+     *\param[in] str the null-terminated ASCII string that should be added */
+    inline LogEntry &operator<< (char *str)
+      {return (*this) << (reinterpret_cast<const char*>(str));}
+    /** Adds an entry to the log
+     *\param[in] b boolean value */
+    LogEntry &operator<< (bool b);
+    /** Adds an entry to the log
+     *\param[in] p pointer value */
+    template<class T>
+    LogEntry &operator<< (T *p)
+      {return (*this) << (reinterpret_cast<uintptr_t>(p));}
+    /** Adds an entry to the log (integer type)
+     *\param[in] n the number */
+    template<class T>
+    LogEntry &operator << (T n);
+
+    /** Starts an entry in the log. */
+    LogEntry &operator<< (SeverityLevel level);
+    /** Changes the number type between hex and decimal. */
+    LogEntry &operator<< (NumberType type);
   };
 
   /** Type of a static log entry (no memory-management involved) */
@@ -291,9 +303,6 @@ private:
 
   /** Temporary buffer which gets filled by calls to operator<<, and flushed by << Flush. */
   StaticLogEntry m_Buffer;
-
-  /** The number type mode that we are in. */
-  NumberType m_NumberType;
 
   /** If we should output to serial */
   bool m_EchoToSerial;
