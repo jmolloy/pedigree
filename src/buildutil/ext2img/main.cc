@@ -138,6 +138,8 @@ bool writeFile(std::string source, std::string dest)
         }
     }
 
+    delete [] buffer;
+
     return true;
 }
 
@@ -254,6 +256,9 @@ bool verifyFile(std::string source, std::string target)
             offset += readCount;
         }
     }
+
+    delete [] bufferA;
+    delete [] bufferB;
 
     return true;
 }
