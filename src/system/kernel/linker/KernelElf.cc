@@ -355,7 +355,7 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
     module->exit = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleExit"));
     module->depends = reinterpret_cast<const char **> (module->elf.lookupSymbol("g_pDepends"));
     module->depends_opt = reinterpret_cast<const char **> (module->elf.lookupSymbol("g_pOptionalDepends"));
-    DEBUG("KERNELELF: Preloaded module " << module->name << " at " << module->loadBase << " to " << (module->loadBase + module->loadSize));
+    DEBUG("KERNELELF: Preloaded module " << module->name << " at " << Hex << module->loadBase << " to " << (module->loadBase + module->loadSize));
     DEBUG("KERNELELF: Module " << module->name << " consumes " << Dec << (module->loadSize / 1024) << Hex << "K of memory");
 
 #ifdef DUMP_DEPENDENCIES

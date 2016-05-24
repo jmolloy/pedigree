@@ -107,7 +107,9 @@ void Debugger::start(InterruptState &state, LargeStaticString &description)
   Machine::instance().stopAllOtherProcessors();
 #endif
 
-  Log::instance() << " << Flushing log content >>" << Flush;
+  Log::LogEntry entry;
+  entry << Log::Fatal << " << Flushing log content >>";
+  Log::instance() << entry << Flush;
 #if defined(VALGRIND) || defined(HAS_SANITIZERS)
   Processor::halt();
 #endif

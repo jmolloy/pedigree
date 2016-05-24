@@ -342,14 +342,14 @@ bool LocksCommand::lockAttempted(Spinlock *pLock, size_t nCpu, bool intState)
     size_t pos = (m_NextPosition[nCpu] += 1) - 1;
     if (pos > MAX_DESCRIPTORS)
     {
-        ERROR_OR_FATAL("Spinlock " << pLock << " ran out of room for locks [" << pos << "].");
+        ERROR_OR_FATAL("Spinlock " << Hex << pLock << " ran out of room for locks [" << Dec << pos << "].");
         return false;
     }
 
     if (pos && intState)
     {
         // We're more than one lock deep, but interrupts are enabled!
-        ERROR_OR_FATAL("Spinlock " << pLock << " acquired at level " << Dec << pos << Hex << " with interrupts enabled.");
+        ERROR_OR_FATAL("Spinlock " << Hex << pLock << " acquired at level " << Dec << pos << Hex << " with interrupts enabled.");
         return false;
     }
 
@@ -377,14 +377,14 @@ bool LocksCommand::lockAcquired(Spinlock *pLock, size_t nCpu, bool intState)
     size_t back = m_NextPosition[nCpu] - 1;
     if (back > MAX_DESCRIPTORS)
     {
-        ERROR_OR_FATAL("Spinlock " << pLock << " acquired unexpectedly (no tracked locks).");
+        ERROR_OR_FATAL("Spinlock " << Hex << pLock << " acquired unexpectedly (no tracked locks).");
         return false;
     }
 
     if (back && intState)
     {
         // We're more than one lock deep, but interrupts are enabled!
-        ERROR_OR_FATAL("Spinlock " << pLock << " acquired at level " << Dec << back << Hex << " with interrupts enabled.");
+        ERROR_OR_FATAL("Spinlock " << Hex << pLock << " acquired at level " << Dec << back << Hex << " with interrupts enabled.");
         return false;
     }
 
@@ -392,7 +392,7 @@ bool LocksCommand::lockAcquired(Spinlock *pLock, size_t nCpu, bool intState)
 
     if (pD->state != Attempted || pD->pLock != pLock)
     {
-        ERROR_OR_FATAL("Spinlock " << pLock << " acquired unexpectedly.");
+        ERROR_OR_FATAL("Spinlock " << Hex << pLock << " acquired unexpectedly.");
         return false;
     }
 
@@ -443,7 +443,8 @@ bool LocksCommand::lockReleased(Spinlock *pLock, size_t nCpu)
 
         if (!ok)
         {
-            ERROR_OR_FATAL("Spinlock " << pLock << " released out-of-order [expected lock " << pD->pLock << ", state " << stateName(pD->state) << "].");
+            ERROR_NOLOCK("expected ra is " << (pD ? pD->pLock->m_Ra : 0));
+            ERROR_OR_FATAL("Spinlock " << Hex << pLock << " released out-of-order [expected lock " << (pD ? pD->pLock : 0) << (pD ? "" : " (no lock)") << ", state " << (pD ? stateName(pD->state) : "(no state)") << "].");
             return false;
         }
     }
@@ -519,8 +520,14 @@ bool LocksCommand::checkState(Spinlock *pLock, size_t nCpu)
             {
                 // We hold their attempted lock. We're waiting on them.
                 // Deadlock.
+<<<<<<< HEAD
                 ERROR_OR_FATAL("Detected lock dependency inversion (deadlock) between " << pLock << " and " << pD->pLock << "!");
                 return false;
+=======
+                ERROR_OR_FATAL("Detected lock dependency inversion (deadlock) between " << Hex << pLock << " and " << pD->pLock << "!");
+                bResult = false;
+                break;
+>>>>>>> 1ded5a9... Hex modifier now required rather than assumed
             }
         }
     }

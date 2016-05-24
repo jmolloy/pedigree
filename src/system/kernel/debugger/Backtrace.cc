@@ -119,7 +119,6 @@ void Backtrace::performBpBacktrace(uintptr_t base, uintptr_t instruction)
         }
         else
         {
-          NOTICE("not mapped: " << base);
           break;
         }
     }
