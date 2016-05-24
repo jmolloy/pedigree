@@ -72,8 +72,8 @@ TEST_F(PedigreeLocksCommand, CorrectCount)
     EXPECT_TRUE(TestLocksCommand.lockAttempted(LOCK_D, CPU_3));
     EXPECT_TRUE(TestLocksCommand.lockAcquired(LOCK_D, CPU_3));
 
-    // 4 acquired locks.
-    EXPECT_EQ(TestLocksCommand.getLineCount(), 4);
+    // 4 acquired locks + 3 CPUs.
+    EXPECT_EQ(TestLocksCommand.getLineCount(), 7);
 }
 
 TEST_F(PedigreeLocksCommand, GoodOrdering)
