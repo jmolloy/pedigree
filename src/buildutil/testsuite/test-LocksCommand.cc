@@ -54,6 +54,28 @@ TEST_F(PedigreeLocksCommand, EmptyChecksOk)
     EXPECT_TRUE(TestLocksCommand.checkState(LOCK_A, CPU_1));
 }
 
+TEST_F(PedigreeLocksCommand, CorrectCount)
+{
+    // acquire(A)
+    EXPECT_TRUE(TestLocksCommand.lockAttempted(LOCK_A, CPU_1));
+    EXPECT_TRUE(TestLocksCommand.lockAcquired(LOCK_A, CPU_1));
+
+    // acquire(B)
+    EXPECT_TRUE(TestLocksCommand.lockAttempted(LOCK_B, CPU_1));
+    EXPECT_TRUE(TestLocksCommand.lockAcquired(LOCK_B, CPU_1));
+
+    // acquire(C)
+    EXPECT_TRUE(TestLocksCommand.lockAttempted(LOCK_C, CPU_2));
+    EXPECT_TRUE(TestLocksCommand.lockAcquired(LOCK_C, CPU_2));
+
+    // acquire(D)
+    EXPECT_TRUE(TestLocksCommand.lockAttempted(LOCK_D, CPU_3));
+    EXPECT_TRUE(TestLocksCommand.lockAcquired(LOCK_D, CPU_3));
+
+    // 4 acquired locks.
+    EXPECT_EQ(TestLocksCommand.getLineCount(), 4);
+}
+
 TEST_F(PedigreeLocksCommand, GoodOrdering)
 {
     // acquire(A)
@@ -62,6 +84,23 @@ TEST_F(PedigreeLocksCommand, GoodOrdering)
 
     // release(A) - OK, in-order
     EXPECT_TRUE(TestLocksCommand.lockReleased(LOCK_A, CPU_1));
+}
+
+TEST_F(PedigreeLocksCommand, BadInterrupts)
+{
+    // acquire(A)
+    EXPECT_TRUE(TestLocksCommand.lockAttempted(LOCK_A, CPU_1));
+    EXPECT_TRUE(TestLocksCommand.lockAcquired(LOCK_A, CPU_1));
+
+    // acquire(B) but with interrupts enabled.
+    EXPECT_DEATH(TestLocksCommand.lockAttempted(LOCK_B, CPU_1, true),
+                 "PANIC: Spinlock 2 acquired at level 1 with interrupts enabled.");
+
+    // Interrupts enabled between attempt and acquire (could happen if we see
+    // an exception?)
+    EXPECT_TRUE(TestLocksCommand.lockAttempted(LOCK_B, CPU_1));
+    EXPECT_DEATH(TestLocksCommand.lockAcquired(LOCK_B, CPU_1, true),
+                 "PANIC: Spinlock 2 acquired at level 1 with interrupts enabled.");
 }
 
 TEST_F(PedigreeLocksCommand, CrossCpuRelease)

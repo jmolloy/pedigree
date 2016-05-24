@@ -21,6 +21,7 @@
 #define LOCKSCOMMAND_H
 
 #include <DebuggerCommand.h>
+#include <Scrollable.h>
 #include <Spinlock.h>
 
 /** @addtogroup kerneldebuggercommands
@@ -42,7 +43,8 @@
 /**
  * Traces lock allocations.
  */
-class LocksCommand : public DebuggerCommand
+class LocksCommand : public DebuggerCommand,
+                     public Scrollable
 {
     friend class Spinlock;
 public:
@@ -54,7 +56,7 @@ public:
     /**
      * Default destructor - does nothing.
      */
-    ~LocksCommand();
+    virtual ~LocksCommand();
 
     /**
      * Return an autocomplete string, given an input string.
@@ -82,8 +84,8 @@ public:
      */
     void setFatal();
 
-    bool lockAttempted(Spinlock *pLock, size_t nCpu=~0U);
-    bool lockAcquired(Spinlock *pLock, size_t nCpu=~0U);
+    bool lockAttempted(Spinlock *pLock, size_t nCpu=~0U, bool intState=false);
+    bool lockAcquired(Spinlock *pLock, size_t nCpu=~0U, bool intState=false);
     bool lockReleased(Spinlock *pLock, size_t nCpu=~0U);
 
     /**
@@ -93,6 +95,11 @@ public:
      * as it may have undesirable overhead for the "perfect" case.
      */
     bool checkState(Spinlock *pLock, size_t nCpu=~0U);
+
+    // Scrollable interface.
+    virtual const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
+    virtual const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour) ;
+    virtual size_t getLineCount();
 
 protected:
     void clearFatal();
@@ -146,6 +153,8 @@ private:
     Atomic<size_t> m_LockIndex;
 
     bool m_bFatal;
+
+    size_t m_SelectedLine;
 };
 
 extern LocksCommand g_LocksCommand;

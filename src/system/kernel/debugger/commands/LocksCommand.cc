@@ -20,10 +20,12 @@
 #include "LocksCommand.h"
 #include <utilities/utility.h>
 #include <processor/Processor.h>
-// #include <linker/KernelElf.h>
 #include <utilities/demangle.h>
 #include <processor/Processor.h>
-// #include <Backtrace.h>
+
+#ifndef TESTSUITE
+#include <linker/KernelElf.h>
+#endif
 
 LocksCommand g_LocksCommand;
 #ifndef TESTSUITE
@@ -40,8 +42,9 @@ static bool g_bReady = false;
         ERROR_NOLOCK(x); \
 } while(0)
 
-LocksCommand::LocksCommand()
-    : DebuggerCommand(), m_pDescriptors(), m_bAcquiring(), m_LockIndex(0), m_bFatal(true)
+LocksCommand::LocksCommand() :
+    DebuggerCommand(), m_pDescriptors(), m_bAcquiring(), m_LockIndex(0),
+    m_bFatal(true), m_SelectedLine(0)
 {
     for (size_t i = 0; i < LOCKS_COMMAND_NUM_CPU; ++i)
     {
@@ -60,81 +63,253 @@ void LocksCommand::autocomplete(const HugeStaticString &input, HugeStaticString 
 
 bool LocksCommand::execute(const HugeStaticString &input, HugeStaticString &output, InterruptState &state, DebuggerIO *pScreen)
 {
-    return false;
-#if 0
-    // If we see just "locks", no parameters were matched.
-    uintptr_t address = 0;
-    if (input != "locks")
-    {
-        // Is it an address?
-        address = input.intValue();
-
-        if (address == 0)
-        {
-            // No, try a symbol name.
-            // TODO.
-            output = "Not a valid address: `";
-            output += input;
-            output += "'.\n";
-            return true;
-        }
-    }
-
-    for (int i = 0; i < MAX_DESCRIPTORS; i++)
-    {
-        LockDescriptor *pD = &m_pDescriptors[i];
-        if (pD->used == false) continue;
-
-        if (address && address != reinterpret_cast<uintptr_t>(pD->pLock))
-            continue;
-                
-        output += "Lock at ";
-        output.append(reinterpret_cast<uintptr_t>(pD->pLock), 16);
-        output += ":\n";
-
-        for (size_t j = 0; j < pD->n; j++)
-        {
-            uintptr_t symStart = 0;
-            const char *pSym = KernelElf::instance().globalLookupSymbol(pD->ra[j], &symStart);
-            if (pSym == 0)
-            {
-                output += " - ";
-                output.append(pD->ra[j], 16);
-            }
-            else
-            {
-                LargeStaticString sym(pSym);
-
-                output += " - [";
-                output.append(symStart, 16);
-                output += "] ";
-                static symbol_t symbol;
-                demangle(sym, &symbol);
-                output += static_cast<const char*>(symbol.name);
-            }
-            output += "\n";
-        }
-    }
-
-    if (address)
-    {
-        Spinlock *pLock = reinterpret_cast<Spinlock*>(address);
-        output += "Lock state:\n";
-        output += "  m_bInterrupts: ";
-        output += static_cast<unsigned>(pLock->m_bInterrupts);
-        output += "\n  m_Atom:";
-        output += (pLock->m_Atom) ? "Unlocked" : "Locked";
-        output += "\n  m_Ra: ";
-        output.append(pLock->m_Ra, 16);
-        output += "\n  m_bAvoidTracking: ";
-        output += static_cast<unsigned>(pLock->m_bAvoidTracking);
-        output += "\n  m_Magic: ";
-        output.append(pLock->m_Magic, 16);
-        output += "\n";
-    }
-
+#ifndef TRACK_LOCKS
+    output += "Sorry, this kernel was not built with TRACK_LOCKS enabled.";
     return true;
 #endif
+
+    if (!g_bReady)
+    {
+        output += "Lock tracking has not yet been enabled.";
+        return true;
+    }
+
+    // Let's enter 'raw' screen mode.
+    pScreen->disableCli();
+
+    // Prepare Scrollable interface.
+    move(0, 1);
+    resize(pScreen->getWidth(), pScreen->getHeight() - 2);
+    setScrollKeys('j', 'k');
+
+    pScreen->drawHorizontalLine(' ', 0, 0, pScreen->getWidth() - 1, DebuggerIO::White, DebuggerIO::Green);
+    pScreen->drawHorizontalLine(' ', pScreen->getHeight() - 1, 0, pScreen->getWidth() - 1, DebuggerIO::White, DebuggerIO::Green);
+    pScreen->drawString("Pedigree debugger - Lock tracker", 0, 0, DebuggerIO::White, DebuggerIO::Green);
+
+    pScreen->drawString("backspace: Page up. space: Page down. q: Quit.",
+                      pScreen->getHeight()-1, 0, DebuggerIO::White, DebuggerIO::Green);
+    pScreen->drawString("backspace", pScreen->getHeight()-1, 0, DebuggerIO::Yellow, DebuggerIO::Green);
+    pScreen->drawString("space", pScreen->getHeight()-1, 20, DebuggerIO::Yellow, DebuggerIO::Green);
+    pScreen->drawString("q", pScreen->getHeight()-1, 38, DebuggerIO::Yellow, DebuggerIO::Green);
+
+    // Main I/O loop.
+    bool bStop = false;
+    bool bReturn = true;
+    while (!bStop)
+    {
+        refresh(pScreen);
+
+        char in = 0;
+        while (!(in = pScreen->getChar()))
+            ;
+
+        switch (in)
+        {
+            case 'j':
+                scroll(-1);
+                if (static_cast<ssize_t>(m_SelectedLine) - 1 >= 0)
+                    --m_SelectedLine;
+                break;
+
+            case 'k':
+                scroll(1);
+                if (m_SelectedLine + 1 < getLineCount())
+                    ++m_SelectedLine;
+                break;
+
+            case ' ':
+                scroll(5);
+                if (m_SelectedLine + 5 < getLineCount())
+                    m_SelectedLine += 5;
+                else
+                    m_SelectedLine = getLineCount() - 1;
+                break;
+
+            case 0x08:  // backspace
+                scroll(-5);
+                if (static_cast<ssize_t>(m_SelectedLine) - 5 >= 0)
+                    m_SelectedLine -= 5;
+                else
+                    m_SelectedLine = 0;
+                break;
+
+            case 'q':
+                bStop = true;
+        }
+    }
+
+    // HACK:: Serial connections will fill the screen with the last background colour used.
+    //        Here we write a space with black background so the CLI screen doesn't get filled
+    //        by some random colour!
+    pScreen->drawString(" ", 1, 0, DebuggerIO::White, DebuggerIO::Black);
+    pScreen->enableCli();
+    return bReturn;
+}
+
+const char *LocksCommand::getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
+{
+    static NormalStaticString Line;
+    Line.clear();
+
+    size_t nLock = 0;
+    size_t nDepth = 0;
+    size_t nCpu = 0;
+    bool hasLocks = false;
+    LockDescriptor *pD = 0;
+    for (nCpu = 0; nCpu < LOCKS_COMMAND_NUM_CPU; ++nCpu)
+    {
+        if (nLock++ == index)
+        {
+            break;
+        }
+
+        if (!m_NextPosition[nCpu])
+        {
+            continue;
+        }
+
+        nDepth = 0;
+        for (size_t j = 0; j < MAX_DESCRIPTORS; ++j)
+        {
+            pD = &m_pDescriptors[nCpu][j];
+            if (pD->state == Inactive)
+            {
+                pD = 0;
+                break;
+            }
+            else if (nLock++ == index)
+            {
+                break;
+            }
+
+            ++nDepth;
+        }
+
+        if (pD)
+        {
+            break;
+        }
+    }
+
+    if (!pD)
+    {
+        Line += "CPU";
+        Line.append(nCpu);
+        Line += ":";
+    }
+    else
+    {
+        Line += " | ";
+    }
+
+    colour = DebuggerIO::White;
+    if (index == m_SelectedLine)
+        bgColour = DebuggerIO::Blue;
+    else
+        bgColour = DebuggerIO::Black;
+
+    return Line;
+}
+
+const char *LocksCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
+{
+    static NormalStaticString Line;
+    Line.clear();
+
+    size_t nLock = 0;
+    size_t nDepth = 0;
+    size_t nCpu = 0;
+    LockDescriptor *pD = 0;
+    for (nCpu = 0; nCpu < LOCKS_COMMAND_NUM_CPU; ++nCpu)
+    {
+        if (nLock++ == index)
+        {
+            break;
+        }
+
+        if (!m_NextPosition[nCpu])
+        {
+            continue;
+        }
+
+        nDepth = 0;
+        for (size_t j = 0; j < MAX_DESCRIPTORS; ++j)
+        {
+            pD = &m_pDescriptors[nCpu][j];
+            if (pD->state == Inactive)
+            {
+                pD = 0;
+                break;
+            }
+            else if (nLock++ == index)
+            {
+                break;
+            }
+
+            ++nDepth;
+        }
+
+        if (pD)
+        {
+            break;
+        }
+    }
+
+    if (!pD)
+    {
+        return Line;
+    }
+
+    colOffset = nDepth + 3;
+
+    Line.append(reinterpret_cast<uintptr_t>(pD->pLock), 16);
+    Line += " state=";
+    Line += stateName(pD->state);
+    Line += " caller=";
+    Line.append(pD->pLock->m_Ra, 16);
+
+#ifndef TESTSUITE
+    uintptr_t symStart = 0;
+    const char *pSym = KernelElf::instance().globalLookupSymbol(pD->pLock->m_Ra, &symStart);
+    if (pSym)
+    {
+        LargeStaticString sym(pSym);
+
+        Line += " [";
+        Line.append(symStart, 16);
+        Line += "] ";
+
+        symbol_t symbol;
+        demangle(sym, &symbol);
+        Line += static_cast<const char*>(symbol.name);
+    }
+#endif
+
+    colour = DebuggerIO::White;
+    if (index == m_SelectedLine)
+        bgColour = DebuggerIO::Blue;
+    else
+        bgColour = DebuggerIO::Black;
+
+    return Line;
+}
+
+size_t LocksCommand::getLineCount()
+{
+    size_t numLocks = 0;
+    for (size_t i = 0; i < LOCKS_COMMAND_NUM_CPU; ++i)
+    {
+        size_t nextPos = m_NextPosition[i];
+        if (nextPos)
+        {
+            // For the CPU line to appear.
+            ++numLocks;
+        }
+
+        numLocks += nextPos;
+    }
+
+    return numLocks;
 }
 
 void LocksCommand::setReady()
@@ -152,7 +327,7 @@ void LocksCommand::clearFatal()
     m_bFatal = false;
 }
 
-bool LocksCommand::lockAttempted(Spinlock *pLock, size_t nCpu)
+bool LocksCommand::lockAttempted(Spinlock *pLock, size_t nCpu, bool intState)
 {
     if (!g_bReady)
         return true;
@@ -163,6 +338,13 @@ bool LocksCommand::lockAttempted(Spinlock *pLock, size_t nCpu)
     if (pos > MAX_DESCRIPTORS)
     {
         ERROR_OR_FATAL("Spinlock " << pLock << " ran out of room for locks [" << pos << "].");
+        return false;
+    }
+
+    if (pos && intState)
+    {
+        // We're more than one lock deep, but interrupts are enabled!
+        ERROR_OR_FATAL("Spinlock " << pLock << " acquired at level " << Dec << pos << Hex << " with interrupts enabled.");
         return false;
     }
 
@@ -180,7 +362,7 @@ bool LocksCommand::lockAttempted(Spinlock *pLock, size_t nCpu)
     return true;
 }
 
-bool LocksCommand::lockAcquired(Spinlock *pLock, size_t nCpu)
+bool LocksCommand::lockAcquired(Spinlock *pLock, size_t nCpu, bool intState)
 {
     if (!g_bReady)
         return true;
@@ -191,6 +373,13 @@ bool LocksCommand::lockAcquired(Spinlock *pLock, size_t nCpu)
     if (back > MAX_DESCRIPTORS)
     {
         ERROR_OR_FATAL("Spinlock " << pLock << " acquired unexpectedly (no tracked locks).");
+        return false;
+    }
+
+    if (back && intState)
+    {
+        // We're more than one lock deep, but interrupts are enabled!
+        ERROR_OR_FATAL("Spinlock " << pLock << " acquired at level " << Dec << back << Hex << " with interrupts enabled.");
         return false;
     }
 
