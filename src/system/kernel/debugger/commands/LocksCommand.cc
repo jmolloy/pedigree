@@ -191,6 +191,11 @@ const char *LocksCommand::getLine1(size_t index, DebuggerIO::Colour &colour, Deb
         }
     }
 
+    if (nLock > index)
+    {
+        return Line;
+    }
+
     if (!pD)
     {
         Line += "CPU";
