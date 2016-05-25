@@ -82,6 +82,7 @@ int PerProcessorScheduler::processorAddThread(void *instance)
         }
         
         pData->pThread->setCpuId(Processor::id());
+        pData->pThread->m_Lock.acquire();
         pInstance->addThread(pData->pThread, pData->pStartFunction, pData->pParam, pData->bUsermode, pData->pStack);
         
         delete pData;
@@ -383,6 +384,8 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
 {
     if(this != &Processor::information().getScheduler())
     {
+        pThread->m_Lock.release();
+
         newThreadData *pData = new newThreadData;
         pData->pThread = pThread;
         pData->pStartFunction = pStartFunction;
