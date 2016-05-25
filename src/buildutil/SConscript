@@ -59,6 +59,7 @@ libutility_sources = [
     os.path.join('utilities', 'Tree.cc'),
     os.path.join('utilities', 'ExtensibleBitmap.cc'),
     os.path.join('utilities', 'ObjectPool.cc'),
+    os.path.join('core', 'lib', 'demangle.cc'),
     os.path.join('core', 'lib', 'string.c'),
     os.path.join('core', 'lib', 'memory.c'),
     os.path.join('core', 'lib', 'vsprintf.c'),
