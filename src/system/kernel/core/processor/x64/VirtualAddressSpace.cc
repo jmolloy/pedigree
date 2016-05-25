@@ -153,8 +153,16 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
                                  void *virtualAddress,
                                  size_t flags)
 {
-  m_Lock.acquire();
-  
+  LockGuard<Spinlock> guard(m_Lock);
+
+  return mapUnlocked(physAddress, virtualAddress, flags, m_Lock.acquired());
+}
+
+bool X64VirtualAddressSpace::mapUnlocked(physical_uintptr_t physAddress,
+                                         void *virtualAddress,
+                                         size_t flags,
+                                         bool locked)
+{
   size_t Flags = toFlags(flags, true);
   size_t pml4Index = PML4_INDEX(virtualAddress);
   uint64_t *pml4Entry = TABLE_ENTRY(m_PhysicalPML4, pml4Index);
@@ -166,7 +174,6 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
   // Is a page directory pointer table present?
   if (conditionalTableEntryAllocation(pml4Entry, flags) == false)
   {
-    m_Lock.release();
     return false;
   }
 
@@ -176,7 +183,6 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
   // Is a page directory present?
   if (conditionalTableEntryAllocation(pageDirectoryPointerEntry, flags) == false)
   {
-    m_Lock.release();
     return false;
   }
 
@@ -186,7 +192,6 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
   // Is a page table present?
   if (conditionalTableEntryAllocation(pageDirectoryEntry, flags) == false)
   {
-    m_Lock.release();
     return false;
   }
 
@@ -196,7 +201,6 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
   // Is a page already present?
   if ((*pageTableEntry & PAGE_PRESENT) == PAGE_PRESENT)
   {
-    m_Lock.release();
     return false;
   }
 
@@ -209,7 +213,8 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
   trackPages(1, 0, 0);
 
   // We don't need the lock to propagate the PDPT.
-  m_Lock.release();
+  if (locked)
+    m_Lock.release();
 
   // If there wasn't a PDPT already present, and the address is in the kernel area
   // of memory, we need to propagate this change across all address spaces.
@@ -227,6 +232,10 @@ bool X64VirtualAddressSpace::map(physical_uintptr_t physAddress,
           *otherPml4Entry = thisPml4Entry;
       }
   }
+
+  // If we were locked before, take the lock to enforce that.
+  if (locked)
+    m_Lock.acquire();
 
   return true;
 }
@@ -293,17 +302,20 @@ void X64VirtualAddressSpace::unmap(void *virtualAddress)
 
 VirtualAddressSpace *X64VirtualAddressSpace::clone()
 {
-    LockGuard<Spinlock> guard(m_Lock);
-
     /// \todo figure out how to handle page tracking here
 
     // Create a new virtual address space
-    VirtualAddressSpace *pClone = VirtualAddressSpace::create();
+    X64VirtualAddressSpace *pClone = static_cast<X64VirtualAddressSpace *>(VirtualAddressSpace::create());
     if (pClone == 0)
     {
         WARNING("X64VirtualAddressSpace: Clone() failed!");
         return 0;
     }
+
+    // Lock both address spaces so we can clone safely.
+    LockGuard<Spinlock> cloneGuard(pClone->m_Lock);
+    LockGuard<Spinlock> cloneStacksGuard(pClone->m_StacksLock);
+    m_Lock.acquire();
 
     // The userspace area is only the bottom half of the address space - the top 256 PML4 entries are for
     // the kernel, and these should be mapped anyway.
@@ -353,7 +365,7 @@ VirtualAddressSpace *X64VirtualAddressSpace::clone()
                         PhysicalMemoryManager::instance().pin(physicalAddress);
 
                         // Handle shared mappings - don't copy the original page.
-                        pClone->map(physicalAddress, virtualAddress, fromFlags(flags, true));
+                        pClone->mapUnlocked(physicalAddress, virtualAddress, fromFlags(flags, true));
                         continue;
                     }
 
@@ -363,7 +375,7 @@ VirtualAddressSpace *X64VirtualAddressSpace::clone()
                     if(flags & PAGE_WRITE)
                       flags |= PAGE_COPY_ON_WRITE;
                     flags &= ~PAGE_WRITE;
-                    pClone->map(physicalAddress, virtualAddress, fromFlags(flags, true));
+                    pClone->mapUnlocked(physicalAddress, virtualAddress, fromFlags(flags, true));
 
                     // We need to modify the entry in *this* address space as well to
                     // also have the read-only and copy-on-write flag set, as otherwise
@@ -384,30 +396,38 @@ VirtualAddressSpace *X64VirtualAddressSpace::clone()
         }
     }
 
-    X64VirtualAddressSpace *pX64Clone = static_cast<X64VirtualAddressSpace *>(pClone);
-
     // Before returning the address space, bring across metadata.
     // Note though that if the parent of the clone (ie, this address space)
     // is the kernel address space, we mustn't copy metadata or else the
     // userspace defaults in the constructor get wiped out.
 
+    if(m_Heap < KERNEL_SPACE_START)
+    {
+        pClone->m_Heap = m_Heap;
+        pClone->m_HeapEnd = m_HeapEnd;
+    }
+
+    // No longer need this address space's lock - cloning is mostly done.
+    m_Lock.release();
+
+    // Now we pick up the stacks lock, so we can copy safely. However, we don't
+    // have the VirtualAddressSpace lock, so we can still safely use the heap
+    // without worrying about re-entering.
+    m_StacksLock.acquire();
+
     if(m_pStackTop < KERNEL_SPACE_START)
     {
-        pX64Clone->m_pStackTop = m_pStackTop;
+        pClone->m_pStackTop = m_pStackTop;
         for(Vector<Stack *>::Iterator it = m_freeStacks.begin();
             it != m_freeStacks.end();
             ++it)
         {
             Stack *pNewStack = new Stack(**it);
-            pX64Clone->m_freeStacks.pushBack(pNewStack);
+            pClone->m_freeStacks.pushBack(pNewStack);
         }
     }
 
-    if(m_Heap < KERNEL_SPACE_START)
-    {
-        pX64Clone->m_Heap = m_Heap;
-        pX64Clone->m_HeapEnd = m_HeapEnd;
-    }
+    m_StacksLock.release();
 
     return pClone;
 }
