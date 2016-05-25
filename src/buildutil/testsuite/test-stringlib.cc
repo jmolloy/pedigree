@@ -83,13 +83,13 @@ TEST(PedigreeStringLibrary, CompareEmpty)
 
 TEST(PedigreeStringLibrary, CompareOneEmpty)
 {
-    EXPECT_EQ(StringCompare("abc", ""), 1);
+    EXPECT_EQ(StringCompare("abc", ""), 'a');
 }
 
 TEST(PedigreeStringLibrary, CompareOtherEmpty)
 {
     // 'a' > '\0'
-    EXPECT_EQ(StringCompare("", "abc"), 1);
+    EXPECT_EQ(StringCompare("", "abc"), -'a');
 }
 
 TEST(PedigreeStringLibrary, CompareSame)
@@ -99,11 +99,24 @@ TEST(PedigreeStringLibrary, CompareSame)
 
 TEST(PedigreeStringLibrary, CompareLess)
 {
-    /// \todo make this actually check against the intended result (1, -1)
-    EXPECT_NE(StringCompare("abc", "bcd"), 0);
+    EXPECT_EQ(StringCompare("abc", "bcd"), 'a' - 'b');
 }
 
-/// \todo add strncmp tests here
+TEST(PedigreeStringLibrary, CompareSome)
+{
+    EXPECT_EQ(StringCompareN("abcdef", "abc", 3), 0);
+    EXPECT_EQ(StringCompareN("abcdef", "abc", 4), 'd');
+    EXPECT_EQ(StringCompareN("abcdef", "abc", 1), 0);
+    EXPECT_EQ(StringCompareN("abcdef", "abc", 0), 0);
+}
+
+TEST(PedigreeStringLibrary, CompareSomeOtherLonger)
+{
+    EXPECT_EQ(StringCompareN("abc", "abcdef", 3), 0);
+    EXPECT_EQ(StringCompareN("abc", "abcdef", 4), -'d');
+    EXPECT_EQ(StringCompareN("abc", "abcdef", 1), 0);
+    EXPECT_EQ(StringCompareN("abc", "abcdef", 0), 0);
+}
 
 TEST(PedigreeStringLibrary, BasicStrcat)
 {
