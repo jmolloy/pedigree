@@ -642,14 +642,9 @@ bool LocksCommand::checkState(const Spinlock *pLock, size_t nCpu)
             {
                 // We hold their attempted lock. We're waiting on them.
                 // Deadlock.
-<<<<<<< HEAD
-                ERROR_OR_FATAL("Detected lock dependency inversion (deadlock) between " << pLock << " and " << pD->pLock << "!");
-                return false;
-=======
                 ERROR_OR_FATAL("Detected lock dependency inversion (deadlock) between " << Hex << pLock << " and " << pD->pLock << "!");
                 bResult = false;
                 break;
->>>>>>> 1ded5a9... Hex modifier now required rather than assumed
             }
         }
     }
