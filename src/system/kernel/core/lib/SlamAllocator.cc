@@ -833,13 +833,6 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
 
     uintptr_t slab = m_Base + (((entry * 64) + bit) * getPageSize());
 
-#ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
-    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
-    VirtualAddressSpace &currva = Processor::information().getVirtualAddressSpace();
-    if (Processor::m_Initialised == 2)
-        Processor::switchAddressSpace(va);
-#endif
-
     // Map and mark as used.
     for (ssize_t i = 0; i < nPages; ++i)
     {
@@ -856,6 +849,13 @@ uintptr_t SlamAllocator::getSlab(size_t fullSize)
 #ifdef THREADS
     // Now that we've marked the slab bits as used, we can map the pages.
     m_SlabRegionLock.release();
+#endif
+
+#ifdef KERNEL_NEEDS_ADDRESS_SPACE_SWITCH
+    VirtualAddressSpace &va = VirtualAddressSpace::getKernelAddressSpace();
+    VirtualAddressSpace &currva = Processor::information().getVirtualAddressSpace();
+    if (Processor::m_Initialised == 2)
+        Processor::switchAddressSpace(va);
 #endif
 
     // Map. This could break as we're allocating physical memory; though we are
