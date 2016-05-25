@@ -33,7 +33,7 @@ KernelElf KernelElf::m_Instance;
 // #undef DUMP_DEPENDENCIES
 
 // Define to 1 to load modules using threads.
-#define THREADED_MODULE_LOADING 0
+#define THREADED_MODULE_LOADING 1
 
 /**
  * Extend the given pointer by adding its canonical prefix again.
@@ -799,7 +799,10 @@ void KernelElf::updateModuleStatus(Module *module, bool status)
     else
     {
         NOTICE("KERNELELF: Module " << moduleName << " failed, unloading.");
-        m_FailedModules.pushBack(SharedPointer<String>::allocate(moduleName));
+        {
+            LockGuard<Spinlock> failedGuard(m_ModuleAdjustmentLock);
+            m_FailedModules.pushBack(SharedPointer<String>::allocate(moduleName));
+        }
         unloadModule(moduleName, true, false);
     }
 
