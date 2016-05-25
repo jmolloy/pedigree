@@ -44,13 +44,29 @@ unsigned long strtoul(const char *nptr, char const **endptr, int base);
 
 size_t _StringLength(const char *src)
 {
+  // Unrolled loop that still avoids reading past the end of src (instead of
+  // e.g. doing bitmasks with 64-bit views of src).
   const char *orig = src;
-  while (*src) ++src;
-  return src - orig;
+  size_t result = 0;
+  while (1)
+  {
+#define UNROLL(n) if (!*(src + n)) return (src + n) - orig;
+    UNROLL(0);
+    UNROLL(1);
+    UNROLL(2);
+    UNROLL(3);
+    UNROLL(4);
+    UNROLL(5);
+    UNROLL(6);
+    UNROLL(7);
+#undef UNROLL
+    src += 8;
+  }
 }
 
 char *StringCopy(char *dest, const char *src)
 {
+  char *orig_dest = dest;
   while (*src)
   {
     *dest = *src;
@@ -58,7 +74,7 @@ char *StringCopy(char *dest, const char *src)
   }
   *dest = '\0';
 
-  return dest;
+  return orig_dest;
 }
 
 char *StringCopyN(char *dest, const char *src, size_t len)
@@ -90,43 +106,40 @@ int StringFormat(char *buf, const char *fmt, ...)
 
 int StringCompare(const char *p1, const char *p2)
 {
-  size_t i = 0;
-  int failed = 0;
-  while(p1[i] != '\0' && p2[i] != '\0')
-  {
-    if(p1[i] != p2[i])
-    {
-      failed = 1;
-      break;
-    }
-    i++;
-  }
-  // why did the loop exit?
-  if( (p1[i] == '\0' && p2[i] != '\0') || (p1[i] != '\0' && p2[i] == '\0') )
-    failed = 1;
+  if (p1 == p2)
+    return 0;
 
-  return failed;
+  while (*p1 && *p2)
+  {
+    char c = *p1 - *p2;
+    if (c)
+      return c;
+    ++p1;
+    ++p2;
+  }
+
+  return *p1 - *p2;
 }
 
 int StringCompareN(const char *p1, const char *p2, size_t n)
 {
-  size_t i = 0;
-  int failed = 0;
-  while(p1[i] != '\0' && p2[i] != '\0' && n)
-  {
-    if(p1[i] != p2[i])
-    {
-      failed = 1;
-      break;
-    }
-    i++;
-    n--;
-  }
-  // why did the loop exit?
-  if( n && ( (p1[i] == '\0' && p2[i] != '\0') || (p1[i] != '\0' && p2[i] == '\0') ) )
-    failed = 1;
+  if (!n)
+    return 0;
+  if (p1 == p2)
+    return 0;
 
-  return failed;
+  while (*p1 && *p2)
+  {
+    char c = *p1 - *p2;
+    if (c)
+      return c;
+    else if (!--n)
+      return 0;
+    ++p1;
+    ++p2;
+  }
+
+  return *p1 - *p2;
 }
 
 char *StringConcat(char *dest, const char *src)
@@ -239,17 +252,27 @@ unsigned long StringToUnsignedLong(const char *nptr, char const **endptr, int ba
 
 const char *StringFind(const char *str, int target)
 {
-  while (*str)
+  const char *s;
+  char ch;
+  while (1)
   {
-    if (*str == target)
-    {
-      return str;
-    }
+#define UNROLL(n) \
+    s = str + n; \
+    ch = *s; \
+    if (!ch) return NULL; \
+    if (ch == target) return s;
 
-    ++str;
+    UNROLL(0);
+    UNROLL(1);
+    UNROLL(2);
+    UNROLL(3);
+    UNROLL(4);
+    UNROLL(5);
+    UNROLL(6);
+    UNROLL(7);
+#undef UNROLL
+    str += 8;
   }
-
-  return NULL;
 }
 
 const char *StringReverseFind(const char *str, int target)
@@ -257,20 +280,30 @@ const char *StringReverseFind(const char *str, int target)
   // StringLength must traverse the entire string once to find the length,
   // so rather than finding the length and then traversing in reverse, we just
   // traverse the string once. This gives a small performance boost.
-  const char *found = NULL;
-  while (*str)
+  const char *s;
+  char ch;
+  while (1)
   {
-    if (*str == target)
-    {
-      found = str;
-    }
+#define UNROLL(n) \
+    s = str + n; \
+    ch = *s; \
+    if (!ch) return NULL; \
+    if (ch == target) return s;
 
-    ++str;
+    UNROLL(0);
+    UNROLL(1);
+    UNROLL(2);
+    UNROLL(3);
+    UNROLL(4);
+    UNROLL(5);
+    UNROLL(6);
+    UNROLL(7);
+#undef UNROLL
+    str += 8;
   }
-
-  return found;
 }
 
+#ifndef UTILITY_LINUX
 // Provide forwarding functions to handle GCC optimising things.
 size_t strlen(const char *s)
 {
@@ -326,3 +359,4 @@ unsigned long strtoul(const char *nptr, char const **endptr, int base)
 {
   return StringToUnsignedLong(nptr, endptr, base);
 }
+#endif
