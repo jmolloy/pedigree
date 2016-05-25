@@ -61,6 +61,8 @@ Rtc Rtc::m_Instance;
 
 void Rtc::addAlarm(Event *pEvent, size_t alarmSecs, size_t alarmUsecs)
 {
+    LockGuard<Spinlock> guard(m_Lock);
+
     // Figure out when to trigger the alarm.
     uint64_t target = m_TickCount;
     uint64_t delta = alarmSecs * Time::Multiplier::SECOND;
@@ -73,6 +75,8 @@ void Rtc::addAlarm(Event *pEvent, size_t alarmSecs, size_t alarmUsecs)
 
 void Rtc::removeAlarm(Event *pEvent)
 {
+    LockGuard<Spinlock> guard(m_Lock);
+
     for (List<Alarm*>::Iterator it = m_Alarms.begin();
          it != m_Alarms.end();
          it++)
@@ -89,6 +93,8 @@ void Rtc::removeAlarm(Event *pEvent)
 
 size_t Rtc::removeAlarm(class Event *pEvent, bool bRetZero)
 {
+    LockGuard<Spinlock> guard(m_Lock);
+
     size_t currTime = getTickCount();
 
     for (List<Alarm*>::Iterator it = m_Alarms.begin();
@@ -375,25 +381,28 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
   m_Nanosecond += delta;
 
   // Check for alarms.
-  while (true)
   {
-      bool bDispatched = false;
-      for (List<Alarm*>::Iterator it = m_Alarms.begin();
-           it != m_Alarms.end();
-           it++)
-      {
-          Alarm *pA = *it;
-          if ( pA->m_Time <= m_TickCount )
-          {
-              pA->m_pThread->sendEvent(pA->m_pEvent);
-              m_Alarms.erase(it);
-              bDispatched = true;
-              delete pA;
-              break;
-          }
-      }
-      if (!bDispatched)
-          break;
+    LockGuard<Spinlock> guard(m_Lock);
+    while (true)
+    {
+        bool bDispatched = false;
+        for (List<Alarm*>::Iterator it = m_Alarms.begin();
+             it != m_Alarms.end();
+             it++)
+        {
+            Alarm *pA = *it;
+            if ( pA->m_Time <= m_TickCount )
+            {
+                pA->m_pThread->sendEvent(pA->m_pEvent);
+                m_Alarms.erase(it);
+                bDispatched = true;
+                delete pA;
+                break;
+            }
+        }
+        if (!bDispatched)
+            break;
+    }
   }
 
   if (UNLIKELY(m_Nanosecond >= Time::Multiplier::MILLISECOND))
@@ -485,8 +494,7 @@ bool Rtc::irq(irq_id_t number, InterruptState &state)
   read(0x0C);
 
   // call handlers
-  size_t nHandler;
-  for(nHandler = 0; nHandler < MAX_TIMER_HANDLERS; nHandler++)
+  for(size_t nHandler = 0; nHandler < MAX_TIMER_HANDLERS; nHandler++)
   {
     // timer delta is in nanoseconds
     if(m_Handlers[nHandler])
