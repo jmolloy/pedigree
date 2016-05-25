@@ -33,7 +33,7 @@ KernelElf KernelElf::m_Instance;
 // #undef DUMP_DEPENDENCIES
 
 // Define to 1 to load modules using threads.
-#define THREADED_MODULE_LOADING 1
+#define THREADED_MODULE_LOADING 0
 
 /**
  * Extend the given pointer by adding its canonical prefix again.
@@ -44,27 +44,54 @@ KernelElf KernelElf::m_Instance;
 template<class T>
 static T *extend(T *p)
 {
-#if defined(BITS_32) || defined(HOSTED)
-    return p;
-#else
+#if defined(X86_COMMON) && !defined(BITS_32)
     uintptr_t u = reinterpret_cast<uintptr_t>(p);
     if(u < 0xFFFFFFFF00000000ULL)
         u += 0xFFFFFFFF00000000ULL;
     return reinterpret_cast<T*>(u);
+#else
+    return p;
 #endif
 }
 
 template<class T>
 static uintptr_t extend(T p)
 {
-#if defined(BITS_32) || defined(HOSTED)
-    return p;
-#else
+#if defined(X86_COMMON) && !defined(BITS_32)
     // Must assign to a possibly-larger type before arithmetic.
     uintptr_t u = p;
     if(u < 0xFFFFFFFF00000000ULL)
         u += 0xFFFFFFFF00000000ULL;
     return u;
+#else
+    return p;
+#endif
+}
+
+template<class T>
+static T *retract(T *p)
+{
+#if defined(X86_COMMON) && !defined(BITS_32)
+    uintptr_t u = reinterpret_cast<uintptr_t>(p);
+    if(u >= 0xFFFFFFFF00000000ULL)
+        u -= 0xFFFFFFFF00000000ULL;
+    return reinterpret_cast<T*>(u);
+#else
+    return p;
+#endif
+}
+
+template<class T>
+static uintptr_t retract(T p)
+{
+#if defined(X86_COMMON) && !defined(BITS_32)
+    // Must assign to a possibly-larger type before arithmetic.
+    uintptr_t u = p;
+    if(u >= 0xFFFFFFFF00000000ULL)
+        u -= 0xFFFFFFFF00000000ULL;
+    return u;
+#else
+    return p;
 #endif
 }
 
@@ -170,9 +197,9 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
         // Adjust the section
         if ((pSh->flags & SHF_ALLOC) != SHF_ALLOC)
         {
-            NOTICE("Converting shdr " << pSh->addr << " -> " << pSh->addr + pSh->size);
+            NOTICE("Converting shdr " << Hex << pSh->addr << " -> " << pSh->addr + pSh->size);
             pSh->addr = reinterpret_cast<uintptr_t>(m_AdditionalSectionContents.convertPhysicalPointer<void>(pSh->addr));
-            NOTICE(" to " << pSh->addr);
+            NOTICE(" to " << Hex << pSh->addr);
             pSh->offset = pSh->addr;
         }
 #endif
@@ -679,7 +706,9 @@ bool KernelElf::moduleDependenciesSatisfied(Module *module)
             }
         }
         if (!found)
+        {
             return false;
+        }
         i++;
     }
     return true;
@@ -840,7 +869,7 @@ const char *KernelElf::globalLookupSymbol(uintptr_t addr, uintptr_t *startAddr)
     // Try a lookup in the kernel.
     const char *ret;
 
-    if ((ret = lookupSymbol(addr, startAddr)))
+    if ((ret = lookupSymbol(retract(addr), startAddr, m_pSymbolTable)))
         return ret;
 
     // OK, try every module.
