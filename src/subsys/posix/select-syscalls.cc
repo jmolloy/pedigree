@@ -371,8 +371,10 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
     // Only do cleanup and lock acquire/release if we set events up.
     if(events.count())
     {
-        // Cleanup.
+        // Block any more events being sent to us so we can safely clean up.
         reentrancyLock.acquire();
+        Processor::information().getCurrentThread()->inhibitEvent(EventNumbers::SelectEvent, true);
+        reentrancyLock.release();
 
         // Ensure there are no events still pending for this thread.
         Processor::information().getCurrentThread()->cullEvent(EventNumbers::SelectEvent);
@@ -386,11 +388,11 @@ int posix_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, 
             delete pSE;
         }
 
-        reentrancyLock.release();
+        // Cleanup is complete, stop inhibiting events now.
+        Processor::information().getCurrentThread()->inhibitEvent(EventNumbers::SelectEvent, false);
     }
 
     F_NOTICE("    -> " << Dec << ((bError) ? -1 : nRet) << Hex);
 
     return (bError) ? -1 : nRet;
 }
-
