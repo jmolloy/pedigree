@@ -140,10 +140,10 @@ Thread::Thread(Process *pParent, SyscallState &state) :
 
   m_Id = m_pParent->addThread(this);
 
+  m_Lock.acquire();
+
   // Now we are ready to go into the scheduler.
-  m_pScheduler = &Processor::information().getScheduler();
-  Scheduler::instance().addThread(this, *m_pScheduler);
-  m_pScheduler->addThread(this, state);
+  ProcessorThreadAllocator::instance().addThread(this, state);
 }
 
 Thread::~Thread()

@@ -61,6 +61,8 @@ struct newThreadData
     void *pParam;
     bool bUsermode;
     void *pStack;
+    SyscallState state;
+    bool useSyscallState;
 };
 
 int PerProcessorScheduler::processorAddThread(void *instance)
@@ -83,7 +85,14 @@ int PerProcessorScheduler::processorAddThread(void *instance)
         
         pData->pThread->setCpuId(Processor::id());
         pData->pThread->m_Lock.acquire();
-        pInstance->addThread(pData->pThread, pData->pStartFunction, pData->pParam, pData->bUsermode, pData->pStack);
+        if (pData->useSyscallState)
+        {
+            pInstance->addThread(pData->pThread, pData->state);
+        }
+        else
+        {
+            pInstance->addThread(pData->pThread, pData->pStartFunction, pData->pParam, pData->bUsermode, pData->pStack);
+        }
         
         delete pData;
     }
@@ -392,6 +401,7 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
         pData->pParam = pParam;
         pData->bUsermode = bUsermode;
         pData->pStack = pStack;
+        pData->useSyscallState = false;
         
         m_NewThreadDataLock.acquire();
         m_NewThreadData.pushBack(pData);
@@ -497,7 +507,26 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
 
 void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
 {
+    if(this != &Processor::information().getScheduler())
+    {
+        pThread->m_Lock.release();
+
+        newThreadData *pData = new newThreadData;
+        pData->pThread = pThread;
+        pData->useSyscallState = true;
+        pData->state = state;
+
+        m_NewThreadDataLock.acquire();
+        m_NewThreadData.pushBack(pData);
+        m_NewThreadDataLock.release();
+
+        m_NewThreadDataCount.release();
+
+        return;
+    }
+
     pThread->setCpuId(Processor::id());
+    pThread->setScheduler(this);
     
     bool bWasInterrupts = Processor::getInterrupts();
     Processor::setInterrupts(false);
