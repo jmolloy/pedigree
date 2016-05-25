@@ -63,6 +63,9 @@ class Spinlock
     /** Unwind the spinlock because a thread is releasing it. */
     void unwind();
 
+    /** Track the release of this lock. */
+    void trackRelease() const;
+
     volatile bool m_bInterrupts;
     Atomic<bool> m_Atom;
     /// \todo handle more than 64 CPUs.

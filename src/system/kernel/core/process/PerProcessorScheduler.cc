@@ -205,6 +205,13 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThre
         pLock->exit();
     }
 
+#ifdef TRACK_LOCKS
+    if (!g_LocksCommand.checkSchedule())
+    {
+        FATAL("Lock checker disallowed this reschedule.");
+    }
+#endif
+
 #ifdef SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH
     pCurrentThread->getLock().unwind();
     Processor::switchState(bWasInterrupts, pCurrentThread->state(), pNextThread->state(), &pCurrentThread->getLock().m_Atom.m_Atom);
@@ -433,6 +440,10 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
         // Lock was in fact locked before.
         g_LocksCommand.lockReleased(&pThread->getLock());
     }
+    if (!g_LocksCommand.checkSchedule())
+    {
+        FATAL("Lock checker disallowed this reschedule.");
+    }
 #endif
 
 #ifdef SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH
@@ -522,6 +533,10 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
         // We unlocked the lock, so track that unlock.
         g_LocksCommand.lockReleased(&pThread->getLock());
     }
+    if (!g_LocksCommand.checkSchedule())
+    {
+        FATAL("Lock checker disallowed this reschedule.");
+    }
 #endif
 
     // Copy the SyscallState into this thread's kernel stack.
@@ -569,6 +584,10 @@ void PerProcessorScheduler::killCurrentThread()
     // this lock held, but it no longer matters.
 #ifdef TRACK_LOCKS
     g_LocksCommand.lockReleased(&pThread->getLock());
+    if (!g_LocksCommand.checkSchedule())
+    {
+        FATAL("Lock checker disallowed this reschedule.");
+    }
 #endif
 
     // Get another thread ready to schedule.
