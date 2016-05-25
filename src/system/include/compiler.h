@@ -109,6 +109,12 @@
     NOT_COPYABLE_OR_ASSIGNABLE(Type)
 #endif
 
+// BARRIER forces GCC to not reorder code across the barrier.
+#define BARRIER() __asm__ __volatile__ ("" ::: "memory")
+
+// FENCE performs a full load/store hardware memory fence.
+#define FENCE() __sync_synchronize()
+
 /** @} */
 
 #endif
