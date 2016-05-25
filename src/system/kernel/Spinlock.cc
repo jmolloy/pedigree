@@ -203,7 +203,6 @@ bool Spinlock::acquire(bool recurse, bool safe)
 
   m_bInterrupts = bInterrupts;
   m_OwnedProcessor = Processor::id();
-    m_pOwner = static_cast<void *>(pThread);
 
   return true;
 
