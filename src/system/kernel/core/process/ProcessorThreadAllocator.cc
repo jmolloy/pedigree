@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -42,13 +41,17 @@ void ProcessorThreadAllocator::addThread(Thread *pThread, Thread::ThreadStartFun
                    void *pParam, bool bUsermode, void *pStack)
 {
     PerProcessorScheduler* pSchedule = m_pAlgorithm->allocateThread(pThread);
-    
     Scheduler::instance().addThread(pThread, *pSchedule);
-    
     pSchedule->addThread(pThread, pStartFunction, pParam, bUsermode, pStack);
+}
+
+void ProcessorThreadAllocator::addThread(Thread *pThread, SyscallState &state)
+{
+    PerProcessorScheduler* pSchedule = m_pAlgorithm->allocateThread(pThread);
+    Scheduler::instance().addThread(pThread, *pSchedule);
+    pSchedule->addThread(pThread, state);
 }
 
 void ProcessorThreadAllocator::threadRemoved(Thread *pThread)
 {
 }
-

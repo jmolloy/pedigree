@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -26,6 +25,7 @@
 #include <process/Thread.h>
 
 #include <processor/types.h>
+#include <processor/state.h>
 
 class ProcessorThreadAllocator
 {
@@ -45,6 +45,9 @@ class ProcessorThreadAllocator
         /// this function should need to be called.
         void addThread(Thread *pThread, Thread::ThreadStartFunc pStartFunction,
                    void *pParam, bool bUsermode, void *pStack);
+
+        /// Same as the other addThread(), but takes a SyscallState instead.
+        void addThread(Thread *pThread, SyscallState &state);
         
         /// Notifies an algorithm a thread has been removed. This allows a
         /// rebalance operation or something similar to take place.
