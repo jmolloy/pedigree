@@ -143,6 +143,7 @@ opts.AddVariables(
     BoolVariable('clang_cross', 'If not hosted, should we use clang and cross-compile (kernel and modules only)?', 0),
     BoolVariable('sanitizers', 'If hosted, enable sanitizers (eg AddressSanitizer) (highly recommended)?', 0),
     BoolVariable('valgrind', 'If hosted, build for Valgrind?', 0),
+    BoolVariable('force_asan', 'Use ASAN even if Valgrind is present.', 0),
     BoolVariable('clang_profile', 'If hosted, use clang instrumentation to profile.', 0),
     BoolVariable('instrumentation', 'Build with function instrumentation (SLOW).', 0),
 
@@ -272,9 +273,14 @@ host_env = conf.Finish()
 # TODO(miselin): figure out how best to detect asan presence.
 host_env['COVERAGE_CCFLAGS'] = ['-fprofile-arcs', '-ftest-coverage', '-O1']
 host_env['COVERAGE_LINKFLAGS'] = ['-fprofile-arcs', '-ftest-coverage']
-if host_env.Detect('valgrind') is None:
+if env['force_asan'] or (host_env.Detect('valgrind') is None):
     host_env['COVERAGE_CCFLAGS'] += ['-fsanitize=address']
     host_env['COVERAGE_LINKFLAGS'] += ['-fsanitize=address']
+
+    host_env.MergeFlags({
+        'CCFLAGS': ['-fsanitize=address'],
+        'LINKFLAGS': ['-fsanitize=address'],
+    })
 host_env['HAS_PROFILE_RT'] = profile_rt
 host_env['HAS_GCOV'] = gcov
 
