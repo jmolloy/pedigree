@@ -28,7 +28,7 @@ class Spinlock
     friend class LocksCommand;
   public:
     inline Spinlock(bool bLocked = false, bool bAvoidTracking = false)
-        : m_bInterrupts(), m_Atom(!bLocked), m_Ra(0),
+        : m_bInterrupts(), m_Atom(!bLocked), m_CpuState(0), m_Ra(0),
         m_bAvoidTracking(bAvoidTracking), m_Magic(0xdeadbaba),
         m_pOwner(0), m_bOwned(false), m_Level(0), m_OwnedProcessor(~0) {}
 
@@ -63,8 +63,13 @@ class Spinlock
     /** Unwind the spinlock because a thread is releasing it. */
     void unwind();
 
+    /** Track the release of this lock. */
+    void trackRelease() const;
+
     volatile bool m_bInterrupts;
     Atomic<bool> m_Atom;
+    /// \todo handle more than 64 CPUs.
+    Atomic<uint64_t> m_CpuState;
 
     uintptr_t m_Ra;
     bool m_bAvoidTracking;

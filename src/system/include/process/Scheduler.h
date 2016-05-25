@@ -107,7 +107,7 @@ private:
     static Scheduler m_Instance;
   
     /** All the processes currently in operation, for enumeration purposes. */
-    List<Process*> m_Processes;
+    List<Process*, 0> m_Processes;
 
     /** The next available process ID. */
     Atomic<size_t> m_NextPid;
@@ -129,6 +129,9 @@ private:
      * means they cannot control things like IRQs being enabled (not good).
      */
     PerProcessorScheduler *m_pBspScheduler;
+
+    /** Main scheduler lock for modifying internal structures. */
+    Spinlock m_SchedulerLock;
 };
 
 #endif

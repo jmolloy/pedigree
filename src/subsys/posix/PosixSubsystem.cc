@@ -260,6 +260,10 @@ PosixSubsystem::~PosixSubsystem()
 
     m_ThreadWaiters.clear();
 
+    // Take the memory map lock before we become uninterruptible.
+    while (!MemoryMapManager::instance().acquireLock())
+        ;
+
     // Spinlock as a quick way of disabling interrupts.
     Spinlock spinlock;
     spinlock.acquire();
@@ -275,13 +279,16 @@ PosixSubsystem::~PosixSubsystem()
     }
 
     // Remove all existing mappings, if any.
-    MemoryMapManager::instance().unmapAll();
+    MemoryMapManager::instance().unmapAllUnlocked();
 
     if(va != &curr) {
         Processor::switchAddressSpace(curr);
     }
 
     spinlock.release();
+
+    // Give back the memory map lock now - we're interruptible again.
+    MemoryMapManager::instance().releaseLock();
 }
 
 bool PosixSubsystem::checkAddress(uintptr_t addr, size_t extent, size_t flags)

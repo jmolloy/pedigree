@@ -24,6 +24,7 @@
 #include <machine/IrqManager.h>
 #include <machine/Timer.h>
 #include <processor/state.h>
+#include <Spinlock.h>
 
 #define MAX_TIMER_HANDLERS    32
 
@@ -172,6 +173,8 @@ class Rtc : public Timer,
 
     /** List of alarms. */
     List<Alarm*> m_Alarms;
+    /** Protects m_Alarms. */
+    Spinlock m_Lock;
 };
 
 /** @} */

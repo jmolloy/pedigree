@@ -15,10 +15,11 @@ fi
 # Remove old coverage data.
 find "$GIT_ROOT" -type f -name '*.gcda' -delete
 
-# Run under valgrind if we can.
 WRAPPER=
+ARGS=
 if type valgrind >/dev/null 2>&1; then
-    WRAPPER="valgrind --tool=memcheck --leak-check=full --error-exitcode=1"
+    WRAPPER=""
+    ARGS=""
 elif type iprofiler >/dev/null 2>&1; then
     # Pass OSX_LEAK_CHECK=1 to run iprofiler (which needs admin rights).
     if [ "x$OSX_LEAK_CHECK" != "x" ]; then
@@ -27,7 +28,7 @@ elif type iprofiler >/dev/null 2>&1; then
 fi
 
 # Run the C++ testsuites.
-$WRAPPER "$GIT_ROOT/build/host/testsuite"
+$WRAPPER "$GIT_ROOT/build/host/testsuite" $ARGS
 
 # Run the benchmarks (useful for discovering performance regressions).
 # TODO(miselin): figure out a way to tracking that the benchmark changed

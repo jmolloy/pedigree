@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -83,7 +82,7 @@ bool DisassembleCommand::execute(const HugeStaticString &input, HugeStaticString
     // What symbol are we in?
     // TODO grep the memory map for the right ELF to look at.
     uintptr_t symStart = 0;
-    const char *pSym = KernelElf::instance().lookupSymbol(location, &symStart);
+    const char *pSym = KernelElf::instance().globalLookupSymbol(location, &symStart);
     if (location == symStart)
     {
 #ifdef BITS_32

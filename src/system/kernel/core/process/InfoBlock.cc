@@ -49,7 +49,7 @@ bool InfoBlockManager::initialise()
     if (!infoBlock)
         return false;  // Nothing to do here.
 
-    NOTICE("InfoBlockManager: Setting up global info block at " << infoBlock);
+    NOTICE("InfoBlockManager: Setting up global info block at " << Hex << infoBlock);
 
     // Map for userspace.
     physical_uintptr_t page = PhysicalMemoryManager::instance().allocatePage();

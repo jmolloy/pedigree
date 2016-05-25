@@ -1324,23 +1324,7 @@ void MemoryMapManager::unmapAll()
 {
     LockGuard<Mutex> guard(m_Lock);
 
-    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
-
-    MmObjectList *pMmObjectList = m_MmObjectLists.lookup(&va);
-    if (!pMmObjectList) return;
-
-    for (List<MemoryMappedObject*>::Iterator it = pMmObjectList->begin();
-         it != pMmObjectList->end();
-         it = pMmObjectList->begin())
-    {
-        (*it)->unmap();
-        delete (*it);
-
-        pMmObjectList->erase(it);
-    }
-
-    delete pMmObjectList;
-    m_MmObjectLists.remove(&va);
+    unmapAllUnlocked();
 }
 
 bool MemoryMapManager::trap(uintptr_t address, bool bIsWrite)
@@ -1465,4 +1449,40 @@ bool MemoryMapManager::compact()
     if(bCompact)
         NOTICE("    -> success, hoping for Cache eviction...");
     return false;
+}
+
+void MemoryMapManager::unmapAllUnlocked()
+{
+    if (m_Lock.getValue())
+    {
+        FATAL("MemoryMapManager::unmapAllUnlocked must be called with the lock taken.");
+    }
+
+    VirtualAddressSpace &va = Processor::information().getVirtualAddressSpace();
+
+    MmObjectList *pMmObjectList = m_MmObjectLists.lookup(&va);
+    if (!pMmObjectList) return;
+
+    for (List<MemoryMappedObject*>::Iterator it = pMmObjectList->begin();
+         it != pMmObjectList->end();
+         it = pMmObjectList->begin())
+    {
+        (*it)->unmap();
+        delete (*it);
+
+        pMmObjectList->erase(it);
+    }
+
+    delete pMmObjectList;
+    m_MmObjectLists.remove(&va);
+}
+
+bool MemoryMapManager::acquireLock()
+{
+    return m_Lock.acquire();
+}
+
+void MemoryMapManager::releaseLock()
+{
+    m_Lock.release();
 }

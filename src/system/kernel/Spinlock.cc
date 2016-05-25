@@ -29,6 +29,8 @@
 
 #include <panic.h>
 
+static Atomic<size_t> x(0);
+
 bool Spinlock::acquire(bool recurse, bool safe)
 {
   Thread *pThread = Processor::information().getCurrentThread();
@@ -50,8 +52,21 @@ bool Spinlock::acquire(bool recurse, bool safe)
 
   if (m_Magic != 0xdeadbaba)
   {
-      FATAL_NOLOCK("Wrong magic in acquire [" << m_Magic << "] [this=" << reinterpret_cast<uintptr_t>(this) << "]");
+      FATAL_NOLOCK("Wrong magic in acquire [" << Hex << m_Magic << "] [this=" << reinterpret_cast<uintptr_t>(this) << "]");
   }
+
+#ifdef TRACK_LOCKS
+  if (!m_bAvoidTracking)
+  {
+    g_LocksCommand.clearFatal();
+    if (!g_LocksCommand.lockAttempted(this, Processor::id(), bInterrupts))
+    {
+      uintptr_t myra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+      FATAL_NOLOCK("Spinlock: LocksCommand disallows this acquire [return=" << Hex << myra << "].");
+    }
+    g_LocksCommand.setFatal();
+  }
+#endif
 
   while (m_Atom.compareAndSwap(true, false) == false)
   {
@@ -62,6 +77,21 @@ bool Spinlock::acquire(bool recurse, bool safe)
       ++m_Level;
       break;
     }
+
+    Processor::pause();
+
+#ifdef TRACK_LOCKS
+    if (!m_bAvoidTracking)
+    {
+      g_LocksCommand.clearFatal();
+      if (!g_LocksCommand.checkState(this))
+      {
+        uintptr_t myra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+        FATAL_NOLOCK("Spinlock: LocksCommand failed a state check [return=" << Hex << myra << "].");
+      }
+      g_LocksCommand.setFatal();
+    }
+#endif
 
 #ifdef MULTIPROCESSOR
     if (Processor::getCount() > 1)
@@ -92,9 +122,10 @@ bool Spinlock::acquire(bool recurse, bool safe)
 
     uintptr_t myra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
     ERROR_NOLOCK("Spinlock has deadlocked in acquire");
-    ERROR_NOLOCK("Spinlock has deadlocked, level is " << m_Level);
-    ERROR_NOLOCK("Spinlock has deadlocked, my return address is " << myra << ", return address of other locker is " << m_Ra);
-    FATAL_NOLOCK("Spinlock has deadlocked, spinlock is " << reinterpret_cast<uintptr_t>(this) << ", atom is " << atom << ".");
+    ERROR_NOLOCK(" -> level is " << m_Level);
+    ERROR_NOLOCK(" -> my return address is " << Hex << myra);
+    ERROR_NOLOCK(" -> return address of other locker is " << m_Ra);
+    FATAL_NOLOCK("Spinlock has deadlocked, spinlock is " << Hex << reinterpret_cast<uintptr_t>(this) << ", atom is " << atom << ".");
 
     // Panic in case there's a return from the debugger (or the debugger isn't available)
     panic("Spinlock has deadlocked");
@@ -102,8 +133,16 @@ bool Spinlock::acquire(bool recurse, bool safe)
   m_Ra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
 
 #ifdef TRACK_LOCKS
-//  if (!m_bAvoidTracking)
-      g_LocksCommand.lockAcquired(this);
+  if (!m_bAvoidTracking)
+  {
+    g_LocksCommand.clearFatal();
+    if (!g_LocksCommand.lockAcquired(this, Processor::id(), bInterrupts))
+    {
+      uintptr_t myra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+      FATAL_NOLOCK("Spinlock: LocksCommand disallows this acquire [return=" << Hex << myra << "].");
+    }
+    g_LocksCommand.setFatal();
+  }
 #endif
 
   if (recurse && !m_bOwned)
@@ -120,8 +159,26 @@ bool Spinlock::acquire(bool recurse, bool safe)
 
 }
 
+void Spinlock::trackRelease() const
+{
+#ifdef TRACK_LOCKS
+  if (!m_bAvoidTracking)
+  {
+    g_LocksCommand.clearFatal();
+    if (!g_LocksCommand.lockReleased(this))
+    {
+      uintptr_t myra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+      FATAL_NOLOCK("Spinlock: LocksCommand disallows this release [return=" << Hex << myra << "].");
+    }
+    g_LocksCommand.setFatal();
+  }
+#endif
+}
+
 void Spinlock::exit()
 {
+  Thread *pThread = Processor::information().getCurrentThread();
+
   bool bWasInterrupts = Processor::getInterrupts();
   if (bWasInterrupts == true)
   {
@@ -138,6 +195,9 @@ void Spinlock::exit()
   {
     if (--m_Level)
     {
+      // Recursive acquire() still tracks, so we still need to track its
+      // release or else we'll run into false positive "out-of-order release"s.
+      trackRelease();
       return;
     }
   }
@@ -145,6 +205,10 @@ void Spinlock::exit()
   m_pOwner = 0;
   m_bOwned = false;
   m_OwnedProcessor = ~0;
+
+  // Track the release just before we actually release the lock to avoid an
+  // immediate reschedule screwing with the tracking.
+  trackRelease();
 
   if (m_Atom.compareAndSwap(false, true) == false)
   {
@@ -155,16 +219,11 @@ void Spinlock::exit()
     m_Atom = true;
 
     uintptr_t myra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
-    FATAL_NOLOCK("Spinlock has deadlocked in release, my return address is " << myra << ", return address of other locker is " << m_Ra << ", spinlock is " << reinterpret_cast<uintptr_t>(this) << ", atom is " << atom << ".");
+    FATAL_NOLOCK("Spinlock has deadlocked in release, my return address is " << Hex << myra << ", return address of other locker is " << m_Ra << ", spinlock is " << reinterpret_cast<uintptr_t>(this) << ", atom is " << Dec << atom << ".");
 
     // Panic in case there's a return from the debugger (or the debugger isn't available)
     panic("Spinlock has deadlocked");
   }
-
-#ifdef TRACK_LOCKS
-//  if (!m_bAvoidTracking)
-    g_LocksCommand.lockReleased(this);
-#endif
 }
 
 void Spinlock::release()
@@ -187,5 +246,4 @@ void Spinlock::unwind()
   m_bOwned = false;
   m_pOwner = 0;
   m_OwnedProcessor = ~0;
-  m_Ra = 0;
 }

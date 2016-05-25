@@ -131,6 +131,8 @@ int main(int argc, char **argv)
     pid_t changer = waitpid(-1, &status, 0);
     if(changer > 0)
       syslog(LOG_INFO, "init: child %d exited with status %d", changer, WEXITSTATUS(status));
+    else
+      continue;
 
     // Register the dead process now.
     struct utmpx *p = 0;

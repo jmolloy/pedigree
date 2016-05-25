@@ -198,7 +198,7 @@ if env['build_libs']:
         LINKFLAGS="-static -Wl,-Bstatic -Wl,--no-whole-archive -nodefaultlibs -T%s " % libload_linkscript)
     libload_env.Depends(libload, "crt0")
 
-    env.Alias('libs', libload)
+    env.Alias('libload', libload)
 
 apps = []
 
@@ -305,6 +305,7 @@ for app in set(apps):
 
     env.Depends(output, "crt0")
     env.Depends(output, "libs")
+    env.Requires(output, "libload")
     env.Depends(output, "headers")
 
 if env['build_libs']:

@@ -285,6 +285,10 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
 
   g_pBootstrapInfo = &bsInf;
 
+#ifdef TRACK_LOCKS
+  g_LocksCommand.setReady();
+#endif
+
   // Initialise the processor-specific interface
   Processor::initialise1(bsInf);
 
@@ -371,10 +375,6 @@ extern "C" void _main(BootstrapStruct_t &bsInf)
   str += "\n";
 #endif
   bootIO.write(str, BootIO::LightGrey, BootIO::Black);
-
-#ifdef TRACK_LOCKS
-  g_LocksCommand.setReady();
-#endif
 
   // Set up the graphics service for drivers to register with
 #ifndef NOGFX

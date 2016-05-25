@@ -114,6 +114,7 @@ opts.AddVariables(
     BoolVariable('memory_log', 'If 1, memory logging on the second serial line is enabled.', 1),
     BoolVariable('memory_log_inline', 'If 1, memory logging will be output alongside conventional serial output.', 0),
     BoolVariable('memory_tracing', 'If 1, trace memory allocations and frees (for statistics and for leak detection) on the second serial line. EXCEPTIONALLY SLOW.', 0),
+    BoolVariable('track_locks', 'If 1, track spinlocks and ensure they are released in the order they are acquired. Also does some basic deadlock detection.', 1),
     
     BoolVariable('multiprocessor', 'If 1, multiprocessor support is compiled in to the kernel.', 1),
     BoolVariable('apic', 'If 1, APIC support will be built in (not to be confused with ACPI).', 0),
@@ -142,6 +143,7 @@ opts.AddVariables(
     BoolVariable('clang_cross', 'If not hosted, should we use clang and cross-compile (kernel and modules only)?', 0),
     BoolVariable('sanitizers', 'If hosted, enable sanitizers (eg AddressSanitizer) (highly recommended)?', 0),
     BoolVariable('valgrind', 'If hosted, build for Valgrind?', 0),
+    BoolVariable('force_asan', 'Use ASAN even if Valgrind is present.', 0),
     BoolVariable('clang_profile', 'If hosted, use clang instrumentation to profile.', 0),
     BoolVariable('instrumentation', 'Build with function instrumentation (SLOW).', 0),
 
@@ -271,9 +273,14 @@ host_env = conf.Finish()
 # TODO(miselin): figure out how best to detect asan presence.
 host_env['COVERAGE_CCFLAGS'] = ['-fprofile-arcs', '-ftest-coverage', '-O1']
 host_env['COVERAGE_LINKFLAGS'] = ['-fprofile-arcs', '-ftest-coverage']
-if host_env.Detect('valgrind') is None:
+if env['force_asan'] or (host_env.Detect('valgrind') is None):
     host_env['COVERAGE_CCFLAGS'] += ['-fsanitize=address']
     host_env['COVERAGE_LINKFLAGS'] += ['-fsanitize=address']
+
+    host_env.MergeFlags({
+        'CCFLAGS': ['-fsanitize=address'],
+        'LINKFLAGS': ['-fsanitize=address'],
+    })
 host_env['HAS_PROFILE_RT'] = profile_rt
 host_env['HAS_GCOV'] = gcov
 

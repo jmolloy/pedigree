@@ -1,5 +1,4 @@
 /*
- * 
  * Copyright (c) 2008-2014, Pedigree Developers
  *
  * Please see the CONTRIB file in the root of the source tree for a full
@@ -22,6 +21,7 @@
 #define LOCKSCOMMAND_H
 
 #include <DebuggerCommand.h>
+#include <Scrollable.h>
 #include <Spinlock.h>
 
 /** @addtogroup kerneldebuggercommands
@@ -30,11 +30,23 @@
 #define NUM_BT_FRAMES 6
 #define MAX_DESCRIPTORS 50
 
+#ifdef TESTSUITE
+#define LOCKS_COMMAND_NUM_CPU 4
+#else
+#ifdef MULTIPROCESSOR
+#define LOCKS_COMMAND_NUM_CPU 255
+#else
+#define LOCKS_COMMAND_NUM_CPU 1
+#endif
+#endif
+
 /**
  * Traces lock allocations.
  */
-class LocksCommand : public DebuggerCommand
+class LocksCommand : public DebuggerCommand,
+                     public Scrollable
 {
+    friend class Spinlock;
 public:
     /**
      * Default constructor - zeroes stuff.
@@ -44,7 +56,7 @@ public:
     /**
      * Default destructor - does nothing.
      */
-    ~LocksCommand();
+    virtual ~LocksCommand();
 
     /**
      * Return an autocomplete string, given an input string.
@@ -66,20 +78,94 @@ public:
 
     void setReady();
 
-    void lockAcquired(Spinlock *pLock);
-    void lockReleased(Spinlock *pLock);
-  
+    /**
+     * LocksCommand defaults to logging errors and returning failure.
+     * Call this to change it to logging fatal errors itself.
+     */
+    void setFatal();
+
+    bool lockAttempted(const Spinlock *pLock, size_t nCpu=~0U, bool intState=false);
+    bool lockAcquired(const Spinlock *pLock, size_t nCpu=~0U, bool intState=false);
+    bool lockReleased(const Spinlock *pLock, size_t nCpu=~0U);
+
+    /**
+     * Notifies the command that a core is about to reschedule.
+     *
+     * Note: NO locks should be held across a reschedule.
+     */
+    bool checkSchedule(size_t nCpu=~0U);
+
+    /**
+     * Notifies the command that we'd like to lock the given lock, allowing
+     * the LocksCommand instance to detect common concurrency issues like
+     * dependency inversion. This should be called after an acquire() fails,
+     * as it may have undesirable overhead for the "perfect" case.
+     */
+    bool checkState(const Spinlock *pLock, size_t nCpu=~0U);
+
+    // Scrollable interface.
+    virtual const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
+    virtual const char *getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour) ;
+    virtual size_t getLineCount();
+
+protected:
+    void clearFatal();
+
 private:
+    enum State
+    {
+        /// The lock is about to be attempted.
+        Attempted,
+        /// The lock is acquired.
+        Acquired,
+        /// The lock failed to be acquired, and has been checked once.
+        Checked,
+        /// This entry is no longer active.
+        Inactive,
+    };
+
+    const char *stateName(State s)
+    {
+        switch(s)
+        {
+            case Attempted:
+                return "attempted";
+            case Acquired:
+                return "acquired";
+            case Checked:
+                return "checked";
+            case Inactive:
+                return "inactive";
+            default:
+                return "unknown";
+        }
+    }
+
     struct LockDescriptor
     {
-        Spinlock *pLock;
+        LockDescriptor() : pLock(0), ra(), n(0), state(Inactive)
+        {
+        }
+
+        const Spinlock *pLock;
         uintptr_t ra[NUM_BT_FRAMES];
         size_t n;
-        bool used;
+        State state;
     };
-    LockDescriptor m_pDescriptors[MAX_DESCRIPTORS];
 
-    bool m_bAcquiring;
+    LockDescriptor m_pDescriptors[LOCKS_COMMAND_NUM_CPU][MAX_DESCRIPTORS];
+
+    Atomic<bool> m_bAcquiring[LOCKS_COMMAND_NUM_CPU];
+    Atomic<bool> m_bTracing[LOCKS_COMMAND_NUM_CPU];
+    Atomic<size_t> m_NextPosition[LOCKS_COMMAND_NUM_CPU];
+    Atomic<size_t> m_LockIndex;
+
+    bool m_bFatal;
+
+    size_t m_SelectedLine;
+
+    /// Lock we've selected for backtracing.
+    LockDescriptor *m_pSelectedLock;
 };
 
 extern LocksCommand g_LocksCommand;

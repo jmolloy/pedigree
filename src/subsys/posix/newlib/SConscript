@@ -75,4 +75,4 @@ output_libs = env.Command(
     Action(buildNewlib, env.get('CCCOMSTR')))
 
 # Need POSIX headers to be installed before we can build Newlib.
-env.Depends(output_libs, 'headers')
+env.Requires(output_libs, 'headers')

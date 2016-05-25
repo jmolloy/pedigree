@@ -991,13 +991,25 @@ uintptr_t Elf::getLastAddress()
 const char *Elf::lookupSymbol(uintptr_t addr, uintptr_t *startAddr)
 {
     if (!m_pSymbolTable || !m_pStringTable)
+    {
         return 0; // Just return null if we haven't got a symbol table.
+    }
+    return lookupSymbol(addr, startAddr, m_pSymbolTable);
+}
 
-    ElfSymbol_t *pSymbol = m_pSymbolTable;
+template <class T>
+const char *Elf::lookupSymbol(uintptr_t addr, uintptr_t *startAddr, T *symbolTable)
+{
+    if (!symbolTable || !m_pStringTable)
+    {
+        return 0; // Just return null if we haven't got the needed tables.
+    }
+
+    T *pSymbol = symbolTable;
 
     const char *pStrtab = reinterpret_cast<const char *>(m_pStringTable);
 
-    for (size_t i = 0; i < m_nSymbolTableSize / sizeof(ElfSymbol_t); i++)
+    for (size_t i = 0; i < m_nSymbolTableSize / sizeof(T); i++)
     {
         // Make sure we're looking at an object or function.
         if (ST_TYPE(pSymbol->info) != 0x2 /* function */ &&
@@ -1239,3 +1251,9 @@ void Elf::populateSymbolTable(SymbolTable *pSymtab, uintptr_t loadBase)
         }
     }
 }
+
+/** Global specializations for ELF symbol types. */
+template const char *Elf::lookupSymbol<Elf::ElfSymbol_t>(uintptr_t addr, uintptr_t *startAddr=0, ElfSymbol_t *symbolTable=0);
+#ifdef BITS_64
+template const char *Elf::lookupSymbol<Elf::Elf32Symbol_t>(uintptr_t addr, uintptr_t *startAddr=0, Elf32Symbol_t *symbolTable=0);
+#endif

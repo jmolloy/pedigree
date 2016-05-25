@@ -41,6 +41,8 @@ static NormalStaticString getTimestamp()
     NormalStaticString r;
     r += "[";
     r.append(t);
+    r += ".";
+    r.append(Processor::id());
     r += "] ";
     return r;
 }
@@ -53,7 +55,6 @@ Log::Log () :
     m_StaticEntryStart(0),
     m_StaticEntryEnd(0),
     m_Buffer(),
-    m_NumberType(Dec),
 #ifdef DONT_LOG_TO_SERIAL
     m_EchoToSerial(false)
 #else
@@ -64,7 +65,9 @@ Log::Log () :
 
 Log::~Log ()
 {
-    *this << Notice << "-- Log Terminating --" << Flush;
+    LogEntry entry;
+    entry << Notice << "-- Log Terminating --";
+    *this << entry << Flush;
 }
 
 void Log::initialise1()
@@ -174,19 +177,19 @@ void Log::removeCallback(LogCallback *pCallback)
     }
 }
 
-Log &Log::operator<< (const char *str)
+Log::LogEntry &Log::LogEntry::operator<< (const char *s)
 {
-    m_Buffer.str.append(str);
+    str.append(s);
     return *this;
 }
 
-Log &Log::operator<< (String str)
+Log::LogEntry &Log::LogEntry::operator<< (const String &s)
 {
-    m_Buffer.str.append(str);
+    str.append(s);
     return *this;
 }
 
-Log &Log::operator<< (bool b)
+Log::LogEntry &Log::LogEntry::operator<< (bool b)
 {
     if (b)
         return *this << "true";
@@ -195,39 +198,72 @@ Log &Log::operator<< (bool b)
 }
 
 template<class T>
-Log &Log::operator << (T n)
+Log::LogEntry &Log::LogEntry::operator << (T n)
 {
     size_t radix = 10;
-    if (m_NumberType == Hex)
+    if (numberType == Hex)
     {
         radix = 16;
-        m_Buffer.str.append("0x");
+        str.append("0x");
     }
-    else if (m_NumberType == Oct)
+    else if (numberType == Oct)
     {
         radix = 8;
-        m_Buffer.str.append("0");
+        str.append("0");
     }
-    m_Buffer.str.append(n, radix);
+    str.append(n, radix);
+    return *this;
+}
+
+Log::LogEntry &Log::LogEntry::operator<< (NumberType type)
+{
+    numberType = type;
+    return *this;
+}
+
+Log::LogEntry &Log::LogEntry::operator<< (SeverityLevel level)
+{
+    // Zero the buffer.
+    str.clear();
+    type = level;
+
+#ifndef UTILITY_LINUX
+    Machine &machine = Machine::instance();
+    if (machine.isInitialised() == true &&
+        machine.getTimer() != 0)
+    {
+        Timer &timer = *machine.getTimer();
+        timestamp = timer.getTickCount();
+    }
+    else
+        timestamp = 0;
+#endif
+
     return *this;
 }
 
 // NOTE: Make sure that the templated << operator gets only instantiated for
 //       integer types.
-template Log &Log::operator << (char);
-template Log &Log::operator << (unsigned char);
-template Log &Log::operator << (short);
-template Log &Log::operator << (unsigned short);
-template Log &Log::operator << (int);
-template Log &Log::operator << (unsigned int);
-template Log &Log::operator << (long);
-template Log &Log::operator << (unsigned long);
+template Log::LogEntry &Log::LogEntry::operator << (char);
+template Log::LogEntry &Log::LogEntry::operator << (unsigned char);
+template Log::LogEntry &Log::LogEntry::operator << (short);
+template Log::LogEntry &Log::LogEntry::operator << (unsigned short);
+template Log::LogEntry &Log::LogEntry::operator << (int);
+template Log::LogEntry &Log::LogEntry::operator << (unsigned int);
+template Log::LogEntry &Log::LogEntry::operator << (long);
+template Log::LogEntry &Log::LogEntry::operator << (unsigned long);
 // NOTE: Instantiating these for MIPS32 requires __udiv3di, but we only have
 //       __udiv3ti (??) in libgcc.a for mips.
 #ifndef MIPS32
-template Log &Log::operator << (long long);
-template Log &Log::operator << (unsigned long long);
+template Log::LogEntry &Log::LogEntry::operator << (long long);
+template Log::LogEntry &Log::LogEntry::operator << (unsigned long long);
 #endif
+
+Log &Log::operator<< (const LogEntry &entry)
+{
+    m_Buffer = entry;
+    return *this;
+}
 
 Log &Log::operator<< (Modifier type)
 {
@@ -304,33 +340,6 @@ Log &Log::operator<< (Modifier type)
             panic(panicstr);
         }
     }
-
-    return *this;
-}
-
-Log &Log::operator<< (NumberType type)
-{
-    m_NumberType = type;
-    return *this;
-}
-
-Log &Log::operator<< (SeverityLevel level)
-{
-    // Zero the buffer.
-    m_Buffer.str.clear();
-    m_Buffer.type = level;
-
-#ifndef UTILITY_LINUX
-    Machine &machine = Machine::instance();
-    if (machine.isInitialised() == true &&
-        machine.getTimer() != 0)
-    {
-        Timer &timer = *machine.getTimer();
-        m_Buffer.timestamp = timer.getTickCount();
-    }
-    else
-        m_Buffer.timestamp = 0;
-#endif
 
     return *this;
 }

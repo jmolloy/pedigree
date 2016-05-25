@@ -44,27 +44,54 @@ KernelElf KernelElf::m_Instance;
 template<class T>
 static T *extend(T *p)
 {
-#if defined(BITS_32) || defined(HOSTED)
-    return p;
-#else
+#if defined(X86_COMMON) && !defined(BITS_32)
     uintptr_t u = reinterpret_cast<uintptr_t>(p);
     if(u < 0xFFFFFFFF00000000ULL)
         u += 0xFFFFFFFF00000000ULL;
     return reinterpret_cast<T*>(u);
+#else
+    return p;
 #endif
 }
 
 template<class T>
 static uintptr_t extend(T p)
 {
-#if defined(BITS_32) || defined(HOSTED)
-    return p;
-#else
+#if defined(X86_COMMON) && !defined(BITS_32)
     // Must assign to a possibly-larger type before arithmetic.
     uintptr_t u = p;
     if(u < 0xFFFFFFFF00000000ULL)
         u += 0xFFFFFFFF00000000ULL;
     return u;
+#else
+    return p;
+#endif
+}
+
+template<class T>
+static T *retract(T *p)
+{
+#if defined(X86_COMMON) && !defined(BITS_32)
+    uintptr_t u = reinterpret_cast<uintptr_t>(p);
+    if(u >= 0xFFFFFFFF00000000ULL)
+        u -= 0xFFFFFFFF00000000ULL;
+    return reinterpret_cast<T*>(u);
+#else
+    return p;
+#endif
+}
+
+template<class T>
+static uintptr_t retract(T p)
+{
+#if defined(X86_COMMON) && !defined(BITS_32)
+    // Must assign to a possibly-larger type before arithmetic.
+    uintptr_t u = p;
+    if(u >= 0xFFFFFFFF00000000ULL)
+        u -= 0xFFFFFFFF00000000ULL;
+    return u;
+#else
+    return p;
 #endif
 }
 
@@ -170,9 +197,9 @@ bool KernelElf::initialise(const BootstrapStruct_t &pBootstrap)
         // Adjust the section
         if ((pSh->flags & SHF_ALLOC) != SHF_ALLOC)
         {
-            NOTICE("Converting shdr " << pSh->addr << " -> " << pSh->addr + pSh->size);
+            NOTICE("Converting shdr " << Hex << pSh->addr << " -> " << pSh->addr + pSh->size);
             pSh->addr = reinterpret_cast<uintptr_t>(m_AdditionalSectionContents.convertPhysicalPointer<void>(pSh->addr));
-            NOTICE(" to " << pSh->addr);
+            NOTICE(" to " << Hex << pSh->addr);
             pSh->offset = pSh->addr;
         }
 #endif
@@ -355,7 +382,7 @@ Module *KernelElf::loadModule(uint8_t *pModule, size_t len, bool silent)
     module->exit = *reinterpret_cast<void (**)()> (module->elf.lookupSymbol("g_pModuleExit"));
     module->depends = reinterpret_cast<const char **> (module->elf.lookupSymbol("g_pDepends"));
     module->depends_opt = reinterpret_cast<const char **> (module->elf.lookupSymbol("g_pOptionalDepends"));
-    DEBUG("KERNELELF: Preloaded module " << module->name << " at " << module->loadBase << " to " << (module->loadBase + module->loadSize));
+    DEBUG("KERNELELF: Preloaded module " << module->name << " at " << Hex << module->loadBase << " to " << (module->loadBase + module->loadSize));
     DEBUG("KERNELELF: Module " << module->name << " consumes " << Dec << (module->loadSize / 1024) << Hex << "K of memory");
 
 #ifdef DUMP_DEPENDENCIES
@@ -679,7 +706,9 @@ bool KernelElf::moduleDependenciesSatisfied(Module *module)
             }
         }
         if (!found)
+        {
             return false;
+        }
         i++;
     }
     return true;
@@ -770,7 +799,10 @@ void KernelElf::updateModuleStatus(Module *module, bool status)
     else
     {
         NOTICE("KERNELELF: Module " << moduleName << " failed, unloading.");
-        m_FailedModules.pushBack(SharedPointer<String>::allocate(moduleName));
+        {
+            LockGuard<Spinlock> failedGuard(m_ModuleAdjustmentLock);
+            m_FailedModules.pushBack(SharedPointer<String>::allocate(moduleName));
+        }
         unloadModule(moduleName, true, false);
     }
 
@@ -840,7 +872,7 @@ const char *KernelElf::globalLookupSymbol(uintptr_t addr, uintptr_t *startAddr)
     // Try a lookup in the kernel.
     const char *ret;
 
-    if ((ret = lookupSymbol(addr, startAddr)))
+    if ((ret = lookupSymbol(retract(addr), startAddr, m_pSymbolTable)))
         return ret;
 
     // OK, try every module.

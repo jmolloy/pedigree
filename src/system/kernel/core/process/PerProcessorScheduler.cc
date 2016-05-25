@@ -61,6 +61,8 @@ struct newThreadData
     void *pParam;
     bool bUsermode;
     void *pStack;
+    SyscallState state;
+    bool useSyscallState;
 };
 
 int PerProcessorScheduler::processorAddThread(void *instance)
@@ -82,7 +84,15 @@ int PerProcessorScheduler::processorAddThread(void *instance)
         }
         
         pData->pThread->setCpuId(Processor::id());
-        pInstance->addThread(pData->pThread, pData->pStartFunction, pData->pParam, pData->bUsermode, pData->pStack);
+        pData->pThread->m_Lock.acquire();
+        if (pData->useSyscallState)
+        {
+            pInstance->addThread(pData->pThread, pData->state);
+        }
+        else
+        {
+            pInstance->addThread(pData->pThread, pData->pStartFunction, pData->pParam, pData->bUsermode, pData->pStack);
+        }
         
         delete pData;
     }
@@ -143,10 +153,6 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThre
                 else
                 {
                     pNextThread = m_pIdleThread;
-
-                    // The SchedulingAlgorithm normally does this.
-                    if(pNextThread != pCurrentThread)
-                        pNextThread->getLock().acquire();
                 }
             }
             else
@@ -161,12 +167,13 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThre
     else
     {
         pNextThread = pNewThread;
-        if(pNextThread != pCurrentThread)
-            pNextThread->getLock().acquire();
     }
 
     if(pNextThread == pNewThread)
         WARNING("scheduler: next thread IS new thread");
+
+    if(pNextThread != pCurrentThread)
+        pNextThread->getLock().acquire();
 
     // Now neither thread can be moved, we're safe to switch.
     if (pCurrentThread != m_pIdleThread)
@@ -183,6 +190,18 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThre
     Processor::switchAddressSpace( *pNextThread->getParent()->getAddressSpace() );
     Processor::setTlsBase(pNextThread->getTlsBase());
 
+    // Update times.
+    pCurrentThread->getParent()->trackTime(false);
+    pNextThread->getParent()->recordTime(false);
+
+    pNextThread->getLock().release();
+
+    // We'll release the current thread's lock when we reschedule, so for now
+    // we just lie to the lock checker.
+#ifdef TRACK_LOCKS
+    g_LocksCommand.lockReleased(&pCurrentThread->getLock());
+#endif
+
     if (pLock)
     {
         // We cannot call ->release() here, because this lock was grabbed
@@ -194,16 +213,14 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThre
         if (pLock->m_bInterrupts)
             bWasInterrupts = true;
         pLock->exit();
-#ifdef TRACK_LOCKS
-        g_LocksCommand.lockReleased(pLock);
-#endif
     }
 
-    // Update times.
-    pCurrentThread->getParent()->trackTime(false);
-    pNextThread->getParent()->recordTime(false);
-
-    pNextThread->getLock().release();
+#ifdef TRACK_LOCKS
+    if (!g_LocksCommand.checkSchedule())
+    {
+        FATAL("Lock checker disallowed this reschedule.");
+    }
+#endif
 
 #ifdef SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH
     pCurrentThread->getLock().unwind();
@@ -227,9 +244,6 @@ void PerProcessorScheduler::schedule(Thread::Status nextStatus, Thread *pNewThre
     }
 
     // Restore context, releasing the old thread's lock when we've switched stacks.
-#ifdef TRACK_LOCKS
-    g_LocksCommand.lockReleased(&pCurrentThread->getLock());
-#endif
     pCurrentThread->getLock().unwind();
     Processor::restoreState(pNextThread->state(), &pCurrentThread->getLock().m_Atom.m_Atom);
     // Not reached.
@@ -379,12 +393,15 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
 {
     if(this != &Processor::information().getScheduler())
     {
+        pThread->m_Lock.release();
+
         newThreadData *pData = new newThreadData;
         pData->pThread = pThread;
         pData->pStartFunction = pStartFunction;
         pData->pParam = pParam;
         pData->bUsermode = bUsermode;
         pData->pStack = pStack;
+        pData->useSyscallState = false;
         
         m_NewThreadDataLock.acquire();
         m_NewThreadData.pushBack(pData);
@@ -424,10 +441,22 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
     // It is worth noting that we can't just call exit() here, as the lock is
     // not necessarily actually taken.
     if (pThread->getLock().m_bInterrupts) bWasInterrupts = true;
+    bool bWas = pThread->getLock().acquired();
     pThread->getLock().unwind();
     pThread->getLock().m_Atom.m_Atom = 1;
 #ifdef TRACK_LOCKS
-    g_LocksCommand.lockReleased(&pThread->getLock());
+    // Satisfy the lock checker; we're releasing these out of order, so make
+    // sure the checker sees them unlocked in order.
+    g_LocksCommand.lockReleased(&pCurrentThread->getLock());
+    if (bWas)
+    {
+        // Lock was in fact locked before.
+        g_LocksCommand.lockReleased(&pThread->getLock());
+    }
+    if (!g_LocksCommand.checkSchedule())
+    {
+        FATAL("Lock checker disallowed this reschedule.");
+    }
 #endif
 
 #ifdef SYSTEM_REQUIRES_ATOMIC_CONTEXT_SWITCH
@@ -478,7 +507,26 @@ void PerProcessorScheduler::addThread(Thread *pThread, Thread::ThreadStartFunc p
 
 void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
 {
+    if(this != &Processor::information().getScheduler())
+    {
+        pThread->m_Lock.release();
+
+        newThreadData *pData = new newThreadData;
+        pData->pThread = pThread;
+        pData->useSyscallState = true;
+        pData->state = state;
+
+        m_NewThreadDataLock.acquire();
+        m_NewThreadData.pushBack(pData);
+        m_NewThreadDataLock.release();
+
+        m_NewThreadDataCount.release();
+
+        return;
+    }
+
     pThread->setCpuId(Processor::id());
+    pThread->setScheduler(this);
     
     bool bWasInterrupts = Processor::getInterrupts();
     Processor::setInterrupts(false);
@@ -507,10 +555,20 @@ void PerProcessorScheduler::addThread(Thread *pThread, SyscallState &state)
     // It is worth noting that we can't just call exit() here, as the lock is
     // not necessarily actually taken.
     if (pThread->getLock().m_bInterrupts) bWasInterrupts = true;
+    bool bWas = pThread->getLock().acquired();
     pThread->getLock().unwind();
     pThread->getLock().m_Atom.m_Atom = 1;
 #ifdef TRACK_LOCKS
-    g_LocksCommand.lockReleased(&pThread->getLock());
+    g_LocksCommand.lockReleased(&pCurrentThread->getLock());
+    if (bWas)
+    {
+        // We unlocked the lock, so track that unlock.
+        g_LocksCommand.lockReleased(&pThread->getLock());
+    }
+    if (!g_LocksCommand.checkSchedule())
+    {
+        FATAL("Lock checker disallowed this reschedule.");
+    }
 #endif
 
     // Copy the SyscallState into this thread's kernel stack.
@@ -558,6 +616,10 @@ void PerProcessorScheduler::killCurrentThread()
     // this lock held, but it no longer matters.
 #ifdef TRACK_LOCKS
     g_LocksCommand.lockReleased(&pThread->getLock());
+    if (!g_LocksCommand.checkSchedule())
+    {
+        FATAL("Lock checker disallowed this reschedule.");
+    }
 #endif
 
     // Get another thread ready to schedule.
@@ -572,11 +634,10 @@ void PerProcessorScheduler::killCurrentThread()
     else if (pNextThread == 0)
     {
         pNextThread = m_pIdleThread;
-
-        // The SchedulingAlgorithm normally does this.
-        if(pNextThread != pThread)
-            pNextThread->getLock().acquire();
     }
+
+    if(pNextThread != pThread)
+        pNextThread->getLock().acquire();
 
     pNextThread->setStatus(Thread::Running);
     Processor::information().setCurrentThread(pNextThread);
