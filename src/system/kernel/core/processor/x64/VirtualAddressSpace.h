@@ -265,6 +265,15 @@ class X64VirtualAddressSpace : public VirtualAddressSpace
     bool conditionalTableEntryMapping(uint64_t *tableEntry,
                                       uint64_t physAddress,
                                       uint64_t flags);
+
+    /**
+     * Perform a mapping proper, without taking the lock.
+     * \param[in] locked whether the lock was taken before calling or not.
+     */
+    bool mapUnlocked(physical_uintptr_t physAddress,
+                     void *virtualAddress,
+                     size_t flags,
+                     bool locked = false);
     
     /** Allocates a stack with a given size. */
     Stack *doAllocateStack(size_t sSize);
