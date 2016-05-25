@@ -200,11 +200,16 @@ class X86CommonPhysicalMemoryManager : public PhysicalMemoryManager
 
     /** Physical page metadata. */
     struct page {
+        page() : active(false), refcount(0)
+        {
+        }
+
+        bool active;
         size_t refcount;
     };
 
     /** Page metadata table */
-    HashTable<PageHashable, struct page> m_PageMetadata;
+    struct page *m_PageMetadata;
 };
 
 /** @} */
