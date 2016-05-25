@@ -41,6 +41,8 @@ static NormalStaticString getTimestamp()
     NormalStaticString r;
     r += "[";
     r.append(t);
+    r += ".";
+    r.append(Processor::id());
     r += "] ";
     return r;
 }
