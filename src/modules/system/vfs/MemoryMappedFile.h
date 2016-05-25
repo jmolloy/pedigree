@@ -363,6 +363,7 @@ class MemoryMappedFile : public MemoryMappedObject
  */
 class MemoryMapManager : public MemoryTrapHandler, public MemoryPressureHandler
 {
+    friend class PosixSubsystem;
     public:
         /** Singleton instance */
         static MemoryMapManager &instance()
@@ -450,6 +451,30 @@ class MemoryMapManager : public MemoryTrapHandler, public MemoryPressureHandler
         {
           return String("Unmap safe pages from memory mapped files.");
         }
+
+    protected:
+        /**
+         * Removes all mappings from the address space, unlocked.
+         *
+         * Requires callers to have acquired the lock by other means.
+         */
+        void unmapAllUnlocked();
+
+        /**
+         * Acquire the manager's lock.
+         *
+         * Take this to be able to call unmapAllUnlocked; this could be used
+         * for cases where a caller cannot be rescheduled but needs to be able
+         * to unmap all mappings. That caller could acquire this lock, then
+         * become un-scheduleable, then perform the needed actions. Without
+         * this, the caller could fail if the manager's lock is taken already.
+         */
+        bool acquireLock();
+
+        /**
+         * Release the manager's lock.
+         */
+        void releaseLock();
 
     private:
         /** Default and only constructor. Registers with PageFaultHandler. */
