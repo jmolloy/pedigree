@@ -25,12 +25,15 @@
 
 #ifndef TESTSUITE
 #include <linker/KernelElf.h>
+#include <debugger/Backtrace.h>
 #endif
 
 LocksCommand g_LocksCommand;
 #ifndef TESTSUITE
 extern Spinlock g_MallocLock;
 #endif
+
+#define DO_BACKTRACES 0
 
 // This is global because we need to rely on it before the constructor is called.
 static bool g_bReady = false;
@@ -49,6 +52,7 @@ LocksCommand::LocksCommand() :
     for (size_t i = 0; i < LOCKS_COMMAND_NUM_CPU; ++i)
     {
         m_bAcquiring[i] = false;
+        m_bTracing[i] = false;
         m_NextPosition[i] = 0;
     }
 }
@@ -154,7 +158,6 @@ const char *LocksCommand::getLine1(size_t index, DebuggerIO::Colour &colour, Deb
     size_t nLock = 0;
     size_t nDepth = 0;
     size_t nCpu = 0;
-    bool hasLocks = false;
     LockDescriptor *pD = 0;
     for (nCpu = 0; nCpu < LOCKS_COMMAND_NUM_CPU; ++nCpu)
     {
@@ -177,12 +180,21 @@ const char *LocksCommand::getLine1(size_t index, DebuggerIO::Colour &colour, Deb
                 pD = 0;
                 break;
             }
-            else if (nLock++ == index)
+            else if (nLock == index)
+            {
+                break;
+            }
+#if DO_BACKTRACES
+            else if ((nLock < index) && (nLock + pD->n >= index))
             {
                 break;
             }
 
+            nLock += pD->n;
+#endif
+
             ++nDepth;
+            ++nLock;
         }
 
         if (pD)
@@ -191,7 +203,7 @@ const char *LocksCommand::getLine1(size_t index, DebuggerIO::Colour &colour, Deb
         }
     }
 
-    if (nLock > index)
+    if ((nLock - 1) > index)
     {
         return Line;
     }
@@ -200,7 +212,9 @@ const char *LocksCommand::getLine1(size_t index, DebuggerIO::Colour &colour, Deb
     {
         Line += "CPU";
         Line.append(nCpu);
-        Line += ":";
+        Line += " (";
+        Line.append(m_NextPosition[nCpu]);
+        Line += " locks):";
     }
     else
     {
@@ -218,23 +232,24 @@ const char *LocksCommand::getLine1(size_t index, DebuggerIO::Colour &colour, Deb
 
 const char *LocksCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour)
 {
-    static NormalStaticString Line;
+    static HugeStaticString Line;
     Line.clear();
 
     size_t nLock = 0;
     size_t nDepth = 0;
     size_t nCpu = 0;
     LockDescriptor *pD = 0;
+    bool doBacktrace = false;
     for (nCpu = 0; nCpu < LOCKS_COMMAND_NUM_CPU; ++nCpu)
     {
-        if (nLock++ == index)
-        {
-            break;
-        }
-
         if (!m_NextPosition[nCpu])
         {
             continue;
+        }
+
+        if (nLock++ == index)
+        {
+            break;
         }
 
         nDepth = 0;
@@ -246,12 +261,23 @@ const char *LocksCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO::
                 pD = 0;
                 break;
             }
-            else if (nLock++ == index)
+            if (nLock == index)
             {
                 break;
             }
+#if DO_BACKTRACES
+            else if ((nLock < index) && (nLock + pD->n >= index))
+            {
+                // Backtrace frame.
+                doBacktrace = true;
+                break;
+            }
+
+            nLock += pD->n;
+#endif
 
             ++nDepth;
+            ++nLock;
         }
 
         if (pD)
@@ -267,28 +293,64 @@ const char *LocksCommand::getLine2(size_t index, size_t &colOffset, DebuggerIO::
 
     colOffset = nDepth + 3;
 
-    Line.append(reinterpret_cast<uintptr_t>(pD->pLock), 16);
-    Line += " state=";
-    Line += stateName(pD->state);
-    Line += " caller=";
-    Line.append(pD->pLock->m_Ra, 16);
+#if DO_BACKTRACES
+    if (doBacktrace && pD->n)
+    {
+        ++colOffset;
+
+        // Not the right lock, but we do need to backtrace.
+        size_t backtraceFrame = index - nLock - 1;
+
+        if (backtraceFrame > pD->n)
+        {
+            ERROR_OR_FATAL("wtf");
+        }
+
+        uintptr_t addr = pD->ra[backtraceFrame];
+
+        Line += " -> [";
+        Line.append(addr, 16);
+        Line += "]";
 
 #ifndef TESTSUITE
-    uintptr_t symStart = 0;
-    const char *pSym = KernelElf::instance().globalLookupSymbol(pD->pLock->m_Ra, &symStart);
-    if (pSym)
-    {
-        LargeStaticString sym(pSym);
+        uintptr_t symStart = 0;
+        const char *pSym = KernelElf::instance().globalLookupSymbol(addr, &symStart);
+        if (pSym)
+        {
+            LargeStaticString sym(pSym);
 
-        Line += " [";
-        Line.append(symStart, 16);
-        Line += "] ";
+            Line += " ";
 
-        symbol_t symbol;
-        demangle(sym, &symbol);
-        Line += static_cast<const char*>(symbol.name);
-    }
+            symbol_t symbol;
+            demangle(sym, &symbol);
+            Line += static_cast<const char*>(symbol.name);
+        }
 #endif
+    }
+    else if (!doBacktrace)
+#endif
+    {
+        Line.append(reinterpret_cast<uintptr_t>(pD->pLock), 16);
+        Line += " state=";
+        Line += stateName(pD->state);
+        Line += " caller=";
+        Line.append(pD->pLock->m_Ra, 16);
+
+#ifndef TESTSUITE
+        uintptr_t symStart = 0;
+        const char *pSym = KernelElf::instance().globalLookupSymbol(pD->pLock->m_Ra, &symStart);
+        if (pSym)
+        {
+            LargeStaticString sym(pSym);
+
+            Line += " ";
+
+            symbol_t symbol;
+            demangle(sym, &symbol);
+            Line += static_cast<const char*>(symbol.name);
+        }
+#endif
+    }
 
     colour = DebuggerIO::White;
     if (index == m_SelectedLine)
@@ -311,6 +373,14 @@ size_t LocksCommand::getLineCount()
             ++numLocks;
         }
 
+#if DO_BACKTRACES
+        // Add backtrace frames for this lock.
+        for (size_t j = 0; j < nextPos; ++j)
+        {
+            numLocks += m_pDescriptors[i][j].n;
+        }
+#endif
+
         numLocks += nextPos;
     }
 
@@ -332,7 +402,7 @@ void LocksCommand::clearFatal()
     m_bFatal = false;
 }
 
-bool LocksCommand::lockAttempted(Spinlock *pLock, size_t nCpu, bool intState)
+bool LocksCommand::lockAttempted(const Spinlock *pLock, size_t nCpu, bool intState)
 {
     if (!g_bReady)
         return true;
@@ -349,7 +419,7 @@ bool LocksCommand::lockAttempted(Spinlock *pLock, size_t nCpu, bool intState)
     if (pos && intState)
     {
         // We're more than one lock deep, but interrupts are enabled!
-        ERROR_OR_FATAL("Spinlock " << Hex << pLock << " acquired at level " << Dec << pos << Hex << " with interrupts enabled.");
+        ERROR_OR_FATAL("Spinlock " << Hex << pLock << " attempted at level " << Dec << pos << Hex << " with interrupts enabled on CPU" << Dec << Processor::id() << ".");
         return false;
     }
 
@@ -363,11 +433,39 @@ bool LocksCommand::lockAttempted(Spinlock *pLock, size_t nCpu, bool intState)
 
     pD->pLock = pLock;
     pD->state = Attempted;
+    pD->n = 0;
+
+#ifndef TESTSUITE
+#if DO_BACKTRACES
+    // Backtrace has to be touched carefully as it takes locks too. Also, we
+    // generally don't care about the top level lock's backtrace, but rather
+    // those that are nested (as they are the ones that will cause problems
+    // with out-of-order release, typically).
+    if (pos && Processor::isInitialised() >= 2 && m_bTracing[nCpu].compareAndSwap(false, true))
+    {
+        Backtrace bt;
+        bt.performBpBacktrace(0, 0);
+
+        size_t numFrames = bt.numStackFrames();
+        if (numFrames > NUM_BT_FRAMES)
+        {
+            numFrames = NUM_BT_FRAMES;
+        }
+        for (size_t i = 0; i < numFrames; ++i)
+        {
+            pD->ra[i] = bt.getReturnAddress(i);
+        }
+        pD->n = numFrames;
+
+        m_bTracing[nCpu] = false;
+    }
+#endif
+#endif
 
     return true;
 }
 
-bool LocksCommand::lockAcquired(Spinlock *pLock, size_t nCpu, bool intState)
+bool LocksCommand::lockAcquired(const Spinlock *pLock, size_t nCpu, bool intState)
 {
     if (!g_bReady)
         return true;
@@ -401,7 +499,7 @@ bool LocksCommand::lockAcquired(Spinlock *pLock, size_t nCpu, bool intState)
     return true;
 }
 
-bool LocksCommand::lockReleased(Spinlock *pLock, size_t nCpu)
+bool LocksCommand::lockReleased(const Spinlock *pLock, size_t nCpu)
 {
     if (!g_bReady)
         return true;
@@ -443,7 +541,6 @@ bool LocksCommand::lockReleased(Spinlock *pLock, size_t nCpu)
 
         if (!ok)
         {
-            ERROR_NOLOCK("expected ra is " << (pD ? pD->pLock->m_Ra : 0));
             ERROR_OR_FATAL("Spinlock " << Hex << pLock << " released out-of-order [expected lock " << (pD ? pD->pLock : 0) << (pD ? "" : " (no lock)") << ", state " << (pD ? stateName(pD->state) : "(no state)") << "].");
             return false;
         }
@@ -457,7 +554,24 @@ bool LocksCommand::lockReleased(Spinlock *pLock, size_t nCpu)
     return true;
 }
 
-bool LocksCommand::checkState(Spinlock *pLock, size_t nCpu)
+bool LocksCommand::checkSchedule(size_t nCpu)
+{
+    if (!g_bReady)
+        return true;
+    if (nCpu == ~0U)
+        nCpu = Processor::id();
+
+    size_t pos = m_NextPosition[nCpu];
+    if (pos)
+    {
+        ERROR_OR_FATAL("Rescheduling CPU" << nCpu << " is not allowed, as there are still " << pos << " acquired locks.");
+        return false;
+    }
+
+    return true;
+}
+
+bool LocksCommand::checkState(const Spinlock *pLock, size_t nCpu)
 {
     if (!g_bReady)
         return true;

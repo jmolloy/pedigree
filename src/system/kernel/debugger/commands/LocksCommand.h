@@ -84,9 +84,16 @@ public:
      */
     void setFatal();
 
-    bool lockAttempted(Spinlock *pLock, size_t nCpu=~0U, bool intState=false);
-    bool lockAcquired(Spinlock *pLock, size_t nCpu=~0U, bool intState=false);
-    bool lockReleased(Spinlock *pLock, size_t nCpu=~0U);
+    bool lockAttempted(const Spinlock *pLock, size_t nCpu=~0U, bool intState=false);
+    bool lockAcquired(const Spinlock *pLock, size_t nCpu=~0U, bool intState=false);
+    bool lockReleased(const Spinlock *pLock, size_t nCpu=~0U);
+
+    /**
+     * Notifies the command that a core is about to reschedule.
+     *
+     * Note: NO locks should be held across a reschedule.
+     */
+    bool checkSchedule(size_t nCpu=~0U);
 
     /**
      * Notifies the command that we'd like to lock the given lock, allowing
@@ -94,7 +101,7 @@ public:
      * dependency inversion. This should be called after an acquire() fails,
      * as it may have undesirable overhead for the "perfect" case.
      */
-    bool checkState(Spinlock *pLock, size_t nCpu=~0U);
+    bool checkState(const Spinlock *pLock, size_t nCpu=~0U);
 
     // Scrollable interface.
     virtual const char *getLine1(size_t index, DebuggerIO::Colour &colour, DebuggerIO::Colour &bgColour);
@@ -140,7 +147,7 @@ private:
         {
         }
 
-        Spinlock *pLock;
+        const Spinlock *pLock;
         uintptr_t ra[NUM_BT_FRAMES];
         size_t n;
         State state;
@@ -149,12 +156,16 @@ private:
     LockDescriptor m_pDescriptors[LOCKS_COMMAND_NUM_CPU][MAX_DESCRIPTORS];
 
     Atomic<bool> m_bAcquiring[LOCKS_COMMAND_NUM_CPU];
+    Atomic<bool> m_bTracing[LOCKS_COMMAND_NUM_CPU];
     Atomic<size_t> m_NextPosition[LOCKS_COMMAND_NUM_CPU];
     Atomic<size_t> m_LockIndex;
 
     bool m_bFatal;
 
     size_t m_SelectedLine;
+
+    /// Lock we've selected for backtracing.
+    LockDescriptor *m_pSelectedLock;
 };
 
 extern LocksCommand g_LocksCommand;
