@@ -421,7 +421,7 @@ bool LocksCommand::lockAttempted(const Spinlock *pLock, size_t nCpu, bool intSta
     if (pos && intState)
     {
         // We're more than one lock deep, but interrupts are enabled!
-        ERROR_OR_FATAL("Spinlock " << Hex << pLock << " attempted at level " << Dec << pos << Hex << " with interrupts enabled on CPU" << Dec << Processor::id() << ".");
+        ERROR_OR_FATAL("Spinlock " << Hex << pLock << " attempted at level " << Dec << pos << Hex << " with interrupts enabled on CPU" << Dec << nCpu << ".");
         return false;
     }
 
@@ -486,7 +486,7 @@ bool LocksCommand::lockAcquired(const Spinlock *pLock, size_t nCpu, bool intStat
     if (back && intState)
     {
         // We're more than one lock deep, but interrupts are enabled!
-        ERROR_OR_FATAL("Spinlock " << Hex << pLock << " acquired at level " << Dec << back << Hex << " with interrupts enabled.");
+        ERROR_OR_FATAL("Spinlock " << Hex << pLock << " acquired at level " << Dec << back << Hex << " with interrupts enabled on CPU" << Dec << nCpu << ".");
         return false;
     }
 
@@ -513,11 +513,6 @@ bool LocksCommand::lockReleased(const Spinlock *pLock, size_t nCpu)
         nCpu = Processor::id();
 
     size_t back = m_NextPosition[nCpu] - 1;
-    if (back > MAX_DESCRIPTORS)
-    {
-        ERROR_OR_FATAL("Spinlock " << pLock << " released unexpectedly (no tracked locks).");
-        return false;
-    }
 
     LockDescriptor *pD = &m_pDescriptors[nCpu][back];
 
