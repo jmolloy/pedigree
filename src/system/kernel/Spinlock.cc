@@ -29,23 +29,6 @@
 
 #include <panic.h>
 
-#include <machine/Machine.h>
-#include <utilities/StaticString.h>
-
-#define COM1 0x3F8
-#define COM2 0x2F8
-
-#define CPU_LOG(s)  do { \
-  uint16_t x = COM1; \
-  if (Processor::id()) \
-    x = COM2; \
-  const char *s_ = s; \
-  for (size_t i = 0; i < str.length(); ++i) \
-    __asm__ __volatile__("outb %1, %0" :: "Nd" (x), "a" (s_[i])); \
-} while(0)
-
-#define ENABLE_CPU_LOG 0
-
 static Atomic<size_t> x(0);
 
 bool Spinlock::acquire(bool recurse, bool safe)
@@ -85,40 +68,8 @@ bool Spinlock::acquire(bool recurse, bool safe)
   }
 #endif
 
-#if ENABLE_CPU_LOG
-  bool bPrintedSpin = false;
-
-  HugeStaticString str;
-  str << "Spinlock: acquire [";
-  str.append(reinterpret_cast<uintptr_t>(this), 16);
-  str << ", ";
-  str.append(reinterpret_cast<uintptr_t>(pThread), 16);
-  str << ", " << Processor::id() << "]";
-  str << " -> ";
-  str.append(reinterpret_cast<uintptr_t>(__builtin_return_address(0)), 16);
-  str << " ";
-  str.append(x += 1);
-  str << "\n";
-  CPU_LOG(str);
-#endif
-
   while (m_Atom.compareAndSwap(true, false) == false)
   {
-#if ENABLE_CPU_LOG
-    if (!bPrintedSpin)
-    {
-      str.clear();
-      str << "  -> A spin ";
-      str << Processor::id();
-      str << " (";
-      str << (m_bAvoidTracking ? "true" : "false");
-      str << ")\n";
-      CPU_LOG(str);
-
-      bPrintedSpin = true;
-    }
-#endif
-
     // Couldn't take the lock - can we re-enter the critical section?
     if (m_bOwned && (m_pOwner == pThread) && recurse)
     {
@@ -171,9 +122,9 @@ bool Spinlock::acquire(bool recurse, bool safe)
 
     uintptr_t myra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
     ERROR_NOLOCK("Spinlock has deadlocked in acquire");
-    ERROR_NOLOCK("T: " << Hex << pThread << " / " << m_pOwner);
-    ERROR_NOLOCK("Spinlock has deadlocked, level is " << m_Level);
-    ERROR_NOLOCK("Spinlock has deadlocked, my return address is " << Hex << myra << ", return address of other locker is " << m_Ra);
+    ERROR_NOLOCK(" -> level is " << m_Level);
+    ERROR_NOLOCK(" -> my return address is " << Hex << myra);
+    ERROR_NOLOCK(" -> return address of other locker is " << m_Ra);
     FATAL_NOLOCK("Spinlock has deadlocked, spinlock is " << Hex << reinterpret_cast<uintptr_t>(this) << ", atom is " << atom << ".");
 
     // Panic in case there's a return from the debugger (or the debugger isn't available)
@@ -254,17 +205,6 @@ void Spinlock::exit()
   m_pOwner = 0;
   m_bOwned = false;
   m_OwnedProcessor = ~0;
-
-#if ENABLE_CPU_LOG
-  HugeStaticString str;
-  str << "Spinlock: release [";
-  str.append(reinterpret_cast<uintptr_t>(this), 16);
-  str << ", ";
-  str.append(reinterpret_cast<uintptr_t>(pThread), 16);
-  str << ", " << Processor::id() << "]";
-  str << "\n";
-  CPU_LOG(str);
-#endif
 
   // Track the release just before we actually release the lock to avoid an
   // immediate reschedule screwing with the tracking.
