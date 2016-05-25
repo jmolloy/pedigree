@@ -406,6 +406,8 @@ bool LocksCommand::lockAttempted(const Spinlock *pLock, size_t nCpu, bool intSta
 {
     if (!g_bReady)
         return true;
+    if (pLock->m_bAvoidTracking)
+        return true;
     if (nCpu == ~0U)
         nCpu = Processor::id();
 
@@ -469,6 +471,8 @@ bool LocksCommand::lockAcquired(const Spinlock *pLock, size_t nCpu, bool intStat
 {
     if (!g_bReady)
         return true;
+    if (pLock->m_bAvoidTracking)
+        return true;
     if (nCpu == ~0U)
         nCpu = Processor::id();
 
@@ -502,6 +506,8 @@ bool LocksCommand::lockAcquired(const Spinlock *pLock, size_t nCpu, bool intStat
 bool LocksCommand::lockReleased(const Spinlock *pLock, size_t nCpu)
 {
     if (!g_bReady)
+        return true;
+    if (pLock->m_bAvoidTracking)
         return true;
     if (nCpu == ~0U)
         nCpu = Processor::id();
@@ -574,6 +580,8 @@ bool LocksCommand::checkSchedule(size_t nCpu)
 bool LocksCommand::checkState(const Spinlock *pLock, size_t nCpu)
 {
     if (!g_bReady)
+        return true;
+    if (pLock->m_bAvoidTracking)
         return true;
     if (nCpu == ~0U)
         nCpu = Processor::id();
