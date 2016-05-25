@@ -77,7 +77,7 @@ TEST(PedigreeObjectPool, ObjectReuseThenAllocation)
     delete a3;
 }
 
-TEST(PedigreeObjectPool, DeallocatedTooMany)
+TEST(PedigreeObjectPool, DISABLED_DeallocatedTooMany)
 {
     ObjectPool<int, 1> x;
 
