@@ -23,10 +23,10 @@
 
 #include <debugger/commands/LocksCommand.h>
 
-#define LOCK_A reinterpret_cast<Spinlock *>(1)
-#define LOCK_B reinterpret_cast<Spinlock *>(2)
-#define LOCK_C reinterpret_cast<Spinlock *>(3)
-#define LOCK_D reinterpret_cast<Spinlock *>(4)
+static Spinlock *LOCK_A = 0;
+static Spinlock *LOCK_B = 0;
+static Spinlock *LOCK_C = 0;
+static Spinlock *LOCK_D = 0;
 
 #define CPU_1 1
 #define CPU_2 2
@@ -38,12 +38,21 @@ class PedigreeLocksCommand : public ::testing::Test
     public:
         PedigreeLocksCommand() : TestLocksCommand()
         {
+            LOCK_A = new Spinlock();
+            LOCK_B = new Spinlock();
+            LOCK_C = new Spinlock();
+            LOCK_D = new Spinlock();
+
             TestLocksCommand.setReady();
             TestLocksCommand.setFatal();
         }
 
         ~PedigreeLocksCommand()
         {
+            delete LOCK_A;
+            delete LOCK_B;
+            delete LOCK_C;
+            delete LOCK_D;
         }
 
         LocksCommand TestLocksCommand;
@@ -94,13 +103,13 @@ TEST_F(PedigreeLocksCommand, BadInterrupts)
 
     // acquire(B) but with interrupts enabled.
     EXPECT_DEATH(TestLocksCommand.lockAttempted(LOCK_B, CPU_1, true),
-                 "PANIC: Spinlock 2 acquired at level 1 with interrupts enabled.");
+                 "PANIC: Spinlock 0x[0-9a-fA-F]+ attempted at level 1 with interrupts enabled on CPU1.");
 
     // Interrupts enabled between attempt and acquire (could happen if we see
     // an exception?)
     EXPECT_TRUE(TestLocksCommand.lockAttempted(LOCK_B, CPU_1));
     EXPECT_DEATH(TestLocksCommand.lockAcquired(LOCK_B, CPU_1, true),
-                 "PANIC: Spinlock 2 acquired at level 1 with interrupts enabled.");
+                 "PANIC: Spinlock 0x[0-9a-fA-F]+ acquired at level 1 with interrupts enabled on CPU1.");
 }
 
 TEST_F(PedigreeLocksCommand, CrossCpuRelease)
@@ -125,7 +134,7 @@ TEST_F(PedigreeLocksCommand, BadOrdering)
 
     // release(A) - out-of-order!
     ASSERT_DEATH(TestLocksCommand.lockReleased(LOCK_A, CPU_1),
-                 "PANIC: Spinlock 1 released out-of-order \\[expected lock 2, state acquired\\].");
+                 "PANIC: Spinlock 0x[0-9a-fA-F]+ released out-of-order \\[expected lock 0x[0-9a-fA-F]+, state acquired\\].");
 }
 
 TEST_F(PedigreeLocksCommand, StateOk)
@@ -163,11 +172,11 @@ TEST_F(PedigreeLocksCommand, Inversion)
     // is able to continue.
     EXPECT_TRUE(TestLocksCommand.lockAttempted(LOCK_A, CPU_2));
     ASSERT_DEATH(TestLocksCommand.checkState(LOCK_A, CPU_2),
-                 "PANIC: Detected lock dependency inversion \\(deadlock\\) between 1 and 2!");
+                 "PANIC: Detected lock dependency inversion \\(deadlock\\) between 0x[0-9a-fA-F]+ and 0x[0-9a-fA-F]+!");
 
     // checkState on the other CPU should now break too.
     ASSERT_DEATH(TestLocksCommand.checkState(LOCK_B, CPU_1),
-                 "PANIC: Detected lock dependency inversion \\(deadlock\\) between 2 and 1!");
+                 "PANIC: Detected lock dependency inversion \\(deadlock\\) between 0x[0-9a-fA-F]+ and 0x[0-9a-fA-F]+!");
 }
 
 TEST_F(PedigreeLocksCommand, Inversion2)
@@ -189,11 +198,11 @@ TEST_F(PedigreeLocksCommand, Inversion2)
     // is able to continue.
     EXPECT_TRUE(TestLocksCommand.lockAttempted(LOCK_B, CPU_2));
     ASSERT_DEATH(TestLocksCommand.checkState(LOCK_B, CPU_2),
-                 "PANIC: Detected lock dependency inversion \\(deadlock\\) between 2 and 1!");
+                 "PANIC: Detected lock dependency inversion \\(deadlock\\) between 0x[0-9a-fA-F]+ and 0x[0-9a-fA-F]+!");
 
     // checkState on the other CPU should now break too.
     ASSERT_DEATH(TestLocksCommand.checkState(LOCK_A, CPU_1),
-                 "PANIC: Detected lock dependency inversion \\(deadlock\\) between 1 and 2!");
+                 "PANIC: Detected lock dependency inversion \\(deadlock\\) between 0x[0-9a-fA-F]+ and 0x[0-9a-fA-F]+!");
 }
 
 TEST_F(PedigreeLocksCommand, AlmostInversion)
