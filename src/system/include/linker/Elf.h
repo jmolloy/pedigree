@@ -175,6 +175,13 @@ typedef  int32_t Elf32_Sxword;
  */
 class Elf
 {
+    protected:
+        // Forward declaration of ELF symbol type for lookupSymbol template.
+        struct ElfSymbol_t;
+#ifdef BITS_64
+        struct Elf32Symbol_t;
+#endif
+
     public:
         /** Default constructor - loads no data. */
         Elf();
@@ -237,7 +244,11 @@ class Elf
         * \param[in] addr The address to look up.
         * \param[out] startAddr The starting address of the found symbol (optional).
         * \return The symbol name, as a C string. */
-        const char *lookupSymbol(uintptr_t addr, uintptr_t *startAddr=0);
+        template <class T = ElfSymbol_t>
+        const char *lookupSymbol(uintptr_t addr, uintptr_t *startAddr, T *symbolTable);
+
+        /** Default implementation which just uses the normal internal symbol table. */
+        const char *lookupSymbol(uintptr_t addr, uintptr_t *startAddr);
 
         /** Returns the start address of the symbol with name 'pName'. */
         uintptr_t lookupSymbol(const char *pName);
@@ -472,6 +483,12 @@ class Elf
         *\note currently not implemented */
         Elf &operator = (const Elf &);
 };
+
+/** External specializations for ELF symbol types. */
+extern template const char *Elf::lookupSymbol<Elf::ElfSymbol_t>(uintptr_t addr, uintptr_t *startAddr=0, ElfSymbol_t *symbolTable=0);
+#ifdef BITS_64
+extern template const char *Elf::lookupSymbol<Elf::Elf32Symbol_t>(uintptr_t addr, uintptr_t *startAddr=0, Elf32Symbol_t *symbolTable=0);
+#endif
 
 #endif
 
